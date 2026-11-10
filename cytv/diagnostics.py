@@ -104,9 +104,34 @@ def create_report(store, action, profile, phase, error=None, tv_info=None, *, ch
         for key in ('luna', 'connection', 'ssh_command', 'python_cache', 'python_runtime', 'root_recovery', 'root_driver', 'no_root_observer', 'no_root_cleanup', 'local_recovery'):
             if key in report:
                 report[key] = safe_error.get(key, {})
+    from .contract_events import merge_events
+    from .recovery_state import observation_diagnostics
+    report['contract_events'] = merge_events(getattr(error, 'contract_events', []),
+        getattr(store, 'contract_events', []), context.mapping(tv_info).get('contract_events', []),
+        observation_diagnostics(status))
+    report['contract_telemetry'] = context.choice(context.mapping(tv_info).get('contract_telemetry'),
+        ('read', 'legacy', 'unavailable'), 'unavailable')
     report.update(context.history(report, store, profile, error, removal or pending))
     if error is not None and action in ('recover', 'status', 'doctor'):
         report['observation_failure'] = context.failure_summary(report)
+    # One report-wide first-cause + recent window, including retained and optional
+    # observation records. History on disk retains its full original projection.
+    containers = [context.mapping(report.get('first_failure')),
+                  context.mapping(report.get('previous_attempt_failure')),
+                  *report.get('intermediate_failures', []), report,
+                  context.mapping(report.get('observation_failure'))]
+    selected = merge_events(*(item.get('contract_events', []) for item in containers))
+    for item in containers:
+        if 'contract_events' not in item: continue
+        own = []
+        for event in item['contract_events']:
+            identity = {k:v for k,v in event.items() if k not in ('count','first','last')}
+            match = next((candidate for candidate in selected if identity ==
+                {k:v for k,v in candidate.items() if k not in ('count','first','last')}), None)
+            if match is not None:
+                own.append(match)
+                selected.remove(match)
+        item['contract_events'] = own
     path = store.root / 'reports' / ('diagnostic-' + uuid.uuid4().hex[:12] + '.json')
     private_write(path, json.dumps(report, indent=2).encode())
     return path

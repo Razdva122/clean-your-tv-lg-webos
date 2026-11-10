@@ -23,26 +23,36 @@ if (
   !require('./state-permissions')(
     data,
     function (x) {
-      console.error(JSON.stringify(x));
+      console.error(
+        JSON.stringify({
+          schema: 1,
+          error: 'contract-error',
+          telemetry: 'unavailable',
+          events: require('./contract-events').safeEvents([x.contract])
+        })
+      );
     },
     true
   )
 )
   throw Error('Helper control initialization failed');
-var logPath = data + '/controller.log',
-  pidPath = data + '/controller.pid';
+var pidPath = data + '/controller.pid';
 require('./state-permissions').atomicRecord(data, 'pid', String(process.pid));
-require('./state-permissions').atomicRecord(data, 'logger', '');
+// Preserve bounded preceding evidence across controller restarts.
+var contractEvents = require('./contract-events').create();
 function log(x) {
   try {
-    fs.appendFileSync(
-      logPath,
-      JSON.stringify(Object.assign({ time: Date.now() }, x)) + '\n'
+    if (x && x.contract) {
+      contractEvents.record(x.contract);
+      x = { event: 'contract-snapshot', contract: contractEvents.snapshot() };
+    }
+    require('./state-permissions').appendLog(
+      data,
+      JSON.stringify(Object.assign({ time: Date.now() }, x))
     );
   } catch (e) {
     try {
-      console.error('Helper log failed: ' + String(e));
-      console.error(x);
+      console.error('Helper telemetry unavailable');
     } catch (ignore) {}
   }
 }
@@ -653,6 +663,16 @@ function cleanupRelay(done) {
     });
     c.on('close', function (code, signal) {
       log({ event: 'cleanup', code: code, signal: signal });
+      if (code !== 0 || signal)
+        log({
+          event: 'contract-event',
+          contract: require('./contract-events').runtimeOutcome(
+            code,
+            undefined,
+            signal,
+            true
+          )
+        });
       complete(code === 0 && !signal);
     });
   } catch (e) {
@@ -692,6 +712,25 @@ function finish(decision) {
   if (screenWatch) screenWatch.close();
   clearInterval(timer);
   log({ event: 'worker-exit', code: code, signal: signal });
+  if (
+    decision.action === 'terminal' &&
+    (code || signal) &&
+    code !== 22 &&
+    decision.reportedReason !== 27 &&
+    !(decision.diagnostics || []).some(function (e) {
+      return e.field === 'exit';
+    })
+  ) {
+    log({
+      event: 'contract-event',
+      contract: require('./contract-events').runtimeOutcome(
+        code,
+        decision.reportedReason,
+        signal,
+        false
+      )
+    });
+  }
   if (decision.block) block(!terminalUI);
   // A signal can replace the OS exit code after the relay reported emergency.
   // Keep the real code/signal above for cleanup policy and diagnostics.

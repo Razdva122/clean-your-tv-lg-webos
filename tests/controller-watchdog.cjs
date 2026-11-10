@@ -1345,7 +1345,8 @@ test('power hint reaches a wake replacement before READY and removal waits for a
 test('mismatched relay exit logs safe original numeric facts before terminal cleanup', () => {
   const c = controller();
   c.close(99, null, c.workers[0], 20);
-  const e = c.logs.find((x) => x.event === 'contract-event');
+  const snapshot = c.logs.find((x) => x.event === 'contract-snapshot');
+  const e = snapshot && { contract: snapshot.contract.events[0] };
   assert(e, 'unexpected lifecycle needs canonical diagnostic evidence');
   assert.equal(e.contract.actual.os_code, 99);
   assert.equal(e.contract.actual.reported_code, 20);
@@ -1364,10 +1365,39 @@ test('unknown power processing retains truthy wake delay and emits metadata only
   });
   c.advance(2000);
   assert.equal(c.workers.length, 1);
-  const e = c.logs.find((x) => x.event === 'contract-event');
+  const snapshot = c.logs.find((x) => x.event === 'contract-snapshot');
+  const e = snapshot && { contract: snapshot.contract.events[0] };
   assert(e, 'unknown firmware value needs safe metadata');
   assert.equal(e.contract.field, 'processing');
   assert.equal(e.contract.actual.type, 'string');
   assert.equal(e.contract.actual.length, 25);
   assert(!JSON.stringify(e).includes('private-processing-marker'));
+});
+
+test('known terminal relay faults retain numeric outcome and cleanup failure safely', () => {
+  const c = controller();
+  c.close(31, null, c.workers[0], 31);
+  let snapshots = c.logs.filter((x) => x.event === 'contract-snapshot');
+  let events = snapshots[snapshots.length - 1].contract.events;
+  assert(
+    events.some((e) => e.actual.os_code === 31 && e.actual.reported_code === 31)
+  );
+  c.cleanup(11);
+  snapshots = c.logs.filter((x) => x.event === 'contract-snapshot');
+  events = snapshots[snapshots.length - 1].contract.events;
+  assert(
+    events.some((e) => e.operation === 'cleanup' && e.actual.os_code === 11)
+  );
+  assert(blocked(c));
+  assert.equal(c.workers.length, 1);
+});
+test('failed diagnostic emitter cannot prevent terminal input cleanup', () => {
+  const c = controller();
+  c.logs.push = function () {
+    throw Error('PRIVATE');
+  };
+  c.close(31, null, c.workers[0], 31);
+  c.cleanup();
+  assert(blocked(c));
+  assert.equal(c.workers.length, 1);
 });

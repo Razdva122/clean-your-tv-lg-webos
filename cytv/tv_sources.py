@@ -54,5 +54,5 @@ function load(name){
 }
 try { var contract=load('./%s');
 %s
-} catch(ignore){process.stdout.write(JSON.stringify({schema:1,error:'contract-error',events:[]}));process.exitCode=1;if(process.exit)process.exit(1);}
+} catch(ignore){var safe=[];try{safe=load('./contract-events').safeEvents(ignore.contractEvents || []);}catch(unavailable){}process.stdout.write(JSON.stringify({schema:1,error:'contract-error',events:safe}));process.exitCode=1;if(process.exit)process.exit(1);}
 }());""" % ('\n'.join(modules), name, invocation)

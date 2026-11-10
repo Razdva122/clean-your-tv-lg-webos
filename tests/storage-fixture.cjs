@@ -24,6 +24,9 @@ function create(io, prepare) {
       io.renameSync(directory + '/.fixture-record', directory + '/' + name);
     } else io.writeFileSync(directory + '/' + name, bytes);
   };
+  result.appendLog = function (directory, line) {
+    io.appendFileSync(directory + '/controller.log', line + '\n');
+  };
   result.readConfiguration = function (directory, kind) {
     return io.readFileSync(
       directory + '/' + (kind === 'key' ? 'ssap-key.json' : 'apps.json'),

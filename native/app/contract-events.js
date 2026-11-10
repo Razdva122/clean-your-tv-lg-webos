@@ -242,7 +242,121 @@ function create(emit, context) {
     }
   };
 }
+// Concrete remote/persisted producer vocabulary; normalize remains a local API.
+var producers = {
+  'storage': [
+    ['inspect', 'prepare', 'stop', 'record', 'read', 'logger', 'collect'],
+    ['validate', 'read', 'write', 'chmod', 'rename', 'stage'],
+    [
+      'directory',
+      'key',
+      'apps',
+      'control',
+      'blocked',
+      'staging',
+      'logger',
+      'logger-previous',
+      'pid',
+      'home-preference',
+      'startup-state',
+      'home-request',
+      'home-response',
+      'input-request',
+      'input-response',
+      'catalog-request',
+      'catalog-response'
+    ],
+    [
+      'safe-storage',
+      'absolute-directory',
+      'nofollow-supported',
+      'directory-type',
+      'trusted-owner',
+      'shared-group',
+      'safe-mode',
+      'stable-inode',
+      'single-regular-file',
+      'bounded-file',
+      'complete-io',
+      'private-key',
+      'authenticated-key',
+      'valid-key',
+      'storage-io',
+      'fixed-record'
+    ]
+  ],
+  'power': [
+    ['observe'],
+    ['normalize'],
+    ['payload', 'state', 'onOff', 'processing'],
+    ['power-object', 'power-state', 'power-on-off', 'firmware-processing']
+  ],
+  'runtime': [
+    ['relay-exit', 'cleanup'],
+    ['classify'],
+    ['exit', 'signal'],
+    ['tracked-relay-exit', 'relay-signal', 'cleanup-exit']
+  ],
+  'recovery': [
+    ['recover'],
+    ['assessment'],
+    [
+      'observation',
+      'device',
+      'device.product',
+      'device.observer',
+      'can_resume_root_setup',
+      'no_root_ready'
+    ],
+    [
+      'observation-object',
+      'device-object',
+      'proof-object',
+      'readiness-boolean',
+      'setup-product-current-complete'
+    ]
+  ],
+  'transport': [['read'], ['validate'], ['envelope'], ['contract-envelope']]
+};
+function exportEvents(values) {
+  var clean = safeEvents(values),
+    result = [],
+    keys = ['operation', 'phase', 'field', 'expected'];
+  clean.forEach(function (event) {
+    var vocabulary = producers[event.component];
+    if (!vocabulary) return;
+    for (var i = 0; i < keys.length; i++)
+      if (vocabulary[i].indexOf(event[keys[i]]) < 0) return;
+    result.push(event);
+  });
+  return result;
+}
+function runtimeOutcome(code, reported, signal, cleanup) {
+  var actual = {
+      os_code: code,
+      reported_code: reported,
+      category: 'unexpected'
+    },
+    signals = { SIGKILL: 9, SIGTERM: 15, SIGINT: 2, SIGHUP: 1 };
+  if (
+    typeof signal === 'string' &&
+    Object.prototype.hasOwnProperty.call(signals, signal)
+  )
+    actual.code = signals[signal];
+  return normalize({
+    schema: 1,
+    component: 'runtime',
+    operation: cleanup ? 'cleanup' : 'relay-exit',
+    phase: 'classify',
+    field: 'exit',
+    expected: cleanup ? 'cleanup-exit' : 'tracked-relay-exit',
+    actual: actual,
+    decision: 'retain'
+  });
+}
 module.exports = {
+  runtimeOutcome: runtimeOutcome,
+  exportEvents: exportEvents,
   describe: describe,
   normalize: normalize,
   safeEvents: safeEvents,

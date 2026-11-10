@@ -575,3 +575,37 @@ populate a report. A new report may describe a later observation failure while
 the original cause remains unknown. Neither these categories nor the portable
 launch establish recovery or compatibility on the reporting device. See the
 [source verification record](../history/2026-11-07-no-root-observer-evidence.md).
+
+
+### Shared contract context
+
+Standard reports include fixed `contract_events` for shared storage refusals,
+Helper power/relay/cleanup outcomes and malformed recovery observations. Each
+records the component, operation, phase, field, expected rule, safe actual
+metadata and decision. Storage metadata can include numeric UID/GID, mode,
+size/limit and errno; unknown payloads expose type/length only. Identifiers at
+remote and persisted export boundaries must belong to the concrete producer
+vocabulary. Arbitrary identifiers, paths, credentials, exception messages,
+application inventories and raw log lines cannot cross that boundary.
+
+The operation recorder is bound/reset with the normal operation context. The
+first failed operation's diagnostic ID retains its original bounded cause;
+later status or optional collection failures cannot replace it. Reports share
+one first-cause/recent-context window across current and retained records:
+at most 32 events/16 KiB of compact event projection, each at most 512 bytes.
+Duplicate copies of the same envelope occupy one exported location. Repeated
+runtime observations retain bounded counts in contract snapshots.
+
+An already authorized No-root status/read probe streams host-owned canonical
+support to read only checked `controller.log` and `controller.log.previous`,
+limited to 128 KiB each. Ordinary logger appends pin/compare a no-follow
+file descriptor; rotation uses the existing checked staging/rename rules.
+The collector returns only the safe projection. `contract_telemetry` is `read`,
+`legacy` (no instrumented evidence), or `unavailable`; none means that device
+acceptance passed. Failed log writes cannot hold cleanup or replace the
+operation failure. Unwritable storage cannot retain new telemetry.
+
+Creating or saving a report uses local evidence only. It never starts Helper,
+repairs storage, adds a permission/endpoint or repeats a TV test. Desktop and
+Android export the same bounded standard report. Diagnostics remain advisory;
+existing storage, lifecycle and recovery proofs still authorize every effect.

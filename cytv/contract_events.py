@@ -119,3 +119,64 @@ def record(event):
         if recorder is not None: recorder.record(event)
     except Exception:
         pass
+
+
+# Concrete producer vocabulary at remote/persisted export boundaries. Local
+# normalize/Recorder deliberately still support developer-defined identifiers.
+PRODUCERS = {
+    'storage': (('inspect', 'prepare', 'stop', 'record', 'read', 'logger', 'collect'),
+                ('validate', 'read', 'write', 'chmod', 'rename', 'stage'),
+                ('directory', 'key', 'apps', 'control', 'blocked', 'staging', 'logger',
+                 'logger-previous', 'pid', 'home-preference', 'startup-state',
+                 'home-request', 'home-response', 'input-request', 'input-response',
+                 'catalog-request', 'catalog-response'),
+                ('safe-storage', 'absolute-directory', 'nofollow-supported', 'directory-type',
+                 'trusted-owner', 'shared-group', 'safe-mode', 'stable-inode',
+                 'single-regular-file', 'bounded-file', 'complete-io', 'private-key',
+                 'authenticated-key', 'valid-key', 'storage-io', 'fixed-record')),
+    'power': (('observe',), ('normalize',), ('payload', 'state', 'onOff', 'processing'),
+              ('power-object', 'power-state', 'power-on-off', 'firmware-processing')),
+    'runtime': (('relay-exit', 'cleanup'), ('classify',), ('exit', 'signal'),
+                ('tracked-relay-exit', 'relay-signal', 'cleanup-exit')),
+    'recovery': (('recover',), ('assessment',),
+                 ('observation', 'device', 'device.product', 'device.observer',
+                  'can_resume_root_setup', 'no_root_ready'),
+                 ('observation-object', 'device-object', 'proof-object', 'readiness-boolean',
+                  'setup-product-current-complete')),
+    'transport': (('read',), ('validate',), ('envelope',), ('contract-envelope',)),
+}
+
+
+def export_events(values, *, strict=False):
+    """Project fixed producers only, with optional exact wire validation."""
+    if type(values) is not list or (strict and len(values) > 32): return []
+    result = []
+    for value in values[:32]:
+        clean = normalize(value)
+        vocabulary = PRODUCERS.get(clean['component']) if clean else None
+        valid = vocabulary and all(clean[key] in allowed for key, allowed in
+            zip(('operation', 'phase', 'field', 'expected'), vocabulary))
+        if not valid or (strict and value != clean):
+            if strict: return []
+            continue
+        result.append(clean)
+    while _bytes(result) > 16200: del result[1]
+    return result
+
+
+def merge_events(*sources):
+    """One global budget; same projection in two envelopes is not a repeat."""
+    recorder = Recorder()
+    for source in sources:
+        for event in export_events(source):
+            identity = {k:v for k,v in event.items() if k not in ('count', 'first', 'last')}
+            old = next((old for old in recorder.events if identity ==
+                {k:v for k,v in old.items() if k not in ('count', 'first', 'last')}), None)
+            if old is None: recorder.record(event)
+            else: old['count'] = max(old['count'], event['count'])
+    return recorder.snapshot()['events']
+
+
+def envelope_failure(category):
+    return dict(schema=1, component='transport', operation='read', phase='validate',
+                field='envelope', expected='contract-envelope', actual={'category':category}, decision='ignore')

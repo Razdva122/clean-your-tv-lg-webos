@@ -24,11 +24,81 @@ function unchanged(a, b) {
     a.ctime.getTime() === b.ctime.getTime()
   );
 }
-function fail() {
-  throw Error('unsafe-storage');
+function field(name) {
+  var names = {
+    'ssap-key.json': 'key',
+    'apps.json': 'apps',
+    'control.json': 'control',
+    'controller.log': 'logger',
+    'controller.log.previous': 'logger-previous',
+    'controller.pid': 'pid',
+    'home-control.json': 'home-preference',
+    'startup-state.json': 'startup-state'
+  };
+  if (Object.prototype.hasOwnProperty.call(names, name)) return names[name];
+  if (/^(home|input|catalog)-(request|response)\.json$/.test(name))
+    return name.slice(0, -5);
+  return name === 'blocked' ? 'blocked' : 'staging';
 }
-function notice(log, target, warning) {
+function actual(stat, limit) {
+  var value = { category: 'unsafe' };
+  if (stat) {
+    value.uid = stat.uid;
+    value.gid = stat.gid;
+    value.mode = stat.mode & 4095;
+    value.size = stat.size;
+  }
+  if (isFinite(limit)) value.limit = limit;
+  return value;
+}
+function failure(error, target, rule, observed, operation, phase) {
   try {
+    if (!error.contractEvents) {
+      if (typeof error.errno === 'number')
+        observed.errno = Math.abs(error.errno);
+      error.contractEvents = [
+        events.normalize({
+          schema: 1,
+          component: 'storage',
+          operation: operation || 'prepare',
+          phase: phase || 'validate',
+          field: target || 'directory',
+          expected: rule || 'storage-io',
+          actual: observed || { category: 'unsafe' },
+          decision: 'refuse'
+        })
+      ];
+    }
+  } catch (ignore) {}
+  return error;
+}
+function fail(target, rule, observed, operation, phase) {
+  throw failure(
+    Error('unsafe-storage'),
+    target,
+    rule,
+    observed || { category: 'unsafe' },
+    operation,
+    phase
+  );
+}
+function notice(log, target, warning, error) {
+  try {
+    var event = events.normalize(
+      error && error.contractEvents
+        ? error.contractEvents[0]
+        : {
+            schema: 1,
+            component: 'storage',
+            operation: 'prepare',
+            phase: 'validate',
+            field: field(target),
+            expected: 'safe-mode',
+            actual: { category: 'unsafe' },
+            decision: warning ? 'retain' : 'refuse'
+          }
+    );
+    if (event && warning) event.decision = 'retain';
     if (log)
       log({
         event: warning
@@ -36,16 +106,7 @@ function notice(log, target, warning) {
           : 'state-permissions-error',
         target: target,
         reason: 'unsafe-storage',
-        contract: events.normalize({
-          schema: 1,
-          component: 'storage',
-          operation: 'prepare',
-          phase: 'validate',
-          field: target,
-          expected: 'safe-storage',
-          actual: { category: 'unsafe' },
-          decision: warning ? 'retain' : 'refuse'
-        })
+        contract: event
       });
   } catch (ignore) {}
 }
@@ -55,16 +116,29 @@ function session(directory, options, action) {
     groups = process.getgroups(),
     parent,
     previous = process.cwd(),
-    entered = false;
+    entered = false,
+    target = 'directory',
+    phase = 'validate',
+    observed = { category: 'unsafe' };
+  function fail(rule, stat, limit, name) {
+    throw failure(
+      Error('unsafe-storage'),
+      name || target,
+      rule || 'stable-inode',
+      stat ? actual(stat, limit) : observed,
+      options.operation || 'prepare',
+      phase
+    );
+  }
   if (groups.indexOf(process.getgid()) < 0) groups.push(process.getgid());
   if (
     typeof directory !== 'string' ||
     directory.charAt(0) !== '/' ||
     /\/\.\.?($|\/)/.test(directory)
   )
-    fail();
+    fail('absolute-directory');
   if (typeof c.O_NOFOLLOW !== 'number' || typeof c.O_DIRECTORY !== 'number')
-    fail();
+    fail('nofollow-supported');
   directory = directory.replace(/\/+$/, '') || '/';
   function owned(s) {
     return s.uid === uid || (s.uid === 5999 && s.gid === 5000);
@@ -72,7 +146,8 @@ function session(directory, options, action) {
   function ancestors() {
     for (var path = directory; ;) {
       var s = fs.lstatSync(path);
-      if (!s.isDirectory() || s.isSymbolicLink()) fail();
+      if (!s.isDirectory() || s.isSymbolicLink())
+        fail('directory-type', s, undefined, 'directory');
       if (path === '/') break;
       path = path.slice(0, path.lastIndexOf('/')) || '/';
     }
@@ -80,17 +155,15 @@ function session(directory, options, action) {
   function security(s) {
     var mode = s.mode & 4095,
       channel = options.role === 'channel';
-    if (
-      !owned(s) ||
-      (options.role !== 'installer' && groups.indexOf(s.gid) < 0)
-    )
-      fail();
+    if (!owned(s)) fail('trusted-owner', s, undefined, 'directory');
+    if (options.role !== 'installer' && groups.indexOf(s.gid) < 0)
+      fail('shared-group', s, undefined, 'directory');
     if (
       channel
         ? mode !== 1528
         : mode & 3584 || (mode & 2 && !(options.legacy && mode === 511))
     )
-      fail();
+      fail('safe-mode', s, undefined, 'directory');
   }
   var before;
   function check() {
@@ -108,19 +181,25 @@ function session(directory, options, action) {
       opened.mode !== before.mode ||
       (entered && !same(before, fs.statSync('.')))
     )
-      fail();
+      fail('stable-inode', current, undefined, 'directory');
     security(current);
   }
   function leaf(name, limit) {
     check();
+    target = field(name);
+    phase = 'read';
+    observed = { category: 'unavailable' };
     var s;
     try {
       s = fs.lstatSync(name);
+      observed = actual(s, limit);
     } catch (e) {
       if (e.code === 'ENOENT') return null;
       throw e;
     }
-    if (!s.isFile() || s.nlink !== 1 || s.size > limit || s.mode & 3586) fail();
+    if (!s.isFile() || s.nlink !== 1) fail('single-regular-file', s, limit);
+    if (s.size > limit) fail('bounded-file', s, limit);
+    if (s.mode & 3586) fail('safe-mode', s, limit);
     return s;
   }
   function read(name, limit) {
@@ -138,7 +217,7 @@ function session(directory, options, action) {
         offset = 0;
       while (offset < bytes.length) {
         var n = fs.readSync(fd, bytes, offset, bytes.length - offset, offset);
-        if (n <= 0) fail();
+        if (n <= 0) fail('complete-io');
         offset += n;
       }
       if (!unchanged(s, fs.fstatSync(fd)) || !unchanged(s, fs.lstatSync(name)))
@@ -149,16 +228,59 @@ function session(directory, options, action) {
       if (fd !== undefined) fs.closeSync(fd);
     }
   }
+  // Fixed runtime log only. Pin and compare the no-follow descriptor before
+  // append; ordinary lines do not rewrite/fsync the bounded history.
+  function appendLog(bytes, initial) {
+    target = 'logger';
+    phase = 'write';
+    observed = actual(initial, 131072);
+    var fd;
+    try {
+      check();
+      fd = fs.openSync(
+        'controller.log',
+        c.O_WRONLY | c.O_APPEND | c.O_NOFOLLOW | c.O_NONBLOCK
+      );
+      if (
+        !unchanged(initial, fs.fstatSync(fd)) ||
+        !unchanged(initial, fs.lstatSync('controller.log'))
+      )
+        fail('stable-inode');
+      for (var offset = 0; offset < bytes.length;) {
+        var n = fs.writeSync(fd, bytes, offset, bytes.length - offset);
+        if (n <= 0) fail('complete-io');
+        offset += n;
+      }
+      var after = fs.fstatSync(fd);
+      if (
+        !same(initial, after) ||
+        after.uid !== initial.uid ||
+        after.gid !== initial.gid ||
+        after.mode !== initial.mode ||
+        after.nlink !== 1 ||
+        after.size !== initial.size + bytes.length ||
+        !unchanged(after, fs.lstatSync('controller.log'))
+      )
+        fail('stable-inode', after);
+      check();
+    } finally {
+      if (fd !== undefined) fs.closeSync(fd);
+    }
+  }
   function write(name, bytes, mode, limit, preserve, original) {
     var initial = leaf(name, limit);
     if (preserve && initial) return;
-    if (initial && groups.indexOf(initial.gid) < 0) fail();
+    if (initial && groups.indexOf(initial.gid) < 0)
+      fail('shared-group', initial);
+    phase = 'write';
     var path =
         (name === 'ssap-key.json' ? '.cytv-key-' : '.cytv-record-') +
         crypto.randomBytes(12).toString('hex'),
       fd,
-      created = false,
-      phase = 'write';
+      created = false;
+    phase = 'write';
+    target = 'staging';
+    observed = { category: 'unsafe', size: bytes.length };
     try {
       check();
       fd = fs.openSync(
@@ -170,6 +292,7 @@ function session(directory, options, action) {
       // The pinned cwd prevents a path substitution from receiving private bytes.
       check();
       var staged = fs.fstatSync(fd);
+      observed = actual(staged, limit);
       if (
         !staged.isFile() ||
         staged.nlink !== 1 ||
@@ -179,7 +302,7 @@ function session(directory, options, action) {
         fail();
       for (var offset = 0; offset < bytes.length;) {
         var n = fs.writeSync(fd, bytes, offset, bytes.length - offset);
-        if (n <= 0) fail();
+        if (n <= 0) fail('complete-io');
         offset += n;
       }
       phase = 'chmod';
@@ -228,7 +351,14 @@ function session(directory, options, action) {
       try {
         error.storagePhase = phase;
       } catch (ignore) {}
-      throw error;
+      throw failure(
+        error,
+        target,
+        'storage-io',
+        observed,
+        options.operation || 'prepare',
+        phase
+      );
     } finally {
       if (fd !== undefined) fs.closeSync(fd);
       if (created) fs.unlinkSync(path);
@@ -264,7 +394,19 @@ function session(directory, options, action) {
         if (error.code !== 'EPERM' && error.code !== 'EACCES') throw error;
         // Permission denial does not waive the original snapshot or policy.
         check();
-        notice(options.log, 'directory', true);
+        notice(
+          options.log,
+          'directory',
+          true,
+          failure(
+            error,
+            'directory',
+            'safe-mode',
+            actual(before),
+            options.operation,
+            'chmod'
+          )
+        );
       }
       check();
     }
@@ -273,11 +415,21 @@ function session(directory, options, action) {
       groups: groups,
       owned: owned,
       read: read,
+      appendLog: appendLog,
       leaf: leaf,
       write: write,
       check: check,
       stat: before
     });
+  } catch (error) {
+    throw failure(
+      error,
+      target,
+      'storage-io',
+      observed,
+      options.operation || 'prepare',
+      phase
+    );
   } finally {
     if (entered) process.chdir(previous);
     if (parent !== undefined) fs.closeSync(parent);
@@ -285,64 +437,109 @@ function session(directory, options, action) {
 }
 function configuration(directory, options, repair) {
   options = options || {};
-  return session(directory, { role: 'installer' }, function (s) {
-    // Validate both configuration leaves before the first key mutation.
-    var key = s.read('ssap-key.json', 65536),
-      apps = s.read('apps.json', 16 * 1024 * 1024),
-      replacing = false;
-    if (apps && !s.owned(apps.stat)) fail();
-    if (key) {
-      var mode = key.stat.mode & 4095;
-      if (!s.owned(key.stat)) {
-        if (
-          !repair ||
-          !/^[a-f0-9]{64}$/.test(options.expectedHash || '') ||
-          key.stat.gid !== s.stat.gid ||
-          s.groups.indexOf(key.stat.gid) < 0 ||
-          [416, 509].indexOf(mode) < 0 ||
-          crypto.createHash('sha256').update(key.bytes).digest('hex') !==
-            options.expectedHash
-        )
-          fail();
-        replacing = true;
-      } else if (mode & 7) {
-        if (!repair || key.stat.uid !== s.uid || mode !== 509) fail();
-      }
-      if (replacing)
-        s.write('ssap-key.json', key.bytes, 416, 65536, false, key);
-      else if (mode & 7) {
-        var fd;
-        try {
-          fd = fs.openSync(
-            'ssap-key.json',
-            c.O_RDONLY | c.O_NOFOLLOW | c.O_NONBLOCK
-          );
+  return session(
+    directory,
+    { role: 'installer', operation: repair ? 'prepare' : 'inspect' },
+    function (s) {
+      // Validate both configuration leaves before the first key mutation.
+      var key = s.read('ssap-key.json', 65536),
+        apps = s.read('apps.json', 16 * 1024 * 1024),
+        replacing = false;
+      if (apps && !s.owned(apps.stat))
+        fail(
+          'apps',
+          'trusted-owner',
+          actual(apps.stat),
+          repair ? 'prepare' : 'inspect',
+          'validate'
+        );
+      if (key) {
+        var mode = key.stat.mode & 4095;
+        if (!s.owned(key.stat)) {
           if (
-            !unchanged(key.stat, fs.fstatSync(fd)) ||
-            !unchanged(key.stat, fs.lstatSync('ssap-key.json'))
+            !repair ||
+            !/^[a-f0-9]{64}$/.test(options.expectedHash || '') ||
+            key.stat.gid !== s.stat.gid ||
+            s.groups.indexOf(key.stat.gid) < 0 ||
+            [416, 509].indexOf(mode) < 0 ||
+            crypto.createHash('sha256').update(key.bytes).digest('hex') !==
+              options.expectedHash
           )
-            fail();
-          s.check();
-          fs.fchmodSync(fd, 416);
-          fs.fsyncSync(fd);
-          var after = fs.fstatSync(fd);
-          if (
-            !same(after, key.stat) ||
-            after.uid !== key.stat.uid ||
-            after.gid !== key.stat.gid ||
-            after.nlink !== 1 ||
-            (after.mode & 4095) !== 416 ||
-            !same(after, fs.lstatSync('ssap-key.json'))
-          )
-            fail();
-          s.check();
-        } finally {
-          if (fd !== undefined) fs.closeSync(fd);
+            fail(
+              'key',
+              'authenticated-key',
+              actual(key.stat),
+              repair ? 'prepare' : 'inspect',
+              'validate'
+            );
+          replacing = true;
+        } else if (mode & 7) {
+          if (!repair || key.stat.uid !== s.uid || mode !== 509)
+            fail(
+              'key',
+              'private-key',
+              actual(key.stat),
+              repair ? 'prepare' : 'inspect',
+              'validate'
+            );
+        }
+        if (replacing)
+          s.write('ssap-key.json', key.bytes, 416, 65536, false, key);
+        else if (mode & 7) {
+          var fd;
+          try {
+            fd = fs.openSync(
+              'ssap-key.json',
+              c.O_RDONLY | c.O_NOFOLLOW | c.O_NONBLOCK
+            );
+            if (
+              !unchanged(key.stat, fs.fstatSync(fd)) ||
+              !unchanged(key.stat, fs.lstatSync('ssap-key.json'))
+            )
+              fail(
+                'key',
+                'stable-inode',
+                actual(key.stat),
+                repair ? 'prepare' : 'inspect',
+                'chmod'
+              );
+            s.check();
+            fs.fchmodSync(fd, 416);
+            fs.fsyncSync(fd);
+            var after = fs.fstatSync(fd);
+            if (
+              !same(after, key.stat) ||
+              after.uid !== key.stat.uid ||
+              after.gid !== key.stat.gid ||
+              after.nlink !== 1 ||
+              (after.mode & 4095) !== 416 ||
+              !same(after, fs.lstatSync('ssap-key.json'))
+            )
+              fail(
+                'key',
+                'stable-inode',
+                actual(key.stat),
+                repair ? 'prepare' : 'inspect',
+                'chmod'
+              );
+            s.check();
+          } catch (error) {
+            throw failure(
+              error,
+              'key',
+              'storage-io',
+              actual(key.stat),
+              repair ? 'prepare' : 'inspect',
+              'chmod'
+            );
+          } finally {
+            if (fd !== undefined) fs.closeSync(fd);
+          }
         }
       }
+      return true;
     }
-    return true;
-  });
+  );
 }
 function prepare(directory, log, initializeControl) {
   var settings = { legacy: true, normalize: true, log: log };
@@ -356,7 +553,13 @@ function prepare(directory, log, initializeControl) {
         var key = s.read('ssap-key.json', 65536);
         if (key) {
           if (key.stat.gid !== s.stat.gid || s.groups.indexOf(key.stat.gid) < 0)
-            fail();
+            fail(
+              'key',
+              'shared-group',
+              actual(key.stat),
+              'prepare',
+              'validate'
+            );
           if ((key.stat.mode & 4095) !== 416) {
             if (key.stat.uid === s.uid) {
               var fd;
@@ -369,7 +572,13 @@ function prepare(directory, log, initializeControl) {
                   !unchanged(key.stat, fs.fstatSync(fd)) ||
                   !unchanged(key.stat, fs.lstatSync('ssap-key.json'))
                 )
-                  fail();
+                  fail(
+                    'key',
+                    'stable-inode',
+                    actual(key.stat),
+                    'prepare',
+                    'chmod'
+                  );
                 s.check();
                 fs.fchmodSync(fd, 416);
                 fs.fsyncSync(fd);
@@ -377,7 +586,13 @@ function prepare(directory, log, initializeControl) {
                   !same(key.stat, fs.lstatSync('ssap-key.json')) ||
                   (fs.fstatSync(fd).mode & 4095) !== 416
                 )
-                  fail();
+                  fail(
+                    'key',
+                    'valid-key',
+                    actual(key.stat),
+                    'prepare',
+                    'validate'
+                  );
               } catch (error) {
                 // Preserve the existing runtime-only EPERM privacy repair.
                 // Installer reclamation above still authenticates the exact hash.
@@ -385,7 +600,13 @@ function prepare(directory, log, initializeControl) {
                   throw error;
                 var adopted = JSON.parse(key.bytes.toString('utf8'));
                 if (!adopted || typeof adopted.key !== 'string' || !adopted.key)
-                  fail();
+                  fail(
+                    'key',
+                    'valid-key',
+                    actual(key.stat),
+                    'prepare',
+                    'validate'
+                  );
                 s.write('ssap-key.json', key.bytes, 416, 65536, false, key);
               } finally {
                 if (fd !== undefined) fs.closeSync(fd);
@@ -395,22 +616,46 @@ function prepare(directory, log, initializeControl) {
               try {
                 parsed = JSON.parse(key.bytes.toString('utf8'));
               } catch (ignore) {
-                fail();
+                fail(
+                  'key',
+                  'valid-key',
+                  actual(key.stat),
+                  'prepare',
+                  'validate'
+                );
               }
               if (!parsed || typeof parsed.key !== 'string' || !parsed.key)
-                fail();
+                fail(
+                  'key',
+                  'valid-key',
+                  actual(key.stat),
+                  'prepare',
+                  'validate'
+                );
               s.write('ssap-key.json', key.bytes, 416, 65536, false, key);
             }
           }
         }
       } catch (ignore) {
         ok = false;
-        notice(log, 'ssap-key.json', false);
+        notice(
+          log,
+          'ssap-key.json',
+          false,
+          failure(
+            ignore,
+            'key',
+            'storage-io',
+            key ? actual(key.stat) : { category: 'unsafe' },
+            'prepare',
+            'read'
+          )
+        );
       }
       return initializeControl ? true : ok;
     });
   } catch (ignore) {
-    notice(log, 'directory', false);
+    notice(log, 'directory', false, ignore);
     return false;
   }
 }
@@ -446,14 +691,18 @@ prepare.atomicRecord = function (directory, kind, bytes, options) {
       fail();
     role = options.role;
   }
-  var settings = { role: role, legacy: role !== 'channel' };
+  var settings = {
+    role: role,
+    legacy: role !== 'channel',
+    operation: 'record'
+  };
   return session(directory, settings, function (s) {
     s.write(record[0], buffer(bytes), record[1], Infinity, false);
     return true;
   });
 };
 prepare.requestStop = function (directory, options) {
-  return session(directory, { role: 'app' }, function (s) {
+  return session(directory, { role: 'app', operation: 'stop' }, function (s) {
     s.leaf('blocked', Infinity);
     s.leaf('control.json', Infinity);
     s.write('blocked', buffer('stopped'), 436, Infinity, true);
@@ -462,8 +711,15 @@ prepare.requestStop = function (directory, options) {
   });
 };
 prepare.readConfiguration = function (directory, kind) {
-  if (kind !== 'key' && kind !== 'apps') fail();
-  return session(directory, { legacy: true }, function (s) {
+  if (kind !== 'key' && kind !== 'apps')
+    fail(
+      'directory',
+      'fixed-record',
+      { category: 'invalid' },
+      'read',
+      'validate'
+    );
+  return session(directory, { legacy: true, operation: 'read' }, function (s) {
     var value = s.read(
       kind === 'key' ? 'ssap-key.json' : 'apps.json',
       kind === 'key' ? 65536 : 16 * 1024 * 1024
@@ -478,8 +734,103 @@ prepare.readConfiguration = function (directory, kind) {
       s.groups.indexOf(value.stat.gid) < 0 ||
       (kind === 'key' && (value.stat.mode & 4095) !== 416)
     )
-      fail();
+      fail(
+        kind,
+        kind === 'key' ? 'private-key' : 'shared-group',
+        actual(value.stat),
+        'read',
+        'validate'
+      );
     return value.bytes.toString('utf8');
   });
+};
+// The sole log writer uses the same checked descriptors/staging as runtime
+// records. Both fixed destinations are validated before any rotation mutation.
+prepare.appendLog = function (directory, line) {
+  if (typeof line !== 'string' || Buffer.byteLength(line, 'utf8') > 131071)
+    fail('logger', 'bounded-file', { limit: 131071 }, 'logger', 'write');
+  return session(
+    directory,
+    { legacy: true, operation: 'logger' },
+    function (s) {
+      var current = s.leaf('controller.log', 131072),
+        previous = s.leaf('controller.log.previous', 131072),
+        bytes = buffer(line + '\n');
+      if (current && current.size + bytes.length > 131072) {
+        s.write(
+          'controller.log.previous',
+          s.read('controller.log', 131072).bytes,
+          420,
+          131072,
+          false
+        );
+        s.write('controller.log', bytes, 420, 131072, false);
+      } else if (current) s.appendLog(bytes, current);
+      else s.write('controller.log', bytes, 420, 131072, false);
+      return true;
+    }
+  );
+};
+prepare.readLogEvents = function (directory) {
+  var result = { schema: 1, telemetry: 'legacy', events: [] };
+  try {
+    return session(
+      directory,
+      { legacy: true, operation: 'collect' },
+      function (s) {
+        var recorder = events.create(),
+          files = [
+            s.read('controller.log.previous', 131072),
+            s.read('controller.log', 131072)
+          ];
+        files.forEach(function (file) {
+          if (!file) return;
+          file.bytes
+            .toString('utf8')
+            .split('\n')
+            .forEach(function (line) {
+              if (line.length > 16480) return;
+              try {
+                var item = JSON.parse(line),
+                  values = [];
+                if (item.event === 'contract-event') values = [item.contract];
+                if (
+                  item.event === 'contract-snapshot' &&
+                  item.contract &&
+                  item.contract.schema === 1
+                )
+                  values = item.contract.events;
+                else if (item.event !== 'contract-event') return;
+                result.telemetry = 'read';
+                events.exportEvents(values).forEach(function (event) {
+                  var old = recorder.snapshot().events,
+                    count = 0;
+                  for (var i = 0; i < old.length; i++) {
+                    var a = events.normalize(old[i]),
+                      b = events.normalize(event);
+                    count = a.count;
+                    delete a.count;
+                    delete b.count;
+                    delete a.first;
+                    delete b.first;
+                    delete a.last;
+                    delete b.last;
+                    if (JSON.stringify(a) === JSON.stringify(b)) {
+                      event.count = Math.max(0, event.count - count);
+                      break;
+                    }
+                  }
+                  if (event.count > 0) recorder.record(event);
+                });
+              } catch (ignore) {}
+            });
+        });
+        result.events = events.exportEvents(recorder.snapshot());
+        return result;
+      }
+    );
+  } catch (ignore) {
+    return { schema: 1, telemetry: 'unavailable', events: [] };
+  }
 };
 module.exports = prepare;

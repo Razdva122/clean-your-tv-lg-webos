@@ -371,6 +371,23 @@ class SSH:
                             detail=root_driver_details(reply.get('root_install_failure'),keep_attempt=True)
                             if detail:error._root_driver_failure=detail
                     except (ValueError,TypeError):pass
+                # Root's historic <=4096 parser above remains independent.
+                from .contract_events import export_events, record, envelope_failure
+                size = sum(map(len, output))
+                if size <= 16480:
+                    try:
+                        reply = json.loads(b''.join(output))
+                        if type(reply) is dict and reply.get('error') == 'contract-error':
+                            clean = export_events(reply.get('events'), strict=True)
+                            if (set(reply) == {'schema', 'error', 'events'} and type(reply['schema']) is int
+                                    and reply['schema'] == 1 and type(reply['events']) is list
+                                    and len(clean) == len(reply['events'])):
+                                error.contract_events = clean
+                                for event in clean: record(event)
+                            else: record(envelope_failure('invalid'))
+                    except (ValueError, TypeError):
+                        pass
+                else: record(envelope_failure('oversized'))
                 raise
             return b''.join(output).decode('utf-8')
         finally:
