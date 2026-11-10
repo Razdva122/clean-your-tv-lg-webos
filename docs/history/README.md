@@ -1,5 +1,7 @@
 # Release history and device evidence
 
+- [Stock Home admission, 2026-11-10](2026-11-10-issue454-stock-home-admission.md): immutable UID 1001 stock executable and bounded larger-file admission; focused source checks, reporter-device acceptance pending.
+
 - [2026-11-10 — No-root removal boot-check diagnostics and unresolved #472](2026-11-10-issue472-removal-boot-diagnostics.md).
 
 - [2026-11-10 — v1.16.0 candidate preparation and remaining acceptance](2026-11-10-release-1.16.0-candidate.md).
