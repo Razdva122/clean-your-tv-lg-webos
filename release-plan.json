@@ -3,6 +3,11 @@
   "version": null,
   "changes": [
     {
+      "pr": 477,
+      "issues": [],
+      "summary": "Accept iPhone HEIC/HEIF wallpaper uploads using native decoding or a bundled local worker; preserve crop, PIN and JPEG transfer"
+    },
+    {
       "pr": 478,
       "issues": [
         418
