@@ -612,3 +612,30 @@ Creating or saving a report uses local evidence only. It never starts Helper,
 repairs storage, adds a permission/endpoint or repeats a TV test. Desktop and
 Android export the same bounded standard report. Diagnostics remain advisory;
 existing storage, lifecycle and recovery proofs still authorize every effect.
+
+
+## Stock-compositor cleanup probe failure (source preparation)
+
+The isolated Python stock-compositor observation previously retained only its
+outer `CalledProcessError`, exit status and `home-readback` cleanup step. Upcoming
+Root support preserves an optional `cleanup_probe` inside the existing product
+`failure` / `last_failure`: inner exception type, bounded errno/child exit status,
+and up to eight allowlisted project basename/line frames. Both the worker and
+host revalidate the fields; commands, full paths, messages, bus replies, routes,
+stdout/stderr and local variables are excluded. Invalid, oversized or unavailable
+child diagnostics leave the existing generic failure. Import/launch failures
+before the reporting wrapper may remain generic.
+
+Only the same child invocation's bounded failed reply supplies this context. It
+still exits unsuccessfully and propagates the original subprocess exception; it
+never supplies stock-routing proof or changes cleanup admission, ordering,
+timeouts, inverse backups or writer fences. Successful observations preserve the
+existing result shape. The operation-matched coordinator result reaches the
+standard Save diagnostic report, current observation failure and retained
+first-failure projection through `status.product`. Old discarded child errors
+cannot be reconstructed. A passing Doctor runtime check does not verify cleanup
+or physical Home recovery.
+
+Rebuild Root coordinator/Updater support and embedding desktop/console/Android
+payloads through the release coordinator. No new state file, permission, endpoint,
+TV call, version selection or physical-device acceptance is introduced here.

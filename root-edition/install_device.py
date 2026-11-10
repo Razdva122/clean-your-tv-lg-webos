@@ -1117,9 +1117,21 @@ class LocalDevice:
                 check=True,stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=90)
             return json.loads(result.stdout)['routes']
         program=('import sys,json;sys.path.insert(0,'+repr(str(self.payload/'root-updater'))+');'
-                 'from clean_removal import compositor_stock;'
-                 'print(json.dumps({"returnValue":True,"result":compositor_stock('+repr(str(self.payload/'root'))+')}))')
-        return deploy.command([sys.executable,'-I','-B','-c',program])['result']
+                 'from clean_removal import compositor_stock_report;'
+                 'reply=compositor_stock_report('+repr(str(self.payload/'root'))+');'
+                 'print(json.dumps(reply),flush=True);sys.exit(0 if reply["returnValue"] is True else 1)')
+        try:
+            return deploy.command([sys.executable,'-I','-B','-c',program])['result']
+        except subprocess.CalledProcessError as error:
+            # This exact child invocation supplies evidence only, never a route.
+            try:
+                if isinstance(error.stdout,(str,bytes)) and len(error.stdout)<=8192:
+                    reply=json.loads(error.stdout)
+                    if isinstance(reply,dict) and reply.get('returnValue') is False:
+                        from install_driver import cleanup_probe_details
+                        error.cleanup_probe=cleanup_probe_details(reply.get('cleanup_probe'))
+            except (ValueError,TypeError,RecursionError):pass
+            raise
 
     def preserve_routing_inverse(self, record):
         # Exact finite data-only inverse records, captured before restore can

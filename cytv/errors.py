@@ -193,7 +193,7 @@ def root_driver_details(value, *, keep_attempt=False):
     """Fixed driver callsites only; no remote prose, paths or attempt in reports."""
     if not isinstance(value,dict) or type(value.get('schema',1)) is not int or value.get('schema',1)!=1:return {}
     names=('ValueError','RuntimeError','OSError','PermissionError','FileNotFoundError',
-           'FileExistsError','CalledProcessError','TimeoutExpired','TypeError','KeyError','unknown')
+           'FileExistsError','CalledProcessError','TimeoutExpired','TimeoutError','TypeError','KeyError','unknown')
     if value.get('exception_type') not in names:return {}
     result={'exception_type':value['exception_type']}
     files=('deploy.py','installation.py','c1_gate.py','c1_keyfilter.py','package_data.py',
