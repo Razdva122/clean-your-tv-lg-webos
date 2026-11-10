@@ -47,6 +47,13 @@
       "pr": 484,
       "issues": [],
       "summary": "Fix browser expectations for adaptive Settings controls"
+    },
+    {
+      "pr": 485,
+      "issues": [
+        472
+      ],
+      "summary": "Retain allowlisted No-root boot-check failure evidence; original #472 cause and device recovery remain unconfirmed"
     }
   ],
   "excluded": [],

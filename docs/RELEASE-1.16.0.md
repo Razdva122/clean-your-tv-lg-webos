@@ -24,6 +24,11 @@ for build evidence and remaining acceptance. Candidate preparation does not auth
   partial #101). Retain bounded attempt-matched Root driver failure diagnostics
   without raw exception prose or replaying work (#480, partial #397).
 
+- Preserve safe No-root boot-check failure categories in diagnostic reports and
+  history, including fixed filesystem/guard details. Reject failure envelopes
+  before accepting restart proof. The original C5 removal cause is still unknown
+  (#485, partial #472).
+
 ## Versions and packaging
 
 | Component | Published v1.15.0 | Candidate | Reason |
@@ -56,4 +61,4 @@ Home routing, audible sound, emergency controls, standby, cold boot, OTA,
 rollback, physical iPhone decoding and live phone-to-TV remain untested on new
 artifacts. Final original-signer Android upgrade and retained-state checks remain
 a publication gate. Browser tests do not establish device compatibility.
-Original reports #418, #101 and #397 remain open and unresolved.
+Original reports #418, #101, #397 and #472 remain open and unresolved.
