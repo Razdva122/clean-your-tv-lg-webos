@@ -72,6 +72,19 @@ backend.probe=probe
         self.assertEqual(self.run_inspection(root,state,identifier,fail=False)['admission'],'passed')
 
     @unittest.skipUnless(os.name=='posix','TV fd/mutex inspection requires POSIX')
+    def test_retained_provisioning_failure_is_projected_without_prose_or_attempt(self):
+        root,state,identifier,request=self.fixture()
+        product=root/'absent-root';product.mkdir(mode=0o700)
+        report=product/'recovery-failure.json'
+        report.write_text(json.dumps({'schema':1,'phase':'register','reason':'negative-reply',
+            'luna_error_code':-1,'startup_state':'exited','exception_name':'Error',
+            'exception_code':'MODULE_NOT_FOUND','attempt':identifier,'message':'PRIVATE'}))
+        report.chmod(0o600)
+        value=self.run_inspection(root,state,identifier)
+        self.assertEqual(value.get('retained_recovery'),{'phase':'register','reason':'negative-reply',
+            'luna_error_code':-1,'startup_state':'exited','exception_name':'Error','exception_code':'MODULE_NOT_FOUND'})
+
+    @unittest.skipUnless(os.name=='posix','TV fd/mutex inspection requires POSIX')
     def test_foreign_lease_activated_or_changed_request_never_yields_probe_proof(self):
         root,state,identifier,request=self.fixture()
         for key,value in (('lease','c'*32),('home_changed',True),('state','pending')):
@@ -107,7 +120,8 @@ backend.probe=probe
             before={str(p):p.read_bytes() for p in store.device_dir(profile).rglob('*') if p.is_file()}
             remote=Mock();remote.run.return_value=json.dumps({'schema':1,'status':'observed',
                 'admission':'failed','deployment_stage':'absent','failure':{'exception_type':'TimeoutError',
-                'frames':[{'file':'c1_keyfilter.py','line':175}],'message':'PRIVATE'}})
+                'frames':[{'file':'c1_keyfilter.py','line':175}],'message':'PRIVATE'},
+                'retained_recovery':{'phase':'register','reason':'negative-reply','message':'PRIVATE','attempt':'a'*32}})
             pin=module.source_pin(PROJECT)
             patcher=patch.object(module,'sources',side_effect=AssertionError('sources reread after connection'))
             self.addCleanup(patcher.stop)
@@ -123,6 +137,7 @@ backend.probe=probe
             self.assertIn('-I -B -',remote.run.call_args.args[0])
             self.assertNotIn('PRIVATE',json.dumps(result))
             self.assertEqual(result['failure']['exception_type'],'TimeoutError')
+            self.assertEqual(result['retained_recovery'],{'phase':'register','reason':'negative-reply'})
             self.assertEqual(before,{str(p):p.read_bytes() for p in store.device_dir(profile).rglob('*') if p.is_file()})
             remote.close.assert_called_once()
             patcher.stop()

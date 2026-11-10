@@ -46,13 +46,18 @@ fallback or TV runtime repair. Host cache acquisition/normalization may occur.
 
 The probe opens the existing ownership mutex without creating it, checks the
 original `root-deploy` request/lease, and rechecks their contents and mutex/directory
-identities plus the deployment journal after observation. Missing, busy, foreign,
+identities plus the deployment journal and retained provisioning failure after observation. Missing, busy, foreign,
 unsafe, changed or already activated state refuses the observation. The host
 profile, trust and pending bytes must also remain unchanged.
 
 The fixed result describes **current admission**, not the historic child error:
-a pass leaves a later deploy failure unexplained; a failure identifies a current
-probe constraint/callsite. Neither result authorizes continuation, cancellation or
+a probe pass alone leaves a later deploy failure unexplained; a probe failure
+identifies a current constraint/callsite. The separate optional `retained_recovery`
+projection reads the already saved `recovery-failure.json` through checked data
+access and the existing canonical sanitizer. It can identify a provisioning phase
+or fixed service/startup failure without rerunning it. This is retained data,
+**not an attempt-bound historic cause**: the old native path did not bind that
+record to its invocation, and an absent, stale or ambiguous record is not a pass. Neither result authorizes continuation, cancellation or
 another installation. Newer source (including #454's stock-Home admission fix)
 can differ from the failed installer's source; preserve the exact source pin and
 that distinction when interpreting results.
@@ -63,12 +68,15 @@ of this reviewed PR head, verify the digest below and use the original operation
 from the owner's saved local pending record. Do not replace profiles, replay old
 workers, change the clock/firmware or remove evidence to make inspection pass.
 
+Use the prepared project virtualenv (`.venv-cytv/bin/python` on macOS/Linux or
+`.venv-cytv/Scripts/python.exe` on Windows) as `python` below.
+
 ```text
 python scripts/root-native-inspection.py digest
 python scripts/root-native-inspection.py inspect --operation ORIGINAL_OPERATION --source-sha256 REVIEWED_SOURCE_SHA256 --interactive-auth
 ```
 
-Reviewed source digest: `41e113c50e45fccb542e3b7a7d82041731225ca534d658e3d02239bf20a63738`.
+Reviewed source digest: `fdaa88267e0ef37a6af747cd8e0413d2fd8eb88cca819f870650b063b6802361`.
 The source tool has no implicit action; `digest` does not connect to a TV. Actual
 Windows execution, private-runtime acceptance on this C2 and probe outcome remain
 untested. After any owner operation follow the installation-result consent rules
@@ -92,6 +100,15 @@ the focused checks below. Existing unrelated release results are reused, not rer
   11 tests passed. Current snapshot is captured before connection and no module is
   reread after runtime verification. Host pin/pending preservation, wrong selector,
   missing/busy mutex, changed request, privacy and no provisioning/upload are covered.
+- After inspecting `provision.finalize`, one additional missing evidence source was
+  identified: its already retained failure record. A new regression failed before
+  adding that projection, then seven inspection tests passed, including producer
+  and host privacy filtering. That is the changed input requiring the final
+  affected inspection check; unchanged Root production checks remain reusable.
+- Selected CI for `a0020bc0` passed all required Linux/macOS runtime shards, browser,
+  optional Python and policy checks ([run 42889380815](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42889380815)).
+  The later retained-data projection changes only the internal inspection; its
+  final PR checks remain a separate gate, without a candidate build or TV run.
 - Final isolated child/durable-request regression: three tests passed. The stored
   nested cause survives and a second call reads the same request without replay.
 - Root dependency closure: 173 tests passed (`test_native_failure`, `test_clean_removal`,

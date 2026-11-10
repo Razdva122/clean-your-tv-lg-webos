@@ -5,6 +5,7 @@ retained TV code. A current admission observation is not the old failure cause
 or permission to retry, activate, remove or clear a request.
 """
 import hashlib
+import inspect
 import json
 from pathlib import Path
 import re
@@ -18,6 +19,7 @@ import fcntl,json,os,stat,sys,traceback,types
 from pathlib import Path
 sources=SOURCES
 operation=OPERATION
+exec(PROJECTION)
 for package in ('updater','runtime'):
     module=types.ModuleType(package);module.__path__=[];sys.modules[package]=module
 for name,source in sources:
@@ -51,6 +53,7 @@ def observe():
         root=Store.__new__(Store);root.root=str(ROOT);root.uid=0
         from installation import _optional_record
         journal=_optional_record(root,'deploy')
+        retained=_optional_record(root,'recovery-failure')
         stages=('prepared','install-submitting','install-accepted','install-observed','payload-verified',
             'provision-apply-starting','provision-apply-complete','provision-refresh-starting',
             'provision-refresh-complete','provision-finalize-starting','provision-finalize-complete',
@@ -58,6 +61,8 @@ def observe():
         stage='absent' if journal is None else journal.get('stage') if isinstance(journal,dict) else 'unknown'
         if stage not in stages+('absent',):stage='unknown'
         result={'schema':1,'status':'observed','deployment_stage':stage}
+        recovery=root_recovery_details(retained)
+        if recovery:result['retained_recovery']=recovery
         try:
             c1_keyfilter.probe()
             result['admission']='passed'
@@ -75,7 +80,8 @@ def observe():
             if (identity(os.fstat(current))!=directory_identity
                     or identity(os.stat('ownership.lock',dir_fd=current,follow_symlinks=False))!=lock_identity
                     or store.read('request-'+operation)!=request or owner.status()!=lease
-                    or _optional_record(root,'deploy')!=journal):
+                    or _optional_record(root,'deploy')!=journal
+                    or _optional_record(root,'recovery-failure')!=retained):
                 raise ValueError('original_operation_changed')
         finally:os.close(current)
         return result
@@ -100,7 +106,9 @@ def sources(project):
 
 def source_material(project):
     project=Path(project)
-    return {'modules':sources(project),'program':PROGRAM,'host':Path(__file__).read_text(),
+    from .errors import root_recovery_details
+    return {'modules':sources(project),'program':PROGRAM,'projection':inspect.getsource(root_recovery_details),
+            'host':Path(__file__).read_text(),
             'script':(project/'scripts/root-native-inspection.py').read_text()}
 
 
@@ -115,7 +123,9 @@ def source_pin(project):
 def render(material, operation):
     if not isinstance(operation,str) or not re.fullmatch('[a-f0-9]{32}',operation):
         raise ValueError('original_operation_required')
-    return material['program'].replace('SOURCES',repr(material['modules']),1).replace('OPERATION',repr(operation),1)
+    return (material['program'].replace('operation=OPERATION','operation='+repr(operation),1)
+        .replace('exec(PROJECTION)',material['projection'],1)
+        .replace('sources=SOURCES','sources='+repr(material['modules']),1))
 
 
 def program(project, operation):
@@ -136,7 +146,7 @@ def collect(remote, store, code):
     if not isinstance(raw,(str,bytes)) or len(raw)>4096:raise ValueError('invalid_native_observation')
     value=json.loads(raw)
     if value=={'schema':1,'status':'refused'}:return value
-    from .errors import root_driver_details
+    from .errors import root_driver_details, root_recovery_details
     if (not isinstance(value,dict) or value.get('schema')!=1 or value.get('status')!='observed'
             or value.get('admission') not in ('passed','failed')):raise ValueError('invalid_native_observation')
     # Output is diagnostic only, and is revalidated before returning it to the host.
@@ -149,6 +159,8 @@ def collect(remote, store, code):
         detail=root_driver_details(value.get('failure'))
         if not detail:raise ValueError('invalid_native_observation')
         result['failure']=detail
+    recovery=root_recovery_details(value.get('retained_recovery'))
+    if recovery:result['retained_recovery']=recovery
     return result
 
 
