@@ -1,5 +1,7 @@
 # Release history and device evidence
 
+- [2026-11-10 — v1.16.0 candidate preparation and remaining acceptance](2026-11-10-release-1.16.0-candidate.md).
+
 - [Settings UX follow-up, 2026-11-10](2026-11-10-settings-ux.md): spatial remote navigation, focus recovery, unavailable/loading states, wallpaper confirmation and localized usage instructions; browser evidence only.
 
 - [Retained native Home removal readback, 2026-11-10](2026-11-10-issue418-native-home-readback.md): digest-bound native restoration, preserved inverse and final stock proof; source checks, physical recovery unverified.

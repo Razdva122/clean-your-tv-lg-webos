@@ -48,9 +48,9 @@ uninstall the applications. First press Home three times within two seconds to s
 
 ## Uninstall
 
-The next installer update adds removal support for older LG stock screens: if
-there is no separate LG Home app, No-root removal may switch to Live TV. This is
-not yet in the published installer. Keep the TV on and follow the normal restart
+Published installers support removal on older LG stock screens: if
+there is no separate LG Home app, No-root removal may switch to Live TV.
+Keep the TV on and follow the normal restart
 and **Try again** prompts; retain the saved connection and recovery records.
 
 In published v1.11.0 and later, select **Uninstall Clean Your TV** on desktop
@@ -89,7 +89,9 @@ its own input shortcut and continues safe package cleanup. A remaining unverifie
 shortcut keeps removal pending; retry after the service is available. No success
 is shown merely because the packages disappeared.
 
-### Root reinstallation through the installer (unreleased, #355)
+<a id="root-reinstallation-through-the-installer-unreleased-355"></a>
+
+### Root reinstallation through the installer
 
 Choose **Set up my TV** with the saved Root connection and confirm **Reinstall
 Root**. This also works after a failed profile-based Home activation. The installer
