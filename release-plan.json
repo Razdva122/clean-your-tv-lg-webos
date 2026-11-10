@@ -37,6 +37,11 @@
       "pr": 482,
       "issues": [],
       "summary": "Offer optional post-install theme preview cards, weather and mode-specific renewal/firmware switches; preserve successful installation on skip or cancellation"
+    },
+    {
+      "pr": 483,
+      "issues": [],
+      "summary": "Fix Settings remote navigation and recovery in both editions"
     }
   ],
   "excluded": [],

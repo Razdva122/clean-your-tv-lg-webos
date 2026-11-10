@@ -56,6 +56,16 @@ Checks:
 - `PYTHON=.venv-cytv/bin/python node tests/themes/selection-ui.cjs`
 - `npm run lint:compat`, `npm run format:check`
 - `.venv-cytv/bin/python scripts/tv_web_build.py --input launcher --output build/settings-ux-compiled`
+- All `tests/updates/*.cjs` and `tests/system_updates/*.cjs` checks.
+
+The initial GitHub run exposed an older update-badge DOM double without
+`removeAttribute` and assertions requiring a hidden Home switch. The harness now
+models attribute removal and asserts that unavailable status exposes no boolean
+choice. The final [Tests run](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42772444277)
+passed all Linux/macOS runtime shards, browser and HEIC browser checks on
+`6b13cd80d483faebc4c12d52e483774b7399b09f`. Integration policy passed before
+[PR #483](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/483) merged into
+`release/next` as `f421b8ee39d3a22a2a932088d2643b970239fdf0`.
 
 All 13 practical localized guides were updated with current navigation, retry
 and wallpaper-deletion instructions. Existing inbound anchors were retained.
