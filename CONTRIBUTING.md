@@ -130,11 +130,12 @@ release story to every user guide. Update the current instruction in place;
 link the original release evidence instead. Clearly separate unpublished paths.
 Preserve inbound links/anchors when reorganizing and retain recovery details.
 
-For another user's installation, an agent must show a redacted draft and destination
-and obtain explicit user consent before publication. Authorized maintainer QA on
-maintainer/project-owned test devices may publish redacted technical acceptance
-records without per-report confirmation. Privacy and scope limits apply to both;
-see [AGENTS.md](AGENTS.md#installation-results-and-user-consent).
+Compatibility documentation may summarize the technical facts a device owner
+already reported publicly, with personal identifiers omitted. Results obtained
+through private assistance or direct access to another user's TV require the
+owner's approval of the redacted draft and its destination. Authorized maintainer
+QA can publish redacted technical acceptance for maintainer/project-owned TVs.
+See [AGENTS.md](AGENTS.md#installation-results-and-user-consent).
 
 ## Reuse release evidence
 
