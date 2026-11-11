@@ -99,6 +99,20 @@
         534
       ],
       "summary": "Verify legacy No-root foreground through saved TV pairing"
+    },
+    {
+      "pr": 543,
+      "issues": [
+        418
+      ],
+      "summary": "Verify stock LG BSP overlays in the Root cleanup finalizer"
+    },
+    {
+      "pr": 546,
+      "issues": [
+        542
+      ],
+      "summary": "Recover standalone Root Updater after rollback readiness timeout"
     }
   ],
   "excluded": [],

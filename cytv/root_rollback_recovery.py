@@ -101,14 +101,15 @@ def recover(manager, device, store, ownership, check, app, launch,
                 route = device.routing_status()
                 if route.get('active') is not False or route.get('safe') is not True:
                     raise ValueError('Verified LG Home routing required')
-                if not device.verify_installed(tx['prior']):
-                    raise ValueError('Restored Root package identity mismatch')
                 name = 'readiness-recovery-' + tx['id'] + '-' + digest(encode(tx))
                 saved = archives.read(name)
                 if saved is not None and saved != tx:
                     raise ValueError('Recovery archive changed')
                 if saved is None:
                     archives.write(name, tx)
+                # The installed-package verifier may repair service registration.
+                if not device.verify_installed(tx['prior']):
+                    raise ValueError('Restored Root package identity mismatch')
                 now = manager._now()
                 if now < deadline:
                     raise ValueError('Clock changed before readiness recovery')
@@ -117,13 +118,17 @@ def recover(manager, device, store, ownership, check, app, launch,
             if tx['phase'] == 'verifying-rollback':
                 device.require_components()
         ownership.stage(record, tx['phase'], terminal=False)
+        if tx['phase'] == 'verifying-rollback':
+            now = manager._now()
+            if tx['launched'] <= now < tx['deadline'] and manager._receipt(tx, 'ready') is None:
+                # Keep removal excluded during close and launch. Release this
+                # lock before waiting for the launcher's authenticated ready RPC.
+                if manager.status() != tx:
+                    raise ValueError('Root Updater journal changed before relaunch')
+                launch()
 
     if tx['phase'] == 'verifying-rollback':
-        now = manager._now()
         stop = time.monotonic() + health_seconds
-        if tx['launched'] <= now < tx['deadline'] and manager._receipt(tx, 'ready') is None:
-            # The authenticated Root ready RPC needs the product lock.
-            launch()
         while (tx['launched'] <= manager._now() < tx['deadline']
                and manager._receipt(tx, 'ready') is None):
             if time.monotonic() >= stop:

@@ -13,8 +13,11 @@
   affected firmware. If the foreground cannot be confirmed, removal stays
   pending (#539). The installer also distinguishes unmeasurable ramfs space
   from a measured storage shortfall (#527).
-- Root setup recognizes the verified read-only BSP overlay layout and reports
-  more specific Qt admission failures (#517, #522).
+- Root setup and cleanup recognize verified read-only BSP overlays. Setup also
+  reports more specific Qt admission failures (#517, #522, #543).
+- The desktop CLI can recover a standalone Root Updater after a completed
+  rollback misses the launcher readiness deadline. It verifies the retained
+  evidence before asking the restored launcher to confirm readiness (#546).
 - Updated Root and System Updaters retry interrupted cleanup of verified
   installer staging at startup. Existing System supervisors do not receive this
   change through ordinary component OTA (#523).

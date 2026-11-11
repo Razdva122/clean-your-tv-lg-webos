@@ -6,7 +6,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(ROOT), str(ROOT.parent), str(ROOT / 'runtime')]
-from installation import Ownership
+from installation import Busy, Ownership
 from runtime import update_guard
 import test_update_core
 from test_update_core import profile
@@ -80,12 +80,19 @@ class RollbackReadinessTests(unittest.TestCase):
             self.assertEqual(current['launched'] + 120, current['deadline'])
             self.assertGreaterEqual(current['launched'], self.original['deadline'])
             self.assertIsNone(self.store.read('ready-rollback-' + current['id']))
-            # The real Root CLI admits the receipt under the same product lock.
+            # Removal cannot take the lease during the launcher RPC.
+            competitor = Ownership(self.owner.store)
+            with self.assertRaises(Busy):
+                with competitor.removal('b' * 32, expected=self.owner.status()['id']):
+                    pass
+
+        def ready(_):
+            # The launcher signals readiness after the launch RPC returns.
             with self.owner.operation('root-update', 'transaction.json',
                                       resume=self.owner.status()['id']):
-                self.manager.ready(current['id'], '1.0.0')
+                self.manager.ready(self.manager.status()['id'], '1.0.0')
 
-        result = self.recover(launch)
+        result = self.recover(launch, ready)
         self.assertEqual('rolled-back', result['phase'])
         self.assertEqual('rolled-back', result['homeResumePhase'])
         self.assertEqual({'status': 'skipped'}, result['homeResume'])
