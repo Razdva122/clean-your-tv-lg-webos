@@ -151,7 +151,7 @@ class CIProfiles(unittest.TestCase):
     def test_required_statuses_include_parallel_browser_failures(self):
         workflow = (ROOT / '.github/workflows/tests.yml').read_text()
         summary = re.search(r'^  tests:\n(.*?)(?=^  [^ ]|\Z)', workflow, re.M | re.S).group(1)
-        self.assertIn('needs: [scope, runtime, browser, phone-heic, optional-python, weather]', summary)
+        self.assertRegex(summary, r'needs: \[scope, runtime, browser, phone-heic, optional-python(?:, weather)?\]')
         browser = re.search(r'^  browser(?:-core)?:\n(.*?)(?=^  [^ ]|\Z)', workflow, re.M | re.S).group(1)
         self.assertIn('BROWSER_CHANNEL=chromium node tests/tv-dev-ui.cjs', browser)
         self.assertIn('if: always()', summary)
@@ -167,6 +167,7 @@ class CIProfiles(unittest.TestCase):
             for state in ('failure', 'skipped', 'cancelled'):
                 with self.subTest(dependency=dependency, state=state):
                     self.assertNotEqual(status(**{dependency: state}), 0)
+        self.assertIn('needs: [scope, runtime, browser, phone-heic, optional-python, weather]', summary)
         self.assertEqual(status(WEATHER='skipped', WEATHER_REQUIRED='false'), 0)
         self.assertEqual(status(BROWSER='skipped', HEIC='skipped', PYTHON='skipped', BROWSER_REQUIRED='false', PYTHON_REQUIRED='false'), 0)
         for dependency in ('BROWSER', 'HEIC', 'PYTHON', 'WEATHER'):
