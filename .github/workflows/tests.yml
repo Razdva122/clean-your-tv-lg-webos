@@ -208,6 +208,8 @@ jobs:
         with:
           ref: ${{ inputs.source_sha || github.sha }}
           persist-credentials: false
+      - name: Trust the runner-owned checkout inside the container
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - uses: actions/cache@v4
         with:
           path: build/python-runtime-cache
@@ -311,6 +313,8 @@ jobs:
         with:
           ref: ${{ inputs.source_sha || github.sha }}
           persist-credentials: false
+      - name: Trust the runner-owned checkout inside the container
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - uses: actions/setup-node@v4
         with:
           node-version: 22
