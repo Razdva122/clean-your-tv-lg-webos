@@ -90,6 +90,11 @@
       "pr": 532,
       "issues": [],
       "summary": "Use a signed Ubuntu archive mirror when the default runner mirror fails DNS"
+    },
+    {
+      "pr": 535,
+      "issues": [],
+      "summary": "Stabilize the Classic theme browser check and Linux desktop dependency downloads"
     }
   ],
   "excluded": [],
