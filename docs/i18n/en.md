@@ -79,6 +79,8 @@ Use the original saved connection and recovery data. If they are lost, reconnect
 
 ## 6. Everyday use and recovery
 
+To pin an HDMI input, select it in **+ / Add app**. Press OK to switch to it. Hold OK to move or hide its tile.
+
 If the installer says “Root setup is unfinished, but its deployment record is missing on the TV.”: Choose Review recovery options to remove Clean Your TV, then start setup separately. Full removal also removes No-root Home and Helper; back up preferences first.
 
 No-root IR support: a short Home release schedules Clean after about 700 ms; LG Home may flash first. Held Home stays with webOS, and triple Home still stops Helper. Access on stock Developer Mode TVs remains unverified; do not change input permissions.

@@ -369,6 +369,9 @@
     pickerClose;
   var pickerOpen = false,
     pickerGeneration = 0,
+    inputTilesDirty = false,
+    initialInputFocus = null,
+    pickerAppsFresh = false,
     pickerIndex = 0,
     pickerButtons = [];
   var hideSelected = false,
@@ -390,6 +393,7 @@
   // A scrolling list can cross a stationary cursor and generate mouseover.
   // Remote input owns focus until the pointer actually moves or is clicked.
   function pointerInput() {
+    initialInputFocus = null;
     pointerNavigation = true;
     lastKeyRepeat = false;
     getElement('homeSurface').classList.remove('ctv-remote-navigation');
@@ -398,8 +402,10 @@
   document.addEventListener(
     'keydown',
     function (event) {
-      if ([13, 27, 37, 38, 39, 40, 461].indexOf(event.keyCode) >= 0)
+      if ([13, 27, 37, 38, 39, 40, 461].indexOf(event.keyCode) >= 0) {
+        initialInputFocus = null;
         pointerNavigation = false;
+      }
       if ([37, 38, 39, 40].indexOf(event.keyCode) >= 0) {
         // The event's own clock: only ever compared with the previous arrow's.
         var surface = getElement('homeSurface'),
@@ -502,6 +508,7 @@
     }
   }
   function rebuild(focusId) {
+    inputTilesDirty = false;
     tilesContainer.innerHTML = '';
     tiles = library.visible().map(createTile);
     if (library.showAddApp()) {
@@ -555,6 +562,9 @@
   function activateTile(item) {
     if (item.add) {
       openPicker();
+    } else if (item.app.input) {
+      var input = library.input(item.app.id);
+      if (input) launchApp(input.appId, input.label);
     } else if (item.app.id === 'airplay') {
       callLuna(
         'luna://airplay.service/showAirplayPage',
@@ -791,6 +801,13 @@
     });
   }
   function renderPicker(apps) {
+    if (pickerAppsFresh)
+      pickerStatus.textContent = apps.length
+        ? tr('Choose an app or input to add to Home.')
+        : tr('All installed apps are already on Home.');
+    var selected = pickerButtons.length > 1 && pickerButtons[pickerIndex],
+      selectedId = selected && selected.dataset.appId,
+      next = selected === pickerClose ? apps.length : 0;
     pickerList.innerHTML = '';
     pickerButtons = [];
     apps.forEach(function (app) {
@@ -799,7 +816,7 @@
       button.dataset.appId = app.id;
       var icon = document.createElement('img');
       icon.className = 'ctv-icon';
-      icon.src = app.icon || '';
+      icon.src = app.input ? inputIcon(app.input) : app.icon || '';
       icon.alt = '';
       icon.onerror = function () {
         icon.style.visibility = 'hidden';
@@ -821,7 +838,8 @@
           library.add(app.id);
           closePicker();
           rebuild(app.id);
-          if (!app.icon && window.ROOT_VERSION) refreshInstalledApps(app.id);
+          if (!app.input && !app.icon && window.ROOT_VERSION)
+            refreshInstalledApps(app.id);
           showToast(
             tr('{app} added', {
               app: app.title
@@ -833,11 +851,12 @@
           );
         }
       });
+      if (app.id === selectedId) next = pickerButtons.length;
       pickerList.appendChild(button);
       pickerButtons.push(button);
     });
     pickerButtons.push(pickerClose);
-    focusPicker(0);
+    focusPicker(next);
   }
   function openPicker() {
     if (moveState || pickerOpen) {
@@ -846,6 +865,7 @@
     dismissUndo();
     cancelHold();
     pickerOpen = true;
+    pickerAppsFresh = false;
     var generation = ++pickerGeneration;
     picker.hidden = false;
     pickerStatus.textContent = tr('Checking installed apps…');
@@ -853,6 +873,7 @@
     pickerButtons = [pickerClose];
     focusPicker(0);
     setFocusZone('picker');
+    refreshInputStatus();
     AppLibrary.installed(function (apps, installedIds) {
       if (!pickerOpen || generation !== pickerGeneration) {
         return;
@@ -868,20 +889,23 @@
           return;
         }
       }
-      var choices = library.available();
-      pickerStatus.textContent =
-        apps === null
-          ? tr('Showing the saved list. Could not refresh apps from the TV.')
-          : choices.length
-            ? tr('Choose an app to add to Home.')
-            : tr('All installed apps are already on Home.');
-      renderPicker(choices);
+      pickerAppsFresh = apps !== null;
+      if (!pickerAppsFresh)
+        pickerStatus.textContent = tr(
+          'Showing the saved list. Could not refresh apps from the TV.'
+        );
+      renderPicker(library.available());
     }, visibleAppIds());
   }
   function visibleAppIds(first) {
-    var ids = library.visible().map(function (app) {
-      return app.id;
-    });
+    var ids = library
+      .visible()
+      .filter(function (app) {
+        return !app.input;
+      })
+      .map(function (app) {
+        return app.id;
+      });
     return first
       ? [first].concat(
           ids.filter(function (id) {
@@ -919,8 +943,12 @@
     library = AppLibrary.create(
       localStorage,
       (window.TV_APPS && TV_APPS.apps) || [],
-      CONFIG
+      CONFIG,
+      inputSources && inputSources.list
     );
+    var firstInput = library.firstInput();
+    if (firstInput && !library.input(firstInput))
+      initialInputFocus = firstInput;
     window.HomeAppControls = {
       refresh: function () {
         var button = getElement('homeShowAddApp');
@@ -1190,10 +1218,21 @@
       card.classList.add('missing-icon');
       card.setAttribute('data-initial', app.title.charAt(0));
     };
-    image.src = app.icon || 'missing-icon';
+    image.src = app.input ? inputIcon(app.input) : app.icon || 'missing-icon';
     card.appendChild(image);
     element.appendChild(card);
     var label = document.createElement('div');
+    if (app.input) {
+      var dot = document.createElement('span');
+      dot.className = 'input-dot';
+      dot.setAttribute('aria-hidden', 'true');
+      element.classList.add('pinned-input');
+      image.alt = '';
+      card.appendChild(dot);
+      tile.inputLabel = label;
+      tile.inputIcon = image;
+      updateInputTile(tile, app.input);
+    }
     return (
       (label.className = 'name ctv-label'),
       (label.textContent = app.title),
@@ -1388,6 +1427,10 @@
     if (card) card.classList.toggle('is-' + state, enabled);
   }
   function focusTile(index) {
+    if (inputTilesDirty && canRefreshInputGrid()) {
+      rebuild(tiles[index] && tiles[index].app.id);
+      return;
+    }
     if (!tiles.length) {
       focusGlassVisible = false;
       focusGlass.style.opacity = '0';
@@ -1712,6 +1755,78 @@
       }
     });
     return nearest;
+  }
+  function inputIcon(input) {
+    return (
+      'data:image/svg+xml,' +
+      encodeURIComponent(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="#fff" d="' +
+          (INPUT_ICONS[input.kind] || INPUT_ICONS.hdmi) +
+          '"/></svg>'
+      )
+    );
+  }
+  function updateInputTile(tile, input) {
+    var detail = input ? inputDetail(input) : '',
+      renamed = input && tile.app.title !== input.label;
+    if (input) {
+      if (input.kind !== tile.app.input.kind)
+        tile.inputIcon.src = inputIcon(input);
+      tile.app.input = input;
+      tile.app.title = tile.inputLabel.textContent = input.label;
+    }
+    tile.el.setAttribute(
+      'aria-label',
+      detail ? tile.app.title + ', ' + detail : tile.app.title
+    );
+    setPartState(tile.el, 'connected', !!input && input.connected === true);
+    setPartState(tile.el, 'disconnected', !!input && input.connected === false);
+    return renamed;
+  }
+  function canRefreshInputGrid() {
+    return (
+      !pickerOpen &&
+      !moveState &&
+      !undoState &&
+      !okHoldTimer &&
+      !pointerTimer &&
+      !previewDialogOpen()
+    );
+  }
+  function syncInputTiles() {
+    var current = tiles.filter(function (tile) {
+      return tile.app.input;
+    });
+    var visible = library.visible().filter(function (app) {
+      return app.input;
+    });
+    inputTilesDirty =
+      current.length !== visible.length ||
+      current.some(function (tile, index) {
+        return tile.app.id !== visible[index].id;
+      });
+    var focused = tiles[focusedTile],
+      renamed = false;
+    current.forEach(function (tile) {
+      if (updateInputTile(tile, library.input(tile.app.id)) && tile === focused)
+        renamed = true;
+    });
+    if (
+      initialInputFocus &&
+      library.input(initialInputFocus) &&
+      canRefreshInputGrid()
+    ) {
+      var id = initialInputFocus;
+      initialInputFocus = null;
+      rebuild(id);
+      return;
+    }
+    if (
+      ((focusZone === 'grid' && (inputTilesDirty || renamed)) ||
+        (!tiles.length && inputTilesDirty)) &&
+      canRefreshInputGrid()
+    )
+      focusTile(focusedTile);
   }
   function inputEntries() {
     var entries = inputSources ? inputSources.list() : [];
@@ -2303,6 +2418,7 @@
       shelfVisible() && shelfIndex >= 0
         ? focusShelf(shelfIndex)
         : focusTile(focusedTile);
+      syncInputTiles();
     } finally {
       restoring = false;
     }
@@ -2540,6 +2656,8 @@
   renderShelf();
   if (inputSources) {
     inputSources.onchange(function () {
+      syncInputTiles();
+      if (pickerOpen) renderPicker(library.available());
       renderShelf();
       if ('inputs' === focusZone) {
         var focusedId =

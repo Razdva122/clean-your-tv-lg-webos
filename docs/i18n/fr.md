@@ -79,6 +79,8 @@ Utilisez la connexion et les données de récupération d’origine. Si elles so
 
 ## 6. Utilisation et récupération
 
+Pour épingler une entrée HDMI, sélectionnez-la dans **+ / Ajouter une application**. Appuyez sur OK pour basculer vers cette entrée. Maintenez OK pour déplacer ou masquer sa tuile.
+
 Si l’installateur indique « La configuration Root est inachevée, mais son journal de déploiement est absent du téléviseur. » : Choisissez Examiner les options de récupération pour supprimer Clean Your TV, puis lancez la configuration séparément. La suppression complète retire aussi No-root Home et Helper ; sauvegardez vos préférences avant.
 
 Prise en charge IR No-root: relâcher Home après un appui court programme Clean après environ 700 ms ; LG Home peut apparaître brièvement. Un appui long reste géré par webOS et trois appuis arrêtent toujours Helper. L’accès en Developer Mode standard reste non vérifié ; ne modifiez pas les permissions des périphériques d’entrée.

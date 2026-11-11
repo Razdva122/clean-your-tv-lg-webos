@@ -66,6 +66,8 @@ Použijte původní uložené připojení a data obnovení. Pokud se ztratila, z
 
 ## 6. Každodenní ovládání
 
+Chcete-li připnout vstup HDMI, vyberte ho v nabídce **+ / Přidat aplikaci**. Tlačítkem OK přepnete na tento vstup. Podržením OK můžete dlaždici přesunout nebo skrýt.
+
 Pokud instalátor hlásí „Nastavení Root není dokončeno, ale v TV chybí záznam nasazení.“: Zvolte Zkontrolovat možnosti obnovy pro odebrání Clean Your TV a potom spusťte nastavení samostatně. Úplné odebrání odstraní také No-root Home a Helper; nejprve zálohujte předvolby.
 
 Podpora IR v No-root: uvolnění Home po krátkém stisku naplánuje Clean přibližně za 700 ms; nejprve může probliknout LG Home. Podržení Home zůstává webOS a trojí stisk stále zastaví Helper. Přístup v běžném Developer Mode není ověřen; neměňte oprávnění vstupních zařízení.
