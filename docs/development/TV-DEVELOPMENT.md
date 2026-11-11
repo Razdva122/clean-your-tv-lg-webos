@@ -148,6 +148,12 @@ expanded Helper file modes to 0777. Software restart with an active Helper
 latched Stop before boot after input cleanup failed. AC power loss let the
 same Helper start automatically and restore its private key mode. Reuse
 software restart for equivalent cleanup and permission cases on this setup.
+Pause standby/wake, software restart and AC tests if the TV shows an OLED
+Pixel Cleaning notice in progress or repeatedly reports incomplete cleaning.
+Let the cycle finish in standby with mains connected. LG identifies loss of
+mains and early wake, including HDMI-CEC wake, as causes of interrupted
+cleaning. [LG Pixel Cleaning guidance](https://www.lg.com/us/support/help-library/how-to-stop-repeated-pixel-cleaning-notifications-on-your-lg-oled-tv--20155440799135)
+
 Keep AC recovery and physical key evidence distinct. A network HOME message
 has no specified press duration. Three network messages opened LG Home
 briefly on this C3 without triggering native emergency Stop. The relay
