@@ -75,6 +75,11 @@ focused-development/full-candidate split in CONTRIBUTING.md and the explicit
 candidate workflow in docs/RELEASE-FLOW.md. A preliminary TV build is never a
 substitute for final release evidence.
 
+When a release task is handed to an agent, record the handoff time before
+starting work. The release coordinator keeps the
+[timing log for each candidate](docs/RELEASE-FLOW.md#record-release-candidate-timings)
+and copies the recorded timeline into the release PR when it becomes available.
+
 For subsequent release QA sessions, follow
 [planned cases before batch fixes](docs/RELEASE-FLOW.md#complete-planned-cases-before-batch-fixes).
 Complete the case pass and consolidated failure inventory before product fixes

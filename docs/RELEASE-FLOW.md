@@ -71,6 +71,8 @@ The description must contain:
   and the checked commit or PR revision. Distinguish checks on an earlier PR
   from checks on the combined or frozen candidate; record pending and failed
   checks. A version bump or package rebuild needs validation of the new artifacts.
+- **Timing:** a chronological log for each candidate and the total elapsed time
+  from the task handoff. Follow [the timing instructions](#record-release-candidate-timings).
 - **Acceptance and release gates:** physical-TV model/firmware and tested paths,
   known limitations, untested behavior, rollback evidence and remaining work.
   Keep the checklist current; automated checks are not hardware acceptance.
@@ -79,6 +81,32 @@ At freeze, replace tentative version targets with the final values, verify them
 against release metadata and component manifests, link the release notes, and
 record validation of the exact frozen candidate. Until then, explicitly state
 that the PR is an unfrozen draft and which bumps have not been committed.
+
+### Record release candidate timings
+
+The release coordinator starts the log when the release task is handed to the
+agent, including any time before work starts. Record the handoff timestamp in the
+working notes if the draft PR does not exist yet, then copy the timeline to the
+PR's **Release timings** section. If the draft was opened without the template,
+copy that section from the template. Keep it outside the generated block and
+update it as stages start and finish. Use one time zone with an explicit UTC offset.
+
+Record the start, end, elapsed time and outcome for each build (including
+packaging), test pass, bug fix and wait for the user. For user waits, record what
+was needed, when the request was sent and when the response or requested action
+arrived. Leave ongoing entries open. Log each rebuild and retest as a new row,
+including failed and cancelled attempts. Link the relevant CI run, test evidence
+or fix when available.
+
+Keep earlier candidates in the PR. When a new candidate supersedes one, identify
+each by its RC number or commit and record when the earlier one ended. Preserve
+the original handoff timestamp across candidates for the same release task.
+For each candidate, record its outcome and the total wall-clock time from
+handoff to acceptance, supersession or withdrawal. For the candidate that
+ships, also record the verified publication timestamp and total time from
+handoff to publication. Report time waiting for the user separately. Calculate
+wall-clock totals from the timestamps and count overlapping wait intervals once.
+Mark unknown timestamps as unknown.
 
 ## Update documentation for every candidate
 
