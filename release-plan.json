@@ -80,6 +80,11 @@
       "pr": 525,
       "issues": [],
       "summary": "Enable System updates after a verified Root-to-No-root transition and document focused retesting"
+    },
+    {
+      "pr": 531,
+      "issues": [],
+      "summary": "Run release checks with Ubuntu dependencies on the supported Ubuntu 24.04 image"
     }
   ],
   "excluded": [],
