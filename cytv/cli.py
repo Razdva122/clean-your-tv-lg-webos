@@ -685,7 +685,9 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
             if args.command in ('status', 'doctor', 'restore'):
                 pending = store.pending(profile)
                 if pending:
+                    from .recovery import missing_root_deployment_plan
                     write.recovery(profile)
+                    missing_root_deployment_plan(write, profile, pending, result)
         return 0
     except (EOFError, KeyboardInterrupt, StopIteration):
         checks.finish_running(cancelled=True)

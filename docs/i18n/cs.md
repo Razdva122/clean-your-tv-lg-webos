@@ -62,6 +62,8 @@ Instalace Root pokračuje s upozorněním, pokud nelze načíst vstupy televizor
 
 ## 6. Každodenní ovládání
 
+Pokud instalátor hlásí „Nastavení Root není dokončeno, ale v TV chybí záznam nasazení.“: Zvolte Zkontrolovat možnosti obnovy pro odebrání Clean Your TV a potom spusťte nastavení samostatně. Úplné odebrání odstraní také No-root Home a Helper; nejprve zálohujte předvolby.
+
 Podpora IR v No-root: uvolnění Home po krátkém stisku naplánuje Clean přibližně za 700 ms; nejprve může probliknout LG Home. Podržení Home zůstává webOS a trojí stisk stále zastaví Helper. Přístup v běžném Developer Mode není ověřen; neměňte oprávnění vstupních zařízení.
 
 Šipky vybírají aplikaci, **OK** ji otevře. Podržením OK můžete měnit pořadí. Krátké **Zpět** zachová navigaci aplikace. Krátké **Home** otevře Clean Your TV při zapnutém ovládání Home. Podržení Zpět po dobu 1,2 sekundy otevře LG Home jednou, bez změny uložených nastavení.

@@ -74,6 +74,19 @@ inspection establish the allowed next action.
 
 ## Interrupted setup or removal
 
+### Root setup is unfinished and its deployment record is missing
+
+Keep the saved Root connection. Choose **Review recovery options** and confirm
+full removal if you want to start over. This removes all Clean Your TV editions,
+including No-root Home and Helper; back up preferences first. Removal checks the
+current TV state and verifies cleanup separately from the old installation result.
+After verified removal, start a new setup separately. Cancelling the prompt leaves
+the interrupted installation and its recovery data unchanged. If removal fails,
+use its existing continuation flow and save the diagnostic report.
+
+An absent deployment record is not proof that the old installation did nothing.
+Status alone does not delete recovery records or restart installation.
+
 <a id="unreleased-local-recovery-storage-messages"></a>
 
 ### Local recovery storage messages
