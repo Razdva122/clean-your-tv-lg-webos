@@ -46,8 +46,11 @@ Home1.15.0. Owner-observed Home/triple-Home/retained Stop and arrows/volume agre
 with readback; all232 installed public files match. The new exact compatibility
 approval passes verify_helper_transition. This pre-dispatch probe does not
 replace final candidate package delivery or selected physical acceptance. The
-complete platform build and final acceptance remain required; main merge and
-publication are separate gates.
+complete replacement build42969073353:1 passed all23 jobs after the reviewed
+Windows fixture-only correction #504. Exact601-file CLI/APK payload, original
+APK signer and code31→32 emulator retention/native checks pass. Final affected
+TV acceptance and Root QA signature remain pending; main merge/publication are
+separate gates.
 
 The original #487 service-status discrepancy and reporter-device continuation/
 standby result remain unverified. The corrected #454 C1 prerequisite, original
