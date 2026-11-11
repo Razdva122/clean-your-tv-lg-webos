@@ -5,6 +5,17 @@ Unknown paths, shared build/dependency files and CI implementation changes still
 select every component. A failure in any selected job fails the required
 Linux/macOS summaries; an unexpected skip cannot grant a selected gate.
 
+## Focused weather checks
+
+Ordinary pull requests that touch `launcher/weather-data.js` or its
+`data.cjs`, `providers.cjs` and `ui.cjs` tests under `tests/weather/`
+select the weather job. It runs the weather logic and compiled browser tests
+and checks that the legacy webOS Home build starts. Other changed files select their usual
+checks, including recovery and packaging. Shared inputs still select the
+broad suite. The scope summary lists the files that selected the weather job,
+and both required test summaries require it to pass when selected. Full
+candidate builds cover weather through the existing runtime and browser suites.
+
 ## Parallel test shards
 
 The runtime matrix runs **four shards per selected OS**, with
