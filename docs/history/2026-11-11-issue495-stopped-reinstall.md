@@ -99,3 +99,12 @@ changed. Browser, both phone-HEIC jobs, optional Python, desktop frozen runtimes
 on Windows/macOS, website build and release policy passed. Independent follow-up
 review found no remaining actionable defects. The subsequent selected run must
 verify the GCC correction; successful authenticated units remain reusable.
+
+Final product-source run [42976707149](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42976707149)
+on 2ad3ada6 passed all eight runtime shards, browser, optional Python and both
+phone-HEIC jobs. Matching desktop frozen-runtime, website build and integration
+policy checks also passed. No full release build/deploy was requested. The final
+issue reread confirms #495 open with `bug` and exactly `status:in-progress`;
+there are no new PR comments/reviews. Merge and physical acceptance remain with
+the next release, alongside #498. This final evidence/plan edit changes no
+product input; do not repeat device/build acceptance for the documentation alone.

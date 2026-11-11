@@ -13,8 +13,10 @@ Spec: ../specs/2026-11-11-issue495-stop-aware-activation-design.md.
   startup/Home outcomes. Preserve lost-profile guidance and #498 separation.
 - [x] Meaningful regression checks: real filesystem/Node/C races and interruption,
   source staging and all affected frontend/report/localization boundaries.
-- [ ] Rewrite stale kept-stopped docs/ledger/PR, independent final review, selected
-  CI, issue status verification and temporary-worktree cleanup after saving work.
+- [x] Rewrite stale kept-stopped docs/ledger/PR, independent final review, selected
+  CI and issue status verification. Final product-source CI on 2ad3ada6 passed.
+
+After saving and pushing this evidence, archive this managed temporary worktree.
 
 Do not merge into frozen release inventory or change versions/build selection.
 Do not contact a TV, publish another user's report or comment to the reporter.
