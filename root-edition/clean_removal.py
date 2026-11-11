@@ -4,7 +4,6 @@ All methods run under Ownership.removal. Package terminal authority remains in
 observed_install; this module never infers an old install outcome from absence.
 """
 from contextlib import contextmanager, ExitStack
-import fcntl
 import hashlib
 import json
 import os
@@ -15,7 +14,7 @@ import subprocess
 
 from updater.store import Store
 from updater.package import safe_bytes
-from installation import _optional_record, terminal_removal
+from installation import _optional_record, component_locks as locks, terminal_removal
 
 APPS = ('com.cleanyourtv.root.preview', 'com.cleanyourtv.root.updater',
         'com.cleanyourtv.system.updater', 'com.cleanyourtv.updater',
@@ -152,20 +151,6 @@ def compositor_stock_report(payload):
             for frame in traceback.extract_tb(error.__traceback__)][-8:]
         return {'returnValue':False,'cleanup_probe':cleanup_probe_details(detail)}
 
-
-@contextmanager
-def locks(roots, uid):
-    """Keep original component lock inodes throughout restoration and cleanup."""
-    with ExitStack() as stack:
-        for index, root in enumerate(roots):
-            if not os.path.lexists(root): continue
-            store=Store(root,uid=uid)
-            directory=store._directory();stack.callback(os.close,directory)
-            for name in (('provision.lock',) if index==0 else ('daemon.lock','worker.lock')):
-                fd=os.open(name,os.O_RDWR|os.O_CREAT|os.O_NOFOLLOW|os.O_NONBLOCK,0o600,dir_fd=directory)
-                stack.callback(os.close,fd);store._check(os.fstat(fd))
-                fcntl.flock(fd,fcntl.LOCK_EX|fcntl.LOCK_NB)
-        yield
 
 
 def retire_tree(path, allowed, keep=(), uid=0, parent_uid=None):

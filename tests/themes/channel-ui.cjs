@@ -19,6 +19,9 @@ const { compileThemeCss } = require('../../theme-api/compile.cjs');
     for (const edition of ['launcher', 'root-launcher']) {
       const { page, errors } = await open(browser, site, edition);
       try {
+        await page.waitForFunction(
+          () => document.querySelector('#tiles .card')?.style.background
+        );
         const original = await page
           .locator('#tiles .card')
           .first()
@@ -153,6 +156,13 @@ const { compileThemeCss } = require('../../theme-api/compile.cjs');
           HomeLayoutState.setColumns(null);
           ThemeRuntime.reset();
         });
+        // Reset renders new cards before their icon colors are sampled.
+        await page.waitForFunction(
+          (color) =>
+            document.querySelector('#tiles .card')?.style.background === color,
+          original,
+          { timeout: 5000 }
+        );
         assert.equal(
           await page
             .locator('#tiles .card')

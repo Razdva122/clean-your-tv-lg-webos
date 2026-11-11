@@ -6,6 +6,8 @@
 - Stop and removal recover known firmware-expanded Helper storage without
   clearing an existing emergency Stop. The installer preserves proof of a
   completed Root-to-No-root handoff across a restart.
+- System Updater setup can continue after a verified transition from Root to
+  No-root. Previous removal records remain available for recovery.
 - The Home app picker refreshes confirmed app removals and installed app icons.
   Helper inventory replies also restore the app catalog at startup (#505).
 - Weather city search renders results on legacy webOS browsers (#499).

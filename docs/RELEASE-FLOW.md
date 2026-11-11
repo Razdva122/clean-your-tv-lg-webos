@@ -511,6 +511,24 @@ acceptance pin. Fix deterministic failures before retrying. Pin only the final s
 attempt, then accept its bytes. Publication/notification recovery keeps its normal
 separate retry paths; do not rebuild or republish merely to retry a comment.
 
+### Retest a fixed candidate
+
+1. Keep the original case IDs and results. Compare the old and new packaged
+   inputs and entry points for each case. Mark an existing pass **carry forward**
+   if its tested artifacts or exact isolated inputs, dependent behavior and
+   device/initial state still match.
+2. Rerun the failed case, any blocked case the fix makes reachable, and prior
+   passes whose relevant inputs or preconditions changed. Use the smallest
+   existing fixture or device action that can establish each result. Record why
+   each rerun is needed. A new build, tag or unrelated file change does not
+   select an already successful case again.
+3. Record each carried result with its original run, artifact hashes and
+   preconditions. Record each new result against the replacement build. Keep
+   the full CI and publication gates and let trusted CI reuse matching units.
+   Do not request a repeated physical power cycle when the affected scenario
+   already has applicable evidence.
+
+
 ### Policy rollout
 
 Pinned build reuse is already available in trusted `main` policy. When changing
