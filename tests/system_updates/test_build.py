@@ -20,6 +20,62 @@ def fixture(root):
         (root/(name+'.ipk')).write_bytes(package.ipk(app,version,files))
 
 class BuildTests(unittest.TestCase):
+    def test_no_root_system_bootstrap_takes_only_completed_clean_handoff(self):
+        import os
+        import sys
+        from unittest.mock import patch
+        sys.path.insert(0, str(ROOT/'root-edition'))
+        import installation
+        setup = load('setup')
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp).resolve()
+            store = installation.Store(path/'installation', uid=os.getuid())
+            ownership = installation.Ownership(store)
+            roots = tuple(path/name for name in ('root', 'root-updater', 'system-updater'))
+            for root, name, value in zip(roots, ('deploy', 'bootstrap', 'bootstrap'), (
+                {'version': 1, 'app': 'com.cleanyourtv.root.preview', 'stage': 'cancellation-admitted'},
+                {'phase': 'cancellation-admitted'}, {'phase': 'cancellation-admitted'},
+            )):
+                installation.Store(root, uid=os.getuid()).write(name, value)
+            original, removal, fence, successor, lease = (letter*32 for letter in 'abcde')
+            predecessor = dict(operation=original, removal=removal, lease=fence)
+            clean = dict(schema=1, protocol='clean-removal-v1', operation=original,
+                         removal=removal, lease='f'*32, final_fence=fence, final_original_lease='f'*32,
+                         stage='verified-clean', state='complete', current=True,
+                         result={'verified_clean': True, 'private_cleanup_verified': True})
+            binding = dict(schema=1, protocol='no-root-root-handoff-v1', operation=successor,
+                           lease=lease, predecessor=predecessor, plan_sha256='0'*64,
+                           source_sha256='1'*64, effects_started=True)
+            store.write('clean-removal-'+original, clean)
+            store.write('operation', dict(schema=1, id=lease, owner='no-root', stage='reserved',
+                                          journal='no-root-'+successor+'.json', terminal=False))
+            journals = dict(installation.JOURNALS, **{
+                'deploy': (roots[0]/'deploy.json', 'stage', {'installed-recovery-only'}),
+                'root-bootstrap': (roots[1]/'bootstrap.json', 'phase', {'complete'}),
+                'system-bootstrap': (roots[2]/'bootstrap.json', 'phase', {'complete'}),
+            })
+            inodes = [root.stat().st_ino for root in roots]
+            read = lambda file: installation._optional_record(installation.Store(file.parent, uid=os.getuid()), file.name) if file.is_file() else None
+            with patch.object(installation, 'JOURNALS', journals):
+                for evidence in (binding, dict(binding, completed=True, revoked=True)):
+                    store.write('no-root-'+successor, evidence)
+                    with self.assertRaises(installation.Busy):
+                        with setup.bootstrap_operation('no-root', False, lambda: None, ownership=ownership, read=read):
+                            self.fail('unverified handoff admitted')
+                store.write('no-root-'+successor, dict(binding, completed=True))
+                with setup.bootstrap_operation('no-root', False, lambda: None, ownership=ownership, read=read):
+                    self.assertEqual(ownership.status()['owner'], 'system-bootstrap')
+                    self.assertTrue(all(not root.exists() for root in roots))
+                    archived = path/'installation'/('component-fences-'+original)
+                    self.assertEqual([ (archived/root.name).stat().st_ino for root in roots], inodes)
+                reserved=ownership.status()
+                self.assertEqual(reserved['stage'], 'reserved')
+                with setup.bootstrap_operation('no-root', False, lambda: None, ownership=ownership, read=read):
+                    self.assertEqual(ownership.status(), reserved)
+                    installation.Store(roots[2], uid=os.getuid()).write('bootstrap', {'phase': 'complete'})
+                self.assertTrue(ownership.status()['terminal'])
+                self.assertEqual(store.read('clean-removal-'+original), clean)
+
     def test_small_verified_read_does_not_allocate_the_maximum_file_limit(self):
         import tracemalloc
         setup=load('setup')

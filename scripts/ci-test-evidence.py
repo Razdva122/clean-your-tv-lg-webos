@@ -32,8 +32,8 @@ DESKTOP_JOBS = {
     'macos-15-intel': 'build (macos-15-intel, cytv-macos-x64, dist/cytv)',
 }
 PLATFORMS = {'runtime': {'ubuntu-latest', 'macos-latest'},
-             'browser': {'ubuntu-latest', 'macos-latest'},
-             'optional': {'ubuntu-latest', 'macos-latest'}, 'desktop': set(DESKTOP_JOBS)}
+             'browser': {'ubuntu-latest', 'ubuntu-24.04', 'macos-latest'},
+             'optional': {'ubuntu-latest', 'ubuntu-24.04', 'macos-latest'}, 'desktop': set(DESKTOP_JOBS)}
 SHA = re.compile('[0-9a-f]{40}')
 DIGEST = re.compile('[0-9a-f]{64}')
 ARCHIVE_LIMIT = 128 * 1024

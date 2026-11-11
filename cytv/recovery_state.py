@@ -3,7 +3,7 @@
 STATES = ('idle', 'pre-submission', 'waiting', 'setup-ready', 'product-ready', 'cancellation-ready', 'terminal-verified', 'blocked')
 REASONS = ('no-pending-operation', 'removal-not-submitted', 'terminal-evidence-missing',
            'inherited-operation', 'unsupported-receipt', 'foreign-operation', 'operation-live',
-           'packages-verified', 'observation-unverified', 'removal-verified', 'activation-verified', 'final-readback-verified', 'cancellation-verified',
+           'packages-verified', 'observation-unverified', 'root-deployment-missing', 'removal-verified', 'activation-verified', 'final-readback-verified', 'cancellation-verified',
            'original-work-remaining', 'original-vendor-failure', 'original-terminal-unknown', 'original-readback-unverified', 'original-reservation-unverified', 'original-configuration-unknown')
 ACTIONS = ('check', 'inspect-support', 'continue-product', 'continue-no-root', 'cancel-install', 'continue-setup', 'finish-home-off', 'reconcile', 'retain-evidence', 'continue-removal', 'connect-root')
 REMOVAL_STAGES = ('requested', 'original-writers-fenced', 'controls-restored', 'package-removal', 'private-cleanup', 'restart-required', 'verified-clean')
@@ -84,6 +84,16 @@ def assess(profile, pending, observation=None):
             and cancellation.get('home_changed') is False
             and cancellation.get('state') in ('admissible','admitted','remove-observed','cancellation-terminal-pending','cancelled-and-removed')):
         return result('cancellation-ready','cancellation-verified','cancel-install','retain-evidence')
+    # A native driver may fail before its deployment journal exists. Absence
+    # does not prove quiescence, stock Home or that submission had no effects.
+    if (profile.get('edition') == 'root' and pending.get('action') == 'install'
+            and pending.get('home_backend') == 'c1-native-gate'
+            and pending.get('stage') in ('setup', 'verify')
+            and not pending.get('product_operation')
+            and pending.get('activation_restore_pending') is not True
+            and device.get('deployment_stage') == 'absent'
+            and observation.get('can_resume_root_setup') is False):
+        return result('blocked', 'root-deployment-missing', 'continue-removal', 'retain-evidence')
     if profile.get('edition') == 'root' and device:
         if product.get('can_resume') is True and product.get('resume_reason')=='original_final_readback_verified':
             return result('product-ready','final-readback-verified','continue-product','retain-evidence')

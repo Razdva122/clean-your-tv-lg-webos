@@ -7,6 +7,7 @@ An unresolved claim is permanent uncertainty, never permission to resubmit.
 import hashlib
 import base64
 import json
+import re
 import shlex
 import time
 import uuid
@@ -513,7 +514,7 @@ def source_for(root_ssh):
     return ROOT_PROGRAM if root_ssh else PROGRAM
 
 
-def make_plan(operation, diagnostic_id, action, artifacts, versions, public_root=PUBLIC_ROOT, configuration_sha256=None, root_ssh=False, private_root=None, root_handoff=None):
+def make_plan(operation, diagnostic_id, action, artifacts, versions, public_root=PUBLIC_ROOT, configuration_sha256=None, root_ssh=False, private_root=None, root_handoff=None, setup_start=None):
     if root_ssh:
         public_root = ROOT_SSH_PUBLIC
     slots = []
@@ -536,6 +537,11 @@ def make_plan(operation, diagnostic_id, action, artifacts, versions, public_root
         if root_ssh or type(private_root) is not str or private_root not in (ROOT, JAIL_ROOT):
             refuse()
         plan['private_root'] = private_root
+    if setup_start is not None:
+        if (action != 'install' or type(setup_start) is not dict or set(setup_start) != {'generation'}
+                or setup_start['generation'] is not None and not valid_generation(setup_start['generation'])):
+            refuse()
+        plan['setup_start'] = dict(setup_start)
     if root_handoff is not None:
         from .root_no_root_handoff import validate
         if not root_ssh:refuse()
@@ -651,7 +657,7 @@ def refuse():
                     reason_code='pending-operation')
 
 
-def begin(installer, action, artifacts, versions, expected, configuration):
+def begin(installer, action, artifacts, versions, expected, configuration, setup_activation=False):
     operation = uuid.uuid4().hex
     installer.store.check_capsule_storage(installer.profile, operation)
     # No package request or durable pending receipt until storage is usable.
@@ -668,12 +674,13 @@ def begin(installer, action, artifacts, versions, expected, configuration):
         else:
             check_plan['private_root'] = selected
     invoke(installer.remote, check_plan, 'storage-check')
+    setup_start = {'generation':setup_generation(installer,create=True)} if setup_activation else None
     installer.store.begin(installer.profile, 'install' if action == 'install' else 'uninstall',
                           recovery_protocol=PROTOCOL, observer_operation=operation,
                           expected=expected, versions=versions)
     pending = installer.store.pending(installer.profile)
     config_hash=hashlib.sha256(canonical({name:hashlib.sha256(raw).hexdigest() for name,raw in configuration.items()}).encode()).hexdigest()
-    plan = make_plan(operation, pending['diagnostic_id'], action, artifacts, versions, PUBLIC_ROOT,config_hash,root_ssh=root_ssh,private_root=selected,root_handoff=handoff)
+    plan = make_plan(operation, pending['diagnostic_id'], action, artifacts, versions, PUBLIC_ROOT,config_hash,root_ssh=root_ssh,private_root=selected,root_handoff=handoff,setup_start=setup_start)
     capsule = dict(schema=1, profile=installer.profile, plan=plan, source=source_for(root_ssh), expected=expected,
                    artifacts={name: base64.b64encode(raw).decode() for name, raw in artifacts.items()},
                    configuration={name: raw.decode('utf8') for name, raw in configuration.items()})
@@ -718,7 +725,7 @@ def capsule(installer, pending):
         artifacts = {name: base64.b64decode(raw, validate=True) for name, raw in value['artifacts'].items()}
         config_hash=hashlib.sha256(canonical({name:hashlib.sha256(raw.encode()).hexdigest() for name,raw in value['configuration'].items()}).encode()).hexdigest()
         rebuilt = make_plan(plan['operation'], plan['diagnostic_id'], plan['action'], artifacts, pending['versions'], PUBLIC_ROOT,config_hash,
-                            root_ssh=installer.profile.get('connection') == 'root-ssh', private_root=plan.get('private_root'),root_handoff=plan.get('root_handoff'))
+                            root_ssh=installer.profile.get('connection') == 'root-ssh', private_root=plan.get('private_root'),root_handoff=plan.get('root_handoff'),setup_start=plan.get('setup_start'))
         rebuilt['source_sha256'] = plan['source_sha256']
         if rebuilt != plan:
             refuse()
@@ -897,10 +904,55 @@ def observe(installer, pending):
                 no_root_ready=ready,no_root_reason=reason)
 
 
-def guard_helper(installer):
+def valid_generation(value):
+    return type(value) is str and re.fullmatch(r'[IS][a-f0-9]{32}', value) is not None
+
+
+GENERATION_CHECK = node_adapter('state-permissions', r"""
+// CYTV_SETUP_GENERATION: fixed Helper state only; no retained source is executed.
+var input=JSON.parse(process.argv[process.argv.length-1]),fs=require('fs');
+try { fs.lstatSync(input.directory); }
+catch(e) { if(e.code!=='ENOENT')throw e;process.stdout.write('null');return; }
+process.stdout.write(JSON.stringify(contract.stopGeneration(input.directory,input.create===true?'install':input.create)));
+""")
+
+
+def setup_generation(installer, create=False):
+    from .operations import HELPER_STATE
+    request={'directory':HELPER_STATE,'create':create}
+    try:
+        value=json.loads(installer.remote.run('/usr/bin/node -e '+shlex.quote(GENERATION_CHECK)+' '+shlex.quote(canonical(request))))
+    except (ValueError,TypeError):refuse()
+    if value is not None and not valid_generation(value):refuse()
+    return value
+
+
+def setup_launch_generation(installer, plan):
+    expected=plan['setup_start']['generation']
+    pending=installer.store.pending(installer.profile) or {}
+    current=setup_generation(installer,create='setup' if expected is None and pending.get('setup_launch_generation') is None else False)
+    if expected is None:
+        # Fresh state may adopt only initialization, never a Stop published
+        # while packages were being installed.
+        if current is None or not current.startswith('I'):return None
+        pinned=pending.get('setup_launch_generation')
+        if pinned is not None and (not valid_generation(pinned) or not pinned.startswith('I')):refuse()
+        if pinned is not None and pinned!=current:return None
+    elif current!=expected:return None
+    return current
+
+
+def helper_start_allowed(installer):
     from .operations import HELPER_STATE
     command='if [ -e '+shlex.quote(HELPER_STATE+'/blocked')+' ] || [ -L '+shlex.quote(HELPER_STATE+'/blocked')+' ] || [ -e '+shlex.quote(HELPER_STATE+'/watchdog')+' ] || [ -L '+shlex.quote(HELPER_STATE+'/watchdog')+' ]; then printf CYTV_STOP_RETAINED; else printf CYTV_START_ALLOWED; fi'
-    if installer.remote.run(command).strip()!='CYTV_START_ALLOWED':
+    result = installer.remote.run(command).strip()
+    if result not in ('CYTV_START_ALLOWED', 'CYTV_STOP_RETAINED'):
+        raise UserError('Startup could not be verified. Save the diagnostic report; do not reinstall blindly.', reason_code='helper-state-unverified')
+    return result == 'CYTV_START_ALLOWED'
+
+
+def guard_helper(installer):
+    if not helper_start_allowed(installer):
         raise UserError('Home Helper remains stopped by its safety control. Recovery data was kept; use the TV controls to review it.',reason_code='pending-operation')
 
 
@@ -977,13 +1029,20 @@ def configure(installer,value):
     # Read-only guard occurs before claiming; an emergency marker may be reviewed
     # on the TV without consuming the still-unsubmitted automatic launch.
     state=snapshot(installer,value)
-    if state.get('configuration',{}).get('launch')=='prepared':guard_helper(installer)
+    setup='setup_start' in plan
+    generation=setup_launch_generation(installer,plan) if setup else None
+    cancelled=setup and generation is None
+    if not setup and state.get('configuration',{}).get('launch')=='prepared':guard_helper(installer)
     token=claim_step(installer,plan,'launch')
-    if token:
-        installer.store.checkpoint(installer.profile,configuration_stage='launch-submitted')
+    if token and cancelled:
+        installer.store.checkpoint(installer.profile,setup_cancelled=True)
+        finish_step(installer,plan,'launch',token)
+    elif token:
+        installer.store.checkpoint(installer.profile,configuration_stage='launch-submitted',
+                                   **({'setup_launch_generation':generation} if setup else {}))
         installer.outcome.launch_submitted()
-        # Automatic native entry preserves a stop arriving after the host guard.
-        configuration_luna(installer,plan,'com.webos.applicationManager/launch',{'id':HELPER,'params':{'nativeHomeAuto':True}})
+        params={'nativeHomeSetup':generation} if setup else {'nativeHomeAuto':True}
+        configuration_luna(installer,plan,'com.webos.applicationManager/launch',{'id':HELPER,'params':params})
         installer.outcome.launch_accepted()
         finish_step(installer,plan,'launch',token)
     installer.store.checkpoint(installer.profile,configuration_stage='complete')
@@ -1062,6 +1121,10 @@ def continue_operation(installer, expected_pending):
     else:
         for index in range(2):readback(installer,value,index)
         if plan['action']=='install':configuration_readback(installer,value)
+    setup = plan['action']=='install' and 'setup_start' in plan
+    setup_receipt = installer.store.pending(installer.profile) or {}
+    cancelled = setup and setup_receipt.get('setup_cancelled') is True
+    expected_generation = (plan['setup_start']['generation'] or setup_receipt.get('setup_launch_generation')) if setup else None
     result=invoke(installer.remote,plan,'release')
     try:
         invoke(installer.remote,plan,'retire')
@@ -1076,8 +1139,28 @@ def continue_operation(installer, expected_pending):
     except (RuntimeError,OSError):
         installer.progress('Setup is verified, but the private recovery capsule could not be removed. Keep the local record for cleanup.')
     if plan['action']=='install':
+        installer.outcome.packages_verified()
+        if setup and expected_generation is not None and setup_receipt.get('setup_cancelled') is not True:
+            # Configuration's committed launch result proves the historical ACK,
+            # including on a closed retry; it never submits another launch.
+            installer.outcome.launch_accepted()
+        observed='unverified'
         try:
             current=installer.helper_state(timeout=5)
-            installer.outcome.startup_observed('process-observed' if current=='running' else 'not-observed' if current in ('stopped','stale') else 'unverified')
-        except Exception:installer.outcome.startup_observed('unverified')
+            observed='process-observed' if current=='running' else 'not-observed' if current in ('stopped','stale') else 'unverified'
+        except Exception:pass
+        if setup:
+            try:
+                # Sample after release/retire/receipt completion and the process
+                # probe: a Stop in any of those stages still wins the result.
+                cancelled = cancelled or setup_generation(installer) != expected_generation
+            except (RuntimeError,OSError):
+                installer.outcome.startup_observed('unverified')
+                raise UserError('Startup could not be verified. Save the diagnostic report; do not reinstall blindly.', reason_code='helper-state-unverified')
+        if cancelled:
+            installer.outcome.cancelled_by_stop()
+            installer.progress('Packages verified. A new Stop cancelled Home activation. Start Helper on the TV when ready.')
+            return {'installed':'no-root','launch_requested':installer.outcome.values['launch_request']=='accepted',
+                    'activation_cancelled':True,'hardware_verified':False}
+        installer.outcome.startup_observed(observed)
     return {'installed':'no-root','launch_requested':True,'hardware_verified':False} if plan['action']=='install' else {'removed':True}

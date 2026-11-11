@@ -193,11 +193,11 @@ def root_driver_details(value, *, keep_attempt=False):
     """Fixed driver callsites only; no remote prose, paths or attempt in reports."""
     if not isinstance(value,dict) or type(value.get('schema',1)) is not int or value.get('schema',1)!=1:return {}
     names=('ValueError','RuntimeError','OSError','PermissionError','FileNotFoundError',
-           'FileExistsError','CalledProcessError','TimeoutExpired','TypeError','KeyError','unknown')
+           'FileExistsError','CalledProcessError','TimeoutExpired','TimeoutError','TypeError','KeyError','unknown')
     if value.get('exception_type') not in names:return {}
     result={'exception_type':value['exception_type']}
     files=('deploy.py','installation.py','c1_gate.py','c1_keyfilter.py','package_data.py',
-           'python_binding.py','observed_install.py','provision.py','store.py')
+           'python_binding.py','observed_install.py','provision.py','store.py','transport.py','emergency_reader.py')
     frames=value.get('frames',[])
     if not isinstance(frames,list) or len(frames)>8:return {}
     result['frames']=[{'file':frame['file'],'line':frame['line']} for frame in frames
@@ -278,7 +278,7 @@ def no_root_cleanup_details(value):
         'exception_name': OBSERVER_EXCEPTION_NAMES,
         'exception_code': OBSERVER_EXCEPTION_CODES,
         'filesystem_operation': OBSERVER_FILESYSTEM_OPERATIONS,
-        'reason': ('unsafe-path', 'invalid-boot-identity', 'invalid-cleanup-action', 'invalid-staging-scope'),
+        'reason': ('unsafe-path', 'invalid-boot-identity', 'invalid-cleanup-action', 'invalid-staging-scope', 'kernel-boot-unchanged'),
         'directory_owner': ('root', 'current-user', 'other'),
         'directory_type': ('directory', 'symlink', 'other'),
     }

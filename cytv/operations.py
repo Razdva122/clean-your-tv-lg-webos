@@ -742,7 +742,7 @@ printf '%s' "$cytv_state"
         from . import no_root_observer
         pending = no_root_observer.begin(self, 'install', {'helper.ipk': helper, 'launcher.ipk': launcher},
             {HOME: self.manifest['home_version'], HELPER: self.manifest['helper_version']}, expected,
-            {'ssap-key.json': key_data, 'apps.json': apps_data})
+            {'ssap-key.json': key_data, 'apps.json': apps_data}, setup_activation=True)
         return self.continue_no_root(pending)
 
     def continue_no_root(self, expected_pending):
@@ -1900,10 +1900,6 @@ print('CYTV_PROJECT_REMOVED')
         if reply.get('cleanup_error') == 'owned-process-still-used':
             self.store.checkpoint(self.profile,stage='restart-required',removal_reason='restart-required')
             return {'removed':False,'verified_clean':False,'restart_required':True}
-        result=reply.get('result',{})
-        if result.get('restart_required') is True:
-            self.store.checkpoint(self.profile,stage='restart-required',removal_reason='restart-required',cleanup_boot_id=reply.get('cleanup_boot_id'))
-            return dict(result,removed=False,verified_clean=False,restart_required=True)
         failure=reply.get('cleanup_error')
         messages={
             'root-worker-busy':'Another Clean Your TV operation is still running. Wait for it to finish, then choose Try again.',
@@ -1913,6 +1909,10 @@ print('CYTV_PROJECT_REMOVED')
         if failure in messages:
             self.store.checkpoint(self.profile,removal_reason=failure)
             raise UserError(messages[failure],reason_code=failure)
+        result=reply.get('result',{})
+        if result.get('restart_required') is True:
+            self.store.checkpoint(self.profile,stage='restart-required',removal_reason='restart-required',cleanup_boot_id=reply.get('cleanup_boot_id'))
+            return dict(result,removed=False,verified_clean=False,restart_required=True)
         if (reply.get('state')!='complete' or phase!='verified-clean'
                 or result.get('removed') is not True or result.get('private_cleanup_verified') is not True
                 or reply.get('current') is not True):

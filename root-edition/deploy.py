@@ -414,23 +414,47 @@ def main():
     print(json.dumps(result), flush=True)
 
 
-def install_failure(error):
+def install_failure(error, *, attempt=None):
     # A diagnostic for this invocation only; never a receipt or recovery authority.
     import re, traceback
-    attempt=os.environ.get('CYTV_ROOT_INSTALL_ATTEMPT','')
-    if len(sys.argv)<2 or sys.argv[1]!='install' or not re.fullmatch('[a-f0-9]{32}',attempt):return None
+    if attempt is None:
+        if len(sys.argv)<2 or sys.argv[1]!='install':return None
+        attempt=os.environ.get('CYTV_ROOT_INSTALL_ATTEMPT','')
+    if not isinstance(attempt,str) or not re.fullmatch('[a-f0-9]{32}',attempt):return None
     files={'deploy.py','installation.py','c1_gate.py','c1_keyfilter.py','package_data.py',
-           'python_binding.py','observed_install.py','provision.py','store.py'}
+           'python_binding.py','observed_install.py','provision.py','store.py','transport.py','emergency_reader.py'}
     frames=[{'file':Path(frame.filename).name,'line':frame.lineno}
             for frame in traceback.extract_tb(error.__traceback__)
             if Path(frame.filename).name in files and 1<=frame.lineno<=10000][-8:]
     names=('ValueError','RuntimeError','OSError','PermissionError','FileNotFoundError',
-           'FileExistsError','CalledProcessError','TimeoutExpired','TypeError','KeyError')
+           'FileExistsError','CalledProcessError','TimeoutExpired','TimeoutError','TypeError','KeyError')
     name=type(error).__name__
     result={'schema':1,'attempt':attempt,'exception_type':name if name in names else 'unknown','frames':frames}
     if isinstance(error,OSError) and type(error.errno) is int and 0<=error.errno<=4095:result['errno']=error.errno
     if isinstance(error,subprocess.CalledProcessError) and type(error.returncode) is int and -255<=error.returncode<=255:
         result['exit_status']=error.returncode
+    return result
+
+
+def install_failure_details(value, attempt=None):
+    """Revalidate child diagnostics; never retain prose, commands or identifiers."""
+    import re
+    names=('ValueError','RuntimeError','OSError','PermissionError','FileNotFoundError',
+           'FileExistsError','CalledProcessError','TimeoutExpired','TimeoutError','TypeError','KeyError','unknown')
+    files=('deploy.py','installation.py','c1_gate.py','c1_keyfilter.py','package_data.py',
+           'python_binding.py','observed_install.py','provision.py','store.py','transport.py','emergency_reader.py')
+    if (not isinstance(value,dict) or type(value.get('schema',1)) is not int or value.get('schema',1)!=1
+            or value.get('exception_type') not in names):return {}
+    if attempt is not None and (not isinstance(attempt,str) or not re.fullmatch('[a-f0-9]{32}',attempt)
+            or value.get('attempt')!=attempt):return {}
+    frames=value.get('frames',[])
+    if not isinstance(frames,list) or len(frames)>8:return {}
+    result={'exception_type':value['exception_type'],'frames':[{'file':f['file'],'line':f['line']}
+        for f in frames if isinstance(f,dict) and f.get('file') in files
+        and type(f.get('line')) is int and 1<=f['line']<=10000]}
+    for key,low,high in (('errno',0,4095),('exit_status',-255,255)):
+        number=value.get(key)
+        if type(number) is int and low<=number<=high:result[key]=number
     return result
 
 

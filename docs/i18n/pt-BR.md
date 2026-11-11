@@ -71,9 +71,15 @@ A instalação Root continua com um aviso se as entradas da TV não puderem ser 
 1. Abra outro app na TV e pressione **Home** brevemente. Clean Your TV deve abrir. Informe ao assistente o que você viu; pule a verificação se não a realizou.
 2. Confira setas, OK, Voltar, volume e som. Teste separadamente espera/retomada e inicialização depois de desligar da tomada. A instalação bem-sucedida não verifica essas ações por si só.
 
+A configuração No-root ativa o Home após verificar os pacotes. Uma nova parada durante a configuração cancela a ativação. Você pode desativar o Home depois nas Configurações.
+
+Use a conexão e os dados de recuperação originais. Se foram perdidos, reconecte à mesma TV e escolha Desinstalar Clean Your TV. Conclua a remoção verificada antes da configuração; não exclua arquivos de reserva. Se a remoção parar, salve o relatório de diagnóstico.
+
 <a id="uso-e-recuperação"></a>
 
 ## 6. Uso e recuperação
+
+Se o instalador mostrar “A configuração Root está incompleta, mas o registro da instalação não está na TV.”: Escolha Revisar opções de recuperação para remover o Clean Your TV e depois inicie a configuração separadamente. A remoção completa também remove No-root Home e Helper; salve suas preferências antes.
 
 Suporte IR No-root: soltar Home após um toque curto agenda o Clean para cerca de 700 ms depois; o LG Home pode aparecer primeiro. Segurar Home continua com o webOS e três toques ainda param o Helper. O acesso pelo Developer Mode padrão não foi verificado; não altere permissões dos dispositivos de entrada.
 
@@ -83,7 +89,7 @@ Setas selecionam; OK abre; segure OK para reorganizar. Um toque em Voltar manté
 
 No-root: Para reiniciar o controle de Home, abra Home Helper, escolha Iniciar Helper e confirme. Sua tela Home escolhida será mantida. Root: ative **Alterar Home** nas configurações do Home para retomar. **Abrir LG Home** abre LG Home uma vez sem mudar o destino de Home. Para restaurar LG Home como destino permanente, desative **Alterar Home**. Nunca execute os dois controladores juntos. Se a falha voltar, mantenha LG Home ativo.
 
-Uma atualização não reinicia um Helper No-root parado. Retome-o explicitamente como descrito acima; não exclua manualmente os marcadores de parada.
+Atualizações automáticas na TV não reiniciam Helper parado. Para retomá-lo separadamente use Iniciar Helper; não exclua arquivos de parada.
 
 ## Precisa de ajuda?
 
@@ -104,6 +110,8 @@ Escolha **Desinstalar Clean Your TV** em Manutenção usando a mesma conexão sa
 Em TVs antigas sem um aplicativo LG Home separado, a remoção No-root pode mudar para a TV ao vivo. Mantenha a TV ligada e reinicie se solicitado; não apague os dados de recuperação nem restaure a TV.
 
 Quando solicitado, desconecte a TV da tomada, reconecte, aguarde a rede e escolha **Tentar novamente**. Espera ou Quick Start não é reinicialização completa; CYTV não reinicia a TV automaticamente. Se a conexão cair, verifique-a e repita a mesma remoção, sem outro assistente de recuperação. Se o acesso for negado, use a conexão Root solicitada; se a TV estiver ocupada, aguarde e tente novamente. O sucesso só aparece após verificar a limpeza final. Preserve as chaves e os relatórios originais. Continuam válidos os controles de emergência e o consentimento para compartilhar.
+
+Se o instalador não conseguir verificar a reinicialização completa solicitada, salve e anexe o relatório de diagnóstico. Mantenha a conexão salva e os dados de recuperação. Não repita os ciclos de energia nem apague manualmente a operação pendente.
 
 Uma instalação com falha ou interrompida oferece recuperação diretamente. Se No-root não puder continuar, confirme a remoção completa uma vez. A remoção faz até três tentativas em caso de perda temporária de conexão ou processo CYTV ocupado. Se precisar de Root, escolha **Conectar com Root** para a mesma TV; a limpeza Root verificada também conclui a remoção No-root bloqueada. Se a ativação Root falhar, o CYTV tenta restaurar e verificar LG Home sem repetir a ativação. Cancelar trabalho pendente preserva o relatório e as ações de recuperação. A parada de emergência é mantida.
 

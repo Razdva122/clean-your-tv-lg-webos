@@ -36,7 +36,8 @@ if sys.argv[-2].endswith('/install'):
   destination=root/'apps'/name; destination.parent.mkdir(parents=True,exist_ok=True); destination.write_bytes(data)
  info=json.loads((root/'apps/usr/palm/applications'/app/'appinfo.json').read_text())
  apps[app]=info['version']; terminal='installed'
- if app=='com.local.nativehome':(root/'apps/usr/palm/applications'/app/'state').mkdir(exist_ok=True)
+ if app=='com.local.nativehome':
+  state=root/'apps/usr/palm/applications'/app/'state';state.mkdir(exist_ok=True);os.chown(state,-1,os.getgid())
 else:
  import shutil
  for kind,suffix in [('applications',''),('packages',''),('services','.renewal' if app=='com.gathin.tvhome' else '.service')]:
@@ -274,29 +275,133 @@ class OriginalOperationIntegration(unittest.TestCase):
         observed=self.installer.observe_recovery()
         self.assertNotIn('continue-no-root',observed['assessment']['actions'])
 
-    def test_update_repairs_vendor_key_mode_without_replaying_packages_or_clearing_stop(self):
+    def publish_stop(self, name='blocked'):
+        from cytv.tv_sources import node_adapter
+        program=node_adapter('state-permissions',"contract.publishStopGeneration(process.argv[process.argv.length-1]);")
+        self.remote.run('/usr/bin/node -e '+shlex.quote(program)+' '+shlex.quote(operations.HELPER_STATE))
+        (Path(operations.HELPER_STATE)/name).write_bytes(b'explicit-stop')
+
+    def test_stopped_update_requests_setup_start_with_bound_generation(self):
+        self.installer.install(self.inventory,'original-secret')
+        self.publish_stop()
+        before=len(self.remote.calls)
+        result=self.installer.install(self.inventory,'original-secret')
+        self.assertIsNone(self.store.pending(self.profile))
+        self.assertTrue(result['launch_requested'])
+        self.assertFalse(result.get('activation_cancelled',False))
+        launches=[row[2] for row in self.remote.calls[before:] if row[0]=='luna' and row[1].endswith('/launch') and row[2]['id']==operations.HELPER]
+        self.assertEqual(len(launches),1)
+        self.assertRegex(launches[0]['params']['nativeHomeSetup'],r'^S[a-f0-9]{32}$')
+        self.assertNotIn('nativeHomeStart',launches[0]['params'])
+        self.assertEqual((self.root/'requests').read_text().splitlines(),list(observer.APPS)*2)
+
+    def test_setup_binds_initial_intent_before_consuming_old_stop(self):
         self.installer.install(self.inventory,'original-secret')
         directory=Path(operations.HELPER_STATE)
-        key=directory/'ssap-key.json';key.chmod(0o775)
-        (directory/'apps.json').chmod(0o775)
-        blocked=directory/'blocked';blocked.write_bytes(b'retained-emergency-stop')
-        # Configuration may proceed, but the existing emergency stop must still
-        # block automatic launch before its claim is consumed.
+        (directory/'stop-generation').unlink()
+        (directory/'blocked').write_text('previous stop')
+        before=len(self.remote.calls)
+        result=self.installer.install(self.inventory,'original-secret')
+        self.assertFalse(result.get('activation_cancelled',False))
+        launches=[row[2] for row in self.remote.calls[before:] if row[0]=='luna' and row[1].endswith('/launch') and row[2]['id']==operations.HELPER]
+        self.assertRegex(launches[0]['params']['nativeHomeSetup'],r'^I[a-f0-9]{32}$')
+
+    def test_new_stop_cancels_bound_setup_even_after_latch_disappears(self):
+        self.installer.install(self.inventory,'original-secret')
+        self.publish_stop()
+        self.remote.cut=True
         with self.assertRaises(RuntimeError):self.installer.install(self.inventory,'original-secret')
-        self.assertEqual(key.stat().st_mode&0o777,0o640)
-        self.assertEqual(blocked.read_bytes(),b'retained-emergency-stop')
-        pending=self.store.pending(self.profile)
-        saved=observer.capsule(self.installer,pending)
-        observed=observer.snapshot(self.installer,saved)
-        self.assertEqual(observed['configuration']['files'],'complete')
-        self.assertEqual(observed['configuration']['launch'],'prepared')
-        self.assertEqual((self.root/'requests').read_text().splitlines(),list(observer.APPS)*2)
-        # Model a later explicit user review of the stop latch, then continue
-        # the same transaction without submitting either package again.
-        blocked.unlink()
-        self.installer.continue_no_root(pending)
+        pending=self.store.pending(self.profile);saved=observer.capsule(self.installer,pending)
+        self.assertRegex(saved['plan']['setup_start']['generation'],r'^S[a-f0-9]{32}$')
+        self.publish_stop();(Path(operations.HELPER_STATE)/'blocked').unlink()
+        before=len(self.remote.calls)
+        result=self.installer.continue_no_root(pending)
+        self.assertTrue(result['activation_cancelled'])
+        self.assertFalse(result['launch_requested'])
         self.assertIsNone(self.store.pending(self.profile))
+        self.assertFalse(any(row[0]=='luna' and row[1].endswith('/launch') for row in self.remote.calls[before:]))
         self.assertEqual((self.root/'requests').read_text().splitlines(),list(observer.APPS)*2)
+
+    def test_closed_setup_retry_does_not_repeat_launch_or_reinstall(self):
+        self.installer.install(self.inventory,'original-secret');self.publish_stop()
+        original=self.remote.run
+        def cut(command,data=None,timeout=30):
+            words=shlex.split(command)
+            if '-e' in words and observer.PROGRAM in words[words.index('-e')+1] and json.loads(words[-1])['command']=='retire':
+                raise RuntimeError('lost retire acknowledgement')
+            return original(command,data,timeout)
+        self.remote.run=cut
+        with self.assertRaises(RuntimeError):self.installer.install(self.inventory,'original-secret')
+        self.remote.run=original;pending=self.store.pending(self.profile)
+        requests=(self.root/'requests').read_bytes();before=len(self.remote.calls)
+        self.installer.continue_no_root(pending)
+        self.assertEqual((self.root/'requests').read_bytes(),requests)
+        self.assertFalse(any(row[0]=='luna' and row[1].endswith('/launch') for row in self.remote.calls[before:]))
+        self.assertIsNone(self.store.pending(self.profile))
+
+    def test_lost_profile_setup_keeps_foreign_reservation_and_offers_verified_removal(self):
+        from cytv.failure_help import for_error
+        self.remote.cut=True
+        with self.assertRaises(RuntimeError):self.installer.install(self.inventory,'original-secret')
+        before={str(p.relative_to(self.root/'private')):p.read_bytes() for p in (self.root/'private').rglob('*') if p.is_file()}
+        requests=(self.root/'requests').read_bytes()
+        other=operations.Installer(self.remote,state.Store(self.root/'new-computer'),self.profile,
+                                  self.installer.payload,self.installer.manifest,lambda *_:None)
+        with self.assertRaises(RuntimeError) as caught:other.install(self.inventory,'new-pairing')
+        guide=for_error(caught.exception,'install-packages',self.profile,other.store.pending(self.profile))
+        self.assertEqual(guide['code'],'no-root-reservation')
+        self.assertIsNone(other.store.pending(self.profile))
+        self.assertEqual((self.root/'requests').read_bytes(),requests)
+        self.assertEqual({str(p.relative_to(self.root/'private')):p.read_bytes() for p in (self.root/'private').rglob('*') if p.is_file()},before)
+
+    def test_stop_during_release_is_reported_as_cancelled_activation(self):
+        original=self.remote.run;stopped=False
+        def run(command,data=None,timeout=30):
+            nonlocal stopped
+            result=original(command,data,timeout)
+            words=shlex.split(command)
+            if not stopped and '-e' in words and observer.PROGRAM in words[words.index('-e')+1] and json.loads(words[-1])['command']=='release':
+                stopped=True;self.publish_stop()
+            return result
+        self.remote.run=run
+        result=self.installer.install(self.inventory,'original-secret')
+        self.assertTrue(stopped)
+        self.assertTrue(result['activation_cancelled'])
+        self.assertTrue(result['launch_requested'])
+        self.assertEqual(self.installer.outcome.values['startup'],'stopped-during-setup')
+        self.assertIsNone(self.store.pending(self.profile))
+
+    def test_invalidated_generation_during_release_never_reports_normal_completion(self):
+        original=self.remote.run
+        def run(command,data=None,timeout=30):
+            result=original(command,data,timeout)
+            words=shlex.split(command)
+            if '-e' in words and observer.PROGRAM in words[words.index('-e')+1] and json.loads(words[-1])['command']=='release':
+                (Path(operations.HELPER_STATE)/'stop-generation').write_bytes(b'')
+            return result
+        self.remote.run=run
+        with self.assertRaises(RuntimeError):self.installer.install(self.inventory,'original-secret')
+        self.assertEqual(self.installer.outcome.values['packages'],'verified')
+        self.assertEqual(self.installer.outcome.values['home_button'],'not-tested')
+        self.assertIsNone(self.store.pending(self.profile))
+
+    def test_invalid_setup_generation_stops_before_package_requests(self):
+        self.installer.install(self.inventory,'original-secret')
+        (Path(operations.HELPER_STATE)/'stop-generation').write_text('invalid')
+        requests=(self.root/'requests').read_bytes()
+        with self.assertRaises(RuntimeError):self.installer.install(self.inventory,'original-secret')
+        self.assertEqual((self.root/'requests').read_bytes(),requests)
+        self.assertIsNone(self.store.pending(self.profile))
+
+    def test_update_repairs_vendor_key_mode_before_setup_start(self):
+        self.installer.install(self.inventory,'original-secret')
+        directory=Path(operations.HELPER_STATE);key=directory/'ssap-key.json'
+        key.chmod(0o775);(directory/'apps.json').chmod(0o775)
+        self.publish_stop()
+        result=self.installer.install(self.inventory,'original-secret')
+        self.assertEqual(key.stat().st_mode&0o777,0o640)
+        self.assertTrue(result['launch_requested'])
+        self.assertIsNone(self.store.pending(self.profile))
 
     def test_pending_update_reclaims_capsule_matched_helper_key_without_package_replay(self):
         self.installer.install(self.inventory,'original-secret')
@@ -306,7 +411,7 @@ class OriginalOperationIntegration(unittest.TestCase):
         # The UID double identifies this inode. Keep it allocated after rename
         # so Linux cannot recycle its number for unrelated observer evidence.
         retained_key=key.open('rb');self.addCleanup(retained_key.close)
-        blocked=directory/'blocked';blocked.write_bytes(b'explicit-stop')
+        blocked=directory/'blocked'
         original=self.remote.run
         interrupted=True
         def run(command,data=None,timeout=30):
@@ -323,19 +428,20 @@ class OriginalOperationIntegration(unittest.TestCase):
         self.remote.run=run
         with self.assertRaises(RuntimeError):self.installer.install(self.inventory,'original-secret')
         pending=self.store.pending(self.profile);saved=observer.capsule(self.installer,pending)
+        self.publish_stop()
         before=(self.root/'requests').read_bytes()
-        with self.assertRaises(RuntimeError):self.installer.continue_no_root(pending)
+        self.assertTrue(self.installer.continue_no_root(pending)['activation_cancelled'])
         self.assertEqual(blocked.read_bytes(),b'explicit-stop')
         self.assertNotEqual(key.stat().st_ino,inode)
         self.assertEqual(key.stat().st_mode&0o777,0o640)
         self.assertEqual(key.read_text(),json.dumps({'key':'original-secret'}))
         observed=observer.snapshot(self.installer,saved)
         self.assertEqual(observed['configuration']['files'],'complete')
-        self.assertEqual(observed['configuration']['launch'],'prepared')
-        self.assertEqual(observer.capsule(self.installer,self.store.pending(self.profile)),saved)
+        self.assertEqual(observed['configuration']['launch'],'complete')
+        self.assertIsNone(self.store.pending(self.profile))
         self.assertEqual((self.root/'requests').read_bytes(),before)
         # Only a separately modeled explicit owner resume removes the latch.
-        blocked.unlink();self.installer.continue_no_root(self.store.pending(self.profile))
+        blocked.unlink()
         self.assertIsNone(self.store.pending(self.profile))
         self.assertEqual((self.root/'requests').read_bytes(),before)
 
@@ -482,15 +588,27 @@ class OriginalOperationIntegration(unittest.TestCase):
         self.assertEqual(self.store.pending(self.profile),pending)
         self.assertEqual((self.root/'requests').read_text().splitlines(),[operations.HELPER])
 
-    def test_emergency_marker_prevents_recovery_launch(self):
+    def test_failed_first_stop_publication_cannot_be_adopted_as_initialization(self):
         self.remote.cut=True
         with self.assertRaises(RuntimeError):self.installer.install(self.inventory,'original-secret')
         pending=self.store.pending(self.profile)
-        marker=Path(operations.HELPER_STATE)/'blocked';marker.parent.mkdir(parents=True,exist_ok=True);marker.write_text('stopped')
-        with self.assertRaisesRegex(RuntimeError,'safety control'):self.installer.continue_no_root(pending)
-        self.assertEqual(marker.read_text(),'stopped')
-        self.assertFalse(any(call[0]=='luna' and call[1].endswith('/launch') for call in self.remote.calls))
-        self.assertIsNotNone(self.store.pending(self.profile))
+        marker=Path(operations.HELPER_STATE)/'blocked';marker.write_bytes(b'new-stop')
+        self.assertFalse((marker.parent/'stop-generation').exists())
+        result=self.installer.continue_no_root(pending)
+        self.assertTrue(result['activation_cancelled'])
+        self.assertFalse(result['launch_requested'])
+        self.assertEqual(marker.read_bytes(),b'new-stop')
+
+    def test_new_stop_prevents_recovery_launch(self):
+        self.remote.cut=True
+        with self.assertRaises(RuntimeError):self.installer.install(self.inventory,'original-secret')
+        pending=self.store.pending(self.profile)
+        self.publish_stop()
+        result=self.installer.continue_no_root(pending)
+        self.assertTrue(result['activation_cancelled'])
+        self.assertEqual((Path(operations.HELPER_STATE)/'blocked').read_bytes(),b'explicit-stop')
+        self.assertFalse(any(row[0]=='luna' and row[1].endswith('/launch') for row in self.remote.calls))
+        self.assertIsNone(self.store.pending(self.profile))
 
     def test_foreign_reservation_blocks_removal_restore_before_any_effect(self):
         self.remote.cut=True
@@ -538,28 +656,26 @@ class OriginalOperationIntegration(unittest.TestCase):
         original=self.remote.luna
         def luna(uri,payload,**kwargs):
             if uri.endswith('/launch') and payload.get('id')==operations.HELPER:
-                marker=Path(operations.HELPER_STATE)/'blocked';marker.parent.mkdir(parents=True,exist_ok=True);marker.write_text('concurrent-stop')
+                self.publish_stop()
                 source=Path(__file__).resolve().parents[2]/'native/app'
-                script=r'''
+                script=r"""
 var fs=require('fs'),vm=require('vm'),path=require('path'),source=process.argv[1],local=process.argv[2],params=JSON.parse(process.argv[3]),captured;
-var entry=fs.readFileSync(source+'/helper-entry.js','utf8');
-vm.runInNewContext(entry,{require:function(name){if(name!=='child_process')throw Error('unexpected');return {spawn:function(binary,args){captured=JSON.parse(args[0]);return {on:function(){},unref:function(){}};}};},process:{argv:['node','entry',JSON.stringify(params)],exit:function(){throw Error('unexpected exit');}}});
-if(!captured||captured.nativeHomeAuto!==true)throw Error('lost automatic safety flag');
-var native=fs.readFileSync(source+'/native.js','utf8'),exited=false;
+vm.runInNewContext(fs.readFileSync(source+'/helper-entry.js','utf8'),{require:function(name){if(name!=='child_process')throw Error('unexpected');return {spawn:function(binary,args){captured=JSON.parse(args[0]);return {on:function(){},unref:function(){}};}};},process:{argv:['node','entry',JSON.stringify(params)],exit:function(){throw Error('unexpected exit');}}});
+if(!captured||captured.nativeHomeSetup!==params.nativeHomeSetup)throw Error('lost setup generation');
+var native=fs.readFileSync(source+'/native.js','utf8').replace('/media/developer/apps/usr/palm/applications/com.local.nativehome',path.dirname(local)),exited=false;
 try{vm.runInNewContext(native,{require:function(name){
- if(name==='fs')return {existsSync:function(p){return fs.existsSync(p.replace('/media/developer/apps/usr/palm/applications/com.local.nativehome/state',local));}};
- if(name==='child_process')return {};
- if(name==='./runtime-policy')return require(source+'/runtime-policy');
+ if(name==='fs')return fs;if(name==='child_process')return {};
+ if(name==='./runtime-policy'||name==='./state-permissions')return require(source+'/'+name.slice(2));
  throw Error('unexpected dependency after stop '+name);
 },process:{argv:['node','native',JSON.stringify(captured)],exit:function(code){if(code!==0)throw Error('failed');exited=true;throw 'STOP';}},Buffer:Buffer});}catch(e){if(e!=='STOP')throw e;}
-if(!exited||fs.readFileSync(local+'/blocked','utf8')!=='concurrent-stop')throw Error('stop lost');
-'''
+if(!exited||fs.readFileSync(local+'/blocked','utf8')!=='explicit-stop')throw Error('stop lost');
+"""
                 result=subprocess.run([shutil.which('node'),'-e',script,str(source),operations.HELPER_STATE,json.dumps(payload['params'])],capture_output=True,timeout=5)
                 self.assertEqual(result.returncode,0,result.stderr.decode())
             return original(uri,payload,**kwargs)
         self.remote.luna=luna
-        self.installer.install(self.inventory,'original-secret')
-        self.assertEqual((Path(operations.HELPER_STATE)/'blocked').read_text(),'concurrent-stop')
+        self.assertTrue(self.installer.install(self.inventory,'original-secret')['activation_cancelled'])
+        self.assertEqual((Path(operations.HELPER_STATE)/'blocked').read_bytes(),b'explicit-stop')
 
     def test_copied_capsule_cannot_duplicate_delayed_configuration(self):
         import threading

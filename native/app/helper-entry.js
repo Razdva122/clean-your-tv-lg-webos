@@ -8,13 +8,18 @@ try {
 } catch (_) {
   params = {};
 }
-if (params.nativeHomeAuto === true || params.nativeHomeStart === true) {
+if (
+  params.nativeHomeAuto === true ||
+  params.nativeHomeStart === true ||
+  (typeof params.nativeHomeSetup === 'string' &&
+    /^[IS][a-f0-9]{32}$/.test(params.nativeHomeSetup))
+) {
+  var start = { nativeHomeAuto: params.nativeHomeAuto === true };
+  if (typeof params.nativeHomeSetup === 'string')
+    start.nativeHomeSetup = params.nativeHomeSetup;
   var child = require('child_process').spawn(
     root + '/detach',
-    [
-      JSON.stringify({ nativeHomeAuto: params.nativeHomeAuto === true }),
-      '--controller'
-    ],
+    [JSON.stringify(start), '--controller'],
     { detached: true, stdio: 'ignore' }
   );
   child.on('error', function () {
