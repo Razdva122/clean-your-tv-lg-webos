@@ -21,6 +21,7 @@ jobs:
   scope:
     runs-on: ubuntu-latest
     outputs:
+      linux_image: ${{ steps.linux-image.outputs.image }}
       any: ${{ steps.scope.outputs.any }}
       ui: ${{ steps.scope.outputs.ui }}
       macos: ${{ steps.scope.outputs.macos }}
@@ -38,6 +39,8 @@ jobs:
           ref: ${{ inputs.source_sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
+      - id: linux-image
+        uses: ./.github/actions/linux-ci-image
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -125,23 +128,9 @@ jobs:
           from pathlib import Path
           runpy.run_path('scripts/release-flow.py')['validate_shape'](json.loads(Path('release-plan.json').read_text()))
           PYTHON
-      - name: Prepare pinned Node 0.10.15, 0.10.25 and 0.12.2 for Helper regression
+      - name: Prepare pinned legacy Node.js for Helper regression
         if: runner.os == 'Linux' && (contains(format(' {0} ', steps.evidence.outputs.missing), ' tv-runtime ') || contains(format(' {0} ', steps.evidence.outputs.missing), ' installer '))
-        shell: bash
-        run: |
-          cd "$RUNNER_TEMP"
-          curl --fail --silent --show-error --location https://nodejs.org/dist/v0.10.15/node-v0.10.15-linux-x64.tar.gz --output node-v0.10.15-linux-x64.tar.gz
-          echo '0b5191748a91b1c49947fef6b143f3e5e5633c9381a31aaa467e7c80efafb6e9  node-v0.10.15-linux-x64.tar.gz' | sha256sum --check -
-          tar -xzf node-v0.10.15-linux-x64.tar.gz
-          echo "NODE010=$RUNNER_TEMP/node-v0.10.15-linux-x64/bin/node" >> "$GITHUB_ENV"
-          curl --fail --silent --show-error --location https://nodejs.org/dist/v0.10.25/node-v0.10.25-linux-x64.tar.gz --output node-v0.10.25-linux-x64.tar.gz
-          echo '1dac61c21fa21e47fc6e799757569c6c3914897ca46fc8f4dd2c8f13f0400626  node-v0.10.25-linux-x64.tar.gz' | sha256sum --check -
-          tar -xzf node-v0.10.25-linux-x64.tar.gz
-          echo "NODE01025=$RUNNER_TEMP/node-v0.10.25-linux-x64/bin/node" >> "$GITHUB_ENV"
-          curl --fail --silent --show-error --location https://nodejs.org/dist/v0.12.2/node-v0.12.2-linux-x64.tar.gz --output node-v0.12.2-linux-x64.tar.gz
-          echo '4e1578efc2a2cc67651413a05ccc4c5d43f6b4329c599901c556f24d93cd0508  node-v0.12.2-linux-x64.tar.gz' | sha256sum --check -
-          tar -xzf node-v0.12.2-linux-x64.tar.gz
-          echo "NODE012=$RUNNER_TEMP/node-v0.12.2-linux-x64/bin/node" >> "$GITHUB_ENV"
+        uses: ./.github/actions/legacy-node
       - name: Test affected runtime components
         if: steps.evidence.outputs.fresh == 'true'
         env:
@@ -185,23 +174,33 @@ jobs:
     needs: scope
     if: needs.scope.outputs.installer == 'true'
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: read
+      packages: read
+    container:
+      image: ${{ needs.scope.outputs.linux_image }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ github.token }}
+    env:
+      CI_TEST_IMAGE: ${{ needs.scope.outputs.linux_image }}
+      # The runtime cache validates every ancestor, including ownership.
+      ARM_PYTHON_CACHE: /var/cache/cytv-python-runtime
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.source_sha || github.sha }}
           persist-credentials: false
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
+      - name: Trust the runner-owned checkout inside the container
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - uses: actions/cache@v4
         with:
-          path: build/python-runtime-cache
-          key: root-python-4a71641c8d5536175e404a961624e8656eba30e97b5026f6bd7dc31e4bbeaaea
-      - name: Install ARM user emulation and EABI sysroot
-        run: |
-          bash scripts/ci-ubuntu-mirror.sh
-          sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends qemu-user libc6-armel-cross libgcc-s1-armel-cross
+          path: ${{ env.ARM_PYTHON_CACHE }}
+          key: root-python-container-4a71641c8d5536175e404a961624e8656eba30e97b5026f6bd7dc31e4bbeaaea
       - name: Select fresh ARM Python work
         id: evidence
         env:
@@ -209,10 +208,12 @@ jobs:
         run: python scripts/ci-test-evidence.py plan --kind optional --os ubuntu-24.04 --units optional-python --directory "$RUNNER_TEMP/ci-evidence"
       - name: Execute the pinned ARM32 Python and native module smoke tests
         if: steps.evidence.outputs.fresh == 'true'
-        run: python scripts/test-python-runtime.py
+        run: python scripts/test-python-runtime.py --cache-dir "$ARM_PYTHON_CACHE"
       - name: Verify shell provisioning boundaries as root
         if: steps.evidence.outputs.fresh == 'true'
-        run: sudo "$(command -v python)" -m unittest tests.cytv.test_python_runtime
+        run: |
+          test "$(id -u)" = 0
+          python -m unittest tests.cytv.test_python_runtime
       - name: Record freshly passed ARM Python work
         id: record
         continue-on-error: true
@@ -243,6 +244,18 @@ jobs:
             browsers: chromium firefox
             engines: chromium,firefox
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+      actions: read
+      packages: read
+    container:
+      image: ${{ matrix.os == 'ubuntu-24.04' && needs.scope.outputs.linux_image || '' }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ github.token }}
+    defaults:
+      run:
+        shell: bash
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
@@ -254,38 +267,61 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci --ignore-scripts --no-audit --no-fund
-      - if: runner.os == 'Linux'
-        run: bash scripts/ci-ubuntu-mirror.sh
-      - run: npx playwright install --with-deps ${{ matrix.browsers }}
+      - if: runner.os == 'macOS'
+        run: npx playwright install --with-deps ${{ matrix.browsers }}
+      - name: Verify the baked Playwright version
+        if: runner.os == 'Linux'
+        run: test "$(node -p "require('playwright/package.json').version")" = "$PLAYWRIGHT_IMAGE_VERSION"
       - name: Check actual HEIC decode and local phone upload
         env:
           HEIC_BROWSERS: ${{ matrix.engines }}
-        run: npm run test:wallpaper:heic
+        run: |
+          if [ "$RUNNER_OS" = Linux ]; then
+            # Firefox refuses to run as root with the runner user's mounted HOME.
+            HOME=$(mktemp -d)
+            export HOME
+            trap 'rm -rf "$HOME"' EXIT
+          fi
+          npm run test:wallpaper:heic
 
   browser:
     needs: scope
     if: needs.scope.outputs.tv == 'true' || needs.scope.outputs.ui == 'true'
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: read
+      packages: read
+    container:
+      image: ${{ needs.scope.outputs.linux_image }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ github.token }}
+    env:
+      CI_TEST_IMAGE: ${{ needs.scope.outputs.linux_image }}
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.source_sha || github.sha }}
           persist-credentials: false
+      - name: Trust the runner-owned checkout inside the container
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: package-lock.json
-      - uses: actions/setup-python@v5
+      - uses: actions/cache@v4
         with:
-          python-version: '3.12'
-          cache: pip
-          cache-dependency-path: |
-            scripts/build-requirements.txt
+          path: ~/.cache/pip
+          key: linux-ci-pip-${{ hashFiles('scripts/build-requirements.txt') }}
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: python -m pip install -r scripts/build-requirements.txt
-      - run: bash scripts/ci-ubuntu-mirror.sh
-      - run: npx playwright install --with-deps chromium
+      - name: Verify the baked Playwright version
+        run: test "$(node -p "require('playwright/package.json').version")" = "$PLAYWRIGHT_IMAGE_VERSION"
       - name: Select fresh browser units
         id: evidence
         env:

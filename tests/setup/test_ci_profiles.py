@@ -104,7 +104,8 @@ class CIProfiles(unittest.TestCase):
     def test_runtime_missing_selection_never_invokes_empty_full_suite(self):
         workflow = (ROOT / '.github/workflows/tests.yml').read_text()
         self.assertIn('TV_RUNTIME: ${{ needs.scope.outputs.tv_runtime }}', workflow)
-        for name in ('Prepare pinned Node', 'Verify real webOS-style file ownership'):
+        for name in ('Prepare pinned legacy Node.js for Helper regression',
+                     'Verify real webOS-style file ownership'):
             condition = workflow[workflow.index('      - name: ' + name):].splitlines()[1]
             self.assertIn("runner.os == 'Linux'", condition)
             self.assertIn("contains(format(' {0} ', steps.evidence.outputs.missing), ' tv-runtime ')", condition)
@@ -222,8 +223,13 @@ class CIProfiles(unittest.TestCase):
                 with self.subTest(missing=missing):
                     self.assertNotEqual(subprocess.run(['bash', '-e', '-c', script], cwd=root,
                         env={**os.environ, 'TV_REQUIRED': missing}).returncode, 0)
-        self.assertIn("if: steps.safety_scope.outputs.tv == 'true'", workflow)
-        self.assertIn('4e1578efc2a2cc67651413a05ccc4c5d43f6b4329c599901c556f24d93cd0508', workflow)
+        legacy_node = workflow[workflow.index('      - name: Prepare pinned legacy Node.js'):safety]
+        self.assertIn("if: steps.safety_scope.outputs.tv == 'true' || "
+                      "steps.safety_scope.outputs.tv_runtime == 'true'", legacy_node)
+        self.assertIn('uses: ./.github/actions/legacy-node', legacy_node)
+        manifest = (ROOT / '.github/actions/legacy-node/SHA256SUMS').read_text()
+        self.assertIn('4e1578efc2a2cc67651413a05ccc4c5d43f6b4329c599901c556f24d93cd0508'
+                      '  node-v0.12.2-linux-x64.tar.gz', manifest.splitlines())
 
     def test_metadata_pushes_never_start_or_cancel_frozen_builds(self):
         candidate = (ROOT / '.github/workflows/cytv.yml').read_text()

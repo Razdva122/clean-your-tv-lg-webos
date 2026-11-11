@@ -83,6 +83,47 @@ this scheduling change do not themselves repartition later setup tests.
 
 ## Runner use, dependency caches and artifact retention
 
+### Shared Linux test image
+
+The browser, Linux HEIC, optional ARM Python, website preview and theme
+submission jobs use the same Linux/amd64 image from GHCR. They stay separate and run in parallel. Each clean runner may
+download the same layers independently. APT and the Playwright browser downloads
+run when building the image, so ordinary jobs do not depend on the Ubuntu mirrors.
+Combining browser and HEIC would serialize their checks and would still leave the
+ARM Python job with separate dependencies. macOS HEIC keeps its native WebKit and
+Chromium checks.
+
+The image contains the lockfile's exact Playwright Chromium and Firefox builds,
+the required browser libraries and fonts, and QEMU user mode with the ARM EABI
+sysroot. The ARM provisioning tests check that they are running as root inside
+the test container; no privileged container mode or host binfmt setup is needed.
+Browser and ARM Python receipts include the immutable image reference in addition
+to their existing runtime fingerprints. A new digest requires fresh evidence.
+
+To refresh the image (including after a Playwright upgrade):
+
+1. From a reviewed commit containing the intended lockfile and Dockerfile,
+   push a new `ci-image-vN` Git tag. Never reuse an existing tag. This starts
+   `Publish Linux CI image`; it does not build or publish a project release.
+   The image build reads the Playwright version directly from the tagged
+   lockfile and checks both browser launches, fonts and the ARM tools before
+   publishing. Keep the GHCR package linked to this repository so the test jobs
+   can pull it with their read-only `GITHUB_TOKEN`.
+2. Copy the `ghcr.io/...@sha256:...` reference from the successful run's summary
+   into `.github/ci-image/reference`. Leave previously pinned versions available
+   for open branches. A rollback uses the previous digest, without rebuilding.
+3. Check the image consumers on the integration PR. Linux browser checks compare
+   the installed root Playwright version with the version baked into the image,
+   so a mismatched lockfile fails before tests or receipt reuse.
+
+### Legacy Node.js archives
+
+Runtime tests and the direct Root TV candidate use the same Actions cache for
+the pinned Linux x64 Node.js archives. The key includes the SHA-256 manifest.
+The shared action validates cached bytes, downloads missing or damaged archives,
+and checks each archive before extracting it into the job's temporary directory.
+GitHub's usual branch and pull request cache scopes apply.
+
 ### Installer test timings and skips
 
 Fresh runtime installer shards and desktop build host tests retain
@@ -144,9 +185,9 @@ The frozen desktop runtime workflow cancels superseded runs for the same PR.
 Manual dispatches use independent concurrency groups. Candidate builds, signed
 QA and release publication keep their existing non-cancelling behavior.
 
-Build, browser and runtime jobs cache npm downloads and pip downloads/wheels
-through the existing setup actions. Keys include the lockfile or the applicable
-requirements files; the setup actions also partition caches by platform/runtime.
+Build, browser and runtime jobs cache npm downloads and pip downloads/wheels.
+Keys include the lockfile or the applicable requirements files; the setup actions
+also partition their caches by platform/runtime.
 Clean `npm ci` and declared pip installs still run. The Android build uses the
 setup-java Gradle cache keyed by Android build scripts, Gradle properties and
 wrapper version. These are dependency caches, not cached acceptance evidence;

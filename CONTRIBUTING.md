@@ -60,7 +60,9 @@ changed behavior and its dependencies; `scripts/test.sh ui`, `tv`, `installer`, 
 all device runtime checks without the UI source/build suite. CI partitions the large
 Python suites across four isolated shards per OS; `scripts/test.sh --shard 2/4 tv`
 reproduces one partition, while omitting `--shard` runs the complete selected group. See
-[focused CI checks](docs/development/CI-CHECKS.md) for its narrow transport routing. Follow the affected PR checks and
+[focused CI checks](docs/development/CI-CHECKS.md) for its narrow transport routing.
+For updates to Playwright or Linux test dependencies, follow the
+[shared Linux test image procedure](docs/development/CI-CHECKS.md#shared-linux-test-image). Follow the affected PR checks and
 run a broader group for shared or unknown dependencies. Complete `scripts/test.sh`
 and browser coverage remains required on the frozen release candidate, using
 fresh execution or authenticated matching test-unit successes as documented in

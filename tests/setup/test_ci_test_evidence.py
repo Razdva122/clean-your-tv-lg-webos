@@ -494,6 +494,31 @@ class EvidenceTests(unittest.TestCase):
         self.assertEqual(self.missing(), [])
         self.assertEqual(self.missing(self.context('optional-python', kind='optional', environment={'arm': 'different'})), ['optional-python'])
 
+    def test_container_receipts_require_the_same_immutable_image(self):
+        image = 'ghcr.io/razdva122/clean-your-tv-lg-webos-ci'
+        first = f'{image}@sha256:{"a" * 64}'
+        second = f'{image}@sha256:{"b" * 64}'
+        with patch.dict(self.m['environment'].__globals__, {'command': lambda *args: 'fixture'}):
+            for kind, unit, job in (('browser', 'browser-core', 'browser'),
+                                    ('optional', 'optional-python', 'optional-python')):
+                with self.subTest(kind=kind):
+                    with patch.dict('os.environ', {'CI_TEST_IMAGE': first}):
+                        observed = self.m['environment'](kind)
+                    self.ctx = self.context(unit, kind=kind, environment=observed)
+                    self.job['name'] = job
+                    self.raw = self.archive(self.m['make_receipt'](self.ctx, 'owner/repo', 10, 1, 100))
+                    self.artifact.update(name=self.ctx['artifact'], size_in_bytes=len(self.raw),
+                                         digest='sha256:' + hashlib.sha256(self.raw).hexdigest())
+                    self.assertEqual(self.missing(), [])
+                    with patch.dict('os.environ', {'CI_TEST_IMAGE': second}):
+                        changed = self.m['environment'](kind)
+                    self.assertEqual(self.missing(self.context(unit, kind=kind, environment=changed)), [unit])
+                    for invalid in ('', f'{image}:ci-image-v1'):
+                        with patch.dict('os.environ', {'CI_TEST_IMAGE': invalid}):
+                            unknown = self.m['environment'](kind)
+                        self.assertFalse(unknown['identity_ready'])
+                        self.assertEqual(self.missing(self.context(unit, kind=kind, environment=unknown)), [unit])
+
     def test_unknown_fields_units_and_nonregular_zip_members_are_misses(self):
         receipt = self.m['make_receipt'](self.ctx, 'owner/repo', 10, 1, 100)
         bad = []
