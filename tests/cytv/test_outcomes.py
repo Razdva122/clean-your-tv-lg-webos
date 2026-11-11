@@ -53,11 +53,11 @@ class OutcomeTests(unittest.TestCase):
                                   'startup':'unknown','home_button':'unknown'})
         self.assertNotIn('PRIVATE', str(exported))
 
-    def test_kept_stopped_does_not_request_a_physical_home_check_or_claim_startup(self):
+    def test_stop_cancelled_activation_does_not_request_home_test_or_claim_startup(self):
         self.outcome.packages_verified()
-        self.outcome.kept_stopped()
+        self.outcome.cancelled_by_stop()
         self.outcome.review_home(lambda _:self.fail('must not ask to test a stopped Helper'),self.write)
         self.assertEqual(self.info['setup_outcome']['launch_request'],'not-requested')
-        self.assertEqual(self.info['setup_outcome']['startup'],'kept-stopped')
+        self.assertEqual(self.info['setup_outcome']['startup'],'stopped-during-setup')
         self.assertEqual(self.checks.results['startup']['status'],'unknown')
         self.assertEqual(self.info['setup_outcome']['home_button'],'not-tested')

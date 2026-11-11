@@ -71,7 +71,7 @@ La instalación Root continúa con un aviso si no se pueden leer las entradas de
 1. Abre otra app del TV y pulsa brevemente **Home**. Debe abrirse Clean Your TV. Indica al asistente lo que viste; omite la prueba si no la hiciste.
 2. Comprueba flechas, OK, Atrás, volumen y sonido. Prueba por separado la suspensión/reactivación y el arranque tras desconectar la alimentación. Una instalación correcta no verifica por sí sola estas acciones.
 
-**No-root:** Paquetes verificados. Home Helper se mantuvo detenido; no se solicitó iniciarlo. Pulsa Home brevemente tres veces en dos segundos para volver a LG Home. Para reiniciar el control de Home, abre Home Helper, elige Iniciar Helper y confirma. Se conserva tu pantalla Home elegida.
+La configuración No-root activa Home tras verificar los paquetes. Una nueva parada durante la configuración cancela la activación. Puedes desactivar Home después en Ajustes.
 
 Usa la conexión y los datos de recuperación originales. Si se perdieron, vuelve a conectarte al mismo TV y elige Desinstalar Clean Your TV. Completa la eliminación verificada antes de configurar; no borres archivos de reserva. Si la eliminación se detiene, guarda el informe de diagnóstico.
 
@@ -87,7 +87,7 @@ Las flechas seleccionan y OK abre; mantén OK para reordenar. Una pulsación bre
 
 No-root: Para reiniciar el control de Home, abre Home Helper, elige Iniciar Helper y confirma. Se conserva tu pantalla Home elegida. Root: activa **Cambiar Home** en los ajustes de Home para reanudar. **Abrir LG Home** lo abre una vez sin cambiar el destino de Home. Para recuperar LG Home como destino permanente, desactiva **Cambiar Home**. No ejecutes ambos controladores a la vez. Si el fallo se repite, deja LG Home activo.
 
-Una actualización no reinicia un Helper No-root detenido. Reanúdalo explícitamente como se indica arriba; no borres manualmente los marcadores de parada.
+Las actualizaciones automáticas del TV no reinician Helper detenido. Para reanudarlo por separado usa Iniciar Helper; no borres archivos de parada.
 
 ## ¿Necesitas ayuda?
 

@@ -740,10 +740,9 @@ printf '%s' "$cytv_state"
         storage.install(self.remote, {'helper.ipk': helper, 'launcher.ipk': launcher}, self.progress,
                         root=self.profile.get('connection') == 'root-ssh')
         from . import no_root_observer
-        keep_stopped = not no_root_observer.helper_start_allowed(self)
         pending = no_root_observer.begin(self, 'install', {'helper.ipk': helper, 'launcher.ipk': launcher},
             {HOME: self.manifest['home_version'], HELPER: self.manifest['helper_version']}, expected,
-            {'ssap-key.json': key_data, 'apps.json': apps_data}, keep_helper_stopped=keep_stopped)
+            {'ssap-key.json': key_data, 'apps.json': apps_data}, setup_activation=True)
         return self.continue_no_root(pending)
 
     def continue_no_root(self, expected_pending):

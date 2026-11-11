@@ -71,7 +71,7 @@ L’installation Root continue avec un avertissement si les entrées du TV ne pe
 1. Ouvrez une autre application sur la TV et appuyez brièvement sur **Home**. Clean Your TV doit s’ouvrir. Indiquez votre observation dans l’assistant ; ignorez le test si vous ne l’avez pas effectué.
 2. Vérifiez flèches, OK, Retour, volume et son. Testez séparément la veille/le réveil et un démarrage après débranchement du secteur. Une installation réussie ne vérifie pas ces actions à elle seule.
 
-**No-root:** Paquets vérifiés. Home Helper est resté arrêté ; aucun lancement n’a été demandé. Trois pressions brèves sur Home en deux secondes ramènent à LG Home. Pour relancer le contrôle de Home, ouvrez Home Helper, choisissez Démarrer Helper et confirmez. Votre choix d’écran Home est conservé.
+La configuration No-root active Home après vérification des paquets. Un nouvel arrêt pendant la configuration annule l’activation. Vous pouvez désactiver Home ensuite dans les paramètres.
 
 Utilisez la connexion et les données de récupération d’origine. Si elles sont perdues, reconnectez-vous au même téléviseur et choisissez Désinstaller Clean Your TV. Terminez la suppression vérifiée avant la configuration ; ne supprimez pas les fichiers de réservation. Si la suppression s’arrête, enregistrez le rapport de diagnostic.
 
@@ -87,7 +87,7 @@ Les flèches sélectionnent, OK ouvre ; maintenez OK pour réorganiser. Un appui
 
 No-root: Pour relancer le contrôle de Home, ouvrez Home Helper, choisissez Démarrer Helper et confirmez. Votre choix d’écran Home est conservé. Root: activez **Changer Home** dans les paramètres de Home pour reprendre. **Ouvrir LG Home** ouvre LG Home une fois sans modifier la destination de Home. Pour rétablir LG Home comme destination permanente, désactivez **Changer Home**. N’exécutez jamais les deux contrôleurs ensemble. Si la panne revient, laissez LG Home actif.
 
-Une mise à jour ne redémarre pas un Helper No-root arrêté. Relancez-le explicitement comme indiqué ci-dessus ; ne supprimez pas manuellement les marqueurs d’arrêt.
+Les mises à jour automatiques sur le téléviseur ne redémarrent pas Helper arrêté. Utilisez Démarrer Helper pour le relancer séparément ; ne supprimez pas les fichiers d’arrêt.
 
 ## Besoin d’aide ?
 

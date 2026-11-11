@@ -584,8 +584,8 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                     write('Root emergency exit: three short Home presses within two seconds.')
                 else:
                     write('Three short Home presses within two seconds return to LG Home. To restart Home control, open Home Helper, choose Start Helper and confirm. Your saved Home screen choice is kept.')
-                    if result.get('helper_kept_stopped') is True:
-                        write('Packages verified. Home Helper was kept stopped; no launch was requested.')
+                    if result.get('activation_cancelled') is True:
+                        write('Packages verified. A new Stop cancelled Home activation. Start Helper on the TV when ready.')
                     else:
                         write("After installation, press Home to try it. If LG Home opens, open Home Helper from the TV's apps.")
                         write('Packages installed; Home Helper launch requested. Check short Home, arrows/OK, Back, volume, standby and cold boot.')

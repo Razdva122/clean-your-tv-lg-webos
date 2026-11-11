@@ -60,7 +60,7 @@ Instalace Root pokračuje s upozorněním, pokud nelze načíst vstupy televizor
 1. Otevřete jinou aplikaci na TV a krátce stiskněte **Home**. Má se otevřít Clean Your TV. V průvodci uveďte, co jste viděli; pokud jste test neprovedli, přeskočte ho.
 2. Vyzkoušejte šipky, OK, Zpět, hlasitost a zvuk. Samostatně ověřte pohotovostní režim/probuzení a spuštění po odpojení napájení. Samotná úspěšná instalace tyto funkce neověřuje.
 
-**No-root:** Balíčky byly ověřeny. Home Helper zůstal zastavený; spuštění nebylo vyžádáno.
+Nastavení No-root zapne Home po ověření balíčků. Nové zastavení během nastavení zruší aktivaci. Home můžete později vypnout v nastavení.
 
 Použijte původní uložené připojení a data obnovení. Pokud se ztratila, znovu se připojte ke stejné TV a zvolte Odinstalovat Clean Your TV. Před nastavením dokončete ověřené odebrání; nemažte soubory rezervace. Pokud se odebrání zastaví, uložte diagnostickou zprávu.
 
@@ -74,7 +74,7 @@ Podpora IR v No-root: uvolnění Home po krátkém stisku naplánuje Clean přib
 
 Pro opětovné zapnutí No-root otevřete **Home Helper**, zvolte spuštění Helperu a potvrďte. Pro Root zapněte **Změnit Home** v nastavení Home. **Otevřít LG Home** otevře původní prostředí jen jednou; pro trvalé používání LG Home vypněte Změnit Home. Nespouštějte oba ovladače Home současně. Při opakované chybě nechte LG Home aktivní.
 
-Aktualizace znovu nespustí zastavený No-root Helper. Obnovte jej výslovně výše uvedeným postupem; ručně nemažte značky zastavení.
+Automatické aktualizace v TV nespouštějí zastavený Helper. Pro samostatné obnovení použijte Spustit Helper; nemažte soubory Stop.
 
 ## Potřebujete pomoc?
 

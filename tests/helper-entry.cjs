@@ -55,6 +55,17 @@ assert.equal(r.calls.length, 0);
 assert.equal(JSON.parse(r.spawns[0][1][0]).nativeHomeAuto, false);
 r = run({ nativeHomeAuto: 'true' });
 assert.equal(r.spawns.length, 0, 'only a boolean allows unattended start');
+r = run({ nativeHomeSetup: 'S' + 'a'.repeat(32) });
+assert.equal(
+  JSON.parse(r.spawns[0][1][0]).nativeHomeSetup,
+  'S' + 'a'.repeat(32)
+);
+r = run({ nativeHomeSetup: 'invalid' });
+assert.equal(
+  r.spawns.length,
+  0,
+  'malformed setup token cannot start a controller'
+);
 console.log(
   'PASS Helper manual explanation, silent background launch and explicit restart'
 );

@@ -71,7 +71,7 @@ Instalacja Root jest kontynuowana z ostrzeżeniem, jeśli nie można odczytać w
 1. Otwórz inną aplikację na TV i krótko naciśnij **Home**. Powinien otworzyć się Clean Your TV. W kreatorze zaznacz, co zobaczyłeś; pomiń test, jeśli go nie wykonałeś.
 2. Sprawdź strzałki, OK, Wstecz, głośność i dźwięk. Osobno sprawdź czuwanie/wybudzenie i uruchomienie po odłączeniu zasilania. Sama udana instalacja nie sprawdza tych działań.
 
-**No-root:** Pakiety zweryfikowano. Home Helper pozostał zatrzymany; nie zażądano uruchomienia. Trzy krótkie naciśnięcia Home w ciągu dwóch sekund przywracają LG Home. Aby wznowić sterowanie Home, otwórz Home Helper, wybierz Uruchom Helper i potwierdź. Zapisany wybór ekranu Home zostaje zachowany.
+Konfiguracja No-root włącza Home po weryfikacji pakietów. Nowe zatrzymanie podczas konfiguracji anuluje aktywację. Home można później wyłączyć w ustawieniach.
 
 Użyj pierwotnego zapisanego połączenia i danych odzyskiwania. Jeśli je utracono, połącz się ponownie z tym samym TV i wybierz Odinstaluj Clean Your TV. Zakończ zweryfikowane usuwanie przed konfiguracją; nie kasuj plików rezerwacji. Jeśli usuwanie się zatrzyma, zapisz raport diagnostyczny.
 
@@ -87,7 +87,7 @@ Strzałki wybierają, OK otwiera; przytrzymaj OK, aby zmienić kolejność. Kró
 
 No-root: Aby wznowić sterowanie Home, otwórz Home Helper, wybierz Uruchom Helper i potwierdź. Zapisany wybór ekranu Home zostaje zachowany. Root: włącz **Zmień Home** w ustawieniach Home, aby wznowić. **Otwórz LG Home** otwiera LG Home jednorazowo bez zmiany celu przycisku Home. Aby przywrócić LG Home jako stały cel, wyłącz **Zmień Home**. Nie uruchamiaj obu kontrolerów jednocześnie. Przy powtarzającym się błędzie pozostań przy LG Home.
 
-Aktualizacja nie uruchamia ponownie zatrzymanego Helpera No-root. Wznów go jawnie zgodnie z opisem powyżej; nie usuwaj ręcznie znaczników zatrzymania.
+Automatyczne aktualizacje na TV nie uruchamiają zatrzymanego Helpera. Aby wznowić go osobno, użyj Uruchom Helper; nie kasuj plików zatrzymania.
 
 ## Potrzebujesz pomocy?
 

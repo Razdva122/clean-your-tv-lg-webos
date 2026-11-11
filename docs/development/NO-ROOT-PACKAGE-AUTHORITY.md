@@ -259,31 +259,34 @@ state format is introduced. See the [source verification ledger](../history/2026
 actual reporter-device recovery remains pending for a future published build.
 
 
-## No-launch disposition for new stopped installs (#495)
+## Stop-aware activation for new installs (#495)
 
-Before a new install begins, the host reads existing Helper safety markers.
-A known retained Stop binds optional `keep_helper_stopped: true` into both the
-canonical TV plan and digest-protected host capsule. Only Boolean true on an
-install plan is accepted; absence preserves historical automatic-launch policy.
-Immutable Developer Mode and Root SSH observer programs are unchanged.
-Existing capsules remain byte-bound and cannot be retrofitted with this field.
+A new setup captures the fixed Helper Stop generation before package requests
+and binds optional `setup_start: {generation: token-or-null}` into the canonical
+plan and digest-protected capsule. A token is exactly I/S plus 32 lowercase hex
+digits. Null is an initially absent Helper state; it may adopt only an I
+(initialization) token after package delivery, never an S Stop token. The launch
+generation is retained before its claim/request. Both immutable observer sources
+are unchanged; no legacy marker migration or private Stop journal is introduced.
 
-For this policy, the fixed `launch` configuration step verifies a no-request
-disposition, not an application launch acknowledgement. The host completes it
-without an LS2 launch call and rechecks idle Helper state before release. On
-continuation, even disappearance of a marker cannot authorize launch; a closed
-retry repeats readback/idle checks without package submissions. Unknown/live
-Helper state blocks completion. A late Stop on a normal plan still blocks before
-its launch claim; native automatic startup continues to preserve a later Stop.
+The Helper receives `nativeHomeSetup` with the captured generation. It requests
+Home On, consuming only the old Stop while checking the generation before/after
+initialization, latch removal and preference writes. Relay startup/input gates
+check the same generation. A new Stop cancels activation and remains persistent;
+identical latch bytes cannot disguise it. The token file is constant 33 bytes,
+nonsecret, and uses existing checked shared Helper storage. It is cancellation
+state, not a new permission/endpoint or historical package authority. Failed
+publication invalidates the baseline. Transient watchdog retry fences do not
+change it; terminal Stop and retry exhaustion do.
 
-The result distinguishes verified packages, `launch_request: not-requested`,
-`startup: kept-stopped` and `home_button: not-tested`. Startup/Home checks are
-not marked pass. No marker is removed, no permission or endpoint is added.
-The new local/TV plan field is persistent operation intent, retired through the
-ordinary successful operation lifecycle; it is not a reusable permission.
+A cancelled launch configuration step is a verified no-request disposition;
+an acknowledged launch is recorded separately from observed startup and physical
+Home. The report uses `startup: stopped-during-setup`, does not mark startup/Home
+pass and skips the physical Home prompt when a new Stop cancelled activation.
+Unknown launch outcomes are never replayed. Closed retries re-read current state
+without submitting package or launch requests again.
 
-`no-root-reservation` is fixed advice only, selected from allowlisted observer
-storage refusal context. It does not adopt TV evidence, change a host pin,
+Fixed `no-root-reservation` advice does not adopt TV evidence, change a host pin,
 release a reservation or start removal. Lost-profile recovery uses the existing
 separately approved clean-removal goal and restart/process/absence guards; see
-[recovery](../RECOVERY.md#no-root-setup-with-retained-stop-and-a-lost-computer-profile).
+[recovery](../RECOVERY.md#no-root-setup-activation-and-a-lost-computer-profile).

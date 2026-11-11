@@ -182,6 +182,38 @@ if(input.action==='stop'){
  try{s=exists(state);}catch(e){blocked('helper-control',e);}
  if(s)try{helperState(state);at(state,s,function(fd){
   ['blocked','control.json'].forEach(function(name){var old=exists(name);if(old&&(!old.isFile()||old.nlink!==1))fail();});
+  // Every explicit cleanup Stop cancels a concurrent setup, even when the
+  // legacy latch already exists. Keep this raw provider standalone for Root.
+  var generationName=null,generationFd=null;
+  try{
+   var prior=exists('stop-generation');if(prior&&(!prior.isFile()||prior.nlink!==1||(prior.mode&3586)))fail();
+   var token='S'+crypto.randomBytes(16).toString('hex');generationName='.cytv-generation-'+crypto.randomBytes(12).toString('hex');
+   generationFd=fs.openSync(generationName,c.O_WRONLY|c.O_CREAT|c.O_EXCL|c.O_NOFOLLOW,384);
+   if(fs.fstatSync(generationFd).gid!==s.gid)fs.fchownSync(generationFd,process.getuid(),s.gid);
+   var bytes=new Buffer(token),offset=0;while(offset<bytes.length){var n=fs.writeSync(generationFd,bytes,offset,bytes.length-offset);if(n<=0)fail();offset+=n;}
+   fs.fchmodSync(generationFd,436);fs.fsyncSync(generationFd);fs.closeSync(generationFd);generationFd=null;
+   var current=exists('stop-generation');if(current&&(!current.isFile()||current.nlink!==1||(current.mode&3586)))fail();
+   fs.renameSync(generationName,'stop-generation');generationName=null;fs.fsyncSync(fd);
+  }catch(e){
+   blocked('helper-control',e);
+   // A failed Stop publication must never leave a valid setup baseline.
+   var invalidFd=null;
+   try{
+    var leaf=exists('stop-generation');
+    if(!leaf)try{invalidFd=fs.openSync('stop-generation',c.O_RDWR|c.O_CREAT|c.O_EXCL|c.O_NOFOLLOW|c.O_NONBLOCK,384);
+     if(fs.fstatSync(invalidFd).gid!==s.gid)fs.fchownSync(invalidFd,process.getuid(),s.gid);
+     fs.fchmodSync(invalidFd,436);leaf=fs.fstatSync(invalidFd);
+    }catch(race){if(race.code!=='EEXIST')throw race;leaf=exists('stop-generation');}
+    if(!leaf||!leaf.isFile()||leaf.nlink!==1||leaf.gid!==s.gid||(leaf.mode&4095)!==436)fail();
+    if(invalidFd===null)invalidFd=fs.openSync('stop-generation',c.O_RDWR|c.O_NOFOLLOW|c.O_NONBLOCK);
+    var opened=fs.fstatSync(invalidFd);
+    if(!same(leaf,opened)||!same(leaf,fs.lstatSync('stop-generation'))||opened.nlink!==1||opened.mode!==leaf.mode||opened.gid!==leaf.gid)fail();
+    fs.ftruncateSync(invalidFd,0);fs.fsyncSync(invalidFd);fs.fsyncSync(fd);
+   }catch(invalid){blocked('helper-control',invalid);}
+   finally{if(invalidFd!==null)fs.closeSync(invalidFd);}
+  }
+  finally{if(generationFd!==null)fs.closeSync(generationFd);if(generationName!==null&&exists(generationName))fs.unlinkSync(generationName);}
+
   if(!exists('blocked')){var marker=fs.openSync('blocked',c.O_WRONLY|c.O_CREAT|c.O_EXCL|c.O_NOFOLLOW,436);try{fs.writeSync(marker,new Buffer('stopped'),0,7,0);fs.fsyncSync(marker);}finally{fs.closeSync(marker);}}
   var name='.cytv-stop-'+crypto.randomBytes(12).toString('hex'),control=fs.openSync(name,c.O_WRONLY|c.O_CREAT|c.O_EXCL|c.O_NOFOLLOW,420);
   try{var b=new Buffer('{"cmd":"stop"}');fs.writeSync(control,b,0,b.length,0);fs.fsyncSync(control);}finally{fs.closeSync(control);}

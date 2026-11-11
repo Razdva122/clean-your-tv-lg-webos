@@ -1,108 +1,90 @@
-# No-root stopped setup and lost-profile guidance (#495)
+# No-root setup activation and lost-profile recovery (#495)
 
-Date: 2026-11-11. Focused development ledger; no physical TV acceptance.
-Base: `3e04e8a583098c2728088b3d7c66a61786529068` from `release/next`.
-This work and separate [#498](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/498)
-are held for the next release. No current frozen candidate admission, inventory,
-version, selected build, signing, installation or device operation is changed.
+Date: 2026-11-11. Focused development ledger, draft PR #503.
+Base: `3e04e8a583098c2728088b3d7c66a61786529068` (`release/next`).
+Hold for the next release alongside separate [#498](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/498).
+No frozen inventory, version, selected build or device operation is changed.
 
-## Scope and diagnosis limits
+## Diagnosis and selected behavior
 
-Related issues: #495. The earlier analysis narrowed repeated setup to a retained
-Stop before automatic launch. Local comparisons using the published installer’s
-configuration/permission functions reproduce the reported UserError/pending and
-product-ready continuation pattern for blocked/watchdog; an unsafe key-mode
-failure instead yields a TVCommandError. This supports a likely cause, not
-proof of which marker/error occurred on the original device. No reporter archive
-or new device evidence was obtained, and no installation report is republished.
+Local differential checks reproduce the reported repeated-setup UserError/pending
+before launch when a blocked/watchdog latch is retained. This supports a likely
+cause; the exact historical marker/error on the reporter's TV remains unproven.
+No reporter diagnostics or installation report is republished here.
 
-The owner explicitly selected: update packages while keeping Helper stopped.
-A new operation reads safety state before creating its pending record and binds
-`keep_helper_stopped: true` into the canonical plan and private host capsule.
-Configuration can complete without requesting launch; current Helper idle state
-is required before release, including closed retries. The optional field is
-install-only and strictly Boolean; absence preserves old-plan behavior. Both
-immutable observer source strings are unchanged, preserving existing capsules.
-A late Stop on a normal operation still blocks; no safety marker is cleared.
+The owner selected automatic Home On after successful setup, with any new Stop
+during setup taking priority, and explicitly requested a simple implementation
+without legacy migration. Earlier kept-stopped behavior and the proposed private
+Stop journal are superseded.
 
-Results report verified packages, not-requested launch, kept-stopped startup and
-untested physical Home. The wizard skips the Home question in this state and
-shows separate explicit restart instructions. Fixed foreign-reservation guidance
-never grants cleanup authority: use original recovery data or a separately
-confirmed clean-removal goal. The existing resident-writer restart, controls,
-startup/process and final absence guards remain. Execute-only tmp needs #498;
-this PR does not contain, publish or physically validate that independent fix.
-No new endpoint or permission is added. New persistent state is only the optional
-plan/capsule intent, retired with the ordinary completed operation.
+One checked `state/stop-generation` file carries I/S plus 32 random hex digits.
+The installer binds the starting generation before package work. Helper and relay
+compare it while activating Home and acquiring/forwarding input. Every permanent
+Stop changes it, including consecutive Stops with identical latch text. Transient
+watchdog recovery fences retain the generation; retry exhaustion publishes Stop.
+Failed publication invalidates the generation while physical Stop cleanup still
+runs. No history, broker, migration, new permission or endpoint is introduced.
 
-## Verification ledger
+Interrupted operations retain the same bound intent and never replay uncertain
+package/launch requests. Packages, launch ACK, observed startup and physical Home
+remain separate outcomes. A new Stop reports cancelled activation and skips the
+Home test prompt. Lost-profile advice uses the original profile or separately
+confirmed full verified removal, never blind deletion of the TV reservation.
+Execute-only tmp removal is handled separately by #498.
 
-Host: macOS, existing project Python virtualenv, current Node. All device paths,
-keys, app inventories and vendor calls in tests are synthetic temporary fixtures.
-TV model, firmware/webOS, remote, installed edition/component versions and real
-controls/audio/standby/cold boot/OTA/rollback/removal outcomes: untested.
+## Verification and reuse
 
-- `npm ci --no-audit --no-fund` installed 323 pinned packages in the isolated
-  worktree and configured the normal pre-commit hook.
-- Four new stopped-update/recovery/outcome/guidance cases first failed on the old
-  behavior: late launch refusal, absent bound policy/outcome and missing advice.
-- Initial affected integration/outcomes/failure-help run: 55 tests passed.
-- Outcomes/failure-help/localization/observer diagnostics: 64 tests passed after
-  translating all new fixed messages into the 12 non-English installer locales.
-- Expanded integration/operations/Helper preflight/Root handoff/outcomes/guidance/
-  localization/diagnostic report/context/observer diagnostics: 265 tests, one
-  existing skip, one observer snapshot error during the initial ordinary install
-  of a legacy vendor-key regression (before its changed update path). No product
-  change was made in response. Only that failed case was rerun, together with
-  affected desktop recovery/actions after the copy correction: all 35 passed.
-  Retain the initial failure rather than calling the expanded run wholly green.
-- Final lost-profile actual-Node refusal plus observer worker suite: 24 passed.
-  The new case confirms no new local pending, package request or alteration of
-  the foreign reservation/evidence; guidance is advice only.
-- Added interrupted and closed stopped-update cases verify no launch or repeated
-  package requests, even if the original marker disappears. Late-Stop legacy
-  scenarios preserve their stricter guard. Unknown startup permission stops
-  before pending or package work.
-- Exact source comparison verifies PROGRAM bytes and ROOT_PROGRAM derivation
-  match the base. Matching old-Node observer evidence is reused; no unchanged
-  legacy-JS matrix, candidate build or installation was repeated.
-- All installer Python parses with Python 3.9 grammar. All 13 localized guides
-  preserve their original explicit anchor aliases. `git diff --check` passes.
-- Independent static review found no blocking implementation defect; its one
-  contradictory unconditional Home-test instruction was corrected and affected
-  desktop/recovery checks passed. The review did not rerun tests or use a TV.
+Host: macOS, project Python virtualenv, real temporary filesystem/Node/C fixtures;
+vendor calls and all device data are synthetic. No TV was contacted. TV model,
+firmware/webOS, remote, edition/component versions and physical Home, sound,
+standby, cold boot, OTA, rollback and actual removal: untested.
 
-## Documentation and remaining work
+- New cancellation, interrupted/closed recovery, invalid preflight, late release
+  Stop and failed-first-publication regressions failed before their respective
+  fixes. Native tests cover actual files, repeated Stop, latch-removal/grab races,
+  failed publication and emergency key release/cleanup.
+- Focused host checks before the final publication fallback: integration,
+  operations, outcomes and observer diagnostics 136 passed; frontend/localization,
+  desktop recovery/diagnostics and CLI 162 passed; source injection, settings and
+  build contracts 24 passed. Root removal: 22 tests, one existing skip.
+- An earlier removal/build/support/handoff run had 110 tests, one existing skip
+  and one synthetic SDK GID mismatch. The fixture now models the temporary FD's
+  group consistently; the failing case and changed Stop case passed. The initial
+  failure is retained here rather than describing that run as wholly green.
+- Independent static review found three defects: transient watchdog Stop tokens
+  prevented recovery; invalid preflight left a capless pending record; a final
+  sample before release missed a late Stop. All were fixed with affected
+  regressions; follow-up review found no remaining actionable findings.
+- Exact observer PROGRAM/ROOT_PROGRAM bytes remain unchanged. Existing matching
+  observer evidence is reused. Python 3.9 grammar, all 13 guide anchor aliases and
+  whitespace checks passed. User guides describe setup Home On, new Stop priority
+  and safe lost-profile recovery without release/developer news.
 
-Updated RECOVERY and No-root authority references, plus all 13 practical user
-guides. Localized guides contain only usage/recovery steps, without release news
-or developer evidence. No release version was selected.
+Final publication-fallback checks and selected PR CI are recorded below when
+observed. Host verification is not physical acceptance or reporter confirmation.
+Keep #495 open and in progress while this draft remains unmerged. Do not announce
+public delivery. Final release/device acceptance belongs to the next coordinator.
 
-Selected PR CI still needs observation. Hold merge for the next-cycle coordinator
-alongside #498. Physical acceptance must use the eventual selected installer;
-source/host tests do not establish original-device recovery or fix confirmation.
-Keep #495 open. Normal release notification/status reconciliation remains with
-the release coordinator; do not announce delivery from a draft PR.
+## Final focused batch
 
-
-## Activation policy revision requested by the owner
-
-The earlier kept-stopped behavior above is superseded as the intended product
-behavior: successful installation should activate CYTV Home, including from a
-previously stopped/Off state. The owner explicitly requires a new Stop during
-installation to retain priority. A launcher-only nativeHomeStart change cannot
-meet that requirement because it unconditionally clears both legacy markers.
-
-The [proposed Stop-aware activation design](../superpowers/specs/2026-11-11-issue495-stop-aware-activation-design.md)
-sets out the architectural work and legacy-transition boundary for owner review.
-It is not a production Stop integration or final acceptance. Draft #503 remains
-held and must be rewritten around the final implementation before review/merge.
-Do not merge its initial kept-stopped implementation as the revised solution.
-
-Initial PR CI on be46b9fd: Linux shards1/2/4, optional Python, Windows frozen
-runtime, website build and policy passed at observation. Linux/macOS shard3
-failed the same CLI waking-TV fixture: its Mock result was truthy when queried
-for helper_kept_stopped, selecting the wrong completion-copy branch. Restricting
-that branch to explicit Boolean true passed the single failed test locally.
-The other queued platform jobs were not called completed. No successful build,
-installer or device operation was repeated for this issue.
+- Changed integration/operations/outcomes/removal suite: 200 passed. The final
+  pre-package initialization-mode correction and invalid final-sample handling
+  then passed four affected integration cases; the latter first failed by
+  returning ordinary completion. A failed final sample now reports the existing
+  startup-unverified error without claiming a proven Stop or offering Home QA.
+- Real filesystem generation/setup checks and real C generation replacement pass.
+  Native controller: 88 passed. C watchdog/generation races, IR and startup pass.
+  Helper compatibility passes on Node 0.10.15, 0.10.25, 0.12.2 and current 23.11.0;
+  these are supported TV runtimes, not legacy Stop migration support.
+- Publication-failure cases cover existing/missing tokens, denied write admission,
+  repeated Stops and entropy/temp allocation failures. Emergency release still
+  delivers key-up, ungrab and close. Standalone removal attempts Stop and control
+  publication even when token publication fails; both tested baseline forms pass.
+- Final Python grammar/guide anchors and whitespace checks pass.
+- Initial CI on be46b9fd had matching Linux/macOS shard3 Mock-truthiness failures;
+  that branch now requires explicit Boolean true and the affected CLI test passed.
+  Other initial units completed successfully. That older behavior is superseded;
+  selected CI on the final source is required before declaring this batch ready.
+- A new #495 comment reports Back/Exit routing improved after manual Helper Start;
+  it supports activation work but is not acceptance of this unpublished fix.
+  Linked #505 concerns inventory/icons and is outside this setup fix.

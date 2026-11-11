@@ -71,7 +71,7 @@ L’installazione Root continua con un avviso se non è possibile leggere gli in
 1. Apri un’altra app sulla TV e premi brevemente **Home**. Deve aprirsi Clean Your TV. Indica nella procedura guidata ciò che hai visto; salta la verifica se non l’hai eseguita.
 2. Controlla frecce, OK, Indietro, volume e audio. Prova separatamente standby/riattivazione e avvio dopo aver scollegato l’alimentazione. L’installazione riuscita non verifica da sola queste azioni.
 
-**No-root:** Pacchetti verificati. Home Helper è rimasto fermo; non è stato richiesto alcun avvio. Tre pressioni brevi di Home entro due secondi riportano a LG Home. Per riavviare il controllo Home, apri Home Helper, scegli Avvia Helper e conferma. La tua scelta della schermata Home viene mantenuta.
+La configurazione No-root attiva Home dopo la verifica dei pacchetti. Un nuovo arresto durante la configurazione annulla l’attivazione. Puoi disattivare Home in seguito nelle impostazioni.
 
 Usa la connessione e i dati di ripristino originali. Se sono persi, riconnettiti alla stessa TV e scegli Disinstalla Clean Your TV. Completa la rimozione verificata prima della configurazione; non eliminare i file di prenotazione. Se la rimozione si ferma, salva il rapporto diagnostico.
 
@@ -87,7 +87,7 @@ Le frecce selezionano, OK apre; tieni premuto OK per riordinare. Un breve Indiet
 
 No-root: Per riavviare il controllo Home, apri Home Helper, scegli Avvia Helper e conferma. La tua scelta della schermata Home viene mantenuta. Root: attiva **Cambia Home** nelle impostazioni Home per riprendere. **Apri LG Home** apre LG Home una volta senza cambiare la destinazione di Home. Per ripristinare LG Home come destinazione permanente, disattiva **Cambia Home**. Non eseguire entrambi i controllori insieme. Se il problema ricompare, lascia attivo LG Home.
 
-Un aggiornamento non riavvia un Helper No-root arrestato. Riattivalo esplicitamente come descritto sopra; non eliminare manualmente i marcatori di arresto.
+Gli aggiornamenti automatici sulla TV non riavviano Helper fermato. Per riprenderlo separatamente usa Avvia Helper; non eliminare i file di arresto.
 
 ## Serve aiuto?
 
