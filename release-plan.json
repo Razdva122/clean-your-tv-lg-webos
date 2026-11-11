@@ -7,14 +7,14 @@
       "issues": [
         418
       ],
-      "summary": "Retain isolated Root cleanup probe failure context"
+      "summary": "Retain Root cleanup probe failure context; original #418 recovery remains unresolved"
     },
     {
       "pr": 497,
       "issues": [
         101
       ],
-      "summary": "Preserve native deploy causes and inspect failed setup without replay"
+      "summary": "Preserve native deployment causes and inspect without replay; original #101 setup remains unresolved"
     },
     {
       "pr": 498,
@@ -35,13 +35,12 @@
       "issues": [
         397
       ],
-      "summary": "Offer full removal when native Root setup lacks deployment evidence"
+      "summary": "Offer verified full removal when native Root deployment evidence is missing; original #397 setup failure remains unresolved"
     },
     {
       "pr": 503,
       "issues": [
-        495,
-        498
+        495
       ],
       "summary": "Activate Home after setup while preserving new Stops (#495)"
     },
@@ -55,15 +54,10 @@
     {
       "pr": 514,
       "issues": [
-        101,
-        397,
-        418,
-        472,
         495,
-        499,
         505
       ],
-      "summary": "Integrate seven queued fixes after v1.17.0"
+      "summary": "Reconcile boot catalog fallback and firmware-expanded Helper state during integration"
     }
   ],
   "excluded": [],
