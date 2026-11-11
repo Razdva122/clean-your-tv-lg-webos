@@ -124,6 +124,41 @@ def vendor_script(path):
     return secure(canonical,limit=256*1024)
 
 
+def stock_bsp_overlay(mounts, overlay, critical):
+    """Verify the two immutable backing images of the LG BSP overlay."""
+    fields, _, _, _, options = overlay
+    bsp = Path('/overlay/bsppart/bsp/usr')
+    lower = 'lowerdir=' + str(bsp) + ':/usr'
+    # LG can report the mount as rw while the overlay superblock is read-only.
+    if (fields[3] != '/' or not re.fullmatch(r'0:[0-9]+', fields[2])
+            or 'ro' not in options or 'rw' in options
+            or [option for option in options
+                if option.startswith(('lowerdir', 'datadir', 'upperdir', 'workdir'))] != [lower]):
+        return False
+    images = {}
+    for entry, target, filesystem, _, flags in mounts:
+        if not (target == '/' or str(bsp) == target or str(bsp).startswith(target + '/')):
+            continue
+        if (target not in ('/', '/overlay/bsppart') or target in images
+                or entry[3] != '/' or filesystem != 'squashfs'
+                or not re.fullmatch(r'179:[0-9]+', entry[2])
+                or int(entry[2].split(':')[1]) >= 256
+                or any('ro' not in access or 'rw' in access
+                       for access in (entry[5].split(','), flags))):
+            return False
+        images[target] = tuple(map(int, entry[2].split(':')))
+    if len(images) != 2 or images['/'] == images['/overlay/bsppart']:
+        return False
+
+    legacy.trusted_directory(bsp)
+    overlay_device = tuple(map(int, fields[2].split(':')))
+    for path, expected in zip((*critical, bsp), (images['/'], overlay_device, images['/overlay/bsppart'])):
+        device = os.stat(path, follow_symlinks=False).st_dev
+        if (os.major(device), os.minor(device)) != expected:
+            return False
+    return True
+
+
 def require_generic_environment():
     """Read-only admission. Never repair a foreign route, input or vendor file."""
     missing=luna('luna://com.webos.service.systemprofile/getProfiles',
@@ -139,16 +174,25 @@ def require_generic_environment():
         if not isinstance(bindings,dict) or '773' in bindings:
             raise ValueError('Foreign Home input binding; no takeover attempted')
     critical=(str(legacy.TARGET),str(STOCK_APPINFO.parent))
-    mounts=MOUNTINFO.read_text()
-    if len(mounts)>1024*1024: raise ValueError('Oversized mount table')
-    system_image=False
-    for line in mounts.splitlines():
+    mountinfo=MOUNTINFO.read_text()
+    if len(mountinfo)>1024*1024: raise ValueError('Oversized mount table')
+    mounts=[]
+    for line in mountinfo.splitlines():
         fields=line.split()
         if len(fields)<10 or ' - ' not in line: raise ValueError('Unknown mount topology')
         separator=fields.index('-')
         if separator<6 or len(fields)!=separator+4: raise ValueError('Unknown mount topology')
         target=re.sub(r'\\([0-7]{3})',lambda m:chr(int(m[1],8)),fields[4])
+        filesystem,source,options=fields[separator+1:]
+        mounts.append((fields,target,filesystem,source,options.split(',')))
+    system_image=False
+    for mount in mounts:
+        fields,target,filesystem,source,options=mount
         if target!='/' and any(p==target or p.startswith(target+'/') for p in critical):
+            if (target=='/usr' and not system_image and filesystem=='overlay'
+                    and stock_bsp_overlay(mounts,mount,critical)):
+                system_image=True
+                continue
             # webOS can mount its whole immutable /usr image separately. This
             # is not a bind/overlay takeover of Home. Admit only an internal
             # MMC squashfs root, with both Home paths on that exact device;
@@ -156,10 +200,10 @@ def require_generic_environment():
             if (target=='/usr' and not system_image and fields[3]=='/'
                     and re.fullmatch(r'179:[0-9]+',fields[2])
                     and int(fields[2].split(':')[1])<256
-                    and fields[separator+1]=='squashfs'
-                    and re.fullmatch(r'/dev/mmcblk[0-9]+p[0-9]+',fields[separator+2])
-                    and all('ro' in options.split(',') and 'rw' not in options.split(',')
-                            for options in (fields[5],fields[separator+3]))):
+                    and filesystem=='squashfs'
+                    and re.fullmatch(r'/dev/mmcblk[0-9]+p[0-9]+',source)
+                    and all('ro' in access and 'rw' not in access
+                            for access in (fields[5].split(','),options))):
                 device=tuple(map(int,fields[2].split(':')))
                 if all((os.major(s.st_dev),os.minor(s.st_dev))==device
                        for s in (os.stat(p,follow_symlinks=False) for p in critical)):
