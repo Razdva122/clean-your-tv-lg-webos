@@ -1,28 +1,10 @@
 """Explicit streamed readiness recovery; retained supervisor code stays immutable."""
-SCRIPT = r'''
-import copy, fcntl, hashlib, json, math, os, re, stat, sys, time, uuid
-from pathlib import Path, PurePosixPath
+from .rollback_recovery_sources import SCRIPT as SOURCE_CHECKS
 
+
+SCRIPT = SOURCE_CHECKS + r'''
 STATE=Path('/var/lib/clean-your-tv-system-updater')
 ERROR='Launcher profile readiness timed out'
-
-def encode(value):
-    return json.dumps(value,ensure_ascii=False,allow_nan=False,separators=(',',':'),sort_keys=True).encode()
-
-def digest(raw):return hashlib.sha256(raw).hexdigest()
-
-def read(path,limit=4*1024*1024):
-    path=Path(path)
-    for parent in (path.parent,*path.parent.parents):
-        info=parent.lstat()
-        if not stat.S_ISDIR(info.st_mode) or info.st_uid not in (0,os.geteuid()) or (info.st_mode&0o022 and not info.st_mode&stat.S_ISVTX):raise ValueError('Unsafe recovery directory')
-    fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK)
-    with os.fdopen(fd,'rb') as stream:
-        info=os.fstat(stream.fileno())
-        if not stat.S_ISREG(info.st_mode) or info.st_uid!=os.geteuid() or info.st_nlink!=1 or info.st_mode&0o022 or info.st_size>limit:raise ValueError('Unsafe recovery file')
-        raw=stream.read(limit+1)
-        if len(raw)>limit:raise ValueError('Oversized recovery file')
-        return raw
 
 def original_code(state):
     binding=json.loads(read(state/'bootstrap-bundle.json'));receipt=json.loads(read(state/'infrastructure.json'))
@@ -38,30 +20,6 @@ def original_code(state):
     raw=read(state/'cache'/(pin['sha256']+'.ipk'),32*1024*1024)
     if digest(raw)!=pin['sha256'] or len(raw)!=pin['size']:raise ValueError('Original supervisor package changed')
     return expected
-
-def load_sources(code,files):
-    import importlib.abc, importlib.util
-    modules={}
-    for name,sha in files.items():
-        if name.endswith('.py'):
-            package=name.endswith('/__init__.py');module=(name[:-12] if package else name[:-3]).replace('/','.')
-            modules[module]=(name,sha,package)
-    roots={n.split('.')[0] for n in modules}
-    forbidden={'updater'} if 'system_updater' in roots else set()
-    if any(n in sys.modules for n in set(modules)|forbidden):raise ValueError('Ambient supervisor module already loaded')
-    class Sources(importlib.abc.MetaPathFinder,importlib.abc.Loader):
-        def find_spec(self,fullname,path=None,target=None):
-            if fullname.split('.')[0] in forbidden:raise ModuleNotFoundError('Unpinned legacy helper alias')
-            if fullname in modules:return importlib.util.spec_from_loader(fullname,self,is_package=modules[fullname][2])
-            if fullname.split('.')[0] in roots:raise ImportError('Unpinned supervisor module')
-        def create_module(self,spec):return None
-        def exec_module(self,module):
-            name,sha,package=modules[module.__name__];raw=read(code/name)
-            if digest(raw)!=sha:raise ValueError('Original supervisor source changed')
-            module.__file__=str(code/name)
-            if package:module.__path__=[]
-            exec(compile(raw,str(code/name),'exec'),module.__dict__)
-    finder=Sources();sys.meta_path.insert(0,finder);return finder
 
 def immutable(tx):
     return {k:v for k,v in tx.items() if k not in ('phase','updated','error','launched','deadline','homeResume','homeResumePhase')}

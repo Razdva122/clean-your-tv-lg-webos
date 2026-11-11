@@ -44,7 +44,7 @@ def parser():
     result._positionals.title = i18n.translate('positional arguments')
     result._optionals.title = i18n.translate('options')
     result.add_argument('-h', '--help', action='help', help=i18n.translate('Show this help message and exit'))
-    result.add_argument('command', nargs='?', default='install', choices=('install', 'status', 'doctor', 'home-diagnostics', 'recover', 'restore', 'uninstall', 'enable-system-updates', 'enable-firmware-access', 'disable-firmware-access', 'recover-system-rollback', 'replace-system-updater', 'clean-wam-cache'))
+    result.add_argument('command', nargs='?', default='install', choices=('install', 'status', 'doctor', 'home-diagnostics', 'recover', 'restore', 'uninstall', 'enable-system-updates', 'enable-firmware-access', 'disable-firmware-access', 'recover-system-rollback', 'recover-root-rollback', 'replace-system-updater', 'clean-wam-cache'))
     result.add_argument('--language', choices=tuple(i18n.LANGUAGES), help=i18n.translate('Interface language (auto uses the computer language)'))
     result.add_argument('--version', action='store_true', help=i18n.translate('Print installer version'))
     result.add_argument('--host', help=i18n.translate('TV IPv4 address or hostname'))
@@ -244,7 +244,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
         if args.command == 'replace-system-updater':
             if profile['edition'] != 'root': raise UserError('System Updater replacement requires an existing Root connection.')
             if store.pending(profile): raise UserError('Previous operation is unresolved. Run cytv status or cytv restore; do not retry installation.', reason_code='pending-operation')
-        if args.command == 'recover-system-rollback':
+        if args.command in ('recover-system-rollback', 'recover-root-rollback'):
             if profile['edition'] != 'root': raise UserError('Rollback readiness recovery requires an existing Root connection.')
             if store.pending(profile): raise UserError('Previous operation is unresolved. Run cytv status or cytv restore; do not retry installation.', reason_code='pending-operation')
         if args.command in ('enable-firmware-access','disable-firmware-access'):
@@ -289,11 +289,11 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                 write('Root will stop the old Home Helper, turn on Home control and open Clean Your TV Home.')
             write('Check controls on the TV after installation.')
         retry_removal=(args.command=='uninstall' and (store.pending(profile) or {}).get('recovery_protocol')=='clean-removal-v1')
-        if args.command in ('install', 'uninstall', 'restore', 'enable-system-updates', 'enable-firmware-access', 'disable-firmware-access', 'recover-system-rollback', 'replace-system-updater') and not args.yes and not retry_removal:
+        if args.command in ('install', 'uninstall', 'restore', 'enable-system-updates', 'enable-firmware-access', 'disable-firmware-access', 'recover-system-rollback', 'recover-root-rollback', 'replace-system-updater') and not args.yes and not retry_removal:
             if args.command == 'uninstall' and profile['edition'] == 'root':
                 write('This removes Root, Root Updater, their services and startup hooks, plus any installed No-root Home, Helper and Updater.')
                 write('Recovery records are retained for diagnostics. Other TV apps stay installed.')
-            verb = {'install': 'Connect to check installed versions', 'uninstall': 'Restore LG Home and remove this edition', 'restore': 'Restore LG Home', 'enable-system-updates': 'Prepare updates for all system components on this rooted TV','enable-firmware-access':'Change Root Home access to Homebrew configuration','disable-firmware-access':'Change Root Home access to Homebrew configuration','recover-system-rollback':'Recover verified Root rollback readiness','replace-system-updater':'Replace only the System Updater and preserve Root settings'}[args.command]
+            verb = {'install': 'Connect to check installed versions', 'uninstall': 'Restore LG Home and remove this edition', 'restore': 'Restore LG Home', 'enable-system-updates': 'Prepare updates for all system components on this rooted TV','enable-firmware-access':'Change Root Home access to Homebrew configuration','disable-firmware-access':'Change Root Home access to Homebrew configuration','recover-system-rollback':'Recover verified Root rollback readiness','recover-root-rollback':'Recover verified Root rollback readiness','replace-system-updater':'Replace only the System Updater and preserve Root settings'}[args.command]
             if args.command == 'uninstall' and profile['edition'] == 'root':
                 pending = store.pending(profile)
                 if pending and pending.get('action') == 'uninstall' and pending.get('full_project') is True:
@@ -363,7 +363,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                     raise UserError('Release payload is missing. Download a built cytv executable or run python scripts/build-cytv.py --payload-only from source.') from None
             if args.command == 'replace-system-updater':
                 if store.pending(profile): raise UserError('Previous operation is unresolved. Run cytv status or cytv restore; do not retry installation.', reason_code='pending-operation')
-            if args.command in ('enable-firmware-access','disable-firmware-access','recover-system-rollback') and store.pending(profile):raise UserError('Previous operation is unresolved. Run cytv status or cytv restore; do not retry installation.', reason_code='pending-operation')
+            if args.command in ('enable-firmware-access','disable-firmware-access','recover-system-rollback','recover-root-rollback') and store.pending(profile):raise UserError('Previous operation is unresolved. Run cytv status or cytv restore; do not retry installation.', reason_code='pending-operation')
             if args.command == 'clean-wam-cache' and store.pending(profile):
                 raise UserError('Resolve the pending installation or removal before clearing WAM data. Keep recovery records.')
             phase = 'ssh-connect'
@@ -609,6 +609,10 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                 phase = args.command
                 installer.replace_system_updater()
                 write('System updates are ready. Open Home Settings → Software updates on the TV.')
+            elif args.command == 'recover-root-rollback':
+                phase = args.command
+                installer.recover_root_rollback()
+                write('Previous Root components and profile verified. Rollback recovery is complete.')
             elif args.command == 'recover-system-rollback':
                 phase = args.command
                 if args.new_recovery_attempt:

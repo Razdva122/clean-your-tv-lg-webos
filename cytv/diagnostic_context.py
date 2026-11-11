@@ -26,7 +26,7 @@ REASONS += ACTIVATION_CODES
 REASONS += ('installer-runtime-mismatch',)
 ACTIONS = ('recover', 'install', 'uninstall', 'restore', 'status', 'doctor', 'home-diagnostics',
            'enable-system-updates', 'enable-firmware-access', 'disable-firmware-access',
-           'recover-system-rollback', 'replace-system-updater', 'clean-wam-cache')
+           'recover-system-rollback', 'recover-root-rollback', 'replace-system-updater', 'clean-wam-cache')
 PHASES = ('launch-helper', 'verify-home-button', 'select-tv', 'inspect-tv', 'select-edition', 'prepare-payload', 'ssh-connect',
           'inspect-installation', 'pair-tv', 'read-inventory', 'install-packages',
           'install-helper', 'install-home', 'configure-helper', 'debloat', 'configure-home', 'install-root',
