@@ -30,7 +30,10 @@ module.exports = function (options) {
       done = false,
       timer,
       attemptTimer,
-      launchPoints = null;
+      confirmationTimer,
+      launchPoints = null,
+      installedIds,
+      deadline = Date.now() + (options.timeout || 8000);
     function finish(error, apps) {
       if (done) return;
       if (error && launchPoints) {
@@ -40,12 +43,21 @@ module.exports = function (options) {
       done = true;
       clearTimeout(timer);
       clearTimeout(attemptTimer);
+      clearTimeout(confirmationTimer);
       if (socket)
         try {
           socket.terminate();
         } catch (_) {}
       if (error) reject(Error(error));
-      else resolve(apps);
+      else if (options.details && !inputs) {
+        icons(apps, hosts[index - 1], options, deadline).then(function (
+          catalog
+        ) {
+          var result = { apps: catalog };
+          if (installedIds) result.installedIds = installedIds;
+          resolve(result);
+        }, reject);
+      } else resolve(apps);
     }
     function send(message) {
       try {
@@ -198,6 +210,31 @@ module.exports = function (options) {
           else if (message.type === 'error') finish('inventory-denied');
           else if (message.id === 'tuner' && launchPoints) {
             var installed = message.payload;
+            if (
+              options.details &&
+              installed &&
+              installed.returnValue === true &&
+              Array.isArray(installed.apps) &&
+              installed.apps.length <= 300
+            ) {
+              var ids = installed.apps.map(function (a) {
+                return a && a.id;
+              });
+              if (
+                ids.every(function (id, i) {
+                  return (
+                    typeof id === 'string' &&
+                    id.length > 0 &&
+                    id.length <= 256 &&
+                    ids.indexOf(id) === i
+                  );
+                }) &&
+                launchPoints.every(function (a) {
+                  return a && ids.indexOf(a.id) >= 0;
+                })
+              )
+                installedIds = ids;
+            }
             var tuner =
               installed &&
               installed.returnValue === true &&
@@ -251,18 +288,29 @@ module.exports = function (options) {
             } else {
               launchPoints = result.launchPoints.slice(0, 200);
               if (
+                !options.details &&
                 launchPoints.some(function (a) {
                   return a && a.id === 'com.webos.app.livetv' && !a.hidden;
                 })
               )
                 finish(null, launchPoints);
-              else
+              else {
+                // Confirmation is optional: leave time to resolve new app icons
+                // even on firmware that never replies to listApps.
+                if (options.details)
+                  confirmationTimer = setTimeout(
+                    function () {
+                      finish(null, launchPoints);
+                    },
+                    Math.min(1000, Math.max(1, (deadline - Date.now()) / 2))
+                  );
                 send({
                   type: 'request',
                   id: 'tuner',
                   uri: 'ssap://com.webos.applicationManager/listApps',
                   payload: {}
                 });
+              }
             }
           }
         });
@@ -275,3 +323,197 @@ module.exports = function (options) {
     }
   });
 };
+
+// Read only icons on the already selected TV endpoint. No redirects, credentials,
+// arbitrary filesystem reads or external hosts; bounds cover the entire refresh.
+function icons(apps, host, options, deadline) {
+  var url = require('url'),
+    total = 512 * 1024,
+    received = 0,
+    active = [],
+    next = 0,
+    running = 0,
+    stopped = false;
+  apps = apps
+    .filter(function (a) {
+      return (
+        a &&
+        typeof a.id === 'string' &&
+        a.id.length > 0 &&
+        a.id.length <= 256 &&
+        typeof a.title === 'string' &&
+        a.title.length <= 256 &&
+        (a.id === 'com.webos.app.livetv' || (!a.hidden && a.visible !== false))
+      );
+    })
+    .slice(0, 200);
+  var catalog = apps.map(function (a) {
+    return {
+      id: a.id,
+      title: a.title,
+      hidden: a.hidden,
+      visible: a.visible,
+      iconColor: a.iconColor || a.bgColor || '',
+      icon: ''
+    };
+  });
+  return new Promise(function (resolve) {
+    var timer = setTimeout(finish, Math.max(0, deadline - Date.now()));
+    function finish() {
+      if (stopped) return;
+      stopped = true;
+      clearTimeout(timer);
+      active.slice().forEach(function (cancel) {
+        cancel();
+      });
+      resolve(catalog);
+    }
+    function pump() {
+      if (stopped) return;
+      if (Date.now() >= deadline || (!running && next === catalog.length)) {
+        finish();
+        return;
+      }
+      while (running < 4 && next < catalog.length) {
+        var index = next++;
+        running++;
+        read(index, 0);
+      }
+    }
+    var variants = [
+      'extraLargeIcon',
+      'largeIcon',
+      'mediumLargeIcon',
+      'icon',
+      'miniicon',
+      'favicon'
+    ];
+    function read(index, variant) {
+      if (stopped) return;
+      if (
+        variant === variants.length ||
+        total <= 0 ||
+        received >= 2 * 1024 * 1024 ||
+        Date.now() >= deadline
+      ) {
+        running--;
+        pump();
+        return;
+      }
+      var uri = apps[index][variants[variant]],
+        parsed;
+      try {
+        if (typeof uri !== 'string' || uri.length > 4096)
+          throw Error('invalid-icon');
+        parsed = url.parse(uri);
+        if (
+          (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') ||
+          parsed.hostname !== host ||
+          parsed.auth ||
+          (parsed.port &&
+            ['80', '443', '3000', '3001'].indexOf(parsed.port) < 0)
+        )
+          throw Error('invalid-icon');
+      } catch (_) {
+        read(index, variant + 1);
+        return;
+      }
+      var request,
+        response,
+        chunks = [],
+        size = 0,
+        complete = false;
+      var requestTimer = setTimeout(
+        function () {
+          done();
+        },
+        Math.min(1000, Math.max(1, deadline - Date.now()))
+      );
+      function cancel() {
+        done(true);
+      }
+      active.push(cancel);
+      function done(cancelled, data) {
+        if (complete) return;
+        complete = true;
+        clearTimeout(requestTimer);
+        active.splice(active.indexOf(cancel), 1);
+        if (response) response.destroy();
+        if (request) request.abort();
+        if (cancelled || stopped) return;
+        var kind =
+          data &&
+          data.length >= 12 &&
+          (data.slice(0, 8).toString('hex') === '89504e470d0a1a0a'
+            ? 'png'
+            : data[0] === 255 && data[1] === 216
+              ? 'jpeg'
+              : data.slice(0, 4).toString() === 'RIFF' &&
+                  data.slice(8, 12).toString() === 'WEBP'
+                ? 'webp'
+                : '');
+        if (kind && data.length <= total) {
+          total -= data.length;
+          catalog[index].icon =
+            'data:image/' + kind + ';base64,' + data.toString('base64');
+          running--;
+          pump();
+        } else read(index, variant + 1);
+      }
+      try {
+        var get =
+          options.get ||
+          require(parsed.protocol === 'https:' ? 'https' : 'http').get;
+        request = get(
+          {
+            protocol: parsed.protocol,
+            hostname: parsed.hostname,
+            port: parsed.port,
+            path: parsed.path,
+            rejectUnauthorized: false,
+            agent: false
+          },
+          function (r) {
+            response = r;
+            r.on('error', function () {
+              done();
+            });
+            r.on('aborted', function () {
+              done();
+            });
+            if (complete) {
+              r.destroy();
+              return;
+            }
+            if (r.statusCode !== 200) {
+              done();
+              return;
+            }
+            r.on('data', function (chunk) {
+              if (complete) return;
+              size += chunk.length;
+              received += chunk.length;
+              if (
+                size > 128 * 1024 ||
+                size > total ||
+                received > 2 * 1024 * 1024
+              )
+                done();
+              else chunks.push(chunk);
+            });
+            r.on('end', function () {
+              done(false, Buffer.concat(chunks));
+            });
+          }
+        );
+        request.on('error', function () {
+          done();
+        });
+      } catch (_) {
+        done();
+      }
+    }
+    pump();
+  });
+}
+module.exports.icons = icons;

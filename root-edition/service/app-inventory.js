@@ -44,7 +44,7 @@ function clientReason(error) {
 }
 
 // Fixed read-only query. No caller-supplied commands, paths or launch parameters.
-module.exports = function (execFile, getuid, priorityIds) {
+module.exports = function (execFile, getuid, priorityIds, details) {
   return new Promise(function (resolve, reject) {
     if (priorityIds === undefined) priorityIds = [];
     if (
@@ -170,7 +170,25 @@ module.exports = function (execFile, getuid, priorityIds) {
                 hidden: hidden
               };
             });
-          resolve(apps);
+          if (details) {
+            var response = { apps: apps };
+            var installedIds = result.apps.map(function (a) {
+              return a && a.id;
+            });
+            if (
+              installedIds.length <= 300 &&
+              installedIds.every(function (id, i) {
+                return (
+                  typeof id === 'string' &&
+                  id.length > 0 &&
+                  id.length <= 256 &&
+                  installedIds.indexOf(id) === i
+                );
+              })
+            )
+              response.installedIds = installedIds;
+            resolve(response);
+          } else resolve(apps);
         } catch (error) {
           reject(
             error && error.inventory

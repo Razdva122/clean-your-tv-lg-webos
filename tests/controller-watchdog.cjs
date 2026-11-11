@@ -1052,7 +1052,10 @@ test('catalog broker reads through the unprivileged controller independently of 
   const c = controller({
     inputQuery: (options) => {
       reads++;
-      assert.deepEqual(JSON.parse(JSON.stringify(options)), { timeout: 3000 });
+      assert.deepEqual(JSON.parse(JSON.stringify(options)), {
+        timeout: 3000,
+        details: true
+      });
       return new Promise((r) => (resolve = r));
     }
   });
@@ -1085,11 +1088,18 @@ test('catalog broker reads through the unprivileged controller independently of 
     JSON.parse(c.files.get(own + 'home-response.json')).enabled,
     true
   );
-  resolve([{ id: 'org.example', title: 'Example' }]);
+  resolve({
+    apps: [{ id: 'org.example', title: 'Example' }],
+    installedIds: ['org.example']
+  });
   await new Promise((r) => setImmediate(r));
   assert.equal(
     JSON.parse(c.files.get(own + 'catalog-response.json')).apps[0].id,
     'org.example'
+  );
+  assert.deepEqual(
+    JSON.parse(c.files.get(own + 'catalog-response.json')).installedIds,
+    ['org.example']
   );
   assert.equal(
     JSON.parse(c.files.get(own + 'catalog-response.json')).id,

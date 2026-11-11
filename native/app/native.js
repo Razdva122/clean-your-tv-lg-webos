@@ -435,7 +435,7 @@ var inputStatusPending = null,
 function readCatalog() {
   if (!catalogPending) {
     catalogPending = Promise.resolve().then(function () {
-      return require('./app-inventory')({ timeout: 3000 });
+      return require('./app-inventory')({ timeout: 3000, details: true });
     });
     catalogPending = catalogPending.then(
       function (apps) {
@@ -576,7 +576,15 @@ function readHomeRequest(channel) {
             !(child && child.reason !== undefined) &&
             request.expires > Date.now()
           )
-            respond({ returnValue: true, apps: apps });
+            respond(
+              Array.isArray(apps)
+                ? { returnValue: true, apps: apps }
+                : {
+                    returnValue: true,
+                    apps: apps.apps,
+                    installedIds: apps.installedIds
+                  }
+            );
         },
         function () {
           if (
