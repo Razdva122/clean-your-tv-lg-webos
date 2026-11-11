@@ -61,7 +61,8 @@ static int cytv_generation_read(char token[34]) {
  fd=openat(dir,"stop-generation",O_RDWR|O_NOFOLLOW|O_NONBLOCK|O_CLOEXEC);if(fd<0)goto done;
  if(fstat(fd,&after)<0||!cytv_generation_same(&before,&after))goto done;
  size_t offset=0;while(offset<34){ssize_t n=pread(fd,token+offset,34-offset,(off_t)offset);if(n<0&&errno==EINTR)continue;if(n<0)goto done;if(!n)break;offset+=(size_t)n;}
- if(offset!=33)goto done;token[33]=0;
+ if(offset!=33)goto done;
+ token[33]=0;
  if(fstat(fd,&after)<0||!cytv_generation_same(&before,&after)||cytv_generation_leaf(dir,&after)!=1||!cytv_generation_same(&before,&after))goto done;
  ok=cytv_generation_token(token)&&cytv_generation_same_directory(dir);
 done:if(fd>=0)close(fd);close(dir);return ok;

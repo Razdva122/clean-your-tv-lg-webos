@@ -88,3 +88,14 @@ public delivery. Final release/device acceptance belongs to the next coordinator
 - A new #495 comment reports Back/Exit routing improved after manual Helper Start;
   it supports activation work but is not acceptance of this unpublished fix.
   Linked #505 concerns inventory/icons and is outside this setup fix.
+
+## Selected CI and compiler follow-up
+
+Final-source run [42975065260](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/42975065260)
+on 92f6712f completed: seven runtime shards passed, Linux shard2 failed only
+GCC `-Wmisleading-indentation` in the new C header. The two statements are now
+on separate lines; the actual C generation test passes locally. No runtime logic
+changed. Browser, both phone-HEIC jobs, optional Python, desktop frozen runtimes
+on Windows/macOS, website build and release policy passed. Independent follow-up
+review found no remaining actionable defects. The subsequent selected run must
+verify the GCC correction; successful authenticated units remain reusable.
