@@ -504,6 +504,54 @@ def execute(bundle,baseline,alias,identity=None,run=subprocess.run,edition=None,
     else:argv+=['--edition',edition]
     return run(['ssh',*options,alias,shlex.join(argv)],check=True,stdin=subprocess.DEVNULL)
 
+def bootstrap_operation(edition, resume, check, ownership=None, read=None):
+    from installation import (JOURNALS, Ownership, archive_component_fences,
+                              completed_no_root_fence, component_locks, device_operation, read_journal)
+    ownership=ownership if ownership is not None else Ownership()
+    no_root=edition=='no-root' and not resume
+    journal=JOURNALS['system-bootstrap'][0]
+    current=ownership.status() if no_root else None
+    reserved=bool(current and not current['terminal'] and
+                  (current['owner'],current['journal'],current['stage'])==('system-bootstrap',journal.name,'reserved'))
+
+    def require_absence(apps):
+        for app in apps:
+            for folder in ('applications','packages','services'):
+                name=app+'.service' if folder=='services' else app
+                if os.path.lexists(INSTALLED/'usr/palm'/folder/name):
+                    raise ValueError('Root or supervisor package remains')
+            for folder in ('services.d','roles.d','client-permissions.d','api-permissions.d','manifests.d'):
+                directory=BASE/folder
+                if directory.is_dir() and any(path.name.startswith(app+'.') for path in directory.iterdir()):
+                    raise ValueError('Root or supervisor registration remains')
+
+    def handoff(lease):
+        if lease['owner']!='no-root':return False
+        record=completed_no_root_fence(ownership.store,lease)
+        roots=tuple(JOURNALS[name][0].parent for name in ('deploy','root-bootstrap','system-bootstrap'))
+        require_normal_root()
+        require_absence((APPS['root'],APPS['root-updater'],APP))
+        for path in (HOOK,HOOK.with_name('50-clean-your-tv-root'),HOOK.with_name('51-clean-your-tv-root-updater'),
+                     Path('/var/webos-profile/override/clean-your-tv-root.json')):
+            if os.path.lexists(path):raise ValueError('Root or supervisor startup state remains')
+        with component_locks(roots,ownership.store.uid):
+            archive_component_fences(ownership.store,record,lease['id'],roots,require_cancelled=True)
+        return True
+
+    def eligible():
+        if reserved:
+            # A reservation can survive a crash before provision creates its
+            # state. Continue only if there is no evidence of package effects.
+            if ownership.status()!=current or os.path.lexists(journal.parent) or os.path.lexists(HOOK):
+                raise ValueError('Reserved supervisor bootstrap requires recovery')
+            require_absence((APP,))
+        check()
+    return device_operation('system-bootstrap',recovery=resume or reserved,check=eligible,ownership=ownership,
+                            read=read if read is not None else read_journal,
+                            handoff=handoff if no_root and not reserved else None)
+
+
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--bundle',type=Path,required=True);parser.add_argument('--baseline',type=Path);parser.add_argument('--edition',choices=('root','no-root'));parser.add_argument('--ssh');parser.add_argument('--identity',type=Path);parser.add_argument('--apply',action='store_true');parser.add_argument('--device',action='store_true',help=argparse.SUPPRESS)
     parser.add_argument('--python',default='/usr/bin/python3',choices=('/usr/bin/python3','/var/lib/clean-your-tv-python/4a71641c8d5536175e404a961624e8656eba30e97b5026f6bd7dc31e4bbeaaea/bin/python3.13'))
@@ -514,7 +562,7 @@ def main():
         policy = 'process.versions.node === "0.12.2"' if LEGACY_NODE_BETA else 'Number(process.versions.node.split(".")[0])>=8'
         subprocess.run(['/usr/bin/node','-e','process.exit(('+policy+')?0:1)'],check=True)
         sys.path.insert(0,str(args.bundle))
-        from installation import device_operation, Ownership, read_journal, JOURNALS
+        from installation import Ownership, read_journal, JOURNALS
         with tempfile.TemporaryDirectory(prefix='system-baseline-') as tmp:
             selected=[args.baseline]
             def eligible():
@@ -530,7 +578,8 @@ def main():
                     if os.path.lexists(STATE):raise FileExistsError('Supervisor setup exists; inspect or explicitly --resume')
                     selected[0]=snapshot(args.bundle,args.edition,Path(tmp)/'baseline')
                 preflight(args.bundle,selected[0])
-            with device_operation('system-bootstrap', recovery=args.resume, check=eligible):
+            edition=verify_baseline(args.baseline,args.bundle)['edition'] if args.baseline and not args.resume else args.edition
+            with bootstrap_operation(edition,args.resume,eligible):
                 print(json.dumps(resume(args.bundle) if args.resume else provision(args.bundle,selected[0])))
         return
     verify_bundle(args.bundle);baseline=verify_baseline(args.baseline,args.bundle) if args.baseline else {'edition':args.edition}
