@@ -273,6 +273,40 @@ class CIScope(unittest.TestCase):
                 expected_os = ['ubuntu-latest', 'macos-latest'] if 'macos' in enabled else ['ubuntu-latest']
                 self.assertEqual(json.loads(result['runtime_os']), expected_os)
 
+    def test_weather_pr_routing_preserves_mixed_shared_and_full_coverage(self):
+        import runpy
+        scope = runpy.run_path(str(ROOT / 'scripts/ci-scope.py'))
+        event = {'pull_request': {'base': {'sha': 'a' * 40, 'ref': 'release/next'},
+                                  'head': {'sha': 'b' * 40, 'ref': 'codex/weather'}}}
+        weather = ('launcher/weather-data.js', 'tests/weather/data.cjs',
+                   'tests/weather/providers.cjs', 'tests/weather/ui.cjs')
+        cases = (
+            (weather, False, {'weather'}),
+            ((*weather, 'docs/i18n/en.md'), False, {'weather', 'preview'}),
+            ((*weather, 'root-edition/install_device.py'), False,
+             {'weather', 'tv', 'installer', 'setup'}),
+            ((*weather, 'package-lock.json'), False, {'weather', *scope['COMPONENTS']}),
+            (('launcher/weather-transport.js',), False, {'tv', 'installer', 'setup', 'preview'}),
+            (weather, True, set(scope['COMPONENTS'])),
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            event_path, output = Path(directory) / 'event.json', Path(directory) / 'output'
+            event_path.write_text(json.dumps(event))
+            env = dict(GITHUB_EVENT_PATH=str(event_path), GITHUB_OUTPUT=str(output),
+                       GITHUB_EVENT_NAME='pull_request', CI_QUICK_SUITE='false')
+            for paths, full, expected in cases:
+                output.write_text('')
+                changed_paths = (chr(0).join(paths) + chr(0)).encode()
+                with self.subTest(paths=paths, full=full), \
+                     patch.dict(os.environ, {**env, 'CI_FULL_SUITE': str(full).lower()}), \
+                     patch.dict(scope['main'].__globals__, git=lambda *args: changed_paths):
+                    with contextlib.redirect_stdout(io.StringIO()):
+                        scope['main']()
+                result = dict(line.split('=', 1) for line in output.read_text().splitlines())
+                checked = {'weather', *(name.replace('-', '_') for name in scope['COMPONENTS'])}
+                self.assertEqual({name for name in checked if result.get(name) == 'true'},
+                                 {name.replace('-', '_') for name in expected})
+
     def test_routes_changes_and_shared_dependencies(self):
         path = ROOT / 'scripts/ci-scope.py'
         self.assertTrue(path.exists(), 'Component routing is missing')
