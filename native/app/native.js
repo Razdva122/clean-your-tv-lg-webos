@@ -1225,8 +1225,9 @@ function refreshWatchCatalog() {
   // Recover routing hints from the existing authenticated TV inventory. Never
   // adopt installer-owned files or make a transient boot/network failure final.
   readCatalog().then(
-    function (apps) {
+    function (catalog) {
       watchCatalogPending = false;
+      var apps = Array.isArray(catalog) ? catalog : catalog && catalog.apps;
       if (!Array.isArray(apps) || stopping || stopRequested) return;
       watchedApps.length = 0;
       apps.forEach(function (app) {

@@ -222,7 +222,10 @@ test('unavailable apps configuration uses fresh TV catalog without adopting inst
     appsConfig: '{"invalid":"configuration"}',
     inputQuery: () => {
       reads++;
-      return Promise.resolve([{ id: 'test.app' }]);
+      return Promise.resolve({
+        apps: [{ id: 'test.app' }],
+        installedIds: ['test.app']
+      });
     }
   });
   c.reset();
@@ -230,7 +233,7 @@ test('unavailable apps configuration uses fresh TV catalog without adopting inst
   assert.equal(reads, 1);
   c.foreground('test.app');
   c.foreground('com.webos.app.home');
-  assert(c.launches.includes('com.gathin.tvhome'));
+  assert(c.logs.some((entry) => entry.event === 'return-after-exit'));
   assert.equal(c.files.get(dir + 'apps.json'), '{"invalid":"configuration"}');
 });
 test('boot catalog failure retries without resetting a healthy foreground subscription', async () => {
@@ -240,7 +243,10 @@ test('boot catalog failure retries without resetting a healthy foreground subscr
     inputQuery: () =>
       ++reads === 1
         ? Promise.reject(Error('not ready'))
-        : Promise.resolve([{ id: 'test.app' }])
+        : Promise.resolve({
+            apps: [{ id: 'test.app' }],
+            installedIds: ['test.app']
+          })
   });
   c.reset();
   await new Promise((r) => setImmediate(r));
@@ -250,7 +256,7 @@ test('boot catalog failure retries without resetting a healthy foreground subscr
   assert.equal(reads, 2);
   c.foreground('test.app');
   c.foreground('com.webos.app.home');
-  assert(c.launches.includes('com.gathin.tvhome'));
+  assert(c.logs.some((entry) => entry.event === 'return-after-exit'));
 });
 test('setup enables Home and preserves its bound generation across a guarded relay retry', () => {
   const token = 'I' + '1'.repeat(32);
