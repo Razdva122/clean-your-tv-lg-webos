@@ -184,7 +184,7 @@ jobs:
   optional-python:
     needs: scope
     if: needs.scope.outputs.installer == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
         with:
@@ -205,7 +205,7 @@ jobs:
         id: evidence
         env:
           GH_TOKEN: ${{ github.token }}
-        run: python scripts/ci-test-evidence.py plan --kind optional --os ubuntu-latest --units optional-python --directory "$RUNNER_TEMP/ci-evidence"
+        run: python scripts/ci-test-evidence.py plan --kind optional --os ubuntu-24.04 --units optional-python --directory "$RUNNER_TEMP/ci-evidence"
       - name: Execute the pinned ARM32 Python and native module smoke tests
         if: steps.evidence.outputs.fresh == 'true'
         run: python scripts/test-python-runtime.py
@@ -238,7 +238,7 @@ jobs:
           - os: macos-latest
             browsers: webkit chromium
             engines: webkit,chromium
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
             browsers: chromium firefox
             engines: chromium,firefox
     runs-on: ${{ matrix.os }}
@@ -262,7 +262,7 @@ jobs:
   browser:
     needs: scope
     if: needs.scope.outputs.tv == 'true' || needs.scope.outputs.ui == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
         with:
@@ -290,7 +290,7 @@ jobs:
         run: |
           units=browser-core
           if [ "$FULL" = true ]; then units="$units browser-themes"; fi
-          python scripts/ci-test-evidence.py plan --kind browser --os ubuntu-latest --units "$units" --directory "$RUNNER_TEMP/ci-evidence"
+          python scripts/ci-test-evidence.py plan --kind browser --os ubuntu-24.04 --units "$units" --directory "$RUNNER_TEMP/ci-evidence"
       - name: Check compiled Home with legacy browser limitations
         if: contains(format(' {0} ', steps.evidence.outputs.missing), ' browser-core ')
         run: |
