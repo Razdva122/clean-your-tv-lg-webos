@@ -2,7 +2,12 @@
 from pathlib import Path
 import sys
 
-NAMES = ('state-permissions', 'contract-events')
+SOURCES = {
+    'state-permissions': 'native/app/state-permissions.js',
+    'contract-events': 'native/app/contract-events.js',
+    'boot-proof': 'native/contracts/boot-proof.js',
+}
+NAMES = tuple(SOURCES)
 
 
 def trusted_source(name):
@@ -14,7 +19,7 @@ def trusted_source(name):
             or sys.platform == 'android' or (package / 'tv').is_dir()):
         path = package / 'tv' / (name + '.js')
     else:
-        path = package.parent / 'native' / 'app' / (name + '.js')
+        path = package.parent / SOURCES[name]
     if path.is_symlink() or not path.is_file():
         raise FileNotFoundError('Missing trusted TV resource: ' + name)
     return path.read_text(encoding='utf-8')
@@ -26,7 +31,7 @@ def stage_sources(destination):
     destination.mkdir(parents=True, exist_ok=True)
     root = Path(__file__).resolve().parents[1]
     for name in NAMES:
-        source = root / 'native' / 'app' / (name + '.js')
+        source = root / SOURCES[name]
         if source.is_symlink() or not source.is_file():
             raise FileNotFoundError('Missing canonical TV resource: ' + name)
         (destination / (name + '.js')).write_bytes(source.read_bytes())
@@ -47,7 +52,7 @@ def node_adapter(name, invocation):
 var builtin=require, factories={},cache={};
 %s
 function load(name){
- if(name==='fs'||name==='crypto'||name==='constants')return builtin(name);
+ if(name==='fs'||name==='crypto'||name==='constants'||name==='path')return builtin(name);
  if(!Object.prototype.hasOwnProperty.call(factories,name))throw Error('unsupported-resource');
  if(!cache[name]){var module={exports:{}};cache[name]=module;factories[name](module,module.exports,load);}
  return cache[name].exports;

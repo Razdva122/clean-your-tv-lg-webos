@@ -60,7 +60,8 @@ mode, link and type checks still apply. UID 0 with insufficient kernel rights
 still fails the actual read/write/chown/chmod operation and checked staging;
 group admission does not waive syscall failures or establish Helper quiescence.
 
-`cytv/tv_sources.py` allowlists only `state-permissions` and `contract-events`.
+`cytv/tv_sources.py` allowlists `state-permissions`, `contract-events` and
+`boot-proof`.
 Source execution reads canonical repository resources; frozen desktop/CLI and
 Android use staged `cytv/tv` bytes and refuse missing packaged resources. Static
 host-owned adapter bodies resolve only bundled factories and necessary Node
@@ -153,3 +154,31 @@ desktop/Android packaged execution and affected physical recovery, Home, power,
 input/emergency and update/rollback scenarios belong to the release coordinator's
 scoped acceptance. No release, compatibility or original-issue resolution follows
 from the development checks alone.
+
+
+## No-root removal restart evidence
+
+`native/contracts/boot-proof.js` owns kernel UUID parsing, proof validation and
+`boot-create`, `boot-probe`, `boot-retire`, `boot-release` via `run(input, context)`.
+The host embeds these exact trusted bytes in the standalone cleanup program;
+Root updater embedding therefore remains self-contained. It uses the same
+staging infrastructure as storage contracts, without adding unused code to the
+Helper package. `readKernel()` provides the same identity validation to inventory.
+
+The one current No-root journal record is `cleanup_boot_proof`; the legacy
+`cleanup_boot_id` field is cleared when capturing it. Existing schema-1 proofs
+retain private per-goal markers on a real root-owned sticky `/tmp` (01777),
+including inode/content checks. Captured proofs never switch kinds on retry.
+
+The Developer Mode SSH layout with a real root-owned `/tmp` of exactly 0111
+captures schema 2 (`kind: kernel-only`, goal and kernel UUID), without opening,
+reading or writing that directory. Only a changed kernel UUID proves a restart.
+Marker absence, successful release, elapsed time and a repeated UUID do not.
+The same-ID snapshot/cold-boot case stays pending with diagnostic guidance;
+there is no alternate marker in persistent or nonsticky shared storage.
+Other modes, owners and symlinks remain refusals. Root SSH cannot select this
+fallback; Root's separate runtime `boot_identity` contract remains unchanged.
+
+This evidence does not replace process, control/startup, package/file and
+previous-operation checks. Unknown prior operations retain the restart gate.
+See [the focused verification record](../history/2026-11-11-issue472-devmode-boot-proof.md).
