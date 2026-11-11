@@ -202,20 +202,28 @@ class OriginalOperationIntegration(unittest.TestCase):
         private=jail/'.cytv-installer';private.mkdir(mode=0o700)
         original=self.remote.run
         def run(command,**kwargs):
+            if command == "LC_ALL=C stat -f -c '%t' /tmp":
+                return '858458f6'
             if command=='LC_ALL=C df -Pk /tmp':
-                return 'Filesystem 1024-blocks Used Available Capacity Mounted on\n/dev/tmp 1024 1024 0 100% /tmp'
+                return 'Filesystem 1024-blocks Used Available Capacity Mounted on\n' + tmp_row
             if command=='LC_ALL=C df -Pk /media/developer':
                 return 'Filesystem 1024-blocks Used Available Capacity Mounted on\n/dev/apps 10000000 0 10000000 0% /media/developer'
             return original(command,**kwargs)
         self.remote.run=run
-        with patch.object(observer,'JAIL_ROOT',str(private)):
-            with self.assertRaises(RuntimeError) as caught:self.installer.install(self.inventory,'original-secret')
-        self.assertEqual(caught.exception.reason_code,'tv-storage-full')
-        self.assertIn('(/tmp)',str(caught.exception))
-        self.assertIsNone(self.store.pending(self.profile))
-        self.assertFalse(any(call[:2]==('observer','storage-select') for call in self.remote.calls))
-        self.assertFalse((self.root/'requests').exists())
-        self.assertEqual(list(private.iterdir()),[])
+        for tmp_row, reason in (
+            ('/dev/tmp 1024 1024 0 100% /tmp', 'tv-storage-full'),
+            ('tmp 0 0 0 0% /tmp', 'tv-storage-ramfs'),
+        ):
+            with self.subTest(reason=reason), patch.object(observer, 'JAIL_ROOT', str(private)):
+                with self.assertRaises(RuntimeError) as caught:
+                    self.installer.install(self.inventory, 'original-secret')
+                self.assertEqual(caught.exception.reason_code, reason)
+                self.assertIn('/tmp', str(caught.exception))
+                self.assertIsNone(self.store.pending(self.profile))
+                self.assertFalse(any(call[:2] == ('observer', 'storage-select')
+                                     for call in self.remote.calls))
+                self.assertFalse((self.root/'requests').exists())
+                self.assertEqual(list(private.iterdir()), [])
 
     def test_root_ssh_observer_install_and_remove_keep_original_receipts(self):
         # Host fixture substitutes UID and fixed TV paths only. Run the actual
