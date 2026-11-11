@@ -52,6 +52,11 @@
       "summary": "Fix stale app catalogs and live No-root icons (#505)"
     },
     {
+      "pr": 512,
+      "issues": [],
+      "summary": "Skip unused Root Updater build in clean reinstall tests"
+    },
+    {
       "pr": 514,
       "issues": [
         495,
