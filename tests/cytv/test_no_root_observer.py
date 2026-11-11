@@ -195,12 +195,12 @@ fs.writeSync=function(fd,b){if(Buffer.isBuffer(b)&&b.toString().indexOf('private
                     with self.subTest(kind=kind):
                         key.unlink();key.write_bytes(b'retained-key');key.chmod(0o775)
                         other=state/'other';other.unlink(missing_ok=True)
-                        if kind=='world-write':key.chmod(0o777)
+                        if kind=='world-write':key.chmod(0o666)
                         if kind=='hardlink':os.link(key,other)
                         if kind=='symlink':key.rename(other);key.symlink_to(other)
-                        if kind=='unsafe-apps':apps.chmod(0o777)
+                        if kind=='unsafe-apps':apps.chmod(0o666)
                         self.assertNotEqual(run(True).returncode,0)
-                        self.assertEqual(key.stat().st_mode&0o777,0o777 if kind=='world-write' else 0o775)
+                        self.assertEqual(key.stat().st_mode&0o777,0o666 if kind=='world-write' else 0o775)
                         self.assertEqual(key.read_bytes(),b'retained-key')
 
     def test_foreign_key_repair_requires_original_bytes_and_keeps_emergency_stop(self):
@@ -209,7 +209,7 @@ fs.writeSync=function(fd,b){if(Buffer.isBuffer(b)&&b.toString().indexOf('private
         runtimes=[shutil.which('node')]+[os.environ[name] for name in ('NODE010','NODE01025','NODE012') if os.environ.get(name)]
         for runtime in runtimes:
             for mode in (0o640,0o775):
-                for kind in ('matching','read-only','wrong-hash','hardlink','symlink','world-write','unsafe-apps','foreign-apps'):
+                for kind in ('matching','expanded','expanded-wrong-hash','read-only','wrong-hash','hardlink','symlink','world-write','unsafe-apps','foreign-apps'):
                     with self.subTest(runtime=runtime,mode=mode,kind=kind),tempfile.TemporaryDirectory(dir=PROCESS_TMP) as root:
                         state=Path(root).resolve()/'state';state.mkdir(mode=0o775);os.chown(state,-1,os.getgid())
                         key=state/'ssap-key.json';key.write_bytes(b'original-pairing');key.chmod(mode)
@@ -219,20 +219,26 @@ fs.writeSync=function(fd,b){if(Buffer.isBuffer(b)&&b.toString().indexOf('private
                         prefix="var fs=require('fs');['lstatSync','fstatSync'].forEach(function(name){var original=fs[name];fs[name]=function(){var s=original.apply(fs,arguments);if(s.ino===INO)s.uid=5509;return s;};});".replace('INO',str(before.st_ino))
                         if kind=='foreign-apps':
                             prefix=prefix.replace('s.ino==='+str(before.st_ino),'(s.ino==='+str(before.st_ino)+'||s.ino==='+str(apps.stat().st_ino)+')')
-                        digest=hashlib.sha256(b'wrong' if kind=='wrong-hash' else b'original-pairing').hexdigest()
+                        digest=hashlib.sha256(b'wrong' if kind.endswith('wrong-hash') else b'original-pairing').hexdigest()
                         if kind=='hardlink':os.link(key,state/'other')
                         if kind=='symlink':key.rename(state/'other');key.symlink_to(state/'other')
-                        if kind=='world-write':key.chmod(0o777)
-                        if kind=='unsafe-apps':apps.chmod(0o777)
+                        if kind.startswith('expanded'):
+                            key.chmod(0o777);apps.chmod(0o777)
+                        if kind=='world-write':key.chmod(0o666)
+                        if kind=='unsafe-apps':apps.chmod(0o666)
                         args=[] if kind=='read-only' else ['repair-key-mode:'+digest]
                         result=subprocess.run([runtime,'-e',prefix+observer.STATE_CHECK]+args+[str(state)],capture_output=True,timeout=5)
-                        if kind=='matching':
+                        if kind in ('matching','expanded'):
                             self.assertEqual(result.returncode,0,result.stderr.decode())
                             self.assertNotEqual(key.stat().st_ino,before.st_ino)
                             self.assertEqual(key.stat().st_mode&0o777,0o640)
+                            self.assertEqual(apps.stat().st_mode&0o777,0o644 if kind=='expanded' else 0o775)
                         else:
                             self.assertNotEqual(result.returncode,0)
                             self.assertEqual(key.stat().st_ino,before.st_ino)
+                            if kind=='expanded-wrong-hash':
+                                self.assertEqual(key.stat().st_mode&0o777,0o777)
+                                self.assertEqual(apps.stat().st_mode&0o777,0o777)
                         self.assertEqual(key.read_bytes(),b'original-pairing')
                         self.assertEqual(latch.read_bytes(),b'explicit-stop')
                         self.assertEqual(sorted(x.name for x in state.iterdir()),sorted(['ssap-key.json','apps.json','blocked']+(['other'] if kind in ('hardlink','symlink') else [])))
