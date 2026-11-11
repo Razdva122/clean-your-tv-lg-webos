@@ -6,6 +6,7 @@ the user's project keys or files after the user has requested their removal.
 import json
 import base64
 import hashlib
+from contextlib import ExitStack
 from time import monotonic, sleep
 
 from .errors import (TVRejected, UserError, TVCommandError, TV_STORAGE_FULL, CLEANUP_BOOT_ACTIONS,
@@ -331,23 +332,55 @@ def _restore_home(installer):
         raise UserError('Removal could not be checked. Reconnect and try again.', reason_code='controls-unverified')
     stock={'com.webos.app.home','com.webos.app.livetv',
            'com.webos.app.hdmi1','com.webos.app.hdmi2','com.webos.app.hdmi3','com.webos.app.hdmi4'}
-    def foreground():
-        reply=installer.remote.luna(uri+'getForegroundAppInfo', {}, timeout=5)
-        app=reply.get('appId') if isinstance(reply,dict) and reply.get('returnValue') is True else None
-        if not isinstance(app,str) or not app:
-            raise UserError('Removal could not be checked. Reconnect and try again.', reason_code='controls-unverified')
-        return app
-    if foreground() in stock:
-        return
-    # Fixed built-in source only; never relaunch an arbitrary observed app.
-    launched=installer.remote.luna(uri+'launch', {'id':'com.webos.app.livetv'})
-    if not isinstance(launched,dict) or launched.get('returnValue') is not True:
-        raise UserError('Removal could not be checked. Reconnect and try again.', reason_code='controls-unverified')
-    deadline=monotonic()+5
-    while foreground() not in stock:
-        if monotonic()>=deadline:
-            raise UserError('Removal could not be checked. Reconnect and try again.', reason_code='controls-unverified')
-        sleep(.1)
+    message = 'Removal could not be checked. Reconnect and try again.'
+    method = uri + 'getForegroundAppInfo'
+    with ExitStack() as connection:
+        paired = None
+
+        def foreground(timeout=5):
+            nonlocal paired
+            if paired is None:
+                try:
+                    reply = installer.remote.luna(method, {}, timeout=timeout)
+                except TVRejected as error:
+                    if (installer.profile.get('connection') == 'root-ssh'
+                            or error.luna.get('error_code') != -1
+                            or error.luna.get('return_value') is not False):
+                        raise
+                    from websockets.exceptions import WebSocketException
+                    from .tv import SSAP
+                    profile = installer.profile
+                    try:
+                        paired = connection.enter_context(SSAP(profile['host'], installer.store.device_dir(profile),
+                                                               installer.progress, reuse_only=True))
+                    except (OSError, ValueError, UserError, WebSocketException) as exc:
+                        raise UserError(message, reason_code='controls-unverified') from exc
+            if paired is not None:
+                try:
+                    reply = paired.call('ssap://' + method, timeout=timeout)
+                except (OSError, ValueError, UserError) as exc:
+                    raise UserError(message, reason_code='controls-unverified') from exc
+            app = None
+            if isinstance(reply, dict):
+                accepted = reply.get('returnValue', paired is not None) is True
+                if accepted and not reply.get('pairingType'):
+                    app = reply.get('appId')
+            if not isinstance(app, str) or not app:
+                raise UserError(message, reason_code='controls-unverified')
+            return app
+
+        if foreground() in stock:
+            return
+        # Fixed built-in source only; require foreground confirmation after launch.
+        launched = installer.remote.luna(uri+'launch', {'id':'com.webos.app.livetv'})
+        if not isinstance(launched, dict) or launched.get('returnValue') is not True:
+            raise UserError(message, reason_code='controls-unverified')
+        deadline = monotonic() + 5
+        while (remaining := deadline - monotonic()) > 0:
+            if foreground(remaining) in stock:
+                return
+            sleep(min(.1, remaining))
+        raise UserError(message, reason_code='controls-unverified')
 
 
 def _repair_registration(installer, value):
