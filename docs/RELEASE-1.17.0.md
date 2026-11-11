@@ -48,9 +48,22 @@ approval passes verify_helper_transition. This pre-dispatch probe does not
 replace final candidate package delivery or selected physical acceptance. The
 complete replacement build42969073353:1 passed all23 jobs after the reviewed
 Windows fixture-only correction #504. Exact601-file CLI/APK payload, original
-APK signer and code31→32 emulator retention/native checks pass. Final affected
-TV acceptance and Root QA signature remain pending; main merge/publication are
-separate gates.
+APK signer and code31→32 emulator retention/native checks pass. Protected
+Root-only signing42974007477 passed production-key signature, exact package
+closure and live provenance checks without publication.
+
+The owner-present final-artifact pass found CLI recovery missing the manifest
+needed by Root-SSH handoff, and Helper unavailable after remote-power and
+separate AC-off/on with its key expanded to0777. Navigation and audible sound
+passed, but Home-control and dependent active-Stop acceptance remain gaps.
+The authorized return restored Root0.16.0 with matching configuration/preferences,
+verified recovery, Home Off and no pending operation. Fresh unchanged
+System1.2.8 setup raised MemoryError before bootstrap, blocking signed final
+Root transition and rollback/forward. The original12-ID ledger records eight
+scoped passes, two observed failures and two concrete blockers, with no safe
+independent untested case remaining in that pass. This completes the failure
+inventory, not candidate acceptance. No final acceptance token, main merge or
+publication is granted.
 
 The original #487 service-status discrepancy and reporter-device continuation/
 standby result remain unverified. The corrected #454 C1 prerequisite, original
