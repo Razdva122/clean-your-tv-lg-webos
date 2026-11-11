@@ -77,6 +77,19 @@ class ContextTests(unittest.TestCase):
         self.assertEqual(unsafe['status']['product']['last_failure']['cleanup_step'],'unknown')
         self.assertNotIn('PRIVATE',json.dumps([report,later,unsafe]))
 
+    def test_cleanup_probe_exception_is_filtered_in_reports_and_saved_history(self):
+        self.store.begin(self.profile,'uninstall')
+        product={'last_failure':{'exception_type':'CalledProcessError','exit_status':1,'cleanup_step':'home-readback',
+            'cleanup_probe':{'exception_type':'PermissionError','errno':13,'error':'PRIVATE',
+                'frames':[{'file':'c1_keyfilter.py','line':144,'path':'PRIVATE'},
+                          {'file':'/PRIVATE/path','line':2},{'file':'deploy.py','line':True}]}}}
+        report=self.report('uninstall','uninstall',UserError('PRIVATE'),status={'device':{'product':product}})
+        expected={'exception_type':'PermissionError','errno':13,'frames':[{'file':'c1_keyfilter.py','line':144}]}
+        self.assertEqual(report['status']['product']['last_failure'].get('cleanup_probe'),expected)
+        later=self.report('doctor','doctor-complete')
+        self.assertEqual(later['first_failure']['status']['product']['last_failure']['cleanup_probe'],expected)
+        self.assertNotIn('PRIVATE',json.dumps([report,later]))
+
     def test_removal_reports_keep_fixed_failure_codes_without_private_messages(self):
         for reason in ('root-worker-busy', 'root-access-required', 'removal-failed',
                        'cleanup-check-failed', 'connection-interrupted'):

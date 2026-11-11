@@ -336,11 +336,61 @@ class ConfinedCleanup(unittest.TestCase):
 
     def test_compositor_stock_subprocess_protocol_returns_fresh_proof(self):
         from install_device import LocalDevice
+        import inspect, clean_removal
         payload=self.root/'support';(payload/'root-updater').mkdir(parents=True)
         proof={'mode':'stock-compositor','target':{'dev':45851,'ino':5647,'size':50684},'target_sha256':'a'*64}
-        (payload/'root-updater/clean_removal.py').write_text('def compositor_stock(payload):\n    return '+repr(proof)+'\n')
+        (payload/'root-updater/clean_removal.py').write_text('def compositor_stock(payload):\n    return '+repr(proof)+'\n'+inspect.getsource(clean_removal.compositor_stock_report))
         device=LocalDevice();device.payload=payload
         self.assertEqual(device.compositor_stock({'operation':'c'*32}),proof)
+
+    def test_stock_probe_child_failure_survives_process_boundary_without_private_data(self):
+        import subprocess, shutil, clean_removal
+        from install_device import LocalDevice
+        from install_driver import failure_summary
+        payload=self.root/'probe-support';support=payload/'root-updater';support.mkdir(parents=True)
+        shutil.copyfile(Path(clean_removal.__file__),support/'clean_removal.py')
+        # Load the actual producer and its normal dependency closure in a fresh interpreter.
+        source=Path(clean_removal.__file__).parent
+        for name in ('install_driver.py','installation.py'):
+            shutil.copyfile(source/name,support/name)
+        shutil.copytree(source/'updater',support/'updater')
+        (support/'deploy.py').write_text('def verify_bundle(*args,**kwargs):\n    raise PermissionError(13,"PRIVATE message","/PRIVATE path")\n')
+        device=LocalDevice();device.payload=payload
+        with self.assertRaises(subprocess.CalledProcessError) as caught:
+            device.compositor_stock({'operation':'c'*32})
+        self.assertEqual(caught.exception.returncode,1)
+        self.assertIn(b'PRIVATE message',caught.exception.stderr)
+        summary=failure_summary(caught.exception)
+        detail=summary.get('cleanup_probe',{})
+        self.assertEqual(detail.get('exception_type'),'PermissionError')
+        self.assertEqual(detail.get('errno'),13)
+        self.assertIn({'file':'deploy.py','line':2},detail.get('frames',[]))
+        self.assertNotIn('PRIVATE',str(summary))
+
+    def test_stock_probe_invalid_child_output_cannot_become_route_or_private_diagnostic(self):
+        import json, subprocess, deploy
+        from install_device import LocalDevice
+        from install_driver import failure_summary
+        device=LocalDevice();device.payload=self.root/'support'
+        outputs=[b'PRIVATE',b'x'*8193,json.dumps({'returnValue':True,'result':{'mode':'PRIVATE'}}).encode(),
+            json.dumps({'returnValue':False,'cleanup_probe':{'exception_type':'PRIVATE','frames':[]}}).encode(),
+            json.dumps({'returnValue':False,'cleanup_probe':{'exception_type':'ValueError','frames':[{}]*9}}).encode()]
+        for output in outputs:
+            error=subprocess.CalledProcessError(1,['PRIVATE'],output=output,stderr=b'PRIVATE')
+            with patch.object(deploy,'command',side_effect=error),self.assertRaises(subprocess.CalledProcessError) as caught:
+                device.compositor_stock({'operation':'c'*32})
+            self.assertIs(caught.exception,error)
+            self.assertEqual(failure_summary(error),{'exception_type':'CalledProcessError','exit_status':1})
+
+    def test_stock_probe_recursive_diagnostic_keeps_original_subprocess_failure(self):
+        import subprocess, deploy, install_device
+        from install_device import LocalDevice
+        device=LocalDevice();device.payload=self.root/'support'
+        error=subprocess.CalledProcessError(1,['PRIVATE'],output=b'['*2000+b']'*2000)
+        with patch.object(deploy,'command',side_effect=error),patch.object(install_device.json,'loads',side_effect=RecursionError):
+            with self.assertRaises(subprocess.CalledProcessError) as caught:
+                device.compositor_stock({'operation':'c'*32})
+        self.assertIs(caught.exception,error)
 
     def test_native_deploy_child_keeps_mutex_and_ignores_only_its_parent_lease(self):
         from install_device import LocalDevice

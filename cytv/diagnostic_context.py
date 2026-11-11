@@ -239,6 +239,9 @@ def worker_summary(value):
         item = value.get(key)
         if type(item) is int and low <= item <= high:
             result[key] = item
+    from .errors import root_driver_details
+    probe=root_driver_details(value.get('cleanup_probe'))
+    if probe:result['cleanup_probe']=probe
     if 'stage' in value:result['stage']=choice(value['stage'],STAGES)
     if 'cleanup_step' in value:
         result['cleanup_step']=choice(value['cleanup_step'],('routing-inverse','runtime-restore',
