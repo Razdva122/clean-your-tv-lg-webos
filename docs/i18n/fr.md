@@ -164,6 +164,8 @@ Ouvrez Paramètres → Fonds d’écran → Envoyer depuis le téléphone et sca
 
 ## Configurer votre Clean Your TV
 
+Avant de choisir un thème, utilisez **Debloat** pour sélectionner les réglages LG de publicité, de recommandations, de confidentialité et de notifications à modifier. Vérifiez chaque résultat. Si la valeur d’origine ne peut pas être lue, elle ne peut pas être enregistrée pour une restauration automatique. Choisissez **Ignorer Debloat** pour conserver vos réglages.
+
 Après une installation réussie, choisissez Classic, Liquid Glass ou Ribbon et activez ou désactivez la météo. Ribbon ne prend pas en charge la météo ; Liquid Glass utilise le format compact. La ville est estimée selon votre connexion et peut être modifiée dans Home.
 
 No-root avec Developer Mode propose la prolongation automatique (Bêta) ; surveillez toujours le compteur officiel. No-root via un accès root SSH existant n’utilise pas cette option. Root permet de bloquer les mises à jour du micrologiciel LG via Homebrew Channel, y compris celles de sécurité ; un vrai redémarrage via Homebrew Channel est requis. Les mises à jour CYTV restent distinctes.

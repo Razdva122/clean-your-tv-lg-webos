@@ -18,6 +18,31 @@ Weather opt-in uses the existing automatic location mode when no city has been
 saved; it creates no new endpoint. A saved city and other weather preferences
 remain intact. An edition fallback determines the final mode before customization.
 
+## Debloat
+
+The optional Debloat step comes before customization. All ten choices start
+unselected. Root uses the LG Settings Service. No-root writes through a paired
+SSAP connection requesting the regular `WRITE_SETTINGS` permission. It uses a
+separate pairing record and reads the three preference categories through
+Developer Mode SSH, or through Luna when connected by root SSH. Live Plus also
+has an SSAP read fallback. The file reader returns only the requested `on` or
+`off` value. A firmware may expose a setting without making its value readable
+to the installer.
+
+The installer skips values that already match. Before a selected write with a
+readable original, it saves the original and requested value in the private
+per-profile `debloat.json` record. It retains the first recorded original on
+subsequent installations. The record captures pre-write values for future
+restoration support. Its presence alone does not prove that a write changed
+the setting.
+Selected settings with unreadable originals can be sent without adding a
+restore entry. Automatic restoration on uninstall is not implemented yet.
+
+The No-root setter may be unavailable or rejected on a given firmware. Debloat
+reports the rejected write for each affected setting. It verifies accepted writes
+with a separate read. Debloat is skipped for non-interactive installs and
+console installs using `--yes`.
+
 ## Application and persistence
 
 The installer sends a bounded `cytvSetup` object through the existing

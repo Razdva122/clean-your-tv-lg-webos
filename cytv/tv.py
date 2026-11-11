@@ -129,7 +129,8 @@ class Inventory:
 
 
 class SSAP:
-    def __init__(self, host, directory, progress=print):
+    def __init__(self, host, directory, progress=print, *, settings_write=False):
+        self.settings_write = settings_write
         self.host, self.directory, self.progress = host, Path(directory), progress
         self.counter, self.ws, self.key = 0, None, None
 
@@ -137,10 +138,11 @@ class SSAP:
         from websockets.sync.client import connect
         from websockets.exceptions import ConnectionClosed
         from lgtv import PERMISSIONS
-        keyfile = self.directory / 'ssap.json'
+        keyfile = self.directory / ('ssap-settings.json' if self.settings_write else 'ssap.json')
+        permissions = ['READ_SETTINGS', 'WRITE_SETTINGS'] if self.settings_write else PERMISSIONS
         saved = json.loads(keyfile.read_text()) if keyfile.exists() else {}
         payload = {'forcePairing': False, 'pairingType': 'PROMPT',
-                   'manifest': {'manifestVersion': 1, 'appVersion': '1.1', 'permissions': PERMISSIONS}}
+                   'manifest': {'manifestVersion': 1, 'appVersion': '1.1', 'permissions': permissions}}
         if saved.get('key'):
             payload['client-key'] = saved['key']
         try:
@@ -181,13 +183,13 @@ class SSAP:
     def __exit__(self, *args):
         self.ws.close()
 
-    def call(self, uri):
+    def call(self, uri, payload=None, *, timeout=20):
         from websockets.exceptions import ConnectionClosed
         self.counter += 1
         request = 'cytv_' + str(self.counter)
         try:
-            self.ws.send(json.dumps({'id': request, 'type': 'request', 'uri': uri, 'payload': {}}))
-            deadline = time.monotonic() + 20
+            self.ws.send(json.dumps({'id': request, 'type': 'request', 'uri': uri, 'payload': {} if payload is None else payload}))
+            deadline = time.monotonic() + timeout
             while time.monotonic() < deadline:
                 reply = json.loads(self.ws.recv(timeout=max(0.1, deadline - time.monotonic())))
                 if reply.get('id') != request:

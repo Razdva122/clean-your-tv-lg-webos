@@ -34,6 +34,8 @@ QWidget#form { background: #272521; border-radius: 12px; }
 QFrame#runtimeChoice { background: #24221e; border: 1px solid #51483e; border-radius: 10px; }
 QScrollArea#runtimeChoices { background: transparent; border: none; }
 QScrollArea#installationSettings, QWidget#installationSettingsFields { background: #272521; border: none; }
+QScrollArea#debloatSelection, QWidget#debloatFields { background: #272521; border: none; }
+QFrame#debloatGroup { background: #2a2722; border: 1px solid #51483e; border-radius: 8px; }
 QLabel#settingTitle { font-weight: 600; }
 QLabel#settingHint { color: #c0b5a5; font-size: 14px; }
 QFrame#settingsDivider { background: #51483e; border: none; }
