@@ -123,6 +123,40 @@ class RuntimeTests(unittest.TestCase):
                     with self.subTest(mounts=invalid):
                         mountinfo.write_text(invalid)
                         with self.assertRaises(ValueError):self.k.require_generic_environment()
+                root = '1 0 179:27 / / ro - squashfs /dev/root ro\n'
+                bsp = '3 1 179:29 / /overlay/bsppart ro - squashfs /dev/mmcblk0p29 ro\n'
+                overlay = '2 1 0:34 / /usr rw - overlay overlay ro,lowerdir=/overlay/bsppart/bsp/usr:/usr\n'
+                devices = {
+                    '/usr/bin/com.webos.app.home': os.makedev(179, 27),
+                    '/usr/palm/applications/com.webos.app.home': os.makedev(0, 34),
+                    '/overlay/bsppart/bsp/usr': os.makedev(179, 29),
+                }
+                with patch.object(self.k.os, 'stat', side_effect=lambda path, **kw: SimpleNamespace(st_dev=devices[str(path)])), patch.object(self.k.legacy, 'trusted_directory') as trusted:
+                    mountinfo.write_text(root + overlay + bsp)
+                    self.k.require_generic_environment()
+                    trusted.assert_called_with(Path('/overlay/bsppart/bsp/usr'))
+                    for invalid in (
+                        root + overlay,
+                        root.replace('/ ro -', '/ rw -') + overlay + bsp,
+                        root + overlay + bsp.replace('squashfs', 'ext4'),
+                        root + overlay.replace('overlay ro,', 'overlay rw,') + bsp,
+                        root + overlay.replace(':/usr', ':/usr,upperdir=/foreign') + bsp,
+                        root + overlay.replace(':/usr', ':/usr,workdir=/foreign') + bsp,
+                        root + overlay.replace(':/usr', ':/usr:/foreign') + bsp,
+                        root + overlay.replace(':/usr', ':/usr,lowerdir=/foreign') + bsp,
+                        root + overlay.replace(':/usr', ':/usr,datadir+=/foreign') + bsp,
+                        root + overlay + bsp + '4 3 0:2 / /overlay/bsppart/bsp ro - tmpfs tmpfs ro\n',
+                        root + overlay + bsp + '4 2 0:2 / /usr/bin ro - tmpfs tmpfs ro\n',
+                        root + overlay + bsp + overlay.replace('2 1 ', '5 1 '),
+                    ):
+                        with self.subTest(mounts=invalid):
+                            mountinfo.write_text(invalid)
+                            with self.assertRaisesRegex(ValueError, 'covered by a mount'):
+                                self.k.require_generic_environment()
+                    mountinfo.write_text(root + overlay + bsp)
+                    devices['/overlay/bsppart/bsp/usr'] = os.makedev(179, 30)
+                    with self.assertRaisesRegex(ValueError, 'covered by a mount'):
+                        self.k.require_generic_environment()
             mountinfo.write_text('1 0 0:1 / / rw - squashfs /dev/root ro\n')
             for invalid in (dict(app,type='flutter'),dict(app,type='web'),dict(app,main='ribbon.qml')):
                 appinfo.write_text(json.dumps(invalid))
