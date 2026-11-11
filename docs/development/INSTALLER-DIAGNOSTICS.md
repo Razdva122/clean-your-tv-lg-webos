@@ -357,11 +357,21 @@ legacy first failures or establish that a submitted package transaction terminat
 ## Root admission and connection advice
 
 Optional `guidance` contains only an allowlisted advice code and a Boolean pending
-flag. Root `tv.root_capabilities` uses two fixed check keys and reasons: readable,
-rejected, invalid-reply, unconfirmed or not-checked. `root_capability_codes` retains
-only bounded numeric Luna error codes for these keys. Raw service replies and
-Home routes are excluded. Current and retained first-failure projections are
-revalidated; these fields cannot grant recovery authority or prove compatibility.
+flag. Root `tv.root_capabilities` uses two fixed check keys with allowlisted
+results, including `service-absent` for a missing System Profile service.
+`root_capability_codes` retains only bounded numeric Luna error codes for these keys.
+
+When the installer supports capability-based Qt admission and System Profile is
+absent, optional `tv.root_compositor_failure` identifies the failed host check.
+Request failures use `system-info-request-failed`, `keyfilters-request-failed`
+or `native-home-request-failed`. Validation failures use `system-info-invalid`,
+`keyfilters-incompatible` or `native-home-incompatible`.
+`native-home-unavailable` identifies a missing or unsafe native Home path.
+`c1-probe-failed` means an error in the preceding C1 probe prevented the
+capability-based check from running.
+
+The report excludes raw replies, command output and Home routes. The installer
+revalidates these fields when exporting current and retained failures.
 See the [preflight and guidance contract](INSTALLER-PREFLIGHT-HELP.md).
 
 <a id="root-activation-evidence-unreleased"></a>
