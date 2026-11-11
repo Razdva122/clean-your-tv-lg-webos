@@ -3,7 +3,7 @@
 The ownership receipt provides exclusion only. Component journals remain the
 source of truth; a closed file descriptor or package readback is never success.
 """
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
 import fcntl
 import os
 from pathlib import Path
@@ -92,6 +92,109 @@ def _optional_record(store, name):
         if error.args == ('unsafe store path',) and isinstance(error.__cause__, FileNotFoundError):
             return None
         raise
+
+
+def _fence_store(path, uid):
+    store=Store.__new__(Store)
+    store.root,store.uid=str(path),uid
+    return store
+
+
+@contextmanager
+def component_locks(roots, uid):
+    """Keep original component lock inodes throughout restoration and cleanup."""
+    with ExitStack() as stack:
+        for index, root in enumerate(roots):
+            if not os.path.lexists(root): continue
+            store=Store(root,uid=uid)
+            directory=store._directory();stack.callback(os.close,directory)
+            for name in (('provision.lock',) if index==0 else ('daemon.lock','worker.lock')):
+                fd=os.open(name,os.O_RDWR|os.O_CREAT|os.O_NOFOLLOW|os.O_NONBLOCK,0o600,dir_fd=directory)
+                stack.callback(os.close,fd);store._check(os.fstat(fd))
+                fcntl.flock(fd,fcntl.LOCK_EX|fcntl.LOCK_NB)
+        yield
+
+
+def archive_component_fences(store, record, successor, roots, require_cancelled=False):
+    """Archive only pinned fence directories while the caller holds all locks."""
+    uid=store.uid
+    archive=Path(store.root)/('component-fences-'+record['operation'])
+    archive.mkdir(mode=0o700,exist_ok=True)
+    os.close(_fence_store(archive,uid)._directory())
+    key='component-fences-plan-'+record['operation']
+    plan=_optional_record(store,key)
+    binding=dict(operation=record['operation'],lease=record['lease'],successor=successor)
+    if plan is None:
+        if any(archive.iterdir()):raise ValueError('component_fence_conflict')
+        entries={}
+        for root in roots:
+            info=root.lstat() if os.path.lexists(root) else None
+            entries[root.name]=[info.st_dev,info.st_ino] if info else None
+        plan=dict(binding,entries=entries)
+        store.write(key,plan)
+    if any(plan.get(k)!=v for k,v in binding.items()) or set(plan.get('entries',{}))!={root.name for root in roots}:
+        raise ValueError('component_fence_conflict')
+    if {entry.name for entry in archive.iterdir()}-set(plan['entries']):raise ValueError('component_fence_conflict')
+    # Validate every remaining source and every previous move before the
+    # first rename, allowing the same reservation to finish after a crash.
+    for index,root in enumerate(roots):
+        target=archive/root.name
+        paths=[path for path in (root,target) if os.path.lexists(path)]
+        expected=plan['entries'][root.name]
+        if len(paths)!=(0 if expected is None else 1):raise ValueError('component_fence_conflict')
+        for path in paths:
+            info=path.lstat()
+            if [info.st_dev,info.st_ino]!=expected:raise ValueError('component_fence_changed')
+            os.close(_fence_store(path,uid)._directory())
+            allowed={'deploy.json','provision.lock'} if index==0 else {'bootstrap.json','daemon.lock','worker.lock'}
+            if {p.name for p in path.iterdir()}-allowed:raise ValueError('component_fence_changed')
+            if require_cancelled:
+                expected_marker=({'version':1,'app':'com.cleanyourtv.root.preview','stage':'cancellation-admitted'}
+                                 if index==0 else {'phase':'cancellation-admitted'})
+                marker='deploy' if index==0 else 'bootstrap'
+                if _fence_store(path,uid).read(marker)!=expected_marker:raise Busy()
+    for root in roots:
+        if not os.path.lexists(root):continue
+        sourcefd=_fence_store(root.parent,uid)._directory()
+        destination=_fence_store(archive,uid)._directory()
+        try:
+            os.rename(root.name,root.name,src_dir_fd=sourcefd,dst_dir_fd=destination)
+            os.fsync(sourcefd);os.fsync(destination)
+        finally:os.close(sourcefd);os.close(destination)
+
+
+def completed_no_root_fence(store, lease):
+    """Authenticate the durable No-root successor and its clean predecessor."""
+    match=re.fullmatch(r'no-root-([a-f0-9]{32})\.json',lease['journal'])
+    if not match or lease['owner']!='no-root' or lease['stage']!='reserved' or lease['terminal']:
+        raise Busy()
+    binding=_optional_record(store,lease['journal'])
+    if (not isinstance(binding,dict) or binding.get('schema')!=1
+            or binding.get('protocol')!='no-root-root-handoff-v1'
+            or binding.get('operation')!=match[1] or binding.get('lease')!=lease['id']
+            or binding.get('effects_started') is not True or binding.get('completed') is not True
+            or binding.get('revoked',False) is not False
+            or any(not isinstance(binding.get(k),str) or not re.fullmatch(r'[a-f0-9]{64}',binding[k])
+                   for k in ('plan_sha256','source_sha256'))):
+        raise Busy()
+    previous=binding.get('predecessor')
+    if (not isinstance(previous,dict) or set(previous)!={'operation','removal','lease'}
+            or any(not isinstance(value,str) or not re.fullmatch(r'[a-f0-9]{32}',value)
+                   for value in previous.values()) or previous['lease']==lease['id']):
+        raise Busy()
+    record=_optional_record(store,'clean-removal-'+previous['operation'])
+    result=record.get('result') if isinstance(record,dict) else None
+    if (not isinstance(result,dict) or record.get('schema')!=1
+            or record.get('protocol')!='clean-removal-v1'
+            or any(record.get(k)!=previous[k] for k in ('operation','removal'))
+            or record.get('final_fence')!=previous['lease']
+            or not isinstance(record.get('lease'),str) or not re.fullmatch(r'[a-f0-9]{32}',record['lease'])
+            or record.get('final_original_lease')!=record['lease']
+            or record.get('stage')!='verified-clean' or record.get('state')!='complete'
+            or record.get('current') is not True or result.get('verified_clean') is not True
+            or result.get('private_cleanup_verified') is not True):
+        raise Busy()
+    return record
 
 
 class Ownership:
@@ -199,7 +302,7 @@ def pending_journals(owner, read=read_journal):
 
 
 @contextmanager
-def device_operation(owner, recovery=False, ownership=None, read=read_journal, check=None):
+def device_operation(owner, recovery=False, ownership=None, read=read_journal, check=None, handoff=None):
     """Short mutation lock plus durable reservation across asynchronous workers.
 
     Same-component continuation is authorized by the fixed CLI operation, while
@@ -214,10 +317,17 @@ def device_operation(owner, recovery=False, ownership=None, read=read_journal, c
     # Reserve it nonterminal before the caller can write a new transaction.
     if recovery and current and not current['terminal'] and (current['owner'],current['journal']) == (owner,path.name):
         resume = current['id']
+    admitted=None
     def eligible():
+        nonlocal admitted
+        if handoff is not None:
+            previous=ownership.status()
+            if previous is not None and handoff(previous):
+                admitted=previous
         pending_journals(owner,read)
         if check is not None: check()
-    with ownership.operation(owner,path.name,resume=resume, check=eligible) as record:
+    with ownership.operation(owner,path.name,resume=resume,check=eligible,
+                             handoff=lambda previous:previous==admitted) as record:
         yield record
         journal = read(path)
         if journal is not None:

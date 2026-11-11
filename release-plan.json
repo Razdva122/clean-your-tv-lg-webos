@@ -75,13 +75,28 @@
         495
       ],
       "summary": "Unify checked Helper Stop and cleanup, preserve completed handoff across reboot, and scope owner-only TV checks"
+    },
+    {
+      "pr": 525,
+      "issues": [],
+      "summary": "Enable System updates after a verified Root-to-No-root transition and document focused retesting"
+    },
+    {
+      "pr": 531,
+      "issues": [],
+      "summary": "Run release checks with Ubuntu dependencies on the supported Ubuntu 24.04 image"
+    },
+    {
+      "pr": 532,
+      "issues": [],
+      "summary": "Use a signed Ubuntu archive mirror when the default runner mirror fails DNS"
+    },
+    {
+      "pr": 535,
+      "issues": [],
+      "summary": "Stabilize the Classic theme browser check and Linux desktop dependency downloads"
     }
   ],
   "excluded": [],
-  "acceptance": "",
-  "build": {
-    "run_id": 43030134684,
-    "attempt": 1,
-    "source": "c928dbea31a2f63b5dfb42df5e575df201ff8067"
-  }
+  "acceptance": ""
 }

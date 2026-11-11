@@ -1183,49 +1183,10 @@ class LocalDevice:
         Called after the new product lease is durable under the same mutex.
         Historical request tombstones remain at their original lookup paths.
         """
-        from clean_removal import locks
-        uid=self.ownership.store.uid
-        archive=Path(self.ownership.store.root)/('component-fences-'+record['operation'])
-        archive.mkdir(mode=0o700,exist_ok=True)
-        os.close(checked_store(archive,uid)._directory())
-        with locks((ROOT,UPDATER,SUPERVISOR),uid):
+        from installation import archive_component_fences, component_locks
+        with component_locks((ROOT,UPDATER,SUPERVISOR),self.ownership.store.uid):
             self.verify_clean(record)
-            roots=(ROOT,UPDATER,SUPERVISOR)
-            key='component-fences-plan-'+record['operation']
-            plan=_optional_record(self.ownership.store,key)
-            binding=dict(operation=record['operation'],lease=record['lease'],successor=self.operation['id'])
-            if plan is None:
-                if any(archive.iterdir()):raise ValueError('component_fence_conflict')
-                entries={}
-                for root in roots:
-                    info=root.lstat() if os.path.lexists(root) else None
-                    entries[root.name]=[info.st_dev,info.st_ino] if info else None
-                plan=dict(binding,entries=entries)
-                self.ownership.store.write(key,plan)
-            if any(plan.get(k)!=v for k,v in binding.items()) or set(plan.get('entries',{}))!={root.name for root in roots}:
-                raise ValueError('component_fence_conflict')
-            if {entry.name for entry in archive.iterdir()}-set(plan['entries']):raise ValueError('component_fence_conflict')
-            # Validate every remaining source and every previous move before the
-            # first rename, allowing the same reservation to finish after a crash.
-            for index,root in enumerate(roots):
-                target=archive/root.name
-                paths=[path for path in (root,target) if os.path.lexists(path)]
-                expected=plan['entries'][root.name]
-                if len(paths)!=(0 if expected is None else 1):raise ValueError('component_fence_conflict')
-                for path in paths:
-                    info=path.lstat()
-                    if [info.st_dev,info.st_ino]!=expected:raise ValueError('component_fence_changed')
-                    os.close(checked_store(path,uid)._directory())
-                    allowed={'deploy.json','provision.lock'} if index==0 else {'bootstrap.json','daemon.lock','worker.lock'}
-                    if {p.name for p in path.iterdir()}-allowed:raise ValueError('component_fence_changed')
-            for root in roots:
-                if not os.path.lexists(root):continue
-                sourcefd=checked_store(root.parent,uid)._directory()
-                destination=checked_store(archive,uid)._directory()
-                try:
-                    os.rename(root.name,root.name,src_dir_fd=sourcefd,dst_dir_fd=destination)
-                    os.fsync(sourcefd);os.fsync(destination)
-                finally:os.close(sourcefd);os.close(destination)
+            archive_component_fences(self.ownership.store,record,self.operation['id'],(ROOT,UPDATER,SUPERVISOR))
 
     def finish_clean_tail(self, record):
         """Transfer final runtime cleanup to Node with the same inherited flock."""
