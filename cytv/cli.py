@@ -11,7 +11,7 @@ from . import __version__, package, state, i18n
 from .errors import UserError, TVNotReady, ExistingRoot
 from .operations import Installer
 from .terminal import Console, supports_ansi
-from . import diagnostics, discovery, inspect_tv, prompts, install_settings
+from . import diagnostics, discovery, inspect_tv, prompts, install_settings, debloat
 
 
 def payload_dir():
@@ -558,14 +558,17 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                     result = installer.install(inventory, key, args.migrate_home, reinstall=reinstall) if reinstall else installer.install(inventory, key, args.migrate_home)
                 setup_cancelled = False
                 if not args.non_interactive and (not args.yes or write.frontend != 'console'):
-                    phase = 'configure-home'
+                    phase = 'debloat'
                     try:
+                        debloat.run(installer, ask, write)
+                        phase = 'configure-home'
                         setup = install_settings.collect(profile, ask, write,
                             current=install_settings.read_current(installer) if write.frontend == 'desktop' else None)
                     except (EOFError, KeyboardInterrupt):
                         setup_cancelled = True
-                    if setup:
-                        install_settings.apply_services(installer, setup, write)
+                    else:
+                        if setup:
+                            install_settings.apply_services(installer, setup, write)
                 phase = 'verify-home-button'
                 installer.outcome.review_home(ask, write, args.non_interactive or setup_cancelled)
                 if profile['edition'] == 'root':

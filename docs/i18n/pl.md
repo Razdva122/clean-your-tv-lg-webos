@@ -165,6 +165,8 @@ Otwórz Ustawienia → Tapety → Prześlij z telefonu i zeskanuj kod. Wybierz J
 
 ## Skonfiguruj Clean Your TV
 
+Przed wyborem motywu użyj opcji **Debloat**, aby wybrać ustawienia reklam, poleceń, prywatności i powiadomień LG do zmiany. Sprawdź każdy wynik. Jeśli instalator nie może odczytać wartości początkowej, nie zapisze jej do automatycznego przywrócenia. Wybierz **Pomiń Debloat**, aby zachować bieżące ustawienia.
+
 Po udanej instalacji wybierz Classic, Liquid Glass lub Ribbon i włącz albo wyłącz pogodę. Ribbon nie obsługuje pogody; Liquid Glass używa formatu kompaktowego. Miasto jest szacowane z połączenia i można je zmienić w Home.
 
 No-root z Developer Mode oferuje automatyczne przedłużanie (Beta); nadal sprawdzaj oficjalny licznik. No-root przez istniejący root SSH nie używa tej opcji. Root pozwala blokować aktualizacje firmware LG przez Homebrew Channel, w tym aktualizacje bezpieczeństwa; wymagany jest pełny restart przez Homebrew Channel. Aktualizacje CYTV są oddzielne.

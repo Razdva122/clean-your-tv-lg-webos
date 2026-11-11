@@ -18,6 +18,39 @@ except ImportError:
 
 @unittest.skipUnless(HAS_QT, 'Desktop build dependencies are optional for CLI tests')
 class GuiTests(unittest.TestCase):
+    def test_debloat_group_selection_and_results(self):
+        import json
+        from cytv import debloat, i18n
+        from cytv.desktop import Channel
+        from cytv.gui_style import ToggleSwitch
+        w = Wizard()
+        self.addCleanup(w.close)
+        i18n.set_language('en')
+        w.channel = Channel(lambda *_: None)
+        w.receive('step', (5, debloat.TITLE, True))
+        w.show_prompt(Prompt(debloat.SELECT))
+        w.resize(900, 680)
+        w.show()
+        self.app.processEvents()
+        scroll = w.form.findChild(QScrollArea, 'debloatSelection')
+        self.assertLessEqual(scroll.widget().width(), scroll.viewport().width())
+        toggles = w.form.findChildren(ToggleSwitch)
+        self.assertEqual(len(toggles), 14)
+        self.assertFalse(any(toggle.isChecked() for toggle in toggles))
+        section = w.form.findChild(ToggleSwitch, 'debloatGroup-homePromotion')
+        section.click()
+        field = w.form.findChild(ToggleSwitch, 'debloat-contentRecommendation')
+        self.assertTrue(field.isChecked())
+        field.click()
+        self.assertEqual(section.accessibleDescription(), 'Some selected')
+        next(b for b in w.form.findChildren(QPushButton) if b.text() == 'Continue').click()
+        self.assertEqual(json.loads(w.channel.answers.get_nowait()), ['homePromotion'])
+        w.receive('debloat-results', {'homePromotion': 'unverified'})
+        w.show_prompt(Prompt(debloat.REVIEW))
+        self.assertIn('The result could not be verified.', w.content.toPlainText())
+        next(b for b in w.form.findChildren(QPushButton) if b.text() == debloat.CONTINUE).click()
+        self.assertEqual(w.channel.answers.get_nowait(), '1')
+
     def test_setup_explanations_do_not_overlap_at_minimum_window_size(self):
         from cytv import i18n, install_settings as settings
         w = Wizard()
@@ -518,7 +551,7 @@ class GuiTests(unittest.TestCase):
         w = Wizard()
         w.receive('step', (3, 'Prepare the TV connection', True))
         self.assertEqual([row.property('state') for row in w.step_rows],
-                         ['complete', 'complete', 'current', 'upcoming', 'upcoming'])
+                         ['complete', 'complete', 'current', 'upcoming', 'upcoming', 'upcoming'])
         w.receive('done', 1)
         self.assertEqual(w.step_rows[2].property('state'), 'error')
         self.assertEqual(w.step_rows[3].property('state'), 'upcoming')

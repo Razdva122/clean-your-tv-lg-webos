@@ -55,7 +55,7 @@ class MaintenanceFlowTests(unittest.TestCase):
                 installer.root_inventory.return_value={'apps':[{'id':'video','title':'Video'}],'inputs':[]}
                 write=Capture()
                 result=cli.main(['install','--host',profile['host'],'--edition','root','--yes','--language','en','--data-dir',tmp],
-                                ask=lambda prompt:'n' if 'Customize Clean Your TV?' in prompt else answer,write=write,connect=lambda *a:Mock())
+                                ask=lambda prompt:'n' if any(text in prompt for text in ('Customize Clean Your TV?', 'Apply optional Debloat settings?')) else answer,write=write,connect=lambda *a:Mock())
                 self.assertEqual(result,0)
                 installer.uninstall_project.assert_not_called()
                 self.assertEqual(installer.root_inventory.call_count,1 if answer=='y' else 0)

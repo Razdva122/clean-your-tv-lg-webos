@@ -10,7 +10,7 @@ import time
 import unittest
 from unittest.mock import patch
 
-from cytv import cli, package, state, i18n
+from cytv import cli, debloat, install_settings, package, state, i18n
 from cytv.errors import TVRejected
 from tests.cytv.test_operations import Remote
 try:
@@ -591,7 +591,11 @@ class DesktopRecoveryTests(unittest.TestCase):
             self.pump(lambda: w.pending is not None)
             w.submit('y')
         self.pump(lambda: w.pending is not None)
-        w.submit('{}')  # Installation is complete; skip optional customization.
+        self.assertEqual(w.pending.label, debloat.SELECT)
+        w.submit('[]')  # Skip optional Debloat.
+        self.pump(lambda: w.pending is not None)
+        self.assertEqual(w.pending.label, install_settings.PROMPT)
+        w.submit('{}')  # Skip optional customization.
         self.pump(lambda: w.pending is not None)
         self.assertIn('Home button result', w.pending.label)
         self.assertEqual(w.pending.default, '3')
@@ -621,7 +625,11 @@ class DesktopRecoveryTests(unittest.TestCase):
         for _ in range(2):
             self.pump(lambda: w.pending is not None); w.submit('y')
         self.pump(lambda: w.pending is not None)
-        w.submit('{}')  # Installation is complete; skip optional customization.
+        self.assertEqual(w.pending.label, debloat.SELECT)
+        w.submit('[]')  # Skip optional Debloat.
+        self.pump(lambda: w.pending is not None)
+        self.assertEqual(w.pending.label, install_settings.PROMPT)
+        w.submit('{}')  # Skip optional customization.
         self.pump(lambda: w.pending is not None)
         w.submit('')
         self.pump(lambda: not w.running)

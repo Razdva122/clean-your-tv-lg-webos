@@ -122,6 +122,32 @@ class InventoryTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, 'permission'):
             session.call('ssap://com.webos.applicationManager/listLaunchPoints')
 
+    def test_settings_session_requests_only_settings_scope_and_keeps_inventory_key(self):
+        from unittest.mock import Mock
+
+        socket = Mock()
+        socket.recv.side_effect = [
+            json.dumps({'type': 'registered', 'payload': {'client-key': 'settings-key'}}),
+            json.dumps({'id': 'cytv_1', 'type': 'response', 'payload': {'returnValue': True}}),
+        ]
+        payload = {'category': 'option', 'settings': {'livePlus': 'off'}}
+        with tempfile.TemporaryDirectory() as tmp:
+            directory = Path(tmp)
+            inventory_key = directory / 'ssap.json'
+            inventory_key.write_text('{"key": "inventory-key"}')
+            with patch('websockets.sync.client.connect', return_value=socket):
+                with SSAP('192.0.2.10', directory, lambda _: None, settings_write=True) as tv:
+                    self.assertEqual(tv.call('ssap://settings/setSystemSettings', payload, timeout=8),
+                                     {'returnValue': True})
+            self.assertEqual(json.loads(inventory_key.read_text()), {'key': 'inventory-key'})
+            self.assertEqual(json.loads((directory / 'ssap-settings.json').read_text()),
+                             {'key': 'settings-key'})
+
+        register, request = (json.loads(call.args[0]) for call in socket.send.call_args_list)
+        self.assertEqual(register['payload']['manifest']['permissions'], ['READ_SETTINGS', 'WRITE_SETTINGS'])
+        self.assertNotIn('client-key', register['payload'])
+        self.assertEqual(request['payload'], payload)
+
     def test_standby_close_before_register_is_actionable_and_closes_socket(self):
         from websockets.exceptions import ConnectionClosedError
         from websockets.frames import Close
