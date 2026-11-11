@@ -54,6 +54,9 @@ def failure_summary(error):
     if detail:result['luna']=detail
     probe=cleanup_probe_details(getattr(error,'cleanup_probe',None))
     if probe:result['cleanup_probe']=probe
+    from deploy import install_failure_details
+    detail=install_failure_details(getattr(error,'root_driver',None))
+    if detail:result['root_driver']=detail
     return result
 
 

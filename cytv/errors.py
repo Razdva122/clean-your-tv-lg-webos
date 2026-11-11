@@ -197,7 +197,7 @@ def root_driver_details(value, *, keep_attempt=False):
     if value.get('exception_type') not in names:return {}
     result={'exception_type':value['exception_type']}
     files=('deploy.py','installation.py','c1_gate.py','c1_keyfilter.py','package_data.py',
-           'python_binding.py','observed_install.py','provision.py','store.py')
+           'python_binding.py','observed_install.py','provision.py','store.py','transport.py','emergency_reader.py')
     frames=value.get('frames',[])
     if not isinstance(frames,list) or len(frames)>8:return {}
     result['frames']=[{'file':frame['file'],'line':frame['line']} for frame in frames
