@@ -231,6 +231,7 @@ if (process.platform !== 'linux' || process.getuid() !== 0) {
     a.equal(fs.statSync(path.join(boot, 'ssap-key.json')).mode & 0o777, 0o640);
     // Root SSH normalizes the packaged owner's directory before issuing a
     // usable setup baseline. The real app UID can read it and publish Stop.
+    fs.chmodSync(boot, 0o777);
     run(
       0,
       bootStorage +
