@@ -416,6 +416,10 @@ const {chromium}=require('playwright');
                 result['browser'] = None
         except (OSError, subprocess.SubprocessError):
             result['browser'] = None
+    if kind in ('browser', 'optional') and 'CI_TEST_IMAGE' in os.environ:
+        image = os.environ['CI_TEST_IMAGE']
+        result['image'] = image
+        result['identity_ready'] = bool(re.fullmatch(r'[^@]+@sha256:[0-9a-f]{64}', image))
     if kind == 'optional':
         result['arm'] = command('dpkg-query', '-W', '-f=${Package}=${Version}\n', 'qemu-user', 'libc6-armel-cross', 'libgcc-s1-armel-cross')
     return result

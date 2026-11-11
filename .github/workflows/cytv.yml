@@ -55,6 +55,10 @@ jobs:
   validation:
     needs: scope
     if: needs.scope.outputs.installers == 'true'
+    permissions:
+      contents: read
+      actions: read
+      packages: read
     uses: ./.github/workflows/tests.yml
     with:
       source_sha: ${{ github.sha }}

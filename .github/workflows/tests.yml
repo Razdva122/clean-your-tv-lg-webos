@@ -21,6 +21,7 @@ jobs:
   scope:
     runs-on: ubuntu-latest
     outputs:
+      linux_image: ${{ steps.linux-image.outputs.image }}
       any: ${{ steps.scope.outputs.any }}
       ui: ${{ steps.scope.outputs.ui }}
       macos: ${{ steps.scope.outputs.macos }}
@@ -33,6 +34,9 @@ jobs:
       setup: ${{ steps.scope.outputs.setup }}
       preview: ${{ steps.scope.outputs.preview }}
     steps:
+      # ci-image-v2; update from the publisher summary (see CI-CHECKS.md).
+      - id: linux-image
+        run: echo 'image=ghcr.io/razdva122/clean-your-tv-lg-webos-ci@sha256:125c4f00cda3eb85bd70bf9349b8b4d8f61ec9ac15650134d3aba9ce161e4530' >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.source_sha || github.sha }}
@@ -185,23 +189,29 @@ jobs:
     needs: scope
     if: needs.scope.outputs.installer == 'true'
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: read
+      packages: read
+    container:
+      image: ${{ needs.scope.outputs.linux_image }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ github.token }}
+    env:
+      CI_TEST_IMAGE: ${{ needs.scope.outputs.linux_image }}
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.source_sha || github.sha }}
           persist-credentials: false
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
       - uses: actions/cache@v4
         with:
           path: build/python-runtime-cache
           key: root-python-4a71641c8d5536175e404a961624e8656eba30e97b5026f6bd7dc31e4bbeaaea
-      - name: Install ARM user emulation and EABI sysroot
-        run: |
-          bash scripts/ci-ubuntu-mirror.sh
-          sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends qemu-user libc6-armel-cross libgcc-s1-armel-cross
       - name: Select fresh ARM Python work
         id: evidence
         env:
@@ -212,7 +222,9 @@ jobs:
         run: python scripts/test-python-runtime.py
       - name: Verify shell provisioning boundaries as root
         if: steps.evidence.outputs.fresh == 'true'
-        run: sudo "$(command -v python)" -m unittest tests.cytv.test_python_runtime
+        run: |
+          test "$(id -u)" = 0
+          python -m unittest tests.cytv.test_python_runtime
       - name: Record freshly passed ARM Python work
         id: record
         continue-on-error: true
@@ -243,6 +255,18 @@ jobs:
             browsers: chromium firefox
             engines: chromium,firefox
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+      actions: read
+      packages: read
+    container:
+      image: ${{ matrix.os == 'ubuntu-24.04' && needs.scope.outputs.linux_image || '' }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ github.token }}
+    defaults:
+      run:
+        shell: bash
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
@@ -254,9 +278,11 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci --ignore-scripts --no-audit --no-fund
-      - if: runner.os == 'Linux'
-        run: bash scripts/ci-ubuntu-mirror.sh
-      - run: npx playwright install --with-deps ${{ matrix.browsers }}
+      - if: runner.os == 'macOS'
+        run: npx playwright install --with-deps ${{ matrix.browsers }}
+      - name: Verify the baked Playwright version
+        if: runner.os == 'Linux'
+        run: test "$(node -p "require('playwright/package.json').version")" = "$PLAYWRIGHT_IMAGE_VERSION"
       - name: Check actual HEIC decode and local phone upload
         env:
           HEIC_BROWSERS: ${{ matrix.engines }}
@@ -266,6 +292,20 @@ jobs:
     needs: scope
     if: needs.scope.outputs.tv == 'true' || needs.scope.outputs.ui == 'true'
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: read
+      packages: read
+    container:
+      image: ${{ needs.scope.outputs.linux_image }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ github.token }}
+    env:
+      CI_TEST_IMAGE: ${{ needs.scope.outputs.linux_image }}
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v4
         with:
@@ -276,16 +316,14 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: package-lock.json
-      - uses: actions/setup-python@v5
+      - uses: actions/cache@v4
         with:
-          python-version: '3.12'
-          cache: pip
-          cache-dependency-path: |
-            scripts/build-requirements.txt
+          path: ~/.cache/pip
+          key: linux-ci-pip-${{ hashFiles('scripts/build-requirements.txt') }}
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: python -m pip install -r scripts/build-requirements.txt
-      - run: bash scripts/ci-ubuntu-mirror.sh
-      - run: npx playwright install --with-deps chromium
+      - name: Verify the baked Playwright version
+        run: test "$(node -p "require('playwright/package.json').version")" = "$PLAYWRIGHT_IMAGE_VERSION"
       - name: Select fresh browser units
         id: evidence
         env:
