@@ -24,6 +24,9 @@ function create(io, prepare) {
       io.renameSync(directory + '/.fixture-record', directory + '/' + name);
     } else io.writeFileSync(directory + '/' + name, bytes);
   };
+  result.readChannelRecord = function (directory, kind) {
+    return io.readFileSync(directory + '/' + kind + '.json', 'utf8');
+  };
   result.appendLog = function (directory, line) {
     io.appendFileSync(directory + '/controller.log', line + '\n');
   };

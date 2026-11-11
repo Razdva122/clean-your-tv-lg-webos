@@ -82,8 +82,8 @@ module.exports = function (fs, dir, options) {
           JSON.stringify(request)
         );
       } catch (e) {
-        var phase = e && e.storagePhase;
         var contract = e && e.contractEvents && e.contractEvents[0];
+        var phase = e && (e.storagePhase || (contract && contract.phase));
         if (['write', 'chmod', 'rename'].indexOf(phase) >= 0) operation = phase;
         finish({
           returnValue: false,
@@ -108,9 +108,9 @@ module.exports = function (fs, dir, options) {
       function poll() {
         operation = 'read';
         try {
-          var raw = fs.readFileSync(
-            dir + '/' + prefix + '-response.json',
-            'utf8'
+          var raw = require('./state-permissions').readChannelRecord(
+            dir,
+            prefix + '-response'
           );
           operation = 'parse';
           var r = JSON.parse(raw);
