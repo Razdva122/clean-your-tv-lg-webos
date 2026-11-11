@@ -98,5 +98,11 @@
     }
   ],
   "excluded": [],
-  "acceptance": ""
+  "acceptance": "LG OLED55C3RLA on 43.21.71 passed the verified Root-to-No-root transition and ordinary System Updater enable/status/check with Home 1.15.2, Helper 0.8.2 and No-root Updater 0.5.8. The exact final CLI matches the preceding CLI payload byte for byte. The ledger scopes carried C3 startup, Stop, standby, and earlier signed Root transaction results to their exercised paths. The final protected Android APK upgraded in place from v1.17.0 and retained all four seeded files on API 35 ARM64. Older webOS and physical-phone coverage remain scoped to the evidence in docs/history/2026-11-11-release-1.17.1-candidate.md.",
+  "build": {
+    "run_id": 43063197550,
+    "attempt": 1,
+    "source": "7731e6b8bb7b6eff7b15609d36f0338b19722b45"
+  },
+  "acceptance_build": "43063197550:1"
 }
