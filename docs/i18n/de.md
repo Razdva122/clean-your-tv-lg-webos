@@ -71,6 +71,10 @@ In der veröffentlichten Version wird die Root-Einrichtung mit einer Warnung for
 1. Öffnen Sie eine andere TV-App und drücken Sie kurz **Home**. Clean Your TV sollte erscheinen. Geben Sie im Assistenten Ihre Beobachtung an; überspringen Sie den Test, wenn Sie ihn nicht durchgeführt haben.
 2. Prüfen Sie Pfeile, OK, Zurück, Lautstärke und Ton. Prüfen Sie Bereitschaft/Aufwachen und einen Start nach Trennung vom Strom separat. Eine erfolgreiche Installation allein prüft diese Funktionen nicht.
 
+**No-root:** Pakete geprüft. Home Helper bleibt angehalten; es wurde kein Start angefordert. Drei kurze Home-Tastendrücke in zwei Sekunden öffnen LG Home. Öffnen Sie zum Neustart der Home-Steuerung Home Helper, wählen Sie Helper starten und bestätigen Sie. Ihre gespeicherte Home-Auswahl bleibt erhalten.
+
+Verwenden Sie die ursprünglich gespeicherte Verbindung und Wiederherstellungsdaten. Sind sie verloren, verbinden Sie sich erneut mit demselben TV und wählen Sie Clean Your TV deinstallieren. Schließen Sie die geprüfte Entfernung vor der Einrichtung ab; löschen Sie keine Reservierungsdateien. Stoppt die Entfernung, speichern Sie den Diagnosebericht.
+
 <a id="bedienung-und-wiederherstellung"></a>
 
 ## 6. Bedienung und Wiederherstellung

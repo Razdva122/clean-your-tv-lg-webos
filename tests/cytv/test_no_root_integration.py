@@ -274,12 +274,97 @@ class OriginalOperationIntegration(unittest.TestCase):
         observed=self.installer.observe_recovery()
         self.assertNotIn('continue-no-root',observed['assessment']['actions'])
 
+    def test_stopped_update_finishes_without_launch_and_preserves_stop_bytes(self):
+        self.installer.install(self.inventory,'original-secret')
+        directory=Path(operations.HELPER_STATE)
+        for name in ('blocked','watchdog'):
+            (directory/name).write_bytes(b'explicit-stop')
+        before=len(self.remote.calls)
+        result=self.installer.install(self.inventory,'original-secret')
+        self.assertIsNone(self.store.pending(self.profile))
+        self.assertFalse(result['launch_requested'])
+        self.assertTrue(result['helper_kept_stopped'])
+        self.assertEqual((self.root/'requests').read_text().splitlines(),list(observer.APPS)*2)
+        self.assertFalse(any(row[0]=='luna' and row[1].endswith('/launch') for row in self.remote.calls[before:]))
+        for name in ('blocked','watchdog'):
+            self.assertEqual((directory/name).read_bytes(),b'explicit-stop')
+        self.assertEqual(self.installer.tv_info['setup_outcome'],{
+            'packages':'verified','launch_request':'not-requested','startup':'kept-stopped','home_button':'not-tested'})
+
+    def test_stopped_update_recovery_keeps_bound_intent_after_marker_disappears(self):
+        self.installer.install(self.inventory,'original-secret')
+        marker=Path(operations.HELPER_STATE)/'blocked';marker.write_bytes(b'explicit-stop')
+        self.remote.cut=True
+        with self.assertRaises(RuntimeError):self.installer.install(self.inventory,'original-secret')
+        pending=self.store.pending(self.profile)
+        saved=observer.capsule(self.installer,pending)
+        self.assertIs(saved['plan'].get('keep_helper_stopped'),True)
+        marker.unlink()  # A package/firmware change cannot grant automatic startup.
+        before=len(self.remote.calls)
+        result=self.installer.continue_no_root(pending)
+        self.assertFalse(result['launch_requested'])
+        self.assertIsNone(self.store.pending(self.profile))
+        self.assertFalse(any(row[0]=='luna' and row[1].endswith('/launch') for row in self.remote.calls[before:]))
+        self.assertEqual((self.root/'requests').read_text().splitlines(),list(observer.APPS)*2)
+
+    def test_closed_stopped_update_retry_does_not_launch_or_reinstall(self):
+        self.installer.install(self.inventory,'original-secret')
+        marker=Path(operations.HELPER_STATE)/'blocked';marker.write_text('retained-stop')
+        original=self.remote.run
+        def cut(command,data=None,timeout=30):
+            words=shlex.split(command)
+            if '-e' in words and observer.PROGRAM in words[words.index('-e')+1] and json.loads(words[-1])['command']=='retire':
+                raise RuntimeError('lost retire acknowledgement')
+            return original(command,data,timeout)
+        self.remote.run=cut
+        with self.assertRaises(RuntimeError):self.installer.install(self.inventory,'original-secret')
+        self.remote.run=original
+        pending=self.store.pending(self.profile)
+        self.assertTrue((self.root/'private/operations'/pending['observer_operation']/'closed.json').exists())
+        requests=(self.root/'requests').read_bytes();before=len(self.remote.calls)
+        self.assertFalse(self.installer.continue_no_root(pending)['launch_requested'])
+        self.assertEqual((self.root/'requests').read_bytes(),requests)
+        self.assertFalse(any(row[0]=='luna' and row[1].endswith('/launch') for row in self.remote.calls[before:]))
+        self.assertEqual(marker.read_text(),'retained-stop')
+        self.assertIsNone(self.store.pending(self.profile))
+
+    def test_lost_profile_setup_keeps_foreign_reservation_and_offers_verified_removal(self):
+        from cytv.failure_help import for_error
+        self.remote.cut=True
+        with self.assertRaises(RuntimeError):self.installer.install(self.inventory,'original-secret')
+        before={str(p.relative_to(self.root/'private')):p.read_bytes() for p in (self.root/'private').rglob('*') if p.is_file()}
+        requests=(self.root/'requests').read_bytes()
+        other=operations.Installer(self.remote,state.Store(self.root/'new-computer'),self.profile,
+                                  self.installer.payload,self.installer.manifest,lambda *_:None)
+        with self.assertRaises(RuntimeError) as caught:other.install(self.inventory,'new-pairing')
+        guide=for_error(caught.exception,'install-packages',self.profile,other.store.pending(self.profile))
+        self.assertEqual(guide['code'],'no-root-reservation')
+        self.assertIsNone(other.store.pending(self.profile))
+        self.assertEqual((self.root/'requests').read_bytes(),requests)
+        self.assertEqual({str(p.relative_to(self.root/'private')):p.read_bytes() for p in (self.root/'private').rglob('*') if p.is_file()},before)
+
+    def test_unknown_start_permission_stops_before_pending_or_package_requests(self):
+        original=self.remote.run
+        def unknown(command,*args,**kwargs):
+            if 'CYTV_STOP_RETAINED' in command:return 'unexpected'
+            return original(command,*args,**kwargs)
+        self.remote.run=unknown
+        with self.assertRaises(RuntimeError):self.installer.install(self.inventory,'original-secret')
+        self.assertIsNone(self.store.pending(self.profile))
+        self.assertFalse((self.root/'requests').exists())
+
     def test_update_repairs_vendor_key_mode_without_replaying_packages_or_clearing_stop(self):
         self.installer.install(self.inventory,'original-secret')
         directory=Path(operations.HELPER_STATE)
         key=directory/'ssap-key.json';key.chmod(0o775)
         (directory/'apps.json').chmod(0o775)
-        blocked=directory/'blocked';blocked.write_bytes(b'retained-emergency-stop')
+        blocked=directory/'blocked'
+        begin=observer.begin
+        def late_stop(*args,**kwargs):
+            result=begin(*args,**kwargs)
+            blocked.write_bytes(b'retained-emergency-stop')
+            return result
+        patcher=patch.object(observer,'begin',late_stop);patcher.start();self.addCleanup(patcher.stop)
         # Configuration may proceed, but the existing emergency stop must still
         # block automatic launch before its claim is consumed.
         with self.assertRaises(RuntimeError):self.installer.install(self.inventory,'original-secret')
@@ -306,7 +391,7 @@ class OriginalOperationIntegration(unittest.TestCase):
         # The UID double identifies this inode. Keep it allocated after rename
         # so Linux cannot recycle its number for unrelated observer evidence.
         retained_key=key.open('rb');self.addCleanup(retained_key.close)
-        blocked=directory/'blocked';blocked.write_bytes(b'explicit-stop')
+        blocked=directory/'blocked'
         original=self.remote.run
         interrupted=True
         def run(command,data=None,timeout=30):
@@ -323,6 +408,7 @@ class OriginalOperationIntegration(unittest.TestCase):
         self.remote.run=run
         with self.assertRaises(RuntimeError):self.installer.install(self.inventory,'original-secret')
         pending=self.store.pending(self.profile);saved=observer.capsule(self.installer,pending)
+        blocked.write_bytes(b'explicit-stop')
         before=(self.root/'requests').read_bytes()
         with self.assertRaises(RuntimeError):self.installer.continue_no_root(pending)
         self.assertEqual(blocked.read_bytes(),b'explicit-stop')

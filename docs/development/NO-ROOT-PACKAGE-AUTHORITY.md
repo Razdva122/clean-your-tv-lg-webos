@@ -257,3 +257,33 @@ replayed by this repair. Status remains read-only, Root SSH is unchanged, and
 emergency/stop files are untouched. No new endpoint, permission grant or durable
 state format is introduced. See the [source verification ledger](../history/2026-11-10-issue487-helper-recovery.md);
 actual reporter-device recovery remains pending for a future published build.
+
+
+## No-launch disposition for new stopped installs (#495)
+
+Before a new install begins, the host reads existing Helper safety markers.
+A known retained Stop binds optional `keep_helper_stopped: true` into both the
+canonical TV plan and digest-protected host capsule. Only Boolean true on an
+install plan is accepted; absence preserves historical automatic-launch policy.
+Immutable Developer Mode and Root SSH observer programs are unchanged.
+Existing capsules remain byte-bound and cannot be retrofitted with this field.
+
+For this policy, the fixed `launch` configuration step verifies a no-request
+disposition, not an application launch acknowledgement. The host completes it
+without an LS2 launch call and rechecks idle Helper state before release. On
+continuation, even disappearance of a marker cannot authorize launch; a closed
+retry repeats readback/idle checks without package submissions. Unknown/live
+Helper state blocks completion. A late Stop on a normal plan still blocks before
+its launch claim; native automatic startup continues to preserve a later Stop.
+
+The result distinguishes verified packages, `launch_request: not-requested`,
+`startup: kept-stopped` and `home_button: not-tested`. Startup/Home checks are
+not marked pass. No marker is removed, no permission or endpoint is added.
+The new local/TV plan field is persistent operation intent, retired through the
+ordinary successful operation lifecycle; it is not a reusable permission.
+
+`no-root-reservation` is fixed advice only, selected from allowlisted observer
+storage refusal context. It does not adopt TV evidence, change a host pin,
+release a reservation or start removal. Lost-profile recovery uses the existing
+separately approved clean-removal goal and restart/process/absence guards; see
+[recovery](../RECOVERY.md#no-root-setup-with-retained-stop-and-a-lost-computer-profile).

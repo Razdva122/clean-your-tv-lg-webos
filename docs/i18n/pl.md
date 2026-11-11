@@ -71,6 +71,10 @@ Instalacja Root jest kontynuowana z ostrzeżeniem, jeśli nie można odczytać w
 1. Otwórz inną aplikację na TV i krótko naciśnij **Home**. Powinien otworzyć się Clean Your TV. W kreatorze zaznacz, co zobaczyłeś; pomiń test, jeśli go nie wykonałeś.
 2. Sprawdź strzałki, OK, Wstecz, głośność i dźwięk. Osobno sprawdź czuwanie/wybudzenie i uruchomienie po odłączeniu zasilania. Sama udana instalacja nie sprawdza tych działań.
 
+**No-root:** Pakiety zweryfikowano. Home Helper pozostał zatrzymany; nie zażądano uruchomienia. Trzy krótkie naciśnięcia Home w ciągu dwóch sekund przywracają LG Home. Aby wznowić sterowanie Home, otwórz Home Helper, wybierz Uruchom Helper i potwierdź. Zapisany wybór ekranu Home zostaje zachowany.
+
+Użyj pierwotnego zapisanego połączenia i danych odzyskiwania. Jeśli je utracono, połącz się ponownie z tym samym TV i wybierz Odinstaluj Clean Your TV. Zakończ zweryfikowane usuwanie przed konfiguracją; nie kasuj plików rezerwacji. Jeśli usuwanie się zatrzyma, zapisz raport diagnostyczny.
+
 <a id="obsługa-i-odzyskiwanie"></a>
 
 ## 6. Obsługa i odzyskiwanie

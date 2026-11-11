@@ -513,7 +513,7 @@ def source_for(root_ssh):
     return ROOT_PROGRAM if root_ssh else PROGRAM
 
 
-def make_plan(operation, diagnostic_id, action, artifacts, versions, public_root=PUBLIC_ROOT, configuration_sha256=None, root_ssh=False, private_root=None, root_handoff=None):
+def make_plan(operation, diagnostic_id, action, artifacts, versions, public_root=PUBLIC_ROOT, configuration_sha256=None, root_ssh=False, private_root=None, root_handoff=None, keep_helper_stopped=False):
     if root_ssh:
         public_root = ROOT_SSH_PUBLIC
     slots = []
@@ -536,6 +536,10 @@ def make_plan(operation, diagnostic_id, action, artifacts, versions, public_root
         if root_ssh or type(private_root) is not str or private_root not in (ROOT, JAIL_ROOT):
             refuse()
         plan['private_root'] = private_root
+    if type(keep_helper_stopped) is not bool or keep_helper_stopped and action != 'install':
+        refuse()
+    if keep_helper_stopped:
+        plan['keep_helper_stopped'] = True
     if root_handoff is not None:
         from .root_no_root_handoff import validate
         if not root_ssh:refuse()
@@ -651,13 +655,13 @@ def refuse():
                     reason_code='pending-operation')
 
 
-def begin(installer, action, artifacts, versions, expected, configuration):
+def begin(installer, action, artifacts, versions, expected, configuration, keep_helper_stopped=False):
     operation = uuid.uuid4().hex
     installer.store.check_capsule_storage(installer.profile, operation)
     # No package request or durable pending receipt until storage is usable.
     root_ssh = installer.profile.get('connection') == 'root-ssh'
     handoff=getattr(installer,'_root_handoff',None)
-    check_plan = make_plan(operation, uuid.uuid4().hex, action, artifacts, versions, PUBLIC_ROOT, root_ssh=root_ssh,root_handoff=handoff)
+    check_plan = make_plan(operation, uuid.uuid4().hex, action, artifacts, versions, PUBLIC_ROOT, root_ssh=root_ssh,root_handoff=handoff,keep_helper_stopped=keep_helper_stopped)
     selected = None
     if not root_ssh:
         selected = invoke(installer.remote, check_plan, 'storage-select').get('root')
@@ -673,7 +677,7 @@ def begin(installer, action, artifacts, versions, expected, configuration):
                           expected=expected, versions=versions)
     pending = installer.store.pending(installer.profile)
     config_hash=hashlib.sha256(canonical({name:hashlib.sha256(raw).hexdigest() for name,raw in configuration.items()}).encode()).hexdigest()
-    plan = make_plan(operation, pending['diagnostic_id'], action, artifacts, versions, PUBLIC_ROOT,config_hash,root_ssh=root_ssh,private_root=selected,root_handoff=handoff)
+    plan = make_plan(operation, pending['diagnostic_id'], action, artifacts, versions, PUBLIC_ROOT,config_hash,root_ssh=root_ssh,private_root=selected,root_handoff=handoff,keep_helper_stopped=keep_helper_stopped)
     capsule = dict(schema=1, profile=installer.profile, plan=plan, source=source_for(root_ssh), expected=expected,
                    artifacts={name: base64.b64encode(raw).decode() for name, raw in artifacts.items()},
                    configuration={name: raw.decode('utf8') for name, raw in configuration.items()})
@@ -718,7 +722,7 @@ def capsule(installer, pending):
         artifacts = {name: base64.b64decode(raw, validate=True) for name, raw in value['artifacts'].items()}
         config_hash=hashlib.sha256(canonical({name:hashlib.sha256(raw.encode()).hexdigest() for name,raw in value['configuration'].items()}).encode()).hexdigest()
         rebuilt = make_plan(plan['operation'], plan['diagnostic_id'], plan['action'], artifacts, pending['versions'], PUBLIC_ROOT,config_hash,
-                            root_ssh=installer.profile.get('connection') == 'root-ssh', private_root=plan.get('private_root'),root_handoff=plan.get('root_handoff'))
+                            root_ssh=installer.profile.get('connection') == 'root-ssh', private_root=plan.get('private_root'),root_handoff=plan.get('root_handoff'),keep_helper_stopped=plan.get('keep_helper_stopped',False))
         rebuilt['source_sha256'] = plan['source_sha256']
         if rebuilt != plan:
             refuse()
@@ -881,10 +885,17 @@ def observe(installer, pending):
                 no_root_ready=ready,no_root_reason=reason)
 
 
-def guard_helper(installer):
+def helper_start_allowed(installer):
     from .operations import HELPER_STATE
     command='if [ -e '+shlex.quote(HELPER_STATE+'/blocked')+' ] || [ -L '+shlex.quote(HELPER_STATE+'/blocked')+' ] || [ -e '+shlex.quote(HELPER_STATE+'/watchdog')+' ] || [ -L '+shlex.quote(HELPER_STATE+'/watchdog')+' ]; then printf CYTV_STOP_RETAINED; else printf CYTV_START_ALLOWED; fi'
-    if installer.remote.run(command).strip()!='CYTV_START_ALLOWED':
+    result = installer.remote.run(command).strip()
+    if result not in ('CYTV_START_ALLOWED', 'CYTV_STOP_RETAINED'):
+        raise UserError('Startup could not be verified. Save the diagnostic report; do not reinstall blindly.', reason_code='helper-state-unverified')
+    return result == 'CYTV_START_ALLOWED'
+
+
+def guard_helper(installer):
+    if not helper_start_allowed(installer):
         raise UserError('Home Helper remains stopped by its safety control. Recovery data was kept; use the TV controls to review it.',reason_code='pending-operation')
 
 
@@ -961,9 +972,16 @@ def configure(installer,value):
     # Read-only guard occurs before claiming; an emergency marker may be reviewed
     # on the TV without consuming the still-unsubmitted automatic launch.
     state=snapshot(installer,value)
-    if state.get('configuration',{}).get('launch')=='prepared':guard_helper(installer)
+    keep_stopped=plan.get('keep_helper_stopped') is True
+    if keep_stopped:
+        if installer.helper_state() not in ('stopped','stale'):refuse()
+    elif state.get('configuration',{}).get('launch')=='prepared':guard_helper(installer)
     token=claim_step(installer,plan,'launch')
-    if token:
+    if token and keep_stopped:
+        # This step verifies the plan's no-launch disposition; it is not an
+        # application launch acknowledgement. The policy is capsule/hash bound.
+        finish_step(installer,plan,'launch',token)
+    elif token:
         installer.store.checkpoint(installer.profile,configuration_stage='launch-submitted')
         installer.outcome.launch_submitted()
         # Automatic native entry preserves a stop arriving after the host guard.
@@ -1046,6 +1064,8 @@ def continue_operation(installer, expected_pending):
     else:
         for index in range(2):readback(installer,value,index)
         if plan['action']=='install':configuration_readback(installer,value)
+    if plan.get('keep_helper_stopped') is True and installer.helper_state() not in ('stopped','stale'):
+        refuse()
     result=invoke(installer.remote,plan,'release')
     try:
         invoke(installer.remote,plan,'retire')
@@ -1059,6 +1079,11 @@ def continue_operation(installer, expected_pending):
         installer.store.retire_capsule(installer.profile,pending['observer_operation'],pending['capsule_sha256'])
     except (RuntimeError,OSError):
         installer.progress('Setup is verified, but the private recovery capsule could not be removed. Keep the local record for cleanup.')
+    if plan['action']=='install' and plan.get('keep_helper_stopped') is True:
+        installer.outcome.packages_verified()
+        installer.outcome.kept_stopped()
+        installer.progress('Packages verified. Home Helper was kept stopped; no launch was requested.')
+        return {'installed':'no-root','launch_requested':False,'helper_kept_stopped':True,'hardware_verified':False}
     if plan['action']=='install':
         try:
             current=installer.helper_state(timeout=5)

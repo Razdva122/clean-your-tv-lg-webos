@@ -1,5 +1,7 @@
 # Release history and device evidence
 
+- [No-root stopped setup and lost-profile guidance, 2026-11-11](2026-11-11-issue495-stopped-reinstall.md): no-launch operation intent, focused verification and remaining device/next-release scope.
+
 - [v1.17.0 canonical candidate ledger, 2026-11-11](2026-11-11-release-1.17.0-candidate.md): prepared versions, reused source checks, exact local package preflight and mandatory Helper compatibility blocker before full dispatch.
 
 - [Website candidate integration, 2026-11-11](2026-11-11-website-candidate-integration.md): redesigned multilingual landing, animated previews and SEO articles; focused CI passed.

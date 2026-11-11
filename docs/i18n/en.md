@@ -71,6 +71,10 @@ Root setup continues with a warning if TV inputs cannot be read but the applicat
 1. Open another TV app and briefly press **Home**. Clean Your TV should open. Tell the wizard what you saw; leave the check skipped if you did not test it.
 2. Check arrows, OK, Back, volume and sound. Test standby/wake and a start after disconnecting power separately. A successful installation alone does not check these actions.
 
+If No-root setup finds Home Helper stopped by its safety control, it keeps Helper stopped while updating. Start Helper separately on the TV when ready. Package verification does not verify the physical Home button.
+
+Use the original saved connection and recovery data. If they are lost, reconnect to the same TV and choose Uninstall Clean Your TV. Finish verified removal before setup; do not delete reservation files. If removal stops, save the diagnostic report.
+
 <a id="everyday-use-and-recovery"></a>
 
 ## 6. Everyday use and recovery

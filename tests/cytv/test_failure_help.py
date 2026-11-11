@@ -194,3 +194,19 @@ class FailureHelpTests(unittest.TestCase):
             report=json.loads(next(Path(tmp).glob('reports/*.json')).read_text())
             self.assertEqual(report['guidance'],{'code':'ssh-timeout','pending':True})
             self.assertNotIn('PRIVATE',json.dumps(report))
+
+    def test_foreign_reservation_guides_lost_profile_recovery_without_granting_cleanup(self):
+        from cytv.errors import UserError
+        error=UserError('PRIVATE',reason_code='pending-operation')
+        error.no_root_observer={'command':'storage-check','failure':'observer-error',
+                                'observer_reason':'foreign-reservation'}
+        guide=self.guide(error,'no-root','install-packages')
+        self.assertIsNotNone(guide)
+        self.assertEqual(guide['code'],'no-root-reservation')
+        self.assertFalse(guide['can_edit_connection'])
+        self.assertFalse(guide['pending'])
+        self.assertNotIn('PRIVATE',str(guide))
+        for phase,edition in (('ssh-connect','no-root'),('install-packages','root')):
+            self.assertIsNone(self.guide(error,edition,phase))
+        error.no_root_observer={'command':'storage-check','failure':'observer-error','observer_reason':'unsafe-directory'}
+        self.assertIsNone(self.guide(error,'no-root','install-packages'))

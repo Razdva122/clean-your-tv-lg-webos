@@ -60,6 +60,10 @@ Instalace Root pokračuje s upozorněním, pokud nelze načíst vstupy televizor
 1. Otevřete jinou aplikaci na TV a krátce stiskněte **Home**. Má se otevřít Clean Your TV. V průvodci uveďte, co jste viděli; pokud jste test neprovedli, přeskočte ho.
 2. Vyzkoušejte šipky, OK, Zpět, hlasitost a zvuk. Samostatně ověřte pohotovostní režim/probuzení a spuštění po odpojení napájení. Samotná úspěšná instalace tyto funkce neověřuje.
 
+**No-root:** Balíčky byly ověřeny. Home Helper zůstal zastavený; spuštění nebylo vyžádáno.
+
+Použijte původní uložené připojení a data obnovení. Pokud se ztratila, znovu se připojte ke stejné TV a zvolte Odinstalovat Clean Your TV. Před nastavením dokončete ověřené odebrání; nemažte soubory rezervace. Pokud se odebrání zastaví, uložte diagnostickou zprávu.
+
 ## 6. Každodenní ovládání
 
 Podpora IR v No-root: uvolnění Home po krátkém stisku naplánuje Clean přibližně za 700 ms; nejprve může probliknout LG Home. Podržení Home zůstává webOS a trojí stisk stále zastaví Helper. Přístup v běžném Developer Mode není ověřen; neměňte oprávnění vstupních zařízení.
