@@ -1,4 +1,5 @@
 """Exercise real orchestration; only the remote SSH boundary is simulated."""
+from functools import cache, lru_cache
 import json
 import os
 import shlex
@@ -7,6 +8,76 @@ import tempfile
 import unittest
 
 from cytv import operations, package, state
+
+
+@lru_cache(maxsize=32)
+def _observer_arguments(command):
+    return tuple(shlex.split(command))
+
+
+def split_observer_command(command):
+    if command.startswith('unset NODE_OPTIONS NODE_PATH && /usr/bin/node -e '):
+        # Hooks and the remote often parse the same large inline program.
+        return list(_observer_arguments(command))
+    return shlex.split(command)
+
+
+@cache
+def _root_updater_files():
+    import runpy
+
+    source = Path(__file__).resolve().parents[2] / 'root-edition/build_updater.py'
+    with tempfile.TemporaryDirectory() as temporary:
+        bundle = Path(temporary).resolve() / 'root-updater'
+        runpy.run_path(str(source))['build'](bundle)
+        return tuple((path.relative_to(bundle), path.read_bytes()) for path in bundle.rglob('*') if path.is_file())
+
+
+class RemoteCommandTests(unittest.TestCase):
+    def test_repeated_shell_command_keeps_original_arguments(self):
+        from unittest.mock import patch
+
+        _observer_arguments.cache_clear()
+        self.addCleanup(_observer_arguments.cache_clear)
+        prefix = 'unset NODE_OPTIONS NODE_PATH && /usr/bin/node -e '
+        source = """\nconst chars = "a ' b \\ c";\n"""
+        request = json.dumps({'source': source, 'path': "/tmp/a' b"})
+        command = prefix + shlex.quote(source) + ' ' + shlex.quote(request)
+        expected = shlex.split(command)
+        with patch.object(shlex, 'split', wraps=shlex.split) as split:
+            first = split_observer_command(command)
+            first[-1] = 'mutated'
+            self.assertEqual(split_observer_command(command), expected)
+            split.assert_called_once_with(command)
+
+    def test_other_shell_forms_keep_shlex_semantics(self):
+        for command in (
+            '/usr/bin/node -e "x y" two\\ words',
+            'unset NODE_OPTIONS NODE_PATH && /usr/bin/node -e \'source\' \'first\' \'second\'',
+            'test -e "/tmp/a b"',
+        ):
+            with self.subTest(command=command):
+                self.assertEqual(split_observer_command(command), shlex.split(command))
+
+
+class RootBundleFixtureTests(unittest.TestCase):
+    def test_root_updater_bundle_is_built_once_and_copied_for_each_test(self):
+        fixtures = [OperationTests(), OperationTests()]
+        for fixture in fixtures:
+            self.addCleanup(fixture.doCleanups)
+            fixture.setUp()
+
+        first, second = fixtures
+        first.root_bundle()
+        first_package = first.payload / 'root-updater/root-updater.ipk'
+        expected = first_package.read_bytes()
+        builds = _root_updater_files.cache_info().misses
+        first_package.write_bytes(b'changed by a test')
+
+        second.root_bundle()
+        self.assertEqual(_root_updater_files.cache_info().misses, builds)
+        self.assertEqual((second.payload / 'root-updater/root-updater.ipk').read_bytes(), expected)
+        self.assertEqual(first_package.read_bytes(), b'changed by a test')
 
 
 class Remote:
@@ -29,7 +100,7 @@ class Remote:
             return 'CYTV_NODE_VERSION v8.12.0'
         from cytv import no_root_observer
         if '/usr/bin/node -e ' in command:
-            args=shlex.split(command)
+            args=split_observer_command(command)
             code=args[args.index('-e')+1]
             if no_root_observer.STORAGE_SELECT in code:
                 request=json.loads(args[-1])
@@ -1202,10 +1273,18 @@ class OperationTests(unittest.TestCase):
         self.assertEqual(self.store.pending(installer.profile)['action'], 'install')
 
     def root_bundle(self):
+        bundle = self.payload / 'root-updater'
+        bundle.mkdir()
+        for name, raw in _root_updater_files():
+            target = bundle / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(raw)
+        # Root reinstallation borrows this fixture without subclassing.
+        return OperationTests.root_graphics_bundle(self)
+
+    def root_graphics_bundle(self):
         import hashlib
-        import runpy
-        build = runpy.run_path(str(Path(__file__).resolve().parents[2] / "root-edition/build_updater.py"))
-        build["build"]((self.payload / "root-updater").resolve())
+
         root = self.payload / 'root'
         root.mkdir()
         name = package.ROOT_APP + '_0.0.1_all.ipk'
