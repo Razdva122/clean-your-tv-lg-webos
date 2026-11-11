@@ -1,7 +1,106 @@
 {
   "schema": 1,
   "version": null,
-  "changes": [],
+  "changes": [
+    {
+      "pr": 515,
+      "issues": [],
+      "summary": "Refresh Home Helper status after a failed first check"
+    },
+    {
+      "pr": 517,
+      "issues": [
+        389
+      ],
+      "summary": "Verify immutable LG BSP overlays during Root Home setup"
+    },
+    {
+      "pr": 520,
+      "issues": [
+        392
+      ],
+      "summary": "Add optional Debloat settings to the installer"
+    },
+    {
+      "pr": 521,
+      "issues": [
+        473
+      ],
+      "summary": "Document LG UM7450PLA No-root compatibility"
+    },
+    {
+      "pr": 522,
+      "issues": [
+        519
+      ],
+      "summary": "Report Qt Home admission failures in installer diagnostics"
+    },
+    {
+      "pr": 523,
+      "issues": [
+        348
+      ],
+      "summary": "Resume interrupted retirement of verified installer staging"
+    },
+    {
+      "pr": 524,
+      "issues": [
+        362
+      ],
+      "summary": "Pin HDMI inputs alongside Home apps"
+    },
+    {
+      "pr": 526,
+      "issues": [
+        487
+      ],
+      "summary": "Document anonymized public device reports and verified LG C2"
+    },
+    {
+      "pr": 527,
+      "issues": [
+        434
+      ],
+      "summary": "Report unmeasurable temporary storage on ramfs TVs"
+    },
+    {
+      "pr": 528,
+      "issues": [],
+      "summary": "Record timing for each release candidate"
+    },
+    {
+      "pr": 530,
+      "issues": [],
+      "summary": "Default to automatic weather location when no city is saved"
+    },
+    {
+      "pr": 533,
+      "issues": [],
+      "summary": "Use a shared Linux CI image after v1.17.1"
+    },
+    {
+      "pr": 536,
+      "issues": [],
+      "summary": "Reuse setup in desktop installer test fixtures"
+    },
+    {
+      "pr": 537,
+      "issues": [],
+      "summary": "Focus weather-only PRs on weather checks"
+    },
+    {
+      "pr": 538,
+      "issues": [],
+      "summary": "Shard full-candidate browser regressions by duration"
+    },
+    {
+      "pr": 539,
+      "issues": [
+        534
+      ],
+      "summary": "Verify legacy No-root foreground through saved TV pairing"
+    }
+  ],
   "excluded": [],
   "acceptance": ""
 }
