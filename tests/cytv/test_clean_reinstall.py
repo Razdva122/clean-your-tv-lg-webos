@@ -10,10 +10,9 @@ CLEAN={'state':'fresh','reason':'verified_removal','can_install':True,
 class CleanReinstallTests(unittest.TestCase):
     setUp=test_operations.OperationTests.setUp
     installer=test_operations.OperationTests.installer
-    root_bundle=test_operations.OperationTests.root_bundle
 
     def fixture(self):
-        self.root_bundle();remote=test_operations.Remote();run=remote.run
+        remote=test_operations.Remote();run=remote.run
         remote.run=lambda command,**kw: 'CYTV_EXISTING_ROOT' if 'CYTV_EXISTING_ROOT' in command else ('{"stage":"cancellation-admitted"}' if 'deploy.json' in command else run(command,**kw))
         inst=self.installer(remote,'root');inst.root_installation=Mock(return_value=dict(CLEAN))
         return inst,remote
