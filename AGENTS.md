@@ -80,6 +80,40 @@ For subsequent release QA sessions, follow
 Complete the case pass and consolidated failure inventory before product fixes
 or merging the fix batch; do not start a full RC for each finding.
 
+### Run Home routing checks on the test TV
+
+For authorized QA on a maintainer or project test TV, run the network-remote
+check yourself. Take the expected destination from the selected QA case or the
+current task. If neither specifies one and the case checks stock behavior, use
+LG Home (`com.webos.app.home`). A custom Home case needs the expected launcher
+or surface from its test plan. The screen currently open is only the starting
+state.
+
+1. Reuse the paired test-TV profile. On the maintainer Mac, look in
+   `~/.config/clean-your-tv/webos-qa/` for `host`, `mac` and `client-key`. If the
+   host changed, use the repository's SSDP discovery in `cytv/discovery.py`
+   and match the saved device identity before reusing the key. Keep the profile
+   owner-only and outside Git. If the TV is unreachable or requires a fresh
+   on-screen pairing confirmation, report the specific blocker after checking
+   discovery and the saved connection.
+2. Use `aiowebostv.WebOsClient(host, client_key)` from a local Python virtual
+   environment. Call `connect()` and read `get_current_app()`. For a general
+   Home check, use the built-in Media Player (`com.webos.app.mediadiscovery`)
+   as the starting app. Call `launch_app(app_id)` and wait up to 12 seconds for
+   its foreground ID. Use the specified starting app or input if the case
+   names one.
+3. Once the starting state is confirmed, call `await client.button("HOME")`
+   once. Poll `get_current_app()` every 250 ms for up to 12 seconds. Verify
+   that the expected ID appears and still matches after one second. If the
+   case targets an overlay or focus state, verify that surface separately.
+   On timeout or mismatch, record the observed transitions and last ID.
+   Disconnect in a `finally` block.
+4. Record the starting app, expected and observed destination, and that the
+   input came from the network remote. Report any unverified checks. A case
+   that depends on the physical Magic Remote, such as a hardware key hook or
+   hold duration, needs evidence from that input path. For release QA, record
+   the run against the selected artifact in the verification ledger.
+
 ### Required QA exit check
 
 Before declaring the planned checks finished, telling the owner the TV is no
