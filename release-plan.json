@@ -85,6 +85,11 @@
       "pr": 531,
       "issues": [],
       "summary": "Run release checks with Ubuntu dependencies on the supported Ubuntu 24.04 image"
+    },
+    {
+      "pr": 532,
+      "issues": [],
+      "summary": "Use a signed Ubuntu archive mirror when the default runner mirror fails DNS"
     }
   ],
   "excluded": [],
