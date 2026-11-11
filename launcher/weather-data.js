@@ -364,6 +364,7 @@
     try {
       saved = JSON.parse(storage.getItem(KEY) || '{}') || {};
     } catch (_) {}
+    var savedLocation = location(saved.location);
     var model = {
       provider:
         ['auto', 'met-no', 'open-meteo'].indexOf(saved.provider) >= 0
@@ -376,8 +377,8 @@
       units: saved.units === 'imperial' ? 'imperial' : 'metric',
       preferred:
         formats.indexOf(saved.preferred) >= 0 ? saved.preferred : 'text',
-      mode: saved.mode === 'auto' ? 'auto' : 'manual',
-      location: location(saved.location),
+      mode: savedLocation && saved.mode === 'manual' ? 'manual' : 'auto',
+      location: savedLocation,
       data: null,
       updated: 0,
       stale: false,

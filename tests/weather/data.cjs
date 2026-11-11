@@ -64,13 +64,22 @@ const payload = {
   }
 };
 (async () => {
+  const fresh = create();
+  await fresh.start();
+  assert.equal(fresh.state().mode, 'auto', 'automatic city on a fresh profile');
+  assert.equal(calls.length, 0, 'off by default');
+  fresh.destroy();
+  memory[Weather.key] = JSON.stringify({ enabled: true, mode: 'manual' });
   const store = create();
   store.start();
-  assert.equal(calls.length, 0, 'off by default');
-  store.setPreferences({ enabled: true });
-  assert.equal(calls.length, 0, 'no city means no request');
+  assert.equal(store.state().mode, 'auto', 'automatic when no city is saved');
+  await flush();
+  assert.deepEqual(calls, ['https://get.geojs.io/v1/ip/geo.json']);
+  await store.setMode('manual');
+  assert(pending.shift().cancelled);
+  const manualCalls = calls.length;
   store.search('B');
-  assert.equal(calls.length, 0);
+  assert.equal(calls.length, manualCalls, 'manual mode waits for city search');
   store.search('Berlin');
   await answer({ results: [location, { ...location, latitude: 999 }] });
   assert.equal(store.state().results.length, 1);
@@ -100,6 +109,7 @@ const payload = {
   const restored = create();
   restored.start();
   assert.equal(restored.state().enabled, false);
+  assert.equal(restored.state().mode, 'manual', 'saved manual choice restored');
   assert.equal(calls.length, stopped, 'disabled startup no requests');
   restored.setPreferences({ enabled: true });
   await flush();
@@ -172,6 +182,7 @@ const payload = {
       getItem: () =>
         JSON.stringify({
           enabled: true,
+          mode: 'manual',
           location,
           locationLanguage: 'en',
           cache: {
