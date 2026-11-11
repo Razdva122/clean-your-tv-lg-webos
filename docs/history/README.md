@@ -1,5 +1,6 @@
 # Release history and device evidence
 
+- [v1.17.1 candidate verification, 2026-11-11](2026-11-11-release-1.17.1-candidate.md)
 - [No-root setup activation and lost-profile recovery, 2026-11-11](2026-11-11-issue495-stopped-reinstall.md): Stop-aware activation, focused verification and remaining device/next-release scope.
 - [Issue 505 catalog and No-root icon verification, 2026-11-11](2026-11-11-issue505-inventory.md): confirmed removals, bounded live icons, legacy profile compatibility and remaining packaged-device gates.
 
