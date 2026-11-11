@@ -58,9 +58,10 @@ def worker(store,device):
         try:fcntl.flock(fd,fcntl.LOCK_EX|fcntl.LOCK_NB)
         except BlockingIOError:return
         device.integrity();manager=Manager(store,device)
+        from installation import device_operation, retry_staging_at_startup
+        retry_staging_at_startup()
         while True:
             if store.read('transaction') is None:return
-            from installation import device_operation
             with device_operation('system-update', recovery=True):
                 from package_identity import TransitionUnknown
                 try:present=device.components_present()

@@ -11,9 +11,9 @@ import re
 import uuid
 
 try:
-    from updater.store import Store
+    from updater.store import Store, retire_verified_files, retention_summary, retention_reason
 except ImportError:
-    from system_updater.support.store import Store
+    from system_updater.support.store import Store, retire_verified_files, retention_summary, retention_reason
 
 STATE = Path('/var/lib/clean-your-tv-installation')
 FIELDS = {'supported', 'packages_match', 'receipts_match', 'pending', 'retained',
@@ -94,6 +94,54 @@ def _optional_record(store, name):
         raise
 
 
+def retire_product_staging(store, identifier, ownership, after=None):
+    """Retire sealed payload files while holding the original ownership mutex."""
+    removed = 0
+    try:
+        if not re.fullmatch('[0-9a-f]{32}', identifier):
+            raise ValueError('invalid_operation_uuid')
+        request_name = 'request-' + identifier
+        submission_name = 'submission-' + identifier
+        request = store.read(request_name)
+        submission = store.read(submission_name)
+        lease = ownership.status()
+        if (not isinstance(request, dict) or not isinstance(submission, dict) or not isinstance(lease, dict)
+                or request.get('operation') != identifier or submission.get('operation') != identifier
+                or request.get('stage') != 'complete' or request.get('state') != 'complete'
+                or request.get('code') != 'verified' or request.get('action') not in ('install', 'remove')
+                or request['action'] != submission.get('action') or submission.get('stage') != 'submitted'
+                or lease.get('terminal') is not True or lease.get('stage') != 'complete'
+                or lease.get('owner') != 'product' or lease.get('journal') != 'product-' + identifier + '.json'
+                or request.get('lease') != lease.get('id')):
+            retention_summary('staging', 'admission-refused')
+            return 0
+        result = request.get('result')
+        completion_key = 'verified' if request['action'] == 'install' else 'removed'
+        if not isinstance(result, dict) or result.get(completion_key) is not True:
+            retention_summary('staging', 'admission-refused')
+            return 0
+        files = submission.get('staging')
+        if not isinstance(files, dict) or not files:
+            retention_summary('staging', 'missing-inventory')
+            return 0
+        if any(not isinstance(name, str) or name.split('/')[0] not in ('root', 'root-updater', 'supervisor')
+               for name in files):
+            retention_summary('staging', 'admission-refused')
+            return 0
+
+        def stable():
+            return (store.read(request_name) == request
+                    and store.read(submission_name) == submission
+                    and ownership.status() == lease)
+
+        removed = retire_verified_files(store, request_name, files, stable)
+        if after is not None:
+            after(stable)
+    except (OSError, ValueError, TypeError, KeyError) as error:
+        retention_summary('staging', retention_reason(error), removed)
+    return removed
+
+
 class Ownership:
     def __init__(self, store=None):
         self.store = store if store is not None else Store(STATE)
@@ -110,15 +158,43 @@ class Ownership:
         return value
 
     @contextmanager
-    def operation(self, owner, journal, resume=None, check=None, handoff=None):
+    def _lock(self, create):
         directory = self.store._directory()
         fd = None
         try:
-            fd = os.open('ownership.lock', os.O_RDWR|os.O_CREAT|os.O_NOFOLLOW|os.O_NONBLOCK,
-                         0o600, dir_fd=directory)
+            flags = os.O_RDWR | os.O_NOFOLLOW | os.O_NONBLOCK
+            if create:
+                flags |= os.O_CREAT
+            fd = os.open('ownership.lock', flags, 0o600, dir_fd=directory)
             self.store._check(os.fstat(fd))
             try: fcntl.flock(fd, fcntl.LOCK_EX|fcntl.LOCK_NB)
             except BlockingIOError: raise Busy() from None
+            yield fd
+        finally:
+            if fd is not None: os.close(fd)
+            os.close(directory)
+
+    def _retry_staging(self, lease):
+        if lease and lease['owner'] == 'product' and lease['terminal'] and lease['stage'] == 'complete':
+            match = re.fullmatch(r'product-([a-f0-9]{32})\.json', lease['journal'])
+            if match:
+                return retire_product_staging(self.store, match[1], self)
+        return 0
+
+    def retry_staging(self):
+        """Retry the current terminal product only, without reserving ownership."""
+        try:
+            with self._lock(create=False):
+                return self._retry_staging(self.status())
+        except (Busy, FileNotFoundError):
+            return 0
+        except (OSError, ValueError, TypeError, KeyError) as error:
+            retention_summary('staging', retention_reason(error))
+            return 0
+
+    @contextmanager
+    def operation(self, owner, journal, resume=None, check=None, handoff=None):
+        with self._lock(create=True) as fd:
             if check is not None: check()
             previous = self.status()
             replace = previous is not None and handoff is not None and handoff(previous) is True
@@ -133,13 +209,13 @@ class Ownership:
                 if any(not isinstance(v,str) or not re.fullmatch('[a-zA-Z0-9_.-]{1,128}',v)
                        for v in (owner,journal)):
                     raise ValueError('invalid_installation_owner')
+                self._retry_staging(previous)
                 self.store.write('operation', record)
             self.fd=fd
-            yield record
-        finally:
-            self.fd=None
-            if fd is not None: os.close(fd)
-            os.close(directory)
+            try:
+                yield record
+            finally:
+                self.fd=None
 
     def stage(self, record, stage, terminal=False):
         """Call only after the owning component has durably written its journal."""
@@ -168,8 +244,18 @@ class Ownership:
         owner = current['owner'] if current else 'clean-removal'
         journal = current['journal'] if current else 'product-'+identifier+'.json'
         with self.operation(owner, journal, resume=current['id'] if current else None,check=check) as lease:
+            self._retry_staging(lease)
             saved = dict(lease)
             yield lease, saved
+
+
+def retry_staging_at_startup():
+    # Use a checked, non-creating store. Fresh devices have no work to retry.
+    if not os.path.lexists(STATE):
+        return 0
+    store = Store.__new__(Store)
+    store.root, store.uid = str(STATE), 0
+    return Ownership(store).retry_staging()
 
 
 JOURNALS = {
