@@ -10,13 +10,15 @@ from cytv import cli, state
 
 class CLITests(unittest.TestCase):
     def test_root_node_failure_can_complete_no_root_using_the_same_ssh(self):
-        from tests.cytv.test_operations import OperationTests, Remote
+        from tests.cytv.test_operations import OperationTests, Remote, split_observer_command
         from cytv import no_root_observer
         import shlex
         fixture=OperationTests()
         fixture.setUp()
         self.addCleanup(fixture.doCleanups)
-        fixture.root_bundle()
+        # Root graphics admission happens before the Node check. The fallback
+        # never stages Root Updater, so only the graphics bundle is needed.
+        fixture.root_graphics_bundle()
         (fixture.payload/'fallback.png').write_bytes(b'fallback')
         class LegacyTV(Remote):
             root=True
@@ -25,7 +27,7 @@ class CLITests(unittest.TestCase):
                 if command == '/usr/bin/node --version':return 'v0.12.2'
                 if 'CYTV_FRESH_ROOT' in command:return 'CYTV_FRESH_ROOT'
                 if 'process.versions.node.split' in command and 'CYTV_ROOT_READY' in command:return 'CYTV_ROOT_MISSING'
-                words=shlex.split(command)
+                words=split_observer_command(command)
                 if '-e' in words and no_root_observer.ROOT_PROGRAM in words[words.index('-e')+1]:
                     index=words.index('-e')+1
                     words[index]=words[index].replace(no_root_observer.ROOT_PROGRAM,no_root_observer.PROGRAM)
