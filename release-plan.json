@@ -63,6 +63,18 @@
         505
       ],
       "summary": "Reconcile boot catalog fallback and firmware-expanded Helper state during integration"
+    },
+    {
+      "pr": 516,
+      "issues": [],
+      "summary": "Document self-service webOS Home routing QA"
+    },
+    {
+      "pr": 518,
+      "issues": [
+        495
+      ],
+      "summary": "Unify checked Helper Stop and cleanup, preserve completed handoff across reboot, and scope owner-only TV checks"
     }
   ],
   "excluded": [],
