@@ -1,5 +1,6 @@
 """Real adapter → transport → retained standard-report contract evidence."""
 import json
+import os
 from pathlib import Path
 import subprocess
 import tempfile
@@ -31,6 +32,7 @@ class ContractReportTests(unittest.TestCase):
             return error
         self.fail('failed command passed')
 
+    @unittest.skipIf(os.name == 'nt', 'Real TV storage fixture requires POSIX ownership and permissions')
     def test_storage_adapter_supplies_where_rule_and_safe_metadata(self):
         with tempfile.TemporaryDirectory() as tmp:
             directory = Path(tmp).resolve()/'state'
@@ -68,11 +70,12 @@ class ContractReportTests(unittest.TestCase):
             return original(name)
         with patch.object(tv_sources,'trusted_source',side_effect=source):
             code=tv_sources.node_adapter('state-permissions',"throw Error('PRIVATE-original');")
-        result=subprocess.run(['node','-e',code],capture_output=True,text=True)
+        result=subprocess.run(['node'],input=code,capture_output=True,text=True)
         self.assertEqual(result.stdout,json.dumps({'schema':1,'error':'contract-error','events':[]},separators=(',',':')))
         self.assertEqual(result.returncode,1)
         self.assertNotIn('PRIVATE',result.stdout+result.stderr)
 
+    @unittest.skipIf(os.name == 'nt', 'Real TV storage fixture requires POSIX ownership and permissions')
     def test_checked_runtime_log_rotation_collection_counts_and_unsafe_replacement(self):
         with tempfile.TemporaryDirectory() as tmp:
             code = r"""
@@ -105,6 +108,7 @@ a.throws(function(){p.appendLog(d,'unsafe-race');});a.equal(fs.readFileSync(d+'/
             result=subprocess.run(['node','-e',code,str(Path(tmp).resolve())],cwd=ROOT,capture_output=True,text=True)
             self.assertEqual(result.returncode,0,result.stderr)
 
+    @unittest.skipIf(os.name == 'nt', 'Real TV storage fixture requires POSIX ownership and permissions')
     def test_storage_write_errno_keeps_original_error_and_fixed_stage_context(self):
         with tempfile.TemporaryDirectory() as tmp:
             code=r"""
@@ -122,6 +126,7 @@ a.equal(fs.readdirSync(d).length,0);
             result=subprocess.run(['node','-e',code,str(Path(tmp).resolve())],cwd=ROOT,capture_output=True,text=True)
             self.assertEqual(result.returncode,0,result.stderr)
 
+    @unittest.skipIf(os.name == 'nt', 'Real TV storage fixture requires POSIX ownership and permissions')
     def test_storage_retained_warning_and_staging_guard_keep_actual_decision_phase(self):
         with tempfile.TemporaryDirectory() as tmp:
             code=r"""
@@ -260,6 +265,7 @@ catch(error) {a.equal(error.contractEvents[0].field,'staging');a.equal(error.con
         self.assertEqual(info['contract_telemetry'],'legacy')
 
 
+    @unittest.skipIf(os.name == 'nt', 'Real TV storage fixture requires POSIX ownership and permissions')
     def test_real_runtime_probe_to_standard_report_preserves_safe_outcomes(self):
         import shlex
         with tempfile.TemporaryDirectory() as tmp:

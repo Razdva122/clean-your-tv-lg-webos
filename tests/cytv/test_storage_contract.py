@@ -8,6 +8,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[2]
 
 
+@unittest.skipIf(os.name == 'nt', 'TV storage fixtures require POSIX ownership, modes and inode semantics')
 class StorageContractTests(unittest.TestCase):
     def run_js(self, body):
         runtimes = ['node'] + [os.environ[k] for k in ('NODE010', 'NODE01025', 'NODE012') if os.environ.get(k)]
