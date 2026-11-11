@@ -98,7 +98,25 @@
             : ['tvhome.order', 'tvhome.language']
           ).forEach(function (key) {
             var value = localStorage.getItem(key);
-            if (value !== null) snapshot.settings[key] = value;
+            if (value !== null) {
+              // Older Root validators reject unknown layout fields. Confirmation
+              // is local cache state; transfer the pruned layout in legacy form.
+              if (key === 'tvhome.layout') {
+                var layout = JSON.parse(value);
+                if (layout.catalogConfirmed === true)
+                  snapshot.inventory.apps = JSON.parse(
+                    JSON.stringify(layout.catalog)
+                  ).map(function (app) {
+                    // Missing discovery icons must not block update/rollback.
+                    // Keep the original empty icon in the layout itself.
+                    if (!app.icon) app.icon = 'brand-v2-icon.png';
+                    return app;
+                  });
+                delete layout.catalogConfirmed;
+                value = JSON.stringify(layout);
+              }
+              snapshot.settings[key] = value;
+            }
           });
           return Promise.all(
             snapshot.inventory.apps.map(function (app) {

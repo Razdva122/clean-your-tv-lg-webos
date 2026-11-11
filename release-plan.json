@@ -1,39 +1,100 @@
 {
   "schema": 1,
-  "version": "1.17.0",
+  "version": "1.17.1",
   "changes": [
     {
-      "pr": 470,
+      "pr": 496,
+      "issues": [
+        418
+      ],
+      "summary": "Retain Root cleanup probe failure context; original #418 recovery remains unresolved"
+    },
+    {
+      "pr": 497,
+      "issues": [
+        101
+      ],
+      "summary": "Preserve native deployment causes and inspect without replay; original #101 setup remains unresolved"
+    },
+    {
+      "pr": 498,
+      "issues": [
+        472
+      ],
+      "summary": "Fix No-root removal with execute-only DevMode tmp"
+    },
+    {
+      "pr": 501,
+      "issues": [
+        499
+      ],
+      "summary": "Fix #499: weather startup on legacy webOS browsers"
+    },
+    {
+      "pr": 502,
+      "issues": [
+        397
+      ],
+      "summary": "Offer verified full removal when native Root deployment evidence is missing; original #397 setup failure remains unresolved"
+    },
+    {
+      "pr": 503,
+      "issues": [
+        495
+      ],
+      "summary": "Activate Home after setup while preserving new Stops (#495)"
+    },
+    {
+      "pr": 506,
+      "issues": [
+        505
+      ],
+      "summary": "Fix stale app catalogs and live No-root icons (#505)"
+    },
+    {
+      "pr": 512,
       "issues": [],
-      "summary": "Redesign multilingual landing with animated previews and SEO articles"
+      "summary": "Skip unused Root Updater build in clean reinstall tests"
     },
     {
-      "pr": 488,
+      "pr": 514,
       "issues": [
-        487
+        495,
+        505
       ],
-      "summary": "Repair authenticated installer key privacy after runtime ownership handoff; original #487 device continuation remains unverified"
+      "summary": "Reconcile boot catalog fallback and firmware-expanded Helper state during integration"
     },
     {
-      "pr": 492,
-      "issues": [
-        454
-      ],
-      "summary": "Admit immutable vendor-owned stock Home up to 16 MiB across Root preflight, compositor runtime and guardian; #454 device confirmation remains pending"
+      "pr": 516,
+      "issues": [],
+      "summary": "Document self-service webOS Home routing QA"
     },
     {
-      "pr": 493,
+      "pr": 518,
       "issues": [
-        487
+        495
       ],
-      "summary": "Share checked storage, lifecycle and recovery contracts; preserve first-cause typed diagnostics in standard reports"
+      "summary": "Unify checked Helper Stop and cleanup, preserve completed handoff across reboot, and scope owner-only TV checks"
     },
     {
-      "pr": 494,
-      "issues": [
-        454
-      ],
-      "summary": "Correct the stock Home regression fixture on UID 1001 CI runners; production behavior unchanged"
+      "pr": 525,
+      "issues": [],
+      "summary": "Enable System updates after a verified Root-to-No-root transition and document focused retesting"
+    },
+    {
+      "pr": 531,
+      "issues": [],
+      "summary": "Run release checks with Ubuntu dependencies on the supported Ubuntu 24.04 image"
+    },
+    {
+      "pr": 532,
+      "issues": [],
+      "summary": "Use a signed Ubuntu archive mirror when the default runner mirror fails DNS"
+    },
+    {
+      "pr": 535,
+      "issues": [],
+      "summary": "Stabilize the Classic theme browser check and Linux desktop dependency downloads"
     }
   ],
   "excluded": [],

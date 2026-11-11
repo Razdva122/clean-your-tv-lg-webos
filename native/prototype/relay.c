@@ -14,6 +14,7 @@
 #include <time.h>
 #include <errno.h>
 #include <string.h>
+#include "../app/stop-generation.h"
 #define GRAB _IOW('E',0x90,int)
 #define BIT(ev,len) _IOC(_IOC_READ,'E',0x20+(ev),len)
 #define KEYSTATE(len) _IOC(_IOC_READ,'E',0x18,len)
@@ -22,6 +23,9 @@
 #define IR_LONG_PRESS_MS 1000
 static volatile sig_atomic_t stop;
 static int output_failed;
+static const char *setup_generation;
+static int generation_cancelled;
+static int generation_current(void){char current[34];return !setup_generation||(cytv_generation_read(current)&&!strcmp(current,setup_generation));}
 /* A stalled controller must never hold the evdev grab by blocking stdout.
  * Only change pipe/socket flags, never an inherited terminal's flags. */
 static int prepare_output(void){
@@ -40,7 +44,7 @@ static void stopped(int n){(void)n;stop=1;}
 static uint64_t ms(void){struct timespec t;clock_gettime(CLOCK_MONOTONIC,&t);return(uint64_t)t.tv_sec*1000+t.tv_nsec/1000000;}
 static int find_device(const char *wanted,int flags){for(int i=0;i<32;i++){char p[64],name[256]={0};snprintf(p,sizeof p,"/dev/input/event%d",i);int fd=open(p,flags|O_NONBLOCK|O_CLOEXEC);if(fd<0)continue;if(ioctl(fd,NAME(sizeof name),name)>=0&&!strcmp(name,wanted)){report("DEVICE %s %s\n",p,name);return fd;}close(fd);}return -1;}
 static int release_keys(int out){unsigned char bits[256]={0};if(ioctl(out,KEYSTATE(sizeof bits),bits)<0)return -1;for(int k=1;k<2048;k++)if(bits[k/8]&(1<<(k%8))){struct ev e[2]={{0,0,1,k,0},{0,0,0,0,0}};if(write(out,e,sizeof e)!=sizeof e)return -1;}return 0;}
-static void latch_stop(int reason){const char *latch=reason==20?"/media/developer/apps/usr/palm/applications/com.local.nativehome/state/watchdog":"/media/developer/apps/usr/palm/applications/com.local.nativehome/state/blocked";int flag=open(latch,O_WRONLY|O_CREAT|O_TRUNC,0644);if(flag>=0){write(flag,"stopped",7);close(flag);}}
+static void latch_stop(int reason){if(!generation_cancelled&&reason!=20)(void)cytv_generation_publish();const char *latch=reason==20?"/media/developer/apps/usr/palm/applications/com.local.nativehome/state/watchdog":"/media/developer/apps/usr/palm/applications/com.local.nativehome/state/blocked";int flag=open(latch,O_WRONLY|O_CREAT|O_TRUNC,0644);if(flag>=0){write(flag,"stopped",7);close(flag);}}
 static int compatible(int in,int out){unsigned char a[256],b[256];int types[]={0,1,2,3};for(int i=0;i<4;i++){memset(a,0,sizeof a);memset(b,0,sizeof b);if(ioctl(in,BIT(types[i],sizeof a),a)<0||ioctl(out,BIT(types[i],sizeof b),b)<0||memcmp(a,b,sizeof a))return 0;}for(int axis=0;axis<2;axis++){int a[6],b[6];if(ioctl(in,_IOR('E',0x40+axis,int[6]),a)<0||ioctl(out,_IOR('E',0x40+axis,int[6]),b)<0||memcmp(a+1,b+1,5*sizeof(int)))return 0;}return 1;}
 static int startup_in,startup_out;
 static uint64_t startup_ack,powerDeadline;
@@ -49,6 +53,7 @@ static void power_command(char command){
  if(command=='R')powerDeadline=0;
 }
 static int startup_keys(void){
+ if(!generation_current())return 29;
  if(stop)return 29;
  /* Discard pre-grab input: webOS already received it. Never replay an old OK. */
  struct ev events[64];
@@ -66,6 +71,7 @@ static int startup_keys(void){
  return 0;
 }
 static int startup_pump(void){
+ if(!generation_current())return 29;
  if(stop)return 29;
  if(ms()-startup_ack>2000)return 20;
  struct pollfd p={0,POLLIN,0};int r=poll(&p,1,50);
@@ -80,6 +86,8 @@ static int startup_pump(void){
  return stop?29:0;
 }
 int main(int argc,char**argv){
+ setup_generation=NULL;generation_cancelled=0;
+ if(argc>1&&!strcmp(argv[1],"setup")){if(argc!=3||!cytv_generation_token(argv[2]))return 29;setup_generation=argv[2];if(!generation_current()){generation_cancelled=1;latch_stop(29);return 29;}}
  output_failed=0;powerDeadline=0;signal(SIGPIPE,SIG_IGN);signal(SIGTERM,stopped);signal(SIGINT,stopped);
  int cleaning=argc>1&&!strcmp(argv[1],"cleanup");
  /* Emergency cleanup must work even with closed or unusable stdout. */
@@ -94,17 +102,21 @@ int main(int argc,char**argv){
  int ir=find_device("LGE RCU",O_RDONLY);if(output_failed)return 30;
  startup_in=in;startup_out=out;startup_ack=ms();
  int startup_reason=wait_for_release(ms,startup_keys,startup_pump);
- if(startup_reason){if(startup_reason==14)report("FAIL source-held\n");if(startup_reason==16)report("FAIL destination-busy\n");return startup_reason;}
+ if(startup_reason){if(!generation_current()){generation_cancelled=1;latch_stop(29);}if(startup_reason==14)report("FAIL source-held\n");if(startup_reason==16)report("FAIL destination-busy\n");return startup_reason;}
+ if(!generation_current()){generation_cancelled=1;latch_stop(29);close(in);close(out);if(ir>=0)close(ir);return 29;}
  if(ioctl(in,GRAB,1)<0){report("FAIL grab\n");return 17;}
- report("READY\n");struct filter f={0},irf={0};uint64_t last=ms(),irDown=0;int reason=0,irSyncLost=0;struct pollfd p[3]={{in,POLLIN,0},{0,POLLIN,0},{ir,POLLIN,0}};
- while(!stop&&!output_failed){uint64_t now=ms();if(now-last>2000){reason=20;break;}if(filter_timeout(&f,now)==OPEN_LG&&report("LGHOME\n")<0)break;
+ struct filter f={0},irf={0};uint64_t last=ms(),irDown=0;int reason=0,irSyncLost=0;struct pollfd p[3]={{in,POLLIN,0},{0,POLLIN,0},{ir,POLLIN,0}};
+ if(!generation_current()){reason=29;generation_cancelled=1;}else report("READY\n");
+ while(!generation_cancelled&&!stop&&!output_failed){if(!generation_current()){reason=29;generation_cancelled=1;break;}uint64_t now=ms();if(now-last>2000){reason=20;break;}if(filter_timeout(&f,now)==OPEN_LG&&report("LGHOME\n")<0)break;
  int r=poll(p,3,50);if(r<0){if(errno==EINTR)continue;reason=23;break;}
+ if(!generation_current()){reason=29;generation_cancelled=1;break;}
  if(p[1].revents&(POLLHUP|POLLERR)){reason=24;break;}
  if(p[1].revents&POLLIN){char b[64];ssize_t n=read(0,b,sizeof b);if(n<=0){reason=24;break;}last=ms();for(int i=0;i<n;i++){if(b[i]=='D'){f.disabled=irf.disabled=1;f.home=irf.home=0;f.count=irf.count=0;irDown=0;}if(b[i]=='E'){f.disabled=irf.disabled=0;f.home=irf.home=0;f.count=irf.count=0;irDown=0;}power_command(b[i]);if(b[i]=='Q')stop=1;if(b[i]=='S')raise(SIGSTOP);}if(report("P\n")<0)break;}
  /* Losing the IR source only disables IR Home; M-RCU keeps working. */
  if(p[2].fd>=0&&p[2].revents&(POLLHUP|POLLERR|POLLNVAL)){close(p[2].fd);p[2].fd=-1;if(report("IR_LOST\n")<0)break;}
  else if(p[2].fd>=0&&p[2].revents&POLLIN){struct ev e[64];ssize_t n=read(p[2].fd,e,sizeof e);
   if(n>0&&n%sizeof e[0]==0)for(int i=0;i<n/(int)sizeof e[0];i++){
+   if(!generation_current()){reason=29;generation_cancelled=1;break;}
    /* Overflow invalidates this passive source, not the grabbed M-RCU path.
     * Discard events through SYN_REPORT and require a new complete press. */
    if(e[i].type==0&&e[i].code==3){irf.home=irf.short_press=irf.count=0;irDown=0;irSyncLost=1;continue;}
@@ -116,12 +128,12 @@ int main(int argc,char**argv){
    if(e[i].value==1&&!irDown)irDown=t;
    else if(e[i].value==0&&irDown){int tap=t-irDown<IR_LONG_PRESS_MS;irDown=0;if(tap&&!irf.disabled&&report("IRHOME\n")<0)break;}
   }
-  if(stop||output_failed)break;
+  if(generation_cancelled||stop||output_failed)break;
  }
  if(p[0].revents&(POLLHUP|POLLERR)){reason=25;break;}
- if(p[0].revents&POLLIN){struct ev e[64];ssize_t n=read(in,e,sizeof e);if(n<0&&errno==EAGAIN)continue;if(n<=0||n%sizeof e[0]){reason=26;break;}for(int i=0;i<n/(int)sizeof e[0];i++){/* Observe Back without consuming or changing its events. */
+ if(p[0].revents&POLLIN){struct ev e[64];ssize_t n=read(in,e,sizeof e);if(n<0&&errno==EAGAIN)continue;if(n<=0||n%sizeof e[0]){reason=26;break;}for(int i=0;i<n/(int)sizeof e[0];i++){if(!generation_current()){reason=29;generation_cancelled=1;break;}/* Observe Back without consuming or changing its events. */
 if(e[i].type==1&&e[i].code==412){if(e[i].value==1)report("BACK_DOWN\n");if(e[i].value==0)report("BACK_UP\n");if(output_failed)break;}
-int a=filter_event(&f,e+i,ms());if(a==RELEASE){reason=27;stop=1;break;}if(a==OPEN_HOME){if(report("HOME\n")<0)break;continue;}if(a==DROP)continue;if(write(out,e+i,sizeof e[i])!=sizeof e[i]){reason=28;stop=1;break;}}}
+int a=filter_event(&f,e+i,ms());if(a==RELEASE){reason=27;stop=1;break;}if(!generation_current()){reason=29;generation_cancelled=1;break;}if(a==OPEN_HOME){if(report("HOME\n")<0)break;continue;}if(a==DROP)continue;if(write(out,e+i,sizeof e[i])!=sizeof e[i]){reason=28;stop=1;break;}}}
  }
  if(output_failed)reason=30;
  if(stop&&reason==25)reason=0;

@@ -168,7 +168,8 @@ service.register('listApps', function (message) {
     inventoryPending = require('./app-inventory')(
       undefined,
       undefined,
-      priorityIds
+      priorityIds,
+      true
     );
     inventoryPriority = priority;
   }
@@ -176,7 +177,15 @@ service.register('listApps', function (message) {
   request.then(
     function (apps) {
       if (inventoryPending === request) inventoryPending = null;
-      message.respond({ returnValue: true, apps: apps });
+      message.respond(
+        Array.isArray(apps)
+          ? { returnValue: true, apps: apps }
+          : {
+              returnValue: true,
+              apps: apps.apps,
+              installedIds: apps.installedIds
+            }
+      );
     },
     function () {
       if (inventoryPending === request) inventoryPending = null;

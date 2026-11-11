@@ -54,12 +54,30 @@
         };
       });
   }
+  function confirmed(ids, apps) {
+    return (
+      Array.isArray(ids) &&
+      ids.length <= 300 &&
+      ids.every(function (id, i) {
+        return (
+          typeof id === 'string' &&
+          id.length > 0 &&
+          id.length <= 256 &&
+          ids.indexOf(id) === i
+        );
+      }) &&
+      apps.every(function (a) {
+        return a && ids.indexOf(a.id) >= 0;
+      })
+    );
+  }
   function create(storage, inventory, config) {
     var catalog = clean(inventory),
       hidden = unique(config.hiddenApps || []),
       ids,
       saved,
-      showAddApp = true;
+      showAddApp = true,
+      catalogConfirmed = false;
     try {
       saved = JSON.parse(storage.getItem(KEY));
       if (
@@ -75,7 +93,10 @@
     }
     if (saved) {
       showAddApp = saved.showAddApp !== false;
-      catalog = clean(catalog.concat(saved.catalog));
+      catalogConfirmed = saved.catalogConfirmed === true;
+      catalog = clean(
+        catalogConfirmed ? saved.catalog : catalog.concat(saved.catalog)
+      );
       hidden = unique(saved.hidden);
       ids = unique(saved.ids);
     } else {
@@ -120,6 +141,7 @@
         catalog: catalog,
         showAddApp: nextShowAddApp === undefined ? showAddApp : nextShowAddApp
       };
+      if (catalogConfirmed) state.catalogConfirmed = true;
       storage.setItem(KEY, JSON.stringify(state)); // Commit memory only after durable storage succeeds.
       ids = state.ids;
       hidden = state.hidden;
@@ -164,11 +186,12 @@
           })
         );
       },
-      refresh: function (apps) {
+      refresh: function (apps, installedIds) {
         // TV queries can return only part of the installed inventory. Absence
         // from a response must not erase saved tiles or apps hidden from Home.
         // Preserve packaged/embedded icons, but refresh expiring remote URLs.
-        var previous = catalog;
+        var previous = catalog,
+          previousConfirmed = catalogConfirmed;
         var embedded =
           /^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/;
         var updates = clean(apps).map(function (a) {
@@ -184,7 +207,29 @@
             a.icon = old.icon;
           return a;
         });
-        catalog = clean(updates.concat(previous));
+        var authoritative = confirmed(installedIds, apps);
+        catalog = clean(
+          updates.concat(previous).filter(function (a) {
+            return !authoritative || installedIds.indexOf(a.id) >= 0;
+          })
+        );
+        if (authoritative) {
+          catalogConfirmed = true;
+          try {
+            save(
+              ids.filter(function (id) {
+                return installedIds.indexOf(id) >= 0;
+              }),
+              hidden.filter(function (id) {
+                return installedIds.indexOf(id) >= 0;
+              })
+            );
+          } catch (error) {
+            catalog = previous;
+            catalogConfirmed = previousConfirmed;
+            throw error;
+          }
+        }
       }
     };
   }
@@ -201,11 +246,11 @@
           bridge.cancel();
         } catch (_) {}
     }
-    function finish(apps) {
+    function finish(apps, installedIds) {
       if (done) return;
       done = true;
       cancel();
-      callback(apps);
+      callback(apps, installedIds);
     }
     function read(fallback) {
       var request = ++generation;
@@ -230,7 +275,13 @@
             )
               apps = clean(result.apps);
           } catch (_) {}
-          if (apps !== null) finish(apps);
+          if (apps !== null)
+            finish(
+              apps,
+              confirmed(result.installedIds, result.apps)
+                ? result.installedIds
+                : undefined
+            );
           else failed();
         };
         // A cross-package LS2 refusal need not block the existing native reader.

@@ -15,7 +15,7 @@ operations share checked directory/inode reads and exclusive staged writes:
 | --- | --- |
 | `inspectConfiguration(directory, options)` | Read-only installer configuration validation. |
 | `prepareConfiguration(directory, options)` | Validate key and apps before key repair; foreign-key replacement additionally requires `expectedHash` matching the original capsule's exact SHA256. Existing outer idle/process guards still apply. |
-| `requestStop(directory, options)` | Validate destinations, preserve an existing blocked latch, create it if absent, then write Stop. It does not establish process quiescence. |
+| `requestStop(directory, options)` | Publish a new Stop generation, recover known firmware-expanded storage, preserve or create the blocked latch, and write the Stop command. Process quiescence is checked by the caller. |
 | `atomicRecord(directory, kind, bytes, options)` | Write one fixed named output class with checked staging and rename. It cannot target configuration, locks or emergency latches. |
 | `readConfiguration(directory, kind)` | Read checked `key` or `apps` only; runtime apps reads never chmod or adopt the inode. |
 | `appendLog(directory, line)` / `readLogEvents(directory)` | Bounded checked local logging / fixed safe-event projection; neither grants recovery authority. |
@@ -32,6 +32,28 @@ owner permits reading an already private key; it does not grant mutation rights.
 A noncaller key needing privacy repair uses the same exact-hash authenticated
 replacement path as an untrusted foreign key, creating a caller-owned 0640 inode.
 An already private trusted packaged key remains unchanged.
+
+Firmware-expanded 0777 records use the same checked storage session. Bootstrap
+copies only the retained key and Home/startup values from a caller-owned or
+packaged inode into a private replacement. This preserves preferences and
+restores permissions; SSAP still authenticates the credential. Ordinary
+configuration reads remain strict. Helper leaves installer-owned apps alone;
+if that list is unavailable it uses the existing authenticated TV catalog,
+with a bounded retry after a transient failure. The installer can restrict its
+own apps inode in place without changing its owner or contents.
+
+Fixed fresh outputs can replace an expanded same-group leaf without using its
+old contents. This applies to control/PID/logs, startup writes and all channel
+request/response classes under their existing directory rules. Stop preserves
+an existing regular latch; it still refuses unsafe directories and links.
+The installer, standalone Stop, No-root cleanup and Root coordinator and
+edition handoff use the same checked Stop writer. Cleanup can retain the
+SDK's legacy directory mode when the checked caller cannot normalize it,
+while a normal Stop requires successful normalization before claiming
+completion. The controller uses its
+latch-preserving operation when it terminates. The native input relay uses
+the same generation and latch format on its synchronous emergency path.
+Bootstrap never clears Stop/watchdog or replaces native locks.
 
 Fixed record kinds are `control`, `home-preference`, `startup-state`, `pid`,
 `logger`, and `home`/`input`/`catalog` request and response pairs. Each has its own
@@ -60,7 +82,8 @@ mode, link and type checks still apply. UID 0 with insufficient kernel rights
 still fails the actual read/write/chown/chmod operation and checked staging;
 group admission does not waive syscall failures or establish Helper quiescence.
 
-`cytv/tv_sources.py` allowlists only `state-permissions` and `contract-events`.
+`cytv/tv_sources.py` allowlists `state-permissions`, `contract-events` and
+`boot-proof`.
 Source execution reads canonical repository resources; frozen desktop/CLI and
 Android use staged `cytv/tv` bytes and refuse missing packaged resources. Static
 host-owned adapter bodies resolve only bundled factories and necessary Node
@@ -153,3 +176,31 @@ desktop/Android packaged execution and affected physical recovery, Home, power,
 input/emergency and update/rollback scenarios belong to the release coordinator's
 scoped acceptance. No release, compatibility or original-issue resolution follows
 from the development checks alone.
+
+
+## No-root removal restart evidence
+
+`native/contracts/boot-proof.js` owns kernel UUID parsing, proof validation and
+`boot-create`, `boot-probe`, `boot-retire`, `boot-release` via `run(input, context)`.
+The host embeds these exact trusted bytes in the standalone cleanup program;
+Root updater embedding therefore remains self-contained. It uses the same
+staging infrastructure as storage contracts, without adding unused code to the
+Helper package. `readKernel()` provides the same identity validation to inventory.
+
+The one current No-root journal record is `cleanup_boot_proof`; the legacy
+`cleanup_boot_id` field is cleared when capturing it. Existing schema-1 proofs
+retain private per-goal markers on a real root-owned sticky `/tmp` (01777),
+including inode/content checks. Captured proofs never switch kinds on retry.
+
+The Developer Mode SSH layout with a real root-owned `/tmp` of exactly 0111
+captures schema 2 (`kind: kernel-only`, goal and kernel UUID), without opening,
+reading or writing that directory. Only a changed kernel UUID proves a restart.
+Marker absence, successful release, elapsed time and a repeated UUID do not.
+The same-ID snapshot/cold-boot case stays pending with diagnostic guidance;
+there is no alternate marker in persistent or nonsticky shared storage.
+Other modes, owners and symlinks remain refusals. Root SSH cannot select this
+fallback; Root's separate runtime `boot_identity` contract remains unchanged.
+
+This evidence does not replace process, control/startup, package/file and
+previous-operation checks. Unknown prior operations retain the restart gate.
+See [the focused verification record](../history/2026-11-11-issue472-devmode-boot-proof.md).

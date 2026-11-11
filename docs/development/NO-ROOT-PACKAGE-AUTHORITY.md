@@ -238,7 +238,7 @@ its own UID. Even mode 0640 then fails the caller/5999 ownership checks above.
 During authenticated No-root continuation with Helper stopped/stale, the source
 fix also permits replacing that single key with a caller-owned 0640 inode when
 its exact bytes match the original capsule's expected SHA256. It accepts only
-0640/0775, a regular single-link file up to 64 KiB in the checked state directory,
+0640/0775/0777, a regular single-link file up to 64 KiB in the checked state directory,
 and its shared group must match the directory and belong to the SSH caller.
 This authenticates bytes rather than trusting an arbitrary numeric Helper UID.
 
@@ -253,7 +253,46 @@ refuse without replacing the key. Staging is cleaned on failure. Caller-owned
 Neither immutable observer source changes. The repaired caller-owned key passes
 its original checks, so pending plans, capsules, terminal package receipts and
 configuration claims keep their original identity. No package request is
-replayed by this repair. Status remains read-only, Root SSH is unchanged, and
+replayed by this repair. Status remains read-only. For Root SSH, only explicit
+repair of the packaged Helper state permanently becomes its 5999:5000 owner
+before touching configuration and still requires the original capsule hash.
+This keeps the key usable at the next boot even when the files step was already
+complete and no upload follows. Expanded keys use a fresh private inode so
+old writable descriptors cannot alter the repaired key. The repair preserves
+the apps inode and owner, and
 emergency/stop files are untouched. No new endpoint, permission grant or durable
 state format is introduced. See the [source verification ledger](../history/2026-11-10-issue487-helper-recovery.md);
 actual reporter-device recovery remains pending for a future published build.
+
+
+## Stop-aware activation for new installs (#495)
+
+A new setup captures the fixed Helper Stop generation before package requests
+and binds optional `setup_start: {generation: token-or-null}` into the canonical
+plan and digest-protected capsule. A token is exactly I/S plus 32 lowercase hex
+digits. Null is an initially absent Helper state; it may adopt only an I
+(initialization) token after package delivery, never an S Stop token. The launch
+generation is retained before its claim/request. Both immutable observer sources
+are unchanged; no legacy marker migration or private Stop journal is introduced.
+
+The Helper receives `nativeHomeSetup` with the captured generation. It requests
+Home On, consuming only the old Stop while checking the generation before/after
+initialization, latch removal and preference writes. Relay startup/input gates
+check the same generation. A new Stop cancels activation and remains persistent;
+identical latch bytes cannot disguise it. The token file is constant 33 bytes,
+nonsecret, and uses existing checked shared Helper storage. It is cancellation
+state, not a new permission/endpoint or historical package authority. Failed
+publication invalidates the baseline. Transient watchdog retry fences do not
+change it; terminal Stop and retry exhaustion do.
+
+A cancelled launch configuration step is a verified no-request disposition;
+an acknowledged launch is recorded separately from observed startup and physical
+Home. The report uses `startup: stopped-during-setup`, does not mark startup/Home
+pass and skips the physical Home prompt when a new Stop cancelled activation.
+Unknown launch outcomes are never replayed. Closed retries re-read current state
+without submitting package or launch requests again.
+
+Fixed `no-root-reservation` advice does not adopt TV evidence, change a host pin,
+release a reservation or start removal. Lost-profile recovery uses the existing
+separately approved clean-removal goal and restart/process/absence guards; see
+[recovery](../RECOVERY.md#no-root-setup-activation-and-a-lost-computer-profile).

@@ -2,7 +2,7 @@
 import errno
 import socket
 
-from .errors import DeveloperKeyError, TVConnectionError, TVRejected, is_storage_full, TV_STORAGE_FULL, COMPUTER_STORAGE_FULL
+from .errors import DeveloperKeyError, TVConnectionError, TVRejected, is_storage_full, TV_STORAGE_FULL, COMPUTER_STORAGE_FULL, no_root_observer_details
 from .recovery_state import unsubmitted_removal
 from .root_action_failure import ACTIVATION_CODES, ACTIVATION_DETAILS
 
@@ -44,6 +44,9 @@ GUIDES = {
         'Choose Review recovery options for the same saved TV connection. Removal requires a separate confirmation; setup starts separately.', False),
     'pending-operation': ('An earlier operation is unresolved', 'This failure does not prove that the earlier package operation finished.',
         'Save the report and keep the original saved connection and recovery data. Use only verified recovery; do not blindly retry setup, Restore or removal.', False),
+    'no-root-reservation': ('An earlier TV operation needs review',
+        'The TV retains an operation reservation. A missing computer profile does not prove that it is safe to release.',
+        'Use the original saved connection and recovery data. If they are lost, reconnect to the same TV and choose Uninstall Clean Your TV. Finish verified removal before setup; do not delete reservation files. If removal stops, save the diagnostic report.', False),
     'no-root-recovery': ('Review the original No-root operation',
         'Package outcomes and remaining setup are checked from the original saved evidence.',
         'Choose Review recovery options for the same saved TV connection. Unknown package or setup requests are not repeated.',False),
@@ -125,6 +128,11 @@ def for_error(error, phase, profile=None, pending=None):
             code = 'ssh-protocol'
         elif isinstance(error,(OSError,TimeoutError)) or 'NoValidConnectionsError' in names:
             code = network_failure_code(error)
+    observer = no_root_observer_details(getattr(error, 'no_root_observer', None))
+    if (code is None and edition == 'no-root' and phase == 'install-packages'
+            and observer.get('command') in ('storage-check', 'storage-select')
+            and observer.get('observer_reason') == 'foreign-reservation'):
+        code = 'no-root-reservation'
     if code is None and edition == 'root' and phase in ('activate-root', 'recover') and reason in ACTIVATION_CODES:
         code = reason
     if code is None and isinstance(pending, dict) and pending.get('recovery_protocol') == 'clean-removal-v1':

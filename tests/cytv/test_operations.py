@@ -79,6 +79,7 @@ class Remote:
                     if name.endswith('.ipk'):
                         files.update({'/media/developer/apps/'+name:data for name,data in package.data_files(raw).items()})
                 return 'CYTV_ORIGINAL_FILES_VERIFIED' if all(name in files and hashlib.sha256(files[name]).hexdigest()==digest for name,digest in expected.items()) else ''
+            if 'CYTV_SETUP_GENERATION' in code:return json.dumps('I'+'1'*32)
             if code==no_root_observer.STATE_CHECK:return 'CYTV_CONFIGURATION_PRIVATE'
         if 'CYTV_STOP_RETAINED' in command:return 'CYTV_START_ALLOWED'
         if command.startswith('LC_ALL=C df -Pk '):
@@ -1183,7 +1184,7 @@ class OperationTests(unittest.TestCase):
         calls = [c for c in remote.calls if c[0] == 'luna']
         installs = [c[2]['id'] for c in calls if c[1].endswith('/install')]
         self.assertEqual(installs, ['com.local.nativehome', 'com.gathin.tvhome'])
-        self.assertEqual(calls[-1][1:], ('com.webos.applicationManager/launch', {'id': 'com.local.nativehome', 'params': {'nativeHomeAuto': True}}))
+        self.assertEqual(calls[-1][1:], ('com.webos.applicationManager/launch', {'id': 'com.local.nativehome', 'params': {'nativeHomeSetup': 'I'+'1'*32}}))
         self.assertEqual(len([c for c in calls if c[1].endswith('/dev/listApps')]), 4)
         self.assertTrue(any(c[0] == 'upload' and c[1].endswith('ssap-key.json') and c[2] == 0o640 for c in remote.calls))
         self.assertIsNone(self.store.pending(installer.profile))
@@ -1334,7 +1335,8 @@ class OperationTests(unittest.TestCase):
         stop_command = ('if [ -f ' + operations.HELPER_STATE + '/controller.pid ]; then '
                         '/usr/bin/node || exit 1; '
                         'n=0; while [ -e ' + operations.HELPER_STATE + '/controller.pid ]; do '
-                        'n=$((n+1)); [ "$n" -le 15 ] || exit 1; sleep 1; done; fi')
+                        'n=$((n+1)); [ "$n" -le 15 ] || exit 1; sleep 1; done; '
+                        'else cat >/dev/null; fi')
         self.assertEqual([entry for entry in remote.run_inputs if entry[0] == stop_command],
                          [(stop_command, PROGRAM.encode(), 25)])
         stop = next(i for i,c in enumerate(remote.calls) if c == ('run', stop_command))

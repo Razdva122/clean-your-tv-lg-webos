@@ -8,8 +8,9 @@ test('Root service keeps different icon priorities independent and releases fail
   const methods = {},
     calls = [];
   const inventory = Object.assign(
-    (exec, uid, ids) =>
+    (exec, uid, ids, details) =>
       new Promise((resolve, reject) => {
+        assert.equal(details, true);
         calls.push({
           ids: ids === undefined ? [] : JSON.parse(JSON.stringify(ids)),
           resolve,
@@ -92,10 +93,14 @@ test('Root service keeps different icon priorities independent and releases fail
     2,
     'an older completion cannot clear the newer pending slot'
   );
-  calls[1].resolve([{ id: 'late', icon: 'data:image/png;base64,aWNvbg==' }]);
+  calls[1].resolve({
+    apps: [{ id: 'late', icon: 'data:image/png;base64,aWNvbg==' }],
+    installedIds: ['late']
+  });
   await new Promise((resolve) => setImmediate(resolve));
   assert.equal(legacy[0].apps[0].icon, '');
   assert(pinned[0].apps[0].icon);
+  assert.deepEqual(pinned[0].installedIds, ['late']);
   assert.deepEqual(pinned, same);
   const failed = request({ priorityIds: ['other'] });
   calls[2].reject(Error('unavailable'));

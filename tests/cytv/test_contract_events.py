@@ -8,6 +8,8 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
+from cytv import tv_sources
+
 ROOT = Path(__file__).resolve().parents[2]
 BASE = dict(schema=1, component='storage', operation='inspect', phase='read',
             field='mode', expected='private', actual={'mode': 420}, decision='refuse', count=1)
@@ -84,13 +86,14 @@ class TrustedSourcesTests(unittest.TestCase):
         from cytv import tv_sources
         with tempfile.TemporaryDirectory() as tmp:
             tv_sources.stage_sources(Path(tmp)/'cytv/tv')
-            for name in ('contract-events','state-permissions'):
-                self.assertEqual((Path(tmp)/'cytv/tv'/ (name+'.js')).read_bytes(), (ROOT/'native/app'/(name+'.js')).read_bytes())
+            for name in tv_sources.NAMES:
+                self.assertEqual((Path(tmp)/'cytv/tv'/ (name+'.js')).read_bytes(), tv_sources.trusted_source(name).encode())
         code = tv_sources.node_adapter('contract-events', "console.log(JSON.stringify(contract.describe('SECRET')));")
-        result = subprocess.check_output(['node','-e',code],cwd=tempfile.gettempdir(),text=True)
+        # Send the full adapter over stdin, as on the TV, without Windows argv limits.
+        result = subprocess.check_output(['node'],input=code,cwd=tempfile.gettempdir(),text=True)
         self.assertEqual(json.loads(result), {'type':'string','length':6})
         code = tv_sources.node_adapter('contract-events', "throw new Error('SECRET');")
-        result = subprocess.run(['node','-e',code],capture_output=True,text=True)
+        result = subprocess.run(['node'],input=code,capture_output=True,text=True)
         self.assertNotEqual(result.returncode,0)
         self.assertNotIn('SECRET', result.stdout+result.stderr)
         self.assertEqual(json.loads(result.stdout)['schema'],1)
@@ -108,6 +111,11 @@ class ResourceDeliveryTests(unittest.TestCase):
         self.assertEqual(files['usr/palm/applications/com.local.nativehome/contract-events.js'],
                          files['usr/palm/services/com.local.nativehome.service/contract-events.js'])
 
+    def test_android_tracks_every_canonical_contract_as_build_input(self):
+        gradle=(ROOT/'android/app/build.gradle').read_text()
+        for source in tv_sources.SOURCES.values():
+            self.assertIn("inputs.file rootProject.file('../"+source+"')",gradle)
+
     def test_android_stages_exact_host_resources(self):
         import runpy
         stage = runpy.run_path(str(ROOT/'android/stage.py'))
@@ -118,9 +126,9 @@ class ResourceDeliveryTests(unittest.TestCase):
             payload=project/'build/cytv/payload';payload.mkdir(parents=True);(payload/'payload.json').write_text('{}')
             with patch.dict(stage['main'].__globals__, {'ROOT':project,'verify_payload':lambda _: {'files':{}}}), patch('subprocess.check_output',return_value='fixture'):
                 stage['main']()
-            for name in ('contract-events','state-permissions'):
+            for name in tv_sources.NAMES:
                 self.assertEqual((project/'android/app/build/generated/python/cytv/tv'/(name+'.js')).read_bytes(),
-                                 (ROOT/'native/app'/(name+'.js')).read_bytes())
+                                 tv_sources.trusted_source(name).encode())
 
     def test_cli_freezer_stages_and_passes_both_trusted_resources(self):
         import runpy
@@ -132,8 +140,8 @@ class ResourceDeliveryTests(unittest.TestCase):
                     specs=[command[i+1] for i,v in enumerate(command) if v=='--add-data']
                     spec=next(v for v in specs if v.endswith(os.pathsep+'cytv/tv'))
                     staged=Path(spec.rsplit(os.pathsep,1)[0])
-                    for name in ('contract-events','state-permissions'):
-                        self.assertEqual((staged/(name+'.js')).read_bytes(),(ROOT/'native/app'/(name+'.js')).read_bytes())
+                    for name in tv_sources.NAMES:
+                        self.assertEqual((staged/(name+'.js')).read_bytes(),tv_sources.trusted_source(name).encode())
             with patch.dict(build['main'].__globals__, {'ROOT':project,'build_payload':lambda:project/'payload'}), patch.object(sys,'argv',['build']), patch('subprocess.run',side_effect=run):
                 build['main']()
 

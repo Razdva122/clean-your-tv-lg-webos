@@ -36,7 +36,16 @@ class TVNameTests(unittest.TestCase):
         from tests.cytv.test_cli import CLITests
         from tests.cytv.test_operations import Remote
         for flag,expected in [([], None),(['--tv-name','Aashiyaan'],'Aashiyaan')]:
-            with self.subTest(flag=flag),tempfile.TemporaryDirectory() as temp,patch('cytv.cli.Installer') as cls,patch('cytv.cli.package.verify_payload',return_value={}),patch('cytv.tv.SSAP') as ssap,patch('cytv.install_settings.apply_services') as apply:
+            with (
+                self.subTest(flag=flag),
+                tempfile.TemporaryDirectory() as temp,
+                patch('cytv.cli.Installer') as cls,
+                patch('cytv.cli.package.verify_payload', return_value={}),
+                patch('cytv.cli.payload_dir', return_value=Path(temp)),
+                patch('cytv.tv.SSAP') as ssap,
+                patch('cytv.install_settings.apply_services') as apply,
+            ):
+                (Path(temp) / 'fallback.png').write_bytes(b'test-fallback')
                 ssap.return_value.__enter__.return_value.inventory.return_value={'apps':[{'id':'example.app'}],'inputs':[]}
                 cls.return_value.version_summary.return_value=[]
                 cls.return_value.install.return_value={}

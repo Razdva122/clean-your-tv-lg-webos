@@ -355,8 +355,12 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                 store.request_clean_removal(profile)
             from .recovery import removal_plan
             cleanup=(store.pending(profile) or {}).get('recovery_protocol')=='clean-removal-v1'
+            observer_support = (profile.get('connection') == 'root-ssh'
+                and (store.pending(profile) or {}).get('recovery_protocol') == 'no-root-original-stream-v1'
+                and args.command in ('status', 'doctor', 'recover'))
             if args.command in ('uninstall','recover') and cleanup:
                 removal_plan(write,store,profile,state='waiting',connecting=True)
+            if (args.command in ('uninstall','recover') and cleanup) or observer_support:
                 try:manifest=package.verify_payload(payload)
                 except FileNotFoundError:
                     raise UserError('Release payload is missing. Download a built cytv executable or run python scripts/build-cytv.py --payload-only from source.') from None
@@ -589,9 +593,12 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                     write('To restore LG Home, use Return to LG Home in settings or run cytv restore.')
                     write('Root emergency exit: three short Home presses within two seconds.')
                 else:
-                    write("After installation, press Home to try it. If LG Home opens, open Home Helper from the TV's apps.")
                     write('Three short Home presses within two seconds return to LG Home. To restart Home control, open Home Helper, choose Start Helper and confirm. Your saved Home screen choice is kept.')
-                    write('Packages installed; Home Helper launch requested. Check short Home, arrows/OK, Back, volume, standby and cold boot.')
+                    if result.get('activation_cancelled') is True:
+                        write('Packages verified. A new Stop cancelled Home activation. Start Helper on the TV when ready.')
+                    else:
+                        write("After installation, press Home to try it. If LG Home opens, open Home Helper from the TV's apps.")
+                        write('Packages installed; Home Helper launch requested. Check short Home, arrows/OK, Back, volume, standby and cold boot.')
                     if profile.get('connection') == 'root-ssh':
                         write('No-root is installed using root SSH. Keep this saved connection for status, recovery and removal.')
                     else:
@@ -691,7 +698,9 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
             if args.command in ('status', 'doctor', 'restore'):
                 pending = store.pending(profile)
                 if pending:
+                    from .recovery import missing_root_deployment_plan
                     write.recovery(profile)
+                    missing_root_deployment_plan(write, profile, pending, result)
         return 0
     except (EOFError, KeyboardInterrupt, StopIteration):
         checks.finish_running(cancelled=True)

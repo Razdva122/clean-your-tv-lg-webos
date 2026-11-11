@@ -62,7 +62,13 @@ Instalace Root pokračuje s upozorněním, pokud nelze načíst vstupy televizor
 1. Otevřete jinou aplikaci na TV a krátce stiskněte **Home**. Má se otevřít Clean Your TV. V průvodci uveďte, co jste viděli; pokud jste test neprovedli, přeskočte ho.
 2. Vyzkoušejte šipky, OK, Zpět, hlasitost a zvuk. Samostatně ověřte pohotovostní režim/probuzení a spuštění po odpojení napájení. Samotná úspěšná instalace tyto funkce neověřuje.
 
+Nastavení No-root zapne Home po ověření balíčků. Nové zastavení během nastavení zruší aktivaci. Home můžete později vypnout v nastavení.
+
+Použijte původní uložené připojení a data obnovení. Pokud se ztratila, znovu se připojte ke stejné TV a zvolte Odinstalovat Clean Your TV. Před nastavením dokončete ověřené odebrání; nemažte soubory rezervace. Pokud se odebrání zastaví, uložte diagnostickou zprávu.
+
 ## 6. Každodenní ovládání
+
+Pokud instalátor hlásí „Nastavení Root není dokončeno, ale v TV chybí záznam nasazení.“: Zvolte Zkontrolovat možnosti obnovy pro odebrání Clean Your TV a potom spusťte nastavení samostatně. Úplné odebrání odstraní také No-root Home a Helper; nejprve zálohujte předvolby.
 
 Podpora IR v No-root: uvolnění Home po krátkém stisku naplánuje Clean přibližně za 700 ms; nejprve může probliknout LG Home. Podržení Home zůstává webOS a trojí stisk stále zastaví Helper. Přístup v běžném Developer Mode není ověřen; neměňte oprávnění vstupních zařízení.
 
@@ -72,7 +78,7 @@ Podpora IR v No-root: uvolnění Home po krátkém stisku naplánuje Clean přib
 
 Pro opětovné zapnutí No-root otevřete **Home Helper**, zvolte spuštění Helperu a potvrďte. Pro Root zapněte **Změnit Home** v nastavení Home. **Otevřít LG Home** otevře původní prostředí jen jednou; pro trvalé používání LG Home vypněte Změnit Home. Nespouštějte oba ovladače Home současně. Při opakované chybě nechte LG Home aktivní.
 
-Aktualizace znovu nespustí zastavený No-root Helper. Obnovte jej výslovně výše uvedeným postupem; ručně nemažte značky zastavení.
+Automatické aktualizace v TV nespouštějí zastavený Helper. Pro samostatné obnovení použijte Spustit Helper; nemažte soubory Stop.
 
 ## Potřebujete pomoc?
 
@@ -93,6 +99,8 @@ Vyberte v Údržbě **Odinstalovat Clean Your TV** se stejným uloženým připo
 Na starších televizorech bez samostatné aplikace LG Home může odebrání No-root přepnout obrazovku na živé vysílání. Nechte televizor zapnutý a na požádání jej restartujte; nemažte data obnovení ani neresetujte televizor.
 
 Na výzvu odpojte TV od napájení, znovu připojte, počkejte na síť a vyberte **Zkusit znovu**. Pohotovost nebo Quick Start není úplný restart; CYTV TV automaticky nerestartuje. Při ztrátě spojení je zkontrolujte a opakujte stejný cíl odebrání bez dalšího průvodce obnovou. Při odmítnutí přístupu použijte požadované připojení Root; pokud je TV zaneprázdněn, počkejte a zkuste znovu. Úspěch se zobrazí až po ověření závěrečného úklidu. Zachovejte klíče a původní zprávy. Nouzové ovládání a souhlas se sdílením výše platí dál.
+
+Pokud instalátor nemůže ověřit požadovaný úplný restart, uložte a přiložte diagnostickou zprávu. Zachovejte uložené připojení a data obnovy. Neopakujte stále odpojování napájení a nemažte ručně nedokončenou operaci.
 
 Je po neúspěšné nebo přerušené instalaci přímo dostupná obnova. Pokud No-root nemůže pokračovat, potvrďte jednou úplné odebrání. Při dočasné ztrátě spojení nebo zaneprázdněném procesu CYTV proběhnou nejvýše tři pokusy. Je-li nutný Root, zvolte **Připojit přes Root** pro stejnou TV; ověřený úklid Root dokončí i její zablokované odebrání No-root. Po chybě aktivace Root se CYTV pokusí obnovit a ověřit LG Home bez opakované aktivace. Zrušení s nedokončenou prací zachová zprávu a kroky obnovy. Nouzové zastavení zůstane zachováno.
 

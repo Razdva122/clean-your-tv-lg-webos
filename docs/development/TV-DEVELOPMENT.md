@@ -119,6 +119,67 @@ already started. Use a new `--output` directory. Ambiguous concurrent dispatches
 stop rather than guess a run. A changed branch, attempt or artifact requires
 review and a new selection; the tool does not silently follow a newer source.
 
+## Select device checks and owner actions
+
+Use the smallest case set that can establish whether the changed behavior is
+safe to ship. Record the changed input, expected behavior, artifact and TV
+state in the verification ledger. Reuse a prior result when the relevant
+inputs, TV state and artifact match. A new branch or release number alone
+does not select a physical case.
+
+| What changed | Agent checks first | When to involve the owner and exactly what to ask |
+| --- | --- | --- |
+| Installer setup, retained receipts, file permissions, cleanup or edition handoff | Run the ordinary installer and check original operation identity, package versions, protected state, Stop and terminal readback. Use a verified software restart for reboot-dependent file and cleanup cases. | If SSH fails to return, check discovery and the saved connection. If the screen is off, ask the owner to turn it on with the remote. Apply the AC criteria below if recovery still needs a verified full restart. For an on-screen pairing prompt, ask the owner to approve it and report the outcome. |
+| Home launch, foreground routing or a launcher surface | Start from a known app or input, send one network HOME and check the exact foreground or surface. | If the change affects the physical input hook, or the network path fails to exercise the affected route, ask the owner to open the named app/input, short-press Home once and report the screen that opens. |
+| Native key filter, relay event delivery, key release or emergency Stop | Feed synthetic down/up events through the real filter/relay and check Stop, ungrab and key release. Check persistent Stop and stock Home on TV. | If the change affects physical key timing, device selection, hardware input release or the physical emergency path, ask the owner to open the named app/input, press Home three times within two seconds and then short-press Home once. Ask whether LG Home opened and stayed open, and whether arrows and volume still work when those controls are in scope. |
+| Power handling, active Helper startup or behavior after loss of mains | Check startup status, actual processes, file modes and Home routing. Use a verified software restart for cleanup and permission checks when it preserves the case preconditions. Use standby for same-boot power behavior. | Request an AC cycle only for a selected case that requires loss of mains and lacks applicable evidence. Ask the owner to unplug for 10 seconds, reconnect, turn on the TV and report when the screen returns. Leave Helper controls untouched until the agent reads its automatic state. For a physical standby case, use the remote with mains connected. |
+| Audio routing, input restoration or a physical display state | Use available readback for the expected app, input and settings. | Ask for the smallest observation the agent cannot measure. For audio, name the app/input and the expected result, such as audible video and one volume change. A volume indicator alone does not establish audible playback. |
+
+Do not unplug the TV as part of the default release pass. Select an AC cycle
+only when a changed startup hook, boot-state reader, permission repair used
+during automatic startup, or power-loss recovery path could affect the result,
+when reproducing a failure observed specifically after loss of mains, or when
+recovery requires a verified full restart and no safe software restart is
+available. A software restart that changes the precondition, for example by
+latching Stop while an active Helper shuts down, establishes the need for AC
+evidence only for that affected case. Reuse applicable evidence when available.
+
+Before requesting the owner's help, record the affected behavior, expected
+failure and why standby, a verified software restart, fixtures and existing
+device evidence cannot answer the question. Compare the actual packaged files
+and trace the changed branches. Carry forward an AC result on the same
+model, firmware and relevant starting state when the startup path and its
+dependencies are equivalent. Record the earlier build and the relevant
+comparison. A version bump, different aggregate IPK hash, or a change confined
+to a Stop or removal path does not by itself require unplugging the TV. Run
+those affected branches with the final package using the ordinary operation,
+verified restart or matching regression fixtures.
+
+Software restart on the tested Root-accessible C3 uses ordinary
+`/sbin/reboot` through the saved SSH identity. Use it only after checking
+that the active operation is safe to restart. Confirm uptime reset and a
+new installer boot session or disappearance of a unique temporary QA
+marker. Preserve the existing operation receipt and verify that the ordinary
+continuation accepts the restart. A kernel boot ID can be reused. Standby or
+Quick Start can leave the same session running.
+
+On OLED55C3RLA firmware 43.21.71, software restart and AC power loss both
+expanded Helper file modes to 0777. Software restart with an active Helper
+latched Stop before boot after input cleanup failed. AC power loss let the
+same Helper start automatically and restore its private key mode. Reuse
+software restart for equivalent cleanup and permission cases on this setup.
+Pause standby/wake, software restart and AC tests if the TV shows an OLED
+Pixel Cleaning notice in progress or repeatedly reports incomplete cleaning.
+Let the cycle finish in standby with mains connected. LG identifies loss of
+mains and early wake, including HDMI-CEC wake, as causes of interrupted
+cleaning. [LG Pixel Cleaning guidance](https://www.lg.com/us/support/help-library/how-to-stop-repeated-pixel-cleaning-notifications-on-your-lg-oled-tv--20155440799135)
+
+Keep AC recovery and physical key evidence distinct. A network HOME message
+has no specified press duration. Three network messages opened LG Home
+briefly on this C3 without triggering native emergency Stop. The relay
+simulation covers valid timed down/up pairs and release behavior.
+[Recorded C3 comparison](../history/2026-11-11-release-1.17.1-candidate.md#c3-software-restart-versus-ac-power-cycle)
+
 ## Explicit device preflight and installation
 
 Use an existing saved Root `cytv` connection profile and a previously verified SSH

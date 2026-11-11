@@ -12,6 +12,8 @@ from .errors import (TVRejected, UserError, TVCommandError, TV_STORAGE_FULL, CLE
                      OBSERVER_EXCEPTION_NAMES, OBSERVER_EXCEPTION_CODES,
                      OBSERVER_FILESYSTEM_OPERATIONS, no_root_cleanup_details)
 
+from .tv_sources import node_loader, trusted_source
+
 APPS = ('com.local.nativehome', 'com.gathin.tvhome', 'com.cleanyourtv.updater')
 RESTART_MESSAGE = 'Restart the TV completely, then choose Try again to finish removal.'
 ROOT_MESSAGE = 'Some project files require Root access. Reconnect using Root to finish removal.'
@@ -23,6 +25,9 @@ var cleanupStep='runtime',cleanupDirectory;
 (function(){
 'use strict';
 var fs=require('fs'),path=require('path'),c=require('constants'),zlib=require('zlib'),crypto=require('crypto');
+var bootProof=(function(){var module={exports:{}},exports=module.exports;
+/* CYTV_BOOT_PROOF_CONTRACT */
+return module.exports;}());
 var input=JSON.parse(process.argv[process.argv.length-1]),uid=process.getuid();
 if(['inventory','idle','sweep','stop','root-package','stage-carrier','boot-create','boot-probe','boot-retire','boot-release'].indexOf(input.action)<0)throw Error('invalid-cleanup-action');
 var base='/media/developer/apps/usr/palm',publicRoot='/media/developer/temp';
@@ -32,9 +37,8 @@ if(input.connection==='root-ssh'){
 }
 var apps=['com.local.nativehome','com.gathin.tvhome','com.cleanyourtv.updater'];
 var services=['com.local.nativehome.service','com.gathin.tvhome.renewal','com.cleanyourtv.updater.service'];
-var reply={schema:1,boot_id:fs.readFileSync('/proc/sys/kernel/random/boot_id','utf8').trim(),present:[],blocked:[],root_present:[],startup_services:[],external_update_hint:null,resident_installer:false,staging_ids:input.staging_ids||[]};
+var reply={schema:1,boot_id:input.action.indexOf('boot-')===0?null:bootProof.readKernel(),present:[],blocked:[],root_present:[],startup_services:[],external_update_hint:null,resident_installer:false,staging_ids:input.staging_ids||[]};
 if(!Array.isArray(reply.staging_ids)||reply.staging_ids.length>128||reply.staging_ids.some(function(id){return typeof id!=='string'||!/^[a-f0-9]{32}$/.test(id);}))throw Error('invalid-staging-scope');
-if(!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(reply.boot_id))throw Error('invalid-boot-identity');
 function exists(p){try{return fs.lstatSync(p);}catch(e){if(e.code==='ENOENT')return null;throw e;}}
 function same(a,b){return a.dev===b.dev&&a.ino===b.ino;}
 function fail(){throw Error('unsafe-path');}
@@ -63,45 +67,11 @@ function remove(p,expected){
 function blocked(scope,error){reply.blocked.push({scope:scope,reason:error.code==='EACCES'||error.code==='EPERM'?'permission-denied':'unsafe-path'});}
 function visit(p,scope){try{var s=exists(p);if(!s)return;if(input.action==='sweep'||input.action==='root-package')remove(p,s);if(exists(p))reply.present.push(scope);}catch(e){blocked(scope,e);}}
 function rootHint(p,scope){try{if(exists(p))reply.root_present.push(scope);}catch(e){if(e.code==='EACCES')reply.root_present.push(scope);else blocked(scope,e);}}
-// A per-approved-goal volatile marker also distinguishes firmware that reuses
-// kernel UUIDs after restoring a snapshot. Inventory never creates this marker.
+// Every boot identity/proof rule lives in the shared host-bundled contract.
 if(input.action.indexOf('boot-')===0){
- var bootRoot='/tmp';
- cleanupStep='boot-root';var parent=fs.lstatSync(bootRoot);cleanupDirectory=parent;ancestry(bootRoot);
- if(parent.uid!==0||(parent.mode&4095)!==1023||typeof input.removal!=='string'||!/^[a-f0-9]{32}$/.test(input.removal))fail();
- var marker='cytv-removal-'+input.removal+'.boot',prefix='cytv-removal-v1:'+input.removal+':',proof=input.proof;
- var markerStat=function(s){if(!s.isFile()||s.isSymbolicLink()||s.uid!==uid||(s.mode&4095)!==384||s.nlink!==1||s.size!==prefix.length+37)fail();};
- var markerRead=function(expected){cleanupStep='boot-read';var s=exists(marker);if(!s)return null;markerStat(s);
-  var fd=fs.openSync(marker,c.O_RDONLY|c.O_NOFOLLOW|c.O_NONBLOCK),b=new Buffer(s.size),offset=0;
-  try{var opened=fs.fstatSync(fd);markerStat(opened);if(!same(s,opened))fail();
-   while(offset<b.length){var n=fs.readSync(fd,b,offset,b.length-offset,offset);if(n<=0)fail();offset+=n;}
-   var after=fs.lstatSync(marker);markerStat(after);if(!same(s,after))fail();
-  }finally{fs.closeSync(fd);}
-  var text=b.toString(),kernel=text.slice(prefix.length,-1);
-  if(text!==prefix+kernel+'\n'||!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(kernel))fail();
-  if(expected&&(!same(s,expected)||kernel!==expected.kernel))fail();return {stat:s,kernel:kernel};
- };
- at(bootRoot,parent,function(directory){
-  cleanupStep='boot-proof';
-  if(input.action!=='boot-create'){
-   if(!proof||Object.keys(proof).sort().join(',')!=='dev,goal,ino,kernel,schema'||proof.schema!==1||proof.goal!==input.removal||typeof proof.kernel!=='string'||!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(proof.kernel)||[proof.dev,proof.ino].some(function(n){return typeof n!=='number'||n<0||n>9007199254740991||Math.floor(n)!==n;}))fail();
-  }
-  var item=markerRead(input.action==='boot-create'?null:proof);
-  if(input.action==='boot-create'){
-   // A lost create response can reuse only this exact owned goal. If a genuine
-   // kernel change preceded host capture, establish a fresh baseline first.
-   cleanupStep='boot-create';
-   if(item&&item.kernel!==reply.boot_id){remove(marker,item.stat);item=null;}
-   if(!item){var out=fs.openSync(marker,c.O_WRONLY|c.O_CREAT|c.O_EXCL|c.O_NOFOLLOW,384),bytes=new Buffer(prefix+reply.boot_id+'\n');
-    try{var offset=0;while(offset<bytes.length){var n=fs.writeSync(out,bytes,offset,bytes.length-offset,offset);if(n<=0)fail();offset+=n;}fs.fsyncSync(out);}finally{fs.closeSync(out);}fs.fsyncSync(directory);item=markerRead(null);}
-   reply.boot_proof={schema:1,goal:input.removal,kernel:item.kernel,dev:item.stat.dev,ino:item.stat.ino};
-  }else{
-   cleanupStep=input.action;
-   reply.boot_restarted=!item||proof.kernel!==reply.boot_id;
-   if(input.action==='boot-retire'){if(!reply.boot_restarted)fail();if(item)remove(marker,item.stat);}
-   if(input.action==='boot-release'&&item)remove(marker,item.stat);
-  }
- });process.stdout.write(JSON.stringify(reply));return;
+ var bootReply=bootProof.run(input,function(step,directory){cleanupStep=step;if(directory)cleanupDirectory=directory;});
+ Object.keys(bootReply).forEach(function(key){reply[key]=bootReply[key];});
+ process.stdout.write(JSON.stringify(reply));return;
 }
 if(input.action==='stage-carrier'){
  var index=apps.indexOf(input.app);if(index<0||!/^[a-f0-9]{32}$/.test(input.removal)||!/^[a-f0-9]{64}$/.test(input.sha256)||!(input.size>0&&input.size<1048576))fail();
@@ -180,13 +150,13 @@ function helperState(state){
 if(input.action==='stop'){
  var state=base+'/applications/'+apps[0]+'/state',s=null;
  try{s=exists(state);}catch(e){blocked('helper-control',e);}
- if(s)try{helperState(state);at(state,s,function(fd){
-  ['blocked','control.json'].forEach(function(name){var old=exists(name);if(old&&(!old.isFile()||old.nlink!==1))fail();});
-  if(!exists('blocked')){var marker=fs.openSync('blocked',c.O_WRONLY|c.O_CREAT|c.O_EXCL|c.O_NOFOLLOW,436);try{fs.writeSync(marker,new Buffer('stopped'),0,7,0);fs.fsyncSync(marker);}finally{fs.closeSync(marker);}}
-  var name='.cytv-stop-'+crypto.randomBytes(12).toString('hex'),control=fs.openSync(name,c.O_WRONLY|c.O_CREAT|c.O_EXCL|c.O_NOFOLLOW,420);
-  try{var b=new Buffer('{"cmd":"stop"}');fs.writeSync(control,b,0,b.length,0);fs.fsyncSync(control);}finally{fs.closeSync(control);}
-  fs.renameSync(name,'control.json');fs.fsyncSync(fd);
- });}catch(e){blocked('helper-control',e);}
+ if(s)try{
+  helperState(state);
+  (function(){
+   /* CYTV_HELPER_STORAGE_LOADER */
+   load('./state-permissions').requestStop(state,{legacyCleanup:true,expectedDirectory:s});
+  }());
+ }catch(e){blocked('helper-control',e);}
  var deadline=Date.now()+8000;
  var stopped=function(){var running=false;
   try{var pidFile=state+'/controller.pid',pidStat=exists(pidFile);if(pidStat){helperState(state);if(!pidStat.isFile()||pidStat.nlink!==1||pidStat.size>32)fail();var text=fs.readFileSync(pidFile,'utf8').trim();if(/^[1-9][0-9]{0,8}$/.test(text)){try{var args=fs.readFileSync('/proc/'+text+'/cmdline','utf8').split('\0');if(args[0]===apps[0]||args.indexOf(base+'/applications/'+apps[0]+'/native.js')>=0){process.kill(Number(text),0);running=true;}}catch(e){if(e.code!=='ENOENT'&&e.code!=='ESRCH')throw e;}}}}
@@ -231,7 +201,8 @@ function next(){if(!stages.length){process.stdout.write(JSON.stringify(reply));r
  }file();
 }next();
 }());
-'''
+'''.replace('/* CYTV_BOOT_PROOF_CONTRACT */', trusted_source('boot-proof')).replace(
+    '/* CYTV_HELPER_STORAGE_LOADER */', node_loader(('state-permissions', 'contract-events')))
 
 
 def _program(request):
@@ -246,7 +217,7 @@ def _program(request):
  var detail={step:cleanupStep,failure:'runtime-error',
   exception_name:category(error&&error.name,NAMES),exception_code:category(error&&error.code,CODES),
   filesystem_operation:category(error&&error.syscall,OPERATIONS),
-  reason:category(error&&error.message,['unsafe-path','invalid-boot-identity','invalid-cleanup-action','invalid-staging-scope'])};
+  reason:category(error&&error.message,['unsafe-path','invalid-boot-identity','invalid-cleanup-action','invalid-staging-scope','kernel-boot-unchanged'])};
  if(cleanupDirectory){
   detail.directory_mode=('0000'+(cleanupDirectory.mode&4095).toString(8)).slice(-4);
   detail.directory_owner=cleanupDirectory.uid===0?'root':cleanupDirectory.uid===process.getuid()?'current-user':'other';
@@ -465,7 +436,7 @@ def continue_removal(installer, expected_pending):
         installer.store.checkpoint(installer.profile, cleanup_boot_proof=None, stage='requested')
         proof = _device(installer, 'boot-create')['boot_proof']
         installer.store.checkpoint(installer.profile, cleanup_boot_proof=proof,
-                                   cleanup_boot_id=proof['kernel'], cleanup_boot_release_started=False,
+                                   cleanup_boot_id=None, cleanup_boot_release_started=False,
                                    cleanup_boot_verified=False, stage='requested')
         return proof
     proof = pending.get('cleanup_boot_proof')
@@ -481,6 +452,13 @@ def continue_removal(installer, expected_pending):
         restarted = False
     else:
         restarted = _device(installer, 'boot-probe', proof=proof)['boot_restarted'] is True
+        if (proof.get('schema') == 2 and not restarted and
+                (pending.get('stage') == 'restart-required' or pending.get('cleanup_restart_first'))):
+            error = UserError('The TV restart could not be verified. Save the diagnostic report and keep recovery data.',
+                              reason_code='pending-operation')
+            error.no_root_cleanup = no_root_cleanup_details({'action':'boot-probe','step':'boot-proof',
+                'failure':'runtime-error','reason':'kernel-boot-unchanged'})
+            raise error
     installer.progress('Restoring TV controls…')
     stopped = _device(installer, 'stop')
     _check_access(stopped, defer_packages=True)

@@ -20,6 +20,97 @@ def fixture(root):
         (root/(name+'.ipk')).write_bytes(package.ipk(app,version,files))
 
 class BuildTests(unittest.TestCase):
+    def test_no_root_system_bootstrap_takes_only_completed_clean_handoff(self):
+        import os
+        import sys
+        from unittest.mock import patch
+        sys.path.insert(0, str(ROOT/'root-edition'))
+        import installation
+        setup = load('setup')
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp).resolve()
+            store = installation.Store(path/'installation', uid=os.getuid())
+            ownership = installation.Ownership(store)
+            roots = tuple(path/name for name in ('root', 'root-updater', 'system-updater'))
+            for root, name, value in zip(roots, ('deploy', 'bootstrap', 'bootstrap'), (
+                {'version': 1, 'app': 'com.cleanyourtv.root.preview', 'stage': 'cancellation-admitted'},
+                {'phase': 'cancellation-admitted'}, {'phase': 'cancellation-admitted'},
+            )):
+                installation.Store(root, uid=os.getuid()).write(name, value)
+            original, removal, fence, successor, lease = (letter*32 for letter in 'abcde')
+            predecessor = dict(operation=original, removal=removal, lease=fence)
+            clean = dict(schema=1, protocol='clean-removal-v1', operation=original,
+                         removal=removal, lease='f'*32, final_fence=fence, final_original_lease='f'*32,
+                         stage='verified-clean', state='complete', current=True,
+                         result={'verified_clean': True, 'private_cleanup_verified': True})
+            binding = dict(schema=1, protocol='no-root-root-handoff-v1', operation=successor,
+                           lease=lease, predecessor=predecessor, plan_sha256='0'*64,
+                           source_sha256='1'*64, effects_started=True)
+            store.write('clean-removal-'+original, clean)
+            store.write('operation', dict(schema=1, id=lease, owner='no-root', stage='reserved',
+                                          journal='no-root-'+successor+'.json', terminal=False))
+            journals = dict(installation.JOURNALS, **{
+                'deploy': (roots[0]/'deploy.json', 'stage', {'installed-recovery-only'}),
+                'root-bootstrap': (roots[1]/'bootstrap.json', 'phase', {'complete'}),
+                'system-bootstrap': (roots[2]/'bootstrap.json', 'phase', {'complete'}),
+            })
+            inodes = [root.stat().st_ino for root in roots]
+            read = lambda file: installation._optional_record(installation.Store(file.parent, uid=os.getuid()), file.name) if file.is_file() else None
+            with patch.object(installation, 'JOURNALS', journals):
+                for evidence in (binding, dict(binding, completed=True, revoked=True)):
+                    store.write('no-root-'+successor, evidence)
+                    with self.assertRaises(installation.Busy):
+                        with setup.bootstrap_operation('no-root', False, lambda: None, ownership=ownership, read=read):
+                            self.fail('unverified handoff admitted')
+                store.write('no-root-'+successor, dict(binding, completed=True))
+                with setup.bootstrap_operation('no-root', False, lambda: None, ownership=ownership, read=read):
+                    self.assertEqual(ownership.status()['owner'], 'system-bootstrap')
+                    self.assertTrue(all(not root.exists() for root in roots))
+                    archived = path/'installation'/('component-fences-'+original)
+                    self.assertEqual([ (archived/root.name).stat().st_ino for root in roots], inodes)
+                reserved=ownership.status()
+                self.assertEqual(reserved['stage'], 'reserved')
+                with setup.bootstrap_operation('no-root', False, lambda: None, ownership=ownership, read=read):
+                    self.assertEqual(ownership.status(), reserved)
+                    installation.Store(roots[2], uid=os.getuid()).write('bootstrap', {'phase': 'complete'})
+                self.assertTrue(ownership.status()['terminal'])
+                self.assertEqual(store.read('clean-removal-'+original), clean)
+
+    def test_small_verified_read_does_not_allocate_the_maximum_file_limit(self):
+        import tracemalloc
+        setup=load('setup')
+        with tempfile.TemporaryDirectory() as tmp:
+            path=Path(tmp).resolve()/'small';expected=b'baseline'*1024;path.write_bytes(expected)
+            tracemalloc.start()
+            try:
+                actual=setup.safe(path)
+                _,peak=tracemalloc.get_traced_memory()
+            finally:tracemalloc.stop()
+            self.assertEqual(actual,expected)
+            self.assertLess(peak,1024*1024,'Small reads must not reserve the 96 MiB admission limit')
+
+    def test_verified_read_refuses_file_growth_or_truncation_after_stat(self):
+        import os
+        from unittest.mock import patch
+        setup=load('setup');original=os.fstat
+        with tempfile.TemporaryDirectory() as tmp:
+            path=Path(tmp).resolve()/'changing'
+            for changed in (b'short',b'original-extra'):
+                with self.subTest(changed=changed):
+                    path.write_bytes(b'original')
+                    def change_after_stat(fd):
+                        info=original(fd);path.write_bytes(changed);return info
+                    with patch.object(setup.os,'fstat',side_effect=change_after_stat):
+                        with self.assertRaisesRegex(ValueError,'changed'):
+                            setup.safe(path)
+
+    def test_verified_read_preserves_oversize_guard(self):
+        setup=load('setup')
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp).resolve();path=root/'oversize'
+            with path.open('wb') as stream:stream.truncate(96*1024*1024+1)
+            with self.assertRaisesRegex(ValueError,'Unsafe file'):setup.safe(path)
+
     def test_registration_refresh_restarts_launcher_without_enabling_home(self):
         setup=load('setup')
         for edition,app in [('root','com.cleanyourtv.root.preview'),('no-root','com.gathin.tvhome')]:

@@ -73,9 +73,15 @@ Instalacja Root jest kontynuowana z ostrzeżeniem, jeśli nie można odczytać w
 1. Otwórz inną aplikację na TV i krótko naciśnij **Home**. Powinien otworzyć się Clean Your TV. W kreatorze zaznacz, co zobaczyłeś; pomiń test, jeśli go nie wykonałeś.
 2. Sprawdź strzałki, OK, Wstecz, głośność i dźwięk. Osobno sprawdź czuwanie/wybudzenie i uruchomienie po odłączeniu zasilania. Sama udana instalacja nie sprawdza tych działań.
 
+Konfiguracja No-root włącza Home po weryfikacji pakietów. Nowe zatrzymanie podczas konfiguracji anuluje aktywację. Home można później wyłączyć w ustawieniach.
+
+Użyj pierwotnego zapisanego połączenia i danych odzyskiwania. Jeśli je utracono, połącz się ponownie z tym samym TV i wybierz Odinstaluj Clean Your TV. Zakończ zweryfikowane usuwanie przed konfiguracją; nie kasuj plików rezerwacji. Jeśli usuwanie się zatrzyma, zapisz raport diagnostyczny.
+
 <a id="obsługa-i-odzyskiwanie"></a>
 
 ## 6. Obsługa i odzyskiwanie
+
+Jeśli instalator wyświetla „Konfiguracja Root jest niedokończona, ale na TV brakuje jej rejestru instalacji.”: Wybierz Przejrzyj opcje odzyskiwania, aby usunąć Clean Your TV, a następnie osobno rozpocznij konfigurację. Pełne usunięcie obejmuje też No-root Home i Helper; najpierw zachowaj ustawienia.
 
 Obsługa pilotów IR w No-root: zwolnienie Home po krótkim naciśnięciu planuje otwarcie Clean po około 700 ms; najpierw może mignąć LG Home. Przytrzymanie Home pozostaje w gestii webOS, a trzy naciśnięcia nadal zatrzymują Helper. Dostęp w zwykłym Developer Mode nie jest potwierdzony; nie zmieniaj uprawnień urządzeń wejściowych.
 
@@ -85,7 +91,7 @@ Strzałki wybierają, OK otwiera; przytrzymaj OK, aby zmienić kolejność. Kró
 
 No-root: Aby wznowić sterowanie Home, otwórz Home Helper, wybierz Uruchom Helper i potwierdź. Zapisany wybór ekranu Home zostaje zachowany. Root: włącz **Zmień Home** w ustawieniach Home, aby wznowić. **Otwórz LG Home** otwiera LG Home jednorazowo bez zmiany celu przycisku Home. Aby przywrócić LG Home jako stały cel, wyłącz **Zmień Home**. Nie uruchamiaj obu kontrolerów jednocześnie. Przy powtarzającym się błędzie pozostań przy LG Home.
 
-Aktualizacja nie uruchamia ponownie zatrzymanego Helpera No-root. Wznów go jawnie zgodnie z opisem powyżej; nie usuwaj ręcznie znaczników zatrzymania.
+Automatyczne aktualizacje na TV nie uruchamiają zatrzymanego Helpera. Aby wznowić go osobno, użyj Uruchom Helper; nie kasuj plików zatrzymania.
 
 ## Potrzebujesz pomocy?
 
@@ -106,6 +112,8 @@ Wybierz **Odinstaluj Clean Your TV** w Konserwacji dla tego samego zapisanego po
 Na starszych telewizorach bez osobnej aplikacji LG Home usuwanie No-root może przełączyć ekran na telewizję na żywo. Pozostaw telewizor włączony i uruchom go ponownie, jeśli pojawi się prośba; nie usuwaj danych odzyskiwania ani nie resetuj telewizora.
 
 Gdy pojawi się prośba, odłącz zasilanie TV, podłącz ponownie, poczekaj na sieć i wybierz **Spróbuj ponownie**. Czuwanie lub Quick Start nie jest pełnym restartem; CYTV nie uruchamia TV ponownie automatycznie. Po utracie połączenia sprawdź je i ponów to samo usuwanie bez kolejnego kreatora odzyskiwania. Przy odmowie dostępu użyj żądanego połączenia Root; gdy TV jest zajęty, poczekaj i ponów. Sukces pojawi się dopiero po weryfikacji końcowego czyszczenia. Zachowaj klucze i oryginalne raporty. Sterowanie awaryjne i zgoda na udostępnianie nadal obowiązują.
+
+Jeśli instalator nie może potwierdzić wymaganego pełnego restartu, zapisz i dołącz raport diagnostyczny. Zachowaj zapisane połączenie i dane odzyskiwania. Nie odłączaj wielokrotnie zasilania ani nie kasuj ręcznie niedokończonej operacji.
 
 Po nieudanej lub przerwanej instalacji odzyskiwanie jest dostępne bezpośrednio. Jeśli No-root nie może kontynuować, potwierdź raz pełne usunięcie. Przy chwilowej utracie połączenia lub zajętym procesie CYTV usuwanie podejmuje do trzech prób. Jeśli potrzebny jest Root, wybierz **Połącz przez Root** dla tego samego TV; zweryfikowane czyszczenie Root kończy też zablokowane usuwanie No-root. Po błędzie aktywacji Root CYTV próbuje przywrócić i sprawdzić LG Home bez ponownej aktywacji. Anulowanie z niedokończoną pracą zachowuje raport i działania odzyskiwania. Stan zatrzymania awaryjnego pozostaje bez zmian.
 
