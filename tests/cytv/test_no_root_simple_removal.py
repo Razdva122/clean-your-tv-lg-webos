@@ -670,6 +670,20 @@ class SimpleRemoval(unittest.TestCase):
         self.assertTrue(self.remove()['restart_required']);self.assertTrue(self.boot_marker().exists())
         self.boot_marker().unlink();self.assertTrue(self.remove()['verified_clean'])
 
+    def test_cleanup_failed_generation_publication_invalidates_baseline_and_stops(self):
+        for existing in (False,True):
+            with self.subTest(existing=existing):
+                marker=self.own_file('apps/usr/palm/applications/com.local.nativehome/state/blocked','stopped')
+                generation=marker.parent/'stop-generation'
+                if existing:generation.write_text('I'+'a'*32);generation.chmod(0o664)
+                elif generation.exists():generation.unlink()
+                self.remote.transform=lambda code:code.replace("var token='S'+crypto.randomBytes(16)","var token='S'+(function(){throw Error('entropy unavailable');})()")
+                result=self.cleanup._device(self.installer,'stop')
+                self.assertTrue(result['blocked'])
+                self.assertEqual(generation.read_bytes(),b'')
+                self.assertEqual(marker.read_text(),'stopped')
+                self.assertEqual(json.loads((marker.parent/'control.json').read_text()),{'cmd':'stop'})
+
     def test_marker_tampering_never_proves_restart_or_removes_foreign_data(self):
         for kind in ('contents','mode','hardlink','symlink','replacement'):
             with self.subTest(kind=kind):
@@ -753,7 +767,15 @@ class SimpleRemoval(unittest.TestCase):
         # only ownership that an unprivileged host cannot reproduce with chown.
         prefix=('var reportedOwners='+json.dumps({str(p):ids for p,ids in owners.items()})+';'
                 'var actualLstat=fs.lstatSync;fs.lstatSync=function(p){var s=actualLstat(p),owner=reportedOwners[path.resolve(p)];'
-                'if(owner){s.uid=owner[0];s.gid=owner[1];}return s;};')
+                'if(owner){s.uid=owner[0];s.gid=owner[1];}return s;};'
+                # Generation publication preserves the modelled SDK GID. Keep
+                # the actual new-file FD and all IO; adapt this one unavailable
+                # host group just like the directory metadata above.
+                'var openedPaths={},actualOpen=fs.openSync,actualClose=fs.closeSync,actualFstat=fs.fstatSync;'
+                'fs.openSync=function(p){var fd=actualOpen.apply(fs,arguments);openedPaths[fd]=path.resolve(p);return fd;};'
+                'fs.closeSync=function(fd){delete openedPaths[fd];return actualClose.apply(fs,arguments);};'
+                'fs.fstatSync=function(fd){var s=actualFstat(fd),p=openedPaths[fd];'
+                'if(p&&path.basename(p).indexOf(".cytv-generation-")===0){var owner=reportedOwners[path.dirname(p)];if(owner)s.gid=owner[1];}return s;};')
         self.remote.transform=lambda code:code.replace('var base=',prefix+'var base=')
 
     def test_reported_sdk_shared_ancestry_allows_inventory_stop_and_clean_retry(self):
@@ -1095,3 +1117,14 @@ class SimpleRemoval(unittest.TestCase):
         (app/'state').symlink_to(foreign,target_is_directory=True)
         with self.assertRaises(UserError):self.remove()
         self.assertEqual(sorted(p.name for p in foreign.iterdir()),['keep'])
+
+    def test_cleanup_stop_always_advances_generation_even_with_existing_latch(self):
+        marker=self.own_file('apps/usr/palm/applications/com.local.nativehome/state/blocked','stopped')
+        self.cleanup._device(self.installer,'stop')
+        generation=marker.parent/'stop-generation'
+        self.assertTrue(generation.exists())
+        first=generation.read_text()
+        self.assertRegex(first,r'^S[a-f0-9]{32}$')
+        self.cleanup._device(self.installer,'stop')
+        self.assertNotEqual(generation.read_text(),first)
+        self.assertEqual(marker.read_text(),'stopped')

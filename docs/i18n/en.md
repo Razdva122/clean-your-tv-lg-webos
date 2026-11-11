@@ -71,6 +71,10 @@ Root setup continues with a warning if TV inputs cannot be read but the applicat
 1. Open another TV app and briefly press **Home**. Clean Your TV should open. Tell the wizard what you saw; leave the check skipped if you did not test it.
 2. Check arrows, OK, Back, volume and sound. Test standby/wake and a start after disconnecting power separately. A successful installation alone does not check these actions.
 
+No-root setup turns Home on after verifying the packages. A new Stop during setup cancels activation. You can turn Home off later in Settings.
+
+Use the original saved connection and recovery data. If they are lost, reconnect to the same TV and choose Uninstall Clean Your TV. Finish verified removal before setup; do not delete reservation files. If removal stops, save the diagnostic report.
+
 <a id="everyday-use-and-recovery"></a>
 
 ## 6. Everyday use and recovery
@@ -85,7 +89,7 @@ Arrows select tiles; OK opens them; hold OK to reorder. Short Back retains the a
 
 No-root: To restart Home control, open Home Helper, choose Start Helper and confirm. Your saved Home screen choice is kept. Root: turn **Change Home** on in Home settings to resume. **Open LG Home** opens LG Home once without changing routing. To restore LG Home as the persistent destination, turn **Change Home** off. Do not run both controllers together. If a failure repeats, leave LG Home active.
 
-An update does not restart a stopped No-root Helper. Resume it explicitly as described above; do not delete stop markers manually.
+Automatic updates on the TV do not restart a stopped Helper. To resume it separately, use Start Helper; do not delete Stop files.
 
 ## Need help?
 

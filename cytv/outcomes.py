@@ -4,7 +4,7 @@ from . import prompts
 FIELDS = {
     'packages': ('not-verified', 'verified'),
     'launch_request': ('not-requested', 'submitted-unconfirmed', 'accepted'),
-    'startup': ('not-checked', 'process-observed', 'root-state-verified', 'not-observed', 'unverified'),
+    'startup': ('not-checked', 'process-observed', 'root-state-verified', 'not-observed', 'unverified', 'stopped-during-setup'),
     'home_button': ('not-tested', 'confirmed-by-user', 'not-working'),
 }
 UNTESTED = 'The physical Home button has not been checked. A launch acknowledgement does not verify it.'
@@ -52,9 +52,16 @@ class SetupOutcome:
                       state, 'Startup could not be verified. Save the diagnostic report; do not reinstall blindly.')
         self.checks.update('startup', 'pass' if state in ('process-observed', 'root-state-verified') else 'unknown', detail)
 
+    def cancelled_by_stop(self):
+        self.values['startup'] = 'stopped-during-setup'
+        self.checks.update('startup', 'unknown', 'Packages verified. A new Stop cancelled Home activation. Start Helper on the TV when ready.')
+
     def review_home(self, ask, write, non_interactive=False):
         self.values['home_button'] = 'not-tested'
         self.checks.update('home-button', 'unknown', UNTESTED)
+        if self.values['startup'] == 'stopped-during-setup':
+            write('Packages verified. A new Stop cancelled Home activation. Start Helper on the TV when ready.')
+            return
         if non_interactive:
             return
         write.heading('Check the physical Home button')

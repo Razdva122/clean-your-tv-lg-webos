@@ -742,7 +742,7 @@ printf '%s' "$cytv_state"
         from . import no_root_observer
         pending = no_root_observer.begin(self, 'install', {'helper.ipk': helper, 'launcher.ipk': launcher},
             {HOME: self.manifest['home_version'], HELPER: self.manifest['helper_version']}, expected,
-            {'ssap-key.json': key_data, 'apps.json': apps_data})
+            {'ssap-key.json': key_data, 'apps.json': apps_data}, setup_activation=True)
         return self.continue_no_root(pending)
 
     def continue_no_root(self, expected_pending):

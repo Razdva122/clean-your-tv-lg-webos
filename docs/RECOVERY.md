@@ -490,3 +490,28 @@ Test standby and cold boot separately. [Compatibility and known limits](COMPATIB
 
 <!-- Anchors retained for links to earlier guide headings. -->
 <a id="no-root-controls-and-recovery"></a>
+
+
+## No-root setup activation and a lost computer profile
+
+New No-root setup requests Home On after package/configuration verification.
+It binds the current Stop generation into the original operation. A new Stop
+before or during activation cancels that activation; the installer keeps the
+Stop and reports package verification separately. Open Helper and explicitly
+start it when ready. Setup does not infer physical Home acceptance from a launch
+acknowledgement. You can turn Home off afterward in Home settings.
+
+Use the complete original saved connection and recovery data when available.
+A TV reservation is not stale merely because its computer profile is missing.
+If that profile is lost, establish a trusted connection to the same TV and
+explicitly choose **Uninstall Clean Your TV**. This starts a new removal goal;
+it does not adopt or replay the old install. Resident installer evidence requires
+a verified restart after the new baseline before the private sweep. Only final
+control/startup, package/registration/file absence and process checks can complete
+removal. Start setup separately afterward; never remove an owner file or edit a
+journal to qualify.
+
+On Developer Mode jails with execute-only `/tmp`, removal also needs the separate,
+not-yet-published [boot-proof correction #498](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/498).
+Its host checks are not physical removal acceptance. If removal stops, save the
+standard diagnostic report and keep recovery data rather than deleting reservations.

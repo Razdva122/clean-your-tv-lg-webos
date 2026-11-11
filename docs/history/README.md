@@ -1,5 +1,7 @@
 # Release history and device evidence
 
+- [No-root setup activation and lost-profile recovery, 2026-11-11](2026-11-11-issue495-stopped-reinstall.md): Stop-aware activation, focused verification and remaining device/next-release scope.
+
 - [v1.17.0 canonical candidate ledger, 2026-11-11](2026-11-11-release-1.17.0-candidate.md): prepared versions, reused source checks, exact local package preflight and mandatory Helper compatibility blocker before full dispatch.
 - [2026-11-11 — Developer Mode removal restart proof (#472)](2026-11-11-issue472-devmode-boot-proof.md): restricted `/tmp` handling, centralized boot evidence and explicit same-ID limit; device confirmation pending.
 

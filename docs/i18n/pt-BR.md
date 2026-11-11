@@ -71,6 +71,10 @@ A instalação Root continua com um aviso se as entradas da TV não puderem ser 
 1. Abra outro app na TV e pressione **Home** brevemente. Clean Your TV deve abrir. Informe ao assistente o que você viu; pule a verificação se não a realizou.
 2. Confira setas, OK, Voltar, volume e som. Teste separadamente espera/retomada e inicialização depois de desligar da tomada. A instalação bem-sucedida não verifica essas ações por si só.
 
+A configuração No-root ativa o Home após verificar os pacotes. Uma nova parada durante a configuração cancela a ativação. Você pode desativar o Home depois nas Configurações.
+
+Use a conexão e os dados de recuperação originais. Se foram perdidos, reconecte à mesma TV e escolha Desinstalar Clean Your TV. Conclua a remoção verificada antes da configuração; não exclua arquivos de reserva. Se a remoção parar, salve o relatório de diagnóstico.
+
 <a id="uso-e-recuperação"></a>
 
 ## 6. Uso e recuperação
@@ -85,7 +89,7 @@ Setas selecionam; OK abre; segure OK para reorganizar. Um toque em Voltar manté
 
 No-root: Para reiniciar o controle de Home, abra Home Helper, escolha Iniciar Helper e confirme. Sua tela Home escolhida será mantida. Root: ative **Alterar Home** nas configurações do Home para retomar. **Abrir LG Home** abre LG Home uma vez sem mudar o destino de Home. Para restaurar LG Home como destino permanente, desative **Alterar Home**. Nunca execute os dois controladores juntos. Se a falha voltar, mantenha LG Home ativo.
 
-Uma atualização não reinicia um Helper No-root parado. Retome-o explicitamente como descrito acima; não exclua manualmente os marcadores de parada.
+Atualizações automáticas na TV não reiniciam Helper parado. Para retomá-lo separadamente use Iniciar Helper; não exclua arquivos de parada.
 
 ## Precisa de ajuda?
 
