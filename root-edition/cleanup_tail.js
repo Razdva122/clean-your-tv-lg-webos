@@ -329,6 +329,70 @@ function routingUntouched() {
     return false;
   return unownedRouting();
 }
+function readOnlyMount(options) {
+  return options.indexOf('ro') !== -1 && options.indexOf('rw') === -1;
+}
+function mmcImageDevice(mount) {
+  var mmc = /^179:([0-9]+)$/.exec(mount.fields[2]);
+  if (
+    mount.fields[3] !== '/' ||
+    !mmc ||
+    Number(mmc[1]) >= 256 ||
+    mount.filesystem !== 'squashfs' ||
+    !readOnlyMount(mount.fields[5].split(',')) ||
+    !readOnlyMount(mount.options)
+  )
+    return null;
+  return 179 * 256 + Number(mmc[1]);
+}
+function coversMount(target, path) {
+  return target === '/' || target === path || path.indexOf(target + '/') === 0;
+}
+function stockBspOverlay(mounts, overlay, homeDevice, appDevice) {
+  var bsp = '/overlay/bsppart/bsp/usr',
+    lower = 'lowerdir=' + bsp + ':/usr',
+    overlayDevice = /^0:([0-9]+)$/.exec(overlay.fields[2]),
+    layers = overlay.options.filter(function (option) {
+      return /^(lowerdir|datadir|upperdir|workdir)/.test(option);
+    });
+  if (
+    overlay.fields[3] !== '/' ||
+    !overlayDevice ||
+    Number(overlayDevice[1]) >= 1048576 ||
+    !readOnlyMount(overlay.options) ||
+    layers.length !== 1 ||
+    layers[0] !== lower
+  )
+    return false;
+
+  var images = {};
+  var valid = mounts.every(function (mount) {
+    if (!coversMount(mount.target, bsp)) return true;
+    if (
+      (mount.target !== '/' && mount.target !== '/overlay/bsppart') ||
+      images[mount.target] !== undefined
+    )
+      return false;
+    var device = mmcImageDevice(mount);
+    if (device === null) return false;
+    images[mount.target] = device;
+    return true;
+  });
+  if (
+    !valid ||
+    images['/'] !== homeDevice ||
+    images['/overlay/bsppart'] === undefined ||
+    images['/overlay/bsppart'] === homeDevice
+  )
+    return false;
+
+  // Linux dev_t encodes the low eight minor bits directly and shifts the rest.
+  var minor = Number(overlayDevice[1]);
+  return (
+    appDevice === (minor % 256) + Math.floor(minor / 256) * 1048576 &&
+    fs.fstatSync(openDir(bsp)).dev === images['/overlay/bsppart']
+  );
+}
 async function compositorStock() {
   if (
     [
@@ -383,46 +447,44 @@ async function compositorStock() {
     [home, 'file://' + home].indexOf(manifest.main) === -1
   )
     throw Error('route-changed');
-  var mounts = fs.readFileSync('/proc/self/mountinfo', 'utf8'),
+  var mountinfo = fs.readFileSync('/proc/self/mountinfo', 'utf8'),
     systemImage = false;
-  if (!mounts || mounts.length > 1048576) throw Error('route-changed');
-  mounts
+  if (!mountinfo || mountinfo.length > 1048576) throw Error('route-changed');
+  var mounts = mountinfo
     .trim()
     .split('\n')
-    .forEach(function (line) {
+    .map(function (line) {
       var fields = line.split(/\s+/),
         separator = fields.indexOf('-');
       if (separator < 6 || fields.length !== separator + 4)
         throw Error('route-changed');
-      var target = fields[4].replace(/\\([0-7]{3})/g, function (_, octal) {
-        return String.fromCharCode(parseInt(octal, 8));
-      });
-      if (
-        target === '/' ||
-        ![home, app].some(function (path) {
-          return path === target || path.indexOf(target + '/') === 0;
-        })
-      )
-        return;
-      var mmc = /^179:([0-9]+)$/.exec(fields[2]);
-      if (
-        target !== '/usr' ||
-        systemImage ||
-        fields[3] !== '/' ||
-        !mmc ||
-        Number(mmc[1]) >= 256 ||
-        fields[separator + 1] !== 'squashfs' ||
-        !/^\/dev\/mmcblk[0-9]+p[0-9]+$/.test(fields[separator + 2]) ||
-        ![fields[5], fields[separator + 3]].every(function (options) {
-          options = options.split(',');
-          return options.indexOf('ro') !== -1 && options.indexOf('rw') === -1;
-        }) ||
-        before.dev !== 179 * 256 + Number(mmc[1]) ||
-        fs.lstatSync(app).dev !== before.dev
-      )
-        throw Error('route-changed');
-      systemImage = true;
+      return {
+        fields: fields,
+        target: fields[4].replace(/\\([0-7]{3})/g, function (_, octal) {
+          return String.fromCharCode(parseInt(octal, 8));
+        }),
+        filesystem: fields[separator + 1],
+        source: fields[separator + 2],
+        options: fields[separator + 3].split(',')
+      };
     });
+  mounts.forEach(function (mount) {
+    if (
+      mount.target === '/' ||
+      (!coversMount(mount.target, home) && !coversMount(mount.target, app))
+    )
+      return;
+    if (mount.target !== '/usr' || systemImage) throw Error('route-changed');
+    var appDevice = fs.lstatSync(app).dev;
+    var stock =
+      mount.filesystem === 'overlay'
+        ? stockBspOverlay(mounts, mount, before.dev, appDevice)
+        : /^\/dev\/mmcblk[0-9]+p[0-9]+$/.test(mount.source) &&
+          mmcImageDevice(mount) === before.dev &&
+          appDevice === before.dev;
+    if (!stock) throw Error('route-changed');
+    systemImage = true;
+  });
   try {
     await rpc('com.webos.service.systemprofile/getProfiles', {
       names: ['defaultApps', 'idleApp'],

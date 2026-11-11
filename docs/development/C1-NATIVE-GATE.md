@@ -199,8 +199,9 @@ native identity, manifest, vendor chain, mount and emergency-input observation.
 It records `stock-compositor`, never `never-applied` or installation success.
 The final Node cleaner independently rechecks stock identity/hash, manifest,
 vendor chain, exact missing service, mount layout and foreign Home integrations
-before retirement and final acknowledgement. Later read-only inspection uses
-the same current proof; it cannot delete anything.
+before retirement and final acknowledgement. The cleanup recheck validates the
+same immutable BSP layers and device identities as the Python stock probe.
+Later read-only inspection uses the same current proof; it cannot delete anything.
 
 For a retained native installation, successful restoration keeps its backend and
 inverse journals as evidence. Those journals must not be interpreted as an
