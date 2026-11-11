@@ -21,7 +21,7 @@ REASONS = ('unknown', 'user-error', 'ssh-command-failed', 'ssh-unreachable', 'ss
            'pending-operation', 'root-operation-unconfirmed', 'project-apps-remain', 'version-mismatch',
            'inventory-unavailable', 'graphics-unverified', 'root-home-interfaces',
            'root-worker-busy', 'root-access-required', 'removal-failed',
-           'cleanup-check-failed', 'connection-interrupted', 'operation-timeout', 'tv-storage-full')
+           'cleanup-check-failed', 'connection-interrupted', 'operation-timeout', 'tv-storage-full', 'tv-storage-ramfs')
 REASONS += ACTIVATION_CODES
 REASONS += ('installer-runtime-mismatch',)
 ACTIONS = ('recover', 'install', 'uninstall', 'restore', 'status', 'doctor', 'home-diagnostics',

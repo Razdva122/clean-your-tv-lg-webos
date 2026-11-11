@@ -3,6 +3,7 @@ import re
 
 
 TV_STORAGE_FULL = 'The TV reported insufficient storage space. Free space on the affected TV partition; deleting apps may free a different partition.'
+TV_STORAGE_RAMFS = 'The TV uses ramfs for /tmp, so available temporary storage could not be measured.'
 COMPUTER_STORAGE_FULL = 'Not enough space on this computer. Free space on the system or temporary drive.'
 
 

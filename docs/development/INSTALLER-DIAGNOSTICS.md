@@ -499,6 +499,15 @@ and repeats existing activation eligibility checks before resolving that pending
 activation. It neither enables Home nor updates code. See the [candidate recovery
 path](../RECOVERY.md#candidate-finish-verified-root-setup-with-home-control-off).
 
+## Temporary storage on ramfs (#434)
+
+If the install preflight reports all-zero block counts for the /tmp mount and a
+read-only filesystem type check confirms ramfs, the report exports
+`tv-storage-ramfs`. It records that available temporary capacity could not be
+measured. A measured shortfall on a different filesystem still takes precedence.
+The installer stops before package submission. The probe output is excluded
+from the report, and package scratch paths stay the same.
+
 <a id="no-root-observer-failures-next-candidate-376-and-378"></a>
 
 ## No-root observer failures (#376 and #378)

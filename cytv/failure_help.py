@@ -2,7 +2,7 @@
 import errno
 import socket
 
-from .errors import DeveloperKeyError, TVConnectionError, TVRejected, is_storage_full, TV_STORAGE_FULL, COMPUTER_STORAGE_FULL, no_root_observer_details
+from .errors import DeveloperKeyError, TVConnectionError, TVRejected, is_storage_full, TV_STORAGE_FULL, TV_STORAGE_RAMFS, COMPUTER_STORAGE_FULL, no_root_observer_details
 from .recovery_state import unsubmitted_removal
 from .root_action_failure import ACTIVATION_CODES, ACTIVATION_DETAILS
 
@@ -11,6 +11,7 @@ DEVELOPER = 'Leave Developer Mode open with Key Server on. Use the current TV pa
 REPORT = 'Save the diagnostic report and keep the saved connection and recovery data. Do not reset the TV or repeat setup to force progress.'
 GUIDES = {
     'tv-storage-full': ('Not enough space on the TV', TV_STORAGE_FULL, REPORT, False),
+    'tv-storage-ramfs': ('Available TV storage could not be determined.', TV_STORAGE_RAMFS, REPORT, False),
     'computer-storage-full': ('Not enough space on this computer', COMPUTER_STORAGE_FULL, REPORT, False),
     'ssh-access-denied': ('Network access was denied', 'This computer blocked the connection before SSH sign-in.',
         "Review this app's network permissions and firewall or VPN rules, then check the connection again.", True),
@@ -100,8 +101,8 @@ def for_error(error, phase, profile=None, pending=None):
     code = None
     if reason == 'installer-runtime-mismatch' and edition == 'root':
         code = reason
-    elif reason == 'tv-storage-full':
-        code = 'tv-storage-full'
+    elif reason in ('tv-storage-full', 'tv-storage-ramfs'):
+        code = reason
     elif reason == 'computer-storage-full' or is_storage_full(error):
         code = 'computer-storage-full'
     elif (pending and edition == 'no-root' and phase in ('recover', 'uninstall')
