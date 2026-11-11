@@ -40,11 +40,14 @@ records reused source/browser/platform checks, local package preflight and the
 selected remaining cases. Prepared metadata and local payloads are not a trusted
 full candidate or final artifact acceptance.
 
-Full dispatch is blocked by the mandatory published-Home/new-Helper compatibility
-probe: the existing approval covers an earlier transition, not Helper 0.8.1.
-Complete that probe and commit its exact archive/hash/device evidence before
-dispatching the complete platform matrix. No final build or hardware acceptance
-is selected yet; no publication or main merge is authorized by preparation.
+The mandatory published-Home/new-Helper compatibility probe passed on the
+maintainer C3 (43.21.71/SDK11.2.0) with the exact Helper0.8.1 and published
+Home1.15.0. Owner-observed Home/triple-Home/retained Stop and arrows/volume agree
+with readback; all232 installed public files match. The new exact compatibility
+approval passes verify_helper_transition. This pre-dispatch probe does not
+replace final candidate package delivery or selected physical acceptance. The
+complete platform build and final acceptance remain required; main merge and
+publication are separate gates.
 
 The original #487 service-status discrepancy and reporter-device continuation/
 standby result remain unverified. The corrected #454 C1 prerequisite, original
