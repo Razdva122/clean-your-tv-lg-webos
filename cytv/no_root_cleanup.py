@@ -154,7 +154,7 @@ if(input.action==='stop'){
   helperState(state);
   (function(){
    /* CYTV_HELPER_STORAGE_LOADER */
-   load('./state-permissions').requestStop(state,{legacyCleanup:true});
+   load('./state-permissions').requestStop(state,{legacyCleanup:true,expectedDirectory:s});
   }());
  }catch(e){blocked('helper-control',e);}
  var deadline=Date.now()+8000;

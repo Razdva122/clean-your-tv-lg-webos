@@ -431,6 +431,8 @@ function session(directory, options, action) {
           if (e.code !== 'EEXIST') throw e;
           leaf(name, limit);
         }
+        fs.unlinkSync(path);
+        created = false;
       } else {
         fs.renameSync(path, name);
         created = false;
@@ -565,6 +567,8 @@ function session(directory, options, action) {
     ancestors();
     parent = fs.openSync(directory, c.O_RDONLY | c.O_NOFOLLOW | c.O_DIRECTORY);
     before = fs.fstatSync(parent);
+    if (options.expectedDirectory && !same(before, options.expectedDirectory))
+      fail('stable-inode', before, undefined, 'directory');
     security(before);
     check();
     process.chdir(directory);
@@ -904,10 +908,15 @@ prepare.retainStop = function (directory) {
   );
 };
 prepare.requestStop = function (directory, options) {
-  var legacyCleanup = options && options.legacyCleanup === true;
+  var legacyCleanup = options && options.legacyCleanup === true,
+    expectedDirectory =
+      (options && options.expectedDirectory) || fs.lstatSync(directory);
   var publicationError;
   try {
-    prepare.publishStopGeneration(directory, legacyCleanup);
+    prepare.publishStopGeneration(directory, {
+      legacyCleanup: legacyCleanup,
+      expectedDirectory: expectedDirectory
+    });
   } catch (error) {
     publicationError = error;
   }
@@ -920,6 +929,7 @@ prepare.requestStop = function (directory, options) {
         operation: 'stop',
         output: ['control.json', 'stop-generation'],
         legacy: legacyCleanup,
+        expectedDirectory: expectedDirectory,
         preserveStop: true
       },
       function (s) {
@@ -1026,7 +1036,9 @@ prepare.stopGeneration = function (directory, create) {
     }
   );
 };
-prepare.publishStopGeneration = function (directory, legacyCleanup) {
+prepare.publishStopGeneration = function (directory, options) {
+  var legacyCleanup = options && options.legacyCleanup === true,
+    expectedDirectory = options && options.expectedDirectory;
   try {
     return session(
       directory,
@@ -1035,6 +1047,7 @@ prepare.publishStopGeneration = function (directory, legacyCleanup) {
         operation: 'stop',
         legacy: true,
         repairGeneration: true,
+        expectedDirectory: expectedDirectory,
         requireStopEvidence: !legacyCleanup,
         output: 'stop-generation'
       },
@@ -1065,9 +1078,17 @@ prepare.publishStopGeneration = function (directory, legacyCleanup) {
     );
   } catch (error) {
     try {
-      session(directory, { role: 'app', operation: 'stop' }, function (s) {
-        s.invalidateGeneration();
-      });
+      session(
+        directory,
+        {
+          role: 'app',
+          operation: 'stop',
+          expectedDirectory: expectedDirectory
+        },
+        function (s) {
+          s.invalidateGeneration();
+        }
+      );
     } catch (ignore) {}
     throw error;
   }

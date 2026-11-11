@@ -299,6 +299,40 @@ fs.writeFileSync(d+'/controller.pid','original');
 });
 """)
 
+    def test_new_stop_latch_is_single_link_when_its_directory_is_synced(self):
+        self.run_js("""
+var sync=fs.fsyncSync, directory=fs.statSync(d).ino, synced=false;
+fs.fsyncSync=function(fd){
+ if(fs.fstatSync(fd).ino===directory&&fs.existsSync(d+'/blocked')){
+  assert.strictEqual(fs.lstatSync(d+'/blocked').nlink,1);
+  synced=true;
+ }
+ return sync.apply(fs,arguments);
+};
+p.retainStop(d);
+assert(synced);
+assert.strictEqual(fs.readFileSync(d+'/blocked','utf8'),'stopped');
+""")
+
+    def test_stop_refuses_a_directory_replaced_after_generation_publication(self):
+        self.run_js("""
+var root=d; d=root+'/state'; fs.mkdirSync(d,504);
+var sync=fs.fsyncSync, inode=fs.statSync(d).ino, replaced=false;
+fs.fsyncSync=function(fd){
+ var result=sync.apply(fs,arguments);
+ if(!replaced&&fs.fstatSync(fd).ino===inode&&fs.existsSync(d+'/stop-generation')){
+  replaced=true;
+  fs.renameSync(d,root+'/old-state');
+  fs.mkdirSync(d,504);
+ }
+ return result;
+};
+assert.throws(function(){p.requestStop(d);});
+assert(replaced);
+assert(!fs.existsSync(d+'/blocked'));
+assert(!fs.existsSync(d+'/control.json'));
+""")
+
     def test_accepted_legacy_runtime_directory_supports_followup_writers_and_readers(self):
         self.run_js("""
 var logs=[],uid=process.getuid();
