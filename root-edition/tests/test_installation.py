@@ -269,10 +269,13 @@ class EntryPointTests(unittest.TestCase):
             with self.subTest(component=component),tempfile.TemporaryDirectory() as tmp:
                 owner=Ownership(Store(Path(tmp).resolve()/'global',uid=os.getuid()))
                 original=device_operation
-                def guarded(name,**kwargs):return original(name,ownership=owner,read=lambda path:None,**kwargs)
+                def guarded(name,**kwargs):
+                    kwargs.setdefault('ownership',owner)
+                    kwargs.setdefault('read',lambda path:None)
+                    return original(name,**kwargs)
                 target=bootstrap if component=='root-bootstrap' else entry
                 args=['setup','--device','--apply','--bundle',tmp,'--baseline',tmp]
-                with patch.object(installation,'device_operation',side_effect=guarded),patch.object(target,'preflight',side_effect=FileExistsError('retained setup')),patch.object(os,'geteuid',return_value=os.getuid()),patch.object(Path,'is_file',return_value=True),patch.object(entry.subprocess,'run'):
+                with patch.object(installation,'Ownership',return_value=owner),patch.object(installation,'device_operation',side_effect=guarded),patch.object(target,'preflight',side_effect=FileExistsError('retained setup')),patch.object(os,'geteuid',return_value=os.getuid()),patch.object(Path,'is_file',return_value=True),patch.object(entry.subprocess,'run'):
                     # Model root identity only for the entry-point privilege gate.
                     with patch.object(os,'geteuid',return_value=0):
                         for attempt in range(2):
