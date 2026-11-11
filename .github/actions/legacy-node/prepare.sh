@@ -17,12 +17,12 @@ while read -r checksum archive; do
         v0.12.2) variable=NODE012 ;;
         *) exit 1 ;;
     esac
-    if ! printf '%s  %s\n' "$checksum" "$archive" | sha256sum --check --status; then
+    if [[ ! -f "$archive" || -L "$archive" ]] || ! printf '%s  %s\n' "$checksum" "$archive" | sha256sum -c - >/dev/null 2>&1; then
         rm -f -- "$archive"
         curl --fail --silent --show-error --location --retry 3 \
             "https://nodejs.org/dist/$version/$archive" --output "$archive"
     fi
-    printf '%s  %s\n' "$checksum" "$archive" | sha256sum --check
+    printf '%s  %s\n' "$checksum" "$archive" | sha256sum -c -
     tar -xzf "$archive" -C "$runtimes"
     printf '%s=%s/%s/bin/node\n' "$variable" "$runtimes" "$distribution" >> "$GITHUB_ENV"
 done < "$manifest"
