@@ -81,7 +81,7 @@ class Wizard(QMainWindow):
         self.steps = QWidget()
         step_layout = QVBoxLayout(self.steps)
         step_layout.setContentsMargins(0, 0, 0, 0)
-        step_layout.setSpacing(12)
+        step_layout.setSpacing(8)
         self.step_rows = []
         self.step_names = []
         self.step_numbers = []
@@ -89,15 +89,14 @@ class Wizard(QMainWindow):
             row = QFrame()
             row.setObjectName('step')
             line = QHBoxLayout(row)
-            line.setContentsMargins(10, 12, 10, 12)
+            line.setContentsMargins(10, 7, 10, 7)
             line.setSpacing(12)
             marker = QLabel(str(number))
             marker.setObjectName('stepNumber')
             marker.setFixedSize(32, 32)
             marker.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            name = QLabel()
+            name = WrappedLabel('')
             name.setObjectName('stepName')
-            name.setWordWrap(True)
             line.addWidget(marker)
             line.addWidget(name, 1)
             self.step_rows.append(row)
@@ -771,6 +770,7 @@ class Wizard(QMainWindow):
         self.preview.hide()
         self.title.setText(tr(debloat.TITLE))
         notice = WrappedLabel(tr(debloat.NOTICE))
+        notice.setObjectName('settingHint')
         self.form_layout.addWidget(notice)
         scroll = QScrollArea()
         scroll.setObjectName('debloatSelection')
@@ -780,20 +780,31 @@ class Wizard(QMainWindow):
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         scroll.setMinimumHeight(200)
         panel = QWidget()
+        panel.setObjectName('debloatFields')
         fields = QVBoxLayout(panel)
         fields.setContentsMargins(0, 0, 12, 0)
-        fields.setSpacing(4)
+        fields.setSpacing(8)
+        fields.setAlignment(Qt.AlignmentFlag.AlignTop)
         scroll.setWidget(panel)
         self.form_layout.addWidget(scroll, 1)
         selected = {}
 
         def add_group(title, rows):
+            card = QFrame()
+            card.setObjectName('debloatGroup')
+            group_layout = QVBoxLayout(card)
+            group_layout.setContentsMargins(12, 2, 8, 2)
+            group_layout.setSpacing(0)
+            fields.addWidget(card)
             section = ToggleSwitch(tr(title), tr('Selected'), tr('Keep current'))
             section.setObjectName('debloatGroup-' + rows[0][0])
             header = QHBoxLayout()
-            header.addWidget(WrappedLabel(tr(title)), 1)
+            heading = WrappedLabel(tr(title))
+            heading.setObjectName('settingTitle')
+            heading.setBuddy(section)
+            header.addWidget(heading, 1)
             header.addWidget(section)
-            fields.addLayout(header)
+            group_layout.addLayout(header)
             switches = []
             for key, _, label, _ in rows:
                 row = QHBoxLayout()
@@ -804,7 +815,7 @@ class Wizard(QMainWindow):
                 text.setBuddy(toggle)
                 row.addWidget(text, 1)
                 row.addWidget(toggle)
-                fields.addLayout(row)
+                group_layout.addLayout(row)
                 selected[key] = toggle
                 switches.append(toggle)
 
@@ -836,9 +847,12 @@ class Wizard(QMainWindow):
             section = add_group(group, rows)
             if first is None:
                 first = section
+        actions = QHBoxLayout()
+        actions.addStretch()
+        self.button('Skip Debloat', lambda: self.submit('[]'), layout=actions)
         self.button('Continue', lambda: self.submit(json.dumps([
-            key for key, toggle in selected.items() if toggle.isChecked()])), True)
-        self.button('Skip Debloat', lambda: self.submit('[]'))
+            key for key, toggle in selected.items() if toggle.isChecked()])), True, layout=actions)
+        self.form_layout.addLayout(actions)
         first.setFocus()
 
     def show_debloat_results(self):
@@ -848,9 +862,11 @@ class Wizard(QMainWindow):
         for key, status in self.debloat_results.items():
             icon, color, message = debloat.RESULTS[status]
             label = html.escape(tr(debloat.SETTINGS[key][1]))
-            rows.append(f'<tr><td style="color:{color};padding:6px">{icon}</td>'
-                        f'<td style="padding:6px">{label}<br><small>{html.escape(tr(message))}</small></td></tr>')
-        self.content.setHtml('<table width="100%">' + ''.join(rows) + '</table>')
+            message = html.escape(tr(message))
+            rows.append(f'<tr><td width="32" valign="top" style="color:{color}">{icon}</td>'
+                        f'<td><span style="color:#f3ede3;font-weight:600">{label}</span><br>'
+                        f'<small>{message}</small></td></tr>')
+        self.content.setHtml('<table width="100%" cellspacing="0" cellpadding="7">' + ''.join(rows) + '</table>')
         self.button(debloat.CONTINUE, lambda: self.submit('1'), True).setFocus()
 
     def show_install_settings(self):
