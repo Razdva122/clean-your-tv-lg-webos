@@ -20,20 +20,27 @@ except ImportError:
 class GuiTests(unittest.TestCase):
     def test_debloat_group_selection_and_results(self):
         import json
+        from PySide6.QtGui import QColor, QPalette
         from cytv import debloat, i18n
         from cytv.desktop import Channel
         from cytv.gui_style import ToggleSwitch
         w = Wizard()
         self.addCleanup(w.close)
         i18n.set_language('en')
+        palette = w.palette()
+        palette.setColor(QPalette.ColorRole.Window, QColor('white'))
+        w.setPalette(palette)
         w.channel = Channel(lambda *_: None)
         w.receive('step', (5, debloat.TITLE, True))
         w.show_prompt(Prompt(debloat.SELECT))
         w.resize(900, 680)
         w.show()
         self.app.processEvents()
+        for name in w.step_names:
+            self.assertGreaterEqual(name.height(), name.heightForWidth(name.width()), name.text())
         scroll = w.form.findChild(QScrollArea, 'debloatSelection')
         self.assertLessEqual(scroll.widget().width(), scroll.viewport().width())
+        self.assertLess(scroll.viewport().grab().toImage().pixelColor(1, 1).lightness(), 100)
         toggles = w.form.findChildren(ToggleSwitch)
         self.assertEqual(len(toggles), 14)
         self.assertFalse(any(toggle.isChecked() for toggle in toggles))
@@ -48,6 +55,12 @@ class GuiTests(unittest.TestCase):
         w.receive('debloat-results', {'homePromotion': 'unverified'})
         w.show_prompt(Prompt(debloat.REVIEW))
         self.assertIn('The result could not be verified.', w.content.toPlainText())
+        self.app.processEvents()
+        icon = w.content.document().find('✓')
+        label = w.content.document().find('Turn off sponsored tiles')
+        icon.setPosition(icon.selectionStart())
+        label.setPosition(label.selectionStart())
+        self.assertLess(w.content.cursorRect(label).left() - w.content.cursorRect(icon).left(), 56)
         next(b for b in w.form.findChildren(QPushButton) if b.text() == debloat.CONTINUE).click()
         self.assertEqual(w.channel.answers.get_nowait(), '1')
 
