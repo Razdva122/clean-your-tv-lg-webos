@@ -1,7 +1,71 @@
 {
   "schema": 1,
   "version": null,
-  "changes": [],
+  "changes": [
+    {
+      "pr": 496,
+      "issues": [
+        418
+      ],
+      "summary": "Retain isolated Root cleanup probe failure context"
+    },
+    {
+      "pr": 497,
+      "issues": [
+        101
+      ],
+      "summary": "Preserve native deploy causes and inspect failed setup without replay"
+    },
+    {
+      "pr": 498,
+      "issues": [
+        472
+      ],
+      "summary": "Fix No-root removal with execute-only DevMode tmp"
+    },
+    {
+      "pr": 501,
+      "issues": [
+        499
+      ],
+      "summary": "Fix #499: weather startup on legacy webOS browsers"
+    },
+    {
+      "pr": 502,
+      "issues": [
+        397
+      ],
+      "summary": "Offer full removal when native Root setup lacks deployment evidence"
+    },
+    {
+      "pr": 503,
+      "issues": [
+        495,
+        498
+      ],
+      "summary": "Activate Home after setup while preserving new Stops (#495)"
+    },
+    {
+      "pr": 506,
+      "issues": [
+        505
+      ],
+      "summary": "Fix stale app catalogs and live No-root icons (#505)"
+    },
+    {
+      "pr": 514,
+      "issues": [
+        101,
+        397,
+        418,
+        472,
+        495,
+        499,
+        505
+      ],
+      "summary": "Integrate seven queued fixes after v1.17.0"
+    }
+  ],
   "excluded": [],
   "acceptance": ""
 }
