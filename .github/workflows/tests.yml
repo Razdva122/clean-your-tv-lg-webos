@@ -200,6 +200,8 @@ jobs:
         password: ${{ github.token }}
     env:
       CI_TEST_IMAGE: ${{ needs.scope.outputs.linux_image }}
+      # The runtime cache validates every ancestor, including ownership.
+      ARM_PYTHON_CACHE: /var/cache/cytv-python-runtime
     defaults:
       run:
         shell: bash
@@ -212,8 +214,8 @@ jobs:
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - uses: actions/cache@v4
         with:
-          path: build/python-runtime-cache
-          key: root-python-4a71641c8d5536175e404a961624e8656eba30e97b5026f6bd7dc31e4bbeaaea
+          path: ${{ env.ARM_PYTHON_CACHE }}
+          key: root-python-container-4a71641c8d5536175e404a961624e8656eba30e97b5026f6bd7dc31e4bbeaaea
       - name: Select fresh ARM Python work
         id: evidence
         env:
@@ -221,7 +223,7 @@ jobs:
         run: python scripts/ci-test-evidence.py plan --kind optional --os ubuntu-24.04 --units optional-python --directory "$RUNNER_TEMP/ci-evidence"
       - name: Execute the pinned ARM32 Python and native module smoke tests
         if: steps.evidence.outputs.fresh == 'true'
-        run: python scripts/test-python-runtime.py
+        run: python scripts/test-python-runtime.py --cache-dir "$ARM_PYTHON_CACHE"
       - name: Verify shell provisioning boundaries as root
         if: steps.evidence.outputs.fresh == 'true'
         run: |
