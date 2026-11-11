@@ -13,6 +13,8 @@ on:
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/theme-submissions.yml'
+      - '.github/actions/linux-ci-image/**'
+      - '.github/ci-image/reference'
   push:
     branches: [main, release/next]
     paths:
@@ -25,6 +27,8 @@ on:
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/theme-submissions.yml'
+      - '.github/actions/linux-ci-image/**'
+      - '.github/ci-image/reference'
   workflow_dispatch:
     inputs:
       verify_remote:
@@ -40,8 +44,30 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  validate:
+  scope:
     runs-on: ubuntu-latest
+    outputs:
+      linux_image: ${{ steps.linux-image.outputs.image }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - id: linux-image
+        uses: ./.github/actions/linux-ci-image
+  validate:
+    needs: scope
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: read
+    container:
+      image: ${{ needs.scope.outputs.linux_image }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ github.token }}
+    defaults:
+      run:
+        shell: bash
     timeout-minutes: 15
     env:
       NODE_OPTIONS: --max-old-space-size=512
@@ -49,6 +75,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+      - name: Trust the runner-owned checkout inside the container
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -56,12 +84,10 @@ jobs:
           cache-dependency-path: package-lock.json
       - name: Install main-project tools without lifecycle scripts
         run: npm ci --ignore-scripts --no-audit --no-fund
-      - uses: actions/setup-python@v5
+      - uses: actions/cache@v4
         with:
-          python-version: "3.12"
-          cache: pip
-          cache-dependency-path: |
-            scripts/build-requirements.txt
+          path: ~/.cache/pip
+          key: linux-ci-pip-${{ hashFiles('scripts/build-requirements.txt') }}
       - run: python -m pip install -r scripts/build-requirements.txt
       - name: Test registry and data-only validation
         run: |
@@ -72,8 +98,8 @@ jobs:
       - name: Verify bounded commit-pinned public source bytes
         if: github.event_name != 'workflow_dispatch' || inputs.verify_remote
         run: timeout 180 node scripts/check-theme-submissions.cjs --remote
-      - name: Prepare isolated browser checks
-        run: npx playwright install --with-deps chromium
+      - name: Verify the baked Playwright version
+        run: test "$(node -p "require('playwright/package.json').version")" = "$PLAYWRIGHT_IMAGE_VERSION"
       - name: Test inline theme preview with blocked external requests
         run: BROWSER_CHANNEL=chromium node tests/preview-themes-ui.cjs
       - name: Build inline theme preview inspection artifact

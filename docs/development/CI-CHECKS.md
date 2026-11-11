@@ -85,8 +85,8 @@ this scheduling change do not themselves repartition later setup tests.
 
 ### Shared Linux test image
 
-The browser, Linux HEIC and optional ARM Python jobs use the same Linux/amd64
-image from GHCR. They stay separate and run in parallel. Each clean runner may
+The browser, Linux HEIC, optional ARM Python, website preview and theme
+submission jobs use the same Linux/amd64 image from GHCR. They stay separate and run in parallel. Each clean runner may
 download the same layers independently. APT and the Playwright browser downloads
 run when building the image, so ordinary jobs do not depend on the Ubuntu mirrors.
 Combining browser and HEIC would serialize their checks and would still leave the
@@ -110,13 +110,19 @@ To refresh the image (including after a Playwright upgrade):
    publishing. Keep the GHCR package linked to this repository so the test jobs
    can pull it with their read-only `GITHUB_TOKEN`.
 2. Copy the `ghcr.io/...@sha256:...` reference from the successful run's summary
-   into the `linux-image` step in `.github/workflows/tests.yml`. Leave previously
-   pinned versions available for open branches. A rollback uses the previous
-   digest, without rebuilding.
-3. Check the browser, Linux HEIC and optional ARM Python jobs on the integration
-   PR. Both Linux browser jobs compare their installed Playwright version with
-   the version baked into the image, so a mismatched lockfile fails before tests
-   or receipt reuse.
+   into `.github/ci-image/reference`. Leave previously pinned versions available
+   for open branches. A rollback uses the previous digest, without rebuilding.
+3. Check the image consumers on the integration PR. Linux browser checks compare
+   the installed root Playwright version with the version baked into the image,
+   so a mismatched lockfile fails before tests or receipt reuse.
+
+### Legacy Node.js archives
+
+Runtime tests and the direct Root TV candidate use the same Actions cache for
+the pinned Linux x64 Node.js archives. The key includes the SHA-256 manifest.
+The shared action validates cached bytes, downloads missing or damaged archives,
+and checks each archive before extracting it into the job's temporary directory.
+GitHub's usual branch and pull request cache scopes apply.
 
 ### Installer test timings and skips
 
