@@ -15,6 +15,25 @@ def operation_id(value):
     return value
 
 
+def cleanup_probe_details(value):
+    """Revalidate the fixed child diagnostic; never treat it as recovery proof."""
+    if not isinstance(value,dict):return {}
+    names=('ValueError','RuntimeError','OSError','PermissionError','FileNotFoundError',
+           'FileExistsError','CalledProcessError','TimeoutExpired','TimeoutError','TypeError','KeyError','unknown')
+    if value.get('exception_type') not in names:return {}
+    frames=value.get('frames',[])
+    if not isinstance(frames,list) or len(frames)>8:return {}
+    files=('deploy.py','installation.py','c1_gate.py','c1_keyfilter.py','package_data.py',
+           'python_binding.py','observed_install.py','provision.py','store.py')
+    result={'exception_type':value['exception_type'],'frames':[{'file':frame['file'],'line':frame['line']}
+        for frame in frames if isinstance(frame,dict) and frame.get('file') in files
+        and type(frame.get('line')) is int and 1<=frame['line']<=10000]}
+    for key,low,high in (('errno',0,4095),('exit_status',-255,255)):
+        number=value.get(key)
+        if type(number) is int and low<=number<=high:result[key]=number
+    return result
+
+
 def failure_summary(error):
     """Fixed worker categories only; command, output and message stay private."""
     import subprocess
@@ -33,6 +52,11 @@ def failure_summary(error):
     from updater.luna import summary
     detail=summary(getattr(error,'luna',None))
     if detail:result['luna']=detail
+    probe=cleanup_probe_details(getattr(error,'cleanup_probe',None))
+    if probe:result['cleanup_probe']=probe
+    from deploy import install_failure_details
+    detail=install_failure_details(getattr(error,'root_driver',None))
+    if detail:result['root_driver']=detail
     return result
 
 

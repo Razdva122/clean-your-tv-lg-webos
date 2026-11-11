@@ -210,3 +210,15 @@ Use `unknown` for missing fields and `untested` for controls, sound, standby,
 cold boot, OTA and rollback unless actually observed. The preparation here has
 no device result. After another owner's operation, offer a concrete redacted
 result draft with its destination and obtain permission before posting it.
+
+
+## Native clean-predecessor failure in #101 (source preparation)
+
+The new synchronous native install is distinct from the historical detached
+worker above. Do not apply those old submission/worker-log prerequisites or ask
+for another install to obtain them. The [native failure source record](../history/2026-11-11-issue101-native-deploy-diagnostics.md)
+pins an original-profile/current-source probe which reads the retained operation
+without staging TV code, changing Home, provisioning Python or replaying setup.
+A current probe result is diagnostic only; it does not establish the historical
+failure cause, authorize recovery or prove C2 compatibility. No new device action
+is requested by this source preparation.

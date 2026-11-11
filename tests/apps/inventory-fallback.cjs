@@ -7,6 +7,7 @@ function fixture(root = false, priorityIds) {
     timers = new Map();
   let seq = 0,
     result,
+    installedIds,
     completed = 0,
     now = 0;
   const context = {
@@ -35,8 +36,9 @@ function fixture(root = false, priorityIds) {
     fs.readFileSync('launcher/app-library.js', 'utf8'),
     context
   );
-  context.module.exports.installed((apps) => {
+  context.module.exports.installed((apps, ids) => {
     result = apps;
+    installedIds = ids;
     completed++;
   }, priorityIds);
   return {
@@ -67,6 +69,9 @@ function fixture(root = false, priorityIds) {
     },
     get result() {
       return result;
+    },
+    get installedIds() {
+      return installedIds;
     },
     get completed() {
       return completed;
@@ -158,4 +163,27 @@ test('a valid direct inventory taking six seconds retains its original supported
   });
   assert.equal(f.result[0].id, 'slow');
   assert.equal(f.completed, 1);
+});
+
+test('only valid complete installed IDs cross direct and fallback service boundaries', () => {
+  for (const fallback of [false, true]) {
+    const f = fixture();
+    if (fallback) f.reply(0, { returnValue: false });
+    f.reply(fallback ? 1 : 0, {
+      returnValue: true,
+      apps: [{ id: 'kept', title: 'Kept' }],
+      installedIds: ['kept', 'hidden']
+    });
+    assert.deepEqual(Array.from(f.installedIds), ['kept', 'hidden']);
+  }
+  for (const ids of [[], ['kept', 'kept'], [false]]) {
+    const f = fixture();
+    f.reply(0, {
+      returnValue: true,
+      apps: [{ id: 'kept', title: 'Kept' }],
+      installedIds: ids
+    });
+    assert.equal(f.installedIds, undefined);
+    assert.equal(f.result[0].id, 'kept');
+  }
 });

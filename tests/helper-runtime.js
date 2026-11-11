@@ -278,8 +278,14 @@ function checkService(port, done) {
           return true;
         };
       if (name === './app-inventory')
-        return function () {
+        return function (options) {
           return require(path.join(serviceRoot, 'app-inventory'))({
+            details: options.details,
+            get: function (request, callback) {
+              assert.equal(request.hostname, '127.0.0.1');
+              request.port = port;
+              return require('https').get(request, callback);
+            },
             readKey: function () {
               return { key: 'test' };
             },
@@ -312,6 +318,14 @@ function checkService(port, done) {
     respond: function (reply) {
       assert.equal(reply.returnValue, true);
       assert.equal(reply.apps[0].id, 'com.example.video');
+      assert.deepEqual(reply.installedIds, ['com.example.video']);
+      assert.equal(
+        reply.apps[0].icon,
+        'data:image/png;base64,' +
+          Buffer.from('89504e470d0a1a0a66697874757265', 'hex').toString(
+            'base64'
+          )
+      );
       done();
     }
   });
@@ -347,6 +361,10 @@ function checkInputs(port, done) {
 var httpsServer = require('https').createServer({
   key: fs.readFileSync(path.join(root, 'test-key.pem')),
   cert: fs.readFileSync(path.join(root, 'test-cert.pem'))
+});
+httpsServer.on('request', function (request, response) {
+  response.writeHead(200, { 'Content-Type': 'image/png' });
+  response.end(Buffer.from('89504e470d0a1a0a66697874757265', 'hex'));
 });
 var server = new WebSocket.Server({
   server: httpsServer,
@@ -414,10 +432,12 @@ server.on('connection', function (socket) {
         '{"id":"inputs","payload":{"returnValue":true,"devices":[{"appId":"com.webos.app.hdmi3","connected":true,"serial":"PRIVATE"},{"appId":"com.webos.app.hdmi1","connected":false}]}}'
       );
     else if (message.id === 'tuner')
-      socket.send('{"id":"tuner","payload":{"returnValue":true,"apps":[]}}');
+      socket.send(
+        '{"id":"tuner","payload":{"returnValue":true,"apps":[{"id":"com.example.video","title":"Video"}]}}'
+      );
     else if (message.id === 'apps')
       socket.send(
-        '{"id":"apps","payload":{"launchPoints":[{"id":"com.example.video"}]}}'
+        '{"id":"apps","payload":{"launchPoints":[{"id":"com.example.video","title":"Video","largeIcon":"https://127.0.0.1/icon.png"}]}}'
       );
     else {
       socket.send('{"payload":{"appId":"com.', { fin: false });

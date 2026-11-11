@@ -33,6 +33,24 @@ function create(io, prepare) {
       'utf8'
     );
   };
+  result.stopGeneration = function (directory, initialize) {
+    var name = directory + '/stop-generation',
+      value;
+    try {
+      value = io.readFileSync(name, 'utf8');
+    } catch (e) {
+      if (!initialize || e.code !== 'ENOENT') throw e;
+      value = 'I00000000000000000000000000000000';
+      io.writeFileSync(name, value);
+    }
+    if (!/^[IS][a-f0-9]{32}$/.test(value)) throw Error('Invalid generation');
+    return value;
+  };
+  result.publishStopGeneration = function (directory) {
+    var token = 'S' + require('crypto').randomBytes(16).toString('hex');
+    io.writeFileSync(directory + '/stop-generation', token);
+    return token;
+  };
   return result;
 }
 function load(file, storage) {

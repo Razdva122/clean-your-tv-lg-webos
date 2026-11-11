@@ -12,6 +12,8 @@ function controller({
   blocked = false,
   watchdog = false,
   automatic = true,
+  setupGeneration,
+  homeInitiallyOff = false,
   deferStart = false,
   inputQuery,
   appsConfig = '[]',
@@ -32,6 +34,9 @@ function controller({
   files.set(dir + 'apps.json', appsConfig);
   if (blocked) files.set(dir + 'blocked', 'stopped');
   if (watchdog) files.set(dir + 'watchdog', 'stopped');
+  if (setupGeneration) files.set(dir + 'stop-generation', setupGeneration);
+  if (homeInitiallyOff)
+    files.set(dir + 'home-control.json', '{"enabled":false}');
   const schedule = (fn, ms, repeat = 0) => {
     const id = ++seq;
     timers.set(id, { fn, at: now + ms, repeat });
@@ -88,6 +93,7 @@ function controller({
       c.writes = [];
       c.kills = [];
       c.ack = true;
+      c.args = args;
       c.stdin.write = (b) => {
         c.writes.push(b);
         if (b === 'P' && c.ack) c.stdout.emit('data', Buffer.from('P\n'));
@@ -97,7 +103,7 @@ function controller({
         c.kills.push(s);
         return true;
       };
-      (args.length ? cleanups : workers).push(c);
+      (args[0] === 'cleanup' ? cleanups : workers).push(c);
       return c;
     }
   };
@@ -141,7 +147,10 @@ function controller({
       argv: [
         'node',
         'native.js',
-        JSON.stringify({ nativeHomeAuto: automatic })
+        JSON.stringify({
+          nativeHomeAuto: automatic,
+          nativeHomeSetup: setupGeneration
+        })
       ],
       pid: 1,
       getuid: () => 5431,
@@ -161,7 +170,7 @@ function controller({
     context
   );
   if (exit === undefined && !deferStart) {
-    advance(automatic ? 0 : 1000);
+    advance(automatic && !setupGeneration ? 0 : 1000);
     workers[0].stdout.emit('data', Buffer.from('READY\n'));
   }
   function close(
@@ -213,7 +222,10 @@ test('unavailable apps configuration uses fresh TV catalog without adopting inst
     appsConfig: '{"invalid":"configuration"}',
     inputQuery: () => {
       reads++;
-      return Promise.resolve([{ id: 'test.app' }]);
+      return Promise.resolve({
+        apps: [{ id: 'test.app' }],
+        installedIds: ['test.app']
+      });
     }
   });
   c.reset();
@@ -221,7 +233,7 @@ test('unavailable apps configuration uses fresh TV catalog without adopting inst
   assert.equal(reads, 1);
   c.foreground('test.app');
   c.foreground('com.webos.app.home');
-  assert(c.launches.includes('com.gathin.tvhome'));
+  assert(c.logs.some((entry) => entry.event === 'return-after-exit'));
   assert.equal(c.files.get(dir + 'apps.json'), '{"invalid":"configuration"}');
 });
 test('boot catalog failure retries without resetting a healthy foreground subscription', async () => {
@@ -231,7 +243,10 @@ test('boot catalog failure retries without resetting a healthy foreground subscr
     inputQuery: () =>
       ++reads === 1
         ? Promise.reject(Error('not ready'))
-        : Promise.resolve([{ id: 'test.app' }])
+        : Promise.resolve({
+            apps: [{ id: 'test.app' }],
+            installedIds: ['test.app']
+          })
   });
   c.reset();
   await new Promise((r) => setImmediate(r));
@@ -241,7 +256,84 @@ test('boot catalog failure retries without resetting a healthy foreground subscr
   assert.equal(reads, 2);
   c.foreground('test.app');
   c.foreground('com.webos.app.home');
-  assert(c.launches.includes('com.gathin.tvhome'));
+  assert(c.logs.some((entry) => entry.event === 'return-after-exit'));
+});
+test('setup enables Home and preserves its bound generation across a guarded relay retry', () => {
+  const token = 'I' + '1'.repeat(32);
+  const c = controller({ setupGeneration: token, homeInitiallyOff: true });
+  assert.equal(
+    JSON.parse(c.files.get(dir + 'home-control.json')).enabled,
+    true
+  );
+  assert.deepEqual(Array.from(c.workers[0].args), ['setup', token]);
+  c.close(20); // The real C relay writes only a transient watchdog fence.
+  c.cleanup();
+  c.advance(1500);
+  assert.equal(c.workers.length, 2);
+  c.workers[1].stdout.emit('data', Buffer.from('READY\n'));
+  assert.equal(c.files.get(dir + 'stop-generation'), token);
+  assert(c.workers[1].writes.includes('E'));
+  const cancelled = 'S' + '2'.repeat(32);
+  c.files.set(dir + 'stop-generation', cancelled);
+  const launches = c.launches.length;
+  c.workers[1].stdout.emit('data', Buffer.from('HOME\n'));
+  assert.equal(
+    c.launches.length,
+    launches,
+    'changed generation must fence post-READY Home'
+  );
+  c.advance(400);
+  assert(c.workers[1].writes.includes('Q'));
+  c.close(29);
+  c.cleanup();
+  assert.equal(c.files.get(dir + 'stop-generation'), cancelled);
+  assert(blocked(c));
+});
+test('setup generation survives confirmed power-removal wake without becoming a Stop', () => {
+  const token = 'I' + '3'.repeat(32),
+    c = controller({ setupGeneration: token });
+  c.power({ state: 'Prepare Power Off' });
+  c.close(32);
+  c.power({ state: 'Active', processing: false, onOff: 'on' });
+  c.advance(1500);
+  assert.equal(c.workers.length, 2);
+  c.workers[1].stdout.emit('data', Buffer.from('READY\n'));
+  assert.equal(c.files.get(dir + 'stop-generation'), token);
+  assert(!blocked(c));
+});
+test('setup generation survives controller-owned watchdog SIGKILL and bounded retry', () => {
+  const token = 'I' + '4'.repeat(32),
+    c = controller({ setupGeneration: token });
+  const w = c.workers[0];
+  w.ack = false;
+  c.advance(2800);
+  assert.deepEqual(w.kills, ['SIGKILL']);
+  assert.equal(c.files.get(dir + 'stop-generation'), token);
+  c.close(null, 'SIGKILL', w, null);
+  c.cleanup();
+  c.advance(1500);
+  assert.equal(c.workers.length, 2);
+  c.workers[1].stdout.emit('data', Buffer.from('READY\n'));
+  assert.equal(c.files.get(dir + 'stop-generation'), token);
+  assert(!blocked(c));
+});
+test('setup retry exhaustion publishes a permanent Stop instead of reusing its generation', () => {
+  const token = 'I' + '5'.repeat(32),
+    c = controller({ setupGeneration: token });
+  for (let i = 0; i < 5; i++) {
+    c.close(20);
+    c.cleanup();
+    c.advance(1500);
+    c.workers.at(-1).stdout.emit('data', Buffer.from('READY\n'));
+    assert.equal(c.files.get(dir + 'stop-generation'), token);
+  }
+  c.close(20);
+  c.cleanup();
+  c.advance(3000);
+  assert.equal(c.workers.length, 6);
+  assert.match(c.files.get(dir + 'stop-generation'), /^S[a-f0-9]{32}$/);
+  assert.notEqual(c.files.get(dir + 'stop-generation'), token);
+  assert(blocked(c));
 });
 test('single CARD emergency returns to LG after cleanup without requiring cross-app close', () => {
   let closes = 0;
@@ -1090,7 +1182,10 @@ test('catalog broker reads through the unprivileged controller independently of 
   const c = controller({
     inputQuery: (options) => {
       reads++;
-      assert.deepEqual(JSON.parse(JSON.stringify(options)), { timeout: 3000 });
+      assert.deepEqual(JSON.parse(JSON.stringify(options)), {
+        timeout: 3000,
+        details: true
+      });
       return new Promise((r) => (resolve = r));
     }
   });
@@ -1123,11 +1218,18 @@ test('catalog broker reads through the unprivileged controller independently of 
     JSON.parse(c.files.get(own + 'home-response.json')).enabled,
     true
   );
-  resolve([{ id: 'org.example', title: 'Example' }]);
+  resolve({
+    apps: [{ id: 'org.example', title: 'Example' }],
+    installedIds: ['org.example']
+  });
   await new Promise((r) => setImmediate(r));
   assert.equal(
     JSON.parse(c.files.get(own + 'catalog-response.json')).apps[0].id,
     'org.example'
+  );
+  assert.deepEqual(
+    JSON.parse(c.files.get(own + 'catalog-response.json')).installedIds,
+    ['org.example']
   );
   assert.equal(
     JSON.parse(c.files.get(own + 'catalog-response.json')).id,

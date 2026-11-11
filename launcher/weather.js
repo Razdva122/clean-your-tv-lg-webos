@@ -784,7 +784,7 @@
     if (identity !== previousResults) {
       previousResults = identity;
       const results = host.querySelector('.weather-city-results');
-      results.replaceChildren();
+      results.textContent = '';
       for (const city of state.searchResults) {
         const button = document.createElement('button');
         button.type = 'button';

@@ -23,6 +23,17 @@ def plan(write, state, summary, next_step=KEPT, actions=None):
     write.recovery_plan(value)
 
 
+def missing_root_deployment_plan(write, profile, pending, observation):
+    """Explain missing evidence without repeating reads or granting recovery."""
+    assessment = assess(profile, pending, observation)
+    if assessment['reason'] != 'root-deployment-missing':
+        return False
+    write.recovery_plan(dict(assessment,
+        summary='Root setup is unfinished, but its deployment record is missing on the TV.',
+        next_step='Choose Review recovery options to remove Clean Your TV, then start setup separately. Full removal also removes No-root Home and Helper; back up preferences first.'))
+    return True
+
+
 def offer_install_recovery(write, store, profile):
     pending = store.pending(profile) if profile else None
     if not pending or pending.get('action') not in ('install', 'activate-root'):
@@ -118,6 +129,11 @@ def recover(installer, ask, write, non_interactive=False, initial_observation=No
         installer.tv_info.update(status=result)
         pending = installer.store.pending(installer.profile)
         assessment = _assessment(installer.profile, pending, result)
+        if assessment['reason'] == 'root-deployment-missing':
+            write('This removes Root, Root Updater, their services and startup hooks, plus any installed No-root Home, Helper and Updater.')
+            write('Removal may reset Home preferences. Reinstallation will not start automatically.')
+            remove_before_reinstall(installer, ask, write)
+            return
         if pending and pending.get('recovery_protocol')=='clean-removal-v1':
             from .recovery_state import removal_summary
             summary=removal_summary(pending)

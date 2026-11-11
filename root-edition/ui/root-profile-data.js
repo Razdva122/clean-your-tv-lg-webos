@@ -125,7 +125,16 @@
     if (value.settings['tvhome.layout'] !== undefined) {
       text(value.settings['tvhome.layout'], LIMIT, true);
       var layout = JSON.parse(value.settings['tvhome.layout']);
-      fields(layout, ['version', 'ids', 'hidden', 'catalog'], ['showAddApp']);
+      fields(
+        layout,
+        ['version', 'ids', 'hidden', 'catalog'],
+        ['showAddApp', 'catalogConfirmed']
+      );
+      if (
+        layout.catalogConfirmed !== undefined &&
+        typeof layout.catalogConfirmed !== 'boolean'
+      )
+        throw Error('Invalid profile fields');
       if (
         layout.showAddApp !== undefined &&
         typeof layout.showAddApp !== 'boolean'

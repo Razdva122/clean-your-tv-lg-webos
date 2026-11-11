@@ -23,7 +23,7 @@ def tracked_files(prefix):
     files = {}
     # Explicit public runtime dependencies may be new files in a source checkout.
     # Do not include arbitrary untracked files or local profile data.
-    required = {'native/app': ['native/app/helper-entry.js', 'native/app/state-permissions.js', 'native/app/contract-events.js', 'native/app/home-control.js', 'native/app/websocket.js'],
+    required = {'native/app': ['native/app/helper-entry.js', 'native/app/stop-generation.h', 'native/app/state-permissions.js', 'native/app/contract-events.js', 'native/app/home-control.js', 'native/app/websocket.js'],
                 'renewal-service': ['renewal-service/home-control.js', 'renewal-service/diagnostics.js', 'renewal-service/ca-bundle.crt', 'renewal-service/ca-LICENSE.txt'],
                 'updater-service': ['updater-service/ca-bundle.crt', 'updater-service/ca-LICENSE.txt'],
                 'launcher': ['launcher/viewport.js', 'launcher/system-updates.js', 'launcher/helper-control.js', 'launcher/release-notes.js', 'launcher/app-library.js', 'launcher/input-sources.js', 'launcher/input-preview.js','launcher/i18n.js', 'launcher/catalogs.js', 'launcher/i18n.css', 'launcher/theme-defaults.css', 'launcher/theme-policy.js', 'launcher/theme-runtime.js', 'launcher/home-layout.js', 'launcher/layout-panel.js', 'launcher/settings-categories.js', 'launcher/layout-panel.css',

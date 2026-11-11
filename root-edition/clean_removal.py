@@ -139,6 +139,20 @@ def compositor_stock(payload):
             'target_sha256':observed['target_sha256']}
 
 
+def compositor_stock_report(payload):
+    """One current child observation; failure stays failure with bounded context."""
+    try:
+        return {'returnValue':True,'result':compositor_stock(payload)}
+    except Exception as error:
+        import traceback
+        traceback.print_exc()  # Existing private child stderr, never part of the export.
+        from install_driver import failure_summary, cleanup_probe_details
+        detail=failure_summary(error)
+        detail['frames']=[{'file':Path(frame.filename).name,'line':frame.lineno}
+            for frame in traceback.extract_tb(error.__traceback__)][-8:]
+        return {'returnValue':False,'cleanup_probe':cleanup_probe_details(detail)}
+
+
 @contextmanager
 def locks(roots, uid):
     """Keep original component lock inodes throughout restoration and cleanup."""

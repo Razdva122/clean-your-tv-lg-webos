@@ -233,12 +233,15 @@ function session(directory, options, action) {
       fail('safe-mode', s, limit);
     return s;
   }
-  function read(name, limit) {
+  function read(name, limit, writable) {
     var s = leaf(name, limit),
       fd;
     if (!s) return null;
     try {
-      fd = fs.openSync(name, c.O_RDONLY | c.O_NOFOLLOW | c.O_NONBLOCK);
+      fd = fs.openSync(
+        name,
+        (writable ? c.O_RDWR : c.O_RDONLY) | c.O_NOFOLLOW | c.O_NONBLOCK
+      );
       if (!unchanged(s, fs.fstatSync(fd)) || !unchanged(s, fs.lstatSync(name)))
         fail();
       var bytes =
@@ -255,6 +258,60 @@ function session(directory, options, action) {
         fail();
       check();
       return { stat: s, bytes: bytes };
+    } finally {
+      if (fd !== undefined) fs.closeSync(fd);
+    }
+  }
+  function invalidateGeneration() {
+    var name = 'stop-generation',
+      initial = leaf(name, 33),
+      fd;
+    try {
+      if (!initial) {
+        try {
+          fd = fs.openSync(
+            name,
+            c.O_RDWR | c.O_CREAT | c.O_EXCL | c.O_NOFOLLOW | c.O_NONBLOCK,
+            384
+          );
+        } catch (error) {
+          if (error.code !== 'EEXIST') throw error;
+          initial = leaf(name, 33);
+        }
+        if (fd !== undefined) {
+          var created = fs.fstatSync(fd);
+          if (
+            !created.isFile() ||
+            created.nlink !== 1 ||
+            created.uid !== uid ||
+            !same(created, fs.lstatSync(name))
+          )
+            fail('stable-inode');
+          if (created.gid !== before.gid) fs.fchownSync(fd, uid, before.gid);
+          fs.fchmodSync(fd, 436);
+          fs.fsyncSync(fd);
+          fs.fsyncSync(parent);
+          check();
+          return;
+        }
+      }
+      if (
+        !initial ||
+        initial.gid !== before.gid ||
+        (initial.mode & 4095) !== 436
+      )
+        fail('safe-mode', initial);
+      fd = fs.openSync(name, c.O_RDWR | c.O_NOFOLLOW | c.O_NONBLOCK);
+      if (
+        !unchanged(initial, fs.fstatSync(fd)) ||
+        !unchanged(initial, fs.lstatSync(name))
+      )
+        fail('stable-inode');
+      check();
+      fs.ftruncateSync(fd, 0);
+      fs.fsyncSync(fd);
+      if (!same(initial, fs.lstatSync(name))) fail('stable-inode');
+      check();
     } finally {
       if (fd !== undefined) fs.closeSync(fd);
     }
@@ -298,7 +355,7 @@ function session(directory, options, action) {
       if (fd !== undefined) fs.closeSync(fd);
     }
   }
-  function write(name, bytes, mode, limit, preserve, original) {
+  function write(name, bytes, mode, limit, preserve, original, concurrent) {
     var initial = leaf(name, limit, true);
     if (preserve && initial) return;
     if (initial && !canAccessGroup(initial.gid)) fail('shared-group', initial);
@@ -355,12 +412,14 @@ function session(directory, options, action) {
         original &&
         (!current ||
           !unchanged(original.stat, current) ||
-          read(name, limit).bytes.toString('hex') !==
-            original.bytes.toString('hex'))
+          (original.bytes &&
+            read(name, limit).bytes.toString('hex') !==
+              original.bytes.toString('hex')))
       )
         fail();
       if (
         !preserve &&
+        !concurrent &&
         (initial ? !current || !unchanged(initial, current) : current)
       )
         fail();
@@ -393,6 +452,25 @@ function session(directory, options, action) {
       if (fd !== undefined) fs.closeSync(fd);
       if (created) fs.unlinkSync(path);
     }
+  }
+  function replaceGeneration(previous) {
+    var name = 'stop-generation';
+    if (
+      previous &&
+      (previous.gid !== before.gid ||
+        ((previous.mode & 4095) !== 436 && (previous.mode & 4095) !== 511))
+    )
+      throw Error('Invalid Stop storage');
+    var token = 'S' + crypto.randomBytes(16).toString('hex');
+    write(
+      name,
+      buffer(token),
+      436,
+      33,
+      !previous,
+      previous && { stat: previous }
+    );
+    return token;
   }
   function expanded(name, limit, requireOwner) {
     check();
@@ -492,12 +570,23 @@ function session(directory, options, action) {
     process.chdir(directory);
     entered = true;
     check();
+    var expandedDirectory = (before.mode & 4095) === 511;
+    var repairedGeneration;
     if (
-      options.normalize &&
-      (before.uid === uid || (uid === 0 && options.role === 'installer')) &&
+      (options.normalize || (options.repairGeneration && expandedDirectory)) &&
+      (before.uid === uid ||
+        (uid === 0 &&
+          (options.role === 'installer' || options.repairGeneration))) &&
       options.role !== 'channel' &&
       (before.mode & 4095) !== 504
     ) {
+      if (expandedDirectory) {
+        var previousGeneration = leaf('stop-generation', 33, true);
+        // Publish the replacement while setup readers still reject this
+        // directory. A failed write must leave the expanded mode unchanged.
+        if (options.repairGeneration || previousGeneration)
+          repairedGeneration = replaceGeneration(previousGeneration);
+      }
       try {
         fs.fchmodSync(parent, 504);
         var normalized = fs.fstatSync(parent);
@@ -535,11 +624,14 @@ function session(directory, options, action) {
       canAccessGroup: canAccessGroup,
       owned: owned,
       read: read,
+      invalidateGeneration: invalidateGeneration,
       appendLog: appendLog,
       leaf: leaf,
       write: write,
       check: check,
       stat: before,
+      repairedGeneration: repairedGeneration,
+      replaceGeneration: replaceGeneration,
       bootstrap: bootstrap,
       expanded: expanded,
       replace: replace,
@@ -567,7 +659,8 @@ function configuration(directory, options, repair) {
       role: 'installer',
       operation: repair ? 'prepare' : 'inspect',
       legacy: repair,
-      normalize: repair
+      normalize: repair,
+      output: repair ? 'stop-generation' : undefined
     },
     function (s) {
       if (repair && s.stat.mode & 2)
@@ -650,7 +743,7 @@ function prepare(directory, log, initializeControl) {
     legacy: true,
     normalize: true,
     log: log,
-    output: 'control.json'
+    output: ['control.json', 'stop-generation']
   };
   try {
     return session(directory, settings, function (s) {
@@ -793,22 +886,155 @@ prepare.atomicRecord = function (directory, kind, bytes, options) {
   });
 };
 prepare.requestStop = function (directory, options) {
+  var publicationError;
+  try {
+    prepare.publishStopGeneration(directory);
+  } catch (error) {
+    publicationError = error;
+  }
+  var result;
+  try {
+    result = session(
+      directory,
+      {
+        role: 'app',
+        operation: 'stop',
+        output: 'control.json',
+        preserveStop: true
+      },
+      function (s) {
+        s.leaf('blocked', Infinity);
+        s.leaf('control.json', Infinity, true);
+        var writeError;
+        try {
+          s.write('blocked', buffer('stopped'), 436, Infinity, true);
+        } catch (error) {
+          writeError = error;
+        }
+        try {
+          s.write(
+            'control.json',
+            buffer('{"cmd":"stop"}'),
+            420,
+            Infinity,
+            false
+          );
+        } catch (error) {
+          if (!writeError) writeError = error;
+        }
+        if (writeError) throw writeError;
+        return true;
+      }
+    );
+  } catch (error) {
+    throw publicationError || error;
+  }
+  if (publicationError) throw publicationError;
+  return result;
+};
+prepare.stopGeneration = function (directory, create) {
+  var manual = create === 'manual',
+    repair = manual || create === 'install',
+    name = 'stop-generation';
   return session(
     directory,
     {
       role: 'app',
       operation: 'stop',
-      output: 'control.json',
-      preserveStop: true
+      legacy: repair,
+      repairGeneration: repair,
+      output: repair ? name : undefined
     },
     function (s) {
-      s.leaf('blocked', Infinity);
-      s.leaf('control.json', Infinity, true);
-      s.write('blocked', buffer('stopped'), 436, Infinity, true);
-      s.write('control.json', buffer('{"cmd":"stop"}'), 420, Infinity, false);
-      return true;
+      if ((s.stat.mode & 4095) === 511) {
+        // Explicit Start retains the published boot recovery path when the
+        // runtime can use the directory but only the packaged owner can chmod it.
+        // Setup always requires a checked generation in private storage.
+        if (manual) return null;
+        throw Error('Stop storage is not private');
+      }
+      if (s.uid !== 0 && !(s.stat.mode & (s.stat.uid === s.uid ? 128 : 16)))
+        throw Error('Stop storage is not writable');
+      var expected = s.repairedGeneration,
+        previous = repair ? s.leaf(name, 33, true) : null;
+      if (
+        previous &&
+        (previous.gid !== s.stat.gid ||
+          ((previous.mode & 4095) !== 436 && (previous.mode & 4095) !== 511))
+      )
+        throw Error('Invalid Stop storage');
+      if (
+        repair &&
+        !expected &&
+        previous &&
+        ((previous.mode & 4095) === 511 || previous.size === 0)
+      ) {
+        // Never adopt expanded bytes or the failed-Stop sentinel. An S token
+        // also prevents a pending fresh setup from adopting a new I token.
+        expected = s.replaceGeneration(previous);
+      }
+      var value = s.read(name, 33, true);
+      if (
+        !value &&
+        create === 'setup' &&
+        (s.leaf('blocked', Infinity) || s.leaf('watchdog', Infinity))
+      )
+        return null;
+      if (
+        !value &&
+        !expected &&
+        (repair || create === true || create === 'setup')
+      ) {
+        var initial = 'I' + crypto.randomBytes(16).toString('hex');
+        s.write(name, buffer(initial), 436, 33, true);
+        if (repair) expected = initial;
+        value = s.read(name, 33, true);
+      }
+      if (
+        value &&
+        (value.stat.gid !== s.stat.gid || (value.stat.mode & 4095) !== 436)
+      )
+        throw Error('Invalid Stop storage');
+      var token = value && value.bytes.toString('utf8');
+      if (
+        !token ||
+        !/^[IS][a-f0-9]{32}$/.test(token) ||
+        (expected && token !== expected)
+      )
+        throw Error('Invalid Stop generation');
+      return token;
     }
   );
+};
+prepare.publishStopGeneration = function (directory) {
+  try {
+    return session(directory, { role: 'app', operation: 'stop' }, function (s) {
+      var previous = s.leaf('stop-generation', 33);
+      if (
+        previous &&
+        (previous.gid !== s.stat.gid || (previous.mode & 4095) !== 436)
+      )
+        throw Error('Invalid Stop storage');
+      var token = 'S' + crypto.randomBytes(16).toString('hex');
+      s.write(
+        'stop-generation',
+        buffer(token),
+        436,
+        33,
+        false,
+        undefined,
+        true
+      );
+      return token;
+    });
+  } catch (error) {
+    try {
+      session(directory, { role: 'app', operation: 'stop' }, function (s) {
+        s.invalidateGeneration();
+      });
+    } catch (ignore) {}
+    throw error;
+  }
 };
 prepare.readConfiguration = function (directory, kind) {
   if (kind !== 'key' && kind !== 'apps')

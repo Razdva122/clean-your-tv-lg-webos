@@ -150,6 +150,16 @@ if (process.platform !== 'linux' || process.getuid() !== 0) {
     a.equal(fs.statSync(path.join(boot, 'ssap-key.json')).mode & 0o777, 0o640);
     a.equal(fs.statSync(path.join(boot, 'apps.json')).ino, appsInode);
     a.equal(fs.statSync(path.join(boot, 'apps.json')).uid, 5999);
+    // The app UID can still use the published explicit Start path while the
+    // packaged owner retains the expanded state directory.
+    const bootStorage = 'var p=require(' + bootModule + '),d=' + bootPath + ';';
+    run(
+      5431,
+      bootStorage + 'if(p.stopGeneration(d,"manual")!==null)process.exit(8);',
+      5431
+    );
+    a.equal(fs.existsSync(path.join(boot, 'stop-generation')), false);
+    a.equal(fs.statSync(boot).mode & 0o777, 0o777);
     const bootHash = require('crypto')
       .createHash('sha256')
       .update(bootFiles['ssap-key.json'])
@@ -219,6 +229,27 @@ if (process.platform !== 'linux' || process.getuid() !== 0) {
       5431
     );
     a.equal(fs.statSync(path.join(boot, 'ssap-key.json')).mode & 0o777, 0o640);
+    // Root SSH normalizes the packaged owner's directory before issuing a
+    // usable setup baseline. The real app UID can read it and publish Stop.
+    fs.chmodSync(boot, 0o777);
+    run(
+      0,
+      bootStorage +
+        'if(!/^S[a-f0-9]{32}$/.test(p.stopGeneration(d,"install")))process.exit(9);'
+    );
+    const generation = path.join(boot, 'stop-generation');
+    const baseline = fs.readFileSync(generation, 'utf8');
+    a.equal(fs.statSync(boot).mode & 0o777, 0o770);
+    a.equal(fs.statSync(generation).gid, 5000);
+    run(
+      5431,
+      bootStorage +
+        'if(p.stopGeneration(d)!==' +
+        JSON.stringify(baseline) +
+        ')process.exit(10);p.publishStopGeneration(d);',
+      5431
+    );
+    a.notEqual(fs.readFileSync(generation, 'utf8'), baseline);
     // Developer Mode setup can still atomically upload a new key after repair.
     run(
       5580,

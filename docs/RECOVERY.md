@@ -74,6 +74,19 @@ inspection establish the allowed next action.
 
 ## Interrupted setup or removal
 
+### Root setup is unfinished and its deployment record is missing
+
+Keep the saved Root connection. Choose **Review recovery options** and confirm
+full removal if you want to start over. This removes all Clean Your TV editions,
+including No-root Home and Helper; back up preferences first. Removal checks the
+current TV state and verifies cleanup separately from the old installation result.
+After verified removal, start a new setup separately. Cancelling the prompt leaves
+the interrupted installation and its recovery data unchanged. If removal fails,
+use its existing continuation flow and save the diagnostic report.
+
+An absent deployment record is not proof that the old installation did nothing.
+Status alone does not delete recovery records or restart installation.
+
 <a id="unreleased-local-recovery-storage-messages"></a>
 
 ### Local recovery storage messages
@@ -116,6 +129,10 @@ A requested restart remains necessary for live/unverifiable project processes or
 unfinished old work. Pending final verification is shown as remaining cleanup;
 a connection interruption and an actual package-removal refusal have separate
 results. Pending cleanup never appears as verified success.
+
+If the installer cannot verify a requested full restart, save and attach its
+diagnostic report and keep the saved connection and recovery data. Do not keep
+repeating power cycles or clear the unfinished operation manually.
 
 If the connection is interrupted, check it and select **Try again**. Existing
 installation history remains available; an old generic failure is not assigned
@@ -473,3 +490,28 @@ Test standby and cold boot separately. [Compatibility and known limits](COMPATIB
 
 <!-- Anchors retained for links to earlier guide headings. -->
 <a id="no-root-controls-and-recovery"></a>
+
+
+## No-root setup activation and a lost computer profile
+
+New No-root setup requests Home On after package/configuration verification.
+It binds the current Stop generation into the original operation. A new Stop
+before or during activation cancels that activation; the installer keeps the
+Stop and reports package verification separately. Open Helper and explicitly
+start it when ready. Setup does not infer physical Home acceptance from a launch
+acknowledgement. You can turn Home off afterward in Home settings.
+
+Use the complete original saved connection and recovery data when available.
+A TV reservation is not stale merely because its computer profile is missing.
+If that profile is lost, establish a trusted connection to the same TV and
+explicitly choose **Uninstall Clean Your TV**. This starts a new removal goal;
+it does not adopt or replay the old install. Resident installer evidence requires
+a verified restart after the new baseline before the private sweep. Only final
+control/startup, package/registration/file absence and process checks can complete
+removal. Start setup separately afterward; never remove an owner file or edit a
+journal to qualify.
+
+On Developer Mode jails with execute-only `/tmp`, removal also needs the separate,
+not-yet-published [boot-proof correction #498](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/498).
+Its host checks are not physical removal acceptance. If removal stops, save the
+standard diagnostic report and keep recovery data rather than deleting reservations.

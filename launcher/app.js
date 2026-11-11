@@ -779,7 +779,8 @@
     pickerGeneration++;
     picker.hidden = true;
     cancelHold();
-    focusZone = 'none';
+    var focusId = tiles[focusedTile] && tiles[focusedTile].app.id;
+    rebuild(focusId);
     focusTile(library.showAddApp() ? tiles.length - 1 : focusedTile);
   }
   function focusPicker(index) {
@@ -852,12 +853,20 @@
     pickerButtons = [pickerClose];
     focusPicker(0);
     setFocusZone('picker');
-    AppLibrary.installed(function (apps) {
+    AppLibrary.installed(function (apps, installedIds) {
       if (!pickerOpen || generation !== pickerGeneration) {
         return;
       }
       if (apps !== null) {
-        library.refresh(apps);
+        try {
+          library.refresh(apps, installedIds);
+        } catch (_) {
+          pickerStatus.textContent = tr(
+            "Couldn't save changes. Please try again."
+          );
+          renderPicker(library.available());
+          return;
+        }
       }
       var choices = library.available();
       pickerStatus.textContent =
@@ -882,9 +891,13 @@
       : ids;
   }
   function refreshInstalledApps(first) {
-    AppLibrary.installed(function (apps) {
+    AppLibrary.installed(function (apps, installedIds) {
       if (apps !== null) {
-        library.refresh(apps);
+        try {
+          library.refresh(apps, installedIds);
+        } catch (_) {
+          return;
+        }
         // Keep inventory updates, but let the next normal rebuild render them
         // when a menu, edit or button hold already owns the interaction.
         if (

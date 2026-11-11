@@ -57,6 +57,7 @@ function harness({
   unavailable = false,
   memory = new Map(),
   iconStatus = 200,
+  iconPath = 'icons/one.png',
   i18n = false
 } = {}) {
   const calls = [],
@@ -122,7 +123,7 @@ function harness({
     XMLHttpRequest: class {
       open(method, url) {
         assert.strictEqual(method, 'GET');
-        assert.strictEqual(url, 'icons/one.png');
+        assert.strictEqual(url, iconPath);
       }
       send() {
         this.status = iconStatus;
@@ -514,6 +515,73 @@ function harness({
     abortedMemory.get('tvhome.order'),
     '{"dock":"app.one","ids":[]}'
   );
+  const localConfirmed = JSON.stringify({
+    version: 1,
+    ids: ['app.one', 'iconless'],
+    hidden: [],
+    catalog: profile.inventory.apps.concat({
+      id: 'iconless',
+      title: 'Iconless',
+      icon: ''
+    }),
+    catalogConfirmed: true
+  });
+  const confirmedMemory = new Map([['tvhome.layout', localConfirmed]]);
+  const confirmedHost = harness({
+    memory: confirmedMemory,
+    iconPath: 'brand-v2-icon.png',
+    packaged: {
+      apps: profile.inventory.apps.concat({ id: 'gone', title: 'Gone', icon }),
+      inputs: []
+    }
+  });
+  await tick();
+  const transferable = await confirmedHost.window.RootProfile.capture({
+    system: true
+  });
+  const portable = JSON.parse(transferable.settings['tvhome.layout']);
+  assert(
+    !Object.hasOwn(portable, 'catalogConfirmed'),
+    'rollback snapshot retains the legacy layout schema'
+  );
+  assert.deepStrictEqual(portable.ids, ['app.one', 'iconless']);
+  assert.deepStrictEqual(
+    transferable.inventory.apps.map((a) => a.id),
+    ['app.one', 'iconless']
+  );
+  assert(/^data:image\/png;base64,/.test(transferable.inventory.apps[1].icon));
+  assert.equal(
+    portable.catalog[1].icon,
+    '',
+    'snapshot fallback does not change saved icon state'
+  );
+  const restoredModel = require('../../launcher/app-library').create(
+    {
+      getItem: (key) =>
+        key === 'tvhome.layout' ? transferable.settings[key] : null
+    },
+    transferable.inventory.apps,
+    transferable.config
+  );
+  assert.deepStrictEqual(
+    restoredModel.visible().map((a) => a.id),
+    ['app.one', 'iconless']
+  );
+  assert(
+    !restoredModel.available().some((a) => a.id === 'gone'),
+    'offline portable restore does not resurrect removed apps'
+  );
+  assert.deepStrictEqual(
+    confirmedHost.window.TV_APPS.apps.map((a) => a.id),
+    ['app.one', 'gone']
+  );
+  assert.strictEqual(
+    confirmedMemory.get('tvhome.layout'),
+    localConfirmed,
+    'capture preserves local confirmation'
+  );
+  if (process.env.LEGACY_PROFILE_VALIDATOR)
+    require(process.env.LEGACY_PROFILE_VALIDATOR).validate(transferable);
   const packaged = JSON.parse(JSON.stringify(profile.inventory));
   // Fresh discovery commonly supplies an empty optional color. Capture must
   // omit noncanonical cosmetic metadata without weakening stored-profile reads.
@@ -560,3 +628,21 @@ function harness({
   console.error(e);
   process.exit(1);
 });
+
+const confirmedProfile = JSON.parse(JSON.stringify(profile));
+confirmedProfile.settings['tvhome.layout'] = JSON.stringify({
+  version: 1,
+  ids: ['app.one'],
+  hidden: [],
+  catalog: profile.inventory.apps,
+  catalogConfirmed: true
+});
+assert.deepStrictEqual(data.validate(confirmedProfile), confirmedProfile);
+confirmedProfile.settings['tvhome.layout'] = JSON.stringify({
+  version: 1,
+  ids: [],
+  hidden: [],
+  catalog: [],
+  catalogConfirmed: 'yes'
+});
+assert.throws(() => data.validate(confirmedProfile));
