@@ -169,6 +169,38 @@ class SuccessorOwnership(unittest.TestCase):
             self.assertEqual(result.returncode,1,result.stdout)
             self.assertEqual(json.loads((self.state/'operation.json').read_text()),lease)
 
+    def test_completed_successor_survives_cold_boot_without_the_volatile_observer(self):
+        self.assertEqual(self.run_guard('claim', self.plan).returncode, 0)
+        name = 'no-root-' + self.plan['operation'] + '.json'
+        request = {'plan': self.plan, 'command': 'release'}
+        self.assertNotEqual(self.run_guard('observer', self.plan, source=self.source, request=request).returncode, 0)
+
+        directory = self.base / 'tmp/.cytv-installer-root/operations' / self.plan['operation']
+        directory.mkdir(parents=True)
+        for parent in directory.parents:
+            if parent == self.base:
+                break
+            parent.chmod(0o700)
+        binding = json.loads((self.state / name).read_text())
+        receipt = {key: binding[key] for key in ('operation', 'plan_sha256', 'source_sha256')}
+        receipt.update(protocol='no-root-original-stream-v1', result='verified')
+        closure = directory / 'closed.json'
+        closure.write_text(json.dumps(dict(receipt, source_sha256='0' * 64)))
+        closure.chmod(0o600)
+        self.assertNotEqual(self.run_guard('observer', self.plan, source=self.source, request=request).returncode, 0)
+        closure.write_text(json.dumps(receipt))
+        result = self.run_guard('observer', self.plan, source=self.source, request=request)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        shutil.rmtree(self.base / 'tmp')
+
+        result = self.run_guard('probe')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout), self.stamp)
+        successor = dict(self.plan, operation='e' * 32)
+        result = self.run_guard('claim', successor)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse(json.loads((self.state / 'operation.json').read_text())['terminal'])
+
     def test_release_keeps_successor_fenced_if_current_absence_fails(self):
         self.assertEqual(self.run_guard('claim',self.plan).returncode,0)
         before=(self.state/'operation.json').read_bytes()

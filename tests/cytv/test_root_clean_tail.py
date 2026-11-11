@@ -52,3 +52,17 @@ class RootTailWire(unittest.TestCase):
             return ''
         self.installer.remote.run.side_effect=run
         self.assertIsNone(resume(self.installer,self.pending))
+
+    def test_current_cleanup_failure_takes_precedence_over_old_restart(self):
+        from unittest.mock import patch
+        from cytv.operations import Installer
+        self.installer.profile = {'edition': 'root'}
+        self.installer.progress = Mock()
+        with patch('cytv.root_clean_tail.resume', return_value={
+            'stage': 'restart-required',
+            'cleanup_error': 'cleanup-check-failed',
+            'result': {'restart_required': True},
+        }):
+            with self.assertRaisesRegex(UserError, 'files or settings remain'):
+                Installer._continue_root_clean_removal(self.installer, self.pending)
+        self.installer.store.finish_clean_removal.assert_not_called()

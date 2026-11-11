@@ -57,6 +57,7 @@ static ssize_t fake_read(int,void*,size_t),fake_write(int,const void*,size_t);
 #undef main
 static uint64_t now;
 static int scenario,grabbed,held,input_event,fault,cleanup_mode,release_checks;
+static char recorded_stop_path[1100];
 static int suspend_hint,suspend_cancel,suspend_expired,power_polls,suspend_stop;
 static int released,ungrabbed,closed_input,closed_output,blocked_marker,watchdog_marker;
 static int fake_open(const char*p,int flags,...){(void)flags;if(strstr(p,"relay.lock"))return 3;if(strstr(p,"/watchdog")){watchdog_marker++;return 4;}if(strstr(p,"/blocked")){blocked_marker++;return 4;}if(strstr(p,"event0"))return 10;if(strstr(p,"event1"))return 11;errno=ENOENT;return -1;}
@@ -74,7 +75,23 @@ static int fake_ioctl(int fd,unsigned long request,...){
 }
 static int fake_poll(struct pollfd*p,nfds_t n,int timeout){if(n==1){now+=timeout;p[0].revents=POLLIN;power_polls++;return 1;}(void)timeout;now+=(scenario==2||scenario==4||scenario>=6)?100:2101;p[0].revents=0;p[1].revents=0;if(scenario==7)new_generation();if(scenario==8)p[0].revents=POLLIN;if(scenario==1)stop=1;if(scenario==2){p[0].revents=POLLIN;p[1].revents=POLLIN;}if(scenario==3||scenario==5)p[0].revents=POLLHUP;if(scenario==4){power_polls++;if(power_polls<=(suspend_expired?162:suspend_cancel?2:1))p[1].revents=POLLIN;else {p[0].revents=POLLHUP;if(suspend_stop)p[1].revents=POLLIN;}}if(output_fault>=3&&output_fault<=5&&grabbed){break_output();if(output_fault>=4)p[1].revents=0;}return 1;}
 static ssize_t fake_read(int fd,void*b,size_t size){(void)size;if(fd==0){*(char*)b=scenario==5?'T':scenario==4&&power_polls>1&&suspend_stop?'Q':scenario==4&&power_polls==1&&suspend_hint?'T':scenario==4&&power_polls==2&&suspend_cancel?'R':'P';return 1;}if(fd==10&&scenario==8&&grabbed){new_generation();struct ev e={0,0,1,30,1};memcpy(b,&e,sizeof e);return sizeof e;}if(fd==10&&scenario==2&&grabbed){struct ev e={0,0,1,output_fault==4?412:773,input_event++%2==0};memcpy(b,&e,sizeof e);return sizeof e;}errno=EAGAIN;return -1;}
-static ssize_t fake_write(int fd,const void*b,size_t size){if(fd==1)return controller_write(b,size);if(fd==11){const struct ev*e=b;assert(e[0].type==1&&e[0].code==103&&e[0].value==0);assert(!ungrabbed);if(fault==2){errno=EIO;return -1;}if(fault==6)return (ssize_t)size-1;released++;held=0;}return (ssize_t)size;}
+static ssize_t fake_write(int fd,const void*b,size_t size){
+ if(fd==4&&recorded_stop_path[0]){
+  FILE *file=fopen(recorded_stop_path,"wb");assert(file);
+  assert(fwrite(b,1,size,file)==size&&fclose(file)==0);
+ }
+ if(fd==1)return controller_write(b,size);
+ if(fd==11){
+  const struct ev*e=b;
+  assert(e[0].type==1&&e[0].code==103&&e[0].value==0);
+  assert(!ungrabbed);
+  if(fault==2){errno=EIO;return -1;}
+  if(fault==6)return (ssize_t)size-1;
+  released++;
+  held=0;
+ }
+ return (ssize_t)size;
+}
 static void reset(void){power_polls=0;now=0;stop=0;input_event=0;grabbed=held=released=ungrabbed=closed_input=closed_output=blocked_marker=watchdog_marker=cleanup_mode=release_checks=0;}
 /* Modes: healthy pipe, full READY, EPIPE, full P, full Back, full Home, full EXIT. */
 static void output_backpressure(int mode,int cleanup_fault){
@@ -109,8 +126,35 @@ static void closed_output_cleanup(int cleanup_fault){
  int status;assert(waitpid(child,&status,0)==child);
  assert(WIFEXITED(status)&&WEXITSTATUS(status)==0);
 }
+static void simulate_triple_home_after_boot(int expanded){
+ char generation[1100],before[34],after[34],marker[8]={0};
+ assert(cytv_generation_read(before));
+ snprintf(generation,sizeof generation,"%s/stop-generation",generation_directory);
+ if(expanded){
+  assert(chmod(generation_directory,0777)==0);
+  assert(chmod(generation,0777)==0);
+ }
+ snprintf(recorded_stop_path,sizeof recorded_stop_path,"%s/blocked",generation_directory);
+ reset();scenario=2;fault=output_fault=0;
+ char *args[]={"relay",NULL};
+ assert(relay_main(1,args)==27);
+ assert(input_event==6&&blocked_marker==1&&watchdog_marker==0);
+ assert(released==1&&ungrabbed==1&&closed_input==1&&closed_output==1);
+ FILE *file=fopen(recorded_stop_path,"rb");assert(file);
+ assert(fread(marker,1,sizeof marker,file)==7&&fclose(file)==0);
+ assert(strcmp(marker,"stopped")==0&&unlink(recorded_stop_path)==0);
+ recorded_stop_path[0]=0;
+ if(expanded){
+  /* Native setup refuses the expanded token until the checked JS repair. */
+  assert(!cytv_generation_read(after));
+  assert(chmod(generation_directory,0700)==0);
+  assert(chmod(generation,0664)==0);
+ }else assert(cytv_generation_read(after)&&after[0]=='S'&&strcmp(before,after));
+}
 int main(void){
  prepare_generation();
+ simulate_triple_home_after_boot(0);
+ simulate_triple_home_after_boot(1);
  for(scenario=1;scenario<=2;scenario++){
   reset();fault=output_fault=0;generation_entropy_failure=1;
   char*args[]={"relay",NULL};assert(relay_main(1,args)==(scenario==1?0:27));
@@ -157,5 +201,5 @@ int main(void){
   assert(reason==(fault?11:0));assert(release_checks==1&&closed_output==1&&ungrabbed==0);
  }
  remove_generation();
- puts("PASS: generation races after grab/poll/read retain cancellation and release input; watchdog/emergency cleanup attempts every release step");
+ puts("PASS: synthetic triple Home persists Stop before and after mode expansion; generation races after grab/poll/read retain cancellation and release input; watchdog/emergency cleanup attempts every release step");
 }

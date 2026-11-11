@@ -15,7 +15,7 @@ operations share checked directory/inode reads and exclusive staged writes:
 | --- | --- |
 | `inspectConfiguration(directory, options)` | Read-only installer configuration validation. |
 | `prepareConfiguration(directory, options)` | Validate key and apps before key repair; foreign-key replacement additionally requires `expectedHash` matching the original capsule's exact SHA256. Existing outer idle/process guards still apply. |
-| `requestStop(directory, options)` | Validate destinations, preserve an existing blocked latch, create it if absent, then write Stop. It does not establish process quiescence. |
+| `requestStop(directory, options)` | Publish a new Stop generation, recover known firmware-expanded storage, preserve or create the blocked latch, and write the Stop command. Process quiescence is checked by the caller. |
 | `atomicRecord(directory, kind, bytes, options)` | Write one fixed named output class with checked staging and rename. It cannot target configuration, locks or emergency latches. |
 | `readConfiguration(directory, kind)` | Read checked `key` or `apps` only; runtime apps reads never chmod or adopt the inode. |
 | `appendLog(directory, line)` / `readLogEvents(directory)` | Bounded checked local logging / fixed safe-event projection; neither grants recovery authority. |
@@ -46,6 +46,13 @@ Fixed fresh outputs can replace an expanded same-group leaf without using its
 old contents. This applies to control/PID/logs, startup writes and all channel
 request/response classes under their existing directory rules. Stop preserves
 an existing regular latch; it still refuses unsafe directories and links.
+The installer, standalone Stop, No-root cleanup and Root coordinator and
+edition handoff use the same checked Stop writer. Cleanup can retain the
+SDK's legacy directory mode when the checked caller cannot normalize it,
+while a normal Stop requires successful normalization before claiming
+completion. The controller uses its
+latch-preserving operation when it terminates. The native input relay uses
+the same generation and latch format on its synchronous emergency path.
 Bootstrap never clears Stop/watchdog or replaces native locks.
 
 Fixed record kinds are `control`, `home-preference`, `startup-state`, `pid`,

@@ -269,6 +269,7 @@ PROGRAM = r'''
       !/^[a-f0-9]{64}$/.test(binding.plan_sha256) ||
       !/^[a-f0-9]{64}$/.test(binding.source_sha256) ||
       typeof binding.effects_started !== 'boolean' ||
+      (binding.completed !== undefined && binding.completed !== true) ||
       (binding.revoked !== undefined && typeof binding.revoked !== 'boolean')
     )
       fail();
@@ -339,8 +340,9 @@ PROGRAM = r'''
       lease = current;
     } else if (proof.lease !== original.lease) fail();
   }
-  function closed() {
+  function closed(requireObserverReceipt) {
     if (!binding) fail();
+    if (!requireObserverReceipt && binding.completed === true) return;
     var privateDir = directory(
         '/tmp/.cytv-installer-root/operations/' + binding.operation
       ),
@@ -702,6 +704,15 @@ PROGRAM = r'''
     fs.fsyncSync(stagingParent);
   }
   execute();
+  if (input.request.command === 'release') {
+    // The observer closes synchronously under both native locks. Persist its
+    // bound completion before the volatile journal disappears at next boot.
+    closed(true);
+    if (binding.completed !== true) {
+      binding.completed = true;
+      write(dir, lease.journal, binding);
+    }
+  }
   function execute() {
     // Preserve the immutable observer source while retaining Root locks in its
     // detached worker. Passing explicit fd slots is necessary: spawn closes others.
