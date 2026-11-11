@@ -75,6 +75,8 @@ Root setup continues with a warning if TV inputs cannot be read but the applicat
 
 ## 6. Everyday use and recovery
 
+If the installer says “Root setup is unfinished, but its deployment record is missing on the TV.”: Choose Review recovery options to remove Clean Your TV, then start setup separately. Full removal also removes No-root Home and Helper; back up preferences first.
+
 No-root IR support: a short Home release schedules Clean after about 700 ms; LG Home may flash first. Held Home stays with webOS, and triple Home still stops Helper. Access on stock Developer Mode TVs remains unverified; do not change input permissions.
 
 Arrows select tiles; OK opens them; hold OK to reorder. Short Back retains the app's navigation and exit confirmation. Short Home opens Clean Your TV while Home control is active. Hold Back for 1.2 seconds to open LG Home once. The Home-control switch and your settings remain unchanged.

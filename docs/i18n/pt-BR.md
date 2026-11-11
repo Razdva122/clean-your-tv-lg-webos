@@ -75,6 +75,8 @@ A instalação Root continua com um aviso se as entradas da TV não puderem ser 
 
 ## 6. Uso e recuperação
 
+Se o instalador mostrar “A configuração Root está incompleta, mas o registro da instalação não está na TV.”: Escolha Revisar opções de recuperação para remover o Clean Your TV e depois inicie a configuração separadamente. A remoção completa também remove No-root Home e Helper; salve suas preferências antes.
+
 Suporte IR No-root: soltar Home após um toque curto agenda o Clean para cerca de 700 ms depois; o LG Home pode aparecer primeiro. Segurar Home continua com o webOS e três toques ainda param o Helper. O acesso pelo Developer Mode padrão não foi verificado; não altere permissões dos dispositivos de entrada.
 
 Setas selecionam; OK abre; segure OK para reorganizar. Um toque em Voltar mantém a navegação e a confirmação de saída do aplicativo. Home abre o lançador com o controle ativo. Segure Voltar por 1,2 segundos para abrir LG Home uma vez. O interruptor de controle do Home e suas configurações não mudam.

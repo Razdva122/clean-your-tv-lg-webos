@@ -120,6 +120,22 @@ saved connection can add the retained deployment stage without repeating setup;
 it may still lack the original exception. Do not repeat installation just to
 populate this field. Preserve the original pending operation and recovery data.
 
+## Native Root pending setup without deployment evidence
+
+For a saved native Root `install` in `setup`/`verify`, with no product-operation
+selector or pending activation restoration, an observed device
+`deployment_stage: absent` and `can_resume_root_setup: false` produce the fixed
+assessment reason `root-deployment-missing`. The operation remains blocked for
+continuation; `continue-removal` exposes the existing recovery review button.
+It is advisory, not package absence, quiescence, stock routing or cleanup proof.
+
+Status/Doctor add a localized explanation without another device request.
+Explicit recovery routes to the existing full-project removal confirmation and
+`clean-removal-v1` operation. Original receipts and first failure remain separate
+from the new removal goal. Existing device ownership, fencing, inverse recovery
+and final cleanup proofs remain authoritative. No setup is automatically replayed.
+This addresses the recovery dead end, not the original driver failure cause.
+
 ## Network connection causes
 
 During `ssh-connect`, inspect typed socket errors, including the values of

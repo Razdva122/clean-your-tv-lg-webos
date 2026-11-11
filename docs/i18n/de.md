@@ -75,6 +75,8 @@ In der veröffentlichten Version wird die Root-Einrichtung mit einer Warnung for
 
 ## 6. Bedienung und Wiederherstellung
 
+Wenn das Installationsprogramm meldet: „Die Root-Einrichtung ist unvollständig, aber ihr Installationsprotokoll fehlt auf dem TV.“: Wählen Sie Wiederherstellungsoptionen prüfen, um Clean Your TV zu entfernen. Starten Sie die Einrichtung danach separat. Dabei werden auch No-root Home und Helper entfernt; sichern Sie zuerst Ihre Einstellungen.
+
 IR-Unterstützung für No-root: Nach kurzem Drücken und Loslassen von Home wird Clean nach etwa 700 ms geöffnet; LG Home kann zuerst aufblitzen. Langes Home bleibt bei webOS; dreimal Home stoppt weiterhin Helper. Der Zugriff mit normalem Developer Mode ist unbestätigt; ändern Sie keine Eingabegeräteberechtigungen.
 
 Pfeile wählen eine Kachel, OK öffnet sie; OK gedrückt halten zum Verschieben. Kurzes Zurück behält Navigation und Beendigungsdialog der App bei. Kurzes Home öffnet bei aktiver Home-Steuerung den Launcher. Zurück 1,2 Sekunden gedrückt halten, um LG Home einmalig zu öffnen. Der Home-Schalter und Ihre Einstellungen bleiben unverändert.

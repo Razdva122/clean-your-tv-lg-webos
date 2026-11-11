@@ -75,6 +75,8 @@ Developer Mode 让 CYTV 可以在没有 root 的电视上安装应用。
 
 ## 6. 日常使用与恢复
 
+如果安装程序显示“Root 设置尚未完成，但电视上缺少部署记录。”： 选择“查看恢复选项”以移除 Clean Your TV，然后单独开始设置。完整移除也会移除 No-root Home 和 Helper；请先备份偏好设置。
+
 No-root 红外遥控支持：短按并松开 Home 后，计划在约 700 毫秒后打开 Clean；LG Home 可能先短暂出现。长按 Home 仍由 webOS 处理，连按三次仍会停止 Helper。普通 Developer Mode 电视上的访问能力尚未验证；请勿更改输入设备权限。
 
 方向键选择磁贴，OK 打开，按住 OK 调整顺序。短按返回保留应用本身的导航和退出确认。启用 Home 控制时，短按 Home 打开 Clean Your TV。按住返回 1.2 秒会临时打开 LG Home 一次，不改变 Home 控制开关和设置。

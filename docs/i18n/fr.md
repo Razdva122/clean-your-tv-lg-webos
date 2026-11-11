@@ -75,6 +75,8 @@ L’installation Root continue avec un avertissement si les entrées du TV ne pe
 
 ## 6. Utilisation et récupération
 
+Si l’installateur indique « La configuration Root est inachevée, mais son journal de déploiement est absent du téléviseur. » : Choisissez Examiner les options de récupération pour supprimer Clean Your TV, puis lancez la configuration séparément. La suppression complète retire aussi No-root Home et Helper ; sauvegardez vos préférences avant.
+
 Prise en charge IR No-root: relâcher Home après un appui court programme Clean après environ 700 ms ; LG Home peut apparaître brièvement. Un appui long reste géré par webOS et trois appuis arrêtent toujours Helper. L’accès en Developer Mode standard reste non vérifié ; ne modifiez pas les permissions des périphériques d’entrée.
 
 Les flèches sélectionnent, OK ouvre ; maintenez OK pour réorganiser. Un appui bref sur Retour conserve la navigation et la confirmation de sortie de l’application. Home ouvre le lanceur si le contrôle est actif. Maintenez Retour pendant 1,2 seconde pour ouvrir LG Home une fois. L’interrupteur du contrôle de Home et vos paramètres restent inchangés.
