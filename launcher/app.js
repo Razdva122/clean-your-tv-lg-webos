@@ -1760,7 +1760,8 @@
     return (
       'data:image/svg+xml,' +
       encodeURIComponent(
-        '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="#fff" d="' +
+        '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">' +
+          '<rect width="24" height="24" rx="3" fill="#252938"/><path fill="#fff" d="' +
           (INPUT_ICONS[input.kind] || INPUT_ICONS.hdmi) +
           '"/></svg>'
       )

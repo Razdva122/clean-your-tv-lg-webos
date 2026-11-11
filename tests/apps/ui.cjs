@@ -516,7 +516,10 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8876';
         (id) =>
           Array.from(document.querySelectorAll('#tiles .pinned-input')).some(
             (e) =>
-              e.dataset.appId === id && e.querySelector('img').naturalWidth > 0
+              e.dataset.appId === id &&
+              e.querySelector('img').naturalWidth > 0 &&
+              e.querySelector('.ctv-card').style.backgroundColor ===
+                'rgb(37, 41, 56)'
           ),
         pin
       );
