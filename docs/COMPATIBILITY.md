@@ -104,6 +104,8 @@ Helper-free first-install mode promising that behavior.
 - LG C5 77″ — No-root
 <!-- compatibility-reports:end -->
 
+- LG UM7450PLA — No-root — firmware 05.40.97 — webOS 4.5 — release v1.14.0. [Owner report #473](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/473)
+
 These are reports for the listed configurations, not a guarantee for every firmware or test case. Unreported versions are omitted. Earlier failures and untested paths remain in the evidence below.
 
 ## What has been tested
