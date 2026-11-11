@@ -506,13 +506,18 @@ def execute(bundle,baseline,alias,identity=None,run=subprocess.run,edition=None,
 
 def bootstrap_operation(edition, resume, check, ownership=None, read=None):
     from installation import (JOURNALS, Ownership, archive_component_fences,
-                              completed_no_root_fence, component_locks, device_operation, read_journal)
+                              completed_no_root_fence, component_locks, device_operation)
+    options={}
+    if ownership is not None:options['ownership']=ownership
+    if read is not None:options['read']=read
+    if resume or (edition!='no-root' and not callable(edition)):
+        return device_operation('system-bootstrap',recovery=resume,check=check,**options)
     ownership=ownership if ownership is not None else Ownership()
-    no_root=edition=='no-root' and not resume
     journal=JOURNALS['system-bootstrap'][0]
-    current=ownership.status() if no_root else None
+    current=ownership.status()
     reserved=bool(current and not current['terminal'] and
-                  (current['owner'],current['journal'],current['stage'])==('system-bootstrap',journal.name,'reserved'))
+                  (current['owner'],current['journal'],current['stage'])==('system-bootstrap',journal.name,'reserved')
+                  and (edition() if callable(edition) else edition)=='no-root')
 
     def require_absence(apps):
         for app in apps:
@@ -526,7 +531,8 @@ def bootstrap_operation(edition, resume, check, ownership=None, read=None):
                     raise ValueError('Root or supervisor registration remains')
 
     def handoff(lease):
-        if lease['owner']!='no-root':return False
+        if lease['owner']!='no-root' or (edition() if callable(edition) else edition)!='no-root':
+            return False
         record=completed_no_root_fence(ownership.store,lease)
         roots=tuple(JOURNALS[name][0].parent for name in ('deploy','root-bootstrap','system-bootstrap'))
         require_normal_root()
@@ -546,9 +552,9 @@ def bootstrap_operation(edition, resume, check, ownership=None, read=None):
                 raise ValueError('Reserved supervisor bootstrap requires recovery')
             require_absence((APP,))
         check()
-    return device_operation('system-bootstrap',recovery=resume or reserved,check=eligible,ownership=ownership,
-                            read=read if read is not None else read_journal,
-                            handoff=handoff if no_root and not reserved else None)
+    options['ownership']=ownership
+    return device_operation('system-bootstrap',recovery=reserved,check=eligible,
+                            handoff=None if reserved else handoff,**options)
 
 
 
@@ -578,7 +584,7 @@ def main():
                     if os.path.lexists(STATE):raise FileExistsError('Supervisor setup exists; inspect or explicitly --resume')
                     selected[0]=snapshot(args.bundle,args.edition,Path(tmp)/'baseline')
                 preflight(args.bundle,selected[0])
-            edition=verify_baseline(args.baseline,args.bundle)['edition'] if args.baseline and not args.resume else args.edition
+            edition=(lambda: verify_baseline(args.baseline,args.bundle)['edition']) if args.baseline else args.edition
             with bootstrap_operation(edition,args.resume,eligible):
                 print(json.dumps(resume(args.bundle) if args.resume else provision(args.bundle,selected[0])))
         return
