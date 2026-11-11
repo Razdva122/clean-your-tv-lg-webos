@@ -119,6 +119,7 @@ function harness(saved, late = false) {
 const settings = (provider = 'auto') => ({
   enabled: true,
   provider,
+  mode: 'manual',
   location: place,
   locationLanguage: 'en'
 });

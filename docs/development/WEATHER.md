@@ -60,9 +60,10 @@ behaviors themselves.
 ## Data and settings
 
 Settings → Weather follows Wallpapers. Off by default; Off cancels requests and hides city, units and format controls;
-source selection remains available. Manual city search uses Open-Meteo geocoding;
-Automatic city selection explicitly opts into approximate GeoJS IP lookup. A VPN
-can change that result; missing city names are not invented. Manual search is the fallback.
+source selection remains available. If weather is enabled when Home starts and
+no city is saved, Home uses Automatic and runs approximate GeoJS IP lookup. A
+saved manual city keeps Manual mode. Manual search uses Open-Meteo geocoding and
+is the fallback if automatic lookup fails or a VPN changes the result.
 Only the selected city/region/country/coordinates and lookup time are retained.
 Fixed HTTPS endpoints are owned by Home, never a theme. XHR timeout is 12 seconds;
 responses are bounded to 1 MiB and fields are validated. No provider key is shipped.
@@ -103,8 +104,8 @@ are introduced. XHR remains responsible for Open-Meteo and location lookup.
 
 Privacy endpoints are `api.met.no` and `api.open-meteo.com` for forecast
 coordinates, `geocoding-api.open-meteo.com` for city searches, and `get.geojs.io`
-for explicitly requested approximate IP location. All use HTTPS. Local source
-selection and cached forecasts stay with Home preferences. Credit MET data to
+for approximate IP location when weather is enabled in Automatic mode. All use
+HTTPS. Local source selection and cached forecasts stay with Home preferences. Credit MET data to
 the Norwegian Meteorological Institute under CC BY 4.0, alongside Open-Meteo,
 GeoNames and GeoJS credits and provider terms in Data sources and
 THIRD_PARTY_NOTICES.md. Network unavailability does not establish a nationwide
