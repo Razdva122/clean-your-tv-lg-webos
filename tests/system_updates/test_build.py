@@ -20,6 +20,41 @@ def fixture(root):
         (root/(name+'.ipk')).write_bytes(package.ipk(app,version,files))
 
 class BuildTests(unittest.TestCase):
+    def test_small_verified_read_does_not_allocate_the_maximum_file_limit(self):
+        import tracemalloc
+        setup=load('setup')
+        with tempfile.TemporaryDirectory() as tmp:
+            path=Path(tmp).resolve()/'small';expected=b'baseline'*1024;path.write_bytes(expected)
+            tracemalloc.start()
+            try:
+                actual=setup.safe(path)
+                _,peak=tracemalloc.get_traced_memory()
+            finally:tracemalloc.stop()
+            self.assertEqual(actual,expected)
+            self.assertLess(peak,1024*1024,'Small reads must not reserve the 96 MiB admission limit')
+
+    def test_verified_read_refuses_file_growth_or_truncation_after_stat(self):
+        import os
+        from unittest.mock import patch
+        setup=load('setup');original=os.fstat
+        with tempfile.TemporaryDirectory() as tmp:
+            path=Path(tmp).resolve()/'changing'
+            for changed in (b'short',b'original-extra'):
+                with self.subTest(changed=changed):
+                    path.write_bytes(b'original')
+                    def change_after_stat(fd):
+                        info=original(fd);path.write_bytes(changed);return info
+                    with patch.object(setup.os,'fstat',side_effect=change_after_stat):
+                        with self.assertRaisesRegex(ValueError,'changed'):
+                            setup.safe(path)
+
+    def test_verified_read_preserves_oversize_guard(self):
+        setup=load('setup')
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp).resolve();path=root/'oversize'
+            with path.open('wb') as stream:stream.truncate(96*1024*1024+1)
+            with self.assertRaisesRegex(ValueError,'Unsafe file'):setup.safe(path)
+
     def test_registration_refresh_restarts_launcher_without_enabling_home(self):
         setup=load('setup')
         for edition,app in [('root','com.cleanyourtv.root.preview'),('no-root','com.gathin.tvhome')]:
