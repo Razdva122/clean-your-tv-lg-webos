@@ -165,6 +165,8 @@ No-root가 Home 상태를 읽지 못하면 다시 시도를 선택하세요. 사
 
 ## Clean Your TV 설정
 
+테마를 선택하기 전에 **Debloat**에서 변경할 LG 광고, 추천, 개인정보 보호 및 알림 설정을 선택하세요. 각 결과를 확인하세요. 설치 프로그램이 원래 값을 읽을 수 없으면 자동 복원용으로 저장할 수 없습니다. 현재 설정을 유지하려면 **Debloat 건너뛰기**를 선택하세요.
+
 설치가 완료되면 Classic, Liquid Glass 또는 Ribbon을 선택하고 날씨를 켜거나 끄세요. Ribbon은 날씨를 지원하지 않으며 Liquid Glass는 간단한 형식을 사용합니다. 인터넷 연결로 대략적인 도시를 찾으며 Home 설정에서 바꿀 수 있습니다.
 
 Developer Mode의 No-root는 자동 연장(베타)을 제공합니다. 공식 타이머를 계속 확인하세요. 기존 root SSH를 통한 No-root에는 이 옵션이 없습니다. Root는 Homebrew Channel로 보안 업데이트를 포함한 LG 펌웨어 업데이트를 차단할 수 있습니다. Homebrew Channel에서 실제로 재시작해야 합니다. CYTV 업데이트는 별도입니다.

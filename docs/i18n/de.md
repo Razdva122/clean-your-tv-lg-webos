@@ -164,6 +164,8 @@ Einstellungen → Hintergrundbilder → Vom Telefon hochladen öffnen und den Co
 
 ## Clean Your TV einrichten
 
+Wählen Sie vor dem Design unter **Debloat**, welche LG-Einstellungen für Werbung, Empfehlungen, Datenschutz und Benachrichtigungen Sie ändern möchten. Prüfen Sie jedes Ergebnis. Kann der ursprüngliche Wert nicht gelesen werden, steht dafür keine automatische Wiederherstellung zur Verfügung. Wählen Sie **Debloat überspringen**, um die Einstellungen beizubehalten.
+
 Wähle nach erfolgreicher Installation Classic, Liquid Glass oder Ribbon und schalte das Wetter ein oder aus. Ribbon unterstützt kein Wetter; Liquid Glass nutzt das Kurzformat. Der ungefähre Ort wird über die Internetverbindung ermittelt und lässt sich in Home ändern.
 
 No-root mit Developer Mode bietet automatische Verlängerung (Beta); prüfe weiterhin den offiziellen Timer. No-root über vorhandenes root-SSH benötigt diese Option nicht. Root bietet über Homebrew Channel eine Sperre für LG-Firmwareupdates, einschließlich Sicherheitsupdates; ein echter Neustart über Homebrew Channel ist erforderlich. CYTV-Updates bleiben separat.

@@ -13,7 +13,7 @@ from PySide6.QtWidgets import (QApplication, QFileDialog, QFrame, QHBoxLayout,
                               QLabel, QLineEdit, QMainWindow, QMessageBox, QProgressBar,
                               QPushButton, QTextBrowser, QVBoxLayout, QWidget, QButtonGroup, QDialog, QScrollArea, QLayout, QCheckBox)
 
-from cytv import __version__, cli, diagnostics, i18n
+from cytv import __version__, cli, debloat, diagnostics, i18n
 from cytv.i18n import translate as tr
 from cytv.desktop import Channel
 from cytv.gui_style import STYLE, TVPreview, Select, EditionOption, BrandSignature, WrappedLabel, ThemeCard, ToggleSwitch
@@ -47,6 +47,7 @@ class Wizard(QMainWindow):
         self.recovery_profile = None
         self.selected_profile = None
         self.install_settings_current = {}
+        self.debloat_results = {}
         self.recovery_plan = None
         self.failure_help = None
         self.worker = None
@@ -84,7 +85,7 @@ class Wizard(QMainWindow):
         self.step_rows = []
         self.step_names = []
         self.step_numbers = []
-        for number in range(1, 6):
+        for number in range(1, 7):
             row = QFrame()
             row.setObjectName('step')
             line = QHBoxLayout(row)
@@ -289,6 +290,7 @@ class Wizard(QMainWindow):
         self.recovery_profile = None
         self.selected_profile = None
         self.install_settings_current = {}
+        self.debloat_results = {}
         self.recovery_plan = None
         self.failure_help = None
         self.preparation = []
@@ -305,7 +307,7 @@ class Wizard(QMainWindow):
         self.badge.setText(tr('Before you begin'))
         self.rail_title.setText(tr('Set up my TV'))
         self.rail_note.setText(tr('Keep your TV on and watch for a pairing request.'))
-        for label, title in zip(self.step_names, ('Connect to your TV', 'Choose your edition', 'Prepare the TV connection', 'Review and install', 'Set up your Clean Your TV')):
+        for label, title in zip(self.step_names, ('Connect to your TV', 'Choose your edition', 'Prepare the TV connection', 'Review and install', debloat.TITLE, 'Set up your Clean Your TV')):
             label.setText(tr(title))
         self.title.setText(tr('Make your TV feel like yours'))
         self.subtitle.setText(tr('Install Root or No-root. We will help you choose.'))
@@ -427,12 +429,12 @@ class Wizard(QMainWindow):
             self.content.setHtml(self.review_content)
             self.title.setText(self.review_title)
             self.update_steps(self.preparation_return_step)
-            self.badge.setText(tr(f'Step {self.current_step} of 5'))
+            self.badge.setText(tr(f'Step {self.current_step} of 6'))
             self.show_prompt(prompt)
             return
         self.clear_form()
         self.title.setText(tr('Prepare the TV connection'))
-        self.badge.setText(tr('Step 3 of 5') + f' · {index + 1} / {len(self.preparation)}')
+        self.badge.setText(tr('Step 3 of 6') + f' · {index + 1} / {len(self.preparation)}')
         self.update_steps(3)
         title, messages = self.preparation[index]
         image = {'1. Developer Mode': 'sign-in', '2. Dev Mode Status': 'dev-mode',
@@ -463,6 +465,7 @@ class Wizard(QMainWindow):
         self.recovery_profile = None
         self.selected_profile = None
         self.install_settings_current = {}
+        self.debloat_results = {}
         self.recovery_plan = None
         self.failure_help = None
         self.pending = None
@@ -502,7 +505,9 @@ class Wizard(QMainWindow):
         self.worker.start()
 
     def receive(self, kind, value):
-        if kind == 'installation-settings':
+        if kind == 'debloat-results':
+            self.debloat_results = dict(value)
+        elif kind == 'installation-settings':
             self.install_settings_current = {key:value[key] for key in ('renewal','block_updates') if type(value.get(key)) is bool}
         elif kind == 'check':
             self.check_panel.setAccessibleName(tr('TV checks'))
@@ -531,7 +536,7 @@ class Wizard(QMainWindow):
             if self.command == 'install':
                 self.title.setText(tr(title))
                 self.subtitle.hide()
-                self.badge.setText(tr(f'Step {number} of 5'))
+                self.badge.setText(tr(f'Step {number} of 6'))
                 self.update_steps(number)
             else:
                 self.title.setText(tr(self.operation_title))
@@ -761,6 +766,93 @@ class Wizard(QMainWindow):
         self.button('Back to start', self.home)
         address.setFocus()
 
+    def show_debloat_selection(self):
+        self.content.hide()
+        self.preview.hide()
+        self.title.setText(tr(debloat.TITLE))
+        notice = WrappedLabel(tr(debloat.NOTICE))
+        self.form_layout.addWidget(notice)
+        scroll = QScrollArea()
+        scroll.setObjectName('debloatSelection')
+        scroll.setAccessibleName(tr(debloat.SELECT.strip().rstrip(':')))
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll.setMinimumHeight(200)
+        panel = QWidget()
+        fields = QVBoxLayout(panel)
+        fields.setContentsMargins(0, 0, 12, 0)
+        fields.setSpacing(4)
+        scroll.setWidget(panel)
+        self.form_layout.addWidget(scroll, 1)
+        selected = {}
+
+        def add_group(title, rows):
+            section = ToggleSwitch(tr(title), tr('Selected'), tr('Keep current'))
+            section.setObjectName('debloatGroup-' + rows[0][0])
+            header = QHBoxLayout()
+            header.addWidget(WrappedLabel(tr(title)), 1)
+            header.addWidget(section)
+            fields.addLayout(header)
+            switches = []
+            for key, _, label, _ in rows:
+                row = QHBoxLayout()
+                row.setContentsMargins(14, 0, 0, 0)
+                text = WrappedLabel(tr(label))
+                toggle = ToggleSwitch(tr(label), tr('Selected'), tr('Keep current'))
+                toggle.setObjectName('debloat-' + key)
+                text.setBuddy(toggle)
+                row.addWidget(text, 1)
+                row.addWidget(toggle)
+                fields.addLayout(row)
+                selected[key] = toggle
+                switches.append(toggle)
+
+            def update_group():
+                count = sum(toggle.isChecked() for toggle in switches)
+                section.blockSignals(True)
+                section.off_text = tr('Some selected') if count else tr('Keep current')
+                section.setChecked(count == len(switches))
+                section.setAccessibleDescription(section.on_text if section.isChecked() else section.off_text)
+                section.updateGeometry()
+                section.update()
+                section.blockSignals(False)
+
+            def select_group(checked):
+                for toggle in switches:
+                    toggle.blockSignals(True)
+                    toggle.setChecked(checked)
+                    toggle.setAccessibleDescription(toggle.on_text if checked else toggle.off_text)
+                    toggle.blockSignals(False)
+                update_group()
+
+            section.toggled.connect(select_group)
+            for toggle in switches:
+                toggle.toggled.connect(update_group)
+            return section
+
+        first = None
+        for group, rows in debloat.GROUPS:
+            section = add_group(group, rows)
+            if first is None:
+                first = section
+        self.button('Continue', lambda: self.submit(json.dumps([
+            key for key, toggle in selected.items() if toggle.isChecked()])), True)
+        self.button('Skip Debloat', lambda: self.submit('[]'))
+        first.setFocus()
+
+    def show_debloat_results(self):
+        self.title.setText(tr('Debloat results'))
+        self.content.show()
+        rows = []
+        for key, status in self.debloat_results.items():
+            icon, color, message = debloat.RESULTS[status]
+            label = html.escape(tr(debloat.SETTINGS[key][1]))
+            rows.append(f'<tr><td style="color:{color};padding:6px">{icon}</td>'
+                        f'<td style="padding:6px">{label}<br><small>{html.escape(tr(message))}</small></td></tr>')
+        self.content.setHtml('<table width="100%">' + ''.join(rows) + '</table>')
+        self.button(debloat.CONTINUE, lambda: self.submit('1'), True).setFocus()
+
     def show_install_settings(self):
         from . import install_settings as settings
         self.title.setText(tr(settings.TITLE))
@@ -782,8 +874,8 @@ class Wizard(QMainWindow):
         fields.setSizeConstraint(QLayout.SizeConstraint.SetMinAndMaxSize)
         scroll.setWidget(panel)
         self.form_layout.addWidget(scroll, 1)
-        self.update_steps(5)
-        self.badge.setText(tr('Step 5 of 5'))
+        self.update_steps(6)
+        self.badge.setText(tr('Step 6 of 6'))
         profile = self.selected_profile or {'edition': 'no-root'}
         fields.setAlignment(Qt.AlignmentFlag.AlignTop)
         fields.addWidget(QLabel(tr('Theme')))
@@ -881,11 +973,17 @@ class Wizard(QMainWindow):
         self.details_toggle.setChecked(False)
         from .install_settings import PROMPT as SETTINGS_PROMPT
         if (self.preparation and self.preparation[0][0] == '1. Developer Mode'
-                and (prompt.label == SETTINGS_PROMPT or prompt.label.startswith('Connect to check installed versions?'))):
+                and (prompt.label in (debloat.SELECT, SETTINGS_PROMPT) or prompt.label.startswith('Connect to check installed versions?'))):
             self.review_title = self.title.text()
             self.review_content = self.content.toHtml()
             self.preparation_return_step = self.current_step
             self.show_preparation(0, prompt)
+            return
+        if prompt.label == debloat.SELECT:
+            self.show_debloat_selection()
+            return
+        if prompt.label == debloat.REVIEW:
+            self.show_debloat_results()
             return
         if prompt.label == SETTINGS_PROMPT:
             self.show_install_settings()
