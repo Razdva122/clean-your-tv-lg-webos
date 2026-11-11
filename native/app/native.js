@@ -983,6 +983,7 @@ var timer = setInterval(function () {
     else if (!cleaning) finish(0);
   }
   if (stopping) return;
+  refreshWatchCatalog();
   homeChannels.forEach(readHomeRequest);
   try {
     var raw = fs.readFileSync(data + '/control.json', 'utf8');
@@ -1135,14 +1136,59 @@ service.call('luna://com.local.nativehome.service/status', {}, function (m) {
 });
 
 var powerPolicy = require('./power-policy')();
-var watchedApps = [];
+var watchedApps = [],
+  needsWatchCatalog = false,
+  watchCatalogPending = false,
+  nextWatchCatalog = 0;
 try {
   watchedApps = JSON.parse(
     require('./state-permissions').readConfiguration(data, 'apps')
   );
-  if (!Array.isArray(watchedApps)) watchedApps = [];
-} catch (e) {}
+  if (!Array.isArray(watchedApps)) throw Error('Invalid apps configuration');
+} catch (e) {
+  watchedApps = [];
+  needsWatchCatalog = true;
+}
 var screenPolicy = require('./screen-policy')(watchedApps);
+function refreshWatchCatalog() {
+  if (
+    !needsWatchCatalog ||
+    watchCatalogPending ||
+    stopping ||
+    stopRequested ||
+    monotonic() < nextWatchCatalog
+  )
+    return;
+  watchCatalogPending = true;
+  nextWatchCatalog = monotonic() + 10000;
+  // Recover routing hints from the existing authenticated TV inventory. Never
+  // adopt installer-owned files or make a transient boot/network failure final.
+  readCatalog().then(
+    function (apps) {
+      watchCatalogPending = false;
+      if (!Array.isArray(apps) || stopping || stopRequested) return;
+      watchedApps.length = 0;
+      apps.forEach(function (app) {
+        if (
+          app &&
+          typeof app.id === 'string' &&
+          [
+            'com.gathin.tvhome',
+            'com.local.nativehome',
+            'com.webos.app.home',
+            'com.cleanyourtv.root.preview'
+          ].indexOf(app.id) < 0
+        )
+          watchedApps.push(app.id);
+      });
+      needsWatchCatalog = false;
+    },
+    function () {
+      watchCatalogPending = false;
+      log({ event: 'app-watch-catalog-unavailable' });
+    }
+  );
+}
 var screenWatch = require('./screen-watch')(
   data,
   screenLog,
@@ -1192,6 +1238,7 @@ var screenWatch = require('./screen-watch')(
     monitorReason = null;
     lgHomeSince = null;
     screenPolicy.reset();
+    refreshWatchCatalog();
     diagnostic('monitor-reset');
   },
   function (p) {

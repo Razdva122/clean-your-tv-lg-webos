@@ -14,6 +14,7 @@ function controller({
   automatic = true,
   deferStart = false,
   inputQuery,
+  appsConfig = '[]',
   luna,
   foreground
 } = {}) {
@@ -28,6 +29,7 @@ function controller({
     cleanups = [],
     logs = [],
     launches = [];
+  files.set(dir + 'apps.json', appsConfig);
   if (blocked) files.set(dir + 'blocked', 'stopped');
   if (watchdog) files.set(dir + 'watchdog', 'stopped');
   const schedule = (fn, ms, repeat = 0) => {
@@ -205,6 +207,42 @@ function controller({
   };
 }
 const blocked = (c) => c.files.has(dir + 'blocked');
+test('unavailable apps configuration uses fresh TV catalog without adopting installer data', async () => {
+  let reads = 0;
+  const c = controller({
+    appsConfig: '{"invalid":"configuration"}',
+    inputQuery: () => {
+      reads++;
+      return Promise.resolve([{ id: 'test.app' }]);
+    }
+  });
+  c.reset();
+  await new Promise((r) => setImmediate(r));
+  assert.equal(reads, 1);
+  c.foreground('test.app');
+  c.foreground('com.webos.app.home');
+  assert(c.launches.includes('com.gathin.tvhome'));
+  assert.equal(c.files.get(dir + 'apps.json'), '{"invalid":"configuration"}');
+});
+test('boot catalog failure retries without resetting a healthy foreground subscription', async () => {
+  let reads = 0;
+  const c = controller({
+    appsConfig: 'invalid',
+    inputQuery: () =>
+      ++reads === 1
+        ? Promise.reject(Error('not ready'))
+        : Promise.resolve([{ id: 'test.app' }])
+  });
+  c.reset();
+  await new Promise((r) => setImmediate(r));
+  assert.equal(reads, 1);
+  c.advance(10000);
+  await new Promise((r) => setImmediate(r));
+  assert.equal(reads, 2);
+  c.foreground('test.app');
+  c.foreground('com.webos.app.home');
+  assert(c.launches.includes('com.gathin.tvhome'));
+});
 test('single CARD emergency returns to LG after cleanup without requiring cross-app close', () => {
   let closes = 0;
   const c = controller({

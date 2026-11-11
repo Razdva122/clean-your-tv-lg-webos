@@ -352,8 +352,12 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                 store.request_clean_removal(profile)
             from .recovery import removal_plan
             cleanup=(store.pending(profile) or {}).get('recovery_protocol')=='clean-removal-v1'
+            observer_support = (profile.get('connection') == 'root-ssh'
+                and (store.pending(profile) or {}).get('recovery_protocol') == 'no-root-original-stream-v1'
+                and args.command in ('status', 'doctor', 'recover'))
             if args.command in ('uninstall','recover') and cleanup:
                 removal_plan(write,store,profile,state='waiting',connecting=True)
+            if (args.command in ('uninstall','recover') and cleanup) or observer_support:
                 try:manifest=package.verify_payload(payload)
                 except FileNotFoundError:
                     raise UserError('Release payload is missing. Download a built cytv executable or run python scripts/build-cytv.py --payload-only from source.') from None

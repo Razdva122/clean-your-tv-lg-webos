@@ -1008,7 +1008,8 @@ else:
             'if [ -f ' + HELPER_STATE + '/controller.pid ]; then '
             '/usr/bin/node || exit 1; '
             'n=0; while [ -e ' + HELPER_STATE + '/controller.pid ]; do '
-            'n=$((n+1)); [ "$n" -le 15 ] || exit 1; sleep 1; done; fi',
+            'n=$((n+1)); [ "$n" -le 15 ] || exit 1; sleep 1; done; '
+            'else cat >/dev/null; fi',
             data=PROGRAM.encode(), timeout=25)
 
     def root_inventory(self, fallback):

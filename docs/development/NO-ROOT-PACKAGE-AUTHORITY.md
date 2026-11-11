@@ -238,7 +238,7 @@ its own UID. Even mode 0640 then fails the caller/5999 ownership checks above.
 During authenticated No-root continuation with Helper stopped/stale, the source
 fix also permits replacing that single key with a caller-owned 0640 inode when
 its exact bytes match the original capsule's expected SHA256. It accepts only
-0640/0775, a regular single-link file up to 64 KiB in the checked state directory,
+0640/0775/0777, a regular single-link file up to 64 KiB in the checked state directory,
 and its shared group must match the directory and belong to the SSH caller.
 This authenticates bytes rather than trusting an arbitrary numeric Helper UID.
 
@@ -253,7 +253,13 @@ refuse without replacing the key. Staging is cleaned on failure. Caller-owned
 Neither immutable observer source changes. The repaired caller-owned key passes
 its original checks, so pending plans, capsules, terminal package receipts and
 configuration claims keep their original identity. No package request is
-replayed by this repair. Status remains read-only, Root SSH is unchanged, and
+replayed by this repair. Status remains read-only. For Root SSH, only explicit
+repair of the packaged Helper state permanently becomes its 5999:5000 owner
+before touching configuration and still requires the original capsule hash.
+This keeps the key usable at the next boot even when the files step was already
+complete and no upload follows. Expanded keys use a fresh private inode so
+old writable descriptors cannot alter the repaired key. The repair preserves
+the apps inode and owner, and
 emergency/stop files are untouched. No new endpoint, permission grant or durable
 state format is introduced. See the [source verification ledger](../history/2026-11-10-issue487-helper-recovery.md);
 actual reporter-device recovery remains pending for a future published build.

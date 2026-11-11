@@ -10,6 +10,94 @@ ROOT = Path(__file__).resolve().parents[2]
 
 @unittest.skipIf(os.name == 'nt', 'TV storage fixtures require POSIX ownership, modes and inode semantics')
 class StorageContractTests(unittest.TestCase):
+    def test_bootstrap_restricts_packaged_boot_modes_before_normal_reads(self):
+        # A bootstrap that skips expanded leaves must fail before input starts.
+        self.run_js("""
+var values={'ssap-key.json':'{"key":"pairing"}','apps.json':'["com.example.app"]',
+ 'control.json':'{"cmd":"stop"}','controller.pid':'123','controller.log':'untrusted old log',
+ 'home-control.json':'{"enabled":false}','startup-state.json':'{"enabled":true,"boot":"prior","schema":3}'};
+Object.keys(values).forEach(function(n){fs.writeFileSync(d+'/'+n,values[n]);fs.chmodSync(d+'/'+n,511);});
+fs.writeFileSync(d+'/blocked','emergency');fs.chmodSync(d+'/blocked',511);
+fs.writeFileSync(d+'/watchdog','watchdog');fs.chmodSync(d+'/watchdog',511);
+fs.chmodSync(d,511);
+assert.throws(function(){p.readConfiguration(d,'key');});
+assert.throws(function(){p.inspectConfiguration(d,{});});
+assert.strictEqual(p(d,null,true),true);
+var modes={'ssap-key.json':416,'home-control.json':432,'startup-state.json':420};
+Object.keys(modes).forEach(function(n){assert.strictEqual(fs.readFileSync(d+'/'+n,'utf8'),values[n]);assert.strictEqual(fs.statSync(d+'/'+n).mode&4095,modes[n]);});
+assert.strictEqual(fs.readFileSync(d+'/control.json','utf8'),'{}');
+assert.strictEqual(p.readConfiguration(d,'key'),values['ssap-key.json']);
+assert.throws(function(){p.readConfiguration(d,'apps');});
+assert.strictEqual(fs.statSync(d+'/apps.json').mode&4095,511);
+assert.strictEqual(fs.readFileSync(d+'/blocked','utf8'),'emergency');
+assert.strictEqual(fs.readFileSync(d+'/watchdog','utf8'),'watchdog');
+p.atomicRecord(d,'pid','456');assert.strictEqual(fs.readFileSync(d+'/controller.pid','utf8'),'456');
+p.appendLog(d,'new checked log');assert.strictEqual(fs.readFileSync(d+'/controller.log','utf8').trim(),'new checked log');
+assert.strictEqual(fs.readdirSync(d).filter(function(n){return n.charAt(0)==='.';}).length,0);
+""")
+
+    def test_explicit_installer_restricts_boot_modes_without_adopting_apps(self):
+        self.run_js("""
+fs.writeFileSync(d+'/ssap-key.json','{"key":"pairing"}');fs.chmodSync(d+'/ssap-key.json',511);
+fs.writeFileSync(d+'/apps.json','["com.example.app"]');fs.chmodSync(d+'/apps.json',511);
+var apps=fs.statSync(d+'/apps.json');assert.throws(function(){p.inspectConfiguration(d,{});});
+assert.strictEqual(fs.statSync(d+'/ssap-key.json').mode&4095,511);
+p.prepareConfiguration(d,{});
+assert.strictEqual(fs.statSync(d+'/apps.json').ino,apps.ino);
+assert.strictEqual(fs.statSync(d+'/apps.json').uid,apps.uid);
+assert.strictEqual(fs.statSync(d+'/apps.json').mode&4095,420);
+assert.strictEqual(fs.statSync(d+'/ssap-key.json').mode&4095,416);
+assert.strictEqual(p.readConfiguration(d,'apps'),'["com.example.app"]');
+""")
+
+    def test_all_fixed_output_classes_replace_expanded_leaves_without_consuming_them(self):
+        self.run_js("""
+var classes={'control':'control.json','home-preference':'home-control.json','startup-state':'startup-state.json',
+ 'pid':'controller.pid','logger':'controller.log','home-request':'home-request.json',
+ 'home-response':'home-response.json','input-request':'input-request.json','input-response':'input-response.json',
+ 'catalog-request':'catalog-request.json','catalog-response':'catalog-response.json'};
+Object.keys(classes).forEach(function(kind){
+ var channel=/-(request|response)$/.test(kind);
+ if(channel&&process.platform!=='linux')return; // macOS clears this temporary setgid directory; Linux CI covers it.
+ fs.chmodSync(d,channel?1528:504);
+ var file=d+'/'+classes[kind];fs.writeFileSync(file,'malformed old output');fs.chmodSync(file,511);
+ p.atomicRecord(d,kind,'fresh output');assert.strictEqual(fs.readFileSync(file,'utf8'),'fresh output');
+ assert.strictEqual(fs.statSync(file).mode&2,0);
+});
+fs.chmodSync(d,504);fs.writeFileSync(d+'/controller.log',new Array(200001).join('x'));fs.chmodSync(d+'/controller.log',511);
+fs.writeFileSync(d+'/controller.log.previous','malformed');fs.chmodSync(d+'/controller.log.previous',511);
+p.appendLog(d,'fresh');assert.strictEqual(fs.readFileSync(d+'/controller.log','utf8').trim(),'fresh');
+assert.strictEqual(fs.readFileSync(d+'/controller.log.previous','utf8'),'');
+""")
+
+    def test_stop_preserves_expanded_latches_while_publishing_fresh_stop(self):
+        self.run_js("""
+fs.chmodSync(d,504);
+['blocked','watchdog'].forEach(function(n){fs.writeFileSync(d+'/'+n,n);fs.chmodSync(d+'/'+n,511);});
+fs.writeFileSync(d+'/control.json','malformed old command');fs.chmodSync(d+'/control.json',511);
+var marker=fs.statSync(d+'/blocked').ino;
+assert.strictEqual(p.requestStop(d),true);
+assert.strictEqual(fs.statSync(d+'/blocked').ino,marker);
+assert.strictEqual(fs.readFileSync(d+'/blocked','utf8'),'blocked');
+assert.strictEqual(fs.readFileSync(d+'/watchdog','utf8'),'watchdog');
+assert.strictEqual(fs.readFileSync(d+'/control.json','utf8'),'{"cmd":"stop"}');
+assert.strictEqual(fs.statSync(d+'/control.json').mode&4095,420);
+""")
+
+    def test_authenticated_expanded_key_isolated_from_retained_writable_descriptor(self):
+        self.run_js("""
+var key=d+'/ssap-key.json',old='{"key":"old"}',newer='{"key":"new"}';
+fs.writeFileSync(key,old);fs.chmodSync(key,511);
+fs.writeFileSync(d+'/apps.json','[]');fs.chmodSync(d+'/apps.json',420);
+var descriptor=fs.openSync(key,require('constants').O_RDWR),inode=fs.statSync(key).ino;
+var hash=require('crypto').createHash('sha256').update(old).digest('hex');
+p.prepareConfiguration(d,{expectedHash:hash,requireHash:true});
+var bytes=Buffer.from?Buffer.from(newer):new Buffer(newer);
+fs.writeSync(descriptor,bytes,0,bytes.length,0);fs.closeSync(descriptor);
+assert.strictEqual(fs.readFileSync(key,'utf8'),old);
+assert.notStrictEqual(fs.statSync(key).ino,inode);
+""")
+
     def run_js(self, body):
         runtimes = ['node'] + [os.environ[k] for k in ('NODE010', 'NODE01025', 'NODE012') if os.environ.get(k)]
         for runtime in runtimes:
@@ -94,7 +182,7 @@ assert.strictEqual(fs.readdirSync(d).filter(function(n){return n.charAt(0)==='.'
     def test_configuration_inspection_is_readonly_and_validates_apps_before_key_repair(self):
         self.run_js("""
 fs.writeFileSync(d+'/ssap-key.json','retained');fs.chmodSync(d+'/ssap-key.json',509);
-fs.writeFileSync(d+'/apps.json','[]');fs.chmodSync(d+'/apps.json',511);
+fs.writeFileSync(d+'/apps.json','[]');fs.chmodSync(d+'/apps.json',507);
 var before=fs.statSync(d+'/ssap-key.json');
 assert.throws(function(){p.prepareConfiguration(d,{});});
 assert.strictEqual(fs.statSync(d+'/ssap-key.json').mode&4095,509);
