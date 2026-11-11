@@ -151,8 +151,8 @@ class CIProfiles(unittest.TestCase):
     def test_required_statuses_include_parallel_browser_failures(self):
         workflow = (ROOT / '.github/workflows/tests.yml').read_text()
         summary = re.search(r'^  tests:\n(.*?)(?=^  [^ ]|\Z)', workflow, re.M | re.S).group(1)
-        self.assertIn('needs: [scope, runtime, browser, phone-heic, optional-python]', summary)
-        browser = re.search(r'^  browser:\n(.*?)(?=^  [^ ]|\Z)', workflow, re.M | re.S).group(1)
+        self.assertRegex(summary, r'needs: \[scope, runtime, browser, phone-heic, optional-python(?:, weather)?\]')
+        browser = re.search(r'^  browser(?:-core)?:\n(.*?)(?=^  [^ ]|\Z)', workflow, re.M | re.S).group(1)
         self.assertIn('BROWSER_CHANNEL=chromium node tests/tv-dev-ui.cjs', browser)
         self.assertIn('if: always()', summary)
         script = summary.split('        run: |\n', 1)[1]
