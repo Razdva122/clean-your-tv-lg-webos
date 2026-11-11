@@ -22,7 +22,8 @@ try {
       throw Error('Invalid setup generation');
     automatic = false;
     startGeneration = setupGeneration;
-  } else if (!automatic) startGeneration = storage.stopGeneration(data, true);
+  } else if (!automatic)
+    startGeneration = storage.stopGeneration(data, 'manual');
 } catch (e) {
   process.exit(1);
 }

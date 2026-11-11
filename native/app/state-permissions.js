@@ -412,8 +412,9 @@ function session(directory, options, action) {
         original &&
         (!current ||
           !unchanged(original.stat, current) ||
-          read(name, limit).bytes.toString('hex') !==
-            original.bytes.toString('hex'))
+          (original.bytes &&
+            read(name, limit).bytes.toString('hex') !==
+              original.bytes.toString('hex')))
       )
         fail();
       if (
@@ -451,6 +452,25 @@ function session(directory, options, action) {
       if (fd !== undefined) fs.closeSync(fd);
       if (created) fs.unlinkSync(path);
     }
+  }
+  function replaceGeneration(previous) {
+    var name = 'stop-generation';
+    if (
+      previous &&
+      (previous.gid !== before.gid ||
+        ((previous.mode & 4095) !== 436 && (previous.mode & 4095) !== 511))
+    )
+      throw Error('Invalid Stop storage');
+    var token = 'S' + crypto.randomBytes(16).toString('hex');
+    write(
+      name,
+      buffer(token),
+      436,
+      33,
+      !previous,
+      previous && { stat: previous }
+    );
+    return token;
   }
   function expanded(name, limit, requireOwner) {
     check();
@@ -550,12 +570,23 @@ function session(directory, options, action) {
     process.chdir(directory);
     entered = true;
     check();
+    var expandedDirectory = (before.mode & 4095) === 511;
+    var repairedGeneration;
     if (
-      options.normalize &&
-      (before.uid === uid || (uid === 0 && options.role === 'installer')) &&
+      (options.normalize || (options.repairGeneration && expandedDirectory)) &&
+      (before.uid === uid ||
+        (uid === 0 &&
+          (options.role === 'installer' || options.repairGeneration))) &&
       options.role !== 'channel' &&
       (before.mode & 4095) !== 504
     ) {
+      if (expandedDirectory) {
+        var previousGeneration = leaf('stop-generation', 33, true);
+        // Publish the replacement while setup readers still reject this
+        // directory. A failed write must leave the expanded mode unchanged.
+        if (options.repairGeneration || previousGeneration)
+          repairedGeneration = replaceGeneration(previousGeneration);
+      }
       try {
         fs.fchmodSync(parent, 504);
         var normalized = fs.fstatSync(parent);
@@ -599,6 +630,8 @@ function session(directory, options, action) {
       write: write,
       check: check,
       stat: before,
+      repairedGeneration: repairedGeneration,
+      replaceGeneration: replaceGeneration,
       bootstrap: bootstrap,
       expanded: expanded,
       replace: replace,
@@ -626,7 +659,8 @@ function configuration(directory, options, repair) {
       role: 'installer',
       operation: repair ? 'prepare' : 'inspect',
       legacy: repair,
-      normalize: repair
+      normalize: repair,
+      output: repair ? 'stop-generation' : undefined
     },
     function (s) {
       if (repair && s.stat.mode & 2)
@@ -709,7 +743,7 @@ function prepare(directory, log, initializeControl) {
     legacy: true,
     normalize: true,
     log: log,
-    output: 'control.json'
+    output: ['control.json', 'stop-generation']
   };
   try {
     return session(directory, settings, function (s) {
@@ -899,36 +933,78 @@ prepare.requestStop = function (directory, options) {
   return result;
 };
 prepare.stopGeneration = function (directory, create) {
-  return session(directory, { role: 'app', operation: 'stop' }, function (s) {
-    if (s.uid !== 0 && !(s.stat.mode & (s.stat.uid === s.uid ? 128 : 16)))
-      throw Error('Stop storage is not writable');
-    var value = s.read('stop-generation', 33, true);
-    if (
-      !value &&
-      create === 'setup' &&
-      (s.leaf('blocked', Infinity) || s.leaf('watchdog', Infinity))
-    )
-      return null;
-    if (!value && (create === true || create === 'setup')) {
-      s.write(
-        'stop-generation',
-        buffer('I' + crypto.randomBytes(16).toString('hex')),
-        436,
-        33,
-        true
-      );
-      value = s.read('stop-generation', 33, true);
+  var manual = create === 'manual',
+    repair = manual || create === 'install',
+    name = 'stop-generation';
+  return session(
+    directory,
+    {
+      role: 'app',
+      operation: 'stop',
+      legacy: repair,
+      repairGeneration: repair,
+      output: repair ? name : undefined
+    },
+    function (s) {
+      if ((s.stat.mode & 4095) === 511) {
+        // Explicit Start retains the published boot recovery path when the
+        // runtime can use the directory but only the packaged owner can chmod it.
+        // Setup always requires a checked generation in private storage.
+        if (manual) return null;
+        throw Error('Stop storage is not private');
+      }
+      if (s.uid !== 0 && !(s.stat.mode & (s.stat.uid === s.uid ? 128 : 16)))
+        throw Error('Stop storage is not writable');
+      var expected = s.repairedGeneration,
+        previous = repair ? s.leaf(name, 33, true) : null;
+      if (
+        previous &&
+        (previous.gid !== s.stat.gid ||
+          ((previous.mode & 4095) !== 436 && (previous.mode & 4095) !== 511))
+      )
+        throw Error('Invalid Stop storage');
+      if (
+        repair &&
+        !expected &&
+        previous &&
+        ((previous.mode & 4095) === 511 || previous.size === 0)
+      ) {
+        // Never adopt expanded bytes or the failed-Stop sentinel. An S token
+        // also prevents a pending fresh setup from adopting a new I token.
+        expected = s.replaceGeneration(previous);
+      }
+      var value = s.read(name, 33, true);
+      if (
+        !value &&
+        create === 'setup' &&
+        (s.leaf('blocked', Infinity) || s.leaf('watchdog', Infinity))
+      )
+        return null;
+      if (
+        !value &&
+        !expected &&
+        (repair || create === true || create === 'setup')
+      ) {
+        var initial = 'I' + crypto.randomBytes(16).toString('hex');
+        s.write(name, buffer(initial), 436, 33, true);
+        if (repair) expected = initial;
+        value = s.read(name, 33, true);
+      }
+      if (
+        value &&
+        (value.stat.gid !== s.stat.gid || (value.stat.mode & 4095) !== 436)
+      )
+        throw Error('Invalid Stop storage');
+      var token = value && value.bytes.toString('utf8');
+      if (
+        !token ||
+        !/^[IS][a-f0-9]{32}$/.test(token) ||
+        (expected && token !== expected)
+      )
+        throw Error('Invalid Stop generation');
+      return token;
     }
-    if (
-      value &&
-      (value.stat.gid !== s.stat.gid || (value.stat.mode & 4095) !== 436)
-    )
-      throw Error('Invalid Stop storage');
-    var token = value && value.bytes.toString('utf8');
-    if (!token || !/^[IS][a-f0-9]{32}$/.test(token))
-      throw Error('Invalid Stop generation');
-    return token;
-  });
+  );
 };
 prepare.publishStopGeneration = function (directory) {
   try {

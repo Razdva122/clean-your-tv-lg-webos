@@ -164,6 +164,100 @@ try {
     assert.throws(() => secure.stopGeneration(directory, 'setup'));
     secure.publishStopGeneration(directory);
   }
+  // An explicit Start can replace a fail-closed Stop sentinel with a new
+  // cancellation baseline. An interrupted setup must still reject it.
+  fs.writeFileSync(filename, '');
+  assert.throws(() => secure.stopGeneration(directory, 'setup'));
+  assert.match(secure.stopGeneration(directory, 'manual'), /^S[a-f0-9]{32}$/);
+  const old = secure.stopGeneration(directory);
+  fs.chmodSync(directory, 0o777);
+  fs.chmodSync(filename, 0o777);
+  assert.throws(() => secure.stopGeneration(directory));
+  assert.throws(() => secure.stopGeneration(directory, 'setup'));
+  const noEntropy = {
+    module: { exports: {} },
+    Buffer,
+    process,
+    require(name) {
+      if (name === 'crypto')
+        return {
+          randomBytes() {
+            throw Error('entropy unavailable');
+          }
+        };
+      return require(
+        name === './contract-events' ? '../app/contract-events' : name
+      );
+    }
+  };
+  vm.runInNewContext(source, noEntropy);
+  assert.throws(() =>
+    noEntropy.module.exports.stopGeneration(directory, 'install')
+  );
+  assert.equal(fs.statSync(directory).mode & 0o777, 0o777);
+  assert.throws(() => secure.stopGeneration(directory));
+  const repaired = secure.stopGeneration(directory, 'install');
+  assert.match(repaired, /^S[a-f0-9]{32}$/);
+  assert.notEqual(repaired, old, 'never adopt a token from expanded storage');
+  assert.equal(fs.statSync(directory).mode & 0o777, 0o770);
+  assert.equal(fs.statSync(filename).mode & 0o777, 0o664);
+  assert.equal(secure.stopGeneration(directory), repaired);
+  assert.notEqual(secure.publishStopGeneration(directory), repaired);
+  const beforeBootstrap = secure.stopGeneration(directory);
+  fs.chmodSync(directory, 0o777);
+  assert.equal(secure(directory), true);
+  assert.notEqual(secure.stopGeneration(directory), beforeBootstrap);
+  assert.equal(fs.statSync(directory).mode & 0o777, 0o770);
+
+  fs.writeFileSync(filename, '');
+  let concurrentStop;
+  const racingRepair = {
+    module: { exports: {} },
+    Buffer,
+    process,
+    require(name) {
+      if (name === 'fs')
+        return Object.assign({}, fs, {
+          renameSync(from, to) {
+            fs.renameSync(from, to);
+            if (to === 'stop-generation' && !concurrentStop)
+              concurrentStop = secure.publishStopGeneration(directory);
+          }
+        });
+      return require(
+        name === './contract-events' ? '../app/contract-events' : name
+      );
+    }
+  };
+  vm.runInNewContext(source, racingRepair);
+  assert.throws(() =>
+    racingRepair.module.exports.stopGeneration(directory, 'manual')
+  );
+  assert.equal(secure.stopGeneration(directory), concurrentStop);
+  fs.chmodSync(directory, 0o777);
+  const stopDuringChmod = {
+    module: { exports: {} },
+    Buffer,
+    process,
+    require(name) {
+      if (name === 'fs')
+        return Object.assign({}, fs, {
+          fchmodSync(fd, mode) {
+            fs.fchmodSync(fd, mode);
+            if (mode === 0o770 && fs.fstatSync(fd).isDirectory())
+              fs.truncateSync(filename, 0);
+          }
+        });
+      return require(
+        name === './contract-events' ? '../app/contract-events' : name
+      );
+    }
+  };
+  vm.runInNewContext(source, stopDuringChmod);
+  assert.throws(() =>
+    stopDuringChmod.module.exports.stopGeneration(directory, 'install')
+  );
+  assert.equal(fs.statSync(filename).size, 0);
   fs.writeFileSync(filename, 'bad');
   assert.throws(() => secure.stopGeneration(directory));
   assert.throws(() => secure.stopGeneration(directory, true));

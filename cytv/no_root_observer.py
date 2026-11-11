@@ -913,7 +913,7 @@ GENERATION_CHECK = node_adapter('state-permissions', r"""
 var input=JSON.parse(process.argv[process.argv.length-1]),fs=require('fs');
 try { fs.lstatSync(input.directory); }
 catch(e) { if(e.code!=='ENOENT')throw e;process.stdout.write('null');return; }
-process.stdout.write(JSON.stringify(contract.stopGeneration(input.directory,input.create)));
+process.stdout.write(JSON.stringify(contract.stopGeneration(input.directory,input.create===true?'install':input.create)));
 """)
 
 
