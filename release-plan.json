@@ -41,13 +41,23 @@
         487
       ],
       "summary": "Fix Windows applicability and stdin transport in shared-contract fixtures"
+    },
+    {
+      "pr": 508,
+      "issues": [
+        507
+      ],
+      "summary": "Bound fresh System updater setup reads by the verified file size to prevent baseline validation MemoryError"
+    },
+    {
+      "pr": 510,
+      "issues": [
+        487,
+        509
+      ],
+      "summary": "Restore private Helper boot state, preserve the original No-root CLI recovery and complete Root activation when Helper is absent"
     }
   ],
   "excluded": [],
-  "acceptance": "",
-  "build": {
-    "run_id": 42969073353,
-    "attempt": 1,
-    "source": "ee8b41c201356e3b9c10df50957e345de122f0a8"
-  }
+  "acceptance": ""
 }
