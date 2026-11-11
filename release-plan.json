@@ -34,6 +34,13 @@
         454
       ],
       "summary": "Correct the stock Home regression fixture on UID 1001 CI runners; production behavior unchanged"
+    },
+    {
+      "pr": 504,
+      "issues": [
+        487
+      ],
+      "summary": "Fix Windows applicability and stdin transport in shared-contract fixtures"
     }
   ],
   "excluded": [],
