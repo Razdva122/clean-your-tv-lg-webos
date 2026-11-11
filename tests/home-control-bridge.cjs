@@ -87,8 +87,9 @@ if ((fs.statSync(dir).mode & 0o7777) !== 0o2770) {
         fs.readFileSync(path.join(dir, 'catalog-request.json'), 'utf8')
       );
     assert.equal(catalogReq.method, 'listApps');
-    fs.writeFileSync(
-      path.join(dir, 'catalog-response.json'),
+    storage.atomicRecord(
+      dir,
+      'catalog-response',
       JSON.stringify({
         id: catalogReq.id,
         returnValue: true,
@@ -97,6 +98,11 @@ if ((fs.statSync(dir).mode & 0o7777) !== 0o2770) {
     );
     queue.pop()();
     assert.equal((await catalogPending).apps[0].id, 'org.example');
+    for (const name of ['catalog-request.json', 'catalog-response.json']) {
+      const stat = fs.statSync(path.join(dir, name));
+      assert.equal(stat.mode & 0o7777, 0o660);
+      assert.equal(stat.gid, fs.statSync(dir).gid);
+    }
     for (const method of ['homeStatus', 'setHomeControl', 'inputStatus'])
       assert.equal(
         (await catalog(method, {})).returnValue,
@@ -291,6 +297,31 @@ if ((fs.statSync(dir).mode & 0o7777) !== 0o2770) {
     );
     queue.shift()();
     assert.equal((await pending).dismissed, true);
+    const missing = await create(fs, path.join(dir, 'missing'))(
+      'homeStatus',
+      {}
+    );
+    assert.equal(missing.diagnostic.code, 'ENOENT');
+    assert.equal(missing.channelMode, undefined);
+    const rejected = fs.mkdtempSync(
+      path.join(path.dirname(dir), 'cytv-rejected-')
+    );
+    try {
+      for (const mode of [0o770, 0o777]) {
+        fs.chmodSync(rejected, mode);
+        for (const method of ['homeStatus', 'listApps']) {
+          const call = create(fs, rejected, { catalog: method === 'listApps' });
+          const reply = await call(method, {});
+          assert.equal(reply.returnValue, false);
+          assert.equal(reply.diagnostic.code, 'INVALID_STATE');
+          assert.equal(reply.diagnostic.operation, 'write');
+          assert.equal(reply.channelMode, mode);
+          assert.deepEqual(fs.readdirSync(rejected), []);
+        }
+      }
+    } finally {
+      fs.rmSync(rejected, { recursive: true });
+    }
     console.log(
       'PASS same-package Home broker: fixed commands, serialization, correlated response, timeout and validation'
     );

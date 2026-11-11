@@ -83,11 +83,25 @@ module.exports = function (fs, dir, options) {
         );
       } catch (e) {
         var phase = e && e.storagePhase;
+        var contract = e && e.contractEvents && e.contractEvents[0];
         if (['write', 'chmod', 'rename'].indexOf(phase) >= 0) operation = phase;
         finish({
           returnValue: false,
           errorText: 'Home Helper data unavailable',
-          diagnostic: diagnostics.describe('home', operation, e)
+          diagnostic: diagnostics.describe(
+            'home',
+            operation,
+            contract && contract.expected !== 'storage-io' && !e.code
+              ? { code: 'INVALID_STATE' }
+              : e
+          ),
+          channelMode:
+            contract &&
+            contract.field === 'directory' &&
+            contract.expected === 'safe-mode' &&
+            contract.actual
+              ? contract.actual.mode
+              : undefined
         });
         return;
       }

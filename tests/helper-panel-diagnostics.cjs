@@ -285,6 +285,32 @@ for (const code of ['SECRET', 1e50, 1.1, null]) {
   assert.equal(view(ui).helper_status.errorCode, null);
 }
 ui = panel();
+ui.respond(0, { returnValue: false, errorCode: -1 });
+ui.respond(1, {
+  returnValue: false,
+  channelMode: 0o770,
+  diagnostic: {
+    component: 'home',
+    operation: 'write',
+    code: 'INVALID_STATE',
+    path: 'SECRET'
+  }
+});
+assert.deepEqual(view(ui).home_status.diagnostic, {
+  operation: 'write',
+  code: 'INVALID_STATE',
+  channelMode: '770'
+});
+assert(!JSON.stringify(ui.snapshot()).includes('SECRET'));
+ui = panel();
+ui.respond(0, { returnValue: false, errorCode: -1 });
+ui.respond(1, {
+  returnValue: false,
+  channelMode: 'SECRET',
+  diagnostic: { component: 'home', operation: 'SECRET', code: 'INVALID_STATE' }
+});
+assert.equal(view(ui).home_status.diagnostic, undefined);
+ui = panel();
 ui.respond(0, { returnValue: true, running: 'SECRET', blocked: 'SECRET' });
 snapshot = view(ui);
 assert.equal(snapshot.helper_status.running, null);
