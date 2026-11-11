@@ -132,8 +132,28 @@ does not select a physical case.
 | Installer setup, retained receipts, file permissions, cleanup or edition handoff | Run the ordinary installer and check original operation identity, package versions, protected state, Stop and terminal readback. Use a verified software restart for reboot-dependent file and cleanup cases. | If the supported reboot cannot be verified or SSH cannot return, ask the owner to power-cycle the TV and report when the display returns. If pairing alone is blocked, ask them to approve the displayed connection prompt and report the outcome. |
 | Home launch, foreground routing or a launcher surface | Start from a known app or input, send one network HOME and check the exact foreground or surface. | If the change affects the physical input hook, or the network path fails to exercise the affected route, ask the owner to open the named app/input, short-press Home once and report the screen that opens. |
 | Native key filter, relay event delivery, key release or emergency Stop | Feed synthetic down/up events through the real filter/relay and check Stop, ungrab and key release. Check persistent Stop and stock Home on TV. | If the change affects physical key timing, device selection, hardware input release or the physical emergency path, ask the owner to open the named app/input, press Home three times within two seconds and then short-press Home once. Ask whether LG Home opened and stayed open, and whether arrows and volume still work when those controls are in scope. |
-| Power handling, active Helper startup or behavior after loss of mains | Check startup status, actual processes, file modes and Home routing after restart. Use the standby path for same-boot power behavior. | Select an AC cycle when the change can affect startup after loss of mains, or when software restart changes the prerequisite state. With the Helper in the stated active/stopped state, ask the owner to unplug the TV for 10 seconds, reconnect it, turn it on and report when the screen returns. Ask them to leave Helper alone until the agent reads its automatic state. If physical standby is required, ask them to power off and on with the remote, keeping mains connected. |
+| Power handling, active Helper startup or behavior after loss of mains | Check startup status, actual processes, file modes and Home routing. Use a verified software restart for cleanup and permission checks when it preserves the case preconditions. Use standby for same-boot power behavior. | Request an AC cycle only for a selected case that requires loss of mains and lacks applicable evidence. Ask the owner to unplug for 10 seconds, reconnect, turn on the TV and report when the screen returns. Leave Helper controls untouched until the agent reads its automatic state. For a physical standby case, use the remote with mains connected. |
 | Audio routing, input restoration or a physical display state | Use available readback for the expected app, input and settings. | Ask for the smallest observation the agent cannot measure. For audio, name the app/input and the expected result, such as audible video and one volume change. A volume indicator alone does not establish audible playback. |
+
+Do not unplug the TV as part of the default release pass. Select an AC cycle
+only when a changed startup hook, boot-state reader, permission repair used
+during automatic startup, or power-loss recovery path could affect the result,
+or when reproducing a failure observed specifically after loss of mains. A
+software restart that changes the precondition (for example by latching Stop
+while an active Helper shuts down) establishes the need for AC evidence only
+for that affected case. It does not require a new AC cycle when applicable
+evidence already exists.
+
+Before requesting the owner's help, record the affected behavior, expected
+failure and why standby, a verified software restart, fixtures and existing
+device evidence cannot answer the question. Compare the actual packaged files
+and trace the changed branches. Carry forward an AC result on the same
+model, firmware and relevant starting state when the startup path and its
+dependencies are equivalent. Record the earlier build and the relevant
+comparison. A version bump, different aggregate IPK hash, or a change confined
+to a Stop or removal path does not by itself require unplugging the TV. Run
+those affected branches with the final package using the ordinary operation,
+verified restart or matching regression fixtures.
 
 Software restart on the tested Root-accessible C3 uses ordinary
 `/sbin/reboot` through the saved SSH identity. Use it only after checking
