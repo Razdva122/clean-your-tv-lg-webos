@@ -571,6 +571,13 @@ function session(directory, options, action) {
     entered = true;
     check();
     var expandedDirectory = (before.mode & 4095) === 511;
+    if (
+      options.requireStopEvidence &&
+      expandedDirectory &&
+      !(before.uid === 5999 && before.gid === 5000) &&
+      !leaf('stop-generation', 33, true)
+    )
+      fail('safe-mode', before, undefined, 'directory');
     var repairedGeneration;
     if (
       (options.normalize || (options.repairGeneration && expandedDirectory)) &&
@@ -885,10 +892,22 @@ prepare.atomicRecord = function (directory, kind, bytes, options) {
     return true;
   });
 };
+function retainStop(s) {
+  s.leaf('blocked', Infinity);
+  s.write('blocked', buffer('stopped'), 436, Infinity, true);
+}
+prepare.retainStop = function (directory) {
+  return session(
+    directory,
+    { role: 'app', operation: 'stop', legacy: true, preserveStop: true },
+    retainStop
+  );
+};
 prepare.requestStop = function (directory, options) {
+  var legacyCleanup = options && options.legacyCleanup === true;
   var publicationError;
   try {
-    prepare.publishStopGeneration(directory);
+    prepare.publishStopGeneration(directory, legacyCleanup);
   } catch (error) {
     publicationError = error;
   }
@@ -899,7 +918,8 @@ prepare.requestStop = function (directory, options) {
       {
         role: 'app',
         operation: 'stop',
-        output: 'control.json',
+        output: ['control.json', 'stop-generation'],
+        legacy: legacyCleanup,
         preserveStop: true
       },
       function (s) {
@@ -907,7 +927,7 @@ prepare.requestStop = function (directory, options) {
         s.leaf('control.json', Infinity, true);
         var writeError;
         try {
-          s.write('blocked', buffer('stopped'), 436, Infinity, true);
+          retainStop(s);
         } catch (error) {
           writeError = error;
         }
@@ -1006,27 +1026,43 @@ prepare.stopGeneration = function (directory, create) {
     }
   );
 };
-prepare.publishStopGeneration = function (directory) {
+prepare.publishStopGeneration = function (directory, legacyCleanup) {
   try {
-    return session(directory, { role: 'app', operation: 'stop' }, function (s) {
-      var previous = s.leaf('stop-generation', 33);
-      if (
-        previous &&
-        (previous.gid !== s.stat.gid || (previous.mode & 4095) !== 436)
-      )
-        throw Error('Invalid Stop storage');
-      var token = 'S' + crypto.randomBytes(16).toString('hex');
-      s.write(
-        'stop-generation',
-        buffer(token),
-        436,
-        33,
-        false,
-        undefined,
-        true
-      );
-      return token;
-    });
+    return session(
+      directory,
+      {
+        role: 'app',
+        operation: 'stop',
+        legacy: true,
+        repairGeneration: true,
+        requireStopEvidence: !legacyCleanup,
+        output: 'stop-generation'
+      },
+      function (s) {
+        if ((s.stat.mode & 4095) === 511 && legacyCleanup !== true)
+          throw Error('Stop storage is not private');
+        if (s.repairedGeneration) return s.repairedGeneration;
+        var previous = s.leaf('stop-generation', 33, true);
+        if (previous && (previous.mode & 4095) === 511)
+          return s.replaceGeneration(previous);
+        if (
+          previous &&
+          (previous.gid !== s.stat.gid || (previous.mode & 4095) !== 436)
+        )
+          throw Error('Invalid Stop storage');
+        var token = 'S' + crypto.randomBytes(16).toString('hex');
+        s.write(
+          'stop-generation',
+          buffer(token),
+          436,
+          33,
+          false,
+          undefined,
+          true
+        );
+        return token;
+      }
+    );
   } catch (error) {
     try {
       session(directory, { role: 'app', operation: 'stop' }, function (s) {

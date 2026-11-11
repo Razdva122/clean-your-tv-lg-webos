@@ -51,6 +51,10 @@ function create(io, prepare) {
     io.writeFileSync(directory + '/stop-generation', token);
     return token;
   };
+  result.retainStop = function (directory) {
+    var path = directory + '/blocked';
+    if (!io.existsSync(path)) io.writeFileSync(path, 'stopped');
+  };
   return result;
 }
 function load(file, storage) {

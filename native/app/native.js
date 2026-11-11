@@ -35,8 +35,7 @@ function generationCurrent() {
   // Preserve cancellation across automatic boot even if the Stop producer's
   // later legacy-latch write did not complete. Never consume its generation.
   try {
-    if (!fs.existsSync(data + '/blocked'))
-      fs.writeFileSync(data + '/blocked', 'stopped', { mode: 420, flag: 'wx' });
+    storage.retainStop(data);
   } catch (e) {}
   return false;
 }
@@ -45,7 +44,9 @@ function block(close) {
   try {
     if (generationCurrent()) storage.publishStopGeneration(data);
   } catch (ignore) {}
-  fs.writeFileSync(data + '/blocked', 'stopped', { mode: 420 });
+  try {
+    storage.retainStop(data);
+  } catch (ignore) {}
   invalidatePresentation(close !== false);
 }
 if (

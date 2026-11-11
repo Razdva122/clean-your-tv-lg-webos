@@ -677,7 +677,7 @@ class SimpleRemoval(unittest.TestCase):
                 generation=marker.parent/'stop-generation'
                 if existing:generation.write_text('I'+'a'*32);generation.chmod(0o664)
                 elif generation.exists():generation.unlink()
-                self.remote.transform=lambda code:code.replace("var token='S'+crypto.randomBytes(16)","var token='S'+(function(){throw Error('entropy unavailable');})()")
+                self.remote.transform=lambda code:code.replace("var token = 'S' + crypto.randomBytes(16)", "var token = 'S' + (function(){throw Error('entropy unavailable');})()")
                 result=self.cleanup._device(self.installer,'stop')
                 self.assertTrue(result['blocked'])
                 self.assertEqual(generation.read_bytes(),b'')
@@ -768,14 +768,18 @@ class SimpleRemoval(unittest.TestCase):
         prefix=('var reportedOwners='+json.dumps({str(p):ids for p,ids in owners.items()})+';'
                 'var actualLstat=fs.lstatSync;fs.lstatSync=function(p){var s=actualLstat(p),owner=reportedOwners[path.resolve(p)];'
                 'if(owner){s.uid=owner[0];s.gid=owner[1];}return s;};'
-                # Generation publication preserves the modelled SDK GID. Keep
-                # the actual new-file FD and all IO; adapt this one unavailable
-                # host group just like the directory metadata above.
-                'var openedPaths={},actualOpen=fs.openSync,actualClose=fs.closeSync,actualFstat=fs.fstatSync;'
+                # Model the packaged owner and group on both the path and
+                # pinned FD. Actual permissions, inode and writes stay POSIX.
+                'var groups=process.getgroups;process.getgroups=function(){return groups.call(process).concat([5000]);};'
+                'var openedPaths={},ownersByInode={},actualOpen=fs.openSync,actualClose=fs.closeSync,actualFstat=fs.fstatSync;'
                 'fs.openSync=function(p){var fd=actualOpen.apply(fs,arguments);openedPaths[fd]=path.resolve(p);return fd;};'
                 'fs.closeSync=function(fd){delete openedPaths[fd];return actualClose.apply(fs,arguments);};'
-                'fs.fstatSync=function(fd){var s=actualFstat(fd),p=openedPaths[fd];'
-                'if(p&&path.basename(p).indexOf(".cytv-generation-")===0){var owner=reportedOwners[path.dirname(p)];if(owner)s.gid=owner[1];}return s;};')
+                'var actualFchown=fs.fchownSync;fs.fchownSync=function(fd,uid,gid){'
+                'if(gid!==5000)return actualFchown.apply(fs,arguments);var s=actualFstat(fd);ownersByInode[s.ino]=gid;};'
+                'fs.fstatSync=function(fd){var s=actualFstat(fd),owner=reportedOwners[openedPaths[fd]];'
+                'if(owner){s.uid=owner[0];s.gid=owner[1];}if(ownersByInode[s.ino])s.gid=ownersByInode[s.ino];return s;};'
+                'var modelledLstat=fs.lstatSync;fs.lstatSync=function(p){var s=modelledLstat(p);'
+                'if(ownersByInode[s.ino])s.gid=ownersByInode[s.ino];return s;};')
         self.remote.transform=lambda code:code.replace('var base=',prefix+'var base=')
 
     def test_reported_sdk_shared_ancestry_allows_inventory_stop_and_clean_retry(self):
@@ -1117,6 +1121,42 @@ class SimpleRemoval(unittest.TestCase):
         (app/'state').symlink_to(foreign,target_is_directory=True)
         with self.assertRaises(UserError):self.remove()
         self.assertEqual(sorted(p.name for p in foreign.iterdir()),['keep'])
+
+    def test_cleanup_repairs_firmware_expanded_stop_without_clearing_latch(self):
+        marker = self.own_file('apps/usr/palm/applications/com.local.nativehome/state/blocked', 'stopped')
+        directory = marker.parent
+        generation = directory / 'stop-generation'
+        generation.write_text('I' + 'a' * 32)
+        for path in (directory, marker, generation):
+            os.chown(path, -1, os.getgid())
+            path.chmod(0o777)
+        original_inode = marker.stat().st_ino
+        result = self.cleanup._device(self.installer, 'stop')
+        self.assertEqual(result['blocked'], [])
+        self.assertFalse(result['controller_running'])
+        self.assertEqual(marker.stat().st_ino, original_inode)
+        self.assertEqual(marker.read_text(), 'stopped')
+        self.assertRegex(generation.read_text(), r'^S[a-f0-9]{32}$')
+        self.assertEqual(generation.stat().st_mode & 0o777, 0o664)
+        self.assertEqual(directory.stat().st_mode & 0o777, 0o770)
+
+    def test_original_removal_finishes_after_firmware_expands_stop_on_cold_boot(self):
+        app = 'com.local.nativehome'
+        self.remote.apps = {app}
+        self.remote.broken_service = True
+        self.own_file('apps/usr/palm/services/' + app + '.service/service.js', 'published source')
+        marker = self.own_file('apps/usr/palm/applications/' + app + '/state/blocked', 'stopped')
+        self.assertTrue(self.remove()['restart_required'])
+        self.assertIsNotNone(self.store.pending(self.profile))
+        generation = marker.parent / 'stop-generation'
+        for path in (marker.parent, marker, generation):
+            os.chown(path, -1, os.getgid())
+            path.chmod(0o777)
+        self.reboot()
+        self.assertTrue(self.remove()['verified_clean'])
+        self.assertIsNone(self.store.pending(self.profile))
+        self.assertFalse(marker.exists())
+        self.assertEqual(sum(uri.endswith('/dev/remove') for uri, _ in self.remote.calls), 1)
 
     def test_cleanup_stop_always_advances_generation_even_with_existing_latch(self):
         marker=self.own_file('apps/usr/palm/applications/com.local.nativehome/state/blocked','stopped')
