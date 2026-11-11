@@ -41,6 +41,41 @@ channels; tuner launch and firmware-specific compatibility still need TV accepta
 
 ## Inventory and persistence
 
+### Confirmed removals and live No-root icons (unreleased)
+
+The next implementation updates Home and the picker after Application Manager
+confirms that an app is no longer installed. It removes the app from the saved
+catalog, order and hidden IDs, and saves the change immediately. Newly discovered
+apps remain in the picker until selected. Closing the picker rebuilds Home so a
+removed tile cannot remain visible behind it.
+
+A successful launch-point read alone is not removal evidence. No-root makes a
+bounded supplementary installed-app query; Root supplies IDs from its complete
+installed-app response before display limits and hidden-app filtering. Missing,
+denied, malformed, oversized, contradictory or legacy confirmation preserves
+saved apps. A valid empty installed catalog can clear an empty fresh catalog.
+
+No-root resolves image variants during live discovery, including apps installed
+after CYTV setup. It embeds supported images fetched only from the selected TV,
+without redirects or credentials. Image failures retain an older usable icon
+where available. Fixed time/size budgets can still leave an icon unavailable;
+this does not guarantee every picker icon or resolve every firmware resource issue.
+The optional confirmation query leaves time for image loading when it is silent.
+
+A local `catalogConfirmed` flag inside `tvhome.layout` prevents the original
+packaged inventory from reintroducing removed apps on ordinary restart. Old
+layouts still migrate. Root system snapshots omit that cache flag to remain
+readable by older rollback packages; they retain the pruned catalog and order, including the snapshot inventory.
+Root snapshots use the packaged Home icon for inventory entries with no image,
+so an unavailable icon cannot block the update. After restoring a snapshot, a
+fresh confirmation re-establishes the flag.
+No-root profile backups preserve the layout. Storage failures keep the previous
+in-memory model and report that changes could not be saved.
+
+These changes require rebuilt Home and Helper packages, Root Home/service, and
+embedding installers. They are outside the current frozen release. See the
+[source verification ledger](history/2026-11-11-issue505-inventory.md).
+
 ### Root store apps and picker utilities (published in v1.12.1)
 
 The published Root service uses Application Manager's general `listApps` query
