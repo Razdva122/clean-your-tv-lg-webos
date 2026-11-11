@@ -129,8 +129,11 @@ class EvidenceTests(unittest.TestCase):
         for shard in ('1/4', '2/4', '3/4', '4/4'):
             ctx = self.context('ui tv-runtime setup installer android preview', shard=shard)
             result.update({(unit, shard): key for unit, key in ctx['keys'].items()})
-        for kind, units in (('browser', 'browser-core browser-themes'), ('optional', 'optional-python')):
+        for kind, units in (('browser', 'browser-core'), ('optional', 'optional-python')):
             result.update({(unit, '1/4'): key for unit, key in self.context(units, kind=kind)['keys'].items()})
+        for shard in ('1/3', '2/3', '3/3'):
+            ctx = self.context('browser-themes', kind='browser', shard=shard)
+            result[('browser-themes', shard)] = ctx['keys']['browser-themes']
         return result
 
     def test_git_test_leaf_mutations_invalidate_owning_families_across_all_shards(self):
@@ -226,13 +229,15 @@ class EvidenceTests(unittest.TestCase):
         self.artifact.update(size_in_bytes=len(self.raw), digest='sha256:' + hashlib.sha256(self.raw).hexdigest())
         self.assertEqual(self.missing(), ['installer', 'setup', 'tv-runtime', 'ui'])
 
-    def candidate_producer(self, kind='runtime', platform='ubuntu-latest', units='tv setup installer'):
-        self.ctx = self.m['context'](kind, platform, '1/4', units,
+    def candidate_producer(self, kind='runtime', platform='ubuntu-latest', units='tv setup installer', shard='1/4'):
+        self.ctx = self.m['context'](kind, platform, shard, units,
                                     {'day': '2026-11-06', 'python': '3.12'}, root=self.root)
         self.run.update(event='workflow_dispatch', head_branch='release/next',
                         path='.github/workflows/cytv.yml', conclusion='failure')
         names = {'runtime': 'validation / runtime (ubuntu-latest, 1)',
-                 'browser': 'validation / browser', 'optional': 'validation / optional-python',
+                 'browser': ('validation / browser-core' if shard == '1/4'
+                             else f'validation / browser-themes ({shard[0]})'),
+                 'optional': 'validation / optional-python',
                  'desktop': 'build (windows-latest, cytv-windows-x64, dist/cytv.exe)'}
         self.job['name'] = names[kind]
         self.raw = self.archive(self.m['make_receipt'](self.ctx, 'owner/repo', 10, 1, 100))
@@ -244,7 +249,7 @@ class EvidenceTests(unittest.TestCase):
         self.responses['actions/runs/10/attempts/1/jobs?per_page=100'] = {'jobs': jobs, 'total_count': len(jobs)}
 
     def test_failed_full_candidate_can_supply_successful_direct_units(self):
-        for kind, units in (('runtime', 'tv setup installer'), ('browser', 'browser-core browser-themes'),
+        for kind, units in (('runtime', 'tv setup installer'), ('browser', 'browser-core'),
                             ('optional', 'optional-python')):
             with self.subTest(kind=kind):
                 self.candidate_producer(kind=kind, units=units)
@@ -480,11 +485,35 @@ class EvidenceTests(unittest.TestCase):
 
     def test_browser_core_does_not_skip_missing_full_theme_work(self):
         self.ctx = self.context('browser-core', kind='browser')
-        self.job['name'] = 'browser'
+        self.job['name'] = 'browser-core'
         self.raw = self.archive(self.m['make_receipt'](self.ctx, 'owner/repo', 10, 1, 100))
         self.artifact.update(name=self.ctx['artifact'], size_in_bytes=len(self.raw), digest='sha256:' + hashlib.sha256(self.raw).hexdigest())
-        self.assertEqual(self.missing(self.context('browser-core browser-themes', kind='browser')), ['browser-themes'])
+        self.assertEqual(self.missing(), [])
+        for shard in ('1/3', '2/3', '3/3'):
+            self.assertEqual(self.missing(self.context('browser-themes', kind='browser', shard=shard)), ['browser-themes'])
         self.assertEqual(self.missing(self.context('browser-core', kind='browser', environment={'day': '2026-11-06', 'browser': 'other'})), ['browser-core'])
+
+    def test_theme_receipt_is_bound_to_successful_candidate_shard(self):
+        self.candidate_producer(kind='browser', units='browser-themes', shard='2/3')
+        self.assertEqual(self.missing(), [])
+        self.assertEqual(self.missing(self.context('browser-themes', kind='browser', shard='1/3')), ['browser-themes'])
+        self.job['name'] = 'validation / browser-themes (1)'
+        self.assertEqual(self.missing(), ['browser-themes'])
+        self.job['name'] = 'validation / browser'
+        self.assertEqual(self.missing(), ['browser-themes'])
+        self.job.update(name='validation / browser-themes (2)', conclusion='skipped')
+        self.assertEqual(self.missing(), ['browser-themes'])
+        self.run.update(path='.github/workflows/tests.yml', event='pull_request', head_branch='feature',
+                        conclusion='success')
+        self.job.update(name='browser-themes (2)', conclusion='success')
+        self.assertEqual(self.missing(), ['browser-themes'])
+
+    def test_theme_receipts_reject_unsharded_or_mixed_units(self):
+        for units, shard in (('browser-themes', '1/4'), ('browser-core', '1/3'),
+                             ('browser-core browser-themes', '1/4'), ('browser-themes', '4/3')):
+            with self.subTest(units=units, shard=shard):
+                with self.assertRaises(ValueError):
+                    self.context(units, kind='browser', shard=shard)
 
     def test_optional_python_reuses_only_matching_arm_environment(self):
         self.ctx = self.context('optional-python', kind='optional')
@@ -499,7 +528,7 @@ class EvidenceTests(unittest.TestCase):
         first = f'{image}@sha256:{"a" * 64}'
         second = f'{image}@sha256:{"b" * 64}'
         with patch.dict(self.m['environment'].__globals__, {'command': lambda *args: 'fixture'}):
-            for kind, unit, job in (('browser', 'browser-core', 'browser'),
+            for kind, unit, job in (('browser', 'browser-core', 'browser-core'),
                                     ('optional', 'optional-python', 'optional-python')):
                 with self.subTest(kind=kind):
                     with patch.dict('os.environ', {'CI_TEST_IMAGE': first}):

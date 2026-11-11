@@ -266,11 +266,25 @@ installer and device runtime retain all four shards. The workflow invokes
 (which would run everything). Linux ownership verification is part of the primary
 `tv-runtime` unit. Pinned legacy Node downloads are needed only for fresh units.
 
-Browser core (legacy build, geometry, settings and development UI) is separate
-from full-only theme regressions. The complete candidate runs missing theme work;
-it does not rerun matching browser core. Optional ARM Python, including privileged
-provisioning checks, is another indivisible unit. Dependencies, actual Chromium/
-Playwright and QEMU/sysroot versions are identified before evidence lookup.
+Browser core (legacy build, geometry, settings and development UI) runs in
+`browser-core`. Full candidates also run three `browser-themes` shards in
+parallel. The `browser` job requires core success and, for a full candidate,
+success of the entire theme matrix. Each shard can reuse only a receipt from
+the corresponding successful full-candidate job.
+
+`scripts/test-browser-themes.py` partitions the existing
+`npm run test:themes:browser` command chain. The initial weights in
+`tests/themes/browser-timings.json` come from intervals between each command's
+last output. They allocate about 318 seconds of the 955-second sample to each
+shard, before runner setup.
+[Serial CI run](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/43030134684/job/130554971664)
+
+Use the per-command durations in new job logs to update the weights. New
+commands without a recorded duration use a 20-second weight.
+
+Optional ARM Python, including privileged provisioning checks, is another
+indivisible unit. Dependencies, actual Chromium/Playwright and QEMU/sysroot
+versions are identified before evidence lookup.
 Primary runtime fingerprints also probe the actual system Chrome channel used by
 preview and installer UI tests. A missing/unavailable browser fingerprint forces
 fresh checks and cannot produce a reusable receipt; an unknown value never

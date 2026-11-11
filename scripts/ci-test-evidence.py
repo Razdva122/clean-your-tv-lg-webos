@@ -50,10 +50,17 @@ def normalize(kind, units, shard):
     if kind == 'runtime' and 'tv' in units:
         units.remove('tv')
         units.update(('ui', 'tv-runtime'))
-    if kind not in KINDS or not units <= KINDS[kind] or not re.fullmatch('[1-4]/4', shard):
+    if kind not in KINDS or not units <= KINDS[kind]:
         raise ValueError('Invalid test selection')
-    if kind != 'runtime' and shard != '1/4':
-        raise ValueError('Browser/optional evidence has no runtime partition')
+    if kind == 'browser':
+        valid = (shard == '1/4' and units == {'browser-core'}
+                 or re.fullmatch('[1-3]/3', shard) and units == {'browser-themes'})
+    elif kind == 'runtime':
+        valid = re.fullmatch('[1-4]/4', shard)
+    else:
+        valid = shard == '1/4'
+    if not valid:
+        raise ValueError('Invalid test selection')
     if kind == 'runtime' and shard != '1/4':
         units -= {'ui', 'android'}
     if kind == 'runtime' and shard != '2/4':
@@ -167,9 +174,18 @@ def receipt_from_archive(raw, artifact):
 def job_name(ctx, candidate=False):
     if ctx['kind'] == 'desktop':
         return DESKTOP_JOBS[ctx['os']]
-    name = (f'runtime ({ctx["os"]}, {ctx["shard"].split("/")[0]})'
-            if ctx['kind'] == 'runtime' else 'browser' if ctx['kind'] == 'browser' else 'optional-python')
+    shard = ctx['shard'].split('/')[0]
+    if ctx['kind'] == 'runtime':
+        name = f'runtime ({ctx["os"]}, {shard})'
+    elif ctx['kind'] == 'browser':
+        name = 'browser-core' if ctx['shard'] == '1/4' else f'browser-themes ({shard})'
+    else:
+        name = 'optional-python'
     return 'validation / ' + name if candidate else name
+
+
+def requires_candidate(ctx):
+    return ctx['kind'] == 'desktop' or (ctx['kind'] == 'browser' and ctx['shard'] != '1/4')
 
 
 def run_jobs(run, api):
@@ -245,7 +261,7 @@ def validate_receipt(ctx, receipt, artifact, repo, current, api):
     jobs = run_jobs(run, api)
     candidate = run.get('path') == '.github/workflows/cytv.yml'
     valid_run = (candidate_cache_hit(run, current, repo, ctx, jobs, api) if candidate else
-                 ctx['kind'] != 'desktop' and INPUTS['test_cache_hit'](run['id'], current, repo, run['head_branch'], api))
+                 not requires_candidate(ctx) and INPUTS['test_cache_hit'](run['id'], current, repo, run['head_branch'], api))
     if not valid_run:
         raise ValueError('Run is not current same-repository successful evidence')
     matches = [job for job in jobs if job['id'] == receipt['job']]
@@ -525,8 +541,8 @@ def main():
                     or run.get('head_repository', {}).get('full_name') != repo
                     or run.get('head_sha') != ctx['checkout']):
                 raise ValueError('Not an exact same-repository full candidate')
-        elif ctx['kind'] == 'desktop':
-            raise ValueError('Desktop receipts require a full candidate')
+        elif requires_candidate(ctx):
+            raise ValueError('Desktop and theme browser receipts require a full candidate')
         jobs = api(f'actions/runs/{current}/attempts/{attempt}/jobs?per_page=100')
         matches = [job for job in jobs['jobs'] if job['name'] == job_name(ctx, candidate) and job['status'] == 'in_progress']
         if jobs['total_count'] != len(jobs['jobs']) or len(matches) != 1:
