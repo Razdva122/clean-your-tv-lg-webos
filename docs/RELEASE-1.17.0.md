@@ -42,46 +42,25 @@ network endpoint or persistent state format is introduced by this inventory.
 
 ## Validation and limits
 
-The [canonical candidate ledger](history/2026-11-11-release-1.17.0-candidate.md)
-records reused source/browser/platform checks, local package preflight and the
-selected remaining cases. Prepared metadata and local payloads are not a trusted
-full candidate or final artifact acceptance.
+The complete platform, browser and runtime build passed. The macOS, Windows,
+Linux and Android installers passed embedded payload checks. The Android APK
+retained the original signer and preserved recovery data in an emulator upgrade
+from the published version.
 
-The original published-Home/new-Helper compatibility probe passed on the
-maintainer C3 (43.21.71/SDK11.2.0) with the exact Helper0.8.1 and published
-Home1.15.0. Owner-observed Home/triple-Home/retained Stop and arrows/volume agree
-with readback; all232 installed public files match. The new exact compatibility
-approval passes verify_helper_transition. This pre-dispatch probe does not
-replace final candidate package delivery or selected physical acceptance. The
-complete replacement build42969073353:1 passed all23 jobs after the reviewed
-Windows fixture-only correction #504. Exact601-file CLI/APK payload, original
-APK signer and code31→32 emulator retention/native checks pass. Protected
-Root-only signing42974007477 passed production-key signature, exact package
-closure and live provenance checks without publication.
+On the maintainer C3 (43.21.71, SDK 11.2.0), the final No-root installer
+completed the original pending operation after explicit Helper Start. Home
+routing, Home Off/On, navigation, audio and remote-button standby worked. The
+same Helper archive passed triple Home with the published rollback Home.
+Active cold boot was deferred and remains unverified.
 
-The owner-present final-artifact pass found CLI recovery missing the manifest
-needed by Root-SSH handoff, and Helper unavailable after remote-power and
-separate AC-off/on with its key expanded to0777. Navigation and audible sound
-passed, but Home-control and dependent active-Stop acceptance remain gaps.
-The authorized return restored Root0.16.0 with matching configuration/preferences,
-verified recovery, Home Off and no pending operation. Fresh unchanged
-System1.2.8 setup raised MemoryError before bootstrap, blocking signed final
-Root transition and rollback/forward. The original12-ID ledger records eight
-scoped passes, two observed failures and two concrete blockers, with no safe
-independent untested case remaining in that pass. This completes the failure
-inventory, not candidate acceptance. No final acceptance token, main merge or
-publication is granted.
+The corrected System setup completed on the same TV. The production-signed
+Root set installed through the ordinary System worker, preserved Home Off
+and retained the actual UI profile. The supported rollback restored Root
+0.16.0, the original profile and controls. The same signed set then
+installed 0.16.1 again. Root short Home and triple Home worked, with LG Home
+active after the emergency exit.
 
-The replacement Helper 0.8.1 also passed the compatibility probe with published
-Home 1.15.0 on the same C3. The owner verified explicit Start, short Home,
-remote-button sleep/wake in the same boot, and triple Home with LG controls.
-Readback confirmed the key remained at mode 0640. The maintainer deferred the
-active cold-boot check. The release ledger links both exact Helper archive hashes
-and the remaining final artifact checks.
-
-The original #487 service-status discrepancy and reporter-device continuation/
-standby result remain unverified. The corrected #454 C1 prerequisite, original
-catalog step and completed installation still need reporter confirmation with
-the published installer. Host and synthetic tests do not establish either
-reporter's recovery, actual firmware events, physical remote/audio/power
-behavior, public-feed operation or universal compatibility.
+The [verification ledger](history/2026-11-11-release-1.17.0-candidate.md)
+records exact artifacts, device steps and limitations. The original #487 C2
+and #454 C1 installations still need reporter confirmation on the published
+installer.
