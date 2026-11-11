@@ -61,6 +61,18 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8876';
               window.inventoryDenied
             )
               r = { returnValue: false, errorCode: -1 };
+            if (uri.endsWith('/getAllInputStatus') || JSON.parse(raw).inputs) {
+              const status = () => ({
+                returnValue: true,
+                devices: JSON.parse(
+                  localStorage.getItem('inputFixture') || '[]'
+                )
+              });
+              r = status();
+              if (uri.endsWith('/getAllInputStatus'))
+                window.publishInputStatus = () =>
+                  this.onservicecallback(JSON.stringify(status()));
+            }
             if (uri.endsWith('/launch')) r = { returnValue: true };
             if (
               uri.endsWith('/listApps') &&
@@ -461,6 +473,91 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8876';
       ),
       ['c', 'b']
     );
+    // A selected HDMI source is a normal editable tile in either edition.
+    const hdmi = 'com.webos.app.hdmi1';
+    const pin = 'input:' + hdmi;
+    const setInputStatus = (label, connected) =>
+      page.evaluate(
+        ({ hdmi, label, connected }) => {
+          localStorage.setItem(
+            'inputFixture',
+            JSON.stringify([
+              { id: 'HDMI_1', appId: hdmi, label, connected },
+              { id: 'AUDIO', appId: 'eim.audio', label: 'Audio only' }
+            ])
+          );
+          if (window.publishInputStatus) window.publishInputStatus();
+          else window.dispatchEvent(new Event('focus'));
+        },
+        { hdmi, label, connected }
+      );
+    for (const edition of ['launcher', 'root-launcher']) {
+      await page.evaluate(() => localStorage.clear());
+      await setInputStatus('Xbox', true);
+      await page.goto(base + '/' + edition + '/index.html');
+      await ready();
+      const tile = page.locator('#tiles [data-app-id="' + pin + '"]');
+      const choice = page.locator('#appPicker [data-app-id="' + pin + '"]');
+      assert.equal(await tile.count(), 0, 'HDMI is opt-in');
+      await page.locator('.add-app').click();
+      await choice.waitFor();
+      assert.match(await choice.textContent(), /Xbox/);
+      assert.equal(
+        await page
+          .locator('#appPicker [data-app-id="input:eim.audio"]')
+          .count(),
+        0
+      );
+      await choice.click();
+      await tile.waitFor();
+      assert.deepEqual(await ids(), ['b', pin, '+']);
+      assert.equal(await tile.locator('.input-dot').isVisible(), true);
+      await page.waitForFunction(
+        (id) =>
+          Array.from(document.querySelectorAll('#tiles .pinned-input')).some(
+            (e) =>
+              e.dataset.appId === id &&
+              e.querySelector('img').naturalWidth > 0 &&
+              e.querySelector('.ctv-card').style.backgroundColor ===
+                'rgb(37, 41, 56)'
+          ),
+        pin
+      );
+      await page.keyboard.press('Enter');
+      await page.waitForFunction(
+        (id) => calls.some((c) => c.uri.endsWith('/launch') && c.p.id === id),
+        hdmi
+      );
+      await setInputStatus('Console', false);
+      await tile
+        .locator('.ctv-label')
+        .filter({ hasText: 'Console' })
+        .waitFor({ state: 'attached' });
+      assert.equal(await tile.locator('.input-dot').isVisible(), false);
+      assert.match(await tile.getAttribute('aria-label'), /Not connected/);
+      assert.equal(await tile.locator('video').count(), 0);
+      await page.keyboard.down('Enter');
+      await page.waitForTimeout(680);
+      await page.keyboard.up('Enter');
+      await page.keyboard.press('ArrowLeft');
+      await page.keyboard.press('Enter');
+      assert.deepEqual(await ids(), [pin, 'b', '+']);
+      await page.reload();
+      await ready();
+      await page
+        .locator('#tiles .focused[data-app-id="' + pin + '"]')
+        .waitFor();
+      await page.keyboard.down('Enter');
+      await page.waitForTimeout(680);
+      await page.keyboard.up('Enter');
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.press('Enter');
+      assert.deepEqual(await ids(), ['b', '+']);
+      await page.keyboard.press('Escape');
+      await page.locator('.add-app').click();
+      await choice.click();
+      assert.deepEqual(await ids(), ['b', pin, '+']);
+    }
     assert.deepEqual(errors, []);
     await page.screenshot({ path: '/tmp/home-app-management.png' });
     console.log(

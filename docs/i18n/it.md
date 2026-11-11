@@ -79,6 +79,8 @@ Usa la connessione e i dati di ripristino originali. Se sono persi, riconnettiti
 
 ## 6. Uso e ripristino
 
+Per fissare un ingresso HDMI, selezionalo in **+ / Aggiungi app**. Premi OK per passare all’ingresso. Tieni premuto OK per spostare o nascondere il riquadro.
+
 Se l’installer mostra «La configurazione Root è incompleta, ma il registro di installazione manca sulla TV.»: Scegli Esamina le opzioni di ripristino per rimuovere Clean Your TV, poi avvia la configurazione separatamente. La rimozione completa elimina anche No-root Home e Helper; salva prima le preferenze.
 
 Supporto IR No-root: rilasciare Home dopo una pressione breve programma Clean dopo circa 700 ms; LG Home potrebbe apparire prima. La pressione prolungata resta a webOS e tre pressioni fermano ancora Helper. L’accesso con Developer Mode standard non è verificato; non modificare i permessi dei dispositivi di input.

@@ -79,6 +79,8 @@ Use a conexão e os dados de recuperação originais. Se foram perdidos, reconec
 
 ## 6. Uso e recuperação
 
+Para fixar uma entrada HDMI, selecione-a em **+ / Adicionar aplicativo**. Pressione OK para mudar para a entrada. Mantenha OK pressionado para mover ou ocultar o bloco.
+
 Se o instalador mostrar “A configuração Root está incompleta, mas o registro da instalação não está na TV.”: Escolha Revisar opções de recuperação para remover o Clean Your TV e depois inicie a configuração separadamente. A remoção completa também remove No-root Home e Helper; salve suas preferências antes.
 
 Suporte IR No-root: soltar Home após um toque curto agenda o Clean para cerca de 700 ms depois; o LG Home pode aparecer primeiro. Segurar Home continua com o webOS e três toques ainda param o Helper. O acesso pelo Developer Mode padrão não foi verificado; não altere permissões dos dispositivos de entrada.

@@ -484,6 +484,16 @@ body.editing #glass {
 .connected .input-dot {
   display: block;
 }
+.pinned-input .input-dot {
+  position: absolute;
+  z-index: 1;
+  top: 12px;
+  right: 12px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #69de9b;
+}
 .input-name,
 .input-detail {
   position: absolute;

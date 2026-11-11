@@ -120,6 +120,58 @@ assert.deepEqual(
   utilities.map((a) => a.id),
   'picker exclusions must preserve existing Home tiles'
 );
+// HDMI choices use their own IDs and follow the independent EIM inventory.
+const hdmi = 'com.webos.app.hdmi1';
+const pinned = 'input:' + hdmi;
+let inputs = [
+  { appId: hdmi, label: 'Xbox', source: 'ext://hdmi:1', connected: true },
+  { appId: 'com.webos.app.livetv', label: 'Live TV', source: null }
+];
+map.clear();
+let withInputs = create(storage, inventory, config, () => inputs);
+assert.deepEqual(
+  withInputs.visible().map((a) => a.id),
+  ['b', 'a']
+);
+assert.deepEqual(
+  withInputs.available().map((a) => a.id),
+  ['c', pinned]
+);
+withInputs.add(pinned);
+withInputs.save([pinned, 'b', 'a'], ['c']);
+withInputs.refresh(inventory, ['a', 'b', 'c']);
+assert.equal(withInputs.visible()[0].title, 'Xbox');
+inputs = [];
+withInputs = create(storage, inventory, config, () => inputs);
+assert.deepEqual(
+  withInputs.visible().map((a) => a.id),
+  ['b', 'a']
+);
+withInputs.save(['a', 'b'], ['c']);
+withInputs.add('c');
+inputs = [
+  { appId: hdmi, label: 'Console', source: 'ext://hdmi:1', connected: false }
+];
+assert.deepEqual(
+  withInputs.visible().map((a) => a.id),
+  [pinned, 'a', 'b', 'c']
+);
+assert.equal(withInputs.visible()[0].title, 'Console');
+assert.equal(withInputs.visible()[0].input.connected, false);
+withInputs.save(['a', 'b', 'c'], [pinned]);
+withInputs.refresh(inventory, ['a', 'b', 'c']);
+assert.deepEqual(withInputs.hidden(), [pinned]);
+assert.equal(withInputs.available()[0].id, pinned);
+withInputs.add(pinned);
+assert.deepEqual(
+  withInputs.visible().map((a) => a.id),
+  ['a', 'b', 'c', pinned]
+);
+assert.equal(
+  JSON.parse(map.get('tvhome.layout')).catalog.some((a) => a.id === pinned),
+  false
+);
+
 console.log(
   'PASS app layout, migration, refresh, restart, empty screen and storage errors'
 );

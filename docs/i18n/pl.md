@@ -79,6 +79,8 @@ Użyj pierwotnego zapisanego połączenia i danych odzyskiwania. Jeśli je utrac
 
 ## 6. Obsługa i odzyskiwanie
 
+Aby przypiąć wejście HDMI, wybierz je w menu **+ / Dodaj aplikację**. Naciśnij OK, aby przełączyć wejście. Przytrzymaj OK, aby przesunąć lub ukryć kafelek.
+
 Jeśli instalator wyświetla „Konfiguracja Root jest niedokończona, ale na TV brakuje jej rejestru instalacji.”: Wybierz Przejrzyj opcje odzyskiwania, aby usunąć Clean Your TV, a następnie osobno rozpocznij konfigurację. Pełne usunięcie obejmuje też No-root Home i Helper; najpierw zachowaj ustawienia.
 
 Obsługa pilotów IR w No-root: zwolnienie Home po krótkim naciśnięciu planuje otwarcie Clean po około 700 ms; najpierw może mignąć LG Home. Przytrzymanie Home pozostaje w gestii webOS, a trzy naciśnięcia nadal zatrzymują Helper. Dostęp w zwykłym Developer Mode nie jest potwierdzony; nie zmieniaj uprawnień urządzeń wejściowych.
