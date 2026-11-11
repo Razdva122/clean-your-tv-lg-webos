@@ -44,14 +44,19 @@ function setup(withPower, secure = true) {
     module: { exports: {} },
     require(n) {
       return n === './state-permissions'
-        ? () => (typeof secure === 'function' ? secure() : secure)
-        : n === 'fs'
-          ? {
-              readFileSync: () => {
+        ? Object.assign(
+            () => (typeof secure === 'function' ? secure() : secure),
+            {
+              readConfiguration(directory, kind) {
+                a.equal(directory, '/state');
+                a.equal(kind, 'key');
                 reads++;
                 return '{"key":"private-test-key"}';
               }
             }
+          )
+        : n === 'fs'
+          ? {}
           : n === 'os'
             ? {
                 networkInterfaces: () => ({

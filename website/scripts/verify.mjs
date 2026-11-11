@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import './verify-articles.mjs';
 import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { parse } from '../../node_modules/parse5/dist/index.js';

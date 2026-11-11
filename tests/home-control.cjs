@@ -3,7 +3,9 @@ const assert = require('node:assert/strict'),
   os = require('os'),
   path = require('path');
 const create = require('../native/app/home-control');
-const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'cytv-home-'));
+const dir = fs.realpathSync(
+  fs.mkdtempSync(path.join(os.tmpdir(), 'cytv-home-'))
+);
 try {
   fs.writeFileSync(path.join(dir, 'profile.json'), 'keep');
   let applied = [],
@@ -18,7 +20,12 @@ try {
   c.visit();
   assert.equal(c.enabled(), true);
   assert.equal(visits, 1);
+  fs.symlinkSync(
+    path.join(dir, 'profile.json'),
+    path.join(dir, 'home-control.json.tmp')
+  );
   c.set(false);
+  assert.equal(fs.readFileSync(path.join(dir, 'profile.json'), 'utf8'), 'keep');
   assert.equal(c.enabled(), false);
   assert.deepEqual(applied, [false]);
   c = create(

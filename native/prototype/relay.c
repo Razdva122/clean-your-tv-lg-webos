@@ -43,7 +43,11 @@ static int release_keys(int out){unsigned char bits[256]={0};if(ioctl(out,KEYSTA
 static void latch_stop(int reason){const char *latch=reason==20?"/media/developer/apps/usr/palm/applications/com.local.nativehome/state/watchdog":"/media/developer/apps/usr/palm/applications/com.local.nativehome/state/blocked";int flag=open(latch,O_WRONLY|O_CREAT|O_TRUNC,0644);if(flag>=0){write(flag,"stopped",7);close(flag);}}
 static int compatible(int in,int out){unsigned char a[256],b[256];int types[]={0,1,2,3};for(int i=0;i<4;i++){memset(a,0,sizeof a);memset(b,0,sizeof b);if(ioctl(in,BIT(types[i],sizeof a),a)<0||ioctl(out,BIT(types[i],sizeof b),b)<0||memcmp(a,b,sizeof a))return 0;}for(int axis=0;axis<2;axis++){int a[6],b[6];if(ioctl(in,_IOR('E',0x40+axis,int[6]),a)<0||ioctl(out,_IOR('E',0x40+axis,int[6]),b)<0||memcmp(a+1,b+1,5*sizeof(int)))return 0;}return 1;}
 static int startup_in,startup_out;
-static uint64_t startup_ack;
+static uint64_t startup_ack,powerDeadline;
+static void power_command(char command){
+ if(command=='T')powerDeadline=ms()+15000;
+ if(command=='R')powerDeadline=0;
+}
 static int startup_keys(void){
  if(stop)return 29;
  /* Discard pre-grab input: webOS already received it. Never replay an old OK. */
@@ -70,13 +74,13 @@ static int startup_pump(void){
  if(p.revents&POLLIN){
   char b[64];ssize_t n=read(0,b,sizeof b);if(n<=0)return 24;
   startup_ack=ms();
-  for(int i=0;i<n;i++){if(b[i]=='Q')return 29;if(b[i]=='S')raise(SIGSTOP);}
+  for(int i=0;i<n;i++){power_command(b[i]);if(b[i]=='Q')return 29;if(b[i]=='S')raise(SIGSTOP);}
   if(report("P\n")<0)return 30;
  }
  return stop?29:0;
 }
 int main(int argc,char**argv){
- output_failed=0;signal(SIGPIPE,SIG_IGN);signal(SIGTERM,stopped);signal(SIGINT,stopped);
+ output_failed=0;powerDeadline=0;signal(SIGPIPE,SIG_IGN);signal(SIGTERM,stopped);signal(SIGINT,stopped);
  int cleaning=argc>1&&!strcmp(argv[1],"cleanup");
  /* Emergency cleanup must work even with closed or unusable stdout. */
  if(prepare_output()<0){if(!cleaning)return 30;output_failed=1;}
@@ -96,7 +100,7 @@ int main(int argc,char**argv){
  while(!stop&&!output_failed){uint64_t now=ms();if(now-last>2000){reason=20;break;}if(filter_timeout(&f,now)==OPEN_LG&&report("LGHOME\n")<0)break;
  int r=poll(p,3,50);if(r<0){if(errno==EINTR)continue;reason=23;break;}
  if(p[1].revents&(POLLHUP|POLLERR)){reason=24;break;}
- if(p[1].revents&POLLIN){char b[64];ssize_t n=read(0,b,sizeof b);if(n<=0){reason=24;break;}last=ms();for(int i=0;i<n;i++){if(b[i]=='D'){f.disabled=irf.disabled=1;f.home=irf.home=0;f.count=irf.count=0;irDown=0;}if(b[i]=='E'){f.disabled=irf.disabled=0;f.home=irf.home=0;f.count=irf.count=0;irDown=0;}if(b[i]=='Q')stop=1;if(b[i]=='S')raise(SIGSTOP);}if(report("P\n")<0)break;}
+ if(p[1].revents&POLLIN){char b[64];ssize_t n=read(0,b,sizeof b);if(n<=0){reason=24;break;}last=ms();for(int i=0;i<n;i++){if(b[i]=='D'){f.disabled=irf.disabled=1;f.home=irf.home=0;f.count=irf.count=0;irDown=0;}if(b[i]=='E'){f.disabled=irf.disabled=0;f.home=irf.home=0;f.count=irf.count=0;irDown=0;}power_command(b[i]);if(b[i]=='Q')stop=1;if(b[i]=='S')raise(SIGSTOP);}if(report("P\n")<0)break;}
  /* Losing the IR source only disables IR Home; M-RCU keeps working. */
  if(p[2].fd>=0&&p[2].revents&(POLLHUP|POLLERR|POLLNVAL)){close(p[2].fd);p[2].fd=-1;if(report("IR_LOST\n")<0)break;}
  else if(p[2].fd>=0&&p[2].revents&POLLIN){struct ev e[64];ssize_t n=read(p[2].fd,e,sizeof e);
@@ -120,16 +124,23 @@ if(e[i].type==1&&e[i].code==412){if(e[i].value==1)report("BACK_DOWN\n");if(e[i].
 int a=filter_event(&f,e+i,ms());if(a==RELEASE){reason=27;stop=1;break;}if(a==OPEN_HOME){if(report("HOME\n")<0)break;continue;}if(a==DROP)continue;if(write(out,e+i,sizeof e[i])!=sizeof e[i]){reason=28;stop=1;break;}}}
  }
  if(output_failed)reason=30;
+ if(stop&&reason==25)reason=0;
  /* Stop emitting before ungrabbing the physical remote. */
  if(reason!=25)latch_stop(reason);
  /* Attempt every cleanup step even if an earlier one fails. A failed release
   * must not masquerade as a watchdog exit eligible for automatic recovery. */
- int cleanup=0;
- if(release_keys(out)<0)cleanup|=1;
- if(ioctl(in,GRAB,0)<0)cleanup|=2;
+ int cleanup=0,release_error=0,ungrab_error=0;
+ if(release_keys(out)<0){cleanup|=1;release_error=errno;}
+ if(ioctl(in,GRAB,0)<0){cleanup|=2;ungrab_error=errno;}
  if(close(in)<0)cleanup|=4;
  if(close(out)<0)cleanup|=8;
  if(p[2].fd>=0)close(p[2].fd);
- if(cleanup){if(reason==25)latch_stop(31);report("CLEANUP_FAILED %d CAUSE %d\n",cleanup,reason);reason=31;}
+ /* Only a recent controller power transition plus vanished BOTH devices may
+  * bypass the persistent failure latch. Real I/O/close errors stay failures. */
+ if(stop&&reason==25){latch_stop(0);reason=0;}
+ if(!stop&&reason==25&&cleanup==3&&powerDeadline&&ms()<=powerDeadline&&
+    (release_error==ENODEV||release_error==ENXIO)&&(ungrab_error==ENODEV||ungrab_error==ENXIO)){
+  report("POWER_REMOVED %d %d\n",release_error,ungrab_error);reason=32;
+ }else if(cleanup){if(reason==25)latch_stop(31);report("CLEANUP_FAILED %d CAUSE %d\n",cleanup,reason);reason=31;}
  if(report("EXIT %d\n",reason)<0&&reason!=31&&reason!=30){latch_stop(30);reason=30;}return reason;
 }

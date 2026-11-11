@@ -85,8 +85,12 @@ def build_desktop(root, payload, environment, version):
         raise RuntimeError('The Windows desktop package currently targets x64 only.')
     name = 'cytv' if sys.platform == 'darwin' else 'cytv-desktop'
     output = root / 'dist/desktop'
+    from cytv.tv_sources import stage_sources
+    trusted = root / 'build/cytv/trusted-js'
+    stage_sources(trusted)
     command = [sys.executable, '-m', 'PyInstaller', '--noconfirm', '--clean', '--onedir', '--windowed',
                '--name', name, '--paths', str(root), '--add-data', str(payload) + os.pathsep + 'payload',
+               '--add-data', str(trusted) + os.pathsep + 'cytv/tv',
                '--workpath', str(root / 'build/cytv/desktop-freeze'), '--specpath', str(root / 'build/cytv/desktop-spec'),
                '--distpath', str(output)]
     if sys.platform == 'darwin':

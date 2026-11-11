@@ -3,6 +3,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import shutil
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -16,7 +17,7 @@ class HelperStopTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
-        self.root = Path(self.tmp.name) / HELPER
+        self.root = Path(self.tmp.name).resolve() / HELPER
         self.directory = self.root / 'state'
         self.directory.mkdir(parents=True, mode=0o770)
         self.directory.chmod(0o770)
@@ -31,12 +32,16 @@ class HelperStopTests(unittest.TestCase):
                 outer.calls.append(uri)
                 if uri.endswith('/dev/listApps'):
                     return {'apps': [{'id': HELPER}]}
-                if uri.endswith('/disable'):
+                if uri.endswith('/disable') and outer.error is not None:
                     raise outer.error
                 return {'returnValue': True}
 
             def run(self, command, data=None, timeout=30):
                 outer.calls.append(command)
+                if command.startswith('if [ -f '):
+                    command = command.replace(HELPER_STATE, str(outer.directory)).replace('/usr/bin/node', shutil.which('node'))
+                    code = data.decode().replace(HELPER_STATE, str(outer.directory))
+                    return subprocess.run(['/bin/sh', '-c', command], input=code, text=True, capture_output=True, check=True).stdout
                 if command == '/usr/bin/node':
                     code = data.decode().replace(HELPER_STATE, str(outer.directory))
                     code = code.replace(HELPER_STATE.rsplit('/', 1)[0], str(outer.root))
@@ -114,3 +119,61 @@ class HelperStopTests(unittest.TestCase):
         with self.assertRaises(subprocess.CalledProcessError):
             self.installer.stop_helper()
         self.assertEqual(list(real.iterdir()), [])
+
+    def test_normal_disable_uses_checked_writer_before_retaining_the_pid_wait(self):
+        self.error = None
+        (self.directory/'controller.pid').write_text('123')
+        target = self.directory/'retained'
+        target.write_text('untouched')
+        (self.directory/'control.json').symlink_to(target)
+        with self.assertRaises(subprocess.CalledProcessError):
+            self.installer.stop_helper()
+        self.assertEqual(target.read_text(), 'untouched')
+        self.assertTrue((self.directory/'controller.pid').exists())
+        self.assertFalse((self.directory/'blocked').exists())
+
+    def test_normal_disable_without_controller_preserves_absent_helper_semantics(self):
+        self.error = None
+        self.installer.stop_helper()
+        self.assertFalse((self.directory/'blocked').exists())
+        self.assertFalse((self.directory/'control.json').exists())
+
+    def test_absent_helper_keeps_stdin_open_until_large_stop_program_is_sent(self):
+        outer = self
+        class PipeRemote:
+            def luna(self, uri, payload, timeout=30):
+                return {'apps': []}
+            def run(self, command, data=None, timeout=30):
+                command = command.replace(HELPER_STATE, str(outer.directory))
+                process = subprocess.Popen(['/bin/sh', '-c', command], stdin=subprocess.PIPE,
+                                           stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                try:
+                    # Model an SSH server scheduling the command before sendall.
+                    # The original shell exits here; a draining shell waits for EOF.
+                    try:
+                        process.wait(timeout=0.1)
+                    except subprocess.TimeoutExpired:
+                        pass
+                    try:
+                        process.stdin.write(data)
+                    except BrokenPipeError:
+                        outer.fail('Stop shell closed stdin before the trusted program was sent')
+                    process.stdin.close()
+                    process.wait(timeout=timeout)
+                    output = process.stdout.read()
+                    outer.assertEqual(process.returncode, 0, process.stderr.read())
+                    return output.decode()
+                finally:
+                    if process.poll() is None:
+                        process.kill()
+                        process.wait()
+                    for stream in (process.stdin, process.stdout, process.stderr):
+                        try:
+                            stream.close()
+                        except BrokenPipeError:
+                            pass
+        self.installer.remote = PipeRemote()
+        self.installer.profile['edition'] = 'root'
+        self.installer.stop_helper()
+        self.assertFalse((self.directory/'blocked').exists())
+        self.assertFalse((self.directory/'control.json').exists())

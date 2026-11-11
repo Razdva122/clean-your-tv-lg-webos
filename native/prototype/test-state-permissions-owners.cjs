@@ -9,7 +9,9 @@ const source = fs.readFileSync(
   'utf8'
 );
 function fixture(options = {}) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cytv-owners-')),
+  const root = fs.realpathSync(
+      fs.mkdtempSync(path.join(os.tmpdir(), 'cytv-owners-'))
+    ),
     state = path.join(root, 'state'),
     key = path.join(state, 'ssap-key.json');
   fs.mkdirSync(state, 0o775);
@@ -26,13 +28,15 @@ function fixture(options = {}) {
           gid: options.directoryGroup || 5000
         }
       ],
-      [key, { uid: 5580, gid: options.keyGroup || 5000 }],
+      [key, { uid: options.keyOwner || 5580, gid: options.keyGroup || 5000 }],
       [path.join(state, 'apps.json'), { uid: 5580, gid: 5000 }]
     ]),
     fds = new Map();
   // macOS may clear setgid; retain the modeled webOS bits until chmod succeeds.
   const specialBits = new Map([[state, (options.directoryMode || 0) & 0o7000]]);
-  let actor = 5367;
+  let actor = 5367,
+    cwd = root;
+  const resolve = (p) => path.resolve(cwd, p);
   const primaryGroup = options.primaryGroup || 5000;
   const denied = () => Object.assign(Error('denied'), { code: 'EPERM' });
   function stat(p, s) {
@@ -44,7 +48,10 @@ function fixture(options = {}) {
   }
   const io = Object.assign({}, fs, {
     openSync(p, ...args) {
+      p = resolve(p);
+      const existed = fs.existsSync(p);
       const fd = fs.openSync(p, ...args);
+      if (!existed) owners.set(p, { uid: actor, gid: primaryGroup });
       fds.set(fd, p);
       return fd;
     },
@@ -56,10 +63,26 @@ function fixture(options = {}) {
       return stat(fds.get(fd), fs.fstatSync(fd));
     },
     lstatSync(p) {
+      p = resolve(p);
       return stat(p, fs.lstatSync(p));
     },
+    statSync(p) {
+      p = resolve(p);
+      return stat(p, fs.statSync(p));
+    },
+    unlinkSync(p) {
+      p = resolve(p);
+      fs.unlinkSync(p);
+      owners.delete(p);
+    },
+    linkSync(from, to) {
+      from = resolve(from);
+      to = resolve(to);
+      fs.linkSync(from, to);
+      owners.set(to, owners.get(from));
+    },
     fchmodSync(fd, mode) {
-      if (io.fstatSync(fd).uid !== actor) throw denied();
+      if (io.fstatSync(fd).uid !== actor && actor !== 0) throw denied();
       fs.fchmodSync(fd, mode);
       specialBits.delete(fds.get(fd));
     },
@@ -91,6 +114,8 @@ function fixture(options = {}) {
       }
     },
     renameSync(from, to) {
+      from = resolve(from);
+      to = resolve(to);
       if (options.renameFailure)
         throw Object.assign(denied(), { code: options.renameCode || 'EPERM' });
       fs.renameSync(from, to);
@@ -102,19 +127,39 @@ function fixture(options = {}) {
     module: { exports: {} },
     Buffer,
     process: {
+      cwd: () => cwd,
+      chdir: (p) => {
+        cwd = resolve(p);
+      },
       getuid: () => actor,
       getgid: () => primaryGroup,
       getgroups: () => [5000, primaryGroup]
     },
-    require: (n) => (n === 'fs' ? io : require(n))
+    require: (n) => {
+      if (n === 'fs') return io;
+      if (n === './contract-events') return events;
+      return require(n);
+    }
   };
-  vm.runInNewContext(source, sandbox);
+  const context = vm.createContext(sandbox);
+  vm.runInContext(
+    fs.readFileSync(require.resolve('../app/contract-events'), 'utf8'),
+    context
+  );
+  const events = sandbox.module.exports;
+  sandbox.module = { exports: {} };
+  vm.runInContext(source, context);
   const logs = [];
   return {
     state,
     key,
     owners,
     logs,
+    permissions: sandbox.module.exports,
+    install(uid, options) {
+      actor = uid;
+      return sandbox.module.exports.prepareConfiguration(state, options);
+    },
     run(uid = 5367, initializeControl = false) {
       actor = uid;
       return sandbox.module.exports(
@@ -138,12 +183,108 @@ function test(name, options, check) {
   }
 }
 test(
+  'packaged 0777 boot state restores privacy without breaking the next Root SSH install',
+  { directoryMode: 0o777, keyMode: 0o777, keyOwner: 5999, primaryGroup: 5431 },
+  (f) => {
+    const apps = path.join(f.state, 'apps.json');
+    fs.chmodSync(apps, 0o777);
+    f.owners.set(apps, { uid: 5999, gid: 5000 });
+    const originalApps = fs.statSync(apps).ino;
+    for (const [name, bytes] of [
+      ['control.json', '{"cmd":"stop"}'],
+      ['home-control.json', '{"enabled":false}'],
+      ['startup-state.json', '{"enabled":true,"boot":"previous","schema":3}']
+    ]) {
+      const file = path.join(f.state, name);
+      fs.writeFileSync(file, bytes);
+      fs.chmodSync(file, 0o777);
+      f.owners.set(file, { uid: 5999, gid: 5000 });
+    }
+    a.equal(f.run(5431, true), true);
+    a.deepEqual(f.owners.get(f.key), { uid: 5431, gid: 5000 });
+    a.equal(fs.statSync(f.key).mode & 0o777, 0o640);
+    a.equal(fs.statSync(apps).ino, originalApps);
+    a.deepEqual(f.owners.get(apps), { uid: 5999, gid: 5000 });
+    a.throws(() => f.permissions.readConfiguration(f.state, 'apps'));
+    const hash = require('crypto')
+      .createHash('sha256')
+      .update('{"key":"test-private-key"}')
+      .digest('hex');
+    f.install(0, { expectedHash: hash });
+    a.equal(fs.statSync(apps).ino, originalApps);
+    a.deepEqual(f.owners.get(apps), { uid: 5999, gid: 5000 });
+    a.equal(fs.statSync(apps).mode & 0o777, 0o644);
+    a.deepEqual(f.owners.get(f.key), { uid: 0, gid: 5000 });
+    a.equal(
+      fs.readFileSync(path.join(f.state, 'home-control.json'), 'utf8'),
+      '{"enabled":false}'
+    );
+    a.equal(
+      fs.readFileSync(path.join(f.state, 'startup-state.json'), 'utf8'),
+      '{"enabled":true,"boot":"previous","schema":3}'
+    );
+  }
+);
+for (const options of [
+  { keyOwner: 12345 },
+  { keyGroup: 12345 },
+  { content: 'invalid JSON' },
+  { renameFailure: true },
+  { writeFailure: true },
+  { shortRead: true }
+])
+  test(
+    '0777 key refuses unsafe metadata/data or failed replacement ' +
+      JSON.stringify(options),
+    Object.assign({ keyOwner: 5999, keyMode: 0o777 }, options),
+    (f) => {
+      const before = fs.statSync(f.key).ino,
+        raw = fs.readFileSync(f.key);
+      a.equal(f.run(), false);
+      a.equal(fs.statSync(f.key).ino, before);
+      a.deepEqual(fs.readFileSync(f.key), raw);
+      a.equal(fs.statSync(f.key).mode & 0o777, 0o777);
+      a.equal(
+        fs.readdirSync(f.state).some((n) => n.startsWith('.cytv-')),
+        false
+      );
+    }
+  );
+test(
   'foreign 0775 directory with protected developer-owned key remains usable',
   { keyMode: 0o640 },
   (f) => {
     a.equal(f.run(), true);
     a.equal(fs.statSync(f.state).mode & 0o777, 0o775);
     a.equal(f.owners.get(f.key).uid, 5580);
+  }
+);
+for (const expectedHash of [undefined, '0'.repeat(64)])
+  test(
+    'Root cannot turn a packaged 0777 key private without its exact capsule hash',
+    { keyOwner: 5999, keyMode: 0o777 },
+    (f) => {
+      const apps = path.join(f.state, 'apps.json');
+      f.owners.set(apps, { uid: 5999, gid: 5000 });
+      fs.chmodSync(apps, 0o644);
+      const original = fs.statSync(f.key).ino;
+      a.throws(() => f.install(0, { expectedHash }));
+      a.equal(fs.statSync(f.key).ino, original);
+      a.equal(fs.statSync(f.key).mode & 0o777, 0o777);
+    }
+  );
+test(
+  'foreign apps still refuse before changing a packaged expanded key',
+  { keyOwner: 5999, keyMode: 0o777 },
+  (f) => {
+    const original = fs.statSync(f.key).ino,
+      hash = require('crypto')
+        .createHash('sha256')
+        .update('{"key":"test-private-key"}')
+        .digest('hex');
+    a.throws(() => f.install(0, { expectedHash: hash }));
+    a.equal(fs.statSync(f.key).ino, original);
+    a.equal(fs.statSync(f.key).mode & 0o777, 0o777);
   }
 );
 test(
@@ -223,7 +364,15 @@ test(
       f.logs.filter(
         (x) =>
           x.event === 'state-permissions-warning' &&
-          x.reason === 'expanded-directory-mode'
+          x.reason === 'unsafe-storage' &&
+          x.target === 'directory' &&
+          x.contract.field === 'directory' &&
+          x.contract.expected === 'safe-mode' &&
+          x.contract.actual.category === 'unsafe' &&
+          x.contract.actual.mode === 0o777 &&
+          x.contract.actual.uid === 5999 &&
+          x.contract.actual.gid === 5000 &&
+          x.contract.decision === 'retain'
       ).length,
       1
     );
@@ -291,7 +440,7 @@ for (const mode of [0o775, 0o777])
       const context = {
         module: { exports: {} },
         require(n) {
-          if (n === './state-permissions') return () => f.run();
+          if (n === './state-permissions') return f.permissions;
           if (n === 'os')
             return {
               networkInterfaces: () => ({

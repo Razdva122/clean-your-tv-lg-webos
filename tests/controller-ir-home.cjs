@@ -47,7 +47,10 @@ const fakefs = {
 const context = {
   Buffer,
   require(n) {
-    if (n === './state-permissions') return () => true;
+    if (n === './home-control')
+      return require('./storage-fixture.cjs').homeControl(fakefs);
+    if (n === './state-permissions')
+      return require('./storage-fixture.cjs').create(fakefs);
     if (n === 'fs') return fakefs;
     if (n === 'child_process')
       return {

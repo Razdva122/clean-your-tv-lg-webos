@@ -1,0 +1,65 @@
+---
+import Site from '../../../layouts/Site.astro';
+import ArticleBreadcrumbs from '../../../components/ArticleBreadcrumbs.astro';
+import { articleCopy, articleRoute, getArticles } from '../../../lib/articles';
+import { locales, base, copy, type Locale } from '../../../lib/site';
+export function getStaticPaths() {
+  return locales.map((lang) => ({ params: { lang } }));
+}
+const lang = Astro.params.lang as Locale;
+const labels = articleCopy[lang];
+const articles = (await getArticles()).filter(
+  (entry) => entry.data.lang === lang
+);
+---
+
+<Site lang={lang} articles>
+  <article class="editorial-index shell">
+    <header>
+      <ArticleBreadcrumbs lang={lang} />
+      <h1>{labels.indexTitle}</h1>
+      <p class="lead">{labels.description}</p>
+    </header>
+    <ul class="article-list">
+      {articles.map(({ data }, index) => (
+        <li>
+          {index === 0 && (
+            <a
+              class="featured-screen"
+              href={articleRoute(lang, data.topic)}
+              tabindex="-1"
+              aria-hidden="true"
+            >
+              <img
+                src={base + 'assets/liquid-glass.jpg'}
+                alt=""
+                width="960"
+                height="540"
+                fetchpriority="high"
+              />
+            </a>
+          )}
+          <div>
+            <h2>
+              <a href={articleRoute(lang, data.topic)}>
+                {data.title}
+                <span aria-hidden="true"> ↗</span>
+              </a>
+            </h2>
+            <p>{data.description}</p>
+            {index === 0 && (
+              <a class="text-link" href={articleRoute(lang, data.topic)}>
+                {copy[lang].details}
+              </a>
+            )}
+          </div>
+        </li>
+      ))}
+    </ul>
+  </article>
+</Site>
+
+<style is:global>
+  @import '../../../article.css';
+  @import '../../../editorial.css';
+</style>

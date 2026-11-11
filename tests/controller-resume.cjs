@@ -43,7 +43,10 @@ function run(baseline, scenario) {
     console,
     Buffer,
     require(name) {
-      if (name === './state-permissions') return () => true;
+      if (name === './home-control')
+        return require('./storage-fixture.cjs').homeControl(fakefs);
+      if (name === './state-permissions')
+        return require('./storage-fixture.cjs').create(fakefs);
       if (name === 'fs') return fakefs;
       if (name === 'child_process')
         return {

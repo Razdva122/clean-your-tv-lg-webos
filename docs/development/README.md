@@ -23,6 +23,8 @@ before using a low-level recovery or installation procedure.
 
 ## Understand behavior and diagnose failures
 
+- [Shared storage, lifecycle and recovery contracts](SHARED-CONTRACTS.md): canonical APIs, ownership handoff, safety authority and bounded diagnostics.
+
 - [Early Root admission and connection guidance](INSTALLER-PREFLIGHT-HELP.md): existing Home-interface contract before runtime preparation, typed localized advice and unchanged recovery/trust authority.
 
 - [Root native startup input](ROOT-NATIVE-INPUT.md): owned EIM lifecycle and acceptance limits.

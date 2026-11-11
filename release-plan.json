@@ -1,74 +1,69 @@
 {
   "schema": 1,
-  "version": "1.16.0",
+  "version": "1.17.0",
   "changes": [
     {
-      "pr": 477,
+      "pr": 470,
       "issues": [],
-      "summary": "Accept iPhone HEIC/HEIF wallpaper uploads using native decoding or a bundled local worker; preserve crop, PIN and JPEG transfer"
+      "summary": "Redesign multilingual landing with animated previews and SEO articles"
     },
     {
-      "pr": 478,
+      "pr": 488,
       "issues": [
-        418
+        487
       ],
-      "summary": "Correct retained-native cleanup Home readback; original #418 activation cause and device recovery remain unconfirmed"
+      "summary": "Repair authenticated installer key privacy after runtime ownership handoff; original #487 device continuation remains unverified"
     },
     {
-      "pr": 479,
+      "pr": 492,
       "issues": [
-        101
+        454
       ],
-      "summary": "Remove generic C3-only Root setup notice; original #101 C2 Root activation remains unconfirmed"
+      "summary": "Admit immutable vendor-owned stock Home up to 16 MiB across Root preflight, compositor runtime and guardian; #454 device confirmation remains pending"
     },
     {
-      "pr": 480,
+      "pr": 493,
       "issues": [
-        397
+        487
       ],
-      "summary": "Retain attempt-bound Root driver install failure diagnostics; original #397 failure cause awaits reporter data"
+      "summary": "Share checked storage, lifecycle and recovery contracts; preserve first-cause typed diagnostics in standard reports"
     },
     {
-      "pr": 481,
-      "issues": [],
-      "summary": "Complete verified Root/No-root removal without mandatory restart; distinguish pending cleanup, connection loss and package refusal"
-    },
-    {
-      "pr": 482,
-      "issues": [],
-      "summary": "Offer optional post-install theme preview cards, weather and mode-specific renewal/firmware switches; preserve successful installation on skip or cancellation"
-    },
-    {
-      "pr": 483,
-      "issues": [],
-      "summary": "Fix Settings remote navigation and recovery in both editions"
-    },
-    {
-      "pr": 484,
-      "issues": [],
-      "summary": "Fix browser expectations for adaptive Settings controls"
-    },
-    {
-      "pr": 485,
+      "pr": 494,
       "issues": [
-        472
+        454
       ],
-      "summary": "Retain allowlisted No-root boot-check failure evidence; original #472 cause and device recovery remain unconfirmed"
+      "summary": "Correct the stock Home regression fixture on UID 1001 CI runners; production behavior unchanged"
     },
     {
-      "pr": 490,
+      "pr": 504,
       "issues": [
-        489
+        487
       ],
-      "summary": "Fix Root recovery verification for bundled HEIC service"
+      "summary": "Fix Windows applicability and stdin transport in shared-contract fixtures"
+    },
+    {
+      "pr": 508,
+      "issues": [
+        507
+      ],
+      "summary": "Bound fresh System updater setup reads by the verified file size to prevent baseline validation MemoryError"
+    },
+    {
+      "pr": 510,
+      "issues": [
+        487,
+        509
+      ],
+      "summary": "Restore private Helper boot state, preserve the original No-root CLI recovery and complete Root activation when Helper is absent"
     }
   ],
   "excluded": [],
-  "acceptance": "2026-11-10: maintainer-owned OLED55C3RLA, firmware43.21.71/webOS SDK11.2.0, normal Root FHD, Magic Remote exact model unknown; macOS15.6.1 ARM64 host. Build42808578156:1 and protected Root QA signing42811994143: exact final artifacts/signature, ordinary signed update, real profile/health, runtime and actual retained-Updater integrity, retained rollback\u2192forward and final owner-observed arrows/OK/Back, short Home\u2192LG Home with Home Off, volume/audio pass. All four selected R2 groups pass; hashes, exact observations and untested scope: docs/history/2026-11-10-release-1.16.0-candidate.md#r2-04-and-final-selected-case-exit-check. No physical No-root/iPhone/Home-On/emergency/power/public-feed acceptance claimed; no publication authorized.",
+  "acceptance": "2026-11-11 maintainer C3 OLED55C3RLA, firmware 43.21.71, webOS SDK 11.2.0, TV Node 20.12.2, LG Magic Remote (model unknown), macOS 15.6.1 ARM64. All 12 selected case IDs reconciled in docs/history/2026-11-11-release-1.17.0-candidate.md#replacement-qa-exit-reconciliation. Final CLI completed original No-root recovery after explicit Helper Start. Short Home, Home Off/On, controls, audible audio and same-boot remote wake passed. The identical Helper archive passed triple Home with published rollback Home. The maintainer explicitly deferred active Helper AC cold boot. Fresh System setup passed. Signed Root 0.16.1 update, retained rollback to 0.16.0 and forward to 0.16.1 passed with actual UI profile and Home Off retained. Root short and triple Home passed. Final TV Root 0.16.1, System 1.2.8, LG Home active, verified recovery and retained rollback available. Standalone Helper service status discrepancy and separate original C1/C2 reporter confirmations remain open.",
   "build": {
-    "run_id": 42808578156,
+    "run_id": 42996279379,
     "attempt": 1,
-    "source": "f23ab1ac92e958ab2720748e9b6fa59ae641916d"
+    "source": "3ad62039450ca431c061784a87287769f52f25bb"
   },
-  "acceptance_build": "42808578156:1"
+  "acceptance_build": "42996279379:1"
 }

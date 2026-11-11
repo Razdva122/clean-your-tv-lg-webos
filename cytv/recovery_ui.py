@@ -24,6 +24,7 @@ REMOVAL_BLOCKERS = {
     'removal-failed':'The TV could not finish removing a package. Choose Try again.',
     'cleanup-check-failed':'Final cleanup could not be verified. Choose Try again to check and finish removal.',
     'removal-verified':'',
+    'removal-recheck-required':'Connect to the TV to verify the saved removal result.',
 }
 
 

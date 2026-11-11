@@ -759,47 +759,31 @@ FILE_CHECK = r'''
 }());
 '''
 
-STATE_CHECK = r'''
-(function(){
- var fs=require('fs'),path=require('path'),c=require('constants'),directory=process.argv[process.argv.length-1],uid=process.getuid();
- var repair=process.argv[process.argv.length-2]==='repair-key-mode',leaf,key;
- function owner(s){return s.uid===uid||s.uid===5999&&s.gid===5000;}
- function same(a,b){return a.dev===b.dev&&a.ino===b.ino;}
- for(var current=directory;;current=path.dirname(current)){
-  var s=fs.lstatSync(current);if(!s.isDirectory()||s.isSymbolicLink())throw Error('unsafe-state-parent');
-  if(current===directory){if(!owner(s)||(s.mode&2))throw Error('unsafe-state-owner');leaf=s;}
-  if(current===path.dirname(current))break;
- }
- // Validate both leaves before changing anything. Only the observed vendor
- // 0775 key mode is repairable; retain the inode, owner, group and key bytes.
- ['ssap-key.json','apps.json'].forEach(function(name){
-  var s;try{s=fs.lstatSync(directory+'/'+name);}catch(e){if(e.code==='ENOENT')return;throw e;}
-  if(!s.isFile()||s.nlink!==1||!owner(s)||(s.mode&2))throw Error('unsafe-config-file');
-  if(name==='ssap-key.json'&&(s.mode&7)){
-   if(!repair||s.uid!==uid||(s.mode&4095)!==509)throw Error('unsafe-config-file');
-   key=s;
-  }
- });
- if(key){
-  if(typeof c.O_NOFOLLOW!=='number'||typeof c.O_DIRECTORY!=='number')throw Error('unsupported-storage');
-  var parent=fs.openSync(directory,c.O_RDONLY|c.O_NOFOLLOW|c.O_DIRECTORY),fd;
-  try{
-   if(!same(leaf,fs.fstatSync(parent)))throw Error('unsafe-state-parent');
-   process.chdir(directory);
-   if(!same(leaf,fs.statSync('.'))||!same(leaf,fs.lstatSync(directory)))throw Error('unsafe-state-parent');
-   fd=fs.openSync('ssap-key.json',c.O_RDONLY|c.O_NOFOLLOW|c.O_NONBLOCK);
-   var opened=fs.fstatSync(fd);
-   if(!same(key,opened)||!opened.isFile()||opened.nlink!==1||opened.uid!==uid||opened.gid!==key.gid||
-      (opened.mode&4095)!==509||!same(key,fs.lstatSync('ssap-key.json')))throw Error('unsafe-config-file');
-   fs.fchmodSync(fd,416);fs.fsyncSync(fd);
-   var after=fs.fstatSync(fd);
-   if(!same(key,after)||after.uid!==key.uid||after.gid!==key.gid||(after.mode&4095)!==416||
-      after.nlink!==1||!same(key,fs.lstatSync('ssap-key.json'))||!same(leaf,fs.lstatSync(directory)))throw Error('unsafe-config-file');
-  }finally{if(fd!==undefined)fs.closeSync(fd);fs.closeSync(parent);}
- }
- process.stdout.write('CYTV_CONFIGURATION_PRIVATE');
-}());
-'''
+from .tv_sources import node_adapter
+
+STATE_CHECK = node_adapter('state-permissions', r"""
+var option=process.argv[process.argv.length-2],directory=process.argv[process.argv.length-1];
+var expected=/^repair-key-mode:[a-f0-9]{64}$/.test(option)?option.slice(16):null;
+var repair=option==='repair-key-mode'||expected,rootRepair=false;
+if(repair&&process.getuid()===0&&process.geteuid()===0&&
+   directory==='/media/developer/apps/usr/palm/applications/com.local.nativehome/state'){
+ var fs=require('fs'),before=fs.lstatSync(directory);
+ if(!expected||!before.isDirectory()||before.isSymbolicLink()||before.uid!==5999||before.gid!==5000)
+  throw Error('unsafe-config-owner');
+ // Keep completed-file continuations boot-readable too: no later observer
+ // upload is guaranteed to repair a root-owned key. Drop permanently first.
+ process.chdir('/');process.setgroups([]);process.setgid(5000);process.setuid(5999);
+ var after=fs.lstatSync(directory);
+ if(process.getuid()!==5999||process.geteuid()!==5999||process.getgid()!==5000||process.getegid()!==5000||
+    process.getgroups().some(function(g){return g!==5000;})||
+    after.dev!==before.dev||after.ino!==before.ino||after.uid!==5999||after.gid!==5000)
+  throw Error('unsafe-config-owner');
+ rootRepair=true;
+}
+if(repair)contract.prepareConfiguration(directory,{expectedHash:expected,requireHash:rootRepair});
+else contract.inspectConfiguration(directory,{});
+process.stdout.write('CYTV_CONFIGURATION_PRIVATE');
+""")
 
 EMPTY_PACKAGE = r'''
 (function(){
@@ -963,8 +947,8 @@ def configure(installer,value):
     # Only an authenticated install continuation with an idle Helper can
     # restrict the known vendor-normalized key mode. Status stays read-only;
     # immutable observer/capsule bytes and emergency latches are untouched.
-    repair=(plan.get('connection')!='root-ssh' and installer.helper_state() in ('stopped','stale'))
-    mode=' repair-key-mode ' if repair else ' '
+    repair=installer.helper_state() in ('stopped','stale')
+    mode=' '+shlex.quote('repair-key-mode:'+expected[HELPER_STATE+'/ssap-key.json'])+' ' if repair else ' '
     if installer.remote.run('/usr/bin/node -e '+shlex.quote(STATE_CHECK)+mode+shlex.quote(HELPER_STATE)).strip()!='CYTV_CONFIGURATION_PRIVATE':refuse()
     token=claim_step(installer,plan,'files')
     if token:

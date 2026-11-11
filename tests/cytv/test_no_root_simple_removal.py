@@ -516,6 +516,9 @@ class SimpleRemoval(unittest.TestCase):
         recovery.recover(self.installer,lambda _:next(answers),write)
         self.assertEqual((directory/'operation.json').read_bytes(),original)
         self.assertEqual(self.remote.commands,[])  # No retained source execution.
+        from cytv import diagnostics
+        diagnostics.create_report(self.store,'recovery',self.profile,'recovery',None)
+        self.assertEqual(self.remote.commands,[])  # Report export is local too.
         answers=iter(['y','y'])
         recovery.recover(self.installer,lambda _:next(answers),write)
         pending=self.store.pending(self.profile)

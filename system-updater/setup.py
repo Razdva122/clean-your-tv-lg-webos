@@ -41,7 +41,9 @@ def safe(path,uid=None):
     with os.fdopen(fd,'rb') as stream:
         info=os.fstat(stream.fileno())
         if not stat.S_ISREG(info.st_mode) or info.st_nlink!=1 or info.st_size>96*1024*1024 or (uid is not None and (info.st_uid!=uid or info.st_mode&0o022)):raise ValueError('Unsafe file')
-        return stream.read(96*1024*1024+1)
+        raw=stream.read(info.st_size+1)
+        if len(raw)!=info.st_size:raise ValueError('File changed during read')
+        return raw
 
 def entries(raw):
     result={}
