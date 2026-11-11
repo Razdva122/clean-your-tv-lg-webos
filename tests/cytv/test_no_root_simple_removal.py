@@ -10,6 +10,7 @@ import subprocess
 import tempfile
 import time
 import unittest
+from unittest.mock import patch
 
 from cytv import operations
 from cytv import package
@@ -163,6 +164,63 @@ class SimpleRemoval(unittest.TestCase):
         self.assertFalse(any(uri.endswith('/dev/remove') for uri,_ in self.remote.calls))
         self.assertFalse(any(uri.endswith('/launch') and body['id']=='com.webos.app.livetv'
                              for uri,body in self.remote.calls))
+
+    def test_inherited_removal_uses_paired_foreground_when_public_luna_refuses(self):
+        (self.root / 'proc').mkdir()
+        self.store.begin(self.profile, 'install', stage='pending')
+        self.legacy_home()
+        original = self.remote.luna
+
+        def luna(uri, payload, **kwargs):
+            if uri.endswith('/getForegroundAppInfo'):
+                raise TVRejected('Rejected', {'returnValue': False, 'errorCode': -1}, uri)
+            return original(uri, payload, **kwargs)
+
+        self.remote.luna = luna
+        key_file = self.store.device_dir(self.profile) / 'ssap.json'
+        saved_key = '{"key":"saved-key"}\n'
+        key_file.write_text(saved_key)
+        requests = []
+
+        class Socket:
+            denied = True
+
+            def send(self, raw):
+                self.request = json.loads(raw)
+                requests.append(self.request)
+
+            def recv(self, timeout):
+                request_id = self.request['id']
+                if self.request['type'] == 'register':
+                    return json.dumps({'id': request_id, 'type': 'registered',
+                                       'payload': {'client-key': 'saved-key'}})
+                payload = {'appId': 'com.webos.app.livetv'}
+                if self.denied:
+                    payload['returnValue'] = False
+                return json.dumps({'id': request_id, 'type': 'response', 'payload': payload})
+
+            def close(self):
+                pass
+
+        socket = Socket()
+        with patch('websockets.sync.client.connect', return_value=socket) as connect:
+            with self.assertRaises(UserError) as caught:
+                self.remove()
+            self.assertEqual(caught.exception.reason_code, 'controls-unverified')
+            self.assertEqual(self.store.pending(self.profile)['stage'], 'requested')
+            self.assertFalse(any(uri.endswith('/dev/remove') for uri, _ in self.remote.calls))
+            socket.denied = False
+            self.assertTrue(self.remove()['restart_required'])
+            self.reboot()
+            self.assertTrue(self.remove()['verified_clean'])
+
+        self.assertIsNone(self.store.pending(self.profile))
+        self.assertEqual(key_file.read_text(), saved_key)
+        self.assertEqual([call.args[0] for call in connect.call_args_list], ['wss://tv.local:3001'] * 3)
+        for register, read in zip(requests[::2], requests[1::2]):
+            self.assertEqual(register['payload']['client-key'], 'saved-key')
+            self.assertNotIn('pairingType', register['payload'])
+            self.assertEqual(read['uri'], 'ssap://com.webos.applicationManager/getForegroundAppInfo')
 
     def test_stock_source_launch_waits_for_fresh_foreground_confirmation(self):
         self.remote.apps=set(self.cleanup.APPS[:2]);state=self.legacy_home('com.gathin.tvhome')

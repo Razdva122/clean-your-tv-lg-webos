@@ -129,8 +129,9 @@ class Inventory:
 
 
 class SSAP:
-    def __init__(self, host, directory, progress=print):
+    def __init__(self, host, directory, progress=print, *, reuse_only=False):
         self.host, self.directory, self.progress = host, Path(directory), progress
+        self.reuse_only = reuse_only
         self.counter, self.ws, self.key = 0, None, None
 
     def __enter__(self):
@@ -139,31 +140,46 @@ class SSAP:
         from lgtv import PERMISSIONS
         keyfile = self.directory / 'ssap.json'
         saved = json.loads(keyfile.read_text()) if keyfile.exists() else {}
-        payload = {'forcePairing': False, 'pairingType': 'PROMPT',
+        key = saved.get('key') if isinstance(saved, dict) else None
+        if self.reuse_only and not (isinstance(key, str) and 0 < len(key) <= 1024):
+            raise UserError('No saved TV remote-control pairing is available.')
+        payload = {'forcePairing': False,
                    'manifest': {'manifestVersion': 1, 'appVersion': '1.1', 'permissions': PERMISSIONS}}
-        if saved.get('key'):
-            payload['client-key'] = saved['key']
+        if not self.reuse_only:
+            payload['pairingType'] = 'PROMPT'
+        if key:
+            payload['client-key'] = key
+        connect_timeout = 5 if self.reuse_only else 10
         try:
-            self.ws = connect(f'wss://{self.host}:3001', ssl=tv_context(), open_timeout=10,
+            self.ws = connect(f'wss://{self.host}:3001', ssl=tv_context(), open_timeout=connect_timeout,
                               max_size=8 * 1024 * 1024, proxy=None)
         except ssl.SSLError:
             # Retry only the TLS connection, before sending any pairing data.
             self.ws = connect(f'wss://{self.host}:3001', ssl=tv_context(compatible=True),
-                              open_timeout=10, max_size=8 * 1024 * 1024, proxy=None)
+                              open_timeout=connect_timeout, max_size=8 * 1024 * 1024, proxy=None)
         try:
-            self.progress('Checking TV remote-control access…' if saved.get('key') else 'Accept the remote-control pairing request on the TV if shown…')
+            self.progress('Checking TV remote-control access…' if key else 'Accept the remote-control pairing request on the TV if shown…')
             self.ws.send(json.dumps({'id': 'register_0', 'type': 'register', 'payload': payload}))
-            deadline = time.monotonic() + 65
+            deadline = time.monotonic() + (5 if self.reuse_only else 65)
             while time.monotonic() < deadline:
                 reply = json.loads(self.ws.recv(timeout=max(0.1, deadline - time.monotonic())))
+                if not isinstance(reply, dict) or not isinstance(reply.get('payload', {}), dict):
+                    raise ValueError('Invalid TV pairing response')
+                response = reply.get('payload', {})
                 if reply.get('type') == 'error':
                     raise UserError('TV pairing was rejected. Check the on-screen request and local network access.')
+                if self.reuse_only and response.get('pairingType'):
+                    raise UserError('The TV did not accept the saved remote-control pairing.')
                 if reply.get('type') == 'registered':
-                    key = reply.get('payload', {}).get('client-key')
-                    if not isinstance(key, str) or not 0 < len(key) <= 1024:
+                    registered = response.get('client-key')
+                    if not isinstance(registered, str) or not 0 < len(registered) <= 1024:
                         raise ValueError('Invalid TV pairing response')
-                    self.key = key
-                    private_write(keyfile, json.dumps({'key': key}).encode())
+                    if self.reuse_only:
+                        if reply.get('id') != 'register_0' or registered != key:
+                            raise UserError('The TV did not accept the saved remote-control pairing.')
+                    else:
+                        private_write(keyfile, json.dumps({'key': registered}).encode())
+                    self.key = registered
                     return self
             raise TVConnectionError('Timed out waiting for the TV pairing request. Keep the TV on and accept it with the remote.',
                                     reason_code='pairing-timeout')
@@ -181,19 +197,22 @@ class SSAP:
     def __exit__(self, *args):
         self.ws.close()
 
-    def call(self, uri):
+    def call(self, uri, *, timeout=20):
         from websockets.exceptions import ConnectionClosed
         self.counter += 1
         request = 'cytv_' + str(self.counter)
         try:
             self.ws.send(json.dumps({'id': request, 'type': 'request', 'uri': uri, 'payload': {}}))
-            deadline = time.monotonic() + 20
+            deadline = time.monotonic() + timeout
             while time.monotonic() < deadline:
                 reply = json.loads(self.ws.recv(timeout=max(0.1, deadline - time.monotonic())))
+                if not isinstance(reply, dict):
+                    raise UserError('Invalid TV remote-control reply')
                 if reply.get('id') != request:
                     continue
                 payload = reply.get('payload', {})
-                if reply.get('type') == 'error' or not isinstance(payload, dict) or payload.get('returnValue') is False:
+                if (reply.get('type', 'response') != 'response' or not isinstance(payload, dict)
+                        or payload.get('returnValue') is False):
                     raise UserError('TV permission was denied. Check pairing and run cytv doctor.')
                 return payload
             raise UserError('Reading TV applications timed out. Keep the TV on and check the connection.')
