@@ -199,6 +199,7 @@ jobs:
           key: root-python-4a71641c8d5536175e404a961624e8656eba30e97b5026f6bd7dc31e4bbeaaea
       - name: Install ARM user emulation and EABI sysroot
         run: |
+          bash scripts/ci-ubuntu-mirror.sh
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends qemu-user libc6-armel-cross libgcc-s1-armel-cross
       - name: Select fresh ARM Python work
@@ -253,6 +254,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci --ignore-scripts --no-audit --no-fund
+      - if: runner.os == 'Linux'
+        run: bash scripts/ci-ubuntu-mirror.sh
       - run: npx playwright install --with-deps ${{ matrix.browsers }}
       - name: Check actual HEIC decode and local phone upload
         env:
@@ -281,6 +284,7 @@ jobs:
             scripts/build-requirements.txt
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: python -m pip install -r scripts/build-requirements.txt
+      - run: bash scripts/ci-ubuntu-mirror.sh
       - run: npx playwright install --with-deps chromium
       - name: Select fresh browser units
         id: evidence
