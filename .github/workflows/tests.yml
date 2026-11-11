@@ -290,7 +290,14 @@ jobs:
       - name: Check actual HEIC decode and local phone upload
         env:
           HEIC_BROWSERS: ${{ matrix.engines }}
-        run: npm run test:wallpaper:heic
+        run: |
+          if [ "$RUNNER_OS" = Linux ]; then
+            # Firefox refuses to run as root with the runner user's mounted HOME.
+            HOME=$(mktemp -d)
+            export HOME
+            trap 'rm -rf "$HOME"' EXIT
+          fi
+          npm run test:wallpaper:heic
 
   browser:
     needs: scope
