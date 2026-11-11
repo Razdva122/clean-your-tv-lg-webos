@@ -1,0 +1,65 @@
+name: Publish Linux CI image
+on:
+  push:
+    tags: ['ci-image-v*']
+permissions:
+  contents: read
+jobs:
+  publish:
+    if: github.repository == 'Razdva122/clean-your-tv-lg-webos'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Build and test Linux dependencies
+        shell: bash
+        run: |
+          [[ "$GITHUB_REF_NAME" =~ ^ci-image-v[1-9][0-9]*$ ]]
+          playwright=$(jq -er '.packages["node_modules/playwright"].version' package-lock.json)
+          [[ "$playwright" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          docker buildx build --platform linux/amd64 --load --tag cytv-linux-ci:verify \
+            --build-arg "PLAYWRIGHT_VERSION=$playwright" \
+            --label "org.opencontainers.image.revision=$GITHUB_SHA" \
+            --label "org.opencontainers.image.version=$GITHUB_REF_NAME" .github/ci-image
+          docker run --rm cytv-linux-ci:verify bash -euc '
+            test "$(id -u)" = 0
+            gh --version
+            node --version
+            python --version
+            cc --version
+            fc-list : family | sort -u | tee /tmp/fonts
+            grep -Fx "Liberation Sans" /tmp/fonts
+            grep -Fx "Noto Color Emoji" /tmp/fonts
+            qemu-arm --version
+            test -x /usr/arm-linux-gnueabi/lib/ld-linux.so.3
+            test -r /usr/arm-linux-gnueabi/lib/libgcc_s.so.1
+          '
+          docker run --rm --interactive cytv-linux-ci:verify node <<'JS'
+          const { chromium, firefox } = require('/opt/ci-playwright/node_modules/playwright');
+          (async () => {
+            for (const [engine, options] of [[chromium, {channel: 'chromium'}], [firefox, {}]]) {
+              const browser = await engine.launch(options);
+              try { console.log(engine.name(), browser.version()); }
+              finally { await browser.close(); }
+            }
+          })().catch(error => { console.error(error); process.exitCode = 1; });
+          JS
+      - name: Push tested image and report digest
+        env:
+          GHCR_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          image="ghcr.io/${GITHUB_REPOSITORY,,}-ci:$GITHUB_REF_NAME"
+          export DOCKER_CONFIG
+          DOCKER_CONFIG=$(mktemp -d)
+          trap 'rm -rf "$DOCKER_CONFIG"' EXIT
+          printf '%s' "$GHCR_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          docker tag cytv-linux-ci:verify "$image"
+          docker push "$image"
+          digest=$(docker image inspect --format '{{index .RepoDigests 0}}' "$image")
+          printf 'Linux CI image: `%s`\n' "$digest" >> "$GITHUB_STEP_SUMMARY"
