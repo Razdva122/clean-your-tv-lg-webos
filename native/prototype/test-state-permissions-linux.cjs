@@ -110,6 +110,115 @@ if (process.platform !== 'linux' || process.getuid() !== 0) {
           ');'
       );
     }
+    // Actual Root-SSH ownership after package-mode expansion, then controller
+    // bootstrap under its supplementary jailer group and the next installer.
+    const boot = path.join(root, 'boot-state');
+    fs.mkdirSync(boot);
+    fs.chownSync(boot, 5999, 5000);
+    fs.chmodSync(boot, 0o777);
+    const bootFiles = {
+      'ssap-key.json': '{"key":"boot-key"}',
+      'apps.json': '["test.app"]',
+      'control.json': '{"cmd":"stop"}',
+      'controller.pid': 'invalid stale PID',
+      'controller.log': 'untrusted old log',
+      'home-control.json': '{"enabled":false}',
+      'startup-state.json': '{"enabled":true,"boot":"previous","schema":3}',
+      blocked: 'emergency',
+      watchdog: 'watchdog'
+    };
+    for (const [name, content] of Object.entries(bootFiles)) {
+      const file = path.join(boot, name);
+      fs.writeFileSync(file, content);
+      fs.chownSync(file, 5999, 5000);
+      fs.chmodSync(file, 0o777);
+    }
+    const bootModule = JSON.stringify(path.join(root, 'state-permissions.js')),
+      bootPath = JSON.stringify(boot),
+      appsInode = fs.statSync(path.join(boot, 'apps.json')).ino;
+    run(
+      5431,
+      'var p=require(' +
+        bootModule +
+        '),d=' +
+        bootPath +
+        ';if(!p(d,null,true))process.exit(7);p.atomicRecord(d,"pid","123");p.appendLog(d,"fresh log");',
+      5431
+    );
+    a.equal(fs.statSync(path.join(boot, 'ssap-key.json')).uid, 5431);
+    a.equal(fs.statSync(path.join(boot, 'ssap-key.json')).gid, 5000);
+    a.equal(fs.statSync(path.join(boot, 'ssap-key.json')).mode & 0o777, 0o640);
+    a.equal(fs.statSync(path.join(boot, 'apps.json')).ino, appsInode);
+    a.equal(fs.statSync(path.join(boot, 'apps.json')).uid, 5999);
+    const bootHash = require('crypto')
+      .createHash('sha256')
+      .update(bootFiles['ssap-key.json'])
+      .digest('hex');
+    run(
+      0,
+      'require(' +
+        bootModule +
+        ').prepareConfiguration(' +
+        bootPath +
+        ',{expectedHash:' +
+        JSON.stringify(bootHash) +
+        '});'
+    );
+    a.equal(fs.statSync(path.join(boot, 'apps.json')).ino, appsInode);
+    a.equal(fs.statSync(path.join(boot, 'apps.json')).uid, 5999);
+    a.equal(fs.statSync(path.join(boot, 'apps.json')).mode & 0o777, 0o644);
+    for (const name of [
+      'home-control.json',
+      'startup-state.json',
+      'blocked',
+      'watchdog'
+    ])
+      a.equal(fs.readFileSync(path.join(boot, name), 'utf8'), bootFiles[name]);
+    // Actual host adapter, without a later upload that could hide wrong ownership.
+    const adapter = cp
+      .execFileSync(
+        process.env.PYTHON || 'python3',
+        [
+          '-c',
+          'from cytv.no_root_observer import STATE_CHECK; print(STATE_CHECK)'
+        ],
+        { cwd: path.resolve(__dirname, '../..'), encoding: 'utf8' }
+      )
+      .split(
+        '/media/developer/apps/usr/palm/applications/com.local.nativehome/state'
+      )
+      .join(boot);
+    const privateCwd = path.join(root, 'root-private');
+    fs.mkdirSync(privateCwd, { mode: 0o700 });
+    fs.chownSync(path.join(boot, 'ssap-key.json'), 5431, 5000);
+    fs.chmodSync(path.join(boot, 'ssap-key.json'), 0o775);
+    fs.chmodSync(path.join(boot, 'apps.json'), 0o777);
+    fs.chmodSync(boot, 0o777);
+    run(
+      0,
+      'process.chdir(' +
+        JSON.stringify(privateCwd) +
+        ');process.argv=["node",' +
+        JSON.stringify('repair-key-mode:' + bootHash) +
+        ',' +
+        bootPath +
+        '];' +
+        adapter
+    );
+    a.equal(fs.statSync(path.join(boot, 'ssap-key.json')).uid, 5999);
+    a.equal(fs.statSync(path.join(boot, 'apps.json')).uid, 5999);
+    a.equal(fs.statSync(path.join(boot, 'apps.json')).ino, appsInode);
+    fs.chmodSync(path.join(boot, 'ssap-key.json'), 0o777);
+    run(
+      5431,
+      'if(!require(' +
+        bootModule +
+        ')(' +
+        bootPath +
+        ',null,true))process.exit(8);',
+      5431
+    );
+    a.equal(fs.statSync(path.join(boot, 'ssap-key.json')).mode & 0o777, 0o640);
     // Developer Mode setup can still atomically upload a new key after repair.
     run(
       5580,
@@ -140,6 +249,28 @@ if (process.platform !== 'linux' || process.getuid() !== 0) {
       fs.chownSync(dir, 5999, 5000);
       fs.chmodSync(dir, 0o2770);
     }
+    for (const prefix of ['home', 'input', 'catalog'])
+      for (const suffix of ['request', 'response']) {
+        const kind = prefix + '-' + suffix,
+          output = path.join(channel, kind + '.json');
+        fs.writeFileSync(output, 'untrusted old output');
+        fs.chownSync(output, 5999, 5000);
+        fs.chmodSync(output, 0o777);
+        run(
+          5367,
+          'require(' +
+            bootModule +
+            ').atomicRecord(' +
+            JSON.stringify(channel) +
+            ',' +
+            JSON.stringify(kind) +
+            ',"fresh");',
+          5367
+        );
+        a.equal(fs.readFileSync(output, 'utf8'), 'fresh');
+        a.equal(fs.statSync(output).mode & 0o777, 0o660);
+        a.equal(fs.statSync(output).gid, 5000);
+      }
     const request = path.join(channel, 'home-request'),
       response = path.join(channel, 'home-response');
     run(

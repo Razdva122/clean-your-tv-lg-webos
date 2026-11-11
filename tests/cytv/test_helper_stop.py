@@ -137,3 +137,43 @@ class HelperStopTests(unittest.TestCase):
         self.installer.stop_helper()
         self.assertFalse((self.directory/'blocked').exists())
         self.assertFalse((self.directory/'control.json').exists())
+
+    def test_absent_helper_keeps_stdin_open_until_large_stop_program_is_sent(self):
+        outer = self
+        class PipeRemote:
+            def luna(self, uri, payload, timeout=30):
+                return {'apps': []}
+            def run(self, command, data=None, timeout=30):
+                command = command.replace(HELPER_STATE, str(outer.directory))
+                process = subprocess.Popen(['/bin/sh', '-c', command], stdin=subprocess.PIPE,
+                                           stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                try:
+                    # Model an SSH server scheduling the command before sendall.
+                    # The original shell exits here; a draining shell waits for EOF.
+                    try:
+                        process.wait(timeout=0.1)
+                    except subprocess.TimeoutExpired:
+                        pass
+                    try:
+                        process.stdin.write(data)
+                    except BrokenPipeError:
+                        outer.fail('Stop shell closed stdin before the trusted program was sent')
+                    process.stdin.close()
+                    process.wait(timeout=timeout)
+                    output = process.stdout.read()
+                    outer.assertEqual(process.returncode, 0, process.stderr.read())
+                    return output.decode()
+                finally:
+                    if process.poll() is None:
+                        process.kill()
+                        process.wait()
+                    for stream in (process.stdin, process.stdout, process.stderr):
+                        try:
+                            stream.close()
+                        except BrokenPipeError:
+                            pass
+        self.installer.remote = PipeRemote()
+        self.installer.profile['edition'] = 'root'
+        self.installer.stop_helper()
+        self.assertFalse((self.directory/'blocked').exists())
+        self.assertFalse((self.directory/'control.json').exists())

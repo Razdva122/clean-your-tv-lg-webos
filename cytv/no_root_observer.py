@@ -764,7 +764,23 @@ from .tv_sources import node_adapter
 STATE_CHECK = node_adapter('state-permissions', r"""
 var option=process.argv[process.argv.length-2],directory=process.argv[process.argv.length-1];
 var expected=/^repair-key-mode:[a-f0-9]{64}$/.test(option)?option.slice(16):null;
-if(option==='repair-key-mode'||expected)contract.prepareConfiguration(directory,{expectedHash:expected});
+var repair=option==='repair-key-mode'||expected,rootRepair=false;
+if(repair&&process.getuid()===0&&process.geteuid()===0&&
+   directory==='/media/developer/apps/usr/palm/applications/com.local.nativehome/state'){
+ var fs=require('fs'),before=fs.lstatSync(directory);
+ if(!expected||!before.isDirectory()||before.isSymbolicLink()||before.uid!==5999||before.gid!==5000)
+  throw Error('unsafe-config-owner');
+ // Keep completed-file continuations boot-readable too: no later observer
+ // upload is guaranteed to repair a root-owned key. Drop permanently first.
+ process.chdir('/');process.setgroups([]);process.setgid(5000);process.setuid(5999);
+ var after=fs.lstatSync(directory);
+ if(process.getuid()!==5999||process.geteuid()!==5999||process.getgid()!==5000||process.getegid()!==5000||
+    process.getgroups().some(function(g){return g!==5000;})||
+    after.dev!==before.dev||after.ino!==before.ino||after.uid!==5999||after.gid!==5000)
+  throw Error('unsafe-config-owner');
+ rootRepair=true;
+}
+if(repair)contract.prepareConfiguration(directory,{expectedHash:expected,requireHash:rootRepair});
 else contract.inspectConfiguration(directory,{});
 process.stdout.write('CYTV_CONFIGURATION_PRIVATE');
 """)
@@ -931,7 +947,7 @@ def configure(installer,value):
     # Only an authenticated install continuation with an idle Helper can
     # restrict the known vendor-normalized key mode. Status stays read-only;
     # immutable observer/capsule bytes and emergency latches are untouched.
-    repair=(plan.get('connection')!='root-ssh' and installer.helper_state() in ('stopped','stale'))
+    repair=installer.helper_state() in ('stopped','stale')
     mode=' '+shlex.quote('repair-key-mode:'+expected[HELPER_STATE+'/ssap-key.json'])+' ' if repair else ' '
     if installer.remote.run('/usr/bin/node -e '+shlex.quote(STATE_CHECK)+mode+shlex.quote(HELPER_STATE)).strip()!='CYTV_CONFIGURATION_PRIVATE':refuse()
     token=claim_step(installer,plan,'files')

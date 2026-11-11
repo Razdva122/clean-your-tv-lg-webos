@@ -1334,7 +1334,8 @@ class OperationTests(unittest.TestCase):
         stop_command = ('if [ -f ' + operations.HELPER_STATE + '/controller.pid ]; then '
                         '/usr/bin/node || exit 1; '
                         'n=0; while [ -e ' + operations.HELPER_STATE + '/controller.pid ]; do '
-                        'n=$((n+1)); [ "$n" -le 15 ] || exit 1; sleep 1; done; fi')
+                        'n=$((n+1)); [ "$n" -le 15 ] || exit 1; sleep 1; done; '
+                        'else cat >/dev/null; fi')
         self.assertEqual([entry for entry in remote.run_inputs if entry[0] == stop_command],
                          [(stop_command, PROGRAM.encode(), 25)])
         stop = next(i for i,c in enumerate(remote.calls) if c == ('run', stop_command))

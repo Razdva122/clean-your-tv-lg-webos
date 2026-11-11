@@ -33,6 +33,21 @@ A noncaller key needing privacy repair uses the same exact-hash authenticated
 replacement path as an untrusted foreign key, creating a caller-owned 0640 inode.
 An already private trusted packaged key remains unchanged.
 
+Firmware-expanded 0777 records use the same checked storage session. Bootstrap
+copies only the retained key and Home/startup values from a caller-owned or
+packaged inode into a private replacement. This preserves preferences and
+restores permissions; SSAP still authenticates the credential. Ordinary
+configuration reads remain strict. Helper leaves installer-owned apps alone;
+if that list is unavailable it uses the existing authenticated TV catalog,
+with a bounded retry after a transient failure. The installer can restrict its
+own apps inode in place without changing its owner or contents.
+
+Fixed fresh outputs can replace an expanded same-group leaf without using its
+old contents. This applies to control/PID/logs, startup writes and all channel
+request/response classes under their existing directory rules. Stop preserves
+an existing regular latch; it still refuses unsafe directories and links.
+Bootstrap never clears Stop/watchdog or replaces native locks.
+
 Fixed record kinds are `control`, `home-preference`, `startup-state`, `pid`,
 `logger`, and `home`/`input`/`catalog` request and response pairs. Each has its own
 fixed filename, role and mode. Control initialization and shared preference/
