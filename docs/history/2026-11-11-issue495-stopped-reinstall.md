@@ -83,3 +83,26 @@ alongside #498. Physical acceptance must use the eventual selected installer;
 source/host tests do not establish original-device recovery or fix confirmation.
 Keep #495 open. Normal release notification/status reconciliation remains with
 the release coordinator; do not announce delivery from a draft PR.
+
+
+## Activation policy revision requested by the owner
+
+The earlier kept-stopped behavior above is superseded as the intended product
+behavior: successful installation should activate CYTV Home, including from a
+previously stopped/Off state. The owner explicitly requires a new Stop during
+installation to retain priority. A launcher-only nativeHomeStart change cannot
+meet that requirement because it unconditionally clears both legacy markers.
+
+The [proposed Stop-aware activation design](../superpowers/specs/2026-11-11-issue495-stop-aware-activation-design.md)
+sets out the architectural work and legacy-transition boundary for owner review.
+It is not a production Stop integration or final acceptance. Draft #503 remains
+held and must be rewritten around the final implementation before review/merge.
+Do not merge its initial kept-stopped implementation as the revised solution.
+
+Initial PR CI on be46b9fd: Linux shards1/2/4, optional Python, Windows frozen
+runtime, website build and policy passed at observation. Linux/macOS shard3
+failed the same CLI waking-TV fixture: its Mock result was truthy when queried
+for helper_kept_stopped, selecting the wrong completion-copy branch. Restricting
+that branch to explicit Boolean true passed the single failed test locally.
+The other queued platform jobs were not called completed. No successful build,
+installer or device operation was repeated for this issue.
