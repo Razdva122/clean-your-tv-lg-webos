@@ -3,6 +3,9 @@
 - No-root setup activates Home after a successful install and preserves an
   explicit Stop issued during setup (#495). Helper startup also handles
   firmware-expanded permissions on known private state records (#514).
+- Stop and removal recover known firmware-expanded Helper storage without
+  clearing an existing emergency Stop. The installer preserves proof of a
+  completed Root-to-No-root handoff across a restart.
 - The Home app picker refreshes confirmed app removals and installed app icons.
   Helper inventory replies also restore the app catalog at startup (#505).
 - Weather city search renders results on legacy webOS browsers (#499).

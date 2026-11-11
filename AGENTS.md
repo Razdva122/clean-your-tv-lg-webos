@@ -114,6 +114,22 @@ state.
    hold duration, needs evidence from that input path. For release QA, record
    the run against the selected artifact in the verification ledger.
 
+### Ask the owner only for required physical evidence
+
+Select TV cases from the changed code, package bytes and affected behavior. Reuse
+matching evidence and explain the specific reason for any repeated device case.
+Run all safe automated work yourself on the authorized test TV, including SSH
+readback, the ordinary installer, network Home and verified software restart.
+Follow the [TV test selection and owner actions](docs/development/TV-DEVELOPMENT.md#select-device-checks-and-owner-actions).
+
+Ask the owner for an action only when an affected case needs physical input,
+an AC power cycle, local audio/visual confirmation or on-screen pairing and
+the agent cannot verify that part. State the affected behavior, the starting TV
+state, the exact button or power sequence, and what outcome to report. Do not
+ask the owner to repeat automated steps, investigate logs or confirm a broad
+checklist. Group compatible manual actions in one message and verify each
+result independently when readback is available.
+
 ### Required QA exit check
 
 Before declaring the planned checks finished, telling the owner the TV is no
