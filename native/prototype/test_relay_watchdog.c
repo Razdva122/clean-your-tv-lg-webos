@@ -80,7 +80,18 @@ static ssize_t fake_write(int fd,const void*b,size_t size){
   FILE *file=fopen(recorded_stop_path,"wb");assert(file);
   assert(fwrite(b,1,size,file)==size&&fclose(file)==0);
  }
- if(fd==1)return controller_write(b,size);if(fd==11){const struct ev*e=b;assert(e[0].type==1&&e[0].code==103&&e[0].value==0);assert(!ungrabbed);if(fault==2){errno=EIO;return -1;}if(fault==6)return (ssize_t)size-1;released++;held=0;}return (ssize_t)size;}
+ if(fd==1)return controller_write(b,size);
+ if(fd==11){
+  const struct ev*e=b;
+  assert(e[0].type==1&&e[0].code==103&&e[0].value==0);
+  assert(!ungrabbed);
+  if(fault==2){errno=EIO;return -1;}
+  if(fault==6)return (ssize_t)size-1;
+  released++;
+  held=0;
+ }
+ return (ssize_t)size;
+}
 static void reset(void){power_polls=0;now=0;stop=0;input_event=0;grabbed=held=released=ungrabbed=closed_input=closed_output=blocked_marker=watchdog_marker=cleanup_mode=release_checks=0;}
 /* Modes: healthy pipe, full READY, EPIPE, full P, full Back, full Home, full EXIT. */
 static void output_backpressure(int mode,int cleanup_fault){
