@@ -17,8 +17,18 @@ receipt. Only verified completion under that request's terminal product lease
 retires those exact payload files. Logs, operational journals, profiles, private
 Python and backups remain. Completed resume requests return historical receipts;
 current installation still requires the separate current-state validation.
-Historical requests without a sealed inventory and cancelled/unfinished/unknown
-requests remain available for inspection and recovery.
+After a restart, the Root or System updater worker retries staging retirement
+before checking for an update transaction. The next admitted ownership change
+also tries to retire the current completed staging before replacing its lease.
+Both paths use the existing ownership mutex, recheck the same completion and
+submission receipts, and hash each remaining file. A missing file is allowed
+because an earlier attempt may have removed it. The retry does not start a
+product worker, modify receipts or sweep caches. A busy lock leaves cleanup
+for a later eligible entry.
+
+Historical requests with a superseded lease or without a sealed inventory,
+and cancelled, unfinished or unknown requests, remain available for inspection
+and recovery.
 
 The version-gated System replacement retains its bundle, baseline and archive:
 the historical replacement verifier still requires those bytes. Its fixed old
@@ -43,8 +53,8 @@ summary with the staging count already removed.
 The integer return and `removed` count describe successful unlinks, including
 partial progress before a later failure. An unlink is counted before directory
 fsync: `filesystem-error removed=1` can mean that one file disappeared but its
-deletion durability was not confirmed. It does not authorize retry, establish a
-strict byte quota or change the installation/update result. Logging is best
+deletion durability was not confirmed. The count conveys no deletion authority
+and does not change the installation or update result. Logging is best
 effort and cannot turn retention into an operation failure.
 
 Summaries go independently to the standard-library platform syslog sink and
@@ -63,7 +73,8 @@ System supervisor packages. Installed packages retain their pinned support code;
 a Root UI update does not automatically replace a retained System supervisor or
 add its newer cleanup/diagnostic hooks. Candidate packaging and acceptance must
 identify the coherent packages actually delivered and tested. This change does
-not migrate retained supervisors. Power loss during terminal staging retirement
-can still leave partial historical payloads: the primitive tolerates missing
-already-retired files on explicit valid re-entry, but automatic re-entry or
-background garbage collection is not implemented.
+not migrate retained supervisors. Startup retry requires a rebuilt updater with
+the new code. The retry is limited to the current product lease. A filesystem
+error during retry leaves the next operation available. If ownership changes
+before retirement succeeds, remaining files stay protected with the historical
+request. This also applies when an older updater supersedes the lease.
