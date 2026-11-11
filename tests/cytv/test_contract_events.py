@@ -87,10 +87,11 @@ class TrustedSourcesTests(unittest.TestCase):
             for name in ('contract-events','state-permissions'):
                 self.assertEqual((Path(tmp)/'cytv/tv'/ (name+'.js')).read_bytes(), (ROOT/'native/app'/(name+'.js')).read_bytes())
         code = tv_sources.node_adapter('contract-events', "console.log(JSON.stringify(contract.describe('SECRET')));")
-        result = subprocess.check_output(['node','-e',code],cwd=tempfile.gettempdir(),text=True)
+        # Send the full adapter over stdin, as on the TV, without Windows argv limits.
+        result = subprocess.check_output(['node'],input=code,cwd=tempfile.gettempdir(),text=True)
         self.assertEqual(json.loads(result), {'type':'string','length':6})
         code = tv_sources.node_adapter('contract-events', "throw new Error('SECRET');")
-        result = subprocess.run(['node','-e',code],capture_output=True,text=True)
+        result = subprocess.run(['node'],input=code,capture_output=True,text=True)
         self.assertNotEqual(result.returncode,0)
         self.assertNotIn('SECRET', result.stdout+result.stderr)
         self.assertEqual(json.loads(result.stdout)['schema'],1)

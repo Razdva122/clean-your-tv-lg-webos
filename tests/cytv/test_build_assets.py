@@ -25,6 +25,10 @@ class BuildAssetsTests(unittest.TestCase):
         import subprocess
         import tempfile
         import os
+        # Package/source equality above is portable; this actual TV storage
+        # exercise needs POSIX UID/GID, permissions and path semantics.
+        if os.name == 'nt':
+            return
         with tempfile.TemporaryDirectory() as directory:
             for name, raw in files.items():
                 target = Path(directory) / name
