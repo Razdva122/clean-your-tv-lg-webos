@@ -62,6 +62,11 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8876';
             )
               r = { returnValue: false, errorCode: -1 };
             if (uri.endsWith('/launch')) r = { returnValue: true };
+            if (
+              uri.endsWith('/listApps') &&
+              Array.isArray(window.inventoryInstalledIds)
+            )
+              r.installedIds = window.inventoryInstalledIds;
             this.onservicecallback(JSON.stringify(r));
           }, 10);
         };
@@ -282,8 +287,14 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8876';
     await page.evaluate(() => {
       window.inventoryDenied = true;
       window.inventoryOverride = [
-        { id: 'org.example.homebrew', title: 'Example homebrew' }
+        {
+          id: 'org.example.homebrew',
+          title: 'Example homebrew',
+          icon: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII='
+        },
+        { id: 'b', title: 'Beta' }
       ];
+      window.inventoryInstalledIds = ['b', 'org.example.homebrew'];
       window.calls = [];
     });
     await page.locator('.add-app').click();
@@ -299,6 +310,39 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8876';
         'luna://com.gathin.tvhome.renewal/listApps'
       ]
     );
+    assert.equal(await page.locator('#appPicker [data-app-id="a"]').count(), 0);
+    await page.keyboard.press('Escape');
+    assert.deepEqual(
+      await ids(),
+      ['b', '+'],
+      'closing picker removes confirmed-uninstalled tiles'
+    );
+    await page.reload();
+    await ready();
+    assert.deepEqual(
+      await ids(),
+      ['b', '+'],
+      'stale packaged apps stay removed across restart'
+    );
+    await page.evaluate(() => {
+      window.inventoryDenied = true;
+      window.inventoryOverride = [
+        { id: 'b', title: 'Beta' },
+        {
+          id: 'org.example.homebrew',
+          title: 'Example homebrew',
+          icon: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII='
+        }
+      ];
+      window.inventoryInstalledIds = ['b', 'org.example.homebrew'];
+    });
+    await page.locator('.add-app').click();
+    await page.waitForFunction(() => {
+      const image = document.querySelector(
+        '#appPicker [data-app-id="org.example.homebrew"] img'
+      );
+      return image && image.naturalWidth > 0;
+    });
     await page
       .locator('#appPicker [data-app-id="org.example.homebrew"]')
       .click();

@@ -10,7 +10,40 @@ var root = '/media/developer/apps/usr/palm/applications/com.local.nativehome';
 var data = root + '/state';
 var launchParams = JSON.parse(process.argv[2] || '{}'),
   automatic = launchParams.nativeHomeAuto === true;
+var storage = require('./state-permissions'),
+  setupGeneration = launchParams.nativeHomeSetup,
+  startGeneration = null;
+try {
+  if (setupGeneration !== undefined) {
+    if (
+      typeof setupGeneration !== 'string' ||
+      !/^[IS][a-f0-9]{32}$/.test(setupGeneration)
+    )
+      throw Error('Invalid setup generation');
+    automatic = false;
+    startGeneration = setupGeneration;
+  } else if (!automatic) startGeneration = storage.stopGeneration(data, true);
+} catch (e) {
+  process.exit(1);
+}
+function generationCurrent() {
+  if (!startGeneration) return true;
+  try {
+    if (storage.stopGeneration(data) === startGeneration) return true;
+  } catch (e) {}
+  // Preserve cancellation across automatic boot even if the Stop producer's
+  // later legacy-latch write did not complete. Never consume its generation.
+  try {
+    if (!fs.existsSync(data + '/blocked'))
+      fs.writeFileSync(data + '/blocked', 'stopped', { mode: 420, flag: 'wx' });
+  } catch (e) {}
+  return false;
+}
+if (!generationCurrent()) process.exit(0);
 function block(close) {
+  try {
+    if (generationCurrent()) storage.publishStopGeneration(data);
+  } catch (ignore) {}
   fs.writeFileSync(data + '/blocked', 'stopped', { mode: 420 });
   invalidatePresentation(close !== false);
 }
@@ -75,6 +108,7 @@ var Service = require('/usr/lib/node_modules/webos-service');
 var service = new Service('com.local.nativehome');
 service.activityManager.create('native-home-controller', function () {});
 if (!automatic) {
+  if (!generationCurrent()) process.exit(0);
   ['blocked', 'watchdog'].forEach(function (name) {
     try {
       fs.unlinkSync(data + '/' + name);
@@ -82,6 +116,7 @@ if (!automatic) {
       if (e.code !== 'ENOENT') throw e;
     }
   });
+  if (!generationCurrent()) process.exit(0);
 }
 var lastForeground = null,
   lastForegroundAt = null,
@@ -196,6 +231,7 @@ function launchHome(reason, done) {
   function open(current) {
     if (
       !current ||
+      !generationCurrent() ||
       stopping ||
       stopRequested ||
       child !== worker ||
@@ -212,6 +248,7 @@ function launchHome(reason, done) {
     afterHomeClose(function (known) {
       if (
         stopping ||
+        !generationCurrent() ||
         stopRequested ||
         child !== worker ||
         (worker &&
@@ -408,6 +445,11 @@ var homeControl = require('./home-control')(
   },
   visitLG
 );
+if (setupGeneration !== undefined) {
+  if (!generationCurrent()) process.exit(0);
+  homeControl.set(true);
+  if (!generationCurrent()) process.exit(0);
+}
 // Keep the legacy channel for older Home packages during upgrade/rollback.
 // New Home submits only through its own service directory, visible in its jail.
 var homeChannels = [
@@ -435,7 +477,7 @@ var inputStatusPending = null,
 function readCatalog() {
   if (!catalogPending) {
     catalogPending = Promise.resolve().then(function () {
-      return require('./app-inventory')({ timeout: 3000 });
+      return require('./app-inventory')({ timeout: 3000, details: true });
     });
     catalogPending = catalogPending.then(
       function (apps) {
@@ -576,7 +618,15 @@ function readHomeRequest(channel) {
             !(child && child.reason !== undefined) &&
             request.expires > Date.now()
           )
-            respond({ returnValue: true, apps: apps });
+            respond(
+              Array.isArray(apps)
+                ? { returnValue: true, apps: apps }
+                : {
+                    returnValue: true,
+                    apps: apps.apps,
+                    installedIds: apps.installedIds
+                  }
+            );
         },
         function () {
           if (
@@ -624,9 +674,15 @@ function readHomeRequest(channel) {
 // A watchdog latch also prevents a new controller from restarting an orphaned
 // relay. Only this live controller's successful READY may clear it, never blocked.
 function watchdogLatch() {
+  // This controller owns the bounded recovery attempt. A terminal decision
+  // advances the Stop generation through block(), not this temporary fence.
   fs.writeFileSync(data + '/watchdog', 'stopped', { mode: 420 });
 }
 function readStop() {
+  if (!generationCurrent()) {
+    stopRequested = true;
+    return true;
+  }
   try {
     if (
       JSON.parse(fs.readFileSync(data + '/control.json', 'utf8')).cmd === 'stop'
@@ -731,7 +787,7 @@ function finish(decision) {
       )
     });
   }
-  if (decision.block) block(!terminalUI);
+  if (decision.block && generationCurrent()) block(!terminalUI);
   // A signal can replace the OS exit code after the relay reported emergency.
   // Keep the real code/signal above for cleanup policy and diagnostics.
   function end() {
@@ -867,9 +923,13 @@ function start(recovering) {
   lastAck = monotonic();
   buffer = '';
   ready = false;
-  var worker = cp.spawn(root + '/relay', [], {
-    stdio: ['pipe', 'pipe', 'pipe']
-  });
+  var worker = cp.spawn(
+    root + '/relay',
+    startGeneration ? ['setup', startGeneration] : [],
+    {
+      stdio: ['pipe', 'pipe', 'pipe']
+    }
+  );
   child = worker;
   log({ event: 'worker-start', pid: worker.pid });
   worker.stderr.on('data', function (b) {
@@ -958,6 +1018,7 @@ function cancelIrHome() {
 function openHome(worker) {
   if (
     child !== worker ||
+    !generationCurrent() ||
     !ready ||
     stopping ||
     worker.exited ||

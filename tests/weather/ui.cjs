@@ -100,6 +100,8 @@ const weather = {
       return r.abort();
     });
     await page.addInitScript(() => {
+      // webOS 4.x lacks this DOM API even after the TV web build.
+      delete Element.prototype.replaceChildren;
       window.installWeatherBridge = () => {
         window.weatherBridgeCalls = [];
         window.weatherBridgeFail = false;
@@ -165,6 +167,12 @@ const weather = {
     await page.goto(pathToFileURL(path.join(site, edition, 'index.html')).href);
     await page.waitForFunction(
       () => window.RootLauncherRendered && window.HomeWeather
+    );
+    await page.evaluate(() => window.HomeUIReady);
+    assert.equal(
+      await page.locator('#systemUpdates:visible').count(),
+      0,
+      'weather initialization must not open startup recovery'
     );
     await page.evaluate(() => document.fonts.ready);
     await page.evaluate(() => installWeatherBridge());
@@ -259,8 +267,19 @@ const weather = {
       'Compact SVG preview fits its window ' + JSON.stringify(compactPreview)
     );
     await page.locator('.weather-city-summary').click();
+    await page.locator('.weather-city-results').evaluate((results) => {
+      const stale = document.createElement('button');
+      stale.textContent = 'Stale city';
+      results.appendChild(stale);
+    });
     await page.locator('.weather-city-search input').fill('Berlin');
     await page.locator('.weather-city-search input').press('Enter');
+    await page.waitForFunction(() =>
+      document
+        .querySelector('.weather-city-results')
+        .textContent.includes('Berlin')
+    );
+    assert.equal(await page.locator('.weather-city-results button').count(), 1);
     await page.locator('.weather-city-results button').click();
     await page.waitForFunction(() => HomeWeather.store.state().data);
     assert.equal(

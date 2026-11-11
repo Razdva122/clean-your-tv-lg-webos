@@ -106,6 +106,8 @@ mkdir -p build/tests
 cc -std=c99 -Wall -Wextra -Werror native/prototype/filter.c native/prototype/test_filter.c -o build/tests/test-filter
 cc -std=c99 -Wall -Wextra -Werror native/prototype/test_startup.c -o build/tests/test-startup
 build/tests/test-startup
+cc -std=c99 -Wall -Wextra -Werror native/prototype/test_stop_generation.c -o build/tests/test-stop-generation
+build/tests/test-stop-generation
 cc -std=c99 -Wall -Wextra -Werror native/prototype/test_relay_startup.c native/prototype/filter.c -o build/tests/test-relay-startup
 build/tests/test-relay-startup > build/tests/relay-startup.log
 tail -1 build/tests/relay-startup.log

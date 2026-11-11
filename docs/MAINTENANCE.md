@@ -89,6 +89,10 @@ its own input shortcut and continues safe package cleanup. A remaining unverifie
 shortcut keeps removal pending; retry after the service is available. No success
 is shown merely because the packages disappeared.
 
+If the installer cannot verify a requested full restart, save and attach its
+diagnostic report and keep the saved connection and recovery data. Do not keep
+repeating power cycles or clear the unfinished operation manually.
+
 <a id="root-reinstallation-through-the-installer-unreleased-355"></a>
 
 ### Root reinstallation through the installer

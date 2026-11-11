@@ -153,12 +153,21 @@ function blocked() {
 
 var inventoryPending = null;
 service.register('listApps', function (message) {
-  if (!inventoryPending) inventoryPending = require('./app-inventory')();
+  if (!inventoryPending)
+    inventoryPending = require('./app-inventory')({ details: true });
   var request = inventoryPending;
   request.then(
     function (apps) {
       if (inventoryPending === request) inventoryPending = null;
-      message.respond({ returnValue: true, apps: apps });
+      message.respond(
+        Array.isArray(apps)
+          ? { returnValue: true, apps: apps }
+          : {
+              returnValue: true,
+              apps: apps.apps,
+              installedIds: apps.installedIds
+            }
+      );
     },
     function () {
       if (inventoryPending === request) inventoryPending = null;
