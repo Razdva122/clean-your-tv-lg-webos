@@ -344,7 +344,7 @@ class ConfinedCleanup(unittest.TestCase):
         self.assertEqual(device.compositor_stock({'operation':'c'*32}),proof)
 
     def test_stock_probe_child_failure_survives_process_boundary_without_private_data(self):
-        import subprocess, shutil, clean_removal
+        import subprocess, shutil, inspect, clean_removal, deploy
         from install_device import LocalDevice
         from install_driver import failure_summary
         payload=self.root/'probe-support';support=payload/'root-updater';support.mkdir(parents=True)
@@ -354,7 +354,8 @@ class ConfinedCleanup(unittest.TestCase):
         for name in ('install_driver.py','installation.py'):
             shutil.copyfile(source/name,support/name)
         shutil.copytree(source/'updater',support/'updater')
-        (support/'deploy.py').write_text('def verify_bundle(*args,**kwargs):\n    raise PermissionError(13,"PRIVATE message","/PRIVATE path")\n')
+        (support/'deploy.py').write_text('def verify_bundle(*args,**kwargs):\n    raise PermissionError(13,"PRIVATE message","/PRIVATE path")\n'
+            +inspect.getsource(deploy.install_failure_details))
         device=LocalDevice();device.payload=payload
         with self.assertRaises(subprocess.CalledProcessError) as caught:
             device.compositor_stock({'operation':'c'*32})
