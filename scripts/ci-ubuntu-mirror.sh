@@ -7,12 +7,22 @@ if timeout 8 getent ahostsv4 azure.archive.ubuntu.com archive.ubuntu.com securit
 fi
 
 . /etc/os-release
-test "$ID" = ubuntu && test "$VERSION_CODENAME" = noble
-sources=/etc/apt/sources.list.d/ubuntu.sources
-grep -Fxq 'Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg' "$sources"
+test "$ID" = ubuntu
+case "$VERSION_CODENAME" in jammy|noble) ;; *) exit 1 ;; esac
 mirror=https://mirrors.edge.kernel.org/ubuntu
 curl --fail --silent --show-error --proto '=https' --connect-timeout 5 --max-time 15 \
-    "$mirror/dists/noble-security/InRelease" --output /dev/null
-# Keep suites, components and the Ubuntu archive keyring from the runner.
-sudo sed -i "s|^URIs: .*|URIs: $mirror|" "$sources"
+    "$mirror/dists/$VERSION_CODENAME-security/InRelease" --output /dev/null
+
+# Keep the runner's suites, components and signature settings.
+sources=/etc/apt/sources.list.d/ubuntu.sources
+if [[ -f $sources ]]; then
+    grep -Fxq 'Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg' "$sources"
+    sudo sed -i "s|^URIs: .*|URIs: $mirror|" "$sources"
+else
+    sources=/etc/apt/sources.list
+    default_uri='mirror[+]file:/etc/apt/apt-mirrors[.]txt|https?://(azure[.]archive|archive|security)[.]ubuntu[.]com/ubuntu/?'
+    line="^(deb(-src)?([[:space:]]+\[[^]]*\])?[[:space:]]+)($default_uri)([[:space:]]+)"
+    grep -Eq "$line" "$sources"
+    sudo sed -Ei "s@$line@\\1$mirror\\6@" "$sources"
+fi
 printf '%s\n' "Using the Ubuntu archive mirror at $mirror"
