@@ -106,6 +106,12 @@ launch/navigation and full-screen dialogs. This models the reported engine
 limitations in a current browser; it is not an emulator of an entire old TV.
 Hardware confirmation is still required on the original webOS 3.5 device.
 
+`PYTHON=/path/to/.venv-cytv/bin/python node tests/weather/ui.cjs` compiles
+the Home preview for both editions, removes `Element.replaceChildren` before
+startup and checks Home readiness without recovery, city-result replacement
+and selection. This models the missing DOM API reported in #499; it does not
+establish physical standby or cold-boot acceptance on an older TV.
+
 The `prefixed-webkit` profile additionally ignores unprefixed flex, transforms,
 transitions and animations, including runtime-injected theme styles and CSSOM
 writes. It checks horizontal shortcuts, focus-frame alignment, scrolling,
