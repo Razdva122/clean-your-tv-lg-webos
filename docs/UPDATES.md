@@ -62,6 +62,11 @@ python3 system-updater/setup-system-updater.py --bundle system-updater \
   --edition no-root --ssh TV_ROOT_ALIAS --apply
 ```
 
+After a verified Root-to-No-root transition, setup accepts the completed
+No-root installation and archives the earlier Root removal fences. If the
+transition still has a pending or unverified operation, complete recovery
+before enabling updates.
+
 Without `--apply`, the script prints the permission plan. Use the packaged setup,
 not repository source `system-updater/setup.py`.
 
