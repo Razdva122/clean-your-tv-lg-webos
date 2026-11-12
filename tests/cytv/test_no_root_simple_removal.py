@@ -915,6 +915,79 @@ class SimpleRemoval(unittest.TestCase):
         late=self.own_file('apps/usr/palm/applications/com.local.nativehome/state/late.json')
         self.reboot();self.assertTrue(self.remove()['verified_clean']);self.assertFalse(late.exists());self.assertIsNone(self.store.pending(self.profile))
 
+    def test_recovery_of_legacy_install_when_global_package_status_is_denied(self):
+        from cytv.diagnostics import create_report
+        from cytv.recovery import recover
+        from cytv.terminal import Console
+        from cytv.transport import terminal_reply
+
+        self.store.begin(self.profile, 'install')
+        original = self.store.pending(self.profile)
+        receipt = self.store.device_dir(self.profile) / 'operation.json'
+        original_bytes = receipt.read_bytes()
+        report = create_report(self.store, 'install', self.profile, 'install-packages', Exception())
+        first_failure = json.loads(report.read_text())['first_failure']
+        self.remote.apps = {operations.HELPER}
+        status_uri = 'com.webos.appInstallService/status'
+        luna = self.remote.luna
+
+        def deny_status(uri, payload, **kwargs):
+            if uri == status_uri:
+                self.remote.calls.append((uri, payload))
+                terminal_reply({'returnValue': False, 'errorCode': -1}, uri=uri)
+            return luna(uri, payload, **kwargs)
+
+        self.remote.luna = deny_status
+        self.carrier_payload()
+        (self.installer.payload / 'payload.json').write_text(json.dumps(self.installer.manifest))
+        self.installer.manifest = {}
+        self.installer.tv_info = {}
+        write = Console(self.progress.append)
+        plans = []
+        write.recovery_plan = plans.append
+
+        def run(*answers):
+            answers = iter(answers)
+            recover(self.installer, lambda _: next(answers), write)
+
+        with patch.object(self.installer, 'observe_recovery',
+                          return_value={'device': {'apps': [{'id': operations.HELPER}]}}), \
+             patch('cytv.package.verify_payload', wraps=package.verify_payload) as verify_payload:
+            run('y', '')
+            self.assertEqual(plans[-1]['state'], 'ready')
+            self.assertEqual(receipt.read_bytes(), original_bytes)
+            self.assertEqual(self.remote.calls, [(status_uri, {'subscribe': True})])
+            self.assertEqual(self.remote.commands, [])
+            verify_payload.assert_not_called()
+
+            self.remote.reject = {'returnValue': False, 'errorCode': -7}
+            with self.assertRaises(TVRejected) as busy:
+                run('y', 'y')
+            self.assertEqual(busy.exception.luna['operation'], 'package-remove')
+            self.assertEqual(busy.exception.luna['error_code'], -7)
+            self.assertEqual(self.remote.apps, {operations.HELPER})
+            self.assertEqual(plans[-1]['state'], 'blocked')
+            verify_payload.assert_called_once_with(self.installer.payload)
+            pending = self.store.pending(self.profile)
+            self.assertEqual(pending['previous'], original)
+            self.assertEqual((receipt.parent / pending['original_receipt']).read_bytes(), original_bytes)
+
+            with self.assertRaisesRegex(UserError, 'Removal is still in progress'):
+                run('y', 'y')
+            self.assertTrue(plans[-1]['restart_required'])
+            self.assertFalse(plans[-1]['verified_clean'])
+            self.assertFalse(self.remote.apps)
+            self.reboot()
+            run('y', 'y')
+
+        self.assertTrue(plans[-1]['verified_clean'])
+        self.assertIsNone(self.store.pending(self.profile))
+        self.assertEqual((receipt.parent / pending['original_receipt']).read_bytes(), original_bytes)
+        report = create_report(self.store, 'recover', self.profile, 'recover')
+        self.assertEqual(json.loads(report.read_text())['first_failure'], first_failure)
+        self.assertEqual(sum(uri == status_uri for uri, _ in self.remote.calls), 2)
+        self.assertFalse(any(uri.endswith('/dev/install') for uri, _ in self.remote.calls))
+
     def test_disconnect_retry_rechecks_presence_and_continues_remaining_packages(self):
         self.remote.apps={'com.local.nativehome','com.gathin.tvhome'};self.remote.cut='com.local.nativehome'
         with self.assertRaises(UserError):self.remove()

@@ -429,12 +429,35 @@ class DesktopRecoveryTests(unittest.TestCase):
         self.store.begin(self.profile, 'install')
         self.test_recovery_uses_same_tv_and_default_no_then_stops_after_verified_removal()
 
-    def test_interrupted_install_recovery_checks_tv_idle_and_saves_failure_without_reinstall(self):
+    def test_interrupted_install_recovery_offers_removal_when_package_status_is_denied(self):
         self.store.finish(self.profile)
         self.store.begin(self.profile, 'install', expected={'saved': 'proof'})
         original = self.store.pending(self.profile)
-        self.test_failed_recovery_offers_original_failure_report_without_retry_or_install()
+        status_uri = 'com.webos.appInstallService/status'
+        luna = self.remote.luna
+
+        def deny_status(uri, payload, **kwargs):
+            if uri == status_uri:
+                self.remote.calls.append(('luna', uri, payload))
+                raise TVRejected('Denied', {'returnValue': False, 'errorCode': -1}, uri)
+            return luna(uri, payload, **kwargs)
+
+        self.remote.luna = deny_status
+        w = self.window()
+        self.check(w)
+        self.button(w, 'Review recovery options').click()
+        self.pump(lambda: w.pending is not None)
+        w.submit('y')
+        self.pump(lambda: w.pending is not None)
+        self.assertIn('Remove remaining', w.pending.label)
+        self.assertEqual(w.pending.default, 'n')
+        w.submit('n')
+        self.pump(lambda: not w.running)
+
         self.assertEqual(self.store.pending(self.profile), original)
+        self.assertEqual(sum(c[1] == status_uri for c in self.remote.calls), 1)
+        self.assertFalse(any(c[0] == 'upload' or c[1].endswith(('/dev/remove', '/dev/install'))
+                             for c in self.remote.calls))
 
     def test_declining_interrupted_install_recovery_retains_original_receipt(self):
         self.store.finish(self.profile)

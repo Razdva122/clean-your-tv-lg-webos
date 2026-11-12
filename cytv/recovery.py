@@ -1,6 +1,6 @@
 """An explicit recovery journey; backend receipts remain the only authority."""
 from . import prompts
-from .errors import UserError
+from .errors import TVRejected, UserError
 from .operations import require_removal_idle
 from .recovery_state import assess, observation_diagnostics, setup_actions, unsubmitted_removal
 
@@ -57,11 +57,19 @@ def cancelled(write, store, profile, action, phase, tv_info=None, checks=None):
     diagnostics.save_result(write, store, action, profile, phase, tv_info, checks=checks)
 
 
-def remove_before_reinstall(installer, ask, write):
+def remove_before_reinstall(installer, ask, write, *, load_payload=False):
     plan(write, 'ready', 'Finish removing Clean Your TV before installing again. LG Home will be restored and remaining Clean Your TV packages removed.')
+    if installer.profile['edition'] == 'no-root':
+        write('LG Home will be restored. Clean Your TV, its updaters, Home Helper and saved preferences will be removed.')
     if not prompts.confirm('Remove remaining Clean Your TV packages?', ask, write):
         write(KEPT)
         return
+    if load_payload and not installer.manifest:
+        from . import package
+        try:
+            installer.manifest = package.verify_payload(installer.payload)
+        except FileNotFoundError:
+            raise UserError('Release payload is missing. Download a built cytv executable or run python scripts/build-cytv.py --payload-only from source.') from None
     completed = installer.uninstall_project()
     if completed.get('removed') is True and completed.get('verified_clean') is True and completed.get('restart_required') is not True:
         write.recovery_plan({'state':'complete','disposition':'clean-removal','removed':True,'verified_clean':True,
@@ -242,7 +250,6 @@ def recover(installer, ask, write, non_interactive=False, initial_observation=No
                 (pending.get('action') == 'uninstall' and pending.get('stage') not in ('pending', 'removing')) or
                 (pending.get('action') == 'install' and pending.get('stage') != 'pending')):
             raise UserError(BLOCKED, reason_code='pending-operation')
-        require_removal_idle(installer.remote, installer.profile, pending)
         apps = {app['id'] for app in result.get('device', {}).get('apps', [])}
         removals = pending.get('removals', {})
         if not isinstance(removals, dict) or any(
@@ -250,6 +257,21 @@ def recover(installer, ask, write, non_interactive=False, initial_observation=No
                 value not in ('submitted', 'terminal', 'done') or app in apps
                 for app, value in removals.items()):
             raise UserError(BLOCKED, reason_code='pending-operation')
+        try:
+            require_removal_idle(installer.remote, installer.profile, pending)
+        except TVRejected as error:
+            if (pending['action'] != 'install' or 'recovery_protocol' in pending
+                    or error.luna['operation'] != 'package-status'
+                    or error.luna['return_value'] is not False
+                    or error.luna['error_code'] != -1
+                    or error.luna['details_error_code'] is not None
+                    or error.luna['state'] != 'unknown'
+                    or error.luna['status_value'] is not None):
+                raise
+            # Developer Mode may deny the global monitor. Treat this as a
+            # separate clean-removal goal with its own checks and confirmation.
+            remove_before_reinstall(installer, ask, write, load_payload=True)
+            return
         summary = ('No package removal was submitted. Finish removal before installing again.'
                    if unsubmitted_removal(installer.profile, pending) else
                    'Finish removing Clean Your TV before installing again. LG Home will be restored and remaining Clean Your TV packages removed.')
