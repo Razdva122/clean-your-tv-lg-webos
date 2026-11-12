@@ -277,6 +277,43 @@ class CapabilityTests(unittest.TestCase):
             self.assertEqual(compositor_failure(remote), expected)
             remote.run.assert_not_called()
 
+    def test_legacy_ribbon_requires_positive_readback_and_confirmed_missing_routing(self):
+        from cytv.errors import TVRejected
+        from cytv.root_capabilities import RootCapabilityError, verify
+
+        missing = {'returnValue': False, 'errorCode': -1,
+                   'errorText': 'Service does not exist: com.webos.service.systemprofile.'}
+        config_uri = 'com.webos.service.config/getConfigs'
+        config_absent = TVRejected('missing config', dict(missing,
+            errorText='Service does not exist: com.webos.service.config.'), config_uri)
+        config_denied = TVRejected('denied config', dict(missing, errorText='Access denied'), config_uri)
+        config_empty = {'returnValue': True, 'configs': {}}
+        identity = {'returnValue': True, 'modelName': 'OTHER-LEGACY-TV',
+                    'firmwareVersion': '04.66.75', 'sdkVersion': '3.5.0'}
+        home = {'homeUIState': [{'uiType': 'home', 'visibility': False}], 'private': 'drop-me'}
+
+        for config, reply, expected, probe in (
+                (config_empty, home, 'LegacyRibbonError', 'readable'),
+                (config_absent, home, 'LegacyRibbonError', 'readable'),
+                (config_empty, {'homeUIState': [{'uiType': 'home', 'visibility': 0}]},
+                 'RootCapabilityError', 'invalid-reply'),
+                (config_empty, TimeoutError(), 'RootCapabilityError', 'timeout'),
+                (config_denied, home, 'RootCapabilityError', None),
+                (TimeoutError(), home, 'RootCapabilityError', None)):
+            with self.subTest(config=config, reply=reply):
+                from cytv.diagnostic_context import tv_summary
+                remote = Mock()
+                remote.luna.side_effect = [missing, identity, identity, config, reply]
+                info = {}
+                with self.assertRaises(RootCapabilityError) as raised:
+                    verify(remote, CheckList(), info, allow_c1=True, allow_compositor=True)
+                self.assertEqual(type(raised.exception).__name__, expected)
+                report = tv_summary(info)
+                self.assertEqual(report.get('root_ribbon_probe'), probe)
+                self.assertNotIn('drop-me', str(report))
+                self.assertNotIn('home_backend', info)
+                remote.run.assert_not_called()
+
     def test_generic_permission_denial_never_enters_native_admission(self):
         from cytv.root_capabilities import verify,RootCapabilityError
         remote=Mock();remote.luna.return_value={'returnValue':False,'errorCode':-1,'errorText':'Access denied'}

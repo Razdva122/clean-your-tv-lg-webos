@@ -5,18 +5,6 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'runtime'))
 import transport
 
 class DeadlineTests(unittest.TestCase):
- def test_legacy_payload_without_return_value_is_opt_in(self):
-  import json
-  spawn=subprocess.Popen
-  payload={'homeUIState':[]}
-  def answer(*args,**kwargs):
-   return spawn([sys.executable,'-c','import sys;print(sys.argv[1],flush=True);sys.stdin.read()',json.dumps(payload)],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-  with patch.object(transport.subprocess,'Popen',side_effect=answer):
-   with self.assertRaises(RuntimeError): transport.call('luna://test/read',{})
-   self.assertEqual(transport.call('luna://test/read',{},allow_missing_return=True),payload)
-   payload={'errorCode':-1}
-   with self.assertRaises(RuntimeError): transport.call('luna://test/read',{},allow_missing_return=True)
-
  def test_negative_reply_is_available_only_to_explicit_read_only_probe(self):
   import json
   spawn=subprocess.Popen

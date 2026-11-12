@@ -184,6 +184,9 @@ def tv_summary(value):
             code = probe.get('error_code')
             if probe_state == 'rejected' and type(code) is int and -(2**31) <= code < 2**31:
                 result['root_keyfilters_probe']['error_code'] = code
+    if 'root_ribbon_probe' in value:
+        from .root_capabilities import RIBBON_PROBE_STATES
+        result['root_ribbon_probe'] = choice(value['root_ribbon_probe'], RIBBON_PROBE_STATES)
     native_home_mode = value.get('root_native_home_mode')
     if isinstance(native_home_mode, str) and re.fullmatch(r'[0-7]{4}', native_home_mode):
         result['root_native_home_mode'] = native_home_mode
