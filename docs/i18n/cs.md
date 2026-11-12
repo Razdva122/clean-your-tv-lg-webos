@@ -2,7 +2,7 @@
 
 Pouze Root Edition: na poslední stránce instalátoru nastavte název obrazovky Home. Prázdné pole ponechá stávající název. V CLI použijte `--tv-name`.
 
-Dosud nevydaná změna instalátoru: před novou instalací instalátor v počítači ověří novější stabilní verzi na GitHubu. Vyberte „Otevřít GitHub a stáhnout nejnovější verzi“ pro zastavení a stažení, nebo „Ne, nainstalovat tuto verzi“ pro výslovné pokračování. Pokud kontrola selže, můžete pokračovat. Nedokončené operace a obnovení kontrolu přeskočí.
+Před novou instalací instalátor v počítači ověří novější stabilní verzi na GitHubu. Vyberte „Otevřít GitHub a stáhnout nejnovější verzi“ pro zastavení a stažení, nebo „Ne, nainstalovat tuto verzi“ pro výslovné pokračování. Pokud kontrola selže, můžete pokračovat. Nedokončené operace a obnovení kontrolu přeskočí.
 
 Clean Your TV je vaše vlastní domovská obrazovka pro LG webOS: aplikace ve vašem pořadí, bez sponzorovaných řádků v této nabídce. Instalujte z počítače nebo telefonu s Androidem; po nastavení může být počítač vypnutý.
 
@@ -24,6 +24,8 @@ Zapněte TV a připojte ji ke stejné domácí síti jako počítač nebo telefo
 - **Root** — pokud už máte root přístup přes SSH. Instalátor televizor nerootuje. Na této TV nezapínejte Developer Mode; zachovejte SSH přístup a data obnovy.
 
 U Root instalátor ověří a vybere dostupný způsob ovládání Home. Pokud nelze kompatibilitu ověřit, instalace se zastaví; neobcházejte neúspěšnou kontrolu.
+
+Pokud instalátor nabídne **No-root**, můžete pokračovat přes stávající root připojení SSH bez zapínání Developer Mode.
 
 **No-root → Root:** Pokud jste po úplném odebrání znovu nainstalovali No-root, přechod na Root může vyžadovat nejprve vyčištění instalace. Zálohujte nastavení Home, zvolte **Odinstalovat Clean Your TV** s uloženým připojením Root a počkejte na ověřené odebrání. Odebere se také No-root Home a Helper. Poté nainstalujte Root a uchovejte záznamy obnovy.
 
@@ -148,6 +150,6 @@ Před výběrem motivu zvolte v kroku **Debloat**, která nastavení reklam, dop
 
 Po úspěšné instalaci vyberte Classic, Liquid Glass nebo Ribbon a zapněte či vypněte počasí. Ribbon počasí nepodporuje; Liquid Glass používá stručný formát. Město se odhaduje podle připojení a lze je změnit v Home.
 
-No-root s Developer Mode nabízí automatické prodloužení (Beta); nadále sledujte oficiální časovač. No-root přes stávající root SSH tuto volbu nepoužívá. Root umožňuje přes Homebrew Channel blokovat aktualizace firmwaru LG včetně bezpečnostních; je nutný skutečný restart přes Homebrew Channel. Aktualizace CYTV jsou samostatné.
+No-root s Developer Mode nabízí automatické prodloužení (Beta); nadále sledujte oficiální časovač. U nových instalací No-root přes stávající root SSH se karta Developer Mode nezobrazuje. Root umožňuje přes Homebrew Channel blokovat aktualizace firmwaru LG včetně bezpečnostních; je nutný skutečný restart přes Homebrew Channel. Aktualizace CYTV jsou samostatné.
 
 Ponechat aktuální nastavení přeskočí přizpůsobení. Přepínač zobrazuje aktuální stav funkce režimu. Nezměněná nastavení zůstanou zachována. Přeinstalace Root nadále odstraní nastavení CYTV podle popisu výše. Ověřte vzhled na TV a nepotvrzené volby v Home před opakováním.

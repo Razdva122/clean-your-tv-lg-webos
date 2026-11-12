@@ -16,6 +16,31 @@ PROFILES={'returnValue':True,'profiles':{'defaultApps':{'categories':{'home':'co
 
 
 class CapabilityTests(unittest.TestCase):
+    def test_keyfilters_probe_records_a_safe_reason_and_clears_stale_evidence(self):
+        from cytv.diagnostic_context import tv_summary
+        from cytv.errors import TVRejected
+        from cytv.root_capabilities import compositor_failure, verify
+
+        identity = {'returnValue': True, 'modelName': 'TV', 'firmwareVersion': '06.10.60',
+                    'sdkVersion': '3.9.0'}
+        cases = (
+            (TimeoutError('private'), {'state': 'timeout'}),
+            (TVRejected('private', {'errorCode': -72}), {'state': 'rejected', 'error_code': -72}),
+            ({'returnValue': True, 'configs': {}}, {'state': 'not-configured'}),
+        )
+        info = {}
+        for reply, expected in cases:
+            with self.subTest(expected=expected):
+                remote = Mock()
+                remote.luna.side_effect = [identity, reply]
+                self.assertIsNotNone(compositor_failure(remote, info))
+                self.assertEqual(tv_summary(info)['root_keyfilters_probe'], expected)
+                self.assertNotIn('private', json.dumps(tv_summary(info)))
+
+        remote.luna.side_effect = [PROFILES, SETTINGS]
+        verify(remote, CheckList(), info, allow_c1=True, allow_compositor=True)
+        self.assertNotIn('root_keyfilters_probe', tv_summary(info))
+
     def test_compositor_preflight_exports_only_fixed_failure_reasons(self):
         from cytv.diagnostics import create_report
         from cytv.errors import TVCommandError, TVRejected
@@ -36,7 +61,10 @@ class CapabilityTests(unittest.TestCase):
             ([identity, identity, TimeoutError(private)], '', 'keyfilters-request-failed'),
             ([identity, identity, TVRejected(private)], '', 'keyfilters-request-failed'),
             ([identity, identity, {'returnValue': False, 'errorText': private}], '', 'keyfilters-request-failed'),
+            ([identity, identity, {'returnValue': True, 'configs': {}}], '', 'keyfilters-not-configured'),
+            ([identity, identity, {'returnValue': True, 'configs': {key: []}}], '', 'keyfilters-not-configured'),
             ([identity, identity, {'returnValue': True, 'configs': None}], '', 'keyfilters-incompatible'),
+            ([identity, identity, {'returnValue': True, 'configs': {key: None}}], '', 'keyfilters-incompatible'),
             ([identity, identity, {'returnValue': True, 'configs': {key: [private]}}], '', 'keyfilters-incompatible'),
             ([identity, identity, chain], TVCommandError(42), 'native-home-unavailable'),
             ([identity, identity, chain], TVCommandError(127), 'native-home-request-failed'),
@@ -236,12 +264,55 @@ class CapabilityTests(unittest.TestCase):
 
     def test_generic_compositor_refuses_unknown_chain_or_invalid_identity(self):
         from cytv.root_capabilities import compositor_failure
-        for sdk,chain in [('11.2.0',[]),('9.2.2',[]),('invalid',[]),('9.2.2',[{'file':'/foreign/home.js','handler':'handleSystemKeys'}])]:
+        cases = (
+            ('11.2.0', [], 'keyfilters-not-configured'),
+            ('9.2.2', [], 'keyfilters-not-configured'),
+            ('invalid', [], 'system-info-invalid'),
+            ('9.2.2', [{'file':'/foreign/home.js','handler':'handleSystemKeys'}], 'keyfilters-incompatible'),
+        )
+        for sdk, chain, expected in cases:
             remote=Mock()
             remote.luna.side_effect=[dict(returnValue=True,modelName='55NANO77SRA',firmwareVersion='23.25.55',sdkVersion=sdk),
                 {'returnValue':True,'configs':{'com.webos.surfacemanager.keyFilters':chain}}]
-            self.assertEqual(compositor_failure(remote),
-                             'system-info-invalid' if sdk == 'invalid' else 'keyfilters-incompatible')
+            self.assertEqual(compositor_failure(remote), expected)
+            remote.run.assert_not_called()
+
+    def test_legacy_ribbon_requires_positive_readback_and_confirmed_missing_routing(self):
+        from cytv.errors import TVRejected
+        from cytv.root_capabilities import RootCapabilityError, verify
+
+        missing = {'returnValue': False, 'errorCode': -1,
+                   'errorText': 'Service does not exist: com.webos.service.systemprofile.'}
+        config_uri = 'com.webos.service.config/getConfigs'
+        config_absent = TVRejected('missing config', dict(missing,
+            errorText='Service does not exist: com.webos.service.config.'), config_uri)
+        config_denied = TVRejected('denied config', dict(missing, errorText='Access denied'), config_uri)
+        config_empty = {'returnValue': True, 'configs': {}}
+        identity = {'returnValue': True, 'modelName': 'OTHER-LEGACY-TV',
+                    'firmwareVersion': '04.66.75', 'sdkVersion': '3.5.0'}
+        home = {'homeUIState': [{'uiType': 'home', 'visibility': False}], 'private': 'drop-me'}
+
+        for config, reply, expected, probe in (
+                (config_empty, home, 'LegacyRibbonError', 'readable'),
+                (config_absent, home, 'LegacyRibbonError', 'readable'),
+                (config_empty, {'homeUIState': [{'uiType': 'home', 'visibility': 0}]},
+                 'RootCapabilityError', 'invalid-reply'),
+                (config_empty, TimeoutError(), 'RootCapabilityError', 'timeout'),
+                (config_denied, home, 'RootCapabilityError', None),
+                (TimeoutError(), home, 'RootCapabilityError', None)):
+            with self.subTest(config=config, reply=reply):
+                from cytv.diagnostic_context import tv_summary
+                remote = Mock()
+                remote.luna.side_effect = [missing, identity, identity, config, reply]
+                info = {}
+                with self.assertRaises(RootCapabilityError) as raised:
+                    verify(remote, CheckList(), info, allow_c1=True, allow_compositor=True)
+                self.assertEqual(type(raised.exception).__name__, expected)
+                report = tv_summary(info)
+                self.assertEqual(report.get('root_ribbon_probe'), probe)
+                self.assertNotIn('drop-me', str(report))
+                self.assertNotIn('home_backend', info)
+                remote.run.assert_not_called()
 
     def test_generic_permission_denial_never_enters_native_admission(self):
         from cytv.root_capabilities import verify,RootCapabilityError

@@ -62,7 +62,7 @@ class JsonReplies:
         return result
 
 
-def terminal_reply(reply, terminal=None, uri=None):
+def terminal_reply(reply, terminal=None, uri=None, *, allow_missing_return=False):
     details = reply.get('details', {})
     if not isinstance(details, dict) or reply.get('returnValue') is False or 'errorCode' in reply or 'errorCode' in details:
         raise TVRejected('TV rejected the operation. Run cytv doctor; no automatic retry was attempted.', reply, uri)
@@ -71,7 +71,7 @@ def terminal_reply(reply, terminal=None, uri=None):
         raise TVRejected('TV package operation failed. Run cytv status before retrying.', reply, uri)
     if terminal:
         return status in (terminal, 'success')
-    return reply.get('returnValue') is True
+    return reply.get('returnValue') is True or (allow_missing_return and 'returnValue' not in reply)
 
 
 def fingerprint(key):
@@ -446,7 +446,7 @@ class SSH:
             finally:
                 channel.close()
 
-    def luna(self, uri, payload, terminal=None, timeout=30, app_id=None):
+    def luna(self, uri, payload, terminal=None, timeout=30, app_id=None, *, allow_missing_return=False):
         args = ['/usr/bin/luna-send' if self.root else '/usr/bin/luna-send-pub', '-i' if terminal else '-n', *([] if terminal else ['1']),
                 *(['-a', app_id, '-m', app_id + '-cytv'] if app_id else []),
                 'luna://' + uri, json.dumps(payload, separators=(',', ':'))]
@@ -455,7 +455,7 @@ class SSH:
             # On the tested TV luna-send exits before replying if stdin receives EOF.
             for chunk in self.chunks(channel, timeout):
                 for reply in parser.feed(chunk):
-                    if terminal_reply(reply, terminal, uri):
+                    if terminal_reply(reply, terminal, uri, allow_missing_return=allow_missing_return):
                         return reply
             raise UserError('TV command ended without a confirmed result. Run cytv status.')
         finally:

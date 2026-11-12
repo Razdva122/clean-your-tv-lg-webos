@@ -14,6 +14,11 @@ ROOT_REQUIREMENTS = ('root-user', 'python3', 'luna-send', 'apps-directory',
                      'luna-services-directory', 'python-json', 'python-fcntl', 'python-version', 'node-version')
 
 ROOT_ACTIONS = ('inspect', 'install', 'status', 'remove', 'enable', 'restore', 'uninstall', 'clean-remove', 'clean-status')
+ROOT_COMMAND_DETAILS = (
+    ('root_action', ROOT_ACTIONS),
+    ('root_boundary', ('coordinator-stage', 'python-select', 'driver')),
+    ('root_interpreter', ('system-python', 'private-python')),
+)
 
 REASONS = ('unknown', 'user-error', 'ssh-command-failed', 'ssh-unreachable', 'ssh-access-denied', 'ssh-refused', 'ssh-timeout',
            'ssh-authentication', 'ssh-identity-changed', 'ssh-trust-record', 'ssh-identity-unverified', 'host-runtime',
@@ -175,6 +180,18 @@ def tv_summary(value):
         failure = choice(value['root_compositor_failure'], COMPOSITOR_FAILURES, None)
         if failure is not None:
             result['root_compositor_failure'] = failure
+    if 'root_keyfilters_probe' in value:
+        from .root_capabilities import KEYFILTER_PROBE_STATES
+        probe = mapping(value['root_keyfilters_probe'])
+        probe_state = choice(probe.get('state'), KEYFILTER_PROBE_STATES, None)
+        if probe_state is not None:
+            result['root_keyfilters_probe'] = {'state': probe_state}
+            code = probe.get('error_code')
+            if probe_state == 'rejected' and type(code) is int and -(2**31) <= code < 2**31:
+                result['root_keyfilters_probe']['error_code'] = code
+    if 'root_ribbon_probe' in value:
+        from .root_capabilities import RIBBON_PROBE_STATES
+        result['root_ribbon_probe'] = choice(value['root_ribbon_probe'], RIBBON_PROBE_STATES)
     native_home_mode = value.get('root_native_home_mode')
     if isinstance(native_home_mode, str) and re.fullmatch(r'[0-7]{4}', native_home_mode):
         result['root_native_home_mode'] = native_home_mode
@@ -381,8 +398,7 @@ def failure_summary(value):
     command = mapping(value.get('ssh_command'))
     if type(command.get('exit_status')) is int and -1 <= command['exit_status'] <= 255:
         result['ssh_command'] = {'exit_status': command['exit_status']}
-    for key, allowed in (('root_action', ROOT_ACTIONS),
-                         ('root_boundary', ('coordinator-stage', 'python-select', 'driver'))):
+    for key, allowed in ROOT_COMMAND_DETAILS:
         if key in command and type(command[key]) is str and command[key] in allowed:
             result.setdefault('ssh_command', {})[key] = command[key]
     if 'tv' in value:

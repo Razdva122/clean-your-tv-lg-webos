@@ -3,7 +3,7 @@ import hashlib
 import json
 import re
 import shlex
-from .errors import UserError
+from .errors import TVCommandError, UserError
 
 RECOVERY_ENTRY = r'''
 import runpy, sys
@@ -29,9 +29,17 @@ def recovery_python(remote):
 
 
 def run(installer, stage, script, args, timeout):
-    python=recovery_python(installer.remote)
+    try:
+        python=recovery_python(installer.remote)
+    except TVCommandError as error:
+        error.root_boundary='python-select'
+        raise
     invocation=installer._python_command([python,'-I','-B','-c',RECOVERY_ENTRY,stage,stage+'/'+script,*args])
-    raw=installer.remote.run(invocation,timeout=timeout)
+    try:
+        raw=installer.remote.run(invocation,timeout=timeout)
+    except TVCommandError as error:
+        error.root_interpreter='system-python' if python=='/usr/bin/python3' else 'private-python'
+        raise
     # Full interpreter inventory was verified by freshly staged python_binding.
     # Subsequent package readback must not run a retained binding module.
     installer._selected_python=python

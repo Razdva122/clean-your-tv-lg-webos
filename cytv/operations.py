@@ -99,16 +99,24 @@ class Installer:
         self.checks = checks if checks is not None else CheckList()
         from .outcomes import SetupOutcome
         self.outcome = SetupOutcome(self.checks, self.tv_info)
+        self._ordinary_payload = None
         self.use_runtime_variant()
 
     def use_runtime_variant(self):
+        ordinary = self._ordinary_payload
         if self.profile.get('root_variant') == 'node012-beta':
             from .root_runtime import select_payload
-            if not getattr(self, '_runtime_variant_selected', False):
-                self.payload, self.manifest = select_payload(self.payload, self.manifest)
-                self._runtime_variant_selected = True
+            if ordinary is None:
+                ordinary = self.payload, self.manifest
+                self.payload, self.manifest = select_payload(*ordinary)
+                self._ordinary_payload = ordinary
             self.tv_info['root_variant'] = 'node012-beta'
             self.checks.root_variant = 'node012-beta'
+        elif ordinary is not None:
+            self.payload, self.manifest = ordinary
+            self._ordinary_payload = None
+            self.tv_info.pop('root_variant', None)
+            self.checks.root_variant = None
 
     @staticmethod
     def _python_command(args):
@@ -176,9 +184,10 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
             raise UserError('Previous operation is unresolved. Run cytv status or cytv restore; do not retry installation.', reason_code='pending-operation')
         from .root_rollback_recovery import program
         try:
+            # Allow time for package and registration checks around the 120-second window.
             reply = json.loads(self.remote.run(
                 self._python_command([self._python(UPDATER_STATE), '-I', '-B', '-']),
-                data=program().encode(), timeout=200))
+                data=program().encode(), timeout=360))
             result = reply.get('result')
             if (reply.get('returnValue') is not True or not isinstance(result, dict)
                     or result.get('phase') != 'rolled-back' or result.get('homeResumePhase') != 'rolled-back'):
@@ -360,7 +369,7 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
             reply=json.loads(raw)
         except TVCommandError as error:
             error.root_action=action
-            error.root_boundary=boundary
+            error.root_boundary=getattr(error,'root_boundary',boundary)
             raise
         if (not isinstance(reply,dict) or reply.get('operation')!=operation
                 or reply.get('state') not in ('pending','complete','recovery_required','unknown','fresh','installed','unsupported','conflict','migration_required')):
@@ -759,7 +768,10 @@ printf '%s' "$cytv_state"
             return self.install_root(inventory, migrate, reinstall)
         if not ssap_key:
             raise ValueError('Remote-control pairing is required for No-root.')
-        launcher, _ = package.personalize((self.payload / self._graphics_paths['launcher']).read_bytes(), HOME, inventory)
+        launcher, _ = package.personalize(
+            (self.payload / self._graphics_paths['launcher']).read_bytes(), HOME, inventory,
+            no_root_connection=self.profile.get('connection') or 'developer-mode',
+        )
         helper = (self.payload / self.manifest['helper']).read_bytes()
         expected = {}
         for data in (helper, launcher):
@@ -1895,7 +1907,8 @@ print('CYTV_PROJECT_REMOVED')
         self.progress('Removing Clean Your TV; earlier installation results will be kept.')
         from .root_clean_tail import resume as resume_tail
         reply=resume_tail(self,pending)
-        if reply is None:
+        recheck_boot=reply is not None and reply.get('recheck_boot') is True
+        if reply is None or recheck_boot:
             root_bundle=self.payload/'root'
             previous=pending
             native_pending=False
@@ -1919,6 +1932,9 @@ print('CYTV_PROJECT_REMOVED')
             target=self.product_action('clean-target',operation,stage)
             selected=target.get('target_operation');lease=target.get('target_lease')
             goal=target.get('target_removal') or pending['removal_operation']
+            if recheck_boot and (selected!=pending.get('removal_target_operation',pending['product_operation'])
+                    or goal!=pending.get('removal_target_intent',pending['removal_operation'])):
+                raise UserError('Removal evidence changed. Recovery data was kept.',reason_code='pending-operation')
             if pending.get('root_cleanup_lease') and (
                     lease!=pending['root_cleanup_lease']
                     or selected!=pending.get('removal_target_operation',pending['product_operation'])
@@ -1935,7 +1951,8 @@ print('CYTV_PROJECT_REMOVED')
         phase=reply.get('stage')
         if phase in REMOVAL_STAGES:
             self.store.checkpoint(self.profile,stage=phase,removal_reason=reply.get('reason') if reply.get('reason') in REMOVAL_REASONS else 'ownership-conflict')
-        if reply.get('cleanup_error') == 'owned-process-still-used':
+        if (reply.get('cleanup_error') == 'owned-process-still-used'
+                and reply.get('restart_required') is True):
             self.store.checkpoint(self.profile,stage='restart-required',removal_reason='restart-required')
             return {'removed':False,'verified_clean':False,'restart_required':True}
         failure=reply.get('cleanup_error')

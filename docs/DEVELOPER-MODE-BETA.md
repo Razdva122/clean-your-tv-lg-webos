@@ -1,8 +1,9 @@
 # Developer Mode auto-renewal (Beta)
 
-Introduced in Home 1.1.0 / release v0.7.0; included in current No-root Home.
-**Off by default.** Open **Home settings → Developer Mode auto-renewal (Beta) →
-Turn on auto-renewal** to opt in. Older packages label this **Enable Beta**. The Settings panel also contains **TV settings** for the original LG settings screen.
+Introduced in Home 1.1.0 / release v0.7.0. New No-root installations through
+existing root SSH hide the **Developer Mode** tab.
+**Off by default.** On a TV set up through LG Developer Mode, open **Home settings →
+Developer Mode → Turn on auto-renewal** to opt in. Older packages label this **Enable Beta**. The Settings panel also contains **TV settings** for the original LG settings screen.
 
 This feature extends the Developer Mode **session**, not your LG account. It uses an on-TV JavaScript service and requests LG directly; it does not send your session token to a community server or need an always-on computer/router. Your TV must already have an active, readable Developer Mode session.
 

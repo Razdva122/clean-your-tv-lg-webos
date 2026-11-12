@@ -133,7 +133,7 @@ def compositor_stock(payload, *, retire_orphan=False):
         raise ValueError('current_compositor_support_required')
     sys.path.insert(0,str(payload/'runtime'))
     import c1_keyfilter
-    observed=c1_keyfilter.probe(retire_orphan=True) if retire_orphan else c1_keyfilter.probe()
+    observed=c1_keyfilter.probe(removed_apps=APPS,retire_orphan=retire_orphan)
     return {'mode':'stock-compositor','target':{k:observed['target'][k] for k in ('dev','ino','size')},
             'target_sha256':observed['target_sha256']}
 

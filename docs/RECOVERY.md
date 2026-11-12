@@ -312,7 +312,11 @@ global package-status permission. The original local journal must still say
 fields. The installer checks that journal again after the separate default-No
 removal confirmation. The diagnostic export alone cannot establish eligibility.
 
-Removal still stops Helper, restores LG Home, records each package request before
+If removal asks for a full restart because it could not read the Helper Stop
+records, restart the TV and continue the existing removal. The installer checks
+the new boot and that Helper has stopped before it submits package requests.
+
+Removal stops Helper, restores LG Home, records each package request before
 sending it, waits for its terminal reply and verifies package/file absence.
 Only successful verified removal clears pending; start installation separately
 afterward. A failed removal keeps its receipt. Already submitted/uncertain
@@ -383,8 +387,10 @@ completion path. Packages and the retained Updater stay installed.
 
 After recovery succeeds, return to Root Updater to check for updates.
 If Home was left off, use **Change Home** to enable it when ready.
-If recovery times out again, retain the journals and run `cytv status`.
-Rerunning the command during an open recovery window keeps its original deadline.
+After a readiness timeout, rerun the command to archive the expired attempt
+and open a fresh 120-second window in the same run. A retry during an open
+window keeps its original deadline. If the launcher already sent valid
+readiness before the deadline, the command finishes that attempt.
 
 ## Root System rollback readiness (candidate)
 

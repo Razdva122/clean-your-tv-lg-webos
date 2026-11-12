@@ -3,6 +3,7 @@
 // Python must never rewrite completion after this process starts retirement.
 var fs = require('fs'),
   nodeCrypto = require('crypto'),
+  nodePath = require('path'),
   cp = require('child_process');
 var C = fs.constants,
   uid = process.getuid(),
@@ -500,37 +501,61 @@ async function compositorStock() {
     })
   ).configs;
   chain = chain && chain['com.webos.surfacemanager.keyFilters'];
+  var vendorFilter =
+      /^\/usr\/lib\/(?:qt5\/)?qml\/KeyFilters\/[A-Za-z0-9_-]+\.js$/,
+    privateFilter =
+      /^\/var\/lib\/clean-your-tv-(?:root(?:-updater)?|system-updater|python)(?:\/|$)/;
   if (
     !Array.isArray(chain) ||
-    !chain.length ||
     chain.length > 128 ||
-    JSON.stringify(chain).length > 16384 ||
-    chain.filter(function (entry) {
+    Buffer.byteLength(JSON.stringify(chain)) > 16384
+  )
+    throw Error('route-changed');
+  var vendor = chain.filter(function (entry) {
+    if (
+      !object(entry) ||
+      typeof entry.file !== 'string' ||
+      entry.file.charAt(0) !== '/' ||
+      entry.file.length > 1024 ||
+      typeof entry.handler !== 'string' ||
+      !/^[A-Za-z_$][A-Za-z0-9_$]{0,127}$/.test(entry.handler) ||
+      entry.handler === 'cytvC1HomeKey'
+    )
+      throw Error('route-changed');
+    var path = nodePath.posix.normalize(entry.file),
+      packagePath =
+        /^\/media\/developer\/apps\/usr\/palm\/(applications|services)\/([^/]+)(?:\/|$)/.exec(
+          path
+        );
+    if (
+      privateFilter.test(path) ||
+      (packagePath &&
+        apps.some(function (app) {
+          return (
+            packagePath[2] ===
+            (packagePath[1] === 'applications'
+              ? app
+              : app + (app === 'com.gathin.tvhome' ? '.renewal' : '.service'))
+          );
+        }))
+    )
+      throw Error('route-changed');
+    return vendorFilter.test(entry.file);
+  });
+  if (
+    vendor.filter(function (entry) {
       return (
-        object(entry) &&
         /\/systemUi\.js$/.test(entry.file) &&
         entry.handler === 'handleSystemKeys'
       );
     }).length !== 1
   )
     throw Error('route-changed');
-  chain.forEach(function (entry) {
-    if (
-      !object(entry) ||
-      typeof entry.file !== 'string' ||
-      !/^\/usr\/lib\/(?:qt5\/)?qml\/KeyFilters\/[A-Za-z0-9_-]+\.js$/.test(
-        entry.file
-      ) ||
-      typeof entry.handler !== 'string' ||
-      !/^[A-Za-z_$][A-Za-z0-9_$]{0,127}$/.test(entry.handler)
-    )
-      throw Error('route-changed');
+  vendor.forEach(function (entry) {
     var path = fs.realpathSync(entry.file),
       slash = path.lastIndexOf('/');
     if (
-      !/^\/usr\/lib\/(?:qt5\/)?qml\/KeyFilters\/[A-Za-z0-9_-]+\.js$/.test(
-        path
-      ) ||
+      !vendorFilter.test(path) ||
       path.slice(slash + 1) !==
         entry.file.slice(entry.file.lastIndexOf('/') + 1)
     )
@@ -1051,6 +1076,21 @@ function completion() {
     result: record.result
   };
 }
+function canRecheckBoot() {
+  var cleanup = record && record.runtime_cleanup;
+  // An older tail retired the managed runtime before removing the boot marker.
+  return (
+    !!cleanup &&
+    ['private-cleanup', 'package-removal', 'restart-required'].indexOf(
+      record.stage
+    ) !== -1 &&
+    !record.final_fence &&
+    record.cleanup_without_restart === true &&
+    ((cleanup.boot_retirement_started === false &&
+      (Object.keys(cleanup.files || {}).length === 0 || exists(runtime))) ||
+      (cleanup.boot_retirement_started === undefined && exists(runtime)))
+  );
+}
 (async function main() {
   try {
     if (!/^[a-f0-9]{32}$/.test(id)) throw Error('invalid-cleanup-selector');
@@ -1067,11 +1107,16 @@ function completion() {
     )
       throw Error('different-removal-intent');
     if (mode === 'inspect') {
+      var runtimeCleanup = record && record.runtime_cleanup;
       process.stdout.write(
         JSON.stringify({
           operation: id,
           removal: removal,
-          state: record && record.runtime_cleanup ? 'tail-ready' : 'not-ready'
+          state: canRecheckBoot()
+            ? 'coordinator-ready'
+            : runtimeCleanup
+              ? 'tail-ready'
+              : 'not-ready'
         })
       );
     } else if (mode === 'stock-proof') {
@@ -1274,6 +1319,13 @@ function completion() {
             throw Error('invalid-support-stage');
           retire(stage.path, null, stage);
         });
+        if (
+          record.cleanup_without_restart === true &&
+          cleanup.boot_retirement_started !== true
+        ) {
+          cleanup.boot_retirement_started = true;
+          write(directory, 'clean-removal-' + id + '.json', record);
+        }
         retire(runtime, cleanup.files, null, true);
         retire(
           bootRoot,
@@ -1308,17 +1360,18 @@ function completion() {
           ? error.message
           : 'cleanup-guard-failed';
       process.stderr.write('CYTV_CLEAN_TAIL: ' + diagnostic + '\n');
-      process.stdout.write(
-        JSON.stringify({
-          operation: id,
-          removal: removal,
-          state: 'recovery_required',
-          stage: 'private-cleanup',
-          current: false,
-          reason: 'private-cleanup-incomplete',
-          cleanup_error: diagnostic
-        })
-      );
+      var failure = {
+        operation: id,
+        removal: removal,
+        state: 'recovery_required',
+        stage: 'private-cleanup',
+        current: false,
+        reason: 'private-cleanup-incomplete',
+        cleanup_error: diagnostic
+      };
+      if (diagnostic === 'owned-process-still-used')
+        failure.restart_required = mode === 'finish' && canRecheckBoot();
+      process.stdout.write(JSON.stringify(failure));
       process.exitCode = 1;
     }
   } finally {

@@ -1,83 +1,81 @@
 {
   "schema": 1,
-  "version": "1.19.0",
+  "version": "1.20.0",
   "changes": [
     {
-      "pr": 474,
+      "pr": 566,
+      "issues": [
+        440
+      ],
+      "summary": "Recheck the boot before retrying interrupted Root removal; original Root installation and reporter recovery remain unverified"
+    },
+    {
+      "pr": 567,
+      "issues": [
+        542
+      ],
+      "summary": "Rearm expired Root rollback recovery on retry"
+    },
+    {
+      "pr": 569,
       "issues": [],
-      "summary": "Allow naming the Home screen in the Root installer"
+      "summary": "Update the Root Home naming heading after release"
     },
     {
-      "pr": 555,
+      "pr": 570,
       "issues": [
-        397
+        240
       ],
-      "summary": "Keep desktop installer recovery results readable on small displays"
+      "summary": "Distinguish Root recovery status interpreter failures; original deployment failure remains open"
     },
     {
-      "pr": 556,
+      "pr": 571,
       "issues": [
-        454
+        152
       ],
-      "summary": "Report rejected native Home permissions in Root preflight (#454)"
+      "summary": "Report Home Helper diagnostic failure stages; original EF950V installation and recovery remain open"
     },
     {
-      "pr": 557,
+      "pr": 572,
       "issues": [
-        359
+        410
       ],
-      "summary": "Offer No-root recovery when global package status is denied"
+      "summary": "Distinguish missing KeyFilters configuration in Root diagnostics; original installation failure remains open"
     },
     {
-      "pr": 559,
+      "pr": 573,
       "issues": [
-        389
+        389,
+        418
       ],
-      "summary": "Retire orphaned CYTV Home filters during Root removal"
+      "summary": "Preserve independently owned Home filters during Root removal; original #418 Root activation remains open"
     },
     {
-      "pr": 560,
+      "pr": 575,
+      "issues": [
+        574
+      ],
+      "summary": "Offer No-root through the existing SSH connection on legacy LG Home ribbon capability; original Root limitation remains"
+    },
+    {
+      "pr": 577,
       "issues": [],
-      "summary": "Document offline firmware reproduction for webOS issues"
+      "summary": "Hide Developer Mode for new No-root installs over root SSH"
     },
     {
-      "pr": 561,
+      "pr": 578,
       "issues": [
-        519
+        576
       ],
-      "summary": "Use the verified payload for Root doctor Home checks"
-    },
-    {
-      "pr": 562,
-      "issues": [],
-      "summary": "Open LG notifications from Home settings"
-    },
-    {
-      "pr": 563,
-      "issues": [
-        368
-      ],
-      "summary": "Verify changed Root SSH identity while retaining pending uninstall"
-    },
-    {
-      "pr": 564,
-      "issues": [
-        307
-      ],
-      "summary": "Require a verified reboot before legacy No-root cleanup"
-    },
-    {
-      "pr": 565,
-      "issues": [],
-      "summary": "Keep homepage previews large and record them in English"
+      "summary": "Recover reproduced No-root removal failures with malformed Helper Stop records; the original device failure remains unconfirmed"
     }
   ],
   "excluded": [],
-  "acceptance": "Scoped TV acceptance passed on LG OLED55C3RLA (43.21.71, SDK 11.2.0) with the exact macOS ARM64 installer. Signed Root update and retained rollback, No-root install and clean removal, native LG Notifications in both editions, Root naming and read-only doctor passed. The starting Root versions, rendered profile and Home route were restored. See [TV acceptance evidence](https://github.com/Razdva122/clean-your-tv-lg-webos/blob/release/next/docs/history/2026-11-12-release-1.19.0-candidate.md) for hashes, device preconditions and scope limits.",
+  "acceptance": "Scoped acceptance on project OLED55C3RLA (43.21.71, webOS SDK 11.2.0) passed. The exact macOS ARM64 CLI completed Root removal, No-root setup and removal, verified software restarts, and network HOME routing. Protected signing run 43273038479:1 supplied the exact Root RC1 set. The original System Updater applied and rolled it back with all three terminals, installed-byte checks, profile comparisons and owner-confirmed Root Home tiles in both directions. Android API 35 ARM64 emulator upgrade passed. Artifact hashes, limits and case reconciliation: docs/history/2026-11-12-release-1.20.0-candidate.md.",
   "build": {
-    "run_id": 43213007147,
-    "attempt": 1,
-    "source": "3bd4a79919290f54594c78ece421e8310bf37c4d"
+    "run_id": 43261506679,
+    "attempt": 3,
+    "source": "a7ced816ceb1c2be733dc64b0d2fb77ddc6f5d98"
   },
-  "acceptance_build": "43213007147:1"
+  "acceptance_build": "43261506679:3"
 }

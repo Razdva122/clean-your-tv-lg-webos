@@ -107,12 +107,35 @@ def write_chain(value,volatile=False):
         raise ValueError('Configd did not acknowledge filter write')
 
 
+VENDOR_FILTER = re.compile(r'/usr/lib/(?:qt5/)?qml/KeyFilters/[A-Za-z0-9_-]+\.js')
+PRIVATE_FILTER = re.compile(r'/var/lib/clean-your-tv-(?:root(?:-updater)?|system-updater|python)(?:/|$)')
+PACKAGE_FILTER = re.compile(r'/media/developer/apps/usr/palm/(applications|services)/([^/]+)(?:/|$)')
+
+
 def stock_chain(chain):
     chain=validate_chain(chain)
     if (not chain or sum(e['file'].endswith('/systemUi.js') and e['handler']=='handleSystemKeys' for e in chain)!=1
-            or any(not re.fullmatch(r'/usr/lib/(?:qt5/)?qml/KeyFilters/[A-Za-z0-9_-]+\.js',e['file']) for e in chain)):
+            or any(not VENDOR_FILTER.fullmatch(e['file']) for e in chain)):
         raise ValueError('Stock Qt Home filter chain not verified')
     return chain
+
+
+def removal_vendor_chain(chain, removed_apps):
+    """Prove LG's part of the chain while keeping third-party entries opaque."""
+    chain = validate_chain(chain)
+    removed_services = {
+        app + ('.renewal' if app == 'com.gathin.tvhome' else '.service')
+        for app in removed_apps
+    }
+    for entry in chain:
+        path = '/' + os.path.normpath(entry['file']).lstrip('/')
+        package = PACKAGE_FILTER.match(path)
+        if (entry['handler'] == 'cytvC1HomeKey' or PRIVATE_FILTER.match(path)
+                or package and package[2] in (
+                    removed_apps if package[1] == 'applications' else removed_services
+                )):
+            raise ValueError('CYTV filter remains during removal')
+    return stock_chain([entry for entry in chain if VENDOR_FILTER.fullmatch(entry['file'])])
 
 
 def vendor_script(path):
@@ -160,7 +183,7 @@ def stock_bsp_overlay(mounts, overlay, critical):
     return True
 
 
-def require_generic_environment(chain=None):
+def require_generic_environment(chain=None, *, removed_apps=None):
     """Read-only admission. Never repair a foreign route, input or vendor file."""
     missing=luna('luna://com.webos.service.systemprofile/getProfiles',
                  {'names':['defaultApps','idleApp'],'subscribe':False},allow_failure=True)
@@ -215,7 +238,8 @@ def require_generic_environment(chain=None):
     if (not isinstance(app,dict) or app.get('id')!=STOCK or app.get('type')!='native'
             or app.get('main') not in (str(legacy.TARGET),'file://'+str(legacy.TARGET))):
         raise ValueError('Stock native Home manifest not verified')
-    chain=stock_chain(read_chain() if chain is None else chain)
+    chain = read_chain() if chain is None else chain
+    chain = stock_chain(chain) if removed_apps is None else removal_vendor_chain(chain, removed_apps)
     for entry in chain:
         script=vendor_script(entry['file'])
         if entry['file'].endswith('/systemUi.js') and (
@@ -301,7 +325,7 @@ def change_chain(root, enabled, uid=0):
     pending.unlink()
 
 
-def probe(*, retire_orphan=False):
+def probe(*, removed_apps=None, retire_orphan=False):
     if os.geteuid()!=0 or sys.platform!='linux':
         raise ValueError('Compositor admission requires an existing root TV session')
     # Keep schema2 admission isolated from schema1 checkpoint prerequisites.
@@ -319,10 +343,10 @@ def probe(*, retire_orphan=False):
                 or len(data)<52 or data[:7]!=b'\x7fELF\x01\x01\x01' or data[18:20]!=b'\x28\0'
                 or not admission_valid(candidate)):
             raise ValueError('Experimental compositor requires verified Qt Home capabilities and ARM32 native Home') from None
-    if retire_orphan:
+    if removed_apps is not None:
         chain = read_chain()
-        stock = reconcile(chain, STATE, False)
-        require_generic_environment(stock)
+        remaining = reconcile(chain, STATE, False) if retire_orphan else chain
+        require_generic_environment(remaining, removed_apps=removed_apps)
     else:
         require_generic_environment()
     after=legacy.TARGET.stat()
@@ -330,14 +354,14 @@ def probe(*, retire_orphan=False):
     if identity(before)!=identity(after) or not before.st_mode & 0o111:
         raise ValueError('Native Home changed during compositor admission')
     observed = read_chain()
-    if retire_orphan:
+    if removed_apps is not None:
         if observed != chain:
-            raise ValueError('Concurrent configd edit during orphan filter recovery')
-        if chain != stock:
+            raise ValueError('Concurrent configd edit during Home filter readback')
+        if chain != remaining:
             # Schema 2 could leave a persistent configd entry after its state
             # directory disappeared. The fenced remover authorizes this inverse.
-            write_chain(stock)
-            if read_chain() != stock:
+            write_chain(remaining)
+            if read_chain() != remaining:
                 raise ValueError('Configd readback mismatch during orphan filter recovery')
     return dict(value,target_sha256=hashlib.sha256(data).hexdigest(),target=identity(after))
 

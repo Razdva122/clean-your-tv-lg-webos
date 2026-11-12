@@ -315,6 +315,95 @@ class SimpleRemoval(unittest.TestCase):
         self.assertIsNone(self.store.pending(self.profile))
         self.assertFalse(list((self.root/'volatile').glob('cytv-removal-*.boot')))
 
+    def test_invalid_helper_stop_record_recovers_only_after_new_boot_and_idle(self):
+        for name, contents in (('control.json', None), ('controller.pid', None), ('controller.pid', 'invalid')):
+            with self.subTest(name=name, contents=contents):
+                case = SimpleRemoval()
+                self.addCleanup(case.doCleanups)
+                case.setUp()
+                proc = case.root / 'proc'
+                proc.mkdir()
+                app = 'com.local.nativehome'
+                case.remote.apps = {app}
+                state = case.own_file(f'apps/usr/palm/applications/{app}/state/blocked', 'stopped').parent
+                invalid = state / name
+                if contents is None:
+                    invalid.mkdir()
+                    (invalid / 'retained').write_text('fixture')
+                else:
+                    invalid.write_text(contents)
+                service = case.own_file(f'apps/usr/palm/services/{app}.service/service.js')
+                case.remote.transform = lambda code: code.replace('idleDeadline=Date.now()+8000', 'idleDeadline=Date.now()+50')
+                remove_uri = 'com.webos.appInstallService/dev/remove'
+
+                self.assertTrue(case.remove()['restart_required'])
+                self.assertEqual(case.store.pending(case.profile)['cleanup_restart_triggers'],
+                                 ['invalid-helper-stop-record'])
+                case.boot_marker().unlink()
+                self.assertTrue(case.remove()['restart_required'])
+                self.assertTrue(invalid.exists())
+                self.assertFalse(any(uri == remove_uri for uri, _ in case.remote.calls))
+
+                case.reboot()
+                case.remote.broken_service = True
+                with self.assertRaises(UserError):
+                    case.remove()
+                self.assertTrue(invalid.exists())
+                self.assertFalse(any(uri == remove_uri for uri, _ in case.remote.calls))
+
+                case.remote.broken_service = False
+                live = proc / '123'
+                live.mkdir()
+                (live / 'cmdline').write_bytes(app.encode() + bytes([0]))
+                with self.assertRaises(UserError):
+                    case.remove()
+                self.assertTrue(invalid.exists())
+                self.assertFalse(any(uri == remove_uri for uri, _ in case.remote.calls))
+
+                shutil.rmtree(live)
+                foreign = proc / '124'
+                foreign.mkdir()
+                (foreign / 'cmdline').write_bytes(bytes([0]).join(
+                    (b'node', b'/usr/bin/run-js-service', b'com.webos.foreign.service')))
+
+                denied = ("var read=fs.readFileSync;fs.readFileSync=function(file){"
+                          "if(file===" + json.dumps(str(foreign / 'cmdline')) + "){"
+                          "var error=Error('denied');error.code='EACCES';throw error;}"
+                          "return read.apply(fs,arguments);};")
+                fast_timeout = case.remote.transform
+                case.remote.transform = lambda code: fast_timeout(code).replace("if(input.action==='idle'){",
+                                                                                "if(input.action==='idle'){" + denied)
+                with self.assertRaises(UserError):
+                    case.remove()
+                self.assertTrue(invalid.exists())
+                self.assertFalse(any(uri == remove_uri for uri, _ in case.remote.calls))
+
+                # The /disable reply can arrive before its short-lived service
+                # process exits. Link restrictions for foreign processes still apply.
+                transient = proc / '125'
+                transient.mkdir()
+                (transient / 'cmdline').write_bytes(str(service).encode())
+                kernel = proc / '2'
+                kernel.mkdir()
+                (kernel / 'cmdline').touch()
+                (kernel / 'stat').write_text('2 (kernel thread) S 0 0 0 0 -1 2097152')
+                denied_links = json.dumps([str(foreign), str(kernel)])
+                model = ("var link=fs.readlinkSync;fs.readlinkSync=function(file){"
+                         "if(" + denied_links + ".indexOf(path.dirname(file))>=0){"
+                         "var error=Error('denied');error.code='EACCES';throw error;}"
+                         "return link.apply(fs,arguments);};"
+                         "var read=fs.readFileSync, polls=0;fs.readFileSync=function(file){"
+                         "if(file===" + json.dumps(str(transient / 'cmdline')) + "&&polls++)return '';"
+                         "return read.apply(fs,arguments);};")
+                case.remote.transform = lambda code: code.replace("if(input.action==='idle'){", "if(input.action==='idle'){" + model)
+                disable_uri = app + '.service/disable'
+                disable_count = sum(uri == disable_uri for uri, _ in case.remote.calls)
+                self.assertTrue(case.remove()['verified_clean'])
+                self.assertEqual(sum(uri == disable_uri for uri, _ in case.remote.calls), disable_count + 1)
+                self.assertFalse(invalid.exists())
+                calls = [uri for uri, _ in case.remote.calls]
+                self.assertIn(disable_uri, calls[:calls.index(remove_uri)])
+
     def test_removed_packages_with_live_process_still_require_restart(self):
         proc=self.root/'proc'/'123';proc.mkdir(parents=True)
         (proc/'cmdline').write_text('/usr/bin/node\0'+str(self.root/'developer/apps/usr/palm/services/com.gathin.tvhome.renewal/service.js')+'\0')

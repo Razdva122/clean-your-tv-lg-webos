@@ -153,6 +153,7 @@ class DiagnosticTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             error=TVCommandError(127)
             error.root_action='PRIVATE-ACTION';error.root_boundary={'private':'PRIVATE-PATH'}
+            error.root_interpreter='/tmp/PRIVATE-INTERPRETER'
             text=diagnostics.create_report(state.Store(tmp),'status',None,'status',error).read_text()
             self.assertEqual(json.loads(text)['ssh_command'],{'exit_status':127})
             self.assertNotIn('PRIVATE-',text)

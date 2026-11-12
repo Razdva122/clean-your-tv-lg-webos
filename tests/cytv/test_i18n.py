@@ -282,6 +282,7 @@ class LanguageTests(unittest.TestCase):
     def test_neutral_edition_guidance_is_translated_in_every_language(self):
         lang = self.language()
         messages = (
+            'This TV uses the LG Home ribbon and has no System Profile or KeyFilters support. Choose No-root to continue.',
             'No-root and Root are equal options for different TV setups.',
             'This installer does not obtain root.',
             'Enter = current choice   /   q = quit',

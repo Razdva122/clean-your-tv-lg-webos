@@ -2,7 +2,7 @@
 
 Solo Root Edition: imposta il nome della schermata Home nell’ultima pagina del programma di installazione. Lascia vuoto il campo per mantenere il nome attuale. Nella CLI usa `--tv-name`.
 
-Modifica non ancora pubblicata: prima di una nuova installazione, l’installer del computer cerca una versione stabile più recente su GitHub. Scegli “Apri GitHub e scarica l’ultima versione” per fermarti e scaricarla, oppure “No, installa questa versione” per continuare esplicitamente. Se la verifica non riesce, puoi continuare. Le operazioni in sospeso e il ripristino saltano la verifica.
+Prima di una nuova installazione, l’installer del computer cerca una versione stabile più recente su GitHub. Scegli “Apri GitHub e scarica l’ultima versione” per fermarti e scaricarla, oppure “No, installa questa versione” per continuare esplicitamente. Se la verifica non riesce, puoi continuare. Le operazioni in sospeso e il ripristino saltano la verifica.
 
 Clean Your TV offre al tuo LG webOS una schermata Home personale: le tue app nel tuo ordine, senza righe sponsorizzate in questo menu. Installa da computer o telefono Android; dopo la configurazione puoi spegnere il computer.
 
@@ -28,6 +28,8 @@ Accendi la TV e collegala alla stessa rete domestica del computer o telefono. Co
 - **Root** — se hai già accesso root via SSH. L’installer non esegue il root della TV. Non attivare Developer Mode su questa TV; conserva accesso SSH e dati di ripristino.
 
 Per Root, l’installer verifica e sceglie un metodo disponibile per controllare Home. Se non può verificare la compatibilità, l’installazione si interrompe; non aggirare il controllo fallito.
+
+Se l’installer propone **No-root**, puoi proseguire con la connessione SSH root esistente. Questa opzione non richiede Developer Mode.
 
 **No-root → Root:** Se No-root è stato reinstallato dopo una rimozione completa, il passaggio a Root può richiedere prima una pulizia. Salva le preferenze di Home, scegli **Disinstalla Clean Your TV** con la connessione Root salvata e attendi la rimozione verificata. Verranno rimossi anche Home e Helper di No-root. Poi installa Root e conserva i dati di ripristino.
 
@@ -174,6 +176,6 @@ Prima di scegliere un tema, usa **Debloat** per selezionare le impostazioni LG d
 
 Dopo l’installazione riuscita, scegli Classic, Liquid Glass o Ribbon e attiva o disattiva il meteo. Ribbon non supporta il meteo; Liquid Glass usa il formato compatto. La città viene stimata dalla connessione e può essere modificata in Home.
 
-No-root con Developer Mode offre il rinnovo automatico (Beta); continua a controllare il timer ufficiale. No-root tramite root SSH esistente non usa questa opzione. Root consente di bloccare gli aggiornamenti firmware LG tramite Homebrew Channel, inclusi quelli di sicurezza; serve un vero riavvio tramite Homebrew Channel. Gli aggiornamenti CYTV restano separati.
+No-root con Developer Mode offre il rinnovo automatico (Beta); continua a controllare il timer ufficiale. Nelle nuove installazioni No-root tramite un accesso SSH root esistente, la scheda Developer Mode è nascosta. Root consente di bloccare gli aggiornamenti firmware LG tramite Homebrew Channel, inclusi quelli di sicurezza; serve un vero riavvio tramite Homebrew Channel. Gli aggiornamenti CYTV restano separati.
 
 Mantieni le impostazioni attuali salta la personalizzazione. L’interruttore mostra lo stato attuale della funzione del modo. Le impostazioni non modificate vengono conservate. Reinstallare Root rimuove comunque le preferenze CYTV come descritto sopra. Controlla l’aspetto sulla TV e le opzioni non confermate in Home prima di riprovare.

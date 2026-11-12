@@ -42,6 +42,13 @@ class RootTailWire(unittest.TestCase):
         self.installer.remote.upload.assert_not_called()
         self.installer.store.checkpoint.assert_not_called()
 
+    def test_device_can_return_control_to_the_coordinator(self):
+        self.installer.remote.run.return_value=json.dumps({
+            'operation':'a'*32,'removal':'d'*32,'state':'coordinator-ready',
+        })
+        self.assertEqual(resume(self.installer,self.pending),{'recheck_boot':True})
+        self.installer.remote.upload.assert_not_called()
+
     def test_completed_readback_failure_returns_to_current_support_sweep(self):
         from cytv.errors import TVCommandError
         self.pending['stage']='verified-clean'

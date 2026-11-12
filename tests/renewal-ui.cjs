@@ -4,7 +4,10 @@ const assert = require('node:assert/strict');
 const versions = require('../release-versions.json');
 const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8876';
 (async () => {
-  const browser = await chromium.launch({ headless: true, channel: 'chrome' });
+  const browser = await chromium.launch({
+    headless: true,
+    channel: process.env.BROWSER_CHANNEL || 'chrome'
+  });
   const page = await browser.newPage({
     viewport: { width: 1920, height: 1080 },
     locale: 'en'
@@ -63,16 +66,24 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8876';
     }, versions);
     // The preview supplies HTML/assets; this test supplies its own bus replies.
     await page.route('**/preview/bridge.js', (r) => r.fulfill({ body: '' }));
+    let connection;
     await page.route('**/apps.js', (r) =>
       r.fulfill({
-        body: 'window.TV_APPS={apps:[{id:"test.app",title:"Test App",icon:"brand-v2-icon.png"}],inputs:[]};'
+        body:
+          'window.TV_APPS={apps:[{id:"test.app",title:"Test App",icon:"brand-v2-icon.png"}],inputs:[]};' +
+          (connection
+            ? `window.CYTVNoRootConnection = ${JSON.stringify(connection)};`
+            : '')
       })
     );
     await page.goto(base + '/launcher/index.html');
     await page.locator('#tiles .item').first().waitFor();
     assert.equal(
       await page.evaluate(
-        () => calls.filter((c) => c.uri.includes('tvhome.renewal')).length
+        () =>
+          calls.filter(
+            (c) => c.uri === 'luna://com.gathin.tvhome.renewal/status'
+          ).length
       ),
       0
     );
@@ -153,9 +164,35 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8876';
       )),
       'viewing updates must not request an installation or rollback'
     );
+
+    // A root SSH install hides the tab, including after a generic Home update.
+    for (const mode of ['root-ssh', undefined]) {
+      connection = mode;
+      await page.reload();
+      await page.locator('#btnSettings').click();
+      await page.locator('[data-category=advanced]').focus();
+      await page.keyboard.press('ArrowDown');
+      assert.equal(await page.locator('[data-category=developer]').count(), 0);
+      assert.equal(await page.locator('#developerOpen').isVisible(), false);
+      assert.equal(
+        await page.evaluate(() => document.activeElement.id),
+        'renewalClose'
+      );
+      assert.equal(
+        await page.evaluate(() =>
+          calls.some((c) => c.uri === 'luna://com.gathin.tvhome.renewal/status')
+        ),
+        false
+      );
+    }
+
+    connection = 'developer-mode';
+    await page.reload();
+    await page.locator('#btnSettings').click();
+    await page.locator('[data-category=developer]').waitFor();
     assert.deepEqual(errors, []);
     console.log(
-      'PASS Beta UI toggle, diagnostics, current System updates, Back and launch after close'
+      'PASS Beta UI, updates, navigation and Developer Mode visibility by installation method'
     );
   } finally {
     await browser.close();

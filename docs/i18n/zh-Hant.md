@@ -2,7 +2,7 @@
 
 僅限 Root Edition：在安裝程式的最後一頁設定 Home 主畫面名稱。留空可保留目前名稱。命令列使用 `--tv-name`。
 
-尚未發布的安裝程式變更：新安裝前，電腦安裝程式會檢查 GitHub 上是否有更新的穩定版本。選擇「開啟 GitHub 並下載最新版本」會停止目前安裝並開啟下載頁面；選擇「不，安裝此版本」才會明確繼續。檢查失敗時仍可繼續。未完成的操作和復原流程會跳過檢查。
+新安裝前，電腦安裝程式會檢查 GitHub 上是否有更新的穩定版本。選擇「開啟 GitHub 並下載最新版本」會停止目前安裝並開啟下載頁面；選擇「不，安裝此版本」才會明確繼續。檢查失敗時仍可繼續。未完成的操作和復原流程會跳過檢查。
 
 Clean Your TV 為 LG webOS 提供個人主畫面：依自己的順序排列應用程式，此選單沒有贊助內容列。使用電腦或 Android 手機安裝，設定完成後即可關閉電腦。
 
@@ -28,6 +28,8 @@ Clean Your TV 為 LG webOS 提供個人主畫面：依自己的順序排列應�
 - **Root** — 已有 SSH root 存取權限時選擇。安裝程式不會為電視取得 root。請勿在此電視上開啟 Developer Mode；保留 SSH 存取和復原資料。
 
 對於 Root，安裝程式會檢查並選擇可用的 Home 控制方式。如果無法確認相容性，安裝將停止；請勿略過失敗的檢查。
+
+如果安裝程式提供 **No-root** 選項，可以使用現有的 root SSH 連線繼續。此選項無需 Developer Mode。
 
 **No-root → Root:** 如果在完整移除後重新安裝了 No-root，切換至 Root 前可能需要先清理。請備份 Home 偏好設定，使用已儲存的 Root 連線選擇**解除安裝 Clean Your TV**，並等待移除驗證完成。這也會移除 No-root Home 和 Helper。接著安裝 Root；請保留復原記錄。
 
@@ -172,6 +174,6 @@ No-root: 要重新啟動 Home 控制，請開啟 Home Helper，選擇啟動 Help
 
 安裝成功後，選擇 Classic、Liquid Glass 或 Ribbon，並開啟或關閉主畫面天氣。Ribbon 不支援天氣；Liquid Glass 使用簡短格式。城市會根據網路連線估算，可在 Home 設定中變更。
 
-Developer Mode 的 No-root 提供自動續期（測試版）；請繼續檢查官方計時器。透過現有 root SSH 安裝的 No-root 不使用此選項。Root 可透過 Homebrew Channel 封鎖 LG 韌體更新，包括安全更新；需要透過 Homebrew Channel 真正重新啟動電視。CYTV 更新單獨管理。
+Developer Mode 的 No-root 提供自動續期（測試版）；請繼續檢查官方計時器。透過現有 root SSH 全新安裝 No-root 時，設定會隱藏 Developer Mode 分頁。Root 可透過 Homebrew Channel 封鎖 LG 韌體更新，包括安全更新；需要透過 Homebrew Channel 真正重新啟動電視。CYTV 更新單獨管理。
 
 選擇「保留目前設定」可跳過自訂。開關顯示模式功能目前的開啟或關閉狀態。未變更的設定會保留。重新安裝 Root 仍會按上文說明刪除 CYTV 設定。請在電視上檢查外觀；重試前請在 Home 設定中檢查未確認的選項。

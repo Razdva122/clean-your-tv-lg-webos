@@ -123,6 +123,11 @@ class TVRejected(UserError):
             and reply.get('returnValue') is False
             and type(reply.get('errorCode')) is int and reply['errorCode'] == -1
             and reply.get('errorText') == 'Service does not exist: com.webos.service.systemprofile.')
+        self.config_service_missing = (
+            uri == 'com.webos.service.config/getConfigs'
+            and reply.get('returnValue') is False
+            and type(reply.get('errorCode')) is int and reply['errorCode'] == -1
+            and reply.get('errorText') == 'Service does not exist: com.webos.service.config.')
         self.package_status_denied = (
             uri == 'com.webos.appInstallService/status'
             and reply.get('returnValue') is False
