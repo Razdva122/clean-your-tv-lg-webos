@@ -252,30 +252,30 @@ class ActivationCompensation(unittest.TestCase):
 
 class RemovalContinuation(unittest.TestCase):
     @unittest.skipIf(os.name == 'nt' or not shutil.which('node'), 'POSIX TV filesystem model requires Node')
-    def test_uncertain_cleanup_carrier_is_not_reinstalled_when_inventory_lags(self):
+    def test_previous_unconfirmed_cleanup_package_does_not_restart_installation(self):
         from tests.cytv.test_no_root_simple_removal import SimpleRemoval
         fixture = SimpleRemoval()
         fixture.setUp()
         self.addCleanup(fixture.doCleanups)
-        fixture.carrier_payload()
-        directory = fixture.root/'bus/roles.d'
+        app = 'com.local.nativehome'
+        directory = fixture.root / 'bus/roles.d'
         directory.mkdir()
-        (directory/'com.local.nativehome.service.json').write_text('{}')
+        role = directory / (app + '.service.json')
+        role.write_text('{}')
         directory.chmod(0o555)
         self.addCleanup(directory.chmod, 0o755)
-        luna = fixture.remote.luna
-        def delayed_install(uri, payload, **kwargs):
-            if uri.endswith('/dev/install'):
-                fixture.remote.calls.append((uri, payload))
-                raise UserError('Lost carrier reply', reason_code='connection-interrupted')
-            return luna(uri, payload, **kwargs)
-        fixture.remote.luna = delayed_install
-        fixture.installer.reconnect = lambda: fixture.remote
-        with patch('cytv.operations.sleep'), self.assertRaises(UserError) as caught:
+        fixture.store.request_clean_removal(fixture.profile)
+        fixture.store.checkpoint(fixture.profile, stage='private-cleanup', cleanup_carriers={app: 'submitted'})
+
+        with self.assertRaises(UserError) as caught:
             fixture.remove()
-        self.assertEqual(sum(uri.endswith('/dev/install') for uri, _ in fixture.remote.calls), 1)
+
         self.assertEqual(caught.exception.reason_code, 'root-access-required')
-        self.assertEqual(fixture.store.pending(fixture.profile)['removal_reason'], 'root-access-required')
+        pending = fixture.store.pending(fixture.profile)
+        self.assertEqual(pending['removal_reason'], 'root-access-required')
+        self.assertEqual(pending['cleanup_carriers'], {app: 'submitted'})
+        self.assertTrue(role.exists())
+        self.assertFalse(any(uri.endswith(('/dev/install', '/dev/remove')) for uri, _ in fixture.remote.calls))
 
     def test_busy_root_worker_waits_and_rechecks_same_removal_goal(self):
         from tests.cytv.test_full_uninstall import FullUninstallTests

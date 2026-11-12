@@ -18,10 +18,10 @@ class InstallerSupportBuild(unittest.TestCase):
             helper = payload / 'helper.ipk'; helper.write_bytes(b'pinned Helper baseline bytes')
             digest = hashlib.sha256(helper.read_bytes()).hexdigest()
             build['stage_installer_support'](payload, work)
-            for name in ('lifecycle-gate', 'cleanup-noop'):
-                raw = (payload / 'installer-support' / name).read_bytes()
-                self.assertEqual(raw[:7], b'\x7fELF\x01\x01\x01')
-                self.assertEqual(struct.unpack_from('<H', raw, 18)[0], 40)  # EM_ARM
-                offset, entry_size, count = struct.unpack_from('<I', raw, 28)[0], struct.unpack_from('<H', raw, 42)[0], struct.unpack_from('<H', raw, 44)[0]
-                self.assertNotIn(3, [struct.unpack_from('<I', raw, offset + i * entry_size)[0] for i in range(count)])  # no PT_INTERP
+            self.assertEqual(sorted(p.name for p in (payload / 'installer-support').iterdir()), ['lifecycle-gate'])
+            raw = (payload / 'installer-support' / 'lifecycle-gate').read_bytes()
+            self.assertEqual(raw[:7], b'\x7fELF\x01\x01\x01')
+            self.assertEqual(struct.unpack_from('<H', raw, 18)[0], 40)  # EM_ARM
+            offset, entry_size, count = struct.unpack_from('<I', raw, 28)[0], struct.unpack_from('<H', raw, 42)[0], struct.unpack_from('<H', raw, 44)[0]
+            self.assertNotIn(3, [struct.unpack_from('<I', raw, offset + i * entry_size)[0] for i in range(count)])  # no PT_INTERP
             self.assertEqual(hashlib.sha256(helper.read_bytes()).hexdigest(), digest)

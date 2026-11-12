@@ -77,6 +77,9 @@ def removal_title(plan, failure=None):
     reason = _removal_reason(plan)
     if reason in ('private-cleanup-incomplete', 'cleanup-check-failed'):
         return 'Finish Clean Your TV cleanup'
+    removal = plan.get('removal') if type(plan.get('removal')) is dict else {}
+    if reason == 'root-access-required' and removal.get('stage') == 'private-cleanup':
+        return 'Cleanup is incomplete.'
     if reason == 'removal-failed':
         return 'The TV could not remove a package'
     return 'Removal is not finished yet.'
