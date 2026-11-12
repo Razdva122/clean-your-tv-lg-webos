@@ -382,9 +382,12 @@ class GuiTests(unittest.TestCase):
                             Qt.MouseButton.NoButton, Qt.KeyboardModifier.NoModifier, Qt.ScrollPhase.NoScrollPhase, False)
         self.app.sendEvent(viewport, wheel)
         self.assertGreater(reading.verticalScrollBar().value(), 0)
-        reading.verticalScrollBar().setValue(0)
-        QTest.keyClick(reading, Qt.Key.Key_PageDown)
-        self.assertGreater(reading.verticalScrollBar().value(), 0)
+        for panel in (w.content, w.check_panel, w.details):
+            with self.subTest(panel=panel.accessibleName()):
+                panel.setFocus()
+                reading.verticalScrollBar().setValue(0)
+                QTest.keyClick(panel, Qt.Key.Key_PageDown)
+                self.assertGreater(reading.verticalScrollBar().value(), 0)
         for button in (w.cancel, w.details_toggle, *w.form.findChildren(QPushButton)):
             self.assertFalse(reading.isAncestorOf(button))
             position = button.mapTo(w, button.rect().bottomRight())
@@ -392,6 +395,35 @@ class GuiTests(unittest.TestCase):
         w.details_toggle.click()
         self.app.processEvents()
         self.assertEqual(reading.verticalScrollBar().value(), 0)
+
+    def test_live_progress_stays_visible_above_tall_checks(self):
+        w = Wizard()
+        self.addCleanup(w.close)
+        w.resize(900, 680)
+        w.show()
+        w.preview.hide()
+        w.content.clear()
+        w.running = True
+        self.addCleanup(setattr, w, 'running', False)
+        for index in range(20):
+            w.receive('check', {'id': str(index), 'label': f'TV check {index}',
+                                'status': 'pass', 'detail': 'Completed'})
+        self.app.processEvents()
+        self.assertGreater(w.check_panel.height(), w.reading.viewport().height())
+        self.assertEqual(w.reading.verticalScrollBar().value(), 0)
+
+        for index in range(20):
+            w.receive('text', f'Cleanup progress {index}')
+            self.app.processEvents()
+        w.receive('text', 'Checking the current cleanup state.')
+        self.app.processEvents()
+        cursor = w.content.document().find('Checking the current cleanup state.')
+        position = w.content.viewport().mapTo(w.reading.viewport(), w.content.cursorRect(cursor).center())
+        self.assertTrue(w.reading.viewport().rect().contains(position), position)
+        w.reading.verticalScrollBar().setValue(0)
+        w.receive('text', 'Cleanup is still running.')
+        self.app.processEvents()
+        self.assertEqual(w.reading.verticalScrollBar().value(), 0)
 
     @classmethod
     def setUpClass(cls):

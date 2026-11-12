@@ -213,11 +213,18 @@ class Wizard(QMainWindow):
         self.home()
 
     def eventFilter(self, watched, event):
-        if event.type() in (QEvent.Type.ShowToParent, QEvent.Type.HideToParent):
+        event_type = event.type()
+        if event_type in (QEvent.Type.ShowToParent, QEvent.Type.HideToParent, QEvent.Type.KeyPress):
             panels = (self.content, self.check_panel, self.details)
             if watched in panels:
-                self.reading.setVisible(any(not panel.isHidden() for panel in panels))
-        if event.type() == QEvent.Type.Wheel and watched in (
+                if event_type != QEvent.Type.KeyPress:
+                    self.reading.setVisible(any(not panel.isHidden() for panel in panels))
+                elif event.modifiers() == Qt.KeyboardModifier.NoModifier and event.key() in (
+                        Qt.Key.Key_Up, Qt.Key.Key_Down, Qt.Key.Key_PageUp, Qt.Key.Key_PageDown,
+                        Qt.Key.Key_Home, Qt.Key.Key_End):
+                    QApplication.sendEvent(self.reading, event)
+                    return True
+        if event_type == QEvent.Type.Wheel and watched in (
                 self.content.viewport(), self.check_panel.viewport(), self.details.viewport()):
             QApplication.sendEvent(self.reading.viewport(), event)
             return True
@@ -406,10 +413,12 @@ class Wizard(QMainWindow):
         if self.details_toggle.isChecked():
             self.reading.verticalScrollBar().setValue(self.details.y())
 
+    def progress_scroll_position(self):
+        return max(0, self.content.y() + self.content.height() - self.reading.viewport().height())
+
     def follow_progress(self):
         if self.running and not self.details_toggle.isChecked():
-            scroll = self.reading.verticalScrollBar()
-            scroll.setValue(scroll.maximum())
+            self.reading.verticalScrollBar().setValue(self.progress_scroll_position())
 
     def reset_details(self):
         self.details.setHtml('<h3>' + html.escape(tr('Details')) + '</h3>')
@@ -593,7 +602,7 @@ class Wizard(QMainWindow):
             style = f' style="color: {color}"'
             markup = f'<{tag}{style}>' + html.escape(text).replace('\n', '<br>') + f'</{tag}>'
             scroll = self.reading.verticalScrollBar()
-            if self.running and scroll.value() == scroll.maximum():
+            if self.running and scroll.value() == self.progress_scroll_position():
                 QTimer.singleShot(0, self, self.follow_progress)
             self.content.append(markup)
             if kind.startswith('error'):
