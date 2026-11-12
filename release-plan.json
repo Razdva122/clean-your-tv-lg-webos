@@ -1,7 +1,13 @@
 {
   "schema": 1,
   "version": null,
-  "changes": [],
+  "changes": [
+    {
+      "pr": 569,
+      "issues": [],
+      "summary": "Update the Root Home naming heading after release"
+    }
+  ],
   "excluded": [],
   "acceptance": ""
 }
