@@ -20,14 +20,14 @@ remain intact. An edition fallback determines the final mode before customizatio
 
 ## Debloat
 
-The optional Debloat step comes before customization. All ten choices start
-unselected. Root uses the LG Settings Service. No-root writes through a paired
-SSAP connection requesting the regular `WRITE_SETTINGS` permission. It uses a
-separate pairing record and reads the three preference categories through
-Developer Mode SSH, or through Luna when connected by root SSH. Live Plus also
-has an SSAP read fallback. The file reader returns only the requested `on` or
-`off` value. A firmware may expose a setting without making its value readable
-to the installer.
+The optional Debloat step comes before customization. The desktop wizard starts
+with all ten choices selected and applies them when the user clicks Continue.
+With root SSH, both editions read and write through the LG Settings Service.
+No-root in Developer Mode writes through a separate SSAP pairing requesting
+the regular `WRITE_SETTINGS` permission. It reads preferences through Developer
+Mode SSH and can also read Live Plus through SSAP. The file reader returns
+only the requested `on` or `off` value. A firmware may expose a setting
+without making its value readable to the installer.
 
 The installer skips values that already match. Before a selected write with a
 readable original, it saves the original and requested value in the private
@@ -38,7 +38,7 @@ the setting.
 Selected settings with unreadable originals can be sent without adding a
 restore entry. Automatic restoration on uninstall is not implemented yet.
 
-The No-root setter may be unavailable or rejected on a given firmware. Debloat
+The SSAP setter may be unavailable or rejected on a given firmware. Debloat
 reports the rejected write for each affected setting. It verifies accepted writes
 with a separate read. Debloat is skipped for non-interactive installs and
 console installs using `--yes`.

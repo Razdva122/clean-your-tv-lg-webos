@@ -44,6 +44,21 @@ class DebloatTests(unittest.TestCase):
         self.assertEqual(writes, ['screenSaverAd', 'livePlus', 'lmt'])
         self.assertEqual(values['screenSaverAd'], 'off')
 
+    def test_no_root_with_root_ssh_writes_and_verifies_through_luna(self):
+        self.installer.profile.update(edition='no-root', connection='root-ssh')
+        self.installer.remote = SimpleNamespace(root=True)
+        with patch.object(self.installer.remote, 'luna', create=True) as luna, patch.object(debloat, 'SSAP') as connect:
+            luna.side_effect = [
+                {'returnValue': True, 'settings': {'livePromotion': 'on'}},
+                {'returnValue': True},
+                {'returnValue': True, 'settings': {'livePromotion': 'off'}},
+            ]
+            self.assertEqual(debloat.apply(self.installer, ['livePromotion']), {'livePromotion': 'verified'})
+            connect.assert_not_called()
+            self.assertEqual(luna.call_count, 3)
+            self.assertEqual(luna.call_args_list[1].args, (
+                debloat.SERVICE + 'setSystemSettings', {'category': 'option', 'settings': {'livePromotion': 'off'}}))
+
     def test_no_root_reads_files_and_sends_only_selected_key_over_ssap(self):
         replies = iter(['null', '"off"'])
         self.installer.profile['edition'] = 'no-root'

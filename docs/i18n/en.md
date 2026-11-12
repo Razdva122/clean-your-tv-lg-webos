@@ -166,7 +166,7 @@ Open Settings → Wallpapers → Upload from phone and scan the code. Choose a J
 
 ## Set up your Clean Your TV
 
-Before choosing a theme, use **Debloat** to select which LG ads, recommendations, privacy settings and notifications to change. Check each result before continuing. If the installer could not read the original value, it cannot save it for an automatic undo. Choose **Skip Debloat** to keep your current settings.
+Before choosing a theme, use **Debloat** to select which LG ads, recommendations, privacy settings and notifications to change. The desktop installer selects every option by default. Clear any options you want to keep as they are before clicking **Continue**. Check each result before continuing. If the installer could not read the original value, it cannot save it for an automatic undo. Choose **Skip Debloat** to keep your current settings.
 
 After successful installation, choose Classic, Liquid Glass or Ribbon and turn Home weather on or off. Ribbon does not support weather; Liquid Glass uses the compact format. Weather can find an approximate city through your internet connection; change it later in Home settings.
 
