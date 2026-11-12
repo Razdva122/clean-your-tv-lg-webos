@@ -7,7 +7,8 @@ CALLS = {
     'home-settings': ('com.webos.settingsservice/getSystemSettings', {'category':'general','keys':['defaultApps']}),
     'home-profiles': ('com.webos.service.systemprofile/getProfiles', {'names':['defaultApps','idleApp'],'subscribe':False}),
 }
-REASONS = ('readable', 'rejected', 'invalid-reply', 'unconfirmed', 'not-checked', 'service-absent')
+REASONS = ('readable', 'rejected', 'invalid-reply', 'unconfirmed', 'not-checked',
+           'service-absent', 'setting-not-found')
 COMPOSITOR_FAILURES = (
     'c1-probe-failed', 'system-info-request-failed', 'system-info-invalid',
     'keyfilters-request-failed', 'keyfilters-not-configured', 'keyfilters-incompatible', 'keyfilters-service-absent',
@@ -217,25 +218,30 @@ def verify(remote, checklist, info, allow_c1=False, allow_compositor=False):
     codes = info['root_capability_codes'] = {}
     for name in (('home-profiles','home-settings') if allow_c1 else CALLS):
         uri, payload = CALLS[name]
-        absent = False
+        rejection = None
         checklist.update(name, 'running')
         code = None
         try:
             reply = remote.luna(uri, payload, timeout=5)
-            if allow_c1 and name == 'home-profiles' and isinstance(reply,dict) and reply.get('returnValue') is False:
-                absent = TVRejected('', reply, uri).systemprofile_missing
             code = reply.get('errorCode') if isinstance(reply,dict) else None
-            reason = ('readable' if valid(name,reply) else
-                      'rejected' if isinstance(reply,dict) and reply.get('returnValue') is False else 'invalid-reply')
+            if isinstance(reply, dict) and reply.get('returnValue') is False:
+                rejection = TVRejected('', reply, uri)
+            reason = 'readable' if valid(name, reply) else 'invalid-reply'
         except TVRejected as error:
-            reason = 'rejected'
-            absent = error.systemprofile_missing
+            rejection = error
             code = error.luna.get('error_code')
         except Exception:
             reason = 'unconfirmed'
+        if rejection is not None:
+            if name == 'home-profiles' and rejection.systemprofile_missing:
+                reason = 'service-absent'
+            elif name == 'home-settings' and rejection.system_setting_not_found:
+                reason = 'setting-not-found'
+            else:
+                reason = 'rejected'
         if type(code) is int and -(2**31)<=code<2**31:
             codes[name] = code
-        if allow_c1 and name == 'home-profiles' and absent:
+        if allow_c1 and reason == 'service-absent':
             failure = None
             schema = 2
             try:
@@ -249,7 +255,7 @@ def verify(remote, checklist, info, allow_c1=False, allow_compositor=False):
                     failure = compositor_failure(remote, info)
                     supported = failure is None
                     schema = 3
-            reasons[name] = 'service-absent'
+            reasons[name] = reason
             if supported:
                 info.pop('root_native_home_mode', None)
                 for key in CALLS:
