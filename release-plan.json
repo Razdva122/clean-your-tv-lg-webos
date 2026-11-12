@@ -71,10 +71,11 @@
     }
   ],
   "excluded": [],
-  "acceptance": "",
+  "acceptance": "Scoped acceptance on project OLED55C3RLA (43.21.71, webOS SDK 11.2.0) passed. The exact macOS ARM64 CLI completed Root removal, No-root setup and removal, verified software restarts, and network HOME routing. Protected signing run 43273038479:1 supplied the exact Root RC1 set. The original System Updater applied and rolled it back with all three terminals, installed-byte checks, profile comparisons and owner-confirmed Root Home tiles in both directions. Android API 35 ARM64 emulator upgrade passed. Artifact hashes, limits and case reconciliation: docs/history/2026-11-12-release-1.20.0-candidate.md.",
   "build": {
     "run_id": 43261506679,
     "attempt": 3,
     "source": "a7ced816ceb1c2be733dc64b0d2fb77ddc6f5d98"
-  }
+  },
+  "acceptance_build": "43261506679:3"
 }
