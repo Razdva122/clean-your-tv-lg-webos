@@ -74,7 +74,18 @@
   function inputId(id) {
     return /^input:[A-Za-z0-9_.-]{1,250}$/.test(id);
   }
-  function create(storage, inventory, config, readInputs) {
+  function replaceFallbackIcons(apps, packaged, fallbackIcon) {
+    if (!fallbackIcon) return;
+    var icons = Object.create(null);
+    packaged.forEach(function (app) {
+      if (app.icon && app.icon !== fallbackIcon) icons[app.id] = app.icon;
+    });
+    apps.forEach(function (app) {
+      if ((!app.icon || app.icon === fallbackIcon) && icons[app.id])
+        app.icon = icons[app.id];
+    });
+  }
+  function create(storage, inventory, config, readInputs, packaged) {
     var catalog = clean(inventory),
       hidden = unique(config.hiddenApps || []),
       ids,
@@ -126,6 +137,12 @@
         )
       );
     }
+    if (packaged && packaged.fallbackIcon)
+      replaceFallbackIcons(
+        catalog,
+        clean(packaged.apps),
+        packaged.fallbackIcon
+      );
     function inputTiles() {
       return (readInputs ? readInputs() : [])
         .filter(function (input) {
@@ -355,5 +372,10 @@
     }
     read(false);
   }
-  return { create: create, installed: installed, key: KEY };
+  return {
+    create: create,
+    installed: installed,
+    key: KEY,
+    replaceFallbackIcons: replaceFallbackIcons
+  };
 });

@@ -24,6 +24,8 @@ function harness(
     systemRpc,
     schedule = setTimeout,
     storage,
+    packagedInventory = { apps: [{ id: 'packaged' }], inputs: [] },
+    packagedFallback,
     tiles = ['app.one']
   } = {}
 ) {
@@ -45,7 +47,8 @@ function harness(
   const window = {
     ROOT_VERSION: '1.2.3',
     CONFIG: profile.config,
-    TV_APPS: { apps: [{ id: 'packaged' }], inputs: [] },
+    TV_APPS: packagedInventory,
+    CYTVPackagedIconFallback: packagedFallback,
     HomeData: data,
     RootProfileData: data,
     AppLibrary: require('../../launcher/app-library'),
@@ -153,6 +156,61 @@ async function startAppearance(h) {
   return context.ThemeManager.current();
 }
 (async () => {
+  const fallback = profile.inventory.apps[0].icon;
+  const recovered = 'data:image/png;base64,Yg==';
+  const packagedInventory = {
+    apps: [
+      { id: 'app.one', title: 'One', icon: recovered },
+      { id: 'app.two', title: 'Two', icon: recovered },
+      { id: 'gone', title: 'Gone', icon: recovered }
+    ],
+    inputs: []
+  };
+  const saved = new Map([
+    ['tvhome.profile.v1', JSON.stringify(profile)],
+    [
+      'tvhome.layout',
+      JSON.stringify({
+        version: 1,
+        catalogConfirmed: true,
+        ids: ['app.one', 'app.two'],
+        hidden: [],
+        catalog: [
+          profile.inventory.apps[0],
+          { id: 'app.two', title: 'Two', icon: fallback }
+        ]
+      })
+    ]
+  ]);
+  const personalized = harness('no-root', {
+    noBackup: true,
+    storage: saved,
+    packagedInventory,
+    packagedFallback: fallback
+  });
+  await tick();
+  assert.equal(personalized.window.TV_APPS.apps[0].icon, recovered);
+  assert.deepEqual(Object.keys(personalized.window.TV_APPS).sort(), [
+    'apps',
+    'inputs'
+  ]);
+  const { TV_APPS, HomePackagedInventory, AppLibrary, CONFIG } =
+    personalized.window;
+  const catalog = AppLibrary.create(
+    personalized.ctx.localStorage,
+    TV_APPS.apps,
+    CONFIG,
+    null,
+    HomePackagedInventory
+  );
+  assert.deepEqual(
+    Array.from(catalog.visible(), (app) => [app.id, app.icon]),
+    [
+      ['app.one', recovered],
+      ['app.two', recovered]
+    ]
+  );
+  assert.deepEqual(catalog.available(), []);
   for (const edition of ['no-root', 'root']) {
     if (edition === 'root') {
       const named = harness(edition, {

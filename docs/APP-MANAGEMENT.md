@@ -146,6 +146,11 @@ on the selected TV. Missing or failed images still use the existing fallback.
 The secondary catalog supplies icon candidates without exposing additional
 hidden applications.
 
+During personalization, the installer can scale oversized PNG, JPEG and WebP
+icons to fit the existing packaged icon limit. Home can replace an older
+placeholder for the same app while preserving confirmed app removals. Live
+refresh continues to use its smaller download limit.
+
 ## Local verification
 
 Run `bash scripts/test.sh` in a Python environment containing the project dependencies.

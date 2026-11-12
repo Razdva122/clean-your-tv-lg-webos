@@ -77,6 +77,39 @@ test('failed reconciliation storage commit preserves the complete previous model
   assert(library.visible().some((a) => a.id === 'gone'));
   assert.equal(library.visible().find((a) => a.id === 'kept').title, 'Kept');
 });
+test('a new packaged icon replaces an old placeholder without restoring removed apps', () => {
+  const fallback = 'data:image/png;base64,ZmFsbGJhY2s=';
+  const resized = 'data:image/png;base64,cmVzaXplZA==';
+  const live = 'data:image/png;base64,bGl2ZQ==';
+  const state = {
+    version: 1,
+    catalogConfirmed: true,
+    ids: ['kept', 'live'],
+    hidden: [],
+    catalog: [
+      { id: 'kept', title: 'Kept', icon: fallback },
+      { id: 'live', title: 'Live', icon: live }
+    ]
+  };
+  const apps = [
+    { id: 'kept', title: 'Kept', icon: resized },
+    { id: 'live', title: 'Live', icon: resized },
+    { id: 'gone', title: 'Gone', icon: resized }
+  ];
+  const library = create(
+    { getItem: () => JSON.stringify(state) },
+    [],
+    {},
+    null,
+    { apps, fallbackIcon: fallback }
+  );
+  assert.deepEqual(
+    library.visible().map((a) => a.icon),
+    [resized, live]
+  );
+  assert.deepEqual(library.available(), []);
+});
+
 function read(installed, extra = {}) {
   class WS extends EventEmitter {
     constructor() {
