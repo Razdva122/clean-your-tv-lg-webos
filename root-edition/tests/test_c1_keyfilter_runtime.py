@@ -368,6 +368,65 @@ class RuntimeTests(unittest.TestCase):
         policy.event(dict(event='stop',appId='background',windowType='_WEBOS_WINDOW_TYPE_CARD'),1)
         self.assertFalse(policy.due(2))
 
+    def test_sam_stop_and_close_without_window_type_keep_original_return_deadline(self):
+        policy = self.k.ReturnPolicy('1' * 32)
+        foreground = dict(event='foreground', appId='player', windowType=self.k.CARD)
+        stop = dict(event='stop', appId='player', reason='windowPolicy')
+        close = dict(stop, event='close')
+        policy.event(foreground, 0)
+        policy.event(stop, 1)
+        self.assertFalse(policy.due(1.9))
+        self.assertTrue(policy.due(2))
+        policy.event(close, 1.5)
+        self.assertTrue(policy.due(2))
+        home = dict(event='foreground', appId=self.k.STOCK, windowType='_WEBOS_WINDOW_TYPE_HOME')
+        for events in ((stop, home, close), (home, stop, close)):
+            with self.subTest(events=events):
+                policy = self.k.ReturnPolicy('1' * 32)
+                policy.event(foreground, 0)
+                for at, event in enumerate(events):
+                    policy.event(event, 1 + at / 10)
+                self.assertFalse(policy.due(1.9))
+                self.assertTrue(policy.due(2))
+
+    def test_sam_stop_needs_tracked_content_and_new_activity_cancels_return(self):
+        foreground = dict(event='foreground', appId='player', windowType=self.k.CARD)
+        stop = dict(event='stop', appId='player', reason='windowPolicy')
+        for interruption in (
+            dict(stop, event='launch', appId='new-app'),
+            dict(stop, event='close', appId='other-app'),
+            dict(foreground, appId='settings', windowType='_WEBOS_WINDOW_TYPE_OVERLAY'),
+        ):
+            with self.subTest(interruption=interruption):
+                policy = self.k.ReturnPolicy('1' * 32)
+                policy.event(stop, 0)
+                self.assertFalse(policy.due(1))
+                policy.event(foreground, 1)
+                policy.event(stop, 2)
+                self.assertTrue(policy.due(3))
+                policy.event(interruption, 2.5)
+                self.assertFalse(policy.due(3))
+
+    def test_native_home_surface_requires_stock_identity_and_no_other_visible_app(self):
+        token = '1' * 32
+        home = dict(appId=self.k.STOCK, windowType='_WEBOS_WINDOW_TYPE_HOME', displayId=0)
+        policy = self.k.ReturnPolicy(token)
+        policy.event(dict(home, event='foreground'), 1)
+        self.assertTrue(policy.due(2))
+
+        proof = self.proof()
+        proof.update(healthy=True, stopped=False, state='armed', guardian_pid=123, stock_verified=False)
+        power = dict(returnValue=True, state='Active')
+        def ready(rows, foreground=''):
+            return self.k.can_return(dict(returnValue=True, foregroundAppInfo=rows), power,
+                                     proof, token, dict(returnValue=True, appId=foreground))
+        self.assertTrue(ready([home]))
+        self.assertFalse(ready([home], 'player'))
+        self.assertFalse(ready([dict(home, appId='foreign')]))
+        self.assertFalse(ready([dict(home, displayId=1)]))
+        self.assertFalse(ready([dict(home, multiview=True)]))
+        self.assertFalse(ready([home, dict(appId='settings', windowType='_WEBOS_WINDOW_TYPE_OVERLAY')]))
+
     def test_modified_owned_entry_restore_retains_native_stop_and_evidence(self):
         self.prepare()
         changed=dict(self.k.filter_entry(self.root),handler='foreign')
