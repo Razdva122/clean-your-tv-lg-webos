@@ -25,6 +25,8 @@ Zapněte TV a připojte ji ke stejné domácí síti jako počítač nebo telefo
 
 U Root instalátor ověří a vybere dostupný způsob ovládání Home. Pokud nelze kompatibilitu ověřit, instalace se zastaví; neobcházejte neúspěšnou kontrolu.
 
+Pokud instalátor nabídne **No-root**, můžete pokračovat přes stávající root připojení SSH bez zapínání Developer Mode.
+
 **No-root → Root:** Pokud jste po úplném odebrání znovu nainstalovali No-root, přechod na Root může vyžadovat nejprve vyčištění instalace. Zálohujte nastavení Home, zvolte **Odinstalovat Clean Your TV** s uloženým připojením Root a počkejte na ověřené odebrání. Odebere se také No-root Home a Helper. Poté nainstalujte Root a uchovejte záznamy obnovy.
 
 ### Developer Mode (No-root)
