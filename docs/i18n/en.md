@@ -1,6 +1,6 @@
 # Clean Your TV — user guide
 
-Name your TV on the final setup page alongside theme and weather (default: Home), or use --tv-name in the CLI. Change it later in Settings → Your Home screen → TV name. Saving attempts to rename the existing LG launch point without reinstalling or adding a shortcut, then checks its title. If LG refuses, Home keeps your saved name and reports that the startup title is unverified. LG Home, loading-screen behavior and persistence need checking on the TV. Existing preferences survive supported updates; names allow 48 characters. The network name is unchanged and no second loading screen is added.
+Root Edition only: set the **Home screen name** on the final installer page. Leave it blank to keep the current name, or use `--tv-name` in the CLI.
 
 Unreleased installer change: before a new installation, the computer installer checks for a newer stable installer on GitHub. Choose “Open GitHub and download the latest version” to stop and download it, or “No, install this version” to continue explicitly. If the check fails, you can continue. Pending operations and recovery skip the check.
 

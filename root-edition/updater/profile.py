@@ -2,6 +2,7 @@
 import base64
 import binascii
 import re
+import unicodedata
 from .store import MAX_BYTES, encode
 import json
 
@@ -64,7 +65,7 @@ def validate(value):
     if 'tvhome.name' in value['settings']:
         name=value['settings']['tvhome.name']
         _text(name,192)
-        if len(name)>48 or re.search(r'[\x00-\x1f\x7f-\x9f\u200b-\u200f\u2028-\u202e\u2060-\u206f]',name):
+        if len(name) > 48 or name != unicodedata.normalize('NFC', name.strip()) or re.search(r'[\u0000-\u001f\u007f-\u009f\u00ad\u061c\u200b-\u200f\u2028-\u202e\u2060-\u206f\ufeff\ud800-\udfff]', name):
             raise ValueError('invalid TV name')
     if 'tvhome.language' in value['settings'] and value['settings']['tvhome.language'] not in ('auto', 'en', 'cs', 'de', 'es', 'pt-BR', 'fr', 'it', 'ko', 'hi', 'pl', 'ru'):
         raise ValueError('invalid language')

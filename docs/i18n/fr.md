@@ -1,6 +1,6 @@
 # Clean Your TV — guide d’utilisation
 
-Le nom du téléviseur figure sur la dernière page de configuration, avec le thème et la météo (Home par défaut) ; la CLI accepte --tv-name. Modifiez-le ensuite dans Réglages → Écran d’accueil → Nom du téléviseur. Enregistrer tente de renommer le point de lancement LG existant sans réinstaller ni créer de raccourci, puis vérifie son titre. Si LG refuse, Home conserve le nom et indique que le titre de démarrage est non vérifié. Vérifiez son affichage et sa persistance sur le téléviseur. Les mises à jour compatibles préservent les préférences. Maximum 48 caractères ; le nom réseau reste inchangé, sans second écran de chargement.
+Root Edition uniquement : choisissez le nom de l’écran d’accueil sur la dernière page du programme d’installation. Laissez le champ vide pour conserver le nom actuel. Dans la CLI, utilisez `--tv-name`.
 
 Modification non publiée : avant une nouvelle installation, l’installateur de l’ordinateur recherche une version stable plus récente sur GitHub. Choisissez « Ouvrir GitHub et télécharger la dernière version » pour arrêter et la télécharger, ou « Non, installer cette version » pour continuer explicitement. Si la vérification échoue, vous pouvez continuer. Les opérations en attente et la récupération ignorent cette vérification.
 

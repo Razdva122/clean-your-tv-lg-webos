@@ -788,17 +788,19 @@ class Wizard(QMainWindow):
         self.badge.setText(tr('Step 5 of 5'))
         profile = self.selected_profile or {'edition': 'no-root'}
         fields.setAlignment(Qt.AlignmentFlag.AlignTop)
-        name_label = QLabel(tr('TV name'))
-        name = QLineEdit(self.install_settings_current.get('tv_name', 'Home'))
-        name.setObjectName('tvName')
-        name.setMaxLength(96)
-        name_label.setBuddy(name)
-        fields.addWidget(name_label)
-        fields.addWidget(name)
-        name_error = QLabel('')
-        name_error.setWordWrap(True)
-        name_error.setObjectName('tvNameError')
-        fields.addWidget(name_error)
+        name = None
+        if profile['edition'] == 'root':
+            name_label = QLabel(tr('Home screen name'))
+            name = QLineEdit()
+            name.setObjectName('tvName')
+            name.setPlaceholderText(self.install_settings_current.get('tv_name', 'Home'))
+            name_label.setBuddy(name)
+            fields.addWidget(name_label)
+            fields.addWidget(name)
+            name_error = QLabel('')
+            name_error.setWordWrap(True)
+            name_error.setObjectName('tvNameError')
+            fields.addWidget(name_error)
         fields.addWidget(QLabel(tr('Theme')))
         cards_row = QWidget()
         cards_layout = QHBoxLayout(cards_row)
@@ -867,17 +869,19 @@ class Wizard(QMainWindow):
                 hint.setText(tr('Current setting unavailable. Check it in Home settings.'))
             switches[key] = toggle
         def save():
-            value = {'theme': group.checkedButton().key, 'weather': weather.isChecked(), 'tv_name': name.text()}
+            value = {'theme': group.checkedButton().key, 'weather': weather.isChecked()}
             for key, toggle in switches.items():
                 if toggle.isEnabled() and toggle.isChecked() != current[key]:
                     value[key] = toggle.isChecked()
-            try:
-                validated = settings.validate(value, profile)
-            except ValueError:
-                name.setFocus()
-                name_error.setText(tr('TV name must contain at most 48 characters, without control characters.'))
-                return
-            self.submit(json.dumps(validated))
+            if name is not None and name.text().strip():
+                from .package import normalize_tv_name
+                try:
+                    value['tv_name'] = normalize_tv_name(name.text())
+                except ValueError:
+                    name.setFocus()
+                    name_error.setText(tr('Home screen name must contain at most 48 characters, without control characters.'))
+                    return
+            self.submit(json.dumps(settings.validate(value, profile)))
         self.button('Continue', save, True)
         self.button('Keep current settings', lambda: self.submit('{}'))
         cards[0].setFocus()
@@ -1029,10 +1033,6 @@ class Wizard(QMainWindow):
                 entry.setEchoMode(QLineEdit.EchoMode.Password)
             elif 'IP address' in prompt.label:
                 entry.setPlaceholderText(tr('For example, 192.168.1.50'))
-            elif prompt.label == 'TV name [Home]: ':
-                entry.setText(prompt.default)
-                entry.setMaxLength(48)
-                entry.selectAll()
             self.form_layout.addWidget(entry)
             def submit_entry():
                 value = entry.text()

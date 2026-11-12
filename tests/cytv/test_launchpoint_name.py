@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 from cytv.launchpoint_name import rename
 from cytv.install_settings import apply_services
 
-APP = 'com.gathin.tvhome'
+APP = 'com.cleanyourtv.root.preview'
 
 def point(title='Home', identity=None):
     return {'id':APP, 'launchPointId': identity or APP+'_default', 'title':title}
@@ -44,7 +44,7 @@ class LaunchPointTests(unittest.TestCase):
 
     def test_optional_denial_does_not_fail_install_or_drop_local_name_request(self):
         remote=MagicMock();remote.luna.side_effect=[reply(point()),{'returnValue':False},{'returnValue':True}]
-        installer=SimpleNamespace(remote=remote,profile={'edition':'no-root'},tv_info={})
+        installer=SimpleNamespace(remote=remote,profile={'edition':'root'},tv_info={})
         apply_services(installer,{'tv_name':'New'},lambda *_:None)
         self.assertEqual(installer.tv_info['installation_settings'],{'launchpoint_title':'unconfirmed','tv_name':'requested-in-home'})
         self.assertEqual(remote.luna.call_args.args[1]['params']['cytvSetup']['tv_name'],'New')

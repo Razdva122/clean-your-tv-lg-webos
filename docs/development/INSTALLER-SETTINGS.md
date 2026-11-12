@@ -8,7 +8,7 @@ opens customization or repeats optional service writes.
 
 | Choice | Root | No-root Developer Mode | No-root through root SSH |
 | --- | --- | --- | --- |
-| TV name (existing primary launch point; API/readback required) | Attempted | Attempted | Attempted |
+| Home screen name (existing primary launch point) | Available | — | — |
 | Classic, Liquid Glass, Ribbon | Yes | Yes | Yes |
 | Home weather | Yes | Yes | Yes |
 | Developer Mode auto-renewal Beta | No | Yes | No |
@@ -41,29 +41,21 @@ create a reload loop. Invalid input causes no writes. Storage errors leave the
 marker uncommitted and display the existing save-error toast. Root reinstallation
 retains its existing full-removal semantics before this optional stage.
 
-TV naming is also on this final page, rather than before package installation.
-The CLI asks at the same stage; `--tv-name` applies after a successful installation,
-including non-interactive runs. Omitting it in non-interactive mode preserves the
-existing/default name. Cancelling optional customization does not undo installation.
+**Home screen name** is available during Root Edition installation. The field
+is optional, and blank input keeps the current name. Enter `Home` explicitly to
+reset it. The Root CLI accepts `--tv-name` for scripted installations.
 
-`cytv/launchpoint_name.py` lists launch points and selects exactly one primary point
-for the installed edition's app ID (an explicit default marker or the app's default
-ID). It never creates a shortcut, rewrites package titles or changes permissions.
-It sends only `launchPointId` and `title` to
-`com.webos.applicationManager/updateLaunchPoint`, then reads `listLaunchPoints`
-again and requires the same identity and exact title. Missing/ambiguous primary
-points, permission denial, timeouts and readback mismatch are unconfirmed, without
-automatic retry or reinstall. The TV-side name panel uses the same selection and
-readback rules through `PalmServiceBridge`, retaining the Home preference if LG
-refuses the system change. A later reset also attempts the primary-point rename.
+The installer selects the existing Root primary launch point, requests a title
+change and checks the same ID and exact title with `listLaunchPoints`. Missing
+or ambiguous points, denied writes, timeouts and readback mismatches remain
+unconfirmed. The installer sends the Home preference separately with the
+cosmetic launch parameters. Root profile-preserving updates can carry the
+saved preference.
 
-Diagnostics keep only `saved`/`unconfirmed` under `launchpoint_title`; the separate
-`tv_name` result is `requested-in-home`/`unconfirmed` and never contains the name.
-The GUI reads the existing primary title to prefill the final field when possible.
-An API success and matching readback do **not** establish LG Home presentation,
-loading-screen behavior, Home-button routing or persistence through app/TV restarts.
-Those checks remain pending on genuine Developer Mode hardware; OSE's public
-API reference does not establish consumer-TV permission or behavior.
+Diagnostics report `saved` or `unconfirmed` for `launchpoint_title`, and
+`requested-in-home` or `unconfirmed` for `tv_name`. Root hardware acceptance
+still needs to check LG Home, the system loading screen, Home-button launch
+and persistence after app and TV restart.
 
 Optional service choices use their existing APIs after installation:
 

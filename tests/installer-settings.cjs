@@ -77,7 +77,7 @@ assert.throws(() =>
 console.log(
   'PASS post-install appearance parameters, mode bounds, one-time application and storage errors'
 );
-const homeName = require('../launcher/tv-name');
+const homeName = require('../root-edition/ui/tv-name');
 const namedSetup = create({ localStorage: storage, HomeName: homeName });
 assert.equal(
   namedSetup.apply({ cytvSetup: { id: 'd'.repeat(32), tv_name: 'New' } }),

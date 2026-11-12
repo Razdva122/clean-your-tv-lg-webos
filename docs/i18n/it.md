@@ -1,6 +1,6 @@
 # Clean Your TV — guida all’uso
 
-Il nome della TV si trova nell’ultima pagina di configurazione, accanto a tema e meteo (predefinito: Home); la CLI supporta --tv-name. Modificalo poi in Impostazioni → Schermata Home → Nome TV. Il salvataggio tenta di rinominare il punto di avvio LG esistente senza reinstallare né creare scorciatoie e ne verifica il titolo. Se LG rifiuta, Home conserva il nome e segnala che il titolo di avvio non è verificato. Controlla visualizzazione e persistenza sulla TV. Gli aggiornamenti compatibili preservano le preferenze. Massimo 48 caratteri; il nome di rete non cambia e non viene aggiunta una seconda schermata di caricamento.
+Solo Root Edition: imposta il nome della schermata Home nell’ultima pagina del programma di installazione. Lascia vuoto il campo per mantenere il nome attuale. Nella CLI usa `--tv-name`.
 
 Modifica non ancora pubblicata: prima di una nuova installazione, l’installer del computer cerca una versione stabile più recente su GitHub. Scegli “Apri GitHub e scarica l’ultima versione” per fermarti e scaricarla, oppure “No, installa questa versione” per continuare esplicitamente. Se la verifica non riesce, puoi continuare. Le operazioni in sospeso e il ripristino saltano la verifica.
 

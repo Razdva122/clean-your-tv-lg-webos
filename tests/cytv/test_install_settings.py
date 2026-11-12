@@ -73,8 +73,6 @@ class SettingsTests(unittest.TestCase):
             if 'Customize' in prompt:
                 self.assertIn('n', options, 'Android must offer a non-cancelling skip')
                 return 'y'
-            if prompt == 'TV name [Home]: ':
-                return 'Home'
             if 'Theme' in prompt:
                 return '1'
             if 'auto-renewal' in prompt:

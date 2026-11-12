@@ -24,10 +24,12 @@ class GuiTests(unittest.TestCase):
         from cytv.install_settings import PROMPT
         w=Wizard();self.addCleanup(w.close)
         w.channel=Channel(lambda *_:None)
+        w.selected_profile = {'edition': 'root'}
         w.receive('installation-settings', {'tv_name':'Existing'})
         w.show_prompt(Prompt(PROMPT))
         entry=w.form.findChild(QLineEdit,'tvName')
-        self.assertEqual(entry.text(),'Existing')
+        self.assertEqual(entry.placeholderText(),'Existing')
+        self.assertEqual(entry.text(), '')
         submit=next(button for button in w.form.findChildren(QPushButton) if button.text()=='Continue')
         entry.setText('x'*49);submit.click()
         self.assertTrue(w.channel.answers.empty())

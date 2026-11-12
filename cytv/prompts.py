@@ -121,10 +121,11 @@ def confirm(prompt, ask, write, default=False):
 def tv_name(ask, write):
     from .package import normalize_tv_name as validate
     write = console(write)
-    write.heading('What would you like to name your TV?')
+    write.heading('Home screen name')
     while True:
         try:
-            return validate(answer(ask, 'TV name [Home]: '))
+            value = answer(ask, 'Home screen name (Enter keeps current name): ')
+            return validate(value) if value.strip() else None
         except ValueError as error:
             write.error(str(error))
 

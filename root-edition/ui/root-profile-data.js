@@ -101,11 +101,16 @@
       text(value.settings['tvhome.name'], 192, true);
       if (
         !value.settings['tvhome.name'].length ||
+        value.settings['tvhome.name'] !==
+          value.settings['tvhome.name'].replace(/^\s+|\s+$/g, '') ||
+        (value.settings['tvhome.name'].normalize &&
+          value.settings['tvhome.name'] !==
+            value.settings['tvhome.name'].normalize('NFC')) ||
         value.settings['tvhome.name'].replace(
           /[\ud800-\udbff][\udc00-\udfff]/g,
           'x'
         ).length > 48 ||
-        /[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028-\u202e\u2060-\u206f]/.test(
+        /[\u0000-\u001f\u007f-\u009f\u00ad\u061c\u200b-\u200f\u2028-\u202e\u2060-\u206f\ufeff]/.test(
           value.settings['tvhome.name']
         )
       )

@@ -1,6 +1,6 @@
 # Clean Your TV — průvodce instalací
 
-Název TV je na závěrečné stránce nastavení vedle motivu a počasí (výchozí Home); CLI podporuje --tv-name. Později jej změňte v Nastavení → Domovská obrazovka → Název TV. Uložení zkusí přejmenovat existující spouštěcí bod LG bez přeinstalace a nového zástupce a ověří jeho titul. Pokud LG odmítne, Home název uloží a oznámí neověřený spouštěcí titul. Zobrazení a trvalost ověřte na TV. Podporované aktualizace zachovají nastavení. Nejvýše 48 znaků; síťový název se nemění a druhá načítací obrazovka se nepřidává.
+Pouze Root Edition: na poslední stránce instalátoru nastavte název obrazovky Home. Prázdné pole ponechá stávající název. V CLI použijte `--tv-name`.
 
 Dosud nevydaná změna instalátoru: před novou instalací instalátor v počítači ověří novější stabilní verzi na GitHubu. Vyberte „Otevřít GitHub a stáhnout nejnovější verzi“ pro zastavení a stažení, nebo „Ne, nainstalovat tuto verzi“ pro výslovné pokračování. Pokud kontrola selže, můžete pokračovat. Nedokončené operace a obnovení kontrolu přeskočí.
 

@@ -1,25 +1,16 @@
 # cytv standalone installer
 
-## Name the launcher (unreleased)
+## Name the Home screen (Root Edition, unreleased)
 
-Interactive installation asks **What would you like to name your TV?**, with
-**Home** as the default. The graphical installer presents the same question.
-For scripted setup, use `cytv install --tv-name "Aashiyaan"` alongside your normal
-connection options. `--yes` and non-interactive installation use Home unless
-`--tv-name` is supplied. The option is only accepted for installation.
+The final customization step offers **Home screen name**. Leave the field blank
+to keep the current name. Enter `Home` explicitly to reset it. For scripted
+installation, use `cytv install --edition root --tv-name "Living Room"`.
+Names can contain up to 48 Unicode characters.
 
-Names can contain up to 48 Unicode characters; blank input selects Home and
-control characters are rejected. The installer sets the package title and seeds
-the launcher's default preference. Later, use **Settings → Home → TV name**
-to save a different name or reset to Home. Upgrading an older installation adds
-this control automatically, defaulting to Home without clearing existing settings.
-Saved names survive restart and supported profile-preserving updates; a saved
-choice takes precedence over a replacement package's default seed.
-
-Settings saves the preference and changes the launcher's document title immediately.
-LG's startup loading label comes from installed package metadata: apply the same
-name through the installer to change it. Home does not add another loading screen. LG supplies its localized
-“Loading…” message. This feature does not change the TV's network name.
+After installation, the installer requests the name in Clean Your TV and
+attempts to update the existing primary launch point in LG Home. It reports the
+launch-point readback separately. Display and persistence on consumer webOS
+remain to be verified on a Root TV.
 
 <a id="installer-update-check-unreleased"></a>
 

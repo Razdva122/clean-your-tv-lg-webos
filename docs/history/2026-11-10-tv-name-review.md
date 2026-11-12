@@ -48,3 +48,10 @@ checks, not a final release candidate or physical-TV acceptance.
 Exit reconciliation: 11 selected groups; 8 host groups passed; 3 device groups
 blocked by physical-device availability; no independent host group remains
 untested. Device groups remain outstanding and no hardware acceptance is claimed.
+
+## Scope revised for Root Edition
+
+This PR now provides naming only at the final installer step for Root Edition.
+The on-TV editor and No-root naming were removed. Earlier simulation results above
+describe the previous scope. Physical acceptance of the Root installer rename,
+LG Home and startup presentation, and restart persistence remains pending.

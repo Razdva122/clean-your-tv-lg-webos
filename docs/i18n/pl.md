@@ -1,6 +1,6 @@
 # Clean Your TV — instrukcja użytkownika
 
-Nazwa TV jest na końcowej stronie konfiguracji obok motywu i pogody (domyślnie Home); CLI obsługuje --tv-name. Później zmień ją w Ustawienia → Ekran główny → Nazwa TV. Zapis próbuje zmienić nazwę istniejącego punktu uruchamiania LG bez ponownej instalacji i nowego skrótu, a następnie sprawdza tytuł. Jeśli LG odmówi, Home zachowuje nazwę i zgłasza niezweryfikowany tytuł startowy. Wyświetlanie i trwałość należy sprawdzić na TV. Obsługiwane aktualizacje zachowują ustawienia. Maksymalnie 48 znaków; nazwa sieciowa nie zmienia się, bez drugiego ekranu ładowania.
+Tylko Root Edition: ustaw nazwę ekranu Home na ostatniej stronie instalatora. Pozostaw puste pole, aby zachować bieżącą nazwę. W CLI użyj `--tv-name`.
 
 Nieopublikowana zmiana instalatora: przed nową instalacją instalator na komputerze sprawdza nowszą stabilną wersję na GitHubie. Wybierz „Otwórz GitHub i pobierz najnowszą wersję”, aby zatrzymać instalację i ją pobrać, lub „Nie, zainstaluj tę wersję”, aby jawnie kontynuować. Jeśli sprawdzenie się nie powiedzie, możesz kontynuować. Oczekujące operacje i odzyskiwanie pomijają sprawdzenie.
 
