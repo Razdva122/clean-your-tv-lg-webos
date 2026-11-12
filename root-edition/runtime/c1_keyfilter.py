@@ -25,6 +25,7 @@ ROUTING = 'compositor-keyfilter-v1'
 KEY = 'com.webos.surfacemanager.keyFilters'
 STOCK = 'com.webos.app.home'
 CARD = '_WEBOS_WINDOW_TYPE_CARD'
+HOME = '_WEBOS_WINDOW_TYPE_HOME'
 STOCK_APPINFO = Path('/usr/palm/applications/com.webos.app.home/appinfo.json')
 MOUNTINFO = Path('/proc/self/mountinfo')
 INPUT_BINDINGS = Path('/home/root/.config/lginputhook/keybinds.json')
@@ -460,20 +461,33 @@ class ReturnPolicy:
 
     def event(self,value,now):
         self.generation+=1
-        if (not isinstance(value,dict) or value.get('event') not in ('foreground','stop')
-                or not isinstance(value.get('appId'),str) or not re.fullmatch(r'[A-Za-z0-9._-]{1,255}',value['appId'])
-                or value.get('windowType')!=CARD):
-            self.pending=None; return
-        app=value['appId']
-        if value['event']=='foreground':
-            self.pending=None
-            if app==STOCK: self.pending=now+1.0
-            elif app!=APP: self.content=app
-        elif app==self.content:
-            self.pending=now+1.0; self.content=None
+        pending = self.pending
+        self.pending = None
+        if not isinstance(value, dict):
+            return
+        event, app = value.get('event'), value.get('appId')
+        valid_app = isinstance(app, str) and re.fullmatch(r'[A-Za-z0-9._-]{1,255}', app)
+        if event == 'foreground':
+            previous = self.content
+            self.content = None
+            if not valid_app:
+                return
+            window = value.get('windowType')
+            if app == STOCK and window in (CARD, HOME):
+                self.pending = pending or (previous or STOCK, now + 1.0)
+            elif app not in (APP, STOCK) and window == CARD:
+                self.content = app
+        elif valid_app and event in ('stop', 'close') and value.get('windowType', CARD) == CARD:
+            # SAM can omit the type on termination. Use the preceding CARD
+            # observation, and keep the original deadline across stop/close.
+            if pending and pending[0] == app and app != STOCK:
+                self.pending = pending
+            elif event == 'stop' and app == self.content:
+                self.pending = (app, now + 1.0)
+                self.content = None
 
     def due(self,now):
-        return self.pending is not None and now>=self.pending
+        return self.pending is not None and now >= self.pending[1]
 
 
 def can_return(surfaces,power,proof,token,foreground=None):
@@ -490,7 +504,7 @@ def can_return(surfaces,power,proof,token,foreground=None):
     if not rows:
         return isinstance(foreground,dict) and foreground.get('returnValue') is True and foreground.get('appId')==''
     for row in rows:
-        if (not isinstance(row,dict) or row.get('displayId',0)!=0 or row.get('windowType')!=CARD
+        if (not isinstance(row,dict) or row.get('displayId',0)!=0 or row.get('windowType') not in (CARD,HOME)
                 or row.get('appId')!=STOCK or row.get('pip',False) is not False
                 or row.get('multiview',False) is not False or row.get('viewType','normal')!='normal'):
             return False
