@@ -24,6 +24,12 @@ function unchanged(a, b) {
     a.ctime.getTime() === b.ctime.getTime()
   );
 }
+// webOS can widen the mode of a retained Stop file. These are replacement
+// inputs only; a generation that is read and used must still be mode 0664.
+function expandedStopMode(stat) {
+  var mode = stat.mode & 4095;
+  return mode === 509 || mode === 511; // 0775 or 0777
+}
 function field(name) {
   var names = {
     directory: 'directory',
@@ -478,7 +484,7 @@ function session(directory, options, action) {
     if (
       previous &&
       (previous.gid !== before.gid ||
-        ((previous.mode & 4095) !== 436 && (previous.mode & 4095) !== 511))
+        ((previous.mode & 4095) !== 436 && !expandedStopMode(previous)))
     )
       throw Error('Invalid Stop storage');
     var token = 'S' + crypto.randomBytes(16).toString('hex');
@@ -1076,14 +1082,14 @@ prepare.stopGeneration = function (directory, create) {
       if (
         previous &&
         (previous.gid !== s.stat.gid ||
-          ((previous.mode & 4095) !== 436 && (previous.mode & 4095) !== 511))
+          ((previous.mode & 4095) !== 436 && !expandedStopMode(previous)))
       )
         throw Error('Invalid Stop storage');
       if (
         repair &&
         !expected &&
         previous &&
-        ((previous.mode & 4095) === 511 || previous.size === 0)
+        (expandedStopMode(previous) || previous.size === 0)
       ) {
         // Never adopt expanded bytes or the failed-Stop sentinel. An S token
         // also prevents a pending fresh setup from adopting a new I token.
@@ -1142,7 +1148,7 @@ prepare.publishStopGeneration = function (directory, options) {
           throw Error('Stop storage is not private');
         if (s.repairedGeneration) return s.repairedGeneration;
         var previous = s.leaf('stop-generation', 33, true);
-        if (previous && (previous.mode & 4095) === 511)
+        if (previous && expandedStopMode(previous))
           return s.replaceGeneration(previous);
         if (
           previous &&
