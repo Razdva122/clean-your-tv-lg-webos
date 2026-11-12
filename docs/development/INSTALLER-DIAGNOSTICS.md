@@ -372,6 +372,9 @@ results, including `service-absent` for a missing System Profile service.
 
 When the installer supports capability-based Qt admission and System Profile is
 absent, optional `tv.root_compositor_failure` identifies the failed host check.
+Root `doctor --report` verifies the bundled payload before using its declared
+Home backends. With no pending operation, it can collect this failure through
+the read-only preflight without starting a Root installation.
 Request failures use `system-info-request-failed`, `keyfilters-request-failed`
 or `native-home-request-failed`. Validation failures use `system-info-invalid`,
 `keyfilters-incompatible` or `native-home-incompatible`.

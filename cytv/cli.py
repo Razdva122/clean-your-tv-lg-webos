@@ -304,7 +304,16 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
         # Canonicalize the selected local build root (macOS /var is an OS
         # alias); authenticated support members still reject indirect children.
         payload, manifest = (Path(payload_root) if payload_root is not None else payload_dir()).resolve(), {}
-        if args.command in ('install', 'enable-system-updates','enable-firmware-access','disable-firmware-access','replace-system-updater') or profile.get('root_variant'):
+        root_doctor = args.command == 'doctor' and profile['edition'] == 'root' and not store.pending(profile)
+        # Source-only doctor can still check basic TV requirements without a built payload.
+        check_doctor_payload = root_doctor and (
+            payload_root is not None or getattr(sys, 'frozen', False) or (payload / 'payload.json').exists()
+        )
+        if (check_doctor_payload or profile.get('root_variant') or args.command in (
+                'install', 'enable-system-updates', 'enable-firmware-access',
+                'disable-firmware-access', 'replace-system-updater')):
+            if root_doctor:
+                phase = 'prepare-payload'
             try:
                 manifest = package.verify_payload(payload)
             except FileNotFoundError:
