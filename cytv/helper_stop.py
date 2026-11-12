@@ -5,3 +5,8 @@ PROGRAM = node_adapter('state-permissions', r"""
 contract.requestStop('/media/developer/apps/usr/palm/applications/com.local.nativehome/state');
 process.stdout.write('CYTV_HELPER_STOP_REQUESTED');
 """)
+
+INSTALL_PROGRAM = node_adapter('state-permissions', r"""
+process.stdout.write(contract.requestStop(
+    '/media/developer/apps/usr/palm/applications/com.local.nativehome/state', {forInstall:true}));
+""")

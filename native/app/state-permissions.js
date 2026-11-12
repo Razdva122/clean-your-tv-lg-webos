@@ -375,7 +375,7 @@ function session(directory, options, action) {
   }
   function write(name, bytes, mode, limit, preserve, original, concurrent) {
     var initial = leaf(name, limit, true);
-    if (preserve && initial) return;
+    if (preserve && initial) return false;
     if (initial && !canAccessGroup(initial.gid)) fail('shared-group', initial);
     phase = 'write';
     var path =
@@ -442,12 +442,14 @@ function session(directory, options, action) {
       )
         fail();
       phase = 'rename';
+      var published = true;
       if (preserve) {
         try {
           fs.linkSync(path, name);
         } catch (e) {
           if (e.code !== 'EEXIST') throw e;
           leaf(name, limit);
+          published = false;
         }
         fs.unlinkSync(path);
         created = false;
@@ -456,6 +458,7 @@ function session(directory, options, action) {
         created = false;
       }
       fs.fsyncSync(parent);
+      return published;
     } catch (error) {
       try {
         error.storagePhase = phase;
@@ -471,6 +474,105 @@ function session(directory, options, action) {
     } finally {
       if (fd !== undefined) fs.closeSync(fd);
       if (created) fs.unlinkSync(path);
+    }
+  }
+  function publishInstallPause(snapshot, pause) {
+    var name = 'stop-generation';
+    function publishExclusive() {
+      // Legacy Stop writers reject a multi-link generation. Publish a single
+      // inode with the final mode and group from the instant it is created.
+      check();
+      var fd,
+        previousMask = process.umask(0);
+      try {
+        fd = fs.openSync(
+          name,
+          c.O_WRONLY | c.O_CREAT | c.O_EXCL | c.O_NOFOLLOW,
+          436
+        );
+      } catch (error) {
+        if (error.code === 'EEXIST') return false;
+        throw error;
+      } finally {
+        process.umask(previousMask);
+      }
+      try {
+        var opened = fs.fstatSync(fd);
+        if (
+          !opened.isFile() ||
+          opened.nlink !== 1 ||
+          opened.uid !== uid ||
+          opened.gid !== before.gid ||
+          (opened.mode & 4095) !== 436 ||
+          !same(opened, leaf(name, 33) || {})
+        )
+          return false;
+        var bytes = buffer(pause);
+        if (fs.writeSync(fd, bytes, 0, bytes.length, 0) !== bytes.length)
+          fail('complete-io');
+        fs.fsyncSync(fd);
+        fs.fsyncSync(parent);
+        var current = read(name, 33);
+        return (
+          !!current &&
+          same(opened, current.stat) &&
+          current.bytes.toString('utf8') === pause
+        );
+      } finally {
+        fs.closeSync(fd);
+      }
+    }
+    if (!snapshot) return publishExclusive();
+    // Capture the actual current inode atomically, then create exclusively.
+    // An ordinary check followed by rename could overwrite a user Stop
+    // published in between. A crash before publication retains the Stop latch.
+    var saved = '.cytv-record-' + crypto.randomBytes(12).toString('hex'),
+      moved = false,
+      published = false;
+    check();
+    var fd = fs.openSync(
+      saved,
+      c.O_WRONLY | c.O_CREAT | c.O_EXCL | c.O_NOFOLLOW,
+      384
+    );
+    fs.closeSync(fd);
+    try {
+      check();
+      fs.renameSync(name, saved);
+      moved = true;
+      var captured = read(saved, 33, true);
+      if (
+        !captured ||
+        !same(snapshot.stat, captured.stat) ||
+        snapshot.stat.uid !== captured.stat.uid ||
+        snapshot.stat.gid !== captured.stat.gid ||
+        snapshot.stat.mode !== captured.stat.mode ||
+        snapshot.bytes.toString('hex') !== captured.bytes.toString('hex')
+      )
+        fail('stable-inode', captured && captured.stat, 33, 'staging');
+      published = publishExclusive();
+      return published;
+    } finally {
+      try {
+        if (moved && !published) {
+          check();
+          var retained = leaf(saved, 33);
+          if (
+            retained &&
+            retained.gid === before.gid &&
+            (retained.mode & 4095) === 436
+          ) {
+            try {
+              fs.linkSync(saved, name);
+              fs.fsyncSync(parent);
+            } catch (error) {
+              if (error.code !== 'EEXIST') throw error;
+            }
+          }
+        }
+      } finally {
+        fs.unlinkSync(saved);
+      }
     }
   }
   function replaceGeneration(previous) {
@@ -661,6 +763,7 @@ function session(directory, options, action) {
       stat: before,
       repairedGeneration: repairedGeneration,
       replaceGeneration: replaceGeneration,
+      publishInstallPause: publishInstallPause,
       bootstrap: bootstrap,
       expanded: expanded,
       replace: replace,
@@ -995,15 +1098,19 @@ prepare.retainStop = function (directory) {
 };
 prepare.requestStop = function (directory, options) {
   var legacyCleanup = options && options.legacyCleanup === true,
+    forInstall = options && options.forInstall === true,
+    generation,
     expectedDirectory =
       (options && options.expectedDirectory) || fs.lstatSync(directory);
   var publicationError;
   try {
-    prepare.publishStopGeneration(directory, {
+    generation = prepare.publishStopGeneration(directory, {
       legacyCleanup: legacyCleanup,
-      expectedDirectory: expectedDirectory
+      expectedDirectory: expectedDirectory,
+      forInstall: forInstall
     });
   } catch (error) {
+    if (forInstall) throw error;
     publicationError = error;
   }
   var result;
@@ -1046,7 +1153,7 @@ prepare.requestStop = function (directory, options) {
     throw publicationError || error;
   }
   if (publicationError) throw publicationError;
-  return result;
+  return forInstall ? generation : result;
 };
 prepare.stopGeneration = function (directory, create) {
   var manual = create === 'manual',
@@ -1124,6 +1231,7 @@ prepare.stopGeneration = function (directory, create) {
 };
 prepare.publishStopGeneration = function (directory, options) {
   var legacyCleanup = options && options.legacyCleanup === true,
+    forInstall = options && options.forInstall === true,
     expectedDirectory = options && options.expectedDirectory;
   try {
     return session(
@@ -1131,8 +1239,8 @@ prepare.publishStopGeneration = function (directory, options) {
       {
         role: 'app',
         operation: 'stop',
-        legacy: true,
-        repairGeneration: true,
+        legacy: !forInstall,
+        repairGeneration: !forInstall,
         expectedDirectory: expectedDirectory,
         requireStopEvidence: !legacyCleanup,
         output: 'stop-generation'
@@ -1140,6 +1248,32 @@ prepare.publishStopGeneration = function (directory, options) {
       function (s) {
         if ((s.stat.mode & 4095) === 511 && legacyCleanup !== true)
           throw Error('Stop storage is not private');
+        if (forInstall) {
+          // Exclusive publication requires the final group from inode creation.
+          // An unsupported SSH group must fall back before taking the latch.
+          if (process.getegid() !== s.stat.gid)
+            throw Error('Installer pause needs the shared effective group');
+          // Pin the generation before looking at the latches. Exclusively
+          // acquire blocked before changing it, so we cannot adopt an
+          // existing safety latch or advance a generation we did not read.
+          var snapshot = s.read('stop-generation', 33, true);
+          if (
+            snapshot &&
+            (snapshot.stat.gid !== s.stat.gid ||
+              (snapshot.stat.mode & 4095) !== 436 ||
+              !/^[IS][a-f0-9]{32}$/.test(snapshot.bytes.toString('utf8')))
+          )
+            throw Error('Invalid Stop generation');
+          if (
+            s.leaf('watchdog', Infinity) ||
+            !s.write('blocked', buffer('stopped'), 436, Infinity, true)
+          )
+            throw Error('Existing Stop prevents installer pause');
+          var pause = 'S' + crypto.randomBytes(16).toString('hex');
+          if (!s.publishInstallPause(snapshot, pause))
+            throw Error('Stop changed during installer pause');
+          return pause;
+        }
         if (s.repairedGeneration) return s.repairedGeneration;
         var previous = s.leaf('stop-generation', 33, true);
         if (previous && (previous.mode & 4095) === 511)
@@ -1163,6 +1297,7 @@ prepare.publishStopGeneration = function (directory, options) {
       }
     );
   } catch (error) {
+    if (forInstall) throw error;
     try {
       session(
         directory,

@@ -1,6 +1,7 @@
 """SSAP pairing and fresh inventory, with icons embedded as local data URLs."""
 import base64
 import json
+import re
 from pathlib import Path
 import ssl
 import time
@@ -60,11 +61,24 @@ class Inventory:
         self.icon_diagnostics = {'schema': 1, 'status': 'reading', **dict.fromkeys(
             ('apps', 'embedded', 'fallback', 'missing_uri', 'rejected_uri', 'fetch_failed', 'invalid_image'), 0)}
 
-    def icon(self, app):
+    def icon(self, app, alternatives=()):
+        fields = ('extraLargeIcon', 'largeIcon', 'mediumLargeIcon', 'icon', 'miniicon', 'favicon')
+        candidates = []
+        for source in (app, *alternatives):
+            for field in fields:
+                candidate = source.get(field)
+                if isinstance(candidate, str) and re.fullmatch(
+                        r'/resources/[a-fA-F0-9]{16,128}/[A-Za-z0-9][A-Za-z0-9_.-]*', candidate):
+                    urls = ('https://' + self.host + ':3001' + candidate,
+                            'http://' + self.host + ':3000' + candidate)
+                else:
+                    urls = (candidate,)
+                for url in urls:
+                    if url not in candidates:
+                        candidates.append(url)
         data, kind, has_uri = self.fallback, 'png', False
         counts = self.icon_diagnostics
-        for key in ('extraLargeIcon', 'largeIcon', 'mediumLargeIcon', 'icon', 'miniicon', 'favicon'):
-            candidate = app.get(key)
+        for candidate in candidates:
             if candidate is None or candidate == '':
                 continue
             has_uri = True
@@ -100,11 +114,23 @@ class Inventory:
                 counts['missing_uri'] += 1
         return 'data:image/' + kind + ';base64,' + base64.b64encode(data).decode()
 
-    def build(self, launchpoints, inputs):
+    def build(self, launchpoints, inputs, installed=None):
         self.icon_diagnostics.update({key: 0 for key in self.icon_diagnostics if key not in ('schema', 'status')},
                                      status='reading')
         if not isinstance(launchpoints, list) or not isinstance(inputs, list) or len(launchpoints) > 300 or len(inputs) > 100:
             raise ValueError('Unexpected TV inventory')
+        alternatives = {}
+        if isinstance(installed, list) and len(installed) <= 300:
+            for catalog in (launchpoints, installed):
+                seen_sources = set()
+                for source in catalog:
+                    if not isinstance(source, dict):
+                        continue
+                    appid = source.get('id')
+                    if isinstance(appid, str) and appid not in seen_sources:
+                        seen_sources.add(appid)
+                        alternatives.setdefault(appid, []).append(source)
+            launchpoints = include_tuner(launchpoints, installed)
         apps, seen = [], set()
         for app in launchpoints:
             if not isinstance(app, dict) or app.get('hidden'):
@@ -116,7 +142,7 @@ class Inventory:
                 continue
             seen.add(appid)
             self.icon_diagnostics['apps'] += 1
-            apps.append({'id': appid, 'title': title, 'icon': self.icon(app),
+            apps.append({'id': appid, 'title': title, 'icon': self.icon(app, alternatives.get(appid, ())),
                          'iconColor': str(app.get('iconColor') or app.get('bgColor') or '')[:64]})
         devices = []
         for device in inputs:
@@ -235,8 +261,7 @@ class SSAP:
             # The wire parser assumes an object; optional malformed JSON or a
             # non-object reply must not discard the successful baseline reads.
             installed = None
-        if isinstance(installed, dict) and installed.get('returnValue') is not False:
-            points = include_tuner(points, installed.get('apps'))
+        apps = installed.get('apps') if isinstance(installed, dict) and installed.get('returnValue') is not False else None
         inventory = Inventory(self.host, fallback)
         self.icon_diagnostics = inventory.icon_diagnostics
-        return inventory.build(points, inputs)
+        return inventory.build(points, inputs, apps)

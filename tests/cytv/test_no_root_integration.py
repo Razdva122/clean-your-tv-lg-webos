@@ -302,6 +302,59 @@ class OriginalOperationIntegration(unittest.TestCase):
         self.remote.run('/usr/bin/node -e '+shlex.quote(program)+' '+shlex.quote(operations.HELPER_STATE))
         (Path(operations.HELPER_STATE)/name).write_bytes(b'explicit-stop')
 
+    def test_running_helper_upgrade_restarts_only_from_its_own_stop(self):
+        from cytv.helper_stop import INSTALL_PROGRAM
+        self.installer.install(self.inventory, 'original-secret')
+        state_dir = Path(operations.HELPER_STATE)
+        original = self.remote.run
+
+        for race in ('none', 'before-publication', 'before-capsule', 'after-capsule', 'watchdog'):
+            with self.subTest(race=race):
+                active = True
+                interrupted = False
+
+                def run(command, data=None, timeout=30):
+                    nonlocal active, interrupted
+                    if command == '/usr/bin/node' and data == INSTALL_PROGRAM.encode():
+                        source = data.replace(b'/media/developer/apps/usr/palm/applications/com.local.nativehome/state',
+                                              operations.HELPER_STATE.encode())
+                        if race == 'before-publication':
+                            self.publish_stop()
+                        result = subprocess.run(['node'], input=source, capture_output=True)
+                        active = False
+                        if result.returncode:
+                            self.assertEqual(race, 'before-publication')
+                            self.assertEqual((state_dir / 'blocked').read_bytes(), b'explicit-stop')
+                            raise RuntimeError('a Stop already exists')
+                        if race == 'before-capsule':
+                            self.publish_stop()
+                        return result.stdout.decode()
+                    words = split_observer_command(command)
+                    if (not interrupted and race in ('after-capsule', 'watchdog') and '-e' in words
+                            and observer.PROGRAM in words[words.index('-e')+1]
+                            and json.loads(words[-1])['command'] == 'start'):
+                        interrupted = True
+                        if race == 'after-capsule':
+                            self.publish_stop()
+                        else:
+                            (state_dir / 'watchdog').write_bytes(b'watchdog')
+                    return original(command, data, timeout)
+
+                self.remote.run = run
+                self.installer.helper_state = lambda timeout=None: 'running' if active else 'stopped'
+                before = len(self.remote.calls)
+                result = self.installer.install(self.inventory, 'original-secret')
+                self.assertEqual(result['launch_requested'], race == 'none')
+                generation = (state_dir / 'stop-generation').read_text()
+                self.assertRegex(generation, r'^S[a-f0-9]{32}$')
+                launches = [row[2].get('params') for row in self.remote.calls[before:]
+                            if row[0] == 'luna' and row[1].endswith('/launch')]
+                self.assertEqual(launches, [{'nativeHomeSetup': generation}] if race == 'none' else [])
+                self.assertIsNone(self.store.pending(self.profile))
+                # The fixture's Luna endpoint acknowledges launch without running native.js.
+                (state_dir / 'blocked').unlink(missing_ok=True)
+                (state_dir / 'watchdog').unlink(missing_ok=True)
+
     def test_reinstall_preserves_explicit_stop_and_legacy_latches(self):
         self.installer.install(self.inventory,'original-secret')
         directory=Path(operations.HELPER_STATE)

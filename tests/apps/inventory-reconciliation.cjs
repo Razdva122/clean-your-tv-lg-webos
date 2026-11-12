@@ -101,7 +101,11 @@ function read(installed, extra = {}) {
                           returnValue: true,
                           launchPoints: [
                             { id: 'kept', title: 'Kept', ...extra.app },
-                            { id: 'com.webos.app.livetv', title: 'TV' }
+                            {
+                              id: 'com.webos.app.livetv',
+                              title: 'TV',
+                              ...extra.tuner
+                            }
                           ]
                         }
                       : installed
@@ -309,4 +313,56 @@ test('a silent optional confirmation leaves time to fetch a new icon', async () 
     result.apps.find((a) => a.id === 'kept').icon,
     'data:image/png;base64,' + png.toString('base64')
   );
+});
+
+test('No-root tries installed-app icons and retains tuner launch-point icons', async () => {
+  const resource = '/resources/' + 'a'.repeat(40) + '/smart.png';
+  const calls = [];
+  const result = await read(
+    {
+      returnValue: true,
+      apps: [
+        { id: 'kept', title: 'SmartTwitchTV', icon: resource },
+        {
+          id: 'com.webos.app.livetv',
+          title: 'Canali',
+          icon: 'icon.png',
+          hidden: true
+        },
+        {
+          id: 'hidden',
+          title: 'Hidden',
+          icon: 'http://192.0.2.1:3000/unrelated'
+        }
+      ]
+    },
+    {
+      app: { icon: 'http://192.0.2.1:3000/old' },
+      tuner: { icon: 'http://192.0.2.1:3000/tuner' },
+      get: get(
+        {
+          '/old': { status: 404 },
+          '/tuner': { chunks: [png] },
+          [resource]: { chunks: [png] }
+        },
+        calls
+      )
+    }
+  );
+  assert.deepEqual(
+    result.apps.map((a) => a.id),
+    ['com.webos.app.livetv', 'kept']
+  );
+  assert(
+    result.apps.every(
+      (a) => a.icon === 'data:image/png;base64,' + png.toString('base64')
+    )
+  );
+  assert(
+    calls.some(
+      (c) =>
+        c.path === resource && c.port === '3001' && c.hostname === '192.0.2.1'
+    )
+  );
+  assert(!calls.some((c) => c.path === '/unrelated'));
 });

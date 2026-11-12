@@ -285,6 +285,21 @@ state, not a new permission/endpoint or historical package authority. Failed
 publication invalidates the baseline. Transient watchdog retry fences do not
 change it; terminal Stop and retry exhaustion do.
 
+When reinstalling over a running Helper, the trusted SSH adapter can stop it
+for the current installation. It exclusively creates the existing Stop latch,
+captures the prior generation without overwriting a concurrent publisher, and
+returns the exact generation it published. The capsule binds that generation
+and the local pending receipt identifies it as installer-owned. Only that exact
+match lets setup resume past its own latch. A previous latch, a watchdog, a
+lost acknowledgement or a changed generation keeps activation stopped. A
+boot-started updated Helper binds its current generation so it can shut down
+without publishing a second one. If an older Helper publishes another generation
+while stopping, setup keeps the Stop and the existing explicit Start procedure
+applies. The checked pause requires the Helper state's shared effective group
+so the generation inode has the correct group at creation. Other SSH group
+layouts use the existing Stop path without automatic restart authority.
+The installer never treats a post-stop read alone as ownership.
+
 A cancelled launch configuration step is a verified no-request disposition;
 an acknowledged launch is recorded separately from observed startup and physical
 Home. The report uses `startup: stopped-during-setup`, does not mark startup/Home

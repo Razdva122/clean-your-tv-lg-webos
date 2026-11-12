@@ -90,6 +90,40 @@ class InventoryTests(unittest.TestCase):
                 if tv['id'] in expected: self.assertEqual(apps[0]['title'], tv['title'])
                 self.assertIn('ssap://com.webos.applicationManager/listApps', calls)
 
+    def test_launch_points_and_installed_metadata_both_supply_icon_candidates(self):
+        png = b'\x89PNG\r\n\x1a\nfixture'
+        session = object.__new__(SSAP)
+        session.host = '192.0.2.10'
+        smart = 'com.tbsniller.smarttwitchwebostv'
+        tuner = 'com.webos.app.livetv'
+        resource = '/resources/' + 'a' * 40 + '/smart.png'
+        sources = {
+            'listLaunchPoints': {'launchPoints': [
+                {'id': smart, 'title': 'SmartTwitchTV', 'icon': 'http://192.0.2.10:3000/missing'},
+                {'id': tuner, 'title': 'Canali', 'icon': 'http://192.0.2.10:3000/good-tuner'},
+            ]},
+            'listApps': {'apps': [
+                {'id': smart, 'title': 'SmartTwitchTV', 'icon': resource},
+                {'id': tuner, 'title': 'Canali', 'icon': 'icon.png', 'hidden': True},
+                {'id': 'hidden-extra', 'title': 'Hidden', 'icon': 'https://other.invalid/private'},
+            ]},
+            'getExternalInputList': {'devices': []},
+        }
+        session.call = lambda uri: sources[uri.rsplit('/', 1)[-1]]
+        requested = []
+        def fetch(url):
+            requested.append(url)
+            if 'missing' in url or url == 'https://192.0.2.10:3001' + resource:
+                raise OSError('not found')
+            return png
+        with patch('cytv.tv.Inventory', side_effect=lambda host, fallback: Inventory(host, fallback, fetch)):
+            result = session.inventory(b'fallback')
+        self.assertEqual([a['id'] for a in result['apps']], [tuner, smart])
+        self.assertEqual(session.icon_diagnostics['embedded'], 2)
+        self.assertEqual(session.icon_diagnostics['fallback'], 0)
+        self.assertIn('https://192.0.2.10:3001' + resource, requested)
+        self.assertIn('http://192.0.2.10:3000' + resource, requested)
+
     def test_optional_malformed_wire_preserves_baseline_inventory(self):
         cases = [('wire', '{broken'), ('wire', 'null'), ('wire', '[]'),
                  ('payload', None), ('payload', [])]

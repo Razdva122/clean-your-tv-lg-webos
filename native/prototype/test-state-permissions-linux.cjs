@@ -351,6 +351,66 @@ if (process.platform !== 'linux' || process.getuid() !== 0) {
       6580,
       []
     );
+    const pauseState = path.join(root, 'install-pause'),
+      quotedPauseState = JSON.stringify(pauseState);
+    fs.mkdirSync(pauseState);
+    fs.chownSync(pauseState, 5999, 5000);
+    fs.chmodSync(pauseState, 0o770);
+    run(
+      5431,
+      'require(' +
+        bootModule +
+        ').stopGeneration(' +
+        quotedPauseState +
+        ',"install");'
+    );
+    const prior = fs.readFileSync(
+      path.join(pauseState, 'stop-generation'),
+      'utf8'
+    );
+    run(
+      5999,
+      'try{require(' +
+        bootModule +
+        ').requestStop(' +
+        quotedPauseState +
+        ',{forInstall:true});process.exit(6)}catch(e){if(!/effective group/.test(e.message))throw e}',
+      5999
+    );
+    a.equal(
+      fs.readFileSync(path.join(pauseState, 'stop-generation'), 'utf8'),
+      prior
+    );
+    a.equal(fs.existsSync(path.join(pauseState, 'blocked')), false);
+    run(
+      5580,
+      'require(' +
+        bootModule +
+        ').requestStop(' +
+        quotedPauseState +
+        ',{forInstall:true});'
+    );
+    const pause = fs.readFileSync(
+      path.join(pauseState, 'stop-generation'),
+      'utf8'
+    );
+    a.match(pause, /^S[a-f0-9]{32}$/);
+    a.notEqual(pause, prior);
+    a.equal(fs.statSync(path.join(pauseState, 'stop-generation')).gid, 5000);
+    a.equal(
+      fs.readFileSync(path.join(pauseState, 'blocked'), 'utf8'),
+      'stopped'
+    );
+    run(
+      5431,
+      'if(require(' +
+        bootModule +
+        ').stopGeneration(' +
+        quotedPauseState +
+        ')!==' +
+        JSON.stringify(pause) +
+        ')process.exit(6);'
+    );
     const request = path.join(channel, 'home-request'),
       response = path.join(channel, 'home-response');
     run(
