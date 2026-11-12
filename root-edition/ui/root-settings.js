@@ -445,7 +445,7 @@
           });
         });
     }
-    var order = [3, 1, 12, 15, 16, 9, 8, 10, 11, 14, 5, 4, 0, 7, 6, 2];
+    var order = [3, 1, 12, 15, 16, 9, 8, 10, 11, 14, 5, 4, 0, 17, 7, 6, 2];
     function focus(index) {
       selected = index;
       if (!buttons[selected].disabled && !buttons[selected].hidden)
@@ -544,6 +544,15 @@
             checkUpdates();
           }
         });
+        return;
+      }
+      if (index === 17) {
+        if (!window.HomeAppControls) return;
+        close();
+        HomeAppControls.launch(
+          'com.webos.app.notificationcenter',
+          t('LG Notifications')
+        );
         return;
       }
       if (index === 0) {
@@ -659,7 +668,7 @@
       back.className = 'renewal-actions';
       footer.appendChild(back);
       buttons = [];
-      [3, 1, 9, 8, 10, 11, 14, 5, 4, 0, 7, 6, 2, 12, 15, 16].forEach(
+      [3, 1, 9, 8, 10, 11, 14, 5, 4, 0, 17, 7, 6, 2, 12, 15, 16].forEach(
         function (i) {
           var labels = [
             'TV settings',
@@ -678,7 +687,8 @@
             'Show inputs on Home',
             'Preview inputs on focus',
             'LG Channels / Live TV',
-            'YouTube'
+            'YouTube',
+            'LG Notifications'
           ];
           var b = document.createElement('button');
           b.textContent = t(i === 6 ? 'Block LG firmware updates' : labels[i]);
@@ -688,7 +698,7 @@
           }
           if (i === 3) b.className = 'home-routing-switch';
           var target =
-            i >= 15
+            i === 15 || i === 16
               ? sourceActions
               : i === 10 || i === 11 || i === 14
                 ? apps
@@ -700,7 +710,7 @@
                       ? firmware
                       : i === 3 || i === 12 || i === 1
                         ? homeActions
-                        : i === 4 || i === 0 || i === 5
+                        : i === 4 || i === 0 || i === 5 || i === 17
                           ? links
                           : back;
           if (i === 10) {
@@ -715,7 +725,7 @@
             b.setAttribute('role', 'switch');
             b.setAttribute('aria-checked', 'true');
           }
-          if (i >= 15) {
+          if (i === 15 || i === 16) {
             b.className = 'home-routing-switch';
             b.setAttribute('role', 'switch');
             b.setAttribute('aria-checked', String(sources[sourceKeys[i - 15]]));
@@ -745,7 +755,7 @@
             dot.setAttribute('aria-hidden', 'true');
             b.appendChild(dot);
           }
-          if (i === 4 || i === 0 || i === 5) {
+          if (i === 4 || i === 0 || i === 5 || i === 17) {
             var arrow = document.createElement('span');
             arrow.className = 'settings-chevron';
             arrow.setAttribute('aria-hidden', 'true');
@@ -777,7 +787,7 @@
           {
             id: 'advanced',
             label: 'Advanced',
-            elements: [buttons[0], buttons[7]]
+            elements: [buttons[0], buttons[17], buttons[7]]
           }
         ]);
       document.body.appendChild(panel);

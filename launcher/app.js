@@ -950,6 +950,7 @@
     if (firstInput && !library.input(firstInput))
       initialInputFocus = firstInput;
     window.HomeAppControls = {
+      launch: launchApp,
       refresh: function () {
         var button = getElement('homeShowAddApp');
         if (button)
