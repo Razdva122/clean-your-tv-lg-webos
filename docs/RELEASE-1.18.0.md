@@ -39,3 +39,6 @@
 Fresh setups use System Updater 1.2.9. The existing explicit replacement
 eligibility remains unchanged. See the [candidate record](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/540)
 for CI and hardware acceptance.
+
+Root and No-root passed connected HDMI and installation checks on LG C3.
+Verification on the devices reported in #418, #534 and #542 follows publication.

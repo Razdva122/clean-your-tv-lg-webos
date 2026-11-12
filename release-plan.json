@@ -116,10 +116,11 @@
     }
   ],
   "excluded": [],
-  "acceptance": "",
+  "acceptance": "LG OLED55C3RLA, firmware 43.21.71: signed Root install, profile preservation and rollback, physical Magic Remote Home/navigation/emergency exit, No-root installation and clean removal, and connected HDMI 3 picture and sound in both editions passed. The maintainer approved verification on the affected devices after publication for #418, #534 and #542. Matching regression fixtures passed. See docs/history/2026-11-12-release-1.18.0-candidate.md.",
   "build": {
     "run_id": 43091100467,
     "attempt": 2,
     "source": "352bd33bdbc8f20a50f5cca942853b10e3bac028"
-  }
+  },
+  "acceptance_build": "43091100467:2"
 }
