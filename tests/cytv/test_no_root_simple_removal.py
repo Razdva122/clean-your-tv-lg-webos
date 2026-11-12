@@ -569,6 +569,59 @@ class SimpleRemoval(unittest.TestCase):
         self.assertFalse(list((self.root/'volatile').glob('cytv-removal-*')))
         self.assertEqual((self.root/'volatile').stat().st_mode&0o7777,0o111)
 
+    def test_restricted_tmp_rechecks_legacy_restart_request_after_startup_recovers(self):
+        self.remote.volatile_mode = 0o111
+        (self.root / 'proc').mkdir()
+        self.remote.apps = {'com.local.nativehome', 'com.gathin.tvhome'}
+        service = self.own_file('apps/usr/palm/services/com.local.nativehome.service/service.js')
+        self.remote.broken_service = True
+        self.assertTrue(self.remove()['restart_required'])
+        pending = self.store.pending(self.profile)
+        self.assertTrue(pending['cleanup_restart_first'])
+        self.assertEqual(pending['cleanup_restart_triggers'], ['startup-disable-unverified'])
+        # v1.17.1 recorded the restart gate before it recorded trigger codes.
+        self.store.checkpoint(self.profile, cleanup_restart_triggers=None)
+        with self.assertRaises(UserError) as caught:
+            self.remove()
+        self.assertEqual(caught.exception.no_root_cleanup['reason'], 'kernel-boot-unchanged')
+        self.assertTrue(service.exists())
+        self.assertEqual(len(self.remote.apps), 2)
+
+        self.remote.broken_service = False
+        proc = self.root / 'proc/123'
+        proc.mkdir()
+        cmdline = proc / 'cmdline'
+        cmdline.write_bytes(b'/usr/bin/node\0' + os.fsencode(service) + b'\0')
+        with self.assertRaises(UserError):
+            self.remove()
+        self.assertEqual(self.store.pending(self.profile)['cleanup_restart_triggers'], ['process-idle-unverified'])
+        self.assertTrue(service.exists())
+        self.assertEqual(len(self.remote.apps), 2)
+
+        cmdline.unlink()
+        proc.rmdir()
+        self.assertTrue(self.remove()['verified_clean'])
+        self.assertFalse(service.exists())
+        self.assertFalse(self.remote.apps)
+        receipt = json.loads((self.store.device_dir(self.profile) / 'clean-removal.json').read_text())
+        self.assertEqual(receipt['removal_operation'], pending['removal_operation'])
+        self.assertFalse(receipt['cleanup_boot_verified'])
+        self.assertEqual(receipt['cleanup_boot_proof']['kernel'], self.remote.boot)
+
+    def test_restricted_tmp_does_not_recheck_with_resident_installer_evidence(self):
+        self.remote.volatile_mode = 0o111
+        (self.root / 'proc').mkdir()
+        self.remote.apps = {'com.local.nativehome'}
+        journal = self.own_file('.cytv-installer/operations/' + 'a' * 32 + '/journal.json')
+        self.assertTrue(self.remove()['restart_required'])
+        with patch.object(self.cleanup, '_device', wraps=self.cleanup._device) as device:
+            with self.assertRaises(UserError) as caught:
+                self.remove()
+        self.assertEqual(caught.exception.no_root_cleanup['reason'], 'kernel-boot-unchanged')
+        self.assertEqual([call.args[1] for call in device.call_args_list], ['inventory', 'boot-probe'])
+        self.assertTrue(journal.exists())
+        self.assertEqual(self.remote.apps, {'com.local.nativehome'})
+
     def test_restricted_tmp_keeps_unresolved_install_until_changed_kernel(self):
         from cytv.diagnostics import create_report
 

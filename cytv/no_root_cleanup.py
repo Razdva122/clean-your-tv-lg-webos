@@ -528,12 +528,23 @@ def continue_removal(installer, expected_pending):
             release(installer)
             installer.store.finish_clean_removal(installer.profile)
             return {'removed': True, 'verified_clean': True}
+    same_boot_retry = False
+
+    def unverified_restart():
+        error = UserError('The TV restart could not be verified. Save the diagnostic report and keep recovery data.',
+                          reason_code='pending-operation')
+        error.no_root_cleanup = no_root_cleanup_details({'action':'boot-probe','step':'boot-proof',
+            'failure':'runtime-error','reason':'kernel-boot-unchanged'})
+        return error
+
     def require_restart(triggers, *, before_packages=False):
         checkpoint = {'stage': 'restart-required', 'removal_reason': 'restart-required',
                       'cleanup_restart_triggers': triggers}
         if before_packages:
             checkpoint['cleanup_restart_first'] = True
         installer.store.checkpoint(installer.profile, **checkpoint)
+        if same_boot_retry:
+            raise unverified_restart()
         installer.progress(RESTART_MESSAGE)
         return {'removed': False, 'verified_clean': False, 'restart_required': True}
 
@@ -568,11 +579,18 @@ def continue_removal(installer, expected_pending):
             boot_id is not None and boot_id == current.get('boot_id') and boot_id != proof['kernel']))
         if (proof.get('schema') == 2 and not restarted and
                 (pending.get('stage') == 'restart-required' or pending.get('cleanup_restart_first'))):
-            error = UserError('The TV restart could not be verified. Save the diagnostic report and keep recovery data.',
-                              reason_code='pending-operation')
-            error.no_root_cleanup = no_root_cleanup_details({'action':'boot-probe','step':'boot-proof',
-                'failure':'runtime-error','reason':'kernel-boot-unchanged'})
-            raise error
+            # A request can outlive a transient Stop failure. Recheck only
+            # ordinary removal and keep the pre-package checks across retries.
+            if (boot.get('boot_restarted') is not False or boot_id != proof.get('kernel')
+                    or boot_id != current.get('boot_id')
+                    or previous is not None or current.get('resident_installer') is not False
+                    or current.get('external_update_hint') is not None
+                    or pending.get('previous_update_status') is not None
+                    or pending.get('cleanup_carriers') not in (None, {})):
+                raise unverified_restart()
+            same_boot_retry = True
+            if pending.get('cleanup_restart_first') is not True:
+                installer.store.checkpoint(installer.profile, cleanup_restart_first=True)
     if legacy_install:
         # A missing SAM entry can skip dev/remove and its busy check. Wait
         # for a verified restart before touching controls or sweeping files.
@@ -664,6 +682,15 @@ def continue_removal(installer, expected_pending):
             _device(installer, 'boot-retire', proof=proof)
             proof = capture_boot()
         return require_restart(restart_triggers, before_packages=True)
+    if same_boot_retry:
+        idle = _device(installer, 'idle')
+        _check_access(idle)
+        if idle.get('boot_id') != boot_id:
+            raise UserError('Removal could not be checked. Reconnect and try again.', reason_code='cleanup-check-failed')
+        if idle.get('resident_installer') is not False or idle.get('external_update_hint') is not None:
+            return require_restart(['resident-installer-evidence'], before_packages=True)
+        if idle.get('idle') is not True:
+            return require_restart(['process-idle-unverified'], before_packages=True)
     for app, message in zip(APPS, ('Removing Helper…', 'Removing Home…', 'Removing the updater…')):
         if app not in apps:
             continue
