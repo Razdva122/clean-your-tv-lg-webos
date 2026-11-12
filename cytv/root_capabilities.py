@@ -65,7 +65,7 @@ def arm32_elf(dump):
             and int.from_bytes(header[28:32], 'little') >= 52 and header[44:46] != b'\0\0')
 
 
-def c1_device(remote):
+def c1_device(remote, info=None):
     reply = remote.luna('com.webos.service.tv.systemproperty/getSystemInfo',
                         {'keys':['modelName','firmwareVersion','sdkVersion']}, timeout=5)
     if not isinstance(reply,dict) or reply.get('returnValue') is not True:
@@ -76,10 +76,10 @@ def c1_device(remote):
             or not re.fullmatch(r'OLED(?:48|55|65|77|83)C1[A-Z0-9]{2,12}', model)
             or not re.fullmatch(version,firmware) or not re.fullmatch(version,sdk) or not sdk.startswith('6.')):
         return False
-    return native_headers_valid(remote.run(NATIVE_HEADERS, timeout=5))
+    return native_headers_valid(remote.run(NATIVE_HEADERS, timeout=5), info)
 
 
-def native_headers_valid(result):
+def native_headers_valid(result, info=None):
     if not isinstance(result,str) or len(result)>2048:
         return False
     metadata, _, headers = result.partition('\n')
@@ -92,10 +92,14 @@ def native_headers_valid(result):
     # UID 1001 is a vendor owner only on an immutable SquashFS image.
     if meta[1] == '1001' and (not filesystem_marker or filesystem.strip() != '73717368'):
         return False
-    return bool(mode & 0o111 and not mode & 0o7022 and separator and arm32_elf(shell) and arm32_elf(home))
+    if not mode & 0o111 or mode & 0o7022:
+        if info is not None:
+            info['root_native_home_mode'] = format(mode, '04o')
+        return False
+    return bool(separator and arm32_elf(shell) and arm32_elf(home))
 
 
-def compositor_failure(remote):
+def compositor_failure(remote, info=None):
     """Return a diagnostic code for a failed host check, or None on success.
 
     Model and SDK are observations, not admission lists. Native Home and the
@@ -137,13 +141,14 @@ def compositor_failure(remote):
         return 'native-home-request-failed'
     except Exception:
         return 'native-home-request-failed'
-    return None if native_headers_valid(headers) else 'native-home-incompatible'
+    return None if native_headers_valid(headers, info) else 'native-home-incompatible'
 
 
 def verify(remote, checklist, info, allow_c1=False, allow_compositor=False):
     info.pop('home_backend', None)
     info.pop('home_backend_schema', None)
     info.pop('root_compositor_failure', None)
+    info.pop('root_native_home_mode', None)
     reasons = info['root_capabilities'] = dict.fromkeys(CALLS, 'not-checked')
     requirements = info.setdefault('root_requirements', {})
     codes = info['root_capability_codes'] = {}
@@ -171,18 +176,19 @@ def verify(remote, checklist, info, allow_c1=False, allow_compositor=False):
             failure = None
             schema = 2
             try:
-                supported = c1_device(remote)
+                supported = c1_device(remote, info)
             except Exception:
                 supported = False
                 if allow_compositor:
                     failure = 'c1-probe-failed'
             else:
                 if not supported and allow_compositor:
-                    failure = compositor_failure(remote)
+                    failure = compositor_failure(remote, info)
                     supported = failure is None
                     schema = 3
             reasons[name] = 'service-absent'
             if supported:
+                info.pop('root_native_home_mode', None)
                 for key in CALLS:
                     requirements.pop(key, None)
                 checklist.update(name,'unknown','System Profile is absent. Experimental compositor Home prerequisites passed; physical controls are unverified.')

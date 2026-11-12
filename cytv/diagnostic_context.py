@@ -175,6 +175,9 @@ def tv_summary(value):
         failure = choice(value['root_compositor_failure'], COMPOSITOR_FAILURES, None)
         if failure is not None:
             result['root_compositor_failure'] = failure
+    native_home_mode = value.get('root_native_home_mode')
+    if isinstance(native_home_mode, str) and re.fullmatch(r'[0-7]{4}', native_home_mode):
+        result['root_native_home_mode'] = native_home_mode
     if 'root_requirements' in value:
         checks = mapping(value['root_requirements'])
         from .root_capabilities import CALLS
