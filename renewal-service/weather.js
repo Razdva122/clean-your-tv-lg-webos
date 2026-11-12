@@ -21,6 +21,8 @@ function createRequest(https) {
       finish('weather-timeout');
     }, 12000);
     try {
+      // Legacy Node reads one certificate per entry in the ca option.
+      var ca = require('fs').readFileSync(__dirname + '/ca-bundle.crt', 'utf8');
       request = https.request(
         {
           hostname: 'api.met.no',
@@ -33,7 +35,10 @@ function createRequest(https) {
             String(Math.round(place.longitude * 10000) / 10000),
           rejectUnauthorized: true,
           agent: false,
-          ca: require('fs').readFileSync(__dirname + '/ca-bundle.crt', 'utf8'),
+          ca:
+            ca.match(
+              /-----BEGIN CERTIFICATE-----[\s\S]+?-----END CERTIFICATE-----/g
+            ) || [],
           headers: {
             Accept: 'application/json',
             'User-Agent':

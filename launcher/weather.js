@@ -443,7 +443,12 @@
     forecast: '4 days'
   };
   const sourceNames = { 'met-no': 'MET Norway', 'open-meteo': 'Open-Meteo' };
-  let settingsHost, cityDialog, cityReturn, sourcesDialog, sourcesButton;
+  let settingsHost,
+    settingsFooter,
+    cityDialog,
+    cityReturn,
+    sourcesDialog,
+    sourcesButton;
   function choose(format, on) {
     const value = {};
     if (format) value.preferred = format;
@@ -582,6 +587,7 @@
     }
   }
   function mountSettings(panel, card, groups) {
+    settingsFooter = card.querySelector('.settings-footer button');
     settingsHost = document.createElement('div');
     settingsHost.className = 'weather-settings';
     settingsHost.innerHTML =
@@ -945,11 +951,7 @@
             next[0];
           target.focus();
         } else if (key === 38) sourcesButton.focus();
-        else
-          settingsHost
-            .closest('.settings-workspace')
-            .querySelector('.settings-footer button')
-            .focus();
+        else if (settingsFooter) settingsFooter.focus();
       },
       true
     );
