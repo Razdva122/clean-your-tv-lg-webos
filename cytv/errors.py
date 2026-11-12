@@ -123,6 +123,12 @@ class TVRejected(UserError):
             and reply.get('returnValue') is False
             and type(reply.get('errorCode')) is int and reply['errorCode'] == -1
             and reply.get('errorText') == 'Service does not exist: com.webos.service.systemprofile.')
+        self.package_status_denied = (
+            uri == 'com.webos.appInstallService/status'
+            and reply.get('returnValue') is False
+            and type(reply.get('errorCode')) is int and reply['errorCode'] == -1
+            and 'status' not in reply and 'statusValue' not in reply
+            and reply.get('details', {}) == {})
         details = reply.get('details')
         details = details if isinstance(details, dict) else {}
         def number(value):
