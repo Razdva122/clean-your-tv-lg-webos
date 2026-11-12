@@ -10,6 +10,13 @@
       "summary": "Complete ordinary No-root removal in one operation"
     },
     {
+      "pr": 582,
+      "issues": [
+        579
+      ],
+      "summary": "Repair No-root reinstall when the Stop record has mode 0775"
+    },
+    {
       "pr": 583,
       "issues": [
         334
