@@ -13,6 +13,17 @@ necessary installation prerequisites, controls and recovery instructions, and
 preserve existing anchor aliases. Put release history and evidence in the canonical
 release/developer/history documents instead.
 
+## Reproduce firmware-dependent bugs offline
+
+When investigating a model- or firmware-specific webOS failure, start with the
+existing diagnostic and try the [offline firmware workflow](docs/development/TV-DEVELOPMENT.md#reproduce-firmware-dependent-bugs-offline)
+before requesting another reporter run. Find the exact LG image, inspect the
+relevant factory files and, where useful, run the stock ARM utility under QEMU
+or replay its output against the affected CYTV version. If the exact image is
+unavailable, try a documented comparable image and state what it can establish.
+Record the result or the specific blocker, then identify any remaining question
+that requires live device evidence.
+
 ## Installation results and user consent
 
 When a device owner voluntarily posts their own installation or test result in

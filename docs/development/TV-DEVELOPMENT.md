@@ -14,6 +14,67 @@ through the installed updater after explicit owner authorization. Neither path
 satisfies final release admission; follow [Release flow](../RELEASE-FLOW.md) for
 full frozen-source checks, pinned builds, physical acceptance and publication.
 
+## Reproduce firmware-dependent bugs offline
+
+Start with the reporter's model (including its regional suffix), firmware,
+webOS/SDK version, CYTV version, failed operation and first recorded failure.
+Use the diagnostic or existing observations to identify the smallest boundary
+to test: a factory setting, filesystem layout, native command, or service reply.
+
+1. **Locate the image.** Search LG's support page for the exact model and
+   firmware. Check the archive's applicable model list and record the source
+   URL, model, firmware, platform/build identifier and SHA-256. If the exact
+   image is unavailable, choose a comparable image using the platform and the
+   component under test. Record what matches and what differs before using it
+   as evidence. An available SDK emulator can exercise web app behavior.
+   Factory firmware behavior requires evidence from the image or a device.
+2. **Inspect the files.** In a disposable workspace, verify ZIP integrity and
+   extract the EPK with a reviewed, pinned extractor. The previous LG image
+   investigations used [epk2extract at a pinned revision](https://github.com/openlgtv/epk2extract/tree/a0ccd8a4b4f48d05675a4cddd233f8780ee36767)
+   with `epk2extract -s -n firmware.epk`, then `unsquashfs -ls` and
+   `unsquashfs -cat` for the specific files in the root filesystem and BSP
+   partitions. Record the signature verification result separately from
+   extraction success. Keep archives and vendor files outside Git. If the
+   available tools cannot read the image, record that blocker and continue
+   with the accessible factory files, prior evidence, or a bounded fixture.
+3. **Run only the component you need.** Check the executable's architecture,
+   ELF interpreter and library dependencies with `file` and `readelf`. In an
+   isolated Linux container or VM, mount the extracted filesystem read-only,
+   disable networking and run selected binaries unprivileged. For a 32-bit ARM
+   image, use `qemu-arm -L "$sysroot"` with the image's own loader and libraries.
+   Recreate only the relevant filesystem or process condition inside the
+   disposable environment. For example, with `/tmp` already mounted as `ramfs`
+   inside the test environment, run the stock BusyBox applets:
+
+   ```sh
+   qemu-arm -L "$sysroot" -E LD_LIBRARY_PATH="$sysroot/lib:$sysroot/usr/lib" \
+     "$sysroot/bin/busybox.nosuid" df -Pk /tmp
+   qemu-arm -L "$sysroot" -E LD_LIBRARY_PATH="$sysroot/lib:$sysroot/usr/lib" \
+     "$sysroot/bin/busybox.nosuid" stat -f -c %t /tmp
+   ```
+
+4. **Replay the failure.** Feed the actual files or command output into the
+   affected CYTV release and compare the failure stage, reason and trace. Use
+   the same inputs with the candidate and include a control where it helps
+   isolate the cause. If a live service such as `configd` is needed, model its
+   reply or state transitions and say which values are simulated. Record the
+   source revisions, image and tool versions, commands, observed result and
+   remaining device-only questions. Factory files show defaults. QEMU user mode
+   runs individual processes on the test kernel. A replay can verify a code
+   path while leaving the reporting TV's live state and hardware behavior open.
+
+Prior examples:
+
+- [#101](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/101):
+  C2 04.40.90 factory files and a modeled mount table reproduced an installer
+  rejection of the stock BSP overlay.
+- [#541](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/541):
+  stock ARM BusyBox in QEMU reproduced the zero `df` output and `ramfs` type,
+  which were replayed through CYTV's storage check.
+- [#389](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/559):
+  the C1 03.53.45 factory filter chain passed. Adding an old CYTV filter in
+  modeled `configd` reproduced the reported removal stage and trace.
+
 ## Compile UI without a TV
 
 ```sh
