@@ -12,7 +12,7 @@
   replacing packages. After reinstall, select **Start Helper** to turn it
   back on (#554).
 - The diagnostic report records which checks required a restart during
-  removal (#545, #472).
+  No-root removal over Developer Mode SSH (#545, #472).
 
 ## Root and shared changes
 

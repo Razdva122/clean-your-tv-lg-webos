@@ -14,7 +14,7 @@
       "issues": [
         472
       ],
-      "summary": "Report why No-root removal required a restart; the underlying recovery remains open"
+      "summary": "Report restart triggers from the No-root cleanup adapter; the original Developer Mode recovery remains open"
     },
     {
       "pr": 547,
@@ -64,10 +64,11 @@
     }
   ],
   "excluded": [],
-  "acceptance": "",
+  "acceptance": "Accepted on LG OLED55C3RLA (43.21.71, SDK 11.2.0), macOS ARM64, and the Android API 35 ARM64 emulator. Exact No-root install, active-Helper reinstall and removal, Debloat read/write and restore, signed Root installation and retained rollback, rendered profile retention, and Magic Remote Home and emergency exit passed. See [v1.18.1 candidate acceptance](https://github.com/Razdva122/clean-your-tv-lg-webos/blob/release/next/docs/history/2026-11-12-release-1.18.1-candidate.md) for hashes, matching legacy fixtures and scope.",
   "build": {
     "run_id": 43175770485,
     "attempt": 1,
     "source": "dd4b9caf0abf4f224db99b5525efd4ede5c0cc02"
-  }
+  },
+  "acceptance_build": "43175770485:1"
 }

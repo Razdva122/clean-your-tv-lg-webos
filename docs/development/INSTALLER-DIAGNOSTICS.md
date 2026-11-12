@@ -352,14 +352,14 @@ guidance offers explicitly confirmed inspection after a failed original removal.
 Original error capture/history behavior is unchanged; these fields do not reconstruct
 legacy first failures or establish that a submitted package transaction terminated.
 
-For a No-root removal waiting for a restart, `removal.restart_triggers` records
-the checks that requested it: `controller-still-running`,
+When the No-root cleanup adapter requests a restart, `removal.restart_triggers`
+records the checks that requested it: `controller-still-running`,
 `protected-package-access`, `startup-disable-unverified`,
 `resident-installer-evidence`, `prior-operation-unresolved`, or
 `process-idle-unverified`. The installer saves the codes with the restart
 checkpoint so they remain available in both status and failed-retry reports.
-An older checkpoint may omit the field. These codes describe the earlier
-decision and do not confirm that the TV has restarted.
+An older checkpoint may omit the field. The Root cleanup adapter records its
+own restart checkpoint and reason. These codes describe the earlier decision.
 
 <a id="root-admission-and-connection-advice-unreleased"></a>
 
