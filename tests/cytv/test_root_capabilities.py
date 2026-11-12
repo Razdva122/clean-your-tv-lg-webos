@@ -36,7 +36,10 @@ class CapabilityTests(unittest.TestCase):
             ([identity, identity, TimeoutError(private)], '', 'keyfilters-request-failed'),
             ([identity, identity, TVRejected(private)], '', 'keyfilters-request-failed'),
             ([identity, identity, {'returnValue': False, 'errorText': private}], '', 'keyfilters-request-failed'),
+            ([identity, identity, {'returnValue': True, 'configs': {}}], '', 'keyfilters-not-configured'),
+            ([identity, identity, {'returnValue': True, 'configs': {key: []}}], '', 'keyfilters-not-configured'),
             ([identity, identity, {'returnValue': True, 'configs': None}], '', 'keyfilters-incompatible'),
+            ([identity, identity, {'returnValue': True, 'configs': {key: None}}], '', 'keyfilters-incompatible'),
             ([identity, identity, {'returnValue': True, 'configs': {key: [private]}}], '', 'keyfilters-incompatible'),
             ([identity, identity, chain], TVCommandError(42), 'native-home-unavailable'),
             ([identity, identity, chain], TVCommandError(127), 'native-home-request-failed'),
@@ -236,12 +239,18 @@ class CapabilityTests(unittest.TestCase):
 
     def test_generic_compositor_refuses_unknown_chain_or_invalid_identity(self):
         from cytv.root_capabilities import compositor_failure
-        for sdk,chain in [('11.2.0',[]),('9.2.2',[]),('invalid',[]),('9.2.2',[{'file':'/foreign/home.js','handler':'handleSystemKeys'}])]:
+        cases = (
+            ('11.2.0', [], 'keyfilters-not-configured'),
+            ('9.2.2', [], 'keyfilters-not-configured'),
+            ('invalid', [], 'system-info-invalid'),
+            ('9.2.2', [{'file':'/foreign/home.js','handler':'handleSystemKeys'}], 'keyfilters-incompatible'),
+        )
+        for sdk, chain, expected in cases:
             remote=Mock()
             remote.luna.side_effect=[dict(returnValue=True,modelName='55NANO77SRA',firmwareVersion='23.25.55',sdkVersion=sdk),
                 {'returnValue':True,'configs':{'com.webos.surfacemanager.keyFilters':chain}}]
-            self.assertEqual(compositor_failure(remote),
-                             'system-info-invalid' if sdk == 'invalid' else 'keyfilters-incompatible')
+            self.assertEqual(compositor_failure(remote), expected)
+            remote.run.assert_not_called()
 
     def test_generic_permission_denial_never_enters_native_admission(self):
         from cytv.root_capabilities import verify,RootCapabilityError

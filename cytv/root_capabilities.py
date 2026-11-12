@@ -10,7 +10,8 @@ CALLS = {
 REASONS = ('readable', 'rejected', 'invalid-reply', 'unconfirmed', 'not-checked', 'service-absent')
 COMPOSITOR_FAILURES = (
     'c1-probe-failed', 'system-info-request-failed', 'system-info-invalid',
-    'keyfilters-request-failed', 'keyfilters-incompatible', 'native-home-request-failed',
+    'keyfilters-request-failed', 'keyfilters-not-configured', 'keyfilters-incompatible',
+    'native-home-request-failed',
     'native-home-unavailable', 'native-home-incompatible',
 )
 
@@ -127,6 +128,8 @@ def compositor_failure(remote, info=None):
         return 'keyfilters-request-failed'
     configs = chain.get('configs')
     entries = configs.get(key) if isinstance(configs, dict) else None
+    if isinstance(configs, dict) and (key not in configs or entries == []):
+        return 'keyfilters-not-configured'
     if (not isinstance(entries,list) or not 1 <= len(entries) <= 128
             or not all(isinstance(e,dict) and isinstance(e.get('file'),str)
                 and re.fullmatch(r'/usr/lib/(?:qt5/)?qml/KeyFilters/[A-Za-z0-9_-]+\.js',e['file'])
