@@ -367,7 +367,9 @@ class GuiTests(unittest.TestCase):
             self.assertTrue(reading.isAncestorOf(panel))
             self.assertFalse(panel.verticalScrollBar().isVisible())
         visible_error = w.content.viewport().mapTo(reading.viewport(), message.bottomLeft())
-        self.assertTrue(reading.viewport().rect().contains(visible_error))
+        self.assertTrue(reading.viewport().rect().contains(visible_error),
+                        (visible_error, reading.viewport().rect(), message,
+                         reading.verticalScrollBar().value(), w.content.toPlainText()))
         w.details_toggle.click()
         self.app.processEvents()
         self.assertGreater(reading.verticalScrollBar().maximum(), 0)
