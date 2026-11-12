@@ -879,6 +879,33 @@ class CleanupTail(unittest.TestCase):
         self.assertEqual(reply['stage'],'verified-clean')
         self.assertFalse(self.runtime.exists())
 
+    def test_compositor_tail_preserves_unrelated_filter_entries(self):
+        self.compositor_record()
+        foreign = self.base/'var/lib/glasshouse/remotekeys-filter.js'
+        foreign.parent.mkdir()
+        foreign.write_text('third-party filter')
+        chain = [
+            {'file':'/var/lib/glasshouse/remotekeys-filter.js','handler':'handleGlasshouseKeys'},
+            {'file':'/usr/lib/qml/KeyFilters/systemUi.js','handler':'handleSystemKeys'},
+            {'file':'/media/developer/another-launcher/filter.js','handler':'handleSystemKeys','extra':{'enabled':True}},
+        ]
+        for stale in (
+            {'file':'/var/lib/clean-your-tv-root/runtime/c1-home-filter.js','handler':'cytvC1HomeKey'},
+            {'file':'/var/lib/other/../clean-your-tv-root/private.js','handler':'other'},
+            {'file':'/foreign.js','handler':'cytvC1HomeKey'},
+            {'file':'/media/developer/apps/usr/palm/services/com.cleanyourtv.root.preview.service/filter.js','handler':'foreign'},
+            chain[1],
+        ):
+            with self.subTest(stale=stale):
+                result, _ = self.compositor_tail(FILTER_CHAIN=json.dumps(chain + [stale]))
+                self.assertNotEqual(result.returncode, 0)
+                self.assertTrue(self.runtime.exists())
+                self.assertEqual(json.loads((self.base/'mutations.json').read_text()), [])
+        result, reply = self.compositor_tail(FILTER_CHAIN=json.dumps(chain))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(reply['stage'], 'verified-clean')
+        self.assertEqual(foreign.read_text(), 'third-party filter')
+
     def test_stock_compositor_read_only_recheck_refuses_new_foreign_home_state(self):
         self.compositor_record()
         result,reply=self.compositor_tail(MODE='stock-proof')

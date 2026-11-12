@@ -102,6 +102,14 @@ class RuntimeTests(unittest.TestCase):
             return real_secure(path,self.uid,*args,**kw)
         with patch.object(self.k,'STOCK_APPINFO',appinfo),patch.object(self.k,'MOUNTINFO',mountinfo),patch.object(self.k,'OTHER_HOME_STATE',(other,)),patch.object(self.k,'INPUT_BINDINGS',bindings),patch.object(self.k,'secure',side_effect=secure),patch.object(self.k,'vendor_script',side_effect=lambda path:secure(Path(path))),patch.object(self.k,'luna',return_value=missing),patch.object(self.k,'read_chain',return_value=[vendor]),patch.object(emergency_reader,'open_remote',side_effect=reader),patch.object(emergency_reader,'query',return_value=keys):
             self.k.require_generic_environment()
+            glasshouse = {'file': '/var/lib/glasshouse/remotekeys-filter.js', 'handler': 'handleGlasshouseKeys'}
+            other_launcher = {'file': '/media/developer/other/systemUi.js', 'handler': 'handleSystemKeys'}
+            mixed = [glasshouse, vendor, other_launcher]
+            with self.assertRaisesRegex(ValueError, 'Stock Qt Home'):
+                self.k.require_generic_environment(mixed)
+            with patch.object(self.k, 'vendor_script', wraps=self.k.vendor_script) as read_vendor:
+                self.k.require_generic_environment(mixed, removed_apps=('com.cleanyourtv.root.preview',))
+            read_vendor.assert_called_once_with(vendor['file'])
             # A separate, whole read-only system image is not a Home takeover.
             stock_mount='2 1 179:27 / /usr ro,relatime - squashfs /dev/mmcblk0p27 ro\n'
             from types import SimpleNamespace
@@ -450,7 +458,10 @@ class RuntimeTests(unittest.TestCase):
         target.chmod(0o700)
         own = self.k.filter_entry()
         stock = [{'file': '/usr/lib/qt5/qml/KeyFilters/systemUi.js', 'handler': 'handleSystemKeys'}]
-        stale = [own, *stock]
+        glasshouse = {'file': '/var/lib/glasshouse/remotekeys-filter.js', 'handler': 'handleGlasshouseKeys',
+                      'options': {'enabled': True}}
+        remaining = [glasshouse, *stock]
+        stale = [glasshouse, own, *stock]
         info = dict(returnValue=True, modelName='OLED65C11LB', firmwareVersion='03.53.45', sdkVersion='6.5.3')
 
         with (
@@ -460,36 +471,42 @@ class RuntimeTests(unittest.TestCase):
             patch.object(self.k.sys, 'platform', 'linux'),
             patch('struct.calcsize', return_value=4),
             patch.object(self.k, 'luna', return_value=info),
-            patch.object(self.k, 'require_generic_environment', side_effect=self.k.stock_chain) as verify,
+            patch.object(self.k, 'require_generic_environment', side_effect=self.k.removal_vendor_chain) as verify,
             patch.object(self.k, 'read_chain') as read,
             patch.object(self.k, 'write_chain') as write,
         ):
-            read.side_effect = [stale, stale, stock]
-            self.k.probe(retire_orphan=True)
-            verify.assert_called_once_with(stock)
-            write.assert_called_once_with(stock)
+            read.side_effect = [stale, stale, remaining]
+            self.k.probe(removed_apps=('com.cleanyourtv.root.preview',), retire_orphan=True)
+            verify.assert_called_once_with(remaining, removed_apps=('com.cleanyourtv.root.preview',))
+            write.assert_called_once_with(remaining)
 
             for before, recheck in (
                 (stale, stock),
                 ([own, own, *stock], stale),
                 ([dict(own, extra=True), *stock], stale),
                 ([own], stale),
-                ([own, *stock, {'file': '/foreign.js', 'handler': 'foreign'}], stale),
+                ([own, *stock, {'file': '/var/lib/other/../clean-your-tv-root/extra.js', 'handler': 'foreign'}], stale),
+                ([own, *stock, {'file': '/media/developer/apps/usr/palm/services/com.cleanyourtv.root.preview.service/filter.js',
+                                'handler': 'foreign'}], stale),
             ):
                 with self.subTest(before=before, recheck=recheck):
                     write.reset_mock()
                     read.side_effect = [before, recheck]
                     with self.assertRaises(ValueError):
-                        self.k.probe(retire_orphan=True)
+                        self.k.probe(removed_apps=('com.cleanyourtv.root.preview',), retire_orphan=True)
                     write.assert_not_called()
 
             read.side_effect = [stale, stale, stale]
             with self.assertRaisesRegex(ValueError, 'readback'):
-                self.k.probe(retire_orphan=True)
-            write.assert_called_once_with(stock)
+                self.k.probe(removed_apps=('com.cleanyourtv.root.preview',), retire_orphan=True)
+            write.assert_called_once_with(remaining)
             write.reset_mock()
-            read.side_effect = [stock, stock]
-            self.k.probe(retire_orphan=True)
+            read.side_effect = [remaining, remaining]
+            self.k.probe(removed_apps=('com.cleanyourtv.root.preview',))
+            write.assert_not_called()
+            read.side_effect = [stale, stale]
+            with self.assertRaisesRegex(ValueError, 'CYTV filter remains'):
+                self.k.probe(removed_apps=('com.cleanyourtv.root.preview',))
             write.assert_not_called()
 
     def test_probe_is_independent_of_legacy_checkpoint_probe(self):
