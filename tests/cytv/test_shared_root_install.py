@@ -54,6 +54,55 @@ class SharedRootInstallTests(unittest.TestCase):
                 remote.luna.assert_not_called()
                 self.assertNotIn('private-stage',json.dumps(report))
 
+    def test_recovery_status_distinguishes_selector_failure_from_selected_python(self):
+        import shlex
+        import shutil
+        from cytv.diagnostics import create_report
+        from cytv.errors import TVCommandError
+        from cytv.python_runtime import RUNTIME_ROOT, SHA256
+
+        private_python = RUNTIME_ROOT + '/' + SHA256 + '/bin/python3.13'
+        launcher = '/var/lib/clean-your-tv-root/python-launcher'
+        for selection, expected in (
+            (None, {'root_boundary': 'python-select'}),
+            ('/usr/bin/python3', {'root_boundary': 'driver', 'root_interpreter': 'system-python'}),
+            (launcher, {'root_boundary': 'driver', 'root_interpreter': 'private-python'}),
+        ):
+            with self.subTest(selection=selection):
+                installer, remote, store, profile = self.fixture({})
+                store.begin(profile, 'install', stage='coordinator-submitted', product_operation='a'*32)
+                pending = store.pending(profile)
+                journal = store.device_dir(profile) / 'operation.json'
+                original = journal.read_bytes()
+
+                def run(command, **kwargs):
+                    args = shlex.split(command)
+                    if args[5:7] == ['/usr/bin/node', '-e']:
+                        if selection is None:
+                            raise TVCommandError(127)
+                        if selection == launcher:
+                            return launcher  # Simulate the accepted retained binding.
+                        # A private executable can run while the Root binding is absent.
+                        subprocess.run([sys.executable, '--version'], check=True, capture_output=True)
+                        return subprocess.run([shutil.which('node'), '-e', args[7], str(journal.parent / 'absent-root')],
+                                              check=True, capture_output=True, text=True).stdout
+                    executable = args[7] if selection == launcher else args[0]
+                    self.assertEqual(executable, private_python if selection == launcher else '/usr/bin/python3')
+                    self.assertEqual(args[-4:], ['status', '--operation', 'a'*32, '--verify-current'])
+                    raise TVCommandError(127)
+
+                remote.run.side_effect = run
+                with self.assertRaises(TVCommandError) as caught:
+                    installer.inspect_root_product(pending)
+                report = json.loads(create_report(store, 'status', profile, 'status', caught.exception).read_text())
+                command = {'exit_status': 127, 'root_action': 'status', **expected}
+                self.assertEqual(report['ssh_command'], command)
+                self.assertEqual(report['observation_failure']['ssh_command'], command)
+                self.assertEqual(journal.read_bytes(), original)
+                self.assertEqual(remote.run.call_count, 1 if selection is None else 2)
+                remote.upload.assert_not_called()
+                remote.luna.assert_not_called()
+
     def test_tv_origin_is_inspected_with_current_code_without_reinstall_or_profile_reset(self):
         event={'operation':None,'stage':'inspect','state':'installed','code':'inspected',
                'installation':{'state':'installed','reason':'verified_components','can_install':False,'can_maintain':True}}

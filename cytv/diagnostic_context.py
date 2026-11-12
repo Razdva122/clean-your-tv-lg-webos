@@ -14,6 +14,11 @@ ROOT_REQUIREMENTS = ('root-user', 'python3', 'luna-send', 'apps-directory',
                      'luna-services-directory', 'python-json', 'python-fcntl', 'python-version', 'node-version')
 
 ROOT_ACTIONS = ('inspect', 'install', 'status', 'remove', 'enable', 'restore', 'uninstall', 'clean-remove', 'clean-status')
+ROOT_COMMAND_DETAILS = (
+    ('root_action', ROOT_ACTIONS),
+    ('root_boundary', ('coordinator-stage', 'python-select', 'driver')),
+    ('root_interpreter', ('system-python', 'private-python')),
+)
 
 REASONS = ('unknown', 'user-error', 'ssh-command-failed', 'ssh-unreachable', 'ssh-access-denied', 'ssh-refused', 'ssh-timeout',
            'ssh-authentication', 'ssh-identity-changed', 'ssh-trust-record', 'ssh-identity-unverified', 'host-runtime',
@@ -393,8 +398,7 @@ def failure_summary(value):
     command = mapping(value.get('ssh_command'))
     if type(command.get('exit_status')) is int and -1 <= command['exit_status'] <= 255:
         result['ssh_command'] = {'exit_status': command['exit_status']}
-    for key, allowed in (('root_action', ROOT_ACTIONS),
-                         ('root_boundary', ('coordinator-stage', 'python-select', 'driver'))):
+    for key, allowed in ROOT_COMMAND_DETAILS:
         if key in command and type(command[key]) is str and command[key] in allowed:
             result.setdefault('ssh_command', {})[key] = command[key]
     if 'tv' in value:
