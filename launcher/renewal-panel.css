@@ -891,6 +891,9 @@
   margin: 0 0 18px;
   text-align: left;
 }
+#settings-pane-advanced > button:not(:last-child) {
+  margin-bottom: 18px;
+}
 .settings-workspace .home-routing-actions {
   display: block;
 }
