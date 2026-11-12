@@ -812,6 +812,7 @@ class Wizard(QMainWindow):
                 text = WrappedLabel(tr(label))
                 toggle = ToggleSwitch(tr(label), tr('Selected'), tr('Keep current'))
                 toggle.setObjectName('debloat-' + key)
+                toggle.setChecked(True)
                 text.setBuddy(toggle)
                 row.addWidget(text, 1)
                 row.addWidget(toggle)
@@ -840,6 +841,7 @@ class Wizard(QMainWindow):
             section.toggled.connect(select_group)
             for toggle in switches:
                 toggle.toggled.connect(update_group)
+            update_group()
             return section
 
         first = None
