@@ -1,6 +1,8 @@
 # cytv standalone installer
 
-## Name the Home screen (Root Edition, unreleased)
+<a id="name-the-home-screen-root-edition-unreleased"></a>
+
+## Name the Home screen (Root Edition)
 
 The final customization step offers **Home screen name**. Leave the field blank
 to keep the current name. Enter `Home` explicitly to reset it. For scripted
