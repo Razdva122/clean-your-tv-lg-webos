@@ -8,6 +8,7 @@ import tempfile
 import unittest
 
 from cytv import operations, package, state
+from cytv.errors import UserError
 
 
 @lru_cache(maxsize=32)
@@ -1606,8 +1607,11 @@ class OperationTests(unittest.TestCase):
             'effective':{'sam_home':'com.webos.app.home','profiles':{
                 'defaultApps':{'categories':{'home':'com.webos.app.home'}},'idleApp':{'appId':'com.webos.app.home'}}}}
         original=remote.run
+        retained_runtime = True
         def run(command,**kwargs):
             if 'deploy.json' in command:return '{"stage":"installed-recovery-only"}'
+            if retained_runtime and b'CYTV_SELECTED_RUNTIME_VERIFIED' in (kwargs.get('data') or b''):
+                return 'CYTV_SELECTED_RUNTIME_MISMATCH'
             for marker in ('CYTV_ROOT_FILES_OK','CYTV_ACTIVATION_RECOVERABLE'):
                 if marker in command:
                     remote.calls.append(('run',command));return marker
@@ -1624,6 +1628,17 @@ class OperationTests(unittest.TestCase):
             activation_restore_pending=False,activation_restore='verified'))
         previous=self.store.pending(installer.profile)
         self.assertFalse(any(c[0]=='run' and c[1].endswith(' enable') for c in remote.calls[checkpoint:]))
+        receipt = self.store.device_dir(installer.profile) / 'operation.json'
+        before = receipt.read_bytes()
+        checkpoint = len(remote.calls)
+        with self.assertRaises(UserError) as failure:
+            installer.resume_root_setup(expected_pending=previous)
+        self.assertEqual(failure.exception.reason_code, 'installer-runtime-mismatch')
+        self.assertEqual(receipt.read_bytes(), before)
+        self.assertEqual(list(receipt.parent.glob('recovery-*.json')), [])
+        self.assertFalse(any(c[1].endswith((' enable', ' restore', '/disable', '/launch'))
+                             or 'controller.pid' in c[1] for c in remote.calls[checkpoint:]))
+        retained_runtime = False
         answers=iter(('y','1','y','3'))
         recover(installer,lambda _:next(answers),Console(lambda *_:None))
         self.assertIsNone(self.store.pending(installer.profile))

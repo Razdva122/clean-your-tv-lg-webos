@@ -4,7 +4,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 from cytv import operations, state
 from cytv.recovery import recover
 from cytv.terminal import Console
@@ -140,7 +140,7 @@ class ActivationRecoveryTests(unittest.TestCase):
         self.assertFalse(self.eligible())
         self.assertEqual(self.store.pending(self.profile), before)
 
-    def test_declining_and_confirming_recovery_preserve_original_evidence(self):
+    def test_declining_recovery_preserves_original_evidence(self):
         self.installer.root_action = MagicMock(return_value={'returnValue': True, 'result': self.device})
         run = self.remote.run
         run.side_effect = lambda cmd, **kw: ('{"stage":"installed-recovery-only"}' if 'deploy.json' in cmd
@@ -151,14 +151,6 @@ class ActivationRecoveryTests(unittest.TestCase):
         self.assertEqual(self.store.pending(self.profile), original)
         self.installer.root_action.assert_called_with('status')
         self.assertEqual(list(self.store.device_dir(self.profile).glob('recovery-*.json')), [])
-        # The real activation orchestration is exercised separately in test_operations.
-        self.installer.activate_root = MagicMock(side_effect=lambda: self.store.finish(self.profile))
-        answers = iter(('y', '1', 'y'))
-        recover(self.installer, lambda _: next(answers), Console(lambda *_: None))
-        saved = list(self.store.device_dir(self.profile).glob('recovery-*.json'))
-        self.assertEqual(len(saved), 1)
-        self.assertEqual(json.loads(saved[0].read_text())['previous'], original)
-        self.assertIsNone(self.store.pending(self.profile))
         self.remote.upload.assert_not_called()
 
     def test_confirmation_rechecks_before_changing_receipt(self):
@@ -166,6 +158,24 @@ class ActivationRecoveryTests(unittest.TestCase):
         before = self.store.pending(self.profile)
         with self.assertRaises(RuntimeError): self.installer.resume_root_setup()
         self.assertEqual(self.store.pending(self.profile), before)
+
+    def test_replaced_receipt_during_runtime_check_is_not_archived_or_activated(self):
+        before = self.store.pending(self.profile)
+        self.installer.observe_recovery = MagicMock(return_value={'can_resume_root_setup': True})
+        self.installer.root_action = MagicMock(return_value={'result': self.device})
+        self.installer.stop_root_helper_for_activation = MagicMock()
+
+        def replace_receipt(_installer):
+            self.store.checkpoint(self.profile, product_operation='e'*32)
+
+        with patch('cytv.root_runtime_contract.verify', side_effect=replace_receipt):
+            with self.assertRaisesRegex(RuntimeError, 'Recovery evidence changed'):
+                self.installer.resume_root_setup(expected_pending=before)
+
+        self.assertEqual(self.store.pending(self.profile), dict(before, product_operation='e'*32))
+        self.assertEqual(list(self.store.device_dir(self.profile).glob('recovery-*.json')), [])
+        self.installer.stop_root_helper_for_activation.assert_not_called()
+        self.installer.root_action.assert_called_once_with('status')
 
     def test_busy_proof_after_confirmation_keeps_original_receipt_without_enabling(self):
         self.installer.root_action = MagicMock(return_value={'returnValue': True, 'result': self.device})
