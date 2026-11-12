@@ -95,7 +95,7 @@ Atualizações automáticas na TV não reiniciam Helper parado. Para retomá-lo 
 
 ## Precisa de ajuda?
 
-Se aparecer `ssh-identity-changed` após restaurar o TV ou alterar o SSH, pare: o CYTV bloqueou a mudança da chave salva antes da autenticação. A confirmação inicial de confiança não a substitui; uma desinstalação pendente não explica a divergência. Guarde o perfil original, as chaves e os registros de recuperação. Não há comando automático compatível para renovar a confiança. É preciso verificar independentemente a identidade/impressão digital do TV e revisar um procedimento que preserve o perfil: [recuperação da identidade SSH](../RECOVERY.md#ssh-identity-changed).
+Se aparecer `ssh-identity-changed` após restaurar o TV ou alterar o SSH, pare: o CYTV bloqueou a mudança da chave salva antes da autenticação. A confirmação inicial de confiança não a substitui; uma desinstalação pendente não explica a divergência. Guarde o perfil original, as chaves e os registros de recuperação. Com um perfil Root salvo e uma desinstalação pendente, é possível registrar no console a impressão digital verificada de forma independente. A desinstalação anterior permanece bloqueada. Veja [recuperação da identidade SSH](../RECOVERY.md#ssh-identity-changed).
 
 Se a instalação foi interrompida, use a mesma conexão salva e escolha primeiro **Verificar estado da TV**. Continue apenas pela recuperação oferecida pelo assistente. Se o estado for desconhecido, salve o relatório de diagnóstico e pare; preserve os dados de recuperação e não repita a instalação às cegas.
 

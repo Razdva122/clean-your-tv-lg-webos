@@ -95,7 +95,7 @@ Automatische Updates am TV starten einen angehaltenen Helper nicht neu. Nutzen S
 
 ## Brauchen Sie Hilfe?
 
-Bei `ssh-identity-changed` nach einem Reset oder einer SSH-Änderung stoppen: CYTV blockiert den geänderten gespeicherten Schlüssel vor der Anmeldung. Die erstmalige Vertrauensabfrage ersetzt ihn nicht; eine ausstehende Deinstallation erklärt die Abweichung nicht. Ursprüngliches Profil, Schlüssel und Wiederherstellungsdaten behalten. Es gibt keinen unterstützten automatischen Befehl zum erneuten Vertrauen. TV-Identität/Fingerabdruck müssen unabhängig geprüft werden; anschließend ist ein geprüftes Verfahren unter Erhalt des Profils nötig: [Wiederherstellung bei geänderter SSH-Identität](../RECOVERY.md#ssh-identity-changed).
+Bei `ssh-identity-changed` nach einem Reset oder einer SSH-Änderung stoppen: CYTV blockiert den geänderten gespeicherten Schlüssel vor der Anmeldung. Die erstmalige Vertrauensabfrage ersetzt ihn nicht; eine ausstehende Deinstallation erklärt die Abweichung nicht. Ursprüngliches Profil, Schlüssel und Wiederherstellungsdaten behalten. Bei einem gespeicherten Root-Profil mit ausstehender Deinstallation lässt sich der unabhängig geprüfte Fingerabdruck in der Konsole erfassen. Die frühere Deinstallation bleibt blockiert. Siehe [Wiederherstellung bei geänderter SSH-Identität](../RECOVERY.md#ssh-identity-changed).
 
 Nach einer unterbrochenen Installation verwenden Sie dieselbe gespeicherte Verbindung und zuerst **TV-Status prüfen**. Fahren Sie nur mit der vom Assistenten angebotenen Wiederherstellung fort. Bei unbekanntem Zustand Diagnosebericht speichern und stoppen; Wiederherstellungsdaten behalten und nicht blind neu installieren.
 

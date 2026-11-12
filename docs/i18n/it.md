@@ -95,7 +95,7 @@ Gli aggiornamenti automatici sulla TV non riavviano Helper fermato. Per riprende
 
 ## Serve aiuto?
 
-Se compare `ssh-identity-changed` dopo un ripristino o una modifica SSH, fermati: CYTV ha bloccato la chiave salvata modificata prima dell’autenticazione. La conferma iniziale di fiducia non la sostituisce; una disinstallazione in sospeso non spiega la differenza. Conserva il profilo originale, le chiavi e i dati di recupero. Non esiste un comando automatico supportato per rinnovare la fiducia. Servono una verifica indipendente dell’identità/impronta del TV e una procedura revisionata che preservi il profilo: [recupero dell’identità SSH](../RECOVERY.md#ssh-identity-changed).
+Se compare `ssh-identity-changed` dopo un ripristino o una modifica SSH, fermati: CYTV ha bloccato la chiave salvata modificata prima dell’autenticazione. La conferma iniziale di fiducia non la sostituisce; una disinstallazione in sospeso non spiega la differenza. Conserva il profilo originale, le chiavi e i dati di recupero. Con un profilo Root salvato e una disinstallazione in sospeso, puoi registrare nella console l’impronta verificata in modo indipendente. La disinstallazione precedente rimane bloccata. Vedi [recupero dell’identità SSH](../RECOVERY.md#ssh-identity-changed).
 
 Se l’installazione viene interrotta, usa la stessa connessione salvata e scegli prima **Controlla stato TV**. Prosegui solo con il ripristino proposto dalla procedura guidata. Se lo stato è sconosciuto, salva il rapporto diagnostico e fermati; conserva i dati di ripristino e non ripetere l’installazione alla cieca.
 

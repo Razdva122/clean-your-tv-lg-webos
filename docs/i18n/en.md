@@ -95,7 +95,7 @@ Automatic updates on the TV do not restart a stopped Helper. To resume it separa
 
 ## Need help?
 
-If `ssh-identity-changed` appears after a reset or SSH change, stop: CYTV blocked the changed saved key before sign-in. The first-use trust prompt cannot replace it, and a pending uninstall does not explain the mismatch. Keep the original saved profile, keys and recovery records. No supported automatic re-trust command is supplied. Independent TV identity/fingerprint verification and a reviewed procedure preserving the profile are needed: [changed SSH identity recovery](../RECOVERY.md#ssh-identity-changed).
+If `ssh-identity-changed` appears after a reset or SSH change, stop: CYTV blocked the changed saved key before sign-in. The first-use trust prompt cannot replace it, and a pending uninstall does not explain the mismatch. Keep the original saved profile, keys and recovery records. For a saved Root profile with a pending uninstall, the console can record the independently verified fingerprint. The earlier uninstall stays blocked. See [changed SSH identity recovery](../RECOVERY.md#ssh-identity-changed).
 
 If installation was interrupted, use the same saved connection and choose **Check TV status** first. Continue only through the recovery action offered by the wizard. If the state is unknown, save the diagnostic report and stop; keep recovery data and do not blindly repeat installation.
 
