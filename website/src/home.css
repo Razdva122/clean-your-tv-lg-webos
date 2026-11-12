@@ -103,25 +103,25 @@ html[data-landing] h2 {
   line-height: 1.12;
 }
 html[data-landing] .hero {
-  height: 100svh;
-  min-height: 760px;
+  height: auto;
+  min-height: max(760px, 100svh);
   padding: 112px 0 32px;
   background: var(--bg);
   display: block;
 }
 html[data-landing] .hero > .wrap {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
+  display: block;
+  height: auto;
 }
 html[data-landing] .hero-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   text-align: center;
-  flex: 0 0 auto;
 }
 html[data-landing] .hero h1 {
   font-size: clamp(44px, 5.4vw, 76px);
-  max-width: 23ch;
+  max-width: min(30ch, 100%);
   margin: 0 auto;
   line-height: 1.04;
   text-wrap: balance;
@@ -152,8 +152,8 @@ html[data-landing] .btn--secondary {
   background: transparent;
 }
 html[data-landing] .showcase {
-  flex: 1;
-  min-height: 0;
+  width: 100%;
+  margin-top: 24px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -208,10 +208,9 @@ html[data-landing] .showcase {
 }
 .showcase-stage {
   position: relative;
-  height: calc(100% - 70px);
-  min-height: 0;
+  display: grid;
+  width: min(100%, clamp(560px, 86svh, 960px));
   aspect-ratio: 16 / 9;
-  max-width: 100%;
   padding: 5px;
   border: 1px solid #ffffff38;
   border-radius: 16px;
@@ -219,8 +218,6 @@ html[data-landing] .showcase {
 }
 .showcase-screen {
   position: relative;
-  height: 100%;
-  aspect-ratio: 16 / 9;
   overflow: hidden;
   border-radius: 11px;
 }
@@ -553,10 +550,6 @@ html[data-landing] .footer-close .btn {
   }
   html[data-landing] .hero {
     padding: 104px 0 32px;
-    min-height: 760px;
-  }
-  html[data-landing] .hero > .wrap {
-    gap: 32px;
   }
   html[data-landing] .hero h1 {
     font-size: clamp(38px, 10.2vw, 54px);
@@ -575,7 +568,7 @@ html[data-landing] .footer-close .btn {
     width: 100%;
   }
   html[data-landing] .showcase {
-    justify-content: flex-start;
+    margin-top: 32px;
     gap: 20px;
   }
   .theme-picker {
@@ -592,14 +585,10 @@ html[data-landing] .footer-close .btn {
   }
   .showcase-stage {
     width: 100%;
-    height: auto;
-    aspect-ratio: 16/9;
     padding: 3px;
     border-radius: 12px;
   }
   .showcase-screen {
-    width: 100%;
-    height: 100%;
     border-radius: 8px;
   }
   .preview-toggle {
@@ -716,14 +705,6 @@ html[data-landing] .footer-close .btn {
     min-height: 56px;
   }
 }
-/* The viewport may be tall and narrow: constrain both sides of the 16:9 capture. */
-.showcase-stage {
-  max-height: calc((100vw - 2 * var(--gut)) * 9 / 16);
-}
-.showcase-screen {
-  width: 100%;
-  aspect-ratio: auto;
-}
 .feature-layout,
 .reading-layout,
 .edition-grid {
@@ -792,9 +773,6 @@ html[data-landing] .footer-close .btn {
   html[data-landing] .hero .btn {
     width: 100%;
   }
-  .showcase-stage {
-    aspect-ratio: 16 / 9;
-  }
   .feature-layout,
   .reading-layout,
   .edition-grid {
@@ -822,20 +800,6 @@ html[data-landing] .footer-close .btn {
     min-height: calc(100svh - 168px);
   }
 }
-html[data-landing] .hero-text {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  height: 100%;
-  min-height: 0;
-}
-html[data-landing] .hero-text > :not(.showcase) {
-  flex-shrink: 0;
-}
-html[data-landing] .hero-text .showcase {
-  width: 100%;
-  margin-top: 24px;
-}
 .theme-picker input {
   appearance: none;
   opacity: 1;
@@ -860,9 +824,6 @@ html[data-landing] .landing-footer > .wrap {
   display: flex;
 }
 @media (max-width: 639px) {
-  html[data-landing] .hero-text .showcase {
-    margin-top: 32px;
-  }
   html[data-landing] .landing-footer {
     padding-bottom: 48px;
   }

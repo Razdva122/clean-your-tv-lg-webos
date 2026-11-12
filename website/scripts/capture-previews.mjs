@@ -1,5 +1,6 @@
 // Record the bundled browser renderer with its public demo inventory, never a TV.
 // Run after prepare.mjs, with the website dev server running. Pillow assembles WebP.
+import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -14,6 +15,7 @@ const browser = await chromium.launch({ headless: true, channel: 'chrome' });
 try {
   for (const theme of ['classic', 'liquid-glass', 'ribbon']) {
     const page = await browser.newPage({
+      locale: 'en-US',
       viewport: { width: 1920, height: 1080 },
       deviceScaleFactor: 1
     });
@@ -31,6 +33,12 @@ try {
       document.dispatchEvent(new Event('webOSRelaunch'));
     }, theme);
     await page.waitForTimeout(900);
+    assert.equal(
+      await page.locator('html').getAttribute('lang'),
+      'en',
+      `Expected English launcher UI for ${theme}`
+    );
+    await page.evaluate(() => document.fonts.ready);
     const dir = join(frames, theme);
     mkdirSync(dir);
     await page.screenshot({ path: join(dir, '00.png') });
