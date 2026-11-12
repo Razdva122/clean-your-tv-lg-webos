@@ -11,7 +11,8 @@ REMOVAL_REASONS = ('removal-requested', 'original-writer-active', 'ownership-con
                    'removal-terminal-unknown', 'private-cleanup-incomplete', 'removal-verified', 'removal-recheck-required', 'restart-required',
                    'root-worker-busy','root-access-required','removal-failed','cleanup-check-failed','connection-interrupted')
 RESTART_TRIGGERS = ('controller-still-running', 'protected-package-access', 'startup-disable-unverified',
-                    'resident-installer-evidence', 'prior-operation-unresolved', 'process-idle-unverified')
+                    'resident-installer-evidence', 'prior-operation-unresolved', 'process-idle-unverified',
+                    'invalid-helper-stop-record')
 STATES += ('cleanup-in-progress', 'verified-clean')
 REASONS += REMOVAL_REASONS
 

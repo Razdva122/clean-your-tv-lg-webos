@@ -124,22 +124,50 @@ if(input.action==='idle'){
  // File absence alone cannot prove that a deleted service or installer stopped.
  var prefixes=installerRoots.concat([publicRoot+'/cytv-', '/var/lib/clean-your-tv-', '/tmp/cytv-', '/tmp/clean-your-tv-']);
  apps.forEach(function(app,index){prefixes.push(base+'/applications/'+app,base+'/services/'+services[index]);});
- reply.idle=true;
- try{var proc='/proc/',pids=fs.readdirSync(proc).filter(function(pid){return /^[1-9][0-9]*$/.test(pid)&&Number(pid)!==process.pid;});
-  if(pids.length>4096)reply.idle=false;
-  pids.forEach(function(pid){try{
-   var args=fs.readFileSync(proc+pid+'/cmdline','utf8').split('\0').filter(Boolean),argc=args.length;
-   try{args.push(fs.readlinkSync(proc+pid+'/exe').replace(/ \(deleted\)$/,''));}catch(e){if(e.code!=='ENOENT')throw e;}
-   try{args.push(fs.readlinkSync(proc+pid+'/cwd').replace(/ \(deleted\)$/,''));}catch(e){if(e.code!=='ENOENT')throw e;}
-   var shell=args.length&&/(^|\/)(sh|ash|bash|dash|zsh|ksh)$/.test(args[0]);
-   if(args.some(function(arg){return apps.concat(services).indexOf(arg)>=0||prefixes.some(function(prefix){return arg===prefix||arg.indexOf(prefix+'/')===0||(/[-]$/.test(prefix)&&arg.indexOf(prefix)===0)||(shell&&arg.indexOf(prefix)>=0);})||(shell&&apps.some(function(app){return arg.indexOf(app)>=0;}));}))reply.idle=false;
-   // Require an unambiguous absolute script. Interpreter flags have too many
-   // inline/combined spellings to infer that an old project body is absent.
-   if(args.some(function(arg){return /(^|\/)(node|python[0-9.]*)$/.test(arg);})&&
-      (argc<2||!/^\/.*[.](js|cjs|mjs|py|pyc)$/.test(args[1])))reply.idle=false;
-  }catch(e){if(e.code!=='ENOENT'||exists(proc+pid))reply.idle=false;}});
- }catch(e){reply.idle=false;}
- process.stdout.write(JSON.stringify(reply));return;
+ var afterStop=input.after_stop===true,idleDeadline=Date.now()+8000;
+ var hasNoUserspace=function(directory){
+  var stat=fs.readFileSync(directory+'/stat','utf8'),close=stat.lastIndexOf(')');
+  if(close<0)return false;
+  var fields=stat.slice(close+1).trim().split(/\s+/);
+  // State (field 3) and flags (field 9, PF_KTHREAD) from proc_pid_stat.
+  return fields[0]==='Z'||fields[0]==='X'||(Number(fields[6])&0x00200000)!==0;
+ };
+ var readProcLink=function(file,args,argc){
+  try{args.push(fs.readlinkSync(file).replace(/ \(deleted\)$/,''));}
+  catch(e){
+   if(e.code==='ENOENT')return;
+   // After a new boot and confirmed startup shutdown, the readable command
+   // line identifies project invocations even if Linux restricts these links.
+   if(afterStop&&(e.code==='EACCES'||e.code==='EPERM')&&
+      (argc>0||hasNoUserspace(path.dirname(file))))return;
+   throw e;
+  }
+ };
+ var checkIdle=function(){
+  reply.idle=true;
+  try{var proc='/proc/',pids=fs.readdirSync(proc).filter(function(pid){return /^[1-9][0-9]*$/.test(pid)&&Number(pid)!==process.pid;});
+   if(pids.length>4096)reply.idle=false;
+   pids.forEach(function(pid){try{
+    var args=fs.readFileSync(proc+pid+'/cmdline','utf8').split('\0').filter(Boolean),argc=args.length;
+    readProcLink(proc+pid+'/exe',args,argc);
+    readProcLink(proc+pid+'/cwd',args,argc);
+    var shell=args.length&&/(^|\/)(sh|ash|bash|dash|zsh|ksh)$/.test(args[0]);
+    if(args.some(function(arg){return apps.concat(services).indexOf(arg)>=0||prefixes.some(function(prefix){return arg===prefix||arg.indexOf(prefix+'/')===0||(/[-]$/.test(prefix)&&arg.indexOf(prefix)===0)||(shell&&arg.indexOf(prefix)>=0);})||(shell&&apps.some(function(app){return arg.indexOf(app)>=0;}));}))reply.idle=false;
+    // Known LS2 launcher with an explicit service ID. Project IDs and
+    // project paths were already checked above.
+    var serviceLauncher=afterStop&&argc===3&&/(^|\/)node$/.test(args[0])&&
+     args[1]==='/usr/bin/run-js-service'&&/^[a-zA-Z0-9_-]+(?:[.][a-zA-Z0-9_-]+)+$/.test(args[2]);
+    // Interpreter flags do not establish the script's identity.
+    if(!serviceLauncher&&args.some(function(arg){return /(^|\/)(node|python[0-9.]*)$/.test(arg);})&&
+       (argc<2||!/^\/.*[.](js|cjs|mjs|py|pyc)$/.test(args[1])))reply.idle=false;
+   }catch(e){if(e.code!=='ENOENT'||exists(proc+pid))reply.idle=false;}});
+  }catch(e){reply.idle=false;}
+  // Calling disable can temporarily activate an LS2 service. Wait for its
+  // process to exit without calling disable again while polling.
+  if(afterStop&&!reply.idle&&Date.now()<idleDeadline){setTimeout(checkIdle,250);return;}
+  process.stdout.write(JSON.stringify(reply));
+ };
+ checkIdle();return;
 }
 function helperState(state){
  ancestry(path.dirname(state));var s=fs.lstatSync(state);
@@ -155,12 +183,41 @@ if(input.action==='stop'){
   helperState(state);
   (function(){
    /* CYTV_HELPER_STORAGE_LOADER */
-   load('./state-permissions').requestStop(state,{legacyCleanup:true,expectedDirectory:s});
+   try{load('./state-permissions').requestStop(state,{legacyCleanup:true,expectedDirectory:s});}
+   catch(error){
+    // Only the canonical refusal for this exact leaf can take the restart path.
+    // Other Stop failures (including generation/latch failures) still block.
+    var event=error.contractEvents&&error.contractEvents[0];
+    if(!event||event.field!=='control'||event.expected!=='single-regular-file'||
+       !at(state,s,function(){
+        var control=exists('control.json');
+        return control&&control.isDirectory();
+       }))throw error;
+    reply.invalid_stop_record=true;
+   }
   }());
  }catch(e){blocked('helper-control',e);}
  var deadline=Date.now()+8000;
  var stopped=function(){var running=false;
-  try{var pidFile=state+'/controller.pid',pidStat=exists(pidFile);if(pidStat){helperState(state);if(!pidStat.isFile()||pidStat.nlink!==1||pidStat.size>32)fail();var text=fs.readFileSync(pidFile,'utf8').trim();if(/^[1-9][0-9]{0,8}$/.test(text)){try{var args=fs.readFileSync('/proc/'+text+'/cmdline','utf8').split('\0');if(args[0]===apps[0]||args.indexOf(base+'/applications/'+apps[0]+'/native.js')>=0){process.kill(Number(text),0);running=true;}}catch(e){if(e.code!=='ENOENT'&&e.code!=='ESRCH')throw e;}}}}
+  try{
+   var pidFile=state+'/controller.pid',pidStat=exists(pidFile);
+   if(pidStat){
+    helperState(state);
+    if(pidStat.isDirectory()||(pidStat.isFile()&&pidStat.nlink===1&&pidStat.size>32)){
+     reply.invalid_stop_record=true;
+    }else{
+     if(!pidStat.isFile()||pidStat.nlink!==1)fail();
+     var text=fs.readFileSync(pidFile,'utf8').trim();
+     if(!/^[1-9][0-9]{0,8}$/.test(text))reply.invalid_stop_record=true;
+     else try{
+      var args=fs.readFileSync('/proc/'+text+'/cmdline','utf8').split('\0');
+      if(args[0]===apps[0]||args.indexOf(base+'/applications/'+apps[0]+'/native.js')>=0){
+       process.kill(Number(text),0);running=true;
+      }
+     }catch(e){if(e.code!=='ENOENT'&&e.code!=='ESRCH')throw e;}
+    }
+   }
+  }
   catch(e){blocked('helper-control',e);}
   if(running&&Date.now()<deadline){setTimeout(stopped,100);return;}
   reply.controller_running=running;process.stdout.write(JSON.stringify(reply));
@@ -230,10 +287,12 @@ def _program(request):
     return ('process.argv.push(' + json.dumps(json.dumps(request)) + ');\n' + source).encode()
 
 
-def _device(installer, action, proof=None):
+def _device(installer, action, proof=None, *, after_stop=False):
     pending = installer.store.pending(installer.profile) or {}
     request = {'action':action, 'staging_ids':pending.get('cleanup_staging_ids', []),
                'removal':pending.get('removal_operation'), 'proof':proof}
+    if after_stop:
+        request['after_stop'] = True
     if installer.profile.get('connection') == 'root-ssh':
         request['connection'] = 'root-ssh'
     try:
@@ -488,6 +547,7 @@ def continue_removal(installer, expected_pending):
                                    cleanup_boot_verified=False, stage='requested')
         return proof
     proof = pending.get('cleanup_boot_proof')
+    boot_id = None
     # A durable genuine restart avoids another power cycle after host failure,
     # but its reuse must still pass fresh process checks below.
     reused_restart = proof is not None and pending.get('cleanup_boot_verified') is True
@@ -534,12 +594,23 @@ def continue_removal(installer, expected_pending):
     installer.progress('Restoring TV controls…')
     stopped = _device(installer, 'stop')
     _check_access(stopped, defer_packages=True)
+    invalid_stop_record = stopped.get('invalid_stop_record') is True
+    if invalid_stop_record:
+        # A missing volatile marker alone cannot replace a failed Stop.
+        if not restarted or boot_id != current.get('boot_id') or boot_id in (None, proof['kernel']):
+            if reused_restart:
+                capture_boot()
+            return require_restart(['invalid-helper-stop-record'], before_packages=True)
     unavailable = set(pending.get('cleanup_startup_unavailable', []))
     startup_access_blocked = not restarted and any(
         _protected_package(row) for row in current['blocked'] + stopped['blocked'])
     startup_disable_unverified = False
+    inaccessible_startup = ({row['scope'] for row in current['blocked'] + stopped['blocked']
+                             if _protected_package(row)} if invalid_stop_record else set())
     for app, service in zip(APPS, ('com.local.nativehome.service', 'com.gathin.tvhome.renewal')):
-        if service not in current['startup_services'] or app in carriers or (restarted and service in unavailable):
+        if ((service not in current['startup_services'] and 'startup-service ' + service not in inaccessible_startup)
+                or app in carriers
+                or (restarted and service in unavailable and not invalid_stop_record)):
             continue
         try:
             reply = installer.remote.luna(service + '/disable', {}, timeout=10)
@@ -583,7 +654,12 @@ def continue_removal(installer, expected_pending):
         restart_triggers.append('startup-disable-unverified')
     if resident and not restarted:
         restart_triggers.append('resident-installer-evidence')
-    if restart_triggers:
+    if invalid_stop_record:
+        # A successful boot leaves the operation ready to retry without
+        # recapturing a baseline if startup or process absence is unverified.
+        if restart_triggers or _device(installer, 'idle', after_stop=True).get('idle') is not True:
+            raise UserError('Removal could not be checked. Reconnect and try again.', reason_code='cleanup-check-failed')
+    elif restart_triggers:
         if restarted:
             _device(installer, 'boot-retire', proof=proof)
             proof = capture_boot()

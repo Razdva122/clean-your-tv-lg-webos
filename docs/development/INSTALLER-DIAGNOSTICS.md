@@ -355,8 +355,11 @@ legacy first failures or establish that a submitted package transaction terminat
 When the No-root cleanup adapter requests a restart, `removal.restart_triggers`
 records the checks that requested it: `controller-still-running`,
 `protected-package-access`, `startup-disable-unverified`,
-`resident-installer-evidence`, `prior-operation-unresolved`, or
-`process-idle-unverified`. The installer saves the codes with the restart
+`resident-installer-evidence`, `prior-operation-unresolved`,
+`process-idle-unverified`, or `invalid-helper-stop-record`. For an invalid
+Helper Stop record, cleanup requires a changed kernel boot ID, confirmation
+that startup was disabled, and a fresh process check before package removal.
+The installer saves the codes with the restart
 checkpoint so they remain available in both status and failed-retry reports.
 An older checkpoint may omit the field. The Root cleanup adapter records its
 own restart checkpoint and reason. These codes describe the earlier decision.
