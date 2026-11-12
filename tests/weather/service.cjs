@@ -182,12 +182,10 @@ function exercise(filename, appId, entry) {
   assert.equal(options.agent, false);
   assert(/CleanYourTV.*github\.com/.test(options.headers['User-Agent']));
   assert(Array.isArray(options.ca));
-  assert.deepStrictEqual(
-    Array.from(options.ca),
-    fs
-      .readFileSync('renewal-service/ca-bundle.crt', 'utf8')
-      .match(/-----BEGIN CERTIFICATE-----[\s\S]+?-----END CERTIFICATE-----/g)
-  );
+  var certificates = fs
+    .readFileSync('renewal-service/ca-bundle.crt', 'utf8')
+    .match(/-----BEGIN CERTIFICATE-----[\s\S]+?-----END CERTIFICATE-----/g);
+  assert.strictEqual(JSON.stringify(options.ca), JSON.stringify(certificates));
   response(call, '{"properties":{"timeseries":[]}}');
   assert.equal(good[0].returnValue, true);
   assert(good[0].forecast.properties);
