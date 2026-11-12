@@ -82,6 +82,15 @@ def create_report(store, action, profile, phase, error=None, tv_info=None, *, ch
         from .errors import root_driver_details
         driver=root_driver_details(getattr(error,'root_driver',None))
         if driver:report['root_driver']=driver
+    if action == phase == 'home-diagnostics':
+        stage = context.choice(getattr(error, 'home_diagnostic_stage', None),
+                               ('start-upload', 'log-read', 'start-unacknowledged'), None)
+        if stage:
+            report['helper_diagnostics'] = {'failure_stage': stage}
+            if stage == 'start-upload':
+                report['helper_diagnostics']['state_directory'] = context.choice(
+                    getattr(error, 'home_diagnostic_directory', None),
+                    ('unavailable', 'access-denied', 'access-available'))
     if hasattr(error, 'no_root_cleanup'):
         from .errors import no_root_cleanup_details
         report['no_root_cleanup'] = no_root_cleanup_details(error.no_root_cleanup)
@@ -172,6 +181,17 @@ def suggest_issue(write, store, action, profile, phase, error, tv_info=None, *, 
     write('Review the report. Do not attach keys or your profile folder.')
 
 
+def _observe_home_diagnostic_directory(remote, directory):
+    """Check directory access after a failed upload without writing a test file."""
+    try:
+        return remote.run(
+            f'if [ ! -d "{directory}" ]; then printf unavailable; '
+            f'elif [ ! -w "{directory}" ] || [ ! -x "{directory}" ]; then printf access-denied; '
+            'else printf access-available; fi', timeout=5).strip()
+    except Exception:
+        return None  # Keep the original upload failure if this probe also fails.
+
+
 def collect_home_report(remote, store, profile, write):
     """One bounded observation window, exported without raw logs or credentials."""
     if profile['edition'] != 'no-root':
@@ -188,10 +208,13 @@ def collect_home_report(remote, store, profile, write):
                 'screen-watch-error', 'screen-watch-disconnected'}
     started = complete = announced = False
     beginning = time.monotonic()
+    failure_stage = 'start-upload'
     try:
         command('diagnostics-start')
         while True:
+            failure_stage = 'log-read'
             raw = remote.run('tail -c 262144 ' + directory + '/controller.log')
+            failure_stage = None
             records = []
             for line in raw.splitlines():
                 try:
@@ -222,6 +245,7 @@ def collect_home_report(remote, store, profile, write):
             complete = any(r['trigger'] == 'expired' for r in records)
             elapsed = time.monotonic() - beginning
             if not started and elapsed >= 5:
+                failure_stage = 'start-unacknowledged'
                 raise UserError('Helper did not start diagnostics. Update to a release containing diagnostics and start Helper in Home settings, then try again.')
             if complete or elapsed >= 70:
                 break
@@ -229,6 +253,12 @@ def collect_home_report(remote, store, profile, write):
                 announced = True
                 write('Press Home once on the TV remote. Leave the remote untouched while the report is collected.')
             time.sleep(2)
+    except Exception as error:
+        if failure_stage:
+            error.home_diagnostic_stage = failure_stage
+        if failure_stage == 'start-upload' and isinstance(error, TVCommandError):
+            error.home_diagnostic_directory = _observe_home_diagnostic_directory(remote, directory)
+        raise
     finally:
         try:
             command('diagnostics-stop')
