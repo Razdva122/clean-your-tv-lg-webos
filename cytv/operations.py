@@ -99,16 +99,24 @@ class Installer:
         self.checks = checks if checks is not None else CheckList()
         from .outcomes import SetupOutcome
         self.outcome = SetupOutcome(self.checks, self.tv_info)
+        self._ordinary_payload = None
         self.use_runtime_variant()
 
     def use_runtime_variant(self):
+        ordinary = self._ordinary_payload
         if self.profile.get('root_variant') == 'node012-beta':
             from .root_runtime import select_payload
-            if not getattr(self, '_runtime_variant_selected', False):
-                self.payload, self.manifest = select_payload(self.payload, self.manifest)
-                self._runtime_variant_selected = True
+            if ordinary is None:
+                ordinary = self.payload, self.manifest
+                self.payload, self.manifest = select_payload(*ordinary)
+                self._ordinary_payload = ordinary
             self.tv_info['root_variant'] = 'node012-beta'
             self.checks.root_variant = 'node012-beta'
+        elif ordinary is not None:
+            self.payload, self.manifest = ordinary
+            self._ordinary_payload = None
+            self.tv_info.pop('root_variant', None)
+            self.checks.root_variant = None
 
     @staticmethod
     def _python_command(args):

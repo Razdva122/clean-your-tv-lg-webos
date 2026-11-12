@@ -29,6 +29,8 @@ Clean Your TV 為 LG webOS 提供個人主畫面：依自己的順序排列應�
 
 對於 Root，安裝程式會檢查並選擇可用的 Home 控制方式。如果無法確認相容性，安裝將停止；請勿略過失敗的檢查。
 
+如果安裝程式提供 **No-root** 選項，可以使用現有的 root SSH 連線繼續。此選項無需 Developer Mode。
+
 **No-root → Root:** 如果在完整移除後重新安裝了 No-root，切換至 Root 前可能需要先清理。請備份 Home 偏好設定，使用已儲存的 Root 連線選擇**解除安裝 Clean Your TV**，並等待移除驗證完成。這也會移除 No-root Home 和 Helper。接著安裝 Root；請保留復原記錄。
 
 ### 設定 Developer Mode（No-root）

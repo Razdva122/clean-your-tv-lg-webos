@@ -10,6 +10,13 @@ from cytv import cli, state
 
 class CLITests(unittest.TestCase):
     def test_root_node_failure_can_complete_no_root_using_the_same_ssh(self):
+        self.assert_no_root_install_after_root_preflight(choose_beta=False)
+
+    def test_root_beta_ribbon_fallback_completes_no_root_using_the_same_ssh(self):
+        self.assert_no_root_install_after_root_preflight(choose_beta=True)
+
+    def assert_no_root_install_after_root_preflight(self, choose_beta):
+        from cytv.root_runtime import VENDOR_PROBE
         from tests.cytv.test_operations import OperationTests, Remote, split_observer_command
         from cytv import no_root_observer
         import shlex
@@ -20,11 +27,34 @@ class CLITests(unittest.TestCase):
         # never stages Root Updater, so only the graphics bundle is needed.
         fixture.root_graphics_bundle()
         (fixture.payload/'fallback.png').write_bytes(b'fallback')
+        beta_payload = fixture.payload / 'beta-fixture'
+        beta_payload.mkdir()
+        import shutil
+        for folder in ('root', 'root-720p'):
+            source = fixture.payload / folder
+            if source.is_dir():
+                shutil.copytree(source, beta_payload / folder)
+        beta_manifest = dict(fixture.manifest, root_backends={'c1-native-gate': {'admission_schema': 3}})
+        if choose_beta:
+            fixture.manifest['legacy_root_beta'] = 'legacy-root-beta'
         class LegacyTV(Remote):
             root=True
             def close(self): pass
+            def luna(self, uri, payload, **kwargs):
+                if choose_beta and uri.endswith('/getProfiles'):
+                    return {'returnValue': False, 'errorCode': -1,
+                            'errorText': 'Service does not exist: com.webos.service.systemprofile.'}
+                if choose_beta and uri.endswith('/getConfigs'):
+                    return {'returnValue': True, 'configs': {}}
+                if choose_beta and uri.endswith('/getCurrentHomeUIState'):
+                    return {'homeUIState': [{'uiType': 'home', 'visibility': False}]}
+                if choose_beta and 'modelName' in payload.get('keys', []) and uri.endswith('/getSystemInfo'):
+                    return {'returnValue': True, 'modelName': 'TEST-LEGACY', 'firmwareVersion': '01.02.03',
+                            'sdkVersion': '3.5.0'}
+                return super().luna(uri, payload, **kwargs)
             def run(self, command, data=None, timeout=30):
                 if command == '/usr/bin/node --version':return 'v0.12.2'
+                if command == VENDOR_PROBE: return 'CYTV_VENDOR_READY'
                 if 'CYTV_FRESH_ROOT' in command:return 'CYTV_FRESH_ROOT'
                 if 'process.versions.node.split' in command and 'CYTV_ROOT_READY' in command:return 'CYTV_ROOT_MISSING'
                 words=split_observer_command(command)
@@ -35,12 +65,20 @@ class CLITests(unittest.TestCase):
                 return super().run(command,data,timeout)
         remote=LegacyTV()
         output=[]
-        with patch('cytv.cli.package.verify_payload',return_value=fixture.manifest), patch('cytv.tv.SSAP') as ssap:
+        answers = iter(('2', '1') if choose_beta else ('1',))
+        def ask(prompt):
+            if 'Alternative edition' in prompt:
+                return next(answers)
+            return 'y' if 'Install experimental Root Beta' in prompt else ''
+
+        with patch('cytv.cli.package.verify_payload', return_value=fixture.manifest), \
+                patch('cytv.root_runtime.select_payload', return_value=(beta_payload, beta_manifest)), \
+                patch('cytv.tv.SSAP') as ssap:
             ssap.return_value.__enter__.return_value.inventory.return_value=fixture.inventory
             ssap.return_value.__enter__.return_value.key='PRIVATE-PAIRING'
             code=cli.main(['install','--host','192.0.2.10','--edition','root','--yes','--language','en',
                            '--data-dir',str(fixture.root/'cli-state'), '--tv-name', 'Living Room'],
-                          connect=lambda *_:remote, ask=lambda prompt:'1' if 'Alternative edition' in prompt else '',
+                          connect=lambda *_:remote, ask=ask,
                           write=output.append, payload_root=fixture.payload)
         self.assertEqual(code,0,'\n'.join(output))
         profiles=state.Store(fixture.root/'cli-state').profiles()
@@ -49,6 +87,8 @@ class CLITests(unittest.TestCase):
         self.assertEqual(selected['port'],22)
         self.assertNotIn('PRIVATE-PAIRING','\n'.join(output))
         self.assertIn('--tv-name was skipped', '\n'.join(output))
+        if choose_beta:
+            self.assertIn('This TV uses the LG Home ribbon', '\n'.join(output))
         self.assertFalse(any(call[0] == 'luna' and call[1].endswith('/updateLaunchPoint') for call in remote.calls))
         submitted=[call[2]['id'] for call in remote.calls if call[0]=='luna' and call[1].endswith('/dev/install')]
         self.assertEqual(submitted,['com.local.nativehome','com.gathin.tvhome'])

@@ -29,6 +29,8 @@ Turn on the TV and connect it and your computer or phone to the same home networ
 
 For Root, the installer checks and selects an available Home control method. If compatibility cannot be verified, setup stops; do not bypass the failed check.
 
+If the installer offers **No-root**, you can continue with your existing root SSH connection. Developer Mode is unnecessary for this option.
+
 **No-root → Root:** If No-root was installed again after full removal, switching to Root may require cleanup first. Back up Home preferences, choose **Uninstall Clean Your TV** with the saved Root connection and wait for verified removal. This also removes No-root Home and Helper. Then install Root; keep recovery records.
 
 ### Developer Mode setup (No-root)

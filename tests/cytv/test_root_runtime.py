@@ -89,6 +89,29 @@ class RuntimeChoices(unittest.TestCase):
                 self.assertEqual(installer.tv_info.get('node_version'), '0.12.2')
                 self.assertEqual(installer.tv_info.get('node_version_status'), 'read')
 
+    def test_legacy_ribbon_offer_requires_an_explicit_edition_choice(self):
+        from unittest.mock import Mock
+        from cytv.root_capabilities import LegacyRibbonError
+        from cytv.root_runtime import offer
+        from cytv.terminal import Console
+
+        for non_interactive, expected in ((False, EOFError), (True, LegacyRibbonError)):
+            with self.subTest(non_interactive=non_interactive), tempfile.TemporaryDirectory() as tmp:
+                profile = state.target('192.0.2.10', 'root', root_variant='node012-beta')
+                store = state.Store(tmp)
+                remote = Mock()
+                remote.run.return_value = 'CYTV_FRESH_ROOT'
+                installer = SimpleNamespace(store=store, profile=profile, remote=remote,
+                                            manifest={'legacy_root_beta': 'legacy-root-beta'})
+                ask = Mock(return_value='')
+                with self.assertRaises(expected):
+                    offer(installer, SimpleNamespace(non_interactive=non_interactive, yes=True),
+                          ask, Console(lambda _: None), ribbon_error=LegacyRibbonError())
+                self.assertEqual(ask.call_count, 0 if non_interactive else 1)
+                self.assertEqual(profile['edition'], 'root')
+                self.assertIsNone(store.pending(profile))
+                remote.upload.assert_not_called()
+
     def test_explicit_beta_needs_second_confirmation(self):
         from cytv.root_runtime import offer
         from cytv.checks import CheckList

@@ -29,6 +29,8 @@ Accendi la TV e collegala alla stessa rete domestica del computer o telefono. Co
 
 Per Root, l’installer verifica e sceglie un metodo disponibile per controllare Home. Se non può verificare la compatibilità, l’installazione si interrompe; non aggirare il controllo fallito.
 
+Se l’installer propone **No-root**, puoi proseguire con la connessione SSH root esistente. Questa opzione non richiede Developer Mode.
+
 **No-root → Root:** Se No-root è stato reinstallato dopo una rimozione completa, il passaggio a Root può richiedere prima una pulizia. Salva le preferenze di Home, scegli **Disinstalla Clean Your TV** con la connessione Root salvata e attendi la rimozione verificata. Verranno rimossi anche Home e Helper di No-root. Poi installa Root e conserva i dati di ripristino.
 
 ### Configurare Developer Mode (No-root)

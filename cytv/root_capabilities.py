@@ -10,16 +10,57 @@ CALLS = {
 REASONS = ('readable', 'rejected', 'invalid-reply', 'unconfirmed', 'not-checked', 'service-absent')
 COMPOSITOR_FAILURES = (
     'c1-probe-failed', 'system-info-request-failed', 'system-info-invalid',
-    'keyfilters-request-failed', 'keyfilters-not-configured', 'keyfilters-incompatible',
+    'keyfilters-request-failed', 'keyfilters-not-configured', 'keyfilters-incompatible', 'keyfilters-service-absent',
     'native-home-request-failed',
     'native-home-unavailable', 'native-home-incompatible',
 )
+KEYFILTER_PROBE_STATES = ('timeout', 'rejected', 'unconfirmed', 'invalid-reply', 'not-configured',
+                          'incompatible', 'readable', 'service-absent')
+RIBBON_PROBE_STATES = ('readable', 'rejected', 'timeout', 'invalid-reply', 'unconfirmed')
+LEGACY_RIBBON = ('This TV uses the LG Home ribbon and has no System Profile or KeyFilters support. '
+                 'Choose No-root to continue.')
+
+
+def keyfilter_probe(info, state, code=None):
+    if info is None:
+        return
+    result = info['root_keyfilters_probe'] = {'state': state}
+    if type(code) is int and -(2**31) <= code < 2**31:
+        result['error_code'] = code
 
 
 class RootCapabilityError(UserError):
+    def __init__(self, message='Required Root Home interfaces could not be verified. Setup stopped; keep recovery data and save the report.'):
+        super().__init__(message, reason_code='root-home-interfaces')
+
+
+class LegacyRibbonError(RootCapabilityError):
     def __init__(self):
-        super().__init__('Required Root Home interfaces could not be verified. Setup stopped; keep recovery data and save the report.',
-                         reason_code='root-home-interfaces')
+        super().__init__(LEGACY_RIBBON)
+
+
+def ribbon_probe(remote):
+    try:
+        reply = remote.luna('com.webos.surfacemanager.home/getCurrentHomeUIState', {},
+                            timeout=5, allow_missing_return=True)
+    except TVRejected:
+        return 'rejected'
+    except TimeoutError:
+        return 'timeout'
+    except Exception:
+        return 'unconfirmed'
+    if not isinstance(reply, dict):
+        return 'invalid-reply'
+    if reply.get('returnValue') is False or any(key in reply for key in ('errorCode', 'errorText', 'errorMessage')):
+        return 'rejected'
+    if reply.get('returnValue', True) is not True:
+        return 'invalid-reply'
+    entries = reply.get('homeUIState')
+    if not isinstance(entries, list):
+        return 'invalid-reply'
+    home = [item for item in entries if isinstance(item, dict) and item.get('uiType') == 'home']
+    return 'readable' if len(home) == 1 and type(home[0].get('visibility')) is bool else 'invalid-reply'
+
 
 
 def valid(name, reply):
@@ -120,22 +161,39 @@ def compositor_failure(remote, info=None):
             or not re.fullmatch(r'\d{1,3}\.\d{1,3}\.\d{1,3}(?:-[A-Za-z0-9.]+)?',str(reply.get('sdkVersion','')))):
         return 'system-info-invalid'
     key = 'com.webos.surfacemanager.keyFilters'
+    uri = 'com.webos.service.config/getConfigs'
     try:
-        chain = remote.luna('com.webos.service.config/getConfigs', {'configNames':[key]}, timeout=5)
+        chain = remote.luna(uri, {'configNames':[key]}, timeout=5)
+        if isinstance(chain, dict) and chain.get('returnValue') is False:
+            raise TVRejected('', chain, uri)
+    except TVRejected as error:
+        if error.config_service_missing:
+            keyfilter_probe(info, 'service-absent', error.luna.get('error_code'))
+            return 'keyfilters-service-absent'
+        keyfilter_probe(info, 'rejected', error.luna.get('error_code'))
+        return 'keyfilters-request-failed'
+    except TimeoutError:
+        keyfilter_probe(info, 'timeout')
+        return 'keyfilters-request-failed'
     except Exception:
+        keyfilter_probe(info, 'unconfirmed')
         return 'keyfilters-request-failed'
     if not isinstance(chain, dict) or chain.get('returnValue') is not True:
+        keyfilter_probe(info, 'invalid-reply')
         return 'keyfilters-request-failed'
     configs = chain.get('configs')
     entries = configs.get(key) if isinstance(configs, dict) else None
     if isinstance(configs, dict) and (key not in configs or entries == []):
+        keyfilter_probe(info, 'not-configured')
         return 'keyfilters-not-configured'
     if (not isinstance(entries,list) or not 1 <= len(entries) <= 128
             or not all(isinstance(e,dict) and isinstance(e.get('file'),str)
                 and re.fullmatch(r'/usr/lib/(?:qt5/)?qml/KeyFilters/[A-Za-z0-9_-]+\.js',e['file'])
                 and isinstance(e.get('handler'),str) and re.fullmatch(r'[A-Za-z_$][A-Za-z0-9_$]{0,127}',e['handler']) for e in entries)
             or sum(e['file'].endswith('/systemUi.js') and e['handler']=='handleSystemKeys' for e in entries) != 1):
+        keyfilter_probe(info, 'incompatible')
         return 'keyfilters-incompatible'
+    keyfilter_probe(info, 'readable')
     try:
         headers = remote.run(NATIVE_HEADERS, timeout=5)
     except TVCommandError as error:
@@ -151,6 +209,8 @@ def verify(remote, checklist, info, allow_c1=False, allow_compositor=False):
     info.pop('home_backend', None)
     info.pop('home_backend_schema', None)
     info.pop('root_compositor_failure', None)
+    info.pop('root_keyfilters_probe', None)
+    info.pop('root_ribbon_probe', None)
     info.pop('root_native_home_mode', None)
     reasons = info['root_capabilities'] = dict.fromkeys(CALLS, 'not-checked')
     requirements = info.setdefault('root_requirements', {})
@@ -202,6 +262,11 @@ def verify(remote, checklist, info, allow_c1=False, allow_compositor=False):
             if failure is not None:
                 info['root_compositor_failure'] = failure
             requirements[name] = 'fail'
+            if failure in ('keyfilters-not-configured', 'keyfilters-service-absent'):
+                info['root_ribbon_probe'] = ribbon_probe(remote)
+                if info['root_ribbon_probe'] == 'readable':
+                    checklist.update(name, 'fail', LEGACY_RIBBON)
+                    raise LegacyRibbonError()
             checklist.update(name,'fail','System Profile is absent and a supported experimental Home backend was not verified.')
             raise RootCapabilityError()
         reasons[name] = reason

@@ -29,6 +29,8 @@ Schalten Sie den TV ein und verbinden Sie ihn und Ihren Computer oder Ihr Smartp
 
 Bei Root prüft und wählt der Installer eine verfügbare Methode zur Home-Steuerung. Kann die Kompatibilität nicht bestätigt werden, stoppt die Einrichtung; umgehen Sie die fehlgeschlagene Prüfung nicht.
 
+Wenn der Installer **No-root** anbietet, können Sie über Ihre vorhandene Root-SSH-Verbindung fortfahren. Developer Mode ist dafür nicht erforderlich.
+
 **No-root → Root:** Wenn No-root nach einer vollständigen Entfernung erneut installiert wurde, kann vor dem Wechsel zu Root eine Bereinigung nötig sein. Sichern Sie die Home-Einstellungen, wählen Sie **Clean Your TV deinstallieren** mit der gespeicherten Root-Verbindung und warten Sie auf die bestätigte Entfernung. Dabei werden auch No-root Home und Helper entfernt. Installieren Sie danach Root und bewahren Sie die Wiederherstellungsdaten auf.
 
 ### Developer Mode einrichten (No-root)

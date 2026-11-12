@@ -64,15 +64,20 @@ def require_idle(store, profile, replacing=None):
             raise UserError('Previous operation is unresolved. Run cytv status or cytv restore; do not retry installation.', reason_code='pending-operation')
 
 
-def offer(installer, args, ask, write):
-    """Only invoked after the ordinary Node requirement has actually failed."""
+def offer(installer, args, ask, write, *, ribbon_error=None):
+    """Offer a compatible edition before submitting any installation."""
     require_idle(installer.store, installer.profile)
-    value = installer.remote.run('/usr/bin/node --version', timeout=10).strip()
-    options = alternatives(value)
-    if not options:
-        raise UserError('Root requirements failed or could not be verified: node-version. Check the diagnostic report.', reason_code='root-requirements')
-    installer.tv_info['node_version'] = value[1:]
-    installer.tv_info['node_version_status'] = 'read'
+    if ribbon_error is None:
+        value = installer.remote.run('/usr/bin/node --version', timeout=10).strip()
+        options = alternatives(value)
+        if not options:
+            raise UserError('Root requirements failed or could not be verified: node-version. Check the diagnostic report.', reason_code='root-requirements')
+        installer.tv_info['node_version'] = value[1:]
+        installer.tv_info['node_version_status'] = 'read'
+    else:
+        if args.non_interactive:
+            raise ribbon_error
+        options = ('no-root',)
     if installer.remote.run(FRESH_PROBE, timeout=10).strip() != 'CYTV_FRESH_ROOT':
         from .root_no_root_handoff import probe
         try:installer._root_handoff=probe(installer)
@@ -80,7 +85,10 @@ def offer(installer, args, ask, write):
             raise UserError('Previous Root installation needs recovery. Run cytv status or cytv restore. Reinstallation has not started; recovery data was left unchanged.') from None
     write.heading('Choose an alternative edition')
     from .i18n import translate
-    write(translate('Ordinary Root requires Node.js 8+. Detected TV Node.js: {version}').format(version=value))
+    if ribbon_error is None:
+        write(translate('Ordinary Root requires Node.js 8+. Detected TV Node.js: {version}').format(version=value))
+    else:
+        write(str(ribbon_error))
     write.option(1, NO_ROOT_TITLE, NO_ROOT_DETAIL)
     beta = BETA in options and installer.manifest.get('legacy_root_beta') == 'legacy-root-beta'
     if beta:

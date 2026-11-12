@@ -144,6 +144,20 @@ class TransportTests(unittest.TestCase):
         ssh.chunks = lambda connection, timeout: [] if channel.eof else [b'{"returnValue":true}']
         self.assertTrue(ssh.luna('test/status', {})['returnValue'])
 
+    def test_luna_legacy_readback_requires_opt_in_and_still_rejects_errors(self):
+        from cytv.errors import TVRejected, UserError
+        ssh = object.__new__(SSH)
+        ssh.root = True
+        ssh.channel = lambda _: SimpleNamespace(close=lambda: None)
+        body = b'{"homeUIState":[{"uiType":"home","visibility":false}]}'
+        ssh.chunks = lambda *_: [body]
+        with self.assertRaises(UserError):
+            ssh.luna('test/status', {})
+        self.assertIn('homeUIState', ssh.luna('test/status', {}, allow_missing_return=True))
+        body = b'{"returnValue":false,"errorCode":-1}'
+        with self.assertRaises(TVRejected):
+            ssh.luna('test/status', {}, allow_missing_return=True)
+
     @unittest.skipUnless(__import__('importlib.util').util.find_spec('paramiko'), 'Requires SSH build dependencies')
     def test_passwordless_root_does_not_request_or_log_password(self):
         from cytv.transport import root_auth

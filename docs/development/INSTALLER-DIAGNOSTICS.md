@@ -379,11 +379,21 @@ Request failures use `system-info-request-failed`, `keyfilters-request-failed`
 or `native-home-request-failed`. Validation failures use `system-info-invalid`,
 `keyfilters-incompatible` or `native-home-incompatible`.
 `keyfilters-not-configured` means a successful configuration reply omitted the
-KeyFilters key or returned an empty list. A missing or malformed `configs`
+KeyFilters key or returned an empty list. `keyfilters-service-absent` records
+an explicit missing configuration-service reply. A missing or malformed `configs`
 object, invalid entries and unsupported chains use `keyfilters-incompatible`.
+Optional `tv.root_keyfilters_probe` records the outcome of the KeyFilters read,
+including a timeout, a rejection, an unconfirmed or malformed reply, an empty
+configuration, and a compatible or incompatible chain. For an explicit
+rejection it can include a bounded numeric Luna error code.
 `native-home-unavailable` identifies a missing or unsafe native Home path.
 `c1-probe-failed` means an error in the preceding C1 probe prevented the
 capability-based check from running.
+When System Profile and KeyFilters are confirmed absent, `tv.root_ribbon_probe`
+records the outcome of the read-only Surface Manager Home state request.
+A valid Home entry identifies a legacy ribbon and lets interactive setup offer
+No-root over the existing root SSH connection. Reports retain the probe
+outcome without the reply or current Home visibility.
 
 When the native Home permission check refuses admission, optional
 `tv.root_native_home_mode` records the four octal permission digits seen by the
