@@ -1,5 +1,6 @@
 # Release history and device evidence
 
+- [v1.20.0 RC1 verification, 2026-11-12](2026-11-12-release-1.20.0-candidate.md)
 - [v1.19.0 RC1 TV acceptance, 2026-11-12](2026-11-12-release-1.19.0-candidate.md)
 - [v1.18.0 overnight candidate verification, 2026-11-12](2026-11-12-release-1.18.0-candidate.md)
 - [v1.17.1 candidate verification, 2026-11-11](2026-11-11-release-1.17.1-candidate.md)
