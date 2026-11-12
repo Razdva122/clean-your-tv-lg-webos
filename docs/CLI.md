@@ -299,9 +299,12 @@ using the recorded destination and state identity before installation can contin
 Reinstallation uses a fresh inventory; `--migrate-home` is refused for that flow
 so an invalid migration source cannot be discovered only after removing old Root.
 
-No-root replacement refuses an active or ambiguous helper. Press Home three times within two
-seconds to stop it before installing again (older Helper: hold Home for two seconds). Installing Root keeps the
-ordinary Home files but stops and disables its Helper before activation. `--migrate-home` explicitly imports an existing Home
+No-root replacement tries to stop a running Helper and verifies that it exited.
+If Helper is still running, press Home three times within two seconds (older Helper:
+hold Home for two seconds) and recheck. An unknown process state blocks replacement.
+A Stop stays in effect after installation; use **Start Helper** on the TV to resume.
+Installing Root keeps the ordinary Home files but stops and disables its Helper before
+activation. `--migrate-home` explicitly imports an existing Home
 profile/packaged inventory instead of reading a fresh SSAP inventory:
 
 ```sh

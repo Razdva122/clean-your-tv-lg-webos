@@ -10,6 +10,8 @@ REMOVAL_STAGES = ('requested', 'original-writers-fenced', 'controls-restored', '
 REMOVAL_REASONS = ('removal-requested', 'original-writer-active', 'ownership-conflict', 'controls-unverified',
                    'removal-terminal-unknown', 'private-cleanup-incomplete', 'removal-verified', 'removal-recheck-required', 'restart-required',
                    'root-worker-busy','root-access-required','removal-failed','cleanup-check-failed','connection-interrupted')
+RESTART_TRIGGERS = ('controller-still-running', 'protected-package-access', 'startup-disable-unverified',
+                    'resident-installer-evidence', 'prior-operation-unresolved', 'process-idle-unverified')
 STATES += ('cleanup-in-progress', 'verified-clean')
 REASONS += REMOVAL_REASONS
 
@@ -24,9 +26,15 @@ def removal_summary(pending):
     outcome = previous.get('state') if type(previous) is dict else None
     if stage == 'verified-clean' and reason == 'removal-verified':
         reason = 'removal-recheck-required'
-    return {'state':'cleanup-in-progress',
+    result = {'state':'cleanup-in-progress',
             'stage':stage, 'reason':reason if reason in REMOVAL_REASONS else 'removal-requested',
             'original_outcome':outcome if outcome in ('complete', 'recovery_required') else 'unknown'}
+    triggers = pending.get('cleanup_restart_triggers')
+    if stage == 'restart-required' and type(triggers) is list:
+        known = {item for item in triggers if type(item) is str and item in RESTART_TRIGGERS}
+        if known:
+            result['restart_triggers'] = [item for item in RESTART_TRIGGERS if item in known]
+    return result
 
 
 def assessment_summary(value):

@@ -8,6 +8,28 @@ from cytv import cli, diagnostics, state
 
 
 class DiagnosticTests(unittest.TestCase):
+    def test_removal_restart_report_exports_only_known_triggers(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            store = state.Store(tmp)
+            profile = state.target('tv.local', 'no-root')
+            store.request_clean_removal(profile)
+            store.checkpoint(profile, stage='restart-required', removal_reason='restart-required')
+
+            def report():
+                return json.loads(diagnostics.create_report(store, 'status', profile, 'status').read_text())
+
+            self.assertNotIn('restart_triggers', report()['removal'])
+            store.checkpoint(profile, cleanup_restart_triggers=[
+                'startup-disable-unverified', 'PRIVATE-TOKEN', {'secret': 'PRIVATE-TOKEN'},
+                'controller-still-running', 'startup-disable-unverified',
+            ])
+            saved = report()
+            self.assertEqual(saved['removal']['restart_triggers'],
+                             ['controller-still-running', 'startup-disable-unverified'])
+            self.assertNotIn('PRIVATE-TOKEN', json.dumps(saved))
+            store.checkpoint(profile, stage='private-cleanup')
+            self.assertNotIn('restart_triggers', report()['removal'])
+
     def test_cleanup_context_is_revalidated_in_report_and_failure_history(self):
         from cytv.errors import UserError
         error=UserError('Removal could not be checked.')

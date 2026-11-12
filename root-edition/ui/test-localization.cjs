@@ -21,6 +21,9 @@ class Element {
   setAttribute(k, v) {
     this.attrs[k] = v;
   }
+  removeAttribute(k) {
+    delete this.attrs[k];
+  }
   focus() {
     selected = this;
     if (this.onfocus) this.onfocus();

@@ -37,9 +37,14 @@ function get(url, redirects) {
       if (e) reject(Error('download-failed'));
       else resolve(data);
     }
+    // Legacy Node reads one certificate per entry in the ca option.
+    var ca = require('fs').readFileSync(__dirname + '/ca-bundle.crt', 'utf8');
     var options = Object.assign(urls.parse(url), {
       rejectUnauthorized: true,
-      ca: require('fs').readFileSync(__dirname + '/ca-bundle.crt', 'utf8'),
+      ca:
+        ca.match(
+          /-----BEGIN CERTIFICATE-----[\s\S]+?-----END CERTIFICATE-----/g
+        ) || [],
       headers: {
         'User-Agent': 'CleanYourTV-Updater',
         'Accept': 'application/json'

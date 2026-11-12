@@ -195,35 +195,44 @@ class OriginalOperationIntegration(unittest.TestCase):
         self.assertEqual((self.root/'requests').read_text().splitlines(),[operations.HELPER])
         self.assertEqual(self.store.pending(self.profile),pending)
 
-    def test_zero_tmp_budget_still_stops_before_private_storage_selection(self):
-        # A writable private evidence root does not establish vendor scratch
-        # capacity. Preserve the earlier per-filesystem admission boundary.
+    def test_devmode_ramfs_allows_install_only_when_developer_storage_fits(self):
         jail=self.root/'jail';jail.mkdir(mode=0o755)
         private=jail/'.cytv-installer';private.mkdir(mode=0o700)
         original=self.remote.run
         def run(command,**kwargs):
             if command == "LC_ALL=C stat -f -c '%t' /tmp":
-                return '858458f6'
+                return fs_magic
             if command=='LC_ALL=C df -Pk /tmp':
                 return 'Filesystem 1024-blocks Used Available Capacity Mounted on\n' + tmp_row
             if command=='LC_ALL=C df -Pk /media/developer':
-                return 'Filesystem 1024-blocks Used Available Capacity Mounted on\n/dev/apps 10000000 0 10000000 0% /media/developer'
+                return 'Filesystem 1024-blocks Used Available Capacity Mounted on\n' + developer_row
             return original(command,**kwargs)
         self.remote.run=run
-        for tmp_row, reason in (
-            ('/dev/tmp 1024 1024 0 100% /tmp', 'tv-storage-full'),
-            ('tmp 0 0 0 0% /tmp', 'tv-storage-ramfs'),
+        developer_available = '/dev/apps 10000000 0 10000000 0% /media/developer'
+        developer_full = '/dev/apps 10000000 10000000 0 100% /media/developer'
+        tmp_zero = 'tmp 0 0 0 0% /tmp'
+        for tmp_row, fs_magic, developer_row, full_path in (
+            ('/dev/tmp 1024 1024 0 100% /tmp', '1021994', developer_available, '/tmp'),
+            (tmp_zero, '', developer_available, '/tmp'),
+            (tmp_zero, '858458f6', developer_full, '/media/developer'),
         ):
-            with self.subTest(reason=reason), patch.object(observer, 'JAIL_ROOT', str(private)):
+            with self.subTest(tmp=tmp_row, fs_magic=fs_magic, full_path=full_path), \
+                 patch.object(observer, 'JAIL_ROOT', str(private)):
                 with self.assertRaises(RuntimeError) as caught:
                     self.installer.install(self.inventory, 'original-secret')
-                self.assertEqual(caught.exception.reason_code, reason)
-                self.assertIn('/tmp', str(caught.exception))
+                self.assertEqual(caught.exception.reason_code, 'tv-storage-full')
+                self.assertIn(f'({full_path})', str(caught.exception))
                 self.assertIsNone(self.store.pending(self.profile))
                 self.assertFalse(any(call[:2] == ('observer', 'storage-select')
                                      for call in self.remote.calls))
                 self.assertFalse((self.root/'requests').exists())
                 self.assertEqual(list(private.iterdir()), [])
+
+        tmp_row, fs_magic, developer_row = tmp_zero, '858458f6', developer_available
+        with patch.object(observer, 'JAIL_ROOT', str(private)):
+            self.installer.install(self.inventory, 'original-secret')
+        self.assertEqual((self.root/'requests').read_text().splitlines(), list(observer.APPS))
+        self.assertIsNone(self.store.pending(self.profile))
 
     def test_root_ssh_observer_install_and_remove_keep_original_receipts(self):
         # Host fixture substitutes UID and fixed TV paths only. Run the actual
@@ -289,34 +298,31 @@ class OriginalOperationIntegration(unittest.TestCase):
         self.remote.run('/usr/bin/node -e '+shlex.quote(program)+' '+shlex.quote(operations.HELPER_STATE))
         (Path(operations.HELPER_STATE)/name).write_bytes(b'explicit-stop')
 
-    def test_stopped_update_requests_setup_start_with_bound_generation(self):
-        self.installer.install(self.inventory,'original-secret')
-        self.publish_stop()
-        before=len(self.remote.calls)
-        result=self.installer.install(self.inventory,'original-secret')
-        self.assertIsNone(self.store.pending(self.profile))
-        self.assertTrue(result['launch_requested'])
-        self.assertFalse(result.get('activation_cancelled',False))
-        launches=[row[2] for row in self.remote.calls[before:] if row[0]=='luna' and row[1].endswith('/launch') and row[2]['id']==operations.HELPER]
-        self.assertEqual(len(launches),1)
-        self.assertRegex(launches[0]['params']['nativeHomeSetup'],r'^S[a-f0-9]{32}$')
-        self.assertNotIn('nativeHomeStart',launches[0]['params'])
-        self.assertEqual((self.root/'requests').read_text().splitlines(),list(observer.APPS)*2)
-
-    def test_setup_binds_initial_intent_before_consuming_old_stop(self):
+    def test_reinstall_preserves_explicit_stop_and_legacy_latches(self):
         self.installer.install(self.inventory,'original-secret')
         directory=Path(operations.HELPER_STATE)
-        (directory/'stop-generation').unlink()
-        (directory/'blocked').write_text('previous stop')
-        before=len(self.remote.calls)
-        result=self.installer.install(self.inventory,'original-secret')
-        self.assertFalse(result.get('activation_cancelled',False))
-        launches=[row[2] for row in self.remote.calls[before:] if row[0]=='luna' and row[1].endswith('/launch') and row[2]['id']==operations.HELPER]
-        self.assertRegex(launches[0]['params']['nativeHomeSetup'],r'^I[a-f0-9]{32}$')
+        for name in ('blocked', 'watchdog'):
+            with self.subTest(name=name):
+                self.publish_stop(name)
+                generation=directory/'stop-generation'
+                if name=='watchdog':
+                    generation.unlink()
+                expected=generation.read_bytes() if generation.exists() else None
+                before=len(self.remote.calls)
+                result=self.installer.install(self.inventory,'original-secret')
+                self.assertIsNone(self.store.pending(self.profile))
+                self.assertTrue(result['activation_cancelled'])
+                self.assertFalse(result['launch_requested'])
+                self.assertEqual((directory/name).read_bytes(),b'explicit-stop')
+                self.assertEqual(generation.read_bytes() if generation.exists() else None,expected)
+                self.assertFalse(any(row[0]=='luna' and row[1].endswith('/launch') and
+                                     row[2]['id']==operations.HELPER for row in self.remote.calls[before:]))
+                (directory/name).unlink()
+        self.assertEqual((self.root/'requests').read_text().splitlines(),list(observer.APPS)*3)
 
     def test_new_stop_cancels_bound_setup_even_after_latch_disappears(self):
         self.installer.install(self.inventory,'original-secret')
-        self.publish_stop()
+        self.publish_stop();(Path(operations.HELPER_STATE)/'blocked').unlink()
         self.remote.cut=True
         with self.assertRaises(RuntimeError):self.installer.install(self.inventory,'original-secret')
         pending=self.store.pending(self.profile);saved=observer.capsule(self.installer,pending)
@@ -331,7 +337,7 @@ class OriginalOperationIntegration(unittest.TestCase):
         self.assertEqual((self.root/'requests').read_text().splitlines(),list(observer.APPS)*2)
 
     def test_closed_setup_retry_does_not_repeat_launch_or_reinstall(self):
-        self.installer.install(self.inventory,'original-secret');self.publish_stop()
+        self.installer.install(self.inventory,'original-secret')
         original=self.remote.run
         def cut(command,data=None,timeout=30):
             words=split_observer_command(command)
@@ -405,7 +411,6 @@ class OriginalOperationIntegration(unittest.TestCase):
         self.installer.install(self.inventory,'original-secret')
         directory=Path(operations.HELPER_STATE);key=directory/'ssap-key.json'
         key.chmod(0o775);(directory/'apps.json').chmod(0o775)
-        self.publish_stop()
         result=self.installer.install(self.inventory,'original-secret')
         self.assertEqual(key.stat().st_mode&0o777,0o640)
         self.assertTrue(result['launch_requested'])

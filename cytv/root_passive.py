@@ -63,11 +63,39 @@ PROGRAM = r'''
   }
   return 'system-default-unverified';
  }
+ function nativeRequest(requestPath, requestRaw, request){
+  var leasePath=base+'/operation.json',leaseRaw=read(leasePath,65536),lease=parse(leaseRaw);
+  if(request.operation!==identifier||request.action!=='install'||(typeof request.lease!=='string'||!/^[a-f0-9]{32}$/.test(request.lease))||
+     lease.schema!==1||lease.id!==request.lease||lease.owner!=='product'||
+     lease.journal!=='product-'+identifier+'.json'||lease.stage!==request.stage||lease.terminal!==false)fail('inconsistent');
+  if(request.state!=='recovery_required'||request.stage!=='root-deploy'||request.home_changed!==false)fail('unavailable');
+  var failure=request.failure||{},detail={};
+  var kinds=['CalledProcessError','TimeoutExpired','ValueError','RuntimeError','OSError','PermissionError',
+             'FileNotFoundError','TypeError','KeyError','TimeoutError'];
+  if(kinds.indexOf(failure.exception_type)!==-1)detail.exception_type=failure.exception_type;
+  function integer(value,min,max){return typeof value==='number'&&value%1===0&&value>=min&&value<=max;}
+  if(integer(failure.exit_status,-255,255))detail.exit_status=failure.exit_status;
+  if(integer(failure.errno,0,4095))detail.errno=failure.errno;
+  var child=failure.root_driver;
+  if(child&&kinds.concat(['FileExistsError','unknown']).indexOf(child.exception_type)!==-1&&
+     Array.isArray(child.frames)&&child.frames.length<=8){
+   var files=['deploy.py','installation.py','c1_gate.py','c1_keyfilter.py','package_data.py','python_binding.py',
+              'observed_install.py','provision.py','store.py','transport.py','emergency_reader.py'];
+   detail.root_driver={exception_type:child.exception_type,frames:child.frames.filter(function(f){
+    return f&&files.indexOf(f.file)!==-1&&integer(f.line,1,10000);
+   }).map(function(f){return {file:f.file,line:f.line};})};
+   if(integer(child.errno,0,4095))detail.root_driver.errno=child.errno;
+   if(integer(child.exit_status,-255,255))detail.root_driver.exit_status=child.exit_status;
+  }
+  if(!read(requestPath,65536).bytes.equals(requestRaw.bytes)||!read(leasePath,65536).bytes.equals(leaseRaw.bytes))fail('inconsistent');
+  return {schema:1,status:'read',operation:'consistent-not-admission',worker:'not-applicable',stage:'root-deploy',failure:detail};
+ }
  try{
   if(process.getuid()!==0)fail('unsafe');
   var requestPath=base+'/request-'+identifier+'.json',submissionPath=base+'/submission-'+identifier+'.json';
-  var requestRaw=read(requestPath,65536),submissionRaw=read(submissionPath,1024*1024);
-  var request=parse(requestRaw),submission=parse(submissionRaw);
+  var requestRaw=read(requestPath,65536),request=parse(requestRaw);
+  if(NATIVE_REQUEST){console.log(JSON.stringify(nativeRequest(requestPath,requestRaw,request)));return;}
+  var submissionRaw=read(submissionPath,1024*1024),submission=parse(submissionRaw);
   if(request.operation!==identifier||submission.operation!==identifier||request.action!=='install'||submission.action!=='install'||
      !digest(submission.candidate_sha256)||!digest(submission.worker_sha256)||
      (request.candidate_sha256!==undefined&&request.candidate_sha256!==submission.candidate_sha256))fail('inconsistent');
@@ -114,7 +142,15 @@ def program(operation, pending=None):
                 if not isinstance(archived,str) or not re.fullmatch(re.escape(base)+r'\.archive-[a-f0-9]{32}',archived):
                     raise ValueError('original_archive_path_required')
                 states.append(archived)
-    return PROGRAM.replace('OPERATION',json.dumps(operation)).replace('STATES',json.dumps(states))
+    return (PROGRAM.replace('OPERATION',json.dumps(operation)).replace('STATES',json.dumps(states))
+            .replace('NATIVE_REQUEST',json.dumps(is_native_pending(pending))))
+
+
+def is_native_pending(pending):
+    return (bool(pending) and pending.get('action')=='install' and pending.get('stage')=='setup'
+            and pending.get('home_backend')=='c1-native-gate'
+            and isinstance(pending.get('product_operation'),str)
+            and re.fullmatch('[a-f0-9]{32}',pending['product_operation']) is not None)
 
 
 def collect(remote, operation, pending=None):
@@ -124,6 +160,16 @@ def collect(remote, operation, pending=None):
     try:
         value=json.loads(raw)
         if value in [dict(schema=1,status=s) for s in ('missing','unsafe','inconsistent','unavailable')]:return value
+        if is_native_pending(pending):
+            if (isinstance(value,dict) and value.get('schema')==1 and value.get('status')=='read'
+                    and value.get('operation')=='consistent-not-admission' and value.get('worker')=='not-applicable'
+                    and value.get('stage')=='root-deploy'):
+                from .diagnostic_context import worker_summary
+                result=dict(schema=1,status='read',operation='consistent-not-admission',
+                            worker='not-applicable',stage='root-deploy')
+                if value.get('failure'):result['failure']=worker_summary(value['failure'])
+                return result
+            return dict(schema=1,status='unsafe')
         if (isinstance(value,dict) and set(value)=={'schema','status','operation','worker','python'}
                 and value['schema']==1 and value['status']=='read' and value['operation']=='consistent-not-admission'
                 and value['worker'] in ('unclassified','exception-recorded')

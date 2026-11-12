@@ -39,6 +39,20 @@ response files retain mode 0660. Renewal preference/history files retain their
 existing private modes. Only these two owned leaf directories receive these
 permissions; SDK parents and application/service code directories stay unchanged.
 
+Some firmware leaves the packaged channel at 0775. The Renewal service and
+the native controller can share its group but run as different UIDs from the
+packaged owner. Renewal therefore creates a private child directory using its
+own UID and the existing shared group. Both runtimes check the original
+directory and require the child to have mode 2770 before reading or writing
+records there. They ignore existing records in the outer directory while it
+has mode 0775. Other unexpected modes, symlinks and failed mode checks still
+refuse access. The usual 2770 directory uses the existing record paths.
+
+Both Home and Helper must ship the recovery logic for a 0775 channel. The
+child contains transient request/response files and is excluded from installed
+rollback capture along with other mutable state. This uses the existing group,
+caller checks, and request protocol. No setup step changes.
+
 The service still checks the caller application before I/O. The protocol retains
 its fixed three commands, boolean validation, random request ID, five-second
 expiry, request serialization and correlated response. There is no socket,

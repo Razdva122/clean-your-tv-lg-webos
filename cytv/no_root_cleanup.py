@@ -463,6 +463,15 @@ def continue_removal(installer, expected_pending):
             release(installer)
             installer.store.finish_clean_removal(installer.profile)
             return {'removed': True, 'verified_clean': True}
+    def require_restart(triggers, *, before_packages=False):
+        checkpoint = {'stage': 'restart-required', 'removal_reason': 'restart-required',
+                      'cleanup_restart_triggers': triggers}
+        if before_packages:
+            checkpoint['cleanup_restart_first'] = True
+        installer.store.checkpoint(installer.profile, **checkpoint)
+        installer.progress(RESTART_MESSAGE)
+        return {'removed': False, 'verified_clean': False, 'restart_required': True}
+
     def capture_boot():
         # A lost re-arm create response must retry seeding, not compare the new
         # marker against a retired inode from the previous captured baseline.
@@ -496,7 +505,9 @@ def continue_removal(installer, expected_pending):
     stopped = _device(installer, 'stop')
     _check_access(stopped, defer_packages=True)
     unavailable = set(pending.get('cleanup_startup_unavailable', []))
-    startup_failed = not restarted and any(_protected_package(row) for row in current['blocked'] + stopped['blocked'])
+    startup_access_blocked = not restarted and any(
+        _protected_package(row) for row in current['blocked'] + stopped['blocked'])
+    startup_disable_unverified = False
     for app, service in zip(APPS, ('com.local.nativehome.service', 'com.gathin.tvhome.renewal')):
         if service not in current['startup_services'] or app in carriers or (restarted and service in unavailable):
             continue
@@ -520,7 +531,7 @@ def continue_removal(installer, expected_pending):
             # undeletable. Check the SSH connection, then move restart earlier.
             _device(installer, 'inventory')
             unavailable.add(service)
-            startup_failed = True
+            startup_disable_unverified = True
     if unavailable:
         installer.store.checkpoint(installer.profile, cleanup_startup_unavailable=sorted(unavailable))
     inputs_removed = _remove_input_shortcut(installer)
@@ -534,13 +545,20 @@ def continue_removal(installer, expected_pending):
     while isinstance(previous, dict):
         resident |= previous.get('recovery_protocol') == 'no-root-original-stream-v1'
         previous = previous.get('previous')
-    if stopped.get('controller_running') or startup_failed or (resident and not restarted):
-        if (stopped.get('controller_running') or startup_failed) and restarted:
+    restart_triggers = []
+    if stopped.get('controller_running'):
+        restart_triggers.append('controller-still-running')
+    if startup_access_blocked:
+        restart_triggers.append('protected-package-access')
+    if startup_disable_unverified:
+        restart_triggers.append('startup-disable-unverified')
+    if resident and not restarted:
+        restart_triggers.append('resident-installer-evidence')
+    if restart_triggers:
+        if restarted:
             _device(installer, 'boot-retire', proof=proof)
             proof = capture_boot()
-        installer.store.checkpoint(installer.profile, stage='restart-required', removal_reason='restart-required', cleanup_restart_first=True)
-        installer.progress(RESTART_MESSAGE)
-        return {'removed': False, 'verified_clean': False, 'restart_required': True}
+        return require_restart(restart_triggers, before_packages=True)
     for app, message in zip(APPS, ('Removing Helper…', 'Removing Home…', 'Removing the updater…')):
         if app not in apps:
             continue
@@ -550,14 +568,13 @@ def continue_removal(installer, expected_pending):
     installer.progress('Removing private recovery data…')
     installer.store.checkpoint(installer.profile, stage='private-cleanup')
     _check_access(_repair_registration(installer, _device(installer, 'sweep')))
-    if (not restarted and pending.get('previous') or
-            (not restarted or reused_restart) and _device(installer, 'idle').get('idle') is not True):
+    if not restarted and pending.get('previous'):
+        return require_restart(['prior-operation-unresolved'])
+    if (not restarted or reused_restart) and _device(installer, 'idle').get('idle') is not True:
         if restarted:
             proof = capture_boot()
             restarted = False
-        installer.store.checkpoint(installer.profile, stage='restart-required', removal_reason='restart-required')
-        installer.progress(RESTART_MESSAGE)
-        return {'removed': False, 'verified_clean': False, 'restart_required': True}
+        return require_restart(['process-idle-unverified'])
     installer.progress('Verifying removal…')
     final = _device(installer, 'inventory')
     _check_access(final)
@@ -570,9 +587,7 @@ def continue_removal(installer, expected_pending):
         if restarted:
             proof = capture_boot()
             restarted = False
-        installer.store.checkpoint(installer.profile, stage='restart-required', removal_reason='restart-required')
-        installer.progress(RESTART_MESSAGE)
-        return {'removed': False, 'verified_clean': False, 'restart_required': True}
+        return require_restart(['process-idle-unverified'])
     if restarted:
         installer.store.checkpoint(installer.profile, cleanup_boot_verified=True)
     else:

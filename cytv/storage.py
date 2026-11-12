@@ -32,7 +32,7 @@ def _tmp_is_ramfs(remote):
     return isinstance(filesystem, str) and filesystem.strip().lower() == RAMFS_MAGIC
 
 
-def check(remote, requirements, progress):
+def check(remote, requirements, progress, *, allow_tmp_ramfs=False):
     """Add requirements sharing a filesystem, rather than testing each in isolation."""
     groups = {}
     ramfs_tmp = False
@@ -48,8 +48,11 @@ def check(remote, requirements, progress):
             raise UserError('Available TV storage could not be determined. Installation stopped before package submission.')
         if (location == fields[5] == '/tmp' and fields[1:4] == ['0', '0', '0']
                 and _tmp_is_ramfs(remote)):
-            ramfs_tmp = True
-            progress(UNKNOWN.format(location=location, required=mib(required + RESERVE)))
+            if allow_tmp_ramfs:
+                progress(TV_STORAGE_RAMFS)
+            else:
+                ramfs_tmp = True
+                progress(UNKNOWN.format(location=location, required=mib(required + RESERVE)))
             continue
         key = (fields[0], fields[5])
         group = groups.setdefault(key, {'location': location, 'required': RESERVE, 'available': int(fields[3]) * 1024})
@@ -86,7 +89,9 @@ def install(remote, bundles, progress, root=False):
     else:
         requirements = {'/media/developer': staged + 2 * expanded,
                         '/tmp': max(sizes, default=0)}
-    check(remote, requirements, progress)
+    # Developer Mode expands the application under /media/developer/apps.
+    # On ramfs, the vendor's /tmp bookkeeping has no measurable block budget.
+    check(remote, requirements, progress, allow_tmp_ramfs=not root)
 
 
 def local(required, progress):

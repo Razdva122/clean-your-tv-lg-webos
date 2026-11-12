@@ -1,126 +1,74 @@
 {
   "schema": 1,
-  "version": "1.18.0",
+  "version": "1.18.1",
   "changes": [
     {
-      "pr": 515,
+      "pr": 544,
+      "issues": [
+        505
+      ],
+      "summary": "Recover No-root Home broker after directory mode drift (#505)"
+    },
+    {
+      "pr": 545,
+      "issues": [
+        472
+      ],
+      "summary": "Report restart triggers from the No-root cleanup adapter; the original Developer Mode recovery remains open"
+    },
+    {
+      "pr": 547,
+      "issues": [
+        101
+      ],
+      "summary": "Read interrupted native Root setup status without staging Python; the original deployment failure remains open"
+    },
+    {
+      "pr": 548,
+      "issues": [
+        355
+      ],
+      "summary": "Show unknown Change Home status in Root Settings"
+    },
+    {
+      "pr": 550,
+      "issues": [
+        434,
+        541
+      ],
+      "summary": "Allow No-root installs on confirmed ramfs"
+    },
+    {
+      "pr": 551,
+      "issues": [
+        101
+      ],
+      "summary": "Fix Root compositor auto-return after app exit"
+    },
+    {
+      "pr": 552,
+      "issues": [
+        541
+      ],
+      "summary": "Fix TLS and weather navigation on legacy webOS"
+    },
+    {
+      "pr": 553,
       "issues": [],
-      "summary": "Refresh Home Helper status after a failed first check"
+      "summary": "Fix Debloat defaults and writes over root SSH"
     },
     {
-      "pr": 517,
-      "issues": [
-        389
-      ],
-      "summary": "Verify immutable LG BSP overlays during Root Home setup"
-    },
-    {
-      "pr": 520,
-      "issues": [
-        392
-      ],
-      "summary": "Add optional Debloat settings to the installer"
-    },
-    {
-      "pr": 521,
-      "issues": [
-        473
-      ],
-      "summary": "Document LG UM7450PLA No-root compatibility"
-    },
-    {
-      "pr": 522,
-      "issues": [
-        519
-      ],
-      "summary": "Report Qt Home admission failures in installer diagnostics"
-    },
-    {
-      "pr": 523,
-      "issues": [
-        348
-      ],
-      "summary": "Resume interrupted retirement of verified installer staging"
-    },
-    {
-      "pr": 524,
-      "issues": [
-        362
-      ],
-      "summary": "Pin HDMI inputs alongside Home apps"
-    },
-    {
-      "pr": 526,
-      "issues": [
-        487
-      ],
-      "summary": "Document anonymized public device reports and verified LG C2"
-    },
-    {
-      "pr": 527,
-      "issues": [
-        434
-      ],
-      "summary": "Report unmeasurable temporary storage on ramfs TVs"
-    },
-    {
-      "pr": 528,
+      "pr": 554,
       "issues": [],
-      "summary": "Record timing for each release candidate"
-    },
-    {
-      "pr": 530,
-      "issues": [],
-      "summary": "Default to automatic weather location when no city is saved"
-    },
-    {
-      "pr": 533,
-      "issues": [],
-      "summary": "Use a shared Linux CI image after v1.17.1"
-    },
-    {
-      "pr": 536,
-      "issues": [],
-      "summary": "Reuse setup in desktop installer test fixtures"
-    },
-    {
-      "pr": 537,
-      "issues": [],
-      "summary": "Focus weather-only PRs on weather checks"
-    },
-    {
-      "pr": 538,
-      "issues": [],
-      "summary": "Shard full-candidate browser regressions by duration"
-    },
-    {
-      "pr": 539,
-      "issues": [
-        534
-      ],
-      "summary": "Verify legacy No-root foreground through saved TV pairing"
-    },
-    {
-      "pr": 543,
-      "issues": [
-        418
-      ],
-      "summary": "Verify stock LG BSP overlays in the Root cleanup finalizer"
-    },
-    {
-      "pr": 546,
-      "issues": [
-        542
-      ],
-      "summary": "Recover standalone Root Updater after rollback readiness timeout"
+      "summary": "Stop Home Helper automatically before No-root reinstall"
     }
   ],
   "excluded": [],
-  "acceptance": "LG OLED55C3RLA, firmware 43.21.71: signed Root install, profile preservation and rollback, physical Magic Remote Home/navigation/emergency exit, No-root installation and clean removal, and connected HDMI 3 picture and sound in both editions passed. The maintainer approved verification on the affected devices after publication for #418, #534 and #542. Matching regression fixtures passed. See docs/history/2026-11-12-release-1.18.0-candidate.md.",
+  "acceptance": "Accepted on LG OLED55C3RLA (43.21.71, SDK 11.2.0), macOS ARM64, and the Android API 35 ARM64 emulator. Exact No-root install, active-Helper reinstall and removal, Debloat read/write and restore, signed Root installation and retained rollback, rendered profile retention, and Magic Remote Home and emergency exit passed. See [v1.18.1 candidate acceptance](https://github.com/Razdva122/clean-your-tv-lg-webos/blob/release/next/docs/history/2026-11-12-release-1.18.1-candidate.md) for hashes, matching legacy fixtures and scope.",
   "build": {
-    "run_id": 43091100467,
-    "attempt": 2,
-    "source": "352bd33bdbc8f20a50f5cca942853b10e3bac028"
+    "run_id": 43175770485,
+    "attempt": 1,
+    "source": "dd4b9caf0abf4f224db99b5525efd4ede5c0cc02"
   },
-  "acceptance_build": "43091100467:2"
+  "acceptance_build": "43175770485:1"
 }

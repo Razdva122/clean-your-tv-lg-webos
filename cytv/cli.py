@@ -457,7 +457,8 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                         offer(installer, args, ask, write)
                         write.selected_profile(profile)
                         installer.select_graphics()
-                        installer.preflight(install=True, home_interfaces=profile['edition']=='root')
+                        if profile['edition'] == 'root':
+                            installer.preflight(install=True, home_interfaces=True)
                 if reinstall:
                     if args.migrate_home:
                         raise UserError('For Root reinstallation, omit --migrate-home. The installer reads a fresh TV inventory before replacing Root.')
@@ -483,17 +484,19 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                         return 0
                 if profile['edition'] == 'no-root':
                     phase = 'inspect-installation'
+                    auto_stop = True
                     while True:
                         try:
-                            installer.preflight(install=True)
+                            installer.preflight(install=True, stop_running_helper=auto_stop)
                             break
                         except UserError as error:
+                            auto_stop = False
                             if error.reason_code != 'helper-running' or args.non_interactive:
                                 raise
                             write.heading('Stop Home Helper on the TV')
                             write('Press Home three times within two seconds (older Helper: hold Home for two seconds), then release all buttons and wait for LG Home.')
                             if not prompts.confirm('Try stopping Helper again?', ask, write, default=True):
-                                write('Cancelled. No TV changes were made.')
+                                write('Cancelled. Installation has not started.')
                                 return 0
                 if not resume:
                     installer.select_graphics()
@@ -591,9 +594,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                     write('Root emergency exit: three short Home presses within two seconds.')
                 else:
                     write('Three short Home presses within two seconds return to LG Home. To restart Home control, open Home Helper, choose Start Helper and confirm. Your saved Home screen choice is kept.')
-                    if result.get('activation_cancelled') is True:
-                        write('Packages verified. A new Stop cancelled Home activation. Start Helper on the TV when ready.')
-                    else:
+                    if result.get('activation_cancelled') is not True:
                         write("After installation, press Home to try it. If LG Home opens, open Home Helper from the TV's apps.")
                         write('Packages installed; Home Helper launch requested. Check short Home, arrows/OK, Back, volume, standby and cold boot.')
                     if profile.get('connection') == 'root-ssh':

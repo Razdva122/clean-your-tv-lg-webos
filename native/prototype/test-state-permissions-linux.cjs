@@ -302,6 +302,55 @@ if (process.platform !== 'linux' || process.getuid() !== 0) {
         a.equal(fs.statSync(output).mode & 0o777, 0o660);
         a.equal(fs.statSync(output).gid, 5000);
       }
+    const drifted = path.join(renewal, 'drifted'),
+      privateChannel = path.join(drifted, '.private'),
+      quotedDrifted = JSON.stringify(drifted);
+    fs.mkdirSync(drifted);
+    fs.chownSync(drifted, 5999, 5000);
+    fs.chmodSync(drifted, 0o775);
+    run(
+      6923,
+      'require(' +
+        bootModule +
+        ').atomicRecord(' +
+        quotedDrifted +
+        ',"catalog-request","fresh");'
+    );
+    a.equal(fs.statSync(drifted).mode & 0o7777, 0o775);
+    a.equal(fs.statSync(drifted).uid, 5999);
+    a.deepEqual(fs.readdirSync(drifted), ['.private']);
+    a.equal(fs.statSync(privateChannel).mode & 0o7777, 0o2770);
+    a.equal(fs.statSync(privateChannel).uid, 6923);
+    a.equal(fs.statSync(privateChannel).gid, 5000);
+    const restored = fs.statSync(
+      path.join(privateChannel, 'catalog-request.json')
+    );
+    a.equal(restored.mode & 0o7777, 0o660);
+    a.equal(restored.gid, 5000);
+    run(
+      5431,
+      'var s=require(' +
+        bootModule +
+        '),d=' +
+        quotedDrifted +
+        ';if(s.readChannelRecord(d,"catalog-request")!=="fresh")process.exit(8);s.atomicRecord(d,"catalog-response","answer");'
+    );
+    run(
+      6923,
+      'if(require(' +
+        bootModule +
+        ').readChannelRecord(' +
+        quotedDrifted +
+        ',"catalog-response")!=="answer")process.exit(8);'
+    );
+    run(
+      6580,
+      'var f=require("fs");try{f.readFileSync(' +
+        JSON.stringify(path.join(privateChannel, 'catalog-request.json')) +
+        ');process.exit(9)}catch(e){if(e.code!=="EACCES")throw e}',
+      6580,
+      []
+    );
     const request = path.join(channel, 'home-request'),
       response = path.join(channel, 'home-response');
     run(

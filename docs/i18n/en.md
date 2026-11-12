@@ -71,7 +71,7 @@ Root setup continues with a warning if TV inputs cannot be read but the applicat
 1. Open another TV app and briefly press **Home**. Clean Your TV should open. Tell the wizard what you saw; leave the check skipped if you did not test it.
 2. Check arrows, OK, Back, volume and sound. Test standby/wake and a start after disconnecting power separately. A successful installation alone does not check these actions.
 
-No-root setup turns Home on after verifying the packages. A new Stop during setup cancels activation. You can turn Home off later in Settings.
+No-root setup turns Home on after verifying the packages unless Helper was stopped. After a Stop, use **Start Helper** on the TV to resume. You can turn Home off later in Settings.
 
 Use the original saved connection and recovery data. If they are lost, reconnect to the same TV and choose Uninstall Clean Your TV. Finish verified removal before setup; do not delete reservation files. If removal stops, save the diagnostic report.
 
@@ -117,7 +117,7 @@ If the installer cannot verify the requested full restart, save and attach its d
 
 Failed or interrupted setup offers recovery directly. If No-root setup cannot continue, confirm full removal once. Removal automatically retries transient connection loss and a busy CYTV worker up to three attempts. If Root access is required, choose **Connect using Root** for the same TV; verified Root cleanup also finishes its blocked No-root removal. A failed Root activation attempts to restore and verify LG Home without repeating activation. Cancellation with unfinished work keeps a diagnostic report and recovery actions. Emergency-stop state remains unchanged.
 
-After a removal connection error, open the connection details, check network access or choose an existing Root SSH key, then retry. The TV address, edition, port and host-key checks stay fixed. No-root checks Helper before pairing: stop it and confirm the recheck in the same setup. Removal can finish without a restart when controls, startup, package/file absence and stopped processes are verified and no unresolved setup remains. If the installer requests a restart, complete it and retry. Input-service failure allows safe package cleanup, but success still requires verified shortcut cleanup.
+After a removal connection error, open the connection details, check network access or choose an existing Root SSH key, then retry. The TV address, edition, port and host-key checks stay fixed. When reinstalling No-root, the wizard tries to stop Helper automatically. Use Home only if prompted, then confirm the recheck. Removal can finish without a restart when controls, startup, package/file absence and stopped processes are verified and no unresolved setup remains. If the installer requests a restart, complete it and retry. Input-service failure allows safe package cleanup, but success still requires verified shortcut cleanup.
 
 **Reinstall Root:** Choose **Set up my TV → Root** with the saved connection and confirm **Reinstall Root?**. The installer restores LG Home and fully removes Clean Your TV, including its updaters, Home Helper and saved preferences. After verified removal, it installs and activates the packages and Root runtime bundled with that installer. Other TV apps and existing root/SSH access are preserved. If removal stops or requests a full restart, finish it before starting setup again. **Uninstall Clean Your TV** alone never starts another installation.
 
@@ -166,7 +166,7 @@ Open Settings → Wallpapers → Upload from phone and scan the code. Choose a J
 
 ## Set up your Clean Your TV
 
-Before choosing a theme, use **Debloat** to select which LG ads, recommendations, privacy settings and notifications to change. Check each result before continuing. If the installer could not read the original value, it cannot save it for an automatic undo. Choose **Skip Debloat** to keep your current settings.
+Before choosing a theme, use **Debloat** to select which LG ads, recommendations, privacy settings and notifications to change. The desktop installer selects every option by default. Clear any options you want to keep as they are before clicking **Continue**. Check each result before continuing. If the installer could not read the original value, it cannot save it for an automatic undo. Choose **Skip Debloat** to keep your current settings.
 
 After successful installation, choose Classic, Liquid Glass or Ribbon and turn Home weather on or off. Ribbon does not support weather; Liquid Glass uses the compact format. Weather can find an approximate city through your internet connection; change it later in Home settings.
 

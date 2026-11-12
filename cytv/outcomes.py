@@ -54,13 +54,13 @@ class SetupOutcome:
 
     def cancelled_by_stop(self):
         self.values['startup'] = 'stopped-during-setup'
-        self.checks.update('startup', 'unknown', 'Packages verified. A new Stop cancelled Home activation. Start Helper on the TV when ready.')
+        self.checks.update('startup', 'unknown', 'Packages verified. Stop cancelled Home activation. Start Helper on the TV when ready.')
 
     def review_home(self, ask, write, non_interactive=False):
         self.values['home_button'] = 'not-tested'
         self.checks.update('home-button', 'unknown', UNTESTED)
         if self.values['startup'] == 'stopped-during-setup':
-            write('Packages verified. A new Stop cancelled Home activation. Start Helper on the TV when ready.')
+            write('Packages verified. Stop cancelled Home activation. Start Helper on the TV when ready.')
             return
         if non_interactive:
             return

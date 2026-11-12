@@ -109,7 +109,7 @@ def apply(installer, selected, progress=lambda _: None):
     profile, remote = installer.profile, installer.remote
     directory = installer.store.device_dir(profile)
     results = {}
-    use_ssap = profile['edition'] == 'no-root'
+    use_ssap = not remote.root
     tv = None
     ssap_unavailable = False
     with ExitStack() as stack:
@@ -136,10 +136,8 @@ def apply(installer, selected, progress=lambda _: None):
                 payload = {'category': category, 'settings': {key: target}}
                 if use_ssap:
                     reply = tv.call('ssap://settings/setSystemSettings', payload, timeout=8)
-                elif remote.root:
-                    reply = remote.luna(SERVICE + 'setSystemSettings', payload, timeout=8)
                 else:
-                    continue
+                    reply = remote.luna(SERVICE + 'setSystemSettings', payload, timeout=8)
                 if reply.get('returnValue') is not True:
                     continue
             except Exception:
