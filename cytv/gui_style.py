@@ -30,6 +30,7 @@ QLabel#title { font-size: 30px; font-weight: 700; color: #f3ede3; }
 QLabel#title[state="error"], QLabel#badge[state="error"] { color: #ff6b6b; }
 QLabel#subtitle { color: #c0b5a5; font-size: 15px; }
 QTextBrowser { background: transparent; color: #c0b5a5; border: none; padding: 0; selection-background-color: #51483e; }
+QScrollArea#wizardReading, QWidget#wizardReadingBody { background: #1d1c1a; border: none; }
 QWidget#form { background: #272521; border-radius: 12px; }
 QFrame#runtimeChoice { background: #24221e; border: 1px solid #51483e; border-radius: 10px; }
 QScrollArea#runtimeChoices { background: transparent; border: none; }

@@ -36,6 +36,7 @@ class GuiTests(unittest.TestCase):
         w.resize(900, 680)
         w.show()
         self.app.processEvents()
+        self.assertTrue(w.reading.isHidden())
         for name in w.step_names:
             self.assertGreaterEqual(name.height(), name.heightForWidth(name.width()), name.text())
         scroll = w.form.findChild(QScrollArea, 'debloatSelection')
@@ -57,6 +58,7 @@ class GuiTests(unittest.TestCase):
                          [key for key in debloat.SETTINGS if key != 'contentRecommendation'])
         w.receive('debloat-results', {'homePromotion': 'unverified'})
         w.show_prompt(Prompt(debloat.REVIEW))
+        self.assertFalse(w.reading.isHidden())
         self.assertIn('The result could not be verified.', w.content.toPlainText())
         self.app.processEvents()
         icon = w.content.document().find('✓')
@@ -326,6 +328,70 @@ class GuiTests(unittest.TestCase):
         self.assertEqual(w.title.property('state'), 'error')
         w.home()
         self.assertEqual(w.title.property('state'), '')
+
+    def test_short_cleanup_result_shows_error_in_one_scrolling_area(self):
+        from PySide6.QtCore import QPoint, QPointF, Qt
+        from PySide6.QtGui import QWheelEvent
+        from PySide6.QtTest import QTest
+
+        w = Wizard()
+        self.addCleanup(w.close)
+        w.resize(900, 680)
+        w.show()
+        w.preview.hide()
+        w.content.clear()
+        w.command = 'uninstall'
+        w.receive('recovery', {'host': '192.0.2.10', 'edition': 'no-root', 'port': 9922})
+        w.receive('recovery-plan', {'state': 'blocked', 'disposition': 'clean-removal',
+                                    'summary': 'Removal is still in progress.', 'actions': ['continue-removal'],
+                                    'removal': {'stage': 'private-cleanup', 'reason': 'private-cleanup-incomplete'}})
+        w.receive('check', {'id': 'ssh', 'label': 'SSH connection and sign-in', 'status': 'pass', 'detail': ''})
+        for index in range(16):
+            w.receive('text', f'Cleanup progress {index}')
+        w.receive('error-heading', 'Could not complete this step')
+        error = 'Some Clean Your TV files or settings remain. Choose Try again.'
+        w.receive('error', error)
+        report = Path(self.directory.name) / 'diagnostic.json'
+        report.touch()
+        w.receive('report', str(report))
+        w.receive('text', 'Review the report.')
+        w.receive('done', 2)
+        self.app.processEvents()
+
+        heading = w.content.cursorRect(w.content.document().find('Could not complete this step'))
+        message = w.content.cursorRect(w.content.document().find(error))
+        self.assertTrue(w.content.viewport().rect().contains(heading.united(message)))
+        reading = w.findChild(QScrollArea, 'wizardReading')
+        self.assertIsNotNone(reading)
+        for panel in (w.content, w.check_panel, w.details):
+            self.assertTrue(reading.isAncestorOf(panel))
+            self.assertFalse(panel.verticalScrollBar().isVisible())
+        visible_error = w.content.viewport().mapTo(reading.viewport(), message.bottomLeft())
+        self.assertTrue(reading.viewport().rect().contains(visible_error))
+        w.details_toggle.click()
+        self.app.processEvents()
+        self.assertGreater(reading.verticalScrollBar().maximum(), 0)
+        self.assertGreater(reading.verticalScrollBar().value(), 0)
+        self.assertFalse(w.details.isHidden())
+        self.assertIn('Cleanup progress 0', w.details.toPlainText())
+        self.assertEqual(w.details.verticalScrollBar().maximum(), 0)
+        reading.verticalScrollBar().setValue(0)
+        viewport = w.content.viewport()
+        point = message.center()
+        wheel = QWheelEvent(QPointF(point), QPointF(viewport.mapToGlobal(point)), QPoint(), QPoint(0, -120),
+                            Qt.MouseButton.NoButton, Qt.KeyboardModifier.NoModifier, Qt.ScrollPhase.NoScrollPhase, False)
+        self.app.sendEvent(viewport, wheel)
+        self.assertGreater(reading.verticalScrollBar().value(), 0)
+        reading.verticalScrollBar().setValue(0)
+        QTest.keyClick(reading, Qt.Key.Key_PageDown)
+        self.assertGreater(reading.verticalScrollBar().value(), 0)
+        for button in (w.cancel, w.details_toggle, *w.form.findChildren(QPushButton)):
+            self.assertFalse(reading.isAncestorOf(button))
+            position = button.mapTo(w, button.rect().bottomRight())
+            self.assertTrue(w.rect().contains(position), button.text())
+        w.details_toggle.click()
+        self.app.processEvents()
+        self.assertEqual(reading.verticalScrollBar().value(), 0)
 
     @classmethod
     def setUpClass(cls):
