@@ -126,7 +126,7 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8879';
     await page.waitForFunction(
       () =>
         document
-          .querySelector('.root-settings [role=switch]')
+          .querySelector('.home-routing-actions .home-routing-switch')
           .getAttribute('aria-checked') === 'true'
     );
     assert.equal(
@@ -147,7 +147,9 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8879';
     assert(await toggle.isDisabled());
     await page.evaluate(() => (settingsBackend.phase = 'active'));
     await page.waitForFunction(
-      () => !document.querySelector('.root-settings [role=switch]').disabled
+      () =>
+        !document.querySelector('.home-routing-actions .home-routing-switch')
+          .disabled
     );
     assert.equal(await toggle.getAttribute('aria-checked'), 'true');
     assert.deepEqual(
@@ -166,11 +168,22 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8879';
       exact: true
     });
     await retry.waitFor();
+    assert(await toggle.isDisabled());
+    assert.equal(await toggle.getAttribute('aria-checked'), null);
+    assert.equal(
+      await toggle.evaluate(
+        (button) => getComputedStyle(button, '::after').content
+      ),
+      '"?"',
+      'failed read shows an unknown state'
+    );
     await retry.focus();
     await page.evaluate(() => (settingsBackend.fail = false));
     await page.keyboard.press('Enter');
     await page.waitForFunction(
-      () => !document.querySelector('.root-settings [role=switch]').disabled
+      () =>
+        !document.querySelector('.home-routing-actions .home-routing-switch')
+          .disabled
     );
     assert.equal(
       await page.evaluate(() => document.activeElement.textContent),
@@ -207,7 +220,9 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8879';
     );
     assert(await toggle.isDisabled());
     await page.evaluate(() =>
-      document.querySelector('.root-settings [role=switch]').click()
+      document
+        .querySelector('.home-routing-actions .home-routing-switch')
+        .click()
     );
     assert.deepEqual(
       await page.evaluate(() =>
@@ -226,7 +241,9 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8879';
       settingsBackend.delay = false;
     });
     await page.waitForFunction(
-      () => !document.querySelector('.root-settings [role=switch]').disabled
+      () =>
+        !document.querySelector('.home-routing-actions .home-routing-switch')
+          .disabled
     );
     assert.equal(await toggle.getAttribute('aria-checked'), 'false');
     const sources = page.locator('.startup-source-actions button');
@@ -258,7 +275,7 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8879';
     await page.waitForFunction(
       () =>
         document
-          .querySelector('.root-settings [role=switch]')
+          .querySelector('.home-routing-actions .home-routing-switch')
           .getAttribute('aria-checked') === 'true'
     );
     assert.deepEqual(
@@ -279,13 +296,15 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8879';
       youtube: true
     });
     await page.waitForFunction(
-      () => !document.querySelector('.root-settings [role=switch]').disabled
+      () =>
+        !document.querySelector('.home-routing-actions .home-routing-switch')
+          .disabled
     );
     await toggle.click();
     await page.waitForFunction(
       () =>
         document
-          .querySelector('.root-settings [role=switch]')
+          .querySelector('.home-routing-actions .home-routing-switch')
           .getAttribute('aria-checked') === 'false'
     );
     assert.deepEqual(
@@ -309,7 +328,7 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8879';
     await page.waitForFunction(
       () =>
         document
-          .querySelector('.root-settings [role=switch]')
+          .querySelector('.home-routing-actions .home-routing-switch')
           .getAttribute('aria-checked') === 'true'
     );
     await page.evaluate(() => (settingsBackend.delayLG = true));
@@ -345,7 +364,9 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8879';
     });
     await page.locator('#btnSettings').click();
     await page.waitForFunction(
-      () => !document.querySelector('.root-settings [role=switch]').disabled
+      () =>
+        !document.querySelector('.home-routing-actions .home-routing-switch')
+          .disabled
     );
     await page
       .getByRole('button', { name: 'Open LG Home', exact: true })

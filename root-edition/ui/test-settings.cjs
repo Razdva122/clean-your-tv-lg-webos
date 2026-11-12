@@ -28,6 +28,9 @@ class Element {
   setAttribute(k, v) {
     this.attrs[k] = v;
   }
+  removeAttribute(k) {
+    delete this.attrs[k];
+  }
   focus() {
     selected = this;
     if (this.onfocus) this.onfocus();
@@ -131,6 +134,8 @@ function key(keyCode) {
 }
 (async () => {
   panel.open();
+  assert.equal(buttons[0].attrs['data-home-state'], 'checking');
+  assert.equal(buttons[0].attrs['aria-checked'], undefined);
   await tick();
   const sources = buttons.filter((b) =>
     ['LG Channels / Live TV', 'YouTube', 'HDMI'].includes(b.textContent)
@@ -258,6 +263,9 @@ function key(keyCode) {
   reply(await nextStatus(), { returnValue: false });
   await tick();
   assert(buttons[0].disabled);
+  assert.equal(buttons[0].attrs['data-home-state'], 'unknown');
+  assert.equal(buttons[0].attrs['aria-checked'], undefined);
+  assert.equal(buttons[0].attrs.role, undefined);
   assert(!retry.hidden);
   assert(!retry.disabled);
   retry.onclick();
@@ -276,6 +284,8 @@ function key(keyCode) {
   reply(await nextStatus(), status('disabled'));
   await tick();
   assert(!buttons[0].disabled);
+  assert.equal(buttons[0].attrs['aria-checked'], 'false');
+  assert.equal(buttons[0].attrs.role, 'switch');
   assert.equal(restores, before);
   listeners.webOSRelaunch();
   const closed = await nextStatus();

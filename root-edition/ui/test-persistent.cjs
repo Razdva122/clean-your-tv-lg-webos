@@ -17,6 +17,9 @@ class E {
     this[name] = value;
     if (name === 'aria-live') message = this;
   }
+  removeAttribute(name) {
+    delete this[name];
+  }
   focus() {}
 }
 const doc = {
