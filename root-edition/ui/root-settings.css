@@ -915,7 +915,8 @@
   outline-offset: 2px;
   background: #303f54;
 }
-.settings-categories svg {
+.settings-categories svg,
+.settings-action-icon {
   width: 28px;
   height: 28px;
   flex-shrink: 0;
@@ -1004,7 +1005,8 @@
     padding: 10px 12px;
     margin-bottom: 6px;
   }
-  .settings-categories svg {
+  .settings-categories svg,
+  .settings-action-icon {
     width: 24px;
     height: 24px;
     margin-right: 12px;

@@ -782,6 +782,7 @@
         {
           id: 'advanced',
           label: 'Advanced',
+          icons: ['tv', 'notifications'],
           elements: [
             document.getElementById('renewalTV'),
             document.getElementById('renewalNotifications')

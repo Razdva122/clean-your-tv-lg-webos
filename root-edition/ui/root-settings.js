@@ -787,6 +787,7 @@
           {
             id: 'advanced',
             label: 'Advanced',
+            icons: ['tv', 'notifications', 'sound'],
             elements: [buttons[0], buttons[17], buttons[7]]
           }
         ]);
