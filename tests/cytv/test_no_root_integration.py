@@ -311,6 +311,9 @@ class OriginalOperationIntegration(unittest.TestCase):
                 generation=directory/'stop-generation'
                 if name=='watchdog':
                     generation.unlink()
+                else:
+                    generation.chmod(0o775)
+                (directory/name).chmod(0o775)
                 expected=generation.read_bytes() if generation.exists() else None
                 before=len(self.remote.calls)
                 result=self.installer.install(self.inventory,'original-secret')
@@ -318,6 +321,7 @@ class OriginalOperationIntegration(unittest.TestCase):
                 self.assertTrue(result['activation_cancelled'])
                 self.assertFalse(result['launch_requested'])
                 self.assertEqual((directory/name).read_bytes(),b'explicit-stop')
+                self.assertEqual((directory/name).stat().st_mode & 0o7777, 0o775)
                 self.assertEqual(generation.read_bytes() if generation.exists() else None,expected)
                 self.assertFalse(any(row[0]=='luna' and row[1].endswith('/launch') and
                                      row[2]['id']==operations.HELPER for row in self.remote.calls[before:]))
@@ -442,6 +446,46 @@ class OriginalOperationIntegration(unittest.TestCase):
         self.assertEqual(key.stat().st_mode&0o777,0o640)
         self.assertTrue(result['launch_requested'])
         self.assertIsNone(self.store.pending(self.profile))
+
+    def test_reinstall_after_vendor_mode_drift_across_helper_state(self):
+        self.installer.install(self.inventory, 'original-secret')
+        directory = Path(operations.HELPER_STATE)
+        # The simulated vendor installs the packages but does not run Helper.
+        # Populate ordinary runtime files that can be left by a previous run.
+        runtime_records = {
+            'bootstrap.log': 'BOOTSTRAP\n',
+            'controller.lock': '',
+            'controller.log': '{"event":"controller-start"}\n',
+            'controller.log.previous': '{"event":"controller-stop"}\n',
+            'controller.pid': '2147483647',
+            'control.json': '{}',
+            'home-control.json': '{"enabled":true}',
+            'relay.lock': '',
+        }
+        for name, contents in runtime_records.items():
+            (directory/name).write_text(contents)
+        generation = directory/'stop-generation'
+        original_generation = generation.read_bytes()
+        key = directory/'ssap-key.json'
+        original_key = key.read_bytes()
+        for path in (directory, *directory.rglob('*')):
+            path.chmod(0o775)
+
+        result = self.installer.install(self.inventory, 'original-secret')
+
+        self.assertTrue(result['launch_requested'])
+        self.assertFalse(result.get('activation_cancelled', False))
+        self.assertEqual(self.installer.outcome.values['packages'], 'verified')
+        self.assertIsNone(self.store.pending(self.profile))
+        self.assertEqual((self.root/'requests').read_text().splitlines(), list(observer.APPS)*2)
+        self.assertEqual(directory.stat().st_mode & 0o7777, 0o770)
+        self.assertEqual(generation.stat().st_mode & 0o7777, 0o664)
+        self.assertNotEqual(generation.read_bytes(), original_generation)
+        self.assertEqual(key.stat().st_mode & 0o7777, 0o640)
+        self.assertEqual(key.read_bytes(), original_key)
+        self.assertEqual((directory/'apps.json').stat().st_mode & 0o7777, 0o644)
+        for name, contents in runtime_records.items():
+            self.assertEqual((directory/name).read_text(), contents, name)
 
     def test_pending_update_reclaims_capsule_matched_helper_key_without_package_replay(self):
         self.installer.install(self.inventory,'original-secret')
