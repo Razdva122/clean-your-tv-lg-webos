@@ -261,6 +261,22 @@ class StagingTests(unittest.TestCase):
                 self.assertEqual(self.retire(),2)
             self.summary('filesystem-error',2)
 
+    def test_product_cache_prune_revalidates_after_opening_peer_stores(self):
+        with self.owner.operation('product', 'product-'+self.identifier+'.json') as lease:
+            self.records(lease)
+            self.owner.stage(lease, 'complete', terminal=True)
+            peer = storage.Store(Path(self.tmp.name).resolve()/'updater', uid=os.getuid())
+
+            def open_peer(*args, **kwargs):
+                self.store.write('request-'+self.identifier, dict(self.record, state='pending'))
+                return peer
+
+            with patch('install_device.UPDATER', peer.root), patch('install_device.SUPERVISOR', self.tree/'missing'), \
+                    patch.object(storage, 'Store', side_effect=open_peer), \
+                    patch.object(storage, 'prune_update_caches') as prune:
+                self.assertEqual(self.retire(), 2)
+                prune.assert_not_called()
+
     def test_terminal_staging_retires_payload_preserving_log_and_journals(self):
         with self.owner.operation('product','product-'+self.identifier+'.json') as lease:
             self.records(lease);self.owner.stage(lease,'complete',terminal=True)
@@ -315,6 +331,54 @@ class StagingTests(unittest.TestCase):
                 return original(name)
             with patch.object(self.store,'read',side_effect=read):self.assertEqual(self.retire(),0)
             self.assertTrue((self.tree/'root/app.ipk').exists())
+
+    def test_startup_retry_finishes_interrupted_retirement_without_changing_receipts(self):
+        from installation import Ownership
+        with self.owner.operation('product', 'product-'+self.identifier+'.json') as lease:
+            self.records(lease)
+            self.owner.stage(lease, 'complete', terminal=True)
+            with patch.object(storage.os, 'fsync', side_effect=OSError):
+                self.assertEqual(self.retire(), 1)
+        submission = self.store.read('submission-'+self.identifier)
+        restarted = Ownership(self.store)
+        self.assertEqual(restarted.retry_staging(), 1)
+        self.assertEqual(restarted.retry_staging(), 0)
+        self.assertEqual(restarted.status(), lease)
+        self.assertEqual(self.store.read('request-'+self.identifier), self.record)
+        self.assertEqual(self.store.read('submission-'+self.identifier), submission)
+        self.assertEqual((self.tree/'worker.log').read_bytes(), b'private log')
+
+    def test_handoff_retries_before_replacing_terminal_lease(self):
+        with self.owner.operation('product', 'product-'+self.identifier+'.json') as lease:
+            self.records(lease)
+            self.owner.stage(lease, 'complete', terminal=True)
+        with self.owner.operation('system-update', 'transaction.json'):
+            self.assertFalse(any((self.tree/name).exists() for name in self.files))
+        self.assertEqual(self.store.read('request-'+self.identifier), self.record)
+
+    def test_startup_retry_preserves_live_and_nonterminal_requests(self):
+        from installation import Ownership
+        restarted = Ownership(self.store)
+        with self.owner.operation('product', 'product-'+self.identifier+'.json') as lease:
+            self.records(lease)
+            self.assertEqual(restarted.retry_staging(), 0)
+            self.owner.stage(lease, 'complete', terminal=True)
+            self.assertEqual(restarted.retry_staging(), 0)
+        self.assertEqual(restarted.retry_staging(), 2)
+
+    def test_startup_retry_does_not_sweep_historical_or_unsealed_requests(self):
+        with self.owner.operation('product', 'product-'+self.identifier+'.json') as lease:
+            self.records(lease)
+            self.owner.stage(lease, 'complete', terminal=True)
+            submission = self.store.read('submission-'+self.identifier)
+            inventory = submission.pop('staging')
+            self.store.write('submission-'+self.identifier, submission)
+        self.assertEqual(self.owner.retry_staging(), 0)
+        with self.owner.operation('system-update', 'transaction.json') as lease:
+            self.owner.stage(lease, 'complete', terminal=True)
+        self.store.write('submission-'+self.identifier, dict(submission, staging=inventory))
+        self.assertEqual(self.owner.retry_staging(), 0)
+        self.assertTrue(all((self.tree/name).exists() for name in self.files))
 
     def test_complete_resume_reads_receipt_without_replaying_retired_worker(self):
         import install_driver

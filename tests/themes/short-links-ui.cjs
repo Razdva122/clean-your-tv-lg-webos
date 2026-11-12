@@ -15,9 +15,14 @@ const entry = require('../../scripts/check-theme-submissions.cjs')
         return res.writeHead(404).end();
       res.end(fs.readFileSync(f));
     });
-  await new Promise((r) => server.listen(0, '127.0.0.1', r));
-  const browser = await chromium.launch({ headless: true, channel: 'chrome' });
+  const browser = await chromium.launch({
+    headless: true,
+    channel: process.env.BROWSER_CHANNEL || 'chrome'
+  });
   try {
+    await new Promise((resolve, reject) =>
+      server.once('error', reject).listen(0, '127.0.0.1', resolve)
+    );
     for (const edition of ['launcher', 'root-launcher']) {
       const p = await browser.newPage();
       await p.route('https://da.gd/**', (r) =>
@@ -73,8 +78,11 @@ const entry = require('../../scripts/check-theme-submissions.cjs')
       await p.close();
     }
   } finally {
-    await browser.close();
-    await new Promise((r) => server.close(r));
+    try {
+      await browser.close();
+    } finally {
+      if (server.listening) await new Promise((r) => server.close(r));
+    }
   }
 })().catch((e) => {
   console.error(e);

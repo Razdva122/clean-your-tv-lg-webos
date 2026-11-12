@@ -79,6 +79,8 @@ Use a conexão e os dados de recuperação originais. Se foram perdidos, reconec
 
 ## 6. Uso e recuperação
 
+Para fixar uma entrada HDMI, selecione-a em **+ / Adicionar aplicativo**. Pressione OK para mudar para a entrada. Mantenha OK pressionado para mover ou ocultar o bloco.
+
 Se o instalador mostrar “A configuração Root está incompleta, mas o registro da instalação não está na TV.”: Escolha Revisar opções de recuperação para remover o Clean Your TV e depois inicie a configuração separadamente. A remoção completa também remove No-root Home e Helper; salve suas preferências antes.
 
 Suporte IR No-root: soltar Home após um toque curto agenda o Clean para cerca de 700 ms depois; o LG Home pode aparecer primeiro. Segurar Home continua com o webOS e três toques ainda param o Helper. O acesso pelo Developer Mode padrão não foi verificado; não altere permissões dos dispositivos de entrada.
@@ -164,6 +166,8 @@ O botão Fontes de dados no título Clima abre informações sobre os serviços 
 Abra Configurações → Papéis de parede → Enviar do telefone e leia o código. Escolha JPG, PNG ou HEIC/HEIF, recorte, confirme o limite de qualidade e envie. Escolha Aplicar na TV. Safari usa suporte HEIC nativo; Chrome, Firefox e outros navegadores modernos usam o decodificador local incluído quando necessário. A conversão ocorre no telefone, sem serviço externo. Cancelar ou escolher outro arquivo interrompe a conversão. Entrada: 32 MiB e 50 milhões de pixels; saída: até 1080p e 2 MiB. Se falhar, tente outra foto ou JPG/PNG. É para a página do telefone, não o app Mac.
 
 ## Configure seu Clean Your TV
+
+Antes de escolher um tema, use **Debloat** para selecionar quais opções de anúncios, recomendações, privacidade e notificações da LG você quer alterar. Confira cada resultado. Se o instalador não conseguir ler o valor original, não poderá salvá-lo para reversão automática. Escolha **Pular Debloat** para manter as configurações atuais.
 
 Após a instalação bem-sucedida, escolha Classic, Liquid Glass ou Ribbon e ative ou desative o clima. Ribbon não oferece clima; Liquid Glass usa o formato compacto. A cidade é estimada pela conexão e pode ser alterada na Home.
 

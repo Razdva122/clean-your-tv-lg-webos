@@ -79,6 +79,8 @@ Usa la conexión y los datos de recuperación originales. Si se perdieron, vuelv
 
 ## 6. Uso y recuperación
 
+Para fijar una entrada HDMI, selecciónala en **+ / Añadir aplicación**. Pulsa OK para cambiar a esa entrada. Mantén pulsado OK para mover u ocultar su mosaico.
+
 Si el instalador muestra «La configuración Root está incompleta, pero falta su registro de instalación en el TV.»: Elige Revisar opciones de recuperación para eliminar Clean Your TV y después inicia la configuración por separado. La eliminación completa también borra No-root Home y Helper; guarda primero tus preferencias.
 
 Compatibilidad IR de No-root: al soltar Home tras una pulsación breve, Clean se programa para unos 700 ms después; LG Home puede aparecer primero. Mantener Home sigue correspondiendo a webOS y tres pulsaciones siguen deteniendo Helper. El acceso con Developer Mode normal no está verificado; no cambie los permisos de entrada.
@@ -163,6 +165,8 @@ El botón Fuentes de datos del encabezado Tiempo abre la información de servici
 Abre Ajustes → Fondos → Subir desde el teléfono y escanea el código. Elige JPG, PNG o HEIC/HEIF, recorta, acepta el límite de calidad y envía. Selecciona Aplicar en el TV. Safari usa HEIC nativo; Chrome, Firefox y otros navegadores modernos usan el decodificador local incluido cuando hace falta. La conversión ocurre en el teléfono, sin servicio externo. Cancelar o elegir otro archivo detiene la conversión. Entrada: 32 MiB y 50 millones de píxeles; salida: hasta 1080p y 2 MiB. Si falla, prueba otra foto o JPG/PNG. Es para la página del teléfono, no la app Mac.
 
 ## Configura tu Clean Your TV
+
+Antes de elegir un tema, usa **Debloat** para seleccionar los ajustes de publicidad, recomendaciones, privacidad y notificaciones de LG que quieras cambiar. Revisa cada resultado. Si el instalador no puede leer el valor original, no podrá guardarlo para restaurarlo automáticamente. Elige **Omitir Debloat** para conservar los ajustes actuales.
 
 Después de instalar correctamente, elige Classic, Liquid Glass o Ribbon y activa o desactiva el tiempo. Ribbon no admite el tiempo; Liquid Glass usa el formato compacto. La ciudad se estima por tu conexión y puedes cambiarla en Home.
 

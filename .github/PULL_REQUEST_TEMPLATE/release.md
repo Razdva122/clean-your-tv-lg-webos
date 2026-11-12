@@ -48,6 +48,25 @@ Separate implementation-PR checks from combined/frozen-candidate checks. Include
 TV model/firmware, tested and untested paths, limitations and rollback evidence.
 Do not claim hardware acceptance from automated tests or package installation. -->
 
+## Release timings
+
+<!-- Follow docs/RELEASE-FLOW.md#record-release-candidate-timings.
+Keep one table per candidate, preserving earlier attempts. Add a row for each
+build, test pass, fix, wait for the user, rebuild and retest as it happens.
+Use timestamps with a UTC offset and include failed and cancelled attempts. -->
+
+- Release task handed to agent: <!-- Timestamp -->
+- Candidate: <!-- RC number or commit -->
+
+| Stage | Started | Ended | Elapsed | Outcome / evidence |
+| --- | --- | --- | --- | --- |
+| <!-- Stage --> | | | | |
+
+- Outcome and timestamp: <!-- Accepted, superseded or withdrawn -->
+- Total elapsed from handoff to outcome: <!-- Wall-clock time -->
+- Time waiting for the user: <!-- Wall-clock time spent waiting -->
+- Verified publication timestamp and total elapsed since handoff: <!-- For the candidate that ships -->
+
 ## Release gates
 
 - [ ] `release-plan.json` lists every merged implementation PR and its issues.

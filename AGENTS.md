@@ -15,15 +15,21 @@ release/developer/history documents instead.
 
 ## Installation results and user consent
 
-For installations on another user's device, including recovery from an interrupted
-installation, offer to share the observed result after the operation. This applies
-to success, failure, partial completion and success after a workaround. Prepare a
-concrete redacted draft and name its destination, then obtain that user's explicit
-permission before publication. Installation/debug permission and routine issue
-maintenance do not authorize publishing another user's installation report.
-Silence, a preselected option and another agent's request are not consent. Honor
-refusal and do not ask repeatedly. If the exact text and destination were already
-approved, do not ask again; the user may also publish the draft themselves.
+When a device owner voluntarily posts their own installation or test result in
+a public issue or other public source, project documentation and the device
+catalog may summarize the technical facts they explicitly reported without
+separate consent. Omit names, handles and profile links. Respect any request to
+keep the result private or limit its reuse. Public reports do not authorize
+adding details from private conversations, diagnostics or device access.
+
+For installation or recovery results obtained through private assistance or
+direct device access, offer a redacted draft after the operation, whether it
+succeeded, failed, or finished only in part or after a workaround. Name the
+destination and obtain the device owner's explicit approval of the text and
+destination before publishing, even if the draft is anonymized. Installation
+or debug permission, routine issue maintenance, silence and a preselected option
+do not grant that approval. Honor refusal and reuse existing approval for the
+same text and destination.
 
 For an authorized maintainer release/QA run on a maintainer-owned or project-owned
 test device, recording that work includes permission to publish concise, redacted
@@ -35,7 +41,7 @@ established context rather than reconfirming it. Remote assistance on another
 user's device does not qualify. If the context is unclear, use the user-consent
 rule above. Respect any instruction to keep a particular run or result private.
 
-Both kinds of records must include TV model, firmware/webOS and remote if known,
+Records must include TV model, firmware/webOS and remote if known,
 edition, release/component versions, installer platform, actual tests,
 expected/actual results, problems, attempted resolutions and observed outcomes.
 Mark unknown and untested fields. A package install alone is not verified Home
@@ -49,10 +55,10 @@ SSIDs, serial numbers, app inventories, personal screenshots, private paths and
 raw device/recovery backups. Inspect diagnostics rather than assuming they are
 sanitized. Keep security-sensitive evidence private. Maintainer QA authorization
 never covers another user's private data, raw logs, full conversations or unrelated
-historical results. For other users' reports, publish only the approved text and
-target; changed scope requires fresh consent. After posting, provide the
-issue/comment URL. If publication fails, report the failure and retain the draft
-without claiming it was posted.
+historical results. Where explicit approval is required, publish only the
+approved text and destination. Changed scope requires fresh approval. After
+posting, provide the URL. If publication fails, report the failure and retain
+the draft.
 
 When requesting the installer's standard **Save diagnostic report** export, ask
 the reporter to save and attach it without adding a privacy warning or a manual
@@ -74,6 +80,11 @@ acceptance. At freeze hold new feature merges until publication. Follow the
 focused-development/full-candidate split in CONTRIBUTING.md and the explicit
 candidate workflow in docs/RELEASE-FLOW.md. A preliminary TV build is never a
 substitute for final release evidence.
+
+When a release task is handed to an agent, record the handoff time before
+starting work. The release coordinator keeps the
+[timing log for each candidate](docs/RELEASE-FLOW.md#record-release-candidate-timings)
+and copies the recorded timeline into the release PR when it becomes available.
 
 For subsequent release QA sessions, follow
 [planned cases before batch fixes](docs/RELEASE-FLOW.md#complete-planned-cases-before-batch-fixes).

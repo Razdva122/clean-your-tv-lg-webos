@@ -79,6 +79,8 @@ Usa la connessione e i dati di ripristino originali. Se sono persi, riconnettiti
 
 ## 6. Uso e ripristino
 
+Per fissare un ingresso HDMI, selezionalo in **+ / Aggiungi app**. Premi OK per passare all’ingresso. Tieni premuto OK per spostare o nascondere il riquadro.
+
 Se l’installer mostra «La configurazione Root è incompleta, ma il registro di installazione manca sulla TV.»: Scegli Esamina le opzioni di ripristino per rimuovere Clean Your TV, poi avvia la configurazione separatamente. La rimozione completa elimina anche No-root Home e Helper; salva prima le preferenze.
 
 Supporto IR No-root: rilasciare Home dopo una pressione breve programma Clean dopo circa 700 ms; LG Home potrebbe apparire prima. La pressione prolungata resta a webOS e tre pressioni fermano ancora Helper. L’accesso con Developer Mode standard non è verificato; non modificare i permessi dei dispositivi di input.
@@ -165,6 +167,8 @@ Il pulsante Fonti dei dati nel titolo Meteo apre le informazioni su servizi e li
 Apri Impostazioni → Sfondi → Carica dal telefono e scansiona il codice. Scegli JPG, PNG o HEIC/HEIF, ritaglia, accetta il limite di qualità e invia. Sulla TV scegli Applica. Safari usa HEIC nativo; Chrome, Firefox e altri browser moderni usano il decoder locale incluso quando serve. La conversione avviene sul telefono, senza servizi esterni. Annulla o cambia file per interromperla. Ingresso: 32 MiB e 50 milioni di pixel; uscita: massimo 1080p e 2 MiB. Se fallisce, prova un’altra foto o JPG/PNG. Vale per la pagina del telefono, non per l’app Mac.
 
 ## Configura il tuo Clean Your TV
+
+Prima di scegliere un tema, usa **Debloat** per selezionare le impostazioni LG di pubblicità, consigli, privacy e notifiche da modificare. Controlla ogni risultato. Se il programma di installazione non può leggere il valore originale, non può salvarlo per un ripristino automatico. Scegli **Salta Debloat** per mantenere le impostazioni attuali.
 
 Dopo l’installazione riuscita, scegli Classic, Liquid Glass o Ribbon e attiva o disattiva il meteo. Ribbon non supporta il meteo; Liquid Glass usa il formato compatto. La città viene stimata dalla connessione e può essere modificata in Home.
 

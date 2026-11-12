@@ -176,13 +176,19 @@ Do not remove that helper or its journal until its native stock/mount proof and 
 ### System images and interrupted fresh setup
 
 Capability admission distinguishes a whole immutable `/usr` system image from
-a mount replacing Home. A separate `/usr` mount is accepted only at filesystem
-root `/`, on read-only squashfs backed by an internal MMC partition (major 179,
-minor below 256), with both critical Home paths on that device. Writable,
-subtree, stacked, overlay and unknown covering mounts remain refusals. The
+a mount replacing Home. A separate SquashFS `/usr` mount must expose its
+filesystem root on a read-only internal MMC partition (major 179, minor below
+256), with both critical Home paths on that device. The
 [original device probe](https://gist.github.com/metaljay/8a1e63060c7fe7cc1d90fe34fe97e386#11-device-probe-record-2026-11-04)
-records read-only `/usr` squashfs; it does not establish another TV's exact mount
-table or compatibility.
+records this layout.
+
+For the BSP layout reported in [#389](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/389),
+the driver verifies a read-only `/usr` overlay filesystem with exactly
+`/overlay/bsppart/bsp/usr:/usr` as its lower layers and no upper or work layer.
+It requires distinct read-only MMC SquashFS roots at `/` and `/overlay/bsppart`
+and checks the device numbers of the BSP layer, Home binary and Home app
+directory. It rejects additional mounts covering those paths. Hardware
+acceptance of this layout remains pending.
 
 An early native admission refusal can leave a host pending attempt without a TV
 deployment journal. Missing files do not resolve that attempt. Explicit full
@@ -193,8 +199,9 @@ native identity, manifest, vendor chain, mount and emergency-input observation.
 It records `stock-compositor`, never `never-applied` or installation success.
 The final Node cleaner independently rechecks stock identity/hash, manifest,
 vendor chain, exact missing service, mount layout and foreign Home integrations
-before retirement and final acknowledgement. Later read-only inspection uses
-the same current proof; it cannot delete anything.
+before retirement and final acknowledgement. The cleanup recheck validates the
+same immutable BSP layers and device identities as the Python stock probe.
+Later read-only inspection uses the same current proof; it cannot delete anything.
 
 For a retained native installation, successful restoration keeps its backend and
 inverse journals as evidence. Those journals must not be interpreted as an

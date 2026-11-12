@@ -1,0 +1,15 @@
+name: Resolve the Linux CI image
+description: Read the repository's immutable CI image reference
+outputs:
+  image:
+    description: GHCR reference pinned by digest
+    value: ${{ steps.pin.outputs.image }}
+runs:
+  using: composite
+  steps:
+    - id: pin
+      shell: bash
+      run: |
+        image=$(cat "$GITHUB_WORKSPACE/.github/ci-image/reference")
+        [[ "$image" =~ ^ghcr\.io/razdva122/clean-your-tv-lg-webos-ci@sha256:[a-f0-9]{64}$ ]]
+        printf 'image=%s\n' "$image" >> "$GITHUB_OUTPUT"

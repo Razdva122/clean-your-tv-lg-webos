@@ -245,7 +245,7 @@ test('Root confirmation includes installed apps beyond the visible 200 entry lim
   assert.equal(result.installedIds.length, 201);
   assert(result.installedIds.includes('app200'));
 });
-test('icon refresh enforces a total byte budget and returns promptly on stalled requests', async () => {
+test('icon refresh enforces a total byte budget and cancels stalled requests at the deadline', async (t) => {
   const big = Buffer.alloc(120 * 1024);
   png.copy(big);
   const calls = [];
@@ -270,8 +270,9 @@ test('icon refresh enforces a total byte budget and returns promptly on stalled 
       512 * 1024
   );
   const stalled = [];
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'] });
   const start = Date.now();
-  const timed = await query.icons(
+  const timed = query.icons(
     apps,
     '192.0.2.1',
     {
@@ -286,10 +287,14 @@ test('icon refresh enforces a total byte budget and returns promptly on stalled 
     },
     start + 30
   );
-  assert(stalled.length <= 4);
+  assert.equal(stalled.length, 4);
+  t.mock.timers.tick(29);
+  assert(stalled.every((r) => !r.aborted));
+  t.mock.timers.tick(1);
+  const catalog = await timed;
+  assert.equal(stalled.length, 4);
   assert(stalled.every((r) => r.aborted));
-  assert(timed.every((a) => a.icon === ''));
-  assert(Date.now() - start < 500);
+  assert(catalog.every((a) => a.icon === ''));
 });
 
 test('a silent optional confirmation leaves time to fetch a new icon', async () => {

@@ -100,9 +100,12 @@ Helper-free first-install mode promising that behavior.
 - OLED55C3RLA — Root — firmware 43.21.71 — webOS SDK11.2.0 — v1.13.0
 - 55UR91006LA — No-root — firmware 33.31.75 — webOS SDK10.3.2 — v1.11.0
 - OLED55C2PUA — No-root — firmware 33.31.68 — webOS 10.3.1 / build 3006
+- OLED42C24LA — No-root — firmware 33.31.68 — webOS 10.3.1 — v1.17.0 — owner confirmed removal through Recover, fresh setup, short Home and automatic Helper restart after remote off/on.
 - LG C3 — No-root — webOS 26
 - LG C5 77″ — No-root
 <!-- compatibility-reports:end -->
+
+- LG UM7450PLA — No-root — firmware 05.40.97 — webOS 4.5 — release v1.14.0. [Owner report #473](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/473)
 
 These are reports for the listed configurations, not a guarantee for every firmware or test case. Unreported versions are omitted. Earlier failures and untested paths remain in the evidence below.
 

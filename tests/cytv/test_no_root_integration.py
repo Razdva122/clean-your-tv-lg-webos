@@ -11,7 +11,7 @@ import unittest
 from unittest.mock import patch
 
 from cytv import no_root_observer as observer, operations, state, package
-from tests.cytv.test_operations import Remote
+from tests.cytv.test_operations import Remote, split_observer_command
 from tests.cytv import test_operations as operations_fixture
 
 
@@ -64,7 +64,7 @@ sys.stdin.read()
             result=subprocess.run(['sh','-c',command],input=source,capture_output=True,timeout=timeout)
             if result.returncode:raise RuntimeError(result.stderr.decode())
             return result.stdout.decode()
-        words=shlex.split(command)
+        words=split_observer_command(command)
         if '/usr/bin/node' in words and words[words.index('/usr/bin/node')+1:][:1]==['-e']:
 
             code=words[words.index('-e')+1]
@@ -202,20 +202,28 @@ class OriginalOperationIntegration(unittest.TestCase):
         private=jail/'.cytv-installer';private.mkdir(mode=0o700)
         original=self.remote.run
         def run(command,**kwargs):
+            if command == "LC_ALL=C stat -f -c '%t' /tmp":
+                return '858458f6'
             if command=='LC_ALL=C df -Pk /tmp':
-                return 'Filesystem 1024-blocks Used Available Capacity Mounted on\n/dev/tmp 1024 1024 0 100% /tmp'
+                return 'Filesystem 1024-blocks Used Available Capacity Mounted on\n' + tmp_row
             if command=='LC_ALL=C df -Pk /media/developer':
                 return 'Filesystem 1024-blocks Used Available Capacity Mounted on\n/dev/apps 10000000 0 10000000 0% /media/developer'
             return original(command,**kwargs)
         self.remote.run=run
-        with patch.object(observer,'JAIL_ROOT',str(private)):
-            with self.assertRaises(RuntimeError) as caught:self.installer.install(self.inventory,'original-secret')
-        self.assertEqual(caught.exception.reason_code,'tv-storage-full')
-        self.assertIn('(/tmp)',str(caught.exception))
-        self.assertIsNone(self.store.pending(self.profile))
-        self.assertFalse(any(call[:2]==('observer','storage-select') for call in self.remote.calls))
-        self.assertFalse((self.root/'requests').exists())
-        self.assertEqual(list(private.iterdir()),[])
+        for tmp_row, reason in (
+            ('/dev/tmp 1024 1024 0 100% /tmp', 'tv-storage-full'),
+            ('tmp 0 0 0 0% /tmp', 'tv-storage-ramfs'),
+        ):
+            with self.subTest(reason=reason), patch.object(observer, 'JAIL_ROOT', str(private)):
+                with self.assertRaises(RuntimeError) as caught:
+                    self.installer.install(self.inventory, 'original-secret')
+                self.assertEqual(caught.exception.reason_code, reason)
+                self.assertIn('/tmp', str(caught.exception))
+                self.assertIsNone(self.store.pending(self.profile))
+                self.assertFalse(any(call[:2] == ('observer', 'storage-select')
+                                     for call in self.remote.calls))
+                self.assertFalse((self.root/'requests').exists())
+                self.assertEqual(list(private.iterdir()), [])
 
     def test_root_ssh_observer_install_and_remove_keep_original_receipts(self):
         # Host fixture substitutes UID and fixed TV paths only. Run the actual
@@ -326,7 +334,7 @@ class OriginalOperationIntegration(unittest.TestCase):
         self.installer.install(self.inventory,'original-secret');self.publish_stop()
         original=self.remote.run
         def cut(command,data=None,timeout=30):
-            words=shlex.split(command)
+            words=split_observer_command(command)
             if '-e' in words and observer.PROGRAM in words[words.index('-e')+1] and json.loads(words[-1])['command']=='retire':
                 raise RuntimeError('lost retire acknowledgement')
             return original(command,data,timeout)
@@ -359,7 +367,7 @@ class OriginalOperationIntegration(unittest.TestCase):
         def run(command,data=None,timeout=30):
             nonlocal stopped
             result=original(command,data,timeout)
-            words=shlex.split(command)
+            words=split_observer_command(command)
             if not stopped and '-e' in words and observer.PROGRAM in words[words.index('-e')+1] and json.loads(words[-1])['command']=='release':
                 stopped=True;self.publish_stop()
             return result
@@ -375,7 +383,7 @@ class OriginalOperationIntegration(unittest.TestCase):
         original=self.remote.run
         def run(command,data=None,timeout=30):
             result=original(command,data,timeout)
-            words=shlex.split(command)
+            words=split_observer_command(command)
             if '-e' in words and observer.PROGRAM in words[words.index('-e')+1] and json.loads(words[-1])['command']=='release':
                 (Path(operations.HELPER_STATE)/'stop-generation').write_bytes(b'')
             return result
@@ -416,7 +424,7 @@ class OriginalOperationIntegration(unittest.TestCase):
         interrupted=True
         def run(command,data=None,timeout=30):
             nonlocal interrupted
-            words=shlex.split(command)
+            words=split_observer_command(command)
             if '-e' in words and '/usr/bin/node' in words:
                 i=words.index('-e')+1
                 if observer.STATE_CHECK in words[i] and interrupted:
@@ -448,8 +456,8 @@ class OriginalOperationIntegration(unittest.TestCase):
     def test_closed_retry_requires_original_configuration_readback(self):
         original=self.remote.run
         def cut(command,data=None,timeout=30):
-            if '-e' in shlex.split(command):
-                words=shlex.split(command)
+            words=split_observer_command(command)
+            if '-e' in words:
                 if observer.PROGRAM in words[words.index('-e')+1] and json.loads(words[-1])['command']=='retire':
                     raise RuntimeError('lost retire acknowledgement')
             return original(command,data,timeout)

@@ -30,7 +30,7 @@ class TerminalTests(unittest.TestCase):
         ui = Console(lines.append, width=42, interactive=False)
         ui.step(2, 'Choose your edition')
         ui.option('1', 'No-root', 'For a TV without root. Uses LG Developer Mode.')
-        self.assertIn('STEP 2 / 5', '\n'.join(lines))
+        self.assertIn('STEP 2 / 6', '\n'.join(lines))
         self.assertIn('[1] No-root', '\n'.join(lines))
         self.assertNotIn('\x1b', '\n'.join(lines))
         self.assertTrue(all(len(line) <= 42 for text in lines for line in text.splitlines()))

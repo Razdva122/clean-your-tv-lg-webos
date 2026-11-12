@@ -75,46 +75,18 @@ def cleanup_failure(error):
 
 
 def retire_staging(store, identifier, ownership):
-    """Only the completed request's matching terminal product lease may retire it.
+    import os
+    from installation import retire_product_staging
+    from updater.store import Store, prune_update_caches
+    from install_device import UPDATER, SUPERVISOR
 
-    Historical requests without a sealed staging inventory remain inspect-only.
-    The caller holds Ownership.operation, excluding other cooperative writers.
-    """
-    from updater.store import Store, retire_verified_files, prune_update_caches, retention_summary, retention_reason
-    removed=0
-    try:
-        identifier=operation_id(identifier)
-        request=store.read('request-'+identifier);submission=store.read('submission-'+identifier)
-        lease=ownership.status()
-        if (not isinstance(request,dict) or not isinstance(submission,dict) or not isinstance(lease,dict)
-                or request.get('operation')!=identifier or submission.get('operation')!=identifier
-                or request.get('stage')!='complete' or request.get('state')!='complete' or request.get('code')!='verified'
-                or request.get('action') not in ('install','remove') or request['action']!=submission.get('action')
-                or submission.get('stage')!='submitted' or lease.get('terminal') is not True or lease.get('stage')!='complete'
-                or lease.get('owner')!='product' or lease.get('journal')!='product-'+identifier+'.json'
-                or request.get('lease')!=lease.get('id')):
-            retention_summary('staging','admission-refused');return 0
-        result=request.get('result')
-        if not isinstance(result,dict) or result.get('verified' if request['action']=='install' else 'removed') is not True:
-            retention_summary('staging','admission-refused');return 0
-        files=submission.get('staging')
-        if not isinstance(files,dict) or not files:
-            retention_summary('staging','missing-inventory');return 0
-        if any(not isinstance(name,str) or name.split('/')[0] not in ('root','root-updater','supervisor') for name in files):
-            retention_summary('staging','admission-refused');return 0
-        stable=lambda: (store.read('request-'+identifier)==request and store.read('submission-'+identifier)==submission and ownership.status()==lease)
-        removed=retire_verified_files(store,'request-'+identifier,files,stable)
-        # Product maintenance can seed newer baselines without an OTA journal.
-        # Its exact final readback and terminal lease above authorize this boundary.
-        import os
-        from install_device import UPDATER, SUPERVISOR
-        peers=[Store(path,uid=store.uid) for path in (UPDATER,SUPERVISOR) if os.path.lexists(path)]
-        if peers and stable():prune_update_caches(peers,product_complete=True)
-        return removed
-    except (OSError,ValueError,TypeError,KeyError) as error:
-        retention_summary('staging',retention_reason(error),removed)
-        return removed
+    def prune(stable):
+        # Exact product readback can seed baselines without an OTA journal.
+        peers = [Store(path, uid=store.uid) for path in (UPDATER, SUPERVISOR) if os.path.lexists(path)]
+        if peers and stable():
+            prune_update_caches(peers, product_complete=True)
 
+    return retire_product_staging(store, identifier, ownership, after=prune)
 
 class _Recorded(Exception):
     def __init__(self,record): self.record=record

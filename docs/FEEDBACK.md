@@ -50,11 +50,14 @@ issue. Keep it private and ask the maintainer for a private reporting channel.
 
 ## If an AI agent helped
 
-For your installation as an end user, the agent should offer a short, redacted
-draft after the attempt, whether it succeeded, failed or succeeded after recovery.
-It must ask your permission to publish that draft to the named issue or repository.
-You may edit it, decline or keep it locally. Permission to install or debug is not
-permission to publish. No response is not consent.
+If you post your own results publicly, the project may summarize the technical
+details you shared in its compatibility documentation and device catalog, with
+your name and account omitted. Tell us if you want to limit how the result is used.
+
+If an agent helps privately or accesses your TV, it should offer a short,
+redacted draft after the attempt and ask you to approve the draft and its
+destination before posting. You may edit it, decline or keep it locally.
+Permission to install or debug is not permission to publish.
 
 For an authorized maintainer release/QA session on a maintainer-owned or
 project-owned test TV, the agent may record redacted technical acceptance results

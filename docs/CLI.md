@@ -457,6 +457,16 @@ uses the guarded fallback. Rejection alone does not establish that an older
 registration is absent: an EIM input-list readback establishes absence when
 available. An unknown EIM result still requires confirmed cleanup before uninstall.
 
+## Standalone Root Updater rollback readiness
+
+```sh
+cytv recover-root-rollback --edition root
+```
+
+This command uses an existing trusted Root SSH connection to recover the
+standalone Updater's `restored profile readiness unconfirmed` timeout after a
+verified rollback. See [Standalone Root Updater rollback readiness](RECOVERY.md#standalone-root-updater-rollback-readiness).
+
 <a id="candidate-root-system-rollback-readiness"></a>
 
 ## Root System rollback readiness

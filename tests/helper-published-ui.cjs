@@ -107,8 +107,12 @@ function panel(statusReply, homeReply) {
     window,
     document,
     setTimeout(callback) {
-      timers.set(++timer, callback);
-      return timer;
+      const id = ++timer;
+      timers.set(id, () => {
+        timers.delete(id);
+        callback();
+      });
+      return id;
     },
     clearTimeout(id) {
       timers.delete(id);
@@ -130,7 +134,9 @@ function panel(statusReply, homeReply) {
   return {
     window,
     calls,
-    timers,
+    finishChecks() {
+      while (timers.size) timers.values().next().value();
+    },
     buttons: elements.filter((e) => e.tag === 'button'),
     status: elements.filter((e) => e.tag === 'p')[1]
   };
@@ -241,8 +247,7 @@ for (const reply of [
   undefined
 ]) {
   const ui = panel(reply, { returnValue: false });
-  if (reply === undefined)
-    for (const callback of [...ui.timers.values()]) callback();
+  ui.finishChecks();
   assert.equal(ui.buttons[1].disabled, true);
   assert.equal(
     ui.buttons[2].hidden,
@@ -252,8 +257,8 @@ for (const reply of [
   assert.match(ui.status.textContent, /status could not be checked/);
   assert.equal(
     ui.calls.length,
-    reply && reply.returnValue === false ? 2 : 1,
-    'only explicit service refusals probe the independent broker'
+    4,
+    'both checks are retried once when Helper status remains unknown'
   );
   const beforeStart = ui.calls.length;
   ui.buttons[2].onclick();
@@ -277,8 +282,7 @@ for (const home of [
   undefined
 ]) {
   const ui = panel(publishedStatus(), home);
-  if (home === undefined)
-    for (const callback of [...ui.timers.values()]) callback();
+  ui.finishChecks();
   assert.equal(
     ui.buttons[1].disabled,
     true,

@@ -357,11 +357,21 @@ legacy first failures or establish that a submitted package transaction terminat
 ## Root admission and connection advice
 
 Optional `guidance` contains only an allowlisted advice code and a Boolean pending
-flag. Root `tv.root_capabilities` uses two fixed check keys and reasons: readable,
-rejected, invalid-reply, unconfirmed or not-checked. `root_capability_codes` retains
-only bounded numeric Luna error codes for these keys. Raw service replies and
-Home routes are excluded. Current and retained first-failure projections are
-revalidated; these fields cannot grant recovery authority or prove compatibility.
+flag. Root `tv.root_capabilities` uses two fixed check keys with allowlisted
+results, including `service-absent` for a missing System Profile service.
+`root_capability_codes` retains only bounded numeric Luna error codes for these keys.
+
+When the installer supports capability-based Qt admission and System Profile is
+absent, optional `tv.root_compositor_failure` identifies the failed host check.
+Request failures use `system-info-request-failed`, `keyfilters-request-failed`
+or `native-home-request-failed`. Validation failures use `system-info-invalid`,
+`keyfilters-incompatible` or `native-home-incompatible`.
+`native-home-unavailable` identifies a missing or unsafe native Home path.
+`c1-probe-failed` means an error in the preceding C1 probe prevented the
+capability-based check from running.
+
+The report excludes raw replies, command output and Home routes. The installer
+revalidates these fields when exporting current and retained failures.
 See the [preflight and guidance contract](INSTALLER-PREFLIGHT-HELP.md).
 
 <a id="root-activation-evidence-unreleased"></a>
@@ -488,6 +498,15 @@ The separately confirmed Home-off completion archives the original local receipt
 and repeats existing activation eligibility checks before resolving that pending
 activation. It neither enables Home nor updates code. See the [candidate recovery
 path](../RECOVERY.md#candidate-finish-verified-root-setup-with-home-control-off).
+
+## Temporary storage on ramfs (#434)
+
+If the install preflight reports all-zero block counts for the /tmp mount and a
+read-only filesystem type check confirms ramfs, the report exports
+`tv-storage-ramfs`. It records that available temporary capacity could not be
+measured. A measured shortfall on a different filesystem still takes precedence.
+The installer stops before package submission. The probe output is excluded
+from the report, and package scratch paths stay the same.
 
 <a id="no-root-observer-failures-next-candidate-376-and-378"></a>
 

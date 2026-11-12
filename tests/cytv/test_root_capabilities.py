@@ -1,6 +1,7 @@
 """Host preflight uses the retained Root read contract, not model guesses."""
 import ast
 import copy
+import json
 import os
 from pathlib import Path
 import tempfile
@@ -15,6 +16,67 @@ PROFILES={'returnValue':True,'profiles':{'defaultApps':{'categories':{'home':'co
 
 
 class CapabilityTests(unittest.TestCase):
+    def test_compositor_preflight_exports_only_fixed_failure_reasons(self):
+        from cytv.diagnostics import create_report
+        from cytv.errors import TVCommandError, TVRejected
+        from cytv.root_capabilities import RootCapabilityError, verify
+
+        missing = {'returnValue': False, 'errorCode': -1,
+                   'errorText': 'Service does not exist: com.webos.service.systemprofile.'}
+        identity = {'returnValue': True, 'modelName': 'AR-50',
+                    'firmwareVersion': '04.66.75', 'sdkVersion': '7.5.9'}
+        key = 'com.webos.surfacemanager.keyFilters'
+        chain = {'returnValue': True, 'configs': {key: [
+            {'file': '/usr/lib/qt5/qml/KeyFilters/systemUi.js', 'handler': 'handleSystemKeys'}]}}
+        private = 'private-remote-data'
+        cases = (
+            ([TimeoutError(private)], '', 'c1-probe-failed'),
+            ([identity, TimeoutError(private)], '', 'system-info-request-failed'),
+            ([identity, dict(identity, sdkVersion=private)], '', 'system-info-invalid'),
+            ([identity, identity, TimeoutError(private)], '', 'keyfilters-request-failed'),
+            ([identity, identity, TVRejected(private)], '', 'keyfilters-request-failed'),
+            ([identity, identity, {'returnValue': False, 'errorText': private}], '', 'keyfilters-request-failed'),
+            ([identity, identity, {'returnValue': True, 'configs': None}], '', 'keyfilters-incompatible'),
+            ([identity, identity, {'returnValue': True, 'configs': {key: [private]}}], '', 'keyfilters-incompatible'),
+            ([identity, identity, chain], TVCommandError(42), 'native-home-unavailable'),
+            ([identity, identity, chain], TVCommandError(127), 'native-home-request-failed'),
+            ([identity, identity, chain], TimeoutError(private), 'native-home-request-failed'),
+            ([identity, identity, chain], private, 'native-home-incompatible'),
+        )
+        for replies, native, expected in cases:
+            with self.subTest(expected=expected), tempfile.TemporaryDirectory() as folder:
+                remote = Mock()
+                remote.luna.side_effect = [missing, *replies]
+                if isinstance(native, Exception):
+                    remote.run.side_effect = native
+                else:
+                    remote.run.return_value = native
+                info = {}
+                checks = CheckList()
+                with self.assertRaises(RootCapabilityError) as failure:
+                    verify(remote, checks, info, allow_c1=True, allow_compositor=True)
+                store = state.Store(folder)
+                profile = state.target('192.0.2.10', 'root')
+                report = create_report(store, 'install', profile, 'inspect-installation', failure.exception, info)
+                data = report.read_text()
+                tv = json.loads(data)['tv']
+                self.assertEqual(tv.get('root_compositor_failure'), expected)
+                self.assertEqual(tv['root_capabilities']['home-profiles'], 'service-absent')
+                self.assertNotIn('home_backend', tv)
+                self.assertNotIn(private, data)
+
+                remote.luna.side_effect = [PROFILES, SETTINGS]
+                verify(remote, checks, info, allow_c1=True, allow_compositor=True)
+                report = create_report(store, 'install', profile, 'inspect-installation', tv_info=info)
+                self.assertNotIn('root_compositor_failure', json.loads(report.read_text())['tv'])
+
+    def test_report_omits_unrecognized_compositor_failure_values(self):
+        from cytv.diagnostic_context import tv_summary
+
+        for value in ('private-remote-data', {'raw': 'private-remote-data'}):
+            with self.subTest(value=value):
+                self.assertNotIn('root_compositor_failure', tv_summary({'root_compositor_failure': value}))
+
     @unittest.skipUnless(os.name == 'posix', 'POSIX shell probe')
     def test_native_header_command_collects_filesystem_and_refuses_symlink(self):
         import shlex
@@ -33,7 +95,7 @@ class CapabilityTests(unittest.TestCase):
             reply=subprocess.run(['/bin/sh','-c',command],env=env,capture_output=True,text=True,check=True)
             self.assertTrue(native_headers_valid(reply.stdout))
             home.unlink();home.symlink_to(shell)
-            self.assertNotEqual(subprocess.run(['/bin/sh','-c',command],env=env,capture_output=True).returncode,0)
+            self.assertEqual(subprocess.run(['/bin/sh','-c',command],env=env,capture_output=True).returncode,42)
 
     def test_reported_c1_home_admission_requires_immutable_nonroot_image(self):
         from cytv.root_capabilities import native_headers_valid
@@ -129,12 +191,13 @@ class CapabilityTests(unittest.TestCase):
             self.assertNotIn('home-profiles',info['root_requirements'])
 
     def test_generic_compositor_refuses_unknown_chain_or_invalid_identity(self):
-        from cytv.root_capabilities import compositor_device
+        from cytv.root_capabilities import compositor_failure
         for sdk,chain in [('11.2.0',[]),('9.2.2',[]),('invalid',[]),('9.2.2',[{'file':'/foreign/home.js','handler':'handleSystemKeys'}])]:
             remote=Mock()
             remote.luna.side_effect=[dict(returnValue=True,modelName='55NANO77SRA',firmwareVersion='23.25.55',sdkVersion=sdk),
                 {'returnValue':True,'configs':{'com.webos.surfacemanager.keyFilters':chain}}]
-            self.assertFalse(compositor_device(remote))
+            self.assertEqual(compositor_failure(remote),
+                             'system-info-invalid' if sdk == 'invalid' else 'keyfilters-incompatible')
 
     def test_generic_permission_denial_never_enters_native_admission(self):
         from cytv.root_capabilities import verify,RootCapabilityError

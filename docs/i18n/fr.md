@@ -79,6 +79,8 @@ Utilisez la connexion et les données de récupération d’origine. Si elles so
 
 ## 6. Utilisation et récupération
 
+Pour épingler une entrée HDMI, sélectionnez-la dans **+ / Ajouter une application**. Appuyez sur OK pour basculer vers cette entrée. Maintenez OK pour déplacer ou masquer sa tuile.
+
 Si l’installateur indique « La configuration Root est inachevée, mais son journal de déploiement est absent du téléviseur. » : Choisissez Examiner les options de récupération pour supprimer Clean Your TV, puis lancez la configuration séparément. La suppression complète retire aussi No-root Home et Helper ; sauvegardez vos préférences avant.
 
 Prise en charge IR No-root: relâcher Home après un appui court programme Clean après environ 700 ms ; LG Home peut apparaître brièvement. Un appui long reste géré par webOS et trois appuis arrêtent toujours Helper. L’accès en Developer Mode standard reste non vérifié ; ne modifiez pas les permissions des périphériques d’entrée.
@@ -163,6 +165,8 @@ Le bouton Sources des données dans l’en-tête Météo ouvre les informations 
 Ouvrez Paramètres → Fonds d’écran → Envoyer depuis le téléphone et scannez le code. Choisissez JPG, PNG ou HEIC/HEIF, recadrez, acceptez la limite de qualité et envoyez. Choisissez Appliquer sur le TV. Safari utilise HEIC natif ; Chrome, Firefox et les autres navigateurs modernes utilisent le décodeur local inclus si nécessaire. La conversion reste sur le téléphone, sans service externe. Annuler ou changer de fichier arrête la conversion. Entrée : 32 Mio et 50 millions de pixels ; sortie : 1080p et 2 Mio maximum. En cas d’échec, essayez une autre photo ou JPG/PNG. Cela concerne la page du téléphone, pas l’app Mac.
 
 ## Configurer votre Clean Your TV
+
+Avant de choisir un thème, utilisez **Debloat** pour sélectionner les réglages LG de publicité, de recommandations, de confidentialité et de notifications à modifier. Vérifiez chaque résultat. Si la valeur d’origine ne peut pas être lue, elle ne peut pas être enregistrée pour une restauration automatique. Choisissez **Ignorer Debloat** pour conserver vos réglages.
 
 Après une installation réussie, choisissez Classic, Liquid Glass ou Ribbon et activez ou désactivez la météo. Ribbon ne prend pas en charge la météo ; Liquid Glass utilise le format compact. La ville est estimée selon votre connexion et peut être modifiée dans Home.
 

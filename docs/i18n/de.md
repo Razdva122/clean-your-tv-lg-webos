@@ -79,6 +79,8 @@ Verwenden Sie die ursprünglich gespeicherte Verbindung und Wiederherstellungsda
 
 ## 6. Bedienung und Wiederherstellung
 
+Wählen Sie unter **+ / App hinzufügen** einen HDMI-Eingang aus, um ihn anzuheften. Mit OK wechseln Sie zum Eingang. Halten Sie OK gedrückt, um die Kachel zu verschieben oder auszublenden.
+
 Wenn das Installationsprogramm meldet: „Die Root-Einrichtung ist unvollständig, aber ihr Installationsprotokoll fehlt auf dem TV.“: Wählen Sie Wiederherstellungsoptionen prüfen, um Clean Your TV zu entfernen. Starten Sie die Einrichtung danach separat. Dabei werden auch No-root Home und Helper entfernt; sichern Sie zuerst Ihre Einstellungen.
 
 IR-Unterstützung für No-root: Nach kurzem Drücken und Loslassen von Home wird Clean nach etwa 700 ms geöffnet; LG Home kann zuerst aufblitzen. Langes Home bleibt bei webOS; dreimal Home stoppt weiterhin Helper. Der Zugriff mit normalem Developer Mode ist unbestätigt; ändern Sie keine Eingabegeräteberechtigungen.
@@ -163,6 +165,8 @@ Die Schaltfläche Datenquellen in der Wetterüberschrift öffnet Informationen z
 Einstellungen → Hintergrundbilder → Vom Telefon hochladen öffnen und den Code scannen. JPG, PNG oder HEIC/HEIF wählen, zuschneiden, Qualitätsgrenze bestätigen und senden. Am TV Anwenden wählen. Safari nutzt native HEIC-Unterstützung; Chrome, Firefox und andere moderne Browser bei Bedarf den mitgelieferten lokalen Decoder. Die Umwandlung erfolgt auf dem Telefon ohne externen Dienst. Abbrechen oder eine andere Datei beendet die Umwandlung. Eingabe: 32 MiB und 50 Millionen Pixel; Ausgabe: maximal 1080p und 2 MiB. Bei Fehlern ein anderes Foto oder JPG/PNG wählen. Gilt für die Telefonseite, nicht die Mac-App.
 
 ## Clean Your TV einrichten
+
+Wählen Sie vor dem Design unter **Debloat**, welche LG-Einstellungen für Werbung, Empfehlungen, Datenschutz und Benachrichtigungen Sie ändern möchten. Prüfen Sie jedes Ergebnis. Kann der ursprüngliche Wert nicht gelesen werden, steht dafür keine automatische Wiederherstellung zur Verfügung. Wählen Sie **Debloat überspringen**, um die Einstellungen beizubehalten.
 
 Wähle nach erfolgreicher Installation Classic, Liquid Glass oder Ribbon und schalte das Wetter ein oder aus. Ribbon unterstützt kein Wetter; Liquid Glass nutzt das Kurzformat. Der ungefähre Ort wird über die Internetverbindung ermittelt und lässt sich in Home ändern.
 

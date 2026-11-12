@@ -39,6 +39,7 @@ function panel(transportError = false) {
     }
   };
   const window = {
+    PalmSystem: { launchParams: JSON.stringify({ showHelper: true }) },
     HomeI18n: {
       ready: (callback) => callback(),
       t: (text) => text,
@@ -57,8 +58,12 @@ function panel(transportError = false) {
     window,
     document,
     setTimeout(fn) {
-      timers.set(++timer, fn);
-      return timer;
+      const id = ++timer;
+      timers.set(id, () => {
+        timers.delete(id);
+        fn();
+      });
+      return id;
     },
     clearTimeout(id) {
       timers.delete(id);
@@ -77,7 +82,6 @@ function panel(transportError = false) {
       }
     }
   });
-  window.HomeHelper.open();
   const buttons = elements.filter((e) => e.tag === 'button'),
     details = elements.find((e) => e.tag === 'pre');
   const ui = {
@@ -87,6 +91,7 @@ function panel(transportError = false) {
     timers,
     buttons,
     details,
+    status: elements.filter((e) => e.tag === 'p')[1],
     get confirms() {
       return confirms;
     },
@@ -123,6 +128,71 @@ function view(ui) {
   assert.equal(ui.document.activeElement, ui.details);
   assert.equal(ui.details.hidden, false);
   return ui.snapshot();
+}
+{
+  const cold = panel();
+  [...cold.timers.values()][0]();
+  assert.equal(
+    cold.calls[1]?.uri,
+    'luna://com.gathin.tvhome.renewal/homeStatus',
+    'the first open checks the Home broker even if Helper status times out'
+  );
+  cold.respond(1, { returnValue: true, enabled: true });
+  assert.equal(
+    cold.status.textContent,
+    'Home and return from apps open Clean Your TV.'
+  );
+  assert.equal(cold.buttons[1].disabled, false);
+  assert.equal(cold.buttons[2].hidden, true);
+}
+for (const action of [
+  'reply',
+  'unknown',
+  'close',
+  'refresh',
+  'blocked',
+  'busy again'
+]) {
+  const cold = panel();
+  cold.respond(0, { returnValue: false, errorCode: -1 });
+  const busy = {
+    returnValue: false,
+    diagnostic: { component: 'home', operation: 'wait', code: 'BUSY' }
+  };
+  cold.respond(1, action === 'unknown' ? { returnValue: false } : busy);
+  assert.equal(cold.status.textContent, 'Checking Home control…');
+  assert.equal(cold.buttons[2].hidden, true);
+  if (action === 'close') cold.key(461);
+  if (action === 'refresh') cold.window.HomeHelper.open();
+  [...cold.timers.values()][0]();
+  if (action === 'close' || action === 'refresh') {
+    assert.equal(cold.calls.length, action === 'close' ? 2 : 3);
+    continue;
+  }
+  assert.equal(cold.calls[2].uri, cold.calls[0].uri);
+  if (action === 'blocked') {
+    cold.respond(2, { returnValue: true, blocked: true });
+    assert.match(cold.status.textContent, /stopped for safety/);
+    assert.equal(cold.calls.length, 3, 'a verified safety stop ends checking');
+    assert.equal(cold.snapshot().home_status.outcome, null);
+    continue;
+  }
+  cold.respond(2, { returnValue: action === 'unknown' });
+  assert.equal(cold.calls[3].uri, cold.calls[1].uri);
+  if (action === 'busy again') {
+    cold.respond(3, busy);
+    assert.equal(cold.timers.size, 0, 'a persistent failure does not loop');
+    assert.match(cold.status.textContent, /status could not be checked/);
+    assert.equal(cold.buttons[2].hidden, false);
+  } else {
+    cold.respond(3, { returnValue: true, enabled: false });
+    assert.equal(
+      cold.status.textContent,
+      'Home and return from apps open LG Home.'
+    );
+    assert.equal(cold.buttons[1].disabled, false);
+    assert.equal(cold.buttons[2].hidden, true);
+  }
 }
 let ui = panel();
 assert.equal(view(ui).helper_status.outcome, 'pending');
@@ -172,18 +242,21 @@ assert.equal(
 );
 ui.respond(1, { returnValue: false });
 assert.ok(!ui.details.textContent.includes('SECRET'));
+[...ui.timers.values()][0]();
+ui.respond(2, { returnValue: false });
+ui.respond(3, { returnValue: false });
 ui.buttons[2].click();
-assert.equal(ui.calls.length, 2);
+assert.equal(ui.calls.length, 4);
 assert.equal(ui.confirms, 1, 'manual start still requires confirmation');
 ui.window.confirmStart();
-assert.equal(ui.calls.length, 3);
-assert.equal(ui.calls[2].params.params.nativeHomeStart, true);
+assert.equal(ui.calls.length, 5);
+assert.equal(ui.calls[4].params.params.nativeHomeStart, true);
 ui.buttons[4].click();
 assert.equal(ui.details.hidden, true);
 view(ui);
 assert.equal(
   ui.calls.length,
-  3,
+  5,
   'diagnostics stay read-only during manual start'
 );
 for (const [raw, expected] of [
@@ -200,12 +273,12 @@ for (const [raw, expected] of [
   snapshot = view(ui);
   assert.equal(snapshot.helper_status.outcome, expected);
   assert.equal(snapshot.helper_status.running, null);
-  assert.equal(ui.calls.length, 1);
+  assert.equal(ui.calls.length, 2);
 }
 ui = panel();
 [...ui.timers.values()][0]();
 assert.equal(view(ui).helper_status.outcome, 'timeout');
-assert.equal(ui.calls.length, 1);
+assert.equal(ui.calls.length, 2);
 for (const code of ['SECRET', 1e50, 1.1, null]) {
   ui = panel();
   ui.respond(0, { returnValue: false, errorCode: code });
@@ -314,7 +387,7 @@ for (const outcome of [
       ? { returnValue: true, running: 'invalid' }
       : { returnValue: true, running: false, blocked: outcome === 'blocked' }
   );
-  if (outcome.indexOf('home-') === 0)
+  if (outcome !== 'blocked')
     pending.respond(1, {
       returnValue: outcome === 'home-success',
       enabled: true
@@ -335,7 +408,7 @@ for (const outcome of [
   assert.equal(pending.document.activeElement, pending.buttons[4]);
 }
 console.log(
-  'PASS Helper panel diagnostics: safe caller outcomes, refusal/timeout/malformed data, no extra RPCs, stale generations, navigation and start consent'
+  'PASS Helper panel: cold-open recovery, bounded retry, safe diagnostics, stale generations, navigation and start consent'
 );
 
 // Optional real-browser geometry: node tests/helper-panel-diagnostics.cjs --browser
@@ -393,6 +466,7 @@ if (process.argv.includes('--browser'))
           }, translations[locale]);
           await page.addScriptTag({ content: source });
           await page.evaluate(() => HomeHelper.open());
+          await page.locator('.helper-panel button').nth(2).waitFor();
           await page.locator('.helper-panel button').nth(4).click();
           const geometry = await page.evaluate(() => {
             const pre = document.getElementById('helperPanelDiagnostics'),
@@ -429,7 +503,7 @@ if (process.argv.includes('--browser'))
                 ': controls and diagnostics fit physical viewport'
             );
           }
-          assert.equal(geometry.calls, 2);
+          assert.equal(geometry.calls, 4);
           if (geometry.scrollHeight > geometry.clientHeight) {
             await page.keyboard.press('ArrowDown');
             assert(

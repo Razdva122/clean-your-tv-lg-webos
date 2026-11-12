@@ -79,6 +79,8 @@ Użyj pierwotnego zapisanego połączenia i danych odzyskiwania. Jeśli je utrac
 
 ## 6. Obsługa i odzyskiwanie
 
+Aby przypiąć wejście HDMI, wybierz je w menu **+ / Dodaj aplikację**. Naciśnij OK, aby przełączyć wejście. Przytrzymaj OK, aby przesunąć lub ukryć kafelek.
+
 Jeśli instalator wyświetla „Konfiguracja Root jest niedokończona, ale na TV brakuje jej rejestru instalacji.”: Wybierz Przejrzyj opcje odzyskiwania, aby usunąć Clean Your TV, a następnie osobno rozpocznij konfigurację. Pełne usunięcie obejmuje też No-root Home i Helper; najpierw zachowaj ustawienia.
 
 Obsługa pilotów IR w No-root: zwolnienie Home po krótkim naciśnięciu planuje otwarcie Clean po około 700 ms; najpierw może mignąć LG Home. Przytrzymanie Home pozostaje w gestii webOS, a trzy naciśnięcia nadal zatrzymują Helper. Dostęp w zwykłym Developer Mode nie jest potwierdzony; nie zmieniaj uprawnień urządzeń wejściowych.
@@ -164,6 +166,8 @@ Przycisk Źródła danych w nagłówku Pogoda otwiera informacje o usługach i l
 Otwórz Ustawienia → Tapety → Prześlij z telefonu i zeskanuj kod. Wybierz JPG, PNG albo HEIC/HEIF, wykadruj, zaakceptuj ograniczenie jakości i wyślij. Na TV wybierz Zastosuj. Safari korzysta z natywnego HEIC; Chrome, Firefox i inne nowoczesne przeglądarki w razie potrzeby z dołączonego lokalnego dekodera. Konwersja odbywa się w telefonie bez zewnętrznej usługi. Anulowanie lub zmiana pliku ją zatrzymuje. Wejście: 32 MiB i 50 milionów pikseli; wyjście: do 1080p i 2 MiB. Przy błędzie wybierz inne zdjęcie lub JPG/PNG. Dotyczy strony telefonu, nie aplikacji Mac.
 
 ## Skonfiguruj Clean Your TV
+
+Przed wyborem motywu użyj opcji **Debloat**, aby wybrać ustawienia reklam, poleceń, prywatności i powiadomień LG do zmiany. Sprawdź każdy wynik. Jeśli instalator nie może odczytać wartości początkowej, nie zapisze jej do automatycznego przywrócenia. Wybierz **Pomiń Debloat**, aby zachować bieżące ustawienia.
 
 Po udanej instalacji wybierz Classic, Liquid Glass lub Ribbon i włącz albo wyłącz pogodę. Ribbon nie obsługuje pogody; Liquid Glass używa formatu kompaktowego. Miasto jest szacowane z połączenia i można je zmienić w Home.
 

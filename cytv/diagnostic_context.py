@@ -21,15 +21,15 @@ REASONS = ('unknown', 'user-error', 'ssh-command-failed', 'ssh-unreachable', 'ss
            'pending-operation', 'root-operation-unconfirmed', 'project-apps-remain', 'version-mismatch',
            'inventory-unavailable', 'graphics-unverified', 'root-home-interfaces',
            'root-worker-busy', 'root-access-required', 'removal-failed',
-           'cleanup-check-failed', 'connection-interrupted', 'operation-timeout', 'tv-storage-full')
+           'cleanup-check-failed', 'connection-interrupted', 'operation-timeout', 'tv-storage-full', 'tv-storage-ramfs')
 REASONS += ACTIVATION_CODES
 REASONS += ('installer-runtime-mismatch',)
 ACTIONS = ('recover', 'install', 'uninstall', 'restore', 'status', 'doctor', 'home-diagnostics',
            'enable-system-updates', 'enable-firmware-access', 'disable-firmware-access',
-           'recover-system-rollback', 'replace-system-updater', 'clean-wam-cache')
+           'recover-system-rollback', 'recover-root-rollback', 'replace-system-updater', 'clean-wam-cache')
 PHASES = ('launch-helper', 'verify-home-button', 'select-tv', 'inspect-tv', 'select-edition', 'prepare-payload', 'ssh-connect',
           'inspect-installation', 'pair-tv', 'read-inventory', 'install-packages',
-          'install-helper', 'install-home', 'configure-helper', 'configure-home', 'install-root',
+          'install-helper', 'install-home', 'configure-helper', 'debloat', 'configure-home', 'install-root',
           'install-root-updater', 'verify-root-updater', 'verify-root-recovery',
           'stop-old-helper', 'activate-root', 'launch-root', 'remove-existing-root',
           'archive-root-state', 'doctor-complete', 'install-complete', 'preflight',
@@ -170,6 +170,11 @@ def tv_summary(value):
         result['home_backend'] = value['home_backend']
     if type(value.get('home_backend_schema')) is int and value['home_backend_schema'] in (2,3):
         result['home_backend_schema'] = value['home_backend_schema']
+    if 'root_compositor_failure' in value:
+        from .root_capabilities import COMPOSITOR_FAILURES
+        failure = choice(value['root_compositor_failure'], COMPOSITOR_FAILURES, None)
+        if failure is not None:
+            result['root_compositor_failure'] = failure
     if 'root_requirements' in value:
         checks = mapping(value['root_requirements'])
         from .root_capabilities import CALLS

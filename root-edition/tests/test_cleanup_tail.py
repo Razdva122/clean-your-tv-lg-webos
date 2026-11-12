@@ -30,11 +30,18 @@ function path(p){
  if(p==='/')return base;
  var match=/^\/proc\/self\/fd\/(\d+)(.*)$/.exec(p);
  if(match)return process.env.CYTV_REAL_PROC_FD==='1'?p:paths[match[1]]+match[2];
- return /^\/(home|usr|var|media|tmp|proc)(\/|$)/.test(p)?base+p:p;
+ return /^\/(home|usr|var|media|tmp|proc|overlay)(\/|$)/.test(p)?base+p:p;
+}
+function device(info,p){
+ if(process.env.BSP_DEVICE){
+  if(p===base+'/usr/palm/applications/com.webos.app.home')info.dev=1048610;
+  if(p===base+'/overlay/bsppart/bsp/usr')info.dev=Number(process.env.BSP_DEVICE);
+ }
+ return info;
 }
 var fs=Object.create(real);
 fs.openSync=function(p,flags,mode){var fd=real.openSync(path(p),flags,mode);paths[fd]=path(p);return fd;};
-fs.fstatSync=function(fd){var info=real.fstatSync(fd);if(process.env.TMP_OWNER && paths[fd]===base+'/tmp')info.uid=Number(process.env.TMP_OWNER);if(process.env.SYSTEM_DEVICE&&paths[fd].indexOf(base+'/usr/')===0)info.dev=45851;return info;};
+fs.fstatSync=function(fd){var info=real.fstatSync(fd);if(process.env.TMP_OWNER && paths[fd]===base+'/tmp')info.uid=Number(process.env.TMP_OWNER);if(process.env.SYSTEM_DEVICE&&paths[fd].indexOf(base+'/usr/')===0)info.dev=45851;return device(info,paths[fd]);};
 ['lstatSync','readFileSync','readlinkSync','realpathSync','readdirSync','rmdirSync','unlinkSync'].forEach(function(name){fs[name]=function(p){
  if(name==='readdirSync' && process.env.SWAP_RUNTIME && process.env.CYTV_REAL_PROC_FD==='1' && /^\/proc\/self\/fd\/\d+$/.test(p)){
   var held=real.readlinkSync(p);
@@ -50,7 +57,7 @@ fs.fstatSync=function(fd){var info=real.fstatSync(fd);if(process.env.TMP_OWNER &
  var value=real[name].apply(real,[path(p)].concat(Array.prototype.slice.call(arguments,1)));
  if(name==='lstatSync'&&process.env.SYSTEM_DEVICE&&path(p).indexOf(base+'/usr/')===0)value.dev=45851;
  if(name==='realpathSync'&&value.indexOf(base+'/usr/')===0)return value.slice(base.length);
- return value;
+ return name==='lstatSync'?device(value,path(p)):value;
 };});
 fs.renameSync=function(a,b){
  var value;try{value=JSON.parse(real.readFileSync(path(a),'utf8'));}catch(e){}
@@ -826,6 +833,44 @@ class CleanupTail(unittest.TestCase):
                 self.assertTrue(self.runtime.exists())
                 self.assertEqual(json.loads((self.base/'mutations.json').read_text()),[])
                 if marker:marker.unlink()
+
+    def bsp_mounts(self):
+        self.restored_native_record()
+        (self.base/'overlay/bsppart/bsp/usr').mkdir(parents=True)
+        root = '1 0 179:27 / / ro - squashfs /dev/root ro\n'
+        bsp = '3 1 179:29 / /overlay/bsppart ro - squashfs /dev/mmcblk0p29 ro\n'
+        overlay = '2 1 0:290 / /usr rw - overlay overlay ro,lowerdir=/overlay/bsppart/bsp/usr:/usr\n'
+        return self.base/'proc/self/mountinfo', root, bsp, overlay
+
+    def test_restored_native_bsp_overlay_finishes_cleanup(self):
+        mount, root, bsp, overlay = self.bsp_mounts()
+        mount.write_text(root + overlay + bsp)
+        result, reply = self.compositor_tail(BSP_DEVICE=str(179*256+29))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(reply['stage'], 'verified-clean')
+        self.assertFalse(self.runtime.exists())
+        self.assertEqual(json.loads((self.state/('routing-backup-'+ID+'.json')).read_text()), self.native_backup)
+
+    def test_native_bsp_overlay_rejects_unverified_layout_before_mutation(self):
+        mount, root, bsp, overlay = self.bsp_mounts()
+        device = str(179*256+29)
+        cases = (
+            (root + overlay, device),
+            (root + overlay + bsp, str(179*256+30)),
+            (root + overlay + bsp.replace('ro - squashfs', 'rw - squashfs'), device),
+            (root + overlay.replace(':/usr', ':/usr,upperdir=/foreign'), device),
+            (root + overlay.replace(':/usr', ':/usr,datadir+=/foreign'), device),
+            (root + overlay + bsp + '4 3 0:2 / /overlay/bsppart/bsp ro - tmpfs tmpfs ro\n', device),
+            (root + overlay + bsp + '4 2 0:2 / /usr/bin ro - tmpfs tmpfs ro\n', device),
+            (root + overlay + bsp + overlay.replace('2 1 ', '5 1 '), device),
+        )
+        for layout, bsp_device in cases:
+            with self.subTest(layout=layout, device=bsp_device):
+                mount.write_text(layout)
+                result, _ = self.compositor_tail(BSP_DEVICE=bsp_device)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertTrue(self.runtime.exists())
+                self.assertEqual(json.loads((self.base/'mutations.json').read_text()), [])
 
     def test_current_stock_compositor_tail_finishes_without_home_settings(self):
         self.compositor_record()

@@ -66,6 +66,8 @@ Použijte původní uložené připojení a data obnovení. Pokud se ztratila, z
 
 ## 6. Každodenní ovládání
 
+Chcete-li připnout vstup HDMI, vyberte ho v nabídce **+ / Přidat aplikaci**. Tlačítkem OK přepnete na tento vstup. Podržením OK můžete dlaždici přesunout nebo skrýt.
+
 Pokud instalátor hlásí „Nastavení Root není dokončeno, ale v TV chybí záznam nasazení.“: Zvolte Zkontrolovat možnosti obnovy pro odebrání Clean Your TV a potom spusťte nastavení samostatně. Úplné odebrání odstraní také No-root Home a Helper; nejprve zálohujte předvolby.
 
 Podpora IR v No-root: uvolnění Home po krátkém stisku naplánuje Clean přibližně za 700 ms; nejprve může probliknout LG Home. Podržení Home zůstává webOS a trojí stisk stále zastaví Helper. Přístup v běžném Developer Mode není ověřen; neměňte oprávnění vstupních zařízení.
@@ -139,6 +141,8 @@ Tlačítko Zdroje dat v záhlaví Počasí otevře informace o službách a lice
 Otevřete Nastavení → Tapety → Nahrát z telefonu a naskenujte kód. Vyberte JPG, PNG nebo HEIC/HEIF, upravte výřez, potvrďte omezení kvality a odešlete. Na TV zvolte Použít. Safari používá vlastní podporu HEIC; Chrome, Firefox a další moderní prohlížeče podle potřeby přibalený místní dekodér. Převod probíhá v telefonu bez externí služby. Zrušení nebo výběr jiného souboru převod zastaví. Vstup: 32 MiB a 50 milionů pixelů; výstup: nejvýše 1080p a 2 MiB. Při chybě zkuste jinou fotku nebo JPG/PNG. Platí pro stránku v telefonu, ne aplikaci pro Mac.
 
 ## Nastavte si Clean Your TV
+
+Před výběrem motivu zvolte v kroku **Debloat**, která nastavení reklam, doporučení, soukromí a oznámení LG chcete změnit. Zkontrolujte každý výsledek. Pokud instalátor nemůže přečíst původní hodnotu, nemůže ji uložit pro automatické obnovení. Volbou **Přeskočit Debloat** zachováte aktuální nastavení.
 
 Po úspěšné instalaci vyberte Classic, Liquid Glass nebo Ribbon a zapněte či vypněte počasí. Ribbon počasí nepodporuje; Liquid Glass používá stručný formát. Město se odhaduje podle připojení a lze je změnit v Home.
 

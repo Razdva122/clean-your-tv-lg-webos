@@ -1,108 +1,126 @@
 {
   "schema": 1,
-  "version": "1.17.1",
+  "version": "1.18.0",
   "changes": [
     {
-      "pr": 496,
+      "pr": 515,
+      "issues": [],
+      "summary": "Refresh Home Helper status after a failed first check"
+    },
+    {
+      "pr": 517,
+      "issues": [
+        389
+      ],
+      "summary": "Verify immutable LG BSP overlays during Root Home setup"
+    },
+    {
+      "pr": 520,
+      "issues": [
+        392
+      ],
+      "summary": "Add optional Debloat settings to the installer"
+    },
+    {
+      "pr": 521,
+      "issues": [
+        473
+      ],
+      "summary": "Document LG UM7450PLA No-root compatibility"
+    },
+    {
+      "pr": 522,
+      "issues": [
+        519
+      ],
+      "summary": "Report Qt Home admission failures in installer diagnostics"
+    },
+    {
+      "pr": 523,
+      "issues": [
+        348
+      ],
+      "summary": "Resume interrupted retirement of verified installer staging"
+    },
+    {
+      "pr": 524,
+      "issues": [
+        362
+      ],
+      "summary": "Pin HDMI inputs alongside Home apps"
+    },
+    {
+      "pr": 526,
+      "issues": [
+        487
+      ],
+      "summary": "Document anonymized public device reports and verified LG C2"
+    },
+    {
+      "pr": 527,
+      "issues": [
+        434
+      ],
+      "summary": "Report unmeasurable temporary storage on ramfs TVs"
+    },
+    {
+      "pr": 528,
+      "issues": [],
+      "summary": "Record timing for each release candidate"
+    },
+    {
+      "pr": 530,
+      "issues": [],
+      "summary": "Default to automatic weather location when no city is saved"
+    },
+    {
+      "pr": 533,
+      "issues": [],
+      "summary": "Use a shared Linux CI image after v1.17.1"
+    },
+    {
+      "pr": 536,
+      "issues": [],
+      "summary": "Reuse setup in desktop installer test fixtures"
+    },
+    {
+      "pr": 537,
+      "issues": [],
+      "summary": "Focus weather-only PRs on weather checks"
+    },
+    {
+      "pr": 538,
+      "issues": [],
+      "summary": "Shard full-candidate browser regressions by duration"
+    },
+    {
+      "pr": 539,
+      "issues": [
+        534
+      ],
+      "summary": "Verify legacy No-root foreground through saved TV pairing"
+    },
+    {
+      "pr": 543,
       "issues": [
         418
       ],
-      "summary": "Retain Root cleanup probe failure context; original #418 recovery remains unresolved"
+      "summary": "Verify stock LG BSP overlays in the Root cleanup finalizer"
     },
     {
-      "pr": 497,
+      "pr": 546,
       "issues": [
-        101
+        542
       ],
-      "summary": "Preserve native deployment causes and inspect without replay; original #101 setup remains unresolved"
-    },
-    {
-      "pr": 498,
-      "issues": [
-        472
-      ],
-      "summary": "Fix No-root removal with execute-only DevMode tmp"
-    },
-    {
-      "pr": 501,
-      "issues": [
-        499
-      ],
-      "summary": "Fix #499: weather startup on legacy webOS browsers"
-    },
-    {
-      "pr": 502,
-      "issues": [
-        397
-      ],
-      "summary": "Offer verified full removal when native Root deployment evidence is missing; original #397 setup failure remains unresolved"
-    },
-    {
-      "pr": 503,
-      "issues": [
-        495
-      ],
-      "summary": "Activate Home after setup while preserving new Stops (#495)"
-    },
-    {
-      "pr": 506,
-      "issues": [
-        505
-      ],
-      "summary": "Fix stale app catalogs and live No-root icons (#505)"
-    },
-    {
-      "pr": 512,
-      "issues": [],
-      "summary": "Skip unused Root Updater build in clean reinstall tests"
-    },
-    {
-      "pr": 514,
-      "issues": [
-        495,
-        505
-      ],
-      "summary": "Reconcile boot catalog fallback and firmware-expanded Helper state during integration"
-    },
-    {
-      "pr": 516,
-      "issues": [],
-      "summary": "Document self-service webOS Home routing QA"
-    },
-    {
-      "pr": 518,
-      "issues": [
-        495
-      ],
-      "summary": "Unify checked Helper Stop and cleanup, preserve completed handoff across reboot, and scope owner-only TV checks"
-    },
-    {
-      "pr": 525,
-      "issues": [],
-      "summary": "Enable System updates after a verified Root-to-No-root transition and document focused retesting"
-    },
-    {
-      "pr": 531,
-      "issues": [],
-      "summary": "Run release checks with Ubuntu dependencies on the supported Ubuntu 24.04 image"
-    },
-    {
-      "pr": 532,
-      "issues": [],
-      "summary": "Use a signed Ubuntu archive mirror when the default runner mirror fails DNS"
-    },
-    {
-      "pr": 535,
-      "issues": [],
-      "summary": "Stabilize the Classic theme browser check and Linux desktop dependency downloads"
+      "summary": "Recover standalone Root Updater after rollback readiness timeout"
     }
   ],
   "excluded": [],
-  "acceptance": "LG OLED55C3RLA on 43.21.71 passed the verified Root-to-No-root transition and ordinary System Updater enable/status/check with Home 1.15.2, Helper 0.8.2 and No-root Updater 0.5.8. The exact final CLI matches the preceding CLI payload byte for byte. The ledger scopes carried C3 startup, Stop, standby, and earlier signed Root transaction results to their exercised paths. The final protected Android APK upgraded in place from v1.17.0 and retained all four seeded files on API 35 ARM64. Older webOS and physical-phone coverage remain scoped to the evidence in docs/history/2026-11-11-release-1.17.1-candidate.md.",
+  "acceptance": "LG OLED55C3RLA, firmware 43.21.71: signed Root install, profile preservation and rollback, physical Magic Remote Home/navigation/emergency exit, No-root installation and clean removal, and connected HDMI 3 picture and sound in both editions passed. The maintainer approved verification on the affected devices after publication for #418, #534 and #542. Matching regression fixtures passed. See docs/history/2026-11-12-release-1.18.0-candidate.md.",
   "build": {
-    "run_id": 43063197550,
-    "attempt": 1,
-    "source": "7731e6b8bb7b6eff7b15609d36f0338b19722b45"
+    "run_id": 43091100467,
+    "attempt": 2,
+    "source": "352bd33bdbc8f20a50f5cca942853b10e3bac028"
   },
-  "acceptance_build": "43063197550:1"
+  "acceptance_build": "43091100467:2"
 }

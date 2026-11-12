@@ -1,0 +1,11 @@
+name: Prepare legacy Node.js
+description: Restore and verify the pinned Linux x64 runtimes for Helper tests
+runs:
+  using: composite
+  steps:
+    - uses: actions/cache@v4
+      with:
+        path: ${{ runner.temp }}/legacy-node-archives
+        key: legacy-node-linux-x64-${{ hashFiles('.github/actions/legacy-node/SHA256SUMS') }}
+    - shell: bash
+      run: bash "$GITHUB_ACTION_PATH/prepare.sh"

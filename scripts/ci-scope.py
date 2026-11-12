@@ -7,6 +7,12 @@ import re
 import subprocess
 
 COMPONENTS = ('ui', 'tv', 'installer', 'android', 'setup', 'preview', 'tv-runtime')
+WEATHER_PR_PATHS = frozenset({
+    'launcher/weather-data.js',
+    'tests/weather/data.cjs',
+    'tests/weather/providers.cjs',
+    'tests/weather/ui.cjs',
+})
 
 
 def components(paths):
@@ -128,8 +134,17 @@ def main():
         diff = (event['before'], event['after'])
     else:
         diff = None
-    selected = components(git('diff', '--name-only', '--no-renames', '-z', *diff).decode().split('\0')[:-1]) if diff and os.environ.get('CI_FULL_SUITE') != 'true' else set(COMPONENTS)
-    if os.environ.get('CI_QUICK_SUITE') == 'true' and os.environ.get('CI_FULL_SUITE') != 'true':
+    full_suite = os.environ.get('CI_FULL_SUITE') == 'true'
+    quick_suite = os.environ.get('CI_QUICK_SUITE') == 'true'
+    weather_paths = set()
+    if diff and not full_suite:
+        paths = set(git('diff', '--name-only', '--no-renames', '-z', *diff).decode().split('\0')[:-1])
+        if kind == 'pull_request' and not quick_suite:
+            weather_paths = paths & WEATHER_PR_PATHS
+        selected = components(paths - weather_paths)
+    else:
+        selected = set(COMPONENTS)
+    if quick_suite and not full_suite:
         selected = draft_components()
     candidate = installers = False
     ref = os.environ.get('GITHUB_REF')
@@ -143,10 +158,11 @@ def main():
         installers = build_installers(event, kind, ref, plan, version, previous, notes)
     if (kind == 'pull_request' and event['pull_request']['base'].get('ref') == 'main'
             and event['pull_request']['head'].get('ref') == 'release/next'
-            and os.environ.get('CI_FULL_SUITE') != 'true'):
+            and not full_suite):
         selected = {'setup'}  # Release policy requires full tests from the trusted build.
+        weather_paths.clear()
     outputs = {name.replace('-', '_'): name in selected for name in COMPONENTS}
-    outputs.update(any=bool(selected), runtime=bool(selected - {'setup'}), candidate=candidate, installers=installers,
+    outputs.update(weather=bool(weather_paths), any=bool(selected), runtime=bool(selected - {'setup'}), candidate=candidate, installers=installers,
                    full=installers and full_candidate(event, kind, ref),
                    macos=bool(selected & {'tv', 'tv-runtime', 'installer'}))
     lines = ''.join(f'{name}={str(value).lower()}\n' for name, value in outputs.items())
@@ -155,6 +171,13 @@ def main():
     print(lines, end='')
     with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
         output.write(lines)
+    if summary := os.environ.get('GITHUB_STEP_SUMMARY'):
+        groups = ', '.join(sorted(selected)) or 'None'
+        with open(summary, 'a') as output:
+            output.write(f'### CI scope\n\nRuntime groups: {groups}\n')
+            if weather_paths:
+                paths = ', '.join(f'`{path}`' for path in sorted(weather_paths))
+                output.write(f'\nFocused weather checks selected for {paths}.\n')
 
 
 if __name__ == '__main__':

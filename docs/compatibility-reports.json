@@ -347,6 +347,30 @@
       "evidenceKind": "public-owner-report"
     },
     {
+      "id": "c2-42-noroot",
+      "model": "OLED42C24LA",
+      "firmware": "33.31.68",
+      "webos": "10.3.1",
+      "edition": "no-root",
+      "release": "v1.17.0",
+      "showOnWebsite": true,
+      "result": "controls-tested",
+      "reportedVersions": "cytv 0.17.1; Home 1.15.1; Helper 0.8.1",
+      "installer": null,
+      "remote": "LG Magic Remote, exact model unknown",
+      "tested": {
+        "install": "Recover could not resume the interrupted update after reboot. The owner completed removal through Recover, then fresh No-root setup finished with EIM registered and no pending operation.",
+        "Home": "short Home opened Clean Your TV",
+        "emergency": "not reported",
+        "audio": "not reported",
+        "power": "remote off/on passed; Helper restarted automatically without a blocked marker",
+        "OTA_rollback": "not reported"
+      },
+      "limitations": "Installer host platform was not reported. AC cold boot and longer-term behavior were not confirmed.",
+      "sources": [],
+      "evidenceKind": "public-owner-report"
+    },
+    {
       "id": "c3-reddit-noroot",
       "model": "LG C3",
       "firmware": null,
