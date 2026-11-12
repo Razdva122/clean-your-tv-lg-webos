@@ -493,7 +493,7 @@ with os.fdopen(f,'rb') as stream:
             raise UserError('Root operation was not confirmed. Run cytv status; retain recovery state.', reason_code='root-operation-unconfirmed')
         return reply
 
-    def preflight(self, install=False, home_interfaces=False):
+    def preflight(self, install=False, home_interfaces=False, stop_running_helper=False):
         diagnostics.context.collect_node_version(self.remote, self.tv_info)
         if self.profile['edition'] == 'root':
             from .python_runtime import SYSTEM_PROBE
@@ -630,6 +630,8 @@ with os.fdopen(f,'rb') as stream:
                 return
             self.checks.update('helper-idle', 'running')
             helper = self.helper_state()
+            if helper == 'running' and stop_running_helper:
+                helper = self.stop_helper_for_install()
             self.tv_info['helper_state'] = helper
             self.checks.update('helper-idle', 'unknown' if helper == 'uncertain' else 'fail' if helper == 'running' else 'pass')
             if helper == 'running':
@@ -638,6 +640,20 @@ with os.fdopen(f,'rb') as stream:
                 raise UserError('Home Helper state could not be verified. Installation has not started; installed versions are unchanged. Run Check TV status and save a diagnostic report before retrying. Do not delete Helper state files.', reason_code='helper-state-unverified')
             if helper == 'stale':
                 self.progress('A stale Helper PID file was found; no Helper process is running. Continuing installation without deleting state files.')
+
+    def stop_helper_for_install(self):
+        from .no_root_observer import helper_start_allowed
+        try:
+            if helper_start_allowed(self):
+                self.stop_helper()
+        except (OSError, RuntimeError):
+            # A lost or negative reply does not prove the controller is running.
+            pass
+        for attempt in range(5):
+            helper = self.helper_state(timeout=5)
+            if helper in ('stopped', 'stale') or attempt == 4:
+                return helper
+            time.sleep(1)
 
     def helper_state(self, timeout=None):
         # Read only: a stale PID is harmless once no controller/worker is found.
@@ -738,7 +754,7 @@ printf '%s' "$cytv_state"
         if self.profile['edition']=='root':
             self.preflight(install=not reinstall, home_interfaces=True)
         else:
-            self.preflight(install=not reinstall)
+            self.preflight(install=True, stop_running_helper=True)
         if self.profile['edition'] == 'root':
             return self.install_root(inventory, migrate, reinstall)
         if not ssap_key:
