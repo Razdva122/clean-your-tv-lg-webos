@@ -1,9 +1,10 @@
 import json
 import tempfile
 import unittest
-from unittest.mock import patch
+from pathlib import Path
+from unittest.mock import Mock, patch
 from cytv import diagnostics, state
-from cytv.errors import UserError
+from cytv.errors import TVCommandError, UserError
 
 
 class HomeDiagnosticsTests(unittest.TestCase):
@@ -39,9 +40,45 @@ class HomeDiagnosticsTests(unittest.TestCase):
             def run(self,command): return '{}'
         with tempfile.TemporaryDirectory() as tmp, patch('time.sleep'), patch('time.monotonic', side_effect=[0,0,1,6]):
             remote=Remote()
-            with self.assertRaisesRegex(UserError,'Helper'):
-                diagnostics.collect_home_report(remote,state.Store(tmp),state.target('192.0.2.55', 'no-root'),lambda text:None)
+            store = state.Store(tmp)
+            profile = state.target('192.0.2.55', 'no-root')
+            with self.assertRaisesRegex(UserError,'Helper') as failure:
+                diagnostics.collect_home_report(remote, store, profile, lambda text: None)
             self.assertEqual(remote.commands[-1]['cmd'],'diagnostics-stop')
+            path = diagnostics.create_report(store, 'home-diagnostics', profile, 'home-diagnostics', failure.exception)
+            self.assertEqual(json.loads(path.read_text()).get('helper_diagnostics'),
+                             {'failure_stage': 'start-unacknowledged'})
+
+    def test_cli_exports_failed_control_upload_separately_from_log_read_failure(self):
+        from cytv import cli
+        for failed_upload, probe, expected in (
+            (True, 'unavailable', {'failure_stage': 'start-upload', 'state_directory': 'unavailable'}),
+            (True, 'access-denied', {'failure_stage': 'start-upload', 'state_directory': 'access-denied'}),
+            (True, 'access-available', {'failure_stage': 'start-upload', 'state_directory': 'access-available'}),
+            (True, 'PRIVATE-REMOTE-OUTPUT', {'failure_stage': 'start-upload', 'state_directory': 'unknown'}),
+            (True, OSError('PRIVATE-REMOTE-OUTPUT'), {'failure_stage': 'start-upload', 'state_directory': 'unknown'}),
+            (False, None, {'failure_stage': 'log-read'}),
+        ):
+            with self.subTest(probe=probe), tempfile.TemporaryDirectory() as tmp:
+                remote = Mock()
+                remote.run.side_effect = [probe if failed_upload else TVCommandError(1)]
+                if failed_upload:
+                    remote.upload.side_effect = [TVCommandError(1), TVCommandError(2)]
+                code = cli.main(['home-diagnostics', '--host', '192.0.2.55', '--edition', 'no-root',
+                                 '--data-dir', tmp, '--language', 'en'],
+                                ask=lambda _: 'y', write=lambda _: None, connect=lambda *args: remote)
+                self.assertEqual(code, 2)
+                path, = (Path(tmp) / 'reports').glob('diagnostic-*.json')
+                raw = path.read_text()
+                report = json.loads(raw)
+                self.assertEqual(report.get('helper_diagnostics'), expected)
+                self.assertEqual(report['ssh_command'], {'exit_status': 1})
+                self.assertIsNone(report['pending'])
+                self.assertNotIn('PRIVATE-REMOTE-OUTPUT', raw)
+                self.assertNotIn('192.0.2.55', raw)
+                self.assertEqual([json.loads(call.args[1])['cmd'] for call in remote.upload.call_args_list],
+                                 ['diagnostics-start', 'diagnostics-stop'])
+                self.assertEqual(remote.run.call_count, 1)
 
     def test_cli_action_saves_report_without_installing(self):
         from cytv import cli
