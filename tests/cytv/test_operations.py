@@ -730,6 +730,28 @@ class OperationTests(unittest.TestCase):
         self.assertIsNone(result['pending'])
         self.assertEqual(result['reconciled'], 'root-installation-verified')
 
+    def test_pending_native_root_status_reads_receipt_without_python_or_staging(self):
+        installer = self.installer(Remote(), 'root')
+        self.store.begin(installer.profile, 'install', stage='setup',
+                         home_backend='c1-native-gate', product_operation='a' * 32)
+        original = self.store.pending(installer.profile)
+        installer.coordinator_code = lambda: self.fail('Status attempted coordinator staging')
+        installer._python = lambda: self.fail('Status attempted interpreter selection')
+
+        def run(command, **kwargs):
+            self.assertEqual(command, 'env -u NODE_OPTIONS -u NODE_PATH /usr/bin/node')
+            return json.dumps({'schema': 1, 'status': 'read', 'operation': 'consistent-not-admission',
+                               'worker': 'not-applicable', 'stage': 'root-deploy',
+                               'failure': {'exception_type': 'CalledProcessError', 'exit_status': 1}})
+
+        installer.remote.run = run
+        result = installer.status()
+        product = result['device']['product']
+        self.assertEqual(product['stage'], 'root-deploy')
+        self.assertEqual(product['failure'], {'exception_type': 'CalledProcessError', 'exit_status': 1})
+        self.assertFalse(result['can_resume_root_setup'])
+        self.assertEqual(self.store.pending(installer.profile), original)
+
     def test_submitted_root_status_never_stages_or_executes_retained_python(self):
         installer=self.installer(Remote(),'root')
         self.store.begin(installer.profile,'install',stage='coordinator-submitted',product_operation='a'*32)
