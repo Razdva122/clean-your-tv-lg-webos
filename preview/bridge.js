@@ -100,7 +100,9 @@
                 ? 'Network settings'
                 : payload.id === 'com.palm.app.settings'
                   ? 'TV settings'
-                  : payload.id
+                  : payload.id === 'com.webos.app.notificationcenter'
+                    ? 'LG Notifications'
+                    : payload.id
           );
         }
         result = { returnValue: true };

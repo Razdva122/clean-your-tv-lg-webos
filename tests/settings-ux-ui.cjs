@@ -38,6 +38,45 @@ const fs = require('node:fs');
           failures.push(edition + '/' + name + ': ' + error.message);
         }
       }
+      await category('advanced');
+      await check('native LG notifications from the remote', async () => {
+        const tvSettings = page.getByRole('button', {
+          name: 'Настройки телевизора',
+          exact: true
+        });
+        const notifications = page.getByRole('button', {
+          name: 'Уведомления LG',
+          exact: true
+        });
+        await tvSettings.focus();
+        await page.keyboard.press('ArrowDown');
+        assert(
+          await notifications.evaluate(
+            (button) => button === document.activeElement,
+            undefined,
+            { timeout: 1500 }
+          )
+        );
+        await page.evaluate(() => {
+          const call = PalmServiceBridge.prototype.call;
+          PalmServiceBridge.prototype.call = function (uri, payload) {
+            if (uri === 'luna://com.webos.applicationManager/launch') {
+              window.lastSettingsLaunch = JSON.parse(payload).id;
+            }
+            return call.call(this, uri, payload);
+          };
+        });
+        await page.keyboard.press('Enter');
+        await page.waitForFunction(
+          () =>
+            window.lastSettingsLaunch === 'com.webos.app.notificationcenter',
+          undefined,
+          { timeout: 2000 }
+        );
+      });
+      if (!(await page.locator('[data-category=appearance]').isVisible())) {
+        await page.locator('#btnSettings').click();
+      }
       await category('appearance');
       await check('focus memory', async () => {
         await page.locator('#homeAddApp').focus();
@@ -159,7 +198,9 @@ const fs = require('node:fs');
             };
           };
         });
-        await page.locator('#settings-pane-advanced button').nth(1).click();
+        await page
+          .getByRole('button', { name: 'Звук по HDMI', exact: true })
+          .click();
         await page.waitForFunction(() => window.answerAudio);
         await check('audio loading is not failure', async () => {
           assert(
