@@ -73,10 +73,11 @@
     }
   ],
   "excluded": [],
-  "acceptance": "",
+  "acceptance": "Scoped TV acceptance passed on LG OLED55C3RLA (43.21.71, SDK 11.2.0) with the exact macOS ARM64 installer. Signed Root update and retained rollback, No-root install and clean removal, native LG Notifications in both editions, Root naming and read-only doctor passed. The starting Root versions, rendered profile and Home route were restored. See [TV acceptance evidence](https://github.com/Razdva122/clean-your-tv-lg-webos/blob/release/next/docs/history/2026-11-12-release-1.19.0-candidate.md) for hashes, device preconditions and scope limits.",
   "build": {
     "run_id": 43213007147,
     "attempt": 1,
     "source": "3bd4a79919290f54594c78ece421e8310bf37c4d"
-  }
+  },
+  "acceptance_build": "43213007147:1"
 }
