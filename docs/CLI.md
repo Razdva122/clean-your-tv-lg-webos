@@ -311,9 +311,12 @@ using the recorded destination and state identity before installation can contin
 Reinstallation uses a fresh inventory; `--migrate-home` is refused for that flow
 so an invalid migration source cannot be discovered only after removing old Root.
 
-No-root replacement refuses an active or ambiguous helper. Press Home three times within two
-seconds to stop it before installing again (older Helper: hold Home for two seconds). Installing Root keeps the
-ordinary Home files but stops and disables its Helper before activation. `--migrate-home` explicitly imports an existing Home
+No-root replacement tries to stop a running Helper and verifies that it exited.
+If Helper is still running, press Home three times within two seconds (older Helper:
+hold Home for two seconds) and recheck. An unknown process state blocks replacement.
+A Stop stays in effect after installation; use **Start Helper** on the TV to resume.
+Installing Root keeps the ordinary Home files but stops and disables its Helper before
+activation. `--migrate-home` explicitly imports an existing Home
 profile/packaged inventory instead of reading a fresh SSAP inventory:
 
 ```sh
@@ -468,6 +471,16 @@ Optional early input restoration is tracked separately. A rejected registration
 uses the guarded fallback. Rejection alone does not establish that an older
 registration is absent: an EIM input-list readback establishes absence when
 available. An unknown EIM result still requires confirmed cleanup before uninstall.
+
+## Standalone Root Updater rollback readiness
+
+```sh
+cytv recover-root-rollback --edition root
+```
+
+This command uses an existing trusted Root SSH connection to recover the
+standalone Updater's `restored profile readiness unconfirmed` timeout after a
+verified rollback. See [Standalone Root Updater rollback readiness](RECOVERY.md#standalone-root-updater-rollback-readiness).
 
 <a id="candidate-root-system-rollback-readiness"></a>
 

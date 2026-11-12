@@ -197,7 +197,7 @@ class BuildTests(unittest.TestCase):
             files=package.data_files((a/'system-updater.ipk').read_bytes())
             service='usr/palm/services/com.cleanyourtv.system.updater.service/'
             self.assertEqual(json.loads(files[service+'services.json'])['id'],'com.cleanyourtv.system.updater.service')
-            self.assertEqual(build.VERSION,'1.2.8')
+            self.assertEqual(build.VERSION,'1.2.9')
             self.assertEqual(json.loads(files[service+'package.json'])['version'],build.VERSION)
             self.assertEqual(json.loads(files['usr/palm/applications/com.cleanyourtv.system.updater/appinfo.json'])['version'],build.VERSION)
             policy_version=subprocess.check_output(['node','-p','require(process.argv[1]).supervisorVersion',str(ROOT/'system-updater/policy.js')],text=True).strip()
@@ -231,6 +231,8 @@ class BuildTests(unittest.TestCase):
             channel=installed/'usr/palm/services/com.gathin.tvhome.renewal/state/home-control'
             channel.mkdir(parents=True);(channel/'.keep').write_bytes(b'')
             (channel/'home-request.json').write_text('private transient request')
+            recovery_channel=channel/'.private';recovery_channel.mkdir(mode=0o700)
+            (recovery_channel/'catalog-response.json').write_text('private transient response')
             bundle=path/'bundle';build.build(bundle)
             baseline=setup.snapshot(bundle,'no-root',path/'baseline',installed=installed)
             manifest=setup.verify_baseline(baseline)

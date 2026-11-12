@@ -270,6 +270,17 @@
       clearTimeout(statusTimer);
       statusTimer = null;
     }
+    function showHomeChoice(state, active) {
+      var button = buttons[3];
+      button.setAttribute('data-home-state', state);
+      if (state === 'known') {
+        button.setAttribute('role', 'switch');
+        button.setAttribute('aria-checked', String(active));
+      } else {
+        button.removeAttribute('role');
+        button.removeAttribute('aria-checked');
+      }
+    }
     function invalidateMode() {
       stopModePoll();
       statusGeneration++;
@@ -278,6 +289,7 @@
       sourceUnavailable = false;
       renderSources();
       buttons[3].disabled = true;
+      showHomeChoice('checking');
       buttons[12].hidden = true;
       buttons[12].disabled = true;
     }
@@ -329,9 +341,9 @@
             );
             var phase = status.intent && status.intent.phase,
               active = phase === 'active';
-            buttons[3].setAttribute('aria-checked', String(active));
             buttons[3].disabled =
               !!phase && phase !== 'active' && phase !== 'disabled';
+            showHomeChoice(buttons[3].disabled ? 'checking' : 'known', active);
             message.textContent = t(
               active
                 ? 'Home and return from apps open Clean Your TV.'
@@ -376,6 +388,7 @@
             sourceStatus = null;
             renderSources();
             buttons[3].disabled = true;
+            showHomeChoice('unknown');
             message.textContent = t(e.message);
             buttons[12].hidden = false;
             buttons[12].disabled = false;
@@ -673,11 +686,7 @@
             b.hidden = true;
             b.disabled = true;
           }
-          if (i === 3) {
-            b.className = 'home-routing-switch';
-            b.setAttribute('role', 'switch');
-            b.setAttribute('aria-checked', 'false');
-          }
+          if (i === 3) b.className = 'home-routing-switch';
           var target =
             i >= 15
               ? sourceActions

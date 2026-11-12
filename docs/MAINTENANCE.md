@@ -75,9 +75,11 @@ SSH port and host-key verification remain fixed. Check network access or select
 an existing Root SSH private key, then retry the same removal. Choosing a key
 does not replace the saved host pin or recovery records.
 
-No-root setup checks Helper before pairing. If it is running, stop it with the
-documented Home gesture and confirm the recheck in the current setup. An unknown
-process state still blocks replacement; emergency-stop markers are preserved.
+When reinstalling No-root, the installer tries to stop a running Helper before
+pairing and verifies that its processes exited. If Helper is still running, use
+the Home gesture and confirm the recheck in the current setup. An unknown process
+state blocks replacement. Installation preserves Stop state; to restore Home
+control after a Stop, open Home Helper on the TV and choose **Start Helper**.
 
 The current source also permits Root and No-root removal to finish without a
 restart after controls/startup restoration, package/file absence and stopped

@@ -1,9 +1,9 @@
 {
-  "from_helper": "0.8.1",
-  "to_helper": "0.8.2",
-  "rollback_home": "1.15.1",
-  "rollback_sha256": "c71a2daa74e3b836417816f5d9c54f4d34e24f85d22a2d4b6d23b9314b0fb169",
-  "prior_helper_sha256": "3fcac65a4df07e9ed261c85c4c7d3714f559ce1de785870b8ab47c4e804b7c8a",
-  "candidate_archive_sha256": "853e74a25e942074b8dc2310c0ff8d44533f597a5dd37087cff2d08dc5dc09bd",
-  "acceptance": "Maintainer QA on OLED55C3RLA, firmware 43.21.71, webOS SDK 11.2.0, TV Node 20.12.2, macOS 15.6.1 ARM64, cytv 0.17.2. Published Home 1.15.1 and prior Helper 0.8.1 match the production-key-verified v1.17.0 feeds. Exact final Helper 0.8.2 probe IPK SHA256 e85c51aa7d3fba4bfe6fc80127262631ef7466649c26aa5dcd21357f9c625552. Ordinary No-root setup with published Home verified 234 installed files, started Helper and finished without a pending operation. A network HOME press from Media Player reached Clean Your TV. The ordinary installer Stop wrote a private latch. A verified software restart expanded Stop storage to 0777 and preserved Stop; the network HOME route stayed in LG Home. An explicit Start ran Helper with key mode 0640 and network HOME returned to Clean Your TV. The native triple Home case was exercised with simulated timed evdev pairs, including mode expansion, and was not repeated with a physical Magic Remote on this archive. Active AC startup and completed-handoff recovery were observed on the prior replacement archive, before the Stop fsync and directory-identity corrections. See docs/history/2026-11-11-release-1.17.1-candidate.md#shared-stop-replacement-candidate."
+  "from_helper": "0.8.2",
+  "to_helper": "0.8.3",
+  "rollback_home": "1.16.0",
+  "rollback_sha256": "48588ded947691e2d4242cf250bc508ea2850f19c5d37c7ed95a15c9445fca9d",
+  "prior_helper_sha256": "e85c51aa7d3fba4bfe6fc80127262631ef7466649c26aa5dcd21357f9c625552",
+  "candidate_archive_sha256": "7828326a1961883f730daaaaa3728c54fc823b30c1061ddc1edfbc69d5f52c47",
+  "acceptance": "2026-11-12 maintainer QA on LG OLED55C3RLA, firmware 43.21.71, webOS SDK 11.2.0, macOS ARM64, cytv 0.18.1. Production-key-verified v1.18.0 System feeds authenticated published Home 1.16.0 FHD/HD and Helper 0.8.2. The exact Helper 0.8.3 probe IPK SHA-256 was e49d6d1d1b809ab75b2f750d3a420cb6bba3caec0af40b55db8fdfc19057909e. Ordinary No-root installation over the saved root SSH connection verified published Home 1.16.0 and the new Helper, preserved the existing Stop and finished with no pending operation. Explicit Start Helper activated the controller. A network HOME press from Media Player opened Clean Your TV and the foreground remained stable. Ordinary installer Stop stopped the controller. Another network HOME press from Media Player opened LG Home and remained there. Physical remote, standby, cold boot and OTA were outside this compatibility probe. Reinstalled the original published Home 1.16.0 and Helper 0.8.2 using the ordinary installer. Package readback confirmed both versions with no pending operation, Helper stopped, and a network HOME press from Media Player opened LG Home."
 }

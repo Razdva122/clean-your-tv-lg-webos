@@ -2,7 +2,7 @@
 from pathlib import Path
 import tempfile
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, call, patch
 
 from cytv import cli, state
 from cytv.errors import ExistingRoot, UserError
@@ -37,6 +37,10 @@ class MaintenanceFlowTests(unittest.TestCase):
                                 ask=lambda _:answer,write=lambda _:None,connect=lambda *a:Mock())
                 self.assertEqual(result,0)
                 self.assertEqual(events,['preflight','preflight','pair'] if answer=='y' else ['preflight'])
+                checks = [call(install=True, stop_running_helper=True)]
+                if answer == 'y':
+                    checks.append(call(install=True, stop_running_helper=False))
+                self.assertEqual(installer.preflight.call_args_list, checks)
                 self.assertEqual(installer.install.call_count,1 if answer=='y' else 0)
 
     def test_legacy_root_updater_offers_confirmed_reinstallation_with_fresh_inventory(self):
@@ -55,7 +59,7 @@ class MaintenanceFlowTests(unittest.TestCase):
                 installer.root_inventory.return_value={'apps':[{'id':'video','title':'Video'}],'inputs':[]}
                 write=Capture()
                 result=cli.main(['install','--host',profile['host'],'--edition','root','--yes','--language','en','--data-dir',tmp],
-                                ask=lambda prompt:'n' if 'Customize Clean Your TV?' in prompt else answer,write=write,connect=lambda *a:Mock())
+                                ask=lambda prompt:'n' if any(text in prompt for text in ('Customize Clean Your TV?', 'Apply optional Debloat settings?')) else answer,write=write,connect=lambda *a:Mock())
                 self.assertEqual(result,0)
                 installer.uninstall_project.assert_not_called()
                 self.assertEqual(installer.root_inventory.call_count,1 if answer=='y' else 0)

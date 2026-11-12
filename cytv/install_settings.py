@@ -67,7 +67,7 @@ def read_current(installer):
 
 
 def collect(profile, ask, write, current=None):
-    write.step(5, TITLE)
+    write.step(6, TITLE)
     write('Clean Your TV is installed.')
     if write.frontend == 'desktop':
         write.installation_settings(current or {})

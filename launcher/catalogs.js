@@ -27,7 +27,8 @@ HomeI18n.add({
     'Checking installed apps…': 'Checking installed apps…',
     'Choose a language. Home will reload.':
       'Choose a language. Home will reload.',
-    'Choose an app to add to Home.': 'Choose an app to add to Home.',
+    'Choose an app or input to add to Home.':
+      'Choose an app or input to add to Home.',
     'Choose where Home and return from apps take you.':
       'Choose where Home and return from apps take you.',
     'Confirm update': 'Confirm update',
@@ -238,7 +239,8 @@ HomeI18n.add({
     'Checking installed apps…': 'Installierte Apps werden geprüft…',
     'Choose a language. Home will reload.':
       'Wählen Sie eine Sprache. Home wird neu geladen.',
-    'Choose an app to add to Home.': 'Wählen Sie eine App für Home.',
+    'Choose an app or input to add to Home.':
+      'Wählen Sie eine App oder einen Eingang für Home.',
     'Choose where Home and return from apps take you.':
       'Wählen Sie das Ziel für Home und die Rückkehr aus Apps.',
     'Confirm update': 'Update bestätigen',
@@ -454,7 +456,8 @@ HomeI18n.add({
     'Checking installed apps…': 'Comprobando las aplicaciones instaladas…',
     'Choose a language. Home will reload.':
       'Elige un idioma. Home se recargará.',
-    'Choose an app to add to Home.': 'Elige una aplicación para añadir a Home.',
+    'Choose an app or input to add to Home.':
+      'Elige una aplicación o una entrada para añadir a Home.',
     'Choose where Home and return from apps take you.':
       'Elige adónde llevan Home y la vuelta desde las aplicaciones.',
     'Confirm update': 'Confirmar actualización',
@@ -670,8 +673,8 @@ HomeI18n.add({
     'Checking installed apps…': 'Verificando aplicativos instalados…',
     'Choose a language. Home will reload.':
       'Escolha um idioma. O Home será recarregado.',
-    'Choose an app to add to Home.':
-      'Escolha um aplicativo para adicionar ao Home.',
+    'Choose an app or input to add to Home.':
+      'Escolha um aplicativo ou uma entrada para adicionar à Home.',
     'Choose where Home and return from apps take you.':
       'Escolha o destino de Home e do retorno dos aplicativos.',
     'Confirm update': 'Confirmar atualização',
@@ -887,8 +890,8 @@ HomeI18n.add({
     'Checking installed apps…': 'Vérification des applications installées…',
     'Choose a language. Home will reload.':
       'Choisissez une langue. Home sera rechargé.',
-    'Choose an app to add to Home.':
-      'Choisissez une application à ajouter à Home.',
+    'Choose an app or input to add to Home.':
+      'Choisissez une application ou une entrée à ajouter à Home.',
     'Choose where Home and return from apps take you.':
       'Choisissez la destination de Home et du retour des applications.',
     'Confirm update': 'Confirmer la mise à jour',
@@ -1105,7 +1108,8 @@ HomeI18n.add({
     'Checking installed apps…': 'Verifica delle app installate…',
     'Choose a language. Home will reload.':
       'Scegli una lingua. Home verrà ricaricato.',
-    'Choose an app to add to Home.': 'Scegli un’app da aggiungere a Home.',
+    'Choose an app or input to add to Home.':
+      'Scegli un’app o un ingresso da aggiungere a Home.',
     'Choose where Home and return from apps take you.':
       'Scegli la destinazione di Home e del ritorno dalle app.',
     'Confirm update': 'Conferma aggiornamento',
@@ -1320,7 +1324,8 @@ HomeI18n.add({
     'Checking installed apps…': '설치된 앱 확인 중…',
     'Choose a language. Home will reload.':
       '언어를 선택하세요. Home을 다시 불러옵니다.',
-    'Choose an app to add to Home.': 'Home에 추가할 앱을 선택하세요.',
+    'Choose an app or input to add to Home.':
+      'Home에 추가할 앱이나 입력을 선택하세요.',
     'Choose where Home and return from apps take you.':
       'Home 버튼과 앱 종료 후 돌아갈 화면을 선택하세요.',
     'Confirm update': '업데이트 확인',
@@ -1530,7 +1535,8 @@ HomeI18n.add({
     'Checking for updates…': 'अपडेट खोजे जा रहे हैं…',
     'Checking installed apps…': 'इंस्टॉल किए ऐप जाँचे जा रहे हैं…',
     'Choose a language. Home will reload.': 'भाषा चुनें। Home फिर लोड होगा।',
-    'Choose an app to add to Home.': 'Home पर जोड़ने के लिए ऐप चुनें।',
+    'Choose an app or input to add to Home.':
+      'Home पर जोड़ने के लिए ऐप या इनपुट चुनें।',
     'Choose where Home and return from apps take you.':
       'चुनें कि Home और ऐप से वापसी पर कौन-सी स्क्रीन खुले।',
     'Confirm update': 'अपडेट की पुष्टि करें',
@@ -1743,7 +1749,8 @@ HomeI18n.add({
     'Checking installed apps…': 'Sprawdzanie zainstalowanych aplikacji…',
     'Choose a language. Home will reload.':
       'Wybierz język. Home zostanie ponownie załadowane.',
-    'Choose an app to add to Home.': 'Wybierz aplikację do dodania do Home.',
+    'Choose an app or input to add to Home.':
+      'Wybierz aplikację lub wejście do dodania do Home.',
     'Choose where Home and return from apps take you.':
       'Wybierz cel przycisku Home i powrotu z aplikacji.',
     'Confirm update': 'Potwierdź aktualizację',
@@ -1960,8 +1967,8 @@ HomeI18n.add({
     'Checking installed apps…': 'Проверяем установленные приложения…',
     'Choose a language. Home will reload.':
       'Выберите язык. Home перезагрузится.',
-    'Choose an app to add to Home.':
-      'Выберите приложение для добавления на Home.',
+    'Choose an app or input to add to Home.':
+      'Выберите приложение или вход для добавления на главный экран.',
     'Choose where Home and return from apps take you.':
       'Выберите, куда ведут кнопка Home и выход из приложений.',
     'Confirm update': 'Подтвердить обновление',
@@ -2851,7 +2858,8 @@ HomeI18n.add({
     'Checking for updates…': '正在检查更新…',
     'Checking installed apps…': '正在检查已安装的应用…',
     'Choose a language. Home will reload.': '请选择语言。Home 将重新加载。',
-    'Choose an app to add to Home.': '选择要添加到 Home 的应用。',
+    'Choose an app or input to add to Home.':
+      '选择要添加到 Home 的应用或输入源。',
     'Choose where Home and return from apps take you.':
       '选择按 Home 键或从应用返回时打开的主屏幕。',
     'Confirm update': '确认更新',
@@ -3111,7 +3119,8 @@ HomeI18n.add({
     'Checking for updates…': '正在檢查更新…',
     'Checking installed apps…': '正在檢查已安裝的應用程式…',
     'Choose a language. Home will reload.': '請選擇語言。Home 將重新載入。',
-    'Choose an app to add to Home.': '選擇要新增至 Home 的應用程式。',
+    'Choose an app or input to add to Home.':
+      '選擇要新增至 Home 的應用程式或輸入來源。',
     'Choose where Home and return from apps take you.':
       '選擇按 Home 鍵或從應用程式返回時開啟的主畫面。',
     'Confirm update': '確認更新',
@@ -3681,8 +3690,8 @@ HomeI18n.add({
     'Checking installed apps…': 'Kontrolují se nainstalované aplikace…',
     'Choose a language. Home will reload.':
       'Vyberte jazyk. Home se znovu načte.',
-    'Choose an app to add to Home.':
-      'Vyberte aplikaci, kterou chcete přidat na Home.',
+    'Choose an app or input to add to Home.':
+      'Vyberte aplikaci nebo vstup, který chcete přidat na Home.',
     'Choose where Home and return from apps take you.':
       'Vyberte, kam vás přenese tlačítko Home a návrat z aplikací.',
     'Confirm update': 'Potvrdit aktualizaci',

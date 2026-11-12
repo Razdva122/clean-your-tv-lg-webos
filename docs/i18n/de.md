@@ -73,13 +73,15 @@ In der veröffentlichten Version wird die Root-Einrichtung mit einer Warnung for
 1. Öffnen Sie eine andere TV-App und drücken Sie kurz **Home**. Clean Your TV sollte erscheinen. Geben Sie im Assistenten Ihre Beobachtung an; überspringen Sie den Test, wenn Sie ihn nicht durchgeführt haben.
 2. Prüfen Sie Pfeile, OK, Zurück, Lautstärke und Ton. Prüfen Sie Bereitschaft/Aufwachen und einen Start nach Trennung vom Strom separat. Eine erfolgreiche Installation allein prüft diese Funktionen nicht.
 
-Die No-root-Einrichtung schaltet Home nach der Paketprüfung ein. Ein neuer Stopp während der Einrichtung bricht die Aktivierung ab. Sie können Home später in den Einstellungen ausschalten.
+Die No-root-Einrichtung schaltet Home nach der Paketprüfung ein, sofern Helper nicht gestoppt wurde. Nach einem Stopp wählen Sie am TV „Helper starten“. Sie können Home später in den Einstellungen ausschalten.
 
 Verwenden Sie die ursprünglich gespeicherte Verbindung und Wiederherstellungsdaten. Sind sie verloren, verbinden Sie sich erneut mit demselben TV und wählen Sie Clean Your TV deinstallieren. Schließen Sie die geprüfte Entfernung vor der Einrichtung ab; löschen Sie keine Reservierungsdateien. Stoppt die Entfernung, speichern Sie den Diagnosebericht.
 
 <a id="bedienung-und-wiederherstellung"></a>
 
 ## 6. Bedienung und Wiederherstellung
+
+Wählen Sie unter **+ / App hinzufügen** einen HDMI-Eingang aus, um ihn anzuheften. Mit OK wechseln Sie zum Eingang. Halten Sie OK gedrückt, um die Kachel zu verschieben oder auszublenden.
 
 Wenn das Installationsprogramm meldet: „Die Root-Einrichtung ist unvollständig, aber ihr Installationsprotokoll fehlt auf dem TV.“: Wählen Sie Wiederherstellungsoptionen prüfen, um Clean Your TV zu entfernen. Starten Sie die Einrichtung danach separat. Dabei werden auch No-root Home und Helper entfernt; sichern Sie zuerst Ihre Einstellungen.
 
@@ -117,7 +119,7 @@ Kann der Installer den angeforderten vollständigen Neustart nicht bestätigen, 
 
 Eine fehlgeschlagene oder unterbrochene Einrichtung bietet direkt die Wiederherstellung an. Kann No-root nicht fortgesetzt werden, bestätigen Sie die vollständige Entfernung einmal. Bei vorübergehendem Verbindungsverlust oder einem beschäftigten CYTV-Prozess erfolgen bis zu drei Versuche. Wählen Sie bei erforderlichem Root-Zugriff **Mit Root verbinden** für denselben TV; die verifizierte Root-Bereinigung beendet auch dessen blockierte No-root-Entfernung. Nach einem Root-Aktivierungsfehler versucht CYTV, LG Home wiederherzustellen und zu prüfen, ohne erneut zu aktivieren. Ein Abbruch mit unerledigter Arbeit behält Bericht und Wiederherstellungsaktionen. Der Notstopp bleibt erhalten.
 
-Öffnen Sie nach einem Verbindungsfehler beim Entfernen die Verbindungsdetails, prüfen Sie das Netzwerk oder wählen Sie einen vorhandenen Root-SSH-Schlüssel und versuchen Sie es erneut. TV-Adresse, Edition, Port und Hostschlüsselprüfung bleiben fest. No-root prüft Helper vor dem Pairing: stoppen Sie ihn und bestätigen Sie die erneute Prüfung im selben Ablauf. Die Entfernung kann ohne Neustart enden, wenn Steuerung, deaktivierter Autostart und das Fehlen von Paketen, Dateien und laufenden Prozessen bestätigt sind und keine Einrichtung offen ist. Wird ein Neustart angefordert, führen Sie ihn aus und versuchen Sie es erneut. Bei Fehlern des Eingangsdiensts geht die sichere Paketbereinigung weiter; Erfolg erfordert weiterhin die bestätigte Verknüpfungsbereinigung.
+Öffnen Sie nach einem Verbindungsfehler beim Entfernen die Verbindungsdetails, prüfen Sie das Netzwerk oder wählen Sie einen vorhandenen Root-SSH-Schlüssel und versuchen Sie es erneut. TV-Adresse, Edition, Port und Hostschlüsselprüfung bleiben fest. Bei einer No-root-Neuinstallation versucht der Assistent, Helper automatisch zu stoppen. Drücken Sie Home nur, wenn der Assistent Sie dazu auffordert, und bestätigen Sie die erneute Prüfung. Die Entfernung kann ohne Neustart enden, wenn Steuerung, deaktivierter Autostart und das Fehlen von Paketen, Dateien und laufenden Prozessen bestätigt sind und keine Einrichtung offen ist. Wird ein Neustart angefordert, führen Sie ihn aus und versuchen Sie es erneut. Bei Fehlern des Eingangsdiensts geht die sichere Paketbereinigung weiter; Erfolg erfordert weiterhin die bestätigte Verknüpfungsbereinigung.
 
 **Root neu installieren:** Wählen Sie mit der gespeicherten Verbindung **Meinen Fernseher einrichten → Root** und bestätigen Sie **Root neu installieren?**. Der Installer stellt LG Home wieder her und entfernt Clean Your TV samt Updatern, Home Helper und gespeicherten Einstellungen vollständig. Nach verifizierter Entfernung installiert und aktiviert er die enthaltenen Pakete und die Root-Laufzeit. Andere TV-Apps und bestehender Root-/SSH-Zugriff bleiben erhalten. Stoppt die Entfernung oder wird ein vollständiger Neustart verlangt, schließen Sie sie vor einer erneuten Einrichtung ab. **Clean Your TV deinstallieren** allein startet keine neue Installation.
 
@@ -165,6 +167,8 @@ Die Schaltfläche Datenquellen in der Wetterüberschrift öffnet Informationen z
 Einstellungen → Hintergrundbilder → Vom Telefon hochladen öffnen und den Code scannen. JPG, PNG oder HEIC/HEIF wählen, zuschneiden, Qualitätsgrenze bestätigen und senden. Am TV Anwenden wählen. Safari nutzt native HEIC-Unterstützung; Chrome, Firefox und andere moderne Browser bei Bedarf den mitgelieferten lokalen Decoder. Die Umwandlung erfolgt auf dem Telefon ohne externen Dienst. Abbrechen oder eine andere Datei beendet die Umwandlung. Eingabe: 32 MiB und 50 Millionen Pixel; Ausgabe: maximal 1080p und 2 MiB. Bei Fehlern ein anderes Foto oder JPG/PNG wählen. Gilt für die Telefonseite, nicht die Mac-App.
 
 ## Clean Your TV einrichten
+
+Wählen Sie vor dem Design unter **Debloat**, welche LG-Einstellungen für Werbung, Empfehlungen, Datenschutz und Benachrichtigungen Sie ändern möchten. Prüfen Sie jedes Ergebnis. Kann der ursprüngliche Wert nicht gelesen werden, steht dafür keine automatische Wiederherstellung zur Verfügung. Wählen Sie **Debloat überspringen**, um die Einstellungen beizubehalten.
 
 Wähle nach erfolgreicher Installation Classic, Liquid Glass oder Ribbon und schalte das Wetter ein oder aus. Ribbon unterstützt kein Wetter; Liquid Glass nutzt das Kurzformat. Der ungefähre Ort wird über die Internetverbindung ermittelt und lässt sich in Home ändern.
 

@@ -18,10 +18,14 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       preview: ${{ steps.scope.outputs.preview }}
+      linux_image: ${{ steps.linux-image.outputs.image }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
+      - id: linux-image
+        uses: ./.github/actions/linux-ci-image
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -30,9 +34,24 @@ jobs:
   build:
     needs: scope
     if: needs.scope.outputs.preview == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: read
+    container:
+      image: ${{ needs.scope.outputs.linux_image }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ github.token }}
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Trust the runner-owned checkout inside the container
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - uses: actions/setup-node@v4
         with:
           node-version: '22.23.4'
@@ -40,12 +59,10 @@ jobs:
           cache-dependency-path: |
             package-lock.json
             website/package-lock.json
-      - uses: actions/setup-python@v5
+      - uses: actions/cache@v4
         with:
-          python-version: "3.12"
-          cache: pip
-          cache-dependency-path: |
-            scripts/build-requirements.txt
+          path: ~/.cache/pip
+          key: linux-ci-pip-${{ hashFiles('scripts/build-requirements.txt') }}
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: python -m pip install -r scripts/build-requirements.txt
       - run: npm ci --prefix website --ignore-scripts --no-audit --no-fund
@@ -55,8 +72,8 @@ jobs:
         run: |
           npm run check --prefix website
           npm run build --prefix website
-      - name: Install browser for website acceptance
-        run: npx playwright install --with-deps chromium
+      - name: Verify the baked Playwright version
+        run: test "$(node -p "require('playwright/package.json').version")" = "$PLAYWRIGHT_IMAGE_VERSION"
       - name: Verify localized navigation, mobile layout and demo
         env:
           BROWSER_CHANNEL: chromium

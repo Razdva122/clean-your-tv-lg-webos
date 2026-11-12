@@ -123,6 +123,40 @@ class RuntimeTests(unittest.TestCase):
                     with self.subTest(mounts=invalid):
                         mountinfo.write_text(invalid)
                         with self.assertRaises(ValueError):self.k.require_generic_environment()
+                root = '1 0 179:27 / / ro - squashfs /dev/root ro\n'
+                bsp = '3 1 179:29 / /overlay/bsppart ro - squashfs /dev/mmcblk0p29 ro\n'
+                overlay = '2 1 0:34 / /usr rw - overlay overlay ro,lowerdir=/overlay/bsppart/bsp/usr:/usr\n'
+                devices = {
+                    '/usr/bin/com.webos.app.home': os.makedev(179, 27),
+                    '/usr/palm/applications/com.webos.app.home': os.makedev(0, 34),
+                    '/overlay/bsppart/bsp/usr': os.makedev(179, 29),
+                }
+                with patch.object(self.k.os, 'stat', side_effect=lambda path, **kw: SimpleNamespace(st_dev=devices[str(path)])), patch.object(self.k.legacy, 'trusted_directory') as trusted:
+                    mountinfo.write_text(root + overlay + bsp)
+                    self.k.require_generic_environment()
+                    trusted.assert_called_with(Path('/overlay/bsppart/bsp/usr'))
+                    for invalid in (
+                        root + overlay,
+                        root.replace('/ ro -', '/ rw -') + overlay + bsp,
+                        root + overlay + bsp.replace('squashfs', 'ext4'),
+                        root + overlay.replace('overlay ro,', 'overlay rw,') + bsp,
+                        root + overlay.replace(':/usr', ':/usr,upperdir=/foreign') + bsp,
+                        root + overlay.replace(':/usr', ':/usr,workdir=/foreign') + bsp,
+                        root + overlay.replace(':/usr', ':/usr:/foreign') + bsp,
+                        root + overlay.replace(':/usr', ':/usr,lowerdir=/foreign') + bsp,
+                        root + overlay.replace(':/usr', ':/usr,datadir+=/foreign') + bsp,
+                        root + overlay + bsp + '4 3 0:2 / /overlay/bsppart/bsp ro - tmpfs tmpfs ro\n',
+                        root + overlay + bsp + '4 2 0:2 / /usr/bin ro - tmpfs tmpfs ro\n',
+                        root + overlay + bsp + overlay.replace('2 1 ', '5 1 '),
+                    ):
+                        with self.subTest(mounts=invalid):
+                            mountinfo.write_text(invalid)
+                            with self.assertRaisesRegex(ValueError, 'covered by a mount'):
+                                self.k.require_generic_environment()
+                    mountinfo.write_text(root + overlay + bsp)
+                    devices['/overlay/bsppart/bsp/usr'] = os.makedev(179, 30)
+                    with self.assertRaisesRegex(ValueError, 'covered by a mount'):
+                        self.k.require_generic_environment()
             mountinfo.write_text('1 0 0:1 / / rw - squashfs /dev/root ro\n')
             for invalid in (dict(app,type='flutter'),dict(app,type='web'),dict(app,main='ribbon.qml')):
                 appinfo.write_text(json.dumps(invalid))
@@ -333,6 +367,65 @@ class RuntimeTests(unittest.TestCase):
         policy=self.k.ReturnPolicy('1'*32)
         policy.event(dict(event='stop',appId='background',windowType='_WEBOS_WINDOW_TYPE_CARD'),1)
         self.assertFalse(policy.due(2))
+
+    def test_sam_stop_and_close_without_window_type_keep_original_return_deadline(self):
+        policy = self.k.ReturnPolicy('1' * 32)
+        foreground = dict(event='foreground', appId='player', windowType=self.k.CARD)
+        stop = dict(event='stop', appId='player', reason='windowPolicy')
+        close = dict(stop, event='close')
+        policy.event(foreground, 0)
+        policy.event(stop, 1)
+        self.assertFalse(policy.due(1.9))
+        self.assertTrue(policy.due(2))
+        policy.event(close, 1.5)
+        self.assertTrue(policy.due(2))
+        home = dict(event='foreground', appId=self.k.STOCK, windowType='_WEBOS_WINDOW_TYPE_HOME')
+        for events in ((stop, home, close), (home, stop, close)):
+            with self.subTest(events=events):
+                policy = self.k.ReturnPolicy('1' * 32)
+                policy.event(foreground, 0)
+                for at, event in enumerate(events):
+                    policy.event(event, 1 + at / 10)
+                self.assertFalse(policy.due(1.9))
+                self.assertTrue(policy.due(2))
+
+    def test_sam_stop_needs_tracked_content_and_new_activity_cancels_return(self):
+        foreground = dict(event='foreground', appId='player', windowType=self.k.CARD)
+        stop = dict(event='stop', appId='player', reason='windowPolicy')
+        for interruption in (
+            dict(stop, event='launch', appId='new-app'),
+            dict(stop, event='close', appId='other-app'),
+            dict(foreground, appId='settings', windowType='_WEBOS_WINDOW_TYPE_OVERLAY'),
+        ):
+            with self.subTest(interruption=interruption):
+                policy = self.k.ReturnPolicy('1' * 32)
+                policy.event(stop, 0)
+                self.assertFalse(policy.due(1))
+                policy.event(foreground, 1)
+                policy.event(stop, 2)
+                self.assertTrue(policy.due(3))
+                policy.event(interruption, 2.5)
+                self.assertFalse(policy.due(3))
+
+    def test_native_home_surface_requires_stock_identity_and_no_other_visible_app(self):
+        token = '1' * 32
+        home = dict(appId=self.k.STOCK, windowType='_WEBOS_WINDOW_TYPE_HOME', displayId=0)
+        policy = self.k.ReturnPolicy(token)
+        policy.event(dict(home, event='foreground'), 1)
+        self.assertTrue(policy.due(2))
+
+        proof = self.proof()
+        proof.update(healthy=True, stopped=False, state='armed', guardian_pid=123, stock_verified=False)
+        power = dict(returnValue=True, state='Active')
+        def ready(rows, foreground=''):
+            return self.k.can_return(dict(returnValue=True, foregroundAppInfo=rows), power,
+                                     proof, token, dict(returnValue=True, appId=foreground))
+        self.assertTrue(ready([home]))
+        self.assertFalse(ready([home], 'player'))
+        self.assertFalse(ready([dict(home, appId='foreign')]))
+        self.assertFalse(ready([dict(home, displayId=1)]))
+        self.assertFalse(ready([dict(home, multiview=True)]))
+        self.assertFalse(ready([home, dict(appId='settings', windowType='_WEBOS_WINDOW_TYPE_OVERLAY')]))
 
     def test_modified_owned_entry_restore_retains_native_stop_and_evidence(self):
         self.prepare()

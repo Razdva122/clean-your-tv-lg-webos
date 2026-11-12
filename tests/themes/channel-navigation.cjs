@@ -43,7 +43,11 @@ const { compileThemeCss } = require('../../theme-api/compile.cjs');
           'the first real pointer movement after keyboard startup restores hover'
         );
         await page.locator('.add-app').click();
-        await page.locator('#appPicker .app-choice').first().click();
+        await page
+          .locator(
+            '#appPicker .app-choice[data-app-id="com.webos.app.browser"]'
+          )
+          .click();
         await page.mouse.move(0, 0);
         await page
           .locator('style')

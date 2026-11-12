@@ -102,6 +102,8 @@ const weather = {
     await page.addInitScript(() => {
       // webOS 4.x lacks this DOM API even after the TV web build.
       delete Element.prototype.replaceChildren;
+      // webOS 3.x uses Chromium 38, before Element.closest.
+      delete Element.prototype.closest;
       window.installWeatherBridge = () => {
         window.weatherBridgeCalls = [];
         window.weatherBridgeFail = false;
@@ -240,10 +242,20 @@ const weather = {
       await sources.evaluate((e) => document.activeElement === e),
       true
     );
+    await page.evaluate(() => HomeWeather.store.setMode('manual'));
     await page.locator('.weather-enabled').click();
     await page.waitForTimeout(70);
     assert.equal(await page.locator('.weather-live-preview').isVisible(), true);
     assert.equal(await page.locator('#homeWeather').isVisible(), false);
+    await page.locator('[data-weather-choice]:visible').last().focus();
+    await page.keyboard.press('ArrowDown');
+    assert.equal(
+      await page
+        .locator('.settings-footer button:visible')
+        .evaluate((button) => button === document.activeElement),
+      true,
+      'Down moves from the last weather option to the settings footer'
+    );
     await page.locator('[data-weather-choice="text"]').click();
     await page.waitForTimeout(70);
     const compactPreview = await page.evaluate(() => {

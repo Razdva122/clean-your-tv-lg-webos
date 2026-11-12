@@ -5,9 +5,10 @@ import shlex
 import tarfile
 
 from . import package
-from .errors import UserError
+from .errors import TV_STORAGE_RAMFS, UserError
 
 RESERVE = 16 * 1024 * 1024
+RAMFS_MAGIC = '858458f6'  # Linux statfs filesystem type.
 SUMMARY = 'Storage estimate ({location}): required {required} MiB; available {available} MiB; shortfall {shortfall} MiB.'
 UNKNOWN = 'Storage estimate ({location}): required {required} MiB; available and shortfall could not be determined.'
 
@@ -23,9 +24,18 @@ def unpacked(data):
         return sum(max(4096, (member.size + 4095) // 4096 * 4096) for member in archive)
 
 
-def check(remote, requirements, progress):
+def _tmp_is_ramfs(remote):
+    try:
+        filesystem = remote.run("LC_ALL=C stat -f -c '%t' /tmp", timeout=5)
+    except (UserError, OSError):
+        return False
+    return isinstance(filesystem, str) and filesystem.strip().lower() == RAMFS_MAGIC
+
+
+def check(remote, requirements, progress, *, allow_tmp_ramfs=False):
     """Add requirements sharing a filesystem, rather than testing each in isolation."""
     groups = {}
+    ramfs_tmp = False
     for location, required in requirements.items():
         try:
             reply = remote.run('LC_ALL=C df -Pk ' + shlex.quote(location))
@@ -36,6 +46,14 @@ def check(remote, requirements, progress):
         if len(fields) != 6 or not re.fullmatch(r'[0-9]{1,16}', fields[3]):
             progress(UNKNOWN.format(location=location, required=mib(required + RESERVE)))
             raise UserError('Available TV storage could not be determined. Installation stopped before package submission.')
+        if (location == fields[5] == '/tmp' and fields[1:4] == ['0', '0', '0']
+                and _tmp_is_ramfs(remote)):
+            if allow_tmp_ramfs:
+                progress(TV_STORAGE_RAMFS)
+            else:
+                ramfs_tmp = True
+                progress(UNKNOWN.format(location=location, required=mib(required + RESERVE)))
+            continue
         key = (fields[0], fields[5])
         group = groups.setdefault(key, {'location': location, 'required': RESERVE, 'available': int(fields[3]) * 1024})
         group['required'] += required
@@ -50,6 +68,9 @@ def check(remote, requirements, progress):
             failed.append(message)
     if failed:
         raise UserError('\n'.join(failed), reason_code='tv-storage-full')
+    if ramfs_tmp:
+        raise UserError(TV_STORAGE_RAMFS + ' Installation stopped before package submission.',
+                        reason_code='tv-storage-ramfs')
 
 
 def install(remote, bundles, progress, root=False):
@@ -68,7 +89,9 @@ def install(remote, bundles, progress, root=False):
     else:
         requirements = {'/media/developer': staged + 2 * expanded,
                         '/tmp': max(sizes, default=0)}
-    check(remote, requirements, progress)
+    # Developer Mode expands the application under /media/developer/apps.
+    # On ramfs, the vendor's /tmp bookkeeping has no measurable block budget.
+    check(remote, requirements, progress, allow_tmp_ramfs=not root)
 
 
 def local(required, progress):

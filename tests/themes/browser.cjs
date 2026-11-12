@@ -84,7 +84,9 @@ async function states(page, visit) {
   );
   await visit('add-app');
   await page.locator('.add-app').click();
-  await page.locator('#appPicker .app-choice').waitFor();
+  await page
+    .locator('#appPicker .app-choice[data-app-id="com.webos.app.browser"]')
+    .waitFor();
   // Remote navigation must not race hover when tiles move beneath the pointer
   // left at Add app by the preceding click (same guard as launcher-geometry).
   await page.mouse.move(0, 0);

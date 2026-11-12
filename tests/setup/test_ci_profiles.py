@@ -104,7 +104,8 @@ class CIProfiles(unittest.TestCase):
     def test_runtime_missing_selection_never_invokes_empty_full_suite(self):
         workflow = (ROOT / '.github/workflows/tests.yml').read_text()
         self.assertIn('TV_RUNTIME: ${{ needs.scope.outputs.tv_runtime }}', workflow)
-        for name in ('Prepare pinned Node', 'Verify real webOS-style file ownership'):
+        for name in ('Prepare pinned legacy Node.js for Helper regression',
+                     'Verify real webOS-style file ownership'):
             condition = workflow[workflow.index('      - name: ' + name):].splitlines()[1]
             self.assertIn("runner.os == 'Linux'", condition)
             self.assertIn("contains(format(' {0} ', steps.evidence.outputs.missing), ' tv-runtime ')", condition)
@@ -151,26 +152,29 @@ class CIProfiles(unittest.TestCase):
     def test_required_statuses_include_parallel_browser_failures(self):
         workflow = (ROOT / '.github/workflows/tests.yml').read_text()
         summary = re.search(r'^  tests:\n(.*?)(?=^  [^ ]|\Z)', workflow, re.M | re.S).group(1)
-        self.assertIn('needs: [scope, runtime, browser, phone-heic, optional-python]', summary)
-        browser = re.search(r'^  browser:\n(.*?)(?=^  [^ ]|\Z)', workflow, re.M | re.S).group(1)
+        self.assertRegex(summary, r'needs: \[scope, runtime, browser, phone-heic, optional-python(?:, weather)?\]')
+        browser = re.search(r'^  browser(?:-core)?:\n(.*?)(?=^  [^ ]|\Z)', workflow, re.M | re.S).group(1)
         self.assertIn('BROWSER_CHANNEL=chromium node tests/tv-dev-ui.cjs', browser)
         self.assertIn('if: always()', summary)
         script = summary.split('        run: |\n', 1)[1]
         script = '\n'.join(line[10:] for line in script.splitlines())
         complete = dict(os.environ, SCOPE='success', RUNTIME='success', BROWSER='success', HEIC='success',
-                        PYTHON='success', BROWSER_REQUIRED='true', PYTHON_REQUIRED='true')
+                        PYTHON='success', WEATHER='success', BROWSER_REQUIRED='true', PYTHON_REQUIRED='true',
+                        WEATHER_REQUIRED='true')
         def status(**updates):
             return subprocess.run(['bash', '-e', '-c', script], env={**complete, **updates}, capture_output=True).returncode
         self.assertEqual(status(), 0)
-        for dependency in ('SCOPE', 'RUNTIME', 'BROWSER', 'HEIC', 'PYTHON'):
+        for dependency in ('SCOPE', 'RUNTIME', 'BROWSER', 'HEIC', 'PYTHON', 'WEATHER'):
             for state in ('failure', 'skipped', 'cancelled'):
                 with self.subTest(dependency=dependency, state=state):
                     self.assertNotEqual(status(**{dependency: state}), 0)
+        self.assertIn('needs: [scope, runtime, browser, phone-heic, optional-python, weather]', summary)
+        self.assertEqual(status(WEATHER='skipped', WEATHER_REQUIRED='false'), 0)
         self.assertEqual(status(BROWSER='skipped', HEIC='skipped', PYTHON='skipped', BROWSER_REQUIRED='false', PYTHON_REQUIRED='false'), 0)
-        for dependency in ('BROWSER', 'HEIC', 'PYTHON'):
+        for dependency in ('BROWSER', 'HEIC', 'PYTHON', 'WEATHER'):
             for state in ('failure', 'cancelled', 'unknown', ''):
                 with self.subTest(optional=dependency, state=state):
-                    self.assertNotEqual(status(BROWSER_REQUIRED='false', PYTHON_REQUIRED='false', **{dependency: state}), 0)
+                    self.assertNotEqual(status(BROWSER_REQUIRED='false', PYTHON_REQUIRED='false', WEATHER_REQUIRED='false', **{dependency: state}), 0)
 
     def test_full_release_marker_fails_for_every_incomplete_dependency(self):
         workflow = (ROOT / '.github/workflows/tests.yml').read_text()
@@ -222,8 +226,13 @@ class CIProfiles(unittest.TestCase):
                 with self.subTest(missing=missing):
                     self.assertNotEqual(subprocess.run(['bash', '-e', '-c', script], cwd=root,
                         env={**os.environ, 'TV_REQUIRED': missing}).returncode, 0)
-        self.assertIn("if: steps.safety_scope.outputs.tv == 'true'", workflow)
-        self.assertIn('4e1578efc2a2cc67651413a05ccc4c5d43f6b4329c599901c556f24d93cd0508', workflow)
+        legacy_node = workflow[workflow.index('      - name: Prepare pinned legacy Node.js'):safety]
+        self.assertIn("if: steps.safety_scope.outputs.tv == 'true' || "
+                      "steps.safety_scope.outputs.tv_runtime == 'true'", legacy_node)
+        self.assertIn('uses: ./.github/actions/legacy-node', legacy_node)
+        manifest = (ROOT / '.github/actions/legacy-node/SHA256SUMS').read_text()
+        self.assertIn('4e1578efc2a2cc67651413a05ccc4c5d43f6b4329c599901c556f24d93cd0508'
+                      '  node-v0.12.2-linux-x64.tar.gz', manifest.splitlines())
 
     def test_metadata_pushes_never_start_or_cancel_frozen_builds(self):
         candidate = (ROOT / '.github/workflows/cytv.yml').read_text()

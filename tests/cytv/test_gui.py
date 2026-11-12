@@ -20,9 +20,11 @@ except ImportError:
 class GuiTests(unittest.TestCase):
     def test_final_customization_prefills_existing_name_validates_and_submits(self):
         import json
+        from cytv import i18n
         from cytv.desktop import Channel
         from cytv.install_settings import PROMPT
         w=Wizard();self.addCleanup(w.close)
+        i18n.set_language('en')
         w.channel=Channel(lambda *_:None)
         w.selected_profile = {'edition': 'root'}
         w.receive('installation-settings', {'tv_name':'Existing'})
@@ -31,11 +33,62 @@ class GuiTests(unittest.TestCase):
         self.assertEqual(entry.placeholderText(),'Existing')
         self.assertEqual(entry.text(), '')
         submit=next(button for button in w.form.findChildren(QPushButton) if button.text()=='Continue')
+        submit.click()
+        self.assertNotIn('tv_name', json.loads(w.channel.answers.get_nowait()))
         entry.setText('x'*49);submit.click()
         self.assertTrue(w.channel.answers.empty())
         self.assertTrue(w.form.findChild(QLabel,'tvNameError').text())
         entry.setText('Aashiyaan');submit.click()
         self.assertEqual(json.loads(w.channel.answers.get_nowait())['tv_name'],'Aashiyaan')
+
+    def test_debloat_group_selection_and_results(self):
+        import json
+        from PySide6.QtGui import QColor, QPalette
+        from cytv import debloat, i18n
+        from cytv.desktop import Channel
+        from cytv.gui_style import ToggleSwitch
+        w = Wizard()
+        self.addCleanup(w.close)
+        i18n.set_language('en')
+        palette = w.palette()
+        palette.setColor(QPalette.ColorRole.Window, QColor('white'))
+        w.setPalette(palette)
+        w.channel = Channel(lambda *_: None)
+        w.receive('step', (5, debloat.TITLE, True))
+        w.show_prompt(Prompt(debloat.SELECT))
+        w.resize(900, 680)
+        w.show()
+        self.app.processEvents()
+        for name in w.step_names:
+            self.assertGreaterEqual(name.height(), name.heightForWidth(name.width()), name.text())
+        scroll = w.form.findChild(QScrollArea, 'debloatSelection')
+        self.assertLessEqual(scroll.widget().width(), scroll.viewport().width())
+        self.assertLess(scroll.viewport().grab().toImage().pixelColor(1, 1).lightness(), 100)
+        toggles = w.form.findChildren(ToggleSwitch)
+        self.assertEqual(len(toggles), 14)
+        self.assertTrue(all(toggle.isChecked() for toggle in toggles))
+        section = w.form.findChild(ToggleSwitch, 'debloatGroup-homePromotion')
+        section.click()
+        field = w.form.findChild(ToggleSwitch, 'debloat-contentRecommendation')
+        self.assertFalse(field.isChecked())
+        section.click()
+        self.assertTrue(field.isChecked())
+        field.click()
+        self.assertEqual(section.accessibleDescription(), 'Some selected')
+        next(b for b in w.form.findChildren(QPushButton) if b.text() == 'Continue').click()
+        self.assertEqual(json.loads(w.channel.answers.get_nowait()),
+                         [key for key in debloat.SETTINGS if key != 'contentRecommendation'])
+        w.receive('debloat-results', {'homePromotion': 'unverified'})
+        w.show_prompt(Prompt(debloat.REVIEW))
+        self.assertIn('The result could not be verified.', w.content.toPlainText())
+        self.app.processEvents()
+        icon = w.content.document().find('✓')
+        label = w.content.document().find('Turn off sponsored tiles')
+        icon.setPosition(icon.selectionStart())
+        label.setPosition(label.selectionStart())
+        self.assertLess(w.content.cursorRect(label).left() - w.content.cursorRect(icon).left(), 56)
+        next(b for b in w.form.findChildren(QPushButton) if b.text() == debloat.CONTINUE).click()
+        self.assertEqual(w.channel.answers.get_nowait(), '1')
 
     def test_setup_explanations_do_not_overlap_at_minimum_window_size(self):
         from cytv import i18n, install_settings as settings
@@ -537,7 +590,7 @@ class GuiTests(unittest.TestCase):
         w = Wizard()
         w.receive('step', (3, 'Prepare the TV connection', True))
         self.assertEqual([row.property('state') for row in w.step_rows],
-                         ['complete', 'complete', 'current', 'upcoming', 'upcoming'])
+                         ['complete', 'complete', 'current', 'upcoming', 'upcoming', 'upcoming'])
         w.receive('done', 1)
         self.assertEqual(w.step_rows[2].property('state'), 'error')
         self.assertEqual(w.step_rows[3].property('state'), 'upcoming')

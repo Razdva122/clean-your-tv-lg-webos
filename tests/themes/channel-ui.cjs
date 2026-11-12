@@ -133,7 +133,11 @@ const { compileThemeCss } = require('../../theme-api/compile.cjs');
         const count = await page.locator('#tiles .item').count();
         await page.locator('.add-app').hover();
         await page.locator('.add-app').click();
-        await page.locator('#appPicker .app-choice').waitFor();
+        await page
+          .locator(
+            '#appPicker .app-choice[data-app-id="com.webos.app.browser"]'
+          )
+          .waitFor();
         assert.equal(
           await page
             .locator('.ctv-library-panel')

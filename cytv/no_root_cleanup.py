@@ -6,6 +6,7 @@ the user's project keys or files after the user has requested their removal.
 import json
 import base64
 import hashlib
+from contextlib import ExitStack
 from time import monotonic, sleep
 
 from .errors import (TVRejected, UserError, TVCommandError, TV_STORAGE_FULL, CLEANUP_BOOT_ACTIONS,
@@ -331,23 +332,55 @@ def _restore_home(installer):
         raise UserError('Removal could not be checked. Reconnect and try again.', reason_code='controls-unverified')
     stock={'com.webos.app.home','com.webos.app.livetv',
            'com.webos.app.hdmi1','com.webos.app.hdmi2','com.webos.app.hdmi3','com.webos.app.hdmi4'}
-    def foreground():
-        reply=installer.remote.luna(uri+'getForegroundAppInfo', {}, timeout=5)
-        app=reply.get('appId') if isinstance(reply,dict) and reply.get('returnValue') is True else None
-        if not isinstance(app,str) or not app:
-            raise UserError('Removal could not be checked. Reconnect and try again.', reason_code='controls-unverified')
-        return app
-    if foreground() in stock:
-        return
-    # Fixed built-in source only; never relaunch an arbitrary observed app.
-    launched=installer.remote.luna(uri+'launch', {'id':'com.webos.app.livetv'})
-    if not isinstance(launched,dict) or launched.get('returnValue') is not True:
-        raise UserError('Removal could not be checked. Reconnect and try again.', reason_code='controls-unverified')
-    deadline=monotonic()+5
-    while foreground() not in stock:
-        if monotonic()>=deadline:
-            raise UserError('Removal could not be checked. Reconnect and try again.', reason_code='controls-unverified')
-        sleep(.1)
+    message = 'Removal could not be checked. Reconnect and try again.'
+    method = uri + 'getForegroundAppInfo'
+    with ExitStack() as connection:
+        paired = None
+
+        def foreground(timeout=5):
+            nonlocal paired
+            if paired is None:
+                try:
+                    reply = installer.remote.luna(method, {}, timeout=timeout)
+                except TVRejected as error:
+                    if (installer.profile.get('connection') == 'root-ssh'
+                            or error.luna.get('error_code') != -1
+                            or error.luna.get('return_value') is not False):
+                        raise
+                    from websockets.exceptions import WebSocketException
+                    from .tv import SSAP
+                    profile = installer.profile
+                    try:
+                        paired = connection.enter_context(SSAP(profile['host'], installer.store.device_dir(profile),
+                                                               installer.progress, reuse_only=True))
+                    except (OSError, ValueError, UserError, WebSocketException) as exc:
+                        raise UserError(message, reason_code='controls-unverified') from exc
+            if paired is not None:
+                try:
+                    reply = paired.call('ssap://' + method, timeout=timeout)
+                except (OSError, ValueError, UserError) as exc:
+                    raise UserError(message, reason_code='controls-unverified') from exc
+            app = None
+            if isinstance(reply, dict):
+                accepted = reply.get('returnValue', paired is not None) is True
+                if accepted and not reply.get('pairingType'):
+                    app = reply.get('appId')
+            if not isinstance(app, str) or not app:
+                raise UserError(message, reason_code='controls-unverified')
+            return app
+
+        if foreground() in stock:
+            return
+        # Fixed built-in source only; require foreground confirmation after launch.
+        launched = installer.remote.luna(uri+'launch', {'id':'com.webos.app.livetv'})
+        if not isinstance(launched, dict) or launched.get('returnValue') is not True:
+            raise UserError(message, reason_code='controls-unverified')
+        deadline = monotonic() + 5
+        while (remaining := deadline - monotonic()) > 0:
+            if foreground(remaining) in stock:
+                return
+            sleep(min(.1, remaining))
+        raise UserError(message, reason_code='controls-unverified')
 
 
 def _repair_registration(installer, value):
@@ -430,6 +463,15 @@ def continue_removal(installer, expected_pending):
             release(installer)
             installer.store.finish_clean_removal(installer.profile)
             return {'removed': True, 'verified_clean': True}
+    def require_restart(triggers, *, before_packages=False):
+        checkpoint = {'stage': 'restart-required', 'removal_reason': 'restart-required',
+                      'cleanup_restart_triggers': triggers}
+        if before_packages:
+            checkpoint['cleanup_restart_first'] = True
+        installer.store.checkpoint(installer.profile, **checkpoint)
+        installer.progress(RESTART_MESSAGE)
+        return {'removed': False, 'verified_clean': False, 'restart_required': True}
+
     def capture_boot():
         # A lost re-arm create response must retry seeding, not compare the new
         # marker against a retired inode from the previous captured baseline.
@@ -463,7 +505,9 @@ def continue_removal(installer, expected_pending):
     stopped = _device(installer, 'stop')
     _check_access(stopped, defer_packages=True)
     unavailable = set(pending.get('cleanup_startup_unavailable', []))
-    startup_failed = not restarted and any(_protected_package(row) for row in current['blocked'] + stopped['blocked'])
+    startup_access_blocked = not restarted and any(
+        _protected_package(row) for row in current['blocked'] + stopped['blocked'])
+    startup_disable_unverified = False
     for app, service in zip(APPS, ('com.local.nativehome.service', 'com.gathin.tvhome.renewal')):
         if service not in current['startup_services'] or app in carriers or (restarted and service in unavailable):
             continue
@@ -487,7 +531,7 @@ def continue_removal(installer, expected_pending):
             # undeletable. Check the SSH connection, then move restart earlier.
             _device(installer, 'inventory')
             unavailable.add(service)
-            startup_failed = True
+            startup_disable_unverified = True
     if unavailable:
         installer.store.checkpoint(installer.profile, cleanup_startup_unavailable=sorted(unavailable))
     inputs_removed = _remove_input_shortcut(installer)
@@ -501,13 +545,20 @@ def continue_removal(installer, expected_pending):
     while isinstance(previous, dict):
         resident |= previous.get('recovery_protocol') == 'no-root-original-stream-v1'
         previous = previous.get('previous')
-    if stopped.get('controller_running') or startup_failed or (resident and not restarted):
-        if (stopped.get('controller_running') or startup_failed) and restarted:
+    restart_triggers = []
+    if stopped.get('controller_running'):
+        restart_triggers.append('controller-still-running')
+    if startup_access_blocked:
+        restart_triggers.append('protected-package-access')
+    if startup_disable_unverified:
+        restart_triggers.append('startup-disable-unverified')
+    if resident and not restarted:
+        restart_triggers.append('resident-installer-evidence')
+    if restart_triggers:
+        if restarted:
             _device(installer, 'boot-retire', proof=proof)
             proof = capture_boot()
-        installer.store.checkpoint(installer.profile, stage='restart-required', removal_reason='restart-required', cleanup_restart_first=True)
-        installer.progress(RESTART_MESSAGE)
-        return {'removed': False, 'verified_clean': False, 'restart_required': True}
+        return require_restart(restart_triggers, before_packages=True)
     for app, message in zip(APPS, ('Removing Helper…', 'Removing Home…', 'Removing the updater…')):
         if app not in apps:
             continue
@@ -517,14 +568,13 @@ def continue_removal(installer, expected_pending):
     installer.progress('Removing private recovery data…')
     installer.store.checkpoint(installer.profile, stage='private-cleanup')
     _check_access(_repair_registration(installer, _device(installer, 'sweep')))
-    if (not restarted and pending.get('previous') or
-            (not restarted or reused_restart) and _device(installer, 'idle').get('idle') is not True):
+    if not restarted and pending.get('previous'):
+        return require_restart(['prior-operation-unresolved'])
+    if (not restarted or reused_restart) and _device(installer, 'idle').get('idle') is not True:
         if restarted:
             proof = capture_boot()
             restarted = False
-        installer.store.checkpoint(installer.profile, stage='restart-required', removal_reason='restart-required')
-        installer.progress(RESTART_MESSAGE)
-        return {'removed': False, 'verified_clean': False, 'restart_required': True}
+        return require_restart(['process-idle-unverified'])
     installer.progress('Verifying removal…')
     final = _device(installer, 'inventory')
     _check_access(final)
@@ -537,9 +587,7 @@ def continue_removal(installer, expected_pending):
         if restarted:
             proof = capture_boot()
             restarted = False
-        installer.store.checkpoint(installer.profile, stage='restart-required', removal_reason='restart-required')
-        installer.progress(RESTART_MESSAGE)
-        return {'removed': False, 'verified_clean': False, 'restart_required': True}
+        return require_restart(['process-idle-unverified'])
     if restarted:
         installer.store.checkpoint(installer.profile, cleanup_boot_verified=True)
     else:

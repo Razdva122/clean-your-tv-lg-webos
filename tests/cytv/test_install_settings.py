@@ -36,7 +36,7 @@ class SettingsTests(unittest.TestCase):
             self.assertEqual(installer.tv_info['installation_settings']['weather'], 'requested-in-home')
 
     def test_customization_is_requested_only_after_successful_install(self):
-        from cytv import cli
+        from cytv import cli, debloat
         from cytv.desktop import DesktopConsole
         for install_error, cancel in ((None, None), (None, EOFError), (None, KeyboardInterrupt), (RuntimeError('install failed'), None)):
             with tempfile.TemporaryDirectory() as tmp, patch('cytv.cli.Installer') as cls, patch('cytv.cli.package.verify_payload', return_value={}):
@@ -48,6 +48,8 @@ class SettingsTests(unittest.TestCase):
                     questions.append(prompt)
                     self.assertTrue(cls.return_value.install.called)
                     self.assertIsNone(install_error)
+                    if prompt == debloat.SELECT:
+                        return '[]'
                     self.assertEqual(prompt, settings.PROMPT)
                     if cancel:
                         raise cancel
@@ -56,7 +58,7 @@ class SettingsTests(unittest.TestCase):
                     '--migrate-home','--language','en','--data-dir',tmp], ask=ask,
                     write=DesktopConsole(lambda *_:None), connect=lambda *_:MagicMock(), payload_root=Path(tmp))
                 self.assertEqual(result, 0 if install_error is None else 1)
-                self.assertEqual(len(questions), 1 if install_error is None else 0)
+                self.assertEqual(questions, [debloat.SELECT, settings.PROMPT] if install_error is None else [])
 
     def test_android_off_and_skip_are_explicit_choices_not_dialog_cancellation(self):
         from cytv.terminal import Console

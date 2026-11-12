@@ -23,6 +23,60 @@ class StorageTests(unittest.TestCase):
         self.assertIn('could not be determined', messages[0])
         self.assertNotIn('PRIVATE', str(messages))
 
+    def test_ramfs_zero_blocks_reports_unmeasurable_capacity_before_submission(self):
+        import json
+        from tempfile import TemporaryDirectory
+        from cytv import diagnostic_context, diagnostics, failure_help, state
+
+        remote = Mock()
+        remote.run.side_effect = [
+            'Filesystem 1024-blocks Used Available Capacity Mounted on\ntmp 0 0 0 0% /tmp',
+            '858458f6\n',
+        ]
+        messages = []
+        with self.assertRaises(UserError) as caught:
+            storage.check(remote, {'/tmp': 1024}, messages.append)
+
+        self.assertEqual(caught.exception.reason_code, 'tv-storage-ramfs')
+        self.assertIn('could not be determined', messages[0])
+        self.assertIn('before package submission', str(caught.exception))
+        remote.upload.assert_not_called()
+        profile = state.target('tv.local', 'no-root')
+        guide = failure_help.for_error(caught.exception, 'install-packages', profile)
+        self.assertEqual(guide['code'], 'tv-storage-ramfs')
+        self.assertIn('ramfs', guide['detail'])
+        with TemporaryDirectory() as directory:
+            path = diagnostics.create_report(state.Store(directory), 'install', profile,
+                                             'install-packages', caught.exception)
+            report = json.loads(path.read_text())
+        self.assertEqual(report['reason_code'], 'tv-storage-ramfs')
+        self.assertEqual(report['previous_attempt_failure']['reason_code'], 'tv-storage-ramfs')
+        self.assertEqual(diagnostic_context.failure_summary(report)['reason_code'], 'tv-storage-ramfs')
+
+    def test_ambiguous_zero_blocks_keep_existing_preflight_failure(self):
+        zero = 'Filesystem 1024-blocks Used Available Capacity Mounted on\ntmp 0 0 0 0% /tmp'
+        for result in ('858458f6\nPRIVATE', '1021994', None, OSError('PRIVATE')):
+            with self.subTest(result=result):
+                remote = Mock()
+                remote.run.side_effect = [zero, result]
+                with self.assertRaises(UserError) as caught:
+                    storage.check(remote, {'/tmp': 1024}, lambda _: None)
+                self.assertEqual(caught.exception.reason_code, 'tv-storage-full')
+                self.assertNotIn('PRIVATE', str(caught.exception))
+
+    def test_measured_full_partition_still_takes_precedence(self):
+        remote = Mock()
+        remote.run.side_effect = [
+            'Filesystem 1024-blocks Used Available Capacity Mounted on\ntmp 0 0 0 0% /tmp',
+            '858458f6',
+            'Filesystem 1024-blocks Used Available Capacity Mounted on\n/dev/full 100 100 0 100% /var/lib',
+        ]
+        with self.assertRaises(UserError) as caught:
+            storage.check(remote, {'/tmp': 1024, '/var/lib': 1024}, lambda _: None)
+        self.assertEqual(caught.exception.reason_code, 'tv-storage-full')
+        self.assertIn('(/var/lib)', str(caught.exception))
+        self.assertNotIn('(/tmp)', str(caught.exception))
+
     def test_compressed_ipk_budget_uses_expanded_blocks(self):
         data = package.ipk('test', '1', {'usr/palm/applications/test/data': b'0' * 1024*1024})
         self.assertGreater(storage.unpacked(data), len(data)*10)

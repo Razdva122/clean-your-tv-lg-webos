@@ -73,13 +73,15 @@ L’installation Root continue avec un avertissement si les entrées du TV ne pe
 1. Ouvrez une autre application sur la TV et appuyez brièvement sur **Home**. Clean Your TV doit s’ouvrir. Indiquez votre observation dans l’assistant ; ignorez le test si vous ne l’avez pas effectué.
 2. Vérifiez flèches, OK, Retour, volume et son. Testez séparément la veille/le réveil et un démarrage après débranchement du secteur. Une installation réussie ne vérifie pas ces actions à elle seule.
 
-La configuration No-root active Home après vérification des paquets. Un nouvel arrêt pendant la configuration annule l’activation. Vous pouvez désactiver Home ensuite dans les paramètres.
+La configuration No-root active Home après vérification des paquets si Helper n’a pas été arrêté. Après un arrêt, choisissez Démarrer Helper sur le téléviseur. Vous pouvez désactiver Home ensuite dans les paramètres.
 
 Utilisez la connexion et les données de récupération d’origine. Si elles sont perdues, reconnectez-vous au même téléviseur et choisissez Désinstaller Clean Your TV. Terminez la suppression vérifiée avant la configuration ; ne supprimez pas les fichiers de réservation. Si la suppression s’arrête, enregistrez le rapport de diagnostic.
 
 <a id="utilisation-et-récupération"></a>
 
 ## 6. Utilisation et récupération
+
+Pour épingler une entrée HDMI, sélectionnez-la dans **+ / Ajouter une application**. Appuyez sur OK pour basculer vers cette entrée. Maintenez OK pour déplacer ou masquer sa tuile.
 
 Si l’installateur indique « La configuration Root est inachevée, mais son journal de déploiement est absent du téléviseur. » : Choisissez Examiner les options de récupération pour supprimer Clean Your TV, puis lancez la configuration séparément. La suppression complète retire aussi No-root Home et Helper ; sauvegardez vos préférences avant.
 
@@ -117,7 +119,7 @@ Si l’installateur ne peut pas vérifier le redémarrage complet demandé, enre
 
 Une installation échouée ou interrompue propose directement la récupération. Si No-root ne peut pas continuer, confirmez une fois la suppression complète. La suppression effectue jusqu’à trois tentatives en cas de perte temporaire de connexion ou de processus CYTV occupé. Si Root est nécessaire, choisissez **Se connecter avec Root** pour le même téléviseur ; le nettoyage Root vérifié termine aussi sa suppression No-root bloquée. Après un échec d’activation Root, CYTV tente de rétablir et vérifier LG Home sans réactiver. Une annulation avec du travail inachevé conserve le rapport et les actions de récupération. L’arrêt d’urgence reste actif.
 
-Après une erreur de connexion pendant la suppression, ouvrez les détails, vérifiez le réseau ou choisissez une clé SSH Root existante, puis réessayez. Adresse, édition, port et vérification de la clé du téléviseur restent fixes. No-root vérifie Helper avant l’association: arrêtez-le et confirmez la nouvelle vérification dans le même parcours. La suppression peut finir sans redémarrage si les commandes, la désactivation du démarrage automatique et l’absence de paquets, fichiers et processus sont vérifiées, sans installation en attente. Si un redémarrage est demandé, effectuez-le puis réessayez. Si le service des entrées échoue, le nettoyage sûr des paquets continue ; le succès exige toujours la vérification du nettoyage du raccourci.
+Après une erreur de connexion pendant la suppression, ouvrez les détails, vérifiez le réseau ou choisissez une clé SSH Root existante, puis réessayez. Adresse, édition, port et vérification de la clé du téléviseur restent fixes. Lors de la réinstallation de No-root, l’assistant tente d’arrêter Helper automatiquement. Appuyez sur Home uniquement si l’assistant le demande, puis confirmez la nouvelle vérification. La suppression peut finir sans redémarrage si les commandes, la désactivation du démarrage automatique et l’absence de paquets, fichiers et processus sont vérifiées, sans installation en attente. Si un redémarrage est demandé, effectuez-le puis réessayez. Si le service des entrées échoue, le nettoyage sûr des paquets continue ; le succès exige toujours la vérification du nettoyage du raccourci.
 
 **Réinstaller Root :** Choisissez **Configurer mon téléviseur → Root** avec la connexion enregistrée et confirmez **Réinstaller Root ?**. L’installateur rétablit LG Home et supprime entièrement Clean Your TV, ses outils de mise à jour, Home Helper et les préférences enregistrées. Après vérification de la suppression, il installe et active les paquets et l’environnement Root fournis avec cet installateur. Les autres apps du TV et l’accès root/SSH existant sont conservés. Si la suppression s’arrête ou demande un redémarrage complet, terminez-la avant de relancer la configuration. **Désinstaller Clean Your TV** seul ne lance jamais une nouvelle installation.
 
@@ -165,6 +167,8 @@ Le bouton Sources des données dans l’en-tête Météo ouvre les informations 
 Ouvrez Paramètres → Fonds d’écran → Envoyer depuis le téléphone et scannez le code. Choisissez JPG, PNG ou HEIC/HEIF, recadrez, acceptez la limite de qualité et envoyez. Choisissez Appliquer sur le TV. Safari utilise HEIC natif ; Chrome, Firefox et les autres navigateurs modernes utilisent le décodeur local inclus si nécessaire. La conversion reste sur le téléphone, sans service externe. Annuler ou changer de fichier arrête la conversion. Entrée : 32 Mio et 50 millions de pixels ; sortie : 1080p et 2 Mio maximum. En cas d’échec, essayez une autre photo ou JPG/PNG. Cela concerne la page du téléphone, pas l’app Mac.
 
 ## Configurer votre Clean Your TV
+
+Avant de choisir un thème, utilisez **Debloat** pour sélectionner les réglages LG de publicité, de recommandations, de confidentialité et de notifications à modifier. Vérifiez chaque résultat. Si la valeur d’origine ne peut pas être lue, elle ne peut pas être enregistrée pour une restauration automatique. Choisissez **Ignorer Debloat** pour conserver vos réglages.
 
 Après une installation réussie, choisissez Classic, Liquid Glass ou Ribbon et activez ou désactivez la météo. Ribbon ne prend pas en charge la météo ; Liquid Glass utilise le format compact. La ville est estimée selon votre connexion et peut être modifiée dans Home.
 

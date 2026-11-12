@@ -11,7 +11,7 @@ from . import __version__, package, state, i18n
 from .errors import UserError, TVNotReady, ExistingRoot
 from .operations import Installer
 from .terminal import Console, supports_ansi
-from . import diagnostics, discovery, inspect_tv, prompts, install_settings
+from . import diagnostics, discovery, inspect_tv, prompts, install_settings, debloat
 
 
 def payload_dir():
@@ -44,7 +44,7 @@ def parser():
     result._positionals.title = i18n.translate('positional arguments')
     result._optionals.title = i18n.translate('options')
     result.add_argument('-h', '--help', action='help', help=i18n.translate('Show this help message and exit'))
-    result.add_argument('command', nargs='?', default='install', choices=('install', 'status', 'doctor', 'home-diagnostics', 'recover', 'restore', 'uninstall', 'enable-system-updates', 'enable-firmware-access', 'disable-firmware-access', 'recover-system-rollback', 'replace-system-updater', 'clean-wam-cache'))
+    result.add_argument('command', nargs='?', default='install', choices=('install', 'status', 'doctor', 'home-diagnostics', 'recover', 'restore', 'uninstall', 'enable-system-updates', 'enable-firmware-access', 'disable-firmware-access', 'recover-system-rollback', 'recover-root-rollback', 'replace-system-updater', 'clean-wam-cache'))
     result.add_argument('--language', choices=tuple(i18n.LANGUAGES), help=i18n.translate('Interface language (auto uses the computer language)'))
     result.add_argument('--version', action='store_true', help=i18n.translate('Print installer version'))
     result.add_argument('--host', help=i18n.translate('TV IPv4 address or hostname'))
@@ -249,7 +249,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
         if args.command == 'replace-system-updater':
             if profile['edition'] != 'root': raise UserError('System Updater replacement requires an existing Root connection.')
             if store.pending(profile): raise UserError('Previous operation is unresolved. Run cytv status or cytv restore; do not retry installation.', reason_code='pending-operation')
-        if args.command == 'recover-system-rollback':
+        if args.command in ('recover-system-rollback', 'recover-root-rollback'):
             if profile['edition'] != 'root': raise UserError('Rollback readiness recovery requires an existing Root connection.')
             if store.pending(profile): raise UserError('Previous operation is unresolved. Run cytv status or cytv restore; do not retry installation.', reason_code='pending-operation')
         if args.command in ('enable-firmware-access','disable-firmware-access'):
@@ -294,11 +294,11 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                 write('Root will stop the old Home Helper, turn on Home control and open Clean Your TV Home.')
             write('Check controls on the TV after installation.')
         retry_removal=(args.command=='uninstall' and (store.pending(profile) or {}).get('recovery_protocol')=='clean-removal-v1')
-        if args.command in ('install', 'uninstall', 'restore', 'enable-system-updates', 'enable-firmware-access', 'disable-firmware-access', 'recover-system-rollback', 'replace-system-updater') and not args.yes and not retry_removal:
+        if args.command in ('install', 'uninstall', 'restore', 'enable-system-updates', 'enable-firmware-access', 'disable-firmware-access', 'recover-system-rollback', 'recover-root-rollback', 'replace-system-updater') and not args.yes and not retry_removal:
             if args.command == 'uninstall' and profile['edition'] == 'root':
                 write('This removes Root, Root Updater, their services and startup hooks, plus any installed No-root Home, Helper and Updater.')
                 write('Recovery records are retained for diagnostics. Other TV apps stay installed.')
-            verb = {'install': 'Connect to check installed versions', 'uninstall': 'Restore LG Home and remove this edition', 'restore': 'Restore LG Home', 'enable-system-updates': 'Prepare updates for all system components on this rooted TV','enable-firmware-access':'Change Root Home access to Homebrew configuration','disable-firmware-access':'Change Root Home access to Homebrew configuration','recover-system-rollback':'Recover verified Root rollback readiness','replace-system-updater':'Replace only the System Updater and preserve Root settings'}[args.command]
+            verb = {'install': 'Connect to check installed versions', 'uninstall': 'Restore LG Home and remove this edition', 'restore': 'Restore LG Home', 'enable-system-updates': 'Prepare updates for all system components on this rooted TV','enable-firmware-access':'Change Root Home access to Homebrew configuration','disable-firmware-access':'Change Root Home access to Homebrew configuration','recover-system-rollback':'Recover verified Root rollback readiness','recover-root-rollback':'Recover verified Root rollback readiness','replace-system-updater':'Replace only the System Updater and preserve Root settings'}[args.command]
             if args.command == 'uninstall' and profile['edition'] == 'root':
                 pending = store.pending(profile)
                 if pending and pending.get('action') == 'uninstall' and pending.get('full_project') is True:
@@ -368,7 +368,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                     raise UserError('Release payload is missing. Download a built cytv executable or run python scripts/build-cytv.py --payload-only from source.') from None
             if args.command == 'replace-system-updater':
                 if store.pending(profile): raise UserError('Previous operation is unresolved. Run cytv status or cytv restore; do not retry installation.', reason_code='pending-operation')
-            if args.command in ('enable-firmware-access','disable-firmware-access','recover-system-rollback') and store.pending(profile):raise UserError('Previous operation is unresolved. Run cytv status or cytv restore; do not retry installation.', reason_code='pending-operation')
+            if args.command in ('enable-firmware-access','disable-firmware-access','recover-system-rollback','recover-root-rollback') and store.pending(profile):raise UserError('Previous operation is unresolved. Run cytv status or cytv restore; do not retry installation.', reason_code='pending-operation')
             if args.command == 'clean-wam-cache' and store.pending(profile):
                 raise UserError('Resolve the pending installation or removal before clearing WAM data. Keep recovery records.')
             phase = 'ssh-connect'
@@ -464,7 +464,8 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                             write('--tv-name was skipped because the selected edition is No-root.')
                         write.selected_profile(profile)
                         installer.select_graphics()
-                        installer.preflight(install=True, home_interfaces=profile['edition']=='root')
+                        if profile['edition'] == 'root':
+                            installer.preflight(install=True, home_interfaces=True)
                 if reinstall:
                     if args.migrate_home:
                         raise UserError('For Root reinstallation, omit --migrate-home. The installer reads a fresh TV inventory before replacing Root.')
@@ -490,17 +491,19 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                         return 0
                 if profile['edition'] == 'no-root':
                     phase = 'inspect-installation'
+                    auto_stop = True
                     while True:
                         try:
-                            installer.preflight(install=True)
+                            installer.preflight(install=True, stop_running_helper=auto_stop)
                             break
                         except UserError as error:
+                            auto_stop = False
                             if error.reason_code != 'helper-running' or args.non_interactive:
                                 raise
                             write.heading('Stop Home Helper on the TV')
                             write('Press Home three times within two seconds (older Helper: hold Home for two seconds), then release all buttons and wait for LG Home.')
                             if not prompts.confirm('Try stopping Helper again?', ask, write, default=True):
-                                write('Cancelled. No TV changes were made.')
+                                write('Cancelled. Installation has not started.')
                                 return 0
                 if not resume:
                     installer.select_graphics()
@@ -570,8 +573,10 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                 setup_cancelled = False
                 setup = {}
                 if not args.non_interactive and (not args.yes or write.frontend != 'console'):
-                    phase = 'configure-home'
+                    phase = 'debloat'
                     try:
+                        debloat.run(installer, ask, write)
+                        phase = 'configure-home'
                         setup = install_settings.collect(profile, ask, write,
                             current=install_settings.read_current(installer) if write.frontend == 'desktop' else None)
                     except (EOFError, KeyboardInterrupt):
@@ -598,9 +603,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                     write('Root emergency exit: three short Home presses within two seconds.')
                 else:
                     write('Three short Home presses within two seconds return to LG Home. To restart Home control, open Home Helper, choose Start Helper and confirm. Your saved Home screen choice is kept.')
-                    if result.get('activation_cancelled') is True:
-                        write('Packages verified. A new Stop cancelled Home activation. Start Helper on the TV when ready.')
-                    else:
+                    if result.get('activation_cancelled') is not True:
                         write("After installation, press Home to try it. If LG Home opens, open Home Helper from the TV's apps.")
                         write('Packages installed; Home Helper launch requested. Check short Home, arrows/OK, Back, volume, standby and cold boot.')
                     if profile.get('connection') == 'root-ssh':
@@ -616,6 +619,10 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                 phase = args.command
                 installer.replace_system_updater()
                 write('System updates are ready. Open Home Settings → Software updates on the TV.')
+            elif args.command == 'recover-root-rollback':
+                phase = args.command
+                installer.recover_root_rollback()
+                write('Previous Root components and profile verified. Rollback recovery is complete.')
             elif args.command == 'recover-system-rollback':
                 phase = args.command
                 if args.new_recovery_attempt:

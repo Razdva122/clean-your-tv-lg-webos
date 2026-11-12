@@ -522,7 +522,12 @@ function readHomeRequest(channel) {
   var request;
   try {
     request = JSON.parse(
-      fs.readFileSync(directory + '/' + prefix + '-request.json', 'utf8')
+      directory === data
+        ? fs.readFileSync(directory + '/' + prefix + '-request.json', 'utf8')
+        : require('./state-permissions').readChannelRecord(
+            directory,
+            prefix + '-request'
+          )
     );
   } catch (e) {
     return;

@@ -71,7 +71,10 @@
       })
     );
   }
-  function create(storage, inventory, config) {
+  function inputId(id) {
+    return /^input:[A-Za-z0-9_.-]{1,250}$/.test(id);
+  }
+  function create(storage, inventory, config, readInputs) {
     var catalog = clean(inventory),
       hidden = unique(config.hiddenApps || []),
       ids,
@@ -123,21 +126,56 @@
         )
       );
     }
-    function visible() {
-      return ids.map(find).filter(function (a) {
-        return a && hidden.indexOf(a.id) < 0;
-      });
+    function inputTiles() {
+      return (readInputs ? readInputs() : [])
+        .filter(function (input) {
+          return input.source && inputId('input:' + input.appId);
+        })
+        .map(function (input) {
+          return {
+            id: 'input:' + input.appId,
+            title: input.label,
+            input: input
+          };
+        });
     }
-    function find(id) {
-      return catalog.filter(function (a) {
-        return a.id === id;
-      })[0];
+    function find(items, id) {
+      for (var i = 0; i < items.length; i++) {
+        if (items[i].id === id) return items[i];
+      }
+    }
+    function visible() {
+      var items = catalog.concat(inputTiles());
+      return ids
+        .map(function (id) {
+          return find(items, id);
+        })
+        .filter(function (a) {
+          return a && hidden.indexOf(a.id) < 0;
+        });
     }
     function save(nextIds, nextHidden, nextShowAddApp) {
+      nextIds = unique(nextIds);
+      nextHidden = unique(nextHidden);
+      // An EIM snapshot can be unavailable during a layout edit. Retain any
+      // pinned input that was not rendered and therefore could not be edited.
+      ids.forEach(function (id, index) {
+        if (
+          inputId(id) &&
+          nextIds.indexOf(id) < 0 &&
+          nextHidden.indexOf(id) < 0
+        )
+          nextIds.splice(index, 0, id);
+      });
+      if (
+        (nextIds.length > 200 && nextIds.some(inputId)) ||
+        (nextHidden.length > 200 && nextHidden.some(inputId))
+      )
+        throw Error('invalid-layout-size');
       var state = {
         version: 1,
-        ids: unique(nextIds),
-        hidden: unique(nextHidden),
+        ids: nextIds,
+        hidden: nextHidden,
         catalog: catalog,
         showAddApp: nextShowAddApp === undefined ? showAddApp : nextShowAddApp
       };
@@ -149,6 +187,19 @@
     }
     return {
       visible: visible,
+      firstInput: function () {
+        for (var i = 0; i < ids.length; i++) {
+          var id = ids[i];
+          if (hidden.indexOf(id) >= 0) continue;
+          if (inputId(id)) return id;
+          if (find(catalog, id)) return null;
+        }
+        return null;
+      },
+      input: function (id) {
+        var tile = find(inputTiles(), id);
+        return tile && tile.input;
+      },
       showAddApp: function () {
         return showAddApp;
       },
@@ -165,6 +216,7 @@
           return a.id;
         });
         return catalog
+          .concat(inputTiles())
           .filter(function (a) {
             return shown.indexOf(a.id) < 0 && pickerExcluded.indexOf(a.id) < 0;
           })
@@ -174,7 +226,8 @@
       },
       save: save,
       add: function (id) {
-        if (!find(id)) throw Error('app-unavailable');
+        if (!find(catalog.concat(inputTiles()), id))
+          throw Error('app-unavailable');
         save(
           visible()
             .map(function (a) {
@@ -218,10 +271,10 @@
           try {
             save(
               ids.filter(function (id) {
-                return installedIds.indexOf(id) >= 0;
+                return inputId(id) || installedIds.indexOf(id) >= 0;
               }),
               hidden.filter(function (id) {
-                return installedIds.indexOf(id) >= 0;
+                return inputId(id) || installedIds.indexOf(id) >= 0;
               })
             );
           } catch (error) {

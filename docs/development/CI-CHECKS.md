@@ -5,6 +5,17 @@ Unknown paths, shared build/dependency files and CI implementation changes still
 select every component. A failure in any selected job fails the required
 Linux/macOS summaries; an unexpected skip cannot grant a selected gate.
 
+## Focused weather checks
+
+Ordinary pull requests that touch `launcher/weather-data.js` or its
+`data.cjs`, `providers.cjs` and `ui.cjs` tests under `tests/weather/`
+select the weather job. It runs the weather logic and compiled browser tests
+and checks that the legacy webOS Home build starts. Other changed files select their usual
+checks, including recovery and packaging. Shared inputs still select the
+broad suite. The scope summary lists the files that selected the weather job,
+and both required test summaries require it to pass when selected. Full
+candidate builds cover weather through the existing runtime and browser suites.
+
 ## Parallel test shards
 
 The runtime matrix runs **four shards per selected OS**, with
@@ -83,6 +94,47 @@ this scheduling change do not themselves repartition later setup tests.
 
 ## Runner use, dependency caches and artifact retention
 
+### Shared Linux test image
+
+The browser, Linux HEIC, optional ARM Python, website preview and theme
+submission jobs use the same Linux/amd64 image from GHCR. They stay separate and run in parallel. Each clean runner may
+download the same layers independently. APT and the Playwright browser downloads
+run when building the image, so ordinary jobs do not depend on the Ubuntu mirrors.
+Combining browser and HEIC would serialize their checks and would still leave the
+ARM Python job with separate dependencies. macOS HEIC keeps its native WebKit and
+Chromium checks.
+
+The image contains the lockfile's exact Playwright Chromium and Firefox builds,
+the required browser libraries and fonts, and QEMU user mode with the ARM EABI
+sysroot. The ARM provisioning tests check that they are running as root inside
+the test container; no privileged container mode or host binfmt setup is needed.
+Browser and ARM Python receipts include the immutable image reference in addition
+to their existing runtime fingerprints. A new digest requires fresh evidence.
+
+To refresh the image (including after a Playwright upgrade):
+
+1. From a reviewed commit containing the intended lockfile and Dockerfile,
+   push a new `ci-image-vN` Git tag. Never reuse an existing tag. This starts
+   `Publish Linux CI image`; it does not build or publish a project release.
+   The image build reads the Playwright version directly from the tagged
+   lockfile and checks both browser launches, fonts and the ARM tools before
+   publishing. Keep the GHCR package linked to this repository so the test jobs
+   can pull it with their read-only `GITHUB_TOKEN`.
+2. Copy the `ghcr.io/...@sha256:...` reference from the successful run's summary
+   into `.github/ci-image/reference`. Leave previously pinned versions available
+   for open branches. A rollback uses the previous digest, without rebuilding.
+3. Check the image consumers on the integration PR. Linux browser checks compare
+   the installed root Playwright version with the version baked into the image,
+   so a mismatched lockfile fails before tests or receipt reuse.
+
+### Legacy Node.js archives
+
+Runtime tests and the direct Root TV candidate use the same Actions cache for
+the pinned Linux x64 Node.js archives. The key includes the SHA-256 manifest.
+The shared action validates cached bytes, downloads missing or damaged archives,
+and checks each archive before extracting it into the job's temporary directory.
+GitHub's usual branch and pull request cache scopes apply.
+
 ### Installer test timings and skips
 
 Fresh runtime installer shards and desktop build host tests retain
@@ -144,9 +196,9 @@ The frozen desktop runtime workflow cancels superseded runs for the same PR.
 Manual dispatches use independent concurrency groups. Candidate builds, signed
 QA and release publication keep their existing non-cancelling behavior.
 
-Build, browser and runtime jobs cache npm downloads and pip downloads/wheels
-through the existing setup actions. Keys include the lockfile or the applicable
-requirements files; the setup actions also partition caches by platform/runtime.
+Build, browser and runtime jobs cache npm downloads and pip downloads/wheels.
+Keys include the lockfile or the applicable requirements files; the setup actions
+also partition their caches by platform/runtime.
 Clean `npm ci` and declared pip installs still run. The Android build uses the
 setup-java Gradle cache keyed by Android build scripts, Gradle properties and
 wrapper version. These are dependency caches, not cached acceptance evidence;
@@ -214,11 +266,25 @@ installer and device runtime retain all four shards. The workflow invokes
 (which would run everything). Linux ownership verification is part of the primary
 `tv-runtime` unit. Pinned legacy Node downloads are needed only for fresh units.
 
-Browser core (legacy build, geometry, settings and development UI) is separate
-from full-only theme regressions. The complete candidate runs missing theme work;
-it does not rerun matching browser core. Optional ARM Python, including privileged
-provisioning checks, is another indivisible unit. Dependencies, actual Chromium/
-Playwright and QEMU/sysroot versions are identified before evidence lookup.
+Browser core (legacy build, geometry, settings and development UI) runs in
+`browser-core`. Full candidates also run three `browser-themes` shards in
+parallel. The `browser` job requires core success and, for a full candidate,
+success of the entire theme matrix. Each shard can reuse only a receipt from
+the corresponding successful full-candidate job.
+
+`scripts/test-browser-themes.py` partitions the existing
+`npm run test:themes:browser` command chain. The initial weights in
+`tests/themes/browser-timings.json` come from intervals between each command's
+last output. They allocate about 318 seconds of the 955-second sample to each
+shard, before runner setup.
+[Serial CI run](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/43030134684/job/130554971664)
+
+Use the per-command durations in new job logs to update the weights. New
+commands without a recorded duration use a 20-second weight.
+
+Optional ARM Python, including privileged provisioning checks, is another
+indivisible unit. Dependencies, actual Chromium/Playwright and QEMU/sysroot
+versions are identified before evidence lookup.
 Primary runtime fingerprints also probe the actual system Chrome channel used by
 preview and installer UI tests. A missing/unavailable browser fingerprint forces
 fresh checks and cannot produce a reusable receipt; an unknown value never

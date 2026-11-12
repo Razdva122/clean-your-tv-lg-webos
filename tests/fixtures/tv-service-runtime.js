@@ -37,7 +37,11 @@ var responses, requested;
 https.get = function (options, callback) {
   requested.push(options);
   assert.strictEqual(options.rejectUnauthorized, true);
-  assert.ok(options.ca.indexOf('BEGIN CERTIFICATE') >= 0);
+  assert.ok(Array.isArray(options.ca) && options.ca.length > 1);
+  options.ca.forEach(function (cert) {
+    assert.strictEqual(cert.indexOf('-----BEGIN CERTIFICATE-----'), 0);
+    assert.strictEqual(cert.lastIndexOf('-----BEGIN CERTIFICATE-----'), 0);
+  });
   var reply = responses.shift();
   assert.ok(reply, 'unexpected network request');
   var request = new EventEmitter();

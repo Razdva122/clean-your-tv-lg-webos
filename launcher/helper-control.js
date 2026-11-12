@@ -77,6 +77,41 @@
         .forEach(function (key) {
           result[key] = r && typeof r[key] === 'boolean' ? r[key] : null;
         });
+      var detail = r && r.diagnostic;
+      if (
+        home &&
+        outcome === 'rejected' &&
+        detail &&
+        detail.component === 'home' &&
+        [
+          'read',
+          'parse',
+          'write',
+          'chmod',
+          'rename',
+          'wait',
+          'authorize'
+        ].indexOf(detail.operation) >= 0 &&
+        [
+          'INVALID_STATE',
+          'ENOENT',
+          'EACCES',
+          'EPERM',
+          'TIMEOUT',
+          'BUSY',
+          'CALLER_DENIED'
+        ].indexOf(detail.code) >= 0
+      ) {
+        result.diagnostic = { operation: detail.operation, code: detail.code };
+        if (
+          detail.code === 'INVALID_STATE' &&
+          typeof r.channelMode === 'number' &&
+          r.channelMode >= 0 &&
+          r.channelMode <= 4095 &&
+          Math.floor(r.channelMode) === r.channelMode
+        )
+          result.diagnostic.channelMode = r.channelMode.toString(8);
+      }
       return result;
     }
     function renderDiagnostics() {
@@ -114,9 +149,13 @@
       });
       if (!on && document.activeElement !== details) focus(index);
     }
-    function refresh() {
+    function refresh(retried) {
       var request = ++generation;
       checking(true);
+      buttons[2].hidden = true;
+      if (index === 2) focus(0);
+      buttons[1].disabled = true;
+      status.textContent = t('Checking Home control…');
       diagnostic = {
         schema: 1,
         source: 'home-helper-panel',
@@ -124,10 +163,6 @@
         home_status: safeStatus(null, null, true)
       };
       renderDiagnostics();
-      buttons[2].hidden = true;
-      if (index === 2) focus(0);
-      buttons[1].disabled = true;
-      status.textContent = t('Checking Home control…');
       rpc(
         'luna://com.local.nativehome.service/status',
         {},
@@ -135,22 +170,7 @@
           if (request !== generation || panel.hidden) return;
           diagnostic.helper_status = safeStatus(r, outcome, false);
           renderDiagnostics();
-          // A service refusal does not establish whether the independent Home broker works.
-          var refused = outcome === 'rejected';
-          if (
-            !refused &&
-            (!r ||
-              r.returnValue !== true ||
-              (r.running !== undefined && typeof r.running !== 'boolean'))
-          ) {
-            status.textContent = t(
-              'Helper status could not be checked on this TV. Start Helper only when you are ready to use Home control again.'
-            );
-            buttons[2].hidden = false;
-            checking(false);
-            return;
-          }
-          if (!refused && r.blocked) {
+          if (outcome === 'success' && r.blocked === true) {
             status.textContent = t(
               'Helper was stopped for safety. Start it only when you are ready to use Home control again.'
             );
@@ -158,46 +178,62 @@
             checking(false);
             return;
           }
-          // Published Helper 0.6.17 omits running; homeStatus confirms control is responding.
-          // A jailed service (webOS 3.x) cannot see the controller and reports running:false,
-          // so only a homeStatus failure confirms that Helper is stopped.
+          var helperKnown =
+            outcome === 'success' &&
+            (r.running === undefined || typeof r.running === 'boolean');
+          // The independent Home broker can answer even when Helper status is
+          // unavailable or a jailed Helper service reports running:false.
           diagnostic.home_status = safeStatus(null, 'pending', true);
           renderDiagnostics();
           rpc(
             'luna://com.gathin.tvhome.renewal/homeStatus',
             {},
-            function (s, outcome) {
+            function (s, homeOutcome) {
               if (request !== generation || panel.hidden) return;
-              checking(false);
-              diagnostic.home_status = safeStatus(s, outcome, true);
+              diagnostic.home_status = safeStatus(s, homeOutcome, true);
               renderDiagnostics();
-              if (
-                !refused &&
+              var failure = s && s.diagnostic;
+              var homeBusy =
+                homeOutcome === 'rejected' &&
+                failure &&
+                failure.component === 'home' &&
+                failure.code === 'BUSY';
+              var homeKnown =
+                homeOutcome === 'success' && typeof s.enabled === 'boolean';
+              var stopped =
+                helperKnown &&
                 r.running === false &&
-                (!s || s.returnValue !== true)
-              ) {
-                status.textContent = t(
-                  'Helper is stopped. Start it to use the Home button and return from apps.'
-                );
-                buttons[2].hidden = false;
+                homeOutcome === 'rejected' &&
+                !homeBusy;
+              if (!retried && !homeKnown && !stopped) {
+                setTimeout(function () {
+                  if (request === generation && !panel.hidden) refresh(true);
+                }, 1000);
                 return;
               }
-              buttons[1].disabled =
-                !s || s.returnValue !== true || typeof s.enabled !== 'boolean';
-              if (refused && buttons[1].disabled) {
+              buttons[1].disabled = !homeKnown;
+              if (homeKnown) {
+                status.textContent = t(
+                  s.enabled
+                    ? 'Home and return from apps open Clean Your TV.'
+                    : 'Home and return from apps open LG Home.'
+                );
+              } else if (!helperKnown) {
                 status.textContent = t(
                   'Helper status could not be checked on this TV. Start Helper only when you are ready to use Home control again.'
                 );
                 buttons[2].hidden = false;
-                return;
+              } else if (stopped) {
+                status.textContent = t(
+                  'Helper is stopped. Start it to use the Home button and return from apps.'
+                );
+                buttons[2].hidden = false;
+              } else {
+                status.textContent = t(
+                  'Home status is unknown. The Home button may still work.'
+                );
               }
-              status.textContent = t(
-                buttons[1].disabled
-                  ? 'Home status is unknown. The Home button may still work.'
-                  : s.enabled
-                    ? 'Home and return from apps open Clean Your TV.'
-                    : 'Home and return from apps open LG Home.'
-              );
+              checking(false);
             }
           );
         }

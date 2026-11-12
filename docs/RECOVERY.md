@@ -350,6 +350,27 @@ Status, restore and removal do not download Python; referenced recovery runtimes
 are retained. For Root routing recovery, use the
 [Root restore commands](../root-edition/ROLLOUT.md#controls-and-recovery).
 
+## Standalone Root Updater rollback readiness
+
+Use the same trusted Root SSH connection if Root Updater reports
+`recovery-required` with `restored profile readiness unconfirmed` after a
+successful automatic rollback.
+
+```sh
+cytv recover-root-rollback --edition root
+```
+
+The command verifies both installer results, the restored Root package, the
+saved profile and LG Home routing. It archives the timed-out journal and
+restarts the restored launcher with a fresh 120-second readiness window.
+It uses the launcher's authenticated signal and the original Updater's
+completion path. Packages and the retained Updater stay installed.
+
+After recovery succeeds, return to Root Updater to check for updates.
+If Home was left off, use **Change Home** to enable it when ready.
+If recovery times out again, retain the journals and run `cytv status`.
+Rerunning the command during an open recovery window keeps its original deadline.
+
 ## Root System rollback readiness (candidate)
 
 <a id="root-system-rollback-readiness-candidate"></a>

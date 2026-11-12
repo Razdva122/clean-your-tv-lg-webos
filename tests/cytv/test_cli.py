@@ -10,13 +10,15 @@ from cytv import cli, state
 
 class CLITests(unittest.TestCase):
     def test_root_node_failure_can_complete_no_root_using_the_same_ssh(self):
-        from tests.cytv.test_operations import OperationTests, Remote
+        from tests.cytv.test_operations import OperationTests, Remote, split_observer_command
         from cytv import no_root_observer
         import shlex
         fixture=OperationTests()
         fixture.setUp()
         self.addCleanup(fixture.doCleanups)
-        fixture.root_bundle()
+        # Root graphics admission happens before the Node check. The fallback
+        # never stages Root Updater, so only the graphics bundle is needed.
+        fixture.root_graphics_bundle()
         (fixture.payload/'fallback.png').write_bytes(b'fallback')
         class LegacyTV(Remote):
             root=True
@@ -25,7 +27,7 @@ class CLITests(unittest.TestCase):
                 if command == '/usr/bin/node --version':return 'v0.12.2'
                 if 'CYTV_FRESH_ROOT' in command:return 'CYTV_FRESH_ROOT'
                 if 'process.versions.node.split' in command and 'CYTV_ROOT_READY' in command:return 'CYTV_ROOT_MISSING'
-                words=shlex.split(command)
+                words=split_observer_command(command)
                 if '-e' in words and no_root_observer.ROOT_PROGRAM in words[words.index('-e')+1]:
                     index=words.index('-e')+1
                     words[index]=words[index].replace(no_root_observer.ROOT_PROGRAM,no_root_observer.PROGRAM)
@@ -89,20 +91,24 @@ class CLITests(unittest.TestCase):
             code, _, calls = self.run_cli(['replace-system-updater', '--host', '192.0.2.10', '--edition', 'root', '--data-dir', tmp], [''])
             self.assertEqual(code, 0); self.assertFalse(calls); installer.assert_not_called()
 
-    def test_explicit_system_rollback_recovery_never_starts_installation(self):
+    def test_explicit_rollback_readiness_recovery_never_starts_installation(self):
         from unittest.mock import MagicMock
-        with tempfile.TemporaryDirectory() as tmp, patch('cytv.cli.Installer') as installer, patch('cytv.cli.package.verify_payload', return_value={}):
-            code, output, _ = self.run_cli(['recover-system-rollback', '--host', '192.0.2.10', '--edition', 'root', '--data-dir', tmp, '--yes'], remote=MagicMock())
-            self.assertEqual(code, 0, output)
-            installer.return_value.recover_system_rollback.assert_called_once_with()
-            installer.return_value.install.assert_not_called()
-        for edition, pending in [('no-root', False), ('root', True)]:
-            with tempfile.TemporaryDirectory() as tmp, patch('cytv.cli.Installer') as installer:
-                if pending: state.Store(tmp).begin(state.target('192.0.2.10', edition), 'install')
-                code, _, calls = self.run_cli(['recover-system-rollback', '--host', '192.0.2.10', '--edition', edition, '--data-dir', tmp, '--yes'])
-                self.assertEqual(code, 2)
-                self.assertFalse(calls)
-                installer.return_value.recover_system_rollback.assert_not_called()
+        for command, method in [('recover-system-rollback', 'recover_system_rollback'),
+                                ('recover-root-rollback', 'recover_root_rollback')]:
+            with self.subTest(command=command):
+                with tempfile.TemporaryDirectory() as tmp, patch('cytv.cli.Installer') as installer, patch('cytv.cli.package.verify_payload', return_value={}):
+                    code, output, _ = self.run_cli([command, '--host', '192.0.2.10', '--edition', 'root', '--data-dir', tmp, '--yes'], remote=MagicMock())
+                    self.assertEqual(code, 0, output)
+                    getattr(installer.return_value, method).assert_called_once_with()
+                    installer.return_value.install.assert_not_called()
+                for edition, pending in [('no-root', False), ('root', True)]:
+                    with tempfile.TemporaryDirectory() as tmp, patch('cytv.cli.Installer') as installer:
+                        if pending:
+                            state.Store(tmp).begin(state.target('192.0.2.10', edition), 'install')
+                        code, _, calls = self.run_cli([command, '--host', '192.0.2.10', '--edition', edition, '--data-dir', tmp, '--yes'])
+                        self.assertEqual(code, 2)
+                        self.assertFalse(calls)
+                        getattr(installer.return_value, method).assert_not_called()
 
     def test_new_recovery_attempt_is_explicit_and_scoped_to_recovery(self):
         from unittest.mock import MagicMock
@@ -581,7 +587,7 @@ class CLITests(unittest.TestCase):
             questions, output = [], []
             answers = iter([''])
             def ask(prompt):
-                if 'Customize Clean Your TV?' in prompt:
+                if any(text in prompt for text in ('Customize Clean Your TV?', 'Apply optional Debloat settings?')):
                     return 'n'
                 questions.append(prompt)
                 return next(answers)
@@ -731,7 +737,7 @@ class CLITests(unittest.TestCase):
         # Existing scenarios keep their settings; dedicated setup tests exercise opt-in.
         def ask(prompt):
             from cytv.i18n import translate
-            return 'n' if translate('Customize Clean Your TV?') in prompt else next(iterator)
+            return 'n' if any(translate(text) in prompt for text in ('Customize Clean Your TV?', 'Apply optional Debloat settings?')) else next(iterator)
         code = cli.main(argv, ask=ask, write=lambda message: output.write(str(message) + '\n'), connect=connect, search=search, inspect=inspect)
         return code, output.getvalue(), calls
 

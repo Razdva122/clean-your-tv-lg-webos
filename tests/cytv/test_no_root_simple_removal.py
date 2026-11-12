@@ -10,6 +10,7 @@ import subprocess
 import tempfile
 import time
 import unittest
+from unittest.mock import patch
 
 from cytv import operations
 from cytv import package
@@ -164,6 +165,63 @@ class SimpleRemoval(unittest.TestCase):
         self.assertFalse(any(uri.endswith('/launch') and body['id']=='com.webos.app.livetv'
                              for uri,body in self.remote.calls))
 
+    def test_inherited_removal_uses_paired_foreground_when_public_luna_refuses(self):
+        (self.root / 'proc').mkdir()
+        self.store.begin(self.profile, 'install', stage='pending')
+        self.legacy_home()
+        original = self.remote.luna
+
+        def luna(uri, payload, **kwargs):
+            if uri.endswith('/getForegroundAppInfo'):
+                raise TVRejected('Rejected', {'returnValue': False, 'errorCode': -1}, uri)
+            return original(uri, payload, **kwargs)
+
+        self.remote.luna = luna
+        key_file = self.store.device_dir(self.profile) / 'ssap.json'
+        saved_key = '{"key":"saved-key"}\n'
+        key_file.write_text(saved_key)
+        requests = []
+
+        class Socket:
+            denied = True
+
+            def send(self, raw):
+                self.request = json.loads(raw)
+                requests.append(self.request)
+
+            def recv(self, timeout):
+                request_id = self.request['id']
+                if self.request['type'] == 'register':
+                    return json.dumps({'id': request_id, 'type': 'registered',
+                                       'payload': {'client-key': 'saved-key'}})
+                payload = {'appId': 'com.webos.app.livetv'}
+                if self.denied:
+                    payload['returnValue'] = False
+                return json.dumps({'id': request_id, 'type': 'response', 'payload': payload})
+
+            def close(self):
+                pass
+
+        socket = Socket()
+        with patch('websockets.sync.client.connect', return_value=socket) as connect:
+            with self.assertRaises(UserError) as caught:
+                self.remove()
+            self.assertEqual(caught.exception.reason_code, 'controls-unverified')
+            self.assertEqual(self.store.pending(self.profile)['stage'], 'requested')
+            self.assertFalse(any(uri.endswith('/dev/remove') for uri, _ in self.remote.calls))
+            socket.denied = False
+            self.assertTrue(self.remove()['restart_required'])
+            self.reboot()
+            self.assertTrue(self.remove()['verified_clean'])
+
+        self.assertIsNone(self.store.pending(self.profile))
+        self.assertEqual(key_file.read_text(), saved_key)
+        self.assertEqual([call.args[0] for call in connect.call_args_list], ['wss://tv.local:3001'] * 3)
+        for register, read in zip(requests[::2], requests[1::2]):
+            self.assertEqual(register['payload']['client-key'], 'saved-key')
+            self.assertNotIn('pairingType', register['payload'])
+            self.assertEqual(read['uri'], 'ssap://com.webos.applicationManager/getForegroundAppInfo')
+
     def test_stock_source_launch_waits_for_fresh_foreground_confirmation(self):
         self.remote.apps=set(self.cleanup.APPS[:2]);state=self.legacy_home('com.gathin.tvhome')
         original=self.remote.luna
@@ -261,7 +319,7 @@ class SimpleRemoval(unittest.TestCase):
         (proc/'cmdline').write_text('/usr/bin/node\0'+str(self.root/'developer/apps/usr/palm/services/com.gathin.tvhome.renewal/service.js')+'\0')
         self.remote.apps={'com.gathin.tvhome'}
         self.assertTrue(self.remove()['restart_required'])
-        self.assertIsNotNone(self.store.pending(self.profile))
+        self.assertEqual(self.store.pending(self.profile)['cleanup_restart_triggers'], ['process-idle-unverified'])
 
     def test_lost_same_boot_marker_release_never_proves_a_restart(self):
         (self.root/'proc').mkdir()
@@ -422,6 +480,8 @@ class SimpleRemoval(unittest.TestCase):
         self.assertEqual((self.root/'volatile').stat().st_mode&0o7777,0o111)
 
     def test_restricted_tmp_keeps_unresolved_install_until_changed_kernel(self):
+        from cytv.diagnostics import create_report
+
         self.remote.volatile_mode=0o111
         (self.root/'proc').mkdir()
         self.store.begin(self.profile,'install',stage='submitted')
@@ -433,6 +493,10 @@ class SimpleRemoval(unittest.TestCase):
         self.assertIsNone(pending.get('cleanup_boot_id'),'No-root kernel identity must have one current storage location')
         with self.assertRaises(UserError) as caught:self.remove()
         self.assertEqual(caught.exception.no_root_cleanup['reason'],'kernel-boot-unchanged')
+        for action, error in (('uninstall', caught.exception), ('status', None)):
+            with self.subTest(action=action):
+                report = json.loads(create_report(self.store, action, self.profile, action, error).read_text())
+                self.assertEqual(report['removal']['restart_triggers'], ['prior-operation-unresolved'])
         self.assertIsNotNone(self.store.pending(self.profile))
         self.remote.boot='22222222-2222-2222-2222-222222222222'
         self.assertTrue(self.remove()['verified_clean'])
@@ -890,6 +954,7 @@ class SimpleRemoval(unittest.TestCase):
                 broken=self.own_file('apps/usr/palm/services/com.local.nativehome.service/service.js',"require('missing dependency');")
                 self.remote.broken_service=True
                 self.assertTrue(self.remove()['restart_required']);self.assertTrue(broken.exists())
+                self.assertEqual(self.store.pending(self.profile)['cleanup_restart_triggers'], ['startup-disable-unverified'])
                 self.remote.boot='33333333-3333-3333-3333-333333333333' if registered else '44444444-4444-4444-4444-444444444444'
                 self.assertTrue(self.remove()['verified_clean']);self.assertFalse(broken.exists())
 
@@ -950,6 +1015,7 @@ class SimpleRemoval(unittest.TestCase):
         source=self.own_file('.cytv-installer/operations/'+'a'*32+'/changed-private-data.json','old unknown data')
         self.remote.apps={'com.local.nativehome'}
         self.assertTrue(self.remove()['restart_required'])
+        self.assertEqual(self.store.pending(self.profile)['cleanup_restart_triggers'], ['resident-installer-evidence'])
         self.assertTrue(source.exists())
         self.assertFalse(any(uri.endswith('/dev/remove') for uri,_ in self.remote.calls))
         self.reboot();self.assertTrue(self.remove()['verified_clean']);self.assertFalse(source.exists())
@@ -1057,6 +1123,7 @@ class SimpleRemoval(unittest.TestCase):
         proc=self.root/'proc'/str(os.getpid());proc.mkdir(parents=True);(proc/'cmdline').write_text(str(pid.parent.parent/'native.js')+'\0')
         self.remote.transform=lambda code:code.replace('Date.now()+8000','Date.now()+100')
         self.assertTrue(self.remove()['restart_required']);self.assertTrue(pid.exists())
+        self.assertEqual(self.store.pending(self.profile)['cleanup_restart_triggers'], ['controller-still-running'])
         self.boot_marker().unlink()  # New volatile lifetime, same kernel UUID.
         self.assertTrue(self.remove()['restart_required']);self.assertTrue(pid.exists())
         self.assertTrue(self.boot_marker().exists(),'a still-running controller requires a new captured restart baseline')
@@ -1107,6 +1174,8 @@ class SimpleRemoval(unittest.TestCase):
                     self.remote.apps={'com.local.nativehome'} if registered else set()
                     start=len(self.remote.calls)
                     first=self.remove();self.assertTrue(first['restart_required']);self.assertFalse(first['verified_clean'])
+                    if mode == 0o000:
+                        self.assertIn('protected-package-access', self.store.pending(self.profile)['cleanup_restart_triggers'])
                     self.remote.boot=('33333333-3333-3333-3333-333333333333' if self.remote.boot!=
                                       '33333333-3333-3333-3333-333333333333' else '44444444-4444-4444-4444-444444444444')
                     self.assertTrue(self.remove()['verified_clean'])

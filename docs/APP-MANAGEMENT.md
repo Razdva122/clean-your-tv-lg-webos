@@ -8,6 +8,11 @@ The **+ / Add app** tile stays last when shown. It lists installed apps which
 are not on Home, including apps previously hidden here. Selecting one adds
 it at the end, before + when shown. This does not install software.
 
+To pin a launchable HDMI input, select it in **+ / Add app**. Press OK on
+its tile to switch inputs. Hold OK to move or hide it like an app. Move it
+to the first position to give it first focus on Home startup. The tile uses
+the TV’s input label and shows a dot when the TV reports it connected.
+
 To hide an app, pick it up and move down beyond the last row of apps to
 **Hide from Home**, then press OK. The pointer can select this button directly.
 The app remains installed on the TV. **Undo** receives focus immediately;
