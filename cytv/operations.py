@@ -184,9 +184,10 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
             raise UserError('Previous operation is unresolved. Run cytv status or cytv restore; do not retry installation.', reason_code='pending-operation')
         from .root_rollback_recovery import program
         try:
+            # Allow time for package and registration checks around the 120-second window.
             reply = json.loads(self.remote.run(
                 self._python_command([self._python(UPDATER_STATE), '-I', '-B', '-']),
-                data=program().encode(), timeout=200))
+                data=program().encode(), timeout=360))
             result = reply.get('result')
             if (reply.get('returnValue') is not True or not isinstance(result, dict)
                     or result.get('phase') != 'rolled-back' or result.get('homeResumePhase') != 'rolled-back'):

@@ -84,7 +84,14 @@ def recover(manager, device, store, ownership, check, app, launch,
                 if tx['phase'] == tx.get('homeResumePhase') == record['stage'] == 'rolled-back':
                     return tx
                 raise ValueError('Nonterminal Root Updater ownership required')
-            if tx['phase'] == 'recovery-required':
+            # An interrupted command may leave the prior window armed.
+            # A receipt accepted within that window still finalizes normally.
+            expired_without_ready = (
+                tx['phase'] == 'verifying-rollback'
+                and manager._now() >= tx['deadline']
+                and manager._receipt(tx, 'ready') is None
+            )
+            if tx['phase'] == 'recovery-required' or expired_without_ready:
                 started, deadline = tx.get('launched'), tx.get('deadline')
                 if (type(started) not in (int, float) or not math.isfinite(started)
                         or started < 0 or deadline != started + health_seconds or manager._now() < deadline):
