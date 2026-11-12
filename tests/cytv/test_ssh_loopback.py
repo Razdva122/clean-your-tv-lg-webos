@@ -261,6 +261,7 @@ class SSHLoopbackTests(unittest.TestCase):
             client = SSH.connect(profile, Path(tmp), no_password, trust)
             client.close()
             pinned = (Path(tmp) / 'known_hosts').read_bytes()
+            original_host_key = current[0]
             current[0] = paramiko.RSAKey.generate(2048)
             # A changed global record cannot override the installer's saved pin.
             standard.add(name, current[0].get_name(), current[0])
@@ -273,6 +274,81 @@ class SSHLoopbackTests(unittest.TestCase):
             self.assertEqual(len(auth_events), auth_count)
             self.assertEqual(len(prompts), 1)
             self.assertEqual((Path(tmp) / 'known_hosts').read_bytes(), pinned)
+
+            from cytv.cli import main
+            from cytv.transport import fingerprint
+            store = state.Store(Path(tmp) / 'profiles')
+            store.save(profile)
+            store.begin(profile, 'uninstall', product_operation='a' * 32, stage='coordinator-submitted')
+            directory = store.device_dir(profile)
+            state.private_write(directory / 'known_hosts', pinned)
+            state.private_write(directory / 'original-receipt.json', b'original recovery evidence')
+            original = {path: path.read_bytes() for path in directory.iterdir()}
+            local = ['--language', 'en', '--data-dir', str(store.root), '--host', profile['host'], '--port', str(profile['port'])]
+            review = ['trust-root-ssh', *local]
+            review_path = directory / 'ssh-identity-review.json'
+            output = []
+            def no_connect(*args, **kwargs):
+                self.fail('Recovery attempted an authenticated connection')
+
+            self.assertEqual(main(['recover', '--edition', 'root', '--non-interactive', *local],
+                                  write=output.append, secret=no_password), 1)
+            self.assertEqual(main(review + ['--non-interactive', '--yes'], ask=no_connect,
+                                  write=output.append, secret=no_password), 2)
+            self.assertEqual(main(review, ask=lambda _: '', write=output.append, secret=no_password), 130)
+            rotated_host_key = current[0]
+            current[0] = original_host_key
+            self.assertEqual(main(review, ask=lambda _: fingerprint(original_host_key), write=output.append,
+                                  secret=no_password), 2)
+            current[0] = rotated_host_key
+            self.assertFalse(review_path.exists())
+            with patch.object(paramiko.Transport, 'start_client', side_effect=EOFError):
+                self.assertEqual(main(review, ask=lambda _: fingerprint(current[0]), write=output.append,
+                                      secret=no_password), 2)
+            bad_pin = f'{name} ssh-rsa not-valid-base64\n'.encode()
+            state.private_write(directory / 'known_hosts', bad_pin)
+            self.assertEqual(main(review, ask=no_connect, write=output.append, secret=no_password), 2)
+            self.assertEqual((directory / 'known_hosts').read_bytes(), bad_pin)
+            state.private_write(directory / 'known_hosts', pinned)
+            wrong = fingerprint(paramiko.RSAKey.generate(2048))
+            self.assertEqual(main(review + ['--yes'], ask=lambda _: wrong, write=output.append,
+                                  secret=no_password), 2)
+            self.assertFalse(review_path.exists())
+            self.assertEqual(main(review, ask=lambda _: fingerprint(current[0]), write=output.append,
+                                  secret=no_password), 0, output)
+            first_review = review_path.read_bytes()
+            self.assertEqual(main(review, ask=lambda _: '', write=output.append, secret=no_password), 130)
+            self.assertEqual(review_path.read_bytes(), first_review)
+            with patch('cytv.ssh_identity_review.presented_key', side_effect=AssertionError('Unexpected connection')):
+                self.assertEqual(main(['trust-root-ssh', '--data-dir', str(store.root),
+                                       '--host', profile['host'], '--port', str(profile['port'] % 65535 + 1)],
+                                      ask=no_connect, write=output.append), 2)
+                self.assertEqual(main(review, ask=lambda _: fingerprint(current[0])[:-1],
+                                      write=output.append, secret=no_password), 2)
+                state.private_write(directory / 'operation.json', original[directory / 'operation.json'] + b' ')
+                self.assertEqual(main(review, ask=no_connect, write=output.append, secret=no_password), 2)
+                state.private_write(directory / 'operation.json', original[directory / 'operation.json'])
+            self.assertEqual(review_path.read_bytes(), first_review)
+            self.assertIn(fingerprint(current[0]).encode(), first_review)
+            self.assertTrue('uninstall remains blocked' in ' '.join(' '.join(output).split()))
+
+            accepted = fingerprint(current[0])
+            current[0] = paramiko.RSAKey.generate(2048)
+            self.assertEqual(main(review, ask=lambda _: accepted, write=output.append, secret=no_password), 2)
+            self.assertEqual(review_path.read_bytes(), first_review)
+            self.assertEqual(main(review, ask=lambda _: fingerprint(current[0]), write=output.append,
+                                  secret=no_password), 0)
+            self.assertIn(fingerprint(current[0]).encode(), review_path.read_bytes())
+
+            # Even a return to the original key cannot unlock the reviewed profile.
+            current[0] = original_host_key
+            for command in ('recover', 'status', 'uninstall'):
+                self.assertEqual(main([command, '--edition', 'root', '--non-interactive', '--yes', *local],
+                                      write=output.append, connect=no_connect), 2)
+            with self.assertRaisesRegex(UserError, 'uninstall remains blocked'):
+                SSH.connect(profile, directory, no_password, trust, persist=False)
+            self.assertEqual({path: path.read_bytes() for path in original}, original)
+            self.assertEqual(len(auth_events), auth_count)
         stop.set()
 
 
