@@ -725,7 +725,7 @@ class Wizard(QMainWindow):
                     self.button('Open System Settings', self.open_network_settings, layout=actions)
                 self.button('Change connection', lambda: self.edit_connection(profile), layout=actions)
             report_actions = None
-            if connection_help:
+            if connection_help or (retry_removal and self.report):
                 report_actions = QHBoxLayout()
                 self.form_layout.addLayout(report_actions)
             if self.report:
@@ -735,8 +735,11 @@ class Wizard(QMainWindow):
             elif failed:
                 self.subtitle.setText(tr('A diagnostic report could not be created. Include the visible error when opening an issue.'))
             if (failed and not cleanup) or self.check_results.get('home-button', {}).get('status') == 'fail':
-                self.button('Open an issue', lambda: QDesktopServices.openUrl(QUrl(diagnostics.ISSUE_URL)), layout=report_actions)
-            self.button('Back to start', self.home, not connection_help and not retry_removal and not recover and not ((failed or setup_review) and self.report))
+                self.button('Open an issue', lambda: QDesktopServices.openUrl(QUrl(diagnostics.ISSUE_URL)),
+                            layout=report_actions if connection_help else None)
+            self.button('Back to start', self.home,
+                        not connection_help and not retry_removal and not recover and not ((failed or setup_review) and self.report),
+                        layout=report_actions if retry_removal else None)
             failed_checks = [result for result in self.check_results.values() if result['status'] in ('fail', 'unknown')]
             if failed and failed_checks:
                 self.subtitle.setText(tr('Failed') + ': ' + ', '.join(tr(result['label']) for result in failed_checks) + '\n' + self.subtitle.text())

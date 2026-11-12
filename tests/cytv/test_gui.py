@@ -358,6 +358,8 @@ class GuiTests(unittest.TestCase):
         w.receive('done', 2)
         self.app.processEvents()
 
+        actions = {button.text(): button for button in w.form.findChildren(QPushButton)}
+        self.assertEqual(actions['Save diagnostic report…'].y(), actions['Back to start'].y())
         heading = w.content.cursorRect(w.content.document().find('Could not complete this step'))
         message = w.content.cursorRect(w.content.document().find(error))
         self.assertTrue(w.content.viewport().rect().contains(heading.united(message)))
