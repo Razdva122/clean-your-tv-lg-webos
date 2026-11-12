@@ -261,12 +261,7 @@ def recover(installer, ask, write, non_interactive=False, initial_observation=No
             require_removal_idle(installer.remote, installer.profile, pending)
         except TVRejected as error:
             if (pending['action'] != 'install' or 'recovery_protocol' in pending
-                    or error.luna['operation'] != 'package-status'
-                    or error.luna['return_value'] is not False
-                    or error.luna['error_code'] != -1
-                    or error.luna['details_error_code'] is not None
-                    or error.luna['state'] != 'unknown'
-                    or error.luna['status_value'] is not None):
+                    or not error.package_status_denied):
                 raise
             # Developer Mode may deny the global monitor. Treat this as a
             # separate clean-removal goal with its own checks and confirmation.

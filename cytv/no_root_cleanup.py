@@ -440,13 +440,19 @@ def continue_removal(installer, expected_pending):
     pending = installer.store.pending(installer.profile)
     if pending != expected_pending or not pending or pending.get('recovery_protocol') != 'clean-removal-v1':
         raise UserError('Removal evidence changed. Recovery data was kept.', reason_code='pending-operation')
+    previous = pending.get('previous')
+    legacy_install = (isinstance(previous, dict) and previous.get('action') == 'install'
+                      and previous.get('stage') == 'pending' and 'recovery_protocol' not in previous)
     current = _device(installer, 'inventory')
-    _check_access(current, defer_packages=True)
+    if not legacy_install:
+        _check_access(current, defer_packages=True)
     installer.store.checkpoint(installer.profile, cleanup_staging_ids=current['staging_ids'])
     app_info = installer.installed_apps()
     apps = {app['id'] for app in app_info}
     carriers = {app['id'] for app in app_info if app.get('title') == 'Clean Your TV cleanup' and app.get('visible') is False}
-    if any(app in apps for app in ('com.cleanyourtv.root.preview', 'com.cleanyourtv.root.updater', 'com.cleanyourtv.system.updater')):
+    root_apps = apps.intersection(('com.cleanyourtv.root.preview', 'com.cleanyourtv.root.updater',
+                                   'com.cleanyourtv.system.updater'))
+    if root_apps and not legacy_install:
         raise UserError(ROOT_MESSAGE, reason_code='root-access-required')
     empty = (pending.get('stage') == 'requested' and not pending.get('previous') and not pending.get('cleanup_boot_proof')
              and not current['blocked'] and not current['present'] and not apps.intersection(APPS)
@@ -485,15 +491,21 @@ def continue_removal(installer, expected_pending):
     # A durable genuine restart avoids another power cycle after host failure,
     # but its reuse must still pass fresh process checks below.
     reused_restart = proof is not None and pending.get('cleanup_boot_verified') is True
-    if reused_restart:
+    if reused_restart and not legacy_install:
         restarted = True
-    elif proof is None or pending.get('stage') == 'verified-clean' or pending.get('cleanup_boot_release_started'):
+    elif (proof is None or pending.get('cleanup_boot_release_started')
+          or (pending.get('stage') == 'verified-clean' and not reused_restart)):
         # A missing marker after our own release is never evidence of a boot.
         # Recapture before replaying current controls/process/absence checks.
         proof = capture_boot()
         restarted = False
     else:
-        restarted = _device(installer, 'boot-probe', proof=proof)['boot_restarted'] is True
+        boot = _device(installer, 'boot-probe', proof=proof)
+        # For an untracked legacy install, a missing volatile marker alone
+        # leaves it ambiguous whether the old package writer was stopped.
+        boot_id = boot.get('boot_id')
+        restarted = boot['boot_restarted'] is True and (not legacy_install or (
+            boot_id is not None and boot_id == current.get('boot_id') and boot_id != proof['kernel']))
         if (proof.get('schema') == 2 and not restarted and
                 (pending.get('stage') == 'restart-required' or pending.get('cleanup_restart_first'))):
             error = UserError('The TV restart could not be verified. Save the diagnostic report and keep recovery data.',
@@ -501,6 +513,24 @@ def continue_removal(installer, expected_pending):
             error.no_root_cleanup = no_root_cleanup_details({'action':'boot-probe','step':'boot-proof',
                 'failure':'runtime-error','reason':'kernel-boot-unchanged'})
             raise error
+    if legacy_install:
+        # A missing SAM entry can skip dev/remove and its busy check. Wait
+        # for a verified restart before touching controls or sweeping files.
+        if not restarted:
+            return require_restart(['prior-operation-unresolved'], before_packages=True)
+        stage = pending.get('stage')
+        if stage == 'restart-required' or pending.get('removal_reason') == 'restart-required':
+            installer.store.checkpoint(installer.profile, stage='requested' if stage == 'restart-required' else stage,
+                                       removal_reason='removal-recheck-required')
+        from .operations import require_removal_idle
+        try:
+            require_removal_idle(installer.remote, installer.profile, pending)
+        except TVRejected as error:
+            if not error.package_status_denied:
+                raise
+        _check_access(current, defer_packages=True)
+        if root_apps:
+            raise UserError(ROOT_MESSAGE, reason_code='root-access-required')
     installer.progress('Restoring TV controls…')
     stopped = _device(installer, 'stop')
     _check_access(stopped, defer_packages=True)
@@ -538,7 +568,6 @@ def continue_removal(installer, expected_pending):
     installer.store.checkpoint(installer.profile, cleanup_inputs_pending=not inputs_removed)
     _restore_home(installer)
     installer.store.checkpoint(installer.profile, stage='controls-restored')
-    previous = pending.get('previous')
     resident = current.get('resident_installer') is True or current.get('external_update_hint') is not None
     if current.get('external_update_hint') is not None:
         installer.store.checkpoint(installer.profile, previous_update_status=current['external_update_hint'])
