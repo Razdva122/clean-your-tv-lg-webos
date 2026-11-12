@@ -1,74 +1,7 @@
 {
   "schema": 1,
-  "version": "1.18.1",
-  "changes": [
-    {
-      "pr": 544,
-      "issues": [
-        505
-      ],
-      "summary": "Recover No-root Home broker after directory mode drift (#505)"
-    },
-    {
-      "pr": 545,
-      "issues": [
-        472
-      ],
-      "summary": "Report restart triggers from the No-root cleanup adapter; the original Developer Mode recovery remains open"
-    },
-    {
-      "pr": 547,
-      "issues": [
-        101
-      ],
-      "summary": "Read interrupted native Root setup status without staging Python; the original deployment failure remains open"
-    },
-    {
-      "pr": 548,
-      "issues": [
-        355
-      ],
-      "summary": "Show unknown Change Home status in Root Settings"
-    },
-    {
-      "pr": 550,
-      "issues": [
-        434,
-        541
-      ],
-      "summary": "Allow No-root installs on confirmed ramfs"
-    },
-    {
-      "pr": 551,
-      "issues": [
-        101
-      ],
-      "summary": "Fix Root compositor auto-return after app exit"
-    },
-    {
-      "pr": 552,
-      "issues": [
-        541
-      ],
-      "summary": "Fix TLS and weather navigation on legacy webOS"
-    },
-    {
-      "pr": 553,
-      "issues": [],
-      "summary": "Fix Debloat defaults and writes over root SSH"
-    },
-    {
-      "pr": 554,
-      "issues": [],
-      "summary": "Stop Home Helper automatically before No-root reinstall"
-    }
-  ],
+  "version": null,
+  "changes": [],
   "excluded": [],
-  "acceptance": "Accepted on LG OLED55C3RLA (43.21.71, SDK 11.2.0), macOS ARM64, and the Android API 35 ARM64 emulator. Exact No-root install, active-Helper reinstall and removal, Debloat read/write and restore, signed Root installation and retained rollback, rendered profile retention, and Magic Remote Home and emergency exit passed. See [v1.18.1 candidate acceptance](https://github.com/Razdva122/clean-your-tv-lg-webos/blob/release/next/docs/history/2026-11-12-release-1.18.1-candidate.md) for hashes, matching legacy fixtures and scope.",
-  "build": {
-    "run_id": 43175770485,
-    "attempt": 1,
-    "source": "dd4b9caf0abf4f224db99b5525efd4ede5c0cc02"
-  },
-  "acceptance_build": "43175770485:1"
+  "acceptance": ""
 }
