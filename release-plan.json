@@ -1,7 +1,77 @@
 {
   "schema": 1,
-  "version": null,
-  "changes": [],
+  "version": "1.19.0",
+  "changes": [
+    {
+      "pr": 474,
+      "issues": [],
+      "summary": "Allow naming the Home screen in the Root installer"
+    },
+    {
+      "pr": 555,
+      "issues": [
+        397
+      ],
+      "summary": "Keep desktop installer recovery results readable on small displays"
+    },
+    {
+      "pr": 556,
+      "issues": [
+        454
+      ],
+      "summary": "Report rejected native Home permissions in Root preflight (#454)"
+    },
+    {
+      "pr": 557,
+      "issues": [
+        359
+      ],
+      "summary": "Offer No-root recovery when global package status is denied"
+    },
+    {
+      "pr": 559,
+      "issues": [
+        389
+      ],
+      "summary": "Retire orphaned CYTV Home filters during Root removal"
+    },
+    {
+      "pr": 560,
+      "issues": [],
+      "summary": "Document offline firmware reproduction for webOS issues"
+    },
+    {
+      "pr": 561,
+      "issues": [
+        519
+      ],
+      "summary": "Use the verified payload for Root doctor Home checks"
+    },
+    {
+      "pr": 562,
+      "issues": [],
+      "summary": "Open LG notifications from Home settings"
+    },
+    {
+      "pr": 563,
+      "issues": [
+        368
+      ],
+      "summary": "Verify changed Root SSH identity while retaining pending uninstall"
+    },
+    {
+      "pr": 564,
+      "issues": [
+        307
+      ],
+      "summary": "Require a verified reboot before legacy No-root cleanup"
+    },
+    {
+      "pr": 565,
+      "issues": [],
+      "summary": "Keep homepage previews large and record them in English"
+    }
+  ],
   "excluded": [],
   "acceptance": ""
 }
