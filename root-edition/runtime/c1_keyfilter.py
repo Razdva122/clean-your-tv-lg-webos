@@ -160,7 +160,7 @@ def stock_bsp_overlay(mounts, overlay, critical):
     return True
 
 
-def require_generic_environment():
+def require_generic_environment(chain=None):
     """Read-only admission. Never repair a foreign route, input or vendor file."""
     missing=luna('luna://com.webos.service.systemprofile/getProfiles',
                  {'names':['defaultApps','idleApp'],'subscribe':False},allow_failure=True)
@@ -215,7 +215,7 @@ def require_generic_environment():
     if (not isinstance(app,dict) or app.get('id')!=STOCK or app.get('type')!='native'
             or app.get('main') not in (str(legacy.TARGET),'file://'+str(legacy.TARGET))):
         raise ValueError('Stock native Home manifest not verified')
-    chain=stock_chain(read_chain())
+    chain=stock_chain(read_chain() if chain is None else chain)
     for entry in chain:
         script=vendor_script(entry['file'])
         if entry['file'].endswith('/systemUi.js') and (
@@ -301,7 +301,7 @@ def change_chain(root, enabled, uid=0):
     pending.unlink()
 
 
-def probe():
+def probe(*, retire_orphan=False):
     if os.geteuid()!=0 or sys.platform!='linux':
         raise ValueError('Compositor admission requires an existing root TV session')
     # Keep schema2 admission isolated from schema1 checkpoint prerequisites.
@@ -319,12 +319,26 @@ def probe():
                 or len(data)<52 or data[:7]!=b'\x7fELF\x01\x01\x01' or data[18:20]!=b'\x28\0'
                 or not admission_valid(candidate)):
             raise ValueError('Experimental compositor requires verified Qt Home capabilities and ARM32 native Home') from None
-    require_generic_environment()
+    if retire_orphan:
+        chain = read_chain()
+        stock = reconcile(chain, STATE, False)
+        require_generic_environment(stock)
+    else:
+        require_generic_environment()
     after=legacy.TARGET.stat()
     identity=lambda st: dict(dev=st.st_dev,ino=st.st_ino,size=st.st_size,mtime_ns=st.st_mtime_ns)
     if identity(before)!=identity(after) or not before.st_mode & 0o111:
         raise ValueError('Native Home changed during compositor admission')
-    read_chain()
+    observed = read_chain()
+    if retire_orphan:
+        if observed != chain:
+            raise ValueError('Concurrent configd edit during orphan filter recovery')
+        if chain != stock:
+            # Schema 2 could leave a persistent configd entry after its state
+            # directory disappeared. The fenced remover authorizes this inverse.
+            write_chain(stock)
+            if read_chain() != stock:
+                raise ValueError('Configd readback mismatch during orphan filter recovery')
     return dict(value,target_sha256=hashlib.sha256(data).hexdigest(),target=identity(after))
 
 

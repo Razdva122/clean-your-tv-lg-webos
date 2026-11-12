@@ -441,6 +441,57 @@ class RuntimeTests(unittest.TestCase):
             with self.assertRaises(ValueError): self.k.change_chain(self.root,False,self.uid)
         write.assert_not_called()
 
+    def test_orphan_filter_is_retired_only_after_verified_stock_readback(self):
+        import struct
+
+        target = self.root / 'native-home'
+        elf = struct.pack('<16sHHIIIIIHHHHHH', b'\x7fELF\x01\x01\x01', 3, 40, 1, 64, 52, 0, 0, 52, 32, 2, 0, 0, 0)
+        target.write_bytes(elf)
+        target.chmod(0o700)
+        own = self.k.filter_entry()
+        stock = [{'file': '/usr/lib/qt5/qml/KeyFilters/systemUi.js', 'handler': 'handleSystemKeys'}]
+        stale = [own, *stock]
+        info = dict(returnValue=True, modelName='OLED65C11LB', firmwareVersion='03.53.45', sdkVersion='6.5.3')
+
+        with (
+            patch.object(self.k.legacy, 'TARGET', target),
+            patch.object(self.k.legacy, 'native_home', return_value=elf),
+            patch.object(self.k.os, 'geteuid', return_value=0),
+            patch.object(self.k.sys, 'platform', 'linux'),
+            patch('struct.calcsize', return_value=4),
+            patch.object(self.k, 'luna', return_value=info),
+            patch.object(self.k, 'require_generic_environment', side_effect=self.k.stock_chain) as verify,
+            patch.object(self.k, 'read_chain') as read,
+            patch.object(self.k, 'write_chain') as write,
+        ):
+            read.side_effect = [stale, stale, stock]
+            self.k.probe(retire_orphan=True)
+            verify.assert_called_once_with(stock)
+            write.assert_called_once_with(stock)
+
+            for before, recheck in (
+                (stale, stock),
+                ([own, own, *stock], stale),
+                ([dict(own, extra=True), *stock], stale),
+                ([own], stale),
+                ([own, *stock, {'file': '/foreign.js', 'handler': 'foreign'}], stale),
+            ):
+                with self.subTest(before=before, recheck=recheck):
+                    write.reset_mock()
+                    read.side_effect = [before, recheck]
+                    with self.assertRaises(ValueError):
+                        self.k.probe(retire_orphan=True)
+                    write.assert_not_called()
+
+            read.side_effect = [stale, stale, stale]
+            with self.assertRaisesRegex(ValueError, 'readback'):
+                self.k.probe(retire_orphan=True)
+            write.assert_called_once_with(stock)
+            write.reset_mock()
+            read.side_effect = [stock, stock]
+            self.k.probe(retire_orphan=True)
+            write.assert_not_called()
+
     def test_probe_is_independent_of_legacy_checkpoint_probe(self):
         target=self.root/'home'; target.write_bytes(b'ELF')
         with patch.object(self.k.legacy,'TARGET',target), patch.object(self.k.os,'geteuid',return_value=0), patch.object(self.k.sys,'platform','linux'), patch.object(self.k.legacy,'probe',side_effect=AssertionError('legacy checkpoint probe')), patch.object(self.k.legacy,'native_home',return_value=b'ELF'), patch.object(self.k.legacy,'admit',return_value={k:self.admission[k] for k in ('model','firmware','webos')}), patch.object(self.k,'luna',return_value={'returnValue':True}), patch.object(self.k,'read_chain',return_value=[]),patch.object(self.k,'require_generic_environment') as environment:
