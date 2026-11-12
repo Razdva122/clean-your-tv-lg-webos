@@ -26,6 +26,11 @@ function createRequest(https, timeoutMs) {
         fail('timeout');
       }, timeoutMs);
       try {
+        // Legacy Node reads one certificate per entry in the ca option.
+        var ca = require('fs').readFileSync(
+          __dirname + '/ca-bundle.crt',
+          'utf8'
+        );
         req = https.request(
           {
             hostname: 'developer.lge.com',
@@ -38,10 +43,10 @@ function createRequest(https, timeoutMs) {
               encodeURIComponent(token),
             rejectUnauthorized: true,
             agent: false,
-            ca: require('fs').readFileSync(
-              __dirname + '/ca-bundle.crt',
-              'utf8'
-            ),
+            ca:
+              ca.match(
+                /-----BEGIN CERTIFICATE-----[\s\S]+?-----END CERTIFICATE-----/g
+              ) || [],
             headers: { Accept: 'application/json' }
           },
           function (res) {

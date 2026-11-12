@@ -76,20 +76,28 @@ const createRequire = require('node:module').createRequire;
       undefined,
       file + ' must retain hostname validation'
     );
-    assert.equal(
-      typeof options.ca,
-      'string',
-      file + ' must supply independent CA trust'
+    const bundle = fs.readFileSync(
+      path.join(path.dirname(filename), 'ca-bundle.crt'),
+      'utf8'
     );
-    assert(options.ca.includes('-----BEGIN CERTIFICATE-----'), file);
-    tls.createSecureContext({ ca: options.ca }); // Parse the actual bundle, not a placeholder.
+    const certificates = bundle.match(
+      /-----BEGIN CERTIFICATE-----[\s\S]+?-----END CERTIFICATE-----/g
+    );
+    assert(certificates.length > 1, file);
+    if (!file.startsWith('root-edition/')) {
+      assert(Array.isArray(options.ca), file + ' must support legacy Node');
+      assert.deepEqual(Array.from(options.ca), certificates, file);
+    } else {
+      assert.equal(options.ca, bundle, file);
+    }
+    tls.createSecureContext({ ca: options.ca });
     if (reference)
-      assert.equal(
-        options.ca,
+      assert.deepEqual(
+        certificates,
         reference,
-        'all HTTPS clients must use the same CA snapshot'
+        'clients must use the same CA snapshot'
       );
-    reference = options.ca;
+    reference = certificates;
   }
   console.log(
     'PASS all outbound HTTPS clients use a parseable CA bundle and strict TLS'
