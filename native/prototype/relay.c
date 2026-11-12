@@ -21,6 +21,9 @@
 #define NAME(len) _IOC(_IOC_READ,'E',0x06,len)
 /* Same long-press threshold as the webOS compositor: a held IR Home stays with webOS. */
 #define IR_LONG_PRESS_MS 1000
+#ifndef CYTV_RELAY_STATE
+#define CYTV_RELAY_STATE "/media/developer/apps/usr/palm/applications/com.local.nativehome/state"
+#endif
 static volatile sig_atomic_t stop;
 static int output_failed;
 static const char *setup_generation;
@@ -44,7 +47,7 @@ static void stopped(int n){(void)n;stop=1;}
 static uint64_t ms(void){struct timespec t;clock_gettime(CLOCK_MONOTONIC,&t);return(uint64_t)t.tv_sec*1000+t.tv_nsec/1000000;}
 static int find_device(const char *wanted,int flags){for(int i=0;i<32;i++){char p[64],name[256]={0};snprintf(p,sizeof p,"/dev/input/event%d",i);int fd=open(p,flags|O_NONBLOCK|O_CLOEXEC);if(fd<0)continue;if(ioctl(fd,NAME(sizeof name),name)>=0&&!strcmp(name,wanted)){report("DEVICE %s %s\n",p,name);return fd;}close(fd);}return -1;}
 static int release_keys(int out){unsigned char bits[256]={0};if(ioctl(out,KEYSTATE(sizeof bits),bits)<0)return -1;for(int k=1;k<2048;k++)if(bits[k/8]&(1<<(k%8))){struct ev e[2]={{0,0,1,k,0},{0,0,0,0,0}};if(write(out,e,sizeof e)!=sizeof e)return -1;}return 0;}
-static void latch_stop(int reason){if(!generation_cancelled&&reason!=20)(void)cytv_generation_publish();const char *latch=reason==20?"/media/developer/apps/usr/palm/applications/com.local.nativehome/state/watchdog":"/media/developer/apps/usr/palm/applications/com.local.nativehome/state/blocked";int flag=open(latch,O_WRONLY|O_CREAT|O_TRUNC,0644);if(flag>=0){write(flag,"stopped",7);close(flag);}}
+static void latch_stop(int reason){if(!generation_cancelled&&reason!=20)(void)cytv_generation_publish();const char *latch=reason==20?CYTV_RELAY_STATE "/watchdog":CYTV_RELAY_STATE "/blocked";int flag=open(latch,O_WRONLY|O_CREAT|O_TRUNC,0644);if(flag>=0){write(flag,"stopped",7);close(flag);}}
 static int compatible(int in,int out){unsigned char a[256],b[256];int types[]={0,1,2,3};for(int i=0;i<4;i++){memset(a,0,sizeof a);memset(b,0,sizeof b);if(ioctl(in,BIT(types[i],sizeof a),a)<0||ioctl(out,BIT(types[i],sizeof b),b)<0||memcmp(a,b,sizeof a))return 0;}for(int axis=0;axis<2;axis++){int a[6],b[6];if(ioctl(in,_IOR('E',0x40+axis,int[6]),a)<0||ioctl(out,_IOR('E',0x40+axis,int[6]),b)<0||memcmp(a+1,b+1,5*sizeof(int)))return 0;}return 1;}
 static int startup_in,startup_out;
 static uint64_t startup_ack,powerDeadline;
@@ -90,13 +93,19 @@ int main(int argc,char**argv){
  if(argc>1&&!strcmp(argv[1],"setup")){if(argc!=3||!cytv_generation_token(argv[2]))return 29;setup_generation=argv[2];if(!generation_current()){generation_cancelled=1;latch_stop(29);return 29;}}
  output_failed=0;powerDeadline=0;signal(SIGPIPE,SIG_IGN);signal(SIGTERM,stopped);signal(SIGINT,stopped);
  int cleaning=argc>1&&!strcmp(argv[1],"cleanup");
+ int probing=argc==2&&!strcmp(argv[1],"--probe");
  /* Emergency cleanup must work even with closed or unusable stdout. */
  if(prepare_output()<0){if(!cleaning)return 30;output_failed=1;}
- int lock=acquire_lock("/media/developer/apps/usr/palm/applications/com.local.nativehome/state/relay.lock");if(lock<0)return 18;
+ if(!probing&&acquire_lock(CYTV_RELAY_STATE "/relay.lock")<0)return 18;
  int out=find_device("LGE M-RCU - Builtin [1]",O_RDWR);if(out<0)return 10;
  if(cleaning){int r=release_keys(out);if(close(out)<0)r=-1;return r?11:0;}
  if(output_failed)return 30;
  int in=find_device("LGE M-RCU - Builtin [0]",O_RDONLY);if(output_failed)return 30;if(in<0||!compatible(in,out)){report("FAIL incompatible\n");return 12;}
+#ifdef CYTV_HOME_ON_RELEASE
+ unsigned char keys[128]={0};
+ if(ioctl(in,BIT(1,sizeof keys),keys)<0||!(keys[773/8]&(1<<(773%8))))return 12;
+#endif
+ if(probing)return report("PROBE_READY\n")<0?30:0;
  /* Optional standard IR remote: read-only, never grabbed or re-emitted, so webOS still
   * receives every IR key. A short Home is reported as IRHOME; triple Home releases. */
  int ir=find_device("LGE RCU",O_RDONLY);if(output_failed)return 30;
@@ -105,7 +114,11 @@ int main(int argc,char**argv){
  if(startup_reason){if(!generation_current()){generation_cancelled=1;latch_stop(29);}if(startup_reason==14)report("FAIL source-held\n");if(startup_reason==16)report("FAIL destination-busy\n");return startup_reason;}
  if(!generation_current()){generation_cancelled=1;latch_stop(29);close(in);close(out);if(ir>=0)close(ir);return 29;}
  if(ioctl(in,GRAB,1)<0){report("FAIL grab\n");return 17;}
- struct filter f={0},irf={0};uint64_t last=ms(),irDown=0;int reason=0,irSyncLost=0;struct pollfd p[3]={{in,POLLIN,0},{0,POLLIN,0},{ir,POLLIN,0}};
+ struct filter f={0},irf={0};
+#ifdef CYTV_HOME_ON_RELEASE
+ f.open_on_release=1;
+#endif
+ uint64_t last=ms(),irDown=0;int reason=0,irSyncLost=0;struct pollfd p[3]={{in,POLLIN,0},{0,POLLIN,0},{ir,POLLIN,0}};
  if(!generation_current()){reason=29;generation_cancelled=1;}else report("READY\n");
  while(!generation_cancelled&&!stop&&!output_failed){if(!generation_current()){reason=29;generation_cancelled=1;break;}uint64_t now=ms();if(now-last>2000){reason=20;break;}if(filter_timeout(&f,now)==OPEN_LG&&report("LGHOME\n")<0)break;
  int r=poll(p,3,50);if(r<0){if(errno==EINTR)continue;reason=23;break;}

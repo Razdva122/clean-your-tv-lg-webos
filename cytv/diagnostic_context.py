@@ -175,6 +175,15 @@ def tv_summary(value):
         failure = choice(value['root_compositor_failure'], COMPOSITOR_FAILURES, None)
         if failure is not None:
             result['root_compositor_failure'] = failure
+    if 'root_keyfilters_probe' in value:
+        from .root_capabilities import KEYFILTER_PROBE_STATES
+        probe = mapping(value['root_keyfilters_probe'])
+        probe_state = choice(probe.get('state'), KEYFILTER_PROBE_STATES, None)
+        if probe_state is not None:
+            result['root_keyfilters_probe'] = {'state': probe_state}
+            code = probe.get('error_code')
+            if probe_state == 'rejected' and type(code) is int and -(2**31) <= code < 2**31:
+                result['root_keyfilters_probe']['error_code'] = code
     native_home_mode = value.get('root_native_home_mode')
     if isinstance(native_home_mode, str) and re.fullmatch(r'[0-7]{4}', native_home_mode):
         result['root_native_home_mode'] = native_home_mode

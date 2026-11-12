@@ -29,5 +29,12 @@ int main(void){
  e.type=2;e.code=8;assert(filter_event(&f,&e,6000)==PASS);
  e.type=0;e.code=0;assert(filter_event(&f,&e,6000)==PASS);
  e.code=3;assert(filter_event(&f,&e,6000)==RELEASE);
+ f=(struct filter){.open_on_release=1};
+ assert(event(&f,773,1,100)==DROP);assert(event(&f,773,0,200)==OPEN_HOME);
+ assert(event(&f,773,1,400)==DROP);assert(event(&f,773,0,500)==OPEN_HOME);
+ assert(event(&f,773,1,700)==DROP);assert(event(&f,773,0,800)==RELEASE);
+ assert(event(&f,773,1,1000)==DROP);assert(event(&f,773,0,1600)==DROP);
+ assert(event(&f,773,1,1800)==DROP);assert(event(&f,773,2,1900)==DROP);
+ assert(event(&f,773,0,2000)==DROP);
  puts("PASS: triple Home, timing, holds, repeats, interruption, cursor, other input, overflow");
 }

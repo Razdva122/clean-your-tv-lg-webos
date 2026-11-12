@@ -14,6 +14,16 @@ COMPOSITOR_FAILURES = (
     'native-home-request-failed',
     'native-home-unavailable', 'native-home-incompatible',
 )
+KEYFILTER_PROBE_STATES = ('timeout', 'rejected', 'unconfirmed', 'invalid-reply', 'not-configured',
+                          'incompatible', 'readable')
+
+
+def keyfilter_probe(info, state, code=None):
+    if info is None:
+        return
+    result = info['root_keyfilters_probe'] = {'state': state}
+    if type(code) is int and -(2**31) <= code < 2**31:
+        result['error_code'] = code
 
 
 class RootCapabilityError(UserError):
@@ -122,20 +132,34 @@ def compositor_failure(remote, info=None):
     key = 'com.webos.surfacemanager.keyFilters'
     try:
         chain = remote.luna('com.webos.service.config/getConfigs', {'configNames':[key]}, timeout=5)
+    except TVRejected as error:
+        keyfilter_probe(info, 'rejected', error.luna.get('error_code'))
+        return 'keyfilters-request-failed'
+    except TimeoutError:
+        keyfilter_probe(info, 'timeout')
+        return 'keyfilters-request-failed'
     except Exception:
+        keyfilter_probe(info, 'unconfirmed')
         return 'keyfilters-request-failed'
     if not isinstance(chain, dict) or chain.get('returnValue') is not True:
+        if isinstance(chain, dict) and chain.get('returnValue') is False:
+            keyfilter_probe(info, 'rejected', chain.get('errorCode'))
+        else:
+            keyfilter_probe(info, 'invalid-reply')
         return 'keyfilters-request-failed'
     configs = chain.get('configs')
     entries = configs.get(key) if isinstance(configs, dict) else None
     if isinstance(configs, dict) and (key not in configs or entries == []):
+        keyfilter_probe(info, 'not-configured')
         return 'keyfilters-not-configured'
     if (not isinstance(entries,list) or not 1 <= len(entries) <= 128
             or not all(isinstance(e,dict) and isinstance(e.get('file'),str)
                 and re.fullmatch(r'/usr/lib/(?:qt5/)?qml/KeyFilters/[A-Za-z0-9_-]+\.js',e['file'])
                 and isinstance(e.get('handler'),str) and re.fullmatch(r'[A-Za-z_$][A-Za-z0-9_$]{0,127}',e['handler']) for e in entries)
             or sum(e['file'].endswith('/systemUi.js') and e['handler']=='handleSystemKeys' for e in entries) != 1):
+        keyfilter_probe(info, 'incompatible')
         return 'keyfilters-incompatible'
+    keyfilter_probe(info, 'readable')
     try:
         headers = remote.run(NATIVE_HEADERS, timeout=5)
     except TVCommandError as error:
@@ -151,6 +175,7 @@ def verify(remote, checklist, info, allow_c1=False, allow_compositor=False):
     info.pop('home_backend', None)
     info.pop('home_backend_schema', None)
     info.pop('root_compositor_failure', None)
+    info.pop('root_keyfilters_probe', None)
     info.pop('root_native_home_mode', None)
     reasons = info['root_capabilities'] = dict.fromkeys(CALLS, 'not-checked')
     requirements = info.setdefault('root_requirements', {})

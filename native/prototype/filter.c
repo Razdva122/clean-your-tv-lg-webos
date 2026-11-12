@@ -16,7 +16,7 @@ int filter_event(struct filter*f,const struct ev*e,uint64_t now){
   int held=f->home;
   if(held)f->count=0;
   f->home=1;f->short_press=1;f->since=now;
-  return held?DROP:OPEN_HOME;
+  return held||f->open_on_release?DROP:OPEN_HOME;
  }
  if(e->value==2){f->short_press=0;f->count=0;return DROP;}
  if(e->value==0){
@@ -27,6 +27,7 @@ int filter_event(struct filter*f,const struct ev*e,uint64_t now){
   for(int i=0;i<f->count;i++)if(now-f->taps[i]<=2000)f->taps[kept++]=f->taps[i];
   f->taps[kept++]=f->since;f->count=kept;
   if(kept==3){f->count=0;return RELEASE;}
+  if(f->open_on_release)return OPEN_HOME;
  }
  return DROP;
 }

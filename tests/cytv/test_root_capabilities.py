@@ -16,6 +16,31 @@ PROFILES={'returnValue':True,'profiles':{'defaultApps':{'categories':{'home':'co
 
 
 class CapabilityTests(unittest.TestCase):
+    def test_keyfilters_probe_records_a_safe_reason_and_clears_stale_evidence(self):
+        from cytv.diagnostic_context import tv_summary
+        from cytv.errors import TVRejected
+        from cytv.root_capabilities import compositor_failure, verify
+
+        identity = {'returnValue': True, 'modelName': 'TV', 'firmwareVersion': '06.10.60',
+                    'sdkVersion': '3.9.0'}
+        cases = (
+            (TimeoutError('private'), {'state': 'timeout'}),
+            (TVRejected('private', {'errorCode': -72}), {'state': 'rejected', 'error_code': -72}),
+            ({'returnValue': True, 'configs': {}}, {'state': 'not-configured'}),
+        )
+        info = {}
+        for reply, expected in cases:
+            with self.subTest(expected=expected):
+                remote = Mock()
+                remote.luna.side_effect = [identity, reply]
+                self.assertIsNotNone(compositor_failure(remote, info))
+                self.assertEqual(tv_summary(info)['root_keyfilters_probe'], expected)
+                self.assertNotIn('private', json.dumps(tv_summary(info)))
+
+        remote.luna.side_effect = [PROFILES, SETTINGS]
+        verify(remote, CheckList(), info, allow_c1=True, allow_compositor=True)
+        self.assertNotIn('root_keyfilters_probe', tv_summary(info))
+
     def test_compositor_preflight_exports_only_fixed_failure_reasons(self):
         from cytv.diagnostics import create_report
         from cytv.errors import TVCommandError, TVRejected

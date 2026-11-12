@@ -381,6 +381,10 @@ or `native-home-request-failed`. Validation failures use `system-info-invalid`,
 `keyfilters-not-configured` means a successful configuration reply omitted the
 KeyFilters key or returned an empty list. A missing or malformed `configs`
 object, invalid entries and unsupported chains use `keyfilters-incompatible`.
+Optional `tv.root_keyfilters_probe` records the outcome of the KeyFilters read,
+including a timeout, a rejection, an unconfirmed or malformed reply, an empty
+configuration, and a compatible or incompatible chain. For an explicit
+rejection it can include a bounded numeric Luna error code.
 `native-home-unavailable` identifies a missing or unsafe native Home path.
 `c1-probe-failed` means an error in the preceding C1 probe prevented the
 capability-based check from running.
