@@ -759,7 +759,10 @@ printf '%s' "$cytv_state"
             return self.install_root(inventory, migrate, reinstall)
         if not ssap_key:
             raise ValueError('Remote-control pairing is required for No-root.')
-        launcher, _ = package.personalize((self.payload / self._graphics_paths['launcher']).read_bytes(), HOME, inventory)
+        launcher, _ = package.personalize(
+            (self.payload / self._graphics_paths['launcher']).read_bytes(), HOME, inventory,
+            no_root_connection=self.profile.get('connection') or 'developer-mode',
+        )
         helper = (self.payload / self.manifest['helper']).read_bytes()
         expected = {}
         for data in (helper, launcher):

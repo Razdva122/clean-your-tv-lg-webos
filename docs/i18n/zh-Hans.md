@@ -172,6 +172,6 @@ No-root: 要重新启动 Home 控制，请打开 Home Helper，选择启动 Help
 
 安装成功后，选择 Classic、Liquid Glass 或 Ribbon，并开启或关闭主屏幕天气。Ribbon 不支持天气；Liquid Glass 使用简短格式。城市根据网络连接估算，可在 Home 设置中更改。
 
-Developer Mode 的 No-root 提供自动续期（测试版）；请继续检查官方计时器。通过现有 root SSH 安装的 No-root 不使用此选项。Root 可通过 Homebrew Channel 阻止 LG 固件更新，包括安全更新；需要通过 Homebrew Channel 真正重启电视。CYTV 更新单独管理。
+Developer Mode 的 No-root 提供自动续期（测试版）；请继续检查官方计时器。通过现有 root SSH 新安装 No-root 时，设置中会隐藏 Developer Mode 标签页。Root 可通过 Homebrew Channel 阻止 LG 固件更新，包括安全更新；需要通过 Homebrew Channel 真正重启电视。CYTV 更新单独管理。
 
 选择“保留当前设置”可跳过自定义。开关显示模式功能当前的开启或关闭状态。未更改的设置会保留。重新安装 Root 仍会按上文说明删除 CYTV 设置。请在电视上检查外观；重试前请在 Home 设置中检查未确认的选项。

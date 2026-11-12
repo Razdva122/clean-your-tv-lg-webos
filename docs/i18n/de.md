@@ -172,6 +172,6 @@ Wählen Sie vor dem Design unter **Debloat**, welche LG-Einstellungen für Werbu
 
 Wähle nach erfolgreicher Installation Classic, Liquid Glass oder Ribbon und schalte das Wetter ein oder aus. Ribbon unterstützt kein Wetter; Liquid Glass nutzt das Kurzformat. Der ungefähre Ort wird über die Internetverbindung ermittelt und lässt sich in Home ändern.
 
-No-root mit Developer Mode bietet automatische Verlängerung (Beta); prüfe weiterhin den offiziellen Timer. No-root über vorhandenes root-SSH benötigt diese Option nicht. Root bietet über Homebrew Channel eine Sperre für LG-Firmwareupdates, einschließlich Sicherheitsupdates; ein echter Neustart über Homebrew Channel ist erforderlich. CYTV-Updates bleiben separat.
+No-root mit Developer Mode bietet automatische Verlängerung (Beta); prüfe weiterhin den offiziellen Timer. Bei neuen No-root-Installationen über vorhandenes root-SSH wird der Tab Developer Mode ausgeblendet. Root bietet über Homebrew Channel eine Sperre für LG-Firmwareupdates, einschließlich Sicherheitsupdates; ein echter Neustart über Homebrew Channel ist erforderlich. CYTV-Updates bleiben separat.
 
 Mit Aktuelle Einstellungen beibehalten überspringst du die Anpassung. Der Schalter zeigt den aktuellen Ein/Aus-Zustand der Modusfunktion. Unveränderte Einstellungen bleiben erhalten. Die Root-Neuinstallation entfernt weiterhin gespeicherte CYTV-Einstellungen wie oben beschrieben. Prüfe das Aussehen am TV und unbestätigte Optionen vor einem neuen Versuch in Home.

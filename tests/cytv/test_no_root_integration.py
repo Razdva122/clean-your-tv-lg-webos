@@ -231,6 +231,8 @@ class OriginalOperationIntegration(unittest.TestCase):
         tmp_row, fs_magic, developer_row = tmp_zero, '858458f6', developer_available
         with patch.object(observer, 'JAIL_ROOT', str(private)):
             self.installer.install(self.inventory, 'original-secret')
+        launcher_apps = Path(self.base) / 'applications' / operations.HOME / 'apps.js'
+        self.assertIn('window.CYTVNoRootConnection = "developer-mode";', launcher_apps.read_text())
         self.assertEqual((self.root/'requests').read_text().splitlines(), list(observer.APPS))
         self.assertIsNone(self.store.pending(self.profile))
 
@@ -251,6 +253,8 @@ class OriginalOperationIntegration(unittest.TestCase):
         with patch.object(observer,'ROOT_PROGRAM',source), patch.object(observer,'ROOT_SSH_PRIVATE',root_private), \
              patch.object(observer,'ROOT_SSH_PUBLIC',root_public):
             self.installer.install(self.inventory,'original-secret')
+            launcher_apps = Path(self.base) / 'applications' / operations.HOME / 'apps.js'
+            self.assertIn('window.CYTVNoRootConnection = "root-ssh";', launcher_apps.read_text())
             self.assertIsNone(self.store.pending(self.profile))
             self.assertEqual((self.root/'requests').read_text().splitlines(),list(observer.APPS))
             owner=Path(operations.HELPER_STATE).stat()
