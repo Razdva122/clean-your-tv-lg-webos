@@ -1,14 +1,15 @@
 """Windowed cytv wizard. Run with python -m cytv.gui."""
 import html
 import json
+import math
 from pathlib import Path
 import shutil
 import subprocess
 import sys
 import threading
 
-from PySide6.QtCore import QObject, Signal, QUrl, QTimer, Qt
-from PySide6.QtGui import QDesktopServices, QIcon, QFontDatabase, QFont, QPixmap
+from PySide6.QtCore import QEvent, QObject, Signal, QUrl, QTimer, Qt
+from PySide6.QtGui import QDesktopServices, QIcon, QFontDatabase, QFont, QPixmap, QTextCursor
 from PySide6.QtWidgets import (QApplication, QFileDialog, QFrame, QHBoxLayout,
                               QLabel, QLineEdit, QMainWindow, QMessageBox, QProgressBar,
                               QPushButton, QTextBrowser, QVBoxLayout, QWidget, QButtonGroup, QDialog, QScrollArea, QLayout, QCheckBox)
@@ -143,23 +144,32 @@ class Wizard(QMainWindow):
         layout.addWidget(self.subtitle)
         self.preview = TVPreview()
         layout.addWidget(self.preview)
+        self.reading = QScrollArea()
+        self.reading.setObjectName('wizardReading')
+        self.reading.setWidgetResizable(True)
+        self.reading.setFrameShape(QFrame.Shape.NoFrame)
+        self.reading.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        reading_body = QWidget()
+        reading_body.setObjectName('wizardReadingBody')
+        reading_layout = QVBoxLayout(reading_body)
+        reading_layout.setContentsMargins(0, 0, 0, 0)
+        reading_layout.setSpacing(12)
+        self.reading.setWidget(reading_body)
+        layout.addWidget(self.reading, 1)
         self.content = QTextBrowser()
         self.content.setOpenExternalLinks(False)
         self.content.setOpenLinks(False)
         self.content.anchorClicked.connect(lambda url: self.show_reference(url.path()) if url.scheme() == 'guide' else None)
-        self.content.setFrameShape(QFrame.Shape.NoFrame)
         self.content.document().setDefaultStyleSheet(
             'p { margin-top: 6px; margin-bottom: 12px; line-height: 140%; } '
             'h3 { color: #f3ede3; font-size: 16px; margin-top: 12px; margin-bottom: 10px; }')
-        layout.addWidget(self.content, 1)
+        reading_layout.addWidget(self.content)
         self.check_results = {}
         self.check_panel = QTextBrowser()
         self.check_panel.setAccessibleName(tr('TV checks'))
         self.check_panel.setOpenLinks(False)
-        self.check_panel.setFrameShape(QFrame.Shape.NoFrame)
-        self.check_panel.setMinimumHeight(150)
         self.check_panel.hide()
-        layout.addWidget(self.check_panel, 2)
+        reading_layout.addWidget(self.check_panel)
         self.progress = QProgressBar()
         self.progress.setRange(0, 0)
         self.progress.setTextVisible(False)
@@ -177,13 +187,22 @@ class Wizard(QMainWindow):
         self.details_toggle.setObjectName('detailsToggle')
         self.details_toggle.setMinimumHeight(36)
         self.details_toggle.toggled.connect(self.toggle_details)
-        layout.addWidget(self.details_toggle)
         self.details = QTextBrowser()
         self.details.setOpenExternalLinks(False)
-        self.details.setMaximumHeight(150)
         self.details.setAccessibleName(tr('Details'))
-        layout.addWidget(self.details)
+        reading_layout.addWidget(self.details)
+        reading_layout.addStretch()
+        for panel in (self.content, self.check_panel, self.details):
+            panel.setFrameShape(QFrame.Shape.NoFrame)
+            panel.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+            panel.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+            panel.installEventFilter(self)
+            panel.viewport().installEventFilter(self)
+            # Each rich-text section takes its full height within the shared viewport.
+            panel.document().documentLayout().documentSizeChanged.connect(
+                lambda size, panel=panel: panel.setFixedHeight(math.ceil(size.height())))
         footer = QHBoxLayout()
+        footer.addWidget(self.details_toggle)
         footer.addStretch()
         self.cancel = QPushButton(tr('Close'))
         self.cancel.setObjectName('close')
@@ -192,6 +211,24 @@ class Wizard(QMainWindow):
         layout.addLayout(footer)
         shell.addWidget(main, 1)
         self.home()
+
+    def eventFilter(self, watched, event):
+        event_type = event.type()
+        if event_type in (QEvent.Type.ShowToParent, QEvent.Type.HideToParent, QEvent.Type.KeyPress):
+            panels = (self.content, self.check_panel, self.details)
+            if watched in panels:
+                if event_type != QEvent.Type.KeyPress:
+                    self.reading.setVisible(any(not panel.isHidden() for panel in panels))
+                elif event.modifiers() == Qt.KeyboardModifier.NoModifier and event.key() in (
+                        Qt.Key.Key_Up, Qt.Key.Key_Down, Qt.Key.Key_PageUp, Qt.Key.Key_PageDown,
+                        Qt.Key.Key_Home, Qt.Key.Key_End):
+                    QApplication.sendEvent(self.reading, event)
+                    return True
+        if event_type == QEvent.Type.Wheel and watched in (
+                self.content.viewport(), self.check_panel.viewport(), self.details.viewport()):
+            QApplication.sendEvent(self.reading.viewport(), event)
+            return True
+        return super().eventFilter(watched, event)
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -282,7 +319,6 @@ class Wizard(QMainWindow):
         self.check_results.clear()
         self.check_panel.clear()
         self.check_panel.hide()
-        self.content.setMaximumHeight(16777215)
 
     def home(self):
         self.reset_checks()
@@ -311,6 +347,7 @@ class Wizard(QMainWindow):
         self.title.setText(tr('Make your TV feel like yours'))
         self.subtitle.setText(tr('Install Root or No-root. We will help you choose.'))
         self.content.setHtml('<h3>' + html.escape(tr('Before you begin')) + '</h3><p>' + html.escape(tr('Turn on your LG webOS TV and connect it to the same home network as this computer.')) + '</p><p>' + html.escape(tr('cytv will look for your TV automatically. Keep the remote nearby to approve pairing on the TV.')) + '</p>')
+        self.reading.verticalScrollBar().setValue(0)
         setup = self.button('Set up my TV', lambda: self.start('install'), True)
         setup.setObjectName('setupTV')
         self.form_layout.addSpacing(6)
@@ -367,9 +404,24 @@ class Wizard(QMainWindow):
     def toggle_details(self, expanded):
         self.details.setVisible(expanded)
         self.details_toggle.setText(tr('Details') + ('  ▾' if expanded else '  ▸'))
+        if expanded:
+            QTimer.singleShot(0, self, self.reveal_details)
+        else:
+            self.reading.verticalScrollBar().setValue(0)
+
+    def reveal_details(self):
+        if self.details_toggle.isChecked():
+            self.reading.verticalScrollBar().setValue(self.details.y())
+
+    def progress_scroll_position(self):
+        return max(0, self.content.y() + self.content.height() - self.reading.viewport().height())
+
+    def follow_progress(self):
+        if self.running and not self.details_toggle.isChecked():
+            self.reading.verticalScrollBar().setValue(self.progress_scroll_position())
 
     def reset_details(self):
-        self.details.clear()
+        self.details.setHtml('<h3>' + html.escape(tr('Details')) + '</h3>')
         self.details_toggle.setChecked(False)
         self.toggle_details(False)
         self.details_toggle.hide()
@@ -512,7 +564,6 @@ class Wizard(QMainWindow):
                 self.install_settings_current['tv_name'] = value['tv_name']
         elif kind == 'check':
             self.check_panel.setAccessibleName(tr('TV checks'))
-            self.content.setMaximumHeight(140)
             self.check_results[value['id']] = dict(value)
             from .checks import STATUS
             colors = {'pass': '#90cfad', 'fail': '#ff8580', 'unknown': '#e8c17d',
@@ -523,7 +574,7 @@ class Wizard(QMainWindow):
                 status = result['status']
                 label, detail = html.escape(tr(result['label'])), html.escape(tr(result['detail']))
                 marker = {'pass': '✓', 'fail': '!', 'unknown': '?', 'running': '…', 'pending': '·'}[status]
-                rows.append(f'<tr><td style="color:{colors[status]};padding:5px">{marker}</td>'
+                rows.append(f'<tr><td width="24" valign="top" style="color:{colors[status]};padding:5px">{marker}</td>'
                             f'<td style="padding:5px">{label}' + (f'<br><small>{detail}</small>' if detail else '') + '</td>'
                             f'<td style="color:{colors[status]};padding:5px">{html.escape(tr(STATUS[status]))}</td></tr>')
             self.check_panel.setHtml('<h3>' + html.escape(tr('TV checks')) + '</h3><table width="100%">' + ''.join(rows) + '</table>')
@@ -545,13 +596,19 @@ class Wizard(QMainWindow):
                 self.subtitle.show()
                 self.badge.setText(tr('Maintenance action'))
             self.content.clear()
+            self.reading.verticalScrollBar().setValue(0)
         elif kind in ('text', 'heading', 'error', 'error-heading'):
             text = tr(value)
             tag = 'h3' if kind in ('heading', 'error-heading') else 'p'
             color = '#ff6b6b' if kind.startswith('error') else '#f3ede3' if kind == 'heading' else '#c0b5a5'
             style = f' style="color: {color}"'
             markup = f'<{tag}{style}>' + html.escape(text).replace('\n', '<br>') + f'</{tag}>'
+            scroll = self.reading.verticalScrollBar()
+            if self.running and scroll.value() == self.progress_scroll_position():
+                QTimer.singleShot(0, self, self.follow_progress)
             self.content.append(markup)
+            if kind.startswith('error'):
+                self.content.document().lastBlock().setUserState(1)
             self.details.append(markup)
             self.details_toggle.show()
             if self.collect_preparation:
@@ -600,8 +657,17 @@ class Wizard(QMainWindow):
             self.badge.setText(self.title.text())
             if self.command == 'install' and not self.recovery_plan:
                 self.update_steps(self.current_step, value)
-            self.content.moveCursor(self.content.textCursor().MoveOperation.End)
             failed = value not in (0, 130)
+            if failed:
+                block = self.content.document().begin()
+                while block.isValid() and block.userState() != 1:
+                    block = block.next()
+                if block.isValid() and block.position():
+                    # Earlier progress is still available in Details.
+                    cursor = QTextCursor(block)
+                    cursor.movePosition(QTextCursor.MoveOperation.Start, QTextCursor.MoveMode.KeepAnchor)
+                    cursor.removeSelectedText()
+            self.reading.verticalScrollBar().setValue(0)
             cleanup = self.command == 'uninstall' or self.recovery_plan is not None and self.recovery_plan.get('disposition') == 'clean-removal'
             completed = False
             recover = (not cleanup and self.recovery_profile is not None and
@@ -661,7 +727,7 @@ class Wizard(QMainWindow):
                     self.button('Open System Settings', self.open_network_settings, layout=actions)
                 self.button('Change connection', lambda: self.edit_connection(profile), layout=actions)
             report_actions = None
-            if connection_help:
+            if connection_help or (retry_removal and self.report):
                 report_actions = QHBoxLayout()
                 self.form_layout.addLayout(report_actions)
             if self.report:
@@ -671,8 +737,11 @@ class Wizard(QMainWindow):
             elif failed:
                 self.subtitle.setText(tr('A diagnostic report could not be created. Include the visible error when opening an issue.'))
             if (failed and not cleanup) or self.check_results.get('home-button', {}).get('status') == 'fail':
-                self.button('Open an issue', lambda: QDesktopServices.openUrl(QUrl(diagnostics.ISSUE_URL)), layout=report_actions)
-            self.button('Back to start', self.home, not connection_help and not retry_removal and not recover and not ((failed or setup_review) and self.report))
+                self.button('Open an issue', lambda: QDesktopServices.openUrl(QUrl(diagnostics.ISSUE_URL)),
+                            layout=report_actions if connection_help else None)
+            self.button('Back to start', self.home,
+                        not connection_help and not retry_removal and not recover and not ((failed or setup_review) and self.report),
+                        layout=report_actions if retry_removal else None)
             failed_checks = [result for result in self.check_results.values() if result['status'] in ('fail', 'unknown')]
             if failed and failed_checks:
                 self.subtitle.setText(tr('Failed') + ': ' + ', '.join(tr(result['label']) for result in failed_checks) + '\n' + self.subtitle.text())
@@ -709,7 +778,6 @@ class Wizard(QMainWindow):
                     app = next((p.name for p in Path(sys.executable).parents if p.suffix == '.app'), 'cytv')
                     mac_help = tr('In System Settings → Privacy & Security → Local Network, allow {app}. macOS may show an older copy’s name. Fully quit cytv and reopen it after changing access.').format(app=app)
                     messages = [mac_help] if self.failure_help['code'] == 'ssh-access-denied' else [*messages, mac_help]
-                self.content.setMaximumHeight(16777215)
                 self.content.setHtml(''.join('<p>'+html.escape(tr(message))+'</p>' for message in messages))
                 self.content.moveCursor(self.content.textCursor().MoveOperation.Start)
                 self.check_panel.hide()
@@ -1006,7 +1074,7 @@ class Wizard(QMainWindow):
 
     def show_prompt(self, prompt):
         self.check_panel.hide()
-        self.content.setMaximumHeight(16777215)
+        self.reading.verticalScrollBar().setValue(0)
         self.pending = prompt
         self.progress.hide()
         self.cancel.setEnabled(True)
@@ -1176,7 +1244,6 @@ class Wizard(QMainWindow):
             self.title.setText(tr('Connecting to your TV'))
         self.pending = None
         if self.check_results:
-            self.content.setMaximumHeight(140)
             self.check_panel.show()
         self.clear_form()
         self.cancel.setEnabled(False)
