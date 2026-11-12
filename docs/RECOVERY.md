@@ -312,7 +312,11 @@ global package-status permission. The original local journal must still say
 fields. The installer checks that journal again after the separate default-No
 removal confirmation. The diagnostic export alone cannot establish eligibility.
 
-Removal still stops Helper, restores LG Home, records each package request before
+If removal asks for a full restart because it could not read the Helper Stop
+records, restart the TV and continue the existing removal. The installer checks
+the new boot and that Helper has stopped before it submits package requests.
+
+Removal stops Helper, restores LG Home, records each package request before
 sending it, waits for its terminal reply and verifies package/file absence.
 Only successful verified removal clears pending; start installation separately
 afterward. A failed removal keeps its receipt. Already submitted/uncertain

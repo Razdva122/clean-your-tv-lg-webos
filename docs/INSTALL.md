@@ -1,6 +1,6 @@
 # Install Clean Your TV
 
-Unreleased: In Root Edition, set the **Home screen name** on the final installer page alongside theme and weather. Leave it blank to keep the current name.
+In Root Edition, set the **Home screen name** on the final installer page alongside theme and weather. Leave it blank to keep the current name.
 
 > **Shared experimental compositor backend:** the installer selects this
 > backend for ordinary Root and Root Beta by verified capabilities, without an

@@ -1,11 +1,73 @@
 {
   "schema": 1,
-  "version": null,
+  "version": "1.20.0",
   "changes": [
+    {
+      "pr": 566,
+      "issues": [
+        440
+      ],
+      "summary": "Recheck the boot before retrying interrupted Root removal; original Root installation and reporter recovery remain unverified"
+    },
+    {
+      "pr": 567,
+      "issues": [
+        542
+      ],
+      "summary": "Rearm expired Root rollback recovery on retry"
+    },
     {
       "pr": 569,
       "issues": [],
       "summary": "Update the Root Home naming heading after release"
+    },
+    {
+      "pr": 570,
+      "issues": [
+        240
+      ],
+      "summary": "Distinguish Root recovery status interpreter failures; original deployment failure remains open"
+    },
+    {
+      "pr": 571,
+      "issues": [
+        152
+      ],
+      "summary": "Report Home Helper diagnostic failure stages; original EF950V installation and recovery remain open"
+    },
+    {
+      "pr": 572,
+      "issues": [
+        410
+      ],
+      "summary": "Distinguish missing KeyFilters configuration in Root diagnostics; original installation failure remains open"
+    },
+    {
+      "pr": 573,
+      "issues": [
+        389,
+        418
+      ],
+      "summary": "Preserve independently owned Home filters during Root removal; original #418 Root activation remains open"
+    },
+    {
+      "pr": 575,
+      "issues": [
+        574
+      ],
+      "summary": "Offer No-root through the existing SSH connection on legacy LG Home ribbon capability; original Root limitation remains"
+    },
+    {
+      "pr": 577,
+      "issues": [],
+      "summary": "Hide Developer Mode for new No-root installs over root SSH"
+    },
+    {
+      "pr": 578,
+      "issues": [
+        576
+      ],
+      "summary": "Recover reproduced No-root removal failures with malformed Helper Stop records; the original device failure remains unconfirmed"
     }
   ],
   "excluded": [],
