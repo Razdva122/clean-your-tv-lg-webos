@@ -368,20 +368,23 @@ if (process.platform !== 'linux' || process.getuid() !== 0) {
       path.join(pauseState, 'stop-generation'),
       'utf8'
     );
-    run(
-      5999,
-      'try{require(' +
-        bootModule +
-        ').requestStop(' +
-        quotedPauseState +
-        ',{forInstall:true});process.exit(6)}catch(e){if(!/effective group/.test(e.message))throw e}',
-      5999
-    );
-    a.equal(
-      fs.readFileSync(path.join(pauseState, 'stop-generation'), 'utf8'),
-      prior
-    );
-    a.equal(fs.existsSync(path.join(pauseState, 'blocked')), false);
+    for (const legacy of [false, true]) {
+      run(
+        5999,
+        (legacy ? 'process.getegid=undefined;' : '') +
+          'try{require(' +
+          bootModule +
+          ').requestStop(' +
+          quotedPauseState +
+          ',{forInstall:true});process.exit(6)}catch(e){if(!/effective group/.test(e.message))throw e}',
+        5999
+      );
+      a.equal(
+        fs.readFileSync(path.join(pauseState, 'stop-generation'), 'utf8'),
+        prior
+      );
+      a.deepEqual(fs.readdirSync(pauseState), ['stop-generation']);
+    }
     run(
       5580,
       'require(' +

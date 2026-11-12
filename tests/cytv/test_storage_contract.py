@@ -319,12 +319,12 @@ assert.strictEqual(fs.readFileSync(d+'/blocked','utf8'),'stopped');
             with self.subTest(boundary=boundary):
                 self.run_js("""
 fs.chmodSync(d,504);
-assert.match(p.stopGeneration(d,'install'), /^I[0-9a-f]{32}$/);
+assert(/^I[0-9a-f]{32}$/.test(p.stopGeneration(d,'install')));
 var boundary = """+repr(boundary)+""", operation=boundary==='capture'?'renameSync':'openSync';
 var original=fs[operation], injected, injecting=false;
 fs[operation]=function(a,b){
  var installWrite=operation==='renameSync'?a==='stop-generation':
-    a==='stop-generation'&&typeof b==='number'&&(b&fs.constants.O_EXCL);
+    a==='stop-generation'&&typeof b==='number'&&(b&require('constants').O_EXCL);
  if(injected||injecting||!installWrite)return original.apply(this,arguments);
  injecting=true;
  if(boundary==='after-open'){
@@ -337,11 +337,11 @@ fs[operation]=function(a,b){
 };
 try {assert.throws(function(){p.requestStop(d,{forInstall:true});});}
 finally {fs[operation]=original;}
-assert.match(injected,/^S[0-9a-f]{32}$/);
+assert(/^S[0-9a-f]{32}$/.test(injected));
 assert.strictEqual(p.stopGeneration(d),injected);
 assert.strictEqual(fs.readFileSync(d+'/blocked','utf8'),'stopped');
 assert.strictEqual(fs.existsSync(d+'/control.json'),false);
-assert.deepStrictEqual(fs.readdirSync(d).sort(),['blocked','stop-generation']);
+assert.strictEqual(fs.readdirSync(d).sort().join(','),'blocked,stop-generation');
 """)
 
     def test_stop_refuses_a_directory_replaced_after_generation_publication(self):

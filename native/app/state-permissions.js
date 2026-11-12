@@ -476,6 +476,25 @@ function session(directory, options, action) {
       if (created) fs.unlinkSync(path);
     }
   }
+  function installPauseGroupMatches() {
+    if (typeof process.getegid === 'function')
+      return process.getegid() === before.gid;
+    // Legacy Node has no getegid. Check the group an exclusive create actually
+    // receives in this directory before touching either Stop latch.
+    var probe = '.cytv-record-' + crypto.randomBytes(12).toString('hex');
+    check();
+    var fd = fs.openSync(
+      probe,
+      c.O_WRONLY | c.O_CREAT | c.O_EXCL | c.O_NOFOLLOW,
+      384
+    );
+    try {
+      return fs.fstatSync(fd).gid === before.gid;
+    } finally {
+      fs.closeSync(fd);
+      fs.unlinkSync(probe);
+    }
+  }
   function publishInstallPause(snapshot, pause) {
     var name = 'stop-generation';
     function publishExclusive() {
@@ -764,6 +783,7 @@ function session(directory, options, action) {
       repairedGeneration: repairedGeneration,
       replaceGeneration: replaceGeneration,
       publishInstallPause: publishInstallPause,
+      installPauseGroupMatches: installPauseGroupMatches,
       bootstrap: bootstrap,
       expanded: expanded,
       replace: replace,
@@ -1251,7 +1271,7 @@ prepare.publishStopGeneration = function (directory, options) {
         if (forInstall) {
           // Exclusive publication requires the final group from inode creation.
           // An unsupported SSH group must fall back before taking the latch.
-          if (process.getegid() !== s.stat.gid)
+          if (!s.installPauseGroupMatches())
             throw Error('Installer pause needs the shared effective group');
           // Pin the generation before looking at the latches. Exclusively
           // acquire blocked before changing it, so we cannot adopt an
