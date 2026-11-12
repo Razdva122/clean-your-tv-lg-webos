@@ -378,6 +378,9 @@ the read-only preflight without starting a Root installation.
 Request failures use `system-info-request-failed`, `keyfilters-request-failed`
 or `native-home-request-failed`. Validation failures use `system-info-invalid`,
 `keyfilters-incompatible` or `native-home-incompatible`.
+`keyfilters-not-configured` means a successful configuration reply omitted the
+KeyFilters key or returned an empty list. A missing or malformed `configs`
+object, invalid entries and unsupported chains use `keyfilters-incompatible`.
 `native-home-unavailable` identifies a missing or unsafe native Home path.
 `c1-probe-failed` means an error in the preceding C1 probe prevented the
 capability-based check from running.

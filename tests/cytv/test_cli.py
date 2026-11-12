@@ -364,7 +364,7 @@ class CLITests(unittest.TestCase):
 
         stock_chain = [{'file': '/usr/lib/qt5/qml/KeyFilters/systemUi.js',
                         'handler': 'handleSystemKeys'}]
-        for chain, expected in ((None, 'keyfilters-request-failed'), ([], 'keyfilters-incompatible'),
+        for chain, expected in ((None, 'keyfilters-request-failed'), ([], 'keyfilters-not-configured'),
                                 (stock_chain, 'native-home-unavailable')):
             with self.subTest(expected=expected), tempfile.TemporaryDirectory() as tmp:
                 root = Path(tmp)
