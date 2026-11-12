@@ -77,3 +77,24 @@ assert.throws(() =>
 console.log(
   'PASS post-install appearance parameters, mode bounds, one-time application and storage errors'
 );
+const homeName = require('../root-edition/ui/tv-name');
+const namedSetup = create({ localStorage: storage, HomeName: homeName });
+assert.equal(
+  namedSetup.apply({ cytvSetup: { id: 'd'.repeat(32), tv_name: 'New' } }),
+  true
+);
+assert.equal(values.get('tvhome.name'), 'New');
+assert.equal(
+  namedSetup.apply({ cytvSetup: { id: 'e'.repeat(32), tv_name: 'bad\nname' } }),
+  false
+);
+assert.equal(values.get('tvhome.name'), 'New');
+assert.equal(
+  namedSetup.apply({ cytvSetup: { id: 'e'.repeat(32), tv_name: ' New ' } }),
+  false
+);
+assert.equal(
+  namedSetup.apply({ cytvSetup: { id: 'd'.repeat(32), tv_name: 'Old' } }),
+  false
+);
+assert.equal(values.get('tvhome.name'), 'New');

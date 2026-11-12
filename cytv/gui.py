@@ -508,6 +508,8 @@ class Wizard(QMainWindow):
             self.debloat_results = dict(value)
         elif kind == 'installation-settings':
             self.install_settings_current = {key:value[key] for key in ('renewal','block_updates') if type(value.get(key)) is bool}
+            if isinstance(value.get('tv_name'), str):
+                self.install_settings_current['tv_name'] = value['tv_name']
         elif kind == 'check':
             self.check_panel.setAccessibleName(tr('TV checks'))
             self.content.setMaximumHeight(140)
@@ -896,6 +898,19 @@ class Wizard(QMainWindow):
         self.badge.setText(tr('Step 6 of 6'))
         profile = self.selected_profile or {'edition': 'no-root'}
         fields.setAlignment(Qt.AlignmentFlag.AlignTop)
+        name = None
+        if profile['edition'] == 'root':
+            name_label = QLabel(tr('Home screen name'))
+            name = QLineEdit()
+            name.setObjectName('tvName')
+            name.setPlaceholderText(self.install_settings_current.get('tv_name', 'Home'))
+            name_label.setBuddy(name)
+            fields.addWidget(name_label)
+            fields.addWidget(name)
+            name_error = QLabel('')
+            name_error.setWordWrap(True)
+            name_error.setObjectName('tvNameError')
+            fields.addWidget(name_error)
         fields.addWidget(QLabel(tr('Theme')))
         cards_row = QWidget()
         cards_layout = QHBoxLayout(cards_row)
@@ -968,6 +983,14 @@ class Wizard(QMainWindow):
             for key, toggle in switches.items():
                 if toggle.isEnabled() and toggle.isChecked() != current[key]:
                     value[key] = toggle.isChecked()
+            if name is not None and name.text().strip():
+                from .package import normalize_tv_name
+                try:
+                    value['tv_name'] = normalize_tv_name(name.text())
+                except ValueError:
+                    name.setFocus()
+                    name_error.setText(tr('Home screen name must contain at most 48 characters, without control characters.'))
+                    return
             self.submit(json.dumps(settings.validate(value, profile)))
         self.button('Continue', save, True)
         self.button('Keep current settings', lambda: self.submit('{}'))

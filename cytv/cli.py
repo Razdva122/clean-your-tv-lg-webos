@@ -39,6 +39,12 @@ class LanguageParser(argparse.ArgumentParser):
         self.exit(2)
 
 
+def home_screen_name_arg(value):
+    if not value.strip():
+        raise argparse.ArgumentTypeError(i18n.translate('Enter a Home screen name, or omit --tv-name.'))
+    return package.normalize_tv_name(value)
+
+
 def parser():
     result = LanguageParser(prog='cytv', add_help=False, description=i18n.translate('Clean Your TV — one installer for No-root and Root.'))
     result._positionals.title = i18n.translate('positional arguments')
@@ -50,6 +56,7 @@ def parser():
     result.add_argument('--host', help=i18n.translate('TV IPv4 address or hostname'))
     result.add_argument('--no-discovery', action='store_true', help=i18n.translate('Skip local network discovery and enter a TV address manually'))
     result.add_argument('--edition', choices=('no-root', 'root'))
+    result.add_argument('--tv-name', type=home_screen_name_arg, help=i18n.translate('Home screen name (Root Edition only)'))
     result.add_argument('--connection', choices=('root-ssh',), help=i18n.translate('No-root: use existing root SSH without Developer Mode'))
     result.add_argument('--root-variant', choices=('node012-beta',), help=i18n.translate('Root: select the experimental Node.js 0.12.2 payload'))
     result.add_argument('--port', type=int, help=i18n.translate('SSH port (No-root: 9922; Root: 22)'))
@@ -201,6 +208,8 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
     remote = None
     store, profile, phase, tv_info = state.Store(args.data_dir), None, 'select-tv', {'frontend':getattr(write,'frontend','console')}
     try:
+        if args.tv_name is not None and args.command != 'install':
+            raise UserError('--tv-name applies only to installation.')
         if args.new_recovery_attempt and (args.command != 'recover-system-rollback' or args.edition == 'no-root'):
             raise UserError('--new-recovery-attempt applies only to Root rollback recovery.')
         if args.repair_package_permissions and (args.command!='enable-firmware-access' or args.edition=='no-root'):
@@ -239,6 +248,8 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
             return info
 
         profile = choose_profile(args, store, ask, write, search or discovery.find_tvs, inspect_connection)
+        if args.tv_name is not None and profile['edition'] != 'root':
+            raise UserError('--tv-name requires Root Edition.')
         write.selected_profile(profile)
         setup = {}
         if args.command == 'replace-system-updater':
@@ -455,6 +466,8 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                             raise UserError('Choose an alternative edition without --migrate-home. Installation has not started.')
                         from .root_runtime import offer
                         offer(installer, args, ask, write)
+                        if args.tv_name is not None and profile['edition'] != 'root':
+                            write('--tv-name was skipped because the selected edition is No-root.')
                         write.selected_profile(profile)
                         installer.select_graphics()
                         if profile['edition'] == 'root':
@@ -564,6 +577,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                 else:
                     result = installer.install(inventory, key, args.migrate_home, reinstall=reinstall) if reinstall else installer.install(inventory, key, args.migrate_home)
                 setup_cancelled = False
+                setup = {}
                 if not args.non_interactive and (not args.yes or write.frontend != 'console'):
                     phase = 'debloat'
                     try:
@@ -573,9 +587,10 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                             current=install_settings.read_current(installer) if write.frontend == 'desktop' else None)
                     except (EOFError, KeyboardInterrupt):
                         setup_cancelled = True
-                    else:
-                        if setup:
-                            install_settings.apply_services(installer, setup, write)
+                if args.tv_name is not None and profile['edition'] == 'root' and not setup_cancelled:
+                    setup['tv_name'] = args.tv_name
+                if setup:
+                    install_settings.apply_services(installer, setup, write)
                 phase = 'verify-home-button'
                 installer.outcome.review_home(ask, write, args.non_interactive or setup_cancelled)
                 if profile['edition'] == 'root':

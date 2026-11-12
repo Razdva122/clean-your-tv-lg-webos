@@ -18,6 +18,32 @@ except ImportError:
 
 @unittest.skipUnless(HAS_QT, 'Desktop build dependencies are optional for CLI tests')
 class GuiTests(unittest.TestCase):
+    def test_final_customization_prefills_existing_name_validates_and_submits(self):
+        import json
+        from cytv import i18n
+        from cytv.desktop import Channel
+        from cytv.install_settings import PROMPT
+        w=Wizard();self.addCleanup(w.close)
+        i18n.set_language('en')
+        w.channel=Channel(lambda *_:None)
+        w.selected_profile = {'edition': 'root'}
+        w.receive('installation-settings', {'tv_name':'Existing'})
+        w.show_prompt(Prompt(PROMPT))
+        entry=w.form.findChild(QLineEdit,'tvName')
+        self.assertEqual(entry.placeholderText(),'Existing')
+        self.assertEqual(entry.text(), '')
+        submit=next(button for button in w.form.findChildren(QPushButton) if button.text()=='Continue')
+        submit.click()
+        self.assertNotIn('tv_name', json.loads(w.channel.answers.get_nowait()))
+        w.show_prompt(Prompt(PROMPT))
+        entry = w.form.findChild(QLineEdit, 'tvName')
+        submit = next(button for button in w.form.findChildren(QPushButton) if button.text() == 'Continue')
+        entry.setText('x'*49);submit.click()
+        self.assertTrue(w.channel.answers.empty())
+        self.assertTrue(w.form.findChild(QLabel,'tvNameError').text())
+        entry.setText('Aashiyaan');submit.click()
+        self.assertEqual(json.loads(w.channel.answers.get_nowait())['tv_name'],'Aashiyaan')
+
     def test_debloat_group_selection_and_results(self):
         import json
         from PySide6.QtGui import QColor, QPalette

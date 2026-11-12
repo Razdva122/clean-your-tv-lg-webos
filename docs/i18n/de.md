@@ -1,5 +1,7 @@
 # Clean Your TV — Benutzeranleitung
 
+Nur Root Edition: Legen Sie den Namen des Home-Bildschirms auf der letzten Seite des Installers fest. Ein leeres Feld behält den bisherigen Namen bei. In der CLI verwenden Sie `--tv-name`.
+
 Noch unveröffentlichte Installer-Änderung: Vor einer neuen Installation prüft der Computer-Installer GitHub auf eine neuere stabile Version. Wähle „GitHub öffnen und die neueste Version herunterladen“, um anzuhalten und sie herunterzuladen, oder „Nein, diese Version installieren“, um ausdrücklich fortzufahren. Bei fehlgeschlagener Prüfung kannst du fortfahren. Ausstehende Vorgänge und Wiederherstellung überspringen die Prüfung.
 
 Clean Your TV ist Ihr persönlicher Startbildschirm für LG webOS: Ihre Apps in Ihrer Reihenfolge, ohne Werbereihen in diesem Menü. Installieren Sie es mit einem Computer oder Android-Smartphone; danach kann der Computer ausgeschaltet bleiben.

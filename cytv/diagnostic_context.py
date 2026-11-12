@@ -158,7 +158,7 @@ def tv_summary(value):
         settings = mapping(value['installation_settings'])
         result['installation_settings'] = {
             key: choice(settings[key], ('requested-in-home', 'saved', 'saved-restart-required', 'unconfirmed'))
-            for key in ('theme', 'weather', 'renewal', 'block_updates') if key in settings}
+            for key in ('theme', 'weather', 'renewal', 'block_updates', 'tv_name', 'launchpoint_title') if key in settings}
     for key, allowed in (('helper_state', HELPER_STATES), ('kernel_arch', KERNEL_ARCHES),
                          ('userland_abi', ('arm32', 'arm64', 'other', 'unknown')),
                          ('graphics_resolution', ('1280x720', '1920x1080'))):

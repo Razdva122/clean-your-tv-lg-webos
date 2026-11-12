@@ -61,7 +61,11 @@ class SettingsTests(unittest.TestCase):
                 self.assertEqual(questions, [debloat.SELECT, settings.PROMPT] if install_error is None else [])
 
     def test_android_off_and_skip_are_explicit_choices_not_dialog_cancellation(self):
+        from cytv import i18n
         from cytv.terminal import Console
+        self.addCleanup(i18n.set_language, i18n.language_choice())
+        i18n.set_language('en')
+
         class Android(Console):
             frontend = 'android'
             def __init__(self):

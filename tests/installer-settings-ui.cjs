@@ -50,7 +50,7 @@ const http = require('node:http');
       await page.waitForFunction(() => window.RootLauncherRendered === true);
       await Promise.all([
         page.waitForEvent('load'),
-        page.evaluate(() => {
+        page.evaluate((edition) => {
           document.dispatchEvent(
             new CustomEvent('webOSRelaunch', {
               detail: {
@@ -58,13 +58,16 @@ const http = require('node:http');
                   cytvSetup: {
                     id: 'a'.repeat(32),
                     theme: 'liquid-glass',
-                    weather: true
+                    weather: true,
+                    ...(edition === 'root-launcher'
+                      ? { tv_name: 'Setup TV' }
+                      : {})
                   }
                 }
               }
             })
           );
-        })
+        }, edition)
       ]);
       await page.waitForFunction(
         () =>
@@ -83,6 +86,15 @@ const http = require('node:http');
         ),
         'auto'
       );
+      assert.equal(
+        await page.evaluate(() => localStorage.getItem('tvhome.name')),
+        edition === 'root-launcher' ? 'Setup TV' : null
+      );
+      if (edition === 'root-launcher')
+        assert.equal(await page.title(), 'Setup TV');
+      await page.locator('#btnSettings').click();
+      assert.equal(await page.locator('#homeTvName').count(), 0);
+      await page.keyboard.press('Escape');
       // Initial launch params on a later startup also run after profile readiness.
       await page.addInitScript(() => {
         window.PalmSystem = {

@@ -3,6 +3,8 @@ import gzip
 import hashlib
 import io
 import json
+import re
+import unicodedata
 from pathlib import Path, PurePosixPath
 import tarfile
 
@@ -132,6 +134,15 @@ def inventory_script(inventory):
     if len(script) > 16 * 1024 * 1024:
         raise ValueError('TV inventory exceeds the 16 MiB package limit')
     return script
+
+
+def normalize_tv_name(value):
+    if not isinstance(value, str):
+        raise ValueError('Home screen name must be text.')
+    name = unicodedata.normalize('NFC', value.strip()) or 'Home'
+    if len(name) > 48 or re.search(r'[\u0000-\u001f\u007f-\u009f\u00ad\u061c\u200b-\u200f\u2028-\u202e\u2060-\u206f\ufeff\ud800-\udfff]', name):
+        raise ValueError('Home screen name must contain at most 48 characters, without control characters.')
+    return name
 
 
 def personalize(data, app, inventory):

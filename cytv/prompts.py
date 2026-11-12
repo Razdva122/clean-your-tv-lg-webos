@@ -118,6 +118,18 @@ def confirm(prompt, ask, write, default=False):
         write.error('Type y for yes, n for no, or q to quit. Enter chooses ' + ('yes.' if default else 'no.'))
 
 
+def tv_name(ask, write):
+    from .package import normalize_tv_name as validate
+    write = console(write)
+    write.heading('Home screen name')
+    while True:
+        try:
+            value = answer(ask, 'Home screen name (Enter keeps current name): ')
+            return validate(value) if value.strip() else None
+        except ValueError as error:
+            write.error(str(error))
+
+
 def wait_for_tv(ask, write):
     write = console(write)
     write.heading('Turn on your TV')
