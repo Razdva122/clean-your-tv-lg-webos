@@ -32,6 +32,7 @@ def resume(installer, pending):
     observation=json.loads(installer.remote.run(shlex.join([*node,'inspect',operation,'-','0','-1','-1','-',removal]),data=source,timeout=30))
     if observation.get('operation')!=operation or observation.get('removal')!=removal:raise UserError('Removal evidence changed. Recovery data was kept.')
     if observation.get('state')=='not-ready':return None
+    if observation.get('state')=='coordinator-ready':return {'recheck_boot':True}
     if observation.get('state')!='tail-ready':
         raise UserError('Removal is still in progress. Recovery data and the remaining cleanup step were kept.',reason_code='pending-operation')
     raw,digest=gate_bytes(installer)

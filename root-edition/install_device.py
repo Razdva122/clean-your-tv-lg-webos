@@ -630,6 +630,18 @@ class LocalDevice:
         roots=(ROOT,UPDATER,SUPERVISOR)
         uid=self.ownership.store.uid
         with locks(roots,uid):
+            cleanup=record.get('runtime_cleanup')
+            if cleanup and record.get('cleanup_without_restart') is True:
+                import python_binding
+                retirement=cleanup.get('boot_retirement_started')
+                runtime=python_binding.MANAGED_ROOT/python_binding.ARCHIVE_SHA256
+                # Inspect is lock-free. The tail may have retired the marker
+                # in the meantime, so repeat the handoff check under the lock.
+                runtime_present=os.path.lexists(runtime)
+                legacy_runtime_present='boot_retirement_started' not in cleanup and runtime_present
+                if not (retirement is False and (not cleanup.get('files') or runtime_present)
+                        or legacy_runtime_present):
+                    raise ValueError('cleanup_tail_required')
             restarted=verified_restart(record)
             baseline=record.get('cleanup_boot_id')
             if baseline is not None and not boot_format(baseline):raise ValueError('boot_id_unavailable')
@@ -1229,7 +1241,8 @@ class LocalDevice:
                 if os.path.lexists(runtime):
                     raw,inventory=python_binding._runtime_inventory(str(runtime/'bin/python3.13'))
                     files=dict(inventory['files']);files['.cytv-runtime.json']=sha(raw);digest=sha(raw)
-                record['runtime_cleanup']={'root':str(runtime),'files':files,'inventory_sha256':digest,'promotion_required':promotion is not None}
+                record['runtime_cleanup']={'root':str(runtime),'files':files,'inventory_sha256':digest,
+                                           'promotion_required':promotion is not None,'boot_retirement_started':False}
             record['runtime_cleanup']['parent_pid']=os.getpid()
             record['stage']='private-cleanup';record['state']='recovery_required'
             record['result']['private_cleanup_verified']=False
