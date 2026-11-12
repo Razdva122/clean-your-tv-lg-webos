@@ -360,7 +360,7 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
             reply=json.loads(raw)
         except TVCommandError as error:
             error.root_action=action
-            error.root_boundary=boundary
+            error.root_boundary=getattr(error,'root_boundary',boundary)
             raise
         if (not isinstance(reply,dict) or reply.get('operation')!=operation
                 or reply.get('state') not in ('pending','complete','recovery_required','unknown','fresh','installed','unsupported','conflict','migration_required')):
