@@ -195,35 +195,44 @@ class OriginalOperationIntegration(unittest.TestCase):
         self.assertEqual((self.root/'requests').read_text().splitlines(),[operations.HELPER])
         self.assertEqual(self.store.pending(self.profile),pending)
 
-    def test_zero_tmp_budget_still_stops_before_private_storage_selection(self):
-        # A writable private evidence root does not establish vendor scratch
-        # capacity. Preserve the earlier per-filesystem admission boundary.
+    def test_devmode_ramfs_allows_install_only_when_developer_storage_fits(self):
         jail=self.root/'jail';jail.mkdir(mode=0o755)
         private=jail/'.cytv-installer';private.mkdir(mode=0o700)
         original=self.remote.run
         def run(command,**kwargs):
             if command == "LC_ALL=C stat -f -c '%t' /tmp":
-                return '858458f6'
+                return fs_magic
             if command=='LC_ALL=C df -Pk /tmp':
                 return 'Filesystem 1024-blocks Used Available Capacity Mounted on\n' + tmp_row
             if command=='LC_ALL=C df -Pk /media/developer':
-                return 'Filesystem 1024-blocks Used Available Capacity Mounted on\n/dev/apps 10000000 0 10000000 0% /media/developer'
+                return 'Filesystem 1024-blocks Used Available Capacity Mounted on\n' + developer_row
             return original(command,**kwargs)
         self.remote.run=run
-        for tmp_row, reason in (
-            ('/dev/tmp 1024 1024 0 100% /tmp', 'tv-storage-full'),
-            ('tmp 0 0 0 0% /tmp', 'tv-storage-ramfs'),
+        developer_available = '/dev/apps 10000000 0 10000000 0% /media/developer'
+        developer_full = '/dev/apps 10000000 10000000 0 100% /media/developer'
+        tmp_zero = 'tmp 0 0 0 0% /tmp'
+        for tmp_row, fs_magic, developer_row, full_path in (
+            ('/dev/tmp 1024 1024 0 100% /tmp', '1021994', developer_available, '/tmp'),
+            (tmp_zero, '', developer_available, '/tmp'),
+            (tmp_zero, '858458f6', developer_full, '/media/developer'),
         ):
-            with self.subTest(reason=reason), patch.object(observer, 'JAIL_ROOT', str(private)):
+            with self.subTest(tmp=tmp_row, fs_magic=fs_magic, full_path=full_path), \
+                 patch.object(observer, 'JAIL_ROOT', str(private)):
                 with self.assertRaises(RuntimeError) as caught:
                     self.installer.install(self.inventory, 'original-secret')
-                self.assertEqual(caught.exception.reason_code, reason)
-                self.assertIn('/tmp', str(caught.exception))
+                self.assertEqual(caught.exception.reason_code, 'tv-storage-full')
+                self.assertIn(f'({full_path})', str(caught.exception))
                 self.assertIsNone(self.store.pending(self.profile))
                 self.assertFalse(any(call[:2] == ('observer', 'storage-select')
                                      for call in self.remote.calls))
                 self.assertFalse((self.root/'requests').exists())
                 self.assertEqual(list(private.iterdir()), [])
+
+        tmp_row, fs_magic, developer_row = tmp_zero, '858458f6', developer_available
+        with patch.object(observer, 'JAIL_ROOT', str(private)):
+            self.installer.install(self.inventory, 'original-secret')
+        self.assertEqual((self.root/'requests').read_text().splitlines(), list(observer.APPS))
+        self.assertIsNone(self.store.pending(self.profile))
 
     def test_root_ssh_observer_install_and_remove_keep_original_receipts(self):
         # Host fixture substitutes UID and fixed TV paths only. Run the actual

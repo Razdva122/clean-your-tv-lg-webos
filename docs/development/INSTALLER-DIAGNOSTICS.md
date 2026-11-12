@@ -510,12 +510,17 @@ path](../RECOVERY.md#candidate-finish-verified-root-setup-with-home-control-off)
 
 ## Temporary storage on ramfs (#434)
 
-If the install preflight reports all-zero block counts for the /tmp mount and a
-read-only filesystem type check confirms ramfs, the report exports
-`tv-storage-ramfs`. It records that available temporary capacity could not be
-measured. A measured shortfall on a different filesystem still takes precedence.
-The installer stops before package submission. The probe output is excluded
-from the report, and package scratch paths stay the same.
+When `df` reports all-zero block counts for the `/tmp` mount and a read-only
+filesystem type check confirms ramfs, No-root over Developer Mode can proceed
+if the `/media/developer` budget passes. On the investigated 2017 LG firmware,
+`appinstalld` extracts package metadata under `/media/developer/tmp` and `opkg`
+writes application files under `/media/developer/apps`. The system `/tmp` still
+holds temporary `opkg` metadata and file lists. No-root reports that available
+temporary capacity could not be measured and uses the existing package service.
+
+Measured shortfalls and unconfirmed zero-block results still stop installation.
+Root and No-root over root SSH retain the `tv-storage-ramfs` preflight stop
+when a separate filesystem does not already report a measured shortfall.
 
 <a id="no-root-observer-failures-next-candidate-376-and-378"></a>
 
