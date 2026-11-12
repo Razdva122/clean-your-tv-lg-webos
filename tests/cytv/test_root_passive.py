@@ -37,7 +37,7 @@ class PassiveBootstrapTests(unittest.TestCase):
         for kind,value in (('request',self.request),('submission',self.submission)):
             self.write(self.base+'/'+kind+'-'+self.identifier+'.json',json.dumps(value).encode())
 
-    def collect(self,foreign=False):
+    def collect(self,foreign=False,pending=None):
         harness=r'''
 var fs=require('fs'),vm=require('vm'),path=require('path'),c=require('constants');
 var fixture=JSON.parse(process.argv[1]),code=JSON.parse(process.argv[2]),foreign=process.argv[3]==='true';
@@ -53,7 +53,7 @@ process.stdout.write(JSON.stringify(output));
 '''
         before={str(p):(p.read_bytes(),p.stat().st_mode) for p in self.root.rglob('*') if p.is_file() and not p.is_symlink()}
         run=subprocess.run([os.environ.get('ROOT_DIAGNOSTIC_NODE','node'),'-e',harness,json.dumps(str(self.root)),
-                            json.dumps(root_passive.program(self.identifier)),str(foreign).lower()],capture_output=True,text=True,check=True)
+                            json.dumps(root_passive.program(self.identifier,pending)),str(foreign).lower()],capture_output=True,text=True,check=True)
         output=json.loads(run.stdout);self.assertEqual(len(output),1)
         for secret in ('PRIVATE','PASSWORD','ADDRESS',self.identifier,self.worker):self.assertNotIn(secret,run.stdout)
         after={str(p):(p.read_bytes(),p.stat().st_mode) for p in self.root.rglob('*') if p.is_file() and not p.is_symlink()}
@@ -73,6 +73,29 @@ process.stdout.write(JSON.stringify(output));
         self.assertEqual(got['python'],'system-default-unverified')
         self.write(self.base+'/request-'+'b'*32+'.json',b'foreign malformed request')
         self.assertEqual(self.collect(),got)
+
+    def test_native_pending_reads_checked_request_without_detached_worker(self):
+        import shutil
+        shutil.rmtree(self.root/self.worker.lstrip('/'))
+        (self.root/(self.base+'/submission-'+self.identifier+'.json').lstrip('/')).unlink()
+        pending = {'action':'install','stage':'setup','home_backend':'c1-native-gate',
+                   'product_operation':self.identifier}
+        lease = {'schema':1,'id':'b'*32,'owner':'product','journal':'product-'+self.identifier+'.json',
+                 'stage':'root-deploy','terminal':False}
+        self.request.update(lease=lease['id'], home_changed=False, failure={
+            'exception_type':'CalledProcessError','exit_status':1,'message':'PRIVATE',
+            'root_driver':{'exception_type':'TimeoutError','frames':[{'file':'c1_keyfilter.py','line':17},
+                                                                   {'file':'PRIVATE','line':5}]}})
+        self.write(self.base+'/request-'+self.identifier+'.json',json.dumps(self.request).encode())
+        self.write(self.base+'/operation.json',json.dumps(lease).encode())
+        self.assertEqual(self.collect(pending=pending),{
+            'schema':1,'status':'read','operation':'consistent-not-admission','worker':'not-applicable',
+            'stage':'root-deploy','failure':{'exception_type':'CalledProcessError','exit_status':1,
+            'root_driver':{'exception_type':'TimeoutError','frames':[{'file':'c1_keyfilter.py','line':17}]}}})
+        self.assertEqual(self.collect(foreign=True,pending=pending)['status'],'unsafe')
+        lease['id']='c'*32
+        self.write(self.base+'/operation.json',json.dumps(lease).encode())
+        self.assertEqual(self.collect(pending=pending)['status'],'inconsistent')
 
     def test_complete_first_worker_line_is_classified_but_tail_fragments_are_not(self):
         self.write(self.worker+'/worker.log',b'RuntimeError: PRIVATE PASSWORD\n')

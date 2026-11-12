@@ -1306,15 +1306,19 @@ else:
         reconciled = None
         reconciliation = None
         can_resume = False
-        if (self.profile['edition']=='root' and pending and pending.get('action')=='install'
+        from .root_passive import collect, is_native_pending
+        native_pending = self.profile['edition']=='root' and is_native_pending(pending)
+        if native_pending or (self.profile['edition']=='root' and pending and pending.get('action')=='install'
                 and pending.get('stage')=='coordinator-submitted' and not trusted_recovery):
             # A failed submission/status (including SSH 127) does not authorize
             # staging a replacement driver or executing retained binding code.
-            from .root_passive import collect
             passive=collect(self.remote,pending.get('product_operation'),pending)
             event=dict(operation=pending['product_operation'],action='install',state='recovery_required',
                        stage='blocked',code='operation_requires_recovery',can_resume=False,
                        resume_reason='recovery_evidence_required',passive=passive)
+            if native_pending and passive.get('status')=='read':
+                event.update(stage=passive['stage'],code='installation_requires_recovery',home_changed=False)
+                if 'failure' in passive:event['failure']=passive['failure']
             return dict(device={'product':event},pending=pending,reconciled=None,can_resume_root_setup=False)
         if not pending and self.profile['edition']=='root' and not self.native_root_present():
             try:
