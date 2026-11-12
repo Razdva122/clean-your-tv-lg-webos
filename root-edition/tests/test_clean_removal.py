@@ -1459,6 +1459,27 @@ class PartialDeviceRemoval(unittest.TestCase):
         self.assertGreater(observe.call_count,1)
         self.assertFalse(present)
 
+    def test_only_first_profileless_home_readback_can_retire_an_orphan_filter(self):
+        import deploy
+        driver, identifier, root, _, payload, _, _ = self.profileless_fixture()
+        (payload/'root/runtime/c1_keyfilter.py').touch()
+        proof = {'mode':'stock-compositor','target':{'dev':1,'ino':2,'size':52},'target_sha256':'a'*64}
+        original = deploy.command.side_effect
+        attempts = []
+
+        def command(args):
+            if 'compositor_stock_report' not in args[-1]:
+                return original(args)
+            attempts.append('retire_orphan=True' in args[-1])
+            return {'returnValue':True,'result':proof}
+
+        with patch.object(deploy.command, 'side_effect', command):
+            self.assertEqual(driver.clean_remove(identifier)['stage'], 'restart-required')
+            driver.device.current_boot = '22222222-2222-2222-2222-222222222222'
+            self.assertEqual(driver.clean_remove(identifier)['stage'], 'verified-clean')
+        self.assertEqual(attempts, [True, *([False] * (len(attempts) - 1))])
+        self.assertGreater(len(attempts), 1)
+
     def test_compositor_retry_keeps_new_routing_evidence_before_cleanup(self):
         driver,identifier,root,updater,payload,calls,present=self.fixture()
         (root/'deploy.json').unlink()
