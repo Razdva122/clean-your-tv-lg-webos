@@ -341,6 +341,45 @@ class CapabilityTests(unittest.TestCase):
             (SETTINGS,{'returnValue':True,'profiles':{'defaultApps':{'categories':{'home':' ' }},'idleApp':{'appId':'com.webos.app.home','support':True}}})]:
             with self.subTest(settings=settings,profiles=profiles),self.assertRaises(UserError):self.verify(settings,profiles)
 
+    def test_reported_missing_home_interfaces_are_distinct_from_rejection(self):
+        from cytv.diagnostic_context import tv_summary
+        from cytv.root_capabilities import CALLS, RootCapabilityError, verify
+        from cytv.transport import terminal_reply
+
+        missing_settings = {'returnValue': False, 'errorCode': None,
+                            'errorText': 'There is no matched result from DB'}
+        missing_profiles = {'returnValue': False, 'errorCode': -1,
+                            'errorText': 'Service does not exist: com.webos.service.systemprofile.'}
+        for settings, profiles, expected in (
+                (missing_settings, missing_profiles, ('setting-not-found', 'service-absent')),
+                (dict(missing_settings, errorText='Access denied'),
+                 dict(missing_profiles, errorText='Access denied'), ('rejected', 'rejected')),
+                (dict(missing_settings, errorCode=-1), missing_profiles, ('rejected', 'service-absent'))):
+            for use_transport in (False, True):
+                with self.subTest(expected=expected, use_transport=use_transport):
+                    replies = dict(zip((uri for uri, _ in CALLS.values()), (settings, profiles)))
+
+                    def luna(uri, payload, **kwargs):
+                        reply = replies[uri]
+                        if use_transport:
+                            terminal_reply(reply, uri=uri)
+                        return reply
+
+                    remote = Mock()
+                    remote.luna.side_effect = luna
+                    info, checklist = {}, CheckList()
+                    with self.assertRaises(RootCapabilityError) as raised:
+                        verify(remote, checklist, info)
+                    self.assertIs(type(raised.exception), RootCapabilityError)
+                    self.assertEqual(raised.exception.reason_code, 'root-home-interfaces')
+                    summary = tv_summary(info)
+                    self.assertEqual(summary['root_capabilities'], dict(zip(CALLS, expected)))
+                    self.assertEqual(summary['root_requirements'], dict.fromkeys(CALLS, 'fail'))
+                    self.assertEqual(summary['root_capability_codes']['home-profiles'], -1)
+                    self.assertNotIn('errorText', str(summary))
+                    self.assertNotIn('home_backend', info)
+                    remote.run.assert_not_called()
+
     def test_denied_timedout_and_malformed_calls_keep_fixed_reasons_only(self):
         from cytv.root_capabilities import verify
         from cytv.errors import TVRejected, UserError

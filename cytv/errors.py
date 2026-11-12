@@ -123,6 +123,11 @@ class TVRejected(UserError):
             and reply.get('returnValue') is False
             and type(reply.get('errorCode')) is int and reply['errorCode'] == -1
             and reply.get('errorText') == 'Service does not exist: com.webos.service.systemprofile.')
+        self.system_setting_not_found = (
+            uri == 'com.webos.settingsservice/getSystemSettings'
+            and reply.get('returnValue') is False
+            and reply.get('errorCode', False) is None
+            and reply.get('errorText') == 'There is no matched result from DB')
         self.config_service_missing = (
             uri == 'com.webos.service.config/getConfigs'
             and reply.get('returnValue') is False
