@@ -171,6 +171,7 @@ class CleanupTail(unittest.TestCase):
         (process/'cmdline').write_bytes(('/usr/bin/python3\0/tmp/'+stage.name+'/setup-system-updater.py\0').encode())
         result,reply=self.run_tail(MODE='verify')
         self.assertEqual(reply.get('cleanup_error'),'owned-process-still-used')
+        self.assertIs(reply['restart_required'],False)
         (process/'cmdline').unlink();process.rmdir()
         saved=json.loads((self.state/('clean-removal-'+ID+'.json')).read_text())
         saved['retained_temporary_stages'][0]['ino']+=1
@@ -532,6 +533,36 @@ class CleanupTail(unittest.TestCase):
         result,reply=self.run_tail()
         self.assertEqual(result.returncode,0,result.stderr)
         self.assertEqual(reply['stage'],'verified-clean')
+
+    def test_restart_retry_rechecks_boot_for_blocked_same_boot_tail(self):
+        self.record['cleanup_without_restart']=True
+        self.record.pop('cleanup_verified_boot_id')
+        self.write('clean-removal-'+ID+'.json',self.record)
+        process=self.base/'proc/123';process.mkdir()
+        (process/'cmdline').write_bytes(b'/usr/bin/node\0-e\0unrelated inline worker\0')
+        _,blocked=self.run_tail()
+        self.assertEqual(blocked['cleanup_error'],'owned-process-still-used')
+        self.assertIs(blocked['restart_required'],True)
+        self.assertTrue(self.runtime.exists())
+        for stage in ('private-cleanup','package-removal','restart-required'):
+            with self.subTest(stage=stage):
+                self.record['stage']=stage
+                self.write('clean-removal-'+ID+'.json',self.record)
+                _,retry=self.run_tail(MODE='inspect')
+                self.assertEqual(retry['state'],'coordinator-ready')
+
+    def test_restart_retry_keeps_tail_after_retirement_has_started(self):
+        self.record['cleanup_without_restart']=True
+        self.record.pop('cleanup_verified_boot_id')
+        self.record['runtime_cleanup']['boot_retirement_started']=False
+        self.write('clean-removal-'+ID+'.json',self.record)
+        result,_=self.run_tail(FAIL_MEMBER='secret.py')
+        self.assertNotEqual(result.returncode,0)
+        self.assertTrue(self.runtime.exists())
+        saved=json.loads((self.state/('clean-removal-'+ID+'.json')).read_text())
+        self.assertIs(saved['runtime_cleanup']['boot_retirement_started'],True)
+        _,retry=self.run_tail(MODE='inspect')
+        self.assertEqual(retry['state'],'tail-ready')
 
     def test_same_boot_permission_never_substitutes_for_process_absence(self):
         self.record['cleanup_without_restart']=True

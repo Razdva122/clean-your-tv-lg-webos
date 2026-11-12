@@ -1895,7 +1895,8 @@ print('CYTV_PROJECT_REMOVED')
         self.progress('Removing Clean Your TV; earlier installation results will be kept.')
         from .root_clean_tail import resume as resume_tail
         reply=resume_tail(self,pending)
-        if reply is None:
+        recheck_boot=reply is not None and reply.get('recheck_boot') is True
+        if reply is None or recheck_boot:
             root_bundle=self.payload/'root'
             previous=pending
             native_pending=False
@@ -1919,6 +1920,9 @@ print('CYTV_PROJECT_REMOVED')
             target=self.product_action('clean-target',operation,stage)
             selected=target.get('target_operation');lease=target.get('target_lease')
             goal=target.get('target_removal') or pending['removal_operation']
+            if recheck_boot and (selected!=pending.get('removal_target_operation',pending['product_operation'])
+                    or goal!=pending.get('removal_target_intent',pending['removal_operation'])):
+                raise UserError('Removal evidence changed. Recovery data was kept.',reason_code='pending-operation')
             if pending.get('root_cleanup_lease') and (
                     lease!=pending['root_cleanup_lease']
                     or selected!=pending.get('removal_target_operation',pending['product_operation'])
@@ -1935,7 +1939,8 @@ print('CYTV_PROJECT_REMOVED')
         phase=reply.get('stage')
         if phase in REMOVAL_STAGES:
             self.store.checkpoint(self.profile,stage=phase,removal_reason=reply.get('reason') if reply.get('reason') in REMOVAL_REASONS else 'ownership-conflict')
-        if reply.get('cleanup_error') == 'owned-process-still-used':
+        if (reply.get('cleanup_error') == 'owned-process-still-used'
+                and reply.get('restart_required') is True):
             self.store.checkpoint(self.profile,stage='restart-required',removal_reason='restart-required')
             return {'removed':False,'verified_clean':False,'restart_required':True}
         failure=reply.get('cleanup_error')

@@ -1051,6 +1051,21 @@ function completion() {
     result: record.result
   };
 }
+function canRecheckBoot() {
+  var cleanup = record && record.runtime_cleanup;
+  // An older tail retired the managed runtime before removing the boot marker.
+  return (
+    !!cleanup &&
+    ['private-cleanup', 'package-removal', 'restart-required'].indexOf(
+      record.stage
+    ) !== -1 &&
+    !record.final_fence &&
+    record.cleanup_without_restart === true &&
+    ((cleanup.boot_retirement_started === false &&
+      (Object.keys(cleanup.files || {}).length === 0 || exists(runtime))) ||
+      (cleanup.boot_retirement_started === undefined && exists(runtime)))
+  );
+}
 (async function main() {
   try {
     if (!/^[a-f0-9]{32}$/.test(id)) throw Error('invalid-cleanup-selector');
@@ -1067,11 +1082,16 @@ function completion() {
     )
       throw Error('different-removal-intent');
     if (mode === 'inspect') {
+      var runtimeCleanup = record && record.runtime_cleanup;
       process.stdout.write(
         JSON.stringify({
           operation: id,
           removal: removal,
-          state: record && record.runtime_cleanup ? 'tail-ready' : 'not-ready'
+          state: canRecheckBoot()
+            ? 'coordinator-ready'
+            : runtimeCleanup
+              ? 'tail-ready'
+              : 'not-ready'
         })
       );
     } else if (mode === 'stock-proof') {
@@ -1274,6 +1294,13 @@ function completion() {
             throw Error('invalid-support-stage');
           retire(stage.path, null, stage);
         });
+        if (
+          record.cleanup_without_restart === true &&
+          cleanup.boot_retirement_started !== true
+        ) {
+          cleanup.boot_retirement_started = true;
+          write(directory, 'clean-removal-' + id + '.json', record);
+        }
         retire(runtime, cleanup.files, null, true);
         retire(
           bootRoot,
@@ -1308,17 +1335,18 @@ function completion() {
           ? error.message
           : 'cleanup-guard-failed';
       process.stderr.write('CYTV_CLEAN_TAIL: ' + diagnostic + '\n');
-      process.stdout.write(
-        JSON.stringify({
-          operation: id,
-          removal: removal,
-          state: 'recovery_required',
-          stage: 'private-cleanup',
-          current: false,
-          reason: 'private-cleanup-incomplete',
-          cleanup_error: diagnostic
-        })
-      );
+      var failure = {
+        operation: id,
+        removal: removal,
+        state: 'recovery_required',
+        stage: 'private-cleanup',
+        current: false,
+        reason: 'private-cleanup-incomplete',
+        cleanup_error: diagnostic
+      };
+      if (diagnostic === 'owned-process-still-used')
+        failure.restart_required = mode === 'finish' && canRecheckBoot();
+      process.stdout.write(JSON.stringify(failure));
       process.exitCode = 1;
     }
   } finally {

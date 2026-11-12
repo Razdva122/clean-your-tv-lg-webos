@@ -60,12 +60,35 @@ class SimpleRootWire(unittest.TestCase):
     def test_final_tail_live_process_requests_restart_instead_of_generic_cleanup_error(self):
         installer=self.prepare()
         reply={'state':'recovery_required','stage':'private-cleanup','current':False,
-               'reason':'private-cleanup-incomplete','cleanup_error':'owned-process-still-used'}
+               'reason':'private-cleanup-incomplete','cleanup_error':'owned-process-still-used',
+               'restart_required':True}
         with patch('cytv.root_clean_tail.resume',return_value=reply):
             result=installer.uninstall(full_project=True)
         self.assertTrue(result['restart_required'])
         self.assertFalse(result['verified_clean'])
         self.assertEqual(self.store.pending(self.profile)['removal_reason'],'restart-required')
+
+        reply['restart_required']=False
+        with patch('cytv.root_clean_tail.resume',return_value=reply):
+            with self.assertRaises(UserError) as error:
+                installer.uninstall(full_project=True)
+        self.assertEqual(error.exception.reason_code,'cleanup-check-failed')
+        self.assertEqual(self.store.pending(self.profile)['stage'],'private-cleanup')
+
+    def test_tail_boot_retry_cannot_adopt_another_removal_intent(self):
+        installer=self.prepare()
+        installer.uninstall(full_project=True)
+        pending=self.store.pending(self.profile)
+        with patch('cytv.root_clean_tail.resume',return_value={'recheck_boot':True}), \
+             patch.object(installer,'product_action',return_value={
+                 'target_operation':pending['removal_target_operation'],
+                 'target_removal':'a'*32,'target_lease':pending['removal_target_lease'],
+             }) as product:
+            with self.assertRaisesRegex(UserError,'Removal evidence changed'):
+                installer.uninstall(full_project=True)
+        self.assertEqual(product.call_count,1)
+        self.assertEqual(product.call_args.args[0],'clean-target')
+        self.assertEqual(self.store.pending(self.profile)['removal_target_intent'],pending['removal_target_intent'])
 
     def test_completed_cleanup_invalidates_retired_support_and_python_cache(self):
         installer=self.prepare();self.restarted=True

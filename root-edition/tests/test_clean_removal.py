@@ -822,6 +822,38 @@ class PartialDeviceRemoval(unittest.TestCase):
         with patch.object(driver.device,'boot_id',side_effect=AssertionError('must not create marker')):
             self.assertEqual(driver.clean_remove(identifier)['stage'],'verified-clean')
 
+    def test_retry_rechecks_boot_of_the_same_removal_before_tail_retirement(self):
+        driver,identifier,root,*_=self.fixture()
+        store=driver.ownership.store
+        name='clean-removal-'+identifier
+        record=driver.clean_remove(identifier)
+        record.update(stage='private-cleanup',cleanup_without_restart=True,
+                      runtime_cleanup={'boot_retirement_started':False})
+        store.write(name,record)
+        process=root.parent/'proc/123'
+        process.mkdir()
+        command=b'/usr/bin/node\0-e\0unrelated inline worker\0'
+        (process/'cmdline').write_bytes(command)
+        driver.device.boot_id=lambda:driver.device.current_boot+':session-'+'b'*32
+        result=driver.clean_remove(identifier)
+        self.assertEqual(result['stage'],'verified-clean',result)
+        self.assertEqual(result['removal'],record['removal'])
+        self.assertEqual(result['cleanup_verified_boot_id'],driver.device.boot_id())
+        self.assertIs(result['cleanup_without_restart'],False)
+        self.assertEqual((process/'cmdline').read_bytes(),command)
+
+    def test_retry_does_not_resample_boot_after_concurrent_tail_retirement(self):
+        driver,identifier,*_=self.fixture()
+        record=driver.clean_remove(identifier)
+        record.update(stage='private-cleanup',cleanup_without_restart=True,
+                      runtime_cleanup={'boot_retirement_started':True})
+        driver.ownership.store.write('clean-removal-'+identifier,record)
+        with patch.object(driver.device,'boot_id') as boot:
+            result=driver.clean_remove(identifier)
+        boot.assert_not_called()
+        self.assertEqual(result['cleanup_error'],'cleanup-check-failed')
+        self.assertEqual(result['state'],'recovery_required')
+
     def test_legacy_baseline_reseeds_and_clears_unusable_verified_fact(self):
         driver,identifier,*_=self.fixture()
         first=driver.clean_remove(identifier)
