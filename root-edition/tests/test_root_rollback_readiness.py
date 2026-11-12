@@ -141,3 +141,46 @@ class RollbackReadinessTests(unittest.TestCase):
 
         self.assertEqual('rolled-back', self.recover(ready)['phase'])
         self.assertEqual(1, len(list(self.archives.glob('*.json'))))
+
+    def test_retry_rearms_expired_window_and_launches_in_same_run(self):
+        def interrupted(_):
+            raise ConnectionError('SSH disconnected while waiting for readiness')
+
+        with self.assertRaises(ConnectionError):
+            self.recover(lambda: None, interrupted)
+        expired = self.manager.status()
+        self.device.time = expired['deadline']
+        self.assertEqual('verifying-rollback', expired['phase'])
+        self.assertEqual('verifying-rollback', self.owner.status()['stage'])
+
+        def launch():
+            armed = self.manager.status()
+            self.assertEqual('verifying-rollback', armed['phase'])
+            self.assertEqual(expired['deadline'], armed['launched'])
+            self.assertEqual(armed['launched'] + 120, armed['deadline'])
+            self.assertEqual(expired, Store(self.archives, uid=os.getuid()).read(armed['readinessRecovery']))
+            self.assertIsNone(self.store.read('ready-rollback-' + armed['id']))
+
+        def ready(_):
+            self.manager.ready(expired['id'], '1.0.0')
+
+        result = self.recover(launch, ready)
+        self.assertEqual('rolled-back', result['phase'])
+        self.assertEqual(expired['rollbackEvidence'], result['rollbackEvidence'])
+        self.assertTrue(self.owner.status()['terminal'])
+        self.assertEqual(2, len(list(self.archives.glob('*.json'))))
+
+    def test_expired_window_with_saved_readiness_finishes_without_relaunch(self):
+        def interrupted(_):
+            self.manager.ready(self.manager.status()['id'], '1.0.0')
+            raise ConnectionError('SSH disconnected before finalization')
+
+        with self.assertRaises(ConnectionError):
+            self.recover(lambda: None, interrupted)
+        armed = self.manager.status()
+        self.device.time = armed['deadline']
+
+        result = self.recover(lambda: self.fail('existing readiness should finalize the rollback'))
+        self.assertEqual('rolled-back', result['phase'])
+        self.assertEqual(armed['deadline'], result['deadline'])
+        self.assertEqual(1, len(list(self.archives.glob('*.json'))))

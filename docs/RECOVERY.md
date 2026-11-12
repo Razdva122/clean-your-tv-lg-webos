@@ -383,8 +383,10 @@ completion path. Packages and the retained Updater stay installed.
 
 After recovery succeeds, return to Root Updater to check for updates.
 If Home was left off, use **Change Home** to enable it when ready.
-If recovery times out again, retain the journals and run `cytv status`.
-Rerunning the command during an open recovery window keeps its original deadline.
+After a readiness timeout, rerun the command to archive the expired attempt
+and open a fresh 120-second window in the same run. A retry during an open
+window keeps its original deadline. If the launcher already sent valid
+readiness before the deadline, the command finishes that attempt.
 
 ## Root System rollback readiness (candidate)
 
