@@ -285,6 +285,20 @@ state, not a new permission/endpoint or historical package authority. Failed
 publication invalidates the baseline. Transient watchdog retry fences do not
 change it; terminal Stop and retry exhaustion do.
 
+During explicit setup or Stop publication, a checked Stop record with mode
+0775 or 0777 is replaced with a fresh S token at 0664. This handles the retained
+record in #579 without accepting its old bytes as an activation baseline or
+changing the blocked/watchdog markers. The same directory, shared group,
+single-link, size and stable-inode checks apply. Ordinary generation reads
+continue to require 0664.
+
+Permission drift can affect several files at once (#437, #487, #505, #579).
+Reuse the checked storage operations, with a recovery rule for each kind of
+state. Pairing keys need provenance and private permissions, the Home control
+channel needs verified directory ownership and group access, and Stop tokens
+need replacement that invalidates older activation claims. Logs can be recreated
+under their existing size and path constraints.
+
 A cancelled launch configuration step is a verified no-request disposition;
 an acknowledged launch is recorded separately from observed startup and physical
 Home. The report uses `startup: stopped-during-setup`, does not mark startup/Home

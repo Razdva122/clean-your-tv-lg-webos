@@ -330,8 +330,14 @@ class OriginalOperationIntegration(unittest.TestCase):
         self.remote.cut=True
         with self.assertRaises(RuntimeError):self.installer.install(self.inventory,'original-secret')
         pending=self.store.pending(self.profile);saved=observer.capsule(self.installer,pending)
-        self.assertRegex(saved['plan']['setup_start']['generation'],r'^S[a-f0-9]{32}$')
-        self.publish_stop();(Path(operations.HELPER_STATE)/'blocked').unlink()
+        captured = saved['plan']['setup_start']['generation']
+        self.assertRegex(captured, r'^S[a-f0-9]{32}$')
+        generation = Path(operations.HELPER_STATE)/'stop-generation'
+        generation.chmod(0o775)
+        self.publish_stop()
+        self.assertNotEqual(generation.read_text(), captured)
+        self.assertEqual(generation.stat().st_mode & 0o7777, 0o664)
+        (generation.parent/'blocked').unlink()
         before=len(self.remote.calls)
         result=self.installer.continue_no_root(pending)
         self.assertTrue(result['activation_cancelled'])
@@ -410,6 +416,23 @@ class OriginalOperationIntegration(unittest.TestCase):
         with self.assertRaises(RuntimeError):self.installer.install(self.inventory,'original-secret')
         self.assertEqual((self.root/'requests').read_bytes(),requests)
         self.assertIsNone(self.store.pending(self.profile))
+
+    def test_reinstall_repairs_vendor_stop_generation_mode_before_setup_start(self):
+        self.installer.install(self.inventory, 'original-secret')
+        generation = Path(operations.HELPER_STATE)/'stop-generation'
+        original = generation.read_text()
+        generation.chmod(0o775)
+
+        result = self.installer.install(self.inventory, 'original-secret')
+
+        repaired = generation.read_text()
+        self.assertRegex(repaired, r'^S[a-f0-9]{32}$')
+        self.assertNotEqual(repaired, original)
+        self.assertEqual(generation.stat().st_mode & 0o7777, 0o664)
+        self.assertTrue(result['launch_requested'])
+        self.assertFalse(result.get('activation_cancelled', False))
+        self.assertIsNone(self.store.pending(self.profile))
+        self.assertEqual((self.root/'requests').read_text().splitlines(), list(observer.APPS)*2)
 
     def test_update_repairs_vendor_key_mode_before_setup_start(self):
         self.installer.install(self.inventory,'original-secret')
