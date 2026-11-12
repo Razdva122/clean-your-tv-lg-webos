@@ -15,6 +15,18 @@
     function ht(s) {
       return window.HomeI18n ? HomeI18n.html(s) : s;
     }
+    function developerModeAvailable() {
+      var connection = window.CYTVNoRootConnection,
+        key = 'tvhome.no-root-connection.v1';
+      try {
+        // Generic Home updates replace apps.js without a connection marker.
+        if (connection === 'root-ssh' || connection === 'developer-mode')
+          window.localStorage.setItem(key, connection);
+        else connection = window.localStorage.getItem(key);
+      } catch (_) {}
+      return connection !== 'root-ssh';
+    }
+    var developerMode = developerModeAvailable();
     var panel = document.createElement('section');
     panel.id = 'renewalPanel';
     panel.className = 'hidden';
@@ -616,9 +628,14 @@
         )
       );
     }
-    document.getElementById('developerOpen').onclick = function () {
+    var developerEntry = document.getElementById('developerOpen');
+    developerEntry.onclick = function () {
       showDeveloper(true);
     };
+    if (!developerMode) {
+      developerEntry.hidden = true;
+      main.removeChild(developerEntry.parentNode);
+    }
     document.getElementById('developerBack').onclick = function () {
       showDeveloper(false);
     };
@@ -748,8 +765,8 @@
     );
     var wallpapers = document.createElement('div');
     if (window.HomeWallpaperPanel) HomeWallpaperPanel.mount(wallpapers);
-    if (window.SettingsCategories)
-      categories = SettingsCategories.attach(panel, main, [
+    if (window.SettingsCategories) {
+      var groups = [
         {
           id: 'home',
           label: 'Your Home screen',
@@ -787,13 +804,16 @@
             document.getElementById('renewalTV'),
             document.getElementById('renewalNotifications')
           ]
-        },
-        {
+        }
+      ];
+      if (developerMode)
+        groups.push({
           id: 'developer',
           label: 'Developer Mode',
-          elements: [document.getElementById('developerOpen').parentNode]
-        }
-      ]);
+          elements: [developerEntry.parentNode]
+        });
+      categories = SettingsCategories.attach(panel, main, groups);
+    }
     window.RenewalPanel = {
       isOpen: openNow,
       open: function () {
@@ -819,7 +839,7 @@
           .getElementById('renewalDiagnostics')
           .setAttribute('aria-expanded', 'false');
         focus(0);
-        action('status');
+        if (developerMode) action('status');
         refreshHome();
         checkUpdates();
         if (categories) categories.open();

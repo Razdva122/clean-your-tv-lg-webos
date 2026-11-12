@@ -174,6 +174,6 @@ Antes de elegir un tema, usa **Debloat** para seleccionar los ajustes de publici
 
 Después de instalar correctamente, elige Classic, Liquid Glass o Ribbon y activa o desactiva el tiempo. Ribbon no admite el tiempo; Liquid Glass usa el formato compacto. La ciudad se estima por tu conexión y puedes cambiarla en Home.
 
-No-root con Developer Mode ofrece renovación automática (Beta); sigue revisando el temporizador oficial. No-root mediante root SSH existente no usa esta opción. Root permite bloquear actualizaciones de firmware LG mediante Homebrew Channel, incluidas las de seguridad; requiere un reinicio real desde Homebrew Channel. Las actualizaciones de CYTV son independientes.
+No-root con Developer Mode ofrece renovación automática (Beta); sigue revisando el temporizador oficial. En las nuevas instalaciones de No-root mediante un acceso SSH root existente, la pestaña Developer Mode está oculta. Root permite bloquear actualizaciones de firmware LG mediante Homebrew Channel, incluidas las de seguridad; requiere un reinicio real desde Homebrew Channel. Las actualizaciones de CYTV son independientes.
 
 Conservar ajustes actuales omite la personalización. El interruptor muestra el estado actual de la función del modo. Los ajustes que no cambies se conservan. Reinstalar Root sigue eliminando las preferencias CYTV como se describe arriba. Comprueba la apariencia en el TV y las opciones sin confirmar en Home antes de reintentar.

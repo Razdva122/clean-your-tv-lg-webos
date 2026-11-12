@@ -396,6 +396,7 @@ jobs:
             exit 1
           fi
           BROWSER_CHANNEL=chromium node tests/settings-ui.cjs
+          BROWSER_CHANNEL=chromium node tests/renewal-ui.cjs
           BROWSER_CHANNEL=chromium node tests/home-viewport-ui.cjs
           BROWSER_CHANNEL=chromium node tests/helper-panel-diagnostics.cjs --browser
           BROWSER_CHANNEL=chromium node tests/settings-update-badges.cjs

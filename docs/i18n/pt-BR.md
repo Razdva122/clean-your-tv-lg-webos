@@ -175,6 +175,6 @@ Antes de escolher um tema, use **Debloat** para selecionar quais opções de an�
 
 Após a instalação bem-sucedida, escolha Classic, Liquid Glass ou Ribbon e ative ou desative o clima. Ribbon não oferece clima; Liquid Glass usa o formato compacto. A cidade é estimada pela conexão e pode ser alterada na Home.
 
-No-root com Developer Mode oferece renovação automática (Beta); continue verificando o temporizador oficial. No-root pelo root SSH existente não usa essa opção. Root permite bloquear atualizações de firmware LG pelo Homebrew Channel, incluindo as de segurança; é preciso reiniciar a TV de verdade pelo Homebrew Channel. As atualizações CYTV são separadas.
+No-root com Developer Mode oferece renovação automática (Beta); continue verificando o temporizador oficial. Nas novas instalações do No-root por um acesso SSH root existente, a aba Developer Mode fica oculta. Root permite bloquear atualizações de firmware LG pelo Homebrew Channel, incluindo as de segurança; é preciso reiniciar a TV de verdade pelo Homebrew Channel. As atualizações CYTV são separadas.
 
 Manter configurações atuais pula a personalização. O interruptor mostra o estado atual da função do modo. Configurações não alteradas são mantidas. Reinstalar Root continua removendo preferências CYTV conforme descrito acima. Confira a aparência na TV e opções não confirmadas na Home antes de tentar novamente.
