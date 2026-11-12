@@ -39,7 +39,7 @@ class CLITests(unittest.TestCase):
             ssap.return_value.__enter__.return_value.inventory.return_value=fixture.inventory
             ssap.return_value.__enter__.return_value.key='PRIVATE-PAIRING'
             code=cli.main(['install','--host','192.0.2.10','--edition','root','--yes','--language','en',
-                           '--data-dir',str(fixture.root/'cli-state')],
+                           '--data-dir',str(fixture.root/'cli-state'), '--tv-name', 'Living Room'],
                           connect=lambda *_:remote, ask=lambda prompt:'1' if 'Alternative edition' in prompt else '',
                           write=output.append, payload_root=fixture.payload)
         self.assertEqual(code,0,'\n'.join(output))
@@ -48,6 +48,8 @@ class CLITests(unittest.TestCase):
         self.assertEqual(selected['connection'],'root-ssh')
         self.assertEqual(selected['port'],22)
         self.assertNotIn('PRIVATE-PAIRING','\n'.join(output))
+        self.assertIn('--tv-name was skipped', '\n'.join(output))
+        self.assertFalse(any(call[0] == 'luna' and call[1].endswith('/updateLaunchPoint') for call in remote.calls))
         submitted=[call[2]['id'] for call in remote.calls if call[0]=='luna' and call[1].endswith('/dev/install')]
         self.assertEqual(submitted,['com.local.nativehome','com.gathin.tvhome'])
 

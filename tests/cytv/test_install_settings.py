@@ -61,7 +61,11 @@ class SettingsTests(unittest.TestCase):
                 self.assertEqual(questions, [debloat.SELECT, settings.PROMPT] if install_error is None else [])
 
     def test_android_off_and_skip_are_explicit_choices_not_dialog_cancellation(self):
+        from cytv import i18n
         from cytv.terminal import Console
+        self.addCleanup(i18n.set_language, i18n.language_choice())
+        i18n.set_language('en')
+
         class Android(Console):
             frontend = 'android'
             def __init__(self):
@@ -84,7 +88,7 @@ class SettingsTests(unittest.TestCase):
             self.assertIn('n', options, 'Android must offer an explicit off choice')
             return 'n'
         result = settings.collect({'edition': 'no-root'}, ask, output)
-        self.assertEqual(result, {'theme': 'classic', 'weather': False, 'tv_name': 'Home'})
+        self.assertEqual(result, {'theme': 'classic', 'weather': False})
 
     def test_diagnostics_keep_only_known_setting_results(self):
         from cytv.diagnostic_context import tv_summary

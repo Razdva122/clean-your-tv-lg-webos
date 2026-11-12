@@ -59,7 +59,9 @@ const http = require('node:http');
                     id: 'a'.repeat(32),
                     theme: 'liquid-glass',
                     weather: true,
-                    ...(edition === 'root-launcher' ? { tv_name: 'Setup TV' } : {})
+                    ...(edition === 'root-launcher'
+                      ? { tv_name: 'Setup TV' }
+                      : {})
                   }
                 }
               }
@@ -88,7 +90,8 @@ const http = require('node:http');
         await page.evaluate(() => localStorage.getItem('tvhome.name')),
         edition === 'root-launcher' ? 'Setup TV' : null
       );
-      if (edition === 'root-launcher') assert.equal(await page.title(), 'Setup TV');
+      if (edition === 'root-launcher')
+        assert.equal(await page.title(), 'Setup TV');
       await page.locator('#btnSettings').click();
       assert.equal(await page.locator('#homeTvName').count(), 0);
       await page.keyboard.press('Escape');

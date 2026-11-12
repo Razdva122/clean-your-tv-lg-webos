@@ -11,7 +11,9 @@
     var pairs = /[\ud800-\udbff][\udc00-\udfff]/g;
     if (
       value.replace(pairs, 'x').length > 48 ||
-      /[\u0000-\u001f\u007f-\u009f\u00ad\u061c\u200b-\u200f\u2028-\u202e\u2060-\u206f\ufeff]/.test(value) ||
+      /[\u0000-\u001f\u007f-\u009f\u00ad\u061c\u200b-\u200f\u2028-\u202e\u2060-\u206f\ufeff]/.test(
+        value
+      ) ||
       /[\ud800-\udfff]/.test(value.replace(pairs, ''))
     )
       throw Error('Invalid Home screen name');
