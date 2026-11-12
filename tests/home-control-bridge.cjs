@@ -87,8 +87,9 @@ if ((fs.statSync(dir).mode & 0o7777) !== 0o2770) {
         fs.readFileSync(path.join(dir, 'catalog-request.json'), 'utf8')
       );
     assert.equal(catalogReq.method, 'listApps');
-    fs.writeFileSync(
-      path.join(dir, 'catalog-response.json'),
+    storage.atomicRecord(
+      dir,
+      'catalog-response',
       JSON.stringify({
         id: catalogReq.id,
         returnValue: true,
@@ -97,6 +98,11 @@ if ((fs.statSync(dir).mode & 0o7777) !== 0o2770) {
     );
     queue.pop()();
     assert.equal((await catalogPending).apps[0].id, 'org.example');
+    for (const name of ['catalog-request.json', 'catalog-response.json']) {
+      const stat = fs.statSync(path.join(dir, name));
+      assert.equal(stat.mode & 0o7777, 0o660);
+      assert.equal(stat.gid, fs.statSync(dir).gid);
+    }
     for (const method of ['homeStatus', 'setHomeControl', 'inputStatus'])
       assert.equal(
         (await catalog(method, {})).returnValue,
@@ -291,6 +297,141 @@ if ((fs.statSync(dir).mode & 0o7777) !== 0o2770) {
     );
     queue.shift()();
     assert.equal((await pending).dismissed, true);
+    const missing = await create(fs, path.join(dir, 'missing'))(
+      'homeStatus',
+      {}
+    );
+    assert.equal(missing.diagnostic.code, 'ENOENT');
+    assert.equal(missing.channelMode, undefined);
+    // Exercise both requests on a shared directory whose original mode
+    // cannot be restored by either unprivileged runtime.
+    const drifted = fs.mkdtempSync(
+      path.join(path.dirname(dir), 'cytv-drifted-')
+    );
+    const privateDir = path.join(drifted, '.private');
+    const originalChmod = fs.fchmodSync;
+    const stats = ['lstatSync', 'fstatSync', 'statSync'].map((method) => [
+      method,
+      fs[method]
+    ]);
+    let privateInode;
+    let retainSetgid = false;
+    try {
+      fs.chmodSync(drifted, 0o775);
+      for (const [method, original] of stats) {
+        fs[method] = function (...args) {
+          const stat = original.apply(fs, args);
+          if (stat.ino === privateInode && retainSetgid) stat.mode |= 0o2000;
+          return stat;
+        };
+      }
+      fs.fchmodSync = function (fd, mode) {
+        assert.equal(
+          fs.fstatSync(fd).ino,
+          fs.statSync(privateDir).ino,
+          'only chmod the private child'
+        );
+        assert.equal(mode, 0o2770);
+        // Model a filesystem that does not retain setgid on chmod.
+        originalChmod(fd, mode & ~0o2000);
+      };
+      assert.throws(
+        () => storage.atomicRecord(drifted, 'input-request', '{}'),
+        /unsafe-storage/
+      );
+      assert.deepEqual(fs.readdirSync(privateDir), []);
+      fs.chmodSync(privateDir, 0o700);
+      fs.fchmodSync = function (fd, mode) {
+        const stat = fs.fstatSync(fd);
+        if (!stat.isDirectory()) return originalChmod(fd, mode);
+        assert.equal(
+          stat.ino,
+          fs.statSync(privateDir).ino,
+          'only chmod the private child'
+        );
+        assert.equal(mode, 0o2770);
+        originalChmod(fd, mode);
+        privateInode = stat.ino;
+        retainSetgid = true;
+      };
+      fs.writeFileSync(
+        path.join(drifted, 'home-request.json'),
+        '{"stale":true}'
+      );
+      assert.throws(
+        () => storage.readChannelRecord(drifted, 'home-request'),
+        /unsafe-storage/
+      );
+      for (const method of ['homeStatus', 'listApps']) {
+        const catalog = method === 'listApps';
+        const prefix = catalog ? 'catalog' : 'home';
+        const call = create(fs, drifted, {
+          catalog,
+          now: () => 1,
+          later: (fn) => queue.push(fn)
+        });
+        const reply = call(method, {});
+        assert.equal(fs.statSync(drifted).mode & 0o7777, 0o775);
+        assert.equal(fs.statSync(privateDir).mode & 0o7777, 0o2770);
+        const request = JSON.parse(
+          storage.readChannelRecord(drifted, prefix + '-request')
+        );
+        assert.equal(request.method, method);
+        storage.atomicRecord(
+          drifted,
+          prefix + '-response',
+          JSON.stringify({
+            id: request.id,
+            returnValue: true,
+            enabled: true,
+            apps: [{ id: 'new' }]
+          })
+        );
+        queue.pop()();
+        assert.equal((await reply).returnValue, true);
+      }
+      assert.deepEqual(
+        JSON.parse(fs.readFileSync(path.join(drifted, 'home-request.json'))),
+        { stale: true }
+      );
+      assert.equal(
+        fs.existsSync(path.join(drifted, 'catalog-request.json')),
+        false
+      );
+      fs.rmSync(privateDir, { recursive: true });
+      fs.symlinkSync(dir, privateDir);
+      assert.throws(
+        () => storage.atomicRecord(drifted, 'catalog-request', '{}'),
+        /unsafe-storage/
+      );
+      assert.throws(
+        () => storage.readChannelRecord(drifted, 'catalog-request'),
+        /unsafe-storage/
+      );
+    } finally {
+      fs.fchmodSync = originalChmod;
+      for (const [method, original] of stats) fs[method] = original;
+      fs.rmSync(drifted, { recursive: true });
+    }
+    const rejected = fs.mkdtempSync(
+      path.join(path.dirname(dir), 'cytv-rejected-')
+    );
+    try {
+      for (const mode of [0o770, 0o777]) {
+        fs.chmodSync(rejected, mode);
+        for (const method of ['homeStatus', 'listApps']) {
+          const call = create(fs, rejected, { catalog: method === 'listApps' });
+          const reply = await call(method, {});
+          assert.equal(reply.returnValue, false);
+          assert.equal(reply.diagnostic.code, 'INVALID_STATE');
+          assert.equal(reply.diagnostic.operation, 'write');
+          assert.equal(reply.channelMode, mode);
+          assert.deepEqual(fs.readdirSync(rejected), []);
+        }
+      }
+    } finally {
+      fs.rmSync(rejected, { recursive: true });
+    }
     console.log(
       'PASS same-package Home broker: fixed commands, serialization, correlated response, timeout and validation'
     );

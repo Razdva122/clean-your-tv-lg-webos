@@ -231,6 +231,8 @@ class BuildTests(unittest.TestCase):
             channel=installed/'usr/palm/services/com.gathin.tvhome.renewal/state/home-control'
             channel.mkdir(parents=True);(channel/'.keep').write_bytes(b'')
             (channel/'home-request.json').write_text('private transient request')
+            recovery_channel=channel/'.private';recovery_channel.mkdir(mode=0o700)
+            (recovery_channel/'catalog-response.json').write_text('private transient response')
             bundle=path/'bundle';build.build(bundle)
             baseline=setup.snapshot(bundle,'no-root',path/'baseline',installed=installed)
             manifest=setup.verify_baseline(baseline)

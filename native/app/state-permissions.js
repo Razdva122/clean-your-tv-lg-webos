@@ -154,19 +154,37 @@ function session(directory, options, action) {
       var s = fs.lstatSync(path);
       if (!s.isDirectory() || s.isSymbolicLink())
         fail('directory-type', s, undefined, 'directory');
+      if (options.channelParent && path === options.channelParent.path) {
+        var outer = options.channelParent.stat;
+        if (
+          !same(outer, s) ||
+          s.uid !== outer.uid ||
+          s.gid !== outer.gid ||
+          s.mode !== outer.mode
+        )
+          fail('stable-inode', s, undefined, 'directory');
+      }
       if (path === '/') break;
       path = path.slice(0, path.lastIndexOf('/')) || '/';
     }
   }
   function security(s) {
     var mode = s.mode & 4095,
-      channel = options.role === 'channel';
-    if (!owned(s)) fail('trusted-owner', s, undefined, 'directory');
+      channel = options.role === 'channel',
+      channelParent = options.role === 'channel-parent';
+    // The private child is created inside the checked package-owned directory.
+    // Only its owner or the existing trusted group can create or replace it.
+    if (
+      options.channelParent
+        ? s.gid !== options.channelParent.stat.gid
+        : !owned(s)
+    )
+      fail('trusted-owner', s, undefined, 'directory');
     if (options.role !== 'installer' && !canAccessGroup(s.gid))
       fail('shared-group', s, undefined, 'directory');
     if (
-      channel
-        ? mode !== 1528
+      channel || channelParent
+        ? mode !== 1528 && !(channelParent && mode === 509)
         : mode & 3584 || (mode & 2 && !(options.legacy && mode === 511))
     )
       fail('safe-mode', s, undefined, 'directory');
@@ -872,6 +890,71 @@ prepare.inspectConfiguration = function (directory, options) {
 prepare.prepareConfiguration = function (directory, options) {
   return configuration(directory, options, true);
 };
+// The installed channel can be owned by a different UID. Under the known
+// 0775 drift, use its group-writable namespace only to find a private child.
+function channelSession(directory, settings, create, action) {
+  var outerSettings = {
+    role: 'channel-parent',
+    operation: settings.operation,
+    output: settings.output
+  };
+  return session(directory, outerSettings, function (outer) {
+    if ((outer.stat.mode & 4095) === 1528) return action(outer);
+    var name = '.private',
+      fd;
+    if (create) {
+      outer.check();
+      try {
+        fs.mkdirSync(name, 448); // 0700 until the owner establishes the shared group.
+      } catch (error) {
+        if (error.code !== 'EEXIST') throw error;
+      }
+      var child = fs.lstatSync(name);
+      if (
+        child.isDirectory() &&
+        child.uid === outer.uid &&
+        (child.mode & 4095) === 448
+      ) {
+        try {
+          fd = fs.openSync(name, c.O_RDONLY | c.O_NOFOLLOW | c.O_DIRECTORY);
+          if (
+            !same(child, fs.fstatSync(fd)) ||
+            !same(child, fs.lstatSync(name))
+          )
+            fail('directory', 'stable-inode');
+          outer.check();
+          if (child.gid !== outer.stat.gid)
+            fs.fchownSync(fd, child.uid, outer.stat.gid);
+          fs.fchmodSync(fd, 1528);
+        } finally {
+          if (fd !== undefined) fs.closeSync(fd);
+        }
+      }
+    }
+    outer.check();
+    settings.channelParent = { path: directory, stat: outer.stat };
+    return session(directory + '/' + name, settings, action);
+  });
+}
+prepare.readChannelRecord = function (directory, kind) {
+  var record =
+    Object.prototype.hasOwnProperty.call(records, kind) && records[kind];
+  if (!record || record[2] !== 'channel') fail();
+  return channelSession(
+    directory,
+    { role: 'channel', operation: 'record' },
+    false,
+    function (s) {
+      var value = s.read(record[0], 2 * 1024 * 1024);
+      if (!value) {
+        var error = Error('channel record unavailable');
+        error.code = 'ENOENT';
+        throw error;
+      }
+      return value.bytes.toString('utf8');
+    }
+  );
+};
 prepare.atomicRecord = function (directory, kind, bytes, options) {
   if (
     !Object.prototype.hasOwnProperty.call(records, kind) ||
@@ -891,10 +974,13 @@ prepare.atomicRecord = function (directory, kind, bytes, options) {
     operation: 'record',
     output: record[0]
   };
-  return session(directory, settings, function (s) {
+  function write(s) {
     s.write(record[0], buffer(bytes), record[1], Infinity, false);
     return true;
-  });
+  }
+  return role === 'channel'
+    ? channelSession(directory, settings, /-request$/.test(kind), write)
+    : session(directory, settings, write);
 };
 function retainStop(s) {
   s.leaf('blocked', Infinity);

@@ -77,6 +77,41 @@
         .forEach(function (key) {
           result[key] = r && typeof r[key] === 'boolean' ? r[key] : null;
         });
+      var detail = r && r.diagnostic;
+      if (
+        home &&
+        outcome === 'rejected' &&
+        detail &&
+        detail.component === 'home' &&
+        [
+          'read',
+          'parse',
+          'write',
+          'chmod',
+          'rename',
+          'wait',
+          'authorize'
+        ].indexOf(detail.operation) >= 0 &&
+        [
+          'INVALID_STATE',
+          'ENOENT',
+          'EACCES',
+          'EPERM',
+          'TIMEOUT',
+          'BUSY',
+          'CALLER_DENIED'
+        ].indexOf(detail.code) >= 0
+      ) {
+        result.diagnostic = { operation: detail.operation, code: detail.code };
+        if (
+          detail.code === 'INVALID_STATE' &&
+          typeof r.channelMode === 'number' &&
+          r.channelMode >= 0 &&
+          r.channelMode <= 4095 &&
+          Math.floor(r.channelMode) === r.channelMode
+        )
+          result.diagnostic.channelMode = r.channelMode.toString(8);
+      }
       return result;
     }
     function renderDiagnostics() {
