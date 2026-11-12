@@ -289,34 +289,31 @@ class OriginalOperationIntegration(unittest.TestCase):
         self.remote.run('/usr/bin/node -e '+shlex.quote(program)+' '+shlex.quote(operations.HELPER_STATE))
         (Path(operations.HELPER_STATE)/name).write_bytes(b'explicit-stop')
 
-    def test_stopped_update_requests_setup_start_with_bound_generation(self):
-        self.installer.install(self.inventory,'original-secret')
-        self.publish_stop()
-        before=len(self.remote.calls)
-        result=self.installer.install(self.inventory,'original-secret')
-        self.assertIsNone(self.store.pending(self.profile))
-        self.assertTrue(result['launch_requested'])
-        self.assertFalse(result.get('activation_cancelled',False))
-        launches=[row[2] for row in self.remote.calls[before:] if row[0]=='luna' and row[1].endswith('/launch') and row[2]['id']==operations.HELPER]
-        self.assertEqual(len(launches),1)
-        self.assertRegex(launches[0]['params']['nativeHomeSetup'],r'^S[a-f0-9]{32}$')
-        self.assertNotIn('nativeHomeStart',launches[0]['params'])
-        self.assertEqual((self.root/'requests').read_text().splitlines(),list(observer.APPS)*2)
-
-    def test_setup_binds_initial_intent_before_consuming_old_stop(self):
+    def test_reinstall_preserves_explicit_stop_and_legacy_latches(self):
         self.installer.install(self.inventory,'original-secret')
         directory=Path(operations.HELPER_STATE)
-        (directory/'stop-generation').unlink()
-        (directory/'blocked').write_text('previous stop')
-        before=len(self.remote.calls)
-        result=self.installer.install(self.inventory,'original-secret')
-        self.assertFalse(result.get('activation_cancelled',False))
-        launches=[row[2] for row in self.remote.calls[before:] if row[0]=='luna' and row[1].endswith('/launch') and row[2]['id']==operations.HELPER]
-        self.assertRegex(launches[0]['params']['nativeHomeSetup'],r'^I[a-f0-9]{32}$')
+        for name in ('blocked', 'watchdog'):
+            with self.subTest(name=name):
+                self.publish_stop(name)
+                generation=directory/'stop-generation'
+                if name=='watchdog':
+                    generation.unlink()
+                expected=generation.read_bytes() if generation.exists() else None
+                before=len(self.remote.calls)
+                result=self.installer.install(self.inventory,'original-secret')
+                self.assertIsNone(self.store.pending(self.profile))
+                self.assertTrue(result['activation_cancelled'])
+                self.assertFalse(result['launch_requested'])
+                self.assertEqual((directory/name).read_bytes(),b'explicit-stop')
+                self.assertEqual(generation.read_bytes() if generation.exists() else None,expected)
+                self.assertFalse(any(row[0]=='luna' and row[1].endswith('/launch') and
+                                     row[2]['id']==operations.HELPER for row in self.remote.calls[before:]))
+                (directory/name).unlink()
+        self.assertEqual((self.root/'requests').read_text().splitlines(),list(observer.APPS)*3)
 
     def test_new_stop_cancels_bound_setup_even_after_latch_disappears(self):
         self.installer.install(self.inventory,'original-secret')
-        self.publish_stop()
+        self.publish_stop();(Path(operations.HELPER_STATE)/'blocked').unlink()
         self.remote.cut=True
         with self.assertRaises(RuntimeError):self.installer.install(self.inventory,'original-secret')
         pending=self.store.pending(self.profile);saved=observer.capsule(self.installer,pending)
@@ -331,7 +328,7 @@ class OriginalOperationIntegration(unittest.TestCase):
         self.assertEqual((self.root/'requests').read_text().splitlines(),list(observer.APPS)*2)
 
     def test_closed_setup_retry_does_not_repeat_launch_or_reinstall(self):
-        self.installer.install(self.inventory,'original-secret');self.publish_stop()
+        self.installer.install(self.inventory,'original-secret')
         original=self.remote.run
         def cut(command,data=None,timeout=30):
             words=split_observer_command(command)
@@ -405,7 +402,6 @@ class OriginalOperationIntegration(unittest.TestCase):
         self.installer.install(self.inventory,'original-secret')
         directory=Path(operations.HELPER_STATE);key=directory/'ssap-key.json'
         key.chmod(0o775);(directory/'apps.json').chmod(0o775)
-        self.publish_stop()
         result=self.installer.install(self.inventory,'original-secret')
         self.assertEqual(key.stat().st_mode&0o777,0o640)
         self.assertTrue(result['launch_requested'])

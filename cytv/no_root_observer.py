@@ -674,7 +674,9 @@ def begin(installer, action, artifacts, versions, expected, configuration, setup
         else:
             check_plan['private_root'] = selected
     invoke(installer.remote, check_plan, 'storage-check')
-    setup_start = {'generation':setup_generation(installer,create=True)} if setup_activation else None
+    stop_retained = setup_activation and not helper_start_allowed(installer)
+    setup_start = ({'generation':None if stop_retained else setup_generation(installer,create=True)}
+                   if setup_activation else None)
     installer.store.begin(installer.profile, 'install' if action == 'install' else 'uninstall',
                           recovery_protocol=PROTOCOL, observer_operation=operation,
                           expected=expected, versions=versions)
@@ -685,7 +687,8 @@ def begin(installer, action, artifacts, versions, expected, configuration, setup
                    artifacts={name: base64.b64encode(raw).decode() for name, raw in artifacts.items()},
                    configuration={name: raw.decode('utf8') for name, raw in configuration.items()})
     digest = installer.store.save_capsule(installer.profile, operation, capsule)
-    installer.store.checkpoint(installer.profile, capsule_sha256=digest)
+    installer.store.checkpoint(installer.profile, capsule_sha256=digest,
+                               **({'setup_cancelled':True} if stop_retained else {}))
     if handoff:
         from .root_no_root_handoff import call
         call(installer.remote,installer.remote._cytv_root_handoff_support,'claim',plan=plan)
@@ -930,6 +933,8 @@ def setup_generation(installer, create=False):
 def setup_launch_generation(installer, plan):
     expected=plan['setup_start']['generation']
     pending=installer.store.pending(installer.profile) or {}
+    if pending.get('setup_cancelled') or not helper_start_allowed(installer):
+        return None
     current=setup_generation(installer,create='setup' if expected is None and pending.get('setup_launch_generation') is None else False)
     if expected is None:
         # Fresh state may adopt only initialization, never a Stop published
@@ -1149,7 +1154,7 @@ def continue_operation(installer, expected_pending):
             current=installer.helper_state(timeout=5)
             observed='process-observed' if current=='running' else 'not-observed' if current in ('stopped','stale') else 'unverified'
         except Exception:pass
-        if setup:
+        if setup and not cancelled:
             try:
                 # Sample after release/retire/receipt completion and the process
                 # probe: a Stop in any of those stages still wins the result.
@@ -1159,7 +1164,7 @@ def continue_operation(installer, expected_pending):
                 raise UserError('Startup could not be verified. Save the diagnostic report; do not reinstall blindly.', reason_code='helper-state-unverified')
         if cancelled:
             installer.outcome.cancelled_by_stop()
-            installer.progress('Packages verified. A new Stop cancelled Home activation. Start Helper on the TV when ready.')
+            installer.progress('Packages verified. Stop cancelled Home activation. Start Helper on the TV when ready.')
             return {'installed':'no-root','launch_requested':installer.outcome.values['launch_request']=='accepted',
                     'activation_cancelled':True,'hardware_verified':False}
         installer.outcome.startup_observed(observed)

@@ -3,6 +3,7 @@ from pathlib import Path
 import subprocess
 import tempfile
 import unittest
+from unittest.mock import Mock, patch
 
 from cytv.operations import Installer, HELPER_STATE
 from cytv.errors import UserError
@@ -26,12 +27,13 @@ class HelperPreflightTests(unittest.TestCase):
             directory.mkdir()
             (directory / 'cmdline').write_bytes(args)
         class Remote:
-            def run(_, command):
+            def run(_, command, **kwargs):
                 if 'CYTV_NODE_READY' in command: return 'CYTV_NODE_READY'
                 if command == 'uname -m': return 'armv7l'
                 if command.startswith('LC_ALL=C od '):
                     return '127 69 76 70 1 1 1 0 0 0 0 0 0 0 0 0 2 0 40 0'
                 if 'CYTV_ROOT_STATE' in command: return ''
+                if 'CYTV_STOP_RETAINED' in command: return 'CYTV_START_ALLOWED'
                 script = command.replace(HELPER_STATE, state.as_posix()).replace('/proc/', proc.as_posix() + '/')
                 if legacy_grep:
                     # BusyBox 1.20.2 grep.c uses strstr for -F, ignoring -x.
@@ -80,6 +82,21 @@ class HelperPreflightTests(unittest.TestCase):
             with self.subTest(args=args):
                 with self.assertRaisesRegex(UserError, 'running.*Installation has not started'):
                     self.probe(None, {123: args}).preflight(install=True)
+
+    def test_install_continues_when_automatic_stop_is_confirmed(self):
+        installer = self.probe(None, {123: b'com.local.nativehome\0'})
+        installer.stop_helper = Mock(side_effect=lambda: (
+            Path(self.tmp.name) / 'proc/123/cmdline').unlink())
+        installer.preflight(install=True, stop_running_helper=True)
+        self.assertEqual(installer.tv_info['helper_state'], 'stopped')
+
+    def test_unconfirmed_automatic_stop_still_requires_the_remote_control(self):
+        installer = self.probe(None, {123: b'com.local.nativehome\0'})
+        installer.stop_helper = Mock(side_effect=RuntimeError('no acknowledgement'))
+        with patch('cytv.operations.time.sleep'), self.assertRaises(UserError) as caught:
+            installer.preflight(install=True, stop_running_helper=True)
+        self.assertEqual(caught.exception.reason_code, 'helper-running')
+        installer.stop_helper.assert_called_once()
 
     def test_invalid_or_symlink_pid_stays_blocked_without_deletion(self):
         for pid, symlink in (('../bad', False), (None, True)):

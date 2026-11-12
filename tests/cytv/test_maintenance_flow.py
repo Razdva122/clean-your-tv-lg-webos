@@ -2,7 +2,7 @@
 from pathlib import Path
 import tempfile
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, call, patch
 
 from cytv import cli, state
 from cytv.errors import ExistingRoot, UserError
@@ -37,6 +37,10 @@ class MaintenanceFlowTests(unittest.TestCase):
                                 ask=lambda _:answer,write=lambda _:None,connect=lambda *a:Mock())
                 self.assertEqual(result,0)
                 self.assertEqual(events,['preflight','preflight','pair'] if answer=='y' else ['preflight'])
+                checks = [call(install=True, stop_running_helper=True)]
+                if answer == 'y':
+                    checks.append(call(install=True, stop_running_helper=False))
+                self.assertEqual(installer.preflight.call_args_list, checks)
                 self.assertEqual(installer.install.call_count,1 if answer=='y' else 0)
 
     def test_legacy_root_updater_offers_confirmed_reinstallation_with_fresh_inventory(self):
