@@ -9,7 +9,8 @@ Names can contain up to 48 Unicode characters.
 
 After installation, the installer requests the name in Clean Your TV and
 attempts to update the existing primary launch point in LG Home. It reports the
-launch-point readback separately. Display and persistence on consumer webOS
+launch-point readback separately. A full Root reinstall may reset the prior
+name before customization. Display and persistence on consumer webOS
 remain to be verified on a Root TV.
 
 <a id="installer-update-check-unreleased"></a>

@@ -74,8 +74,10 @@ The installer selects the existing Root primary launch point, requests a title
 change and checks the same ID and exact title with `listLaunchPoints`. Missing
 or ambiguous points, denied writes, timeouts and readback mismatches remain
 unconfirmed. The installer sends the Home preference separately with the
-cosmetic launch parameters. Root profile-preserving updates can carry the
-saved preference.
+cosmetic launch parameters. The preference is stored in Home’s local storage.
+Root updater profile formats remain compatible with installed supervisors. An
+update or full reinstall that clears app storage may reset the name. Blank input
+skips renaming after installation.
 
 Diagnostics report `saved` or `unconfirmed` for `launchpoint_title`, and
 `requested-in-home` or `unconfirmed` for `tv_name`. Root hardware acceptance

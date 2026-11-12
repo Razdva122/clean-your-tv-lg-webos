@@ -29,6 +29,8 @@ class TVNameTests(unittest.TestCase):
 
     def test_cli_flag_validation_and_default(self):
         self.assertEqual(cli.parser().parse_args(['install','--tv-name',' Aashiyaan ']).tv_name,'Aashiyaan')
+        with self.assertRaises(SystemExit):
+            cli.parser().parse_args(['install', '--tv-name', ''])
         self.assertIsNone(cli.parser().parse_args(['install','--non-interactive']).tv_name)
         with patch('cytv.cli.choose_profile') as choose:
             self.assertEqual(cli.main(['status','--tv-name','Aashiyaan'],write=lambda _:None),2)

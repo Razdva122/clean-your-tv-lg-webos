@@ -155,32 +155,15 @@ async function startAppearance(h) {
 (async () => {
   for (const edition of ['no-root', 'root']) {
     if (edition === 'root') {
-      // A new profile round-trips the name through independent system restore;
-      // an older profile without this optional field keeps the origin preference.
-      let named = harness(edition, {
-        snapshotProfile: {
-          ...profile,
-          settings: { ...profile.settings, 'tvhome.name': 'Aashiyaan' }
-        }
-      });
-      await tick();
-      assert.equal(named.memory.get('tvhome.name'), 'Aashiyaan');
-      assert.equal(
-        (await named.window.RootProfile.capture({ system: true })).settings[
-          'tvhome.name'
-        ],
-        'Aashiyaan'
-      );
-      assert.equal(
-        (await named.window.RootProfile.capture()).settings['tvhome.name'],
-        undefined,
-        'legacy Root updater retains its pinned profile contract'
-      );
-      named = harness(edition, {
+      const named = harness(edition, {
         storage: new Map([['tvhome.name', 'Aashiyaan']])
       });
       await tick();
       assert.equal(named.memory.get('tvhome.name'), 'Aashiyaan');
+      for (const options of [undefined, { system: true }]) {
+        const profile = await named.window.RootProfile.capture(options);
+        assert.equal(profile.settings['tvhome.name'], undefined);
+      }
     }
     let h = harness(edition);
     await tick();

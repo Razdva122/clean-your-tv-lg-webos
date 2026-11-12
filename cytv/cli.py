@@ -39,6 +39,12 @@ class LanguageParser(argparse.ArgumentParser):
         self.exit(2)
 
 
+def home_screen_name_arg(value):
+    if not value.strip():
+        raise argparse.ArgumentTypeError(i18n.translate('Enter a Home screen name, or omit --tv-name.'))
+    return package.normalize_tv_name(value)
+
+
 def parser():
     result = LanguageParser(prog='cytv', add_help=False, description=i18n.translate('Clean Your TV — one installer for No-root and Root.'))
     result._positionals.title = i18n.translate('positional arguments')
@@ -50,7 +56,7 @@ def parser():
     result.add_argument('--host', help=i18n.translate('TV IPv4 address or hostname'))
     result.add_argument('--no-discovery', action='store_true', help=i18n.translate('Skip local network discovery and enter a TV address manually'))
     result.add_argument('--edition', choices=('no-root', 'root'))
-    result.add_argument('--tv-name', type=package.normalize_tv_name, help=i18n.translate('Home screen name (Root Edition only)'))
+    result.add_argument('--tv-name', type=home_screen_name_arg, help=i18n.translate('Home screen name (Root Edition only)'))
     result.add_argument('--connection', choices=('root-ssh',), help=i18n.translate('No-root: use existing root SSH without Developer Mode'))
     result.add_argument('--root-variant', choices=('node012-beta',), help=i18n.translate('Root: select the experimental Node.js 0.12.2 payload'))
     result.add_argument('--port', type=int, help=i18n.translate('SSH port (No-root: 9922; Root: 22)'))

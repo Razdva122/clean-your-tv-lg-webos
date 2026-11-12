@@ -2,7 +2,6 @@
 import base64
 import binascii
 import re
-import unicodedata
 from .store import MAX_BYTES, encode
 import json
 
@@ -61,12 +60,7 @@ def validate(value):
         raise ValueError('invalid columns')
     _ids(config['dockApps']); _ids(config['hiddenApps'])
     if 'liveTvApp' in config: _text(config['liveTvApp'], empty=True)
-    _fields(value['settings'], (), ('tvhome.order', 'tvhome.language', 'tvhome.name'))
-    if 'tvhome.name' in value['settings']:
-        name=value['settings']['tvhome.name']
-        _text(name,192)
-        if len(name) > 48 or name != unicodedata.normalize('NFC', name.strip()) or re.search(r'[\u0000-\u001f\u007f-\u009f\u00ad\u061c\u200b-\u200f\u2028-\u202e\u2060-\u206f\ufeff\ud800-\udfff]', name):
-            raise ValueError('invalid TV name')
+    _fields(value['settings'], (), ('tvhome.order', 'tvhome.language'))
     if 'tvhome.language' in value['settings'] and value['settings']['tvhome.language'] not in ('auto', 'en', 'cs', 'de', 'es', 'pt-BR', 'fr', 'it', 'ko', 'hi', 'pl', 'ru'):
         raise ValueError('invalid language')
     if 'tvhome.order' in value['settings']:

@@ -52,6 +52,7 @@ untested. Device groups remain outstanding and no hardware acceptance is claimed
 ## Scope revised for Root Edition
 
 This PR now provides naming only at the final installer step for Root Edition.
-The on-TV editor and No-root naming were removed. Earlier simulation results above
+The on-TV editor and No-root naming were removed. Updater profile schemas
+retain their existing fields for compatibility with installed supervisors. Earlier simulation results above
 describe the previous scope. Physical acceptance of the Root installer rename,
 LG Home and startup presentation, and restart persistence remains pending.

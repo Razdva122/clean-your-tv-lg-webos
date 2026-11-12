@@ -147,9 +147,16 @@ def apply_services(installer, value, write):
             if reply.get('returnValue') is not True:
                 raise ValueError('Home launch unconfirmed')
             results.update({key:'requested-in-home' for key in appearance})
-            write('Appearance choices will be applied when Home opens. Check the result on the TV.')
+            if 'tv_name' in appearance:
+                write('Home screen name requested. Check the result on the TV.')
+            if appearance.keys() - {'tv_name'}:
+                write('Appearance choices will be applied when Home opens. Check the result on the TV.')
         except Exception:
             results.update({key:'unconfirmed' for key in appearance})
+            if 'tv_name' in appearance:
+                write(tr('Optional setting unconfirmed: {setting}').format(setting=tr('Home screen name')))
+            if appearance.keys() - {'tv_name'}:
+                write('Optional appearance settings could not be confirmed.')
             write('Installation of Clean Your TV completed separately.')
     for key in ('renewal', 'block_updates'):
         if key not in value:

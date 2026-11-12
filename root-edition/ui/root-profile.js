@@ -89,12 +89,7 @@
             settings: {}
           };
           (options && options.system
-            ? [
-                'tvhome.order',
-                'tvhome.language',
-                'tvhome.layout',
-                'tvhome.name'
-              ]
+            ? ['tvhome.order', 'tvhome.language', 'tvhome.layout']
             : ['tvhome.order', 'tvhome.language']
           ).forEach(function (key) {
             var value = localStorage.getItem(key);
@@ -361,11 +356,6 @@
               localStorage.setItem(
                 'tvhome.language',
                 profile.settings['tvhome.language']
-              );
-            if (profile.settings['tvhome.name'] !== undefined)
-              localStorage.setItem(
-                'tvhome.name',
-                profile.settings['tvhome.name']
               );
             localStorage.setItem(marker, identity);
             if (window.HomeI18n) {
