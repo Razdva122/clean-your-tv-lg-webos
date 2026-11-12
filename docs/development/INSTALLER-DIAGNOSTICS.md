@@ -372,12 +372,20 @@ results, including `service-absent` for a missing System Profile service.
 
 When the installer supports capability-based Qt admission and System Profile is
 absent, optional `tv.root_compositor_failure` identifies the failed host check.
+Root `doctor --report` verifies the bundled payload before using its declared
+Home backends. With no pending operation, it can collect this failure through
+the read-only preflight without starting a Root installation.
 Request failures use `system-info-request-failed`, `keyfilters-request-failed`
 or `native-home-request-failed`. Validation failures use `system-info-invalid`,
 `keyfilters-incompatible` or `native-home-incompatible`.
 `native-home-unavailable` identifies a missing or unsafe native Home path.
 `c1-probe-failed` means an error in the preceding C1 probe prevented the
 capability-based check from running.
+
+When the native Home permission check refuses admission, optional
+`tv.root_native_home_mode` records the four octal permission digits seen by the
+C1 or capability-based probe. This field helps compare the installer observation
+with the stock file's expected permissions without exporting command output.
 
 The report excludes raw replies, command output and Home routes. The installer
 revalidates these fields when exporting current and retained failures.

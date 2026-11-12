@@ -915,7 +915,8 @@
   outline-offset: 2px;
   background: #303f54;
 }
-.settings-categories svg {
+.settings-categories svg,
+.settings-action-icon {
   width: 28px;
   height: 28px;
   flex-shrink: 0;
@@ -963,6 +964,9 @@
   margin: 0 0 18px;
   text-align: left;
 }
+#settings-pane-advanced > button:not(:last-child) {
+  margin-bottom: 18px;
+}
 .settings-workspace .home-routing-actions {
   display: block;
 }
@@ -1004,7 +1008,8 @@
     padding: 10px 12px;
     margin-bottom: 6px;
   }
-  .settings-categories svg {
+  .settings-categories svg,
+  .settings-action-icon {
     width: 24px;
     height: 24px;
     margin-right: 12px;

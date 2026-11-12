@@ -27,7 +27,7 @@
       typeof value.id !== 'string' ||
       !/^[a-f0-9]{32}$/.test(value.id) ||
       Object.keys(value).some(function (key) {
-        return ['id', 'theme', 'weather'].indexOf(key) < 0;
+        return ['id', 'theme', 'weather', 'tv_name'].indexOf(key) < 0;
       }) ||
       (value.theme !== undefined &&
         ['classic', 'liquid-glass', 'ribbon'].indexOf(value.theme) < 0) ||
@@ -35,6 +35,15 @@
       (value.theme === 'ribbon' && value.weather === true)
     )
       return false;
+    if (value.tv_name !== undefined) {
+      if (!root.HomeName) return false;
+      try {
+        if (root.HomeName.normalize(value.tv_name) !== value.tv_name)
+          return false;
+      } catch (_) {
+        return false;
+      }
+    }
     if (root.localStorage.getItem(marker) === value.id) return false;
     // These are the same app-owned preferences used by the TV settings panels.
     if (value.theme !== undefined) {
@@ -57,6 +66,7 @@
       if (value.weather && !weather.location) weather.mode = 'auto';
       save('tvhome.weather.v1', JSON.stringify(weather));
     }
+    if (value.tv_name !== undefined) save('tvhome.name', value.tv_name);
     save(marker, value.id);
     return true;
   }

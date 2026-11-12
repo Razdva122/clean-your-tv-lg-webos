@@ -137,7 +137,7 @@ class RecoveryStateTests(unittest.TestCase):
             before = store.pending(profile)
             installer = Mock(store=store, profile=profile)
             installer.observe_recovery.return_value = {'device': {'apps': []}}
-            installer.remote.luna.side_effect = TVRejected('PRIVATE', {'returnValue': False, 'errorCode': -1}, 'com.webos.appInstallService/status')
+            installer.remote.luna.side_effect = TVRejected('PRIVATE', {'returnValue': False, 'errorCode': -7}, 'com.webos.appInstallService/status')
             events = []
             with self.assertRaises(TVRejected):
                 recover(installer, lambda _: 'y', DesktopConsole(lambda k,v: events.append((k,v))))
@@ -146,3 +146,4 @@ class RecoveryStateTests(unittest.TestCase):
             self.assertNotIn('PRIVATE', str(events))
             self.assertEqual(store.pending(profile), before)
             installer.uninstall.assert_not_called()
+            installer.uninstall_project.assert_not_called()

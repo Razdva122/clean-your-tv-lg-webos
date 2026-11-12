@@ -39,7 +39,7 @@ class CLITests(unittest.TestCase):
             ssap.return_value.__enter__.return_value.inventory.return_value=fixture.inventory
             ssap.return_value.__enter__.return_value.key='PRIVATE-PAIRING'
             code=cli.main(['install','--host','192.0.2.10','--edition','root','--yes','--language','en',
-                           '--data-dir',str(fixture.root/'cli-state')],
+                           '--data-dir',str(fixture.root/'cli-state'), '--tv-name', 'Living Room'],
                           connect=lambda *_:remote, ask=lambda prompt:'1' if 'Alternative edition' in prompt else '',
                           write=output.append, payload_root=fixture.payload)
         self.assertEqual(code,0,'\n'.join(output))
@@ -48,6 +48,8 @@ class CLITests(unittest.TestCase):
         self.assertEqual(selected['connection'],'root-ssh')
         self.assertEqual(selected['port'],22)
         self.assertNotIn('PRIVATE-PAIRING','\n'.join(output))
+        self.assertIn('--tv-name was skipped', '\n'.join(output))
+        self.assertFalse(any(call[0] == 'luna' and call[1].endswith('/updateLaunchPoint') for call in remote.calls))
         submitted=[call[2]['id'] for call in remote.calls if call[0]=='luna' and call[1].endswith('/dev/install')]
         self.assertEqual(submitted,['com.local.nativehome','com.gathin.tvhome'])
 
@@ -323,6 +325,94 @@ class CLITests(unittest.TestCase):
                     operation.uninstall.assert_called_once_with(full_project=True)
                 else:
                     getattr(operation, command).assert_called_once_with()
+
+    def test_root_doctor_exports_qt_failure_from_verified_payload(self):
+        import hashlib
+        from cytv.errors import TVCommandError, TVRejected
+        from cytv.root_capabilities import CALLS, NATIVE_HEADERS
+        from tests.cytv.test_operations import Remote
+
+        identity = {'returnValue': True, 'modelName': 'AR-50', 'firmwareVersion': '04.66.75',
+                    'sdkVersion': '7.5.9'}
+
+        class TV(Remote):
+            root = True
+
+            def close(self):
+                pass
+
+            def run(self, command, *args, **kwargs):
+                if command == NATIVE_HEADERS:
+                    raise TVCommandError(42)
+                return super().run(command, *args, **kwargs)
+
+            def luna(self, uri, payload, **kwargs):
+                if uri.endswith('/getSystemInfo'):
+                    return identity
+                if uri == CALLS['home-profiles'][0]:
+                    raise TVRejected('modeled missing service', {
+                        'returnValue': False, 'errorCode': -1,
+                        'errorText': 'Service does not exist: com.webos.service.systemprofile.',
+                    }, uri)
+                if uri == CALLS['home-settings'][0]:
+                    raise TVRejected('modeled settings rejection', {'returnValue': False}, uri)
+                if uri.endswith('/getConfigs'):
+                    if chain is None:
+                        raise TimeoutError('modeled config request timeout')
+                    return {'returnValue': True, 'configs': {'com.webos.surfacemanager.keyFilters': chain}}
+                return super().luna(uri, payload, **kwargs)
+
+        stock_chain = [{'file': '/usr/lib/qt5/qml/KeyFilters/systemUi.js',
+                        'handler': 'handleSystemKeys'}]
+        for chain, expected in ((None, 'keyfilters-request-failed'), ([], 'keyfilters-incompatible'),
+                                (stock_chain, 'native-home-unavailable')):
+            with self.subTest(expected=expected), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                payload = root / 'payload'
+                payload.mkdir()
+                member = b'fixture'
+                (payload / 'support.txt').write_bytes(member)
+                (payload / 'payload.json').write_text(json.dumps({
+                    'files': {'support.txt': hashlib.sha256(member).hexdigest()},
+                    'root_backends': {'c1-native-gate': {'admission_schema': 3}},
+                }))
+                data = root / 'data'
+                remote = TV()
+                args = ['doctor', '--host', '192.0.2.10', '--edition', 'root',
+                        '--data-dir', str(data), '--report', '--language', 'en']
+                with patch('cytv.cli.payload_dir', return_value=payload):
+                    code, output, _ = self.run_cli(args, remote=remote)
+                    self.assertEqual(code, 2, output)
+                    report_path, = (data / 'reports').glob('*.json')
+                    report = json.loads(report_path.read_text())
+                    self.assertEqual(report['phase'], 'doctor')
+                    self.assertEqual(report['reason_code'], 'root-home-interfaces')
+                    self.assertEqual(report['tv'].get('root_compositor_failure'), expected)
+                    self.assertIsNone(report['pending'])
+                    self.assertFalse(remote.uploads)
+                    self.assertFalse(remote.installed)
+
+                    (payload / 'support.txt').write_bytes(b'tampered')
+                    code, output, calls = self.run_cli(args, remote=remote)
+                    self.assertEqual(code, 1, output)
+                    self.assertFalse(calls)
+                    rejected_path, = set((data / 'reports').glob('*.json')) - {report_path}
+                    rejected = json.loads(rejected_path.read_text())
+                    self.assertEqual(rejected['phase'], 'prepare-payload')
+                    self.assertEqual(rejected['trace'][-1]['function'], 'verify_payload')
+                    self.assertNotIn('root_compositor_failure', rejected['tv'])
+
+    def test_root_doctor_from_source_keeps_basic_checks_without_built_payload(self):
+        from unittest.mock import MagicMock
+
+        with tempfile.TemporaryDirectory() as tmp, \
+                patch('cytv.cli.payload_dir', return_value=Path(tmp) / 'unbuilt'), \
+                patch('cytv.cli.Installer') as installer:
+            installer.return_value.status.return_value = {}
+            code, output, _ = self.run_cli(['doctor', '--host', '192.0.2.10', '--edition', 'root',
+                                           '--data-dir', tmp], remote=MagicMock())
+            self.assertEqual(code, 0, output)
+            installer.return_value.preflight.assert_called_once_with(home_interfaces=True)
 
     def test_maintenance_chooses_connection_without_installation_steps(self):
         from cytv.desktop import DesktopConsole

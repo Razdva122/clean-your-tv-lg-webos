@@ -1,5 +1,7 @@
 # Clean Your TV — guía de uso
 
+Solo Root Edition: configura el nombre de la pantalla de inicio en la última página del instalador. Deja el campo vacío para conservar el nombre actual. En la CLI, usa `--tv-name`.
+
 Cambio del instalador aún no publicado: antes de una nueva instalación, el instalador del ordenador busca una versión estable más reciente en GitHub. Elige «Abrir GitHub y descargar la última versión» para detenerte y descargarla, o «No, instalar esta versión» para continuar explícitamente. Si falla la comprobación, puedes continuar. Las operaciones pendientes y la recuperación omiten esta comprobación.
 
 Clean Your TV ofrece una pantalla de inicio personal para tu LG webOS: tus aplicaciones en tu orden, sin filas patrocinadas en este menú. Instálalo desde un ordenador o teléfono Android; después puedes apagar el ordenador.
@@ -95,7 +97,7 @@ Las actualizaciones automáticas del TV no reinician Helper detenido. Para reanu
 
 ## ¿Necesitas ayuda?
 
-Si aparece `ssh-identity-changed` tras un reinicio de fábrica o un cambio de SSH, detente: CYTV bloqueó la clave guardada modificada antes de autenticar. La confirmación inicial de confianza no la reemplaza; una desinstalación pendiente no explica la discrepancia. Conserva el perfil original, las claves y los registros de recuperación. No hay un comando automático compatible para renovar la confianza. Se requieren una verificación independiente de la identidad/huella del TV y un procedimiento revisado que conserve el perfil: [recuperación de identidad SSH](../RECOVERY.md#ssh-identity-changed).
+Si aparece `ssh-identity-changed` tras un reinicio de fábrica o un cambio de SSH, detente: CYTV bloqueó la clave guardada modificada antes de autenticar. La confirmación inicial de confianza no la reemplaza; una desinstalación pendiente no explica la discrepancia. Conserva el perfil original, las claves y los registros de recuperación. Si el perfil Root guardado tiene una desinstalación pendiente, puedes registrar en la consola la huella verificada de forma independiente. La desinstalación anterior seguirá bloqueada. Consulta [recuperación de identidad SSH](../RECOVERY.md#ssh-identity-changed).
 
 Si se interrumpe la instalación, usa la misma conexión guardada y comienza por **Comprobar estado del TV**. Continúa solo mediante la recuperación que ofrezca el asistente. Si el estado es desconocido, guarda el informe de diagnóstico y detente; conserva los datos de recuperación y no repitas la instalación a ciegas.
 

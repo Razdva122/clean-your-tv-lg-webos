@@ -14,8 +14,13 @@ FIRMWARE_HELP = 'Requires Homebrew Channel with root. Also blocks firmware secur
 
 
 def validate(value, profile):
-    if not isinstance(value, dict) or set(value) - {'theme', 'weather', 'renewal', 'block_updates'}:
+    if not isinstance(value, dict) or set(value) - {'theme', 'weather', 'renewal', 'block_updates', 'tv_name'}:
         raise ValueError('Invalid installation settings')
+    if 'tv_name' in value:
+        if profile['edition'] != 'root':
+            raise ValueError('Home screen naming requires Root Edition.')
+        from .package import normalize_tv_name
+        value = dict(value, tv_name=normalize_tv_name(value['tv_name']))
     if 'theme' in value and (type(value['theme']) is not str or value['theme'] not in dict(THEMES)):
         raise ValueError('Invalid installation theme')
     for key in ('weather', 'renewal', 'block_updates'):
@@ -30,7 +35,7 @@ def validate(value, profile):
     return dict(value)
 
 
-def read_current(installer):
+def read_service_current(installer):
     """Read only the edition's existing preference, never infer unknown as off."""
     try:
         if installer.profile['edition'] == 'root':
@@ -45,6 +50,20 @@ def read_current(installer):
     except Exception:
         pass
     return {}
+
+
+def read_current(installer):
+    result = read_service_current(installer)
+    if installer.profile['edition'] != 'root':
+        return result
+    try:
+        from .launchpoint_name import primary, SERVICE
+        from .package import ROOT_APP, normalize_tv_name
+        point = primary(installer.remote.luna(SERVICE + 'listLaunchPoints', {}, timeout=8), ROOT_APP)
+        result['tv_name'] = normalize_tv_name(point['title'])
+    except Exception:
+        pass
+    return result
 
 
 def collect(profile, ask, write, current=None):
@@ -66,6 +85,10 @@ def collect(profile, ask, write, current=None):
             break
         write.error('Choose 1, 2 or 3.')
     result = {'theme': THEMES[int(choice) - 1][0]}
+    if profile['edition'] == 'root':
+        name = prompts.tv_name(ask, write)
+        if name is not None:
+            result['tv_name'] = name
     if result['theme'] == 'ribbon':
         write('Ribbon does not support weather.')
         result['weather'] = False
@@ -103,7 +126,18 @@ def service_choice(title, ask, write):
 def apply_services(installer, value, write):
     value = validate(value, installer.profile)
     results = installer.tv_info.setdefault('installation_settings', {})
-    appearance = {key:value[key] for key in ('theme', 'weather') if key in value}
+    if 'tv_name' in value:
+        from .launchpoint_name import rename
+        from .package import ROOT_APP
+        try:
+            rename(installer.remote, ROOT_APP, value['tv_name'])
+            results['launchpoint_title'] = 'saved'
+            write('LG launcher title verified. Check the loading screen on the TV.')
+        except Exception:
+            results['launchpoint_title'] = 'unconfirmed'
+            write(tr('Optional setting unconfirmed: {setting}').format(setting=tr('Home screen name')))
+            write('Installation of Clean Your TV completed separately.')
+    appearance = {key:value[key] for key in ('theme', 'weather', 'tv_name') if key in value}
     if appearance:
         try:
             from .package import ROOT_APP
@@ -113,10 +147,17 @@ def apply_services(installer, value, write):
             if reply.get('returnValue') is not True:
                 raise ValueError('Home launch unconfirmed')
             results.update({key:'requested-in-home' for key in appearance})
-            write('Appearance choices will be applied when Home opens. Check the result on the TV.')
+            if 'tv_name' in appearance:
+                write('Home screen name requested. Check the result on the TV.')
+            if appearance.keys() - {'tv_name'}:
+                write('Appearance choices will be applied when Home opens. Check the result on the TV.')
         except Exception:
             results.update({key:'unconfirmed' for key in appearance})
-            write('Check this setting in Home settings before trying again. Installation of Clean Your TV completed separately.')
+            if 'tv_name' in appearance:
+                write(tr('Optional setting unconfirmed: {setting}').format(setting=tr('Home screen name')))
+            if appearance.keys() - {'tv_name'}:
+                write('Optional appearance settings could not be confirmed.')
+            write('Installation of Clean Your TV completed separately.')
     for key in ('renewal', 'block_updates'):
         if key not in value:
             continue

@@ -27,7 +27,7 @@
         '<div class="renewal-actions home-routing-actions"><button id="homeRoutingToggle" class="home-routing-switch" role="switch" aria-checked="false" aria-describedby="homeRoutingStatus" disabled>Change Home</button><button id="homeRoutingRetry" hidden>Try again</button><button id="homeVisit" class="home-visit-button" aria-describedby="homeVisitHint">Open LG Home</button></div><p id="homeVisitHint" class="home-visit-hint">Open LG Home once, keeping your Home choice.</p>',
         '<div class="renewal-actions settings-layout"><div id="homeThemeHost"></div></div><div class="renewal-actions settings-layout"><button id="homeColumns">Columns</button></div></section>',
         '<div id="homeAppSettings" class="renewal-actions settings-layout"><button id="homeShowAddApp" class="home-routing-switch" role="switch" aria-checked="true">Show Add app tile</button><button id="homeAddApp">Add app</button><button id="homePreviewInputs" class="home-routing-switch" role="switch" aria-checked="true">Preview inputs on focus</button><p id="homeAppsError" role="alert"></p></div>',
-        '<div class="renewal-actions settings-links settings-section"><button id="homeLanguage">Language<span class="settings-chevron" aria-hidden="true"></span></button><button id="renewalUpdates">Software updates<span class="settings-update-dot" aria-hidden="true"></span><span class="settings-chevron" aria-hidden="true"></span></button><button id="renewalTV">TV settings<span class="settings-chevron" aria-hidden="true"></span></button></div><div class="renewal-actions settings-developer"><button id="developerOpen" aria-controls="developerSettings" aria-describedby="renewalSummary"><span><span>Developer Mode</span> <span class="settings-beta">Beta</span><span id="renewalSummary" class="renewal-summary" aria-live="polite">Checking auto-renewal…</span></span><span class="settings-chevron" aria-hidden="true"></span></button></div><div class="settings-footer">',
+        '<div class="renewal-actions settings-links settings-section"><button id="homeLanguage">Language<span class="settings-chevron" aria-hidden="true"></span></button><button id="renewalUpdates">Software updates<span class="settings-update-dot" aria-hidden="true"></span><span class="settings-chevron" aria-hidden="true"></span></button><button id="renewalTV">TV settings<span class="settings-chevron" aria-hidden="true"></span></button><button id="renewalNotifications">LG Notifications<span class="settings-chevron" aria-hidden="true"></span></button></div><div class="renewal-actions settings-developer"><button id="developerOpen" aria-controls="developerSettings" aria-describedby="renewalSummary"><span><span>Developer Mode</span> <span class="settings-beta">Beta</span><span id="renewalSummary" class="renewal-summary" aria-live="polite">Checking auto-renewal…</span></span><span class="settings-chevron" aria-hidden="true"></span></button></div><div class="settings-footer">',
         '<div class="renewal-actions"><button id="renewalClose">Back to Home</button></div></div>',
         '</div><div id="developerSettings" class="renewal-card hidden"><div class="settings-heading"><h2>Developer Mode</h2><span class="settings-edition">Beta</span></div><div class="developer-content"><div id="renewalStatus" aria-live="polite">Checking auto-renewal…</div>',
         '<div class="renewal-actions"><button id="renewalToggle" class="home-routing-switch" role="switch" aria-checked="false">Turn on auto-renewal</button></div><p class="renewal-warning">Beta: renewal is not yet verified on no-root TVs. Keep checking the timer in the Developer Mode app.</p>',
@@ -681,6 +681,14 @@
         );
       } catch (_) {}
     };
+    document.getElementById('renewalNotifications').onclick = function () {
+      if (!window.HomeAppControls) return;
+      close();
+      HomeAppControls.launch(
+        'com.webos.app.notificationcenter',
+        tr('LG Notifications')
+      );
+    };
     // Reflow can move Columns beneath a parked cursor. Only real pointer movement
     // may take focus back from the remote or category navigation.
     var pointerX = null,
@@ -774,7 +782,11 @@
         {
           id: 'advanced',
           label: 'Advanced',
-          elements: [document.getElementById('renewalTV')]
+          icons: ['tv', 'notifications'],
+          elements: [
+            document.getElementById('renewalTV'),
+            document.getElementById('renewalNotifications')
+          ]
         },
         {
           id: 'developer',

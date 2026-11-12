@@ -168,6 +168,7 @@ try {
     'zh-Hans',
     'zh-Hant'
   ];
+  const previewWidths = new Map();
   for (const lang of languages) {
     for (const [width, height] of [
       [320, 700],
@@ -175,6 +176,7 @@ try {
       [768, 1024],
       [820, 1180],
       [1024, 768],
+      [1340, 746],
       [1440, 900],
       [1440, 600]
     ]) {
@@ -218,6 +220,22 @@ try {
         failures,
         [],
         `${lang} at ${width}×${height}: preview/content crosses its frame or section`
+      );
+      const { width: previewWidth, height: previewHeight } = await responsive
+        .locator('.showcase-stage')
+        .boundingBox();
+      const viewport = `${width}×${height}`;
+      assert.ok(
+        previewWidth >= Math.min(width - 48, 560) &&
+          Math.abs(previewWidth / previewHeight - 16 / 9) < 0.01,
+        `${lang} at ${viewport}: expected a usable 16:9 preview, got ${previewWidth}×${previewHeight}`
+      );
+      if (!previewWidths.has(viewport))
+        previewWidths.set(viewport, previewWidth);
+      assert.equal(
+        previewWidth,
+        previewWidths.get(viewport),
+        `${lang} at ${viewport}: translated copy changes the preview width`
       );
       if (shots && lang === 'ru')
         await responsive.screenshot({

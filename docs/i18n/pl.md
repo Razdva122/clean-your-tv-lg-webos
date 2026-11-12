@@ -1,5 +1,7 @@
 # Clean Your TV — instrukcja użytkownika
 
+Tylko Root Edition: ustaw nazwę ekranu Home na ostatniej stronie instalatora. Pozostaw puste pole, aby zachować bieżącą nazwę. W CLI użyj `--tv-name`.
+
 Nieopublikowana zmiana instalatora: przed nową instalacją instalator na komputerze sprawdza nowszą stabilną wersję na GitHubie. Wybierz „Otwórz GitHub i pobierz najnowszą wersję”, aby zatrzymać instalację i ją pobrać, lub „Nie, zainstaluj tę wersję”, aby jawnie kontynuować. Jeśli sprawdzenie się nie powiedzie, możesz kontynuować. Oczekujące operacje i odzyskiwanie pomijają sprawdzenie.
 
 Clean Your TV to własny ekran główny dla LG webOS: Twoje aplikacje w Twojej kolejności, bez sponsorowanych rzędów w tym menu. Zainstaluj go z komputera lub telefonu z Androidem; potem komputer może być wyłączony.
@@ -95,7 +97,7 @@ Automatyczne aktualizacje na TV nie uruchamiają zatrzymanego Helpera. Aby wznow
 
 ## Potrzebujesz pomocy?
 
-Jeśli po resecie lub zmianie SSH pojawi się `ssh-identity-changed`, zatrzymaj się: CYTV zablokował zmianę zapisanego klucza przed logowaniem. Pierwsza zgoda na zaufanie nie zastępuje klucza; oczekująca dezinstalacja nie wyjaśnia niezgodności. Zachowaj oryginalny profil, klucze i dane odzyskiwania. Nie ma obsługiwanego automatycznego polecenia ponownego zaufania. Potrzebna jest niezależna weryfikacja tożsamości/odcisku TV oraz sprawdzona procedura zachowująca profil: [odzyskiwanie po zmianie tożsamości SSH](../RECOVERY.md#ssh-identity-changed).
+Jeśli po resecie lub zmianie SSH pojawi się `ssh-identity-changed`, zatrzymaj się: CYTV zablokował zmianę zapisanego klucza przed logowaniem. Pierwsza zgoda na zaufanie nie zastępuje klucza; oczekująca dezinstalacja nie wyjaśnia niezgodności. Zachowaj oryginalny profil, klucze i dane odzyskiwania. W zapisanym profilu Root z oczekującą dezinstalacją można zapisać w konsoli niezależnie zweryfikowany odcisk. Wcześniejsza dezinstalacja pozostaje zablokowana. Zobacz [odzyskiwanie po zmianie tożsamości SSH](../RECOVERY.md#ssh-identity-changed).
 
 Po przerwaniu instalacji użyj tego samego zapisanego połączenia i najpierw wybierz **Sprawdź stan TV**. Kontynuuj tylko przez odzyskiwanie zaproponowane przez kreator. Gdy stan jest nieznany, zapisz raport diagnostyczny i zatrzymaj się; zachowaj dane odzyskiwania i nie ponawiaj instalacji w ciemno.
 

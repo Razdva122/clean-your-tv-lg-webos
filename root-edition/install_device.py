@@ -755,7 +755,7 @@ class LocalDevice:
                 with cleanup_step('legacy-permissions'):
                     self.cleanup('legacy_permissions')
                 with cleanup_step('home-readback'):
-                    record['routes']=routes(self,record)
+                    record['routes']=routes(self,record,retire_orphan=True)
                 record['done'].append('controls-restored');save('controls-restored')
             # Recheck before destructive work: a retry must not erase newly
             # appeared routing evidence and then use its absence as proof.
@@ -1128,16 +1128,17 @@ class LocalDevice:
             and not any(os.path.lexists(ROOT/name) for name in ROUTING_EVIDENCE)
             and not os.path.lexists('/var/webos-profile/override/clean-your-tv-root.json'))
 
-    def compositor_stock(self, record):
+    def compositor_stock(self, record, *, retire_orphan=False):
         import deploy
         if self.payload is None:
             result=subprocess.run(['/usr/bin/node',str(Path(__file__).parent/'cleanup_tail.js'),
                 'stock-proof',record['operation'],'-','-1','-1','-1','-',record['removal']],
                 check=True,stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=90)
             return json.loads(result.stdout)['routes']
+        option = ',retire_orphan=True' if retire_orphan else ''
         program=('import sys,json;sys.path.insert(0,'+repr(str(self.payload/'root-updater'))+');'
                  'from clean_removal import compositor_stock_report;'
-                 'reply=compositor_stock_report('+repr(str(self.payload/'root'))+');'
+                 'reply=compositor_stock_report('+repr(str(self.payload/'root'))+option+');'
                  'print(json.dumps(reply),flush=True);sys.exit(0 if reply["returnValue"] is True else 1)')
         try:
             return deploy.command([sys.executable,'-I','-B','-c',program])['result']

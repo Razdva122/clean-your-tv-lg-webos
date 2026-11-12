@@ -12,7 +12,7 @@ import stat
 import time
 import urllib.request
 
-from .state import private_write
+from .state import private_write, require_original_ssh_identity
 from .errors import reports_storage_full, UserError, TVRejected, DeveloperKeyError, TVCommandError
 
 
@@ -238,6 +238,7 @@ class SSH:
         import paramiko
         root_ssh = profile['edition'] == 'root' or profile.get('connection') == 'root-ssh'
         directory = Path(directory)
+        require_original_ssh_identity(directory)
         known = directory / 'known_hosts'
         if not persist:
             # Internal inspection requires the original cytv pin, never TOFU or

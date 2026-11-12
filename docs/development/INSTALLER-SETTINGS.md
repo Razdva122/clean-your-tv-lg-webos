@@ -8,6 +8,7 @@ opens customization or repeats optional service writes.
 
 | Choice | Root | No-root Developer Mode | No-root through root SSH |
 | --- | --- | --- | --- |
+| Home screen name (existing primary launch point) | Available | — | — |
 | Classic, Liquid Glass, Ribbon | Yes | Yes | Yes |
 | Home weather | Yes | Yes | Yes |
 | Developer Mode auto-renewal Beta | No | Yes | No |
@@ -47,8 +48,9 @@ console installs using `--yes`.
 
 The installer sends a bounded `cytvSetup` object through the existing
 `com.webos.applicationManager/launch` method to the installed edition's Home app.
-The object contains a random request identity plus only built-in theme and weather
-choices. This does not rewrite packages, inventory, private recovery data or LS2
+The object contains a random request identity plus built-in theme, weather and
+optional validated TV-name choices. TV naming writes the existing `tvhome.name`
+preference and does not add an application-managed loading screen. This does not rewrite packages, inventory, private recovery data or LS2
 permissions. It adds no network endpoint or elevated service API.
 
 The shared `launcher/install-settings.js` handler reads initial launch parameters
@@ -63,6 +65,24 @@ identity so stale launch parameters cannot override later TV-side changes or
 create a reload loop. Invalid input causes no writes. Storage errors leave the
 marker uncommitted and display the existing save-error toast. Root reinstallation
 retains its existing full-removal semantics before this optional stage.
+
+**Home screen name** is available during Root Edition installation. The field
+is optional, and blank input keeps the current name. Enter `Home` explicitly to
+reset it. The Root CLI accepts `--tv-name` for scripted installations.
+
+The installer selects the existing Root primary launch point, requests a title
+change and checks the same ID and exact title with `listLaunchPoints`. Missing
+or ambiguous points, denied writes, timeouts and readback mismatches remain
+unconfirmed. The installer sends the Home preference separately with the
+cosmetic launch parameters. The preference is stored in Home’s local storage.
+Root updater profile formats remain compatible with installed supervisors. An
+update or full reinstall that clears app storage may reset the name. Blank input
+skips renaming after installation.
+
+Diagnostics report `saved` or `unconfirmed` for `launchpoint_title`, and
+`requested-in-home` or `unconfirmed` for `tv_name`. Root hardware acceptance
+still needs to check LG Home, the system loading screen, Home-button launch
+and persistence after app and TV restart.
 
 Optional service choices use their existing APIs after installation:
 

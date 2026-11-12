@@ -1,5 +1,7 @@
 # Clean Your TV — průvodce instalací
 
+Pouze Root Edition: na poslední stránce instalátoru nastavte název obrazovky Home. Prázdné pole ponechá stávající název. V CLI použijte `--tv-name`.
+
 Dosud nevydaná změna instalátoru: před novou instalací instalátor v počítači ověří novější stabilní verzi na GitHubu. Vyberte „Otevřít GitHub a stáhnout nejnovější verzi“ pro zastavení a stažení, nebo „Ne, nainstalovat tuto verzi“ pro výslovné pokračování. Pokud kontrola selže, můžete pokračovat. Nedokončené operace a obnovení kontrolu přeskočí.
 
 Clean Your TV je vaše vlastní domovská obrazovka pro LG webOS: aplikace ve vašem pořadí, bez sponzorovaných řádků v této nabídce. Instalujte z počítače nebo telefonu s Androidem; po nastavení může být počítač vypnutý.
@@ -82,7 +84,7 @@ Automatické aktualizace v TV nespouštějí zastavený Helper. Pro samostatné 
 
 ## Potřebujete pomoc?
 
-Pokud se po resetu nebo změně SSH objeví `ssh-identity-changed`, zastavte se: CYTV zablokoval změněný uložený klíč před přihlášením. První potvrzení důvěry jej nenahradí; čekající odinstalace nevysvětluje neshodu. Zachovejte původní profil, klíče a záznamy obnovy. Podporovaný automatický příkaz pro obnovení důvěry není k dispozici. Je nutné nezávisle ověřit identitu/otisk TV a použít zkontrolovaný postup zachovávající profil: [obnova po změně identity SSH](../RECOVERY.md#ssh-identity-changed).
+Pokud se po resetu nebo změně SSH objeví `ssh-identity-changed`, zastavte se: CYTV zablokoval změněný uložený klíč před přihlášením. První potvrzení důvěry jej nenahradí; čekající odinstalace nevysvětluje neshodu. Zachovejte původní profil, klíče a záznamy obnovy. V uloženém profilu Root s čekající odinstalací lze nezávisle ověřený otisk zaznamenat v konzoli. Dřívější odinstalace zůstane zablokovaná. Viz [obnova po změně identity SSH](../RECOVERY.md#ssh-identity-changed).
 
 Po přerušené instalaci použijte stejné uložené připojení a nejprve kontrolu stavu TV (**Check TV status**). Pokračujte jen nabízenou obnovou. Pokud je stav neznámý, uložte diagnostickou zprávu a zastavte se. Zachovejte data obnovy a neopakujte instalaci naslepo.
 

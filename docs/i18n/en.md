@@ -1,5 +1,7 @@
 # Clean Your TV — user guide
 
+Root Edition only: set the **Home screen name** on the final installer page. Leave it blank to keep the current name, or use `--tv-name` in the CLI.
+
 Unreleased installer change: before a new installation, the computer installer checks for a newer stable installer on GitHub. Choose “Open GitHub and download the latest version” to stop and download it, or “No, install this version” to continue explicitly. If the check fails, you can continue. Pending operations and recovery skip the check.
 
 Clean Your TV gives your LG webOS TV a personal Home screen: your apps in your order, without sponsored rows in this menu. Install from a computer or Android phone; the computer can be switched off afterward.
@@ -79,6 +81,8 @@ Use the original saved connection and recovery data. If they are lost, reconnect
 
 ## 6. Everyday use and recovery
 
+To open the TV's notification center from Clean Your TV, choose **Home settings → Advanced → LG Notifications**.
+
 To pin an HDMI input, select it in **+ / Add app**. Press OK to switch to it. Hold OK to move or hide its tile.
 
 If the installer says “Root setup is unfinished, but its deployment record is missing on the TV.”: Choose Review recovery options to remove Clean Your TV, then start setup separately. Full removal also removes No-root Home and Helper; back up preferences first.
@@ -95,7 +99,7 @@ Automatic updates on the TV do not restart a stopped Helper. To resume it separa
 
 ## Need help?
 
-If `ssh-identity-changed` appears after a reset or SSH change, stop: CYTV blocked the changed saved key before sign-in. The first-use trust prompt cannot replace it, and a pending uninstall does not explain the mismatch. Keep the original saved profile, keys and recovery records. No supported automatic re-trust command is supplied. Independent TV identity/fingerprint verification and a reviewed procedure preserving the profile are needed: [changed SSH identity recovery](../RECOVERY.md#ssh-identity-changed).
+If `ssh-identity-changed` appears after a reset or SSH change, stop: CYTV blocked the changed saved key before sign-in. The first-use trust prompt cannot replace it, and a pending uninstall does not explain the mismatch. Keep the original saved profile, keys and recovery records. For a saved Root profile with a pending uninstall, the console can record the independently verified fingerprint. The earlier uninstall stays blocked. See [changed SSH identity recovery](../RECOVERY.md#ssh-identity-changed).
 
 If installation was interrupted, use the same saved connection and choose **Check TV status** first. Continue only through the recovery action offered by the wizard. If the state is unknown, save the diagnostic report and stop; keep recovery data and do not blindly repeat installation.
 

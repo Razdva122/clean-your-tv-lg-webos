@@ -1,30 +1,24 @@
 const assert = require('node:assert/strict'),
   fs = require('fs'),
   vm = require('vm');
-const catalogs = {};
-vm.runInNewContext(fs.readFileSync(__dirname + '/root-locales.js', 'utf8'), {
-  window: {
-    HomeI18n: {
-      add: (values) =>
-        Object.keys(values).forEach(
-          (l) => (catalogs[l] = Object.assign(catalogs[l] || {}, values[l]))
-        )
-    }
+function loadCatalogs(...files) {
+  const catalogs = {};
+  const HomeI18n = {
+    add: (values) =>
+      Object.keys(values).forEach(
+        (l) => (catalogs[l] = Object.assign(catalogs[l] || {}, values[l]))
+      )
+  };
+  for (const file of files) {
+    vm.runInNewContext(fs.readFileSync(__dirname + '/' + file, 'utf8'), {
+      HomeI18n,
+      window: { HomeI18n }
+    });
   }
-});
-vm.runInNewContext(
-  fs.readFileSync(__dirname + '/root-audio-locales.js', 'utf8'),
-  {
-    window: {
-      HomeI18n: {
-        add: (values) =>
-          Object.keys(values).forEach(
-            (l) => (catalogs[l] = Object.assign(catalogs[l] || {}, values[l]))
-          )
-      }
-    }
-  }
-);
+  return catalogs;
+}
+const catalogs = loadCatalogs('root-locales.js', 'root-audio-locales.js');
+const shared = loadCatalogs('../../launcher/catalogs.js');
 const sources = Object.keys(catalogs.en);
 for (const locale of [
   'en',
@@ -69,7 +63,11 @@ for (const file of [
       (/^[A-Z]/.test(source) && source.includes(' ')) ||
       ['Back', 'Update', 'Language', 'unknown'].includes(source)
     )
-      assert(source in catalogs.en, file + ' missing ' + source);
+      for (const locale of Object.keys(catalogs))
+        assert(
+          (catalogs[locale][source] || shared[locale][source] || '').trim(),
+          file + ' missing ' + source + ' in ' + locale
+        );
   }
 }
 console.log(

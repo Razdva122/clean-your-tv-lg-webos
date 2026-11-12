@@ -70,6 +70,50 @@ class CapabilityTests(unittest.TestCase):
                 report = create_report(store, 'install', profile, 'inspect-installation', tv_info=info)
                 self.assertNotIn('root_compositor_failure', json.loads(report.read_text())['tv'])
 
+    def test_root_report_retains_only_the_rejected_native_home_mode(self):
+        import struct
+        from cytv.diagnostic_context import tv_summary
+        from cytv.diagnostics import create_report
+        from cytv.root_capabilities import RootCapabilityError, verify
+
+        missing = {'returnValue': False, 'errorCode': -1,
+                   'errorText': 'Service does not exist: com.webos.service.systemprofile.'}
+        c1 = {'returnValue': True, 'modelName': 'OLED55C1TEST',
+              'firmwareVersion': '03.00.00', 'sdkVersion': '6.0.0'}
+        other = dict(c1, modelName='TEST-QT')
+        key = 'com.webos.surfacemanager.keyFilters'
+        chain = {'returnValue': True, 'configs': {key: [
+            {'file': '/usr/lib/qt5/qml/KeyFilters/systemUi.js', 'handler': 'handleSystemKeys'}]}}
+        header = struct.pack('<16sHHIIIIIHHHHHH', b'\x7fELF\x01\x01\x01',
+                             3, 40, 1, 64, 52, 0, 0, 52, 32, 2, 0, 0, 0)
+        dump = ' '.join(map(str, header))
+        observed = '1001 1 {mode} 5242880\n' + dump + '\nCYTV_HOME_ELF\n' + dump + '\nCYTV_HOME_FS\n73717368'
+
+        for identity, extra, schema in ((c1, [], 2), (other, [other, chain], 3)):
+            with self.subTest(schema=schema), tempfile.TemporaryDirectory() as folder:
+                remote = Mock()
+                remote.luna.side_effect = [missing, identity, *extra]
+                remote.run.return_value = observed.format(mode='775')
+                info = {}
+                with self.assertRaises(RootCapabilityError) as failure:
+                    verify(remote, CheckList(), info, allow_c1=True, allow_compositor=bool(extra))
+                store = state.Store(folder)
+                profile = state.target('192.0.2.10', 'root')
+                report = create_report(store, 'install', profile, 'inspect-installation', failure.exception, info)
+                tv = json.loads(report.read_text())['tv']
+                self.assertEqual(tv.get('root_native_home_mode'), '0775')
+                self.assertNotIn('home_backend', tv)
+
+                remote.luna.side_effect = [missing, identity, *extra]
+                remote.run.return_value = observed.format(mode='755')
+                self.assertEqual(verify(remote, CheckList(), info, allow_c1=True, allow_compositor=bool(extra)),
+                                 'c1-native-gate')
+                self.assertEqual(info['home_backend_schema'], schema)
+                self.assertNotIn('root_native_home_mode', tv_summary(info))
+
+        for value in ('0775 private-data', 775, '0888', None):
+            self.assertNotIn('root_native_home_mode', tv_summary({'root_native_home_mode': value}))
+
     def test_report_omits_unrecognized_compositor_failure_values(self):
         from cytv.diagnostic_context import tv_summary
 

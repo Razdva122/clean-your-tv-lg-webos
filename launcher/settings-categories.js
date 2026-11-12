@@ -34,6 +34,22 @@
     'M4 5h16v12H4zM8 21h8M12 17v4',
     'M8 5L2 12l6 7M16 5l6 7-6 7M14 3l-4 18'
   ];
+  var actionPaths = {
+    tv: paths[5],
+    notifications: 'M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4',
+    sound: 'M3 9h4l5-4v14l-5-4H3zM16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12'
+  };
+  function createIcon(shape) {
+    var ns = 'http://www.w3.org/2000/svg',
+      svg = document.createElementNS(ns, 'svg'),
+      path = document.createElementNS(ns, 'path');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('aria-hidden', 'true');
+    svg.setAttribute('focusable', 'false');
+    path.setAttribute('d', shape);
+    svg.appendChild(path);
+    return svg;
+  }
   function attach(panel, card, groups) {
     var nav = document.createElement('div'),
       workspace = document.createElement('div'),
@@ -111,28 +127,23 @@
       tab.setAttribute('data-category', group.id);
       tab.id = 'settings-tab-' + group.id;
       tab.setAttribute('aria-controls', 'settings-pane-' + group.id);
-      var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'),
-        path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      svg.setAttribute('viewBox', '0 0 24 24');
-      svg.setAttribute('aria-hidden', 'true');
-      path.setAttribute(
-        'd',
-        group.id === 'wallpapers'
-          ? 'M3 3h18v18H3zM3 16l6-6 5 5 3-3 4 4M16 7h.01'
-          : paths[
-              [
-                'home',
-                'appearance',
-                'themes',
-                'language',
-                'updates',
-                'advanced',
-                'developer'
-              ].indexOf(group.id)
-            ]
+      tab.appendChild(
+        createIcon(
+          group.id === 'wallpapers'
+            ? 'M3 3h18v18H3zM3 16l6-6 5 5 3-3 4 4M16 7h.01'
+            : paths[
+                [
+                  'home',
+                  'appearance',
+                  'themes',
+                  'language',
+                  'updates',
+                  'advanced',
+                  'developer'
+                ].indexOf(group.id)
+              ]
+        )
       );
-      svg.appendChild(path);
-      tab.appendChild(svg);
       var text = document.createElement('span');
       text.textContent = t(group.label);
       tab.appendChild(text);
@@ -163,8 +174,15 @@
       )
         HomeI18n.mountLanguagePicker(pane);
       else
-        group.elements.forEach(function (el) {
-          if (el) pane.appendChild(el);
+        group.elements.forEach(function (el, index) {
+          if (!el) return;
+          var shape = group.icons && actionPaths[group.icons[index]];
+          if (shape) {
+            var icon = createIcon(shape);
+            icon.setAttribute('class', 'settings-action-icon');
+            el.insertBefore(icon, el.firstChild);
+          }
+          pane.appendChild(el);
         });
       if (group.id === 'appearance') {
         [

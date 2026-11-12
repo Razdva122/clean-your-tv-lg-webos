@@ -58,19 +58,34 @@ of the host-key mismatch or proof of what removal completed. Do not clear
 `known_hosts`, delete/recreate the profile or pending records, disable host-key
 checks, or repeat removal, installation, reset or rooting to bypass this stop.
 
-Before maintainer-assisted trust recovery, the owner must independently establish
-that the endpoint is the intended TV and verify its current host-key fingerprint
-through an already trusted access path or a trusted local/on-device method.
-Record which independent method was used, the verified fingerprint and the
-owner-confirmed reset/SSH-change history for private maintainer review. A key
-presented by the blocked network connection, an address or a reset history alone
-is insufficient. Do not upload keys, profiles or raw diagnostics publicly.
+For a saved Root connection with a pending uninstall, use the console command
+`trust-root-ssh` from an installer build that lists it in `cytv --help`.
 
-CYTV currently supplies no supported automatic host-key replacement or re-trust
-command. Even after independent identity verification, maintainers still need a
-reviewed, profile-preserving trust-recovery procedure before recovery can resume.
-Keep the pending operation intact until that procedure and the subsequent trusted
-inspection establish the allowed next action.
+1. Identify the intended TV independently and obtain the full OpenSSH-style
+   `SHA256:…` fingerprint of the active SSH server host key through a trusted
+   local/on-device method or an already trusted access path. For OpenSSH, you
+   can run `ssh-keygen -E sha256 -lf /path/to/active-host-key.pub` against the
+   server's public host-key file from that trusted access path. Use the host key
+   for the algorithm used by the saved connection if the server has several.
+   The blocked SSH connection, a network scan, the address and reset history
+   cannot establish this fingerprint. Stop if you have no independent source.
+2. Run `cytv trust-root-ssh --host TV_ADDRESS` on the computer with the original
+   saved profile. Use the saved address and include `--port` if the profile
+   uses a port other than 22. Include `--data-dir` if you originally used a
+   custom profile directory.
+3. Enter the independently verified full fingerprint. Enter an empty line or
+   press Ctrl+C to cancel. CYTV checks the key in a fresh SSH handshake and
+   records a match without signing in or executing commands. If the key
+   changes again, verify its new fingerprint independently and repeat this
+   step with the same saved profile.
+
+A successful check records the new SSH identity for this profile and its
+original recovery evidence. The original SSH pin and uninstall receipt are
+retained. The earlier uninstall and ordinary connections through this profile
+remain blocked. Verifying the TV's current SSH host key cannot establish that
+the installation named by the old receipt survived the reset. Keep the profile
+and receipts for maintainer-assisted recovery. Share the independently verified
+method and reset history privately if requested. Keep raw profiles and keys private.
 
 ## Interrupted setup or removal
 

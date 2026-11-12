@@ -122,7 +122,7 @@ def restored_native_schema(record, backup):
     return selection['schema']
 
 
-def compositor_stock(payload):
+def compositor_stock(payload, *, retire_orphan=False):
     """Fresh stock observation from current verified support, never old code."""
     import sys
     import deploy
@@ -133,15 +133,16 @@ def compositor_stock(payload):
         raise ValueError('current_compositor_support_required')
     sys.path.insert(0,str(payload/'runtime'))
     import c1_keyfilter
-    observed=c1_keyfilter.probe()
+    observed=c1_keyfilter.probe(retire_orphan=True) if retire_orphan else c1_keyfilter.probe()
     return {'mode':'stock-compositor','target':{k:observed['target'][k] for k in ('dev','ino','size')},
             'target_sha256':observed['target_sha256']}
 
 
-def compositor_stock_report(payload):
+def compositor_stock_report(payload, *, retire_orphan=False):
     """One current child observation; failure stays failure with bounded context."""
     try:
-        return {'returnValue':True,'result':compositor_stock(payload)}
+        result = compositor_stock(payload, retire_orphan=True) if retire_orphan else compositor_stock(payload)
+        return {'returnValue':True,'result':result}
     except Exception as error:
         import traceback
         traceback.print_exc()  # Existing private child stderr, never part of the export.
@@ -204,10 +205,14 @@ def retire_tree(path, allowed, keep=(), uid=0, parent_uid=None):
     return len(plan)
 
 
-def routes(device, record=None):
+def routes(device, record=None, *, retire_orphan=False):
     if record is not None and device.routing_untouched(record):
         return {'mode':'never-applied'}
     if record is not None and device.compositor_stock_eligible(record):
+        if (retire_orphan and record.get('routes') is None
+                and record.get('profileless_cleanup_eligible') is True
+                and record.get('native_restored_sha256') is None):
+            return device.compositor_stock(record, retire_orphan=True)
         return device.compositor_stock(record)
     settings=device.rpc('com.webos.settingsservice/getSystemSettings',{'category':'general','keys':['defaultApps']})
     home=settings.get('settings',{}).get('defaultApps',{}).get('home')

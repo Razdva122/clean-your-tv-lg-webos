@@ -70,6 +70,20 @@ def private_write(path, data):
             os.unlink(name)
 
 
+SSH_IDENTITY_REVIEW = 'ssh-identity-review.json'
+
+
+def require_original_ssh_identity(directory):
+    # Even an unreadable review must hold the profile. A verified new host key
+    # does not establish continuity of the original installation.
+    try:
+        (Path(directory) / SSH_IDENTITY_REVIEW).lstat()
+    except FileNotFoundError:
+        return
+    raise UserError('The earlier uninstall remains blocked. Keep the saved SSH and recovery records.',
+                    reason_code='ssh-identity-unverified')
+
+
 class Store:
     def __init__(self, root=None):
         # Canonicalize the caller-selected root once (including macOS /var).
@@ -188,9 +202,10 @@ class Store:
 
     def connection_profile(self, selected):
         """Resolve pending work to its original saved identity, before connecting."""
+        directory = self.device_dir(selected)
+        require_original_ssh_identity(directory)
         if self.pending(selected) is None:
             return selected, False
-        directory = self.device_dir(selected)
         try:
             path = directory / 'profile.json'
             known = directory / 'known_hosts'

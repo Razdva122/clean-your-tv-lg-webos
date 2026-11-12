@@ -1,5 +1,7 @@
 # Clean Your TV — guide d’utilisation
 
+Root Edition uniquement : choisissez le nom de l’écran d’accueil sur la dernière page du programme d’installation. Laissez le champ vide pour conserver le nom actuel. Dans la CLI, utilisez `--tv-name`.
+
 Modification non publiée : avant une nouvelle installation, l’installateur de l’ordinateur recherche une version stable plus récente sur GitHub. Choisissez « Ouvrir GitHub et télécharger la dernière version » pour arrêter et la télécharger, ou « Non, installer cette version » pour continuer explicitement. Si la vérification échoue, vous pouvez continuer. Les opérations en attente et la récupération ignorent cette vérification.
 
 Clean Your TV donne à votre LG webOS un écran d’accueil personnel: vos applications dans votre ordre, sans rangées sponsorisées dans ce menu. Installez-le depuis un ordinateur ou un téléphone Android ; l’ordinateur peut ensuite rester éteint.
@@ -95,7 +97,7 @@ Les mises à jour automatiques sur le téléviseur ne redémarrent pas Helper ar
 
 ## Besoin d’aide ?
 
-Si `ssh-identity-changed` apparaît après une réinitialisation ou une modification SSH, arrêtez: CYTV a bloqué la clé mémorisée modifiée avant l’authentification. La confirmation de confiance initiale ne la remplace pas ; une désinstallation en attente n’explique pas cet écart. Conservez le profil d’origine, les clés et les données de récupération. Aucune commande automatique de renouvellement de confiance n’est prise en charge. Il faut vérifier indépendamment l’identité/l’empreinte du TV, puis disposer d’une procédure revue préservant le profil: [récupération de l’identité SSH](../RECOVERY.md#ssh-identity-changed).
+Si `ssh-identity-changed` apparaît après une réinitialisation ou une modification SSH, arrêtez: CYTV a bloqué la clé mémorisée modifiée avant l’authentification. La confirmation de confiance initiale ne la remplace pas ; une désinstallation en attente n’explique pas cet écart. Conservez le profil d’origine, les clés et les données de récupération. Avec un profil Root enregistré et une désinstallation en attente, la console permet d’enregistrer l’empreinte vérifiée indépendamment. La désinstallation précédente reste bloquée. Voir [récupération de l’identité SSH](../RECOVERY.md#ssh-identity-changed).
 
 Après une interruption, utilisez la même connexion enregistrée et commencez par **Vérifier l’état du téléviseur**. Continuez uniquement avec l’action de récupération proposée par l’assistant. Si l’état est inconnu, enregistrez le rapport de diagnostic et arrêtez-vous ; conservez les données de récupération et ne réinstallez pas à l’aveugle.
 

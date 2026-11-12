@@ -154,6 +154,17 @@ async function startAppearance(h) {
 }
 (async () => {
   for (const edition of ['no-root', 'root']) {
+    if (edition === 'root') {
+      const named = harness(edition, {
+        storage: new Map([['tvhome.name', 'Aashiyaan']])
+      });
+      await tick();
+      assert.equal(named.memory.get('tvhome.name'), 'Aashiyaan');
+      for (const options of [undefined, { system: true }]) {
+        const profile = await named.window.RootProfile.capture(options);
+        assert.equal(profile.settings['tvhome.name'], undefined);
+      }
+    }
     let h = harness(edition);
     await tick();
     assert.equal(

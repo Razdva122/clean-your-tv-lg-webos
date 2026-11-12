@@ -69,6 +69,7 @@ class Remote:
                 except (FileNotFoundError,PermissionError):info={'id':app}
                 result.append(info)
             return {'returnValue':True,'apps':result}
+        if uri == 'com.webos.appInstallService/status':return {'returnValue':True,'status':{'apps':[]}}
         if uri.endswith('/getAllInputStatus'):return {'returnValue':True,'devices':[]}
         if uri.endswith('/dev/remove'):
             app=payload['id']
@@ -204,19 +205,19 @@ class SimpleRemoval(unittest.TestCase):
 
         socket = Socket()
         with patch('websockets.sync.client.connect', return_value=socket) as connect:
+            self.assertTrue(self.remove()['restart_required'])
+            self.reboot()
             with self.assertRaises(UserError) as caught:
                 self.remove()
             self.assertEqual(caught.exception.reason_code, 'controls-unverified')
             self.assertEqual(self.store.pending(self.profile)['stage'], 'requested')
             self.assertFalse(any(uri.endswith('/dev/remove') for uri, _ in self.remote.calls))
             socket.denied = False
-            self.assertTrue(self.remove()['restart_required'])
-            self.reboot()
             self.assertTrue(self.remove()['verified_clean'])
 
         self.assertIsNone(self.store.pending(self.profile))
         self.assertEqual(key_file.read_text(), saved_key)
-        self.assertEqual([call.args[0] for call in connect.call_args_list], ['wss://tv.local:3001'] * 3)
+        self.assertEqual([call.args[0] for call in connect.call_args_list], ['wss://tv.local:3001'] * 2)
         for register, read in zip(requests[::2], requests[1::2]):
             self.assertEqual(register['payload']['client-key'], 'saved-key')
             self.assertNotIn('pairingType', register['payload'])
@@ -914,6 +915,212 @@ class SimpleRemoval(unittest.TestCase):
         self.assertTrue(self.remove()['restart_required'])
         late=self.own_file('apps/usr/palm/applications/com.local.nativehome/state/late.json')
         self.reboot();self.assertTrue(self.remove()['verified_clean']);self.assertFalse(late.exists());self.assertIsNone(self.store.pending(self.profile))
+
+    def test_recovery_of_legacy_install_when_global_package_status_is_denied(self):
+        from cytv.diagnostics import create_report
+        from cytv.recovery import recover
+        from cytv.terminal import Console
+        from cytv.transport import terminal_reply
+
+        self.store.begin(self.profile, 'install')
+        original = self.store.pending(self.profile)
+        receipt = self.store.device_dir(self.profile) / 'operation.json'
+        original_bytes = receipt.read_bytes()
+        report = create_report(self.store, 'install', self.profile, 'install-packages', Exception())
+        first_failure = json.loads(report.read_text())['first_failure']
+        self.remote.apps = {operations.HELPER}
+        status_uri = 'com.webos.appInstallService/status'
+        luna = self.remote.luna
+
+        def deny_status(uri, payload, **kwargs):
+            if uri == status_uri:
+                self.remote.calls.append((uri, payload))
+                terminal_reply({'returnValue': False, 'errorCode': -1}, uri=uri)
+            return luna(uri, payload, **kwargs)
+
+        self.remote.luna = deny_status
+        self.carrier_payload()
+        (self.installer.payload / 'payload.json').write_text(json.dumps(self.installer.manifest))
+        self.installer.manifest = {}
+        self.installer.tv_info = {}
+        write = Console(self.progress.append)
+        plans = []
+        write.recovery_plan = plans.append
+
+        def run(*answers):
+            answers = iter(answers)
+            recover(self.installer, lambda _: next(answers), write)
+
+        with patch.object(self.installer, 'observe_recovery',
+                          return_value={'device': {'apps': [{'id': operations.HELPER}]}}), \
+             patch('cytv.package.verify_payload', wraps=package.verify_payload) as verify_payload:
+            run('y', '')
+            self.assertEqual(plans[-1]['state'], 'ready')
+            self.assertEqual(receipt.read_bytes(), original_bytes)
+            self.assertEqual(self.remote.calls, [(status_uri, {'subscribe': True})])
+            self.assertEqual(self.remote.commands, [])
+            verify_payload.assert_not_called()
+
+            run('y', 'y')
+            self.assertTrue(plans[-1]['restart_required'])
+            self.assertFalse(plans[-1]['verified_clean'])
+            self.assertEqual(self.remote.apps, {operations.HELPER})
+            self.assertFalse(any(uri.endswith('/dev/remove') for uri, _ in self.remote.calls))
+            verify_payload.assert_called_once_with(self.installer.payload)
+            self.reboot()
+
+            self.remote.reject = {'returnValue': False, 'errorCode': -7}
+            with self.assertRaises(TVRejected) as busy:
+                run('y', 'y')
+            self.assertEqual(busy.exception.luna['operation'], 'package-remove')
+            self.assertEqual(busy.exception.luna['error_code'], -7)
+            self.assertEqual(self.remote.apps, {operations.HELPER})
+            self.assertEqual(plans[-1]['state'], 'blocked')
+            pending = self.store.pending(self.profile)
+            self.assertEqual(pending['previous'], original)
+            self.assertEqual((receipt.parent / pending['original_receipt']).read_bytes(), original_bytes)
+
+            run('y', 'y')
+            self.assertFalse(self.remote.apps)
+
+        self.assertTrue(plans[-1]['verified_clean'])
+        self.assertIsNone(self.store.pending(self.profile))
+        self.assertEqual((receipt.parent / pending['original_receipt']).read_bytes(), original_bytes)
+        report = create_report(self.store, 'recover', self.profile, 'recover')
+        self.assertEqual(json.loads(report.read_text())['first_failure'], first_failure)
+        self.assertEqual(sum(uri == status_uri for uri, _ in self.remote.calls), 4)
+        self.assertFalse(any(uri.endswith('/dev/install') for uri, _ in self.remote.calls))
+
+    def test_issue_307_unregistered_partial_helper_requires_verified_restart(self):
+        from cytv.diagnostics import create_report
+        from cytv.recovery import recover
+        from cytv.terminal import Console
+        from cytv.transport import terminal_reply
+
+        helper = operations.HELPER
+        service = helper + '.service'
+        app_info = self.own_file(f'apps/usr/palm/applications/{helper}/appinfo.json',
+                                 json.dumps({'id': helper, 'version': '0.6.22'}))
+        state = self.own_file(f'apps/usr/palm/applications/{helper}/state/settings.json', '{}')
+        package_info = self.own_file(f'apps/usr/palm/packages/{helper}/packageinfo.json',
+                                     json.dumps({'id': helper, 'services': [service]}))
+        files = {file: file.read_bytes() for file in (app_info, state, package_info)}
+        self.assertFalse((self.root / 'developer/apps/usr/palm/services').exists())
+        self.assertEqual(list((self.root / 'bus').iterdir()), [])
+        self.remote.apps = {'com.limelight.webos'}
+        self.store.begin(self.profile, 'install')
+        directory = self.store.device_dir(self.profile)
+        receipt = directory / 'operation.json'
+        original = receipt.read_bytes()
+        failure = TVRejected('Install failed', {'statusValue': 24, 'details': {'errorCode': -1}},
+                             'com.webos.appInstallService/dev/install')
+        report = create_report(self.store, 'install', self.profile, 'install-packages', failure)
+        first_failure = json.loads(report.read_text())['first_failure']
+        self.assertEqual(first_failure['luna']['status_value'], 24)
+        history = directory / 'diagnostic-failures'
+        retained = {file.name: file.read_bytes() for file in history.iterdir()}
+
+        status_uri = 'com.webos.appInstallService/status'
+        denied = {'returnValue': False, 'errorCode': -1}
+        active = {'returnValue': True, 'status': {'apps': [helper]}}
+        ambiguous = {'returnValue': True, 'status': {}}
+        contradictory = dict(denied, status=active['status'])
+        status = denied
+        luna = self.remote.luna
+
+        def package_status(uri, payload, **kwargs):
+            if uri == status_uri:
+                self.remote.calls.append((uri, payload))
+                terminal_reply(status, uri=uri)
+                return status
+            return luna(uri, payload, **kwargs)
+
+        self.remote.luna = package_status
+        self.carrier_payload()
+        (self.installer.payload / 'payload.json').write_text(json.dumps(self.installer.manifest))
+        self.installer.manifest = {}
+        self.installer.tv_info = {}
+        write = Console(self.progress.append)
+        plans = []
+        write.recovery_plan = plans.append
+
+        def run(*answers):
+            answers = iter(answers)
+            recover(self.installer, lambda _: next(answers), write)
+
+        def assert_files_kept():
+            self.assertEqual({file: file.read_bytes() for file in files}, files)
+            self.assertEqual({file.name: file.read_bytes() for file in history.iterdir()}, retained)
+            self.assertTrue(all(uri in (status_uri, 'com.webos.applicationManager/dev/listApps')
+                                for uri, _ in self.remote.calls))
+
+        with patch.object(self.installer, 'observe_recovery', return_value={'device': {'apps': []}}):
+            for status in (active, ambiguous):
+                with self.subTest(status=status), self.assertRaisesRegex(UserError, 'not confirmed idle'):
+                    run('y')
+                self.assertEqual(receipt.read_bytes(), original)
+                self.assertEqual(self.remote.commands, [])
+                assert_files_kept()
+
+            status = contradictory
+            with self.assertRaises(TVRejected):
+                run('y')
+            self.assertEqual(receipt.read_bytes(), original)
+            assert_files_kept()
+
+            status = denied
+            run('y', '')
+            self.assertEqual(receipt.read_bytes(), original)
+            self.assertEqual(self.remote.commands, [])
+            assert_files_kept()
+
+            run('y', 'y')
+            self.assertTrue(plans[-1]['restart_required'])
+            self.assertFalse(plans[-1]['verified_clean'])
+            archived = directory / self.store.pending(self.profile)['original_receipt']
+            self.assertEqual(archived.read_bytes(), original)
+            assert_files_kept()
+
+            with self.assertRaises(UserError) as same_boot:
+                run('y', 'y')
+            self.assertEqual(same_boot.exception.reason_code, 'pending-operation')
+            self.assertTrue(plans[-1]['restart_required'])
+            self.assertFalse(plans[-1]['verified_clean'])
+            assert_files_kept()
+
+            self.boot_marker().unlink()
+            with self.assertRaises(UserError):
+                run('y', 'y')
+            self.assertTrue(plans[-1]['restart_required'])
+            assert_files_kept()
+
+            self.reboot()
+            for status in (active, ambiguous):
+                with self.subTest(status=status), self.assertRaisesRegex(UserError, 'not confirmed idle'):
+                    run('y', 'y')
+                self.assertIsNotNone(self.store.pending(self.profile))
+                self.assertFalse(plans[-1]['verified_clean'])
+                self.assertFalse(plans[-1]['restart_required'])
+                assert_files_kept()
+
+            status = denied
+            (self.root / 'proc').mkdir()
+            with patch.object(self.store, 'finish_clean_removal', side_effect=OSError('host interruption')):
+                with self.assertRaisesRegex(OSError, 'host interruption'):
+                    run('y', 'y')
+            self.assertEqual(self.store.pending(self.profile)['stage'], 'verified-clean')
+            self.assertFalse(plans[-1]['verified_clean'])
+            run('y', 'y')
+
+        self.assertTrue(plans[-1]['verified_clean'])
+        self.assertIsNone(self.store.pending(self.profile))
+        self.assertTrue(all(not file.exists() for file in files))
+        self.assertEqual(self.remote.apps, {'com.limelight.webos'})
+        self.assertFalse(any(uri.endswith(('/dev/install', '/dev/remove', '/disable')) for uri, _ in self.remote.calls))
+        self.assertEqual(archived.read_bytes(), original)
+        self.assertEqual({file.name: file.read_bytes() for file in history.iterdir()}, retained)
+        report = create_report(self.store, 'recover', self.profile, 'recover')
+        self.assertEqual(json.loads(report.read_text())['first_failure'], first_failure)
 
     def test_disconnect_retry_rechecks_presence_and_continues_remaining_packages(self):
         self.remote.apps={'com.local.nativehome','com.gathin.tvhome'};self.remote.cut='com.local.nativehome'

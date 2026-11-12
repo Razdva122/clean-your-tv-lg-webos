@@ -158,7 +158,7 @@ def tv_summary(value):
         settings = mapping(value['installation_settings'])
         result['installation_settings'] = {
             key: choice(settings[key], ('requested-in-home', 'saved', 'saved-restart-required', 'unconfirmed'))
-            for key in ('theme', 'weather', 'renewal', 'block_updates') if key in settings}
+            for key in ('theme', 'weather', 'renewal', 'block_updates', 'tv_name', 'launchpoint_title') if key in settings}
     for key, allowed in (('helper_state', HELPER_STATES), ('kernel_arch', KERNEL_ARCHES),
                          ('userland_abi', ('arm32', 'arm64', 'other', 'unknown')),
                          ('graphics_resolution', ('1280x720', '1920x1080'))):
@@ -175,6 +175,9 @@ def tv_summary(value):
         failure = choice(value['root_compositor_failure'], COMPOSITOR_FAILURES, None)
         if failure is not None:
             result['root_compositor_failure'] = failure
+    native_home_mode = value.get('root_native_home_mode')
+    if isinstance(native_home_mode, str) and re.fullmatch(r'[0-7]{4}', native_home_mode):
+        result['root_native_home_mode'] = native_home_mode
     if 'root_requirements' in value:
         checks = mapping(value['root_requirements'])
         from .root_capabilities import CALLS

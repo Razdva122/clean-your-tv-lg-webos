@@ -950,6 +950,7 @@
     if (firstInput && !library.input(firstInput))
       initialInputFocus = firstInput;
     window.HomeAppControls = {
+      launch: launchApp,
       refresh: function () {
         var button = getElement('homeShowAddApp');
         if (button)
@@ -2707,6 +2708,7 @@
         tile.el.classList.add('shown');
       });
       getElement('homeSurface').classList.remove('ctv-starting');
+      if (window.HomeName) HomeName.refresh();
     });
   }
   // Weather changes reserve layout space without resetting the user's app/row.
