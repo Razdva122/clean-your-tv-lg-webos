@@ -140,6 +140,8 @@ known project apps/files that are present and skip items that are absent.
 
 The current source permits completion without a restart when current control,
 startup, package/file and process checks pass and no prior setup is unresolved.
+A normal Developer Mode removal runs these checks as part of the same
+operation. Wait for the installer to confirm that removal is complete.
 A requested restart remains necessary for live/unverifiable project processes or
 unfinished old work. Pending final verification is shown as remaining cleanup;
 a connection interruption and an actual package-removal refusal have separate

@@ -124,7 +124,7 @@ if(input.action==='idle'){
  // File absence alone cannot prove that a deleted service or installer stopped.
  var prefixes=installerRoots.concat([publicRoot+'/cytv-', '/var/lib/clean-your-tv-', '/tmp/cytv-', '/tmp/clean-your-tv-']);
  apps.forEach(function(app,index){prefixes.push(base+'/applications/'+app,base+'/services/'+services[index]);});
- var afterStop=input.after_stop===true,idleDeadline=Date.now()+8000;
+ var afterStop=input.after_stop===true,waitForIdle=input.wait_for_idle===true,idleDeadline=Date.now()+8000;
  var hasNoUserspace=function(directory){
   var stat=fs.readFileSync(directory+'/stat','utf8'),close=stat.lastIndexOf(')');
   if(close<0)return false;
@@ -143,16 +143,21 @@ if(input.action==='idle'){
    throw e;
   }
  };
+ var isProject=function(args){
+  var shell=args.length&&/(^|\/)(sh|ash|bash|dash|zsh|ksh)$/.test(args[0]);
+  return args.some(function(arg){return apps.concat(services).indexOf(arg)>=0||prefixes.some(function(prefix){return arg===prefix||arg.indexOf(prefix+'/')===0||(/[-]$/.test(prefix)&&arg.indexOf(prefix)===0)||(shell&&arg.indexOf(prefix)>=0);})||(shell&&apps.some(function(app){return arg.indexOf(app)>=0;}));});
+ };
  var checkIdle=function(){
   reply.idle=true;
+  reply.project_running=false;
   try{var proc='/proc/',pids=fs.readdirSync(proc).filter(function(pid){return /^[1-9][0-9]*$/.test(pid)&&Number(pid)!==process.pid;});
    if(pids.length>4096)reply.idle=false;
    pids.forEach(function(pid){try{
     var args=fs.readFileSync(proc+pid+'/cmdline','utf8').split('\0').filter(Boolean),argc=args.length;
+    if(isProject(args)){reply.project_running=true;reply.idle=false;return;}
     readProcLink(proc+pid+'/exe',args,argc);
     readProcLink(proc+pid+'/cwd',args,argc);
-    var shell=args.length&&/(^|\/)(sh|ash|bash|dash|zsh|ksh)$/.test(args[0]);
-    if(args.some(function(arg){return apps.concat(services).indexOf(arg)>=0||prefixes.some(function(prefix){return arg===prefix||arg.indexOf(prefix+'/')===0||(/[-]$/.test(prefix)&&arg.indexOf(prefix)===0)||(shell&&arg.indexOf(prefix)>=0);})||(shell&&apps.some(function(app){return arg.indexOf(app)>=0;}));}))reply.idle=false;
+    if(isProject(args)){reply.project_running=true;reply.idle=false;return;}
     // Known LS2 launcher with an explicit service ID. Project IDs and
     // project paths were already checked above.
     var serviceLauncher=afterStop&&argc===3&&/(^|\/)node$/.test(args[0])&&
@@ -164,7 +169,9 @@ if(input.action==='idle'){
   }catch(e){reply.idle=false;}
   // Calling disable can temporarily activate an LS2 service. Wait for its
   // process to exit without calling disable again while polling.
-  if(afterStop&&!reply.idle&&Date.now()<idleDeadline){setTimeout(checkIdle,250);return;}
+  if(((afterStop&&!reply.idle)||(waitForIdle&&reply.project_running))&&Date.now()<idleDeadline){
+   setTimeout(checkIdle,250);return;
+  }
   process.stdout.write(JSON.stringify(reply));
  };
  checkIdle();return;
@@ -287,12 +294,14 @@ def _program(request):
     return ('process.argv.push(' + json.dumps(json.dumps(request)) + ');\n' + source).encode()
 
 
-def _device(installer, action, proof=None, *, after_stop=False):
+def _device(installer, action, proof=None, *, after_stop=False, wait_for_idle=False):
     pending = installer.store.pending(installer.profile) or {}
     request = {'action':action, 'staging_ids':pending.get('cleanup_staging_ids', []),
                'removal':pending.get('removal_operation'), 'proof':proof}
     if after_stop:
         request['after_stop'] = True
+    if wait_for_idle:
+        request['wait_for_idle'] = True
     if installer.profile.get('connection') == 'root-ssh':
         request['connection'] = 'root-ssh'
     try:
@@ -528,30 +537,57 @@ def continue_removal(installer, expected_pending):
             release(installer)
             installer.store.finish_clean_removal(installer.profile)
             return {'removed': True, 'verified_clean': True}
+    same_boot_retry = False
+
+    def unverified_restart():
+        error = UserError('The TV restart could not be verified. Save the diagnostic report and keep recovery data.',
+                          reason_code='pending-operation')
+        error.no_root_cleanup = no_root_cleanup_details({'action':'boot-probe','step':'boot-proof',
+            'failure':'runtime-error','reason':'kernel-boot-unchanged'})
+        return error
+
     def require_restart(triggers, *, before_packages=False):
         checkpoint = {'stage': 'restart-required', 'removal_reason': 'restart-required',
                       'cleanup_restart_triggers': triggers}
         if before_packages:
             checkpoint['cleanup_restart_first'] = True
         installer.store.checkpoint(installer.profile, **checkpoint)
+        if proof is None:
+            capture_boot(stage='restart-required')
+        if same_boot_retry:
+            raise unverified_restart()
         installer.progress(RESTART_MESSAGE)
         return {'removed': False, 'verified_clean': False, 'restart_required': True}
 
-    def capture_boot():
+    def capture_boot(stage='requested'):
         # A lost re-arm create response must retry seeding, not compare the new
         # marker against a retired inode from the previous captured baseline.
-        installer.store.checkpoint(installer.profile, cleanup_boot_proof=None, stage='requested')
+        installer.store.checkpoint(installer.profile, cleanup_boot_proof=None, stage=stage)
         proof = _device(installer, 'boot-create')['boot_proof']
         installer.store.checkpoint(installer.profile, cleanup_boot_proof=proof,
                                    cleanup_boot_id=None, cleanup_boot_release_started=False,
-                                   cleanup_boot_verified=False, stage='requested')
+                                   cleanup_boot_verified=False, stage=stage)
         return proof
     proof = pending.get('cleanup_boot_proof')
+    # A normal Developer Mode uninstall can prove cleanup directly. Recovery
+    # receipts and an already requested restart still use their saved baseline.
+    defer_boot = ('cleanup_boot_proof' not in pending and installer.profile.get('connection') != 'root-ssh'
+                  and previous is None and current.get('resident_installer') is False
+                  and current.get('external_update_hint') is None
+                  and pending.get('previous_update_status') is None
+                  and pending.get('cleanup_carriers') in (None, {})
+                  and not pending.get('cleanup_restart_first')
+                  and not pending.get('cleanup_boot_release_started')
+                  and pending.get('stage') != 'restart-required'
+                  and pending.get('removal_reason') != 'restart-required')
     boot_id = None
     # A durable genuine restart avoids another power cycle after host failure,
     # but its reuse must still pass fresh process checks below.
     reused_restart = proof is not None and pending.get('cleanup_boot_verified') is True
-    if reused_restart and not legacy_install:
+    if defer_boot:
+        boot_id = current.get('boot_id')
+        restarted = False
+    elif reused_restart and not legacy_install:
         restarted = True
     elif (proof is None or pending.get('cleanup_boot_release_started')
           or (pending.get('stage') == 'verified-clean' and not reused_restart)):
@@ -568,11 +604,18 @@ def continue_removal(installer, expected_pending):
             boot_id is not None and boot_id == current.get('boot_id') and boot_id != proof['kernel']))
         if (proof.get('schema') == 2 and not restarted and
                 (pending.get('stage') == 'restart-required' or pending.get('cleanup_restart_first'))):
-            error = UserError('The TV restart could not be verified. Save the diagnostic report and keep recovery data.',
-                              reason_code='pending-operation')
-            error.no_root_cleanup = no_root_cleanup_details({'action':'boot-probe','step':'boot-proof',
-                'failure':'runtime-error','reason':'kernel-boot-unchanged'})
-            raise error
+            # A request can outlive a transient Stop failure. Recheck only
+            # ordinary removal and keep the pre-package checks across retries.
+            if (boot.get('boot_restarted') is not False or boot_id != proof.get('kernel')
+                    or boot_id != current.get('boot_id')
+                    or previous is not None or current.get('resident_installer') is not False
+                    or current.get('external_update_hint') is not None
+                    or pending.get('previous_update_status') is not None
+                    or pending.get('cleanup_carriers') not in (None, {})):
+                raise unverified_restart()
+            same_boot_retry = True
+            if pending.get('cleanup_restart_first') is not True:
+                installer.store.checkpoint(installer.profile, cleanup_restart_first=True)
     if legacy_install:
         # A missing SAM entry can skip dev/remove and its busy check. Wait
         # for a verified restart before touching controls or sweeping files.
@@ -664,6 +707,18 @@ def continue_removal(installer, expected_pending):
             _device(installer, 'boot-retire', proof=proof)
             proof = capture_boot()
         return require_restart(restart_triggers, before_packages=True)
+    if defer_boot or same_boot_retry:
+        idle = _device(installer, 'idle', wait_for_idle=True)
+        _check_access(idle)
+        if idle.get('boot_id') != boot_id:
+            raise UserError('Removal could not be checked. Reconnect and try again.', reason_code='cleanup-check-failed')
+        if idle.get('resident_installer') is not False or idle.get('external_update_hint') is not None:
+            return require_restart(['resident-installer-evidence'], before_packages=True)
+        # Fresh package removal can use the vendor's terminal result when
+        # unrelated /proc entries are unreadable. The final strict idle
+        # checks still govern completion. A saved restart gate stays stricter.
+        if idle.get('project_running') is not False or (same_boot_retry and idle.get('idle') is not True):
+            return require_restart(['process-idle-unverified'], before_packages=True)
     for app, message in zip(APPS, ('Removing Helper…', 'Removing Home…', 'Removing the updater…')):
         if app not in apps:
             continue
@@ -693,11 +748,12 @@ def continue_removal(installer, expected_pending):
             proof = capture_boot()
             restarted = False
         return require_restart(['process-idle-unverified'])
-    if restarted:
-        installer.store.checkpoint(installer.profile, cleanup_boot_verified=True)
-    else:
-        installer.store.checkpoint(installer.profile, cleanup_boot_release_started=True)
-    _device(installer, 'boot-retire' if restarted else 'boot-release', proof=proof)
+    if proof is not None:
+        if restarted:
+            installer.store.checkpoint(installer.profile, cleanup_boot_verified=True)
+        else:
+            installer.store.checkpoint(installer.profile, cleanup_boot_release_started=True)
+        _device(installer, 'boot-retire' if restarted else 'boot-release', proof=proof)
     installer.store.checkpoint(installer.profile, stage='verified-clean', removal_reason='removal-verified',
                                result={'removed': True, 'verified_clean': True})
     from .root_no_root_handoff import release
