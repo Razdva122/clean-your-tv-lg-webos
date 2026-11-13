@@ -50,6 +50,48 @@
     svg.appendChild(path);
     return svg;
   }
+  function mountClockFormat(pane) {
+    var title = document.createElement('h4'),
+      choices = document.createElement('div'),
+      error = document.createElement('p');
+    title.id = 'home-clock-format-label';
+    title.className = 'settings-subheading';
+    title.textContent = t('Clock format');
+    choices.className = 'settings-clock-format renewal-actions';
+    choices.setAttribute('role', 'group');
+    choices.setAttribute('aria-labelledby', title.id);
+    error.setAttribute('role', 'alert');
+    error.hidden = true;
+    var options = [
+      ['auto', 'Automatic (TV locale)'],
+      ['12h', '12-hour'],
+      ['24h', '24-hour']
+    ];
+    function render() {
+      var selected = HomeI18n.clockFormat();
+      options.forEach(function (option, index) {
+        choices.children[index].setAttribute(
+          'aria-pressed',
+          String(option[0] === selected)
+        );
+      });
+    }
+    options.forEach(function (option) {
+      var button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = t(option[1]);
+      button.onclick = function () {
+        error.hidden = HomeI18n.setClockFormat(option[0]);
+        if (!error.hidden) error.textContent = t('Could not save state');
+        render();
+      };
+      choices.appendChild(button);
+    });
+    render();
+    pane.appendChild(title);
+    pane.appendChild(choices);
+    pane.appendChild(error);
+  }
   function attach(panel, card, groups) {
     var nav = document.createElement('div'),
       workspace = document.createElement('div'),
@@ -184,6 +226,7 @@
           }
           pane.appendChild(el);
         });
+      if (group.id === 'home' && root.HomeI18n) mountClockFormat(pane);
       if (group.id === 'appearance') {
         [
           [

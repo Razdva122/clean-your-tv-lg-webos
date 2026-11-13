@@ -130,6 +130,8 @@ Po chybě připojení během odstranění otevřete podrobnosti, zkontrolujte s�
 
 Pomocí ↑ ↓ vyberte kategorii a pomocí → nebo OK do ní vstupte. ← se vrací ke kategoriím; Zpět se nejprve vrátí k nim a poté zavře nastavení. Při návratu do sekce se obnoví poslední dostupný ovládací prvek. Ve Sloupcích šipky odpovídají mřížce se třemi sloupci. V Jazyku se zaměří vybraný jazyk.
 
+V **Nastavení → Vaše obrazovka Home → Formát času** vyberte **Automaticky (podle nastavení TV)**, **12hodinový** nebo **24hodinový** formát.
+
 Pokud No-root nemůže načíst stav Home, zvolte Zkusit znovu. Nedostupný přepínač neznamená vypnuté ovládání Home. V Tapetách nahrajte obrázek z telefonu nebo CYTV; kvalita a ztmavení jsou dostupné po výběru tapety. Odstranění vlastní tapety vyžaduje potvrzení; Zrušit ji zachová.
 
 ## Počasí

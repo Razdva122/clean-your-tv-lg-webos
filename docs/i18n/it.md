@@ -156,6 +156,8 @@ Riferimenti dettagliati in inglese: [requisiti](../COMPATIBILITY.md) · [comandi
 
 Usa ↑ ↓ per scegliere una categoria e → oppure OK per aprirla. ← torna alle categorie; Indietro torna prima alle categorie e poi chiude le impostazioni. Rientrando in una sezione, il focus torna all’ultimo controllo disponibile. In Colonne, le frecce seguono la griglia a tre colonne. In Lingua, il focus va alla lingua selezionata.
 
+In **Impostazioni → La tua schermata Home → Formato dell’ora**, scegli **Automatico (regione del TV)**, **12 ore** o **24 ore**.
+
 Se No-root non riesce a leggere lo stato di Home, scegli Riprova. Un controllo non disponibile non significa che Home sia disattivato. In Sfondi, carica un’immagine dal telefono o da CYTV; qualità e oscuramento compaiono quando è disponibile uno sfondo. La rimozione di uno sfondo personale richiede conferma; Annulla lo conserva.
 
 ## Meteo

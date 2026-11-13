@@ -156,6 +156,8 @@ After a removal connection error, open the connection details, check network acc
 
 Use ↑ ↓ to choose a category and → or OK to enter it. ← returns to categories; Back returns there first, then closes settings. Within a section, returning from categories restores the last available control. In Columns, arrows follow the three-column grid. In Language, entry focuses the selected language.
 
+In **Settings → Your Home screen → Clock format**, choose **Automatic (TV locale)**, **12-hour**, or **24-hour**.
+
 If No-root cannot read Home status, choose Try again. The unavailable control does not mean Home routing is off. Under Wallpapers, upload a personal image from a phone or CYTV; quality and dimming appear when a wallpaper is available. Removing a personal wallpaper asks for confirmation; Cancel keeps it.
 
 ## Weather

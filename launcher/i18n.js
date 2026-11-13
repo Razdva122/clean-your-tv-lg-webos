@@ -2,6 +2,8 @@
 (function (root) {
   'use strict';
   var key = 'tvhome.language',
+    clockKey = 'tvhome.clockFormat',
+    clockFormats = ['auto', '12h', '24h'],
     catalogs = {},
     active = 'en',
     dialog = null,
@@ -162,38 +164,91 @@
       return new Date(value).toLocaleDateString();
     }
   }
-  function formatDateTime(value) {
+  function clockFormat() {
     try {
-      return new Date(value).toLocaleString(active);
-    } catch (_) {
-      return new Date(value).toLocaleString();
-    }
+      var value = root.localStorage.getItem(clockKey);
+      if (clockFormats.indexOf(value) >= 0) return value;
+    } catch (_) {}
+    return 'auto';
   }
-  // 12-hour languages read "6:13 PM"; 24-hour languages keep "06:13".
-  function twelveHour() {
+  function setClockFormat(value) {
+    if (clockFormats.indexOf(value) < 0) return false;
     try {
-      return (
-        new Intl.DateTimeFormat(active, { hour: 'numeric' }).resolvedOptions()
-          .hour12 === true
-      );
+      root.localStorage.setItem(clockKey, value);
     } catch (_) {
       return false;
     }
-  }
-  function formatTime(value) {
-    try {
-      // Old WebKit silently ignores toLocaleTimeString options. Require Intl
-      // here so engines without it use the compact clock below.
-      return new Intl.DateTimeFormat(active, {
-        hour: twelveHour() ? 'numeric' : '2-digit',
-        minute: '2-digit'
-      }).format(new Date(value));
-    } catch (_) {
-      var d = new Date(value);
-      return (
-        ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2)
+    if (root.document)
+      root.document.dispatchEvent(
+        new root.CustomEvent('home-clock-format-change')
       );
+    return true;
+  }
+  function twelveHour() {
+    var mode = clockFormat();
+    if (mode !== 'auto') return mode === '12h';
+    var nav = root.navigator || {},
+      choices = [
+        systemLanguage,
+        nav.language || nav.userLanguage || (nav.languages || [])[0],
+        active
+      ];
+    for (var i = 0; i < choices.length; i++) {
+      var locale = String(choices[i] || '')
+        .split(/[.@]/)[0]
+        .replace(/_/g, '-');
+      if (!locale) continue;
+      try {
+        if (!Intl.DateTimeFormat.supportedLocalesOf(locale).length) continue;
+        return (
+          new Intl.DateTimeFormat(locale, { hour: 'numeric' }).resolvedOptions()
+            .hour12 === true
+        );
+      } catch (_) {}
     }
+    return false;
+  }
+  function formatDateTime(value) {
+    return (
+      formatDate(value, {
+        year: 'numeric',
+        month: 'numeric',
+        day: 'numeric'
+      }) +
+      ' ' +
+      formatTime(value, true)
+    );
+  }
+  function formatTime(value, seconds) {
+    var date = new Date(value),
+      use12 = twelveHour(),
+      options = {
+        hour: use12 ? 'numeric' : '2-digit',
+        minute: '2-digit',
+        hourCycle: use12 ? 'h12' : 'h23'
+      };
+    if (seconds) options.second = '2-digit';
+    try {
+      // Older engines may ignore hourCycle or lack Intl entirely.
+      var formatter = new Intl.DateTimeFormat(active, options),
+        resolved = formatter.resolvedOptions();
+      if (
+        resolved.hour12 === use12 &&
+        (!resolved.hourCycle || resolved.hourCycle === options.hourCycle)
+      )
+        return formatter.format(date);
+    } catch (_) {}
+    var hour = date.getHours();
+    function pad(number) {
+      return ('0' + number).slice(-2);
+    }
+    return (
+      (use12 ? hour % 12 || 12 : pad(hour)) +
+      ':' +
+      pad(date.getMinutes()) +
+      (seconds ? ':' + pad(date.getSeconds()) : '') +
+      (use12 ? (hour < 12 ? ' AM' : ' PM') : '')
+    );
   }
   function closePicker() {
     if (dialog) dialog.hidden = true;
@@ -353,6 +408,8 @@
     html: html,
     apply: apply,
     setLanguage: setLanguage,
+    clockFormat: clockFormat,
+    setClockFormat: setClockFormat,
     formatDate: formatDate,
     formatDateTime: formatDateTime,
     formatTime: formatTime,
@@ -361,7 +418,7 @@
     confirm: confirmAction
   };
   refresh();
-  if (root.PalmServiceBridge && preference() === 'auto') {
+  if (root.PalmServiceBridge && (root.CONFIG || preference() === 'auto')) {
     pending = true;
     var bridge,
       timer,

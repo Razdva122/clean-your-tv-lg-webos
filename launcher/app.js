@@ -2678,6 +2678,7 @@
   }
   updateClock();
   setInterval(updateClock, 1e4);
+  document.addEventListener('home-clock-format-change', updateClock);
   callLuna(
     'luna://com.palm.connectionmanager/getStatus',
     {

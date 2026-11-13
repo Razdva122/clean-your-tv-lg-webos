@@ -155,6 +155,8 @@ Szczegółowe instrukcje po angielsku: [wymagania](../COMPATIBILITY.md) · [ster
 
 Wybierz kategorię przyciskami ↑ ↓ i wejdź do niej przez → lub OK. ← wraca do kategorii; Wstecz najpierw wraca do nich, a potem zamyka ustawienia. Po ponownym wejściu sekcja przywraca fokus na ostatnim dostępnym elemencie. W Kolumnach strzałki odpowiadają siatce trzech kolumn. W Języku fokus trafia na wybrany język.
 
+W **Ustawienia → Twój ekran Home → Format godziny** wybierz **Automatycznie (region telewizora)**, **12-godzinny** lub **24-godzinny**.
+
 Jeśli No-root nie może odczytać stanu Home, wybierz Spróbuj ponownie. Niedostępny przełącznik nie oznacza wyłączonego sterowania Home. W Tapetach prześlij obraz z telefonu lub CYTV; jakość i przyciemnienie pojawiają się, gdy tapeta jest dostępna. Usunięcie własnej tapety wymaga potwierdzenia; Anuluj ją zachowuje.
 
 ## Pogoda

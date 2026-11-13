@@ -155,6 +155,8 @@ Referências detalhadas em inglês: [requisitos](../COMPATIBILITY.md) · [contro
 
 Use ↑ ↓ para escolher uma categoria e → ou OK para entrar. ← volta às categorias; Voltar retorna primeiro a elas e depois fecha as configurações. Ao retornar a uma seção, o foco volta ao último controle disponível. Em Colunas, as setas seguem a grade de três colunas. Em Idioma, o foco entra no idioma selecionado.
 
+Em **Configurações → Sua tela Home → Formato da hora**, escolha **Automático (região da TV)**, **12 horas** ou **24 horas**.
+
 Se No-root não conseguir ler o estado de Home, escolha Tentar novamente. Um controle indisponível não significa que Home esteja desativado. Em Papéis de parede, envie uma imagem do telefone ou CYTV; qualidade e escurecimento aparecem quando há um papel de parede disponível. A remoção de um papel de parede pessoal pede confirmação; Cancelar o mantém.
 
 ## Clima
