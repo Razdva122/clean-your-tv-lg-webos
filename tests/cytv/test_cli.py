@@ -9,6 +9,74 @@ from cytv import cli, state
 
 
 class CLITests(unittest.TestCase):
+    def test_43uk6450plc_legacy_root_refusal_exports_preflight_evidence(self):
+        from tests.cytv.test_operations import OperationTests, Remote
+
+        fixture = OperationTests()
+        fixture.setUp()
+        self.addCleanup(fixture.doCleanups)
+        fixture.root_graphics_bundle()
+        fixture.manifest['legacy_root_beta'] = 'legacy-root-beta'
+
+        class LegacyTV(Remote):
+            root = True
+
+            def close(self):
+                pass
+
+            def luna(self, uri, payload, **kwargs):
+                if uri == 'com.webos.service.tv.systemproperty/getSystemInfo':
+                    return {'returnValue': True, 'UHD': True, 'modelName': '43UK6450PLC',
+                            'firmwareVersion': '05.50.70', 'sdkVersion': '4.4.0'}
+                raise AssertionError(f'Unexpected Luna request before edition selection: {uri}')
+
+            def run(self, command, data=None, timeout=30):
+                if command == '/usr/bin/node --version':
+                    return 'v0.12.2'
+                if 'CYTV_NODE_VERSION' in command:
+                    return 'CYTV_NODE_VERSION v0.12.2'
+                if 'CYTV_FRESH_ROOT' in command:
+                    return 'CYTV_FRESH_ROOT'
+                if 'CYTV_ROOT_READY' in command and (
+                    '/usr/bin/python3' in command or '/usr/bin/node -e' in command
+                ):
+                    return 'CYTV_ROOT_MISSING'
+                return super().run(command, data, timeout)
+
+        remote = LegacyTV()
+        data_dir = fixture.root / 'cli-state'
+        output = []
+        with patch('cytv.cli.package.verify_payload', return_value=fixture.manifest), \
+                patch('cytv.root_runtime.select_payload') as select_beta, \
+                patch('cytv.tv.SSAP') as ssap:
+            code = cli.main(['install', '--host', '192.0.2.10', '--edition', 'root',
+                             '--non-interactive', '--yes', '--language', 'en',
+                             '--data-dir', str(data_dir)],
+                            connect=lambda *_: remote, ask=lambda _: self.fail('Unexpected prompt'),
+                            write=output.append, payload_root=fixture.payload)
+        self.assertEqual(code, 2, '\n'.join(output))
+        self.assertIn('No-root — reduced functionality', '\n'.join(output))
+        self.assertIn('Root Beta — not sufficiently tested', '\n'.join(output))
+        select_beta.assert_not_called()
+        ssap.assert_not_called()
+        self.assertFalse(remote.uploads)
+
+        report_path, = (data_dir / 'reports').glob('diagnostic-*.json')
+        report = json.loads(report_path.read_text())
+        self.assertEqual(report['phase'], 'inspect-installation')
+        self.assertEqual(report['reason_code'], 'root-requirements')
+        self.assertEqual(report['edition'], 'root')
+        self.assertIsNone(report['pending'])
+        tv = report['tv']
+        self.assertEqual(tv['modelName'], '43UK6450PLC')
+        self.assertEqual(tv['firmwareVersion'], '05.50.70')
+        self.assertEqual(tv['sdkVersion'], '4.4.0')
+        self.assertEqual((tv['node_version_status'], tv['node_version']), ('read', '0.12.2'))
+        self.assertEqual({key for key, status in report['checks'].items() if status == 'fail'},
+                         {'python3', 'python-json', 'python-fcntl', 'python-version', 'node-version'})
+        for key in ('home-settings', 'home-profiles', 'inventory'):
+            self.assertEqual(report['checks'][key], 'pending')
+
     def test_root_node_failure_can_complete_no_root_using_the_same_ssh(self):
         self.assert_no_root_install_after_root_preflight(choose_beta=False)
 
