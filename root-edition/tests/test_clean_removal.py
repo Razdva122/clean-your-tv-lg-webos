@@ -687,29 +687,67 @@ class PartialDeviceRemoval(unittest.TestCase):
         self.assertTrue(all(not path.exists() for path in receipts))
         self.assertTrue(driver.inspect()['can_install'])
 
-    def test_receipt_name_near_matches_and_wrong_component_are_not_retired(self):
-        uuid='12345678-1234-4abc-8def-123456789abc'
-        for component,name in [('root','completed-profile-'+'a'*32+'.json'),
-                               ('root','completed-profile-'+uuid+'.json.bak'),
-                               ('root','system-rollback-anchor-'+'a'*31+'.json'),
-                               ('root','system-rollback-anchor-'+'A'*32+'.json'),
-                               ('root','current-root.json'),('root','installer-accepted.json'),
-                               ('root','ready-'+'a'*32+'.json'),
-                               ('updater','stock-home-initialization.json'),
-                               ('updater','ready-rollback-'+'a'*31+'.json'),
-                               ('updater','ready-'+'A'*32+'.json'),
-                               ('updater','confirm-'+'a'*32+'.json.bak'),
-                               ('updater','confirm-rollback-'+'a'*32+'.json'),
-                               ('updater','completed-profile-'+uuid+'.json')]:
-            with self.subTest(component=component,name=name):
-                driver,identifier,root,updater,payload,calls,present=self.fixture()
-                driver.device.ownership=driver.ownership
-                path=(root if component=='root' else updater)/name;path.write_text('preserve')
-                with self.assertRaisesRegex(ValueError,'unclassified_private_member'):
-                    driver.device.retire_clean_private({'operation':identifier,'staging_hashes':[]})
-                self.assertEqual(path.read_text(),'preserve')
+    def test_new_component_state_does_not_block_removal_or_touch_neighboring_data(self):
+        import install_device
+        driver, identifier, root, updater, _, calls, _ = self.fixture()
+        supervisor = install_device.SUPERVISOR
+        supervisor.mkdir(mode=0o700)
+        self.assertEqual(driver.clean_remove(identifier)['stage'], 'restart-required')
+        for component in (root, updater, supervisor):
+            Store(component, uid=os.getuid()).write('future-update-state', {'schema': 2})
+            (component / 'new-cache').mkdir(mode=0o700)
+            (component / 'new-cache' / 'entry').write_text('private')
+        neighbor = root.parent / 'foreign-state'
+        neighbor.mkdir()
+        (neighbor / 'future-update-state.json').write_text('keep')
+        (root / 'new-link').symlink_to(neighbor, target_is_directory=True)
+        driver.device.current_boot = '22222222-2222-2222-2222-222222222222'
 
-    def test_known_receipts_in_authenticated_archives_use_same_classification(self):
+        record = driver.clean_remove(identifier)
+
+        self.assertEqual(record['stage'], 'verified-clean', record.get('last_failure'))
+        self.assertEqual(calls.count('remove-com.cleanyourtv.root.preview'), 1)
+        self.assertTrue(driver.inspect()['can_install'])
+        for component in (root, updater, supervisor):
+            self.assertFalse((component / 'future-update-state.json').exists())
+            self.assertFalse((component / 'new-cache').exists())
+        self.assertFalse((root / 'new-link').is_symlink())
+        self.assertEqual((neighbor / 'future-update-state.json').read_text(), 'keep')
+
+    def test_mounted_component_subtree_is_not_retired(self):
+        driver, identifier, root, _, _, _, _ = self.fixture()
+        driver.device.ownership = driver.ownership
+        mounted = root / 'mounted data'
+        mounted.mkdir()
+        (mounted / 'foreign').write_text('keep')
+        original = root / 'profile-trial.json'
+        original.write_text('{}')
+        mountinfo = root.parent / 'mountinfo'
+        mountpoint = str(mounted).replace(' ', r'\040')
+        mountinfo.write_text(f'33 22 8:1 / {mountpoint} rw - ext4 /dev/sda1 rw\n')
+        with patch('clean_removal.MOUNTINFO', mountinfo, create=True):
+            with self.assertRaisesRegex(ValueError, 'private_mount_present'):
+                driver.device.retire_clean_private({'operation': identifier, 'staging_hashes': []})
+        self.assertEqual((mounted / 'foreign').read_text(), 'keep')
+        self.assertTrue(original.exists())
+
+    def test_saved_archive_identity_cannot_select_a_path_outside_component_archives(self):
+        driver, identifier, root, _, _, _, _ = self.fixture()
+        driver.device.ownership = driver.ownership
+        foreign = root.parent / 'foreign-archive'
+        foreign.mkdir()
+        data = foreign / 'data.json'
+        data.write_text('keep')
+        info = foreign.stat()
+        record = {'operation': identifier, 'staging_hashes': [], 'archives': [
+            {'component': 0, 'path': str(foreign), 'dev': info.st_dev, 'ino': info.st_ino}
+        ]}
+
+        with self.assertRaisesRegex(ValueError, 'unclassified_private_archive'):
+            driver.device.retire_clean_private(record)
+        self.assertEqual(data.read_text(), 'keep')
+
+    def test_authenticated_archives_retire_new_state_and_preserve_inverse(self):
         import install_device
         driver,identifier,root,updater,payload,calls,present=self.fixture()
         driver.device.ownership=driver.ownership
@@ -725,27 +763,45 @@ class PartialDeviceRemoval(unittest.TestCase):
             else:
                 store.write('cytv-removal',{'archive':str(archive),'phase':'disabling'})
                 names=['current-root.json','current-no-root.json','installer-accepted.json'] if index==2 else []
-            names.append('profile-'+'b'*32+'.json')
+            names.append('future-archive-record.json')
             for name in names:(archive/name).write_text('{"fixture":"owned receipt"}')
         driver.device.retire_clean_private({'operation':identifier,'staging_hashes':[]})
         self.assertTrue(all(not archive.exists() for archive in archives))
         self.assertEqual(driver.store.read('archive-backup-'+identifier+'-0'),
                          {'profile-trial':{'fixture':'original archive inverse'}})
 
-    def test_known_receipt_with_foreign_owner_is_not_retired(self):
-        driver,identifier,root,updater,payload,calls,present=self.fixture()
-        driver.device.ownership=driver.ownership
-        path=root/'completed-profile-12345678-1234-4abc-8def-123456789abc.json';path.write_text('preserve')
-        actual=os.stat
-        def foreign(name,*args,**kwargs):
-            info=actual(name,*args,**kwargs)
-            if name==path.name and 'dir_fd' in kwargs:
-                fields=list(info);fields[4]=os.getuid()+1;return os.stat_result(fields)
+    def test_private_file_owner_and_mode_drift_do_not_block_removal(self):
+        driver, identifier, root, _, _, _, _ = self.fixture()
+        driver.device.ownership = driver.ownership
+        path = root / 'firmware-managed.json'
+        path.write_text('private state')
+        path.chmod(0o666)
+        actual = os.stat
+
+        def foreign_owner(name, *args, **kwargs):
+            info = actual(name, *args, **kwargs)
+            if name == path.name and 'dir_fd' in kwargs:
+                fields = list(info)
+                fields[4] = os.getuid() + 1
+                return os.stat_result(fields)
             return info
-        with patch('clean_removal.os.stat',side_effect=foreign):
-            with self.assertRaisesRegex(ValueError,'unsafe_private_member'):
-                driver.device.retire_clean_private({'operation':identifier,'staging_hashes':[]})
-        self.assertEqual(path.read_text(),'preserve')
+
+        with patch('clean_removal.os.stat', side_effect=foreign_owner):
+            driver.device.retire_clean_private({'operation': identifier, 'staging_hashes': []})
+        self.assertFalse(path.exists())
+
+    def test_writable_private_subdirectory_blocks_removal(self):
+        driver, identifier, root, _, _, _, _ = self.fixture()
+        driver.device.ownership = driver.ownership
+        directory = root / 'shared'
+        directory.mkdir()
+        directory.chmod(0o777)
+        path = directory / 'data'
+        path.write_text('keep')
+
+        with self.assertRaisesRegex(ValueError, 'unsafe_private_member'):
+            driver.device.retire_clean_private({'operation': identifier, 'staging_hashes': []})
+        self.assertEqual(path.read_text(), 'keep')
 
     def test_known_completed_receipt_hardlink_is_still_refused(self):
         driver,identifier,root,updater,payload,calls,present=self.fixture()
@@ -1090,7 +1146,7 @@ class PartialDeviceRemoval(unittest.TestCase):
         driver.device.current_boot = '22222222-2222-2222-2222-222222222222'
         # Model the released installer rejecting this incomplete upload before
         # the Node handoff. The next installer reads that same durable receipt.
-        with patch.object(driver.device, 'retire_temporary_support', side_effect=ValueError('unclassified_support_stage')), \
+        with patch.object(driver.device, 'retire_clean_private', side_effect=ValueError('unclassified_support_stage')), \
                 patch.object(driver.device, 'log'):
             stuck = driver.clean_remove(identifier)
         self.assertEqual(stuck['stage'], 'private-cleanup')
@@ -1112,42 +1168,25 @@ class PartialDeviceRemoval(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'live_original_worker'):
             driver.device.verify_clean(record)
 
-    def test_retained_inert_system_temp_does_not_block_clean_readback(self):
+    def test_untracked_temporary_uploads_are_left_in_place_and_do_not_block_removal(self):
         import install_device
-        driver,identifier,root,updater,payload,calls,present=self.fixture()
-        driver.clean_remove(identifier)
-        driver.device.current_boot='22222222-2222-2222-2222-222222222222'
-        record=driver.clean_remove(identifier)
-        stage=install_device.TEMP/('cytv-system-updater-'+'a'*32);stage.mkdir(mode=0o700)
-        (stage/'diagnostic.txt').write_text('preserve unknown temporary data')
-        info=stage.stat()
-        record['retained_temporary_stages']=[dict(path=str(stage),dev=info.st_dev,ino=info.st_ino)]
-        self.assertTrue(driver.device.verify_clean(record))
-        self.assertTrue((stage/'diagnostic.txt').exists())
-        record['retained_temporary_stages'][0]['ino']+=1
-        with self.assertRaisesRegex(ValueError,'support_stage_remains'):driver.device.verify_clean(record)
+        driver, identifier, _, _, _, _, _ = self.fixture()
+        self.assertEqual(driver.clean_remove(identifier)['stage'], 'restart-required')
+        stages = []
+        for kind in ('product', 'coordinator', 'system-updater', 'c1-root', 'root-tail'):
+            stage = install_device.TEMP / ('cytv-' + kind + '-' + 'a' * 32)
+            stage.mkdir()
+            (stage / 'partial').write_text('keep')
+            stages.append(stage)
+        driver.device.current_boot = '22222222-2222-2222-2222-222222222222'
 
-    def test_clean_readback_exempts_only_executing_checked_coordinator_stage(self):
-        import install_device
-        driver,identifier,root,updater,payload,calls,present=self.fixture()
-        self.assertEqual(driver.clean_remove(identifier)['stage'],'restart-required')
-        driver.device.current_boot='22222222-2222-2222-2222-222222222222'
-        record=driver.clean_remove(identifier)
-        stage=install_device.TEMP/('cytv-coordinator-'+'a'*32);stage.mkdir()
-        (stage/'install_device.py').write_bytes(b'current support')
-        with patch.object(install_device,'__file__',str(stage/'install_device.py')), patch('coordinator_inventory.BUNDLED_FILES',('install_device.py',)):
-            self.assertTrue(driver.device.verify_clean(record))
-            other=install_device.TEMP/('cytv-coordinator-'+'b'*32);other.mkdir()
-            (other/'install_device.py').write_bytes(b'current support')
-            self.assertTrue(driver.device.verify_clean(record))
-            (other/'foreign').write_bytes(b'unknown support')
-            with self.assertRaisesRegex(ValueError,'support_stage_remains'):driver.device.verify_clean(record)
-            (other/'foreign').unlink()
-            (other/'install_device.py').write_bytes(b'stale support')
-            with self.assertRaisesRegex(ValueError,'support_stage_remains'):driver.device.verify_clean(record)
-            (other/'install_device.py').unlink()
-            (other/'install_device.py').symlink_to(stage/'install_device.py')
-            with self.assertRaisesRegex(ValueError,'support_stage_remains'):driver.device.verify_clean(record)
+        result = driver.clean_remove(identifier)
+
+        self.assertEqual(result['stage'], 'verified-clean', result.get('last_failure'))
+        self.assertTrue(result['result']['temporary_files_retained'])
+        self.assertTrue(driver.inspect()['can_install'])
+        for stage in stages:
+            self.assertEqual((stage / 'partial').read_text(), 'keep')
 
     def test_readonly_clean_proof_runs_current_shared_cleanup_without_payload(self):
         import install_device,json,hashlib,subprocess
@@ -1196,28 +1235,6 @@ class PartialDeviceRemoval(unittest.TestCase):
             for name in ('install_device.py','install_driver.py'):(other/name).write_bytes(b'stale support')
             command.write_bytes(b'\0'.join(arg.replace(str(stage),str(other)).encode() for arg in args)+b'\0')
             with self.assertRaisesRegex(ValueError,'live_original_worker'):driver.device.clean_quiescent(record,all_processes=True)
-
-    def test_clean_readback_accepts_only_exact_current_product_upload(self):
-        import install_device,json,shutil,hashlib
-        driver,identifier,root,updater,payload,calls,present=self.fixture()
-        driver.clean_remove(identifier)
-        driver.device.current_boot='22222222-2222-2222-2222-222222222222'
-        record=driver.clean_remove(identifier)
-        snapshot=payload.parent/'current-snapshot';snapshot.mkdir()
-        for component in ('root','root-updater'):
-            folder=snapshot/component;folder.mkdir()
-            (folder/'current.py').write_bytes(b'current bytes')
-            (folder/'bundle.json').write_text(json.dumps({'files':{'current.py':hashlib.sha256(b'current bytes').hexdigest()}}))
-        stage=install_device.TEMP/('cytv-product-'+'a'*32)
-        shutil.copytree(snapshot,stage)
-        (snapshot/'worker.log').write_bytes(b'private worker log')
-        driver.device.payload=snapshot
-        self.assertTrue(driver.device.verify_clean(record))
-        (stage/'foreign').mkdir()
-        with self.assertRaisesRegex(ValueError,'support_stage_remains'):driver.device.verify_clean(record)
-        (stage/'foreign').rmdir()
-        (stage/'root/current.py').write_bytes(b'changed bytes')
-        with self.assertRaisesRegex(ValueError,'support_stage_remains'):driver.device.verify_clean(record)
 
     def test_interrupted_fence_archive_resumes_only_original_inodes(self):
         import install_device

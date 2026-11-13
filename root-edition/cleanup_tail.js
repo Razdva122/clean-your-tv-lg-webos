@@ -647,31 +647,6 @@ async function absent(final) {
     )
       throw Error('no-root-private-cleanup-required');
   }
-  if (final)
-    fs.readdirSync('/tmp').forEach(function (name) {
-      if (
-        /^cytv-(?:product|coordinator|system-updater|c1-root|root-tail)-[a-f0-9]{32}$/.test(
-          name
-        )
-      ) {
-        var fd = openDir('/tmp/' + name),
-          info = fs.fstatSync(fd);
-        if (
-          /^cytv-(?:product|system-updater)-[a-f0-9]{32}$/.test(name) &&
-          (record.retained_temporary_stages || []).some(function (entry) {
-            return (
-              object(entry) &&
-              Object.keys(entry).length === 3 &&
-              entry.path === '/tmp/' + name &&
-              entry.dev === info.dev &&
-              entry.ino === info.ino
-            );
-          })
-        )
-          return;
-        if (fs.readdirSync(at(fd)).length) throw Error('support-stage-remains');
-      }
-    });
   // No Home consumer setting is required when the fenced original operation
   // never reached routing and both original inverse and current paths agree.
   if (object(record.routes) && record.routes.mode === 'stock-compositor') {
@@ -817,6 +792,11 @@ async function absent(final) {
     })
   )
     throw Error('owned-input-remains');
+  var temporarySupport = fs.readdirSync('/tmp').filter(function (name) {
+    return /^cytv-(?:product|coordinator|system-updater|c1-root|root-tail)-[a-f0-9]{32}$/.test(name);
+  }).map(function (name) {
+    return '/tmp/' + name + '/';
+  });
   fs.readdirSync('/proc')
     .filter(function (n) {
       return (
@@ -902,15 +882,7 @@ async function absent(final) {
       (record.archives || []).forEach(function (item) {
         prefixes.push(item.path + '/');
       });
-      (record.retained_temporary_stages || []).forEach(function (entry) {
-        if (
-          object(entry) &&
-          /^\/tmp\/cytv-(?:product|system-updater)-[a-f0-9]{32}$/.test(
-            entry.path
-          )
-        )
-          prefixes.push(entry.path + '/');
-      });
+      prefixes = prefixes.concat(temporarySupport);
       if (
         record.cleanup_without_restart === true &&
         /(^|\/)(sh|ash|bash|dash|zsh|ksh)$/.test(args[0] || '') &&
@@ -1354,7 +1326,7 @@ function canRecheckBoot() {
       );
     else {
       var known =
-        'boot-session-remains cleanup-member-changed cleanup-readback-malformed cleanup-readback-unavailable cleanup-root-changed different-removal-intent incomplete-removal-receipts invalid-cleanup-selector invalid-runtime-inventory invalid-support-stage invalid-tail-stage invalid-tail-stages no-root-private-cleanup-required no-root-private-readback-unavailable original-lock-changed original-lock-required original-promotion-lock-missing original-removal-required oversized-cleanup-record owned-activity-remains owned-input-remains owned-private-registration-remains owned-process-still-used owned-registration-remains owned-route-remains package-absence-unverified package-remains private-member-remains restart-required route-changed runtime-cleanup-proof-required runtime-member-changed startup-remains support-stage-remains unexpected-promotion-lock unknown-ownership-receipt unknown-runtime-directory unknown-runtime-member unknown-support-directory unknown-support-member unknown-tail-stage unsafe-cleanup-directory unsafe-cleanup-member'.split(
+        'boot-session-remains cleanup-member-changed cleanup-readback-malformed cleanup-readback-unavailable cleanup-root-changed different-removal-intent incomplete-removal-receipts invalid-cleanup-selector invalid-runtime-inventory invalid-support-stage invalid-tail-stage invalid-tail-stages no-root-private-cleanup-required no-root-private-readback-unavailable original-lock-changed original-lock-required original-promotion-lock-missing original-removal-required oversized-cleanup-record owned-activity-remains owned-input-remains owned-private-registration-remains owned-process-still-used owned-registration-remains owned-route-remains package-absence-unverified package-remains private-member-remains restart-required route-changed runtime-cleanup-proof-required runtime-member-changed startup-remains unexpected-promotion-lock unknown-ownership-receipt unknown-runtime-directory unknown-runtime-member unknown-support-directory unknown-support-member unknown-tail-stage unsafe-cleanup-directory unsafe-cleanup-member'.split(
           ' '
         );
       var diagnostic =
