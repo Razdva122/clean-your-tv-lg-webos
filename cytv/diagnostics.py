@@ -8,7 +8,7 @@ import time
 import re
 import uuid
 
-from . import __version__, diagnostic_context as context
+from . import __version__, debloat, diagnostic_context as context
 from .state import private_write
 from .terminal import console
 from .errors import TVConnectionError, DeveloperKeyError, UserError, TVCommandError, TVRejected, PythonPreflightError, PythonCacheError, root_recovery_details
@@ -36,6 +36,13 @@ def create_report(store, action, profile, phase, error=None, tv_info=None, *, ch
         'checks': context.checks_summary(checks),
         'privacy': 'No addresses, SSH identities, exception text, credentials, app inventory, environment or raw TV logs are collected.',
     }
+    if action == 'install':
+        events = context.mapping(context.mapping(tv_info).get('debloat'))
+        results = {key: context.choice(events.get(key), debloat.DIAGNOSTIC_RESULTS, None)
+                   for key in debloat.SETTINGS}
+        results = {key: outcome for key, outcome in results.items() if outcome is not None}
+        if results:
+            report['debloat'] = results
     if profile:
         if profile.get('root_variant') == 'node012-beta':
             report['root_variant'] = 'node012-beta'
