@@ -1,7 +1,66 @@
 {
   "schema": 1,
-  "version": null,
-  "changes": [],
+  "version": "1.20.2",
+  "changes": [
+    {
+      "pr": 586,
+      "issues": [
+        152
+      ],
+      "summary": "Use standard uninstall for No-root cleanup"
+    },
+    {
+      "pr": 589,
+      "issues": [
+        418
+      ],
+      "summary": "Preserve Root inspection failure details after cleanup"
+    },
+    {
+      "pr": 590,
+      "issues": [
+        101
+      ],
+      "summary": "Test Root cleanup and reinstall after interrupted native deployment"
+    },
+    {
+      "pr": 591,
+      "issues": [
+        588
+      ],
+      "summary": "Resume stuck Root removal past incomplete temporary uploads"
+    },
+    {
+      "pr": 592,
+      "issues": [
+        587
+      ],
+      "summary": "Offer No-root when native Root Home is unavailable"
+    },
+    {
+      "pr": 593,
+      "issues": [
+        410,
+        541,
+        587
+      ],
+      "summary": "Offer checked No-root fallback with safe ramfs storage"
+    },
+    {
+      "pr": 594,
+      "issues": [
+        216
+      ],
+      "summary": "Preserve blocked Root install reason in removal audit"
+    },
+    {
+      "pr": 595,
+      "issues": [
+        383
+      ],
+      "summary": "Cover LG 43UK6450PLC legacy Root preflight"
+    }
+  ],
   "excluded": [],
   "acceptance": ""
 }
