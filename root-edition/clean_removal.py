@@ -210,8 +210,11 @@ def retire_tree(path, allowed, keep=(), uid=0, parent_uid=None, *, expected_iden
                 info=os.stat(name,dir_fd=fd,follow_symlinks=False)
                 if allowed is None and info.st_dev != root_info.st_dev:
                     raise ValueError('private_mount_present')
-                if info.st_uid!=uid or (not stat.S_ISLNK(info.st_mode) and info.st_mode&0o022): raise ValueError('unsafe_private_member')
-                if stat.S_ISDIR(info.st_mode):
+                is_dir = stat.S_ISDIR(info.st_mode)
+                if (allowed is not None or is_dir) and (
+                        info.st_uid != uid or (not stat.S_ISLNK(info.st_mode) and info.st_mode & 0o022)):
+                    raise ValueError('unsafe_private_member')
+                if is_dir:
                     child=os.open(name,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW,dir_fd=fd)
                     stack.callback(os.close,child)
                     if (os.fstat(child).st_dev,os.fstat(child).st_ino)!=(info.st_dev,info.st_ino):
@@ -225,11 +228,21 @@ def retire_tree(path, allowed, keep=(), uid=0, parent_uid=None, *, expected_iden
             require_unmounted_tree(path)
         for fd,name,info,directory in plan:
             current=os.stat(name,dir_fd=fd,follow_symlinks=False)
-            if (current.st_dev,current.st_ino,current.st_mode,current.st_uid,current.st_nlink)!=(info.st_dev,info.st_ino,info.st_mode,info.st_uid,info.st_nlink):
+            if allowed is None and not directory:
+                # A leaf is unlinked through its trusted parent. Its owner and
+                # access bits do not grant authority over that directory entry.
+                before = (info.st_dev, info.st_ino, stat.S_IFMT(info.st_mode), info.st_nlink)
+                after = (current.st_dev, current.st_ino, stat.S_IFMT(current.st_mode), current.st_nlink)
+            else:
+                before = (info.st_dev, info.st_ino, info.st_mode, info.st_uid, info.st_nlink)
+                after = (current.st_dev, current.st_ino, current.st_mode, current.st_uid, current.st_nlink)
+            if after != before:
                 raise ValueError('private_member_changed')
         for fd,name,info,directory in plan:
             current=os.stat(name,dir_fd=fd,follow_symlinks=False)
-            if (current.st_dev,current.st_ino)!=(info.st_dev,info.st_ino):raise ValueError('private_member_changed')
+            if ((current.st_dev,current.st_ino)!=(info.st_dev,info.st_ino)
+                    or allowed is None and stat.S_ISREG(current.st_mode) and current.st_nlink != 1):
+                raise ValueError('private_member_changed')
             (os.rmdir if directory else os.unlink)(name,dir_fd=fd);os.fsync(fd)
         if set(os.listdir(root))-set(keep):raise ValueError('private_members_remain')
     return len(plan)

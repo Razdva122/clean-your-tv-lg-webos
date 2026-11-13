@@ -82,8 +82,10 @@ readback and preserves routing and permission inverses before retiring state.
 Archives require component provenance and the recorded directory identity.
 
 Keep shared paths and mounted data outside these directories. The private-tree
-sweep rejects mounts, hard links and entries with unexpected ownership, and
-unlinks symbolic links without following them. Shared registrations, packages,
+sweep rejects mounts, hard links and directories with unexpected ownership or
+group or other write access. A regular file inside a trusted directory can be
+unlinked regardless of its owner or access bits. Symbolic links are unlinked
+without following them. Shared registrations, packages,
 startup hooks and temporary uploads retain their own verification and cleanup
 rules. Any future state that changes behavior outside the private directories
 needs an explicit restoration step before the sweep.

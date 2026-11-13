@@ -770,20 +770,38 @@ class PartialDeviceRemoval(unittest.TestCase):
         self.assertEqual(driver.store.read('archive-backup-'+identifier+'-0'),
                          {'profile-trial':{'fixture':'original archive inverse'}})
 
-    def test_known_receipt_with_foreign_owner_is_not_retired(self):
-        driver,identifier,root,updater,payload,calls,present=self.fixture()
-        driver.device.ownership=driver.ownership
-        path=root/'completed-profile-12345678-1234-4abc-8def-123456789abc.json';path.write_text('preserve')
-        actual=os.stat
-        def foreign(name,*args,**kwargs):
-            info=actual(name,*args,**kwargs)
-            if name==path.name and 'dir_fd' in kwargs:
-                fields=list(info);fields[4]=os.getuid()+1;return os.stat_result(fields)
+    def test_private_file_owner_and_mode_drift_do_not_block_removal(self):
+        driver, identifier, root, _, _, _, _ = self.fixture()
+        driver.device.ownership = driver.ownership
+        path = root / 'firmware-managed.json'
+        path.write_text('private state')
+        path.chmod(0o666)
+        actual = os.stat
+
+        def foreign_owner(name, *args, **kwargs):
+            info = actual(name, *args, **kwargs)
+            if name == path.name and 'dir_fd' in kwargs:
+                fields = list(info)
+                fields[4] = os.getuid() + 1
+                return os.stat_result(fields)
             return info
-        with patch('clean_removal.os.stat',side_effect=foreign):
-            with self.assertRaisesRegex(ValueError,'unsafe_private_member'):
-                driver.device.retire_clean_private({'operation':identifier,'staging_hashes':[]})
-        self.assertEqual(path.read_text(),'preserve')
+
+        with patch('clean_removal.os.stat', side_effect=foreign_owner):
+            driver.device.retire_clean_private({'operation': identifier, 'staging_hashes': []})
+        self.assertFalse(path.exists())
+
+    def test_writable_private_subdirectory_blocks_removal(self):
+        driver, identifier, root, _, _, _, _ = self.fixture()
+        driver.device.ownership = driver.ownership
+        directory = root / 'shared'
+        directory.mkdir()
+        directory.chmod(0o777)
+        path = directory / 'data'
+        path.write_text('keep')
+
+        with self.assertRaisesRegex(ValueError, 'unsafe_private_member'):
+            driver.device.retire_clean_private({'operation': identifier, 'staging_hashes': []})
+        self.assertEqual(path.read_text(), 'keep')
 
     def test_known_completed_receipt_hardlink_is_still_refused(self):
         driver,identifier,root,updater,payload,calls,present=self.fixture()
