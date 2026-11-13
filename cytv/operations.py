@@ -651,13 +651,21 @@ with os.fdopen(f,'rb') as stream:
                 self.progress('A stale Helper PID file was found; no Helper process is running. Continuing installation without deleting state files.')
 
     def stop_helper_for_install(self):
-        from .no_root_observer import helper_start_allowed
+        from .helper_stop import INSTALL_PROGRAM
+        from .no_root_observer import helper_start_allowed, valid_generation
+        self._install_stop_generation = None
         try:
-            if helper_start_allowed(self):
-                self.stop_helper()
+            token = self.remote.run('/usr/bin/node', data=INSTALL_PROGRAM.encode(), timeout=15).strip()
+            if valid_generation(token) and token.startswith('S'):
+                self._install_stop_generation = token
         except (OSError, RuntimeError):
-            # A lost or negative reply does not prove the controller is running.
-            pass
+            # Older state may not support the checked pause. Keep its existing
+            # Stop path, with no automatic restart authority after that path.
+            try:
+                if helper_start_allowed(self):
+                    self.stop_helper()
+            except (OSError, RuntimeError):
+                pass
         for attempt in range(5):
             helper = self.helper_state(timeout=5)
             if helper in ('stopped', 'stale') or attempt == 4:

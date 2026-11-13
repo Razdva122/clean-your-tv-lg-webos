@@ -136,6 +136,21 @@ never automatically adds tiles. The no-root profile backup includes the new key,
 so the updater can restore it along with the existing settings. Root retains the
 layout in its application storage across in-place updates.
 
+### No-root icon candidates from both catalogs
+
+Installer personalization and live refresh can try icon metadata from
+`listLaunchPoints` and `listApps` for the same installed app. This preserves
+the tuner launch point's artwork when its supplemental metadata only contains
+a package-relative filename. TV resource paths with a resource ID are resolved
+on the selected TV. Missing or failed images still use the existing fallback.
+The secondary catalog supplies icon candidates without exposing additional
+hidden applications.
+
+During personalization, the installer can scale oversized PNG, JPEG and WebP
+icons to fit the existing packaged icon limit. Home can replace an older
+placeholder for the same app while preserving confirmed app removals. Live
+refresh continues to use its smaller download limit.
+
 ## Local verification
 
 Run `bash scripts/test.sh` in a Python environment containing the project dependencies.

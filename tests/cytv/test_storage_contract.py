@@ -314,6 +314,36 @@ assert(synced);
 assert.strictEqual(fs.readFileSync(d+'/blocked','utf8'),'stopped');
 """)
 
+    def test_installer_pause_cannot_replace_a_stop_published_during_handoff(self):
+        for boundary in ('capture', 'before-open', 'after-open'):
+            with self.subTest(boundary=boundary):
+                self.run_js("""
+fs.chmodSync(d,504);
+assert(/^I[0-9a-f]{32}$/.test(p.stopGeneration(d,'install')));
+var boundary = """+repr(boundary)+""", operation=boundary==='capture'?'renameSync':'openSync';
+var original=fs[operation], injected, injecting=false;
+fs[operation]=function(a,b){
+ var installWrite=operation==='renameSync'?a==='stop-generation':
+    a==='stop-generation'&&typeof b==='number'&&(b&require('constants').O_EXCL);
+ if(injected||injecting||!installWrite)return original.apply(this,arguments);
+ injecting=true;
+ if(boundary==='after-open'){
+    var fd=original.apply(this,arguments);
+    injected=p.publishStopGeneration(d);
+    return fd;
+ }
+ injected=p.publishStopGeneration(d);
+ return original.apply(this,arguments);
+};
+try {assert.throws(function(){p.requestStop(d,{forInstall:true});});}
+finally {fs[operation]=original;}
+assert(/^S[0-9a-f]{32}$/.test(injected));
+assert.strictEqual(p.stopGeneration(d),injected);
+assert.strictEqual(fs.readFileSync(d+'/blocked','utf8'),'stopped');
+assert.strictEqual(fs.existsSync(d+'/control.json'),false);
+assert.strictEqual(fs.readdirSync(d).sort().join(','),'blocked,stop-generation');
+""")
+
     def test_stop_refuses_a_directory_replaced_after_generation_publication(self):
         self.run_js("""
 var root=d; d=root+'/state'; fs.mkdirSync(d,504);

@@ -22,8 +22,15 @@ try {
       throw Error('Invalid setup generation');
     automatic = false;
     startGeneration = setupGeneration;
-  } else if (!automatic)
+  } else if (!automatic) {
     startGeneration = storage.stopGeneration(data, 'manual');
+  } else {
+    // Bind boot-started controllers when checked setup storage is available.
+    // A change then stops the existing relay without publishing another Stop.
+    try {
+      startGeneration = storage.stopGeneration(data);
+    } catch (ignore) {}
+  }
 } catch (e) {
   process.exit(1);
 }
@@ -50,8 +57,9 @@ function block(close) {
   invalidatePresentation(close !== false);
 }
 if (
-  automatic &&
-  (fs.existsSync(data + '/blocked') || fs.existsSync(data + '/watchdog'))
+  (automatic &&
+    (fs.existsSync(data + '/blocked') || fs.existsSync(data + '/watchdog'))) ||
+  (setupGeneration !== undefined && fs.existsSync(data + '/watchdog'))
 )
   process.exit(0);
 if (
@@ -111,14 +119,20 @@ var service = new Service('com.local.nativehome');
 service.activityManager.create('native-home-controller', function () {});
 if (!automatic) {
   if (!generationCurrent()) process.exit(0);
-  ['blocked', 'watchdog'].forEach(function (name) {
+  var clearedLatches =
+    setupGeneration === undefined ? ['blocked', 'watchdog'] : ['blocked'];
+  clearedLatches.forEach(function (name) {
     try {
       fs.unlinkSync(data + '/' + name);
     } catch (e) {
       if (e.code !== 'ENOENT') throw e;
     }
   });
-  if (!generationCurrent()) process.exit(0);
+  if (
+    !generationCurrent() ||
+    (setupGeneration !== undefined && fs.existsSync(data + '/watchdog'))
+  )
+    process.exit(0);
 }
 var lastForeground = null,
   lastForegroundAt = null,

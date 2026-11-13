@@ -90,6 +90,86 @@ class InventoryTests(unittest.TestCase):
                 if tv['id'] in expected: self.assertEqual(apps[0]['title'], tv['title'])
                 self.assertIn('ssap://com.webos.applicationManager/listApps', calls)
 
+    def test_launch_points_and_installed_metadata_both_supply_icon_candidates(self):
+        png = b'\x89PNG\r\n\x1a\nfixture'
+        session = object.__new__(SSAP)
+        session.host = '192.0.2.10'
+        smart = 'com.tbsniller.smarttwitchwebostv'
+        tuner = 'com.webos.app.livetv'
+        resource = '/resources/' + 'a' * 40 + '/smart.png'
+        sources = {
+            'listLaunchPoints': {'launchPoints': [
+                {'id': smart, 'title': 'SmartTwitchTV', 'icon': 'http://192.0.2.10:3000/missing'},
+                {'id': tuner, 'title': 'Canali', 'icon': 'http://192.0.2.10:3000/good-tuner'},
+            ]},
+            'listApps': {'apps': [
+                {'id': smart, 'title': 'SmartTwitchTV', 'icon': resource},
+                {'id': tuner, 'title': 'Canali', 'icon': 'icon.png', 'hidden': True},
+                {'id': 'hidden-extra', 'title': 'Hidden', 'icon': 'https://other.invalid/private'},
+            ]},
+            'getExternalInputList': {'devices': []},
+        }
+        session.call = lambda uri: sources[uri.rsplit('/', 1)[-1]]
+        requested = []
+        def fetch(url):
+            requested.append(url)
+            if 'missing' in url or url == 'https://192.0.2.10:3001' + resource:
+                raise OSError('not found')
+            return png
+        with patch('cytv.tv.Inventory', side_effect=lambda host, fallback: Inventory(host, fallback, fetch)):
+            result = session.inventory(b'fallback')
+        self.assertEqual([a['id'] for a in result['apps']], [tuner, smart])
+        self.assertEqual(session.icon_diagnostics['embedded'], 2)
+        self.assertEqual(session.icon_diagnostics['fallback'], 0)
+        self.assertIn('https://192.0.2.10:3001' + resource, requested)
+        self.assertIn('http://192.0.2.10:3000' + resource, requested)
+
+    def test_oversized_icon_is_reduced_before_personalization(self):
+        import base64
+        from io import BytesIO
+        import random
+        from PIL import Image
+        from cytv.package import inventory_script
+
+        source = BytesIO()
+        Image.frombytes('RGBA', (1200, 1200), random.Random(505).randbytes(1200 * 1200 * 4)).save(source, 'PNG')
+        self.assertGreater(len(source.getvalue()), 5 * 1024 * 1024)
+        inventory = Inventory('192.0.2.10', b'fallback', lambda _: source.getvalue())
+        result = inventory.build([{'id': 'app', 'title': 'App',
+                                   'icon': 'https://192.0.2.10:3001/icon.png'}], [])
+        encoded = result['apps'][0]['icon'].split(',', 1)[1]
+        image = base64.b64decode(encoded)
+        self.assertLessEqual(len(image), 256 * 1024)
+        with Image.open(BytesIO(image)) as resized:
+            self.assertEqual(resized.size, (192, 192))
+            self.assertEqual(resized.mode, 'RGBA')
+        self.assertEqual(inventory.icon_diagnostics['embedded'], 1)
+        self.assertEqual(base64.b64decode(result['fallbackIcon'].split(',', 1)[1]), b'fallback')
+        apps_script, marker_script = inventory_script(result).decode().splitlines()
+        packaged_inventory = json.loads(apps_script.removeprefix('window.TV_APPS = ').removesuffix(';'))
+        self.assertEqual(set(packaged_inventory), {'apps', 'inputs'})
+        self.assertIn('window.CYTVPackagedIconFallback', marker_script)
+
+    def test_oversized_invalid_image_leaves_alternate_icon_usable(self):
+        png = b'\x89PNG\r\n\x1a\n'
+        icon = png + b'alternate'
+        inventory = Inventory('192.0.2.10', b'fallback',
+                              lambda url: png + bytes(256 * 1024) if url.endswith('/large') else icon)
+        self.assertEqual(inventory.icon({'largeIcon': 'http://192.0.2.10/large',
+                                         'icon': 'http://192.0.2.10/alternate'}),
+                         'data:image/png;base64,iVBORw0KGgphbHRlcm5hdGU=')
+        self.assertEqual(inventory.icon_diagnostics['invalid_image'], 1)
+
+    def test_resized_icons_obey_total_output_budget(self):
+        png = b'\x89PNG\r\n\x1a\n'
+        inventory = Inventory('192.0.2.10', b'fallback', lambda _: png + bytes(256 * 1024))
+        apps = [{'id': str(i), 'title': str(i), 'icon': f'http://192.0.2.10/{i}'} for i in range(4)]
+        with patch('cytv.tv.resize_icon', return_value=png + bytes(192 * 1024 - len(png))) as resize:
+            inventory.build(apps, [])
+        self.assertEqual(resize.call_count, 4)
+        self.assertEqual(inventory.icon_diagnostics['embedded'], 2)
+        self.assertEqual(inventory.icon_diagnostics['fallback'], 2)
+
     def test_optional_malformed_wire_preserves_baseline_inventory(self):
         cases = [('wire', '{broken'), ('wire', 'null'), ('wire', '[]'),
                  ('payload', None), ('payload', [])]
