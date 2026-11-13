@@ -364,20 +364,53 @@ def validate_package_receipts(record):
 def remove_packages(device, record, save):
     """Retry explicit removal against current presence, keeping old outcomes separate."""
     from observed_install import remove
-    errors=[]
+    errors = []
+    present = device.apps()
+    checked = {}
+    changed = False
     for app in APPS:
+        receipt = {'state': 'absent', 'readback': {'app': app, 'absent': True}}
         try:
-            if app in device.apps():
-                record['packages'][app]={'state':'removing'};save('package-removal')
-                terminal=remove(app,timeout=150)
-                if not terminal_removal(terminal,app):raise ValueError('package_removal_unconfirmed')
-            if getattr(type(device),'sweep_package',None) is not None:device.sweep_package(app,record)
+            if app not in present and record['packages'].get(app) == receipt:
+                try:
+                    device.absent(app)
+                except ValueError as error:
+                    if error.args != ('package_remains',):
+                        raise
+                else:
+                    continue
+            if app in present:
+                if 'package-removal' in record.get('done', []):
+                    record['done'].remove('package-removal')
+                record['packages'][app] = {'state': 'removing'}
+                save('package-removal')
+                changed = True
+                terminal = remove(app, timeout=150)
+                if not terminal_removal(terminal, app):
+                    raise ValueError('package_removal_unconfirmed')
+            if getattr(type(device), 'sweep_package', None) is not None:
+                device.sweep_package(app, record)
             device.absent(app)
-            if app in device.apps():raise ValueError('package_still_registered')
-            record['packages'][app]={'state':'absent','readback':{'app':app,'absent':True}};save('package-removal')
-        except (OSError,RuntimeError,ValueError,subprocess.SubprocessError) as error:
+            checked[app] = receipt
+        except (OSError, RuntimeError, ValueError, subprocess.SubprocessError) as error:
             errors.append(error)
-    if errors:raise errors[0]
+
+    # A single fresh catalogue confirms all requests submitted in this pass.
+    if changed:
+        try:
+            present = device.apps()
+        except (OSError, RuntimeError, ValueError, subprocess.SubprocessError):
+            if errors:
+                raise errors[0]
+            raise
+    for app, receipt in checked.items():
+        if app in present:
+            errors.append(ValueError('package_still_registered'))
+        elif record['packages'].get(app) != receipt:
+            record['packages'][app] = receipt
+            save('package-removal')
+    if errors:
+        raise errors[0]
 
 
 def compact_audit(record, store):

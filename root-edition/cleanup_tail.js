@@ -570,8 +570,8 @@ async function compositorStock() {
       throw Error('route-changed');
   });
 }
-async function absent(final) {
-  if (final && exists(bootRoot)) throw Error('boot-session-remains');
+async function absent() {
+  if (exists(bootRoot)) throw Error('boot-session-remains');
   var inventory;
   try {
     inventory = (await rpc('com.webos.applicationManager/dev/listApps', {}))
@@ -792,11 +792,19 @@ async function absent(final) {
     })
   )
     throw Error('owned-input-remains');
-  var temporarySupport = fs.readdirSync('/tmp').filter(function (name) {
-    return /^cytv-(?:product|coordinator|system-updater|c1-root|root-tail)-[a-f0-9]{32}$/.test(name);
-  }).map(function (name) {
-    return '/tmp/' + name + '/';
-  });
+  requireIdle();
+}
+function requireIdle() {
+  var temporarySupport = fs
+    .readdirSync('/tmp')
+    .filter(function (name) {
+      return /^cytv-(?:product|coordinator|system-updater|c1-root|root-tail)-[a-f0-9]{32}$/.test(
+        name
+      );
+    })
+    .map(function (name) {
+      return '/tmp/' + name + '/';
+    });
   fs.readdirSync('/proc')
     .filter(function (n) {
       return (
@@ -1222,7 +1230,7 @@ function canRecheckBoot() {
         // Admission is a current readback, never another cleanup attempt.
         // Keep all original lock inodes and receipts untouched.
         retireHostStages();
-        await absent(true);
+        await absent();
         if (
           pendingFinal ||
           ((mode === 'finalize' || mode === 'finish') && !record.final_fence)
@@ -1287,7 +1295,7 @@ function canRecheckBoot() {
         write(directory, 'clean-removal-' + id + '.json', record);
         // The parent is allowed to wait for its own child tail with the same flock.
         // Other users of this private runtime prevent retirement.
-        await absent(false);
+        requireIdle();
         (record.support_stages || []).forEach(function (stage) {
           if (!/^\/tmp\/cytv-product-[a-f0-9]{32}$/.test(stage.path))
             throw Error('invalid-support-stage');
@@ -1310,7 +1318,7 @@ function canRecheckBoot() {
         gates.forEach(function (entry) {
           retire(entry.path, null, entry, true, true);
         });
-        await absent(true);
+        await absent();
         record.result.private_cleanup_verified = true;
         record.result.verified_clean = true;
         cleanup.files = {};

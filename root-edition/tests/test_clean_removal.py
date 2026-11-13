@@ -503,6 +503,41 @@ class PackageRemoval(unittest.TestCase):
             clean_removal.remove_packages(device,record,lambda stage:None)
         self.assertEqual(calls,[app]);self.assertEqual(record['original']['outcome'],'unknown')
 
+    def test_retry_uses_one_catalog_read_and_sweeps_only_reappeared_packages(self):
+        import clean_removal
+        app = clean_removal.APPS[0]
+        present = set()
+
+        class Device:
+            def __init__(self):
+                self.reads = 0
+                self.sweeps = []
+                self.residue = set()
+
+            def apps(self):
+                self.reads += 1
+                return present.copy()
+
+            def absent(self, identity):
+                if identity in self.residue:
+                    raise ValueError('package_remains')
+
+            def sweep_package(self, identity, record):
+                self.sweeps.append(identity)
+                self.residue.discard(identity)
+
+        device = Device()
+        record = {'packages': {identity: {'state': 'absent', 'readback': {'app': identity, 'absent': True}}
+                               for identity in clean_removal.APPS}}
+        clean_removal.remove_packages(device, record, lambda stage: self.fail('replayed package checkpoint'))
+        self.assertEqual(device.reads, 1)
+        self.assertEqual(device.sweeps, [])
+
+        device.residue.add(app)
+        clean_removal.remove_packages(device, record, lambda stage: None)
+        self.assertEqual(device.sweeps, [app])
+        self.assertEqual(device.reads, 2)
+
     def test_retry_skips_absent_package_after_connection_loss(self):
         import clean_removal
         from unittest.mock import Mock
@@ -1672,12 +1707,21 @@ class PartialDeviceRemoval(unittest.TestCase):
 
         # A fresh desktop preflight uses the ordinary coordinator without
         # the cleanup upload. Only its TV-specific Node observation is modeled.
-        device.payload = None
+        from install_device import LocalDevice
+        inspection = LocalDevice()
+        inspection.rpc = device.rpc
+        inspection.apps = device.apps
+        inspection.shared_cleanup = device.shared_cleanup
+        reopened = Coordinator(inspection, Ownership(driver.store))
+
         def stock_readback(args, **kwargs):
             self.assertEqual(args[2:], ['stock-proof', failed_id, '-', '-1', '-1', '-1', '-', clean['removal']])
             return subprocess.CompletedProcess(args, 0, json.dumps({'routes': proof}).encode())
         with patch('install_device.subprocess.run', side_effect=stock_readback):
-            self.assertTrue(driver.inspect()['can_install'])
+            self.assertTrue(reopened.inspect()['can_install'])
+            with patch.object(inspection, 'apps', return_value={deploy.APP}):
+                with self.assertRaisesRegex(ValueError, 'project_apps_remain'):
+                    reopened.inspect()
 
         helper = root.parent/'guard'
         helper.write_bytes(static_arm())
