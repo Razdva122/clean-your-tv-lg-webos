@@ -30,7 +30,7 @@ fs.writeFileSync(apps, '[]', {mode: 0o644});
 fs.writeFileSync(physical + '/blocked', 'existing emergency stop');
 const owners = {}, gids = {};
 const stateInode = fs.statSync(physical).ino;
-function execute(option) {
+function execute(option, statusOverride) {
   let uid = 0, gid = 0, groups = [0], cwd = '/root-private', output = '', exitCode = 0;
   const events = [], hostFs = Object.assign({}, fs);
   function virtual(name) { return path.resolve(cwd, String(name)); }
@@ -62,6 +62,11 @@ function execute(option) {
   };
   ['unlinkSync', 'chmodSync', 'readFileSync', 'readdirSync'].forEach(function(name) {
     hostFs[name] = function(target) {
+      if (name === 'readFileSync' && target === '/proc/self/status') {
+        if (statusOverride !== undefined && uid !== 0) return statusOverride;
+        return 'Name:\tnode\nUid:\t' + [uid, uid, uid, uid].join('\t') +
+          '\nGid:\t' + [gid, gid, gid, gid].join('\t') + '\n';
+      }
       const args = Array.prototype.slice.call(arguments); args[0] = translate(target);
       return fs[name].apply(fs, args);
     };
@@ -86,6 +91,10 @@ function execute(option) {
     stdout: {write: function(value) { output += value; }},
     exit: function(code) { exitCode = code; throw Error('adapter-exit'); }
   };
+  if (input.legacy) {
+    delete processBoundary.geteuid;
+    delete processBoundary.getegid;
+  }
   try {
     vm.runInNewContext(input.source, {
       require: function(name) { return name === 'fs' ? hostFs : require(name); },
@@ -118,6 +127,19 @@ for (const option of ['repair-key-mode', 'repair-key-mode:' + '0'.repeat(64)]) {
   if (option === 'repair-key-mode') assert.strictEqual(refused.uid, 0);
 }
 const digest = crypto.createHash('sha256').update(bytes).digest('hex');
+if (input.legacy) {
+  for (const status of [
+    'Uid:\t5999\t5999\t5999\t5999\n', // Missing effective group.
+    'Uid:\t5999\t0\t5999\t5999\nGid:\t5000\t5000\t5000\t5000\n',
+    'Uid:\t5999\t5999\t5999\t5999\nGid:\t5000\t0\t5000\t5000\n'
+  ]) {
+    const refused = execute('repair-key-mode:' + digest, status);
+    assert.notStrictEqual(refused.exitCode, 0);
+    assert.strictEqual(refused.events.filter(e => e[0] === 'open').length, 0);
+    assert.strictEqual(fs.statSync(key).ino, before.ino);
+    assert.strictEqual(fs.statSync(key).mode & 0o777, 0o775);
+  }
+}
 const repaired = execute('repair-key-mode:' + digest);
 assert.strictEqual(repaired.exitCode, 0, repaired.output);
 assert.strictEqual(repaired.output, 'CYTV_CONFIGURATION_PRIVATE');
@@ -137,8 +159,9 @@ assert.strictEqual(fs.readFileSync(physical + '/blocked', 'utf8'), 'existing eme
 assert.deepStrictEqual(fs.readdirSync(physical).sort(), ['apps.json', 'blocked', 'ssap-key.json']);
 console.log('PASS: readonly Root inspect and permanent Developer identity repair without upload');
 '''
-        with tempfile.TemporaryDirectory() as temporary:
-            result = subprocess.run([shutil.which('node'), '-e', harness],
-                input=json.dumps({'root': str(Path(temporary).resolve()), 'source': STATE_CHECK}),
-                text=True, capture_output=True, timeout=10)
-        self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+        for legacy in (False, True):
+            with self.subTest(legacy=legacy), tempfile.TemporaryDirectory() as temporary:
+                result = subprocess.run([shutil.which('node'), '-e', harness],
+                    input=json.dumps({'root': str(Path(temporary).resolve()), 'source': STATE_CHECK, 'legacy': legacy}),
+                    text=True, capture_output=True, timeout=10)
+                self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
