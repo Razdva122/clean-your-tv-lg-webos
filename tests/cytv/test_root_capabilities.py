@@ -98,6 +98,137 @@ class CapabilityTests(unittest.TestCase):
                 report = create_report(store, 'install', profile, 'inspect-installation', tv_info=info)
                 self.assertNotIn('root_compositor_failure', json.loads(report.read_text())['tv'])
 
+    @unittest.skipUnless(os.name == 'posix', 'POSIX shell probe')
+    def test_home_mount_probe_classifies_topology_without_exporting_paths(self):
+        import subprocess
+        from cytv.root_capabilities import NATIVE_HOME_MOUNT_PROBE
+
+        root = '10 1 8:1 / / rw - ext4 /dev/private rw'
+        mount = '20 10 8:1 /private/file /usr/bin/com.webos.app.home rw shared:2 - ext4 /dev/private rw'
+        stacked = mount.replace('20 10 ', '21 20 ', 1)
+        overlay = '15 10 0:23 / /usr rw - overlay overlay rw,upperdir=/private/path'
+        parent = '16 10 8:1 /private/bin /usr/bin rw - ext4 /dev/private rw'
+        other = mount.replace('app.home ', 'app.home.other ', 1)
+        cases = (
+            ([], 'absent'),
+            ([other], 'absent'),
+            ([mount], 'file-mount'),
+            ([mount, stacked], 'stacked-file-mounts'),
+            ([overlay], 'parent-overlay'),
+            ([parent], 'parent-mount'),
+            ([overlay, parent], 'multiple-parent-mounts'),
+            ([overlay, mount], 'file-and-parent-mounts'),
+            (['20 10 8:1 / /usr/bin/com.webos.app.home rw'], 'unknown'),
+        )
+        command = NATIVE_HOME_MOUNT_PROBE.replace('/proc/self/mountinfo', '-')
+        for rows, expected in cases:
+            with self.subTest(expected=expected):
+                reply = subprocess.run(['/bin/sh', '-c', command], input='\n'.join([root, *rows]) + '\n',
+                                       text=True, capture_output=True, check=True)
+                self.assertEqual(reply.stdout.strip(), expected)
+
+    @unittest.skipUnless(os.name == 'posix', 'POSIX shell probe')
+    def test_home_mount_recovery_guard_rejects_unsafe_mount_tables(self):
+        import subprocess
+        from cytv.root_capabilities import NATIVE_HOME_MOUNT_SNAPSHOT, NATIVE_HOME_STOCK_MOUNT
+
+        root = '10 1 179:1 / / ro - squashfs /dev/mmcblk0p1 ro'
+        mount = '20 10 8:1 /other/home /usr/bin/com.webos.app.home rw - ext4 /dev/private rw'
+        stacked = mount.replace('20 10 ', '21 20 ', 1)
+        parent = '15 10 0:23 / /usr rw - overlay overlay rw'
+        shared = mount.replace(' - ext4 ', ' shared:9 - ext4 ')
+        foreign_parent = mount.replace('20 10 ', '20 99 ', 1)
+        snapshot = NATIVE_HOME_MOUNT_SNAPSHOT.replace('/proc/self/mountinfo', '-')
+        stock = NATIVE_HOME_STOCK_MOUNT.replace('/proc/self/mountinfo', '-')
+
+        def run(command, *rows):
+            return subprocess.run(['/bin/sh', '-c', command], input='\n'.join(rows) + '\n',
+                                  capture_output=True, text=True)
+
+        self.assertEqual(run(snapshot, root, mount).stdout.strip(), mount)
+        self.assertEqual(run(stock, root).returncode, 0)
+        for rows in ((root,), (root, mount, stacked), (root, parent, mount),
+                     (root, shared), (root, foreign_parent), (root, mount, 'truncated')):
+            with self.subTest(rows=rows):
+                result = run(snapshot, *rows)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(result.stdout, '')
+        self.assertNotEqual(run(stock, root, mount).returncode, 0)
+        self.assertNotEqual(run(stock, root.replace('squashfs', 'ext4')).returncode, 0)
+
+    def test_home_mount_recovery_refuses_ambiguous_or_unverified_input(self):
+        from cytv.root_capabilities import NATIVE_HOME_MOUNT_STATES, restore_native_home
+
+        for state in set(NATIVE_HOME_MOUNT_STATES) - {'file-mount'}:
+            with self.subTest(state=state):
+                remote = Mock()
+                self.assertFalse(restore_native_home(remote, state, lambda: True))
+                remote.run.assert_not_called()
+
+        remote = Mock()
+        remote.run.side_effect = ['20 10 8:1 /private/file /usr/bin/com.webos.app.home rw - ext4 /dev/private rw\n',
+                                  'invalid preview']
+        confirm = Mock(return_value=True)
+        self.assertFalse(restore_native_home(remote, 'file-mount', confirm))
+        confirm.assert_not_called()
+        self.assertEqual(remote.run.call_count, 2)
+
+    def test_home_mount_recovery_verifies_elf_and_uses_explicit_confirmation(self):
+        import struct
+        import subprocess
+        from cytv.root_capabilities import restore_native_home
+
+        header = struct.pack('<16sHHIIIIIHHHHHH', b'\x7fELF\x01\x01\x01',
+                             3, 40, 1, 64, 52, 0, 0, 52, 32, 2, 0, 0, 0)
+        dump = ' '.join(map(str, header))
+        fingerprint = 'a' * 64
+        preview = f'{fingerprint}\n0 1 755 1024\n{dump}\nCYTV_HOME_ELF\n{dump}\nCYTV_HOME_FS\n73717368\n'
+        mount = '20 10 8:1 /private/file /usr/bin/com.webos.app.home rw - ext4 /dev/private rw'
+        for accepted in (False, True):
+            with self.subTest(accepted=accepted):
+                remote = Mock()
+                remote.run.side_effect = [mount, preview, preview]
+                self.assertIs(restore_native_home(remote, 'file-mount', lambda: accepted), accepted)
+                self.assertEqual(remote.run.call_count, 3 if accepted else 2)
+                self.assertIn('unshare --mount --propagation private', remote.run.call_args_list[1].args[0])
+                if accepted:
+                    self.assertIn(fingerprint, remote.run.call_args.args[0])
+                    if os.name == 'posix':
+                        subprocess.run(['/bin/sh', '-n'], input=remote.run.call_args.args[0], text=True, check=True)
+
+    def test_ar50_home_script_reports_root_refusal_without_no_root_offer(self):
+        from cytv.root_capabilities import NoRootAlternativeError, RootCapabilityError, verify
+
+        missing = {'returnValue': False, 'errorCode': -1,
+                   'errorText': 'Service does not exist: com.webos.service.systemprofile.'}
+        identity = {'returnValue': True, 'modelName': 'AR-50',
+                    'firmwareVersion': '04.66.75', 'sdkVersion': '7.5.9'}
+        key = 'com.webos.surfacemanager.keyFilters'
+        chain = {'returnValue': True, 'configs': {key: [
+            {'file': '/usr/lib/qt5/qml/KeyFilters/systemUi.js', 'handler': 'handleSystemKeys'}]}}
+        shell = ('127 69 76 70 1 1 1 0 0 0 0 0 0 0 0 0 3 0 40 0 1 0 0 0 217 218 '
+                 '0 0 52 0 0 0 164 98 10 0 0 2 0 5 52 0 32 0 9 0 40 0 29 0 28 0')
+        home = ('35 33 47 98 105 110 47 115 104 10 35 32 83 116 97 110 100 115 32 105 '
+                '110 32 102 111 114 32 76 71 39 115 32 72 111 109 101 32 112 114 111 '
+                '103 114 97 109 32 111 110 32 84 86 115 32 119')
+        remote = Mock()
+        remote.luna.side_effect = [missing, identity, identity, chain]
+        remote.run.side_effect = [f'0 1 755 7582\n{shell}\nCYTV_HOME_ELF\n{home}\nCYTV_HOME_FS\nef53\n',
+                                  'file-mount\n']
+        info = {}
+        with self.assertRaises(RootCapabilityError) as caught:
+            verify(remote, CheckList(), info, allow_c1=True, allow_compositor=True)
+        self.assertNotIsInstance(caught.exception, NoRootAlternativeError)
+        self.assertEqual(info['root_compositor_failure'], 'native-home-script')
+        from cytv.diagnostic_context import tv_summary
+        self.assertEqual(tv_summary(info)['root_native_home_mount'], 'file-mount')
+        self.assertNotIn('root_native_home_mount', tv_summary({'root_native_home_mount': '/private/source'}))
+        self.assertNotIn('home_backend', info)
+        from cytv.failure_help import for_error
+        advice = for_error(caught.exception, 'inspect-installation', {'edition': 'root'})
+        self.assertEqual(advice['code'], 'native-home-script')
+        self.assertIn('Restore LG Home', advice['next_step'])
+
     def test_root_report_retains_only_the_rejected_native_home_mode(self):
         import struct
         from cytv.diagnostic_context import tv_summary

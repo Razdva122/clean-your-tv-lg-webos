@@ -58,15 +58,11 @@ for (const name of ['windows', 'macos-arm64', 'macos-x64', 'linux', 'android'])
     root + 'assets/brand/downloads/' + name + '.svg',
     pub + 'assets/downloads/' + name + '.svg'
   );
-for (const theme of ['classic', 'ribbon'])
+for (const theme of ['classic', 'liquid-glass', 'ribbon'])
   copyFileSync(
     root + 'docs/launcher-' + theme + '.jpg',
     pub + 'assets/' + theme + '.jpg'
   );
-copyFileSync(
-  root + 'themes/liquid-glass/assets/preview.jpg',
-  pub + 'assets/liquid-glass.jpg'
-);
 for (const name of ['outfit-400.ttf', 'outfit-700.ttf', 'OFL.txt']) {
   copyFileSync(root + 'launcher/fonts/' + name, pub + 'assets/' + name);
 }

@@ -328,6 +328,16 @@ successful TV work into a failed command. `doctor --report` remains explicit.
 Review every report before sharing. The special Home-button recording retains
 its separately documented application-ID/timing scope.
 
+An install report includes a `debloat` object when selected settings were
+processed. It maps known setting keys to fixed outcomes. The pairing outcomes
+are `pairing-rejected`, `pairing-timeout` and `pairing-unavailable`. A
+negative reply to a write is `write-rejected`, while a transport failure or
+invalid reply is `write-unavailable`. After a confirmed write,
+`verify-mismatch` means the value differs from the target and
+`verify-unavailable` means no value could be read. Other outcomes are
+`already`, `verified` and `journal-failed` (the original value could not be
+saved locally). The export excludes setting values and raw TV responses.
+
 <a id="recovery-journal-summary-unreleased"></a>
 
 ## Recovery journal summary
@@ -392,6 +402,20 @@ including a timeout, a rejection, an unconfirmed or malformed reply, an empty
 configuration, and a compatible or incompatible chain. For an explicit
 rejection it can include a bounded numeric Luna error code.
 `native-home-unavailable` identifies a missing or unsafe native Home path.
+`native-home-script` identifies a script at the native Home path. Restore the
+original Home executable before retrying Root setup. On the capability-based
+Qt path, Doctor also checks the mount table from the SSH session. The report
+exports only the `tv.root_native_home_mount` classification, such as a mount
+on the Home file, a mount on a parent directory, or stacked mounts. `absent`
+means the probe saw no separate mount on Home, `/usr/bin` or `/usr`.
+`unknown` means the probe could not establish the layout.
+
+During interactive Root setup, a single private file mount can be restored
+after a preview in a private mount namespace exposes a valid ARM32 Home ELF
+on a read-only SquashFS root. After confirmation, setup rechecks the mount,
+unmounts it normally, verifies the same ELF, and reruns Root preflight.
+Stacked or covering mounts require separate investigation. The device still
+checks for conflicting Home integrations before admission.
 When System Profile is absent and KeyFilters passed, this result lets interactive
 setup offer No-root over the existing root SSH connection. No-root still runs
 its own preflight before installing.

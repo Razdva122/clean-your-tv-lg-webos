@@ -6,7 +6,8 @@ In Root Edition, set the **Home screen name** on the final installer page alongs
 > backend for ordinary Root and Root Beta by verified capabilities, without an
 > SDK/model allowlist. It requires fresh setup, confirmed absence of System Profile,
 > stock ARM32 native LG Home, vendor Qt filters and compatible emergency input and
-> recovery. Conflicting Home integrations are left untouched. Experimental OTA is
+> recovery. On C1, setup turns off GlassHouse Home when detected and replaces
+> third-party compositor filters with LG's filters and CYTV. Experimental OTA is
 > disabled; physical compatibility remains unconfirmed. See [scope and recovery](development/C1-NATIVE-GATE.md#unpublished-capability-based-compositor-admission-364).
 
 Use **cytv** to install No-root or Root. It includes the computer runtime and TV

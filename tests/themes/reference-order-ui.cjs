@@ -28,11 +28,11 @@ const http = require('node:http');
     channel: process.env.BROWSER_CHANNEL || 'chrome'
   });
   const recommended = [
+    'com.beb.plxnative',
     'netflix',
     'youtube.leanback.v4',
     'com.apple.appletv',
-    'com.apple.applemusic',
-    'tv.twitch.tv.starshot.lg'
+    'com.apple.applemusic'
   ];
   try {
     for (const edition of ['launcher', 'root-launcher']) {
@@ -64,7 +64,7 @@ const http = require('node:http');
         );
         await ready();
         const original = await ids();
-        assert.equal(original.length, 10);
+        assert.equal(original.length, 11);
         assert.deepEqual(
           original.slice(0, 5),
           recommended,
@@ -75,8 +75,8 @@ const http = require('node:http');
         await page.keyboard.up('Enter');
         assert.equal(
           await page.locator('#tiles .moving').getAttribute('data-app-id'),
-          'netflix',
-          'real hold enters Netflix editing'
+          recommended[0],
+          'real hold edits the first app'
         );
         await page.keyboard.press('ArrowRight');
         await page.keyboard.press('Enter');

@@ -75,8 +75,9 @@ let bridge,
   timed,
   loaded = false;
 const tv = {
+  CONFIG: {},
   navigator: { language: 'en-US' },
-  localStorage: { getItem: () => null },
+  localStorage: { getItem: () => 'en' },
   setTimeout: (fn) => {
     timed = fn;
     return 1;
@@ -100,16 +101,40 @@ assert.equal(loaded, false);
 bridge.onservicecallback(
   JSON.stringify({
     returnValue: true,
-    settings: { localeInfo: { locales: { UI: 'de-DE' } } }
+    settings: { localeInfo: { locales: { UI: 'da-DK' } } }
   })
 );
 assert.equal(loaded, true);
 assert.equal(
   tv.HomeI18n.language(),
-  'de',
-  'TV UI language takes precedence over browser'
+  'en',
+  'explicit launcher language remains selected'
 );
-console.log('PASS async TV system locale before UI startup');
+const afternoon = new Date(2026, 10, 7, 13, 40, 36).getTime();
+assert.equal(tv.HomeI18n.formatTime(afternoon), '13:40');
+assert.match(tv.HomeI18n.formatDateTime(afternoon), /13:40:36$/);
+assert.equal(load(['da-DK']).i.language(), 'en');
+assert.equal(load(['da-DK']).i.formatTime(afternoon), '13:40');
+assert.equal(load(['en-GB'], 'en').i.formatTime(afternoon), '13:40');
+const clock = load(['en-US'], 'en');
+assert.equal(clock.i.formatTime(afternoon), '1:40 PM');
+assert.equal(clock.i.setClockFormat('24h'), true);
+assert.equal(clock.i.clockFormat(), '24h');
+assert.equal(clock.saved['tvhome.clockFormat'], '24h');
+assert.equal(clock.i.formatTime(afternoon), '13:40');
+assert.equal(clock.i.formatTime(new Date(2026, 10, 7, 0, 5)), '00:05');
+assert.equal(clock.i.setClockFormat('invalid'), false);
+assert.equal(clock.i.clockFormat(), '24h');
+assert.equal(clock.i.setClockFormat('auto'), true);
+assert.equal(clock.i.formatTime(afternoon), '1:40 PM');
+assert.equal(clock.reloads(), 0);
+const danish = load(['da-DK'], 'en');
+assert.equal(danish.i.setClockFormat('12h'), true);
+assert.equal(danish.i.formatTime(afternoon), '1:40 PM');
+assert.equal(load(['en-US'], 'en', true).i.setClockFormat('24h'), false);
+console.log(
+  'PASS system and explicit clock formats independent of UI language'
+);
 const htmlLocale = load(['de']);
 htmlLocale.i.add({ de: { 'Inputs': '<Eingänge>', 'Choose': '"Wählen"' } });
 assert.equal(
@@ -122,6 +147,7 @@ let done = 0;
 const failedTV = {
   ...tv,
   navigator: { language: 'fr' },
+  localStorage: { getItem: () => null },
   PalmServiceBridge: function () {
     this.call = () => {
       throw Error('unavailable');
@@ -140,7 +166,16 @@ console.log(
 
 // Legacy WebKit may ignore locale options without throwing, leaking seconds/GMT.
 for (const intl of [undefined, {}]) {
-  const legacy = vm.createContext({ Intl: intl });
+  let format;
+  const legacy = vm.createContext({
+    Intl: intl,
+    localStorage: {
+      getItem: (key) => (key === 'tvhome.clockFormat' ? format : null),
+      setItem: (_, value) => {
+        format = value;
+      }
+    }
+  });
   vm.runInContext(
     'Date.prototype.toLocaleTimeString = function () { return "10:57:36 PM GMT+04:00"; };',
     legacy
@@ -154,6 +189,8 @@ for (const intl of [undefined, {}]) {
     const stamp = new Date(2026, 10, 7, hour, minute, 36).getTime();
     assert.equal(legacy.HomeI18n.formatTime(stamp), expected);
   }
+  assert.equal(legacy.HomeI18n.setClockFormat('12h'), true);
+  assert.equal(legacy.HomeI18n.formatTime(afternoon), '1:40 PM');
 }
 for (const [lang, expected] of [
   ['en', ['12:05 AM', '12:05 PM', '10:05 PM']],

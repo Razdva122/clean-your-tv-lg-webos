@@ -1163,11 +1163,55 @@ class PartialDeviceRemoval(unittest.TestCase):
         driver,identifier,root,updater,payload,calls,present=self.fixture()
         process=install_device.PROC/'12345';process.mkdir()
         (process/'cmdline').write_bytes(str(install_device.INSTALLED/'usr/palm/applications/com.local.nativehome/relay').encode()+b'\0')
-        result=driver.clean_remove(identifier)
+        with patch.object(install_device, 'monotonic', side_effect=(0, 5)):
+            result=driver.clean_remove(identifier)
         self.assertEqual(result['stage'],'restart-required')
         self.assertFalse(result['current'])
         self.assertTrue((root/'state/ssap.json').exists())
         self.assertTrue(any(name.startswith('remove-') for name in calls))
+
+    def test_retry_rechecks_a_departed_helper_on_the_same_boot(self):
+        import install_device
+        driver, identifier, _, _, _, calls, _ = self.fixture()
+        original = driver.store.read('request-' + identifier)
+        driver.store.write('request-' + identifier, dict(original, state='complete'))
+        process = install_device.PROC / '12345'
+        process.mkdir()
+        cmdline = process / 'cmdline'
+        cmdline.write_bytes(os.fsencode(install_device.INSTALLED /
+                                       'usr/palm/applications/com.local.nativehome/relay') + b'\0')
+        with patch.object(install_device, 'monotonic', side_effect=(0, 5)):
+            self.assertEqual(driver.clean_remove(identifier)['stage'], 'restart-required')
+        cmdline.unlink()
+        process.rmdir()
+
+        result = driver.clean_remove(identifier)
+
+        self.assertEqual(result['stage'], 'verified-clean', result)
+        self.assertTrue(result['cleanup_without_restart'])
+        self.assertEqual(calls.count('remove-com.cleanyourtv.root.preview'), 1)
+
+    def test_waits_for_helper_exit_and_finishes_root_removal_in_one_call(self):
+        import install_device
+        driver, identifier, _, _, _, calls, _ = self.fixture()
+        original = driver.store.read('request-' + identifier)
+        driver.store.write('request-' + identifier, dict(original, state='complete'))
+        process = install_device.PROC / '12345'
+        process.mkdir()
+        cmdline = process / 'cmdline'
+        cmdline.write_bytes(os.fsencode(install_device.INSTALLED /
+                                       'usr/palm/applications/com.local.nativehome/relay') + b'\0')
+
+        def exit_helper(_delay):
+            cmdline.unlink()
+            process.rmdir()
+
+        with patch.object(install_device, 'sleep', side_effect=exit_helper) as wait:
+            result = driver.clean_remove(identifier)
+
+        wait.assert_called_once()
+        self.assertEqual(result['stage'], 'verified-clean', result)
+        self.assertEqual(calls.count('remove-com.cleanyourtv.root.preview'), 1)
 
     def test_interrupted_product_upload_does_not_strand_removal_after_restart(self):
         import install_device
@@ -1587,6 +1631,46 @@ class PartialDeviceRemoval(unittest.TestCase):
                 self.assertEqual(driver.store.read('routing-backup-'+identifier),inverse)
                 self.assertEqual(result['original']['request'],original)
                 self.assertFalse(present)
+
+    def test_install_inspection_leaves_live_compositor_probe_to_native_install(self):
+        import subprocess
+        driver, identifier, _, _, payload, _, present, native_hash, proof = self.retained_native_fixture()
+        device = driver.device
+        with patch('deploy.command', return_value={'returnValue':True,'result':'restored','native_restored_sha256':native_hash}), \
+                patch.object(device, 'compositor_stock', return_value=proof):
+            self.assertEqual(driver.clean_remove(identifier)['stage'], 'restart-required')
+            device.current_boot = '22222222-2222-2222-2222-222222222222'
+            self.assertEqual(driver.clean_remove(identifier)['stage'], 'verified-clean')
+
+        def stock(record):
+            if device.payload is None:
+                raise subprocess.CalledProcessError(1, ['/usr/bin/node', 'cleanup_tail.js', 'stock-proof'])
+            raise ValueError('live Home route changed')
+
+        device.payload = None
+        original = driver.ownership.status()
+        new = 'f' * 32
+        installed = {'returnValue': True, 'installed': 'com.cleanyourtv.root.preview', 'home_changed': False}
+        with patch.object(device, 'compositor_stock', side_effect=stock) as check, \
+                patch.object(device, 'preflight', side_effect=lambda *args, **kwargs: setattr(device, 'payload', payload)), \
+                patch.object(device, 'native_deploy', return_value=installed) as deploy:
+            self.assertTrue(driver.inspect(for_install=True)['can_install'])
+            check.assert_not_called()
+            with self.assertRaises(subprocess.CalledProcessError):
+                driver.inspect()
+            with patch.object(device, 'log'):
+                refused = driver.native_install(new, payload)
+            self.assertEqual(refused['code'], 'clean-handoff-refused')
+            self.assertEqual(driver.status(new)['state'], 'unknown')
+            deploy.assert_not_called()
+            self.assertEqual(driver.ownership.status(), original)
+            check.side_effect = None
+            check.return_value = proof
+            result = driver.native_install(new, payload)
+            self.assertEqual(result['state'], 'complete', result)
+            self.assertEqual(result['clean_predecessor'], identifier)
+            deploy.assert_called_once_with(payload)
+        self.assertFalse(present)
 
     def test_restored_native_restart_does_not_erase_new_routing(self):
         driver,identifier,root,updater,payload,calls,present,native_hash,proof=self.retained_native_fixture()

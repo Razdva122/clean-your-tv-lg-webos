@@ -1099,6 +1099,9 @@
   color: #ccd1db;
   font-weight: 500;
 }
+.settings-clock-format button[aria-pressed='true'] {
+  border-color: #b8d3ff;
+}
 .settings-pane .settings-layout + .settings-subheading {
   margin-top: 28px;
 }

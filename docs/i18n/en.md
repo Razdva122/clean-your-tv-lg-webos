@@ -125,7 +125,7 @@ If the installer cannot verify the requested full restart, save and attach its d
 
 Failed or interrupted setup offers recovery directly. If No-root setup cannot continue, confirm full removal once. Removal automatically retries transient connection loss and a busy CYTV worker up to three attempts. If Root access is required, choose **Connect using Root** for the same TV; verified Root cleanup also finishes its blocked No-root removal. A failed Root activation attempts to restore and verify LG Home without repeating activation. Cancellation with unfinished work keeps a diagnostic report and recovery actions. Emergency-stop state remains unchanged.
 
-After a removal connection error, open the connection details, check network access or choose an existing Root SSH key, then retry. The TV address, edition, port and host-key checks stay fixed. When reinstalling No-root, the wizard tries to stop Helper automatically. Use Home only if prompted, then confirm the recheck. Removal can finish without a restart when controls, startup, package/file absence and stopped processes are verified and no unresolved setup remains. If the installer requests a restart, complete it and retry. Input-service failure allows safe package cleanup, but success still requires verified shortcut cleanup.
+After a removal connection error, open the connection details, check network access or choose an existing Root SSH key, then retry. The TV address, edition, port and host-key checks stay fixed. When reinstalling No-root, the wizard tries to stop Helper automatically. Use Home only if prompted, then confirm the recheck. The installer waits for busy package operations and Clean Your TV processes before continuing No-root removal. If the installer requests a restart, complete it and retry. Input-service failure allows safe package cleanup, but success still requires verified shortcut cleanup.
 
 **Reinstall Root:** Choose **Set up my TV → Root** with the saved connection and confirm **Reinstall Root?**. The installer restores LG Home and fully removes Clean Your TV, including its updaters, Home Helper and saved preferences. After verified removal, it installs and activates the packages and Root runtime bundled with that installer. Other TV apps and existing root/SSH access are preserved. If removal stops or requests a full restart, finish it before starting setup again. **Uninstall Clean Your TV** alone never starts another installation.
 
@@ -155,6 +155,8 @@ After a removal connection error, open the connection details, check network acc
 ## Settings
 
 Use ↑ ↓ to choose a category and → or OK to enter it. ← returns to categories; Back returns there first, then closes settings. Within a section, returning from categories restores the last available control. In Columns, arrows follow the three-column grid. In Language, entry focuses the selected language.
+
+In **Settings → Your Home screen → Clock format**, choose **Automatic (TV locale)**, **12-hour**, or **24-hour**.
 
 If No-root cannot read Home status, choose Try again. The unavailable control does not mean Home routing is off. Under Wallpapers, upload a personal image from a phone or CYTV; quality and dimming appear when a wallpaper is available. Removing a personal wallpaper asks for confirmation; Cancel keeps it.
 

@@ -1,5 +1,6 @@
 """Read the existing Root Home contract before preparing new runtime/packages."""
 import re
+import shlex
 
 from .errors import UserError, TVCommandError, TVRejected
 
@@ -13,7 +14,7 @@ COMPOSITOR_FAILURES = (
     'c1-probe-failed', 'system-info-request-failed', 'system-info-invalid',
     'keyfilters-request-failed', 'keyfilters-not-configured', 'keyfilters-incompatible', 'keyfilters-service-absent',
     'native-home-request-failed',
-    'native-home-unavailable', 'native-home-incompatible',
+    'native-home-unavailable', 'native-home-incompatible', 'native-home-script',
 )
 KEYFILTER_PROBE_STATES = ('timeout', 'rejected', 'unconfirmed', 'invalid-reply', 'not-configured',
                           'incompatible', 'readable', 'service-absent')
@@ -33,6 +34,13 @@ def keyfilter_probe(info, state, code=None):
 class RootCapabilityError(UserError):
     def __init__(self, message='Required Root Home interfaces could not be verified. Setup stopped; keep recovery data and save the report.'):
         super().__init__(message, reason_code='root-home-interfaces')
+
+
+class NativeHomeScriptError(RootCapabilityError):
+    def __init__(self):
+        from .failure_help import NATIVE_HOME_SCRIPT
+        super().__init__(NATIVE_HOME_SCRIPT[1])
+        self.reason_code = 'native-home-script'
 
 
 class NoRootAlternativeError(RootCapabilityError):
@@ -101,6 +109,105 @@ printf '\nCYTV_HOME_FS\n'
 stat -f -c '%t' "$home" 2>/dev/null || printf 'unknown\n'
 """
 
+NATIVE_HOME_MOUNT_STATES = (
+    'absent', 'file-mount', 'stacked-file-mounts', 'file-and-parent-mounts',
+    'parent-overlay', 'parent-mount', 'multiple-parent-mounts', 'unknown',
+)
+NATIVE_HOME_MOUNT_AWK = """'
+    {
+        if (NR > 8192) { invalid = 1; exit }
+        for (sep = 7; sep <= NF && $sep != "-"; sep++) {}
+        if (sep + 3 != NF || $1 !~ /^[0-9]+$/ || $2 !~ /^[0-9]+$/ || substr($5, 1, 1) != "/") {
+            invalid = 1
+            exit
+        }
+        if ($5 == "/usr/bin/com.webos.app.home") {
+            files++
+            row = $0
+            file_parent = $2
+            for (i = 7; i < sep; i++)
+                if ($i ~ /^shared:/) shared = 1
+        }
+        if ($5 == "/") {
+            roots++
+            root_id = $1
+            for (i = 7; i < sep; i++)
+                if ($i ~ /^shared:/) shared = 1
+            if ($(sep + 1) == "squashfs" && $6 ~ /(^|,)ro(,|$)/ &&
+                $(sep + 3) ~ /(^|,)ro(,|$)/) stock_root = 1
+        }
+        if ($5 == "/usr" || $5 == "/usr/bin") {
+            parents++
+            if ($(sep + 1) == "overlay") overlay = 1
+        }
+    }
+    END {
+        if (mode == "snapshot" || mode == "preview") {
+            if (invalid || roots != 1 || files != 1 || file_parent != root_id || parents || shared) exit 1
+            if (mode == "preview") sub(/^[0-9]+ +[0-9]+ +/, "", row)
+            print row
+        }
+        else if (mode == "stock") {
+            if (invalid || roots != 1 || stock_root != 1 || files || parents) exit 1
+        }
+        else if (invalid || !NR) print "unknown"
+        else if (files > 1) print "stacked-file-mounts"
+        else if (files && parents) print "file-and-parent-mounts"
+        else if (files) print "file-mount"
+        else if (parents > 1) print "multiple-parent-mounts"
+        else if (overlay) print "parent-overlay"
+        else if (parents) print "parent-mount"
+        else print "absent"
+    }'"""
+NATIVE_HOME_MOUNT_PROBE = 'LC_ALL=C awk ' + NATIVE_HOME_MOUNT_AWK + ' /proc/self/mountinfo'
+NATIVE_HOME_MOUNT_SNAPSHOT = 'LC_ALL=C awk -v mode=snapshot ' + NATIVE_HOME_MOUNT_AWK + ' /proc/self/mountinfo'
+NATIVE_HOME_STOCK_MOUNT = 'LC_ALL=C awk -v mode=stock ' + NATIVE_HOME_MOUNT_AWK + ' /proc/self/mountinfo'
+NATIVE_HOME_PATH = '/usr/bin/com.webos.app.home'
+RESTORE_NATIVE_HOME = 'Restore LG Home for Root setup?'
+
+
+def restore_native_home(remote, mount_state, confirm):
+    """Inspect the covered Home in a private mount namespace before restoring it."""
+    if mount_state != 'file-mount':
+        return False
+    home = NATIVE_HOME_PATH
+    readback = (f'{NATIVE_HOME_STOCK_MOUNT}\n'
+                f"sha256sum {home} | awk '{{print $1}}'\n"
+                + NATIVE_HEADERS)
+    try:
+        snapshot = remote.run(NATIVE_HOME_MOUNT_SNAPSHOT, timeout=5).strip()
+        fields = snapshot.split()
+        if len(snapshot) > 2048 or '\n' in snapshot or len(fields) < 10 or fields[4] != home:
+            return False
+        unchanged = f'test "$({NATIVE_HOME_MOUNT_SNAPSHOT})" = {shlex.quote(snapshot)}'
+        script = f'''test "$(od -An -v -tu1 -N2 {home} | awk '{{print $1, $2}}')" = '35 33' '''
+        regular = f'test ! -L /usr && test ! -L /usr/bin && test ! -L {home} && test -f {home}'
+        uncover = f'{regular}\n{script}\numount {home}\n'
+        # A cloned namespace can assign new mount IDs to the same filesystems.
+        preview_snapshot = NATIVE_HOME_MOUNT_SNAPSHOT.replace('mode=snapshot', 'mode=preview')
+        mount_identity = re.sub(r'^[0-9]+ +[0-9]+ +', '', snapshot)
+        preview_guard = f'test "$({preview_snapshot})" = {shlex.quote(mount_identity)}'
+        preview_command = 'unshare --mount --propagation private /bin/sh -c ' + shlex.quote(
+            f'set -e\n{preview_guard}\n{uncover}{readback}')
+        preview = remote.run(preview_command, timeout=15)
+        digest, _, headers = preview.partition('\n')
+        if not re.fullmatch(r'[0-9a-f]{64}', digest) or not native_headers_valid(headers):
+            return False
+    except (UserError, OSError, TimeoutError):
+        return False
+    if not confirm():
+        return False
+
+    # Match the ELF fingerprint from the private preview before reporting success.
+    verify_digest = f"""test "$(sha256sum {home} | awk '{{print $1}}')" = {digest}\n"""
+    try:
+        reply = remote.run(f'set -e\n{unchanged}\n{uncover}{verify_digest}{readback}', timeout=15)
+    except (UserError, OSError, TimeoutError) as error:
+        raise UserError('Root operation was not confirmed.', reason_code='root-operation-unconfirmed') from error
+    if reply != preview:
+        raise UserError('Root operation was not confirmed.', reason_code='root-operation-unconfirmed')
+    return True
+
 
 def arm32_elf(dump):
     fields = dump.split()
@@ -127,23 +234,31 @@ def c1_device(remote, info=None):
 
 
 def native_headers_valid(result, info=None):
+    return native_header_failure(result, info) is None
+
+
+def native_header_failure(result, info=None):
     if not isinstance(result,str) or len(result)>2048:
-        return False
+        return 'native-home-incompatible'
     metadata, _, headers = result.partition('\n')
     meta = re.fullmatch(r'(0|1001) 1 ([0-7]{3,4}) ([0-9]{1,10})', metadata)
     if not meta or not 52 <= int(meta[3]) <= 16*1024*1024:
-        return False
+        return 'native-home-incompatible'
     mode = int(meta[2],8)
     shell, separator, home = headers.partition('CYTV_HOME_ELF')
     home, filesystem_marker, filesystem = home.partition('CYTV_HOME_FS')
     # UID 1001 is a vendor owner only on an immutable SquashFS image.
     if meta[1] == '1001' and (not filesystem_marker or filesystem.strip() != '73717368'):
-        return False
+        return 'native-home-incompatible'
     if not mode & 0o111 or mode & 0o7022:
         if info is not None:
             info['root_native_home_mode'] = format(mode, '04o')
-        return False
-    return bool(separator and arm32_elf(shell) and arm32_elf(home))
+        return 'native-home-incompatible'
+    if not separator or not arm32_elf(shell):
+        return 'native-home-incompatible'
+    if home.split()[:2] == ['35', '33']:
+        return 'native-home-script'
+    return None if arm32_elf(home) else 'native-home-incompatible'
 
 
 def compositor_failure(remote, info=None):
@@ -207,7 +322,14 @@ def compositor_failure(remote, info=None):
         return 'native-home-request-failed'
     except Exception:
         return 'native-home-request-failed'
-    return None if native_headers_valid(headers, info) else 'native-home-incompatible'
+    failure = native_header_failure(headers, info)
+    if failure == 'native-home-script' and info is not None:
+        try:
+            mount = remote.run(NATIVE_HOME_MOUNT_PROBE, timeout=5).strip()
+        except Exception:
+            mount = 'unknown'
+        info['root_native_home_mount'] = mount if mount in NATIVE_HOME_MOUNT_STATES else 'unknown'
+    return failure
 
 
 def verify(remote, checklist, info, allow_c1=False, allow_compositor=False):
@@ -217,6 +339,7 @@ def verify(remote, checklist, info, allow_c1=False, allow_compositor=False):
     info.pop('root_keyfilters_probe', None)
     info.pop('root_ribbon_probe', None)
     info.pop('root_native_home_mode', None)
+    info.pop('root_native_home_mount', None)
     reasons = info['root_capabilities'] = dict.fromkeys(CALLS, 'not-checked')
     requirements = info.setdefault('root_requirements', {})
     codes = info['root_capability_codes'] = {}
@@ -272,6 +395,10 @@ def verify(remote, checklist, info, allow_c1=False, allow_compositor=False):
             if failure is not None:
                 info['root_compositor_failure'] = failure
             requirements[name] = 'fail'
+            if failure == 'native-home-script':
+                error = NativeHomeScriptError()
+                checklist.update(name, 'fail', str(error))
+                raise error
             if failure == 'native-home-unavailable':
                 checklist.update(name, 'fail', NATIVE_HOME_UNAVAILABLE_MESSAGE)
                 raise NoRootAlternativeError(NATIVE_HOME_UNAVAILABLE_MESSAGE)

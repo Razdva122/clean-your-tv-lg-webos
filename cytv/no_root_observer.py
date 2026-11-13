@@ -970,6 +970,18 @@ def observe(installer, pending):
     if ready and plan_is_configured(value,result):
         try:configuration_readback(installer,value)
         except (RuntimeError,ValueError,KeyError):ready=False;reason='original-readback-unverified'
+    if (ready and value['plan']['action'] == 'install' and result['reservation'] == 'active'
+            and any(slot['submission'] == 'prepared' for slot in result['slots'])):
+        try:
+            invoke(installer.remote, value['plan'], 'artifacts')
+        except UserError as error:
+            details = getattr(error, 'no_root_observer', {})
+            # Prepare can attach before creating staging and submitting any slot.
+            if not (details.get('exception_code') == 'ENOENT'
+                    and details.get('storage_area') == 'public-staging'
+                    and all(slot['submission'] == 'prepared' for slot in result['slots'])):
+                ready = False
+                reason = 'original-staging-unverified'
     return dict(device={'observer':result},pending=pending,reconciled=None,can_resume_root_setup=False,
                 no_root_ready=ready,no_root_reason=reason)
 

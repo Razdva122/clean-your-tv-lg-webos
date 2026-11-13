@@ -38,6 +38,7 @@ ROOT_LAUNCHER_FILES = {
 ICON_FILES = {path.name for path in (ROOT / 'preview/icons').glob('*.svg')}
 REFERENCE_FILES = {'reference-apps/' + str(path.relative_to(ROOT / 'preview/reference-apps'))
                    for path in (ROOT / 'preview/reference-apps').rglob('*') if path.is_file()}
+THEME_CARD_FILES = {'theme-cards/' + path.name for path in (ROOT / 'preview/theme-cards').glob('*.jpg')}
 
 
 ROOT_LAUNCHER_FILES.update(['appinfo.json'] + THEME_FILES)
@@ -63,7 +64,7 @@ def revision():
     files += list((ROOT / 'showcase/registry').glob('*.json'))
     files += [ROOT / 'showcase/order.json']
     files += [ROOT / 'preview/icons' / name for name in sorted(ICON_FILES)]
-    files += [ROOT / 'preview' / name for name in sorted(REFERENCE_FILES)]
+    files += [ROOT / 'preview' / name for name in sorted(REFERENCE_FILES | THEME_CARD_FILES)]
     stamps = []
     for file in files:
         try:
@@ -118,7 +119,7 @@ def export_site(destination):
         else:
             shutil.copyfile(ROOT / 'launcher' / name, target)
     (destination / 'launcher/apps.js').write_text('window.TV_APPS = ' + json.dumps(inventory()) + ';\n', encoding='utf-8')
-    for name in ['bridge.js', 'themes.js', 'presentation.js', 'icons/SOURCES.txt', 'icons/LICENSE-LUCIDE.txt'] + ['icons/' + name for name in sorted(ICON_FILES)] + sorted(REFERENCE_FILES):
+    for name in ['bridge.js', 'themes.js', 'presentation.js', 'icons/SOURCES.txt', 'icons/LICENSE-LUCIDE.txt'] + ['icons/' + name for name in sorted(ICON_FILES)] + sorted(REFERENCE_FILES | THEME_CARD_FILES):
         target = destination / 'preview' / name
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(ROOT / 'preview' / name, target)
@@ -159,7 +160,7 @@ class Handler(BaseHTTPRequestHandler):
             file = ROOT / 'preview/index.html'
         elif path in ('/preview/bridge.js', '/preview/themes.js', '/preview/presentation.js', '/preview/live-reload.js', '/preview/settings.html', '/preview/update-overflow.html'):
             file = ROOT / path.lstrip('/')
-        elif path.startswith('/preview/') and path[len('/preview/'):] in REFERENCE_FILES:
+        elif path.startswith('/preview/') and path[len('/preview/'):] in REFERENCE_FILES | THEME_CARD_FILES:
             file = ROOT / path.lstrip('/')
         elif path.startswith('/preview/icons/') and path[len('/preview/icons/'):] in ICON_FILES:
             file = ROOT / path.lstrip('/')

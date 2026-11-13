@@ -11,6 +11,7 @@ import re
 from pathlib import Path
 import subprocess
 import sys
+from time import monotonic, sleep
 
 from installation import classify, device_snapshot, read_journal, _optional_record
 from updater.package import safe_bytes, inspect_package, verify_payload, members
@@ -651,8 +652,6 @@ class LocalDevice:
                     record['cleanup_boot_id']=current_boot
                     record.pop('cleanup_verified_boot_id',None);save(record['stage'])
                 restarted=current_boot!=record['cleanup_boot_id']
-            if record['stage']=='restart-required' and not restarted:
-                return {'removed':False,'verified_clean':False,'restart_required':True}
             self.clean_quiescent(record)
             private=self.shared_cleanup('inventory',record)
             record['cleanup_staging_ids']=private.get('staging_ids',[])
@@ -809,13 +808,23 @@ class LocalDevice:
             processes_stopped = True
             try:
                 self.shared_cleanup('sweep', record)
-                try:
-                    self.clean_quiescent(record, all_processes=True, same_boot=not restarted)
-                    self.retire_clean_private(record)
-                except ValueError as error:
-                    if restarted or error.args != ('live_original_worker',):
-                        raise
-                    processes_stopped = False
+                deadline = monotonic() + 5
+                while True:
+                    try:
+                        self.clean_quiescent(record, all_processes=True, same_boot=not restarted)
+                    except ValueError as error:
+                        if error.args != ('live_original_worker',):
+                            raise
+                        remaining = deadline - monotonic()
+                        if remaining <= 0:
+                            if restarted:
+                                raise
+                            processes_stopped = False
+                            break
+                        sleep(min(.25, remaining))
+                    else:
+                        self.retire_clean_private(record)
+                        break
             except Exception as error:
                 if package_error is not None:
                     raise package_error from error
@@ -973,7 +982,7 @@ class LocalDevice:
         driver=Path(argv[2]);stage=driver.parent
         if (driver.name!='install_driver.py' or stage.parent!=TEMP
                 or not re.fullmatch(r'cytv-coordinator-[a-f0-9]{32}',stage.name)):return False
-        readonly=argv[3:]==['inspect']
+        readonly=argv[3:] in (['inspect'], ['inspect', '--for-install'])
         if (len(argv) in (6,7) and argv[3:5]==['status','--operation']
                 and re.fullmatch(r'[a-f0-9]{32}',argv[5])
                 and (len(argv)==6 or argv[6]=='--verify-current')):readonly=True
@@ -1236,7 +1245,7 @@ class LocalDevice:
             return False
         except (OSError,ValueError,KeyError,TypeError):return False
 
-    def verify_clean(self, record):
+    def verify_clean(self, record, *, check_routes=True):
         from clean_removal import verified_restart
         if record.get('cleanup_without_restart') is not True and not verified_restart(record):
             raise ValueError('restart_required')
@@ -1245,11 +1254,12 @@ class LocalDevice:
         from clean_removal import APPS, routes
         if self.apps().intersection(APPS):raise ValueError('project_apps_remain')
         for app in APPS:self.absent(app)
-        current_routes=routes(self,record)
-        if current_routes!=record.get('routes'):
-            if current_routes!={'mode':'never-applied'}:raise ValueError('restored_routes_changed')
-            # Upgrade older pre-activation readbacks only with fresh no-effect proof.
-            record['routes']=current_routes
+        if check_routes:
+            current_routes=routes(self,record)
+            if current_routes!=record.get('routes'):
+                if current_routes!={'mode':'never-applied'}:raise ValueError('restored_routes_changed')
+                # Upgrade older pre-activation readbacks only with fresh no-effect proof.
+                record['routes']=current_routes
         for name in ('50-clean-your-tv-root','51-clean-your-tv-root-updater','52-clean-your-tv-system-updater'):
             if os.path.lexists(INIT/name):raise ValueError('startup_remains')
         for name in ('/var/luna-service2/manifests.d/com.cleanyourtv.root.preview.recovery.json',

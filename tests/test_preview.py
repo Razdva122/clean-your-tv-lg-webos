@@ -24,7 +24,7 @@ class PreviewTest(unittest.TestCase):
         spec.loader.exec_module(preview)
         data = preview.inventory()
         metadata = json.loads((ROOT / 'preview/reference-apps/metadata.json').read_text())
-        expected_ids = ['netflix', 'youtube.leanback.v4', 'com.apple.appletv',
+        expected_ids = ['com.beb.plxnative', 'netflix', 'youtube.leanback.v4', 'com.apple.appletv',
                         'com.apple.applemusic', 'tv.twitch.tv.starshot.lg',
                         'com.emby.app', 'cdp-30', 'org.jellyfin.webos',
                         'mgg4.5.channelplus', 'com.webos.app.browser']
@@ -100,6 +100,10 @@ class PreviewTest(unittest.TestCase):
             themes = json.loads((output / 'preview/themes.json').read_bytes())
             catalog = (ROOT / 'launcher/theme-catalog.json').read_bytes()
             self.assertEqual(themes['themes'], json.loads(catalog)['themes'])
+            self.assertEqual(set(themes['cards']), {theme['id'] for theme in themes['themes']})
+            for card in themes['cards'].values():
+                self.assertEqual((output / 'preview' / card).read_bytes(),
+                                 (ROOT / 'preview' / card).read_bytes())
             self.assertLess((output / 'preview/themes.json').stat().st_size, 32768,
                             'initial catalogue must not embed theme assets')
             self.assertTrue(themes['packages'])
@@ -165,13 +169,13 @@ class PreviewTest(unittest.TestCase):
             self.assertIn('root-settings.js', root)
             self.assertNotIn('native-bootstrap.js', root)
             self.assertNotIn('profile-bootstrap.js', root)
-            self.assertEqual(json.loads(get('/root-launcher/apps.js').removeprefix('window.TV_APPS = ').rstrip(';\n'))['apps'][0]['id'], 'netflix')
+            self.assertEqual(json.loads(get('/root-launcher/apps.js').removeprefix('window.TV_APPS = ').rstrip(';\n'))['apps'][0]['id'], 'com.beb.plxnative')
             page = get('/launcher/index.html')
             self.assertLess(page.index('/preview/bridge.js'), page.index('profile-bootstrap.js'))
             self.assertEqual(get('/launcher/style.css'), (ROOT / 'launcher/style.css').read_text())
             apps = json.loads(get('/launcher/apps.js').removeprefix('window.TV_APPS = ').rstrip(';\n'))
             self.assertTrue(apps['referenceApps'])
-            self.assertEqual(len(apps['apps']), 10)
+            self.assertEqual(len(apps['apps']), 11)
             for app in apps['apps']:
                 self.assertTrue(app['icon'].startswith('data:image/png;base64,'))
             with urlopen(base + '/preview/reference-apps/icons/youtube.png') as response:
@@ -180,6 +184,10 @@ class PreviewTest(unittest.TestCase):
             catalog = json.loads(get('/preview/themes.json'))
             self.assertLess(len(json.dumps(catalog)), 32768)
             package_url = next(iter(catalog['packages'].values()))
+            card = catalog['cards']['builtin:classic']
+            with urlopen(base + '/preview/' + card) as response:
+                self.assertEqual(response.headers.get_content_type(), 'image/jpeg')
+                self.assertEqual(response.read(), (ROOT / 'preview' / card).read_bytes())
             self.assertEqual(json.loads(get('/preview/' + package_url))['schemaVersion'], 1)
             for invalid in ('0' * 64 + '.json', '../themes.json', 'unknown.json'):
                 with self.assertRaises(HTTPError) as error:

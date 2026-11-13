@@ -10,6 +10,31 @@
   },
   "apps": [
     {
+      "slug": "plxnative",
+      "id": "com.beb.plxnative",
+      "title": "PlxNative",
+      "version": "0.10.0",
+      "vendor": "beb",
+      "type": "native",
+      "iconColor": "#060606",
+      "source": {
+        "repository": "https://github.com/GLinnik21/plx-native",
+        "commit": "2f0431b16e9420e9a78f5c15015358deddc8e821",
+        "appInfo": "pkg/appinfo.json",
+        "icon": "pkg/largeIcon.png"
+      },
+      "icon": {
+        "field": "largeIcon",
+        "originalName": "largeIcon.png",
+        "mediaType": "image/png",
+        "width": 130,
+        "height": 130,
+        "path": "icons/plxnative.png",
+        "size": 9716,
+        "sha256": "dc169758d9bc7fa9de9a3b8ee9aca6c5e5772a68f04366bb03115ec2b5d6e514"
+      }
+    },
+    {
       "slug": "netflix",
       "id": "netflix",
       "title": "Netflix",

@@ -1,56 +1,63 @@
 {
   "schema": 1,
-  "version": "1.20.3",
+  "version": "1.20.4",
   "changes": [
     {
-      "pr": 598,
+      "pr": 605,
+      "issues": [],
+      "summary": "Feature PlxNative first in browser demos and previews"
+    },
+    {
+      "pr": 607,
       "issues": [
         529
       ],
-      "summary": "Finish verified No-root recovery without temporary IPKs"
+      "summary": "Simplify removal and wait for TV operations"
     },
     {
-      "pr": 600,
+      "pr": 609,
       "issues": [
-        101,
+        608
+      ],
+      "summary": "Add an independent Home clock format setting"
+    },
+    {
+      "pr": 611,
+      "issues": [
         519
       ],
-      "summary": "Add desktop SSH command diagnostics"
+      "summary": "Restore verified LG Home before Root setup"
     },
     {
-      "pr": 601,
+      "pr": 612,
       "issues": [
-        588
+        610
       ],
-      "summary": "Finish Root removal with retained updater receipts"
+      "summary": "Explain and diagnose No-root Debloat failures"
     },
     {
-      "pr": 602,
+      "pr": 613,
       "issues": [
-        588
-      ],
-      "summary": "Remove Root private state by component ownership"
-    },
-    {
-      "pr": 603,
-      "issues": [
+        152,
         389,
-        588
+        418
       ],
-      "summary": "Resume Root removal without repeating completed checks"
+      "summary": "Fix EF950V No-root removal and C1 reinstall"
     },
     {
-      "pr": 604,
-      "issues": [],
-      "summary": "Finish No-root removal after a transient stop failure"
+      "pr": 614,
+      "issues": [
+        529
+      ],
+      "summary": "Check No-root IPK staging before resuming package installation"
     }
   ],
   "excluded": [],
-  "acceptance": "Project LG OLED55C3RLA, firmware 43.21.71, webOS 11.2.0. Exact macOS ARM64 installer and signed Root QA bytes verified. Signed Root update, Magic Remote controls/audio/emergency exit, ordinary retained rollback, Root and No-root fresh installation and full removal with verified restart passed. Original package versions and LG Home routing restored; one captured input label differed after baseline reinstall. Original reporter states remain unverified on hardware. See docs/history/2026-11-13-release-1.20.3-rc-verification.md.",
+  "acceptance": "Project LG OLED55C3RLA firmware 43.21.71, SDK 11.2.0. Exact macOS Apple Silicon installer passed Root and No-root installation, removal and Home routing. Signed Root update and all three rollback components passed with the original profile preserved. Physical remote and No-root clock formats passed. Restored original device state. Artifact hashes and coverage limits: docs/history/2026-11-13-release-1.20.4-rc-verification.md.",
   "build": {
-    "run_id": 43405375772,
+    "run_id": 43454675248,
     "attempt": 1,
-    "source": "09ef047afeb44ab5a2cda2544c2b18c70fc8ed8e"
+    "source": "58ceffd04ba3596f65f309b5ddb04e5ad68e5c4e"
   },
-  "acceptance_build": "43405375772:1"
+  "acceptance_build": "43454675248:1"
 }

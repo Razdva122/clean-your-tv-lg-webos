@@ -660,7 +660,8 @@ const CURVE = 'cubic-bezier(0.2, 0.8, 0.2, 1)';
         await page.emulateMedia({ reducedMotion: 'no-preference' });
         await page.evaluate(() => HomeLayoutState.setColumns(null));
 
-        // 12-hour languages drop the leading zero; 24-hour languages keep it.
+        // Explicit clock formats work independently of the UI language.
+        await page.evaluate(() => HomeI18n.setClockFormat('12h'));
         assert.equal(
           await page.evaluate(() =>
             HomeI18n.formatTime(new Date(2026, 10, 1, 18, 5))
@@ -673,9 +674,7 @@ const CURVE = 'cubic-bezier(0.2, 0.8, 0.2, 1)';
           ),
           '9:05 AM'
         );
-        await page.evaluate(() =>
-          localStorage.setItem('tvhome.language', 'de')
-        );
+        await page.evaluate(() => HomeI18n.setClockFormat('24h'));
         await page.reload();
         await page.locator('#tiles .focused').waitFor();
         assert.deepEqual(
@@ -685,7 +684,6 @@ const CURVE = 'cubic-bezier(0.2, 0.8, 0.2, 1)';
           ]),
           ['18:05', '06:05']
         );
-        await page.evaluate(() => localStorage.removeItem('tvhome.language'));
         assert.deepEqual(errors, [], 'renderer errors');
         console.log(
           'PASS focus motion, press feedback, title crossfade and clock: ' +

@@ -479,13 +479,24 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                 if profile['edition'] == 'root' and not resume:
                     installer.select_graphics()
                     phase = 'inspect-installation'
-                    from .root_capabilities import NoRootAlternativeError, RootCapabilityError
+                    from .root_capabilities import (
+                        NativeHomeScriptError, NoRootAlternativeError, RootCapabilityError,
+                        RESTORE_NATIVE_HOME, restore_native_home,
+                    )
                     from .root_runtime import offer
+                    restored_home = False
                     try:
                         if replacing_activation:
                             reinstall = 'installed'
                         else:
                             try:
+                                installer.preflight(install=True, home_interfaces=True)
+                            except NativeHomeScriptError:
+                                if args.non_interactive or not restore_native_home(
+                                        remote, tv_info.get('root_native_home_mount'),
+                                        lambda: prompts.confirm(RESTORE_NATIVE_HOME, ask, write)):
+                                    raise
+                                restored_home = True
                                 installer.preflight(install=True, home_interfaces=True)
                             except UserError as error:
                                 if (error.reason_code != 'root-requirements' or profile.get('root_variant')
@@ -498,6 +509,8 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                                     installer.select_graphics()
                                     installer.preflight(install=True, home_interfaces=True)
                     except RootCapabilityError as error:
+                        if restored_home or isinstance(error, NativeHomeScriptError):
+                            raise
                         if profile.get('root_variant') != BETA and not isinstance(error, NoRootAlternativeError):
                             raise
                         if args.migrate_home:
@@ -618,7 +631,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                 if not args.non_interactive and (not args.yes or write.frontend != 'console'):
                     phase = 'debloat'
                     try:
-                        debloat.run(installer, ask, write)
+                        debloat.run(installer, ask, write, diagnostic=tv_info.setdefault('debloat', {}))
                         phase = 'configure-home'
                         setup = install_settings.collect(profile, ask, write,
                             current=install_settings.read_current(installer) if write.frontend == 'desktop' else None)

@@ -27,7 +27,7 @@ LG screens or obtain root access.
 
 ![Classic menu with reference app icons](docs/launcher-classic.jpg)
 
-*Classic, the default built-in theme, shown in the browser preview. Reference apps are not bundled; TV functions are simulated.*
+*Classic in the browser preview, featuring [PlxNative](https://github.com/GLinnik21/plx-native) in the first slot. TV functions are simulated.*
 
 ## Themes
 
@@ -55,7 +55,7 @@ and creating your own theme.
 ## Download and install
 
 <!-- release:downloads -->
-Current stable release: **[v1.20.3](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.20.3)** — [release notes](docs/RELEASE-1.20.3.md).
+Current stable release: **[v1.20.4](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.20.4)** — [release notes](docs/RELEASE-1.20.4.md).
 <!-- /release:downloads -->
 
 [![Download Windows x64 graphical installer — GUI ZIP](assets/brand/downloads/windows.svg)](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/latest/download/cytv-windows-x64-desktop.zip)
@@ -99,6 +99,14 @@ remote: [check requirements and known limits](docs/COMPATIBILITY.md) first.
 [Remote controls](docs/CONTROLS.md) · [Arrange apps](docs/APP-MANAGEMENT.md) ·
 [Update or remove](docs/MAINTENANCE.md)
 
+## Also for LG webOS
+
+Watch movies and shows from your Plex library on your LG TV with
+**PlxNative**, an unofficial Plex client with a responsive native
+interface and 4K Dolby Vision playback on compatible TVs.
+
+[Explore PlxNative →](https://github.com/GLinnik21/plx-native)
+
 <a id="candidate-install-root-from-the-tv"></a>
 <a id="developer-mode-auto-renewal--beta"></a>
 
@@ -135,12 +143,12 @@ For contributors: [build and technical references](docs/development/README.md),
 <!-- release:components -->
 | Component | Stable version |
 | --- | --- |
-| cytv installer | 0.20.3 |
-| Home | 1.18.2 |
+| cytv installer | 0.20.4 |
+| Home | 1.18.3 |
 | Home Helper | 0.8.4 |
-| Root edition | 0.19.3 |
-| Both edition Updaters | 0.5.14 |
-| Android installer / versionCode | 0.19.3 / 40 |
+| Root edition | 0.19.4 |
+| Both edition Updaters | 0.5.15 |
+| Android installer / versionCode | 0.19.4 / 41 |
 <!-- /release:components -->
 
 v1.15.0 fresh System Updater: 1.2.8 / protocol 1. v1.14.0 used 1.2.7. Existing supervisors stay pinned; installed 1.1.2 has no general replacement path. See the [delivery limits](docs/RELEASE-1.13.0.md).

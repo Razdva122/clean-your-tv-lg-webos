@@ -3,6 +3,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import shlex
 import shutil
 import subprocess
 import tempfile
@@ -91,6 +92,53 @@ sys.stdin.read()
 
 @unittest.skipIf(os.name=='nt','The TV observer uses POSIX process and filesystem primitives')
 class ObserverProcesses(unittest.TestCase):
+    def test_recovery_offers_confirmed_removal_when_remaining_package_has_unsafe_staging(self):
+        from types import SimpleNamespace
+        from unittest.mock import Mock, patch
+        from cytv.desktop import DesktopConsole
+        from cytv.recovery import recover
+        from cytv.state import target
+
+        with tempfile.TemporaryDirectory(dir=PROCESS_TMP) as root:
+            h = Harness(root)
+            h.prepare()
+            h.call('start', 0)
+            self.assertEqual(h.wait()['terminal'], 'success')
+            h.call('readback', 0)
+            stage = Path(h.config['public_root']) / ('cytv-' + h.plan['operation'])
+            pending = dict(action='install', stage='pending', recovery_protocol=observer.PROTOCOL,
+                           observer_operation=h.plan['operation'])
+
+            def run(command, **kwargs):
+                program, request = shlex.split(command)[-2:]
+                result = subprocess.run([h.runtime, '-e', program, request],
+                                        capture_output=True, text=True, check=True)
+                return result.stdout
+
+            installer = SimpleNamespace(
+                remote=SimpleNamespace(run=run), profile=target('192.0.2.10', 'no-root'),
+                store=SimpleNamespace(pending=lambda profile: pending), tv_info={},
+                continue_no_root=Mock(), uninstall_project=Mock(return_value={'removed': True, 'verified_clean': True}))
+            installer.observe_recovery = lambda: observer.observe(installer, pending)
+            write = DesktopConsole(lambda kind, value: None)
+            with patch.multiple(observer, ROOT=h.config['root'], PUBLIC_ROOT=h.config['public_root']), \
+                 patch.object(observer, 'capsule', return_value={'plan': h.plan}), \
+                 patch.object(observer, 'readback'):
+                self.assertTrue(installer.observe_recovery()['no_root_ready'])
+                stage.chmod(0o775)
+                observation = installer.observe_recovery()
+                self.assertFalse(observation['no_root_ready'])
+                self.assertEqual(observation['no_root_reason'], 'original-staging-unverified')
+                for answer in ('n', 'y'):
+                    ask = Mock(side_effect=('y', answer))
+                    recover(installer, ask, write)
+                    self.assertEqual([call.args[0].split(' [y/N]')[0] for call in ask.call_args_list],
+                                     ['Check recovery options?', 'Remove remaining Clean Your TV packages?'])
+                    installer.continue_no_root.assert_not_called()
+                    self.assertEqual(installer.uninstall_project.call_count, int(answer == 'y'))
+                self.assertEqual(stage.stat().st_mode & 0o777, 0o775)
+                self.assertEqual((h.root / 'requests').read_text().splitlines(), [observer.APPS[0]])
+
     def test_sdk_staging_permissions_with_private_sticky_storage(self):
         with tempfile.TemporaryDirectory(dir=PROCESS_TMP) as root:
             h=Harness(root)
