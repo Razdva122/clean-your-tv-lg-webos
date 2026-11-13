@@ -112,7 +112,8 @@
         button.setAttribute('aria-label', item.title);
         button.setAttribute('aria-pressed', 'false');
         const image = document.createElement('img');
-        image.src = 'launcher/' + item.preview;
+        const card = data.cards?.[item.id];
+        image.src = card ? 'preview/' + card : 'launcher/' + item.preview;
         image.alt = '';
         image.width = 160;
         image.height = 90;
