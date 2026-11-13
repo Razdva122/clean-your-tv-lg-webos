@@ -225,7 +225,7 @@ class DesktopRecoveryTests(unittest.TestCase):
         w.receive('done', 0)
         self.assertEqual(w.title.text(), 'Removal is not finished yet.')
         self.assertEqual(w.badge.text(), w.title.text())
-        self.assertIn('Removal could not be confirmed.', w.subtitle.text())
+        self.assertIn('Removal could not be verified.', w.subtitle.text())
         w.receive('recovery-plan', {'state':'waiting','disposition':'clean-removal',
                                   'summary':'Removal has been requested.',
                                   'next_step':'Connect to the TV to continue cleanup.'})
@@ -292,7 +292,7 @@ class DesktopRecoveryTests(unittest.TestCase):
         self.assertIsNot(w.recovery_plan.get('restart_required'),True)
         self.assertIsNone(self.button(w,'Try again'))
 
-    def test_cleanup_retry_rechecks_same_goal_even_with_old_advisory_actions(self):
+    def test_cleanup_reviews_recovery_even_with_old_advisory_actions(self):
         def runner(argv, **kwargs):
             write = kwargs['write']
             write.recovery(self.profile)
@@ -309,12 +309,14 @@ class DesktopRecoveryTests(unittest.TestCase):
         self.assertNotEqual(w.title.property('state'), 'error')
         self.assertIn('Verifying removal…', w.subtitle.text())
         self.assertIn('Final cleanup could not be verified.', w.subtitle.text())
-        self.assertIsNotNone(self.button(w, 'Try again'))
+        self.assertIsNone(self.button(w, 'Try again'))
+        self.assertIsNotNone(self.button(w, 'Review recovery options'))
         w.recovery_plan['actions'] = ['retain-evidence']
         w.receive('done', 2)
-        self.assertIsNotNone(self.button(w, 'Try again'))
+        self.assertIsNone(self.button(w, 'Try again'))
+        self.assertIsNotNone(self.button(w, 'Review recovery options'))
 
-    def test_try_again_finishes_existing_root_private_cleanup(self):
+    def test_recovery_review_finishes_existing_root_private_cleanup(self):
         from tests.cytv.clean_removal_fixture import prepare
 
         outcomes = iter(('cleanup-check-failed', 'complete'))
@@ -329,10 +331,17 @@ class DesktopRecoveryTests(unittest.TestCase):
         self.assertIsNone(w.pending, 'An existing cleanup must not ask for approval again')
         self.assertEqual(w.title.text(), 'Finish Clean Your TV cleanup')
 
-        retry = self.button(w, 'Try again')
-        self.assertIsNotNone(retry)
-        retry.click()
-        self.pump(lambda: not w.running or w.pending is not None)
+        review = self.button(w, 'Review recovery options')
+        self.assertIsNotNone(review)
+        review.click()
+        self.pump(lambda: w.pending is not None)
+        self.assertIn('Check recovery options?', w.pending.label)
+        self.assertEqual(self.device_removals, [original['product_operation']])
+        w.submit('y')
+        self.pump(lambda: w.pending is not None and 'Continue removing' in w.pending.label)
+        self.assertEqual(self.device_removals, [original['product_operation']])
+        w.submit('y')
+        self.pump(lambda: not w.running)
 
         self.assertIsNone(w.pending)
         self.assertEqual(w.title.text(), 'Clean Your TV removal is verified.', w.content.toPlainText())
