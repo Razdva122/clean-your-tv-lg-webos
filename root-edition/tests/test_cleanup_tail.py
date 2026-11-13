@@ -155,7 +155,13 @@ class CleanupTail(unittest.TestCase):
                 self.assertNotEqual(reply.get('state'),'complete')
 
     def test_inert_system_staging_does_not_block_final_removal_or_recheck(self):
-        stage=self.base/'tmp'/('cytv-system-updater-'+'c'*32);stage.mkdir(mode=0o700)
+        self.check_inert_staging('system-updater')
+
+    def test_inert_product_staging_does_not_block_final_removal_or_recheck(self):
+        self.check_inert_staging('product')
+
+    def check_inert_staging(self, prefix):
+        stage=self.base/'tmp'/('cytv-'+prefix+'-'+'c'*32);stage.mkdir(mode=0o700)
         (stage/'unknown-diagnostic.txt').write_text('retain without execution')
         info=stage.stat()
         self.record['retained_temporary_stages']=[dict(path='/tmp/'+stage.name,dev=info.st_dev,ino=info.st_ino)]

@@ -1013,6 +1013,40 @@ class PartialDeviceRemoval(unittest.TestCase):
         self.assertTrue((root/'state/ssap.json').exists())
         self.assertTrue(any(name.startswith('remove-') for name in calls))
 
+    def test_interrupted_product_upload_does_not_strand_removal_after_restart(self):
+        import install_device
+        driver, identifier, _, _, _, calls, _ = self.fixture()
+        self.assertEqual(driver.clean_remove(identifier)['stage'], 'restart-required')
+        stage = install_device.TEMP / ('cytv-product-' + 'd' * 32)
+        stage.mkdir(mode=0o700)
+        (stage / 'root').mkdir(mode=0o700)
+        partial_file = stage / 'root' / 'release.json'
+        partial_file.write_text('incomplete upload')
+        driver.device.current_boot = '22222222-2222-2222-2222-222222222222'
+        # Model the released installer rejecting this incomplete upload before
+        # the Node handoff. The next installer reads that same durable receipt.
+        with patch.object(driver.device, 'retire_temporary_support', side_effect=ValueError('unclassified_support_stage')), \
+                patch.object(driver.device, 'log'):
+            stuck = driver.clean_remove(identifier)
+        self.assertEqual(stuck['stage'], 'private-cleanup')
+        self.assertEqual(stuck['cleanup_error'], 'cleanup-check-failed')
+        self.assertTrue(stuck['result']['restart_required'])
+        self.assertNotIn('private-cleanup', stuck['done'])
+
+        record = driver.clean_remove(identifier, intent=stuck['removal'], expected_lease=stuck['lease'])
+
+        self.assertEqual(record['stage'], 'verified-clean', record)
+        self.assertEqual(record['removal'], stuck['removal'])
+        self.assertTrue(record['result']['temporary_files_retained'])
+        self.assertEqual(calls.count('remove-com.cleanyourtv.root.preview'), 1)
+        self.assertEqual(partial_file.read_text(), 'incomplete upload')
+        self.assertTrue(driver.inspect()['can_install'])
+        process = install_device.PROC / '12345'
+        process.mkdir()
+        (process / 'cmdline').write_bytes(os.fsencode(partial_file) + b'\0')
+        with self.assertRaisesRegex(ValueError, 'live_original_worker'):
+            driver.device.verify_clean(record)
+
     def test_retained_inert_system_temp_does_not_block_clean_readback(self):
         import install_device
         driver,identifier,root,updater,payload,calls,present=self.fixture()
