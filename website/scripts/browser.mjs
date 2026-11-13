@@ -546,6 +546,21 @@ try {
     await page.getByRole('button', { name: edition, exact: true }).click();
     await frame.locator('#tiles .focused').waitFor();
     await page.locator('#previewThemes[aria-busy="false"]').waitFor();
+    assert.equal(
+      await frame
+        .locator('#tiles .item[data-app-id]')
+        .first()
+        .getAttribute('data-app-id'),
+      'com.beb.plxnative'
+    );
+    const cards = page.locator('#previewThemes img');
+    await cards.last().waitFor({ state: 'attached' });
+    await page.waitForFunction(() =>
+      [...document.querySelectorAll('#previewThemes img')].every(
+        (card) =>
+          card.src.includes('/preview/theme-cards/') && card.naturalWidth > 0
+      )
+    );
     await page
       .getByRole('button', { name: 'Liquid Glass', exact: true })
       .click();

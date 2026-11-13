@@ -146,7 +146,7 @@ function call(
     assert.equal(reply.returnValue, true);
     assert.equal(
       reply.apps.length,
-      10,
+      11,
       'reference inventory must not gain synthetic apps'
     );
     assert.deepEqual(reply.apps, context.window.TV_APPS.apps);

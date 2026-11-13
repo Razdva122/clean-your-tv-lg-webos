@@ -27,7 +27,7 @@ LG screens or obtain root access.
 
 ![Classic menu with reference app icons](docs/launcher-classic.jpg)
 
-*Classic, the default built-in theme, shown in the browser preview. Reference apps are not bundled; TV functions are simulated.*
+*Classic in the browser preview, featuring [PlxNative](https://github.com/GLinnik21/plx-native) in the first slot. TV functions are simulated.*
 
 ## Themes
 

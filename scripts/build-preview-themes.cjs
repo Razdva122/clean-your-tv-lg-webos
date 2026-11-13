@@ -9,6 +9,15 @@ const entries = loadRegistry(root).filter((e) => !e.record.availability);
 const themes = JSON.parse(
   fs.readFileSync(path.resolve(__dirname, '../launcher/theme-catalog.json'))
 ).themes;
+const cards = {};
+for (const theme of themes) {
+  const file =
+    'theme-cards/' +
+    theme.id.toLowerCase().replace(/[^a-z0-9-]/g, '-') +
+    '.jpg';
+  if (fs.existsSync(path.resolve(__dirname, '../preview', file)))
+    cards[theme.id] = file;
+}
 const packages = {};
 const mode = process.argv[2],
   argument = process.argv[3];
@@ -44,5 +53,5 @@ if (themes.some((t) => !t.builtin && !packages[t.id]))
 if (mode === '--package' && !requested)
   throw Error('Unknown reviewed theme package');
 process.stdout.write(
-  JSON.stringify(mode === '--package' ? requested : { themes, packages })
+  JSON.stringify(mode === '--package' ? requested : { themes, packages, cards })
 );
