@@ -333,9 +333,11 @@ def probe(*, removed_apps=None, retire_orphan=False):
     data=legacy.native_home()
     info=luna('luna://com.webos.service.tv.systemproperty/getSystemInfo',
               {'keys':['modelName','firmwareVersion','sdkVersion']})
+    known_c1=True
     try:
         value=legacy.admit(info,data)
     except ValueError:
+        known_c1=False
         import struct
         value={key:info.get(field) for key,field in (('model','modelName'),('firmware','firmwareVersion'),('webos','sdkVersion'))} if isinstance(info,dict) else {}
         candidate=dict(value,target_sha256='0'*64,target=dict(dev=0,ino=1,size=len(data),mtime_ns=0))
@@ -347,6 +349,10 @@ def probe(*, removed_apps=None, retire_orphan=False):
         chain = read_chain()
         remaining = reconcile(chain, STATE, False) if retire_orphan else chain
         require_generic_environment(remaining, removed_apps=removed_apps)
+    elif known_c1:
+        # CYTV prepends its Home handler on C1. Verify the factory chain and
+        # leave independent entries available for other keys and for Off.
+        require_generic_environment(removed_apps=(APP,))
     else:
         require_generic_environment()
     after=legacy.TARGET.stat()
@@ -464,7 +470,7 @@ def status(root=STATE, uid=0):
     chain=read_chain()
     clean=reconcile(chain,root,False)==chain
     value['stock_verified']=value['stock_verified'] and clean
-    value['healthy']=value['healthy'] and not clean
+    value['healthy']=value['healthy'] and bool(chain and chain[0]==filter_entry(root))
     value['filter_installed']=not clean
     value['routing_active']=value['healthy'] and not value['stopped']
     intent=read_intent(root,uid)

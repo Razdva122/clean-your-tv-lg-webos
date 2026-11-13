@@ -83,6 +83,15 @@ class RootGateTests(unittest.TestCase):
         self.assertEqual(self.installer.product_action.call_args.args[0],'native-install')
         self.assertNotIn('install',self.actions)
 
+    def test_rejected_clean_handoff_leaves_no_pending_install(self):
+        self.installer._native_clean_install=True
+        self.installer.upload_product=Mock(return_value='/tmp/cytv-product-'+'a'*32)
+        self.installer.product_action=Mock(return_value={'state':'recovery_required','code':'clean-handoff-refused'})
+        with self.assertRaisesRegex(UserError, 'Installation has not started'):
+            root_gate.install(self.installer,self.inventory)
+        self.assertIsNone(self.store.pending(self.profile))
+        self.assertEqual(self.actions,[])
+
     def action(self,action,**kwargs):
         self.actions.append((action,kwargs))
         if self.failure==action:raise RuntimeError('interrupted '+action)

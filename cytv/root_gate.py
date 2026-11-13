@@ -158,6 +158,9 @@ def install(installer, inventory, migrate=False, reinstall=None):
         operation=uuid.uuid4().hex
         installer.store.checkpoint(installer.profile,stage='setup',product_operation=operation,product_payload=stage)
         reply=installer.product_action('native-install',operation,stage)
+        if reply.get('code')=='clean-handoff-refused':
+            installer.store.finish(installer.profile)
+            raise UserError('The previous cleanup could not be verified. Installation has not started. Save the diagnostic report.',reason_code='clean-handoff-refused')
         if reply.get('state')!='complete':
             raise UserError('Previous operation is unresolved. Run cytv status or cytv restore; do not retry installation.',reason_code='pending-operation')
         result=reply.get('result')

@@ -110,7 +110,7 @@ class Coordinator:
             raise ValueError('unknown_product_operation')
         return value
 
-    def _clean_record(self, lease):
+    def _clean_record(self, lease, *, for_install_inspection=False):
         identifier=operation_id(lease['journal'][8:-5])
         record=_optional_record(self.store,'clean-removal-'+identifier)
         if (lease['journal']!='product-'+identifier+'.json' or lease['terminal']
@@ -122,7 +122,9 @@ class Coordinator:
                 or record.get('state')!='complete' or record.get('current') is not True
                 or record.get('result',{}).get('private_cleanup_verified') is not True):raise Busy()
         self.device.ownership=self.ownership
-        if self.device.verify_clean(record) is not True:raise Busy()
+        if for_install_inspection and isinstance(record.get('routes'),dict) and record['routes'].get('mode')=='stock-compositor':
+            if self.device.verify_clean(record, check_routes=False) is not True:raise Busy()
+        elif self.device.verify_clean(record) is not True:raise Busy()
         return record
 
     def _finish_clean(self, record, lease):
@@ -140,14 +142,16 @@ class Coordinator:
         self.ownership.stage(lease,'verified-clean')
         return record
 
-    def inspect(self):
+    def inspect(self, *, for_install=False):
         lease=self.ownership.status()
         if lease and lease['owner']=='clean-removal' and lease['stage']=='verified-clean':
             # Resume the same reservation only to acquire its original mutex.
             # Inspection never releases the durable old-worker fence.
             with self.ownership.operation('clean-removal',lease['journal'],resume=lease['id']) as current:
                 if current!=lease:raise Busy()
-                self._clean_record(current)
+                # Native install verifies live routing with its selected bundle
+                # before taking over this fence. This read has no such bundle.
+                self._clean_record(current, for_install_inspection=for_install)
                 return dict(state='fresh',reason='verified_clean_removal',can_install=True,
                             can_maintain=False,clean_removal_verified=True)
         return self.device.inspect()
@@ -160,7 +164,7 @@ class Coordinator:
                 return dict(restored=True,already_removed=True)
         return self.device.restore()
 
-    def _run(self, identifier, action, perform):
+    def _run(self, identifier, action, perform, *, native=False):
         identifier=operation_id(identifier)
         previous=self.status(identifier)
         if previous['state']!='unknown':
@@ -174,7 +178,15 @@ class Coordinator:
             if action=='install' and previous and previous['owner']=='clean-removal' and previous['stage']=='verified-clean':
                 old=previous['journal'][8:-5]
                 if old==identifier:raise Busy()
-                record=self._clean_record(previous)
+                try:
+                    record=self._clean_record(previous)
+                except Exception as error:
+                    if not native:raise
+                    # The check callback runs before the device lease changes.
+                    log_failure(self.device,error)
+                    raise _Recorded(dict(operation=identifier,action=action,stage='blocked',
+                        state='recovery_required',code='clean-handoff-refused',home_changed=False,
+                        failure=failure_summary(error))) from error
                 cleaned.append((previous,record))
                 return
             pending_journals('product',self.read)
@@ -229,7 +241,7 @@ class Coordinator:
         def perform(checkpoint):
             checkpoint('root-deploy')
             return self.device.native_deploy(payload)
-        return self._run(identifier,'install',perform)
+        return self._run(identifier,'install',perform,native=True)
 
     def install(self, identifier, payload, migrate=False, prepare_supervisor=False):
         operation_id(identifier)
@@ -746,11 +758,13 @@ def main():
     parser.add_argument('--migrate-packaged-home',action='store_true')
     parser.add_argument('--prepare-supervisor',action='store_true')
     parser.add_argument('--verify-current',action='store_true',help='Read current completion proof without replay')
+    parser.add_argument('--for-install',action='store_true',help=argparse.SUPPRESS)
     parser.add_argument('--resume',action='store_true',help='Explicitly continue the original verified request; never replay unknown submissions')
     parser.add_argument('--final-readback-only',action='store_true',help='Revalidate the final readback under the original lease; no package replay')
     parser.add_argument('--worker',action='store_true',help=argparse.SUPPRESS)
     parser.add_argument('--submission-parent',type=int,help=argparse.SUPPRESS)
     args=parser.parse_args()
+    if args.for_install and args.action!='inspect':parser.error('--for-install requires inspect')
     if args.final_readback_only and (not args.resume or args.action!='install'):
         parser.error('--final-readback-only requires install --resume')
     if args.action in ('install','native-install','remove','status','clean-remove','clean-status','clean-target'): operation_id(args.operation)
@@ -809,7 +823,7 @@ def main():
                     try:result['current']=device.validate_completion(result['action'],result.get('lease'))
                     except (OSError,ValueError,RuntimeError,KeyError):pass
         elif args.action=='inspect':
-            inspected=coordinator.inspect()
+            inspected=coordinator.inspect(for_install=True) if args.for_install else coordinator.inspect()
             result=dict(operation=None,stage='inspect',state=inspected['state'],code='inspected',installation=inspected)
             try:
                 active=ownership.status()

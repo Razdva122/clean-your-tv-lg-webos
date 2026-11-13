@@ -225,8 +225,14 @@ installerRoots.forEach(function(root){try{privateInstaller(root);visit(root,'ins
 // Only fixed project registration names. Existing foreign roles/routes are not
 // inferred to belong to this project merely because they reference an app.
 ['services.d','roles.d','client-permissions.d','api-permissions.d','manifests.d','groups.d'].forEach(function(folder){
- var dir='/var/luna-service2-dev/'+folder;if(!exists(dir))return;
- try{ancestry(dir);fs.readdirSync(dir).forEach(function(name){if(apps.concat(services).some(function(id){return ['.json','.service','.app.json','.api.json','.group.json','.groups.json','.manifest.json','.package.json','.permissions.json'].some(function(suffix){return name===id+suffix;});}))visit(dir+'/'+name,'registration '+name);});}catch(e){blocked('registrations '+folder,e);}
+ var dir='/var/luna-service2-dev/'+folder;
+ try{if(!exists(dir))return;ancestry(dir);}catch(e){blocked('registrations '+folder,e);return;}
+ // Developer Mode can search the registry without being allowed to list it.
+ apps.concat(services).forEach(function(id){
+  ['.json','.service','.app.json','.api.json','.group.json','.groups.json','.manifest.json','.package.json','.permissions.json'].forEach(function(suffix){
+   var name=id+suffix;visit(dir+'/'+name,'registration '+name);
+  });
+ });
 });
 // Inspect only the small IPK control member, never extract an archive or trust
 // the cytv-* directory prefix alone. Foreign payloads remain in place.
@@ -331,10 +337,22 @@ def _protected_package(row):
     return None
 
 
-def _check_access(value, defer_packages=False):
-    blocked = [row for row in value['blocked'] if not (defer_packages and _protected_package(row))]
+def _check_access(value, defer_packages=False, *, sweep=False):
+    blocked = [row for row in value['blocked'] if row.get('scope') != 'installer-staging'
+               and not (defer_packages and _protected_package(row))]
     if value['root_present'] or any(row.get('reason') == 'permission-denied' for row in blocked):
-        raise UserError(ROOT_MESSAGE, reason_code='root-access-required')
+        error = UserError(ROOT_MESSAGE, reason_code='root-access-required')
+        if sweep:
+            areas = ['root-location'] if value['root_present'] else []
+            for row in blocked:
+                if row.get('reason') != 'permission-denied':
+                    continue
+                scope = row['scope']
+                prefix, _, suffix = scope.partition(' ')
+                areas.append({'registration': 'ls2-registration', 'registrations': 'ls2-registry',
+                              'installer-private': 'installer-private', 'startup-service': 'service'}.get(prefix, suffix))
+            error.no_root_cleanup = no_root_cleanup_details({'action': 'sweep', 'blocked_areas': areas})
+        raise error
     if blocked:
         raise UserError('Some project paths changed. Close other installers and try again.')
 
@@ -664,13 +682,15 @@ def continue_removal(installer, expected_pending):
         _remove_package(installer, app)
     installer.progress('Removing private recovery data…')
     installer.store.checkpoint(installer.profile, stage='private-cleanup')
-    _check_access(_device(installer, 'sweep'))
+    swept = _device(installer, 'sweep')
+    _check_access(swept, sweep=True)
     if not restarted and pending.get('previous'):
         return require_restart(['prior-operation-unresolved'])
     installer.progress('Verifying removal…')
     final = _device(installer, 'inventory')
     _check_access(final)
-    if final['present'] or {app['id'] for app in installer.installed_apps()}.intersection(APPS):
+    if (any(scope != 'installer-staging' and not scope.startswith('installer-staging ') for scope in final['present'])
+            or {app['id'] for app in installer.installed_apps()}.intersection(APPS)):
         raise UserError('Some project files remain. Try again to finish removal.')
     if (not restarted or reused_restart) and _device(installer, 'idle').get('idle') is not True:
         if restarted:
@@ -686,9 +706,11 @@ def continue_removal(installer, expected_pending):
         else:
             installer.store.checkpoint(installer.profile, cleanup_boot_release_started=True)
         _device(installer, 'boot-retire' if restarted else 'boot-release', proof=proof)
-    installer.store.checkpoint(installer.profile, stage='verified-clean', removal_reason='removal-verified',
-                               result={'removed': True, 'verified_clean': True})
+    result = {'removed': True, 'verified_clean': True}
+    if final['present'] or final['blocked'] or swept['blocked']:
+        result['temporary_files_retained'] = True
+    installer.store.checkpoint(installer.profile, stage='verified-clean', removal_reason='removal-verified', result=result)
     from .root_no_root_handoff import release
     release(installer)
     installer.store.finish_clean_removal(installer.profile)
-    return {'removed': True, 'verified_clean': True}
+    return result

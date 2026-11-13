@@ -35,7 +35,7 @@ class RuntimeTests(unittest.TestCase):
                 observed=self.k.probe()
                 self.assertEqual(observed['target']['size'],4530960)
                 self.assertEqual(observed['target_sha256'],hashlib.sha256(content).hexdigest())
-                environment.assert_called_once_with()
+                environment.assert_called_once_with(removed_apps=(self.k.APP,))
             # Root-owned stock files retain admission without a filesystem exception.
             def root_attributes(fd):
                 value=attributes(fd); value.st_uid=0; return value
@@ -102,7 +102,7 @@ class RuntimeTests(unittest.TestCase):
             return real_secure(path,self.uid,*args,**kw)
         with patch.object(self.k,'STOCK_APPINFO',appinfo),patch.object(self.k,'MOUNTINFO',mountinfo),patch.object(self.k,'OTHER_HOME_STATE',(other,)),patch.object(self.k,'INPUT_BINDINGS',bindings),patch.object(self.k,'secure',side_effect=secure),patch.object(self.k,'vendor_script',side_effect=lambda path:secure(Path(path))),patch.object(self.k,'luna',return_value=missing),patch.object(self.k,'read_chain',return_value=[vendor]),patch.object(emergency_reader,'open_remote',side_effect=reader),patch.object(emergency_reader,'query',return_value=keys):
             self.k.require_generic_environment()
-            glasshouse = {'file': '/var/lib/glasshouse/remotekeys-filter.js', 'handler': 'handleGlasshouseKeys'}
+            glasshouse = {'file': '/var/lib/tvweb/remotekeys-filter.js', 'handler': 'handleGlasshouseKeys'}
             other_launcher = {'file': '/media/developer/other/systemUi.js', 'handler': 'handleSystemKeys'}
             mixed = [glasshouse, vendor, other_launcher]
             with self.assertRaisesRegex(ValueError, 'Stock Qt Home'):
@@ -113,7 +113,8 @@ class RuntimeTests(unittest.TestCase):
             # A separate, whole read-only system image is not a Home takeover.
             stock_mount='2 1 179:27 / /usr ro,relatime - squashfs /dev/mmcblk0p27 ro\n'
             from types import SimpleNamespace
-            with patch.object(self.k,'STOCK_APPINFO',Path('/usr/palm/applications/com.webos.app.home/appinfo.json')),patch.object(self.k.legacy,'TARGET',Path('/usr/bin/com.webos.app.home')),patch.object(self.k.os,'stat',return_value=SimpleNamespace(st_dev=os.makedev(179,27))):
+            # Darwin returns signed dev_t; the fixture models unsigned Linux IDs.
+            with patch.object(self.k,'STOCK_APPINFO',Path('/usr/palm/applications/com.webos.app.home/appinfo.json')),patch.object(self.k.legacy,'TARGET',Path('/usr/bin/com.webos.app.home')),patch.object(self.k.os,'stat',return_value=SimpleNamespace(st_dev=os.makedev(179,27) & 0xffffffff)):
                 mountinfo.write_text(stock_mount)
                 self.k.require_generic_environment()
                 for invalid in (
@@ -135,9 +136,9 @@ class RuntimeTests(unittest.TestCase):
                 bsp = '3 1 179:29 / /overlay/bsppart ro - squashfs /dev/mmcblk0p29 ro\n'
                 overlay = '2 1 0:34 / /usr rw - overlay overlay ro,lowerdir=/overlay/bsppart/bsp/usr:/usr\n'
                 devices = {
-                    '/usr/bin/com.webos.app.home': os.makedev(179, 27),
+                    '/usr/bin/com.webos.app.home': os.makedev(179, 27) & 0xffffffff,
                     '/usr/palm/applications/com.webos.app.home': os.makedev(0, 34),
-                    '/overlay/bsppart/bsp/usr': os.makedev(179, 29),
+                    '/overlay/bsppart/bsp/usr': os.makedev(179, 29) & 0xffffffff,
                 }
                 with patch.object(self.k.os, 'stat', side_effect=lambda path, **kw: SimpleNamespace(st_dev=devices[str(path)])), patch.object(self.k.legacy, 'trusted_directory') as trusted:
                     mountinfo.write_text(root + overlay + bsp)
@@ -162,7 +163,7 @@ class RuntimeTests(unittest.TestCase):
                             with self.assertRaisesRegex(ValueError, 'covered by a mount'):
                                 self.k.require_generic_environment()
                     mountinfo.write_text(root + overlay + bsp)
-                    devices['/overlay/bsppart/bsp/usr'] = os.makedev(179, 30)
+                    devices['/overlay/bsppart/bsp/usr'] = os.makedev(179, 30) & 0xffffffff
                     with self.assertRaisesRegex(ValueError, 'covered by a mount'):
                         self.k.require_generic_environment()
             mountinfo.write_text('1 0 0:1 / / rw - squashfs /dev/root ro\n')
@@ -313,6 +314,19 @@ class RuntimeTests(unittest.TestCase):
         self.assertEqual(self.k.reconcile([own]+foreign, self.root, False), foreign)
         for chain in ([dict(own, handler='changed')], [dict(own, extra=True)], [own, own]):
             with self.assertRaises(ValueError): self.k.reconcile(chain, self.root, False)
+
+    def test_c1_home_takes_precedence_and_off_restores_glasshouse_order(self):
+        self.prepare()
+        vendor = {'file':'/usr/lib/qt5/qml/KeyFilters/systemUi.js','handler':'handleSystemKeys'}
+        glasshouse = {'file':'/var/lib/tvweb/remotekeys-filter.js','handler':'handleGlasshouseKeys'}
+        original = [glasshouse, vendor]
+        chain = original.copy()
+        with patch.object(self.k,'read_chain',side_effect=lambda: chain.copy()), \
+                patch.object(self.k,'write_chain',side_effect=lambda value: chain.__setitem__(slice(None),value)):
+            self.k.change_chain(self.root,True,self.uid)
+            self.assertEqual(chain,[self.k.filter_entry(self.root), *original])
+            self.k.change_chain(self.root,False,self.uid)
+            self.assertEqual(chain,original)
         for chain in (None, {}, ['opaque'], [{'file':1,'handler':'x'}]):
             with self.assertRaises(ValueError): self.k.reconcile(chain, self.root, False)
 
@@ -335,6 +349,18 @@ class RuntimeTests(unittest.TestCase):
                 self.assertFalse(self.k.status(self.root,self.uid)['effective']['stock_verified'])
             with patch.object(self.k,'read_chain',return_value=[]):
                 self.assertTrue(self.k.status(self.root,self.uid)['effective']['stock_verified'])
+
+    def test_routing_status_requires_cytv_to_be_first(self):
+        self.prepare()
+        own = self.k.filter_entry(self.root)
+        foreign = {'file':'/var/lib/tvweb/remotekeys-filter.js','handler':'handleGlasshouseKeys'}
+        armed = dict(self.proof(), healthy=True, stopped=False, state='armed', guardian_pid=123, stock_verified=False)
+        with patch.object(self.k,'native',return_value=armed), patch.object(self.k,'verify_ready',return_value={}):
+            for chain, active in (([own,foreign], True), ([foreign,own], False)):
+                with patch.object(self.k,'read_chain',return_value=chain):
+                    effective = self.k.status(self.root,self.uid)['effective']
+                    self.assertTrue(effective['filter_installed'])
+                    self.assertIs(effective['routing_active'],active)
 
     def test_restore_stops_native_before_removing_filter(self):
         self.prepare(); calls=[]; chain=[self.k.filter_entry(self.root)]
@@ -515,7 +541,7 @@ class RuntimeTests(unittest.TestCase):
             target.chmod(0o700)
             observed=self.k.probe()
         self.assertEqual(observed['target']['size'],3)
-        environment.assert_called_once_with()
+        environment.assert_called_once_with(removed_apps=(self.k.APP,))
         self.assertEqual(observed['model'],self.admission['model'])
 
     def test_restore_clears_interrupted_prewrite_intent_after_absence_readback(self):
