@@ -762,7 +762,12 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                     diagnostics.save_result(write, store, args.command, profile, 'doctor-complete', tv_info, checks=checks.results, status=result)
             else:
                 phase = args.command
-                result = installer.uninstall(full_project=True) if args.command == 'uninstall' else getattr(installer, args.command)()
+                if args.command == 'uninstall':
+                    if not args.non_interactive:
+                        debloat.offer_restore(remote, store, profile, ask, write)
+                    result = installer.uninstall(full_project=True)
+                else:
+                    result = getattr(installer, args.command)()
                 if result.get('verified_clean') is True and result.get('removed') is True:
                     write.recovery_plan({'state':'complete','disposition':'clean-removal','verified_clean':True,'removed':True,
                                          'summary':'Clean Your TV removal is verified.','next_step':'Other TV apps stay installed.'})

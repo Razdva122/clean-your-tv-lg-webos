@@ -15,6 +15,9 @@ SELECT = 'Select Debloat settings: '
 REVIEW = 'Review Debloat results: '
 CONTINUE = 'Continue to customization'
 APPLY = 'Apply selected settings'
+RESTORE_PROMPT = 'Restore saved Debloat settings before removal?'
+RESTORE_LABEL = 'Restore saved Debloat settings'
+SKIP_RESTORE = 'Skip restoration'
 NOTICE = 'If the original value cannot be read, the selected change cannot be automatically undone.'
 GROUPS = (
     ('LG Home', (
@@ -37,6 +40,18 @@ GROUPS = (
     )),
 )
 SETTINGS = {key: (category, label, target) for _, rows in GROUPS for key, category, label, target in rows}
+SETTING_NAMES = {
+    'homePromotion': 'Sponsored tiles',
+    'contentRecommendation': 'Content recommendations',
+    'screenSaverAd': 'Screen saver ads',
+    'livePromotion': 'Promotions while watching',
+    'webOSPromotionVideo': 'webOS promotional video',
+    'livePlus': 'Live Plus',
+    'adCookie': 'Advertising cookies',
+    'lmt': 'Ad tracking limit',
+    'aiNudge': 'Smart Tips',
+    'sportsAlarm': 'Sports notifications',
+}
 RESULTS = {
     'already': ('✓', '#b4ada4', 'Already in the requested state'),
     'verified': ('✓', '#90cfad', 'Successfully applied and verified'),
@@ -95,6 +110,126 @@ def read_current(remote, category, key, tv):
     return read(remote, category, key) or read_ssap(tv, category, key)
 
 
+def set_value(remote, tv, category, key, value):
+    payload = {'category': category, 'settings': {key: value}}
+    if tv is not None:
+        return tv.call('ssap://settings/setSystemSettings', payload, timeout=8)
+    return remote.luna(SERVICE + 'setSystemSettings', payload, timeout=8)
+
+
+def verify_value(remote, tv, category, key, value, previous):
+    actual = read_current(remote, category, key, tv)
+    # The on-disk snapshot can lag the SSAP action. Retry reads only.
+    for delay in (.25, .5, 1):
+        if actual == value or (actual is None and previous is None):
+            break
+        time.sleep(delay)
+        actual = read_current(remote, category, key, tv)
+    return actual
+
+
+def offer_restore(remote, store, profile, ask, write):
+    """Offer one best-effort restoration before the normal removal operation."""
+    try:
+        path = store.device_dir(profile) / 'debloat.json'
+        journal = json.loads(path.read_text(encoding='utf-8'))
+        if not isinstance(journal, dict) or journal.get('schema') != 1 or not isinstance(journal.get('settings'), dict):
+            raise ValueError('Invalid Debloat record')
+    except FileNotFoundError:
+        return
+    except (OSError, ValueError):
+        write('Could not read the saved Debloat settings.')
+        return
+
+    entries = journal['settings']
+    eligible = [
+        key for key, (_, _, target) in SETTINGS.items()
+        if isinstance(entries.get(key), dict)
+        and entries[key].get('target') == target
+        and entries[key].get('original') in ('on', 'off')
+        and entries[key]['original'] != target
+    ]
+    if not eligible:
+        return
+    remaining = entries.copy()
+    with ExitStack() as stack:
+        tv = None
+        current_values = {key: read(remote, SETTINGS[key][0], key) for key in eligible}
+        # Live Plus can be read over an existing pairing without a TV prompt.
+        if not remote.root and 'livePlus' in current_values and current_values['livePlus'] is None:
+            try:
+                tv = stack.enter_context(SSAP(profile['host'], path.parent, write,
+                                             settings_write=True, reuse_only=True))
+            except Exception:
+                pass
+            current_values['livePlus'] = read_ssap(tv, SETTINGS['livePlus'][0], 'livePlus')
+        planned = {key for key, current in current_values.items() if current == entries[key]['target']}
+        if write.frontend == 'desktop' and planned:
+            write.step(1, 'Debloat restoration preview')
+        else:
+            write.heading('Debloat restoration preview')
+        states = {'on': tr('On'), 'off': tr('Off')}
+        for key, current in current_values.items():
+            label = tr(SETTING_NAMES[key])
+            if key in planned:
+                original = entries[key]['original']
+                write(f'{label} — {states[current]} → {states[original]}')
+            elif current is None:
+                write(f"{label} — {tr('Could not read the current value')}")
+            else:
+                write(f"{label} — {tr('Already at the saved original value')}")
+        if not planned:
+            return
+        if write.frontend == 'android':
+            write.option('y', RESTORE_LABEL)
+            write.option('n', SKIP_RESTORE)
+        if not prompts.confirm(RESTORE_PROMPT, ask, write):
+            return
+
+        write.heading('Debloat restoration results')
+        pairing_failed = False
+        for key in eligible:
+            original = entries[key]['original']
+            if key not in planned:
+                if current_values[key] == original:
+                    del remaining[key]
+                continue
+            category, _, target = SETTINGS[key]
+            if not remote.root and tv is None and not pairing_failed:
+                try:
+                    tv = stack.enter_context(SSAP(profile['host'], path.parent, write, settings_write=True))
+                except Exception:
+                    pairing_failed = True
+            current = read_current(remote, category, key, tv)
+            if current == original:
+                message = 'Already at the saved original value'
+            elif current is None:
+                message = 'Could not read the current value'
+            elif current == target and (remote.root or tv is not None):
+                try:
+                    reply = set_value(remote, tv, category, key, original)
+                except Exception:
+                    reply = None
+                if isinstance(reply, dict) and reply.get('returnValue') is True:
+                    actual = verify_value(remote, tv, category, key, original, current)
+                    message = 'Restored and verified' if actual == original else 'Could not verify the restored value'
+                else:
+                    message = 'Could not restore the setting'
+            else:
+                message = 'Could not restore the setting'
+            if message in ('Already at the saved original value', 'Restored and verified'):
+                del remaining[key]
+            write(f'{tr(SETTING_NAMES[key])} — {tr(message)}')
+
+    if remaining == entries:
+        return
+    journal['settings'] = remaining
+    try:
+        private_write(path, json.dumps(journal).encode())
+    except OSError:
+        write('Could not update the saved Debloat settings.')
+
+
 def remember(path, key, original, target):
     try:
         journal = json.loads(path.read_text(encoding='utf-8'))
@@ -149,12 +284,8 @@ def apply(installer, selected, progress=lambda _: None, *, diagnostic=None):
                 except Exception:
                     events[key] = 'journal-failed'
                     continue
-            payload = {'category': category, 'settings': {key: target}}
             try:
-                if use_ssap:
-                    reply = tv.call('ssap://settings/setSystemSettings', payload, timeout=8)
-                else:
-                    reply = remote.luna(SERVICE + 'setSystemSettings', payload, timeout=8)
+                reply = set_value(remote, tv, category, key, target)
             except TVRejected:
                 events[key] = 'write-rejected'
                 continue
@@ -166,13 +297,7 @@ def apply(installer, selected, progress=lambda _: None, *, diagnostic=None):
                 rejected = isinstance(reply, dict) and reply.get('returnValue') is False
                 events[key] = 'write-rejected' if rejected else 'write-unavailable'
                 continue
-            actual = read_current(remote, category, key, tv)
-            # The on-disk snapshot can lag the SSAP action. Retry reads only.
-            for delay in (.25, .5, 1):
-                if actual == target or (actual is None and original is None):
-                    break
-                time.sleep(delay)
-                actual = read_current(remote, category, key, tv)
+            actual = verify_value(remote, tv, category, key, target, original)
             results[key] = 'verified' if actual == target else 'unverified' if actual is None else 'failed'
             events[key] = 'verified' if actual == target else 'verify-unavailable' if actual is None else 'verify-mismatch'
     return results

@@ -186,6 +186,8 @@ Abre Ajustes → Fondos → Subir desde el teléfono y escanea el código. Elige
 
 Antes de elegir un tema, usa **Debloat** para seleccionar los ajustes de publicidad, recomendaciones, privacidad y notificaciones de LG que quieras cambiar. Revisa cada resultado. Si el instalador no puede leer el valor original, no podrá guardarlo para restaurarlo automáticamente. Elige **Omitir Debloat** para conservar los ajustes actuales.
 
+Durante la desinstalación, puedes restaurar los ajustes originales de Debloat guardados. Si omites la restauración, la desinstalación continúa sin cambiar esos ajustes.
+
 Después de instalar correctamente, elige Classic, Liquid Glass o Ribbon y activa o desactiva el tiempo. Ribbon no admite el tiempo; Liquid Glass usa el formato compacto. La ciudad se estima por tu conexión y puedes cambiarla en Home.
 
 No-root con Developer Mode ofrece renovación automática (Beta); sigue revisando el temporizador oficial. En las nuevas instalaciones de No-root mediante un acceso SSH root existente, la pestaña Developer Mode está oculta. Root permite bloquear actualizaciones de firmware LG mediante Homebrew Channel, incluidas las de seguridad; requiere un reinicio real desde Homebrew Channel. Las actualizaciones de CYTV son independientes.

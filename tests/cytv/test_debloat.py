@@ -158,3 +158,77 @@ class DebloatTests(unittest.TestCase):
                     'homePromotion': 'write-rejected', 'aiNudge': 'verify-mismatch', 'sportsAlarm': 'verify-unavailable',
                 })
                 self.assertNotIn('private-', report)
+
+    def test_restore_requires_consent_and_keeps_unverified_entries(self):
+        from cytv.terminal import Console
+
+        entries = {
+            'homePromotion': {'original': 'on', 'target': 'off'},
+            'screenSaverAd': {'original': 'on', 'target': 'off'},
+            'livePlus': {'original': 'on', 'target': 'off'},
+            'sportsAlarm': {'original': 'on', 'target': 'off'},
+        }
+        self.record.write_text(json.dumps({'schema': 1, 'settings': entries}))
+        values = {'homePromotion': 'off', 'screenSaverAd': 'on', 'sportsAlarm': 'off'}
+        writes = []
+
+        def luna(uri, payload, **kwargs):
+            if uri.endswith('/getSystemSettings'):
+                key, = payload['keys']
+                return {'returnValue': True, 'settings': {key: values.get(key)}}
+            (key, wanted), = payload['settings'].items()
+            writes.append((key, wanted))
+            if key == 'sportsAlarm':
+                return {'returnValue': False}
+            values[key] = wanted
+            return {'returnValue': True}
+
+        self.installer.remote = SimpleNamespace(root=True, luna=luna)
+        output = []
+        console = Console(output.append)
+        def decline(_):
+            preview = ' '.join(output)
+            self.assertIn('Sponsored tiles — Off → On', preview)
+            self.assertIn('Sports notifications — Off → On', preview)
+            self.assertIn('Screen saver ads — Already at the saved original value', preview)
+            self.assertIn('Live Plus — Could not read the current value', preview)
+            self.assertEqual(writes, [])
+            return ''
+
+        debloat.offer_restore(self.installer.remote, self.installer.store, self.installer.profile, decline, console)
+        self.assertEqual(writes, [])
+        self.assertEqual(json.loads(self.record.read_text())['settings'], entries)
+
+        def accept(_):
+            # An unreadable setting that becomes readable after the preview
+            # was never included in the user's confirmation.
+            values['livePlus'] = 'off'
+            return 'y'
+
+        debloat.offer_restore(self.installer.remote, self.installer.store, self.installer.profile, accept, console)
+        self.assertEqual(writes, [('homePromotion', 'on'), ('sportsAlarm', 'on')])
+        self.assertEqual(json.loads(self.record.read_text())['settings'],
+                         {key: entries[key] for key in ('livePlus', 'sportsAlarm')})
+        self.assertIn('Restored and verified', ' '.join(output))
+        self.assertIn('Could not read the current value', ' '.join(output))
+
+    def test_restore_uses_ssap_for_saved_developer_mode_profile(self):
+        self.installer.profile.update(edition='no-root', port=9922)
+        record = self.installer.store.device_dir(self.installer.profile) / 'debloat.json'
+        record.write_text(json.dumps({'schema': 1, 'settings': {
+            'livePlus': {'original': 'on', 'target': 'off'},
+        }}))
+        self.installer.remote = SimpleNamespace(root=False, run=lambda *a, **kw: 'null')
+        with patch.object(debloat, 'SSAP') as connect:
+            ssap = connect.return_value.__enter__.return_value
+            ssap.call.side_effect = [
+                {'returnValue': True, 'settings': {'livePlus': 'off'}},
+                {'returnValue': True, 'settings': {'livePlus': 'off'}},
+                {'returnValue': True},
+                {'returnValue': True, 'settings': {'livePlus': 'on'}},
+            ]
+            from cytv.terminal import Console
+            debloat.offer_restore(self.installer.remote, self.installer.store, self.installer.profile, lambda _: 'y', Console(lambda _: None))
+            self.assertEqual(ssap.call.call_args_list[2].args, (
+                'ssap://settings/setSystemSettings', {'category': 'option', 'settings': {'livePlus': 'on'}}))
+        self.assertEqual(json.loads(record.read_text())['settings'], {})

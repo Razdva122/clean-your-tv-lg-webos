@@ -18,6 +18,25 @@ except ImportError:
 
 @unittest.skipUnless(HAS_QT, 'Desktop build dependencies are optional for CLI tests')
 class GuiTests(unittest.TestCase):
+    def test_debloat_restoration_defaults_to_skip_without_cancelling_removal(self):
+        from cytv import debloat, i18n
+        from cytv.desktop import Channel
+
+        i18n.set_language('en')
+        wizard = Wizard()
+        self.addCleanup(wizard.close)
+        wizard.command = 'uninstall'
+        wizard.operation_title = 'Uninstall Clean Your TV'
+        wizard.channel = Channel(wizard.receive)
+        wizard.channel.console.step(1, 'Debloat restoration preview')
+        wizard.channel.console('Sponsored tiles — Off → On')
+        wizard.show_prompt(Prompt(debloat.RESTORE_PROMPT + ' [y/N]: '))
+        self.assertIn('Sponsored tiles — Off → On', wizard.content.toPlainText())
+        buttons = {button.text(): button for button in wizard.form.findChildren(QPushButton)}
+        self.assertTrue(buttons[debloat.SKIP_RESTORE].isDefault())
+        buttons[debloat.SKIP_RESTORE].click()
+        self.assertEqual(wizard.channel.answers.get_nowait(), 'n')
+
     def test_final_customization_prefills_existing_name_validates_and_submits(self):
         import json
         from cytv import i18n

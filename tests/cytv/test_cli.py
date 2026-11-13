@@ -600,6 +600,37 @@ class CLITests(unittest.TestCase):
             cls.return_value.uninstall.assert_not_called()
             cls.return_value.install.assert_not_called()
 
+    def test_uninstall_offers_separate_debloat_consent_even_with_yes(self):
+        from unittest.mock import MagicMock
+
+        for answer, noninteractive, restores in (('', False, False), ('y', False, True), ('', True, False)):
+            with self.subTest(answer=answer, noninteractive=noninteractive), tempfile.TemporaryDirectory() as tmp, \
+                    patch('cytv.cli.Installer') as installer, \
+                    patch('cytv.cli.package.verify_payload', return_value={}):
+                store = state.Store(tmp)
+                profile = state.target('192.0.2.10', 'root')
+                store.save(profile)
+                record = store.device_dir(profile) / 'debloat.json'
+                record.write_text(json.dumps({'schema': 1, 'settings': {
+                    'homePromotion': {'original': 'on', 'target': 'off'},
+                }}))
+                remote = MagicMock(root=True)
+                remote.luna.side_effect = [
+                    {'returnValue': True, 'settings': {'homePromotion': 'off'}},
+                    {'returnValue': True, 'settings': {'homePromotion': 'off'}},
+                    {'returnValue': True},
+                    {'returnValue': True, 'settings': {'homePromotion': 'on'}},
+                ]
+                installer.return_value.uninstall.return_value = {}
+                args = ['uninstall', '--data-dir', tmp, '--yes', '--language', 'en']
+                if noninteractive:
+                    args += ['--non-interactive']
+                code, output, _ = self.run_cli(args, [answer], remote=remote)
+                self.assertEqual(code, 0, output)
+                self.assertEqual('Restore saved Debloat settings before removal?' in output, not noninteractive)
+                self.assertEqual(remote.luna.call_count, 4 if restores else 0 if noninteractive else 1)
+                installer.return_value.uninstall.assert_called_once_with(full_project=True)
+
     def test_each_maintenance_command_reaches_its_operation_without_installing(self):
         from unittest.mock import MagicMock
         for command in ('status', 'doctor', 'restore', 'uninstall'):
