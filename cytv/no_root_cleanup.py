@@ -126,7 +126,7 @@ if(input.action==='idle'){
   try{args.push(fs.readlinkSync(file).replace(/ \(deleted\)$/,''));}
   catch(e){
    if(e.code==='ENOENT')return;
-   // After a new boot and confirmed startup shutdown, the readable command
+   // After startup shutdown, the readable command
    // line identifies project invocations even if Linux restricts these links.
    if(afterStop&&(e.code==='EACCES'||e.code==='EPERM')&&
       (argc>0||hasNoUserspace(path.dirname(file))))return;
@@ -159,7 +159,7 @@ if(input.action==='idle'){
   }catch(e){reply.idle=false;}
   // Calling disable can temporarily activate an LS2 service. Wait for its
   // process to exit without calling disable again while polling.
-  if(((afterStop&&!reply.idle)||(waitForIdle&&reply.project_running))&&Date.now()<idleDeadline){
+  if(waitForIdle&&reply.project_running&&Date.now()<idleDeadline){
    setTimeout(checkIdle,250);return;
   }
   process.stdout.write(JSON.stringify(reply));
@@ -607,25 +607,30 @@ def continue_removal(installer, expected_pending):
     if external_update is not None:
         installer.store.checkpoint(installer.profile, previous_update_status=external_update)
     restart_triggers = []
-    if stopped.get('controller_running'):
-        restart_triggers.append('controller-still-running')
     if startup_access_blocked:
         restart_triggers.append('protected-package-access')
     if startup_disable_unverified:
         restart_triggers.append('startup-disable-unverified')
     if external_update is not None and not restarted:
         restart_triggers.append('resident-installer-evidence')
-    if invalid_stop_record:
-        if restart_triggers or _device(installer, 'idle', after_stop=True).get('idle') is not True:
-            raise UserError('Removal could not be checked. Reconnect and try again.', reason_code='cleanup-check-failed')
-    elif restart_triggers:
+    if invalid_stop_record and restart_triggers:
+        raise UserError('Removal could not be checked. Recovery data was kept.', reason_code='cleanup-check-failed')
+    if restart_triggers:
         return require_restart(restart_triggers, rearm=restarted)
-    else:
-        idle = _device(installer, 'idle', wait_for_idle=True)
+
+    def wait_for_stopped_processes(require_idle):
+        idle = _device(installer, 'idle', after_stop=True, wait_for_idle=True)
         _check_access(idle, defer_packages=True)
-        needs_full_idle = not restarted and (uncertain_install or inaccessible_packages or unavailable)
-        if idle.get('project_running') is not False or (needs_full_idle and idle.get('idle') is not True):
-            return require_restart(['process-idle-unverified'], rearm=restarted)
+        if idle.get('project_running') is True:
+            raise UserError('A Clean Your TV process did not stop in time. Removal data was kept.',
+                            reason_code='cleanup-check-failed')
+        return idle.get('project_running') is False and (not require_idle or idle.get('idle') is True)
+
+    if not wait_for_stopped_processes(invalid_stop_record or
+                                     not restarted and (uncertain_install or inaccessible_packages or unavailable)):
+        if invalid_stop_record:
+            raise UserError('Removal could not be checked. Recovery data was kept.', reason_code='cleanup-check-failed')
+        return require_restart(['process-idle-unverified'], rearm=restarted)
     for app, message in zip(APPS, ('Removing Helper…', 'Removing Home…', 'Removing the updater…')):
         if app not in apps:
             continue
@@ -643,9 +648,7 @@ def continue_removal(installer, expected_pending):
                  if scope != 'installer-staging' and not scope.startswith('installer-staging ')]
     if remaining or {app['id'] for app in installer.installed_apps()}.intersection(APPS):
         raise UserError('Some project files remain. Try again to finish removal.')
-    idle = _device(installer, 'idle', after_stop=invalid_stop_record, wait_for_idle=True)
-    if idle.get('project_running') is not False or ((not restarted or reused_restart or invalid_stop_record)
-                                                  and idle.get('idle') is not True):
+    if not wait_for_stopped_processes(not restarted or reused_restart or invalid_stop_record):
         return require_restart(['process-idle-unverified'], rearm=restarted)
     if not inputs_removed:
         installer.store.checkpoint(installer.profile, removal_reason='controls-unverified')
