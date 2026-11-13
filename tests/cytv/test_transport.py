@@ -17,6 +17,44 @@ class RejectedAuthTransport:
 
 
 class TransportTests(unittest.TestCase):
+    def test_diagnostic_command_captures_both_streams_and_nonzero_exit(self):
+        from unittest.mock import Mock
+
+        channel = Mock(closed=True)
+        channel.recv_ready.side_effect = [True, False]
+        channel.recv_stderr_ready.side_effect = [True, False]
+        channel.recv.return_value = b'out\n'
+        channel.recv_stderr.return_value = b'err\xff\n'
+        channel.exit_status_ready.return_value = True
+        channel.recv_exit_status.return_value = 42
+        ssh = SSH(Mock())
+        ssh.channel = Mock(return_value=channel)
+        command = "printf 'out\\n'\nprintf 'err\\n' >&2\nexit 42"
+        result = ssh.run_command(command)
+        self.assertEqual((result.stdout, result.stderr, result.exit_code), ('out\n', 'err�\n', 42))
+        self.assertFalse(result.truncated)
+        ssh.channel.assert_called_once_with(command)
+        channel.shutdown_write.assert_called_once_with()
+        channel.close.assert_called_once_with()
+
+    def test_diagnostic_command_timeout_keeps_partial_output(self):
+        from unittest.mock import Mock
+
+        channel = Mock(closed=False, eof_received=False)
+        channel.recv_ready.side_effect = [True, False]
+        channel.recv_stderr_ready.return_value = False
+        channel.recv.return_value = b'x' * (256 * 1024 + 1)
+        ssh = SSH(Mock())
+        ssh.channel = Mock(return_value=channel)
+        with patch('cytv.transport.time.monotonic', side_effect=[0, 0, 1, 30]), patch('cytv.transport.time.sleep'):
+            result = ssh.run_command('diagnose')
+        self.assertEqual(result.stdout, 'x' * (256 * 1024))
+        self.assertEqual(result.stderr, '')
+        self.assertIsNone(result.exit_code)
+        self.assertTrue(result.truncated)
+        self.assertIn('Timed out', result.error)
+        channel.close.assert_called_once_with()
+
     def test_failed_command_preserves_only_fixed_space_category(self):
         from cytv.errors import TVCommandError
         from unittest.mock import Mock

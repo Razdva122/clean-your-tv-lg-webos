@@ -1,72 +1,56 @@
 {
   "schema": 1,
-  "version": "1.20.2",
+  "version": "1.20.3",
   "changes": [
     {
-      "pr": 586,
+      "pr": 598,
       "issues": [
-        152
+        529
       ],
-      "summary": "Use standard uninstall for No-root cleanup"
+      "summary": "Finish verified No-root recovery without temporary IPKs"
     },
     {
-      "pr": 589,
+      "pr": 600,
       "issues": [
-        418
+        101,
+        519
       ],
-      "summary": "Preserve Root inspection failure details after cleanup"
+      "summary": "Add desktop SSH command diagnostics"
     },
     {
-      "pr": 590,
-      "issues": [
-        101
-      ],
-      "summary": "Test Root cleanup and reinstall after interrupted native deployment"
-    },
-    {
-      "pr": 591,
+      "pr": 601,
       "issues": [
         588
       ],
-      "summary": "Resume stuck Root removal past incomplete temporary uploads"
+      "summary": "Finish Root removal with retained updater receipts"
     },
     {
-      "pr": 592,
+      "pr": 602,
       "issues": [
-        587
+        588
       ],
-      "summary": "Offer No-root when native Root Home is unavailable"
+      "summary": "Remove Root private state by component ownership"
     },
     {
-      "pr": 593,
+      "pr": 603,
       "issues": [
-        410,
-        541,
-        587
+        389,
+        588
       ],
-      "summary": "Offer checked No-root fallback with safe ramfs storage"
+      "summary": "Resume Root removal without repeating completed checks"
     },
     {
-      "pr": 594,
-      "issues": [
-        216
-      ],
-      "summary": "Preserve blocked Root install reason in removal audit"
-    },
-    {
-      "pr": 595,
-      "issues": [
-        383
-      ],
-      "summary": "Cover LG 43UK6450PLC legacy Root preflight"
+      "pr": 604,
+      "issues": [],
+      "summary": "Finish No-root removal after a transient stop failure"
     }
   ],
   "excluded": [],
-  "acceptance": "LG OLED55C3RLA, firmware 43.21.71, webOS SDK 11.2.0, macOS ARM64 installer 0.20.2. Exact RC2 payload, Android API 35 upgrade, Root and No-root cleanup, No-root install and Restore, signed Root OTA and retained rollback verified. Physical LG remote and audible playback confirmed by the owner. Artifact hashes, retests and untested paths: docs/history/2026-11-13-release-1.20.2-rc2-verification.md.",
+  "acceptance": "Project LG OLED55C3RLA, firmware 43.21.71, webOS 11.2.0. Exact macOS ARM64 installer and signed Root QA bytes verified. Signed Root update, Magic Remote controls/audio/emergency exit, ordinary retained rollback, Root and No-root fresh installation and full removal with verified restart passed. Original package versions and LG Home routing restored; one captured input label differed after baseline reinstall. Original reporter states remain unverified on hardware. See docs/history/2026-11-13-release-1.20.3-rc-verification.md.",
   "build": {
-    "run_id": 43383813744,
+    "run_id": 43405375772,
     "attempt": 1,
-    "source": "c5fef29a103f0cbbc390ee65981974747bec100b"
+    "source": "09ef047afeb44ab5a2cda2544c2b18c70fc8ed8e"
   },
-  "acceptance_build": "43383813744:1"
+  "acceptance_build": "43405375772:1"
 }

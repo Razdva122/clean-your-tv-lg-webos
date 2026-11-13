@@ -77,6 +77,31 @@ class CLITests(unittest.TestCase):
         for key in ('home-settings', 'home-profiles', 'inventory'):
             self.assertEqual(report['checks'][key], 'pending')
 
+    def test_ssh_command_cancellation_preserves_pending_removal(self):
+        from unittest.mock import Mock
+        from cytv.desktop import DesktopConsole, SSH_COMMAND_PROMPT
+
+        with tempfile.TemporaryDirectory() as tmp:
+            store = state.Store(tmp)
+            profile = state.target('192.0.2.10', 'root')
+            store.save(profile)
+            pending = store.request_clean_removal(profile)
+            self.assertTrue(pending['connection_pending'])
+            remote = Mock()
+            events = []
+            def cancel(prompt):
+                self.assertEqual(prompt, SSH_COMMAND_PROMPT)
+                raise EOFError
+
+            code = cli.main(['ssh-command', '--data-dir', tmp, '--language', 'en'],
+                            ask=cancel, connect=lambda *_: remote,
+                            write=DesktopConsole(lambda *event: events.append(event)))
+            self.assertEqual(code, 130)
+            self.assertEqual(store.pending(profile), pending)
+            self.assertNotIn('report', [kind for kind, _ in events])
+            remote.run_command.assert_not_called()
+            remote.close.assert_called_once_with()
+
     def test_root_node_failure_can_complete_no_root_using_the_same_ssh(self):
         self.assert_no_root_install_after_root_preflight(choose_beta=False)
 

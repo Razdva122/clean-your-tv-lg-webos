@@ -471,6 +471,57 @@ class GuiTests(unittest.TestCase):
         languages.start()
         self.addCleanup(languages.stop)
 
+    def test_diagnostics_runs_explicit_multiline_command_on_selected_ssh_and_copies_output(self):
+        from PySide6.QtWidgets import QPlainTextEdit
+        from unittest.mock import Mock
+        from cytv import cli, state
+        from cytv.transport import CommandResult
+
+        for edition, connection, username in (('root', None, 'root'),
+                                              ('no-root', None, 'prisoner'),
+                                              ('no-root', 'root-ssh', 'root')):
+            with self.subTest(edition=edition, connection=connection):
+                profile = state.target('192.0.2.10', edition, connection=connection)
+                store = state.Store(Path(self.directory.name) / username / edition)
+                store.save(profile)
+                remote = Mock()
+                remote.run_command.return_value = CommandResult('  <out>\n', 'error\n', 42, False)
+                connect = Mock(return_value=remote)
+                w = Wizard(run=lambda args, **kwargs: cli.main(
+                    [*args, '--data-dir', str(store.root)], connect=connect, **kwargs))
+                self.addCleanup(w.close)
+                self.addCleanup(lambda window=w: window.submit(None) if window.running and window.pending else None)
+                w.resize(900, 680)
+                w.show()
+                w.diagnostics_toggle.click()
+                next(b for b in w.form.findChildren(QPushButton) if b.text() == 'Run SSH command').click()
+                self.pump(lambda: w.findChild(QPlainTextEdit, 'sshCommandInput') is not None)
+                editor = w.findChild(QPlainTextEdit, 'sshCommandInput')
+                self.assertIn(f'{username}@192.0.2.10:{profile["port"]}', w.subtitle.text())
+                run = next(b for b in w.form.findChildren(QPushButton) if b.text() == 'Run')
+                self.assertFalse(run.isEnabled())
+                self.app.processEvents()
+                self.assertTrue(editor.isVisible())
+                self.assertTrue(w.form.rect().contains(run.geometry()))
+                command = "printf '<out>'\nprintf 'error' >&2\nexit 42"
+                editor.setPlainText(command)
+                remote.run_command.assert_not_called()
+                run.click()
+                self.pump(lambda: not w.running)
+                connect.assert_called_once()
+                self.assertEqual(connect.call_args.args[0], profile)
+                remote.run_command.assert_called_once_with(command)
+                remote.close.assert_called_once_with()
+                output = w.findChild(QPlainTextEdit, 'sshCommandOutput')
+                self.assertTrue(output.isReadOnly())
+                next(b for b in w.form.findChildren(QPushButton) if b.text() == 'Copy output').click()
+                copied = self.app.clipboard().text()
+                self.assertEqual(copied, output.toPlainText())
+                self.assertIn('stdout\n  <out>', copied)
+                self.assertIn('stderr\nerror', copied)
+                self.assertIn('Exit code: 42', copied)
+                w.close()
+
     def test_maintenance_is_disclosed_and_resets_on_home(self):
         w = Wizard()
         self.addCleanup(w.close)

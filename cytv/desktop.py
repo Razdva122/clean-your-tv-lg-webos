@@ -6,6 +6,9 @@ from dataclasses import dataclass, field
 from .terminal import Console
 
 
+SSH_COMMAND_PROMPT = 'Run SSH command'
+
+
 @dataclass(repr=False)
 class Prompt:
     label: str
@@ -113,6 +116,9 @@ class DesktopConsole(Console):
     def selected_profile(self, profile):
         self.emit('selected-profile', {key:profile[key] for key in
                   ('host','edition','port','connection','root_variant') if key in profile})
+
+    def ssh_command_result(self, result):
+        self.emit('ssh-command-result', result)
 
     def installation_settings(self, value):
         self.emit('installation-settings', {key:value[key] for key in ('renewal','block_updates') if type(value.get(key)) is bool})

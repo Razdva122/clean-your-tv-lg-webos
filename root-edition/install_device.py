@@ -25,7 +25,6 @@ BUS=Path('/var/luna-service2-dev')
 INIT=Path('/var/lib/webosbrew/init.d')
 TEMP=Path('/tmp')
 SUPPORT_STAGE=re.compile(r'cytv-(?:product|coordinator|system-updater|c1-root|root-tail)-[a-f0-9]{32}')
-RETAINABLE_SUPPORT_STAGE=re.compile(r'cytv-(?:product|system-updater)-[a-f0-9]{32}')
 
 
 class InstallerRuntimeMismatch(ValueError):
@@ -789,27 +788,39 @@ class LocalDevice:
             if stopped.get('controller_running') or startup_failed or restart_first and not restarted:
                 save('restart-required')
                 return {'removed':False,'verified_clean':False,'restart_required':True}
-            save('package-removal')
-            package_error=None
+            packages_complete = 'package-removal' in record['done']
+            if not packages_complete:
+                save('package-removal')
+            package_error = None
             try:
-                remove_packages(self,record,save)
-                self.cleanup('app_permissions')
-            except (OSError,RuntimeError,ValueError,subprocess.SubprocessError) as error:
-                package_error=error
-            if not package_error and 'package-removal' not in record['done']:record['done'].append('package-removal')
+                remove_packages(self, record, save)
+                if 'package-removal' not in record['done']:
+                    self.cleanup('app_permissions')
+                if not packages_complete:
+                    record['done'].append('package-removal')
+            except (OSError, RuntimeError, ValueError, subprocess.SubprocessError) as error:
+                from install_driver import failure_summary
+                package_error = error
+                record['cleanup_error'] = 'removal-failed'
+                record['last_failure'] = dict(failure_summary(error), stage='package-removal')
+                record.setdefault('failure', record['last_failure'])
+
             save('private-cleanup')
-            self.shared_cleanup('sweep',record)
-            processes_stopped=True
+            processes_stopped = True
             try:
-                self.clean_quiescent(record,all_processes=True,same_boot=not restarted)
-                self.retire_clean_private(record)
-            except ValueError as error:
-                if restarted or str(error)!='live_original_worker':raise
-                # Published Helper may still have a loaded process. Full boot
-                # ends it; the final sweep runs afterwards without changing it.
-                processes_stopped=False
-            if package_error:
-                record['cleanup_error']='removal-failed'
+                self.shared_cleanup('sweep', record)
+                try:
+                    self.clean_quiescent(record, all_processes=True, same_boot=not restarted)
+                    self.retire_clean_private(record)
+                except ValueError as error:
+                    if restarted or error.args != ('live_original_worker',):
+                        raise
+                    processes_stopped = False
+            except Exception as error:
+                if package_error is not None:
+                    raise package_error from error
+                raise
+            if package_error is not None:
                 raise package_error
             original_request=record['original'].get('request')
             unresolved_original=isinstance(original_request,dict) and original_request.get('state')!='complete'
@@ -823,7 +834,7 @@ class LocalDevice:
             if 'private-cleanup' not in record['done']:record['done'].append('private-cleanup')
             save('private-cleanup')
         return {'removed':True,'verified_clean':True,'applications_services_startup_removed':True,'private_cleanup_verified':True,
-                'temporary_files_retained':bool(record.get('retained_temporary_stages'))}
+                'temporary_files_retained':self.has_untracked_support(record)}
 
     def remove_owned_registrations(self):
         devices=self.rpc('com.webos.service.eim/getAllInputStatus',{}).get('devices')
@@ -846,9 +857,7 @@ class LocalDevice:
 
     def retire_clean_private(self, record):
         from clean_removal import retire_tree
-        import deploy
         uid=self.ownership.store.uid
-        self.retire_temporary_support(record)
         volatile=Path('/tmp/clean-your-tv-root-gate')
         if os.path.lexists(volatile):
             # Current native restore has already verified unmount/stop. Refuse
@@ -866,40 +875,13 @@ class LocalDevice:
                     if filename.endswith('.ipk') and isinstance(digest,str) and re.fullmatch('[a-f0-9]{64}',digest):hashes.add(digest)
             record['staging_hashes']=sorted(hashes)
             self.ownership.store.write('clean-removal-'+record['operation'],record)
-        root_allowed={name.split('/')[0] for name in deploy.SUPPORT_FILES}|{'runtime','service','__pycache__','bundle.json','release.json',
-            'deploy.json','install-terminal.json','python-launcher','python-runtime.json',
-            'ls2-provision-snapshot.json','recovery-provision.pending.json','recovery-provision.json',
-            'recovery-failure.json','run-recovery-service','recovery-service.json','bootstrap.pid',
-            'activity-registration.json','startup-hook.json','startup-hook.previous.json',
-            'profile-trial.json','profile-trial.lock','persistent-intent.json','persistent-intent.lock',
-            'persistent-binding.json','boot-continuation.json','profile-guardian-ready.json','profile-recovery.log',
-            'profile-candidate.stage','native-input.json','software-update.lock','update-block.json',
-            'update-home-cancel.json','update-home-resume.json','session.lock','boot-dispatch.lock',
-            'startup-policy.json','startup-policy.lock','health.log','audio','failsafe',
-            'home-backend.json','c1-gate','c1-keyfilter','personalization.json','personalization',
-            'state','ssap.json','apps.json','config.json','firmware-permissions.json',
-            'theme-receiver-permissions.json','wallpaper-media-permissions.json','weather-permissions.json','audio-recovery',
-            'boot-decision.json','session.json','persistent-operation.lock','profile-guardian.log',
-            'emergency.log','escape-ready.json','permissions','firmware-permissions.lock','system-permissions.json'}
-        updater_allowed={'code','cache','profiles','run-service','python-launcher','python-runtime.json',
-            'bootstrap.json','bootstrap-bundle.json','baseline.json','current.json','infrastructure.json',
-            'installed-package.json','installed-terminal.json','registration.json','startup-hook.json',
-            'startup-hook.previous.json','transaction.json','legacy-lockdown.json','bootstrap.pid',
-            'worker.log','daemon.log','removed-registration','cytv-removal.json'}
-        def classified(root,index):
-            allowed=root_allowed if index==0 else updater_allowed
-            if index==2:allowed=allowed|{'current-root.json','current-no-root.json','installer-accepted.json'}
-            pattern=r'(?:profile|healthy|healthy-rollback|mutable|helper-resume|renewal-pause)-[a-f0-9]{32}(?:-rollback)?\.json'
-            if index==0:
-                pattern+=r'|(?:completed-profile-[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}|system-rollback-anchor-[a-f0-9]{32})\.json'
-            return allowed|{p.name for p in root.iterdir() if re.fullmatch(pattern,p.name)}
         roots=(ROOT,UPDATER,SUPERVISOR)
         for index,root in enumerate(roots):
             if not os.path.lexists(root):continue
             keep={'deploy.json','provision.lock'} if index==0 else {'bootstrap.json','daemon.lock','worker.lock'}
-            # Per-transaction data in this private namespace is product-owned;
-            # no arbitrary prefix outside it can select a deletion target.
-            retire_tree(root,classified(root,index),keep,uid)
+            # Fixed, dedicated component stores own their contents across releases.
+            # The coordinator has already fenced writers and restored controls.
+            retire_tree(root, None, keep, uid)
         for stage in Path(self.ownership.store.root).iterdir():
             if not re.fullmatch(r'request-[a-f0-9]{32}',stage.name):continue
             identifier=stage.name[8:]
@@ -932,6 +914,15 @@ class LocalDevice:
         # filename alone is not enough to delete an unknown archive.
         archives=record.get('archives')
         discovered=[]
+        if archives is not None:
+            for item in archives:
+                index=item.get('component')
+                if type(index) is not int or index not in range(len(roots)):
+                    raise ValueError('unclassified_private_archive')
+                component=roots[index]
+                path=Path(item['path'])
+                if path.parent!=component.parent or not re.fullmatch(re.escape(component.name)+r'\.archive-[a-f0-9]{32}',path.name):
+                    raise ValueError('unclassified_private_archive')
         for index,root in enumerate(roots):
             for path in sorted(root.parent.iterdir()):
                 if not path.name.startswith(root.name+'.archive-'):continue
@@ -955,7 +946,7 @@ class LocalDevice:
             archives=record['archives']=discovered
             self.ownership.store.write('clean-removal-'+record['operation'],record)
         for number,item in enumerate(archives):
-            index=item['component'];path=Path(item['path'])
+            path=Path(item['path'])
             if not os.path.lexists(path):continue
             info=path.lstat()
             if (info.st_dev,info.st_ino)!=(item['dev'],item['ino']):raise ValueError('private_archive_changed')
@@ -967,8 +958,7 @@ class LocalDevice:
             if previous is None:self.ownership.store.write(key,backup)
             # After an interrupted delete, the backup remains the original.
             elif any(previous.get(k)!=v for k,v in backup.items()):raise ValueError('owner_backup_changed')
-            allowed=classified(path,index)|{'provision.lock','daemon.lock','worker.lock'}
-            retire_tree(path,allowed,uid=uid)
+            retire_tree(path, None, uid=uid, expected_identity=(item['dev'], item['ino']))
             path.rmdir()
             parent=os.open(path.parent,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)
             try:os.fsync(parent)
@@ -1040,82 +1030,11 @@ class LocalDevice:
                    and (all_processes or helpers_only or arg.rsplit(b'/',1)[-1] in mutators) for arg in args):
                 raise ValueError('live_original_worker')
 
-    def retire_temporary_support(self, record):
-        """Classify discarded installer bundles as data, never by prefix alone."""
-        from clean_removal import retire_tree
-        uid=self.ownership.store.uid
-        inventory=record.setdefault('temporary_stages',[])
-        by_path={item['path']:item for item in inventory}
-        retained=record.setdefault('retained_temporary_stages',[])
-        current=json.loads(safe_bytes(self.payload/'root-updater/bundle.json',uid=uid)) if self.payload else None
-        for path in sorted(TEMP.iterdir()):
-            if not SUPPORT_STAGE.fullmatch(path.name) or path==self.payload:continue
-            if str(path) in {item['path'] for item in record.get('support_stages',[])}:continue
-            store=checked_store(path,uid);fd=store._directory()
-            try:names=set(os.listdir(fd));info=os.fstat(fd)
-            finally:os.close(fd)
-            if not names:continue
-            saved=by_path.get(str(path))
-            if saved:
-                if (saved['dev'],saved['ino'])!=(info.st_dev,info.st_ino):raise ValueError('support_stage_changed')
-                continue
-            identity={'path':str(path),'dev':info.st_dev,'ino':info.st_ino}
-            retain=False
-            if path.name.startswith('cytv-product-'):
-                allowed={'root','root-updater'}
-                try:
-                    release=json.loads(safe_bytes(path/'root/release.json',uid=uid))
-                    package=json.loads(safe_bytes(path/'root-updater/package.json',uid=uid))
-                except (FileNotFoundError, json.JSONDecodeError, UnicodeDecodeError):
-                    # A disconnected upload can leave an incomplete bundle in /tmp.
-                    # Keep its data and require a live process check at readback.
-                    retain=True
-                else:
-                    retain=(not isinstance(release,dict) or release.get('application_id')!=APP
-                            or not isinstance(package,dict) or package.get('name')!='com.cleanyourtv.root.updater.service'
-                            or bool(names-allowed))
-            elif path.name.startswith('cytv-coordinator-'):
-                package=json.loads(safe_bytes(path/'package.json',uid=uid));services=json.loads(safe_bytes(path/'services.json',uid=uid))
-                if package.get('name')!='com.cleanyourtv.root.updater.service' or services.get('id')!=package['name'] or current is None:raise ValueError('unclassified_support_stage')
-                allowed={name.split('/')[0] for name in current['files']}|{'bundle.json'}
-            elif path.name.startswith('cytv-c1-root-'):
-                import deploy
-                manifest=deploy.verify_bundle(path,allow_experimental=True)
-                release=json.loads(safe_bytes(path/'release.json',uid=uid))
-                if release.get('application_id')!=APP:raise ValueError('unclassified_support_stage')
-                allowed={name.split('/')[0] for name in manifest['files']}|{'bundle.json'}
-            elif path.name.startswith('cytv-system-updater-'):
-                manifest=self.system_setup().verify_bundle(path)
-                allowed={name.split('/')[0] for name in manifest['files']}|{'bundle.json'}
-                retain=bool(names-allowed-{'__pycache__'})
-                if '__pycache__' in names:
-                    cache=checked_store(path/'__pycache__',uid);cached=cache._directory()
-                    try:bytecode=os.listdir(cached)
-                    finally:os.close(cached)
-                    sources=[name[:-3] for name in manifest['files'] if '/' not in name and name.endswith('.py')]
-                    for name in bytecode:
-                        if not any(re.fullmatch(re.escape(source)+r'\.cpython-[0-9]{2,3}(?:\.opt-[12])?\.pyc',name) for source in sources):
-                            retain=True
-                        else:safe_bytes(path/'__pycache__'/name,uid=uid)
-                    allowed.add('__pycache__')
-            else:
-                # Unrecorded gate-only staging has no product metadata and is
-                # not classified from its name or ELF header alone.
-                raise ValueError('unclassified_support_stage')
-            if retain:
-                if identity not in retained:retained.append(identity)
-                continue
-            if names-allowed:raise ValueError('unclassified_support_stage')
-            saved=dict(identity,allowed=sorted(allowed))
-            inventory.append(saved);by_path[str(path)]=saved
-        self.ownership.store.write('clean-removal-'+record['operation'],record)
-        for item in inventory:
-            path=Path(item['path'])
-            if not os.path.lexists(path):continue
-            info=path.lstat()
-            if (info.st_dev,info.st_ino)!=(item['dev'],item['ino']):raise ValueError('support_stage_changed')
-            retire_tree(path,set(item['allowed']),uid=uid)
-
+    def has_untracked_support(self, record):
+        # Shared /tmp can contain interrupted uploads from any installer run.
+        tracked = {item['path'] for item in record.get('support_stages', [])}
+        return any(SUPPORT_STAGE.fullmatch(path.name) and str(path) not in tracked and path != self.payload
+                   for path in TEMP.iterdir())
 
     def routing_untouched(self, record):
         """Prove absence of CYTV routing effects, independently of firmware APIs."""
@@ -1291,25 +1210,6 @@ class LocalDevice:
         scan(root)
         return result
 
-    def current_product_stage(self, path):
-        """Accept an upload only as an exact copy of this authenticated payload."""
-        if self.payload is None:return False
-        try:
-            expected={}
-            for component in ('root','root-updater'):
-                source=self.payload/component
-                raw=safe_bytes(source/'bundle.json',uid=self.ownership.store.uid)
-                files=json.loads(raw)['files']
-                expected[component+'/']=None
-                expected[component+'/bundle.json']=sha(raw)
-                for name,digest in files.items():
-                    if sha(safe_bytes(source/name,uid=self.ownership.store.uid))!=digest:return False
-                    expected[component+'/'+name]=digest
-                    for parent in Path(name).parents:
-                        if str(parent)!='.':expected[component+'/'+str(parent)+'/']=None
-            return self.support_inventory(path)==expected
-        except (OSError,ValueError,KeyError,TypeError):return False
-
     def current_coordinator_stage(self, path):
         """Recognize complete copies of the current host-verified support only."""
         from coordinator_inventory import BUNDLED_FILES
@@ -1357,19 +1257,6 @@ class LocalDevice:
             if os.path.lexists(name):raise ValueError('owned_registration_remains')
         private=self.shared_cleanup('inventory',record)
         if private['present']:raise ValueError('no_root_private_cleanup_required')
-        for path in TEMP.iterdir():
-            if SUPPORT_STAGE.fullmatch(path.name) and path!=self.payload:
-                if RETAINABLE_SUPPORT_STAGE.fullmatch(path.name):
-                    fd=checked_store(path,self.ownership.store.uid)._directory()
-                    try:info=os.fstat(fd)
-                    finally:os.close(fd)
-                    if {'path':str(path),'dev':info.st_dev,'ino':info.st_ino} in record.get('retained_temporary_stages',[]):continue
-                if re.fullmatch(r'cytv-coordinator-[a-f0-9]{32}',path.name) and self.current_coordinator_stage(path):continue
-                if re.fullmatch(r'cytv-product-[a-f0-9]{32}',path.name) and self.current_product_stage(path):continue
-                fd=checked_store(path,self.ownership.store.uid)._directory()
-                try:
-                    if os.listdir(fd):raise ValueError('support_stage_remains')
-                finally:os.close(fd)
         for folder in ('services.d','roles.d','client-permissions.d','api-permissions.d','manifests.d','groups.d'):
             directory=BUS/folder
             if not os.path.lexists(directory):continue

@@ -742,6 +742,49 @@ class OriginalOperationIntegration(unittest.TestCase):
         self.assertFalse((self.store.device_dir(self.profile)/('capsule-'+pending['observer_operation']+'.json')).exists())
         self.assertFalse(any(call[0]=='luna' and call[1].endswith('appInstallService/status') for call in self.remote.calls))
 
+    def test_recovery_finishes_configuration_with_unusable_staging(self):
+        from cytv.desktop import DesktopConsole
+        from cytv.recovery import recover
+
+        original_run = self.remote.run
+
+        def disconnect_after_packages(command, data=None, timeout=30):
+            reply = original_run(command, data, timeout)
+            words = split_observer_command(command)
+            if '-e' in words and observer.PROGRAM in words[words.index('-e') + 1]:
+                if json.loads(words[-1])['command'] == 'status':
+                    if all(slot['terminal'] == 'success' for slot in json.loads(reply)['slots']):
+                        raise RuntimeError('disconnected after both package installs')
+            return reply
+
+        with patch.object(self.remote, 'run', disconnect_after_packages):
+            with self.assertRaises(RuntimeError):
+                self.installer.install(self.inventory, 'original-secret')
+        pending = self.store.pending(self.profile)
+        self.assertEqual((self.root / 'requests').read_text().splitlines(), list(observer.APPS))
+        staging = self.root / 'public' / ('cytv-' + pending['observer_operation'])
+        staging.chmod(0o775)
+        staged = {file.name: file.read_bytes() for file in staging.iterdir()}
+        self.assertFalse((Path(operations.HELPER_STATE) / 'ssap-key.json').exists())
+        observation = self.installer.observe_recovery()
+        self.assertIn('continue-no-root', observation['assessment']['actions'])
+        before = len(self.remote.calls)
+        recover(self.installer, lambda _: 'y', DesktopConsole(lambda *_: None),
+                initial_observation=observation)
+        calls = self.remote.calls[before:]
+        self.assertFalse(any(call[0] == 'observer' and call[1] in
+                             ('prepare', 'artifacts', 'upload-artifact', 'start') for call in calls))
+        self.assertEqual((self.root / 'requests').read_text().splitlines(), list(observer.APPS))
+        self.assertEqual(json.loads((Path(operations.HELPER_STATE) / 'ssap-key.json').read_text()),
+                         {'key': 'original-secret'})
+        self.assertIsNone(self.store.pending(self.profile))
+        self.assertEqual(staging.stat().st_mode & 0o777, 0o775)
+        self.assertEqual({file.name: file.read_bytes() for file in staging.iterdir()}, staged)
+        archives = (json.loads(file.read_text()) for file in
+                    self.store.device_dir(self.profile).glob('recovery-*.json'))
+        archive = next(entry for entry in archives if entry['action'] == 'finish-no-root-operation')
+        self.assertEqual(archive['staging_cleanup']['observer_reason'], 'writable-directory')
+
     def test_new_removal_uses_null_artifact_and_resumes_only_home(self):
         self.installer.install(self.inventory,'original-secret')
         (self.root/'requests').write_text('')

@@ -79,7 +79,7 @@ function fixtureReply(command,args,options){
  var method=args[2],value={returnValue:true};
  if(method.indexOf('listApps')!==-1){if(process.env.PRIVATE_ERROR)throw Error(process.env.PRIVATE_ERROR);if(process.env.ALL_CATALOGS_DENIED || process.env.DEV_CATALOG_DENIED && method.indexOf('/dev/')!==-1)value.returnValue=false;if(process.env.CATALOG_MALFORMED && method.indexOf('/dev/')!==-1)delete value.returnValue;value.apps=[];}
  else if(method.indexOf('getSystemSettings')!==-1){if(process.env.NO_HOME_APIS)throw Error('Home APIs unavailable');value.settings={defaultApps:{home:process.env.SETTINGS_HOME||(process.env.FOREIGN_ROUTE?'changed':'third.party.home')}};}
- else if(method.indexOf('getProfiles')!==-1){if(process.env.FAIL_FINAL_READBACK && ++profileReads===2)throw Error('injected final readback failure');if(process.env.MISSING_PROFILES){value.returnValue=false;if(process.env.PROFILE_ERROR)value=JSON.parse(process.env.PROFILE_ERROR);}else value.profiles={defaultApps:{categories:{home:'third.party.home'}},idleApp:{appId:'third.party.home'}};}
+ else if(method.indexOf('getProfiles')!==-1){if(process.env.FAIL_FINAL_READBACK && ++profileReads===1)throw Error('injected final readback failure');if(process.env.MISSING_PROFILES){value.returnValue=false;if(process.env.PROFILE_ERROR)value=JSON.parse(process.env.PROFILE_ERROR);}else value.profiles={defaultApps:{categories:{home:'third.party.home'}},idleApp:{appId:'third.party.home'}};}
  else if(method.indexOf('activitymanager')!==-1){
   if(process.env.ACTIVITY_BOTH_UNAVAILABLE || process.env.ACTIVITY_LIST_UNAVAILABLE && method.indexOf('/list')!==-1)return {status:1,stdout:new Buffer('')};
   value.activities=JSON.parse(process.env.ACTIVITIES||'[]');
@@ -128,6 +128,15 @@ class CleanupTail(unittest.TestCase):
     def write(self,name,value):
         path=self.state/name;path.write_text(json.dumps(value));path.chmod(0o600)
 
+    def assert_completion_pending_after_retirement(self):
+        self.assertFalse(self.runtime.exists())
+        record = json.loads((self.state / ('clean-removal-' + ID + '.json')).read_text())
+        self.assertEqual(record['stage'], 'private-cleanup')
+        self.assertFalse(record['result']['private_cleanup_verified'])
+        self.assertNotIn('final_fence', record)
+        for _, path in json.loads((self.base / 'mutations.json').read_text()):
+            self.assertTrue(Path(path).is_relative_to(self.runtime), path)
+
     def run_tail(self,**environment):
         node=os.environ.get('NODE8','node')
         result=subprocess.run([node,str(self.harness),str(self.base),str(SOURCE)],capture_output=True,text=True,
@@ -144,6 +153,14 @@ class CleanupTail(unittest.TestCase):
         self.assertEqual(result.returncode,0,result.stderr)
         self.assertEqual(reply['state'],'verified-clean')
 
+    def test_finalizer_reads_profiles_once_after_runtime_retirement(self):
+        self.harness.write_text(self.harness.read_text().replace(
+            "if(process.env.FAIL_FINAL_READBACK && ++profileReads===1)",
+            "if(++profileReads>1 || real.existsSync(base+'" + RUNTIME + "'))"))
+        result, reply = self.run_tail()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(reply['stage'], 'verified-clean')
+
     def test_activity_fallback_never_accepts_missing_or_malformed_inventory(self):
         for flags in ({'ACTIVITY_BOTH_UNAVAILABLE':'1'},{'ACTIVITY_MALFORMED':'1'},
                       {'ACTIVITY_LIST_UNAVAILABLE':'1','ACTIVITIES':'[null]'},
@@ -151,46 +168,34 @@ class CleanupTail(unittest.TestCase):
             with self.subTest(flags=flags):
                 result,reply=self.run_tail(**flags)
                 self.assertEqual(result.returncode,1)
-                self.assertTrue(self.runtime.exists())
+                self.assert_completion_pending_after_retirement()
                 self.assertNotEqual(reply.get('state'),'complete')
 
-    def test_inert_system_staging_does_not_block_final_removal_or_recheck(self):
-        self.check_inert_staging('system-updater')
-
-    def test_inert_product_staging_does_not_block_final_removal_or_recheck(self):
-        self.check_inert_staging('product')
-
-    def check_inert_staging(self, prefix):
-        stage=self.base/'tmp'/('cytv-'+prefix+'-'+'c'*32);stage.mkdir(mode=0o700)
-        (stage/'unknown-diagnostic.txt').write_text('retain without execution')
-        info=stage.stat()
-        self.record['retained_temporary_stages']=[dict(path='/tmp/'+stage.name,dev=info.st_dev,ino=info.st_ino)]
-        self.record['result']['temporary_files_retained']=True
-        self.write('clean-removal-'+ID+'.json',self.record)
-        result,reply=self.run_tail()
-        self.assertEqual(result.returncode,0,result.stderr)
-        self.assertTrue(reply['result']['temporary_files_retained'])
-        self.assertTrue((stage/'unknown-diagnostic.txt').exists())
-        result,reply=self.run_tail(MODE='verify')
-        self.assertEqual(result.returncode,0,result.stderr)
-        process=self.base/'proc/99991';process.mkdir()
-        (process/'cmdline').write_bytes(('/usr/bin/python3\0/tmp/'+stage.name+'/setup-system-updater.py\0').encode())
-        result,reply=self.run_tail(MODE='verify')
-        self.assertEqual(reply.get('cleanup_error'),'owned-process-still-used')
-        self.assertIs(reply['restart_required'],False)
-        (process/'cmdline').unlink();process.rmdir()
-        saved=json.loads((self.state/('clean-removal-'+ID+'.json')).read_text())
-        saved['retained_temporary_stages'][0]['ino']+=1
-        self.write('clean-removal-'+ID+'.json',saved)
-        result,reply=self.run_tail(MODE='verify')
-        self.assertEqual(reply['cleanup_error'],'support-stage-remains')
+    def test_untracked_temporary_uploads_do_not_block_final_removal_or_recheck(self):
+        for kind in ('product', 'coordinator', 'system-updater', 'c1-root', 'root-tail'):
+            stage = self.base / 'tmp' / ('cytv-' + kind + '-' + 'c' * 32)
+            stage.mkdir()
+            (stage / 'partial').write_text('keep')
+        result, reply = self.run_tail()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(reply['stage'], 'verified-clean')
+        self.assertEqual((stage / 'partial').read_text(), 'keep')
+        result, reply = self.run_tail(MODE='verify')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        process = self.base / 'proc' / '99991'
+        process.mkdir()
+        script = '/tmp/' + stage.name + '/worker.js'
+        (process / 'cmdline').write_bytes(b'/usr/bin/node\0' + script.encode() + b'\0')
+        result, reply = self.run_tail(MODE='verify')
+        self.assertEqual(reply.get('cleanup_error'), 'owned-process-still-used')
+        self.assertFalse(reply['restart_required'])
 
     def test_finalizer_accepts_fallback_catalog_and_still_checks_package_paths(self):
         owned=self.base/'media/developer/apps/usr/palm/applications/com.local.nativehome'
         owned.mkdir(parents=True)
         result,reply=self.run_tail(DEV_CATALOG_DENIED='1')
         self.assertEqual(reply['cleanup_error'],'package-remains')
-        self.assertTrue((self.runtime/'bin/python3.13').exists())
+        self.assert_completion_pending_after_retirement()
         owned.rmdir()
         result,reply=self.run_tail(DEV_CATALOG_DENIED='1')
         self.assertEqual(result.returncode,0,result.stderr)
@@ -355,13 +360,13 @@ class CleanupTail(unittest.TestCase):
             self.assertEqual(result.returncode,0,result.stderr)
             self.assertEqual(reply['state'],'verified-clean')
 
-    def test_unavailable_or_malformed_catalog_never_retires_runtime(self):
+    def test_unavailable_or_malformed_catalog_blocks_final_confirmation(self):
         for flags,reason in (({'ALL_CATALOGS_DENIED':'1'},'cleanup-readback-unavailable'),
                              ({'CATALOG_MALFORMED':'1'},'cleanup-readback-malformed')):
             result,reply=self.run_tail(**flags)
             self.assertEqual(result.returncode,1)
             self.assertEqual(reply['cleanup_error'],reason)
-            self.assertTrue((self.runtime/'bin/python3.13').exists())
+            self.assert_completion_pending_after_retirement()
 
     def test_actual_stdin_entry_reaches_selector_guard_with_readonly_global_crypto(self):
         # Node 20+ exposes getter-only global WebCrypto for stdin scripts. Model
@@ -450,7 +455,7 @@ class CleanupTail(unittest.TestCase):
                     with redirect_stderr(output):reply=device.finish_clean_tail(self.record)
                     self.assertEqual(reply['cleanup_error'],'route-changed')
                     self.assertEqual(output.getvalue(),'CYTV_CLEAN_TAIL: route-changed\n')
-                    self.assertTrue(boot.exists())
+                    self.assertFalse(boot.exists())
                     return
                 reply=device.finish_clean_tail(self.record)
                 self.assertIsNotNone(reply,'Native Python still requires the final Node absence proof')
@@ -743,8 +748,7 @@ class CleanupTail(unittest.TestCase):
             with self.subTest(activity=activity):
                 result,reply=self.run_tail(ACTIVITIES=json.dumps([activity]))
                 self.assertNotEqual(result.returncode,0)
-                self.assertTrue(self.runtime.exists())
-                self.assertEqual(json.loads((self.base/'mutations.json').read_text()),[])
+                self.assert_completion_pending_after_retirement()
 
     def test_failure_exposes_only_known_guard_code(self):
         result,reply=self.run_tail(FOREIGN_ROUTE='1')
@@ -758,10 +762,10 @@ class CleanupTail(unittest.TestCase):
             self.assertNotIn(private,result.stdout+result.stderr)
             self.assertEqual(result.stderr,'CYTV_CLEAN_TAIL: cleanup-readback-unavailable\n')
 
-    def test_changed_foreign_route_refuses_before_delete(self):
+    def test_changed_foreign_route_blocks_final_confirmation(self):
         result,reply=self.run_tail(FOREIGN_ROUTE='1')
         self.assertNotEqual(result.returncode,0)
-        self.assertEqual(json.loads((self.base/'mutations.json').read_text()),[])
+        self.assert_completion_pending_after_retirement()
 
     def test_inspect_needs_no_runtime_or_mutation(self):
         result,reply=self.run_tail(MODE='inspect')
@@ -848,8 +852,7 @@ class CleanupTail(unittest.TestCase):
         self.write('clean-removal-'+ID+'.json',self.record)
         result,_=self.compositor_tail()
         self.assertNotEqual(result.returncode,0)
-        self.assertTrue(self.runtime.exists())
-        self.assertEqual(json.loads((self.base/'mutations.json').read_text()),[])
+        self.assert_completion_pending_after_retirement()
 
     def test_restored_native_tail_refuses_unbound_inverse_or_live_routing(self):
         self.restored_native_record()
@@ -867,8 +870,7 @@ class CleanupTail(unittest.TestCase):
                 self.write('routing-backup-'+ID+'.json',backup)
                 result,_=self.compositor_tail()
                 self.assertNotEqual(result.returncode,0)
-                self.assertTrue(self.runtime.exists())
-                self.assertEqual(json.loads((self.base/'mutations.json').read_text()),[])
+                self.assert_completion_pending_after_retirement()
                 if marker:marker.unlink()
 
     def bsp_mounts(self):
@@ -910,7 +912,7 @@ class CleanupTail(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(reply['routes'], self.record['routes'])
 
-    def test_native_bsp_overlay_rejects_unverified_layout_before_mutation(self):
+    def test_native_bsp_overlay_rejects_unverified_layout_at_final_confirmation(self):
         mount, root, bsp, overlay = self.bsp_mounts()
         device = str(179*256+29)
         cases = (
@@ -928,8 +930,7 @@ class CleanupTail(unittest.TestCase):
                 mount.write_text(layout)
                 result, _ = self.compositor_tail(BSP_DEVICE=bsp_device)
                 self.assertNotEqual(result.returncode, 0)
-                self.assertTrue(self.runtime.exists())
-                self.assertEqual(json.loads((self.base/'mutations.json').read_text()), [])
+                self.assert_completion_pending_after_retirement()
 
     def test_current_stock_compositor_tail_finishes_without_home_settings(self):
         self.compositor_record()
@@ -958,8 +959,7 @@ class CleanupTail(unittest.TestCase):
             with self.subTest(stale=stale):
                 result, _ = self.compositor_tail(FILTER_CHAIN=json.dumps(chain + [stale]))
                 self.assertNotEqual(result.returncode, 0)
-                self.assertTrue(self.runtime.exists())
-                self.assertEqual(json.loads((self.base/'mutations.json').read_text()), [])
+                self.assert_completion_pending_after_retirement()
         result, reply = self.compositor_tail(FILTER_CHAIN=json.dumps(chain))
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(reply['stage'], 'verified-clean')
@@ -998,8 +998,7 @@ class CleanupTail(unittest.TestCase):
                 if change=='live':marker.parent.mkdir(exist_ok=True);marker.write_text('{}')
                 result,_=self.compositor_tail(**({'FILTER_CHAIN':'[{"file":"/foreign/home.js","handler":"home"}]'} if change=='chain' else {}))
                 self.assertNotEqual(result.returncode,0)
-                self.assertTrue(self.runtime.exists())
-                self.assertEqual(json.loads((self.base/'mutations.json').read_text()),[])
+                self.assert_completion_pending_after_retirement()
                 home.write_bytes(original[0]);appinfo.write_bytes(original[1]);vendor.write_bytes(original[2]);mount.write_text(stock)
                 self.write('routing-backup-'+ID+'.json',{})
                 if marker.exists():marker.unlink();marker.parent.rmdir()
@@ -1017,21 +1016,20 @@ class CleanupTail(unittest.TestCase):
             with self.subTest(reply=reply):
                 result,_=self.run_tail(MISSING_PROFILES='1',PROFILE_ERROR=json.dumps(reply),SETTINGS_HOME='com.webos.app.home')
                 self.assertNotEqual(result.returncode,0)
-                self.assertEqual(json.loads((self.base/'mutations.json').read_text()),[])
-                self.assertTrue(self.runtime.exists())
+                self.assert_completion_pending_after_retirement()
         missing=json.dumps({'returnValue':False,'errorCode':-1,'errorText':'Service does not exist: com.webos.service.systemprofile.'})
         result,_=self.run_tail(MISSING_PROFILES='1',PROFILE_ERROR=missing,SETTINGS_HOME='third.party.home')
         self.assertNotEqual(result.returncode,0)
-        self.assertTrue(self.runtime.exists())
+        self.assert_completion_pending_after_retirement()
         # A service appearing later cannot silently change the selected contract.
         result,_=self.run_tail(SETTINGS_HOME='com.webos.app.home')
         self.assertNotEqual(result.returncode,0)
-        self.assertEqual(json.loads((self.base/'mutations.json').read_text()),[])
+        self.assert_completion_pending_after_retirement()
         self.record.pop('profileless_cleanup_eligible')
         self.write('clean-removal-'+ID+'.json',self.record)
         result,_=self.run_tail(MISSING_PROFILES='1',PROFILE_ERROR=missing,SETTINGS_HOME='com.webos.app.home')
         self.assertNotEqual(result.returncode,0)
-        self.assertEqual(json.loads((self.base/'mutations.json').read_text()),[])
+        self.assert_completion_pending_after_retirement()
 
     def untouched_record(self):
         self.record.update(routing_never_applied=True,profileless_cleanup_eligible=True,
@@ -1061,13 +1059,12 @@ class CleanupTail(unittest.TestCase):
                 self.write('clean-removal-'+ID+'.json',self.record)
                 result,reply=self.run_tail(NO_HOME_APIS='1')
                 self.assertNotEqual(result.returncode,0)
-                self.assertTrue(self.runtime.exists())
-                self.assertEqual(json.loads((self.base/'mutations.json').read_text()),[])
+                self.assert_completion_pending_after_retirement()
                 if marker:marker.unlink();marker.parent.rmdir()
 
     def test_only_recorded_never_applied_routing_allows_missing_profile_interface(self):
         result,reply=self.run_tail(MISSING_PROFILES='1');self.assertNotEqual(result.returncode,0)
-        self.assertEqual(json.loads((self.base/'mutations.json').read_text()),[])
+        self.assert_completion_pending_after_retirement()
         self.record['routing_never_applied']=True
         self.record['routes']={'mode':'never-applied','home':'third.party.home'}
         self.write('clean-removal-'+ID+'.json',self.record)
@@ -1091,7 +1088,7 @@ class CleanupTail(unittest.TestCase):
         state=self.base/'var/lib/clean-your-tv-root';state.mkdir()
         (state/'ssap.json').write_text('private')
         result,reply=self.run_tail();self.assertNotEqual(result.returncode,0)
-        self.assertEqual(json.loads((self.base/'mutations.json').read_text()),[])
+        self.assert_completion_pending_after_retirement()
 
     @unittest.skipUnless(os.environ.get('CYTV_REAL_PROC_FD')=='1','requires real Linux /proc directory descriptors')
     def test_directory_replacement_cannot_redirect_pinned_deletions(self):

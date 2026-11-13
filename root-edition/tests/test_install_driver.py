@@ -399,13 +399,8 @@ Coordinator(Device(),Ownership(Store(sys.argv[2],uid=os.getuid())),read=lambda p
             saved=owner.store.read('submission-'+'a'*32)
             self.assertTrue(saved['staging'])
             self.assertTrue((stage/'root/install_driver.py').is_file())
-            device=install_device.LocalDevice();device.ownership=owner;device.payload=snapshot
-            self.assertTrue(device.current_product_stage(stage))
-            (stage/'foreign').write_bytes(b'unknown')
-            self.assertFalse(device.current_product_stage(stage))
-            (stage/'foreign').unlink()
-            (stage/'root/install_driver.py').write_bytes(b'changed')
-            self.assertFalse(device.current_product_stage(stage))
+            self.assertEqual((stage/'root/install_driver.py').read_bytes(),
+                             (snapshot/'root/install_driver.py').read_bytes())
         with patch('install_driver._verified_payload',return_value=inventories),patch('install_driver.root_review_binding',return_value={'identity':{},'code':{}}),patch.object(install_device.LocalDevice,'preflight'),patch('subprocess.Popen',side_effect=spawn),patch('os.fsync',side_effect=sync):
             self.assertEqual(install_driver.submit('a'*32,stage,ownership=owner)['state'],'pending')
 

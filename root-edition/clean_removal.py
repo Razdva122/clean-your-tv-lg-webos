@@ -11,6 +11,7 @@ import re
 from pathlib import Path
 import stat
 import subprocess
+import sys
 
 from updater.store import Store
 from updater.package import safe_bytes
@@ -154,12 +155,31 @@ def compositor_stock_report(payload, *, retire_orphan=False):
 
 
 
-def retire_tree(path, allowed, keep=(), uid=0, parent_uid=None):
+MOUNTINFO = Path('/proc/self/mountinfo')
+
+
+def require_unmounted_tree(path):
+    """Reject nested mounts, including bind mounts on the same device."""
+    if sys.platform != 'linux' and not MOUNTINFO.exists():
+        return
+    root = str(path)
+    with MOUNTINFO.open(encoding='utf-8', errors='surrogateescape') as table:
+        for line in table:
+            fields = line.split()
+            if len(fields) < 10 or ' - ' not in line:
+                raise ValueError('private_mount_table_unverified')
+            target = re.sub(r'\\([0-7]{3})', lambda match: chr(int(match[1], 8)), fields[4])
+            if target == root or target.startswith(root + '/'):
+                raise ValueError('private_mount_present')
+
+
+def retire_tree(path, allowed, keep=(), uid=0, parent_uid=None, *, expected_identity=None):
     """Confined, pinned unlink of classified owned data; no following links.
 
     Validate the entire inventory before deleting the first member. Missing
     members support a retry after power loss. Changes to owned preferences do
-    not need installation-continuation hashes. Foreign shared paths never enter.
+    not need installation-continuation hashes. Only fixed component stores and
+    authenticated component archives may pass allowed=None for the whole tree.
     """
     path=Path(path)
     if not os.path.lexists(path):return 0
@@ -175,15 +195,26 @@ def retire_tree(path, allowed, keep=(), uid=0, parent_uid=None):
             if info.st_uid!=uid or info.st_mode&0o022:
                 os.close(root);raise ValueError('unsafe_private_member')
         stack.callback(os.close,root)
+        root_info = os.fstat(root)
+        if expected_identity is not None and (root_info.st_dev, root_info.st_ino) != expected_identity:
+            raise ValueError('private_archive_changed')
+        if allowed is None:
+            require_unmounted_tree(path)
         plan=[]
         def scan(fd, prefix=''):
             for name in sorted(os.listdir(fd)):
                 relative=prefix+name
                 if not prefix and name in keep: continue
-                if not prefix and name not in allowed: raise ValueError('unclassified_private_member')
+                if not prefix and allowed is not None and name not in allowed:
+                    raise ValueError('unclassified_private_member')
                 info=os.stat(name,dir_fd=fd,follow_symlinks=False)
-                if info.st_uid!=uid or (not stat.S_ISLNK(info.st_mode) and info.st_mode&0o022): raise ValueError('unsafe_private_member')
-                if stat.S_ISDIR(info.st_mode):
+                if allowed is None and info.st_dev != root_info.st_dev:
+                    raise ValueError('private_mount_present')
+                is_dir = stat.S_ISDIR(info.st_mode)
+                if (allowed is not None or is_dir) and (
+                        info.st_uid != uid or (not stat.S_ISLNK(info.st_mode) and info.st_mode & 0o022)):
+                    raise ValueError('unsafe_private_member')
+                if is_dir:
                     child=os.open(name,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW,dir_fd=fd)
                     stack.callback(os.close,child)
                     if (os.fstat(child).st_dev,os.fstat(child).st_ino)!=(info.st_dev,info.st_ino):
@@ -193,13 +224,25 @@ def retire_tree(path, allowed, keep=(), uid=0, parent_uid=None):
                     plan.append((fd,name,info,False))
                 else: raise ValueError('unsafe_private_member')
         scan(root)
+        if allowed is None:
+            require_unmounted_tree(path)
         for fd,name,info,directory in plan:
             current=os.stat(name,dir_fd=fd,follow_symlinks=False)
-            if (current.st_dev,current.st_ino,current.st_mode,current.st_uid,current.st_nlink)!=(info.st_dev,info.st_ino,info.st_mode,info.st_uid,info.st_nlink):
+            if allowed is None and not directory:
+                # A leaf is unlinked through its trusted parent. Its owner and
+                # access bits do not grant authority over that directory entry.
+                before = (info.st_dev, info.st_ino, stat.S_IFMT(info.st_mode), info.st_nlink)
+                after = (current.st_dev, current.st_ino, stat.S_IFMT(current.st_mode), current.st_nlink)
+            else:
+                before = (info.st_dev, info.st_ino, info.st_mode, info.st_uid, info.st_nlink)
+                after = (current.st_dev, current.st_ino, current.st_mode, current.st_uid, current.st_nlink)
+            if after != before:
                 raise ValueError('private_member_changed')
         for fd,name,info,directory in plan:
             current=os.stat(name,dir_fd=fd,follow_symlinks=False)
-            if (current.st_dev,current.st_ino)!=(info.st_dev,info.st_ino):raise ValueError('private_member_changed')
+            if ((current.st_dev,current.st_ino)!=(info.st_dev,info.st_ino)
+                    or allowed is None and stat.S_ISREG(current.st_mode) and current.st_nlink != 1):
+                raise ValueError('private_member_changed')
             (os.rmdir if directory else os.unlink)(name,dir_fd=fd);os.fsync(fd)
         if set(os.listdir(root))-set(keep):raise ValueError('private_members_remain')
     return len(plan)
@@ -321,20 +364,53 @@ def validate_package_receipts(record):
 def remove_packages(device, record, save):
     """Retry explicit removal against current presence, keeping old outcomes separate."""
     from observed_install import remove
-    errors=[]
+    errors = []
+    present = device.apps()
+    checked = {}
+    changed = False
     for app in APPS:
+        receipt = {'state': 'absent', 'readback': {'app': app, 'absent': True}}
         try:
-            if app in device.apps():
-                record['packages'][app]={'state':'removing'};save('package-removal')
-                terminal=remove(app,timeout=150)
-                if not terminal_removal(terminal,app):raise ValueError('package_removal_unconfirmed')
-            if getattr(type(device),'sweep_package',None) is not None:device.sweep_package(app,record)
+            if app not in present and record['packages'].get(app) == receipt:
+                try:
+                    device.absent(app)
+                except ValueError as error:
+                    if error.args != ('package_remains',):
+                        raise
+                else:
+                    continue
+            if app in present:
+                if 'package-removal' in record.get('done', []):
+                    record['done'].remove('package-removal')
+                record['packages'][app] = {'state': 'removing'}
+                save('package-removal')
+                changed = True
+                terminal = remove(app, timeout=150)
+                if not terminal_removal(terminal, app):
+                    raise ValueError('package_removal_unconfirmed')
+            if getattr(type(device), 'sweep_package', None) is not None:
+                device.sweep_package(app, record)
             device.absent(app)
-            if app in device.apps():raise ValueError('package_still_registered')
-            record['packages'][app]={'state':'absent','readback':{'app':app,'absent':True}};save('package-removal')
-        except (OSError,RuntimeError,ValueError,subprocess.SubprocessError) as error:
+            checked[app] = receipt
+        except (OSError, RuntimeError, ValueError, subprocess.SubprocessError) as error:
             errors.append(error)
-    if errors:raise errors[0]
+
+    # A single fresh catalogue confirms all requests submitted in this pass.
+    if changed:
+        try:
+            present = device.apps()
+        except (OSError, RuntimeError, ValueError, subprocess.SubprocessError):
+            if errors:
+                raise errors[0]
+            raise
+    for app, receipt in checked.items():
+        if app in present:
+            errors.append(ValueError('package_still_registered'))
+        elif record['packages'].get(app) != receipt:
+            record['packages'][app] = receipt
+            save('package-removal')
+    if errors:
+        raise errors[0]
 
 
 def compact_audit(record, store):

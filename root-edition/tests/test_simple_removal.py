@@ -159,6 +159,16 @@ class SimpleRemoval(unittest.TestCase):
         self.boot='22222222-2222-2222-2222-222222222222'
         self.assertEqual(driver.clean_remove(identifier)['stage'],'verified-clean')
 
+    def test_package_failure_survives_a_second_failure_during_private_cleanup(self):
+        driver, identifier, *_ = self.prepare()
+        with patch('observed_install.remove', side_effect=RuntimeError('vendor_busy')), \
+                patch.object(driver.device, 'retire_clean_private', side_effect=PermissionError('cleanup denied')), \
+                patch.object(driver.device, 'log'):
+            reply = driver.clean_remove(identifier)
+        self.assertEqual(reply['cleanup_error'], 'removal-failed')
+        self.assertEqual(reply['last_failure'], {'exception_type': 'RuntimeError', 'stage': 'package-removal'})
+        self.assertEqual(reply['stage'], 'private-cleanup')
+
     def test_stale_other_product_selector_does_not_block_explicit_removal(self):
         driver,identifier,root,updater,payload,calls,present=self.prepare()
         target=driver.removal_target('e'*32)
