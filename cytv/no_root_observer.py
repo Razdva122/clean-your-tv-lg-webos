@@ -1148,10 +1148,16 @@ def continue_operation(installer, expected_pending):
     if installer.store.pending(installer.profile)!=pending:
         refuse()
     if not result.get('closed'):
-        if result.get('reservation') in ('prepared','active'):
+        # An attached install with both vendor replies can finish from the
+        # installed packages. No new request needs the temporary IPKs.
+        packages_installed = (plan['action'] == 'install' and result['reservation'] == 'active'
+                              and all(slot['terminal'] == 'success' and not slot.get('reason')
+                                      for slot in result['slots']))
+        if not packages_installed and result['reservation'] in ('prepared','active'):
             invoke(installer.remote,plan,'prepare',source=value['source'])
         invoke(installer.remote,plan,'attach')
-        stage_remaining(installer,value)
+        if not packages_installed:
+            stage_remaining(installer,value)
         if plan['action']=='remove':
             token=claim_step(installer,plan,'restore')
             if token:
@@ -1202,13 +1208,24 @@ def continue_operation(installer, expected_pending):
     cancelled = setup and setup_receipt.get('setup_cancelled') is True
     expected_generation = (plan['setup_start']['generation'] or setup_receipt.get('setup_launch_generation')) if setup else None
     result=invoke(installer.remote,plan,'release')
+    record = {'action': 'finish-no-root-operation', 'stage': 'verified',
+              'previous': installer.store.pending(installer.profile), 'observer': result}
     try:
         invoke(installer.remote,plan,'retire')
-    except RuntimeError:
-        raise UserError('Packages are verified, but temporary package cleanup is incomplete. Recovery data was kept.',reason_code='pending-operation') from None
+    except RuntimeError as error:
+        details = getattr(error, 'no_root_observer', {})
+        staging_error = (details.get('storage_area') in ('public-staging', 'storage-parent')
+                         or details.get('observer_reason') in (
+                             'changed-artifact', 'changed-public-stage', 'private-public-parent',
+                             'unsafe-directory', 'writable-directory'))
+        if (plan['action'] != 'install' or details.get('failure') != 'observer-error'
+                or not staging_error or not snapshot(installer, value).get('closed')):
+            raise UserError('Packages are verified, but temporary package cleanup is incomplete. Recovery data was kept.',reason_code='pending-operation') from None
+        record['staging_cleanup'] = details
+        installer.progress('Temporary No-root package files could not be safely removed.')
     from .state import private_write
     archive=installer.store.recovery(installer.profile,'finish-no-root-operation')
-    private_write(archive,json.dumps({'action':'finish-no-root-operation','stage':'verified','previous':installer.store.pending(installer.profile),'observer':result}).encode())
+    private_write(archive,json.dumps(record).encode())
     installer.store.finish(installer.profile)
     try:
         installer.store.retire_capsule(installer.profile,pending['observer_operation'],pending['capsule_sha256'])
