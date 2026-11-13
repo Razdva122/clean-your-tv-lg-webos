@@ -1491,6 +1491,129 @@ class PartialDeviceRemoval(unittest.TestCase):
         self.assertGreater(observe.call_count,1)
         self.assertFalse(present)
 
+    def test_native_install_after_cleaning_a_failed_clean_predecessor_handoff(self):
+        import json
+        import subprocess
+        import deploy
+        import package_data
+        from cytv.package import data_files
+        from runtime import c1_keyfilter
+        from test_c1_gate_bundle import load, static_arm
+
+        driver, first, root, updater, payload, calls, present = self.fixture()
+        device = driver.device
+        self.assertEqual(driver.clean_remove(first)['stage'], 'restart-required')
+        device.current_boot = '22222222-2222-2222-2222-222222222222'
+        self.assertEqual(driver.clean_remove(first)['stage'], 'verified-clean')
+
+        def preflight(candidate, options, product):
+            self.assertFalse(product)
+            device.payload = Path(candidate)
+        device.preflight = preflight
+        device.log = lambda error: None
+        failed_id, fresh_id = 'e' * 32, 'f' * 32
+        failed_upload = root.parent/'tmp'/('cytv-product-' + 'a' * 32)
+        (failed_upload/'root').mkdir(parents=True, mode=0o700)
+        (failed_upload/'root'/'release.json').write_text('{"fixture":"failed upload"}')
+        with patch.object(device, 'native_deploy', side_effect=subprocess.CalledProcessError(1, 'fixture')):
+            failed = driver.native_install(failed_id, failed_upload)
+        self.assertEqual(failed['stage'], 'root-deploy', failed)
+        self.assertEqual(failed['state'], 'recovery_required')
+        self.assertEqual(failed['clean_predecessor'], first)
+        self.assertFalse(root.exists())
+        self.assertFalse(updater.exists())
+        self.assertFalse(present)
+        device.previous_stages = (failed_upload,)
+        device.payload = payload
+
+        (payload/'root/runtime').mkdir(parents=True, exist_ok=True)
+        (payload/'root/runtime/c1_keyfilter.py').touch()
+        (payload/'root-updater').mkdir(exist_ok=True)
+        (payload/'root-updater/bundle.json').write_text('{"files":{}}')
+        proof = {'mode':'stock-compositor','target':{'dev':45851,'ino':5647,'size':50684},'target_sha256':'a'*64}
+        rpc = device.rpc
+        def profileless(method, data):
+            if method.endswith(('/getSystemSettings', '/getProfiles')):
+                raise RuntimeError('Unavailable Home setting')
+            return rpc(method, data)
+        device.rpc = profileless
+        command = deploy.command.side_effect
+        def current_command(args):
+            if 'compositor_stock_report' in args[-1]:
+                return {'returnValue': True, 'result': proof}
+            return command(args)
+        deploy.command.side_effect = current_command
+        before = calls.count('remove-' + deploy.APP)
+        clean = driver.clean_remove(failed_id)
+        if clean['stage'] == 'restart-required':
+            device.current_boot = '33333333-3333-3333-3333-333333333333'
+            clean = driver.clean_remove(failed_id)
+        self.assertEqual(clean['stage'], 'verified-clean', clean)
+        self.assertEqual(clean['routes'], proof)
+        self.assertEqual(calls.count('remove-' + deploy.APP), before)
+        self.assertFalse(any(failed_upload.iterdir()))
+        old_request = driver.status(failed_id)
+
+        # A fresh desktop preflight uses the ordinary coordinator without
+        # the cleanup upload. Only its TV-specific Node observation is modeled.
+        device.payload = None
+        def stock_readback(args, **kwargs):
+            self.assertEqual(args[2:], ['stock-proof', failed_id, '-', '-1', '-1', '-1', '-', clean['removal']])
+            return subprocess.CompletedProcess(args, 0, json.dumps({'routes': proof}).encode())
+        with patch('install_device.subprocess.run', side_effect=stock_readback):
+            self.assertTrue(driver.inspect()['can_install'])
+
+        helper = root.parent/'guard'
+        helper.write_bytes(static_arm())
+        bundle = root.parent/'new-upload'/'root'
+        bundle.parent.mkdir()
+        load('build').build(bundle, experimental_c1_keyfilter=helper)
+        installed = root.parent/'apps'
+        admission = dict(model='OLED65C2AUA', firmware='04.40.90', webos='7.4.0',
+                         target_sha256=proof['target_sha256'], target=dict(proof['target'], mtime_ns=1))
+        provisions = []
+        def prepare(state, digest, observed):
+            return c1_keyfilter_prepare(state, digest, observed, uid=os.getuid())
+        c1_keyfilter_prepare = c1_keyfilter.prepare
+        def install_ipk(app, path, *, timeout, on_ready, on_accepted):
+            self.assertEqual(app, deploy.APP)
+            self.assertNotIn(app, present)
+            on_ready()
+            for name, data in data_files(Path(path).read_bytes()).items():
+                target = installed/name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(data)
+            present.add(app)
+            return {'completed': True}
+        def provision(args):
+            provisions.append(args[-1])
+            return {'returnValue': True}
+        read_verified = package_data.read_verified
+        device.payload = bundle.parent
+        def deploy_fresh(candidate):
+            self.assertEqual(candidate, bundle.parent)
+            self.assertFalse(root.exists())
+            self.assertFalse(updater.exists())
+            self.assertFalse(present)
+            return deploy.install(bundle, run=provision, observe=install_ipk, experimental_c1_gate=True)
+        with patch.multiple(deploy, STATE=root, INSTALLED=installed), \
+             patch.object(deploy, 'experimental_admission', return_value=admission), \
+             patch.object(deploy, 'install_launcher'), patch.object(deploy, 'python_command', return_value=sys.executable), \
+             patch.object(c1_keyfilter, 'prepare', side_effect=prepare), \
+             patch.object(c1_keyfilter, 'boot_identity', return_value=device.current_boot), \
+             patch.object(c1_keyfilter, 'native', return_value={'backend':'c1-native-gate','selfcheck':True}), \
+             patch.object(package_data, 'read_verified', side_effect=lambda path, **kwargs: read_verified(path, uid=os.getuid(), **kwargs)), \
+             patch.object(device, 'native_deploy', side_effect=deploy_fresh) as install:
+            fresh = driver.native_install(fresh_id, bundle.parent)
+            self.assertEqual(fresh['state'], 'complete', fresh)
+            self.assertEqual(fresh['clean_predecessor'], failed_id)
+            self.assertNotEqual(fresh['lease'], failed['lease'])
+            self.assertEqual(driver.native_install(fresh_id, bundle.parent), fresh)
+            self.assertEqual(driver.native_install(failed_id, bundle.parent), old_request)
+            install.assert_called_once_with(bundle.parent)
+        self.assertEqual(provisions, ['apply', 'refresh', 'finalize'])
+        self.assertEqual(json.loads((root/'deploy.json').read_text())['stage'], 'installed-recovery-only')
+
     def test_only_first_profileless_home_readback_can_retire_an_orphan_filter(self):
         import deploy
         driver, identifier, root, _, payload, _, _ = self.profileless_fixture()
