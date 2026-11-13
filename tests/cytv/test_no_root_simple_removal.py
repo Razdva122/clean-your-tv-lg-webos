@@ -599,6 +599,23 @@ class SimpleRemoval(unittest.TestCase):
         self.assertFalse(list((self.root/'volatile').glob('cytv-removal-*')))
         self.assertEqual((self.root/'volatile').stat().st_mode&0o7777,0o111)
 
+    def test_marker_based_retry_finishes_after_startup_recovers_without_reboot(self):
+        (self.root / 'proc').mkdir()
+        self.remote.apps = {'com.local.nativehome'}
+        self.own_file('apps/usr/palm/services/com.local.nativehome.service/service.js')
+        self.remote.broken_service = True
+        self.assertTrue(self.remove()['restart_required'])
+        pending = self.store.pending(self.profile)
+        self.assertEqual(pending['cleanup_boot_proof']['schema'], 1)
+        self.remote.broken_service = False
+
+        with patch.object(self.cleanup, '_device', wraps=self.cleanup._device) as device:
+            self.assertTrue(self.remove()['verified_clean'])
+        actions = [call.args[1] for call in device.call_args_list]
+        self.assertIn('idle', actions[:actions.index('sweep')])
+        self.assertEqual(actions[actions.index('sweep') + 1:], ['inventory', 'idle', 'boot-release'])
+        self.assertIsNone(self.store.pending(self.profile))
+
     def test_restricted_tmp_rechecks_legacy_restart_request_after_startup_recovers(self):
         self.remote.volatile_mode = 0o111
         (self.root / 'proc').mkdir()
