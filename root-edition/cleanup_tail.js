@@ -905,7 +905,9 @@ async function absent(final) {
       (record.retained_temporary_stages || []).forEach(function (entry) {
         if (
           object(entry) &&
-          /^\/tmp\/cytv-(?:product|system-updater)-[a-f0-9]{32}$/.test(entry.path)
+          /^\/tmp\/cytv-(?:product|system-updater)-[a-f0-9]{32}$/.test(
+            entry.path
+          )
         )
           prefixes.push(entry.path + '/');
       });

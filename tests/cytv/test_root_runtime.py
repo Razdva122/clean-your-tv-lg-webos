@@ -109,9 +109,10 @@ class RuntimeChoices(unittest.TestCase):
                 installer = SimpleNamespace(store=store, profile=profile, remote=remote, payload=Path(tmp),
                                             manifest={'legacy_root_beta': 'legacy-root-beta'}, _ordinary_payload=None)
                 ask = Mock(return_value='')
+                expected = type(home_error) if non_interactive else EOFError
                 with patch('cytv.operations.Installer.check_no_root_alternative') as check, self.assertRaises(expected):
                     offer(installer, SimpleNamespace(non_interactive=non_interactive, yes=True),
-                          ask, Console(lambda _: None), home_error=LegacyRibbonError())
+                          ask, Console(lambda _: None), home_error=home_error)
                 self.assertEqual(check.call_count, 0 if non_interactive else 1)
                 self.assertEqual(ask.call_count, 0 if non_interactive else 1)
                 self.assertEqual(profile['edition'], 'root')

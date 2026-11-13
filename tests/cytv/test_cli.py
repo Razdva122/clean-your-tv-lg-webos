@@ -98,7 +98,7 @@ class CLITests(unittest.TestCase):
     def assert_no_root_install_after_root_preflight(self, choose_beta, generic=False, storage_full=False,
                                                    native_missing=False):
         from cytv.errors import TVCommandError
-        from cytv.root_capabilities import NATIVE_HEADERS
+        from cytv.root_capabilities import NATIVE_HEADERS, NATIVE_HOME_UNAVAILABLE
         from cytv.root_runtime import VENDOR_PROBE
         from cytv.transport import terminal_reply
         from tests.cytv.test_operations import OperationTests, Remote, split_observer_command
@@ -150,13 +150,11 @@ class CLITests(unittest.TestCase):
                             'sdkVersion': '3.5.0'}
                 return super().luna(uri, payload, **kwargs)
             def run(self, command, data=None, timeout=30):
-                if missing_native_home and command == NATIVE_HEADERS:
-                    raise TVCommandError(NATIVE_HOME_UNAVAILABLE)
                 if command == '/usr/bin/node --version':return 'v0.12.2'
                 if command == VENDOR_PROBE: return 'CYTV_VENDOR_READY'
                 if 'CYTV_FRESH_ROOT' in command:return 'CYTV_FRESH_ROOT'
                 if native_missing and command == NATIVE_HEADERS:
-                    raise TVCommandError(42)
+                    raise TVCommandError(NATIVE_HOME_UNAVAILABLE)
                 if not native_missing and 'process.versions.node.split' in command and 'CYTV_ROOT_READY' in command:
                     return 'CYTV_ROOT_MISSING'
                 if generic and command == 'LC_ALL=C df -Pk /tmp':
@@ -499,7 +497,7 @@ class CLITests(unittest.TestCase):
     def test_root_doctor_exports_qt_failure_from_verified_payload(self):
         import hashlib
         from cytv.errors import TVCommandError, TVRejected
-        from cytv.root_capabilities import CALLS, NATIVE_HEADERS
+        from cytv.root_capabilities import CALLS, NATIVE_HEADERS, NATIVE_HOME_UNAVAILABLE
         from tests.cytv.test_operations import Remote
 
         identity = {'returnValue': True, 'modelName': 'AR-50', 'firmwareVersion': '04.66.75',
@@ -513,7 +511,7 @@ class CLITests(unittest.TestCase):
 
             def run(self, command, *args, **kwargs):
                 if command == NATIVE_HEADERS:
-                    raise TVCommandError(42)
+                    raise TVCommandError(NATIVE_HOME_UNAVAILABLE)
                 return super().run(command, *args, **kwargs)
 
             def luna(self, uri, payload, **kwargs):
