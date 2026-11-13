@@ -39,7 +39,8 @@
       "pr": 613,
       "issues": [
         152,
-        389
+        389,
+        418
       ],
       "summary": "Fix EF950V No-root removal and C1 reinstall"
     },
