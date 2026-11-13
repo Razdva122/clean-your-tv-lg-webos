@@ -142,8 +142,11 @@ The current source permits completion without a restart when current control,
 startup, package/file and process checks pass and no prior setup is unresolved.
 A normal Developer Mode removal runs these checks as part of the same
 operation. Wait for the installer to confirm that removal is complete.
-A requested restart remains necessary for live/unverifiable project processes or
-unfinished old work. Pending final verification is shown as remaining cleanup;
+With the v1.20.3 installer, **Try again** can also finish a No-root removal on
+the same boot if a transient Helper Stop failure clears and current checks
+confirm cleanup can proceed. Follow a restart request if it remains after the
+retry. Live or unverifiable project processes and unfinished old work can still
+require a full restart. Pending final verification is shown as remaining cleanup;
 a connection interruption and an actual package-removal refusal have separate
 results. Pending cleanup never appears as verified success.
 
