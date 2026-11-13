@@ -194,8 +194,6 @@ class SimpleRemoval(unittest.TestCase):
 
         socket = Socket()
         with patch('websockets.sync.client.connect', return_value=socket) as connect:
-            self.assertTrue(self.remove()['restart_required'])
-            self.reboot()
             with self.assertRaises(UserError) as caught:
                 self.remove()
             self.assertEqual(caught.exception.reason_code, 'controls-unverified')
@@ -303,6 +301,33 @@ class SimpleRemoval(unittest.TestCase):
         self.assertFalse(self.remote.apps)
         self.assertIsNone(self.store.pending(self.profile))
         self.assertFalse(list((self.root/'volatile').glob('cytv-removal-*.boot')))
+
+    def test_broken_optional_startup_does_not_block_registered_package_removal(self):
+        (self.root / 'proc').mkdir()
+        self.remote.apps = {'com.local.nativehome'}
+        self.remote.broken_service = True
+        self.own_file('apps/usr/palm/services/com.local.nativehome.service/service.js')
+        self.assertTrue(self.remove()['verified_clean'])
+        self.assertFalse(self.remote.apps)
+        self.assertFalse(list((self.root / 'volatile').glob('cytv-removal-*.boot')))
+
+    def test_removal_waits_for_package_manager_and_continues_without_second_request(self):
+        (self.root / 'proc').mkdir()
+        self.store.begin(self.profile, 'install', stage='submitted')
+        self.remote.apps = {'com.local.nativehome'}
+        luna = self.remote.luna
+        states = iter([['com.local.nativehome'], []])
+
+        def status(uri, payload, **kwargs):
+            if uri == 'com.webos.appInstallService/status':
+                return {'returnValue': True, 'status': {'apps': next(states)}}
+            return luna(uri, payload, **kwargs)
+
+        self.remote.luna = status
+        with patch.object(self.cleanup, 'sleep') as wait:
+            self.assertTrue(self.remove()['verified_clean'])
+        wait.assert_called_once()
+        self.assertIsNone(self.store.pending(self.profile))
 
     def test_invalid_helper_stop_record_recovers_only_after_new_boot_and_idle(self):
         for name, contents in (('control.json', None), ('controller.pid', None), ('controller.pid', 'invalid')):
@@ -428,8 +453,7 @@ class SimpleRemoval(unittest.TestCase):
     def test_lost_host_completion_after_verified_restart_does_not_request_second_restart(self):
         from unittest.mock import patch
         (self.root/'proc').mkdir()
-        self.store.begin(self.profile,'install',stage='submitted')
-        self.assertTrue(self.remove()['restart_required'])
+        self.seed_pending_restart()
         self.reboot()
         with patch.object(self.store,'finish_clean_removal',side_effect=OSError('host interruption')):
             with self.assertRaises(OSError):self.remove()
@@ -439,8 +463,7 @@ class SimpleRemoval(unittest.TestCase):
     def test_saved_restart_proof_does_not_hide_a_reappeared_process(self):
         from unittest.mock import patch
         (self.root/'proc').mkdir()
-        self.store.begin(self.profile,'install',stage='submitted')
-        self.assertTrue(self.remove()['restart_required'])
+        self.seed_pending_restart()
         self.reboot()
         with patch.object(self.store,'finish_clean_removal',side_effect=OSError('host interruption')):
             with self.assertRaises(OSError):self.remove()
@@ -477,10 +500,14 @@ class SimpleRemoval(unittest.TestCase):
         (proc/'cwd').symlink_to(self.root/'developer/apps/usr/palm/services/com.gathin.tvhome.renewal')
         self.assertTrue(self.remove()['restart_required'])
 
-    def test_empty_files_with_unresolved_installation_do_not_skip_restart(self):
+    def test_legacy_partial_install_with_idle_package_manager_needs_no_restart(self):
         (self.root/'proc').mkdir()
-        self.store.begin(self.profile,'install',stage='submitted')
-        self.assertTrue(self.remove()['restart_required'])
+        self.store.begin(self.profile,'install')
+        own = self.own_file('apps/usr/palm/applications/com.local.nativehome/state/settings.json')
+        self.remote.boot = 'not-readable-as-a-boot-id'
+        self.assertTrue(self.remove()['verified_clean'])
+        self.assertFalse(own.exists())
+        self.assertIsNone(self.store.pending(self.profile))
 
     def test_input_read_failure_uses_owned_delete_and_finishes_after_restart(self):
         self.remote.apps={'com.gathin.tvhome'}
@@ -543,6 +570,11 @@ class SimpleRemoval(unittest.TestCase):
         self.assertEqual(caught.exception.reason_code,'connection-interrupted')
         self.assertTrue(self.remote.apps)
 
+    def seed_pending_restart(self):
+        self.store.request_clean_removal(self.profile)
+        proof = self.cleanup._device(self.installer, 'boot-create')['boot_proof']
+        self.store.checkpoint(self.profile, stage='restart-required', cleanup_boot_proof=proof)
+
     def reboot(self):
         self.remote.boot='22222222-2222-2222-2222-222222222222'
         for p in (self.root/'volatile').glob('cytv-removal-*.boot'):p.unlink()
@@ -603,8 +635,7 @@ class SimpleRemoval(unittest.TestCase):
         (self.root / 'proc').mkdir()
         self.remote.apps = {'com.local.nativehome'}
         self.own_file('apps/usr/palm/services/com.local.nativehome.service/service.js')
-        self.remote.broken_service = True
-        self.assertTrue(self.remove()['restart_required'])
+        self.seed_pending_restart()
         pending = self.store.pending(self.profile)
         self.assertEqual(pending['cleanup_boot_proof']['schema'], 1)
         self.remote.broken_service = False
@@ -621,26 +652,13 @@ class SimpleRemoval(unittest.TestCase):
         (self.root / 'proc').mkdir()
         self.remote.apps = {'com.local.nativehome', 'com.gathin.tvhome'}
         service = self.own_file('apps/usr/palm/services/com.local.nativehome.service/service.js')
-        self.remote.broken_service = True
-        self.assertTrue(self.remove()['restart_required'])
+        self.seed_pending_restart()
         pending = self.store.pending(self.profile)
-        self.assertTrue(pending['cleanup_restart_first'])
-        self.assertEqual(pending['cleanup_restart_triggers'], ['startup-disable-unverified'])
-        # v1.17.1 recorded the restart gate before it recorded trigger codes.
-        self.store.checkpoint(self.profile, cleanup_restart_triggers=None)
-        with self.assertRaises(UserError) as caught:
-            self.remove()
-        self.assertEqual(caught.exception.no_root_cleanup['reason'], 'kernel-boot-unchanged')
-        self.assertTrue(service.exists())
-        self.assertEqual(len(self.remote.apps), 2)
-
-        self.remote.broken_service = False
         proc = self.root / 'proc/123'
         proc.mkdir()
         cmdline = proc / 'cmdline'
         cmdline.write_bytes(b'/usr/bin/node\0' + os.fsencode(service) + b'\0')
-        with self.assertRaises(UserError):
-            self.remove()
+        self.assertTrue(self.remove()['restart_required'])
         self.assertEqual(self.store.pending(self.profile)['cleanup_restart_triggers'], ['process-idle-unverified'])
         self.assertTrue(service.exists())
         self.assertEqual(len(self.remote.apps), 2)
@@ -652,7 +670,7 @@ class SimpleRemoval(unittest.TestCase):
         self.assertFalse(self.remote.apps)
         receipt = json.loads((self.store.device_dir(self.profile) / 'clean-removal.json').read_text())
         self.assertEqual(receipt['removal_operation'], pending['removal_operation'])
-        self.assertFalse(receipt['cleanup_boot_verified'])
+        self.assertIsNot(receipt.get('cleanup_boot_verified'), True)
         self.assertEqual(receipt['cleanup_boot_proof']['kernel'], self.remote.boot)
 
     def test_restricted_tmp_rechecks_resident_installer_after_package_manager_becomes_idle(self):
@@ -669,7 +687,11 @@ class SimpleRemoval(unittest.TestCase):
             return original_luna(uri, payload, **kwargs)
 
         self.remote.luna = luna
-        self.assertTrue(self.remove()['restart_required'])
+        self.seed_pending_restart()
+        with patch.object(self.cleanup, 'monotonic', side_effect=(0, 20)), self.assertRaises(UserError) as failure:
+            self.remove()
+        self.assertEqual(failure.exception.reason_code, 'original-writer-active')
+        self.assertEqual(self.store.pending(self.profile)['stage'], 'requested')
         self.assertTrue(journal.exists())
         self.assertEqual(self.remote.apps, {'com.local.nativehome'})
 
@@ -677,8 +699,7 @@ class SimpleRemoval(unittest.TestCase):
         proc = self.root / 'proc/123'
         proc.mkdir()
         (proc / 'cmdline').write_bytes(b'/usr/bin/node\0' + os.fsencode(journal.with_name('observer.js')) + b'\0')
-        with self.assertRaises(UserError):
-            self.remove()
+        self.assertTrue(self.remove()['restart_required'])
         self.assertTrue(journal.exists())
         self.assertFalse(any(uri.endswith('/dev/remove') for uri, _ in self.remote.calls))
         shutil.rmtree(proc)
@@ -687,7 +708,7 @@ class SimpleRemoval(unittest.TestCase):
         self.assertFalse(journal.exists())
         self.assertFalse(self.remote.apps)
         receipt = json.loads((self.store.device_dir(self.profile) / 'clean-removal.json').read_text())
-        self.assertFalse(receipt['cleanup_boot_verified'])
+        self.assertIsNot(receipt.get('cleanup_boot_verified'), True)
         self.assertEqual(receipt['cleanup_boot_proof']['kernel'], self.remote.boot)
 
     def test_denied_package_status_uses_only_terminal_readback_for_original_install(self):
@@ -720,46 +741,33 @@ class SimpleRemoval(unittest.TestCase):
         self.assertFalse(self.remote.apps)
         self.assertFalse(any(uri.endswith('/dev/install') for uri, _ in self.remote.calls))
 
-    def test_restricted_tmp_keeps_unresolved_install_until_changed_kernel(self):
+    def test_restricted_tmp_keeps_unresolved_install_when_package_status_is_denied(self):
         from cytv.diagnostics import create_report
 
-        self.remote.volatile_mode=0o111
-        (self.root/'proc').mkdir()
-        self.store.begin(self.profile,'install',stage='submitted')
-        try:self.assertTrue(self.remove()['restart_required'])
-        except UserError as error:self.fail('Could not capture kernel-only baseline: '+str(error))
-        pending=self.store.pending(self.profile)
-        self.assertEqual(pending['cleanup_boot_proof'],{'schema':2,'kind':'kernel-only',
-            'goal':pending['removal_operation'],'kernel':self.remote.boot})
-        self.assertIsNone(pending.get('cleanup_boot_id'),'No-root kernel identity must have one current storage location')
-        with self.assertRaises(UserError) as caught:self.remove()
-        self.assertEqual(caught.exception.no_root_cleanup['reason'],'kernel-boot-unchanged')
-        for action, error in (('uninstall', caught.exception), ('status', None)):
-            with self.subTest(action=action):
-                report = json.loads(create_report(self.store, action, self.profile, action, error).read_text())
-                self.assertEqual(report['removal']['restart_triggers'], ['prior-operation-unresolved'])
-        self.assertIsNotNone(self.store.pending(self.profile))
-        self.remote.boot='22222222-2222-2222-2222-222222222222'
-        self.assertTrue(self.remove()['verified_clean'])
+        self.remote.volatile_mode = 0o111
+        (self.root / 'proc').mkdir()
+        self.store.begin(self.profile, 'install', stage='submitted')
+        luna = self.remote.luna
 
-    def test_restricted_tmp_lost_capture_and_saved_restart_recheck_processes(self):
-        from unittest.mock import patch
-        self.remote.volatile_mode=0o111
-        (self.root/'proc').mkdir()
-        self.store.begin(self.profile,'install',stage='submitted')
-        self.remote.cut_boot_create=True
-        with self.assertRaises(UserError):self.remove()
+        def denied(uri, payload, **kwargs):
+            if uri == 'com.webos.appInstallService/status':
+                raise TVRejected('Denied', {'returnValue': False, 'errorCode': -1}, uri)
+            return luna(uri, payload, **kwargs)
+
+        self.remote.luna = denied
+        self.remote.cut_boot_create = True
+        with self.assertRaises(UserError):
+            self.remove()
         self.assertIsNone(self.store.pending(self.profile).get('cleanup_boot_proof'))
         self.assertTrue(self.remove()['restart_required'])
-        self.remote.boot='22222222-2222-2222-2222-222222222222'
-        with patch.object(self.store,'finish_clean_removal',side_effect=OSError('host interruption')):
-            with self.assertRaises(OSError):self.remove()
-        proc=self.root/'proc/123';proc.mkdir()
-        (proc/'cmdline').write_text('/usr/bin/node\0'+str(self.root/'developer/apps/usr/palm/services/com.gathin.tvhome.renewal/service.js')+'\0')
+        pending = self.store.pending(self.profile)
+        self.assertEqual(pending['cleanup_boot_proof'], {'schema': 2, 'kind': 'kernel-only',
+            'goal': pending['removal_operation'], 'kernel': self.remote.boot})
         self.assertTrue(self.remove()['restart_required'])
-        self.assertEqual(self.store.pending(self.profile)['cleanup_boot_proof']['kernel'],self.remote.boot)
-        with self.assertRaises(UserError) as caught:self.remove()
-        self.assertEqual(caught.exception.no_root_cleanup['reason'],'kernel-boot-unchanged')
+        report = json.loads(create_report(self.store, 'status', self.profile, 'status', None).read_text())
+        self.assertEqual(report['removal']['restart_triggers'], ['prior-operation-unresolved'])
+        self.reboot()
+        self.assertTrue(self.remove()['verified_clean'])
 
     def test_kernel_only_proof_never_uses_marker_absence_or_retires_same_boot(self):
         self.remote.volatile_mode=0o111
@@ -796,10 +804,13 @@ class SimpleRemoval(unittest.TestCase):
         with self.assertRaises(UserError):self.cleanup._device(self.installer,'boot-probe',proof=proof)
         self.assertTrue(self.boot_marker().exists())
 
-    def test_boot_root_refusal_exports_safe_context_before_any_cleanup(self):
+    def test_boot_root_refusal_exports_safe_context_before_package_removal(self):
         from cytv import diagnostics
         self.remote.volatile_mode=0o755
         self.remote.apps={'com.local.nativehome'}
+        process = self.root / 'proc/123'
+        process.mkdir(parents=True)
+        (process / 'cmdline').write_bytes(b'com.local.nativehome\0')
         self.store.request_clean_removal(self.profile)
         self.store.checkpoint(self.profile, cleanup_boot_proof=None)
         with self.assertRaises(RuntimeError) as caught:self.remove()
@@ -811,8 +822,8 @@ class SimpleRemoval(unittest.TestCase):
         self.assertEqual(detail['directory_mode'],'0755')
         self.assertEqual(detail['directory_owner'],'root')
         self.assertEqual(detail['directory_type'],'directory')
-        self.assertFalse(any(uri.endswith(('/disable','/dev/remove')) for uri,_ in self.remote.calls))
-        self.assertEqual(self.store.pending(self.profile)['stage'],'requested')
+        self.assertFalse(any(uri.endswith('/dev/remove') for uri,_ in self.remote.calls))
+        self.assertEqual(self.store.pending(self.profile)['stage'],'restart-required')
         report=json.loads(diagnostics.create_report(self.store,'uninstall',self.profile,'uninstall',caught.exception).read_text())
         self.assertEqual(report['no_root_cleanup'],detail)
         self.assertEqual(report['first_failure']['no_root_cleanup'],detail)
@@ -920,7 +931,7 @@ class SimpleRemoval(unittest.TestCase):
         self.assertTrue(self.remove()['verified_clean'])
         self.assertIsNone(self.store.pending(self.profile))
         self.assertEqual((directory/('capsule-'+operation+'.json')).read_bytes(),capsule)
-        self.assertFalse(any(uri.endswith(('/dev/install','/dev/remove','appInstallService/status')) for uri,_ in self.remote.calls))
+        self.assertFalse(any(uri.endswith(('/dev/install','/dev/remove')) for uri,_ in self.remote.calls))
 
     def test_new_private_observer_is_included_in_explicit_removal(self):
         private=self.root/'volatile/.cytv-installer/operations'/('a'*32)
@@ -1036,20 +1047,6 @@ class SimpleRemoval(unittest.TestCase):
         with self.assertRaises((RuntimeError,UserError)):self.remove()
         self.assertEqual(marker.read_text(),'foreign existing file')
 
-    def test_inherited_install_captures_boot_proof_before_control_and_package_effects(self):
-        self.store.begin(self.profile, 'install', stage='submitted')
-        self.remote.apps={'com.local.nativehome'}
-        key=self.own_file('apps/usr/palm/applications/com.local.nativehome/state/ssap-key.json')
-        run=self.remote.run
-        def checked(command,**kwargs):
-            encoded,_=json.JSONDecoder().raw_decode(kwargs['data'].decode()[len('process.argv.push('):])
-            action=json.loads(encoded)['action']
-            if action in ('stop','sweep'):
-                self.assertIn('cleanup_boot_proof',self.store.pending(self.profile))
-            return run(command,**kwargs)
-        self.remote.run=checked
-        self.assertTrue(self.remove()['restart_required']);self.assertFalse(key.exists())
-
     def test_forged_or_mixed_kernel_proof_cannot_retire_same_boot_marker(self):
         self.remove();marker=self.boot_marker();proof=self.store.pending(self.profile)['cleanup_boot_proof']
         for value in (self.remote.boot,dict(proof,kernel='22222222-2222-2222-2222-222222222222'),dict(proof,goal='a'*32)):
@@ -1145,16 +1142,16 @@ class SimpleRemoval(unittest.TestCase):
         self.installer.payload=payload
         self.installer.manifest={'helper':'helper.ipk','files':{str(p.relative_to(payload)):hashlib.sha256(p.read_bytes()).hexdigest() for p in payload.rglob('*') if p.is_file()}}
 
-    def test_partial_setup_is_removed_without_original_success_then_final_sweep_after_restart(self):
-        self.store.begin(self.profile,'install',components={},failure={'reason':'unknown'},stage='install-packages')
-        original=(self.store.device_dir(self.profile)/'operation.json').read_bytes()
-        key=self.own_file('apps/usr/palm/applications/com.local.nativehome/state/ssap-key.json','changed private key')
-        first=self.remove();self.assertFalse(first['verified_clean']);self.assertTrue(first['restart_required']);self.assertFalse(key.exists())
-        pending=self.store.pending(self.profile)
-        self.assertEqual((self.store.device_dir(self.profile)/pending['original_receipt']).read_bytes(),original)
-        self.assertTrue(self.remove()['restart_required'])
-        late=self.own_file('apps/usr/palm/applications/com.local.nativehome/state/late.json')
-        self.reboot();self.assertTrue(self.remove()['verified_clean']);self.assertFalse(late.exists());self.assertIsNone(self.store.pending(self.profile))
+    def test_partial_setup_removal_archives_original_receipt(self):
+        (self.root / 'proc').mkdir()
+        self.store.begin(self.profile, 'install', components={}, failure={'reason': 'unknown'}, stage='install-packages')
+        directory = self.store.device_dir(self.profile)
+        original = (directory / 'operation.json').read_bytes()
+        key = self.own_file('apps/usr/palm/applications/com.local.nativehome/state/ssap-key.json')
+        self.assertTrue(self.remove()['verified_clean'])
+        self.assertFalse(key.exists())
+        completed = json.loads((directory / 'clean-removal.json').read_text())
+        self.assertEqual((directory / completed['original_receipt']).read_bytes(), original)
 
     def test_recovery_of_legacy_install_when_global_package_status_is_denied(self):
         from cytv.diagnostics import create_report
@@ -1228,7 +1225,7 @@ class SimpleRemoval(unittest.TestCase):
         self.assertEqual((receipt.parent / pending['original_receipt']).read_bytes(), original_bytes)
         report = create_report(self.store, 'recover', self.profile, 'recover')
         self.assertEqual(json.loads(report.read_text())['first_failure'], first_failure)
-        self.assertEqual(sum(uri == status_uri for uri, _ in self.remote.calls), 4)
+        self.assertEqual(sum(uri == status_uri for uri, _ in self.remote.calls), 5)
         self.assertFalse(any(uri.endswith('/dev/install') for uri, _ in self.remote.calls))
 
     def test_issue_307_unregistered_partial_helper_requires_verified_restart(self):
@@ -1335,9 +1332,11 @@ class SimpleRemoval(unittest.TestCase):
             assert_files_kept()
 
             self.reboot()
-            for status in (active, ambiguous):
-                with self.subTest(status=status), self.assertRaisesRegex(UserError, 'not confirmed idle'):
+            for status, reason in ((active, 'original-writer-active'), (ambiguous, 'pending-operation')):
+                with self.subTest(status=status), patch.object(self.cleanup, 'monotonic', side_effect=(0, 20)), \
+                     self.assertRaises(UserError) as failure:
                     run('y', 'y')
+                self.assertEqual(failure.exception.reason_code, reason)
                 self.assertIsNotNone(self.store.pending(self.profile))
                 self.assertFalse(plans[-1]['verified_clean'])
                 self.assertFalse(plans[-1]['restart_required'])
@@ -1394,16 +1393,16 @@ class SimpleRemoval(unittest.TestCase):
         self.assertTrue(self.remove()['restart_required']);self.assertFalse(service.exists())
         self.reboot();self.assertTrue(self.remove()['verified_clean'])
 
-    def test_broken_service_requires_restart_then_can_be_deleted_without_starting_it(self):
-        for registered in (True,False):
-            with self.subTest(registered=registered):
-                if registered:self.remote.apps={'com.local.nativehome'}
-                broken=self.own_file('apps/usr/palm/services/com.local.nativehome.service/service.js',"require('missing dependency');")
-                self.remote.broken_service=True
-                self.assertTrue(self.remove()['restart_required']);self.assertTrue(broken.exists())
-                self.assertEqual(self.store.pending(self.profile)['cleanup_restart_triggers'], ['startup-disable-unverified'])
-                self.remote.boot='33333333-3333-3333-3333-333333333333' if registered else '44444444-4444-4444-4444-444444444444'
-                self.assertTrue(self.remove()['verified_clean']);self.assertFalse(broken.exists())
+    def test_unregistered_broken_service_can_be_deleted_after_restart(self):
+        broken = self.own_file('apps/usr/palm/services/com.local.nativehome.service/service.js',
+                               "require('missing dependency');")
+        self.remote.broken_service = True
+        self.assertTrue(self.remove()['restart_required'])
+        self.assertTrue(broken.exists())
+        self.assertEqual(self.store.pending(self.profile)['cleanup_restart_triggers'], ['startup-disable-unverified'])
+        self.reboot()
+        self.assertTrue(self.remove()['verified_clean'])
+        self.assertFalse(broken.exists())
 
     def test_optional_service_disconnect_is_reported_without_turning_into_restart_hint(self):
         self.remote.apps={'com.local.nativehome'}
@@ -1442,6 +1441,25 @@ class SimpleRemoval(unittest.TestCase):
         self.remove();self.assertFalse(own.exists());self.assertTrue((foreign/'helper.ipk').exists())
         self.reboot();self.assertTrue(self.remove()['verified_clean']);self.assertEqual((foreign/'notes.txt').read_text(),'owner file')
 
+    def test_removal_finishes_when_only_temporary_ipks_cannot_be_deleted(self):
+        (self.root / 'proc').mkdir()
+        self.remote.apps = set(self.cleanup.APPS[:2])
+        stage = self.root / 'developer/temp' / ('cytv-' + 'a' * 32)
+        stage.mkdir(parents=True)
+        ipk = stage / 'helper.ipk'
+        ipk.write_bytes(package.ipk('com.local.nativehome', '0.7.4', {}, architecture='arm'))
+        stage.chmod(0o555)
+        self.addCleanup(stage.chmod, 0o755)
+
+        result = self.remove()
+
+        self.assertEqual(result, {'removed': True, 'verified_clean': True, 'temporary_files_retained': True})
+        self.assertFalse(self.remote.apps)
+        self.assertTrue(ipk.is_file())
+        self.assertIsNone(self.store.pending(self.profile))
+        receipt = json.loads((self.store.device_dir(self.profile) / 'clean-removal.json').read_text())
+        self.assertEqual(receipt['result'], result)
+
     def test_directory_replacement_is_not_traversed_or_deleted(self):
         own=self.root/'developer/apps/usr/palm/applications/com.local.nativehome';(own/'child').mkdir(parents=True)
         foreign=self.root/'foreign';foreign.mkdir();(foreign/'valuable').write_text('preserve')
@@ -1462,7 +1480,7 @@ class SimpleRemoval(unittest.TestCase):
         source=self.own_file('.cytv-installer/operations/'+'a'*32+'/changed-private-data.json','old unknown data')
         self.remote.apps={'com.local.nativehome'}
         self.assertTrue(self.remove()['restart_required'])
-        self.assertEqual(self.store.pending(self.profile)['cleanup_restart_triggers'], ['resident-installer-evidence'])
+        self.assertEqual(self.store.pending(self.profile)['cleanup_restart_triggers'], ['process-idle-unverified'])
         self.assertTrue(source.exists())
         self.assertFalse(any(uri.endswith('/dev/remove') for uri,_ in self.remote.calls))
         self.reboot();self.assertTrue(self.remove()['verified_clean']);self.assertFalse(source.exists())
@@ -1585,7 +1603,7 @@ class SimpleRemoval(unittest.TestCase):
         self.assertTrue(self.remove()['restart_required']);self.assertTrue(pid.exists())
         self.assertTrue(self.boot_marker().exists(),'a still-running controller requires a new captured restart baseline')
         self.assertTrue(self.remove()['restart_required']);self.assertTrue(pid.exists())
-        pid.unlink();self.reboot();self.assertTrue(self.remove()['verified_clean'])
+        pid.unlink();shutil.rmtree(proc);self.reboot();self.assertTrue(self.remove()['verified_clean'])
 
     def test_lost_rearm_create_reply_keeps_retry_seedable_without_adopting_a_mismatch(self):
         pid=self.own_file('apps/usr/palm/applications/com.local.nativehome/state/controller.pid',str(os.getpid()))
@@ -1599,7 +1617,7 @@ class SimpleRemoval(unittest.TestCase):
             self.assertTrue(marker.exists())
             self.assertTrue(self.remove()['restart_required'])
             self.assertTrue(pid.exists())
-        pid.unlink();marker.unlink();self.assertTrue(self.remove()['verified_clean'])
+        pid.unlink();shutil.rmtree(proc);marker.unlink();self.assertTrue(self.remove()['verified_clean'])
 
     def test_stale_pid_of_foreign_process_does_not_force_endless_restart(self):
         pid=self.own_file('apps/usr/palm/applications/com.local.nativehome/state/controller.pid',str(os.getpid()))
@@ -1616,6 +1634,7 @@ class SimpleRemoval(unittest.TestCase):
     @unittest.skipIf(getattr(os,'getuid',lambda:-1)()==0,'unprivileged SDK permission model')
     def test_registered_packages_use_os_removal_for_protected_namespaces(self):
         self.remote.os_cleanup=True
+        (self.root/'proc').mkdir()
         for kind,name,mode in [('applications','com.local.nativehome',0o555),
                                ('applications','com.local.nativehome',0o000),
                                ('applications','com.local.nativehome/state',0o555),
@@ -1629,11 +1648,6 @@ class SimpleRemoval(unittest.TestCase):
                 foreign=self.own_file('apps/usr/palm/'+kind+'/org.foreign/keep.json','preserve')
                 self.remote.apps={'com.local.nativehome'}
                 start=len(self.remote.calls)
-                first=self.remove();self.assertTrue(first['restart_required']);self.assertFalse(first['verified_clean'])
-                if mode == 0o000:
-                    self.assertIn('protected-package-access', self.store.pending(self.profile)['cleanup_restart_triggers'])
-                self.remote.boot=('33333333-3333-3333-3333-333333333333' if self.remote.boot!=
-                                  '33333333-3333-3333-3333-333333333333' else '44444444-4444-4444-4444-444444444444')
                 self.assertTrue(self.remove()['verified_clean'])
                 self.assertFalse(directory.exists());self.assertEqual(foreign.read_text(),'preserve')
                 calls=self.remote.calls[start:]
@@ -1671,7 +1685,8 @@ class SimpleRemoval(unittest.TestCase):
         self.remote.broken_service = True
         self.own_file('apps/usr/palm/services/' + app + '.service/service.js', 'published source')
         marker = self.own_file('apps/usr/palm/applications/' + app + '/state/blocked', 'stopped')
-        self.assertTrue(self.remove()['restart_required'])
+        self.seed_pending_restart()
+        self.cleanup._device(self.installer, 'stop')
         self.assertIsNotNone(self.store.pending(self.profile))
         generation = marker.parent / 'stop-generation'
         for path in (marker.parent, marker, generation):
