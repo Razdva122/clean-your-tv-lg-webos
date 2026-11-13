@@ -871,7 +871,7 @@ class LocalDevice:
             'ls2-provision-snapshot.json','recovery-provision.pending.json','recovery-provision.json',
             'recovery-failure.json','run-recovery-service','recovery-service.json','bootstrap.pid',
             'activity-registration.json','startup-hook.json','startup-hook.previous.json',
-            'profile-trial.json','profile-trial.lock','persistent-intent.json','persistent-intent.lock',
+            'profile-trial.json','profile-trial.lock','stock-home-initialization.json','persistent-intent.json','persistent-intent.lock',
             'persistent-binding.json','boot-continuation.json','profile-guardian-ready.json','profile-recovery.log',
             'profile-candidate.stage','native-input.json','software-update.lock','update-block.json',
             'update-home-cancel.json','update-home-resume.json','session.lock','boot-dispatch.lock',
@@ -885,13 +885,15 @@ class LocalDevice:
             'bootstrap.json','bootstrap-bundle.json','baseline.json','current.json','infrastructure.json',
             'installed-package.json','installed-terminal.json','registration.json','startup-hook.json',
             'startup-hook.previous.json','transaction.json','legacy-lockdown.json','bootstrap.pid',
-            'worker.log','daemon.log','removed-registration','cytv-removal.json'}
+            'worker.log','daemon.log','removed-registration','cytv-removal.json','installer-accepted.json'}
         def classified(root,index):
             allowed=root_allowed if index==0 else updater_allowed
-            if index==2:allowed=allowed|{'current-root.json','current-no-root.json','installer-accepted.json'}
+            if index==2:allowed=allowed|{'current-root.json','current-no-root.json'}
             pattern=r'(?:profile|healthy|healthy-rollback|mutable|helper-resume|renewal-pause)-[a-f0-9]{32}(?:-rollback)?\.json'
             if index==0:
                 pattern+=r'|(?:completed-profile-[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}|system-rollback-anchor-[a-f0-9]{32})\.json'
+            elif index==1:
+                pattern+=r'|(?:confirm|ready|ready-rollback)-[a-f0-9]{32}\.json'
             return allowed|{p.name for p in root.iterdir() if re.fullmatch(pattern,p.name)}
         roots=(ROOT,UPDATER,SUPERVISOR)
         for index,root in enumerate(roots):

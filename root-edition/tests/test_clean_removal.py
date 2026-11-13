@@ -660,13 +660,46 @@ class PartialDeviceRemoval(unittest.TestCase):
         self.assertTrue(all(not path.exists() for path in names))
         self.assertEqual(driver.ownership.store.read('routing-backup-'+identifier),{'profile-trial.json':original})
 
+    def test_retry_retires_root_update_receipts_from_existing_private_cleanup(self):
+        driver, identifier, root, updater, _, calls, _ = self.fixture()
+        self.assertEqual(driver.clean_remove(identifier)['stage'], 'restart-required')
+        driver.device.current_boot = '22222222-2222-2222-2222-222222222222'
+        with patch.object(driver.device, 'retire_clean_private', side_effect=ValueError('unclassified_private_member')), \
+                patch.object(driver.device, 'log'):
+            stuck = driver.clean_remove(identifier)
+        self.assertEqual(stuck['stage'], 'private-cleanup')
+        self.assertEqual(stuck['cleanup_error'], 'cleanup-check-failed')
+        self.assertTrue(stuck['result']['restart_required'])
+        self.assertNotIn('private-cleanup', stuck['done'])
+
+        receipts = [root / 'stock-home-initialization.json', updater / 'installer-accepted.json']
+        receipts.extend(updater / (kind + '-' + 'a' * 32 + '.json')
+                        for kind in ('confirm', 'ready', 'ready-rollback'))
+        for path in receipts:
+            path.write_text('{}')
+
+        record = driver.clean_remove(identifier, intent=stuck['removal'], expected_lease=stuck['lease'])
+
+        self.assertEqual(record['stage'], 'verified-clean', record.get('last_failure'))
+        self.assertEqual(record['removal'], stuck['removal'])
+        self.assertNotIn('restart_required', record['result'])
+        self.assertEqual(calls.count('remove-com.cleanyourtv.root.preview'), 1)
+        self.assertTrue(all(not path.exists() for path in receipts))
+        self.assertTrue(driver.inspect()['can_install'])
+
     def test_receipt_name_near_matches_and_wrong_component_are_not_retired(self):
         uuid='12345678-1234-4abc-8def-123456789abc'
         for component,name in [('root','completed-profile-'+'a'*32+'.json'),
                                ('root','completed-profile-'+uuid+'.json.bak'),
                                ('root','system-rollback-anchor-'+'a'*31+'.json'),
                                ('root','system-rollback-anchor-'+'A'*32+'.json'),
-                               ('root','current-root.json'),('updater','installer-accepted.json'),
+                               ('root','current-root.json'),('root','installer-accepted.json'),
+                               ('root','ready-'+'a'*32+'.json'),
+                               ('updater','stock-home-initialization.json'),
+                               ('updater','ready-rollback-'+'a'*31+'.json'),
+                               ('updater','ready-'+'A'*32+'.json'),
+                               ('updater','confirm-'+'a'*32+'.json.bak'),
+                               ('updater','confirm-rollback-'+'a'*32+'.json'),
                                ('updater','completed-profile-'+uuid+'.json')]:
             with self.subTest(component=component,name=name):
                 driver,identifier,root,updater,payload,calls,present=self.fixture()
