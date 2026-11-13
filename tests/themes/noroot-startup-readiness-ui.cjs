@@ -458,11 +458,274 @@ const { compile } = require('../../scripts/compile-tv-web.cjs');
       await page.close();
     }
   }
+  async function checkStartup(edition, scenario) {
+    const page = await browser.newPage(),
+      errors = [];
+    page.on('pageerror', (error) => errors.push(error.message));
+    const { version } = JSON.parse(source(edition, 'appinfo.json'));
+    const transaction = 'startup-readiness',
+      icon =
+        'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aE1sAAAAASUVORK5CYII=',
+      profile = {
+        schema: 1,
+        inventory: {
+          apps: [
+            { id: 'readiness.first', title: 'First', icon },
+            { id: 'readiness.second', title: 'Second', icon }
+          ],
+          inputs: []
+        },
+        config: { columns: 5, dockApps: ['readiness.first'], hiddenApps: [] },
+        settings: {}
+      };
+    if (scenario === 'profile-failure') profile.inventory.apps[0].icon = '';
+    await page.addInitScript((scenario) => {
+      window.startupScenario = scenario;
+      window.startupFaults = 0;
+      window.startupHealth = [];
+      window.startupLaunches = [];
+      if (scenario === 'weather-sync') {
+        const toggle = DOMTokenList.prototype.toggle;
+        DOMTokenList.prototype.toggle = function (name) {
+          if (name === 'weather-reserves-right') {
+            startupFaults++;
+            throw new TypeError('Weather DOM fixture failure');
+          }
+          return toggle.apply(this, arguments);
+        };
+      }
+      if (scenario === 'weather-forecast') {
+        localStorage.setItem(
+          'tvhome.weather.v1',
+          JSON.stringify({
+            enabled: true,
+            provider: 'open-meteo',
+            preferred: 'forecast',
+            mode: 'manual',
+            location: { name: 'Berlin', latitude: 52.52, longitude: 13.41 }
+          })
+        );
+        const createRange = document.createRange;
+        document.createRange = function () {
+          if (document.querySelector('#homeWeather[data-format="forecast"]')) {
+            startupFaults++;
+            throw new TypeError('Weather forecast Range fixture failure');
+          }
+          return createRange.call(this);
+        };
+      }
+      if (scenario === 'render-failure') {
+        const remove = DOMTokenList.prototype.remove;
+        DOMTokenList.prototype.remove = function (name) {
+          if (name === 'ctv-starting')
+            throw new Error('Required render fixture failure');
+          return remove.apply(this, arguments);
+        };
+      }
+    }, scenario);
+    await page.route(/^https:/, (route) => route.abort());
+    await page.route('**/preview/bridge.js', (route) =>
+      route.fulfill({
+        body:
+          fs.readFileSync(path.join(site, 'preview/bridge.js'), 'utf8') +
+          `
+      window.CYTV_BROWSER_PREVIEW=false;
+      const startupBridge=window.PalmServiceBridge.prototype.call;
+      window.PalmServiceBridge.prototype.call=function(uri,raw){
+        const service='luna://com.cleanyourtv.system.updater.service/';
+        if(uri===service+'restoreProfile'){
+          this.onservicecallback(JSON.stringify({returnValue:true,result:{
+            profile:${JSON.stringify(profile)},transaction:${JSON.stringify(transaction)},
+            version:${JSON.stringify(version)},phase:'verifying'
+          }}));return;
+        }
+        if(uri===service+'healthy'){
+          startupHealth.push(JSON.parse(raw));
+          this.onservicecallback(JSON.stringify({returnValue:true,result:{}}));return;
+        }
+        if(uri==='luna://com.webos.applicationManager/launch'){
+          startupLaunches.push(JSON.parse(raw).id);
+          this.onservicecallback(JSON.stringify({returnValue:true}));return;
+        }
+        startupBridge.call(this,uri,raw);
+      };`
+      })
+    );
+    let releaseForecast;
+    if (scenario === 'weather-forecast') {
+      const forecastGate = new Promise((resolve) => {
+        releaseForecast = resolve;
+      });
+      await page.route(
+        'https://api.open-meteo.com/v1/forecast?*',
+        async (route) => {
+          await forecastGate;
+          await route.fulfill({
+            headers: { 'Access-Control-Allow-Origin': '*' },
+            json: {
+              current: { temperature_2m: 8, weather_code: 3 },
+              daily: {
+                time: ['2026-11-13'],
+                temperature_2m_min: [4],
+                temperature_2m_max: [8],
+                weather_code: [3]
+              }
+            }
+          });
+        }
+      );
+    }
+    if (scenario === 'weather-async')
+      await page.route('**/weather-data.js', (route) =>
+        route.fulfill({
+          body:
+            source(edition, 'weather-data.js') +
+            `
+        const createWeatherStore=WeatherData.create;
+        WeatherData.create=function(options){
+          const store=createWeatherStore(options);
+          store.start=function(){
+            startupFaults++;
+            return new Promise((resolve,reject)=>{
+              window.rejectWeatherStart=()=>reject(new Error('Weather promise fixture failure'));
+            });
+          };
+          return store;
+        };`
+        })
+      );
+    await page.route('**/install-settings.js', (route) =>
+      route.fulfill({
+        body:
+          source(edition, 'install-settings.js') +
+          `
+      const listenForSettings=CYTVInstallSettings.listen;
+      CYTVInstallSettings.listen=function(onError){
+        window.startupSettingsListening=true;
+        if(startupScenario==='settings-sync'){
+          startupFaults++;
+          throw new Error('Settings listener fixture failure');
+        }
+        if(startupScenario==='settings-async'){
+          startupFaults++;
+          return Promise.reject(new Error('Settings listener promise fixture failure'));
+        }
+        return listenForSettings(onError);
+      };`
+      })
+    );
+    try {
+      await page.goto(
+        'http://127.0.0.1:' +
+          server.address().port +
+          '/' +
+          edition +
+          '/index.html'
+      );
+      const health = () => page.evaluate(() => startupHealth);
+      if (scenario === 'profile-failure') {
+        await page.locator('#systemUpdates').waitFor();
+        assert.equal(await page.evaluate(() => !!window.HomeUIReady), false);
+        assert.deepEqual(await health(), []);
+      } else {
+        await page.waitForFunction(() => !!window.HomeUIReady);
+        const result = await page.evaluate(() =>
+          HomeUIReady.then(
+            () => 'ready',
+            (error) => error.message
+          )
+        );
+        if (scenario === 'render-failure') {
+          assert.equal(result, 'Required render fixture failure');
+          await page.locator('#systemUpdates').waitFor();
+          assert.equal(await page.evaluate(() => RootLauncherRendered), false);
+          assert.deepEqual(await health(), []);
+        } else {
+          assert.equal(result, 'ready', edition + ' ' + scenario);
+          await page.waitForFunction(() => window.startupSettingsListening);
+          assert.equal(await page.evaluate(() => RootLauncherRendered), true);
+          if (releaseForecast) {
+            assert.equal(
+              await page.evaluate(() => HomeWeather.store.state().data),
+              null
+            );
+            releaseForecast();
+            await page.waitForFunction(() => startupFaults > 0);
+            assert.equal(
+              await page.evaluate(() => HomeWeather.store.state().data.temp),
+              8
+            );
+          }
+          const first = page.locator(
+            '#tiles .focused[data-app-id="readiness.first"]'
+          );
+          await first.waitFor();
+          await page.keyboard.press('ArrowRight');
+          await page
+            .locator('#tiles .focused[data-app-id="readiness.second"]')
+            .waitFor();
+          await page.keyboard.press('Enter');
+          assert.deepEqual(await page.evaluate(() => startupLaunches), [
+            'readiness.second'
+          ]);
+          if (scenario !== 'weather-sync')
+            assert.equal(await page.locator('#homeWeather').count(), 1);
+          if (scenario === 'weather-async')
+            await page.evaluate(() => rejectWeatherStart());
+          // Let a theme-triggered Weather frame and unhandled rejections surface.
+          await page.evaluate(
+            () =>
+              new Promise((resolve) =>
+                requestAnimationFrame(() => requestAnimationFrame(resolve))
+              )
+          );
+          assert.deepEqual(errors, []);
+          assert.equal(
+            await page.evaluate(() => startupFaults),
+            scenario === 'success' ? 0 : 1
+          );
+          assert.equal(
+            await page.evaluate(() => SystemUpdates.isOpen()),
+            false
+          );
+          assert.deepEqual(await health(), [
+            {
+              edition: edition === 'root-launcher' ? 'root' : 'no-root',
+              transaction,
+              version
+            }
+          ]);
+        }
+      }
+      assert.deepEqual(errors, []);
+      console.log('PASS ' + edition + ' startup ' + scenario);
+    } finally {
+      if (releaseForecast) releaseForecast();
+      await page.close();
+    }
+  }
   try {
     const editions = process.env.CYTV_READINESS_EDITION
         ? [process.env.CYTV_READINESS_EDITION]
         : ['launcher', 'root-launcher'],
-      overlapOnly = process.env.CYTV_READINESS_OVERLAP_ONLY === '1';
+      overlapOnly = process.env.CYTV_READINESS_OVERLAP_ONLY === '1',
+      startupOnly = process.env.CYTV_READINESS_STARTUP;
+    if (!historical && !overlapOnly)
+      for (const edition of editions)
+        for (const scenario of startupOnly
+          ? [startupOnly]
+          : [
+              'weather-sync',
+              'weather-async',
+              'weather-forecast',
+              'settings-sync',
+              'settings-async',
+              'success',
+              'render-failure',
+              'profile-failure'
+            ])
+          await checkStartup(edition, scenario);
+    if (startupOnly) return;
     if (!overlapOnly)
       for (const edition of editions)
         for (const savedBuiltin of [false, true])

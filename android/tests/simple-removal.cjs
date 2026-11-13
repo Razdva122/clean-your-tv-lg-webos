@@ -71,6 +71,7 @@ let browser;
         const target = {
           host: '192.0.2.10',
           edition,
+          root_variant: edition === 'root' ? 'node012-beta' : undefined,
           port: edition === 'root' ? 2222 : 9923,
           action: 'uninstall',
           language
@@ -93,8 +94,18 @@ let browser;
         );
         assert.equal(await page.locator('[data-action=recover]').count(), 0);
         assert.equal(
-          await page.locator('[data-action=retry-removal]').innerText(),
-          words[language].tryAgain
+          await page
+            .locator(
+              reason === 'root-access-required'
+                ? '[data-action=connect-root]'
+                : '[data-action=retry-removal]'
+            )
+            .innerText(),
+          reason === 'root-access-required'
+            ? words[language][
+                edition === 'root' ? 'toConnection' : 'connectRoot'
+              ]
+            : words[language].tryAgain
         );
         assert(
           (await page.locator('.recovery-info').innerText()).includes(
@@ -141,6 +152,33 @@ let browser;
           await page.locator('[data-action=start]').click();
           await page.evaluate(() => goBack());
           assert.equal(await page.locator('.progress-line').count(), 1);
+        } else if (reason === 'root-access-required') {
+          const count = await page.evaluate(() => requests.length);
+          await page.locator('[data-action=connect-root]').click();
+          assert.equal(await page.locator('#host').inputValue(), target.host);
+          assert.equal(
+            await page.locator('#port').inputValue(),
+            edition === 'root' ? String(target.port) : '22'
+          );
+          assert.equal(
+            await page.evaluate(() => requests.length),
+            count,
+            'Root handoff waits for sign-in'
+          );
+          if (edition === 'root') {
+            assert.equal(
+              await page.locator('#host').getAttribute('readonly'),
+              ''
+            );
+            await page.locator('[data-action=start]').click();
+            const review = await page.evaluate(() => requests.at(-1));
+            assert.equal(review.action, 'recover');
+            assert.equal(review.host, target.host);
+            assert.equal(review.port, target.port);
+            assert.equal(review.edition, target.edition);
+            assert.equal(review.root_variant, target.root_variant);
+          }
+          continue;
         } else await page.locator('[data-action=retry-removal]').click();
         const request = await page.evaluate(() => requests.at(-1));
         for (const key of ['host', 'edition', 'port', 'action', 'language'])

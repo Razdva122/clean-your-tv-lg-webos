@@ -70,6 +70,7 @@ class RootTailWire(unittest.TestCase):
             'cleanup_error': 'cleanup-check-failed',
             'result': {'restart_required': True},
         }):
-            with self.assertRaisesRegex(UserError, 'files or settings remain'):
+            with self.assertRaisesRegex(UserError, 'Final cleanup could not be verified') as failure:
                 Installer._continue_root_clean_removal(self.installer, self.pending)
+        self.assertEqual(failure.exception.reason_code, 'cleanup-check-failed')
         self.installer.store.finish_clean_removal.assert_not_called()

@@ -107,8 +107,9 @@ class FullUninstallTests(unittest.TestCase):
         report=diagnostics.create_report(store,'install',profile,'install-helper',TVCommandError(127))
         first=json.loads(report.read_bytes())['first_failure']
         original=store.pending(profile)
-        with self.assertRaisesRegex(UserError,'could not finish removing a package'):
+        with self.assertRaisesRegex(UserError, 'TV package result could not be verified') as failure:
             inst.uninstall(full_project=True)
+        self.assertEqual(failure.exception.reason_code, 'removal-failed')
         pending=store.pending(profile)
         self.assertEqual(pending['previous'],original)
         self.assertEqual(pending['removal_reason'],'removal-failed')
@@ -163,8 +164,9 @@ class FullUninstallTests(unittest.TestCase):
         remote.run.side_effect=stale
         store.begin(profile,'install',stage='pending',product_operation='a'*32)
         original=store.pending(profile)
-        with self.assertRaisesRegex(UserError,'Some Clean Your TV files or settings remain'):
+        with self.assertRaisesRegex(UserError, 'Final cleanup could not be verified') as failure:
             inst.uninstall(full_project=True)
+        self.assertEqual(failure.exception.reason_code, 'cleanup-check-failed')
         self.assertEqual(store.pending(profile)['previous'],original)
         self.assertFalse((store.device_dir(profile)/'clean-removal.json').exists())
         self.assertEqual(calls,[('clean-target','a'*32),('clean-remove','b'*32)])

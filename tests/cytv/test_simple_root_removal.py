@@ -57,6 +57,59 @@ class SimpleRootWire(unittest.TestCase):
         self.assertTrue(installer.uninstall(full_project=True)['restart_required'])
         self.assertEqual(self.store.pending(self.profile)['removal_operation'],identifier)
 
+    def test_saved_transport_failure_keeps_only_evidence_supported_by_ssh(self):
+        import errno
+        from paramiko.ssh_exception import NoValidConnectionsError, SSHException
+        from cytv.desktop import DesktopConsole
+        from cytv.recovery import removal_plan
+
+        installer = self.prepare()
+        events = []
+        write = DesktopConsole(lambda kind, value: events.append((kind, value)))
+        cases = [
+            (TimeoutError('PRIVATE'), 'connection-interrupted', 'transient'),
+            (SSHException('PRIVATE'), 'connection-unverified', 'unverified'),
+            (NoValidConnectionsError({
+                ('192.0.2.10',22): PermissionError(errno.EACCES, 'PRIVATE'),
+                ('192.0.2.11',22): ConnectionRefusedError(errno.ECONNREFUSED, 'PRIVATE'),
+            }), 'connection-unverified', 'unverified'),
+        ]
+        for error, reason, condition in cases:
+            with self.subTest(error=type(error)):
+                self.error = error
+                with self.assertRaises(type(error)):
+                    installer.uninstall(full_project=True)
+                self.assertEqual(self.store.pending(self.profile)['removal_reason'], reason)
+                removal_plan(write, self.store, self.profile)
+                result = [value for kind, value in events if kind == 'recovery-plan'][-1]
+                self.assertEqual(result['removal_action']['condition'], condition)
+                self.assertNotIn('PRIVATE', str(events))
+
+    def test_cleanup_reconnect_authentication_preserves_connection_guidance(self):
+        from paramiko.ssh_exception import AuthenticationException
+        from cytv.desktop import DesktopConsole
+        from cytv.failure_help import for_error
+        from cytv.recovery import recover
+
+        installer = self.prepare()
+        self.store.request_clean_removal(self.profile)
+        self.error = ConnectionError('PRIVATE')
+        def reconnect():
+            raise AuthenticationException('PRIVATE')
+        installer.reconnect = reconnect
+        events = []
+        write = DesktopConsole(lambda kind, value: events.append((kind, value)))
+        with patch('cytv.operations.sleep'), self.assertRaises(AuthenticationException) as error:
+            recover(installer, lambda _: 'y', write)
+        result = [value for kind, value in events if kind == 'recovery-plan'][-1]
+        self.assertEqual(result['removal_action']['condition'], 'unverified')
+        self.assertIs(result['connection_failure'], True)
+        self.assertIn('SSH', result['next_step'])
+        self.assertNotIn('PRIVATE', str(events))
+        pending = self.store.pending(self.profile)
+        self.assertEqual(pending['removal_reason'], 'connection-unverified')
+        self.assertEqual(for_error(error.exception, 'recover', self.profile, pending)['code'], 'ssh-auth-root')
+
     def test_final_tail_live_process_requests_restart_instead_of_generic_cleanup_error(self):
         installer=self.prepare()
         reply={'state':'recovery_required','stage':'private-cleanup','current':False,

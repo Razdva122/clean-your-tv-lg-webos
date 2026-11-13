@@ -36,7 +36,7 @@ def create_report(store, action, profile, phase, error=None, tv_info=None, *, ch
         'checks': context.checks_summary(checks),
         'privacy': 'No addresses, SSH identities, exception text, credentials, app inventory, environment or raw TV logs are collected.',
     }
-    if action == 'install':
+    if action in ('install', 'debloat'):
         events = context.mapping(context.mapping(tv_info).get('debloat'))
         results = {key: context.choice(events.get(key), debloat.DIAGNOSTIC_RESULTS, None)
                    for key in debloat.SETTINGS}

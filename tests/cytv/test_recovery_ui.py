@@ -3,6 +3,72 @@ import unittest
 
 
 class RecoveryPresentationTests(unittest.TestCase):
+    def test_removal_action_classifies_only_fixed_evidence(self):
+        from cytv.recovery_ui import removal_action
+        plan = {'disposition':'clean-removal'}
+        check = ('check', 'unverified', True)
+        retry = ('retry-removal', 'transient', False)
+        restart = ('retry-removal', 'restart', True)
+        access = ('connect-root', 'access', True)
+        complete = ('none', 'complete', False)
+        terminal = {'state':'complete', 'removed':True, 'verified_clean':True}
+        cases = [
+            (terminal, None, complete),
+            ({'state':'complete','removed':True}, None, check),
+            ({'state':'complete','removed':True,'verified_clean':1}, None, check),
+            ({'state':'ready','removed':True,'verified_clean':True}, None, check),
+            ({'removal':{'stage':'verified-clean','reason':'removal-verified'}}, None, check),
+            ({'actions':['connect-root']}, None, access),
+            ({'reason':'root-access-required'}, None, access),
+            ({'removal':{'stage':'restart-required'}}, None, restart),
+            (dict(terminal, restart_required=True), None, restart),
+            (dict(terminal, restart_required=True), {'code':'ssh-auth-root'}, check),
+            (terminal, {'code':'ssh-timeout'}, retry),
+            ({'reason':'root-access-required'}, {'code':'ssh-timeout'}, retry),
+            ({'reason':'root-access-required'}, {'code':'ssh-auth-root'}, check),
+            ({'restart_required':True}, {'code':'ssh-timeout'}, retry),
+            ({'restart_required':True}, {'code':'ssh-identity'}, check),
+            ({'restart_required':True}, {'code':'ssh-access-denied'}, check),
+            ({'restart_required':True}, {'code':'ssh-refused'}, check),
+            ({'restart_required':True}, {'code':'ssh-unreachable'}, check),
+            ({'restart_required':True}, {'code':'ssh-unreachable','transient_connection':True}, retry),
+            ({'reason':'cleanup-check-failed','removal':{'stage':'restart-required'}}, None, check),
+            ({'reason':'removal-failed','removal':{'stage':'restart-required'}}, None, check),
+            ({'reason':'root-worker-busy','removal':{'stage':'restart-required'}}, None, retry),
+            ({'reason':'connection-interrupted','removal':{'stage':'restart-required'}}, None, retry),
+            ({'reason':'connection-interrupted','actions':['connect-root']}, None, access),
+            ({'reason':'removal-failed','removal':{'reason':'connection-interrupted'}}, None, check),
+            ({'reason':'connection-interrupted'}, {'code':'recovery-status-rejected'}, check),
+            ({'reason':'root-worker-busy','removal':{'reason':'controls-unverified'}}, None, retry),
+            ({'reason':'PRIVATE','removal':{'reason':'original-writer-active'}}, None, retry),
+            ({'reason':'removal-requested'}, {'code':'PRIVATE'}, check),
+            ({'reason':'removal-requested'}, ['PRIVATE'], check),
+            ({'reason':'removal-requested'}, {'code':['PRIVATE']}, check),
+            ({'actions':'connect-root','removal':['PRIVATE'],'reason':['PRIVATE']}, None, check),
+        ]
+        cases += [({'reason':reason}, None, retry)
+                  for reason in ('connection-interrupted', 'root-worker-busy', 'original-writer-active',
+                                 'removal-requested')]
+        cases += [({'reason':reason}, None, check)
+                  for reason in (None, 'PRIVATE', 'cleanup-check-failed', 'private-cleanup-incomplete',
+                                 'ownership-conflict', 'controls-unverified', 'removal-terminal-unknown',
+                                 'removal-failed', 'removal-recheck-required')]
+        for fields, failure, (action, condition, change) in cases:
+            with self.subTest(fields=fields, failure=failure):
+                self.assertEqual(removal_action(dict(plan, **fields), failure),
+                                 {'action':action, 'condition':condition, 'requires_change':change})
+        for malformed in (None, [], 'PRIVATE', {}, {'disposition':'home-off', **terminal}):
+            with self.subTest(plan=malformed):
+                self.assertEqual(removal_action(malformed),
+                                 {'action':'check', 'condition':'unverified', 'requires_change':True})
+
+    def test_precomputed_completion_needs_current_verified_removal(self):
+        from cytv.recovery_ui import projected_removal_action
+        value = {'state':'blocked','disposition':'clean-removal','removed':False,'verified_clean':False,
+                 'removal_action':{'action':'none','condition':'complete','requires_change':False}}
+        self.assertEqual(projected_removal_action(value),
+                         {'action':'check','condition':'unverified','requires_change':True})
+
     def test_connection_pending_cleanup_and_package_refusal_have_distinct_results(self):
         from cytv.recovery_ui import removal_title, removal_waiting
         def plan(reason):
@@ -28,14 +94,14 @@ class RecoveryPresentationTests(unittest.TestCase):
         self.assertEqual(removal_details({'disposition':'clean-removal','removal':{
             'stage':'private-cleanup','reason':'removal-terminal-unknown'}}), {
                 'stage_text':'Removing private setup data…',
-                'blocker_text':'Removal could not be confirmed. Check the connection and try again.'})
+                'blocker_text':'The TV package result could not be verified. Review recovery options before continuing.'})
 
     def test_unknown_codes_do_not_become_private_main_ui_text_or_completion(self):
         from cytv.recovery_ui import removal_details
         details = removal_details({'disposition':'clean-removal','removal':{
             'stage':'PRIVATE-PATH','reason':'PRIVATE-ERROR','original_outcome':'PRIVATE'}})
         self.assertEqual(details, {'stage_text':'Verifying removal…',
-                                 'blocker_text':'Removal could not be confirmed. Check the connection and try again.'})
+                                 'blocker_text':'Removal could not be verified. Review recovery options before continuing.'})
         self.assertNotIn('PRIVATE', str(details))
         self.assertEqual(removal_details({'disposition':'clean-removal','removal':{
             'stage':['PRIVATE'], 'reason':{'PRIVATE':True}}}), details)
