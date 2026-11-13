@@ -24,7 +24,7 @@ REASONS = ('unknown', 'user-error', 'ssh-command-failed', 'ssh-unreachable', 'ss
            'ssh-authentication', 'ssh-identity-changed', 'ssh-trust-record', 'ssh-identity-unverified', 'host-runtime',
            'helper-running', 'helper-state-unverified', 'root-requirements',
            'pending-operation', 'root-operation-unconfirmed', 'project-apps-remain', 'version-mismatch',
-           'inventory-unavailable', 'graphics-unverified', 'root-home-interfaces',
+           'inventory-unavailable', 'graphics-unverified', 'root-home-interfaces', 'native-home-script',
            'root-worker-busy', 'root-access-required', 'removal-failed',
            'cleanup-check-failed', 'connection-interrupted', 'operation-timeout', 'tv-storage-full', 'tv-storage-ramfs')
 REASONS += ACTIVATION_CODES
@@ -192,6 +192,11 @@ def tv_summary(value):
     if 'root_ribbon_probe' in value:
         from .root_capabilities import RIBBON_PROBE_STATES
         result['root_ribbon_probe'] = choice(value['root_ribbon_probe'], RIBBON_PROBE_STATES)
+    if 'root_native_home_mount' in value:
+        from .root_capabilities import NATIVE_HOME_MOUNT_STATES
+        mount = choice(value['root_native_home_mount'], NATIVE_HOME_MOUNT_STATES, None)
+        if mount is not None:
+            result['root_native_home_mount'] = mount
     native_home_mode = value.get('root_native_home_mode')
     if isinstance(native_home_mode, str) and re.fullmatch(r'[0-7]{4}', native_home_mode):
         result['root_native_home_mode'] = native_home_mode

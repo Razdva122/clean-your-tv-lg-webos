@@ -113,8 +113,8 @@ class RuntimeTests(unittest.TestCase):
             # A separate, whole read-only system image is not a Home takeover.
             stock_mount='2 1 179:27 / /usr ro,relatime - squashfs /dev/mmcblk0p27 ro\n'
             from types import SimpleNamespace
-            # Darwin returns signed dev_t; the fixture models unsigned Linux IDs.
-            with patch.object(self.k,'STOCK_APPINFO',Path('/usr/palm/applications/com.webos.app.home/appinfo.json')),patch.object(self.k.legacy,'TARGET',Path('/usr/bin/com.webos.app.home')),patch.object(self.k.os,'stat',return_value=SimpleNamespace(st_dev=os.makedev(179,27) & 0xffffffff)):
+            # Use the host dev_t representation so os.major/minor can decode it.
+            with patch.object(self.k,'STOCK_APPINFO',Path('/usr/palm/applications/com.webos.app.home/appinfo.json')),patch.object(self.k.legacy,'TARGET',Path('/usr/bin/com.webos.app.home')),patch.object(self.k.os,'stat',return_value=SimpleNamespace(st_dev=os.makedev(179,27))):
                 mountinfo.write_text(stock_mount)
                 self.k.require_generic_environment()
                 for invalid in (
@@ -136,9 +136,9 @@ class RuntimeTests(unittest.TestCase):
                 bsp = '3 1 179:29 / /overlay/bsppart ro - squashfs /dev/mmcblk0p29 ro\n'
                 overlay = '2 1 0:34 / /usr rw - overlay overlay ro,lowerdir=/overlay/bsppart/bsp/usr:/usr\n'
                 devices = {
-                    '/usr/bin/com.webos.app.home': os.makedev(179, 27) & 0xffffffff,
+                    '/usr/bin/com.webos.app.home': os.makedev(179, 27),
                     '/usr/palm/applications/com.webos.app.home': os.makedev(0, 34),
-                    '/overlay/bsppart/bsp/usr': os.makedev(179, 29) & 0xffffffff,
+                    '/overlay/bsppart/bsp/usr': os.makedev(179, 29),
                 }
                 with patch.object(self.k.os, 'stat', side_effect=lambda path, **kw: SimpleNamespace(st_dev=devices[str(path)])), patch.object(self.k.legacy, 'trusted_directory') as trusted:
                     mountinfo.write_text(root + overlay + bsp)
@@ -163,7 +163,7 @@ class RuntimeTests(unittest.TestCase):
                             with self.assertRaisesRegex(ValueError, 'covered by a mount'):
                                 self.k.require_generic_environment()
                     mountinfo.write_text(root + overlay + bsp)
-                    devices['/overlay/bsppart/bsp/usr'] = os.makedev(179, 30) & 0xffffffff
+                    devices['/overlay/bsppart/bsp/usr'] = os.makedev(179, 30)
                     with self.assertRaisesRegex(ValueError, 'covered by a mount'):
                         self.k.require_generic_environment()
             mountinfo.write_text('1 0 0:1 / / rw - squashfs /dev/root ro\n')

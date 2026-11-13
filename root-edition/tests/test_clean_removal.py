@@ -1163,11 +1163,55 @@ class PartialDeviceRemoval(unittest.TestCase):
         driver,identifier,root,updater,payload,calls,present=self.fixture()
         process=install_device.PROC/'12345';process.mkdir()
         (process/'cmdline').write_bytes(str(install_device.INSTALLED/'usr/palm/applications/com.local.nativehome/relay').encode()+b'\0')
-        result=driver.clean_remove(identifier)
+        with patch.object(install_device, 'monotonic', side_effect=(0, 5)):
+            result=driver.clean_remove(identifier)
         self.assertEqual(result['stage'],'restart-required')
         self.assertFalse(result['current'])
         self.assertTrue((root/'state/ssap.json').exists())
         self.assertTrue(any(name.startswith('remove-') for name in calls))
+
+    def test_retry_rechecks_a_departed_helper_on_the_same_boot(self):
+        import install_device
+        driver, identifier, _, _, _, calls, _ = self.fixture()
+        original = driver.store.read('request-' + identifier)
+        driver.store.write('request-' + identifier, dict(original, state='complete'))
+        process = install_device.PROC / '12345'
+        process.mkdir()
+        cmdline = process / 'cmdline'
+        cmdline.write_bytes(os.fsencode(install_device.INSTALLED /
+                                       'usr/palm/applications/com.local.nativehome/relay') + b'\0')
+        with patch.object(install_device, 'monotonic', side_effect=(0, 5)):
+            self.assertEqual(driver.clean_remove(identifier)['stage'], 'restart-required')
+        cmdline.unlink()
+        process.rmdir()
+
+        result = driver.clean_remove(identifier)
+
+        self.assertEqual(result['stage'], 'verified-clean', result)
+        self.assertTrue(result['cleanup_without_restart'])
+        self.assertEqual(calls.count('remove-com.cleanyourtv.root.preview'), 1)
+
+    def test_waits_for_helper_exit_and_finishes_root_removal_in_one_call(self):
+        import install_device
+        driver, identifier, _, _, _, calls, _ = self.fixture()
+        original = driver.store.read('request-' + identifier)
+        driver.store.write('request-' + identifier, dict(original, state='complete'))
+        process = install_device.PROC / '12345'
+        process.mkdir()
+        cmdline = process / 'cmdline'
+        cmdline.write_bytes(os.fsencode(install_device.INSTALLED /
+                                       'usr/palm/applications/com.local.nativehome/relay') + b'\0')
+
+        def exit_helper(_delay):
+            cmdline.unlink()
+            process.rmdir()
+
+        with patch.object(install_device, 'sleep', side_effect=exit_helper) as wait:
+            result = driver.clean_remove(identifier)
+
+        wait.assert_called_once()
+        self.assertEqual(result['stage'], 'verified-clean', result)
+        self.assertEqual(calls.count('remove-com.cleanyourtv.root.preview'), 1)
 
     def test_interrupted_product_upload_does_not_strand_removal_after_restart(self):
         import install_device
