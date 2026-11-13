@@ -1,49 +1,7 @@
 {
   "schema": 1,
-  "version": "1.20.1",
-  "changes": [
-    {
-      "pr": 580,
-      "issues": [
-        472
-      ],
-      "summary": "Complete ordinary No-root removal in one operation"
-    },
-    {
-      "pr": 581,
-      "issues": [
-        505
-      ],
-      "summary": "Resume No-root after installer pause and recover app icons (#505)"
-    },
-    {
-      "pr": 582,
-      "issues": [
-        579
-      ],
-      "summary": "Repair No-root reinstall when the Stop record has mode 0775"
-    },
-    {
-      "pr": 583,
-      "issues": [
-        334
-      ],
-      "summary": "Preserve pending Root activation on preflight refusal"
-    },
-    {
-      "pr": 584,
-      "issues": [
-        315
-      ],
-      "summary": "Distinguish missing Root Home interfaces in diagnostics"
-    }
-  ],
+  "version": null,
+  "changes": [],
   "excluded": [],
-  "acceptance": "Scoped final acceptance passed on LG OLED55C3RLA, firmware 43.21.71, using the exact macOS ARM64 CLI and signed Root QA set. Verified signed Root install and rollback, physical and network Home controls, emergency-stop persistence, exact No-root install/reinstall and safe manual-start fallback over root SSH, verified removal and restoration of the original Root profile. Automatic Helper resume with matching group remains fixture evidence. See docs/history/2026-11-13-release-1.20.1-rc2-acceptance.md for package hashes, scope and limitations.",
-  "build": {
-    "run_id": 43372444144,
-    "attempt": 1,
-    "source": "1a379b4b973887ff958aa64f7466fc7e7c4ee99a"
-  },
-  "acceptance_build": "43372444144:1"
+  "acceptance": ""
 }
