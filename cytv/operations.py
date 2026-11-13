@@ -651,13 +651,21 @@ with os.fdopen(f,'rb') as stream:
                 self.progress('A stale Helper PID file was found; no Helper process is running. Continuing installation without deleting state files.')
 
     def stop_helper_for_install(self):
-        from .no_root_observer import helper_start_allowed
+        from .helper_stop import INSTALL_PROGRAM
+        from .no_root_observer import helper_start_allowed, valid_generation
+        self._install_stop_generation = None
         try:
-            if helper_start_allowed(self):
-                self.stop_helper()
+            token = self.remote.run('/usr/bin/node', data=INSTALL_PROGRAM.encode(), timeout=15).strip()
+            if valid_generation(token) and token.startswith('S'):
+                self._install_stop_generation = token
         except (OSError, RuntimeError):
-            # A lost or negative reply does not prove the controller is running.
-            pass
+            # Older state may not support the checked pause. Keep its existing
+            # Stop path, with no automatic restart authority after that path.
+            try:
+                if helper_start_allowed(self):
+                    self.stop_helper()
+            except (OSError, RuntimeError):
+                pass
         for attempt in range(5):
             helper = self.helper_state(timeout=5)
             if helper in ('stopped', 'stale') or attempt == 4:
@@ -992,8 +1000,10 @@ else:
                     return False
         return False
 
-    def activate_root(self):
+    def activate_root(self, *, resume_from=None):
         pending=self.store.pending(self.profile) or {}
+        if resume_from is not None and pending != resume_from:
+            raise UserError('Recovery evidence changed. Check recovery again; recovery data was kept.', reason_code='pending-operation')
         if pending.get('home_backend') == 'c1-native-gate':
             from .root_activation import activate
             return activate(self)
@@ -1006,6 +1016,13 @@ else:
         self.progress('Checking Root recovery…')
         if self.root_action('status').get('result', {}).get('recovery', {}).get('integrity_verified') is not True:
             raise UserError('Root is installed, but recovery could not be verified. Run cytv status; activation has not started.')
+        if resume_from is not None:
+            if self.store.pending(self.profile) != resume_from:
+                raise UserError('Recovery evidence changed. Check recovery again; recovery data was kept.', reason_code='pending-operation')
+            from .state import private_write
+            receipt = self.store.recovery(self.profile, 'resume-root-activation')
+            private_write(receipt, json.dumps({'action': 'resume-root-activation', 'previous': resume_from}).encode())
+            self.store.checkpoint(self.profile, stage='stop-helper', updates_ready=True)
         self.stop_root_helper_for_activation()
         self.store.checkpoint(self.profile, stage='enable')
         self.progress('Turning on Root Home control…')
@@ -1609,19 +1626,18 @@ else:
             raise UserError('Root setup could not be verified for continuation. Recovery data was kept.')
         if previous.get('action')=='install' and previous.get('product_operation'):
             self._save_product_baseline(previous,observation)
-        previous = self.store.pending(self.profile)
-        if previous and previous.get('action') == 'activate-root':
-            from .state import private_write
-            receipt = self.store.recovery(self.profile, 'resume-root-activation')
-            private_write(receipt, json.dumps({'action': 'resume-root-activation', 'previous': previous}).encode())
+            previous = self.store.pending(self.profile)
         self.outcome.packages_verified()
-        if (self.store.pending(self.profile) or {}).get('home_backend') == 'c1-native-gate':
+        if (previous or {}).get('home_backend') == 'c1-native-gate':
             self.store.checkpoint(self.profile, action='activate-root', stage='stop-helper', updates_ready=False)
             launched = self.activate_root()
             return {'installed':package.ROOT_APP,'home_changed':True,'launch_requested':launched,
                     'updates_ready':False,'backend':'c1-native-gate','beta':True}
-        self.store.checkpoint(self.profile, action='activate-root', stage='stop-helper', updates_ready=True)
-        self.activate_root()
+        if previous and previous.get('action') == 'activate-root':
+            self.activate_root(resume_from=previous)
+        else:
+            self.store.checkpoint(self.profile, action='activate-root', stage='stop-helper', updates_ready=True)
+            self.activate_root()
         return {'installed': package.ROOT_APP, 'home_changed': True, 'launch_requested': True,
                 'updates_ready': self.profile.get('root_variant') != 'node012-beta'}
 

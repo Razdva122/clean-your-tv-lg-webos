@@ -285,6 +285,36 @@ state, not a new permission/endpoint or historical package authority. Failed
 publication invalidates the baseline. Transient watchdog retry fences do not
 change it; terminal Stop and retry exhaustion do.
 
+During explicit setup or Stop publication, a checked Stop record with mode
+0775 or 0777 is replaced with a fresh S token at 0664. This handles the retained
+record in #579 without accepting its old bytes as an activation baseline or
+changing the blocked/watchdog markers. The same directory, shared group,
+single-link, size and stable-inode checks apply. Ordinary generation reads
+continue to require 0664.
+
+Permission drift can affect several files at once (#437, #487, #505, #579).
+Reuse the checked storage operations, with a recovery rule for each kind of
+state. Pairing keys need provenance and private permissions, the Home control
+channel needs verified directory ownership and group access, and Stop tokens
+need replacement that invalidates older activation claims. Logs can be recreated
+under their existing size and path constraints.
+
+When reinstalling over a running Helper, the trusted SSH adapter can stop it
+for the current installation. It exclusively creates the existing Stop latch,
+captures the prior generation without overwriting a concurrent publisher, and
+returns the exact generation it published. The capsule binds that generation
+and the local pending receipt identifies it as installer-owned. Only that exact
+match lets setup resume past its own latch. A previous latch, a watchdog, a
+lost acknowledgement or a changed generation keeps activation stopped. A
+boot-started updated Helper binds its current generation so it can shut down
+without publishing a second one. If an older Helper publishes another generation
+while stopping, setup keeps the Stop and the existing explicit Start procedure
+applies. The checked pause verifies the generation inode will be created in the Helper
+state's shared group. On legacy Node it checks the group of a temporary inode
+in that directory before creating the latch. Other SSH group
+layouts use the existing Stop path without automatic restart authority.
+The installer never treats a post-stop read alone as ownership.
+
 A cancelled launch configuration step is a verified no-request disposition;
 an acknowledged launch is recorded separately from observed startup and physical
 Home. The report uses `startup: stopped-during-setup`, does not mark startup/Home

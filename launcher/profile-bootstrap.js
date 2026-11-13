@@ -269,6 +269,13 @@
       }
     };
     function legacy() {
+      var packaged = window.TV_APPS;
+      if (packaged && window.CYTVPackagedIconFallback) {
+        window.HomePackagedInventory = {
+          apps: packaged.apps,
+          fallbackIcon: window.CYTVPackagedIconFallback
+        };
+      }
       var saved;
       try {
         saved = HomeData.load(localStorage);
@@ -291,8 +298,18 @@
               : value;
         function finish(restore, identity) {
           try {
-            if (restore && snapshot) use(snapshot, true, identity);
-            else if (saved) use(saved);
+            if (restore && snapshot) {
+              window.HomePackagedInventory = null;
+              use(snapshot, true, identity);
+            } else if (saved) {
+              use(saved);
+              if (window.HomePackagedInventory)
+                AppLibrary.replaceFallbackIcons(
+                  window.TV_APPS.apps,
+                  packaged.apps,
+                  window.CYTVPackagedIconFallback
+                );
+            }
           } catch (_) {
             profileError = true;
           }

@@ -13,6 +13,7 @@ function controller({
   watchdog = false,
   automatic = true,
   setupGeneration,
+  retainedGeneration = setupGeneration,
   homeInitiallyOff = false,
   deferStart = false,
   inputQuery,
@@ -34,7 +35,8 @@ function controller({
   files.set(dir + 'apps.json', appsConfig);
   if (blocked) files.set(dir + 'blocked', 'stopped');
   if (watchdog) files.set(dir + 'watchdog', 'stopped');
-  if (setupGeneration) files.set(dir + 'stop-generation', setupGeneration);
+  if (retainedGeneration)
+    files.set(dir + 'stop-generation', retainedGeneration);
   if (homeInitiallyOff)
     files.set(dir + 'home-control.json', '{"enabled":false}');
   const schedule = (fn, ms, repeat = 0) => {
@@ -107,6 +109,8 @@ function controller({
       return c;
     }
   };
+  const exitSignal = {};
+  let loading = true;
   const context = {
     Buffer,
     console,
@@ -158,6 +162,7 @@ function controller({
       on() {},
       exit(c) {
         exit = c;
+        if (loading) throw exitSignal;
       }
     },
     setTimeout: (f, ms) => schedule(f, ms),
@@ -165,10 +170,16 @@ function controller({
     setInterval: (f, ms) => schedule(f, ms, ms),
     clearInterval: (id) => timers.delete(id)
   };
-  vm.runInNewContext(
-    fs.readFileSync(path.join(source, 'native.js'), 'utf8'),
-    context
-  );
+  try {
+    vm.runInNewContext(
+      fs.readFileSync(path.join(source, 'native.js'), 'utf8'),
+      context
+    );
+  } catch (error) {
+    if (error !== exitSignal) throw error;
+  } finally {
+    loading = false;
+  }
   if (exit === undefined && !deferStart) {
     advance(automatic && !setupGeneration ? 0 : 1000);
     workers[0].stdout.emit('data', Buffer.from('READY\n'));
@@ -258,6 +269,36 @@ test('boot catalog failure retries without resetting a healthy foreground subscr
   c.foreground('com.webos.app.home');
   assert(c.logs.some((entry) => entry.event === 'return-after-exit'));
 });
+test('boot-started Helper keeps the installer pause generation when it shuts down', () => {
+  const before = 'I' + '1'.repeat(32);
+  const pause = 'S' + '2'.repeat(32);
+  const c = controller({ automatic: true, retainedGeneration: before });
+  const worker = c.workers[0];
+  assert.deepEqual(Array.from(worker.args), ['setup', before]);
+  c.files.set(dir + 'blocked', 'stopped');
+  c.files.set(dir + 'stop-generation', pause);
+  c.files.set(dir + 'control.json', '{"cmd":"stop"}');
+  c.advance(1000);
+  worker.stdout.emit('data', Buffer.from('EXIT 29\n'));
+  worker.emit('close', 29);
+  assert.equal(c.files.get(dir + 'stop-generation'), pause);
+  assert.equal(c.files.get(dir + 'blocked'), 'stopped');
+  assert.equal(c.workers.length, 1);
+});
+
+test('setup launch retains a watchdog latch that appeared after the host check', () => {
+  const token = 'S' + '1'.repeat(32);
+  const c = controller({
+    setupGeneration: token,
+    blocked: true,
+    watchdog: true
+  });
+  assert.equal(c.files.get(dir + 'stop-generation'), token);
+  assert.equal(c.files.get(dir + 'watchdog'), 'stopped');
+  assert.equal(c.files.get(dir + 'blocked'), 'stopped');
+  assert.equal(c.workers.length, 0);
+});
+
 test('setup enables Home and preserves its bound generation across a guarded relay retry', () => {
   const token = 'I' + '1'.repeat(32);
   const c = controller({ setupGeneration: token, homeInitiallyOff: true });

@@ -33,6 +33,7 @@ module.exports = function (options) {
       confirmationTimer,
       launchPoints = null,
       installedIds,
+      installedApps,
       deadline = Date.now() + (options.timeout || 8000);
     function finish(error, apps) {
       if (done) return;
@@ -50,9 +51,10 @@ module.exports = function (options) {
         } catch (_) {}
       if (error) reject(Error(error));
       else if (options.details && !inputs) {
-        icons(apps, hosts[index - 1], options, deadline).then(function (
-          catalog
-        ) {
+        icons(apps, hosts[index - 1], options, deadline, [
+          launchPoints,
+          installedApps || []
+        ]).then(function (catalog) {
           var result = { apps: catalog };
           if (installedIds) result.installedIds = installedIds;
           resolve(result);
@@ -211,13 +213,14 @@ module.exports = function (options) {
           else if (message.id === 'tuner' && launchPoints) {
             var installed = message.payload;
             if (
-              options.details &&
               installed &&
               installed.returnValue === true &&
               Array.isArray(installed.apps) &&
               installed.apps.length <= 300
-            ) {
-              var ids = installed.apps.map(function (a) {
+            )
+              installedApps = installed.apps;
+            if (options.details && installedApps) {
+              var ids = installedApps.map(function (a) {
                 return a && a.id;
               });
               if (
@@ -326,7 +329,7 @@ module.exports = function (options) {
 
 // Read only icons on the already selected TV endpoint. No redirects, credentials,
 // arbitrary filesystem reads or external hosts; bounds cover the entire refresh.
-function icons(apps, host, options, deadline) {
+function icons(apps, host, options, deadline, alternatives) {
   var url = require('url'),
     total = 512 * 1024,
     received = 0,
@@ -388,10 +391,42 @@ function icons(apps, host, options, deadline) {
       'miniicon',
       'favicon'
     ];
+    var sources = Object.create(null);
+    (alternatives || []).forEach(function (catalog) {
+      var seen = Object.create(null);
+      catalog.forEach(function (app) {
+        if (app && typeof app.id === 'string' && !seen[app.id]) {
+          seen[app.id] = true;
+          (sources[app.id] || (sources[app.id] = [])).push(app);
+        }
+      });
+    });
+    var candidates = apps.map(function (app) {
+      var urls = [];
+      [app].concat(sources[app.id] || []).forEach(function (source) {
+        variants.forEach(function (key) {
+          var uri = source[key];
+          if (typeof uri !== 'string' || !uri || uri.length > 4096) return;
+          var choices =
+            /^\/resources\/[a-fA-F0-9]{16,128}\/[A-Za-z0-9][A-Za-z0-9_.-]*$/.test(
+              uri
+            )
+              ? [
+                  'https://' + host + ':3001' + uri,
+                  'http://' + host + ':3000' + uri
+                ]
+              : [uri];
+          choices.forEach(function (candidate) {
+            if (urls.indexOf(candidate) < 0) urls.push(candidate);
+          });
+        });
+      });
+      return urls;
+    });
     function read(index, variant) {
       if (stopped) return;
       if (
-        variant === variants.length ||
+        variant === candidates[index].length ||
         total <= 0 ||
         received >= 2 * 1024 * 1024 ||
         Date.now() >= deadline
@@ -400,7 +435,7 @@ function icons(apps, host, options, deadline) {
         pump();
         return;
       }
-      var uri = apps[index][variants[variant]],
+      var uri = candidates[index][variant],
         parsed;
       try {
         if (typeof uri !== 'string' || uri.length > 4096)

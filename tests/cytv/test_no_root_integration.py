@@ -302,6 +302,59 @@ class OriginalOperationIntegration(unittest.TestCase):
         self.remote.run('/usr/bin/node -e '+shlex.quote(program)+' '+shlex.quote(operations.HELPER_STATE))
         (Path(operations.HELPER_STATE)/name).write_bytes(b'explicit-stop')
 
+    def test_running_helper_upgrade_restarts_only_from_its_own_stop(self):
+        from cytv.helper_stop import INSTALL_PROGRAM
+        self.installer.install(self.inventory, 'original-secret')
+        state_dir = Path(operations.HELPER_STATE)
+        original = self.remote.run
+
+        for race in ('none', 'before-publication', 'before-capsule', 'after-capsule', 'watchdog'):
+            with self.subTest(race=race):
+                active = True
+                interrupted = False
+
+                def run(command, data=None, timeout=30):
+                    nonlocal active, interrupted
+                    if command == '/usr/bin/node' and data == INSTALL_PROGRAM.encode():
+                        source = data.replace(b'/media/developer/apps/usr/palm/applications/com.local.nativehome/state',
+                                              operations.HELPER_STATE.encode())
+                        if race == 'before-publication':
+                            self.publish_stop()
+                        result = subprocess.run(['node'], input=source, capture_output=True)
+                        active = False
+                        if result.returncode:
+                            self.assertEqual(race, 'before-publication')
+                            self.assertEqual((state_dir / 'blocked').read_bytes(), b'explicit-stop')
+                            raise RuntimeError('a Stop already exists')
+                        if race == 'before-capsule':
+                            self.publish_stop()
+                        return result.stdout.decode()
+                    words = split_observer_command(command)
+                    if (not interrupted and race in ('after-capsule', 'watchdog') and '-e' in words
+                            and observer.PROGRAM in words[words.index('-e')+1]
+                            and json.loads(words[-1])['command'] == 'start'):
+                        interrupted = True
+                        if race == 'after-capsule':
+                            self.publish_stop()
+                        else:
+                            (state_dir / 'watchdog').write_bytes(b'watchdog')
+                    return original(command, data, timeout)
+
+                self.remote.run = run
+                self.installer.helper_state = lambda timeout=None: 'running' if active else 'stopped'
+                before = len(self.remote.calls)
+                result = self.installer.install(self.inventory, 'original-secret')
+                self.assertEqual(result['launch_requested'], race == 'none')
+                generation = (state_dir / 'stop-generation').read_text()
+                self.assertRegex(generation, r'^S[a-f0-9]{32}$')
+                launches = [row[2].get('params') for row in self.remote.calls[before:]
+                            if row[0] == 'luna' and row[1].endswith('/launch')]
+                self.assertEqual(launches, [{'nativeHomeSetup': generation}] if race == 'none' else [])
+                self.assertIsNone(self.store.pending(self.profile))
+                # The fixture's Luna endpoint acknowledges launch without running native.js.
+                (state_dir / 'blocked').unlink(missing_ok=True)
+                (state_dir / 'watchdog').unlink(missing_ok=True)
+
     def test_reinstall_preserves_explicit_stop_and_legacy_latches(self):
         self.installer.install(self.inventory,'original-secret')
         directory=Path(operations.HELPER_STATE)
@@ -311,6 +364,9 @@ class OriginalOperationIntegration(unittest.TestCase):
                 generation=directory/'stop-generation'
                 if name=='watchdog':
                     generation.unlink()
+                else:
+                    generation.chmod(0o775)
+                (directory/name).chmod(0o775)
                 expected=generation.read_bytes() if generation.exists() else None
                 before=len(self.remote.calls)
                 result=self.installer.install(self.inventory,'original-secret')
@@ -318,6 +374,7 @@ class OriginalOperationIntegration(unittest.TestCase):
                 self.assertTrue(result['activation_cancelled'])
                 self.assertFalse(result['launch_requested'])
                 self.assertEqual((directory/name).read_bytes(),b'explicit-stop')
+                self.assertEqual((directory/name).stat().st_mode & 0o7777, 0o775)
                 self.assertEqual(generation.read_bytes() if generation.exists() else None,expected)
                 self.assertFalse(any(row[0]=='luna' and row[1].endswith('/launch') and
                                      row[2]['id']==operations.HELPER for row in self.remote.calls[before:]))
@@ -330,8 +387,14 @@ class OriginalOperationIntegration(unittest.TestCase):
         self.remote.cut=True
         with self.assertRaises(RuntimeError):self.installer.install(self.inventory,'original-secret')
         pending=self.store.pending(self.profile);saved=observer.capsule(self.installer,pending)
-        self.assertRegex(saved['plan']['setup_start']['generation'],r'^S[a-f0-9]{32}$')
-        self.publish_stop();(Path(operations.HELPER_STATE)/'blocked').unlink()
+        captured = saved['plan']['setup_start']['generation']
+        self.assertRegex(captured, r'^S[a-f0-9]{32}$')
+        generation = Path(operations.HELPER_STATE)/'stop-generation'
+        generation.chmod(0o775)
+        self.publish_stop()
+        self.assertNotEqual(generation.read_text(), captured)
+        self.assertEqual(generation.stat().st_mode & 0o7777, 0o664)
+        (generation.parent/'blocked').unlink()
         before=len(self.remote.calls)
         result=self.installer.continue_no_root(pending)
         self.assertTrue(result['activation_cancelled'])
@@ -411,6 +474,23 @@ class OriginalOperationIntegration(unittest.TestCase):
         self.assertEqual((self.root/'requests').read_bytes(),requests)
         self.assertIsNone(self.store.pending(self.profile))
 
+    def test_reinstall_repairs_vendor_stop_generation_mode_before_setup_start(self):
+        self.installer.install(self.inventory, 'original-secret')
+        generation = Path(operations.HELPER_STATE)/'stop-generation'
+        original = generation.read_text()
+        generation.chmod(0o775)
+
+        result = self.installer.install(self.inventory, 'original-secret')
+
+        repaired = generation.read_text()
+        self.assertRegex(repaired, r'^S[a-f0-9]{32}$')
+        self.assertNotEqual(repaired, original)
+        self.assertEqual(generation.stat().st_mode & 0o7777, 0o664)
+        self.assertTrue(result['launch_requested'])
+        self.assertFalse(result.get('activation_cancelled', False))
+        self.assertIsNone(self.store.pending(self.profile))
+        self.assertEqual((self.root/'requests').read_text().splitlines(), list(observer.APPS)*2)
+
     def test_update_repairs_vendor_key_mode_before_setup_start(self):
         self.installer.install(self.inventory,'original-secret')
         directory=Path(operations.HELPER_STATE);key=directory/'ssap-key.json'
@@ -419,6 +499,46 @@ class OriginalOperationIntegration(unittest.TestCase):
         self.assertEqual(key.stat().st_mode&0o777,0o640)
         self.assertTrue(result['launch_requested'])
         self.assertIsNone(self.store.pending(self.profile))
+
+    def test_reinstall_after_vendor_mode_drift_across_helper_state(self):
+        self.installer.install(self.inventory, 'original-secret')
+        directory = Path(operations.HELPER_STATE)
+        # The simulated vendor installs the packages but does not run Helper.
+        # Populate ordinary runtime files that can be left by a previous run.
+        runtime_records = {
+            'bootstrap.log': 'BOOTSTRAP\n',
+            'controller.lock': '',
+            'controller.log': '{"event":"controller-start"}\n',
+            'controller.log.previous': '{"event":"controller-stop"}\n',
+            'controller.pid': '2147483647',
+            'control.json': '{}',
+            'home-control.json': '{"enabled":true}',
+            'relay.lock': '',
+        }
+        for name, contents in runtime_records.items():
+            (directory/name).write_text(contents)
+        generation = directory/'stop-generation'
+        original_generation = generation.read_bytes()
+        key = directory/'ssap-key.json'
+        original_key = key.read_bytes()
+        for path in (directory, *directory.rglob('*')):
+            path.chmod(0o775)
+
+        result = self.installer.install(self.inventory, 'original-secret')
+
+        self.assertTrue(result['launch_requested'])
+        self.assertFalse(result.get('activation_cancelled', False))
+        self.assertEqual(self.installer.outcome.values['packages'], 'verified')
+        self.assertIsNone(self.store.pending(self.profile))
+        self.assertEqual((self.root/'requests').read_text().splitlines(), list(observer.APPS)*2)
+        self.assertEqual(directory.stat().st_mode & 0o7777, 0o770)
+        self.assertEqual(generation.stat().st_mode & 0o7777, 0o664)
+        self.assertNotEqual(generation.read_bytes(), original_generation)
+        self.assertEqual(key.stat().st_mode & 0o7777, 0o640)
+        self.assertEqual(key.read_bytes(), original_key)
+        self.assertEqual((directory/'apps.json').stat().st_mode & 0o7777, 0o644)
+        for name, contents in runtime_records.items():
+            self.assertEqual((directory/name).read_text(), contents, name)
 
     def test_pending_update_reclaims_capsule_matched_helper_key_without_package_replay(self):
         self.installer.install(self.inventory,'original-secret')

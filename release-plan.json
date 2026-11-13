@@ -1,81 +1,49 @@
 {
   "schema": 1,
-  "version": "1.20.0",
+  "version": "1.20.1",
   "changes": [
     {
-      "pr": 566,
+      "pr": 580,
       "issues": [
-        440
+        472
       ],
-      "summary": "Recheck the boot before retrying interrupted Root removal; original Root installation and reporter recovery remain unverified"
+      "summary": "Complete ordinary No-root removal in one operation"
     },
     {
-      "pr": 567,
+      "pr": 581,
       "issues": [
-        542
+        505
       ],
-      "summary": "Rearm expired Root rollback recovery on retry"
+      "summary": "Resume No-root after installer pause and recover app icons (#505)"
     },
     {
-      "pr": 569,
-      "issues": [],
-      "summary": "Update the Root Home naming heading after release"
-    },
-    {
-      "pr": 570,
+      "pr": 582,
       "issues": [
-        240
+        579
       ],
-      "summary": "Distinguish Root recovery status interpreter failures; original deployment failure remains open"
+      "summary": "Repair No-root reinstall when the Stop record has mode 0775"
     },
     {
-      "pr": 571,
+      "pr": 583,
       "issues": [
-        152
+        334
       ],
-      "summary": "Report Home Helper diagnostic failure stages; original EF950V installation and recovery remain open"
+      "summary": "Preserve pending Root activation on preflight refusal"
     },
     {
-      "pr": 572,
+      "pr": 584,
       "issues": [
-        410
+        315
       ],
-      "summary": "Distinguish missing KeyFilters configuration in Root diagnostics; original installation failure remains open"
-    },
-    {
-      "pr": 573,
-      "issues": [
-        389,
-        418
-      ],
-      "summary": "Preserve independently owned Home filters during Root removal; original #418 Root activation remains open"
-    },
-    {
-      "pr": 575,
-      "issues": [
-        574
-      ],
-      "summary": "Offer No-root through the existing SSH connection on legacy LG Home ribbon capability; original Root limitation remains"
-    },
-    {
-      "pr": 577,
-      "issues": [],
-      "summary": "Hide Developer Mode for new No-root installs over root SSH"
-    },
-    {
-      "pr": 578,
-      "issues": [
-        576
-      ],
-      "summary": "Recover reproduced No-root removal failures with malformed Helper Stop records; the original device failure remains unconfirmed"
+      "summary": "Distinguish missing Root Home interfaces in diagnostics"
     }
   ],
   "excluded": [],
-  "acceptance": "Scoped acceptance on project OLED55C3RLA (43.21.71, webOS SDK 11.2.0) passed. The exact macOS ARM64 CLI completed Root removal, No-root setup and removal, verified software restarts, and network HOME routing. Protected signing run 43273038479:1 supplied the exact Root RC1 set. The original System Updater applied and rolled it back with all three terminals, installed-byte checks, profile comparisons and owner-confirmed Root Home tiles in both directions. Android API 35 ARM64 emulator upgrade passed. Artifact hashes, limits and case reconciliation: docs/history/2026-11-12-release-1.20.0-candidate.md.",
+  "acceptance": "Scoped final acceptance passed on LG OLED55C3RLA, firmware 43.21.71, using the exact macOS ARM64 CLI and signed Root QA set. Verified signed Root install and rollback, physical and network Home controls, emergency-stop persistence, exact No-root install/reinstall and safe manual-start fallback over root SSH, verified removal and restoration of the original Root profile. Automatic Helper resume with matching group remains fixture evidence. See docs/history/2026-11-13-release-1.20.1-rc2-acceptance.md for package hashes, scope and limitations.",
   "build": {
-    "run_id": 43261506679,
-    "attempt": 3,
-    "source": "a7ced816ceb1c2be733dc64b0d2fb77ddc6f5d98"
+    "run_id": 43372444144,
+    "attempt": 1,
+    "source": "1a379b4b973887ff958aa64f7466fc7e7c4ee99a"
   },
-  "acceptance_build": "43261506679:3"
+  "acceptance_build": "43372444144:1"
 }

@@ -944,7 +944,8 @@
       localStorage,
       (window.TV_APPS && TV_APPS.apps) || [],
       CONFIG,
-      inputSources && inputSources.list
+      inputSources && inputSources.list,
+      window.HomePackagedInventory
     );
     var firstInput = library.firstInput();
     if (firstInput && !library.input(firstInput))

@@ -77,6 +77,39 @@ test('failed reconciliation storage commit preserves the complete previous model
   assert(library.visible().some((a) => a.id === 'gone'));
   assert.equal(library.visible().find((a) => a.id === 'kept').title, 'Kept');
 });
+test('a new packaged icon replaces an old placeholder without restoring removed apps', () => {
+  const fallback = 'data:image/png;base64,ZmFsbGJhY2s=';
+  const resized = 'data:image/png;base64,cmVzaXplZA==';
+  const live = 'data:image/png;base64,bGl2ZQ==';
+  const state = {
+    version: 1,
+    catalogConfirmed: true,
+    ids: ['kept', 'live'],
+    hidden: [],
+    catalog: [
+      { id: 'kept', title: 'Kept', icon: fallback },
+      { id: 'live', title: 'Live', icon: live }
+    ]
+  };
+  const apps = [
+    { id: 'kept', title: 'Kept', icon: resized },
+    { id: 'live', title: 'Live', icon: resized },
+    { id: 'gone', title: 'Gone', icon: resized }
+  ];
+  const library = create(
+    { getItem: () => JSON.stringify(state) },
+    [],
+    {},
+    null,
+    { apps, fallbackIcon: fallback }
+  );
+  assert.deepEqual(
+    library.visible().map((a) => a.icon),
+    [resized, live]
+  );
+  assert.deepEqual(library.available(), []);
+});
+
 function read(installed, extra = {}) {
   class WS extends EventEmitter {
     constructor() {
@@ -101,7 +134,11 @@ function read(installed, extra = {}) {
                           returnValue: true,
                           launchPoints: [
                             { id: 'kept', title: 'Kept', ...extra.app },
-                            { id: 'com.webos.app.livetv', title: 'TV' }
+                            {
+                              id: 'com.webos.app.livetv',
+                              title: 'TV',
+                              ...extra.tuner
+                            }
                           ]
                         }
                       : installed
@@ -309,4 +346,56 @@ test('a silent optional confirmation leaves time to fetch a new icon', async () 
     result.apps.find((a) => a.id === 'kept').icon,
     'data:image/png;base64,' + png.toString('base64')
   );
+});
+
+test('No-root tries installed-app icons and retains tuner launch-point icons', async () => {
+  const resource = '/resources/' + 'a'.repeat(40) + '/smart.png';
+  const calls = [];
+  const result = await read(
+    {
+      returnValue: true,
+      apps: [
+        { id: 'kept', title: 'SmartTwitchTV', icon: resource },
+        {
+          id: 'com.webos.app.livetv',
+          title: 'Canali',
+          icon: 'icon.png',
+          hidden: true
+        },
+        {
+          id: 'hidden',
+          title: 'Hidden',
+          icon: 'http://192.0.2.1:3000/unrelated'
+        }
+      ]
+    },
+    {
+      app: { icon: 'http://192.0.2.1:3000/old' },
+      tuner: { icon: 'http://192.0.2.1:3000/tuner' },
+      get: get(
+        {
+          '/old': { status: 404 },
+          '/tuner': { chunks: [png] },
+          [resource]: { chunks: [png] }
+        },
+        calls
+      )
+    }
+  );
+  assert.deepEqual(
+    result.apps.map((a) => a.id),
+    ['com.webos.app.livetv', 'kept']
+  );
+  assert(
+    result.apps.every(
+      (a) => a.icon === 'data:image/png;base64,' + png.toString('base64')
+    )
+  );
+  assert(
+    calls.some(
+      (c) =>
+        c.path === resource && c.port === '3001' && c.hostname === '192.0.2.1'
+    )
+  );
+  assert(!calls.some((c) => c.path === '/unrelated'));
 });

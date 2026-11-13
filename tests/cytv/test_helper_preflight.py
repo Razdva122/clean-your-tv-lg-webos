@@ -85,17 +85,34 @@ class HelperPreflightTests(unittest.TestCase):
 
     def test_install_continues_when_automatic_stop_is_confirmed(self):
         installer = self.probe(None, {123: b'com.local.nativehome\0'})
-        installer.stop_helper = Mock(side_effect=lambda: (
-            Path(self.tmp.name) / 'proc/123/cmdline').unlink())
+        from cytv.helper_stop import INSTALL_PROGRAM
+        run = installer.remote.run
+        token = 'S' + 'a' * 32
+        def remote(command, **kwargs):
+            if command == '/usr/bin/node':
+                self.assertEqual(kwargs['data'], INSTALL_PROGRAM.encode())
+                (Path(self.tmp.name) / 'proc/123/cmdline').unlink()
+                return token
+            return run(command, **kwargs)
+        installer.remote.run = remote
         installer.preflight(install=True, stop_running_helper=True)
         self.assertEqual(installer.tv_info['helper_state'], 'stopped')
+        self.assertEqual(installer._install_stop_generation, token)
 
     def test_unconfirmed_automatic_stop_still_requires_the_remote_control(self):
         installer = self.probe(None, {123: b'com.local.nativehome\0'})
-        installer.stop_helper = Mock(side_effect=RuntimeError('no acknowledgement'))
+        run = installer.remote.run
+        def remote(command, **kwargs):
+            if command == '/usr/bin/node':
+                raise RuntimeError('no acknowledgement')
+            return run(command, **kwargs)
+        installer.remote.run = Mock(side_effect=remote)
+        installer.stop_helper = Mock(side_effect=RuntimeError('legacy Stop refused'))
         with patch('cytv.operations.time.sleep'), self.assertRaises(UserError) as caught:
             installer.preflight(install=True, stop_running_helper=True)
         self.assertEqual(caught.exception.reason_code, 'helper-running')
+        self.assertEqual(sum(call.args[0] == '/usr/bin/node' for call in installer.remote.run.call_args_list), 1)
+        self.assertIsNone(installer._install_stop_generation)
         installer.stop_helper.assert_called_once()
 
     def test_invalid_or_symlink_pid_stays_blocked_without_deletion(self):

@@ -22,7 +22,8 @@ function run(phase) {
   fs.mkdirSync(state, { mode: 0o770 });
   const token = secure.stopGeneration(state, true);
   fs.writeFileSync(path.join(state, 'blocked'), 'old-stop');
-  fs.writeFileSync(path.join(state, 'watchdog'), 'old-watchdog');
+  if (phase === 'watchdog')
+    fs.writeFileSync(path.join(state, 'watchdog'), 'old-watchdog');
   fs.writeFileSync(path.join(state, 'home-control.json'), '{"enabled":false}');
   let fired = false,
     latest = token,
@@ -102,7 +103,12 @@ function run(phase) {
       true,
       'cancellation must continue blocking automatic boot'
     );
-    if (phase === 'before' || phase === 'initialize')
+    if (phase === 'watchdog')
+      assert.strictEqual(
+        fs.readFileSync(path.join(state, 'watchdog'), 'utf8'),
+        'old-watchdog'
+      );
+    if (phase === 'before' || phase === 'initialize' || phase === 'watchdog')
       assert.strictEqual(
         fs.readFileSync(path.join(state, 'blocked'), 'utf8'),
         'old-stop'
@@ -110,7 +116,6 @@ function run(phase) {
   } else {
     assert.strictEqual(exit, undefined);
     assert.strictEqual(fs.existsSync(path.join(state, 'blocked')), false);
-    assert.strictEqual(fs.existsSync(path.join(state, 'watchdog')), false);
     assert.strictEqual(
       JSON.parse(fs.readFileSync(path.join(state, 'home-control.json')))
         .enabled,
@@ -121,7 +126,14 @@ function run(phase) {
   fs.rmSync(state, { recursive: true, force: true });
 }
 try {
-  for (const phase of [null, 'before', 'initialize', 'clear', 'home-on'])
+  for (const phase of [
+    null,
+    'before',
+    'watchdog',
+    'initialize',
+    'clear',
+    'home-on'
+  ])
     run(phase);
   console.log(
     'PASS: actual setup initialization/Home On and Stops across initialization, latch clear and preference write'

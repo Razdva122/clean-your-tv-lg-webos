@@ -130,7 +130,10 @@ def inventory_script(inventory):
         raise ValueError('No usable apps were read from the TV. Installation stopped.')
     if len(inventory['apps']) > 200 or len(inventory.get('inputs', [])) > 100:
         raise ValueError('TV inventory is too large')
-    script = ('window.TV_APPS = ' + json.dumps(inventory, ensure_ascii=True) + ';\n').encode()
+    data = {key: value for key, value in inventory.items() if key != 'fallbackIcon'}
+    script = ('window.TV_APPS = ' + json.dumps(data, ensure_ascii=True) + ';\n').encode()
+    if inventory.get('fallbackIcon'):
+        script += ('window.CYTVPackagedIconFallback = ' + json.dumps(inventory['fallbackIcon']) + ';\n').encode()
     if len(script) > 16 * 1024 * 1024:
         raise ValueError('TV inventory exceeds the 16 MiB package limit')
     return script

@@ -370,7 +370,9 @@ own restart checkpoint and reason. These codes describe the earlier decision.
 
 Optional `guidance` contains only an allowlisted advice code and a Boolean pending
 flag. Root `tv.root_capabilities` uses two fixed check keys with allowlisted
-results, including `service-absent` for a missing System Profile service.
+results, including `service-absent` for an explicit missing System Profile
+service reply and `setting-not-found` when the settings service reports no
+database match for `general.defaultApps`. Both describe failed interface reads.
 `root_capability_codes` retains only bounded numeric Luna error codes for these keys.
 
 When the installer supports capability-based Qt admission and System Profile is

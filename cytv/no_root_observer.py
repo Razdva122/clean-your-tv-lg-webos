@@ -674,8 +674,16 @@ def begin(installer, action, artifacts, versions, expected, configuration, setup
         else:
             check_plan['private_root'] = selected
     invoke(installer.remote, check_plan, 'storage-check')
-    stop_retained = setup_activation and not helper_start_allowed(installer)
-    setup_start = ({'generation':None if stop_retained else setup_generation(installer,create=True)}
+    install_stop = getattr(installer, '_install_stop_generation', None) if setup_activation else None
+    if setup_activation:
+        installer._install_stop_generation = None
+    owns_stop = (valid_generation(install_stop) and install_stop.startswith('S')
+                 and helper_start_allowed(installer, allow_blocked=True)
+                 and setup_generation(installer) == install_stop)
+    stop_retained = setup_activation and not owns_stop and (
+        install_stop is not None or not helper_start_allowed(installer))
+    setup_start = ({'generation': install_stop if owns_stop else
+                    None if stop_retained else setup_generation(installer, create=True)}
                    if setup_activation else None)
     installer.store.begin(installer.profile, 'install' if action == 'install' else 'uninstall',
                           recovery_protocol=PROTOCOL, observer_operation=operation,
@@ -688,7 +696,8 @@ def begin(installer, action, artifacts, versions, expected, configuration, setup
                    configuration={name: raw.decode('utf8') for name, raw in configuration.items()})
     digest = installer.store.save_capsule(installer.profile, operation, capsule)
     installer.store.checkpoint(installer.profile, capsule_sha256=digest,
-                               **({'setup_cancelled':True} if stop_retained else {}))
+                               **({'setup_cancelled':True} if stop_retained else {}),
+                               **({'setup_install_stop':install_stop} if owns_stop else {}))
     if handoff:
         from .root_no_root_handoff import call
         call(installer.remote,installer.remote._cytv_root_handoff_support,'claim',plan=plan)
@@ -933,7 +942,8 @@ def setup_generation(installer, create=False):
 def setup_launch_generation(installer, plan):
     expected=plan['setup_start']['generation']
     pending=installer.store.pending(installer.profile) or {}
-    if pending.get('setup_cancelled') or not helper_start_allowed(installer):
+    own_stop = valid_generation(expected) and expected.startswith('S') and pending.get('setup_install_stop') == expected
+    if pending.get('setup_cancelled') or not helper_start_allowed(installer, allow_blocked=own_stop):
         return None
     current=setup_generation(installer,create='setup' if expected is None and pending.get('setup_launch_generation') is None else False)
     if expected is None:
@@ -947,9 +957,12 @@ def setup_launch_generation(installer, plan):
     return current
 
 
-def helper_start_allowed(installer):
+def helper_start_allowed(installer, *, allow_blocked=False):
     from .operations import HELPER_STATE
-    command='if [ -e '+shlex.quote(HELPER_STATE+'/blocked')+' ] || [ -L '+shlex.quote(HELPER_STATE+'/blocked')+' ] || [ -e '+shlex.quote(HELPER_STATE+'/watchdog')+' ] || [ -L '+shlex.quote(HELPER_STATE+'/watchdog')+' ]; then printf CYTV_STOP_RETAINED; else printf CYTV_START_ALLOWED; fi'
+    names = ('watchdog',) if allow_blocked else ('blocked', 'watchdog')
+    paths = [shlex.quote(HELPER_STATE + '/' + name) for name in names]
+    retained = ' || '.join(f'[ -e {path} ] || [ -L {path} ]' for path in paths)
+    command = f'if {retained}; then printf CYTV_STOP_RETAINED; else printf CYTV_START_ALLOWED; fi'
     result = installer.remote.run(command).strip()
     if result not in ('CYTV_START_ALLOWED', 'CYTV_STOP_RETAINED'):
         raise UserError('Startup could not be verified. Save the diagnostic report; do not reinstall blindly.', reason_code='helper-state-unverified')
