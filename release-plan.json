@@ -46,10 +46,11 @@
     }
   ],
   "excluded": [],
-  "acceptance": "",
+  "acceptance": "Project LG OLED55C3RLA, firmware 43.21.71, webOS 11.2.0. Exact macOS ARM64 installer and signed Root QA bytes verified. Signed Root update, Magic Remote controls/audio/emergency exit, ordinary retained rollback, Root and No-root fresh installation and full removal with verified restart passed. Original package versions and LG Home routing restored; one captured input label differed after baseline reinstall. Original reporter states remain unverified on hardware. See docs/history/2026-11-13-release-1.20.3-rc-verification.md.",
   "build": {
     "run_id": 43405375772,
     "attempt": 1,
     "source": "09ef047afeb44ab5a2cda2544c2b18c70fc8ed8e"
-  }
+  },
+  "acceptance_build": "43405375772:1"
 }
