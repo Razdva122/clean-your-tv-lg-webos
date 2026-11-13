@@ -85,7 +85,12 @@ Keep shared paths and mounted data outside these directories. The private-tree
 sweep rejects mounts, hard links and directories with unexpected ownership or
 group or other write access. A regular file inside a trusted directory can be
 unlinked regardless of its owner or access bits. Symbolic links are unlinked
-without following them. Shared registrations, packages,
-startup hooks and temporary uploads retain their own verification and cleanup
-rules. Any future state that changes behavior outside the private directories
-needs an explicit restoration step before the sweep.
+without following them. Shared registrations, packages and startup hooks retain
+their own verification and cleanup rules. Any future state that changes
+behavior outside the private directories needs an explicit restoration step
+before the sweep.
+
+Full removal retires temporary uploads tied to the current operation. Other
+installer artifacts in shared temporary storage may remain after removal.
+The coordinator and finalizer check for processes using installer staging
+paths before confirming removal.

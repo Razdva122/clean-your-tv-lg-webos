@@ -25,7 +25,6 @@ BUS=Path('/var/luna-service2-dev')
 INIT=Path('/var/lib/webosbrew/init.d')
 TEMP=Path('/tmp')
 SUPPORT_STAGE=re.compile(r'cytv-(?:product|coordinator|system-updater|c1-root|root-tail)-[a-f0-9]{32}')
-RETAINABLE_SUPPORT_STAGE=re.compile(r'cytv-(?:product|system-updater)-[a-f0-9]{32}')
 
 
 class InstallerRuntimeMismatch(ValueError):
@@ -823,7 +822,7 @@ class LocalDevice:
             if 'private-cleanup' not in record['done']:record['done'].append('private-cleanup')
             save('private-cleanup')
         return {'removed':True,'verified_clean':True,'applications_services_startup_removed':True,'private_cleanup_verified':True,
-                'temporary_files_retained':bool(record.get('retained_temporary_stages'))}
+                'temporary_files_retained':self.has_untracked_support(record)}
 
     def remove_owned_registrations(self):
         devices=self.rpc('com.webos.service.eim/getAllInputStatus',{}).get('devices')
@@ -847,7 +846,6 @@ class LocalDevice:
     def retire_clean_private(self, record):
         from clean_removal import retire_tree
         uid=self.ownership.store.uid
-        self.retire_temporary_support(record)
         volatile=Path('/tmp/clean-your-tv-root-gate')
         if os.path.lexists(volatile):
             # Current native restore has already verified unmount/stop. Refuse
@@ -1020,82 +1018,11 @@ class LocalDevice:
                    and (all_processes or helpers_only or arg.rsplit(b'/',1)[-1] in mutators) for arg in args):
                 raise ValueError('live_original_worker')
 
-    def retire_temporary_support(self, record):
-        """Classify discarded installer bundles as data, never by prefix alone."""
-        from clean_removal import retire_tree
-        uid=self.ownership.store.uid
-        inventory=record.setdefault('temporary_stages',[])
-        by_path={item['path']:item for item in inventory}
-        retained=record.setdefault('retained_temporary_stages',[])
-        current=json.loads(safe_bytes(self.payload/'root-updater/bundle.json',uid=uid)) if self.payload else None
-        for path in sorted(TEMP.iterdir()):
-            if not SUPPORT_STAGE.fullmatch(path.name) or path==self.payload:continue
-            if str(path) in {item['path'] for item in record.get('support_stages',[])}:continue
-            store=checked_store(path,uid);fd=store._directory()
-            try:names=set(os.listdir(fd));info=os.fstat(fd)
-            finally:os.close(fd)
-            if not names:continue
-            saved=by_path.get(str(path))
-            if saved:
-                if (saved['dev'],saved['ino'])!=(info.st_dev,info.st_ino):raise ValueError('support_stage_changed')
-                continue
-            identity={'path':str(path),'dev':info.st_dev,'ino':info.st_ino}
-            retain=False
-            if path.name.startswith('cytv-product-'):
-                allowed={'root','root-updater'}
-                try:
-                    release=json.loads(safe_bytes(path/'root/release.json',uid=uid))
-                    package=json.loads(safe_bytes(path/'root-updater/package.json',uid=uid))
-                except (FileNotFoundError, json.JSONDecodeError, UnicodeDecodeError):
-                    # A disconnected upload can leave an incomplete bundle in /tmp.
-                    # Keep its data and require a live process check at readback.
-                    retain=True
-                else:
-                    retain=(not isinstance(release,dict) or release.get('application_id')!=APP
-                            or not isinstance(package,dict) or package.get('name')!='com.cleanyourtv.root.updater.service'
-                            or bool(names-allowed))
-            elif path.name.startswith('cytv-coordinator-'):
-                package=json.loads(safe_bytes(path/'package.json',uid=uid));services=json.loads(safe_bytes(path/'services.json',uid=uid))
-                if package.get('name')!='com.cleanyourtv.root.updater.service' or services.get('id')!=package['name'] or current is None:raise ValueError('unclassified_support_stage')
-                allowed={name.split('/')[0] for name in current['files']}|{'bundle.json'}
-            elif path.name.startswith('cytv-c1-root-'):
-                import deploy
-                manifest=deploy.verify_bundle(path,allow_experimental=True)
-                release=json.loads(safe_bytes(path/'release.json',uid=uid))
-                if release.get('application_id')!=APP:raise ValueError('unclassified_support_stage')
-                allowed={name.split('/')[0] for name in manifest['files']}|{'bundle.json'}
-            elif path.name.startswith('cytv-system-updater-'):
-                manifest=self.system_setup().verify_bundle(path)
-                allowed={name.split('/')[0] for name in manifest['files']}|{'bundle.json'}
-                retain=bool(names-allowed-{'__pycache__'})
-                if '__pycache__' in names:
-                    cache=checked_store(path/'__pycache__',uid);cached=cache._directory()
-                    try:bytecode=os.listdir(cached)
-                    finally:os.close(cached)
-                    sources=[name[:-3] for name in manifest['files'] if '/' not in name and name.endswith('.py')]
-                    for name in bytecode:
-                        if not any(re.fullmatch(re.escape(source)+r'\.cpython-[0-9]{2,3}(?:\.opt-[12])?\.pyc',name) for source in sources):
-                            retain=True
-                        else:safe_bytes(path/'__pycache__'/name,uid=uid)
-                    allowed.add('__pycache__')
-            else:
-                # Unrecorded gate-only staging has no product metadata and is
-                # not classified from its name or ELF header alone.
-                raise ValueError('unclassified_support_stage')
-            if retain:
-                if identity not in retained:retained.append(identity)
-                continue
-            if names-allowed:raise ValueError('unclassified_support_stage')
-            saved=dict(identity,allowed=sorted(allowed))
-            inventory.append(saved);by_path[str(path)]=saved
-        self.ownership.store.write('clean-removal-'+record['operation'],record)
-        for item in inventory:
-            path=Path(item['path'])
-            if not os.path.lexists(path):continue
-            info=path.lstat()
-            if (info.st_dev,info.st_ino)!=(item['dev'],item['ino']):raise ValueError('support_stage_changed')
-            retire_tree(path,set(item['allowed']),uid=uid)
-
+    def has_untracked_support(self, record):
+        # Shared /tmp can contain interrupted uploads from any installer run.
+        tracked = {item['path'] for item in record.get('support_stages', [])}
+        return any(SUPPORT_STAGE.fullmatch(path.name) and str(path) not in tracked and path != self.payload
+                   for path in TEMP.iterdir())
 
     def routing_untouched(self, record):
         """Prove absence of CYTV routing effects, independently of firmware APIs."""
@@ -1271,25 +1198,6 @@ class LocalDevice:
         scan(root)
         return result
 
-    def current_product_stage(self, path):
-        """Accept an upload only as an exact copy of this authenticated payload."""
-        if self.payload is None:return False
-        try:
-            expected={}
-            for component in ('root','root-updater'):
-                source=self.payload/component
-                raw=safe_bytes(source/'bundle.json',uid=self.ownership.store.uid)
-                files=json.loads(raw)['files']
-                expected[component+'/']=None
-                expected[component+'/bundle.json']=sha(raw)
-                for name,digest in files.items():
-                    if sha(safe_bytes(source/name,uid=self.ownership.store.uid))!=digest:return False
-                    expected[component+'/'+name]=digest
-                    for parent in Path(name).parents:
-                        if str(parent)!='.':expected[component+'/'+str(parent)+'/']=None
-            return self.support_inventory(path)==expected
-        except (OSError,ValueError,KeyError,TypeError):return False
-
     def current_coordinator_stage(self, path):
         """Recognize complete copies of the current host-verified support only."""
         from coordinator_inventory import BUNDLED_FILES
@@ -1337,19 +1245,6 @@ class LocalDevice:
             if os.path.lexists(name):raise ValueError('owned_registration_remains')
         private=self.shared_cleanup('inventory',record)
         if private['present']:raise ValueError('no_root_private_cleanup_required')
-        for path in TEMP.iterdir():
-            if SUPPORT_STAGE.fullmatch(path.name) and path!=self.payload:
-                if RETAINABLE_SUPPORT_STAGE.fullmatch(path.name):
-                    fd=checked_store(path,self.ownership.store.uid)._directory()
-                    try:info=os.fstat(fd)
-                    finally:os.close(fd)
-                    if {'path':str(path),'dev':info.st_dev,'ino':info.st_ino} in record.get('retained_temporary_stages',[]):continue
-                if re.fullmatch(r'cytv-coordinator-[a-f0-9]{32}',path.name) and self.current_coordinator_stage(path):continue
-                if re.fullmatch(r'cytv-product-[a-f0-9]{32}',path.name) and self.current_product_stage(path):continue
-                fd=checked_store(path,self.ownership.store.uid)._directory()
-                try:
-                    if os.listdir(fd):raise ValueError('support_stage_remains')
-                finally:os.close(fd)
         for folder in ('services.d','roles.d','client-permissions.d','api-permissions.d','manifests.d','groups.d'):
             directory=BUS/folder
             if not os.path.lexists(directory):continue

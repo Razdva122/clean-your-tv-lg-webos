@@ -1146,7 +1146,7 @@ class PartialDeviceRemoval(unittest.TestCase):
         driver.device.current_boot = '22222222-2222-2222-2222-222222222222'
         # Model the released installer rejecting this incomplete upload before
         # the Node handoff. The next installer reads that same durable receipt.
-        with patch.object(driver.device, 'retire_temporary_support', side_effect=ValueError('unclassified_support_stage')), \
+        with patch.object(driver.device, 'retire_clean_private', side_effect=ValueError('unclassified_support_stage')), \
                 patch.object(driver.device, 'log'):
             stuck = driver.clean_remove(identifier)
         self.assertEqual(stuck['stage'], 'private-cleanup')
@@ -1168,42 +1168,25 @@ class PartialDeviceRemoval(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'live_original_worker'):
             driver.device.verify_clean(record)
 
-    def test_retained_inert_system_temp_does_not_block_clean_readback(self):
+    def test_untracked_temporary_uploads_are_left_in_place_and_do_not_block_removal(self):
         import install_device
-        driver,identifier,root,updater,payload,calls,present=self.fixture()
-        driver.clean_remove(identifier)
-        driver.device.current_boot='22222222-2222-2222-2222-222222222222'
-        record=driver.clean_remove(identifier)
-        stage=install_device.TEMP/('cytv-system-updater-'+'a'*32);stage.mkdir(mode=0o700)
-        (stage/'diagnostic.txt').write_text('preserve unknown temporary data')
-        info=stage.stat()
-        record['retained_temporary_stages']=[dict(path=str(stage),dev=info.st_dev,ino=info.st_ino)]
-        self.assertTrue(driver.device.verify_clean(record))
-        self.assertTrue((stage/'diagnostic.txt').exists())
-        record['retained_temporary_stages'][0]['ino']+=1
-        with self.assertRaisesRegex(ValueError,'support_stage_remains'):driver.device.verify_clean(record)
+        driver, identifier, _, _, _, _, _ = self.fixture()
+        self.assertEqual(driver.clean_remove(identifier)['stage'], 'restart-required')
+        stages = []
+        for kind in ('product', 'coordinator', 'system-updater', 'c1-root', 'root-tail'):
+            stage = install_device.TEMP / ('cytv-' + kind + '-' + 'a' * 32)
+            stage.mkdir()
+            (stage / 'partial').write_text('keep')
+            stages.append(stage)
+        driver.device.current_boot = '22222222-2222-2222-2222-222222222222'
 
-    def test_clean_readback_exempts_only_executing_checked_coordinator_stage(self):
-        import install_device
-        driver,identifier,root,updater,payload,calls,present=self.fixture()
-        self.assertEqual(driver.clean_remove(identifier)['stage'],'restart-required')
-        driver.device.current_boot='22222222-2222-2222-2222-222222222222'
-        record=driver.clean_remove(identifier)
-        stage=install_device.TEMP/('cytv-coordinator-'+'a'*32);stage.mkdir()
-        (stage/'install_device.py').write_bytes(b'current support')
-        with patch.object(install_device,'__file__',str(stage/'install_device.py')), patch('coordinator_inventory.BUNDLED_FILES',('install_device.py',)):
-            self.assertTrue(driver.device.verify_clean(record))
-            other=install_device.TEMP/('cytv-coordinator-'+'b'*32);other.mkdir()
-            (other/'install_device.py').write_bytes(b'current support')
-            self.assertTrue(driver.device.verify_clean(record))
-            (other/'foreign').write_bytes(b'unknown support')
-            with self.assertRaisesRegex(ValueError,'support_stage_remains'):driver.device.verify_clean(record)
-            (other/'foreign').unlink()
-            (other/'install_device.py').write_bytes(b'stale support')
-            with self.assertRaisesRegex(ValueError,'support_stage_remains'):driver.device.verify_clean(record)
-            (other/'install_device.py').unlink()
-            (other/'install_device.py').symlink_to(stage/'install_device.py')
-            with self.assertRaisesRegex(ValueError,'support_stage_remains'):driver.device.verify_clean(record)
+        result = driver.clean_remove(identifier)
+
+        self.assertEqual(result['stage'], 'verified-clean', result.get('last_failure'))
+        self.assertTrue(result['result']['temporary_files_retained'])
+        self.assertTrue(driver.inspect()['can_install'])
+        for stage in stages:
+            self.assertEqual((stage / 'partial').read_text(), 'keep')
 
     def test_readonly_clean_proof_runs_current_shared_cleanup_without_payload(self):
         import install_device,json,hashlib,subprocess
@@ -1252,28 +1235,6 @@ class PartialDeviceRemoval(unittest.TestCase):
             for name in ('install_device.py','install_driver.py'):(other/name).write_bytes(b'stale support')
             command.write_bytes(b'\0'.join(arg.replace(str(stage),str(other)).encode() for arg in args)+b'\0')
             with self.assertRaisesRegex(ValueError,'live_original_worker'):driver.device.clean_quiescent(record,all_processes=True)
-
-    def test_clean_readback_accepts_only_exact_current_product_upload(self):
-        import install_device,json,shutil,hashlib
-        driver,identifier,root,updater,payload,calls,present=self.fixture()
-        driver.clean_remove(identifier)
-        driver.device.current_boot='22222222-2222-2222-2222-222222222222'
-        record=driver.clean_remove(identifier)
-        snapshot=payload.parent/'current-snapshot';snapshot.mkdir()
-        for component in ('root','root-updater'):
-            folder=snapshot/component;folder.mkdir()
-            (folder/'current.py').write_bytes(b'current bytes')
-            (folder/'bundle.json').write_text(json.dumps({'files':{'current.py':hashlib.sha256(b'current bytes').hexdigest()}}))
-        stage=install_device.TEMP/('cytv-product-'+'a'*32)
-        shutil.copytree(snapshot,stage)
-        (snapshot/'worker.log').write_bytes(b'private worker log')
-        driver.device.payload=snapshot
-        self.assertTrue(driver.device.verify_clean(record))
-        (stage/'foreign').mkdir()
-        with self.assertRaisesRegex(ValueError,'support_stage_remains'):driver.device.verify_clean(record)
-        (stage/'foreign').rmdir()
-        (stage/'root/current.py').write_bytes(b'changed bytes')
-        with self.assertRaisesRegex(ValueError,'support_stage_remains'):driver.device.verify_clean(record)
 
     def test_interrupted_fence_archive_resumes_only_original_inodes(self):
         import install_device
