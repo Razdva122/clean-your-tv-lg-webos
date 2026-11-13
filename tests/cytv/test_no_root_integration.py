@@ -766,6 +766,15 @@ class OriginalOperationIntegration(unittest.TestCase):
         staging.chmod(0o775)
         staged = {file.name: file.read_bytes() for file in staging.iterdir()}
         self.assertFalse((Path(operations.HELPER_STATE) / 'ssap-key.json').exists())
+        installed = Path(self.base) / 'applications' / operations.HOME / 'appinfo.json'
+        original = installed.read_bytes()
+        installed.write_bytes(b'{}')
+        self.assertNotIn('continue-no-root', self.installer.observe_recovery()['assessment']['actions'])
+        with self.assertRaisesRegex(RuntimeError, 'changed-content'):
+            self.installer.continue_no_root(pending)
+        self.assertEqual(self.store.pending(self.profile), pending)
+        self.assertFalse((Path(operations.HELPER_STATE) / 'ssap-key.json').exists())
+        installed.write_bytes(original)
         observation = self.installer.observe_recovery()
         self.assertIn('continue-no-root', observation['assessment']['actions'])
         before = len(self.remote.calls)

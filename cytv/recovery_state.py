@@ -4,7 +4,8 @@ STATES = ('idle', 'pre-submission', 'waiting', 'setup-ready', 'product-ready', '
 REASONS = ('no-pending-operation', 'removal-not-submitted', 'terminal-evidence-missing',
            'inherited-operation', 'unsupported-receipt', 'foreign-operation', 'operation-live',
            'packages-verified', 'observation-unverified', 'root-deployment-missing', 'removal-verified', 'activation-verified', 'final-readback-verified', 'cancellation-verified',
-           'original-work-remaining', 'original-vendor-failure', 'original-terminal-unknown', 'original-readback-unverified', 'original-reservation-unverified', 'original-configuration-unknown')
+           'original-work-remaining', 'original-vendor-failure', 'original-terminal-unknown', 'original-readback-unverified',
+           'original-reservation-unverified', 'original-configuration-unknown', 'original-staging-unverified')
 ACTIONS = ('check', 'inspect-support', 'continue-product', 'continue-no-root', 'cancel-install', 'continue-setup', 'finish-home-off', 'reconcile', 'retain-evidence', 'continue-removal', 'connect-root')
 REMOVAL_STAGES = ('requested', 'original-writers-fenced', 'controls-restored', 'package-removal', 'private-cleanup', 'restart-required', 'verified-clean')
 REMOVAL_REASONS = ('removal-requested', 'original-writer-active', 'ownership-conflict', 'controls-unverified',
