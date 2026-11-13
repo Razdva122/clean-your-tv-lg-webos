@@ -714,3 +714,14 @@ or physical Home recovery.
 Rebuild Root coordinator/Updater support and embedding desktop/console/Android
 payloads through the release coordinator. No new state file, permission, endpoint,
 TV call, version selection or physical-device acceptance is introduced here.
+
+
+### Root inspection after removal
+
+A blocked Root installation inspection now includes `status.product.failure`
+in the standard diagnostic report. It carries the existing bounded worker
+exception summary and, when recognized, an `inspect_check` code from the cleanup
+readback. The installer uses this evidence for diagnosis only. A previous
+verified cleanup and a later inspection failure can both be valid observations.
+The later inspection must still verify the retained receipt and current TV state
+before a new installation is allowed.
