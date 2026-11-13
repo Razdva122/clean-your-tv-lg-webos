@@ -176,6 +176,8 @@ No-root: 要重新启动 Home 控制，请打开 Home Helper，选择启动 Help
 
 选择主题前，在 **Debloat** 中选择要更改的 LG 广告、推荐、隐私和通知设置，并逐项查看结果。如果安装程序无法读取原始值，就无法保存该值以供自动恢复。选择**跳过 Debloat**可保留当前设置。
 
+卸载时，可以选择恢复 Debloat 保存的原始设置。跳过恢复后，卸载会继续，这些设置保持现状。
+
 安装成功后，选择 Classic、Liquid Glass 或 Ribbon，并开启或关闭主屏幕天气。Ribbon 不支持天气；Liquid Glass 使用简短格式。城市根据网络连接估算，可在 Home 设置中更改。
 
 Developer Mode 的 No-root 提供自动续期（测试版）；请继续检查官方计时器。通过现有 root SSH 新安装 No-root 时，设置中会隐藏 Developer Mode 标签页。Root 可通过 Homebrew Channel 阻止 LG 固件更新，包括安全更新；需要通过 Homebrew Channel 真正重启电视。CYTV 更新单独管理。

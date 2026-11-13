@@ -18,6 +18,21 @@ except ImportError:
 
 @unittest.skipUnless(HAS_QT, 'Desktop build dependencies are optional for CLI tests')
 class GuiTests(unittest.TestCase):
+    def test_debloat_restoration_defaults_to_skip_without_cancelling_removal(self):
+        from cytv import debloat, i18n
+        from cytv.desktop import Channel
+
+        i18n.set_language('en')
+        wizard = Wizard()
+        self.addCleanup(wizard.close)
+        wizard.command = 'uninstall'
+        wizard.channel = Channel(lambda *_: None)
+        wizard.show_prompt(Prompt(debloat.RESTORE_PROMPT + ' [y/N]: '))
+        buttons = {button.text(): button for button in wizard.form.findChildren(QPushButton)}
+        self.assertTrue(buttons[debloat.SKIP_RESTORE].isDefault())
+        buttons[debloat.SKIP_RESTORE].click()
+        self.assertEqual(wizard.channel.answers.get_nowait(), 'n')
+
     def test_final_customization_prefills_existing_name_validates_and_submits(self):
         import json
         from cytv import i18n

@@ -177,6 +177,8 @@ Otwórz Ustawienia → Tapety → Prześlij z telefonu i zeskanuj kod. Wybierz J
 
 Przed wyborem motywu użyj opcji **Debloat**, aby wybrać ustawienia reklam, poleceń, prywatności i powiadomień LG do zmiany. Sprawdź każdy wynik. Jeśli instalator nie może odczytać wartości początkowej, nie zapisze jej do automatycznego przywrócenia. Wybierz **Pomiń Debloat**, aby zachować bieżące ustawienia.
 
+Podczas odinstalowywania możesz przywrócić zapisane początkowe ustawienia Debloat. Jeśli pominiesz przywracanie, odinstalowywanie będzie kontynuowane bez zmiany tych ustawień.
+
 Po udanej instalacji wybierz Classic, Liquid Glass lub Ribbon i włącz albo wyłącz pogodę. Ribbon nie obsługuje pogody; Liquid Glass używa formatu kompaktowego. Miasto jest szacowane z połączenia i można je zmienić w Home.
 
 No-root z Developer Mode oferuje automatyczne przedłużanie (Beta); nadal sprawdzaj oficjalny licznik. W nowych instalacjach No-root przez istniejący dostęp root SSH karta Developer Mode jest ukryta. Root pozwala blokować aktualizacje firmware LG przez Homebrew Channel, w tym aktualizacje bezpieczeństwa; wymagany jest pełny restart przez Homebrew Channel. Aktualizacje CYTV są oddzielne.

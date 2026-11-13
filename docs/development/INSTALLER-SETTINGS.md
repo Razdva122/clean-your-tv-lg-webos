@@ -37,7 +37,12 @@ subsequent installations. The record captures pre-write values for future
 restoration support. Its presence alone does not prove that a write changed
 the setting.
 Selected settings with unreadable originals can be sent without adding a
-restore entry. Automatic restoration on uninstall is not implemented yet.
+restore entry. Interactive removal offers to restore saved settings, with Skip as the default.
+It uses the existing Root SSH or Developer Mode settings connection and writes
+only when the current value still matches the recorded Debloat value. Verified
+restorations and values already back at their original setting are retired from
+the record. Failed or unreadable entries stay saved, and removal continues.
+Non-interactive removal skips restoration.
 
 The SSAP setter may be unavailable or rejected on a given firmware. Debloat
 reports the rejected write for each affected setting. It verifies accepted writes

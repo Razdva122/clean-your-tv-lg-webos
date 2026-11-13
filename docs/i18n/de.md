@@ -176,6 +176,8 @@ Einstellungen → Hintergrundbilder → Vom Telefon hochladen öffnen und den Co
 
 Wählen Sie vor dem Design unter **Debloat**, welche LG-Einstellungen für Werbung, Empfehlungen, Datenschutz und Benachrichtigungen Sie ändern möchten. Prüfen Sie jedes Ergebnis. Kann der ursprüngliche Wert nicht gelesen werden, steht dafür keine automatische Wiederherstellung zur Verfügung. Wählen Sie **Debloat überspringen**, um die Einstellungen beizubehalten.
 
+Bei der Deinstallation können Sie die gespeicherten ursprünglichen Debloat-Einstellungen wiederherstellen. Wenn Sie die Wiederherstellung überspringen, läuft die Deinstallation ohne diese Änderungen weiter.
+
 Wähle nach erfolgreicher Installation Classic, Liquid Glass oder Ribbon und schalte das Wetter ein oder aus. Ribbon unterstützt kein Wetter; Liquid Glass nutzt das Kurzformat. Der ungefähre Ort wird über die Internetverbindung ermittelt und lässt sich in Home ändern.
 
 No-root mit Developer Mode bietet automatische Verlängerung (Beta); prüfe weiterhin den offiziellen Timer. Bei neuen No-root-Installationen über vorhandenes root-SSH wird der Tab Developer Mode ausgeblendet. Root bietet über Homebrew Channel eine Sperre für LG-Firmwareupdates, einschließlich Sicherheitsupdates; ein echter Neustart über Homebrew Channel ist erforderlich. CYTV-Updates bleiben separat.

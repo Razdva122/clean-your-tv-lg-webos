@@ -1175,9 +1175,13 @@ class Wizard(QMainWindow):
         elif prompt.kind == 'confirm':
             trust_prompt = prompt.label.startswith('Connect and remember this TV?')
             beta_prompt = prompt.label.startswith('Install experimental Root Beta?')
-            label = 'Connect and remember' if trust_prompt else 'Try Root Beta' if beta_prompt else 'Continue'
-            yes = self.button(label, lambda: self.submit('y'), prompt.default == 'y')
-            no = self.button('Cancel' if beta_prompt else 'No, go back / cancel this operation', lambda: self.submit('n'), prompt.default == 'n')
+            if prompt.label.startswith(debloat.RESTORE_PROMPT):
+                yes_label, no_label = debloat.RESTORE_LABEL, debloat.SKIP_RESTORE
+            else:
+                yes_label = 'Connect and remember' if trust_prompt else 'Try Root Beta' if beta_prompt else 'Continue'
+                no_label = 'Cancel' if beta_prompt else 'No, go back / cancel this operation'
+            yes = self.button(yes_label, lambda: self.submit('y'), prompt.default == 'y')
+            no = self.button(no_label, lambda: self.submit('n'), prompt.default == 'n')
             (yes if prompt.default == 'y' else no).setFocus()
             if trust_prompt:
                 self.button('Connection details', lambda: self.submit('?'))
