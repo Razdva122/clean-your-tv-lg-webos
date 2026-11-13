@@ -433,6 +433,7 @@
       )
         focus(index);
     }
+    document.addEventListener('home-clock-format-change', render);
     function action(method) {
       if (busy) return;
       busy = true;

@@ -253,6 +253,60 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8876';
     for (const edition of ['launcher', 'root-launcher']) {
       const context = await browser.newContext({
         viewport: { width: 1280, height: 720 },
+        locale: 'da-DK',
+        timezoneId: 'UTC'
+      });
+      const page = await context.newPage();
+      await page.clock.setFixedTime(new Date('2026-11-07T13:40:36Z'));
+      await page.goto(base + '/' + edition + '/index.html');
+      await page.locator('#tiles .add-app').waitFor();
+      assert.equal(await page.locator('html').getAttribute('lang'), 'en');
+      assert.equal(await page.locator('#clock').textContent(), '13:40');
+      await page.locator('#btnSettings').click();
+      const format = page.getByRole('group', { name: 'Clock format' });
+      const automatic = format.getByRole('button', {
+        name: 'Automatic (TV locale)'
+      });
+      const twelve = format.getByRole('button', { name: '12-hour' });
+      const twentyFour = format.getByRole('button', { name: '24-hour' });
+      assert.equal(await automatic.getAttribute('aria-pressed'), 'true');
+      await automatic.focus();
+      await page.keyboard.press('ArrowRight');
+      assert.equal(
+        await twelve.evaluate((el) => el === document.activeElement),
+        true
+      );
+      await page.keyboard.press('Enter');
+      assert.equal(await twelve.getAttribute('aria-pressed'), 'true');
+      assert.equal(await page.locator('#clock').textContent(), '1:40 PM');
+      if (edition === 'launcher') {
+        await page.locator('[data-category=developer]').click();
+        await page
+          .locator('#renewalHistory')
+          .filter({ hasText: '1:40:36 PM' })
+          .waitFor({
+            state: 'attached'
+          });
+      }
+      await page.reload();
+      await page.locator('#tiles .add-app').waitFor();
+      assert.equal(await page.locator('#clock').textContent(), '1:40 PM');
+      await page.locator('#btnSettings').click();
+      assert.equal(await twelve.getAttribute('aria-pressed'), 'true');
+      await twentyFour.click();
+      assert.equal(await page.locator('#clock').textContent(), '13:40');
+      assert.equal(await twentyFour.getAttribute('aria-pressed'), 'true');
+      await automatic.click();
+      assert.equal(await automatic.getAttribute('aria-pressed'), 'true');
+      assert.equal(await page.locator('#clock').textContent(), '13:40');
+      await context.close();
+    }
+    console.log(
+      'PASS clock formats, remote activation and persistence in both Home editions'
+    );
+    for (const edition of ['launcher', 'root-launcher']) {
+      const context = await browser.newContext({
+        viewport: { width: 1280, height: 720 },
         locale: 'ru'
       });
       await context.addInitScript(() => {

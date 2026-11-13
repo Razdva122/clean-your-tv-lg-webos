@@ -154,6 +154,8 @@ Références détaillées en anglais: [prérequis](../COMPATIBILITY.md) · [comm
 
 Utilisez ↑ ↓ pour choisir une catégorie, puis → ou OK pour y entrer. ← revient aux catégories ; Retour y revient d’abord, puis ferme les réglages. En revenant dans une section, le dernier contrôle disponible reprend le focus. Dans Colonnes, les flèches suivent la grille de trois colonnes. Dans Langue, le focus se place sur la langue choisie.
 
+Dans **Réglages → Votre écran Home → Format de l’heure**, choisissez **Automatique (région du téléviseur)**, **12 heures** ou **24 heures**.
+
 Si No-root ne peut pas lire l’état de Home, choisissez Réessayer. Un contrôle indisponible ne signifie pas que Home est désactivé. Dans Fonds d’écran, transférez une image depuis le téléphone ou CYTV ; qualité et assombrissement apparaissent lorsqu’un fond est disponible. La suppression d’un fond personnel demande confirmation ; Annuler le conserve.
 
 ## Météo

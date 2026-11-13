@@ -900,7 +900,9 @@
       var expires = node('p');
       expires.id = 'themeReceiverDeadline';
       expires.textContent = t('PIN expires at {time}', {
-        time: new Date(session.expiresAt).toLocaleTimeString()
+        time: root.HomeI18n
+          ? HomeI18n.formatTime(session.expiresAt, true)
+          : new Date(session.expiresAt).toLocaleTimeString()
       });
       info.appendChild(expires);
       card.appendChild(info);

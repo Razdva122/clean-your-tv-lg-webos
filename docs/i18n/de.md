@@ -154,6 +154,8 @@ Ausführliche Referenzen auf Englisch: [Voraussetzungen](../COMPATIBILITY.md) ·
 
 Wähle mit ↑ ↓ eine Kategorie und öffne sie mit → oder OK. ← führt zu den Kategorien zurück; Zurück führt zuerst dorthin und schließt danach die Einstellungen. Beim erneuten Betreten bleibt der Fokus auf dem letzten verfügbaren Element. Unter Spalten folgen die Pfeile dem dreispaltigen Raster. Unter Sprache wird die gewählte Sprache fokussiert.
 
+Wählen Sie unter **Einstellungen → Ihr Home-Bildschirm → Uhrzeitformat** zwischen **Automatisch (TV-Region)**, **12 Stunden** und **24 Stunden**.
+
 Kann No-root den Home-Status nicht lesen, wähle Erneut versuchen. Ein nicht verfügbarer Schalter bedeutet nicht, dass die Home-Steuerung ausgeschaltet ist. Unter Hintergründe kannst du ein Bild vom Smartphone oder CYTV übertragen; Qualität und Abdunklung erscheinen, wenn ein Hintergrund verfügbar ist. Das Entfernen eines eigenen Hintergrunds muss bestätigt werden; Abbrechen behält ihn.
 
 ## Wetter
