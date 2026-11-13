@@ -83,6 +83,25 @@ Use [the feedback guide](docs/FEEDBACK.md) and installation-result issue form fo
 user reports. These rules authorize records within the current task; they do not
 create a background monitor or automatic issue bot.
 
+## Request SSH diagnostics from a TV owner
+
+When the owner needs to collect SSH evidence from their TV, use the desktop
+installer's **Diagnostics → Run SSH command** if their build has it. Give the
+owner the exact command, the TV and SSH profile to select, and the evidence it
+collects. Prefer one read-only probe with output limited to the fields needed
+for the decision. Use the owner's existing Root or No-root connection.
+
+> Open Clean Your TV on your computer and choose **Diagnostics → Run SSH
+> command**. Select your TV and its existing [Root or No-root] connection. Check
+> that the screen shows the expected TV and SSH user. Paste the command below
+> into the editor and click **Run**. When it finishes, click **Copy output** and
+> send the result here, including stdout, stderr and the exit code.
+
+Name the destination allowed by the current task. Treat copied command output
+as raw evidence and follow the privacy and consent rules above. If the action
+is missing from the owner's build, give the same probe for their existing
+authorized SSH session.
+
 ## Release coordination and verification scope
 
 Use one coordinator for a release candidate. Other tasks supply focused changes

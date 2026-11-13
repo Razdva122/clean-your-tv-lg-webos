@@ -99,6 +99,8 @@ Les mises à jour automatiques sur le téléviseur ne redémarrent pas Helper ar
 
 ## Besoin d’aide ?
 
+Si l’assistance vous demande la sortie d’une commande SSH, ouvrez **Diagnostic → Exécuter une commande SSH** dans le programme d’installation sur ordinateur et sélectionnez la connexion existante au téléviseur. Vérifiez le téléviseur et l’utilisateur SSH, collez la commande, puis cliquez sur **Exécuter** et **Copier la sortie**. Le texte copié contient stdout, stderr et le code de sortie.
+
 Si `ssh-identity-changed` apparaît après une réinitialisation ou une modification SSH, arrêtez: CYTV a bloqué la clé mémorisée modifiée avant l’authentification. La confirmation de confiance initiale ne la remplace pas ; une désinstallation en attente n’explique pas cet écart. Conservez le profil d’origine, les clés et les données de récupération. Avec un profil Root enregistré et une désinstallation en attente, la console permet d’enregistrer l’empreinte vérifiée indépendamment. La désinstallation précédente reste bloquée. Voir [récupération de l’identité SSH](../RECOVERY.md#ssh-identity-changed).
 
 Après une interruption, utilisez la même connexion enregistrée et commencez par **Vérifier l’état du téléviseur**. Continuez uniquement avec l’action de récupération proposée par l’assistant. Si l’état est inconnu, enregistrez le rapport de diagnostic et arrêtez-vous ; conservez les données de récupération et ne réinstallez pas à l’aveugle.

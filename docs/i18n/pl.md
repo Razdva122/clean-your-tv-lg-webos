@@ -99,6 +99,8 @@ Automatyczne aktualizacje na TV nie uruchamiają zatrzymanego Helpera. Aby wznow
 
 ## Potrzebujesz pomocy?
 
+Jeśli pomoc techniczna poprosi o wynik polecenia SSH, otwórz **Diagnostyka → Uruchom polecenie SSH** w instalatorze na komputerze i wybierz istniejące połączenie z telewizorem. Sprawdź telewizor i użytkownika SSH, wklej polecenie, a następnie kliknij **Uruchom** i **Kopiuj wynik**. Skopiowany tekst zawiera stdout, stderr i kod zakończenia.
+
 Jeśli po resecie lub zmianie SSH pojawi się `ssh-identity-changed`, zatrzymaj się: CYTV zablokował zmianę zapisanego klucza przed logowaniem. Pierwsza zgoda na zaufanie nie zastępuje klucza; oczekująca dezinstalacja nie wyjaśnia niezgodności. Zachowaj oryginalny profil, klucze i dane odzyskiwania. W zapisanym profilu Root z oczekującą dezinstalacją można zapisać w konsoli niezależnie zweryfikowany odcisk. Wcześniejsza dezinstalacja pozostaje zablokowana. Zobacz [odzyskiwanie po zmianie tożsamości SSH](../RECOVERY.md#ssh-identity-changed).
 
 Po przerwaniu instalacji użyj tego samego zapisanego połączenia i najpierw wybierz **Sprawdź stan TV**. Kontynuuj tylko przez odzyskiwanie zaproponowane przez kreator. Gdy stan jest nieznany, zapisz raport diagnostyczny i zatrzymaj się; zachowaj dane odzyskiwania i nie ponawiaj instalacji w ciemno.

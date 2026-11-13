@@ -99,6 +99,8 @@ Automatische Updates am TV starten einen angehaltenen Helper nicht neu. Nutzen S
 
 ## Brauchen Sie Hilfe?
 
+Wenn der Support die Ausgabe eines SSH-Befehls benötigt, öffnen Sie im Desktop-Installer **Diagnose → SSH-Befehl ausführen** und wählen Sie Ihre bestehende TV-Verbindung. Prüfen Sie den Fernseher und den SSH-Benutzer, fügen Sie den Befehl ein und klicken Sie auf **Ausführen** und **Ausgabe kopieren**. Der kopierte Text enthält stdout, stderr und den Exit-Code.
+
 Bei `ssh-identity-changed` nach einem Reset oder einer SSH-Änderung stoppen: CYTV blockiert den geänderten gespeicherten Schlüssel vor der Anmeldung. Die erstmalige Vertrauensabfrage ersetzt ihn nicht; eine ausstehende Deinstallation erklärt die Abweichung nicht. Ursprüngliches Profil, Schlüssel und Wiederherstellungsdaten behalten. Bei einem gespeicherten Root-Profil mit ausstehender Deinstallation lässt sich der unabhängig geprüfte Fingerabdruck in der Konsole erfassen. Die frühere Deinstallation bleibt blockiert. Siehe [Wiederherstellung bei geänderter SSH-Identität](../RECOVERY.md#ssh-identity-changed).
 
 Nach einer unterbrochenen Installation verwenden Sie dieselbe gespeicherte Verbindung und zuerst **TV-Status prüfen**. Fahren Sie nur mit der vom Assistenten angebotenen Wiederherstellung fort. Bei unbekanntem Zustand Diagnosebericht speichern und stoppen; Wiederherstellungsdaten behalten und nicht blind neu installieren.

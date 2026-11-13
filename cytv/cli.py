@@ -45,12 +45,15 @@ def home_screen_name_arg(value):
     return package.normalize_tv_name(value)
 
 
-def parser():
+def parser(desktop=False):
     result = LanguageParser(prog='cytv', add_help=False, description=i18n.translate('Clean Your TV — one installer for No-root and Root.'))
     result._positionals.title = i18n.translate('positional arguments')
     result._optionals.title = i18n.translate('options')
     result.add_argument('-h', '--help', action='help', help=i18n.translate('Show this help message and exit'))
-    result.add_argument('command', nargs='?', default='install', choices=('install', 'status', 'doctor', 'home-diagnostics', 'recover', 'trust-root-ssh', 'restore', 'uninstall', 'enable-system-updates', 'enable-firmware-access', 'disable-firmware-access', 'recover-system-rollback', 'recover-root-rollback', 'replace-system-updater', 'clean-wam-cache'))
+    commands = ('install', 'status', 'doctor', 'home-diagnostics', 'recover', 'trust-root-ssh', 'restore', 'uninstall', 'enable-system-updates', 'enable-firmware-access', 'disable-firmware-access', 'recover-system-rollback', 'recover-root-rollback', 'replace-system-updater', 'clean-wam-cache')
+    if desktop:
+        commands += ('ssh-command',)
+    result.add_argument('command', nargs='?', default='install', choices=commands)
     result.add_argument('--language', choices=tuple(i18n.LANGUAGES), help=i18n.translate('Interface language (auto uses the computer language)'))
     result.add_argument('--version', action='store_true', help=i18n.translate('Print installer version'))
     result.add_argument('--host', help=i18n.translate('TV IPv4 address or hostname'))
@@ -199,7 +202,8 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
         (write if isinstance(write, Console) else Console(write)).error('Could not save language preference', heading=True)
         (write if isinstance(write, Console) else Console(write)).error('Check write access to the application data folder and try again.')
         return 2
-    args = parser().parse_args(argv)
+    from .desktop import DesktopConsole, SSH_COMMAND_PROMPT
+    args = parser(desktop=isinstance(write, DesktopConsole)).parse_args(argv)
     if args.version:
         write('cytv ' + __version__)
         return 0
@@ -325,7 +329,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
         check_doctor_payload = root_doctor and (
             payload_root is not None or getattr(sys, 'frozen', False) or (payload / 'payload.json').exists()
         )
-        if (check_doctor_payload or profile.get('root_variant') or args.command in (
+        if (check_doctor_payload or (profile.get('root_variant') and args.command != 'ssh-command') or args.command in (
                 'install', 'enable-system-updates', 'enable-firmware-access',
                 'disable-firmware-access', 'replace-system-updater')):
             if root_doctor:
@@ -424,6 +428,18 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                     write('Connecting to the TV…')
                     sleep(attempt + 1)
             checks.update('ssh', 'pass')
+            if args.command == 'ssh-command':
+                phase = 'ssh-command'
+                if not recovering and not store.pending(profile):
+                    store.save(profile)
+                write.selected_profile(profile)
+                command = ask(SSH_COMMAND_PROMPT)
+                if not command.strip():
+                    return 130
+                result = remote.run_command(command)
+                write.ssh_command_result(result)
+                return 0
+
             if not recovering and args.command in ('install', 'status', 'doctor', 'recover'):
                 diagnostics.context.collect_metadata(remote, tv_info)
             if not recovering:
@@ -742,6 +758,8 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
         return 0
     except (EOFError, KeyboardInterrupt, StopIteration):
         checks.finish_running(cancelled=True)
+        if args.command == 'ssh-command':
+            return 130
         from .recovery import cancelled
         cancelled(write, store, profile, args.command, phase, tv_info, checks.results)
         return 130
