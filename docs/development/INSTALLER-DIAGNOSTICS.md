@@ -328,6 +328,16 @@ successful TV work into a failed command. `doctor --report` remains explicit.
 Review every report before sharing. The special Home-button recording retains
 its separately documented application-ID/timing scope.
 
+An install report includes a `debloat` object when selected settings were
+processed. It maps known setting keys to fixed outcomes. The pairing outcomes
+are `pairing-rejected`, `pairing-timeout` and `pairing-unavailable`. A
+negative reply to a write is `write-rejected`, while a transport failure or
+invalid reply is `write-unavailable`. After a confirmed write,
+`verify-mismatch` means the value differs from the target and
+`verify-unavailable` means no value could be read. Other outcomes are
+`already`, `verified` and `journal-failed` (the original value could not be
+saved locally). The export excludes setting values and raw TV responses.
+
 <a id="recovery-journal-summary-unreleased"></a>
 
 ## Recovery journal summary

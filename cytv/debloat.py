@@ -5,6 +5,7 @@ import shlex
 import time
 
 from . import prompts
+from .errors import UserError, TVRejected
 from .i18n import translate as tr
 from .state import private_write
 from .tv import SSAP
@@ -39,8 +40,12 @@ RESULTS = {
     'already': ('✓', '#b4ada4', 'Already in the requested state'),
     'verified': ('✓', '#90cfad', 'Successfully applied and verified'),
     'failed': ('×', '#ff8580', 'Could not change the setting'),
+    'firmware-blocked': ('×', '#ff8580', 'This TV firmware blocks changing this setting in No-root.'),
     'unverified': ('✓', '#b4ada4', 'Command sent. The result could not be verified.'),
 }
+DIAGNOSTIC_RESULTS = ('already', 'verified', 'pairing-rejected', 'pairing-timeout',
+                      'pairing-unavailable', 'write-rejected', 'write-unavailable',
+                      'journal-failed', 'verify-unavailable', 'verify-mismatch')
 SERVICE = 'com.webos.settingsservice/'
 # Execute in the existing Developer Mode SSH jail. Return only the requested
 # value so private data from the preferences files never leaves the TV.
@@ -101,7 +106,7 @@ def remember(path, key, original, target):
         private_write(path, json.dumps(journal).encode())
 
 
-def apply(installer, selected, progress=lambda _: None):
+def apply(installer, selected, progress=lambda _: None, *, diagnostic=None):
     if not isinstance(selected, list) or any(not isinstance(key, str) or key not in SETTINGS for key in selected):
         raise ValueError('Invalid Debloat selection')
     if not selected:
@@ -109,38 +114,56 @@ def apply(installer, selected, progress=lambda _: None):
     profile, remote = installer.profile, installer.remote
     directory = installer.store.device_dir(profile)
     results = {}
+    events = diagnostic if diagnostic is not None else {}
     use_ssap = not remote.root
     tv = None
-    ssap_unavailable = False
+    pairing_failure = None
     with ExitStack() as stack:
         for key, (category, label, target) in SETTINGS.items():
             if key not in selected:
                 continue
             progress(label)
             original = read(remote, category, key)
-            results[key] = 'already' if original == target else 'failed'
-            if original == target or (use_ssap and ssap_unavailable):
+            if original == target:
+                results[key] = events[key] = 'already'
                 continue
-            try:
-                if use_ssap and tv is None:
-                    ssap_unavailable = True
+            results[key] = 'failed'
+            if use_ssap and tv is None and pairing_failure is None:
+                try:
                     tv = stack.enter_context(SSAP(profile['host'], directory, progress, settings_write=True))
-                    ssap_unavailable = False
-                if original is None and use_ssap:
-                    original = read_ssap(tv, category, key)
-                    if original == target:
-                        results[key] = 'already'
-                        continue
-                if original is not None:
+                except Exception as exc:
+                    reason = exc.reason_code if isinstance(exc, UserError) else None
+                    pairing_failure = reason if reason in ('pairing-rejected', 'pairing-timeout') else 'pairing-unavailable'
+            if pairing_failure:
+                events[key] = pairing_failure
+                continue
+            if original is None and use_ssap:
+                original = read_ssap(tv, category, key)
+                if original == target:
+                    results[key] = events[key] = 'already'
+                    continue
+            if original is not None:
+                try:
                     remember(directory / 'debloat.json', key, original, target)
-                payload = {'category': category, 'settings': {key: target}}
+                except Exception:
+                    events[key] = 'journal-failed'
+                    continue
+            payload = {'category': category, 'settings': {key: target}}
+            try:
                 if use_ssap:
                     reply = tv.call('ssap://settings/setSystemSettings', payload, timeout=8)
                 else:
                     reply = remote.luna(SERVICE + 'setSystemSettings', payload, timeout=8)
-                if reply.get('returnValue') is not True:
-                    continue
-            except Exception:
+            except TVRejected:
+                events[key] = 'write-rejected'
+                continue
+            except Exception as exc:
+                rejected = isinstance(exc, UserError) and exc.reason_code == 'ssap-request-rejected'
+                events[key] = 'write-rejected' if rejected else 'write-unavailable'
+                continue
+            if not isinstance(reply, dict) or reply.get('returnValue') is not True:
+                rejected = isinstance(reply, dict) and reply.get('returnValue') is False
+                events[key] = 'write-rejected' if rejected else 'write-unavailable'
                 continue
             actual = read_current(remote, category, key, tv)
             # The on-disk snapshot can lag the SSAP action. Retry reads only.
@@ -150,10 +173,11 @@ def apply(installer, selected, progress=lambda _: None):
                 time.sleep(delay)
                 actual = read_current(remote, category, key, tv)
             results[key] = 'verified' if actual == target else 'unverified' if actual is None else 'failed'
+            events[key] = 'verified' if actual == target else 'verify-unavailable' if actual is None else 'verify-mismatch'
     return results
 
 
-def run(installer, ask, write):
+def run(installer, ask, write, *, diagnostic=None):
     write.step(5, TITLE)
     if write.frontend == 'desktop':
         try:
@@ -195,11 +219,18 @@ def run(installer, ask, write):
                 return
     if not selected:
         return
+    events = diagnostic if diagnostic is not None else {}
     try:
-        results = apply(installer, selected, write)
+        results = apply(installer, selected, write, diagnostic=events)
     except (OSError, ValueError):
         write.error('Could not apply Debloat settings.')
         return
+    # The factory SSAP allowlist for this model and firmware excludes all Debloat keys (#610).
+    if (not installer.remote.root and installer.tv_info.get('modelName') == '55UK7500PSA'
+            and installer.tv_info.get('firmwareVersion') == '05.50.70'):
+        for key in results:
+            if events[key] == 'write-rejected':
+                results[key] = 'firmware-blocked'
     if write.frontend == 'desktop':
         write.debloat_results(results)
         prompts.answer(ask, REVIEW)

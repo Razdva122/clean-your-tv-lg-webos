@@ -191,16 +191,16 @@ class InventoryTests(unittest.TestCase):
                 self.assertEqual(inventory['inputs'], [{'appId': 'com.webos.app.hdmi1', 'label': 'HDMI_1'}])
 
     def test_ssap_rejects_error_instead_of_empty_success(self):
-        session = object.__new__(SSAP)
-        session.counter = 0
+        session = SSAP('192.0.2.10', '.')
         class Socket:
             def send(self, data):
                 self.request = json.loads(data)
             def recv(self, timeout):
                 return json.dumps({'id': self.request['id'], 'type': 'error', 'error': 'denied'})
         session.ws = Socket()
-        with self.assertRaisesRegex(RuntimeError, 'permission'):
+        with self.assertRaisesRegex(RuntimeError, 'permission') as caught:
             session.call('ssap://com.webos.applicationManager/listLaunchPoints')
+        self.assertEqual(caught.exception.reason_code, 'user-error')
 
     def test_settings_session_requests_only_settings_scope_and_keeps_inventory_key(self):
         from unittest.mock import Mock

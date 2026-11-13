@@ -643,7 +643,12 @@ class DesktopRecoveryTests(unittest.TestCase):
             w.submit('y')
         self.pump(lambda: w.pending is not None)
         self.assertEqual(w.pending.label, debloat.SELECT)
-        w.submit('[]')  # Skip optional Debloat.
+        self.remote.root = False
+        with patch.object(debloat, 'SSAP', side_effect=TimeoutError):
+            w.submit('["homePromotion"]')
+            self.pump(lambda: w.pending is not None)
+            self.assertEqual(w.pending.label, debloat.REVIEW, w.content.toPlainText())
+        w.submit('1')
         self.pump(lambda: w.pending is not None)
         self.assertEqual(w.pending.label, install_settings.PROMPT)
         w.submit('{}')  # Skip optional customization.
@@ -660,6 +665,7 @@ class DesktopRecoveryTests(unittest.TestCase):
         self.assertTrue(self.button(w, 'Save diagnostic report…').isDefault())
         report = json.loads(w.report.read_text())
         self.assertIsNone(report['error_type'])
+        self.assertEqual(report['debloat'], {'homePromotion': 'pairing-unavailable'})
         self.assertEqual(report['tv']['setup_outcome']['home_button'], 'not-working')
         self.assertEqual(report['checks']['packages'], 'pass')
         self.assertEqual(report['checks']['startup'], 'pass')

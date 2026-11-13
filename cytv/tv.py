@@ -281,7 +281,8 @@ class SSAP:
                     raise ValueError('Invalid TV pairing response')
                 response = reply.get('payload', {})
                 if reply.get('type') == 'error':
-                    raise UserError('TV pairing was rejected. Check the on-screen request and local network access.')
+                    raise UserError('TV pairing was rejected. Check the on-screen request and local network access.',
+                                    reason_code='pairing-rejected' if self.settings_write else 'user-error')
                 if self.reuse_only and response.get('pairingType'):
                     raise UserError('The TV did not accept the saved remote-control pairing.')
                 if reply.get('type') == 'registered':
@@ -325,9 +326,11 @@ class SSAP:
                 if reply.get('id') != request:
                     continue
                 payload = reply.get('payload', {})
-                if (reply.get('type', 'response') != 'response' or not isinstance(payload, dict)
-                        or payload.get('returnValue') is False):
-                    raise UserError('TV permission was denied. Check pairing and run cytv doctor.')
+                if reply.get('type') == 'error' or (isinstance(payload, dict) and payload.get('returnValue') is False):
+                    raise UserError('TV permission was denied. Check pairing and run cytv doctor.',
+                                    reason_code='ssap-request-rejected' if self.settings_write else 'user-error')
+                if reply.get('type', 'response') != 'response' or not isinstance(payload, dict):
+                    raise UserError('Invalid TV remote-control reply')
                 return payload
             raise UserError('Reading TV applications timed out. Keep the TV on and check the connection.')
         except ConnectionClosed as exc:

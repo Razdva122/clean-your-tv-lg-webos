@@ -82,10 +82,11 @@ class GuiTests(unittest.TestCase):
         next(b for b in w.form.findChildren(QPushButton) if b.text() == 'Continue').click()
         self.assertEqual(json.loads(w.channel.answers.get_nowait()),
                          [key for key in debloat.SETTINGS if key != 'contentRecommendation'])
-        w.receive('debloat-results', {'homePromotion': 'unverified'})
+        w.receive('debloat-results', {'homePromotion': 'unverified', 'aiNudge': 'firmware-blocked'})
         w.show_prompt(Prompt(debloat.REVIEW))
         self.assertFalse(w.reading.isHidden())
         self.assertIn('The result could not be verified.', w.content.toPlainText())
+        self.assertIn('This TV firmware blocks changing this setting in No-root.', w.content.toPlainText())
         self.app.processEvents()
         icon = w.content.document().find('✓')
         label = w.content.document().find('Turn off sponsored tiles')

@@ -631,7 +631,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                 if not args.non_interactive and (not args.yes or write.frontend != 'console'):
                     phase = 'debloat'
                     try:
-                        debloat.run(installer, ask, write)
+                        debloat.run(installer, ask, write, diagnostic=tv_info.setdefault('debloat', {}))
                         phase = 'configure-home'
                         setup = install_settings.collect(profile, ask, write,
                             current=install_settings.read_current(installer) if write.frontend == 'desktop' else None)
