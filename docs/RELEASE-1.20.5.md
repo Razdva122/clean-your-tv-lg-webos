@@ -12,6 +12,12 @@
 - No-root setup over Root SSH can read effective user and group IDs on older LG
   Node.js runtimes without the corresponding Node APIs (#620, #587).
 
+- Home settings show a preview for each clock format and distinguish the saved
+  selection from remote focus (#621, #608).
+- No-root removal waits for Clean Your TV processes to stop, then continues the
+  same removal. If a confirmed process remains, the installer keeps the removal
+  record and reports the timeout (#622, #529).
+
 | Component | v1.20.4 | v1.20.5 |
 | --- | --- | --- |
 | cytv | 0.20.4 | 0.20.5 |
