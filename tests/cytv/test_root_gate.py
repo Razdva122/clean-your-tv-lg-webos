@@ -3,6 +3,7 @@ import hashlib
 import json
 from pathlib import Path
 import shlex
+import stat
 from types import SimpleNamespace
 import tempfile
 import unittest
@@ -109,10 +110,10 @@ class RootGateTests(unittest.TestCase):
         tvweb=self.root/'tvweb';tvweb.mkdir(mode=0o700)
         launcher=tvweb/'tvwebctl';launcher.touch(mode=0o700)
         script=root_gate.RESTORE_GLASSHOUSE_HOME.replace("'/var/lib/tvweb'",repr(str(tvweb)))
-        real_lstat=Path.lstat
+        # The script runs on webOS, where these are POSIX owner-only modes.
+        device_modes = {tvweb: stat.S_IFDIR | 0o700, launcher: stat.S_IFREG | 0o700}
         def owner(path):
-            info=real_lstat(path)
-            return SimpleNamespace(st_uid=0,st_mode=info.st_mode)
+            return SimpleNamespace(st_uid=0, st_mode=device_modes[path])
         for settings, keys, restore in (({}, {}, False), ({'enabled':True}, {}, True),
                                         ({'restorePending':True}, {}, True), ({}, {'home':'com.tvweb.home'}, True)):
             with self.subTest(settings=settings, keys=keys):
