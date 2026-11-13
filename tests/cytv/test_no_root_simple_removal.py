@@ -655,19 +655,70 @@ class SimpleRemoval(unittest.TestCase):
         self.assertFalse(receipt['cleanup_boot_verified'])
         self.assertEqual(receipt['cleanup_boot_proof']['kernel'], self.remote.boot)
 
-    def test_restricted_tmp_does_not_recheck_with_resident_installer_evidence(self):
+    def test_restricted_tmp_rechecks_resident_installer_after_package_manager_becomes_idle(self):
         self.remote.volatile_mode = 0o111
         (self.root / 'proc').mkdir()
         self.remote.apps = {'com.local.nativehome'}
         journal = self.own_file('.cytv-installer/operations/' + 'a' * 32 + '/journal.json')
+        original_luna = self.remote.luna
+        busy = True
+
+        def luna(uri, payload, **kwargs):
+            if uri == 'com.webos.appInstallService/status' and busy:
+                return {'returnValue': True, 'status': {'apps': ['com.local.nativehome']}}
+            return original_luna(uri, payload, **kwargs)
+
+        self.remote.luna = luna
         self.assertTrue(self.remove()['restart_required'])
-        with patch.object(self.cleanup, '_device', wraps=self.cleanup._device) as device:
-            with self.assertRaises(UserError) as caught:
-                self.remove()
-        self.assertEqual(caught.exception.no_root_cleanup['reason'], 'kernel-boot-unchanged')
-        self.assertEqual([call.args[1] for call in device.call_args_list], ['inventory', 'boot-probe'])
         self.assertTrue(journal.exists())
         self.assertEqual(self.remote.apps, {'com.local.nativehome'})
+
+        busy = False
+        proc = self.root / 'proc/123'
+        proc.mkdir()
+        (proc / 'cmdline').write_bytes(b'/usr/bin/node\0' + os.fsencode(journal.with_name('observer.js')) + b'\0')
+        with self.assertRaises(UserError):
+            self.remove()
+        self.assertTrue(journal.exists())
+        self.assertFalse(any(uri.endswith('/dev/remove') for uri, _ in self.remote.calls))
+        shutil.rmtree(proc)
+
+        self.assertTrue(self.remove()['verified_clean'])
+        self.assertFalse(journal.exists())
+        self.assertFalse(self.remote.apps)
+        receipt = json.loads((self.store.device_dir(self.profile) / 'clean-removal.json').read_text())
+        self.assertFalse(receipt['cleanup_boot_verified'])
+        self.assertEqual(receipt['cleanup_boot_proof']['kernel'], self.remote.boot)
+
+    def test_denied_package_status_uses_only_terminal_readback_for_original_install(self):
+        from cytv import no_root_observer
+
+        self.remote.volatile_mode = 0o111
+        (self.root / 'proc').mkdir()
+        self.store.begin(self.profile, 'install', recovery_protocol=no_root_observer.PROTOCOL)
+        self.remote.apps = {'com.local.nativehome', 'com.gathin.tvhome'}
+        journal = self.own_file('.cytv-installer/operations/' + 'a' * 32 + '/journal.json')
+        original_luna = self.remote.luna
+
+        def luna(uri, payload, **kwargs):
+            if uri == 'com.webos.appInstallService/status':
+                raise TVRejected('Denied', {'returnValue': False, 'errorCode': -1}, uri)
+            return original_luna(uri, payload, **kwargs)
+
+        self.remote.luna = luna
+        slots = [dict(terminal='success', readback='matches', reason=None) for _ in range(2)]
+        slots[1]['readback'] = 'not-checked'
+        with patch.object(no_root_observer, 'capsule', return_value={'plan': {}}) as capsule, \
+             patch.object(no_root_observer, 'snapshot', return_value={'reservation': 'active', 'slots': slots}):
+            self.assertTrue(self.remove()['restart_required'])
+            self.assertTrue(journal.exists())
+            self.assertFalse(any(uri.endswith('/dev/remove') for uri, _ in self.remote.calls))
+            slots[1]['readback'] = 'matches'
+            self.assertTrue(self.remove()['verified_clean'])
+            self.assertEqual(capsule.call_args.args[1]['action'], 'install')
+        self.assertFalse(journal.exists())
+        self.assertFalse(self.remote.apps)
+        self.assertFalse(any(uri.endswith('/dev/install') for uri, _ in self.remote.calls))
 
     def test_restricted_tmp_keeps_unresolved_install_until_changed_kernel(self):
         from cytv.diagnostics import create_report

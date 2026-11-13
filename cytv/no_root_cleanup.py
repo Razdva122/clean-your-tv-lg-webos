@@ -348,6 +348,22 @@ def _remove_package(installer, app):
         raise
 
 
+def _original_install_finished(installer, previous):
+    from . import no_root_observer
+    from .errors import connection_interrupted
+
+    try:
+        original = no_root_observer.capsule(installer, previous)
+        result = no_root_observer.snapshot(installer, original)
+    except UserError as error:
+        if connection_interrupted(error):
+            raise
+        return False
+    return (result['reservation'] in ('active', 'closed')
+            and all(slot['terminal'] == 'success' and slot['readback'] == 'matches' and not slot.get('reason')
+                    for slot in result['slots']))
+
+
 def _remove_input_shortcut(installer):
     """A fixed owned delete can succeed even when the optional list API fails."""
     def request(method, payload):
@@ -507,13 +523,21 @@ def continue_removal(installer, expected_pending):
                                    cleanup_boot_verified=False, stage=stage)
         return proof
     proof = pending.get('cleanup_boot_proof')
+    original_install = (isinstance(previous, dict) and previous.get('action') == 'install'
+                        and previous.get('recovery_protocol') == 'no-root-original-stream-v1'
+                        and 'previous' not in previous)
+    recheck_install = (installer.profile.get('connection') != 'root-ssh'
+                       and (previous is None or original_install)
+                       and (current.get('resident_installer') is True or original_install))
+    direct_cleanup = ((recheck_install or previous is None and current.get('resident_installer') is False)
+                      and current.get('external_update_hint') is None
+                      and pending.get('previous_update_status') is None
+                      and pending.get('cleanup_carriers') in (None, {}))
+    recheck_install = recheck_install and direct_cleanup
     # A normal Developer Mode uninstall can prove cleanup directly. Recovery
     # receipts and an already requested restart still use their saved baseline.
     defer_boot = ('cleanup_boot_proof' not in pending and installer.profile.get('connection') != 'root-ssh'
-                  and previous is None and current.get('resident_installer') is False
-                  and current.get('external_update_hint') is None
-                  and pending.get('previous_update_status') is None
-                  and pending.get('cleanup_carriers') in (None, {})
+                  and direct_cleanup
                   and not pending.get('cleanup_restart_first')
                   and not pending.get('cleanup_boot_release_started')
                   and pending.get('stage') != 'restart-required'
@@ -541,13 +565,10 @@ def continue_removal(installer, expected_pending):
         restarted = boot['boot_restarted'] is True and (not legacy_install or (
             boot_id is not None and boot_id == current.get('boot_id') and boot_id != proof['kernel']))
         if not restarted and (pending.get('stage') == 'restart-required' or pending.get('cleanup_restart_first')):
-            # A request can outlive a transient Stop failure. Recheck only
-            # ordinary removal and keep the pre-package checks across retries.
+            # Recheck current safety when the original blocker may have cleared.
             same_boot_retry = (
                 boot.get('boot_restarted') is False and boot_id == proof.get('kernel') == current.get('boot_id')
-                and previous is None and current.get('resident_installer') is False
-                and current.get('external_update_hint') is None and pending.get('previous_update_status') is None
-                and pending.get('cleanup_carriers') in (None, {})
+                and direct_cleanup
             )
             if not same_boot_retry and proof.get('schema') == 2:
                 raise unverified_restart()
@@ -622,9 +643,10 @@ def continue_removal(installer, expected_pending):
     resident = current.get('resident_installer') is True or current.get('external_update_hint') is not None
     if current.get('external_update_hint') is not None:
         installer.store.checkpoint(installer.profile, previous_update_status=current['external_update_hint'])
-    while isinstance(previous, dict):
-        resident |= previous.get('recovery_protocol') == 'no-root-original-stream-v1'
-        previous = previous.get('previous')
+    inherited = previous
+    while isinstance(inherited, dict):
+        resident |= inherited.get('recovery_protocol') == 'no-root-original-stream-v1'
+        inherited = inherited.get('previous')
     restart_triggers = []
     if stopped.get('controller_running'):
         restart_triggers.append('controller-still-running')
@@ -632,7 +654,7 @@ def continue_removal(installer, expected_pending):
         restart_triggers.append('protected-package-access')
     if startup_disable_unverified:
         restart_triggers.append('startup-disable-unverified')
-    if resident and not restarted:
+    if resident and not restarted and not recheck_install:
         restart_triggers.append('resident-installer-evidence')
     if invalid_stop_record:
         # A successful boot leaves the operation ready to retry without
@@ -644,7 +666,29 @@ def continue_removal(installer, expected_pending):
             _device(installer, 'boot-retire', proof=proof)
             proof = capture_boot()
         return require_restart(restart_triggers, before_packages=True)
-    if defer_boot or same_boot_retry:
+    install_idle = False
+    if recheck_install and not restarted:
+        # A journal can outlive its writer. Require live process absence and
+        # package-manager idle, or terminal readback for the bound install
+        # when webOS denies access to global package status.
+        idle = _device(installer, 'idle', wait_for_idle=True)
+        _check_access(idle)
+        if idle.get('idle') is not True or idle.get('external_update_hint') is not None:
+            return require_restart(['resident-installer-evidence'], before_packages=True)
+        from .operations import require_removal_idle
+        try:
+            require_removal_idle(installer.remote, installer.profile, pending)
+        except TVRejected as error:
+            if not error.package_status_denied:
+                raise
+            if not original_install or not _original_install_finished(installer, previous):
+                return require_restart(['resident-installer-evidence'], before_packages=True)
+        except UserError as error:
+            if error.reason_code != 'pending-operation':
+                raise
+            return require_restart(['resident-installer-evidence'], before_packages=True)
+        install_idle = True
+    elif defer_boot or same_boot_retry:
         idle = _device(installer, 'idle', wait_for_idle=True)
         _check_access(idle)
         if idle.get('boot_id') != boot_id:
@@ -665,7 +709,7 @@ def continue_removal(installer, expected_pending):
     installer.progress('Removing private recovery data…')
     installer.store.checkpoint(installer.profile, stage='private-cleanup')
     _check_access(_device(installer, 'sweep'))
-    if not restarted and pending.get('previous'):
+    if not restarted and pending.get('previous') and not install_idle:
         return require_restart(['prior-operation-unresolved'])
     installer.progress('Verifying removal…')
     final = _device(installer, 'inventory')

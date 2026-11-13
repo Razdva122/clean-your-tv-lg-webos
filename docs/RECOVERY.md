@@ -139,7 +139,10 @@ known project apps/files that are present and skip items that are absent.
    the final sweep. Success requires both removed and verified-clean results.
 
 The current source permits completion without a restart when current control,
-startup, package/file and process checks pass and no prior setup is unresolved.
+startup, package/file and process checks pass. Retained No-root setup records
+can also be cleaned up in Developer Mode when the installer verifies that the
+package manager is idle or verifies the original install's terminal receipts
+if webOS denies package-status access.
 A normal Developer Mode removal runs these checks as part of the same
 operation. Wait for the installer to confirm that removal is complete.
 With the v1.20.3 installer, **Try again** can also finish a No-root removal on
