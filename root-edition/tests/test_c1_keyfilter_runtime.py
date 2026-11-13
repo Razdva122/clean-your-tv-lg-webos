@@ -373,6 +373,53 @@ class RuntimeTests(unittest.TestCase):
             self.assertEqual(self.k.execute('restore',root=self.root,uid=self.uid),'restored')
         self.assertLess(calls.index('--restore'),calls.index('chain'))
 
+    def test_removal_reconciles_ui_failure_only_with_fresh_stock_proof(self):
+        from types import SimpleNamespace
+
+        self.admission = dict(self.generic(), model='OLED48A19LA', firmware='03.53.45', webos='6.5.3')
+        self.prepare()
+        own = self.k.filter_entry(self.root)
+        vendor = {'file': '/usr/lib/qt5/qml/KeyFilters/systemUi.js', 'handler': 'handleSystemKeys'}
+        self.k.atomic(self.root/'c1-keyfilter/ownership.json', dict(schema=1, entry=own, token='1'*32), self.uid)
+        for case in ('stock', 'other-foreground', 'cytv-overlay', 'stock-changed', 'other-attempt', 'lock-failed'):
+            with self.subTest(case=case):
+                chain = [own, vendor]
+                initial = self.proof()
+                stopped = dict(initial)
+                failure = dict(initial, returnValue=False, reason='ui_release_failed')
+                if case == 'stock-changed':
+                    stopped['stock_verified'] = False
+                if case == 'other-attempt':
+                    stopped['token'] = '2'*32
+                if case == 'lock-failed':
+                    failure['reason'] = 'effect_busy'
+                def run(argv, **kwargs):
+                    value = failure if argv[-1] == '--restore' else stopped
+                    return SimpleNamespace(stdout=json.dumps(value).encode(), returncode=int(not value['returnValue']))
+                def write(value, **kwargs):
+                    chain[:] = value
+                foreground = {'returnValue': True, 'appId': self.k.APP if case == 'other-foreground' else self.k.STOCK}
+                surfaces = [{'appId': self.k.STOCK, 'windowType': self.k.HOME}]
+                if case == 'cytv-overlay':
+                    surfaces.append({'appId': self.k.APP, 'windowType': '_WEBOS_WINDOW_TYPE_OVERLAY'})
+                def read_foreground(uri, payload):
+                    if uri == 'luna://com.webos.surfacemanager/getForegroundAppInfo':
+                        return {'returnValue': True, 'foregroundAppInfo': surfaces}
+                    self.assertEqual(uri, 'luna://com.webos.applicationManager/getForegroundAppInfo')
+                    return foreground
+                with patch.object(self.k, 'binary', return_value=Path('/verified-guard')), \
+                        patch.object(self.k.subprocess, 'run', side_effect=run), \
+                        patch.object(self.k, 'read_chain', side_effect=lambda: list(chain)), \
+                        patch.object(self.k, 'write_chain', side_effect=write), \
+                        patch.object(self.k, 'luna', side_effect=read_foreground):
+                    if case == 'stock':
+                        self.assertEqual(self.k.restore_for_removal(self.root, self.uid), 'restored')
+                        self.assertEqual(chain, [vendor])
+                        self.assertEqual(self.k.read_intent(self.root, self.uid)['phase'], 'disabled')
+                    else:
+                        with self.assertRaises(ValueError):
+                            self.k.restore_for_removal(self.root, self.uid)
+
     def test_lifecycle_replay_cancel_and_unknown_visibility(self):
         policy=self.k.ReturnPolicy('1'*32)
         card=lambda app,event='foreground':dict(event=event,appId=app,windowType='_WEBOS_WINDOW_TYPE_CARD')

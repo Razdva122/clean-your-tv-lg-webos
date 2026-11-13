@@ -80,12 +80,14 @@ def runtime_restore(payload, uid=0):
     sys.path.insert(0,str(payload/'runtime'))
     import cli
     backend=cli.gate_backend()
+    compositor = False
     if backend is not None:
         selected=backend.selection(backend.STATE,uid)
         name='c1-home-gate'
         if selected.get('routing')=='compositor-keyfilter-v1':
             import c1_keyfilter
             backend=c1_keyfilter;name='c1-keyfilter-guard'
+            compositor = True
         path=payload/'runtime'/name
         raw=deploy.checked_file(payload,'runtime/'+name)
         if hashlib.sha256(raw).hexdigest()!=manifest['files'].get('runtime/'+name):
@@ -98,7 +100,8 @@ def runtime_restore(payload, uid=0):
         finally:os.close(fd)
         backend.binary=lambda root,uid:path
     selection_raw=safe_bytes(backend.STATE/'home-backend.json',uid=uid) if backend is not None else None
-    result={'returnValue':True,'result':cli.main('restore')}
+    restored = backend.restore_for_removal(backend.STATE, uid) if compositor else cli.main('restore')
+    result={'returnValue':True,'result':restored}
     if selection_raw is not None and result['result']=='restored':
         if safe_bytes(backend.STATE/'home-backend.json',uid=uid)!=selection_raw:
             raise ValueError('native_recovery_selection_changed')

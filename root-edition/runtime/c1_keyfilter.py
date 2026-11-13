@@ -439,11 +439,22 @@ def binary(root=STATE, uid=0):
     return path
 
 
-def native(args, root=STATE, uid=0, timeout=12):
+def native(args, root=STATE, uid=0, timeout=12, *, allow_ui_failure=False):
     reply=subprocess.run([str(binary(root,uid)),*args],stdin=subprocess.DEVNULL,
         stdout=subprocess.PIPE,stderr=subprocess.PIPE,env={'PATH':'/usr/bin:/bin','LANG':'C'},timeout=timeout,check=False)
-    if len(reply.stdout)>16384 or reply.returncode:
+    if len(reply.stdout)>16384:
         raise ValueError('Native compositor recovery failed; retain evidence')
+    if reply.returncode:
+        if not (allow_ui_failure and args == ['--restore'] and reply.returncode == 1):
+            raise ValueError('Native compositor recovery failed; retain evidence')
+        value = json.loads(reply.stdout)
+        if (not isinstance(value, dict) or value.get('returnValue') is not False
+                or value.get('reason') != 'ui_release_failed'):
+            raise ValueError('Native compositor recovery failed; retain evidence')
+        validate_native(dict(value, returnValue=True))
+        if not stopped_stock(value):
+            raise ValueError('Native stop retirement unverified; retain evidence')
+        return value
     value=json.loads(reply.stdout)
     if args==['--selfcheck']:
         expected=dict(returnValue=True,backend=BACKEND,routing=ROUTING,selfcheck=True)
@@ -552,6 +563,10 @@ def can_return(surfaces,power,proof,token,foreground=None):
     if not isinstance(rows,list) or len(rows)>128: return False
     if not rows:
         return isinstance(foreground,dict) and foreground.get('returnValue') is True and foreground.get('appId')==''
+    return stock_surfaces(rows)
+
+
+def stock_surfaces(rows):
     for row in rows:
         if (not isinstance(row,dict) or row.get('displayId',0)!=0 or row.get('windowType') not in (CARD,HOME)
                 or row.get('appId')!=STOCK or row.get('pip',False) is not False
@@ -607,9 +622,27 @@ def stop_controller(root,uid):
     path.unlink()
 
 
-def restore_locked(root,uid):
-    native(['--restore'],root,uid)
+def stopped_stock(proof):
+    return (proof['state'] == 'stopped' and proof['stopped'] and proof['stock_verified']
+            and not proof['healthy'] and proof['guardian_pid'] == 0)
+
+
+def restore_for_removal(root, uid):
+    with operation(root, uid):
+        return restore_locked(root, uid, for_removal=True)
+
+
+def restore_locked(root,uid, *, for_removal=False):
+    ui_failure = None
+    if for_removal:
+        restored = native(['--restore'], root, uid, allow_ui_failure=True)
+        if restored['returnValue'] is False:
+            ui_failure = restored
+    else:
+        native(['--restore'],root,uid)
     after=validate_native(native(['--status'],root,uid))
+    if ui_failure is not None and (not stopped_stock(after) or after['token'] != ui_failure['token']):
+        raise ValueError('Native stop retirement unverified; retain evidence')
     generic=selection(root,uid)['schema']==3
     if after['healthy'] or not after['stopped'] or after['guardian_pid'] or (not generic and not after['stock_verified']):
         raise ValueError('Native stop retirement unverified; retain evidence')
@@ -618,6 +651,23 @@ def restore_locked(root,uid):
     change_chain(root,False,uid)
     if not after['stock_verified']:
         raise ValueError('Home identity changed; owned filter removed, recovery evidence retained')
+    if ui_failure is not None:
+        foreground = luna('luna://com.webos.applicationManager/getForegroundAppInfo', {})
+        if (not isinstance(foreground, dict) or foreground.get('returnValue') is not True
+                or foreground.get('appId') != STOCK):
+            raise ValueError('Stock LG Home foreground unverified; retain evidence')
+        # SAM can report LG Home underneath an application overlay.
+        surfaces = luna('luna://com.webos.surfacemanager/getForegroundAppInfo', {})
+        rows = surfaces.get('foregroundAppInfo') if isinstance(surfaces, dict) else None
+        if (not isinstance(rows, list) or not 1 <= len(rows) <= 128
+                or surfaces.get('returnValue') is not True or not stock_surfaces(rows)
+                or not any(row.get('visible', True) is True for row in rows)):
+            raise ValueError('Stock LG Home surface unverified; retain evidence')
+        chain = read_chain()
+        current = native(['--status'], root, uid)
+        if (not stopped_stock(current) or current['token'] != after['token']
+                or reconcile(chain, root, False) != chain):
+            raise ValueError('Stock LG Home routing unverified; retain evidence')
     write_intent(root,False,after['token'],'disabled',uid)
     return 'restored'
 

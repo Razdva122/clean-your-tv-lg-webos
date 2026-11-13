@@ -486,6 +486,43 @@ def install(bundle,experimental_c1_gate=False,_experimental_admission=None):
         self.assertEqual(native.stat().st_mode&0o777,0o700)
 
 
+    def test_compositor_removal_uses_recovery_with_stock_readback(self):
+        import hashlib
+        import clean_removal
+        from unittest.mock import Mock
+
+        payload = self.root / 'bundle'
+        runtime = payload / 'runtime'
+        runtime.mkdir(parents=True)
+        native = runtime / 'c1-keyfilter-guard'
+        native.write_bytes(b'current native')
+        native.chmod(0o600)
+        backend = Mock()
+        backend.STATE = self.root / 'old'
+        backend.STATE.mkdir(mode=0o700)
+        selection = b'{"schema":3,"routing":"compositor-keyfilter-v1"}'
+        (backend.STATE / 'home-backend.json').write_bytes(selection)
+        backend.selection.return_value = {'routing': 'compositor-keyfilter-v1'}
+        cli = Mock()
+        cli.gate_backend.return_value = backend
+
+        def restore(root, uid):
+            self.assertEqual(backend.binary(root, uid), native)
+            return 'restored'
+
+        backend.restore_for_removal.side_effect = restore
+        manifest = {'files': {'runtime/c1-keyfilter-guard': hashlib.sha256(native.read_bytes()).hexdigest()}}
+        with patch.dict(sys.modules, {'cli': cli, 'c1_keyfilter': backend}), \
+                patch('deploy.verify_bundle', return_value=manifest), \
+                patch('deploy.checked_file', return_value=native.read_bytes()), \
+                patch.object(sys, 'path', list(sys.path)):
+            result = clean_removal.runtime_restore(payload, os.getuid())
+        cli.main.assert_not_called()
+        backend.restore_for_removal.assert_called_once_with(backend.STATE, os.getuid())
+        self.assertEqual(result['result'], 'restored')
+        self.assertEqual(result['native_restored_sha256'], hashlib.sha256(selection).hexdigest())
+
+
 class PackageRemoval(unittest.TestCase):
     def test_old_unknown_is_separate_from_new_remove_terminal(self):
         import clean_removal
