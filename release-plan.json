@@ -10,6 +10,13 @@
       "summary": "Complete ordinary No-root removal in one operation"
     },
     {
+      "pr": 581,
+      "issues": [
+        505
+      ],
+      "summary": "Resume No-root after installer pause and recover app icons (#505)"
+    },
+    {
       "pr": 582,
       "issues": [
         579
