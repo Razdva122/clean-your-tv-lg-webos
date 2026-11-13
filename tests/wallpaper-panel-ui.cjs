@@ -12,7 +12,11 @@ const path = require('node:path');
     });
     await page.setContent('<div id="host"></div>');
     await page.evaluate(() => {
-      window.HomeI18n = { language: () => 'en', t: (s) => s };
+      window.HomeI18n = {
+        language: () => 'en',
+        t: (s) => s,
+        clockFormat: () => 'auto'
+      };
       window.testState = {
         themeId: 'test',
         title: 'Test theme',
