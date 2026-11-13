@@ -1,5 +1,7 @@
 # Release history and device evidence
 
+- [LG 43UK6450PLC legacy Root preflight, 2026-11-13](2026-11-13-issue383-legacy-root-preflight.md)
+
 - [v1.20.0 RC1 verification, 2026-11-12](2026-11-12-release-1.20.0-candidate.md)
 - [v1.19.0 RC1 TV acceptance, 2026-11-12](2026-11-12-release-1.19.0-candidate.md)
 - [v1.18.0 overnight candidate verification, 2026-11-12](2026-11-12-release-1.18.0-candidate.md)
