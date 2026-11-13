@@ -101,12 +101,13 @@ class RuntimeChoices(unittest.TestCase):
                 store = state.Store(tmp)
                 remote = Mock()
                 remote.run.return_value = 'CYTV_FRESH_ROOT'
-                installer = SimpleNamespace(store=store, profile=profile, remote=remote,
-                                            manifest={'legacy_root_beta': 'legacy-root-beta'})
+                installer = SimpleNamespace(store=store, profile=profile, remote=remote, payload=Path(tmp),
+                                            manifest={'legacy_root_beta': 'legacy-root-beta'}, _ordinary_payload=None)
                 ask = Mock(return_value='')
-                with self.assertRaises(expected):
+                with patch('cytv.operations.Installer.check_no_root_alternative') as check, self.assertRaises(expected):
                     offer(installer, SimpleNamespace(non_interactive=non_interactive, yes=True),
-                          ask, Console(lambda _: None), ribbon_error=LegacyRibbonError())
+                          ask, Console(lambda _: None), home_error=LegacyRibbonError())
+                self.assertEqual(check.call_count, 0 if non_interactive else 1)
                 self.assertEqual(ask.call_count, 0 if non_interactive else 1)
                 self.assertEqual(profile['edition'], 'root')
                 self.assertIsNone(store.pending(profile))
@@ -183,6 +184,24 @@ class RuntimeChoices(unittest.TestCase):
             store.begin(other, 'install')
             with self.assertRaises(UserError):
                 require_idle(store, root)
+
+    def test_root_ssh_storage_keeps_existing_journal_namespace(self):
+        from unittest.mock import Mock
+        from cytv import no_root_observer as observer
+
+        for layout, ramfs, expected in (
+                ('', False, None), ('', True, observer.ROOT_SSH_DISK),
+                ('CYTV_DISK_STORAGE', False, observer.ROOT_SSH_DISK),
+                ('CYTV_LEGACY_STORAGE', False, None)):
+            with self.subTest(layout=layout, ramfs=ramfs):
+                remote = Mock()
+                remote.run.return_value = layout
+                self.assertEqual(observer.root_ssh_storage(SimpleNamespace(remote=remote), ramfs), expected)
+        remote = Mock()
+        for layout in ('CYTV_LEGACY_STORAGE', 'CYTV_LEGACY_STORAGECYTV_DISK_STORAGE'):
+            remote.run.return_value = layout
+            with self.assertRaises(UserError):
+                observer.root_ssh_storage(SimpleNamespace(remote=remote), ramfs=True)
 
     def test_root_ssh_uses_root_auth_without_developer_key(self):
         from cytv.transport import SSH

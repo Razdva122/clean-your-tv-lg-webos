@@ -84,6 +84,27 @@ class StorageTests(unittest.TestCase):
         messages = []; storage.install(remote, {'test.ipk': data}, messages.append)
         self.assertIn('shortfall 0.0 MiB', messages[0])
 
+    def test_root_ssh_noroot_only_accepts_confirmed_ramfs(self):
+        header = 'Filesystem 1024-blocks Used Available Capacity Mounted on\n'
+        available = header + '/dev/data 1000000 0 1000000 0% /data'
+        ramfs = header + 'tmp 0 0 0 0% /tmp'
+        full = header + '/dev/tmp 1024 1024 0 100% /tmp'
+        for tmp, magic, root, reason in (
+                (ramfs, '858458f6', False, None),
+                (ramfs, '858458f6', True, 'tv-storage-ramfs'),
+                (ramfs, '1021994', False, 'tv-storage-full'),
+                (full, '', False, 'tv-storage-full')):
+            with self.subTest(tmp=tmp, magic=magic, root=root):
+                remote = Mock()
+                remote.run.side_effect = [tmp, *([magic] if tmp == ramfs else []), available, available]
+                options = {'root': True} if root else {'no_root_root_ssh': True}
+                if reason is None:
+                    storage.install(remote, {'data': b'data'}, lambda _: None, **options)
+                else:
+                    with self.assertRaises(UserError) as caught:
+                        storage.install(remote, {'data': b'data'}, lambda _: None, **options)
+                    self.assertEqual(caught.exception.reason_code, reason)
+
     def test_noroot_install_stops_before_receipt_or_upload_on_full_partition(self):
         from test_operations import OperationTests, Remote
         from cytv import operations

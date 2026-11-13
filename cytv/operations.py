@@ -502,7 +502,7 @@ with os.fdopen(f,'rb') as stream:
             raise UserError('Root operation was not confirmed. Run cytv status; retain recovery state.', reason_code='root-operation-unconfirmed')
         return reply
 
-    def preflight(self, install=False, home_interfaces=False, stop_running_helper=False):
+    def preflight(self, install=False, home_interfaces=False, stop_running_helper=False, *, fresh_only=False):
         diagnostics.context.collect_node_version(self.remote, self.tv_info)
         if self.profile['edition'] == 'root':
             from .python_runtime import SYSTEM_PROBE
@@ -590,7 +590,10 @@ with os.fdopen(f,'rb') as stream:
                 from .root_runtime import FRESH_PROBE
                 if self.remote.run(FRESH_PROBE, timeout=10).strip() != 'CYTV_FRESH_ROOT':
                     from .root_no_root_handoff import probe
-                    try:self._root_handoff=probe(self)
+                    try:
+                        if fresh_only:
+                            raise ValueError('Retained Root state')
+                        self._root_handoff=probe(self)
                     except (OSError,ValueError,RuntimeError):
                         raise UserError('Previous Root installation needs recovery. Run cytv status or cytv restore. Reinstallation has not started; recovery data was left unchanged.') from None
             self.checks.update('architecture', 'running')
@@ -752,6 +755,24 @@ printf '%s' "$cytv_state"
         self._graphics_paths = paths
         self.tv_info['graphics_resolution'] = selected
 
+    def check_no_root_alternative(self):
+        """Read-only admission before offering No-root; check final bytes at install."""
+        self.preflight(install=True, fresh_only=True)
+        self.select_graphics()
+        bundles = {}
+        for slot, name in (('helper.ipk', self.manifest['helper']),
+                           ('launcher.ipk', self._graphics_paths['launcher'])):
+            path = self.payload / package.safe_name(name)
+            if path.is_symlink():
+                raise ValueError('Indirect embedded package')
+            data = path.read_bytes()
+            if hashlib.sha256(data).hexdigest() != self.manifest['files'][name]:
+                raise ValueError('Embedded payload integrity mismatch')
+            bundles[slot] = data
+        ramfs = storage.install(self.remote, bundles, self.progress, no_root_root_ssh=True)
+        from .no_root_observer import inspect_root_ssh_storage
+        inspect_root_ssh_storage(self, bundles, ramfs)
+
     def install(self, inventory, ssap_key=None, migrate=False, reinstall=None):
         # All local validation precedes the durable mutation receipt.
         pending = self.store.pending(self.profile)
@@ -791,12 +812,14 @@ printf '%s' "$cytv_state"
         apps_data = json.dumps(ids).encode()
         expected[HELPER_STATE + '/ssap-key.json'] = hashlib.sha256(key_data).hexdigest()
         expected[HELPER_STATE + '/apps.json'] = hashlib.sha256(apps_data).hexdigest()
-        storage.install(self.remote, {'helper.ipk': helper, 'launcher.ipk': launcher}, self.progress,
-                        root=self.profile.get('connection') == 'root-ssh')
+        root_ssh = self.profile.get('connection') == 'root-ssh'
+        handoff = bool(getattr(self, '_root_handoff', None))
+        ramfs = storage.install(self.remote, {'helper.ipk': helper, 'launcher.ipk': launcher}, self.progress,
+                                root=root_ssh and handoff, no_root_root_ssh=root_ssh and not handoff)
         from . import no_root_observer
         pending = no_root_observer.begin(self, 'install', {'helper.ipk': helper, 'launcher.ipk': launcher},
             {HOME: self.manifest['home_version'], HELPER: self.manifest['helper_version']}, expected,
-            {'ssap-key.json': key_data, 'apps.json': apps_data}, setup_activation=True)
+            {'ssap-key.json': key_data, 'apps.json': apps_data}, setup_activation=True, ramfs=ramfs)
         return self.continue_no_root(pending)
 
     def continue_no_root(self, expected_pending):

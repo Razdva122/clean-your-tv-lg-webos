@@ -50,6 +50,8 @@ class Remote:
         code=('var fixtureFs=require("fs"),fixturePath=require("path"),fixtureLstat=fixtureFs.lstatSync;'
               'fixtureFs.lstatSync=function(p){var s=fixtureLstat(p);if(fixturePath.resolve(p)==='
               +json.dumps(str(volatile))+')s.uid=0;return s;};\n')+code
+        if request.get('connection') == 'root-ssh':
+            code = 'process.getuid=function(){return 0;};\n' + code
         (self.root/'boot').write_text(self.boot)
         node=os.environ.get('NODE_EXEC') or shutil.which('node')
         result=subprocess.run([node] if stdin else [node,'-e',self.transform(code),words[-1]],
@@ -719,6 +721,19 @@ class SimpleRemoval(unittest.TestCase):
         for bad in (dict(proof,goal='a'*32),dict(proof,kind='marker'),dict(proof,schema=True),dict(proof,extra=True)):
             with self.subTest(proof=bad),self.assertRaises(UserError):
                 self.cleanup._device(self.installer,'boot-probe',proof=bad)
+
+    def test_root_ssh_nonsticky_tmp_requires_a_changed_kernel_boot_id(self):
+        self.profile.update(connection='root-ssh', port=22)
+        self.remote.volatile_mode = 0o777
+        self.store.request_clean_removal(self.profile)
+        proof = self.cleanup._device(self.installer, 'boot-create')['boot_proof']
+        self.assertEqual(proof['kind'], 'kernel-only')
+        self.assertFalse(self.cleanup._device(self.installer, 'boot-probe', proof=proof)['boot_restarted'])
+        with self.assertRaises(UserError):
+            self.cleanup._device(self.installer, 'boot-retire', proof=proof)
+        self.remote.boot = '22222222-2222-2222-2222-222222222222'
+        self.assertTrue(self.cleanup._device(self.installer, 'boot-retire', proof=proof)['boot_restarted'])
+        self.assertFalse(list((self.root / 'volatile').iterdir()))
 
     def test_captured_marker_proof_cannot_switch_to_kernel_only_when_tmp_changes(self):
         self.store.request_clean_removal(self.profile)

@@ -106,20 +106,23 @@ try{
  }
 }catch(ignored){}
 var installerRoots=['/media/developer/.cytv-installer','/tmp/.cytv-installer'];
-if(uid===0)installerRoots.push('/tmp/.cytv-installer-root','/var/lib/clean-your-tv-installer');
+var rootInstaller='/var/lib/clean-your-tv-installer', rootPrivate=rootInstaller+'/private';
+if(uid===0)installerRoots.push('/tmp/.cytv-installer-root',rootInstaller);
 else installerRoots.push('/.cytv-installer');
 function privateInstaller(root){
- if(root!=='/.cytv-installer')return;
+ if(root===rootInstaller)root=rootPrivate;
+ if(root!=='/.cytv-installer'&&root!==rootPrivate)return;
  var s=exists(root);if(!s)return;
  if(!s.isDirectory()||s.isSymbolicLink()||s.uid!==uid||(s.mode&4095)!==448)fail();
  for(var p=root;;p=path.dirname(p)){
   var parent=fs.lstatSync(p);
   if(!parent.isDirectory()||parent.isSymbolicLink()||(parent.uid!==0&&parent.uid!==uid)||
-     ((parent.mode&18)&&!(parent.uid===0&&(parent.mode&512))))fail();
+     ((parent.mode&18)&&!(parent.uid===0&&(parent.mode&512)))||
+     (root===rootPrivate&&parent.uid!==0))fail();
   if(path.dirname(p)===p)break;
  }
 }
-installerRoots.forEach(function(root){try{privateInstaller(root);var operations=root+'/operations';if(exists(operations)){ancestry(operations);var ids=fs.readdirSync(operations);reply.resident_installer=reply.resident_installer||ids.length>0;ids.forEach(function(id){if(/^[a-f0-9]{32}$/.test(id)&&reply.staging_ids.indexOf(id)<0)reply.staging_ids.push(id);});if(reply.staging_ids.length>128)fail();}}catch(e){blocked('installer-private',e);}});
+installerRoots.forEach(function(root){try{privateInstaller(root);var operations=(root===rootInstaller?rootPrivate:root)+'/operations';if(exists(operations)){ancestry(operations);var ids=fs.readdirSync(operations);reply.resident_installer=reply.resident_installer||ids.length>0;ids.forEach(function(id){if(/^[a-f0-9]{32}$/.test(id)&&reply.staging_ids.indexOf(id)<0)reply.staging_ids.push(id);});if(reply.staging_ids.length>128)fail();}}catch(e){blocked('installer-private',e);}});
 if(input.action==='idle'){
  // File absence alone cannot prove that a deleted service or installer stopped.
  var prefixes=installerRoots.concat([publicRoot+'/cytv-', '/var/lib/clean-your-tv-', '/tmp/cytv-', '/tmp/clean-your-tv-']);

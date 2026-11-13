@@ -18,8 +18,7 @@ COMPOSITOR_FAILURES = (
 KEYFILTER_PROBE_STATES = ('timeout', 'rejected', 'unconfirmed', 'invalid-reply', 'not-configured',
                           'incompatible', 'readable', 'service-absent')
 RIBBON_PROBE_STATES = ('readable', 'rejected', 'timeout', 'invalid-reply', 'unconfirmed')
-LEGACY_RIBBON = ('This TV uses the LG Home ribbon and has no System Profile or KeyFilters support. '
-                 'Choose No-root to continue.')
+LEGACY_RIBBON = 'This TV uses the LG Home ribbon and has no System Profile or KeyFilters support.'
 
 
 def keyfilter_probe(info, state, code=None):
