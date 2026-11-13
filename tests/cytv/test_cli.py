@@ -15,7 +15,12 @@ class CLITests(unittest.TestCase):
     def test_root_beta_ribbon_fallback_completes_no_root_using_the_same_ssh(self):
         self.assert_no_root_install_after_root_preflight(choose_beta=True)
 
-    def assert_no_root_install_after_root_preflight(self, choose_beta):
+    def test_root_beta_with_keyfilters_but_without_native_home_offers_no_root(self):
+        self.assert_no_root_install_after_root_preflight(choose_beta=True, missing_native_home=True)
+
+    def assert_no_root_install_after_root_preflight(self, choose_beta, missing_native_home=False):
+        from cytv.errors import TVCommandError
+        from cytv.root_capabilities import NATIVE_HEADERS, NATIVE_HOME_UNAVAILABLE
         from cytv.root_runtime import VENDOR_PROBE
         from tests.cytv.test_operations import OperationTests, Remote, split_observer_command
         from cytv import no_root_observer
@@ -45,14 +50,23 @@ class CLITests(unittest.TestCase):
                     return {'returnValue': False, 'errorCode': -1,
                             'errorText': 'Service does not exist: com.webos.service.systemprofile.'}
                 if choose_beta and uri.endswith('/getConfigs'):
+                    if missing_native_home:
+                        return {'returnValue': True, 'configs': {'com.webos.surfacemanager.keyFilters': [
+                            {'file': '/usr/lib/qt5/qml/KeyFilters/systemUi.js', 'handler': 'handleSystemKeys'}
+                        ]}}
                     return {'returnValue': True, 'configs': {}}
                 if choose_beta and uri.endswith('/getCurrentHomeUIState'):
                     return {'homeUIState': [{'uiType': 'home', 'visibility': False}]}
                 if choose_beta and 'modelName' in payload.get('keys', []) and uri.endswith('/getSystemInfo'):
+                    if missing_native_home:
+                        return {'returnValue': True, 'modelName': '43UK6200PLA',
+                                'firmwareVersion': '05.50.70', 'sdkVersion': '4.4.0'}
                     return {'returnValue': True, 'modelName': 'TEST-LEGACY', 'firmwareVersion': '01.02.03',
                             'sdkVersion': '3.5.0'}
                 return super().luna(uri, payload, **kwargs)
             def run(self, command, data=None, timeout=30):
+                if missing_native_home and command == NATIVE_HEADERS:
+                    raise TVCommandError(NATIVE_HOME_UNAVAILABLE)
                 if command == '/usr/bin/node --version':return 'v0.12.2'
                 if command == VENDOR_PROBE: return 'CYTV_VENDOR_READY'
                 if 'CYTV_FRESH_ROOT' in command:return 'CYTV_FRESH_ROOT'
@@ -87,7 +101,9 @@ class CLITests(unittest.TestCase):
         self.assertEqual(selected['port'],22)
         self.assertNotIn('PRIVATE-PAIRING','\n'.join(output))
         self.assertIn('--tv-name was skipped', '\n'.join(output))
-        if choose_beta:
+        if missing_native_home:
+            self.assertIn('Root cannot control Home on this TV.', '\n'.join(output))
+        elif choose_beta:
             self.assertIn('This TV uses the LG Home ribbon', '\n'.join(output))
         self.assertFalse(any(call[0] == 'luna' and call[1].endswith('/updateLaunchPoint') for call in remote.calls))
         submitted=[call[2]['id'] for call in remote.calls if call[0]=='luna' and call[1].endswith('/dev/install')]

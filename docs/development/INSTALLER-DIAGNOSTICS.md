@@ -392,6 +392,9 @@ including a timeout, a rejection, an unconfirmed or malformed reply, an empty
 configuration, and a compatible or incompatible chain. For an explicit
 rejection it can include a bounded numeric Luna error code.
 `native-home-unavailable` identifies a missing or unsafe native Home path.
+When System Profile is absent and KeyFilters passed, this result lets interactive
+setup offer No-root over the existing root SSH connection. No-root still runs
+its own preflight before installing.
 `c1-probe-failed` means an error in the preceding C1 probe prevented the
 capability-based check from running.
 When System Profile and KeyFilters are confirmed absent, `tv.root_ribbon_probe`
