@@ -62,10 +62,11 @@
     }
   ],
   "excluded": [],
-  "acceptance": "",
+  "acceptance": "LG OLED55C3RLA, firmware 43.21.71, webOS SDK 11.2.0, macOS ARM64 installer 0.20.2. Exact RC2 payload, Android API 35 upgrade, Root and No-root cleanup, No-root install and Restore, signed Root OTA and retained rollback verified. Physical LG remote and audible playback confirmed by the owner. Artifact hashes, retests and untested paths: docs/history/2026-11-13-release-1.20.2-rc2-verification.md.",
   "build": {
     "run_id": 43383813744,
     "attempt": 1,
     "source": "c5fef29a103f0cbbc390ee65981974747bec100b"
-  }
+  },
+  "acceptance_build": "43383813744:1"
 }
