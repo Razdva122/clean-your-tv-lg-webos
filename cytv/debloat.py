@@ -39,6 +39,18 @@ GROUPS = (
     )),
 )
 SETTINGS = {key: (category, label, target) for _, rows in GROUPS for key, category, label, target in rows}
+SETTING_NAMES = {
+    'homePromotion': 'Sponsored tiles',
+    'contentRecommendation': 'Content recommendations',
+    'screenSaverAd': 'Screen saver ads',
+    'livePromotion': 'Promotions while watching',
+    'webOSPromotionVideo': 'webOS promotional video',
+    'livePlus': 'Live Plus',
+    'adCookie': 'Advertising cookies',
+    'lmt': 'Ad tracking limit',
+    'aiNudge': 'Smart Tips',
+    'sportsAlarm': 'Sports notifications',
+}
 RESULTS = {
     'already': ('✓', '#b4ada4', 'Already in the requested state'),
     'verified': ('✓', '#90cfad', 'Successfully applied and verified'),
@@ -138,39 +150,61 @@ def offer_restore(remote, store, profile, ask, write):
     ]
     if not eligible:
         return
-    if write.frontend == 'android':
-        write.option('y', RESTORE_LABEL)
-        write.option('n', SKIP_RESTORE)
-    if not prompts.confirm(RESTORE_PROMPT, ask, write):
-        return
-
-    write.heading('Debloat restoration results')
     remaining = entries.copy()
     with ExitStack() as stack:
         tv = None
+        current_values = {key: read(remote, SETTINGS[key][0], key) for key in eligible}
+        # Live Plus can be read over an existing pairing without a TV prompt.
+        if not remote.root and 'livePlus' in current_values and current_values['livePlus'] is None:
+            try:
+                tv = stack.enter_context(SSAP(profile['host'], path.parent, write,
+                                             settings_write=True, reuse_only=True))
+            except Exception:
+                pass
+            current_values['livePlus'] = read_ssap(tv, SETTINGS['livePlus'][0], 'livePlus')
+        planned = {key for key, current in current_values.items() if current == entries[key]['target']}
+        if write.frontend == 'desktop' and planned:
+            write.step(1, 'Debloat restoration preview')
+        else:
+            write.heading('Debloat restoration preview')
+        states = {'on': tr('On'), 'off': tr('Off')}
+        for key, current in current_values.items():
+            label = tr(SETTING_NAMES[key])
+            if key in planned:
+                original = entries[key]['original']
+                write(f'{label} — {states[current]} → {states[original]}')
+            elif current is None:
+                write(f"{label} — {tr('Could not read the current value')}")
+            else:
+                write(f"{label} — {tr('Already at the saved original value')}")
+        if not planned:
+            return
+        if write.frontend == 'android':
+            write.option('y', RESTORE_LABEL)
+            write.option('n', SKIP_RESTORE)
+        if not prompts.confirm(RESTORE_PROMPT, ask, write):
+            return
+
+        write.heading('Debloat restoration results')
         pairing_failed = False
         for key in eligible:
-            category, label, target = SETTINGS[key]
             original = entries[key]['original']
-            current = read(remote, category, key)
-            # Live Plus can also be read over SSAP. Pair lazily so settings
-            # already restored never need write permission.
-            if not remote.root and tv is None and not pairing_failed and (
-                current == target or (current is None and key == 'livePlus')
-            ):
+            if key not in planned:
+                if current_values[key] == original:
+                    del remaining[key]
+                continue
+            category, _, target = SETTINGS[key]
+            if not remote.root and tv is None and not pairing_failed:
                 try:
                     tv = stack.enter_context(SSAP(profile['host'], path.parent, write, settings_write=True))
                 except Exception:
                     pairing_failed = True
-                else:
-                    current = read(remote, category, key)
-            if current is None:
-                current = read_ssap(tv, category, key)
+            current = read_current(remote, category, key, tv)
             if current == original:
                 message = 'Already at the saved original value'
             elif current is None:
                 message = 'Could not read the current value'
-            elif remote.root or tv is not None:
+            elif current == target and (remote.root or tv is not None):
                 try:
                     reply = set_value(remote, tv, category, key, original)
                 except Exception:
@@ -184,7 +218,7 @@ def offer_restore(remote, store, profile, ask, write):
                 message = 'Could not restore the setting'
             if message in ('Already at the saved original value', 'Restored and verified'):
                 del remaining[key]
-            write(f'{tr(label)} — {tr(message)}')
+            write(f'{tr(SETTING_NAMES[key])} — {tr(message)}')
 
     if remaining == entries:
         return

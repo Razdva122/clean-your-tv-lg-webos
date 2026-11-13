@@ -38,8 +38,10 @@ restoration support. Its presence alone does not prove that a write changed
 the setting.
 Selected settings with unreadable originals can be sent without adding a
 restore entry. Interactive removal offers to restore saved settings, with Skip as the default.
-It uses the existing Root SSH or Developer Mode settings connection and writes
-only when the current value still matches the recorded Debloat value. Verified
+Before confirmation it shows each planned change from the current value to the
+saved original. It uses the existing Root SSH or Developer Mode settings
+connection and rechecks each displayed value before writing. Settings already
+at the original value and settings whose current value cannot be read are skipped. Verified
 restorations and values already back at their original setting are retired from
 the record. Failed or unreadable entries stay saved, and removal continues.
 Non-interactive removal skips restoration.

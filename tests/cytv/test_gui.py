@@ -26,8 +26,12 @@ class GuiTests(unittest.TestCase):
         wizard = Wizard()
         self.addCleanup(wizard.close)
         wizard.command = 'uninstall'
-        wizard.channel = Channel(lambda *_: None)
+        wizard.operation_title = 'Uninstall Clean Your TV'
+        wizard.channel = Channel(wizard.receive)
+        wizard.channel.console.step(1, 'Debloat restoration preview')
+        wizard.channel.console('Sponsored tiles — Off → On')
         wizard.show_prompt(Prompt(debloat.RESTORE_PROMPT + ' [y/N]: '))
+        self.assertIn('Sponsored tiles — Off → On', wizard.content.toPlainText())
         buttons = {button.text(): button for button in wizard.form.findChildren(QPushButton)}
         self.assertTrue(buttons[debloat.SKIP_RESTORE].isDefault())
         buttons[debloat.SKIP_RESTORE].click()

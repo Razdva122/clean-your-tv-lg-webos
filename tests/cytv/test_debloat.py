@@ -183,11 +183,26 @@ class DebloatTests(unittest.TestCase):
         self.installer.remote = SimpleNamespace(root=True, luna=luna)
         output = []
         console = Console(output.append)
-        debloat.offer_restore(self.installer.remote, self.installer.store, self.installer.profile, lambda _: '', console)
+        def decline(_):
+            preview = ' '.join(output)
+            self.assertIn('Sponsored tiles — Off → On', preview)
+            self.assertIn('Sports notifications — Off → On', preview)
+            self.assertIn('Screen saver ads — Already at the saved original value', preview)
+            self.assertIn('Live Plus — Could not read the current value', preview)
+            self.assertEqual(writes, [])
+            return ''
+
+        debloat.offer_restore(self.installer.remote, self.installer.store, self.installer.profile, decline, console)
         self.assertEqual(writes, [])
         self.assertEqual(json.loads(self.record.read_text())['settings'], entries)
 
-        debloat.offer_restore(self.installer.remote, self.installer.store, self.installer.profile, lambda _: 'y', console)
+        def accept(_):
+            # An unreadable setting that becomes readable after the preview
+            # was never included in the user's confirmation.
+            values['livePlus'] = 'off'
+            return 'y'
+
+        debloat.offer_restore(self.installer.remote, self.installer.store, self.installer.profile, accept, console)
         self.assertEqual(writes, [('homePromotion', 'on'), ('sportsAlarm', 'on')])
         self.assertEqual(json.loads(self.record.read_text())['settings'],
                          {key: entries[key] for key in ('livePlus', 'sportsAlarm')})
@@ -205,11 +220,12 @@ class DebloatTests(unittest.TestCase):
             ssap = connect.return_value.__enter__.return_value
             ssap.call.side_effect = [
                 {'returnValue': True, 'settings': {'livePlus': 'off'}},
+                {'returnValue': True, 'settings': {'livePlus': 'off'}},
                 {'returnValue': True},
                 {'returnValue': True, 'settings': {'livePlus': 'on'}},
             ]
             from cytv.terminal import Console
             debloat.offer_restore(self.installer.remote, self.installer.store, self.installer.profile, lambda _: 'y', Console(lambda _: None))
-            self.assertEqual(ssap.call.call_args_list[1].args, (
+            self.assertEqual(ssap.call.call_args_list[2].args, (
                 'ssap://settings/setSystemSettings', {'category': 'option', 'settings': {'livePlus': 'on'}}))
         self.assertEqual(json.loads(record.read_text())['settings'], {})

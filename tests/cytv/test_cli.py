@@ -510,6 +510,7 @@ class CLITests(unittest.TestCase):
                 remote = MagicMock(root=True)
                 remote.luna.side_effect = [
                     {'returnValue': True, 'settings': {'homePromotion': 'off'}},
+                    {'returnValue': True, 'settings': {'homePromotion': 'off'}},
                     {'returnValue': True},
                     {'returnValue': True, 'settings': {'homePromotion': 'on'}},
                 ]
@@ -520,7 +521,7 @@ class CLITests(unittest.TestCase):
                 code, output, _ = self.run_cli(args, [answer], remote=remote)
                 self.assertEqual(code, 0, output)
                 self.assertEqual('Restore saved Debloat settings before removal?' in output, not noninteractive)
-                self.assertEqual(remote.luna.call_count, 3 if restores else 0)
+                self.assertEqual(remote.luna.call_count, 4 if restores else 0 if noninteractive else 1)
                 installer.return_value.uninstall.assert_called_once_with(full_project=True)
 
     def test_each_maintenance_command_reaches_its_operation_without_installing(self):
