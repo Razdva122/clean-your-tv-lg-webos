@@ -58,6 +58,7 @@ class CleanReinstallTests(unittest.TestCase):
     def test_native_beta_accepts_only_verified_clean_handoff_before_effects(self):
         inst,remote=self.fixture();inst.tv_info['home_backend']='c1-native-gate'
         inst.preflight(install=True)
+        inst.root_installation.assert_called_once_with(for_install=True)
         self.assertTrue(inst._native_clean_install)
         self.assertIsNone(self.store.pending(inst.profile))
         inst.root_installation.return_value=dict(CLEAN,clean_removal_verified=False)

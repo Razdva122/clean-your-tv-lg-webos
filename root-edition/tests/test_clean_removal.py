@@ -1632,6 +1632,46 @@ class PartialDeviceRemoval(unittest.TestCase):
                 self.assertEqual(result['original']['request'],original)
                 self.assertFalse(present)
 
+    def test_install_inspection_leaves_live_compositor_probe_to_native_install(self):
+        import subprocess
+        driver, identifier, _, _, payload, _, present, native_hash, proof = self.retained_native_fixture()
+        device = driver.device
+        with patch('deploy.command', return_value={'returnValue':True,'result':'restored','native_restored_sha256':native_hash}), \
+                patch.object(device, 'compositor_stock', return_value=proof):
+            self.assertEqual(driver.clean_remove(identifier)['stage'], 'restart-required')
+            device.current_boot = '22222222-2222-2222-2222-222222222222'
+            self.assertEqual(driver.clean_remove(identifier)['stage'], 'verified-clean')
+
+        def stock(record):
+            if device.payload is None:
+                raise subprocess.CalledProcessError(1, ['/usr/bin/node', 'cleanup_tail.js', 'stock-proof'])
+            raise ValueError('live Home route changed')
+
+        device.payload = None
+        original = driver.ownership.status()
+        new = 'f' * 32
+        installed = {'returnValue': True, 'installed': 'com.cleanyourtv.root.preview', 'home_changed': False}
+        with patch.object(device, 'compositor_stock', side_effect=stock) as check, \
+                patch.object(device, 'preflight', side_effect=lambda *args, **kwargs: setattr(device, 'payload', payload)), \
+                patch.object(device, 'native_deploy', return_value=installed) as deploy:
+            self.assertTrue(driver.inspect(for_install=True)['can_install'])
+            check.assert_not_called()
+            with self.assertRaises(subprocess.CalledProcessError):
+                driver.inspect()
+            with patch.object(device, 'log'):
+                refused = driver.native_install(new, payload)
+            self.assertEqual(refused['code'], 'clean-handoff-refused')
+            self.assertEqual(driver.status(new)['state'], 'unknown')
+            deploy.assert_not_called()
+            self.assertEqual(driver.ownership.status(), original)
+            check.side_effect = None
+            check.return_value = proof
+            result = driver.native_install(new, payload)
+            self.assertEqual(result['state'], 'complete', result)
+            self.assertEqual(result['clean_predecessor'], identifier)
+            deploy.assert_called_once_with(payload)
+        self.assertFalse(present)
+
     def test_restored_native_restart_does_not_erase_new_routing(self):
         driver,identifier,root,updater,payload,calls,present,native_hash,proof=self.retained_native_fixture()
         with patch('deploy.command',return_value={'returnValue':True,'result':'restored','native_restored_sha256':native_hash}),patch.object(driver.device,'compositor_stock',return_value=proof):

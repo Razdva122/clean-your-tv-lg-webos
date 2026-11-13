@@ -321,7 +321,7 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
         setattr(self,cache,stage)
         return stage
 
-    def product_action(self, action, operation=None, payload=None, migrate=False, verify_current=False, resume=False, trusted_recovery=False, retire_stages=(), helper_fence=None, removal_intent=None, removal_lease=None):
+    def product_action(self, action, operation=None, payload=None, migrate=False, verify_current=False, resume=False, trusted_recovery=False, retire_stages=(), helper_fence=None, removal_intent=None, removal_lease=None, for_install=False):
         if action not in ('inspect','install','native-install','status','remove','clean-remove','clean-status','clean-target'): raise ValueError('Unsupported product action')
         if action!='inspect' and (not isinstance(operation,str) or not re.fullmatch('[a-f0-9]{32}',operation)):
             raise ValueError('Invalid product operation')
@@ -346,6 +346,7 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
                 if candidate: args+=['--candidate',candidate]
             if migrate: args.append('--migrate-packaged-home')
             if verify_current:args.append('--verify-current')
+            if for_install:args.append('--for-install')
             if removal_intent is not None:
                 if action!='clean-remove' or not re.fullmatch('[a-f0-9]{32}',removal_intent):raise ValueError('Invalid removal intent')
                 args+=['--removal-intent',removal_intent]
@@ -424,9 +425,9 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
         self._product_candidates[stage]=digest
         return stage
 
-    def root_installation(self):
+    def root_installation(self, *, for_install=False):
         """Shared descriptor/profile inspection is independent of installer origin."""
-        reply=self.product_action('inspect')
+        reply=self.product_action('inspect', for_install=True) if for_install else self.product_action('inspect')
         if reply.get('reason')=='restart-required':
             raise UserError('Previous Root was removed. Restart the TV with its remote, wait for LG Home, then run cytv again. Old Root processes must stop before reinstallation. Recovery data was kept.',reason_code='restart-required')
         if reply.get('reason')=='project-apps-remain':
@@ -578,11 +579,11 @@ with os.fdopen(f,'rb') as stream:
                 self._native_clean_install=False
                 if existing:
                     try:
-                        installation=self.root_installation()
+                        native=self.tv_info.get('home_backend')=='c1-native-gate'
+                        installation=self.root_installation(for_install=True) if native else self.root_installation()
                         maintain=(installation.get('clean_removal_verified') is True and
                                   installation.get('can_install') is True)
-                        self._native_clean_install=(installation.get('clean_removal_verified') is True
-                            and installation.get('can_install') is True and self.tv_info.get('home_backend')=='c1-native-gate')
+                        self._native_clean_install=maintain and native
                     except UserError as error:
                         if error.reason_code in ('restart-required','project-apps-remain'):raise
                     except (OSError,ValueError,RuntimeError): pass

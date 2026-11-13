@@ -30,7 +30,7 @@ STOCK_APPINFO = Path('/usr/palm/applications/com.webos.app.home/appinfo.json')
 MOUNTINFO = Path('/proc/self/mountinfo')
 INPUT_BINDINGS = Path('/home/root/.config/lginputhook/keybinds.json')
 OTHER_HOME_STATE = tuple(Path(p) for p in ('/media/developer/cleanyourtv',
-    '/var/lib/tvweb/home-takeover', '/var/lib/luma-home', '/var/lib/webosbrew/homechooser'))
+    '/var/lib/luma-home', '/var/lib/webosbrew/homechooser'))
 secure = legacy.secure
 atomic = legacy.atomic
 boot_identity = legacy.boot_identity
@@ -278,9 +278,14 @@ def filter_present(root):
 def change_chain(root, enabled, uid=0):
     before=read_chain()
     generic=selection(root,uid)['schema']==3
-    if generic and enabled:
-        stock_chain(before)
     after=reconcile(before,root,enabled)
+    if enabled:
+        if generic:
+            stock_chain(before)
+        else:
+            # On C1, replace third-party compositor hooks with the stock LG
+            # chain plus CYTV. Off removes CYTV from that current chain.
+            after=[filter_entry(root), *removal_vendor_chain(after[1:], (APP,))]
     directory=private_directory(root,uid)
     pending=directory/'pending.json'
     if os.path.lexists(pending):
@@ -333,9 +338,11 @@ def probe(*, removed_apps=None, retire_orphan=False):
     data=legacy.native_home()
     info=luna('luna://com.webos.service.tv.systemproperty/getSystemInfo',
               {'keys':['modelName','firmwareVersion','sdkVersion']})
+    known_c1=True
     try:
         value=legacy.admit(info,data)
     except ValueError:
+        known_c1=False
         import struct
         value={key:info.get(field) for key,field in (('model','modelName'),('firmware','firmwareVersion'),('webos','sdkVersion'))} if isinstance(info,dict) else {}
         candidate=dict(value,target_sha256='0'*64,target=dict(dev=0,ino=1,size=len(data),mtime_ns=0))
@@ -347,6 +354,10 @@ def probe(*, removed_apps=None, retire_orphan=False):
         chain = read_chain()
         remaining = reconcile(chain, STATE, False) if retire_orphan else chain
         require_generic_environment(remaining, removed_apps=removed_apps)
+    elif known_c1:
+        # Activation replaces third-party compositor hooks on C1. Verify the
+        # LG portion here before any package or configd changes.
+        require_generic_environment(removed_apps=(APP,))
     else:
         require_generic_environment()
     after=legacy.TARGET.stat()
@@ -464,7 +475,7 @@ def status(root=STATE, uid=0):
     chain=read_chain()
     clean=reconcile(chain,root,False)==chain
     value['stock_verified']=value['stock_verified'] and clean
-    value['healthy']=value['healthy'] and not clean
+    value['healthy']=value['healthy'] and bool(chain and chain[0]==filter_entry(root))
     value['filter_installed']=not clean
     value['routing_active']=value['healthy'] and not value['stopped']
     intent=read_intent(root,uid)

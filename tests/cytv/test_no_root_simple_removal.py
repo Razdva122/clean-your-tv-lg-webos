@@ -1432,6 +1432,21 @@ class SimpleRemoval(unittest.TestCase):
         with self.assertRaisesRegex(UserError,'Root access'):self.remove()
         self.assertTrue(root.exists());self.assertIsNotNone(self.store.pending(self.profile))
 
+    @unittest.skipIf(getattr(os, 'getuid', lambda: -1)() == 0, 'unprivileged SDK model')
+    def test_no_root_removal_does_not_require_listing_foreign_ls2_roles(self):
+        (self.root / 'proc').mkdir()
+        directory = self.root / 'bus/roles.d'
+        directory.mkdir()
+        foreign = directory / 'org.foreign.app.json'
+        foreign.write_text('{}')
+        directory.chmod(0o111)
+        self.addCleanup(directory.chmod, 0o755)
+
+        self.assertTrue(self.remove()['verified_clean'])
+
+        self.assertTrue(foreign.exists())
+        self.assertIsNone(self.store.pending(self.profile))
+
     def test_public_staging_requires_owned_package_identity_and_preserves_foreign(self):
         own=self.root/'developer/temp'/('cytv-'+'a'*32);own.mkdir(parents=True)
         foreign=self.root/'developer/temp'/('cytv-'+'b'*32);foreign.mkdir()
@@ -1441,6 +1456,7 @@ class SimpleRemoval(unittest.TestCase):
         self.remove();self.assertFalse(own.exists());self.assertTrue((foreign/'helper.ipk').exists())
         self.reboot();self.assertTrue(self.remove()['verified_clean']);self.assertEqual((foreign/'notes.txt').read_text(),'owner file')
 
+    @unittest.skipIf(getattr(os, 'getuid', lambda: -1)() == 0, 'unprivileged SDK model')
     def test_removal_finishes_when_only_temporary_ipks_cannot_be_deleted(self):
         (self.root / 'proc').mkdir()
         self.remote.apps = set(self.cleanup.APPS[:2])
@@ -1534,6 +1550,8 @@ class SimpleRemoval(unittest.TestCase):
 
     @unittest.skipIf(getattr(os,'getuid',lambda:-1)()==0,'unprivileged SDK model')
     def test_unlisted_package_with_protected_registration_reports_partial_cleanup(self):
+        from cytv import diagnostics
+
         self.removal_payload()
         app = 'com.local.nativehome'
         directory = self.root / 'bus/roles.d'
@@ -1552,6 +1570,12 @@ class SimpleRemoval(unittest.TestCase):
         self.assertEqual(pending['removal_reason'], 'root-access-required')
         self.assertTrue(role.exists())
         self.assertFalse(any(uri.endswith(('/dev/install', '/dev/remove')) for uri, _ in self.remote.calls))
+        report = diagnostics.create_report(self.store, 'uninstall', self.profile, 'uninstall', caught.exception)
+        details = {'action': 'sweep', 'blocked_areas': ['ls2-registration']}
+        failure = json.loads(report.read_text())
+        self.assertEqual(failure['no_root_cleanup'], details)
+        self.assertEqual(failure['first_failure']['no_root_cleanup'], details)
+        self.assertNotIn(role.name, json.dumps(failure))
 
     def test_previous_cleanup_package_is_removed_as_a_registered_app(self):
         app = 'com.local.nativehome'

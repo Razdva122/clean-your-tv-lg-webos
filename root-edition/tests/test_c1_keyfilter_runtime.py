@@ -35,7 +35,7 @@ class RuntimeTests(unittest.TestCase):
                 observed=self.k.probe()
                 self.assertEqual(observed['target']['size'],4530960)
                 self.assertEqual(observed['target_sha256'],hashlib.sha256(content).hexdigest())
-                environment.assert_called_once_with()
+                environment.assert_called_once_with(removed_apps=(self.k.APP,))
             # Root-owned stock files retain admission without a filesystem exception.
             def root_attributes(fd):
                 value=attributes(fd); value.st_uid=0; return value
@@ -102,7 +102,7 @@ class RuntimeTests(unittest.TestCase):
             return real_secure(path,self.uid,*args,**kw)
         with patch.object(self.k,'STOCK_APPINFO',appinfo),patch.object(self.k,'MOUNTINFO',mountinfo),patch.object(self.k,'OTHER_HOME_STATE',(other,)),patch.object(self.k,'INPUT_BINDINGS',bindings),patch.object(self.k,'secure',side_effect=secure),patch.object(self.k,'vendor_script',side_effect=lambda path:secure(Path(path))),patch.object(self.k,'luna',return_value=missing),patch.object(self.k,'read_chain',return_value=[vendor]),patch.object(emergency_reader,'open_remote',side_effect=reader),patch.object(emergency_reader,'query',return_value=keys):
             self.k.require_generic_environment()
-            glasshouse = {'file': '/var/lib/glasshouse/remotekeys-filter.js', 'handler': 'handleGlasshouseKeys'}
+            glasshouse = {'file': '/var/lib/tvweb/remotekeys-filter.js', 'handler': 'handleGlasshouseKeys'}
             other_launcher = {'file': '/media/developer/other/systemUi.js', 'handler': 'handleSystemKeys'}
             mixed = [glasshouse, vendor, other_launcher]
             with self.assertRaisesRegex(ValueError, 'Stock Qt Home'):
@@ -113,6 +113,7 @@ class RuntimeTests(unittest.TestCase):
             # A separate, whole read-only system image is not a Home takeover.
             stock_mount='2 1 179:27 / /usr ro,relatime - squashfs /dev/mmcblk0p27 ro\n'
             from types import SimpleNamespace
+            # Use the host dev_t representation so os.major/minor can decode it.
             with patch.object(self.k,'STOCK_APPINFO',Path('/usr/palm/applications/com.webos.app.home/appinfo.json')),patch.object(self.k.legacy,'TARGET',Path('/usr/bin/com.webos.app.home')),patch.object(self.k.os,'stat',return_value=SimpleNamespace(st_dev=os.makedev(179,27))):
                 mountinfo.write_text(stock_mount)
                 self.k.require_generic_environment()
@@ -313,15 +314,30 @@ class RuntimeTests(unittest.TestCase):
         self.assertEqual(self.k.reconcile([own]+foreign, self.root, False), foreign)
         for chain in ([dict(own, handler='changed')], [dict(own, extra=True)], [own, own]):
             with self.assertRaises(ValueError): self.k.reconcile(chain, self.root, False)
+
+    def test_c1_home_replaces_foreign_filters_and_off_leaves_lg_chain(self):
+        self.prepare()
+        vendor = {'file':'/usr/lib/qt5/qml/KeyFilters/systemUi.js','handler':'handleSystemKeys'}
+        glasshouse = {'file':'/var/lib/tvweb/remotekeys-filter.js','handler':'handleGlasshouseKeys'}
+        another = {'file':'/var/lib/other-launcher/home.js','handler':'otherHome'}
+        original = [glasshouse, another, vendor]
+        chain = original.copy()
+        with patch.object(self.k,'read_chain',side_effect=lambda: chain.copy()), \
+                patch.object(self.k,'write_chain',side_effect=lambda value: chain.__setitem__(slice(None),value)):
+            self.k.change_chain(self.root,True,self.uid)
+            self.assertEqual(chain,[self.k.filter_entry(self.root), vendor])
+            self.k.change_chain(self.root,False,self.uid)
+            self.assertEqual(chain,[vendor])
         for chain in (None, {}, ['opaque'], [{'file':1,'handler':'x'}]):
             with self.assertRaises(ValueError): self.k.reconcile(chain, self.root, False)
 
     def test_pending_durable_before_write_and_readback_failure_retains_evidence(self):
-        self.prepare(); chain=[]
+        self.prepare()
+        chain=[{'file':'/usr/lib/qt5/qml/KeyFilters/systemUi.js','handler':'handleSystemKeys'}]
         def read(): return list(chain)
         def write(value):
             pending=json.loads((self.root/'c1-keyfilter/pending.json').read_text())
-            self.assertEqual(pending['before'], [])
+            self.assertEqual(pending['before'], chain)
             self.assertEqual(pending['after'], value)
             # Simulate configd acknowledging but not applying its write.
         with patch.object(self.k,'read_chain',side_effect=read), patch.object(self.k,'write_chain',side_effect=write):
@@ -335,6 +351,18 @@ class RuntimeTests(unittest.TestCase):
                 self.assertFalse(self.k.status(self.root,self.uid)['effective']['stock_verified'])
             with patch.object(self.k,'read_chain',return_value=[]):
                 self.assertTrue(self.k.status(self.root,self.uid)['effective']['stock_verified'])
+
+    def test_routing_status_requires_cytv_to_be_first(self):
+        self.prepare()
+        own = self.k.filter_entry(self.root)
+        foreign = {'file':'/var/lib/tvweb/remotekeys-filter.js','handler':'handleGlasshouseKeys'}
+        armed = dict(self.proof(), healthy=True, stopped=False, state='armed', guardian_pid=123, stock_verified=False)
+        with patch.object(self.k,'native',return_value=armed), patch.object(self.k,'verify_ready',return_value={}):
+            for chain, active in (([own,foreign], True), ([foreign,own], False)):
+                with patch.object(self.k,'read_chain',return_value=chain):
+                    effective = self.k.status(self.root,self.uid)['effective']
+                    self.assertTrue(effective['filter_installed'])
+                    self.assertIs(effective['routing_active'],active)
 
     def test_restore_stops_native_before_removing_filter(self):
         self.prepare(); calls=[]; chain=[self.k.filter_entry(self.root)]
@@ -515,7 +543,7 @@ class RuntimeTests(unittest.TestCase):
             target.chmod(0o700)
             observed=self.k.probe()
         self.assertEqual(observed['target']['size'],3)
-        environment.assert_called_once_with()
+        environment.assert_called_once_with(removed_apps=(self.k.APP,))
         self.assertEqual(observed['model'],self.admission['model'])
 
     def test_restore_clears_interrupted_prewrite_intent_after_absence_readback(self):

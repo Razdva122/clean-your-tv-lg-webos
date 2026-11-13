@@ -398,7 +398,6 @@ async function compositorStock() {
   if (
     [
       '/media/developer/cleanyourtv',
-      '/var/lib/tvweb/home-takeover',
       '/var/lib/luma-home',
       '/var/lib/webosbrew/homechooser'
     ].some(exists)
