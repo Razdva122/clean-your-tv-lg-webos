@@ -915,7 +915,19 @@ def readback(installer, value, index, allow_empty=False):
 
 
 def snapshot(installer, value):
-    plan=value['plan']; result=invoke(installer.remote,plan,'status')
+    plan = value['plan']
+    for attempt in range(3):
+        try:
+            result = invoke(installer.remote, plan, 'status')
+            break
+        except UserError as error:
+            details = getattr(error, 'no_root_observer', {})
+            # A detached writer can have two links to a terminal inode until
+            # publication finishes. Each read still requires one link.
+            if (attempt == 2 or details.get('failure') != 'observer-error'
+                    or details.get('observer_reason') != 'unsafe-file'):
+                raise
+            time.sleep(0.1)
     if (result.get('protocol')!=PROTOCOL or result.get('plan_sha256')!=hashlib.sha256(canonical(plan).encode()).hexdigest()
             or not isinstance(result.get('slots'),list) or len(result['slots'])!=2
             or result.get('reservation') not in ('active','prepared','closed','busy','unknown')

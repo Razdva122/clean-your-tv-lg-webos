@@ -355,6 +355,39 @@ class OriginalOperationIntegration(unittest.TestCase):
                 (state_dir / 'blocked').unlink(missing_ok=True)
                 (state_dir / 'watchdog').unlink(missing_ok=True)
 
+    def test_status_retries_while_terminal_hardlink_is_being_published(self):
+        original = self.remote.run
+        sampled = False
+
+        def run(command, data=None, timeout=30):
+            nonlocal sampled
+            words = split_observer_command(command)
+            if '-e' in words and observer.PROGRAM in words[words.index('-e') + 1]:
+                request = json.loads(words[-1])
+                if request['command'] == 'status' and not sampled:
+                    op = request['plan']['operation']
+                    journal = self.root / 'private' / 'operations' / op
+                    terminal = journal / 'terminal-0.json'
+                    if terminal.is_file():
+                        # atomicNew briefly leaves two links to the terminal inode.
+                        temporary = journal / ('.pending-' + 'a' * 32)
+                        os.link(terminal, temporary)
+                        try:
+                            reply = json.loads(original(command, data, timeout))
+                            self.assertEqual(reply['observer_error']['observer_reason'],
+                                             'unsafe-file')
+                            sampled = True
+                            return json.dumps(reply)
+                        finally:
+                            temporary.unlink()
+            return original(command, data, timeout)
+
+        self.remote.run = run
+        self.installer.install(self.inventory, 'original-secret')
+        self.assertTrue(sampled)
+        self.assertIsNone(self.store.pending(self.profile))
+        self.assertEqual((self.root / 'requests').read_text().splitlines(), list(observer.APPS))
+
     def test_reinstall_preserves_explicit_stop_and_legacy_latches(self):
         self.installer.install(self.inventory,'original-secret')
         directory=Path(operations.HELPER_STATE)
