@@ -267,6 +267,13 @@ def worker_summary(value):
     from .errors import root_driver_details
     probe=root_driver_details(value.get('cleanup_probe'))
     if probe:result['cleanup_probe']=probe
+    inspect_check=choice(value.get('inspect_check'), ('restart_required', 'support_stage_remains', 'live_original_worker',
+                  'project_apps_remain', 'restored_routes_changed', 'startup_remains',
+                  'owned_registration_remains', 'no_root_private_cleanup_required',
+                  'private_members_remain', 'owned_activity_remains', 'owned_input_registration_remains',
+                  'route-changed', 'original-removal-required', 'different-removal-intent',
+                  'unsafe-cleanup-directory', 'unsafe-cleanup-member', 'cleanup-guard-failed'), None)
+    if inspect_check is not None:result['inspect_check']=inspect_check
     if 'stage' in value:result['stage']=choice(value['stage'],STAGES)
     if 'cleanup_step' in value:
         result['cleanup_step']=choice(value['cleanup_step'],('routing-inverse','runtime-restore',

@@ -97,8 +97,8 @@ function run(input, context) {
   context('boot-root');
   var parent = fs.lstatSync(bootRoot);
   context('boot-root', parent);
-  ancestry(bootRoot, uid);
   if (
+    !parent.isDirectory() ||
     parent.uid !== 0 ||
     typeof input.removal !== 'string' ||
     !/^[a-f0-9]{32}$/.test(input.removal) ||
@@ -110,12 +110,11 @@ function run(input, context) {
   // Preserve the kind of every captured proof. An inaccessible schema-1 marker
   // is not permission to replace it with a weaker observation.
   var kernelOnly = proof && proof.schema === 2;
-  if (
-    input.action === 'boot-create' &&
-    !proof &&
-    input.connection !== 'root-ssh' &&
-    (parent.mode & 4095) === 73
-  ) {
+  var markerUnavailable =
+    input.connection === 'root-ssh'
+      ? uid === 0 && (parent.mode & 4095) === 511
+      : (parent.mode & 4095) === 73;
+  if (input.action === 'boot-create' && !proof && markerUnavailable) {
     reply.boot_proof = {
       schema: 2,
       kind: 'kernel-only',
@@ -127,13 +126,17 @@ function run(input, context) {
   if (kernelOnly) {
     context('boot-proof', parent);
     validProof(proof, input.removal, true);
-    if (input.connection === 'root-ssh' || input.action === 'boot-create')
+    if (
+      (input.connection === 'root-ssh' && uid !== 0) ||
+      input.action === 'boot-create'
+    )
       fail();
     reply.boot_restarted = proof.kernel !== kernel;
     if (input.action === 'boot-retire' && !reply.boot_restarted)
       fail('kernel-boot-unchanged');
     return reply;
   }
+  ancestry(bootRoot, uid);
   if ((parent.mode & 4095) !== 1023) fail();
   var marker = 'cytv-removal-' + input.removal + '.boot',
     prefix = 'cytv-removal-v1:' + input.removal + ':';

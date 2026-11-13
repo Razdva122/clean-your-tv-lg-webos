@@ -9,14 +9,98 @@ from cytv import cli, state
 
 
 class CLITests(unittest.TestCase):
+    def test_43uk6450plc_legacy_root_refusal_exports_preflight_evidence(self):
+        from tests.cytv.test_operations import OperationTests, Remote
+
+        fixture = OperationTests()
+        fixture.setUp()
+        self.addCleanup(fixture.doCleanups)
+        fixture.root_graphics_bundle()
+        fixture.manifest['legacy_root_beta'] = 'legacy-root-beta'
+
+        class LegacyTV(Remote):
+            root = True
+
+            def close(self):
+                pass
+
+            def luna(self, uri, payload, **kwargs):
+                if uri == 'com.webos.service.tv.systemproperty/getSystemInfo':
+                    return {'returnValue': True, 'UHD': True, 'modelName': '43UK6450PLC',
+                            'firmwareVersion': '05.50.70', 'sdkVersion': '4.4.0'}
+                raise AssertionError(f'Unexpected Luna request before edition selection: {uri}')
+
+            def run(self, command, data=None, timeout=30):
+                if command == '/usr/bin/node --version':
+                    return 'v0.12.2'
+                if 'CYTV_NODE_VERSION' in command:
+                    return 'CYTV_NODE_VERSION v0.12.2'
+                if 'CYTV_FRESH_ROOT' in command:
+                    return 'CYTV_FRESH_ROOT'
+                if 'CYTV_ROOT_READY' in command and (
+                    '/usr/bin/python3' in command or '/usr/bin/node -e' in command
+                ):
+                    return 'CYTV_ROOT_MISSING'
+                return super().run(command, data, timeout)
+
+        remote = LegacyTV()
+        data_dir = fixture.root / 'cli-state'
+        output = []
+        with patch('cytv.cli.package.verify_payload', return_value=fixture.manifest), \
+                patch('cytv.root_runtime.select_payload') as select_beta, \
+                patch('cytv.tv.SSAP') as ssap:
+            code = cli.main(['install', '--host', '192.0.2.10', '--edition', 'root',
+                             '--non-interactive', '--yes', '--language', 'en',
+                             '--data-dir', str(data_dir)],
+                            connect=lambda *_: remote, ask=lambda _: self.fail('Unexpected prompt'),
+                            write=output.append, payload_root=fixture.payload)
+        self.assertEqual(code, 2, '\n'.join(output))
+        self.assertIn('No-root — reduced functionality', '\n'.join(output))
+        self.assertIn('Root Beta — not sufficiently tested', '\n'.join(output))
+        select_beta.assert_not_called()
+        ssap.assert_not_called()
+        self.assertFalse(remote.uploads)
+
+        report_path, = (data_dir / 'reports').glob('diagnostic-*.json')
+        report = json.loads(report_path.read_text())
+        self.assertEqual(report['phase'], 'inspect-installation')
+        self.assertEqual(report['reason_code'], 'root-requirements')
+        self.assertEqual(report['edition'], 'root')
+        self.assertIsNone(report['pending'])
+        tv = report['tv']
+        self.assertEqual(tv['modelName'], '43UK6450PLC')
+        self.assertEqual(tv['firmwareVersion'], '05.50.70')
+        self.assertEqual(tv['sdkVersion'], '4.4.0')
+        self.assertEqual((tv['node_version_status'], tv['node_version']), ('read', '0.12.2'))
+        self.assertEqual({key for key, status in report['checks'].items() if status == 'fail'},
+                         {'python3', 'python-json', 'python-fcntl', 'python-version', 'node-version'})
+        for key in ('home-settings', 'home-profiles', 'inventory'):
+            self.assertEqual(report['checks'][key], 'pending')
+
     def test_root_node_failure_can_complete_no_root_using_the_same_ssh(self):
         self.assert_no_root_install_after_root_preflight(choose_beta=False)
 
     def test_root_beta_ribbon_fallback_completes_no_root_using_the_same_ssh(self):
         self.assert_no_root_install_after_root_preflight(choose_beta=True)
 
-    def assert_no_root_install_after_root_preflight(self, choose_beta):
+    def test_root_beta_home_refusal_offers_no_root_on_confirmed_ramfs(self):
+        self.assert_no_root_install_after_root_preflight(choose_beta=True, generic=True)
+
+    def test_root_beta_home_refusal_hides_no_root_when_storage_is_full(self):
+        self.assert_no_root_install_after_root_preflight(choose_beta=True, generic=True, storage_full=True)
+
+    def test_root_native_home_unavailable_uses_the_same_checked_alternative(self):
+        self.assert_no_root_install_after_root_preflight(choose_beta=False, native_missing=True)
+
+    def test_root_beta_with_keyfilters_but_without_native_home_offers_no_root(self):
+        self.assert_no_root_install_after_root_preflight(choose_beta=True, native_missing=True)
+
+    def assert_no_root_install_after_root_preflight(self, choose_beta, generic=False, storage_full=False,
+                                                   native_missing=False):
+        from cytv.errors import TVCommandError
+        from cytv.root_capabilities import NATIVE_HEADERS, NATIVE_HOME_UNAVAILABLE
         from cytv.root_runtime import VENDOR_PROBE
+        from cytv.transport import terminal_reply
         from tests.cytv.test_operations import OperationTests, Remote, split_observer_command
         from cytv import no_root_observer
         import shlex
@@ -37,18 +121,31 @@ class CLITests(unittest.TestCase):
         beta_manifest = dict(fixture.manifest, root_backends={'c1-native-gate': {'admission_schema': 3}})
         if choose_beta:
             fixture.manifest['legacy_root_beta'] = 'legacy-root-beta'
+        if native_missing:
+            fixture.manifest['root_backends'] = beta_manifest['root_backends']
         class LegacyTV(Remote):
             root=True
             def close(self): pass
             def luna(self, uri, payload, **kwargs):
-                if choose_beta and uri.endswith('/getProfiles'):
+                if (choose_beta or native_missing) and uri.endswith('/getProfiles'):
                     return {'returnValue': False, 'errorCode': -1,
                             'errorText': 'Service does not exist: com.webos.service.systemprofile.'}
+                if native_missing and uri.endswith('/getConfigs'):
+                    key = 'com.webos.surfacemanager.keyFilters'
+                    return {'returnValue': True, 'configs': {key: [
+                        {'file': '/usr/lib/qt5/qml/KeyFilters/systemUi.js', 'handler': 'handleSystemKeys'}]}}
                 if choose_beta and uri.endswith('/getConfigs'):
+                    if generic:
+                        reply = {'missingConfigs': ['com.webos.surfacemanager.keyFilters'],
+                                 'errorCode': -1, 'returnValue': True,
+                                 'errorText': 'No Entry Found ,fetch record failed'}
+                        terminal_reply(reply, uri=uri)
                     return {'returnValue': True, 'configs': {}}
                 if choose_beta and uri.endswith('/getCurrentHomeUIState'):
+                    if generic:
+                        return {'returnValue': False}
                     return {'homeUIState': [{'uiType': 'home', 'visibility': False}]}
-                if choose_beta and 'modelName' in payload.get('keys', []) and uri.endswith('/getSystemInfo'):
+                if (choose_beta or native_missing) and 'modelName' in payload.get('keys', []) and uri.endswith('/getSystemInfo'):
                     return {'returnValue': True, 'modelName': 'TEST-LEGACY', 'firmwareVersion': '01.02.03',
                             'sdkVersion': '3.5.0'}
                 return super().luna(uri, payload, **kwargs)
@@ -56,18 +153,36 @@ class CLITests(unittest.TestCase):
                 if command == '/usr/bin/node --version':return 'v0.12.2'
                 if command == VENDOR_PROBE: return 'CYTV_VENDOR_READY'
                 if 'CYTV_FRESH_ROOT' in command:return 'CYTV_FRESH_ROOT'
-                if 'process.versions.node.split' in command and 'CYTV_ROOT_READY' in command:return 'CYTV_ROOT_MISSING'
+                if native_missing and command == NATIVE_HEADERS:
+                    raise TVCommandError(NATIVE_HOME_UNAVAILABLE)
+                if not native_missing and 'process.versions.node.split' in command and 'CYTV_ROOT_READY' in command:
+                    return 'CYTV_ROOT_MISSING'
+                if generic and command == 'LC_ALL=C df -Pk /tmp':
+                    return 'Filesystem 1024-blocks Used Available Capacity Mounted on\ntmp 0 0 0 0% /tmp'
+                if generic and command == "LC_ALL=C stat -f -c '%t' /tmp":
+                    return '858458f6'
+                if storage_full and command == 'LC_ALL=C df -Pk /var/lib':
+                    return 'Filesystem 1024-blocks Used Available Capacity Mounted on\n/dev/full 1 1 0 100% /var/lib'
                 words=split_observer_command(command)
-                if '-e' in words and no_root_observer.ROOT_PROGRAM in words[words.index('-e')+1]:
+                if '-e' in words:
                     index=words.index('-e')+1
-                    words[index]=words[index].replace(no_root_observer.ROOT_PROGRAM,no_root_observer.PROGRAM)
-                    command=shlex.join(words)
+                    if '"connection":"root-ssh"' in words[-1]:
+                        plan = json.loads(words[-1])['plan']
+                        request = json.loads(words[-1])
+                        if request['command'] == 'storage-inspect':
+                            return json.dumps({'operation': plan['operation']})
+                        self.observer_plan = plan
+                        source = no_root_observer.source_for(True, plan.get('private_root'))
+                        words[index]=words[index].replace(source,no_root_observer.PROGRAM)
+                        command=shlex.join(words)
                 return super().run(command,data,timeout)
         remote=LegacyTV()
         output=[]
+        offers=[]
         answers = iter(('2', '1') if choose_beta else ('1',))
         def ask(prompt):
             if 'Alternative edition' in prompt:
+                offers.append(prompt)
                 return next(answers)
             return 'y' if 'Install experimental Root Beta' in prompt else ''
 
@@ -80,18 +195,31 @@ class CLITests(unittest.TestCase):
                            '--data-dir',str(fixture.root/'cli-state'), '--tv-name', 'Living Room'],
                           connect=lambda *_:remote, ask=ask,
                           write=output.append, payload_root=fixture.payload)
-        self.assertEqual(code,0,'\n'.join(output))
         profiles=state.Store(fixture.root/'cli-state').profiles()
+        if storage_full:
+            self.assertEqual(code, 2, '\n'.join(output))
+            self.assertEqual(len(offers), 1)
+            self.assertFalse(any(profile['edition'] == 'no-root' for profile in profiles))
+            self.assertFalse(remote.uploads)
+            return
+        self.assertEqual(code,0,'\n'.join(output))
         selected=next(p for p in profiles if p['edition']=='no-root')
         self.assertEqual(selected['connection'],'root-ssh')
         self.assertEqual(selected['port'],22)
         self.assertNotIn('PRIVATE-PAIRING','\n'.join(output))
         self.assertIn('--tv-name was skipped', '\n'.join(output))
-        if choose_beta:
+        if native_missing:
+            self.assertIn('Root cannot control Home on this TV.', '\n'.join(output))
+        elif choose_beta and not generic:
             self.assertIn('This TV uses the LG Home ribbon', '\n'.join(output))
+        if generic:
+            self.assertEqual(len(offers), 2)
+            self.assertIn('ramfs', '\n'.join(output))
         self.assertFalse(any(call[0] == 'luna' and call[1].endswith('/updateLaunchPoint') for call in remote.calls))
         submitted=[call[2]['id'] for call in remote.calls if call[0]=='luna' and call[1].endswith('/dev/install')]
         self.assertEqual(submitted,['com.local.nativehome','com.gathin.tvhome'])
+        if generic:
+            self.assertEqual(remote.observer_plan['private_root'], no_root_observer.ROOT_SSH_DISK)
 
     def test_unknown_graphics_stops_no_root_before_pairing(self):
         from unittest.mock import MagicMock
@@ -369,7 +497,7 @@ class CLITests(unittest.TestCase):
     def test_root_doctor_exports_qt_failure_from_verified_payload(self):
         import hashlib
         from cytv.errors import TVCommandError, TVRejected
-        from cytv.root_capabilities import CALLS, NATIVE_HEADERS
+        from cytv.root_capabilities import CALLS, NATIVE_HEADERS, NATIVE_HOME_UNAVAILABLE
         from tests.cytv.test_operations import Remote
 
         identity = {'returnValue': True, 'modelName': 'AR-50', 'firmwareVersion': '04.66.75',
@@ -383,7 +511,7 @@ class CLITests(unittest.TestCase):
 
             def run(self, command, *args, **kwargs):
                 if command == NATIVE_HEADERS:
-                    raise TVCommandError(42)
+                    raise TVCommandError(NATIVE_HOME_UNAVAILABLE)
                 return super().run(command, *args, **kwargs)
 
             def luna(self, uri, payload, **kwargs):

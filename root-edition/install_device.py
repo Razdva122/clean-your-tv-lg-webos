@@ -25,6 +25,7 @@ BUS=Path('/var/luna-service2-dev')
 INIT=Path('/var/lib/webosbrew/init.d')
 TEMP=Path('/tmp')
 SUPPORT_STAGE=re.compile(r'cytv-(?:product|coordinator|system-updater|c1-root|root-tail)-[a-f0-9]{32}')
+RETAINABLE_SUPPORT_STAGE=re.compile(r'cytv-(?:product|system-updater)-[a-f0-9]{32}')
 
 
 class InstallerRuntimeMismatch(ValueError):
@@ -1045,6 +1046,7 @@ class LocalDevice:
         uid=self.ownership.store.uid
         inventory=record.setdefault('temporary_stages',[])
         by_path={item['path']:item for item in inventory}
+        retained=record.setdefault('retained_temporary_stages',[])
         current=json.loads(safe_bytes(self.payload/'root-updater/bundle.json',uid=uid)) if self.payload else None
         for path in sorted(TEMP.iterdir()):
             if not SUPPORT_STAGE.fullmatch(path.name) or path==self.payload:continue
@@ -1057,11 +1059,21 @@ class LocalDevice:
             if saved:
                 if (saved['dev'],saved['ino'])!=(info.st_dev,info.st_ino):raise ValueError('support_stage_changed')
                 continue
+            identity={'path':str(path),'dev':info.st_dev,'ino':info.st_ino}
+            retain=False
             if path.name.startswith('cytv-product-'):
-                release=json.loads(safe_bytes(path/'root/release.json',uid=uid))
-                package=json.loads(safe_bytes(path/'root-updater/package.json',uid=uid))
-                if release.get('application_id')!=APP or package.get('name')!='com.cleanyourtv.root.updater.service':raise ValueError('unclassified_support_stage')
                 allowed={'root','root-updater'}
+                try:
+                    release=json.loads(safe_bytes(path/'root/release.json',uid=uid))
+                    package=json.loads(safe_bytes(path/'root-updater/package.json',uid=uid))
+                except (FileNotFoundError, json.JSONDecodeError, UnicodeDecodeError):
+                    # A disconnected upload can leave an incomplete bundle in /tmp.
+                    # Keep its data and require a live process check at readback.
+                    retain=True
+                else:
+                    retain=(not isinstance(release,dict) or release.get('application_id')!=APP
+                            or not isinstance(package,dict) or package.get('name')!='com.cleanyourtv.root.updater.service'
+                            or bool(names-allowed))
             elif path.name.startswith('cytv-coordinator-'):
                 package=json.loads(safe_bytes(path/'package.json',uid=uid));services=json.loads(safe_bytes(path/'services.json',uid=uid))
                 if package.get('name')!='com.cleanyourtv.root.updater.service' or services.get('id')!=package['name'] or current is None:raise ValueError('unclassified_support_stage')
@@ -1086,17 +1098,15 @@ class LocalDevice:
                             retain=True
                         else:safe_bytes(path/'__pycache__'/name,uid=uid)
                     allowed.add('__pycache__')
-                if retain:
-                    entry={'path':str(path),'dev':info.st_dev,'ino':info.st_ino}
-                    retained=record.setdefault('retained_temporary_stages',[])
-                    if entry not in retained:retained.append(entry)
-                    continue  # Inert unknown temporary data must not strand removal.
             else:
                 # Unrecorded gate-only staging has no product metadata and is
                 # not classified from its name or ELF header alone.
                 raise ValueError('unclassified_support_stage')
+            if retain:
+                if identity not in retained:retained.append(identity)
+                continue
             if names-allowed:raise ValueError('unclassified_support_stage')
-            saved={'path':str(path),'dev':info.st_dev,'ino':info.st_ino,'allowed':sorted(allowed)}
+            saved=dict(identity,allowed=sorted(allowed))
             inventory.append(saved);by_path[str(path)]=saved
         self.ownership.store.write('clean-removal-'+record['operation'],record)
         for item in inventory:
@@ -1349,7 +1359,7 @@ class LocalDevice:
         if private['present']:raise ValueError('no_root_private_cleanup_required')
         for path in TEMP.iterdir():
             if SUPPORT_STAGE.fullmatch(path.name) and path!=self.payload:
-                if path.name.startswith('cytv-system-updater-'):
+                if RETAINABLE_SUPPORT_STAGE.fullmatch(path.name):
                     fd=checked_store(path,self.ownership.store.uid)._directory()
                     try:info=os.fstat(fd)
                     finally:os.close(fd)

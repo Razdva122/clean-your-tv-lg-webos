@@ -392,6 +392,9 @@ including a timeout, a rejection, an unconfirmed or malformed reply, an empty
 configuration, and a compatible or incompatible chain. For an explicit
 rejection it can include a bounded numeric Luna error code.
 `native-home-unavailable` identifies a missing or unsafe native Home path.
+When System Profile is absent and KeyFilters passed, this result lets interactive
+setup offer No-root over the existing root SSH connection. No-root still runs
+its own preflight before installing.
 `c1-probe-failed` means an error in the preceding C1 probe prevented the
 capability-based check from running.
 When System Profile and KeyFilters are confirmed absent, `tv.root_ribbon_probe`
@@ -534,7 +537,7 @@ and repeats existing activation eligibility checks before resolving that pending
 activation. It neither enables Home nor updates code. See the [candidate recovery
 path](../RECOVERY.md#candidate-finish-verified-root-setup-with-home-control-off).
 
-## Temporary storage on ramfs (#434)
+## Temporary storage on ramfs (#434, #410)
 
 When `df` reports all-zero block counts for the `/tmp` mount and a read-only
 filesystem type check confirms ramfs, No-root over Developer Mode can proceed
@@ -544,9 +547,17 @@ writes application files under `/media/developer/apps`. The system `/tmp` still
 holds temporary `opkg` metadata and file lists. No-root reports that available
 temporary capacity could not be measured and uses the existing package service.
 
+No-root over root SSH also accepts confirmed ramfs with unmeasurable capacity.
+It stages packages under `/var/lib/clean-your-tv-installer` and still checks the
+budgets for `/var/lib` and `/media/developer/apps`. A fresh setup on ramfs pins
+the observer journal in the owned `0700` `private` child of the staging root.
+The installer refuses conflicting old and new evidence and checks directory
+ownership and writes before package submission. Retained capsules keep their
+original path. Root-to-No-root handoffs retain their original storage contract.
+For root SSH removal with a root-owned `0777` `/tmp`, restart verification uses
+a changed kernel boot ID. Existing marker proofs retain their original rules.
 Measured shortfalls and unconfirmed zero-block results still stop installation.
-Root and No-root over root SSH retain the `tv-storage-ramfs` preflight stop
-when a separate filesystem does not already report a measured shortfall.
+Root retains the `tv-storage-ramfs` preflight stop.
 
 <a id="no-root-observer-failures-next-candidate-376-and-378"></a>
 
@@ -714,3 +725,14 @@ or physical Home recovery.
 Rebuild Root coordinator/Updater support and embedding desktop/console/Android
 payloads through the release coordinator. No new state file, permission, endpoint,
 TV call, version selection or physical-device acceptance is introduced here.
+
+
+### Root inspection after removal
+
+A blocked Root installation inspection now includes `status.product.failure`
+in the standard diagnostic report. It carries the existing bounded worker
+exception summary and, when recognized, an `inspect_check` code from the cleanup
+readback. The installer uses this evidence for diagnosis only. A previous
+verified cleanup and a later inspection failure can both be valid observations.
+The later inspection must still verify the retained receipt and current TV state
+before a new installation is allowed.

@@ -1,6 +1,5 @@
 """Ordinary removal, interrupted setup, reconnect, and full-restart completion."""
 import json
-import base64
 import os
 import hashlib
 from pathlib import Path
@@ -20,7 +19,7 @@ from cytv.state import Store, target
 
 class Remote:
     def __init__(self, root):
-        self.root=root;self.apps=set();self.calls=[];self.cut=None;self.cut_install=False;self.reject_install=False;self.broken_service=False;self.reject=None;self.transform=lambda code:code
+        self.root=root;self.apps=set();self.calls=[];self.cut=None;self.broken_service=False;self.reject=None;self.transform=lambda code:code
         self.os_cleanup=False;self.cut_boot_create=False;self.command_limit=None;self.commands=[]
         self.boot='11111111-1111-1111-1111-111111111111'
 
@@ -50,6 +49,8 @@ class Remote:
         code=('var fixtureFs=require("fs"),fixturePath=require("path"),fixtureLstat=fixtureFs.lstatSync;'
               'fixtureFs.lstatSync=function(p){var s=fixtureLstat(p);if(fixturePath.resolve(p)==='
               +json.dumps(str(volatile))+')s.uid=0;return s;};\n')+code
+        if request.get('connection') == 'root-ssh':
+            code = 'process.getuid=function(){return 0;};\n' + code
         (self.root/'boot').write_text(self.boot)
         node=os.environ.get('NODE_EXEC') or shutil.which('node')
         result=subprocess.run([node] if stdin else [node,'-e',self.transform(code),words[-1]],
@@ -94,20 +95,6 @@ class Remote:
                 for file in roles.glob(app+'.*'):file.unlink()
             if self.cut==app:self.cut=None;raise UserError('Connection to the TV was lost. Reconnect and choose Retry.')
             return {'returnValue':True,'id':app,'details':{'state':'removed'}}
-        if uri.endswith('/dev/install'):
-            if self.reject_install:
-                self.reject_install=False;raise TVRejected('Package manager busy.',{'returnValue':False,'errorCode':-7},uri)
-            source=Path(payload['ipkUrl'].replace('/media/developer',str(self.root/'developer')))
-            if self.os_cleanup:
-                app=payload['id'];service='com.gathin.tvhome.renewal' if app=='com.gathin.tvhome' else app+'.service'
-                for kind,name in [('applications',app),('packages',app),('services',service)]:
-                    directory=self.root/'developer/apps/usr/palm'/kind/name
-                    if directory.exists():directory.chmod(0o755)
-            for name,raw in package.data_files(source.read_bytes()).items():
-                destination=self.root/'developer/apps'/name;destination.parent.mkdir(parents=True,exist_ok=True);destination.write_bytes(raw)
-            self.apps.add(payload['id'])
-            if self.cut_install:self.cut_install=False;raise UserError('Connection to the TV was interrupted.')
-            return {'returnValue':True,'id':payload['id'],'details':{'state':'installed'}}
         if uri=='com.gathin.tvhome.renewal/disable':return {'returnValue':True,'state':{'enabled':False}}
         if uri=='com.local.nativehome.service/disable':return {'returnValue':True,'cancel':{'returnValue':True}}
         return {'returnValue':True}
@@ -720,6 +707,19 @@ class SimpleRemoval(unittest.TestCase):
             with self.subTest(proof=bad),self.assertRaises(UserError):
                 self.cleanup._device(self.installer,'boot-probe',proof=bad)
 
+    def test_root_ssh_nonsticky_tmp_requires_a_changed_kernel_boot_id(self):
+        self.profile.update(connection='root-ssh', port=22)
+        self.remote.volatile_mode = 0o777
+        self.store.request_clean_removal(self.profile)
+        proof = self.cleanup._device(self.installer, 'boot-create')['boot_proof']
+        self.assertEqual(proof['kind'], 'kernel-only')
+        self.assertFalse(self.cleanup._device(self.installer, 'boot-probe', proof=proof)['boot_restarted'])
+        with self.assertRaises(UserError):
+            self.cleanup._device(self.installer, 'boot-retire', proof=proof)
+        self.remote.boot = '22222222-2222-2222-2222-222222222222'
+        self.assertTrue(self.cleanup._device(self.installer, 'boot-retire', proof=proof)['boot_restarted'])
+        self.assertFalse(list((self.root / 'volatile').iterdir()))
+
     def test_captured_marker_proof_cannot_switch_to_kernel_only_when_tmp_changes(self):
         self.store.request_clean_removal(self.profile)
         proof=self.cleanup._device(self.installer,'boot-create')['boot_proof']
@@ -1000,24 +1000,6 @@ class SimpleRemoval(unittest.TestCase):
         self.assertTrue(self.remote.commands)
         self.assertEqual(set(self.remote.commands),{'/usr/bin/node'})
 
-    def test_stdin_carrier_request_publishes_exact_binary_bytes_and_rejects_corruption(self):
-        self.remote.command_limit=8192
-        self.store.request_clean_removal(self.profile)
-        identifier=self.store.pending(self.profile)['removal_operation']
-        raw=bytes(range(256))*257
-        request={'action':'stage-carrier','app':'com.local.nativehome','removal':identifier,
-                 'size':len(raw),'sha256':hashlib.sha256(raw).hexdigest(),'carrier':base64.b64encode(raw).decode('ascii')}
-        self.remote.run('/usr/bin/node',data=self.cleanup._program(request),timeout=90)
-        file=self.root/'developer/temp'/('cytv-'+identifier)/'helper.ipk'
-        self.assertEqual(file.read_bytes(),raw)
-        self.remote.run('/usr/bin/node',data=self.cleanup._program(request),timeout=90)
-        self.assertEqual(file.read_bytes(),raw,'exact same staged bytes can be read back on Retry')
-        for bad in (dict(request,carrier=request['carrier'][:-4]),dict(request,sha256='0'*64)):
-            with self.subTest(size=bad['size'],hash=bad['sha256']):
-                with self.assertRaises(RuntimeError):self.remote.run('/usr/bin/node',data=self.cleanup._program(bad),timeout=90)
-                self.assertEqual(file.read_bytes(),raw)
-        self.assertEqual(set(self.remote.commands),{'/usr/bin/node'})
-
     def model_owners(self, owners):
         # Keep actual POSIX modes/inodes and Node filesystem operations; adapt
         # only ownership that an unprivileged host cannot reproduce with chown.
@@ -1085,14 +1067,13 @@ class SimpleRemoval(unittest.TestCase):
         self.assertIn({'scope':'installer-staging','reason':'unsafe-path'},result['blocked'])
         self.assertEqual(own.read_text(),'partial upload')
 
-    def carrier_payload(self):
+    def removal_payload(self):
         app='com.local.nativehome';service=app+'.service';version='0.7.4'
         files={'usr/palm/applications/'+app+'/appinfo.json':json.dumps({'id':app,'version':version,'main':'detach'}).encode(),
                'usr/palm/packages/'+app+'/packageinfo.json':json.dumps({'id':app,'app':app,'version':version,'services':[service]}).encode(),
                'usr/palm/services/'+service+'/services.json':json.dumps({'id':service,'services':[{'name':service}]}).encode()}
-        payload=self.root/'payload';payload.mkdir();(payload/'installer-support').mkdir()
+        payload=self.root/'payload';payload.mkdir()
         (payload/'helper.ipk').write_bytes(package.ipk(app,version,files,architecture='arm'))
-        (payload/'installer-support/cleanup-noop').write_bytes(b'\x7fELFfixture of authenticated support')
         self.installer.payload=payload
         self.installer.manifest={'helper':'helper.ipk','files':{str(p.relative_to(payload)):hashlib.sha256(p.read_bytes()).hexdigest() for p in payload.rglob('*') if p.is_file()}}
 
@@ -1130,7 +1111,7 @@ class SimpleRemoval(unittest.TestCase):
             return luna(uri, payload, **kwargs)
 
         self.remote.luna = deny_status
-        self.carrier_payload()
+        self.removal_payload()
         (self.installer.payload / 'payload.json').write_text(json.dumps(self.installer.manifest))
         self.installer.manifest = {}
         self.installer.tv_info = {}
@@ -1227,7 +1208,7 @@ class SimpleRemoval(unittest.TestCase):
             return luna(uri, payload, **kwargs)
 
         self.remote.luna = package_status
-        self.carrier_payload()
+        self.removal_payload()
         (self.installer.payload / 'payload.json').write_text(json.dumps(self.installer.manifest))
         self.installer.manifest = {}
         self.installer.tv_info = {}
@@ -1466,37 +1447,44 @@ class SimpleRemoval(unittest.TestCase):
         self.assertTrue(own.exists())
 
     @unittest.skipIf(getattr(os,'getuid',lambda:-1)()==0,'unprivileged SDK model')
-    def test_missing_sam_protected_registration_uses_one_inert_carrier_then_remove(self):
-        self.carrier_payload();directory=self.root/'bus/roles.d';directory.mkdir();role=directory/'com.local.nativehome.service.json';role.write_text('{}');directory.chmod(0o555)
-        try:
-            self.assertTrue(self.remove()['restart_required']);self.assertFalse(role.exists())
-            installs=[p for uri,p in self.remote.calls if uri.endswith('/dev/install')]
-            removals=[p for uri,p in self.remote.calls if uri.endswith('/dev/remove')]
-            self.assertEqual(len(installs),1);self.assertEqual(len(removals),1);self.assertEqual(installs[0]['id'],removals[0]['id'])
-            self.reboot();self.assertTrue(self.remove()['verified_clean'])
-        finally:directory.chmod(0o755)
+    def test_unlisted_package_with_protected_registration_reports_partial_cleanup(self):
+        self.removal_payload()
+        app = 'com.local.nativehome'
+        directory = self.root / 'bus/roles.d'
+        directory.mkdir()
+        role = directory / (app + '.service.json')
+        role.write_text('{}')
+        directory.chmod(0o555)
+        self.addCleanup(directory.chmod, 0o755)
 
-    @unittest.skipIf(getattr(os,'getuid',lambda:-1)()==0,'unprivileged SDK model')
-    def test_disconnect_after_carrier_install_rechecks_registered_app_without_reinstall(self):
-        self.carrier_payload();directory=self.root/'bus/roles.d';directory.mkdir();(directory/'com.local.nativehome.service.json').write_text('{}');directory.chmod(0o555)
-        self.remote.cut_install=True
-        try:
-            with self.assertRaises(UserError):self.remove()
-            self.assertTrue(self.remove()['restart_required'])
-            self.assertEqual(sum(uri.endswith('/dev/install') for uri,_ in self.remote.calls),1)
-            self.reboot();self.assertTrue(self.remove()['verified_clean'])
-        finally:directory.chmod(0o755)
+        with self.assertRaises(UserError) as caught:
+            self.remove()
 
-    @unittest.skipIf(getattr(os,'getuid',lambda:-1)()==0,'unprivileged SDK model')
-    def test_rejected_carrier_has_no_automatic_loop_and_explicit_retry_can_try_again(self):
-        self.carrier_payload();directory=self.root/'bus/roles.d';directory.mkdir();role=directory/'com.local.nativehome.service.json';role.write_text('{}');directory.chmod(0o555)
-        self.remote.reject_install=True
-        try:
-            with self.assertRaises(TVRejected):self.remove()
-            self.assertTrue(role.exists());self.assertEqual(sum(uri.endswith('/dev/install') for uri,_ in self.remote.calls),1)
-            self.assertTrue(self.remove()['restart_required']);self.assertFalse(role.exists())
-            self.assertEqual(sum(uri.endswith('/dev/install') for uri,_ in self.remote.calls),2)
-        finally:directory.chmod(0o755)
+        self.assertEqual(caught.exception.reason_code, 'root-access-required')
+        pending = self.store.pending(self.profile)
+        self.assertEqual(pending['stage'], 'private-cleanup')
+        self.assertEqual(pending['removal_reason'], 'root-access-required')
+        self.assertTrue(role.exists())
+        self.assertFalse(any(uri.endswith(('/dev/install', '/dev/remove')) for uri, _ in self.remote.calls))
+
+    def test_previous_cleanup_package_is_removed_as_a_registered_app(self):
+        app = 'com.local.nativehome'
+        info = {'id': app, 'title': 'Clean Your TV cleanup', 'visible': False}
+        self.own_file('apps/usr/palm/applications/' + app + '/appinfo.json', json.dumps(info))
+        self.remote.apps.add(app)
+        self.remote.os_cleanup = True
+        self.store.request_clean_removal(self.profile)
+        self.store.checkpoint(self.profile, cleanup_carriers={app: 'installed'})
+
+        result = self.remove()
+        if result['restart_required']:
+            self.reboot()
+            result = self.remove()
+
+        self.assertTrue(result['verified_clean'])
+        self.assertIsNone(self.store.pending(self.profile))
+        self.assertEqual([(uri.rsplit('/', 1)[-1], body['id']) for uri, body in self.remote.calls
+                          if uri.endswith(('/dev/install', '/dev/remove'))], [('remove', app)])
 
     def test_controller_stop_finishes_before_its_files_are_removed(self):
         native=self.own_file('apps/usr/palm/applications/com.local.nativehome/native.js',
@@ -1558,32 +1546,31 @@ class SimpleRemoval(unittest.TestCase):
         self.reboot();self.assertTrue(self.remove()['verified_clean'])
 
     @unittest.skipIf(getattr(os,'getuid',lambda:-1)()==0,'unprivileged SDK permission model')
-    def test_protected_no_root_namespaces_use_os_removal_or_one_carrier(self):
-        self.carrier_payload();self.remote.os_cleanup=True
-        for registered in (False,True):
-            for kind,name,mode in [('applications','com.local.nativehome',0o555),
-                                   ('applications','com.local.nativehome',0o000),
-                                   ('applications','com.local.nativehome/state',0o555),
-                                   ('services','com.local.nativehome.service',0o000),
-                                   ('packages','com.local.nativehome',0o555)]:
-                with self.subTest(registered=registered,kind=kind):
-                    self.store.begin(self.profile,'install');self.store.finish(self.profile)
-                    own=self.own_file('apps/usr/palm/'+kind+'/'+name+'/private.json','partial NoRoot data')
-                    directory=own.parent;directory.chmod(mode)
-                    self.addCleanup(lambda p=directory:p.chmod(0o755) if p.exists() else None)
-                    foreign=self.own_file('apps/usr/palm/'+kind+'/org.foreign/keep.json','preserve')
-                    self.remote.apps={'com.local.nativehome'} if registered else set()
-                    start=len(self.remote.calls)
-                    first=self.remove();self.assertTrue(first['restart_required']);self.assertFalse(first['verified_clean'])
-                    if mode == 0o000:
-                        self.assertIn('protected-package-access', self.store.pending(self.profile)['cleanup_restart_triggers'])
-                    self.remote.boot=('33333333-3333-3333-3333-333333333333' if self.remote.boot!=
-                                      '33333333-3333-3333-3333-333333333333' else '44444444-4444-4444-4444-444444444444')
-                    self.assertTrue(self.remove()['verified_clean'])
-                    self.assertFalse(directory.exists());self.assertEqual(foreign.read_text(),'preserve')
-                    calls=self.remote.calls[start:]
-                    self.assertEqual(sum(uri.endswith('/dev/install') for uri,_ in calls),0 if registered else 1)
-                    self.assertEqual(sum(uri.endswith('/dev/remove') for uri,_ in calls),1)
+    def test_registered_packages_use_os_removal_for_protected_namespaces(self):
+        self.remote.os_cleanup=True
+        for kind,name,mode in [('applications','com.local.nativehome',0o555),
+                               ('applications','com.local.nativehome',0o000),
+                               ('applications','com.local.nativehome/state',0o555),
+                               ('services','com.local.nativehome.service',0o000),
+                               ('packages','com.local.nativehome',0o555)]:
+            with self.subTest(kind=kind,mode=mode):
+                self.store.begin(self.profile,'install');self.store.finish(self.profile)
+                own=self.own_file('apps/usr/palm/'+kind+'/'+name+'/private.json','partial NoRoot data')
+                directory=own.parent;directory.chmod(mode)
+                self.addCleanup(lambda p=directory:p.chmod(0o755) if p.exists() else None)
+                foreign=self.own_file('apps/usr/palm/'+kind+'/org.foreign/keep.json','preserve')
+                self.remote.apps={'com.local.nativehome'}
+                start=len(self.remote.calls)
+                first=self.remove();self.assertTrue(first['restart_required']);self.assertFalse(first['verified_clean'])
+                if mode == 0o000:
+                    self.assertIn('protected-package-access', self.store.pending(self.profile)['cleanup_restart_triggers'])
+                self.remote.boot=('33333333-3333-3333-3333-333333333333' if self.remote.boot!=
+                                  '33333333-3333-3333-3333-333333333333' else '44444444-4444-4444-4444-444444444444')
+                self.assertTrue(self.remove()['verified_clean'])
+                self.assertFalse(directory.exists());self.assertEqual(foreign.read_text(),'preserve')
+                calls=self.remote.calls[start:]
+                self.assertEqual(sum(uri.endswith('/dev/install') for uri,_ in calls),0)
+                self.assertEqual(sum(uri.endswith('/dev/remove') for uri,_ in calls),1)
 
     def test_legacy_state_symlink_does_not_write_into_foreign_directory(self):
         foreign=self.root/'foreign';foreign.mkdir();(foreign/'keep').write_text('preserve')

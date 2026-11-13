@@ -463,7 +463,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                 if profile['edition'] == 'root' and not resume:
                     installer.select_graphics()
                     phase = 'inspect-installation'
-                    from .root_capabilities import LegacyRibbonError
+                    from .root_capabilities import NoRootAlternativeError, RootCapabilityError
                     from .root_runtime import offer
                     try:
                         if replacing_activation:
@@ -481,10 +481,12 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                                 if profile['edition'] == 'root':
                                     installer.select_graphics()
                                     installer.preflight(install=True, home_interfaces=True)
-                    except LegacyRibbonError as error:
+                    except RootCapabilityError as error:
+                        if profile.get('root_variant') != BETA and not isinstance(error, NoRootAlternativeError):
+                            raise
                         if args.migrate_home:
                             raise UserError('Choose an alternative edition without --migrate-home. Installation has not started.')
-                        offer(installer, args, ask, write, ribbon_error=error)
+                        offer(installer, args, ask, write, home_error=error)
                     except ExistingRoot:
                         if tv_info.get('home_backend') == 'c1-native-gate':
                             raise UserError('Root is already installed or recovery state remains. Use cytv status or cytv restore; reinstallation has not started.')

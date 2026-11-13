@@ -90,6 +90,17 @@ class ContextTests(unittest.TestCase):
         self.assertEqual(later['first_failure']['status']['product']['last_failure']['cleanup_probe'],expected)
         self.assertNotIn('PRIVATE',json.dumps([report,later]))
 
+    def test_inspect_check_is_allowlisted_in_product_report(self):
+        product = {'state': 'recovery_required', 'stage': 'blocked',
+                   'failure': {'exception_type': 'ValueError', 'inspect_check': 'restored_routes_changed'},
+                   'last_failure': {'exception_type': 'ValueError', 'inspect_check': 'PRIVATE'}}
+        report = self.report('install', 'inspect-installation', UserError('blocked'),
+                             status={'device': {'product': product}})
+        observed = report['status']['product']
+        self.assertEqual(observed['failure'].get('inspect_check'), 'restored_routes_changed')
+        self.assertNotIn('inspect_check', observed['last_failure'])
+        self.assertNotIn('PRIVATE', json.dumps(report))
+
     def test_removal_reports_keep_fixed_failure_codes_without_private_messages(self):
         for reason in ('root-worker-busy', 'root-access-required', 'removal-failed',
                        'cleanup-check-failed', 'connection-interrupted'):

@@ -314,6 +314,34 @@ class DesktopRecoveryTests(unittest.TestCase):
         w.receive('done', 2)
         self.assertIsNotNone(self.button(w, 'Try again'))
 
+    def test_try_again_finishes_existing_root_private_cleanup(self):
+        from tests.cytv.clean_removal_fixture import prepare
+
+        outcomes = iter(('cleanup-check-failed', 'complete'))
+        prepare(self, lambda: next(outcomes))
+        # The saved removal predates this installer session, as in #588.
+        self.store.request_clean_removal(self.profile)
+        self.store.checkpoint(self.profile, stage='private-cleanup', removal_reason='cleanup-check-failed')
+        original = self.store.pending(self.profile)
+        w = self.window()
+        w.start('uninstall', self.profile)
+        self.pump(lambda: not w.running or w.pending is not None)
+        self.assertIsNone(w.pending, 'An existing cleanup must not ask for approval again')
+        self.assertEqual(w.title.text(), 'Finish Clean Your TV cleanup')
+
+        retry = self.button(w, 'Try again')
+        self.assertIsNotNone(retry)
+        retry.click()
+        self.pump(lambda: not w.running or w.pending is not None)
+
+        self.assertIsNone(w.pending)
+        self.assertEqual(w.title.text(), 'Clean Your TV removal is verified.', w.content.toPlainText())
+        self.assertEqual(self.device_removals, [original['product_operation']] * 2)
+        self.assertIsNone(self.store.pending(self.profile))
+        receipt = json.loads((self.store.device_dir(self.profile) / 'clean-removal.json').read_bytes())
+        self.assertEqual(receipt['removal_operation'], original['removal_operation'])
+        self.assertTrue(receipt['result']['verified_clean'])
+
     def test_root_partial_cleanup_shows_current_phase_and_retains_original_failure(self):
         from tests.cytv.clean_removal_fixture import prepare
         original = prepare(self, 'partial')

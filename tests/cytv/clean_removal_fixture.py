@@ -52,12 +52,15 @@ def prepare(fixture, outcome='complete'):
                 pending = fixture.store.pending(fixture.profile)
                 assert words[words.index('--removal-intent')+1] == pending['removal_operation']
                 fixture.device_removals.append(operation)
-                complete = outcome == 'complete'
+                current = outcome() if callable(outcome) else outcome
+                complete = current == 'complete'
                 return json.dumps({'operation':operation, 'state':'complete' if complete else 'recovery_required',
                     'stage':'verified-clean' if complete else 'private-cleanup', 'current':complete,
                     'reason':'removal-verified' if complete else 'private-cleanup-incomplete',
+                    **({'cleanup_error': 'cleanup-check-failed'} if current == 'cleanup-check-failed' else {}),
                     'result':{'removed':complete,'private_cleanup_verified':complete,
-                              'applications_services_startup_removed':complete}})
+                              'applications_services_startup_removed':complete,
+                              **({'restart_required': True} if current == 'cleanup-check-failed' else {})}})
         return original_run(command, **kwargs)
     fixture.remote.run = run
     return original

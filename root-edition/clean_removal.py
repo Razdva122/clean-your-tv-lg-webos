@@ -359,7 +359,9 @@ def compact_audit(record, store):
             elif key=='action' and item in ('install','remove'):result[key]=item
             elif key in ('stage','phase') and isinstance(item,str):result[key]=item if item in phases else 'unknown'
             elif key=='state' and item in ('pending','complete','recovery_required','unknown'):result[key]=item
-            elif key=='code' and item in ('verified','operation_pending','unknown_operation','installation_requires_recovery','clean_removal_requested','continuation_requires_recovery'):result[key]=item
+            elif key=='code' and item in ('verified','operation_pending','unknown_operation',
+                    'installation_requires_recovery','operation_requires_recovery',
+                    'clean_removal_requested','continuation_requires_recovery'):result[key]=item
             elif key in ('schema','version') and type(item) is int and 0<=item<=2:result[key]=item
             elif key in ('home_changed','terminal') and type(item) is bool:result[key]=item
             elif key=='failure' and isinstance(item,dict):

@@ -80,6 +80,30 @@ class NativeOperationsTests(unittest.TestCase):
                 self.assertEqual(target.read_bytes(),b'preserve foreign bytes')
                 remote.upload.assert_not_called();remote.luna.assert_not_called()
 
+    def test_interrupted_native_handoff_without_root_files_uses_compositor_cleanup(self):
+        import hashlib
+        from tests.cytv.test_full_uninstall import FullUninstallTests
+        installer, remote, store, profile, calls, device = FullUninstallTests.fixture(self)
+        native = installer.payload/'root-c1'
+        native.mkdir()
+        (native/'bundle.json').write_text(json.dumps({'files': {'release.json': hashlib.sha256(b'{}').hexdigest()}}))
+        (native/'release.json').write_bytes(b'{}')
+        operation = device['target_operation']
+        stage = '/tmp/cytv-product-' + 'a' * 32
+        store.begin(profile, 'install', stage='setup', product_operation=operation,
+                    product_payload=stage, home_backend='c1-native-gate', requires_updater=False)
+        original = store.pending(profile)
+        installer.native_root_present = MagicMock(return_value=False)
+        with patch.object(installer, 'upload_product', wraps=installer.upload_product) as upload:
+            result = installer.uninstall_project()
+            self.assertTrue(result['verified_clean'])
+            upload.assert_called_once_with(native, clean_removal=True)
+        self.assertEqual(calls, [('clean-target', operation), ('clean-remove', operation)])
+        self.assertIn('--retire-stage ' + stage, remote.run.call_args.args[0])
+        receipt = json.loads((store.device_dir(profile)/'clean-removal.json').read_bytes())
+        self.assertEqual(receipt['previous'], original)
+        self.assertIsNone(store.pending(profile))
+
     def test_uncertain_install_submission_stays_pending_when_root_files_are_absent(self):
         with tempfile.TemporaryDirectory() as folder:
             store=state.Store(folder);profile=state.target('tv.local','root')

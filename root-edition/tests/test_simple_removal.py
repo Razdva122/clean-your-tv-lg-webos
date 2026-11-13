@@ -96,6 +96,40 @@ class SimpleRemoval(unittest.TestCase):
         self.assertEqual(driver.clean_remove(identifier)['stage'],'verified-clean')
         self.assertFalse(any(name.startswith('remove-') for name in calls))
 
+    def test_legacy_blocked_install_retains_reason_after_verified_removal(self):
+        from installation import Busy
+
+        driver, identifier, root, _, _, calls, present = self.prepare(unknown=True)
+        request = dict(operation=identifier, action='install', code='operation_requires_recovery',
+                       home_changed=False, stage='blocked', state='recovery_required')
+        driver.store.write('request-'+identifier, request)
+        foreign = 'org.example.foreign'
+        present.add(foreign)
+        intent = 'e'*32
+        target = driver.removal_target(identifier)
+        lease = target['target_lease']
+        self.assertEqual(target['target_operation'], identifier)
+
+        with driver.ownership.operation('product', 'product-'+identifier+'.json', resume=lease):
+            with self.assertRaises(Busy):
+                driver.clean_remove(identifier, intent=intent, expected_lease=lease)
+        self.assertEqual(calls, [])
+        self.assertEqual(driver.status(identifier), request)
+
+        first = driver.clean_remove(identifier, intent=intent, expected_lease=lease)
+        self.assertEqual(first['stage'], 'restart-required')
+        self.assertEqual(driver.status(identifier), request)
+        self.assertFalse((root/'state/ssap.json').exists())
+
+        self.boot = '22222222-2222-2222-2222-222222222222'
+        final = driver.clean_remove(identifier, intent=intent, expected_lease=lease)
+        self.assertEqual(final['stage'], 'verified-clean')
+        self.assertTrue(final['result']['verified_clean'])
+        self.assertEqual(present, {foreign})
+        self.assertEqual(calls.count('remove-'+APPS[0]), 1)
+        self.assertEqual(final['original']['request'], request)
+        self.assertEqual(driver.status(identifier), request)
+
     def test_retry_uses_current_presence_not_stale_submitted_json(self):
         device=Mock();device.apps.return_value=set()
         record={'packages':{APPS[0]:{'state':'submitted'}}}

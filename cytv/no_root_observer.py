@@ -22,6 +22,7 @@ JAIL_ROOT = '/.cytv-installer'
 PUBLIC_ROOT = '/media/developer/temp'
 ROOT_SSH_PRIVATE = '/tmp/.cytv-installer-root'
 ROOT_SSH_PUBLIC = '/var/lib/clean-your-tv-installer'
+ROOT_SSH_DISK = ROOT_SSH_PUBLIC + '/private'
 APPS = ('com.local.nativehome', 'com.gathin.tvhome')
 
 # Read-only selection before pending. Never rediscover a root for recovery.
@@ -510,7 +511,11 @@ if(!plan||plan.connection!=='root-ssh'||uid!==0||root!=='/tmp/.cytv-installer-ro
 )
 
 
-def source_for(root_ssh):
+def source_for(root_ssh, private=None):
+    # Existing capsules continue to authenticate the original source bytes.
+    if root_ssh and private == ROOT_SSH_DISK:
+        return ROOT_PROGRAM.replace("root!=='/tmp/.cytv-installer-root'",
+                                    "root!==plan.private_root||root!==" + canonical(ROOT_SSH_DISK))
     return ROOT_PROGRAM if root_ssh else PROGRAM
 
 
@@ -529,12 +534,12 @@ def make_plan(operation, diagnostic_id, action, artifacts, versions, public_root
                           artifact_sha256=hashlib.sha256(artifacts[name]).hexdigest() if action == 'install' else None,
                           version=versions[app] if action == 'install' else None))
     plan = dict(protocol=PROTOCOL, edition='no-root', operation=operation, diagnostic_id=diagnostic_id,
-                action=action, source_sha256=hashlib.sha256(source_for(root_ssh).encode()).hexdigest(), slots=slots,
+                action=action, source_sha256=hashlib.sha256(source_for(root_ssh, private_root).encode()).hexdigest(), slots=slots,
                 configuration_sha256=configuration_sha256 or hashlib.sha256(b'{}').hexdigest())
     if root_ssh:
         plan['connection'] = 'root-ssh'
     if private_root is not None:
-        if root_ssh or type(private_root) is not str or private_root not in (ROOT, JAIL_ROOT):
+        if type(private_root) is not str or private_root not in ((ROOT_SSH_DISK,) if root_ssh else (ROOT, JAIL_ROOT)):
             refuse()
         plan['private_root'] = private_root
     if setup_start is not None:
@@ -544,16 +549,18 @@ def make_plan(operation, diagnostic_id, action, artifacts, versions, public_root
         plan['setup_start'] = dict(setup_start)
     if root_handoff is not None:
         from .root_no_root_handoff import validate
-        if not root_ssh:refuse()
+        if not root_ssh or private_root is not None:refuse()
         plan['root_handoff']=validate(root_handoff)
     return plan
 
 
 def private_root(plan):
     if plan.get('connection') == 'root-ssh':
-        if 'private_root' in plan:
+        if 'private_root' not in plan:
+            return ROOT_SSH_PRIVATE
+        if plan['private_root'] != ROOT_SSH_DISK or 'root_handoff' in plan:
             refuse()
-        return ROOT_SSH_PRIVATE
+        return ROOT_SSH_DISK
     root = plan.get('private_root', ROOT)
     if type(root) is not str or root not in (ROOT, JAIL_ROOT):
         refuse()
@@ -575,13 +582,23 @@ def invoke(remote, plan, command, slot=None, source=None, proof=None, data=None)
     if plan.get('connection') == 'root-ssh':
         if not getattr(remote, 'root', False):
             refuse()
-        request.update(root=ROOT_SSH_PRIVATE, public_root=ROOT_SSH_PUBLIC, sender='/usr/bin/luna-send')
-    program_source = source_for(plan.get('connection') == 'root-ssh')
+        request.update(public_root=ROOT_SSH_PUBLIC, sender='/usr/bin/luna-send')
+    program_source = source_for(plan.get('connection') == 'root-ssh', plan.get('private_root'))
     if command == 'storage-select':
         if plan.get('connection') == 'root-ssh' or 'private_root' in plan:
             refuse()
         request['alternate_root'] = JAIL_ROOT
         program_source = STORAGE_SELECT
+    if command == 'storage-inspect':
+        if plan.get('connection') != 'root-ssh' or 'root_handoff' in plan:
+            refuse()
+        program_source = program_source.replace("case 'storage-check':result=storageCheck();break;", """case 'storage-inspect':
+ ancestry(path.dirname(publicRoot),true);
+ if(exists(publicRoot))ancestry(publicRoot,true);
+ if(exists(path.dirname(root)))ancestry(path.dirname(root));
+ if(exists(root))directory(root,true);
+ if(exists(active)){directory(active,true);if(fs.readdirSync(active).length)fail('foreign-reservation');}
+ result={operation:op};break;""")
     if command == 'prepare':
         request['source'] = program_source if source is None else source
     if proof is not None:request['proof']=proof
@@ -657,14 +674,42 @@ def refuse():
                     reason_code='pending-operation')
 
 
-def begin(installer, action, artifacts, versions, expected, configuration, setup_activation=False):
+def root_ssh_storage(installer, ramfs=False):
+    legacy = shlex.quote(ROOT_SSH_PRIVATE)
+    disk = shlex.quote(ROOT_SSH_DISK)
+    command = f'''
+if [ -e {legacy} ] || [ -L {legacy} ]; then
+    printf CYTV_LEGACY_STORAGE
+fi
+if [ -e {disk} ] || [ -L {disk} ]; then
+    printf CYTV_DISK_STORAGE
+fi
+'''
+    layout = installer.remote.run(command).strip()
+    if not ramfs and layout in ('', 'CYTV_LEGACY_STORAGE'):
+        return None
+    if layout in ('', 'CYTV_DISK_STORAGE') and not getattr(installer, '_root_handoff', None):
+        return ROOT_SSH_DISK
+    refuse()
+
+
+def inspect_root_ssh_storage(installer, bundles, ramfs):
+    selected = root_ssh_storage(installer, ramfs)
+    versions = dict(zip(APPS, (installer.manifest['helper_version'], installer.manifest['home_version'])))
+    plan = make_plan(uuid.uuid4().hex, uuid.uuid4().hex, 'install', bundles, versions,
+                     root_ssh=True, private_root=selected)
+    invoke(installer.remote, plan, 'storage-inspect')
+
+
+def begin(installer, action, artifacts, versions, expected, configuration, setup_activation=False, ramfs=False):
     operation = uuid.uuid4().hex
     installer.store.check_capsule_storage(installer.profile, operation)
     # No package request or durable pending receipt until storage is usable.
     root_ssh = installer.profile.get('connection') == 'root-ssh'
     handoff=getattr(installer,'_root_handoff',None)
-    check_plan = make_plan(operation, uuid.uuid4().hex, action, artifacts, versions, PUBLIC_ROOT, root_ssh=root_ssh,root_handoff=handoff)
-    selected = None
+    selected = root_ssh_storage(installer, ramfs) if root_ssh else None
+    check_plan = make_plan(operation, uuid.uuid4().hex, action, artifacts, versions, PUBLIC_ROOT, root_ssh=root_ssh,
+                           private_root=selected, root_handoff=handoff)
     if not root_ssh:
         selected = invoke(installer.remote, check_plan, 'storage-select').get('root')
         if type(selected) is not str or selected not in (ROOT, JAIL_ROOT):
@@ -691,7 +736,7 @@ def begin(installer, action, artifacts, versions, expected, configuration, setup
     pending = installer.store.pending(installer.profile)
     config_hash=hashlib.sha256(canonical({name:hashlib.sha256(raw).hexdigest() for name,raw in configuration.items()}).encode()).hexdigest()
     plan = make_plan(operation, pending['diagnostic_id'], action, artifacts, versions, PUBLIC_ROOT,config_hash,root_ssh=root_ssh,private_root=selected,root_handoff=handoff,setup_start=setup_start)
-    capsule = dict(schema=1, profile=installer.profile, plan=plan, source=source_for(root_ssh), expected=expected,
+    capsule = dict(schema=1, profile=installer.profile, plan=plan, source=source_for(root_ssh, selected), expected=expected,
                    artifacts={name: base64.b64encode(raw).decode() for name, raw in artifacts.items()},
                    configuration={name: raw.decode('utf8') for name, raw in configuration.items()})
     digest = installer.store.save_capsule(installer.profile, operation, capsule)
@@ -732,7 +777,7 @@ def capsule(installer, pending):
                 hashlib.sha256(value['source'].encode()).hexdigest() != plan['source_sha256'] or
                 value['expected'] != pending['expected']):
             refuse()
-        if value['source'] != source_for(installer.profile.get('connection') == 'root-ssh'):
+        if value['source'] != source_for(installer.profile.get('connection') == 'root-ssh', plan.get('private_root')):
             raise LocalRecoveryError('source-incompatible')
         artifacts = {name: base64.b64decode(raw, validate=True) for name, raw in value['artifacts'].items()}
         config_hash=hashlib.sha256(canonical({name:hashlib.sha256(raw.encode()).hexdigest() for name,raw in value['configuration'].items()}).encode()).hexdigest()
@@ -870,7 +915,20 @@ def readback(installer, value, index, allow_empty=False):
 
 
 def snapshot(installer, value):
-    plan=value['plan']; result=invoke(installer.remote,plan,'status')
+    plan = value['plan']
+    for attempt in range(3):
+        try:
+            result = invoke(installer.remote, plan, 'status')
+            break
+        except UserError as error:
+            details = getattr(error, 'no_root_observer', {})
+            # A detached writer can be publishing a claim or terminal while
+            # status reads it. Retry the read without changing evidence checks.
+            publishing = (details.get('observer_reason') in ('unsafe-file', 'changed-file', 'short-read')
+                          or details.get('exception_name') == 'SyntaxError')
+            if attempt == 2 or details.get('failure') != 'observer-error' or not publishing:
+                raise
+            time.sleep(0.1)
     if (result.get('protocol')!=PROTOCOL or result.get('plan_sha256')!=hashlib.sha256(canonical(plan).encode()).hexdigest()
             or not isinstance(result.get('slots'),list) or len(result['slots'])!=2
             or result.get('reservation') not in ('active','prepared','closed','busy','unknown')

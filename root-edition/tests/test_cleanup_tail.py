@@ -155,7 +155,13 @@ class CleanupTail(unittest.TestCase):
                 self.assertNotEqual(reply.get('state'),'complete')
 
     def test_inert_system_staging_does_not_block_final_removal_or_recheck(self):
-        stage=self.base/'tmp'/('cytv-system-updater-'+'c'*32);stage.mkdir(mode=0o700)
+        self.check_inert_staging('system-updater')
+
+    def test_inert_product_staging_does_not_block_final_removal_or_recheck(self):
+        self.check_inert_staging('product')
+
+    def check_inert_staging(self, prefix):
+        stage=self.base/'tmp'/('cytv-'+prefix+'-'+'c'*32);stage.mkdir(mode=0o700)
         (stage/'unknown-diagnostic.txt').write_text('retain without execution')
         info=stage.stat()
         self.record['retained_temporary_stages']=[dict(path='/tmp/'+stage.name,dev=info.st_dev,ino=info.st_ino)]
@@ -881,6 +887,28 @@ class CleanupTail(unittest.TestCase):
         self.assertEqual(reply['stage'], 'verified-clean')
         self.assertFalse(self.runtime.exists())
         self.assertEqual(json.loads((self.state/('routing-backup-'+ID+'.json')).read_text()), self.native_backup)
+
+    def test_failed_native_handoff_without_deploy_journal_finalizes_on_bsp(self):
+        self.compositor_record()
+        (self.base/'overlay/bsppart/bsp/usr').mkdir(parents=True)
+        (self.base/'proc/self/mountinfo').write_text(
+            '1 0 179:27 / / ro - squashfs /dev/root ro\n'
+            '3 1 179:29 / /overlay/bsppart ro - squashfs /dev/mmcblk0p29 ro\n'
+            '2 1 0:290 / /usr rw - overlay overlay ro,lowerdir=/overlay/bsppart/bsp/usr:/usr\n')
+        self.record['original'] = {
+            'operation': ID,
+            'request': {'stage': 'root-deploy', 'state': 'recovery_required',
+                        'home_changed': False, 'clean_predecessor': 'c' * 32},
+            'components': {'deploy': None},
+        }
+        self.write('clean-removal-'+ID+'.json', self.record)
+        result, reply = self.compositor_tail(BSP_DEVICE=str(179*256+29))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(reply['stage'], 'verified-clean')
+        self.assertFalse(self.runtime.exists())
+        result, reply = self.compositor_tail(MODE='stock-proof', BSP_DEVICE=str(179*256+29))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(reply['routes'], self.record['routes'])
 
     def test_native_bsp_overlay_rejects_unverified_layout_before_mutation(self):
         mount, root, bsp, overlay = self.bsp_mounts()
