@@ -614,7 +614,7 @@ def continue_removal(installer, expected_pending):
     if external_update is not None and not restarted:
         restart_triggers.append('resident-installer-evidence')
     if invalid_stop_record and restart_triggers:
-        raise UserError('Removal could not be checked. Recovery data was kept.', reason_code='cleanup-check-failed')
+        raise UserError('Removal could not be verified. Removal data was kept.', reason_code='cleanup-check-failed')
     if restart_triggers:
         return require_restart(restart_triggers, rearm=restarted)
 
@@ -629,7 +629,7 @@ def continue_removal(installer, expected_pending):
     if not wait_for_stopped_processes(invalid_stop_record or
                                      not restarted and (uncertain_install or inaccessible_packages or unavailable)):
         if invalid_stop_record:
-            raise UserError('Removal could not be checked. Recovery data was kept.', reason_code='cleanup-check-failed')
+            raise UserError('Removal could not be verified. Removal data was kept.', reason_code='cleanup-check-failed')
         return require_restart(['process-idle-unverified'], rearm=restarted)
     for app, message in zip(APPS, ('Removing Helper…', 'Removing Home…', 'Removing the updater…')):
         if app not in apps:
