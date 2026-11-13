@@ -48,10 +48,10 @@ def check(remote, requirements, progress, *, allow_tmp_ramfs=False):
             raise UserError('Available TV storage could not be determined. Installation stopped before package submission.')
         if (location == fields[5] == '/tmp' and fields[1:4] == ['0', '0', '0']
                 and _tmp_is_ramfs(remote)):
+            ramfs_tmp = True
             if allow_tmp_ramfs:
                 progress(TV_STORAGE_RAMFS)
             else:
-                ramfs_tmp = True
                 progress(UNKNOWN.format(location=location, required=mib(required + RESERVE)))
             continue
         key = (fields[0], fields[5])
@@ -68,12 +68,13 @@ def check(remote, requirements, progress, *, allow_tmp_ramfs=False):
             failed.append(message)
     if failed:
         raise UserError('\n'.join(failed), reason_code='tv-storage-full')
-    if ramfs_tmp:
+    if ramfs_tmp and not allow_tmp_ramfs:
         raise UserError(TV_STORAGE_RAMFS + ' Installation stopped before package submission.',
                         reason_code='tv-storage-ramfs')
+    return ramfs_tmp
 
 
-def install(remote, bundles, progress, root=False):
+def install(remote, bundles, progress, root=False, *, no_root_root_ssh=False):
     """Budget new bytes alongside existing installs, including staging and rollback copies.
 
     This is a conservative estimate, not a promise about appinstalld's private
@@ -82,6 +83,7 @@ def install(remote, bundles, progress, root=False):
     staged = sum(len(data) for data in bundles.values())
     sizes = [unpacked(data) for name, data in bundles.items() if name.endswith('.ipk')]
     expanded = sum(sizes)
+    root = root or no_root_root_ssh
     if root:
         requirements = {'/tmp': staged + max(sizes, default=0),
                         '/var/lib': 2 * (staged + expanded),
@@ -89,9 +91,9 @@ def install(remote, bundles, progress, root=False):
     else:
         requirements = {'/media/developer': staged + 2 * expanded,
                         '/tmp': max(sizes, default=0)}
-    # Developer Mode expands the application under /media/developer/apps.
-    # On ramfs, the vendor's /tmp bookkeeping has no measurable block budget.
-    check(remote, requirements, progress, allow_tmp_ramfs=not root)
+    # Both No-root connections expand apps under /media/developer/apps. Root
+    # SSH stages the IPKs on /var/lib. Vendor scratch on ramfs is unmeasurable.
+    return check(remote, requirements, progress, allow_tmp_ramfs=not root or no_root_root_ssh)
 
 
 def local(required, progress):

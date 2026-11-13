@@ -67,6 +67,8 @@ def require_idle(store, profile, replacing=None):
 def offer(installer, args, ask, write, *, home_error=None):
     """Offer a compatible edition before submitting any installation."""
     require_idle(installer.store, installer.profile)
+    previous = dict(installer.profile)
+    no_root = state.target(previous['host'], 'no-root', previous['port'], previous.get('identity'), connection='root-ssh')
     if home_error is None:
         value = installer.remote.run('/usr/bin/node --version', timeout=10).strip()
         options = alternatives(value)
@@ -77,8 +79,19 @@ def offer(installer, args, ask, write, *, home_error=None):
     else:
         if args.non_interactive:
             raise home_error
+        from .operations import Installer
+        payload, manifest = installer._ordinary_payload or (installer.payload, installer.manifest)
+        candidate = Installer(installer.remote, installer.store, no_root, payload, manifest,
+                              progress=lambda _: None)
+        try:
+            candidate.check_no_root_alternative()
+        except UserError as error:
+            write(str(error))
+            raise home_error from None
+        except (OSError, RuntimeError, ValueError, KeyError, TypeError):
+            raise home_error from None
         options = ('no-root',)
-    if installer.remote.run(FRESH_PROBE, timeout=10).strip() != 'CYTV_FRESH_ROOT':
+    if home_error is None and installer.remote.run(FRESH_PROBE, timeout=10).strip() != 'CYTV_FRESH_ROOT':
         from .root_no_root_handoff import probe
         try:installer._root_handoff=probe(installer)
         except (OSError,ValueError,RuntimeError):
@@ -100,9 +113,8 @@ def offer(installer, args, ask, write, *, home_error=None):
     if choice == 0:
         raise EOFError
     require_idle(installer.store, installer.profile)
-    previous = dict(installer.profile)
     if choice == 1:
-        selected = state.target(previous['host'], 'no-root', previous['port'], previous.get('identity'), connection='root-ssh')
+        selected = no_root
         # Preserve the already authenticated exact host key and SSAP connection.
         source = installer.store.device_dir(previous)
         target = installer.store.device_dir(selected)
@@ -119,6 +131,8 @@ def offer(installer, args, ask, write, *, home_error=None):
     installer.profile.clear()
     installer.profile.update(selected)
     installer.store.save(installer.profile)
+    if hasattr(installer, '_graphics_paths'):
+        del installer._graphics_paths
     installer.use_runtime_variant()
     installer.checks.results.clear()
     write.selected_profile(selected)

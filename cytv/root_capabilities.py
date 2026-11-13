@@ -18,8 +18,9 @@ COMPOSITOR_FAILURES = (
 KEYFILTER_PROBE_STATES = ('timeout', 'rejected', 'unconfirmed', 'invalid-reply', 'not-configured',
                           'incompatible', 'readable', 'service-absent')
 RIBBON_PROBE_STATES = ('readable', 'rejected', 'timeout', 'invalid-reply', 'unconfirmed')
-LEGACY_RIBBON = ('This TV uses the LG Home ribbon and has no System Profile or KeyFilters support. '
-                 'Choose No-root to continue.')
+LEGACY_RIBBON = 'This TV uses the LG Home ribbon and has no System Profile or KeyFilters support.'
+
+
 NATIVE_HOME_UNAVAILABLE_MESSAGE = 'Root cannot control Home on this TV. You can try No-root using the existing SSH connection.'
 
 
@@ -273,6 +274,9 @@ def verify(remote, checklist, info, allow_c1=False, allow_compositor=False):
             if failure is not None:
                 info['root_compositor_failure'] = failure
             requirements[name] = 'fail'
+            if failure == 'native-home-unavailable':
+                checklist.update(name, 'fail', NATIVE_HOME_UNAVAILABLE_MESSAGE)
+                raise NoRootAlternativeError(NATIVE_HOME_UNAVAILABLE_MESSAGE)
             if failure == 'native-home-unavailable':
                 checklist.update(name, 'fail', NATIVE_HOME_UNAVAILABLE_MESSAGE)
                 raise NoRootAlternativeError(NATIVE_HOME_UNAVAILABLE_MESSAGE)
