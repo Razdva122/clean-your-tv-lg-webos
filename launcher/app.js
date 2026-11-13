@@ -2722,16 +2722,27 @@
     if (focusZone === 'grid') focusTile(focusedTile);
     else setScroll(scrollOffset);
   });
+  function startOptional(start) {
+    Promise.resolve()
+      .then(start)
+      .catch(function () {});
+  }
   window.HomeUIReady = (
     window.ThemeManager
       ? ThemeManager.start(presentHome)
       : Promise.resolve().then(presentHome)
   ).then(function () {
     window.RootLauncherRendered = true;
-    if (window.HomeWeather) HomeWeather.start();
+    // Optional modules start independently after required presentation.
+    if (window.HomeWeather)
+      startOptional(function () {
+        return HomeWeather.start();
+      });
     if (window.CYTVInstallSettings)
-      CYTVInstallSettings.listen(function () {
-        showToast(tr("Couldn't save changes. Please try again."));
+      startOptional(function () {
+        return CYTVInstallSettings.listen(function () {
+          showToast(tr("Couldn't save changes. Please try again."));
+        });
       });
   });
 })();

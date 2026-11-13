@@ -1,4 +1,4 @@
-"""Optional LG settings changes after installation, with per-setting readback."""
+"""Optional LG settings changes with per-setting readback."""
 from contextlib import ExitStack
 import json
 import shlex
@@ -14,6 +14,7 @@ TITLE = 'Debloat'
 SELECT = 'Select Debloat settings: '
 REVIEW = 'Review Debloat results: '
 CONTINUE = 'Continue to customization'
+APPLY = 'Apply selected settings'
 RESTORE_PROMPT = 'Restore saved Debloat settings before removal?'
 RESTORE_LABEL = 'Restore saved Debloat settings'
 SKIP_RESTORE = 'Skip restoration'
@@ -302,8 +303,11 @@ def apply(installer, selected, progress=lambda _: None, *, diagnostic=None):
     return results
 
 
-def run(installer, ask, write, *, diagnostic=None):
-    write.step(5, TITLE)
+def run(installer, ask, write, *, diagnostic=None, maintenance=False):
+    if maintenance:
+        write.heading(TITLE)
+    else:
+        write.step(5, TITLE)
     if write.frontend == 'desktop':
         try:
             selected = json.loads(prompts.answer(ask, SELECT))
@@ -366,4 +370,5 @@ def run(installer, ask, write, *, diagnostic=None):
             write(f'{icon} {tr(SETTINGS[key][1])} — {tr(message)}')
         if write.frontend == 'android':
             write.option('1', CONTINUE)
-        prompts.answer(ask, tr('Continue to customization: '))
+        if not maintenance:
+            prompts.answer(ask, tr('Continue to customization: '))

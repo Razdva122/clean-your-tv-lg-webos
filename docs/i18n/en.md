@@ -119,15 +119,25 @@ Choose **Uninstall Clean Your TV** in Maintenance with the same saved TV connect
 
 On older TVs without a separate LG Home app, No-root removal may switch to Live TV. Keep the TV on and follow any requested restart; do not delete recovery records or reset the TV.
 
-When asked, disconnect the TV from power, reconnect it, wait for the network and choose **Try again**. Standby or Quick Start is not a full restart; CYTV does not restart the TV automatically. A connection loss needs a connection check and Try again on the same goal, without another recovery wizard. If access is denied, use the requested Root connection; if the TV is busy, wait and retry. Success appears only after final cleanup is verified. Keep your keys and original reports. The emergency controls and sharing consent above still apply.
+When asked, disconnect the TV from power, reconnect it, wait for the network and choose **Try again**. Standby or Quick Start is not a full restart; CYTV does not restart the TV automatically. If access is denied, use the requested Root connection; if the TV is busy, wait and retry. Success appears only after final cleanup is verified. Keep your keys and original reports. The emergency controls and sharing consent above still apply.
+
+If the installer cannot verify removal, final cleanup, TV controls or the package result, or reports changed project paths, choose **Review recovery options** with the original saved connection. Confirm continuation separately if the installer offers it.
 
 If the installer cannot verify the requested full restart, save and attach its diagnostic report. Keep the saved connection and recovery data. Do not keep repeating power cycles or clear the unfinished operation manually.
 
 Failed or interrupted setup offers recovery directly. If No-root setup cannot continue, confirm full removal once. Removal automatically retries transient connection loss and a busy CYTV worker up to three attempts. If Root access is required, choose **Connect using Root** for the same TV; verified Root cleanup also finishes its blocked No-root removal. A failed Root activation attempts to restore and verify LG Home without repeating activation. Cancellation with unfinished work keeps a diagnostic report and recovery actions. Emergency-stop state remains unchanged.
 
-After a removal connection error, open the connection details, check network access or choose an existing Root SSH key, then retry. The TV address, edition, port and host-key checks stay fixed. When reinstalling No-root, the wizard tries to stop Helper automatically. Use Home only if prompted, then confirm the recheck. The installer waits for busy package operations and Clean Your TV processes before continuing No-root removal. If the installer requests a restart, complete it and retry. Input-service failure allows safe package cleanup, but success still requires verified shortcut cleanup.
+If removal stops after a temporary connection loss, check the network and choose **Try again** when offered to continue the same removal. If sign-in fails, the connection cannot be verified, or the result is unclear, choose **Review recovery options**. If **Connection details** is offered, use it to check the connection or select an existing Root SSH key for the recovery check. The saved TV address, edition, port and host-key verification stay fixed. If the installer offers to continue removal after review, confirm separately.
+
+When reinstalling No-root, the wizard tries to stop Helper automatically. Use Home only if prompted, then confirm the recheck. The installer waits for busy package operations and Clean Your TV processes before continuing No-root removal. If the installer requests a restart, complete it and retry. Input-service failure allows safe package cleanup, but success still requires verified shortcut cleanup.
 
 **Reinstall Root:** Choose **Set up my TV → Root** with the saved connection and confirm **Reinstall Root?**. The installer restores LG Home and fully removes Clean Your TV, including its updaters, Home Helper and saved preferences. After verified removal, it installs and activates the packages and Root runtime bundled with that installer. Other TV apps and existing root/SSH access are preserved. If removal stops or requests a full restart, finish it before starting setup again. **Uninstall Clean Your TV** alone never starts another installation.
+
+### Adjust LG settings and finish a Root rollback
+
+In the desktop installer, open **Maintenance action → Adjust LG settings (Debloat)** with your saved TV connection. Select the settings you want to change, choose **Apply selected settings**, then review the results. If an earlier operation is unresolved, choose **Review recovery options** with its original saved connection first.
+
+After a rollback readiness error, use the original saved Root connection. Choose **Recover Root Updater rollback** or **Recover Root System Updater rollback**, depending on which updater reported the error, and confirm. For Root System Updater only, select **Start a new audited attempt after the previous deadline** if the previous attempt expired and the [recovery instructions](../RECOVERY.md#root-system-rollback-readiness-candidate) permit another attempt.
 
 <!-- Legacy anchors retained for existing links. Detailed references: -->
 <a id="optional-python-for-root-in-v110"></a>

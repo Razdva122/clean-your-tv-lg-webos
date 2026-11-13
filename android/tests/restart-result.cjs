@@ -111,7 +111,7 @@ let browser;
     );
     assert.equal(
       await page.locator('h1').innerText(),
-      'Removal is not finished yet.'
+      'Check the TV connection to continue removal'
     );
     assert(
       (await page.locator('.recovery-info').innerText()).includes(nextStep)
@@ -122,7 +122,7 @@ let browser;
       )
     );
     assert.equal(
-      await page.locator('[data-action=retry-removal].primary').count(),
+      await page.locator('[data-action=recover].primary').count(),
       1
     );
     assert.equal(
@@ -223,7 +223,7 @@ let browser;
   assert.deepEqual(errors, []);
   await browser.close();
   console.log(
-    'PASS removal restart semantics: five contradictory completion variants, five malformed shapes, current connection/auth priority, single-primary Retry/report behavior, semantic-only cleanup proof and unchanged Home-off completion'
+    'PASS removal restart semantics: five contradictory completion variants, five malformed shapes, current connection/auth priority, safe review fallback/report behavior, semantic-only cleanup proof and unchanged Home-off completion'
   );
 })().catch(async (error) => {
   console.error(error);

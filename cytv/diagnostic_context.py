@@ -31,10 +31,10 @@ REASONS += ACTIVATION_CODES
 REASONS += ('installer-runtime-mismatch', 'clean-handoff-refused', 'foreign-home-restore-failed')
 ACTIONS = ('recover', 'install', 'uninstall', 'restore', 'status', 'doctor', 'home-diagnostics',
            'enable-system-updates', 'enable-firmware-access', 'disable-firmware-access',
-           'recover-system-rollback', 'recover-root-rollback', 'replace-system-updater', 'clean-wam-cache')
+           'recover-system-rollback', 'recover-root-rollback', 'replace-system-updater', 'clean-wam-cache', 'debloat')
 PHASES = ('launch-helper', 'verify-home-button', 'select-tv', 'inspect-tv', 'select-edition', 'prepare-payload', 'ssh-connect',
           'inspect-installation', 'pair-tv', 'read-inventory', 'install-packages',
-          'install-helper', 'install-home', 'configure-helper', 'debloat', 'configure-home', 'install-root',
+          'install-helper', 'install-home', 'configure-helper', 'configure-home', 'install-root',
           'install-root-updater', 'verify-root-updater', 'verify-root-recovery',
           'stop-old-helper', 'activate-root', 'launch-root', 'remove-existing-root',
           'archive-root-state', 'doctor-complete', 'install-complete', 'preflight',

@@ -72,8 +72,12 @@ See [removal](RECOVERY.md#next-candidate-original-operation-recovery-and-full-re
 After a removal connection error, open the connection details on desktop or
 return to the connection screen on Android. The pending TV address, edition,
 SSH port and host-key verification remain fixed. Check network access or select
-an existing Root SSH private key, then retry the same removal. Choosing a key
-does not replace the saved host pin or recovery records.
+an existing Root SSH private key. For a known temporary interruption, use
+**Try again** when offered on the same removal. An authentication failure or
+unverified connection leads to **Review recovery options**, including when an
+existing Root key is selected. Continuing removal then needs a separate
+confirmation. Choosing a key does not replace the saved host pin or recovery
+records.
 
 When reinstalling No-root, the installer tries to stop a running Helper before
 pairing and verifies that its processes exited. If Helper is still running, use
@@ -88,8 +92,15 @@ unverifiable process, broken startup service or unresolved old operation keeps
 the full-restart path. A requested restart must still be completed. If the
 input-list API fails, CYTV tries deleting only
 its own input shortcut and continues safe package cleanup. A remaining unverified
-shortcut keeps removal pending; retry after the service is available. No success
+shortcut keeps removal pending; review recovery options after the service is available. No success
 is shown merely because the packages disappeared.
+
+When cleanup, package results, TV controls or project paths cannot be verified,
+choose **Review recovery options**. Keep the original saved connection and
+report. Reviewing the saved operation does not establish that the TV is clean;
+continuing removal requires a separate confirmation and current backend checks.
+Only a known connection interruption, busy operation or requested restart offers
+**Try again** after the stated condition is resolved.
 
 If the installer cannot verify a requested full restart, save and attach its
 diagnostic report and keep the saved connection and recovery data. Do not keep

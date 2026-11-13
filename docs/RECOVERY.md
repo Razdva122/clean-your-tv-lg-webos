@@ -152,6 +152,13 @@ require a full restart. Pending final verification is shown as remaining cleanup
 a connection interruption and an actual package-removal refusal have separate
 results. Pending cleanup never appears as verified success.
 
+When cleanup, package results, TV controls or project paths cannot be verified,
+choose **Review recovery options**. Keep the original saved connection and
+report. Reviewing the saved operation does not establish that the TV is clean;
+continuing removal requires a separate confirmation and current backend checks.
+Only a known connection interruption, busy operation or requested restart offers
+**Try again** after the stated condition is resolved.
+
 If the installer cannot verify a requested full restart, save and attach its
 diagnostic report and keep the saved connection and recovery data. Do not keep
 repeating power cycles or clear the unfinished operation manually.
@@ -380,7 +387,8 @@ are retained. For Root routing recovery, use the
 
 Use the same trusted Root SSH connection if Root Updater reports
 `recovery-required` with `restored profile readiness unconfirmed` after a
-successful automatic rollback.
+successful automatic rollback. In the desktop installer, choose **Maintenance →
+Recover Root Updater rollback**, or run:
 
 ```sh
 cytv recover-root-rollback --edition root
@@ -406,7 +414,8 @@ readiness before the deadline, the command finishes that attempt.
 **Available in cytv 0.6.0.** Use this explicit maintenance command only when a
 Root System rollback completed every package installer, but the restored launcher
 missed its readiness deadline. First check status using the same trusted TV
-connection and retain the failed attempt's diagnostic report.
+connection and retain the failed attempt's diagnostic report. In the desktop
+installer, choose **Maintenance → Recover Root System Updater rollback**, or run:
 
 ```sh
 cytv recover-system-rollback --edition root
@@ -423,7 +432,9 @@ A private durable audit records the attempt and its outcome. Retrying the normal
 command resumes only the same unexpired attempt and never extends its deadline.
 A failed or uncertain attempt keeps its evidence. After diagnosis, an explicit
 new attempt is available only after the previous **120-second deadline has
-expired**, with no accepted health receipt and no unknown installer outcome:
+expired**, with no accepted health receipt and no unknown installer outcome.
+In the desktop action, select **Start a new audited attempt after the previous
+deadline**, or run:
 
 ```sh
 cytv recover-system-rollback --edition root --new-recovery-attempt

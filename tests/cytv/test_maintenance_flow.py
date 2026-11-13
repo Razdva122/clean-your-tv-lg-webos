@@ -68,18 +68,19 @@ class MaintenanceFlowTests(unittest.TestCase):
                 ssap.assert_not_called()
 
     def test_explicit_recovery_key_does_not_replace_saved_target_or_host_pin(self):
-        with tempfile.TemporaryDirectory() as tmp,patch('cytv.cli.package.verify_payload',return_value={}),patch('cytv.cli.Installer'):
-            store=state.Store(tmp);profile=state.target('192.0.2.50','root',2222,identity='/old/key')
-            store.save(profile);directory=store.device_dir(profile)
-            (directory/'known_hosts').write_bytes(b'original pin');store.request_clean_removal(profile)
-            pending=store.pending(profile);connections=[]
-            def connect(selected,*args,**kwargs):
-                connections.append((dict(selected),kwargs));raise UserError('Stop before TV work')
-            result=cli.main(['uninstall','--host',profile['host'],'--edition','root','--port','2222','--identity',str(Path(tmp)/'new-key'),
-                             '--language','en','--data-dir',tmp],connect=connect,write=lambda _:None)
-            self.assertNotEqual(result,0)
-            self.assertEqual(connections[0][0]['identity'],str((Path(tmp)/'new-key').resolve()))
-            self.assertFalse(connections[0][1]['persist'])
-            self.assertEqual(store.pending(profile)['removal_operation'],pending['removal_operation'])
-            self.assertEqual((directory/'known_hosts').read_bytes(),b'original pin')
-            self.assertEqual(store.profiles(),[profile])
+        for command in ('uninstall', 'recover'):
+            with tempfile.TemporaryDirectory() as tmp,patch('cytv.cli.package.verify_payload',return_value={}),patch('cytv.cli.Installer'):
+                store=state.Store(tmp);profile=state.target('192.0.2.50','root',2222,identity='/old/key')
+                store.save(profile);directory=store.device_dir(profile)
+                (directory/'known_hosts').write_bytes(b'original pin');store.request_clean_removal(profile)
+                pending=store.pending(profile);connections=[]
+                def connect(selected,*args,**kwargs):
+                    connections.append((dict(selected),kwargs));raise UserError('Stop before TV work')
+                result=cli.main([command,'--host',profile['host'],'--edition','root','--port','2222','--identity',str(Path(tmp)/'new-key'),
+                                 '--language','en','--data-dir',tmp],connect=connect,ask=lambda _:'y',write=lambda _:None)
+                self.assertNotEqual(result,0)
+                self.assertEqual(connections[0][0]['identity'],str((Path(tmp)/'new-key').resolve()))
+                self.assertFalse(connections[0][1]['persist'])
+                self.assertEqual(store.pending(profile)['removal_operation'],pending['removal_operation'])
+                self.assertEqual((directory/'known_hosts').read_bytes(),b'original pin')
+                self.assertEqual(store.profiles(),[profile])

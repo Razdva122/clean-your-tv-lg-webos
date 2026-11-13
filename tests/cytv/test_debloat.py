@@ -133,7 +133,7 @@ class DebloatTests(unittest.TestCase):
         self.assertEqual(events, {'livePlus': 'already', 'lmt': 'pairing-rejected', 'aiNudge': 'pairing-rejected'})
         socket.send.assert_called_once()
 
-    def test_write_rejection_and_readback_failures_are_distinct_in_install_report(self):
+    def test_write_rejection_and_readback_failures_are_distinct_in_reports(self):
         self.installer.profile.update(edition='no-root', port=9922)
         self.installer.remote = SimpleNamespace(
             root=False, run=lambda command, **kwargs: 'null' if 'sportsAlarm' in command else '"on"')
@@ -148,13 +148,16 @@ class DebloatTests(unittest.TestCase):
         with patch('websockets.sync.client.connect', return_value=socket), patch.object(debloat.time, 'sleep'):
             result = debloat.apply(self.installer, ['homePromotion', 'aiNudge', 'sportsAlarm'], diagnostic=events)
         self.assertEqual(result, {'homePromotion': 'failed', 'aiNudge': 'failed', 'sportsAlarm': 'unverified'})
-        path = diagnostics.create_report(self.installer.store, 'install', self.installer.profile, 'install-complete',
-                                         tv_info={'debloat': {**events, 'private-key': 'verified', 'livePlus': 'private-value'}})
-        report = path.read_text()
-        self.assertEqual(json.loads(report)['debloat'], {
-            'homePromotion': 'write-rejected', 'aiNudge': 'verify-mismatch', 'sportsAlarm': 'verify-unavailable',
-        })
-        self.assertNotIn('private-', report)
+        for action, phase in (('install', 'install-complete'), ('debloat', 'debloat')):
+            with self.subTest(action=action):
+                path = diagnostics.create_report(
+                    self.installer.store, action, self.installer.profile, phase,
+                    tv_info={'debloat': {**events, 'private-key': 'verified', 'livePlus': 'private-value'}})
+                report = path.read_text()
+                self.assertEqual(json.loads(report)['debloat'], {
+                    'homePromotion': 'write-rejected', 'aiNudge': 'verify-mismatch', 'sportsAlarm': 'verify-unavailable',
+                })
+                self.assertNotIn('private-', report)
 
     def test_restore_requires_consent_and_keeps_unverified_entries(self):
         from cytv.terminal import Console

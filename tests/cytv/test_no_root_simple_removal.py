@@ -534,8 +534,9 @@ class SimpleRemoval(unittest.TestCase):
         self.assertTrue(self.remove()['restart_required'])
         self.assertFalse(self.remote.apps)
         self.reboot()
-        with self.assertRaisesRegex(UserError,'input shortcuts'):
+        with self.assertRaises(UserError) as caught:
             self.remove()
+        self.assertEqual(caught.exception.reason_code, 'controls-unverified')
         self.assertIsNotNone(self.store.pending(self.profile))
         self.remote.luna=original
         self.assertTrue(self.remove()['verified_clean'])

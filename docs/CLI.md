@@ -361,6 +361,7 @@ slots. See [candidate requirements](INSTALL.md#candidate-on-tv-root-installation
 ```sh
 ./cytv status
 ./cytv doctor
+./cytv debloat
 ./cytv restore
 ./cytv uninstall
 ./cytv enable-system-updates --edition root
@@ -373,6 +374,12 @@ without removing applications. `uninstall` restores before requesting removal an
 checks application, service and package absence. The published Root installer
 retains recovery evidence and referenced runtime data; do not delete it to force
 reinstallation. See [Root rollout](../root-edition/ROLLOUT.md).
+
+`cytv debloat` opens an interactive selection of LG settings on the saved TV
+connection. Choose the settings and confirm the selection. No-root may need
+settings pairing on the TV. Results and a diagnostic report are shown after the
+attempt. If an earlier operation is unresolved, run `cytv recover` with the
+original saved connection first.
 
 In published v1.11.0 and later, explicit `cytv uninstall` confirms one cleanup
 goal on the saved connection, removes known present project items and skips missing
