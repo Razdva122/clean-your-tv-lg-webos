@@ -52,10 +52,11 @@
     }
   ],
   "excluded": [],
-  "acceptance": "",
+  "acceptance": "Project LG OLED55C3RLA firmware 43.21.71, SDK 11.2.0. Exact macOS Apple Silicon installer passed Root and No-root installation, removal and Home routing. Signed Root update and all three rollback components passed with the original profile preserved. Physical remote and No-root clock formats passed. Restored original device state. Artifact hashes and coverage limits: docs/history/2026-11-13-release-1.20.4-rc-verification.md.",
   "build": {
     "run_id": 43454675248,
     "attempt": 1,
     "source": "58ceffd04ba3596f65f309b5ddb04e5ad68e5c4e"
-  }
+  },
+  "acceptance_build": "43454675248:1"
 }
