@@ -270,14 +270,32 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8876';
       const twelve = format.getByRole('button', { name: '12-hour' });
       const twentyFour = format.getByRole('button', { name: '24-hour' });
       assert.equal(await automatic.getAttribute('aria-pressed'), 'true');
+      assert.equal(
+        await automatic.locator('.settings-clock-example').textContent(),
+        '13:40'
+      );
+      assert.equal(
+        await twelve.locator('.settings-clock-example').textContent(),
+        '1:40 PM'
+      );
+      assert.equal(
+        await twentyFour.locator('.settings-clock-example').textContent(),
+        '13:40'
+      );
       await automatic.focus();
       await page.keyboard.press('ArrowRight');
       assert.equal(
         await twelve.evaluate((el) => el === document.activeElement),
         true
       );
+      assert.equal(await automatic.getAttribute('aria-pressed'), 'true');
+      assert.equal(await twelve.getAttribute('aria-pressed'), 'false');
       await page.keyboard.press('Enter');
       assert.equal(await twelve.getAttribute('aria-pressed'), 'true');
+      assert.equal(
+        await automatic.locator('.settings-clock-example').textContent(),
+        '13:40'
+      );
       assert.equal(await page.locator('#clock').textContent(), '1:40 PM');
       if (edition === 'launcher') {
         await page.locator('[data-category=developer]').click();

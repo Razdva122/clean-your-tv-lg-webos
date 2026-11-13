@@ -76,10 +76,22 @@
         );
       });
     }
+    var sample = new Date(2000, 0, 1, 13, 40);
     options.forEach(function (option) {
-      var button = document.createElement('button');
+      var button = document.createElement('button'),
+        label = document.createElement('span'),
+        example = document.createElement('span'),
+        check = createIcon('M5 12l4 4L19 6');
       button.type = 'button';
-      button.textContent = t(option[1]);
+      label.className = 'settings-clock-name';
+      label.textContent = t(option[1]);
+      example.className = 'settings-clock-example';
+      example.setAttribute('aria-hidden', 'true');
+      example.textContent = HomeI18n.formatTime(sample, false, option[0]);
+      check.setAttribute('class', 'settings-clock-check');
+      button.appendChild(check);
+      button.appendChild(example);
+      button.appendChild(label);
       button.onclick = function () {
         error.hidden = HomeI18n.setClockFormat(option[0]);
         if (!error.hidden) error.textContent = t('Could not save state');
