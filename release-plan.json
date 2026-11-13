@@ -1,63 +1,7 @@
 {
   "schema": 1,
-  "version": "1.20.4",
-  "changes": [
-    {
-      "pr": 605,
-      "issues": [],
-      "summary": "Feature PlxNative first in browser demos and previews"
-    },
-    {
-      "pr": 607,
-      "issues": [
-        529
-      ],
-      "summary": "Simplify removal and wait for TV operations"
-    },
-    {
-      "pr": 609,
-      "issues": [
-        608
-      ],
-      "summary": "Add an independent Home clock format setting"
-    },
-    {
-      "pr": 611,
-      "issues": [
-        519
-      ],
-      "summary": "Restore verified LG Home before Root setup"
-    },
-    {
-      "pr": 612,
-      "issues": [
-        610
-      ],
-      "summary": "Explain and diagnose No-root Debloat failures"
-    },
-    {
-      "pr": 613,
-      "issues": [
-        152,
-        389,
-        418
-      ],
-      "summary": "Fix EF950V No-root removal and C1 reinstall"
-    },
-    {
-      "pr": 614,
-      "issues": [
-        529
-      ],
-      "summary": "Check No-root IPK staging before resuming package installation"
-    }
-  ],
+  "version": null,
+  "changes": [],
   "excluded": [],
-  "acceptance": "Project LG OLED55C3RLA firmware 43.21.71, SDK 11.2.0. Exact macOS Apple Silicon installer passed Root and No-root installation, removal and Home routing. Signed Root update and all three rollback components passed with the original profile preserved. Physical remote and No-root clock formats passed. Restored original device state. Artifact hashes and coverage limits: docs/history/2026-11-13-release-1.20.4-rc-verification.md.",
-  "build": {
-    "run_id": 43454675248,
-    "attempt": 1,
-    "source": "58ceffd04ba3596f65f309b5ddb04e5ad68e5c4e"
-  },
-  "acceptance_build": "43454675248:1"
+  "acceptance": ""
 }
