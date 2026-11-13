@@ -40,6 +40,11 @@
         529
       ],
       "summary": "Finish No-root removal after TV processes stop"
+    },
+    {
+      "pr": 625,
+      "issues": [],
+      "summary": "Check guided removal in the desktop installer tests"
     }
   ],
   "excluded": [],
