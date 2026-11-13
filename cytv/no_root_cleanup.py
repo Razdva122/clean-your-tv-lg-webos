@@ -368,7 +368,7 @@ def _remove_input_shortcut(installer):
     return request('deleteDevice', {'appId': APPS[1]}).get('returnValue') is True
 
 
-def _restore_home(installer):
+def restore_stock_home(installer):
     """Old webOS has an LG Home bar rather than a launchable Home app.
 
     Only the exact missing-app rejection admits a fresh stock-surface readback.
@@ -461,7 +461,7 @@ def continue_removal(installer, expected_pending):
              and not current['blocked'] and not current['present'] and not apps.intersection(APPS)
              and not current['startup_services'] and not current['resident_installer'] and not current['external_update_hint'])
     if empty and _device(installer, 'idle').get('idle') is True and _remove_input_shortcut(installer):
-        _restore_home(installer)
+        restore_stock_home(installer)
         final = _device(installer, 'inventory')
         _check_access(final)
         if (not final['present'] and not {row['id'] for row in installer.installed_apps()}.intersection(APPS)
@@ -615,7 +615,7 @@ def continue_removal(installer, expected_pending):
         installer.store.checkpoint(installer.profile, cleanup_startup_unavailable=sorted(unavailable))
     inputs_removed = _remove_input_shortcut(installer)
     installer.store.checkpoint(installer.profile, cleanup_inputs_pending=not inputs_removed)
-    _restore_home(installer)
+    restore_stock_home(installer)
     installer.store.checkpoint(installer.profile, stage='controls-restored')
     resident = current.get('resident_installer') is True or current.get('external_update_hint') is not None
     if current.get('external_update_hint') is not None:

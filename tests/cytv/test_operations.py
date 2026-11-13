@@ -516,6 +516,69 @@ class OperationTests(unittest.TestCase):
         self.assertTrue(any(call[0] == 'luna' and call[1].endswith('/launch')
                             and call[2]['id'] == 'com.webos.app.home' for call in installer.remote.calls))
 
+    def test_recover_removes_packages_only_after_legacy_home_fallback_is_verified(self):
+        from cytv.errors import TVRejected
+        from cytv.recovery import recover
+        from cytv.terminal import Console
+        from cytv.transport import terminal_reply
+
+        app_manager = 'com.webos.applicationManager/'
+        remove = 'com.webos.appInstallService/dev/remove'
+        for error_code, foreground, expected in (
+            (-101, ['com.webos.app.hdmi2'], ['stock-home', 'foreground', 'remove']),
+            (-101, [operations.HOME, 'com.webos.app.livetv'],
+             ['stock-home', 'foreground', 'live-tv', 'foreground', 'remove']),
+            (-101, [None], ['stock-home', 'foreground']),
+            (-102, [], ['stock-home']),
+        ):
+            with self.subTest(error_code=error_code, foreground=foreground), tempfile.TemporaryDirectory() as tmp:
+                remote = Remote()
+                remote.installed = [{'id': operations.HOME}]
+                installer = self.installer(remote)
+                installer.store = store = state.Store(tmp)
+                store.begin(installer.profile, 'uninstall', eim_registered=False)
+                pending = store.pending(installer.profile)
+                original = remote.luna
+                observed = iter(foreground)
+                calls = []
+
+                def luna(uri, payload, **kwargs):
+                    if uri == app_manager + 'launch':
+                        if payload['id'] == 'com.webos.app.home':
+                            calls.append('stock-home')
+                            terminal_reply({'returnValue': False, 'errorCode': error_code}, uri=uri)
+                        self.assertEqual(payload['id'], 'com.webos.app.livetv')
+                        calls.append('live-tv')
+                    elif uri == app_manager + 'getForegroundAppInfo':
+                        calls.append('foreground')
+                        return {'returnValue': True, 'appId': next(observed)}
+                    elif uri == remove:
+                        calls.append('remove')
+                        self.assertEqual(payload, {'id': operations.HOME, 'subscribe': True})
+                        self.assertEqual(kwargs['terminal'], 'removed')
+                        remote.installed.clear()
+                        return {'returnValue': True, 'details': {'state': 'removed'}}
+                    elif uri.endswith('/dev/install'):
+                        self.fail('Recover must not install packages')
+                    return original(uri, payload, **kwargs)
+
+                remote.luna = luna
+
+                def run():
+                    recover(installer, lambda _: 'y', Console(lambda _: None),
+                            initial_observation={'device': {'apps': list(remote.installed)}})
+
+                if expected[-1] == 'remove':
+                    run()
+                    self.assertIsNone(store.pending(installer.profile))
+                else:
+                    with self.assertRaises(TVRejected if error_code != -101 else UserError) as caught:
+                        run()
+                    if error_code == -101:
+                        self.assertEqual(caught.exception.reason_code, 'controls-unverified')
+                    self.assertEqual(store.pending(installer.profile), pending)
+                self.assertEqual(calls, expected)
+
     def test_denied_helper_disable_restores_then_resumes_pending_removal(self):
         from cytv.errors import TVRejected
         remote = Remote()
