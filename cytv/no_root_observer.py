@@ -922,10 +922,11 @@ def snapshot(installer, value):
             break
         except UserError as error:
             details = getattr(error, 'no_root_observer', {})
-            # A detached writer can have two links to a terminal inode until
-            # publication finishes. Each read still requires one link.
-            if (attempt == 2 or details.get('failure') != 'observer-error'
-                    or details.get('observer_reason') != 'unsafe-file'):
+            # A detached writer can be publishing a claim or terminal while
+            # status reads it. Retry the read without changing evidence checks.
+            publishing = (details.get('observer_reason') in ('unsafe-file', 'changed-file', 'short-read')
+                          or details.get('exception_name') == 'SyntaxError')
+            if attempt == 2 or details.get('failure') != 'observer-error' or not publishing:
                 raise
             time.sleep(0.1)
     if (result.get('protocol')!=PROTOCOL or result.get('plan_sha256')!=hashlib.sha256(canonical(plan).encode()).hexdigest()

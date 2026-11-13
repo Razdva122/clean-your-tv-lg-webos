@@ -355,6 +355,40 @@ class OriginalOperationIntegration(unittest.TestCase):
                 (state_dir / 'blocked').unlink(missing_ok=True)
                 (state_dir / 'watchdog').unlink(missing_ok=True)
 
+    def test_status_retries_during_the_first_write_of_a_slot_claim(self):
+        original = self.remote.run
+        sampled = False
+
+        def run(command, data=None, timeout=30):
+            nonlocal sampled
+            words = split_observer_command(command)
+            if '-e' in words and observer.PROGRAM in words[words.index('-e') + 1]:
+                request = json.loads(words[-1])
+                if request['command'] == 'status' and not sampled:
+                    # Present a partial claim to one status read, without changing
+                    # what the worker writes or allowing a second submission.
+                    code = words[words.index('-e') + 1]
+                    hook = ("var originalJson=json;json=function(name){"
+                            "if(name.slice(-13)==='/claim-0.json')JSON.parse('');"
+                            "return originalJson(name);};")
+                    probe = "function claimName(i)"
+                    code = code.replace(probe, hook + probe, 1)
+                    result = subprocess.run([shutil.which('node'), '-e', code, words[-1]],
+                                            capture_output=True, check=True, timeout=timeout)
+                    reply = json.loads(result.stdout)
+                    error = reply.get('observer_error')
+                    if error:
+                        self.assertEqual(error['exception_name'], 'SyntaxError')
+                        sampled = True
+                        return json.dumps(reply)
+            return original(command, data, timeout)
+
+        self.remote.run = run
+        self.installer.install(self.inventory, 'original-secret')
+        self.assertTrue(sampled)
+        self.assertIsNone(self.store.pending(self.profile))
+        self.assertEqual((self.root / 'requests').read_text().splitlines(), list(observer.APPS))
+
     def test_status_retries_while_terminal_hardlink_is_being_published(self):
         original = self.remote.run
         sampled = False
