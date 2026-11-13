@@ -1,7 +1,50 @@
 {
   "schema": 1,
-  "version": null,
-  "changes": [],
+  "version": "1.20.3",
+  "changes": [
+    {
+      "pr": 598,
+      "issues": [
+        529
+      ],
+      "summary": "Finish verified No-root recovery without temporary IPKs"
+    },
+    {
+      "pr": 600,
+      "issues": [
+        101,
+        519
+      ],
+      "summary": "Add desktop SSH command diagnostics"
+    },
+    {
+      "pr": 601,
+      "issues": [
+        588
+      ],
+      "summary": "Finish Root removal with retained updater receipts"
+    },
+    {
+      "pr": 602,
+      "issues": [
+        588
+      ],
+      "summary": "Remove Root private state by component ownership"
+    },
+    {
+      "pr": 603,
+      "issues": [
+        389,
+        588
+      ],
+      "summary": "Resume Root removal without repeating completed checks"
+    },
+    {
+      "pr": 604,
+      "issues": [],
+      "summary": "Finish No-root removal after a transient stop failure"
+    }
+  ],
   "excluded": [],
   "acceptance": ""
 }
