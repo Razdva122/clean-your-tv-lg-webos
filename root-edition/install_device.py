@@ -846,7 +846,6 @@ class LocalDevice:
 
     def retire_clean_private(self, record):
         from clean_removal import retire_tree
-        import deploy
         uid=self.ownership.store.uid
         self.retire_temporary_support(record)
         volatile=Path('/tmp/clean-your-tv-root-gate')
@@ -866,42 +865,13 @@ class LocalDevice:
                     if filename.endswith('.ipk') and isinstance(digest,str) and re.fullmatch('[a-f0-9]{64}',digest):hashes.add(digest)
             record['staging_hashes']=sorted(hashes)
             self.ownership.store.write('clean-removal-'+record['operation'],record)
-        root_allowed={name.split('/')[0] for name in deploy.SUPPORT_FILES}|{'runtime','service','__pycache__','bundle.json','release.json',
-            'deploy.json','install-terminal.json','python-launcher','python-runtime.json',
-            'ls2-provision-snapshot.json','recovery-provision.pending.json','recovery-provision.json',
-            'recovery-failure.json','run-recovery-service','recovery-service.json','bootstrap.pid',
-            'activity-registration.json','startup-hook.json','startup-hook.previous.json',
-            'profile-trial.json','profile-trial.lock','stock-home-initialization.json','persistent-intent.json','persistent-intent.lock',
-            'persistent-binding.json','boot-continuation.json','profile-guardian-ready.json','profile-recovery.log',
-            'profile-candidate.stage','native-input.json','software-update.lock','update-block.json',
-            'update-home-cancel.json','update-home-resume.json','session.lock','boot-dispatch.lock',
-            'startup-policy.json','startup-policy.lock','health.log','audio','failsafe',
-            'home-backend.json','c1-gate','c1-keyfilter','personalization.json','personalization',
-            'state','ssap.json','apps.json','config.json','firmware-permissions.json',
-            'theme-receiver-permissions.json','wallpaper-media-permissions.json','weather-permissions.json','audio-recovery',
-            'boot-decision.json','session.json','persistent-operation.lock','profile-guardian.log',
-            'emergency.log','escape-ready.json','permissions','firmware-permissions.lock','system-permissions.json'}
-        updater_allowed={'code','cache','profiles','run-service','python-launcher','python-runtime.json',
-            'bootstrap.json','bootstrap-bundle.json','baseline.json','current.json','infrastructure.json',
-            'installed-package.json','installed-terminal.json','registration.json','startup-hook.json',
-            'startup-hook.previous.json','transaction.json','legacy-lockdown.json','bootstrap.pid',
-            'worker.log','daemon.log','removed-registration','cytv-removal.json','installer-accepted.json'}
-        def classified(root,index):
-            allowed=root_allowed if index==0 else updater_allowed
-            if index==2:allowed=allowed|{'current-root.json','current-no-root.json'}
-            pattern=r'(?:profile|healthy|healthy-rollback|mutable|helper-resume|renewal-pause)-[a-f0-9]{32}(?:-rollback)?\.json'
-            if index==0:
-                pattern+=r'|(?:completed-profile-[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}|system-rollback-anchor-[a-f0-9]{32})\.json'
-            elif index==1:
-                pattern+=r'|(?:confirm|ready|ready-rollback)-[a-f0-9]{32}\.json'
-            return allowed|{p.name for p in root.iterdir() if re.fullmatch(pattern,p.name)}
         roots=(ROOT,UPDATER,SUPERVISOR)
         for index,root in enumerate(roots):
             if not os.path.lexists(root):continue
             keep={'deploy.json','provision.lock'} if index==0 else {'bootstrap.json','daemon.lock','worker.lock'}
-            # Per-transaction data in this private namespace is product-owned;
-            # no arbitrary prefix outside it can select a deletion target.
-            retire_tree(root,classified(root,index),keep,uid)
+            # Fixed, dedicated component stores own their contents across releases.
+            # The coordinator has already fenced writers and restored controls.
+            retire_tree(root, None, keep, uid)
         for stage in Path(self.ownership.store.root).iterdir():
             if not re.fullmatch(r'request-[a-f0-9]{32}',stage.name):continue
             identifier=stage.name[8:]
@@ -934,6 +904,15 @@ class LocalDevice:
         # filename alone is not enough to delete an unknown archive.
         archives=record.get('archives')
         discovered=[]
+        if archives is not None:
+            for item in archives:
+                index=item.get('component')
+                if type(index) is not int or index not in range(len(roots)):
+                    raise ValueError('unclassified_private_archive')
+                component=roots[index]
+                path=Path(item['path'])
+                if path.parent!=component.parent or not re.fullmatch(re.escape(component.name)+r'\.archive-[a-f0-9]{32}',path.name):
+                    raise ValueError('unclassified_private_archive')
         for index,root in enumerate(roots):
             for path in sorted(root.parent.iterdir()):
                 if not path.name.startswith(root.name+'.archive-'):continue
@@ -957,7 +936,7 @@ class LocalDevice:
             archives=record['archives']=discovered
             self.ownership.store.write('clean-removal-'+record['operation'],record)
         for number,item in enumerate(archives):
-            index=item['component'];path=Path(item['path'])
+            path=Path(item['path'])
             if not os.path.lexists(path):continue
             info=path.lstat()
             if (info.st_dev,info.st_ino)!=(item['dev'],item['ino']):raise ValueError('private_archive_changed')
@@ -969,8 +948,7 @@ class LocalDevice:
             if previous is None:self.ownership.store.write(key,backup)
             # After an interrupted delete, the backup remains the original.
             elif any(previous.get(k)!=v for k,v in backup.items()):raise ValueError('owner_backup_changed')
-            allowed=classified(path,index)|{'provision.lock','daemon.lock','worker.lock'}
-            retire_tree(path,allowed,uid=uid)
+            retire_tree(path, None, uid=uid, expected_identity=(item['dev'], item['ino']))
             path.rmdir()
             parent=os.open(path.parent,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)
             try:os.fsync(parent)

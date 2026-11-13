@@ -70,3 +70,20 @@ and checks not reached or still pending. See [diagnostic fields and limits](INST
 These observations preserve the existing recovery admission; no extra TV checks
 or changes are performed to fill the report, and legacy discarded causes remain
 unknown.
+
+## Root component state during full removal
+
+Root, Root Updater and System Updater keep disposable component state in
+dedicated private directories. After fencing component writers and restoring
+controls, full removal retires their contents by directory ownership. New
+receipts and caches inside these directories need no filename registration.
+The coordinator keeps the original locks and fence records through final
+readback and preserves routing and permission inverses before retiring state.
+Archives require component provenance and the recorded directory identity.
+
+Keep shared paths and mounted data outside these directories. The private-tree
+sweep rejects mounts, hard links and entries with unexpected ownership, and
+unlinks symbolic links without following them. Shared registrations, packages,
+startup hooks and temporary uploads retain their own verification and cleanup
+rules. Any future state that changes behavior outside the private directories
+needs an explicit restoration step before the sweep.

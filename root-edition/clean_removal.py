@@ -11,6 +11,7 @@ import re
 from pathlib import Path
 import stat
 import subprocess
+import sys
 
 from updater.store import Store
 from updater.package import safe_bytes
@@ -154,12 +155,31 @@ def compositor_stock_report(payload, *, retire_orphan=False):
 
 
 
-def retire_tree(path, allowed, keep=(), uid=0, parent_uid=None):
+MOUNTINFO = Path('/proc/self/mountinfo')
+
+
+def require_unmounted_tree(path):
+    """Reject nested mounts, including bind mounts on the same device."""
+    if sys.platform != 'linux' and not MOUNTINFO.exists():
+        return
+    root = str(path)
+    with MOUNTINFO.open(encoding='utf-8', errors='surrogateescape') as table:
+        for line in table:
+            fields = line.split()
+            if len(fields) < 10 or ' - ' not in line:
+                raise ValueError('private_mount_table_unverified')
+            target = re.sub(r'\\([0-7]{3})', lambda match: chr(int(match[1], 8)), fields[4])
+            if target == root or target.startswith(root + '/'):
+                raise ValueError('private_mount_present')
+
+
+def retire_tree(path, allowed, keep=(), uid=0, parent_uid=None, *, expected_identity=None):
     """Confined, pinned unlink of classified owned data; no following links.
 
     Validate the entire inventory before deleting the first member. Missing
     members support a retry after power loss. Changes to owned preferences do
-    not need installation-continuation hashes. Foreign shared paths never enter.
+    not need installation-continuation hashes. Only fixed component stores and
+    authenticated component archives may pass allowed=None for the whole tree.
     """
     path=Path(path)
     if not os.path.lexists(path):return 0
@@ -175,13 +195,21 @@ def retire_tree(path, allowed, keep=(), uid=0, parent_uid=None):
             if info.st_uid!=uid or info.st_mode&0o022:
                 os.close(root);raise ValueError('unsafe_private_member')
         stack.callback(os.close,root)
+        root_info = os.fstat(root)
+        if expected_identity is not None and (root_info.st_dev, root_info.st_ino) != expected_identity:
+            raise ValueError('private_archive_changed')
+        if allowed is None:
+            require_unmounted_tree(path)
         plan=[]
         def scan(fd, prefix=''):
             for name in sorted(os.listdir(fd)):
                 relative=prefix+name
                 if not prefix and name in keep: continue
-                if not prefix and name not in allowed: raise ValueError('unclassified_private_member')
+                if not prefix and allowed is not None and name not in allowed:
+                    raise ValueError('unclassified_private_member')
                 info=os.stat(name,dir_fd=fd,follow_symlinks=False)
+                if allowed is None and info.st_dev != root_info.st_dev:
+                    raise ValueError('private_mount_present')
                 if info.st_uid!=uid or (not stat.S_ISLNK(info.st_mode) and info.st_mode&0o022): raise ValueError('unsafe_private_member')
                 if stat.S_ISDIR(info.st_mode):
                     child=os.open(name,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW,dir_fd=fd)
@@ -193,6 +221,8 @@ def retire_tree(path, allowed, keep=(), uid=0, parent_uid=None):
                     plan.append((fd,name,info,False))
                 else: raise ValueError('unsafe_private_member')
         scan(root)
+        if allowed is None:
+            require_unmounted_tree(path)
         for fd,name,info,directory in plan:
             current=os.stat(name,dir_fd=fd,follow_symlinks=False)
             if (current.st_dev,current.st_ino,current.st_mode,current.st_uid,current.st_nlink)!=(info.st_dev,info.st_ino,info.st_mode,info.st_uid,info.st_nlink):
