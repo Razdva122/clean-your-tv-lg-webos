@@ -492,7 +492,7 @@ def continue_removal(installer, expected_pending):
         installer.store.checkpoint(installer.profile, **checkpoint)
         if proof is None:
             capture_boot(stage='restart-required')
-        if same_boot_retry:
+        if same_boot_retry and proof.get('schema') == 2:
             raise unverified_restart()
         installer.progress(RESTART_MESSAGE)
         return {'removed': False, 'verified_clean': False, 'restart_required': True}
@@ -540,19 +540,18 @@ def continue_removal(installer, expected_pending):
         boot_id = boot.get('boot_id')
         restarted = boot['boot_restarted'] is True and (not legacy_install or (
             boot_id is not None and boot_id == current.get('boot_id') and boot_id != proof['kernel']))
-        if (proof.get('schema') == 2 and not restarted and
-                (pending.get('stage') == 'restart-required' or pending.get('cleanup_restart_first'))):
+        if not restarted and (pending.get('stage') == 'restart-required' or pending.get('cleanup_restart_first')):
             # A request can outlive a transient Stop failure. Recheck only
             # ordinary removal and keep the pre-package checks across retries.
-            if (boot.get('boot_restarted') is not False or boot_id != proof.get('kernel')
-                    or boot_id != current.get('boot_id')
-                    or previous is not None or current.get('resident_installer') is not False
-                    or current.get('external_update_hint') is not None
-                    or pending.get('previous_update_status') is not None
-                    or pending.get('cleanup_carriers') not in (None, {})):
+            same_boot_retry = (
+                boot.get('boot_restarted') is False and boot_id == proof.get('kernel') == current.get('boot_id')
+                and previous is None and current.get('resident_installer') is False
+                and current.get('external_update_hint') is None and pending.get('previous_update_status') is None
+                and pending.get('cleanup_carriers') in (None, {})
+            )
+            if not same_boot_retry and proof.get('schema') == 2:
                 raise unverified_restart()
-            same_boot_retry = True
-            if pending.get('cleanup_restart_first') is not True:
+            if same_boot_retry and pending.get('cleanup_restart_first') is not True:
                 installer.store.checkpoint(installer.profile, cleanup_restart_first=True)
     if legacy_install:
         # A missing SAM entry can skip dev/remove and its busy check. Wait
@@ -668,24 +667,19 @@ def continue_removal(installer, expected_pending):
     _check_access(_device(installer, 'sweep'))
     if not restarted and pending.get('previous'):
         return require_restart(['prior-operation-unresolved'])
-    if (not restarted or reused_restart) and _device(installer, 'idle').get('idle') is not True:
-        if restarted:
-            proof = capture_boot()
-            restarted = False
-        return require_restart(['process-idle-unverified'])
     installer.progress('Verifying removal…')
     final = _device(installer, 'inventory')
     _check_access(final)
     if final['present'] or {app['id'] for app in installer.installed_apps()}.intersection(APPS):
         raise UserError('Some project files remain. Try again to finish removal.')
-    if not inputs_removed:
-        installer.store.checkpoint(installer.profile, removal_reason='controls-unverified')
-        raise UserError('TV input shortcuts could not be checked. Try again.', reason_code='controls-unverified')
     if (not restarted or reused_restart) and _device(installer, 'idle').get('idle') is not True:
         if restarted:
             proof = capture_boot()
             restarted = False
         return require_restart(['process-idle-unverified'])
+    if not inputs_removed:
+        installer.store.checkpoint(installer.profile, removal_reason='controls-unverified')
+        raise UserError('TV input shortcuts could not be checked. Try again.', reason_code='controls-unverified')
     if proof is not None:
         if restarted:
             installer.store.checkpoint(installer.profile, cleanup_boot_verified=True)
