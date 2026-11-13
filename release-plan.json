@@ -1,7 +1,47 @@
 {
   "schema": 1,
-  "version": null,
-  "changes": [],
+  "version": "1.20.5",
+  "changes": [
+    {
+      "pr": 617,
+      "issues": [
+        392
+      ],
+      "summary": "Offer to restore LG Debloat settings during removal"
+    },
+    {
+      "pr": 618,
+      "issues": [
+        499,
+        529,
+        534,
+        542,
+        588
+      ],
+      "summary": "Fix Home startup isolation and guided removal recovery"
+    },
+    {
+      "pr": 620,
+      "issues": [
+        587
+      ],
+      "summary": "Fix No-root state checks on legacy LG Node"
+    },
+    {
+      "pr": 621,
+      "issues": [
+        608
+      ],
+      "summary": "Show clock format previews in Home settings"
+    },
+    {
+      "pr": 622,
+      "issues": [
+        529
+      ],
+      "summary": "Finish No-root removal after TV processes stop"
+    }
+  ],
   "excluded": [],
   "acceptance": ""
 }
