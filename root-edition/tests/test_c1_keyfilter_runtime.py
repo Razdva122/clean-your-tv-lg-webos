@@ -315,27 +315,29 @@ class RuntimeTests(unittest.TestCase):
         for chain in ([dict(own, handler='changed')], [dict(own, extra=True)], [own, own]):
             with self.assertRaises(ValueError): self.k.reconcile(chain, self.root, False)
 
-    def test_c1_home_takes_precedence_and_off_restores_glasshouse_order(self):
+    def test_c1_home_replaces_foreign_filters_and_off_leaves_lg_chain(self):
         self.prepare()
         vendor = {'file':'/usr/lib/qt5/qml/KeyFilters/systemUi.js','handler':'handleSystemKeys'}
         glasshouse = {'file':'/var/lib/tvweb/remotekeys-filter.js','handler':'handleGlasshouseKeys'}
-        original = [glasshouse, vendor]
+        another = {'file':'/var/lib/other-launcher/home.js','handler':'otherHome'}
+        original = [glasshouse, another, vendor]
         chain = original.copy()
         with patch.object(self.k,'read_chain',side_effect=lambda: chain.copy()), \
                 patch.object(self.k,'write_chain',side_effect=lambda value: chain.__setitem__(slice(None),value)):
             self.k.change_chain(self.root,True,self.uid)
-            self.assertEqual(chain,[self.k.filter_entry(self.root), *original])
+            self.assertEqual(chain,[self.k.filter_entry(self.root), vendor])
             self.k.change_chain(self.root,False,self.uid)
-            self.assertEqual(chain,original)
+            self.assertEqual(chain,[vendor])
         for chain in (None, {}, ['opaque'], [{'file':1,'handler':'x'}]):
             with self.assertRaises(ValueError): self.k.reconcile(chain, self.root, False)
 
     def test_pending_durable_before_write_and_readback_failure_retains_evidence(self):
-        self.prepare(); chain=[]
+        self.prepare()
+        chain=[{'file':'/usr/lib/qt5/qml/KeyFilters/systemUi.js','handler':'handleSystemKeys'}]
         def read(): return list(chain)
         def write(value):
             pending=json.loads((self.root/'c1-keyfilter/pending.json').read_text())
-            self.assertEqual(pending['before'], [])
+            self.assertEqual(pending['before'], chain)
             self.assertEqual(pending['after'], value)
             # Simulate configd acknowledging but not applying its write.
         with patch.object(self.k,'read_chain',side_effect=read), patch.object(self.k,'write_chain',side_effect=write):

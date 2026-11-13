@@ -9,12 +9,41 @@ import tarfile
 import uuid
 
 from . import package
-from .errors import UserError
+from .errors import TVCommandError, UserError
 from .state import private_write
 
 BACKEND = 'c1-native-gate'
 NOTICE = 'C1 Beta: native Home control selected automatically. Power recovery and TV controls are still being tested.'
 GRAPHICS = {'1920x1080': 'root-c1', '1280x720': 'root-c1-720p'}
+
+RESTORE_GLASSHOUSE_HOME = '''
+import json
+import os
+from pathlib import Path
+import stat
+
+root = Path('/var/lib/tvweb')
+stage = root / 'home-takeover'
+home = Path('/usr/palm/applications/com.webos.app.home')
+
+def settings(name):
+    try:
+        return json.loads((root / name).read_text())
+    except FileNotFoundError:
+        return {}
+
+configuration = settings('home.json')
+keys = settings('remotekeys.json')
+if (configuration.get('enabled') or configuration.get('restorePending') or keys.get('home')
+        or keys.get('starting') or (stage.exists() and home.samefile(stage))):
+    command = root / 'tvwebctl'
+    for path in (root, command):
+        info = path.lstat()
+        kind = stat.S_ISDIR if path == root else stat.S_ISREG
+        if not kind(info.st_mode) or info.st_uid != 0 or info.st_mode & 0o022:
+            raise ValueError('Unsafe GlassHouse installation')
+    os.execv(str(command), [str(command), 'restore-glasshouse-home'])
+'''
 
 
 def digest(raw):
@@ -143,6 +172,13 @@ def install(installer, inventory, migrate=False, reinstall=None):
         raise UserError('Experimental Home packages are missing or invalid. Use a complete installer build. Installation has not started.') from error
     from . import storage
     storage.install(installer.remote, prepared, installer.progress, root=True)
+    if installer.tv_info.get('home_backend_schema') == 2:
+        command = installer._python_command([installer._python(), '-I', '-B', '-c', RESTORE_GLASSHOUSE_HOME])
+        try:
+            installer.remote.run(command, timeout=90)
+        except TVCommandError as error:
+            raise UserError('GlassHouse Home could not be restored to LG Home. Installation has not started.',
+                            reason_code='foreign-home-restore-failed') from error
     installer.progress('Experimental compositor Home: physical controls and power recovery are unverified.'
                        if installer.tv_info.get('home_backend_schema') == 3 else NOTICE)
     installer.store.begin(installer.profile, 'install', release_sha=digest(prepared['release.json']),

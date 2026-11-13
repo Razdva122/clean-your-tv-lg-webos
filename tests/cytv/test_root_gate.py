@@ -6,7 +6,7 @@ import shlex
 from types import SimpleNamespace
 import tempfile
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 from cytv import package, state
 from cytv.errors import UserError
 from cytv import root_gate
@@ -91,6 +91,39 @@ class RootGateTests(unittest.TestCase):
             root_gate.install(self.installer,self.inventory)
         self.assertIsNone(self.store.pending(self.profile))
         self.assertEqual(self.actions,[])
+
+    def test_c1_restores_foreign_home_before_creating_install_receipt(self):
+        self.installer.tv_info['home_backend_schema']=2
+        run=self.remote.run
+        def remote(command, **kwargs):
+            if 'restore-glasshouse-home' in command:
+                self.assertIsNone(self.store.pending(self.profile))
+            return run(command)
+        self.remote.run=Mock(side_effect=remote)
+        self.installer._python=Mock(return_value='/usr/bin/python3')
+        self.installer._python_command=shlex.join
+        root_gate.install(self.installer,self.inventory)
+        self.assertTrue(any('restore-glasshouse-home' in call.args[0] for call in self.remote.run.call_args_list))
+
+    def test_glasshouse_restore_runs_only_for_active_or_pending_home(self):
+        tvweb=self.root/'tvweb';tvweb.mkdir(mode=0o700)
+        launcher=tvweb/'tvwebctl';launcher.touch(mode=0o700)
+        script=root_gate.RESTORE_GLASSHOUSE_HOME.replace("'/var/lib/tvweb'",repr(str(tvweb)))
+        real_lstat=Path.lstat
+        def owner(path):
+            info=real_lstat(path)
+            return SimpleNamespace(st_uid=0,st_mode=info.st_mode)
+        for settings, keys, restore in (({}, {}, False), ({'enabled':True}, {}, True),
+                                        ({'restorePending':True}, {}, True), ({}, {'home':'com.tvweb.home'}, True)):
+            with self.subTest(settings=settings, keys=keys):
+                (tvweb/'home.json').write_text(json.dumps(settings))
+                (tvweb/'remotekeys.json').write_text(json.dumps(keys))
+                with patch.object(Path,'lstat',owner),patch('os.execv') as run:
+                    exec(script,{})
+                if restore:
+                    run.assert_called_once_with(str(launcher),[str(launcher),'restore-glasshouse-home'])
+                else:
+                    run.assert_not_called()
 
     def action(self,action,**kwargs):
         self.actions.append((action,kwargs))
