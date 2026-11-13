@@ -8,7 +8,7 @@ import sys
 from time import sleep
 
 from . import __version__, package, state, i18n
-from .errors import UserError, TVNotReady, ExistingRoot
+from .errors import ExistingRoot, LocalRecoveryError, SAVED_PROFILE_ACCESS, TVNotReady, UserError
 from .operations import Installer
 from .terminal import Console, supports_ansi
 from . import diagnostics, discovery, inspect_tv, prompts, install_settings, debloat
@@ -104,19 +104,49 @@ def removal_connection_message(store, profile, phase, error):
 
 
 def choose_profile(args, store, ask, write, search, inspect):
-    profiles = [p for p in store.profiles() if not args.edition or p['edition'] == args.edition]
-    if not args.host and len(profiles) == 1 and (args.command != 'install' or args.non_interactive):
-        profile = dict(profiles[0])
-        write('Using saved ' + profile['edition'] + ' TV connection.')
-    elif not args.host and profiles:
-        write.step(1, 'Choose a saved TV')
-        for index, p in enumerate(profiles, 1):
-            write.option(index, p['host'], 'Root' if p['edition'] == 'root' else 'No-root')
-        write.option(0, 'Add another TV')
-        selected = prompts.number(ask, write, 'TV number [1]: ', 0, len(profiles), default=1)
-        profile = dict(profiles[selected - 1]) if selected else None
+    denied = False
+
+    def access_denied():
+        nonlocal denied
+        denied = True
+
+    # Only observation can use a partial list. Recovery identity checks still
+    # require the complete list, and a hidden profile is never treated as new.
+    if args.command in ('status', 'doctor'):
+        saved = store.profiles(on_access_denied=access_denied)
     else:
-        profile = None
+        saved = store.profiles()
+    profiles = [p for p in saved if not args.edition or p['edition'] == args.edition]
+    profile = None
+    if denied:
+        profiles = [p for p in profiles
+                    if (args.port is None or p['port'] == args.port)
+                    and (args.connection is None or p.get('connection') == args.connection)
+                    and (args.root_variant is None or p.get('root_variant') == args.root_variant)]
+        if args.host:
+            profiles = [p for p in profiles if p['host'] == args.host.strip().lower()]
+            if len(profiles) != 1:
+                raise LocalRecoveryError('profile-access', 'profile')
+            write(SAVED_PROFILE_ACCESS)
+            profile = dict(profiles[0])
+        elif not profiles or args.non_interactive:
+            raise LocalRecoveryError('profile-access', 'profile')
+        else:
+            write(SAVED_PROFILE_ACCESS)
+    if not args.host:
+        if not denied and len(profiles) == 1 and (args.command != 'install' or args.non_interactive):
+            profile = dict(profiles[0])
+            write('Using saved ' + profile['edition'] + ' TV connection.')
+        elif profiles:
+            write.step(1, 'Choose a saved TV')
+            for index, p in enumerate(profiles, 1):
+                write.option(index, p['host'], 'Root' if p['edition'] == 'root' else 'No-root')
+            if denied:
+                selected = prompts.number(ask, write, 'TV number: ', 1, len(profiles))
+            else:
+                write.option(0, 'Add another TV')
+                selected = prompts.number(ask, write, 'TV number [1]: ', 0, len(profiles), default=1)
+            profile = dict(profiles[selected - 1]) if selected else None
     if profile is None:
         host = args.host or prompts.tv_address(ask, write, search=None if args.no_discovery or args.non_interactive else search)
         edition = args.edition

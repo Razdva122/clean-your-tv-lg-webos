@@ -16,6 +16,86 @@ class SavedConnectionTests(unittest.TestCase):
                 (store.device_dir(profile)/'known_hosts').write_bytes(b'original pin')
             with self.assertRaisesRegex(RuntimeError,'original saved'):
                 store.connection_profile(original)
+    def test_cli_can_select_readable_profile_when_another_file_is_denied(self):
+        from cytv import cli
+        from cytv.terminal import Console
+        with tempfile.TemporaryDirectory() as tmp:
+            store = state.Store(tmp)
+            good = state.target('tv.local', 'root')
+            bad = state.target('other.local', 'root')
+            for profile in (good, bad):
+                store.save(profile)
+            denied = store.device_dir(bad) / 'profile.json'
+            original = Path.read_text
+
+            def read(path, *args, **kwargs):
+                if path == denied:
+                    raise PermissionError('PRIVATE Windows path')
+                return original(path, *args, **kwargs)
+
+            args = cli.parser().parse_args(['status'])
+            messages = []
+            with patch.object(Path, 'read_text', read):
+                chosen = cli.choose_profile(args, store, lambda _: '1', Console(messages.append),
+                                            lambda: self.fail('unexpected discovery'), None)
+                self.assertEqual(chosen, good)
+                explicit = cli.parser().parse_args(['status', '--host', 'TV.LOCAL', '--edition', 'root'])
+                self.assertEqual(cli.choose_profile(explicit, store, lambda _: self.fail('unexpected prompt'),
+                                                    Console(messages.append), None, None), good)
+                with self.assertRaisesRegex(RuntimeError, 'saved TV connections'):
+                    cli.choose_profile(cli.parser().parse_args(['status', '--host', 'other.local', '--edition', 'root']),
+                                       store, lambda _: self.fail('unexpected prompt'), Console(messages.append),
+                                       lambda: self.fail('unexpected discovery'), None)
+                store.begin(good, 'install')
+                (store.device_dir(good) / 'known_hosts').write_bytes(b'original pin')
+                with self.assertRaisesRegex(RuntimeError, 'saved TV connections'):
+                    store.connection_profile(good)
+            self.assertNotIn('PRIVATE', ' '.join(messages))
+
+    def test_cli_status_reports_local_access_failure_before_connecting(self):
+        from cytv import cli
+        with tempfile.TemporaryDirectory() as tmp:
+            store = state.Store(tmp)
+            store.save(state.target('tv.local', 'root'))
+            original = Path.read_text
+
+            def read(path, *args, **kwargs):
+                if path.name == 'profile.json':
+                    raise PermissionError('PRIVATE Windows path')
+                return original(path, *args, **kwargs)
+
+            with patch.object(Path, 'read_text', read):
+                code = cli.main(['status', '--data-dir', tmp, '--language', 'en'],
+                                ask=lambda _: self.fail('unexpected prompt'), write=lambda _: None,
+                                connect=lambda *_: self.fail('unexpected connection'))
+            self.assertEqual(code, 2)
+            report_path, = (Path(tmp) / 'reports').glob('*.json')
+            report = json.loads(report_path.read_text())
+            self.assertEqual(report['phase'], 'select-tv')
+            self.assertEqual(report.get('local_recovery'), {'reason': 'profile-access', 'location': 'profile'})
+            self.assertNotIn('PRIVATE', report_path.read_text())
+
+    def test_windows_sharing_violation_retries_the_same_profile(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            store = state.Store(tmp)
+            profile = state.target('tv.local', 'root')
+            store.save(profile)
+            for winerror in (None, 32, 33):
+                with self.subTest(winerror=winerror):
+                    error = PermissionError('sharing violation')
+                    if winerror is not None:
+                        error.winerror = winerror
+                    with patch.object(state, 'platform', 'win32'), patch.object(state, 'sleep') as sleep, \
+                            patch.object(Path, 'read_text', side_effect=[error, json.dumps(profile)]) as read:
+                        self.assertEqual(store.profiles(), [profile])
+                        self.assertEqual(read.call_count, 2)
+                        sleep.assert_called_once_with(0.05)
+            with patch.object(state, 'platform', 'win32'), patch.object(state, 'sleep'), \
+                    patch.object(Path, 'read_text', side_effect=PermissionError('denied')) as read:
+                with self.assertRaisesRegex(RuntimeError, 'saved TV connections'):
+                    store.profiles()
+                self.assertEqual(read.call_count, 3)
+
     def test_cli_recovery_uses_original_profile_without_metadata_or_persistence(self):
         from cytv import cli
         from unittest.mock import Mock

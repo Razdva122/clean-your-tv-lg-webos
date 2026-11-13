@@ -7,7 +7,9 @@ import os
 from pathlib import Path
 import re
 import stat
+from sys import platform
 import tempfile
+from time import sleep
 import uuid
 from .errors import UserError, LocalRecoveryError, is_storage_full
 
@@ -212,12 +214,12 @@ class Store:
             pending=self.pending(selected) or {}
             if (pending.get('recovery_protocol')=='clean-removal-v1' and pending.get('connection_pending') is True
                     and 'previous' not in pending and not path.is_symlink() and not known.is_symlink() and not known.exists()):
-                original=target(**json.loads(path.read_text()))
+                original=self._read_profile(path)
                 if any(original[k]!=selected[k] for k in ('host','edition','port')):raise ValueError('foreign profile')
                 return original,False  # First connection still requires explicit normal host-key trust.
             if path.is_symlink() or known.is_symlink() or not known.read_bytes():
                 raise ValueError('missing trust')
-            original = target(**json.loads(path.read_text()))
+            original = self._read_profile(path)
             if any(original[k] != selected[k] for k in ('host', 'edition', 'port')):
                 raise ValueError('foreign profile')
             profiles=self.profiles()
@@ -232,11 +234,30 @@ class Store:
             raise UserError('The original saved TV connection and host key are required for recovery. Recovery data was kept.',
                             reason_code='ssh-identity-unverified') from None
 
-    def profiles(self):
+    @staticmethod
+    def _read_profile(path):
+        for attempt in range(3):
+            try:
+                raw = path.read_text()
+                break
+            except PermissionError as error:
+                # Windows file opens can report sharing violations as plain EACCES.
+                winerror = getattr(error, 'winerror', None)
+                if platform != 'win32' or winerror not in (None, 32, 33) or attempt == 2:
+                    raise LocalRecoveryError('profile-access', 'profile') from None
+                sleep(0.05 * (attempt + 1))
+        return target(**json.loads(raw))
+
+    def profiles(self, *, on_access_denied=None):
         result = []
         if self.root.exists():
             for path in sorted(self.root.glob('*/profile.json')):
-                result.append(target(**json.loads(path.read_text())))
+                try:
+                    result.append(self._read_profile(path))
+                except LocalRecoveryError:
+                    if on_access_denied is None:
+                        raise
+                    on_access_denied()
         return sorted(result, key=lambda p: (p['host'], p['port'], p['edition']))
 
     def pending(self, profile):
