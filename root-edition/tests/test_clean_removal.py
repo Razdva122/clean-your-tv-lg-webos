@@ -238,6 +238,38 @@ class CoordinatorCleanRemoval(unittest.TestCase):
                 self.assertIs(result['home_changed'],False)
                 self.assertNotIn('PRIVATE',output.getvalue())
 
+    def test_blocked_inspect_exports_safe_worker_failure(self):
+        import install_driver, install_device, io, json, subprocess
+        from contextlib import redirect_stdout
+        cases = (
+            (ValueError('restored_routes_changed'), 'ValueError', 'restored_routes_changed', None),
+            (ValueError('PRIVATE'), 'ValueError', None, None),
+            (subprocess.CalledProcessError(1, ['/usr/bin/node', '/PRIVATE/cleanup_tail.js', 'stock-proof'],
+                                           stderr=b'CYTV_CLEAN_TAIL: route-changed\n'),
+             'CalledProcessError', 'route-changed', 1),
+            (subprocess.CalledProcessError(1, ['PRIVATE'], stderr=b'CYTV_CLEAN_TAIL: route-changed\n'),
+             'CalledProcessError', None, 1),
+            (subprocess.CalledProcessError(1, ['/usr/bin/node', '/PRIVATE/cleanup_tail.js', 'stock-proof'],
+                                           stderr=b'CYTV_CLEAN_TAIL: route-changed PRIVATE\n'),
+             'CalledProcessError', None, 1),
+        )
+        for error, exception_type, reason, exit_status in cases:
+            with self.subTest(exception_type=exception_type, reason=reason):
+                output = io.StringIO()
+                with patch.object(sys, 'argv', ['install_driver', 'inspect']), patch.object(
+                    Coordinator, 'inspect', side_effect=error
+                ), patch.object(install_device.LocalDevice, 'log'), redirect_stdout(output):
+                    install_driver.main()
+                reply = json.loads(output.getvalue())
+                self.assertEqual(reply['state'], 'recovery_required')
+                self.assertEqual(reply['code'], 'operation_requires_recovery')
+                self.assertNotIn('installation', reply)
+                detail = reply.get('failure', {})
+                self.assertEqual(detail.get('exception_type'), exception_type)
+                self.assertEqual(detail.get('inspect_check'), reason)
+                self.assertEqual(detail.get('exit_status'), exit_status)
+                self.assertNotIn('PRIVATE', output.getvalue())
+
     def test_reinstalled_apps_keep_the_verified_removal_fence(self):
         self.original();self.driver.clean_remove(self.id)
         lease=self.owner.status().copy()

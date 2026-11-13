@@ -729,6 +729,7 @@ def wait_submission_parent(parent):
 def main():
     import argparse
     import json
+    import subprocess
     from pathlib import Path
     from install_device import LocalDevice, checked_store
     from installation import STATE
@@ -821,6 +822,25 @@ def main():
     except Exception as error:
         device.log(error)
         result=dict(operation=args.operation,stage='blocked',state='recovery_required',code='operation_requires_recovery',home_changed=False)
+        if args.action=='inspect':
+            detail=failure_summary(error)
+            checks=('restart_required', 'support_stage_remains', 'live_original_worker',
+                  'project_apps_remain', 'restored_routes_changed', 'startup_remains',
+                  'owned_registration_remains', 'no_root_private_cleanup_required',
+                  'private_members_remain', 'owned_activity_remains', 'owned_input_registration_remains')
+            if type(error) is ValueError and len(error.args)==1 and error.args[0] in checks:
+                detail['inspect_check']=error.args[0]
+            if (isinstance(error, subprocess.CalledProcessError)
+                    and isinstance(error.cmd, list) and len(error.cmd)>=3
+                    and error.cmd[0]=='/usr/bin/node'
+                    and isinstance(error.cmd[1], str) and error.cmd[1].endswith('/cleanup_tail.js')
+                    and error.cmd[2]=='stock-proof'):
+                for check in ('route-changed', 'original-removal-required', 'different-removal-intent',
+                              'unsafe-cleanup-directory', 'unsafe-cleanup-member', 'cleanup-guard-failed'):
+                    if error.stderr==('CYTV_CLEAN_TAIL: '+check+'\n').encode():
+                        detail['inspect_check']=check
+                        break
+            result['failure']=detail
         if args.action=='inspect' and isinstance(error,ValueError) and error.args in (('support_stage_remains',),('live_original_worker',)):
             result['reason']='restart-required'
         if args.action=='inspect' and isinstance(error,ValueError) and error.args==('project_apps_remain',):
