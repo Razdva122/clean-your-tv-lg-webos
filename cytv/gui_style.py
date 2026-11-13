@@ -46,7 +46,7 @@ QLabel#promptTitle { font-size: 16px; font-weight: 600; }
 QPushButton { background: #302d28; border: 1px solid #796956; border-radius: 8px; padding: 10px 16px; font-weight: 500; min-height: 22px; }
 QPushButton:hover { background: #3a342d; border-color: #a28c73; }
 QPushButton:pressed { background: #443b32; }
-QPushButton:focus, QLineEdit:focus, QComboBox:focus { border: 2px solid #d6c5ae; }
+QPushButton:focus, QLineEdit:focus, QComboBox:focus, QPlainTextEdit:focus { border: 2px solid #d6c5ae; }
 QPushButton[primary="true"] { background: #51483e; color: #fff8eb; border: 2px solid #8e7b68; font-weight: 600; }
 QPushButton[primary="true"]:hover { background: #605447; border-color: #b49c7e; }
 QPushButton[primary="true"]:pressed { background: #443b32; }
@@ -58,12 +58,13 @@ QPushButton#setupTV:pressed { background: #c9b89f; border-color: #c9b89f; }
 QPushButton#setupTV:focus { border-color: #796956; }
 QPushButton#setupTV:disabled { background: #272521; color: #a79a88; border-color: #51483e; }
 QWidget#homeSecondaryActions QPushButton { min-height: 30px; }
-QPushButton#maintenanceToggle:checked { background: #443b32; border-color: #d6c5ae; }
+QPushButton#maintenanceToggle:checked, QPushButton#diagnosticsToggle:checked { background: #443b32; border-color: #d6c5ae; }
 QWidget#maintenanceActions { background: #211f1b; border: 1px solid #51483e; border-radius: 8px; }
 QPushButton#detailsToggle { background: transparent; border: none; text-align: left; padding: 4px 0; font-size: 14px; color: #d6c5ae; }
 QPushButton#detailsToggle:focus { border: 2px solid #d6c5ae; padding: 2px; }
 QPushButton#close { background: transparent; padding: 6px 16px; }
 QLineEdit, QComboBox { background: #24221e; color: #f3ede3; border: 1px solid #8e7b68; border-radius: 7px; padding: 10px 12px; min-height: 22px; selection-background-color: #51483e; }
+QPlainTextEdit { background: #24221e; color: #f3ede3; border: 1px solid #8e7b68; border-radius: 7px; padding: 8px; selection-background-color: #51483e; font-family: "Menlo", "Consolas", monospace; }
 QComboBox { padding-right: 30px; }
 QComboBox::down-arrow { image: none; }
 QComboBox::drop-down { border: none; width: 26px; }

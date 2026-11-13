@@ -12,11 +12,11 @@ from PySide6.QtCore import QEvent, QObject, Signal, QUrl, QTimer, Qt
 from PySide6.QtGui import QDesktopServices, QIcon, QFontDatabase, QFont, QPixmap, QTextCursor
 from PySide6.QtWidgets import (QApplication, QFileDialog, QFrame, QHBoxLayout,
                               QLabel, QLineEdit, QMainWindow, QMessageBox, QProgressBar,
-                              QPushButton, QTextBrowser, QVBoxLayout, QWidget, QButtonGroup, QDialog, QScrollArea, QLayout, QCheckBox)
+                              QPushButton, QTextBrowser, QPlainTextEdit, QVBoxLayout, QWidget, QButtonGroup, QDialog, QScrollArea, QLayout, QCheckBox)
 
 from cytv import __version__, cli, debloat, diagnostics, i18n
 from cytv.i18n import translate as tr
-from cytv.desktop import Channel
+from cytv.desktop import Channel, SSH_COMMAND_PROMPT
 from cytv.gui_style import STYLE, TVPreview, Select, EditionOption, BrandSignature, WrappedLabel, ThemeCard, ToggleSwitch
 
 MAINTENANCE_ACTIONS = (
@@ -28,6 +28,12 @@ MAINTENANCE_ACTIONS = (
     ('Home button diagnostics', 'home-diagnostics'),
     ('Enable updates for all TV components (root required)', 'enable-system-updates'),
     ('Clear WAM caches (root required)', 'clean-wam-cache'),
+)
+
+
+DIAGNOSTIC_ACTIONS = (
+    ('Check connection and create a diagnostic report', 'doctor'),
+    (SSH_COMMAND_PROMPT, 'ssh-command'),
 )
 
 
@@ -321,6 +327,7 @@ class Wizard(QMainWindow):
         self.check_panel.hide()
 
     def home(self):
+        self.ssh_command_result = None
         self.reset_checks()
         self.recovery_profile = None
         self.selected_profile = None
@@ -361,6 +368,10 @@ class Wizard(QMainWindow):
         self.maintenance_toggle.setObjectName('maintenanceToggle')
         self.maintenance_toggle.setCheckable(True)
         self.maintenance_toggle.setText(tr('Maintenance action') + '  ▸')
+        self.diagnostics_toggle = self.button('Diagnostics', self.toggle_diagnostics, layout=secondary_layout)
+        self.diagnostics_toggle.setObjectName('diagnosticsToggle')
+        self.diagnostics_toggle.setCheckable(True)
+        self.diagnostics_toggle.setText(tr('Diagnostics') + '  ▸')
         self.form_layout.addWidget(secondary)
         self.maintenance = QWidget()
         self.maintenance.setObjectName('maintenanceActions')
@@ -381,6 +392,14 @@ class Wizard(QMainWindow):
         maintenance_layout.addWidget(execute)
         self.form_layout.addWidget(self.maintenance)
         self.maintenance.hide()
+        self.diagnostics_actions = QWidget()
+        self.diagnostics_actions.setObjectName('maintenanceActions')
+        actions_layout = QVBoxLayout(self.diagnostics_actions)
+        actions_layout.setContentsMargins(16, 16, 16, 16)
+        for label, command in DIAGNOSTIC_ACTIONS:
+            self.button(label, lambda checked=False, selected=command: self.start(selected), layout=actions_layout)
+        self.form_layout.addWidget(self.diagnostics_actions)
+        self.diagnostics_actions.hide()
 
     def open_wallpapers(self):
         if self.running:
@@ -395,11 +414,24 @@ class Wizard(QMainWindow):
         self.wallpaper_dialog.open()
 
     def toggle_maintenance(self):
-        expanded = self.maintenance_toggle.isChecked()
-        self.preview.setVisible(not expanded)
-        self.content.setVisible(not expanded)
-        self.maintenance.setVisible(expanded)
-        self.maintenance_toggle.setText(tr('Maintenance action') + ('  ▾' if expanded else '  ▸'))
+        if self.maintenance_toggle.isChecked():
+            self.diagnostics_toggle.setChecked(False)
+        self.show_home_actions()
+
+    def toggle_diagnostics(self):
+        if self.diagnostics_toggle.isChecked():
+            self.maintenance_toggle.setChecked(False)
+        self.show_home_actions()
+
+    def show_home_actions(self):
+        maintenance = self.maintenance_toggle.isChecked()
+        diagnostics = self.diagnostics_toggle.isChecked()
+        self.preview.setVisible(not (maintenance or diagnostics))
+        self.content.setVisible(not (maintenance or diagnostics))
+        self.maintenance.setVisible(maintenance)
+        self.diagnostics_actions.setVisible(diagnostics)
+        self.maintenance_toggle.setText(tr('Maintenance action') + ('  ▾' if maintenance else '  ▸'))
+        self.diagnostics_toggle.setText(tr('Diagnostics') + ('  ▾' if diagnostics else '  ▸'))
 
     def toggle_details(self, expanded):
         self.details.setVisible(expanded)
@@ -504,15 +536,17 @@ class Wizard(QMainWindow):
         self.reset_checks()
         self.set_error_state(False)
         self.command = command
-        self.operation_title = next((label for label, key in MAINTENANCE_ACTIONS if key == command), 'Set up my TV')
+        self.operation_title = next((label for label, key in MAINTENANCE_ACTIONS + DIAGNOSTIC_ACTIONS
+                                     if key == command), 'Set up my TV')
         self.preview.hide()
         self.subtitle.show()
         self.steps.setVisible(command == 'install')
         self.update_steps(1)
-        self.badge.setText(tr('Connecting to your TV' if command == 'install' else 'Maintenance action'))
+        self.badge.setText(tr('Connecting to your TV' if command == 'install' else 'Diagnostics' if command == 'ssh-command' else 'Maintenance action'))
         self.rail_title.setText(tr(self.operation_title))
         self.language.setEnabled(False)
         self.report = None
+        self.ssh_command_result = None
         self.recovery_profile = None
         self.selected_profile = None
         self.install_settings_current = {}
@@ -556,7 +590,9 @@ class Wizard(QMainWindow):
         self.worker.start()
 
     def receive(self, kind, value):
-        if kind == 'debloat-results':
+        if kind == 'ssh-command-result':
+            self.ssh_command_result = value
+        elif kind == 'debloat-results':
             self.debloat_results = dict(value)
         elif kind == 'installation-settings':
             self.install_settings_current = {key:value[key] for key in ('renewal','block_updates') if type(value.get(key)) is bool}
@@ -650,6 +686,13 @@ class Wizard(QMainWindow):
             self.cancel.setText(tr('Close'))
             self.cancel.setEnabled(True)
             self.clear_form()
+            if self.command == 'ssh-command':
+                if self.ssh_command_result is not None:
+                    self.show_ssh_command_result(self.ssh_command_result)
+                    return
+                if value == 130:
+                    self.home()
+                    return
             self.title.setText(tr('Finished' if value == 0 else 'Cancelled' if value == 130 else 'Let’s resolve this'))
             self.subtitle.show()
             self.subtitle.setText(tr('Read the result below before continuing.'))
@@ -1088,6 +1131,9 @@ class Wizard(QMainWindow):
             self.preparation_return_step = self.current_step
             self.show_preparation(0, prompt)
             return
+        if prompt.label == SSH_COMMAND_PROMPT and self.command == 'ssh-command':
+            self.show_ssh_command_prompt()
+            return
         if prompt.label == debloat.SELECT:
             self.show_debloat_selection()
             return
@@ -1235,15 +1281,73 @@ class Wizard(QMainWindow):
                 self.button('Help finding my TV', lambda: self.submit('?'))
             entry.setFocus()
 
+    def show_ssh_command_prompt(self):
+        profile = self.selected_profile
+        root = profile['edition'] == 'root' or profile.get('connection') == 'root-ssh'
+        user = 'root' if root else 'prisoner'
+        self.title.setText(tr(SSH_COMMAND_PROMPT))
+        self.badge.setText(tr('Diagnostics'))
+        target = f"{user}@{profile['host']}:{profile['port']}"
+        hint = tr('Review the command before running it.')
+        if root:
+            hint += ' ' + tr('This command can change the TV system.')
+        self.subtitle.setText(target + '\n' + hint)
+        self.subtitle.show()
+        self.content.hide()
+        self.details_toggle.hide()
+        self.details.hide()
+        editor = QPlainTextEdit()
+        editor.setObjectName('sshCommandInput')
+        editor.setAccessibleName(tr('SSH command'))
+        editor.setTabChangesFocus(True)
+        self.form_layout.addWidget(editor)
+        run = self.button('Run', lambda: self.submit(editor.toPlainText()), True)
+        run.setEnabled(False)
+        editor.textChanged.connect(lambda: run.setEnabled(bool(editor.toPlainText().strip())))
+        editor.setFocus()
+
+    def show_ssh_command_result(self, result):
+        self.set_error_state(bool(result.error) or result.exit_code not in (None, 0))
+        self.title.setText(tr('SSH command result'))
+        self.badge.setText(tr('Diagnostics'))
+        target = self.subtitle.text().split('\n', 1)[0]
+        self.subtitle.setText(target)
+        self.content.hide()
+        self.check_panel.hide()
+        self.details_toggle.hide()
+        self.details.hide()
+        code = result.exit_code if result.exit_code is not None else tr('Unknown')
+        lines = [tr('Exit code: {code}').format(code=code)]
+        if result.error:
+            lines.append(tr(result.error))
+        if result.truncated:
+            lines.append(tr('Output truncated at 256 KiB per stream.'))
+        lines.extend(('', 'stdout', result.stdout, 'stderr', result.stderr))
+        text = '\n'.join(lines)
+        output = QPlainTextEdit()
+        output.setObjectName('sshCommandOutput')
+        output.setAccessibleName(tr('SSH command result'))
+        output.setReadOnly(True)
+        output.setPlainText(text)
+        self.form_layout.addWidget(output)
+        actions = QHBoxLayout()
+        self.form_layout.addLayout(actions)
+        copy = self.button('Copy output', lambda: QApplication.clipboard().setText(text), True, layout=actions)
+        self.button('Back to start', self.home, layout=actions)
+        copy.setFocus()
+
     def submit(self, value):
         self.content.show()
         if not self.pending:
             return
+        ssh_command = self.command == 'ssh-command' and self.pending.label == SSH_COMMAND_PROMPT
+        if ssh_command and value is not None:
+            self.content.setPlainText(tr('Running SSH command…'))
         if self.pending.secret:
             self.content.clear()
             self.title.setText(tr('Connecting to your TV'))
         self.pending = None
-        if self.check_results:
+        if self.check_results and not ssh_command:
             self.check_panel.show()
         self.clear_form()
         self.cancel.setEnabled(False)

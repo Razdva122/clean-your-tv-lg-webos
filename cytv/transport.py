@@ -6,7 +6,9 @@ import http.client
 import io
 import json
 import os
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Optional
 import shlex
 import stat
 import time
@@ -228,6 +230,15 @@ def root_auth(secret, profile=None, identity_prompt=None, automatic=True, passwo
     return RootAuth(ssh_config=None)
 
 
+@dataclass(repr=False)
+class CommandResult:
+    stdout: str
+    stderr: str
+    exit_code: Optional[int]
+    truncated: bool
+    error: str = ''
+
+
 class SSH:
     def __init__(self, client, root=False):
         self.client = client
@@ -346,7 +357,7 @@ class SSH:
                 time.sleep(0.02)
         raise UserError('TV operation timed out. Run cytv status before retrying.', reason_code='operation-timeout')
 
-    def run(self, command, data=None, timeout=30):
+    def _command_channel(self, command, data):
         # Some TV SSH servers disconnect on large exec requests. A builtin read
         # consumes only the command header; binary stdin stays on the channel.
         if len(command.encode('utf-8')) > 4096:
@@ -359,6 +370,52 @@ class SSH:
             if data is not None:
                 channel.sendall(data)
             channel.shutdown_write()
+        except BaseException:
+            channel.close()
+            raise
+        return channel
+
+    def run_command(self, command, timeout=30):
+        """Capture both streams for the desktop SSH command runner."""
+        channel = self._command_channel(command, None)
+        stdout, stderr = bytearray(), bytearray()
+        limit = 256 * 1024
+        deadline = time.monotonic() + timeout
+        truncated = False
+        status = None
+        error = ''
+        try:
+            while time.monotonic() < deadline:
+                # Once EOF/close is visible, all buffered bytes can be drained.
+                finished = channel.closed or (channel.eof_received and channel.exit_status_ready())
+                received = False
+                for ready, read, buffer in ((channel.recv_ready, channel.recv, stdout),
+                                             (channel.recv_stderr_ready, channel.recv_stderr, stderr)):
+                    if ready():
+                        data = read(65536)
+                        remaining = limit - len(buffer)
+                        truncated |= len(data) > remaining
+                        buffer.extend(data[:remaining])
+                        received = True
+                if received:
+                    continue
+                if finished:
+                    status = channel.recv_exit_status()
+                    if status == -1:
+                        status = None
+                        error = 'SSH closed without reporting an exit code.'
+                    break
+                time.sleep(0.02)
+            else:
+                error = 'Timed out waiting for the SSH command. It may still be running on the TV.'
+            return CommandResult(stdout.decode('utf-8', errors='replace'),
+                                 stderr.decode('utf-8', errors='replace'), status, truncated, error)
+        finally:
+            channel.close()
+
+    def run(self, command, data=None, timeout=30):
+        channel = self._command_channel(command, data)
+        try:
             output=[]
             try:
                 for chunk in self.chunks(channel,timeout):output.append(chunk)
