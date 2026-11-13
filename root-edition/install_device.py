@@ -788,27 +788,39 @@ class LocalDevice:
             if stopped.get('controller_running') or startup_failed or restart_first and not restarted:
                 save('restart-required')
                 return {'removed':False,'verified_clean':False,'restart_required':True}
-            save('package-removal')
-            package_error=None
+            packages_complete = 'package-removal' in record['done']
+            if not packages_complete:
+                save('package-removal')
+            package_error = None
             try:
-                remove_packages(self,record,save)
-                self.cleanup('app_permissions')
-            except (OSError,RuntimeError,ValueError,subprocess.SubprocessError) as error:
-                package_error=error
-            if not package_error and 'package-removal' not in record['done']:record['done'].append('package-removal')
+                remove_packages(self, record, save)
+                if 'package-removal' not in record['done']:
+                    self.cleanup('app_permissions')
+                if not packages_complete:
+                    record['done'].append('package-removal')
+            except (OSError, RuntimeError, ValueError, subprocess.SubprocessError) as error:
+                from install_driver import failure_summary
+                package_error = error
+                record['cleanup_error'] = 'removal-failed'
+                record['last_failure'] = dict(failure_summary(error), stage='package-removal')
+                record.setdefault('failure', record['last_failure'])
+
             save('private-cleanup')
-            self.shared_cleanup('sweep',record)
-            processes_stopped=True
+            processes_stopped = True
             try:
-                self.clean_quiescent(record,all_processes=True,same_boot=not restarted)
-                self.retire_clean_private(record)
-            except ValueError as error:
-                if restarted or str(error)!='live_original_worker':raise
-                # Published Helper may still have a loaded process. Full boot
-                # ends it; the final sweep runs afterwards without changing it.
-                processes_stopped=False
-            if package_error:
-                record['cleanup_error']='removal-failed'
+                self.shared_cleanup('sweep', record)
+                try:
+                    self.clean_quiescent(record, all_processes=True, same_boot=not restarted)
+                    self.retire_clean_private(record)
+                except ValueError as error:
+                    if restarted or error.args != ('live_original_worker',):
+                        raise
+                    processes_stopped = False
+            except Exception as error:
+                if package_error is not None:
+                    raise package_error from error
+                raise
+            if package_error is not None:
                 raise package_error
             original_request=record['original'].get('request')
             unresolved_original=isinstance(original_request,dict) and original_request.get('state')!='complete'
