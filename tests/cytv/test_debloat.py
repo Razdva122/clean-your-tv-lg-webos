@@ -16,6 +16,29 @@ class DebloatTests(unittest.TestCase):
         self.installer = SimpleNamespace(profile=profile, store=Store(self.tmp.name))
         self.record = self.installer.store.device_dir(profile) / 'debloat.json'
 
+    def test_results_explain_write_rejection_only_on_matching_no_root_firmware(self):
+        from cytv.desktop import DesktopConsole
+
+        self.installer.profile['edition'] = 'no-root'
+        self.installer.remote = SimpleNamespace(
+            root=False, run=lambda command, **kwargs: '"off"' if 'livePlus' in command else 'null')
+        self.installer.tv_info = {'modelName': '55UK7500PSA', 'firmwareVersion': '05.50.70'}
+        for firmware, reply, expected in (
+            ('05.50.70', {'returnValue': False}, 'firmware-blocked'),
+            ('05.50.70', TimeoutError(), 'failed'),
+            ('05.50.71', {'returnValue': False}, 'failed'),
+        ):
+            with self.subTest(firmware=firmware, reply=reply), patch.object(debloat, 'SSAP') as connect:
+                self.installer.tv_info['firmwareVersion'] = firmware
+                connect.return_value.__enter__.return_value.call.side_effect = [reply]
+                writer = Mock()
+                events = {}
+                answers = iter(['["homePromotion", "livePlus"]', '1'])
+                debloat.run(self.installer, lambda _: next(answers), DesktopConsole(writer), diagnostic=events)
+                writer.assert_any_call('debloat-results', {'homePromotion': expected, 'livePlus': 'already'})
+                self.assertEqual(events['homePromotion'],
+                                 'write-unavailable' if isinstance(reply, Exception) else 'write-rejected')
+
     def test_result_states_and_journal_precedes_write(self):
         values = {'homePromotion': 'off', 'screenSaverAd': 'on', 'lmt': 'off'}
         writes = []
