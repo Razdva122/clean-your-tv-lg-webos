@@ -11,6 +11,7 @@ import re
 from pathlib import Path
 import subprocess
 import sys
+from time import monotonic, sleep
 
 from installation import classify, device_snapshot, read_journal, _optional_record
 from updater.package import safe_bytes, inspect_package, verify_payload, members
@@ -651,8 +652,6 @@ class LocalDevice:
                     record['cleanup_boot_id']=current_boot
                     record.pop('cleanup_verified_boot_id',None);save(record['stage'])
                 restarted=current_boot!=record['cleanup_boot_id']
-            if record['stage']=='restart-required' and not restarted:
-                return {'removed':False,'verified_clean':False,'restart_required':True}
             self.clean_quiescent(record)
             private=self.shared_cleanup('inventory',record)
             record['cleanup_staging_ids']=private.get('staging_ids',[])
@@ -809,13 +808,23 @@ class LocalDevice:
             processes_stopped = True
             try:
                 self.shared_cleanup('sweep', record)
-                try:
-                    self.clean_quiescent(record, all_processes=True, same_boot=not restarted)
-                    self.retire_clean_private(record)
-                except ValueError as error:
-                    if restarted or error.args != ('live_original_worker',):
-                        raise
-                    processes_stopped = False
+                deadline = monotonic() + 5
+                while True:
+                    try:
+                        self.clean_quiescent(record, all_processes=True, same_boot=not restarted)
+                    except ValueError as error:
+                        if error.args != ('live_original_worker',):
+                            raise
+                        remaining = deadline - monotonic()
+                        if remaining <= 0:
+                            if restarted:
+                                raise
+                            processes_stopped = False
+                            break
+                        sleep(min(.25, remaining))
+                    else:
+                        self.retire_clean_private(record)
+                        break
             except Exception as error:
                 if package_error is not None:
                     raise package_error from error

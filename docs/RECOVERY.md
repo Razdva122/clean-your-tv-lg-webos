@@ -138,10 +138,12 @@ known project apps/files that are present and skip items that are absent.
    The installer checks the actual boot change and remaining files, then performs
    the final sweep. Success requires both removed and verified-clean results.
 
-The current source permits completion without a restart when current control,
-startup, package/file and process checks pass and no prior setup is unresolved.
-A normal Developer Mode removal runs these checks as part of the same
-operation. Wait for the installer to confirm that removal is complete.
+Developer Mode removal checks the current TV state and waits briefly for busy
+installation work and Clean Your TV processes to finish. It can complete on the
+same boot after an interrupted setup if those checks pass. If webOS denies
+package-status access, the installer can use the original install's verified
+terminal receipts. The installer may report retained temporary installation
+archives after confirming that apps, services and Home controls were removed.
 With the v1.20.3 installer, **Try again** can also finish a No-root removal on
 the same boot if a transient Helper Stop failure clears and current checks
 confirm cleanup can proceed. Follow a restart request if it remains after the
