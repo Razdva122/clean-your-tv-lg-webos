@@ -1874,6 +1874,7 @@ print('CYTV_PROJECT_REMOVED')
 
     def continue_clean_removal(self, expected_pending):
         from .errors import connection_interrupted
+        from .failure_help import CONNECTION_FAILURES, removal_failure, transient_connection_failure
         from .recovery_state import REMOVAL_REASONS
         # Root's verified full-project absence also completes blocked No-root
         # goals for this host. Never use an old receipt or cross-host proof.
@@ -1902,11 +1903,18 @@ print('CYTV_PROJECT_REMOVED')
                 return result
             except Exception as error:
                 lost = connection_interrupted(error)
-                reason = 'connection-interrupted' if lost else getattr(error, 'reason_code', None)
-                if (reason in REMOVAL_REASONS and self.store.pending(self.profile)
-                        and (self.profile['edition'] == 'no-root' or reason in
-                             ('connection-interrupted', 'root-access-required', 'root-worker-busy', 'removal-failed'))):
-                    self.store.checkpoint(self.profile, removal_reason=reason)
+                # Keep the existing reconnect behavior independent of the saved diagnosis.
+                reason = getattr(error, 'reason_code', None)
+                pending = self.store.pending(self.profile)
+                if pending:
+                    failure = removal_failure(error, 'uninstall', self.profile, pending)
+                    if transient_connection_failure(failure):
+                        self.store.checkpoint(self.profile, removal_reason='connection-interrupted')
+                    elif lost or failure['code'] in CONNECTION_FAILURES:
+                        self.store.checkpoint(self.profile, removal_reason='connection-unverified')
+                    elif reason in REMOVAL_REASONS and (self.profile['edition'] == 'no-root' or reason in
+                            ('root-access-required', 'root-worker-busy', 'removal-failed')):
+                        self.store.checkpoint(self.profile, removal_reason=reason)
                 if not reconnect or attempt == 2 or not (lost or reason == 'root-worker-busy'):
                     raise
                 try:
@@ -2002,9 +2010,9 @@ print('CYTV_PROJECT_REMOVED')
         failure=reply.get('cleanup_error')
         messages={
             'root-worker-busy':'Another Clean Your TV operation is still running. Wait for it to finish, then choose Try again.',
-            'root-access-required':'Root access is required to remove the remaining files. Restore Root SSH access, then choose Try again.',
-            'removal-failed':'The TV could not finish removing a package. Choose Try again.',
-            'cleanup-check-failed':'Some Clean Your TV files or settings remain. Choose Try again.'}
+            'root-access-required':'Some project files require Root access. Reconnect using Root to finish removal.',
+            'removal-failed':'The TV package result could not be verified. Review recovery options before continuing.',
+            'cleanup-check-failed':'Final cleanup could not be verified. Review recovery options before continuing.'}
         if failure in messages:
             self.store.checkpoint(self.profile,removal_reason=failure)
             raise UserError(messages[failure],reason_code=failure)

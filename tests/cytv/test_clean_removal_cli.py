@@ -64,3 +64,29 @@ class CleanupConnectionWire(unittest.TestCase):
                 self.assertNotIn('disconnect it from power',text[current:])
                 self.assertNotIn('Restart the TV to finish removal',text[current:])
                 self.assertEqual(store.pending(profile)['stage'],'restart-required')
+
+    def test_ambiguous_connection_failure_does_not_persist_transient_retry(self):
+        import errno
+        from paramiko.ssh_exception import NoValidConnectionsError
+        errors = (
+            NoValidConnectionsError({('192.0.2.50', 22): PermissionError(errno.EACCES, 'denied'),
+                                     ('192.0.2.51', 22): ConnectionRefusedError(errno.ECONNREFUSED, 'refused')}),
+            OSError('unknown socket cause'),
+        )
+        for error in errors:
+            with self.subTest(error=type(error).__name__), tempfile.TemporaryDirectory() as tmp:
+                store = state.Store(tmp)
+                profile = state.target('192.0.2.50', 'root')
+                store.save(profile)
+                (store.device_dir(profile) / 'known_hosts').write_bytes(b'original pin')
+                store.request_clean_removal(profile)
+                store.checkpoint(profile, stage='restart-required', removal_reason='restart-required')
+                write = Capture()
+                with patch('cytv.cli.package.verify_payload', return_value={'files': {'fixture': 'digest'}}):
+                    code = cli.main(['uninstall', '--language', 'en', '--yes', '--host', profile['host'],
+                                     '--edition', 'root', '--data-dir', tmp], write=write,
+                                    connect=Mock(side_effect=error), payload_root=Path(tmp) / 'payload')
+                self.assertEqual(code, 1)
+                self.assertEqual(write.plans[-1]['removal_action']['action'], 'check')
+                self.assertNotEqual(store.pending(profile)['removal_reason'], 'connection-interrupted')
+                self.assertEqual(store.pending(profile)['stage'], 'restart-required')

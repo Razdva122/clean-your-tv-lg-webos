@@ -122,21 +122,21 @@ let browser;
         event.blockerText
       )
     );
-    assert.equal(await page.locator('[data-action=retry-removal]').count(), 1);
+    assert.equal(await page.locator('[data-action=retry-removal]').count(), 0);
     await page.evaluate((event) => {
       receiveNative({ ...event, actions: ['retain-evidence'] });
       receiveNative({ kind: 'finished', code: 2 });
     }, event);
     assert.equal(
-      await page.locator('[data-action=retry-removal]').count(),
+      await page.locator('[data-action=recover]').count(),
       1,
-      language + ' retry rechecks same goal'
+      language + ' blocked cleanup offers recovery review'
     );
     await page.evaluate((event) => {
       receiveNative(event);
       receiveNative({ kind: 'finished', code: 2 });
     }, event);
-    assert.equal(await page.locator('[data-action=recover]').count(), 0);
+    assert.equal(await page.locator('[data-action=recover]').count(), 1);
     assert(!(await page.locator('body').innerText()).includes('PRIVATE'));
   }
   await page.close();

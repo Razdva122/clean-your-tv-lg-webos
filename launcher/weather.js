@@ -67,7 +67,10 @@
     queued = true;
     requestAnimationFrame(function () {
       queued = false;
-      render();
+      // Forecast notifications can render after the startup Promise settles.
+      try {
+        render();
+      } catch (_) {}
     });
   }
   function storeState() {
@@ -998,11 +1001,19 @@
     start: function () {
       if (started) return;
       started = true;
-      render();
-      store.start();
+      let startup;
+      try {
+        render();
+        startup = store.start();
+      } catch (error) {
+        // A theme change may have queued a render before startup ran.
+        started = false;
+        throw error;
+      }
       setInterval(function () {
         if (doc.visibilityState !== 'hidden') store.refresh();
       }, 60000);
+      return startup;
     },
     reservation: function () {
       return region;

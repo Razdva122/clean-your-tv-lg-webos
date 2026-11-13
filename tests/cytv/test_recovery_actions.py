@@ -184,6 +184,8 @@ class RecoveryActionTests(unittest.TestCase):
                         recover(installer,lambda prompt:'y',write,initial_observation={})
                         self.assertEqual(plans[-1]['state'],'complete')
                         self.assertIs(plans[-1]['verified_clean'],True)
+                        self.assertEqual(plans[-1].get('removal_action'),
+                                         {'action':'none','condition':'complete','requires_change':False})
                         report=json.loads(diagnostics.create_report(store,'recover',profile,'recover',
                             status={'removed':True,'verified_clean':True}).read_text())
                         self.assertEqual(report['recovery']['state'],'idle')
@@ -194,6 +196,145 @@ class RecoveryActionTests(unittest.TestCase):
                         self.assertNotEqual(plans[-1]['state'],'complete')
                         self.assertIs(plans[-1]['verified_clean'],False)
                     installer.continue_clean_removal.assert_called_once_with(pending)
+
+    def test_review_cleanup_can_stop_before_continuation_and_keep_original_failure(self):
+        from cytv.recovery import removal_plan
+        for edition in ('root', 'no-root'):
+            with self.subTest(edition=edition), tempfile.TemporaryDirectory() as tmp:
+                store = state.Store(tmp)
+                profile = state.target('tv.local', edition)
+                store.begin(profile, 'install', state='recovery_required')
+                store.request_clean_removal(profile)
+                store.checkpoint(profile, stage='private-cleanup', removal_reason='cleanup-check-failed')
+                pending = store.pending(profile)
+                installer = Mock(store=store, profile=profile)
+                installer.observe_recovery.return_value = {'device': {}}
+                events = []
+                write = DesktopConsole(lambda kind, value: events.append((kind, value)))
+
+                removal_plan(write, store, profile, failure={'code':'ssh-identity', 'next_step':'Verify the key.'})
+                plan = [value for kind, value in events if kind == 'recovery-plan'][-1]
+                self.assertEqual(plan['removal']['original_outcome'], 'recovery_required')
+                self.assertEqual(plan['reason'], 'cleanup-check-failed')
+                self.assertEqual(plan.get('removal_action'),
+                                 {'action':'check','condition':'unverified','requires_change':True})
+
+                prompts = []
+                answers = iter(('y', 'n'))
+                def answer(prompt):
+                    prompts.append(prompt)
+                    return next(answers)
+
+                recover(installer, answer, write)
+                self.assertEqual(len(prompts), 2)
+                self.assertIn('Check recovery options?', prompts[0])
+                self.assertIn('Continue removing Clean Your TV?', prompts[1])
+                installer.continue_clean_removal.assert_not_called()
+                self.assertEqual(store.pending(profile), pending)
+                ready = [value for kind, value in events if kind == 'recovery-plan'][-1]
+                self.assertEqual(ready.get('removal_action'),
+                                 {'action':'check','condition':'unverified','requires_change':True})
+                self.assertEqual(ready['removal']['original_outcome'], 'recovery_required')
+
+    def test_connection_help_only_recommends_retry_for_known_transient_causes(self):
+        import errno
+        import socket
+        from paramiko.ssh_exception import NoValidConnectionsError
+        from cytv.cli import explain_failure
+        from cytv.recovery import removal_plan
+
+        cases = [
+            (TimeoutError(), 'ssh-timeout', 'transient'),
+            (OSError(errno.EHOSTUNREACH, 'PRIVATE'), 'ssh-unreachable', 'transient'),
+            (OSError(errno.EIO, 'PRIVATE'), 'ssh-unreachable', 'unverified'),
+            (socket.gaierror(socket.EAI_NONAME, 'PRIVATE'), 'ssh-unreachable', 'unverified'),
+            (NoValidConnectionsError({
+                ('192.0.2.10',22): PermissionError(errno.EACCES, 'PRIVATE'),
+                ('192.0.2.11',22): ConnectionRefusedError(errno.ECONNREFUSED, 'PRIVATE'),
+            }), 'ssh-unreachable', 'unverified'),
+        ]
+        with tempfile.TemporaryDirectory() as tmp:
+            store = state.Store(tmp)
+            profile = state.target('tv.local', 'root')
+            store.request_clean_removal(profile)
+            store.checkpoint(profile, stage='restart-required', removal_reason='restart-required')
+            for error, code, condition in cases:
+                with self.subTest(error=type(error), condition=condition):
+                    events = []
+                    write = DesktopConsole(lambda kind, value: events.append((kind, value)))
+                    help = explain_failure(write, store, profile, 'ssh-connect', error)
+                    self.assertEqual(help['code'], code)
+                    removal_plan(write, store, profile, failure=help)
+                    plan = [value for kind, value in events if kind == 'recovery-plan'][-1]
+                    self.assertEqual(plan['removal_action']['condition'], condition)
+                    self.assertTrue(plan['restart_required'])
+                    self.assertNotIn('PRIVATE', str(events))
+
+    def test_recover_emits_current_failure_advice_over_the_saved_restart(self):
+        cases = [
+            (UserError('Native C1 recovery could not be verified. Removal has not started.'),
+             'unverified'),
+            (UserError('PRIVATE', reason_code='cleanup-check-failed'), 'unverified'),
+            (UserError('PRIVATE', reason_code='connection-interrupted'), 'transient'),
+            (None, 'restart'),
+        ]
+        with tempfile.TemporaryDirectory() as tmp:
+            store = state.Store(tmp)
+            profile = state.target('tv.local', 'root')
+            store.request_clean_removal(profile)
+            store.checkpoint(profile, stage='restart-required', removal_reason='restart-required')
+            pending = store.pending(profile)
+            for error, condition in cases:
+                with self.subTest(condition=condition, error=error):
+                    installer = Mock(store=store, profile=profile)
+                    installer.observe_recovery.return_value = {'device': {}}
+                    installer.continue_clean_removal.side_effect = error
+                    installer.continue_clean_removal.return_value = {'restart_required': True}
+                    events = []
+                    write = DesktopConsole(lambda kind, value: events.append((kind, value)))
+                    with self.assertRaises(UserError):
+                        recover(installer, lambda _: 'y', write)
+                    plan = [value for kind, value in events if kind == 'recovery-plan'][-1]
+                    self.assertEqual(plan['removal_action']['condition'], condition)
+                    self.assertEqual(plan['reason'], 'restart-required')
+                    self.assertTrue(plan['restart_required'])
+                    if condition != 'restart':
+                        self.assertNotIn('Restart the TV', plan['summary'])
+                        self.assertNotIn('Restart the TV', plan['next_step'])
+                    self.assertEqual(store.pending(profile), pending)
+                    self.assertNotIn('PRIVATE', str(events))
+
+    def test_missing_saved_removal_reason_does_not_project_a_fresh_request(self):
+        from cytv.recovery import removal_plan
+        with tempfile.TemporaryDirectory() as tmp:
+            store = state.Store(tmp)
+            profile = state.target('tv.local', 'no-root')
+            store.request_clean_removal(profile)
+            events = []
+            write = DesktopConsole(lambda kind, value: events.append((kind, value)))
+            removal_plan(write, store, profile, state='waiting', connecting=True)
+            fresh = [value for kind, value in events if kind == 'recovery-plan'][-1]
+            self.assertEqual(fresh.get('removal_action'),
+                             {'action':'retry-removal','condition':'transient','requires_change':False})
+            removal_plan(write, store, profile)
+            failed = [value for kind, value in events if kind == 'recovery-plan'][-1]
+            self.assertEqual(failed.get('removal_action'),
+                             {'action':'check','condition':'unverified','requires_change':True})
+            for unknown in (None, 'PRIVATE'):
+                with self.subTest(reason=unknown):
+                    store.checkpoint(profile, removal_reason=unknown)
+                    removal_plan(write, store, profile, state='waiting', connecting=True)
+                    plan = [value for kind, value in events if kind == 'recovery-plan'][-1]
+                    self.assertEqual(plan.get('removal_action'),
+                                     {'action':'check','condition':'unverified','requires_change':True})
+                    self.assertNotIn('PRIVATE', str(plan))
+            store.checkpoint(profile, stage='restart-required', removal_reason=None)
+            installer = Mock(store=store, profile=profile)
+            installer.observe_recovery.return_value = {'device': {}}
+            recover(installer, lambda _: 'n', write, initial_observation={})
+            plan = [value for kind, value in events if kind == 'recovery-plan'][-1]
+            self.assertEqual(plan.get('removal_action'),
+                             {'action':'retry-removal','condition':'restart','requires_change':True})
 
     def test_unexpected_observation_diagnostics_are_pure_fixed_and_optional(self):
         from cytv.contract_events import Recorder, current_recorder
