@@ -99,6 +99,14 @@ remote: [check requirements and known limits](docs/COMPATIBILITY.md) first.
 [Remote controls](docs/CONTROLS.md) · [Arrange apps](docs/APP-MANAGEMENT.md) ·
 [Update or remove](docs/MAINTENANCE.md)
 
+## Also for LG webOS
+
+Watch movies and shows from your Plex library on your LG TV with
+**PlxNative**, an unofficial Plex client with a responsive native
+interface and 4K Dolby Vision playback on compatible TVs.
+
+[Explore PlxNative →](https://github.com/GLinnik21/plx-native)
+
 <a id="candidate-install-root-from-the-tv"></a>
 <a id="developer-mode-auto-renewal--beta"></a>
 
