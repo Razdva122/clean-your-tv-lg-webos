@@ -312,13 +312,13 @@ def _device(installer, action, proof=None, *, after_stop=False, wait_for_idle=Fa
         detail = value['cleanup_error'] if type(value['cleanup_error']) is dict else {}
         detail = no_root_cleanup_details(dict(detail,action=action))
         storage_full = detail.get('exception_code') in ('ENOSPC', 'EDQUOT')
-        error = UserError(TV_STORAGE_FULL if storage_full else 'Removal could not be checked. Reconnect and try again.',
+        error = UserError(TV_STORAGE_FULL if storage_full else 'Removal could not be verified. Review recovery options before continuing.',
                           reason_code='tv-storage-full' if storage_full else 'pending-operation')
         error.no_root_cleanup = detail
         raise error
     if (not isinstance(value, dict) or value.get('schema') != 1 or
             not all(isinstance(value.get(k), list) for k in ('present', 'blocked', 'root_present'))):
-        raise UserError('Removal could not be checked. Reconnect and try again.')
+        raise UserError('Removal could not be verified. Review recovery options before continuing.')
     return value
 
 
@@ -354,14 +354,14 @@ def _check_access(value, defer_packages=False, *, sweep=False):
             error.no_root_cleanup = no_root_cleanup_details({'action': 'sweep', 'blocked_areas': areas})
         raise error
     if blocked:
-        raise UserError('Some project paths changed. Close other installers and try again.')
+        raise UserError('Some project paths changed. Close other installers, then review recovery options.')
 
 
 def _remove_package(installer, app):
     try:
         installer.remote.luna('com.webos.appInstallService/dev/remove', {'id': app, 'subscribe': True}, terminal='removed', timeout=150)
     except TVRejected as error:
-        error.args = ('The TV rejected removal. Check the error details and try again.',)
+        error.args = ('The TV package result could not be verified. Review recovery options before continuing.',)
         error.reason_code = 'removal-failed'
         raise
 
@@ -421,10 +421,10 @@ def restore_stock_home(installer):
     else:
         if isinstance(result,dict) and result.get('returnValue') is True:
             return
-        raise UserError('Removal could not be checked. Reconnect and try again.', reason_code='controls-unverified')
+        raise UserError('Removal could not be verified. Review recovery options before continuing.', reason_code='controls-unverified')
     stock={'com.webos.app.home','com.webos.app.livetv',
            'com.webos.app.hdmi1','com.webos.app.hdmi2','com.webos.app.hdmi3','com.webos.app.hdmi4'}
-    message = 'Removal could not be checked. Reconnect and try again.'
+    message = 'Removal could not be verified. Review recovery options before continuing.'
     method = uri + 'getForegroundAppInfo'
     with ExitStack() as connection:
         paired = None
@@ -617,7 +617,7 @@ def continue_removal(installer, expected_pending):
         restart_triggers.append('resident-installer-evidence')
     if invalid_stop_record:
         if restart_triggers or _device(installer, 'idle', after_stop=True).get('idle') is not True:
-            raise UserError('Removal could not be checked. Reconnect and try again.', reason_code='cleanup-check-failed')
+            raise UserError('Removal could not be verified. Review recovery options before continuing.', reason_code='cleanup-check-failed')
     elif restart_triggers:
         return require_restart(restart_triggers, rearm=restarted)
     else:
@@ -642,14 +642,14 @@ def continue_removal(installer, expected_pending):
     remaining = [scope for scope in final['present']
                  if scope != 'installer-staging' and not scope.startswith('installer-staging ')]
     if remaining or {app['id'] for app in installer.installed_apps()}.intersection(APPS):
-        raise UserError('Some project files remain. Try again to finish removal.')
+        raise UserError('Final cleanup could not be verified. Review recovery options before continuing.')
     idle = _device(installer, 'idle', after_stop=invalid_stop_record, wait_for_idle=True)
     if idle.get('project_running') is not False or ((not restarted or reused_restart or invalid_stop_record)
                                                   and idle.get('idle') is not True):
         return require_restart(['process-idle-unverified'], rearm=restarted)
     if not inputs_removed:
         installer.store.checkpoint(installer.profile, removal_reason='controls-unverified')
-        raise UserError('TV input shortcuts could not be checked. Try again.', reason_code='controls-unverified')
+        raise UserError('TV controls could not be verified. Review recovery options before continuing.', reason_code='controls-unverified')
     if proof is not None and not pending.get('cleanup_boot_release_started'):
         if restarted:
             installer.store.checkpoint(installer.profile, cleanup_boot_verified=True)

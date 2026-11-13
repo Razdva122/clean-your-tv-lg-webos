@@ -9,6 +9,10 @@ from .root_action_failure import ACTIVATION_CODES, ACTIVATION_DETAILS
 NETWORK = 'Keep the TV on and use the same home network. Review the selected TV address and SSH port, Local Network access and VPN isolation.'
 DEVELOPER = 'Leave Developer Mode open with Key Server on. Use the current TV passphrase exactly; do not turn Developer Mode off or delete the saved profile.'
 REPORT = 'Save the diagnostic report and keep the saved connection and recovery data. Do not reset the TV or repeat setup to force progress.'
+NETWORK_FAILURES = ('ssh-unreachable', 'ssh-protocol', 'ssh-access-denied', 'ssh-refused', 'ssh-timeout')
+AUTH_FAILURES = ('ssh-auth-root', 'ssh-auth-no-root', 'ssh-key-file', 'ssh-identity',
+                 'developer-key-server', 'developer-key-unlock', 'developer-key-response')
+CONNECTION_FAILURES = NETWORK_FAILURES + AUTH_FAILURES
 NATIVE_HOME_SCRIPT = (
     'Restore LG Home before Root setup',
     'The Home executable path currently points to a script.',
@@ -73,6 +77,7 @@ NETWORK_CAUSES = {
     'host-unreachable': 'ssh-unreachable', 'network-unreachable': 'ssh-unreachable',
     'name-resolution': 'ssh-unreachable', 'unknown': 'ssh-unreachable',
 }
+TRANSIENT_NETWORK_CAUSES = ('timeout', 'host-unreachable', 'network-unreachable')
 
 
 def network_failure_causes(error):
@@ -105,6 +110,8 @@ def for_error(error, phase, profile=None, pending=None):
     root_ssh = edition == 'root' or profile.get('connection') == 'root-ssh'
     names = {cls.__name__ for cls in type(error).__mro__}
     reason = getattr(error, 'reason_code', None)
+    clean_removal = isinstance(pending, dict) and pending.get('recovery_protocol') == 'clean-removal-v1'
+    removal_ssh_error = clean_removal and bool(names.intersection(('SSHException', 'NoValidConnectionsError')))
     code = None
     if reason == 'installer-runtime-mismatch' and edition == 'root':
         code = reason
@@ -126,11 +133,11 @@ def for_error(error, phase, profile=None, pending=None):
                 'developer-key-unlock' if reason=='key-unlock' else 'developer-key-response')
     elif isinstance(error, TVConnectionError) and phase in ('pair-tv','read-inventory'):
         code = 'tv-pairing'
-    elif phase == 'ssh-connect':
+    elif phase == 'ssh-connect' or removal_ssh_error:
         if 'AuthenticationException' in names:
             code = 'ssh-auth-root' if root_ssh else 'ssh-auth-no-root'
-        elif (isinstance(error,PermissionError) and getattr(error,'filename',None)
-              or root_ssh and isinstance(error,(FileNotFoundError,ValueError))):
+        elif phase == 'ssh-connect' and (isinstance(error,PermissionError) and getattr(error,'filename',None)
+                                        or root_ssh and isinstance(error,(FileNotFoundError,ValueError))):
             code = 'ssh-key-file'
         elif 'SSHException' in names:
             code = 'ssh-protocol'
@@ -143,7 +150,7 @@ def for_error(error, phase, profile=None, pending=None):
         code = 'no-root-reservation'
     if code is None and edition == 'root' and phase in ('activate-root', 'recover') and reason in ACTIVATION_CODES:
         code = reason
-    if code is None and isinstance(pending, dict) and pending.get('recovery_protocol') == 'clean-removal-v1':
+    if code is None and clean_removal:
         return None  # The existing removal plan already explains the safe retry.
     if code is None and pending:
         code = ('no-root-recovery' if edition=='no-root' and pending.get('recovery_protocol')=='no-root-original-stream-v1'
@@ -156,8 +163,38 @@ def for_error(error, phase, profile=None, pending=None):
         if code in ('ssh-unreachable', 'ssh-timeout', 'ssh-protocol'):
             next_step = 'Keep the TV awake on the same home network. Check network access and VPN isolation using the original trusted connection.'
         next_step += ' Keep the original saved TV connection and recovery data; do not replace or edit the connection to bypass recovery.'
-    return {'code':code, 'title':title, 'detail':detail, 'next_step':next_step,
-            'pending':bool(pending), 'can_edit_connection':edit and not bool(pending)}
+    result = {'code':code, 'title':title, 'detail':detail, 'next_step':next_step,
+              'pending':bool(pending), 'can_edit_connection':edit and not bool(pending)}
+    if code == 'ssh-unreachable' and clean_removal:
+        result['transient_connection'] = all(cause in TRANSIENT_NETWORK_CAUSES
+                                            for cause in network_failure_causes(error))
+    return result
+
+
+def removal_failure(error, phase, profile=None, pending=None, help=None):
+    """Carry a bounded diagnosis for an unsuccessful removal attempt."""
+    help = for_error(error, phase, profile, pending) if help is None else help
+    if help is not None:
+        return help
+    if getattr(error, 'removal_restart_required', False) is True:
+        return {'code':'restart-required'}
+    reason = getattr(error, 'reason_code', None)
+    from .recovery_state import REMOVAL_REASONS
+    if reason in REMOVAL_REASONS:
+        return {'code':reason}
+    if (isinstance(error, (TimeoutError, ConnectionResetError, ConnectionAbortedError, BrokenPipeError))
+            or type(error) is ConnectionError):
+        return {'code':'connection-interrupted'}
+    return {'code':'unknown'}
+
+
+def transient_connection_failure(failure):
+    """Distinguish known interruption from ambiguous connection guidance."""
+    if type(failure) is not dict:
+        return False
+    code = failure.get('code')
+    return (code in ('connection-interrupted', 'ssh-timeout')
+            or code == 'ssh-unreachable' and failure.get('transient_connection') is True)
 
 
 def report_summary(value):

@@ -195,6 +195,8 @@ function restartNeeded() {
   );
 }
 function connectionFailure() {
+  if (typeof recoveryPlan?.connection_failure === 'boolean')
+    return recoveryPlan.connection_failure;
   return (
     [
       'ssh-unreachable',
@@ -215,7 +217,12 @@ function connectionFailure() {
   );
 }
 function restartPresentation() {
-  return restartNeeded() && !connectionFailure();
+  return (
+    restartNeeded() &&
+    !connectionFailure() &&
+    (!recoveryPlan?.removal_action ||
+      recoveryPlan.removal_action.condition === 'restart')
+  );
 }
 function recoveryDetails() {
   if (!recoveryPlan) return '';
@@ -236,11 +243,24 @@ function recoveryDetails() {
       ].includes(failureHelp?.code)
     )
       detail = failureHelp.nextStep;
-    else if (connectionFailure()) detail = t('connectionInterrupted');
+    else if (connectionFailure()) detail = detail || t('connectionInterrupted');
     else if (restartPresentation()) detail = t('fullRestart');
     else detail = detail || t('removalUnconfirmed');
   }
   return `<div class="recovery-info">${recoveryPlan.stageText && !restartNeeded() && !connectionFailure() ? `<p>${esc(recoveryPlan.stageText)}</p>` : ''}${detail ? `<p role="status">${esc(detail)}</p>` : ''}${!isCleanup() ? `<p>${esc(recoveryPlan.nextStep)}</p>` : ''}</div>`;
+}
+function removalPrimary() {
+  const decision = recoveryPlan?.removal_action?.action;
+  if (decision === 'connect-root')
+    return primary(
+      edition === 'root' ? 'toConnection' : 'connectRoot',
+      'connect-root',
+      'key'
+    );
+  if (decision === 'retry-removal')
+    return primary('tryAgain', 'retry-removal', 'refresh');
+  // Missing or unknown advice must not turn into another package mutation.
+  return primary('recoveryReview', 'recover', 'refresh');
 }
 function canReviewRecovery() {
   return (
@@ -316,7 +336,7 @@ function result() {
     : cancelled
       ? 'cancelledDesc'
       : 'failedDesc';
-  return `<div class="result-symbol ${complete ? '' : needsReview ? 'review-symbol' : 'error-symbol'}">${icon(complete ? 'check' : 'alert')}</div><section class="center progress-copy ${!ok && !cancelled && !waitingCleanup ? 'error-result' : ''}"><h1>${cancelled ? t('cancelled') : recoveryPlan ? (recovered ? esc(recoveryPlan.summary) : isCleanup() ? (connectionFailure() ? t('removalConnection') : recoveryPlan.titleText ? esc(recoveryPlan.titleText) : t(restartPresentation() ? 'restartRemoval' : 'removalPending')) : t('recoveryReview')) : ok && setup ? t(verified ? 'homeObserved' : 'tvChecksReview') : failureHelp ? esc(failureHelp.title) : t(title)}</h1><p>${recoveryPlan ? esc(recovered ? recoveryPlan.nextStep : isCleanup() ? t('removalPending') : recoveryPlan.summary) : ok && setup ? t('tvChecksDesc') : failureHelp ? esc(failureHelp.detail) : t(desc)}</p><div class="target">${editionName()}<span> / </span>${esc(host)}</div></section>${!ok && !waitingCleanup && errorLogs.size ? `<p class="error-summary error-text" role="alert">${esc([...errorLogs].at(-1))}</p>` : ''}${checkList()}${ok && !recoveryPlan && action === 'install' ? `<div class="recovery-info"><h3>${t('recoveryTitle')}</h3><p>${t('recoveryDesc')}</p><div class="gesture"><kbd>Home</kbd> × 3 <span class="muted"> / 2 ${t('seconds')}</span></div></div>` : ''}${ok && !recoveryPlan && action === 'install' && edition === 'no-root' ? `<div class="recovery-info"><p>${t('tryHomeHelp')}</p><p>${t('resumeHomeHelp')}</p>${selectedConnection === 'root-ssh' ? '' : `<p>${t('sessionHelp')}</p>`}</div>` : ''}${recoveryPlan && !recovered ? recoveryDetails() : ''}${failureHelp && !isCleanup() ? `<section class="recovery-info" role="note"><p>${esc(failureHelp.nextStep)}</p></section>` : ''}${logBlock()}<footer class="bottom">${reportReady ? `<button class="${recoveryPlan && isCleanup() && !recovered ? 'secondary' : 'primary'}" data-action="save-report">${t('saveReport')}${icon('file')}</button>` : ''}${recoveryPlan ? `${isCleanup() && !recovered ? (recoveryPlan.actions?.includes('connect-root') ? primary('connectRoot', 'connect-root', 'key') : primary('tryAgain', 'retry-removal', 'refresh')) : canReviewRecovery() ? primary('recoveryReview', 'recover', 'refresh') : ''}${isCleanup() && !recovered && connectionFailure() ? `<button class="secondary" data-action="to-connection">${t('toConnection')}</button>` : ''}<button class="secondary" data-action="home">${t('done')}</button>` : !ok ? `${!failureHelp || failureHelp.canEditConnection ? `<button class="secondary" data-action="to-connection">${t('toConnection')}</button>` : ''}<button class="text-button maintenance-link" data-action="home">${t('done')}</button>` : reportReady ? `<button class="secondary" data-action="home">${t('done')}</button>` : primary('done', 'home', 'check')}</footer>`;
+  return `<div class="result-symbol ${complete ? '' : needsReview ? 'review-symbol' : 'error-symbol'}">${icon(complete ? 'check' : 'alert')}</div><section class="center progress-copy ${!ok && !cancelled && !waitingCleanup ? 'error-result' : ''}"><h1>${cancelled ? t('cancelled') : recoveryPlan ? (recovered ? esc(recoveryPlan.summary) : isCleanup() ? (connectionFailure() ? t('removalConnection') : recoveryPlan.titleText ? esc(recoveryPlan.titleText) : t(restartPresentation() ? 'restartRemoval' : 'removalPending')) : t('recoveryReview')) : ok && setup ? t(verified ? 'homeObserved' : 'tvChecksReview') : failureHelp ? esc(failureHelp.title) : t(title)}</h1><p>${recoveryPlan ? esc(recovered ? recoveryPlan.nextStep : isCleanup() ? t('removalPending') : recoveryPlan.summary) : ok && setup ? t('tvChecksDesc') : failureHelp ? esc(failureHelp.detail) : t(desc)}</p><div class="target">${editionName()}<span> / </span>${esc(host)}</div></section>${!ok && !waitingCleanup && errorLogs.size ? `<p class="error-summary error-text" role="alert">${esc([...errorLogs].at(-1))}</p>` : ''}${checkList()}${ok && !recoveryPlan && action === 'install' ? `<div class="recovery-info"><h3>${t('recoveryTitle')}</h3><p>${t('recoveryDesc')}</p><div class="gesture"><kbd>Home</kbd> × 3 <span class="muted"> / 2 ${t('seconds')}</span></div></div>` : ''}${ok && !recoveryPlan && action === 'install' && edition === 'no-root' ? `<div class="recovery-info"><p>${t('tryHomeHelp')}</p><p>${t('resumeHomeHelp')}</p>${selectedConnection === 'root-ssh' ? '' : `<p>${t('sessionHelp')}</p>`}</div>` : ''}${recoveryPlan && !recovered ? recoveryDetails() : ''}${failureHelp && !isCleanup() ? `<section class="recovery-info" role="note"><p>${esc(failureHelp.nextStep)}</p></section>` : ''}${logBlock()}<footer class="bottom">${reportReady ? `<button class="${recoveryPlan && isCleanup() && !recovered ? 'secondary' : 'primary'}" data-action="save-report">${t('saveReport')}${icon('file')}</button>` : ''}${recoveryPlan ? `${isCleanup() && !recovered ? removalPrimary() : canReviewRecovery() ? primary('recoveryReview', 'recover', 'refresh') : ''}${isCleanup() && !recovered && connectionFailure() ? `<button class="secondary" data-action="to-connection">${t('toConnection')}</button>` : ''}<button class="secondary" data-action="home">${t('done')}</button>` : !ok ? `${!failureHelp || failureHelp.canEditConnection ? `<button class="secondary" data-action="to-connection">${t('toConnection')}</button>` : ''}<button class="text-button maintenance-link" data-action="home">${t('done')}</button>` : reportReady ? `<button class="secondary" data-action="home">${t('done')}</button>` : primary('done', 'home', 'check')}</footer>`;
 }
 function wallpapers() {
   return `${step()}<section class="page-intro"><h1>${t('wallpapers')}</h1><p>${t('wallpaperInstructions')}</p></section><div class="wallpaper-limit" role="note">${icon('alert')}<p>${t('wallpaperLimit')}</p></div><footer class="bottom"><div class="footnote">${icon('wifi')}${t('networkFoot')}</div></footer>`;
@@ -690,11 +710,16 @@ document.addEventListener('click', (event) => {
     if (native) CYTV.importKey();
     else info(t('browserKey'));
   } else if (cmd === 'connect-root') {
-    selectedConnection = null;
-    rootVariant = null;
-    action = 'uninstall';
-    edition = 'root';
-    port = '22';
+    if (edition === 'root') {
+      removalConnection = true;
+      action = 'recover';
+    } else {
+      selectedConnection = null;
+      rootVariant = null;
+      action = 'uninstall';
+      edition = 'root';
+      port = '22';
+    }
     screen = 'connection';
     render();
   } else if (cmd === 'retry-removal') {
@@ -716,7 +741,11 @@ document.addEventListener('click', (event) => {
     dialog.close();
   } else if (cmd === 'to-connection') {
     removalConnection = isCleanup();
-    if (removalConnection) action = 'uninstall';
+    if (removalConnection)
+      action =
+        recoveryPlan?.removal_action?.action === 'retry-removal'
+          ? 'uninstall'
+          : 'recover';
     screen = 'connection';
     render();
   } else if (cmd === 'save-report') {
