@@ -9,7 +9,14 @@ from .root_action_failure import ACTIVATION_CODES, ACTIVATION_DETAILS
 NETWORK = 'Keep the TV on and use the same home network. Review the selected TV address and SSH port, Local Network access and VPN isolation.'
 DEVELOPER = 'Leave Developer Mode open with Key Server on. Use the current TV passphrase exactly; do not turn Developer Mode off or delete the saved profile.'
 REPORT = 'Save the diagnostic report and keep the saved connection and recovery data. Do not reset the TV or repeat setup to force progress.'
+NATIVE_HOME_SCRIPT = (
+    'Restore LG Home before Root setup',
+    'The Home executable path currently points to a script.',
+    'Restore LG Home and disable the existing Home replacement, then check the TV again.',
+    False,
+)
 GUIDES = {
+    'native-home-script': NATIVE_HOME_SCRIPT,
     'tv-storage-full': ('Not enough space on the TV', TV_STORAGE_FULL, REPORT, False),
     'tv-storage-ramfs': ('Available TV storage could not be determined.', TV_STORAGE_RAMFS, REPORT, False),
     'computer-storage-full': ('Not enough space on this computer', COMPUTER_STORAGE_FULL, REPORT, False),
@@ -108,7 +115,7 @@ def for_error(error, phase, profile=None, pending=None):
     elif (pending and edition == 'no-root' and phase in ('recover', 'uninstall')
             and isinstance(error, TVRejected) and error.luna.get('operation') == 'package-status'):
         code = 'recovery-status-rejected'
-    elif reason in ('root-home-interfaces','root-requirements') and edition=='root':
+    elif reason in ('root-home-interfaces','root-requirements','native-home-script') and edition=='root':
         code = reason
     elif reason in ('ssh-trust-record', 'ssh-identity-unverified') or 'BadHostKeyException' in names:
         code = 'ssh-identity'

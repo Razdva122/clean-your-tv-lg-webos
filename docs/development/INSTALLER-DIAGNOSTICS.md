@@ -392,6 +392,20 @@ including a timeout, a rejection, an unconfirmed or malformed reply, an empty
 configuration, and a compatible or incompatible chain. For an explicit
 rejection it can include a bounded numeric Luna error code.
 `native-home-unavailable` identifies a missing or unsafe native Home path.
+`native-home-script` identifies a script at the native Home path. Restore the
+original Home executable before retrying Root setup. On the capability-based
+Qt path, Doctor also checks the mount table from the SSH session. The report
+exports only the `tv.root_native_home_mount` classification, such as a mount
+on the Home file, a mount on a parent directory, or stacked mounts. `absent`
+means the probe saw no separate mount on Home, `/usr/bin` or `/usr`.
+`unknown` means the probe could not establish the layout.
+
+During interactive Root setup, a single private file mount can be restored
+after a preview in a private mount namespace exposes a valid ARM32 Home ELF
+on a read-only SquashFS root. After confirmation, setup rechecks the mount,
+unmounts it normally, verifies the same ELF, and reruns Root preflight.
+Stacked or covering mounts require separate investigation. The device still
+checks for conflicting Home integrations before admission.
 When System Profile is absent and KeyFilters passed, this result lets interactive
 setup offer No-root over the existing root SSH connection. No-root still runs
 its own preflight before installing.
