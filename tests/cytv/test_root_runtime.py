@@ -89,14 +89,19 @@ class RuntimeChoices(unittest.TestCase):
                 self.assertEqual(installer.tv_info.get('node_version'), '0.12.2')
                 self.assertEqual(installer.tv_info.get('node_version_status'), 'read')
 
-    def test_legacy_ribbon_offer_requires_an_explicit_edition_choice(self):
+    def test_root_home_fallback_requires_an_explicit_edition_choice(self):
         from unittest.mock import Mock
-        from cytv.root_capabilities import LegacyRibbonError
+        from cytv.root_capabilities import (
+            LegacyRibbonError, NATIVE_HOME_UNAVAILABLE_MESSAGE, NoRootAlternativeError,
+        )
         from cytv.root_runtime import offer
         from cytv.terminal import Console
 
-        for non_interactive, expected in ((False, EOFError), (True, LegacyRibbonError)):
-            with self.subTest(non_interactive=non_interactive), tempfile.TemporaryDirectory() as tmp:
+        for home_error, non_interactive in (
+                (LegacyRibbonError(), False), (LegacyRibbonError(), True),
+                (NoRootAlternativeError(NATIVE_HOME_UNAVAILABLE_MESSAGE), False),
+                (NoRootAlternativeError(NATIVE_HOME_UNAVAILABLE_MESSAGE), True)):
+            with self.subTest(error=type(home_error), non_interactive=non_interactive), tempfile.TemporaryDirectory() as tmp:
                 profile = state.target('192.0.2.10', 'root', root_variant='node012-beta')
                 store = state.Store(tmp)
                 remote = Mock()
@@ -104,9 +109,9 @@ class RuntimeChoices(unittest.TestCase):
                 installer = SimpleNamespace(store=store, profile=profile, remote=remote,
                                             manifest={'legacy_root_beta': 'legacy-root-beta'})
                 ask = Mock(return_value='')
-                with self.assertRaises(expected):
+                with self.assertRaises(type(home_error) if non_interactive else EOFError):
                     offer(installer, SimpleNamespace(non_interactive=non_interactive, yes=True),
-                          ask, Console(lambda _: None), ribbon_error=LegacyRibbonError())
+                          ask, Console(lambda _: None), home_error=home_error)
                 self.assertEqual(ask.call_count, 0 if non_interactive else 1)
                 self.assertEqual(profile['edition'], 'root')
                 self.assertIsNone(store.pending(profile))
