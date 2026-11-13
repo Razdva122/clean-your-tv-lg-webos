@@ -657,7 +657,7 @@ async function absent(final) {
         var fd = openDir('/tmp/' + name),
           info = fs.fstatSync(fd);
         if (
-          /^cytv-system-updater-[a-f0-9]{32}$/.test(name) &&
+          /^cytv-(?:product|system-updater)-[a-f0-9]{32}$/.test(name) &&
           (record.retained_temporary_stages || []).some(function (entry) {
             return (
               object(entry) &&
@@ -905,7 +905,7 @@ async function absent(final) {
       (record.retained_temporary_stages || []).forEach(function (entry) {
         if (
           object(entry) &&
-          /^\/tmp\/cytv-system-updater-[a-f0-9]{32}$/.test(entry.path)
+          /^\/tmp\/cytv-(?:product|system-updater)-[a-f0-9]{32}$/.test(entry.path)
         )
           prefixes.push(entry.path + '/');
       });
