@@ -1791,7 +1791,8 @@ print('CYTV_ROOT_FILES_OK')
                     self.save_eim(False)
                 else:
                     eim_error = True
-        self.remote.luna('com.webos.applicationManager/launch', {'id': 'com.webos.app.home'})
+        from .no_root_cleanup import restore_stock_home
+        restore_stock_home(self)
         if eim_error:
             raise UserError('LG Home launch was requested, but input restoration removal is unconfirmed. Keep recovery state and run cytv doctor before uninstalling.')
         return {'restored': True, 'pending': self.store.pending(self.profile)}

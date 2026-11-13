@@ -225,11 +225,11 @@ def stage_installer_support(payload, work):
     target.mkdir(parents=True, exist_ok=True)
     environment = dict(os.environ, ZIG_GLOBAL_CACHE_DIR=str(Path(work) / 'zig-global-cache'),
                        ZIG_LOCAL_CACHE_DIR=str(Path(work) / 'zig-cache'))
-    for name in ('lifecycle-gate', 'cleanup-noop'):
-        subprocess.run([sys.executable, '-m', 'ziglang', 'cc', '-target', 'arm-linux-musleabi',
-                        '-std=c99', '-Wall', '-Wextra', '-Werror', '-Os', '-static', '-s',
-                        'native/installer/' + name + '.c', '-o', str(target / name)],
-                       cwd=ROOT, env=environment, check=True)
+    name = 'lifecycle-gate'
+    subprocess.run([sys.executable, '-m', 'ziglang', 'cc', '-target', 'arm-linux-musleabi',
+                    '-std=c99', '-Wall', '-Wextra', '-Werror', '-Os', '-static', '-s',
+                    'native/installer/' + name + '.c', '-o', str(target / name)],
+                   cwd=ROOT, env=environment, check=True)
 
 
 def build_payload():

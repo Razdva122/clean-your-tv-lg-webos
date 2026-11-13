@@ -236,7 +236,7 @@ class LanguageTests(unittest.TestCase):
     def test_bounded_cleanup_details_translate_in_every_locale(self):
         from cytv.recovery_ui import REMOVAL_STAGES, REMOVAL_BLOCKERS
         lang = self.language()
-        messages = set(REMOVAL_STAGES.values()) | set(REMOVAL_BLOCKERS.values())
+        messages = set(REMOVAL_STAGES.values()) | set(REMOVAL_BLOCKERS.values()) | {'Cleanup is incomplete.'}
         for code in set(lang.LANGUAGES) - {'en','auto'}:
             lang.set_language(code)
             for message in messages - {''}:

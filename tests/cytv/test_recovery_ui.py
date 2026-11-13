@@ -14,6 +14,15 @@ class RecoveryPresentationTests(unittest.TestCase):
         self.assertFalse(removal_waiting(plan('removal-failed')))
         self.assertFalse(removal_waiting(plan('private-cleanup-incomplete'),{'code':'ssh-timeout'}))
 
+    def test_protected_files_in_final_cleanup_are_shown_as_partial_removal(self):
+        from cytv.recovery_ui import removal_details, removal_title
+        plan = {'disposition': 'clean-removal', 'removal': {
+            'stage': 'private-cleanup', 'reason': 'root-access-required'}}
+        self.assertEqual(removal_title(plan), 'Cleanup is incomplete.')
+        self.assertIn('Root access', removal_details(plan)['blocker_text'])
+        plan['removal']['stage'] = 'requested'
+        self.assertEqual(removal_title(plan), 'Removal is not finished yet.')
+
     def test_known_cleanup_phase_and_blocker_have_plain_instructions(self):
         from cytv.recovery_ui import removal_details
         self.assertEqual(removal_details({'disposition':'clean-removal','removal':{
