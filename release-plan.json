@@ -1,56 +1,7 @@
 {
   "schema": 1,
-  "version": "1.20.3",
-  "changes": [
-    {
-      "pr": 598,
-      "issues": [
-        529
-      ],
-      "summary": "Finish verified No-root recovery without temporary IPKs"
-    },
-    {
-      "pr": 600,
-      "issues": [
-        101,
-        519
-      ],
-      "summary": "Add desktop SSH command diagnostics"
-    },
-    {
-      "pr": 601,
-      "issues": [
-        588
-      ],
-      "summary": "Finish Root removal with retained updater receipts"
-    },
-    {
-      "pr": 602,
-      "issues": [
-        588
-      ],
-      "summary": "Remove Root private state by component ownership"
-    },
-    {
-      "pr": 603,
-      "issues": [
-        389,
-        588
-      ],
-      "summary": "Resume Root removal without repeating completed checks"
-    },
-    {
-      "pr": 604,
-      "issues": [],
-      "summary": "Finish No-root removal after a transient stop failure"
-    }
-  ],
+  "version": null,
+  "changes": [],
   "excluded": [],
-  "acceptance": "Project LG OLED55C3RLA, firmware 43.21.71, webOS 11.2.0. Exact macOS ARM64 installer and signed Root QA bytes verified. Signed Root update, Magic Remote controls/audio/emergency exit, ordinary retained rollback, Root and No-root fresh installation and full removal with verified restart passed. Original package versions and LG Home routing restored; one captured input label differed after baseline reinstall. Original reporter states remain unverified on hardware. See docs/history/2026-11-13-release-1.20.3-rc-verification.md.",
-  "build": {
-    "run_id": 43405375772,
-    "attempt": 1,
-    "source": "09ef047afeb44ab5a2cda2544c2b18c70fc8ed8e"
-  },
-  "acceptance_build": "43405375772:1"
+  "acceptance": ""
 }
