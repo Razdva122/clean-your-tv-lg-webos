@@ -1,7 +1,13 @@
 {
   "schema": 1,
   "version": null,
-  "changes": [],
+  "changes": [
+    {
+      "pr": 605,
+      "issues": [],
+      "summary": "Feature PlxNative first in browser demos and previews"
+    }
+  ],
   "excluded": [],
   "acceptance": ""
 }
