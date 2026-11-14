@@ -425,7 +425,7 @@ if ((fs.statSync(dir).mode & 0o7777) !== 0o2770) {
           assert.equal(reply.returnValue, false);
           assert.equal(reply.diagnostic.code, 'INVALID_STATE');
           assert.equal(reply.diagnostic.operation, 'write');
-          assert.equal(reply.channelMode, mode);
+          assert.equal(reply.channelMode, mode === 0o770 ? mode : undefined);
           assert.deepEqual(fs.readdirSync(rejected), []);
         }
       }

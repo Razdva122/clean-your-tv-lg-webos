@@ -22,6 +22,10 @@ class AgentLoginFailed(UserError):
     """An automatic agent attempt needs an explicit fresh manual connection."""
 
 
+class LunaReplyUnconfirmed(UserError):
+    """The command exited normally without an accepted Luna reply."""
+
+
 class CredentialPrompt(str):
     """A string-compatible secret prompt with a language-independent type."""
     def __new__(cls, text, credential_type):
@@ -514,6 +518,6 @@ class SSH:
                 for reply in parser.feed(chunk):
                     if terminal_reply(reply, terminal, uri, allow_missing_return=allow_missing_return):
                         return reply
-            raise UserError('TV command ended without a confirmed result. Run cytv status.')
+            raise LunaReplyUnconfirmed('TV command ended without a confirmed result. Run cytv status.')
         finally:
             channel.close()

@@ -178,6 +178,231 @@ class OriginalOperationIntegration(unittest.TestCase):
         self.installer=operations.Installer(self.remote,self.store,self.profile,fixture.payload,fixture.manifest,lambda *_:None)
         self.inventory=fixture.inventory
 
+    def test_unconfirmed_home_launch_requires_exact_foreground_to_remove_then_install_fresh(self):
+        from unittest.mock import Mock
+        from cytv.errors import TVCommandError, TVRejected, UserError
+        from cytv.transport import SSH
+
+        (self.root / 'proc').mkdir()
+        self.installer.install(self.inventory, 'original-secret')
+        installed = self.root / 'installed.json'
+        packages = installed.read_bytes()
+        self.assertEqual(set(json.loads(packages)), set(observer.APPS))
+        directory = self.store.device_dir(self.profile)
+        removal = self.store.request_clean_removal(self.profile)
+        self.installer.store = self.store = state.Store(self.store.root)
+        manager = 'com.webos.applicationManager/'
+        home = 'com.webos.app.home'
+        commands = []
+        original = self.remote.luna
+        ssh = SSH(None)
+        launch_output = b''
+        launch_status = 0
+
+        def channel(command):
+            binary, mode, count, uri, body = shlex.split(command)
+            self.assertEqual((binary, mode, count), ('/usr/bin/luna-send-pub', '-n', '1'))
+            commands.append((uri, json.loads(body)))
+            if uri.endswith('/getForegroundAppInfo'):
+                output, status = foreground, 0
+            else:
+                output, status = launch_output, launch_status
+            reply = Mock(closed=status is None)
+            reply.recv_ready.side_effect = [bool(output), False]
+            reply.recv.return_value = output
+            reply.recv_stderr_ready.return_value = False
+            reply.exit_status_ready.return_value = status is not None
+            reply.recv_exit_status.return_value = status
+            return reply
+
+        def luna(uri, payload, **kwargs):
+            if uri in (manager + 'launch', manager + 'getForegroundAppInfo'):
+                return ssh.luna(uri, payload, **kwargs)
+            return original(uri, payload, **kwargs)
+
+        ssh.channel = channel
+        self.remote.luna = luna
+        expected = [('luna://' + manager + 'launch', {'id': home}),
+                    ('luna://' + manager + 'getForegroundAppInfo', {})]
+        for launch_output, launch_status, error_type, reason in (
+                (b'{"returnValue":false,"errorCode":-103}', 0, TVRejected, 'user-error'),
+                (b'', 1, TVCommandError, 'user-error'),
+                (b'', None, UserError, 'connection-interrupted')):
+            with self.subTest(launch_status=launch_status, launch_output=launch_output):
+                commands.clear()
+                with self.assertRaises(error_type) as caught:
+                    self.installer.uninstall_project()
+                self.assertEqual(caught.exception.reason_code, reason)
+                self.assertEqual(commands, expected[:1])
+                self.assertEqual(installed.read_bytes(), packages)
+        launch_output, launch_status = b'', 0
+
+        for foreground in (b'', b'{"returnValue":true}', b'{"returnValue":true,"appId":[]}',
+                           b'{"returnValue":false,"errorCode":-103,"appId":"com.webos.app.home"}',
+                           b'{"returnValue":true,"pairingType":"PROMPT","appId":"com.webos.app.home"}',
+                           b'{"returnValue":true,"appId":"com.webos.app.livetv"}',
+                           b'{"returnValue":true,"appId":"com.webos.app.hdmi1"}',
+                           b'{"returnValue":true,"appId":"com.gathin.tvhome"}'):
+            with self.subTest(foreground=foreground):
+                commands.clear()
+                try:
+                    self.installer.uninstall_project()
+                except UserError as error:
+                    self.assertEqual(error.reason_code, 'controls-unverified')
+                else:
+                    self.fail('Removal continued without confirmed LG Home foreground')
+                self.assertEqual(commands, expected)
+                self.assertEqual(installed.read_bytes(), packages)
+                self.assertEqual(self.store.pending(self.profile)['removal_operation'], removal['removal_operation'])
+                self.assertEqual(self.store.pending(self.profile)['stage'], 'requested')
+                self.assertFalse(self.store.pending(self.profile).get('removals'))
+                self.assertFalse(any(call[1].endswith('/dev/remove') for call in self.remote.calls))
+
+        commands.clear()
+        foreground = b'{"returnValue":false,"errorCode":-1}'
+        with patch('websockets.sync.client.connect') as connect, self.assertRaises(UserError) as unpaired:
+            self.installer.uninstall_project()
+        self.assertEqual(unpaired.exception.reason_code, 'controls-unverified')
+        connect.assert_not_called()
+        self.assertEqual(commands, expected)
+        self.assertEqual(installed.read_bytes(), packages)
+
+        commands.clear()
+        foreground = b'{"returnValue":true,"appId":"com.webos.app.home"}'
+        self.assertTrue(self.installer.uninstall_project()['verified_clean'])
+        self.assertEqual(commands, expected)
+        self.assertEqual([call[2]['id'] for call in self.remote.calls if call[1].endswith('/dev/remove')],
+                         list(observer.APPS))
+        self.assertEqual(json.loads(installed.read_bytes()), {})
+        self.assertIsNone(self.store.pending(self.profile))
+        completed = directory / 'clean-removal.json'
+        evidence = completed.read_bytes()
+        self.assertEqual(json.loads(evidence)['removal_operation'], removal['removal_operation'])
+
+        self.remote.luna = original
+        self.installer.install(self.inventory, 'fresh-secret')
+        self.assertEqual((self.root / 'requests').read_text().splitlines(), list(observer.APPS) * 2)
+        self.assertEqual(installed.read_bytes(), packages)
+        self.assertIsNone(self.store.pending(self.profile))
+        self.assertFalse(completed.exists())
+        archives = list(directory.glob('clean-removal-history-*.json'))
+        self.assertEqual([file.read_bytes() for file in archives], [evidence])
+
+    def test_removal_review_checks_binding_without_touching_evidence(self):
+        from cytv.desktop import DesktopConsole
+        from cytv.diagnostic_context import status_summary
+        from cytv.errors import UserError
+        from cytv.recovery import recover
+
+        run = self.remote.run
+        def interrupt(command, data=None, timeout=30):
+            if data and data.startswith(b'!<arch>'):
+                raise OSError('simulated upload interruption')
+            return run(command, data, timeout)
+
+        self.remote.run = interrupt
+        with self.assertRaises(UserError):
+            self.installer.install(self.inventory, 'fixture')
+        self.remote.run = run
+        (self.root / 'proc').mkdir()
+        stage, = (self.root / 'public').glob('cytv-*')
+        stage.chmod(0o777)
+        pending = self.store.request_clean_removal(self.profile)
+        capsule = self.store._capsule_path(self.profile, pending['previous']['observer_operation'])
+
+        def evidence():
+            return {str(path): path.read_bytes()
+                    for root in (self.root / 'private', self.store.root)
+                    for path in root.rglob('*') if path.is_file()}
+
+        before = evidence()
+        status = self.installer.observe_recovery()
+        self.assertEqual(status_summary(status)['removal_binding'],
+                         {'capsule': 'verified', 'reservation': 'matched'})
+        self.assertEqual(evidence(), before)
+        capsule.unlink()
+        without_capsule = evidence()
+        status = self.installer.observe_recovery()
+        self.assertEqual(status_summary(status)['removal_binding'],
+                         {'capsule': 'capsule-missing', 'reservation': 'matched'})
+        self.assertEqual(evidence(), without_capsule)
+        console = DesktopConsole(lambda *_: None)
+        recover(self.installer, lambda _: 'n', console, initial_observation=status)
+        self.assertEqual(evidence(), without_capsule)
+
+        # Even after a successful review, removal must recheck the TV plan.
+        plan_path = self.root / 'private/operations' / pending['previous']['observer_operation'] / 'plan.json'
+        original = plan_path.read_bytes()
+        plan = json.loads(original)
+        plan['diagnostic_id'] = '0' * 32
+        plan_path.write_text(observer.canonical(plan))
+        with self.assertRaisesRegex(UserError, 'reservation could not be verified'):
+            recover(self.installer, lambda _: 'y', console, initial_observation=status)
+        self.assertFalse((self.root / 'private/active/cancel-removal.json').exists())
+        self.assertFalse((self.root / 'requests').exists())
+        plan_path.write_bytes(original)
+
+        active = self.root / 'private/active'
+        owner, = active.iterdir()
+        competing_owner = active / ('owner-' + '0' * 32 + '.json')
+        owner.rename(competing_owner)
+        before_conflict = evidence()
+        conflict = self.installer.observe_recovery()
+        self.assertEqual(conflict['removal_binding']['reservation'], 'conflict')
+        self.assertNotIn('continue-removal', conflict['assessment']['actions'])
+        self.assertEqual(evidence(), before_conflict)
+        competing_owner.rename(owner)
+
+        recover(self.installer, lambda _: 'y', console)
+        self.assertIsNone(self.store.pending(self.profile))
+        self.assertFalse((self.root / 'private' / 'active').exists())
+        self.assertFalse(capsule.exists())
+        self.assertFalse((self.root / 'requests').exists())
+        self.assertTrue(self.installer.install(self.inventory, 'fresh-secret')['launch_requested'])
+        self.assertEqual((self.root / 'requests').read_text().splitlines(), list(observer.APPS))
+
+    def test_missing_capsule_with_incomplete_history_requires_only_live_reservation_proof(self):
+        from cytv.errors import UserError
+
+        run = self.remote.run
+
+        def interrupt(command, data=None, timeout=30):
+            if data and data.startswith(b'!<arch>'):
+                raise OSError('simulated upload interruption')
+            return run(command, data, timeout)
+
+        self.remote.run = interrupt
+        with self.assertRaises(UserError):
+            self.installer.install(self.inventory, 'fixture')
+        self.remote.run = run
+        (self.root / 'proc').mkdir()
+        pending = self.store.request_clean_removal(self.profile)
+        operation = pending['previous']['observer_operation']
+        self.store._capsule_path(self.profile, operation).unlink()
+        private = self.root / 'private'
+        operation_dir = private / 'operations' / operation
+        (operation_dir / 'plan.json').unlink()
+
+        active = private / 'active'
+        prepared = operation_dir / 'reservation'
+        for reservation in (active, prepared):
+            with self.subTest(reservation=reservation.name):
+                binding = self.installer.observe_recovery()['removal_binding']
+                self.assertEqual(binding, {'capsule': 'capsule-missing', 'reservation': 'unverified'})
+                with self.assertRaisesRegex(UserError, 'reservation could not be verified'):
+                    self.installer.continue_clean_removal(self.store.pending(self.profile))
+                self.assertFalse((reservation / 'cancel-removal.json').exists())
+                self.assertFalse((self.root / 'requests').exists())
+                if reservation == active:
+                    active.rename(prepared)
+
+        shutil.rmtree(prepared)
+        binding = self.installer.observe_recovery()['removal_binding']
+        self.assertEqual(binding, {'capsule': 'capsule-missing', 'reservation': 'absent'})
+        self.assertTrue(self.installer.uninstall_project()['verified_clean'])
+        self.assertIsNone(self.store.pending(self.profile))
+        self.assertFalse((self.root / 'requests').exists())
+
     def test_cli_cancels_owned_partial_install_and_can_install_fresh(self):
         from cytv import cli
         (self.root / 'proc').mkdir()
@@ -259,18 +484,26 @@ class OriginalOperationIntegration(unittest.TestCase):
         marker = self.root / 'private/active/cancel-removal.json'
         self.assertEqual(marker.stat().st_nlink, 2)
         self.remote.transform_cleanup = lambda code: code
-        lost = []
-        def interrupt(request, reply):
-            if request['action'] == 'history' and not lost:
-                lost.append(True)
-                from cytv.errors import UserError
-                raise UserError('Connection interrupted', reason_code='connection-interrupted')
-        self.remote.cut_after_cleanup = interrupt
+        observation = self.installer.observe_recovery()
+        self.assertEqual(observation['removal_binding'],
+                         {'capsule': 'verified', 'reservation': 'interrupted'})
+        self.assertIn('continue-removal', observation['assessment']['actions'])
+        self.assertEqual(marker.stat().st_nlink, 2)
+        self.store._capsule_path(self.profile, old['observer_operation']).unlink()
+        plan_path = self.root / 'private/operations' / old['observer_operation'] / 'plan.json'
+        self.remote.transform_cleanup = lambda code: code.replace(
+            'if(stat)remove(opdir,stat);',
+            'if(stat){fs.unlinkSync(opdir+"/plan.json");process.exit(79);}')
         self.installer.store = state.Store(self.store.root)
         with self.assertRaises(RuntimeError):
             self.installer.uninstall_project()
+        self.assertFalse(plan_path.exists())
+        self.assertTrue(plan_path.parent.exists())
         self.assertEqual(self.store.pending(self.profile)['stage'], 'verified-clean')
+        self.remote.transform_cleanup = lambda code: code
         self.installer.store = state.Store(self.store.root)
+        self.assertEqual(self.installer.observe_recovery()['removal_binding'],
+                         {'capsule': 'capsule-missing', 'reservation': 'absent'})
         self.assertTrue(self.installer.uninstall_project()['verified_clean'])
         self.assertFalse(marker.exists())
         self.assertEqual((self.root / 'requests').read_text().splitlines(), [operations.HELPER])
@@ -317,6 +550,7 @@ class OriginalOperationIntegration(unittest.TestCase):
             sleep(.01)
         self.assertTrue(ready.exists())
         self.assertFalse((opdir / 'claim-1.json').exists())
+        self.store._capsule_path(self.profile, plan['operation']).unlink()
 
         def release_after_poll_starts():
             deadline = monotonic() + 5

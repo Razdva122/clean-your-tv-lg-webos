@@ -1089,6 +1089,11 @@ def restore_original(installer):
     installer.remote.luna('com.webos.applicationManager/launch',{'id':'com.webos.app.home'})
 
 
+PREPARE_HOME_CHANNEL = node_adapter('state-permissions', """
+contract.prepareChannel('/media/developer/apps/usr/palm/services/com.gathin.tvhome.renewal/state/home-control');
+""")
+
+
 def configure(installer,value):
     from .operations import HELPER_STATE, HOME, HELPER
     from .errors import TVRejected
@@ -1110,6 +1115,13 @@ def configure(installer,value):
         files_match(installer,expected)
         finish_step(installer,plan,'files',token)
     else:files_match(installer,expected)
+    # Repair the fixed transient channel with the trusted installer source.
+    # Other SSH identities can still use a correctly provisioned channel.
+    if repair:
+        try:
+            installer.remote.run('/usr/bin/node', data=PREPARE_HOME_CHANNEL.encode(), timeout=10)
+        except (OSError, RuntimeError):
+            pass  # Broker status remains unknown; independent setup may continue.
     installer.store.checkpoint(installer.profile,configuration_stage='eim-ready')
     token=claim_step(installer,plan,'eim')
     if token:

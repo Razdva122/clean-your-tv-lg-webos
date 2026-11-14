@@ -350,9 +350,14 @@ class SimpleRemoval(unittest.TestCase):
         base=root.parent;developer=base/'developer';sdk=developer/'apps/usr/palm'
         foreign=base/'foreign';foreign.write_text('never follow')
         owned=[];siblings=[]
+        sdk.mkdir(parents=True)
+        containers = [sdk.parent, sdk, *(sdk / kind for kind in ('applications', 'services', 'packages'))]
+        for container in containers:
+            container.mkdir(exist_ok=True)
+            os.chown(container, 1001, 1001)
+            container.chmod(0o777)
         for kind,name in (('services',APPS[0]+'.service'),('packages',APPS[0]),('applications',APPS[0])):
-            container=sdk/kind;container.mkdir(parents=True,exist_ok=True)
-            if kind!='applications':os.chown(container,1001,1001);container.chmod(0o777)
+            container = sdk / kind
             path=container/name;path.mkdir();(path/'changed-owned-data').write_text('partial bytes')
             (path/'link').symlink_to(foreign);owned.append(path)
             sibling=container/'org.foreign.app';sibling.mkdir();(sibling/'keep').write_text('keep');siblings.append(sibling)
@@ -369,7 +374,8 @@ class SimpleRemoval(unittest.TestCase):
         self.assertTrue(all(not p.exists() for p in owned))
         self.assertTrue(all((p/'keep').read_text()=='keep' for p in siblings))
         self.assertEqual(foreign.read_text(),'never follow')
-        self.assertEqual((sdk/'services').stat().st_uid,1001)
+        self.assertTrue(all((p.stat().st_uid, p.stat().st_gid, p.stat().st_mode & 0o777)
+                            == (1001, 1001, 0o777) for p in containers))
 
 
 if __name__=='__main__':unittest.main()

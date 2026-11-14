@@ -256,6 +256,15 @@ class ContextTests(unittest.TestCase):
         path = diagnostics.create_report(self.store, action, self.profile, phase, error, **kwargs)
         return json.loads(path.read_text())
 
+    def test_removal_report_retains_unverified_controls_reason(self):
+        self.store.request_clean_removal(self.profile)
+        self.store.checkpoint(self.profile, removal_reason='controls-unverified')
+        error = UserError('PRIVATE', reason_code='controls-unverified')
+        report = self.report('uninstall', 'uninstall', error)
+        self.assertEqual(report['reason_code'], 'controls-unverified')
+        self.assertEqual(report['removal']['reason'], 'controls-unverified')
+        self.assertNotIn('PRIVATE', json.dumps(report))
+
     def test_primary_failure_survives_new_process_status_and_doctor(self):
         self.store.begin(self.profile, 'install')
         before = (self.store.device_dir(self.profile) / 'operation.json').read_bytes()
