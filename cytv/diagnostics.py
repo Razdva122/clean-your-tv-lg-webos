@@ -52,8 +52,12 @@ def create_report(store, action, profile, phase, error=None, tv_info=None, *, ch
     if pending and pending.get('activation_restore') in ('verified', 'unverified'):
         report['activation_recovery'] = {'lg_home':pending['activation_restore'],
                                          'retry_required':pending.get('activation_restore_pending') is True}
-    report['recovery'] = {**summary(profile or {}, pending), **assess(profile, pending, status)}
-    removal=pending or (getattr(store,'diagnostic_removal',None) if action in ('uninstall','recover') else None)
+    partial = context.mapping(tv_info).get('partial_profile_observation') is True
+    removal = None
+    if profile and not partial:
+        report['recovery'] = {**summary(profile, pending), **assess(profile, pending, status)}
+        removal = pending or (getattr(store, 'diagnostic_removal', None)
+                              if action in ('uninstall', 'recover') else None)
     if removal and removal.get('recovery_protocol')=='clean-removal-v1':
         from .recovery_state import removal_summary
         report['removal']=removal_summary(removal)
@@ -126,7 +130,7 @@ def create_report(store, action, profile, phase, error=None, tv_info=None, *, ch
         observation_diagnostics(status))
     report['contract_telemetry'] = context.choice(context.mapping(tv_info).get('contract_telemetry'),
         ('read', 'legacy', 'unavailable'), 'unavailable')
-    report.update(context.history(report, store, profile, error, removal or pending))
+    report.update(context.history(report, store, profile, error, removal or pending, create=not partial))
     if error is not None and action in ('recover', 'status', 'doctor'):
         report['observation_failure'] = context.failure_summary(report)
     # One report-wide first-cause + recent window, including retained and optional
