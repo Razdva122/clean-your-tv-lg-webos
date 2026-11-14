@@ -26,7 +26,8 @@ REASONS = ('unknown', 'user-error', 'ssh-command-failed', 'ssh-unreachable', 'ss
            'pending-operation', 'root-operation-unconfirmed', 'project-apps-remain', 'version-mismatch',
            'inventory-unavailable', 'graphics-unverified', 'root-home-interfaces', 'native-home-script', 'foreign-home-handoff-required',
            'root-worker-busy', 'root-access-required', 'removal-failed',
-           'cleanup-check-failed', 'connection-interrupted', 'operation-timeout', 'tv-storage-full', 'tv-storage-ramfs')
+           'cleanup-check-failed', 'controls-unverified', 'connection-interrupted', 'operation-timeout',
+           'tv-storage-full', 'tv-storage-ramfs')
 REASONS += ACTIVATION_CODES
 REASONS += ('installer-runtime-mismatch', 'clean-handoff-refused', 'foreign-home-restore-failed')
 ACTIONS = ('recover', 'install', 'uninstall', 'restore', 'status', 'doctor', 'home-diagnostics',
@@ -435,7 +436,8 @@ def failure_summary(value):
     result = {'action': choice(value.get('action'), ACTIONS),
               'phase': choice(value.get('phase'), PHASES),
               'reason_code': choice(value.get('reason_code'), REASONS)}
-    error_types = ('RootCapabilityError', 'UserError', 'LocalRecoveryError', 'TVCommandError', 'TVRejected', 'PythonCacheError',
+    error_types = ('RootCapabilityError', 'UserError', 'LocalRecoveryError', 'TVCommandError', 'TVRejected', 'LunaReplyUnconfirmed',
+                   'PythonCacheError',
                    'PythonPreflightError', 'DeveloperKeyError', 'TVConnectionError',
                    'AuthenticationException', 'BadHostKeyException', 'NoValidConnectionsError',
                    'OSError', 'RuntimeError', 'ValueError', 'TimeoutError', 'Exception')
