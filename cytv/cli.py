@@ -8,7 +8,7 @@ import sys
 from time import sleep
 
 from . import __version__, package, state, i18n
-from .errors import ExistingRoot, LocalRecoveryError, SAVED_PROFILE_ACCESS, TVNotReady, UserError
+from .errors import ExistingRoot, LocalRecoveryError, TVNotReady, UserError
 from .desktop import EXPLICIT_TV_CHOICE
 from .operations import Installer
 from .terminal import Console, supports_ansi
@@ -106,11 +106,10 @@ def removal_connection_message(store, profile, phase, error):
 
 def choose_profile(args, store, ask, write, search, inspect):
     observing = args.command in ('status', 'doctor')
-    incomplete = False
+    profile_errors = {}
 
-    def access_denied():
-        nonlocal incomplete
-        incomplete = True
+    def record_profile_error(error):
+        profile_errors.setdefault(error.local_recovery['reason'], error)
 
     host = args.host.strip().lower() if args.host else None
     exact = observing and host and args.port is not None and (args.edition == 'root' or args.connection)
@@ -124,11 +123,11 @@ def choose_profile(args, store, ask, write, search, inspect):
     if selector:
         exact_directory = store.device_path(selector)
         exact_profile = store.saved_profile(selector)
-    saved = store.profiles(on_access_denied=access_denied if observing else None,
+    saved = store.profiles(on_profile_error=record_profile_error if observing else None,
                            already_read=(exact_directory, exact_profile) if selector and exact_profile else None)
     profiles = [p for p in saved if not args.edition or p['edition'] == args.edition]
     profile = None
-    if incomplete:
+    if profile_errors:
         # Omitted connection is a wildcard for No-root, which can also use
         # Root SSH on the same port. Only a complete selector can skip review.
         if selector:
@@ -136,7 +135,8 @@ def choose_profile(args, store, ask, write, search, inspect):
             if profile and args.root_variant and profile.get('root_variant') != args.root_variant:
                 profile = None
             if profile:
-                write(SAVED_PROFILE_ACCESS)
+                for error in profile_errors.values():
+                    write(str(error))
         elif exact:
             raise UserError('Invalid TV address or port. Use an IPv4 address or hostname and a port from 1 to 65535.') from None
         elif not args.non_interactive:
@@ -146,7 +146,8 @@ def choose_profile(args, store, ask, write, search, inspect):
                        and (args.root_variant is None or p.get('root_variant') == args.root_variant)]
             if choices:
                 write.step(1, 'Choose a saved TV')
-                write(SAVED_PROFILE_ACCESS)
+                for error in profile_errors.values():
+                    write(str(error))
                 for index, saved_profile in enumerate(choices, 1):
                     kind = ('Root (SSH)' if saved_profile['edition'] == 'root' else
                             'No-root (Root SSH)' if saved_profile.get('connection') == 'root-ssh' else
@@ -155,7 +156,7 @@ def choose_profile(args, store, ask, write, search, inspect):
                 selected = prompts.number(ask, write, EXPLICIT_TV_CHOICE, 1, len(choices))
                 profile = choices[selected - 1]
         if profile is None:
-            raise LocalRecoveryError('profile-access', 'profile')
+            raise next(iter(profile_errors.values()))
         if args.identity:
             profile = dict(profile, identity=str(args.identity.expanduser().resolve()))
         return profile, True

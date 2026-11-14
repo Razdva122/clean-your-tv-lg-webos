@@ -139,6 +139,73 @@ class SavedConnectionTests(unittest.TestCase):
             remote.upload.assert_not_called()
             self.assertEqual(remote.close.call_count, 5)
 
+    def test_invalid_unrelated_profile_allows_only_explicit_pinned_observation(self):
+        from cytv import cli
+        with tempfile.TemporaryDirectory() as tmp:
+            store = state.Store(tmp)
+            picked = state.target('tv.local', 'root', 2222, identity=Path(tmp) / 'saved-key')
+            other = state.target('other.local', 'root')
+            for profile in (picked, other):
+                store.save(profile)
+            directory = store.device_dir(picked)
+            (directory / 'known_hosts').write_bytes(b'original pin')
+            store.begin(picked, 'activate-root', stage='enable')
+            damaged = store.device_dir(other) / 'profile.json'
+            damaged.write_text('{')
+            original = {path: path.read_bytes() for path in (*directory.iterdir(), damaged)}
+            io = self.forbidden_io()
+            connections, messages = [], []
+
+            def connect(profile, data, secret, trust, *, persist=True):
+                connections.append((profile, data, persist, trust('different fingerprint', True)))
+                return Mock()
+
+            explicit = ['--host', 'tv.local', '--edition', 'root', '--port', '2222', '--non-interactive']
+            base = ['--data-dir', tmp, '--language', 'en']
+            for args, ask in ((['status', *explicit], io), (['doctor'], lambda _: '1')):
+                with self.subTest(args=args):
+                    code = cli.main([*args, *base], ask=ask, connect=connect, search=io, inspect=io,
+                                    write=messages.append)
+                    self.assertEqual(code, 0, messages)
+            self.assertEqual(connections, [(picked, directory, False, False)] * 2)
+            self.assertIn('A saved TV connection is invalid.', ' '.join(messages))
+            for action in ('install', 'uninstall', 'recover'):
+                with self.subTest(action=action):
+                    code = cli.main([action, *explicit, *base], ask=io, connect=io, search=io, inspect=io,
+                                    write=messages.append)
+                    self.assertEqual(code, 2, messages)
+            io.assert_not_called()
+            self.assertEqual(len(connections), 2)
+            self.assertEqual({path: path.read_bytes() for path in (*directory.iterdir(), damaged)}, original)
+
+    def test_exact_invalid_saved_profile_is_reported_before_any_device_io(self):
+        from cytv import cli
+        invalid_values = (
+            '{',
+            '{"host": 12, "edition": "root", "port": 22}',
+            '{"host": "tv.local", "edition": "root", "port": 22.5}',
+        )
+        for raw in invalid_values:
+            with self.subTest(raw=raw), tempfile.TemporaryDirectory() as tmp:
+                store = state.Store(tmp)
+                profile = state.target('tv.local', 'root')
+                store.save(profile)
+                store.save(state.target('tv.local', 'root', 2222))
+                path = store.device_dir(profile) / 'profile.json'
+                path.write_text(raw)
+                io = self.forbidden_io()
+                code = cli.main(['status', '--host', 'tv.local', '--edition', 'root', '--port', '22',
+                                 '--data-dir', tmp, '--language', 'en'],
+                                ask=io, connect=io, search=io, inspect=io, write=lambda _: None)
+                self.assertEqual(code, 2)
+                io.assert_not_called()
+                report_path, = (Path(tmp) / 'reports').glob('*.json')
+                report = json.loads(report_path.read_text())
+                self.assertEqual(report['phase'], 'select-tv')
+                self.assertEqual(report['local_recovery'], {'reason': 'profile-invalid', 'location': 'profile'})
+                self.assertNotIn('recovery', report)
+                self.assertEqual(path.read_text(), raw)
+
     def test_partial_observation_failure_never_offers_recovery_or_updates_removal_receipt(self):
         from cytv import cli
         from cytv.desktop import DesktopConsole
@@ -285,14 +352,17 @@ class SavedConnectionTests(unittest.TestCase):
 
             denied = self.forbidden_io()
             with patch.object(Path, 'read_text', disappear):
-                self.assertEqual(store.profiles(on_access_denied=denied), [])
+                self.assertEqual(store.profiles(on_profile_error=denied), [])
             denied.assert_not_called()
 
             path.write_text('{')
             with self.assertRaises(LocalRecoveryError) as failure:
-                store.profiles(on_access_denied=denied)
+                store.profiles()
             self.assertEqual(failure.exception.local_recovery['reason'], 'profile-invalid')
-            denied.assert_not_called()
+            skipped = []
+            self.assertEqual(store.profiles(on_profile_error=skipped.append), [])
+            self.assertEqual([error.local_recovery for error in skipped],
+                             [{'reason': 'profile-invalid', 'location': 'profile'}])
 
     def test_exact_status_can_probe_saved_profile_when_root_listing_is_denied(self):
         from cytv import cli

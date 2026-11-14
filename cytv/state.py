@@ -249,7 +249,13 @@ class Store:
                 if platform != 'win32' or winerror not in (None, 32, 33) or attempt == 2:
                     raise LocalRecoveryError('profile-access', 'profile') from None
                 sleep(0.05 * (attempt + 1))
-        return target(**json.loads(raw))
+        saved = json.loads(raw)
+        if (type(saved) is not dict or type(saved.get('host')) is not str
+                or type(saved.get('edition')) is not str or type(saved.get('port')) is not int
+                or any(key in saved and type(saved[key]) is not str
+                       for key in ('identity', 'connection', 'root_variant'))):
+            raise ValueError('Invalid saved profile fields')
+        return target(**saved)
 
     def _saved_profile(self, directory):
         path = directory / 'profile.json'
@@ -271,11 +277,11 @@ class Store:
         """Read an exact saved connection key without creating its directory."""
         return self._saved_profile(self.device_path(selector))
 
-    def profiles(self, *, on_access_denied=None, already_read=None):
-        def inaccessible():
-            if on_access_denied is None:
-                raise LocalRecoveryError('profile-access', 'profile') from None
-            on_access_denied()
+    def profiles(self, *, on_profile_error=None, already_read=None):
+        def report_error(error):
+            if on_profile_error is None:
+                raise error from None
+            on_profile_error(error)
 
         # Unlike a glob, explicit enumeration and probes surface a denied root
         # listing or child traversal. Probe only the saved-profile namespace.
@@ -284,7 +290,7 @@ class Store:
         except FileNotFoundError:
             return []
         except OSError:
-            inaccessible()
+            report_error(LocalRecoveryError('profile-access', 'profile'))
             return []
         result = []
         for directory in directories:
@@ -293,9 +299,7 @@ class Store:
             try:
                 profile = already_read[1] if already_read and directory == already_read[0] else self._saved_profile(directory)
             except LocalRecoveryError as error:
-                if error.local_recovery['reason'] != 'profile-access':
-                    raise
-                inaccessible()
+                report_error(error)
             else:
                 if profile is not None:
                     result.append(profile)
