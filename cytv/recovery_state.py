@@ -71,6 +71,8 @@ def assess(profile, pending, observation=None):
         reason = removal['reason']
         if type(binding) is dict:
             if binding.get('reservation') in ('conflict', 'unverified'):
+                if reason == 'root-access-required' and profile.get('edition') == 'no-root':
+                    return result(removal['state'], reason, 'connect-root', 'retain-evidence')
                 return result(removal['state'], 'ownership-conflict', 'check', 'retain-evidence')
             if binding.get('reservation') in ('matched', 'absent', 'interrupted') and reason == 'ownership-conflict':
                 reason = 'removal-recheck-required'

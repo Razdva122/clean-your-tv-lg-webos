@@ -2,7 +2,7 @@
 import json
 import tempfile
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 from cytv import diagnostics, state
 from cytv.desktop import DesktopConsole
 from cytv.errors import TVRejected
@@ -11,6 +11,35 @@ from cytv.recovery import recover
 
 
 class RecoveryStateTests(unittest.TestCase):
+    def test_reservation_review_preserves_required_root_handoff(self):
+        from cytv.operations import Installer
+
+        for reservation in ('conflict', 'unverified'):
+            with self.subTest(reservation=reservation), tempfile.TemporaryDirectory() as tmp:
+                store = state.Store(tmp)
+                profile = state.target('test-tv', 'no-root')
+                store.request_clean_removal(profile)
+                store.checkpoint(profile, removal_reason='root-access-required')
+                pending = store.pending(profile)
+                remote = Mock()
+                installer = Installer(remote, store, profile, store.root, {}, lambda *_: None)
+                events = []
+                write = DesktopConsole(lambda kind, value: events.append((kind, value)))
+                ask = Mock(side_effect=AssertionError('Developer Mode removal was offered'))
+                binding = {'capsule': 'capsule-missing', 'reservation': reservation}
+
+                with patch('cytv.no_root_cleanup.inspect_binding', return_value=binding):
+                    observation = installer.observe_recovery()
+                recover(installer, ask, write, initial_observation=observation)
+
+                plan = [value for kind, value in events if kind == 'recovery-plan'][-1]
+                self.assertEqual(plan['removal_action']['action'], 'connect-root')
+                self.assertNotIn('continue-removal', plan['actions'])
+                self.assertEqual(observation['removal_binding'], binding)
+                self.assertEqual(store.pending(profile), pending)
+                ask.assert_not_called()
+                self.assertEqual(remote.mock_calls, [])
+
     def test_observer_diagnostics_export_only_fixed_facts(self):
         from cytv.diagnostic_context import status_summary
         result=status_summary({'device':{'observer':{'operation':'PRIVATE','plan_sha256':'PRIVATE','reservation':'active',
