@@ -883,10 +883,11 @@ class CLITests(unittest.TestCase):
             with self.subTest(command=command), tempfile.TemporaryDirectory() as tmp:
                 events = []
                 args = cli.parser().parse_args([command, '--host', '192.0.2.10'])
-                profile = cli.choose_profile(args, state.Store(tmp), lambda _: '1',
+                profile, partial = cli.choose_profile(args, state.Store(tmp), lambda _: '1',
                     DesktopConsole(lambda *event: events.append(event)),
                     lambda: [], lambda *args: {'developer_ssh': True})
                 self.assertEqual(profile['edition'], 'no-root')
+                self.assertFalse(partial)
                 self.assertIn(('step', (2, 'Choose how you normally connect to this TV.', True)), events)
                 self.assertFalse(any(event[0] == 'step' and event[1][1] == 'Choose your edition' for event in events))
 
