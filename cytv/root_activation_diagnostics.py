@@ -121,6 +121,19 @@ def guardian_release(directory, uid, token):
     return None
 
 
+def stop_records(directory, uid):
+    records = []
+    for name in ('outcome', 'stopped'):
+        try:
+            raw, info, _ = read(directory/name, uid, private=True, limit=160)
+        except FileNotFoundError:
+            records.append(None)
+        else:
+            records.append((raw, info.st_dev, info.st_ino, info.st_mode, info.st_uid,
+                            info.st_nlink, info.st_mtime_ns, info.st_ctime_ns))
+    return records
+
+
 def compositor(directory, uid, cursor):
     try:
         identity, intent, before = compositor_identity(directory, uid)
@@ -135,12 +148,11 @@ def compositor(directory, uid, cursor):
             return {'status':'stale'}, None
         reasons = set()
         stale = False
-        for name in ('outcome', 'stopped'):
-            try:
-                raw, _, _ = read(directory/name, uid, private=True, limit=160)
-            except FileNotFoundError:
+        stops = stop_records(directory, uid)
+        for record in stops:
+            if record is None:
                 continue
-            match = re.fullmatch(rb'('+TOKEN+rb') ([a-z_]{1,63})\n', raw)
+            match = re.fullmatch(rb'('+TOKEN+rb') ([a-z_]{1,63})\n', record[0])
             if not match:
                 raise ValueError('invalid stop record')
             seen, reason = (item.decode('ascii') for item in match.groups())
@@ -152,10 +164,11 @@ def compositor(directory, uid, cursor):
                 reasons.add(reason)
         release = guardian_release(directory, uid, token) if reasons else None
         try:
+            after_stops = stop_records(directory, uid)
             after = compositor_identity(directory, uid)[2]
         except (OSError, ValueError, RecursionError):
             return {'status':'inconsistent'}, None
-        if before != after or len(reasons) > 1:
+        if before != after or stops != after_stops or len(reasons) > 1:
             return {'status':'inconsistent'}, None
         if not reasons:
             return {'status':'stale' if stale else 'missing'}, list(identity)

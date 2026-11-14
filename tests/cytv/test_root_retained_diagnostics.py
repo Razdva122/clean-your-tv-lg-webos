@@ -111,6 +111,8 @@ class RetainedDiagnosticTests(unittest.TestCase):
                 commands.append(command)
                 if '/usr/bin/node --version' in command:
                     return 'CYTV_NODE_VERSION v0.12.2'
+                if 'CYTV_C1_GATE' in command:
+                    return 'CYTV_C1_GATE'
                 if 'deploy.json' in command:
                     if fail_readback:
                         raise read_error
@@ -155,9 +157,18 @@ class RetainedDiagnosticTests(unittest.TestCase):
                 self.assertNotIn(private, json.dumps(report))
             self.assertFalse(hasattr(inst, '_selected_python'))
             self.assertEqual((directory/'stopped').read_text(), values['stopped'])
+            fail_readback = False
+            fresh_store = state.Store(base / 'no-receipt')
+            recovery_installer = operations.Installer(remote, fresh_store, profile, base, {})
+            recovery = recovery_installer.observe_recovery()
+            self.assertIsNone(recovery['pending'])
+            recovery_report = json.loads(diagnostics.create_report(fresh_store, 'recover', profile,
+                'recover', tv_info=recovery_installer.tv_info, status=recovery).read_text())
+            self.assertEqual(recovery_report['tv'].get('root_diagnostics', {}).get('compositor'), expected)
+            self.assertIsNone(fresh_store.pending(profile))
             (directory/'intent.json').unlink()
             recovery = inst.status()
             self.assertEqual(recovery['removal']['state'], 'cleanup-in-progress')
             self.assertEqual(inst.tv_info['root_diagnostics']['compositor'], {'status':'missing'})
-            self.assertEqual(sum('/usr/bin/python3 -I -B - null' in cmd for cmd in commands), 4)
+            self.assertEqual(sum('/usr/bin/python3 -I -B - null' in cmd for cmd in commands), 5)
             self.assertEqual(store.pending(profile), removal)

@@ -1244,9 +1244,13 @@ else:
                 self.collect_root_diagnostics()
             raise
         self.tv_info['status']=result
-        if self.profile['edition']=='root' and 'passive' not in result.get('device', {}).get('product', {}):
-            self.collect_root_diagnostics()
+        self._collect_observed_root_diagnostics(result)
         return result
+
+    def _collect_observed_root_diagnostics(self, result):
+        if (self.profile['edition']=='root' and result.get('device')
+                and 'passive' not in result['device'].get('product', {})):
+            self.collect_root_diagnostics()
 
     def observe_recovery(self):
         """Read current proofs without clearing or archiving the host receipt.
@@ -1272,6 +1276,10 @@ else:
                                     pending.get('recovery_protocol') == 'root-final-readback-v1'))
         result['assessment'] = assess(self.profile, self.store.pending(self.profile), result)
         self.tv_info['status'] = result
+        setup = self.tv_info.get('root_setup_recovery', {})
+        if (result['assessment']['reason'] != 'foreign-operation'
+                and setup.get('reason') not in ('receipt-unverified', 'restoration-pending')):
+            self._collect_observed_root_diagnostics(result)
         return result
 
     def inspect_root_product(self, expected_pending):

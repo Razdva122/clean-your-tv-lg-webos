@@ -146,6 +146,27 @@ class ActivationSnapshotTests(unittest.TestCase):
         finally:
             self.namespace['read'] = read
 
+        for member in ('outcome', 'stopped'):
+            with self.subTest(changed_stop=member):
+                if member == 'stopped':
+                    (directory / 'outcome').unlink()
+                write(member, f'{token} broker_expired\n')
+                changed = False
+                def rewrite_stop(path, *args, **kwargs):
+                    nonlocal changed
+                    result = read(path, *args, **kwargs)
+                    if path.name == member and not changed:
+                        changed = True
+                        write(member, f'{token} explicit_off\n')
+                    return result
+                self.namespace['read'] = rewrite_stop
+                try:
+                    self.assertEqual(self.snapshot()['compositor'], {'status':'inconsistent'})
+                finally:
+                    self.namespace['read'] = read
+                    (directory / member).unlink()
+                    write('outcome', f'{token} broker_expired\n')
+
         write('stopped', f'{token} explicit_off\n')
         self.assertEqual(self.snapshot()['compositor'], {'status':'inconsistent'})
         (directory / 'stopped').unlink()
