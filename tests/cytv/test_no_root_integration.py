@@ -251,6 +251,48 @@ class OriginalOperationIntegration(unittest.TestCase):
         self.assertTrue(self.installer.install(self.inventory, 'fresh-secret')['launch_requested'])
         self.assertEqual((self.root / 'requests').read_text().splitlines(), list(observer.APPS))
 
+    def test_missing_capsule_with_incomplete_history_requires_only_live_reservation_proof(self):
+        from cytv.errors import UserError
+
+        run = self.remote.run
+
+        def interrupt(command, data=None, timeout=30):
+            if data and data.startswith(b'!<arch>'):
+                raise OSError('simulated upload interruption')
+            return run(command, data, timeout)
+
+        self.remote.run = interrupt
+        with self.assertRaises(UserError):
+            self.installer.install(self.inventory, 'fixture')
+        self.remote.run = run
+        (self.root / 'proc').mkdir()
+        pending = self.store.request_clean_removal(self.profile)
+        operation = pending['previous']['observer_operation']
+        self.store._capsule_path(self.profile, operation).unlink()
+        private = self.root / 'private'
+        operation_dir = private / 'operations' / operation
+        (operation_dir / 'plan.json').unlink()
+
+        active = private / 'active'
+        prepared = operation_dir / 'reservation'
+        for reservation in (active, prepared):
+            with self.subTest(reservation=reservation.name):
+                binding = self.installer.observe_recovery()['removal_binding']
+                self.assertEqual(binding, {'capsule': 'capsule-missing', 'reservation': 'unverified'})
+                with self.assertRaisesRegex(UserError, 'reservation could not be verified'):
+                    self.installer.continue_clean_removal(self.store.pending(self.profile))
+                self.assertFalse((reservation / 'cancel-removal.json').exists())
+                self.assertFalse((self.root / 'requests').exists())
+                if reservation == active:
+                    active.rename(prepared)
+
+        shutil.rmtree(prepared)
+        binding = self.installer.observe_recovery()['removal_binding']
+        self.assertEqual(binding, {'capsule': 'capsule-missing', 'reservation': 'absent'})
+        self.assertTrue(self.installer.uninstall_project()['verified_clean'])
+        self.assertIsNone(self.store.pending(self.profile))
+        self.assertFalse((self.root / 'requests').exists())
+
     def test_cli_cancels_owned_partial_install_and_can_install_fresh(self):
         from cytv import cli
         (self.root / 'proc').mkdir()

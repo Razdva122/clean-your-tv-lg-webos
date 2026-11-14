@@ -179,10 +179,10 @@ if(input.guard_owner){
                           inspect:input.action==='binding',receipt:receipt};
    try{owned=/* CYTV_OWNED_CANCELLATION */null;}
    catch(e){
-    // Verified cleanup can resume after partially retiring old history.
-    // An active or prepared reservation still needs its full binding.
-    if(hasOwner||e.cancelReservation||receipt&&(!input.finalizing||
-       exact(selected+'/operations/'+receipt.operation+'/reservation',true)))throw e;
+    // Old history is optional once both reservation paths are absent.
+    // The ordinary writer and package checks still apply before removal.
+    if(hasOwner||e.cancelReservation||
+       receipt&&exact(selected+'/operations/'+receipt.operation+'/reservation',true))throw e;
     blocked('installer-private',e);owned={};
    }
    reply.cancellation=owned;
