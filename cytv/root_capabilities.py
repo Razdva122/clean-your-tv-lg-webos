@@ -345,7 +345,8 @@ def native_header_predicate(result, info):
     return 'readable' if arm32_elf(home) else 'home-header-invalid'
 
 
-def probe_native_home(remote, info=None, *, read_headers=None, strict=False, inspect_mount=True):
+def probe_native_home(remote, info=None, *, read_headers=None, strict=False, inspect_mount=True,
+                      allow_unavailable=False):
     if info is not None:
         clear_native_probe(info)
     try:
@@ -354,7 +355,7 @@ def probe_native_home(remote, info=None, *, read_headers=None, strict=False, ins
         unavailable = isinstance(error, TVCommandError) and error.exit_status == NATIVE_HOME_UNAVAILABLE
         if info is not None:
             info['root_native_home_probe'] = 'unavailable' if unavailable else 'request-failed'
-        if strict:
+        if strict and not (allow_unavailable and unavailable):
             raise
         return 'native-home-unavailable' if unavailable else 'native-home-request-failed'
     failure = native_header_failure(headers, info)

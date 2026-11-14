@@ -1815,7 +1815,8 @@ print('CYTV_ROOT_FILES_OK')
         footprint = self.remote.run(ROOT_RESTORE_FOOTPRINT, timeout=5)
         if footprint != 'CYTV_ROOT_FOOTPRINT_ABSENT':
             return
-        failure = probe_native_home(self.remote, self.tv_info, strict=True)
+        # The header probe uses a dedicated exit status when Home is unavailable.
+        failure = probe_native_home(self.remote, self.tv_info, strict=True, allow_unavailable=True)
         if failure == 'native-home-script':
             error = native_home_script_error(self.tv_info)
             if isinstance(error, ForeignHomeHandoffRequired):

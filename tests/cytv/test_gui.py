@@ -758,6 +758,7 @@ class GuiTests(unittest.TestCase):
         w.receive('done', 2)
         self.assertEqual(w.title.text(), 'Return to LG Home with the existing integration')
         self.assertIn('own supported procedure', w.subtitle.text())
+        self.assertIn('Diagnostics → Check connection and create a diagnostic report', w.subtitle.text())
         self.assertNotIn('Check connection again', [b.text() for b in w.form.findChildren(QPushButton)])
         self.assertEqual(calls, [])
 

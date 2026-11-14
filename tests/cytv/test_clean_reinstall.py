@@ -139,6 +139,24 @@ class CleanReinstallTests(unittest.TestCase):
         self.assertEqual(report['tv']['root_native_home_mount'], 'file-and-parent-mounts')
         self.assertNotIn('/usr/bin/com.webos.app.home', report_path.read_text())
 
+    def test_unavailable_native_home_keeps_existing_restore(self):
+        import json
+        from cytv.errors import TVCommandError
+        from cytv.root_capabilities import NATIVE_HEADERS
+
+        inst, remote = self.fixture()
+        inst.root_installation.return_value = dict(CLEAN, clean_removal_verified=False)
+        inst.root_action = Mock(return_value={'restored': True})
+        remote.run = Mock(side_effect=['CYTV_ROOT_FOOTPRINT_ABSENT', TVCommandError(42)])
+
+        self.assertEqual(inst.restore(), {'restored': True})
+        remote.run.assert_called_with(NATIVE_HEADERS, timeout=5)
+        self.assertEqual(remote.run.call_count, 2)
+        self.assertEqual(inst.tv_info['root_native_home_probe'], 'unavailable')
+        inst.root_action.assert_called_once_with('restore')
+        receipt, = self.store.device_dir(inst.profile).glob('recovery-*.json')
+        self.assertEqual(json.loads(receipt.read_text()), {'action': 'restore', 'stage': 'complete'})
+
     def test_unowned_restore_preserves_guard_failures_without_receipt(self):
         from cytv.errors import TVCommandError
         from cytv.root_capabilities import NATIVE_HEADERS, NATIVE_HOME_MOUNT_PROBE
@@ -147,7 +165,7 @@ class CleanReinstallTests(unittest.TestCase):
                  '0 0 52 0 0 0 164 98 10 0 0 2 0 5 52 0 32 0 9 0 40 0 29 0 28 0')
         native = f'0 1 755 7582\n{shell}\nCYTV_HOME_ELF\n35 33\n'
         for index in range(3):
-            for error in (TimeoutError('private'), TVCommandError(42 if index == 1 else 127)):
+            for error in (TimeoutError('private'), TVCommandError(127 if index == 1 else 42)):
                 with self.subTest(index=index, error=type(error)):
                     replies = ['CYTV_ROOT_FOOTPRINT_ABSENT', native][:index] + [error]
                     remote.run = Mock(side_effect=replies)

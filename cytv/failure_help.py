@@ -16,7 +16,7 @@ CONNECTION_FAILURES = NETWORK_FAILURES + AUTH_FAILURES
 NATIVE_HOME_SCRIPT = (
     'Restore LG Home before Root setup',
     'The Home executable path currently points to a script.',
-    'Use the existing integration’s own supported procedure to return to LG Home, then run Check TV again.',
+    'Use the existing integration’s own supported procedure to return to LG Home. Then choose Diagnostics → Check connection and create a diagnostic report.',
     False,
 )
 GUIDES = {
