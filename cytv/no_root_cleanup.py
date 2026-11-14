@@ -76,7 +76,7 @@ function developerBlocked(scope,error){blocked(scope,error);reply.blocked[reply.
 function developerVisit(p,scope,app){
  var s;
  try{
-  s=exact(p,!!app);if(!s)return;
+  s=exact(p,!!app);if(!s)return true;
   if(app&&input.action==='inventory'){
    ancestry(path.dirname(p)); // Keep the existing foreign-ancestor checks.
    if([0,uid,5999,501,1001].indexOf(s.uid)<0)fail();
@@ -90,7 +90,8 @@ function developerVisit(p,scope,app){
     reply.protected_targets.push(app);
   }
   if(input.action==='sweep')remove(p,s);
-  if(exact(p,!!app))reply.present.push(scope);
+  if(!exact(p,!!app))return true;
+  reply.present.push(scope);
  }catch(e){
   if(!app&&!s&&(e.code==='EACCES'||e.code==='EPERM'))reply.legacy_registrations_unverified=true;
   else developerBlocked(scope,e);
@@ -336,7 +337,7 @@ if(input.action==='stop'){
   reply.controller_running=running;process.stdout.write(JSON.stringify(reply));
  };stopped();return;
 }
-if(input.guard_owner){reply.footprints=[];reply.protected_targets=[];reply.legacy_registered=[];}
+if(input.guard_owner){reply.footprints=[];reply.protected_targets=[];reply.legacy_registered=[];reply.legacy_registration_absent=[];}
 apps.forEach(function(app,index){
  function project(p,area){
   if(input.guard_owner)developerVisit(base+p,app+' '+area,app);
@@ -363,8 +364,12 @@ if(input.guard_owner){
    }
    ids.forEach(function(id){
     var name=id+suffix,n=reply.present.length;
-    developerVisit(dir+'/'+name,'registration '+name);
-    if(!peer&&reply.present.length>n)reply.legacy_registered.push(apps[services.indexOf(id)]);
+    var absent=developerVisit(dir+'/'+name,'registration '+name);
+    if(!peer){
+     var app=apps[services.indexOf(id)];
+     if(absent)reply.legacy_registration_absent.push(app);
+     else if(reply.present.length>n)reply.legacy_registered.push(app);
+    }
    });
   };
   registrations('services/pub',services,'.service',false);
@@ -689,8 +694,17 @@ def continue_removal(installer, expected_pending):
     store = installer.store
     guard = profile.get('connection') != 'root-ssh'
 
+    terminals_this_pass = set()
+    surviving_registrations = set()
+
     def device(action, **options):
-        return _device(installer, action, guard=guard, **options)
+        value = _device(installer, action, guard=guard, **options)
+        if guard and action in ('inventory', 'sweep'):
+            # Track only public registration leaves observed after this pass's
+            # vendor terminal. A hidden directory cannot refute that evidence.
+            surviving_registrations.update(terminals_this_pass.intersection(value.get('legacy_registered', ())))
+            surviving_registrations.difference_update(value.get('legacy_registration_absent', ()))
+        return value
 
     def check(value, **options):
         _check_access(value, guard=guard, **options)
@@ -707,9 +721,17 @@ def continue_removal(installer, expected_pending):
     # if a vendor request changes the SDK's public legacy view.
     sam_readback = {app for app in APPS if app in pending.get('removals', {})}
 
+    def check_surviving_registrations():
+        if surviving_registrations:
+            error = UserError('Removal could not verify that a remaining service registration was cleared.',
+                              reason_code='cleanup-check-failed')
+            error.no_root_cleanup = no_root_cleanup_details({'action': 'sweep', 'blocked_areas': ['ls2-registration']})
+            raise error
+
     def verify_functional(require_idle):
         final = device('inventory')
         check(final)
+        check_surviving_registrations()
         remaining = [scope for scope in final['present']
                      if scope != 'installer-staging' and not scope.startswith('installer-staging ')]
         catalog_remains = {app['id'] for app in installer.installed_apps()}.intersection(APPS)
@@ -1028,6 +1050,7 @@ def continue_removal(installer, expected_pending):
                     continue
             raise
         removals[app] = 'terminal'
+        terminals_this_pass.add(app)
         store.checkpoint(profile, removals=removals)
     if rejected:
         raise rejected
@@ -1048,6 +1071,7 @@ def continue_removal(installer, expected_pending):
         return require_restart(['process-idle-unverified'], rearm=restarted)
     if guard:
         device('inventory')
+        check_surviving_registrations()
         inputs_removed = _remove_input_shortcut(installer) if not inputs_removed else _input_absent(installer)
     if not inputs_removed:
         store.checkpoint(profile, removal_reason='controls-unverified')

@@ -2066,6 +2066,84 @@ class SimpleRemoval(unittest.TestCase):
         self.assertTrue(self.remove()['verified_clean'])
         self.assertEqual(self.vendor_removals(), [app, independent, app])
 
+    @unittest.skipIf(getattr(os,'getuid',lambda:-1)()==0,'unprivileged SDK model')
+    def test_legacy_post_terminal_registration_needs_exposed_absence(self):
+        for transition in ('hidden-before-observation', 'hidden-after-observation', 'cleared-then-hidden'):
+            with self.subTest(transition=transition):
+                case = SimpleRemoval()
+                case.setUp()
+                try:
+                    case.legacy_registration_visibility_history(transition)
+                finally:
+                    case.doCleanups()
+
+    def legacy_registration_visibility_history(self, transition):
+        app, source, registration = self.legacy_package()
+        independent = self.cleanup.APPS[2]
+        self.remote.apps.add(independent)
+        self.remote.leave_registration = True
+        original_luna = self.remote.luna
+        original_device = self.cleanup._device
+        ancestor = registration.parent.parent
+        self.addCleanup(ancestor.chmod, 0o755)
+        saw_survivor = False
+        terminal = False
+        scope = 'registration ' + registration.name
+
+        def luna(uri, payload, **kwargs):
+            nonlocal terminal
+            reply = original_luna(uri, payload, **kwargs)
+            if uri.endswith('/dev/remove') and payload['id'] == app:
+                self.assertEqual(reply['details']['state'], 'removed')
+                terminal = True
+                if transition == 'hidden-before-observation':
+                    ancestor.chmod(0)
+            return reply
+
+        def device(installer, action, **options):
+            nonlocal saw_survivor
+            reply = original_device(installer, action, **options)
+            if action == 'inventory' and terminal and scope in reply['present'] and not saw_survivor:
+                saw_survivor = True
+                if transition == 'hidden-after-observation':
+                    ancestor.chmod(0)
+                elif transition == 'cleared-then-hidden':
+                    registration.parent.chmod(0o755)
+            if action == 'sweep' and transition == 'cleared-then-hidden':
+                self.assertFalse(registration.exists())
+                ancestor.chmod(0)
+            return reply
+
+        self.remote.luna = luna
+        goal = self.store.request_clean_removal(self.profile)['removal_operation']
+        try:
+            with patch.object(self.cleanup, '_device', side_effect=device):
+                if transition == 'hidden-after-observation':
+                    with self.assertRaises(UserError) as caught:
+                        self.remove()
+                    self.assertEqual(caught.exception.reason_code, 'cleanup-check-failed')
+                    self.assertEqual(caught.exception.no_root_cleanup['blocked_areas'], ['ls2-registration'])
+                    pending = self.store.pending(self.profile)
+                    self.assertEqual(pending['removal_operation'], goal)
+                    self.assertEqual(pending['removals'], {app:'terminal', independent:'terminal'})
+                else:
+                    result = self.remove()
+                    self.assertTrue(result['verified_clean'])
+                    self.assertTrue(result['legacy_registrations_unverified'])
+        finally:
+            ancestor.chmod(0o755)
+        self.assertFalse(source.exists())
+        self.assertEqual(saw_survivor, transition != 'hidden-before-observation')
+        self.assertEqual(registration.is_file(), transition != 'cleared-then-hidden')
+        if transition == 'hidden-after-observation':
+            self.store = self.installer.store = Store(self.store.root)
+            registration.parent.chmod(0o755)
+            self.assertTrue(self.remove()['verified_clean'])
+            self.assertFalse(registration.exists())
+        finished = json.loads((self.store.device_dir(self.profile)/'clean-removal.json').read_text())
+        self.assertEqual(finished['removal_operation'], goal)
+        self.assertEqual(self.vendor_removals(), [app, independent])
+
     def test_previous_cleanup_package_is_removed_as_a_registered_app(self):
         app = 'com.local.nativehome'
         info = {'id': app, 'title': 'Clean Your TV cleanup', 'visible': False}
