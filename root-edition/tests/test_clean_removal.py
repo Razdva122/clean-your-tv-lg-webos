@@ -742,7 +742,9 @@ def luna(uri, payload):
         (root_bundle/'bundle.json').write_text(json.dumps({'package':package, 'files':{
             name:hashlib.sha256((root_bundle/name).read_bytes()).hexdigest() for name in files}}))
 
-        stock = dict(appId=backend.STOCK, windowType=backend.HOME, displayId=0, visible=True)
+        stock = dict(appId=backend.STOCK, windowType=backend.CARD, displayId=0)
+        screensaver = dict(appId='com.webos.app.screensaver',
+                           windowType='_WEBOS_WINDOW_TYPE_SCREENSAVER', displayId=0)
         effect_lock = guard.root/'state/effect.lock'
         effect_lock.symlink_to(guard.root/'state/config')
         original = driver.ownership.store.read('request-'+identifier)
@@ -762,7 +764,12 @@ def luna(uri, payload):
             self.assertEqual(blocked['last_failure']['cleanup_probe']['native_reason'], 'effect_busy')
             effect_lock.unlink()
             for surfaces in ([dict(stock, displayId=False)], [dict(stock, displayId=0.0)],
-                             [dict(stock, visible=False)], [], [stock, dict(stock, appId=backend.APP)]):
+                             [dict(stock, visible=False)], [], [stock, dict(stock, appId=backend.APP)],
+                             [screensaver], [dict(stock, visible=False), screensaver],
+                             [stock, dict(screensaver, appId='example.foreign')],
+                             [stock, dict(screensaver, windowType=backend.CARD)],
+                             [stock, dict(screensaver, displayId=1)],
+                             [stock, screensaver, dict(stock, appId=backend.APP)]):
                 with self.subTest(surfaces=surfaces):
                     rows.write_text(json.dumps(surfaces))
                     blocked = driver.clean_remove(identifier)
@@ -773,7 +780,7 @@ def luna(uri, payload):
                     self.assertTrue(present)
                     self.assertFalse(any(call.startswith('remove-') for call in calls))
                     self.assertEqual(driver.ownership.store.read('request-'+identifier), original)
-            rows.write_text(json.dumps([stock]))
+            rows.write_text(json.dumps([stock, screensaver]))
             def lose_response(args):
                 result = loaded.command(args)
                 self.assertEqual(result['result'], 'restored')
