@@ -439,6 +439,39 @@ def compact_audit(record, store):
         'readback','complete','submitted','preparing','provisioning','installed-recovery-only','cancellation-admitted',
         'uninstalled-state-retained','remove-submitting','remove-observed','clean-removal-requested','recovery-required',
         'backed-up','installing','awaiting-launch','verifying','rolling-back','rolled-back','aborted','disabled'}
+    from deploy import install_failure_details
+    from install_driver import cleanup_probe_details
+    from updater.luna import CALLS, REASONS, summary
+
+    def safe_failure(value):
+        result={k:v for k,v in value.items() if (k=='exception_type' and v in ('CalledProcessError',
+            'TimeoutExpired','ValueError','RuntimeError','OSError','PermissionError','FileNotFoundError',
+            'TypeError','KeyError','TimeoutError','unknown'))
+            or (k in ('exit_status','errno') and type(v) is int and -255<=v<=4095)}
+        if type(value.get('stage')) is str and value['stage'] in phases:
+            result['stage']=value['stage']
+        step=value.get('cleanup_step')
+        if step in ('routing-inverse','runtime-restore','provision-rollback','startup-hook',
+                    'legacy-lockdown','registration-restore','legacy-permissions','home-readback'):
+            result['cleanup_step']=step
+        # Existing validators assume frame file names are hashable. Ignore
+        # malformed optional data without interrupting cleanup.
+        for key, validator in (('root_driver', install_failure_details), ('cleanup_probe', cleanup_probe_details)):
+            try:
+                detail=validator(value.get(key))
+            except (TypeError, ValueError):
+                continue
+            if detail:
+                if key=='cleanup_probe' and step!='runtime-restore':
+                    detail.pop('native_reason', None)
+                    detail.pop('restore_check', None)
+                result[key]=detail
+        luna=value.get('luna')
+        if (type(luna) is dict and luna.get('call') in (*CALLS.values(),'other')
+                and luna.get('reason') in REASONS):
+            result['luna']=summary(luna)
+        return result
+
     def safe(value):
         if not isinstance(value,dict):return None
         result={}
@@ -453,9 +486,8 @@ def compact_audit(record, store):
                     'clean_removal_requested','continuation_requires_recovery'):result[key]=item
             elif key in ('schema','version') and type(item) is int and 0<=item<=2:result[key]=item
             elif key in ('home_changed','terminal') and type(item) is bool:result[key]=item
-            elif key=='failure' and isinstance(item,dict):
-                result[key]={k:v for k,v in item.items() if (k=='exception_type' and v in ('CalledProcessError','TimeoutExpired','ValueError','RuntimeError','OSError','PermissionError','FileNotFoundError','TypeError','KeyError','unknown'))
-                    or (k in ('exit_status','errno') and type(v) is int and -255<=v<=4095)}
+            elif key in ('failure','last_failure') and isinstance(item,dict):
+                result[key]=safe_failure(item)
         return result
     if record.get('audit_compacted') is True:return
     original=record['original']

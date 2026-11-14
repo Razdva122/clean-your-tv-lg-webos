@@ -14,6 +14,7 @@ class ActivationSnapshotTests(unittest.TestCase):
         namespace={'__name__':'fixture'}
         exec(self.module.PROGRAM,namespace)
         self.read_snapshot=namespace['snapshot']
+        self.namespace=namespace
         self.tmp=tempfile.TemporaryDirectory();self.addCleanup(self.tmp.cleanup)
         self.root=Path(self.tmp.name).resolve()/'root';self.root.mkdir(mode=0o700)
         self.installed=Path(self.tmp.name).resolve()/'apps';self.installed.mkdir(mode=0o700)
@@ -90,3 +91,65 @@ class ActivationSnapshotTests(unittest.TestCase):
         self.log.write_bytes(raw)
         os.utime(self.log,ns=(info.st_atime_ns,info.st_mtime_ns+1000000000))
         self.assertEqual(self.snapshot(before['cursor'])['health_log']['scope'],'historical-tail')
+
+
+    def test_retained_compositor_stop_and_guardian_reply(self):
+        boot = '12345678-1234-1234-1234-123456789abc'
+        token = 'a' * 32
+        kernel_boot = self.root / 'boot-id'
+        kernel_boot.write_text(boot + '\n')
+        self.namespace['BOOT'] = kernel_boot
+        directory = self.root / 'c1-keyfilter'
+        directory.mkdir(mode=0o700)
+
+        def write(name, contents):
+            path = directory / name
+            path.write_text(contents)
+            path.chmod(0o600)
+
+        write('config', f'CYTV-C1-KEYFILTER-1\ntoken {token}\nboot {boot}\ndev 1\nino 2\nsize 3\nmtime_ns 4\n')
+        write('intent.json', json.dumps(dict(schema=1, enabled=False, phase='disabled', token=token, boot=boot)))
+        write('outcome', f'{token} broker_expired\n')
+        reply = json.dumps(dict(returnValue=False, backend='c1-native-gate',
+            routing='compositor-keyfilter-v1', state='stopped', mounted=False, healthy=False,
+            stock_verified=True, stopped=True, token=token, guardian_pid=0,
+            reason='ui_release_failed', profiles=None))
+        write('native.log', reply + '\n')
+        self.assertEqual(self.snapshot().get('compositor'), {
+            'status':'read', 'scope':'retained', 'original_stop':'broker_expired',
+            'guardian_release':'ui_release_failed'})
+        for invalid in (reply, reply[:-1] + ', "token":"' + token + '"}\n',
+                        reply.replace('"guardian_pid": 0', '"guardian_pid": false') + '\n',
+                        reply.replace(token, 'b' * 32) + '\n'):
+            with self.subTest(invalid=invalid):
+                write('native.log', invalid)
+                self.assertEqual(self.snapshot()['compositor']['original_stop'], 'broker_expired')
+                self.assertNotIn('guardian_release', self.snapshot()['compositor'])
+        previous = self.snapshot()['cursor']
+        write('outcome', ('b'*32)+' broker_expired\n')
+        self.assertEqual(self.snapshot()['compositor'], {'status':'stale'})
+        write('outcome', f'{token} broker_expired\n')
+        self.assertEqual(self.snapshot(previous)['compositor']['scope'], 'retained')
+
+        read = self.namespace['read']
+        def replace_intent(path, *args, **kwargs):
+            result = read(path, *args, **kwargs)
+            if path.name == 'outcome':
+                name = directory/'intent.json'
+                intent = name.read_text()
+                name.unlink()
+                write('intent.json', intent)
+            return result
+        self.namespace['read'] = replace_intent
+        try:
+            self.assertEqual(self.snapshot()['compositor'], {'status':'inconsistent'})
+        finally:
+            self.namespace['read'] = read
+
+        write('stopped', f'{token} explicit_off\n')
+        self.assertEqual(self.snapshot()['compositor'], {'status':'inconsistent'})
+        (directory / 'stopped').unlink()
+        kernel_boot.write_text('b' + boot[1:] + '\n')
+        self.assertEqual(self.snapshot()['compositor'], {'status':'stale'})
+        (directory / 'intent.json').unlink()
+        self.assertEqual(self.snapshot()['compositor'], {'status':'missing'})

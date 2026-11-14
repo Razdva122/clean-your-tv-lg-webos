@@ -50,6 +50,30 @@ class CoordinatorCleanRemoval(unittest.TestCase):
         with self.assertRaises(Busy):
             with self.owner.operation('product', 'product-'+self.id+'.json', resume=original['lease']): pass
 
+    def test_compaction_preserves_original_worker_cause_and_latest_cleanup(self):
+        original = self.original()
+        driver = {'exception_type':'ValueError','frames':[{'file':'deploy.py','line':12}]}
+        luna = {'call':'apps-dev','reason':'permission-denied','error_code':-1}
+        original['failure'].update(root_driver=dict(driver, attempt='PRIVATE'), luna=dict(luna, raw='PRIVATE'))
+        self.owner.store.write('request-'+self.id, original)
+        def fail(record, save):
+            save('original-writers-fenced')
+            error = ValueError('PRIVATE')
+            error.cleanup_step = 'runtime-restore'
+            error.cleanup_probe = {'exception_type':'ValueError','native_reason':'effect_busy'}
+            raise error
+        self.device.clean_remove = fail
+        failed = self.driver.clean_remove(self.id)
+        self.device.clean_remove = Device().clean_remove
+        completed = self.driver.clean_remove(self.id)
+        self.assertEqual(completed['stage'], 'verified-clean')
+        self.assertEqual(completed['last_failure'], failed['last_failure'])
+        retained = self.driver.status(self.id)
+        self.assertEqual(retained['lease'], original['lease'])
+        self.assertEqual(retained['failure'].get('root_driver'), driver)
+        self.assertEqual(retained['failure'].get('luna'), luna)
+        self.assertNotIn('PRIVATE', str(completed))
+
     def test_retry_keeps_first_and_latest_failure_separate(self):
         first=RuntimeError('PRIVATE first');first.luna={'call':'apps-dev','reason':'permission-denied','error_code':-1}
         last=TimeoutError('PRIVATE last');last.luna={'call':'home-settings','reason':'timeout'}

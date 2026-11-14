@@ -113,6 +113,21 @@ def root_diagnostics_summary(value):
         result['health_log']['health_refusal']=choice(log['health_refusal'],('generic','transaction-mismatch',
             'binding-restored','generation-mismatch','token-mismatch','boot-mismatch','phase-inactive','failsafe-present'))
     if type(log.get('supervisor_error')) is bool:result['health_log']['supervisor_error']=log['supervisor_error']
+    compositor=mapping(value.get('compositor'))
+    if compositor:
+        from .root_activation_diagnostics import COMPOSITOR_STOPS
+        observed={'status':choice(compositor.get('status'),
+            ('read','missing','unsafe','unavailable','stale','inconsistent'))}
+        if observed['status']=='read':
+            stop=choice(compositor.get('original_stop'), COMPOSITOR_STOPS, None)
+            if stop is not None:
+                observed['original_stop']=stop
+                observed['scope']=choice(compositor.get('scope'), ('retained','since-enable'))
+                if compositor.get('guardian_release')=='ui_release_failed':
+                    observed['guardian_release']='ui_release_failed'
+            else:
+                observed['status']='unknown'
+        result['compositor']=observed
     return result
 
 
