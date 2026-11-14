@@ -505,7 +505,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                     installer.select_graphics()
                     phase = 'inspect-installation'
                     from .root_capabilities import (
-                        NativeHomeScriptError, NoRootAlternativeError, RootCapabilityError,
+                        ForeignHomeHandoffRequired, NativeHomeScriptError, NoRootAlternativeError, RootCapabilityError,
                         RESTORE_NATIVE_HOME, restore_native_home,
                     )
                     from .root_runtime import offer
@@ -516,8 +516,8 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                         else:
                             try:
                                 installer.preflight(install=True, home_interfaces=True)
-                            except NativeHomeScriptError:
-                                if args.non_interactive or not restore_native_home(
+                            except NativeHomeScriptError as error:
+                                if isinstance(error, ForeignHomeHandoffRequired) or args.non_interactive or not restore_native_home(
                                         remote, tv_info.get('root_native_home_mount'),
                                         lambda: prompts.confirm(RESTORE_NATIVE_HOME, ask, write)):
                                     raise
@@ -752,7 +752,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
             elif args.command == 'doctor':
                 phase = 'doctor'
                 if profile['edition']=='root' and not store.pending(profile):
-                    installer.preflight(home_interfaces=True)
+                    installer.preflight(home_interfaces=True, diagnose=True)
                 else:
                     installer.preflight()
                 write('Connection and basic requirements passed. This does not certify hardware compatibility.')

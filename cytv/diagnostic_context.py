@@ -24,7 +24,7 @@ REASONS = ('unknown', 'user-error', 'ssh-command-failed', 'ssh-unreachable', 'ss
            'ssh-authentication', 'ssh-identity-changed', 'ssh-trust-record', 'ssh-identity-unverified', 'host-runtime',
            'helper-running', 'helper-state-unverified', 'root-requirements',
            'pending-operation', 'root-operation-unconfirmed', 'project-apps-remain', 'version-mismatch',
-           'inventory-unavailable', 'graphics-unverified', 'root-home-interfaces', 'native-home-script',
+           'inventory-unavailable', 'graphics-unverified', 'root-home-interfaces', 'native-home-script', 'foreign-home-handoff-required',
            'root-worker-busy', 'root-access-required', 'removal-failed',
            'cleanup-check-failed', 'connection-interrupted', 'operation-timeout', 'tv-storage-full', 'tv-storage-ramfs')
 REASONS += ACTIVATION_CODES
@@ -175,30 +175,43 @@ def tv_summary(value):
         result['home_backend'] = value['home_backend']
     if type(value.get('home_backend_schema')) is int and value['home_backend_schema'] in (2,3):
         result['home_backend_schema'] = value['home_backend_schema']
-    if 'root_compositor_failure' in value:
-        from .root_capabilities import COMPOSITOR_FAILURES
-        failure = choice(value['root_compositor_failure'], COMPOSITOR_FAILURES, None)
-        if failure is not None:
-            result['root_compositor_failure'] = failure
+    from .root_capabilities import (COMPOSITOR_FAILURES, C1_PROBE_STATES, KEYFILTER_PREDICATES,
+                                    KEYFILTER_PROBE_STATES, NATIVE_HOME_PREDICATES)
+    for field, allowed in (
+        ('root_compositor_failure', COMPOSITOR_FAILURES),
+        ('root_c1_probe', C1_PROBE_STATES),
+        ('root_native_home_probe', NATIVE_HOME_PREDICATES),
+    ):
+        observation = choice(value.get(field), allowed, None)
+        if observation is not None:
+            result[field] = observation
+    if result.get('root_compositor_failure') == 'c1-probe-failed':
+        observation = choice(value.get('root_compositor_observation'), COMPOSITOR_FAILURES, None)
+        if observation is not None:
+            result['root_compositor_observation'] = observation
     if 'root_keyfilters_probe' in value:
-        from .root_capabilities import KEYFILTER_PROBE_STATES
         probe = mapping(value['root_keyfilters_probe'])
         probe_state = choice(probe.get('state'), KEYFILTER_PROBE_STATES, None)
         if probe_state is not None:
             result['root_keyfilters_probe'] = {'state': probe_state}
+            predicate = choice(probe.get('predicate'), KEYFILTER_PREDICATES, None)
+            if probe_state == 'incompatible' and predicate is not None:
+                result['root_keyfilters_probe']['predicate'] = predicate
             code = probe.get('error_code')
             if probe_state == 'rejected' and type(code) is int and -(2**31) <= code < 2**31:
                 result['root_keyfilters_probe']['error_code'] = code
     if 'root_ribbon_probe' in value:
         from .root_capabilities import RIBBON_PROBE_STATES
         result['root_ribbon_probe'] = choice(value['root_ribbon_probe'], RIBBON_PROBE_STATES)
-    if 'root_native_home_mount' in value:
+    native_probe = value.get('root_native_home_probe')
+    if native_probe in (None, 'home-script') and 'root_native_home_mount' in value:
         from .root_capabilities import NATIVE_HOME_MOUNT_STATES
         mount = choice(value['root_native_home_mount'], NATIVE_HOME_MOUNT_STATES, None)
         if mount is not None:
             result['root_native_home_mount'] = mount
     native_home_mode = value.get('root_native_home_mode')
-    if isinstance(native_home_mode, str) and re.fullmatch(r'[0-7]{4}', native_home_mode):
+    if (native_probe in (None, 'mode-invalid') and isinstance(native_home_mode, str)
+            and re.fullmatch(r'[0-7]{4}', native_home_mode)):
         result['root_native_home_mode'] = native_home_mode
     if 'root_requirements' in value:
         checks = mapping(value['root_requirements'])
