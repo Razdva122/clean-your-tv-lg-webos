@@ -104,15 +104,25 @@ Vyberte v Údržbě **Odinstalovat Clean Your TV** se stejným uloženým připo
 
 Na starších televizorech bez samostatné aplikace LG Home může odebrání No-root přepnout obrazovku na živé vysílání. Nechte televizor zapnutý a na požádání jej restartujte; nemažte data obnovení ani neresetujte televizor.
 
-Na výzvu odpojte TV od napájení, znovu připojte, počkejte na síť a vyberte **Zkusit znovu**. Pohotovost nebo Quick Start není úplný restart; CYTV TV automaticky nerestartuje. Při ztrátě spojení je zkontrolujte a opakujte stejný cíl odebrání bez dalšího průvodce obnovou. Při odmítnutí přístupu použijte požadované připojení Root; pokud je TV zaneprázdněn, počkejte a zkuste znovu. Úspěch se zobrazí až po ověření závěrečného úklidu. Zachovejte klíče a původní zprávy. Nouzové ovládání a souhlas se sdílením výše platí dál.
+Na výzvu odpojte TV od napájení, znovu připojte, počkejte na síť a vyberte **Zkusit znovu**. Pohotovost nebo Quick Start není úplný restart; CYTV TV automaticky nerestartuje. Při odmítnutí přístupu použijte požadované připojení Root; pokud je TV zaneprázdněn, počkejte a zkuste znovu. Úspěch se zobrazí až po ověření závěrečného úklidu. Zachovejte klíče a původní zprávy. Nouzové ovládání a souhlas se sdílením výše platí dál.
+
+Pokud instalátor nemůže ověřit odebrání, závěrečný úklid, ovládání TV či výsledek operace s balíčky nebo hlásí změnu cest projektu, zvolte **Prověřit možnosti obnovy** s původním uloženým připojením. Nabídne-li instalátor pokračování, potvrďte je samostatně.
 
 Pokud instalátor nemůže ověřit požadovaný úplný restart, uložte a přiložte diagnostickou zprávu. Zachovejte uložené připojení a data obnovy. Neopakujte stále odpojování napájení a nemažte ručně nedokončenou operaci.
 
 Je po neúspěšné nebo přerušené instalaci přímo dostupná obnova. Pokud No-root nemůže pokračovat, potvrďte jednou úplné odebrání. Při dočasné ztrátě spojení nebo zaneprázdněném procesu CYTV proběhnou nejvýše tři pokusy. Je-li nutný Root, zvolte **Připojit přes Root** pro stejnou TV; ověřený úklid Root dokončí i její zablokované odebrání No-root. Po chybě aktivace Root se CYTV pokusí obnovit a ověřit LG Home bez opakované aktivace. Zrušení s nedokončenou prací zachová zprávu a kroky obnovy. Nouzové zastavení zůstane zachováno.
 
-Po chybě připojení během odstranění otevřete podrobnosti, zkontrolujte síť nebo vyberte existující SSH klíč Root a zkuste to znovu. Adresa, edice, port a ověření klíče TV zůstávají pevné. Při přeinstalaci se No-root pokusí Helper zastavit automaticky. Použijte tlačítko Home jen na výzvu průvodce a potvrďte opětovnou kontrolu. Odebrání může skončit bez restartu po ověření ovládání, vypnutého automatického spouštění a nepřítomnosti balíčků, souborů a běžících procesů, pokud nezůstává nedokončená instalace. Pokud instalátor požaduje restart, proveďte jej a zkuste to znovu. Při selhání služby vstupů pokračuje bezpečné odstranění balíčků; úspěch stále vyžaduje ověření odstranění zástupce.
+Pokud se odebrání zastaví kvůli dočasnému výpadku spojení, zkontrolujte síť a pokračujte ve stejném odebrání volbou **Zkusit znovu**, pokud se zobrazí. Pokud přihlášení selže, spojení nelze ověřit nebo výsledek není jasný, zvolte **Prověřit možnosti obnovy**. Pokud se zobrazí **Podrobnosti připojení**, zkontrolujte připojení nebo vyberte existující klíč SSH pro Root pro kontrolu obnovy. Uložená adresa TV, edice, port a ověření klíče hostitele zůstávají stejné. Nabídne-li instalátor po kontrole pokračování v odebrání, potvrďte je zvlášť.
+
+Při přeinstalaci se No-root pokusí Helper zastavit automaticky. Použijte tlačítko Home jen na výzvu průvodce a potvrďte opětovnou kontrolu. Odebrání může skončit bez restartu po ověření ovládání, vypnutého automatického spouštění a nepřítomnosti balíčků, souborů a běžících procesů, pokud nezůstává nedokončená instalace. Pokud instalátor požaduje restart, proveďte jej a zkuste to znovu. Při selhání služby vstupů pokračuje bezpečné odstranění balíčků; úspěch stále vyžaduje ověření odstranění zástupce.
 
 **Přeinstalace Root:** S uloženým připojením zvolte **Nastavit televizor → Root** a potvrďte **Přeinstalovat Root?**. Instalátor obnoví LG Home a zcela odstraní Clean Your TV včetně aktualizátorů, Home Helper a uložených předvoleb. Po ověření odstranění nainstaluje a aktivuje balíčky a prostředí Root dodané v tomto instalátoru. Ostatní aplikace TV a stávající přístup root/SSH zůstanou zachovány. Pokud se odstranění zastaví nebo požádá o úplný restart, dokončete je před novým spuštěním instalace. Samotné **Odinstalovat Clean Your TV** nikdy nespustí novou instalaci.
+
+### Úprava nastavení LG a dokončení obnovy Root
+
+V desktopovém instalátoru otevřete **Údržba → Upravit nastavení LG (Debloat)** a použijte uložené připojení k TV. Vyberte nastavení, která chcete změnit, klikněte na **Použít vybraná nastavení** a zkontrolujte výsledky. Pokud je předchozí operace nedokončená, zvolte nejprve **Prověřit možnosti obnovy** s původním uloženým připojením.
+
+Pokud aktualizátor po návratu k předchozí verzi neověřil připravenost, použijte původní uložené připojení Root. Podle aktualizátoru vyberte **Dokončit obnovu po návratu přes Root Updater** nebo **Dokončit obnovu po návratu přes Root System Updater** a potvrďte. Pouze u Root System Updater zaškrtněte **Po uplynutí lhůty zahájit nový auditovaný pokus**, pokud předchozí pokus vypršel a [pokyny k obnově](../RECOVERY.md#root-system-rollback-readiness-candidate) další pokus připouštějí.
 
 <!-- Legacy anchors retained for existing links. -->
 <a id="automatické-rozlišení-grafiky-kandidát"></a>
@@ -151,6 +161,8 @@ Otevřete Nastavení → Tapety → Nahrát z telefonu a naskenujte kód. Vybert
 ## Nastavte si Clean Your TV
 
 Před výběrem motivu zvolte v kroku **Debloat**, která nastavení reklam, doporučení, soukromí a oznámení LG chcete změnit. Zkontrolujte každý výsledek. Pokud instalátor nemůže přečíst původní hodnotu, nemůže ji uložit pro automatické obnovení. Volbou **Přeskočit Debloat** zachováte aktuální nastavení.
+
+Při odinstalaci můžete potvrdit obnovení uložených původních nastavení Debloat. Pokud obnovení přeskočíte, odinstalace pokračuje bez jejich změny.
 
 Po úspěšné instalaci vyberte Classic, Liquid Glass nebo Ribbon a zapněte či vypněte počasí. Ribbon počasí nepodporuje; Liquid Glass používá stručný formát. Město se odhaduje podle připojení a lze je změnit v Home.
 

@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 import sys
 from time import sleep
+from types import SimpleNamespace
 
 from . import __version__, package, state, i18n
 from .errors import ExistingRoot, LocalRecoveryError, TVNotReady, UserError
@@ -51,7 +52,7 @@ def parser(desktop=False):
     result._positionals.title = i18n.translate('positional arguments')
     result._optionals.title = i18n.translate('options')
     result.add_argument('-h', '--help', action='help', help=i18n.translate('Show this help message and exit'))
-    commands = ('install', 'status', 'doctor', 'home-diagnostics', 'recover', 'trust-root-ssh', 'restore', 'uninstall', 'enable-system-updates', 'enable-firmware-access', 'disable-firmware-access', 'recover-system-rollback', 'recover-root-rollback', 'replace-system-updater', 'clean-wam-cache')
+    commands = ('install', 'status', 'doctor', 'home-diagnostics', 'recover', 'trust-root-ssh', 'restore', 'uninstall', 'enable-system-updates', 'enable-firmware-access', 'disable-firmware-access', 'recover-system-rollback', 'recover-root-rollback', 'replace-system-updater', 'clean-wam-cache', 'debloat')
     if desktop:
         commands += ('ssh-command',)
     result.add_argument('command', nargs='?', default='install', choices=commands)
@@ -95,11 +96,12 @@ def explain_failure(write, store, profile, phase, error):
 
 
 def removal_connection_message(store, profile, phase, error):
-    if not profile or (store.pending(profile) or {}).get('recovery_protocol')!='clean-removal-v1':return None
-    disconnected=(isinstance(error,ConnectionError) or getattr(error,'reason_code',None)=='connection-interrupted'
-                  or type(error).__name__ in ('SSHException','NoValidConnectionsError')
-                  or phase=='ssh-connect' and isinstance(error,TimeoutError))
-    if not disconnected:return None
+    from .failure_help import removal_failure, transient_connection_failure
+    pending = store.pending(profile) if profile else None
+    if not pending or pending.get('recovery_protocol') != 'clean-removal-v1':
+        return None
+    if not transient_connection_failure(removal_failure(error, phase, profile, pending)):
+        return None
     store.checkpoint(profile,removal_reason='connection-interrupted')
     return 'Connection to the TV was interrupted. Check the connection and try again.'
 
@@ -295,6 +297,8 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
             raise UserError('--report is available with cytv doctor.')
         if args.command == 'clean-wam-cache' and args.non_interactive:
             raise UserError('WAM cleanup requires interactive confirmation; --yes does not authorize it.')
+        if args.command == 'debloat' and args.non_interactive:
+            raise UserError('Debloat requires interactive selection of the settings to change.')
         if args.non_interactive:
             def no_ask(_):
                 raise UserError('Non-interactive mode needs --host and --edition or one saved profile; pairing and SSH trust must already be completed.')
@@ -377,6 +381,8 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                 pending = store.pending(profile)
                 if pending and pending.get('action') == 'uninstall' and pending.get('full_project') is True:
                     verb = 'Check TV and continue removal'
+            if args.new_recovery_attempt:
+                write('Start a new audited attempt after the previous deadline')
             if not prompts.confirm(verb + '?', ask, write, default=args.command == 'install'):
                 write('Cancelled. No TV changes were made.')
                 return 0
@@ -388,7 +394,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
         check_doctor_payload = root_doctor and (
             payload_root is not None or getattr(sys, 'frozen', False) or (payload / 'payload.json').exists()
         )
-        if not partial and (check_doctor_payload or (profile.get('root_variant') and args.command != 'ssh-command') or args.command in (
+        if not partial and (check_doctor_payload or (profile.get('root_variant') and args.command not in ('ssh-command', 'debloat')) or args.command in (
                 'install', 'enable-system-updates', 'enable-firmware-access',
                 'disable-firmware-access', 'replace-system-updater')):
             if root_doctor:
@@ -428,6 +434,14 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
 
         from .transport import SSH, CredentialPrompt
         with store.lock(profile), diagnostics.context.operation_context(store, profile):
+            if args.command == 'debloat':
+                from .root_runtime import require_idle
+                phase = 'debloat'
+                try:
+                    require_idle(store, profile)
+                except UserError:
+                    raise UserError('An earlier operation is unresolved. Choose Review recovery options or run cytv recover with the original TV connection.',
+                                    reason_code='pending-operation') from None
             recovering = False
             if partial:
                 directory = store.device_path(profile)
@@ -439,7 +453,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                 profile, recovering = store.connection_profile(profile)
             # An explicit sign-in key may change; the saved TV identity and pin
             # must still be resolved and verified before using it.
-            if (recovering and args.identity and args.command == 'uninstall'
+            if (recovering and args.identity and args.command in ('uninstall', 'recover')
                     and (profile['edition'] == 'root' or profile.get('connection') == 'root-ssh')
                     and (store.pending(profile) or {}).get('recovery_protocol') == 'clean-removal-v1'):
                 profile = dict(profile, identity=str(args.identity.expanduser().resolve()))
@@ -516,13 +530,24 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                 write.ssh_command_result(result)
                 return 0
 
-            if not recovering and args.command in ('install', 'status', 'doctor', 'recover'):
+            if not recovering and args.command in ('install', 'status', 'doctor', 'recover', 'debloat'):
                 diagnostics.context.collect_metadata(remote, tv_info)
             if not recovering:
                 store.save(profile)
                 pending=store.pending(profile)
                 if pending and pending.get('recovery_protocol')=='clean-removal-v1' and pending.get('connection_pending') is True:
                     store.checkpoint(profile,connection_pending=False)
+            if args.command == 'debloat':
+                phase = 'debloat'
+                settings = SimpleNamespace(remote=remote, store=store, profile=profile, tv_info=tv_info)
+                events = tv_info.setdefault('debloat', {})
+                try:
+                    debloat.run(settings, ask, write, diagnostic=events, maintenance=True)
+                finally:
+                    if events:
+                        diagnostics.save_result(write, store, args.command, profile, phase, tv_info,
+                                                checks=checks.results)
+                return 0
             installer = Installer(remote, store, profile, payload, manifest, write, tv_info=tv_info, checks=checks)
             def reconnect_tv():
                 nonlocal remote
@@ -813,7 +838,12 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                     diagnostics.save_result(write, store, args.command, profile, 'doctor-complete', tv_info, checks=checks.results, status=result)
             else:
                 phase = args.command
-                result = installer.uninstall(full_project=True) if args.command == 'uninstall' else getattr(installer, args.command)()
+                if args.command == 'uninstall':
+                    if not args.non_interactive:
+                        debloat.offer_restore(remote, store, profile, ask, write)
+                    result = installer.uninstall(full_project=True)
+                else:
+                    result = getattr(installer, args.command)()
                 if result.get('verified_clean') is True and result.get('removed') is True:
                     write.recovery_plan({'state':'complete','disposition':'clean-removal','verified_clean':True,'removed':True,
                                          'summary':'Clean Your TV removal is verified.','next_step':'Other TV apps stay installed.'})
@@ -849,6 +879,9 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
         checks.finish_running(cancelled=True)
         if partial or args.command == 'ssh-command':
             return 130
+        if args.command == 'debloat':
+            write('Cancelled')
+            return 130
         from .recovery import cancelled
         cancelled(write, store, profile, args.command, phase, tv_info, checks.results)
         return 130
@@ -861,7 +894,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
         if not partial:
             from .recovery import removal_plan
             help = explain_failure(write, store, profile, phase, exc)
-            removal_plan(write, store, profile, failure=help)
+            removal_plan(write, store, profile, failure=help, error=exc, phase=phase)
         diagnostics.suggest_issue(write, store, args.command, profile, phase, exc, tv_info, checks=checks.results, status=tv_info.get('status'))
         return 2
     except Exception as exc:
@@ -876,12 +909,12 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
         message = None if partial else removal_connection_message(store, profile, phase, exc)
         write.error(message or ('Could not read the TV applications. Keep the TV on and accept its pairing request. Installation has not started.'
               if phase in ('pair-tv', 'read-inventory') and kind != 'ModuleNotFoundError' else hints.get(kind,
-              'Some Clean Your TV files or settings remain. Choose Try again.' if args.command=='uninstall'
+              'Removal could not be verified. Review recovery options before continuing.' if args.command=='uninstall'
               else 'Operation could not be confirmed. Save the diagnostic report and keep recovery data; do not retry blindly.')))
         if not partial:
             from .recovery import removal_plan
             help = explain_failure(write, store, profile, phase, exc)
-            removal_plan(write, store, profile, failure=help)
+            removal_plan(write, store, profile, failure=help, error=exc, phase=phase)
         diagnostics.suggest_issue(write, store, args.command, profile, phase, exc, tv_info, checks=checks.results, status=tv_info.get('status'))
         return 1
     finally:

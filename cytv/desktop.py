@@ -108,7 +108,11 @@ class DesktopConsole(Console):
 
     def recovery_plan(self, value):
         super().recovery_plan(value)
-        self.emit('recovery-plan', dict(value))
+        event = dict(value)
+        if value.get('disposition') == 'clean-removal':
+            from .recovery_ui import projected_removal_action
+            event['removal_action'] = projected_removal_action(value)
+        self.emit('recovery-plan', event)
 
     def recovery(self, profile):
         super().recovery(profile)

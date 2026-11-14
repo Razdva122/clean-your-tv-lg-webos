@@ -422,10 +422,36 @@ class SimpleRemoval(unittest.TestCase):
         proc=self.root/'proc'/'123';proc.mkdir(parents=True)
         (proc/'cmdline').write_text('/usr/bin/node\0'+str(self.root/'developer/apps/usr/palm/services/com.gathin.tvhome.renewal/service.js')+'\0')
         self.remote.apps={'com.gathin.tvhome'}
-        self.assertTrue(self.remove()['restart_required'])
-        self.assertEqual(self.store.pending(self.profile)['cleanup_restart_triggers'], ['process-idle-unverified'])
+        with self.assertRaises(UserError) as error:
+            self.remove()
+        self.assertEqual(error.exception.reason_code, 'cleanup-check-failed')
         self.assertEqual(self.remote.apps, {'com.gathin.tvhome'})
-        self.assertTrue(self.boot_marker().exists())
+        self.assertFalse(self.boot_marker().exists())
+
+    def test_removal_waits_for_project_process_despite_denied_foreign_proc_links(self):
+        proc = self.root / 'proc'
+        foreign, project = proc / '123', proc / '124'
+        foreign.mkdir(parents=True)
+        project.mkdir()
+        (foreign / 'cmdline').write_bytes(b'/usr/bin/sam\0')
+        (project / 'cmdline').write_bytes(b'com.local.nativehome.service\0')
+        self.remote.apps = {'com.local.nativehome'}
+        self.own_file('apps/usr/palm/services/com.local.nativehome.service/service.js')
+        model = (
+            "var link=fs.readlinkSync, read=fs.readFileSync, polls=0;"
+            "fs.readlinkSync=function(file){if(path.dirname(file)===" + json.dumps(str(foreign)) +
+            "){var denied=Error();denied.code='EACCES';throw denied;}return link.apply(fs,arguments);};"
+            "fs.readFileSync=function(file){if(file===" + json.dumps(str(project / 'cmdline')) +
+            "&&polls++)return '';return read.apply(fs,arguments);};"
+        )
+        self.remote.transform = lambda code: code.replace("if(input.action==='idle'){",
+                                                          "if(input.action==='idle'){" + model)
+        self.assertTrue(self.remove()['verified_clean'])
+        calls = [uri for uri, _ in self.remote.calls]
+        self.assertEqual(calls.count('com.local.nativehome.service/disable'), 1)
+        self.assertEqual(calls.count('com.webos.appInstallService/dev/remove'), 1)
+        self.assertFalse(list((self.root / 'volatile').glob('cytv-removal-*.boot')))
+        self.assertIsNone(self.store.pending(self.profile))
 
     def test_lost_same_boot_marker_release_never_proves_a_restart(self):
         (self.root/'proc').mkdir()
@@ -447,7 +473,8 @@ class SimpleRemoval(unittest.TestCase):
         self.remote.run=interrupted
         with self.assertRaises(UserError):self.remove()
         self.assertTrue(lost)
-        self.assertTrue(self.remove()['restart_required'])
+        with self.assertRaisesRegex(UserError, 'process did not stop'):
+            self.remove()
         self.assertIsNotNone(self.store.pending(self.profile))
 
     def test_lost_host_completion_after_verified_restart_does_not_request_second_restart(self):
@@ -469,10 +496,11 @@ class SimpleRemoval(unittest.TestCase):
             with self.assertRaises(OSError):self.remove()
         proc=self.root/'proc/123';proc.mkdir()
         (proc/'cmdline').write_text('/usr/bin/node\0'+str(self.root/'developer/apps/usr/palm/services/com.gathin.tvhome.renewal/service.js')+'\0')
-        self.assertTrue(self.remove().get('restart_required'))
+        with self.assertRaisesRegex(UserError, 'process did not stop'):
+            self.remove()
         self.assertIsNotNone(self.store.pending(self.profile))
 
-    def test_empty_files_with_live_or_unreadable_processes_still_need_restart(self):
+    def test_empty_files_with_live_or_unreadable_processes_still_block_removal(self):
         proc=self.root/'proc'/'123';proc.mkdir(parents=True)
         for argv in ('/usr/bin/node\0/media/developer/apps/usr/palm/services/com.gathin.tvhome.renewal/service.js\0',
                      '/bin/sh\0-c\0sleep 1; /usr/bin/node /media/developer/apps/usr/palm/services/com.gathin.tvhome.renewal/service.js\0',
@@ -487,18 +515,23 @@ class SimpleRemoval(unittest.TestCase):
                 (self.store.device_dir(self.profile)/'clean-removal.json').unlink(missing_ok=True)
                 if argv is not None:(proc/'cmdline').write_text(argv.replace('/media/developer',str(self.root/'developer')))
                 elif (proc/'cmdline').exists():(proc/'cmdline').unlink()
-                self.assertTrue(self.remove()['restart_required'])
+                if argv and 'com.gathin.tvhome.renewal' in argv:
+                    with self.assertRaisesRegex(UserError, 'process did not stop'):
+                        self.remove()
+                else:
+                    self.assertTrue(self.remove()['restart_required'])
 
     def test_foreign_absolute_script_does_not_force_restart_on_empty_tv(self):
         proc=self.root/'proc'/'123';proc.mkdir(parents=True)
         (proc/'cmdline').write_text('/usr/bin/node\0/usr/palm/services/org.foreign/service.js\0')
         self.assertTrue(self.remove()['verified_clean'])
 
-    def test_relative_script_in_deleted_project_cwd_still_requires_restart(self):
+    def test_relative_script_in_deleted_project_cwd_still_blocks_removal(self):
         proc=self.root/'proc'/'123';proc.mkdir(parents=True)
         (proc/'cmdline').write_text('/usr/bin/node\0service.js\0')
         (proc/'cwd').symlink_to(self.root/'developer/apps/usr/palm/services/com.gathin.tvhome.renewal')
-        self.assertTrue(self.remove()['restart_required'])
+        with self.assertRaisesRegex(UserError, 'process did not stop'):
+            self.remove()
 
     def test_legacy_partial_install_with_idle_package_manager_needs_no_restart(self):
         (self.root/'proc').mkdir()
@@ -534,8 +567,9 @@ class SimpleRemoval(unittest.TestCase):
         self.assertTrue(self.remove()['restart_required'])
         self.assertFalse(self.remote.apps)
         self.reboot()
-        with self.assertRaisesRegex(UserError,'input shortcuts'):
+        with self.assertRaises(UserError) as caught:
             self.remove()
+        self.assertEqual(caught.exception.reason_code, 'controls-unverified')
         self.assertIsNotNone(self.store.pending(self.profile))
         self.remote.luna=original
         self.assertTrue(self.remove()['verified_clean'])
@@ -658,8 +692,8 @@ class SimpleRemoval(unittest.TestCase):
         proc.mkdir()
         cmdline = proc / 'cmdline'
         cmdline.write_bytes(b'/usr/bin/node\0' + os.fsencode(service) + b'\0')
-        self.assertTrue(self.remove()['restart_required'])
-        self.assertEqual(self.store.pending(self.profile)['cleanup_restart_triggers'], ['process-idle-unverified'])
+        with self.assertRaisesRegex(UserError, 'process did not stop'):
+            self.remove()
         self.assertTrue(service.exists())
         self.assertEqual(len(self.remote.apps), 2)
 
@@ -699,7 +733,8 @@ class SimpleRemoval(unittest.TestCase):
         proc = self.root / 'proc/123'
         proc.mkdir()
         (proc / 'cmdline').write_bytes(b'/usr/bin/node\0' + os.fsencode(journal.with_name('observer.js')) + b'\0')
-        self.assertTrue(self.remove()['restart_required'])
+        with self.assertRaisesRegex(UserError, 'process did not stop'):
+            self.remove()
         self.assertTrue(journal.exists())
         self.assertFalse(any(uri.endswith('/dev/remove') for uri, _ in self.remote.calls))
         shutil.rmtree(proc)
@@ -810,7 +845,8 @@ class SimpleRemoval(unittest.TestCase):
         self.remote.apps={'com.local.nativehome'}
         process = self.root / 'proc/123'
         process.mkdir(parents=True)
-        (process / 'cmdline').write_bytes(b'com.local.nativehome\0')
+        (process / 'cmdline').write_bytes(b'/usr/bin/node\0-e\0')
+        self.own_file('.cytv-installer/operations/' + 'a' * 32 + '/journal.json')
         self.store.request_clean_removal(self.profile)
         self.store.checkpoint(self.profile, cleanup_boot_proof=None)
         with self.assertRaises(RuntimeError) as caught:self.remove()
@@ -1617,31 +1653,31 @@ class SimpleRemoval(unittest.TestCase):
         self.assertTrue(self.remove()['verified_clean'])
         child.wait(timeout=3);self.assertEqual(released.read_text(),'keys released');self.assertFalse(native.exists())
 
-    def test_unresponsive_controller_requires_restart_before_file_deletion(self):
+    def test_unresponsive_controller_times_out_before_file_deletion(self):
         pid=self.own_file('apps/usr/palm/applications/com.local.nativehome/state/controller.pid',str(os.getpid()))
         proc=self.root/'proc'/str(os.getpid());proc.mkdir(parents=True);(proc/'cmdline').write_text(str(pid.parent.parent/'native.js')+'\0')
         self.remote.transform=lambda code:code.replace('Date.now()+8000','Date.now()+100')
-        self.assertTrue(self.remove()['restart_required']);self.assertTrue(pid.exists())
-        self.assertEqual(self.store.pending(self.profile)['cleanup_restart_triggers'], ['controller-still-running'])
-        self.boot_marker().unlink()  # New volatile lifetime, same kernel UUID.
-        self.assertTrue(self.remove()['restart_required']);self.assertTrue(pid.exists())
-        self.assertTrue(self.boot_marker().exists(),'a still-running controller requires a new captured restart baseline')
-        self.assertTrue(self.remove()['restart_required']);self.assertTrue(pid.exists())
-        pid.unlink();shutil.rmtree(proc);self.reboot();self.assertTrue(self.remove()['verified_clean'])
+        with self.assertRaisesRegex(UserError, 'process did not stop'):
+            self.remove()
+        self.assertTrue(pid.exists())
+        self.assertFalse(self.boot_marker().exists())
+        self.assertFalse(any(uri.endswith('/dev/remove') for uri, _ in self.remote.calls))
+        pid.unlink();shutil.rmtree(proc);self.assertTrue(self.remove()['verified_clean'])
 
     def test_lost_rearm_create_reply_keeps_retry_seedable_without_adopting_a_mismatch(self):
-        pid=self.own_file('apps/usr/palm/applications/com.local.nativehome/state/controller.pid',str(os.getpid()))
-        proc=self.root/'proc'/str(os.getpid());proc.mkdir(parents=True);(proc/'cmdline').write_text(str(pid.parent.parent/'native.js')+'\0')
+        proc=self.root/'proc/123';proc.mkdir(parents=True)
+        (proc/'cmdline').write_bytes(b'/usr/bin/node\0-e\0')
         self.remote.transform=lambda code:code.replace('Date.now()+8000','Date.now()+100')
         self.remove();marker=self.boot_marker()
         with marker.open('rb') as held_old_inode:
             marker.unlink()  # Keep the fixture inode distinct from the next marker.
+            self.store.checkpoint(self.profile, cleanup_boot_verified=True)
             self.remote.cut_boot_create=True
             with self.assertRaisesRegex(UserError,'interrupted'):self.remove()
             self.assertTrue(marker.exists())
             self.assertTrue(self.remove()['restart_required'])
-            self.assertTrue(pid.exists())
-        pid.unlink();shutil.rmtree(proc);marker.unlink();self.assertTrue(self.remove()['verified_clean'])
+            self.assertTrue(proc.exists())
+        shutil.rmtree(proc);marker.unlink();self.assertTrue(self.remove()['verified_clean'])
 
     def test_stale_pid_of_foreign_process_does_not_force_endless_restart(self):
         pid=self.own_file('apps/usr/palm/applications/com.local.nativehome/state/controller.pid',str(os.getpid()))

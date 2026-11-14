@@ -78,7 +78,7 @@ class SimpleRemovalUITests(unittest.TestCase):
             self.fixture.button(w,'Choose key file…').click()
         self.fixture.pump(lambda:not w.running)
         self.assertEqual(attempts[-1][attempts[-1].index('--identity')+1],'/existing/key')
-        self.assertEqual(attempts[-1][0],'uninstall')
+        self.assertEqual(attempts[-1][0],'recover')
         self.assertEqual(attempts[-1][attempts[-1].index('--host')+1],profile['host'])
         self.assertEqual(attempts[-1][attempts[-1].index('--port')+1],'2222')
 
@@ -115,7 +115,7 @@ class SimpleRemovalUITests(unittest.TestCase):
         self.assertIn('Standby is not a full restart.', w.subtitle.text())
         self.assertIsNotNone(self.fixture.button(w, 'Try again'))
 
-    def test_incomplete_final_cleanup_is_neutral_and_keeps_retry(self):
+    def test_incomplete_final_cleanup_is_neutral_and_offers_review(self):
         def runner(argv, **kwargs):
             write=kwargs['write'];write.recovery(self.fixture.profile)
             write.recovery_plan({'state':'blocked','disposition':'clean-removal',
@@ -127,7 +127,9 @@ class SimpleRemovalUITests(unittest.TestCase):
         self.fixture.pump(lambda:not w.running)
         self.assertEqual(w.title.text(),'Finish Clean Your TV cleanup')
         self.assertNotEqual(w.title.property('state'),'error')
-        self.assertIsNotNone(self.fixture.button(w,'Try again'))
+        self.assertIsNone(self.fixture.button(w,'Try again'))
+        self.assertIsNotNone(self.fixture.button(w, 'Review recovery options'))
+        self.assertIn('Review recovery options before continuing.', w.subtitle.text())
 
     def test_actual_cli_retry_reuses_approved_goal_without_second_confirmation(self):
         attempts = []
@@ -183,7 +185,7 @@ class SimpleRemovalUITests(unittest.TestCase):
                 w.start('uninstall', self.fixture.profile)
                 self.fixture.pump(lambda: not w.running)
                 self.assertEqual(w.title.text(), 'Removal is not finished yet.')
-                self.assertIn('Check the connection and try again.', w.subtitle.text())
+                self.assertIn('Review recovery options before continuing.', w.subtitle.text())
                 self.assertNotIn('PRIVATE', w.subtitle.text())
                 w.close()
 

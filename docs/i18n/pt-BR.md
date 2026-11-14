@@ -117,15 +117,25 @@ Escolha **Desinstalar Clean Your TV** em Manutenção usando a mesma conexão sa
 
 Em TVs antigas sem um aplicativo LG Home separado, a remoção No-root pode mudar para a TV ao vivo. Mantenha a TV ligada e reinicie se solicitado; não apague os dados de recuperação nem restaure a TV.
 
-Quando solicitado, desconecte a TV da tomada, reconecte, aguarde a rede e escolha **Tentar novamente**. Espera ou Quick Start não é reinicialização completa; CYTV não reinicia a TV automaticamente. Se a conexão cair, verifique-a e repita a mesma remoção, sem outro assistente de recuperação. Se o acesso for negado, use a conexão Root solicitada; se a TV estiver ocupada, aguarde e tente novamente. O sucesso só aparece após verificar a limpeza final. Preserve as chaves e os relatórios originais. Continuam válidos os controles de emergência e o consentimento para compartilhar.
+Quando solicitado, desconecte a TV da tomada, reconecte, aguarde a rede e escolha **Tentar novamente**. Espera ou Quick Start não é reinicialização completa; CYTV não reinicia a TV automaticamente. Se o acesso for negado, use a conexão Root solicitada; se a TV estiver ocupada, aguarde e tente novamente. O sucesso só aparece após verificar a limpeza final. Preserve as chaves e os relatórios originais. Continuam válidos os controles de emergência e o consentimento para compartilhar.
+
+Se o instalador não conseguir verificar a remoção, a limpeza final, os controles da TV ou o resultado da operação de pacotes, ou informar que os caminhos do projeto mudaram, escolha **Revisar opções de recuperação** com a conexão original salva. Confirme a continuação separadamente se o instalador oferecer essa opção.
 
 Se o instalador não conseguir verificar a reinicialização completa solicitada, salve e anexe o relatório de diagnóstico. Mantenha a conexão salva e os dados de recuperação. Não repita os ciclos de energia nem apague manualmente a operação pendente.
 
 Uma instalação com falha ou interrompida oferece recuperação diretamente. Se No-root não puder continuar, confirme a remoção completa uma vez. A remoção faz até três tentativas em caso de perda temporária de conexão ou processo CYTV ocupado. Se precisar de Root, escolha **Conectar com Root** para a mesma TV; a limpeza Root verificada também conclui a remoção No-root bloqueada. Se a ativação Root falhar, o CYTV tenta restaurar e verificar LG Home sem repetir a ativação. Cancelar trabalho pendente preserva o relatório e as ações de recuperação. A parada de emergência é mantida.
 
-Após uma falha de conexão durante a remoção, abra os detalhes, verifique a rede ou escolha uma chave SSH Root existente e tente novamente. Endereço, edição, porta e verificação da chave da TV permanecem fixos. Ao reinstalar o No-root, o assistente tenta parar o Helper automaticamente. Pressione Home somente se solicitado e confirme a nova verificação. A remoção pode terminar sem reiniciar quando os controles, a desativação da inicialização automática e a ausência de pacotes, arquivos e processos forem verificados e não houver instalação pendente. Se o instalador pedir para reiniciar, faça isso e tente novamente. Se o serviço de entradas falhar, a limpeza segura dos pacotes continua; o sucesso ainda exige verificar a limpeza do atalho.
+Se a remoção parar por uma queda temporária da conexão, confira a rede e escolha **Tentar novamente** quando essa opção aparecer para continuar a mesma remoção. Se a autenticação falhar, a conexão não puder ser verificada ou o resultado for incerto, escolha **Revisar opções de recuperação**. Se **Detalhes da conexão** aparecer, use essa opção para verificar a conexão ou selecionar uma chave SSH Root existente para a verificação de recuperação. O endereço salvo da TV, a edição, a porta e a verificação da chave do host permanecem fixos. Se o instalador oferecer a continuação da remoção após a verificação, confirme separadamente.
+
+Ao reinstalar o No-root, o assistente tenta parar o Helper automaticamente. Pressione Home somente se solicitado e confirme a nova verificação. A remoção pode terminar sem reiniciar quando os controles, a desativação da inicialização automática e a ausência de pacotes, arquivos e processos forem verificados e não houver instalação pendente. Se o instalador pedir para reiniciar, faça isso e tente novamente. Se o serviço de entradas falhar, a limpeza segura dos pacotes continua; o sucesso ainda exige verificar a limpeza do atalho.
 
 **Reinstalar o Root:** Escolha **Configurar minha TV → Root** com a conexão salva e confirme **Reinstalar Root?**. O instalador restaura o LG Home e remove completamente o Clean Your TV, incluindo seus atualizadores, Home Helper e preferências salvas. Após verificar a remoção, instala e ativa os pacotes e o ambiente Root incluídos nesse instalador. Os outros apps da TV e o acesso root/SSH existente são preservados. Se a remoção parar ou solicitar uma reinicialização completa, termine-a antes de iniciar a configuração novamente. **Desinstalar Clean Your TV** sozinho nunca inicia outra instalação.
+
+### Alterar configurações da LG e concluir a recuperação do Root
+
+No instalador para computador, abra **Ação de manutenção → Ajustar as configurações da LG (Debloat)** com a conexão salva da TV. Selecione as configurações que quer alterar, escolha **Aplicar configurações selecionadas** e confira os resultados. Se houver uma operação pendente, escolha primeiro **Revisar opções de recuperação** com a conexão original salva.
+
+Se o launcher não ficar pronto após a reversão, use a conexão Root original salva. Escolha **Recuperar após reversão do Root Updater** ou **Recuperar após reversão do Root System Updater** conforme o atualizador que informou o erro e confirme. Apenas para o Root System Updater, marque **Iniciar nova tentativa registrada após o fim do prazo anterior** se a tentativa anterior expirou e as [instruções de recuperação](../RECOVERY.md#root-system-rollback-readiness-candidate) permitirem outra tentativa.
 
 <!-- Legacy anchors retained for existing links. Detailed references: -->
 <a id="python-opcional-para-root"></a>
@@ -176,6 +186,8 @@ Abra Configurações → Papéis de parede → Enviar do telefone e leia o códi
 ## Configure seu Clean Your TV
 
 Antes de escolher um tema, use **Debloat** para selecionar quais opções de anúncios, recomendações, privacidade e notificações da LG você quer alterar. Confira cada resultado. Se o instalador não conseguir ler o valor original, não poderá salvá-lo para reversão automática. Escolha **Pular Debloat** para manter as configurações atuais.
+
+Durante a desinstalação, você pode restaurar os valores originais salvos pelo Debloat. Se pular a restauração, a desinstalação continua sem alterar esses ajustes.
 
 Após a instalação bem-sucedida, escolha Classic, Liquid Glass ou Ribbon e ative ou desative o clima. Ribbon não oferece clima; Liquid Glass usa o formato compacto. A cidade é estimada pela conexão e pode ser alterada na Home.
 
