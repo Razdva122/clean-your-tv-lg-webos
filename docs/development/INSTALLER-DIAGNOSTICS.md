@@ -359,8 +359,10 @@ paths and capsule contents.
 The review publishes no cancellation marker. If only the capsule is missing,
 removal can use the original local receipt and its matching private TV plan.
 It checks the operation and diagnostic IDs, source and configuration hashes,
-package versions and reservation identity. A different active reservation or
-an unverifiable private plan stops the review. The report can show
+package versions and reservation identity. An active or prepared reservation
+requires a verifiable private plan and a matching owner. If both reservation
+paths are absent, incomplete private history can remain while the existing
+writer and package checks run. The report can show
 `capsule-missing` with a `matched` reservation. This path is only available
 for removal. Confirmed removal checks the binding again and uses the existing
 cancellation and writer checks before modifying packages.
