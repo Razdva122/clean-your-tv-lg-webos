@@ -1820,6 +1820,232 @@ def luna(uri, payload):
                 self.assertEqual(result['original']['request'],original)
                 self.assertFalse(present)
 
+    def test_old_compositor_alias_full_removal_and_fresh_enrollment(self):
+        import hashlib
+        import json
+        from contextlib import ExitStack
+        from types import SimpleNamespace
+        import clean_removal
+        import deploy
+        import install_device
+        import observed_install
+        from runtime import c1_keyfilter
+        from updater.device import Device
+
+        driver, identifier, root, updater, payload, calls, present = self.fixture()
+        device = driver.device
+        provision = sys.modules['provision']
+        service = root/'service'
+        files = {key: install_device.BUS/path.parent.name/path.name
+                 for key, path in provision.FILES.items()}
+        original = {
+            'service': f'[D-BUS Service]\nName={provision.NAME}\nExec=/usr/bin/run-js-service -n {provision.SERVICE}\n',
+            'role': json.dumps({'appId': provision.NAME}), 'client': '{}', 'api': '{}',
+        }
+        old_sender, new_sender = 'com.webos.surfacemanager', 'com.webos.starfish.keyfilters'
+        old_group = provision.NAME + '.c1lease'
+        current_plan = provision.plan
+        stock = 'com.webos.app.home'
+        snapshot = root/'ls2-provision-snapshot.json'
+        ready = root/'recovery-provision.json'
+        uid = os.getuid()
+        vendor = {'file': '/usr/lib/qt5/qml/KeyFilters/systemUi.js', 'handler': 'handleSystemKeys'}
+        chain = [vendor]
+        native = payload/'root/runtime/c1-keyfilter-guard'
+        native.write_bytes(b'current guardian fixture')
+        digest = hashlib.sha256(native.read_bytes()).hexdigest()
+        admission = dict(model='OLED55C37LA', firmware='03.53.45', webos='9.2.2',
+                         target_sha256='a'*64, target=dict(dev=1, ino=2, size=52, mtime_ns=3))
+
+        def old_plan(policy, capabilities):
+            result = current_plan(policy, capabilities)
+            role, client, api = (json.loads(result[key]) for key in ('role', 'client', 'api'))
+            role['permissions'][-1]['inbound'] = [old_sender]
+            client[old_sender] = [old_group]
+            api.pop('all', None)
+            api[old_group] = [provision.LEASE_NAME+'/c1Lease', provision.LEASE_NAME+'/c1Home']
+            return dict(result, role=provision.encoded(role), client=provision.encoded(client),
+                        api=provision.encoded(api))
+
+        def sdk_install():
+            service.mkdir(parents=True, exist_ok=True)
+            (service/'services.json').write_text(json.dumps({'id': provision.NAME}))
+            (root/'release.json').write_text(json.dumps({'capabilities': provision.COMPOSITOR_CAPABILITIES}))
+            for key, path in files.items():
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(original[key])
+                path.chmod(0o640)
+            self.assertEqual(c1_keyfilter.prepare(root, digest, admission, uid)['schema'], 3)
+
+        restore_worker = getattr(clean_removal, 'runtime_restore_report', clean_removal.runtime_restore)
+
+        def restore(args):
+            self.assertIn(restore_worker.__name__ + '(', args[-1])
+            backend = SimpleNamespace(selection=c1_keyfilter.selection, STATE=root)
+            cli = SimpleNamespace(gate_backend=lambda: backend,
+                                  main=lambda mode: c1_keyfilter.execute(mode, root=root, uid=uid))
+            with patch.dict(sys.modules, {'cli': cli, 'c1_keyfilter': c1_keyfilter}), \
+                 patch.object(sys, 'path', sys.path.copy()), patch.object(c1_keyfilter, 'binary'):
+                return restore_worker(payload/'root', uid)
+
+        def guardian(args, state, owner, *, allow_ui_failure=False):
+            self.assertEqual(allow_ui_failure, restore_worker.__name__ == 'runtime_restore_report'
+                             and args == ['--restore'])
+            self.assertEqual(c1_keyfilter.binary(state, owner), native)
+            calls.append(args[0])
+            return dict(returnValue=True, backend=c1_keyfilter.BACKEND, routing=c1_keyfilter.ROUTING,
+                        state='stopped', mounted=False, healthy=False, stock_verified=True,
+                        stopped=True, token='1'*32, guardian_pid=0, reason='', profiles=None)
+
+        def write_chain(entries, *, volatile):
+            self.assertTrue(volatile)
+            self.assertEqual(calls[-2:], ['--restore', '--status'])
+            chain[:] = entries
+
+        def stock_rpc(method, data):
+            if method.endswith('/getSystemSettings'):
+                self.assertIn('--restore', calls)
+                self.assertEqual(chain, [vendor])
+                return {'returnValue': True, 'settings': {'defaultApps': {'home': stock}}}
+            if method.endswith('/getProfiles'):
+                return {'returnValue': True, 'profiles': {
+                    'defaultApps': {'categories': {'home': stock}}, 'idleApp': {'appId': stock},
+                }}
+            return rpc(method, data)
+
+        def remove(app, timeout):
+            for key, path in files.items():
+                self.assertEqual(path.read_bytes(), original[key].encode())
+                info = path.stat()
+                self.assertEqual((info.st_mode & 0o777, info.st_uid, info.st_gid), original_metadata[key])
+                path.unlink()  # Package manager removes the restored SDK files.
+            return package_remove(app, timeout)
+
+        def boot_identity():
+            return device.current_boot
+
+        rpc, package_remove = device.rpc, observed_install.remove.side_effect
+        driver.store.write('request-'+identifier, dict(driver.status(identifier), state='complete'))
+        Store(root, uid=os.getuid()).write('deploy', {'app': deploy.APP, 'stage': 'installed-recovery-only'})
+
+        def provision_rpc(method):
+            calls.append(method)
+            return {'root': True, 'registered': True, 'activityName': provision.NAME+'.recovery'}
+
+        with ExitStack() as stack:
+            stack.enter_context(patch.multiple(c1_keyfilter, STATE=root, boot_identity=boot_identity))
+            stack.enter_context(patch.object(c1_keyfilter, 'native', side_effect=guardian))
+            stack.enter_context(patch.object(c1_keyfilter, 'read_chain', side_effect=chain.copy))
+            stack.enter_context(patch.object(c1_keyfilter, 'write_chain', side_effect=write_chain))
+            stack.enter_context(patch.object(deploy, 'verify_bundle', return_value={'files': {'runtime/c1-keyfilter-guard': digest}}))
+            stack.enter_context(patch.object(deploy, 'checked_file', side_effect=lambda base, name: (base/name).read_bytes()))
+            sdk_install()
+            own_filter = c1_keyfilter.filter_entry(root)
+            chain.insert(0, own_filter)
+            c1_keyfilter.atomic(root/'c1-keyfilter/ownership.json',
+                                dict(schema=1, entry=own_filter, token='1'*32), uid)
+            original_metadata = {key: (path.stat().st_mode & 0o777, path.stat().st_uid, path.stat().st_gid)
+                                 for key, path in files.items()}
+            stack.enter_context(patch.multiple(provision, STATE=root, FILES=files, PRIVATE_SERVICE=service,
+                                              RUNNER=root/'run-recovery-service'))
+            for name, options in {
+                'secure': {'side_effect': Path.read_bytes},
+                'prepare_private_service': {},
+                'manifest': {'return_value': {'version': 1, 'mode': 'recovery-only'}},
+                'refresh': {},
+                'prepare_stock_home': {},
+                'register_firmware_access': {'return_value': False},
+                'rpc': {'side_effect': provision_rpc},
+            }.items():
+                stack.enter_context(patch.object(provision, name, **options))
+            stack.enter_context(patch.object(provision.os, 'geteuid', return_value=0))
+            stack.enter_context(patch.object(provision.os, 'chown'))
+            stack.enter_context(patch('startup_hook.install'))
+            stack.enter_context(patch('system_permissions.remove'))
+            stack.enter_context(patch.object(device, 'log'))
+            stack.enter_context(patch.object(device, 'rpc', side_effect=stock_rpc))
+            stack.enter_context(patch.object(observed_install.remove, 'side_effect', remove))
+            stack.enter_context(patch.object(deploy.command, 'side_effect', restore))
+
+            with patch.object(provision, 'plan', side_effect=old_plan):
+                provision.apply()
+                provision.finalize()
+            self.assertTrue(ready.exists())
+            self.assertEqual(json.loads(files['client'].read_bytes())[old_sender], [old_group])
+            self.assertNotIn(new_sender, json.loads(files['client'].read_bytes()))
+            with self.assertRaisesRegex(ValueError, 'excluded from normal Root Updater'):
+                Device.require_home_resume_runtime(root)
+
+            enrolled = {key: path.read_bytes() for key, path in files.items()}
+            saved = json.loads(snapshot.read_bytes())
+            files['client'].write_bytes(b'foreign policy')
+            blocked = driver.clean_remove(identifier)
+            self.assertEqual(blocked['last_failure']['cleanup_step'], 'provision-rollback')
+            self.assertEqual(files['client'].read_bytes(), b'foreign policy')
+            for key in ('service', 'role', 'api'):
+                self.assertEqual(files[key].read_bytes(), enrolled[key])
+            self.assertTrue(ready.exists())
+            self.assertEqual(chain, [vendor])
+            self.assertNotIn('unregister', calls)
+            self.assertIn(deploy.APP, present)
+
+            files['client'].write_bytes(enrolled['client'])
+            actual_write = provision.write
+
+            def interrupt(path, data, mode=0o600):
+                if path == files['role']:
+                    raise OSError('interrupted inverse')
+                actual_write(path, data, mode)
+
+            with patch.object(provision, 'write', side_effect=interrupt):
+                interrupted = driver.clean_remove(identifier)
+            self.assertEqual(interrupted['last_failure']['cleanup_step'], 'provision-rollback')
+            self.assertEqual(json.loads(snapshot.read_bytes())['phase'], 'restoring')
+            self.assertEqual(files['api'].read_text(), original['api'])
+            self.assertEqual(files['role'].read_bytes(), enrolled['role'])
+
+            reopened = Coordinator(device, Ownership(driver.store), driver.read)
+            clean = reopened.clean_remove(identifier)
+            self.assertEqual(clean['stage'], 'verified-clean', clean)
+            self.assertEqual(clean['routes'], [stock]*3)
+            self.assertEqual(calls.count('unregister'), 1)
+            self.assertEqual(calls.count('remove-'+deploy.APP), 1)
+            self.assertFalse(present)
+            self.assertFalse(snapshot.exists())
+            self.assertEqual(reopened.store.read('owner-backup-'+identifier)['provision']['files'], saved['files'])
+
+            def enroll(candidate):
+                self.assertEqual(candidate, payload)
+                self.assertFalse(root.exists())
+                self.assertFalse(updater.exists())
+                self.assertFalse(any(path.exists() for path in files.values()))
+                c1_keyfilter.stock_chain(chain)
+                fresh_state = dict(supported=True, packages_match=False, receipts_match=False,
+                                   pending=False, retained=False, complete=False, migration_supported=False)
+                with patch('installation.device_snapshot', return_value=fresh_state), \
+                     patch.object(c1_keyfilter, 'probe', return_value=admission):
+                    self.assertEqual(deploy.experimental_admission(c1_keyfilter.ROUTING, device.operation['id']),
+                                     admission)
+                sdk_install()
+                provision.apply()
+                provision.refresh()
+                return provision.finalize()
+
+            with patch.object(device, 'preflight'), patch.object(device, 'native_deploy', side_effect=enroll):
+                fresh = reopened.native_install('e'*32, payload)
+            self.assertEqual(fresh['state'], 'complete', fresh)
+            self.assertEqual(fresh['clean_predecessor'], identifier)
+            self.assertNotEqual(fresh['lease'], clean['lease'])
+            self.assertTrue(ready.exists())
+            normal = current_plan(original, provision.WALLPAPER_CAPABILITIES)
+            self.assertEqual(files['client'].read_bytes(), normal['client'])
+            self.assertEqual(json.loads(files['role'].read_bytes())['permissions'][-1], {
+                'service': provision.LEASE_NAME, 'inbound': [old_sender, new_sender], 'outbound': [],
+            })
+            api = json.loads(files['api'].read_bytes())
+            self.assertEqual(api.pop('all'), [provision.LEASE_NAME+'/c1Lease', provision.LEASE_NAME+'/c1Home'])
+            self.assertEqual(provision.encoded(api), normal['api'])
+
     def test_install_inspection_leaves_live_compositor_probe_to_native_install(self):
         import subprocess
         driver, identifier, _, _, payload, _, present, native_hash, proof = self.retained_native_fixture()
