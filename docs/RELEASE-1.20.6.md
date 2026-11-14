@@ -20,14 +20,17 @@
   another Home integration needs to restore LG Home itself, the installer
   explains the next step (#631, #454, #519).
 
+The Home and independent updater packages include Chinese font subsets regenerated
+for the expanded installer translations.
+
 | Component | v1.20.5 | v1.20.6 |
 | --- | --- | --- |
 | cytv | 0.20.5 | 0.20.6 |
 | Android / versionCode | 0.19.5 / 42 | 0.19.6 / 43 |
-| Home FHD/HD | 1.18.4 | 1.18.4 |
+| Home FHD/HD | 1.18.4 | 1.18.5 |
 | Home Helper | 0.8.4 | 0.8.4 |
 | Root edition | 0.19.5 | 0.19.6 |
-| Independent updater | 0.5.15 | 0.5.15 |
+| Independent updater | 0.5.15 | 0.5.16 |
 
 See the [candidate record](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/628)
 for build and device verification.

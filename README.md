@@ -144,10 +144,10 @@ For contributors: [build and technical references](docs/development/README.md),
 | Component | Stable version |
 | --- | --- |
 | cytv installer | 0.20.6 |
-| Home | 1.18.4 |
+| Home | 1.18.5 |
 | Home Helper | 0.8.4 |
 | Root edition | 0.19.6 |
-| Both edition Updaters | 0.5.15 |
+| Both edition Updaters | 0.5.16 |
 | Android installer / versionCode | 0.19.6 / 43 |
 <!-- /release:components -->
 
