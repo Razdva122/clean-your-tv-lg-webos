@@ -225,8 +225,10 @@ module.exports = function (service, options) {
   }
   function currentCaller(message) {
     try {
+      var sender = message.ls2Message.senderServiceName();
       return (
-        message.ls2Message.senderServiceName() === 'com.webos.surfacemanager'
+        sender === 'com.webos.surfacemanager' ||
+        sender === 'com.webos.starfish.keyfilters'
       );
     } catch (_) {
       return false;

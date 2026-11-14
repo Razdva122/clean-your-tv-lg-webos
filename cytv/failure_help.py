@@ -16,11 +16,17 @@ CONNECTION_FAILURES = NETWORK_FAILURES + AUTH_FAILURES
 NATIVE_HOME_SCRIPT = (
     'Restore LG Home before Root setup',
     'The Home executable path currently points to a script.',
-    'Restore LG Home and disable the existing Home replacement, then check the TV again.',
+    'Use the existing integration’s own supported procedure to return to LG Home. Then choose Diagnostics → Check connection and create a diagnostic report.',
     False,
 )
 GUIDES = {
     'native-home-script': NATIVE_HOME_SCRIPT,
+    'foreign-home-handoff-required': (
+        'Return to LG Home with the existing integration',
+        'Another Home integration covers LG Home. This installer cannot restore it safely.',
+        NATIVE_HOME_SCRIPT[2],
+        False,
+    ),
     'tv-storage-full': ('Not enough space on the TV', TV_STORAGE_FULL, REPORT, False),
     'tv-storage-ramfs': ('Available TV storage could not be determined.', TV_STORAGE_RAMFS, REPORT, False),
     'computer-storage-full': ('Not enough space on this computer', COMPUTER_STORAGE_FULL, REPORT, False),
@@ -122,6 +128,8 @@ def for_error(error, phase, profile=None, pending=None):
     elif (pending and edition == 'no-root' and phase in ('recover', 'uninstall')
             and isinstance(error, TVRejected) and error.luna.get('operation') == 'package-status'):
         code = 'recovery-status-rejected'
+    elif reason == 'foreign-home-handoff-required' and edition == 'root':
+        code = reason
     elif reason in ('root-home-interfaces','root-requirements','native-home-script') and edition=='root':
         code = reason
     elif reason in ('ssh-trust-record', 'ssh-identity-unverified') or 'BadHostKeyException' in names:

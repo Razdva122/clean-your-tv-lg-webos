@@ -24,7 +24,7 @@ REASONS = ('unknown', 'user-error', 'ssh-command-failed', 'ssh-unreachable', 'ss
            'ssh-authentication', 'ssh-identity-changed', 'ssh-trust-record', 'ssh-identity-unverified', 'host-runtime',
            'helper-running', 'helper-state-unverified', 'root-requirements',
            'pending-operation', 'root-operation-unconfirmed', 'project-apps-remain', 'version-mismatch',
-           'inventory-unavailable', 'graphics-unverified', 'root-home-interfaces', 'native-home-script',
+           'inventory-unavailable', 'graphics-unverified', 'root-home-interfaces', 'native-home-script', 'foreign-home-handoff-required',
            'root-worker-busy', 'root-access-required', 'removal-failed',
            'cleanup-check-failed', 'connection-interrupted', 'operation-timeout', 'tv-storage-full', 'tv-storage-ramfs')
 REASONS += ACTIVATION_CODES
@@ -37,7 +37,7 @@ PHASES = ('launch-helper', 'verify-home-button', 'select-tv', 'inspect-tv', 'sel
           'install-helper', 'install-home', 'configure-helper', 'configure-home', 'install-root',
           'install-root-updater', 'verify-root-updater', 'verify-root-recovery',
           'stop-old-helper', 'activate-root', 'launch-root', 'remove-existing-root',
-          'archive-root-state', 'doctor-complete', 'install-complete', 'preflight',
+          'archive-root-state', 'doctor-complete', 'partial-tv-observation', 'install-complete', 'preflight',
           'prepare-python-runtime', *ACTIONS)
 STATES = ('pending', 'complete', 'recovery_required', 'unknown', 'fresh', 'installed',
           'unsupported', 'conflict', 'migration_required')
@@ -113,6 +113,21 @@ def root_diagnostics_summary(value):
         result['health_log']['health_refusal']=choice(log['health_refusal'],('generic','transaction-mismatch',
             'binding-restored','generation-mismatch','token-mismatch','boot-mismatch','phase-inactive','failsafe-present'))
     if type(log.get('supervisor_error')) is bool:result['health_log']['supervisor_error']=log['supervisor_error']
+    compositor=mapping(value.get('compositor'))
+    if compositor:
+        from .root_activation_diagnostics import COMPOSITOR_STOPS
+        observed={'status':choice(compositor.get('status'),
+            ('read','missing','unsafe','unavailable','stale','inconsistent'))}
+        if observed['status']=='read':
+            stop=choice(compositor.get('original_stop'), COMPOSITOR_STOPS, None)
+            if stop is not None:
+                observed['original_stop']=stop
+                observed['scope']=choice(compositor.get('scope'), ('retained','since-enable'))
+                if compositor.get('guardian_release')=='ui_release_failed':
+                    observed['guardian_release']='ui_release_failed'
+            else:
+                observed['status']='unknown'
+        result['compositor']=observed
     return result
 
 
@@ -175,30 +190,43 @@ def tv_summary(value):
         result['home_backend'] = value['home_backend']
     if type(value.get('home_backend_schema')) is int and value['home_backend_schema'] in (2,3):
         result['home_backend_schema'] = value['home_backend_schema']
-    if 'root_compositor_failure' in value:
-        from .root_capabilities import COMPOSITOR_FAILURES
-        failure = choice(value['root_compositor_failure'], COMPOSITOR_FAILURES, None)
-        if failure is not None:
-            result['root_compositor_failure'] = failure
+    from .root_capabilities import (COMPOSITOR_FAILURES, C1_PROBE_STATES, KEYFILTER_PREDICATES,
+                                    KEYFILTER_PROBE_STATES, NATIVE_HOME_PREDICATES)
+    for field, allowed in (
+        ('root_compositor_failure', COMPOSITOR_FAILURES),
+        ('root_c1_probe', C1_PROBE_STATES),
+        ('root_native_home_probe', NATIVE_HOME_PREDICATES),
+    ):
+        observation = choice(value.get(field), allowed, None)
+        if observation is not None:
+            result[field] = observation
+    if result.get('root_compositor_failure') == 'c1-probe-failed':
+        observation = choice(value.get('root_compositor_observation'), COMPOSITOR_FAILURES, None)
+        if observation is not None:
+            result['root_compositor_observation'] = observation
     if 'root_keyfilters_probe' in value:
-        from .root_capabilities import KEYFILTER_PROBE_STATES
         probe = mapping(value['root_keyfilters_probe'])
         probe_state = choice(probe.get('state'), KEYFILTER_PROBE_STATES, None)
         if probe_state is not None:
             result['root_keyfilters_probe'] = {'state': probe_state}
+            predicate = choice(probe.get('predicate'), KEYFILTER_PREDICATES, None)
+            if probe_state == 'incompatible' and predicate is not None:
+                result['root_keyfilters_probe']['predicate'] = predicate
             code = probe.get('error_code')
             if probe_state == 'rejected' and type(code) is int and -(2**31) <= code < 2**31:
                 result['root_keyfilters_probe']['error_code'] = code
     if 'root_ribbon_probe' in value:
         from .root_capabilities import RIBBON_PROBE_STATES
         result['root_ribbon_probe'] = choice(value['root_ribbon_probe'], RIBBON_PROBE_STATES)
-    if 'root_native_home_mount' in value:
+    native_probe = value.get('root_native_home_probe')
+    if native_probe in (None, 'home-script') and 'root_native_home_mount' in value:
         from .root_capabilities import NATIVE_HOME_MOUNT_STATES
         mount = choice(value['root_native_home_mount'], NATIVE_HOME_MOUNT_STATES, None)
         if mount is not None:
             result['root_native_home_mount'] = mount
     native_home_mode = value.get('root_native_home_mode')
-    if isinstance(native_home_mode, str) and re.fullmatch(r'[0-7]{4}', native_home_mode):
+    if (native_probe in (None, 'mode-invalid') and isinstance(native_home_mode, str)
+            and re.fullmatch(r'[0-7]{4}', native_home_mode)):
         result['root_native_home_mode'] = native_home_mode
     if 'root_requirements' in value:
         checks = mapping(value['root_requirements'])
@@ -270,7 +298,15 @@ def worker_summary(value):
         if type(item) is int and low <= item <= high:
             result[key] = item
     from .errors import root_driver_details
-    probe=root_driver_details(value.get('cleanup_probe'))
+    raw_probe=mapping(value.get('cleanup_probe'))
+    probe=root_driver_details(raw_probe)
+    if probe and value.get('cleanup_step')=='runtime-restore':
+        reason=choice(raw_probe.get('native_reason'),('effect_busy','ui_release_failed'),None)
+        if reason is not None:probe['native_reason']=reason
+        if reason=='ui_release_failed':
+            check=choice(raw_probe.get('restore_check'),('native-stop-unverified','stock-foreground-unverified',
+                'stock-surface-unverified','stock-routing-unverified'),None)
+            if check is not None:probe['restore_check']=check
     if probe:result['cleanup_probe']=probe
     inspect_check=choice(value.get('inspect_check'), ('restart_required', 'support_stage_remains', 'live_original_worker',
                   'project_apps_remain', 'restored_routes_changed', 'startup_remains',
@@ -543,19 +579,20 @@ def record_first_failure(store, profile, pending, report):
             pass  # Diagnostics cannot stop an independent removal request.
 
 
-def history(report, store, profile, error, pending):
+def history(report, store, profile, error, pending, *, create=True):
     result = {'first_failure': None, 'failure_history': 'not-recorded'}
     if not profile:
         return result
     try:
-        directory = store.device_dir(profile) / 'diagnostic-failures'
+        directory = store.device_path(profile) / 'diagnostic-failures'
         if directory.is_symlink():
             raise ValueError('Indirect diagnostic directory')
-        directory.mkdir(mode=0o700, exist_ok=True)
+        if create:
+            directory.mkdir(parents=True, mode=0o700, exist_ok=True)
         identifier = mapping(pending).get('diagnostic_id')
         if type(identifier) is str and re.fullmatch(r'[a-f0-9]{32}', identifier):
             path = directory / (identifier + '.json')
-            if (error is not None and getattr(store, 'diagnostic_created', None) == identifier
+            if (create and error is not None and getattr(store, 'diagnostic_created', None) == identifier
                     and report['action'] == getattr(store, 'diagnostic_action', None)):
                 _write_first_failure(path, report)
             if path.exists() or path.is_symlink():
@@ -577,7 +614,7 @@ def history(report, store, profile, error, pending):
                         expected='removal-original-'+removal+'.json' if type(removal) is str and re.fullmatch('[a-f0-9]{32}',removal) else None
                         if value.get('recovery_protocol')!='clean-removal-v1' or not expected or value['original_receipt']!=expected:
                             raise ValueError('Invalid original receipt')
-                        original=read_record(store.device_dir(profile)/expected)
+                        original=read_record(store.device_path(profile)/expected)
                     return original
                 original=previous(pending)
                 records={}
@@ -603,7 +640,7 @@ def history(report, store, profile, error, pending):
                 if intermediate:result.setdefault('intermediate_failures', []).extend(intermediate)
         elif not pending:
             path = directory / 'previous-attempt.json'
-            if error is not None and report['action'] == 'install':
+            if create and error is not None and report['action'] == 'install':
                 private_write(path, json.dumps(failure_summary(report)).encode())
             if path.exists() or path.is_symlink():
                 result['previous_attempt_failure'] = failure_summary(read_record(path))

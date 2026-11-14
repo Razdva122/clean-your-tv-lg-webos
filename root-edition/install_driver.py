@@ -31,6 +31,13 @@ def cleanup_probe_details(value):
     for key,low,high in (('errno',0,4095),('exit_status',-255,255)):
         number=value.get(key)
         if type(number) is int and low<=number<=high:result[key]=number
+    reason=value.get('native_reason')
+    if reason in ('effect_busy','ui_release_failed'):
+        result['native_reason']=reason
+        check=value.get('restore_check')
+        if reason=='ui_release_failed' and check in ('native-stop-unverified','stock-foreground-unverified',
+                'stock-surface-unverified','stock-routing-unverified'):
+            result['restore_check']=check
     return result
 
 

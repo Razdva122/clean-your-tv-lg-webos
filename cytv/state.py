@@ -7,7 +7,9 @@ import os
 from pathlib import Path
 import re
 import stat
+from sys import platform
 import tempfile
+from time import sleep
 import uuid
 from .errors import UserError, LocalRecoveryError, is_storage_full
 
@@ -90,12 +92,15 @@ class Store:
         # Capsule members and subsequently introduced links are still rejected.
         self.root = (Path(root) if root else default_dir()).resolve()
 
-    def device_dir(self, profile):
+    def device_path(self, profile):
         normalized = target(**profile)
         key = ':'.join(str(normalized[k]) for k in ('host', 'port', 'edition'))
         if normalized.get('connection'):
             key += ':' + normalized['connection']
-        path = self.root / hashlib.sha256(key.encode()).hexdigest()[:24]
+        return self.root / hashlib.sha256(key.encode()).hexdigest()[:24]
+
+    def device_dir(self, profile):
+        path = self.device_path(profile)
         path.mkdir(parents=True, exist_ok=True, mode=0o700)
         return path
 
@@ -212,12 +217,12 @@ class Store:
             pending=self.pending(selected) or {}
             if (pending.get('recovery_protocol')=='clean-removal-v1' and pending.get('connection_pending') is True
                     and 'previous' not in pending and not path.is_symlink() and not known.is_symlink() and not known.exists()):
-                original=target(**json.loads(path.read_text()))
+                original=self._read_profile(path)
                 if any(original[k]!=selected[k] for k in ('host','edition','port')):raise ValueError('foreign profile')
                 return original,False  # First connection still requires explicit normal host-key trust.
             if path.is_symlink() or known.is_symlink() or not known.read_bytes():
                 raise ValueError('missing trust')
-            original = target(**json.loads(path.read_text()))
+            original = self._read_profile(path)
             if any(original[k] != selected[k] for k in ('host', 'edition', 'port')):
                 raise ValueError('foreign profile')
             profiles=self.profiles()
@@ -232,22 +237,82 @@ class Store:
             raise UserError('The original saved TV connection and host key are required for recovery. Recovery data was kept.',
                             reason_code='ssh-identity-unverified') from None
 
-    def profiles(self):
+    @staticmethod
+    def _read_profile(path):
+        for attempt in range(3):
+            try:
+                raw = path.read_text()
+                break
+            except PermissionError as error:
+                # Windows file opens can report sharing violations as plain EACCES.
+                winerror = getattr(error, 'winerror', None)
+                if platform != 'win32' or winerror not in (None, 32, 33) or attempt == 2:
+                    raise LocalRecoveryError('profile-access', 'profile') from None
+                sleep(0.05 * (attempt + 1))
+        saved = json.loads(raw)
+        if (type(saved) is not dict or type(saved.get('host')) is not str
+                or type(saved.get('edition')) is not str or type(saved.get('port')) is not int
+                or any(key in saved and type(saved[key]) is not str
+                       for key in ('identity', 'connection', 'root_variant'))):
+            raise ValueError('Invalid saved profile fields')
+        return target(**saved)
+
+    def _saved_profile(self, directory):
+        path = directory / 'profile.json'
+        try:
+            if not stat.S_ISREG(path.stat().st_mode):
+                raise ValueError('Invalid profile file')
+            profile = self._read_profile(path)
+            if self.device_path(profile) != directory:
+                raise ValueError('Profile in the wrong directory')
+            return profile
+        except FileNotFoundError:
+            return None
+        except OSError:
+            raise LocalRecoveryError('profile-access', 'profile') from None
+        except (ValueError, TypeError):
+            raise LocalRecoveryError('profile-invalid', 'profile') from None
+
+    def saved_profile(self, selector):
+        """Read an exact saved connection key without creating its directory."""
+        return self._saved_profile(self.device_path(selector))
+
+    def profiles(self, *, on_profile_error=None, already_read=None):
+        def report_error(error):
+            if on_profile_error is None:
+                raise error from None
+            on_profile_error(error)
+
+        # Unlike a glob, explicit enumeration and probes surface a denied root
+        # listing or child traversal. Probe only the saved-profile namespace.
+        try:
+            directories = sorted(self.root.iterdir())
+        except FileNotFoundError:
+            return []
+        except OSError:
+            report_error(LocalRecoveryError('profile-access', 'profile'))
+            return []
         result = []
-        if self.root.exists():
-            for path in sorted(self.root.glob('*/profile.json')):
-                result.append(target(**json.loads(path.read_text())))
+        for directory in directories:
+            if not re.fullmatch('[a-f0-9]{24}', directory.name):
+                continue
+            try:
+                profile = already_read[1] if already_read and directory == already_read[0] else self._saved_profile(directory)
+            except LocalRecoveryError as error:
+                report_error(error)
+            else:
+                if profile is not None:
+                    result.append(profile)
         return sorted(result, key=lambda p: (p['host'], p['port'], p['edition']))
 
     def pending(self, profile):
-        path = self.device_dir(profile) / 'operation.json'
-        if not path.exists():
-            return None
         try:
-            result = json.loads(path.read_text())
+            result = json.loads((self.device_path(profile) / 'operation.json').read_text())
             if not isinstance(result, dict) or not isinstance(result.get('action'), str):
                 raise ValueError('Invalid receipt')
             return result
+        except FileNotFoundError:
+            return None
         except (ValueError, OSError):
             return {'action': 'unknown', 'stage': 'corrupt-receipt; retain evidence and inspect TV'}
 

@@ -24,7 +24,7 @@ class UserError(RuntimeError):
 
 
 LOCAL_RECOVERY_REASONS = ('directory-owner', 'directory-permissions', 'directory-type',
-                          'directory-access', 'storage-unavailable', 'operation-invalid',
+                          'directory-access', 'storage-unavailable', 'operation-invalid', 'profile-access', 'profile-invalid',
                           'capsule-missing', 'capsule-permissions', 'capsule-unsafe',
                           'capsule-changed', 'capsule-invalid', 'capsule-access', 'source-incompatible')
 
@@ -42,11 +42,20 @@ def local_recovery_details(value):
     return result
 
 
+SAVED_PROFILE_ACCESS = 'Some saved TV connections could not be read. Close other installer windows and check file permissions for your account, then try again.'
+
+
 class LocalRecoveryError(UserError):
     """Fixed local failure categories; no paths, account names or raw exceptions."""
     def __init__(self, reason, location='capsule', *, mode=None, owner=None, storage_full=False):
         self.local_recovery = local_recovery_details(dict(reason=reason, location=location, mode=mode, owner=owner))
         reason = self.local_recovery['reason']
+        if reason == 'profile-access':
+            super().__init__(SAVED_PROFILE_ACCESS)
+            return
+        if reason == 'profile-invalid':
+            super().__init__('A saved TV connection is invalid. Keep the saved connection and recovery data.')
+            return
         message = ('Local recovery storage could not be verified.' if reason.startswith('directory-') or reason == 'storage-unavailable' else
                    'The original private recovery file is missing.' if reason == 'capsule-missing' else
                    'The saved recovery operation is incompatible with this installer.' if reason == 'source-incompatible' else

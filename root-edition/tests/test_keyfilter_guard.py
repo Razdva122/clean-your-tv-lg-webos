@@ -338,6 +338,30 @@ int main(void) {
         s,rc=self.run_guard('--restore'); self.assertEqual(rc,0)
         self.assertTrue(s['stopped']); self.assertTrue((self.root/'luna-calls').is_file(),'standalone native restore must release UI')
         self.assertEqual(len((self.root/'luna-calls').read_text().splitlines()),2)
+    def test_restore_separates_ls2_failure_from_an_unverified_effect_lock(self):
+        rejection = '{"returnValue":false,"errorCode":41}'
+        for name in ('luna-close-reply', 'luna-reply'):
+            with self.subTest(failed_reply=name):
+                reply = self.root / name
+                if name == 'luna-reply':
+                    (self.root / 'luna-close-reply').write_text('{"returnValue":true}')
+                reply.write_text(rejection)
+                result, rc = self.run_guard('--restore')
+                self.assertEqual(rc, 1)
+                self.assertEqual(result['reason'], 'ui_release_failed')
+                self.assertTrue(result['stopped'])
+                self.assertTrue(result['stock_verified'])
+                self.assertEqual(result['guardian_pid'], 0)
+                reply.unlink()
+        calls = (self.root / 'luna-calls').read_text()
+        lock = self.root / 'state/effect.lock'
+        lock.unlink()
+        lock.symlink_to(self.root / 'state/config')
+        result, rc = self.run_guard('--restore')
+        self.assertEqual(rc, 1)
+        self.assertEqual(result['reason'], 'effect_busy')
+        self.assertEqual((self.root / 'luna-calls').read_text(), calls)
+
     def test_luna_malformed_reply_reports_failure_keeps_stop(self):
         (self.root/'luna-reply').write_text('{"returnValue":true,"returnValue":false}\n')
         s,rc=self.run_guard('--restore'); self.assertNotEqual(rc,0)

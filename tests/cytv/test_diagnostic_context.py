@@ -90,6 +90,26 @@ class ContextTests(unittest.TestCase):
         self.assertEqual(later['first_failure']['status']['product']['last_failure']['cleanup_probe'],expected)
         self.assertNotIn('PRIVATE',json.dumps([report,later]))
 
+    def test_runtime_restore_diagnostic_preserves_native_and_proof_causes(self):
+        self.store.begin(self.profile, 'install')
+        first = self.report('install', 'install-helper', TVCommandError(127))
+        self.store.request_clean_removal(self.profile)
+        failure = {'exception_type': 'CalledProcessError', 'exit_status': 1,
+                   'cleanup_step': 'runtime-restore', 'stage': 'original-writers-fenced',
+                   'cleanup_probe': {'exception_type': 'ValueError', 'frames': [],
+                       'native_reason': 'ui_release_failed', 'restore_check': 'stock-surface-unverified',
+                       'message': 'PRIVATE'}}
+        report = self.report('uninstall', 'uninstall', UserError('blocked'),
+                             status={'device': {'product': {'last_failure': failure}}})
+        detail = report['status']['product']['last_failure']['cleanup_probe']
+        self.assertEqual(detail.get('native_reason'), 'ui_release_failed')
+        self.assertEqual(detail.get('restore_check'), 'stock-surface-unverified')
+        self.assertEqual(report['first_failure'], first['first_failure'])
+        failure['cleanup_probe'].update(native_reason='PRIVATE', restore_check='PRIVATE')
+        report = self.report('uninstall', 'uninstall', UserError('blocked'),
+                             status={'device': {'product': {'last_failure': failure}}})
+        self.assertNotIn('PRIVATE', json.dumps(report))
+
     def test_inspect_check_is_allowlisted_in_product_report(self):
         product = {'state': 'recovery_required', 'stage': 'blocked',
                    'failure': {'exception_type': 'ValueError', 'inspect_check': 'restored_routes_changed'},
