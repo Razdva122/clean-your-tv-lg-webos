@@ -18,15 +18,29 @@ COMPOSITOR_FAILURES = (
 )
 KEYFILTER_PROBE_STATES = ('timeout', 'rejected', 'unconfirmed', 'invalid-reply', 'not-configured',
                           'incompatible', 'readable', 'service-absent')
+KEYFILTER_PREDICATES = (
+    'configs-not-object', 'entries-not-list', 'entry-count-invalid', 'entry-not-object',
+    'file-invalid', 'path-outside-contract', 'handler-invalid',
+    'system-filter-missing', 'system-filter-duplicate',
+)
+NATIVE_HOME_PREDICATES = (
+    'readable', 'request-failed', 'unavailable', 'invalid-output', 'metadata-invalid',
+    'size-out-of-range', 'vendor-filesystem-unverified', 'mode-invalid',
+    'shell-header-invalid', 'home-script', 'home-header-invalid',
+)
+C1_PROBE_STATES = ('admitted', 'request-failed', 'identity-rejected', 'identity-outside-contract',
+                   'native-home-rejected')
 RIBBON_PROBE_STATES = ('readable', 'rejected', 'timeout', 'invalid-reply', 'unconfirmed')
 LEGACY_RIBBON = 'This TV uses the LG Home ribbon and has no System Profile or KeyFilters support.'
 NATIVE_HOME_UNAVAILABLE_MESSAGE = 'Root cannot control Home on this TV. You can try No-root using the existing SSH connection.'
 
 
-def keyfilter_probe(info, state, code=None):
+def keyfilter_probe(info, state, code=None, *, predicate=None):
     if info is None:
         return
     result = info['root_keyfilters_probe'] = {'state': state}
+    if predicate is not None:
+        result['predicate'] = predicate
     if type(code) is int and -(2**31) <= code < 2**31:
         result['error_code'] = code
 
@@ -37,10 +51,16 @@ class RootCapabilityError(UserError):
 
 
 class NativeHomeScriptError(RootCapabilityError):
+    reason = 'native-home-script'
+
     def __init__(self):
-        from .failure_help import NATIVE_HOME_SCRIPT
-        super().__init__(NATIVE_HOME_SCRIPT[1])
-        self.reason_code = 'native-home-script'
+        from .failure_help import GUIDES
+        super().__init__(GUIDES[self.reason][1])
+        self.reason_code = self.reason
+
+
+class ForeignHomeHandoffRequired(NativeHomeScriptError):
+    reason = 'foreign-home-handoff-required'
 
 
 class NoRootAlternativeError(RootCapabilityError):
@@ -113,6 +133,18 @@ NATIVE_HOME_MOUNT_STATES = (
     'absent', 'file-mount', 'stacked-file-mounts', 'file-and-parent-mounts',
     'parent-overlay', 'parent-mount', 'multiple-parent-mounts', 'unknown',
 )
+UNSUPPORTED_HOME_MOUNTS = {
+    'stacked-file-mounts', 'file-and-parent-mounts', 'parent-overlay',
+    'parent-mount', 'multiple-parent-mounts',
+}
+
+
+def native_home_script_error(info):
+    if info.get('root_native_home_mount') in UNSUPPORTED_HOME_MOUNTS:
+        return ForeignHomeHandoffRequired()
+    return NativeHomeScriptError()
+
+
 NATIVE_HOME_MOUNT_AWK = """'
     {
         if (NR > 8192) { invalid = 1; exit }
@@ -219,18 +251,57 @@ def arm32_elf(dump):
             and int.from_bytes(header[28:32], 'little') >= 52 and header[44:46] != b'\0\0')
 
 
-def c1_device(remote, info=None):
+def clear_home_observations(info):
+    for name in ('root_capabilities', 'root_capability_codes', 'root_compositor_failure',
+                 'root_compositor_observation', 'root_c1_probe', 'root_keyfilters_probe',
+                 'root_ribbon_probe', 'root_native_home_probe', 'root_native_home_mode',
+                 'root_native_home_mount', 'home_backend', 'home_backend_schema'):
+        info.pop(name, None)
+
+
+def c1_identity(remote):
     reply = remote.luna('com.webos.service.tv.systemproperty/getSystemInfo',
                         {'keys':['modelName','firmwareVersion','sdkVersion']}, timeout=5)
-    if not isinstance(reply,dict) or reply.get('returnValue') is not True:
-        return False
+    if not isinstance(reply, dict) or reply.get('returnValue') is not True:
+        return 'identity-rejected'
     version = r'[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}(?:-[A-Za-z0-9.]+)?'
     model, firmware, sdk = (reply.get(k) for k in ('modelName','firmwareVersion','sdkVersion'))
     if (not all(isinstance(v,str) for v in (model,firmware,sdk))
             or not re.fullmatch(r'OLED(?:48|55|65|77|83)C1[A-Z0-9]{2,12}', model)
             or not re.fullmatch(version,firmware) or not re.fullmatch(version,sdk) or not sdk.startswith('6.')):
+        return 'identity-outside-contract'
+    return 'match'
+
+
+def c1_device(remote, info=None, *, read_headers=None):
+    if info is not None:
+        info.pop('root_c1_probe', None)
+        clear_native_probe(info)
+    try:
+        identity = c1_identity(remote)
+    except Exception:
+        if info is not None:
+            info['root_c1_probe'] = 'request-failed'
+        raise
+    if identity != 'match':
+        if info is not None:
+            info['root_c1_probe'] = identity
         return False
-    return native_headers_valid(remote.run(NATIVE_HEADERS, timeout=5), info)
+    try:
+        supported = probe_native_home(remote, info, read_headers=read_headers, strict=True,
+                                      inspect_mount=False) is None
+    except Exception:
+        if info is not None:
+            info['root_c1_probe'] = 'native-home-rejected'
+        raise
+    if info is not None:
+        info['root_c1_probe'] = 'admitted' if supported else 'native-home-rejected'
+    return supported
+
+
+def clear_native_probe(info):
+    for name in ('root_native_home_probe', 'root_native_home_mode', 'root_native_home_mount'):
+        info.pop(name, None)
 
 
 def native_headers_valid(result, info=None):
@@ -238,35 +309,101 @@ def native_headers_valid(result, info=None):
 
 
 def native_header_failure(result, info=None):
-    if not isinstance(result,str) or len(result)>2048:
-        return 'native-home-incompatible'
+    if info is not None:
+        clear_native_probe(info)
+    predicate = native_header_predicate(result, info)
+    if info is not None:
+        info['root_native_home_probe'] = predicate
+    if predicate == 'readable':
+        return None
+    return 'native-home-script' if predicate == 'home-script' else 'native-home-incompatible'
+
+
+def native_header_predicate(result, info):
+    if not isinstance(result, str) or len(result) > 2048:
+        return 'invalid-output'
     metadata, _, headers = result.partition('\n')
     meta = re.fullmatch(r'(0|1001) 1 ([0-7]{3,4}) ([0-9]{1,10})', metadata)
-    if not meta or not 52 <= int(meta[3]) <= 16*1024*1024:
-        return 'native-home-incompatible'
-    mode = int(meta[2],8)
+    if not meta:
+        return 'metadata-invalid'
+    if not 52 <= int(meta[3]) <= 16*1024*1024:
+        return 'size-out-of-range'
+    mode = int(meta[2], 8)
     shell, separator, home = headers.partition('CYTV_HOME_ELF')
     home, filesystem_marker, filesystem = home.partition('CYTV_HOME_FS')
     # UID 1001 is a vendor owner only on an immutable SquashFS image.
     if meta[1] == '1001' and (not filesystem_marker or filesystem.strip() != '73717368'):
-        return 'native-home-incompatible'
+        return 'vendor-filesystem-unverified'
     if not mode & 0o111 or mode & 0o7022:
         if info is not None:
             info['root_native_home_mode'] = format(mode, '04o')
-        return 'native-home-incompatible'
+        return 'mode-invalid'
     if not separator or not arm32_elf(shell):
-        return 'native-home-incompatible'
+        return 'shell-header-invalid'
     if home.split()[:2] == ['35', '33']:
-        return 'native-home-script'
-    return None if arm32_elf(home) else 'native-home-incompatible'
+        return 'home-script'
+    return 'readable' if arm32_elf(home) else 'home-header-invalid'
 
 
-def compositor_failure(remote, info=None):
+def probe_native_home(remote, info=None, *, read_headers=None, strict=False, inspect_mount=True,
+                      allow_unavailable=False):
+    if info is not None:
+        clear_native_probe(info)
+    try:
+        headers = read_headers() if read_headers else remote.run(NATIVE_HEADERS, timeout=5)
+    except Exception as error:
+        unavailable = isinstance(error, TVCommandError) and error.exit_status == NATIVE_HOME_UNAVAILABLE
+        if info is not None:
+            info['root_native_home_probe'] = 'unavailable' if unavailable else 'request-failed'
+        if strict and not (allow_unavailable and unavailable):
+            raise
+        return 'native-home-unavailable' if unavailable else 'native-home-request-failed'
+    failure = native_header_failure(headers, info)
+    if failure == 'native-home-script' and info is not None and inspect_mount:
+        try:
+            response = remote.run(NATIVE_HOME_MOUNT_PROBE, timeout=5)
+            mount = response.strip() if isinstance(response, str) else 'unknown'
+        except Exception:
+            if strict:
+                raise
+            mount = 'unknown'
+        info['root_native_home_mount'] = mount if mount in NATIVE_HOME_MOUNT_STATES else 'unknown'
+    return failure
+
+
+def keyfilters_structure_failure(configs, key):
+    if not isinstance(configs, dict):
+        return 'configs-not-object'
+    entries = configs.get(key)
+    if not isinstance(entries, list):
+        return 'entries-not-list'
+    if not 1 <= len(entries) <= 128:
+        return 'entry-count-invalid'
+    for entry in entries:
+        if not isinstance(entry, dict):
+            return 'entry-not-object'
+        file, handler = entry.get('file'), entry.get('handler')
+        if not isinstance(file, str):
+            return 'file-invalid'
+        if not re.fullmatch(r'/usr/lib/(?:qt5/)?qml/KeyFilters/[A-Za-z0-9_-]+\.js', file):
+            return 'path-outside-contract'
+        if not isinstance(handler, str) or not re.fullmatch(r'[A-Za-z_$][A-Za-z0-9_$]{0,127}', handler):
+            return 'handler-invalid'
+    system_filters = sum(e['file'].endswith('/systemUi.js') and e['handler'] == 'handleSystemKeys' for e in entries)
+    if system_filters != 1:
+        return 'system-filter-duplicate' if system_filters else 'system-filter-missing'
+    return None
+
+
+def compositor_failure(remote, info=None, *, read_headers=None):
     """Return a diagnostic code for a failed host check, or None on success.
 
     Model and SDK are observations, not admission lists. Native Home and the
     vendor JS chain are required; the device rechecks their actual contract.
     """
+    if info is not None:
+        info.pop('root_keyfilters_probe', None)
+        clear_native_probe(info)
     try:
         reply = remote.luna('com.webos.service.tv.systemproperty/getSystemInfo',
                             {'keys':['modelName','firmwareVersion','sdkVersion']}, timeout=5)
@@ -306,40 +443,20 @@ def compositor_failure(remote, info=None):
     if isinstance(configs, dict) and (key not in configs or entries == []):
         keyfilter_probe(info, 'not-configured')
         return 'keyfilters-not-configured'
-    if (not isinstance(entries,list) or not 1 <= len(entries) <= 128
-            or not all(isinstance(e,dict) and isinstance(e.get('file'),str)
-                and re.fullmatch(r'/usr/lib/(?:qt5/)?qml/KeyFilters/[A-Za-z0-9_-]+\.js',e['file'])
-                and isinstance(e.get('handler'),str) and re.fullmatch(r'[A-Za-z_$][A-Za-z0-9_$]{0,127}',e['handler']) for e in entries)
-            or sum(e['file'].endswith('/systemUi.js') and e['handler']=='handleSystemKeys' for e in entries) != 1):
-        keyfilter_probe(info, 'incompatible')
+    predicate = keyfilters_structure_failure(configs, key)
+    if predicate is not None:
+        keyfilter_probe(info, 'incompatible', predicate=predicate)
         return 'keyfilters-incompatible'
     keyfilter_probe(info, 'readable')
-    try:
-        headers = remote.run(NATIVE_HEADERS, timeout=5)
-    except TVCommandError as error:
-        if error.exit_status == NATIVE_HOME_UNAVAILABLE:
-            return 'native-home-unavailable'
-        return 'native-home-request-failed'
-    except Exception:
-        return 'native-home-request-failed'
-    failure = native_header_failure(headers, info)
-    if failure == 'native-home-script' and info is not None:
-        try:
-            mount = remote.run(NATIVE_HOME_MOUNT_PROBE, timeout=5).strip()
-        except Exception:
-            mount = 'unknown'
-        info['root_native_home_mount'] = mount if mount in NATIVE_HOME_MOUNT_STATES else 'unknown'
-    return failure
+    return probe_native_home(remote, info, read_headers=read_headers)
 
 
-def verify(remote, checklist, info, allow_c1=False, allow_compositor=False):
-    info.pop('home_backend', None)
-    info.pop('home_backend_schema', None)
-    info.pop('root_compositor_failure', None)
-    info.pop('root_keyfilters_probe', None)
-    info.pop('root_ribbon_probe', None)
-    info.pop('root_native_home_mode', None)
-    info.pop('root_native_home_mount', None)
+def verify(remote, checklist, info, allow_c1=False, allow_compositor=False, *, diagnose=False, absent_profile_only=False):
+    clear_home_observations(info)
+    for name in CALLS:
+        if name in checklist.results:
+            checklist.update(name, 'pending', '')
+    admission_error = None
     reasons = info['root_capabilities'] = dict.fromkeys(CALLS, 'not-checked')
     requirements = info.setdefault('root_requirements', {})
     codes = info['root_capability_codes'] = {}
@@ -371,17 +488,40 @@ def verify(remote, checklist, info, allow_c1=False, allow_compositor=False):
         if allow_c1 and reason == 'service-absent':
             failure = None
             schema = 2
+            # Doctor can reuse the C1 header observation; setup retains its
+            # separate schema-3 read and its C1 exception short circuit.
+            header_reads = []
+
+            def read_headers():
+                if not header_reads:
+                    try:
+                        header_reads.append(remote.run(NATIVE_HEADERS, timeout=5))
+                    except Exception as caught:
+                        header_reads.append(caught)
+                if isinstance(header_reads[0], Exception):
+                    raise header_reads[0]
+                return header_reads[0]
+
+            read = read_headers if diagnose else None
             try:
-                supported = c1_device(remote, info)
+                supported = c1_device(remote, info, read_headers=read) if diagnose else c1_device(remote, info)
             except Exception:
                 supported = False
                 if allow_compositor:
                     failure = 'c1-probe-failed'
+                    if diagnose:
+                        observed = compositor_failure(remote, info, read_headers=read)
+                        if observed is not None:
+                            info['root_compositor_observation'] = observed
             else:
                 if not supported and allow_compositor:
-                    failure = compositor_failure(remote, info)
+                    failure = compositor_failure(remote, info, read_headers=read)
                     supported = failure is None
                     schema = 3
+            if (diagnose and not supported and
+                    ('root_native_home_probe' not in info or
+                     (info['root_native_home_probe'] == 'home-script' and 'root_native_home_mount' not in info))):
+                probe_native_home(remote, info, read_headers=read)
             reasons[name] = reason
             if supported:
                 info.pop('root_native_home_mode', None)
@@ -396,24 +536,32 @@ def verify(remote, checklist, info, allow_c1=False, allow_compositor=False):
                 info['root_compositor_failure'] = failure
             requirements[name] = 'fail'
             if failure == 'native-home-script':
-                error = NativeHomeScriptError()
-                checklist.update(name, 'fail', str(error))
-                raise error
-            if failure == 'native-home-unavailable':
+                admission_error = native_home_script_error(info)
+                checklist.update(name, 'fail', str(admission_error))
+            elif failure == 'native-home-unavailable':
                 checklist.update(name, 'fail', NATIVE_HOME_UNAVAILABLE_MESSAGE)
-                raise NoRootAlternativeError(NATIVE_HOME_UNAVAILABLE_MESSAGE)
-            if failure in ('keyfilters-not-configured', 'keyfilters-service-absent'):
-                info['root_ribbon_probe'] = ribbon_probe(remote)
-                if info['root_ribbon_probe'] == 'readable':
+                admission_error = NoRootAlternativeError(NATIVE_HOME_UNAVAILABLE_MESSAGE)
+            else:
+                if failure in ('keyfilters-not-configured', 'keyfilters-service-absent'):
+                    info['root_ribbon_probe'] = ribbon_probe(remote)
+                if info.get('root_ribbon_probe') == 'readable':
                     checklist.update(name, 'fail', LEGACY_RIBBON)
-                    raise LegacyRibbonError()
-            checklist.update(name,'fail','System Profile is absent and a supported experimental Home backend was not verified.')
-            raise RootCapabilityError()
+                    admission_error = LegacyRibbonError()
+                else:
+                    checklist.update(name,'fail','System Profile is absent and a supported experimental Home backend was not verified.')
+                    admission_error = RootCapabilityError()
+            if not diagnose:
+                raise admission_error
+            continue
         reasons[name] = reason
         status = 'pass' if reason=='readable' else 'unknown' if reason=='unconfirmed' else 'fail'
         requirements[name] = status
         checklist.update(name,status, '' if status=='pass' else
                          'The required Home interface could not be read safely. No repair or routing change was attempted by this check.')
+        if absent_profile_only and name == 'home-profiles':
+            return None
+    if admission_error is not None:
+        raise admission_error
     if any(reason!='readable' for reason in reasons.values()):
         raise RootCapabilityError()
     info['home_backend'] = 'system-profile'

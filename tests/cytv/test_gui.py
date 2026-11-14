@@ -744,6 +744,24 @@ class GuiTests(unittest.TestCase):
         self.assertEqual(calls,[])
         w.home();self.assertIsNone(w.failure_help)
 
+    def test_foreign_home_restore_help_hands_control_to_existing_integration(self):
+        from cytv.failure_help import for_error
+        from cytv.root_capabilities import ForeignHomeHandoffRequired
+
+        calls = []
+        w = Wizard(run=lambda *a, **k: calls.append(a))
+        self.addCleanup(w.close)
+        w.command = 'restore'
+        profile = {'host': '192.0.2.10', 'port': 22, 'edition': 'root'}
+        w.receive('selected-profile', profile)
+        w.receive('failure-help', for_error(ForeignHomeHandoffRequired(), 'restore', profile))
+        w.receive('done', 2)
+        self.assertEqual(w.title.text(), 'Return to LG Home with the existing integration')
+        self.assertIn('own supported procedure', w.subtitle.text())
+        self.assertIn('Diagnostics → Check connection and create a diagnostic report', w.subtitle.text())
+        self.assertNotIn('Check connection again', [b.text() for b in w.form.findChildren(QPushButton)])
+        self.assertEqual(calls, [])
+
     def test_partial_saved_list_requires_explicit_labeled_connection_selection(self):
         from cytv import cli, state
         directory = self.directory.name
