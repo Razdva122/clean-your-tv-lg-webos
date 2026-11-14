@@ -23,7 +23,9 @@ exports.classifyExit = function (s) {
   };
   var emergency = s.stop || s.blocked || (s.watchdog && !s.watchdogOwned);
   if (!emergency && reason !== 27 && s.tracked) {
-    if (
+    if (code === 33 && !signal && reason === 33 && s.ready && !s.watchdog) {
+      d.block = d.cleanup = false;
+    } else if (
       code === 32 &&
       !signal &&
       reason === 32 &&
@@ -50,12 +52,13 @@ exports.classifyExit = function (s) {
   }
   var known = [
     0, 10, 11, 12, 13, 14, 15, 16, 17, 18, 20, 22, 23, 24, 25, 26, 27, 28, 29,
-    30, 31, 32
+    30, 31, 32, 33
   ];
   if (
     (reason !== undefined && reason !== code) ||
     (!signal && known.indexOf(code) < 0) ||
-    (code === 32 && d.action !== 'wait-power')
+    (code === 32 && d.action !== 'wait-power') ||
+    (code === 33 && d.block)
   ) {
     var actual = events.describe(code);
     actual.os_code = code;

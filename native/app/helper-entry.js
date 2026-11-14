@@ -17,6 +17,10 @@ if (
   var start = { nativeHomeAuto: params.nativeHomeAuto === true };
   if (typeof params.nativeHomeSetup === 'string')
     start.nativeHomeSetup = params.nativeHomeSetup;
+  else if (!start.nativeHomeAuto && params.nativeHomeStart === true) {
+    start.nativeHomeStart = true;
+    if (params.nativeHomePanel === true) start.nativeHomePanel = true;
+  }
   var child = require('child_process').spawn(
     root + '/detach',
     [JSON.stringify(start), '--controller'],

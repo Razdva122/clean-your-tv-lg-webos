@@ -190,12 +190,15 @@ function session(directory, options, action) {
       fail('shared-group', s, undefined, 'directory');
     if (
       channel || channelParent
-        ? mode !== 1528 && !(channelParent && mode === 509)
+        ? mode !== 1528 &&
+          !(channelParent && mode === 509) &&
+          !((options.repairChannel || options.bootChannel) && mode === 511) &&
+          !(options.repairChannel && mode === 1472)
         : mode & 3584 || (mode & 2 && !(options.legacy && mode === 511))
     )
       fail('safe-mode', s, undefined, 'directory');
   }
-  var before, bootSnapshot;
+  var before, bootSnapshot, expandedDirectory;
   function check() {
     ancestors();
     var current = fs.lstatSync(directory),
@@ -483,6 +486,7 @@ function session(directory, options, action) {
     }
   }
   function installPauseGroupMatches() {
+    if (before.mode & 1024) return true; // setgid directory.
     if (typeof process.getegid === 'function')
       return process.getegid() === before.gid;
     // Legacy Node has no getegid. Check the group an exclusive create actually
@@ -499,6 +503,63 @@ function session(directory, options, action) {
     } finally {
       fs.closeSync(fd);
       fs.unlinkSync(probe);
+    }
+  }
+  function setDirectoryMode(mode) {
+    check();
+    if ((before.mode & 4095) === mode) return before;
+    fs.fchmodSync(parent, mode);
+    var fixed = fs.fstatSync(parent);
+    if (
+      !same(before, fixed) ||
+      fixed.uid !== before.uid ||
+      fixed.gid !== before.gid ||
+      (fixed.mode & 4095) !== mode
+    )
+      fail('stable-inode', fixed, undefined, 'directory');
+    before = fixed;
+    check();
+    return before;
+  }
+  function discardChannelRecords() {
+    Object.keys(records).forEach(function (kind) {
+      var record = records[kind];
+      if (record[2] !== 'channel') return;
+      check();
+      // Discard these fixed transient directory entries without opening
+      // their old contents. unlink never follows a symbolic link.
+      try {
+        fs.unlinkSync(record[0]);
+      } catch (error) {
+        if (error.code !== 'ENOENT') throw error;
+      }
+    });
+    fs.fsyncSync(parent);
+  }
+  function withInstallPauseGroup(action) {
+    if (installPauseGroupMatches()) return action();
+    // Exclusive publication must create the inode in the correct group
+    // before any concurrent Stop writer can see it.
+    var setGroup = process.setegid;
+    // Node 0.10 exposes only setgid. UID 0 can restore its original group.
+    if (typeof setGroup !== 'function' && uid === 0) setGroup = process.setgid;
+    if (typeof setGroup !== 'function')
+      throw Error('Installer pause needs the shared effective group');
+    var original =
+      typeof process.getegid === 'function'
+        ? process.getegid()
+        : process.getgid();
+    try {
+      setGroup.call(process, before.gid);
+    } catch (error) {
+      throw Error('Installer pause needs the shared effective group');
+    }
+    try {
+      if (!installPauseGroupMatches())
+        throw Error('Installer pause needs the shared effective group');
+      return action();
+    } finally {
+      setGroup.call(process, original);
     }
   }
   function publishInstallPause(snapshot, pause) {
@@ -690,7 +751,13 @@ function session(directory, options, action) {
       ],
       pending = [];
     rules.forEach(function (rule) {
-      var original = expanded(rule[0], 65536, true);
+      // A previous Helper service can own the retained pairing candidate.
+      // Both runtimes must still validate it through SSAP registration.
+      var original = expanded(
+        rule[0],
+        65536,
+        rule[0] !== 'ssap-key.json' || !expandedDirectory
+      );
       if (!original) return;
       var value = JSON.parse(original.bytes.toString('utf8'));
       if (
@@ -719,7 +786,7 @@ function session(directory, options, action) {
     process.chdir(directory);
     entered = true;
     check();
-    var expandedDirectory = (before.mode & 4095) === 511;
+    expandedDirectory = (before.mode & 4095) === 511;
     if (
       options.requireStopEvidence &&
       expandedDirectory &&
@@ -744,16 +811,7 @@ function session(directory, options, action) {
           repairedGeneration = replaceGeneration(previousGeneration);
       }
       try {
-        fs.fchmodSync(parent, 504);
-        var normalized = fs.fstatSync(parent);
-        if (
-          !same(before, normalized) ||
-          normalized.uid !== before.uid ||
-          normalized.gid !== before.gid ||
-          (normalized.mode & 4095) !== 504
-        )
-          fail();
-        before = normalized;
+        setDirectoryMode(504);
       } catch (error) {
         if (options.role === 'installer') throw error;
         if (error.code !== 'EPERM' && error.code !== 'EACCES') throw error;
@@ -789,7 +847,9 @@ function session(directory, options, action) {
       repairedGeneration: repairedGeneration,
       replaceGeneration: replaceGeneration,
       publishInstallPause: publishInstallPause,
-      installPauseGroupMatches: installPauseGroupMatches,
+      withInstallPauseGroup: withInstallPauseGroup,
+      setDirectoryMode: setDirectoryMode,
+      discardChannelRecords: discardChannelRecords,
       bootstrap: bootstrap,
       expanded: expanded,
       replace: replace,
@@ -1019,11 +1079,43 @@ prepare.inspectConfiguration = function (directory, options) {
 prepare.prepareConfiguration = function (directory, options) {
   return configuration(directory, options, true);
 };
-// The installed channel can be owned by a different UID. Under the known
-// 0775 drift, use its group-writable namespace only to find a private child.
+prepare.prepareChannel = function (directory) {
+  var parent = require('path').dirname(directory);
+  var settings = {
+    role: 'channel-parent',
+    operation: 'prepare',
+    repairChannel: true
+  };
+  // Refuse an unsupported channel before changing the service state mode.
+  session(directory, settings, function (channel) {
+    if (channel.stat.uid !== 5999 || channel.stat.gid !== 5000)
+      fail('directory', 'trusted-owner', actual(channel.stat));
+  });
+  var anchor = session(parent, settings, function (state) {
+    if (state.stat.uid !== 5999 || state.stat.gid !== 5000)
+      fail('directory', 'trusted-owner', actual(state.stat));
+    return state.setDirectoryMode(1528);
+  });
+  settings.channelParent = { path: parent, stat: anchor };
+  return session(directory, settings, function (channel) {
+    // Do not preserve any commands from a previously writable namespace.
+    if (channel.stat.uid !== 5999)
+      fail('directory', 'trusted-owner', actual(channel.stat));
+    if ((channel.stat.mode & 4095) !== 1528) {
+      channel.setDirectoryMode(1472); // 2700 until all old requests are gone.
+      channel.discardChannelRecords();
+      channel.setDirectoryMode(1528);
+    }
+    return true;
+  });
+};
+// The service cannot chmod the packaged directory. Use a checked child under
+// vendor-widened directories. A boot-specific name keeps old writers and files
+// out of the 0777 recovery path even when LG widens the previous child too.
 function channelSession(directory, settings, create, action) {
   var outerSettings = {
     role: 'channel-parent',
+    bootChannel: true,
     operation: settings.operation,
     output: settings.output
   };
@@ -1031,6 +1123,16 @@ function channelSession(directory, settings, create, action) {
     if ((outer.stat.mode & 4095) === 1528) return action(outer);
     var name = '.private',
       fd;
+    if ((outer.stat.mode & 4095) === 511) {
+      if (outer.stat.uid !== 5999 || outer.stat.gid !== 5000)
+        fail('directory', 'trusted-owner', actual(outer.stat));
+      var boot = fs
+        .readFileSync('/proc/sys/kernel/random/boot_id', 'utf8')
+        .trim();
+      if (!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(boot))
+        fail('directory', 'valid-record');
+      name += '-' + boot;
+    }
     if (create) {
       outer.check();
       try {
@@ -1275,30 +1377,28 @@ prepare.publishStopGeneration = function (directory, options) {
         if ((s.stat.mode & 4095) === 511 && legacyCleanup !== true)
           throw Error('Stop storage is not private');
         if (forInstall) {
-          // Exclusive publication requires the final group from inode creation.
-          // An unsupported SSH group must fall back before taking the latch.
-          if (!s.installPauseGroupMatches())
-            throw Error('Installer pause needs the shared effective group');
-          // Pin the generation before looking at the latches. Exclusively
-          // acquire blocked before changing it, so we cannot adopt an
-          // existing safety latch or advance a generation we did not read.
-          var snapshot = s.read('stop-generation', 33, true);
-          if (
-            snapshot &&
-            (snapshot.stat.gid !== s.stat.gid ||
-              (snapshot.stat.mode & 4095) !== 436 ||
-              !/^[IS][a-f0-9]{32}$/.test(snapshot.bytes.toString('utf8')))
-          )
-            throw Error('Invalid Stop generation');
-          if (
-            s.leaf('watchdog', Infinity) ||
-            !s.write('blocked', buffer('stopped'), 436, Infinity, true)
-          )
-            throw Error('Existing Stop prevents installer pause');
-          var pause = 'S' + crypto.randomBytes(16).toString('hex');
-          if (!s.publishInstallPause(snapshot, pause))
-            throw Error('Stop changed during installer pause');
-          return pause;
+          return s.withInstallPauseGroup(function () {
+            // Pin the generation before looking at the latches. Exclusively
+            // acquire blocked before changing it, so we cannot adopt an
+            // existing safety latch or advance a generation we did not read.
+            var snapshot = s.read('stop-generation', 33, true);
+            if (
+              snapshot &&
+              (snapshot.stat.gid !== s.stat.gid ||
+                (snapshot.stat.mode & 4095) !== 436 ||
+                !/^[IS][a-f0-9]{32}$/.test(snapshot.bytes.toString('utf8')))
+            )
+              throw Error('Invalid Stop generation');
+            if (
+              s.leaf('watchdog', Infinity) ||
+              !s.write('blocked', buffer('stopped'), 436, Infinity, true)
+            )
+              throw Error('Existing Stop prevents installer pause');
+            var pause = 'S' + crypto.randomBytes(16).toString('hex');
+            if (!s.publishInstallPause(snapshot, pause))
+              throw Error('Stop changed during installer pause');
+            return pause;
+          });
         }
         if (s.repairedGeneration) return s.repairedGeneration;
         var previous = s.leaf('stop-generation', 33, true);
