@@ -2122,6 +2122,58 @@ class SimpleRemoval(unittest.TestCase):
                 finally:
                     case.doCleanups()
 
+    @unittest.skipIf(getattr(os, 'getuid', lambda: -1)() == 0, 'unprivileged SDK model')
+    def test_terminal_helper_with_protected_app_residue_identifies_the_blocked_app(self):
+        from cytv import diagnostics
+
+        helper, home = self.cleanup.APPS[:2]
+        (self.root / 'proc').mkdir()
+        self.store.begin(self.profile, 'uninstall')
+        self.store.request_clean_removal(self.profile)
+        self.store.checkpoint(self.profile, stage='private-cleanup', removals={helper: 'terminal'})
+        foreign = self.own_file('apps/usr/palm/applications/org.foreign/keep.json', 'preserve')
+
+        for app, component in ((helper, 'helper'), (home, 'home')):
+            with self.subTest(component=component):
+                residue = self.own_file('apps/usr/palm/applications/' + app + '/private-residue.json')
+                residue.parent.chmod(0o555)
+                self.addCleanup(residue.unlink, missing_ok=True)
+                self.addCleanup(lambda directory=residue.parent: directory.chmod(0o755)
+                                if directory.exists() else None)
+                with self.assertRaises(UserError) as caught:
+                    self.remove()
+                pending = self.store.pending(self.profile)
+                self.assertEqual(pending['stage'], 'private-cleanup')
+                self.assertEqual(pending['removals'][helper], 'terminal')
+                self.assertEqual(caught.exception.reason_code, 'cleanup-check-failed')
+                path = diagnostics.create_report(self.store, 'recover', self.profile, 'recover', caught.exception)
+                report = json.loads(path.read_text())
+                self.assertEqual(report['no_root_cleanup'], {
+                    'action': 'sweep', 'blocked_areas': ['app'], 'blocked_apps': [component],
+                })
+                self.assertEqual(report['observation_failure']['no_root_cleanup'], report['no_root_cleanup'])
+                report['no_root_cleanup']['blocked_apps'].extend([component, residue.name, {'id': app}])
+                self.assertEqual(diagnostics.context.failure_summary(report)['no_root_cleanup']['blocked_apps'],
+                                 [component])
+                self.assertNotIn(residue.name, path.read_text())
+                self.assertNotIn(app, path.read_text())
+                self.assertTrue(residue.is_file())
+                residue.parent.chmod(0o755)
+                residue.unlink()
+
+        self.assertTrue(self.remove()['verified_clean'])
+        self.assertEqual(self.vendor_removals(), [home])
+        self.assertEqual(foreign.read_text(), 'preserve')
+        self.assertIsNone(self.store.pending(self.profile))
+
+    def test_sweep_permission_denial_without_a_scope_keeps_the_cleanup_error(self):
+        with self.assertRaises(UserError) as caught:
+            self.cleanup._check_access({
+                'root_present': [], 'blocked': [{'reason': 'permission-denied', 'developer_path': True}],
+            }, action='sweep', guard=True)
+        self.assertEqual(caught.exception.reason_code, 'cleanup-check-failed')
+        self.assertEqual(caught.exception.no_root_cleanup, {'action': 'sweep', 'blocked_areas': []})
+
     def test_legacy_vendor_rejection_keeps_the_actual_failure(self):
         app, source, _ = self.legacy_package()
         independent = self.cleanup.APPS[2]

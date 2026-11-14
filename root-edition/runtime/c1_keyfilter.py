@@ -26,6 +26,7 @@ KEY = 'com.webos.surfacemanager.keyFilters'
 STOCK = 'com.webos.app.home'
 CARD = '_WEBOS_WINDOW_TYPE_CARD'
 HOME = '_WEBOS_WINDOW_TYPE_HOME'
+SCREENSAVER = ('com.webos.app.screensaver', '_WEBOS_WINDOW_TYPE_SCREENSAVER')
 STOCK_APPINFO = Path('/usr/palm/applications/com.webos.app.home/appinfo.json')
 MOUNTINFO = Path('/proc/self/mountinfo')
 INPUT_BINDINGS = Path('/home/root/.config/lginputhook/keybinds.json')
@@ -575,13 +576,17 @@ def can_return(surfaces,power,proof,token,foreground=None):
     return stock_surfaces(rows)
 
 
-def stock_surfaces(rows):
+def stock_surfaces(rows, *, allow_screensaver=False):
     for row in rows:
         # The single-display broker may omit displayId and visible.
         if (not isinstance(row,dict) or type(row.get('displayId',0)) is not int or row.get('displayId',0)!=0
-                or type(row.get('visible',True)) is not bool or row.get('windowType') not in (CARD,HOME)
-                or row.get('appId')!=STOCK or row.get('pip',False) is not False
+                or type(row.get('visible',True)) is not bool or row.get('pip',False) is not False
                 or row.get('multiview',False) is not False or row.get('viewType','normal')!='normal'):
+            return False
+        app, window = row.get('appId'), row.get('windowType')
+        if allow_screensaver and (app, window) == SCREENSAVER:
+            continue
+        if app != STOCK or window not in (CARD, HOME):
             return False
     return True
 
@@ -671,13 +676,16 @@ def restore_locked(root,uid, *, for_removal=False):
             if (not isinstance(foreground, dict) or foreground.get('returnValue') is not True
                     or foreground.get('appId') != STOCK):
                 raise ValueError('Stock LG Home foreground unverified; retain evidence')
-            # SAM can report LG Home underneath an application overlay.
+            # SAM can report LG Home underneath an application overlay. The LG
+            # screensaver can also cover its stock card after idle (#615).
             check = 'stock-surface-unverified'
             surfaces = luna('luna://com.webos.surfacemanager/getForegroundAppInfo', {})
             rows = surfaces.get('foregroundAppInfo') if isinstance(surfaces, dict) else None
             if (not isinstance(rows, list) or not 1 <= len(rows) <= 128
-                    or surfaces.get('returnValue') is not True or not stock_surfaces(rows)
-                    or not any(row.get('visible', True) is True for row in rows)):
+                    or surfaces.get('returnValue') is not True
+                    or not stock_surfaces(rows, allow_screensaver=True)
+                    or not any(row.get('appId') == STOCK and row.get('visible', True) is True
+                               for row in rows)):
                 raise ValueError('Stock LG Home surface unverified; retain evidence')
             check = 'stock-routing-unverified'
             chain = read_chain()

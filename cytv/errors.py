@@ -317,6 +317,11 @@ def no_root_cleanup_details(value):
         blocked = value.get('blocked_areas')
         result = {'action': action, 'blocked_areas': [area for area in areas if area in blocked]
                   if type(blocked) is list else []}
+        apps = value.get('blocked_apps')
+        if action == 'sweep' and 'app' in result['blocked_areas'] and type(apps) is list:
+            components = [component for component in ('helper', 'home', 'updater') if component in apps]
+            if components:
+                result['blocked_apps'] = components
         if value.get('reason') == 'unsafe-path':
             result['reason'] = 'unsafe-path'
         return result
