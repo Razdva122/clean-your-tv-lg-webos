@@ -17,13 +17,13 @@ if (
   var start = { nativeHomeAuto: params.nativeHomeAuto === true };
   if (typeof params.nativeHomeSetup === 'string')
     start.nativeHomeSetup = params.nativeHomeSetup;
-  else if (!start.nativeHomeAuto && params.nativeHomeStart === true)
+  else if (!start.nativeHomeAuto && params.nativeHomeStart === true) {
     start.nativeHomeStart = true;
+    if (params.nativeHomePanel === true) start.nativeHomePanel = true;
+  }
   var child = require('child_process').spawn(
     root + '/detach',
-    start.nativeHomeStart === true
-      ? [JSON.stringify(start), '--controller', '--wait-for-stop']
-      : [JSON.stringify(start), '--controller'],
+    [JSON.stringify(start), '--controller'],
     { detached: true, stdio: 'ignore' }
   );
   child.on('error', function () {

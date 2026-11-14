@@ -8,8 +8,6 @@ const root = fs.mkdtempSync(path.join(os.tmpdir(), 'home-service-jail-'));
 const own = '/media/developer/apps/usr/palm/services/com.gathin.tvhome.renewal';
 const methods = {},
   writes = [];
-let expanded = false;
-const transportCalls = [];
 // Model the service mount namespace: its own package exists; the Helper app
 // remains absent even though a native controller can access it outside this jail.
 function local(p) {
@@ -74,11 +72,8 @@ function Service() {
   this.register = (n, f) => {
     methods[n] = f;
   };
-  this.call = (uri, payload, reply) => {
-    assert.equal(expanded, true);
-    assert.equal(uri, 'luna://com.local.nativehome/homeRequest');
-    transportCalls.push(payload.method);
-    reply({ payload: { returnValue: true, enabled: true } });
+  this.call = () => {
+    throw Error('Home must use its installed same-package service');
   };
 }
 fs.mkdirSync(root + '/state/home-control', { recursive: true });
@@ -91,21 +86,6 @@ vm.runInNewContext(fs.readFileSync('renewal-service/service.js', 'utf8'), {
     if (n === 'webos-service') return Service;
     if (n === './home-control') {
       const storage = require('./storage-fixture.cjs').create(jailed);
-      const write = storage.atomicRecord;
-      storage.atomicRecord = (...args) => {
-        if (expanded)
-          throw Object.assign(Error('unsafe-storage'), {
-            contractEvents: [
-              {
-                phase: 'validate',
-                field: 'directory',
-                expected: 'safe-mode',
-                actual: { mode: 511 }
-              }
-            ]
-          });
-        return write(...args);
-      };
       return require('./storage-fixture.cjs').load(
         path.resolve('renewal-service/home-control.js'),
         storage
@@ -251,12 +231,6 @@ function call(app, method = 'homeStatus', payload = {}) {
       writes.slice(-2).every((p) => p.startsWith(own + '/state/home-control/')),
       'presentation uses only the existing HOME jail path'
     );
-    expanded = true;
-    const originalWrites = writes.length;
-    assert.equal((await call('other.app')).returnValue, false);
-    assert.equal((await call('com.gathin.tvhome')).enabled, true);
-    assert.deepEqual(transportCalls, ['homeStatus']);
-    assert.equal(writes.length, originalWrites);
     console.log(
       'PASS actual service Home RPC in a service-only filesystem namespace'
     );

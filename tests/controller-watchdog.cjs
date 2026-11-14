@@ -13,6 +13,7 @@ function controller({
   watchdog = false,
   automatic = true,
   explicitStart = false,
+  panelStart = explicitStart,
   setupGeneration,
   retainedGeneration = setupGeneration,
   homeInitiallyOff = false,
@@ -157,6 +158,7 @@ function controller({
         JSON.stringify({
           nativeHomeAuto: automatic,
           nativeHomeStart: explicitStart,
+          nativeHomePanel: panelStart,
           nativeHomeSetup: setupGeneration
         })
       ],
@@ -242,25 +244,14 @@ test('explicit Start after triple Home does not depend on relaunching Home', () 
   assert.equal(blocked(c), false);
   assert.deepEqual(c.launches, []);
 });
-test('booted controller authenticates Home broker requests on Luna', () => {
-  const c = controller();
-  function request(app, sender) {
-    let reply;
-    c.methods.homeRequest({
-      payload: { method: 'homeStatus', payload: {}, expires: 6000 },
-      ls2Message: { applicationID: () => app, senderServiceName: () => sender },
-      respond: (value) => (reply = value)
-    });
-    return reply;
-  }
-  assert.equal(request('', 'com.gathin.tvhome.renewal').enabled, true);
-  assert.equal(
-    request('other.app', 'com.gathin.tvhome.renewal').returnValue,
-    false
-  );
-  assert.equal(request('', 'other.service').returnValue, false);
-  c.files.set(dir + 'blocked', 'stopped');
-  assert.equal(request('', 'com.gathin.tvhome.renewal').returnValue, false);
+test('legacy explicit installer launch opens the configured Home', () => {
+  const c = controller({
+    automatic: false,
+    explicitStart: true,
+    panelStart: false
+  });
+  assert.deepEqual(c.launches, ['com.gathin.tvhome']);
+  assert.equal(c.workers.length, 1);
 });
 test('unavailable apps configuration uses fresh TV catalog without adopting installer data', async () => {
   let reads = 0;
@@ -1457,6 +1448,22 @@ for (const kind of [
     assert(blocked(c));
     assert.equal(c.workers.length, 1);
   });
+test('both evdev endpoints disappearing without a power hint ends this boot without Stop', () => {
+  const c = controller();
+  c.close(33);
+  assert.equal(blocked(c), false);
+  assert.equal(c.cleanups.length, 0);
+  assert.equal(c.exit, 33);
+});
+test('device removal cannot override a simultaneous Stop or an unconfirmed exit', () => {
+  const stopped = controller();
+  stopped.files.set(dir + 'control.json', '{"cmd":"stop"}');
+  stopped.close(33);
+  assert.equal(blocked(stopped), true);
+  const unconfirmed = controller();
+  unconfirmed.close(33, null, unconfirmed.workers[0], null);
+  assert.equal(blocked(unconfirmed), true);
+});
 test('ordinary cleanup failure remains blocked even during power-off', () => {
   const c = controller();
   c.power({ state: 'Prepare Power Off' });

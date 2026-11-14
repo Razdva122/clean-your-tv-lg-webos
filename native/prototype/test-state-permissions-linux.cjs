@@ -360,6 +360,23 @@ if (process.platform !== 'linux' || process.getuid() !== 0) {
     fs.chmodSync(oldRequest, 0o777);
     // A retained writer can keep its old descriptor open across chmod.
     const oldDescriptor = fs.openSync(oldRequest, 'w');
+    const channelCode =
+      'var s=require(' + bootModule + '),d=' + quotedDrifted + ';';
+    run(6923, channelCode + 's.atomicRecord(d,"home-request","boot request");');
+    run(
+      5431,
+      channelCode +
+        'if(s.readChannelRecord(d,"home-request")!=="boot request")process.exit(8);' +
+        's.atomicRecord(d,"home-response","boot response");'
+    );
+    run(
+      6923,
+      channelCode +
+        'if(s.readChannelRecord(d,"home-response")!=="boot response")process.exit(8);'
+    );
+    a.equal(fs.statSync(drifted).mode & 0o7777, 0o777);
+    a.equal(fs.readFileSync(oldRequest, 'utf8'), '');
+
     const repairChannel =
       'var s=require(' +
       bootModule +

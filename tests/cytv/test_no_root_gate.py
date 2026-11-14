@@ -128,7 +128,7 @@ class LifecycleGate(unittest.TestCase):
             time.sleep(.01)
         self.assertEqual(marker.read_text(), 'late old executor')
 
-    def test_explicit_helper_start_waits_only_for_the_observed_stop(self):
+    def test_explicit_helper_start_cannot_queue_behind_stop(self):
         import fcntl
         helper = self.directory / 'helper'
         state = helper / 'state'
@@ -147,24 +147,16 @@ class LifecycleGate(unittest.TestCase):
         subprocess.run(['cc', '-I', str(REPO / 'native/app'), str(c), '-o', str(binary)], check=True)
         marker = helper / 'started'
         (helper / 'native.js').write_text('require("fs").writeFileSync(' + repr(str(marker)) + ',"started");')
-        for changed in (False, True):
-            marker.unlink(missing_ok=True)
-            with lock.open('rb') as owner:
-                fcntl.flock(owner, fcntl.LOCK_EX)
-                process = subprocess.Popen([str(binary), '{}', '--controller', '--wait-for-stop'])
-                self.children.append(process)
-                time.sleep(.23)
-                self.assertIsNone(process.poll())
-                if changed:
-                    replacement = state / 'new-generation'
-                    replacement.write_text('S' + 'b' * 32)
-                    replacement.replace(generation)
-            process.wait(timeout=5)
-            if not changed:
-                deadline = time.monotonic() + 3
-                while not marker.exists() and time.monotonic() < deadline:
-                    time.sleep(.02)
-            self.assertEqual(marker.exists(), not changed)
+        with lock.open('rb') as owner:
+            fcntl.flock(owner, fcntl.LOCK_EX)
+            subprocess.run([str(binary), '{}', '--controller', '--wait-for-stop'],
+                           check=True, timeout=1)
+        self.assertFalse(marker.exists())
+        subprocess.run([str(binary), '{}', '--controller'], check=True, timeout=1)
+        deadline = time.monotonic() + 3
+        while not marker.exists() and time.monotonic() < deadline:
+            time.sleep(.02)
+        self.assertEqual(marker.read_text(), 'started')
 
     def test_removed_stable_lock_is_not_recreated(self):
         self.assertEqual(self.call('revoke').returncode, 0)

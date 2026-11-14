@@ -192,7 +192,8 @@ function session(directory, options, action) {
       channel || channelParent
         ? mode !== 1528 &&
           !(channelParent && mode === 509) &&
-          !(options.repairChannel && (mode === 511 || mode === 1472))
+          !((options.repairChannel || options.bootChannel) && mode === 511) &&
+          !(options.repairChannel && mode === 1472)
         : mode & 3584 || (mode & 2 && !(options.legacy && mode === 511))
     )
       fail('safe-mode', s, undefined, 'directory');
@@ -1108,11 +1109,13 @@ prepare.prepareChannel = function (directory) {
     return true;
   });
 };
-// The installed channel can be owned by a different UID. Under the known
-// 0775 drift, use its group-writable namespace only to find a private child.
+// The service cannot chmod the packaged directory. Use a checked child under
+// vendor-widened directories. A boot-specific name keeps old writers and files
+// out of the 0777 recovery path even when LG widens the previous child too.
 function channelSession(directory, settings, create, action) {
   var outerSettings = {
     role: 'channel-parent',
+    bootChannel: true,
     operation: settings.operation,
     output: settings.output
   };
@@ -1120,6 +1123,16 @@ function channelSession(directory, settings, create, action) {
     if ((outer.stat.mode & 4095) === 1528) return action(outer);
     var name = '.private',
       fd;
+    if ((outer.stat.mode & 4095) === 511) {
+      if (outer.stat.uid !== 5999 || outer.stat.gid !== 5000)
+        fail('directory', 'trusted-owner', actual(outer.stat));
+      var boot = fs
+        .readFileSync('/proc/sys/kernel/random/boot_id', 'utf8')
+        .trim();
+      if (!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(boot))
+        fail('directory', 'valid-record');
+      name += '-' + boot;
+    }
     if (create) {
       outer.check();
       try {

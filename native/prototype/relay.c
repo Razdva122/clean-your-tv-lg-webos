@@ -147,12 +147,15 @@ int a=filter_event(&f,e+i,ms());if(a==RELEASE){reason=27;stop=1;break;}if(!gener
  if(close(in)<0)cleanup|=4;
  if(close(out)<0)cleanup|=8;
  if(p[2].fd>=0)close(p[2].fd);
- /* Only a recent controller power transition plus vanished BOTH devices may
-  * bypass the persistent failure latch. Real I/O/close errors stay failures. */
+ /* When both evdev endpoints disappeared, there is nothing left to release.
+  * Resume in the same boot only with a recent power transition. Otherwise
+  * finish this session and let the next boot perform normal startup. */
  if(stop&&reason==25){latch_stop(0);reason=0;}
- if(!stop&&reason==25&&cleanup==3&&powerDeadline&&ms()<=powerDeadline&&
+ if(!generation_current()&&reason==25){generation_cancelled=1;latch_stop(29);reason=29;}
+ if(!stop&&reason==25&&cleanup==3&&
     (release_error==ENODEV||release_error==ENXIO)&&(ungrab_error==ENODEV||ungrab_error==ENXIO)){
-  report("POWER_REMOVED %d %d\n",release_error,ungrab_error);reason=32;
+  reason=powerDeadline&&ms()<=powerDeadline?32:33;
+  report(reason==32?"POWER_REMOVED %d %d\n":"DEVICES_REMOVED %d %d\n",release_error,ungrab_error);
  }else if(cleanup){if(reason==25)latch_stop(31);report("CLEANUP_FAILED %d CAUSE %d\n",cleanup,reason);reason=31;}
  if(report("EXIT %d\n",reason)<0&&reason!=31&&reason!=30){latch_stop(30);reason=30;}return reason;
 }

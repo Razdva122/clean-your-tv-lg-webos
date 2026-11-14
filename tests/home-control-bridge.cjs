@@ -425,22 +425,10 @@ if ((fs.statSync(dir).mode & 0o7777) !== 0o2770) {
           assert.equal(reply.returnValue, false);
           assert.equal(reply.diagnostic.code, 'INVALID_STATE');
           assert.equal(reply.diagnostic.operation, 'write');
-          assert.equal(reply.channelMode, mode);
+          assert.equal(reply.channelMode, mode === 0o770 ? mode : undefined);
           assert.deepEqual(fs.readdirSync(rejected), []);
         }
       }
-      let forwarded = 0;
-      const fallback = create(fs, rejected, {
-        fallback(method, payload, expires, done) {
-          forwarded++;
-          assert.equal(method, 'homeStatus');
-          assert.deepEqual(payload, {});
-          done({ returnValue: true, enabled: true });
-        }
-      });
-      assert.equal((await fallback('homeStatus', {})).enabled, true);
-      assert.equal(forwarded, 1);
-      assert.deepEqual(fs.readdirSync(rejected), []);
     } finally {
       fs.rmSync(rejected, { recursive: true });
     }
