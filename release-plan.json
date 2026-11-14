@@ -48,10 +48,11 @@
     }
   ],
   "excluded": [],
-  "acceptance": "",
+  "acceptance": "On project LG OLED55C3RLA firmware 43.21.71, exact macOS ARM64 installer passed Root and No-root installation, removal, restart continuation, network Home and Debloat Restore/Skip. Owner confirmed physical Magic Remote clock settings and playback audio/volume. Signed Root OTA and rollback completed with matching profiles and verified component versions. Android same-signer upgrade and native checks passed in the API 35 ARM64 emulator. See docs/history/2026-11-14-release-1.20.5-rc-verification.md for hashes and scope.",
   "build": {
     "run_id": 43496590482,
     "attempt": 1,
     "source": "eb5a8cb39627f0ef0e0e485ca79ec01c70a54f71"
-  }
+  },
+  "acceptance_build": "43496590482:1"
 }
