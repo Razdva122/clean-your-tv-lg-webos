@@ -20,6 +20,7 @@ class ProcessRemote(Remote):
         super().__init__()
         self.root_path=root
         self.cut=False
+        self.boot = "11111111-1111-1111-1111-111111111111"
         self.cut_after_cleanup=None
         self.transform_cleanup=lambda source: source
         self.close=lambda: None
@@ -75,7 +76,7 @@ sys.stdin.read()
             source = source.replace('/tmp/.cytv-installer', str(self.root_path / 'private'))
             source = source.replace("'/proc/'", repr(str(self.root_path / 'proc') + '/'))
             boot_id = self.root_path / 'boot'
-            boot_id.write_text('11111111-1111-1111-1111-111111111111')
+            boot_id.write_text(self.boot)
             source = source.replace('/proc/sys/kernel/random/boot_id', str(boot_id))
             tmp_root = self.root_path / 'volatile'
             tmp_root.mkdir(exist_ok=True)
@@ -350,6 +351,58 @@ class OriginalOperationIntegration(unittest.TestCase):
         self.assertIsNone(self.store.pending(self.profile))
         self.installer.install(self.inventory, 'fresh-secret')
         self.assertEqual((self.root / 'requests').read_text().splitlines(), list(observer.APPS)*2)
+
+    def test_second_lost_vendor_reply_needs_proof_newer_than_second_request(self):
+        from cytv.errors import UserError
+
+        (self.root / 'proc').mkdir()
+        self.remote.cut = True
+        with self.assertRaises(RuntimeError):
+            self.installer.install(self.inventory, 'original-secret')
+        app = operations.HELPER
+        residue = Path(self.base) / 'applications' / app / 'appinfo.json'
+        registered = self.root / 'installed.json'
+        original_luna = self.remote.luna
+        submissions = []
+
+        def luna(uri, payload, **kwargs):
+            if uri.endswith('/dev/remove'):
+                submissions.append((self.remote.boot, payload['id']))
+                if len(submissions) == 2:
+                    registered.write_text('{}')
+                raise UserError('Connection interrupted', reason_code='connection-interrupted')
+            return original_luna(uri, payload, **kwargs)
+
+        self.remote.luna = luna
+        goal = self.store.request_clean_removal(self.profile)['removal_operation']
+        first_kernel = self.remote.boot
+        with self.assertRaises(UserError):
+            self.installer.uninstall_project()
+        self.assertTrue(self.installer.uninstall_project()['restart_required'])
+        self.assertEqual(self.store.pending(self.profile)['cleanup_boot_proof']['kernel'], first_kernel)
+
+        self.remote.boot = second_kernel = '22222222-2222-2222-2222-222222222222'
+        with self.assertRaises(UserError):
+            self.installer.uninstall_project()
+        self.assertEqual(json.loads(registered.read_text()), {})
+        self.assertEqual(submissions, [(first_kernel, app), (second_kernel, app)])
+        self.assertEqual(self.store.pending(self.profile)['removals'], {app: 'submitted'})
+        self.assertTrue(self.installer.uninstall_project().get('restart_required'))
+        self.assertTrue(residue.exists())
+        self.assertEqual(self.store.pending(self.profile)['cleanup_boot_proof']['kernel'], second_kernel)
+        with self.assertRaises(UserError) as waiting:
+            self.installer.uninstall_project()
+        self.assertEqual(waiting.exception.reason_code, 'removal-terminal-unknown')
+        self.assertTrue(residue.exists())
+
+        self.remote.boot = '33333333-3333-3333-3333-333333333333'
+        self.assertTrue(self.installer.uninstall_project()['verified_clean'])
+        self.assertFalse(residue.exists())
+        self.assertEqual(submissions, [(first_kernel, app), (second_kernel, app)])
+        completed = json.loads((self.store.device_dir(self.profile) / 'clean-removal.json').read_text())
+        self.assertEqual(completed['removal_operation'], goal)
+        self.installer.install(self.inventory, 'fresh-secret')
+        self.assertEqual((self.root / 'requests').read_text().splitlines(), [app, *observer.APPS])
 
     def test_closed_release_cut_with_missing_historical_launch_result_allows_removal(self):
         from cytv.errors import UserError

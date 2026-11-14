@@ -851,7 +851,13 @@ def continue_removal(installer, expected_pending):
             device('inventory')
         installer.progress(message)
         removals[app] = 'submitted'
-        store.checkpoint(profile, stage='package-removal', removals=removals)
+        checkpoint = {'stage': 'package-removal', 'removals': removals}
+        if guard and 'package-removal-unverified' in boot_triggers:
+            # The earlier reboot can settle other work, but it predates this
+            # request. Retire its vendor coverage before sending the request.
+            checkpoint['cleanup_restart_triggers'] = [
+                trigger for trigger in boot_triggers if trigger != 'package-removal-unverified']
+        store.checkpoint(profile, **checkpoint)
         try:
             _remove_package(installer, app)
         except TVRejected as error:
