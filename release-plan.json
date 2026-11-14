@@ -32,10 +32,11 @@
     }
   ],
   "excluded": [],
-  "acceptance": "",
+  "acceptance": "Project OLED55C3RLA, firmware 43.21.71, SDK 11.2.0, macOS ARM64: all seven selected C3 cases passed, including signed Root update/rollback, No-root restart, Helper panel at 0777, physical triple Home, Start Helper and verified baseline restoration. Artifact hashes, observations and limits: docs/history/2026-11-14-release-1.20.7-rc-verification.md. Android upgrade and reporter-specific hardware remain outside this C3 result.",
   "build": {
     "run_id": 43610126410,
     "attempt": 1,
     "source": "2d98cf41bcc5f201df0983bcb306a59c1b0cea4b"
-  }
+  },
+  "acceptance_build": "43610126410:1"
 }
