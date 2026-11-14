@@ -1,7 +1,47 @@
 {
   "schema": 1,
-  "version": null,
-  "changes": [],
+  "version": "1.20.6",
+  "changes": [
+    {
+      "pr": 623,
+      "issues": [
+        418,
+        615
+      ],
+      "summary": "Verify stock Home before continuing compositor removal"
+    },
+    {
+      "pr": 624,
+      "issues": [
+        418
+      ],
+      "summary": "Handle access errors when reading saved TV profiles"
+    },
+    {
+      "pr": 629,
+      "issues": [
+        418,
+        615
+      ],
+      "summary": "Fix experimental Home caller permissions on W21"
+    },
+    {
+      "pr": 630,
+      "issues": [
+        152,
+        472
+      ],
+      "summary": "Recover No-root removal after interrupted installs and omitted packages"
+    },
+    {
+      "pr": 631,
+      "issues": [
+        454,
+        519
+      ],
+      "summary": "Preserve Root recovery while diagnosing Home compatibility"
+    }
+  ],
   "excluded": [],
   "acceptance": ""
 }
