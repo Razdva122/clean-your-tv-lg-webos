@@ -356,8 +356,15 @@ A refused removal can also report
 `removal_binding` alongside its error. The report omits operation identifiers,
 paths and capsule contents.
 
-The review publishes no cancellation marker. Confirmed removal checks the
-original binding again and uses the existing cancellation and writer checks.
+The review publishes no cancellation marker. If only the capsule is missing,
+removal can use the original local receipt and its matching private TV plan.
+It checks the operation and diagnostic IDs, source and configuration hashes,
+package versions and reservation identity. A different active reservation or
+an unverifiable private plan stops the review. The report can show
+`capsule-missing` with a `matched` reservation. This path is only available
+for removal. Confirmed removal checks the binding again and uses the existing
+cancellation and writer checks before modifying packages.
+
 A reservation conflict does not establish that another process is running.
 Use the original saved connection and recovery data to review the same removal
 goal. Temporary IPK staging is not evidence of reservation ownership.

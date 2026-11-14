@@ -179,7 +179,6 @@ class OriginalOperationIntegration(unittest.TestCase):
         self.inventory=fixture.inventory
 
     def test_removal_review_checks_binding_without_touching_evidence(self):
-        from cytv import diagnostics
         from cytv.desktop import DesktopConsole
         from cytv.diagnostic_context import status_summary
         from cytv.errors import UserError
@@ -211,36 +210,46 @@ class OriginalOperationIntegration(unittest.TestCase):
         self.assertEqual(status_summary(status)['removal_binding'],
                          {'capsule': 'verified', 'reservation': 'matched'})
         self.assertEqual(evidence(), before)
-        retained = capsule.with_suffix('.retained')
-        capsule.rename(retained)
+        capsule.unlink()
         without_capsule = evidence()
         status = self.installer.observe_recovery()
         self.assertEqual(status_summary(status)['removal_binding'],
-                         {'capsule': 'capsule-missing', 'reservation': 'conflict'})
+                         {'capsule': 'capsule-missing', 'reservation': 'matched'})
         self.assertEqual(evidence(), without_capsule)
         console = DesktopConsole(lambda *_: None)
-
-        def unexpected_prompt(_):
-            self.fail('Conflicting reservation offered a mutation')
-
-        recover(self.installer, unexpected_prompt, console, initial_observation=status)
+        recover(self.installer, lambda _: 'n', console, initial_observation=status)
         self.assertEqual(evidence(), without_capsule)
-        with self.assertRaises(UserError) as blocked:
-            self.installer.continue_clean_removal(pending)
-        self.assertEqual(blocked.exception.reason_code, 'ownership-conflict')
-        report = diagnostics.create_report(self.store, 'recover', self.profile, 'recover', blocked.exception,
-                                           status=status)
-        exported = json.loads(report.read_text())
-        self.assertEqual(exported['removal_binding'], status_summary(status)['removal_binding'])
-        self.assertNotIn(str(capsule), report.read_text())
 
-        retained.rename(capsule)
-        status = self.installer.observe_recovery()
-        self.assertIn('continue-removal', status['assessment']['actions'])
-        recover(self.installer, lambda _: 'y', console, initial_observation=status)
+        # Even after a successful review, removal must recheck the TV plan.
+        plan_path = self.root / 'private/operations' / pending['previous']['observer_operation'] / 'plan.json'
+        original = plan_path.read_bytes()
+        plan = json.loads(original)
+        plan['diagnostic_id'] = '0' * 32
+        plan_path.write_text(observer.canonical(plan))
+        with self.assertRaisesRegex(UserError, 'reservation could not be verified'):
+            recover(self.installer, lambda _: 'y', console, initial_observation=status)
+        self.assertFalse((self.root / 'private/active/cancel-removal.json').exists())
+        self.assertFalse((self.root / 'requests').exists())
+        plan_path.write_bytes(original)
+
+        active = self.root / 'private/active'
+        owner, = active.iterdir()
+        competing_owner = active / ('owner-' + '0' * 32 + '.json')
+        owner.rename(competing_owner)
+        before_conflict = evidence()
+        conflict = self.installer.observe_recovery()
+        self.assertEqual(conflict['removal_binding']['reservation'], 'conflict')
+        self.assertNotIn('continue-removal', conflict['assessment']['actions'])
+        self.assertEqual(evidence(), before_conflict)
+        competing_owner.rename(owner)
+
+        recover(self.installer, lambda _: 'y', console)
         self.assertIsNone(self.store.pending(self.profile))
         self.assertFalse((self.root / 'private' / 'active').exists())
+        self.assertFalse(capsule.exists())
         self.assertFalse((self.root / 'requests').exists())
+        self.assertTrue(self.installer.install(self.inventory, 'fresh-secret')['launch_requested'])
+        self.assertEqual((self.root / 'requests').read_text().splitlines(), list(observer.APPS))
 
     def test_cli_cancels_owned_partial_install_and_can_install_fresh(self):
         from cytv import cli
@@ -328,18 +337,21 @@ class OriginalOperationIntegration(unittest.TestCase):
                          {'capsule': 'verified', 'reservation': 'interrupted'})
         self.assertIn('continue-removal', observation['assessment']['actions'])
         self.assertEqual(marker.stat().st_nlink, 2)
-        lost = []
-        def interrupt(request, reply):
-            if request['action'] == 'history' and not lost:
-                lost.append(True)
-                from cytv.errors import UserError
-                raise UserError('Connection interrupted', reason_code='connection-interrupted')
-        self.remote.cut_after_cleanup = interrupt
+        self.store._capsule_path(self.profile, old['observer_operation']).unlink()
+        plan_path = self.root / 'private/operations' / old['observer_operation'] / 'plan.json'
+        self.remote.transform_cleanup = lambda code: code.replace(
+            'if(stat)remove(opdir,stat);',
+            'if(stat){fs.unlinkSync(opdir+"/plan.json");process.exit(79);}')
         self.installer.store = state.Store(self.store.root)
         with self.assertRaises(RuntimeError):
             self.installer.uninstall_project()
+        self.assertFalse(plan_path.exists())
+        self.assertTrue(plan_path.parent.exists())
         self.assertEqual(self.store.pending(self.profile)['stage'], 'verified-clean')
+        self.remote.transform_cleanup = lambda code: code
         self.installer.store = state.Store(self.store.root)
+        self.assertEqual(self.installer.observe_recovery()['removal_binding'],
+                         {'capsule': 'capsule-missing', 'reservation': 'absent'})
         self.assertTrue(self.installer.uninstall_project()['verified_clean'])
         self.assertFalse(marker.exists())
         self.assertEqual((self.root / 'requests').read_text().splitlines(), [operations.HELPER])
@@ -386,6 +398,7 @@ class OriginalOperationIntegration(unittest.TestCase):
             sleep(.01)
         self.assertTrue(ready.exists())
         self.assertFalse((opdir / 'claim-1.json').exists())
+        self.store._capsule_path(self.profile, plan['operation']).unlink()
 
         def release_after_poll_starts():
             deadline = monotonic() + 5

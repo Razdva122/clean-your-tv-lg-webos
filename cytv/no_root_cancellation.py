@@ -6,6 +6,21 @@ from .no_root_observer import PROGRAM
 SOURCE = PROGRAM.replace(
     "var input=JSON.parse(process.argv[process.argv.length-1]), plan=input.plan;",
     "var input=cancellationInput, plan=input.plan;"
+).replace(
+    "if(typeof c.O_NOFOLLOW",
+    r"""if(input.receipt){
+ var receipt=input.receipt, operationDir=root+'/operations/'+receipt.operation;
+ directory(root,true);directory(root+'/operations',true);directory(operationDir,true);
+ plan=json(operationDir+'/plan.json');
+ if(!plan||plan.action!=='install'||plan.operation!==receipt.operation||
+    plan.diagnostic_id!==receipt.diagnostic_id||plan.source_sha256!==receipt.source_sha256||
+    plan.configuration_sha256!==receipt.configuration_sha256||plan.connection!==undefined||
+    plan.root_handoff!==undefined||(plan.private_root||receipt.default_root)!==root||
+    !Array.isArray(plan.slots)||plan.slots.length!==2||
+    plan.slots.some(function(slot,i){return !slot||slot.version!==receipt.versions[i];}))
+  fail('foreign-evidence');
+}
+if(typeof c.O_NOFOLLOW""",
 ).replace("var result;\nswitch(input.command){", r"""
 function cancel(){
  var goal=input.goal, fence='cancel-removal.json', prepared=opdir+'/reservation';

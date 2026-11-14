@@ -3,7 +3,9 @@
 Old installation receipts describe history. They are not permission to retain
 the user's project keys or files after the user has requested their removal.
 """
+import hashlib
 import json
+import re
 from contextlib import ExitStack
 from time import monotonic, sleep
 
@@ -150,25 +152,37 @@ function privateInstaller(root){
 if(input.guard_owner){
  try{
   var selected=input.cancellation, owned=null, hasOwner=false;
+  var receipt=input.missing_capsule;
+  if(receipt){
+   var candidates=receipt.roots.filter(function(root){
+    return exact(root+'/operations/'+receipt.operation,true);
+   });
+   if(candidates.length>1){reply.owner_conflict=true;fail();}
+   if(candidates.length===1)selected=candidates[0];
+  }
   // Check all other roots first. A cancellation can publish a marker only
   // inside the exact inherited reservation, and it grants no other scope.
   installerRoots.forEach(function(root){
    var a=(root===rootInstaller?rootPrivate:root)+'/active',stat=exists(a);
    if(stat){
     ancestry(a);
-    if(!fs.readdirSync(a).length)return;
-    if(root!==selected){reply.owner_conflict=true;fail();}
+    var names=fs.readdirSync(a);
+    if(!names.length)return;
+    if(root!==selected||receipt&&names.indexOf('owner-'+receipt.operation+'.json')<0&&
+       names.indexOf('cancel-removal.json')<0){reply.owner_conflict=true;fail();}
     hasOwner=true;
    }
   });
   if(selected){
    var cancellationInput={root:selected,public_root:input.public_root,plan:input.plan,goal:input.removal,
-                          finalizing:input.finalizing,retire:input.action==='history',inspect:input.action==='binding'};
+                          finalizing:input.finalizing,retire:input.action==='history',
+                          inspect:input.action==='binding',receipt:receipt};
    try{owned=/* CYTV_OWNED_CANCELLATION */null;}
    catch(e){
-    // An absent current owner is independent of old optional evidence.
-    // Do not bypass an actual staged reservation or an observed writer.
-    if(hasOwner||e.cancelReservation)throw e;
+    // Verified cleanup can resume after partially retiring old history.
+    // An active or prepared reservation still needs its full binding.
+    if(hasOwner||e.cancelReservation||receipt&&(!input.finalizing||
+       exact(selected+'/operations/'+receipt.operation+'/reservation',true)))throw e;
     blocked('installer-private',e);owned={};
    }
    reply.cancellation=owned;
@@ -190,7 +204,10 @@ if(input.action==='history'){
   privateInstaller(root);
   // Releasing the owned reservation opens ordinary installation again.
   // Retire its exact operation only, without sweeping any successor's root.
-  if(input.cancellation===root){var opdir=root+'/operations/'+input.plan.operation,stat=exists(opdir);if(stat)remove(opdir,stat);}
+  if(selected===root){
+   var opdir=root+'/operations/'+(receipt?receipt.operation:input.plan.operation),stat=exists(opdir);
+   if(stat)remove(opdir,stat);
+  }
   else if(root===rootInstaller){
    // This disjoint Root public staging root was already guarded on entry.
    var stageRoot=exists(root);
@@ -431,7 +448,7 @@ function next(){if(!stages.length){process.stdout.write(JSON.stringify(reply));r
 def _program(request):
     # Keep the SSH exec request tiny; old TV SSH servers reject long argv.
     source = PRIVATE_CLEANUP_PROGRAM
-    if request.get('cancellation'):
+    if request.get('cancellation') or request.get('missing_capsule'):
         from .no_root_cancellation import SOURCE
         source = source.replace('/* CYTV_OWNED_CANCELLATION */null', SOURCE)
     if request.get('action') in CLEANUP_BOOT_ACTIONS:
@@ -455,6 +472,34 @@ def _program(request):
     return ('process.argv.push(' + json.dumps(json.dumps(request)) + ');\n' + source).encode()
 
 
+def _missing_capsule_receipt(previous):
+    from . import no_root_observer as observer
+    from .operations import HELPER_STATE
+
+    operation = previous.get('observer_operation')
+    diagnostic_id = previous.get('diagnostic_id')
+    digest = previous.get('capsule_sha256')
+    if not all(isinstance(value, str) and re.fullmatch('[a-f0-9]{%d}' % size, value)
+               for value, size in ((operation, 32), (diagnostic_id, 32), (digest, 64))):
+        return None
+    if 'previous' in previous:
+        return None
+    try:
+        versions = [previous['versions'][app] for app in observer.APPS]
+        configuration = {name: previous['expected'][HELPER_STATE+'/'+name]
+                         for name in ('ssap-key.json', 'apps.json')}
+    except (KeyError, TypeError):
+        return None
+    if not all(isinstance(value, str) for value in versions) or not all(
+            isinstance(value, str) and re.fullmatch('[a-f0-9]{64}', value)
+            for value in configuration.values()):
+        return None
+    return {'operation': operation, 'diagnostic_id': diagnostic_id, 'versions': versions,
+            'configuration_sha256': hashlib.sha256(observer.canonical(configuration).encode()).hexdigest(),
+            'source_sha256': hashlib.sha256(observer.PROGRAM.encode()).hexdigest(),
+            'default_root': observer.ROOT, 'roots': [observer.ROOT, observer.JAIL_ROOT]}
+
+
 def _device(installer, action, proof=None, *, after_stop=False, wait_for_idle=False, guard=False):
     pending = installer.store.pending(installer.profile) or {}
     request = {'action':action, 'staging_ids':pending.get('cleanup_staging_ids', []),
@@ -473,6 +518,10 @@ def _device(installer, action, proof=None, *, after_stop=False, wait_for_idle=Fa
                 if error.reason_code != 'pending-operation' or connection_interrupted(error):
                     raise
                 capsule = getattr(error, 'local_recovery', {}).get('reason', 'unverified')
+                receipt = _missing_capsule_receipt(previous) if capsule == 'capsule-missing' else None
+                if receipt is not None:
+                    request.update(missing_capsule=receipt, public_root=no_root_observer.PUBLIC_ROOT,
+                                   finalizing=pending.get('stage') == 'verified-clean')
             else:
                 capsule = 'verified'
                 request.update(cancellation=no_root_observer.private_root(plan), plan=plan,
