@@ -310,11 +310,16 @@ CLEANUP_BOOT_ACTIONS = ('boot-create', 'boot-probe', 'boot-retire', 'boot-releas
 def no_root_cleanup_details(value):
     """Revalidate fixed No-root cleanup categories from live and saved reports."""
     if type(value) is not dict:return {}
-    if value.get('action') == 'sweep':
-        areas = ('app', 'service', 'package', 'ls2-registration', 'ls2-registry', 'installer-private', 'root-location')
+    action = value.get('action')
+    if action in ('inventory', 'idle', 'stop', 'sweep'):
+        areas = ('app', 'service', 'package', 'helper-state', 'ls2-registration', 'ls2-registry',
+                 'installer-private', 'root-location')
         blocked = value.get('blocked_areas')
-        return {'action': 'sweep', 'blocked_areas': [area for area in areas if area in blocked]
-                if type(blocked) is list else []}
+        result = {'action': action, 'blocked_areas': [area for area in areas if area in blocked]
+                  if type(blocked) is list else []}
+        if value.get('reason') == 'unsafe-path':
+            result['reason'] = 'unsafe-path'
+        return result
     allowed = {
         'action': CLEANUP_BOOT_ACTIONS,
         'step': ('runtime', 'boot-root', 'boot-proof', 'boot-read', *CLEANUP_BOOT_ACTIONS),

@@ -153,6 +153,27 @@ Developer Mode evidence. Cross-namespace device cleanup is not established by
 host fixtures. No parent chmod/chown, automatic migration or capsule editing is
 introduced; SDK IPKs stay under `/media/developer/temp`.
 
+For No-root over Root SSH, the installer obtains the installed project IDs
+from LG's application catalog. It disables known startup services by ID and
+asks LG's package manager to remove installed packages by ID. A blocked local
+probe for a catalogued package is checked again after vendor removal. A
+blocked Helper stop requires a verified restart before removal can proceed.
+Catalog paths are not used as deletion targets. Local residue cleanup requires
+an exact project slot, a matching app, package or service manifest and the
+existing filesystem checks. Cleanup retains conflicting or unverifiable
+residue and reports an incomplete result.
+
+The shared removal adapter accepts the retail SDK containers under
+`/media/developer/apps/usr` when their metadata matches the reported LG layout
+(`1001:1001`, `0777`). Startup-service probing, Helper stop and the final sweep use the
+same ancestry rule. The exception covers only `usr`, `palm`, and the fixed
+`applications`, `services` and `packages` containers. Existing SDK ownership
+variants for `services` and `packages` remain supported. The adapter keeps its
+directory, symlink and inode checks and does not change the container
+permissions. The ordinary installer report identifies the cleanup action and
+the affected project area, when known, if an unsafe path blocks removal. It exports
+neither raw paths nor app inventories.
+
 The existing volatile restart-proof marker remains under `/tmp` with its original
 strict sticky-parent checks. A persistent jail directory cannot replace proof of
 a full restart. Firmware refusing that marker may still block explicit removal;
