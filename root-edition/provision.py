@@ -128,9 +128,9 @@ def plan(original, capabilities=None):
         role['allowedNames'].append(LEASE_NAME)
         senders = ['com.webos.surfacemanager', 'com.webos.starfish.keyfilters']
         role['permissions'].append({'service':LEASE_NAME, 'inbound':senders, 'outbound':[]})
-        for sender in senders:
-            clients[sender] = [NAME+'.c1lease']
-        apis[NAME+'.c1lease'] = [LEASE_NAME+'/c1Lease', LEASE_NAME+'/c1Home']
+        # Running W21 compositor clients already hold the named stock group
+        # 'all'. A policy scan does not refresh their cached client groups.
+        apis['all'] = [LEASE_NAME+'/c1Lease', LEASE_NAME+'/c1Home']
     result = {'service': original['service'].replace(expected,'Exec='+str(RUNNER)).encode(),
             'role':encoded(role), 'client':encoded(clients), 'api':encoded(apis)}
     if 'c1-keyfilter-v1' in capabilities:

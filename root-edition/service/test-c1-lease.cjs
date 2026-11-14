@@ -231,6 +231,64 @@ function native(token) {
     profiles: null
   };
 }
+if (process.argv[2] === '--warm-policy') {
+  const { service, role, api } = JSON.parse(fs.readFileSync(0, 'utf8'));
+  assert(role.allowedNames.includes(service));
+  const inbound = role.permissions.find(
+    (entry) => entry.service === service
+  ).inbound;
+  // Group membership was cached before CYTV scanned its policy. Model the
+  // factory exact-name inbound check and method group intersection.
+  function dispatch(caller, groups, method, handler) {
+    if (
+      !inbound.includes(caller) ||
+      !groups.some((group) =>
+        (api[group] || []).includes(service + '/' + method)
+      )
+    )
+      return false;
+    handler();
+    return true;
+  }
+  ['com.webos.surfacemanager', 'com.webos.starfish.keyfilters'].forEach(
+    (caller) => {
+      const groups = [
+        'all',
+        'luna.internal.public',
+        'signals.all',
+        'signals.register'
+      ];
+      if (caller === 'com.webos.surfacemanager') groups.push('private');
+      const a = fixture();
+      assert(
+        dispatch(caller, groups, 'c1Lease', () =>
+          a.subscribe(a.message('warm', caller))
+        ),
+        caller + ' must reach c1Lease with cached factory groups'
+      );
+      assert.deepStrictEqual(a.calls.at(-1).args, ['--lease']);
+      a.reply(native());
+      assert.strictEqual(a.replies.at(-1).healthy, true);
+      assert(
+        dispatch(caller, groups, 'c1Home', () => a.home(undefined, caller)),
+        caller + ' must reach c1Home with cached factory groups'
+      );
+      assert.deepStrictEqual(a.calls.at(-1).args, ['--home', 'a'.repeat(32)]);
+      a.reply(native());
+      assert.strictEqual(a.replies.at(-1).returnValue, true);
+      function rejected() {
+        assert.fail('ungranted method reached the broker');
+      }
+      for (const method of ['c1Lease', 'c1Home'])
+        assert.strictEqual(
+          dispatch('com.foreign.client', ['all'], method, rejected),
+          false
+        );
+      assert.strictEqual(dispatch(caller, groups, 'status', rejected), false);
+    }
+  );
+  process.exit(0);
+}
 var f = fixture();
 if (process.argv[2]) {
   var disk = fixture(undefined, undefined, process.argv[2]);

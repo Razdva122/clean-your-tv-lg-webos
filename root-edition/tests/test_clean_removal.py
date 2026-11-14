@@ -1655,7 +1655,7 @@ class PartialDeviceRemoval(unittest.TestCase):
             'role': json.dumps({'appId': provision.NAME}), 'client': '{}', 'api': '{}',
         }
         old_sender, new_sender = 'com.webos.surfacemanager', 'com.webos.starfish.keyfilters'
-        group = provision.NAME + '.c1lease'
+        old_group = provision.NAME + '.c1lease'
         current_plan = provision.plan
         stock = 'com.webos.app.home'
         snapshot = root/'ls2-provision-snapshot.json'
@@ -1671,10 +1671,13 @@ class PartialDeviceRemoval(unittest.TestCase):
 
         def old_plan(policy, capabilities):
             result = current_plan(policy, capabilities)
-            role, client = (json.loads(result[key]) for key in ('role', 'client'))
+            role, client, api = (json.loads(result[key]) for key in ('role', 'client', 'api'))
             role['permissions'][-1]['inbound'] = [old_sender]
-            client.pop(new_sender, None)
-            return dict(result, role=provision.encoded(role), client=provision.encoded(client))
+            client[old_sender] = [old_group]
+            api.pop('all', None)
+            api[old_group] = [provision.LEASE_NAME+'/c1Lease', provision.LEASE_NAME+'/c1Home']
+            return dict(result, role=provision.encoded(role), client=provision.encoded(client),
+                        api=provision.encoded(api))
 
         def sdk_install():
             service.mkdir(parents=True, exist_ok=True)
@@ -1776,7 +1779,7 @@ class PartialDeviceRemoval(unittest.TestCase):
                 provision.apply()
                 provision.finalize()
             self.assertTrue(ready.exists())
-            self.assertEqual(json.loads(files['client'].read_bytes())[old_sender], [group])
+            self.assertEqual(json.loads(files['client'].read_bytes())[old_sender], [old_group])
             self.assertNotIn(new_sender, json.loads(files['client'].read_bytes()))
             with self.assertRaisesRegex(ValueError, 'excluded from normal Root Updater'):
                 Device.require_home_resume_runtime(root)
@@ -1842,8 +1845,14 @@ class PartialDeviceRemoval(unittest.TestCase):
             self.assertEqual(fresh['clean_predecessor'], identifier)
             self.assertNotEqual(fresh['lease'], clean['lease'])
             self.assertTrue(ready.exists())
-            client = json.loads(files['client'].read_bytes())
-            self.assertEqual({name for name, groups in client.items() if group in groups}, {old_sender, new_sender})
+            normal = current_plan(original, provision.WALLPAPER_CAPABILITIES)
+            self.assertEqual(files['client'].read_bytes(), normal['client'])
+            self.assertEqual(json.loads(files['role'].read_bytes())['permissions'][-1], {
+                'service': provision.LEASE_NAME, 'inbound': [old_sender, new_sender], 'outbound': [],
+            })
+            api = json.loads(files['api'].read_bytes())
+            self.assertEqual(api.pop('all'), [provision.LEASE_NAME+'/c1Lease', provision.LEASE_NAME+'/c1Home'])
+            self.assertEqual(provision.encoded(api), normal['api'])
 
     def test_install_inspection_leaves_live_compositor_probe_to_native_install(self):
         import subprocess

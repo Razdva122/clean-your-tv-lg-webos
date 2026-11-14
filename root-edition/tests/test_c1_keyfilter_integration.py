@@ -1,6 +1,7 @@
 """Build and LS2 boundaries of the mount-free C1 routing mode."""
 import json
 import os
+import subprocess
 from contextlib import ExitStack, contextmanager
 from unittest.mock import patch
 from pathlib import Path
@@ -40,19 +41,21 @@ class KeyfilterIntegrationTests(unittest.TestCase):
                     'role':json.dumps({'appId':provision.NAME}).encode()}
         normal = provision.plan(original, ['theme-receiver-v1','wallpaper-media-v1'])
         revised = provision.plan(original, ['theme-receiver-v1','wallpaper-media-v1','c1-keyfilter-v1'])
-        role, client, api = (json.loads(revised[key]) for key in ('role', 'client', 'api'))
+        role, api = (json.loads(revised[key]) for key in ('role', 'api'))
+        broker = Path(__file__).resolve().parents[1] / 'service/test-c1-lease.cjs'
+        result = subprocess.run(
+            ['node', str(broker), '--warm-policy'], text=True, capture_output=True,
+            input=json.dumps({'service': provision.LEASE_NAME, 'role': role, 'api': api}),
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
         senders = ['com.webos.surfacemanager', 'com.webos.starfish.keyfilters']
-        group = provision.NAME + '.c1lease'
         self.assertEqual(role['allowedNames'].pop(), provision.LEASE_NAME)
         self.assertEqual(role['permissions'].pop(), {
             'service': provision.LEASE_NAME, 'inbound': senders, 'outbound': [],
         })
-        self.assertEqual({name for name, groups in client.items() if group in groups}, set(senders))
-        for name in senders:
-            self.assertEqual(client.pop(name), [group])
-        self.assertEqual(api.pop(group), [provision.LEASE_NAME+'/c1Lease', provision.LEASE_NAME+'/c1Home'])
+        self.assertEqual(api.pop('all'), [provision.LEASE_NAME+'/c1Lease', provision.LEASE_NAME+'/c1Home'])
         self.assertEqual(provision.encoded(role), normal['role'])
-        self.assertEqual(provision.encoded(client), normal['client'])
+        self.assertEqual(revised['client'], normal['client'])
         self.assertEqual(provision.encoded(api), normal['api'])
         self.assertEqual(revised['service'], normal['service'].replace(
             ('Name=' + provision.NAME).encode(), ('Name=' + provision.NAME + ';' + provision.LEASE_NAME).encode(),
