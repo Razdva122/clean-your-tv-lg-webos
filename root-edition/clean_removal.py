@@ -80,12 +80,14 @@ def runtime_restore(payload, uid=0):
     sys.path.insert(0,str(payload/'runtime'))
     import cli
     backend=cli.gate_backend()
+    compositor = False
     if backend is not None:
         selected=backend.selection(backend.STATE,uid)
         name='c1-home-gate'
         if selected.get('routing')=='compositor-keyfilter-v1':
             import c1_keyfilter
             backend=c1_keyfilter;name='c1-keyfilter-guard'
+            compositor = True
         path=payload/'runtime'/name
         raw=deploy.checked_file(payload,'runtime/'+name)
         if hashlib.sha256(raw).hexdigest()!=manifest['files'].get('runtime/'+name):
@@ -98,7 +100,8 @@ def runtime_restore(payload, uid=0):
         finally:os.close(fd)
         backend.binary=lambda root,uid:path
     selection_raw=safe_bytes(backend.STATE/'home-backend.json',uid=uid) if backend is not None else None
-    result={'returnValue':True,'result':cli.main('restore')}
+    restored = backend.restore_for_removal(backend.STATE, uid) if compositor else cli.main('restore')
+    result={'returnValue':True,'result':restored}
     if selection_raw is not None and result['result']=='restored':
         if safe_bytes(backend.STATE/'home-backend.json',uid=uid)!=selection_raw:
             raise ValueError('native_recovery_selection_changed')
@@ -140,15 +143,25 @@ def compositor_stock(payload, *, retire_orphan=False):
 
 
 def compositor_stock_report(payload, *, retire_orphan=False):
-    """One current child observation; failure stays failure with bounded context."""
+    return _cleanup_child_report(compositor_stock, payload, **({'retire_orphan': True} if retire_orphan else {}))
+
+
+def runtime_restore_report(payload, uid=0):
+    report = _cleanup_child_report(runtime_restore, payload, uid)
+    return report['result'] if report['returnValue'] else report
+
+
+def _cleanup_child_report(action, *args, **kwargs):
+    """One current child operation with bounded failure context."""
     try:
-        result = compositor_stock(payload, retire_orphan=True) if retire_orphan else compositor_stock(payload)
-        return {'returnValue':True,'result':result}
+        return {'returnValue':True,'result':action(*args, **kwargs)}
     except Exception as error:
         import traceback
         traceback.print_exc()  # Existing private child stderr, never part of the export.
         from install_driver import failure_summary, cleanup_probe_details
         detail=failure_summary(error)
+        detail['native_reason']=getattr(error,'native_reason',None)
+        detail['restore_check']=getattr(error,'restore_check',None)
         detail['frames']=[{'file':Path(frame.filename).name,'line':frame.lineno}
             for frame in traceback.extract_tb(error.__traceback__)][-8:]
         return {'returnValue':False,'cleanup_probe':cleanup_probe_details(detail)}
@@ -426,6 +439,39 @@ def compact_audit(record, store):
         'readback','complete','submitted','preparing','provisioning','installed-recovery-only','cancellation-admitted',
         'uninstalled-state-retained','remove-submitting','remove-observed','clean-removal-requested','recovery-required',
         'backed-up','installing','awaiting-launch','verifying','rolling-back','rolled-back','aborted','disabled'}
+    from deploy import install_failure_details
+    from install_driver import cleanup_probe_details
+    from updater.luna import CALLS, REASONS, summary
+
+    def safe_failure(value):
+        result={k:v for k,v in value.items() if (k=='exception_type' and v in ('CalledProcessError',
+            'TimeoutExpired','ValueError','RuntimeError','OSError','PermissionError','FileNotFoundError',
+            'TypeError','KeyError','TimeoutError','unknown'))
+            or (k in ('exit_status','errno') and type(v) is int and -255<=v<=4095)}
+        if type(value.get('stage')) is str and value['stage'] in phases:
+            result['stage']=value['stage']
+        step=value.get('cleanup_step')
+        if step in ('routing-inverse','runtime-restore','provision-rollback','startup-hook',
+                    'legacy-lockdown','registration-restore','legacy-permissions','home-readback'):
+            result['cleanup_step']=step
+        # Existing validators assume frame file names are hashable. Ignore
+        # malformed optional data without interrupting cleanup.
+        for key, validator in (('root_driver', install_failure_details), ('cleanup_probe', cleanup_probe_details)):
+            try:
+                detail=validator(value.get(key))
+            except (TypeError, ValueError):
+                continue
+            if detail:
+                if key=='cleanup_probe' and step!='runtime-restore':
+                    detail.pop('native_reason', None)
+                    detail.pop('restore_check', None)
+                result[key]=detail
+        luna=value.get('luna')
+        if (type(luna) is dict and luna.get('call') in (*CALLS.values(),'other')
+                and luna.get('reason') in REASONS):
+            result['luna']=summary(luna)
+        return result
+
     def safe(value):
         if not isinstance(value,dict):return None
         result={}
@@ -440,9 +486,8 @@ def compact_audit(record, store):
                     'clean_removal_requested','continuation_requires_recovery'):result[key]=item
             elif key in ('schema','version') and type(item) is int and 0<=item<=2:result[key]=item
             elif key in ('home_changed','terminal') and type(item) is bool:result[key]=item
-            elif key=='failure' and isinstance(item,dict):
-                result[key]={k:v for k,v in item.items() if (k=='exception_type' and v in ('CalledProcessError','TimeoutExpired','ValueError','RuntimeError','OSError','PermissionError','FileNotFoundError','TypeError','KeyError','unknown'))
-                    or (k in ('exit_status','errno') and type(v) is int and -255<=v<=4095)}
+            elif key in ('failure','last_failure') and isinstance(item,dict):
+                result[key]=safe_failure(item)
         return result
     if record.get('audit_compacted') is True:return
     original=record['original']

@@ -64,7 +64,7 @@ def root_updater_paths():
                                 ('client-permissions.d', '.service.json'), ('api-permissions.d', '.api.json'))]]
 
 
-def require_removal_idle(remote, profile, pending, *, report_busy=False):
+def require_removal_idle(remote, profile, pending, *, report_busy=False, optional_monitor=False):
     if pending and pending.get('recovery_protocol') == 'no-root-original-stream-v1':
         raise UserError('The original No-root operation cannot safely continue. Recovery data was kept.', reason_code='pending-operation')
     # A fresh uninstall reserves its journal before restore(), and only changes
@@ -83,10 +83,19 @@ def require_removal_idle(remote, profile, pending, *, report_busy=False):
             # Doctor as a way around an unavailable recovery capability.
             error.args = ('\n'.join(GUIDES['recovery-status-rejected'][:3]),)
         raise
+    except UserError as error:
+        # An unanswered optional status call cannot prove that work is idle.
+        if optional_monitor and (error.reason_code == 'operation-timeout' or (
+                error.reason_code == 'user-error'
+                and str(error) == 'TV command ended without a confirmed result. Run cytv status.')):
+            return False
+        raise
     status = idle.get('status') if isinstance(idle, dict) and idle.get('returnValue') is True else None
     apps = status.get('apps') if isinstance(status, dict) else None
     if report_busy and isinstance(apps, list) and apps:
         raise UserError('The TV is busy. Wait a moment and try again.', reason_code='original-writer-active')
+    if optional_monitor:
+        return apps == []
     if apps != []:
         raise UserError('TV installer is not confirmed idle. Keep the receipt and run cytv status before removal.', reason_code='pending-operation')
 
@@ -445,12 +454,14 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
     def collect_root_diagnostics(self, cursor=None):
         try:
             from .root_activation_diagnostics import collect
-            value=collect(self.remote,self._python(ROOT_STATE),cursor)
+            python = getattr(self, '_selected_python', None) or '/usr/bin/python3'
+            value=collect(self.remote,python,cursor)
             self.tv_info['root_diagnostics']=diagnostics.context.root_diagnostics_summary(value)
             return value.get('cursor')
         except Exception:
             # Optional evidence must not change recovery or hide the primary error.
-            self.tv_info['root_diagnostics']={'health_log':{'status':'unavailable'}}
+            self.tv_info['root_diagnostics']={'health_log':{'status':'unavailable'},
+                                              'compositor':{'status':'unavailable'}}
             return None
 
     def root_action(self, action, bundle=None, migrate=False, experimental=False):
@@ -506,7 +517,13 @@ with os.fdopen(f,'rb') as stream:
             raise UserError('Root operation was not confirmed. Run cytv status; retain recovery state.', reason_code='root-operation-unconfirmed')
         return reply
 
-    def preflight(self, install=False, home_interfaces=False, stop_running_helper=False, *, fresh_only=False):
+    def preflight(self, install=False, home_interfaces=False, stop_running_helper=False, *, fresh_only=False,
+                  diagnose=False):
+        from .root_capabilities import CALLS, clear_home_observations, verify
+        clear_home_observations(self.tv_info)
+        for name in CALLS:
+            if name in self.checks.results:
+                self.checks.update(name, 'pending', '')
         diagnostics.context.collect_node_version(self.remote, self.tv_info)
         if self.profile['edition'] == 'root':
             from .python_runtime import SYSTEM_PROBE
@@ -540,8 +557,9 @@ with os.fdopen(f,'rb') as stream:
             for name, probe in zip(diagnostics.ROOT_REQUIREMENTS, probes):
                 check(name, probe)
             python_names = {'python3', 'python-json', 'python-fcntl', 'python-version'}
+            observe_blocked_home = False
             if home_interfaces:
-                from .root_capabilities import verify, CALLS
+                backend = self.manifest.get('root_backends', {}).get('c1-native-gate')
                 if all(checks[name]=='pass' for name in checks if name not in python_names):
                     if not install and self.native_root_present():
                         device = self.root_action('status').get('result', {})
@@ -551,13 +569,15 @@ with os.fdopen(f,'rb') as stream:
                         for name in CALLS:
                             checks.pop(name, None)
                             self.checks.update(name, 'unknown')
-                    elif 'c1-native-gate' in self.manifest.get('root_backends', {}):
+                    elif backend is not None:
                         verify(self.remote, self.checks, self.tv_info, allow_c1=True,
-                               allow_compositor=self.manifest['root_backends']['c1-native-gate'].get('admission_schema') == 3)
+                               allow_compositor=backend.get('admission_schema') == 3, diagnose=diagnose)
                     else:
                         verify(self.remote, self.checks, self.tv_info)
                 else:
                     checks.update(dict.fromkeys(CALLS, 'unknown'))
+                    observe_blocked_home = (diagnose and backend is not None and checks['root-user'] == 'pass'
+                                            and checks['luna-send'] == 'pass')
             if (install and any(checks[name] != 'pass' for name in python_names)
                     and all(result == 'pass' for name, result in checks.items() if name not in python_names)):
                 self.checks.update('python3', 'running')
@@ -567,6 +587,17 @@ with os.fdopen(f,'rb') as stream:
                         check(name, probe)
             failed = [name for name, result in checks.items() if result != 'pass']
             if failed:
+                if observe_blocked_home:
+                    try:
+                        if not self.native_root_present():
+                            verify(self.remote, self.checks, self.tv_info, allow_c1=True,
+                                   allow_compositor=backend.get('admission_schema') == 3,
+                                   diagnose=True, absent_profile_only=True)
+                    except Exception:
+                        pass  # Optional observations must preserve the original requirements failure.
+                    finally:
+                        self.tv_info.pop('home_backend', None)
+                        self.tv_info.pop('home_backend_schema', None)
                 raise UserError('Root requirements failed or could not be verified: {requirements}. Check the diagnostic report.'.format(
                     requirements=', '.join(failed)), reason_code='root-requirements')
             if install:
@@ -1235,12 +1266,20 @@ else:
         pending=self.store.pending(self.profile)
         if pending and pending.get('recovery_protocol')=='clean-removal-v1':
             return self.observe_recovery()
-        result=self._status()
+        try:
+            result=self._status()
+        except Exception:
+            if self.profile['edition']=='root':
+                self.collect_root_diagnostics()
+            raise
         self.tv_info['status']=result
-        if (self.profile['edition']=='root'
-                and result.get('deployment_stage')=='installed-recovery-only'):
-            self.collect_root_diagnostics()
+        self._collect_observed_root_diagnostics(result)
         return result
+
+    def _collect_observed_root_diagnostics(self, result):
+        if (self.profile['edition']=='root' and result.get('device')
+                and 'passive' not in result['device'].get('product', {})):
+            self.collect_root_diagnostics()
 
     def observe_recovery(self):
         """Read current proofs without clearing or archiving the host receipt.
@@ -1256,6 +1295,8 @@ else:
             result={'device':{},'pending':pending,'assessment':assess(self.profile,pending),
                     'removal':removal_summary(pending),'can_resume_root_setup':False}
             self.tv_info['status']=result
+            if self.profile['edition']=='root':
+                self.collect_root_diagnostics()
             return result
         initial = assess(self.profile, pending)
         result = ({'device': {}, 'pending': pending, 'can_resume_root_setup': False}
@@ -1264,6 +1305,10 @@ else:
                                     pending.get('recovery_protocol') == 'root-final-readback-v1'))
         result['assessment'] = assess(self.profile, self.store.pending(self.profile), result)
         self.tv_info['status'] = result
+        setup = self.tv_info.get('root_setup_recovery', {})
+        if (result['assessment']['reason'] != 'foreign-operation'
+                and setup.get('reason') not in ('receipt-unverified', 'restoration-pending')):
+            self._collect_observed_root_diagnostics(result)
         return result
 
     def inspect_root_product(self, expected_pending):
@@ -1782,8 +1827,30 @@ print('CYTV_ROOT_FILES_OK')
         except RuntimeError:
             return False
 
+    def check_unowned_root_home_restore(self):
+        from .root_capabilities import (
+            ForeignHomeHandoffRequired, clear_home_observations, native_home_script_error,
+            probe_native_home,
+        )
+        from .root_restore_footprint import ROOT_RESTORE_FOOTPRINT, local_recovery_retained
+
+        clear_home_observations(self.tv_info)
+        if self.store.pending(self.profile) or local_recovery_retained(self.store.device_dir(self.profile)):
+            return
+        footprint = self.remote.run(ROOT_RESTORE_FOOTPRINT, timeout=5)
+        if footprint != 'CYTV_ROOT_FOOTPRINT_ABSENT':
+            return
+        # The header probe uses a dedicated exit status when Home is unavailable.
+        failure = probe_native_home(self.remote, self.tv_info, strict=True, allow_unavailable=True)
+        if failure == 'native-home-script':
+            error = native_home_script_error(self.tv_info)
+            if isinstance(error, ForeignHomeHandoffRequired):
+                raise error
+
     def restore(self):
         from .state import private_write
+        if self.profile['edition'] == 'root':
+            self.check_unowned_root_home_restore()
         receipt = self.store.recovery(self.profile, 'restore')
         result = self.restore_device()
         private_write(receipt, b'{"action":"restore","stage":"complete"}')
@@ -1916,6 +1983,8 @@ print('CYTV_PROJECT_REMOVED')
                             ('root-access-required', 'root-worker-busy', 'removal-failed')):
                         self.store.checkpoint(self.profile, removal_reason=reason)
                 if not reconnect or attempt == 2 or not (lost or reason == 'root-worker-busy'):
+                    if self.profile['edition']=='root' and not lost:
+                        self.collect_root_diagnostics()
                     raise
                 try:
                     diagnostics.create_report(self.store, 'uninstall', self.profile, 'uninstall', error,

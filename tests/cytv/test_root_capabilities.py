@@ -16,6 +16,100 @@ PROFILES={'returnValue':True,'profiles':{'defaultApps':{'categories':{'home':'co
 
 
 class CapabilityTests(unittest.TestCase):
+    def test_doctor_records_home_and_keyfilters_when_both_fail(self):
+        from cytv.diagnostic_context import tv_summary
+        from cytv.root_capabilities import NATIVE_HEADERS, RootCapabilityError, verify
+
+        missing = {'returnValue': False, 'errorCode': -1,
+                   'errorText': 'Service does not exist: com.webos.service.systemprofile.'}
+        identity = {'returnValue': True, 'modelName': 'OLED55C1PUB',
+                    'firmwareVersion': '03.50.25', 'sdkVersion': '6.3.0'}
+        chain = {'returnValue': True, 'configs': {'com.webos.surfacemanager.keyFilters': [
+            {'file': '/private/config.js', 'handler': 'handleSystemKeys'}]}}
+        remote = Mock()
+        remote.luna.side_effect = [missing, identity, identity, chain, SETTINGS]
+        remote.run.return_value = '0 1 775 4096\n'
+        info = {}
+        with self.assertRaises(RootCapabilityError):
+            verify(remote, CheckList(), info, allow_c1=True, allow_compositor=True, diagnose=True)
+
+        remote.run.assert_called_once_with(NATIVE_HEADERS, timeout=5)
+        tv = tv_summary(info)
+        self.assertEqual(tv['root_compositor_failure'], 'keyfilters-incompatible')
+        self.assertEqual(tv['root_c1_probe'], 'native-home-rejected')
+        self.assertEqual(tv['root_native_home_probe'], 'mode-invalid')
+        self.assertEqual(tv['root_native_home_mode'], '0775')
+        self.assertEqual(tv['root_keyfilters_probe'],
+                         {'state': 'incompatible', 'predicate': 'path-outside-contract'})
+        self.assertEqual(tv['root_capabilities']['home-settings'], 'readable')
+        self.assertNotIn('/private/config.js', json.dumps(tv))
+
+    def test_c1_exception_keeps_original_failure_but_doctor_observes_fallback(self):
+        from cytv.errors import TVCommandError, TVRejected
+        from cytv.root_capabilities import NATIVE_HEADERS, RootCapabilityError, verify
+
+        missing = {'returnValue': False, 'errorCode': -1,
+                   'errorText': 'Service does not exist: com.webos.service.systemprofile.'}
+        identity = {'returnValue': True, 'modelName': 'OLED55C1PUB',
+                    'firmwareVersion': '03.50.25', 'sdkVersion': '6.3.0'}
+        key = 'com.webos.surfacemanager.keyFilters'
+        chain = {'returnValue': True, 'configs': {key: [
+            {'file': '/usr/lib/qt5/qml/KeyFilters/systemUi.js', 'handler': 'handleSystemKeys'}]}}
+        elf = ('127 69 76 70 1 1 1 0 0 0 0 0 0 0 0 0 3 0 40 0 1 0 0 0 217 218 '
+               '0 0 52 0 0 0 164 98 10 0 0 2 0 5 52 0 32 0 9 0 40 0 29 0 28 0')
+        stock = f'0 1 755 7582\n{elf}\nCYTV_HOME_ELF\n{elf}\n'
+        cases = (
+            (TVRejected('private'), stock, 'request-failed', 'readable'),
+            (identity, TVCommandError(42), 'native-home-rejected', 'unavailable'),
+            (identity, '0 1 775 7582\n', 'native-home-rejected', 'mode-invalid'),
+            ({'returnValue': False}, stock, 'identity-rejected', 'readable'),
+            (identity, stock, 'admitted', 'readable'),
+        )
+        for first, headers, c1, native in cases:
+            for diagnose in (False, True):
+                with self.subTest(c1=c1, native=native, diagnose=diagnose):
+                    remote = Mock()
+                    remote.luna.side_effect = [missing, first, identity, chain, SETTINGS]
+                    remote.run.side_effect = [headers, stock]
+                    info = {}
+                    threw = isinstance(first, Exception) or isinstance(headers, Exception)
+                    if threw or diagnose and c1 == 'native-home-rejected':
+                        with self.assertRaises(RootCapabilityError):
+                            verify(remote, CheckList(), info, allow_c1=True, allow_compositor=True, diagnose=diagnose)
+                    else:
+                        self.assertEqual(verify(remote, CheckList(), info, allow_c1=True, allow_compositor=True,
+                                                diagnose=diagnose), 'c1-native-gate')
+                        self.assertEqual(info['home_backend_schema'], 2 if c1 == 'admitted' else 3)
+                    self.assertEqual(info['root_c1_probe'], c1)
+                    if not diagnose and threw:
+                        self.assertEqual(remote.luna.call_count, 2)
+                    elif diagnose and (threw or c1 == 'native-home-rejected'):
+                        self.assertEqual(info['root_keyfilters_probe']['state'], 'readable')
+                        self.assertEqual(info['root_native_home_probe'], native)
+                        self.assertEqual(info['root_capabilities']['home-settings'], 'readable')
+                        remote.run.assert_called_once_with(NATIVE_HEADERS, timeout=5)
+                    if threw:
+                        self.assertEqual(info['root_compositor_failure'], 'c1-probe-failed')
+                        if diagnose and native == 'unavailable':
+                            self.assertEqual(info['root_compositor_observation'], 'native-home-unavailable')
+                    if c1 == 'admitted':
+                        self.assertEqual(remote.luna.call_count, 2)
+
+    def test_projection_omits_injected_predicates_and_stale_details(self):
+        from cytv.diagnostic_context import tv_summary
+        private = '/private/path'
+        report = tv_summary({
+            'root_native_home_probe': private, 'root_native_home_mount': 'file-mount',
+            'root_native_home_mode': '0775', 'root_c1_probe': private,
+            'root_compositor_observation': 'native-home-script',
+            'root_keyfilters_probe': {'state': 'readable', 'predicate': 'file-invalid', 'file': private},
+        })
+        self.assertEqual(report['root_keyfilters_probe'], {'state': 'readable'})
+        for name in ('root_native_home_probe', 'root_native_home_mount', 'root_native_home_mode',
+                     'root_c1_probe', 'root_compositor_observation'):
+            self.assertNotIn(name, report)
+        self.assertNotIn(private, json.dumps(report))
+
     def test_keyfilters_probe_records_a_safe_reason_and_clears_stale_evidence(self):
         from cytv.diagnostic_context import tv_summary
         from cytv.errors import TVRejected
@@ -227,7 +321,7 @@ class CapabilityTests(unittest.TestCase):
         from cytv.failure_help import for_error
         advice = for_error(caught.exception, 'inspect-installation', {'edition': 'root'})
         self.assertEqual(advice['code'], 'native-home-script')
-        self.assertIn('Restore LG Home', advice['next_step'])
+        self.assertIn('own supported procedure', advice['next_step'])
 
     def test_root_report_retains_only_the_rejected_native_home_mode(self):
         import struct
@@ -670,4 +764,4 @@ class CapabilityTests(unittest.TestCase):
                               connect=lambda *a:Mock(),write=lambda _:None)
                 self.assertEqual(code,0)
                 if pending:cls.return_value.preflight.assert_called_once_with()
-                else:cls.return_value.preflight.assert_called_once_with(home_interfaces=True)
+                else:cls.return_value.preflight.assert_called_once_with(home_interfaces=True, diagnose=True)

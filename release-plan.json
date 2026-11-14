@@ -1,58 +1,53 @@
 {
   "schema": 1,
-  "version": "1.20.5",
+  "version": "1.20.6",
   "changes": [
     {
-      "pr": 617,
+      "pr": 623,
       "issues": [
-        392
+        418,
+        615
       ],
-      "summary": "Offer to restore LG Debloat settings during removal"
+      "summary": "Verify stock Home before continuing compositor removal"
     },
     {
-      "pr": 618,
+      "pr": 624,
       "issues": [
-        499,
-        529,
-        534,
-        542,
-        588
+        418
       ],
-      "summary": "Fix Home startup isolation and guided removal recovery"
+      "summary": "Handle access errors when reading saved TV profiles"
     },
     {
-      "pr": 620,
+      "pr": 629,
       "issues": [
-        587
+        418,
+        615
       ],
-      "summary": "Fix No-root state checks on legacy LG Node"
+      "summary": "Fix experimental Home caller permissions on W21"
     },
     {
-      "pr": 621,
+      "pr": 630,
       "issues": [
-        608
+        152,
+        472
       ],
-      "summary": "Show clock format previews in Home settings"
+      "summary": "Recover No-root removal after interrupted installs and omitted packages"
     },
     {
-      "pr": 622,
+      "pr": 631,
       "issues": [
-        529
+        454,
+        519
       ],
-      "summary": "Finish No-root removal after TV processes stop"
-    },
-    {
-      "pr": 625,
-      "issues": [],
-      "summary": "Check guided removal in the desktop installer tests"
+      "summary": "Preserve Root recovery while diagnosing Home compatibility"
     }
   ],
   "excluded": [],
-  "acceptance": "On project LG OLED55C3RLA firmware 43.21.71, exact macOS ARM64 installer passed Root and No-root installation, removal, restart continuation, network Home and Debloat Restore/Skip. Owner confirmed physical Magic Remote clock settings and playback audio/volume. Signed Root OTA and rollback completed with matching profiles and verified component versions. Android same-signer upgrade and native checks passed in the API 35 ARM64 emulator. See docs/history/2026-11-14-release-1.20.5-rc-verification.md for hashes and scope.",
+  "acceptance": "Project LG OLED55C3RLA / firmware 43.21.71 / webOS SDK 11.2.0: exact macOS ARM64 installer passed Root and No-root setup, Home routing, removal across verified software restart and baseline restoration. Signed Root update and rollback passed with matching versions and profile, physical Home/navigation/emergency controls and audio. Both exact Chinese font faces rendered on C3; Android same-signer upgrade passed in API 35 ARM64. W21 A1/C1 physical acceptance is deferred by the maintainer to device owners. See docs/history/2026-11-14-release-1.20.6-rc-verification.md.",
   "build": {
-    "run_id": 43496590482,
+    "run_id": 43576072858,
     "attempt": 1,
-    "source": "eb5a8cb39627f0ef0e0e485ca79ec01c70a54f71"
+    "source": "50f73905262f1a38c218657eaac1289ae7662a48"
   },
-  "acceptance_build": "43496590482:1"
+  "acceptance_build": "43576072858:1"
 }

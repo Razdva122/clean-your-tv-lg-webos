@@ -7,6 +7,7 @@ from .terminal import Console
 
 
 SSH_COMMAND_PROMPT = 'Run SSH command'
+EXPLICIT_TV_CHOICE = 'TV number: '
 
 
 @dataclass(repr=False)

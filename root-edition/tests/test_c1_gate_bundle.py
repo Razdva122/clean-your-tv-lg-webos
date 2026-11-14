@@ -46,6 +46,11 @@ class BundleTests(unittest.TestCase):
             manifest = load('deploy').verify_bundle(root / 'normal')
             self.assertNotIn('runtime/c1_gate.py', manifest['files'])
             self.assertNotIn('runtime/c1-home-gate', manifest['files'])
+            from cytv.package import data_files
+            release = json.loads((root / 'normal/release.json').read_bytes())
+            contents = data_files((root / 'normal' / manifest['package']).read_bytes())
+            service = 'usr/palm/services/com.cleanyourtv.root.preview.service/service.js'
+            self.assertEqual(release['files'][service], hashlib.sha256(contents[service]).hexdigest())
 
     def test_experimental_native_bundle_requires_explicit_reader_opt_in(self):
         with tempfile.TemporaryDirectory() as folder:

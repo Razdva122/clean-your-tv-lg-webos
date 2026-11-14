@@ -1,6 +1,7 @@
 """Build and LS2 boundaries of the mount-free C1 routing mode."""
 import json
 import os
+import subprocess
 from contextlib import ExitStack, contextmanager
 from unittest.mock import patch
 from pathlib import Path
@@ -39,15 +40,26 @@ class KeyfilterIntegrationTests(unittest.TestCase):
         original = {'service':'[D-BUS Service]\nName='+provision.NAME+'\nExec=/usr/bin/run-js-service -n ' + str(provision.SERVICE),
                     'role':json.dumps({'appId':provision.NAME}).encode()}
         normal = provision.plan(original, ['theme-receiver-v1','wallpaper-media-v1'])
-        self.assertNotIn('com.webos.surfacemanager', json.loads(normal['client']))
         revised = provision.plan(original, ['theme-receiver-v1','wallpaper-media-v1','c1-keyfilter-v1'])
-        client, api = (json.loads(revised[key]) for key in ('client','api'))
-        self.assertEqual(client['com.webos.surfacemanager'], [provision.NAME+'.c1lease'])
-        self.assertEqual(api[provision.NAME+'.c1lease'], [provision.LEASE_NAME+'/c1Lease',provision.LEASE_NAME+'/c1Home'])
-        self.assertIn('Name='+provision.NAME+';'+provision.LEASE_NAME, revised['service'].decode())
-        self.assertNotIn('lease_service',revised)
-        self.assertNotIn('com.webos.surfacemanager', json.loads(revised['role'])['allowedNames'])
-        self.assertNotIn(provision.NAME+'.control', client['com.webos.surfacemanager'])
+        role, api = (json.loads(revised[key]) for key in ('role', 'api'))
+        broker = Path(__file__).resolve().parents[1] / 'service/test-c1-lease.cjs'
+        result = subprocess.run(
+            ['node', str(broker), '--warm-policy'], text=True, capture_output=True,
+            input=json.dumps({'service': provision.LEASE_NAME, 'role': role, 'api': api}),
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        senders = ['com.webos.surfacemanager', 'com.webos.starfish.keyfilters']
+        self.assertEqual(role['allowedNames'].pop(), provision.LEASE_NAME)
+        self.assertEqual(role['permissions'].pop(), {
+            'service': provision.LEASE_NAME, 'inbound': senders, 'outbound': [],
+        })
+        self.assertEqual(api.pop('all'), [provision.LEASE_NAME+'/c1Lease', provision.LEASE_NAME+'/c1Home'])
+        self.assertEqual(provision.encoded(role), normal['role'])
+        self.assertEqual(revised['client'], normal['client'])
+        self.assertEqual(provision.encoded(api), normal['api'])
+        self.assertEqual(revised['service'], normal['service'].replace(
+            ('Name=' + provision.NAME).encode(), ('Name=' + provision.NAME + ';' + provision.LEASE_NAME).encode(),
+        ))
 
 
 class PrivateAliasProvisionTests(unittest.TestCase):
@@ -94,13 +106,30 @@ class PrivateAliasProvisionTests(unittest.TestCase):
             with patch.object(p,'rpc') as rpc,self.assertRaises(ValueError):p.rollback()
             rpc.assert_not_called();self.assertEqual(files['service'].read_text(),'concurrent edit')
 
-    def test_updater_repairs_shared_activation_after_package_replacement(self):
+    def test_updater_repairs_ordinary_registration_from_recorded_hashes(self):
         from types import SimpleNamespace
         from updater.device import Device
-        with self.fixture() as (p,state,alias,original,files):
-            p.apply();files['service'].write_text(original['service'])
-            device=Device.__new__(Device);device.code=Path(__file__).parents[1];device.root_state=state
-            spec=SimpleNamespace(loader=SimpleNamespace(exec_module=lambda module:None))
-            with patch('importlib.util.spec_from_file_location',return_value=spec),patch('importlib.util.module_from_spec',return_value=p),patch('updater.device.safe_bytes',side_effect=lambda path,**kwargs:path.read_bytes()),patch.object(p,'refresh'),patch.object(p,'rpc',return_value={'root':True}):
+
+        with self.fixture() as (p, state, alias, original, files):
+            (state/'release.json').write_text(json.dumps({'capabilities': p.WALLPAPER_CAPABILITIES}))
+            p.apply()
+            enrolled = files['service'].read_bytes()
+            self.assertNotIn(p.LEASE_NAME.encode(), enrolled)
+            self.assertFalse(alias.exists())
+            device = Device.__new__(Device)
+            device.code = Path(__file__).parents[1]
+            device.root_state = state
+            spec = SimpleNamespace(loader=SimpleNamespace(exec_module=lambda module: None))
+            with patch('importlib.util.spec_from_file_location', return_value=spec), \
+                 patch('importlib.util.module_from_spec', return_value=p), \
+                 patch('updater.device.safe_bytes', side_effect=lambda path, **kwargs: path.read_bytes()), \
+                 patch.object(p, 'refresh') as refresh, patch.object(p, 'rpc', return_value={'root': True}):
+                files['service'].write_text(original['service'])
                 device.repair_registration()
-            self.assertIn('Name='+p.NAME+';'+p.LEASE_NAME,files['service'].read_text());self.assertFalse(alias.exists())
+                self.assertEqual(files['service'].read_bytes(), enrolled)
+                refresh.assert_called_once()
+                files['service'].write_bytes(b'foreign registration')
+                with self.assertRaisesRegex(ValueError, 'Root service registration conflict'):
+                    device.repair_registration()
+                self.assertEqual(files['service'].read_bytes(), b'foreign registration')
+                refresh.assert_called_once()

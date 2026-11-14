@@ -80,8 +80,8 @@ when forcibly closing the foreground app. That mechanism is not part of this
 native-Home backend. See the [pinned implementation](https://github.com/rorygallagher2024/glasshouse/blob/0d5007aac997d23d2405cfe4f7aad42a1685bb1f/server/lib/home.js#L1335).
 
 The same fresh-install, emergency-stop, explicit re-enable, restore and disabled
-OTA rules apply to both runtime variants. No new state layout, LS2 permission or
-network endpoint is added. Host tests are not physical TV acceptance.
+OTA rules apply to both runtime variants. They share the same LS2 caller policy.
+Host tests are not physical TV acceptance.
 
 Before device installation reservation and before activation, admission checks
 the observed model/firmware/SDK, native ARM32 Home, 32-bit interpreter/input ABI,
@@ -140,7 +140,22 @@ Triple Home, long Back, Open LG Home, lease loss, controller loss, trial expiry 
 
 State is root-owned under `/var/lib/clean-your-tv-root/c1-keyfilter` (0700), with volatile guardian state under `/tmp/clean-your-tv-root-keyfilter`. The selected marker remains `home-backend.json`. A native guardian requires independent emergency-input, lifecycle-controller and service-broker leases. The filter expires its own in-memory lease and passes Home to LG when authority is lost. Healthy Home requests and lifecycle returns both use the guardian's fixed `--home TOKEN` operation. Durable stop revokes authority before waiting for an in-flight launch and closing only the owned Root app, then requesting LG Home. Recovery never signals a journal PID. SIGKILL cannot execute guardian UI cleanup: the compositor lease expires independently, but explicit Restore may still be needed to close retained Root UI and reconcile the owned chain.
 
-The private Root service owns the LS2 alias `com.webos.cleanyourtv.root.lease`. Root provisioning adds its name to the existing project activation record and snapshots the exact original; it is not advertised as a developer-package service outside the application ID. Only authenticated `com.webos.surfacemanager` may call its two methods, `c1Lease` and `c1Home`. The alias accepts no arbitrary command or application ID. The existing activation-file path remains registered by the package manifest; LS2 supports multiple names in its semicolon-delimited `Name` field. Vendor compositor roles are not edited. No network endpoint is added. The System Profile backend does not activate this alias.
+The private Root service owns the LS2 alias `com.webos.cleanyourtv.root.lease`.
+Provisioning adds it to the existing activation file's semicolon-delimited `Name`
+field and snapshots the original. The developer package advertises only its
+application-prefixed service. The alias exposes `c1Lease` and `c1Home` to the exact
+authenticated LS2 sender names `com.webos.surfacemanager` and
+`com.webos.starfish.keyfilters`. The inspected W21U, W21O and W21A factory Qt
+clients on 03.53.45 register the second name for the filter, and their compositor
+roles also permit the historical name. The broker reads the sender service name
+from LS2. Lease, token and Stop checks still apply. System Profile provisioning
+does not activate the alias. Factory inspection and host fixtures leave
+activation and physical Home routing on target hardware unverified.
+
+An existing finalized experimental installation keeps its recorded LS2
+registration. To adopt the corrected caller policy, use verified full removal
+and then a fresh experimental install. Removal restores the recorded LS2 bytes
+and ownership before package removal. Normal Root OTA excludes this backend.
 
 Restore retires the guardian and controller before removing exactly the owned configd chain entry. Foreign entries are preserved. Concurrent or unexpected edits, failed UI release and uncertain retirement retain recovery evidence. Do not delete journals, private files or stop latches to bypass refusal. Full C1 removal still refuses when other No-root components remain; remove those through their normal flow first. Root and System Updater reject experimental/orphaned state.
 

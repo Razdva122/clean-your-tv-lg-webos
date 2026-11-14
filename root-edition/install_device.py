@@ -702,10 +702,11 @@ class LocalDevice:
                     # Current verified runtime reads old state as data. Guardian,
                     # key-up and emergency restoration execute before unregister.
                     program=('import sys,json;sys.path.insert(0,'+repr(str(self.payload/'root-updater'))+');'
-                             'from clean_removal import runtime_restore;'
-                             'print(json.dumps(runtime_restore('+repr(str(self.payload/'root'))+')))')
+                             'from clean_removal import runtime_restore_report;'
+                             'reply=runtime_restore_report('+repr(str(self.payload/'root'))+');'
+                             'print(json.dumps(reply),flush=True);sys.exit(0 if reply["returnValue"] is True else 1)')
                     with cleanup_step('runtime-restore'):
-                        restored=deploy.command([sys.executable,'-I','-B','-c',program])
+                        restored=self.cleanup_child(program)
                         if restored.get('result') not in ('restored','absent'):raise ValueError('controls_restore_unverified')
                         if restored.get('native_restored_sha256') is not None:
                             record['native_restored_sha256']=restored['native_restored_sha256']
@@ -1079,7 +1080,6 @@ class LocalDevice:
             and not os.path.lexists('/var/webos-profile/override/clean-your-tv-root.json'))
 
     def compositor_stock(self, record, *, retire_orphan=False):
-        import deploy
         if self.payload is None:
             result=subprocess.run(['/usr/bin/node',str(Path(__file__).parent/'cleanup_tail.js'),
                 'stock-proof',record['operation'],'-','-1','-1','-1','-',record['removal']],
@@ -1090,12 +1090,16 @@ class LocalDevice:
                  'from clean_removal import compositor_stock_report;'
                  'reply=compositor_stock_report('+repr(str(self.payload/'root'))+option+');'
                  'print(json.dumps(reply),flush=True);sys.exit(0 if reply["returnValue"] is True else 1)')
+        return self.cleanup_child(program)['result']
+
+    def cleanup_child(self, program):
+        import deploy
         try:
-            return deploy.command([sys.executable,'-I','-B','-c',program])['result']
+            return deploy.command([sys.executable,'-I','-B','-c',program])
         except subprocess.CalledProcessError as error:
-            # This exact child invocation supplies evidence only, never a route.
+            # A failed current child can report diagnostic context, never proof.
             try:
-                if isinstance(error.stdout,(str,bytes)) and len(error.stdout)<=8192:
+                if error.returncode == 1 and isinstance(error.stdout,(str,bytes)) and len(error.stdout)<=8192:
                     reply=json.loads(error.stdout)
                     if isinstance(reply,dict) and reply.get('returnValue') is False:
                         from install_driver import cleanup_probe_details

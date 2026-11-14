@@ -94,7 +94,7 @@ class UpdateTests(unittest.TestCase):
     def test_cli_gate_prevents_tv_connection_and_skips_pending_recovery(self):
         update=self.updates()
         profile={'host':'192.0.2.1','edition':'root','port':22}
-        with tempfile.TemporaryDirectory() as directory, patch('cytv.cli.choose_profile', return_value=profile), patch('cytv.package.verify_payload', side_effect=RuntimeError('stop after gate')) as payload:
+        with tempfile.TemporaryDirectory() as directory, patch('cytv.cli.choose_profile', return_value=(profile, False)), patch('cytv.package.verify_payload', side_effect=RuntimeError('stop after gate')) as payload:
             with patch.object(update, 'offer', return_value=False) as offer:
                 self.assertEqual(cli.main(['--data-dir',directory], write=lambda _:None, check_updates=True),0)
                 payload.assert_not_called()
