@@ -1,7 +1,22 @@
 {
   "schema": 1,
   "version": null,
-  "changes": [],
+  "changes": [
+    {
+      "pr": 640,
+      "issues": [
+        615
+      ],
+      "summary": "Allow the stock LG screensaver during verified Root removal"
+    },
+    {
+      "pr": 642,
+      "issues": [
+        152
+      ],
+      "summary": "Identify protected apps in No-root cleanup reports"
+    }
+  ],
   "excluded": [],
   "acceptance": ""
 }
