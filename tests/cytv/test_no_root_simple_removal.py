@@ -20,7 +20,7 @@ from cytv.state import Store, target
 class Remote:
     def __init__(self, root):
         self.root=root;self.apps=set();self.calls=[];self.cut=None;self.broken_service=False;self.reject=None;self.transform=lambda code:code
-        self.os_cleanup=False;self.cut_boot_create=False;self.command_limit=None;self.commands=[]
+        self.os_cleanup=False;self.legacy_vendor=set();self.leave_executable=False;self.leave_registration=False;self.sam={};self.cut_boot_create=False;self.command_limit=None;self.commands=[]
         self.boot='11111111-1111-1111-1111-111111111111'
 
     def run(self, command, data=None, timeout=30):
@@ -36,6 +36,7 @@ class Remote:
             request=json.loads(encoded)
         else:request=json.loads(words[-1])
         code=self.assert_program.replace('/media/developer',str(self.root/'developer')).replace('/var/luna-service2-dev',str(self.root/'bus'))
+        code=code.replace('/var/palm/ls2-dev',str(self.root/'legacy-bus'))
         code=code.replace('/var/lib',str(self.root/'varlib')).replace('/var/webos-profile',str(self.root/'profiles'))
         code=code.replace('/proc/sys/kernel/random/boot_id',str(self.root/'boot'))
         code=code.replace("'/proc/'",json.dumps(str(self.root/'proc')+'/'))
@@ -74,16 +75,28 @@ class Remote:
             return {'returnValue':True,'apps':result}
         if uri == 'com.webos.appInstallService/status':return {'returnValue':True,'status':{'apps':[]}}
         if uri.endswith('/getAllInputStatus'):return {'returnValue':True,'devices':[]}
+        if uri.endswith('/getAppInfo'):
+            if self.sam is None:
+                raise TVRejected('Denied', {'returnValue':False,'errorCode':-1},uri)
+            return self.sam.get(payload['id'], {'returnValue':False})
         if uri.endswith('/dev/remove'):
             app=payload['id']
             if self.reject:
                 reason=self.reject;self.reject=None;raise TVRejected('TV rejected removal.',reason,uri)
             self.apps.discard(app)
+            service='com.gathin.tvhome.renewal' if app=='com.gathin.tvhome' else app+'.service'
+            if app in self.legacy_vendor:
+                self.legacy_vendor.remove(app)
+                if self.sam is not None:
+                    self.sam.pop(app, None)
+                registration = self.root/'legacy-bus/services/pub'/(service+'.service')
+                if registration.is_file() and not self.leave_registration:
+                    registration.parent.chmod(0o755)  # The vendor has write access.
+                    registration.unlink()
             if self.os_cleanup:
-                service='com.gathin.tvhome.renewal' if app=='com.gathin.tvhome' else app+'.service'
                 for kind,name in [('applications',app),('packages',app),('services',service)]:
                     directory=self.root/'developer/apps/usr/palm'/kind/name
-                    if directory.exists():
+                    if directory.exists() and not (self.leave_executable and kind=='services'):
                         directory.chmod(0o755)
                         for parent,dirs,files in os.walk(directory):
                             for name in dirs:(Path(parent)/name).chmod(0o755)
@@ -92,7 +105,8 @@ class Remote:
             if roles.exists():
                 # Model package-manager privilege; SDK sweep itself cannot chmod.
                 roles.chmod(0o755)
-                for file in roles.glob(app+'.*'):file.unlink()
+                for name in (app+'.json',app+'.app.json',service+'.json'):
+                    (roles/name).unlink(missing_ok=True)
             if self.cut==app:self.cut=None;raise UserError('Connection to the TV was lost. Reconnect and choose Retry.')
             return {'returnValue':True,'id':app,'details':{'state':'removed'}}
         if uri=='com.gathin.tvhome.renewal/disable':return {'returnValue':True,'state':{'enabled':False}}
@@ -1823,6 +1837,128 @@ class SimpleRemoval(unittest.TestCase):
         self.assertEqual(failure['no_root_cleanup'], details)
         self.assertEqual(failure['first_failure']['no_root_cleanup'], details)
         self.assertNotIn(role.name, json.dumps(failure))
+
+    def legacy_paths(self):
+        (self.root/'proc').mkdir()
+        public = self.root/'legacy-bus/services/pub'
+        public.mkdir(parents=True)
+        self.addCleanup(lambda: public.chmod(0o755) if public.exists() else None)
+        return public
+
+    def legacy_package(self, metadata=None):
+        app = self.cleanup.APPS[1]
+        self.remote.os_cleanup = True
+        self.remote.legacy_vendor.add(app)
+        self.remote.sam = None
+        public = self.legacy_paths()
+        registration = public/'com.gathin.tvhome.renewal.service'
+        registration.write_text('[D-BUS Service]\nName=com.gathin.tvhome.renewal\n'
+                                'Exec=/usr/bin/run-js-service com.gathin.tvhome.renewal\n')
+        public.chmod(0o555)
+        source = self.own_file('apps/usr/palm/services/com.gathin.tvhome.renewal/service.js')
+        source.parent.chmod(0o555)
+        if metadata is not None:
+            packageinfo = self.own_file('apps/usr/palm/packages/'+app+'/packageinfo.json',metadata)
+            if metadata == 'unreadable':
+                packageinfo.chmod(0)
+        return app, source, registration
+
+    def vendor_removals(self):
+        return [body['id'] for uri, body in self.remote.calls if uri.endswith('/dev/remove')]
+
+    @unittest.skipIf(getattr(os,'getuid',lambda:-1)()==0,'unprivileged SDK model')
+    def test_legacy_omitted_target_uses_vendor_with_missing_or_inaccessible_optional_metadata(self):
+        for metadata in (None, 'not json', 'unreadable'):
+            with self.subTest(metadata=metadata):
+                case = SimpleRemoval()
+                case.setUp()
+                try:
+                    app, source, registration = case.legacy_package(metadata)
+                    case.model_owners({source.parent:(0,0),source.parent.parent:(501,20)})
+                    if metadata is None:
+                        # The readable legacy registry is not needed for nomination.
+                        shutil.rmtree(registration.parent)
+                        case.remote.leave_registration = True
+                    role = case.root/'bus/roles.d'/(app+'.foreign.json')
+                    role.parent.mkdir()
+                    role.write_text('preserve')
+                    result = case.remove()
+                    self.assertTrue(result['verified_clean'])
+                    self.assertEqual(case.vendor_removals(),[app])
+                    self.assertFalse(source.exists())
+                    self.assertFalse(registration.exists())
+                    self.assertEqual(role.read_text(),'preserve')
+                    self.assertEqual(result.get('legacy_registrations_unverified',False),metadata is not None)
+                finally:
+                    case.doCleanups()
+
+    @unittest.skipIf(getattr(os,'getuid',lambda:-1)()==0,'unprivileged SDK model')
+    def test_legacy_terminal_does_not_certify_visible_executable_or_registration_remnants(self):
+        for remaining in ('executable','registration'):
+            with self.subTest(remaining=remaining):
+                case = SimpleRemoval()
+                case.setUp()
+                try:
+                    app, source, registration = case.legacy_package()
+                    case.remote.leave_executable = remaining == 'executable'
+                    case.remote.leave_registration = remaining == 'registration'
+                    with self.assertRaises(UserError) as caught:
+                        case.remove()
+                    pending = case.store.pending(case.profile)
+                    self.assertEqual(pending['removals'],{app:'terminal'})
+                    self.assertEqual(caught.exception.reason_code,'cleanup-check-failed')
+                    self.assertEqual(caught.exception.no_root_cleanup['blocked_areas'],
+                                     ['service' if remaining == 'executable' else 'ls2-registration'])
+                    self.assertTrue((source if remaining == 'executable' else registration).exists())
+                finally:
+                    case.doCleanups()
+
+    def test_legacy_vendor_rejection_keeps_the_actual_failure(self):
+        app, source, _ = self.legacy_package()
+        independent = self.cleanup.APPS[2]
+        self.remote.apps.add(independent)
+        self.remote.reject = {'returnValue':False,'errorCode':-102}
+        with self.assertRaises(TVRejected) as caught:
+            self.remove()
+        self.assertEqual(caught.exception.reason_code,'removal-failed')
+        self.assertEqual(self.vendor_removals(),[app,independent])
+        self.assertEqual(self.store.pending(self.profile)['removals'],{independent:'terminal'})
+        self.assertTrue(source.exists())
+        self.assertTrue(self.remove()['verified_clean'])
+        self.assertEqual(self.vendor_removals(),[app,independent,app])
+
+    @unittest.skipIf(getattr(os,'getuid',lambda:-1)()==0,'unprivileged SDK model')
+    def test_unsearchable_legacy_parent_never_nominates_a_target_or_verifies_absence(self):
+        self.legacy_paths()
+        for real_leaf in (False, True):
+            with self.subTest(real_leaf=real_leaf):
+                apps = self.root/'developer/apps/usr/palm/applications'
+                apps.mkdir(parents=True,exist_ok=True)
+                if real_leaf:
+                    (apps/self.cleanup.APPS[1]).mkdir()
+                apps.chmod(0)
+                try:
+                    with self.assertRaises(UserError) as caught:
+                        self.remove()
+                    self.assertEqual(caught.exception.reason_code,'cleanup-check-failed')
+                    self.assertEqual(self.vendor_removals(),[])
+                    self.assertFalse(self.store.pending(self.profile).get('cleanup_boot_proof'))
+                finally:
+                    apps.chmod(0o755)
+
+    def test_legacy_exact_sam_can_nominate_but_different_path_cannot(self):
+        public = self.legacy_paths()
+        app = self.cleanup.APPS[1]
+        self.remote.legacy_vendor.add(app)
+        info = {'id':app,'folderPath':'/usr/palm/applications/'+app}
+        self.remote.sam[app] = {'returnValue':True,'appId':app,'appInfo':info}
+        with self.assertRaises(UserError):
+            self.remove()
+        self.assertEqual(self.vendor_removals(),[])
+        info['folderPath'] = '/media/developer/apps/usr/palm/applications/'+app
+        self.assertTrue(self.remove()['verified_clean'])
+        self.assertEqual(self.vendor_removals(),[app])
+        self.assertTrue(public.exists())
 
     def test_previous_cleanup_package_is_removed_as_a_registered_app(self):
         app = 'com.local.nativehome'

@@ -39,6 +39,13 @@ var services=['com.local.nativehome.service','com.gathin.tvhome.renewal','com.cl
 var reply={schema:1,present:[],blocked:[],root_present:[],startup_services:[],external_update_hint:null,resident_installer:false,staging_ids:input.staging_ids||[]};
 if(!Array.isArray(reply.staging_ids)||reply.staging_ids.length>128||reply.staging_ids.some(function(id){return typeof id!=='string'||!/^[a-f0-9]{32}$/.test(id);}))throw Error('invalid-staging-scope');
 function exists(p){try{return fs.lstatSync(p);}catch(e){if(e.code==='ENOENT')return null;throw e;}}
+// Inspect fixed names without listing or following a symlinked ancestor.
+function exact(p,dir){
+ var parent=path.dirname(p);
+ if(parent!==p&&!exact(parent,true))return null;
+ var s=exists(p);if(s&&(s.isSymbolicLink()||(dir?!s.isDirectory():!s.isFile())))fail();
+ return s;
+}
 function same(a,b){return a.dev===b.dev&&a.ino===b.ino;}
 function fail(){throw Error('unsafe-path');}
 function ancestry(p){for(;;){var s=fs.lstatSync(p),sdk=[publicRoot,'/media/developer','/media/developer/apps','/media/developer/apps/usr',base,base+'/applications',base+'/packages',base+'/services'].indexOf(p)>=0;
@@ -65,6 +72,30 @@ function remove(p,expected){
 }
 function blocked(scope,error){reply.blocked.push({scope:scope,reason:error.code==='EACCES'||error.code==='EPERM'?'permission-denied':'unsafe-path'});}
 function visit(p,scope){try{var s=exists(p);if(!s)return;if(input.action==='sweep'||input.action==='root-package')remove(p,s);if(exists(p))reply.present.push(scope);}catch(e){blocked(scope,e);}}
+function developerBlocked(scope,error){blocked(scope,error);reply.blocked[reply.blocked.length-1].developer_path=true;}
+function developerVisit(p,scope,app,peer){
+ var s;
+ try{
+  s=exact(p,!!app);if(!s)return;
+  if(app&&input.action==='inventory'){
+   ancestry(path.dirname(p)); // Keep the existing foreign-ancestor checks.
+   if([0,uid,5999,501,1001].indexOf(s.uid)<0)fail();
+   if(reply.footprints.indexOf(app)<0)reply.footprints.push(app);
+   var parent=fs.lstatSync(path.dirname(p)),groups=process.getgroups();
+   var permits=function(stat,bits){
+    var shift=stat.uid===uid?6:groups.indexOf(stat.gid)>=0?3:0;
+    return ((stat.mode>>shift)&bits)===bits;
+   };
+   if((!permits(s,7)||!permits(parent,3))&&reply.protected_targets.indexOf(app)<0)
+    reply.protected_targets.push(app);
+  }
+  if(input.action==='sweep')remove(p,s);
+  if(exact(p,!!app))reply.present.push(scope);
+ }catch(e){
+  if(peer&&!s&&(e.code==='EACCES'||e.code==='EPERM'))reply.legacy_registrations_unverified=true;
+  else developerBlocked(scope,e);
+ }
+}
 function rootHint(p,scope){try{if(exists(p))reply.root_present.push(scope);}catch(e){if(e.code==='EACCES')reply.root_present.push(scope);else blocked(scope,e);}}
 // Every boot identity/proof rule lives in the shared host-bundled contract.
 if(input.action.indexOf('boot-')===0){
@@ -80,7 +111,13 @@ if(input.action==='root-package'){
 }
 ['clean-your-tv-root','clean-your-tv-installation','clean-your-tv-python','clean-your-tv-root-updater','clean-your-tv-system-updater'].forEach(function(name){rootHint('/var/lib/'+name,name);});
 rootHint('/var/webos-profile/override/clean-your-tv-root.json','root-profile');
-services.slice(0,2).forEach(function(service){try{var dir=base+'/services/'+service,s=exists(dir);if(s&&s.isDirectory()){ancestry(path.dirname(dir));at(dir,s,function(){var source=exists('service.js');if(source&&source.isFile())reply.startup_services.push(service);});}}catch(e){blocked('startup-service '+service,e);}});
+services.slice(0,2).forEach(function(service){
+ if(input.guard_owner){
+  try{if(exact(base+'/services/'+service+'/service.js',false))reply.startup_services.push(service);}
+  catch(e){developerBlocked('startup-service '+service,e);}
+  return;
+ }
+ try{var dir=base+'/services/'+service,s=exists(dir);if(s&&s.isDirectory()){ancestry(path.dirname(dir));at(dir,s,function(){var source=exists('service.js');if(source&&source.isFile())reply.startup_services.push(service);});}}catch(e){blocked('startup-service '+service,e);}});
 try{
  var journal=base+'/services/'+services[2]+'/state/transaction.json',transactionStat=exists(journal);
  if(transactionStat){ancestry(path.dirname(journal));if(!transactionStat.isFile()||transactionStat.nlink!==1||transactionStat.size>5242880)fail();
@@ -253,7 +290,8 @@ function helperState(state){
 }
 if(input.action==='stop'){
  var state=base+'/applications/'+apps[0]+'/state',s=null;
- try{s=exists(state);}catch(e){blocked('helper-control',e);}
+ try{s=input.guard_owner?exact(state,true):exists(state);}
+ catch(e){if(input.guard_owner)developerBlocked('helper-control',e);else blocked('helper-control',e);}
  if(s)try{
   helperState(state);
   (function(){
@@ -275,7 +313,7 @@ if(input.action==='stop'){
  var deadline=Date.now()+8000;
  var stopped=function(){var running=false;
   try{
-   var pidFile=state+'/controller.pid',pidStat=exists(pidFile);
+   var pidFile=state+'/controller.pid',pidStat=input.guard_owner&&!exact(state,true)?null:exists(pidFile);
    if(pidStat){
     helperState(state);
     if(pidStat.isDirectory()||(pidStat.isFile()&&pidStat.nlink===1&&pidStat.size>32)){
@@ -293,12 +331,45 @@ if(input.action==='stop'){
     }
    }
   }
-  catch(e){blocked('helper-control',e);}
+  catch(e){if(input.guard_owner)developerBlocked('helper-control',e);else blocked('helper-control',e);}
   if(running&&Date.now()<deadline){setTimeout(stopped,100);return;}
   reply.controller_running=running;process.stdout.write(JSON.stringify(reply));
  };stopped();return;
 }
-apps.forEach(function(app,index){visit(base+'/applications/'+app,app+' app');visit(base+'/packages/'+app,app+' package');visit(base+'/services/'+services[index],app+' service');});
+if(input.guard_owner){reply.footprints=[];reply.protected_targets=[];reply.legacy_registered=[];}
+apps.forEach(function(app,index){
+ function project(p,area){
+  if(input.guard_owner)developerVisit(base+p,app+' '+area,app);
+  else visit(base+p,app+' '+area);
+ }
+ project('/applications/'+app,'app');project('/packages/'+app,'package');project('/services/'+services[index],'service');
+});
+if(input.guard_owner){
+ var legacy='/var/palm/ls2-dev',pub=legacy+'/services/pub';
+ try{reply.legacy_layout=!!exact(pub,true);}
+ catch(e){developerBlocked('registrations legacy-public',e);}
+ if(reply.legacy_layout){
+  var registrations=function(folder,ids,suffix,peer){
+   var dir=legacy+'/'+folder;
+   try{
+    if(!exact(dir,true)){if(peer)reply.legacy_registrations_unverified=true;return;}
+   }catch(e){
+    if(peer&&(e.code==='EACCES'||e.code==='EPERM'))reply.legacy_registrations_unverified=true;
+    else developerBlocked('registrations '+folder,e);
+    return;
+   }
+   ids.forEach(function(id){
+    var name=id+suffix,n=reply.present.length;
+    developerVisit(dir+'/'+name,'registration '+name,null,peer);
+    if(!peer&&reply.present.length>n)reply.legacy_registered.push(apps[services.indexOf(id)]);
+   });
+  };
+  registrations('services/pub',services,'.service',false);
+  registrations('services/prv',services,'.service',true);
+  registrations('roles/pub',apps.concat(services),'.json',true);
+  registrations('roles/prv',apps.concat(services),'.json',true);
+ }
+}
 if(!input.guard_owner)installerRoots.forEach(function(root){try{privateInstaller(root);visit(root,'installer-private');}catch(e){blocked('installer-private',e);}});
 // Only fixed project registration names. Existing foreign roles/routes are not
 // inferred to belong to this project merely because they reference an app.
@@ -443,10 +514,15 @@ def _protected_package(row):
 def _check_access(value, defer_packages=False, *, sweep=False, guard=False):
     optional = ('installer-staging', 'installer-private') if guard else ('installer-staging',)
     blocked = [row for row in value['blocked'] if row.get('scope') not in optional
-               and not (defer_packages and _protected_package(row))]
-    if value['root_present'] or any(row.get('reason') == 'permission-denied' for row in blocked):
-        error = UserError(ROOT_MESSAGE, reason_code='root-access-required')
-        if sweep:
+               and not (defer_packages and (_protected_package(row) or
+                        row.get('developer_path') and row.get('reason') == 'permission-denied'))]
+    access_denied = [row for row in blocked if row.get('reason') == 'permission-denied']
+    root_required = value['root_present'] or any(not row.get('developer_path') for row in access_denied)
+    if root_required or access_denied:
+        error = (UserError(ROOT_MESSAGE, reason_code='root-access-required') if root_required else
+                 UserError('Developer Mode could not verify removal of some project files. Save a diagnostic report from Recovery options.',
+                           reason_code='cleanup-check-failed'))
+        if sweep or not root_required:
             areas = ['root-location'] if value['root_present'] else []
             for row in blocked:
                 if row.get('reason') != 'permission-denied':
@@ -459,6 +535,32 @@ def _check_access(value, defer_packages=False, *, sweep=False, guard=False):
         raise error
     if blocked:
         raise UserError('Some project paths changed. Close other installers, then review recovery options.')
+
+
+def _exact_developer_app(installer, app):
+    uri = 'com.webos.applicationManager/getAppInfo'
+    try:
+        result = installer.remote.luna(uri, {'id': app}, timeout=5)
+    except TVRejected:
+        return None
+    except UserError as error:
+        if error.reason_code == 'operation-timeout':
+            return None
+        raise
+    info = result.get('appInfo') if isinstance(result, dict) and result.get('returnValue') is True else None
+    if not isinstance(info, dict) or not isinstance(info.get('id'), str) or not isinstance(info.get('folderPath'), str):
+        return False
+    if (result.get('appId', app) != app or info.get('id') != app or
+            info.get('folderPath') not in (f'/media/developer/apps/usr/palm/applications/{app}',
+                                           f'/media/developer/apps/usr/palm/applications/{app}/')):
+        raise UserError('The TV returned a different application location. Recovery data was kept.',
+                        reason_code='cleanup-check-failed')
+    return True
+
+
+def _has_developer_target(observation, app):
+    return (app in observation.get('protected_targets', ()) or
+            app in observation.get('footprints', ()) and app in observation.get('legacy_registered', ()))
 
 
 def _remove_package(installer, app):
@@ -603,8 +705,11 @@ def continue_removal(installer, expected_pending):
         check(final)
         remaining = [scope for scope in final['present']
                      if scope != 'installer-staging' and not scope.startswith('installer-staging ')]
-        if remaining or {app['id'] for app in installer.installed_apps()}.intersection(APPS):
-            raise UserError('Final cleanup could not be verified. Review recovery options before continuing.')
+        catalog_remains = {app['id'] for app in installer.installed_apps()}.intersection(APPS)
+        if remaining or catalog_remains or (guard and final.get('legacy_layout')
+                and any(_exact_developer_app(installer, app) for app in APPS)):
+            raise UserError('Final cleanup could not be verified. Review recovery options before continuing.',
+                            reason_code='cleanup-check-failed')
         return final, wait_for_stopped_processes(require_idle)
 
     def finish(result):
@@ -615,6 +720,8 @@ def continue_removal(installer, expected_pending):
                 result = dict(result, temporary_files_retained=True)
                 store.checkpoint(profile, result=result)
                 installer.progress('Some temporary recovery files were kept.')
+        if result.get('legacy_registrations_unverified'):
+            installer.progress('Developer Mode could not inspect all legacy service registration directories.')
         release(installer)
         store.finish_clean_removal(profile)
         return result
@@ -748,6 +855,12 @@ def continue_removal(installer, expected_pending):
             store.checkpoint(profile, cleanup_staging_ids=current['staging_ids'])
             cancellation = current.get('cancellation', {})
         apps, carriers = catalog()
+    targets = apps.copy()
+    if guard:
+        for app in APPS:
+            if app not in apps and (_has_developer_target(current, app) or
+                    (current.get('legacy_layout') and _exact_developer_app(installer, app))):
+                targets.add(app)
 
     # A proof predating our new vendor request cannot settle that request.
     if submitted and not package_idle and not (new_kernel and 'package-removal-unverified' in boot_triggers):
@@ -763,10 +876,10 @@ def continue_removal(installer, expected_pending):
              isinstance(previous.get('removals'), dict) and 'submitted' in previous['removals'].values()))
     older_request = older_request or not guard and uncertain_install
     older_pending = older_request and not (package_idle or new_kernel)
-    if older_pending and (not guard or not apps.intersection(APPS)):
+    if older_pending and (not guard or not targets.intersection(APPS)):
         return require_restart(['prior-operation-unresolved'])
     original_package_settled = package_idle or new_kernel and 'original-package-unverified' in boot_triggers
-    if bound_package_pending and not original_package_settled and not apps.intersection(APPS):
+    if bound_package_pending and not original_package_settled and not targets.intersection(APPS):
         return require_restart(['original-package-unverified'], rearm=proof is not None
                                and 'original-package-unverified' not in boot_triggers)
     installer.progress('Restoring TV controls…')
@@ -778,9 +891,10 @@ def continue_removal(installer, expected_pending):
         if not new_kernel:
             return require_restart(['invalid-helper-stop-record'])
     unavailable = set(pending.get('cleanup_startup_unavailable', []))
-    inaccessible_packages = {_protected_package(row) for row in current['blocked'] + stopped['blocked']}
+    inaccessible_packages = {_protected_package(row) for row in current['blocked'] + stopped['blocked']
+                             if not row.get('developer_path')}
     inaccessible_packages.discard(None)
-    startup_access_blocked = not restarted and bool(inaccessible_packages - apps)
+    startup_access_blocked = not restarted and bool(inaccessible_packages - targets)
     startup_disable_unverified = False
     inaccessible_startup = ({row['scope'] for row in current['blocked'] + stopped['blocked']
                              if _protected_package(row)} if invalid_stop_record else set())
@@ -811,7 +925,7 @@ def continue_removal(installer, expected_pending):
             # undeletable. Check the SSH connection, then move restart earlier.
             device('inventory')
             unavailable.add(service)
-            startup_disable_unverified |= invalid_stop_record or app not in apps
+            startup_disable_unverified |= invalid_stop_record or app not in targets
     if unavailable:
         installer.store.checkpoint(installer.profile, cleanup_startup_unavailable=sorted(unavailable))
     if guard:
@@ -842,13 +956,21 @@ def continue_removal(installer, expected_pending):
         if invalid_stop_record:
             raise UserError('Removal could not be verified. Review recovery options before continuing.', reason_code='cleanup-check-failed')
         return require_restart(['process-idle-unverified'], rearm=restarted)
+    rejected = None
     for app, message in zip(APPS, ('Removing Helper…', 'Removing Home…', 'Removing the updater…')):
-        if app not in apps:
+        if app not in targets:
             continue
         if removals.get(app) == 'terminal':
-            raise UserError('A removed package is present again. Recovery data was kept.', reason_code='removal-failed')
+            if app in apps:
+                raise UserError('A removed package is present again. Recovery data was kept.', reason_code='removal-failed')
+            # A surviving exact footprint still needs readback or safe sweep.
+            continue
         if guard:
-            device('inventory')
+            fresh = device('inventory')
+            check(fresh, defer_packages=True)
+            if app not in apps and not (_has_developer_target(fresh, app) or
+                    (fresh.get('legacy_layout') and _exact_developer_app(installer, app))):
+                continue
         installer.progress(message)
         removals[app] = 'submitted'
         checkpoint = {'stage': 'package-removal', 'removals': removals}
@@ -866,9 +988,16 @@ def continue_removal(installer, expected_pending):
             if not guard or error.definite_package_removal_rejection(app):
                 removals.pop(app)
                 store.checkpoint(profile, removals=removals)
+                if app not in apps:
+                    # We know this request finished. Try independent targets,
+                    # but leave the failed target and its dependent sweep pending.
+                    rejected = rejected or error
+                    continue
             raise
         removals[app] = 'terminal'
         store.checkpoint(profile, removals=removals)
+    if rejected:
+        raise rejected
     if older_pending:
         return require_restart(['prior-operation-unresolved'])
     if 'homebrew-request-unverified' in boot_triggers and not new_kernel:
@@ -897,6 +1026,8 @@ def continue_removal(installer, expected_pending):
             store.checkpoint(profile, cleanup_boot_release_started=True)
         _device(installer, 'boot-retire' if restarted else 'boot-release', proof=proof)
     result = {'removed': True, 'verified_clean': True}
+    if final.get('legacy_registrations_unverified'):
+        result['legacy_registrations_unverified'] = True
     if final['present'] or final['blocked'] or swept['blocked']:
         result['temporary_files_retained'] = True
         installer.progress('Some temporary recovery files were kept.')

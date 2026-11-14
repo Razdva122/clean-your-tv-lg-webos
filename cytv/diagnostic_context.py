@@ -379,7 +379,7 @@ def status_summary(value):
     if updater:
         result['system_updater'] = {key: updater[key] for key in ('present', 'bootstrap_complete', 'disabled') if type(updater.get(key)) is bool}
     runtime = mapping(device.get('result', device))
-    for key in ('removed','verified_clean','private_cleanup_verified'):
+    for key in ('removed','verified_clean','private_cleanup_verified','legacy_registrations_unverified'):
         if type(value.get(key)) is bool:result[key]=value[key]
     for key in ('guardian_active', 'journal_exists', 'recovery_integrity_verified', 'home_enabled'):
         if type(runtime.get(key)) is bool:

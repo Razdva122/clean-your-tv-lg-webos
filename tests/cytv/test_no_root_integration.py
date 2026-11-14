@@ -20,6 +20,7 @@ class ProcessRemote(Remote):
         super().__init__()
         self.root_path=root
         self.cut=False
+        self.omit=set()
         self.boot = "11111111-1111-1111-1111-111111111111"
         self.cut_after_cleanup=None
         self.transform_cleanup=lambda source: source
@@ -72,6 +73,9 @@ sys.stdin.read()
             value, _ = json.JSONDecoder().raw_decode(data.decode()[len('process.argv.push('):])
             request = json.loads(value)
             source = data.decode().replace('/media/developer/apps', str(self.root_path / 'apps'))
+            source = source.replace('/var/palm/ls2-dev', str(self.root_path / 'legacy-bus'))
+            source = source.replace('/var/lib', str(self.root_path / 'varlib'))
+            source = source.replace('/var/webos-profile', str(self.root_path / 'profiles'))
             source = source.replace('/media/developer/temp', str(self.root_path / 'public'))
             source = source.replace('/tmp/.cytv-installer', str(self.root_path / 'private'))
             source = source.replace("'/proc/'", repr(str(self.root_path / 'proc') + '/'))
@@ -141,13 +145,14 @@ sys.stdin.read()
             app = payload['id']
             apps.pop(app)
             source.write_text(json.dumps(apps))
+            (self.root_path/'legacy-bus/services/pub'/(app+'.service.service')).unlink(missing_ok=True)
             for kind, name in [('applications', app), ('packages', app),
                                ('services', app + ('.renewal' if app == operations.HOME else '.service'))]:
                 shutil.rmtree(self.root_path / 'apps/usr/palm' / kind / name, ignore_errors=True)
             return {'returnValue': True, 'id': app, 'details': {'state': 'removed'}}
         if uri.endswith('/dev/listApps'):
             source=self.root_path/'installed.json'
-            self.installed=[{'id':app,'version':version} for app,version in json.loads(source.read_text()).items()] if source.exists() else []
+            self.installed=[{'id':app,'version':version} for app,version in json.loads(source.read_text()).items() if app not in self.omit] if source.exists() else []
         return super().luna(uri,payload,**kwargs)
 
 
@@ -351,6 +356,64 @@ class OriginalOperationIntegration(unittest.TestCase):
         self.assertIsNone(self.store.pending(self.profile))
         self.installer.install(self.inventory, 'fresh-secret')
         self.assertEqual((self.root / 'requests').read_text().splitlines(), list(observer.APPS)*2)
+
+    def test_legacy_omitted_helper_removes_and_supports_fresh_install(self):
+        from cytv.errors import UserError
+
+        for lost in (False, True):
+            with self.subTest(lost=lost):
+                case = OriginalOperationIntegration()
+                case.setUp()
+                try:
+                    case.run_legacy_omitted_helper_history(lost, UserError)
+                finally:
+                    case.doCleanups()
+
+    def run_legacy_omitted_helper_history(self, lost, error_type):
+        (self.root/'proc').mkdir()
+        (self.root/'legacy-bus/services/pub').mkdir(parents=True)
+        self.remote.cut = True
+        with self.assertRaises(RuntimeError):
+            self.installer.install(self.inventory, 'original-secret')
+        app = operations.HELPER
+        self.remote.omit.add(app)
+        (self.root/'legacy-bus/services/pub'/(app+'.service.service')).write_text('[D-BUS Service]\n')
+        goal = self.store.request_clean_removal(self.profile)['removal_operation']
+        original_luna = self.remote.luna
+
+        def luna(uri, payload, **kwargs):
+            if uri.endswith('/dev/remove'):
+                reply = original_luna(uri,payload,**kwargs)
+                if lost:
+                    raise error_type('Connection interrupted', reason_code='connection-interrupted')
+                return reply
+            if uri.endswith('/getAppInfo'):
+                from cytv.errors import TVRejected
+                raise TVRejected('Denied',{'returnValue':False,'errorCode':-1},uri)
+            return original_luna(uri,payload,**kwargs)
+
+        self.remote.luna = luna
+        if lost:
+            with self.assertRaises(error_type):
+                self.installer.uninstall_project()
+            pending = self.store.pending(self.profile)
+            self.assertEqual(pending['removal_operation'],goal)
+            self.assertEqual(pending['removals'],{app:'submitted'})
+            self.installer.store = state.Store(self.store.root)
+
+            def idle(uri, payload, **kwargs):
+                if uri.endswith('/status'):
+                    return {'returnValue':True,'status':{'apps':[]}}
+                return luna(uri,payload,**kwargs)
+            self.remote.luna = idle
+        self.assertTrue(self.installer.uninstall_project()['verified_clean'])
+        self.assertIsNone(self.store.pending(self.profile))
+        self.assertEqual([call[2]['id'] for call in self.remote.calls if call[1].endswith('/dev/remove')],[app])
+        completed = json.loads((self.store.device_dir(self.profile)/'clean-removal.json').read_text())
+        self.assertEqual(completed['removal_operation'],goal)
+        self.remote.omit.clear()
+        self.installer.install(self.inventory,'fresh-secret')
+        self.assertEqual((self.root/'requests').read_text().splitlines(),[app,*observer.APPS])
 
     def test_second_lost_vendor_reply_needs_proof_newer_than_second_request(self):
         from cytv.errors import UserError
