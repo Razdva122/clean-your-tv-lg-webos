@@ -9,7 +9,8 @@ from time import monotonic, sleep
 
 from .errors import (TVRejected, UserError, TVCommandError, TV_STORAGE_FULL, CLEANUP_BOOT_ACTIONS,
                      OBSERVER_EXCEPTION_NAMES, OBSERVER_EXCEPTION_CODES,
-                     OBSERVER_FILESYSTEM_OPERATIONS, no_root_cleanup_details)
+                     OBSERVER_FILESYSTEM_OPERATIONS, connection_interrupted, no_root_cleanup_details)
+from .transport import LunaReplyUnconfirmed
 
 from .tv_sources import node_loader, trusted_source
 
@@ -678,23 +679,25 @@ def _remove_input_shortcut(installer):
 
 
 def restore_stock_home(installer):
-    """Old webOS has an LG Home bar rather than a launchable Home app.
-
-    Only the exact missing-app rejection admits a fresh stock-surface readback.
-    Never infer restored controls from an arbitrary app or a launch receipt.
-    """
+    """Verify stock controls when SAM cannot confirm the LG Home launch."""
     uri='com.webos.applicationManager/'
+    home = 'com.webos.app.home'
+    legacy_home = False
     try:
-        result=installer.remote.luna(uri+'launch', {'id':'com.webos.app.home'})
+        result=installer.remote.luna(uri+'launch', {'id':home})
     except TVRejected as error:
         if (error.luna.get('operation')!='application-launch' or error.luna.get('error_code')!=-101
                 or error.luna.get('return_value') is not False):
+            raise
+        legacy_home = True
+    except LunaReplyUnconfirmed:
+        if installer.profile.get('connection') == 'root-ssh':
             raise
     else:
         if isinstance(result,dict) and result.get('returnValue') is True:
             return
         raise UserError('Removal could not be verified. Review recovery options before continuing.', reason_code='controls-unverified')
-    stock={'com.webos.app.home','com.webos.app.livetv',
+    stock={home,'com.webos.app.livetv',
            'com.webos.app.hdmi1','com.webos.app.hdmi2','com.webos.app.hdmi3','com.webos.app.hdmi4'}
     message = 'Removal could not be verified. Review recovery options before continuing.'
     method = uri + 'getForegroundAppInfo'
@@ -727,11 +730,22 @@ def restore_stock_home(installer):
             app = None
             if isinstance(reply, dict):
                 accepted = reply.get('returnValue', paired is not None) is True
-                if accepted and not reply.get('pairingType'):
+                if accepted and not reply.get('pairingType') and (legacy_home or 'errorCode' not in reply):
                     app = reply.get('appId')
             if not isinstance(app, str) or not app:
                 raise UserError(message, reason_code='controls-unverified')
             return app
+
+        if not legacy_home:
+            try:
+                app = foreground()
+            except (UserError, ValueError) as error:
+                if connection_interrupted(error) or isinstance(error, TVCommandError):
+                    raise
+                raise UserError(message, reason_code='controls-unverified') from error
+            if app == home:
+                return
+            raise UserError(message, reason_code='controls-unverified')
 
         if foreground() in stock:
             return
