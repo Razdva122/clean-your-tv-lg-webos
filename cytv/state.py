@@ -92,12 +92,15 @@ class Store:
         # Capsule members and subsequently introduced links are still rejected.
         self.root = (Path(root) if root else default_dir()).resolve()
 
-    def device_dir(self, profile):
+    def device_path(self, profile):
         normalized = target(**profile)
         key = ':'.join(str(normalized[k]) for k in ('host', 'port', 'edition'))
         if normalized.get('connection'):
             key += ':' + normalized['connection']
-        path = self.root / hashlib.sha256(key.encode()).hexdigest()[:24]
+        return self.root / hashlib.sha256(key.encode()).hexdigest()[:24]
+
+    def device_dir(self, profile):
+        path = self.device_path(profile)
         path.mkdir(parents=True, exist_ok=True, mode=0o700)
         return path
 
@@ -248,27 +251,64 @@ class Store:
                 sleep(0.05 * (attempt + 1))
         return target(**json.loads(raw))
 
-    def profiles(self, *, on_access_denied=None):
+    def _saved_profile(self, directory):
+        path = directory / 'profile.json'
+        try:
+            if not stat.S_ISREG(path.stat().st_mode):
+                raise ValueError('Invalid profile file')
+            profile = self._read_profile(path)
+            if self.device_path(profile) != directory:
+                raise ValueError('Profile in the wrong directory')
+            return profile
+        except FileNotFoundError:
+            return None
+        except OSError:
+            raise LocalRecoveryError('profile-access', 'profile') from None
+        except (ValueError, TypeError):
+            raise LocalRecoveryError('profile-invalid', 'profile') from None
+
+    def saved_profile(self, selector):
+        """Read an exact saved connection key without creating its directory."""
+        return self._saved_profile(self.device_path(selector))
+
+    def profiles(self, *, on_access_denied=None, already_read=None):
+        def inaccessible():
+            if on_access_denied is None:
+                raise LocalRecoveryError('profile-access', 'profile') from None
+            on_access_denied()
+
+        # Unlike a glob, explicit enumeration and probes surface a denied root
+        # listing or child traversal. Probe only the saved-profile namespace.
+        try:
+            directories = sorted(self.root.iterdir())
+        except FileNotFoundError:
+            return []
+        except OSError:
+            inaccessible()
+            return []
         result = []
-        if self.root.exists():
-            for path in sorted(self.root.glob('*/profile.json')):
-                try:
-                    result.append(self._read_profile(path))
-                except LocalRecoveryError:
-                    if on_access_denied is None:
-                        raise
-                    on_access_denied()
+        for directory in directories:
+            if not re.fullmatch('[a-f0-9]{24}', directory.name):
+                continue
+            try:
+                profile = already_read[1] if already_read and directory == already_read[0] else self._saved_profile(directory)
+            except LocalRecoveryError as error:
+                if error.local_recovery['reason'] != 'profile-access':
+                    raise
+                inaccessible()
+            else:
+                if profile is not None:
+                    result.append(profile)
         return sorted(result, key=lambda p: (p['host'], p['port'], p['edition']))
 
     def pending(self, profile):
-        path = self.device_dir(profile) / 'operation.json'
-        if not path.exists():
-            return None
         try:
-            result = json.loads(path.read_text())
+            result = json.loads((self.device_path(profile) / 'operation.json').read_text())
             if not isinstance(result, dict) or not isinstance(result.get('action'), str):
                 raise ValueError('Invalid receipt')
             return result
+        except FileNotFoundError:
+            return None
         except (ValueError, OSError):
             return {'action': 'unknown', 'stage': 'corrupt-receipt; retain evidence and inspect TV'}
 

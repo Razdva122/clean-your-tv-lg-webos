@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (QApplication, QFileDialog, QFrame, QHBoxLayout,
 
 from cytv import __version__, cli, debloat, diagnostics, i18n
 from cytv.i18n import translate as tr
-from cytv.desktop import Channel, SSH_COMMAND_PROMPT
+from cytv.desktop import EXPLICIT_TV_CHOICE, Channel, SSH_COMMAND_PROMPT
 from cytv.gui_style import STYLE, TVPreview, Select, EditionOption, BrandSignature, WrappedLabel, ThemeCard, ToggleSwitch
 
 MAINTENANCE_ACTIONS = (
@@ -1247,7 +1247,12 @@ class Wizard(QMainWindow):
                 if key == prompt.default:
                     choices.setCurrentIndex(choices.count() - 1)
             self.form_layout.addWidget(choices)
-            self.button('Continue', lambda: self.submit(choices.currentData()), True)
+            proceed = self.button('Continue', lambda: self.submit(choices.currentData()), True)
+            if prompt.label == EXPLICIT_TV_CHOICE:
+                choices.setPlaceholderText(tr('Choose a saved TV'))
+                choices.setCurrentIndex(-1)
+                proceed.setEnabled(False)
+                choices.currentIndexChanged.connect(lambda index: proceed.setEnabled(index >= 0))
             choices.setFocus()
             if prompt.label.startswith('TV number'):
                 # Saved-TV menus also use this label; retry is offered only for discovery.

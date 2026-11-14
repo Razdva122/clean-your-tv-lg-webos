@@ -37,7 +37,7 @@ PHASES = ('launch-helper', 'verify-home-button', 'select-tv', 'inspect-tv', 'sel
           'install-helper', 'install-home', 'configure-helper', 'debloat', 'configure-home', 'install-root',
           'install-root-updater', 'verify-root-updater', 'verify-root-recovery',
           'stop-old-helper', 'activate-root', 'launch-root', 'remove-existing-root',
-          'archive-root-state', 'doctor-complete', 'install-complete', 'preflight',
+          'archive-root-state', 'doctor-complete', 'partial-tv-observation', 'install-complete', 'preflight',
           'prepare-python-runtime', *ACTIONS)
 STATES = ('pending', 'complete', 'recovery_required', 'unknown', 'fresh', 'installed',
           'unsupported', 'conflict', 'migration_required')
@@ -518,19 +518,20 @@ def operation_context(store, profile):
             store.diagnostic_pending = {'action': 'unknown', 'stage': 'unknown'}
 
 
-def history(report, store, profile, error, pending):
+def history(report, store, profile, error, pending, *, create=True):
     result = {'first_failure': None, 'failure_history': 'not-recorded'}
     if not profile:
         return result
     try:
-        directory = store.device_dir(profile) / 'diagnostic-failures'
+        directory = store.device_path(profile) / 'diagnostic-failures'
         if directory.is_symlink():
             raise ValueError('Indirect diagnostic directory')
-        directory.mkdir(mode=0o700, exist_ok=True)
+        if create:
+            directory.mkdir(parents=True, mode=0o700, exist_ok=True)
         identifier = mapping(pending).get('diagnostic_id')
         if type(identifier) is str and re.fullmatch(r'[a-f0-9]{32}', identifier):
             path = directory / (identifier + '.json')
-            if (error is not None and getattr(store, 'diagnostic_created', None) == identifier
+            if (create and error is not None and getattr(store, 'diagnostic_created', None) == identifier
                     and report['action'] == getattr(store, 'diagnostic_action', None)):
                 try:
                     fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
@@ -556,7 +557,7 @@ def history(report, store, profile, error, pending):
                         expected='removal-original-'+removal+'.json' if type(removal) is str and re.fullmatch('[a-f0-9]{32}',removal) else None
                         if value.get('recovery_protocol')!='clean-removal-v1' or not expected or value['original_receipt']!=expected:
                             raise ValueError('Invalid original receipt')
-                        original=read_record(store.device_dir(profile)/expected)
+                        original=read_record(store.device_path(profile)/expected)
                     return original
                 original=previous(pending)
                 records={}
@@ -582,7 +583,7 @@ def history(report, store, profile, error, pending):
                 if intermediate:result['intermediate_failures']=intermediate
         elif not pending:
             path = directory / 'previous-attempt.json'
-            if error is not None and report['action'] == 'install':
+            if create and error is not None and report['action'] == 'install':
                 private_write(path, json.dumps(failure_summary(report)).encode())
             if path.exists() or path.is_symlink():
                 result['previous_attempt_failure'] = failure_summary(read_record(path))

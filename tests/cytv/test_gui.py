@@ -203,7 +203,7 @@ class GuiTests(unittest.TestCase):
         from cytv import installer_update as update
         w=Wizard()
         self.addCleanup(w.close)
-        with patch('cytv.cli.choose_profile',return_value={'host':'192.0.2.1','edition':'root','port':22}), patch.object(update,'latest',return_value='0.15.0'), patch('cytv.package.verify_payload') as payload, patch('cytv.gui.QDesktopServices.openUrl',return_value=True):
+        with patch('cytv.cli.choose_profile',return_value=({'host':'192.0.2.1','edition':'root','port':22}, False)), patch.object(update,'latest',return_value='0.15.0'), patch('cytv.package.verify_payload') as payload, patch('cytv.gui.QDesktopServices.openUrl',return_value=True):
             w.start('install')
             deadline=time.monotonic()+3
             while not w.pending and time.monotonic()<deadline:
@@ -619,6 +619,101 @@ class GuiTests(unittest.TestCase):
         self.assertIn('could not be created',w.subtitle.text())
         self.assertEqual(calls,[])
         w.home();self.assertIsNone(w.failure_help)
+
+    def test_partial_saved_list_requires_explicit_labeled_connection_selection(self):
+        from cytv import cli, state
+        directory = self.directory.name
+        store = state.Store(directory)
+        blocked = state.target('tv.example', 'root', 2222)
+        developer = state.target('tv.example', 'no-root', 9922)
+        root_ssh = state.target('tv.example', 'no-root', 9922, connection='root-ssh')
+        for profile in (blocked, developer, root_ssh):
+            store.save(profile)
+        denied = store.device_dir(blocked) / 'profile.json'
+        read_text = Path.read_text
+        connected = []
+
+        def read(path, *args, **kwargs):
+            if path == denied:
+                raise PermissionError('PRIVATE fixture location')
+            return read_text(path, *args, **kwargs)
+
+        def connect(profile, *args, **kwargs):
+            connected.append(profile)
+            raise RuntimeError('fixture stopped before device I/O')
+
+        def run(args, **kwargs):
+            return cli.main(args + ['--data-dir', directory], connect=connect, **kwargs)
+
+        w = Wizard(run=run)
+        self.addCleanup(w.close)
+        with patch.object(Path, 'read_text', read):
+            w.start('status')
+            self.pump(lambda: w.pending is not None)
+            try:
+                combo, = w.form.findChildren(QComboBox)
+                continue_button = next(b for b in w.form.findChildren(QPushButton) if b.text() == 'Continue')
+                self.assertFalse(continue_button.isEnabled())
+                self.assertIsNone(combo.currentData())
+                rows = {combo.itemText(i): i for i in range(combo.count())}
+                self.assertEqual(set(rows), {'tv.example:9922 — No-root (Developer Mode)',
+                                             'tv.example:9922 — No-root (Root SSH)'})
+                combo.setCurrentIndex(rows['tv.example:9922 — No-root (Root SSH)'])
+                self.assertTrue(continue_button.isEnabled())
+                continue_button.click()
+                self.pump(lambda: not w.running)
+                self.assertEqual(connected, [root_ssh])
+            finally:
+                if w.running:
+                    w.channel.answer(None)
+                    self.pump(lambda: not w.running)
+
+    def test_desktop_exports_local_access_failure_without_claiming_recovery_idle(self):
+        import json
+        from unittest.mock import Mock
+        from cytv import cli, state
+        directory = self.directory.name
+        store = state.Store(directory)
+        profile = state.target('private.example', 'root', 2222, identity=Path(directory) / 'private-key')
+        store.save(profile)
+        store.begin(profile, 'activate-root', stage='enable')
+        private = store.device_dir(profile)
+        (private / 'known_hosts').write_bytes(b'original pin')
+        before = {path: path.read_bytes() for path in private.iterdir()}
+        read_text = Path.read_text
+        io = Mock(side_effect=AssertionError('unexpected device I/O'))
+
+        def read(path, *args, **kwargs):
+            if path == private / 'profile.json':
+                raise PermissionError('PRIVATE fixture location')
+            return read_text(path, *args, **kwargs)
+
+        def run(args, **kwargs):
+            return cli.main(args + ['--data-dir', directory], connect=io, inspect=io, search=io, **kwargs)
+
+        w = Wizard(run=run)
+        self.addCleanup(w.close)
+        with patch.object(Path, 'read_text', read):
+            w.start('status')
+            self.pump(lambda: not w.running)
+            saved = Path(directory) / 'export.json'
+            with patch('cytv.gui.QFileDialog.getSaveFileName', return_value=(str(saved), 'JSON')):
+                next(b for b in w.form.findChildren(QPushButton) if b.text() == 'Save diagnostic report…').click()
+        self.assertEqual(saved.read_bytes(), w.report.read_bytes())
+        report = json.loads(saved.read_text())
+        self.assertEqual(report['frontend'], 'desktop')
+        self.assertEqual(report['phase'], 'select-tv')
+        self.assertEqual(report['local_recovery'], {'reason': 'profile-access', 'location': 'profile'})
+        self.assertIsNone(report['pending'])
+        self.assertNotIn('recovery', report)
+        self.assertEqual(report['tv'], {})
+        self.assertEqual(report['checks'], {})
+        self.assertNotIn('PRIVATE', saved.read_text())
+        self.assertNotIn('private.example', saved.read_text())
+        self.assertNotIn('private-key', saved.read_text())
+        self.assertNotIn(directory, saved.read_text())
+        io.assert_not_called()
+        self.assertEqual({path: path.read_bytes() for path in private.iterdir()}, before)
 
     def test_network_failure_actions_recheck_without_install_and_preserve_recovery(self):
         import errno

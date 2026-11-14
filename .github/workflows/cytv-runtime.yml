@@ -5,6 +5,10 @@ on:
       - 'cytv/__main__.py'
       - 'cytv/__init__.py'
       - 'cytv/cli.py'
+      - 'cytv/desktop.py'
+      - 'cytv/diagnostic*.py'
+      - 'cytv/errors.py'
+      - 'cytv/state.py'
       - 'cytv/desktop*.py'
       - 'cytv/gui.py'
       - 'cytv/gui_style.py'
@@ -15,7 +19,7 @@ on:
       - 'cytv/runtime_check.py'
       - 'cytv/requirements.txt'
       - 'cytv/build-requirements.txt'
-      - 'tests/cytv/test_console_encoding.py'
+      - 'tests/cytv/test_console*.py'
       - 'tests/cytv/test_wallpaper*.py'
       - 'tests/cytv/test_gui.py'
       - 'tests/cytv/test_desktop_package.py'
@@ -96,5 +100,5 @@ jobs:
               if kind == 'console':
                   import os
                   subprocess.run([sys.executable, '-m', 'unittest', 'discover', '-s', 'tests/cytv',
-                      '-p', 'test_console_encoding.py', '-v'], check=True,
+                      '-p', 'test_console*.py', '-v'], check=True,
                       env=dict(os.environ, CYTV_CONSOLE_EXECUTABLE=str(executable)))
