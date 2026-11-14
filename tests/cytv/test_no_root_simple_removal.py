@@ -1290,11 +1290,14 @@ class SimpleRemoval(unittest.TestCase):
         self.assertTrue(self.remote.commands)
         self.assertEqual(set(self.remote.commands),{'/usr/bin/node'})
 
-    def model_owners(self, owners):
+    def model_owners(self, owners, root_state=None):
         # Keep actual POSIX modes/inodes and Node filesystem operations; adapt
         # only ownership that an unprivileged host cannot reproduce with chown.
         prefix=('var reportedOwners='+json.dumps({str(p):ids for p,ids in owners.items()})+';'
-                'var actualLstat=fs.lstatSync;fs.lstatSync=function(p){var s=actualLstat(p),owner=reportedOwners[path.resolve(p)];'
+                'var rootState='+json.dumps(str(root_state) if root_state else None)+';'
+                'function modeledOwner(p,s){return reportedOwners[p]||'
+                '(s.isFile()&&rootState&&path.dirname(p||"")===rootState?[0,5000]:null);}'
+                'var actualLstat=fs.lstatSync;fs.lstatSync=function(p){var s=actualLstat(p),owner=modeledOwner(path.resolve(p),s);'
                 'if(owner){s.uid=owner[0];s.gid=owner[1];}return s;};'
                 # Model the packaged owner and group on both the path and
                 # pinned FD. Actual permissions, inode and writes stay POSIX.
@@ -1304,7 +1307,7 @@ class SimpleRemoval(unittest.TestCase):
                 'fs.closeSync=function(fd){delete openedPaths[fd];return actualClose.apply(fs,arguments);};'
                 'var actualFchown=fs.fchownSync;fs.fchownSync=function(fd,uid,gid){'
                 'if(gid!==5000)return actualFchown.apply(fs,arguments);var s=actualFstat(fd);ownersByInode[s.ino]=gid;};'
-                'fs.fstatSync=function(fd){var s=actualFstat(fd),owner=reportedOwners[openedPaths[fd]];'
+                'fs.fstatSync=function(fd){var s=actualFstat(fd),owner=modeledOwner(openedPaths[fd],s);'
                 'if(owner){s.uid=owner[0];s.gid=owner[1];}if(ownersByInode[s.ino])s.gid=ownersByInode[s.ino];return s;};'
                 'var modelledLstat=fs.lstatSync;fs.lstatSync=function(p){var s=modelledLstat(p);'
                 'if(ownersByInode[s.ino])s.gid=ownersByInode[s.ino];return s;};')
@@ -1335,6 +1338,93 @@ class SimpleRemoval(unittest.TestCase):
         self.assertFalse(stage.exists())
         self.reboot();self.assertTrue(self.remove()['verified_clean'])
         self.assertEqual(foreign.read_text(),'preserve')
+
+    def test_root_ssh_resumes_legacy_removal_through_vendor_owned_sdk_tree(self):
+        from cytv.root_runtime import FRESH_PROBE
+
+        run = self.remote.run
+
+        def root_ssh_run(command, **kwargs):
+            if command == FRESH_PROBE:
+                return 'CYTV_FRESH_ROOT'
+            return run(command, **kwargs)
+
+        self.remote.run = root_ssh_run
+        self.installer.profile = self.profile = target('tv.local', 'no-root', connection='root-ssh')
+        self.store.begin(self.profile, 'install', stage='pending')
+        self.remote.volatile_mode = 0o777
+        developer = self.root / 'developer'
+        base = developer / 'apps/usr/palm'
+        containers = [developer, developer / 'apps', base.parent, base,
+                      base / 'applications', base / 'services', base / 'packages']
+        for directory in containers:
+            directory.mkdir(exist_ok=True)
+            directory.chmod(0o777)
+        owners = {directory: (1001, 1001) for directory in containers[2:]}
+        owners.update({directory: (0, 0) for directory in containers[:2]})
+        owned = []
+        for app, service in [('com.local.nativehome', 'com.local.nativehome.service'),
+                             ('com.gathin.tvhome', 'com.gathin.tvhome.renewal')]:
+            self.remote.apps.add(app)
+            for kind, name, leaf in [('applications', app, 'appinfo.json'),
+                                     ('services', service, 'service.js'),
+                                     ('packages', app, 'packageinfo.json')]:
+                file = self.own_file(f'apps/usr/palm/{kind}/{name}/{leaf}', json.dumps({'id': app}))
+                owned.append(file.parent)
+                owners[file.parent] = (0, 0)
+        state = self.own_file('apps/usr/palm/applications/com.local.nativehome/state/apps.json', '[]').parent
+        state.chmod(0o770)
+        owners[state] = (5999, 5000)
+        luna = self.remote.luna
+
+        def verify_stop_before_removal(uri, payload, **kwargs):
+            if uri.endswith('/dev/remove'):
+                self.assertEqual(json.loads((state / 'control.json').read_text()), {'cmd': 'stop'})
+                self.assertTrue((state / 'blocked').is_file())
+            return luna(uri, payload, **kwargs)
+
+        self.remote.luna = verify_stop_before_removal
+        foreign = self.own_file('apps/usr/palm/services/org.foreign/keep.json', 'preserve')
+        # The host's private temporary ancestors stand in for /media and /.
+        owners.update({directory: (0, 0) for directory in (self.root, *self.root.parents)})
+        self.model_owners(owners, root_state=state)
+        self.store.request_clean_removal(self.profile)
+
+        self.assertTrue(self.remove()['restart_required'])
+        self.reboot()
+        (self.root / 'proc').mkdir()
+        self.assertTrue(self.remove()['verified_clean'])
+        self.assertIsNone(self.store.pending(self.profile))
+        self.assertCountEqual([body['id'] for uri, body in self.remote.calls if uri.endswith('/dev/remove')],
+                              ['com.local.nativehome', 'com.gathin.tvhome'])
+        self.assertTrue(all(not directory.exists() for directory in owned))
+        self.assertTrue(all(directory.stat().st_mode & 0o777 == 0o777 for directory in containers))
+        self.assertEqual(foreign.read_text(), 'preserve')
+
+    def test_root_ssh_reports_unsafe_sdk_ancestry_without_removing_packages(self):
+        from cytv import diagnostics
+
+        self.installer.profile = self.profile = target('tv.local', 'no-root', connection='root-ssh')
+        service = self.own_file('apps/usr/palm/services/com.local.nativehome.service/service.js')
+        parent = service.parents[2]
+        self.remote.apps.add('com.local.nativehome')
+
+        for owner, mode in (((4242, 4242), 0o777), ((1001, 4242), 0o777),
+                            ((1001, 1001), 0o775)):
+            with self.subTest(owner=owner, mode=mode):
+                parent.chmod(mode)
+                self.model_owners({parent: owner})
+                with self.assertRaises(UserError) as caught:
+                    self.remove()
+                report = diagnostics.create_report(self.store, 'uninstall', self.profile, 'uninstall', caught.exception)
+                detail = json.loads(report.read_text()).get('no_root_cleanup')
+                self.assertEqual(detail, {'action': 'inventory', 'reason': 'unsafe-path',
+                                          'blocked_areas': ['service']})
+                self.assertEqual(diagnostics.context.failure_summary(json.loads(report.read_text()))['no_root_cleanup'],
+                                 detail)
+                self.assertEqual(self.store.pending(self.profile)['stage'], 'requested')
+                self.assertTrue(service.is_file())
+        self.assertFalse(any(uri.endswith('/dev/remove') for uri, _ in self.remote.calls))
 
     def test_shared_sdk_services_symlink_does_not_admit_foreign_tree(self):
         foreign=self.root/'foreign';service=foreign/'com.local.nativehome.service'

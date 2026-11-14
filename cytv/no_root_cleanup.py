@@ -48,12 +48,28 @@ function exact(p,dir){
 }
 function same(a,b){return a.dev===b.dev&&a.ino===b.ino;}
 function fail(){throw Error('unsafe-path');}
-function ancestry(p){for(;;){var s=fs.lstatSync(p),sdk=[publicRoot,'/media/developer','/media/developer/apps','/media/developer/apps/usr',base,base+'/applications',base+'/packages',base+'/services'].indexOf(p)>=0;
- // SDK creates these fixed containers and project app/service roots as0777.
- // This does not admit arbitrary writable ancestry or UUID staging directories.
- sdk=sdk||apps.some(function(app){return p===base+'/applications/'+app;})||services.some(function(service){return p===base+'/services/'+service;});
- var shared=(sdk&&s.uid===0&&(s.mode&4095)===511)||((p===base+'/packages'||p===base+'/services')&&[1001,501].indexOf(s.uid)>=0);
- if(!s.isDirectory()||s.isSymbolicLink()||(!shared&&[0,uid,5999].indexOf(s.uid)<0)||((s.mode&2)&&!shared&&!(s.uid===0&&(s.mode&512))))fail();if(path.dirname(p)===p)break;p=path.dirname(p);}}
+var sdkContainers=[path.dirname(base),base,base+'/applications',base+'/packages',base+'/services'];
+var sharedRootDirectories=sdkContainers.concat([publicRoot,'/media/developer','/media/developer/apps'],
+ apps.map(function(app){return base+'/applications/'+app;}),
+ services.map(function(service){return base+'/services/'+service;}));
+function sharedSdkDirectory(p,s){
+ var mode=s.mode&4095;
+ if(s.uid===0&&mode===511&&sharedRootDirectories.indexOf(p)>=0)return true;
+ // Retail SDK trees can be owned by the platform account below apps/.
+ // Keep the existing packages/services compatibility for older SDK views.
+ if((p===base+'/packages'||p===base+'/services')&&[1001,501].indexOf(s.uid)>=0)return true;
+ return sdkContainers.indexOf(p)>=0&&s.uid===1001&&s.gid===1001&&mode===511;
+}
+function ancestry(p){
+ for(;;){
+  var s=fs.lstatSync(p);
+  if(!s.isDirectory()||s.isSymbolicLink())fail();
+  if(!sharedSdkDirectory(p,s)&&([0,uid,5999].indexOf(s.uid)<0||
+     ((s.mode&2)&&!(s.uid===0&&(s.mode&512)))))fail();
+  if(path.dirname(p)===p)break;
+  p=path.dirname(p);
+ }
+}
 function at(p,expected,fn){
  var before=fs.lstatSync(p),fd=fs.openSync(p,c.O_RDONLY|c.O_DIRECTORY|c.O_NOFOLLOW),prior=process.cwd(),priorStat=fs.statSync('.');
  try{if(!before.isDirectory()||!same(before,fs.fstatSync(fd))||!same(before,expected))fail();process.chdir(p);if(!same(before,fs.statSync('.')))fail();return fn(fd);}
@@ -519,7 +535,16 @@ def _protected_package(row):
     return None
 
 
-def _check_access(value, defer_packages=False, *, sweep=False, guard=False):
+def _blocked_area(row):
+    prefix, _, suffix = row.get('scope', '').partition(' ')
+    if prefix in APPS:
+        return suffix
+    return {'startup-service': 'service', 'registration': 'ls2-registration',
+            'registrations': 'ls2-registry', 'helper-control': 'helper-state',
+            'installer-private': 'installer-private'}.get(prefix)
+
+
+def _check_access(value, defer_packages=False, *, action='inventory', guard=False):
     optional = ('installer-staging', 'installer-private') if guard else ('installer-staging',)
     blocked = [row for row in value['blocked'] if row.get('scope') not in optional
                and not (defer_packages and (_protected_package(row) or
@@ -530,19 +555,18 @@ def _check_access(value, defer_packages=False, *, sweep=False, guard=False):
         error = (UserError(ROOT_MESSAGE, reason_code='root-access-required') if root_required else
                  UserError('Developer Mode could not verify removal of some project files. Save a diagnostic report from Recovery options.',
                            reason_code='cleanup-check-failed'))
-        if sweep or not root_required:
+        if action == 'sweep' or not root_required:
             areas = ['root-location'] if value['root_present'] else []
-            for row in blocked:
-                if row.get('reason') != 'permission-denied':
-                    continue
-                scope = row['scope']
-                prefix, _, suffix = scope.partition(' ')
-                areas.append({'registration': 'ls2-registration', 'registrations': 'ls2-registry',
-                              'installer-private': 'installer-private', 'startup-service': 'service'}.get(prefix, suffix))
-            error.no_root_cleanup = no_root_cleanup_details({'action': 'sweep', 'blocked_areas': areas})
+            areas.extend(_blocked_area(row) for row in access_denied)
+            error.no_root_cleanup = no_root_cleanup_details({'action': action, 'blocked_areas': areas})
         raise error
     if blocked:
-        raise UserError('Some project paths changed. Close other installers, then review recovery options.')
+        error = UserError('Some project paths changed. Close other installers, then review recovery options.')
+        error.no_root_cleanup = no_root_cleanup_details({
+            'action': action, 'reason': 'unsafe-path',
+            'blocked_areas': [_blocked_area(row) for row in blocked],
+        })
+        raise error
 
 
 def _exact_developer_app(installer, app):
@@ -711,7 +735,7 @@ def continue_removal(installer, expected_pending):
 
     def wait_for_stopped_processes(require_idle):
         idle = device('idle', after_stop=True, wait_for_idle=True)
-        check(idle, defer_packages=True)
+        check(idle, defer_packages=True, action='idle')
         if idle.get('project_running') is True:
             raise UserError('A Clean Your TV process did not stop in time. Removal data was kept.',
                             reason_code='cleanup-check-failed')
@@ -933,7 +957,7 @@ def continue_removal(installer, expected_pending):
                                and 'original-package-unverified' not in boot_triggers)
     installer.progress('Restoring TV controls…')
     stopped = device('stop')
-    check(stopped, defer_packages=True)
+    check(stopped, defer_packages=True, action='stop')
     invalid_stop_record = stopped.get('invalid_stop_record') is True
     if invalid_stop_record:
         # A missing volatile marker alone cannot replace a failed Stop.
@@ -1064,7 +1088,7 @@ def continue_removal(installer, expected_pending):
     installer.progress('Removing project files…')
     store.checkpoint(profile, stage='private-cleanup')
     swept = device('sweep')
-    check(swept, sweep=True)
+    check(swept, action='sweep')
     installer.progress('Verifying removal…')
     final, process_stopped = verify_functional(not restarted or reused_restart or invalid_stop_record)
     if not process_stopped:
