@@ -3,7 +3,9 @@
 Old installation receipts describe history. They are not permission to retain
 the user's project keys or files after the user has requested their removal.
 """
+import hashlib
 import json
+import re
 from contextlib import ExitStack
 from time import monotonic, sleep
 
@@ -30,7 +32,7 @@ var bootProof=(function(){var module={exports:{}},exports=module.exports;
 /* CYTV_BOOT_PROOF_CONTRACT */
 return module.exports;}());
 var input=JSON.parse(process.argv[process.argv.length-1]),uid=process.getuid();
-if(['inventory','idle','sweep','stop','history','root-package','boot-create','boot-probe','boot-retire','boot-release'].indexOf(input.action)<0)throw Error('invalid-cleanup-action');
+if(['inventory','idle','sweep','stop','history','binding','root-package','boot-create','boot-probe','boot-retire','boot-release'].indexOf(input.action)<0)throw Error('invalid-cleanup-action');
 var base='/media/developer/apps/usr/palm',publicRoot='/media/developer/temp';
 if(input.connection==='root-ssh'){
  if(uid!==0)throw Error('root-access-required');
@@ -206,25 +208,37 @@ function privateInstaller(root){
 if(input.guard_owner){
  try{
   var selected=input.cancellation, owned=null, hasOwner=false;
+  var receipt=input.missing_capsule;
+  if(receipt){
+   var candidates=receipt.roots.filter(function(root){
+    return exact(root+'/operations/'+receipt.operation,true);
+   });
+   if(candidates.length>1){reply.owner_conflict=true;fail();}
+   if(candidates.length===1)selected=candidates[0];
+  }
   // Check all other roots first. A cancellation can publish a marker only
   // inside the exact inherited reservation, and it grants no other scope.
   installerRoots.forEach(function(root){
    var a=(root===rootInstaller?rootPrivate:root)+'/active',stat=exists(a);
    if(stat){
     ancestry(a);
-    if(!fs.readdirSync(a).length)return;
-    if(root!==selected){reply.owner_conflict=true;fail();}
+    var names=fs.readdirSync(a);
+    if(!names.length)return;
+    if(root!==selected||receipt&&names.indexOf('owner-'+receipt.operation+'.json')<0&&
+       names.indexOf('cancel-removal.json')<0){reply.owner_conflict=true;fail();}
     hasOwner=true;
    }
   });
   if(selected){
    var cancellationInput={root:selected,public_root:input.public_root,plan:input.plan,goal:input.removal,
-                          finalizing:input.finalizing,retire:input.action==='history'};
+                          finalizing:input.finalizing,retire:input.action==='history',
+                          inspect:input.action==='binding',receipt:receipt};
    try{owned=/* CYTV_OWNED_CANCELLATION */null;}
    catch(e){
-    // An absent current owner is independent of old optional evidence.
-    // Do not bypass an actual staged reservation or an observed writer.
-    if(hasOwner||e.cancelReservation)throw e;
+    // Old history is optional once both reservation paths are absent.
+    // The ordinary writer and package checks still apply before removal.
+    if(hasOwner||e.cancelReservation||
+       receipt&&exact(selected+'/operations/'+receipt.operation+'/reservation',true))throw e;
     blocked('installer-private',e);owned={};
    }
    reply.cancellation=owned;
@@ -235,13 +249,21 @@ if(input.guard_owner){
   }
  }catch(e){if(!reply.owner_conflict)reply.owner_unverified=true;process.stdout.write(JSON.stringify(reply));return;}
 }
+if(input.action==='binding'){
+ var binding=reply.cancellation;
+ reply.reservation=binding&&binding.interrupted?'interrupted':binding&&binding.reservation?'matched':'absent';
+ process.stdout.write(JSON.stringify(reply));return;
+}
 installerRoots.forEach(function(root){try{privateInstaller(root);var operations=(root===rootInstaller?rootPrivate:root)+'/operations';if(exists(operations)){ancestry(operations);var ids=fs.readdirSync(operations);reply.resident_installer=reply.resident_installer||ids.length>0;ids.forEach(function(id){if(/^[a-f0-9]{32}$/.test(id)&&reply.staging_ids.indexOf(id)<0)reply.staging_ids.push(id);});if(reply.staging_ids.length>128)fail();}}catch(e){blocked('installer-private',e);}});
 if(input.action==='history'){
  installerRoots.forEach(function(root){try{
   privateInstaller(root);
   // Releasing the owned reservation opens ordinary installation again.
   // Retire its exact operation only, without sweeping any successor's root.
-  if(input.cancellation===root){var opdir=root+'/operations/'+input.plan.operation,stat=exists(opdir);if(stat)remove(opdir,stat);}
+  if(selected===root){
+   var opdir=root+'/operations/'+(receipt?receipt.operation:input.plan.operation),stat=exists(opdir);
+   if(stat)remove(opdir,stat);
+  }
   else if(root===rootInstaller){
    // This disjoint Root public staging root was already guarded on entry.
    var stageRoot=exists(root);
@@ -483,7 +505,7 @@ function next(){if(!stages.length){process.stdout.write(JSON.stringify(reply));r
 def _program(request):
     # Keep the SSH exec request tiny; old TV SSH servers reject long argv.
     source = PRIVATE_CLEANUP_PROGRAM
-    if request.get('cancellation'):
+    if request.get('cancellation') or request.get('missing_capsule'):
         from .no_root_cancellation import SOURCE
         source = source.replace('/* CYTV_OWNED_CANCELLATION */null', SOURCE)
     if request.get('action') in CLEANUP_BOOT_ACTIONS:
@@ -507,10 +529,39 @@ def _program(request):
     return ('process.argv.push(' + json.dumps(json.dumps(request)) + ');\n' + source).encode()
 
 
+def _missing_capsule_receipt(previous):
+    from . import no_root_observer as observer
+    from .operations import HELPER_STATE
+
+    operation = previous.get('observer_operation')
+    diagnostic_id = previous.get('diagnostic_id')
+    digest = previous.get('capsule_sha256')
+    if not all(isinstance(value, str) and re.fullmatch('[a-f0-9]{%d}' % size, value)
+               for value, size in ((operation, 32), (diagnostic_id, 32), (digest, 64))):
+        return None
+    if 'previous' in previous:
+        return None
+    try:
+        versions = [previous['versions'][app] for app in observer.APPS]
+        configuration = {name: previous['expected'][HELPER_STATE+'/'+name]
+                         for name in ('ssap-key.json', 'apps.json')}
+    except (KeyError, TypeError):
+        return None
+    if not all(isinstance(value, str) for value in versions) or not all(
+            isinstance(value, str) and re.fullmatch('[a-f0-9]{64}', value)
+            for value in configuration.values()):
+        return None
+    return {'operation': operation, 'diagnostic_id': diagnostic_id, 'versions': versions,
+            'configuration_sha256': hashlib.sha256(observer.canonical(configuration).encode()).hexdigest(),
+            'source_sha256': hashlib.sha256(observer.PROGRAM.encode()).hexdigest(),
+            'default_root': observer.ROOT, 'roots': [observer.ROOT, observer.JAIL_ROOT]}
+
+
 def _device(installer, action, proof=None, *, after_stop=False, wait_for_idle=False, guard=False):
     pending = installer.store.pending(installer.profile) or {}
     request = {'action':action, 'staging_ids':pending.get('cleanup_staging_ids', []),
                'removal':pending.get('removal_operation'), 'proof':proof}
+    capsule = 'no-original-install'
     if guard and installer.profile.get('connection') != 'root-ssh':
         from . import no_root_observer
         from .errors import connection_interrupted
@@ -523,7 +574,13 @@ def _device(installer, action, proof=None, *, after_stop=False, wait_for_idle=Fa
             except UserError as error:
                 if error.reason_code != 'pending-operation' or connection_interrupted(error):
                     raise
+                capsule = getattr(error, 'local_recovery', {}).get('reason', 'unverified')
+                receipt = _missing_capsule_receipt(previous) if capsule == 'capsule-missing' else None
+                if receipt is not None:
+                    request.update(missing_capsule=receipt, public_root=no_root_observer.PUBLIC_ROOT,
+                                   finalizing=pending.get('stage') == 'verified-clean')
             else:
+                capsule = 'verified'
                 request.update(cancellation=no_root_observer.private_root(plan), plan=plan,
                                public_root=no_root_observer.PUBLIC_ROOT,
                                finalizing=pending.get('stage') == 'verified-clean')
@@ -552,13 +609,21 @@ def _device(installer, action, proof=None, *, after_stop=False, wait_for_idle=Fa
     if (not isinstance(value, dict) or value.get('schema') != 1 or
             not all(isinstance(value.get(k), list) for k in ('present', 'blocked', 'root_present'))):
         raise UserError('Removal could not be verified. Review recovery options before continuing.')
-    if value.get('owner_conflict'):
-        raise UserError('Another installer owns the TV reservation. Wait for it to finish and try again.',
-                        reason_code='original-writer-active')
-    if value.get('owner_unverified'):
-        raise UserError('The current TV installer reservation could not be verified. Recovery data was kept.',
-                        reason_code='ownership-conflict')
+    reservation = ('conflict' if value.get('owner_conflict') else
+                   'unverified' if value.get('owner_unverified') else value.get('reservation'))
+    binding = {'capsule': capsule, 'reservation': reservation}
+    if action == 'binding':
+        return binding
+    if value.get('owner_conflict') or value.get('owner_unverified'):
+        error = UserError('The current TV installer reservation could not be verified. Recovery data was kept.',
+                          reason_code='ownership-conflict')
+        error.removal_binding = binding
+        raise error
     return value
+
+
+def inspect_binding(installer):
+    return _device(installer, 'binding', guard=True)
 
 
 def _protected_package(row):

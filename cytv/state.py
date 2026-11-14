@@ -107,11 +107,11 @@ class Store:
     def save(self, profile):
         private_write(self.device_dir(profile) / 'profile.json', json.dumps(target(**profile)).encode())
 
-    def _capsule_path(self, profile, operation):
+    def _capsule_path(self, profile, operation, *, create=True):
         if not isinstance(operation, str) or not re.fullmatch('[a-f0-9]{32}', operation):
             raise LocalRecoveryError('operation-invalid', 'operation')
         try:
-            directory = self.device_dir(profile)
+            directory = self.device_dir(profile) if create else self.device_path(profile)
         except OSError as error:
             raise LocalRecoveryError('directory-access', 'profile', storage_full=is_storage_full(error)) from None
         # Reuse the existing Chaquopy context proof for Android's system-owned
@@ -131,6 +131,9 @@ class Store:
             location = 'profile' if parent == directory else 'ancestor'
             try:
                 info = parent.lstat()
+            except FileNotFoundError:
+                reason = 'capsule-missing' if not create and parent == directory else 'directory-access'
+                raise LocalRecoveryError(reason, location) from None
             except OSError:
                 raise LocalRecoveryError('directory-access', location) from None
             details = dict(location=location, mode=format(info.st_mode & 0o7777, '04o'))
@@ -171,7 +174,7 @@ class Store:
 
     def read_capsule(self, profile, operation, digest):
         try:
-            path = self._capsule_path(profile, operation)
+            path = self._capsule_path(profile, operation, create=False)
             before = path.lstat()
             if not stat.S_ISREG(before.st_mode) or before.st_nlink != 1 or before.st_size > 192*1024*1024:
                 raise LocalRecoveryError('capsule-unsafe')
