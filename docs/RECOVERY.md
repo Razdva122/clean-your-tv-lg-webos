@@ -344,6 +344,17 @@ retain the existing guards; no request is blindly repeated. Do not edit the
 journal or reset Developer Mode to qualify. This change is not in 1.6.0 and
 physical EF950V recovery remains unverified.
 
+### Remove No-root after losing the local recovery capsule
+
+If the original No-root installation was interrupted, use **Review recovery
+options** with the original saved TV connection. Before offering removal, the
+installer checks whether the original local receipt matches the removal plan on
+the TV. If the local recovery capsule is missing, removal can still proceed
+when that match is verified. Confirm removal separately. The installer keeps
+the operation pending if the match cannot be verified or another operation
+owns the reservation. Keep the original receipt and save the diagnostic
+report if removal stays blocked.
+
 <a id="recovery-explanations-and-direct-review-unreleased"></a>
 
 ### Recovery explanations and direct review (1.7.0)
