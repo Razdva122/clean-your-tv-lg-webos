@@ -1689,16 +1689,20 @@ class PartialDeviceRemoval(unittest.TestCase):
                 path.chmod(0o640)
             self.assertEqual(c1_keyfilter.prepare(root, digest, admission, uid)['schema'], 3)
 
+        restore_worker = getattr(clean_removal, 'runtime_restore_report', clean_removal.runtime_restore)
+
         def restore(args):
-            self.assertIn('runtime_restore(', args[-1])
+            self.assertIn(restore_worker.__name__ + '(', args[-1])
             backend = SimpleNamespace(selection=c1_keyfilter.selection, STATE=root)
             cli = SimpleNamespace(gate_backend=lambda: backend,
                                   main=lambda mode: c1_keyfilter.execute(mode, root=root, uid=uid))
             with patch.dict(sys.modules, {'cli': cli, 'c1_keyfilter': c1_keyfilter}), \
                  patch.object(sys, 'path', sys.path.copy()), patch.object(c1_keyfilter, 'binary'):
-                return clean_removal.runtime_restore(payload/'root', uid)
+                return restore_worker(payload/'root', uid)
 
-        def guardian(args, state, owner):
+        def guardian(args, state, owner, *, allow_ui_failure=False):
+            self.assertEqual(allow_ui_failure, restore_worker.__name__ == 'runtime_restore_report'
+                             and args == ['--restore'])
             self.assertEqual(c1_keyfilter.binary(state, owner), native)
             calls.append(args[0])
             return dict(returnValue=True, backend=c1_keyfilter.BACKEND, routing=c1_keyfilter.ROUTING,
