@@ -266,14 +266,17 @@ if (process.argv[2] === '--warm-policy') {
         ),
         caller + ' must reach c1Lease with cached factory groups'
       );
-      assert.deepStrictEqual(a.calls.at(-1).args, ['--lease']);
+      assert.strictEqual(a.calls.at(-1).args.length, 1);
+      assert.strictEqual(a.calls.at(-1).args[0], '--lease');
       a.reply(native());
       assert.strictEqual(a.replies.at(-1).healthy, true);
       assert(
         dispatch(caller, groups, 'c1Home', () => a.home(undefined, caller)),
         caller + ' must reach c1Home with cached factory groups'
       );
-      assert.deepStrictEqual(a.calls.at(-1).args, ['--home', 'a'.repeat(32)]);
+      assert.strictEqual(a.calls.at(-1).args.length, 2);
+      assert.strictEqual(a.calls.at(-1).args[0], '--home');
+      assert.strictEqual(a.calls.at(-1).args[1], 'a'.repeat(32));
       a.reply(native());
       assert.strictEqual(a.replies.at(-1).returnValue, true);
       function rejected() {
@@ -718,7 +721,9 @@ function schema3(files, model, sdk) {
     assert.strictEqual(a.replies.at(-1).healthy, true);
     a.home(undefined, caller);
     assert.strictEqual(a.calls.length, 2, caller + ' can call c1Home');
-    assert.deepStrictEqual(a.calls.at(-1).args, ['--home', 'a'.repeat(32)]);
+    assert.strictEqual(a.calls.at(-1).args.length, 2);
+    assert.strictEqual(a.calls.at(-1).args[0], '--home');
+    assert.strictEqual(a.calls.at(-1).args[1], 'a'.repeat(32));
     a.reply(native());
     assert.strictEqual(a.replies.at(-1).returnValue, true);
   });
