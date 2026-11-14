@@ -73,7 +73,7 @@ function remove(p,expected){
 function blocked(scope,error){reply.blocked.push({scope:scope,reason:error.code==='EACCES'||error.code==='EPERM'?'permission-denied':'unsafe-path'});}
 function visit(p,scope){try{var s=exists(p);if(!s)return;if(input.action==='sweep'||input.action==='root-package')remove(p,s);if(exists(p))reply.present.push(scope);}catch(e){blocked(scope,e);}}
 function developerBlocked(scope,error){blocked(scope,error);reply.blocked[reply.blocked.length-1].developer_path=true;}
-function developerVisit(p,scope,app,peer){
+function developerVisit(p,scope,app){
  var s;
  try{
   s=exact(p,!!app);if(!s)return;
@@ -92,7 +92,7 @@ function developerVisit(p,scope,app,peer){
   if(input.action==='sweep')remove(p,s);
   if(exact(p,!!app))reply.present.push(scope);
  }catch(e){
-  if(peer&&!s&&(e.code==='EACCES'||e.code==='EPERM'))reply.legacy_registrations_unverified=true;
+  if(!app&&!s&&(e.code==='EACCES'||e.code==='EPERM'))reply.legacy_registrations_unverified=true;
   else developerBlocked(scope,e);
  }
 }
@@ -347,20 +347,23 @@ apps.forEach(function(app,index){
 if(input.guard_owner){
  var legacy='/var/palm/ls2-dev',pub=legacy+'/services/pub';
  try{reply.legacy_layout=!!exact(pub,true);}
- catch(e){developerBlocked('registrations legacy-public',e);}
+ catch(e){
+  if(e.code==='EACCES'||e.code==='EPERM')reply.legacy_registrations_unverified=true;
+  else developerBlocked('registrations legacy-public',e);
+ }
  if(reply.legacy_layout){
   var registrations=function(folder,ids,suffix,peer){
    var dir=legacy+'/'+folder;
    try{
     if(!exact(dir,true)){if(peer)reply.legacy_registrations_unverified=true;return;}
    }catch(e){
-    if(peer&&(e.code==='EACCES'||e.code==='EPERM'))reply.legacy_registrations_unverified=true;
+    if(e.code==='EACCES'||e.code==='EPERM')reply.legacy_registrations_unverified=true;
     else developerBlocked('registrations '+folder,e);
     return;
    }
    ids.forEach(function(id){
     var name=id+suffix,n=reply.present.length;
-    developerVisit(dir+'/'+name,'registration '+name,null,peer);
+    developerVisit(dir+'/'+name,'registration '+name);
     if(!peer&&reply.present.length>n)reply.legacy_registered.push(apps[services.indexOf(id)]);
    });
   };
@@ -541,11 +544,11 @@ def _exact_developer_app(installer, app):
     uri = 'com.webos.applicationManager/getAppInfo'
     try:
         result = installer.remote.luna(uri, {'id': app}, timeout=5)
-    except TVRejected:
-        return None
+    except (TVRejected, ValueError):
+        return False
     except UserError as error:
-        if error.reason_code == 'operation-timeout':
-            return None
+        if error.reason_code == 'operation-timeout' or str(error) == 'TV command ended without a confirmed result. Run cytv status.':
+            return False
         raise
     info = result.get('appInfo') if isinstance(result, dict) and result.get('returnValue') is True else None
     if not isinstance(info, dict) or not isinstance(info.get('id'), str) or not isinstance(info.get('folderPath'), str):
@@ -700,14 +703,19 @@ def continue_removal(installer, expected_pending):
                             reason_code='cleanup-check-failed')
         return idle.get('project_running') is False and (not require_idle or idle.get('idle') is True)
 
+    # The fixed IDs from this goal's package requests still need readback
+    # if a vendor request changes the SDK's public legacy view.
+    sam_readback = {app for app in APPS if app in pending.get('removals', {})}
+
     def verify_functional(require_idle):
         final = device('inventory')
         check(final)
         remaining = [scope for scope in final['present']
                      if scope != 'installer-staging' and not scope.startswith('installer-staging ')]
         catalog_remains = {app['id'] for app in installer.installed_apps()}.intersection(APPS)
-        if remaining or catalog_remains or (guard and final.get('legacy_layout')
-                and any(_exact_developer_app(installer, app) for app in APPS)):
+        sam_apps = APPS if final.get('legacy_layout') else sam_readback
+        if remaining or catalog_remains or (guard and any(
+                _exact_developer_app(installer, app) for app in APPS if app in sam_apps)):
             raise UserError('Final cleanup could not be verified. Review recovery options before continuing.',
                             reason_code='cleanup-check-failed')
         return final, wait_for_stopped_processes(require_idle)
@@ -855,12 +863,20 @@ def continue_removal(installer, expected_pending):
             store.checkpoint(profile, cleanup_staging_ids=current['staging_ids'])
             cancellation = current.get('cancellation', {})
         apps, carriers = catalog()
+    def nominated(observation, app):
+        footprint = _has_developer_target(observation, app)
+        # SAM is optional, but a positive conflicting mapping raises before
+        # the vendor request, even when an exact footprint is visible.
+        if footprint or observation.get('legacy_layout') or app in sam_readback:
+            return _exact_developer_app(installer, app) or footprint
+        return False
+
     targets = apps.copy()
     if guard:
         for app in APPS:
-            if app not in apps and (_has_developer_target(current, app) or
-                    (current.get('legacy_layout') and _exact_developer_app(installer, app))):
+            if app not in apps and nominated(current, app):
                 targets.add(app)
+                sam_readback.add(app)
 
     configuration_pending = cancellation.get('eim_pending') or cancellation.get('launch_pending')
     configuration_settled = False
@@ -979,8 +995,7 @@ def continue_removal(installer, expected_pending):
         if guard:
             fresh = device('inventory')
             check(fresh, defer_packages=True)
-            if app not in apps and not (_has_developer_target(fresh, app) or
-                    (fresh.get('legacy_layout') and _exact_developer_app(installer, app))):
+            if app not in apps and not nominated(fresh, app):
                 continue
         installer.progress(message)
         removals[app] = 'submitted'
@@ -1002,7 +1017,14 @@ def continue_removal(installer, expected_pending):
                 if app not in apps:
                     # We know this request finished. Try independent targets,
                     # but leave the failed target and its dependent sweep pending.
-                    rejected = rejected or error
+                    if rejected is None:
+                        from .diagnostic_context import record_first_failure
+                        record_first_failure(store, profile, pending, {
+                            'action': 'uninstall', 'phase': 'uninstall',
+                            'error_type': type(error).__name__, 'reason_code': error.reason_code,
+                            'luna': error.luna,
+                        })
+                        rejected = error
                     continue
             raise
         removals[app] = 'terminal'
@@ -1037,7 +1059,8 @@ def continue_removal(installer, expected_pending):
             store.checkpoint(profile, cleanup_boot_release_started=True)
         _device(installer, 'boot-retire' if restarted else 'boot-release', proof=proof)
     result = {'removed': True, 'verified_clean': True}
-    if final.get('legacy_registrations_unverified'):
+    if (final.get('legacy_registrations_unverified')
+            or guard and current.get('legacy_layout') and not final.get('legacy_layout')):
         result['legacy_registrations_unverified'] = True
     if final['present'] or final['blocked'] or swept['blocked']:
         result['temporary_files_retained'] = True

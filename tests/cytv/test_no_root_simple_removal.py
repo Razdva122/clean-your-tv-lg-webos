@@ -1961,6 +1961,111 @@ class SimpleRemoval(unittest.TestCase):
         self.assertEqual(self.vendor_removals(),[app])
         self.assertTrue(public.exists())
 
+    @unittest.skipIf(getattr(os,'getuid',lambda:-1)()==0,'unprivileged SDK model')
+    def test_unsearchable_legacy_registry_is_only_an_audit_limit(self):
+        public = self.legacy_paths()
+        public.parent.chmod(0)
+        self.addCleanup(public.parent.chmod, 0o755)
+        app = self.cleanup.APPS[0]
+        self.remote.apps.add(app)
+        result = self.remove()
+        self.assertTrue(result['verified_clean'])
+        self.assertTrue(result['legacy_registrations_unverified'])
+        self.assertEqual(self.vendor_removals(), [app])
+        self.assertIsNone(self.store.pending(self.profile))
+        self.assertTrue(self.remove()['verified_clean'])
+        self.assertEqual(self.vendor_removals(), [app])
+
+    def test_legacy_protected_footprint_does_not_override_conflicting_sam(self):
+        app, source, registration = self.legacy_package()
+        info = {'id':app, 'folderPath':'/usr/palm/applications/'+app}
+        self.remote.sam = {app:{'returnValue':True, 'appId':app, 'appInfo':info}}
+        with self.assertRaises(UserError) as caught:
+            self.remove()
+        self.assertEqual(caught.exception.reason_code, 'cleanup-check-failed')
+        self.assertEqual(self.vendor_removals(), [])
+        self.assertTrue(source.exists())
+        self.assertTrue(registration.exists())
+        self.remote.sam = None
+        self.assertTrue(self.remove()['verified_clean'])
+        self.assertEqual(self.vendor_removals(), [app])
+
+    def test_legacy_exact_sam_still_verifies_removal_if_public_view_disappears(self):
+        public = self.legacy_paths()
+        app = self.cleanup.APPS[1]
+        info = {'id':app, 'folderPath':'/media/developer/apps/usr/palm/applications/'+app}
+        self.remote.sam[app] = {'returnValue':True, 'appId':app, 'appInfo':info}
+        original = self.remote.luna
+
+        def luna(uri, body, **options):
+            reply = original(uri, body, **options)
+            if uri.endswith('/dev/remove'):
+                public.rmdir()
+            return reply
+
+        self.remote.luna = luna
+        with self.assertRaises(UserError) as caught:
+            self.remove()
+        self.assertEqual(caught.exception.reason_code, 'cleanup-check-failed')
+        pending = self.store.pending(self.profile)
+        self.assertEqual(pending['removals'], {app:'terminal'})
+        with self.assertRaises(UserError):
+            self.remove()  # A positive exact result still matters on retry.
+        self.remote.sam.clear()
+        self.assertTrue(self.remove()['verified_clean'])
+        self.assertEqual(self.vendor_removals(), [app])
+
+    def test_legacy_vanished_public_view_is_audited_after_supported_removal(self):
+        public = self.legacy_paths()
+        app = self.cleanup.APPS[1]
+        info = {'id':app, 'folderPath':'/media/developer/apps/usr/palm/applications/'+app}
+        self.remote.sam[app] = {'returnValue':True, 'appId':app, 'appInfo':info}
+        original = self.remote.luna
+
+        def luna(uri, body, **options):
+            reply = original(uri, body, **options)
+            if uri.endswith('/dev/remove'):
+                public.rmdir()
+                self.remote.sam = None
+            return reply
+
+        self.remote.luna = luna
+        result = self.remove()
+        self.assertTrue(result['verified_clean'])
+        self.assertTrue(result['legacy_registrations_unverified'])
+        self.assertIsNone(self.store.pending(self.profile))
+        self.assertEqual(self.vendor_removals(), [app])
+
+    def test_legacy_first_vendor_rejection_survives_later_independent_disconnect(self):
+        from cytv import diagnostics
+
+        app, source, _ = self.legacy_package()
+        independent = self.cleanup.APPS[2]
+        self.remote.apps.add(independent)
+        self.remote.reject = {'returnValue':False, 'errorCode':-102, 'errorText':'vendor-private-text'}
+        self.remote.cut = independent
+        goal = self.store.request_clean_removal(self.profile)['removal_operation']
+        # Locate the original install's failure independently of cleanup.
+        self.store.checkpoint(self.profile, previous={'action':'install', 'stage':'install-packages'})
+        self.store = self.installer.store = Store(self.store.root)
+
+        with self.assertRaises(UserError) as caught:
+            self.remove()
+        self.assertIn('connection to the tv was lost', str(caught.exception).lower())
+        pending = self.store.pending(self.profile)
+        self.assertEqual(pending['removals'], {independent:'submitted'})
+        self.assertEqual(pending['removal_operation'], goal)
+        path = diagnostics.create_report(self.store, 'uninstall', self.profile, 'uninstall', caught.exception)
+        value = json.loads(path.read_text())
+        self.assertIsNone(value['first_failure'])
+        rejection, = value['intermediate_failures']
+        self.assertEqual(rejection['luna']['error_code'], -102)
+        self.assertEqual(rejection['luna']['operation'], 'package-remove')
+        self.assertNotIn('vendor-private-text', path.read_text())
+        self.assertTrue(source.exists())
+        self.assertTrue(self.remove()['verified_clean'])
+        self.assertEqual(self.vendor_removals(), [app, independent, app])
+
     def test_previous_cleanup_package_is_removed_as_a_registered_app(self):
         app = 'com.local.nativehome'
         info = {'id': app, 'title': 'Clean Your TV cleanup', 'visible': False}
