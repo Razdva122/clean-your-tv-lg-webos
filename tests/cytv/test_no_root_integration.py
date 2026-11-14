@@ -20,6 +20,9 @@ class ProcessRemote(Remote):
         super().__init__()
         self.root_path=root
         self.cut=False
+        self.cut_after_cleanup=None
+        self.transform_cleanup=lambda source: source
+        self.close=lambda: None
         self.sender=root/'sender'
         self.sender.write_text('''#!/usr/bin/env python3
 import json,sys,os,select
@@ -64,6 +67,23 @@ sys.stdin.read()
             result=subprocess.run(['sh','-c',command],input=source,capture_output=True,timeout=timeout)
             if result.returncode:raise RuntimeError(result.stderr.decode())
             return result.stdout.decode()
+        if command == '/usr/bin/node' and data.startswith(b'process.argv.push('):
+            value, _ = json.JSONDecoder().raw_decode(data.decode()[len('process.argv.push('):])
+            request = json.loads(value)
+            import tempfile
+            source = data.decode().replace('/media/developer/apps', str(self.root_path / 'apps'))
+            source = source.replace('/media/developer/temp', str(self.root_path / 'public'))
+            source = source.replace('/tmp/.cytv-installer', str(self.root_path / 'private'))
+            source = source.replace("'/proc/'", repr(str(self.root_path / 'proc') + '/'))
+            source = source.replace('/proc/sys/kernel/random/boot_id', str(self.root_path / 'boot'))
+            source = source.replace("'/tmp'", repr(tempfile.gettempdir()))
+            result = subprocess.run([os.environ.get('NODE_EXEC') or shutil.which('node')], input=self.transform_cleanup(source).encode(),
+                                    capture_output=True, timeout=timeout)
+            if result.returncode:
+                raise RuntimeError(result.stderr.decode())
+            if self.cut_after_cleanup is not None:
+                self.cut_after_cleanup(request, json.loads(result.stdout))
+            return result.stdout.decode()
         words=split_observer_command(command)
         if '/usr/bin/node' in words and words[words.index('/usr/bin/node')+1:][:1]==['-e']:
 
@@ -103,6 +123,20 @@ sys.stdin.read()
         return result.stdout.decode()
 
     def luna(self,uri,payload,**kwargs):
+        if uri == 'com.webos.appInstallService/status':
+            from cytv.errors import TVRejected
+            raise TVRejected('Denied', {'returnValue': False, 'errorCode': -1}, uri)
+        if uri.endswith('/dev/remove'):
+            self.calls.append(('luna', uri, payload))
+            source = self.root_path / 'installed.json'
+            apps = json.loads(source.read_text())
+            app = payload['id']
+            apps.pop(app)
+            source.write_text(json.dumps(apps))
+            for kind, name in [('applications', app), ('packages', app),
+                               ('services', app + ('.renewal' if app == operations.HOME else '.service'))]:
+                shutil.rmtree(self.root_path / 'apps/usr/palm' / kind / name, ignore_errors=True)
+            return {'returnValue': True, 'id': app, 'details': {'state': 'removed'}}
         if uri.endswith('/dev/listApps'):
             source=self.root_path/'installed.json'
             self.installed=[{'id':app,'version':version} for app,version in json.loads(source.read_text()).items()] if source.exists() else []
@@ -130,6 +164,150 @@ class OriginalOperationIntegration(unittest.TestCase):
             patcher=patch.object(operations,name,value);patcher.start();self.addCleanup(patcher.stop)
         self.installer=operations.Installer(self.remote,self.store,self.profile,fixture.payload,fixture.manifest,lambda *_:None)
         self.inventory=fixture.inventory
+
+    def test_cli_cancels_owned_partial_install_and_can_install_fresh(self):
+        from cytv import cli
+        (self.root / 'proc').mkdir()
+        self.remote.cut = True
+        with self.store.lock(self.profile), self.assertRaises(RuntimeError):
+            self.installer.install(self.inventory, 'original-secret')
+        old = self.store.pending(self.profile)
+        plan = observer.capsule(self.installer, old)['plan']
+        directory = self.store.device_dir(self.profile)
+        original = (directory / 'operation.json').read_bytes()
+        self.store.save(self.profile)
+        (directory / 'known_hosts').write_text('trusted-by-fixture\n')
+        args = ['uninstall', '--host', self.profile['host'], '--edition', 'no-root',
+                '--data-dir', str(self.store.root), '--yes', '--non-interactive', '--language', 'en']
+        output = []
+
+        def remove():
+            with patch('cytv.cli.package.verify_payload', return_value=self.installer.manifest):
+                return cli.main(args, write=output.append, connect=lambda *_: self.remote,
+                                payload_root=self.installer.payload)
+
+        with self.store.lock(self.profile):
+            self.assertNotEqual(remove(), 0)
+        self.assertEqual((directory / 'operation.json').read_bytes(), original)
+        self.assertEqual(remove(), 0, output)
+        self.assertIsNone(self.store.pending(self.profile), output)
+        self.assertEqual((self.root / 'requests').read_text().splitlines(), [operations.HELPER])
+        self.assertFalse((self.root / 'private/active').exists())
+        self.assertEqual([call[2]['id'] for call in self.remote.calls if call[1].endswith('/dev/remove')],
+                         [operations.HELPER])
+        finished = json.loads((directory / 'clean-removal.json').read_text())
+        self.assertEqual((directory / finished['original_receipt']).read_bytes(), original)
+        self.assertEqual(finished['previous']['observer_operation'], plan['operation'])
+        self.installer.install(self.inventory, 'fresh-secret')
+        self.assertEqual((self.root / 'requests').read_text().splitlines(), [operations.HELPER, *observer.APPS])
+
+    def test_owned_fence_survives_lost_acknowledgement_and_blocks_old_attach(self):
+        from cytv.errors import UserError
+        (self.root / 'proc').mkdir()
+        self.remote.cut = True
+        with self.assertRaises(RuntimeError):
+            self.installer.install(self.inventory, 'original-secret')
+        plan = observer.capsule(self.installer, self.store.pending(self.profile))['plan']
+        original_source = self.root / 'private/operations' / plan['operation'] / 'observer.js'
+        source_bytes = original_source.read_bytes()
+        observed = []
+
+        def disconnect_once(request, reply):
+            if not observed and reply.get('cancellation', {}).get('reservation'):
+                observed.append(request['removal'])
+                raise UserError('Connection interrupted', reason_code='connection-interrupted')
+
+        self.remote.cut_after_cleanup = disconnect_once
+        with self.assertRaises(UserError):
+            self.installer.uninstall_project()
+        active = self.root / 'private/active'
+        self.assertEqual(sorted(p.name for p in active.iterdir()),
+                         ['cancel-removal.json', 'owner-' + plan['operation'] + '.json'])
+        self.assertEqual(original_source.read_bytes(), source_bytes)
+        with self.assertRaises(UserError):
+            observer.invoke(self.remote, plan, 'attach')
+        self.installer.store = state.Store(self.store.root)
+        self.assertTrue(self.installer.uninstall_project()['verified_clean'])
+        finished = json.loads((self.store.device_dir(self.profile) / 'clean-removal.json').read_text())
+        self.assertEqual(observed, [finished['removal_operation']])
+        self.assertEqual((self.root / 'requests').read_text().splitlines(), [operations.HELPER])
+
+    def test_interrupted_two_link_fence_publication_is_resumable(self):
+        (self.root / 'proc').mkdir()
+        self.remote.cut = True
+        with self.assertRaises(RuntimeError):
+            self.installer.install(self.inventory, 'original-secret')
+        old = self.store.pending(self.profile)
+        self.remote.transform_cleanup = lambda code: code.replace(
+            'fs.linkSync(tmp,fence);', 'fs.linkSync(tmp,fence);process.exit(79);')
+        with self.assertRaises(RuntimeError):
+            self.installer.uninstall_project()
+        goal = self.store.pending(self.profile)['removal_operation']
+        marker = self.root / 'private/active/cancel-removal.json'
+        self.assertEqual(marker.stat().st_nlink, 2)
+        self.remote.transform_cleanup = lambda code: code
+        lost = []
+        def interrupt(request, reply):
+            if request['action'] == 'history' and not lost:
+                lost.append(True)
+                from cytv.errors import UserError
+                raise UserError('Connection interrupted', reason_code='connection-interrupted')
+        self.remote.cut_after_cleanup = interrupt
+        self.installer.store = state.Store(self.store.root)
+        with self.assertRaises(RuntimeError):
+            self.installer.uninstall_project()
+        self.assertEqual(self.store.pending(self.profile)['stage'], 'verified-clean')
+        self.installer.store = state.Store(self.store.root)
+        self.assertTrue(self.installer.uninstall_project()['verified_clean'])
+        self.assertFalse(marker.exists())
+        self.assertEqual((self.root / 'requests').read_text().splitlines(), [operations.HELPER])
+        finished = json.loads((self.store.device_dir(self.profile) / 'clean-removal.json').read_text())
+        self.assertEqual(finished['removal_operation'], goal)
+        self.assertEqual(finished['previous'], old)
+        self.installer.install(self.inventory, 'fresh-secret')
+        self.assertEqual((self.root / 'requests').read_text().splitlines(), [operations.HELPER, *observer.APPS])
+
+    def test_closed_release_cut_with_missing_historical_launch_result_allows_removal(self):
+        from cytv.errors import UserError
+        (self.root / 'proc').mkdir()
+        invoke = observer.invoke
+        cut = []
+
+        def lose_release(remote, plan, command, *args, **kwargs):
+            if command == 'release' and not cut:
+                cut.append(plan)
+                installed = self.root / 'private/operations' / plan['operation']
+                active = self.root / 'private/active'
+                owner = active / ('owner-' + plan['operation'] + '.json')
+                # Run the real producer through durable closure, before its
+                # owner unlink (equivalent to loss of power or SSH here).
+                source = observer.PROGRAM.replace(
+                    "if(exists(active+'/'+marker)){",
+                    "throw Error('synthetic release cut');if(exists(active+'/'+marker)){", 1)
+                original_run = remote.run
+
+                def run(command, **options):
+                    words = split_observer_command(command)
+                    code = words[words.index('-e') + 1].replace(observer.PROGRAM, source)
+                    return original_run('/usr/bin/node -e ' + shlex.quote(code) + ' ' +
+                                        shlex.quote(words[-1]), **options)
+
+                with patch.object(remote, 'run', side_effect=run):
+                    with self.assertRaises(UserError):
+                        invoke(remote, plan, command, *args, **kwargs)
+                self.assertTrue(owner.exists())
+                self.assertTrue((installed / 'closed.json').exists())
+                (installed / 'config-result-launch.json').unlink()
+                raise UserError('Connection interrupted', reason_code='connection-interrupted')
+            return invoke(remote, plan, command, *args, **kwargs)
+
+        with patch.object(observer, 'invoke', side_effect=lose_release):
+            with self.assertRaises(UserError):
+                self.installer.install(self.inventory, 'original-secret')
+        self.assertTrue(self.installer.uninstall_project()['verified_clean'])
+        self.assertFalse((self.root / 'private/active').exists())
+        self.assertEqual([call[2]['id'] for call in self.remote.calls if call[1].endswith('/dev/remove')],
+                         list(observer.APPS))
 
     @unittest.skipIf(getattr(os,'getuid',lambda:0)()==0,'Requires an unprivileged Developer Mode user')
     def test_execute_only_tmp_uses_owned_jail_storage_and_resumes_pinned_operation(self):

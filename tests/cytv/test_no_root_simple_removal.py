@@ -453,6 +453,75 @@ class SimpleRemoval(unittest.TestCase):
         self.assertFalse(list((self.root / 'volatile').glob('cytv-removal-*.boot')))
         self.assertIsNone(self.store.pending(self.profile))
 
+    def test_reconnect_reconciles_vendor_and_history_replies_under_one_goal(self):
+        (self.root / 'proc').mkdir()
+        app = 'com.local.nativehome'
+        self.remote.apps.add(app)
+        self.remote.os_cleanup = True
+        journal = self.own_file('.cytv-installer/operations/' + 'a' * 32 + '/journal.json')
+        self.remote.cut = app
+        pending = self.store.request_clean_removal(self.profile)
+        with self.assertRaises(UserError):
+            self.remove()
+        self.assertFalse(self.remote.apps)
+
+        original = self.remote.run
+        cuts = ['sweep', 'boot-release', 'history']
+        def run(command, data=None, **options):
+            result = original(command, data, **options)
+            if data and cuts:
+                value, _ = json.JSONDecoder().raw_decode(data.decode()[len('process.argv.push('):])
+                if json.loads(value)['action'] == cuts[0]:
+                    cuts.pop(0)
+                    raise UserError('Connection interrupted', reason_code='connection-interrupted')
+            return result
+
+        proof = self.cleanup._device(self.installer, 'boot-create')['boot_proof']
+        self.store.checkpoint(self.profile, cleanup_boot_proof=proof)
+        self.remote.run = run
+        for _ in range(3):
+            self.installer.store = Store(self.store.root)
+            with self.assertRaises(UserError):
+                self.remove()
+            self.assertEqual(self.store.pending(self.profile)['removal_operation'], pending['removal_operation'])
+            self.store = self.installer.store
+        self.assertTrue(self.remove()['verified_clean'])
+        self.assertFalse(cuts)
+        self.assertFalse(journal.exists())
+        self.assertEqual([body['id'] for uri, body in self.remote.calls if uri.endswith('/dev/remove')], [app])
+        self.assertIsNone(self.store.pending(self.profile))
+
+    def test_denied_monitor_waits_for_real_lost_request_then_finishes(self):
+        (self.root / 'proc').mkdir()
+        app = 'com.local.nativehome'
+        self.remote.apps.add(app)
+        self.remote.os_cleanup = True
+        self.remote.cut = app
+        original = self.remote.luna
+        monitor = 'denied'
+
+        def luna(uri, payload, **kwargs):
+            if uri.endswith('/status') and monitor == 'denied':
+                raise TVRejected('Denied', {'returnValue': False, 'errorCode': -1}, uri)
+            return original(uri, payload, **kwargs)
+
+        self.remote.luna = luna
+        pending = self.store.request_clean_removal(self.profile)
+        with self.assertRaises(UserError):
+            self.remove()
+        self.assertTrue(self.remove()['restart_required'])
+        proof = self.store.pending(self.profile)['cleanup_boot_proof']
+        with self.assertRaises(UserError) as waiting:
+            self.remove()
+        self.assertEqual(waiting.exception.reason_code, 'removal-terminal-unknown')
+        self.assertEqual(self.store.pending(self.profile)['cleanup_boot_proof'], proof)
+        monitor = 'idle'
+        self.assertTrue(self.remove()['verified_clean'])
+        self.assertEqual([body['id'] for uri, body in self.remote.calls if uri.endswith('/dev/remove')], [app])
+        completed = json.loads((self.store.device_dir(self.profile) / 'clean-removal.json').read_text())
+        self.assertEqual(completed['removal_operation'], pending['removal_operation'])
+        self.assertEqual(self.remote.boot, proof['kernel'])
+
     def test_lost_same_boot_marker_release_never_proves_a_restart(self):
         (self.root/'proc').mkdir()
         self.remote.apps={'com.gathin.tvhome'}
@@ -485,6 +554,7 @@ class SimpleRemoval(unittest.TestCase):
         with patch.object(self.store,'finish_clean_removal',side_effect=OSError('host interruption')):
             with self.assertRaises(OSError):self.remove()
         self.assertEqual(self.store.pending(self.profile)['stage'],'verified-clean')
+        (self.root / 'proc').rmdir()
         self.assertTrue(self.remove()['verified_clean'])
 
     def test_saved_restart_proof_does_not_hide_a_reappeared_process(self):
@@ -678,7 +748,7 @@ class SimpleRemoval(unittest.TestCase):
             self.assertTrue(self.remove()['verified_clean'])
         actions = [call.args[1] for call in device.call_args_list]
         self.assertIn('idle', actions[:actions.index('sweep')])
-        self.assertEqual(actions[actions.index('sweep') + 1:], ['inventory', 'idle', 'boot-release'])
+        self.assertEqual(actions[actions.index('sweep') + 1:], ['inventory', 'idle', 'inventory', 'boot-release', 'history'])
         self.assertIsNone(self.store.pending(self.profile))
 
     def test_restricted_tmp_rechecks_legacy_restart_request_after_startup_recovers(self):
@@ -733,7 +803,7 @@ class SimpleRemoval(unittest.TestCase):
         proc = self.root / 'proc/123'
         proc.mkdir()
         (proc / 'cmdline').write_bytes(b'/usr/bin/node\0' + os.fsencode(journal.with_name('observer.js')) + b'\0')
-        with self.assertRaisesRegex(UserError, 'process did not stop'):
+        with self.assertRaisesRegex(UserError, 'original TV operation is still running'):
             self.remove()
         self.assertTrue(journal.exists())
         self.assertFalse(any(uri.endswith('/dev/remove') for uri, _ in self.remote.calls))
@@ -746,35 +816,49 @@ class SimpleRemoval(unittest.TestCase):
         self.assertIsNot(receipt.get('cleanup_boot_verified'), True)
         self.assertEqual(receipt['cleanup_boot_proof']['kernel'], self.remote.boot)
 
-    def test_denied_package_status_uses_only_terminal_readback_for_original_install(self):
-        from cytv import no_root_observer
-
+    def test_denied_optional_monitor_and_unreadable_history_allow_vendor_removal(self):
         self.remote.volatile_mode = 0o111
         (self.root / 'proc').mkdir()
-        self.store.begin(self.profile, 'install', recovery_protocol=no_root_observer.PROTOCOL)
-        self.remote.apps = {'com.local.nativehome', 'com.gathin.tvhome'}
+        app = 'com.local.nativehome'
+        self.remote.apps.add(app)
+        self.store.begin(self.profile, 'install',
+                         recovery_protocol='no-root-original-stream-v1', observer_operation='a' * 32)
         journal = self.own_file('.cytv-installer/operations/' + 'a' * 32 + '/journal.json')
-        original_luna = self.remote.luna
+        journal.parent.chmod(0o000)
+        self.addCleanup(lambda: journal.parent.chmod(0o700) if journal.parent.exists() else None)
+        original = self.remote.luna
 
-        def luna(uri, payload, **kwargs):
-            if uri == 'com.webos.appInstallService/status':
+        def denied(uri, payload, **kwargs):
+            if uri.endswith('/status'):
                 raise TVRejected('Denied', {'returnValue': False, 'errorCode': -1}, uri)
-            return original_luna(uri, payload, **kwargs)
+            return original(uri, payload, **kwargs)
 
-        self.remote.luna = luna
-        slots = [dict(terminal='success', readback='matches', reason=None) for _ in range(2)]
-        slots[1]['readback'] = 'not-checked'
-        with patch.object(no_root_observer, 'capsule', return_value={'plan': {}}) as capsule, \
-             patch.object(no_root_observer, 'snapshot', return_value={'reservation': 'active', 'slots': slots}):
-            self.assertTrue(self.remove()['restart_required'])
-            self.assertTrue(journal.exists())
-            self.assertFalse(any(uri.endswith('/dev/remove') for uri, _ in self.remote.calls))
-            slots[1]['readback'] = 'matches'
-            self.assertTrue(self.remove()['verified_clean'])
-            self.assertEqual(capsule.call_args.args[1]['action'], 'install')
-        self.assertFalse(journal.exists())
-        self.assertFalse(self.remote.apps)
-        self.assertFalse(any(uri.endswith('/dev/install') for uri, _ in self.remote.calls))
+        self.remote.luna = denied
+        self.assertTrue(self.remove()['verified_clean'])
+        self.assertEqual([body['id'] for uri, body in self.remote.calls if uri.endswith('/dev/remove')], [app])
+        self.assertIsNone(self.store.pending(self.profile))
+
+    def test_foreign_active_reservation_arriving_at_stop_preserves_controls(self):
+        (self.root / 'proc').mkdir()
+        self.remote.apps.add('com.local.nativehome')
+        owner = self.root / 'developer/.cytv-installer/active/owner-foreign.json'
+        original = self.remote.run
+
+        def run(command, data=None, **options):
+            if data and json.loads(json.JSONDecoder().raw_decode(data.decode()[len('process.argv.push('):])[0])['action'] == 'stop' and not appeared:
+                appeared.append(True)
+                owner.parent.mkdir(parents=True)
+                owner.write_text('foreign')
+            return original(command, data, **options)
+
+        appeared = []
+        self.remote.run = run
+        with self.assertRaises(UserError):
+            self.remove()
+        self.assertEqual(owner.read_text(), 'foreign')
+        self.assertFalse(any(uri.endswith(('/deleteDevice', '/launch', '/dev/remove')) for uri, _ in self.remote.calls))
+        owner.unlink()
+        self.assertTrue(self.remove()['verified_clean'])
 
     def test_restricted_tmp_keeps_unresolved_install_when_package_status_is_denied(self):
         from cytv.diagnostics import create_report
@@ -1011,7 +1095,8 @@ class SimpleRemoval(unittest.TestCase):
     def test_unsafe_jail_private_leaf_is_never_deleted_or_repaired(self):
         private=self.root/'jail-private';private.mkdir(mode=0o755)
         evidence=private/'foreign';evidence.write_text('keep')
-        with self.assertRaises((RuntimeError,UserError)):self.remove()
+        (self.root / 'proc').mkdir()
+        self.assertTrue(self.remove()['temporary_files_retained'])
         self.assertEqual(evidence.read_text(),'keep')
         self.assertEqual(private.stat().st_mode&0o777,0o755)
 
@@ -1195,6 +1280,7 @@ class SimpleRemoval(unittest.TestCase):
         from cytv.terminal import Console
         from cytv.transport import terminal_reply
 
+        (self.root / 'proc').mkdir()
         self.store.begin(self.profile, 'install')
         original = self.store.pending(self.profile)
         receipt = self.store.device_dir(self.profile) / 'operation.json'
@@ -1234,14 +1320,6 @@ class SimpleRemoval(unittest.TestCase):
             self.assertEqual(self.remote.commands, [])
             verify_payload.assert_not_called()
 
-            run('y', 'y')
-            self.assertTrue(plans[-1]['restart_required'])
-            self.assertFalse(plans[-1]['verified_clean'])
-            self.assertEqual(self.remote.apps, {operations.HELPER})
-            self.assertFalse(any(uri.endswith('/dev/remove') for uri, _ in self.remote.calls))
-            verify_payload.assert_called_once_with(self.installer.payload)
-            self.reboot()
-
             self.remote.reject = {'returnValue': False, 'errorCode': -7}
             with self.assertRaises(TVRejected) as busy:
                 run('y', 'y')
@@ -1252,9 +1330,15 @@ class SimpleRemoval(unittest.TestCase):
             pending = self.store.pending(self.profile)
             self.assertEqual(pending['previous'], original)
             self.assertEqual((receipt.parent / pending['original_receipt']).read_bytes(), original_bytes)
+            verify_payload.assert_called_once_with(self.installer.payload)
 
-            run('y', 'y')
+            with self.assertRaises(UserError):
+                run('y', 'y')
             self.assertFalse(self.remote.apps)
+            self.assertTrue(plans[-1]['restart_required'])
+            self.assertFalse(plans[-1]['verified_clean'])
+            self.reboot()
+            run('y', 'y')
 
         self.assertTrue(plans[-1]['verified_clean'])
         self.assertIsNone(self.store.pending(self.profile))
@@ -1520,11 +1604,33 @@ class SimpleRemoval(unittest.TestCase):
         with self.assertRaises(UserError):self.remove()
         self.assertEqual((own/'child/valuable').read_text(),'preserve')
 
-    def test_stale_updater_transaction_requires_restart_but_not_old_success(self):
-        record=self.own_file('apps/usr/palm/services/com.cleanyourtv.updater.service/state/transaction.json',json.dumps({'schema':1,'status':'installing'}))
+    def test_observed_homebrew_sender_blocks_sweep_after_it_exits_until_restart(self):
+        (self.root / 'proc').mkdir()
+        app = 'com.local.nativehome'
+        self.remote.apps.add(app)
+        residue = self.own_file('apps/usr/palm/applications/' + app + '/appinfo.json', json.dumps({'id': app}))
+        process = self.root / 'proc/123'
+        process.mkdir()
+        (process / 'cmdline').write_bytes(
+            b'/usr/bin/luna-send-pub\0-i\0luna://org.webosbrew.hbchannel.service/install\0'
+            b'{"id":"com.local.nativehome"}\0')
+        with self.assertRaises(UserError):
+            self.remove()
+        self.assertTrue(residue.exists())
+        self.assertFalse(any(uri.endswith('/dev/remove') for uri, _ in self.remote.calls))
+        shutil.rmtree(process)
         self.assertTrue(self.remove()['restart_required'])
-        self.assertTrue(record.exists())
-        self.reboot();self.assertTrue(self.remove()['verified_clean']);self.assertFalse(record.exists())
+        self.assertFalse(self.remote.apps)
+        self.assertTrue(residue.exists())
+        self.reboot()
+        self.assertTrue(self.remove()['verified_clean'])
+        self.assertFalse(residue.exists())
+
+    def test_stale_updater_transaction_is_not_current_work(self):
+        (self.root / 'proc').mkdir()
+        record=self.own_file('apps/usr/palm/services/com.cleanyourtv.updater.service/state/transaction.json',json.dumps({'schema':1,'status':'installing'}))
+        self.assertTrue(self.remove()['verified_clean'])
+        self.assertFalse(record.exists())
         receipt=json.loads((self.store.device_dir(self.profile)/'clean-removal.json').read_text())
         self.assertEqual(receipt['previous_update_status'],'installing')
 
