@@ -48,15 +48,33 @@ records there. They ignore existing records in the outer directory while it
 has mode 0775. Other unexpected modes, symlinks and failed mode checks still
 refuse access. The usual 2770 directory uses the existing record paths.
 
-Both Home and Helper must ship the recovery logic for a 0775 channel. The
-child contains transient request/response files and is excluded from installed
-rollback capture along with other mutable state. This uses the existing group,
-caller checks, and request protocol. No setup step changes.
+The stock Developer Mode startup script on C3 firmware 43.21.96 recursively
+sets mode 0777 under `/media/developer` and `/tmp/developer`. When a setup
+session has authority over the packaged 5999:5000 directories, it restores
+the existing service state and channel to 2770. It closes the channel to the
+shared group while discarding the fixed transient request/response names.
+At runtime, when the packaged channel is still 0777, Renewal creates a child
+for the current kernel boot ID. Both processes check the parent inode and
+require the shared jailer group and exact mode 2770 on the child before
+handling records. The boot ID keeps records and open descriptors from prior
+boots out of the active channel. The outer directory can still cause denial
+of service if its entries are removed or replaced. Requests remain on the
+same-package Renewal service path because webOS does not expose the native
+application name as a callable service.
+
+Start Helper from the Home panel starts the relay without asking SAM to
+relaunch the foreground Home CARD. If the previous controller still holds
+its lock, the panel allows another explicit attempt once it exits. Legacy
+installer launches retain their existing Home launch behavior.
+
+If both evdev endpoints disappear without a recent power event, the relay
+cleans up and exits for the current boot. The next boot can start Helper
+normally. Explicit Stop and other cleanup failures keep their existing
+persistent safety behavior.
 
 The service still checks the caller application before I/O. The protocol retains
 its fixed three commands, boolean validation, random request ID, five-second
-expiry, request serialization and correlated response. There is no socket,
-network endpoint, broad LS2 grant or automatic Helper start/resume. A stopped
+expiry, request serialization and correlated response. This channel uses local files and the same-package service. A stopped
 controller remains stopped; unavailable status stays unknown. The native
 controller still reads the old channel for older Home packages, with independent
 request-ID tracking. New Home submits once to the new channel; it does not replay

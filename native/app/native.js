@@ -561,11 +561,6 @@ function readHomeRequest(channel) {
   )
     return;
   if (
-    (channel.inputOnly && request.method !== 'inputStatus') ||
-    (channel.catalogOnly && request.method !== 'listApps')
-  )
-    return;
-  if (
     channel.catalogOnly &&
     (stopping ||
       stopRequested ||
@@ -573,7 +568,7 @@ function readHomeRequest(channel) {
       (child && child.reason !== undefined))
   )
     return;
-  function respond(result) {
+  handleHomeRequest(channel, request, function (result) {
     result.id = request.id;
     try {
       require('./state-permissions').atomicRecord(
@@ -585,7 +580,15 @@ function readHomeRequest(channel) {
     } catch (e) {
       log({ event: 'home-response-error', error: String(e) });
     }
-  }
+  });
+}
+function handleHomeRequest(channel, request, respond) {
+  var directory = channel.directory;
+  if (
+    (channel.inputOnly && request.method !== 'inputStatus') ||
+    (channel.catalogOnly && request.method !== 'listApps')
+  )
+    return respond({ returnValue: false });
   try {
     if (
       !channel.inputOnly &&
@@ -1160,7 +1163,14 @@ setTimeout(
       if (!stopping) finish(0);
       return;
     }
-    if (!homeControl.enabled()) {
+    // The panel already runs inside Home. Explicit Start should report relay
+    // readiness even if SAM would refuse to relaunch the foreground CARD.
+    if (
+      (!automatic &&
+        setupGeneration === undefined &&
+        launchParams.nativeHomePanel === true) ||
+      !homeControl.enabled()
+    ) {
       start();
       return;
     }

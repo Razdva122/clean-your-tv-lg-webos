@@ -14,7 +14,7 @@ REMOVAL_REASONS = ('removal-requested', 'original-writer-active', 'ownership-con
                    'connection-interrupted','connection-unverified')
 RESTART_TRIGGERS = ('controller-still-running', 'protected-package-access', 'startup-disable-unverified',
                     'resident-installer-evidence', 'prior-operation-unresolved', 'process-idle-unverified',
-                    'invalid-helper-stop-record', 'package-removal-unverified',
+                    'invalid-helper-stop-record', 'catalog-helper-stop-unverified', 'package-removal-unverified',
                     'original-configuration-unverified', 'original-package-unverified', 'homebrew-request-unverified')
 STATES += ('cleanup-in-progress', 'verified-clean')
 REASONS += REMOVAL_REASONS

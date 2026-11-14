@@ -189,7 +189,7 @@ int main(void){
  for(int hint=0;hint<5;hint++)for(int fail=8;fail<=11;fail++){
   reset();scenario=4;fault=fail;suspend_hint=hint!=0;suspend_cancel=hint==2;suspend_expired=hint==3;suspend_stop=hint==4;
   char*args[]={"relay",NULL};int reason=relay_main(1,args);
-  int expected=hint==1&&fail==8?32:31;
+  int expected=fail==8&&hint!=4?(hint==1?32:33):31;
   assert(reason==expected);assert(blocked_marker==(expected==31)&&watchdog_marker==0);
   assert(release_checks==1&&ungrabbed==1&&closed_input==1&&closed_output==1);
  }

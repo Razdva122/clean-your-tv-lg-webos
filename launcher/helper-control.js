@@ -303,7 +303,7 @@
                 'luna://com.webos.applicationManager/launch',
                 {
                   id: 'com.local.nativehome',
-                  params: { nativeHomeStart: true }
+                  params: { nativeHomeStart: true, nativeHomePanel: true }
                 },
                 function (r) {
                   busy = false;

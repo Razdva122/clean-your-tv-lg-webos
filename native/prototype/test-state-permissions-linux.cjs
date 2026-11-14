@@ -153,6 +153,13 @@ if (process.platform !== 'linux' || process.getuid() !== 0) {
     // The app UID can still use the published explicit Start path while the
     // packaged owner retains the expanded state directory.
     const bootStorage = 'var p=require(' + bootModule + '),d=' + bootPath + ';';
+    // The previous startup service could repair the key in the app's namespace.
+    // Replay LG widening that service-owned key, then start the native app.
+    fs.chownSync(path.join(boot, 'ssap-key.json'), 6923, 5000);
+    fs.chmodSync(path.join(boot, 'ssap-key.json'), 0o777);
+    run(5431, bootStorage + 'if(!p(d,null,true))process.exit(8);', 5431);
+    a.equal(fs.statSync(path.join(boot, 'ssap-key.json')).uid, 5431);
+    a.equal(fs.statSync(path.join(boot, 'ssap-key.json')).mode & 0o777, 0o640);
     run(
       5431,
       bootStorage + 'if(p.stopGeneration(d,"manual")!==null)process.exit(8);',
@@ -343,6 +350,63 @@ if (process.platform !== 'linux' || process.getuid() !== 0) {
         quotedDrifted +
         ',"catalog-response")!=="answer")process.exit(8);'
     );
+    // Replay the stock recursive chmod against both channel directories and
+    // the records retained from previous boots.
+    fs.chmodSync(renewal, 0o777);
+    fs.chmodSync(drifted, 0o777);
+    fs.chmodSync(privateChannel, 0o777);
+    const oldRequest = path.join(drifted, 'home-request.json');
+    fs.writeFileSync(oldRequest, 'discard on recovery', { mode: 0o777 });
+    fs.chmodSync(oldRequest, 0o777);
+    // A retained writer can keep its old descriptor open across chmod.
+    const oldDescriptor = fs.openSync(oldRequest, 'w');
+    const channelCode =
+      'var s=require(' + bootModule + '),d=' + quotedDrifted + ';';
+    run(6923, channelCode + 's.atomicRecord(d,"home-request","boot request");');
+    run(
+      5431,
+      channelCode +
+        'if(s.readChannelRecord(d,"home-request")!=="boot request")process.exit(8);' +
+        's.atomicRecord(d,"home-response","boot response");'
+    );
+    run(
+      6923,
+      channelCode +
+        'if(s.readChannelRecord(d,"home-response")!=="boot response")process.exit(8);'
+    );
+    a.equal(fs.statSync(drifted).mode & 0o7777, 0o777);
+    a.equal(fs.readFileSync(oldRequest, 'utf8'), '');
+
+    const repairChannel =
+      'var s=require(' +
+      bootModule +
+      '),d=' +
+      quotedDrifted +
+      ';s.prepareChannel(d);';
+    run(0, repairChannel, 0, [0]);
+    a.equal(fs.statSync(renewal).mode & 0o7777, 0o2770);
+    a.equal(fs.statSync(drifted).mode & 0o7777, 0o2770);
+    a.equal(fs.existsSync(oldRequest), false);
+    fs.writeSync(oldDescriptor, 'still the old inode');
+    fs.closeSync(oldDescriptor);
+    a.equal(fs.existsSync(oldRequest), false);
+    a.equal(fs.statSync(privateChannel).mode & 0o7777, 0o777);
+    run(
+      6923,
+      'var s=require(' +
+        bootModule +
+        '),d=' +
+        quotedDrifted +
+        ';s.atomicRecord(d,"home-request","fresh");'
+    );
+    run(
+      5431,
+      'var s=require(' +
+        bootModule +
+        '),d=' +
+        quotedDrifted +
+        ';if(s.readChannelRecord(d,"home-request")!=="fresh")process.exit(8);'
+    );
     run(
       6580,
       'var f=require("fs");try{f.readFileSync(' +
@@ -414,6 +478,23 @@ if (process.platform !== 'linux' || process.getuid() !== 0) {
         JSON.stringify(pause) +
         ')process.exit(6);'
     );
+    for (const legacy of [false, true]) {
+      fs.unlinkSync(path.join(pauseState, 'blocked'));
+      run(
+        0,
+        (legacy ? 'process.getegid=process.setegid=undefined;' : '') +
+          'var s=require(' +
+          bootModule +
+          '),d=' +
+          quotedPauseState +
+          ';' +
+          'var token=s.requestStop(d,{forInstall:true});' +
+          'if(s.stopGeneration(d)!==token||process.getgid()!==0)process.exit(6);',
+        0,
+        [0]
+      );
+      a.equal(fs.statSync(path.join(pauseState, 'stop-generation')).gid, 5000);
+    }
     const request = path.join(channel, 'home-request'),
       response = path.join(channel, 'home-response');
     run(

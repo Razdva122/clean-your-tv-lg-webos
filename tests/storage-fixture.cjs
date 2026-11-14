@@ -66,6 +66,7 @@ function load(file, storage) {
     module: module,
     exports: module.exports,
     setTimeout: setTimeout,
+    clearTimeout: clearTimeout,
     require: function (name) {
       return name === './state-permissions'
         ? storage

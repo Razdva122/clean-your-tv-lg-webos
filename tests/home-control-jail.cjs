@@ -73,7 +73,7 @@ function Service() {
     methods[n] = f;
   };
   this.call = () => {
-    throw Error('no network or launch expected');
+    throw Error('Home must use its installed same-package service');
   };
 }
 fs.mkdirSync(root + '/state/home-control', { recursive: true });
@@ -84,11 +84,13 @@ vm.runInNewContext(fs.readFileSync('renewal-service/service.js', 'utf8'), {
   require(n) {
     if (n === 'fs') return jailed;
     if (n === 'webos-service') return Service;
-    if (n === './home-control')
+    if (n === './home-control') {
+      const storage = require('./storage-fixture.cjs').create(jailed);
       return require('./storage-fixture.cjs').load(
         path.resolve('renewal-service/home-control.js'),
-        require('./storage-fixture.cjs').create(jailed)
+        storage
       );
+    }
     if (n === './manager') return () => ({});
     if (n === './local-io') return { createLocalIO: () => ({}) };
     if (n === './transport') return { createRequest: () => {} };

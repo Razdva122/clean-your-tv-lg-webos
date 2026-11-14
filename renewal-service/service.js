@@ -190,20 +190,13 @@ function fromUpdater(m) {
   }
 );
 
-var homeControl = require('./home-control')(
-  fs,
-  __dirname + '/state/home-control'
-);
-var inputControl = require('./home-control')(
-  fs,
-  __dirname + '/state/home-control',
-  { inputs: true }
-);
-var catalogControl = require('./home-control')(
-  fs,
-  __dirname + '/state/home-control',
-  { catalog: true }
-);
+var homeControl = require('./home-control')(fs, dir + '/home-control');
+var inputControl = require('./home-control')(fs, dir + '/home-control', {
+  inputs: true
+});
+var catalogControl = require('./home-control')(fs, dir + '/home-control', {
+  catalog: true
+});
 [
   'homeStatus',
   'setHomeControl',
