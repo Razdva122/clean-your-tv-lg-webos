@@ -629,22 +629,30 @@ def continue_removal(installer, expected_pending):
     current = device('inventory')
     check(current, defer_packages=True)
     store.checkpoint(profile, cleanup_staging_ids=current['staging_ids'])
-    app_info = installer.installed_apps()
-    apps = {app['id'] for app in app_info}
-    # An older cytv may have left an inert cleanup package registered.
-    carriers = {app['id'] for app in app_info if app.get('title') == 'Clean Your TV cleanup' and app.get('visible') is False}
-    root_apps = apps.intersection(('com.cleanyourtv.root.preview', 'com.cleanyourtv.root.updater',
-                                  'com.cleanyourtv.system.updater'))
-    if root_apps:
-        raise UserError(ROOT_MESSAGE, reason_code='root-access-required')
+
+    def catalog():
+        app_info = installer.installed_apps()
+        apps = {app['id'] for app in app_info}
+        if apps.intersection(('com.cleanyourtv.root.preview', 'com.cleanyourtv.root.updater',
+                              'com.cleanyourtv.system.updater')):
+            raise UserError(ROOT_MESSAGE, reason_code='root-access-required')
+        # An older cytv may have left an inert cleanup package registered.
+        carriers = {app['id'] for app in app_info
+                    if app.get('title') == 'Clean Your TV cleanup' and app.get('visible') is False}
+        return apps, carriers
+
+    if not guard:
+        apps, carriers = catalog()
+
     proof = pending.get('cleanup_boot_proof')
+    boot_triggers = pending.get('cleanup_restart_triggers', [])
     reused_restart = proof is not None and pending.get('cleanup_boot_verified') is True
     restarted = reused_restart
     new_kernel = reused_restart
     if proof is not None and not reused_restart and not pending.get('cleanup_boot_release_started'):
         boot = _device(installer, 'boot-probe', proof=proof)
         new_kernel = boot.get('boot_id') not in (None, proof.get('kernel'))
-        critical = set(pending.get('cleanup_restart_triggers', [])) & {
+        critical = set(boot_triggers) & {
             'package-removal-unverified', 'original-configuration-unverified',
             'original-package-unverified', 'homebrew-request-unverified'}
         restarted = boot['boot_restarted'] is True and (not (legacy_install or critical) or new_kernel)
@@ -652,6 +660,12 @@ def continue_removal(installer, expected_pending):
     def require_restart(triggers, *, rearm=False, observed_writer=False):
         nonlocal proof
         stage = 'restart-required'
+        reason = triggers[0]
+        # A vendor idle observation cannot settle an independent Homebrew
+        # request. A newer shared baseline still covers both outstanding scopes.
+        if guard and not new_kernel and 'homebrew-request-unverified' in boot_triggers:
+            triggers = ['homebrew-request-unverified', *(trigger for trigger in triggers
+                                                        if trigger != 'homebrew-request-unverified')]
         if rearm and proof is not None and not pending.get('cleanup_boot_release_started'):
             _device(installer, 'boot-release', proof=proof)
         if proof is None or rearm or pending.get('cleanup_boot_release_started'):
@@ -667,8 +681,8 @@ def continue_removal(installer, expected_pending):
             raise UserError('A Homebrew package request was observed. Wait for it to settle before continuing.',
                             reason_code='original-writer-active')
         if (guard and pending.get('removal_reason') in ('restart-required', 'removal-terminal-unknown')
-                and proof is not None and not rearm and triggers == pending.get('cleanup_restart_triggers')
-                and triggers[0] in ('package-removal-unverified', 'original-configuration-unverified',
+                and proof is not None and not rearm and set(triggers).issubset(boot_triggers)
+                and reason in ('package-removal-unverified', 'original-configuration-unverified',
                                     'original-package-unverified', 'homebrew-request-unverified')):
             # Preserve this boot baseline. The retry UI can report the current
             # unresolved request without sending the same power-cycle steps.
@@ -691,9 +705,6 @@ def continue_removal(installer, expected_pending):
         if writers.get('installer_running') is True:
             raise UserError('An original TV operation is still running. Wait and try again.',
                             reason_code='original-writer-active')
-        if 'cancellation' in writers:
-            # An admitted old worker can write its claim while idle polls.
-            cancellation = device('inventory')['cancellation']
 
     # The optional monitor can settle older requests. The first supported
     # fixed-ID remove has its own terminal, even without monitoring privilege.
@@ -709,7 +720,7 @@ def continue_removal(installer, expected_pending):
             try:
                 observed_idle = require_removal_idle(
                     installer.remote, profile, pending, report_busy=True,
-                    optional_monitor=guard and bool(apps.intersection(APPS)))
+                    optional_monitor=guard)
             except TVRejected as error:
                 if not error.package_status_denied:
                     raise
@@ -728,8 +739,17 @@ def continue_removal(installer, expected_pending):
                 package_idle = observed_idle is not False
             break
 
+    if guard:
+        # The drain and package-manager wait can finish an old registration.
+        # Read current paths and exact package IDs before changing controls.
+        if uncertain_install or submitted or 'cancellation' in writers:
+            current = device('inventory')
+            check(current, defer_packages=True)
+            store.checkpoint(profile, cleanup_staging_ids=current['staging_ids'])
+            cancellation = current.get('cancellation', {})
+        apps, carriers = catalog()
+
     # A proof predating our new vendor request cannot settle that request.
-    boot_triggers = pending.get('cleanup_restart_triggers', [])
     if submitted and not package_idle and not (new_kernel and 'package-removal-unverified' in boot_triggers):
         return require_restart(['package-removal-unverified'], rearm=proof is not None
                                and 'package-removal-unverified' not in boot_triggers)
@@ -834,11 +854,12 @@ def continue_removal(installer, expected_pending):
         store.checkpoint(profile, stage='package-removal', removals=removals)
         try:
             _remove_package(installer, app)
-        except TVRejected:
-            # A negative response is definite for this request. A later
-            # attempt can submit again after the reported conflict settles.
-            removals.pop(app)
-            store.checkpoint(profile, removals=removals)
+        except TVRejected as error:
+            # A malformed stream can also raise TVRejected. Only a scoped,
+            # definite rejection releases our submitted checkpoint.
+            if not guard or error.definite_package_removal_rejection(app):
+                removals.pop(app)
+                store.checkpoint(profile, removals=removals)
             raise
         removals[app] = 'terminal'
         store.checkpoint(profile, removals=removals)

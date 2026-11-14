@@ -288,10 +288,14 @@ class OriginalOperationIntegration(unittest.TestCase):
         opdir = self.root / 'private/operations' / plan['operation']
         ready = self.root / 'worker-attached'
         resume = self.root / 'release-worker'
-        self.remote.sender.write_text('#!/bin/sh\necho com.gathin.tvhome >> ' +
-                                     shlex.quote(str(self.root / 'requests')) + '\n')
+        sender = self.remote.sender.read_text()
+        late_sender = self.root / 'late-sender'
+        late_sender.write_text(sender.replace(
+            "print(json.dumps({'returnValue':True,'details':{'state':terminal}}),flush=True)",
+            "sys.exit(0)"))
+        late_sender.chmod(0o700)
         data = {'root': str(self.root / 'private'), 'public_root': str(self.root / 'public'),
-                'plan': plan, 'command': 'worker', 'slot': 1, 'sender': str(self.remote.sender), 'timeout': 3000}
+                'plan': plan, 'command': 'worker', 'slot': 1, 'sender': str(late_sender), 'timeout': 3000}
         # Instrument the bundled observer in memory to hold the real worker just
         # after attached(), before the exclusive package claim. On-disk bytes stay exact.
         hold = 'fs.writeFileSync(' + json.dumps(str(ready)) + ', "ready");' + (
@@ -329,6 +333,9 @@ class OriginalOperationIntegration(unittest.TestCase):
         self.assertEqual((self.root / 'requests').read_text().splitlines(), list(observer.APPS))
         self.assertTrue(result.get('restart_required'), result)
         self.assertTrue((opdir / 'claim-1.json').exists())
+        self.assertEqual([call[2]['id'] for call in self.remote.calls if call[1].endswith('/dev/remove')],
+                         list(observer.APPS))
+        self.assertEqual(json.loads((self.root / 'installed.json').read_text()), {})
         self.assertFalse((opdir / 'terminal-1.json').exists())
         self.assertEqual(self.store.pending(self.profile)['cleanup_restart_triggers'], ['original-package-unverified'])
 
@@ -341,6 +348,8 @@ class OriginalOperationIntegration(unittest.TestCase):
         self.remote.luna = idle
         self.assertTrue(self.installer.uninstall_project()['verified_clean'])
         self.assertIsNone(self.store.pending(self.profile))
+        self.installer.install(self.inventory, 'fresh-secret')
+        self.assertEqual((self.root / 'requests').read_text().splitlines(), list(observer.APPS)*2)
 
     def test_closed_release_cut_with_missing_historical_launch_result_allows_removal(self):
         from cytv.errors import UserError

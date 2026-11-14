@@ -522,6 +522,71 @@ class SimpleRemoval(unittest.TestCase):
         self.assertEqual(completed['removal_operation'], pending['removal_operation'])
         self.assertEqual(self.remote.boot, proof['kernel'])
 
+    def test_lost_vendor_reply_with_absent_target_accepts_new_kernel_and_malformed_status(self):
+        (self.root / 'proc').mkdir()
+        app = 'com.local.nativehome'
+        self.remote.apps.add(app)
+        self.remote.os_cleanup = True
+        self.remote.cut = app
+        original = self.remote.luna
+
+        def luna(uri, payload, **kwargs):
+            if uri.endswith('/status'):
+                return {'returnValue': True, 'status': {}}
+            return original(uri, payload, **kwargs)
+
+        self.remote.luna = luna
+        pending = self.store.request_clean_removal(self.profile)
+        with self.assertRaises(UserError):
+            self.remove()
+        self.assertFalse(self.remote.apps)
+        self.assertTrue(self.remove()['restart_required'])
+        with self.assertRaises(UserError):
+            self.remove()
+        self.reboot()
+        self.assertTrue(self.remove()['verified_clean'])
+        self.assertEqual([body['id'] for uri, body in self.remote.calls if uri.endswith('/dev/remove')], [app])
+        completed = json.loads((self.store.device_dir(self.profile) / 'clean-removal.json').read_text())
+        self.assertEqual(completed['removal_operation'], pending['removal_operation'])
+
+    def test_malformed_negative_stream_keeps_submitted_until_observed_idle(self):
+        from unittest.mock import Mock
+        from cytv.transport import SSH
+
+        (self.root / 'proc').mkdir()
+        app = 'com.local.nativehome'
+        self.remote.apps.add(app)
+        original = self.remote.luna
+        ssh = object.__new__(SSH)
+        ssh.root = False
+        ssh.channel = Mock()
+        ssh.chunks = Mock(return_value=iter((
+            b'{"returnValue":true,"details":{"state":"removing"}}',
+            b'{"returnValue":true,"details":[]}',
+        )))
+        settled = False
+        vendor_calls = []
+
+        def luna(uri, payload, **kwargs):
+            if uri.endswith('/status') and not settled:
+                raise TVRejected('Denied', {'returnValue': False, 'errorCode': -1}, uri)
+            if uri.endswith('/dev/remove'):
+                vendor_calls.append(payload['id'])
+                if len(vendor_calls) == 1:
+                    return ssh.luna(uri, payload, **kwargs)
+            return original(uri, payload, **kwargs)
+
+        self.remote.luna = luna
+        with self.assertRaises(TVRejected):
+            self.remove()
+        self.assertEqual(self.store.pending(self.profile)['removals'], {app: 'submitted'})
+        self.assertTrue(self.remove()['restart_required'])
+        self.assertEqual(vendor_calls, [app])
+        settled = True
+        self.assertTrue(self.remove()['verified_clean'])
+        self.assertEqual(vendor_calls, [app, app])
+        self.assertIsNone(self.store.pending(self.profile))
+
     def test_lost_same_boot_marker_release_never_proves_a_restart(self):
         (self.root/'proc').mkdir()
         self.remote.apps={'com.gathin.tvhome'}
@@ -1477,17 +1542,16 @@ class SimpleRemoval(unittest.TestCase):
             assert_files_kept()
 
             self.reboot()
-            for status, reason in ((active, 'original-writer-active'), (ambiguous, 'pending-operation')):
-                with self.subTest(status=status), patch.object(self.cleanup, 'monotonic', side_effect=(0, 20)), \
-                     self.assertRaises(UserError) as failure:
-                    run('y', 'y')
-                self.assertEqual(failure.exception.reason_code, reason)
-                self.assertIsNotNone(self.store.pending(self.profile))
-                self.assertFalse(plans[-1]['verified_clean'])
-                self.assertFalse(plans[-1]['restart_required'])
-                assert_files_kept()
+            status = active
+            with patch.object(self.cleanup, 'monotonic', side_effect=(0, 20)), self.assertRaises(UserError) as failure:
+                run('y', 'y')
+            self.assertEqual(failure.exception.reason_code, 'original-writer-active')
+            self.assertIsNotNone(self.store.pending(self.profile))
+            self.assertFalse(plans[-1]['verified_clean'])
+            self.assertFalse(plans[-1]['restart_required'])
+            assert_files_kept()
 
-            status = denied
+            status = ambiguous
             (self.root / 'proc').mkdir()
             with patch.object(self.store, 'finish_clean_removal', side_effect=OSError('host interruption')):
                 with self.assertRaisesRegex(OSError, 'host interruption'):
@@ -1644,8 +1708,24 @@ class SimpleRemoval(unittest.TestCase):
         self.assertTrue(residue.exists())
         self.assertFalse(any(uri.endswith('/dev/remove') for uri, _ in self.remote.calls))
         shutil.rmtree(process)
+        self.remote.cut = app
+        original = self.remote.luna
+        idle = False
+
+        def luna(uri, payload, **kwargs):
+            if uri.endswith('/status') and not idle:
+                raise TVRejected('Denied', {'returnValue': False, 'errorCode': -1}, uri)
+            return original(uri, payload, **kwargs)
+
+        self.remote.luna = luna
+        with self.assertRaises(UserError):
+            self.remove()
         self.assertTrue(self.remove()['restart_required'])
         self.assertFalse(self.remote.apps)
+        self.assertTrue(residue.exists())
+        idle = True
+        with self.assertRaises(UserError):
+            self.remove()
         self.assertTrue(residue.exists())
         self.reboot()
         self.assertTrue(self.remove()['verified_clean'])
