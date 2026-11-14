@@ -3,11 +3,16 @@ from . import prompts
 from .errors import TVRejected, UserError
 from .operations import require_removal_idle
 from .recovery_state import assess, observation_diagnostics, setup_actions, unsubmitted_removal
+from .recovery_ui import removal_action
 
 REVIEW = 'Review recovery options'
 KEPT = 'Recovery data kept. Installation has not restarted.'
 BLOCKED = 'Recovery could not be verified. Save the diagnostic report and keep recovery data. Do not repeat removal.'
 SEPARATE = 'Recovery finished. Start a new setup separately when you are ready.'
+
+
+class _RemovalRestartRequired(UserError):
+    removal_restart_required = True
 
 
 def _assessment(profile, pending, observation):
@@ -21,6 +26,16 @@ def plan(write, state, summary, next_step=KEPT, actions=None):
     value={'state':state,'summary':summary,'next_step':next_step}
     if actions is not None:value['actions']=actions
     write.recovery_plan(value)
+
+
+def _write_removal_plan(write, value, *, pending=None, failure=None, allow_requested=False):
+    evidence = value
+    if pending is not None and value['removal']['reason'] == 'removal-requested':
+        # The public assessment also uses this reason for missing or unknown
+        # journal codes. Only the explicit request gets transient advice.
+        if not allow_requested or pending.get('removal_reason') != 'removal-requested':
+            evidence = dict(value, reason=None, removal=dict(value['removal'], reason=None))
+    write.recovery_plan(dict(value, removal_action=removal_action(evidence, failure)))
 
 
 def missing_root_deployment_plan(write, profile, pending, observation):
@@ -72,17 +87,20 @@ def remove_before_reinstall(installer, ask, write, *, load_payload=False):
             raise UserError('Release payload is missing. Download a built cytv executable or run python scripts/build-cytv.py --payload-only from source.') from None
     completed = installer.uninstall_project()
     if completed.get('removed') is True and completed.get('verified_clean') is True and completed.get('restart_required') is not True:
-        write.recovery_plan({'state':'complete','disposition':'clean-removal','removed':True,'verified_clean':True,
+        _write_removal_plan(write, {'state':'complete','disposition':'clean-removal','removed':True,'verified_clean':True,
             'summary':'Clean Your TV removal is verified.','next_step':SEPARATE})
     else:
         removal_plan(write, installer.store, installer.profile, state='waiting')
 
 
-def removal_plan(write, store, profile, state='blocked', connecting=False, failure=None):
+def removal_plan(write, store, profile, state='blocked', connecting=False, failure=None, *, error=None, phase='recover'):
     """Expose only current safe assessment fields, with the selected TV bound."""
     if not profile:return False
     pending=store.pending(profile)
     if not pending or pending.get('recovery_protocol')!='clean-removal-v1':return False
+    if error is not None:
+        from .failure_help import removal_failure
+        failure = removal_failure(error, phase, profile, pending, help=failure)
     from .recovery_state import removal_summary
     summary=removal_summary(pending)
     assessment=assess(profile,pending,None)
@@ -95,12 +113,17 @@ def removal_plan(write, store, profile, state='blocked', connecting=False, failu
         'next_step':('Restart the TV completely: disconnect it from power, reconnect it, then choose Try again. Standby is not a full restart.' if restart
                      else 'Connect to the TV to continue cleanup.' if connecting else 'Continue the remaining cleanup for this TV.'),
         'removal':summary,'actions':assessment['actions'],'reason':summary['reason']}
-    from .recovery_ui import removal_connection_failure, removal_details, removal_title
-    if removal_connection_failure(value, failure):
-        value.update(summary=removal_title(value, failure),next_step=removal_details(value, failure)['blocker_text'])
+    from .recovery_ui import removal_connection_failure, removal_details, removal_title, removal_waiting
+    detail = removal_details(value, failure)
+    value.update(connection_failure=removal_connection_failure(value, failure),
+                 removal_presentation={**detail, 'title_text':removal_title(value, failure),
+                                       'waiting':removal_waiting(value, failure)})
+    if failure is not None or value['connection_failure']:
+        value.update(summary=value['removal_presentation']['title_text'],next_step=detail['blocker_text'])
     elif not connecting:
-        value.update(summary=removal_title(value),next_step=removal_details(value)['blocker_text'] or value['next_step'])
-    write.recovery_plan(value)
+        value.update(summary=value['removal_presentation']['title_text'],
+                     next_step=detail['blocker_text'] or value['next_step'])
+    _write_removal_plan(write, value, pending=pending, failure=failure, allow_requested=connecting)
     return True
 
 
@@ -145,15 +168,20 @@ def recover(installer, ask, write, non_interactive=False, initial_observation=No
         if pending and pending.get('recovery_protocol')=='clean-removal-v1':
             from .recovery_state import removal_summary
             summary=removal_summary(pending)
-            write.recovery_plan({'state':'ready','disposition':'clean-removal',
+            if summary['reason']=='root-access-required' and installer.profile['edition']=='no-root':
+                assessment['actions'].insert(0, 'connect-root')
+            _write_removal_plan(write, {'state':'ready','disposition':'clean-removal',
                 'summary':'Removal has been requested. Continue the remaining cleanup for this TV.',
-                'next_step':'Continue the remaining cleanup for this TV.','removal':summary,'actions':assessment['actions']})
+                'next_step':'Continue the remaining cleanup for this TV.','removal':summary,'actions':assessment['actions']},
+                pending=pending, allow_requested=True)
             if prompts.confirm('Continue removing Clean Your TV?',ask,write):
                 completed=installer.continue_clean_removal(pending)
-                if (completed.get('verified_clean') is not True or completed.get('removed') is not True
-                        or completed.get('restart_required') is True):
-                    raise UserError('Removal is still in progress. Recovery data and the remaining cleanup step were kept.',reason_code='pending-operation')
-                write.recovery_plan({'state':'complete','disposition':'clean-removal',
+                restart = completed.get('restart_required') is True
+                if restart or completed.get('verified_clean') is not True or completed.get('removed') is not True:
+                    error_type = _RemovalRestartRequired if restart else UserError
+                    raise error_type('Removal is still in progress. Recovery data and the remaining cleanup step were kept.',
+                                     reason_code='pending-operation')
+                _write_removal_plan(write, {'state':'complete','disposition':'clean-removal',
                                      'removed':completed['removed'],'verified_clean':completed['verified_clean'],'restart_required':False,
                                      'summary':'Clean Your TV removal is verified.','next_step':SEPARATE})
             else:write(KEPT)
@@ -281,7 +309,7 @@ def recover(installer, ask, write, non_interactive=False, initial_observation=No
             raise UserError(BLOCKED, reason_code='pending-operation')
         plan(write, 'complete', 'Finished', SEPARATE)
     except Exception as error:
-        if removal_plan(write,installer.store,installer.profile):raise
+        if removal_plan(write,installer.store,installer.profile,error=error):raise
         from .failure_help import for_error
         help = for_error(error, 'recover', installer.profile, installer.store.pending(installer.profile))
         if help and help['code'] != 'pending-operation':

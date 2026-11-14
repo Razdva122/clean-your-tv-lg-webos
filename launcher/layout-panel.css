@@ -73,3 +73,70 @@
   width: 100%;
   text-align: left;
 }
+
+.settings-clock-format.renewal-actions {
+  flex-wrap: nowrap;
+}
+.settings-clock-format.renewal-actions > button {
+  position: relative;
+  flex: 1 1 0%;
+  min-width: 0;
+  min-height: 120px;
+  padding: 14px 10px;
+  background: #2a3039;
+  border-color: #414b59;
+}
+.settings-clock-format.renewal-actions > button[aria-pressed='true'] {
+  background: #293c55;
+  border-color: #789bc9;
+}
+.settings-clock-format.renewal-actions > button:focus {
+  background: #46556c;
+  border-color: #f5f7fa;
+}
+.settings-clock-example,
+.settings-clock-name {
+  display: block;
+}
+.settings-clock-example {
+  color: #f5f7fa;
+  font-size: 34px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.settings-clock-name {
+  margin-top: 4px;
+  color: #d7dfea;
+  font-size: 18px;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+}
+.settings-clock-check {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 17px;
+  height: 17px;
+  visibility: hidden;
+  fill: none;
+  stroke: #c6ddff;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.settings-clock-format.renewal-actions
+  > button[aria-pressed='true']
+  .settings-clock-check {
+  visibility: visible;
+}
+@media (max-height: 800px) {
+  .settings-clock-format.renewal-actions > button {
+    min-height: 102px;
+  }
+  .settings-clock-example {
+    font-size: 28px;
+  }
+  .settings-clock-name {
+    font-size: 16px;
+  }
+}

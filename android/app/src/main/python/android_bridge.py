@@ -120,11 +120,15 @@ class AndroidConsole(Console):
 
     def recovery_plan(self, value):
         super().recovery_plan(value)
-        from cytv.recovery_ui import removal_details, removal_restart_required, removal_title, removal_waiting
+        from cytv.recovery_ui import (projected_removal_action, removal_details, removal_restart_required,
+                                      removal_title, removal_waiting)
         from cytv.recovery_state import ACTIONS, REASONS
         optional = {key:value[key] for key in ('disposition',) if key in value}
-        optional.update({key:value[key] for key in ('removed','verified_clean') if type(value.get(key)) is bool})
+        optional.update({key:value[key] for key in ('removed','verified_clean','connection_failure')
+                         if type(value.get(key)) is bool})
         optional['restart_required'] = removal_restart_required(value)
+        if value.get('disposition') == 'clean-removal':
+            optional['removal_action'] = projected_removal_action(value)
         if type(value.get('actions')) is list:
             optional['actions'] = [item for item in value['actions'] if type(item) is str and item in ACTIONS]
         removal = value.get('removal') if type(value.get('removal')) is dict else {}

@@ -1,63 +1,58 @@
 {
   "schema": 1,
-  "version": "1.20.4",
+  "version": "1.20.5",
   "changes": [
     {
-      "pr": 605,
-      "issues": [],
-      "summary": "Feature PlxNative first in browser demos and previews"
-    },
-    {
-      "pr": 607,
+      "pr": 617,
       "issues": [
-        529
+        392
       ],
-      "summary": "Simplify removal and wait for TV operations"
+      "summary": "Offer to restore LG Debloat settings during removal"
     },
     {
-      "pr": 609,
+      "pr": 618,
+      "issues": [
+        499,
+        529,
+        534,
+        542,
+        588
+      ],
+      "summary": "Fix Home startup isolation and guided removal recovery"
+    },
+    {
+      "pr": 620,
+      "issues": [
+        587
+      ],
+      "summary": "Fix No-root state checks on legacy LG Node"
+    },
+    {
+      "pr": 621,
       "issues": [
         608
       ],
-      "summary": "Add an independent Home clock format setting"
+      "summary": "Show clock format previews in Home settings"
     },
     {
-      "pr": 611,
-      "issues": [
-        519
-      ],
-      "summary": "Restore verified LG Home before Root setup"
-    },
-    {
-      "pr": 612,
-      "issues": [
-        610
-      ],
-      "summary": "Explain and diagnose No-root Debloat failures"
-    },
-    {
-      "pr": 613,
-      "issues": [
-        152,
-        389,
-        418
-      ],
-      "summary": "Fix EF950V No-root removal and C1 reinstall"
-    },
-    {
-      "pr": 614,
+      "pr": 622,
       "issues": [
         529
       ],
-      "summary": "Check No-root IPK staging before resuming package installation"
+      "summary": "Finish No-root removal after TV processes stop"
+    },
+    {
+      "pr": 625,
+      "issues": [],
+      "summary": "Check guided removal in the desktop installer tests"
     }
   ],
   "excluded": [],
-  "acceptance": "Project LG OLED55C3RLA firmware 43.21.71, SDK 11.2.0. Exact macOS Apple Silicon installer passed Root and No-root installation, removal and Home routing. Signed Root update and all three rollback components passed with the original profile preserved. Physical remote and No-root clock formats passed. Restored original device state. Artifact hashes and coverage limits: docs/history/2026-11-13-release-1.20.4-rc-verification.md.",
+  "acceptance": "On project LG OLED55C3RLA firmware 43.21.71, exact macOS ARM64 installer passed Root and No-root installation, removal, restart continuation, network Home and Debloat Restore/Skip. Owner confirmed physical Magic Remote clock settings and playback audio/volume. Signed Root OTA and rollback completed with matching profiles and verified component versions. Android same-signer upgrade and native checks passed in the API 35 ARM64 emulator. See docs/history/2026-11-14-release-1.20.5-rc-verification.md for hashes and scope.",
   "build": {
-    "run_id": 43454675248,
+    "run_id": 43496590482,
     "attempt": 1,
-    "source": "58ceffd04ba3596f65f309b5ddb04e5ad68e5c4e"
+    "source": "eb5a8cb39627f0ef0e0e485ca79ec01c70a54f71"
   },
-  "acceptance_build": "43454675248:1"
+  "acceptance_build": "43496590482:1"
 }

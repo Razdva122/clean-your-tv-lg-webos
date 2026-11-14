@@ -829,8 +829,18 @@ STATE_CHECK = node_adapter('state-permissions', r"""
 var option=process.argv[process.argv.length-2],directory=process.argv[process.argv.length-1];
 var expected=/^repair-key-mode:[a-f0-9]{64}$/.test(option)?option.slice(16):null;
 var repair=option==='repair-key-mode'||expected,rootRepair=false;
-if(repair&&process.getuid()===0&&process.geteuid()===0&&
+function effectiveIdentity(uid,gid){
+ if(typeof process.geteuid==='function'&&typeof process.getegid==='function')
+  return process.geteuid()===uid&&(gid===undefined||process.getegid()===gid);
+ // Older LG Node builds expose real IDs only. Linux reports effective IDs in column two.
+ var status=require('fs').readFileSync('/proc/self/status','utf8');
+ var user=/^Uid:[ \t]+\d+[ \t]+(\d+)[ \t]+\d+[ \t]+\d+$/m.exec(status);
+ var group=/^Gid:[ \t]+\d+[ \t]+(\d+)[ \t]+\d+[ \t]+\d+$/m.exec(status);
+ return !!user&&!!group&&Number(user[1])===uid&&(gid===undefined||Number(group[1])===gid);
+}
+if(repair&&process.getuid()===0&&
    directory==='/media/developer/apps/usr/palm/applications/com.local.nativehome/state'){
+ if(!effectiveIdentity(0))throw Error('unsafe-config-owner');
  var fs=require('fs'),before=fs.lstatSync(directory);
  if(!expected||!before.isDirectory()||before.isSymbolicLink()||before.uid!==5999||before.gid!==5000)
   throw Error('unsafe-config-owner');
@@ -838,7 +848,7 @@ if(repair&&process.getuid()===0&&process.geteuid()===0&&
  // upload is guaranteed to repair a root-owned key. Drop permanently first.
  process.chdir('/');process.setgroups([]);process.setgid(5000);process.setuid(5999);
  var after=fs.lstatSync(directory);
- if(process.getuid()!==5999||process.geteuid()!==5999||process.getgid()!==5000||process.getegid()!==5000||
+ if(process.getuid()!==5999||process.getgid()!==5000||!effectiveIdentity(5999,5000)||
     process.getgroups().some(function(g){return g!==5000;})||
     after.dev!==before.dev||after.ino!==before.ino||after.uid!==5999||after.gid!==5000)
   throw Error('unsafe-config-owner');

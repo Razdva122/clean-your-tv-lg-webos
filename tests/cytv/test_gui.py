@@ -8,7 +8,7 @@ import unittest
 from unittest.mock import patch
 from pathlib import Path
 try:
-    from PySide6.QtWidgets import QApplication, QPushButton, QLineEdit, QComboBox, QRadioButton, QDialog, QLabel, QScrollArea
+    from PySide6.QtWidgets import QApplication, QPushButton, QLineEdit, QComboBox, QRadioButton, QDialog, QLabel, QScrollArea, QCheckBox
     from cytv.gui import Wizard
     from cytv.desktop import Prompt
     HAS_QT = True
@@ -18,6 +18,25 @@ except ImportError:
 
 @unittest.skipUnless(HAS_QT, 'Desktop build dependencies are optional for CLI tests')
 class GuiTests(unittest.TestCase):
+    def test_debloat_restoration_defaults_to_skip_without_cancelling_removal(self):
+        from cytv import debloat, i18n
+        from cytv.desktop import Channel
+
+        i18n.set_language('en')
+        wizard = Wizard()
+        self.addCleanup(wizard.close)
+        wizard.command = 'uninstall'
+        wizard.operation_title = 'Uninstall Clean Your TV'
+        wizard.channel = Channel(wizard.receive)
+        wizard.channel.console.step(1, 'Debloat restoration preview')
+        wizard.channel.console('Sponsored tiles — Off → On')
+        wizard.show_prompt(Prompt(debloat.RESTORE_PROMPT + ' [y/N]: '))
+        self.assertIn('Sponsored tiles — Off → On', wizard.content.toPlainText())
+        buttons = {button.text(): button for button in wizard.form.findChildren(QPushButton)}
+        self.assertTrue(buttons[debloat.SKIP_RESTORE].isDefault())
+        buttons[debloat.SKIP_RESTORE].click()
+        self.assertEqual(wizard.channel.answers.get_nowait(), 'n')
+
     def test_final_customization_prefills_existing_name_validates_and_submits(self):
         import json
         from cytv import i18n
@@ -601,6 +620,111 @@ class GuiTests(unittest.TestCase):
                 self.assertEqual(actual_badge, 'Maintenance action')
                 self.assertTrue(w.steps.isHidden())
                 w.close()
+
+    def test_rollback_maintenance_retains_default_no_and_pending_guards(self):
+        from unittest.mock import Mock
+        from cytv import cli, state
+
+        store = state.Store(self.directory.name)
+        profile = state.target('192.0.2.10', 'root')
+        store.save(profile)
+        for command, option, method in (
+                ('recover-root-rollback', False, 'recover_root_rollback'),
+                ('recover-system-rollback', False, 'recover_system_rollback'),
+                ('recover-system-rollback', True, 'recover_system_rollback')):
+            for outcome in ('declined', 'confirmed', 'pending'):
+                with self.subTest(command=command, new_attempt=option, outcome=outcome), \
+                        patch('cytv.cli.Installer') as installer:
+                    connect = Mock()
+                    args = []
+
+                    def runner(argv, **kwargs):
+                        args.extend(argv)
+                        return cli.main(argv, connect=connect, **kwargs)
+
+                    w = Wizard(run=runner)
+                    self.addCleanup(w.close)
+                    w.maintenance_toggle.click()
+                    choices = w.maintenance.findChild(QComboBox)
+                    self.assertGreaterEqual(choices.findData(command), 0)
+                    choices.setCurrentIndex(choices.findData(command))
+                    rearm = w.maintenance.findChild(QCheckBox)
+                    self.assertEqual(rearm.isHidden(), command != 'recover-system-rollback')
+                    self.assertFalse(rearm.isChecked())
+                    if option:
+                        rearm.click()
+                    if outcome == 'pending':
+                        store.begin(profile, 'install')
+                        self.addCleanup(store.device_dir(profile).joinpath('operation.json').unlink, missing_ok=True)
+                    w.maintenance.findChild(QPushButton).click()
+                    if outcome != 'pending':
+                        self.pump(lambda: w.pending is not None)
+                        self.assertEqual((w.pending.kind, w.pending.default), ('confirm', 'n'))
+                        self.assertFalse(connect.called)
+                        w.submit('y' if outcome == 'confirmed' else 'n')
+                    self.pump(lambda: not w.running)
+                    self.assertEqual('--new-recovery-attempt' in args, option)
+                    self.assertNotIn('--yes', args)
+                    recover = getattr(installer.return_value, method)
+                    if outcome == 'confirmed':
+                        recover.assert_called_once_with(**({'new_attempt': True} if option else {}))
+                        connect.assert_called_once()
+                    else:
+                        recover.assert_not_called()
+                        connect.assert_not_called()
+                    installer.return_value.install.assert_not_called()
+                    w.close()
+                    if outcome == 'pending':
+                        store.device_dir(profile).joinpath('operation.json').unlink()
+
+    def test_debloat_maintenance_uses_setup_selection_and_saves_report(self):
+        from unittest.mock import Mock
+        from cytv import cli, debloat, state
+        from cytv.gui_style import ToggleSwitch
+
+        store = state.Store(self.directory.name)
+        profile = state.target('192.0.2.10', 'root')
+        store.save(profile)
+        remote = Mock(root=True)
+        remote.luna.side_effect = [
+            {'returnValue': False},
+            {'returnValue': True, 'settings': {'homePromotion': 'on'}},
+            {'returnValue': True},
+            {'returnValue': True, 'settings': {'homePromotion': 'off'}},
+        ]
+        w = Wizard(run=lambda argv, **kwargs: cli.main(argv, connect=lambda *_: remote, **kwargs))
+        self.addCleanup(w.close)
+        with patch('cytv.cli.Installer') as installer, patch('cytv.cli.package.verify_payload') as payload:
+            w.maintenance_toggle.click()
+            choices = w.maintenance.findChild(QComboBox)
+            self.assertGreaterEqual(choices.findData('debloat'), 0)
+            choices.setCurrentIndex(choices.findData('debloat'))
+            w.maintenance.findChild(QPushButton).click()
+            self.pump(lambda: w.pending is not None)
+            self.assertEqual(w.pending.label, debloat.SELECT)
+            self.assertTrue(w.steps.isHidden())
+            toggles = w.form.findChildren(ToggleSwitch)
+            self.assertTrue(toggles)
+            self.assertTrue(all(not toggle.isChecked() for toggle in toggles))
+            apply = next(b for b in w.form.findChildren(QPushButton) if b.text() == 'Apply selected settings')
+            self.assertFalse(apply.isEnabled())
+            group = w.form.findChild(ToggleSwitch, 'debloatGroup-homePromotion')
+            group.click()
+            self.assertTrue(apply.isEnabled())
+            group.click()
+            self.assertFalse(apply.isEnabled())
+            w.form.findChild(ToggleSwitch, 'debloat-homePromotion').click()
+            apply.click()
+            self.pump(lambda: w.pending is not None)
+            self.assertEqual(w.pending.label, debloat.REVIEW)
+            self.assertIn('Successfully applied and verified', w.content.toPlainText())
+            next(b for b in w.form.findChildren(QPushButton) if b.text() == 'Continue').click()
+            self.pump(lambda: not w.running)
+            self.assertIsNotNone(w.report)
+            self.assertTrue(any(b.text() == 'Save diagnostic report…' for b in w.form.findChildren(QPushButton)))
+            installer.assert_not_called()
+            payload.assert_not_called()
+            remote.upload.assert_not_called()
 
     def test_failed_home_interface_is_visible_before_passed_prerequisites(self):
         w=Wizard();self.addCleanup(w.close)

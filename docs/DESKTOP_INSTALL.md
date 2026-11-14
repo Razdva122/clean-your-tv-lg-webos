@@ -197,8 +197,12 @@ proof. Eligible Root setup may still finish separately with LG Home/Home control
 off. Physical checks remain separate. See the
 [removal flow](RECOVERY.md#next-candidate-original-operation-recovery-and-full-removal).
 
-For unfinished removal, **Try again** is the primary action and repeats the same
-approved goal. **Save diagnostic report…** remains available. For other failed
+For unfinished removal, the primary action follows the current result. A known
+connection interruption, busy operation or required restart offers **Try again**
+for the same approved goal after the condition is resolved. Unverified cleanup,
+package results, TV controls or changed project paths offer **Review recovery
+options**. That review keeps the saved operation and asks separately before
+continuing removal. **Save diagnostic report…** remains available. For other failed
 steps, saving the report is the primary action. Save that attempt's report with
 the normal file dialog and attach it to your issue; no
 terminal or later `doctor` run is needed. Cancelling the file dialog or choosing
@@ -227,6 +231,26 @@ owned private setup/runtime data when its cleanup proof permits; minimal removal
 records and ownership backups may remain. A blocked cleanup is reported explicitly.
 They have no active service or startup registration. The Mac application and its
 local reports remain installed on your computer.
+
+## Adjust LG settings with Debloat
+
+Choose **Maintenance → Adjust LG settings (Debloat)** and use your saved TV
+connection. Select the settings you want to change and choose **Apply selected
+settings**. Approve the TV's pairing request if it appears. Review each result,
+then choose **Continue** to reach **Save diagnostic report…**. This action only
+changes the selected LG settings. If the installer reports an unresolved
+operation, use **Review recovery options** with the original saved connection
+first.
+
+## Finish a Root rollback
+
+Use the saved Root connection and choose **Recover Root Updater rollback** or
+**Recover Root System Updater rollback** under **Maintenance**, matching the
+updater that reported a rollback readiness failure. Confirm the action when
+prompted. For Root System Updater only, select **Start a new audited attempt
+after the previous deadline** if the previous recovery attempt expired and the
+[recovery checks](RECOVERY.md#root-system-rollback-readiness-candidate) permit
+another attempt.
 
 ## Clear WAM caches on a rooted TV
 

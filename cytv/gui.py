@@ -28,6 +28,9 @@ MAINTENANCE_ACTIONS = (
     ('Home button diagnostics', 'home-diagnostics'),
     ('Enable updates for all TV components (root required)', 'enable-system-updates'),
     ('Clear WAM caches (root required)', 'clean-wam-cache'),
+    ('Adjust LG settings (Debloat)', 'debloat'),
+    ('Recover Root Updater rollback', 'recover-root-rollback'),
+    ('Recover Root System Updater rollback', 'recover-system-rollback'),
 )
 
 
@@ -386,9 +389,18 @@ class Wizard(QMainWindow):
         help_text.setWordWrap(True)
         maintenance_layout.addWidget(help_text)
         maintenance_layout.addWidget(actions)
+        new_attempt = QCheckBox(tr('Start a new audited attempt after the previous deadline'))
+        new_attempt.hide()
+
+        def update_recovery_option():
+            new_attempt.setChecked(False)
+            new_attempt.setVisible(actions.currentData() == 'recover-system-rollback')
+
+        actions.currentIndexChanged.connect(update_recovery_option)
+        maintenance_layout.addWidget(new_attempt)
         execute = QPushButton(tr('Run selected maintenance action'))
         execute.setMinimumHeight(44)
-        execute.clicked.connect(lambda: self.start(actions.currentData()))
+        execute.clicked.connect(lambda: self.start(actions.currentData(), new_recovery_attempt=new_attempt.isChecked()))
         maintenance_layout.addWidget(execute)
         self.form_layout.addWidget(self.maintenance)
         self.maintenance.hide()
@@ -527,7 +539,7 @@ class Wizard(QMainWindow):
             self.button('Back', lambda: self.show_preparation(index - 1, prompt))
         self.button('Continue', lambda: self.show_preparation(index + 1, prompt), True).setFocus()
 
-    def start(self, command, profile=None):
+    def start(self, command, profile=None, *, new_recovery_attempt=False):
         if getattr(getattr(self, 'wallpaper_dialog', None), 'busy', False):
             return
         if self.running:
@@ -569,6 +581,8 @@ class Wizard(QMainWindow):
         def work():
             try:
                 args = [command, '--report'] if command == 'doctor' else [command]
+                if command == 'recover-system-rollback' and new_recovery_attempt:
+                    args.append('--new-recovery-attempt')
                 if profile:
                     args += ['--host', profile['host'], '--edition', profile['edition'],
                              '--port', str(profile['port']), '--no-discovery']
@@ -748,13 +762,20 @@ class Wizard(QMainWindow):
                 self.button('Review recovery options', lambda: self.start('recover', profile), not failed)
             elif retry_removal:
                 profile = dict(self.recovery_profile)
-                if 'connect-root' in self.recovery_plan.get('actions', []):
+                from .recovery_ui import removal_action, projected_removal_action
+                advice = (removal_action(self.recovery_plan, self.failure_help) if self.failure_help
+                          else projected_removal_action(self.recovery_plan))
+                if advice['action'] == 'connect-root' and profile['edition'] == 'root':
+                    self.button('Connection details', lambda: self.edit_connection(profile, removal=True), True)
+                elif advice['action'] == 'connect-root':
                     from .recovery_ui import root_removal_profile
                     from .state import Store
                     root_profile = root_removal_profile(Store(), profile)
                     self.button('Connect using Root', lambda: self.start('uninstall', root_profile), True)
-                else:
+                elif advice['action'] == 'retry-removal':
                     self.button('Try again', lambda: self.start('uninstall', profile), True)
+                else:
+                    self.button('Review recovery options', lambda: self.start('recover', profile), True)
                 from .recovery_ui import removal_connection_failure
                 if removal_connection_failure(self.recovery_plan, self.failure_help):
                     self.button('Connection details', lambda: self.edit_connection(profile, removal=True))
@@ -805,7 +826,7 @@ class Wizard(QMainWindow):
                     if removal_waiting(self.recovery_plan, self.failure_help):
                         self.set_error_state(False)
                     self.badge.setText(self.title.text())
-                    message = detail.get('blocker_text') or 'Removal could not be confirmed. Check the connection and try again.'
+                    message = detail.get('blocker_text') or 'Removal could not be verified. Review recovery options before continuing.'
                     if self.failure_help and self.failure_help.get('code') in ('ssh-auth-root','ssh-auth-no-root','ssh-key-file','ssh-identity','developer-key-server','developer-key-unlock','developer-key-response'):
                         message = self.failure_help['next_step']
                     self.subtitle.setText(tr(message)+('' if show_restart or connection else '\n'+tr(detail.get('stage_text', ''))))
@@ -833,6 +854,10 @@ class Wizard(QMainWindow):
 
     def edit_connection(self, profile, removal=False):
         """Check edited fields; never resume installation from a connection error."""
+        from .recovery_ui import removal_action, projected_removal_action
+        advice = (removal_action(self.recovery_plan, self.failure_help) if self.failure_help
+                  else projected_removal_action(self.recovery_plan or {})) if removal else {}
+        resume_command = 'uninstall' if advice.get('action') == 'retry-removal' else 'recover'
         self.clear_form()
         self.set_error_state(False)
         self.title.setText(tr('Connection details'))
@@ -867,18 +892,20 @@ class Wizard(QMainWindow):
             except ValueError:
                 self.subtitle.setText(tr('Invalid TV address or port. Use an IPv4 address or hostname and a port from 1 to 65535.'))
                 return
-            self.start('uninstall' if removal else 'doctor', edited)
+            self.start(resume_command if removal else 'doctor', edited)
         if removal and (profile['edition'] == 'root' or profile.get('connection') == 'root-ssh'):
             def choose_key():
                 filename, _ = QFileDialog.getOpenFileName(self, tr('Choose your existing SSH private key'))
                 if filename:
-                    self.start('uninstall', dict(profile, identity=filename))
+                    self.start(resume_command, dict(profile, identity=filename))
             self.button('Choose key file…', choose_key)
-        self.button('Try again' if removal else 'Check connection again', check, True)
+        self.button(('Try again' if resume_command == 'uninstall' else 'Review recovery options')
+                    if removal else 'Check connection again', check, True)
         self.button('Back to start', self.home)
         address.setFocus()
 
     def show_debloat_selection(self):
+        maintenance = self.command == 'debloat'
         self.content.hide()
         self.preview.hide()
         self.title.setText(tr(debloat.TITLE))
@@ -925,7 +952,7 @@ class Wizard(QMainWindow):
                 text = WrappedLabel(tr(label))
                 toggle = ToggleSwitch(tr(label), tr('Selected'), tr('Keep current'))
                 toggle.setObjectName('debloat-' + key)
-                toggle.setChecked(True)
+                toggle.setChecked(not maintenance)
                 text.setBuddy(toggle)
                 row.addWidget(text, 1)
                 row.addWidget(toggle)
@@ -965,8 +992,12 @@ class Wizard(QMainWindow):
         actions = QHBoxLayout()
         actions.addStretch()
         self.button('Skip Debloat', lambda: self.submit('[]'), layout=actions)
-        self.button('Continue', lambda: self.submit(json.dumps([
+        apply = self.button(debloat.APPLY if maintenance else 'Continue', lambda: self.submit(json.dumps([
             key for key, toggle in selected.items() if toggle.isChecked()])), True, layout=actions)
+        if maintenance:
+            apply.setEnabled(False)
+            for toggle in panel.findChildren(ToggleSwitch):
+                toggle.toggled.connect(lambda: apply.setEnabled(any(item.isChecked() for item in selected.values())))
         self.form_layout.addLayout(actions)
         first.setFocus()
 
@@ -982,7 +1013,8 @@ class Wizard(QMainWindow):
                         f'<td><span style="color:#f3ede3;font-weight:600">{label}</span><br>'
                         f'<small>{message}</small></td></tr>')
         self.content.setHtml('<table width="100%" cellspacing="0" cellpadding="7">' + ''.join(rows) + '</table>')
-        self.button(debloat.CONTINUE, lambda: self.submit('1'), True).setFocus()
+        self.button('Continue' if self.command == 'debloat' else debloat.CONTINUE,
+                    lambda: self.submit('1'), True).setFocus()
 
     def show_install_settings(self):
         from . import install_settings as settings
@@ -1175,9 +1207,13 @@ class Wizard(QMainWindow):
         elif prompt.kind == 'confirm':
             trust_prompt = prompt.label.startswith('Connect and remember this TV?')
             beta_prompt = prompt.label.startswith('Install experimental Root Beta?')
-            label = 'Connect and remember' if trust_prompt else 'Try Root Beta' if beta_prompt else 'Continue'
-            yes = self.button(label, lambda: self.submit('y'), prompt.default == 'y')
-            no = self.button('Cancel' if beta_prompt else 'No, go back / cancel this operation', lambda: self.submit('n'), prompt.default == 'n')
+            if prompt.label.startswith(debloat.RESTORE_PROMPT):
+                yes_label, no_label = debloat.RESTORE_LABEL, debloat.SKIP_RESTORE
+            else:
+                yes_label = 'Connect and remember' if trust_prompt else 'Try Root Beta' if beta_prompt else 'Continue'
+                no_label = 'Cancel' if beta_prompt else 'No, go back / cancel this operation'
+            yes = self.button(yes_label, lambda: self.submit('y'), prompt.default == 'y')
+            no = self.button(no_label, lambda: self.submit('n'), prompt.default == 'n')
             (yes if prompt.default == 'y' else no).setFocus()
             if trust_prompt:
                 self.button('Connection details', lambda: self.submit('?'))

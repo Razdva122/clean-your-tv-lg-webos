@@ -184,8 +184,8 @@
       );
     return true;
   }
-  function twelveHour() {
-    var mode = clockFormat();
+  function twelveHour(mode) {
+    mode = mode || clockFormat();
     if (mode !== 'auto') return mode === '12h';
     var nav = root.navigator || {},
       choices = [
@@ -219,9 +219,9 @@
       formatTime(value, true)
     );
   }
-  function formatTime(value, seconds) {
+  function formatTime(value, seconds, mode) {
     var date = new Date(value),
-      use12 = twelveHour(),
+      use12 = twelveHour(mode),
       options = {
         hour: use12 ? 'numeric' : '2-digit',
         minute: '2-digit',

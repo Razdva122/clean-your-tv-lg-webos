@@ -305,6 +305,113 @@ class CLITests(unittest.TestCase):
                         self.assertFalse(calls)
                         getattr(installer.return_value, method).assert_not_called()
 
+    def test_debloat_uses_saved_profile_and_only_selected_settings(self):
+        from unittest.mock import Mock
+        from cytv.errors import UserError
+
+        scenarios = (
+            ('root', None, 'node012-beta', 'verified', True),
+            ('no-root', 'root-ssh', None, 'verified', True),
+            ('no-root', None, None, 'verified', False),
+            ('no-root', None, None, 'write-rejected', False),
+            ('no-root', None, None, 'pairing-rejected', False),
+            ('root', None, None, 'cancelled', True),
+            ('root', None, None, 'declined', True),
+        )
+        for edition, connection, variant, outcome, root in scenarios:
+            with self.subTest(edition=edition, connection=connection, variant=variant, outcome=outcome), \
+                    tempfile.TemporaryDirectory() as tmp, \
+                    patch('cytv.cli.Installer', side_effect=AssertionError('Debloat entered package operations')) as installer, \
+                    patch('cytv.cli.package.verify_payload') as payload, \
+                    patch.object(state.Store, 'begin') as begin, patch('cytv.debloat.SSAP') as pair:
+                store = state.Store(tmp)
+                profile = state.target('192.0.2.10', edition, connection=connection, root_variant=variant)
+                store.save(profile)
+                remote = Mock(root=root)
+                if root:
+                    remote.luna.side_effect = [
+                        {'returnValue': False},
+                        {'returnValue': True, 'settings': {'homePromotion': 'on'}},
+                        {'returnValue': True},
+                        {'returnValue': True, 'settings': {'homePromotion': 'off'}},
+                    ]
+                else:
+                    remote.luna.return_value = {
+                        'returnValue': True, 'modelName': '55UK7500PSA', 'firmwareVersion': '05.50.70',
+                    }
+                    remote.run.side_effect = ['"on"', '"off"']
+                ssap = pair.return_value.__enter__.return_value
+                ssap.call.return_value = {'returnValue': outcome != 'write-rejected'}
+                if outcome == 'pairing-rejected':
+                    pair.return_value.__enter__.side_effect = UserError('Refused', reason_code='pairing-rejected')
+                answers = ['q'] if outcome == 'cancelled' else ['y', '2', 'y', 'n', '0', '0', '0', 'y']
+                if outcome == 'declined':
+                    answers[-1] = 'n'
+                prompts = iter(answers)
+                messages = []
+                code = cli.main(['debloat', '--language', 'en', '--data-dir', tmp],
+                                ask=lambda _: next(prompts), write=messages.append,
+                                connect=lambda selected, *_: remote if selected == profile else self.fail(selected))
+                output = '\n'.join(messages)
+                self.assertEqual(code, 130 if outcome == 'cancelled' else 0, output)
+                installer.assert_not_called()
+                payload.assert_not_called()
+                begin.assert_not_called()
+                remote.upload.assert_not_called()
+                remote.upload_file.assert_not_called()
+                remote.close.assert_called_once_with()
+                self.assertIsNone(store.pending(profile))
+                if outcome in ('cancelled', 'declined'):
+                    self.assertEqual(remote.luna.call_count, 1)  # Read-only TV metadata.
+                    remote.run.assert_not_called()
+                    pair.assert_not_called()
+                    continue
+                report_path, = (Path(tmp) / 'reports').glob('diagnostic-*.json')
+                report = json.loads(report_path.read_text())
+                self.assertEqual((report['action'], report['phase']), ('debloat', 'debloat'))
+                self.assertEqual(report['debloat'], {'homePromotion': outcome})
+                if root:
+                    pair.assert_not_called()
+                    self.assertEqual(remote.luna.call_count, 4)  # Metadata, original, write, readback.
+                    remote.run.assert_not_called()
+                    remote.luna.assert_any_call(
+                        'com.webos.settingsservice/setSystemSettings',
+                        {'category': 'general', 'settings': {'homePromotion': 'off'}}, timeout=8)
+                elif outcome != 'pairing-rejected':
+                    self.assertEqual(remote.luna.call_count, 1)
+                    ssap.call.assert_called_once_with(
+                        'ssap://settings/setSystemSettings',
+                        {'category': 'general', 'settings': {'homePromotion': 'off'}}, timeout=8)
+                else:
+                    self.assertEqual(remote.luna.call_count, 1)
+                    ssap.call.assert_not_called()
+                if outcome == 'write-rejected':
+                    self.assertIn('This TV firmware blocks changing this setting in No-root.', ' '.join(output.split()))
+
+    def test_debloat_pending_work_on_same_tv_blocks_before_connecting(self):
+        from unittest.mock import Mock
+        for action, saved_edition in [('install', 'root'), ('uninstall', 'no-root'), ('recover', 'root')]:
+            with self.subTest(action=action, saved_edition=saved_edition), \
+                    tempfile.TemporaryDirectory() as tmp, patch('cytv.cli.Installer') as installer, \
+                    patch('cytv.cli.package.verify_payload') as payload, patch('cytv.debloat.SSAP') as pair:
+                store = state.Store(tmp)
+                saved = state.target('192.0.2.10', saved_edition)
+                store.save(saved)
+                store.begin(saved, action)
+                pending = store.pending(saved)
+                connect, ask = Mock(), Mock()
+                messages = []
+                code = cli.main(['debloat', '--host', '192.0.2.10', '--edition', 'no-root',
+                                 '--language', 'en', '--data-dir', tmp], connect=connect, ask=ask, write=messages.append)
+                self.assertEqual(code, 2)
+                self.assertIn('cytv recover', '\n'.join(messages))
+                connect.assert_not_called()
+                ask.assert_not_called()
+                installer.assert_not_called()
+                payload.assert_not_called()
+                pair.assert_not_called()
+                self.assertEqual(store.pending(saved), pending)
+
     def test_new_recovery_attempt_is_explicit_and_scoped_to_recovery(self):
         from unittest.mock import MagicMock
         with tempfile.TemporaryDirectory() as tmp, patch('cytv.cli.Installer') as installer:
@@ -492,6 +599,37 @@ class CLITests(unittest.TestCase):
             self.assertEqual(store.pending(profile)['action'], 'install')
             cls.return_value.uninstall.assert_not_called()
             cls.return_value.install.assert_not_called()
+
+    def test_uninstall_offers_separate_debloat_consent_even_with_yes(self):
+        from unittest.mock import MagicMock
+
+        for answer, noninteractive, restores in (('', False, False), ('y', False, True), ('', True, False)):
+            with self.subTest(answer=answer, noninteractive=noninteractive), tempfile.TemporaryDirectory() as tmp, \
+                    patch('cytv.cli.Installer') as installer, \
+                    patch('cytv.cli.package.verify_payload', return_value={}):
+                store = state.Store(tmp)
+                profile = state.target('192.0.2.10', 'root')
+                store.save(profile)
+                record = store.device_dir(profile) / 'debloat.json'
+                record.write_text(json.dumps({'schema': 1, 'settings': {
+                    'homePromotion': {'original': 'on', 'target': 'off'},
+                }}))
+                remote = MagicMock(root=True)
+                remote.luna.side_effect = [
+                    {'returnValue': True, 'settings': {'homePromotion': 'off'}},
+                    {'returnValue': True, 'settings': {'homePromotion': 'off'}},
+                    {'returnValue': True},
+                    {'returnValue': True, 'settings': {'homePromotion': 'on'}},
+                ]
+                installer.return_value.uninstall.return_value = {}
+                args = ['uninstall', '--data-dir', tmp, '--yes', '--language', 'en']
+                if noninteractive:
+                    args += ['--non-interactive']
+                code, output, _ = self.run_cli(args, [answer], remote=remote)
+                self.assertEqual(code, 0, output)
+                self.assertEqual('Restore saved Debloat settings before removal?' in output, not noninteractive)
+                self.assertEqual(remote.luna.call_count, 4 if restores else 0 if noninteractive else 1)
+                installer.return_value.uninstall.assert_called_once_with(full_project=True)
 
     def test_each_maintenance_command_reaches_its_operation_without_installing(self):
         from unittest.mock import MagicMock

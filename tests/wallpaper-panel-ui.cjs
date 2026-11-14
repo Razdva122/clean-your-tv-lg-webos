@@ -15,7 +15,8 @@ const path = require('node:path');
       window.HomeI18n = {
         language: () => 'en',
         t: (s) => s,
-        clockFormat: () => 'auto'
+        clockFormat: () => 'auto',
+        formatTime: () => '13:40'
       };
       window.testState = {
         themeId: 'test',

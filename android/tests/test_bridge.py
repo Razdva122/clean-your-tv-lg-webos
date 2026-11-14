@@ -45,6 +45,8 @@ class BridgeTests(unittest.TestCase):
                                'private':'PRIVATE-ORIGINAL-RECEIPT'})
         self.assertEqual(native.events[-1]['disposition'], 'clean-removal')
         self.assertTrue(native.events[-1]['verified_clean'])
+        self.assertEqual(native.events[-1].get('removal_action'),
+                         {'action':'check','condition':'unverified','requires_change':True})
         self.assertNotIn('PRIVATE', json.dumps(native.events))
 
     def test_cleanup_details_are_localized_and_never_forward_unknown_codes(self):
@@ -63,10 +65,12 @@ class BridgeTests(unittest.TestCase):
             'removal':{'stage':'private-cleanup','reason':'private-cleanup-incomplete','private':'PRIVATE'}})
         event = native.events[-1]
         self.assertEqual(event['stageText'], 'Verifying removal…')
-        self.assertEqual(event['blockerText'], 'Final cleanup could not be verified. Choose Try again to check and finish removal.')
+        self.assertEqual(event['blockerText'], 'Final cleanup could not be verified. Review recovery options before continuing.')
         self.assertEqual(event['titleText'], 'Finish Clean Your TV cleanup')
         self.assertTrue(event['waiting'])
         self.assertEqual(event['actions'], ['continue-removal'])
+        self.assertEqual(event.get('removal_action'),
+                         {'action':'check','condition':'unverified','requires_change':True})
         self.assertNotIn('PRIVATE', json.dumps(event))
 
     def test_restart_semantics_are_forwarded_without_relying_on_translated_stage(self):
@@ -81,6 +85,69 @@ class BridgeTests(unittest.TestCase):
                 'removed':True,'verified_clean':True,'summary':'Clean Your TV removal is verified.',
                 'next_step':'Try again',**value})
             self.assertIs(native.events[-1].get('restart_required'), True)
+            self.assertEqual(native.events[-1].get('removal_action'),
+                             {'action':'retry-removal','condition':'restart','requires_change':True})
+
+    def test_current_removal_failure_projects_the_same_advice_on_android_and_desktop(self):
+        from cytv import state
+        from cytv.desktop import DesktopConsole
+        from cytv.recovery import removal_plan
+        module = self.module()
+
+        class Native:
+            def __init__(self): self.events = []
+            def emit(self, raw): self.events.append(json.loads(raw))
+
+        native = Native()
+        android = module.AndroidConsole(module.Callbacks(native))
+        events = []
+        desktop = DesktopConsole(lambda kind, value: events.append((kind, value)))
+        with tempfile.TemporaryDirectory() as tmp:
+            store = state.Store(tmp)
+            profile = state.target('tv.local', 'root')
+            store.request_clean_removal(profile)
+            store.checkpoint(profile, stage='restart-required', removal_reason='restart-required')
+            for code, expected in (
+                    ('ssh-auth-root', {'action':'check','condition':'unverified','requires_change':True}),
+                    ('ssh-timeout', {'action':'retry-removal','condition':'transient','requires_change':False})):
+                with self.subTest(code=code):
+                    for console in (desktop, android):
+                        removal_plan(console, store, profile, failure={'code':code})
+                    desktop_plan = [value for kind, value in events if kind == 'recovery-plan'][-1]
+                    android_plan = native.events[-1]
+                    self.assertEqual(desktop_plan.get('removal_action'), expected)
+                    self.assertEqual(android_plan.get('removal_action'), expected)
+                    self.assertEqual(android_plan.get('reason'), 'restart-required')
+                    self.assertTrue(android_plan['restart_required'])
+                    self.assertIs(android_plan['connection_failure'], True)
+
+    def test_current_cleanup_failure_replaces_saved_restart_wording(self):
+        from cytv import state
+        from cytv.errors import UserError
+        from cytv.recovery import removal_plan
+        module = self.module()
+
+        class Native:
+            def __init__(self): self.events = []
+            def emit(self, raw): self.events.append(json.loads(raw))
+
+        native = Native()
+        console = module.AndroidConsole(module.Callbacks(native))
+        with tempfile.TemporaryDirectory() as tmp:
+            store = state.Store(tmp)
+            profile = state.target('tv.local', 'root')
+            store.request_clean_removal(profile)
+            store.checkpoint(profile, stage='restart-required', removal_reason='restart-required')
+            removal_plan(console, store, profile,
+                         error=UserError('PRIVATE', reason_code='cleanup-check-failed'))
+        event = native.events[-1]
+        self.assertEqual(event['removal_action']['condition'], 'unverified')
+        self.assertEqual(event['titleText'], event['summary'])
+        self.assertEqual(event['blockerText'], event['nextStep'])
+        self.assertTrue(event['restart_required'])
+        self.assertIs(event['connection_failure'], False)
+        self.assertNotIn('Restart the TV', str(event))
+        self.assertNotIn('PRIVATE', str(event))
 
     def test_check_events_translate_text_but_preserve_ids_and_status(self):
         from cytv import i18n
