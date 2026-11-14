@@ -385,52 +385,48 @@ service reply and `setting-not-found` when the settings service reports no
 database match for `general.defaultApps`. Both describe failed interface reads.
 `root_capability_codes` retains only bounded numeric Luna error codes for these keys.
 
-When the installer supports capability-based Qt admission and System Profile is
-absent, optional `tv.root_compositor_failure` identifies the failed host check.
-Root `doctor --report` verifies the bundled payload before using its declared
-Home backends. With no pending operation, it can collect this failure through
-the read-only preflight without starting a Root installation.
-Request failures use `system-info-request-failed`, `keyfilters-request-failed`
-or `native-home-request-failed`. Validation failures use `system-info-invalid`,
-`keyfilters-incompatible` or `native-home-incompatible`.
-`keyfilters-not-configured` means a successful configuration reply omitted the
-KeyFilters key or returned an empty list. `keyfilters-service-absent` records
-an explicit missing configuration-service reply. A missing or malformed `configs`
-object, invalid entries and unsupported chains use `keyfilters-incompatible`.
-Optional `tv.root_keyfilters_probe` records the outcome of the KeyFilters read,
-including a timeout, a rejection, an unconfirmed or malformed reply, an empty
-configuration, and a compatible or incompatible chain. For an explicit
-rejection it can include a bounded numeric Luna error code.
-`native-home-unavailable` identifies a missing or unsafe native Home path.
-`native-home-script` identifies a script at the native Home path. Restore the
-original Home executable before retrying Root setup. On the capability-based
-Qt path, Doctor also checks the mount table from the SSH session. The report
-exports only the `tv.root_native_home_mount` classification, such as a mount
-on the Home file, a mount on a parent directory, or stacked mounts. `absent`
-means the probe saw no separate mount on Home, `/usr/bin` or `/usr`.
-`unknown` means the probe could not establish the layout.
+With a verified payload that supports the native Home backend and an explicit
+missing System Profile reply, fresh Root Doctor records independent Home
+observations. It retains the original preflight failure. For example, a failed
+Node check remains `root-requirements` even if the Home observations succeed.
+The added reads do not install or stage software. Existing runtime readiness
+checks can create and remove temporary smoke-test files.
 
-During interactive Root setup, a single private file mount can be restored
-after a preview in a private mount namespace exposes a valid ARM32 Home ELF
-on a read-only SquashFS root. After confirmation, setup rechecks the mount,
-unmounts it normally, verifies the same ELF, and reruns Root preflight.
-Stacked or covering mounts require separate investigation. The device still
-checks for conflicting Home integrations before admission.
-When System Profile is absent and KeyFilters passed, this result lets interactive
-setup offer No-root over the existing root SSH connection. No-root still runs
-its own preflight before installing.
-`c1-probe-failed` means an error in the preceding C1 probe prevented the
-capability-based check from running.
+- `tv.root_compositor_failure` retains the primary host admission result.
+  `c1-probe-failed` means the C1 identity or native read raised; setup does
+  not fall back after this exception. Doctor can still observe the fallback's
+  failure in `tv.root_compositor_observation`.
+- `tv.root_c1_probe` distinguishes C1 admission, request failure, rejection
+  or mismatch of the identity reply, and an unsuccessful native Home check.
+- `tv.root_keyfilters_probe` records separately whether the configuration
+  request failed, is unset, or returned a compatible or incompatible chain.
+  For an incompatible chain its fixed `predicate` names the first structural
+  failure: config object, entry list/count, entry object, file, path, handler,
+  or missing/duplicate system filter. An explicit rejection can retain a
+  bounded numeric Luna error code.
+- `tv.root_native_home_probe` distinguishes a readable native executable,
+  a failed request or unavailable path, and a specific validation failure
+  (output, metadata, size, filesystem, mode, shell header, or Home header).
+  A script is reported as `home-script`. A mode rejection can retain
+  four octal digits in `tv.root_native_home_mode`.
+
+When a script is observed, `tv.root_native_home_mount` describes only the
+mount layout seen by the SSH session. `absent` means there was no separate
+mount on Home, `/usr/bin` or `/usr`; `unknown` means the layout could not
+be established. In interactive Root setup a single private file mount can
+still be restored with the existing private preview, explicit confirmation,
+mount and ELF verification, and a new preflight. A script with stacked or
+covering mounts reports `foreign-home-handoff-required` when it blocks
+setup. Manual Restore reports the same guidance before staging or creating
+a restore receipt if it positively observes this combination and verifies
+that no current Root recovery footprint is present. Existing retained or
+uncertain Root footprints follow the existing authenticated recovery route.
+
 When System Profile and KeyFilters are confirmed absent, `tv.root_ribbon_probe`
-records the outcome of the read-only Surface Manager Home state request.
-A valid Home entry identifies a legacy ribbon and lets interactive setup offer
-No-root over the existing root SSH connection. Reports retain the probe
-outcome without the reply or current Home visibility.
-
-When the native Home permission check refuses admission, optional
-`tv.root_native_home_mode` records the four octal permission digits seen by the
-C1 or capability-based probe. This field helps compare the installer observation
-with the stock file's expected permissions without exporting command output.
+records the Surface Manager Home state result. A valid Home entry still lets
+interactive setup offer No-root over the existing Root SSH connection.
+Likewise, a native Home path unavailable after KeyFilters pass can still offer
+No-root. Separate Doctor observations do not change these setup decisions.
 
 The report excludes raw replies, command output and Home routes. The installer
 revalidates these fields when exporting current and retained failures.

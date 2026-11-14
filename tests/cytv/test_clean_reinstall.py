@@ -1,4 +1,5 @@
 """Regression for verified clean removal followed by normal Root installation."""
+import os
 import unittest
 from unittest.mock import Mock
 from tests.cytv import test_operations
@@ -55,25 +56,187 @@ class CleanReinstallTests(unittest.TestCase):
         inst.root_installation.return_value=dict(CLEAN,clean_removal_verified=False)
         with self.assertRaises(ExistingRoot):inst.preflight(install=True,home_interfaces=True)
 
+    def native_fixture(self):
+        from cytv.root_capabilities import NATIVE_HEADERS
+        inst, remote = self.fixture()
+        inst.manifest['root_backends'] = {'c1-native-gate': {'admission_schema': 3}}
+        luna, run = remote.luna, remote.run
+        elf = ('127 69 76 70 1 1 1 0 0 0 0 0 0 0 0 0 3 0 40 0 1 0 0 0 217 218 '
+               '0 0 52 0 0 0 164 98 10 0 0 2 0 5 52 0 32 0 9 0 40 0 29 0 28 0')
+
+        def read(uri, payload, **kwargs):
+            if uri.endswith('/getProfiles'):
+                return {'returnValue': False, 'errorCode': -1,
+                        'errorText': 'Service does not exist: com.webos.service.systemprofile.'}
+            if uri.endswith('/getSystemInfo') and 'modelName' in payload.get('keys', []):
+                return {'returnValue': True, 'modelName': 'OLED55C1PUB',
+                        'firmwareVersion': '03.50.25', 'sdkVersion': '6.3.0'}
+            return luna(uri, payload, **kwargs)
+
+        remote.luna = read
+        remote.run = lambda command, **kw: (
+            f'0 1 755 7582\n{elf}\nCYTV_HOME_ELF\n{elf}\n'
+            if command == NATIVE_HEADERS else run(command, **kw))
+        return inst, remote
+
     def test_native_beta_accepts_only_verified_clean_handoff_before_effects(self):
-        inst,remote=self.fixture();inst.tv_info['home_backend']='c1-native-gate'
-        inst.preflight(install=True)
+        inst,remote=self.native_fixture()
+        inst.preflight(install=True, home_interfaces=True)
         inst.root_installation.assert_called_once_with(for_install=True)
         self.assertTrue(inst._native_clean_install)
         self.assertIsNone(self.store.pending(inst.profile))
         inst.root_installation.return_value=dict(CLEAN,clean_removal_verified=False)
-        with self.assertRaises(ExistingRoot):inst.preflight(install=True)
+        with self.assertRaises(ExistingRoot):inst.preflight(install=True, home_interfaces=True)
 
     def test_native_verified_clean_ownership_without_root_directory_still_hands_off(self):
-        inst,remote=self.fixture();inst.tv_info['home_backend']='c1-native-gate'
+        inst,remote=self.native_fixture()
         original=remote.run
         def run(command,**kwargs):
             if 'CYTV_EXISTING_ROOT' in command:
                 return 'CYTV_EXISTING_ROOT' if '/var/lib/clean-your-tv-installation/operation.json' in command else ''
             return original(command,**kwargs)
         remote.run=run
-        inst.preflight(install=True)
+        inst.preflight(install=True, home_interfaces=True)
         self.assertTrue(inst._native_clean_install)
+
+    def test_unowned_foreign_cover_refuses_repeated_restore_before_receipt_or_staging(self):
+        from cytv.errors import UserError
+        from cytv.root_capabilities import NATIVE_HEADERS, NATIVE_HOME_MOUNT_PROBE
+        inst, remote = self.fixture()
+        shell = ('127 69 76 70 1 1 1 0 0 0 0 0 0 0 0 0 3 0 40 0 1 0 0 0 217 218 '
+                 '0 0 52 0 0 0 164 98 10 0 0 2 0 5 52 0 32 0 9 0 40 0 29 0 28 0')
+        native = f'0 1 755 7582\n{shell}\nCYTV_HOME_ELF\n35 33\nCYTV_HOME_FS\nef53\n'
+        calls = []
+
+        def run(command, **kwargs):
+            calls.append(command)
+            if 'CYTV_ROOT_FOOTPRINT_ABSENT' in command:
+                return 'CYTV_ROOT_FOOTPRINT_ABSENT'
+            if command == NATIVE_HEADERS:
+                return native
+            if command == NATIVE_HOME_MOUNT_PROBE:
+                return 'file-and-parent-mounts'
+            self.fail('Unexpected TV command')
+
+        remote.run = run
+        for _ in range(2):
+            with self.assertRaises(UserError) as caught:
+                inst.restore()
+            self.assertEqual(caught.exception.reason_code, 'foreign-home-handoff-required')
+        self.assertEqual(calls[1:3], [NATIVE_HEADERS, NATIVE_HOME_MOUNT_PROBE])
+        self.assertEqual(calls[:3], calls[3:])
+        inst.root_installation.assert_not_called()
+        self.assertIsNone(self.store.pending(inst.profile))
+        self.assertEqual(list(self.store.device_dir(inst.profile).glob('recovery-*.json')), [])
+
+        from cytv.diagnostics import create_report
+        report_path = create_report(self.store, 'restore', inst.profile, 'restore', caught.exception, inst.tv_info)
+        import json
+        report = json.loads(report_path.read_text())
+        self.assertEqual(report['phase'], 'restore')
+        self.assertEqual(report['reason_code'], 'foreign-home-handoff-required')
+        self.assertEqual(report['guidance']['code'], 'foreign-home-handoff-required')
+        self.assertEqual(report['tv']['root_native_home_mount'], 'file-and-parent-mounts')
+        self.assertNotIn('/usr/bin/com.webos.app.home', report_path.read_text())
+
+    def test_unowned_restore_preserves_guard_failures_without_receipt(self):
+        from cytv.errors import TVCommandError
+        from cytv.root_capabilities import NATIVE_HEADERS, NATIVE_HOME_MOUNT_PROBE
+        inst, remote = self.fixture()
+        shell = ('127 69 76 70 1 1 1 0 0 0 0 0 0 0 0 0 3 0 40 0 1 0 0 0 217 218 '
+                 '0 0 52 0 0 0 164 98 10 0 0 2 0 5 52 0 32 0 9 0 40 0 29 0 28 0')
+        native = f'0 1 755 7582\n{shell}\nCYTV_HOME_ELF\n35 33\n'
+        for index in range(3):
+            for error in (TimeoutError('private'), TVCommandError(42 if index == 1 else 127)):
+                with self.subTest(index=index, error=type(error)):
+                    replies = ['CYTV_ROOT_FOOTPRINT_ABSENT', native][:index] + [error]
+                    remote.run = Mock(side_effect=replies)
+                    with self.assertRaises(type(error)) as caught:
+                        inst.restore()
+                    self.assertIs(caught.exception, error)
+                    self.assertEqual(remote.run.call_count, index + 1)
+                    self.assertIsNone(self.store.pending(inst.profile))
+                    self.assertFalse(list(self.store.device_dir(inst.profile).glob('recovery-*.json')))
+                    inst.root_installation.assert_not_called()
+                    if index:
+                        self.assertIn(remote.run.call_args.args[0], (NATIVE_HEADERS, NATIVE_HOME_MOUNT_PROBE))
+
+    def test_possible_root_footprint_and_malformed_evidence_keep_authenticated_restore(self):
+        inst, remote = self.fixture()
+        for footprint in ('CYTV_ROOT_FOOTPRINT_RETAINED', 'CYTV_ROOT_FOOTPRINT_UNCERTAIN',
+                          '', 'CYTV_ROOT_FOOTPRINT_ABSENT\nprivate'):
+            with self.subTest(footprint=footprint):
+                remote.run = Mock(return_value=footprint)
+                self.assertTrue(inst.restore()['already_removed'])
+                self.assertEqual(remote.run.call_count, 1)
+        self.assertEqual(inst.root_installation.call_count, 4)
+
+    def test_local_recovery_evidence_preserves_existing_restore(self):
+        inst, remote = self.fixture()
+        remote.run = Mock(side_effect=AssertionError('No fresh footprint probe'))
+        directory = self.store.device_dir(inst.profile)
+        for name in ('installation.json', 'clean-removal.json', 'recovery-local.json'):
+            with self.subTest(name=name):
+                receipt = directory / name
+                receipt.write_text('{"action":"restore","stage":"pending"}')
+                self.assertTrue(inst.restore()['already_removed'])
+                receipt.unlink()
+        self.store.begin(inst.profile, 'activate-root')
+        self.assertTrue(inst.restore()['already_removed'])
+        self.assertIsNone(self.store.pending(inst.profile))
+
+    @unittest.skipUnless(os.name == 'posix', 'POSIX TV filesystem paths')
+    def test_footprint_script_distinguishes_missing_from_indirect_or_unreadable_paths(self):
+        import json
+        from pathlib import Path
+        import shutil
+        import subprocess
+        import tempfile
+        from cytv.root_restore_footprint import _FOOTPRINT_SCRIPT, _ROOT_MARKERS
+
+        node = shutil.which('node')
+        if node is None:
+            self.skipTest('Node unavailable')
+        with tempfile.TemporaryDirectory() as tmp:
+            directory = Path(tmp).resolve()
+            target = directory / 'profile' / 'override' / 'clean-your-tv-root.json'
+
+            def probe(prefix=''):
+                return subprocess.check_output(
+                    [node, '-e', prefix + _FOOTPRINT_SCRIPT, json.dumps([str(target)])],
+                    text=True, timeout=5)
+
+            self.assertIn('/var/webos-profile/override/clean-your-tv-root.json', _ROOT_MARKERS)
+            self.assertEqual(probe(), 'CYTV_ROOT_FOOTPRINT_ABSENT')
+            target.parent.mkdir(parents=True)
+            self.assertEqual(probe(), 'CYTV_ROOT_FOOTPRINT_ABSENT')
+            target.touch()
+            self.assertEqual(probe(), 'CYTV_ROOT_FOOTPRINT_RETAINED')
+            target.unlink()
+            target.parent.rmdir()
+            target.parent.symlink_to(directory, target_is_directory=True)
+            self.assertEqual(probe(), 'CYTV_ROOT_FOOTPRINT_UNCERTAIN')
+            target.parent.unlink()
+            target.parent.touch()
+            self.assertEqual(probe(), 'CYTV_ROOT_FOOTPRINT_UNCERTAIN')
+            deny = """
+var lstat = require('fs').lstatSync;
+require('fs').lstatSync = function (path) {
+    if (path.endsWith('/profile')) throw Object.assign(Error('private'), {code: 'EACCES'});
+    return lstat(path);
+};
+"""
+            self.assertEqual(probe(deny), 'CYTV_ROOT_FOOTPRINT_UNCERTAIN')
+            target.parent.unlink()
+            change = """
+var lstat = require('fs').lstatSync, visits = 0;
+require('fs').lstatSync = function (path) {
+    var result = lstat(path);
+    if (path.endsWith('/profile')) return {ino: visits++, dev: result.dev, isDirectory: () => true};
+    return result;
+};
+"""
+            self.assertEqual(probe(change), 'CYTV_ROOT_FOOTPRINT_RETAINED')
 
     def test_unverified_clean_restore_keeps_existing_recovery_path(self):
         inst,remote=self.fixture()

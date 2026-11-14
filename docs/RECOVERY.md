@@ -11,6 +11,11 @@
 
 ## Return to LG Home
 
+If the installer reports that another Home integration covers LG Home, use
+that integration's supported procedure to return to LG Home. Then open
+**Diagnostics → Check connection and create a diagnostic report**. The
+installer's **Return to LG Home** action is for Clean Your TV recovery.
+
 Press Home **three times within two seconds**, releasing between presses. This
 stops Home interception and opens LG Home; it preserves preferences. Helper
 through 0.6.13 uses holding Home for about two seconds instead.
