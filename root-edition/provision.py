@@ -126,8 +126,10 @@ def plan(original, capabilities=None):
         if names not in (['Name='+NAME],['Name='+NAME+';']):
             raise ValueError('Unexpected compositor activation names')
         role['allowedNames'].append(LEASE_NAME)
-        role['permissions'].append({'service':LEASE_NAME, 'inbound':['com.webos.surfacemanager'], 'outbound':[]})
-        clients['com.webos.surfacemanager'] = [NAME+'.c1lease']
+        senders = ['com.webos.surfacemanager', 'com.webos.starfish.keyfilters']
+        role['permissions'].append({'service':LEASE_NAME, 'inbound':senders, 'outbound':[]})
+        for sender in senders:
+            clients[sender] = [NAME+'.c1lease']
         apis[NAME+'.c1lease'] = [LEASE_NAME+'/c1Lease', LEASE_NAME+'/c1Home']
     result = {'service': original['service'].replace(expected,'Exec='+str(RUNNER)).encode(),
             'role':encoded(role), 'client':encoded(clients), 'api':encoded(apis)}

@@ -151,17 +151,21 @@ function fixture(uid, initialChange, diskDirectory) {
   };
   if (initialChange) initialChange(files, metadata);
   install(service, opts);
-  function message(token, caller) {
+  function message(
+    token,
+    caller = 'com.webos.surfacemanager',
+    applicationID = ''
+  ) {
     return {
       uniqueToken: token || 'one',
       isSubscription: true,
       payload: { subscribe: true },
       ls2Message: {
         applicationID: function () {
-          return '';
+          return applicationID;
         },
         senderServiceName: function () {
-          return caller || 'com.webos.surfacemanager';
+          return caller;
         }
       },
       respond: function (v) {
@@ -180,8 +184,8 @@ function fixture(uid, initialChange, diskDirectory) {
     advance: function (ms) {
       clock += ms;
     },
-    home: function (payload, caller, response) {
-      var m = message('home', caller);
+    home: function (payload, caller, response, applicationID) {
+      var m = message('home', caller, applicationID);
       m.isSubscription = false;
       m.payload = payload || { token: 'a'.repeat(32) };
       if (response) m.respond = response;
@@ -641,6 +645,46 @@ function schema3(files, model, sdk) {
   m.admission.firmware = '23.25.55';
   files[ROOT + '/home-backend.json'] = Buffer.from(JSON.stringify(m));
 }
+[
+  undefined,
+  function (files) {
+    schema3(files, 'OLED55C37LA', '9.2.2');
+  }
+].forEach(function (setup) {
+  var trusted = ['com.webos.surfacemanager', 'com.webos.starfish.keyfilters'];
+  trusted.forEach(function (caller) {
+    var a = fixture(undefined, setup);
+    a.subscribe(a.message('one', caller));
+    assert.strictEqual(a.calls.length, 1, caller + ' can subscribe to c1Lease');
+    a.reply(native());
+    assert.strictEqual(a.replies.at(-1).healthy, true);
+    a.home(undefined, caller);
+    assert.strictEqual(a.calls.length, 2, caller + ' can call c1Home');
+    assert.deepStrictEqual(a.calls.at(-1).args, ['--home', 'a'.repeat(32)]);
+    a.reply(native());
+    assert.strictEqual(a.replies.at(-1).returnValue, true);
+  });
+  var a = fixture(undefined, setup);
+  a.subscribe();
+  a.reply(native());
+  [
+    '',
+    'com.foreign.client',
+    ...trusted.map((name) => name + '.foreign')
+  ].forEach(function (caller) {
+    trusted.forEach(function (forgedID) {
+      a.subscribe(a.message('forged', caller, forgedID));
+      assert.strictEqual(a.replies.at(-1).returnValue, false);
+      a.home(undefined, caller, undefined, forgedID);
+      assert.strictEqual(a.replies.at(-1).returnValue, false);
+      assert.strictEqual(
+        a.calls.length,
+        1,
+        'foreign sender cannot invoke native'
+      );
+    });
+  });
+});
 ['55NANO77SRA', 'OLED55C37LA', '55UP7000PUA', '60UJ6050-UA'].forEach(
   function (model) {
     var a = fixture(undefined, function (files) {
