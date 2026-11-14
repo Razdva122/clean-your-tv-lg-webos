@@ -1877,6 +1877,7 @@ class SimpleRemoval(unittest.TestCase):
                     case.model_owners({source.parent:(0,0),source.parent.parent:(501,20)})
                     if metadata is None:
                         # The readable legacy registry is not needed for nomination.
+                        registration.parent.chmod(0o755)
                         shutil.rmtree(registration.parent)
                         case.remote.leave_registration = True
                     role = case.root/'bus/roles.d'/(app+'.foreign.json')
