@@ -1369,7 +1369,12 @@ class SimpleRemoval(unittest.TestCase):
             for kind, name, leaf in [('applications', app, 'appinfo.json'),
                                      ('services', service, 'service.js'),
                                      ('packages', app, 'packageinfo.json')]:
-                file = self.own_file(f'apps/usr/palm/{kind}/{name}/{leaf}', json.dumps({'id': app}))
+                metadata = {'id': app, 'app': app, 'services': [service]} if kind == 'packages' else {'id': app}
+                file = self.own_file(f'apps/usr/palm/{kind}/{name}/{leaf}', json.dumps(metadata))
+                if kind == 'services':
+                    file = file.parent / 'services.json'
+                    file.write_text(json.dumps({'id': service}))
+                owners[file] = (0, 0)
                 owned.append(file.parent)
                 owners[file.parent] = (0, 0)
         state = self.own_file('apps/usr/palm/applications/com.local.nativehome/state/apps.json', '[]').parent
@@ -1401,13 +1406,126 @@ class SimpleRemoval(unittest.TestCase):
         self.assertTrue(all(directory.stat().st_mode & 0o777 == 0o777 for directory in containers))
         self.assertEqual(foreign.read_text(), 'preserve')
 
+    def test_root_ssh_catalog_removal_handles_vendor_layout_without_local_access(self):
+        from cytv.root_runtime import FRESH_PROBE
+
+        self.installer.profile = self.profile = target('tv.local', 'no-root', connection='root-ssh')
+        app = 'com.gathin.tvhome'
+        (self.root / 'proc').mkdir()
+        primary = self.own_file('apps/usr/palm/services/com.gathin.tvhome.renewal/service.js')
+        alternate = self.own_file('vendor-store/slot-2/' + app + '/appinfo.json', json.dumps({'id': app}))
+        self.model_owners({primary.parents[2]: (4242, 4242)})
+        self.remote.apps.add(app)
+        run = self.remote.run
+        self.remote.run = lambda command, **kw: 'CYTV_FRESH_ROOT' if command == FRESH_PROBE else run(command, **kw)
+        luna = self.remote.luna
+
+        def vendor(uri, body, **kwargs):
+            reply = luna(uri, body, **kwargs)
+            if uri.endswith('/dev/listApps') and self.remote.apps:
+                reply['apps'][0]['folderPath'] = '/media/developer/vendor-store/slot-2/' + app
+            if uri.endswith('/dev/remove'):
+                primary.unlink()
+                primary.parent.rmdir()
+                alternate.unlink()
+                alternate.parent.rmdir()
+            return reply
+
+        self.remote.luna = vendor
+        self.assertTrue(self.remove()['verified_clean'])
+        self.assertEqual([body['id'] for uri, body in self.remote.calls if uri.endswith('/dev/remove')], [app])
+
+    def test_root_ssh_catalog_removal_waits_for_restart_if_helper_stop_cannot_be_verified(self):
+        from cytv.root_runtime import FRESH_PROBE
+
+        self.installer.profile = self.profile = target('tv.local', 'no-root', connection='root-ssh')
+        self.remote.volatile_mode = 0o777
+        (self.root / 'proc').mkdir()
+        app = 'com.local.nativehome'
+        state = self.own_file('apps/usr/palm/applications/' + app + '/state/apps.json', '[]').parent
+        self.model_owners({state.parents[2]: (4242, 4242)})
+        self.remote.apps.add(app)
+        self.remote.os_cleanup = True
+        run = self.remote.run
+        self.remote.run = lambda command, **kw: 'CYTV_FRESH_ROOT' if command == FRESH_PROBE else run(command, **kw)
+
+        for _ in range(2):
+            self.assertTrue(self.remove()['restart_required'])
+            self.assertTrue(state.is_dir())
+            self.assertFalse(any(uri.endswith('/dev/remove') for uri, _ in self.remote.calls))
+
+        self.reboot()
+        self.assertTrue(self.remove()['verified_clean'])
+        self.assertFalse(state.exists())
+        self.assertEqual([body['id'] for uri, body in self.remote.calls if uri.endswith('/dev/remove')], [app])
+
+    def test_root_ssh_catalog_readback_blocks_sweep_if_package_remains(self):
+        self.installer.profile = self.profile = target('tv.local', 'no-root', connection='root-ssh')
+        (self.root / 'proc').mkdir()
+        app = 'com.gathin.tvhome'
+        manifest = self.own_file('apps/usr/palm/applications/' + app + '/appinfo.json', json.dumps({'id': app}))
+        self.model_owners({p: (0, 0) for p in (manifest, *manifest.parents)})
+        self.remote.apps.add(app)
+        luna = self.remote.luna
+
+        def vendor(uri, body, **kwargs):
+            reply = luna(uri, body, **kwargs)
+            if uri.endswith('/dev/remove'):
+                self.remote.apps.add(app)
+            return reply
+
+        self.remote.luna = vendor
+        with self.assertRaises(UserError) as caught:
+            self.remove()
+        self.assertEqual(caught.exception.reason_code, 'removal-failed')
+        self.assertTrue(manifest.is_file())
+        self.assertEqual(self.store.pending(self.profile)['removals'][app], 'terminal')
+
+    def test_root_ssh_sweep_requires_project_identity_for_exact_residue(self):
+        self.installer.profile = self.profile = target('tv.local', 'no-root', connection='root-ssh')
+        app = 'com.gathin.tvhome'
+        service = 'com.gathin.tvhome.renewal'
+        for kind, slot, leaf, area, identity in (
+            ('applications', app, 'appinfo.json', 'app', {'id': app}),
+            ('services', service, 'services.json', 'service', {'id': service}),
+            ('packages', app, 'packageinfo.json', 'package', {'id': app, 'app': app, 'services': [service]}),
+        ):
+            with self.subTest(area=area):
+                manifest = self.own_file(f'apps/usr/palm/{kind}/{slot}/{leaf}',
+                                         json.dumps(dict(identity, id='org.foreign.app')))
+                directory = manifest.parent
+                self.model_owners({p: (0, 0) for p in (manifest, directory, *directory.parents)})
+                result = self.cleanup._device(self.installer, 'sweep')
+                self.assertTrue(manifest.is_file())
+                self.assertIn({'scope': app + ' ' + area, 'reason': 'unsafe-path'}, result['blocked'])
+
+                external = self.root / leaf
+                external.write_text(json.dumps(identity))
+                manifest.unlink()
+                manifest.symlink_to(external)
+                result = self.cleanup._device(self.installer, 'sweep')
+                self.assertTrue(manifest.is_symlink())
+                self.assertIn({'scope': app + ' ' + area, 'reason': 'unsafe-path'}, result['blocked'])
+
+                manifest.unlink()
+                manifest.write_text(json.dumps(identity))
+                manifest.chmod(0o666)
+                result = self.cleanup._device(self.installer, 'sweep')
+                self.assertTrue(manifest.is_file())
+                self.assertIn({'scope': app + ' ' + area, 'reason': 'unsafe-path'}, result['blocked'])
+
+                manifest.chmod(0o644)
+                result = self.cleanup._device(self.installer, 'sweep')
+                self.assertEqual(result['blocked'], [])
+                self.assertFalse(directory.exists())
+                self.assertEqual(json.loads(external.read_text()), identity)
+
     def test_root_ssh_reports_unsafe_sdk_ancestry_without_removing_packages(self):
         from cytv import diagnostics
 
         self.installer.profile = self.profile = target('tv.local', 'no-root', connection='root-ssh')
         service = self.own_file('apps/usr/palm/services/com.local.nativehome.service/service.js')
         parent = service.parents[2]
-        self.remote.apps.add('com.local.nativehome')
 
         for owner, mode in (((4242, 4242), 0o777), ((1001, 4242), 0o777),
                             ((1001, 1001), 0o775)):

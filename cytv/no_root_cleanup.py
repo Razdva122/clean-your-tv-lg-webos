@@ -14,6 +14,7 @@ from .errors import (TVRejected, UserError, TVCommandError, TV_STORAGE_FULL, CLE
 from .tv_sources import node_loader, trusted_source
 
 APPS = ('com.local.nativehome', 'com.gathin.tvhome', 'com.cleanyourtv.updater')
+STARTUP_SERVICES = ('com.local.nativehome.service', 'com.gathin.tvhome.renewal')
 RESTART_MESSAGE = 'Restart the TV completely, then choose Try again to finish removal.'
 ROOT_MESSAGE = 'Some project files require Root access. Reconnect using Root to finish removal.'
 
@@ -88,6 +89,44 @@ function remove(p,expected){
 }
 function blocked(scope,error){reply.blocked.push({scope:scope,reason:error.code==='EACCES'||error.code==='EPERM'?'permission-denied':'unsafe-path'});}
 function visit(p,scope){try{var s=exists(p);if(!s)return;if(input.action==='sweep'||input.action==='root-package')remove(p,s);if(exists(p))reply.present.push(scope);}catch(e){blocked(scope,e);}}
+// Catalog paths are never passed to local deletion. Only an exact project
+// slot with matching package metadata is eligible for a privileged sweep.
+function verifyResidue(directory,stat,app,service,area){
+ ancestry(path.dirname(directory));
+ function trusted(s){return s.uid===0||(s.uid===5999&&s.gid===5000);}
+ if(!trusted(stat))fail();
+ var file={app:'appinfo.json',package:'packageinfo.json',service:'services.json'}[area];
+ at(directory,stat,function(){
+  var metadata=fs.lstatSync(file);
+  if(!metadata.isFile()||metadata.nlink!==1||metadata.size>65536||
+     !trusted(metadata)||(metadata.mode&18))fail();
+  var fd=fs.openSync(file,c.O_RDONLY|c.O_NOFOLLOW|c.O_NONBLOCK);
+  try{
+   if(!same(metadata,fs.fstatSync(fd)))fail();
+   var bytes=new Buffer(metadata.size),offset=0;
+   while(offset<bytes.length){
+    var count=fs.readSync(fd,bytes,offset,bytes.length-offset,offset);
+    if(!count)fail();offset+=count;
+   }
+   if(!same(metadata,fs.lstatSync(file))||fs.fstatSync(fd).size!==metadata.size)fail();
+   var info=JSON.parse(bytes.toString('utf8'));
+   if(!info||info.id!==(area==='service'?service:app))fail();
+   if(area==='package'&&(info.app!==app||!Array.isArray(info.services)||
+      info.services.length!==1||info.services[0]!==service))fail();
+  }finally{fs.closeSync(fd);}
+ });
+}
+function rootResidue(directory,app,service,area){
+ var scope=app+' '+area;
+ try{
+  var stat=exact(directory,true);if(!stat)return;
+  if(input.action==='sweep'){
+   verifyResidue(directory,stat,app,service,area);
+   remove(directory,stat);
+  }
+  if(exact(directory,true))reply.present.push(scope);
+ }catch(e){blocked(scope,e);}
+}
 function developerBlocked(scope,error){blocked(scope,error);reply.blocked[reply.blocked.length-1].developer_path=true;}
 function developerVisit(p,scope,app){
  var s;
@@ -357,6 +396,7 @@ if(input.guard_owner){reply.footprints=[];reply.protected_targets=[];reply.legac
 apps.forEach(function(app,index){
  function project(p,area){
   if(input.guard_owner)developerVisit(base+p,app+' '+area,app);
+  else if(input.connection==='root-ssh')rootResidue(base+p,app,services[index],area);
   else visit(base+p,app+' '+area);
  }
  project('/applications/'+app,'app');project('/packages/'+app,'package');project('/services/'+services[index],'service');
@@ -733,9 +773,10 @@ def continue_removal(installer, expected_pending):
     def check(value, **options):
         _check_access(value, guard=guard, **options)
 
-    def wait_for_stopped_processes(require_idle):
+    def wait_for_stopped_processes(require_idle, *, verify_after_remove=False):
         idle = device('idle', after_stop=True, wait_for_idle=True)
-        check(idle, defer_packages=True, action='idle')
+        check(defer_catalogued_paths(idle) if not verify_after_remove else idle,
+              defer_packages=True, action='idle')
         if idle.get('project_running') is True:
             raise UserError('A Clean Your TV process did not stop in time. Removal data was kept.',
                             reason_code='cleanup-check-failed')
@@ -764,7 +805,7 @@ def continue_removal(installer, expected_pending):
                 _exact_developer_app(installer, app) for app in APPS if app in sam_apps)):
             raise UserError('Final cleanup could not be verified. Review recovery options before continuing.',
                             reason_code='cleanup-check-failed')
-        return final, wait_for_stopped_processes(require_idle)
+        return final, wait_for_stopped_processes(require_idle, verify_after_remove=True)
 
     def finish(result):
         from .root_no_root_handoff import release
@@ -787,10 +828,6 @@ def continue_removal(installer, expected_pending):
             raise UserError('TV controls could not be verified. Recovery data was kept.', reason_code='controls-unverified')
         return finish(pending['result'])
 
-    current = device('inventory')
-    check(current, defer_packages=True)
-    store.checkpoint(profile, cleanup_staging_ids=current['staging_ids'])
-
     def catalog():
         app_info = installer.installed_apps()
         apps = {app['id'] for app in app_info}
@@ -805,6 +842,22 @@ def continue_removal(installer, expected_pending):
     if not guard:
         apps, carriers = catalog()
 
+    def defer_catalogued_paths(value):
+        if guard:
+            return value
+        # A rejected local probe does not invalidate an LG catalog entry.
+        # Keep the original observation for service shutdown and recheck
+        # remaining paths after the vendor removal has finished.
+        covered = {'startup-service ' + service for app, service in zip(APPS, STARTUP_SERVICES)
+                   if app in apps}
+        covered.update(app + ' ' + area for app in apps.intersection(APPS)
+                       for area in ('app', 'package', 'service'))
+        return dict(value, blocked=[row for row in value['blocked'] if row.get('scope') not in covered])
+
+    current = device('inventory')
+    check(defer_catalogued_paths(current), defer_packages=True)
+    store.checkpoint(profile, cleanup_staging_ids=current['staging_ids'])
+
     proof = pending.get('cleanup_boot_proof')
     boot_triggers = pending.get('cleanup_restart_triggers', [])
     reused_restart = proof is not None and pending.get('cleanup_boot_verified') is True
@@ -815,7 +868,7 @@ def continue_removal(installer, expected_pending):
         new_kernel = boot.get('boot_id') not in (None, proof.get('kernel'))
         critical = set(boot_triggers) & {
             'package-removal-unverified', 'original-configuration-unverified',
-            'original-package-unverified', 'homebrew-request-unverified'}
+            'original-package-unverified', 'homebrew-request-unverified', 'catalog-helper-stop-unverified'}
         restarted = boot['boot_restarted'] is True and (not (legacy_install or critical) or new_kernel)
 
     def require_restart(triggers, *, rearm=False, observed_writer=False):
@@ -908,7 +961,9 @@ def continue_removal(installer, expected_pending):
             check(current, defer_packages=True)
             store.checkpoint(profile, cleanup_staging_ids=current['staging_ids'])
             cancellation = current.get('cancellation', {})
+    if guard or uncertain_install or submitted:
         apps, carriers = catalog()
+
     def nominated(observation, app):
         footprint = _has_developer_target(observation, app)
         # SAM is optional, but a positive conflicting mapping raises before
@@ -957,7 +1012,16 @@ def continue_removal(installer, expected_pending):
                                and 'original-package-unverified' not in boot_triggers)
     installer.progress('Restoring TV controls…')
     stopped = device('stop')
-    check(stopped, defer_packages=True, action='stop')
+    helper_stop_blocked = any(row.get('scope') == 'helper-control' for row in stopped['blocked'])
+    helper_stop_restarted = not guard and new_kernel and 'catalog-helper-stop-unverified' in boot_triggers
+    unverified_helper_stop = not guard and APPS[0] in apps and helper_stop_blocked and not helper_stop_restarted
+    if unverified_helper_stop:
+        return require_restart(['catalog-helper-stop-unverified'], rearm=restarted)
+    stop_check = defer_catalogued_paths(stopped)
+    if helper_stop_restarted:
+        stop_check = dict(stop_check, blocked=[row for row in stop_check['blocked']
+                                              if row.get('scope') != 'helper-control'])
+    check(stop_check, defer_packages=True, action='stop')
     invalid_stop_record = stopped.get('invalid_stop_record') is True
     if invalid_stop_record:
         # A missing volatile marker alone cannot replace a failed Stop.
@@ -971,8 +1035,10 @@ def continue_removal(installer, expected_pending):
     startup_disable_unverified = False
     inaccessible_startup = ({row['scope'] for row in current['blocked'] + stopped['blocked']
                              if _protected_package(row)} if invalid_stop_record else set())
-    for app, service in zip(APPS, ('com.local.nativehome.service', 'com.gathin.tvhome.renewal')):
-        if ((service not in current['startup_services'] and 'startup-service ' + service not in inaccessible_startup)
+    for app, service in zip(APPS, STARTUP_SERVICES):
+        catalogued = not guard and app in apps
+        if ((not catalogued and service not in current['startup_services']
+             and 'startup-service ' + service not in inaccessible_startup)
                 or app in carriers
                 or (restarted and service in unavailable and not invalid_stop_record)):
             continue
@@ -1085,6 +1151,8 @@ def continue_removal(installer, expected_pending):
     if bound_package_pending and not original_package_settled:
         return require_restart(['original-package-unverified'], rearm=proof is not None
                                and 'original-package-unverified' not in boot_triggers)
+    if not guard and any(entry['id'] in APPS for entry in installer.installed_apps()):
+        raise UserError('The TV package result could not be verified.', reason_code='removal-failed')
     installer.progress('Removing project files…')
     store.checkpoint(profile, stage='private-cleanup')
     swept = device('sweep')
