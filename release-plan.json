@@ -1,42 +1,7 @@
 {
   "schema": 1,
-  "version": "1.20.7",
-  "changes": [
-    {
-      "pr": 634,
-      "issues": [
-        626
-      ],
-      "summary": "Use the LG catalog for No-root removal on legacy TVs"
-    },
-    {
-      "pr": 636,
-      "issues": [
-        472
-      ],
-      "summary": "Confirm LG Home after an unacknowledged No-root removal launch"
-    },
-    {
-      "pr": 637,
-      "issues": [
-        505
-      ],
-      "summary": "Restore No-root Helper and panel after reboot and Stop (#505)"
-    },
-    {
-      "pr": 638,
-      "issues": [
-        635
-      ],
-      "summary": "Recover No-root removal when the original capsule is missing (#635)"
-    }
-  ],
+  "version": null,
+  "changes": [],
   "excluded": [],
-  "acceptance": "Project OLED55C3RLA, firmware 43.21.71, SDK 11.2.0, macOS ARM64: all seven selected C3 cases passed, including signed Root update/rollback, No-root restart, Helper panel at 0777, physical triple Home, Start Helper and verified baseline restoration. Artifact hashes, observations and limits: docs/history/2026-11-14-release-1.20.7-rc-verification.md. The exact Android APK passed original-signer versionCode 43 to 44 upgrade, Store retention and native OperationChecks on an isolated API 35 ARM64 emulator. Physical phones and reporter-specific hardware remain unverified.",
-  "build": {
-    "run_id": 43610126410,
-    "attempt": 1,
-    "source": "2d98cf41bcc5f201df0983bcb306a59c1b0cea4b"
-  },
-  "acceptance_build": "43610126410:1"
+  "acceptance": ""
 }
