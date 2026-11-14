@@ -153,6 +153,13 @@ if (process.platform !== 'linux' || process.getuid() !== 0) {
     // The app UID can still use the published explicit Start path while the
     // packaged owner retains the expanded state directory.
     const bootStorage = 'var p=require(' + bootModule + '),d=' + bootPath + ';';
+    // The previous startup service could repair the key in the app's namespace.
+    // Replay LG widening that service-owned key, then start the native app.
+    fs.chownSync(path.join(boot, 'ssap-key.json'), 6923, 5000);
+    fs.chmodSync(path.join(boot, 'ssap-key.json'), 0o777);
+    run(5431, bootStorage + 'if(!p(d,null,true))process.exit(8);', 5431);
+    a.equal(fs.statSync(path.join(boot, 'ssap-key.json')).uid, 5431);
+    a.equal(fs.statSync(path.join(boot, 'ssap-key.json')).mode & 0o777, 0o640);
     run(
       5431,
       bootStorage + 'if(p.stopGeneration(d,"manual")!==null)process.exit(8);',

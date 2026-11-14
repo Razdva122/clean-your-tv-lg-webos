@@ -128,6 +128,44 @@ class LifecycleGate(unittest.TestCase):
             time.sleep(.01)
         self.assertEqual(marker.read_text(), 'late old executor')
 
+    def test_explicit_helper_start_waits_only_for_the_observed_stop(self):
+        import fcntl
+        helper = self.directory / 'helper'
+        state = helper / 'state'
+        state.mkdir(parents=True)
+        lock = state / 'controller.lock'
+        lock.touch()
+        (state / 'blocked').write_text('stopped')
+        generation = state / 'stop-generation'
+        generation.write_text('S' + 'a' * 32)
+        source = (REPO / 'native/app/detach.c').read_text()
+        source = source.replace('/media/developer/apps/usr/palm/applications/com.local.nativehome', str(helper))
+        source = source.replace('/usr/bin/node', shutil.which('node'))
+        c = self.directory / 'detach.c'
+        c.write_text(source)
+        binary = helper / 'detach'
+        subprocess.run(['cc', '-I', str(REPO / 'native/app'), str(c), '-o', str(binary)], check=True)
+        marker = helper / 'started'
+        (helper / 'native.js').write_text('require("fs").writeFileSync(' + repr(str(marker)) + ',"started");')
+        for changed in (False, True):
+            marker.unlink(missing_ok=True)
+            with lock.open('rb') as owner:
+                fcntl.flock(owner, fcntl.LOCK_EX)
+                process = subprocess.Popen([str(binary), '{}', '--controller', '--wait-for-stop'])
+                self.children.append(process)
+                time.sleep(.23)
+                self.assertIsNone(process.poll())
+                if changed:
+                    replacement = state / 'new-generation'
+                    replacement.write_text('S' + 'b' * 32)
+                    replacement.replace(generation)
+            process.wait(timeout=5)
+            if not changed:
+                deadline = time.monotonic() + 3
+                while not marker.exists() and time.monotonic() < deadline:
+                    time.sleep(.02)
+            self.assertEqual(marker.exists(), not changed)
+
     def test_removed_stable_lock_is_not_recreated(self):
         self.assertEqual(self.call('revoke').returncode, 0)
         (self.root / 'lifecycle.lock').unlink()

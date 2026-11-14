@@ -12,6 +12,7 @@ function controller({
   blocked = false,
   watchdog = false,
   automatic = true,
+  explicitStart = false,
   setupGeneration,
   retainedGeneration = setupGeneration,
   homeInitiallyOff = false,
@@ -31,7 +32,8 @@ function controller({
     workers = [],
     cleanups = [],
     logs = [],
-    launches = [];
+    launches = [],
+    methods = {};
   files.set(dir + 'apps.json', appsConfig);
   if (blocked) files.set(dir + 'blocked', 'stopped');
   if (watchdog) files.set(dir + 'watchdog', 'stopped');
@@ -77,6 +79,7 @@ function controller({
   };
   function Service() {
     this.activityManager = { create() {} };
+    this.register = (name, handler) => (methods[name] = handler);
     this.call = (uri, p, cb) => {
       if (uri.endsWith('/launch')) launches.push(p.id);
       if (luna && luna(uri, p, cb)) return;
@@ -153,6 +156,7 @@ function controller({
         'native.js',
         JSON.stringify({
           nativeHomeAuto: automatic,
+          nativeHomeStart: explicitStart,
           nativeHomeSetup: setupGeneration
         })
       ],
@@ -212,6 +216,7 @@ function controller({
     cleanups,
     logs,
     launches,
+    methods,
     close,
     cleanup,
     command,
@@ -227,6 +232,36 @@ function controller({
   };
 }
 const blocked = (c) => c.files.has(dir + 'blocked');
+test('explicit Start after triple Home does not depend on relaunching Home', () => {
+  const c = controller({
+    automatic: false,
+    blocked: true,
+    explicitStart: true
+  });
+  assert.equal(c.workers.length, 1);
+  assert.equal(blocked(c), false);
+  assert.deepEqual(c.launches, []);
+});
+test('booted controller authenticates Home broker requests on Luna', () => {
+  const c = controller();
+  function request(app, sender) {
+    let reply;
+    c.methods.homeRequest({
+      payload: { method: 'homeStatus', payload: {}, expires: 6000 },
+      ls2Message: { applicationID: () => app, senderServiceName: () => sender },
+      respond: (value) => (reply = value)
+    });
+    return reply;
+  }
+  assert.equal(request('', 'com.gathin.tvhome.renewal').enabled, true);
+  assert.equal(
+    request('other.app', 'com.gathin.tvhome.renewal').returnValue,
+    false
+  );
+  assert.equal(request('', 'other.service').returnValue, false);
+  c.files.set(dir + 'blocked', 'stopped');
+  assert.equal(request('', 'com.gathin.tvhome.renewal').returnValue, false);
+});
 test('unavailable apps configuration uses fresh TV catalog without adopting installer data', async () => {
   let reads = 0;
   const c = controller({

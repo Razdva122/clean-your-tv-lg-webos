@@ -8,6 +8,8 @@ const root = fs.mkdtempSync(path.join(os.tmpdir(), 'home-service-jail-'));
 const own = '/media/developer/apps/usr/palm/services/com.gathin.tvhome.renewal';
 const methods = {},
   writes = [];
+let expanded = false;
+const transportCalls = [];
 // Model the service mount namespace: its own package exists; the Helper app
 // remains absent even though a native controller can access it outside this jail.
 function local(p) {
@@ -72,8 +74,11 @@ function Service() {
   this.register = (n, f) => {
     methods[n] = f;
   };
-  this.call = () => {
-    throw Error('no network or launch expected');
+  this.call = (uri, payload, reply) => {
+    assert.equal(expanded, true);
+    assert.equal(uri, 'luna://com.local.nativehome/homeRequest');
+    transportCalls.push(payload.method);
+    reply({ payload: { returnValue: true, enabled: true } });
   };
 }
 fs.mkdirSync(root + '/state/home-control', { recursive: true });
@@ -84,11 +89,28 @@ vm.runInNewContext(fs.readFileSync('renewal-service/service.js', 'utf8'), {
   require(n) {
     if (n === 'fs') return jailed;
     if (n === 'webos-service') return Service;
-    if (n === './home-control')
+    if (n === './home-control') {
+      const storage = require('./storage-fixture.cjs').create(jailed);
+      const write = storage.atomicRecord;
+      storage.atomicRecord = (...args) => {
+        if (expanded)
+          throw Object.assign(Error('unsafe-storage'), {
+            contractEvents: [
+              {
+                phase: 'validate',
+                field: 'directory',
+                expected: 'safe-mode',
+                actual: { mode: 511 }
+              }
+            ]
+          });
+        return write(...args);
+      };
       return require('./storage-fixture.cjs').load(
         path.resolve('renewal-service/home-control.js'),
-        require('./storage-fixture.cjs').create(jailed)
+        storage
       );
+    }
     if (n === './manager') return () => ({});
     if (n === './local-io') return { createLocalIO: () => ({}) };
     if (n === './transport') return { createRequest: () => {} };
@@ -229,6 +251,12 @@ function call(app, method = 'homeStatus', payload = {}) {
       writes.slice(-2).every((p) => p.startsWith(own + '/state/home-control/')),
       'presentation uses only the existing HOME jail path'
     );
+    expanded = true;
+    const originalWrites = writes.length;
+    assert.equal((await call('other.app')).returnValue, false);
+    assert.equal((await call('com.gathin.tvhome')).enabled, true);
+    assert.deepEqual(transportCalls, ['homeStatus']);
+    assert.equal(writes.length, originalWrites);
     console.log(
       'PASS actual service Home RPC in a service-only filesystem namespace'
     );

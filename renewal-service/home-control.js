@@ -83,6 +83,37 @@ module.exports = function (fs, dir, options) {
         );
       } catch (e) {
         var contract = e && e.contractEvents && e.contractEvents[0];
+        if (
+          options.fallback &&
+          contract &&
+          contract.phase === 'validate' &&
+          contract.field === 'directory' &&
+          contract.expected === 'safe-mode' &&
+          contract.actual &&
+          contract.actual.mode === 511
+        ) {
+          var timer = setTimeout(function () {
+            forwarded({
+              returnValue: false,
+              diagnostic: diagnostics.describe('home', 'wait', {
+                code: 'TIMEOUT'
+              })
+            });
+          }, 5000);
+          var settled = false;
+          function forwarded(reply) {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
+            finish(reply);
+          }
+          try {
+            options.fallback(method, payload, deadline, forwarded);
+          } catch (_) {
+            forwarded({ returnValue: false });
+          }
+          return;
+        }
         var phase = e && (e.storagePhase || (contract && contract.phase));
         if (['write', 'chmod', 'rename'].indexOf(phase) >= 0) operation = phase;
         finish({

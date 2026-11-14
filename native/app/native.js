@@ -561,11 +561,6 @@ function readHomeRequest(channel) {
   )
     return;
   if (
-    (channel.inputOnly && request.method !== 'inputStatus') ||
-    (channel.catalogOnly && request.method !== 'listApps')
-  )
-    return;
-  if (
     channel.catalogOnly &&
     (stopping ||
       stopRequested ||
@@ -573,7 +568,7 @@ function readHomeRequest(channel) {
       (child && child.reason !== undefined))
   )
     return;
-  function respond(result) {
+  handleHomeRequest(channel, request, function (result) {
     result.id = request.id;
     try {
       require('./state-permissions').atomicRecord(
@@ -585,7 +580,15 @@ function readHomeRequest(channel) {
     } catch (e) {
       log({ event: 'home-response-error', error: String(e) });
     }
-  }
+  });
+}
+function handleHomeRequest(channel, request, respond) {
+  var directory = channel.directory;
+  if (
+    (channel.inputOnly && request.method !== 'inputStatus') ||
+    (channel.catalogOnly && request.method !== 'listApps')
+  )
+    return respond({ returnValue: false });
   try {
     if (
       !channel.inputOnly &&
@@ -692,6 +695,44 @@ function readHomeRequest(channel) {
     respond({ returnValue: false, errorText: String(e) });
   }
 }
+// The authenticated service can reach the live controller after LG widens the
+// file channel at boot. An app-provided sender string carries no authority.
+if (typeof service.register === 'function')
+  service.register('homeRequest', function (message) {
+    var sender = message.ls2Message,
+      request = message.payload || {},
+      payload = request.payload || {};
+    if (
+      !sender ||
+      typeof sender.applicationID !== 'function' ||
+      typeof sender.senderServiceName !== 'function' ||
+      sender.applicationID() !== '' ||
+      sender.senderServiceName() !== 'com.gathin.tvhome.renewal' ||
+      typeof request.expires !== 'number' ||
+      !(request.expires > Date.now() && request.expires <= Date.now() + 5000) ||
+      stopping ||
+      !ready ||
+      liveStop(false) ||
+      (child &&
+        (child.reason !== undefined || child.exited || child.watchdogKill))
+    )
+      return message.respond({ returnValue: false });
+    handleHomeRequest(
+      {
+        inputOnly: request.method === 'inputStatus',
+        catalogOnly: request.method === 'listApps'
+      },
+      {
+        method: request.method,
+        enabled: payload.enabled,
+        generation: payload.generation,
+        expires: request.expires
+      },
+      function (result) {
+        message.respond(result);
+      }
+    );
+  });
 // A watchdog latch also prevents a new controller from restarting an orphaned
 // relay. Only this live controller's successful READY may clear it, never blocked.
 function watchdogLatch() {
@@ -1160,7 +1201,14 @@ setTimeout(
       if (!stopping) finish(0);
       return;
     }
-    if (!homeControl.enabled()) {
+    // The panel already runs inside Home. Explicit Start should report relay
+    // readiness even if SAM would refuse to relaunch the foreground CARD.
+    if (
+      (!automatic &&
+        setupGeneration === undefined &&
+        launchParams.nativeHomeStart === true) ||
+      !homeControl.enabled()
+    ) {
       start();
       return;
     }

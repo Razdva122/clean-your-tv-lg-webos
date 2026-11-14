@@ -53,9 +53,17 @@ sets mode 0777 under `/media/developer` and `/tmp/developer`. When a setup
 session has authority over the packaged 5999:5000 directories, it restores
 the existing service state and channel to 2770. It closes the channel to the
 shared group while discarding the fixed transient request/response names.
-The runtime continues to refuse a world-writable channel. Another boot that
-widens the directories requires another authorized repair. The shared group
-and caller checks stay in place.
+When a write is refused for channel mode 0777, Renewal forwards the validated
+request to the running controller over LS2. The controller checks the LS2
+sender is the Renewal service and handles requests only while its relay is
+ready. A refused file write can use this route before any record is submitted.
+Requests whose execution is uncertain stay on their original route.
+
+An explicit Start Helper request can wait up to four seconds for the previous
+controller to release its lock after Stop. A changed latch, generation or lock
+ends the attempt. Automatic boot and installer launches do not wait on this
+path. Explicit Start starts the relay from the panel without requesting another
+launch of the Home CARD.
 
 The service still checks the caller application before I/O. The protocol retains
 its fixed three commands, boolean validation, random request ID, five-second

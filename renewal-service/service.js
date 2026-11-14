@@ -190,19 +190,29 @@ function fromUpdater(m) {
   }
 );
 
+function controllerCall(method, payload, expires, done) {
+  service.call(
+    'luna://com.local.nativehome/homeRequest',
+    { method: method, payload: payload, expires: expires },
+    function (message) {
+      done((message && message.payload) || { returnValue: false });
+    }
+  );
+}
 var homeControl = require('./home-control')(
   fs,
-  __dirname + '/state/home-control'
+  __dirname + '/state/home-control',
+  { fallback: controllerCall }
 );
 var inputControl = require('./home-control')(
   fs,
   __dirname + '/state/home-control',
-  { inputs: true }
+  { inputs: true, fallback: controllerCall }
 );
 var catalogControl = require('./home-control')(
   fs,
   __dirname + '/state/home-control',
-  { catalog: true }
+  { catalog: true, fallback: controllerCall }
 );
 [
   'homeStatus',

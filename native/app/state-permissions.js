@@ -197,7 +197,7 @@ function session(directory, options, action) {
     )
       fail('safe-mode', s, undefined, 'directory');
   }
-  var before, bootSnapshot;
+  var before, bootSnapshot, expandedDirectory;
   function check() {
     ancestors();
     var current = fs.lstatSync(directory),
@@ -750,7 +750,13 @@ function session(directory, options, action) {
       ],
       pending = [];
     rules.forEach(function (rule) {
-      var original = expanded(rule[0], 65536, true);
+      // A previous Helper service can own the retained pairing candidate.
+      // Both runtimes must still validate it through SSAP registration.
+      var original = expanded(
+        rule[0],
+        65536,
+        rule[0] !== 'ssap-key.json' || !expandedDirectory
+      );
       if (!original) return;
       var value = JSON.parse(original.bytes.toString('utf8'));
       if (
@@ -779,7 +785,7 @@ function session(directory, options, action) {
     process.chdir(directory);
     entered = true;
     check();
-    var expandedDirectory = (before.mode & 4095) === 511;
+    expandedDirectory = (before.mode & 4095) === 511;
     if (
       options.requireStopEvidence &&
       expandedDirectory &&
