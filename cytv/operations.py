@@ -445,12 +445,14 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
     def collect_root_diagnostics(self, cursor=None):
         try:
             from .root_activation_diagnostics import collect
-            value=collect(self.remote,self._python(ROOT_STATE),cursor)
+            python = getattr(self, '_selected_python', None) or '/usr/bin/python3'
+            value=collect(self.remote,python,cursor)
             self.tv_info['root_diagnostics']=diagnostics.context.root_diagnostics_summary(value)
             return value.get('cursor')
         except Exception:
             # Optional evidence must not change recovery or hide the primary error.
-            self.tv_info['root_diagnostics']={'health_log':{'status':'unavailable'}}
+            self.tv_info['root_diagnostics']={'health_log':{'status':'unavailable'},
+                                              'compositor':{'status':'unavailable'}}
             return None
 
     def root_action(self, action, bundle=None, migrate=False, experimental=False):
@@ -1255,12 +1257,20 @@ else:
         pending=self.store.pending(self.profile)
         if pending and pending.get('recovery_protocol')=='clean-removal-v1':
             return self.observe_recovery()
-        result=self._status()
+        try:
+            result=self._status()
+        except Exception:
+            if self.profile['edition']=='root':
+                self.collect_root_diagnostics()
+            raise
         self.tv_info['status']=result
-        if (self.profile['edition']=='root'
-                and result.get('deployment_stage')=='installed-recovery-only'):
-            self.collect_root_diagnostics()
+        self._collect_observed_root_diagnostics(result)
         return result
+
+    def _collect_observed_root_diagnostics(self, result):
+        if (self.profile['edition']=='root' and result.get('device')
+                and 'passive' not in result['device'].get('product', {})):
+            self.collect_root_diagnostics()
 
     def observe_recovery(self):
         """Read current proofs without clearing or archiving the host receipt.
@@ -1276,6 +1286,8 @@ else:
             result={'device':{},'pending':pending,'assessment':assess(self.profile,pending),
                     'removal':removal_summary(pending),'can_resume_root_setup':False}
             self.tv_info['status']=result
+            if self.profile['edition']=='root':
+                self.collect_root_diagnostics()
             return result
         initial = assess(self.profile, pending)
         result = ({'device': {}, 'pending': pending, 'can_resume_root_setup': False}
@@ -1284,6 +1296,10 @@ else:
                                     pending.get('recovery_protocol') == 'root-final-readback-v1'))
         result['assessment'] = assess(self.profile, self.store.pending(self.profile), result)
         self.tv_info['status'] = result
+        setup = self.tv_info.get('root_setup_recovery', {})
+        if (result['assessment']['reason'] != 'foreign-operation'
+                and setup.get('reason') not in ('receipt-unverified', 'restoration-pending')):
+            self._collect_observed_root_diagnostics(result)
         return result
 
     def inspect_root_product(self, expected_pending):
@@ -1958,6 +1974,8 @@ print('CYTV_PROJECT_REMOVED')
                             ('root-access-required', 'root-worker-busy', 'removal-failed')):
                         self.store.checkpoint(self.profile, removal_reason=reason)
                 if not reconnect or attempt == 2 or not (lost or reason == 'root-worker-busy'):
+                    if self.profile['edition']=='root' and not lost:
+                        self.collect_root_diagnostics()
                     raise
                 try:
                     diagnostics.create_report(self.store, 'uninstall', self.profile, 'uninstall', error,

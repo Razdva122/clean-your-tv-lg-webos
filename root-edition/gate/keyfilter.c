@@ -911,7 +911,8 @@ static int restore(int lock) {
   if (ok) {
     close(lock);
     effect_fd=private_lock("effect.lock",3000);
-    if (effect_fd<0 || !release_ui()) { ok=0; reason="ui_release_failed"; }
+    if (effect_fd<0) { ok=0; reason="effect_busy"; }
+    else if (!release_ui()) { ok=0; reason="ui_release_failed"; }
     if (effect_fd>=0) { close(effect_fd); effect_fd=-1; }
     lock=lock_state();
     if (lock<0) return reply(0,0,"recovery_busy");

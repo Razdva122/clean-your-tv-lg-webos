@@ -113,6 +113,21 @@ def root_diagnostics_summary(value):
         result['health_log']['health_refusal']=choice(log['health_refusal'],('generic','transaction-mismatch',
             'binding-restored','generation-mismatch','token-mismatch','boot-mismatch','phase-inactive','failsafe-present'))
     if type(log.get('supervisor_error')) is bool:result['health_log']['supervisor_error']=log['supervisor_error']
+    compositor=mapping(value.get('compositor'))
+    if compositor:
+        from .root_activation_diagnostics import COMPOSITOR_STOPS
+        observed={'status':choice(compositor.get('status'),
+            ('read','missing','unsafe','unavailable','stale','inconsistent'))}
+        if observed['status']=='read':
+            stop=choice(compositor.get('original_stop'), COMPOSITOR_STOPS, None)
+            if stop is not None:
+                observed['original_stop']=stop
+                observed['scope']=choice(compositor.get('scope'), ('retained','since-enable'))
+                if compositor.get('guardian_release')=='ui_release_failed':
+                    observed['guardian_release']='ui_release_failed'
+            else:
+                observed['status']='unknown'
+        result['compositor']=observed
     return result
 
 
@@ -283,7 +298,15 @@ def worker_summary(value):
         if type(item) is int and low <= item <= high:
             result[key] = item
     from .errors import root_driver_details
-    probe=root_driver_details(value.get('cleanup_probe'))
+    raw_probe=mapping(value.get('cleanup_probe'))
+    probe=root_driver_details(raw_probe)
+    if probe and value.get('cleanup_step')=='runtime-restore':
+        reason=choice(raw_probe.get('native_reason'),('effect_busy','ui_release_failed'),None)
+        if reason is not None:probe['native_reason']=reason
+        if reason=='ui_release_failed':
+            check=choice(raw_probe.get('restore_check'),('native-stop-unverified','stock-foreground-unverified',
+                'stock-surface-unverified','stock-routing-unverified'),None)
+            if check is not None:probe['restore_check']=check
     if probe:result['cleanup_probe']=probe
     inspect_check=choice(value.get('inspect_check'), ('restart_required', 'support_stage_remains', 'live_original_worker',
                   'project_apps_remain', 'restored_routes_changed', 'startup_remains',

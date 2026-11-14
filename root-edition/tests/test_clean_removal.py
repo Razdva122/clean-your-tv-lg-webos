@@ -50,6 +50,30 @@ class CoordinatorCleanRemoval(unittest.TestCase):
         with self.assertRaises(Busy):
             with self.owner.operation('product', 'product-'+self.id+'.json', resume=original['lease']): pass
 
+    def test_compaction_preserves_original_worker_cause_and_latest_cleanup(self):
+        original = self.original()
+        driver = {'exception_type':'ValueError','frames':[{'file':'deploy.py','line':12}]}
+        luna = {'call':'apps-dev','reason':'permission-denied','error_code':-1}
+        original['failure'].update(root_driver=dict(driver, attempt='PRIVATE'), luna=dict(luna, raw='PRIVATE'))
+        self.owner.store.write('request-'+self.id, original)
+        def fail(record, save):
+            save('original-writers-fenced')
+            error = ValueError('PRIVATE')
+            error.cleanup_step = 'runtime-restore'
+            error.cleanup_probe = {'exception_type':'ValueError','native_reason':'effect_busy'}
+            raise error
+        self.device.clean_remove = fail
+        failed = self.driver.clean_remove(self.id)
+        self.device.clean_remove = Device().clean_remove
+        completed = self.driver.clean_remove(self.id)
+        self.assertEqual(completed['stage'], 'verified-clean')
+        self.assertEqual(completed['last_failure'], failed['last_failure'])
+        retained = self.driver.status(self.id)
+        self.assertEqual(retained['lease'], original['lease'])
+        self.assertEqual(retained['failure'].get('root_driver'), driver)
+        self.assertEqual(retained['failure'].get('luna'), luna)
+        self.assertNotIn('PRIVATE', str(completed))
+
     def test_retry_keeps_first_and_latest_failure_separate(self):
         first=RuntimeError('PRIVATE first');first.luna={'call':'apps-dev','reason':'permission-denied','error_code':-1}
         last=TimeoutError('PRIVATE last');last.luna={'call':'home-settings','reason':'timeout'}
@@ -371,7 +395,7 @@ class ConfinedCleanup(unittest.TestCase):
         import inspect, clean_removal
         payload=self.root/'support';(payload/'root-updater').mkdir(parents=True)
         proof={'mode':'stock-compositor','target':{'dev':45851,'ino':5647,'size':50684},'target_sha256':'a'*64}
-        (payload/'root-updater/clean_removal.py').write_text('def compositor_stock(payload):\n    return '+repr(proof)+'\n'+inspect.getsource(clean_removal.compositor_stock_report))
+        (payload/'root-updater/clean_removal.py').write_text('def compositor_stock(payload):\n    return '+repr(proof)+'\n'+inspect.getsource(clean_removal.compositor_stock_report)+inspect.getsource(clean_removal._cleanup_child_report))
         device=LocalDevice();device.payload=payload
         self.assertEqual(device.compositor_stock({'operation':'c'*32}),proof)
 
@@ -484,6 +508,43 @@ def install(bundle,experimental_c1_gate=False,_experimental_admission=None):
                     clean_removal.runtime_restore(payload,os.getuid())
             finally:sys.path[:]=before
         self.assertEqual(native.stat().st_mode&0o777,0o700)
+
+
+    def test_compositor_removal_uses_recovery_with_stock_readback(self):
+        import hashlib
+        import clean_removal
+        from unittest.mock import Mock
+
+        payload = self.root / 'bundle'
+        runtime = payload / 'runtime'
+        runtime.mkdir(parents=True)
+        native = runtime / 'c1-keyfilter-guard'
+        native.write_bytes(b'current native')
+        native.chmod(0o600)
+        backend = Mock()
+        backend.STATE = self.root / 'old'
+        backend.STATE.mkdir(mode=0o700)
+        selection = b'{"schema":3,"routing":"compositor-keyfilter-v1"}'
+        (backend.STATE / 'home-backend.json').write_bytes(selection)
+        backend.selection.return_value = {'routing': 'compositor-keyfilter-v1'}
+        cli = Mock()
+        cli.gate_backend.return_value = backend
+
+        def restore(root, uid):
+            self.assertEqual(backend.binary(root, uid), native)
+            return 'restored'
+
+        backend.restore_for_removal.side_effect = restore
+        manifest = {'files': {'runtime/c1-keyfilter-guard': hashlib.sha256(native.read_bytes()).hexdigest()}}
+        with patch.dict(sys.modules, {'cli': cli, 'c1_keyfilter': backend}), \
+                patch('deploy.verify_bundle', return_value=manifest), \
+                patch('deploy.checked_file', return_value=native.read_bytes()), \
+                patch.object(sys, 'path', list(sys.path)):
+            result = clean_removal.runtime_restore(payload, os.getuid())
+        cli.main.assert_not_called()
+        backend.restore_for_removal.assert_called_once_with(backend.STATE, os.getuid())
+        self.assertEqual(result['result'], 'restored')
+        self.assertEqual(result['native_restored_sha256'], hashlib.sha256(selection).hexdigest())
 
 
 class PackageRemoval(unittest.TestCase):
@@ -601,6 +662,133 @@ class PartialDeviceRemoval(unittest.TestCase):
         self.assertEqual(driver.ownership.store.read('routing-backup-'+identifier)['profile-trial.json'],inverse)
         self.assertFalse(any(call.startswith(('remove-','cleanup-')) for call in calls))
         self.assertNotIn('PRIVATE',str(result['last_failure']))
+
+    def test_current_runtime_child_proof_gates_destructive_removal(self):
+        import hashlib
+        import json
+        import shutil
+        import subprocess
+        import deploy
+        import c1_keyfilter as backend
+        from test_keyfilter_guard import KeyfilterGuardTests, BOOT, TOKEN
+        if not shutil.which('cc'):
+            self.skipTest('POSIX compiler required')
+        driver, identifier, root, _, payload, calls, present = self.fixture()
+        guard = KeyfilterGuardTests()
+        self.addCleanup(guard.tearDown)
+        guard.setUp()
+        admission = dict(model='OLED48A19LA', firmware='03.53.45', webos='6.5.3',
+                         target_sha256='b'*64, target=dict(dev=1, ino=2, size=52, mtime_ns=3))
+        uid = os.getuid()
+        with patch.object(backend, 'boot_identity', return_value=BOOT):
+            backend.prepare(root, 'a'*64, admission, uid)
+        own = backend.filter_entry(root)
+        vendor = dict(file='/usr/lib/qt5/qml/KeyFilters/systemUi.js', handler='handleSystemKeys')
+        backend.atomic(root/'c1-keyfilter/ownership.json', dict(schema=1, entry=own, token=TOKEN), uid)
+        for name in ('stopped', 'outcome'):
+            path = guard.root/'state'/name
+            path.write_text(TOKEN+' broker_expired\n')
+            path.chmod(0o600)
+        (guard.root/'luna-reply').write_text('{"returnValue":false,"errorCode":41}')
+
+        chain = root.parent/'fixture-chain.json'
+        chain.write_text(json.dumps([own, vendor]))
+        rows = root.parent/'fixture-surfaces.json'
+        fixture_runtime = payload/'root/runtime'
+        source = Path(deploy.__file__).parent
+        support = payload/'root-updater'
+        for name in ('clean_removal.py', 'install_driver.py', 'installation.py', 'deploy.py',
+                     'observed_install.py', 'installer_status.py', 'python_binding.py'):
+            shutil.copyfile(source/name, support/name)
+        shutil.copytree(source/'updater', support/'updater', ignore=shutil.ignore_patterns('__pycache__'))
+        shutil.copytree(source/'runtime', fixture_runtime, dirs_exist_ok=True,
+                        ignore=shutil.ignore_patterns('__pycache__'))
+        native = fixture_runtime/'c1-keyfilter-guard'
+        shutil.copyfile(guard.binary, native)
+
+        # Adapt the fixed TV paths, UID and bus for the isolated child.
+        with (support/'clean_removal.py').open('a') as stream:
+            stream.write(f'\nruntime_restore_report.__defaults__=({uid},)\n')
+        with (fixture_runtime/'device_adapter.py').open('a') as stream:
+            stream.write(f'\nSTATE=Path({str(root)!r})\nEXPECTED_UID={uid}\n')
+        with (fixture_runtime/'c1_gate.py').open('a') as stream:
+            stream.write(f'\nSTATE=Path({str(root)!r})\n')
+        with (fixture_runtime/'c1_keyfilter.py').open('a') as stream:
+            stream.write(f"""
+def boot_identity(): return {BOOT!r}
+def read_chain(): return json.loads(Path({str(chain)!r}).read_text())
+def write_chain(value, **kwargs): Path({str(chain)!r}).write_text(json.dumps(value))
+def luna(uri, payload):
+    if uri == 'luna://com.webos.applicationManager/getForegroundAppInfo':
+        return dict(returnValue=True, appId=STOCK)
+    if uri == 'luna://com.webos.surfacemanager/getForegroundAppInfo':
+        return dict(returnValue=True, foregroundAppInfo=json.loads(Path({str(rows)!r}).read_text()))
+    raise AssertionError(uri)
+""")
+        # Keep current-bundle digest and executable checks real.
+        package = deploy.APP+'_0.0.1_all.ipk'
+        root_bundle = payload/'root'
+        release = dict(application_id=deploy.APP, version='0.0.1', home_backend=backend.BACKEND,
+                       experimental=True, routing=backend.ROUTING, native_sha256=hashlib.sha256(native.read_bytes()).hexdigest(),
+                       capabilities=['theme-receiver-v1','wallpaper-media-v1','c1-keyfilter-v1'])
+        (root_bundle/'release.json').write_text(json.dumps(release))
+        for name in (*deploy.SUPPORT_FILES, package, 'SHA256SUMS'):
+            path = root_bundle/name
+            path.parent.mkdir(exist_ok=True)
+            path.touch()
+        files = (*deploy.SUPPORT_FILES, *('runtime/'+name for name in deploy.RUNTIME_FILES),
+                 'runtime/c1_gate.py', 'runtime/c1_keyfilter.py', 'runtime/c1-home-filter.js',
+                 'runtime/c1-keyfilter-guard', package, 'SHA256SUMS', 'release.json')
+        (root_bundle/'bundle.json').write_text(json.dumps({'package':package, 'files':{
+            name:hashlib.sha256((root_bundle/name).read_bytes()).hexdigest() for name in files}}))
+
+        stock = dict(appId=backend.STOCK, windowType=backend.HOME, displayId=0, visible=True)
+        effect_lock = guard.root/'state/effect.lock'
+        effect_lock.symlink_to(guard.root/'state/config')
+        original = driver.ownership.store.read('request-'+identifier)
+        original['failure'] = {'exception_type':'CalledProcessError','exit_status':17}
+        driver.ownership.store.write('request-'+identifier, original)
+        # Bypass the coordinator fixture's child mock and use the real decoder.
+        spec = importlib.util.spec_from_file_location('r4_test_deploy', source/'deploy.py')
+        loaded = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(loaded)
+        stock_route = {'mode':'stock-compositor','target':{'dev':1,'ino':2,'size':52},'target_sha256':'b'*64}
+        with patch.object(deploy, 'command', side_effect=loaded.command), \
+                patch.object(driver.device, 'compositor_stock', return_value=stock_route), \
+                patch.object(driver.device, 'log'):
+            rows.write_text(json.dumps([stock]))
+            blocked = driver.clean_remove(identifier)
+            self.assertEqual(blocked['stage'], 'original-writers-fenced', blocked.get('last_failure'))
+            self.assertEqual(blocked['last_failure']['cleanup_probe']['native_reason'], 'effect_busy')
+            effect_lock.unlink()
+            for surfaces in ([dict(stock, displayId=False)], [dict(stock, displayId=0.0)],
+                             [dict(stock, visible=False)], [], [stock, dict(stock, appId=backend.APP)]):
+                with self.subTest(surfaces=surfaces):
+                    rows.write_text(json.dumps(surfaces))
+                    blocked = driver.clean_remove(identifier)
+                    self.assertEqual(blocked['stage'], 'original-writers-fenced')
+                    probe = blocked['last_failure']['cleanup_probe']
+                    self.assertEqual(probe['native_reason'], 'ui_release_failed')
+                    self.assertEqual(probe['restore_check'], 'stock-surface-unverified')
+                    self.assertTrue(present)
+                    self.assertFalse(any(call.startswith('remove-') for call in calls))
+                    self.assertEqual(driver.ownership.store.read('request-'+identifier), original)
+            rows.write_text(json.dumps([stock]))
+            def lose_response(args):
+                result = loaded.command(args)
+                self.assertEqual(result['result'], 'restored')
+                raise subprocess.CalledProcessError(1, ['fixture-lost-response'])
+            with patch.object(deploy, 'command', side_effect=lose_response):
+                blocked = driver.clean_remove(identifier)
+            self.assertEqual(blocked['stage'], 'original-writers-fenced')
+            self.assertTrue(present)
+            self.assertEqual(driver.clean_remove(identifier)['stage'], 'restart-required')
+            driver.device.current_boot = '22222222-2222-2222-2222-222222222222'
+            final = driver.clean_remove(identifier)
+        self.assertEqual(final['stage'], 'verified-clean', final.get('last_failure'))
+        self.assertEqual(final['original']['request'], original)
+        self.assertEqual((guard.root/'state/outcome').read_text(), TOKEN+' broker_expired\n')
+        self.assertFalse(present)
 
     def test_legacy_permissions_failure_does_not_blame_runtime_restore_on_retry(self):
         import subprocess, deploy

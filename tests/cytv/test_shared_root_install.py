@@ -122,7 +122,10 @@ class SharedRootInstallTests(unittest.TestCase):
         installer.verify_absent=MagicMock()
         result=installer.status()
         self.assertEqual(result['device']['product'],event);self.assertIsNotNone(result['pending'])
-        self.assertIn(' status --operation '+identifier,remote.run.call_args.args[0])
+        driver_commands = [call.args[0] for call in remote.run.call_args_list
+                           if '/install_driver.py ' in call.args[0]]
+        self.assertEqual(len(driver_commands), 1)
+        self.assertIn(' status --operation '+identifier, driver_commands[0])
         remote.luna.assert_not_called();installer.verify_absent.assert_not_called()
 
     def test_verified_setup_offers_separate_explicit_activation(self):
