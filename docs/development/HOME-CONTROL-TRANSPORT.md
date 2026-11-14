@@ -48,10 +48,14 @@ records there. They ignore existing records in the outer directory while it
 has mode 0775. Other unexpected modes, symlinks and failed mode checks still
 refuse access. The usual 2770 directory uses the existing record paths.
 
-Both Home and Helper must ship the recovery logic for a 0775 channel. The
-child contains transient request/response files and is excluded from installed
-rollback capture along with other mutable state. This uses the existing group,
-caller checks, and request protocol. No setup step changes.
+The stock Developer Mode startup script on C3 firmware 43.21.96 recursively
+sets mode 0777 under `/media/developer` and `/tmp/developer`. When a setup
+session has authority over the packaged 5999:5000 directories, it restores
+the existing service state and channel to 2770. It closes the channel to the
+shared group while discarding the fixed transient request/response names.
+The runtime continues to refuse a world-writable channel. Another boot that
+widens the directories requires another authorized repair. The shared group
+and caller checks stay in place.
 
 The service still checks the caller application before I/O. The protocol retains
 its fixed three commands, boolean validation, random request ID, five-second

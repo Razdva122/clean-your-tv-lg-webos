@@ -190,7 +190,9 @@ function session(directory, options, action) {
       fail('shared-group', s, undefined, 'directory');
     if (
       channel || channelParent
-        ? mode !== 1528 && !(channelParent && mode === 509)
+        ? mode !== 1528 &&
+          !(channelParent && mode === 509) &&
+          !(options.repairChannel && (mode === 511 || mode === 1472))
         : mode & 3584 || (mode & 2 && !(options.legacy && mode === 511))
     )
       fail('safe-mode', s, undefined, 'directory');
@@ -483,6 +485,7 @@ function session(directory, options, action) {
     }
   }
   function installPauseGroupMatches() {
+    if (before.mode & 1024) return true; // setgid directory.
     if (typeof process.getegid === 'function')
       return process.getegid() === before.gid;
     // Legacy Node has no getegid. Check the group an exclusive create actually
@@ -499,6 +502,63 @@ function session(directory, options, action) {
     } finally {
       fs.closeSync(fd);
       fs.unlinkSync(probe);
+    }
+  }
+  function setDirectoryMode(mode) {
+    check();
+    if ((before.mode & 4095) === mode) return before;
+    fs.fchmodSync(parent, mode);
+    var fixed = fs.fstatSync(parent);
+    if (
+      !same(before, fixed) ||
+      fixed.uid !== before.uid ||
+      fixed.gid !== before.gid ||
+      (fixed.mode & 4095) !== mode
+    )
+      fail('stable-inode', fixed, undefined, 'directory');
+    before = fixed;
+    check();
+    return before;
+  }
+  function discardChannelRecords() {
+    Object.keys(records).forEach(function (kind) {
+      var record = records[kind];
+      if (record[2] !== 'channel') return;
+      check();
+      // Discard these fixed transient directory entries without opening
+      // their old contents. unlink never follows a symbolic link.
+      try {
+        fs.unlinkSync(record[0]);
+      } catch (error) {
+        if (error.code !== 'ENOENT') throw error;
+      }
+    });
+    fs.fsyncSync(parent);
+  }
+  function withInstallPauseGroup(action) {
+    if (installPauseGroupMatches()) return action();
+    // Exclusive publication must create the inode in the correct group
+    // before any concurrent Stop writer can see it.
+    var setGroup = process.setegid;
+    // Node 0.10 exposes only setgid. UID 0 can restore its original group.
+    if (typeof setGroup !== 'function' && uid === 0) setGroup = process.setgid;
+    if (typeof setGroup !== 'function')
+      throw Error('Installer pause needs the shared effective group');
+    var original =
+      typeof process.getegid === 'function'
+        ? process.getegid()
+        : process.getgid();
+    try {
+      setGroup.call(process, before.gid);
+    } catch (error) {
+      throw Error('Installer pause needs the shared effective group');
+    }
+    try {
+      if (!installPauseGroupMatches())
+        throw Error('Installer pause needs the shared effective group');
+      return action();
+    } finally {
+      setGroup.call(process, original);
     }
   }
   function publishInstallPause(snapshot, pause) {
@@ -744,16 +804,7 @@ function session(directory, options, action) {
           repairedGeneration = replaceGeneration(previousGeneration);
       }
       try {
-        fs.fchmodSync(parent, 504);
-        var normalized = fs.fstatSync(parent);
-        if (
-          !same(before, normalized) ||
-          normalized.uid !== before.uid ||
-          normalized.gid !== before.gid ||
-          (normalized.mode & 4095) !== 504
-        )
-          fail();
-        before = normalized;
+        setDirectoryMode(504);
       } catch (error) {
         if (options.role === 'installer') throw error;
         if (error.code !== 'EPERM' && error.code !== 'EACCES') throw error;
@@ -789,7 +840,9 @@ function session(directory, options, action) {
       repairedGeneration: repairedGeneration,
       replaceGeneration: replaceGeneration,
       publishInstallPause: publishInstallPause,
-      installPauseGroupMatches: installPauseGroupMatches,
+      withInstallPauseGroup: withInstallPauseGroup,
+      setDirectoryMode: setDirectoryMode,
+      discardChannelRecords: discardChannelRecords,
       bootstrap: bootstrap,
       expanded: expanded,
       replace: replace,
@@ -1018,6 +1071,36 @@ prepare.inspectConfiguration = function (directory, options) {
 };
 prepare.prepareConfiguration = function (directory, options) {
   return configuration(directory, options, true);
+};
+prepare.prepareChannel = function (directory) {
+  var parent = require('path').dirname(directory);
+  var settings = {
+    role: 'channel-parent',
+    operation: 'prepare',
+    repairChannel: true
+  };
+  // Refuse an unsupported channel before changing the service state mode.
+  session(directory, settings, function (channel) {
+    if (channel.stat.uid !== 5999 || channel.stat.gid !== 5000)
+      fail('directory', 'trusted-owner', actual(channel.stat));
+  });
+  var anchor = session(parent, settings, function (state) {
+    if (state.stat.uid !== 5999 || state.stat.gid !== 5000)
+      fail('directory', 'trusted-owner', actual(state.stat));
+    return state.setDirectoryMode(1528);
+  });
+  settings.channelParent = { path: parent, stat: anchor };
+  return session(directory, settings, function (channel) {
+    // Do not preserve any commands from a previously writable namespace.
+    if (channel.stat.uid !== 5999)
+      fail('directory', 'trusted-owner', actual(channel.stat));
+    if ((channel.stat.mode & 4095) !== 1528) {
+      channel.setDirectoryMode(1472); // 2700 until all old requests are gone.
+      channel.discardChannelRecords();
+      channel.setDirectoryMode(1528);
+    }
+    return true;
+  });
 };
 // The installed channel can be owned by a different UID. Under the known
 // 0775 drift, use its group-writable namespace only to find a private child.
@@ -1275,30 +1358,28 @@ prepare.publishStopGeneration = function (directory, options) {
         if ((s.stat.mode & 4095) === 511 && legacyCleanup !== true)
           throw Error('Stop storage is not private');
         if (forInstall) {
-          // Exclusive publication requires the final group from inode creation.
-          // An unsupported SSH group must fall back before taking the latch.
-          if (!s.installPauseGroupMatches())
-            throw Error('Installer pause needs the shared effective group');
-          // Pin the generation before looking at the latches. Exclusively
-          // acquire blocked before changing it, so we cannot adopt an
-          // existing safety latch or advance a generation we did not read.
-          var snapshot = s.read('stop-generation', 33, true);
-          if (
-            snapshot &&
-            (snapshot.stat.gid !== s.stat.gid ||
-              (snapshot.stat.mode & 4095) !== 436 ||
-              !/^[IS][a-f0-9]{32}$/.test(snapshot.bytes.toString('utf8')))
-          )
-            throw Error('Invalid Stop generation');
-          if (
-            s.leaf('watchdog', Infinity) ||
-            !s.write('blocked', buffer('stopped'), 436, Infinity, true)
-          )
-            throw Error('Existing Stop prevents installer pause');
-          var pause = 'S' + crypto.randomBytes(16).toString('hex');
-          if (!s.publishInstallPause(snapshot, pause))
-            throw Error('Stop changed during installer pause');
-          return pause;
+          return s.withInstallPauseGroup(function () {
+            // Pin the generation before looking at the latches. Exclusively
+            // acquire blocked before changing it, so we cannot adopt an
+            // existing safety latch or advance a generation we did not read.
+            var snapshot = s.read('stop-generation', 33, true);
+            if (
+              snapshot &&
+              (snapshot.stat.gid !== s.stat.gid ||
+                (snapshot.stat.mode & 4095) !== 436 ||
+                !/^[IS][a-f0-9]{32}$/.test(snapshot.bytes.toString('utf8')))
+            )
+              throw Error('Invalid Stop generation');
+            if (
+              s.leaf('watchdog', Infinity) ||
+              !s.write('blocked', buffer('stopped'), 436, Infinity, true)
+            )
+              throw Error('Existing Stop prevents installer pause');
+            var pause = 'S' + crypto.randomBytes(16).toString('hex');
+            if (!s.publishInstallPause(snapshot, pause))
+              throw Error('Stop changed during installer pause');
+            return pause;
+          });
         }
         if (s.repairedGeneration) return s.repairedGeneration;
         var previous = s.leaf('stop-generation', 33, true);

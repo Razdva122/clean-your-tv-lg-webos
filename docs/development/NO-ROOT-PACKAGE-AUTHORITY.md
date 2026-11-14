@@ -310,9 +310,11 @@ boot-started updated Helper binds its current generation so it can shut down
 without publishing a second one. If an older Helper publishes another generation
 while stopping, setup keeps the Stop and the existing explicit Start procedure
 applies. The checked pause verifies the generation inode will be created in the Helper
-state's shared group. On legacy Node it checks the group of a temporary inode
-in that directory before creating the latch. Other SSH group
-layouts use the existing Stop path without automatic restart authority.
+state's shared group. The synchronous pause temporarily selects the verified
+group when permitted, including Root SSH with a different primary group, and
+restores the original group afterward. On legacy Node it checks the group of a
+temporary inode before creating the latch. If SSH cannot select the checked
+group it uses the existing Stop path without automatic restart authority.
 The installer never treats a post-stop read alone as ownership.
 
 A cancelled launch configuration step is a verified no-request disposition;
