@@ -1,7 +1,36 @@
 {
   "schema": 1,
-  "version": null,
-  "changes": [],
+  "version": "1.20.7",
+  "changes": [
+    {
+      "pr": 634,
+      "issues": [
+        626
+      ],
+      "summary": "Use the LG catalog for No-root removal on legacy TVs"
+    },
+    {
+      "pr": 636,
+      "issues": [
+        472
+      ],
+      "summary": "Confirm LG Home after an unacknowledged No-root removal launch"
+    },
+    {
+      "pr": 637,
+      "issues": [
+        505
+      ],
+      "summary": "Restore No-root Helper and panel after reboot and Stop (#505)"
+    },
+    {
+      "pr": 638,
+      "issues": [
+        635
+      ],
+      "summary": "Recover No-root removal when the original capsule is missing (#635)"
+    }
+  ],
   "excluded": [],
   "acceptance": ""
 }

@@ -1,9 +1,9 @@
 {
-  "from_helper": "0.8.3",
-  "to_helper": "0.8.4",
-  "rollback_home": "1.18.0",
-  "rollback_sha256": "558d1070404de34c8e01a171fec98b04d02675fb52986f9c17e8218b12260278",
-  "prior_helper_sha256": "e49d6d1d1b809ab75b2f750d3a420cb6bba3caec0af40b55db8fdfc19057909e",
-  "candidate_archive_sha256": "770ff04b262c8272785131f67a2be5c520b42e090754fb3068c4a1fd0a0071ab",
-  "acceptance": "2026-11-13 maintainer QA on LG OLED55C3RLA, firmware 43.21.71, webOS SDK 11.2.0, macOS ARM64 source installer cytv 0.20.1. The ordinary No-root installer over saved root SSH installed production-feed-verified published Home 1.18.0 FHD and exact Helper 0.8.4 (IPK SHA-256 2bd9044b7ced35a12577d8bff535095276d3ff9c50474ab8ea895a98b581d969). Independent SHA-256 readback matched 236 public files and setup left no pending operation. Network HOME from LG Media Player reached No-root Home. The owner verified short physical Home opened Clean Your TV, triple Home returned to LG Home, and a subsequent Home press, arrows and volume worked in LG Home. Independent readback confirmed LG Home foreground, Helper stopped, blocked latch retained and no pending operation. Published HD bytes were authenticated separately. HD hardware, standby, cold boot, audio and OTA were outside this compatibility probe."
+  "from_helper": "0.8.4",
+  "to_helper": "0.8.5",
+  "rollback_home": "1.18.5",
+  "rollback_sha256": "10d69406c8c94649e693841476853a28ccde6377077fcba0cb3d0325bd95f2a7",
+  "prior_helper_sha256": "2bd9044b7ced35a12577d8bff535095276d3ff9c50474ab8ea895a98b581d969",
+  "candidate_archive_sha256": "986d8c8b7dafc225e4bcc3ee8ce79ba9cd687ffcfc1035d87ff1cbde548ea824",
+  "acceptance": "2026-11-14 project OLED55C3RLA, firmware 43.21.71, webOS SDK 11.2.0, macOS ARM64 source cytv 0.20.7, No-root over saved root SSH. Production-key verified v1.20.6 No-root System feeds authenticated Home 1.18.5 FHD/HD and Helper 0.8.4. The exact Helper 0.8.5 IPK SHA-256 was bea38cd6e3a8e6ecf2f89cf73e96c2682f8a8ca6d4fa12a23831ec3f9769c2fc. Ordinary setup installed published Home 1.18.5 and the candidate Helper with an idle receipt. The first network HOME from Media Player reached Clean Your TV but failed the one-second stability check. A repeated route on the same installation reached and stayed in Clean Your TV. Ordinary installer Restore stopped interception; network HOME reached and stayed in LG Home. The ordinary installer restored published Home 1.18.5 and Helper 0.8.4 with idle receipts, and network HOME stayed in LG Home. Magic Remote, standby, AC cold boot and OTA were outside this probe."
 }
