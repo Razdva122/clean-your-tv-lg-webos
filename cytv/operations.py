@@ -1297,6 +1297,12 @@ else:
             self.tv_info['status']=result
             if self.profile['edition']=='root':
                 self.collect_root_diagnostics()
+            elif self.profile.get('connection') != 'root-ssh':
+                from .no_root_cleanup import inspect_binding
+                binding = inspect_binding(self)
+                result['removal_binding'] = binding
+                result['assessment'] = assess(self.profile, pending, result)
+                result['removal']['reason'] = result['assessment']['reason']
             return result
         initial = assess(self.profile, pending)
         result = ({'device': {}, 'pending': pending, 'can_resume_root_setup': False}

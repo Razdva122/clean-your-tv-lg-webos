@@ -343,6 +343,25 @@ saved locally). The export excludes setting values and raw TV responses.
 
 <a id="recovery-journal-summary-unreleased"></a>
 
+## No-root removal reservation check
+
+During status or recovery review of pending Developer Mode removal,
+`status.removal_binding` reports the local capsule check and reservation
+observation separately. The capsule result is `verified`, `no-original-install`,
+or a fixed category such as `capsule-missing`, `capsule-changed` or
+`source-incompatible`. The reservation result is `matched`, `absent`,
+`conflict`, `unverified` or `interrupted`. The latter identifies a partially
+published cancellation marker. The confirmed path verifies it before continuing.
+A refused removal can also report
+`removal_binding` alongside its error. The report omits operation identifiers,
+paths and capsule contents.
+
+The review publishes no cancellation marker. Confirmed removal checks the
+original binding again and uses the existing cancellation and writer checks.
+A reservation conflict does not establish that another process is running.
+Use the original saved connection and recovery data to review the same removal
+goal. Temporary IPK staging is not evidence of reservation ownership.
+
 ## Recovery journal summary
 
 Additive `recovery` is computed from the original local journal snapshot already

@@ -67,7 +67,14 @@ def assess(profile, pending, observation=None):
         return {'state': state, 'reason': reason, 'actions': list(actions)}
     if type(pending) is dict and pending.get('recovery_protocol') == 'clean-removal-v1':
         removal = removal_summary(pending)
-        return result(removal['state'], removal['reason'], 'continue-removal', 'retain-evidence')
+        binding = observation.get('removal_binding')
+        reason = removal['reason']
+        if type(binding) is dict:
+            if binding.get('reservation') in ('conflict', 'unverified'):
+                return result(removal['state'], 'ownership-conflict', 'check', 'retain-evidence')
+            if binding.get('reservation') in ('matched', 'absent', 'interrupted') and reason == 'ownership-conflict':
+                reason = 'removal-recheck-required'
+        return result(removal['state'], reason, 'continue-removal', 'retain-evidence')
     if observation.get('active_operation') is not None:
         return result('blocked', 'foreign-operation', 'check', 'retain-evidence')
     if pending is None:

@@ -15,7 +15,7 @@ REMOVAL_STAGES = {
 REMOVAL_BLOCKERS = {
     'removal-requested':'',
     'original-writer-active':'The TV is busy. Wait a moment and try again.',
-    'ownership-conflict':'Some project paths changed. Close other installers, then review recovery options.',
+    'ownership-conflict':'The current TV installer reservation could not be verified.',
     'controls-unverified':'TV controls could not be verified. Review recovery options before continuing.',
     'removal-terminal-unknown':'The TV package result could not be verified. Review recovery options before continuing.',
     'private-cleanup-incomplete':'Final cleanup could not be verified. Review recovery options before continuing.',

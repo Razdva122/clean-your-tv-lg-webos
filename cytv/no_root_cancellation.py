@@ -33,6 +33,7 @@ function cancel(){
    // Recover the extra link if the previous process died during publication.
    var leaf=fs.lstatSync(fence);
    if(leaf.nlink===2&&exists(tmp)&&same(leaf,fs.lstatSync(tmp))){
+    if(input.inspect)return {owner:owner,marked:marked,interrupted:true};
     fs.unlinkSync(tmp);sync(opdir);
    }
    if(canonical(json(name+'/'+fence))!==canonical(expected))fail('foreign-reservation');
@@ -44,6 +45,7 @@ function cancel(){
   if(!same(pinned,fs.fstatSync(fd)))fail('changed-reservation');
   process.chdir(dir);
   var state=check(dir);
+  if(input.inspect)return {reservation:{dev:identity.dev,ino:identity.ino},interrupted:state.interrupted===true};
   if(!state.marked){
    if(input.finalizing)fail('foreign-reservation');
    // Publish complete bytes without an intermediate child in the reservation.

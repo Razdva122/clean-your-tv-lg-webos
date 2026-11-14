@@ -26,7 +26,7 @@ REASONS = ('unknown', 'user-error', 'ssh-command-failed', 'ssh-unreachable', 'ss
            'pending-operation', 'root-operation-unconfirmed', 'project-apps-remain', 'version-mismatch',
            'inventory-unavailable', 'graphics-unverified', 'root-home-interfaces', 'native-home-script', 'foreign-home-handoff-required',
            'root-worker-busy', 'root-access-required', 'removal-failed',
-           'cleanup-check-failed', 'connection-interrupted', 'operation-timeout', 'tv-storage-full', 'tv-storage-ramfs')
+           'cleanup-check-failed', 'ownership-conflict', 'connection-interrupted', 'operation-timeout', 'tv-storage-full', 'tv-storage-ramfs')
 REASONS += ACTIVATION_CODES
 REASONS += ('installer-runtime-mismatch', 'clean-handoff-refused', 'foreign-home-restore-failed')
 ACTIONS = ('recover', 'install', 'uninstall', 'restore', 'status', 'doctor', 'home-diagnostics',
@@ -358,6 +358,15 @@ def product_summary(value):
     return result
 
 
+def removal_binding_summary(value):
+    from .errors import LOCAL_RECOVERY_REASONS
+    value = mapping(value)
+    return {
+        'capsule': choice(value.get('capsule'), ('verified', 'no-original-install', 'unverified', *LOCAL_RECOVERY_REASONS)),
+        'reservation': choice(value.get('reservation'), ('matched', 'absent', 'conflict', 'unverified', 'interrupted')),
+    }
+
+
 def status_summary(value):
     value = mapping(value)
     device = mapping(value.get('device', value))
@@ -369,6 +378,8 @@ def status_summary(value):
                            'stage':choice(removal.get('stage'),REMOVAL_STAGES),
                            'reason':choice(removal.get('reason'),REMOVAL_REASONS),
                            'original_outcome':choice(removal.get('original_outcome'),('unknown','complete','recovery_required'))}
+    if 'removal_binding' in value:
+        result['removal_binding'] = removal_binding_summary(value['removal_binding'])
     if 'observer' in device:
         observer=mapping(device['observer'])
         slots=observer.get('slots') if type(observer.get('slots')) is list else []
@@ -501,6 +512,8 @@ def failure_summary(value):
     if 'no_root_observer' in value:
         from .errors import no_root_observer_details
         result['no_root_observer'] = no_root_observer_details(value['no_root_observer'])
+    if 'removal_binding' in value:
+        result['removal_binding'] = removal_binding_summary(value['removal_binding'])
     if 'local_recovery' in value:
         from .errors import local_recovery_details
         result['local_recovery'] = local_recovery_details(value['local_recovery'])

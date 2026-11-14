@@ -28,7 +28,7 @@ var bootProof=(function(){var module={exports:{}},exports=module.exports;
 /* CYTV_BOOT_PROOF_CONTRACT */
 return module.exports;}());
 var input=JSON.parse(process.argv[process.argv.length-1]),uid=process.getuid();
-if(['inventory','idle','sweep','stop','history','root-package','boot-create','boot-probe','boot-retire','boot-release'].indexOf(input.action)<0)throw Error('invalid-cleanup-action');
+if(['inventory','idle','sweep','stop','history','binding','root-package','boot-create','boot-probe','boot-retire','boot-release'].indexOf(input.action)<0)throw Error('invalid-cleanup-action');
 var base='/media/developer/apps/usr/palm',publicRoot='/media/developer/temp';
 if(input.connection==='root-ssh'){
  if(uid!==0)throw Error('root-access-required');
@@ -163,7 +163,7 @@ if(input.guard_owner){
   });
   if(selected){
    var cancellationInput={root:selected,public_root:input.public_root,plan:input.plan,goal:input.removal,
-                          finalizing:input.finalizing,retire:input.action==='history'};
+                          finalizing:input.finalizing,retire:input.action==='history',inspect:input.action==='binding'};
    try{owned=/* CYTV_OWNED_CANCELLATION */null;}
    catch(e){
     // An absent current owner is independent of old optional evidence.
@@ -178,6 +178,11 @@ if(input.guard_owner){
    }
   }
  }catch(e){if(!reply.owner_conflict)reply.owner_unverified=true;process.stdout.write(JSON.stringify(reply));return;}
+}
+if(input.action==='binding'){
+ var binding=reply.cancellation;
+ reply.reservation=binding&&binding.interrupted?'interrupted':binding&&binding.reservation?'matched':'absent';
+ process.stdout.write(JSON.stringify(reply));return;
 }
 installerRoots.forEach(function(root){try{privateInstaller(root);var operations=(root===rootInstaller?rootPrivate:root)+'/operations';if(exists(operations)){ancestry(operations);var ids=fs.readdirSync(operations);reply.resident_installer=reply.resident_installer||ids.length>0;ids.forEach(function(id){if(/^[a-f0-9]{32}$/.test(id)&&reply.staging_ids.indexOf(id)<0)reply.staging_ids.push(id);});if(reply.staging_ids.length>128)fail();}}catch(e){blocked('installer-private',e);}});
 if(input.action==='history'){
@@ -454,6 +459,7 @@ def _device(installer, action, proof=None, *, after_stop=False, wait_for_idle=Fa
     pending = installer.store.pending(installer.profile) or {}
     request = {'action':action, 'staging_ids':pending.get('cleanup_staging_ids', []),
                'removal':pending.get('removal_operation'), 'proof':proof}
+    capsule = 'no-original-install'
     if guard and installer.profile.get('connection') != 'root-ssh':
         from . import no_root_observer
         from .errors import connection_interrupted
@@ -466,7 +472,9 @@ def _device(installer, action, proof=None, *, after_stop=False, wait_for_idle=Fa
             except UserError as error:
                 if error.reason_code != 'pending-operation' or connection_interrupted(error):
                     raise
+                capsule = getattr(error, 'local_recovery', {}).get('reason', 'unverified')
             else:
+                capsule = 'verified'
                 request.update(cancellation=no_root_observer.private_root(plan), plan=plan,
                                public_root=no_root_observer.PUBLIC_ROOT,
                                finalizing=pending.get('stage') == 'verified-clean')
@@ -495,13 +503,21 @@ def _device(installer, action, proof=None, *, after_stop=False, wait_for_idle=Fa
     if (not isinstance(value, dict) or value.get('schema') != 1 or
             not all(isinstance(value.get(k), list) for k in ('present', 'blocked', 'root_present'))):
         raise UserError('Removal could not be verified. Review recovery options before continuing.')
-    if value.get('owner_conflict'):
-        raise UserError('Another installer owns the TV reservation. Wait for it to finish and try again.',
-                        reason_code='original-writer-active')
-    if value.get('owner_unverified'):
-        raise UserError('The current TV installer reservation could not be verified. Recovery data was kept.',
-                        reason_code='ownership-conflict')
+    reservation = ('conflict' if value.get('owner_conflict') else
+                   'unverified' if value.get('owner_unverified') else value.get('reservation'))
+    binding = {'capsule': capsule, 'reservation': reservation}
+    if action == 'binding':
+        return binding
+    if value.get('owner_conflict') or value.get('owner_unverified'):
+        error = UserError('The current TV installer reservation could not be verified. Recovery data was kept.',
+                          reason_code='ownership-conflict')
+        error.removal_binding = binding
+        raise error
     return value
+
+
+def inspect_binding(installer):
+    return _device(installer, 'binding', guard=True)
 
 
 def _protected_package(row):

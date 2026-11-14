@@ -106,6 +106,8 @@ def create_report(store, action, profile, phase, error=None, tv_info=None, *, ch
         report['no_root_cleanup'] = no_root_cleanup_details(error.no_root_cleanup)
     if hasattr(error, 'no_root_observer'):
         report['no_root_observer'] = getattr(error, 'no_root_observer')
+    if hasattr(error, 'removal_binding'):
+        report['removal_binding'] = context.removal_binding_summary(error.removal_binding)
     if hasattr(error, 'local_recovery'):
         from .errors import local_recovery_details
         report['local_recovery'] = local_recovery_details(error.local_recovery)
@@ -120,7 +122,7 @@ def create_report(store, action, profile, phase, error=None, tv_info=None, *, ch
             ('available_kib', 'required_kib', 'wam_session_kib') if getattr(safe, key) is not None})
     if error is not None:
         safe_error = context.failure_summary(report)
-        for key in ('luna', 'connection', 'ssh_command', 'python_cache', 'python_runtime', 'root_recovery', 'root_driver', 'no_root_observer', 'no_root_cleanup', 'local_recovery'):
+        for key in ('luna', 'connection', 'ssh_command', 'python_cache', 'python_runtime', 'root_recovery', 'root_driver', 'no_root_observer', 'no_root_cleanup', 'local_recovery', 'removal_binding'):
             if key in report:
                 report[key] = safe_error.get(key, {})
     from .contract_events import merge_events

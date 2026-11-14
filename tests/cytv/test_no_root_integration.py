@@ -178,6 +178,70 @@ class OriginalOperationIntegration(unittest.TestCase):
         self.installer=operations.Installer(self.remote,self.store,self.profile,fixture.payload,fixture.manifest,lambda *_:None)
         self.inventory=fixture.inventory
 
+    def test_removal_review_checks_binding_without_touching_evidence(self):
+        from cytv import diagnostics
+        from cytv.desktop import DesktopConsole
+        from cytv.diagnostic_context import status_summary
+        from cytv.errors import UserError
+        from cytv.recovery import recover
+
+        run = self.remote.run
+        def interrupt(command, data=None, timeout=30):
+            if data and data.startswith(b'!<arch>'):
+                raise OSError('simulated upload interruption')
+            return run(command, data, timeout)
+
+        self.remote.run = interrupt
+        with self.assertRaises(UserError):
+            self.installer.install(self.inventory, 'fixture')
+        self.remote.run = run
+        (self.root / 'proc').mkdir()
+        stage, = (self.root / 'public').glob('cytv-*')
+        stage.chmod(0o777)
+        pending = self.store.request_clean_removal(self.profile)
+        capsule = self.store._capsule_path(self.profile, pending['previous']['observer_operation'])
+
+        def evidence():
+            return {str(path): path.read_bytes()
+                    for root in (self.root / 'private', self.store.root)
+                    for path in root.rglob('*') if path.is_file()}
+
+        before = evidence()
+        status = self.installer.observe_recovery()
+        self.assertEqual(status_summary(status)['removal_binding'],
+                         {'capsule': 'verified', 'reservation': 'matched'})
+        self.assertEqual(evidence(), before)
+        retained = capsule.with_suffix('.retained')
+        capsule.rename(retained)
+        without_capsule = evidence()
+        status = self.installer.observe_recovery()
+        self.assertEqual(status_summary(status)['removal_binding'],
+                         {'capsule': 'capsule-missing', 'reservation': 'conflict'})
+        self.assertEqual(evidence(), without_capsule)
+        console = DesktopConsole(lambda *_: None)
+
+        def unexpected_prompt(_):
+            self.fail('Conflicting reservation offered a mutation')
+
+        recover(self.installer, unexpected_prompt, console, initial_observation=status)
+        self.assertEqual(evidence(), without_capsule)
+        with self.assertRaises(UserError) as blocked:
+            self.installer.continue_clean_removal(pending)
+        self.assertEqual(blocked.exception.reason_code, 'ownership-conflict')
+        report = diagnostics.create_report(self.store, 'recover', self.profile, 'recover', blocked.exception,
+                                           status=status)
+        exported = json.loads(report.read_text())
+        self.assertEqual(exported['removal_binding'], status_summary(status)['removal_binding'])
+        self.assertNotIn(str(capsule), report.read_text())
+
+        retained.rename(capsule)
+        status = self.installer.observe_recovery()
+        self.assertIn('continue-removal', status['assessment']['actions'])
+        recover(self.installer, lambda _: 'y', console, initial_observation=status)
+        self.assertIsNone(self.store.pending(self.profile))
+        self.assertFalse((self.root / 'private' / 'active').exists())
+        self.assertFalse((self.root / 'requests').exists())
+
     def test_cli_cancels_owned_partial_install_and_can_install_fresh(self):
         from cytv import cli
         (self.root / 'proc').mkdir()
@@ -259,6 +323,11 @@ class OriginalOperationIntegration(unittest.TestCase):
         marker = self.root / 'private/active/cancel-removal.json'
         self.assertEqual(marker.stat().st_nlink, 2)
         self.remote.transform_cleanup = lambda code: code
+        observation = self.installer.observe_recovery()
+        self.assertEqual(observation['removal_binding'],
+                         {'capsule': 'verified', 'reservation': 'interrupted'})
+        self.assertIn('continue-removal', observation['assessment']['actions'])
+        self.assertEqual(marker.stat().st_nlink, 2)
         lost = []
         def interrupt(request, reply):
             if request['action'] == 'history' and not lost:
