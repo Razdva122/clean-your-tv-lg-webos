@@ -415,6 +415,87 @@ class OriginalOperationIntegration(unittest.TestCase):
         self.installer.install(self.inventory,'fresh-secret')
         self.assertEqual((self.root/'requests').read_text().splitlines(),[app,*observer.APPS])
 
+    def test_unanswered_optional_monitor_allows_supported_remove_and_fresh_install(self):
+        for mode in ('empty', 'timeout'):
+            with self.subTest(mode=mode):
+                case = OriginalOperationIntegration()
+                case.setUp()
+                try:
+                    case.unanswered_monitor_history(mode)
+                finally:
+                    case.doCleanups()
+
+    def unanswered_monitor_history(self, mode):
+        from unittest.mock import Mock
+        from cytv.errors import UserError
+        from cytv.transport import SSH
+
+        (self.root/'proc').mkdir()
+        self.remote.cut = True
+        app = operations.HELPER
+        with self.assertRaises(RuntimeError):
+            self.installer.install(self.inventory, 'original-secret')
+        installed = self.root/'installed.json'
+        self.assertEqual(set(json.loads(installed.read_text())), {app})
+        self.installer.store = self.store = state.Store(self.store.root)
+        original = self.remote.luna
+        monitor = object.__new__(SSH)
+        monitor.root = False
+        channel = Mock()
+        monitor.channel = Mock(return_value=channel)
+        monitor.chunks = (lambda channel, timeout: iter(())) if mode == 'empty' else (
+            lambda channel, timeout: SSH.chunks(monitor, channel, 0))
+        uri = 'com.webos.appInstallService/status'
+        goal = self.store.request_clean_removal(self.profile)
+        idle = False
+        removals = []
+
+        def luna(endpoint, payload, **options):
+            if endpoint == uri:
+                if idle:
+                    return {'returnValue':True, 'status':{'apps':[]}}
+                return monitor.luna(endpoint, payload, **options)
+            if endpoint.endswith('/dev/remove'):
+                removals.append(payload['id'])
+            return original(endpoint, payload, **options)
+
+        self.remote.luna = luna
+        with self.assertRaises(UserError) as strict:
+            operations.require_removal_idle(monitor, self.profile, goal)
+        expected = 'user-error' if mode == 'empty' else 'operation-timeout'
+        self.assertEqual(strict.exception.reason_code, expected)
+        channel.close.reset_mock()
+
+        self.assertTrue(self.installer.uninstall_project()['verified_clean'])
+        channel.close.assert_called_once()
+        self.assertEqual(removals, [app])
+        self.assertEqual(json.loads(installed.read_text()), {})
+        self.assertIsNone(self.store.pending(self.profile))
+        self.installer.install(self.inventory, 'fresh-secret')
+        self.assertIsNone(self.store.pending(self.profile))
+
+        # An already submitted vendor request still needs independent settlement.
+        remove = self.remote.luna
+        def lose_vendor_reply(endpoint, payload, **options):
+            reply = remove(endpoint, payload, **options)
+            if endpoint.endswith('/dev/remove') and payload['id'] == app:
+                raise UserError('Connection interrupted', reason_code='connection-interrupted')
+            return reply
+
+        self.remote.luna = lose_vendor_reply
+        with self.assertRaisesRegex(UserError, 'Connection interrupted'):
+            self.installer.uninstall_project()
+        pending = self.store.pending(self.profile)
+        self.assertEqual(pending['removals'], {app:'submitted'})
+        self.remote.luna = luna
+        self.assertTrue(self.installer.uninstall_project()['restart_required'])
+        self.assertEqual(removals.count(app), 2)
+        idle = True
+        self.assertTrue(self.installer.uninstall_project()['verified_clean'])
+        self.assertEqual(removals.count(app), 2)
+        completed = json.loads((self.store.device_dir(self.profile)/'clean-removal.json').read_text())
+        self.assertEqual(completed['removal_operation'], pending['removal_operation'])
+
     def test_second_lost_vendor_reply_needs_proof_newer_than_second_request(self):
         from cytv.errors import UserError
 

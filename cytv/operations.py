@@ -83,6 +83,13 @@ def require_removal_idle(remote, profile, pending, *, report_busy=False, optiona
             # Doctor as a way around an unavailable recovery capability.
             error.args = ('\n'.join(GUIDES['recovery-status-rejected'][:3]),)
         raise
+    except UserError as error:
+        # An unanswered optional status call cannot prove that work is idle.
+        if optional_monitor and (error.reason_code == 'operation-timeout' or (
+                error.reason_code == 'user-error'
+                and str(error) == 'TV command ended without a confirmed result. Run cytv status.')):
+            return False
+        raise
     status = idle.get('status') if isinstance(idle, dict) and idle.get('returnValue') is True else None
     apps = status.get('apps') if isinstance(status, dict) else None
     if report_busy and isinstance(apps, list) and apps:
