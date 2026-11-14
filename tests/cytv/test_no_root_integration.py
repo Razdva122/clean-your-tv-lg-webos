@@ -70,13 +70,20 @@ sys.stdin.read()
         if command == '/usr/bin/node' and data.startswith(b'process.argv.push('):
             value, _ = json.JSONDecoder().raw_decode(data.decode()[len('process.argv.push('):])
             request = json.loads(value)
-            import tempfile
             source = data.decode().replace('/media/developer/apps', str(self.root_path / 'apps'))
             source = source.replace('/media/developer/temp', str(self.root_path / 'public'))
             source = source.replace('/tmp/.cytv-installer', str(self.root_path / 'private'))
             source = source.replace("'/proc/'", repr(str(self.root_path / 'proc') + '/'))
-            source = source.replace('/proc/sys/kernel/random/boot_id', str(self.root_path / 'boot'))
-            source = source.replace("'/tmp'", repr(tempfile.gettempdir()))
+            boot_id = self.root_path / 'boot'
+            boot_id.write_text('11111111-1111-1111-1111-111111111111')
+            source = source.replace('/proc/sys/kernel/random/boot_id', str(boot_id))
+            tmp_root = self.root_path / 'volatile'
+            tmp_root.mkdir(exist_ok=True)
+            tmp_root.chmod(0o111)
+            source = source.replace("'/tmp'", repr(str(tmp_root)))
+            source = ('var fixtureFs=require("fs"),lstat=fixtureFs.lstatSync;'
+                      'fixtureFs.lstatSync=function(p){var s=lstat(p);if(p===' +
+                      json.dumps(str(tmp_root)) + ')s.uid=0;return s;};\n') + source
             result = subprocess.run([os.environ.get('NODE_EXEC') or shutil.which('node')], input=self.transform_cleanup(source).encode(),
                                     capture_output=True, timeout=timeout)
             if result.returncode:
@@ -266,6 +273,74 @@ class OriginalOperationIntegration(unittest.TestCase):
         self.assertEqual(finished['previous'], old)
         self.installer.install(self.inventory, 'fresh-secret')
         self.assertEqual((self.root / 'requests').read_text().splitlines(), [operations.HELPER, *observer.APPS])
+
+    def test_worker_admitted_before_fence_can_publish_claim_during_drain(self):
+        from concurrent.futures import ThreadPoolExecutor
+        from time import monotonic, sleep
+
+        self.remote.cut = True
+        with self.assertRaises(RuntimeError):
+            self.installer.install(self.inventory, 'original-secret')
+        original = observer.capsule(self.installer, self.store.pending(self.profile))
+        plan = original['plan']
+        observer.readback(self.installer, original, 0)
+        observer.invoke(self.remote, plan, 'readback', 0)
+        opdir = self.root / 'private/operations' / plan['operation']
+        ready = self.root / 'worker-attached'
+        resume = self.root / 'release-worker'
+        self.remote.sender.write_text('#!/bin/sh\necho com.gathin.tvhome >> ' +
+                                     shlex.quote(str(self.root / 'requests')) + '\n')
+        data = {'root': str(self.root / 'private'), 'public_root': str(self.root / 'public'),
+                'plan': plan, 'command': 'worker', 'slot': 1, 'sender': str(self.remote.sender), 'timeout': 3000}
+        # Instrument the bundled observer in memory to hold the real worker just
+        # after attached(), before the exclusive package claim. On-disk bytes stay exact.
+        hold = 'fs.writeFileSync(' + json.dumps(str(ready)) + ', "ready");' + (
+            'while(!exists(' + json.dumps(str(resume)) + ')){}')
+        worker = observer.PROGRAM.replace('attached();predecessor(i);', 'attached();' + hold + 'predecessor(i);')
+        child = subprocess.Popen([shutil.which('node'), '-e', worker, json.dumps(data)], stderr=subprocess.DEVNULL)
+        self.addCleanup(lambda: (child.kill(), child.wait()) if child.poll() is None else None)
+        fake_proc = self.root / 'proc' / str(child.pid)
+        fake_proc.mkdir(parents=True)
+        (fake_proc / 'cmdline').write_text('/usr/bin/node\0' + str(opdir / 'observer.js') + '\0')
+        deadline = monotonic() + 5
+        while not ready.exists() and child.poll() is None and monotonic() < deadline:
+            sleep(.01)
+        self.assertTrue(ready.exists())
+        self.assertFalse((opdir / 'claim-1.json').exists())
+
+        def release_after_poll_starts():
+            deadline = monotonic() + 5
+            polling = self.root / 'idle-first-sample'
+            while not polling.exists() and monotonic() < deadline:
+                sleep(.01)
+            resume.touch()
+            self.assertTrue(polling.exists())
+            self.assertEqual(child.wait(timeout=5), 0)
+            shutil.rmtree(fake_proc)
+
+        self.remote.transform_cleanup = lambda code: code.replace(
+            'setTimeout(checkIdle,250);return;',
+            'fs.writeFileSync(' + json.dumps(str(self.root / 'idle-first-sample')) +
+            ',"polling");setTimeout(checkIdle,250);return;')
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            released = executor.submit(release_after_poll_starts)
+            result = self.installer.uninstall_project()
+            released.result()
+        self.assertEqual((self.root / 'requests').read_text().splitlines(), list(observer.APPS))
+        self.assertTrue(result.get('restart_required'), result)
+        self.assertTrue((opdir / 'claim-1.json').exists())
+        self.assertFalse((opdir / 'terminal-1.json').exists())
+        self.assertEqual(self.store.pending(self.profile)['cleanup_restart_triggers'], ['original-package-unverified'])
+
+        luna = self.remote.luna
+        def idle(uri, payload, **options):
+            if uri.endswith('/status'):
+                return {'returnValue': True, 'status': {'apps': []}}
+            return luna(uri, payload, **options)
+
+        self.remote.luna = idle
+        self.assertTrue(self.installer.uninstall_project()['verified_clean'])
+        self.assertIsNone(self.store.pending(self.profile))
 
     def test_closed_release_cut_with_missing_historical_launch_result_allows_removal(self):
         from cytv.errors import UserError

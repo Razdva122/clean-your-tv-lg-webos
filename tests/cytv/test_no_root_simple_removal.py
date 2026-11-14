@@ -838,6 +838,31 @@ class SimpleRemoval(unittest.TestCase):
         self.assertEqual([body['id'] for uri, body in self.remote.calls if uri.endswith('/dev/remove')], [app])
         self.assertIsNone(self.store.pending(self.profile))
 
+    def test_malformed_optional_monitor_allows_first_supported_vendor_remove(self):
+        (self.root / 'proc').mkdir()
+        app = 'com.local.nativehome'
+        self.remote.apps.add(app)
+        self.own_file('.cytv-installer/operations/' + 'a' * 32 + '/journal.json')
+        original = self.remote.luna
+        interrupted = True
+
+        def luna(uri, payload, **kwargs):
+            if uri.endswith('/status'):
+                if interrupted:
+                    raise UserError('Connection interrupted', reason_code='connection-interrupted')
+                return {'returnValue': True, 'status': {}}
+            return original(uri, payload, **kwargs)
+
+        self.remote.luna = luna
+        with self.assertRaises(UserError) as disconnected:
+            self.remove()
+        self.assertEqual(disconnected.exception.reason_code, 'connection-interrupted')
+        self.assertFalse(any(uri.endswith('/dev/remove') for uri, _ in self.remote.calls))
+        interrupted = False
+        self.assertTrue(self.remove()['verified_clean'])
+        self.assertEqual([body['id'] for uri, body in self.remote.calls if uri.endswith('/dev/remove')], [app])
+        self.assertIsNone(self.store.pending(self.profile))
+
     def test_foreign_active_reservation_arriving_at_stop_preserves_controls(self):
         (self.root / 'proc').mkdir()
         self.remote.apps.add('com.local.nativehome')

@@ -64,7 +64,7 @@ def root_updater_paths():
                                 ('client-permissions.d', '.service.json'), ('api-permissions.d', '.api.json'))]]
 
 
-def require_removal_idle(remote, profile, pending, *, report_busy=False):
+def require_removal_idle(remote, profile, pending, *, report_busy=False, optional_monitor=False):
     if pending and pending.get('recovery_protocol') == 'no-root-original-stream-v1':
         raise UserError('The original No-root operation cannot safely continue. Recovery data was kept.', reason_code='pending-operation')
     # A fresh uninstall reserves its journal before restore(), and only changes
@@ -87,6 +87,8 @@ def require_removal_idle(remote, profile, pending, *, report_busy=False):
     apps = status.get('apps') if isinstance(status, dict) else None
     if report_busy and isinstance(apps, list) and apps:
         raise UserError('The TV is busy. Wait a moment and try again.', reason_code='original-writer-active')
+    if optional_monitor:
+        return apps == []
     if apps != []:
         raise UserError('TV installer is not confirmed idle. Keep the receipt and run cytv status before removal.', reason_code='pending-operation')
 

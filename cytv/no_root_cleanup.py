@@ -691,7 +691,9 @@ def continue_removal(installer, expected_pending):
         if writers.get('installer_running') is True:
             raise UserError('An original TV operation is still running. Wait and try again.',
                             reason_code='original-writer-active')
-        cancellation = writers.get('cancellation', cancellation)
+        if 'cancellation' in writers:
+            # An admitted old worker can write its claim while idle polls.
+            cancellation = device('inventory')['cancellation']
 
     # The optional monitor can settle older requests. The first supported
     # fixed-ID remove has its own terminal, even without monitoring privilege.
@@ -705,7 +707,9 @@ def continue_removal(installer, expected_pending):
         waiting = False
         while True:
             try:
-                require_removal_idle(installer.remote, profile, pending, report_busy=True)
+                observed_idle = require_removal_idle(
+                    installer.remote, profile, pending, report_busy=True,
+                    optional_monitor=guard and bool(apps.intersection(APPS)))
             except TVRejected as error:
                 if not error.package_status_denied:
                     raise
@@ -721,7 +725,7 @@ def continue_removal(installer, expected_pending):
                 sleep(min(1, remaining))
                 continue
             else:
-                package_idle = True
+                package_idle = observed_idle is not False
             break
 
     # A proof predating our new vendor request cannot settle that request.
