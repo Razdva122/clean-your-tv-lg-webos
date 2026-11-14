@@ -850,7 +850,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                     write.heading('Clean Your TV removed')
                     write('Clean Your TV removed. Its apps, startup and Home-button control were removed.')
                     if result.get('temporary_files_retained'):
-                        write('Some temporary files were kept; they do not prevent reinstallation.')
+                        write('Some temporary recovery files were kept.')
                     else:
                         write('Only ownership backups and minimal removal records were kept.')
                 elif result.get('restart_required') is True:

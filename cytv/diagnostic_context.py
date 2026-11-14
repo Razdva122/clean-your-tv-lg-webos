@@ -415,7 +415,7 @@ def status_summary(value):
     if updater:
         result['system_updater'] = {key: updater[key] for key in ('present', 'bootstrap_complete', 'disabled') if type(updater.get(key)) is bool}
     runtime = mapping(device.get('result', device))
-    for key in ('removed','verified_clean','private_cleanup_verified'):
+    for key in ('removed','verified_clean','private_cleanup_verified','legacy_registrations_unverified'):
         if type(value.get(key)) is bool:result[key]=value[key]
     for key in ('guardian_active', 'journal_exists', 'recovery_integrity_verified', 'home_enabled'):
         if type(runtime.get(key)) is bool:
@@ -554,6 +554,31 @@ def operation_context(store, profile):
             store.diagnostic_pending = {'action': 'unknown', 'stage': 'unknown'}
 
 
+def _write_first_failure(path, report):
+    try:
+        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    except FileExistsError:
+        return
+    with os.fdopen(fd, 'wb') as stream:
+        stream.write(json.dumps(failure_summary(report)).encode())
+        stream.flush()
+        os.fsync(stream.fileno())
+    sync_directory(path.parent)
+
+
+def record_first_failure(store, profile, pending, report):
+    """Retain an observed failure before independent work can also fail."""
+    identifier = pending.get('diagnostic_id')
+    if type(identifier) is str and re.fullmatch(r'[a-f0-9]{32}', identifier):
+        try:
+            directory = store.device_dir(profile) / 'diagnostic-failures'
+            if not directory.is_symlink():
+                directory.mkdir(mode=0o700, exist_ok=True)
+                _write_first_failure(directory / (identifier + '.json'), report)
+        except (OSError, ValueError, TypeError):
+            pass  # Diagnostics cannot stop an independent removal request.
+
+
 def history(report, store, profile, error, pending, *, create=True):
     result = {'first_failure': None, 'failure_history': 'not-recorded'}
     if not profile:
@@ -569,22 +594,18 @@ def history(report, store, profile, error, pending, *, create=True):
             path = directory / (identifier + '.json')
             if (create and error is not None and getattr(store, 'diagnostic_created', None) == identifier
                     and report['action'] == getattr(store, 'diagnostic_action', None)):
-                try:
-                    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-                except FileExistsError:
-                    pass
-                else:
-                    with os.fdopen(fd, 'wb') as stream:
-                        stream.write(json.dumps(failure_summary(report)).encode())
-                        stream.flush()
-                        os.fsync(stream.fileno())
-                    sync_directory(directory)
+                _write_first_failure(path, report)
             if path.exists() or path.is_symlink():
                 result['first_failure'] = failure_summary(read_record(path))
                 result['failure_history'] = 'recorded'
             if mapping(pending).get('recovery_protocol')=='clean-removal-v1' and ('previous' in pending or 'original_receipt' in pending):
-                # The new cleanup failure is reported separately above. It
-                # cannot become the cause of an older unknown installation.
+                # A prior failure in this cleanup is separate from the
+                # original install's cause and from the current report.
+                cleanup_failure = result['first_failure']
+                current = failure_summary(report) if error is not None else {}
+                identity = ('action', 'phase', 'reason_code', 'error_type', 'luna')
+                if cleanup_failure and any(cleanup_failure.get(key) != current.get(key) for key in identity):
+                    result['intermediate_failures'] = [cleanup_failure]
                 result.update(first_failure=None,failure_history='not-recorded')
                 def previous(value):
                     original=value.get('previous')
@@ -616,7 +637,7 @@ def history(report, store, profile, error, pending, *, create=True):
                 elif records and type(prior) is str:
                     records.pop(prior,None)  # The original is not an intermediate failure.
                 intermediate=[value for value in records.values() if value is not None]
-                if intermediate:result['intermediate_failures']=intermediate
+                if intermediate:result.setdefault('intermediate_failures', []).extend(intermediate)
         elif not pending:
             path = directory / 'previous-attempt.json'
             if create and error is not None and report['action'] == 'install':

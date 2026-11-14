@@ -148,8 +148,9 @@ class TVRejected(UserError):
             and type(reply.get('errorCode')) is int and reply['errorCode'] == -1
             and 'status' not in reply and 'statusValue' not in reply
             and reply.get('details', {}) == {})
-        details = reply.get('details')
-        details = details if isinstance(details, dict) else {}
+        details = reply.get('details', {})
+        well_formed_details = isinstance(details, dict)
+        details = details if well_formed_details else {}
         def number(value):
             if isinstance(value, str) and re.fullmatch(r'-?[0-9]{1,10}', value):
                 value = int(value)
@@ -169,6 +170,14 @@ class TVRejected(UserError):
             'state': status if status in LUNA_STATES else 'unknown',
             'return_value': reply.get('returnValue') if type(reply.get('returnValue')) is bool else None,
         }
+        self._removal_rejection_ids = None
+        if self.luna['operation'] == 'package-remove' and well_formed_details and (
+                self.luna['return_value'] is False or self.luna['error_code'] is not None
+                or self.luna['details_error_code'] is not None
+                or self.luna['state'] in ('failed', 'error', 'remove failed')):
+            ids = tuple(item['id'] for item in (reply, details) if 'id' in item)
+            if all(isinstance(app, str) and re.fullmatch(r'[a-zA-Z0-9_.-]{1,128}', app) for app in ids):
+                self._removal_rejection_ids = ids
         if 'reason' in details:
             reason = details['reason']
             self.luna['reason'] = reason if isinstance(reason, str) and reason in PACKAGE_FAILURE_REASONS else 'unknown'
@@ -177,6 +186,10 @@ class TVRejected(UserError):
                 ('FAILED_NOT_ENOUGH_TEMP_SPACE', 'FAILED_NOT_ENOUGH_INSTALL_SPACE')):
             self.reason_code = 'tv-storage-full'
             self.args = (TV_STORAGE_FULL,)
+
+    def definite_package_removal_rejection(self, app):
+        ids = self._removal_rejection_ids
+        return ids is not None and all(target == app for target in ids)
 
 
 class ExistingRoot(UserError):
