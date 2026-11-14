@@ -467,6 +467,115 @@ class OriginalOperationIntegration(unittest.TestCase):
         self.installer.install(self.inventory, 'fresh-secret')
         self.assertEqual((self.root / 'requests').read_text().splitlines(), [app, *observer.APPS])
 
+    def test_mixed_removal_keeps_original_eim_settlement_after_vendor_reply_loss(self):
+        from cytv import cli
+        from cytv.errors import UserError
+
+        (self.root / 'proc').mkdir()
+        status_idle = False
+        lose_eim = True
+        inputs = set()
+        removals = []
+        actions = []
+        original_luna = self.remote.luna
+
+        def luna(uri, payload, **options):
+            if uri.endswith('/status') and status_idle:
+                return {'returnValue': True, 'status': {'apps': []}}
+            if uri.endswith('/addDevice'):
+                inputs.add(payload['appId'])
+                if lose_eim:
+                    raise UserError('Connection interrupted during EIM reply', reason_code='connection-interrupted')
+            if uri.endswith('/getAllInputStatus'):
+                return {'returnValue': True, 'devices': [{'appId': app} for app in sorted(inputs)]}
+            if uri.endswith('/deleteDevice'):
+                inputs.discard(payload['appId'])
+            if uri.endswith('/dev/remove'):
+                removals.append((self.remote.boot, payload['id']))
+                terminal = original_luna(uri, payload, **options)
+                if payload['id'] == operations.HELPER:
+                    raise UserError('Connection interrupted during vendor reply', reason_code='connection-interrupted')
+                return terminal
+            return original_luna(uri, payload, **options)
+
+        def remove():
+            self.installer.store = self.store = state.Store(self.store.root)
+            with self.store.lock(self.profile):
+                return self.installer.uninstall_project()
+
+        self.remote.luna = luna
+        self.remote.cut_after_cleanup = lambda request, reply: actions.append(request['action'])
+        with self.store.lock(self.profile), self.assertRaisesRegex(UserError, 'EIM reply'):
+            self.installer.install(self.inventory, 'original-secret')
+        old = self.store.pending(self.profile)
+        opdir = self.root / 'private/operations' / old['observer_operation']
+        self.assertTrue((opdir / 'config-claim-eim.json').exists())
+        self.assertFalse((opdir / 'config-result-eim.json').exists())
+        self.assertEqual(inputs, {operations.HOME})
+
+        self.assertTrue(remove()['restart_required'])
+        first = self.store.pending(self.profile)
+        self.assertEqual(first['cleanup_restart_triggers'], ['original-configuration-unverified'])
+        self.assertEqual(first['cleanup_boot_proof']['kernel'], self.remote.boot)
+        with self.assertRaises(UserError) as waiting:
+            remove()
+        self.assertEqual(waiting.exception.reason_code, 'removal-terminal-unknown')
+        self.assertFalse(removals)
+
+        self.remote.boot = kernel_b = '22222222-2222-2222-2222-222222222222'
+        checkpoint = state.Store.checkpoint
+
+        def lose_checkpoint_ack(store, profile, **fields):
+            checkpoint(store, profile, **fields)
+            if 'cleanup_original_configuration_settled' in fields:
+                raise OSError('Host interrupted after configuration settlement')
+
+        with patch.object(state.Store, 'checkpoint', lose_checkpoint_ack):
+            with self.assertRaisesRegex(OSError, 'after configuration settlement'):
+                remove()
+        self.assertFalse(removals)
+        self.assertEqual(inputs, {operations.HOME})
+        with self.assertRaisesRegex(UserError, 'vendor reply'):
+            remove()
+        self.assertEqual(self.store.pending(self.profile)['removals'], {operations.HELPER: 'submitted'})
+        self.assertEqual(removals, [(kernel_b, operations.HELPER)])
+        self.assertFalse(inputs)
+        self.assertTrue(remove()['restart_required'])
+        second = self.store.pending(self.profile)
+        self.assertEqual(second['cleanup_restart_triggers'], ['package-removal-unverified'])
+        self.assertEqual(second['cleanup_boot_proof']['kernel'], kernel_b)
+        with self.assertRaises(UserError) as waiting:
+            remove()
+        self.assertEqual(waiting.exception.reason_code, 'removal-terminal-unknown')
+        self.assertEqual(removals, [(kernel_b, operations.HELPER)])
+        self.assertFalse((opdir / 'config-result-eim.json').exists())
+
+        status_idle = True
+        self.store.save(self.profile)
+        (self.store.device_dir(self.profile) / 'known_hosts').write_text('trusted-by-fixture\n')
+        args = ['uninstall', '--host', self.profile['host'], '--edition', 'no-root',
+                '--data-dir', str(self.store.root), '--yes', '--non-interactive', '--language', 'en']
+        output = []
+        before = len(actions)
+        with patch('cytv.cli.package.verify_payload', return_value=self.installer.manifest):
+            self.assertEqual(cli.main(args, write=output.append, connect=lambda *_: self.remote,
+                                      payload_root=self.installer.payload), 0, output)
+        self.assertIsNone(self.store.pending(self.profile), output)
+        self.assertNotIn('boot-create', actions[before:])
+        self.assertEqual(removals, [(kernel_b, operations.HELPER), (kernel_b, operations.HOME)])
+        self.assertEqual(json.loads((self.root / 'installed.json').read_text()), {})
+        self.assertFalse((self.root / 'private/active').exists())
+        self.assertFalse(inputs)
+        finished = json.loads((self.store.device_dir(self.profile) / 'clean-removal.json').read_text())
+        self.assertEqual(finished['removal_operation'], first['removal_operation'])
+
+        lose_eim = False
+        with self.store.lock(self.profile):
+            self.installer.install(self.inventory, 'fresh-secret')
+        self.assertEqual(inputs, {operations.HOME})
+        self.assertEqual((self.root / 'requests').read_text().splitlines(), list(observer.APPS) * 2)
+        self.assertIsNone(self.store.pending(self.profile))
+
     def test_closed_release_cut_with_missing_historical_launch_result_allows_removal(self):
         from cytv.errors import UserError
         (self.root / 'proc').mkdir()

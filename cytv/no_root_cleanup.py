@@ -862,14 +862,25 @@ def continue_removal(installer, expected_pending):
                     (current.get('legacy_layout') and _exact_developer_app(installer, app))):
                 targets.add(app)
 
+    configuration_pending = cancellation.get('eim_pending') or cancellation.get('launch_pending')
+    configuration_settled = False
+    if configuration_pending:
+        # The original configuration is bound to the immutable capsule under
+        # this removal goal. Save its verified settlement before another
+        # request can replace the shared boot proof.
+        original = previous['observer_operation']
+        configuration_settled = pending.get('cleanup_original_configuration_settled') == original
+        if not configuration_settled and new_kernel and 'original-configuration-unverified' in boot_triggers:
+            store.checkpoint(profile, cleanup_original_configuration_settled=original)
+            configuration_settled = True
+
     # A proof predating our new vendor request cannot settle that request.
     if submitted and not package_idle and not (new_kernel and 'package-removal-unverified' in boot_triggers):
         return require_restart(['package-removal-unverified'], rearm=proof is not None
                                and 'package-removal-unverified' not in boot_triggers)
-    if cancellation.get('eim_pending') or cancellation.get('launch_pending'):
-        if not (new_kernel and 'original-configuration-unverified' in boot_triggers):
-            return require_restart(['original-configuration-unverified'], rearm=proof is not None
-                                   and 'original-configuration-unverified' not in boot_triggers)
+    if configuration_pending and not configuration_settled:
+        return require_restart(['original-configuration-unverified'], rearm=proof is not None
+                               and 'original-configuration-unverified' not in boot_triggers)
     bound_package_pending = cancellation.get('package_pending') is True
     older_request = legacy_install or (isinstance(previous, dict)
         and (previous.get('stage') in ('submitted', 'removing') or
