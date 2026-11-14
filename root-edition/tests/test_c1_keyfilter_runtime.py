@@ -381,7 +381,9 @@ class RuntimeTests(unittest.TestCase):
         own = self.k.filter_entry(self.root)
         vendor = {'file': '/usr/lib/qt5/qml/KeyFilters/systemUi.js', 'handler': 'handleSystemKeys'}
         self.k.atomic(self.root/'c1-keyfilter/ownership.json', dict(schema=1, entry=own, token='1'*32), self.uid)
-        for case in ('stock', 'other-foreground', 'cytv-overlay', 'stock-changed', 'other-attempt', 'lock-failed'):
+        for case in ('stock', 'explicit-stock', 'other-foreground', 'cytv-overlay', 'stock-changed',
+                     'other-attempt', 'lock-failed', 'display-false', 'display-float',
+                     'hidden', 'absent', 'malformed-visibility'):
             with self.subTest(case=case):
                 chain = [own, vendor]
                 initial = self.proof()
@@ -402,6 +404,18 @@ class RuntimeTests(unittest.TestCase):
                 surfaces = [{'appId': self.k.STOCK, 'windowType': self.k.HOME}]
                 if case == 'cytv-overlay':
                     surfaces.append({'appId': self.k.APP, 'windowType': '_WEBOS_WINDOW_TYPE_OVERLAY'})
+                if case == 'absent':
+                    surfaces.clear()
+                if case == 'display-false':
+                    surfaces[0].update(displayId=False, visible=True)
+                if case == 'display-float':
+                    surfaces[0].update(displayId=0.0, visible=True)
+                if case == 'hidden':
+                    surfaces[0]['visible'] = False
+                if case == 'malformed-visibility':
+                    surfaces.append(dict(surfaces[0], visible=0))
+                if case == 'explicit-stock':
+                    surfaces[0].update(displayId=0, visible=True)
                 def read_foreground(uri, payload):
                     if uri == 'luna://com.webos.surfacemanager/getForegroundAppInfo':
                         return {'returnValue': True, 'foregroundAppInfo': surfaces}
@@ -412,13 +426,15 @@ class RuntimeTests(unittest.TestCase):
                         patch.object(self.k, 'read_chain', side_effect=lambda: list(chain)), \
                         patch.object(self.k, 'write_chain', side_effect=write), \
                         patch.object(self.k, 'luna', side_effect=read_foreground):
-                    if case == 'stock':
+                    if case in ('stock', 'explicit-stock'):
                         self.assertEqual(self.k.restore_for_removal(self.root, self.uid), 'restored')
                         self.assertEqual(chain, [vendor])
                         self.assertEqual(self.k.read_intent(self.root, self.uid)['phase'], 'disabled')
                     else:
-                        with self.assertRaises(ValueError):
+                        with self.assertRaises(ValueError) as caught:
                             self.k.restore_for_removal(self.root, self.uid)
+                        self.assertEqual(getattr(caught.exception, 'native_reason', None),
+                                         'effect_busy' if case == 'lock-failed' else 'ui_release_failed')
 
     def test_lifecycle_replay_cancel_and_unknown_visibility(self):
         policy=self.k.ReturnPolicy('1'*32)

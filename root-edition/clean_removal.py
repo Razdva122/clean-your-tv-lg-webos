@@ -143,15 +143,25 @@ def compositor_stock(payload, *, retire_orphan=False):
 
 
 def compositor_stock_report(payload, *, retire_orphan=False):
-    """One current child observation; failure stays failure with bounded context."""
+    return _cleanup_child_report(compositor_stock, payload, **({'retire_orphan': True} if retire_orphan else {}))
+
+
+def runtime_restore_report(payload, uid=0):
+    report = _cleanup_child_report(runtime_restore, payload, uid)
+    return report['result'] if report['returnValue'] else report
+
+
+def _cleanup_child_report(action, *args, **kwargs):
+    """One current child operation with bounded failure context."""
     try:
-        result = compositor_stock(payload, retire_orphan=True) if retire_orphan else compositor_stock(payload)
-        return {'returnValue':True,'result':result}
+        return {'returnValue':True,'result':action(*args, **kwargs)}
     except Exception as error:
         import traceback
         traceback.print_exc()  # Existing private child stderr, never part of the export.
         from install_driver import failure_summary, cleanup_probe_details
         detail=failure_summary(error)
+        detail['native_reason']=getattr(error,'native_reason',None)
+        detail['restore_check']=getattr(error,'restore_check',None)
         detail['frames']=[{'file':Path(frame.filename).name,'line':frame.lineno}
             for frame in traceback.extract_tb(error.__traceback__)][-8:]
         return {'returnValue':False,'cleanup_probe':cleanup_probe_details(detail)}

@@ -270,7 +270,15 @@ def worker_summary(value):
         if type(item) is int and low <= item <= high:
             result[key] = item
     from .errors import root_driver_details
-    probe=root_driver_details(value.get('cleanup_probe'))
+    raw_probe=mapping(value.get('cleanup_probe'))
+    probe=root_driver_details(raw_probe)
+    if probe and value.get('cleanup_step')=='runtime-restore':
+        reason=choice(raw_probe.get('native_reason'),('effect_busy','ui_release_failed'),None)
+        if reason is not None:probe['native_reason']=reason
+        if reason=='ui_release_failed':
+            check=choice(raw_probe.get('restore_check'),('native-stop-unverified','stock-foreground-unverified',
+                'stock-surface-unverified','stock-routing-unverified'),None)
+            if check is not None:probe['restore_check']=check
     if probe:result['cleanup_probe']=probe
     inspect_check=choice(value.get('inspect_check'), ('restart_required', 'support_stage_remains', 'live_original_worker',
                   'project_apps_remain', 'restored_routes_changed', 'startup_remains',
