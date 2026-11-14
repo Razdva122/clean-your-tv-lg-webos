@@ -1,53 +1,7 @@
 {
   "schema": 1,
-  "version": "1.20.6",
-  "changes": [
-    {
-      "pr": 623,
-      "issues": [
-        418,
-        615
-      ],
-      "summary": "Verify stock Home before continuing compositor removal"
-    },
-    {
-      "pr": 624,
-      "issues": [
-        418
-      ],
-      "summary": "Handle access errors when reading saved TV profiles"
-    },
-    {
-      "pr": 629,
-      "issues": [
-        418,
-        615
-      ],
-      "summary": "Fix experimental Home caller permissions on W21"
-    },
-    {
-      "pr": 630,
-      "issues": [
-        152,
-        472
-      ],
-      "summary": "Recover No-root removal after interrupted installs and omitted packages"
-    },
-    {
-      "pr": 631,
-      "issues": [
-        454,
-        519
-      ],
-      "summary": "Preserve Root recovery while diagnosing Home compatibility"
-    }
-  ],
+  "version": null,
+  "changes": [],
   "excluded": [],
-  "acceptance": "Project LG OLED55C3RLA / firmware 43.21.71 / webOS SDK 11.2.0: exact macOS ARM64 installer passed Root and No-root setup, Home routing, removal across verified software restart and baseline restoration. Signed Root update and rollback passed with matching versions and profile, physical Home/navigation/emergency controls and audio. Both exact Chinese font faces rendered on C3; Android same-signer upgrade passed in API 35 ARM64. W21 A1/C1 physical acceptance is deferred by the maintainer to device owners. See docs/history/2026-11-14-release-1.20.6-rc-verification.md.",
-  "build": {
-    "run_id": 43576072858,
-    "attempt": 1,
-    "source": "50f73905262f1a38c218657eaac1289ae7662a48"
-  },
-  "acceptance_build": "43576072858:1"
+  "acceptance": ""
 }
