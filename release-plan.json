@@ -1,35 +1,7 @@
 {
   "schema": 1,
-  "version": "1.21.0",
-  "changes": [
-    {
-      "pr": 649,
-      "issues": [
-        646
-      ],
-      "summary": "Add Home settings tile editing without holding OK"
-    },
-    {
-      "pr": 655,
-      "issues": [
-        653
-      ],
-      "summary": "Complete No-root upgrades after Developer Mode widens Helper state (#653)"
-    },
-    {
-      "pr": 656,
-      "issues": [
-        643
-      ],
-      "summary": "Retry Windows reads of saved removal receipts"
-    }
-  ],
+  "version": null,
+  "changes": [],
   "excluded": [],
-  "acceptance": "Project LG OLED55C3RLA, firmware 43.21.71, webOS SDK 11.2.0, macOS ARM64 cytv 0.20.9. Exact No-root Home 1.19.0 and Helper 0.8.7 installed over saved Root SSH; original Stop, explicit Start, network HOME, short-OK tile editing with persisted order, ordinary Restore and verified removal passed. Exact signed Root 0.20.0 and Updater 0.5.17 updated through System Updater from Root 0.17.0, rendered and retained the profile; tile editing, stock network HOME, Restore and ordinary rollback passed. Original published No-root state and stock LG Home were restored on the C3. Pinned Android code 46 signed emulator upgrade retained all four records. The reporter C2 Developer Mode firmware/state is unavailable for physical RC-05 confirmation; focused fixtures passed. Artifact hashes, device observations and limitations: docs/history/2026-11-15-release-1.21.0-rc-verification.md.",
-  "build": {
-    "run_id": 43716432145,
-    "attempt": 1,
-    "source": "b1a7caabbae142bd1f47c8b599c42a4820984c77"
-  },
-  "acceptance_build": "43716432145:1"
+  "acceptance": ""
 }
