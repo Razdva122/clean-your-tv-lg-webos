@@ -551,9 +551,14 @@ def _missing_capsule_receipt(previous):
             isinstance(value, str) and re.fullmatch('[a-f0-9]{64}', value)
             for value in configuration.values()):
         return None
+    original_source = hashlib.sha256(observer.PROGRAM.encode()).hexdigest()
+    packaged_source = hashlib.sha256(observer.PACKAGED_STATE_PROGRAM.encode()).hexdigest()
+    source = previous.get('observer_source_sha256', original_source)
+    if source not in (original_source, packaged_source):
+        return None
     return {'operation': operation, 'diagnostic_id': diagnostic_id, 'versions': versions,
             'configuration_sha256': hashlib.sha256(observer.canonical(configuration).encode()).hexdigest(),
-            'source_sha256': hashlib.sha256(observer.PROGRAM.encode()).hexdigest(),
+            'source_sha256': source,
             'default_root': observer.ROOT, 'roots': [observer.ROOT, observer.JAIL_ROOT]}
 
 
