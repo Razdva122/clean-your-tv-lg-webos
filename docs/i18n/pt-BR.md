@@ -91,6 +91,8 @@ Suporte IR No-root: soltar Home após um toque curto agenda o Clean para cerca d
 
 Setas selecionam; OK abre; segure OK para reorganizar. Um toque em Voltar mantém a navegação e a confirmação de saída do aplicativo. Home abre o lançador com o controle ativo. Segure Voltar por 1,2 segundos para abrir LG Home uma vez. O interruptor de controle do Home e suas configurações não mudam.
 
+Para editar com toques curtos, abra **Configurações do Home → Aparência → Editar blocos**. Pressione OK para selecionar um bloco, mova-o com as setas e pressione OK para soltá-lo. Voltar cancela o movimento ou encerra a edição.
+
 **Pressione Home três vezes em dois segundos**, soltando entre os toques. Isso restaura LG Home e interrompe o controle sem apagar preferências.
 
 No-root: Para reiniciar o controle de Home, abra Home Helper, escolha Iniciar Helper e confirme. Sua tela Home escolhida será mantida. Root: ative **Alterar Home** nas configurações do Home para retomar. **Abrir LG Home** abre LG Home uma vez sem mudar o destino de Home. Para restaurar LG Home como destino permanente, desative **Alterar Home**. Nunca execute os dois controladores juntos. Se a falha voltar, mantenha LG Home ativo.

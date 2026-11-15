@@ -4117,3 +4117,58 @@ HomeI18n.add({
   'zh-Hans': { 'Applications': '应用' },
   'zh-Hant': { 'Applications': '應用程式' }
 });
+
+HomeI18n.add({
+  en: {
+    'Edit tiles': 'Edit tiles',
+    'OK Pick up   ·   Back Exit': 'OK Pick up   ·   Back Exit'
+  },
+  cs: {
+    'Edit tiles': 'Upravit dlaždice',
+    'OK Pick up   ·   Back Exit': 'OK Vybrat   ·   Zpět Ukončit'
+  },
+  de: {
+    'Edit tiles': 'Kacheln bearbeiten',
+    'OK Pick up   ·   Back Exit': 'OK Aufnehmen   ·   Zurück Beenden'
+  },
+  es: {
+    'Edit tiles': 'Editar mosaicos',
+    'OK Pick up   ·   Back Exit': 'OK Seleccionar   ·   Atrás Salir'
+  },
+  'pt-BR': {
+    'Edit tiles': 'Editar blocos',
+    'OK Pick up   ·   Back Exit': 'OK Selecionar   ·   Voltar Sair'
+  },
+  fr: {
+    'Edit tiles': 'Modifier les tuiles',
+    'OK Pick up   ·   Back Exit': 'OK Sélectionner   ·   Retour Quitter'
+  },
+  it: {
+    'Edit tiles': 'Modifica riquadri',
+    'OK Pick up   ·   Back Exit': 'OK Seleziona   ·   Indietro Esci'
+  },
+  ko: {
+    'Edit tiles': '타일 편집',
+    'OK Pick up   ·   Back Exit': 'OK 타일 선택   ·   뒤로 종료'
+  },
+  hi: {
+    'Edit tiles': 'टाइलें संपादित करें',
+    'OK Pick up   ·   Back Exit': 'OK चुनें   ·   वापस बाहर निकलें'
+  },
+  pl: {
+    'Edit tiles': 'Edytuj kafelki',
+    'OK Pick up   ·   Back Exit': 'OK Wybierz   ·   Wstecz Wyjdź'
+  },
+  ru: {
+    'Edit tiles': 'Редактировать плитки',
+    'OK Pick up   ·   Back Exit': 'OK Поднять плитку   ·   Назад Выйти'
+  },
+  'zh-Hans': {
+    'Edit tiles': '编辑磁贴',
+    'OK Pick up   ·   Back Exit': 'OK 拾取   ·   返回退出'
+  },
+  'zh-Hant': {
+    'Edit tiles': '編輯圖塊',
+    'OK Pick up   ·   Back Exit': 'OK 拿起   ·   返回離開'
+  }
+});

@@ -376,6 +376,7 @@
     pickerButtons = [];
   var hideSelected = false,
     undoState = null,
+    tileEditMode = false,
     undoBar,
     undoButton,
     pointerTimer = null,
@@ -489,6 +490,15 @@
     element.addEventListener('mouseover', hover);
     element.addEventListener('mousemove', hover);
   }
+  function editableTileCount() {
+    var last = tiles[tiles.length - 1];
+    return tiles.length - (last && last.add ? 1 : 0);
+  }
+  function setTileEditMode(active) {
+    tileEditMode = active && editableTileCount() > 0;
+    editHint.hidden = !tileEditMode;
+    if (tileEditMode) editHint.textContent = tr('OK Pick up   ·   Back Exit');
+  }
   function screenIds() {
     return tiles
       .filter(function (item) {
@@ -511,6 +521,7 @@
     inputTilesDirty = false;
     tilesContainer.innerHTML = '';
     tiles = library.visible().map(createTile);
+    if (tileEditMode && !tiles.length) setTileEditMode(false);
     if (library.showAddApp()) {
       var el = document.createElement('div');
       el.className = 'item add-app ctv-tile';
@@ -530,6 +541,7 @@
       bindPointerFocus(el, function () {
         if (
           !moveState &&
+          !tileEditMode &&
           !pickerOpen &&
           !undoState &&
           (focusZone !== 'grid' || tiles[focusedTile] !== item)
@@ -538,7 +550,7 @@
         }
       });
       el.addEventListener('click', function () {
-        if (!moveState) {
+        if (!moveState && !tileEditMode) {
           openPicker();
         }
       });
@@ -666,7 +678,13 @@
   }
   function bindHold(item) {
     item.el.addEventListener('mousedown', function (event) {
-      if (event.button !== 0 || moveState || pickerOpen || undoState) {
+      if (
+        event.button !== 0 ||
+        moveState ||
+        tileEditMode ||
+        pickerOpen ||
+        undoState
+      ) {
         return;
       }
       focusTile(tiles.indexOf(item));
@@ -708,6 +726,8 @@
     if (moveState) {
       pointerMove(item);
       finishMoving(true);
+    } else if (tileEditMode) {
+      beginMoving(item);
     } else {
       activateTile(item);
     }
@@ -726,7 +746,8 @@
     }
     var item = moveState.item,
       snapshot = moveState.snapshot.slice(),
-      oldHidden = library.hidden();
+      oldHidden = library.hidden(),
+      resumeEdit = tileEditMode;
     var previous = tiles.slice();
     tiles = tiles.filter(function (tile) {
       return tile !== item;
@@ -741,7 +762,7 @@
     setPartState(item.el, 'moving', false);
     document.body.classList.remove('editing');
     hideButton.hidden = true;
-    editHint.hidden = true;
+    setTileEditMode(false);
     item.el.remove();
     layoutTiles();
     focusZone = 'none';
@@ -755,7 +776,8 @@
           return tile.app.id;
         }),
       hidden: oldHidden,
-      id: item.app.id
+      id: item.app.id,
+      resumeEdit: resumeEdit
     };
     undoBar.hidden = false;
     undoButton.focus();
@@ -764,8 +786,10 @@
     if (!undoState) {
       return;
     }
+    var resumeEdit = undoState.resumeEdit;
     undoState = null;
     undoBar.hidden = true;
+    setTileEditMode(resumeEdit);
     focusTile(focusedTile);
   }
   function undoHide() {
@@ -773,10 +797,11 @@
       return;
     }
     try {
-      var id = undoState.id;
-      library.save(undoState.ids, undoState.hidden);
+      var undo = undoState;
+      library.save(undo.ids, undo.hidden);
       dismissUndo();
-      rebuild(id);
+      rebuild(undo.id);
+      if (undo.resumeEdit && !tileEditMode) setTileEditMode(true);
     } catch (error) {
       showToast(tr("Couldn't restore app. Please try again."));
     }
@@ -953,6 +978,8 @@
     window.HomeAppControls = {
       launch: launchApp,
       refresh: function () {
+        var editButton = getElement('homeEditTiles');
+        if (editButton) editButton.disabled = !editableTileCount();
         var button = getElement('homeShowAddApp');
         if (button)
           button.setAttribute('aria-checked', String(library.showAddApp()));
@@ -970,7 +997,12 @@
             error.textContent = tr("Couldn't save changes. Please try again.");
         }
       },
-      add: openPicker
+      add: openPicker,
+      edit: function () {
+        cancelHold();
+        setTileEditMode(true);
+        if (tileEditMode) focusTile(focusedTile);
+      }
     };
     hideButton = document.createElement('button');
     hideButton.id = 'hideApp';
@@ -986,6 +1018,7 @@
     editHint = document.createElement('div');
     editHint.id = 'editHint';
     editHint.hidden = true;
+    editHint.setAttribute('role', 'status');
     editHint.textContent = tr(
       '← ↑ ↓ → Move   ·   OK Place   ·   Back Cancel   ·   ↓ Below last row to hide'
     );
@@ -1035,6 +1068,7 @@
     document.addEventListener('visibilitychange', function () {
       if (document.hidden) {
         cancelHold();
+        if (tileEditMode) setTileEditMode(false);
         if (moveState) {
           finishMoving(false);
         }
@@ -1075,7 +1109,7 @@
           if (key === 13 && !event.repeat) {
             hideApp();
           } else if (key === 27 || key === 461) {
-            finishMoving(false);
+            if (!tileEditMode || !event.repeat) finishMoving(false);
           } else if (key === (layoutGeometry.ribbon ? 40 : 38)) {
             hideSelected = false;
             hideButton.classList.remove('focused');
@@ -1263,6 +1297,7 @@
   }
   function stepRibbon(direction) {
     if (
+      !tileEditMode &&
       direction < 0 &&
       ribbonSlot(focusedTile) === 0 &&
       layoutGeometry.ribbon &&
@@ -1271,7 +1306,8 @@
       focusTopButton(2);
       return;
     }
-    var index = (focusedTile + direction + tiles.length) % tiles.length;
+    var count = tileEditMode ? editableTileCount() : tiles.length;
+    var index = (focusedTile + direction + count) % count;
     if (tiles.length > columnCount && ribbonSlot(index) >= columnCount) {
       ribbonStart =
         direction < 0
@@ -1448,7 +1484,8 @@
       return;
     }
     if (tiles.length) {
-      index = Math.max(0, Math.min(index, tiles.length - 1));
+      var count = tileEditMode ? editableTileCount() : tiles.length;
+      index = Math.max(0, Math.min(index, count - 1));
       setFocusZone('grid');
       tiles[focusedTile] &&
         setPartState(tiles[focusedTile].el, 'focused', false);
@@ -1723,6 +1760,7 @@
     setPartState(topButtons[focusedTopButton], 'focused', true);
   }
   function setFocusZone(zone) {
+    if (tileEditMode && zone !== 'grid') setTileEditMode(false);
     // Some paths reset focusZone directly, so clear a shelf highlight and preview on every exit.
     if ('shelf' !== zone) {
       setPartState(
@@ -1971,13 +2009,17 @@
         !moveState &&
         !pickerOpen &&
         !undoState &&
+        !tileEditMode &&
         'inputs' !== focusZone &&
         ('shelf' !== focusZone || focusedShelf !== index)
       )
         focusShelf(index);
     });
     element.addEventListener('click', function () {
-      if (!moveState && !pickerOpen && !undoState) launchInput(input);
+      if (!moveState && !pickerOpen && !undoState) {
+        if (tileEditMode) setTileEditMode(false);
+        launchInput(input);
+      }
     });
     element.addEventListener('mousedown', function (event) {
       if (event.button === 0) setPressed(element, true);
@@ -2280,6 +2322,7 @@
     return inputRows.length;
   }
   function activateTopButton(index) {
+    if (tileEditMode) setTileEditMode(false);
     0 === index
       ? (function () {
           if (fillInputsPanel()) {
@@ -2393,7 +2436,7 @@
     document.body.classList.remove('editing');
     hideSelected = false;
     hideButton.hidden = true;
-    editHint.hidden = true;
+    setTileEditMode(tileEditMode);
     layoutTiles();
     focusTile(tiles.indexOf(item));
   }
@@ -2405,6 +2448,7 @@
     cancelHold();
     closePicker();
     dismissUndo();
+    if (tileEditMode) setTileEditMode(false);
     moveState && finishMoving(false);
     updateClock();
     'inputs' === focusZone && inputsPanel.classList.add('hidden');
@@ -2447,7 +2491,15 @@
     if (key !== KEY_OK && okHoldTimer) {
       cancelHold();
     }
-    if (key === KEY_OK && okPressed) {
+    if (tileEditMode && (key === KEY_BACK || key === 27)) {
+      if (!event.repeat) {
+        if (moveState) finishMoving(false);
+        else setTileEditMode(false);
+      }
+      event.preventDefault();
+      return;
+    }
+    if (key === KEY_OK && (okPressed || (tileEditMode && event.repeat))) {
       event.preventDefault();
     } else {
       if ((key === KEY_OK && (okPressed = true), moveState)) {
@@ -2554,11 +2606,11 @@
         }
       } else {
         var column = focusedTile % columnCount,
-          lastIndex = tiles.length - 1;
+          lastIndex = (tileEditMode ? editableTileCount() : tiles.length) - 1;
         if (37 === key) {
           if (layoutPreset === 'scenic-grid') stepRibbon(-1);
           else if (column > 0) focusTile(focusedTile - 1);
-          else if (layoutPreset === 'side-grid')
+          else if (!tileEditMode && layoutPreset === 'side-grid')
             focusTopButton(focusedTopButton);
           else edgeBump('left');
         } else if (39 === key) {
@@ -2568,9 +2620,9 @@
           else edgeBump('right');
         } else if (38 === key) {
           if (0 !== rowFor(focusedTile)) focusTile(focusedTile - columnCount);
-          else if (shelfVisible())
+          else if (!tileEditMode && shelfVisible())
             focusShelf(nearestShelf(tileLeft(focusedTile) + CARD_WIDTH / 2));
-          else
+          else if (!tileEditMode)
             focusTopButton(
               nearestTopButton(tileLeft(focusedTile) + CARD_WIDTH / 2)
             );
@@ -2578,6 +2630,8 @@
           rowFor(focusedTile) < rowFor(lastIndex)
             ? focusTile(Math.min(focusedTile + columnCount, lastIndex))
             : edgeBump('down');
+        } else if (key === KEY_OK && tileEditMode) {
+          beginMoving(tiles[focusedTile]);
         } else if (key === KEY_OK) {
           setPressed(tiles[focusedTile] && tiles[focusedTile].el, true);
           okHoldTimer = setTimeout(function () {
@@ -2594,6 +2648,7 @@
   topButtons.forEach(function (e, t) {
     bindPointerFocus(e, function () {
       'inputs' !== focusZone &&
+        !tileEditMode &&
         !moveState &&
         !pickerOpen &&
         !undoState &&
