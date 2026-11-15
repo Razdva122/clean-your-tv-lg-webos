@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "version": null,
+  "version": "1.20.8",
   "changes": [
     {
       "pr": 640,
@@ -15,6 +15,27 @@
         152
       ],
       "summary": "Identify protected apps in No-root cleanup reports"
+    },
+    {
+      "pr": 644,
+      "issues": [
+        643
+      ],
+      "summary": "Resume No-root removal over root SSH when SAM Home is unset"
+    },
+    {
+      "pr": 645,
+      "issues": [
+        418
+      ],
+      "summary": "Report failed Root activation recovery steps"
+    },
+    {
+      "pr": 648,
+      "issues": [
+        647
+      ],
+      "summary": "Resume No-root updates with a stale Helper pairing key"
     }
   ],
   "excluded": [],
