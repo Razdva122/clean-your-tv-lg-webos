@@ -1,49 +1,7 @@
 {
   "schema": 1,
-  "version": "1.20.8",
-  "changes": [
-    {
-      "pr": 640,
-      "issues": [
-        615
-      ],
-      "summary": "Allow the stock LG screensaver during verified Root removal"
-    },
-    {
-      "pr": 642,
-      "issues": [
-        152
-      ],
-      "summary": "Identify protected apps in No-root cleanup reports"
-    },
-    {
-      "pr": 644,
-      "issues": [
-        643
-      ],
-      "summary": "Resume No-root removal over root SSH when SAM Home is unset"
-    },
-    {
-      "pr": 645,
-      "issues": [
-        418
-      ],
-      "summary": "Report failed Root activation recovery steps"
-    },
-    {
-      "pr": 648,
-      "issues": [
-        647
-      ],
-      "summary": "Resume No-root updates with a stale Helper pairing key"
-    }
-  ],
+  "version": null,
+  "changes": [],
   "excluded": [],
-  "acceptance": "Project LG OLED55C3RLA, firmware 43.21.71, webOS SDK 11.2.0, macOS ARM64 cytv 0.20.8: No-root Home 1.18.7/Helper 0.8.6 install in place, preserved Stop, explicit Start and stable network HOME, ordinary Restore and verified removal. Root signed 0.19.8 update, rendered/profile readback, stock HOME and ordinary rollback to Root 0.17.0 passed. Original No-root profile and stock LG Home restored. Pixel 6 API 35 ARM64 userdebug emulator: original-signer upgrade from published v1.20.7 (44) to exact v1.20.8 (45), retained four app-private records, idle launch and native recovery fixtures passed. Exact hashes, network observations and rollback evidence: docs/history/2026-11-15-release-1.20.8-rc-verification.md. Reporter-specific RC-07 configurations remain unavailable pending focused follow-up.",
-  "build": {
-    "run_id": 43689792534,
-    "attempt": 1,
-    "source": "1d79a8c3e5a004ea32fe90ff6608c0cd66eed0ce"
-  },
-  "acceptance_build": "43689792534:1"
+  "acceptance": ""
 }
