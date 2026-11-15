@@ -307,6 +307,46 @@ function unownedRouting(allowNative) {
     !exists('/var/webos-profile/override/clean-your-tv-root.json')
   );
 }
+function stockProfilesEligible() {
+  var original = record.original;
+  var journals = [
+    'deploy',
+    'root-bootstrap',
+    'root-update',
+    'system-bootstrap',
+    'system-update'
+  ];
+  function noJournals(value) {
+    return (
+      object(value) &&
+      Object.keys(value).length === journals.length &&
+      journals.every(function (key) {
+        return value[key] === null;
+      })
+    );
+  }
+  var backup = json(directory, 'routing-backup-' + id + '.json');
+  return (
+    record.profileless_cleanup_eligible === true &&
+    object(original) &&
+    object(original.lease) &&
+    original.lease.owner === 'clean-removal' &&
+    original.request === null &&
+    original.submission === null &&
+    original.removal === null &&
+    noJournals(original.components) &&
+    noJournals(record.fenced_components) &&
+    object(backup) &&
+    Object.keys(backup).length === 0 &&
+    ![
+      'clean-your-tv-root',
+      'clean-your-tv-root-updater',
+      'clean-your-tv-system-updater'
+    ].some(function (name) {
+      return exists('/var/lib/' + name);
+    })
+  );
+}
 function routingUntouched() {
   var deploy = record.fenced_components && record.fenced_components.deploy;
   if (
@@ -660,7 +700,10 @@ async function absent() {
       category: 'general',
       keys: ['defaultApps']
     });
-    var home = settings.settings.defaultApps.home,
+    var defaultApps = settings.settings.defaultApps,
+      home = defaultApps.home,
+      stockProfiles =
+        object(record.routes) && record.routes.mode === 'stock-profiles',
       stockOnly =
         record.profileless_cleanup_eligible === true &&
         object(record.routes) &&
@@ -672,8 +715,18 @@ async function absent() {
         record.routing_never_applied === true &&
         record.routes &&
         record.routes.mode === 'never-applied';
-    if (typeof home !== 'string' || !home || apps.indexOf(home) !== -1)
+    if (stockProfiles) {
+      if (
+        !object(defaultApps) ||
+        Object.keys(record.routes).length !== 1 ||
+        (Object.prototype.hasOwnProperty.call(defaultApps, 'home') &&
+          home !== 'com.webos.app.home') ||
+        !stockProfilesEligible()
+      )
+        throw Error('route-changed');
+    } else if (typeof home !== 'string' || !home || apps.indexOf(home) !== -1) {
       throw Error('owned-route-remains');
+    }
     try {
       profiles = (
         await rpc('com.webos.service.systemprofile/getProfiles', {
@@ -683,10 +736,19 @@ async function absent() {
       ).profiles;
       if (!object(profiles)) throw Error('cleanup-readback-malformed');
     } catch (error) {
-      if (!never && !(stockOnly && error.systemprofile_missing === true))
+      if (
+        stockProfiles ||
+        (!never && !(stockOnly && error.systemprofile_missing === true))
+      )
         throw error;
     }
-    if (profiles) {
+    if (stockProfiles) {
+      if (
+        profiles.defaultApps.categories.home !== 'com.webos.app.home' ||
+        profiles.idleApp.appId !== 'com.webos.app.home'
+      )
+        throw Error('route-changed');
+    } else if (profiles) {
       if (stockOnly) throw Error('route-changed');
       var routes = [
         home,
