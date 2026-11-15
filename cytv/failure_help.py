@@ -116,6 +116,8 @@ def for_error(error, phase, profile=None, pending=None):
     root_ssh = edition == 'root' or profile.get('connection') == 'root-ssh'
     names = {cls.__name__ for cls in type(error).__mro__}
     reason = getattr(error, 'reason_code', None)
+    if getattr(error, 'local_recovery', {}).get('reason') == 'operation-access' and reason != 'computer-storage-full':
+        return None  # The installer already explains the local storage failure.
     clean_removal = isinstance(pending, dict) and pending.get('recovery_protocol') == 'clean-removal-v1'
     removal_ssh_error = clean_removal and bool(names.intersection(('SSHException', 'NoValidConnectionsError')))
     code = None

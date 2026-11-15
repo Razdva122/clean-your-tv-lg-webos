@@ -239,7 +239,10 @@ Optional `local_recovery` distinguishes host directory ownership/permissions,
 directory type/access, unavailable storage, missing/unsafe/changed/invalid capsule
 bytes, invalid operation selectors and incompatible retained observer source.
 `profile-access` identifies a saved connection file that could not be read. Windows
-sharing and lock violations are retried briefly. Status and doctor can offer
+sharing and lock violations are retried briefly when reading profiles and operation
+receipts. `operation-access` identifies an unreadable operation receipt and holds
+recovery before SSH. Once readable, the existing removal receipt is reused.
+Status and doctor can offer
 readable connections; recovery still requires verification of its saved identity.
 It appears in current errors and revalidated first/current-observation history.
 Only fixed `reason` and `location` (`profile`, `ancestor`, `capsule`, `operation`)
