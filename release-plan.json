@@ -1,42 +1,49 @@
 {
   "schema": 1,
-  "version": "1.20.7",
+  "version": "1.20.8",
   "changes": [
     {
-      "pr": 634,
+      "pr": 640,
       "issues": [
-        626
+        615
       ],
-      "summary": "Use the LG catalog for No-root removal on legacy TVs"
+      "summary": "Allow the stock LG screensaver during verified Root removal"
     },
     {
-      "pr": 636,
+      "pr": 642,
       "issues": [
-        472
+        152
       ],
-      "summary": "Confirm LG Home after an unacknowledged No-root removal launch"
+      "summary": "Identify protected apps in No-root cleanup reports"
     },
     {
-      "pr": 637,
+      "pr": 644,
       "issues": [
-        505
+        643
       ],
-      "summary": "Restore No-root Helper and panel after reboot and Stop (#505)"
+      "summary": "Resume No-root removal over root SSH when SAM Home is unset"
     },
     {
-      "pr": 638,
+      "pr": 645,
       "issues": [
-        635
+        418
       ],
-      "summary": "Recover No-root removal when the original capsule is missing (#635)"
+      "summary": "Report failed Root activation recovery steps"
+    },
+    {
+      "pr": 648,
+      "issues": [
+        647
+      ],
+      "summary": "Resume No-root updates with a stale Helper pairing key"
     }
   ],
   "excluded": [],
-  "acceptance": "Project OLED55C3RLA, firmware 43.21.71, SDK 11.2.0, macOS ARM64: all seven selected C3 cases passed, including signed Root update/rollback, No-root restart, Helper panel at 0777, physical triple Home, Start Helper and verified baseline restoration. Artifact hashes, observations and limits: docs/history/2026-11-14-release-1.20.7-rc-verification.md. The exact Android APK passed original-signer versionCode 43 to 44 upgrade, Store retention and native OperationChecks on an isolated API 35 ARM64 emulator. Physical phones and reporter-specific hardware remain unverified.",
+  "acceptance": "Project LG OLED55C3RLA, firmware 43.21.71, webOS SDK 11.2.0, macOS ARM64 cytv 0.20.8: No-root Home 1.18.7/Helper 0.8.6 install in place, preserved Stop, explicit Start and stable network HOME, ordinary Restore and verified removal. Root signed 0.19.8 update, rendered/profile readback, stock HOME and ordinary rollback to Root 0.17.0 passed. Original No-root profile and stock LG Home restored. Pixel 6 API 35 ARM64 userdebug emulator: original-signer upgrade from published v1.20.7 (44) to exact v1.20.8 (45), retained four app-private records, idle launch and native recovery fixtures passed. Exact hashes, network observations and rollback evidence: docs/history/2026-11-15-release-1.20.8-rc-verification.md. Reporter-specific RC-07 configurations remain unavailable pending focused follow-up.",
   "build": {
-    "run_id": 43610126410,
+    "run_id": 43689792534,
     "attempt": 1,
-    "source": "2d98cf41bcc5f201df0983bcb306a59c1b0cea4b"
+    "source": "1d79a8c3e5a004ea32fe90ff6608c0cd66eed0ce"
   },
-  "acceptance_build": "43610126410:1"
+  "acceptance_build": "43689792534:1"
 }

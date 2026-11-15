@@ -664,7 +664,12 @@ def _check_access(value, defer_packages=False, *, action='inventory', guard=Fals
         if action == 'sweep' or not root_required:
             areas = ['root-location'] if value['root_present'] else []
             areas.extend(_blocked_area(row) for row in access_denied)
-            error.no_root_cleanup = no_root_cleanup_details({'action': action, 'blocked_areas': areas})
+            detail = {'action': action, 'blocked_areas': areas}
+            if action == 'sweep':
+                scopes = [row.get('scope') for row in access_denied]
+                detail['blocked_apps'] = [component for app, component in zip(APPS, ('helper', 'home', 'updater'))
+                                          if app + ' app' in scopes]
+            error.no_root_cleanup = no_root_cleanup_details(detail)
         raise error
     if blocked:
         error = UserError('Some project paths changed. Close other installers, then review recovery options.')

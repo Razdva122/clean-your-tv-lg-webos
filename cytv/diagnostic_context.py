@@ -157,6 +157,20 @@ def tv_summary(value):
             count = icons.get(key)
             if type(count) is int and 0 <= count <= 1800:
                 result['icon_inventory'][key] = count
+    if 'root_activation_restore_failure' in value:
+        failure = mapping(value['root_activation_restore_failure'])
+        detail = {
+            'step': choice(failure.get('step'), ('initial-status', 'restore', 'final-status', 'finalize')),
+            'reason': choice(failure.get('reason'), ('integrity-unverified', 'stock-home-unverified',
+                'ssh-command-failed', 'connection-interrupted', 'invalid-response',
+                'operation-unconfirmed', 'observation-failed')),
+        }
+        code = failure.get('exit_status')
+        if detail['reason'] == 'ssh-command-failed' and type(code) is int and -1 <= code <= 255:
+            detail['exit_status'] = code
+        if detail['reason'] == 'connection-interrupted' and failure.get('reconnect_failed') is True:
+            detail['reconnect_failed'] = True
+        result['root_activation_restore_failure'] = detail
     if 'root_setup_recovery' in value:
         result['root_setup_recovery'] = root_setup_summary(value['root_setup_recovery'])
     if 'root_inventory' in value:

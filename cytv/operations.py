@@ -1028,6 +1028,8 @@ else:
         Keep the original stage/error, including when the compensation fails.
         Never repeat enable/launch or acknowledge the installation as complete.
         """
+        diagnostic_key = 'root_activation_restore_failure'
+        self.tv_info.pop(diagnostic_key, None)
         pending = self.store.pending(self.profile)
         if (self.profile['edition'] != 'root' or not pending or 'previous' in pending
                 or pending.get('action') not in ('install', 'activate-root')
@@ -1035,26 +1037,49 @@ else:
             return False
         self.store.checkpoint(self.profile, activation_restore_pending=True, activation_restore='unverified')
         self.progress('Restoring LG Home…')
+        from .errors import connection_interrupted
         for attempt in range(2):
+            step = 'initial-status'
             try:
                 current = self.root_action('status').get('result', {})
                 if current.get('recovery', {}).get('integrity_verified') is not True:
+                    self.tv_info[diagnostic_key] = {'step': step, 'reason': 'integrity-unverified'}
                     return False
                 if not self.root_setup_inactive(current):
+                    step = 'restore'
                     self.root_action('restore')
-                    if not self.root_setup_inactive(self.root_action('status').get('result', {})):
+                    step = 'final-status'
+                    after = self.root_action('status').get('result', {})
+                    if not self.root_setup_inactive(after):
+                        integrity = diagnostics.context.mapping(diagnostics.context.mapping(after).get('recovery'))
+                        reason = ('stock-home-unverified' if integrity.get('integrity_verified') is True
+                                  else 'integrity-unverified')
+                        self.tv_info[diagnostic_key] = {'step': step, 'reason': reason}
                         return False
+                step = 'finalize'
                 self.store.checkpoint(self.profile, activation_restore_pending=False, activation_restore='verified')
                 self.progress('LG Home is restored.')
                 return True
             except Exception as error:
-                from .errors import connection_interrupted
+                interrupted = connection_interrupted(error)
+                detail = {'step': step, 'reason': 'observation-failed'}
+                if isinstance(error, TVCommandError):
+                    detail.update(reason='ssh-command-failed', exit_status=error.exit_status)
+                elif interrupted:
+                    detail['reason'] = 'connection-interrupted'
+                elif isinstance(error, (json.JSONDecodeError, UnicodeError)):
+                    detail['reason'] = 'invalid-response'
+                elif isinstance(error, UserError) and error.reason_code == 'root-operation-unconfirmed':
+                    detail['reason'] = 'operation-unconfirmed'
                 reconnect = getattr(self, 'reconnect', None)
-                if attempt or not reconnect or not connection_interrupted(error):
+                if attempt or not reconnect or not interrupted:
+                    self.tv_info[diagnostic_key] = detail
                     return False
                 try:
                     self.remote = reconnect()
                 except Exception:
+                    detail['reconnect_failed'] = True
+                    self.tv_info[diagnostic_key] = detail
                     return False
         return False
 

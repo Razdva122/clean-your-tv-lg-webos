@@ -252,6 +252,18 @@ synthetic filesystem/process regressions. The origin of the firmware's 0775 mode
 and acceptance on the reporting C2 remain unconfirmed. See the
 [dated verification and limits](../history/2026-11-08-issue437-key-mode-repair.md).
 
+## Stale Helper-owned pairing key (#647)
+
+Developer Mode continuation can replace a stale Helper-owned key after the TV
+accepts the original capsule key in a fresh SSAP registration. Recovery uses
+the saved connection and requests no new pairing. The replacement must match
+the capsule SHA-256 and the probe must still identify the same checked file.
+The regular-file, single-link, supported-mode and shared-group checks apply.
+Only a verified operation with the file step still pending and Helper idle may
+replace the key. After a lost SSH reply, continuation can verify the replacement
+and finish the same operation. The original package receipts and the explicit
+Stop remain in force.
+
 ## Capsule-matched Helper-owned pairing key (#487, unpublished)
 
 A later Helper bootstrap may atomically replace a vendor-normalized key under

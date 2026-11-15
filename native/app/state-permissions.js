@@ -703,11 +703,11 @@ function session(directory, options, action) {
       bootSnapshot = null;
     }
   }
-  function replace(name, original, mode, limit) {
+  function replace(name, original, mode, limit, replacement) {
     if ((original.stat.mode & 4095) === 511)
       bootSnapshot = { name: name, stat: original.stat };
     try {
-      write(name, original.bytes, mode, limit, false, original);
+      write(name, replacement || original.bytes, mode, limit, false, original);
     } finally {
       bootSnapshot = null;
     }
@@ -890,7 +890,8 @@ function configuration(directory, options, repair) {
         apps =
           (repair && s.expanded('apps.json', 16 * 1024 * 1024, true)) ||
           s.read('apps.json', 16 * 1024 * 1024),
-        replacing = false;
+        replacing = false,
+        replacement;
       if (apps && !s.owned(apps.stat))
         fail(
           'apps',
@@ -915,14 +916,70 @@ function configuration(directory, options, repair) {
         // Trusted read ownership does not grant chmod authority over a
         // noncaller key; privacy repair must authenticate its original bytes.
         if (!s.owned(key.stat) || (key.stat.uid !== s.uid && mode & 7)) {
+          var groupMatches =
+              key.stat.gid === s.stat.gid && s.canAccessGroup(key.stat.gid),
+            validHash = /^[a-f0-9]{64}$/.test(options.expectedHash || ''),
+            keyHash =
+              validHash &&
+              crypto.createHash('sha256').update(key.bytes).digest('hex'),
+            matches = keyHash === options.expectedHash;
+          if (
+            repair &&
+            options.recoverStaleKey &&
+            s.uid !== 0 &&
+            key.stat.uid !== 0 &&
+            [416, 509, 511].indexOf(mode) >= 0 &&
+            validHash
+          ) {
+            if (!groupMatches)
+              fail(
+                'key',
+                'shared-group',
+                actual(key.stat),
+                'prepare',
+                'validate'
+              );
+            if (!matches) {
+              // Pairing runs between the probe and write. A new inode from
+              // another setup must never receive this operation's key.
+              var identity = crypto
+                .createHash('sha256')
+                .update(
+                  JSON.stringify([
+                    key.stat.dev,
+                    key.stat.ino,
+                    key.stat.mode,
+                    key.stat.uid,
+                    key.stat.gid,
+                    key.stat.size,
+                    key.stat.mtime.getTime(),
+                    key.stat.ctime.getTime(),
+                    keyHash
+                  ])
+                )
+                .digest('hex');
+              if (!options.replacementKey) return identity;
+              if (identity !== options.staleKeyIdentity)
+                fail(
+                  'key',
+                  'stable-inode',
+                  actual(key.stat),
+                  'prepare',
+                  'validate'
+                );
+              replacement = options.replacementKey;
+              matches =
+                crypto
+                  .createHash('sha256')
+                  .update(replacement)
+                  .digest('hex') === options.expectedHash;
+            }
+          }
           if (
             !repair ||
-            !/^[a-f0-9]{64}$/.test(options.expectedHash || '') ||
-            key.stat.gid !== s.stat.gid ||
-            !s.canAccessGroup(key.stat.gid) ||
+            !groupMatches ||
             [416, 509, 511].indexOf(mode) < 0 ||
-            crypto.createHash('sha256').update(key.bytes).digest('hex') !==
-              options.expectedHash
+            !matches
           )
             fail(
               'key',
@@ -949,7 +1006,7 @@ function configuration(directory, options, repair) {
       if (repair && apps && (apps.stat.mode & 4095) === 511)
         s.restrict('apps.json', apps, 420, 16 * 1024 * 1024);
       if (key) {
-        if (replacing) s.replace('ssap-key.json', key, 416, 65536);
+        if (replacing) s.replace('ssap-key.json', key, 416, 65536, replacement);
         else if (mode & 7) s.restrict('ssap-key.json', key, 416, 65536);
       }
       return true;

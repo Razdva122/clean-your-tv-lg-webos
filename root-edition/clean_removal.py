@@ -17,6 +17,8 @@ from updater.store import Store
 from updater.package import safe_bytes
 from installation import _optional_record, component_locks as locks, terminal_removal
 
+STOCK_HOME = 'com.webos.app.home'
+
 APPS = ('com.cleanyourtv.root.preview', 'com.cleanyourtv.root.updater',
         'com.cleanyourtv.system.updater', 'com.cleanyourtv.updater',
         'com.local.nativehome', 'com.gathin.tvhome')
@@ -271,10 +273,20 @@ def routes(device, record=None, *, retire_orphan=False):
             return device.compositor_stock(record, retire_orphan=True)
         return device.compositor_stock(record)
     settings=device.rpc('com.webos.settingsservice/getSystemSettings',{'category':'general','keys':['defaultApps']})
-    home=settings.get('settings',{}).get('defaultApps',{}).get('home')
-    if settings.get('returnValue') is not True or not isinstance(home,str) or not home or home in APPS:
+    default_apps = settings.get('settings', {}).get('defaultApps')
+    if settings.get('returnValue') is not True or not isinstance(default_apps, dict):
         raise ValueError('route_readback_unverified')
-    never=(record or {}).get('routing_never_applied') is True
+    home = default_apps.get('home')
+    previous = (record or {}).get('routes')
+    stock_proof = {'mode': 'stock-profiles'}
+    stock_profiles = previous == stock_proof or 'home' not in default_apps
+    if stock_profiles:
+        if (previous not in (None, stock_proof) or ('home' in default_apps and home != STOCK_HOME)
+                or record is None or not device.stock_profiles_eligible(record)):
+            raise ValueError('route_readback_unverified')
+    elif not isinstance(home, str) or not home or home in APPS:
+        raise ValueError('route_readback_unverified')
+    never=not stock_profiles and (record or {}).get('routing_never_applied') is True
     try:reply=device.rpc('com.webos.service.systemprofile/getProfiles',{'names':['defaultApps','idleApp'],'subscribe':False})
     except (OSError,RuntimeError,ValueError,KeyError,subprocess.SubprocessError) as error:
         if never:return {'mode':'never-applied','home':home}
@@ -291,6 +303,10 @@ def routes(device, record=None, *, retire_orphan=False):
         raise ValueError('route_readback_unverified')
     profiles=reply['profiles']
     result=[home,profiles['defaultApps']['categories']['home'],profiles['idleApp']['appId']]
+    if stock_profiles:
+        if result[1:] != [STOCK_HOME, STOCK_HOME]:
+            raise ValueError('route_readback_unverified')
+        return stock_proof
     if any(not isinstance(item,str) or not item or item in APPS for item in result):
         raise ValueError('owned_route_remains')
     if never and isinstance((record or {}).get('routes'),dict):return {'mode':'never-applied','home':home}

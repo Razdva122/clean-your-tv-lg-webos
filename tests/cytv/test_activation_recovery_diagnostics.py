@@ -130,6 +130,84 @@ class ActivationDiagnosticTests(unittest.TestCase):
         self.assertEqual(self.store.pending(self.profile),before)
         self.remote.upload.assert_not_called()
 
+
+    def test_failed_activation_restore_exports_stop_step_and_cause(self):
+        stock = {'backend': 'c1-native-gate', 'recovery': {'integrity_verified': True},
+                 'intent': {'enabled': False}, 'effective': {
+                     'returnValue': True, 'backend': 'c1-native-gate', 'profiles': None,
+                     'stock_verified': True, 'mounted': False, 'healthy': False, 'guardian_pid': 0}}
+        active = {**stock, 'intent': {'enabled': True}}
+        def reply(result):
+            return {'returnValue': True, 'result': result}
+        cases = (
+            ([TVCommandError(1)], ['status'], 'initial-status', 'ssh-command-failed', 1),
+            ([reply({'recovery': {}})], ['status'], 'initial-status', 'integrity-unverified', None),
+            ([reply(active), TVCommandError(2)], ['status', 'restore'], 'restore', 'ssh-command-failed', 2),
+            ([reply(active), {}, TVCommandError(3)], ['status', 'restore', 'status'],
+             'final-status', 'ssh-command-failed', 3),
+            ([reply(active), {}, reply({**stock, 'recovery': {}})], ['status', 'restore', 'status'],
+             'final-status', 'integrity-unverified', None),
+            ([reply(active), {}, reply(active)], ['status', 'restore', 'status'],
+             'final-status', 'stock-home-unverified', None),
+            ([json.JSONDecodeError('invalid', 'PRIVATE', 0)], ['status'], 'initial-status', 'invalid-response', None),
+        )
+        self.store.finish(self.profile)
+        self.store.begin(self.profile, 'install', home_backend='c1-native-gate')
+        self.store.checkpoint(self.profile, action='activate-root', stage='enable',
+                              activation_restore_pending=True, activation_restore='unverified')
+        original = self.store.pending(self.profile)
+        first = self.report_failure(TVCommandError(7), action='install')
+        for replies, calls, step, reason, code in cases:
+            with self.subTest(step=step, reason=reason):
+                self.installer.root_action = MagicMock(side_effect=replies)
+                with self.assertRaises(UserError) as blocker:
+                    recover(self.installer, lambda _: 'y', Console(lambda *_: None))
+                report = self.report_failure(blocker.exception)
+                expected = {'step': step, 'reason': reason}
+                if code is not None:
+                    expected['exit_status'] = code
+                self.assertEqual(report['tv']['root_activation_restore_failure'], expected)
+                self.assertEqual(report['observation_failure']['tv']['root_activation_restore_failure'], expected)
+                self.assertEqual(report['first_failure']['ssh_command'], first['ssh_command'])
+                self.assertNotIn('PRIVATE', json.dumps(report))
+                self.assertEqual([call.args[0] for call in self.installer.root_action.call_args_list], calls)
+                self.assertEqual(self.store.pending(self.profile), original)
+
+        self.installer.root_action = MagicMock(return_value=reply(stock))
+        self.assertTrue(self.installer.recover_failed_activation())
+        self.installer.root_action.assert_called_once_with('status')
+        self.assertFalse(self.store.pending(self.profile)['activation_restore_pending'])
+        self.assertNotIn('root_activation_restore_failure', diagnostic_context.tv_summary(self.installer.tv_info))
+
+
+    def test_activation_restore_transport_failure_preserves_failed_step(self):
+        state = copy.deepcopy(self.device)
+        state['intent']['enabled'] = True
+        self.installer.root_action = MagicMock(side_effect=[
+            {'result': state}, TimeoutError('PRIVATE')])
+        self.installer.reconnect = MagicMock(side_effect=RuntimeError('PRIVATE'))
+        self.assertFalse(self.installer.recover_failed_activation())
+        report = self.report_failure(UserError('blocked'))
+        self.assertEqual(report['tv']['root_activation_restore_failure'], {
+            'step': 'restore', 'reason': 'connection-interrupted', 'reconnect_failed': True})
+        self.assertNotIn('PRIVATE', json.dumps(report))
+        self.assertEqual([call.args[0] for call in self.installer.root_action.call_args_list],
+                         ['status', 'restore'])
+
+    def report_failure(self, error, action='recover'):
+        return json.loads(diagnostics.create_report(self.store, action, self.profile, action,
+            error, self.installer.tv_info).read_text())
+
+    def test_activation_restore_detail_rejects_unbounded_values(self):
+        raw = {'step': 'restore', 'reason': 'ssh-command-failed', 'exit_status': 1024,
+               'error': 'PRIVATE'}
+        summary = diagnostic_context.tv_summary({'root_activation_restore_failure': raw})
+        self.assertEqual(summary['root_activation_restore_failure'],
+                         {'step': 'restore', 'reason': 'ssh-command-failed'})
+        raw.update(step={'PRIVATE': True}, reason='PRIVATE')
+        self.assertNotIn('PRIVATE', json.dumps(diagnostic_context.tv_summary(
+            {'root_activation_restore_failure': raw})))
+
     def test_embedded_updater_probe_classifies_real_check_failures_without_text(self):
         import contextlib
         import hashlib

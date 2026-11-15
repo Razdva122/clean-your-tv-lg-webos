@@ -1,5 +1,6 @@
 # Release history and device evidence
 
+- [v1.20.8 candidate verification, 2026-11-15](2026-11-15-release-1.20.8-rc-verification.md)
 - [v1.20.3 candidate verification, 2026-11-13](2026-11-13-release-1.20.3-rc-verification.md)
 - [v1.20.2 RC2 verification, 2026-11-13](2026-11-13-release-1.20.2-rc2-verification.md)
 - [v1.20.1 RC2 final acceptance, 2026-11-13](2026-11-13-release-1.20.1-rc2-acceptance.md)
