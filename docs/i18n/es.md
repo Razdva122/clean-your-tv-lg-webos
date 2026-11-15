@@ -91,6 +91,8 @@ Compatibilidad IR de No-root: al soltar Home tras una pulsación breve, Clean se
 
 Las flechas seleccionan y OK abre; mantén OK para reordenar. Una pulsación breve de Atrás conserva la navegación y confirmación de salida de cada aplicación. Home abre el lanzador mientras el control está activo. Mantén Atrás durante 1,2 segundos para abrir LG Home una vez. El interruptor de control de Home y tus ajustes no cambian.
 
+Para editar con pulsaciones breves, abre **Ajustes de Home → Apariencia → Editar mosaicos**. Pulsa OK para seleccionar un mosaico, muévelo con las flechas y pulsa OK para colocarlo. Atrás cancela el movimiento o sale de la edición.
+
 **Pulsa Home tres veces en dos segundos**, soltando entre pulsaciones. Se recupera LG Home y se detiene el control sin borrar preferencias.
 
 No-root: Para reiniciar el control de Home, abre Home Helper, elige Iniciar Helper y confirma. Se conserva tu pantalla Home elegida. Root: activa **Cambiar Home** en los ajustes de Home para reanudar. **Abrir LG Home** lo abre una vez sin cambiar el destino de Home. Para recuperar LG Home como destino permanente, desactiva **Cambiar Home**. No ejecutes ambos controladores a la vez. Si el fallo se repite, deja LG Home activo.

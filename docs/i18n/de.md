@@ -91,6 +91,8 @@ IR-Unterstützung für No-root: Nach kurzem Drücken und Loslassen von Home wird
 
 Pfeile wählen eine Kachel, OK öffnet sie; OK gedrückt halten zum Verschieben. Kurzes Zurück behält Navigation und Beendigungsdialog der App bei. Kurzes Home öffnet bei aktiver Home-Steuerung den Launcher. Zurück 1,2 Sekunden gedrückt halten, um LG Home einmalig zu öffnen. Der Home-Schalter und Ihre Einstellungen bleiben unverändert.
 
+Öffnen Sie **Home-Einstellungen → Darstellung → Kacheln bearbeiten**, um Kacheln mit kurzen Tastendrücken zu bearbeiten. Nehmen Sie die Kachel mit OK auf, verschieben Sie sie mit den Pfeiltasten und legen Sie sie mit OK ab. Zurück bricht das Verschieben ab oder beendet die Bearbeitung.
+
 **Home innerhalb von zwei Sekunden dreimal kurz drücken**, dazwischen loslassen. Dies stellt LG Home wieder her und stoppt die Steuerung, ohne Einstellungen zurückzusetzen.
 
 No-root: Öffnen Sie zum Neustart der Home-Steuerung Home Helper, wählen Sie Helper starten und bestätigen Sie. Ihre gespeicherte Home-Auswahl bleibt erhalten. Root: **Home ändern** in den Home-Einstellungen einschalten, um fortzufahren. **LG Home öffnen** öffnet LG Home einmalig, ohne das Home-Ziel zu ändern. Für LG Home als dauerhaftes Ziel **Home ändern** ausschalten. Beide Steuerungen nie gleichzeitig betreiben. Bei wiederholtem Fehler LG Home aktiv lassen.

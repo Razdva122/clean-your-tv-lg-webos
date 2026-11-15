@@ -89,6 +89,109 @@ const { assert, chromium, stage, open } = require('./browser.cjs');
         await page.locator('#tiles .focused').waitFor();
         const pair = await ids();
         assert.equal(pair.length, 2);
+        const editTiles = page.getByRole('button', { name: 'Edit tiles' });
+        async function openTileEditor() {
+          await page.locator('#btnSettings').click();
+          await page.locator('[data-category=appearance]').click();
+          await page.keyboard.press('ArrowRight');
+          for (let step = 0; step < 6; step++) {
+            if (
+              await page.evaluate(
+                () => document.activeElement.id === 'homeEditTiles'
+              )
+            )
+              break;
+            await page.keyboard.press('ArrowDown');
+          }
+          assert(
+            await editTiles.evaluate((el) => el === document.activeElement)
+          );
+          await page.keyboard.press('Enter');
+        }
+        await openTileEditor();
+        const hint = page.locator('#editHint');
+        assert.match(await hint.textContent(), /OK Pick up/);
+        assert(await hint.isVisible());
+        assert.equal(await page.locator('#tiles .moving').count(), 0);
+        await page.keyboard.press('Enter');
+        assert.equal(await page.locator('#tiles .moving').count(), 1);
+        await page.keyboard.press('ArrowRight');
+        assert.deepEqual(await ids(), [pair[1], pair[0]]);
+        await page.keyboard.down('Escape');
+        await page.keyboard.down('Escape');
+        await page.keyboard.up('Escape');
+        assert.deepEqual(await ids(), pair, 'Back cancels the current move');
+        assert(
+          await hint.isVisible(),
+          'holding Back does not also exit selection'
+        );
+        assert.match(await hint.textContent(), /OK Pick up/);
+        await page.keyboard.press('Enter');
+        await page.keyboard.press('ArrowRight');
+        await page.keyboard.press('Enter');
+        assert.deepEqual(await ids(), [pair[1], pair[0]]);
+        assert.match(await hint.textContent(), /OK Pick up/);
+        await page.keyboard.press('Escape');
+        assert.equal(
+          await hint.isVisible(),
+          false,
+          'Back exits tile selection'
+        );
+        await page.reload();
+        await page.locator('#tiles .focused').waitFor();
+        assert.deepEqual(
+          await ids(),
+          [pair[1], pair[0]],
+          'short OK saves order'
+        );
+        await openTileEditor();
+        await page.keyboard.press('Enter');
+        await page.keyboard.press('ArrowDown');
+        await page.keyboard.press('Enter');
+        assert.deepEqual(
+          await ids(),
+          [pair[0]],
+          'short OK hides the selected app'
+        );
+        assert.equal(await hint.isVisible(), false, 'Undo owns OK and Back');
+        await page.keyboard.press('Enter');
+        assert.deepEqual(
+          await ids(),
+          [pair[1], pair[0]],
+          'short OK undoes hiding'
+        );
+        await page.keyboard.press('Escape');
+        assert.equal(await hint.isVisible(), false);
+        await openTileEditor();
+        await page.locator('#tiles [data-app-id]').first().click();
+        assert.equal(await page.locator('#tiles .moving').count(), 1);
+        const destination = await page
+          .locator('#tiles [data-app-id]')
+          .last()
+          .boundingBox();
+        await page.mouse.move(
+          destination.x + destination.width / 2,
+          destination.y + destination.height / 2
+        );
+        await page.locator('#tiles .moving').click();
+        assert.deepEqual(
+          await ids(),
+          pair,
+          'short pointer clicks place a tile'
+        );
+        assert.equal(await page.locator('#tiles .moving').count(), 0);
+        const backPrevented = await page.evaluate(
+          () =>
+            !document.dispatchEvent(
+              new KeyboardEvent('keydown', {
+                keyCode: 461,
+                bubbles: true,
+                cancelable: true
+              })
+            )
+        );
+        assert(backPrevented, 'webOS Back is handled in tile selection');
+        assert.equal(await hint.isVisible(), false);
         for (const preset of [
           'dock-grid',
           'icon-grid',
@@ -131,15 +234,27 @@ const { assert, chromium, stage, open } = require('./browser.cjs');
           );
         }
         await page.evaluate(() => ThemeRuntime.reset());
-        // Hide the last apps and dismiss Undo; upper controls must remain operable.
+        // Undoing a hide of the final app must restore the editor.
+        await openTileEditor();
         for (let i = 0; i < 2; i++) {
-          await page.keyboard.down('Enter');
-          await page.waitForTimeout(700);
-          await page.keyboard.up('Enter');
+          await page.keyboard.press('Enter');
           await page.keyboard.press('ArrowDown');
           await page.keyboard.press('Enter');
-          await page.keyboard.press('Escape');
+          if (i === 0) await page.keyboard.press('Escape');
         }
+        assert.equal((await ids()).length, 0);
+        await page.keyboard.press('Enter');
+        assert.equal((await ids()).length, 1);
+        assert(
+          await hint.isVisible(),
+          'Undo restores selection with the last app'
+        );
+        await page.keyboard.press('Enter');
+        assert.equal(await page.locator('#tiles .moving').count(), 1);
+        await page.keyboard.press('ArrowDown');
+        await page.keyboard.press('Enter');
+        await page.keyboard.press('Escape');
+        assert.equal(await hint.isVisible(), false);
         assert.equal((await ids()).length, 0);
         assert.equal(
           await page
@@ -164,6 +279,11 @@ const { assert, chromium, stage, open } = require('./browser.cjs');
         // App management remains reachable through Settings even with an empty Home.
         await page.locator('#btnSettings').click();
         await page.locator('[data-category=appearance]').click();
+        assert.equal(
+          await editTiles.isDisabled(),
+          true,
+          'empty Home has no tiles to edit'
+        );
         await page.locator('#homeAddApp').click();
         await page.locator('#appPicker .app-choice').first().waitFor();
         await page.locator('#appPicker .app-choice').first().click();

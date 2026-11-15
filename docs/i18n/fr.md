@@ -91,6 +91,8 @@ Prise en charge IR No-root: relâcher Home après un appui court programme Clean
 
 Les flèches sélectionnent, OK ouvre ; maintenez OK pour réorganiser. Un appui bref sur Retour conserve la navigation et la confirmation de sortie de l’application. Home ouvre le lanceur si le contrôle est actif. Maintenez Retour pendant 1,2 seconde pour ouvrir LG Home une fois. L’interrupteur du contrôle de Home et vos paramètres restent inchangés.
 
+Pour modifier les tuiles avec des appuis courts, ouvrez **Paramètres de Home → Apparence → Modifier les tuiles**. Appuyez sur OK pour sélectionner une tuile, déplacez-la avec les flèches puis appuyez sur OK pour la poser. Retour annule le déplacement ou quitte la modification.
+
 **Appuyez trois fois sur Home en deux secondes**, en relâchant entre les appuis. Cela rétablit LG Home et arrête le contrôle sans effacer vos préférences.
 
 No-root: Pour relancer le contrôle de Home, ouvrez Home Helper, choisissez Démarrer Helper et confirmez. Votre choix d’écran Home est conservé. Root: activez **Changer Home** dans les paramètres de Home pour reprendre. **Ouvrir LG Home** ouvre LG Home une fois sans modifier la destination de Home. Pour rétablir LG Home comme destination permanente, désactivez **Changer Home**. N’exécutez jamais les deux contrôleurs ensemble. Si la panne revient, laissez LG Home actif.
