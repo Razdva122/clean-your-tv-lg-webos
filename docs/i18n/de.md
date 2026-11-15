@@ -70,6 +70,8 @@ Der Desktop-Assistent verwendet zunächst die Systemsprache und speichert eine a
 
 In der veröffentlichten Version wird die Root-Einrichtung mit einer Warnung fortgesetzt, wenn TV-Eingänge nicht gelesen werden können, die Anwendungsliste aber gültig ist. Eingänge können in Home fehlen; eine fehlerhafte oder leere Anwendungsliste stoppt die Einrichtung weiterhin. Speichern Sie bei wiederholter Warnung den Diagnosebericht.
 
+Bei der Root-Einrichtung kann das Installationsprogramm eine erkannte Home-Übernahme automatisch deaktivieren, damit CYTV die Home-Steuerung übernimmt. Wenn die Einrichtung abbricht, speichern Sie den Diagnosebericht.
+
 ## 5. Fernbedienung prüfen
 
 1. Öffnen Sie eine andere TV-App und drücken Sie kurz **Home**. Clean Your TV sollte erscheinen. Geben Sie im Assistenten Ihre Beobachtung an; überspringen Sie den Test, wenn Sie ihn nicht durchgeführt haben.

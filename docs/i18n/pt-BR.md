@@ -70,6 +70,8 @@ O assistente usa inicialmente o idioma do sistema e salva sua escolha explícita
 
 A instalação Root continua com um aviso se as entradas da TV não puderem ser lidas, mas a lista de aplicativos for válida. Entradas podem faltar na Home; uma lista de aplicativos com falha ou vazia ainda interrompe a instalação. Salve o relatório de diagnóstico se o aviso persistir.
 
+A instalação Root pode desativar automaticamente uma substituição reconhecida da tela inicial para que o CYTV controle o botão Home. Se a instalação parar, salve o relatório de diagnóstico.
+
 ## 5. Confira o controle remoto
 
 1. Abra outro app na TV e pressione **Home** brevemente. Clean Your TV deve abrir. Informe ao assistente o que você viu; pule a verificação se não a realizou.
