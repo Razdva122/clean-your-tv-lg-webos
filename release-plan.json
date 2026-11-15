@@ -39,5 +39,10 @@
     }
   ],
   "excluded": [],
-  "acceptance": ""
+  "acceptance": "",
+  "build": {
+    "run_id": 43689792534,
+    "attempt": 1,
+    "source": "1d79a8c3e5a004ea32fe90ff6608c0cd66eed0ce"
+  }
 }
