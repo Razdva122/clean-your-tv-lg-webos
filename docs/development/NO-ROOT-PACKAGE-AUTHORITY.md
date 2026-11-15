@@ -332,6 +332,19 @@ channel needs verified directory ownership and group access, and Stop tokens
 need replacement that invalidates older activation claims. Logs can be recreated
 under their existing size and path constraints.
 
+In Developer Mode, firmware may widen the packaged Helper state directory to
+`0777` while retaining owner `5999:5000` (#653). A checked non-owner SSH session
+with access to the packaged group may continue package delivery without binding
+a launch generation. The pending receipt cancels automatic activation before
+either package request. A new observer source binds the exact configuration
+directory to the operation. Both original observer sources remain valid for
+existing capsules. The update can complete if the package manager retains
+`0777`. Only the two capsule-bound configuration files may be written. Publication
+checks the directory and staged inodes, owner, group, link count and final file
+modes. The installer verifies configuration metadata and expected hashes before
+closing the operation. Existing Stop and watchdog latches are preserved.
+The TV owner can choose **Start Helper** after package verification.
+
 When reinstalling over a running Helper, the trusted SSH adapter can stop it
 for the current installation. It exclusively creates the existing Stop latch,
 captures the prior generation without overwriting a concurrent publisher, and

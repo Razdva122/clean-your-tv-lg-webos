@@ -12,6 +12,7 @@ import shlex
 import time
 import uuid
 
+from .outcomes import START_HELPER
 from .errors import (UserError, LocalRecoveryError, TVCommandError, TV_STORAGE_FULL, no_root_observer_details,
                      OBSERVER_EXCEPTION_NAMES, OBSERVER_EXCEPTION_CODES, OBSERVER_REASONS,
                      OBSERVER_FILESYSTEM_OPERATIONS)
@@ -511,15 +512,53 @@ if(!plan||plan.connection!=='root-ssh'||uid!==0||root!=='/tmp/.cytv-installer-ro
 )
 
 
-def source_for(root_ssh, private=None):
+# This source is selected only by new plans bound to the fixed Helper state.
+# Original Developer Mode and Root observer bytes remain valid for recovery.
+PACKAGED_STATE_PROGRAM = PROGRAM.replace(
+    "  if(current===name&&(!owner(s)||(s.mode&2)))fail('unsafe-state-owner');",
+    """  var expanded=plan.configuration_directory===path.resolve(name)&&uid!==0&&
+      s.uid===5999&&s.gid===5000&&(s.mode&4095)===511&&
+      (process.getgid()===s.gid||process.getgroups().indexOf(s.gid)>=0);
+  if(current===name&&(!owner(s)||(s.mode&2)&&!expanded))fail('unsafe-state-owner');"""
+).replace(
+    "  destination=proof.directory;name=proof.name;",
+    """  if(proof.directory!==plan.configuration_directory)fail('invalid-configuration-upload');
+  destination=proof.directory;name=proof.name;"""
+).replace(
+    ' fs.fchmodSync(fd,mode);fs.fsyncSync(fd);fs.closeSync(fd);fd=null;',
+    """ var staged;
+   if(!isArtifact){
+    var file=fs.fstatSync(fd);
+    if(file.gid!==pinned.gid)fs.fchownSync(fd,uid,pinned.gid);
+    staged=fs.fstatSync(fd);
+    if(!staged.isFile()||staged.nlink!==1||staged.uid!==uid||staged.gid!==pinned.gid)fail('unsafe-config-file');
+   }
+   fs.fchmodSync(fd,mode);fs.fsyncSync(fd);fs.closeSync(fd);fd=null;"""
+).replace(
+    "    stateDirectory('.');fs.renameSync(tmp,name);",
+    """    if(!same(pinned,stateDirectory('.')))fail('changed-upload-directory');
+    var source=fs.lstatSync(tmp);
+    if(!same(staged,source)||source.uid!==uid||source.gid!==pinned.gid||
+       source.nlink!==1||(source.mode&4095)!==mode)fail('unsafe-config-file');
+    fs.renameSync(tmp,name);
+    var published=fs.lstatSync(name);
+    if(!same(staged,published)||published.uid!==uid||published.gid!==pinned.gid||
+       published.nlink!==1||(published.mode&4095)!==mode||
+       !same(pinned,stateDirectory(destination)))fail('unsafe-config-file');"""
+)
+
+
+def source_for(root_ssh, private=None, configuration_directory=None):
     # Existing capsules continue to authenticate the original source bytes.
     if root_ssh and private == ROOT_SSH_DISK:
         return ROOT_PROGRAM.replace("root!=='/tmp/.cytv-installer-root'",
                                     "root!==plan.private_root||root!==" + canonical(ROOT_SSH_DISK))
-    return ROOT_PROGRAM if root_ssh else PROGRAM
+    if root_ssh:
+        return ROOT_PROGRAM
+    return PACKAGED_STATE_PROGRAM if configuration_directory is not None else PROGRAM
 
 
-def make_plan(operation, diagnostic_id, action, artifacts, versions, public_root=PUBLIC_ROOT, configuration_sha256=None, root_ssh=False, private_root=None, root_handoff=None, setup_start=None):
+def make_plan(operation, diagnostic_id, action, artifacts, versions, public_root=PUBLIC_ROOT, configuration_sha256=None, root_ssh=False, private_root=None, root_handoff=None, setup_start=None, configuration_directory=None):
     if root_ssh:
         public_root = ROOT_SSH_PUBLIC
     slots = []
@@ -534,7 +573,7 @@ def make_plan(operation, diagnostic_id, action, artifacts, versions, public_root
                           artifact_sha256=hashlib.sha256(artifacts[name]).hexdigest() if action == 'install' else None,
                           version=versions[app] if action == 'install' else None))
     plan = dict(protocol=PROTOCOL, edition='no-root', operation=operation, diagnostic_id=diagnostic_id,
-                action=action, source_sha256=hashlib.sha256(source_for(root_ssh, private_root).encode()).hexdigest(), slots=slots,
+                action=action, source_sha256=hashlib.sha256(source_for(root_ssh, private_root, configuration_directory).encode()).hexdigest(), slots=slots,
                 configuration_sha256=configuration_sha256 or hashlib.sha256(b'{}').hexdigest())
     if root_ssh:
         plan['connection'] = 'root-ssh'
@@ -547,6 +586,11 @@ def make_plan(operation, diagnostic_id, action, artifacts, versions, public_root
                 or setup_start['generation'] is not None and not valid_generation(setup_start['generation'])):
             refuse()
         plan['setup_start'] = dict(setup_start)
+    if configuration_directory is not None:
+        from .operations import HELPER_STATE
+        if root_ssh or configuration_directory != HELPER_STATE or setup_start != {'generation': None}:
+            refuse()
+        plan['configuration_directory'] = configuration_directory
     if root_handoff is not None:
         from .root_no_root_handoff import validate
         if not root_ssh or private_root is not None:refuse()
@@ -583,7 +627,8 @@ def invoke(remote, plan, command, slot=None, source=None, proof=None, data=None)
         if not getattr(remote, 'root', False):
             refuse()
         request.update(public_root=ROOT_SSH_PUBLIC, sender='/usr/bin/luna-send')
-    program_source = source_for(plan.get('connection') == 'root-ssh', plan.get('private_root'))
+    program_source = source_for(plan.get('connection') == 'root-ssh', plan.get('private_root'),
+                                plan.get('configuration_directory'))
     if command == 'storage-select':
         if plan.get('connection') == 'root-ssh' or 'private_root' in plan:
             refuse()
@@ -725,24 +770,40 @@ def begin(installer, action, artifacts, versions, expected, configuration, setup
     owns_stop = (valid_generation(install_stop) and install_stop.startswith('S')
                  and helper_start_allowed(installer, allow_blocked=True)
                  and setup_generation(installer) == install_stop)
-    stop_retained = setup_activation and not owns_stop and (
+    start_cancelled = setup_activation and not owns_stop and (
         install_stop is not None or not helper_start_allowed(installer))
-    setup_start = ({'generation': install_stop if owns_stop else
-                    None if stop_retained else setup_generation(installer, create=True)}
-                   if setup_activation else None)
+    from .operations import HELPER_STATE
+    generation = install_stop if owns_stop else None
+    expanded_state = False
+    if start_cancelled and not root_ssh:
+        expanded_state = setup_generation(installer, create='inspect-install-storage') is False
+    if setup_activation and not (owns_stop or start_cancelled):
+        generation = setup_generation(installer, create=True if root_ssh else 'install-or-defer-start')
+        if generation is False:
+            # Package delivery does not require an activation baseline.
+            # Without one this operation must never automatically start Helper.
+            expanded_state = True
+            start_cancelled = True
+            generation = None
+    setup_start = {'generation': generation} if setup_activation else None
     installer.store.begin(installer.profile, 'install' if action == 'install' else 'uninstall',
                           recovery_protocol=PROTOCOL, observer_operation=operation,
                           expected=expected, versions=versions)
     pending = installer.store.pending(installer.profile)
     config_hash=hashlib.sha256(canonical({name:hashlib.sha256(raw).hexdigest() for name,raw in configuration.items()}).encode()).hexdigest()
-    plan = make_plan(operation, pending['diagnostic_id'], action, artifacts, versions, PUBLIC_ROOT,config_hash,root_ssh=root_ssh,private_root=selected,root_handoff=handoff,setup_start=setup_start)
-    capsule = dict(schema=1, profile=installer.profile, plan=plan, source=source_for(root_ssh, selected), expected=expected,
+    configuration_directory = HELPER_STATE if expanded_state else None
+    plan = make_plan(operation, pending['diagnostic_id'], action, artifacts, versions, PUBLIC_ROOT,config_hash,
+                     root_ssh=root_ssh,private_root=selected,root_handoff=handoff,setup_start=setup_start,
+                     configuration_directory=configuration_directory)
+    capsule = dict(schema=1, profile=installer.profile, plan=plan,
+                   source=source_for(root_ssh, selected, configuration_directory), expected=expected,
                    artifacts={name: base64.b64encode(raw).decode() for name, raw in artifacts.items()},
                    configuration={name: raw.decode('utf8') for name, raw in configuration.items()})
     digest = installer.store.save_capsule(installer.profile, operation, capsule)
     installer.store.checkpoint(installer.profile, capsule_sha256=digest,
-                               **({'setup_cancelled':True} if stop_retained else {}),
-                               **({'setup_install_stop':install_stop} if owns_stop else {}))
+                               **({'setup_cancelled':True} if start_cancelled else {}),
+                               **({'setup_install_stop':install_stop} if owns_stop else {}),
+                               **({'observer_source_sha256':plan['source_sha256']} if expanded_state else {}))
     if handoff:
         from .root_no_root_handoff import call
         call(installer.remote,installer.remote._cytv_root_handoff_support,'claim',plan=plan)
@@ -777,12 +838,16 @@ def capsule(installer, pending):
                 hashlib.sha256(value['source'].encode()).hexdigest() != plan['source_sha256'] or
                 value['expected'] != pending['expected']):
             refuse()
-        if value['source'] != source_for(installer.profile.get('connection') == 'root-ssh', plan.get('private_root')):
+        if value['source'] != source_for(installer.profile.get('connection') == 'root-ssh',
+                                         plan.get('private_root'), plan.get('configuration_directory')):
             raise LocalRecoveryError('source-incompatible')
+        if 'configuration_directory' in plan and pending.get('observer_source_sha256') != plan['source_sha256']:
+            refuse()
         artifacts = {name: base64.b64decode(raw, validate=True) for name, raw in value['artifacts'].items()}
         config_hash=hashlib.sha256(canonical({name:hashlib.sha256(raw.encode()).hexdigest() for name,raw in value['configuration'].items()}).encode()).hexdigest()
         rebuilt = make_plan(plan['operation'], plan['diagnostic_id'], plan['action'], artifacts, pending['versions'], PUBLIC_ROOT,config_hash,
-                            root_ssh=installer.profile.get('connection') == 'root-ssh', private_root=plan.get('private_root'),root_handoff=plan.get('root_handoff'),setup_start=plan.get('setup_start'))
+                            root_ssh=installer.profile.get('connection') == 'root-ssh', private_root=plan.get('private_root'),root_handoff=plan.get('root_handoff'),setup_start=plan.get('setup_start'),
+                            configuration_directory=plan.get('configuration_directory'))
         rebuilt['source_sha256'] = plan['source_sha256']
         if rebuilt != plan:
             refuse()
@@ -827,6 +892,9 @@ from .tv_sources import node_adapter
 
 STATE_CHECK = node_adapter('state-permissions', r"""
 var option=process.argv[process.argv.length-2],directory=process.argv[process.argv.length-1];
+var packagedState=option.indexOf('packaged-state:')===0;
+if(packagedState)option=option.slice('packaged-state:'.length);
+var verifyHashes=packagedState&&/^verify:([a-f0-9]{64}):([a-f0-9]{64})$/.exec(option);
 var match=/^(repair-key-mode|check-stale-key|replace-stale-key):([a-f0-9]{64})(?::([a-f0-9]{64}))?$/.exec(option);
 var expected=match?match[2]:null;
 var recoverStaleKey=!!match&&match[1]!=='repair-key-mode';
@@ -857,7 +925,8 @@ if(repair&&process.getuid()===0&&
   throw Error('unsafe-config-owner');
  rootRepair=true;
 }
-var options={expectedHash:expected,requireHash:rootRepair,recoverStaleKey:recoverStaleKey};
+var options={expectedHash:expected,requireHash:rootRepair,recoverStaleKey:recoverStaleKey,packagedState:packagedState,
+ verifyHashes:verifyHashes&&verifyHashes.slice(1)};
 if(match&&match[1]==='replace-stale-key'){
  // Read only the capsule's bounded private payload from SSH stdin.
  var data=typeof Buffer.alloc==='function'?Buffer.alloc(65537):new Buffer(65537);
@@ -871,7 +940,7 @@ if(match&&match[1]==='replace-stale-key'){
  options.replacementKey=data.slice(0,offset);
  options.staleKeyIdentity=match[3];
 }
-var result=repair?contract.prepareConfiguration(directory,options):contract.inspectConfiguration(directory,{});
+var result=repair?contract.prepareConfiguration(directory,options):contract.inspectConfiguration(directory,options);
 process.stdout.write(typeof result==='string'?'CYTV_STALE_PAIRING_KEY '+result:'CYTV_CONFIGURATION_PRIVATE');
 """)
 
@@ -1021,6 +1090,9 @@ GENERATION_CHECK = node_adapter('state-permissions', r"""
 var input=JSON.parse(process.argv[process.argv.length-1]),fs=require('fs');
 try { fs.lstatSync(input.directory); }
 catch(e) { if(e.code!=='ENOENT')throw e;process.stdout.write('null');return; }
+if(input.create==='inspect-install-storage'){
+ process.stdout.write(contract.isPackagedStateExpanded(input.directory)?'false':'null');return;
+}
 process.stdout.write(JSON.stringify(contract.stopGeneration(input.directory,input.create===true?'install':input.create)));
 """)
 
@@ -1031,6 +1103,8 @@ def setup_generation(installer, create=False):
     try:
         value=json.loads(installer.remote.run('/usr/bin/node -e '+shlex.quote(GENERATION_CHECK)+' '+shlex.quote(canonical(request))))
     except (ValueError,TypeError):refuse()
+    if value is False and create in ('install-or-defer-start', 'inspect-install-storage'):
+        return value
     if value is not None and not valid_generation(value):refuse()
     return value
 
@@ -1039,7 +1113,8 @@ def setup_launch_generation(installer, plan):
     expected=plan['setup_start']['generation']
     pending=installer.store.pending(installer.profile) or {}
     own_stop = valid_generation(expected) and expected.startswith('S') and pending.get('setup_install_stop') == expected
-    if pending.get('setup_cancelled') or not helper_start_allowed(installer, allow_blocked=own_stop):
+    if ('configuration_directory' in plan or pending.get('setup_cancelled')
+            or not helper_start_allowed(installer, allow_blocked=own_stop)):
         return None
     current=setup_generation(installer,create='setup' if expected is None and pending.get('setup_launch_generation') is None else False)
     if expected is None:
@@ -1088,8 +1163,14 @@ def plan_is_configured(value,result):
 
 def configuration_readback(installer,value):
     from .operations import HELPER_STATE
-    if installer.remote.run('/usr/bin/node -e '+shlex.quote(STATE_CHECK)+' '+shlex.quote(HELPER_STATE)).strip()!='CYTV_CONFIGURATION_PRIVATE':refuse()
-    files_match(installer,{HELPER_STATE+'/'+name:value['expected'][HELPER_STATE+'/'+name] for name in value['configuration']})
+    expected = {name: value['expected'][HELPER_STATE+'/'+name] for name in value['configuration']}
+    packaged_state = 'configuration_directory' in value['plan']
+    mode = (' packaged-state:verify:'+expected['ssap-key.json']+':'+expected['apps.json']
+            if packaged_state else '')
+    if installer.remote.run('/usr/bin/node -e '+shlex.quote(STATE_CHECK)+mode+' '+shlex.quote(HELPER_STATE)).strip()!='CYTV_CONFIGURATION_PRIVATE':
+        refuse()
+    if not packaged_state:
+        files_match(installer, {HELPER_STATE+'/'+name: digest for name, digest in expected.items()})
 
 
 def restore_original(installer):
@@ -1123,12 +1204,14 @@ def configure(installer,value):
     developer_mode = installer.profile.get('connection') != 'root-ssh'
     command = '/usr/bin/node -e ' + shlex.quote(STATE_CHECK)
     directory = shlex.quote(HELPER_STATE)
+    packaged_state = 'configuration_directory' in plan
+    prefix = 'packaged-state:' if packaged_state else ''
     if repair:
         action = 'check-stale-key' if developer_mode else 'repair-key-mode'
-        mode = ' ' + shlex.quote(f'{action}:{key_hash}')
+        mode = f'{prefix}{action}:{key_hash}'
     else:
-        mode = ''
-    result = installer.remote.run(command + mode + ' ' + directory).strip()
+        mode = prefix + 'inspect'
+    result = installer.remote.run(f'{command} {shlex.quote(mode)} {directory}').strip()
     stale_key = re.fullmatch(r'CYTV_STALE_PAIRING_KEY ([a-f0-9]{64})', result)
     if stale_key and repair and developer_mode:
         from .tv import SSAP
@@ -1147,7 +1230,7 @@ def configure(installer,value):
                 or current['configuration']['files'] != 'prepared'
                 or installer.helper_state() not in ('stopped', 'stale')):
             refuse()
-        mode = shlex.quote(f'replace-stale-key:{key_hash}:{stale_key[1]}')
+        mode = shlex.quote(f'{prefix}replace-stale-key:{key_hash}:{stale_key[1]}')
         result = installer.remote.run(f'{command} {mode} {directory}', data=key_data.encode()).strip()
     if result != 'CYTV_CONFIGURATION_PRIVATE':
         refuse()
@@ -1158,9 +1241,12 @@ def configure(installer,value):
             proof={'nonce':token,'directory':HELPER_STATE,'name':name,
                    'hashes':{key:hashlib.sha256(text.encode()).hexdigest() for key,text in value['configuration'].items()}}
             invoke(installer.remote,plan,'upload-configuration',proof=proof,data=raw.encode())
+    if packaged_state:
+        configuration_readback(installer, value)
+    else:
         files_match(installer,expected)
+    if token:
         finish_step(installer,plan,'files',token)
-    else:files_match(installer,expected)
     # Repair the fixed transient channel with the trusted installer source.
     # Other SSH identities can still use a correctly provisioned channel.
     if repair:
@@ -1332,7 +1418,7 @@ def continue_operation(installer, expected_pending):
                 raise UserError('Startup could not be verified. Save the diagnostic report; do not reinstall blindly.', reason_code='helper-state-unverified')
         if cancelled:
             installer.outcome.cancelled_by_stop()
-            installer.progress('Packages verified. Stop cancelled Home activation. Start Helper on the TV when ready.')
+            installer.progress(START_HELPER)
             return {'installed':'no-root','launch_requested':installer.outcome.values['launch_request']=='accepted',
                     'activation_cancelled':True,'hardware_verified':False}
         installer.outcome.startup_observed(observed)

@@ -869,6 +869,24 @@ function session(directory, options, action) {
     if (parent !== undefined) fs.closeSync(parent);
   }
 }
+function packagedState(s) {
+  return (
+    s.uid !== 0 &&
+    s.stat.uid === 5999 &&
+    s.stat.gid === 5000 &&
+    s.canAccessGroup(s.stat.gid)
+  );
+}
+prepare.isPackagedStateExpanded = function (directory) {
+  if ((fs.lstatSync(directory).mode & 4095) !== 511) return false;
+  return session(
+    directory,
+    { legacy: true, operation: 'inspect' },
+    function (s) {
+      return (s.stat.mode & 4095) === 511 && packagedState(s);
+    }
+  );
+};
 function configuration(directory, options, repair) {
   options = options || {};
   return session(
@@ -876,12 +894,12 @@ function configuration(directory, options, repair) {
     {
       role: 'installer',
       operation: repair ? 'prepare' : 'inspect',
-      legacy: repair,
+      legacy: repair || options.packagedState,
       normalize: repair,
       output: repair ? 'stop-generation' : undefined
     },
     function (s) {
-      if (repair && s.stat.mode & 2)
+      if (s.stat.mode & 2 && !(options.packagedState && packagedState(s)))
         fail('safe-mode', s.stat, undefined, 'directory');
       // Validate both configuration leaves before the first key mutation.
       var key =
@@ -892,6 +910,17 @@ function configuration(directory, options, repair) {
           s.read('apps.json', 16 * 1024 * 1024),
         replacing = false,
         replacement;
+      if (
+        options.packagedState &&
+        ((apps && apps.stat.gid !== s.stat.gid) ||
+          (key && key.stat.gid !== s.stat.gid))
+      )
+        fail(
+          'directory',
+          'shared-group',
+          actual(s.stat),
+          repair ? 'prepare' : 'inspect'
+        );
       if (apps && !s.owned(apps.stat))
         fail(
           'apps',
@@ -1000,11 +1029,30 @@ function configuration(directory, options, repair) {
             );
         }
       }
+      if (options.verifyHashes) {
+        if (
+          !key ||
+          (key.stat.mode & 4095) !== 416 ||
+          crypto.createHash('sha256').update(key.bytes).digest('hex') !==
+            options.verifyHashes[0]
+        )
+          fail('key', 'authenticated-key', key && actual(key.stat), 'inspect');
+        if (
+          !apps ||
+          (apps.stat.mode & 4095) !== 420 ||
+          crypto.createHash('sha256').update(apps.bytes).digest('hex') !==
+            options.verifyHashes[1]
+        )
+          fail('apps', 'valid-record', apps && actual(apps.stat), 'inspect');
+      }
       // A fresh private inode disconnects pre-repair writable descriptors.
       if (key && repair && (mode === 511 || (options.requireHash && mode & 7)))
         replacing = true;
-      if (repair && apps && (apps.stat.mode & 4095) === 511)
-        s.restrict('apps.json', apps, 420, 16 * 1024 * 1024);
+      if (repair && apps && (apps.stat.mode & 4095) === 511) {
+        if (options.packagedState && apps.stat.uid !== s.uid)
+          s.replace('apps.json', apps, 420, 16 * 1024 * 1024);
+        else s.restrict('apps.json', apps, 420, 16 * 1024 * 1024);
+      }
       if (key) {
         if (replacing) s.replace('ssap-key.json', key, 416, 65536, replacement);
         else if (mode & 7) s.restrict('ssap-key.json', key, 416, 65536);
@@ -1342,7 +1390,8 @@ prepare.requestStop = function (directory, options) {
 };
 prepare.stopGeneration = function (directory, create) {
   var manual = create === 'manual',
-    repair = manual || create === 'install',
+    deferStart = create === 'install-or-defer-start',
+    repair = manual || create === 'install' || deferStart,
     name = 'stop-generation';
   return session(
     directory,
@@ -1357,8 +1406,10 @@ prepare.stopGeneration = function (directory, create) {
       if ((s.stat.mode & 4095) === 511) {
         // Explicit Start retains the published boot recovery path when the
         // runtime can use the directory but only the packaged owner can chmod it.
-        // Setup always requires a checked generation in private storage.
         if (manual) return null;
+        // Developer Mode setup can deliver the packages without authorizing
+        // activation. Never use a generation from the widened directory.
+        if (deferStart && packagedState(s)) return false;
         throw Error('Stop storage is not private');
       }
       if (s.uid !== 0 && !(s.stat.mode & (s.stat.uid === s.uid ? 128 : 16)))

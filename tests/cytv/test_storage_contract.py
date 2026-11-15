@@ -344,6 +344,38 @@ assert.strictEqual(fs.existsSync(d+'/control.json'),false);
 assert.strictEqual(fs.readdirSync(d).sort().join(','),'blocked,stop-generation');
 """)
 
+    def test_deferred_install_start_requires_checked_packaged_directory(self):
+        self.run_js("""
+var original=fs.statSync(d),uid=5999,gid=5000,groups=[5000];
+process.getuid=function(){return 6126;};
+process.getgid=function(){return 5000;};
+process.getgroups=function(){return groups.slice();};
+['lstatSync','fstatSync','statSync'].forEach(function(name){
+ var stat=fs[name];fs[name]=function(){
+  var value=stat.apply(fs,arguments);
+  if(value.ino===original.ino){value.uid=uid;value.gid=gid;}
+  return value;
+ };
+});
+var generation=d+'/stop-generation';
+fs.chmodSync(d,511);
+fs.writeFileSync(generation,'S' + new Array(33).join('a'));fs.chmodSync(generation,511);
+var before=fs.statSync(generation);
+assert.throws(function(){p.stopGeneration(d,'install');});
+assert.strictEqual(p.stopGeneration(d,'install-or-defer-start'),false);
+groups=[];process.getgid=function(){return 6126;};
+assert.throws(function(){p.stopGeneration(d,'install-or-defer-start');});
+groups=[5000];uid=7777;
+assert.throws(function(){p.stopGeneration(d,'install-or-defer-start');});
+uid=5999;gid=7777;
+assert.throws(function(){p.stopGeneration(d,'install-or-defer-start');});
+assert.strictEqual(fs.statSync(d).mode&4095,511);
+assert.strictEqual(fs.statSync(generation).ino,before.ino);
+assert.strictEqual(fs.statSync(generation).mode&4095,511);
+assert.strictEqual(fs.readFileSync(generation,'utf8'),'S' + new Array(33).join('a'));
+assert.strictEqual(fs.readdirSync(d).join(','),'stop-generation');
+""")
+
     def test_stop_refuses_a_directory_replaced_after_generation_publication(self):
         self.run_js("""
 var root=d; d=root+'/state'; fs.mkdirSync(d,504);
