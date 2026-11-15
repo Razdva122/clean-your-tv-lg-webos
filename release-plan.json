@@ -1,7 +1,29 @@
 {
   "schema": 1,
   "version": null,
-  "changes": [],
+  "changes": [
+    {
+      "pr": 649,
+      "issues": [
+        646
+      ],
+      "summary": "Add Home settings tile editing without holding OK"
+    },
+    {
+      "pr": 655,
+      "issues": [
+        653
+      ],
+      "summary": "Complete No-root upgrades after Developer Mode widens Helper state (#653)"
+    },
+    {
+      "pr": 656,
+      "issues": [
+        643
+      ],
+      "summary": "Retry Windows reads of saved removal receipts"
+    }
+  ],
   "excluded": [],
   "acceptance": ""
 }
