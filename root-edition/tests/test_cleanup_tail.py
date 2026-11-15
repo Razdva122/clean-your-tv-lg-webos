@@ -78,8 +78,8 @@ function fixtureReply(command,args,options){
  }
  var method=args[2],value={returnValue:true};
  if(method.indexOf('listApps')!==-1){if(process.env.PRIVATE_ERROR)throw Error(process.env.PRIVATE_ERROR);if(process.env.ALL_CATALOGS_DENIED || process.env.DEV_CATALOG_DENIED && method.indexOf('/dev/')!==-1)value.returnValue=false;if(process.env.CATALOG_MALFORMED && method.indexOf('/dev/')!==-1)delete value.returnValue;value.apps=[];}
- else if(method.indexOf('getSystemSettings')!==-1){if(process.env.NO_HOME_APIS)throw Error('Home APIs unavailable');value.settings={defaultApps:{home:process.env.SETTINGS_HOME||(process.env.FOREIGN_ROUTE?'changed':'third.party.home')}};}
- else if(method.indexOf('getProfiles')!==-1){if(process.env.FAIL_FINAL_READBACK && ++profileReads===1)throw Error('injected final readback failure');if(process.env.MISSING_PROFILES){value.returnValue=false;if(process.env.PROFILE_ERROR)value=JSON.parse(process.env.PROFILE_ERROR);}else value.profiles={defaultApps:{categories:{home:'third.party.home'}},idleApp:{appId:'third.party.home'}};}
+ else if(method.indexOf('getSystemSettings')!==-1){if(process.env.NO_HOME_APIS)throw Error('Home APIs unavailable');value.settings={defaultApps:process.env.UNSET_SAM_HOME?{}:{home:process.env.SETTINGS_HOME||(process.env.FOREIGN_ROUTE?'changed':'third.party.home')}};}
+ else if(method.indexOf('getProfiles')!==-1){if(process.env.FAIL_FINAL_READBACK && ++profileReads===1)throw Error('injected final readback failure');if(process.env.MISSING_PROFILES){value.returnValue=false;if(process.env.PROFILE_ERROR)value=JSON.parse(process.env.PROFILE_ERROR);}else value.profiles={defaultApps:{categories:{home:process.env.PROFILE_HOME||'third.party.home'}},idleApp:{appId:process.env.IDLE_HOME||'third.party.home'}};}
  else if(method.indexOf('activitymanager')!==-1){
   if(process.env.ACTIVITY_BOTH_UNAVAILABLE || process.env.ACTIVITY_LIST_UNAVAILABLE && method.indexOf('/list')!==-1)return {status:1,stdout:new Buffer('')};
   value.activities=JSON.parse(process.env.ACTIVITIES||'[]');
@@ -788,6 +788,23 @@ class CleanupTail(unittest.TestCase):
         self.record.pop('schema');self.write('clean-removal-'+ID+'.json',self.record)
         result,reply=self.run_tail();self.assertNotEqual(result.returncode,0)
         self.assertEqual(json.loads((self.base/'mutations.json').read_text()),[])
+
+    def test_stock_profile_tail_rechecks_unset_sam_home(self):
+        self.record.update(routes={'mode': 'stock-profiles'}, profileless_cleanup_eligible=True,
+            original={'lease': {'owner': 'clean-removal'}, 'request': None, 'submission': None, 'removal': None,
+                      'components': dict.fromkeys(('deploy', 'root-bootstrap', 'root-update', 'system-bootstrap', 'system-update'))},
+            fenced_components=dict.fromkeys(('deploy', 'root-bootstrap', 'root-update', 'system-bootstrap', 'system-update')))
+        self.write('routing-backup-'+ID+'.json', {})
+        self.write('clean-removal-'+ID+'.json', self.record)
+
+        stock = 'com.webos.app.home'
+        result, _ = self.run_tail(UNSET_SAM_HOME='1', PROFILE_HOME=stock)
+        self.assertNotEqual(result.returncode, 0)
+        self.assert_completion_pending_after_retirement()
+
+        result, reply = self.run_tail(UNSET_SAM_HOME='1', PROFILE_HOME=stock, IDLE_HOME=stock)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(reply['stage'], 'verified-clean')
 
     def test_stock_settings_tail_finishes_without_systemprofile(self):
         self.record['profileless_cleanup_eligible']=True

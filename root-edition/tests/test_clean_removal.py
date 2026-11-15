@@ -1,4 +1,5 @@
 import os
+import shutil
 import importlib.util
 from pathlib import Path
 import sys
@@ -1646,6 +1647,54 @@ def luna(uri, payload):
         self.assertEqual(result['last_failure']['luna'],{'call':'apps','reason':'negative-reply','error_code':-1})
         self.assertFalse(any(name.startswith('remove-') for name in calls))
         self.assertTrue((root/'state/ssap.json').exists())
+
+    def test_retry_no_root_removal_when_sam_home_is_unset(self):
+        driver, identifier, root, updater, _, calls, present = self.fixture()
+        for path in (root, updater):
+            shutil.rmtree(path)
+        for name in ('operation.json', 'request-'+identifier+'.json'):
+            (Path(driver.store.root)/name).unlink()
+        present.clear()
+        present.add('com.gathin.tvhome')
+
+        device = driver.device
+        original_rpc = device.rpc
+        stock = 'com.webos.app.home'
+        observed = {'home': 'third.party.home', 'idle': stock, 'settings': {}}
+        def reply(method, data):
+            if method.endswith('/getSystemSettings'):
+                return {'returnValue': True, 'settings': {'defaultApps': observed['settings']}}
+            if method.endswith('/getProfiles'):
+                return {'returnValue': True, 'profiles': {
+                    'defaultApps': {'categories': {'home': observed['home']}},
+                    'idleApp': {'appId': observed['idle']}}}
+            if method == 'com.gathin.tvhome.renewal/disable':
+                return {'returnValue': True, 'state': {'enabled': False}}
+            return original_rpc(method, data)
+
+        device.rpc = reply
+        with patch.object(device, 'log'):
+            failed = driver.clean_remove(identifier)
+            self.assertEqual(failed['stage'], 'original-writers-fenced', failed)
+            self.assertIn('com.gathin.tvhome', present)
+            observed.update(home=stock, settings={'home': None})
+            self.assertEqual(driver.clean_remove(identifier)['stage'], 'original-writers-fenced')
+            self.assertFalse(any(call.startswith('remove-') for call in calls))
+
+            observed['settings'] = {}
+            present.add('com.cleanyourtv.root.preview')
+            self.assertEqual(driver.clean_remove(identifier)['stage'], 'original-writers-fenced')
+            self.assertFalse(any(call.startswith('remove-') for call in calls))
+            present.remove('com.cleanyourtv.root.preview')
+
+            resumed = driver.clean_remove(identifier, failed['removal'], failed['lease'])
+            if resumed['stage'] == 'restart-required':
+                device.current_boot = '22222222-2222-2222-2222-222222222222'
+                resumed = driver.clean_remove(identifier, failed['removal'], failed['lease'])
+        self.assertEqual(resumed['stage'], 'verified-clean', resumed)
+        self.assertEqual(resumed['removal'], failed['removal'])
+        self.assertEqual(calls.count('remove-com.gathin.tvhome'), 1)
+        self.assertFalse(present)
 
     def profileless_fixture(self, reply=None, home='com.webos.app.home'):
         from updater.luna import context

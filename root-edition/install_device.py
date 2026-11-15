@@ -769,6 +769,10 @@ class LocalDevice:
                 with cleanup_step('home-readback'):
                     record['routes']=routes(self,record,retire_orphan=True)
                 record['done'].append('controls-restored');save('controls-restored')
+            elif record.get('routes') == {'mode': 'stock-profiles'}:
+                with cleanup_step('home-readback'):
+                    if routes(self, record) != record['routes']:
+                        raise ValueError('routing_evidence_changed')
             # Recheck before destructive work: a retry must not erase newly
             # appeared routing evidence and then use its absence as proof.
             if isinstance(record.get('routes'),dict) and record['routes'].get('mode')=='stock-compositor':
@@ -1058,6 +1062,29 @@ class LocalDevice:
             and not any(name.split('/')[0] in ROUTING_EVIDENCE for name in backup)
             and not any(os.path.lexists(ROOT/name) for name in ROUTING_EVIDENCE)
             and not os.path.lexists('/var/webos-profile/override/clean-your-tv-root.json'))
+
+    def stock_profiles_eligible(self, record):
+        """Allow stock-profile proof only for removal without Root Edition state."""
+        from clean_removal import APPS
+        from installation import JOURNALS
+
+        original = record['original']
+        if (record.get('profileless_cleanup_eligible') is not True
+                or original['lease']['owner'] != 'clean-removal'
+                or any(original[key] is not None for key in ('request', 'submission', 'removal'))
+                or original['components'] != dict.fromkeys(JOURNALS)
+                or record.get('fenced_components') != dict.fromkeys(JOURNALS)):
+            return False
+        backup = self.ownership.store.read('routing-backup-'+record['operation'])
+        if backup != {} or any(os.path.lexists(path) for path in (
+                ROOT, UPDATER, SUPERVISOR, '/var/webos-profile/override/clean-your-tv-root.json',
+                '/var/luna-service2/manifests.d/com.cleanyourtv.root.preview.recovery.json',
+                *(INIT/name for name in ('50-clean-your-tv-root', '51-clean-your-tv-root-updater',
+                                         '52-clean-your-tv-system-updater')))):
+            return False
+        root_apps = APPS[:3]
+        return not (self.apps().intersection(root_apps) or
+                    any(os.path.lexists(path) for app in root_apps for path in self.package_paths(app)))
 
     def compositor_stock_eligible(self, record):
         from clean_removal import ROUTING_EVIDENCE, restored_native_schema
