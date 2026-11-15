@@ -1451,6 +1451,91 @@ class OriginalOperationIntegration(unittest.TestCase):
         self.assertIsNone(self.store.pending(self.profile))
         self.assertEqual((self.root/'requests').read_bytes(),before)
 
+    def test_pending_update_replaces_stale_key_without_replaying_packages_or_clearing_stop(self):
+        from unittest.mock import Mock
+        from cytv.errors import UserError
+
+        self.installer.install(self.inventory, 'old-secret')
+        directory = Path(operations.HELPER_STATE)
+        key = directory / 'ssap-key.json'
+        old_bytes = key.read_bytes()
+        # Keep the original inode allocated after rename and model Helper ownership.
+        retained = key.open('rb')
+        self.addCleanup(retained.close)
+        inode = key.stat().st_ino
+        original = self.remote.run
+        lose_replacement_reply = False
+
+        def run(command, data=None, timeout=30):
+            nonlocal lose_replacement_reply
+            words = split_observer_command(command)
+            if '/usr/bin/node' in words and '-e' in words:
+                i = words.index('-e') + 1
+                prefix = (
+                    "var fs=require('fs');['lstatSync','fstatSync'].forEach(function(name){"
+                    "var original=fs[name];fs[name]=function(){var s=original.apply(fs,arguments);"
+                    "if(s.ino===INO)s.uid=6773;return s;};});"
+                ).replace('INO', str(inode))
+                words[i] = prefix + words[i]
+                command = shlex.join(words)
+            response = original(command, data=data, timeout=timeout)
+            if lose_replacement_reply and any(word.startswith('replace-stale-key:') for word in words):
+                lose_replacement_reply = False
+                raise RuntimeError('lost replacement reply')
+            return response
+
+        self.remote.run = run
+        keyfile = self.store.device_dir(self.profile) / 'ssap.json'
+        state.private_write(keyfile, json.dumps({'key': 'new-secret'}).encode())
+        socket = Mock()
+        socket.recv.return_value = json.dumps({'id': 'register_0', 'type': 'error'})
+        with patch('websockets.sync.client.connect', return_value=socket):
+            with self.assertRaises(RuntimeError):
+                self.installer.install(self.inventory, 'new-secret')
+            pending = self.store.pending(self.profile)
+            self.assertIsNotNone(pending)
+            saved = observer.capsule(self.installer, pending)
+            requests = (self.root / 'requests').read_bytes()
+            self.assertEqual(requests.splitlines(), [app.encode() for app in observer.APPS] * 2)
+            self.assertEqual(key.read_bytes(), old_bytes)
+            self.assertEqual(key.stat().st_ino, inode)
+            self.publish_stop()
+            generation = (directory / 'stop-generation').read_bytes()
+
+            with self.assertRaisesRegex(UserError, 'pairing'):
+                self.installer.continue_no_root(pending)
+            self.assertEqual(key.read_bytes(), old_bytes)
+            self.assertEqual(self.store.pending(self.profile), pending)
+            self.assertEqual((self.root / 'requests').read_bytes(), requests)
+
+            socket.recv.return_value = json.dumps({
+                'id': 'register_0', 'type': 'registered', 'payload': {'client-key': 'new-secret'},
+            })
+            lose_replacement_reply = True
+            with self.assertRaisesRegex(RuntimeError, 'lost replacement reply'):
+                self.installer.continue_no_root(pending)
+            self.assertEqual(key.read_text(), json.dumps({'key': 'new-secret'}))
+            self.assertEqual(self.store.pending(self.profile), pending)
+            self.assertEqual((self.root / 'requests').read_bytes(), requests)
+            self.assertEqual((directory / 'blocked').read_bytes(), b'explicit-stop')
+            result = self.installer.continue_no_root(pending)
+
+        self.assertEqual(socket.send.call_count, 3)
+        registration = json.loads(socket.send.call_args.args[0])['payload']
+        self.assertEqual(registration['client-key'], 'new-secret')
+        self.assertFalse(registration['forcePairing'])
+        self.assertNotIn('pairingType', registration)
+        self.assertTrue(result['activation_cancelled'])
+        self.assertFalse(result['launch_requested'])
+        self.assertEqual((directory / 'blocked').read_bytes(), b'explicit-stop')
+        self.assertEqual((directory / 'stop-generation').read_bytes(), generation)
+        self.assertEqual(key.read_text(), json.dumps({'key': 'new-secret'}))
+        self.assertEqual(key.stat().st_mode & 0o777, 0o640)
+        self.assertNotEqual(key.stat().st_ino, inode)
+        self.assertEqual((self.root / 'requests').read_bytes(), requests)
+        self.assertEqual(observer.snapshot(self.installer, saved)['configuration']['files'], 'complete')
+        self.assertIsNone(self.store.pending(self.profile))
+
     def test_closed_retry_requires_original_configuration_readback(self):
         original=self.remote.run
         def cut(command,data=None,timeout=30):

@@ -827,8 +827,11 @@ from .tv_sources import node_adapter
 
 STATE_CHECK = node_adapter('state-permissions', r"""
 var option=process.argv[process.argv.length-2],directory=process.argv[process.argv.length-1];
-var expected=/^repair-key-mode:[a-f0-9]{64}$/.test(option)?option.slice(16):null;
+var match=/^(repair-key-mode|check-stale-key|replace-stale-key):([a-f0-9]{64})(?::([a-f0-9]{64}))?$/.exec(option);
+var expected=match?match[2]:null;
+var recoverStaleKey=!!match&&match[1]!=='repair-key-mode';
 var repair=option==='repair-key-mode'||expected,rootRepair=false;
+if(recoverStaleKey&&process.getuid()===0)throw Error('unsafe-config-owner');
 function effectiveIdentity(uid,gid){
  if(typeof process.geteuid==='function'&&typeof process.getegid==='function')
   return process.geteuid()===uid&&(gid===undefined||process.getegid()===gid);
@@ -854,9 +857,22 @@ if(repair&&process.getuid()===0&&
   throw Error('unsafe-config-owner');
  rootRepair=true;
 }
-if(repair)contract.prepareConfiguration(directory,{expectedHash:expected,requireHash:rootRepair});
-else contract.inspectConfiguration(directory,{});
-process.stdout.write('CYTV_CONFIGURATION_PRIVATE');
+var options={expectedHash:expected,requireHash:rootRepair,recoverStaleKey:recoverStaleKey};
+if(match&&match[1]==='replace-stale-key'){
+ // Read only the capsule's bounded private payload from SSH stdin.
+ var data=typeof Buffer.alloc==='function'?Buffer.alloc(65537):new Buffer(65537);
+ var offset=0,fs=require('fs');
+ while(offset<data.length){
+  var count=fs.readSync(0,data,offset,data.length-offset,null);
+  if(!count)break;
+  offset+=count;
+ }
+ if(!offset||offset===data.length||!match[3])throw Error('invalid-key-replacement');
+ options.replacementKey=data.slice(0,offset);
+ options.staleKeyIdentity=match[3];
+}
+var result=repair?contract.prepareConfiguration(directory,options):contract.inspectConfiguration(directory,{});
+process.stdout.write(typeof result==='string'?'CYTV_STALE_PAIRING_KEY '+result:'CYTV_CONFIGURATION_PRIVATE');
 """)
 
 EMPTY_PACKAGE = r'''
@@ -1103,8 +1119,38 @@ def configure(installer,value):
     # restrict the known vendor-normalized key mode. Status stays read-only;
     # immutable observer/capsule bytes and emergency latches are untouched.
     repair=installer.helper_state() in ('stopped','stale')
-    mode=' '+shlex.quote('repair-key-mode:'+expected[HELPER_STATE+'/ssap-key.json'])+' ' if repair else ' '
-    if installer.remote.run('/usr/bin/node -e '+shlex.quote(STATE_CHECK)+mode+shlex.quote(HELPER_STATE)).strip()!='CYTV_CONFIGURATION_PRIVATE':refuse()
+    key_hash = expected[HELPER_STATE + '/ssap-key.json']
+    developer_mode = installer.profile.get('connection') != 'root-ssh'
+    command = '/usr/bin/node -e ' + shlex.quote(STATE_CHECK)
+    directory = shlex.quote(HELPER_STATE)
+    if repair:
+        action = 'check-stale-key' if developer_mode else 'repair-key-mode'
+        mode = ' ' + shlex.quote(f'{action}:{key_hash}')
+    else:
+        mode = ''
+    result = installer.remote.run(command + mode + ' ' + directory).strip()
+    stale_key = re.fullmatch(r'CYTV_STALE_PAIRING_KEY ([a-f0-9]{64})', result)
+    if stale_key and repair and developer_mode:
+        from .tv import SSAP
+        pending = installer.store.pending(installer.profile)
+        if snapshot(installer, value)['configuration']['files'] != 'prepared':
+            refuse()
+        key_data = value['configuration']['ssap-key.json']
+        profile = installer.profile
+        # The retained TV file is not proof of pairing. Authenticate the
+        # original capsule's key before allowing the adapter to replace it.
+        with SSAP(profile['host'], installer.store.device_dir(profile), installer.progress, reuse_only=True) as paired:
+            if paired.key != json.loads(key_data)['key']:
+                refuse()
+        current = snapshot(installer, value)
+        if (installer.store.pending(profile) != pending or current['reservation'] != 'active'
+                or current['configuration']['files'] != 'prepared'
+                or installer.helper_state() not in ('stopped', 'stale')):
+            refuse()
+        mode = shlex.quote(f'replace-stale-key:{key_hash}:{stale_key[1]}')
+        result = installer.remote.run(f'{command} {mode} {directory}', data=key_data.encode()).strip()
+    if result != 'CYTV_CONFIGURATION_PRIVATE':
+        refuse()
     token=claim_step(installer,plan,'files')
     if token:
         if installer.helper_state() not in ('stopped','stale'):refuse()
