@@ -21,6 +21,39 @@ class Capture(Console):
 
 
 class CleanupConnectionWire(unittest.TestCase):
+    def test_unreadable_operation_stops_before_ssh_with_local_diagnostic(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            store = state.Store(tmp)
+            profile = state.target('192.0.2.50', 'root')
+            store.save(profile)
+            directory = store.device_dir(profile)
+            (directory / 'known_hosts').write_bytes(b'original pin')
+            store.request_clean_removal(profile)
+            receipt = directory / 'operation.json'
+            original = receipt.read_bytes()
+            open_file = Path.open
+
+            def open_with_denial(path, *args, **kwargs):
+                if path == receipt:
+                    denied = PermissionError('PRIVATE failure')
+                    denied.winerror = 5
+                    raise denied
+                return open_file(path, *args, **kwargs)
+
+            for command in ('uninstall', 'recover'):
+                with self.subTest(command=command):
+                    write, connect = Capture(), Mock()
+                    with patch('cytv.state.platform', 'win32'), patch.object(Path, 'open', open_with_denial):
+                        code = cli.main([command, '--language', 'en', '--yes', '--host', profile['host'],
+                                         '--edition', 'root', '--data-dir', tmp], write=write, connect=connect, ask=lambda _: 'y')
+                    self.assertEqual(code, 2)
+                    connect.assert_not_called()
+                    report = json.loads(write.reports[-1].read_bytes())
+                    self.assertEqual(report['local_recovery'], {'reason': 'operation-access', 'location': 'operation'})
+                    self.assertNotIn('PRIVATE', json.dumps(report))
+            self.assertEqual(receipt.read_bytes(), original)
+            self.assertEqual(list(directory.glob('removal-original-*.json')), [])
+
     def test_ssh_failure_keeps_bound_plan_current_error_and_original_failure(self):
         for edition,command in (('root','uninstall'),('no-root','uninstall'),('root','recover')):
             with self.subTest(edition=edition,command=command),tempfile.TemporaryDirectory() as tmp:

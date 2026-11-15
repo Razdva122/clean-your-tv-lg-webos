@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from cytv.state import Store, target
 from cytv.recovery_state import assess, removal_summary
@@ -29,6 +30,29 @@ class RemovalIntentTests(unittest.TestCase):
         projection = removal_summary(intent)
         self.assertNotIn('SECRET', str(projection))
         self.assertEqual(assess(self.profile, intent)['actions'], ['continue-removal', 'retain-evidence'])
+
+    def test_windows_receipt_lock_resumes_original_removal(self):
+        intent = self.store.request_clean_removal(self.profile)
+        receipt = self.store.device_path(self.profile) / 'operation.json'
+        open_file = Path.open
+        original = receipt.read_bytes()
+        for winerror in (None, 32, 33):
+            with self.subTest(winerror=winerror):
+                locked = PermissionError('fixture sharing violation')
+                if winerror is not None:
+                    locked.winerror = winerror
+                remaining = iter((locked, locked))
+
+                def read(path, *args, **kwargs):
+                    error = next(remaining, None) if path == receipt else None
+                    if error:
+                        raise error
+                    return open_file(path, *args, **kwargs)
+
+                with patch('cytv.state.platform', 'win32'), patch('cytv.state.sleep'), patch.object(Path, 'open', read):
+                    self.assertEqual(self.store.request_clean_removal(self.profile), intent)
+        self.assertEqual(receipt.read_bytes(), original)
+        self.assertEqual(list(receipt.parent.glob('removal-original-*.json')), [])
 
     def test_359_unknown_does_not_guess_original_submission(self):
         self.profile = target('tv.local', 'no-root')
