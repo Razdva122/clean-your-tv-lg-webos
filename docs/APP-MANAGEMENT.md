@@ -4,6 +4,11 @@ Hold OK on an app for 0.6 seconds to pick it up. Use the arrows to move it,
 press OK to place it, or Back to cancel. With a pointer, hold the tile,
 release, point at its new position and click to place it.
 
+With short presses, open **Home settings → Appearance → Edit tiles**. Press
+OK to pick up the focused tile. Move it with the arrows and press OK to
+place it, or select **Hide from Home** and press OK. Back cancels the current
+move. Press Back in tile selection to exit editing.
+
 The **+ / Add app** tile stays last when shown. It lists installed apps which
 are not on Home, including apps previously hidden here. Selecting one adds
 it at the end, before + when shown. This does not install software.

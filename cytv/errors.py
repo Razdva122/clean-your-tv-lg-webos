@@ -24,7 +24,7 @@ class UserError(RuntimeError):
 
 
 LOCAL_RECOVERY_REASONS = ('directory-owner', 'directory-permissions', 'directory-type',
-                          'directory-access', 'storage-unavailable', 'operation-invalid', 'profile-access', 'profile-invalid',
+                          'directory-access', 'storage-unavailable', 'operation-invalid', 'operation-access', 'profile-access', 'profile-invalid',
                           'capsule-missing', 'capsule-permissions', 'capsule-unsafe',
                           'capsule-changed', 'capsule-invalid', 'capsule-access', 'source-incompatible')
 
@@ -56,7 +56,7 @@ class LocalRecoveryError(UserError):
         if reason == 'profile-invalid':
             super().__init__('A saved TV connection is invalid. Keep the saved connection and recovery data.')
             return
-        message = ('Local recovery storage could not be verified.' if reason.startswith('directory-') or reason == 'storage-unavailable' else
+        message = ('Local recovery storage could not be verified.' if reason.startswith('directory-') or reason in ('storage-unavailable', 'operation-access') else
                    'The original private recovery file is missing.' if reason == 'capsule-missing' else
                    'The saved recovery operation is incompatible with this installer.' if reason == 'source-incompatible' else
                    'The original private recovery file could not be verified.')

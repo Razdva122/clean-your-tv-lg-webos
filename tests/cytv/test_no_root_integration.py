@@ -101,7 +101,8 @@ sys.stdin.read()
 
             code=words[words.index('-e')+1]
             argument=words[-1]
-            if observer.PROGRAM in code or observer.ROOT_PROGRAM in code or observer.STORAGE_SELECT in code:
+            is_observer = any(source in code for source in (observer.PROGRAM, observer.ROOT_PROGRAM, observer.PACKAGED_STATE_PROGRAM))
+            if is_observer or observer.STORAGE_SELECT in code:
                 request=json.loads(argument)
                 request['sender']=str(self.sender)
                 request['timeout']=3000
@@ -110,7 +111,7 @@ sys.stdin.read()
             result=subprocess.run([shutil.which('node'),'-e',code]+words[words.index('-e')+2:-1]+[argument],input=data,capture_output=True,timeout=timeout)
             if result.returncode: raise RuntimeError(result.stderr.decode())
             reply=result.stdout.decode()
-            if (observer.PROGRAM in code or observer.ROOT_PROGRAM in code) and self.cut and request['command']=='status':
+            if is_observer and self.cut and request['command']=='status':
                 value=json.loads(reply)
                 if value['slots'][0]['terminal']=='success':
                     self.cut=False
@@ -1236,6 +1237,8 @@ class OriginalOperationIntegration(unittest.TestCase):
                 else:
                     generation.chmod(0o775)
                 (directory/name).chmod(0o775)
+                if name == 'watchdog':
+                    directory.chmod(0o777)
                 expected=generation.read_bytes() if generation.exists() else None
                 before=len(self.remote.calls)
                 result=self.installer.install(self.inventory,'original-secret')
@@ -1408,6 +1411,76 @@ class OriginalOperationIntegration(unittest.TestCase):
         self.assertEqual((directory/'apps.json').stat().st_mode & 0o7777, 0o644)
         for name, contents in runtime_records.items():
             self.assertEqual((directory/name).read_text(), contents, name)
+
+    def test_reinstall_after_vendor_expands_foreign_owned_state(self):
+        self.check_reinstall_after_vendor_expands_foreign_owned_state()
+
+    def test_resume_reinstall_with_expanded_state_preserves_stop(self):
+        self.check_reinstall_after_vendor_expands_foreign_owned_state(interrupt=True)
+
+    def check_reinstall_after_vendor_expands_foreign_owned_state(self, interrupt=False):
+        self.installer.install(self.inventory, 'original-secret')
+        directory = Path(operations.HELPER_STATE)
+        generation = directory / 'stop-generation'
+        old_generation = generation.read_bytes()
+        for path in (directory, *directory.iterdir()):
+            path.chmod(0o777)
+
+        # The test runner owns the real inodes. Model LG's packaged UID/GID
+        # on the directory independently of the SSH caller and its files.
+        packaged_inodes = [directory.stat().st_ino]
+        if interrupt:
+            # Also cover packaged inventory the SSH caller cannot chmod.
+            retained_apps = (directory / 'apps.json').open('rb')
+            self.addCleanup(retained_apps.close)
+            packaged_inodes.append(os.fstat(retained_apps.fileno()).st_ino)
+        add_owner = (
+            "var fs=require('fs');['lstatSync','fstatSync','statSync'].forEach(function(name){"
+            "var stat=fs[name];fs[name]=function(){var s=stat.apply(fs,arguments);"
+            f"s.gid=5000;if({json.dumps(packaged_inodes)}.indexOf(s.ino)>=0)s.uid=5999;"
+            "return s;};});"
+            "var groups=process.getgroups();process.getgroups=function(){return groups.concat(5000);};"
+        )
+        run = self.remote.run
+
+        def packaged_state(command, data=None, timeout=30):
+            words = split_observer_command(command)
+            if '/usr/bin/node' in words and '-e' in words:
+                index = words.index('-e') + 1
+                if any(source in words[index] for source in (observer.GENERATION_CHECK, observer.STATE_CHECK,
+                                                             observer.PACKAGED_STATE_PROGRAM)):
+                    words[index] = add_owner + words[index]
+                    command = shlex.join(words)
+            return run(command, data, timeout)
+
+        self.remote.run = packaged_state
+        if interrupt:
+            blocked = directory / 'blocked'
+            blocked.write_bytes(b'explicit-stop')
+            blocked.chmod(0o777)
+            self.remote.cut = True
+            with self.assertRaisesRegex(RuntimeError, 'observation could not be verified'):
+                self.installer.install(self.inventory, 'new-key')
+            pending = self.store.pending(self.profile)
+            value = observer.capsule(self.installer, pending)
+            self.assertEqual(value['plan']['configuration_directory'], str(directory))
+            self.assertEqual(value['source'], observer.PACKAGED_STATE_PROGRAM)
+            result = self.installer.continue_no_root(pending)
+            self.assertEqual(blocked.read_bytes(), b'explicit-stop')
+            self.assertEqual(blocked.stat().st_mode & 0o7777, 0o777)
+        else:
+            result = self.installer.install(self.inventory, 'new-key')
+
+        self.assertEqual(self.installer.outcome.values['packages'], 'verified')
+        self.assertTrue(result['activation_cancelled'])
+        self.assertFalse(result['launch_requested'])
+        self.assertEqual((self.root / 'requests').read_text().splitlines(), list(observer.APPS) * 2)
+        self.assertIsNone(self.store.pending(self.profile))
+        self.assertEqual(directory.stat().st_mode & 0o7777, 0o777)
+        self.assertEqual((directory / 'ssap-key.json').stat().st_mode & 0o7777, 0o640)
+        self.assertEqual(json.loads((directory / 'ssap-key.json').read_text()), {'key': 'new-key'})
+        self.assertEqual((directory / 'apps.json').stat().st_mode & 0o7777, 0o644)
+        self.assertEqual(generation.read_bytes(), old_generation)
 
     def test_pending_update_reclaims_capsule_matched_helper_key_without_package_replay(self):
         self.installer.install(self.inventory,'original-secret')

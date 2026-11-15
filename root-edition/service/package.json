@@ -1,6 +1,6 @@
 {
   "name": "com.cleanyourtv.root.preview.service",
-  "version": "0.19.8",
+  "version": "0.20.0",
   "main": "service.js",
   "private": true,
   "wallpaperMediaProtocol": 1,

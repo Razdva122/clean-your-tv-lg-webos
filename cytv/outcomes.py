@@ -9,6 +9,7 @@ FIELDS = {
 }
 UNTESTED = 'The physical Home button has not been checked. A launch acknowledgement does not verify it.'
 REVIEW = 'Review TV checks'
+START_HELPER = 'Packages verified. Open Home Helper on the TV and choose Start Helper when ready.'
 
 
 def summary(value):
@@ -54,13 +55,13 @@ class SetupOutcome:
 
     def cancelled_by_stop(self):
         self.values['startup'] = 'stopped-during-setup'
-        self.checks.update('startup', 'unknown', 'Packages verified. Stop cancelled Home activation. Start Helper on the TV when ready.')
+        self.checks.update('startup', 'unknown', START_HELPER)
 
     def review_home(self, ask, write, non_interactive=False):
         self.values['home_button'] = 'not-tested'
         self.checks.update('home-button', 'unknown', UNTESTED)
         if self.values['startup'] == 'stopped-during-setup':
-            write('Packages verified. Stop cancelled Home activation. Start Helper on the TV when ready.')
+            write(START_HELPER)
             return
         if non_interactive:
             return

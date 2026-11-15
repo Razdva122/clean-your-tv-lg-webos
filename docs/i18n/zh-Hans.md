@@ -91,6 +91,8 @@ No-root 红外遥控支持：短按并松开 Home 后，计划在约 700 毫秒�
 
 方向键选择磁贴，OK 打开，按住 OK 调整顺序。短按返回保留应用本身的导航和退出确认。启用 Home 控制时，短按 Home 打开 Clean Your TV。按住返回 1.2 秒会临时打开 LG Home 一次，不改变 Home 控制开关和设置。
 
+要用短按编辑磁贴，请打开 **Home 设置 → 外观 → 编辑磁贴**。按 OK 拾取磁贴，用方向键移动，再按 OK 放下。按返回可取消移动或退出编辑。
+
 **两秒内按 Home 三次，每次都松开**，即可返回 LG Home 并停止 Home 控制，偏好设置保留。
 
 No-root: 要重新启动 Home 控制，请打开 Home Helper，选择启动 Helper 并确认。已保存的主屏幕选择会保留。 Root：在 Home 设置中启用 **更改 Home（Change Home）** 恢复。**打开 LG Home（Open LG Home）** 只打开 LG Home 一次，不更改路由。要持续使用 LG Home，请关闭 **更改 Home（Change Home）**。不要同时运行两种控制器。若故障重复出现，请保持 LG Home 启用。

@@ -91,6 +91,8 @@ Supporto IR No-root: rilasciare Home dopo una pressione breve programma Clean do
 
 Le frecce selezionano, OK apre; tieni premuto OK per riordinare. Un breve Indietro conserva navigazione e conferma di uscita dell’app. Home apre il launcher quando il controllo è attivo. Tieni premuto Indietro per 1,2 secondi per aprire LG Home una volta. L’interruttore del controllo Home e le impostazioni restano invariati.
 
+Per modificare con pressioni brevi, apri **Impostazioni Home → Aspetto → Modifica riquadri**. Premi OK per selezionare un riquadro, spostalo con le frecce e premi ancora OK per posizionarlo. Indietro annulla lo spostamento o esce dalla modifica.
+
 **Premi Home tre volte entro due secondi**, rilasciandolo tra le pressioni. Ripristina LG Home e interrompe il controllo senza cancellare le preferenze.
 
 No-root: Per riavviare il controllo Home, apri Home Helper, scegli Avvia Helper e conferma. La tua scelta della schermata Home viene mantenuta. Root: attiva **Cambia Home** nelle impostazioni Home per riprendere. **Apri LG Home** apre LG Home una volta senza cambiare la destinazione di Home. Per ripristinare LG Home come destinazione permanente, disattiva **Cambia Home**. Non eseguire entrambi i controllori insieme. Se il problema ricompare, lascia attivo LG Home.

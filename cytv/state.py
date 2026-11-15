@@ -72,6 +72,17 @@ def private_write(path, data):
             os.unlink(name)
 
 
+def _read_with_windows_retry(read):
+    for attempt in range(3):
+        try:
+            return read()
+        except PermissionError as error:
+            # Windows file opens can report sharing violations as plain EACCES.
+            if platform != 'win32' or getattr(error, 'winerror', None) not in (None, 32, 33) or attempt == 2:
+                raise
+            sleep(0.05 * (attempt + 1))
+
+
 SSH_IDENTITY_REVIEW = 'ssh-identity-review.json'
 
 
@@ -212,12 +223,12 @@ class Store:
         """Resolve pending work to its original saved identity, before connecting."""
         directory = self.device_dir(selected)
         require_original_ssh_identity(directory)
-        if self.pending(selected) is None:
+        _, pending = self._read_operation(directory / 'operation.json', require_access=True)
+        if pending is None:
             return selected, False
         try:
             path = directory / 'profile.json'
             known = directory / 'known_hosts'
-            pending=self.pending(selected) or {}
             if (pending.get('recovery_protocol')=='clean-removal-v1' and pending.get('connection_pending') is True
                     and 'previous' not in pending and not path.is_symlink() and not known.is_symlink() and not known.exists()):
                 original=self._read_profile(path)
@@ -232,7 +243,7 @@ class Store:
             matches = [p for p in profiles if all(p.get(k) == original.get(k) for k in ('host','edition','port','connection'))]
             if matches != [original]:
                 raise ValueError('ambiguous profile')
-            operation=(self.pending(original) or {}).get('product_operation')
+            operation=pending.get('product_operation')
             if operation and [p for p in profiles if (self.pending(p) or {}).get('product_operation')==operation] != [original]:
                 raise ValueError('ambiguous operation')
             return original, True
@@ -242,16 +253,10 @@ class Store:
 
     @staticmethod
     def _read_profile(path):
-        for attempt in range(3):
-            try:
-                raw = path.read_text()
-                break
-            except PermissionError as error:
-                # Windows file opens can report sharing violations as plain EACCES.
-                winerror = getattr(error, 'winerror', None)
-                if platform != 'win32' or winerror not in (None, 32, 33) or attempt == 2:
-                    raise LocalRecoveryError('profile-access', 'profile') from None
-                sleep(0.05 * (attempt + 1))
+        try:
+            raw = _read_with_windows_retry(path.read_text)
+        except PermissionError:
+            raise LocalRecoveryError('profile-access', 'profile') from None
         saved = json.loads(raw)
         if (type(saved) is not dict or type(saved.get('host')) is not str
                 or type(saved.get('edition')) is not str or type(saved.get('port')) is not int
@@ -308,16 +313,28 @@ class Store:
                     result.append(profile)
         return sorted(result, key=lambda p: (p['host'], p['port'], p['edition']))
 
-    def pending(self, profile):
+    @staticmethod
+    def _read_operation(path, *, require_access=False):
+        unknown = {'action': 'unknown', 'stage': 'corrupt-receipt; retain evidence and inspect TV'}
         try:
-            result = json.loads((self.device_path(profile) / 'operation.json').read_text())
+            raw = _read_with_windows_retry(path.read_bytes)
+        except FileNotFoundError:
+            return None, None
+        except OSError as error:
+            if require_access:
+                raise LocalRecoveryError('operation-access', 'operation',
+                                         storage_full=is_storage_full(error)) from None
+            return None, unknown
+        try:
+            result = json.loads(raw)
             if not isinstance(result, dict) or not isinstance(result.get('action'), str):
                 raise ValueError('Invalid receipt')
-            return result
-        except FileNotFoundError:
-            return None
-        except (ValueError, OSError):
-            return {'action': 'unknown', 'stage': 'corrupt-receipt; retain evidence and inspect TV'}
+        except ValueError:
+            return raw, unknown
+        return raw, result
+
+    def pending(self, profile):
+        return self._read_operation(self.device_path(profile) / 'operation.json')[1]
 
     def begin(self, profile, action, **values):
         path = self.device_dir(profile) / 'operation.json'
@@ -351,10 +368,11 @@ class Store:
 
     def request_clean_removal(self, profile):
         """Record desired absence under the host lock, without TV authority."""
-        previous = self.pending(profile)
+        directory = self.device_path(profile)
+        operation_path = directory / 'operation.json'
+        original_bytes, previous = self._read_operation(operation_path, require_access=True)
         if previous and previous.get('recovery_protocol') == 'clean-removal-v1':
             return previous
-        directory = self.device_dir(profile)
         completed = directory / 'clean-removal.json'
         if previous is None and completed.exists():
             value = json.loads(completed.read_text())
@@ -371,7 +389,7 @@ class Store:
         if previous is None and not (directory/'known_hosts').exists():value['connection_pending']=True
         if previous is not None:
             original = 'removal-original-' + identifier + '.json'
-            private_write(directory / original, (directory / 'operation.json').read_bytes())
+            private_write(directory / original, original_bytes)
             value.update(previous=previous, original_receipt=original)
             # Original selector/lease; the new ID identifies intent, not a lock bypass.
             current = previous
@@ -381,7 +399,7 @@ class Store:
                     value['product_operation'] = operation
                     break
                 current = current.get('previous')
-        private_write(directory / 'operation.json', json.dumps(value).encode())
+        private_write(operation_path, json.dumps(value).encode())
         self.diagnostic_created=value['diagnostic_id']
         self.diagnostic_action='uninstall'
         return value

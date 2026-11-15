@@ -91,6 +91,8 @@ No-root 紅外線遙控支援：短按並放開 Home 後，預定約 700 毫秒�
 
 方向鍵選擇圖塊，OK 打開，按住 OK 調整順序。短按返回保留應用本身的導航和退出確認。啟用 Home 控制時，短按 Home 打開 Clean Your TV。按住返回 1.2 秒會臨時打開 LG Home 一次，不改變 Home 控制開關和設定。
 
+若要用短按編輯圖塊，請開啟 **Home 設定 → 外觀 → 編輯圖塊**。按 OK 拿起圖塊，用方向鍵移動，再按 OK 放下。按返回可取消移動或離開編輯。
+
 **兩秒內按 Home 三次，每次都鬆開**，即可返回 LG Home 並停止 Home 控制，偏好設定保留。
 
 No-root: 要重新啟動 Home 控制，請開啟 Home Helper，選擇啟動 Helper 並確認。已儲存的主畫面選擇會保留。 Root：在 Home 設定中啟用 **更改 Home（Change Home）** 恢復。**開啟 LG Home（Open LG Home）** 只打開 LG Home 一次，不更改路由。要持續使用 LG Home，請關閉 **更改 Home（Change Home）**。不要同時執行兩種控制器。若故障重復出現，請保持 LG Home 啟用。

@@ -445,7 +445,7 @@
           });
         });
     }
-    var order = [3, 1, 12, 15, 16, 9, 8, 10, 11, 14, 5, 4, 0, 17, 7, 6, 2];
+    var order = [3, 1, 12, 15, 16, 9, 8, 10, 11, 18, 14, 5, 4, 0, 17, 7, 6, 2];
     function focus(index) {
       selected = index;
       if (!buttons[selected].disabled && !buttons[selected].hidden)
@@ -496,10 +496,11 @@
         if (window.HomeInputShelf) HomeInputShelf.togglePreview();
         return;
       }
-      if (index === 11) {
+      if (index === 11 || index === 18) {
         if (window.HomeAppControls) {
           close();
-          HomeAppControls.add();
+          if (index === 18) HomeAppControls.edit();
+          else HomeAppControls.add();
         }
         return;
       }
@@ -668,7 +669,7 @@
       back.className = 'renewal-actions';
       footer.appendChild(back);
       buttons = [];
-      [3, 1, 9, 8, 10, 11, 14, 5, 4, 0, 17, 7, 6, 2, 12, 15, 16].forEach(
+      [3, 1, 9, 8, 10, 11, 18, 14, 5, 4, 0, 17, 7, 6, 2, 12, 15, 16].forEach(
         function (i) {
           var labels = [
             'TV settings',
@@ -688,7 +689,8 @@
             'Preview inputs on focus',
             'LG Channels / Live TV',
             'YouTube',
-            'LG Notifications'
+            'LG Notifications',
+            'Edit tiles'
           ];
           var b = document.createElement('button');
           b.textContent = t(i === 6 ? 'Block LG firmware updates' : labels[i]);
@@ -700,7 +702,7 @@
           var target =
             i === 15 || i === 16
               ? sourceActions
-              : i === 10 || i === 11 || i === 14
+              : i === 10 || i === 11 || i === 14 || i === 18
                 ? apps
                 : i === 9
                   ? themes
@@ -733,6 +735,7 @@
             b.disabled = true;
           }
           if (i === 11) b.id = 'homeAddApp';
+          if (i === 18) b.id = 'homeEditTiles';
           if (i === 9) {
             b.hidden = true;
             b.disabled = true;
