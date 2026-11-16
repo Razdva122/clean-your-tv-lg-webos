@@ -75,14 +75,25 @@ def parser(desktop=False):
     result.add_argument('--prepare-python-runtime', action='store_true', help=i18n.translate('Download and verify the optional TV Python for offline setup'))
     result.add_argument('--new-recovery-attempt', action='store_true', help=i18n.translate('recover-system-rollback: explicitly start a new audited attempt after the old deadline'))
     result.add_argument('--repair-package-permissions', action='store_true', help=i18n.translate('enable-firmware-access: explicitly repair verified Root package permissions'))
+    result.add_argument('--reconnect-after-reset', action='store_true',
+                        help=i18n.translate('Install No-root using a new connection after a factory reset'))
     result.add_argument('--report', action='store_true', help=i18n.translate('doctor: save an issue-ready diagnostic report without private connection data'))
     return result
 
 
 def explain_failure(write, store, profile, phase, error):
     from .failure_help import for_error
+
+    def has_reset_source():
+        from .no_root_reconnect import original_pins
+        try:
+            original_pins(store, profile)
+        except UserError:
+            return False
+        return True
+
     pending = store.diagnostic_pending if hasattr(store, 'diagnostic_pending') else store.pending(profile) if profile else None
-    help = for_error(error, phase, profile, pending)
+    help = for_error(error, phase, profile, pending, has_reset_source=has_reset_source)
     if help:
         write.failure_help(help)
         if help['code'] == 'ssh-identity' and profile and profile['edition'] == 'root' and (pending or {}).get('action') == 'uninstall':
@@ -274,6 +285,10 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
         from .ssh_identity_review import run
         return run(args, store, ask, write)
     try:
+        if args.reconnect_after_reset and (
+                args.command != 'install' or args.edition != 'no-root' or not args.host
+                or args.connection or args.identity or args.non_interactive or args.yes):
+            raise UserError('Start a new No-root connection interactively with the saved TV address.')
         if args.tv_name is not None and args.command != 'install':
             raise UserError('--tv-name applies only to installation.')
         if args.new_recovery_attempt and (args.command != 'recover-system-rollback' or args.edition == 'no-root'):
@@ -347,7 +362,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
             write.step(3, 'Prepare the TV connection')
             if profile['edition'] == 'root':
                 write('Root requires existing root and SSH access.')
-            elif profile.get('connection') != 'root-ssh':
+            elif profile.get('connection') != 'root-ssh' and not args.reconnect_after_reset:
                 write('Developer Mode lets CYTV install apps on a TV without root.')
                 write('Home is your app screen. Home Helper makes the Home button open it.')
                 write.heading('1. Developer Mode')
@@ -372,7 +387,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                 write('Root will stop the old Home Helper, turn on Home control and open Clean Your TV Home.')
             write('Check controls on the TV after installation.')
         retry_removal=(args.command=='uninstall' and (store.pending(profile) or {}).get('recovery_protocol')=='clean-removal-v1')
-        if args.command in ('install', 'uninstall', 'restore', 'enable-system-updates', 'enable-firmware-access', 'disable-firmware-access', 'recover-system-rollback', 'recover-root-rollback', 'replace-system-updater') and not args.yes and not retry_removal:
+        if args.command in ('install', 'uninstall', 'restore', 'enable-system-updates', 'enable-firmware-access', 'disable-firmware-access', 'recover-system-rollback', 'recover-root-rollback', 'replace-system-updater') and not (args.yes or retry_removal or args.reconnect_after_reset):
             if args.command == 'uninstall' and profile['edition'] == 'root':
                 write('This removes Root, Root Updater, their services and startup hooks, plus any installed No-root Home, Helper and Updater.')
                 write('Recovery records are retained for diagnostics. Other TV apps stay installed.')
@@ -443,7 +458,14 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                     raise UserError('An earlier operation is unresolved. Choose Review recovery options or run cytv recover with the original TV connection.',
                                     reason_code='pending-operation') from None
             recovering = False
-            if partial:
+            if args.reconnect_after_reset:
+                from .no_root_reconnect import original_pins, reconnect
+                old_key_type, old_pins = original_pins(store, profile)
+                write('Start a new No-root connection only after a factory reset. The old profile and its uninstall record will be kept.')
+                write('Only continue for your own TV on your trusted home network.')
+                if not prompts.confirm('Start a new No-root connection after a factory reset?', ask, write, default=False):
+                    raise EOFError
+            elif partial:
                 directory = store.device_path(profile)
                 state.require_original_ssh_identity(directory)
                 if (directory / 'known_hosts').is_symlink():
@@ -461,7 +483,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                 if not recovering:store.save(profile)
                 store.request_clean_removal(profile)
             from .recovery import removal_plan
-            cleanup=not partial and (store.pending(profile) or {}).get('recovery_protocol')=='clean-removal-v1'
+            cleanup=not (partial or args.reconnect_after_reset) and (store.pending(profile) or {}).get('recovery_protocol')=='clean-removal-v1'
             observer_support = (not partial and profile.get('connection') == 'root-ssh'
                 and (store.pending(profile) or {}).get('recovery_protocol') == 'no-root-original-stream-v1'
                 and args.command in ('status', 'doctor', 'recover'))
@@ -481,8 +503,10 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                 checks.prepare(profile['edition'], args.command)
             checks.update('ssh', 'running')
             write('Connecting to the TV…')
-            def connect_tv(pinned):
-                directory = store.device_path(profile) if partial else store.device_dir(profile)
+            def connect_tv(pinned, directory=None, confirm=trust):
+                pairing = {'previous_host_key_type': old_key_type} if directory is not None else {}
+                if directory is None:
+                    directory = store.device_path(profile) if partial else store.device_dir(profile)
                 if connect:
                     # Older embedders accept exactly four positional arguments.
                     import inspect as signature_inspect
@@ -494,15 +518,19 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                         except TypeError:
                             pass
                     return connect(profile, directory, secret_with_help,
-                                   (lambda *_: False) if pinned else trust, **options)
-                return SSH.connect(profile, directory, secret_with_help, trust,
+                                   (lambda *_: False) if pinned else confirm, **options)
+                return SSH.connect(profile, directory, secret_with_help, confirm,
                                    identity_prompt=None if pinned or args.non_interactive else lambda: prompts.root_credentials(ask, write),
-                                   persist=not pinned)
+                                   persist=not pinned, **pairing)
 
             from .errors import connection_interrupted
             for attempt in range(3 if cleanup else 1):
                 try:
-                    remote = connect_tv(recovering or partial)
+                    if args.reconnect_after_reset:
+                        remote = reconnect(store, profile, lambda directory, confirm: connect_tv(False, directory, confirm),
+                                           trust, old_pins)
+                    else:
+                        remote = connect_tv(recovering or partial)
                     break
                 except Exception as error:
                     if not cleanup or attempt == 2 or not connection_interrupted(error):

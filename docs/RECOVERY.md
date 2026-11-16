@@ -56,12 +56,26 @@ on the TV. This differs from first-use **Connect and remember this TV?**:
 that prompt cannot approve replacement of an existing pin. A factory reset or
 reroot may explain a new key, but does not verify the TV's identity.
 
-Keep the original saved connection/profile, SSH keys, trust records, diagnostic
-reports and pending-operation receipts privately. A retained
-`uninstall / coordinator-submitted` describes earlier work; it is not the cause
-of the host-key mismatch or proof of what removal completed. Do not clear
-`known_hosts`, delete/recreate the profile or pending records, disable host-key
-checks, or repeat removal, installation, reset or rooting to bypass this stop.
+Keep the original profile, keys and pending-operation records. A pending
+uninstall describes earlier work. It does not explain the key mismatch or
+establish what remains on the TV.
+
+### Connect a No-root TV after a factory reset
+
+Use this only for your own TV on your trusted home network after a factory
+reset you performed. Enable **Dev Mode Status** and **Key Server** on the TV.
+When the desktop installer reports the changed key, select **Reconnect after
+factory reset**, confirm the reset, enter the Developer Mode code, and confirm
+the new SSH key as you would for a first connection. Then continue No-root setup.
+In the console, use `cytv install --edition no-root --host TV_ADDRESS --reconnect-after-reset`.
+Include the saved SSH port with `--port` if it differs from 9922.
+
+CYTV saves the new connection after successful SSH sign-in and keeps the
+previous profile, SSH pin and uninstall receipt. The new setup uses its own
+records. For other SSH identity changes, keep the existing connection and use
+an independently verified source for the new key.
+
+### Review a changed Root SSH identity
 
 For a saved Root connection with a pending uninstall, use the console command
 `trust-root-ssh` from an installer build that lists it in `cytv --help`.

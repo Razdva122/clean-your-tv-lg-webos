@@ -105,6 +105,8 @@ Jeśli pomoc techniczna poprosi o wynik polecenia SSH, otwórz **Diagnostyka →
 
 Jeśli po resecie lub zmianie SSH pojawi się `ssh-identity-changed`, zatrzymaj się: CYTV zablokował zmianę zapisanego klucza przed logowaniem. Pierwsza zgoda na zaufanie nie zastępuje klucza; oczekująca dezinstalacja nie wyjaśnia niezgodności. Zachowaj oryginalny profil, klucze i dane odzyskiwania. W zapisanym profilu Root z oczekującą dezinstalacją można zapisać w konsoli niezależnie zweryfikowany odcisk. Wcześniejsza dezinstalacja pozostaje zablokowana. Zobacz [odzyskiwanie po zmianie tożsamości SSH](../RECOVERY.md#ssh-identity-changed).
 
+Po przywróceniu ustawień fabrycznych własnego telewizora No-root wybierz **Połącz ponownie po resecie fabrycznym**, gdy klucz się zmieni. Postępuj zgodnie z instrukcjami w zaufanej sieci domowej. Poprzedni profil i zapis odinstalowania zostaną zachowane.
+
 Po przerwaniu instalacji użyj tego samego zapisanego połączenia i najpierw wybierz **Sprawdź stan TV**. Kontynuuj tylko przez odzyskiwanie zaproponowane przez kreator. Gdy stan jest nieznany, zapisz raport diagnostyczny i zatrzymaj się; zachowaj dane odzyskiwania i nie ponawiaj instalacji w ciemno.
 
 Podczas odzyskiwania pozostaw sterowanie Home wyłączone i zachowaj oryginalne raporty diagnostyczne oraz zapisane połączenie. Kontrolę i zmiany potwierdzaj osobno. Postępuj zgodnie ze szczegółowym przewodnikiem dla zainstalowanej wersji; nie wymuszaj ponownej instalacji ani nie usuwaj stanu odzyskiwania.

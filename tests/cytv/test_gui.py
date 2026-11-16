@@ -897,6 +897,40 @@ class GuiTests(unittest.TestCase):
         self.assertNotIn('Check connection again', labels)
         self.assertNotIn('Change connection', labels)
 
+    def test_changed_no_root_host_key_offers_explicit_new_install_flow(self):
+        from paramiko import RSAKey
+        from cytv.cli import explain_failure
+        from cytv.desktop import Channel
+        from cytv.state import Store, target
+
+        error = type('BadHostKeyException', (Exception,), {})()
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        store = Store(directory.name)
+        profile = target('192.0.2.10', 'no-root')
+        calls = []
+        window = Wizard(run=lambda args, **kwargs: calls.append(args) or 0)
+        self.addCleanup(window.close)
+        window.receive('selected-profile', profile)
+        console = Channel(window.receive).console
+        explain_failure(console, store, profile, 'ssh-connect', error)
+        window.receive('done', 1)
+        labels = [button.text() for button in window.form.findChildren(QPushButton)]
+        self.assertNotIn('Reconnect after factory reset', labels)
+
+        store.save(profile)
+        store.begin(profile, 'uninstall', stage='restart-required')
+        key = RSAKey.generate(2048)
+        (store.device_path(profile) / 'known_hosts').write_text(
+            f"[{profile['host']}]:{profile['port']} {key.get_name()} {key.get_base64()}\n")
+        explain_failure(console, store, profile, 'ssh-connect', error)
+        window.receive('done', 1)
+        buttons = {button.text(): button for button in window.form.findChildren(QPushButton)}
+        buttons['Reconnect after factory reset'].click()
+        self.pump(lambda: not window.running)
+        self.assertEqual(calls[0][:3], ['install', '--reconnect-after-reset', '--host'])
+        self.assertIn('192.0.2.10', calls[0])
+
     def test_macos_timeout_keeps_network_checklist_with_optional_permission_advice(self):
         from cytv.failure_help import for_error
         w = Wizard(); self.addCleanup(w.close)

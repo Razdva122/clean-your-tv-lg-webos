@@ -107,6 +107,8 @@ If support asks for SSH command output, open **Diagnostics → Run SSH command**
 
 If `ssh-identity-changed` appears after a reset or SSH change, stop: CYTV blocked the changed saved key before sign-in. The first-use trust prompt cannot replace it, and a pending uninstall does not explain the mismatch. Keep the original saved profile, keys and recovery records. For a saved Root profile with a pending uninstall, the console can record the independently verified fingerprint. The earlier uninstall stays blocked. See [changed SSH identity recovery](../RECOVERY.md#ssh-identity-changed).
 
+For your own No-root TV after a factory reset, choose **Reconnect after factory reset** when the installer reports a changed key. Follow the prompts on your trusted home network. The installer keeps the previous profile and removal record.
+
 If installation was interrupted, use the same saved connection and choose **Check TV status** first. Continue only through the recovery action offered by the wizard. If the state is unknown, save the diagnostic report and stop; keep recovery data and do not blindly repeat installation.
 
 During recovery, keep Home control off and retain the original diagnostic reports and saved connection. Confirm inspection and changes separately. Follow the detailed recovery guide for your installed version; do not force reinstallation or clear recovery state.

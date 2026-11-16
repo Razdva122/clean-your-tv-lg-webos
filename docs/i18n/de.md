@@ -105,6 +105,8 @@ Wenn der Support die Ausgabe eines SSH-Befehls benötigt, öffnen Sie im Desktop
 
 Bei `ssh-identity-changed` nach einem Reset oder einer SSH-Änderung stoppen: CYTV blockiert den geänderten gespeicherten Schlüssel vor der Anmeldung. Die erstmalige Vertrauensabfrage ersetzt ihn nicht; eine ausstehende Deinstallation erklärt die Abweichung nicht. Ursprüngliches Profil, Schlüssel und Wiederherstellungsdaten behalten. Bei einem gespeicherten Root-Profil mit ausstehender Deinstallation lässt sich der unabhängig geprüfte Fingerabdruck in der Konsole erfassen. Die frühere Deinstallation bleibt blockiert. Siehe [Wiederherstellung bei geänderter SSH-Identität](../RECOVERY.md#ssh-identity-changed).
 
+Wenn Sie Ihren No-root-Fernseher auf die Werkseinstellungen zurückgesetzt haben, wählen Sie bei geändertem Schlüssel **Nach dem Werksreset erneut verbinden**. Folgen Sie den Schritten in Ihrem vertrauenswürdigen Heimnetz. Das alte Profil und der Deinstallationseintrag bleiben erhalten.
+
 Nach einer unterbrochenen Installation verwenden Sie dieselbe gespeicherte Verbindung und zuerst **TV-Status prüfen**. Fahren Sie nur mit der vom Assistenten angebotenen Wiederherstellung fort. Bei unbekanntem Zustand Diagnosebericht speichern und stoppen; Wiederherstellungsdaten behalten und nicht blind neu installieren.
 
 Lassen Sie während der Wiederherstellung die Home-Steuerung ausgeschaltet und bewahren Sie die ursprünglichen Diagnoseberichte und die gespeicherte Verbindung auf. Bestätigen Sie Prüfung und Änderungen getrennt. Folgen Sie der ausführlichen Anleitung für Ihre installierte Version; erzwingen Sie keine Neuinstallation und löschen Sie keinen Wiederherstellungszustand.
