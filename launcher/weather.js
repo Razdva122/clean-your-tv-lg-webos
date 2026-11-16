@@ -134,9 +134,7 @@
     if (!Number.isFinite(v)) return '—';
     if (options.units === 'imperial') v = (v * 9) / 5 + 32;
     v = Math.round(v);
-    return (
-      (v < 0 ? '−' + number(-v) : v > 0 ? '+' + number(v) : number(0)) + '°'
-    );
+    return (v < 0 ? '−' : '') + number(Math.abs(v)) + '°';
   }
   function content(format, iconStyle, w = store.state().data) {
     if (!w) return '';
