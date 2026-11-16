@@ -272,6 +272,11 @@ const path = require('node:path');
     await page.locator('[data-category=wallpapers]').click();
     await page.keyboard.press('ArrowRight');
     assert.equal(
+      await page.evaluate(() => document.activeElement.id),
+      'wallpaperFullscreen'
+    );
+    await page.keyboard.press('ArrowDown');
+    assert.equal(
       await page.evaluate(() =>
         document.activeElement.getAttribute('data-wallpaper-quality')
       ),

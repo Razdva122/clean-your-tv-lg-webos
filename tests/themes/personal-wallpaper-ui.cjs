@@ -119,16 +119,16 @@ const { chromium, stage, fs, path } = require('./browser.cjs'),
         });
         await PersonalWallpaper.receive(envelope);
       });
+      if (!(await page.locator('#wallpaperApply').isVisible()))
+        await page
+          .locator('#homeWallpaperPanel [data-background-upload]')
+          .click();
       assert(await page.locator('#wallpaperPending').isVisible());
       assert.equal(
         await page.evaluate(() => PersonalWallpaper.state().installed),
         false,
         'preview does not persist'
       );
-      if (!(await page.locator('#wallpaperApply').isVisible()))
-        await page
-          .locator('#homeWallpaperPanel [data-background-upload]')
-          .click();
       await page.locator('#wallpaperApply').click();
       await page.waitForFunction(() => PersonalWallpaper.state().installed);
       assert.equal(
