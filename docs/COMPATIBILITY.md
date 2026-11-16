@@ -101,6 +101,7 @@ Helper-free first-install mode promising that behavior.
 - 55UR91006LA — No-root — firmware 33.31.75 — webOS SDK10.3.2 — v1.11.0
 - OLED55C2PUA — No-root — firmware 33.31.68 — webOS 10.3.1 / build 3006
 - OLED42C24LA — No-root — firmware 33.31.68 — webOS 10.3.1 — v1.17.0 — owner confirmed removal through Recover, fresh setup, short Home and automatic Helper restart after remote off/on.
+- OLED42C24LA — No-root — firmware 43.21.94 — webOS SDK 11.2.0 — v1.21.0 — owner confirmed an in-place upgrade from Helper 0.8.4, short Home after explicit Start Helper, and automatic startup and short Home after a full remote restart.
 - LG C3 — No-root — webOS 26
 - LG C5 77″ — No-root
 <!-- compatibility-reports:end -->
@@ -113,6 +114,7 @@ These are reports for the listed configurations, not a guarantee for every firmw
 
 | Configuration | Evidence and limits |
 | --- | --- |
+| OLED42C24LA (C2) / firmware 43.21.94, No-root Developer Mode | v1.21.0 (cytv 0.20.9, Home 1.19.0, Helper 0.8.7). The in-place upgrade completed. Short Home worked after explicit Start Helper. A full restart from the remote restored the vendor's `0777` directory mode, and Helper started automatically and routed short Home. Installer platform, exact remote model, emergency Stop, audio, standby, AC cold boot and OTA/rollback were not reported. [Owner confirmation #653](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/653#issuecomment-6910629293) |
 | OLED55C3RLA / firmware 43.21.71, Root | [v1.13.0 exact-artifact acceptance](history/2026-11-08-release-1.13.0-artifacts.md): signed update/rollback/forward through retained System 1.2.5, physical short/triple Home, remote off/on, AC cold boot and audible playback. [Exact Helper transition](history/2026-11-08-helper-0.8.0-compatibility.md) is separate No-root evidence. Earlier [1.6.0](history/2026-11-02-release-1.6.0-final-acceptance.md) and [1.4.0](RELEASE-1.4.0-ACCEPTANCE.md) observations retain their original scope. No guarantee of immediate first-screen startup or other models. |
 | OLED55C46LA (C4), No-root | Earlier community Helper results have outstanding firmware/input and long-Back confirmation. [Original reports](history/COMPATIBILITY.md#historical-110-hardware-evidence). |
 | Specific C5 / webOS 26, BX / webOS 5 and UK6540PTD reports | Unresolved or unverified paths remain on the reporting devices. Positive reports above belong to their own configurations; they do not resolve a different owner’s failure. |

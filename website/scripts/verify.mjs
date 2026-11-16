@@ -76,17 +76,17 @@ assert.equal(
   'compatibility documentation model count'
 );
 for (const report of visibleReports) {
-  const line = reportLines.find((line) =>
-    line.startsWith('- ' + report.model + ' —')
-  );
-  assert(line, 'compatibility documentation missing model ' + report.model);
-  for (const value of [report.firmware, report.webos, report.release].filter(
+  const versions = [report.firmware, report.webos, report.release].filter(
     Boolean
-  ))
-    assert(
-      line.includes(value),
-      'compatibility documentation missing reported version ' + value
-    );
+  );
+  assert(
+    reportLines.some(
+      (line) =>
+        line.startsWith('- ' + report.model + ' —') &&
+        versions.every((version) => line.includes(version))
+    ),
+    'compatibility documentation missing report ' + report.id
+  );
 }
 function translated(value, reference, label) {
   if (typeof reference === 'string') {
