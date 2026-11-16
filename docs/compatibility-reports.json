@@ -371,6 +371,34 @@
       "evidenceKind": "public-owner-report"
     },
     {
+      "id": "c2-42-noroot-43-21-94",
+      "model": "OLED42C24LA",
+      "firmware": "43.21.94",
+      "webos": "SDK 11.2.0",
+      "edition": "no-root",
+      "release": "v1.21.0",
+      "showOnWebsite": true,
+      "result": "controls-tested",
+      "reportedVersions": "cytv 0.20.9; Home 1.19.0; Helper 0.8.7",
+      "installer": null,
+      "remote": null,
+      "tested": {
+        "install": "In-place upgrade from Home 1.18.4 and Helper 0.8.4 over the saved Developer Mode connection completed and verified. Bootstrap during the upgrade still refused the old key. Setup restored pairing-key mode 0640 and inventory mode 0644.",
+        "Home": "Short Home opened LG Home before explicit Start Helper. After Start Helper and again after a full restart, short Home from another app opened Clean Your TV.",
+        "emergency": "not reported",
+        "audio": "not reported",
+        "power": "Full restart from the remote passed. Developer Mode widened permissions again, Helper started automatically, and its pairing key was restored to mode 0640.",
+        "OTA_rollback": "not reported"
+      },
+      "limitations": "Installer host platform and exact remote model were not reported. Standby, AC cold boot, emergency Stop, audio and OTA/rollback were not reported.",
+      "sources": [
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/653#issuecomment-6910629293"
+        }
+      ],
+      "evidenceKind": "public-owner-report"
+    },
+    {
       "id": "c3-reddit-noroot",
       "model": "LG C3",
       "firmware": null,
