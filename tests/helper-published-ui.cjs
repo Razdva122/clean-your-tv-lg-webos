@@ -254,7 +254,7 @@ for (const reply of [
     false,
     'unknown status still permits a confirmed manual start'
   );
-  assert.match(ui.status.textContent, /status could not be checked/);
+  assert.equal(ui.status.textContent, 'Status is unavailable.');
   assert.equal(
     ui.calls.length,
     4,
@@ -283,6 +283,7 @@ for (const home of [
 ]) {
   const ui = panel(publishedStatus(), home);
   ui.finishChecks();
+  assert.equal(ui.status.textContent, 'Status is unavailable.');
   assert.equal(
     ui.buttons[1].disabled,
     true,
