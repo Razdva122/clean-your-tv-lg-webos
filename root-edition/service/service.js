@@ -204,3 +204,45 @@ require('./weather')(service, {
   appId: 'com.cleanyourtv.root.preview',
   hold: themeReceiver.activityHold(service, 'weatherForecast')
 });
+
+// Optional local screensaver APIs never delay the existing recovery handlers.
+// New bundles supply these private modules and an explicit screensaver-v1 ACL;
+// retained installations without that capability keep their previous service.
+try {
+  if (require('./package.json').screensaverProtocol === 1)
+    require('./screensaver-register')(service, {
+      createAdapter: require('./screensaver'),
+      controller: require('./screensaver-runtime/controller'),
+      createLG: require('./screensaver-lg'),
+      settings: require('./screensaver-runtime/settings'),
+      hold: themeReceiver.activityHold(service, 'screensaver'),
+      execute: function (command, payload) {
+        return new Promise(function (resolve, reject) {
+          if (
+            process.getuid() !== 0 ||
+            ['status', 'configure'].indexOf(command) < 0
+          )
+            return reject(Error('Screensaver owner unavailable'));
+          var child = execFile(
+            pythonCommand(),
+            [runtime, 'screensaver', command],
+            { timeout: 2000, maxBuffer: 8192 },
+            function (error, stdout) {
+              if (error) return reject(Error('Screensaver owner unavailable'));
+              try {
+                var response = JSON.parse(stdout);
+                if (response.returnValue !== true || !response.result)
+                  throw Error('Unavailable');
+                resolve(response.result);
+              } catch (_) {
+                reject(Error('Screensaver owner unavailable'));
+              }
+            }
+          );
+          child.stdin.end(
+            command === 'configure' ? JSON.stringify(payload) : ''
+          );
+        });
+      }
+    }).resume();
+} catch (_) {}

@@ -16,7 +16,8 @@ import stat
 
 INSTALLED=Path('/media/developer/apps')
 OWNERS=frozenset(('com.cleanyourtv.root.preview','com.cleanyourtv.root.updater',
-                  'com.cleanyourtv.system.updater','com.cleanyourtv.installer'))
+                  'com.cleanyourtv.system.updater','com.cleanyourtv.installer',
+                  'com.cleanyourtv.screensaver'))
 
 
 def read(path,limit=65536,uid=0,installed=INSTALLED):

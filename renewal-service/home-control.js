@@ -1,5 +1,70 @@
 'use strict';
 var diagnostics = require('./diagnostics');
+var screensaverMethods = [
+  'screensaverStatus',
+  'screensaverConfigure',
+  'screensaverPreview',
+  'screensaverActivity',
+  'screensaverEligible',
+  'screensaverStop'
+];
+function validScreensaver(method, payload, object) {
+  if (!object) return false;
+  if (method === 'screensaverPreview' || method === 'screensaverEligible') {
+    var keys = Object.keys(payload);
+    return (
+      !keys.length ||
+      (keys.length === 1 &&
+        keys[0] === 'mediaUrl' &&
+        typeof payload.mediaUrl === 'string' &&
+        payload.mediaUrl.length <= 96 &&
+        /^http:\/\/127\.0\.0\.1:[0-9]{1,5}\/[a-f0-9]{32}\/(?:4k\.mp4|1080p\.mp4|photo\.(?:jpg|png))$/.test(
+          payload.mediaUrl
+        ))
+    );
+  }
+  if (method !== 'screensaverConfigure')
+    return Object.keys(payload).length === 0;
+  return (
+    Object.keys(payload).every(function (key) {
+      return (
+        [
+          'assetId',
+          'enabled',
+          'idleTimeoutMs',
+          'mode',
+          'scope',
+          'clockOverlay',
+          'clock',
+          'quality'
+        ].indexOf(key) >= 0
+      );
+    }) &&
+    (!Object.prototype.hasOwnProperty.call(payload, 'quality') ||
+      ['auto', '4k', '1080p', 'image'].indexOf(payload.quality) >= 0) &&
+    (!Object.prototype.hasOwnProperty.call(payload, 'clock') ||
+      (payload.clock &&
+        typeof payload.clock === 'object' &&
+        !Array.isArray(payload.clock) &&
+        Object.keys(payload.clock).sort().join(',') === 'hour12,locale' &&
+        typeof payload.clock.locale === 'string' &&
+        /^[a-z]{2,3}(?:-[A-Z][a-z]{3}|-[A-Z]{2})?$/.test(
+          payload.clock.locale
+        ) &&
+        typeof payload.clock.hour12 === 'boolean')) &&
+    (!Object.prototype.hasOwnProperty.call(payload, 'clockOverlay') ||
+      typeof payload.clockOverlay === 'boolean') &&
+    typeof payload.enabled === 'boolean' &&
+    ['cytv', 'global'].indexOf(payload.scope) !== -1 &&
+    ['ambient', 'clock', 'photo', 'video'].indexOf(payload.mode) !== -1 &&
+    typeof payload.assetId === 'string' &&
+    /^[A-Za-z0-9_-]{0,128}$/.test(payload.assetId) &&
+    typeof payload.idleTimeoutMs === 'number' &&
+    Math.floor(payload.idleTimeoutMs) === payload.idleTimeoutMs &&
+    payload.idleTimeoutMs >= 30000 &&
+    payload.idleTimeoutMs <= 1800000
+  );
+}
 // The service writes inside its own jail-visible package. The native controller
 // reads this provisioned prisoner:jailer 2770 channel; request files stay 0660.
 module.exports = function (fs, dir, options) {
@@ -31,8 +96,10 @@ module.exports = function (fs, dir, options) {
               'openLGHome',
               'presentationContext',
               'presentationDismissed'
-            ]
+            ].concat(screensaverMethods)
       ).indexOf(method) < 0 ||
+      (screensaverMethods.indexOf(method) !== -1 &&
+        !validScreensaver(method, payload, object)) ||
       (method === 'presentationContext' &&
         (!object || Object.keys(payload).length !== 0)) ||
       (method === 'presentationDismissed' &&
@@ -75,6 +142,13 @@ module.exports = function (fs, dir, options) {
       try {
         var request = { id: id, method: method, expires: deadline };
         if (method === 'setHomeControl') request.enabled = payload.enabled;
+        if (method === 'screensaverConfigure') request.settings = payload;
+        if (
+          (method === 'screensaverPreview' ||
+            method === 'screensaverEligible') &&
+          payload.mediaUrl
+        )
+          request.mediaUrl = payload.mediaUrl;
         if (method === 'presentationDismissed') request.generation = generation;
         require('./state-permissions').atomicRecord(
           dir,

@@ -349,6 +349,15 @@ class Coordinator:
                             or binding.get('lease')!=lease['id'] or binding.get('operation')!=lease['journal'][8:-5]
                             or not re.fullmatch('[a-f0-9]{64}',str(binding.get('plan_sha256','')))
                             or identifier==binding['operation']):raise Busy()
+                elif lease['owner']=='system-replace':
+                    if not lease['terminal'] or lease['stage']!='complete' or lease['journal']!='system-replacement.json':
+                        raise Busy()
+                    replacement=_optional_record(self.store,'system-replacement')
+                    if (not isinstance(replacement,dict) or replacement.get('schema')!=1
+                            or replacement.get('id')!=lease['id'] or replacement.get('stage')!='complete'
+                            or any(not isinstance(replacement.get(field),str) or not re.fullmatch('[a-f0-9]{64}',replacement[field])
+                                   for field in ('bundle_sha256','source_sha256','baseline_sha256'))):
+                        raise Busy()
                 elif lease['owner'] not in ('product','deploy','root-bootstrap','root-update','system-bootstrap','system-update'):
                     raise Busy()
                 from installation import JOURNALS

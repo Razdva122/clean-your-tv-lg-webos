@@ -408,6 +408,9 @@
     html: html,
     apply: apply,
     setLanguage: setLanguage,
+    clockPresentation: function () {
+      return { locale: active, hour12: twelveHour() };
+    },
     clockFormat: clockFormat,
     setClockFormat: setClockFormat,
     formatDate: formatDate,

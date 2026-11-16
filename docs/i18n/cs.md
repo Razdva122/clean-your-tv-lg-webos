@@ -59,6 +59,8 @@ Jazyk vyberte v instalátoru; na Androidu je volba vpravo nahoře. Jazyk TV se n
 
 Instalace Root pokračuje s upozorněním, pokud nelze načíst vstupy televizoru, ale seznam aplikací je platný. V Home mohou chybět vstupy; chyba načtení nebo prázdný seznam aplikací instalaci nadále zastaví. Pokud se upozornění opakuje, uložte diagnostickou zprávu.
 
+Při instalaci Root může instalátor automaticky vypnout rozpoznané nahrazení obrazovky Home, aby Home převzal CYTV. Pokud instalace skončí chybou, uložte diagnostickou zprávu.
+
 ## 5. Vyzkoušejte ovladač
 
 1. Otevřete jinou aplikaci na TV a krátce stiskněte **Home**. Má se otevřít Clean Your TV. V průvodci uveďte, co jste viděli; pokud jste test neprovedli, přeskočte ho.
@@ -91,6 +93,8 @@ Automatické aktualizace v TV nespouštějí zastavený Helper. Pro samostatné 
 Pokud podpora požádá o výstup příkazu SSH, otevřete v instalátoru na počítači **Diagnostika → Spustit příkaz SSH** a vyberte stávající připojení k televizoru. Zkontrolujte televizor a uživatele SSH, vložte příkaz a klikněte na **Spustit** a **Zkopírovat výstup**. Zkopírovaný text obsahuje stdout, stderr a návratový kód.
 
 Pokud se po resetu nebo změně SSH objeví `ssh-identity-changed`, zastavte se: CYTV zablokoval změněný uložený klíč před přihlášením. První potvrzení důvěry jej nenahradí; čekající odinstalace nevysvětluje neshodu. Zachovejte původní profil, klíče a záznamy obnovy. V uloženém profilu Root s čekající odinstalací lze nezávisle ověřený otisk zaznamenat v konzoli. Dřívější odinstalace zůstane zablokovaná. Viz [obnova po změně identity SSH](../RECOVERY.md#ssh-identity-changed).
+
+Po obnovení továrního nastavení vlastní TV s No-root vyberte při změně klíče **Připojit znovu po obnovení továrního nastavení**. Postupujte podle pokynů v důvěryhodné domácí síti. Původní profil a záznam o odinstalaci se zachovají.
 
 Po přerušené instalaci použijte stejné uložené připojení a nejprve kontrolu stavu TV (**Check TV status**). Pokračujte jen nabízenou obnovou. Pokud je stav neznámý, uložte diagnostickou zprávu a zastavte se. Zachovejte data obnovy a neopakujte instalaci naslepo.
 

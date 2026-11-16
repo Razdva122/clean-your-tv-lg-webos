@@ -258,6 +258,7 @@ var producers = {
       'logger-previous',
       'pid',
       'home-preference',
+      'screensaver-preference',
       'startup-state',
       'home-request',
       'home-response',

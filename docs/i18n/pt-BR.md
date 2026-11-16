@@ -70,6 +70,8 @@ O assistente usa inicialmente o idioma do sistema e salva sua escolha explícita
 
 A instalação Root continua com um aviso se as entradas da TV não puderem ser lidas, mas a lista de aplicativos for válida. Entradas podem faltar na Home; uma lista de aplicativos com falha ou vazia ainda interrompe a instalação. Salve o relatório de diagnóstico se o aviso persistir.
 
+A instalação Root pode desativar automaticamente uma substituição reconhecida da tela inicial para que o CYTV controle o botão Home. Se a instalação parar, salve o relatório de diagnóstico.
+
 ## 5. Confira o controle remoto
 
 1. Abra outro app na TV e pressione **Home** brevemente. Clean Your TV deve abrir. Informe ao assistente o que você viu; pule a verificação se não a realizou.
@@ -104,6 +106,8 @@ Atualizações automáticas na TV não reiniciam Helper parado. Para retomá-lo 
 Se o suporte pedir a saída de um comando SSH, abra **Diagnóstico → Executar comando SSH** no instalador para computador e selecione sua conexão existente com a TV. Confira a TV e o usuário SSH, cole o comando e clique em **Executar** e **Copiar saída**. O texto copiado inclui stdout, stderr e o código de saída.
 
 Se aparecer `ssh-identity-changed` após restaurar o TV ou alterar o SSH, pare: o CYTV bloqueou a mudança da chave salva antes da autenticação. A confirmação inicial de confiança não a substitui; uma desinstalação pendente não explica a divergência. Guarde o perfil original, as chaves e os registros de recuperação. Com um perfil Root salvo e uma desinstalação pendente, é possível registrar no console a impressão digital verificada de forma independente. A desinstalação anterior permanece bloqueada. Veja [recuperação da identidade SSH](../RECOVERY.md#ssh-identity-changed).
+
+Após redefinir sua TV No-root para os padrões de fábrica, escolha **Reconectar após a redefinição de fábrica** quando a chave mudar. Siga as instruções na sua rede doméstica confiável. O perfil anterior e o registro de remoção são preservados.
 
 Se a instalação foi interrompida, use a mesma conexão salva e escolha primeiro **Verificar estado da TV**. Continue apenas pela recuperação oferecida pelo assistente. Se o estado for desconhecido, salve o relatório de diagnóstico e pare; preserve os dados de recuperação e não repita a instalação às cegas.
 

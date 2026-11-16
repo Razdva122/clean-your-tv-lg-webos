@@ -27,10 +27,15 @@ function signed(value) {
   };
 }
 assert.equal(policy.verify(signed(manifest), keys.publicKey).version, '0.1.0');
+assert.equal(
+  policy.verify(signed({ ...manifest, updater: 2 }), keys.publicKey).updater,
+  2
+);
 for (const [key, value] of [
   ['edition', 'no-root'],
   ['application', 'com.gathin.tvhome'],
   ['runtime', 2],
+  ['updater', 3],
   ['profile', 2],
   ['size', -1],
   ['size', 34 * 1024 * 1024],

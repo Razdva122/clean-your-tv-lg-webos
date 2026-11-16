@@ -239,14 +239,14 @@ fs.writeSync=function(fd,b){if(Buffer.isBuffer(b)&&b.toString().indexOf('private
                 self.assertEqual(key.read_bytes(),b'retained-key')
                 self.assertEqual(latch.read_bytes(),b'keep-stop')
                 self.assertEqual(latch.stat().st_mode&0o777,0o775)
-                for kind in ('world-write','hardlink','symlink','unsafe-apps'):
+                for kind in ('world-write','hardlink','symlink','special-apps'):
                     with self.subTest(kind=kind):
                         key.unlink();key.write_bytes(b'retained-key');key.chmod(0o775)
                         other=state/'other';other.unlink(missing_ok=True)
                         if kind=='world-write':key.chmod(0o666)
                         if kind=='hardlink':os.link(key,other)
                         if kind=='symlink':key.rename(other);key.symlink_to(other)
-                        if kind=='unsafe-apps':apps.chmod(0o666)
+                        if kind=='special-apps':apps.chmod(0o4777)
                         self.assertNotEqual(run(True).returncode,0)
                         self.assertEqual(key.stat().st_mode&0o777,0o666 if kind=='world-write' else 0o775)
                         self.assertEqual(key.read_bytes(),b'retained-key')
@@ -257,7 +257,7 @@ fs.writeSync=function(fd,b){if(Buffer.isBuffer(b)&&b.toString().indexOf('private
         runtimes=[shutil.which('node')]+[os.environ[name] for name in ('NODE010','NODE01025','NODE012') if os.environ.get(name)]
         for runtime in runtimes:
             for mode in (0o640,0o775):
-                for kind in ('matching','expanded','expanded-wrong-hash','read-only','wrong-hash','hardlink','symlink','world-write','unsafe-apps','foreign-apps'):
+                for kind in ('matching','expanded','expanded-wrong-hash','read-only','wrong-hash','hardlink','symlink','world-write','special-apps','foreign-apps'):
                     with self.subTest(runtime=runtime,mode=mode,kind=kind),tempfile.TemporaryDirectory(dir=PROCESS_TMP) as root:
                         state=Path(root).resolve()/'state';state.mkdir(mode=0o775);os.chown(state,-1,os.getgid())
                         key=state/'ssap-key.json';key.write_bytes(b'original-pairing');key.chmod(mode)
@@ -273,7 +273,7 @@ fs.writeSync=function(fd,b){if(Buffer.isBuffer(b)&&b.toString().indexOf('private
                         if kind.startswith('expanded'):
                             key.chmod(0o777);apps.chmod(0o777)
                         if kind=='world-write':key.chmod(0o666)
-                        if kind=='unsafe-apps':apps.chmod(0o666)
+                        if kind=='special-apps':apps.chmod(0o4777)
                         args=[] if kind=='read-only' else ['repair-key-mode:'+digest]
                         result=subprocess.run([runtime,'-e',prefix+observer.STATE_CHECK]+args+[str(state)],capture_output=True,timeout=5)
                         if kind in ('matching','expanded'):

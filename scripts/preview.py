@@ -18,6 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from scripts.chinese_fonts import prepare_fonts
 from scripts.home_assets import THEME_FILES
+from scripts.screensaver_package import settings_script
 
 def preview_themes(*args):
     return subprocess.check_output(['node', str(ROOT / 'scripts/build-preview-themes.cjs'), *args], cwd=ROOT)
@@ -42,6 +43,10 @@ THEME_CARD_FILES = {'theme-cards/' + path.name for path in (ROOT / 'preview/them
 
 
 ROOT_LAUNCHER_FILES.update(['appinfo.json'] + THEME_FILES)
+SCREENSAVER_FILES = {'screensaver-config.js', 'screensaver-idle.js', 'screensaver-personal.js',
+                     'screensaver-settings.js', 'screensaver-settings.css'}
+LAUNCHER_FILES.update(SCREENSAVER_FILES)
+ROOT_LAUNCHER_FILES.update(SCREENSAVER_FILES)
 
 
 def inventory():
@@ -57,7 +62,9 @@ def preview_config(original):
 
 
 def revision():
-    files = [ROOT / 'launcher' / name for name in sorted(LAUNCHER_FILES)]
+    files = [ROOT / 'launcher' / name for name in sorted(LAUNCHER_FILES)
+             if name != 'screensaver-config.js']
+    files += [ROOT / 'screensaver/settings.js']
     files += [ROOT / 'root-edition/preview.py']
     files += [ROOT / 'root-edition/ui' / name for name in ('root-locales.js', 'root-exit.js', 'root-firmware-control.js', 'root-firmware.js', 'root-audio.js', 'root-audio-locales.js', 'root-settings.js', 'root-settings.css', 'tv-name.js', 'root-profile-data.js', 'root-profile.js', 'root-updates.js')]
     files += [ROOT / 'preview/index.html', ROOT / 'preview/bridge.js', ROOT / 'preview/live-reload.js', ROOT / 'preview/themes.js', ROOT / 'preview/presentation.js', ROOT / 'scripts/build-preview-themes.cjs']
@@ -116,6 +123,8 @@ def export_site(destination):
             target.write_text(launcher_html(), encoding='utf-8')
         elif name == 'config.js':
             target.write_bytes(preview_config((ROOT / 'launcher' / name).read_bytes()))
+        elif name == 'screensaver-config.js':
+            target.write_bytes(settings_script())
         else:
             shutil.copyfile(ROOT / 'launcher' / name, target)
     (destination / 'launcher/apps.js').write_text('window.TV_APPS = ' + json.dumps(inventory()) + ';\n', encoding='utf-8')
@@ -164,6 +173,9 @@ class Handler(BaseHTTPRequestHandler):
             file = ROOT / path.lstrip('/')
         elif path.startswith('/preview/icons/') and path[len('/preview/icons/'):] in ICON_FILES:
             file = ROOT / path.lstrip('/')
+        elif path == '/launcher/screensaver-config.js':
+            self.respond(settings_script(), 'text/javascript; charset=utf-8')
+            return
         elif path == '/launcher/config.js':
             self.respond(preview_config((ROOT / 'launcher/config.js').read_bytes()),
                          'text/javascript; charset=utf-8')

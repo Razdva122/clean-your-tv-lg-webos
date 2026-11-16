@@ -84,6 +84,7 @@ def _read_with_windows_retry(read):
 
 
 SSH_IDENTITY_REVIEW = 'ssh-identity-review.json'
+ACTIVE_AFTER_RESET = 'active-after-reset'
 
 
 def require_original_ssh_identity(directory):
@@ -103,12 +104,39 @@ class Store:
         # Capsule members and subsequently introduced links are still rejected.
         self.root = (Path(root) if root else default_dir()).resolve()
 
-    def device_path(self, profile):
+    def original_device_path(self, profile):
         normalized = target(**profile)
         key = ':'.join(str(normalized[k]) for k in ('host', 'port', 'edition'))
         if normalized.get('connection'):
             key += ':' + normalized['connection']
         return self.root / hashlib.sha256(key.encode()).hexdigest()[:24]
+
+    @staticmethod
+    def active_device_path(original):
+        selection = original / ACTIVE_AFTER_RESET
+        try:
+            metadata = selection.lstat()
+        except FileNotFoundError:
+            return original
+        except OSError:
+            raise LocalRecoveryError('profile-access', 'profile') from None
+        try:
+            if not stat.S_ISREG(metadata.st_mode) or original.is_symlink():
+                raise ValueError('Invalid saved connection selection')
+            name = selection.read_text(encoding='ascii')
+            if not re.fullmatch(r'after-reset-[a-f0-9]{32}', name):
+                raise ValueError('Invalid saved connection directory')
+            active = original / name
+            if not stat.S_ISDIR(active.lstat().st_mode) or not stat.S_ISREG((active / 'profile.json').lstat().st_mode):
+                raise ValueError('Invalid active saved profile')
+            return active
+        except (FileNotFoundError, ValueError):
+            raise LocalRecoveryError('profile-invalid', 'profile') from None
+        except OSError:
+            raise LocalRecoveryError('profile-access', 'profile') from None
+
+    def device_path(self, profile):
+        return self.active_device_path(self.original_device_path(profile))
 
     def device_dir(self, profile):
         path = self.device_path(profile)
@@ -305,7 +333,8 @@ class Store:
             if not re.fullmatch('[a-f0-9]{24}', directory.name):
                 continue
             try:
-                profile = already_read[1] if already_read and directory == already_read[0] else self._saved_profile(directory)
+                active = self.active_device_path(directory)
+                profile = already_read[1] if already_read and active == already_read[0] else self._saved_profile(active)
             except LocalRecoveryError as error:
                 report_error(error)
             else:

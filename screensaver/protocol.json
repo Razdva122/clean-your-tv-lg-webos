@@ -1,0 +1,64 @@
+{
+  "schema": 1,
+  "rendererEnvelope": {
+    "required": [
+      "schema",
+      "sessionId",
+      "generation",
+      "visible",
+      "focused",
+      "mediaState"
+    ],
+    "sessionId": "Controller-supplied opaque random nonempty string, at most 256 characters; never reuse within an owner generation. This identifier alone is not transport authentication.",
+    "generation": "Nonnegative safe integer identifying the controller owner.",
+    "mediaState": ["loading", "ready", "error", "closed"],
+    "ready": "Usable content is rendered; visible and focused must both be true before ownership is granted."
+  },
+  "policy": {
+    "factory": "createInitialState(generation)",
+    "transition": "transition(state, event, context, nowMs) -> {state, effects}",
+    "clock": "Caller-supplied monotonic milliseconds, never renderer wall-clock timestamps.",
+    "phases": ["disabled", "armed", "starting", "visible", "closing"],
+    "events": [
+      "ENABLE",
+      "DISABLE",
+      "PREVIEW",
+      "ELIGIBLE",
+      "GLOBAL",
+      "ACTIVITY",
+      "READY",
+      "HEARTBEAT",
+      "FOCUS_LOST",
+      "CLOSE",
+      "CLOSED",
+      "DEADLINE",
+      "OWNER_STOP",
+      "POWER_INACTIVE",
+      "LG_REQUEST"
+    ],
+    "effects": ["LAUNCH", "CLOSE", "RELEASE", "RESPOND_LG"],
+    "activation": "PREVIEW, ELIGIBLE and GLOBAL require supplied sessionId and matching generation. PREVIEW requires previewEligible; ELIGIBLE requires inAppEligible, prior ACTIVITY and elapsed idleTimeoutMs. Missing flags deny startup. GLOBAL is issued only by the edition owner following a natural LG request and requires globalEligible.",
+    "rendererEvents": "READY and HEARTBEAT require the complete schema-1 envelope. CLOSE, CLOSED and FOCUS_LOST require matching sessionId and generation. ACTIVITY and DEADLINE may be controller-wide; any supplied identity must match.",
+    "context": [
+      "ownerGeneration",
+      "ownerHealthy",
+      "popupSupported",
+      "previewEligible",
+      "inAppEligible",
+      "idleTimeoutMs",
+      "launchTimeoutMs",
+      "heartbeatTimeoutMs",
+      "closeTimeoutMs"
+    ],
+    "defaultTimeoutsMs": {
+      "idleTimeoutMs": 60000,
+      "launchTimeoutMs": 10000,
+      "heartbeatTimeoutMs": 5000,
+      "closeTimeoutMs": 2000
+    },
+    "timeouts": "Positive finite context values override defaults. Controllers must schedule DEADLINE calls independently of renderer messages.",
+    "lg": "LG_REQUEST only evaluates an already visible session. The LG adapter may request GLOBAL separately with a bounded readiness wait. RESPOND_LG preserves event.request unchanged; allow=false only while healthy, visible, focused and heartbeat-fresh. Adapter validates requests, deduplicates them, echoes timestamp without coercion, and unregisters on stop.",
+    "ownership": "CLOSE and RELEASE refer only to our supplied session. RELEASE is idempotent adapter cleanup, never a third-party launch or playback operation. OWNER_STOP releases immediately. Other closes await CLOSED or bounded close timeout. After dismissal, automatic launch requires fresh ACTIVITY and a new idle period.",
+    "transport": "Adapters authenticate envelopes independently; session identity checks do not replace authentication. Never expose an unauthenticated control endpoint."
+  }
+}

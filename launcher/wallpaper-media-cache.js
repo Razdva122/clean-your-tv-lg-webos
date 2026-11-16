@@ -114,19 +114,27 @@
       acquiring = null;
       return stopped(id);
     }
-    function acquire() {
-      if (disposed) return Promise.reject(Error('Cancelled'));
+    function acquire(cancelPending) {
+      if (disposed || (cancelPending && cancelPending()))
+        return Promise.reject(Error('Cancelled'));
       if (session && Object.keys(handles).length)
         return Promise.resolve(handles);
       if (acquiring) return acquiring;
       var identity = ++generation,
         owned = null;
       function check() {
-        if (disposed || identity !== generation) throw Error('Cancelled');
+        if (
+          disposed ||
+          identity !== generation ||
+          (cancelPending && cancelPending())
+        )
+          throw Error('Cancelled');
       }
       var operation = rpc('wallpaperCacheStart', {
         variants: variants.map(function (v) {
-          return { quality: v.quality, size: v.size, sha256: v.sha256 };
+          var entry = { quality: v.quality, size: v.size, sha256: v.sha256 };
+          if (v.quality === 'photo') entry.mediaType = v.mediaType;
+          return entry;
         })
       })
         .then(function (value) {
@@ -183,12 +191,17 @@
           )
             throw Error('Invalid wallpaper cache handles');
           variants.forEach(function (v) {
+            var url = map[v.quality];
+            var file =
+              v.quality === 'photo'
+                ? 'photo.' + (v.mediaType === 'image/png' ? 'png' : 'jpg')
+                : v.quality + '.mp4';
             if (
-              typeof map[v.quality] !== 'string' ||
-              !/^http:\/\/127\.0\.0\.1:[0-9]{1,5}\/[a-f0-9]{32}\/(?:4k|1080p)\.mp4$/.test(
-                map[v.quality]
+              typeof url !== 'string' ||
+              !/^http:\/\/127\.0\.0\.1:[0-9]{1,5}\/[a-f0-9]{32}\/(?:4k\.mp4|1080p\.mp4|photo\.(?:jpg|png))$/.test(
+                url
               ) ||
-              map[v.quality].slice(-v.quality.length - 4) !== v.quality + '.mp4'
+              url.slice(-file.length - 1) !== '/' + file
             )
               throw Error('Invalid wallpaper cache handle');
           });
@@ -235,5 +248,25 @@
       }
     });
   }
-  root.WallpaperMediaCache = { prepare: prepare };
+  root.WallpaperMediaCache = {
+    prepare: prepare,
+    prepareImage: function (image, bytes) {
+      return prepare(
+        {
+          wallpaperVideo: {
+            variants: [
+              {
+                quality: 'photo',
+                mediaType: image.mediaType,
+                size: image.size,
+                sha256: image.sha256,
+                path: 'photo'
+              }
+            ]
+          }
+        },
+        { files: { photo: bytes } }
+      );
+    }
+  };
 })(this);

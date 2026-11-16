@@ -70,6 +70,8 @@ The desktop wizard selects your system language automatically; its language sele
 
 Root setup continues with a warning if TV inputs cannot be read but the application list is valid. Inputs may be missing from Home; a failed or empty application list still stops setup. Save the diagnostic report if the warning persists.
 
+Root setup can automatically disable a recognized Home replacement so CYTV can take over the Home button. If setup stops, save the diagnostic report.
+
 ## 5. Check your remote
 
 1. Open another TV app and briefly press **Home**. Clean Your TV should open. Tell the wizard what you saw; leave the check skipped if you did not test it.
@@ -106,6 +108,8 @@ Automatic updates on the TV do not restart a stopped Helper. To resume it separa
 If support asks for SSH command output, open **Diagnostics → Run SSH command** in the desktop installer and select your existing TV connection. Check the TV and SSH user, paste the command, then click **Run** and **Copy output**. The copied text includes stdout, stderr and the exit code.
 
 If `ssh-identity-changed` appears after a reset or SSH change, stop: CYTV blocked the changed saved key before sign-in. The first-use trust prompt cannot replace it, and a pending uninstall does not explain the mismatch. Keep the original saved profile, keys and recovery records. For a saved Root profile with a pending uninstall, the console can record the independently verified fingerprint. The earlier uninstall stays blocked. See [changed SSH identity recovery](../RECOVERY.md#ssh-identity-changed).
+
+For your own No-root TV after a factory reset, choose **Reconnect after factory reset** when the installer reports a changed key. Follow the prompts on your trusted home network. The installer keeps the previous profile and removal record.
 
 If installation was interrupted, use the same saved connection and choose **Check TV status** first. Continue only through the recovery action offered by the wizard. If the state is unknown, save the diagnostic report and stop; keep recovery data and do not blindly repeat installation.
 

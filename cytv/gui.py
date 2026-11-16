@@ -539,7 +539,7 @@ class Wizard(QMainWindow):
             self.button('Back', lambda: self.show_preparation(index - 1, prompt))
         self.button('Continue', lambda: self.show_preparation(index + 1, prompt), True).setFocus()
 
-    def start(self, command, profile=None, *, new_recovery_attempt=False):
+    def start(self, command, profile=None, *, new_recovery_attempt=False, reconnect_after_reset=False):
         if getattr(getattr(self, 'wallpaper_dialog', None), 'busy', False):
             return
         if self.running:
@@ -581,6 +581,8 @@ class Wizard(QMainWindow):
         def work():
             try:
                 args = [command, '--report'] if command == 'doctor' else [command]
+                if reconnect_after_reset:
+                    args.append('--reconnect-after-reset')
                 if command == 'recover-system-rollback' and new_recovery_attempt:
                     args.append('--new-recovery-attempt')
                 if profile:
@@ -790,6 +792,10 @@ class Wizard(QMainWindow):
                 if sys.platform == 'darwin' and self.failure_help['code'] in ('ssh-access-denied', 'ssh-unreachable', 'ssh-timeout'):
                     self.button('Open System Settings', self.open_network_settings, layout=actions)
                 self.button('Change connection', lambda: self.edit_connection(profile), layout=actions)
+            if failed and self.failure_help and self.failure_help.get('can_reconnect_after_reset') and self.selected_profile:
+                reset_profile = dict(self.selected_profile)
+                self.button('Reconnect after factory reset',
+                            lambda: self.start('install', reset_profile, reconnect_after_reset=True))
             report_actions = None
             if connection_help or (retry_removal and self.report):
                 report_actions = QHBoxLayout()

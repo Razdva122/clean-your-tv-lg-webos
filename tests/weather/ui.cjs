@@ -61,7 +61,7 @@ const weather = {
   },
   daily: {
     time: ['2026-11-09', '2026-11-10', '2026-11-11', '2026-11-12'],
-    temperature_2m_min: [3, 4, 2, 1],
+    temperature_2m_min: [-25, -18, 0, 1],
     temperature_2m_max: [8, 9, 7, 6],
     weather_code: [3, 61, 0, 45],
     precipitation_probability_max: [20, 50, 0, 5]
@@ -187,7 +187,8 @@ const weather = {
     const order = await page
       .locator('[role=tab]')
       .evaluateAll((a) => a.map((n) => n.dataset.category));
-    assert.equal(order.indexOf('weather'), order.indexOf('wallpapers') + 1);
+    assert.equal(order.indexOf('screensaver'), order.indexOf('wallpapers') + 1);
+    assert.equal(order.indexOf('weather'), order.indexOf('screensaver') + 1);
     assert.equal(await page.locator('.weather-options').isVisible(), false);
     const sources = page.locator('.weather-sources-button');
     assert.equal(
@@ -346,6 +347,15 @@ const weather = {
     await page.waitForTimeout(70);
     assert.equal(await page.locator('#weatherPreview .weather-row').count(), 4);
     assert.equal(await page.locator('#homeWeather .weather-row').count(), 4);
+    const homeWeather = page.locator('#homeWeather');
+    assert.equal(
+      await homeWeather.locator('.ctv-weather-temp').innerText(),
+      '8°'
+    );
+    assert.deepEqual(
+      await homeWeather.locator('.weather-low').allTextContents(),
+      ['−25°', '−18°', '0°', '1°']
+    );
     assert.equal(
       await page.locator('.weather-credit').count(),
       0,
@@ -417,6 +427,18 @@ const weather = {
     await page.keyboard.press('Enter');
     await page.waitForFunction(
       () => HomeWeather.store.state().units === 'imperial'
+    );
+    await homeWeather
+      .locator('.ctv-weather-temp')
+      .filter({ hasText: '46°' })
+      .waitFor();
+    assert.equal(
+      await homeWeather.locator('.ctv-weather-temp').innerText(),
+      '46°'
+    );
+    assert.deepEqual(
+      await homeWeather.locator('.weather-low').allTextContents(),
+      ['−13°', '0°', '32°', '34°']
     );
     await page.locator('[data-weather-provider="auto"]').focus();
     await page.keyboard.press('Escape');

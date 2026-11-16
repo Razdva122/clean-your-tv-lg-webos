@@ -70,6 +70,8 @@ El asistente de escritorio usa inicialmente el idioma del sistema y guarda una s
 
 La instalación Root continúa con un aviso si no se pueden leer las entradas del TV pero la lista de aplicaciones es válida. Pueden faltar entradas en Home; una lista de aplicaciones fallida o vacía sigue deteniendo la instalación. Guarda el informe de diagnóstico si el aviso persiste.
 
+La instalación Root puede desactivar automáticamente un reemplazo de Inicio reconocido para que CYTV controle el botón Inicio. Si la instalación se detiene, guarda el informe de diagnóstico.
+
 ## 5. Comprueba el mando
 
 1. Abre otra app del TV y pulsa brevemente **Home**. Debe abrirse Clean Your TV. Indica al asistente lo que viste; omite la prueba si no la hiciste.
@@ -104,6 +106,8 @@ Las actualizaciones automáticas del TV no reinician Helper detenido. Para reanu
 Si soporte te pide la salida de un comando SSH, abre **Diagnóstico → Ejecutar comando SSH** en el instalador de escritorio y selecciona tu conexión existente al TV. Comprueba el televisor y el usuario SSH, pega el comando y haz clic en **Ejecutar** y **Copiar salida**. El texto copiado incluye stdout, stderr y el código de salida.
 
 Si aparece `ssh-identity-changed` tras un reinicio de fábrica o un cambio de SSH, detente: CYTV bloqueó la clave guardada modificada antes de autenticar. La confirmación inicial de confianza no la reemplaza; una desinstalación pendiente no explica la discrepancia. Conserva el perfil original, las claves y los registros de recuperación. Si el perfil Root guardado tiene una desinstalación pendiente, puedes registrar en la consola la huella verificada de forma independiente. La desinstalación anterior seguirá bloqueada. Consulta [recuperación de identidad SSH](../RECOVERY.md#ssh-identity-changed).
+
+Tras restablecer tu televisor No-root de fábrica, elige **Volver a conectar tras el restablecimiento de fábrica** cuando cambie la clave. Sigue los pasos en tu red doméstica de confianza. Se conservan el perfil anterior y el registro de desinstalación.
 
 Si se interrumpe la instalación, usa la misma conexión guardada y comienza por **Comprobar estado del TV**. Continúa solo mediante la recuperación que ofrezca el asistente. Si el estado es desconocido, guarda el informe de diagnóstico y detente; conserva los datos de recuperación y no repitas la instalación a ciegas.
 

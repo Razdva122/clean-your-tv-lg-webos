@@ -165,7 +165,7 @@ class LocalRemovalTests(unittest.TestCase):
         base=Path(temp.name).resolve();root=base/'root';root.mkdir()
         owner=Ownership(Store(base/'ownership',uid=os.getuid()))
         errors=[];owner.fixture_errors=errors
-        calls=[];present=set(apps if apps is not None else (install_device.APP,'com.cleanyourtv.root.updater','com.cleanyourtv.updater','com.local.nativehome','com.gathin.tvhome','com.cleanyourtv.system.updater'))
+        calls=[];present=set(apps if apps is not None else (install_device.APP,'com.cleanyourtv.root.updater','com.cleanyourtv.updater','com.local.nativehome','com.gathin.tvhome','com.cleanyourtv.system.updater','com.cleanyourtv.screensaver'))
         class Model(install_device.LocalDevice):
             def log(self,error):errors.append(type(error).__name__+': '+str(error))
             def verify_resume(self,payload,submission):return {'migrate':False,'prepare_supervisor':False}

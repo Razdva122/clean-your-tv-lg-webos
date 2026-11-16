@@ -17,6 +17,7 @@ operations share checked directory/inode reads and exclusive staged writes:
 | `prepareConfiguration(directory, options)` | Validate key and apps before key repair; foreign-key replacement additionally requires `expectedHash` matching the original capsule's exact SHA256. Existing outer idle/process guards still apply. |
 | `requestStop(directory, options)` | Publish a new Stop generation, recover known firmware-expanded storage, preserve or create the blocked latch, and write the Stop command. Process quiescence is checked by the caller. |
 | `atomicRecord(directory, kind, bytes, options)` | Write one fixed named output class with checked staging and rename. It cannot target configuration, locks or emergency latches. |
+| `readRecord(directory, kind)` | Read one fixed ordinary data record using its registered size bound; excludes commands, credentials and channel messages. |
 | `readConfiguration(directory, kind)` | Read checked `key` or `apps` only; runtime apps reads never chmod or adopt the inode. |
 | `appendLog(directory, line)` / `readLogEvents(directory)` | Bounded checked local logging / fixed safe-event projection; neither grants recovery authority. |
 
@@ -33,14 +34,34 @@ A noncaller key needing privacy repair uses the same exact-hash authenticated
 replacement path as an untrusted foreign key, creating a caller-owned 0640 inode.
 An already private trusted packaged key remains unchanged.
 
-Firmware-expanded 0777 records use the same checked storage session. Bootstrap
-copies only the retained key and Home/startup values from a caller-owned or
-packaged inode into a private replacement. This preserves preferences and
-restores permissions; SSAP still authenticates the credential. Ordinary
-configuration reads remain strict. Helper leaves installer-owned apps alone;
-if that list is unavailable it uses the existing authenticated TV catalog,
-with a bounded retry after a transient failure. The installer can restrict its
-own apps inode in place without changing its owner or contents.
+Ordinary data records (Home/startup preferences, catalog, PID and logs) do not
+use POSIX rwx bits as an admission or authenticity check. Developer Mode can
+recursively set retained files to 0777 at boot. Readers accept that state without
+chmod or replacement, and installer catalog verification checks the expected
+content hash rather than an exact catalog mode. Explicit installation still
+normalizes the retained catalog before a configuration upload: immutable saved
+observer programs require this for writing. This compatibility step belongs to
+installation, never to ordinary reads or Helper bootstrap. New writes still set their
+intended modes and verify the newly created staging inode before publication.
+A registered app/service data record inherits this policy; adding a preference
+must not require a second boot-repair entry. Command and channel records are
+excluded. `readRecord` provides bounded, no-follow reads for ordinary records;
+JSON/schema and semantic validation remain the consumer's responsibility.
+
+Only the retained pairing credential needs bootstrap privacy repair. The same
+SSAP registration, exact-hash installer proof and ownership rules still apply.
+Stop/watchdog, Stop generations, command-channel privacy and Root authorization
+are unchanged. Settings cannot authorize a privileged command or clear a latch.
+Ordinary data still requires the checked directory, regular single-link files,
+size bounds and stable no-follow descriptors. Special mode bits are rejected.
+The system cannot use Unix rwx bits as content-integrity evidence in a directory
+LG itself widens; consumers must treat its data accordingly. This policy applies
+to Helper through either Developer Mode or Root SSH, not to Root's privileged
+runtime files or installer recovery capsules outside this data namespace.
+
+Bounded log history survives a mode-only change. Oversized log files are reset
+before appending; event export still validates and bounds every projected event.
+The catalog fallback remains available if the file is absent or invalid.
 
 Fixed fresh outputs can replace an expanded same-group leaf without using its
 old contents. This applies to control/PID/logs, startup writes and all channel

@@ -3,7 +3,7 @@ import json
 import os
 import unittest
 from unittest.mock import patch
-from cytv.operations import Installer, ROOT_STATE
+from cytv.operations import Installer, ROOT_STATE, _RETAINED_PYTHON_CHECK
 from cytv.errors import UserError
 
 MANAGED='/var/lib/clean-your-tv-python/4a71641c8d5536175e404a961624e8656eba30e97b5026f6bd7dc31e4bbeaaea/bin/python3.13'
@@ -19,6 +19,8 @@ class Remote:
             missing=any(v in command for v in self.failed)
             if '/usr/bin/python3' in command: missing=True
             return 'CYTV_ROOT_MISSING' if missing else 'CYTV_ROOT_READY'
+        if 'install_driver.py inspect' in command:
+            return json.dumps({'operation': None, 'state': 'installed', 'installation': {}})
         if 'deploy.py' in command:return json.dumps({'returnValue':True})
         return ''
 
@@ -38,10 +40,24 @@ class SelectionTests(unittest.TestCase):
         select.assert_not_called()
     def test_maintenance_prefers_existing_binding_without_provisioning(self):
         remote=Remote(bound=True);installer=Installer(remote,None,{'edition':'root'},'.',{})
-        with patch.object(installer,'_select_python',create=True) as select:
-            installer.root_action('restore')
+        with (patch.object(installer, '_select_python', create=True) as select,
+              patch.object(installer, 'coordinator_code', return_value='/tmp/cytv-coordinator')):
+            installer.restore_device()
         select.assert_not_called()
-        self.assertTrue(MANAGED+' ' in remote.calls[-1])
+        self.assertIn('"$cytv_state" restore', remote.calls[0])
+        self.assertIn(MANAGED + ' -B /tmp/cytv-coordinator/install_driver.py inspect', remote.calls[1])
+        self.assertIn(MANAGED + ' /var/lib/clean-your-tv-root/deploy.py restore', remote.calls[2])
+
+    def test_restore_does_not_inspect_or_execute_a_rejected_binding(self):
+        remote = Remote()
+        remote.run = lambda *_args, **_kwargs: 'CYTV_PYTHON_INVALID'
+        installer = Installer(remote, None, {'edition':'root'}, '.', {})
+        with (patch.object(installer, 'root_installation') as inspect,
+              patch.object(installer, 'root_action') as restore):
+            with self.assertRaisesRegex(UserError, 'Retained Python binding'):
+                installer.restore_device()
+        inspect.assert_not_called()
+        restore.assert_not_called()
     def test_diagnostics_do_not_provision_missing_python(self):
         installer=Installer(Remote(),None,{'edition':'root'},'.',{})
         with patch.object(installer,'_select_python',create=True) as select:
@@ -124,3 +140,72 @@ class SelectionTests(unittest.TestCase):
                 receipt=state/'python-runtime.json';saved=json.loads(receipt.read_bytes());saved['inventory_sha256']=hashlib.sha256(allowed_raw).hexdigest();receipt.write_text(json.dumps(saved))
                 self.assertEqual(installer._python(),MANAGED)
                 self.assertTrue(marker.exists(),'valid matching fixture never reached its interpreter')
+
+
+    @unittest.skipUnless(os.name == 'posix', 'TV validator fixture requires POSIX paths')
+    def test_restore_retires_only_generated_cache_from_verified_runtime(self):
+        import hashlib
+        import shutil
+        import subprocess
+        import tempfile
+        from pathlib import Path
+
+        node = shutil.which('node')
+        if node is None:
+            self.skipTest('Node is required for the TV binding validator')
+        pin = MANAGED.split('/')[-3]
+        for scenario in ('passive', 'restore', 'changed', 'missing', 'foreign', 'symlink', 'hardlink'):
+            with self.subTest(scenario=scenario), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp).resolve()
+                state = root / 'state'
+                state.mkdir()
+                slot = root / 'runtime' / pin
+                files = {'bin/python3.13': b'fixture', 'lib/module.py': b'pass'}
+                for name, content in files.items():
+                    path = slot / name
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    path.write_bytes(content)
+                inventory = json.dumps({
+                    'schema': 1, 'archive_sha256': pin,
+                    'files': {name: hashlib.sha256(content).hexdigest() for name, content in files.items()},
+                }).encode()
+                (slot / '.cytv-runtime.json').write_bytes(inventory)
+                executable = slot / 'bin/python3.13'
+                launcher = state / 'python-launcher'
+                launcher.write_text('#!/bin/sh\nunset PYTHONHOME PYTHONPATH\n'
+                    'export PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=1\n'
+                    f'exec {executable} "$@"\n')
+                launcher.chmod(0o700)
+                (state / 'python-runtime.json').write_text(json.dumps({
+                    'schema': 1, 'archive_sha256': pin, 'executable': str(executable),
+                    'inventory_sha256': hashlib.sha256(inventory).hexdigest(),
+                }))
+                cache = slot / 'lib/__pycache__/module.cpython-313.pyc'
+                cache.parent.mkdir()
+                if scenario == 'symlink':
+                    cache.symlink_to(slot / 'lib/module.py')
+                elif scenario == 'hardlink':
+                    os.link(slot / 'lib/module.py', cache)
+                else:
+                    cache.write_bytes(b'generated cache')
+                if scenario == 'changed':
+                    (slot / 'lib/module.py').write_bytes(b'changed')
+                if scenario == 'missing':
+                    (slot / 'lib/module.py').unlink()
+                if scenario == 'foreign':
+                    (cache.parent / 'unknown.cpython-313.pyc').touch()
+                bootstrap = """var fs=require('fs'),stat=fs.lstatSync;
+fs.lstatSync=function(p){var item=stat.apply(fs,arguments);
+item.uid=0;if(String(p).indexOf(ROOT)!==0)item.mode&=~18;return item;};
+""".replace('ROOT', json.dumps(str(root)))
+                source = bootstrap + _RETAINED_PYTHON_CHECK.replace('/var/lib/clean-your-tv-python', str(root / 'runtime'))
+                args = [node, '-e', source, str(state)]
+                if scenario != 'passive':
+                    args.append('restore')
+                result = subprocess.run(args, capture_output=True)
+                self.assertEqual(result.returncode, 0 if scenario in ('passive', 'restore') else 1)
+                self.assertEqual(cache.exists(), scenario != 'restore')
+                if scenario == 'restore':
+                    subprocess.run(args, check=True, capture_output=True)
+                    for name, content in files.items():
+                        self.assertEqual((slot / name).read_bytes(), content)

@@ -143,7 +143,8 @@ function verifySystemRelease(
   if (
     manifest.edition === 'root' &&
     systemPolicy.compare(manifest.release.slice(1), '1.4.1') >= 0 &&
-    manifest.minimumSupervisorVersion !== '1.1.1'
+    manifest.minimumSupervisorVersion !==
+      (manifest.supervisor === 2 ? '1.2.10' : '1.1.1')
   )
     throw Error('root-minimum-supervisor-required');
   if (manifest.release !== build.tag)

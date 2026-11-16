@@ -171,4 +171,15 @@ In 1.6.0, installer builds contain both HD/FHD packages. New or explicitly migra
 
 ## System support
 
+### Update Root from v1.21.0
+
+If System Updater 1.2.9 is installed, use **Return to LG Home** in the
+installer to restore the stock Home route. Then run the
+[supervisor replacement](RECOVERY.md#replace-the-root-system-updater-candidate)
+with the installer containing System Updater 1.2.10. Open Clean Your TV from
+the TV app list, then go to **Home Settings → Software updates** and choose
+**Update all**. Use **Rollback** on the same screen to return to the previous
+Root release after an update. Supervisor replacement preserves the installed
+Root packages and launcher profile.
+
 v1.15.0 packages fresh System Updater 1.2.8 / protocol 1 because its embedded shared Luna support changes. Existing supervisors stay pinned; ordinary component OTA does not replace them. Explicit supported replacement still admits only installed 1.1.0/1.1.1 and verifies the exact new bundle and readback. Installed 1.1.2/1.2.x are not newly admitted. See [packaging and acceptance](RELEASE-1.15.0.md).

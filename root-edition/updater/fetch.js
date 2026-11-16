@@ -83,7 +83,7 @@ function validate(m) {
     m.edition !== 'root' ||
     m.application !== APP ||
     m.runtime !== 1 ||
-    m.updater !== 1 ||
+    (m.updater !== 1 && m.updater !== 2) ||
     m.profile !== 1 ||
     typeof m.release !== 'string' ||
     !/^v\d{1,4}\.\d{1,4}\.\d{1,4}$/.test(m.release) ||

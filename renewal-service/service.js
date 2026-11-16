@@ -204,7 +204,13 @@ var catalogControl = require('./home-control')(fs, dir + '/home-control', {
   'inputStatus',
   'listApps',
   'presentationContext',
-  'presentationDismissed'
+  'presentationDismissed',
+  'screensaverStatus',
+  'screensaverConfigure',
+  'screensaverPreview',
+  'screensaverActivity',
+  'screensaverEligible',
+  'screensaverStop'
 ].forEach(function (method) {
   service.register(method, function (m) {
     var raw = m.ls2Message,

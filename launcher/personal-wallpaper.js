@@ -37,6 +37,7 @@
       installed: !!current,
       pending: summary(pending),
       origin: current ? current.envelope.source : null,
+      mediaKind: current && current.envelope.mediaKind,
       error: restoreError
     };
   }
@@ -74,10 +75,16 @@
     return out.buffer;
   }
   function validate(envelope) {
-    keys(envelope, 'schemaVersion kind source image variants');
+    var hasKind =
+      envelope && Object.prototype.hasOwnProperty.call(envelope, 'mediaKind');
+    keys(
+      envelope,
+      'schemaVersion kind source image variants' + (hasKind ? ' mediaKind' : '')
+    );
     if (
       envelope.schemaVersion !== 1 ||
       envelope.kind !== 'wallpaper' ||
+      (hasKind && ['photo', 'video'].indexOf(envelope.mediaKind) < 0) ||
       ['phone', 'cytv'].indexOf(envelope.source) < 0 ||
       !Array.isArray(envelope.variants) ||
       envelope.variants.length > 2 ||
@@ -305,6 +312,7 @@
         }
         var tx = db.transaction(['wallpaper'], mode),
           result,
+          failure,
           timer = root.setTimeout(function () {
             try {
               tx.abort();
@@ -321,7 +329,10 @@
         };
         tx.onabort = tx.onerror = function (event) {
           cleanup();
-          var cause = tx.error || (event && event.target && event.target.error);
+          var cause =
+            failure ||
+            tx.error ||
+            (event && event.target && event.target.error);
           reject(
             cause && cause.name === 'QuotaExceededError'
               ? cause
@@ -329,9 +340,21 @@
           );
         };
         try {
-          action(tx.objectStore('wallpaper'), function (value) {
-            result = value;
-          });
+          action(
+            tx.objectStore('wallpaper'),
+            function (value) {
+              result = value;
+            },
+            function (error) {
+              failure = error;
+              try {
+                tx.abort();
+              } catch (_) {
+                cleanup();
+                reject(error);
+              }
+            }
+          );
         } catch (e) {
           try {
             tx.abort();
@@ -392,7 +415,173 @@
       });
   }
   function record(next) {
+    if (current && current.mediaRef)
+      return { mediaRef: current.mediaRef, source: next };
     return { envelope: current ? current.envelope : null, source: next };
+  }
+  function checkMode(mode) {
+    if (mode !== 'photo' && mode !== 'video') throw Error('Unknown media type');
+  }
+  function read(store, key, done) {
+    var request = store.get(key);
+    request.onsuccess = function () {
+      done(request.result);
+    };
+  }
+  function readActive(store, done) {
+    read(store, 'slot', function (saved) {
+      if (!saved || !saved.mediaRef) return done(saved);
+      read(store, saved.mediaRef, function (envelope) {
+        done({
+          envelope: envelope,
+          source: saved.source,
+          mediaRef: saved.mediaRef
+        });
+      });
+    });
+  }
+  function reap(store, ref) {
+    if (
+      typeof ref !== 'string' ||
+      !/^media:[a-f0-9]{64}:(?:(?:4k|1080p):[a-f0-9]{64}(?::|$)){0,2}$/.test(
+        ref
+      )
+    )
+      return;
+    read(store, 'slot', function (active) {
+      if (active && active.mediaRef === ref) return;
+      read(store, 'library:photo', function (photo) {
+        if (photo === ref) return;
+        read(store, 'library:video', function (video) {
+          if (video !== ref) store.delete(ref);
+        });
+      });
+    });
+  }
+  function mediaRef(envelope) {
+    return (
+      'media:' +
+      envelope.image.sha256 +
+      ':' +
+      envelope.variants
+        .map(function (variant) {
+          return variant.quality + ':' + variant.sha256;
+        })
+        .sort()
+        .join(':')
+    );
+  }
+  function saveMedia(store, mode, envelope, apply, done, failWrite, cancelled) {
+    var ref = mediaRef(envelope);
+    read(store, 'library:' + mode, function (previous) {
+      try {
+        if (cancelled && cancelled()) throw Error('Cancelled');
+        store.put(envelope, ref);
+        store.put(ref, 'library:' + mode);
+        if (apply) store.put({ mediaRef: ref, source: 'personal' }, 'slot');
+        else reap(store, previous);
+        done({ mediaRef: ref, previous: previous });
+      } catch (error) {
+        failWrite(error);
+      }
+    });
+  }
+  function libraryEnvelope(mode) {
+    checkMode(mode);
+    return transaction('readonly', function (store, set) {
+      read(store, 'library:' + mode, function (ref) {
+        if (ref) {
+          read(store, ref, function (envelope) {
+            set({ mediaRef: ref, envelope: envelope });
+          });
+        } else {
+          // Open an already uploaded wallpaper without copying the old save.
+          readActive(store, function (saved) {
+            if (
+              saved &&
+              saved.envelope &&
+              (mode === 'photo' ||
+                (Array.isArray(saved.envelope.variants) &&
+                  saved.envelope.variants.length))
+            )
+              set({
+                mediaRef: saved.mediaRef,
+                envelope: saved.envelope,
+                legacy: true
+              });
+          });
+        }
+      });
+    });
+  }
+  function importMedia(mode, envelope, cancelled) {
+    return serialized(function () {
+      checkMode(mode);
+      var pack = validate(envelope);
+      if (envelope.mediaKind && envelope.mediaKind !== mode)
+        throw Error('Choose the matching file type');
+      if (mode === 'video' && !pack.manifest.wallpaperVideo)
+        throw Error('Choose a prepared video');
+      if (cancelled && cancelled()) throw Error('Cancelled');
+      var needed = JSON.stringify(envelope).length * 2 + 1048576;
+      return root.StorageBudget.check(needed)
+        .then(function () {
+          return transaction('readwrite', function (store, set, failWrite) {
+            if (cancelled && cancelled()) throw Error('Cancelled');
+            saveMedia(store, mode, envelope, false, set, failWrite, cancelled);
+          });
+        })
+        .then(function () {
+          emit();
+          return { mode: mode };
+        })
+        .catch(function (error) {
+          return root.StorageBudget.quotaFailure(error, needed);
+        });
+    });
+  }
+  function readMedia(mode) {
+    return libraryEnvelope(mode).then(function (item) {
+      if (!item || !item.envelope) throw Error('No saved media');
+      var pack = validate(item.envelope);
+      // Older wallpaper records do not distinguish still clips from motion.
+      // A photo selected from this old record uses its image poster.
+      if (mode === 'photo' && item.legacy) delete pack.manifest.wallpaperVideo;
+      return pack;
+    });
+  }
+  function previewMedia(mode) {
+    return libraryEnvelope(mode).then(function (item) {
+      if (!item || !item.envelope) return null;
+      var image = item.envelope.image;
+      var poster = bytes(image, 2 * 1024 * 1024);
+      return {
+        url: root.URL.createObjectURL(
+          new root.Blob([poster], { type: image.mediaType })
+        ),
+        width: image.width,
+        height: image.height,
+        qualities:
+          item.legacy && mode === 'photo'
+            ? []
+            : item.envelope.variants.map(function (variant) {
+                return variant.quality;
+              })
+      };
+    });
+  }
+  function listMedia() {
+    return transaction('readonly', function (store, set) {
+      read(store, 'library:photo', function (photo) {
+        read(store, 'library:video', function (video) {
+          var legacy = current && current.envelope;
+          set({
+            photo: !!(photo || legacy),
+            video: !!(video || (legacy && legacy.variants.length))
+          });
+        });
+      });
+    });
   }
   function render() {
     root.HomeWallpaper.setPersonal(
@@ -411,7 +600,10 @@
     if (!pending || applying)
       return Promise.reject(Error('No pending wallpaper'));
     var item = pending,
-      token = generation;
+      token = generation,
+      mode =
+        item.envelope.mediaKind ||
+        (item.envelope.variants.length ? 'video' : 'photo');
     applying = true;
     return serialized(function () {
       return root.StorageBudget.check(
@@ -423,19 +615,29 @@
           item.storageBudget = b;
           return transaction(
             'readwrite',
-            function (store) {
-              store.put(
-                { envelope: item.envelope, source: 'personal' },
-                'slot'
+            function (store, set, failWrite) {
+              saveMedia(
+                store,
+                mode,
+                item.envelope,
+                true,
+                set,
+                failWrite,
+                function () {
+                  return token !== generation;
+                }
               );
             },
             token
           );
         })
-        .then(function () {
+        .then(function (saved) {
           if (token !== generation) {
             return transaction('readwrite', function (store) {
               store.put(record(source), 'slot');
+              if (saved.previous) store.put(saved.previous, 'library:' + mode);
+              else store.delete('library:' + mode);
+              reap(store, saved.mediaRef);
             }).then(function () {
               throw Error('Cancelled');
             });
@@ -443,13 +645,21 @@
           var old = current,
             oldBuiltin = builtin;
           builtin = null;
+          item.mediaRef = saved.mediaRef;
           current = item;
           pending = null;
           source = 'personal';
           restoreError = '';
           render();
           emit();
-          return Promise.all([dispose(old), dispose(oldBuiltin)]);
+          return Promise.all([
+            dispose(old),
+            dispose(oldBuiltin),
+            transaction('readwrite', function (store) {
+              reap(store, saved.previous);
+              reap(store, old && old.mediaRef);
+            }).catch(function () {})
+          ]);
         });
     }).then(
       function (value) {
@@ -467,6 +677,49 @@
         );
       }
     );
+  }
+  function selectMedia(mode) {
+    var restoring = start();
+    return serialized(function () {
+      return restoring
+        .catch(function () {})
+        .then(function () {
+          return libraryEnvelope(mode);
+        })
+        .then(function (saved) {
+          if (!saved || !saved.envelope) throw Error('No saved media');
+          return prepare(saved.envelope, function () {
+            return false;
+          }).then(function (item) {
+            var old = current,
+              oldBuiltin = builtin;
+            item.mediaRef = saved.mediaRef || mediaRef(item.envelope);
+            return transaction('readwrite', function (store) {
+              if (!saved.mediaRef) store.put(item.envelope, item.mediaRef);
+              store.put(
+                { mediaRef: item.mediaRef, source: 'personal' },
+                'slot'
+              );
+              reap(store, old && old.mediaRef);
+            }).then(
+              function () {
+                current = item;
+                builtin = null;
+                source = 'personal';
+                restoreError = '';
+                render();
+                emit();
+                return Promise.all([dispose(old), dispose(oldBuiltin)]);
+              },
+              function (error) {
+                return dispose(item).then(function () {
+                  throw error;
+                });
+              }
+            );
+          });
+        });
+    });
   }
   function select(next) {
     var isBuiltin = root.WallpaperLibrary && root.WallpaperLibrary.has(next);
@@ -518,6 +771,7 @@
         if (source.indexOf('builtin:') === 0)
           store.put({ envelope: null, source: source }, 'slot');
         else store.delete('slot');
+        reap(store, current && current.mediaRef);
       }).then(function () {
         var old = current;
         current = null;
@@ -534,10 +788,7 @@
     var token = restoreGeneration;
     started = serialized(function () {
       return transaction('readonly', function (store, set) {
-        var request = store.get('slot');
-        request.onsuccess = function () {
-          set(request.result);
-        };
+        readActive(store, set);
       })
         .then(function (saved) {
           if (!saved || token !== restoreGeneration) return;
@@ -552,6 +803,7 @@
             .then(function (item) {
               if (cancelled()) return dispose(item);
               current = item;
+              if (current) current.mediaRef = saved.mediaRef;
               source =
                 saved.source === 'personal' && current ? 'personal' : 'theme';
               if (
@@ -591,6 +843,11 @@
     cancel: cancel,
     select: select,
     remove: remove,
-    state: state
+    state: state,
+    importMedia: importMedia,
+    listMedia: listMedia,
+    readMedia: readMedia,
+    previewMedia: previewMedia,
+    selectMedia: selectMedia
   };
 })(this);

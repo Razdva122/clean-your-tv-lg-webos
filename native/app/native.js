@@ -8,6 +8,13 @@ function monotonic() {
 }
 var root = '/media/developer/apps/usr/palm/applications/com.local.nativehome';
 var data = root + '/state';
+var screensaverOwner = null;
+var screensaverPowerActive = false;
+var screensaverCatalogAt = null,
+  screensaverCatalogIds = [];
+function stopScreensaver() {
+  if (screensaverOwner) screensaverOwner.stop();
+}
 var launchParams = JSON.parse(process.argv[2] || '{}'),
   automatic = launchParams.nativeHomeAuto === true;
 var storage = require('./state-permissions'),
@@ -48,6 +55,7 @@ function generationCurrent() {
 }
 if (!generationCurrent()) process.exit(0);
 function block(close) {
+  stopScreensaver();
   try {
     if (generationCurrent()) storage.publishStopGeneration(data);
   } catch (ignore) {}
@@ -457,7 +465,10 @@ var homeControl = require('./home-control')(
     cancelResume();
     if (screenPolicy) screenPolicy.reset();
     if (child) child.stdin.write(enabled ? 'E' : 'D');
-    if (!enabled) invalidatePresentation(true);
+    if (!enabled) {
+      stopScreensaver();
+      invalidatePresentation(true);
+    }
   },
   visitLG
 );
@@ -526,6 +537,122 @@ function readInputs() {
   }
   return inputStatusPending;
 }
+function screensaverRequest(request, current, respond) {
+  if (!screensaverOwner) {
+    screensaverOwner = require('./screensaver-owner')({
+      service: service,
+      now: monotonic,
+      log: log,
+      powerActive: function () {
+        return screensaverPowerActive;
+      },
+      loadSettings: function () {
+        return JSON.parse(storage.readRecord(data, 'screensaver-preference'));
+      },
+      saveSettings: function (value) {
+        storage.atomicRecord(
+          data,
+          'screensaver-preference',
+          JSON.stringify(value)
+        );
+      },
+      healthy: function () {
+        return (
+          ready &&
+          !stopping &&
+          !stopRequested &&
+          homeControl.enabled() &&
+          generationCurrent() &&
+          !fs.existsSync(data + '/blocked') &&
+          !(child && child.reason !== undefined)
+        );
+      }
+    });
+  }
+  var owner = screensaverOwner;
+  if (request.method === 'screensaverStop') {
+    respond(owner.handle(request.method));
+    return;
+  }
+  function finish(id) {
+    if (!current()) return;
+    function fail() {
+      if (!current()) return;
+      owner.stop();
+      respond({
+        returnValue: false,
+        available: false,
+        errorText: 'Screensaver unavailable'
+      });
+    }
+    try {
+      owner.foreground(id);
+      var payload =
+        request.method === 'screensaverConfigure'
+          ? request.settings
+          : undefined;
+      if (
+        (request.method === 'screensaverPreview' ||
+          request.method === 'screensaverEligible') &&
+        request.mediaUrl !== undefined
+      )
+        payload = { mediaUrl: request.mediaUrl };
+      var result = owner.handle(request.method, payload, current);
+      if (result && typeof result.then === 'function') {
+        result.then(function (reply) {
+          if (current()) respond(reply);
+        }, fail);
+      } else respond(result);
+    } catch (ignore) {
+      fail();
+    }
+  }
+  var currentTime = monotonic();
+  var inventory =
+    screensaverCatalogAt !== null &&
+    currentTime >= screensaverCatalogAt &&
+    currentTime - screensaverCatalogAt < 30000
+      ? Promise.resolve({ installedIds: screensaverCatalogIds })
+      : readCatalog();
+  inventory.then(
+    function (catalog) {
+      if (!current()) return;
+      var ids = catalog && catalog.installedIds;
+      if (!Array.isArray(ids)) {
+        var apps = Array.isArray(catalog) ? catalog : catalog && catalog.apps;
+        ids = Array.isArray(apps)
+          ? apps.map(function (app) {
+              return app && app.id;
+            })
+          : [];
+      }
+      if (
+        screensaverCatalogAt === null ||
+        currentTime - screensaverCatalogAt >= 30000
+      ) {
+        screensaverCatalogAt = currentTime;
+        screensaverCatalogIds = ids.slice();
+      }
+      owner.installed(ids);
+      if (!screenWatch || typeof screenWatch.foreground !== 'function')
+        finish(null);
+      else {
+        try {
+          screenWatch.foreground(finish);
+        } catch (ignore) {
+          finish(null);
+        }
+      }
+    },
+    function () {
+      if (!current()) return;
+      screensaverCatalogAt = null;
+      screensaverCatalogIds = [];
+      owner.installed([]);
+      finish(null);
+    }
+  );
+}
 function readHomeRequest(channel) {
   var directory = channel.directory,
     prefix = channel.catalogOnly
@@ -591,6 +718,32 @@ function handleHomeRequest(channel, request, respond) {
     return respond({ returnValue: false });
   try {
     if (
+      !channel.inputOnly &&
+      !channel.catalogOnly &&
+      directory !== data &&
+      [
+        'screensaverStatus',
+        'screensaverConfigure',
+        'screensaverPreview',
+        'screensaverActivity',
+        'screensaverEligible',
+        'screensaverStop'
+      ].indexOf(request.method) >= 0
+    ) {
+      screensaverRequest(
+        request,
+        function () {
+          return (
+            channel.last === request.id &&
+            request.expires > Date.now() &&
+            !stopping &&
+            !stopRequested &&
+            !(child && child.reason !== undefined)
+          );
+        },
+        respond
+      );
+    } else if (
       !channel.inputOnly &&
       directory !== data &&
       request.method === 'presentationContext'
@@ -784,6 +937,7 @@ function finish(decision) {
   var code = decision.code,
     signal = decision.signal;
   stopping = true;
+  stopScreensaver();
   terminalUI = decision.terminalUI;
   invalidatePresentation(!terminalUI);
   clearTimeout(restartTimer);
@@ -896,6 +1050,7 @@ function workerClosed(worker, code, signal) {
   });
   child = null;
   ready = false;
+  stopScreensaver();
   buffer = '';
   if (decision.action === 'wait-power') {
     // The relay closed both vanished devices; do not reopen suspended input.
@@ -1007,6 +1162,15 @@ function start(recovering) {
           continue;
         }
         ready = true;
+        try {
+          screensaverRequest(
+            { method: 'screensaverStatus' },
+            function () {
+              return ready && !stopping && !stopRequested;
+            },
+            function () {}
+          );
+        } catch (ignore) {}
         lastAck = monotonic();
         if (recovering) {
           try {
@@ -1286,6 +1450,7 @@ var screenWatch = require('./screen-watch')(
   data,
   screenLog,
   function (id) {
+    if (screensaverOwner) screensaverOwner.foreground(id);
     if (id === 'com.webos.app.home') {
       if (lgHomeSince === null) lgHomeSince = monotonic();
     } else {
@@ -1324,6 +1489,8 @@ var screenWatch = require('./screen-watch')(
     }
   },
   function () {
+    screensaverPowerActive = false;
+    stopScreensaver();
     invalidatePresentation(false);
     lastForeground = null;
     lastForegroundAt = null;
@@ -1342,6 +1509,11 @@ var screenWatch = require('./screen-watch')(
       onOff: p.onOff
     });
     var power = powerPolicy.observe(p, monotonic());
+    var wasActive = screensaverPowerActive;
+    screensaverPowerActive = p.state === 'Active';
+    if (!screensaverPowerActive) stopScreensaver();
+    else if (!wasActive && screensaverOwner)
+      screensaverOwner.foreground(lastForeground);
     power.diagnostics.forEach(function (event) {
       log({ event: 'contract-event', contract: event });
     });

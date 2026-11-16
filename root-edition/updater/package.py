@@ -1,4 +1,5 @@
 """Bounded inspection of our reproducible IPK format, never extract or execute it."""
+import gzip
 import hashlib
 import io
 import json
@@ -11,6 +12,16 @@ APP = 'com.cleanyourtv.root.preview'
 PREFIX = 'usr/palm/applications/' + APP + '/'
 SERVICE = 'usr/palm/services/' + APP + '.service/'
 INFO = 'usr/palm/packages/' + APP + '/packageinfo.json'
+SCREENSAVER = 'com.cleanyourtv.screensaver'
+SCREENSAVER_PREFIX = 'usr/palm/applications/' + SCREENSAVER + '/'
+SCREENSAVER_INFO = 'usr/palm/packages/' + SCREENSAVER + '/packageinfo.json'
+SCREENSAVER_RECIPE = PREFIX + 'screensaver-companion/manifest.json'
+SCREENSAVER_FILES = frozenset((
+    'appinfo.json', 'index.html', 'renderer.js', 'settings.js', 'style.css',
+    'icon.png', 'compat-polyfills.js', 'compat-LICENSE.txt',
+) + tuple('backgrounds/' + scene + suffix for scene in ('alpine', 'ribbon') for suffix in (
+    '-photo.jpg', '-video.mp4', '-video-1080p.mp4', '-CREDITS.txt', '-LICENSE.txt',
+)))
 
 
 def members(raw):
@@ -51,7 +62,7 @@ def archive(raw):
     return result
 
 
-def inspect_package(raw, manifest):
+def _verified_package_files(raw, manifest):
     if len(raw) != manifest['size'] or hashlib.sha256(raw).hexdigest() != manifest['sha256']:
         raise ValueError('Package hash mismatch')
     parts = members(raw); files = archive(parts['data.tar.gz']); control = archive(parts['control.tar.gz'])
@@ -69,7 +80,171 @@ def inspect_package(raw, manifest):
     if 'url' in manifest:
         expected='1280x720' if manifest['url'].endswith('_720p_all.ipk') else '1920x1080'
         if app.get('resolution','1920x1080')!=expected:raise ValueError('Root package graphics variant mismatch')
+    return files
+
+
+def inspect_package(raw, manifest):
+    files = _verified_package_files(raw, manifest)
+    companion_files(files)
     return {name: hashlib.sha256(data).hexdigest() for name, data in files.items()}
+
+
+def companion_files(files):
+    """Project only the fixed service-free companion from verified Root DATA."""
+    recipe = files.get(SCREENSAVER_RECIPE)
+    if recipe is None:
+        return None
+    spec = json.loads(recipe)
+    if (not isinstance(spec, dict) or set(spec) != {'schema', 'version', 'files'}
+            or type(spec['schema']) is not int or spec['schema'] != 1
+            or not isinstance(spec['files'], dict) or set(spec['files']) != SCREENSAVER_FILES):
+        raise ValueError('Invalid Root screensaver recipe')
+    version = spec['version']
+    import re
+    if not isinstance(version, str) or not re.fullmatch(r'[0-9]{1,4}\.[0-9]{1,4}\.[0-9]{1,4}', version):
+        raise ValueError('Invalid Root screensaver version')
+    result = {}
+    for name, source in spec['files'].items():
+        if not isinstance(source, str) or not source.startswith(PREFIX) or source not in files:
+            raise ValueError('Screensaver resource outside authenticated Root application')
+        result[SCREENSAVER_PREFIX + name] = files[source]
+    info = json.loads(result[SCREENSAVER_PREFIX + 'appinfo.json'])
+    if (not isinstance(info, dict) or info.get('id') != SCREENSAVER
+            or info.get('version') != version or info.get('type') != 'web'
+            or info.get('main') != 'index.html' or info.get('defaultWindowType') != 'popup'
+            or info.get('visible') is not False or info.get('requiredACG') or info.get('privilegedJail')):
+        raise ValueError('Unexpected Root screensaver app identity')
+    result[SCREENSAVER_INFO] = json.dumps({
+        'id': SCREENSAVER, 'version': version, 'app': SCREENSAVER, 'services': [],
+    }).encode()
+    return version, result
+
+
+def companion_archive(version, files):
+    """Package verified static bytes under the fixed ordinary app identity."""
+    def tgz(content):
+        buffer = io.BytesIO()
+        with tarfile.open(fileobj=buffer, mode='w', format=tarfile.USTAR_FORMAT) as stream:
+            parents = {str(p) for name in content for p in PurePosixPath(name).parents
+                       if len(p.parts) >= 4}
+            for name in sorted(parents):
+                member = tarfile.TarInfo(name)
+                member.type, member.mode, member.mtime = tarfile.DIRTYPE, 0o755, 1704067200
+                stream.addfile(member)
+            for name, data in sorted(content.items()):
+                member = tarfile.TarInfo(name)
+                member.mode, member.mtime, member.size = 0o644, 1704067200, len(data)
+                stream.addfile(member, io.BytesIO(data))
+        packed = io.BytesIO()
+        with gzip.GzipFile(filename='', fileobj=packed, mode='wb', compresslevel=1, mtime=0) as output:
+            output.write(buffer.getvalue())
+        return packed.getvalue()
+
+    control = f'Package: {SCREENSAVER}\nVersion: {version}\nArchitecture: all\nMaintainer: Clean Your TV\nDescription: Clean Your TV Screensaver\n'
+    result = bytearray(b'!<arch>\n')
+    for name, raw in (('debian-binary', b'2.0\n'), ('control.tar.gz', tgz({'control': control.encode()})),
+                      ('data.tar.gz', tgz(files))):
+        result.extend(f'{name + "/":<16}{0:<12}{0:<6}{0:<6}{"100644":<8}{len(raw):<10}`\n'.encode())
+        result.extend(raw)
+        if len(raw) % 2:
+            result.extend(b'\n')
+    return bytes(result)
+
+
+def root_companion(raw, descriptor):
+    return companion_files(_verified_package_files(raw, descriptor))
+
+
+def installed_companion(installed, selected, uid=0):
+    if selected is None:
+        paths = (
+            SCREENSAVER_PREFIX.rstrip('/'),
+            SCREENSAVER_INFO.rsplit('/', 1)[0],
+            'usr/palm/services/' + SCREENSAVER + '.service',
+        )
+        return not any(os.path.lexists(Path(installed) / name) for name in paths)
+    try:
+        verify_payload(installed, {name: hashlib.sha256(raw).hexdigest()
+                                   for name, raw in selected[1].items()}, uid=uid)
+    except FileNotFoundError:
+        return False
+    except ValueError as error:
+        if str(error) == 'Package DATA digest mismatch' or str(error).startswith('Installed payload mismatch: '):
+            return False
+        raise
+    return True
+
+
+def companion_journal_name(tx, rollback):
+    return ('screensaver-rollback-' if rollback else 'screensaver-update-') + tx['id']
+
+
+def companion_outcome_pending(store, tx):
+    return any(
+        value is not None and (not isinstance(value, dict) or value.get('terminal') is None)
+        for value in (store.read(companion_journal_name(tx, rollback)) for rollback in (False, True))
+    )
+
+
+def sync_companion(installed, selected, prior, journal, work, *, uid=0, install=None, remove=None):
+    """Advance a fixed companion once under the caller's product/worker lock."""
+    if selected is None and prior is None:
+        return
+    from observed_install import install as observed_install, remove as observed_remove
+    from installation import terminal_install, terminal_removal
+    from tempfile import TemporaryDirectory
+
+    install = install or observed_install
+    remove = remove or observed_remove
+    action = 'install' if selected else 'remove'
+    version = selected[0] if selected else prior[0]
+    content = (selected or prior)[1]
+    # Bind receipts to exact payload bytes, not just an app id or version.
+    hashes = {name: hashlib.sha256(raw).hexdigest() for name, raw in content.items()}
+    identity = {'action': action, 'version': version,
+                'sha256': hashlib.sha256(json.dumps(hashes, sort_keys=True).encode()).hexdigest()}
+
+    state = journal()
+    if state is not None:
+        if not isinstance(state, dict) or set(state) != {'identity', 'terminal'} or state['identity'] != identity:
+            raise ValueError('Screensaver package operation changed')
+        proof = state['terminal']
+        predicate = terminal_install if selected else terminal_removal
+        if not predicate(proof, SCREENSAVER):
+            raise ValueError('Screensaver package outcome unconfirmed; recovery required')
+        if installed_companion(installed, selected, uid):
+            return
+        if not selected:
+            package = Path(installed) / SCREENSAVER_INFO.rsplit('/', 1)[0]
+            if package.is_dir() and not any(path.is_symlink() for path in (package, *package.parents)):
+                package.rmdir()
+            if installed_companion(installed, selected, uid):
+                return
+        raise ValueError('Screensaver package readback did not match recorded result')
+
+    if installed_companion(installed, selected, uid):
+        return
+    if not (installed_companion(installed, None, uid)
+            or (prior is not None and installed_companion(installed, prior, uid))):
+        raise ValueError('Installed screensaver does not match the verified Root baseline')
+    if selected:
+        with TemporaryDirectory(prefix='screensaver-', dir=work) as directory:
+            path = Path(directory) / 'screensaver.ipk'
+            with path.open('xb') as output:
+                output.write(companion_archive(*selected))
+                output.flush()
+                os.fsync(output.fileno())
+            proof = install(SCREENSAVER, str(path), timeout=150,
+                            on_ready=lambda: journal({'identity': identity, 'terminal': None}))
+    else:
+        journal({'identity': identity, 'terminal': None})
+        proof = remove(SCREENSAVER, timeout=150)
+    predicate = terminal_install if selected else terminal_removal
+    if not predicate(proof, SCREENSAVER):
+        raise ValueError('Screensaver package outcome unconfirmed; recovery required')
+    journal({'identity': identity, 'terminal': proof})
+    # Re-enter solely for terminal readback, never for another package request.
+    sync_companion(installed, selected, prior, journal, work, uid=uid, install=install, remove=remove)
 
 
 def safe_bytes(path, limit=32*1024*1024, uid=None):

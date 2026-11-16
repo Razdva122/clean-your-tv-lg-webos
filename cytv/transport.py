@@ -84,7 +84,7 @@ def fingerprint(key):
     return 'SHA256:' + base64.b64encode(hashlib.sha256(key.asbytes()).digest()).decode().rstrip('=')
 
 
-def trusted_host_keys(known, host, port, standard=None):
+def trusted_host_keys(known, host, port, standard=None, *, import_standard=True):
     """Reuse exact OpenSSH host/port records without replacing a cytv pin."""
     import paramiko
     from paramiko.hostkeys import HostKeyEntry
@@ -120,7 +120,7 @@ def trusted_host_keys(known, host, port, standard=None):
                 raise UserError('The saved SSH key for this TV could not be read. Verify the entry through your existing trusted SSH setup before continuing.', reason_code='ssh-trust-record') from None
             if entry is None:
                 raise UserError('The saved SSH key for this TV is unsupported. Verify it through your existing trusted SSH setup before continuing.', reason_code='ssh-trust-record')
-            if not pinned:
+            if not pinned and import_standard:
                 keys.add(name, entry.key.get_name(), entry.key)
     return keys
 
@@ -249,7 +249,7 @@ class SSH:
         self.root = root
 
     @classmethod
-    def connect(cls, profile, directory, secret, trust, identity_prompt=None, automatic=True, persist=True):
+    def connect(cls, profile, directory, secret, trust, identity_prompt=None, automatic=True, persist=True, *, previous_host_key_type=None):
         import paramiko
         root_ssh = profile['edition'] == 'root' or profile.get('connection') == 'root-ssh'
         directory = Path(directory)
@@ -263,7 +263,7 @@ class SSH:
                 raise UserError('SSH host key was not verified. Connection cancelled.', reason_code='ssh-identity-unverified')
             profile = dict(profile)
         client = paramiko.SSHClient()
-        keys = trusted_host_keys(known, profile['host'], profile['port'])
+        keys = trusted_host_keys(known, profile['host'], profile['port'], import_standard=previous_host_key_type is None)
         for name, values in keys.items():
             for kind, value in values.items():
                 client.get_host_keys().add(name, kind, value)
@@ -280,6 +280,16 @@ class SSH:
                        username='root' if root_ssh else 'prisoner',
                        timeout=10, banner_timeout=10, auth_timeout=15,
                        allow_agent=False, look_for_keys=False)
+        if previous_host_key_type is not None:
+            def select_host_key_type(*args, **kwargs):
+                transport = paramiko.Transport(*args, **kwargs)
+                # Use the same algorithm preference as a pinned connection.
+                security = transport.get_security_options()
+                security.key_types = (previous_host_key_type, *(kind for kind in security.key_types
+                                                               if kind != previous_host_key_type))
+                return transport
+
+            options['transport_factory'] = select_host_key_type
         if not root_ssh:
             # Developer Mode SSH servers may accept only ssh-rsa and omit
             # server-sig-algs; Paramiko otherwise attempts an RSA SHA-2 signature.
@@ -350,13 +360,12 @@ class SSH:
                 stderr_tail = stderr_tail[-64:]
                 if total > 8 * 1024 * 1024:
                     raise UserError('TV response exceeded the size limit.')
-            elif channel.exit_status_ready():
+            elif channel.exit_status_ready() or channel.closed:
+                # Paramiko wakes its exit-status waiter on close, even without a status.
                 status = channel.recv_exit_status()
                 if status != 0:
                     raise TVCommandError(status, storage_full=storage_full)
                 return
-            elif channel.closed:
-                raise UserError('TV connection interrupted. Run cytv status before retrying.',reason_code='connection-interrupted')
             else:
                 time.sleep(0.02)
         raise UserError('TV operation timed out. Run cytv status before retrying.', reason_code='operation-timeout')

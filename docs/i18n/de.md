@@ -70,6 +70,8 @@ Der Desktop-Assistent verwendet zunächst die Systemsprache und speichert eine a
 
 In der veröffentlichten Version wird die Root-Einrichtung mit einer Warnung fortgesetzt, wenn TV-Eingänge nicht gelesen werden können, die Anwendungsliste aber gültig ist. Eingänge können in Home fehlen; eine fehlerhafte oder leere Anwendungsliste stoppt die Einrichtung weiterhin. Speichern Sie bei wiederholter Warnung den Diagnosebericht.
 
+Bei der Root-Einrichtung kann das Installationsprogramm eine erkannte Home-Übernahme automatisch deaktivieren, damit CYTV die Home-Steuerung übernimmt. Wenn die Einrichtung abbricht, speichern Sie den Diagnosebericht.
+
 ## 5. Fernbedienung prüfen
 
 1. Öffnen Sie eine andere TV-App und drücken Sie kurz **Home**. Clean Your TV sollte erscheinen. Geben Sie im Assistenten Ihre Beobachtung an; überspringen Sie den Test, wenn Sie ihn nicht durchgeführt haben.
@@ -104,6 +106,8 @@ Automatische Updates am TV starten einen angehaltenen Helper nicht neu. Nutzen S
 Wenn der Support die Ausgabe eines SSH-Befehls benötigt, öffnen Sie im Desktop-Installer **Diagnose → SSH-Befehl ausführen** und wählen Sie Ihre bestehende TV-Verbindung. Prüfen Sie den Fernseher und den SSH-Benutzer, fügen Sie den Befehl ein und klicken Sie auf **Ausführen** und **Ausgabe kopieren**. Der kopierte Text enthält stdout, stderr und den Exit-Code.
 
 Bei `ssh-identity-changed` nach einem Reset oder einer SSH-Änderung stoppen: CYTV blockiert den geänderten gespeicherten Schlüssel vor der Anmeldung. Die erstmalige Vertrauensabfrage ersetzt ihn nicht; eine ausstehende Deinstallation erklärt die Abweichung nicht. Ursprüngliches Profil, Schlüssel und Wiederherstellungsdaten behalten. Bei einem gespeicherten Root-Profil mit ausstehender Deinstallation lässt sich der unabhängig geprüfte Fingerabdruck in der Konsole erfassen. Die frühere Deinstallation bleibt blockiert. Siehe [Wiederherstellung bei geänderter SSH-Identität](../RECOVERY.md#ssh-identity-changed).
+
+Wenn Sie Ihren No-root-Fernseher auf die Werkseinstellungen zurückgesetzt haben, wählen Sie bei geändertem Schlüssel **Nach dem Werksreset erneut verbinden**. Folgen Sie den Schritten in Ihrem vertrauenswürdigen Heimnetz. Das alte Profil und der Deinstallationseintrag bleiben erhalten.
 
 Nach einer unterbrochenen Installation verwenden Sie dieselbe gespeicherte Verbindung und zuerst **TV-Status prüfen**. Fahren Sie nur mit der vom Assistenten angebotenen Wiederherstellung fort. Bei unbekanntem Zustand Diagnosebericht speichern und stoppen; Wiederherstellungsdaten behalten und nicht blind neu installieren.
 

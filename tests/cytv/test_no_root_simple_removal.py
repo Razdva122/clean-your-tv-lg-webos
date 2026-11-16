@@ -316,6 +316,21 @@ class SimpleRemoval(unittest.TestCase):
         self.assertIsNone(self.store.pending(self.profile))
         self.assertFalse(list((self.root/'volatile').glob('cytv-removal-*.boot')))
 
+    def test_screensaver_is_removed_as_a_service_free_project_package(self):
+        (self.root / 'proc').mkdir()
+        app = package.SCREENSAVER_APP
+        self.remote.apps = {app}
+        self.remote.os_cleanup = True
+        popup = self.own_file('apps/usr/palm/applications/' + app + '/appinfo.json',
+                              json.dumps({'id': app}))
+        self.assertTrue(self.remove()['verified_clean'])
+        self.assertEqual([body['id'] for uri, body in self.remote.calls if uri.endswith('/dev/remove')],
+                         [app])
+        self.assertFalse(any(uri.startswith(app) and uri.endswith('/disable')
+                             for uri, _ in self.remote.calls))
+        self.assertFalse(popup.exists())
+        self.assertIsNone(self.store.pending(self.profile))
+
     def test_broken_optional_startup_does_not_block_registered_package_removal(self):
         (self.root / 'proc').mkdir()
         self.remote.apps = {'com.local.nativehome'}

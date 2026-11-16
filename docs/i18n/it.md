@@ -70,6 +70,8 @@ L’assistente usa inizialmente la lingua del sistema e salva una scelta esplici
 
 L’installazione Root continua con un avviso se non è possibile leggere gli ingressi TV ma l’elenco delle app è valido. Gli ingressi potrebbero mancare in Home; un elenco delle app non leggibile o vuoto interrompe comunque l’installazione. Salva il rapporto diagnostico se l’avviso persiste.
 
+La configurazione Root può disattivare automaticamente una sostituzione di Home riconosciuta, così CYTV può gestire il tasto Home. Se la configurazione si interrompe, salva il rapporto diagnostico.
+
 ## 5. Controlla il telecomando
 
 1. Apri un’altra app sulla TV e premi brevemente **Home**. Deve aprirsi Clean Your TV. Indica nella procedura guidata ciò che hai visto; salta la verifica se non l’hai eseguita.
@@ -104,6 +106,8 @@ Gli aggiornamenti automatici sulla TV non riavviano Helper fermato. Per riprende
 Se l’assistenza chiede l’output di un comando SSH, apri **Diagnostica → Esegui comando SSH** nel programma di installazione per computer e seleziona la connessione esistente alla TV. Controlla la TV e l’utente SSH, incolla il comando e fai clic su **Esegui** e **Copia output**. Il testo copiato include stdout, stderr e il codice di uscita.
 
 Se compare `ssh-identity-changed` dopo un ripristino o una modifica SSH, fermati: CYTV ha bloccato la chiave salvata modificata prima dell’autenticazione. La conferma iniziale di fiducia non la sostituisce; una disinstallazione in sospeso non spiega la differenza. Conserva il profilo originale, le chiavi e i dati di recupero. Con un profilo Root salvato e una disinstallazione in sospeso, puoi registrare nella console l’impronta verificata in modo indipendente. La disinstallazione precedente rimane bloccata. Vedi [recupero dell’identità SSH](../RECOVERY.md#ssh-identity-changed).
+
+Dopo aver ripristinato le impostazioni di fabbrica del tuo TV No-root, scegli **Riconnetti dopo il ripristino di fabbrica** se la chiave è cambiata. Segui le istruzioni sulla tua rete domestica fidata. Il profilo precedente e il registro di rimozione vengono conservati.
 
 Se l’installazione viene interrotta, usa la stessa connessione salvata e scegli prima **Controlla stato TV**. Prosegui solo con il ripristino proposto dalla procedura guidata. Se lo stato è sconosciuto, salva il rapporto diagnostico e fermati; conserva i dati di ripristino e non ripetere l’installazione alla cieca.
 

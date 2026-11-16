@@ -27,7 +27,11 @@ COMPOSITOR_CAPABILITIES = WALLPAPER_CAPABILITIES + ['c1-keyfilter-v1']
 
 def snapshot_capabilities(saved):
     capabilities = saved.get('capabilities', [])
-    if capabilities not in ([], RECEIVER_CAPABILITIES, WALLPAPER_CAPABILITIES, COMPOSITOR_CAPABILITIES):
+    ordinary = ([], RECEIVER_CAPABILITIES, WALLPAPER_CAPABILITIES)
+    # An OTA can retain an older registration contract. Add only the
+    # screensaver methods and keep that contract intact for rollback.
+    with_screensaver = tuple(base + ['screensaver-v1'] for base in ordinary)
+    if capabilities not in ordinary + (COMPOSITOR_CAPABILITIES,) + with_screensaver:
         raise ValueError('Unknown recovery capabilities')
     return capabilities
 SYSTEM_FILES = tuple(Path(x) for x in ('/usr/bin/node','/usr/palm/services/jsservicelauncher/bootstrap-node.js','/usr/palm/services/jsservicelauncher/bootstrap.js'))
@@ -71,10 +75,13 @@ def encoded(value):
 def runner_bytes():
     # Follow the firmware's bootstrap argument contract, without evaluating a
     # writable Homebrew wrapper or modifying the system run-js-service script.
+    # Legacy webos-service can exit idle while Activity Manager stalls dispatch.
+    # LG's local activity mode keeps its request lifecycle without that round trip.
     return ('#!/bin/sh\nset -eu\n[ "$#" -eq 0 ] || exit 2\n'
             'cd '+str(PRIVATE_SERVICE)+'\n'
             'export NODE_PATH=/usr/palm/frameworks:/usr/lib/nodejs:/usr/lib/node_modules\n'
-            'exec /usr/bin/node '+('' if LEGACY_NODE_BETA else '--require '+str(PRIVATE_SERVICE/'startup-diagnostics.js')+' ')+'/usr/palm/services/jsservicelauncher/bootstrap-node.js -- '
+            'exec /usr/bin/node '+('' if LEGACY_NODE_BETA else '--require '+str(PRIVATE_SERVICE/'startup-diagnostics.js')+' ')+'/usr/palm/services/jsservicelauncher/bootstrap-node.js '
+            +('--disable-activity-creation ' if LEGACY_NODE_BETA else '')+'-- '
             +str(STATE/'bootstrap.pid')+' /var/palm/ls2-dev '+str(PRIVATE_SERVICE)+'\n').encode()
 
 def prepare_private_service():
@@ -120,6 +127,10 @@ def plan(original, capabilities=None):
     if 'wallpaper-media-v1' in capabilities:
         control += ['wallpaperCacheStart','wallpaperCacheWrite','wallpaperCacheCommit','wallpaperCacheKeepAlive','wallpaperCacheStop']
     clients = {NAME:['activity.operation'],'com.cleanyourtv.root.preview':[NAME+'.control'],'com.cleanyourtv.root.preview-*':[NAME+'.control']}
+    if 'screensaver-v1' in capabilities:
+        control += ['screensaverStatus','screensaverConfigure','screensaverPreview','screensaverActivity','screensaverEligible','screensaverStop']
+        clients[NAME].append('application.launcher')
+        role['permissions'][0]['outbound'] += ['com.webos.applicationManager','com.webos.service.tvpower']
     apis = {NAME+'.control':[NAME+'/'+x for x in control],'activities.callbacks':[NAME+'/boot'],NAME+'.admin':[NAME+'/'+x for x in ('status','restore','register','unregister')]}
     if 'c1-keyfilter-v1' in capabilities:
         names=[line for line in original['service'].splitlines() if line.startswith('Name=')]

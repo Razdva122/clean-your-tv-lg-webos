@@ -1,6 +1,5 @@
 """Read the existing Root Home contract before preparing new runtime/packages."""
 import re
-import shlex
 
 from .errors import UserError, TVCommandError, TVRejected
 
@@ -153,36 +152,14 @@ NATIVE_HOME_MOUNT_AWK = """'
             invalid = 1
             exit
         }
-        if ($5 == "/usr/bin/com.webos.app.home") {
-            files++
-            row = $0
-            file_parent = $2
-            for (i = 7; i < sep; i++)
-                if ($i ~ /^shared:/) shared = 1
-        }
-        if ($5 == "/") {
-            roots++
-            root_id = $1
-            for (i = 7; i < sep; i++)
-                if ($i ~ /^shared:/) shared = 1
-            if ($(sep + 1) == "squashfs" && $6 ~ /(^|,)ro(,|$)/ &&
-                $(sep + 3) ~ /(^|,)ro(,|$)/) stock_root = 1
-        }
+        if ($5 == "/usr/bin/com.webos.app.home") files++
         if ($5 == "/usr" || $5 == "/usr/bin") {
             parents++
             if ($(sep + 1) == "overlay") overlay = 1
         }
     }
     END {
-        if (mode == "snapshot" || mode == "preview") {
-            if (invalid || roots != 1 || files != 1 || file_parent != root_id || parents || shared) exit 1
-            if (mode == "preview") sub(/^[0-9]+ +[0-9]+ +/, "", row)
-            print row
-        }
-        else if (mode == "stock") {
-            if (invalid || roots != 1 || stock_root != 1 || files || parents) exit 1
-        }
-        else if (invalid || !NR) print "unknown"
+        if (invalid || !NR) print "unknown"
         else if (files > 1) print "stacked-file-mounts"
         else if (files && parents) print "file-and-parent-mounts"
         else if (files) print "file-mount"
@@ -192,53 +169,6 @@ NATIVE_HOME_MOUNT_AWK = """'
         else print "absent"
     }'"""
 NATIVE_HOME_MOUNT_PROBE = 'LC_ALL=C awk ' + NATIVE_HOME_MOUNT_AWK + ' /proc/self/mountinfo'
-NATIVE_HOME_MOUNT_SNAPSHOT = 'LC_ALL=C awk -v mode=snapshot ' + NATIVE_HOME_MOUNT_AWK + ' /proc/self/mountinfo'
-NATIVE_HOME_STOCK_MOUNT = 'LC_ALL=C awk -v mode=stock ' + NATIVE_HOME_MOUNT_AWK + ' /proc/self/mountinfo'
-NATIVE_HOME_PATH = '/usr/bin/com.webos.app.home'
-RESTORE_NATIVE_HOME = 'Restore LG Home for Root setup?'
-
-
-def restore_native_home(remote, mount_state, confirm):
-    """Inspect the covered Home in a private mount namespace before restoring it."""
-    if mount_state != 'file-mount':
-        return False
-    home = NATIVE_HOME_PATH
-    readback = (f'{NATIVE_HOME_STOCK_MOUNT}\n'
-                f"sha256sum {home} | awk '{{print $1}}'\n"
-                + NATIVE_HEADERS)
-    try:
-        snapshot = remote.run(NATIVE_HOME_MOUNT_SNAPSHOT, timeout=5).strip()
-        fields = snapshot.split()
-        if len(snapshot) > 2048 or '\n' in snapshot or len(fields) < 10 or fields[4] != home:
-            return False
-        unchanged = f'test "$({NATIVE_HOME_MOUNT_SNAPSHOT})" = {shlex.quote(snapshot)}'
-        script = f'''test "$(od -An -v -tu1 -N2 {home} | awk '{{print $1, $2}}')" = '35 33' '''
-        regular = f'test ! -L /usr && test ! -L /usr/bin && test ! -L {home} && test -f {home}'
-        uncover = f'{regular}\n{script}\numount {home}\n'
-        # A cloned namespace can assign new mount IDs to the same filesystems.
-        preview_snapshot = NATIVE_HOME_MOUNT_SNAPSHOT.replace('mode=snapshot', 'mode=preview')
-        mount_identity = re.sub(r'^[0-9]+ +[0-9]+ +', '', snapshot)
-        preview_guard = f'test "$({preview_snapshot})" = {shlex.quote(mount_identity)}'
-        preview_command = 'unshare --mount --propagation private /bin/sh -c ' + shlex.quote(
-            f'set -e\n{preview_guard}\n{uncover}{readback}')
-        preview = remote.run(preview_command, timeout=15)
-        digest, _, headers = preview.partition('\n')
-        if not re.fullmatch(r'[0-9a-f]{64}', digest) or not native_headers_valid(headers):
-            return False
-    except (UserError, OSError, TimeoutError):
-        return False
-    if not confirm():
-        return False
-
-    # Match the ELF fingerprint from the private preview before reporting success.
-    verify_digest = f"""test "$(sha256sum {home} | awk '{{print $1}}')" = {digest}\n"""
-    try:
-        reply = remote.run(f'set -e\n{unchanged}\n{uncover}{verify_digest}{readback}', timeout=15)
-    except (UserError, OSError, TimeoutError) as error:
-        raise UserError('Root operation was not confirmed.', reason_code='root-operation-unconfirmed') from error
-    if reply != preview:
-        raise UserError('Root operation was not confirmed.', reason_code='root-operation-unconfirmed')
-    return True
 
 
 def arm32_elf(dump):

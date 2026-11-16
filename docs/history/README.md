@@ -1,5 +1,7 @@
 # Release history and device evidence
 
+- [Helper ordinary-data mode policy, 2026-11-16](2026-11-16-helper-data-mode-policy.md): shared rwx-independent data reads, preserved credential/Stop boundaries and focused development verification.
+
 - [v1.20.8 candidate verification, 2026-11-15](2026-11-15-release-1.20.8-rc-verification.md)
 - [v1.20.3 candidate verification, 2026-11-13](2026-11-13-release-1.20.3-rc-verification.md)
 - [v1.20.2 RC2 verification, 2026-11-13](2026-11-13-release-1.20.2-rc2-verification.md)

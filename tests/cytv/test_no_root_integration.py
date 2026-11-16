@@ -20,6 +20,7 @@ class ProcessRemote(Remote):
         super().__init__()
         self.root_path=root
         self.cut=False
+        self.cut_slot=0
         self.omit=set()
         self.boot = "11111111-1111-1111-1111-111111111111"
         self.cut_after_cleanup=None
@@ -101,7 +102,8 @@ sys.stdin.read()
 
             code=words[words.index('-e')+1]
             argument=words[-1]
-            is_observer = any(source in code for source in (observer.PROGRAM, observer.ROOT_PROGRAM, observer.PACKAGED_STATE_PROGRAM))
+            sources = (observer.PROGRAM, observer.ROOT_PROGRAM, observer.PACKAGED_STATE_PROGRAM)
+            is_observer = any(source in code or observer.companion_source(source) in code for source in sources)
             if is_observer or observer.STORAGE_SELECT in code:
                 request=json.loads(argument)
                 request['sender']=str(self.sender)
@@ -113,7 +115,7 @@ sys.stdin.read()
             reply=result.stdout.decode()
             if is_observer and self.cut and request['command']=='status':
                 value=json.loads(reply)
-                if value['slots'][0]['terminal']=='success':
+                if value['slots'][self.cut_slot]['terminal']=='success':
                     self.cut=False
                     raise RuntimeError('simulated host disconnect after durable Helper terminal')
             return reply
@@ -179,6 +181,59 @@ class OriginalOperationIntegration(unittest.TestCase):
         self.installer=operations.Installer(self.remote,self.store,self.profile,fixture.payload,fixture.manifest,lambda *_:None)
         self.inventory=fixture.inventory
 
+    def include_screensaver_companion(self):
+        app = 'com.cleanyourtv.screensaver'
+        prefix = 'usr/palm/applications/' + app + '/'
+        companion = package.ipk(app, '0.0.3', {
+            prefix + 'appinfo.json': json.dumps({
+                'id': app, 'type': 'web', 'defaultWindowType': 'popup',
+                'version': '0.0.3', 'visible': False,
+            }).encode(),
+            prefix + 'index.html': b'<html></html>',
+            'usr/palm/packages/' + app + '/packageinfo.json': json.dumps({
+                'id': app, 'app': app, 'version': '0.0.3', 'services': [],
+            }).encode(),
+        })
+        (self.installer.payload / 'screensaver.ipk').write_bytes(companion)
+        self.installer.manifest.update(screensaver='screensaver.ipk', screensaver_version='0.0.3')
+        self.installer.manifest.setdefault('files', {})['screensaver.ipk'] = hashlib.sha256(companion).hexdigest()
+        return app
+
+    def test_screensaver_install_resumes_without_submitting_the_companion_twice(self):
+        app = self.include_screensaver_companion()
+
+        self.remote.cut_slot = 2
+        self.remote.cut = True
+        with self.assertRaisesRegex(RuntimeError, 'observation could not be verified'):
+            self.installer.install(self.inventory, 'original-secret')
+        pending = self.store.pending(self.profile)
+        saved = observer.capsule(self.installer, pending)
+        self.assertEqual([slot['app'] for slot in saved['plan']['slots']], [*observer.APPS, app])
+        self.assertEqual((self.root / 'requests').read_text().splitlines(), [*observer.APPS, app])
+
+        self.installer.continue_no_root(pending)
+        self.assertEqual((self.root / 'requests').read_text().splitlines(), [*observer.APPS, app])
+        self.assertEqual((Path(self.base) / 'applications' / app / 'index.html').read_bytes(),
+                         b'<html></html>')
+        self.assertIsNone(self.store.pending(self.profile))
+
+    def test_screensaver_install_can_be_cancelled_when_the_local_capsule_is_missing(self):
+        self.include_screensaver_companion()
+        (self.root / 'proc').mkdir()
+        self.remote.cut = True
+        with self.assertRaises(RuntimeError):
+            self.installer.install(self.inventory, 'original-secret')
+        pending = self.store.pending(self.profile)
+        capsule = self.store.device_dir(self.profile) / ('capsule-' + pending['observer_operation'] + '.json')
+        capsule.unlink()
+
+        result = self.installer.uninstall_project()
+        self.assertTrue(result['verified_clean'])
+        self.assertIsNone(self.store.pending(self.profile))
+        self.assertEqual((self.root / 'requests').read_text().splitlines(), [operations.HELPER])
+        self.assertEqual([call[2]['id'] for call in self.remote.calls if call[1].endswith('/dev/remove')],
+                         [operations.HELPER])
+
     def test_unconfirmed_home_launch_requires_exact_foreground_to_remove_then_install_fresh(self):
         from unittest.mock import Mock
         from cytv.errors import TVCommandError, TVRejected, UserError
@@ -199,6 +254,7 @@ class OriginalOperationIntegration(unittest.TestCase):
         ssh = SSH(None)
         launch_output = b''
         launch_status = 0
+        self.installer.reconnect = Mock(side_effect=AssertionError('Unexpected automatic reconnect'))
 
         def channel(command):
             binary, mode, count, uri, body = shlex.split(command)
@@ -208,11 +264,11 @@ class OriginalOperationIntegration(unittest.TestCase):
                 output, status = foreground, 0
             else:
                 output, status = launch_output, launch_status
-            reply = Mock(closed=status is None)
+            reply = Mock(closed=status == -1)
             reply.recv_ready.side_effect = [bool(output), False]
             reply.recv.return_value = output
             reply.recv_stderr_ready.return_value = False
-            reply.exit_status_ready.return_value = status is not None
+            reply.exit_status_ready.return_value = True
             reply.recv_exit_status.return_value = status
             return reply
 
@@ -228,14 +284,19 @@ class OriginalOperationIntegration(unittest.TestCase):
         for launch_output, launch_status, error_type, reason in (
                 (b'{"returnValue":false,"errorCode":-103}', 0, TVRejected, 'user-error'),
                 (b'', 1, TVCommandError, 'user-error'),
-                (b'', None, UserError, 'connection-interrupted')):
+                (b'', -1, TVCommandError, 'ssh-exit-status-missing')):
             with self.subTest(launch_status=launch_status, launch_output=launch_output):
                 commands.clear()
                 with self.assertRaises(error_type) as caught:
                     self.installer.uninstall_project()
                 self.assertEqual(caught.exception.reason_code, reason)
                 self.assertEqual(commands, expected[:1])
+                self.installer.reconnect.assert_not_called()
                 self.assertEqual(installed.read_bytes(), packages)
+                pending = self.store.pending(self.profile)
+                self.assertEqual(pending['removal_operation'], removal['removal_operation'])
+                self.assertEqual(pending['stage'], 'requested')
+                self.assertFalse(pending.get('removals'))
         launch_output, launch_status = b'', 0
 
         for foreground in (b'', b'{"returnValue":true}', b'{"returnValue":true,"appId":[]}',

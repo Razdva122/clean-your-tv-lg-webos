@@ -143,6 +143,7 @@ class ActivationDiagnosticTests(unittest.TestCase):
             ([TVCommandError(1)], ['status'], 'initial-status', 'ssh-command-failed', 1),
             ([reply({'recovery': {}})], ['status'], 'initial-status', 'integrity-unverified', None),
             ([reply(active), TVCommandError(2)], ['status', 'restore'], 'restore', 'ssh-command-failed', 2),
+            ([reply(active), TVCommandError(-1)], ['status', 'restore'], 'restore', 'ssh-exit-status-missing', None),
             ([reply(active), {}, TVCommandError(3)], ['status', 'restore', 'status'],
              'final-status', 'ssh-command-failed', 3),
             ([reply(active), {}, reply({**stock, 'recovery': {}})], ['status', 'restore', 'status'],

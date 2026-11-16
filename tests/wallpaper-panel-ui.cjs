@@ -58,6 +58,12 @@ const path = require('node:path');
       await page.locator('#wallpaperPreview').getAttribute('src'),
       await page.evaluate(() => testState.posterURL)
     );
+    assert.deepEqual(
+      await page
+        .locator('.wallpaper-summary .wallpaper-media-badges span')
+        .allTextContents(),
+      ['Video', '4K', '1080p']
+    );
     assert.match(
       await page.locator('#wallpaperCapability').innerText(),
       /unknown/i
@@ -265,6 +271,11 @@ const path = require('node:path');
     });
     await page.locator('[data-category=wallpapers]').click();
     await page.keyboard.press('ArrowRight');
+    assert.equal(
+      await page.evaluate(() => document.activeElement.id),
+      'wallpaperFullscreen'
+    );
+    await page.keyboard.press('ArrowDown');
     assert.equal(
       await page.evaluate(() =>
         document.activeElement.getAttribute('data-wallpaper-quality')

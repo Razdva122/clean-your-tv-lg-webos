@@ -14,8 +14,10 @@ def manifest(bundle,release,notes):
     bundle=Path(bundle).resolve();verified=verify_bundle(bundle)
     info=json.loads(checked_file(bundle,'release.json'));raw=checked_file(bundle,verified['package'])
     if not 0<len(raw)<=32*1024*1024:raise ValueError('Root package exceeds updater bound')
+    from updater.package import SCREENSAVER_RECIPE, archive, members
+    has_companion = SCREENSAVER_RECIPE in archive(members(raw)['data.tar.gz'])
     return {'schema':1,'edition':'root','application':APP,'release':release,'version':info['version'],
-            'runtime':1,'updater':1,'profile':1,
+            'runtime':1,'updater':2 if has_companion else 1,'profile':1,
             'url':'https://github.com/Razdva122/clean-your-tv-lg-webos/releases/download/'+release+'/'+verified['package'],
             'sha256':hashlib.sha256(raw).hexdigest(),'size':len(raw),'notes':notes}
 

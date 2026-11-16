@@ -218,20 +218,9 @@
                     ? 'Home and return from apps open Clean Your TV.'
                     : 'Home and return from apps open LG Home.'
                 );
-              } else if (!helperKnown) {
-                status.textContent = t(
-                  'Helper status could not be checked on this TV. Start Helper only when you are ready to use Home control again.'
-                );
-                buttons[2].hidden = false;
-              } else if (stopped) {
-                status.textContent = t(
-                  'Helper is stopped. Start it to use the Home button and return from apps.'
-                );
-                buttons[2].hidden = false;
               } else {
-                status.textContent = t(
-                  'Home status is unknown. The Home button may still work.'
-                );
+                status.textContent = t('Status is unavailable.');
+                buttons[2].hidden = helperKnown && !stopped;
               }
               checking(false);
             }

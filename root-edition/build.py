@@ -138,8 +138,20 @@ def build(output, version='0.0.1', legacy_node_prototype=False, resolution=None,
     private_service = bundle_presentation_context({name[len(service_prefix):]: data for name, data in payload.items() if name.startswith(service_prefix)})
     private_service = bundle_c1_lease(private_service)
     private_service = bundle_weather(private_service)
+    has_screensaver = b"require('./screensaver-register')" in private_service['service.js']
+    screensaver_enabled = has_screensaver and native_gate is None and not legacy_node_prototype and not legacy_node_beta
+    if has_screensaver:
+        from scripts.screensaver_package import root_bundle
+        private_service['service.js'] = root_bundle(private_service['service.js'])
+        metadata = json.loads(private_service['package.json'])
+        if screensaver_enabled:
+            metadata['screensaverProtocol'] = 1
+        private_service['package.json'] = (json.dumps(metadata, indent=2) + '\n').encode()
     private_service = inject(private_service, standalone=True)
     payload.pop(service_prefix+'c1-lease.js')
+    if screensaver_enabled:
+        from scripts.screensaver_package import add_root_resources
+        add_root_resources(payload, 'usr/palm/applications/' + app_id + '/')
     if legacy_node_beta:
         private_service['service.js'] = b"require('./startup-diagnostics');\n" + private_service['service.js']
     if legacy_node_prototype or legacy_node_beta:
@@ -174,6 +186,8 @@ def build(output, version='0.0.1', legacy_node_prototype=False, resolution=None,
     if legacy_node_beta:
         release['runtime_variant'] = 'node012-beta'
         release['automatic_updates'] = False
+    if screensaver_enabled:
+        release['capabilities'].append('screensaver-v1')
     if native_gate is not None:
         release.update(home_backend='c1-native-gate', experimental=True,
                        native_sha256=hashlib.sha256(native_gate).hexdigest())

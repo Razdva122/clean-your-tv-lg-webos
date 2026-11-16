@@ -48,6 +48,40 @@ function pythonCommand(state){
  if(owned(inventoryPath,true).size>4*1024*1024||owned(executable,true).size>256*1024*1024)throw Error('oversized-python-runtime');
  var raw=fs.readFileSync(inventoryPath),inventory=JSON.parse(raw);
  if(crypto.createHash('sha256').update(raw).digest('hex')!==binding.inventory_sha256||inventory.schema!==1||inventory.archive_sha256!==pin||!inventory.files||crypto.createHash('sha256').update(fs.readFileSync(executable)).digest('hex')!==inventory.files['bin/python3.13'])throw Error('changed-python-runtime');
+ if (process.argv[2] === 'restore') {
+  // Check the entire tree before unlinking any unlisted cache. This runs in
+  // trusted host-supplied Node code, before the affected Python can import it.
+  var slot=path.dirname(inventoryPath), seen=0, caches=[];
+  function listed(name){return Object.prototype.hasOwnProperty.call(inventory.files,name);}
+  function inspect(directory){
+   fs.readdirSync(directory).forEach(function(name){
+    var file=path.join(directory,name),item=fs.lstatSync(file);
+    if(item.isDirectory()){
+     owned(file,false);
+     inspect(file);
+     return;
+    }
+    if(file===inventoryPath)return;
+    item=owned(file,true);
+    var relative=path.relative(slot,file);
+    if(listed(relative)){
+     if(item.size>256*1024*1024||crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex')!==inventory.files[relative])throw Error('changed-python-runtime');
+     seen++;
+     return;
+    }
+    var cache=/^(.+)\.cpython-313(?:\.opt-[12])?\.pyc$/.exec(name);
+    if(path.basename(directory)!=='__pycache__'||!cache||cache[0]!==name||
+       !listed(path.relative(slot,path.join(path.dirname(directory),cache[1]+'.py'))))throw Error('unexpected-python-runtime-file');
+    caches.push(file);
+   });
+  }
+  inspect(slot);
+  if(seen!==Object.keys(inventory.files).length)throw Error('missing-python-runtime-file');
+  caches.forEach(function(file){
+   try { owned(file,true); fs.unlinkSync(file); }
+   catch(e){if(e.code!=='ENOENT')throw e;}
+  });
+ }
  return launcher;
 }
 
@@ -142,8 +176,8 @@ class Installer:
         cache = (self.store.root if self.store is not None else default_dir()) / 'python-cache'
         return select_python(self.remote, cache, self.progress, provision=provision)
 
-    def _python(self, state=None):
-        if getattr(self, '_selected_python', None):
+    def _python(self, state=None, *, repair_cache=False):
+        if getattr(self, '_selected_python', None) and not repair_cache:
             return self._selected_python
         managed = '/var/lib/clean-your-tv-python/4a71641c8d5536175e404a961624e8656eba30e97b5026f6bd7dc31e4bbeaaea/bin/python3.13'
         states = list(dict.fromkeys([state or ROOT_STATE, ROOT_STATE, UPDATER_STATE, SYSTEM_UPDATER_STATE]))
@@ -177,10 +211,10 @@ if ! cytv_owned "$cytv_launcher" || ! cytv_owned "$cytv_receipt" || ! cytv_owned
    ! printf '%s\n' '#!/bin/sh' 'unset PYTHONHOME PYTHONPATH' 'export PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=1' 'exec MANAGED "$@"' | cmp -s - "$cytv_launcher"; then printf CYTV_PYTHON_INVALID; exit 0; fi
 if ! cytv_owned HELPER || [ ! -f HELPER ] || [ "$(stat -c %h HELPER)" != 1 ]; then printf CYTV_PYTHON_INVALID; exit 0; fi
 unset NODE_OPTIONS NODE_PATH
-if ! /usr/bin/node -e NODE_CHECK "$cytv_state" >/dev/null 2>&1; then printf CYTV_PYTHON_INVALID; exit 0; fi
+if ! /usr/bin/node -e NODE_CHECK "$cytv_state" CACHE_ACTION >/dev/null 2>&1; then printf CYTV_PYTHON_INVALID; exit 0; fi
 if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=1 MANAGED -c 'import runpy,sys; runpy.run_path(sys.argv[1])["verify_binding"](sys.argv[2]); print("CYTV_PYTHON_BOUND")' HELPER "$cytv_state"; then printf CYTV_PYTHON_INVALID; fi
-'''.replace('STATE', shlex.quote(location)).replace('MANAGED', managed).replace('HELPER', shlex.quote(helper)).replace('NODE_CHECK', shlex.quote(_RETAINED_PYTHON_CHECK))
-            reply = self.remote.run(script).strip()
+'''.replace('STATE', shlex.quote(location)).replace('MANAGED', managed).replace('HELPER', shlex.quote(helper)).replace('CACHE_ACTION', 'restore' if repair_cache else 'check').replace('NODE_CHECK', shlex.quote(_RETAINED_PYTHON_CHECK))
+            reply = (self.remote.run(script, timeout=180) if repair_cache else self.remote.run(script)).strip()
             if reply == 'CYTV_PYTHON_BOUND':
                 self._selected_python = managed
                 return managed
@@ -231,16 +265,21 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
         pending=self.store.pending(self.profile)
         if pending:
             raise UserError('Previous operation is unresolved. Run cytv status; retain recovery state before retrying.')
-        from .system_updater_replace import program
+        from .system_updater_replace import REPLACEMENT_SOURCES, program
+        failure='System updater setup was not confirmed. Keep recovery state and run cytv status.'
         try:
             source=program(self.payload.resolve()/'system-updater')
             python=self._python(ROOT_STATE)
             reply=json.loads(self.remote.run(self._python_command([python,'-I','-B','-']),data=source.encode(),timeout=600))
-            if not isinstance(reply,dict) or reply.get('installed') is not True or reply.get('version')!='1.2.9' or not all(reply.get(k) is True for k in ('root_unchanged','home_unchanged','profile_storage_untouched')):
-                raise ValueError('Unconfirmed System replacement')
-            return reply
         except Exception:
-            raise UserError('System updater setup was not confirmed. Keep recovery state and run cytv status.') from None
+            raise UserError(failure) from None
+        if reply=={'reason':'stock-home-required'}:
+            raise UserError('Choose Return to LG Home in the installer before replacing System Updater, then retry.',
+                            reason_code='controls-unverified')
+        version=reply.get('version') if isinstance(reply,dict) else None
+        if not isinstance(version,str) or version not in REPLACEMENT_SOURCES or reply.get('installed') is not True or not all(reply.get(k) is True for k in ('root_unchanged','home_unchanged','profile_storage_untouched')):
+            raise UserError(failure)
+        return reply
 
     def configure_firmware_access(self, enabled=True, repair=False):
         if self.profile['edition']!='root' or not self.remote.root:
@@ -250,7 +289,7 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
         from .firmware_access import program
         try:
             source=program(self.payload/'root',enabled,repair=True) if repair else program(self.payload/'root',enabled)
-            reply=json.loads(self.remote.run(self._python_command([self._python(ROOT_STATE),'-I','-']),data=source.encode(),timeout=60))
+            reply=json.loads(self.remote.run(self._python_command([self._python(ROOT_STATE),'-I','-B','-']),data=source.encode(),timeout=60))
             if not isinstance(reply,dict) or reply.get('returnValue') is not True or reply.get('permissions_installed') is not enabled:raise ValueError('Unconfirmed firmware permission action')
             return reply
         except Exception:
@@ -464,7 +503,27 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
                                               'compositor':{'status':'unavailable'}}
             return None
 
-    def root_action(self, action, bundle=None, migrate=False, experimental=False):
+    def observe_failed_root_home_button(self):
+        if (self.profile['edition'] != 'root' or self.tv_info.get('home_backend_schema') != 3
+                or self.outcome.values['home_button'] != 'not-working'):
+            return
+        field = 'root_home_button_readback'
+        self.tv_info[field] = {'status': 'unavailable'}
+        try:
+            result = self.root_action('status', timeout=12)['result']
+            effective, intent = result['effective'], result['intent']
+            if (result.get('backend') != 'c1-native-gate'
+                    or effective.get('routing') != 'compositor-keyfilter-v1'
+                    or effective.get('returnValue') is not True):
+                return
+            self.tv_info[field] = diagnostics.context.root_home_button_readback({
+                **effective, 'status': 'read', 'intent_enabled': intent.get('enabled'),
+            })
+        except Exception:
+            # This observation is optional and does not reopen the completed install.
+            pass
+
+    def root_action(self, action, bundle=None, migrate=False, experimental=False, *, timeout=None):
         driver = (bundle or ROOT_STATE) + '/deploy.py'
         args = [self._python(ROOT_STATE), driver, action]
         if bundle:
@@ -481,7 +540,9 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
             self.tv_info['status']['observation_phase']='before-enable'
         cursor = self.collect_root_diagnostics() if action == 'enable' else None
         try:
-            raw = self.remote.run(command, timeout=1080 if action == 'uninstall' else 720 if action == 'restore' or experimental else 180)
+            if timeout is None:
+                timeout = 1080 if action == 'uninstall' else 720 if action == 'restore' or experimental else 180
+            raw = self.remote.run(command, timeout=timeout)
         except TVCommandError as error:
             if action == 'enable':
                 self.collect_root_diagnostics(cursor)
@@ -804,6 +865,9 @@ printf '%s' "$cytv_state"
             if hashlib.sha256(data).hexdigest() != self.manifest['files'][name]:
                 raise ValueError('Embedded payload integrity mismatch')
             bundles[slot] = data
+        companion = package.screensaver_payload(self.payload, self.manifest)
+        if companion:
+            bundles[package.SCREENSAVER_IPK] = companion[0]
         ramfs = storage.install(self.remote, bundles, self.progress, no_root_root_ssh=True)
         from .no_root_observer import inspect_root_ssh_storage
         inspect_root_ssh_storage(self, bundles, ramfs)
@@ -822,6 +886,8 @@ printf '%s' "$cytv_state"
             package.inventory_script(inventory)
         if reinstall not in (None, 'installed', 'removed') or (reinstall and self.profile['edition'] != 'root'):
             raise UserError('Invalid reinstallation request.')
+        companion = (package.screensaver_payload(self.payload, self.manifest)
+                     if self.profile['edition'] == 'no-root' else None)
         self.outcome.begin()
         self.select_graphics()
         if self.profile['edition']=='root':
@@ -837,23 +903,28 @@ printf '%s' "$cytv_state"
             no_root_connection=self.profile.get('connection') or 'developer-mode',
         )
         helper = (self.payload / self.manifest['helper']).read_bytes()
+        bundles = {'helper.ipk': helper, 'launcher.ipk': launcher}
+        versions = {HOME: self.manifest['home_version'], HELPER: self.manifest['helper_version']}
+        if companion:
+            archive, version = companion
+            bundles[package.SCREENSAVER_IPK] = archive
+            versions[package.SCREENSAVER_APP] = version
         expected = {}
-        for data in (helper, launcher):
+        for data in bundles.values():
             for name, content in package.data_files(data).items():
                 if '/state/' not in name:
                     expected[BASE.removesuffix('/usr/palm') + '/' + name] = hashlib.sha256(content).hexdigest()
         key_data = json.dumps({'key': ssap_key}).encode()
-        ids = [app['id'] for app in inventory['apps'] if app['id'] not in (HOME, HELPER, 'com.webos.app.home', package.ROOT_APP)]
+        ids = [app['id'] for app in inventory['apps'] if app['id'] not in (HOME, HELPER, 'com.webos.app.home', package.ROOT_APP, package.SCREENSAVER_APP)]
         apps_data = json.dumps(ids).encode()
         expected[HELPER_STATE + '/ssap-key.json'] = hashlib.sha256(key_data).hexdigest()
         expected[HELPER_STATE + '/apps.json'] = hashlib.sha256(apps_data).hexdigest()
         root_ssh = self.profile.get('connection') == 'root-ssh'
         handoff = bool(getattr(self, '_root_handoff', None))
-        ramfs = storage.install(self.remote, {'helper.ipk': helper, 'launcher.ipk': launcher}, self.progress,
+        ramfs = storage.install(self.remote, bundles, self.progress,
                                 root=root_ssh and handoff, no_root_root_ssh=root_ssh and not handoff)
         from . import no_root_observer
-        pending = no_root_observer.begin(self, 'install', {'helper.ipk': helper, 'launcher.ipk': launcher},
-            {HOME: self.manifest['home_version'], HELPER: self.manifest['helper_version']}, expected,
+        pending = no_root_observer.begin(self, 'install', bundles, versions, expected,
             {'ssap-key.json': key_data, 'apps.json': apps_data}, setup_activation=True, ramfs=ramfs)
         return self.continue_no_root(pending)
 
@@ -896,7 +967,10 @@ printf '%s' "$cytv_state"
             storage.install(self.remote, {str(path.relative_to(bundle)): path.read_bytes()
                             for path in bundle.rglob('*') if path.is_file()} |
                             {'updater/' + str(path.relative_to(updater)): path.read_bytes()
-                             for path in updater.rglob('*') if path.is_file()}, self.progress, root=True)
+                             for path in updater.rglob('*') if path.is_file()} |
+                            ({package.SCREENSAVER_IPK: (self.payload / package.SCREENSAVER_IPK).read_bytes()}
+                             if (self.payload / package.SCREENSAVER_IPK).is_file() else {}),
+                            self.progress, root=True)
             if reinstall:
                 self.prepare_root_reinstall()
                 self.preflight(install=True, home_interfaces=True)
@@ -1064,7 +1138,7 @@ else:
                 interrupted = connection_interrupted(error)
                 detail = {'step': step, 'reason': 'observation-failed'}
                 if isinstance(error, TVCommandError):
-                    detail.update(reason='ssh-command-failed', exit_status=error.exit_status)
+                    detail.update(reason=error.diagnostic_reason, exit_status=error.exit_status)
                 elif interrupted:
                     detail['reason'] = 'connection-interrupted'
                 elif isinstance(error, (json.JSONDecodeError, UnicodeError)):
@@ -1892,6 +1966,8 @@ print('CYTV_ROOT_FILES_OK')
 
     def restore_device(self):
         if self.profile['edition'] == 'root':
+            # Qualify the interpreter before inspection can import any cache.
+            self._python(ROOT_STATE, repair_cache=True)
             try:
                 installation=self.root_installation()
                 if installation.get('clean_removal_verified') is True and installation.get('can_install') is True:

@@ -56,12 +56,26 @@ on the TV. This differs from first-use **Connect and remember this TV?**:
 that prompt cannot approve replacement of an existing pin. A factory reset or
 reroot may explain a new key, but does not verify the TV's identity.
 
-Keep the original saved connection/profile, SSH keys, trust records, diagnostic
-reports and pending-operation receipts privately. A retained
-`uninstall / coordinator-submitted` describes earlier work; it is not the cause
-of the host-key mismatch or proof of what removal completed. Do not clear
-`known_hosts`, delete/recreate the profile or pending records, disable host-key
-checks, or repeat removal, installation, reset or rooting to bypass this stop.
+Keep the original profile, keys and pending-operation records. A pending
+uninstall describes earlier work. It does not explain the key mismatch or
+establish what remains on the TV.
+
+### Connect a No-root TV after a factory reset
+
+Use this only for your own TV on your trusted home network after a factory
+reset you performed. Enable **Dev Mode Status** and **Key Server** on the TV.
+When the desktop installer reports the changed key, select **Reconnect after
+factory reset**, confirm the reset, enter the Developer Mode code, and confirm
+the new SSH key as you would for a first connection. Then continue No-root setup.
+In the console, use `cytv install --edition no-root --host TV_ADDRESS --reconnect-after-reset`.
+Include the saved SSH port with `--port` if it differs from 9922.
+
+CYTV saves the new connection after successful SSH sign-in and keeps the
+previous profile, SSH pin and uninstall receipt. The new setup uses its own
+records. For other SSH identity changes, keep the existing connection and use
+an independently verified source for the new key.
+
+### Review a changed Root SSH identity
 
 For a saved Root connection with a pending uninstall, use the console command
 `trust-root-ssh` from an installer build that lists it in `cytv --help`.
@@ -470,21 +484,17 @@ controls, audio, standby or cold boot; check actual behavior separately. [Connec
 
 ## Replace the Root System Updater
 
-In 1.6.0, the replacement bundle targets System Updater 1.2.0;
-1.5.4 used 1.1.2. The original 1.1.0 can reject a launcher's one-shot readiness
-response while its worker holds the installation lock; this can cause an unnecessary rollback.
-Signed Root offers retain a minimum supervisor version of 1.1.1 and are rejected
-by the original 1.1.0; the new receiver/runtime path needs separate verification. Historical signed baselines remain valid for rollback.
+For a Root installation from v1.21.0 with System Updater 1.2.9,
+the installer containing System Updater 1.2.10 can replace that supervisor in
+place. This prepares the TV for the signed Root update format that installs
+and rolls back the screensaver together with the other Root components.
+Earlier supported source versions 1.1.0 and 1.1.1 are also eligible.
 
-This command supports replacing 1.1.0 or 1.1.1 after authenticating the retained
-code, owner package, registration and finished recovery state. Other installed
-versions, including1.1.2, are rejected. Existing1.1.2 stays pinned with its old
-channels; no general migration is provided. Do not reinstall or delete state to
-force replacement. Physical acceptance of a particular transition remains
-separate from the command's source and fixture checks.
-
-After any current update or rollback has completed, use the same trusted Root
-connection and the complete matching installer from [GitHub Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases):
+After any current update or rollback has completed, choose **Return to LG Home**
+in the installer if Clean Your TV is active as Home. From the command line, use
+`cytv restore --edition root` for that step. Then use the same trusted Root
+connection and the complete matching installer from
+[GitHub Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases):
 
 ```sh
 cytv replace-system-updater --edition root

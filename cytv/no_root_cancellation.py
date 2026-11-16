@@ -1,14 +1,15 @@
 """Removal-only adapter for the immutable Developer Mode observer."""
-from .no_root_observer import PROGRAM
+from .no_root_observer import PROGRAM, companion_source
 
 # Run trusted helpers in the same TV process as the guarded mutation. The
 # retained observer is read only to authenticate its original plan binding.
-SOURCE = PROGRAM.replace(
-    "var input=JSON.parse(process.argv[process.argv.length-1]), plan=input.plan;",
-    "var input=cancellationInput, plan=input.plan;"
-).replace(
-    "if(typeof c.O_NOFOLLOW",
-    r"""if(input.receipt){
+def cancellation_source(program):
+    return program.replace(
+        "var input=JSON.parse(process.argv[process.argv.length-1]), plan=input.plan;",
+        "var input=cancellationInput, plan=input.plan;"
+    ).replace(
+        "if(typeof c.O_NOFOLLOW",
+        r"""if(input.receipt){
  var receipt=input.receipt, operationDir=root+'/operations/'+receipt.operation;
  directory(root,true);directory(root+'/operations',true);directory(operationDir,true);
  plan=json(operationDir+'/plan.json');
@@ -16,12 +17,12 @@ SOURCE = PROGRAM.replace(
     plan.diagnostic_id!==receipt.diagnostic_id||plan.source_sha256!==receipt.source_sha256||
     plan.configuration_sha256!==receipt.configuration_sha256||plan.connection!==undefined||
     plan.root_handoff!==undefined||(plan.private_root||receipt.default_root)!==root||
-    !Array.isArray(plan.slots)||plan.slots.length!==2||
+    !Array.isArray(plan.slots)||plan.slots.length!==apps.length||
     plan.slots.some(function(slot,i){return !slot||slot.version!==receipt.versions[i];}))
   fail('foreign-evidence');
 }
 if(typeof c.O_NOFOLLOW""",
-).replace("var result;\nswitch(input.command){", r"""
+    ).replace("var result;\nswitch(input.command){", r"""
 function cancel(){
  var goal=input.goal, fence='cancel-removal.json', prepared=opdir+'/reservation';
  if(plan.action!=='install'||!/^[a-f0-9]{32}$/.test(goal))fail('invalid-cancellation');
@@ -114,3 +115,7 @@ try{return cancel();}catch(e){
 var result;
 switch(input.command){
 """)
+
+
+SOURCE = cancellation_source(PROGRAM)
+COMPANION_SOURCE = cancellation_source(companion_source(PROGRAM))

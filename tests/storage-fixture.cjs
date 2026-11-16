@@ -24,7 +24,20 @@ function create(io, prepare) {
       io.renameSync(directory + '/.fixture-record', directory + '/' + name);
     } else io.writeFileSync(directory + '/' + name, bytes);
   };
+  result.readRecord = function (directory, kind) {
+    var name = {
+      'home-preference': 'home-control.json',
+      'startup-state': 'startup-state.json',
+      pid: 'controller.pid',
+      logger: 'controller.log'
+    }[kind];
+    if (!name) throw Error('Unknown data record');
+    return io.readFileSync(directory + '/' + name, 'utf8');
+  };
   result.readChannelRecord = function (directory, kind) {
+    return io.readFileSync(directory + '/' + kind + '.json', 'utf8');
+  };
+  result.readRecord = function (directory, kind) {
     return io.readFileSync(directory + '/' + kind + '.json', 'utf8');
   };
   result.appendLog = function (directory, line) {
