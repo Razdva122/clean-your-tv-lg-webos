@@ -29,6 +29,9 @@ The existing installer observation rule remains mandatory: an unknown submission
 is never permission to submit again. A matching version or idle installer is not
 terminal evidence. Do not clear ownership or modify inventories to bypass this.
 
+Recovery offers **Reinstall System Updater** when the signed catalog supplies
+the installed engine version. A newer engine is installed through **Update all**.
+
 No-root keeps Home, Helper and Home Updater. Its signed Home package contains the
 authenticated screensaver Companion recipe, using the existing fixed component
 set. Root retains its recipe in Root Home. Both HD/FHD packages carry the recipe.

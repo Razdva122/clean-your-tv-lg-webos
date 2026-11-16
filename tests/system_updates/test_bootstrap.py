@@ -77,6 +77,14 @@ class BootstrapRecoveryTests(BootstrapFixture):
         with patch.object(self.runtime,'call',side_effect=call),patch.object(self.bootstrap,'policy',return_value={'catalog':catalog,'proof':{}}),patch.object(self.bootstrap.subprocess,'run',return_value=SimpleNamespace(stdout=b'v22.0.0')):
             offer=self.runtime.offer('no-root')
         self.assertTrue(offer['canInstall'])
+        self.assertFalse(offer['canRepair'])
+
+    def test_repair_cannot_install_a_new_engine_without_product_update(self):
+        with patch.object(self.runtime, 'active_transition', return_value=None), \
+                patch.object(self.runtime, 'reconcile_terminal'), \
+                patch.object(self.runtime, 'offer', return_value={'canRepair': False}):
+            with self.assertRaisesRegex(ValueError, 'same-version'):
+                self.runtime.handle('repair', {'edition': 'no-root', 'profile': profile()})
 
     def test_aborted_journal_closes_original_lease_after_power_loss(self):
         original=self.owner.stage

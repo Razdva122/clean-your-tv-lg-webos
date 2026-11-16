@@ -132,12 +132,35 @@ class BootstrapFlowTests(test_bootstrap.BootstrapFixture):
                 self.assertEqual(self.owner.status()['owner'],'system-update')
                 self.assertFalse(self.owner.status()['terminal'])
                 self.assertEqual(self.runtime.product.read('profile-'+self.identifier),profile())
+                manager = cli.Manager(self.runtime.product, product_io)
+
+                def advance(expected):
+                    for _ in range(40):
+                        state = manager.run()
+                        if state['phase'] == expected:
+                            return
+                    self.fail(state)
+
+                advance('verifying')
+                self.assertEqual(manager.restore_profile(edition)['profile'], profile())
+                manager.healthy(edition, self.identifier, '1.1.0')
+                advance('complete')
+                self.assertTrue(manager.status()['canRollback'])
+                manager.rollback()
+                advance('verifying-rollback')
+                self.assertEqual(manager.restore_profile(edition)['profile'], profile())
+                manager.healthy(edition, self.identifier, '1.0.0')
+                advance('rolled-back')
+                self.assertTrue(all(c['version'] == '1.0.0' for c in product_io.current['components']))
+                self.assertEqual(self.runtime.slots.active().name, 'a')
+                self.assertEqual(calls, [concrete.APP])
         finally:
             for context in reversed(contexts):context.stop()
     def test_no_root_update_all_hands_off_same_owner_after_self_update(self):self.execute()
     def test_root_update_all_hands_off_same_owner_after_self_update(self):self.execute('root')
     def test_engine_only_release_finishes_without_product_installer(self):self.execute(engine_only=True)
     def test_explicit_repair_reinstalls_same_signed_own_package(self):self.execute(repair=True)
+    def test_root_repair_reinstalls_same_signed_own_package(self):self.execute('root', repair=True)
     def test_interrupted_handoff_resumes_exact_child_without_reinstalling_supervisor(self):self.execute(crash_handoff=True)
     def test_unknown_supervisor_installer_result_is_never_replayed(self):self.execute(unknown_install=True)
     def test_completed_engine_journal_closes_original_lease_after_power_loss(self):self.execute(engine_only=True,crash_terminal=True)

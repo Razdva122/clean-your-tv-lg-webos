@@ -136,19 +136,21 @@ class Bootstrap:
         if sys.version_info[:3] < version(engine['minimumPython']): raise ValueError('Installed Python does not support this updater')
         node = subprocess.run(['/usr/bin/node','--version'], stdout=subprocess.PIPE, check=True, timeout=5).stdout.decode().strip().lstrip('v')
         if version(node)[0] < engine['minimumNode']: raise ValueError('Installed TV runtime does not support this updater')
-        if version(engine['version']) < version(self.current_version()): raise ValueError('Engine downgrade refused')
+        installed_engine = version(self.current_version())
+        offered_engine = version(engine['version'])
+        if offered_engine < installed_engine: raise ValueError('Engine downgrade refused')
         components = [{ 'name':c['name'], 'version':c['version'],
             'installed':next((p['version'] for p in baseline['components'] if p['name']==c['name']),None)}
             for c in candidate['components']]
         for component in components:
             if component['installed'] and version(component['version'])<version(component['installed']):raise ValueError('Component downgrade refused')
         product = version(candidate['release'][1:]) > version(baseline['release'][1:]) and any(c['installed']!=c['version'] for c in components)
-        engine_update = version(engine['version']) > version(self.current_version())
+        engine_update = offered_engine > installed_engine
         available = product or engine_update
         return {'edition':edition, 'release':candidate['release'], 'notes':candidate['notes'],
                 'components':components, 'canInstall':available, 'reason':'available' if available else 'current',
                 'proof':found['proof'], 'variant':variant, 'engine':engine,
-                'engineOnly':not product, 'canRepair':True, **self.capability(edition)}
+                'engineOnly':not product, 'canRepair':not engine_update, **self.capability(edition)}
 
     def reserve(self, payload, repair=False):
         from installation import device_operation
@@ -158,6 +160,8 @@ class Bootstrap:
             raise ValueError('Finish the existing product update before changing its engine')
         if self.active_transition(): raise ValueError('Finish the existing engine update in Recovery')
         offer = self.offer(payload['edition'])
+        if repair and not offer['canRepair']:
+            raise ValueError('Signed same-version System Updater package is unavailable')
         if not repair and (not offer['canInstall'] or offer['release'] != payload['release']): raise ValueError('Signed update offer changed')
         profile = self.call(self.slots.active(),'engine-profile',{'edition':payload['edition'],'profile':payload['profile']})
         if not isinstance(profile,dict) or len(encode(profile))>4*1024*1024:raise ValueError('Invalid captured profile')

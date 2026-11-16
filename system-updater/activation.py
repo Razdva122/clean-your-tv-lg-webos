@@ -94,10 +94,19 @@ class Slots:
         slots = self.root / 'slots'; Store(slots, uid=self.store.uid)
         target = slots / name
         record = {'slot': name, 'proof': proof}
+        inventory = {key: digest(value) for key, value in files.items()}
+        inventory['engine.tar.gz'] = digest(raw)
         retained = self.store.read('retained-' + name)
         staging = self.store.read('staging-' + name)
         if staging and staging.get('phase') != 'complete':
-            if staging.get('candidate') != record: raise ValueError('Another engine is partially staged')
+            if staging.get('candidate') != record:
+                # The common lease admits a new offer only after the old one
+                # closes. Keep its authenticated hashes through retirement.
+                partial = staging['phase'] == 'staging'
+                previous = staging['inventory'] if partial else staging['previous']
+                staging = dict(candidate=record, inventory=inventory, previous=previous,
+                               temporary=partial or staging.get('temporary', False), phase='retiring')
+                self.store.write('staging-' + name, staging)
         else:
             previous = {}
             if target.exists():
@@ -107,7 +116,7 @@ class Slots:
                 _, old_files = self._manifest(old, self.verify(retained['proof']))
                 previous = {key: digest(value) for key, value in old_files.items()}
                 previous['engine.tar.gz'] = digest(old)
-            staging = dict(candidate=record, previous=previous, phase='retiring')
+            staging = dict(candidate=record, inventory=inventory, previous=previous, phase='retiring')
             self.store.write('staging-' + name, staging)
         if staging['phase'] == 'retiring':
             # Retirement may have stopped after any unlink. Authenticate every
@@ -120,7 +129,10 @@ class Slots:
                     for entry in names:
                         path = Path(directory)/entry
                         key = path.relative_to(target).as_posix()
-                        if key not in staging['previous'] or digest(safe_bytes(path, limit=64*1024*1024, uid=self.store.uid)) != staging['previous'][key]:
+                        content = safe_bytes(path, limit=64*1024*1024, uid=self.store.uid)
+                        if staging.get('temporary') and re.fullmatch(r'\.engine-[a-f0-9]{32}', entry):
+                            continue
+                        if staging['previous'].get(key) != digest(content):
                             raise ValueError('Retiring engine changed')
                 shutil.rmtree(target)
                 directory = os.open(slots, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)

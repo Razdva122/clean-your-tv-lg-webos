@@ -64,4 +64,23 @@ class ActivationTests(unittest.TestCase):
         with self.assertRaises(ValueError): self.slots.stage({}, self.raw + b'broken')
         self.assertFalse((self.root/'bootstrap/slots').exists())
 
+    def test_new_offer_can_replace_partial_inactive_slot(self):
+        from unittest.mock import patch
+        def interrupt(path, raw):
+            atomic(path, raw)
+            raise KeyboardInterrupt('power loss')
+
+        original = {'signature': 'original'}
+        slot = self.slots.stage(original, self.raw)
+        self.slots.begin('a'*32, slot)
+        self.slots.confirm('a'*32)
+        atomic = self.mod.atomic
+        with patch.object(self.mod, 'atomic', side_effect=interrupt):
+            with self.assertRaises(KeyboardInterrupt):
+                self.slots.stage({'signature': 'cancelled'}, self.raw)
+        # The outer lease admits a different proof only after the pending
+        # operation is cancelled. A newer catalog must not strand this slot.
+        self.assertEqual(self.slots.stage({'signature': 'new'}, self.raw).name, 'b')
+        self.assertEqual(self.slots.active(), slot)
+
 if __name__ == '__main__': unittest.main()

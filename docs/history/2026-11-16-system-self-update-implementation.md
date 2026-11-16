@@ -195,3 +195,32 @@ successfully, only that job and its dependent aggregate gates were retried. They
 successful test groups, release builds and TV operations were not manually repeated.
 This final record changes documentation only and retains the matching code evidence.
 These are host checks; hardware acceptance remains outstanding.
+
+## Prelaunch host verification
+
+The device pass retains six cases, covering Update all, same-version System
+Updater repair and product rollback for Root and No-root with root. All six
+are blocked on unpublished signed delivery. The public v1.22.0 release has no
+bootstrap catalog. The protected preliminary signer and private admission
+controller only support the previous Root product transaction. They cannot
+admit an engine catalog, engine archive and product manifests for both editions.
+No case was deferred or counted as passed based on host evidence.
+
+Two host regressions were reproduced and fixed. Cancelling after a partial
+write could leave an inactive slot that rejected every later offer. The next
+operation now verifies leftover files against the prior staging inventory before
+recycling the slot. Recovery also rejected neither a newer engine offer nor its
+repair request. Repair now requires a signed offer for the installed engine
+version, while a newer engine remains available through Update all.
+
+The host built and verified the complete installer payload. After the fixes,
+the affected System Updater bundle was rebuilt and combined with the unchanged
+product packages. A temporary host-only key exercised signing and final
+verification against those actual bytes. All four edition and graphics manifests
+matched their archive and package hashes. The test key was not provisioned on a TV.
+
+66 targeted Python tests passed. The combined Root and No-root fixture flows
+verified engine replacement, product health, explicit rollback and profile
+restoration. Both editions' repair fixtures, the UI tests and signing and
+policy tests passed. Installer, LS2 and device execution in these flows used
+fixtures. The six selected physical cases remain outstanding.
