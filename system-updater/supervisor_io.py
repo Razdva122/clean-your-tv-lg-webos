@@ -6,6 +6,7 @@ import re
 import signal
 import stat
 import subprocess
+import time
 from .activation import atomic, digest
 from .support.store import Store
 from .support.package import safe_bytes, members, verify_payload
@@ -204,8 +205,21 @@ class SupervisorIO:
             except FileNotFoundError:continue
         device.scan_services()
         launcher='com.gathin.tvhome' if self.outer['edition']=='no-root' else 'com.cleanyourtv.root.preview'
-        result=subprocess.run(['/usr/bin/luna-send','-a',launcher,'-m',launcher+'-cytv','-n','1',
-            'luna://'+SERVICE+'/status','{}'],stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=25,check=True)
-        reply=json.loads(result.stdout)
-        if reply.get('returnValue') is not True or reply.get('result',{}).get('id')!=tx['operation']:
-            raise ValueError('New System Updater service did not pass its bus readiness check')
+        command = ['/usr/bin/luna-send', '-a', launcher, '-m', launcher+'-cytv', '-n', '1',
+                   'luna://'+SERVICE+'/status', '{}']
+        # The bus can acknowledge the rescan before the new service is ready.
+        # Poll for this exact operation without restarting or reinstalling it.
+        deadline = time.monotonic() + 25
+        while (remaining := deadline - time.monotonic()) > 0:
+            try:
+                reply = json.loads(subprocess.run(command, stdout=subprocess.PIPE,
+                                                 stderr=subprocess.PIPE, timeout=min(remaining, 5),
+                                                 check=True).stdout)
+                if isinstance(reply, dict) and reply.get('returnValue') is True:
+                    result = reply.get('result')
+                    if isinstance(result, dict) and result.get('id') == tx['operation']:
+                        return
+            except (subprocess.SubprocessError, ValueError):
+                pass
+            time.sleep(min(.5, max(0, deadline - time.monotonic())))
+        raise ValueError('New System Updater service did not pass its bus readiness check')

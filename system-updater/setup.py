@@ -518,6 +518,7 @@ def bootstrap_operation(edition, resume, check, ownership=None, read=None):
     reserved=bool(current and not current['terminal'] and
                   (current['owner'],current['journal'],current['stage'])==('system-bootstrap',journal.name,'reserved')
                   and (edition() if callable(edition) else edition)=='no-root')
+    checked = False
 
     def require_absence(apps):
         for app in apps:
@@ -531,6 +532,7 @@ def bootstrap_operation(edition, resume, check, ownership=None, read=None):
                     raise ValueError('Root or supervisor registration remains')
 
     def handoff(lease):
+        nonlocal checked
         if lease['owner']!='no-root' or (edition() if callable(edition) else edition)!='no-root':
             return False
         record=completed_no_root_fence(ownership.store,lease)
@@ -540,8 +542,38 @@ def bootstrap_operation(edition, resume, check, ownership=None, read=None):
         for path in (HOOK,HOOK.with_name('50-clean-your-tv-root'),HOOK.with_name('51-clean-your-tv-root-updater'),
                      Path('/var/webos-profile/override/clean-your-tv-root.json')):
             if os.path.lexists(path):raise ValueError('Root or supervisor startup state remains')
+        # Snapshot and validate the No-root baseline before moving any fences.
+        check()
+        checked = True
         with component_locks(roots,ownership.store.uid):
-            archive_component_fences(ownership.store,record,lease['id'],roots,require_cancelled=True)
+            from installation import _optional_record
+            plan = _optional_record(ownership.store, 'component-fences-plan-'+record['operation'])
+            successor = lease['id']
+            if isinstance(plan, dict) and plan.get('successor') != successor:
+                # An earlier bootstrap may have archived every fence and failed
+                # before reserving System ownership. Reuse only that exact
+                # fully archived plan and authenticate its completed No-root leg.
+                if any(os.path.lexists(root) for root in roots):
+                    raise ValueError('component_fence_conflict')
+                earlier = plan.get('successor')
+                if not isinstance(earlier, str) or not re.fullmatch('[a-f0-9]{32}', earlier):
+                    raise ValueError('component_fence_conflict')
+                from itertools import islice
+                names = list(islice(Path(ownership.store.root).glob('no-root-*.json'), 4097))
+                matches = []
+                if len(names) > 4096:
+                    raise ValueError('component_fence_conflict')
+                for path in names:
+                    binding = _optional_record(ownership.store, path.name)
+                    if isinstance(binding, dict) and binding.get('lease') == earlier:
+                        matches.append(path.name)
+                if len(matches) != 1:
+                    raise ValueError('component_fence_conflict')
+                prior = dict(lease, id=earlier, journal=matches[0])
+                if completed_no_root_fence(ownership.store, prior) != record:
+                    raise ValueError('component_fence_conflict')
+                successor = earlier
+            archive_component_fences(ownership.store,record,successor,roots,require_cancelled=True)
         return True
 
     def eligible():
@@ -551,7 +583,8 @@ def bootstrap_operation(edition, resume, check, ownership=None, read=None):
             if ownership.status()!=current or os.path.lexists(journal.parent) or os.path.lexists(HOOK):
                 raise ValueError('Reserved supervisor bootstrap requires recovery')
             require_absence((APP,))
-        check()
+        if not checked:
+            check()
     options['ownership']=ownership
     return device_operation('system-bootstrap',recovery=reserved,check=eligible,
                             handoff=None if reserved else handoff,**options)

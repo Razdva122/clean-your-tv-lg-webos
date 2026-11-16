@@ -63,11 +63,27 @@ class BuildTests(unittest.TestCase):
                         with setup.bootstrap_operation('no-root', False, lambda: None, ownership=ownership, read=read):
                             self.fail('unverified handoff admitted')
                 store.write('no-root-'+successor, dict(binding, completed=True))
+                def reject_baseline():
+                    raise ValueError('invalid baseline')
+                with self.assertRaisesRegex(ValueError, 'invalid baseline'):
+                    with setup.bootstrap_operation('no-root', False, reject_baseline, ownership=ownership, read=read):
+                        self.fail('invalid baseline admitted')
+                self.assertTrue(all(root.exists() for root in roots))
                 with setup.bootstrap_operation('no-root', False, lambda: None, ownership=ownership, read=read):
                     self.assertEqual(ownership.status()['owner'], 'system-bootstrap')
                     self.assertTrue(all(not root.exists() for root in roots))
                     archived = path/'installation'/('component-fences-'+original)
                     self.assertEqual([ (archived/root.name).stat().st_ino for root in roots], inodes)
+                # Simulate an earlier bootstrap that archived the fences but
+                # never published its reservation, followed by No-root repair.
+                new_operation, new_lease = '7'*32, '8'*32
+                store.write('no-root-'+new_operation,
+                            dict(binding, completed=True, operation=new_operation, lease=new_lease))
+                store.write('operation', dict(schema=1, id=new_lease, owner='no-root', stage='reserved',
+                                              journal='no-root-'+new_operation+'.json', terminal=False))
+                with setup.bootstrap_operation('no-root', False, lambda: None, ownership=ownership, read=read):
+                    self.assertEqual(ownership.status()['owner'], 'system-bootstrap')
+                    self.assertEqual([(archived/root.name).stat().st_ino for root in roots], inodes)
                 reserved=ownership.status()
                 self.assertEqual(reserved['stage'], 'reserved')
                 with setup.bootstrap_operation('no-root', False, lambda: None, ownership=ownership, read=read):

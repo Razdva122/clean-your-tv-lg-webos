@@ -59,12 +59,15 @@ class SupervisorIntegrationTests(unittest.TestCase):
         product.write('registration', {'files':registration})
         self.old_receipt = product.read('installed-package'); self.installs = []; self.bus = []
         self.wrong_terminal = False
+        self.bus_replies = []
         original_iterdir = Path.iterdir
         def safe_iterdir(path):
             if path == Path('/proc'): return iter(())
             return original_iterdir(path)
         def bus(argv,**kwargs):
             self.bus.append(argv)
+            if self.bus_replies:
+                return SimpleNamespace(stdout=json.dumps(self.bus_replies.pop(0)).encode())
             return SimpleNamespace(stdout=json.dumps({'returnValue':True,'result':{'id':self.identifier}}).encode())
         patches = [patch.object(self.bootstrap,'Bootstrap',return_value=self.runtime),
                    patch('observed_install.install',side_effect=self.submit),
@@ -137,6 +140,13 @@ class SupervisorIntegrationTests(unittest.TestCase):
             with self.assertRaises(KeyboardInterrupt): self.manager.run()
         self.assertEqual(self.manager.run()['phase'],'complete')
         self.assertEqual(self.installs,['1.1.0']); self.assert_registration()
+
+    def test_service_ready_after_delayed_registration_without_reinstall(self):
+        self.begin()
+        self.bus_replies = [{'returnValue': False}, {'returnValue': True, 'result': {'id': 'b'*32}}]
+        self.assertEqual(self.manager.run()['phase'], 'complete')
+        self.assertEqual(len(self.bus), 3)
+        self.assertEqual(self.installs, ['1.1.0'])
 
 
 if __name__ == '__main__': unittest.main()

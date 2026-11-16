@@ -296,6 +296,8 @@ class Device:
         service_prefixes=tuple('usr/palm/services/'+s+'/' for s in services)
         if any(not (name.startswith(prefix) or name.startswith(service_prefixes) or name==info) for name in files):raise ValueError('Foreign package payload')
         state_markers={prefix+'state/.keep','usr/palm/services/'+app+'.service/state/.keep'} if app=='com.local.nativehome' else set()
+        if app == 'com.gathin.tvhome':
+            state_markers.add('usr/palm/services/com.gathin.tvhome.renewal/state/home-control/.keep')
         if any('/state/' in name and (name not in state_markers or files[name]!=b'') for name in files):raise ValueError('Mutable state in package payload')
         appinfo=json.loads(files.get(prefix+'appinfo.json',b'{}'));pkg=json.loads(files.get(info,b'{}'))
         if appinfo.get('id')!=app or appinfo.get('version')!=c['version'] or pkg.get('id')!=app or pkg.get('app')!=app or pkg.get('version')!=c['version'] or not isinstance(pkg.get('services'),list) or set(pkg['services'])-services:raise ValueError('Package application identity mismatch')

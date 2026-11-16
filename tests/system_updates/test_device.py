@@ -129,6 +129,23 @@ class Tests(DeviceBase):
 if __name__=='__main__':unittest.main()
 
 class ExistingPackageTests(DeviceBase):
+    def test_home_accepts_only_empty_channel_marker(self):
+        from cytv.package import ipk as build_ipk, data_files
+        app = 'com.gathin.tvhome'
+        marker = 'usr/palm/services/com.gathin.tvhome.renewal/state/home-control/.keep'
+        files = data_files(ipk(app))
+        def inspect(contents):
+            files[marker] = contents
+            raw = build_ipk(app, '1.0.0', files)
+            return self.device.inspect(raw, dict(name='home', application=app, version='1.0.0',
+                                                kind='ipk', sha256=digest(raw), size=len(raw)))
+        self.assertTrue(inspect(b''))
+        with self.assertRaisesRegex(ValueError, 'Mutable state'):
+            inspect(b'nonempty')
+        files[marker.replace('.keep', 'foreign.json')] = b''
+        with self.assertRaisesRegex(ValueError, 'Mutable state'):
+            inspect(b'')
+
     def test_public_ordinary_package_directory_entries_are_supported(self):
         import sys
         sys.path.insert(0,str(Path(__file__).resolve().parents[2]))

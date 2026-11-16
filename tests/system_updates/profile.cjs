@@ -82,6 +82,14 @@ function harness(
     setTimeout: schedule,
     clearTimeout,
     Promise,
+    PalmServiceBridge: class {
+      call() {
+        this.onservicecallback(
+          JSON.stringify({ returnValue: true, state: { enabled: false } })
+        );
+      }
+      cancel() {}
+    },
     XMLHttpRequest: class {
       open() {}
       send() {
@@ -156,6 +164,23 @@ async function startAppearance(h) {
   return context.ThemeManager.current();
 }
 (async () => {
+  const capture = harness('no-root');
+  const liveInventory = {
+    apps: [
+      { ...profile.inventory.apps[0], iconColor: '' },
+      { ...profile.inventory.apps[0], id: 'app.two', iconColor: '#00aabb' }
+    ],
+    inputs: []
+  };
+  capture.window.TV_APPS = liveInventory;
+  const snapshot = await new Promise((resolve, reject) =>
+    capture.window.HomeProfile.capture((error, value) =>
+      error ? reject(error) : resolve(value)
+    )
+  );
+  assert.equal(Object.hasOwn(snapshot.inventory.apps[0], 'iconColor'), false);
+  assert.equal(snapshot.inventory.apps[1].iconColor, '#00aabb');
+  assert.equal(liveInventory.apps[0].iconColor, '');
   const fallback = profile.inventory.apps[0].icon;
   const recovered = 'data:image/png;base64,Yg==';
   const packagedInventory = {
