@@ -35,6 +35,9 @@ these guides. Link release notes and developer evidence from their canonical pag
 instead. Retain only prerequisite versions necessary to choose/install safely
 (such as supported OS/runtime requirements), current controls and recovery steps.
 Do not prepend release-news blocks. Preserve existing inbound anchor aliases.
+Keep the numbered installation steps focused on actions needed for a typical
+first setup. Link to the relevant reference for optional Root fields, CLI flags,
+model-specific behavior and advanced recovery procedures.
 
 For every release candidate, complete the affected parts of the [documentation pass](docs/RELEASE-FLOW.md#update-documentation-for-every-candidate),
 record reviewed guides and verification in the release PR, and keep candidate

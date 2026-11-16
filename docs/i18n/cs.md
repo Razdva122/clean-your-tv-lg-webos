@@ -1,9 +1,5 @@
 # Clean Your TV — průvodce instalací
 
-Pouze Root Edition: na poslední stránce instalátoru nastavte název obrazovky Home. Prázdné pole ponechá stávající název. V CLI použijte `--tv-name`.
-
-Před novou instalací instalátor v počítači ověří novější stabilní verzi na GitHubu. Vyberte „Otevřít GitHub a stáhnout nejnovější verzi“ pro zastavení a stažení, nebo „Ne, nainstalovat tuto verzi“ pro výslovné pokračování. Pokud kontrola selže, můžete pokračovat. Nedokončené operace a obnovení kontrolu přeskočí.
-
 Clean Your TV je vaše vlastní domovská obrazovka pro LG webOS: aplikace ve vašem pořadí, bez sponzorovaných řádků v této nabídce. Instalujte z počítače nebo telefonu s Androidem; po nastavení může být počítač vypnutý.
 
 ## 1. Stáhněte instalátor
@@ -23,11 +19,9 @@ Zapněte TV a připojte ji ke stejné domácí síti jako počítač nebo telefo
 - **No-root** — pokud nemáte root přístup. Připravte Developer Mode podle kroků níže.
 - **Root** — pokud už máte root přístup přes SSH. Instalátor televizor nerootuje. Na této TV nezapínejte Developer Mode; zachovejte SSH přístup a data obnovy.
 
-U Root instalátor ověří a vybere dostupný způsob ovládání Home. Pokud nelze kompatibilitu ověřit, instalace se zastaví; neobcházejte neúspěšnou kontrolu.
-
 Pokud instalátor nabídne **No-root**, můžete pokračovat přes stávající root připojení SSH bez zapínání Developer Mode.
 
-**No-root → Root:** Pokud jste po úplném odebrání znovu nainstalovali No-root, přechod na Root může vyžadovat nejprve vyčištění instalace. Zálohujte nastavení Home, zvolte **Odinstalovat Clean Your TV** s uloženým připojením Root a počkejte na ověřené odebrání. Odebere se také No-root Home a Helper. Poté nainstalujte Root a uchovejte záznamy obnovy.
+[Podrobná instalace](../INSTALL.md) · [Kompatibilita](../COMPATIBILITY.md)
 
 ### Developer Mode (No-root)
 
@@ -55,28 +49,16 @@ Jazyk vyberte v instalátoru; na Androidu je volba vpravo nahoře. Jazyk TV se n
 1. V CYTV zvolte nastavení TV (**Set up my TV**). Na počítači vyberte nalezenou TV; na Androidu zadejte její IP adresu. Pokud hledání nic nenajde, zadejte adresu ručně.
 2. Vyberte **No-root** nebo **Root** a před pokračováním zkontrolujte televizor.
 3. No-root: zadejte kód z Developer Mode a potvrďte žádost na TV. Root: použijte svůj stávající SSH přístup. Novou SSH identitu potvrďte pouze pro vlastní TV v důvěryhodné síti. Pokud se uložený klíč změnil, zastavte se a zjistěte příčinu.
-4. Postupujte podle průvodce. Nechte TV zapnutou, neměňte síť a nezavírejte CYTV do dokončení. Na Androidu nevynucujte ukončení aplikace. Root zapne ovládání Home ihned po přípravě obnovy.
-
-Instalace Root pokračuje s upozorněním, pokud nelze načíst vstupy televizoru, ale seznam aplikací je platný. V Home mohou chybět vstupy; chyba načtení nebo prázdný seznam aplikací instalaci nadále zastaví. Pokud se upozornění opakuje, uložte diagnostickou zprávu.
-
-Při instalaci Root může instalátor automaticky vypnout rozpoznané nahrazení obrazovky Home, aby Home převzal CYTV. Pokud instalace skončí chybou, uložte diagnostickou zprávu.
+4. Postupujte podle průvodce. Nechte TV zapnutou, neměňte síť a nezavírejte CYTV do dokončení. Na Androidu nevynucujte ukončení aplikace.
 
 ## 5. Vyzkoušejte ovladač
 
 1. Otevřete jinou aplikaci na TV a krátce stiskněte **Home**. Má se otevřít Clean Your TV. V průvodci uveďte, co jste viděli; pokud jste test neprovedli, přeskočte ho.
-2. Vyzkoušejte šipky, OK, Zpět, hlasitost a zvuk. Samostatně ověřte pohotovostní režim/probuzení a spuštění po odpojení napájení. Samotná úspěšná instalace tyto funkce neověřuje.
-
-Nastavení No-root zapne Home po ověření balíčků, pokud Helper nebyl zastaven. Po zastavení použijte na TV volbu Spustit Helper. Home můžete později vypnout v nastavení.
-
-Použijte původní uložené připojení a data obnovení. Pokud se ztratila, znovu se připojte ke stejné TV a zvolte Odinstalovat Clean Your TV. Před nastavením dokončete ověřené odebrání; nemažte soubory rezervace. Pokud se odebrání zastaví, uložte diagnostickou zprávu.
+2. Vyzkoušejte šipky, OK, Zpět, hlasitost a zvuk.
 
 ## 6. Každodenní ovládání
 
 Chcete-li připnout vstup HDMI, vyberte ho v nabídce **+ / Přidat aplikaci**. Tlačítkem OK přepnete na tento vstup. Podržením OK můžete dlaždici přesunout nebo skrýt.
-
-Pokud instalátor hlásí „Nastavení Root není dokončeno, ale v TV chybí záznam nasazení.“: Zvolte Zkontrolovat možnosti obnovy pro odebrání Clean Your TV a potom spusťte nastavení samostatně. Úplné odebrání odstraní také No-root Home a Helper; nejprve zálohujte předvolby.
-
-Podpora IR v No-root: uvolnění Home po krátkém stisku naplánuje Clean přibližně za 700 ms; nejprve může probliknout LG Home. Podržení Home zůstává webOS a trojí stisk stále zastaví Helper. Přístup v běžném Developer Mode není ověřen; neměňte oprávnění vstupních zařízení.
 
 Šipky vybírají aplikaci, **OK** ji otevře. Podržením OK můžete měnit pořadí. Krátké **Zpět** zachová navigaci aplikace. Krátké **Home** otevře Clean Your TV při zapnutém ovládání Home. Podržení Zpět po dobu 1,2 sekundy otevře LG Home jednou, bez změny uložených nastavení.
 
@@ -86,13 +68,9 @@ Pro úpravy krátkými stisky otevřete **Nastavení Home → Vzhled → Upravit
 
 Pro opětovné zapnutí No-root otevřete **Home Helper**, zvolte spuštění Helperu a potvrďte. Pro Root zapněte **Změnit Home** v nastavení Home. **Otevřít LG Home** otevře původní prostředí jen jednou; pro trvalé používání LG Home vypněte Změnit Home. Nespouštějte oba ovladače Home současně. Při opakované chybě nechte LG Home aktivní.
 
-Automatické aktualizace v TV nespouštějí zastavený Helper. Pro samostatné obnovení použijte Spustit Helper; nemažte soubory Stop.
-
 ## Potřebujete pomoc?
 
-Pokud podpora požádá o výstup příkazu SSH, otevřete v instalátoru na počítači **Diagnostika → Spustit příkaz SSH** a vyberte stávající připojení k televizoru. Zkontrolujte televizor a uživatele SSH, vložte příkaz a klikněte na **Spustit** a **Zkopírovat výstup**. Zkopírovaný text obsahuje stdout, stderr a návratový kód.
-
-Pokud se po resetu nebo změně SSH objeví `ssh-identity-changed`, zastavte se: CYTV zablokoval změněný uložený klíč před přihlášením. První potvrzení důvěry jej nenahradí; čekající odinstalace nevysvětluje neshodu. Zachovejte původní profil, klíče a záznamy obnovy. V uloženém profilu Root s čekající odinstalací lze nezávisle ověřený otisk zaznamenat v konzoli. Dřívější odinstalace zůstane zablokovaná. Viz [obnova po změně identity SSH](../RECOVERY.md#ssh-identity-changed).
+Pokud se zobrazí chyba `ssh-identity-changed`, zastavte se a ověřte klíč televizoru. [Obnova po změně klíče SSH](../RECOVERY.md#ssh-identity-changed)
 
 Po obnovení továrního nastavení vlastní TV s No-root vyberte při změně klíče **Připojit znovu po obnovení továrního nastavení**. Postupujte podle pokynů v důvěryhodné domácí síti. Původní profil a záznam o odinstalaci se zachovají.
 
@@ -108,19 +86,11 @@ Uveďte model TV, firmware, No-root nebo Root, instalační zařízení, krok a 
 
 Vyberte v Údržbě **Odinstalovat Clean Your TV** se stejným uloženým připojením TV. Potvrďte jednou. Přítomné známé aplikace a soubory projektu se odeberou, chybějící se přeskočí, i po částečné instalaci.
 
-Na starších televizorech bez samostatné aplikace LG Home může odebrání No-root přepnout obrazovku na živé vysílání. Nechte televizor zapnutý a na požádání jej restartujte; nemažte data obnovení ani neresetujte televizor.
-
 Na výzvu odpojte TV od napájení, znovu připojte, počkejte na síť a vyberte **Zkusit znovu**. Pohotovost nebo Quick Start není úplný restart; CYTV TV automaticky nerestartuje. Při odmítnutí přístupu použijte požadované připojení Root; pokud je TV zaneprázdněn, počkejte a zkuste znovu. Úspěch se zobrazí až po ověření závěrečného úklidu. Zachovejte klíče a původní zprávy. Nouzové ovládání a souhlas se sdílením výše platí dál.
 
 Pokud instalátor nemůže ověřit odebrání, závěrečný úklid, ovládání TV či výsledek operace s balíčky nebo hlásí změnu cest projektu, zvolte **Prověřit možnosti obnovy** s původním uloženým připojením. Nabídne-li instalátor pokračování, potvrďte je samostatně.
 
 Pokud instalátor nemůže ověřit požadovaný úplný restart, uložte a přiložte diagnostickou zprávu. Zachovejte uložené připojení a data obnovy. Neopakujte stále odpojování napájení a nemažte ručně nedokončenou operaci.
-
-Je po neúspěšné nebo přerušené instalaci přímo dostupná obnova. Pokud No-root nemůže pokračovat, potvrďte jednou úplné odebrání. Při dočasné ztrátě spojení nebo zaneprázdněném procesu CYTV proběhnou nejvýše tři pokusy. Je-li nutný Root, zvolte **Připojit přes Root** pro stejnou TV; ověřený úklid Root dokončí i její zablokované odebrání No-root. Po chybě aktivace Root se CYTV pokusí obnovit a ověřit LG Home bez opakované aktivace. Zrušení s nedokončenou prací zachová zprávu a kroky obnovy. Nouzové zastavení zůstane zachováno.
-
-Pokud se odebrání zastaví kvůli dočasnému výpadku spojení, zkontrolujte síť a pokračujte ve stejném odebrání volbou **Zkusit znovu**, pokud se zobrazí. Pokud přihlášení selže, spojení nelze ověřit nebo výsledek není jasný, zvolte **Prověřit možnosti obnovy**. Pokud se zobrazí **Podrobnosti připojení**, zkontrolujte připojení nebo vyberte existující klíč SSH pro Root pro kontrolu obnovy. Uložená adresa TV, edice, port a ověření klíče hostitele zůstávají stejné. Nabídne-li instalátor po kontrole pokračování v odebrání, potvrďte je zvlášť.
-
-Při přeinstalaci se No-root pokusí Helper zastavit automaticky. Použijte tlačítko Home jen na výzvu průvodce a potvrďte opětovnou kontrolu. Odebrání může skončit bez restartu po ověření ovládání, vypnutého automatického spouštění a nepřítomnosti balíčků, souborů a běžících procesů, pokud nezůstává nedokončená instalace. Pokud instalátor požaduje restart, proveďte jej a zkuste to znovu. Při selhání služby vstupů pokračuje bezpečné odstranění balíčků; úspěch stále vyžaduje ověření odstranění zástupce.
 
 **Přeinstalace Root:** S uloženým připojením zvolte **Nastavit televizor → Root** a potvrďte **Přeinstalovat Root?**. Instalátor obnoví LG Home a zcela odstraní Clean Your TV včetně aktualizátorů, Home Helper a uložených předvoleb. Po ověření odstranění nainstaluje a aktivuje balíčky a prostředí Root dodané v tomto instalátoru. Ostatní aplikace TV a stávající přístup root/SSH zůstanou zachovány. Pokud se odstranění zastaví nebo požádá o úplný restart, dokončete je před novým spuštěním instalace. Samotné **Odinstalovat Clean Your TV** nikdy nespustí novou instalaci.
 
@@ -128,7 +98,7 @@ Při přeinstalaci se No-root pokusí Helper zastavit automaticky. Použijte tla
 
 V desktopovém instalátoru otevřete **Údržba → Upravit nastavení LG (Debloat)** a použijte uložené připojení k TV. Vyberte nastavení, která chcete změnit, klikněte na **Použít vybraná nastavení** a zkontrolujte výsledky. Pokud je předchozí operace nedokončená, zvolte nejprve **Prověřit možnosti obnovy** s původním uloženým připojením.
 
-Pokud aktualizátor po návratu k předchozí verzi neověřil připravenost, použijte původní uložené připojení Root. Podle aktualizátoru vyberte **Dokončit obnovu po návratu přes Root Updater** nebo **Dokončit obnovu po návratu přes Root System Updater** a potvrďte. Pouze u Root System Updater zaškrtněte **Po uplynutí lhůty zahájit nový auditovaný pokus**, pokud předchozí pokus vypršel a [pokyny k obnově](../RECOVERY.md#root-system-rollback-readiness-candidate) další pokus připouštějí.
+[Obnova po návratu k předchozí verzi Root](../RECOVERY.md#standalone-root-updater-rollback-readiness)
 
 <!-- Legacy anchors retained for existing links. -->
 <a id="automatické-rozlišení-grafiky-kandidát"></a>
