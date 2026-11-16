@@ -76,5 +76,11 @@
     }
   ],
   "excluded": [],
-  "acceptance": ""
+  "acceptance": "LG OLED55C3RLA (43.21.71, webOS SDK 11.2.0), macOS ARM64, paired network remote. Exact signed Root update from v1.21.0 after migration to System Updater 1.2.10 and ordinary rollback passed with original profile and routes. Root screensaver preview and 30-second idle, exact Home 1.20.0 and Helper 0.9.0 install, Home screensaver preview, and Restore passed. See docs/history/2026-11-16-release-1.22.0-rc-verification.md for hashes, scope and untested paths.",
+  "build": {
+    "run_id": 43891859803,
+    "attempt": 2,
+    "source": "1f96bac815cd1c852d3251c1c71edbcaffd631f2"
+  },
+  "acceptance_build": "43891859803:2"
 }
