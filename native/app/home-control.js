@@ -1,10 +1,19 @@
 'use strict';
 // The routing preference is separate from the emergency-stop latch and profile.
 module.exports = function (fs, data, apply, visit) {
-  var path = data + '/home-control.json',
-    enabled = true;
+  var enabled = true;
   try {
-    enabled = JSON.parse(fs.readFileSync(path, 'utf8')).enabled !== false;
+    var saved = JSON.parse(
+      require('./state-permissions').readRecord(data, 'home-preference')
+    );
+    if (
+      !saved ||
+      typeof saved !== 'object' ||
+      Array.isArray(saved) ||
+      (saved.enabled !== undefined && typeof saved.enabled !== 'boolean')
+    )
+      throw Error('Expected Home preference object with enabled boolean');
+    enabled = saved.enabled !== false;
   } catch (e) {
     if (e.code !== 'ENOENT') throw e;
   }

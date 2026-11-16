@@ -10,8 +10,69 @@ ROOT = Path(__file__).resolve().parents[2]
 
 @unittest.skipIf(os.name == 'nt', 'TV storage fixtures require POSIX ownership, modes and inode semantics')
 class StorageContractTests(unittest.TestCase):
-    def test_bootstrap_restricts_packaged_boot_modes_before_normal_reads(self):
-        # A bootstrap that skips expanded leaves must fail before input starts.
+    def test_catalog_mode_is_not_a_read_or_verification_gate(self):
+        self.run_js("""
+var apps='[{"id":"com.example.app"}]',key='{"key":"paired"}';
+fs.writeFileSync(d+'/ssap-key.json',key);fs.chmodSync(d+'/ssap-key.json',416);
+fs.writeFileSync(d+'/apps.json',apps);
+var hashes=[key,apps].map(function(value){return require('crypto').createHash('sha256').update(value).digest('hex');});
+[438,507,509,511].forEach(function(mode){
+ fs.chmodSync(d+'/apps.json',mode);var before=fs.statSync(d+'/apps.json');
+ assert.strictEqual(p.readConfiguration(d,'apps'),apps);
+ p.inspectConfiguration(d,{verifyHashes:hashes});
+ var after=fs.statSync(d+'/apps.json');
+ assert.strictEqual(after.ino,before.ino);assert.strictEqual(after.mode,before.mode);
+ assert.strictEqual(after.ctime.getTime(),before.ctime.getTime());
+ assert.throws(function(){p.inspectConfiguration(d,{verifyHashes:[hashes[0],new Array(65).join('0')]});});
+});
+""")
+
+    def test_boot_does_not_repair_ordinary_preferences(self):
+        self.run_js("""
+var values={'home-control.json':'{"enabled":false}','startup-state.json':'{"enabled":true,"schema":3,"boot":"previous"}'};
+Object.keys(values).forEach(function(name){fs.writeFileSync(d+'/'+name,values[name]);fs.chmodSync(d+'/'+name,511);});
+var chmod=fs.fchmodSync,rename=fs.renameSync;
+fs.fchmodSync=function(fd){assert(!Object.keys(values).some(function(name){return fs.statSync(d+'/'+name).ino===fs.fstatSync(fd).ino;}),'ordinary preference chmod');return chmod.apply(fs,arguments);};
+fs.renameSync=function(from,to){assert(!Object.prototype.hasOwnProperty.call(values,to),'ordinary preference replacement');return rename.apply(fs,arguments);};
+assert.strictEqual(p(d,null,true),true);
+Object.keys(values).forEach(function(name){assert.strictEqual(fs.readFileSync(d+'/'+name,'utf8'),values[name]);assert.strictEqual(fs.statSync(d+'/'+name).mode&4095,511);});
+""")
+
+    def test_data_record_reads_are_bounded_and_do_not_follow_links(self):
+        self.run_js("""
+var value='{"enabled":false}';
+p.atomicRecord(d,'home-preference',value);fs.chmodSync(d,511);fs.chmodSync(d+'/home-control.json',511);
+assert.strictEqual(p.readRecord(d,'home-preference'),value);
+assert.throws(function(){p.readRecord(d,'control');});
+assert.throws(function(){p.readRecord(d,'home-request');});
+assert.throws(function(){p.readRecord(d,'../outside');});
+fs.linkSync(d+'/home-control.json',d+'/alias');assert.throws(function(){p.readRecord(d,'home-preference');});fs.unlinkSync(d+'/alias');
+fs.unlinkSync(d+'/home-control.json');fs.writeFileSync(d+'/outside',value);fs.symlinkSync(d+'/outside',d+'/home-control.json');
+assert.throws(function(){p.readRecord(d,'home-preference');});assert.throws(function(){p.atomicRecord(d,'home-preference',value);});
+assert.strictEqual(fs.readFileSync(d+'/outside','utf8'),value);fs.unlinkSync(d+'/home-control.json');
+fs.writeFileSync(d+'/home-control.json',new Array(65538).join('x'));fs.chmodSync(d+'/home-control.json',511);
+assert.throws(function(){p.readRecord(d,'home-preference');});
+fs.writeFileSync(d+'/home-control.json',value);
+var open=fs.openSync,swapped=false;
+fs.openSync=function(name){if(name==='home-control.json'&&!swapped){swapped=true;fs.renameSync(name,name+'.old');fs.writeFileSync(name,value);}return open.apply(fs,arguments);};
+assert.throws(function(){p.readRecord(d,'home-preference');});assert(swapped);
+""")
+
+    def test_expanded_data_does_not_relax_credentials_or_stop(self):
+        self.run_js("""
+fs.writeFileSync(d+'/ssap-key.json','{"key":"paired"}');fs.chmodSync(d+'/ssap-key.json',511);
+assert.throws(function(){p.readConfiguration(d,'key');});
+fs.writeFileSync(d+'/stop-generation','I'+new Array(33).join('a'));fs.chmodSync(d+'/stop-generation',511);
+fs.writeFileSync(d+'/blocked','explicit stop');fs.writeFileSync(d+'/watchdog','watchdog');
+assert.throws(function(){p.stopGeneration(d,false);});
+p.atomicRecord(d,'home-preference','{"enabled":true}');fs.chmodSync(d+'/home-control.json',511);
+assert.strictEqual(fs.readFileSync(d+'/blocked','utf8'),'explicit stop');
+assert.strictEqual(fs.readFileSync(d+'/watchdog','utf8'),'watchdog');
+assert.strictEqual(fs.readFileSync(d+'/stop-generation','utf8'),'I'+new Array(33).join('a'));
+""")
+
+    def test_bootstrap_repairs_credentials_and_retains_expanded_data(self):
+        # Credential repair must not require a repair list for ordinary data.
         self.run_js("""
 var values={'ssap-key.json':'{"key":"pairing"}','apps.json':'["com.example.app"]',
  'control.json':'{"cmd":"stop"}','controller.pid':'123','controller.log':'untrusted old log',
@@ -23,20 +84,20 @@ fs.chmodSync(d,511);
 assert.throws(function(){p.readConfiguration(d,'key');});
 assert.throws(function(){p.inspectConfiguration(d,{});});
 assert.strictEqual(p(d,null,true),true);
-var modes={'ssap-key.json':416,'home-control.json':432,'startup-state.json':420};
+var modes={'ssap-key.json':416,'home-control.json':511,'startup-state.json':511};
 Object.keys(modes).forEach(function(n){assert.strictEqual(fs.readFileSync(d+'/'+n,'utf8'),values[n]);assert.strictEqual(fs.statSync(d+'/'+n).mode&4095,modes[n]);});
 assert.strictEqual(fs.readFileSync(d+'/control.json','utf8'),'{}');
 assert.strictEqual(p.readConfiguration(d,'key'),values['ssap-key.json']);
-assert.throws(function(){p.readConfiguration(d,'apps');});
+assert.strictEqual(p.readConfiguration(d,'apps'),values['apps.json']);
 assert.strictEqual(fs.statSync(d+'/apps.json').mode&4095,511);
 assert.strictEqual(fs.readFileSync(d+'/blocked','utf8'),'emergency');
 assert.strictEqual(fs.readFileSync(d+'/watchdog','utf8'),'watchdog');
 p.atomicRecord(d,'pid','456');assert.strictEqual(fs.readFileSync(d+'/controller.pid','utf8'),'456');
-p.appendLog(d,'new checked log');assert.strictEqual(fs.readFileSync(d+'/controller.log','utf8').trim(),'new checked log');
+p.appendLog(d,'new checked log');assert.strictEqual(fs.readFileSync(d+'/controller.log','utf8').trim(),'untrusted old lognew checked log');
 assert.strictEqual(fs.readdirSync(d).filter(function(n){return n.charAt(0)==='.';}).length,0);
 """)
 
-    def test_explicit_installer_restricts_boot_modes_without_adopting_apps(self):
+    def test_explicit_installer_prepares_legacy_upload_without_adopting_catalog(self):
         self.run_js("""
 fs.writeFileSync(d+'/ssap-key.json','{"key":"pairing"}');fs.chmodSync(d+'/ssap-key.json',511);
 fs.writeFileSync(d+'/apps.json','["com.example.app"]');fs.chmodSync(d+'/apps.json',511);
@@ -67,7 +128,7 @@ Object.keys(classes).forEach(function(kind){
 fs.chmodSync(d,504);fs.writeFileSync(d+'/controller.log',new Array(200001).join('x'));fs.chmodSync(d+'/controller.log',511);
 fs.writeFileSync(d+'/controller.log.previous','malformed');fs.chmodSync(d+'/controller.log.previous',511);
 p.appendLog(d,'fresh');assert.strictEqual(fs.readFileSync(d+'/controller.log','utf8').trim(),'fresh');
-assert.strictEqual(fs.readFileSync(d+'/controller.log.previous','utf8'),'');
+assert.strictEqual(fs.readFileSync(d+'/controller.log.previous','utf8'),'malformed');
 """)
 
     def test_stop_preserves_expanded_latches_while_publishing_fresh_stop(self):
@@ -182,7 +243,7 @@ assert.strictEqual(fs.readdirSync(d).filter(function(n){return n.charAt(0)==='.'
     def test_configuration_inspection_is_readonly_and_validates_apps_before_key_repair(self):
         self.run_js("""
 fs.writeFileSync(d+'/ssap-key.json','retained');fs.chmodSync(d+'/ssap-key.json',509);
-fs.writeFileSync(d+'/apps.json','[]');fs.chmodSync(d+'/apps.json',507);
+fs.writeFileSync(d+'/apps.json','[]');fs.chmodSync(d+'/apps.json',2559); // Special bits are not ordinary rwx expansion.
 var before=fs.statSync(d+'/ssap-key.json');
 assert.throws(function(){p.prepareConfiguration(d,{});});
 assert.strictEqual(fs.statSync(d+'/ssap-key.json').mode&4095,509);
