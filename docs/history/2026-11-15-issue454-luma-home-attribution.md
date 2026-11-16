@@ -113,3 +113,18 @@ boot bind and interrupted handoffs before and after the native file was
 uncovered. No package install, Home key, standby or cold boot has run on
 the reporting C1. Live mount propagation, Python libffi and final Home
 activation remain device acceptance checks.
+
+## Integration follow-up
+
+The handoff recognizes the published Luma 2.18.0 and 2.18.1 startup layout by
+checking the installed shell, native helper and bound launcher against the
+verified package bytes. Those releases delegate the mount to the native
+helper and do not install the early KeyFilters entry. The Luma 2.19.0 replay
+retains coverage of the early hook and KeyFilters cleanup.
+
+The receipt is published only after its plan is durable. A second handoff
+cannot enter while the first one holds the archive lock. Recovery can discard
+an incomplete staging copy after verifying its intact original. Local Linux
+replays of the Luma 2.18.1 and 2.19.0 IPKs detached real file binds and restored
+the matching factory ELF. Both readbacks passed compositor admission with
+modeled topology and LS2. The C1 hardware cases above remain open.

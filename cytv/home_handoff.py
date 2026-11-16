@@ -26,7 +26,9 @@ import shlex
 import stat
 import subprocess
 import sys
+import tempfile
 import time
+from contextlib import contextmanager
 from pathlib import Path, PurePosixPath
 
 ROOT = Path('/')
@@ -41,6 +43,14 @@ RECEIPT = ARCHIVE + '/pending'
 KEY = 'com.webos.surfacemanager.keyFilters'
 VENDOR = re.compile(r'/usr/lib/(?:qt5/)?qml/KeyFilters/[A-Za-z0-9_-]+\.js')
 SAFE_PATH = re.compile(r'/(?:[A-Za-z0-9_.-]+/)*[A-Za-z0-9_.-]+')
+# Luma 2.18.0 and 2.18.1 delegate the mount to a native helper. The two
+# releases use identical startup shells and helpers but different launchers.
+LEGACY_LUMA_SCRIPT = '307d96f1d44e8b4c439b0634ed78f3cd18787670dcc0eb169382abfc40d0b74f'
+LEGACY_LUMA_HELPER = '7edb727e16241121c710823f33b6a07a3c47b09698028073d47f200bc40f353b'
+LEGACY_LUMA_LAUNCHERS = {
+    '79d51c5446a8858ff940b32380e0b2694b02253427874b2a0135eea269ecdadf',
+    '9daf8a444939a22d239aaadff6090da4cb4a0d921a6d4f031e02777dfda720d4',
+}
 
 
 def require(condition):
@@ -339,13 +349,24 @@ def inspect():
     require(sum(row['file'].endswith('/systemUi.js') and row['handler'] == 'handleSystemKeys'
                 for row in stock) == 1)
     filters = [row['file'] for row in chain if row not in stock]
-    files, lock = startup_files(source, filters)
+    digest = source_digest(source)
+    files, lock = startup_files(source, digest, filters)
     return {'mount':mount, 'stock_chain':stock, 'chain':chain,
             'files':{filename:path_identity(local(filename)) for filename in files},
-            'stock_digest':stock_preview(), 'source_digest':source_digest(source), 'lock':lock}
+            'stock_digest':stock_preview(), 'source_digest':digest, 'lock':lock}
 
 
-def startup_files(source, filters):
+def legacy_luma_hook(hook, target, script, source, digest, filters):
+    return (not filters and hook == BOOT + '/64-luma-home'
+            and target == '/var/lib/luma-home/home.sh'
+            and source == APP_ROOT + '/com.ecklf.luma/luma'
+            and digest in LEGACY_LUMA_LAUNCHERS
+            and hashlib.sha256(script).hexdigest() == LEGACY_LUMA_SCRIPT
+            and hashlib.sha256(read('/var/lib/luma-home/luma-helper', 16*1024*1024)).hexdigest()
+            == LEGACY_LUMA_HELPER)
+
+
+def startup_files(source, digest, filters):
     owners, direct = {}, []
     entries = sorted(local(BOOT).iterdir())
     require(len(entries) <= 128)
@@ -377,9 +398,10 @@ def startup_files(source, filters):
                 or settings.get('method') != 'executable' or settings.get('homeId', APP_ID) != APP_ID
                 or settings.get('appDir') != str(PurePosixPath(source).parent)):
             continue
-        script = b'\n'.join(line for line in read(target).splitlines()
-                            if not line.lstrip().startswith(b'#'))
-        require(all(word in script for word in (APP_ID.encode(), b'state.json', b'boot', b'mount --bind')))
+        script = read(target)
+        commands = b'\n'.join(line for line in script.splitlines() if not line.lstrip().startswith(b'#'))
+        require(all(word in commands for word in (APP_ID.encode(), b'state.json', b'boot', b'mount --bind'))
+                or legacy_luma_hook(hook, target, script, source, digest, filters))
         trusted(path, stat.S_ISLNK)
         owners[hook] = (work, state)
     if direct and not owners:
@@ -469,10 +491,44 @@ def open_lock(plan):
     return fd
 
 
-def archive_receipt(path):
-    complete = path.parent / ('complete-' + str(time.time_ns()))
-    path.rename(complete)
-    sync_directory(complete.parent)
+def prepare_archive():
+    archive = local(ARCHIVE)
+    trusted(archive.parent, stat.S_ISDIR)
+    archive.mkdir(mode=0o700, exist_ok=True)
+    require(stat.S_IMODE(trusted(archive, stat.S_ISDIR).st_mode) == 0o700)
+    return archive
+
+
+@contextmanager
+def operation_lock():
+    archive = prepare_archive()
+    fd = os.open(archive, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        yield
+    finally:
+        os.close(fd)
+
+
+def archive_receipt(path, outcome='complete'):
+    archived = path.parent / (outcome + '-' + str(time.time_ns()))
+    path.rename(archived)
+    sync_directory(archived.parent)
+
+
+def publish_receipt(plan):
+    path = local(RECEIPT)
+    archive = prepare_archive()
+    with tempfile.TemporaryDirectory(prefix='.pending-', dir=archive) as staged:
+        staged = Path(staged)
+        receipt = staged / 'plan.json'
+        with receipt.open('x', encoding='utf-8') as stream:
+            json.dump(plan, stream)
+        durable(receipt)
+        sync_directory(staged)
+        staged.rename(path)
+        sync_directory(archive)
+    return path
 
 
 def recorded_mount(plan):
@@ -480,8 +536,21 @@ def recorded_mount(plan):
     return list(mount_source()) == list(plan['mount'])
 
 
+def copy_path(destination):
+    return destination.with_name('.' + destination.name + '.handoff-copy')
+
+
+def discard_copy(destination):
+    partial = copy_path(destination)
+    if os.path.lexists(partial):
+        trusted(partial, stat.S_ISLNK if partial.is_symlink() else stat.S_ISREG)
+        partial.unlink()
+        sync_directory(partial.parent)
+
+
 def move(origin, saved, identity):
     require(not os.path.lexists(saved) and path_identity(origin) == identity)
+    discard_copy(saved)
     try:
         origin.rename(saved)
     except OSError as error:
@@ -491,8 +560,7 @@ def move(origin, saved, identity):
         # Publish a verified, fsynced copy before removing the active name.
         # Recovery accepts two identical copies after an interruption.
         meta = origin.lstat()
-        temporary = saved.with_name('.' + saved.name + '.handoff-copy')
-        require(not os.path.lexists(temporary))
+        temporary = copy_path(saved)
         try:
             if origin.is_symlink():
                 temporary.symlink_to(os.readlink(origin))
@@ -545,11 +613,10 @@ def restore_before_detach(path, plan, *, retry=False):
             else:
                 move(saved, origin, identity)
         require(path_identity(origin) == identity)
+        discard_copy(saved)
     if any(filename.startswith(LS2 + '/') for filename in plan['files']):
         rescan()
-    (path / 'plan.json').unlink()
-    path.rmdir()
-    sync_directory(path.parent)
+    archive_receipt(path, 'restored')
 
 
 def quarantine(path, plan, *, retry=False):
@@ -604,18 +671,7 @@ def apply(expected):
     fd = open_lock(plan)
     try:
         require(fingerprint(inspect()) == expected)
-        path = local(RECEIPT)
-        trusted(path.parent.parent, stat.S_ISDIR)
-        path.parent.mkdir(mode=0o700, exist_ok=True)
-        trusted(path.parent, stat.S_ISDIR)
-        require(stat.S_IMODE(path.parent.lstat().st_mode) == 0o700)
-        path.mkdir(mode=0o700)
-        receipt = path / 'plan.json'
-        with receipt.open('x', encoding='utf-8') as stream:
-            json.dump(plan, stream)
-        durable(receipt)
-        sync_directory(path)
-        sync_directory(path.parent)
+        path = publish_receipt(plan)
         detached = False
         try:
             quarantine(path, plan)
@@ -645,11 +701,13 @@ if __name__ == '__main__':
                 print(json.dumps({'interrupted':True}))
             else:
                 print(json.dumps({'plan':fingerprint(inspect())}))
-        elif sys.argv[1] == 'recover':
-            print('CYTV_HOME_HANDOFF_COMPLETE' if recover() else 'CYTV_HOME_HANDOFF_RECOVERED')
         else:
-            apply(sys.argv[1])
-            print('CYTV_HOME_HANDOFF_COMPLETE')
+            with operation_lock():
+                if sys.argv[1] == 'recover':
+                    print('CYTV_HOME_HANDOFF_COMPLETE' if recover() else 'CYTV_HOME_HANDOFF_RECOVERED')
+                else:
+                    apply(sys.argv[1])
+                    print('CYTV_HOME_HANDOFF_COMPLETE')
     except (OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError):
         # Do not export mount sources, hook paths or application inventories.
         if len(sys.argv) == 1:

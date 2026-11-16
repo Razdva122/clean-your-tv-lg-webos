@@ -1,9 +1,11 @@
+import errno
+import hashlib
 import json
 import os
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 @unittest.skipUnless(os.name == 'posix', 'TV handoff uses POSIX primitives')
 class HomeHandoffTests(unittest.TestCase):
@@ -139,6 +141,101 @@ class HomeHandoffTests(unittest.TestCase):
         self.assertEqual(self.handoff['fingerprint'](self.handoff['inspect']()),
                          self.handoff['fingerprint'](plan))
         self.handoff['apply'](self.handoff['fingerprint'](plan))
+        self.assertEqual(self.chain, self.stock)
+
+    def test_operation_lock_excludes_a_second_handoff(self):
+        operation_lock = self.handoff['operation_lock']
+        with operation_lock():
+            with self.assertRaises(BlockingIOError):
+                with operation_lock():
+                    self.fail('Concurrent Home handoff acquired the lock')
+        with operation_lock():
+            self.assertTrue(self.path(self.handoff['ARCHIVE']).is_dir())
+
+    def test_interrupted_plan_write_does_not_publish_pending(self):
+        plan = self.handoff['inspect']()
+        sync = self.handoff['durable']
+        self.handoff['durable'] = Mock(side_effect=OSError('interrupted before the plan was durable'))
+        with self.assertRaises(OSError):
+            self.handoff['apply'](self.handoff['fingerprint'](plan))
+        self.assertFalse(self.path(self.handoff['RECEIPT']).exists())
+        self.assertTrue(self.path(self.hook).is_symlink())
+        self.handoff['durable'] = sync
+        self.handoff['apply'](self.handoff['fingerprint'](plan))
+        self.assertEqual(self.chain, self.stock)
+
+    def test_retry_resumes_interrupted_cross_filesystem_copy(self):
+        plan = self.handoff['inspect']()
+        receipt = self.path(self.handoff['RECEIPT'])
+        receipt.parent.mkdir(mode=0o700)
+        receipt.mkdir(mode=0o700)
+        (receipt / 'plan.json').write_text(json.dumps(plan))
+        origin = self.path(self.service_path)
+        contents = origin.read_bytes()
+        index = list(plan['files']).index(self.service_path)
+        (receipt / f'.{index}.handoff-copy').write_bytes(contents[:4])
+        rename = Path.rename
+
+        def across_filesystems(path, target):
+            if path == origin:
+                raise OSError(errno.EXDEV, 'cross-device link')
+            return rename(path, target)
+
+        with patch.object(Path, 'rename', across_filesystems):
+            self.assertTrue(self.handoff['recover']())
+        self.assertFalse(origin.exists())
+        archive, = receipt.parent.glob('complete-*')
+        self.assertEqual((archive / str(index)).read_bytes(), contents)
+        self.assertEqual(self.chain, self.stock)
+
+    def test_retry_discards_incomplete_copy_when_restoring_live_bind(self):
+        plan = self.handoff['inspect']()
+        receipt = self.path(self.handoff['RECEIPT'])
+        receipt.parent.mkdir(mode=0o700)
+        receipt.mkdir(mode=0o700)
+        (receipt / 'plan.json').write_text(json.dumps(plan))
+        origin = self.path(self.service_path)
+        contents = origin.read_bytes()
+        index = list(plan['files']).index(self.service_path)
+        (receipt / f'.{index}.handoff-copy').write_bytes(contents[:4])
+        self.handoff['mountinfo'] = lambda: [
+            (['10', '1', '7:2', '/source', self.home, 'rw'], ['ext4', '/dev/test', 'rw']),
+        ]
+        self.assertFalse(self.handoff['recover']())
+        self.assertFalse(receipt.exists())
+        self.assertEqual(origin.read_bytes(), contents)
+        self.assertEqual(self.chain, self.stock + [self.other])
+
+    def test_packaged_legacy_home_hook_delegates_mount_to_verified_helper(self):
+        work = '/var/lib/luma-home'
+        hook = '/var/lib/webosbrew/init.d/64-luma-home'
+        source = '/media/developer/apps/usr/palm/applications/com.ecklf.luma/luma'
+        script = '#!/bin/sh\nexec /var/lib/luma-home/luma-helper home apply\n'
+        helper = 'verified native helper'
+        launcher = 'verified native launcher'
+        self.chain = self.stock
+        self.path(self.hook).unlink()
+        self.file(source, launcher)
+        self.file(work + '/home.sh', script)
+        self.file(work + '/luma-helper', helper)
+        self.file(work + '/lock', '')
+        self.file(work + '/state.json', json.dumps({
+            'appDir': source.rsplit('/', 1)[0], 'enabled': True, 'method': 'executable',
+        }))
+        self.path(hook).symlink_to(work + '/home.sh')
+        self.handoff['mount_source'] = lambda: (source, [], [], 1, 1)
+        self.handoff.update(
+            LEGACY_LUMA_SCRIPT=hashlib.sha256(script.encode()).hexdigest(),
+            LEGACY_LUMA_HELPER=hashlib.sha256(helper.encode()).hexdigest(),
+            LEGACY_LUMA_LAUNCHERS={hashlib.sha256(launcher.encode()).hexdigest()},
+        )
+        plan = self.handoff['inspect']()
+        self.assertEqual(set(plan['files']), {work, hook})
+
+        self.file(work + '/luma-helper', 'different helper')
+        with self.assertRaises(ValueError):
+            self.handoff['apply'](self.handoff['fingerprint'](plan))
+        self.assertTrue(self.path(hook).is_symlink())
         self.assertEqual(self.chain, self.stock)
 
     def test_unrelated_root_install_is_untouched(self):
