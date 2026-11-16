@@ -266,15 +266,20 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
         if pending:
             raise UserError('Previous operation is unresolved. Run cytv status; retain recovery state before retrying.')
         from .system_updater_replace import REPLACEMENT_SOURCES, program
+        failure='System updater setup was not confirmed. Keep recovery state and run cytv status.'
         try:
             source=program(self.payload.resolve()/'system-updater')
             python=self._python(ROOT_STATE)
             reply=json.loads(self.remote.run(self._python_command([python,'-I','-B','-']),data=source.encode(),timeout=600))
-            if not isinstance(reply,dict) or reply.get('installed') is not True or reply.get('version') not in REPLACEMENT_SOURCES or not all(reply.get(k) is True for k in ('root_unchanged','home_unchanged','profile_storage_untouched')):
-                raise ValueError('Unconfirmed System replacement')
-            return reply
         except Exception:
-            raise UserError('System updater setup was not confirmed. Keep recovery state and run cytv status.') from None
+            raise UserError(failure) from None
+        if reply=={'reason':'stock-home-required'}:
+            raise UserError('Choose Return to LG Home in the installer before replacing System Updater, then retry.',
+                            reason_code='controls-unverified')
+        version=reply.get('version') if isinstance(reply,dict) else None
+        if not isinstance(version,str) or version not in REPLACEMENT_SOURCES or reply.get('installed') is not True or not all(reply.get(k) is True for k in ('root_unchanged','home_unchanged','profile_storage_untouched')):
+            raise UserError(failure)
+        return reply
 
     def configure_firmware_access(self, enabled=True, repair=False):
         if self.profile['edition']!='root' or not self.remote.root:

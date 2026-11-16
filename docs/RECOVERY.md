@@ -476,8 +476,11 @@ place. This prepares the TV for the signed Root update format that installs
 and rolls back the screensaver together with the other Root components.
 Earlier supported source versions 1.1.0 and 1.1.1 are also eligible.
 
-After any current update or rollback has completed, use the same trusted Root
-connection and the complete matching installer from [GitHub Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases):
+After any current update or rollback has completed, choose **Return to LG Home**
+in the installer if Clean Your TV is active as Home. From the command line, use
+`cytv restore --edition root` for that step. Then use the same trusted Root
+connection and the complete matching installer from
+[GitHub Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases):
 
 ```sh
 cytv replace-system-updater --edition root
