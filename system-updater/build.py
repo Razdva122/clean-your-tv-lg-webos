@@ -13,7 +13,7 @@ from cytv import package
 
 SERVICE='com.cleanyourtv.system.updater.service'
 APP='com.cleanyourtv.system.updater'
-VERSION='1.2.9'
+VERSION='1.2.10'
 APPS={'home':'com.gathin.tvhome','helper':'com.local.nativehome','updater':'com.cleanyourtv.updater','root':'com.cleanyourtv.root.preview','root-updater':'com.cleanyourtv.root.updater'}
 
 def digest(raw):return hashlib.sha256(raw).hexdigest()
@@ -131,8 +131,9 @@ def release_set(payload,edition,release,local=True,notes='Computer-provisioned b
         if local:item.update(local=True,files=files,absent=[])
         else:item['url']='https://github.com/Razdva122/clean-your-tv-lg-webos/releases/download/'+release+'/root-infrastructure_'+item['version']+('_720p' if graphics=='1280x720' and raw!=infrastructure(payload)[0] else '')+'.tar.gz'
         components.append(item)
-    manifest={'schema':1,'edition':edition,'release':release,'supervisor':1,'notes':notes,'components':components}
-    if edition=='root' and not local:manifest['minimumSupervisorVersion']='1.1.1'
+    companion = not local and edition == 'root' and 'usr/palm/applications/com.cleanyourtv.root.preview/screensaver-companion/manifest.json' in package.data_files(raws['root'])
+    manifest={'schema':1,'edition':edition,'release':release,'supervisor':2 if companion else 1,'notes':notes,'components':components}
+    if edition=='root' and not local:manifest['minimumSupervisorVersion']=VERSION if companion else '1.1.1'
     return manifest,raws
 
 def prepare_baseline(payload,edition,output,release=None,graphics="1920x1080"):

@@ -2793,6 +2793,10 @@
       startOptional(function () {
         return HomeWeather.start();
       });
+    if (window.HomeScreensaver)
+      startOptional(function () {
+        return HomeScreensaver.start();
+      });
     if (window.CYTVInstallSettings)
       startOptional(function () {
         return CYTVInstallSettings.listen(function () {

@@ -259,6 +259,9 @@ class Device:
             if appinfo.get('resolution','1920x1080')!=expected:raise ValueError('Package graphics variant mismatch')
         main=appinfo.get('main')
         if not isinstance(main,str) or prefix+main not in files:raise ValueError('Missing package entry point')
+        if c['name'] == 'root':
+            from .support.package import companion_files
+            companion_files(files)
         return {name:digest(value) for name,value in files.items()}
 
     def prepare(self,candidate,prior):
@@ -387,6 +390,42 @@ class Device:
         # Persist terminal proof before any post-install restoration can fail.
         on_terminal({'success':True,'event':result['event']})
         self.restore_mutable();self.repair_registrations()
+
+    def screensaver_pending(self, tx):
+        from .support.package import companion_outcome_pending
+        return tx['edition'] == 'root' and companion_outcome_pending(self.store, tx)
+
+    def screensaver_components(self, tx, rollback):
+        from .support.package import root_companion
+
+        def companion(release):
+            self._verify_release(release, 'root')
+            component = next(item for item in release['components'] if item['name'] == 'root')
+            return root_companion(self.cache_bytes(component), component)
+
+        candidate, prior = companion(tx['candidate']), companion(tx['prior'])
+        return (prior, candidate) if rollback else (candidate, prior)
+
+    def sync_screensaver(self, tx, rollback):
+        if tx['edition'] != 'root':
+            return
+        from .support.package import companion_journal_name, sync_companion
+        target, prior = self.screensaver_components(tx, rollback)
+        name = companion_journal_name(tx, rollback)
+
+        def journal(value=None):
+            if value is None:
+                return self.store.read(name)
+            self.store.write(name, value)
+
+        sync_companion(self.installed_root, target, prior, journal, self.state, uid=self.uid)
+
+    def verify_screensaver(self, tx, rollback):
+        if tx['edition'] != 'root':
+            return True
+        from .support.package import installed_companion
+        target, prior = self.screensaver_components(tx, rollback)
+        return (target is None and prior is None) or installed_companion(self.installed_root, target, self.uid)
 
     def verify_installed(self,c):
         hashes=self.inspect(self.cache_bytes(c),c)

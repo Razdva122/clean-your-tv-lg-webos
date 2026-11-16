@@ -17,11 +17,11 @@ def tar(files):
         for name,raw in files.items():
             info=tarfile.TarInfo(name);info.size=len(raw);info.mode=0o600;archive.addfile(info,io.BytesIO(raw))
     return output.getvalue()
-def ipk(app='com.gathin.tvhome',foreign=False):
+def ipk(app='com.gathin.tvhome',foreign=False,version='1.0.0'):
     prefix='usr/palm/applications/'+app+'/'
-    files={prefix+'appinfo.json':json.dumps({'id':app,'version':'1.0.0','type':'web','main':'index.html','systemUpdateProtocol':1}).encode(),prefix+'index.html':b'Home','usr/palm/packages/'+app+'/packageinfo.json':json.dumps({'id':app,'app':app,'version':'1.0.0','services':[]}).encode()}
+    files={prefix+'appinfo.json':json.dumps({'id':app,'version':version,'type':'web','main':'index.html','systemUpdateProtocol':1}).encode(),prefix+'index.html':b'Home','usr/palm/packages/'+app+'/packageinfo.json':json.dumps({'id':app,'app':app,'version':version,'services':[]}).encode()}
     if foreign:files['etc/passwd']=b'bad'
-    parts={'debian-binary':b'2.0\n','control.tar.gz':tar({'control':('Package: '+app+'\nVersion: 1.0.0\n').encode()}),'data.tar.gz':tar(files)};out=b'!<arch>\n'
+    parts={'debian-binary':b'2.0\n','control.tar.gz':tar({'control':('Package: '+app+'\nVersion: '+version+'\n').encode()}),'data.tar.gz':tar(files)};out=b'!<arch>\n'
     for name,data in parts.items():out+=(name+'/').ljust(16).encode()+b'0           0     0     100644  '+str(len(data)).ljust(10).encode()+b'`\n'+data+(b'\n' if len(data)%2 else b'')
     return out
 
@@ -413,7 +413,7 @@ class RootRollbackDataTests(DeviceBase):
         for c,name in zip(prior['components'],('root','root-updater','root-infrastructure')):
             c.update(name=name,application=self.mod.IDENTITIES[name],kind='infrastructure' if name=='root-infrastructure' else 'ipk')
             if c['kind']=='ipk':
-                raw=ipk(c['application']);c.update(sha256=digest(raw),size=len(raw))
+                raw=ipk(c['application'], version=c['version']);c.update(sha256=digest(raw),size=len(raw))
                 (self.root/'state/cache'/c['sha256']).write_bytes(raw)
         candidate=copy.deepcopy(prior);candidate['release']='v1.1.0'
         for c in candidate['components']:c['version']='1.1.0'
@@ -429,6 +429,12 @@ class RootRollbackDataTests(DeviceBase):
         self.device.require_components=lambda:self.mod.Device.require_components(self.device)
         self.device.integrity=lambda **kw:None;self.device.routing_safe=lambda:True;self.device.now=lambda:1000;self.device.launch=lambda edition:None
         self.device.snapshot_mutable=lambda:None;self.device.restore_mutable=lambda:None;self.device.repair_registrations=lambda:None
+        self.device._verify_release=lambda value, edition: value
+        failed_root=candidate['components'][0]
+        raw=ipk(failed_root['application'],version=failed_root['version'])
+        failed_root.update(sha256=digest(raw),size=len(raw))
+        (self.root/'state/cache'/failed_root['sha256']).write_bytes(raw)
+        self.store.write('transaction',tx)
         actual=self.device.verify_installed
         self.device.verify_installed=lambda c:actual(c) if c['name']=='root' else True
         (self.root/'installed/usr/palm/applications/com.cleanyourtv.root.preview/appinfo.json').unlink()

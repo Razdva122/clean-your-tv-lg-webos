@@ -269,13 +269,16 @@ class DeployTests(unittest.TestCase):
             from package_data import read_verified as package_reader
             def observe(app, path, **kwargs):
                 kwargs['on_ready']()
-                with tarfile.open(fileobj=io.BytesIO(ar_members(package.read_bytes())['data.tar.gz'])) as archive:
+                with tarfile.open(fileobj=io.BytesIO(ar_members(Path(path).read_bytes())['data.tar.gz'])) as archive:
                     for member in archive:
                         if member.isdir():continue
                         target = installed / member.name
                         target.parent.mkdir(parents=True, exist_ok=True)
                         target.write_bytes(archive.extractfile(member).read())
-                return {'completed':True}
+                return {'completed':True,'event':{'id':app,'statusValue':30,'details':{
+                    'packageId': app, 'client':'com.webos.lunasend-123',
+                    'ipkFile':'/var/lib/clean-your-tv-installer/cytv-root-install-test/package.ipk',
+                }}}
             with patch.object(deploy, 'STATE', root / 'state'), patch.object(deploy, 'INSTALLED', installed), patch('package_data.read_verified',side_effect=lambda path,**kw: package_reader(path,**{**kw,'uid':__import__('os').getuid()})):
                 result = deploy.install(bundle, run=lambda args: calls.append(args[-1]), observe=observe)
             self.assertTrue(result['returnValue'])

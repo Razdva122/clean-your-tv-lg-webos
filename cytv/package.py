@@ -9,6 +9,8 @@ from pathlib import Path, PurePosixPath
 import tarfile
 
 ROOT_APP = 'com.cleanyourtv.root.preview'
+SCREENSAVER_APP = 'com.cleanyourtv.screensaver'
+SCREENSAVER_IPK = 'screensaver.ipk'
 # webOS pkgverifier rejects epoch-zero tar dates. Fixed 2024-01-01 keeps builds reproducible.
 IPK_MTIME = 1704067200
 
@@ -181,6 +183,36 @@ def personalize_root(bundle, inventory):
     (bundle / 'bundle.json').write_text(json.dumps(manifest), encoding='utf-8')
 
 
+def screensaver_payload(root, manifest):
+    """Read and validate the optional companion from an authenticated payload."""
+    name = manifest.get('screensaver')
+    version = manifest.get('screensaver_version')
+    if 'screensaver' not in manifest and 'screensaver_version' not in manifest:
+        return None
+    if name != SCREENSAVER_IPK or not isinstance(version, str) or not re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+', version):
+        raise ValueError('Invalid embedded screensaver declaration')
+    path = Path(root) / name
+    if path.is_symlink():
+        raise ValueError('Indirect embedded screensaver package')
+    raw = path.read_bytes()
+    if hashlib.sha256(raw).hexdigest() != manifest['files'].get(name):
+        raise ValueError('Embedded screensaver package integrity mismatch')
+    files = data_files(raw)
+    app = 'usr/palm/applications/' + SCREENSAVER_APP + '/'
+    package = 'usr/palm/packages/' + SCREENSAVER_APP + '/packageinfo.json'
+    if not all(entry == package or entry.startswith(app) for entry in files):
+        raise ValueError('Unexpected embedded screensaver paths')
+    info = json.loads(files.get(app + 'appinfo.json', b'null'))
+    metadata = json.loads(files.get(package, b'null'))
+    if (not isinstance(info, dict) or info.get('id') != SCREENSAVER_APP or info.get('version') != version
+            or info.get('type') != 'web' or info.get('defaultWindowType') != 'popup'
+            or info.get('visible') is not False or info.get('requiredACG')
+            or info.get('privilegedJail')
+            or metadata != {'id': SCREENSAVER_APP, 'app': SCREENSAVER_APP, 'version': version, 'services': []}):
+        raise ValueError('Embedded screensaver identity or version mismatch')
+    return raw, version
+
+
 def verify_payload(root):
     root = Path(root)
     manifest = json.loads((root / 'payload.json').read_text())
@@ -195,4 +227,5 @@ def verify_payload(root):
                 raise ValueError('POSIX script must use LF line endings: ' + name + ': ' + script)
     if not manifest['files']:
         raise ValueError('Empty embedded payload')
+    screensaver_payload(root, manifest)
     return manifest

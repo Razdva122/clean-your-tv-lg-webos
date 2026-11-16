@@ -265,12 +265,12 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
         pending=self.store.pending(self.profile)
         if pending:
             raise UserError('Previous operation is unresolved. Run cytv status; retain recovery state before retrying.')
-        from .system_updater_replace import program
+        from .system_updater_replace import REPLACEMENT_SOURCES, program
         try:
             source=program(self.payload.resolve()/'system-updater')
             python=self._python(ROOT_STATE)
             reply=json.loads(self.remote.run(self._python_command([python,'-I','-B','-']),data=source.encode(),timeout=600))
-            if not isinstance(reply,dict) or reply.get('installed') is not True or reply.get('version')!='1.2.9' or not all(reply.get(k) is True for k in ('root_unchanged','home_unchanged','profile_storage_untouched')):
+            if not isinstance(reply,dict) or reply.get('installed') is not True or reply.get('version') not in REPLACEMENT_SOURCES or not all(reply.get(k) is True for k in ('root_unchanged','home_unchanged','profile_storage_untouched')):
                 raise ValueError('Unconfirmed System replacement')
             return reply
         except Exception:
@@ -838,6 +838,9 @@ printf '%s' "$cytv_state"
             if hashlib.sha256(data).hexdigest() != self.manifest['files'][name]:
                 raise ValueError('Embedded payload integrity mismatch')
             bundles[slot] = data
+        companion = package.screensaver_payload(self.payload, self.manifest)
+        if companion:
+            bundles[package.SCREENSAVER_IPK] = companion[0]
         ramfs = storage.install(self.remote, bundles, self.progress, no_root_root_ssh=True)
         from .no_root_observer import inspect_root_ssh_storage
         inspect_root_ssh_storage(self, bundles, ramfs)
@@ -856,6 +859,8 @@ printf '%s' "$cytv_state"
             package.inventory_script(inventory)
         if reinstall not in (None, 'installed', 'removed') or (reinstall and self.profile['edition'] != 'root'):
             raise UserError('Invalid reinstallation request.')
+        companion = (package.screensaver_payload(self.payload, self.manifest)
+                     if self.profile['edition'] == 'no-root' else None)
         self.outcome.begin()
         self.select_graphics()
         if self.profile['edition']=='root':
@@ -871,23 +876,28 @@ printf '%s' "$cytv_state"
             no_root_connection=self.profile.get('connection') or 'developer-mode',
         )
         helper = (self.payload / self.manifest['helper']).read_bytes()
+        bundles = {'helper.ipk': helper, 'launcher.ipk': launcher}
+        versions = {HOME: self.manifest['home_version'], HELPER: self.manifest['helper_version']}
+        if companion:
+            archive, version = companion
+            bundles[package.SCREENSAVER_IPK] = archive
+            versions[package.SCREENSAVER_APP] = version
         expected = {}
-        for data in (helper, launcher):
+        for data in bundles.values():
             for name, content in package.data_files(data).items():
                 if '/state/' not in name:
                     expected[BASE.removesuffix('/usr/palm') + '/' + name] = hashlib.sha256(content).hexdigest()
         key_data = json.dumps({'key': ssap_key}).encode()
-        ids = [app['id'] for app in inventory['apps'] if app['id'] not in (HOME, HELPER, 'com.webos.app.home', package.ROOT_APP)]
+        ids = [app['id'] for app in inventory['apps'] if app['id'] not in (HOME, HELPER, 'com.webos.app.home', package.ROOT_APP, package.SCREENSAVER_APP)]
         apps_data = json.dumps(ids).encode()
         expected[HELPER_STATE + '/ssap-key.json'] = hashlib.sha256(key_data).hexdigest()
         expected[HELPER_STATE + '/apps.json'] = hashlib.sha256(apps_data).hexdigest()
         root_ssh = self.profile.get('connection') == 'root-ssh'
         handoff = bool(getattr(self, '_root_handoff', None))
-        ramfs = storage.install(self.remote, {'helper.ipk': helper, 'launcher.ipk': launcher}, self.progress,
+        ramfs = storage.install(self.remote, bundles, self.progress,
                                 root=root_ssh and handoff, no_root_root_ssh=root_ssh and not handoff)
         from . import no_root_observer
-        pending = no_root_observer.begin(self, 'install', {'helper.ipk': helper, 'launcher.ipk': launcher},
-            {HOME: self.manifest['home_version'], HELPER: self.manifest['helper_version']}, expected,
+        pending = no_root_observer.begin(self, 'install', bundles, versions, expected,
             {'ssap-key.json': key_data, 'apps.json': apps_data}, setup_activation=True, ramfs=ramfs)
         return self.continue_no_root(pending)
 
@@ -930,7 +940,10 @@ printf '%s' "$cytv_state"
             storage.install(self.remote, {str(path.relative_to(bundle)): path.read_bytes()
                             for path in bundle.rglob('*') if path.is_file()} |
                             {'updater/' + str(path.relative_to(updater)): path.read_bytes()
-                             for path in updater.rglob('*') if path.is_file()}, self.progress, root=True)
+                             for path in updater.rglob('*') if path.is_file()} |
+                            ({package.SCREENSAVER_IPK: (self.payload / package.SCREENSAVER_IPK).read_bytes()}
+                             if (self.payload / package.SCREENSAVER_IPK).is_file() else {}),
+                            self.progress, root=True)
             if reinstall:
                 self.prepare_root_reinstall()
                 self.preflight(install=True, home_interfaces=True)

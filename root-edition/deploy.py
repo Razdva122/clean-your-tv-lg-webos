@@ -207,6 +207,26 @@ def write_binding(path, data, mode=0o600):
         if os.path.lexists(temporary): temporary.unlink()
 
 
+def install_screensaver(bundle, release, observe=observed_install):
+    from updater.package import root_companion, sync_companion
+    root = Path(bundle).resolve()
+    manifest = json.loads(checked_file(root, 'bundle.json'))
+    raw = checked_file(root, manifest['package'])
+    if hashlib.sha256(raw).hexdigest() != manifest['files'][manifest['package']]:
+        raise ValueError('Root bundle changed before companion installation')
+    selected = root_companion(raw, {'version': release['version'],
+                                    'sha256': manifest['files'][manifest['package']], 'size': len(raw)})
+    if selected is None:
+        return
+    from updater.store import Store
+    store = Store(STATE, uid=os.geteuid())
+    def journal(value=None):
+        if value is None:
+            return store.read('screensaver-install')
+        store.write('screensaver-install', value)
+    sync_companion(INSTALLED, selected, None, journal, STATE, uid=store.uid, install=observe)
+
+
 def install(bundle, run=command, observe=observed_install, migrate=False, experimental_c1_gate=False, _experimental_admission=None):
     if sys.version_info < (3, 9):
         raise RuntimeError('Root requires TV Python 3.9+')
@@ -224,6 +244,13 @@ def install(bundle, run=command, observe=observed_install, migrate=False, experi
         from provision import require_home_interfaces
         require_home_interfaces()
         manifest = verify_bundle(bundle)
+    from updater.package import root_companion
+    root = Path(bundle).resolve()
+    release = json.loads(checked_file(root, 'release.json'))
+    raw = checked_file(root, manifest['package'])
+    root_companion(raw, {'version': release['version'], 'size': len(raw),
+                         'sha256': manifest['files'][manifest['package']]})
+    del raw
     # Validate and retain the exact migration bytes before any install mutation.
     prepared = migration_source() if migrate else None
     STATE.mkdir(mode=0o700, parents=False)
@@ -264,6 +291,7 @@ def install(bundle, run=command, observe=observed_install, migrate=False, experi
     release = json.loads((Path(bundle) / 'release.json').read_text())
     verify_payload(release)
     write_stage('payload-verified')
+    install_screensaver(bundle, release, observe)
     if migrate:
         migrate_packaged_home(prepared)
     for step in ('apply', 'refresh', 'finalize'):

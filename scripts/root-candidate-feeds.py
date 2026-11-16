@@ -109,7 +109,7 @@ def validate_tv_bundle(files,metadata):
     expected.update(schema=1,workflow=DIRECT_WORKFLOW,repository=REPO)
     if provenance!=expected:raise ValueError('Direct artifact provenance mismatch')
     if (manifest.get('schema')!=1 or manifest.get('edition')!='root' or manifest.get('release')!=metadata['release']
-            or manifest.get('supervisor')!=1 or manifest.get('minimumSupervisorVersion')!='1.1.1'
+            or manifest.get('supervisor') not in (1, 2) or manifest.get('minimumSupervisorVersion')!=('1.2.10' if manifest.get('supervisor')==2 else '1.1.1')
             or set(manifest)!={'schema','edition','release','supervisor','minimumSupervisorVersion','notes','components'}):raise ValueError('Invalid direct Root manifest')
     components=manifest['components']
     if not isinstance(components,list) or len(components)!=3 or {c.get('name') for c in components}!={'root','root-updater','root-infrastructure'}:raise ValueError('Incomplete direct TV component set')
@@ -130,7 +130,11 @@ def validate_tv_bundle(files,metadata):
             parser.inspect_package(raw,c)
             members=parser.members(raw);data=parser.archive(members['data.tar.gz'])
             if set(parser.archive(members['control.tar.gz']))!={'control'}:raise ValueError('Unexpected package scripts')
-            if name=='root':root_files=data
+            if name=='root':
+                root_files=data
+                companion=parser.companion_files(root_files)
+                if manifest['supervisor'] != (2 if companion else 1):
+                    raise ValueError('Root screensaver manifest requires a compatible System Updater')
         else:
             infra=parser.archive(raw)
             if set(infra)!=infrastructure_paths():raise ValueError('Incomplete or foreign infrastructure inventory')

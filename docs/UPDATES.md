@@ -171,4 +171,14 @@ In 1.6.0, installer builds contain both HD/FHD packages. New or explicitly migra
 
 ## System support
 
+### Update Root from v1.21.0
+
+If System Updater 1.2.9 is installed, first run the
+[supervisor replacement](RECOVERY.md#replace-the-root-system-updater-candidate)
+with the installer containing System Updater 1.2.10. Then open **Home Settings
+→ Software updates** and choose **Update all**. Use **Rollback** on the same
+screen to return to the previous Root release after an update. The replacement
+keeps the installed Root packages, profile and Home choice in place until you
+start the update.
+
 v1.15.0 packages fresh System Updater 1.2.8 / protocol 1 because its embedded shared Luna support changes. Existing supervisors stay pinned; ordinary component OTA does not replace them. Explicit supported replacement still admits only installed 1.1.0/1.1.1 and verifies the exact new bundle and readback. Installed 1.1.2/1.2.x are not newly admitted. See [packaging and acceptance](RELEASE-1.15.0.md).

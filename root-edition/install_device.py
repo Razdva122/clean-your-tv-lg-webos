@@ -69,6 +69,10 @@ def current_root(root=ROOT, updater=UPDATER, installed=INSTALLED, uid=0):
     raw=safe_bytes(device.cached(descriptor),uid=uid)
     verify_payload(installed,inspect_package(raw,descriptor),uid=uid)
     verify_package_modes(raw,installed)
+    from updater.package import root_companion, installed_companion
+    companion = root_companion(raw, descriptor)
+    if companion and not installed_companion(installed, companion, uid):
+        raise ValueError('Installed Root screensaver does not match its package')
     tx=store.read('transaction')
     if tx is not None:
         if tx.get('phase') not in ('complete','rolled-back','aborted') or tx.get('homeResumePhase')!=tx.get('phase'):
@@ -285,7 +289,9 @@ class LocalDevice:
                 if options['migrate'] and read_journal(ROOT/'personalization.json') is None:raise ValueError('migration_snapshot_requires_recovery')
                 self.validate_root_driver()
                 if options['migrate']:_capture_migrated_baseline(root)
-                deploy.verify_payload(json.loads(safe_bytes(root/'release.json')))
+                release=json.loads(safe_bytes(root/'release.json'))
+                deploy.verify_payload(release)
+                deploy.install_screensaver(root, release)
                 steps=['refresh','finalize']
                 if read_journal(ROOT/'recovery-provision.json') is None:
                     steps.insert(0,'resume_pending' if read_journal(ROOT/'ls2-provision-snapshot.json') is not None else 'apply')
@@ -574,8 +580,10 @@ class LocalDevice:
     @staticmethod
     def package_paths(app):
         service=app+'.renewal' if app=='com.gathin.tvhome' else app+'.service'
-        return [INSTALLED/'usr/palm'/folder/name for folder,name in (
-            ('applications',app),('packages',app),('services',service))]
+        paths = [('applications', app), ('packages', app)]
+        if app != 'com.cleanyourtv.screensaver':
+            paths.append(('services', service))
+        return [INSTALLED/'usr/palm'/folder/name for folder,name in paths]
 
     def absent(self, app, terminal=None):
         paths=self.package_paths(app)
@@ -1388,7 +1396,7 @@ class LocalDevice:
                 if not isinstance(devices,list) or any(d.get('id')==home or d.get('appId')==home for d in devices):raise ValueError('legacy_input_registration_remains')
             self.rpc('com.webos.applicationManager/launch',{'id':'com.webos.app.home'})
         step('restore-home',restore_home);step('legacy-permissions',lambda:self.cleanup('legacy_permissions'))
-        for app in ('com.cleanyourtv.root.updater',legacy,helper,home,supervisor):
+        for app in ('com.cleanyourtv.root.updater',legacy,helper,home,supervisor,'com.cleanyourtv.screensaver'):
             previous=record['removals'].get(app)
             if previous is not None:
                 if previous.get('state')=='submitted':raise ValueError('package_removal_terminal_unknown')
@@ -1424,7 +1432,7 @@ class LocalDevice:
         return {'removed':True,'applications_services_startup_removed':True,'recovery_retained':str(ROOT),'updater_archive':record.get('updater_archive'),'system_updater_archive':record['system_updater_archive'] if record['system_needed'] else None}
 
     def verify_removed(self):
-        apps=(APP,'com.cleanyourtv.root.updater','com.cleanyourtv.updater','com.gathin.tvhome','com.local.nativehome','com.cleanyourtv.system.updater')
+        apps=(APP,'com.cleanyourtv.root.updater','com.cleanyourtv.updater','com.gathin.tvhome','com.local.nativehome','com.cleanyourtv.system.updater','com.cleanyourtv.screensaver')
         if self.apps().intersection(apps): raise ValueError('project_apps_remain')
         for app in apps: self.absent(app)
         paths=['/var/lib/webosbrew/init.d/'+n for n in ('50-clean-your-tv-root','51-clean-your-tv-root-updater','52-clean-your-tv-system-updater')]

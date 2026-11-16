@@ -7,11 +7,17 @@ from pathlib import Path
 import zlib
 
 
+REPLACEMENT_SOURCES = {
+    '1.2.9': ('1.1.0', '1.1.1'),
+    '1.2.10': ('1.1.0', '1.1.1', '1.2.9'),
+}
+
+
 def support_source():
     from .system_rollback_recovery import SCRIPT
     tree=ast.parse(SCRIPT)
     names={'encode','digest','read','original_code','load_sources'}
-    return 'import hashlib,json,os,re,stat,sys\nfrom pathlib import Path,PurePosixPath\n'+ '\n'.join(ast.get_source_segment(SCRIPT,n) for n in tree.body if isinstance(n,ast.FunctionDef) and n.name in names)+'\n'
+    return 'import hashlib,json,os,re,stat,sys\nfrom pathlib import Path,PurePosixPath\n'+ f'REPLACEMENT_SOURCES = {REPLACEMENT_SOURCES!r}\n' + '\n'.join(ast.get_source_segment(SCRIPT,n) for n in tree.body if isinstance(n,ast.FunctionDef) and n.name in names)+'\n'
 
 
 SCRIPT=r'''
@@ -138,10 +144,10 @@ def completed_evidence(job,setup,manager,store,system,terminal_removal):
     raw=setup.safe(bundle/'system-updater.ipk')
     info=json.loads(setup.package_files(raw)['usr/palm/applications/'+APP+'/appinfo.json'])
     binding=json.loads(read(system/'bootstrap-bundle.json'))
-    if (info.get('id')!=APP or info.get('version')!='1.1.1'
-            or manager.io.owner_identity(APP)['version']!='1.1.1'
+    live_version=manager.io.owner_identity(APP)['version']
+    if (info.get('id')!=APP or info.get('version')!=live_version
             or binding['bundle']!=manifest or binding['package']!={'sha256':digest(raw),'size':len(raw)}
-            or original_code(system)!={n:h for n,h in manifest['files'].items() if n not in ('system-updater.ipk','setup-system-updater.py')}):raise ValueError('Historical replacement does not authenticate the live 1.1.1 owner')
+            or original_code(system)!={n:h for n,h in manifest['files'].items() if n not in ('system-updater.ipk','setup-system-updater.py')}):raise ValueError('Historical replacement does not authenticate the live System Updater owner')
     target=root/'completed-replacement.json'
     return target
 
@@ -152,7 +158,8 @@ def replace(bundle,setup,cleanup,manager,store,ownership,remove,terminal_removal
     bundle_sha=digest(read(bundle/'bundle.json'))
     files=setup.package_files(setup.safe(bundle/'system-updater.ipk'))
     version=json.loads(files['usr/palm/applications/'+APP+'/appinfo.json'])
-    if version.get('id')!=APP or version.get('version')!='1.2.9':raise ValueError('This replacement requires the fixed System Updater 1.2.9 bundle')
+    target_version=version.get('version')
+    if version.get('id')!=APP or target_version not in REPLACEMENT_SOURCES:raise ValueError('This replacement requires a supported System Updater bundle')
     job=store.read('system-replacement');lease=ownership.status();retired=None
     historical=job is not None and job.get('stage')=='complete' and job.get('bundle_sha256')!=bundle_sha
     if job is not None:
@@ -175,7 +182,7 @@ def replace(bundle,setup,cleanup,manager,store,ownership,remove,terminal_removal
     if job is None:
         # Inspect every proof before reserving a new operation or disabling code.
         old=old_proof(manager,system)
-        if manager.io.owner_identity(APP)['version'] not in ('1.1.0','1.1.1'):raise ValueError('Only System Updater 1.1.0 or 1.1.1 can use this replacement')
+        if manager.io.owner_identity(APP)['version'] not in REPLACEMENT_SOURCES[target_version]:raise ValueError('Installed System Updater is not supported by this replacement bundle')
         cleanup.operate('status',state=system)
         resume=lease['id'] if lease and not lease['terminal'] and lease['owner']=='system-replace' and lease['journal']=='system-replacement.json' and lease['stage']=='reserved' else None
     def eligible():
@@ -276,9 +283,9 @@ def replace(bundle,setup,cleanup,manager,store,ownership,remove,terminal_removal
         archive_proof(archive,job)
         if original_code(system)!={n:h for n,h in manifest['files'].items() if n not in ('system-updater.ipk','setup-system-updater.py')}:raise ValueError('Fixed supervisor code/pins mismatch')
         new=type(manager.io)(type(manager.store)(system,uid=manager.io.uid),code=system/'code');new.integrity(enforce=False);new.require_components();new._root_integrity()
-        if new.owner_identity(APP)['version']!='1.2.9':raise ValueError('Fixed System package readback mismatch')
+        if new.owner_identity(APP)['version']!=target_version:raise ValueError('Fixed System package readback mismatch')
         job['stage']='complete';store.write('system-replacement',job);ownership.stage(record,'complete',terminal=True)
-        return {'installed':True,'version':'1.2.9','root_unchanged':True,'home_unchanged':True,'saved_profile_unchanged':True,'profile_storage_untouched':True,'archive':job['archive']}
+        return {'installed':True,'version':target_version,'root_unchanged':True,'home_unchanged':True,'saved_profile_unchanged':True,'profile_storage_untouched':True,'archive':job['archive']}
 
 def entry():
     if os.geteuid()!=0:raise PermissionError('Root replacement required')

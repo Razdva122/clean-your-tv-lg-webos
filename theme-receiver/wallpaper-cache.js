@@ -67,7 +67,7 @@ exports.create = function (options) {
     });
     Object.keys(s.files).forEach(function (q) {
       try {
-        fs.unlinkSync(path.join(s.dir, q + '.mp4'));
+        fs.unlinkSync(path.join(s.dir, s.files[q].filename));
       } catch (_) {}
     });
     try {
@@ -113,17 +113,37 @@ exports.create = function (options) {
       p.variants.forEach(function (v) {
         if (
           !v ||
-          ['4k', '1080p'].indexOf(v.quality) < 0 ||
+          ['4k', '1080p', 'photo'].indexOf(v.quality) < 0 ||
           files[v.quality] ||
+          (v.quality === 'photo'
+            ? ['image/jpeg', 'image/png'].indexOf(v.mediaType) < 0
+            : v.mediaType !== undefined && v.mediaType !== 'video/mp4') ||
           typeof v.size !== 'number' ||
+          !isFinite(v.size) ||
           v.size % 1 ||
           v.size < 1 ||
-          v.size > (v.quality === '4k' ? 12582912 : 4194304) ||
+          v.size >
+            (v.quality === 'photo'
+              ? 2097152
+              : v.quality === '4k'
+                ? 12582912
+                : 4194304) ||
           typeof v.sha256 !== 'string' ||
           !/^[a-f0-9]{64}$/.test(v.sha256)
         )
           throw error('invalid variant');
-        files[v.quality] = { size: v.size, sha256: v.sha256, offset: 0 };
+        files[v.quality] = {
+          size: v.size,
+          sha256: v.sha256,
+          offset: 0,
+          mediaType: v.quality === 'photo' ? v.mediaType : 'video/mp4',
+          filename:
+            v.quality === 'photo'
+              ? v.mediaType === 'image/jpeg'
+                ? 'photo.jpg'
+                : 'photo.png'
+              : v.quality + '.mp4'
+        };
         total += v.size;
       });
       if (total > 16777216) throw error('too large');
@@ -177,20 +197,22 @@ exports.create = function (options) {
               if (!entry.isDirectory() || entry.isSymbolicLink())
                 throw error('unsafe directory');
               var stale = Date.now() - entry.mtime.getTime() >= ttl;
-              ['4k', '1080p'].forEach(function (q) {
-                var name = path.join(dir, q + '.mp4'),
-                  file;
-                try {
-                  file = fs.lstatSync(name);
-                } catch (e) {
-                  if (e.code === 'ENOENT') return;
-                  throw e;
+              ['4k.mp4', '1080p.mp4', 'photo.jpg', 'photo.png'].forEach(
+                function (filename) {
+                  var name = path.join(dir, filename),
+                    file;
+                  try {
+                    file = fs.lstatSync(name);
+                  } catch (e) {
+                    if (e.code === 'ENOENT') return;
+                    throw e;
+                  }
+                  if (!file.isFile() || file.isSymbolicLink())
+                    throw error('unsafe file');
+                  if (stale) fs.unlinkSync(name);
+                  else total += file.size;
                 }
-                if (!file.isFile() || file.isSymbolicLink())
-                  throw error('unsafe file');
-                if (stale) fs.unlinkSync(name);
-                else total += file.size;
-              });
+              );
               if (stale)
                 try {
                   fs.rmdirSync(dir);
@@ -212,7 +234,11 @@ exports.create = function (options) {
             fs.mkdirSync(s.dir, 448);
             try {
               Object.keys(files).forEach(function (q) {
-                var fd = fs.openSync(path.join(s.dir, q + '.mp4'), 'wx', 384);
+                var fd = fs.openSync(
+                  path.join(s.dir, files[q].filename),
+                  'wx',
+                  384
+                );
                 fs.closeSync(fd);
               });
               if (typeof options.hold === 'function')
@@ -235,7 +261,9 @@ exports.create = function (options) {
   }
   function write(p) {
     var s = current(p),
-      f = s.files[p.quality];
+      f =
+        Object.prototype.hasOwnProperty.call(s.files, p.quality) &&
+        s.files[p.quality];
     if (
       s.server ||
       !f ||
@@ -255,7 +283,7 @@ exports.create = function (options) {
       bytes.length > f.size - f.offset
     )
       throw error('invalid chunk');
-    fs.appendFileSync(path.join(s.dir, p.quality + '.mp4'), bytes);
+    fs.appendFileSync(path.join(s.dir, f.filename), bytes);
     f.offset += bytes.length;
     touch(s);
     return { nextOffset: f.offset };
@@ -267,14 +295,21 @@ exports.create = function (options) {
       try {
         Object.keys(s.files).forEach(function (q) {
           var f = s.files[q];
+          var bytes = fs.readFileSync(path.join(s.dir, f.filename));
           if (
             f.offset !== f.size ||
-            crypto
-              .createHash('sha256')
-              .update(fs.readFileSync(path.join(s.dir, q + '.mp4')))
-              .digest('hex') !== f.sha256
+            crypto.createHash('sha256').update(bytes).digest('hex') !== f.sha256
           )
             throw error('hash mismatch');
+          // Check the declared photo container before publishing its MIME type.
+          // Image decoding/dimension checks remain with the uploader/renderer.
+          if (
+            q === 'photo' &&
+            (f.mediaType === 'image/png'
+              ? bytes.slice(0, 8).toString('hex') !== '89504e470d0a1a0a'
+              : bytes.slice(0, 3).toString('hex') !== 'ffd8ff')
+          )
+            throw error('invalid photo signature');
         });
       } catch (e) {
         remove(s);
@@ -298,7 +333,7 @@ exports.create = function (options) {
           )
             return end(403);
           var quality = Object.keys(s.files).filter(function (q) {
-            return req.url === '/' + token + '/' + q + '.mp4';
+            return req.url === '/' + token + '/' + s.files[q].filename;
           })[0];
           if (!quality) return end(404);
           var f = s.files[quality],
@@ -327,7 +362,7 @@ exports.create = function (options) {
             status = 206;
           }
           var headers = {
-            'Content-Type': 'video/mp4',
+            'Content-Type': f.mediaType,
             'Content-Length': last - start + 1,
             'Accept-Ranges': 'bytes',
             'Cache-Control': 'no-store',
@@ -337,12 +372,15 @@ exports.create = function (options) {
           if (status === 206)
             headers['Content-Range'] =
               'bytes ' + start + '-' + last + '/' + f.size;
+          // Only an authenticated fixed route with a valid range renews the
+          // lease; the popup may retain photo bytes with bounded HEAD probes.
+          touch(s);
           res.writeHead(status, headers);
           if (req.method === 'HEAD') {
             res.end();
             return;
           }
-          var stream = fs.createReadStream(path.join(s.dir, quality + '.mp4'), {
+          var stream = fs.createReadStream(path.join(s.dir, f.filename), {
             start: start,
             end: last
           });
@@ -382,8 +420,7 @@ exports.create = function (options) {
               '/' +
               token +
               '/' +
-              q +
-              '.mp4';
+              s.files[q].filename;
           });
           touch(s);
           resolve({ handles: handles });

@@ -28,6 +28,8 @@ PYPIN
 if [[ "$baseline" != published ]]; then
 # Stage from a clean set of public sources; never package local runtime state.
 cp native/app/*.js native/app/*.json native/app/*.png build/native-app/
+mkdir -p build/native-app/screensaver
+cp screensaver/{controller,policy,transport,media,settings}.js build/native-app/screensaver/
 cp -R native/app/vendor build/native-app/
 cp native/service/*.js native/service/*.json build/native-service/
 cp native/service/app-inventory.js build/native-app/
@@ -48,6 +50,7 @@ helper=$(python3 -c 'import json; a=json.load(open("build/native-app/appinfo.jso
 python3 scripts/fix-package-data.py "$helper"
 fi
 python3 scripts/tv_web_build.py --input launcher --output build/home-app --resolution "$graphics_resolution"
+cp screensaver/settings.js build/home-app/screensaver-config.js
 # Stage only public renewal sources, including the paired theme receiver.
 python3 - <<'PYRECEIVER'
 import runpy
@@ -74,6 +77,7 @@ PYRECEIVER
 "$ARES_PACKAGE" build/home-app build/home-service -o dist
 home=$(python3 -c 'import json; a=json.load(open("build/home-app/appinfo.json")); print("dist/"+a["id"]+"_"+a["version"]+"_all.ipk")')
 python3 scripts/fix-package-data.py "$home" --home-control
+python3 scripts/screensaver_package.py --output dist/screensaver.ipk
 python3 - <<'PY'
 from pathlib import Path
 import hashlib

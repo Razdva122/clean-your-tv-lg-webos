@@ -132,7 +132,11 @@ class Device:
         self.require_graphics(candidate,self.graphics_resolution())
         self.require_components()
         self.integrity();self.descriptor(candidate,True);self.descriptor(prior)
-        previous=safe_bytes(self.cached(prior),uid=0);inspect_package(previous,prior)
+        from updater.package import installed_companion, root_companion
+        previous = safe_bytes(self.cached(prior), uid=0)
+        previous_companion = root_companion(previous, prior)
+        if previous_companion and not installed_companion(self.installed_root, previous_companion, self.store.uid):
+            raise ValueError('Prior Root screensaver package could not be verified')
         # Include decompressed application, cached rollback and filesystem overhead.
         if shutil.disk_usage(self.state).free < candidate['size']+64*1024*1024:raise ValueError('Insufficient space for update and rollback')
         target=self.cached(candidate)
@@ -236,6 +240,29 @@ class Device:
         if result.get('completed') is not True:raise RuntimeError('Installer outcome unknown')
         on_terminal({'success':True,'event':result['event']})
 
+    def screensaver_pending(self, tx):
+        from updater.package import companion_outcome_pending
+        return companion_outcome_pending(self.store, tx)
+
+    def sync_screensaver(self, tx, rollback):
+        from updater.package import companion_journal_name, root_companion, sync_companion
+
+        def companion(manifest):
+            self.descriptor(manifest)
+            return root_companion(safe_bytes(self.cached(manifest), uid=0), manifest)
+
+        candidate = companion(tx['candidate'])
+        prior = companion(tx['prior'])
+        selected, other = (prior, candidate) if rollback else (candidate, prior)
+        name = companion_journal_name(tx, rollback)
+
+        def journal(value=None):
+            if value is None:
+                return self.store.read(name)
+            self.store.write(name, value)
+
+        sync_companion(self.installed_root, selected, other, journal, self.state, uid=self.store.uid)
+
     def repair_registration(self):
         import importlib.util
         spec=importlib.util.spec_from_file_location('updater_support_provision',self.code/'provision.py')
@@ -255,7 +282,12 @@ class Device:
         if provision.rpc('status').get('root') is not True:raise ValueError('Root recovery service registration not effective')
 
     def verify_installed(self, manifest):
-        hashes=inspect_package(safe_bytes(self.cached(manifest),uid=0),manifest)
+        from updater.package import root_companion, installed_companion
+        raw = safe_bytes(self.cached(manifest), uid=0)
+        hashes = inspect_package(raw, manifest)
+        selected = root_companion(raw, manifest)
+        if selected is not None and not installed_companion(self.installed_root, selected, self.store.uid):
+            raise ValueError('Root screensaver package does not match the selected version')
         verify_payload(self.installed_root,hashes,uid=self.store.uid)
         self.repair_registration();self.integrity()
         from package_data import read_verified

@@ -37,6 +37,9 @@ function create(io, prepare) {
   result.readChannelRecord = function (directory, kind) {
     return io.readFileSync(directory + '/' + kind + '.json', 'utf8');
   };
+  result.readRecord = function (directory, kind) {
+    return io.readFileSync(directory + '/' + kind + '.json', 'utf8');
+  };
   result.appendLog = function (directory, line) {
     io.appendFileSync(directory + '/controller.log', line + '\n');
   };

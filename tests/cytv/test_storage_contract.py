@@ -10,6 +10,27 @@ ROOT = Path(__file__).resolve().parents[2]
 
 @unittest.skipIf(os.name == 'nt', 'TV storage fixtures require POSIX ownership, modes and inode semantics')
 class StorageContractTests(unittest.TestCase):
+    def test_screensaver_preference_is_atomic_bounded_and_rejects_symlinks(self):
+        self.run_js("""
+assert.throws(function(){p.readRecord(d,'screensaver-preference');},function(e){return e.code==='ENOENT';});
+var value='{"enabled":true,"scope":"global","mode":"clock","assetId":"","idleTimeoutMs":60000}';
+p.atomicRecord(d,'screensaver-preference',value);
+assert.strictEqual(p.readRecord(d,'screensaver-preference'),value);
+assert.strictEqual(fs.statSync(d+'/screensaver-preference.json').mode&4095,432);
+fs.chmodSync(d,511);fs.chmodSync(d+'/screensaver-preference.json',511);
+assert.strictEqual(p(d,null,true),true);
+assert.strictEqual(p.readRecord(d,'screensaver-preference'),value);
+assert.strictEqual(fs.statSync(d+'/screensaver-preference.json').mode&4095,511);
+fs.unlinkSync(d+'/screensaver-preference.json');
+fs.writeFileSync(d+'/outside','private');fs.symlinkSync(d+'/outside',d+'/screensaver-preference.json');
+assert.throws(function(){p.readRecord(d,'screensaver-preference');});
+assert.throws(function(){p.atomicRecord(d,'screensaver-preference',value);});
+assert.strictEqual(fs.readFileSync(d+'/outside','utf8'),'private');
+fs.unlinkSync(d+'/screensaver-preference.json');
+p.atomicRecord(d,'screensaver-preference',new Array(4098).join('x'));
+assert.throws(function(){p.readRecord(d,'screensaver-preference');});
+""")
+
     def test_catalog_mode_is_not_a_read_or_verification_gate(self):
         self.run_js("""
 var apps='[{"id":"com.example.app"}]',key='{"key":"paired"}';

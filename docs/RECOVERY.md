@@ -470,18 +470,11 @@ controls, audio, standby or cold boot; check actual behavior separately. [Connec
 
 ## Replace the Root System Updater
 
-In 1.6.0, the replacement bundle targets System Updater 1.2.0;
-1.5.4 used 1.1.2. The original 1.1.0 can reject a launcher's one-shot readiness
-response while its worker holds the installation lock; this can cause an unnecessary rollback.
-Signed Root offers retain a minimum supervisor version of 1.1.1 and are rejected
-by the original 1.1.0; the new receiver/runtime path needs separate verification. Historical signed baselines remain valid for rollback.
-
-This command supports replacing 1.1.0 or 1.1.1 after authenticating the retained
-code, owner package, registration and finished recovery state. Other installed
-versions, including1.1.2, are rejected. Existing1.1.2 stays pinned with its old
-channels; no general migration is provided. Do not reinstall or delete state to
-force replacement. Physical acceptance of a particular transition remains
-separate from the command's source and fixture checks.
+For a Root installation from v1.21.0 with System Updater 1.2.9,
+the installer containing System Updater 1.2.10 can replace that supervisor in
+place. This prepares the TV for the signed Root update format that installs
+and rolls back the screensaver together with the other Root components.
+Earlier supported source versions 1.1.0 and 1.1.1 are also eligible.
 
 After any current update or rollback has completed, use the same trusted Root
 connection and the complete matching installer from [GitHub Releases](https://github.com/Razdva122/clean-your-tv-lg-webos/releases):

@@ -21,7 +21,7 @@ STOCK_HOME = 'com.webos.app.home'
 
 APPS = ('com.cleanyourtv.root.preview', 'com.cleanyourtv.root.updater',
         'com.cleanyourtv.system.updater', 'com.cleanyourtv.updater',
-        'com.local.nativehome', 'com.gathin.tvhome')
+        'com.local.nativehome', 'com.gathin.tvhome', 'com.cleanyourtv.screensaver')
 # Presence (including dangling links) requires the original routing backend.
 ROUTING_EVIDENCE=('profile-trial.json','persistent-intent.json','persistent-binding.json','boot-continuation.json',
                   'profile-candidate.stage','home-backend.json','c1-gate','c1-keyfilter')
@@ -384,7 +384,11 @@ def validate_restored_root_api(files,base,root_updater,uid=0):
 
 def validate_package_receipts(record):
     packages=record.get('packages')
-    if not isinstance(packages,dict) or set(packages)!=set(APPS):raise ValueError('incomplete_removal_receipts')
+    # Older receipts lack the companion. The caller still checks the current
+    # catalogue and filesystem for every known app, including the companion.
+    compatible = (set(APPS), set(APPS[:-1]))
+    if not isinstance(packages,dict) or set(packages) not in compatible:
+        raise ValueError('incomplete_removal_receipts')
     for app,item in packages.items():
         if not isinstance(item,dict) or item.get('state')!='absent' or item.get('readback')!={'app':app,'absent':True}:
             raise ValueError('package_absence_unverified')

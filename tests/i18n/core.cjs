@@ -118,10 +118,18 @@ assert.equal(load(['da-DK']).i.formatTime(afternoon), '13:40');
 assert.equal(load(['en-GB'], 'en').i.formatTime(afternoon), '13:40');
 const clock = load(['en-US'], 'en');
 assert.equal(clock.i.formatTime(afternoon), '1:40 PM');
+assert.equal(
+  JSON.stringify(clock.i.clockPresentation()),
+  '{"locale":"en","hour12":true}'
+);
 assert.equal(clock.i.setClockFormat('24h'), true);
 assert.equal(clock.i.clockFormat(), '24h');
 assert.equal(clock.saved['tvhome.clockFormat'], '24h');
 assert.equal(clock.i.formatTime(afternoon), '13:40');
+assert.equal(
+  JSON.stringify(clock.i.clockPresentation()),
+  '{"locale":"en","hour12":false}'
+);
 assert.equal(clock.i.formatTime(new Date(2026, 10, 7, 0, 5)), '00:05');
 assert.equal(clock.i.setClockFormat('invalid'), false);
 assert.equal(clock.i.clockFormat(), '24h');
@@ -131,6 +139,11 @@ assert.equal(clock.reloads(), 0);
 const danish = load(['da-DK'], 'en');
 assert.equal(danish.i.setClockFormat('12h'), true);
 assert.equal(danish.i.formatTime(afternoon), '1:40 PM');
+assert.equal(danish.i.setLanguage('ru'), true);
+assert.equal(
+  JSON.stringify(danish.i.clockPresentation()),
+  '{"locale":"ru","hour12":true}'
+);
 assert.equal(load(['en-US'], 'en', true).i.setClockFormat('24h'), false);
 console.log(
   'PASS system and explicit clock formats independent of UI language'

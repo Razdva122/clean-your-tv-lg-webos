@@ -1,6 +1,19 @@
 /* Shared wallpaper settings: twelve translations plus English source strings. */
 window.HomeWallpaperLocales = {
   'ru': {
+    'Built-in': 'Встроенные',
+    'My files': 'Мои файлы',
+    'Background source': 'Источник фона',
+    'Add a file': 'Добавить файл',
+    'No saved files': 'Здесь появятся ваши фото и видео',
+    'Full screen': 'На весь экран',
+    'Wallpaper preview': 'Предпросмотр обоев',
+    'Close preview': 'Закрыть просмотр',
+    'Still frame': 'Стоп-кадр',
+    'Photo': 'Фото',
+    'My photo': 'Моё фото',
+    'My video': 'Моё видео',
+    'Video': 'Видео',
     'Remove the saved wallpaper? Upload it again to use it later.':
       'Удалить сохранённые обои? Для повторного использования их потребуется загрузить заново.',
     'Wallpapers': 'Обои',
@@ -39,6 +52,9 @@ window.HomeWallpaperLocales = {
     'Video dimensions do not match the theme.':
       'Размеры видео не соответствуют теме.',
     'My wallpaper': 'Мои обои',
+    'Saved media': 'Общая медиатека',
+    'Use saved photo': 'Выбрать сохранённое фото',
+    'Use saved video': 'Выбрать сохранённое видео',
     'Remove personal wallpaper': 'Удалить мои обои',
     'Receive from CYTV': 'Получить из CYTV',
     'Upload from phone': 'Загрузить с телефона',

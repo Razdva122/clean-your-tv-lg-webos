@@ -15,6 +15,24 @@ BASE = dict(schema=1, component='storage', operation='inspect', phase='read',
             field='mode', expected='private', actual={'mode': 420}, decision='refuse', count=1)
 
 class ContractEventsTests(unittest.TestCase):
+    def test_screensaver_preference_diagnostic_survives_js_python_export_roundtrip(self):
+        from cytv import contract_events as events
+        expected = dict(schema=1, component='storage', operation='record', phase='read',
+                        field='screensaver-preference', expected='safe-mode',
+                        actual={'mode': 511}, decision='refuse', count=1)
+        source = dict(expected, actual={'mode': 511, 'path': '/private/SECRET'})
+        self.assertEqual(events.export_events([source]), [expected])
+        self.assertEqual(events.export_events([expected], strict=True), [expected])
+        self.assertEqual(events.export_events([source], strict=True), [])
+        code = "var e=require('./native/app/contract-events');console.log(JSON.stringify(e.exportEvents(JSON.parse(process.argv[1]))));"
+        for runtime in dict.fromkeys(filter(None, ['node', os.getenv('NODE010'), os.getenv('NODE01025'), os.getenv('NODE012')])):
+            raw = subprocess.check_output([runtime, '-e', code, json.dumps([source])], cwd=ROOT, text=True)
+            self.assertNotIn('SECRET', raw)
+            self.assertEqual(json.loads(raw), [expected])
+            projected = events.export_events(json.loads(raw), strict=True)
+            again = subprocess.check_output([runtime, '-e', code, json.dumps(projected)], cwd=ROOT, text=True)
+            self.assertEqual(json.loads(again), [expected])
+
     def test_literal_metadata_and_rejection_vectors_match_raw_legacy_js(self):
         from cytv import contract_events as events
         vectors = [BASE, dict(BASE, actual={'type':'SECRET', 'category':'SECRET', 'path':'SECRET',

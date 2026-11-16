@@ -139,7 +139,10 @@ class FlowFixture:
         return {'completed':True,'event':{'details':{'packageId':app}}}
     def provision(self,bundle,baseline):
         self.calls.append('provision');self.make_system(self.system,bundle)
-        self.appdir.mkdir(parents=True,exist_ok=True);(self.appdir/'version').write_text('1.2.9')
+        files = self.setup.package_files(self.setup.safe(Path(bundle)/'system-updater.ipk'))
+        info = json.loads(files['usr/palm/applications/'+self.ns['APP']+'/appinfo.json'])
+        self.appdir.mkdir(parents=True, exist_ok=True)
+        (self.appdir/'version').write_text(info['version'])
         if self.fault=='provision':raise KeyboardInterrupt('new bootstrap in progress')
         return {'installed':True}
     def resume(self,bundle):self.calls.append('resume');self.verify_bundle(bundle);return {'installed':True}
@@ -148,10 +151,10 @@ class FlowFixture:
 
 class FlowTests(FlowFixture, unittest.TestCase):
     def test_other_target_versions_are_rejected_before_device_changes(self):
-        for version in ('1.2.1','1.2.2','1.2.3','1.2.4','1.2.5','1.2.6','1.2.7','1.2.8','1.2.10'):
+        for version in ('1.2.1','1.2.2','1.2.3','1.2.4','1.2.5','1.2.6','1.2.7','1.2.8','1.2.11'):
             with self.subTest(version=version):
                 self.make_bundle(self.bundle,version=version)
-                with self.assertRaisesRegex(ValueError,'fixed System Updater 1.2.9 bundle'):
+                with self.assertRaisesRegex(ValueError,'supported System Updater bundle'):
                     self.run_replacement()
                 self.assertEqual(self.calls,[]);self.assertEqual(self.removals,0)
                 self.assertIsNone(self.store.read('system-replacement'))
@@ -299,6 +302,19 @@ class HistoricalReplacementTests(FlowFixture, unittest.TestCase):
         self.assertEqual((root/'completed-replacement.json').read_bytes(),raw)
         self.assertNotEqual(self.store.read('system-replacement')['id'],old['id'])
         self.assertTrue(Path(old['archive']).is_dir());self.assertEqual(self.removals,1)
+    def test_published_supervisor_can_migrate_after_completed_replacement(self):
+        self.run_replacement()
+        old = self.store.read('system-replacement')
+        root = Path(self.store.root) / ('system-replacement-' + old['id'])
+        bundle = self.bundle.parent / 'new-bundle'
+        self.make_bundle(bundle, version='1.2.10')
+        result = self.run_replacement(bundle)
+        self.assertEqual(result['version'], '1.2.10')
+        self.assertTrue(result['root_unchanged'])
+        self.assertTrue(result['home_unchanged'])
+        self.assertTrue(result['profile_storage_untouched'])
+        self.assertTrue((root / 'completed-replacement.json').is_file())
+
     def test_historical_proof_damage_never_retires_or_disables(self):
         for damage in ('archive','bundle','baseline','owner','foreign-active','foreign-aborted','collision','unfinished','source-only'):
             with self.subTest(damage=damage):

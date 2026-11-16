@@ -13,10 +13,11 @@ from .errors import (TVRejected, UserError, TVCommandError, TV_STORAGE_FULL, CLE
                      OBSERVER_EXCEPTION_NAMES, OBSERVER_EXCEPTION_CODES,
                      OBSERVER_FILESYSTEM_OPERATIONS, connection_interrupted, no_root_cleanup_details)
 from .transport import LunaReplyUnconfirmed
+from .package import SCREENSAVER_APP
 
 from .tv_sources import node_loader, trusted_source
 
-APPS = ('com.local.nativehome', 'com.gathin.tvhome', 'com.cleanyourtv.updater')
+APPS = ('com.local.nativehome', 'com.gathin.tvhome', 'com.cleanyourtv.updater', SCREENSAVER_APP)
 STARTUP_SERVICES = ('com.local.nativehome.service', 'com.gathin.tvhome.renewal')
 RESTART_MESSAGE = 'Restart the TV completely, then choose Try again to finish removal.'
 ROOT_MESSAGE = 'Some project files require Root access. Reconnect using Root to finish removal.'
@@ -38,7 +39,7 @@ if(input.connection==='root-ssh'){
  if(uid!==0)throw Error('root-access-required');
  publicRoot='/var/lib/clean-your-tv-installer';
 }
-var apps=['com.local.nativehome','com.gathin.tvhome','com.cleanyourtv.updater'];
+var apps=['com.local.nativehome','com.gathin.tvhome','com.cleanyourtv.updater','com.cleanyourtv.screensaver'];
 var services=['com.local.nativehome.service','com.gathin.tvhome.renewal','com.cleanyourtv.updater.service'];
 var reply={schema:1,present:[],blocked:[],root_present:[],startup_services:[],external_update_hint:null,resident_installer:false,staging_ids:input.staging_ids||[]};
 if(!Array.isArray(reply.staging_ids)||reply.staging_ids.length>128||reply.staging_ids.some(function(id){return typeof id!=='string'||!/^[a-f0-9]{32}$/.test(id);}))throw Error('invalid-staging-scope');
@@ -115,7 +116,7 @@ function verifyResidue(directory,stat,app,service,area){
    var info=JSON.parse(bytes.toString('utf8'));
    if(!info||info.id!==(area==='service'?service:app))fail();
    if(area==='package'&&(info.app!==app||!Array.isArray(info.services)||
-      info.services.length!==1||info.services[0]!==service))fail();
+      info.services.length!==(service?1:0)||(service&&info.services[0]!==service)))fail();
   }finally{fs.closeSync(fd);}
  });
 }
@@ -165,7 +166,7 @@ if(input.action.indexOf('boot-')===0){
 if(input.action==='root-package'){
  if(uid!==0||apps.concat(['com.cleanyourtv.root.preview','com.cleanyourtv.root.updater','com.cleanyourtv.system.updater']).indexOf(input.app)<0)throw Error('invalid-root-package');
  var service=input.app==='com.gathin.tvhome'?'com.gathin.tvhome.renewal':input.app+'.service';
- visit(base+'/applications/'+input.app,input.app+' app');visit(base+'/services/'+service,input.app+' service');visit(base+'/packages/'+input.app,input.app+' package');
+ visit(base+'/applications/'+input.app,input.app+' app');if(input.app!==apps[3])visit(base+'/services/'+service,input.app+' service');visit(base+'/packages/'+input.app,input.app+' package');
  process.stdout.write(JSON.stringify(reply));return;
 }
 ['clean-your-tv-root','clean-your-tv-installation','clean-your-tv-python','clean-your-tv-root-updater','clean-your-tv-system-updater'].forEach(function(name){rootHint('/var/lib/'+name,name);});
@@ -289,7 +290,8 @@ if(input.action==='history'){
 if(input.action==='idle'){
  // File absence alone cannot prove that a deleted service or installer stopped.
  var prefixes=installerRoots.concat([publicRoot+'/cytv-', '/var/lib/clean-your-tv-', '/tmp/cytv-', '/tmp/clean-your-tv-']);
- apps.forEach(function(app,index){prefixes.push(base+'/applications/'+app,base+'/services/'+services[index]);});
+ apps.forEach(function(app){prefixes.push(base+'/applications/'+app);});
+ services.forEach(function(service){prefixes.push(base+'/services/'+service);});
  var afterStop=input.after_stop===true,waitForIdle=input.wait_for_idle===true,idleDeadline=Date.now()+8000;
  var hasNoUserspace=function(directory){
   var stat=fs.readFileSync(directory+'/stat','utf8'),close=stat.lastIndexOf(')');
@@ -422,7 +424,7 @@ apps.forEach(function(app,index){
   else if(input.connection==='root-ssh')rootResidue(base+p,app,services[index],area);
   else visit(base+p,app+' '+area);
  }
- project('/applications/'+app,'app');project('/packages/'+app,'package');project('/services/'+services[index],'service');
+ project('/applications/'+app,'app');project('/packages/'+app,'package');if(services[index])project('/services/'+services[index],'service');
 });
 if(input.guard_owner){
  var legacy='/var/palm/ls2-dev',pub=legacy+'/services/pub';
@@ -493,7 +495,7 @@ function next(){if(!stages.length){process.stdout.write(JSON.stringify(reply));r
  try{pin=fs.lstatSync(dir);if(!pin.isDirectory()||pin.isSymbolicLink()){if(known)visit(dir,'installer-staging');next();return;}files=fs.readdirSync(dir);}catch(e){if(known)blocked('installer-staging',e);next();return;}
  function retire(name,expected){if(!expected)return;owned=true;try{if(!same(pin,fs.lstatSync(dir)))fail();if(input.action==='sweep')remove(dir+'/'+name,expected);if(exists(dir+'/'+name))reply.present.push('installer-staging '+name);}catch(e){blocked('installer-staging',e);}}
  function file(){if(!files.length){try{if(input.action==='sweep'&&(known||owned)&&same(pin,fs.lstatSync(dir))&&!fs.readdirSync(dir).length)fs.rmdirSync(dir);}catch(e){blocked('installer-staging',e);}next();return;}
-  var name=files.shift(),index=['helper.ipk','launcher.ipk','updater.ipk'].indexOf(name);if(index<0){if(known)retire(name,exists(dir+'/'+name));file();return;}
+  var name=files.shift(),index=['helper.ipk','launcher.ipk','updater.ipk','screensaver.ipk'].indexOf(name);if(index<0){if(known)retire(name,exists(dir+'/'+name));file();return;}
   controlIdentity(dir+'/'+name,function(error,app,expected){if(error){if(known)retire(name,exists(dir+'/'+name));file();return;}if(app===apps[index])retire(name,expected);file();});
  }file();
 }next();
@@ -506,8 +508,10 @@ def _program(request):
     # Keep the SSH exec request tiny; old TV SSH servers reject long argv.
     source = PRIVATE_CLEANUP_PROGRAM
     if request.get('cancellation') or request.get('missing_capsule'):
-        from .no_root_cancellation import SOURCE
-        source = source.replace('/* CYTV_OWNED_CANCELLATION */null', SOURCE)
+        from .no_root_cancellation import COMPANION_SOURCE, SOURCE
+        plan = request.get('plan') or request.get('missing_capsule') or {}
+        cancellation = COMPANION_SOURCE if plan.get('screensaver') is True else SOURCE
+        source = source.replace('/* CYTV_OWNED_CANCELLATION */null', cancellation)
     if request.get('action') in CLEANUP_BOOT_ACTIONS:
         # Semantic failure envelope follows the observer protocol: SSH completion
         # is not cleanup success. The host refuses it before using any proof.
@@ -542,7 +546,8 @@ def _missing_capsule_receipt(previous):
     if 'previous' in previous:
         return None
     try:
-        versions = [previous['versions'][app] for app in observer.APPS]
+        components = observer.APPS + ((SCREENSAVER_APP,) if SCREENSAVER_APP in previous['versions'] else ())
+        versions = [previous['versions'][app] for app in components]
         configuration = {name: previous['expected'][HELPER_STATE+'/'+name]
                          for name in ('ssap-key.json', 'apps.json')}
     except (KeyError, TypeError):
@@ -554,10 +559,16 @@ def _missing_capsule_receipt(previous):
     original_source = hashlib.sha256(observer.PROGRAM.encode()).hexdigest()
     packaged_source = hashlib.sha256(observer.PACKAGED_STATE_PROGRAM.encode()).hexdigest()
     source = previous.get('observer_source_sha256', original_source)
-    if source not in (original_source, packaged_source):
+    screensaver = len(components) > len(observer.APPS)
+    supported = (original_source, packaged_source)
+    if screensaver:
+        supported = tuple(hashlib.sha256(observer.companion_source(program).encode()).hexdigest()
+                          for program in (observer.PROGRAM, observer.PACKAGED_STATE_PROGRAM))
+    if source not in supported:
         return None
     return {'operation': operation, 'diagnostic_id': diagnostic_id, 'versions': versions,
             'configuration_sha256': hashlib.sha256(observer.canonical(configuration).encode()).hexdigest(),
+            'screensaver': screensaver,
             'source_sha256': source,
             'default_root': observer.ROOT, 'roots': [observer.ROOT, observer.JAIL_ROOT]}
 
@@ -636,6 +647,8 @@ def _protected_package(row):
     if row.get('reason') != 'permission-denied':
         return None
     scope = row.get('scope', '')
+    if scope in (SCREENSAVER_APP + ' app', SCREENSAVER_APP + ' package'):
+        return SCREENSAVER_APP
     for app, service in zip(APPS, ('com.local.nativehome.service', 'com.gathin.tvhome.renewal', 'com.cleanyourtv.updater.service')):
         if scope in (app + ' app', app + ' package', app + ' service', 'startup-service ' + service):
             return app
@@ -672,7 +685,7 @@ def _check_access(value, defer_packages=False, *, action='inventory', guard=Fals
             detail = {'action': action, 'blocked_areas': areas}
             if action == 'sweep':
                 scopes = [row.get('scope') for row in access_denied]
-                detail['blocked_apps'] = [component for app, component in zip(APPS, ('helper', 'home', 'updater'))
+                detail['blocked_apps'] = [component for app, component in zip(APPS, ('helper', 'home', 'updater', 'screensaver'))
                                           if app + ' app' in scopes]
             error.no_root_cleanup = no_root_cleanup_details(detail)
         raise error
@@ -1185,7 +1198,7 @@ def continue_removal(installer, expected_pending):
             raise UserError('Removal could not be verified. Review recovery options before continuing.', reason_code='cleanup-check-failed')
         return require_restart(['process-idle-unverified'], rearm=restarted)
     rejected = None
-    for app, message in zip(APPS, ('Removing Helper…', 'Removing Home…', 'Removing the updater…')):
+    for app, message in zip(APPS, ('Removing Helper…', 'Removing Home…', 'Removing the updater…', 'Removing the screensaver…')):
         if app not in targets:
             continue
         if removals.get(app) == 'terminal':

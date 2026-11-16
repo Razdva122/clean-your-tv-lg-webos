@@ -1,0 +1,195 @@
+.screensaver-header {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #303842;
+}
+.screensaver-header > * {
+  margin-right: 16px;
+}
+.screensaver-options {
+  margin-top: 18px;
+}
+.screensaver-settings [hidden] {
+  display: none;
+}
+.screensaver-settings p {
+  margin: 0 0 12px;
+  font-size: 21px;
+  line-height: 1.4;
+}
+.screensaver-settings .screensaver-personal-hint,
+.screensaver-settings .screensaver-status {
+  opacity: 0.86;
+}
+.screensaver-settings .screensaver-personal-hint {
+  margin: 6px 0 0;
+  font-size: 16px;
+}
+.screensaver-settings .screensaver-status:empty {
+  display: none;
+}
+.screensaver-timing {
+  padding: 16px 0 0;
+  margin: 0 0 16px;
+  border-top: 1px solid rgba(180, 200, 226, 0.24);
+}
+.screensaver-timing .screensaver-delay-choices {
+  margin-bottom: 0;
+}
+.screensaver-choices {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0 -5px -8px;
+}
+.screensaver-choices button {
+  flex: 1 0 auto;
+  min-height: 50px;
+  margin: 0 5px 8px;
+}
+.screensaver-scenes {
+  margin-top: 12px;
+}
+.screensaver-settings .screensaver-delay-choices button {
+  padding-right: 10px;
+  padding-left: 10px;
+}
+.screensaver-settings button[aria-pressed='true'] {
+  border-color: #b6c9e2;
+  background: #39495e;
+}
+.screensaver-settings button[role='switch'] {
+  position: relative;
+  padding-right: 84px;
+}
+.screensaver-settings button[role='switch']::after {
+  content: '';
+  position: absolute;
+  width: 48px;
+  height: 26px;
+  top: 50%;
+  right: 16px;
+  margin-top: -13px;
+  border-radius: 16px;
+  border: 1px solid #aab8ca;
+  background: radial-gradient(circle at 13px 50%, #cbd4de 8px, transparent 9px)
+    #3d4958;
+}
+.screensaver-settings button[aria-checked='true']::after {
+  background: radial-gradient(circle at 35px 50%, #fff 8px, transparent 9px)
+    #3264a3;
+  border-color: #8eb6f0;
+}
+.screensaver-settings button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.screensaver-settings button:focus {
+  outline: 3px solid #fff;
+  outline-offset: 3px;
+}
+.screensaver-receiver[hidden] {
+  display: none;
+}
+.screensaver-receiver {
+  border: 1px solid #626a76;
+  border-radius: 12px;
+  padding: 16px;
+  margin: 0 0 16px;
+}
+
+.screensaver-clock-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+  font-size: 48px;
+  font-weight: 300;
+}
+
+@media (min-width: 1281px) {
+  .screensaver-settings .background-preview .screensaver-clock-preview {
+    height: 200px;
+  }
+}
+
+#screensaverScenes button.wallpaper-media-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.screensaver-glow-thumbnail {
+  align-self: stretch;
+}
+
+.screensaver-preview-date {
+  font-size: 0.32em;
+}
+
+.screensaver-glow {
+  background: radial-gradient(
+      circle closest-side,
+      rgba(43, 92, 255, 0.3),
+      rgba(43, 92, 255, 0.08) 72%,
+      transparent 145%
+    )
+    #000;
+  color: #fff;
+}
+
+.screensaver-glow-thumbnail {
+  display: block;
+  height: 84px;
+  margin-bottom: 8px;
+  border-radius: 4px;
+}
+
+.screensaver-timing h5 {
+  margin: 12px 0 8px;
+  font-size: 22px;
+}
+
+@media (max-width: 1280px) {
+  .screensaver-options {
+    margin-top: 8px;
+  }
+  .screensaver-timing {
+    padding-top: 6px;
+    margin-bottom: 4px;
+  }
+  .screensaver-timing h5 {
+    margin: 4px 0 6px;
+    font-size: 17px;
+  }
+  .screensaver-settings .screensaver-personal-hint {
+    font-size: 13px;
+  }
+  #settings-pane-screensaver .screensaver-delay-choices button {
+    flex-basis: 0;
+    min-width: 0;
+    min-height: 38px;
+    padding: 5px 3px;
+    font-size: 15px;
+    white-space: nowrap;
+  }
+  .screensaver-glow-thumbnail {
+    height: 58px;
+  }
+  .screensaver-header {
+    padding-bottom: 6px;
+    margin-bottom: 8px;
+  }
+  #settings-pane-screensaver .screensaver-header button {
+    padding: 5px 66px 5px 10px;
+    min-height: 42px;
+    font-size: 17px;
+  }
+  #settings-pane-screensaver .background-preview .wallpaper-preview-image,
+  #settings-pane-screensaver .background-focus-preview img {
+    height: 106px;
+    min-height: 0;
+  }
+}
