@@ -141,3 +141,46 @@ The implementation selects one newest engine compatible with the retained recove
 it does not implement a multistep bridge graph or catalog expiry/revocation protocol.
 Maintainers must preserve backward compatibility with the selected first baseline, retain
 the stable catalog/trust path, and run final artifact/device acceptance before shipping.
+
+## PR integration checks
+
+[Draft PR #675](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/675) targets
+`release/next` without changing the frozen candidate. Its first
+[CI pass](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/43911840775)
+exposed two integration defects on both Linux and macOS:
+
+- Full clean removal captured a fixed component-journal list without the new engine
+  journal. Its exact absence check consequently rejected profileless No-root cleanup.
+  The snapshot now follows the canonical journal inventory. The affected lifecycle
+  review also covers live engine/service entries and retained own-package staging.
+- Generic package inspection temporarily changes the parser's application prefix.
+  Companion admission incorrectly used that mutable value as parent authority while
+  its default argument retained the original Home prefix. Admission now uses the
+  two fixed Home application identities and still rejects foreign parents.
+
+The original direct-candidate setup failure was reproduced before the Companion fix;
+all 12 direct-candidate tests and all 10 package/screensaver-delivery tests passed
+afterward. The original clean-removal failure was also reproduced before its fix.
+All 111 tests in the affected `test_clean_removal.py` module then passed, including
+new engine-journal/process, retained staging and foreign-package regressions.
+The standalone test command needs `root-edition/runtime:root-edition/tests` in
+`PYTHONPATH`; an initial run without the runtime path produced an import error,
+not a product failure.
+
+Review found that an old public installer stage can survive a successful installation
+when unlink fails. After several self-updates its package may no longer appear in
+the latest generation/migration receipt. Cleanup now checks the dedicated historical
+engine cache with bounded file reads, exact hashes and own-package namespace checks,
+then persists classified hashes before retiring cache bytes. This preserves retry
+evidence without authorizing removal of a foreign package. The new regression was
+observed failing before this correction and passing afterward.
+
+Independent follow-up review closed the historical-stage finding and found no further
+P1/P2 defects in the fix batch. The first CI pass completed its independent jobs:
+runtime shards 1/4 on Linux and macOS, browser coverage, phone HEIC, optional Python,
+frozen Windows/macOS Intel installer runtime and website build succeeded. Only the
+two described causes failed runtime shards 2/3 and their aggregate gates. Unaffected
+jobs and full release publication were skipped by normal routing.
+
+The final PR CI outcome is recorded below once the independent checks finish.
+These are host checks; hardware acceptance remains outstanding.

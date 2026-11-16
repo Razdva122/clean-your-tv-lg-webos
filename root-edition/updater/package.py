@@ -90,8 +90,10 @@ def inspect_package(raw, manifest):
 
 
 def companion_files(files, prefix=PREFIX):
-    """Project only the fixed service-free companion from verified Root DATA."""
-    if prefix not in (PREFIX, 'usr/palm/applications/com.gathin.tvhome/'):
+    """Project the fixed service-free companion from verified Root or Home DATA."""
+    # Generic package admission temporarily changes PREFIX for other components;
+    # that must not change the independently fixed companion parent allowlist.
+    if prefix not in ('usr/palm/applications/com.cleanyourtv.root.preview/', 'usr/palm/applications/com.gathin.tvhome/'):
         raise ValueError('Foreign companion parent')
     recipe = files.get(prefix + 'screensaver-companion/manifest.json')
     if recipe is None:
