@@ -3,6 +3,7 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+import shlex
 import shutil
 import sys
 import subprocess
@@ -21,6 +22,15 @@ class StartupTests(unittest.TestCase):
     def setUp(self):
         context = patch.object(p, 'prepare_stock_home')
         context.start(); self.addCleanup(context.stop)
+
+    def test_beta_uses_lg_local_activity_before_bootstrap_positionals(self):
+        with patch.object(p, 'LEGACY_NODE_BETA', True):
+            command = shlex.split(p.runner_bytes().decode().splitlines()[-1])
+        self.assertEqual(command, [
+            'exec', '/usr/bin/node', '/usr/palm/services/jsservicelauncher/bootstrap-node.js',
+            '--disable-activity-creation', '--', str(p.STATE/'bootstrap.pid'),
+            '/var/palm/ls2-dev', str(p.PRIVATE_SERVICE),
+        ])
 
     def test_node_records_exit_and_exception_without_swallowing_failure(self):
         source = ROOT / 'service/startup-diagnostics.js'
