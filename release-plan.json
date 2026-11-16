@@ -1,7 +1,75 @@
 {
   "schema": 1,
-  "version": null,
-  "changes": [],
+  "version": "1.22.0",
+  "changes": [
+    {
+      "pr": 657,
+      "issues": [
+        454
+      ],
+      "summary": "Hand off verified Home replacements during Root setup"
+    },
+    {
+      "pr": 660,
+      "issues": [
+        505
+      ],
+      "summary": "Clarify unavailable Home Helper status"
+    },
+    {
+      "pr": 661,
+      "issues": [
+        615
+      ],
+      "summary": "Capture installer evidence after failed Root Home checks"
+    },
+    {
+      "pr": 662,
+      "issues": [],
+      "summary": "Remove plus signs from weather temperatures"
+    },
+    {
+      "pr": 665,
+      "issues": [
+        653
+      ],
+      "summary": "Record confirmed C2 No-root upgrade on firmware 43.21.94"
+    },
+    {
+      "pr": 666,
+      "issues": [
+        505,
+        653
+      ],
+      "summary": "Read ordinary Helper data after webOS resets file permissions"
+    },
+    {
+      "pr": 667,
+      "issues": [
+        664
+      ],
+      "summary": "Reconnect No-root TVs after a factory reset"
+    },
+    {
+      "pr": 668,
+      "issues": [
+        389
+      ],
+      "summary": "Recover Root restore from managed Python bytecode cache"
+    },
+    {
+      "pr": 669,
+      "issues": [],
+      "summary": "Deliver the screensaver and Root supervisor migration"
+    },
+    {
+      "pr": 670,
+      "issues": [
+        160
+      ],
+      "summary": "Keep Root Beta recovery dispatch independent of LG activity creation"
+    }
+  ],
   "excluded": [],
   "acceptance": ""
 }
