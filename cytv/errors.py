@@ -199,13 +199,17 @@ class ExistingRoot(UserError):
 class TVCommandError(UserError):
     """A failed or unconfirmed SSH command, never remote output."""
     def __init__(self, exit_status, *, storage_full=False):
-        message = 'TV command failed. Save the diagnostic report and keep recovery data.'
         if exit_status == -1:
             message = ('SSH closed without an exit status. The TV command outcome is unknown. '
                        'Save the diagnostic report and keep recovery data.')
+            reason = 'ssh-exit-status-missing'
         elif storage_full:
             message = TV_STORAGE_FULL
-        super().__init__(message, reason_code='tv-storage-full' if storage_full else 'user-error')
+            reason = 'tv-storage-full'
+        else:
+            message = 'TV command failed. Save the diagnostic report and keep recovery data.'
+            reason = 'user-error'
+        super().__init__(message, reason_code=reason)
         self.exit_status = exit_status if type(exit_status) is int and -1 <= exit_status <= 255 else None
 
     @property

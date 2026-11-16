@@ -199,6 +199,7 @@ class OriginalOperationIntegration(unittest.TestCase):
         ssh = SSH(None)
         launch_output = b''
         launch_status = 0
+        self.installer.reconnect = Mock(side_effect=AssertionError('Unexpected automatic reconnect'))
 
         def channel(command):
             binary, mode, count, uri, body = shlex.split(command)
@@ -208,11 +209,11 @@ class OriginalOperationIntegration(unittest.TestCase):
                 output, status = foreground, 0
             else:
                 output, status = launch_output, launch_status
-            reply = Mock(closed=status is None)
+            reply = Mock(closed=status == -1)
             reply.recv_ready.side_effect = [bool(output), False]
             reply.recv.return_value = output
             reply.recv_stderr_ready.return_value = False
-            reply.exit_status_ready.return_value = status is not None
+            reply.exit_status_ready.return_value = True
             reply.recv_exit_status.return_value = status
             return reply
 
@@ -228,14 +229,19 @@ class OriginalOperationIntegration(unittest.TestCase):
         for launch_output, launch_status, error_type, reason in (
                 (b'{"returnValue":false,"errorCode":-103}', 0, TVRejected, 'user-error'),
                 (b'', 1, TVCommandError, 'user-error'),
-                (b'', None, UserError, 'connection-interrupted')):
+                (b'', -1, TVCommandError, 'ssh-exit-status-missing')):
             with self.subTest(launch_status=launch_status, launch_output=launch_output):
                 commands.clear()
                 with self.assertRaises(error_type) as caught:
                     self.installer.uninstall_project()
                 self.assertEqual(caught.exception.reason_code, reason)
                 self.assertEqual(commands, expected[:1])
+                self.installer.reconnect.assert_not_called()
                 self.assertEqual(installed.read_bytes(), packages)
+                pending = self.store.pending(self.profile)
+                self.assertEqual(pending['removal_operation'], removal['removal_operation'])
+                self.assertEqual(pending['stage'], 'requested')
+                self.assertFalse(pending.get('removals'))
         launch_output, launch_status = b'', 0
 
         for foreground in (b'', b'{"returnValue":true}', b'{"returnValue":true,"appId":[]}',
