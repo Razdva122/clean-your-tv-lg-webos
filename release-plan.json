@@ -68,6 +68,11 @@
         160
       ],
       "summary": "Keep Root Beta recovery dispatch independent of LG activity creation"
+    },
+    {
+      "pr": 671,
+      "issues": [],
+      "summary": "Fix wallpaper panel overflow in the v1.22.0 candidate"
     }
   ],
   "excluded": [],
