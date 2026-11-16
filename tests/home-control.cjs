@@ -28,6 +28,8 @@ try {
   assert.equal(fs.readFileSync(path.join(dir, 'profile.json'), 'utf8'), 'keep');
   assert.equal(c.enabled(), false);
   assert.deepEqual(applied, [false]);
+  fs.chmodSync(dir, 0o777);
+  fs.chmodSync(path.join(dir, 'home-control.json'), 0o777);
   c = create(
     fs,
     dir,
@@ -49,6 +51,23 @@ try {
     ).enabled(),
     true
   );
+  for (const value of [null, [], { enabled: 'false' }, { enabled: 1 }]) {
+    const bytes = JSON.stringify(value);
+    fs.writeFileSync(path.join(dir, 'home-control.json'), bytes);
+    fs.chmodSync(path.join(dir, 'home-control.json'), 0o777);
+    assert.throws(() =>
+      create(
+        fs,
+        dir,
+        () => {},
+        () => {}
+      )
+    );
+    assert.equal(
+      fs.readFileSync(path.join(dir, 'home-control.json'), 'utf8'),
+      bytes
+    );
+  }
   console.log(
     'PASS Home preference persists independently of stock-Home visits and user profile'
   );

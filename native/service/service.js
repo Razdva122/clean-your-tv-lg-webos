@@ -13,11 +13,12 @@ secureState(
     console.error(JSON.stringify(x));
   }
 );
-var statePath = __dirname + '/state/startup-state.json',
-  name = 'com.local.nativehome.boot';
+var name = 'com.local.nativehome.boot';
 function read() {
   try {
-    return JSON.parse(fs.readFileSync(statePath, 'utf8'));
+    return JSON.parse(
+      secureState.readRecord(__dirname + '/state', 'startup-state')
+    );
   } catch (e) {
     return { enabled: false };
   }

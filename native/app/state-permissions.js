@@ -47,6 +47,16 @@ function field(name) {
     return name.slice(0, -5);
   return name === 'blocked' ? 'blocked' : 'staging';
 }
+// Ordinary data is identified by the fixed record registry, not a boot repair
+// list. Its contents are validated by consumers; rwx bits are not authority.
+// Credentials, control/Stop and channel records retain their separate policy.
+function dataFile(name) {
+  if (name === 'apps.json' || name === 'controller.log.previous') return true;
+  return Object.keys(records).some(function (kind) {
+    var record = records[kind];
+    return record[0] === name && kind !== 'control' && record[2] !== 'channel';
+  });
+}
 function actual(stat, limit) {
   var value = { category: 'unsafe' };
   if (stat) {
@@ -233,7 +243,7 @@ function session(directory, options, action) {
     if (!s.isFile() || s.nlink !== 1) fail('single-regular-file', s, limit);
     if (s.size > limit) fail('bounded-file', s, limit);
     if (
-      s.mode & 3586 &&
+      s.mode & (dataFile(name) ? 3584 : 3586) &&
       !(
         bootSnapshot &&
         bootSnapshot.name === name &&
@@ -742,39 +752,23 @@ function session(directory, options, action) {
     }
   }
   function bootstrap() {
-    // Only these retained values need a checked copy. A key is still just a
-    // candidate credential until the TV's existing SSAP registration succeeds.
-    var rules = [
-        ['ssap-key.json', 416],
-        ['home-control.json', 432],
-        ['startup-state.json', 420]
-      ],
-      pending = [];
-    rules.forEach(function (rule) {
-      // A previous Helper service can own the retained pairing candidate.
-      // Both runtimes must still validate it through SSAP registration.
-      var original = expanded(
-        rule[0],
-        65536,
-        rule[0] !== 'ssap-key.json' || !expandedDirectory
-      );
-      if (!original) return;
-      var value = JSON.parse(original.bytes.toString('utf8'));
-      if (
-        !value ||
-        typeof value !== 'object' ||
-        Array.isArray(value) ||
-        (rule[0] === 'ssap-key.json'
-          ? typeof value.key !== 'string' || !value.key
-          : typeof value.enabled !== 'boolean')
-      )
-        fail('valid-record', original.stat, 65536, field(rule[0]));
-      pending.push([rule, original]);
-    });
-    pending.forEach(function (item) {
-      replace(item[0][0], item[1], item[0][1], 65536);
-    });
+    // Only the credential needs privacy repair. Settings are ordinary data and
+    // must remain readable after LG widens rwx bits, including future records.
+    // A retained key is still only a candidate until SSAP authenticates it.
+    var original = expanded('ssap-key.json', 65536, !expandedDirectory);
+    if (!original) return;
+    var value = JSON.parse(original.bytes.toString('utf8'));
+    if (
+      !value ||
+      typeof value !== 'object' ||
+      Array.isArray(value) ||
+      typeof value.key !== 'string' ||
+      !value.key
+    )
+      fail('valid-record', original.stat, 65536, 'key');
+    replace('ssap-key.json', original, 416, 65536);
   }
+
   try {
     ancestors();
     parent = fs.openSync(directory, c.O_RDONLY | c.O_NOFOLLOW | c.O_DIRECTORY);
@@ -905,9 +899,7 @@ function configuration(directory, options, repair) {
       var key =
           (repair && s.expanded('ssap-key.json', 65536, false)) ||
           s.read('ssap-key.json', 65536),
-        apps =
-          (repair && s.expanded('apps.json', 16 * 1024 * 1024, true)) ||
-          s.read('apps.json', 16 * 1024 * 1024),
+        apps = s.read('apps.json', 16 * 1024 * 1024),
         replacing = false,
         replacement;
       if (
@@ -1039,7 +1031,6 @@ function configuration(directory, options, repair) {
           fail('key', 'authenticated-key', key && actual(key.stat), 'inspect');
         if (
           !apps ||
-          (apps.stat.mode & 4095) !== 420 ||
           crypto.createHash('sha256').update(apps.bytes).digest('hex') !==
             options.verifyHashes[1]
         )
@@ -1048,6 +1039,9 @@ function configuration(directory, options, repair) {
       // A fresh private inode disconnects pre-repair writable descriptors.
       if (key && repair && (mode === 511 || (options.requireHash && mode & 7)))
         replacing = true;
+      // Explicit installation is a write operation. Immutable retained upload
+      // programs still require a normalized catalog before publishing new
+      // configuration. Ordinary reads/verification never require this repair.
       if (repair && apps && (apps.stat.mode & 4095) === 511) {
         if (options.packagedState && apps.stat.uid !== s.uid)
           s.replace('apps.json', apps, 420, 16 * 1024 * 1024);
@@ -1169,10 +1163,10 @@ function prepare(directory, log, initializeControl) {
 // with no historical bound are not given a new speculative cap.
 var records = {
   control: ['control.json', 432, 'app'],
-  'home-preference': ['home-control.json', 432, 'app'],
-  'startup-state': ['startup-state.json', 420, 'service'],
-  pid: ['controller.pid', 420, 'app'],
-  logger: ['controller.log', 420, 'app']
+  'home-preference': ['home-control.json', 432, 'app', 65536],
+  'startup-state': ['startup-state.json', 420, 'service', 65536],
+  pid: ['controller.pid', 420, 'app', 128],
+  logger: ['controller.log', 420, 'app', 131072]
 };
 ['home', 'input', 'catalog'].forEach(function (prefix) {
   records[prefix + '-request'] = [prefix + '-request.json', 432, 'channel'];
@@ -1284,6 +1278,27 @@ prepare.readChannelRecord = function (directory, kind) {
       var value = s.read(record[0], 2 * 1024 * 1024);
       if (!value) {
         var error = Error('channel record unavailable');
+        error.code = 'ENOENT';
+        throw error;
+      }
+      return value.bytes.toString('utf8');
+    }
+  );
+};
+// Fixed data records share bounded no-follow reads. This cannot read commands,
+// credentials, Stop state, arbitrary paths or cross-boot channel messages.
+prepare.readRecord = function (directory, kind) {
+  var record =
+    Object.prototype.hasOwnProperty.call(records, kind) && records[kind];
+  if (!record || !dataFile(record[0]) || typeof record[3] !== 'number')
+    fail('directory', 'fixed-record', { category: 'invalid' }, 'read');
+  return session(
+    directory,
+    { role: record[2], legacy: true, operation: 'read' },
+    function (s) {
+      var value = s.read(record[0], record[3]);
+      if (!value) {
+        var error = Error('missing-record');
         error.code = 'ENOENT';
         throw error;
       }
@@ -1597,7 +1612,7 @@ prepare.appendLog = function (directory, line) {
     function (s) {
       ['controller.log', 'controller.log.previous'].forEach(function (name) {
         var expanded = s.leaf(name, Infinity, true);
-        if (expanded && (expanded.mode & 4095) === 511)
+        if (expanded && expanded.size > 131072)
           s.write(name, buffer(''), 420, Infinity, false);
       });
       var current = s.leaf('controller.log', 131072),

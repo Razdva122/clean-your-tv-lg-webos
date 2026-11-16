@@ -205,7 +205,7 @@ test(
     a.equal(fs.statSync(f.key).mode & 0o777, 0o640);
     a.equal(fs.statSync(apps).ino, originalApps);
     a.deepEqual(f.owners.get(apps), { uid: 5999, gid: 5000 });
-    a.throws(() => f.permissions.readConfiguration(f.state, 'apps'));
+    a.equal(f.permissions.readConfiguration(f.state, 'apps'), '["test.app"]');
     const hash = require('crypto')
       .createHash('sha256')
       .update('{"key":"test-private-key"}')

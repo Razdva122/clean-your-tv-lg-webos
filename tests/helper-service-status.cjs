@@ -4,10 +4,12 @@ const fs = require('fs'),
   vm = require('vm'),
   assert = require('node:assert/strict');
 let cmdline = 'com.local.nativehome\0\0',
-  pid = '4321';
+  pid = '4321',
+  startup = JSON.stringify({ enabled: true, schema: 3, boot: 'previous' });
 const methods = {};
 const fakefs = {
   readFileSync(p) {
+    if (p === '/service/state/startup-state.json') return startup;
     if (p.endsWith('/controller.pid')) return pid;
     if (p === '/proc/4321/cmdline') return cmdline;
     throw Object.assign(Error('missing'), { code: 'ENOENT' });
@@ -28,7 +30,8 @@ vm.runInNewContext(fs.readFileSync('native/service/service.js', 'utf8'), {
         }
       };
     if (n === './boot-state') return { identity: () => ({}), claim() {} };
-    if (n === './state-permissions') return () => true;
+    if (n === './state-permissions')
+      return require('./storage-fixture.cjs').create(fakefs);
     throw Error(n);
   }
 });
@@ -46,6 +49,15 @@ function status() {
   assert.equal(reply.returnValue, true);
   return reply;
 }
+assert.equal(status().state.enabled, true, 'service reads saved startup data');
+startup = '{broken';
+assert.equal(
+  status().state.enabled,
+  false,
+  'malformed startup data cannot enable boot'
+);
+startup = JSON.stringify({ enabled: false });
+assert.equal(status().state.enabled, false, 'explicit startup off remains off');
 assert.equal(status().running, true, 'renamed live controller is running');
 cmdline = 'unrelated-process\0';
 assert.equal(status().running, false, 'stale PID is not running Helper');
