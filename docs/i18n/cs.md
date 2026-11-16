@@ -59,6 +59,8 @@ Jazyk vyberte v instalátoru; na Androidu je volba vpravo nahoře. Jazyk TV se n
 
 Instalace Root pokračuje s upozorněním, pokud nelze načíst vstupy televizoru, ale seznam aplikací je platný. V Home mohou chybět vstupy; chyba načtení nebo prázdný seznam aplikací instalaci nadále zastaví. Pokud se upozornění opakuje, uložte diagnostickou zprávu.
 
+Při instalaci Root může instalátor automaticky vypnout rozpoznané nahrazení obrazovky Home, aby Home převzal CYTV. Pokud instalace skončí chybou, uložte diagnostickou zprávu.
+
 ## 5. Vyzkoušejte ovladač
 
 1. Otevřete jinou aplikaci na TV a krátce stiskněte **Home**. Má se otevřít Clean Your TV. V průvodci uveďte, co jste viděli; pokud jste test neprovedli, přeskočte ho.

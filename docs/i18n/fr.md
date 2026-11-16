@@ -70,6 +70,8 @@ L’assistant utilise initialement la langue du système et mémorise votre choi
 
 L’installation Root continue avec un avertissement si les entrées du TV ne peuvent pas être lues mais que la liste des applications est valide. Des entrées peuvent manquer dans Home ; une liste d’applications illisible ou vide arrête toujours l’installation. Enregistrez le rapport de diagnostic si l’avertissement persiste.
 
+L’installation Root peut désactiver automatiquement un remplacement de l’accueil reconnu pour que CYTV prenne en charge le bouton Accueil. Si l’installation s’arrête, enregistrez le rapport de diagnostic.
+
 ## 5. Vérifier la télécommande
 
 1. Ouvrez une autre application sur la TV et appuyez brièvement sur **Home**. Clean Your TV doit s’ouvrir. Indiquez votre observation dans l’assistant ; ignorez le test si vous ne l’avez pas effectué.

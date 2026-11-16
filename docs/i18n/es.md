@@ -70,6 +70,8 @@ El asistente de escritorio usa inicialmente el idioma del sistema y guarda una s
 
 La instalación Root continúa con un aviso si no se pueden leer las entradas del TV pero la lista de aplicaciones es válida. Pueden faltar entradas en Home; una lista de aplicaciones fallida o vacía sigue deteniendo la instalación. Guarda el informe de diagnóstico si el aviso persiste.
 
+La instalación Root puede desactivar automáticamente un reemplazo de Inicio reconocido para que CYTV controle el botón Inicio. Si la instalación se detiene, guarda el informe de diagnóstico.
+
 ## 5. Comprueba el mando
 
 1. Abre otra app del TV y pulsa brevemente **Home**. Debe abrirse Clean Your TV. Indica al asistente lo que viste; omite la prueba si no la hiciste.

@@ -70,6 +70,8 @@ The desktop wizard selects your system language automatically; its language sele
 
 Root setup continues with a warning if TV inputs cannot be read but the application list is valid. Inputs may be missing from Home; a failed or empty application list still stops setup. Save the diagnostic report if the warning persists.
 
+Root setup can automatically disable a recognized Home replacement so CYTV can take over the Home button. If setup stops, save the diagnostic report.
+
 ## 5. Check your remote
 
 1. Open another TV app and briefly press **Home**. Clean Your TV should open. Tell the wizard what you saw; leave the check skipped if you did not test it.

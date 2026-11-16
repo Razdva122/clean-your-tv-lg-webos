@@ -70,6 +70,8 @@ L’assistente usa inizialmente la lingua del sistema e salva una scelta esplici
 
 L’installazione Root continua con un avviso se non è possibile leggere gli ingressi TV ma l’elenco delle app è valido. Gli ingressi potrebbero mancare in Home; un elenco delle app non leggibile o vuoto interrompe comunque l’installazione. Salva il rapporto diagnostico se l’avviso persiste.
 
+La configurazione Root può disattivare automaticamente una sostituzione di Home riconosciuta, così CYTV può gestire il tasto Home. Se la configurazione si interrompe, salva il rapporto diagnostico.
+
 ## 5. Controlla il telecomando
 
 1. Apri un’altra app sulla TV e premi brevemente **Home**. Deve aprirsi Clean Your TV. Indica nella procedura guidata ciò che hai visto; salta la verifica se non l’hai eseguita.

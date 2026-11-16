@@ -70,6 +70,8 @@ Kreator początkowo używa języka systemu i zapamiętuje wybrany język. Na tel
 
 Instalacja Root jest kontynuowana z ostrzeżeniem, jeśli nie można odczytać wejść TV, ale lista aplikacji jest prawidłowa. W Home może brakować wejść; nieodczytana lub pusta lista aplikacji nadal zatrzymuje instalację. Jeśli ostrzeżenie się powtarza, zapisz raport diagnostyczny.
 
+Instalacja Root może automatycznie wyłączyć rozpoznane zastąpienie ekranu Home, aby CYTV mógł obsługiwać przycisk Home. Jeśli instalacja się zatrzyma, zapisz raport diagnostyczny.
+
 ## 5. Sprawdź pilota
 
 1. Otwórz inną aplikację na TV i krótko naciśnij **Home**. Powinien otworzyć się Clean Your TV. W kreatorze zaznacz, co zobaczyłeś; pomiń test, jeśli go nie wykonałeś.

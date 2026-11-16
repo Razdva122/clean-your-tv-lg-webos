@@ -657,19 +657,71 @@ class CLITests(unittest.TestCase):
                 else:
                     getattr(operation, command).assert_called_once_with()
 
-    def test_root_setup_only_previews_file_mount_and_rechecks_after_confirmed_restore(self):
-        import struct
+    def test_root_setup_continues_after_automatic_home_handoff(self):
         from cytv.errors import UserError
-        from cytv.root_capabilities import (NATIVE_HEADERS, NATIVE_HOME_MOUNT_PROBE,
-                                            NATIVE_HOME_MOUNT_SNAPSHOT)
+        from cytv.home_handoff import PROGRAM
+        from cytv.root_capabilities import NATIVE_HEADERS, NATIVE_HOME_MOUNT_PROBE
+        from tests.cytv.test_operations import Remote
+
+        manifest = {'root_backends': {'c1-native-gate': {'admission_schema': 3}}}
+        class TV(Remote):
+            root = True
+            restored = False
+            def close(self):
+                pass
+
+            def run(self, command, data=None, **options):
+                if command == NATIVE_HEADERS and not self.restored:
+                    return '1001 1 755 4530960\nCYTV_HOME_ELF\nCYTV_HOME_FS\nef53\n'
+                if command == NATIVE_HOME_MOUNT_PROBE:
+                    return 'file-and-parent-mounts'
+                if 'CYTV_HOME_LIBC_READY' in command:
+                    return 'CYTV_HOME_LIBC_READY'
+                if data == PROGRAM.encode():
+                    if command.endswith(' ' + 'a' * 64):
+                        self.restored = True
+                        return 'CYTV_HOME_HANDOFF_COMPLETE'
+                    return json.dumps({'plan': 'a' * 64})
+                return super().run(command, data=data, **options)
+
+            def luna(self, uri, payload, **options):
+                if uri.endswith('/getSystemInfo'):
+                    return {'returnValue': True, 'modelName': 'OLED55C16LA',
+                            'firmwareVersion': '03.53.45', 'sdkVersion': '6.5.3'}
+                if not self.restored and uri.endswith('/getProfiles'):
+                    return {'returnValue': False, 'errorCode': -1,
+                            'errorText': 'Service does not exist: com.webos.service.systemprofile.'}
+                if not self.restored and uri.endswith('/getConfigs'):
+                    return {'returnValue': True, 'configs': {'com.webos.surfacemanager.keyFilters': [
+                        {'file': '/var/lib/third-party/filter.js', 'handler': 'handle'}]}}
+                return super().luna(uri, payload, **options)
+
+        with tempfile.TemporaryDirectory() as tmp, \
+                patch('cytv.cli.payload_dir', return_value=Path(tmp)), \
+                patch('cytv.cli.package.verify_payload', return_value=manifest), \
+                patch('cytv.operations.Installer.select_graphics'), \
+                patch('cytv.operations.Installer.version_summary', return_value=[]), \
+                patch('cytv.operations.Installer._select_python', return_value='/usr/bin/python3'), \
+                patch('cytv.operations.Installer.root_inventory', return_value={'apps': []}), \
+                patch('cytv.operations.Installer.install', side_effect=UserError('Reached install boundary')) as install:
+            (Path(tmp) / 'fallback.png').write_bytes(b'fixture')
+            remote = TV()
+            code, output, _ = self.run_cli(
+                ['install', '--host', '192.0.2.10', '--edition', 'root', '--data-dir', tmp,
+                 '--yes', '--non-interactive', '--language', 'en'], remote=remote)
+            self.assertEqual(code, 2, output)
+            self.assertIn('Reached install boundary', output)
+            self.assertTrue(remote.restored)
+            install.assert_called_once()
+
+    def test_root_setup_leaves_unverified_native_home_script_untouched(self):
+        import struct
+        from cytv.root_capabilities import NATIVE_HEADERS, NATIVE_HOME_MOUNT_PROBE
         from tests.cytv.test_operations import Remote
 
         elf = ' '.join(map(str, struct.pack('<16sHHIIIIIHHHHHH', b'\x7fELF\x01\x01\x01',
                                             3, 40, 1, 64, 52, 0, 0, 52, 32, 2, 0, 0, 0)))
-        stock = f'0 1 755 1024\n{elf}\nCYTV_HOME_ELF\n{elf}\nCYTV_HOME_FS\n73717368\n'
         script = f'0 1 755 1024\n{elf}\nCYTV_HOME_ELF\n35 33\n'
-        snapshot = '20 10 8:1 /private/file /usr/bin/com.webos.app.home rw - ext4 /dev/private rw'
-        preview = 'a' * 64 + '\n' + stock
         manifest = {'root_backends': {'c1-native-gate': {'admission_schema': 3}}}
 
         class TV(Remote):
@@ -677,7 +729,7 @@ class CLITests(unittest.TestCase):
 
             def __init__(self, topology):
                 super().__init__()
-                self.topology, self.observations, self.restored = topology, [], False
+                self.topology, self.observations = topology, []
 
             def close(self):
                 pass
@@ -685,18 +737,11 @@ class CLITests(unittest.TestCase):
             def run(self, command, *args, **kwargs):
                 if command == NATIVE_HEADERS:
                     self.observations.append('headers')
-                    return stock if self.restored else script
+                    return script
                 if command == NATIVE_HOME_MOUNT_PROBE:
                     return self.topology
-                if command == NATIVE_HOME_MOUNT_SNAPSHOT:
-                    return snapshot
-                if command.startswith('unshare --mount'):
-                    self.observations.append('preview')
-                    return preview
-                if 'umount /usr/bin/com.webos.app.home' in command:
-                    self.observations.append('restore')
-                    self.restored = True
-                    return preview
+                if 'CYTV_HOME_LIBC_READY' in command:
+                    return 'CYTV_HOME_LIBC_READY'
                 return super().run(command, *args, **kwargs)
 
             def luna(self, uri, payload, **kwargs):
@@ -711,32 +756,24 @@ class CLITests(unittest.TestCase):
                         {'file': '/usr/lib/qt5/qml/KeyFilters/systemUi.js', 'handler': 'handleSystemKeys'}]}}
                 return super().luna(uri, payload, **kwargs)
 
-        cases = (
-            ('file-mount', 'y', ['headers', 'preview', 'restore', 'headers']),
-            ('file-mount', 'n', ['headers', 'preview']),
-            ('file-and-parent-mounts', None, ['headers']),
-        )
-        for topology, answer, expected in cases:
-            with self.subTest(topology=topology, answer=answer), tempfile.TemporaryDirectory() as tmp, \
+        for topology in ('file-mount', 'file-and-parent-mounts'):
+            with self.subTest(topology=topology), tempfile.TemporaryDirectory() as tmp, \
                     patch('cytv.cli.package.verify_payload', return_value=manifest), \
                     patch('cytv.operations.Installer.select_graphics'), \
-                    patch('cytv.operations.Installer.version_summary', side_effect=UserError('Reached install review')) as review, \
+                    patch('cytv.operations.Installer.version_summary', return_value=[]), \
+                    patch('cytv.operations.Installer._select_python', return_value='/usr/bin/python3'), \
                     patch('cytv.operations.Installer.install') as install:
                 remote = TV(topology)
                 code, output, _ = self.run_cli(
                     ['install', '--host', '192.0.2.10', '--edition', 'root', '--data-dir', tmp, '--yes',
-                     '--language', 'en'], [answer] if answer else [], remote=remote)
+                     '--language', 'en'], remote=remote)
                 self.assertEqual(code, 2, output)
-                self.assertEqual(remote.observations, expected)
-                if answer == 'y':
-                    review.assert_called_once()
-                else:
-                    review.assert_not_called()
+                self.assertEqual(remote.observations, ['headers'])
                 install.assert_not_called()
                 self.assertFalse(remote.uploads)
-                if topology == 'file-and-parent-mounts':
-                    report, = (Path(tmp) / 'reports').glob('*.json')
-                    self.assertEqual(json.loads(report.read_text())['reason_code'], 'foreign-home-handoff-required')
+                report, = (Path(tmp) / 'reports').glob('diagnostic-*.json')
+                reason = 'foreign-home-handoff-required' if topology == 'file-and-parent-mounts' else 'native-home-script'
+                self.assertEqual(json.loads(report.read_text())['reason_code'], reason)
 
     def test_root_doctor_exports_qt_failure_from_verified_payload(self):
         import hashlib

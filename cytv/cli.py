@@ -587,6 +587,8 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
             installer.reconnect = reconnect_tv
             if args.command == 'install':
                 reinstall = None
+                home_conflict = None
+                home_pending = False
                 resume = False
                 pending = store.pending(profile)
                 replacing_activation = (profile['edition'] == 'root' and pending
@@ -608,25 +610,21 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                 if profile['edition'] == 'root' and not resume:
                     installer.select_graphics()
                     phase = 'inspect-installation'
-                    from .root_capabilities import (
-                        ForeignHomeHandoffRequired, NativeHomeScriptError, NoRootAlternativeError, RootCapabilityError,
-                        RESTORE_NATIVE_HOME, restore_native_home,
-                    )
+                    from .root_capabilities import NativeHomeScriptError, NoRootAlternativeError, RootCapabilityError
                     from .root_runtime import offer
-                    restored_home = False
                     try:
                         if replacing_activation:
                             reinstall = 'installed'
                         else:
                             try:
                                 installer.preflight(install=True, home_interfaces=True)
-                            except NativeHomeScriptError as error:
-                                if isinstance(error, ForeignHomeHandoffRequired) or args.non_interactive or not restore_native_home(
-                                        remote, tv_info.get('root_native_home_mount'),
-                                        lambda: prompts.confirm(RESTORE_NATIVE_HOME, ask, write)):
+                            except RootCapabilityError as error:
+                                mount_conflict = tv_info.get('root_compositor_failure') in (
+                                    'keyfilters-incompatible', 'native-home-incompatible',
+                                )
+                                if profile.get('root_variant') or not (mount_conflict or isinstance(error, NativeHomeScriptError)):
                                     raise
-                                restored_home = True
-                                installer.preflight(install=True, home_interfaces=True)
+                                home_conflict = error
                             except UserError as error:
                                 if (error.reason_code != 'root-requirements' or profile.get('root_variant')
                                         or tv_info.get('root_requirements', {}).get('node-version') != 'fail'):
@@ -638,7 +636,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                                     installer.select_graphics()
                                     installer.preflight(install=True, home_interfaces=True)
                     except RootCapabilityError as error:
-                        if restored_home or isinstance(error, NativeHomeScriptError):
+                        if isinstance(error, NativeHomeScriptError):
                             raise
                         if profile.get('root_variant') != BETA and not isinstance(error, NoRootAlternativeError):
                             raise
@@ -651,6 +649,10 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                         reinstall = 'installed'
                     if args.tv_name is not None and profile['edition'] == 'no-root':
                         write('--tv-name was skipped because the selected edition is No-root.')
+                    if (not reinstall and profile['edition'] == 'root' and not profile.get('root_variant')
+                            and installer.manifest.get('root_backends', {}).get('c1-native-gate')):
+                        from .home_handoff import handoff_pending
+                        home_pending = handoff_pending(remote)
                 if reinstall:
                     if args.migrate_home:
                         raise UserError('For Root reinstallation, omit --migrate-home. The installer reads a fresh TV inventory before replacing Root.')
@@ -674,6 +676,14 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                     if not args.yes and not prompts.confirm('Install these versions?', ask, write, default=True):
                         write('Cancelled. No TV changes were made.')
                         return 0
+                if home_conflict is not None or home_pending:
+                    from .home_handoff import takeover
+                    if not takeover(installer, pending=home_pending):
+                        if home_pending:
+                            raise UserError('Root operation was not confirmed. Run cytv status; retain recovery state.',
+                                            reason_code='root-operation-unconfirmed')
+                        raise home_conflict
+                    installer.preflight(install=True, home_interfaces=True)
                 if profile['edition'] == 'no-root':
                     phase = 'inspect-installation'
                     auto_stop = True
