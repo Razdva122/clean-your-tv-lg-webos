@@ -350,13 +350,12 @@ class SSH:
                 stderr_tail = stderr_tail[-64:]
                 if total > 8 * 1024 * 1024:
                     raise UserError('TV response exceeded the size limit.')
-            elif channel.exit_status_ready():
+            elif channel.exit_status_ready() or channel.closed:
+                # Paramiko wakes its exit-status waiter on close, even without a status.
                 status = channel.recv_exit_status()
                 if status != 0:
                     raise TVCommandError(status, storage_full=storage_full)
                 return
-            elif channel.closed:
-                raise UserError('TV connection interrupted. Run cytv status before retrying.',reason_code='connection-interrupted')
             else:
                 time.sleep(0.02)
         raise UserError('TV operation timed out. Run cytv status before retrying.', reason_code='operation-timeout')

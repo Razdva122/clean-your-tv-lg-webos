@@ -173,12 +173,15 @@ def tv_summary(value):
         detail = {
             'step': choice(failure.get('step'), ('initial-status', 'restore', 'final-status', 'finalize')),
             'reason': choice(failure.get('reason'), ('integrity-unverified', 'stock-home-unverified',
-                'ssh-command-failed', 'connection-interrupted', 'invalid-response',
+                'ssh-command-failed', 'ssh-exit-status-missing', 'connection-interrupted', 'invalid-response',
                 'operation-unconfirmed', 'observation-failed')),
         }
         code = failure.get('exit_status')
-        if detail['reason'] == 'ssh-command-failed' and type(code) is int and -1 <= code <= 255:
-            detail['exit_status'] = code
+        if detail['reason'] == 'ssh-command-failed' and type(code) is int:
+            if code == -1:
+                detail['reason'] = 'ssh-exit-status-missing'
+            elif 0 <= code <= 255:
+                detail['exit_status'] = code
         if detail['reason'] == 'connection-interrupted' and failure.get('reconnect_failed') is True:
             detail['reconnect_failed'] = True
         result['root_activation_restore_failure'] = detail

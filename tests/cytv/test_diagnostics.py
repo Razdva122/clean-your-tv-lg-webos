@@ -22,6 +22,7 @@ class DiagnosticTests(unittest.TestCase):
             self.assertEqual(report['ssh_command'], {'root_action': 'clean-remove', 'root_boundary': 'driver'})
             self.assertEqual(diagnostics.context.failure_summary(report)['reason_code'], 'ssh-exit-status-missing')
             self.assertIn('outcome is unknown', str(error))
+            self.assertIn('outcome is unknown', str(TVCommandError(-1, storage_full=True)))
 
             legacy = dict(report, reason_code='ssh-command-failed',
                           ssh_command=dict(report['ssh_command'], exit_status=-1))

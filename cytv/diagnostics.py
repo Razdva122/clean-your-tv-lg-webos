@@ -67,7 +67,7 @@ def create_report(store, action, profile, phase, error=None, tv_info=None, *, ch
         report['guidance'] = report_summary(help)
     reason = getattr(error, 'reason_code', 'unknown')
     if isinstance(error, TVCommandError):
-        reason = 'ssh-exit-status-missing' if error.exit_status == -1 else 'ssh-command-failed'
+        reason = error.diagnostic_reason
     elif type(error).__name__ in ('NoValidConnectionsError', 'AuthenticationException', 'BadHostKeyException', 'ImportError'):
         reason = {'NoValidConnectionsError': 'ssh-unreachable', 'AuthenticationException': 'ssh-authentication',
                   'BadHostKeyException': 'ssh-identity-changed', 'ImportError': 'host-runtime'}[type(error).__name__]

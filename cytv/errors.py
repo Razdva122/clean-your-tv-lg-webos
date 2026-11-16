@@ -203,9 +203,14 @@ class TVCommandError(UserError):
         if exit_status == -1:
             message = ('SSH closed without an exit status. The TV command outcome is unknown. '
                        'Save the diagnostic report and keep recovery data.')
-        super().__init__(TV_STORAGE_FULL if storage_full else message,
-                         reason_code='tv-storage-full' if storage_full else 'user-error')
+        elif storage_full:
+            message = TV_STORAGE_FULL
+        super().__init__(message, reason_code='tv-storage-full' if storage_full else 'user-error')
         self.exit_status = exit_status if type(exit_status) is int and -1 <= exit_status <= 255 else None
+
+    @property
+    def diagnostic_reason(self):
+        return 'ssh-exit-status-missing' if self.exit_status == -1 else 'ssh-command-failed'
 
 
 class DeveloperKeyError(UserError):

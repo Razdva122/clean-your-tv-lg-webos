@@ -1086,7 +1086,7 @@ else:
                 interrupted = connection_interrupted(error)
                 detail = {'step': step, 'reason': 'observation-failed'}
                 if isinstance(error, TVCommandError):
-                    detail.update(reason='ssh-command-failed', exit_status=error.exit_status)
+                    detail.update(reason=error.diagnostic_reason, exit_status=error.exit_status)
                 elif interrupted:
                     detail['reason'] = 'connection-interrupted'
                 elif isinstance(error, (json.JSONDecodeError, UnicodeError)):
