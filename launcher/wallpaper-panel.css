@@ -164,7 +164,7 @@
 .wallpaper-media-gallery {
   display: flex;
   flex-wrap: wrap;
-  margin: 0 -10px 6px 0;
+  margin: 0 0 6px;
 }
 .wallpaper-media-gallery h5 {
   margin: 8px 0;
@@ -210,14 +210,18 @@
 .background-layout {
   display: flex;
   align-items: flex-start;
-  margin: 0 -14px;
 }
 .background-preview,
 .background-library {
   box-sizing: border-box;
   width: 50%;
   min-width: 0;
-  padding: 0 14px;
+}
+.background-preview {
+  padding-right: 14px;
+}
+.background-library {
+  padding-left: 14px;
 }
 .background-preview .wallpaper-summary {
   position: relative;
@@ -359,12 +363,11 @@ body.ctv-wallpaper-playing .wallpaper-fullscreen img {
   visibility: hidden;
 }
 @media (max-width: 1280px) {
-  .background-layout {
-    margin: 0 -9px;
+  .background-preview {
+    padding-right: 9px;
   }
-  .background-preview,
   .background-library {
-    padding: 0 9px;
+    padding-left: 9px;
   }
   .background-preview .wallpaper-preview-image,
   .background-focus-preview img {

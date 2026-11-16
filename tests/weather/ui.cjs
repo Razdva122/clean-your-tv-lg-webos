@@ -187,7 +187,8 @@ const weather = {
     const order = await page
       .locator('[role=tab]')
       .evaluateAll((a) => a.map((n) => n.dataset.category));
-    assert.equal(order.indexOf('weather'), order.indexOf('wallpapers') + 1);
+    assert.equal(order.indexOf('screensaver'), order.indexOf('wallpapers') + 1);
+    assert.equal(order.indexOf('weather'), order.indexOf('screensaver') + 1);
     assert.equal(await page.locator('.weather-options').isVisible(), false);
     const sources = page.locator('.weather-sources-button');
     assert.equal(
