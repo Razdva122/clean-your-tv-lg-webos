@@ -108,7 +108,7 @@ def network_failure_code(error):
     return codes.pop() if len(codes) == 1 else 'ssh-unreachable'
 
 
-def for_error(error, phase, profile=None, pending=None):
+def for_error(error, phase, profile=None, pending=None, *, has_reset_source=None):
     if error is None:
         return None
     profile = profile if isinstance(profile,dict) else {}
@@ -176,7 +176,8 @@ def for_error(error, phase, profile=None, pending=None):
     result = {'code':code, 'title':title, 'detail':detail, 'next_step':next_step,
               'pending':bool(pending), 'can_edit_connection':edit and not bool(pending)}
     if ('BadHostKeyException' in names and phase == 'ssh-connect' and edition == 'no-root'
-            and not root_ssh and (not pending or pending.get('action') == 'uninstall')):
+            and not root_ssh and (not pending or pending.get('action') == 'uninstall')
+            and has_reset_source is not None and has_reset_source()):
         result['can_reconnect_after_reset'] = True
         result['next_step'] = 'If you factory-reset your TV, choose Reconnect after factory reset. For other SSH changes, verify the TV through your existing trusted connection.'
     if code == 'ssh-unreachable' and clean_removal:

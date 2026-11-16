@@ -898,15 +898,32 @@ class GuiTests(unittest.TestCase):
         self.assertNotIn('Change connection', labels)
 
     def test_changed_no_root_host_key_offers_explicit_new_install_flow(self):
-        from cytv.failure_help import for_error
+        from paramiko import RSAKey
+        from cytv.cli import explain_failure
+        from cytv.desktop import Channel
+        from cytv.state import Store, target
 
         error = type('BadHostKeyException', (Exception,), {})()
-        profile = {'host': '192.0.2.10', 'port': 9922, 'edition': 'no-root'}
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        store = Store(directory.name)
+        profile = target('192.0.2.10', 'no-root')
         calls = []
         window = Wizard(run=lambda args, **kwargs: calls.append(args) or 0)
         self.addCleanup(window.close)
         window.receive('selected-profile', profile)
-        window.receive('failure-help', for_error(error, 'ssh-connect', profile, {'action': 'uninstall'}))
+        console = Channel(window.receive).console
+        explain_failure(console, store, profile, 'ssh-connect', error)
+        window.receive('done', 1)
+        labels = [button.text() for button in window.form.findChildren(QPushButton)]
+        self.assertNotIn('Reconnect after factory reset', labels)
+
+        store.save(profile)
+        store.begin(profile, 'uninstall', stage='restart-required')
+        key = RSAKey.generate(2048)
+        (store.device_path(profile) / 'known_hosts').write_text(
+            f"[{profile['host']}]:{profile['port']} {key.get_name()} {key.get_base64()}\n")
+        explain_failure(console, store, profile, 'ssh-connect', error)
         window.receive('done', 1)
         buttons = {button.text(): button for button in window.form.findChildren(QPushButton)}
         buttons['Reconnect after factory reset'].click()

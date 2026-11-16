@@ -83,8 +83,17 @@ def parser(desktop=False):
 
 def explain_failure(write, store, profile, phase, error):
     from .failure_help import for_error
+
+    def has_reset_source():
+        from .no_root_reconnect import original_pins
+        try:
+            original_pins(store, profile)
+        except UserError:
+            return False
+        return True
+
     pending = store.diagnostic_pending if hasattr(store, 'diagnostic_pending') else store.pending(profile) if profile else None
-    help = for_error(error, phase, profile, pending)
+    help = for_error(error, phase, profile, pending, has_reset_source=has_reset_source)
     if help:
         write.failure_help(help)
         if help['code'] == 'ssh-identity' and profile and profile['edition'] == 'root' and (pending or {}).get('action') == 'uninstall':
