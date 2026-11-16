@@ -16,6 +16,7 @@ class CleanReinstallTests(unittest.TestCase):
         remote=test_operations.Remote();run=remote.run
         remote.run=lambda command,**kw: 'CYTV_EXISTING_ROOT' if 'CYTV_EXISTING_ROOT' in command else ('{"stage":"cancellation-admitted"}' if 'deploy.json' in command else run(command,**kw))
         inst=self.installer(remote,'root');inst.root_installation=Mock(return_value=dict(CLEAN))
+        inst._python = Mock(return_value='/usr/bin/python3')
         return inst,remote
 
     def test_blocked_shared_inspection_has_fixed_error_not_key_error(self):

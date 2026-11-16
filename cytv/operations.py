@@ -48,6 +48,40 @@ function pythonCommand(state){
  if(owned(inventoryPath,true).size>4*1024*1024||owned(executable,true).size>256*1024*1024)throw Error('oversized-python-runtime');
  var raw=fs.readFileSync(inventoryPath),inventory=JSON.parse(raw);
  if(crypto.createHash('sha256').update(raw).digest('hex')!==binding.inventory_sha256||inventory.schema!==1||inventory.archive_sha256!==pin||!inventory.files||crypto.createHash('sha256').update(fs.readFileSync(executable)).digest('hex')!==inventory.files['bin/python3.13'])throw Error('changed-python-runtime');
+ if (process.argv[2] === 'restore') {
+  // Check the entire tree before unlinking any unlisted cache. This runs in
+  // trusted host-supplied Node code, before the affected Python can import it.
+  var slot=path.dirname(inventoryPath), seen=0, caches=[];
+  function listed(name){return Object.prototype.hasOwnProperty.call(inventory.files,name);}
+  function inspect(directory){
+   fs.readdirSync(directory).forEach(function(name){
+    var file=path.join(directory,name),item=fs.lstatSync(file);
+    if(item.isDirectory()){
+     owned(file,false);
+     inspect(file);
+     return;
+    }
+    if(file===inventoryPath)return;
+    item=owned(file,true);
+    var relative=path.relative(slot,file);
+    if(listed(relative)){
+     if(item.size>256*1024*1024||crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex')!==inventory.files[relative])throw Error('changed-python-runtime');
+     seen++;
+     return;
+    }
+    var cache=/^(.+)\.cpython-313(?:\.opt-[12])?\.pyc$/.exec(name);
+    if(path.basename(directory)!=='__pycache__'||!cache||cache[0]!==name||
+       !listed(path.relative(slot,path.join(path.dirname(directory),cache[1]+'.py'))))throw Error('unexpected-python-runtime-file');
+    caches.push(file);
+   });
+  }
+  inspect(slot);
+  if(seen!==Object.keys(inventory.files).length)throw Error('missing-python-runtime-file');
+  caches.forEach(function(file){
+   try { owned(file,true); fs.unlinkSync(file); }
+   catch(e){if(e.code!=='ENOENT')throw e;}
+  });
+ }
  return launcher;
 }
 
@@ -142,8 +176,8 @@ class Installer:
         cache = (self.store.root if self.store is not None else default_dir()) / 'python-cache'
         return select_python(self.remote, cache, self.progress, provision=provision)
 
-    def _python(self, state=None):
-        if getattr(self, '_selected_python', None):
+    def _python(self, state=None, *, repair_cache=False):
+        if getattr(self, '_selected_python', None) and not repair_cache:
             return self._selected_python
         managed = '/var/lib/clean-your-tv-python/4a71641c8d5536175e404a961624e8656eba30e97b5026f6bd7dc31e4bbeaaea/bin/python3.13'
         states = list(dict.fromkeys([state or ROOT_STATE, ROOT_STATE, UPDATER_STATE, SYSTEM_UPDATER_STATE]))
@@ -177,10 +211,10 @@ if ! cytv_owned "$cytv_launcher" || ! cytv_owned "$cytv_receipt" || ! cytv_owned
    ! printf '%s\n' '#!/bin/sh' 'unset PYTHONHOME PYTHONPATH' 'export PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=1' 'exec MANAGED "$@"' | cmp -s - "$cytv_launcher"; then printf CYTV_PYTHON_INVALID; exit 0; fi
 if ! cytv_owned HELPER || [ ! -f HELPER ] || [ "$(stat -c %h HELPER)" != 1 ]; then printf CYTV_PYTHON_INVALID; exit 0; fi
 unset NODE_OPTIONS NODE_PATH
-if ! /usr/bin/node -e NODE_CHECK "$cytv_state" >/dev/null 2>&1; then printf CYTV_PYTHON_INVALID; exit 0; fi
+if ! /usr/bin/node -e NODE_CHECK "$cytv_state" CACHE_ACTION >/dev/null 2>&1; then printf CYTV_PYTHON_INVALID; exit 0; fi
 if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=1 MANAGED -c 'import runpy,sys; runpy.run_path(sys.argv[1])["verify_binding"](sys.argv[2]); print("CYTV_PYTHON_BOUND")' HELPER "$cytv_state"; then printf CYTV_PYTHON_INVALID; fi
-'''.replace('STATE', shlex.quote(location)).replace('MANAGED', managed).replace('HELPER', shlex.quote(helper)).replace('NODE_CHECK', shlex.quote(_RETAINED_PYTHON_CHECK))
-            reply = self.remote.run(script).strip()
+'''.replace('STATE', shlex.quote(location)).replace('MANAGED', managed).replace('HELPER', shlex.quote(helper)).replace('CACHE_ACTION', 'restore' if repair_cache else 'check').replace('NODE_CHECK', shlex.quote(_RETAINED_PYTHON_CHECK))
+            reply = (self.remote.run(script, timeout=180) if repair_cache else self.remote.run(script)).strip()
             if reply == 'CYTV_PYTHON_BOUND':
                 self._selected_python = managed
                 return managed
@@ -250,7 +284,7 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
         from .firmware_access import program
         try:
             source=program(self.payload/'root',enabled,repair=True) if repair else program(self.payload/'root',enabled)
-            reply=json.loads(self.remote.run(self._python_command([self._python(ROOT_STATE),'-I','-']),data=source.encode(),timeout=60))
+            reply=json.loads(self.remote.run(self._python_command([self._python(ROOT_STATE),'-I','-B','-']),data=source.encode(),timeout=60))
             if not isinstance(reply,dict) or reply.get('returnValue') is not True or reply.get('permissions_installed') is not enabled:raise ValueError('Unconfirmed firmware permission action')
             return reply
         except Exception:
@@ -1892,6 +1926,8 @@ print('CYTV_ROOT_FILES_OK')
 
     def restore_device(self):
         if self.profile['edition'] == 'root':
+            # Qualify the interpreter before inspection can import any cache.
+            self._python(ROOT_STATE, repair_cache=True)
             try:
                 installation=self.root_installation()
                 if installation.get('clean_removal_verified') is True and installation.get('can_install') is True:
