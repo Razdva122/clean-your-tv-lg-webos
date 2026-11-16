@@ -49,6 +49,7 @@ module.exports = function (options) {
     var previous = run;
     run = null;
     if (!previous) return;
+    if (previous.monitor !== null) unschedule(previous.monitor);
     // Remove LG deferral first. Renderer then sees close or its bounded
     // controller-loss timeout; no privileged closeByAppId is required.
     try {
@@ -111,7 +112,12 @@ module.exports = function (options) {
     // request to LG after CYTV used the previous one.
     if (!lgDeferral || lgDeferral.generation !== generation)
       lgDeferral = { generation: generation, deferredGlobal: false };
-    var active = { generation: generation, controller: null, lg: null };
+    var active = {
+      generation: generation,
+      controller: null,
+      lg: null,
+      monitor: null
+    };
     run = active;
     try {
       active.controller = options.controller.create({
@@ -157,6 +163,7 @@ module.exports = function (options) {
           return active.controller.getSession();
         }
       });
+      active.monitor = schedule(reconcile, 250);
       active.controller.enable();
       active.lg.start();
       return true;
@@ -178,7 +185,6 @@ module.exports = function (options) {
     return true;
   }
 
-  var monitor = schedule(reconcile, 250);
   return {
     enable: enable,
     whenReady: function (generation) {
@@ -206,7 +212,6 @@ module.exports = function (options) {
     reconcile: reconcile,
     dispose: function () {
       disposed = true;
-      unschedule(monitor);
       release();
     }
   };

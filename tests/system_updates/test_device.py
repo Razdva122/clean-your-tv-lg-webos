@@ -47,6 +47,51 @@ class DeviceBase(unittest.TestCase):
         self.store.write('baseline',value)
 
 class Tests(DeviceBase):
+    def test_root_registration_follows_screensaver_across_interrupted_update_and_rollback(self):
+        from types import SimpleNamespace
+        snapshot_path = self.device.root_state / 'ls2-provision-snapshot.json'
+        snapshot_path.parent.mkdir()
+        files = {name: self.root / name for name in ('api', 'client', 'role', 'service')}
+        base = ['theme-receiver-v1', 'wallpaper-media-v1']
+        enhanced = base + ['screensaver-v1']
+
+        def plan(original, caps):
+            return {name: data.encode() + (b':screensaver' if 'screensaver-v1' in caps and name != 'service' else b':normal')
+                    for name, data in original.items()}
+
+        original = {name: name for name in files}
+        old_policy, new_policy = plan(original, base), plan(original, enhanced)
+        snapshot = {'capabilities': base, 'files': {}}
+        for name, path in files.items():
+            path.write_bytes(old_policy[name])
+            snapshot['files'][str(path)] = {
+                'original': original[name], 'original_sha256': digest(original[name].encode()),
+                'installed_sha256': digest(old_policy[name]), 'mode': 0o600,
+                'uid': os.getuid(), 'gid': os.getgid(),
+            }
+        snapshot_path.write_text(json.dumps(snapshot))
+        provision = SimpleNamespace(FILES=files, plan=plan)
+        atomic = self.device.atomic
+
+        def interrupt(path, data, *args, **kwargs):
+            if path == files['client']:
+                raise InterruptedError('power lost')
+            atomic(path, data, *args, **kwargs)
+
+        self.device.atomic = interrupt
+        with self.assertRaises(InterruptedError):
+            self.device.repair_root_registration(provision, screensaver=True)
+        self.assertEqual(files['api'].read_bytes(), new_policy['api'])
+        self.assertEqual(json.loads(snapshot_path.read_text()), snapshot)
+
+        self.device.atomic = atomic
+        self.device.repair_root_registration(provision, screensaver=True)
+        self.assertEqual({name: path.read_bytes() for name, path in files.items()}, new_policy)
+        self.assertEqual(json.loads(snapshot_path.read_text())['capabilities'], enhanced)
+        self.device.repair_root_registration(provision, screensaver=False)
+        self.assertEqual({name: path.read_bytes() for name, path in files.items()}, old_policy)
+        self.assertEqual(json.loads(snapshot_path.read_text()), snapshot)
+
     def test_package_foreign_paths_and_identity_rejected(self):
         raw=ipk();descriptor={'name':'home','application':'com.gathin.tvhome','version':'1.0.0','sha256':digest(raw),'size':len(raw),'kind':'ipk'};self.assertTrue(self.device.inspect(raw,descriptor))
         raw=ipk(foreign=True);descriptor.update(sha256=digest(raw),size=len(raw))

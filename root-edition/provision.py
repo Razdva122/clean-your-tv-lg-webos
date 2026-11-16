@@ -24,11 +24,14 @@ PRIVATE_FILES = ('service.js','startup-diagnostics.js','app-inventory.js','handl
 RECEIVER_CAPABILITIES = ['theme-receiver-v1']
 WALLPAPER_CAPABILITIES = RECEIVER_CAPABILITIES + ['wallpaper-media-v1']
 COMPOSITOR_CAPABILITIES = WALLPAPER_CAPABILITIES + ['c1-keyfilter-v1']
-SCREENSAVER_CAPABILITIES = WALLPAPER_CAPABILITIES + ['screensaver-v1']
 
 def snapshot_capabilities(saved):
     capabilities = saved.get('capabilities', [])
-    if capabilities not in ([], RECEIVER_CAPABILITIES, WALLPAPER_CAPABILITIES, COMPOSITOR_CAPABILITIES, SCREENSAVER_CAPABILITIES):
+    ordinary = ([], RECEIVER_CAPABILITIES, WALLPAPER_CAPABILITIES)
+    # An OTA can retain an older registration contract. Add only the
+    # screensaver methods and keep that contract intact for rollback.
+    with_screensaver = tuple(base + ['screensaver-v1'] for base in ordinary)
+    if capabilities not in ordinary + (COMPOSITOR_CAPABILITIES,) + with_screensaver:
         raise ValueError('Unknown recovery capabilities')
     return capabilities
 SYSTEM_FILES = tuple(Path(x) for x in ('/usr/bin/node','/usr/palm/services/jsservicelauncher/bootstrap-node.js','/usr/palm/services/jsservicelauncher/bootstrap.js'))

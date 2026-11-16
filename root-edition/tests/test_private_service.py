@@ -27,6 +27,14 @@ class PrivateServiceTests(unittest.TestCase):
     self.assertEqual(json.loads(result['api'])[p.NAME+'.control'],[p.NAME+'/'+name for name in expected])
     self.assertEqual(p.snapshot_capabilities({'capabilities':capabilities}),capabilities)
     for key in ('service','role','client'):self.assertEqual(result[key],p.plan(original)[key])
+ def test_screensaver_migration_preserves_older_registration_grants(self):
+  original={'service':'Exec=/usr/bin/run-js-service -n '+str(p.SERVICE),'role':json.dumps({'appId':p.NAME}),'client':'{}','api':'{}'}
+  methods=['screensaverStatus','screensaverConfigure','screensaverPreview','screensaverActivity','screensaverEligible','screensaverStop']
+  for capabilities in ([],p.RECEIVER_CAPABILITIES,p.WALLPAPER_CAPABILITIES):
+   with self.subTest(capabilities=capabilities):
+    previous=json.loads(p.plan(original,capabilities)['api'])
+    upgraded=json.loads(p.plan(original,capabilities+['screensaver-v1'])['api'])
+    self.assertEqual(upgraded[p.NAME+'.control'],previous[p.NAME+'.control']+[p.NAME+'/'+name for name in methods])
  def test_each_snapshot_repairs_its_own_grant_even_after_new_release_metadata(self):
   for capabilities in ([],['theme-receiver-v1'],['theme-receiver-v1','wallpaper-media-v1']):
    with self.subTest(capabilities=capabilities),tempfile.TemporaryDirectory() as tmp:

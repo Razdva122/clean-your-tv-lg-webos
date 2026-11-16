@@ -353,7 +353,14 @@ class Device:
         else:self.require_components()
         self.integrity(enforce=False)
         self._trusted_component(c);raw=self.cache_bytes(c);hashes=self.inspect(raw,c)
-        if c['kind']=='infrastructure':self.validate_infrastructure_transition()
+        screensaver = None
+        if c['kind']=='infrastructure':
+            self.validate_infrastructure_transition()
+            if tx['candidate'].get('supervisor') == 2:
+                target, _ = self.screensaver_components(tx, rollback)
+                if not rollback and target is None:
+                    raise ValueError('Root screensaver release is missing its companion')
+                screensaver = target is not None
         # Only the original synchronous Manager call can persist this intent.
         # All preflight is read-only; lockdown and other effects follow intent.
         on_intent()
@@ -380,7 +387,14 @@ class Device:
                 if not os.path.lexists(path):continue
                 if digest(safe_bytes(path,uid=self.uid))!=candidate_hashes[name]:raise ValueError('Candidate-created infrastructure changed; refuse removal')
                 path.unlink();self.sync(path.parent)
-            self._refresh_root_receipts(hashes);self.repair_registrations();self.restart_root_service();on_terminal({'success':True,'sha256':c['sha256']});return
+            self._refresh_root_receipts(hashes)
+            if screensaver is None:
+                self.repair_registrations()
+            else:
+                self.repair_registrations(screensaver=screensaver)
+            self.restart_root_service()
+            on_terminal({'success':True,'sha256':c['sha256']})
+            return
         self.snapshot_mutable()
         from observed_install import install
         result=install(c['application'],str(self.cached(c)),timeout=180,
@@ -585,7 +599,7 @@ class Device:
             if result.returncode!=0:raise ValueError('Held remote keys could not be released')
         ticket['suspended']=True;self.store.write(ticket_name,ticket)
 
-    def repair_registrations(self):
+    def repair_registrations(self, *, screensaver=None):
         # IPK replacement may reset app service registrations. Restore only the
         # original or installed bytes recorded by explicit computer provision.
         tx=self.store.read('transaction')
@@ -607,16 +621,52 @@ class Device:
             # The provision module and its contract are in the verified Root
             # updater inventory; its plan contains only fixed Root LS2 paths.
             spec=importlib.util.spec_from_file_location('system_root_provision',self.root_updater/'code/provision.py');provision=importlib.util.module_from_spec(spec);spec.loader.exec_module(provision)
-            snapshot=json.loads(safe_bytes(self.root_state/'ls2-provision-snapshot.json',limit=65536,uid=self.uid))
-            if snapshot.get('phase') is not None:raise ValueError('Root removal in progress')
-            original={key:snapshot['files'][str(path)]['original'] for key,path in provision.FILES.items()};planned=provision.plan(original,provision.snapshot_capabilities(snapshot)) if 'capabilities' in snapshot else provision.plan(original)
-            for key,path in provision.FILES.items():
-                record=snapshot['files'][str(path)];current=safe_bytes(path,limit=65536,uid=self.uid)
-                if digest(planned[key])!=record['installed_sha256'] or digest(current) not in (record['original_sha256'],record['installed_sha256']):raise ValueError('Root service registration conflict')
-                if current!=planned[key]:self.atomic(path,planned[key],record['mode'],owner=(record['uid'],record['gid']))
+            self.repair_root_registration(provision, screensaver=screensaver)
             provision.refresh()
         else:self.scan_services()
         self.enforce_legacy_lockdown()
+
+    def repair_root_registration(self, provision, *, screensaver=None):
+        snapshot_path = self.root_state / 'ls2-provision-snapshot.json'
+        snapshot = json.loads(safe_bytes(snapshot_path, limit=65536, uid=self.uid))
+        if snapshot.get('phase') is not None:
+            raise ValueError('Root removal in progress')
+        records = snapshot['files']
+        if set(records) != {str(path) for path in provision.FILES.values()}:
+            raise ValueError('Foreign Root registration receipt')
+        previous = snapshot.get('capabilities', [])
+        capabilities = list(previous)
+        if screensaver is True and 'screensaver-v1' not in capabilities:
+            capabilities.append('screensaver-v1')
+        elif screensaver is False and 'screensaver-v1' in capabilities:
+            capabilities.remove('screensaver-v1')
+
+        original = {key: records[str(path)]['original'] for key, path in provision.FILES.items()}
+        planned = provision.plan(original, capabilities) if capabilities else provision.plan(original)
+        transition = capabilities != previous
+        changed = []
+        for key, path in provision.FILES.items():
+            record = records[str(path)]
+            target = planned[key]
+            target_sha = digest(target)
+            current = safe_bytes(path, limit=65536, uid=self.uid)
+            allowed = {record['original_sha256'], record['installed_sha256']}
+            # A resumed infrastructure leg may already have written the exact target bytes.
+            if transition:
+                allowed.add(target_sha)
+            if (digest(original[key].encode()) != record['original_sha256']
+                    or not transition and target_sha != record['installed_sha256']
+                    or digest(current) not in allowed):
+                raise ValueError('Root service registration conflict')
+            if current != target:
+                changed.append((path, target, record))
+            record['installed_sha256'] = target_sha
+
+        for path, target, record in changed:
+            self.atomic(path, target, record['mode'], owner=(record['uid'], record['gid']))
+        if transition:
+            snapshot['capabilities'] = capabilities
+            self.atomic(snapshot_path, json.dumps(snapshot, sort_keys=True, separators=(',', ':')).encode())
 
     def finish(self,tx):
         self.require_normal_root()

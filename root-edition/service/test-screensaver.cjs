@@ -27,6 +27,8 @@ let opened = 0;
 let subscriptions = 0;
 let acquiredMedia = 0;
 let releasedMedia = 0;
+let nextTimer = 0;
+const timers = new Set();
 const launches = [];
 const acknowledgements = [];
 const service = {
@@ -66,8 +68,11 @@ const adapter = create({
     idleTimeoutMs: 100
   }),
   now: () => time,
-  setInterval: () => 1,
-  clearInterval: () => {},
+  setInterval: () => {
+    timers.add(++nextTimer);
+    return nextTimer;
+  },
+  clearInterval: (timer) => timers.delete(timer),
   acquireMedia() {
     acquiredMedia += 1;
     return {
@@ -123,6 +128,7 @@ assert.equal(
 assert.equal(opened, 0, 'unsupported popup must not allocate transport');
 assert.equal(subscriptions, 0, 'unsupported popup must not register LG client');
 assert.equal(acquiredMedia, 0, 'unsupported owner cannot acquire media');
+assert.equal(timers.size, 0, 'the dormant adapter must not schedule polling');
 popupSupported = true;
 assert.equal(adapter.enable(7), true);
 assert.equal(adapter.preview(7), true);
@@ -157,6 +163,7 @@ assert.equal(adapter.stop(7), true);
 assert.equal(wireClosed, 1, 'explicit stop releases controller transport');
 assert.equal(cancelled, 1, 'explicit stop releases LG registration');
 assert.equal(releasedMedia, 1, 'Root stop releases the owned media lease');
+assert.equal(timers.size, 0, 'Root stop clears owned polling');
 assert.equal(
   adapter.preview(7),
   false,
@@ -290,6 +297,7 @@ assert.equal(
 );
 ready();
 adapter.dispose();
+assert.equal(timers.size, 0, 'dispose clears owned polling');
 assert.equal(adapter.enable(10), false, 'disposed adapter never restarts');
 assert.ok(
   launches.every((item) => item.id === 'com.cleanyourtv.screensaver'),
