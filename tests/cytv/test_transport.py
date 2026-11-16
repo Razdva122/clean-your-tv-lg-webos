@@ -55,6 +55,20 @@ class TransportTests(unittest.TestCase):
         self.assertIn('Timed out', result.error)
         channel.close.assert_called_once_with()
 
+    def test_command_close_racing_exit_status_poll_has_unknown_outcome(self):
+        from cytv.errors import TVCommandError, connection_interrupted
+        from unittest.mock import Mock
+
+        channel = Mock(closed=True)
+        channel.recv_ready.return_value = False
+        channel.recv_stderr_ready.return_value = False
+        channel.exit_status_ready.return_value = False
+        channel.recv_exit_status.return_value = -1
+        with self.assertRaises(TVCommandError) as caught:
+            list(SSH.__new__(SSH).chunks(channel, 1))
+        self.assertEqual(caught.exception.exit_status, -1)
+        self.assertFalse(connection_interrupted(caught.exception))
+
     def test_failed_command_preserves_only_fixed_space_category(self):
         from cytv.errors import TVCommandError
         from unittest.mock import Mock

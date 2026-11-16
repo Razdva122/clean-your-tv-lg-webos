@@ -221,6 +221,46 @@ class Remote:
 
 
 class OperationTests(unittest.TestCase):
+    def test_failed_compositor_home_press_collects_fresh_read_only_status(self):
+        from unittest.mock import Mock, patch
+        from cytv.diagnostic_context import tv_summary
+
+        remote = Mock()
+        installer = operations.Installer(remote, None, {'edition': 'root'}, Path('/unused'), {}, lambda *_: None)
+        installer.tv_info.update(home_backend='c1-native-gate', home_backend_schema=3)
+        installer.outcome.values['home_button'] = 'not-working'
+        remote.run.return_value = json.dumps({
+            'returnValue': True, 'result': {'backend': 'c1-native-gate',
+                'effective': {'backend': 'c1-native-gate', 'routing': 'compositor-keyfilter-v1',
+                    'returnValue': True, 'state': 'stopped', 'healthy': False, 'stopped': True,
+                    'stock_verified': True, 'routing_active': False, 'filter_installed': True,
+                    'reason': 'broker_expired', 'token': 'PRIVATE-TOKEN'},
+                'intent': {'enabled': False, 'token': 'PRIVATE-TOKEN'},
+                'recovery': {'integrity_verified': True}}})
+        with patch.object(installer, '_python', return_value='/verified/python'):
+            installer.observe_failed_root_home_button()
+        command, = remote.run.call_args.args
+        self.assertEqual(shlex.split(command)[-1], 'status')
+        self.assertEqual(remote.run.call_args.kwargs['timeout'], 12)
+        summary = tv_summary(installer.tv_info)['root_home_button_readback']
+        self.assertEqual(summary, {'status': 'read', 'healthy': False, 'stopped': True,
+            'stock_verified': True, 'routing_active': False, 'filter_installed': True,
+            'intent_enabled': False, 'reason': 'broker_expired'})
+        self.assertNotIn('PRIVATE', json.dumps(installer.tv_info))
+
+    def test_root_home_button_readback_skips_untested_and_retains_failed_result_on_ssh_loss(self):
+        from unittest.mock import Mock, patch
+
+        installer = operations.Installer(Mock(), None, {'edition': 'root'}, Path('/unused'), {}, lambda *_: None)
+        installer.tv_info.update(home_backend='c1-native-gate', home_backend_schema=3)
+        with patch.object(installer, 'root_action', side_effect=TimeoutError) as status:
+            installer.observe_failed_root_home_button()
+            status.assert_not_called()
+            installer.outcome.values['home_button'] = 'not-working'
+            installer.observe_failed_root_home_button()
+        self.assertEqual(installer.tv_info['root_home_button_readback'], {'status': 'unavailable'})
+        self.assertEqual(installer.outcome.values['home_button'], 'not-working')
+
     def test_new_recovery_attempt_reaches_only_explicit_program(self):
         from unittest.mock import MagicMock, patch
         remote = MagicMock(); remote.root = True

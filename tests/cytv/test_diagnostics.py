@@ -8,6 +8,36 @@ from cytv import cli, diagnostics, state
 
 
 class DiagnosticTests(unittest.TestCase):
+    def test_closed_ssh_channel_reports_unknown_removal_completion(self):
+        from cytv.errors import TVCommandError
+
+        with tempfile.TemporaryDirectory() as tmp:
+            store = state.Store(tmp)
+            error = TVCommandError(-1)
+            error.root_action = 'clean-remove'
+            error.root_boundary = 'driver'
+            path = diagnostics.create_report(store, 'uninstall', None, 'uninstall', error)
+            report = json.loads(path.read_text())
+            self.assertEqual(report['reason_code'], 'ssh-exit-status-missing')
+            self.assertEqual(report['ssh_command'], {'root_action': 'clean-remove', 'root_boundary': 'driver'})
+            self.assertEqual(diagnostics.context.failure_summary(report)['reason_code'], 'ssh-exit-status-missing')
+            self.assertIn('outcome is unknown', str(error))
+            incomplete = TVCommandError(-1, storage_full=True)
+            self.assertEqual(incomplete.reason_code, 'ssh-exit-status-missing')
+            self.assertIn('outcome is unknown', str(incomplete))
+
+            legacy = dict(report, reason_code='ssh-command-failed',
+                          ssh_command=dict(report['ssh_command'], exit_status=-1))
+            retained = diagnostics.context.failure_summary(legacy)
+            self.assertEqual(retained['reason_code'], report['reason_code'])
+            self.assertEqual(retained['ssh_command'], report['ssh_command'])
+
+            error = TVCommandError(1)
+            path = diagnostics.create_report(store, 'uninstall', None, 'uninstall', error)
+            report = json.loads(path.read_text())
+            self.assertEqual(report['reason_code'], 'ssh-command-failed')
+            self.assertEqual(report['ssh_command']['exit_status'], 1)
+
     def test_removal_restart_report_exports_only_known_triggers(self):
         with tempfile.TemporaryDirectory() as tmp:
             store = state.Store(tmp)

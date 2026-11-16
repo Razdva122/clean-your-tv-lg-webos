@@ -67,7 +67,7 @@ def create_report(store, action, profile, phase, error=None, tv_info=None, *, ch
         report['guidance'] = report_summary(help)
     reason = getattr(error, 'reason_code', 'unknown')
     if isinstance(error, TVCommandError):
-        reason = 'ssh-command-failed'
+        reason = error.diagnostic_reason
     elif type(error).__name__ in ('NoValidConnectionsError', 'AuthenticationException', 'BadHostKeyException', 'ImportError'):
         reason = {'NoValidConnectionsError': 'ssh-unreachable', 'AuthenticationException': 'ssh-authentication',
                   'BadHostKeyException': 'ssh-identity-changed', 'ImportError': 'host-runtime'}[type(error).__name__]
@@ -82,7 +82,9 @@ def create_report(store, action, profile, phase, error=None, tv_info=None, *, ch
     if isinstance(error, DeveloperKeyError):
         report['connection'] = {'protocol': 'developer-key', 'reason_code': error.reason_code}
     if isinstance(error, TVCommandError):
-        report['ssh_command'] = {'exit_status': error.exit_status}
+        report['ssh_command'] = {}
+        if error.exit_status != -1:
+            report['ssh_command']['exit_status'] = error.exit_status
         for key, allowed in context.ROOT_COMMAND_DETAILS:
             value = getattr(error, key, None)
             if isinstance(value, str) and value in allowed:

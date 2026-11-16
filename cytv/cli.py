@@ -744,6 +744,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                     install_settings.apply_services(installer, setup, write)
                 phase = 'verify-home-button'
                 installer.outcome.review_home(ask, write, args.non_interactive or setup_cancelled)
+                installer.observe_failed_root_home_button()
                 if profile['edition'] == 'root':
                     write.heading('Review TV checks')
                     if result.get('backend') != 'c1-native-gate':

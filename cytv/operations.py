@@ -498,7 +498,27 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
                                               'compositor':{'status':'unavailable'}}
             return None
 
-    def root_action(self, action, bundle=None, migrate=False, experimental=False):
+    def observe_failed_root_home_button(self):
+        if (self.profile['edition'] != 'root' or self.tv_info.get('home_backend_schema') != 3
+                or self.outcome.values['home_button'] != 'not-working'):
+            return
+        field = 'root_home_button_readback'
+        self.tv_info[field] = {'status': 'unavailable'}
+        try:
+            result = self.root_action('status', timeout=12)['result']
+            effective, intent = result['effective'], result['intent']
+            if (result.get('backend') != 'c1-native-gate'
+                    or effective.get('routing') != 'compositor-keyfilter-v1'
+                    or effective.get('returnValue') is not True):
+                return
+            self.tv_info[field] = diagnostics.context.root_home_button_readback({
+                **effective, 'status': 'read', 'intent_enabled': intent.get('enabled'),
+            })
+        except Exception:
+            # This observation is optional and does not reopen the completed install.
+            pass
+
+    def root_action(self, action, bundle=None, migrate=False, experimental=False, *, timeout=None):
         driver = (bundle or ROOT_STATE) + '/deploy.py'
         args = [self._python(ROOT_STATE), driver, action]
         if bundle:
@@ -515,7 +535,9 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
             self.tv_info['status']['observation_phase']='before-enable'
         cursor = self.collect_root_diagnostics() if action == 'enable' else None
         try:
-            raw = self.remote.run(command, timeout=1080 if action == 'uninstall' else 720 if action == 'restore' or experimental else 180)
+            if timeout is None:
+                timeout = 1080 if action == 'uninstall' else 720 if action == 'restore' or experimental else 180
+            raw = self.remote.run(command, timeout=timeout)
         except TVCommandError as error:
             if action == 'enable':
                 self.collect_root_diagnostics(cursor)
@@ -1098,7 +1120,7 @@ else:
                 interrupted = connection_interrupted(error)
                 detail = {'step': step, 'reason': 'observation-failed'}
                 if isinstance(error, TVCommandError):
-                    detail.update(reason='ssh-command-failed', exit_status=error.exit_status)
+                    detail.update(reason=error.diagnostic_reason, exit_status=error.exit_status)
                 elif interrupted:
                     detail['reason'] = 'connection-interrupted'
                 elif isinstance(error, (json.JSONDecodeError, UnicodeError)):
