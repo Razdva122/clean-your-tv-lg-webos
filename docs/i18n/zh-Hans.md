@@ -199,3 +199,7 @@ No-root: 要重新启动 Home 控制，请打开 Home Helper，选择启动 Help
 Developer Mode 的 No-root 提供自动续期（测试版）；请继续检查官方计时器。通过现有 root SSH 新安装 No-root 时，设置中会隐藏 Developer Mode 标签页。Root 可通过 Homebrew Channel 阻止 LG 固件更新，包括安全更新；需要通过 Homebrew Channel 真正重启电视。CYTV 更新单独管理。
 
 选择“保留当前设置”可跳过自定义。开关显示模式功能当前的开启或关闭状态。未更改的设置会保留。重新安装 Root 仍会按上文说明删除 CYTV 设置。请在电视上检查外观；重试前请在 Home 设置中检查未确认的选项。
+
+## 已 root 电视上的更新
+
+如果已配置可自行更新的 System Updater，已 root 电视上的 Root 或 No-root 可使用 **软件更新 → 全部更新**。完成前请保持电视开机。要仅修复更新工具，请打开 Home，选择 **软件更新 → 恢复 → 重新安装 System Updater**；Home 和设置将保留。没有 root 权限的 No-root 仍需通过电脑安装。

@@ -89,9 +89,11 @@ def inspect_package(raw, manifest):
     return {name: hashlib.sha256(data).hexdigest() for name, data in files.items()}
 
 
-def companion_files(files):
+def companion_files(files, prefix=PREFIX):
     """Project only the fixed service-free companion from verified Root DATA."""
-    recipe = files.get(SCREENSAVER_RECIPE)
+    if prefix not in (PREFIX, 'usr/palm/applications/com.gathin.tvhome/'):
+        raise ValueError('Foreign companion parent')
+    recipe = files.get(prefix + 'screensaver-companion/manifest.json')
     if recipe is None:
         return None
     spec = json.loads(recipe)
@@ -105,7 +107,7 @@ def companion_files(files):
         raise ValueError('Invalid Root screensaver version')
     result = {}
     for name, source in spec['files'].items():
-        if not isinstance(source, str) or not source.startswith(PREFIX) or source not in files:
+        if not isinstance(source, str) or not source.startswith(prefix) or source not in files:
             raise ValueError('Screensaver resource outside authenticated Root application')
         result[SCREENSAVER_PREFIX + name] = files[source]
     info = json.loads(result[SCREENSAVER_PREFIX + 'appinfo.json'])

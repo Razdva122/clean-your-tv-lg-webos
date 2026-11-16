@@ -2,6 +2,7 @@
 .lgtv-key.json
 .env
 *.pem
+!system-updater/bootstrap-public.pem
 *.key
 *.log
 launcher/apps.js

@@ -542,3 +542,26 @@ class InfrastructureOfferTests(DeviceBase):
 
     def test_downloaded_candidate_hash_mismatch_is_not_offered(self):
         self.assertFalse(self.offer({'runtime/cli.py':b'new'},corrupt=True)['canInstall'])
+
+class EngineInfrastructureEvolutionTests(DeviceBase):
+    def test_new_engine_inventory_preserves_old_snapshot_and_removes_only_pinned_bytes(self):
+        old_files={'runtime/old.py':b'old','runtime/keep.py':b'old keep'}
+        new_files={'runtime/new.py':b'new','runtime/keep.py':b'new keep'}
+        old,new=tar(old_files),tar(new_files)
+        prior={'name':'root-infrastructure','kind':'infrastructure','version':'1.0.0','sha256':digest(old),'size':len(old),'local':True,'files':{n:digest(v) for n,v in old_files.items()}}
+        candidate={'name':'root-infrastructure','kind':'infrastructure','version':'2.0.0','sha256':digest(new),'size':len(new)}
+        self.baseline({'edition':'root','components':[prior]})
+        original=self.root/'state/code';original.mkdir()
+        (original/'infrastructure-paths.json').write_text(json.dumps(list(old_files)))
+        (self.device.code/'infrastructure-paths.json').write_text(json.dumps(list(new_files)))
+        self.store.write('transaction',{'edition':'root','prior':{'components':[prior]},'candidate':{'components':[candidate]}})
+        for c,raw in ((prior,old),(candidate,new)):(self.root/'state/cache'/c['sha256']).write_bytes(raw)
+        self.assertEqual(self.device.inspect(old,prior),prior['files'])
+        self.assertEqual(self.device.inspect(new,candidate),{n:digest(v) for n,v in new_files.items()})
+        for name,value in old_files.items():
+            target=self.device._infra_path(name);target.parent.mkdir(exist_ok=True,parents=True);target.write_bytes(value)
+        self.device.validate_infrastructure_transition()
+        self.device._retire_infrastructure(new_files,old_files)
+        self.assertFalse(self.device._infra_path('runtime/old.py').exists())
+        target=self.device._infra_path('runtime/new.py');target.write_bytes(b'foreign')
+        with self.assertRaises(ValueError):self.device._retire_infrastructure(old_files,new_files)

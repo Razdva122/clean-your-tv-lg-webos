@@ -74,6 +74,9 @@ def pack_app(appfiles, servicefiles, architecture='all', helper=False):
         # uncompiled async functions stop them from loading at all.
         servicefiles = compile_helper(servicefiles)
     files = {'usr/palm/applications/' + app + '/' + n: b for n, b in appfiles.items()}
+    if app == 'com.gathin.tvhome':
+        from scripts.screensaver_package import add_root_resources
+        add_root_resources(files, 'usr/palm/applications/' + app + '/')
     files.update({'usr/palm/services/' + service + '/' + n: b for n, b in servicefiles.items()})
     files['usr/palm/packages/' + app + '/packageinfo.json'] = json.dumps({
         'id': app, 'version': version, 'app': app, 'services': [service]}).encode()

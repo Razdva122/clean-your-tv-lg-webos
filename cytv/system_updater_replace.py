@@ -10,6 +10,7 @@ import zlib
 REPLACEMENT_SOURCES = {
     '1.2.9': ('1.1.0', '1.1.1'),
     '1.2.10': ('1.1.0', '1.1.1', '1.2.9'),
+    '1.2.11': ('1.2.10',),
 }
 
 
@@ -258,13 +259,13 @@ def replace(bundle,setup,cleanup,manager,store,ownership,remove,terminal_removal
         # Inspect every proof before reserving a new operation or disabling code.
         old=old_proof(manager,system)
         if manager.io.owner_identity(APP)['version'] not in REPLACEMENT_SOURCES[target_version]:raise ValueError('Installed System Updater is not supported by this replacement bundle')
-        if target_version=='1.2.10':require_stock_home(manager)
+        if target_version in ('1.2.10','1.2.11'):require_stock_home(manager)
         if bootstrap is None:cleanup.operate('status',state=system)
         resume=lease['id'] if lease and not lease['terminal'] and lease['owner']=='system-replace' and lease['journal']=='system-replacement.json' and lease['stage']=='reserved' else None
     def eligible():
         nonlocal bootstrap_admission
         pending_journals('system-bootstrap' if job is not None and job['stage']=='provision' else 'system-replace')
-        if target_version=='1.2.10' and (job is None or job['stage']=='capture'):
+        if target_version in ('1.2.10','1.2.11') and (job is None or job['stage']=='capture'):
             require_stock_home(manager)
         if job is not None and job['stage']=='capture' and 'bootstrap_admission' in job:
             admission=job['bootstrap_admission']

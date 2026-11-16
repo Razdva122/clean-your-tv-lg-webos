@@ -61,6 +61,12 @@ class ScreensaverPackageTests(unittest.TestCase):
         self.assertIn(prefix + "screensaver-config.js", files)
         self.assertIn(prefix + "screensaver-settings.js", files)
         self.assertNotIn("usr/palm/applications/com.cleanyourtv.screensaver/appinfo.json", files)
+        recipe = json.loads(files[prefix + "screensaver-companion/manifest.json"])
+        from scripts.screensaver_package import popup_files
+        popup_info, popup = popup_files()
+        self.assertEqual(recipe['version'], popup_info['version'])
+        self.assertEqual({name: files[source] for name, source in recipe['files'].items()}, popup)
+        self.assertTrue(all(source.startswith(prefix) for source in recipe['files'].values()))
         root_dir = str(Path("root-edition").resolve())
         sys.path.insert(0, root_dir)
         try:

@@ -162,7 +162,7 @@ class FlowFixture:
 
 class FlowTests(FlowFixture, unittest.TestCase):
     def test_other_target_versions_are_rejected_before_device_changes(self):
-        for version in ('1.2.1','1.2.2','1.2.3','1.2.4','1.2.5','1.2.6','1.2.7','1.2.8','1.2.11'):
+        for version in ('1.2.1','1.2.2','1.2.3','1.2.4','1.2.5','1.2.6','1.2.7','1.2.8','1.2.12'):
             with self.subTest(version=version):
                 self.make_bundle(self.bundle,version=version)
                 with self.assertRaisesRegex(ValueError,'supported System Updater bundle'):
@@ -244,6 +244,31 @@ class FlowTests(FlowFixture, unittest.TestCase):
         self.fault=None;Store(self.system,uid=os.getuid()).write('registration',{'changed':True})
         with self.assertRaises(ValueError):self.run_replacement()
         self.assertEqual(self.removals,0)
+
+class SelfUpdatingBaselineTests(FlowFixture, unittest.TestCase):
+    def setUp(self):
+        super().setUp()
+        self.make_bundle(self.bundle,version='1.2.11')
+        (self.appdir/'version').write_text('1.2.10')
+
+    def test_preceding_supervisor_replacement_preserves_product_and_settings(self):
+        result=self.run_replacement()
+        self.assertEqual(result['version'],'1.2.11')
+        self.assertEqual(self.removals,1)
+        self.assertEqual(self.profile.read_bytes(),b'personal layout')
+        self.assertEqual(self.root_marker.read_bytes(),b'Root remains exact')
+
+    def test_old_broken_transition_is_not_newly_admitted(self):
+        (self.appdir/'version').write_text('1.2.9')
+        with self.assertRaisesRegex(ValueError,'not supported'):
+            self.run_replacement()
+        self.assertEqual(self.removals,0)
+
+    def test_active_home_blocks_baseline_replacement(self):
+        self.runtime_status['intent']={'enabled':True,'phase':'active'}
+        with self.assertRaises(ValueError):self.run_replacement()
+        self.assertEqual(self.removals,0)
+
 
 class StockHomeFlowTests(FlowFixture, unittest.TestCase):
     def setUp(self):

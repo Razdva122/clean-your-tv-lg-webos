@@ -25,7 +25,7 @@ BASE=Path('/var/luna-service2-dev')
 HOOK=Path('/var/lib/webosbrew/init.d/52-clean-your-tv-system-updater')
 ROOT_UPDATER_TRANSACTION=Path('/var/lib/clean-your-tv-root-updater/transaction.json')
 APPS={'home':'com.gathin.tvhome','helper':'com.local.nativehome','updater':'com.cleanyourtv.updater','root':'com.cleanyourtv.root.preview','root-updater':'com.cleanyourtv.root.updater'}
-CODE={'startup_hook.py','package_data.py','package_identity.py','startup_guard.py','installation.py','python_boot.js','python_binding.py','infrastructure-paths.json','system_updater/__init__.py','system_updater/support/__init__.py','system_updater/core.py','system_updater/device.py','system_updater/cli.py','system_updater/policy.js','system_updater/release-public.pem','system_updater/ca-bundle.crt','system_updater/ca-LICENSE.txt','system_updater/support/store.py','system_updater/support/package.py','system_updater/support/profile.py','system_updater/support/luna.py','observed_install.py','installer_status.py','service.js','run-system-updater.py','services.json','package.json'}
+CODE={'service-entry.py','permissions.json','system_updater/bootstrap_migration.py','system_updater/supervisor_io.py','system_updater/bootstrap-trust.js','system_updater/bootstrap-public.pem','engine-entry.py','system_updater/engine-policy.js','system_updater/bootstrap.py','system_updater/activation.py','startup_hook.py','package_data.py','package_identity.py','startup_guard.py','installation.py','python_boot.js','python_binding.py','infrastructure-paths.json','system_updater/__init__.py','system_updater/support/__init__.py','system_updater/core.py','system_updater/device.py','system_updater/cli.py','system_updater/policy.js','system_updater/release-public.pem','system_updater/ca-bundle.crt','system_updater/ca-LICENSE.txt','system_updater/support/store.py','system_updater/support/package.py','system_updater/support/profile.py','system_updater/support/luna.py','observed_install.py','installer_status.py','service.js','run-system-updater.py','services.json','package.json'}
 
 def require_normal_root(root=Path('/var/lib/clean-your-tv-root')):
     if any(os.path.lexists(Path(root)/name) for name in ('home-backend.json','c1-gate','c1-keyfilter','runtime/c1_gate.py','runtime/c1_keyfilter.py','runtime/c1-home-gate','runtime/c1-keyfilter-guard')):
@@ -246,7 +246,7 @@ def permission_plan():
     for app in ('com.gathin.tvhome','com.cleanyourtv.root.preview','com.cleanyourtv.updater','com.cleanyourtv.root.updater'):
         for pattern in (app,app+'-*'):clients[pattern]=[group]+([launcher] if app in ('com.gathin.tvhome','com.cleanyourtv.root.preview') else [])
     return {'role.json':{'appId':SERVICE,'type':'regular','allowedNames':[SERVICE],'permissions':[{'service':SERVICE,'inbound':list(clients),'outbound':[]}]},
-            'client.json':clients,'api.json':{group:[SERVICE+'/'+m for m in ('check','status','rollback','reconcile')],launcher:[SERVICE+'/'+m for m in ('install','restoreProfile','healthy')]}}
+            'client.json':clients,'api.json':{group:[SERVICE+'/'+m for m in ('check','status','rollback','reconcile')],launcher:[SERVICE+'/'+m for m in ('install','repair','restoreProfile','healthy')]}}
 
 def atomic(path,raw,mode=0o600):
     path=Path(path);raw=raw.encode() if isinstance(raw,str) else raw
@@ -415,7 +415,7 @@ def finish_registration(bundle,baseline,state=STATE,installed=INSTALLED,base=BAS
     expected='Exec=/usr/bin/run-js-service -n '+str(Path(installed)/'usr/palm/services'/SERVICE)
     if original['service'].decode().splitlines().count(expected)!=1 or json.loads(original['role']).get('appId')!=SERVICE:raise ValueError('Unexpected supervisor registration')
     runner=state/'run-service'
-    atomic(runner,'#!/bin/sh\nset -eu\n[ "$#" -eq 0 ] || exit 2\ncd '+str(code)+'\nexport NODE_PATH=/usr/palm/frameworks:/usr/lib/nodejs:/usr/lib/node_modules\nexec /usr/bin/node /usr/palm/services/jsservicelauncher/bootstrap-node.js -- '+str(state/'bootstrap.pid')+' /var/palm/ls2-dev '+str(code)+'\n',0o700)
+    atomic(runner,'#!/bin/sh\nset -eu\n[ "$#" -eq 0 ] || exit 2\nunset NODE_OPTIONS NODE_PATH\nexec /usr/bin/node '+str(code/'python_boot.js')+' '+str(state)+' '+str(code/'service-entry.py')+' service\n',0o700)
     plan=permission_plan();role=json.loads(original['role']);role.update(plan['role.json'])
     updated={'service':original['service'].decode().replace(expected,'Exec='+str(runner)).encode(),'role':json.dumps(role).encode(),'client':json.dumps(plan['client.json']).encode(),'api':json.dumps(plan['api.json']).encode()}
     expected={'files':{str(paths[k]):{'original':original[k].decode(),'installed':v.decode()} for k,v in updated.items()}}

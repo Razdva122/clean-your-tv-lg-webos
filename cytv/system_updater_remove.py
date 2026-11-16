@@ -38,7 +38,7 @@ def write(path,value,mode=0o600):
         if temp.exists():temp.unlink()
 
 def processes(code,proc=Path('/proc')):
-    result=[]
+    result=[];roots=(code,code.parent/'engine-state/slots/a',code.parent/'engine-state/slots/b')
     for path in proc.iterdir():
         if not path.name.isdigit() or int(path.name)==os.getpid():continue
         try:
@@ -48,15 +48,21 @@ def processes(code,proc=Path('/proc')):
         except (FileNotFoundError,ProcessLookupError,UnicodeError):continue
         if not args:continue
         executable=Path(args[0]).name
+        if executable.startswith('python') and len(args)>1 and args[1]=='-B':args=[args[0]]+args[2:]
         worker=False;match=False
         if executable in ('python3','python3.9','python3.10','python3.11','python3.12','python3.13','python3.14') and len(args)>=3:
-            if args[1]==str(code/'run-system-updater.py'):
+            if args[1] in {str(root/name) for root in roots for name in ('run-system-updater.py','engine-entry.py','service-entry.py')}:
                 match=True;worker=args[2]=='worker'
             elif re.fullmatch(r'/tmp/cytv-system-updater-[0-9a-f]{32}/(?:(?:system-updater|bundle)/)?setup-system-updater\.py',args[1]) and '--device' in args[2:] and '--apply' in args[2:]:
                 match=True;worker=True
         if executable in ('sh','bash','dash') and len(args)>=2 and args[1]==str(code.parent/'run-service'):match=True
         if executable in ('node','nodejs'):
-            match=(len(args)>=2 and args[1]==str(code/'system_updater/policy.js')) or (str(code) in args and '/usr/palm/services/jsservicelauncher/bootstrap-node.js' in args)
+            match=(len(args)>=2 and args[1] in {str(root/name) for root in roots for name in ('system_updater/policy.js','system_updater/engine-policy.js','service-entry.js')}) or (any(str(root) in args for root in roots) and '/usr/palm/services/jsservicelauncher/bootstrap-node.js' in args)
+            if len(args)>=5 and args[1]==str(code/'python_boot.js') and args[2]==str(code.parent) and args[3] in (str(code/'run-system-updater.py'),str(code/'service-entry.py')):
+                match=True;worker=args[4]=='worker'
+        if args==[SERVICE]:
+            try:match=Path(os.readlink(path/'cwd')) in roots and Path(os.readlink(path/'exe')).name in ('node','nodejs')
+            except FileNotFoundError:pass
         if match:result.append((int(path.name),start,worker))
     return result
 
@@ -172,6 +178,18 @@ def python_command(state):
     return str(launcher)
 
 
+def generation(state):
+    if not os.path.lexists(state/'engine-state/supervisor-generation.json'):return
+    code=state/'code';receipt=json.loads(read(state/'infrastructure.json'))
+    if not {'python_boot.js','run-system-updater.py','system_updater/bootstrap.py'}<=set(receipt['code']):raise ValueError('Missing supervisor generation reader')
+    env={key:value for key,value in os.environ.items() if not key.startswith('PYTHON') and key not in ('NODE_OPTIONS','NODE_PATH')}
+    env.update(PYTHONDONTWRITEBYTECODE='1',PYTHONNOUSERSITE='1')
+    result=subprocess.run(['/usr/bin/node',str(code/'python_boot.js'),str(state),str(code/'run-system-updater.py'),'own-package'],input=b'{}',stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=90,check=False,cwd=code,env=env)
+    if result.returncode or len(result.stdout)>2*1024*1024:raise ValueError('Supervisor generation reader failed')
+    reply=json.loads(result.stdout)
+    if not isinstance(reply,dict) or set(reply)!={'returnValue','result'} or reply['returnValue'] is not True or not isinstance(reply['result'],dict) or not reply['result']:raise ValueError('Invalid signed supervisor generation')
+
+
 def operate(action,state=STATE,base=Path('/var/luna-service2-dev'),hook=Path('/var/lib/webosbrew/init.d/52-clean-your-tv-system-updater'),installed=Path('/media/developer/apps/usr/palm'),destination=None,refresh=lambda:None,stop_processes=stop,proc=Path('/proc')):
     if action not in ('status','disable','archive'):raise ValueError('Unsupported supervisor cleanup action')
     state,base,hook,installed=map(Path,(state,base,hook,installed))
@@ -195,13 +213,21 @@ def operate(action,state=STATE,base=Path('/var/luna-service2-dev'),hook=Path('/v
             try:fcntl.flock(fd,fcntl.LOCK_EX|fcntl.LOCK_NB)
             except BlockingIOError:raise ValueError('Supervisor worker is active; retry after recovery')
     def idle():
+        migration=state/'engine-state/supervisor-migration.json'
+        if os.path.lexists(migration):
+            value=json.loads(read(migration))
+            if not isinstance(value,dict) or value.get('schema')!=1 or value.get('phase') not in ('complete','rolled-back','aborted'):raise ValueError('Supervisor package migration is pending')
+        engine=state/'engine-state/transaction.json'
+        if os.path.lexists(engine):
+            transition=json.loads(read(engine))
+            if transition.get('phase') not in ('complete','aborted'):raise ValueError('System engine replacement is pending')
         if any(p[2] for p in processes(state/'code',proc)):raise ValueError('Supervisor worker is active; retry after recovery')
         path=state/'transaction.json'
         if os.path.lexists(path):
             tx=json.loads(read(path))
             if tx.get('schema')!=1 or tx.get('phase') not in ('complete','rolled-back','aborted'):raise ValueError('Supervisor transaction requires recovery before removal')
     try:
-        locked();idle();setup=bootstrap(state)
+        locked();idle();setup=bootstrap(state);generation(state)
         journal=state/'cytv-removal.json';record=json.loads(read(journal)) if os.path.lexists(journal) else None
         if os.path.lexists(journal) and (not isinstance(record,dict) or set(record)!={'phase','archive'} or record.get('phase') not in ('disabling','disabled')):raise ValueError('Unknown supervisor removal journal')
         legacy=lockdown(state,base,allow_missing=record is not None and record.get('phase')=='disabled')
@@ -282,12 +308,12 @@ if __name__=='__main__':main()
 from .startup_remove import HELPER
 SCRIPT=SCRIPT.replace('\ndef operate(',HELPER+'\ndef operate(',1)
 
-import base64
-import zlib
-import io
-import tokenize
-# Whitespace/comments are transport-only; the readable SCRIPT remains inspectable.
-transport=tokenize.untokenize(t for t in tokenize.generate_tokens(io.StringIO(SCRIPT).readline) if t.type!=tokenize.COMMENT)
-# Normalize this fixed script's four-space indents for the bounded SSH transport.
-transport='\n'.join(' ' *((len(line)-len(line.lstrip()))//4)+line.strip() for line in transport.splitlines() if line.strip())+'\n'
-COMMAND='import base64,zlib;exec(zlib.decompress(base64.b85decode('+repr(base64.b85encode(zlib.compress(transport.encode(),9)).decode())+')))'
+import hashlib
+# Send the fixed source on stdin: cleanup recovery must not depend on the SSH
+# command-line size limit. The receiver rejects missing, truncated or changed
+# input before executing anything and leaves action/archive arguments intact.
+COMMAND = ('import hashlib,sys\n'
+           'source=sys.stdin.buffer.read('+str(len(SCRIPT.encode())+1)+')\n'
+           'if len(source)!='+str(len(SCRIPT.encode()))+' or hashlib.sha256(source).hexdigest()!='
+           +repr(hashlib.sha256(SCRIPT.encode()).hexdigest())+': raise ValueError("Incomplete cleanup source")\n'
+           'exec(compile(source,"<system-updater-cleanup>","exec"))')
