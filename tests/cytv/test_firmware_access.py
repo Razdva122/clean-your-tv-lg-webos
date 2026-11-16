@@ -274,7 +274,7 @@ class Tests(unittest.TestCase):
         with patch.object(installer,'_python',return_value='/usr/bin/python3'):
             installer.configure_firmware_access(True)
         self.assertLess(len(calls[0][0]),512,'TV SSH servers limit the exec request size')
-        self.assertIn('-I -',calls[0][0]);self.assertIn(b'def firmware_access(',calls[0][1])
+        self.assertIn('-I -B -',calls[0][0]);self.assertIn(b'def firmware_access(',calls[0][1])
 
     def test_sdk_world_writable_containers_are_read_only_and_exactly_scoped(self):
         virtual=self.base/'virtual-media';app=virtual/'developer/apps/usr/palm/applications'/APP

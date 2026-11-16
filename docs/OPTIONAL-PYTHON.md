@@ -60,6 +60,13 @@ or another installed updater may still require them. Do not delete these files
 while Root, an updater, rollback data or unfinished recovery references them.
 An interrupted or foreign slot is not silently overwritten.
 
+For an installed Root edition whose managed interpreter has extra bytecode
+cache files, the desktop installer's **Return to LG Home** action verifies the
+runtime binding and all listed file hashes before removing unlisted CPython 3.13
+cache files that correspond to listed sources. This uses the existing runtime
+without downloading a replacement. Restore stops if a listed file has changed
+or an unexpected file cannot be identified as a generated cache entry.
+
 ## Prepare the download for an offline setup
 
 On a computer with Internet access, run:
