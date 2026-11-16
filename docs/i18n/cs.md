@@ -92,6 +92,8 @@ Pokud podpora požádá o výstup příkazu SSH, otevřete v instalátoru na po�
 
 Pokud se po resetu nebo změně SSH objeví `ssh-identity-changed`, zastavte se: CYTV zablokoval změněný uložený klíč před přihlášením. První potvrzení důvěry jej nenahradí; čekající odinstalace nevysvětluje neshodu. Zachovejte původní profil, klíče a záznamy obnovy. V uloženém profilu Root s čekající odinstalací lze nezávisle ověřený otisk zaznamenat v konzoli. Dřívější odinstalace zůstane zablokovaná. Viz [obnova po změně identity SSH](../RECOVERY.md#ssh-identity-changed).
 
+Po obnovení továrního nastavení vlastní TV s No-root vyberte při změně klíče **Připojit znovu po obnovení továrního nastavení**. Postupujte podle pokynů v důvěryhodné domácí síti. Původní profil a záznam o odinstalaci se zachovají.
+
 Po přerušené instalaci použijte stejné uložené připojení a nejprve kontrolu stavu TV (**Check TV status**). Pokračujte jen nabízenou obnovou. Pokud je stav neznámý, uložte diagnostickou zprávu a zastavte se. Zachovejte data obnovy a neopakujte instalaci naslepo.
 
 Během obnovy ponechte ovládání Home vypnuté a zachovejte původní diagnostické zprávy i uložené připojení. Kontrolu a změny potvrzujte samostatně. Postupujte podle podrobného návodu pro nainstalovanou verzi; nevynucujte novou instalaci ani nemažte stav obnovy.

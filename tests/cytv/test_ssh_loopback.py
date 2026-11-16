@@ -41,9 +41,22 @@ class SSHLoopbackTests(unittest.TestCase):
             listener.listen(1)
             listener.settimeout(5)
             profile = state.target('127.0.0.1', 'no-root', listener.getsockname()[1])
+            store = state.Store(tmp)
+            store.save(profile)
+            original = store.device_path(profile)
             trusted = []
-            for cached in (False, True):
-                with self.subTest(cached=cached):
+            additional_key = paramiko.ECDSAKey.generate()
+            for attempt in ('first', 'remembered', 'same-key', 'after-reset'):
+                with self.subTest(attempt=attempt):
+                    if attempt == 'same-key':
+                        from cytv.no_root_reconnect import original_pins, reconnect
+                        from cytv.errors import UserError
+
+                        store.begin(profile, 'uninstall', stage='restart-required')
+                        receipt = (original / 'operation.json').read_bytes()
+                        original_key = (original / 'known_hosts').read_bytes()
+                    if attempt == 'after-reset':
+                        host_key = paramiko.RSAKey.generate(2048)
                     done = threading.Event()
                     errors = []
 
@@ -56,8 +69,13 @@ class SSHLoopbackTests(unittest.TestCase):
                             transport = paramiko.Transport(connection, server_sig_algs=False,
                                 disabled_algorithms={'pubkeys': ['rsa-sha2-512', 'rsa-sha2-256']})
                             transport.add_server_key(host_key)
+                            if attempt in ('same-key', 'after-reset'):
+                                transport.add_server_key(additional_key)
                             transport.start_server(server=Server())
                             done.wait(5)
+                        except EOFError as exc:
+                            if attempt != 'same-key':
+                                errors.append(exc)
                         except Exception as exc:
                             errors.append(exc)
                         finally:
@@ -67,21 +85,47 @@ class SSHLoopbackTests(unittest.TestCase):
                     thread = threading.Thread(target=serve, daemon=True)
                     thread.start()
                     try:
-                        remote = SSH.connect(profile, tmp, lambda _: 'test-passphrase',
-                                             lambda *args: trusted.append(args) or True)
-                        try:
-                            self.assertTrue(remote.client.get_transport().is_authenticated())
-                        finally:
-                            remote.close()
+                        def connect(directory, trust, **options):
+                            return SSH.connect(profile, directory, lambda _: 'test-passphrase', trust, **options)
+
+                        def trust(*args):
+                            trusted.append(args)
+                            return True
+
+                        if attempt in ('same-key', 'after-reset'):
+                            old_key_type, old_pins = original_pins(store, profile)
+
+                            def connect_again():
+                                return reconnect(store, profile,
+                                                 lambda path, approve: connect(
+                                                     path, approve, previous_host_key_type=old_key_type),
+                                                 trust, old_pins)
+
+                            if attempt == 'same-key':
+                                with self.assertRaisesRegex(UserError, 'still uses its saved SSH key'):
+                                    connect_again()
+                                remote = None
+                            else:
+                                remote = connect_again()
+                        else:
+                            remote = connect(original, trust)
+                        if remote is not None:
+                            try:
+                                self.assertTrue(remote.client.get_transport().is_authenticated())
+                            finally:
+                                remote.close()
                     finally:
                         done.set()
                         thread.join(timeout=6)
                     self.assertFalse(thread.is_alive())
                     self.assertEqual(errors, [])
-                    self.assertEqual((Path(tmp)/'developer-key.pem').read_bytes(), raw)
-            fetch.assert_called_once_with('127.0.0.1', 'test-passphrase')
-            self.assertEqual(len(trusted), 1)
-            self.assertFalse(trusted[0][1])
+                    self.assertEqual((store.device_path(profile) / 'developer-key.pem').read_bytes(), raw)
+            self.assertEqual((original / 'operation.json').read_bytes(), receipt)
+            self.assertEqual((original / 'known_hosts').read_bytes(), original_key)
+            self.assertIsNone(store.pending(profile))
+            self.assertEqual(fetch.call_count, 3)
+            self.assertEqual([root for _, root in trusted], [False, False])
+            self.assertNotEqual(trusted[0][0], trusted[1][0])
 
     def test_persisted_pin_reconnects_and_changed_key_is_rejected_before_auth(self):
         import paramiko

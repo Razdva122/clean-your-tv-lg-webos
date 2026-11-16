@@ -175,6 +175,10 @@ def for_error(error, phase, profile=None, pending=None):
         next_step += ' Keep the original saved TV connection and recovery data; do not replace or edit the connection to bypass recovery.'
     result = {'code':code, 'title':title, 'detail':detail, 'next_step':next_step,
               'pending':bool(pending), 'can_edit_connection':edit and not bool(pending)}
+    if ('BadHostKeyException' in names and phase == 'ssh-connect' and edition == 'no-root'
+            and not root_ssh and (not pending or pending.get('action') == 'uninstall')):
+        result['can_reconnect_after_reset'] = True
+        result['next_step'] = 'If you factory-reset your TV, choose Reconnect after factory reset. For other SSH changes, verify the TV through your existing trusted connection.'
     if code == 'ssh-unreachable' and clean_removal:
         result['transient_connection'] = all(cause in TRANSIENT_NETWORK_CAUSES
                                             for cause in network_failure_causes(error))

@@ -105,6 +105,8 @@ Se l’assistenza chiede l’output di un comando SSH, apri **Diagnostica → Es
 
 Se compare `ssh-identity-changed` dopo un ripristino o una modifica SSH, fermati: CYTV ha bloccato la chiave salvata modificata prima dell’autenticazione. La conferma iniziale di fiducia non la sostituisce; una disinstallazione in sospeso non spiega la differenza. Conserva il profilo originale, le chiavi e i dati di recupero. Con un profilo Root salvato e una disinstallazione in sospeso, puoi registrare nella console l’impronta verificata in modo indipendente. La disinstallazione precedente rimane bloccata. Vedi [recupero dell’identità SSH](../RECOVERY.md#ssh-identity-changed).
 
+Dopo aver ripristinato le impostazioni di fabbrica del tuo TV No-root, scegli **Riconnetti dopo il ripristino di fabbrica** se la chiave è cambiata. Segui le istruzioni sulla tua rete domestica fidata. Il profilo precedente e il registro di rimozione vengono conservati.
+
 Se l’installazione viene interrotta, usa la stessa connessione salvata e scegli prima **Controlla stato TV**. Prosegui solo con il ripristino proposto dalla procedura guidata. Se lo stato è sconosciuto, salva il rapporto diagnostico e fermati; conserva i dati di ripristino e non ripetere l’installazione alla cieca.
 
 Durante il ripristino, lascia disattivato il controllo Home e conserva i rapporti diagnostici originali e la connessione salvata. Conferma separatamente la verifica e le modifiche. Segui la guida dettagliata per la versione installata; non forzare la reinstallazione e non cancellare lo stato di ripristino.
