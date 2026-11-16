@@ -1139,6 +1139,9 @@ else:
                 detail = {'step': step, 'reason': 'observation-failed'}
                 if isinstance(error, TVCommandError):
                     detail.update(reason=error.diagnostic_reason, exit_status=error.exit_status)
+                    if step == 'restore':
+                        from .errors import root_restore_failure_details
+                        detail.update(root_restore_failure_details(getattr(error, 'root_restore_failure', None)))
                 elif interrupted:
                     detail['reason'] = 'connection-interrupted'
                 elif isinstance(error, (json.JSONDecodeError, UnicodeError)):
