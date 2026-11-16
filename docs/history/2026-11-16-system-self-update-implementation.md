@@ -182,5 +182,16 @@ frozen Windows/macOS Intel installer runtime and website build succeeded. Only t
 two described causes failed runtime shards 2/3 and their aggregate gates. Unaffected
 jobs and full release publication were skipped by normal routing.
 
-The final PR CI outcome is recorded below once the independent checks finish.
+The corrected product commit `8dd86a1c6b7a6d99a00ed9c3a516210e92595a86` passed
+[Tests run 43915406758, attempt 2](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/43915406758):
+all eight Linux/macOS runtime shards, both aggregate gates, browser coverage,
+phone HEIC and optional Python checks succeeded. The frozen Windows/macOS Intel
+installer runtime and website build also passed. Normal routing skipped unaffected
+theme/weather jobs and full release publication.
+
+The first attempt of that run could not obtain a hosted macOS ARM runner for shard 1.
+GitHub cancelled it before any test step. After all other independent jobs finished
+successfully, only that job and its dependent aggregate gates were retried. They passed;
+successful test groups, release builds and TV operations were not manually repeated.
+This final record changes documentation only and retains the matching code evidence.
 These are host checks; hardware acceptance remains outstanding.
