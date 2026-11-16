@@ -145,6 +145,21 @@ function view(ui) {
   assert.equal(cold.buttons[1].disabled, false);
   assert.equal(cold.buttons[2].hidden, true);
 }
+for (const enabled of [true, false]) {
+  const ui = panel();
+  ui.respond(0, { returnValue: false, errorCode: -1 });
+  ui.respond(1, { returnValue: true, enabled });
+  assert.equal(
+    ui.status.textContent,
+    enabled
+      ? 'Home and return from apps open Clean Your TV.'
+      : 'Home and return from apps open LG Home.'
+  );
+  const snapshot = view(ui);
+  assert.equal(snapshot.helper_status.outcome, 'rejected');
+  assert.equal(snapshot.helper_status.errorCode, -1);
+  assert.equal(snapshot.home_status.enabled, enabled);
+}
 for (const action of [
   'reply',
   'unknown',
@@ -182,7 +197,7 @@ for (const action of [
   if (action === 'busy again') {
     cold.respond(3, busy);
     assert.equal(cold.timers.size, 0, 'a persistent failure does not loop');
-    assert.match(cold.status.textContent, /status could not be checked/);
+    assert.equal(cold.status.textContent, 'Status is unavailable.');
     assert.equal(cold.buttons[2].hidden, false);
   } else {
     cold.respond(3, { returnValue: true, enabled: false });
@@ -320,6 +335,7 @@ ui.respond(0, { returnValue: true, running: false, blocked: false });
 assert.equal(ui.calls.length, 2);
 ui.respond(1, { returnValue: false });
 assert.equal(view(ui).helper_status.running, false);
+assert.equal(ui.status.textContent, 'Status is unavailable.');
 assert.equal(ui.buttons[2].hidden, false);
 ui = panel();
 ui.respond(0, { returnValue: true, blocked: false });
@@ -368,6 +384,16 @@ for (const failure of ['timeout', 'invalid-json', 'invalid-response']) {
   assert.equal(ui.calls.length, 2);
 }
 ui = panel();
+for (const call of [0, 2]) {
+  ui.respond(call, { returnValue: true, running: true });
+  ui.timers.values().next().value();
+  if (call === 0) ui.timers.values().next().value();
+}
+assert.equal(ui.status.textContent, 'Status is unavailable.');
+assert.equal(view(ui).home_status.outcome, 'timeout');
+assert.equal(ui.buttons[1].disabled, true);
+assert.equal(ui.buttons[2].hidden, true);
+ui = panel();
 ui.respond(0, { returnValue: true });
 ui.buttons[3].click();
 ui.respond(2, { returnValue: true });
@@ -391,7 +417,11 @@ vm.runInNewContext(catalogSource, {
     }
   }
 });
-for (const label of ['Show diagnostics', 'Hide diagnostics'])
+for (const label of [
+  'Show diagnostics',
+  'Hide diagnostics',
+  'Status is unavailable.'
+])
   assert.equal(
     catalogs.filter((locale) => Object.hasOwn(locale, label)).length,
     13,
