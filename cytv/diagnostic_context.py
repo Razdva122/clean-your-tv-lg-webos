@@ -20,7 +20,8 @@ ROOT_COMMAND_DETAILS = (
     ('root_interpreter', ('system-python', 'private-python')),
 )
 
-REASONS = ('unknown', 'user-error', 'ssh-command-failed', 'ssh-unreachable', 'ssh-access-denied', 'ssh-refused', 'ssh-timeout',
+REASONS = ('unknown', 'user-error', 'ssh-command-failed', 'ssh-exit-status-missing',
+           'ssh-unreachable', 'ssh-access-denied', 'ssh-refused', 'ssh-timeout',
            'ssh-authentication', 'ssh-identity-changed', 'ssh-trust-record', 'ssh-identity-unverified', 'host-runtime',
            'helper-running', 'helper-state-unverified', 'root-requirements',
            'pending-operation', 'root-operation-unconfirmed', 'project-apps-remain', 'version-mismatch',
@@ -146,6 +147,16 @@ def inventory_failures(value):
     return result
 
 
+def root_home_button_readback(value):
+    from .root_activation_diagnostics import COMPOSITOR_STOPS
+    value = mapping(value)
+    if value.get('status') != 'read' or type(value.get('routing_active')) is not bool:
+        return {'status': 'unavailable'}
+    flags = ('healthy', 'stopped', 'stock_verified', 'routing_active', 'filter_installed', 'intent_enabled')
+    return {'status': 'read', **{key: value[key] for key in flags if type(value.get(key)) is bool},
+            'reason': choice(value.get('reason'), ('none', *COMPOSITOR_STOPS))}
+
+
 def tv_summary(value):
     value = mapping(value)
     result = metadata(value)
@@ -189,6 +200,8 @@ def tv_summary(value):
     if 'setup_outcome' in value:
         from .outcomes import summary
         result['setup_outcome'] = summary(value['setup_outcome'])
+    if 'root_home_button_readback' in value:
+        result['root_home_button_readback'] = root_home_button_readback(value['root_home_button_readback'])
     if 'installation_settings' in value:
         settings = mapping(value['installation_settings'])
         result['installation_settings'] = {
@@ -471,8 +484,11 @@ def failure_summary(value):
         from .failure_help import report_summary
         result['guidance'] = report_summary(value['guidance'])
     command = mapping(value.get('ssh_command'))
-    if type(command.get('exit_status')) is int and -1 <= command['exit_status'] <= 255:
-        result['ssh_command'] = {'exit_status': command['exit_status']}
+    if type(command.get('exit_status')) is int:
+        if command['exit_status'] == -1 and result['reason_code'] == 'ssh-command-failed':
+            result['reason_code'] = 'ssh-exit-status-missing'
+        elif 0 <= command['exit_status'] <= 255:
+            result['ssh_command'] = {'exit_status': command['exit_status']}
     for key, allowed in ROOT_COMMAND_DETAILS:
         if key in command and type(command[key]) is str and command[key] in allowed:
             result.setdefault('ssh_command', {})[key] = command[key]
