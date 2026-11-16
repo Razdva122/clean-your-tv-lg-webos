@@ -71,10 +71,13 @@ def encoded(value):
 def runner_bytes():
     # Follow the firmware's bootstrap argument contract, without evaluating a
     # writable Homebrew wrapper or modifying the system run-js-service script.
+    # Legacy webos-service can exit idle while Activity Manager stalls dispatch.
+    # LG's local activity mode keeps its request lifecycle without that round trip.
     return ('#!/bin/sh\nset -eu\n[ "$#" -eq 0 ] || exit 2\n'
             'cd '+str(PRIVATE_SERVICE)+'\n'
             'export NODE_PATH=/usr/palm/frameworks:/usr/lib/nodejs:/usr/lib/node_modules\n'
-            'exec /usr/bin/node '+('' if LEGACY_NODE_BETA else '--require '+str(PRIVATE_SERVICE/'startup-diagnostics.js')+' ')+'/usr/palm/services/jsservicelauncher/bootstrap-node.js -- '
+            'exec /usr/bin/node '+('' if LEGACY_NODE_BETA else '--require '+str(PRIVATE_SERVICE/'startup-diagnostics.js')+' ')+'/usr/palm/services/jsservicelauncher/bootstrap-node.js '
+            +('--disable-activity-creation ' if LEGACY_NODE_BETA else '')+'-- '
             +str(STATE/'bootstrap.pid')+' /var/palm/ls2-dev '+str(PRIVATE_SERVICE)+'\n').encode()
 
 def prepare_private_service():
