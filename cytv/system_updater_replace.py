@@ -153,7 +153,7 @@ def stop_old_service(code,cleanup,registration_sha,proc=Path('/proc')):
 def completed_bootstrap(lease,job):
     return (isinstance(lease,dict) and lease.get('schema')==1
             and re.fullmatch('[a-f0-9]{32}',lease.get('id','')) is not None
-            and lease['id']!=job['id'] and lease.get('terminal') is True
+            and lease['id']!=job.get('id') and lease.get('terminal') is True
             and (lease.get('owner'),lease.get('journal'),lease.get('stage'))==('system-bootstrap','bootstrap.json','complete'))
 
 def fresh_bootstrap_proof(setup,cleanup,manager,system,lease):
@@ -220,7 +220,11 @@ def replace(bundle,setup,cleanup,manager,store,ownership,remove,terminal_removal
     target_version=version.get('version')
     if version.get('id')!=APP or target_version not in REPLACEMENT_SOURCES:raise ValueError('This replacement requires a supported System Updater bundle')
     job=store.read('system-replacement');lease=ownership.status();retired=None;bootstrap=None;bootstrap_admission=None
-    historical=job is not None and job.get('stage')=='complete' and job.get('bundle_sha256')!=bundle_sha
+    reserved=(job is not None and lease and not lease['terminal'] and lease['owner']=='system-replace'
+              and lease['journal']=='system-replacement.json' and lease['stage']=='reserved' and lease['id']!=job.get('id'))
+    fresh=job is not None and completed_bootstrap(lease,job)
+    historical=(job is not None and job.get('stage')=='complete'
+                and (job.get('bundle_sha256')!=bundle_sha or fresh or reserved))
     if job is not None:
         if (job.get('schema')!=1 or not historical and (job.get('bundle_sha256')!=bundle_sha or job.get('source_sha256')!=source_sha) or not re.fullmatch('[a-f0-9]{32}',job.get('id',''))):raise ValueError('Resume replacement with the same verified installer bundle')
         if job.get('stage') not in STAGES or not isinstance(job.get('archive'),str) or not re.fullmatch(re.escape(str(system))+r'\.archive-[a-f0-9]{32}',job['archive']):raise ValueError('Unknown replacement journal stage or archive')
@@ -231,9 +235,8 @@ def replace(bundle,setup,cleanup,manager,store,ownership,remove,terminal_removal
         if job['stage']!='capture' and not re.fullmatch('[a-f0-9]{64}',job.get('baseline_sha256','')):raise ValueError('Missing captured baseline proof')
         if historical:
             if not re.fullmatch('[a-f0-9]{64}',job.get('bundle_sha256','')) or not re.fullmatch('[a-f0-9]{64}',job.get('source_sha256','')):raise ValueError('Unknown historical replacement pins')
-            reserved=lease and not lease['terminal'] and lease['owner']=='system-replace' and lease['journal']=='system-replacement.json' and lease['stage']=='reserved' and lease['id']!=job['id']
             if not lease or not (lease['terminal'] and lease['stage']=='complete' or reserved):raise ValueError('Historical replacement requires terminal ownership')
-            if completed_bootstrap(lease,job):
+            if fresh:
                 bootstrap=lease
             elif reserved:
                 historical_root=Path(store.root)/('system-replacement-'+job['id'])

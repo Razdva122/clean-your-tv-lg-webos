@@ -392,6 +392,18 @@ class HistoricalReplacementTests(FlowFixture, unittest.TestCase):
         self.make_bundle(bundle, version='1.2.10')
         return historical, root, active, bundle
 
+    def test_same_replacement_bundle_is_eligible_after_fresh_published_bootstrap(self):
+        history, root, _, bundle = self.fresh_root_bootstrap()
+        self.make_bundle(root/'bundle', version='1.2.10')
+        history['bundle_sha256'] = self.ns['digest']((root/'bundle/bundle.json').read_bytes())
+        self.assertEqual(history['bundle_sha256'], self.ns['digest']((bundle/'bundle.json').read_bytes()))
+        self.store.write('system-replacement', history)
+        result = self.run_replacement(bundle, source_sha='b'*64)
+        self.assertEqual(result['version'], '1.2.10')
+        self.assertTrue(result['home_unchanged'])
+        self.assertEqual(self.removals, 1)
+        self.assertTrue((root/'completed-replacement.json').exists())
+
     def test_fresh_verified_root_bootstrap_retires_history_with_missing_archive(self):
         from unittest.mock import patch
         for point in ('reservation', 'active-journal'):
