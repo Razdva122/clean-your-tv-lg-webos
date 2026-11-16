@@ -20,7 +20,8 @@ var apps = [
   'com.cleanyourtv.system.updater',
   'com.cleanyourtv.updater',
   'com.local.nativehome',
-  'com.gathin.tvhome'
+  'com.gathin.tvhome',
+  'com.cleanyourtv.screensaver'
 ];
 var opened = [],
   directory,
@@ -137,13 +138,17 @@ function object(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 function packageReceipts() {
+  if (!object(record.packages)) throw Error('incomplete-removal-receipts');
+  var keys = Object.keys(record.packages).sort();
+  var compatible = [apps, apps.slice(0, -1)];
   if (
-    !object(record.packages) ||
-    Object.keys(record.packages).sort().join(',') !==
-      apps.slice().sort().join(',')
+    !compatible.some(function (ids) {
+      return ids.slice().sort().join(',') === keys.join(',');
+    })
   )
     throw Error('incomplete-removal-receipts');
-  apps.forEach(function (app) {
+  // Older receipts predate the companion. absent() still checks every app.
+  keys.forEach(function (app) {
     var item = record.packages[app];
     if (
       !object(item) ||

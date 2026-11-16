@@ -73,18 +73,7 @@ const assert = require('node:assert/strict');
       await page.keyboard.press('ArrowRight');
       assert.equal(
         await page.evaluate(() => document.activeElement.id),
-        'wallpaperSourceTheme'
-      );
-      await page.keyboard.press('ArrowDown');
-      assert.equal(
-        await page.evaluate(() => document.activeElement.id),
-        'wallpaperCYTV',
-        'upload actions precede built-in wallpaper controls'
-      );
-      await page.keyboard.press('ArrowDown');
-      assert.equal(
-        await page.evaluate(() => document.activeElement.id),
-        'wallpaperBuiltin-black-hole'
+        'wallpaperFullscreen'
       );
       await page.keyboard.press('ArrowDown');
       assert.equal(
@@ -104,6 +93,17 @@ const assert = require('node:assert/strict');
       assert.equal(
         await page.evaluate(() => HomeWallpaper.state().preferenceQuality),
         'image'
+      );
+      await page.locator('#wallpaperFullscreen').click();
+      assert.equal(
+        await page.locator('.wallpaper-fullscreen').isVisible(),
+        true
+      );
+      await page.keyboard.press('Escape');
+      assert.equal(await page.locator('.wallpaper-fullscreen').count(), 0);
+      assert.equal(
+        await page.evaluate(() => document.activeElement.id),
+        'wallpaperFullscreen'
       );
       await page.locator('#wallpaperDimPlus').click();
       assert.equal(

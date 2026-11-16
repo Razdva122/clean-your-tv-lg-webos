@@ -312,6 +312,15 @@ def main(mode, transaction=None):
 
 
 def execute(mode, transaction=None):
+    if mode == 'screensaver':
+        from intent_runtime import screensaver_entry
+        value = None
+        if transaction == 'configure':
+            raw = sys.stdin.buffer.read(4097)
+            if len(raw) > 4096:
+                raise ValueError('Oversized screensaver configuration')
+            value = json.loads(raw)
+        return screensaver_entry(transaction, value)
     if mode == 'provision-wallpaper-access':
         ready=True
         for feature in ('theme-receiver','wallpaper-media','weather'):

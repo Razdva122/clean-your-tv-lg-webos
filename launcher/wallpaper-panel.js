@@ -4,6 +4,7 @@
 
   var panel,
     preview,
+    mediaBadges,
     title,
     sourceInfo,
     capability,
@@ -17,7 +18,10 @@
     minus,
     plus,
     reset,
-    preferences;
+    preferences,
+    fullscreen,
+    closePreview,
+    clearFocusPreview;
   function t(source) {
     var prefix = 'Video dimensions do not match the theme. ';
     if (source.indexOf(prefix) === 0)
@@ -55,6 +59,158 @@
             ? '4K'
             : '1080p'
     );
+  }
+  function renderBadges(element, mode, qualities, width, height) {
+    var labels = mode ? [t(mode === 'video' ? 'Video' : 'Photo')] : [];
+    if (mode) {
+      if (
+        qualities.indexOf('4k') >= 0 ||
+        (mode === 'photo' && width >= 3840 && height >= 2160)
+      )
+        labels.push(label('4k'));
+      if (
+        qualities.indexOf('1080p') >= 0 ||
+        (mode === 'photo' && width === 1920 && height === 1080)
+      )
+        labels.push(label('1080p'));
+    }
+    if (element.getAttribute('data-labels') === labels.join('\n')) return;
+    element.setAttribute('data-labels', labels.join('\n'));
+    element.textContent = '';
+    labels.forEach(function (value) {
+      node('span', element).textContent = value;
+    });
+  }
+  function mediaCard(button, title, mode, media) {
+    button.classList.add('wallpaper-media-card');
+    if (!button.mediaCard) {
+      button.textContent = '';
+      var image = node('img', button);
+      image.alt = '';
+      image.hidden = true;
+      var name = node('strong', button);
+      var badges = node('span', button);
+      badges.className = 'wallpaper-media-badges';
+      button.mediaCard = { image: image, name: name, badges: badges };
+    }
+    var card = button.mediaCard;
+    card.name.textContent = title;
+    card.image.hidden = !media || !media.url;
+    if (card.image.hidden) card.image.removeAttribute('src');
+    else if (card.image.getAttribute('src') !== media.url)
+      card.image.src = media.url;
+    renderBadges(
+      card.badges,
+      mode,
+      media ? media.qualities : [],
+      media && media.width,
+      media && media.height
+    );
+  }
+  function releaseCard(button) {
+    if (!button) return;
+    button.mediaEpoch = (button.mediaEpoch || 0) + 1;
+    if (!button.mediaUrl) return;
+    button.mediaCard.image.hidden = true;
+    button.mediaCard.image.removeAttribute('src');
+    root.URL.revokeObjectURL(button.mediaUrl);
+    button.mediaUrl = '';
+  }
+  function savedCard(button, title, mode) {
+    if (!button.mediaCard) mediaCard(button, title, mode);
+    if (!root.PersonalWallpaper || !root.PersonalWallpaper.previewMedia) return;
+    var epoch = (button.mediaEpoch || 0) + 1;
+    button.mediaEpoch = epoch;
+    return root.PersonalWallpaper.previewMedia(mode)
+      .then(function (media) {
+        if (button.mediaEpoch !== epoch) {
+          if (media) root.URL.revokeObjectURL(media.url);
+          return;
+        }
+        if (button.mediaUrl) root.URL.revokeObjectURL(button.mediaUrl);
+        button.mediaUrl = media && media.url;
+        mediaCard(button, title, mode, media);
+      })
+      .catch(function () {});
+  }
+  function backgroundLayout(parent) {
+    var layout = node('div', parent);
+    layout.className = 'background-layout';
+    var left = node('div', layout);
+    left.className = 'background-preview';
+    var right = node('div', layout);
+    right.className = 'background-library';
+    return { left: left, right: right };
+  }
+  function libraryTabs(parent, builtin, saved, initial) {
+    var tabs = node('div', parent);
+    tabs.className = 'background-tabs wallpaper-quality';
+    tabs.setAttribute('role', 'group');
+    tabs.setAttribute('aria-label', t('Background source'));
+    var panes = [builtin, saved];
+    var buttons = ['Built-in', 'My files'].map(function (name, index) {
+      var choice = button(tabs, null, function () {
+        select(index);
+      });
+      choice.setAttribute(
+        'data-background-tab',
+        index === 0 ? 'built-in' : 'my-files'
+      );
+      choice.textContent = t(name);
+      return choice;
+    });
+    panes.forEach(function (pane) {
+      parent.appendChild(pane);
+    });
+    function select(index) {
+      panes.forEach(function (pane, i) {
+        pane.hidden = index !== i;
+        buttons[i].setAttribute('aria-pressed', String(index === i));
+      });
+    }
+    select(initial || 0);
+    return select;
+  }
+  function disclosure(parent, content, name) {
+    var control = button(parent, null, function () {
+      content.hidden = !content.hidden;
+      control.setAttribute('aria-expanded', String(!content.hidden));
+    });
+    control.textContent = t(name);
+    control.setAttribute('aria-expanded', 'false');
+    control.setAttribute('data-background-upload', '');
+    content.hidden = true;
+    parent.appendChild(content);
+  }
+  function focusPreview(gallery, summary) {
+    var overlay = node('div', summary);
+    overlay.className = 'background-focus-preview';
+    overlay.hidden = true;
+    overlay.setAttribute('aria-hidden', 'true');
+    var image = node('img', overlay);
+    image.alt = '';
+    var title = node('strong', overlay);
+    gallery.addEventListener('focusin', function (event) {
+      var card = event.target.mediaCard;
+      if (
+        !card ||
+        card.image.hidden ||
+        event.target.getAttribute('aria-pressed') === 'true'
+      )
+        return;
+      image.src = card.image.src;
+      title.textContent = card.name.textContent;
+      overlay.hidden = false;
+    });
+    gallery.addEventListener('focusout', function (event) {
+      if (!event.target.mediaCard) return;
+      overlay.hidden = true;
+      image.removeAttribute('src');
+    });
+    return function () {
+      overlay.hidden = true;
+      image.removeAttribute('src');
+    };
   }
   var personalControls,
     themeSource,
@@ -209,25 +365,54 @@
     }, error);
   }
   var builtinButtons = [];
-  function mountPersonal() {
+  var sharedButtons = {};
+  var sharedHeading = null;
+  function refreshSharedMedia() {
+    if (!sharedHeading || !root.PersonalWallpaper.listMedia) return;
+    root.PersonalWallpaper.listMedia().then(
+      function (result) {
+        sharedHeading.hidden = result.photo || result.video;
+        sharedButtons.photo.hidden = !result.photo;
+        sharedButtons.video.hidden = !result.video;
+        ['photo', 'video'].forEach(function (mode) {
+          if (result[mode] && active)
+            savedCard(sharedButtons[mode], savedLabel(mode), mode);
+          else releaseCard(sharedButtons[mode]);
+        });
+      },
+      function () {
+        sharedHeading.hidden =
+          sharedButtons.photo.hidden =
+          sharedButtons.video.hidden =
+            true;
+      }
+    );
+  }
+  function savedLabel(mode) {
+    return t(mode === 'photo' ? 'My photo' : 'My video');
+  }
+  function mountPersonal(destination) {
     if (!root.PersonalWallpaper) return;
-    personalControls = node('div', panel, 'personalWallpaperControls');
-    var sourceControls = node('div', panel, 'wallpaperSources');
-    var sources = node('div', sourceControls);
-    sources.className = 'wallpaper-quality';
+    var sourceControls = node('div', destination, 'wallpaperSources');
+    var builtinPane = node('div', sourceControls);
+    var myPane = node('div', sourceControls);
+    var sources = node('div', builtinPane);
+    sources.className = 'background-source-action';
+    var savedSource = node('div', myPane);
+    savedSource.className = 'background-source-action';
     themeSource = button(sources, 'wallpaperSourceTheme', function () {
       invoke('select', 'theme');
     });
-    mySource = button(sources, 'wallpaperSourcePersonal', function () {
+    mySource = button(savedSource, 'wallpaperSourcePersonal', function () {
       invoke('select', 'personal');
     });
     if (root.WallpaperLibrary) {
-      var library = node('div', sourceControls, 'wallpaperBuiltins');
-      var heading = node('h5', library);
-      heading.textContent = t('Built-in wallpapers');
+      var library = node('div', builtinPane, 'wallpaperBuiltins');
+      var gallery = node('div', library);
+      gallery.className = 'wallpaper-media-gallery';
       root.WallpaperLibrary.list().forEach(function (item) {
         var el = button(
-          library,
+          gallery,
           'wallpaperBuiltin-' + item.id.slice(8),
           function () {
             stopReceiver();
@@ -235,20 +420,40 @@
           }
         );
         el.setAttribute('data-wallpaper-id', item.id);
-        var name = node('strong', el);
-        name.textContent = item.title;
+        mediaCard(el, item.title, 'video', {
+          url: 'wallpapers/ribbon-preview.jpg',
+          qualities: ['4k', '1080p']
+        });
         var credit = node('small', el);
-        credit.textContent = '4K · ' + t('Video by') + ' ' + item.author;
+        credit.textContent = t('Video by') + ' ' + item.author;
         builtinButtons.push({
           button: el,
           credit: credit,
-          item: item,
-          heading: heading
+          item: item
         });
       });
     }
-    panel.insertBefore(sourceControls, notice);
-    sourceControls.insertBefore(personalControls, library || null);
+    libraryTabs(sourceControls, builtinPane, myPane);
+    if (root.PersonalWallpaper.selectMedia) {
+      var shared = node('div', myPane);
+      shared.className = 'wallpaper-media-gallery';
+      sharedHeading = node('p', myPane);
+      sharedHeading.className = 'background-empty';
+      sharedHeading.textContent = t('No saved files');
+      ['photo', 'video'].forEach(function (mode) {
+        sharedButtons[mode] = button(
+          shared,
+          'wallpaperSaved-' + mode,
+          function () {
+            invoke('selectMedia', mode);
+          }
+        );
+        mediaCard(sharedButtons[mode], savedLabel(mode), mode);
+        sharedButtons[mode].hidden = true;
+      });
+      refreshSharedMedia();
+    }
+    personalControls = node('div', destination, 'personalWallpaperControls');
     var uploads = node('div', personalControls);
     receiveCYTV = button(uploads, 'wallpaperCYTV', function () {
       receive(false);
@@ -299,6 +504,7 @@
         }
       );
     });
+    disclosure(destination, personalControls, 'Add a file');
   }
   function refreshPersonal() {
     if (!personalControls) return;
@@ -312,9 +518,13 @@
     }
     themeSource.textContent = t('Theme');
     mySource.textContent = t('My wallpaper');
+    if (sharedHeading) {
+      sharedHeading.textContent = t('No saved files');
+    }
     themeSource.setAttribute('aria-pressed', String(value.source === 'theme'));
     mySource.setAttribute('aria-pressed', String(value.source === 'personal'));
     mySource.disabled = !value.installed;
+    mySource.hidden = !value.installed;
     remove.disabled = !value.installed;
     remove.textContent = t('Remove personal wallpaper');
     receiveCYTV.textContent = t('Receive from CYTV');
@@ -327,9 +537,8 @@
         'aria-pressed',
         String(value.source === 'builtin' && value.builtinId === entry.item.id)
       );
-      entry.heading.textContent = t('Built-in wallpapers');
-      entry.credit.textContent =
-        '4K · ' + t('Video by') + ' ' + entry.item.author;
+
+      entry.credit.textContent = t('Video by') + ' ' + entry.item.author;
     });
     receiverCancel.textContent = t('Cancel');
     applyButton.textContent = t('Apply');
@@ -355,6 +564,8 @@
       cap = value.capabilities || {},
       dim = typeof value.dim === 'number' ? value.dim : 0;
     preferences.hidden = !hasPoster;
+    fullscreen.disabled = !hasPoster;
+    fullscreen.textContent = t('Full screen');
     title.textContent =
       value.source === 'personal'
         ? t('My wallpaper')
@@ -387,6 +598,17 @@
         preview.src = value.posterURL;
       preview.alt = t('Current theme wallpaper');
     } else preview.removeAttribute('src');
+    renderBadges(
+      mediaBadges,
+      hasPoster &&
+        ((value.source === 'personal' && personal().mediaKind) ||
+          (available.indexOf('4k') >= 0 || available.indexOf('1080p') >= 0
+            ? 'video'
+            : 'photo')),
+      available,
+      value.posterWidth,
+      value.posterHeight
+    );
     capability.textContent =
       t('TV capability') +
       ': ' +
@@ -417,7 +639,12 @@
     if (value.notice) notice.textContent += ' ' + t(value.notice);
     qualityButtons.forEach(function (button) {
       var q = button.getAttribute('data-wallpaper-quality');
-      button.textContent = label(q);
+      button.textContent =
+        q === 'image' &&
+        (available.indexOf('4k') >= 0 || available.indexOf('1080p') >= 0) &&
+        personal().mediaKind !== 'photo'
+          ? t('Still frame')
+          : label(q);
       button.disabled =
         !hasPoster ||
         (q !== 'auto' && available.indexOf(q) < 0) ||
@@ -481,6 +708,51 @@
     el.onclick = action;
     return el;
   }
+  function showFullscreen() {
+    var poster = state().posterURL;
+    if (!poster || closePreview) return;
+    var dialog = node('div', document.body);
+    dialog.className = 'wallpaper-fullscreen';
+    dialog.setAttribute('role', 'dialog');
+    dialog.setAttribute('aria-modal', 'true');
+    dialog.setAttribute('aria-label', t('Wallpaper preview'));
+    var image = node('img', dialog);
+    image.alt = '';
+    image.src = poster;
+    var back = button(dialog, null, function () {
+      closePreview(true);
+    });
+    back.textContent = t('Close preview');
+    var settings = panel.parentElement;
+    while (settings && settings.getAttribute('role') !== 'dialog')
+      settings = settings.parentElement;
+    var wasHidden = settings && settings.getAttribute('aria-hidden');
+    function key(event) {
+      if ([8, 13, 27, 32, 461].indexOf(event.keyCode) >= 0) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        closePreview(true);
+      } else if ([9, 37, 38, 39, 40].indexOf(event.keyCode) >= 0) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+      }
+    }
+    closePreview = function (focus) {
+      root.removeEventListener('keydown', key, true);
+      document.body.classList.remove('ctv-wallpaper-fullscreen');
+      dialog.parentNode.removeChild(dialog);
+      if (settings) {
+        if (wasHidden === null) settings.removeAttribute('aria-hidden');
+        else settings.setAttribute('aria-hidden', wasHidden);
+      }
+      closePreview = null;
+      if (focus) fullscreen.focus();
+    };
+    if (settings) settings.setAttribute('aria-hidden', 'true');
+    document.body.classList.add('ctv-wallpaper-fullscreen');
+    root.addEventListener('keydown', key, true);
+    back.focus();
+  }
   function mount(host) {
     if (panel) {
       host.appendChild(panel);
@@ -488,18 +760,22 @@
       return;
     }
     panel = node('div', host, 'homeWallpaperPanel');
-    var summary = node('div', panel);
+    var layout = backgroundLayout(panel);
+    var summary = node('div', layout.left);
     summary.className = 'wallpaper-summary';
     preview = node('img', summary, 'wallpaperPreview');
+    preview.className = 'wallpaper-preview-image';
     var info = node('div', summary);
     info.className = 'wallpaper-info';
     title = node('h4', info, 'wallpaperTitle');
+    mediaBadges = node('div', info);
+    mediaBadges.className = 'wallpaper-media-badges';
     sourceInfo = node('p', info, 'wallpaperSourceInfo');
     capability = node('p', info, 'wallpaperCapability');
     actual = node('p', info, 'wallpaperActual');
-    notice = node('p', panel, 'wallpaperNotice');
+    notice = node('p', layout.left, 'wallpaperNotice');
     notice.setAttribute('aria-live', 'polite');
-    preferences = node('div', panel, 'wallpaperPreferences');
+    preferences = node('div', layout.left, 'wallpaperPreferences');
     var qualities = node('div', preferences);
     qualities.className = 'wallpaper-quality';
     qualities.setAttribute('role', 'group');
@@ -511,7 +787,11 @@
       el.setAttribute('data-wallpaper-quality', q);
       qualityButtons.push(el);
     });
-    inputWarning = node('div', preferences, 'wallpaperInputPreviewWarning');
+    fullscreen = button(layout.left, 'wallpaperFullscreen', showFullscreen);
+    layout.left.insertBefore(fullscreen, preferences);
+    var details = node('div', panel);
+    details.className = 'background-options';
+    inputWarning = node('div', details, 'wallpaperInputPreviewWarning');
     inputWarning.hidden = true;
     inputWarningText = node(
       'p',
@@ -536,7 +816,7 @@
       'aria-describedby',
       'wallpaperInputPreviewWarningText'
     );
-    var dim = node('div', preferences);
+    var dim = node('div', details);
     dim.className = 'wallpaper-dim';
     dimValue = node('p', dim, 'wallpaperDimValue');
     minus = button(dim, 'wallpaperDimMinus', function () {
@@ -551,16 +831,28 @@
         Math.min(0.85, Math.round(((state().dim || 0) + 0.05) * 100) / 100)
       );
     });
-    reset = button(preferences, 'wallpaperReset', function () {
+    reset = button(details, 'wallpaperReset', function () {
       change('resetPreferences');
     });
-    mountPersonal();
+    var mediaDetails = node('div', panel);
+    mediaDetails.className = 'background-media-details';
+    [sourceInfo, capability, actual, notice].forEach(function (line) {
+      mediaDetails.appendChild(line);
+    });
+    mountPersonal(layout.right);
+    clearFocusPreview = focusPreview(layout.right, summary);
+    panel.addEventListener('click', clearFocusPreview);
     refresh();
   }
   document.addEventListener('home-wallpaper-change', refresh);
+  document.addEventListener('home-wallpaper-change', refreshSharedMedia);
   document.addEventListener('home-layout-change', refresh);
   function deactivate() {
     active = false;
+    if (closePreview) closePreview(false);
+    if (clearFocusPreview) clearFocusPreview();
+    releaseCard(sharedButtons.photo);
+    releaseCard(sharedButtons.video);
     stopReceiver();
     if (statusText) statusText.textContent = '';
   }
@@ -571,16 +863,29 @@
     }
   });
   root.addEventListener('pagehide', function () {
+    if (closePreview) closePreview(false);
     stopReceiver();
   });
   root.HomeWallpaperPanel = {
     mount: mount,
     refresh: refresh,
     t: t,
+    qualityLabel: label,
+    renderBadges: renderBadges,
+    backgroundLayout: backgroundLayout,
+    libraryTabs: libraryTabs,
+    disclosure: disclosure,
+    focusPreview: focusPreview,
+    mediaCard: mediaCard,
+    savedCard: savedCard,
+    releaseCard: releaseCard,
     activate: function (value) {
       active = !!value;
       if (!value) deactivate();
-      else refresh();
+      else {
+        refresh();
+        refreshSharedMedia();
+      }
     },
     unmount: deactivate
   };

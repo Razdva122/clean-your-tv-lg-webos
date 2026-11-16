@@ -127,7 +127,7 @@ PRODUCERS = {
     'storage': (('inspect', 'prepare', 'stop', 'record', 'read', 'logger', 'collect'),
                 ('validate', 'read', 'write', 'chmod', 'rename', 'stage'),
                 ('directory', 'key', 'apps', 'control', 'blocked', 'staging', 'logger',
-                 'logger-previous', 'pid', 'home-preference', 'startup-state',
+                 'logger-previous', 'pid', 'home-preference', 'screensaver-preference', 'startup-state',
                  'home-request', 'home-response', 'input-request', 'input-response',
                  'catalog-request', 'catalog-response'),
                 ('safe-storage', 'absolute-directory', 'nofollow-supported', 'directory-type',

@@ -201,6 +201,7 @@
         input.wallpaperRelease = Promise.resolve(pending).catch(function () {});
       } catch (_) {}
     }
+    return input && input.wallpaperRelease;
   }
   function rootPackagedStream(q) {
     if (
@@ -528,9 +529,10 @@
   function suspend(owner) {
     owners[owner || 'manual'] = true;
     detach();
-    releaseLease();
+    var released = releaseLease();
     paintDim();
     emit();
+    return released;
   }
   function resume(owner) {
     var held = owners[owner || 'manual'];

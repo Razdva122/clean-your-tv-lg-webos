@@ -19,6 +19,7 @@ FILES = (
     'fonts/outfit-300.ttf', 'fonts/outfit-400.ttf', 'fonts/outfit-500.ttf', 'fonts/outfit-700.ttf', 'fonts/NotoSans.ttf', 'fonts/NotoSans-OFL.txt', 'fonts/NotoSansDevanagari.ttf', 'fonts/NotoSansDevanagari-OFL.txt', 'fonts/NotoSansKR.ttf', 'fonts/NotoSansKR-OFL.txt', 'fonts/NotoSansSC.ttf', 'fonts/NotoSansSC-OFL.txt', 'fonts/NotoSansTC.ttf', 'fonts/NotoSansTC-OFL.txt', 'fonts/OFL.txt',
 )
 FILES += tuple(THEME_FILES)
+FILES += ('screensaver-idle.js', 'screensaver-personal.js', 'screensaver-settings.js', 'screensaver-settings.css')
 UI = Path(__file__).resolve().parent / 'ui'
 UI_FILES = ('root-audio-locales.js', 'root-audio.js', 'root-locales.js', 'root-exit.js', 'root-firmware-control.js', 'root-firmware.js', 'root-settings.js', 'root-settings.css', 'tv-name.js', 'root-profile-data.js', 'root-profile.js', 'root-updates.js')
 
@@ -34,6 +35,8 @@ def prepare(version='0.0.1', resolution=None):
         if path.is_symlink() or not path.is_file() or not path.resolve().is_relative_to(SOURCE.resolve()):
             raise ValueError('Missing or indirect source: ' + name)
         files[name] = path.read_bytes()
+    from scripts.screensaver_package import settings_script
+    files['screensaver-config.js'] = settings_script()
     info = json.loads(files['appinfo.json'])
     if (info.get('id'), info.get('type'), info.get('main')) != ('com.gathin.tvhome', 'web', 'index.html'):
         raise ValueError('Unexpected launcher manifest')

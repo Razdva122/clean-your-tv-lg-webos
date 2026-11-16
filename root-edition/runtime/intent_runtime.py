@@ -460,3 +460,160 @@ def startup_entry(args):
         if len(raw)>2048:raise ValueError('Oversized startup sources')
         return startup_configure(json.loads(raw))
     raise ValueError('Unknown startup operation')
+
+
+# Optional application-owned screensaver. Reuses existing guarded ownership.
+import math as _screensaver_math
+from transport import call as _screensaver_luna
+
+_SCREENSAVER_DEFAULTS = dict(enabled=False, scope='cytv', mode='ambient', assetId='', idleTimeoutMs=60000, clockOverlay=True, quality='auto')
+_SCREENSAVER_HOME = 'com.cleanyourtv.root.preview'
+_SCREENSAVER_POPUP = 'com.cleanyourtv.screensaver'
+
+
+def _screensaver_verify():
+    from provision import verify
+    return verify()
+
+
+def _screensaver_require_idle():
+    from helper_bridge import require_idle
+    return require_idle()
+
+
+def screensaver_validate(value):
+    defaults = set(_SCREENSAVER_DEFAULTS)
+    if (not isinstance(value, dict)
+            or not defaults - {'clockOverlay', 'quality'} <= set(value) <= defaults | {'clock'}
+            or value.get('quality', 'auto') not in ('auto', '4k', '1080p', 'image')
+            or type(value.get('clockOverlay', True)) is not bool
+            or type(value['enabled']) is not bool or value['scope'] not in ('cytv', 'global')
+            or value['mode'] not in ('ambient', 'clock', 'photo', 'video')
+            or not isinstance(value['assetId'], str)
+            or value['assetId'] and not re.fullmatch(r'[A-Za-z0-9_-]{1,128}', value['assetId'])
+            or type(value['idleTimeoutMs']) is not int or not 30000 <= value['idleTimeoutMs'] <= 1800000):
+        raise ValueError('Invalid screensaver settings')
+    if 'clock' in value:
+        clock = value['clock']
+        if (not isinstance(clock, dict) or set(clock) != {'locale', 'hour12'}
+                or not isinstance(clock['locale'], str)
+                or not re.fullmatch(r'[a-z]{2,3}(?:-[A-Z][a-z]{3}|-[A-Z]{2})?', clock['locale'])
+                or type(clock['hour12']) is not bool):
+            raise ValueError('Invalid screensaver clock presentation')
+    return dict(_SCREENSAVER_DEFAULTS, **value)
+
+
+def screensaver_settings():
+    d.trusted_dir(d.STATE)
+    try:
+        return screensaver_validate(d.safe_json(d.STATE/'screensaver-settings.json'))
+    except FileNotFoundError:
+        return dict(_SCREENSAVER_DEFAULTS)
+
+
+def screensaver_configure(value):
+    value = screensaver_validate(value)
+    screensaver_settings()  # Reject an unsafe existing leaf before replacing it.
+    fd, temporary = tempfile.mkstemp(prefix='.screensaver-', dir=d.STATE)
+    try:
+        with os.fdopen(fd, 'w') as stream:
+            os.fchmod(stream.fileno(), 0o600)
+            json.dump(value, stream, sort_keys=True)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, d.STATE/'screensaver-settings.json')
+        d.sync(d.STATE)
+    finally:
+        if os.path.lexists(temporary):
+            os.unlink(temporary)
+    return value
+
+
+def screensaver_remaining_health_ms(transaction):
+    import persistent_health as health
+    fresh = health.require_fresh(transaction)
+    health.require_guardian(transaction)
+    guard = d.safe_json(health.path(transaction).with_suffix('.guard'))
+    remaining = min(fresh['expires'], guard['issued'] + 2) - time.monotonic()
+    return min(1500, max(0, _screensaver_math.floor(remaining * 1000)))
+
+
+def screensaver_foreground_own(response, popup=False, foreign=False):
+    items = response.get('foregroundAppInfo') if isinstance(response, dict) and response.get('returnValue') is True else None
+    if not isinstance(items, list) or not 1 <= len(items) <= 16:
+        return False
+    found = False
+    found_popup = False
+    for item in items:
+        if (not isinstance(item, dict) or item.get('displayId', 0) != 0
+                or item.get('pip') is True or item.get('multiview') is True
+                or item.get('viewType', 'normal') != 'normal'):
+            return False
+        pair = item.get('appId'), item.get('windowType')
+        if pair == (_SCREENSAVER_HOME, '_WEBOS_WINDOW_TYPE_CARD'):
+            if foreign or found:
+                return False
+            found = True
+        elif pair == (_SCREENSAVER_POPUP, '_WEBOS_WINDOW_TYPE_POPUP'):
+            if found_popup:
+                return False
+            found_popup = True
+        elif (foreign and not found and isinstance(pair[0], str) and pair[0]
+              and pair[0] not in (_SCREENSAVER_POPUP, 'com.webos.app.screensaver', 'com.webos.app.cpcover')
+              and pair[1] == '_WEBOS_WINDOW_TYPE_CARD'):
+            found = True
+        else:
+            return False
+    return found_popup if popup else found and (not foreign or not found_popup)
+
+
+def screensaver_status():
+    result = dict(state=screensaver_settings(), owner=None, foregroundOwn=False, foregroundForeign=False, popupOwn=False, popupInstalled=False, validForMs=0)
+    try:
+        if _screensaver_verify().get('integrity_verified') is not True:
+            return result
+        _screensaver_require_idle()
+        current = coordinator()
+        if current is None:
+            return result
+        intent = current.store.read()
+        generation = intent['generation']
+        if (type(generation) is not int or not 0 <= generation <= 9007199254740991
+                or intent.get('enabled') is not True or intent.get('phase') != 'active'):
+            return result
+        transaction = current.read_binding()['transaction']
+        boot = boot_identity()
+        startup_require(current, intent, transaction, boot)
+        installed = _screensaver_luna('luna://com.webos.applicationManager/getAppInfo', {'id':_SCREENSAVER_POPUP}, timeout=.5)
+        info = installed.get('appInfo')
+        if (installed.get('returnValue') is not True or not isinstance(info, dict)
+                or info.get('id') != _SCREENSAVER_POPUP or info.get('type') != 'web'
+                or info.get('defaultWindowType') != 'popup'):
+            return result
+        # CLOCK_MONOTONIC is shared by Python and Node on the TV. Anchor the
+        # lifetime before reading foreground, after the expensive owner checks.
+        observed_at_ms = _screensaver_math.floor(time.monotonic() * 1000)
+        foreground = _screensaver_luna('luna://com.webos.surfacemanager/getForegroundAppInfo', {}, timeout=.5)
+        power = _screensaver_luna('luna://com.webos.service.tvpower/power/getPowerState', {}, timeout=.5)
+        startup_require(current, intent, transaction, boot)
+        ttl = screensaver_remaining_health_ms(transaction)
+        if power.get('returnValue') is not True or power.get('state') != 'Active' or ttl <= 0:
+            return result
+        result.update(owner=dict(active=True, healthy=True, legacyHelperActive=False, generation=generation),
+                      popupInstalled=True,
+                      foregroundOwn=screensaver_foreground_own(foreground),
+                      foregroundForeign=screensaver_foreground_own(foreground, foreign=True),
+                      popupOwn=(screensaver_foreground_own(foreground, popup=True)
+                                or screensaver_foreground_own(foreground, popup=True, foreign=True)),
+                      observedAtMs=observed_at_ms, validForMs=ttl)
+    except (OSError, ValueError, RuntimeError, KeyError, TypeError, TimeoutError):
+        pass
+    return result
+
+
+def screensaver_entry(operation, value=None):
+    if operation == 'configure':
+        screensaver_configure(value)
+    elif operation != 'status':
+        raise ValueError('Unknown screensaver operation')
+    return screensaver_status()

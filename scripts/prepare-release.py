@@ -168,7 +168,8 @@ def prepare_manifests(tag, build, packages, prior_build, prior_packages, rollbac
     previous = home_manifest(previous_version, previous_bytes, 'Previous published Home ' + previous_version + ' for rollback.')
     name = APPS['root'] + '_' + current['root'] + '_all.ipk'
     raw = packages['root']; files[name] = raw
-    root = {'schema': 1, 'edition': 'root', 'application': APPS['root'], 'release': tag, 'version': current['root'], 'runtime': 1, 'updater': 1, 'profile': 1, 'url': URL + tag + '/' + name, 'sha256': digest(raw), 'size': len(raw), 'notes': notes}
+    companion_protocol = 2 if 'usr/palm/applications/com.cleanyourtv.root.preview/screensaver-companion/manifest.json' in data_files(raw) else 1
+    root = {'schema': 1, 'edition': 'root', 'application': APPS['root'], 'release': tag, 'version': current['root'], 'runtime': 1, 'updater': companion_protocol, 'profile': 1, 'url': URL + tag + '/' + name, 'sha256': digest(raw), 'size': len(raw), 'notes': notes}
     manifests={'root': root, 'home': home, 'previous': previous}
     hd={kind:packages[kind+'-720p'] for kind in ('home','root') if kind+'-720p' in packages}
     if hd:
@@ -216,14 +217,20 @@ def verify_system_assets(manifests,build,files):
     for key,manifest in manifests.items():
         edition=key.removesuffix('-720p');names=expected[edition]
         graphics='1280x720' if key.endswith('-720p') else '1920x1080'
-        if edition=='root' and manifest.get('minimumSupervisorVersion')!='1.1.1':raise ValueError('Root minimum supervisor 1.1.1 required')
+        expected_supervisor = '1.2.10' if manifest.get('supervisor') == 2 else '1.1.1'
+        if edition=='root' and manifest.get('minimumSupervisorVersion')!=expected_supervisor:raise ValueError('Root minimum supervisor mismatch')
         if edition=='no-root' and 'minimumSupervisorVersion' in manifest:raise ValueError('Unexpected No-root minimum supervisor')
-        if manifest.get('edition')!=edition or manifest.get('release')!=build['tag'] or manifest.get('schema')!=1 or manifest.get('supervisor')!=1 or {c['name'] for c in manifest['components']}!=names or len(manifest['components'])!=len(names):raise ValueError('Invalid system release set')
+        if manifest.get('edition')!=edition or manifest.get('release')!=build['tag'] or manifest.get('schema')!=1 or manifest.get('supervisor') not in (1, 2) or {c['name'] for c in manifest['components']}!=names or len(manifest['components'])!=len(names):raise ValueError('Invalid system release set')
         for item in manifest['components']:
             filename=item['url'].rsplit('/',1)[1]
             if item['url']!=URL+build['tag']+'/'+filename or not re.fullmatch(r'[A-Za-z0-9._-]+',filename):raise ValueError('Invalid system release asset')
             raw=files[filename]
             if digest(raw)!=item['sha256'] or len(raw)!=item['size']:raise ValueError('System release asset hash mismatch')
+            if item['name'] in ('root', 'home'):
+                has_companion = (edition == 'root' and
+                    'usr/palm/applications/com.cleanyourtv.root.preview/screensaver-companion/manifest.json' in data_files(raw))
+                if manifest['supervisor'] != (2 if has_companion else 1):
+                    raise ValueError('System release screensaver protocol mismatch')
             key={'root-infrastructure':'root','root-updater':'updater'}.get(item['name'],item['name'])
             if not isinstance(build['versions'].get(key),str) or item['version']!=build['versions'][key]:raise ValueError('System component version mismatch')
             if item['name']!='root-infrastructure':

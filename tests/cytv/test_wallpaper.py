@@ -55,7 +55,8 @@ class WallpaperTests(unittest.TestCase):
                 source=Path(tmp)/'source.png'; image=QImage(width,height,QImage.Format.Format_RGB32); image.fill(QColor('#426070')); image.save(str(source))
                 result=w.prepare(source)
                 self.assertEqual([v['quality'] for v in result['variants']],qualities)
-                self.assertEqual(set(result), {'schemaVersion','kind','source','image','variants'})
+                self.assertEqual(set(result), {'schemaVersion','kind','source','mediaKind','image','variants'})
+                self.assertEqual(result['mediaKind'], 'photo')
                 self.assertEqual((result['kind'],result['source']),('wallpaper','cytv'))
                 for asset in [result['image']]+result['variants']:
                     data=base64.b64decode(asset['data'],validate=True)
@@ -187,6 +188,15 @@ class WallpaperTests(unittest.TestCase):
             self.assertEqual(w.upload('192.168.1.2','123456',envelope),'received')
             self.assertEqual([r[0][:2] for r in Connection.requests],[('GET','/v1/wallpaper-capabilities'),('POST','/v1/wallpaper')])
             self.assertEqual(Connection.requests[0][1]['headers']['X-CYTV-PIN'],'123456')
+            for capabilities, expected in [({'wallpaperProtocol':1}, False),
+                                           ({'wallpaperProtocol':1,'mediaKind':True}, True)]:
+                Connection.replies=[Reply(200,json.dumps(capabilities).encode()),Reply(202,b'{}')]
+                Connection.requests=[]
+                w.upload('192.168.1.2','123456',dict(envelope,mediaKind='photo'))
+                sent=json.loads(Connection.requests[-1][1]['body'])
+                self.assertEqual('mediaKind' in sent,expected)
+                if expected:
+                    self.assertEqual(sent['mediaKind'],'photo')
             Connection.replies=[Reply(200,b'{"wallpaperProtocol":1}'),Reply(500,b'{}')]
             with self.assertRaises(ValueError): w.upload('192.168.1.2','123456',envelope)
 

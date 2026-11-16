@@ -203,6 +203,28 @@ class CoordinatorCleanRemoval(unittest.TestCase):
         self.assertEqual(second['stage'],'verified-clean')
         self.assertNotEqual(second['final_fence'],first['final_fence'])
 
+    def test_completed_system_replacement_can_be_cleaned_up(self):
+        replacement='f'*32
+        self.owner.store.write('operation',dict(schema=1,id=replacement,owner='system-replace',
+            journal='system-replacement.json',stage='complete',terminal=True))
+        job=dict(schema=1,id=replacement,stage='complete',bundle_sha256='a'*64,
+            source_sha256='b'*64,baseline_sha256='c'*64)
+        self.owner.store.write('system-replacement',job)
+        result=self.driver.clean_remove(self.id,expected_lease=replacement)
+        self.assertEqual(result['stage'],'verified-clean')
+        self.assertEqual(result['original']['lease']['id'],replacement)
+        self.assertEqual(self.owner.store.read('system-replacement'),job)
+
+    def test_incomplete_system_replacement_blocks_cleanup(self):
+        replacement='f'*32
+        self.owner.store.write('operation',dict(schema=1,id=replacement,owner='system-replace',
+            journal='system-replacement.json',stage='verify',terminal=False))
+        self.owner.store.write('system-replacement',dict(schema=1,id=replacement,stage='verify',
+            bundle_sha256='a'*64,source_sha256='b'*64,baseline_sha256='c'*64))
+        with self.assertRaises(Busy):
+            self.driver.clean_remove(self.id,expected_lease=replacement)
+        self.assertEqual(self.owner.status()['owner'],'system-replace')
+
     def test_inspect_and_restore_verified_removal_preserve_fences_and_old_request(self):
         original=self.original();self.driver.clean_remove(self.id)
         self.device.inspect=lambda:{'state':'recovery_required','can_install':False,'can_maintain':False}

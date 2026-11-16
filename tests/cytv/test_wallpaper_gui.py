@@ -53,11 +53,11 @@ class WallpaperGuiTests(unittest.TestCase):
                 dialog.send(); end=time.monotonic()+3
                 while dialog.busy and time.monotonic()<end: self.app.processEvents(); time.sleep(.01)
                 self.assertFalse(dialog.busy); prepare.assert_called_once()
-                self.assertIn('Apply',dialog.status.text()); self.assertFalse(dialog.zoom.isEnabled())
+                self.assertIn('Check the background on the TV',dialog.status.text()); self.assertFalse(dialog.zoom.isEnabled())
             image=QImage(640,360,QImage.Format.Format_RGB32); image.fill(QColor('blue')); photo=Path(tmp)/'photo.png'; image.save(str(photo))
             dialog.load_file(str(photo)); self.assertTrue(dialog.zoom.isEnabled())
 
-    def test_background_cancel_and_received_requires_tv_apply(self):
+    def test_background_cancel_and_received_requests_tv_check(self):
         started=threading.Event()
         def preparation(path,crop,cancel,progress):
             started.set()
@@ -76,7 +76,7 @@ class WallpaperGuiTests(unittest.TestCase):
         with patch('cytv.wallpaper_gui.wallpaper.prepare',return_value={}),patch('cytv.wallpaper_gui.wallpaper.upload',return_value='received'):
             dialog.send(); end=time.monotonic()+3
             while dialog.busy and time.monotonic()<end: self.app.processEvents(); time.sleep(.01)
-            self.assertIn('Apply',dialog.status.text()); self.assertIn('Received',dialog.status.text())
+            self.assertEqual(dialog.status.text(),'Received by TV. Check the background on the TV.')
 
     def test_closing_main_window_cancels_active_wallpaper_worker(self):
         started=threading.Event()
@@ -99,7 +99,7 @@ class WallpaperGuiTests(unittest.TestCase):
         from cytv import translations
         rows=Path(__file__).resolve().parents[2]/'cytv/wallpaper_gui.py'
         import ast
-        keys={'Zoom','Horizontal position','Vertical position','4K + 1080p video','1080p video','Image only; source is below 1080p', 'Received by TV. Choose Apply on the TV to use this wallpaper.'}
+        keys={'Zoom','Horizontal position','Vertical position','4K + 1080p video','1080p video','Image only; source is below 1080p', 'Received by TV. Check the background on the TV.'}
         for node in ast.walk(ast.parse(rows.read_text(encoding='utf-8'))):
             if isinstance(node,ast.Call) and isinstance(node.func,ast.Name) and node.func.id=='tr' and node.args and isinstance(node.args[0],ast.Constant): keys.add(node.args[0].value)
         for key in keys:

@@ -197,6 +197,10 @@ function send(session, body) {
         await page.evaluate(() => PersonalWallpaper.state().installed),
         false
       );
+      if (!(await page.locator('#wallpaperApply').isVisible()))
+        await page
+          .locator('#homeWallpaperPanel [data-background-upload]')
+          .click();
       await page.locator('#wallpaperApply').click();
       await page.waitForFunction(() => PersonalWallpaper.state().installed);
       await page

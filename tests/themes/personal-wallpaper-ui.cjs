@@ -125,6 +125,10 @@ const { chromium, stage, fs, path } = require('./browser.cjs'),
         false,
         'preview does not persist'
       );
+      if (!(await page.locator('#wallpaperApply').isVisible()))
+        await page
+          .locator('#homeWallpaperPanel [data-background-upload]')
+          .click();
       await page.locator('#wallpaperApply').click();
       await page.waitForFunction(() => PersonalWallpaper.state().installed);
       assert.equal(
@@ -149,6 +153,10 @@ const { chromium, stage, fs, path } = require('./browser.cjs'),
           }
         });
       });
+      if (!(await page.locator('#wallpaperApply').isVisible()))
+        await page
+          .locator('#homeWallpaperPanel [data-background-upload]')
+          .click();
       await page.locator('#wallpaperApply').click();
       await page.waitForFunction(() =>
         document
@@ -259,6 +267,9 @@ const { chromium, stage, fs, path } = require('./browser.cjs'),
       await page.waitForFunction(
         () => HomeWallpaper.state().source === 'theme'
       );
+      await page
+        .locator('#homeWallpaperPanel [data-background-tab=my-files]')
+        .click();
       await page.locator('#wallpaperSourcePersonal').click();
       await page.waitForFunction(
         () => HomeWallpaper.state().source === 'personal'
@@ -280,6 +291,10 @@ const { chromium, stage, fs, path } = require('./browser.cjs'),
           }
         };
       });
+      if (!(await page.locator('#wallpaperPhone').isVisible()))
+        await page
+          .locator('#homeWallpaperPanel [data-background-upload]')
+          .click();
       await page.locator('#wallpaperPhone').click();
       await page.waitForFunction(
         () => !document.getElementById('wallpaperConnection').hidden
@@ -314,6 +329,10 @@ const { chromium, stage, fs, path } = require('./browser.cjs'),
             window.finishStart = resolve;
           });
       });
+      if (!(await page.locator('#wallpaperPhone').isVisible()))
+        await page
+          .locator('#homeWallpaperPanel [data-background-upload]')
+          .click();
       await page.locator('#wallpaperPhone').click();
       await page.locator('[data-category=home]').click();
       await page.evaluate(() =>
@@ -339,6 +358,10 @@ const { chromium, stage, fs, path } = require('./browser.cjs'),
             expiresAt: Date.now() - 1
           });
       });
+      if (!(await page.locator('#wallpaperPhone').isVisible()))
+        await page
+          .locator('#homeWallpaperPanel [data-background-upload]')
+          .click();
       await page.locator('#wallpaperPhone').click();
       await page.waitForFunction(() => stops.includes('expired'));
       assert(
@@ -354,6 +377,10 @@ const { chromium, stage, fs, path } = require('./browser.cjs'),
             expiresAt: Date.now() + 100000
           });
       });
+      if (!(await page.locator('#wallpaperPhone').isVisible()))
+        await page
+          .locator('#homeWallpaperPanel [data-background-upload]')
+          .click();
       await page.locator('#wallpaperPhone').click();
       await page.waitForFunction(
         () => !document.getElementById('wallpaperConnection').hidden
@@ -375,6 +402,10 @@ const { chromium, stage, fs, path } = require('./browser.cjs'),
         await page.locator('#wallpaperConnection').isHidden(),
         'app hide stops connection'
       );
+      if (!(await page.locator('#wallpaperCYTV').isVisible()))
+        await page
+          .locator('#homeWallpaperPanel [data-background-upload]')
+          .click();
       await page.locator('#wallpaperCYTV').click();
       await page.waitForFunction(
         () => !document.getElementById('wallpaperConnection').hidden
@@ -402,11 +433,19 @@ const { chromium, stage, fs, path } = require('./browser.cjs'),
           return revoke.call(URL, url);
         };
       });
+      if (!(await page.locator('#wallpaperRemove').isVisible()))
+        await page
+          .locator('#homeWallpaperPanel [data-background-upload]')
+          .click();
       await page.locator('#wallpaperRemove').click();
       assert(await page.locator('#homeConfirmation').isVisible());
       assert(await page.evaluate(() => PersonalWallpaper.state().installed));
       await page.keyboard.press('Escape');
       assert(await page.evaluate(() => PersonalWallpaper.state().installed));
+      if (!(await page.locator('#wallpaperRemove').isVisible()))
+        await page
+          .locator('#homeWallpaperPanel [data-background-upload]')
+          .click();
       await page.locator('#wallpaperRemove').click();
       await page.locator('#homeConfirmation button').last().click();
       await page.waitForFunction(() => !PersonalWallpaper.state().installed);

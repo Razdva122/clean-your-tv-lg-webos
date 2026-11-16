@@ -23,6 +23,19 @@ class PackageTests(unittest.TestCase):
         subprocess.run(['git', 'init', '-q'], cwd=root, check=True)
         subprocess.run(['git', 'add', 'renewal-service'], cwd=root, check=True)
 
+    def stage_screensaver(self, root):
+        from scripts.screensaver_package import BACKGROUNDS
+
+        shutil.copytree(ROOT/'screensaver', root/'screensaver')
+        paths = ['scripts/screensaver_package.py', 'launcher/brand-v2-icon.png']
+        paths.extend('themes/' + source for source in BACKGROUNDS.values())
+        paths.extend('themes/' + theme + '/' + name for theme in ('alpine', 'ribbon')
+                     for name in ('LICENSE.txt', 'CREDITS.txt'))
+        for name in paths:
+            target = root/name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy(ROOT/name, target)
+
     def test_source_build_reuses_published_helper_without_compiling_it(self):
         with tempfile.TemporaryDirectory(prefix='pinned helper ') as tmp:
             root = Path(tmp)
@@ -41,6 +54,7 @@ class PackageTests(unittest.TestCase):
             (root/'launcher/appinfo.json').write_text(json.dumps({'id':'com.gathin.tvhome','version':'9.8.7','type':'web'}))
             (root/'renewal-service/services.json').write_text('{}')
             (root/'launcher/index.html').write_text('<html><head></head><body></body></html>')
+            self.stage_screensaver(root)
             zig = root/'zig'
             zig.write_text('#!/bin/sh\nexit 99\n')
             zig.chmod(0o755)
@@ -84,6 +98,7 @@ Path('dist/com.gathin.tvhome_9.8.7_all.ipk').write_bytes(ipk('com.gathin.tvhome'
                 shutil.copy(ROOT/'native/app'/name, root/'native/app'/name)
             shutil.copy(ROOT/'native/service/app-inventory.js', root/'native/service/app-inventory.js')
             (root/'native/app/vendor').mkdir()
+            self.stage_screensaver(root)
             (root/'bin').mkdir()
             zig = root/'bin/zig'
             zig.write_text('#!/bin/sh\nfor arg do target="$arg"; done\n: > "$target"\n')

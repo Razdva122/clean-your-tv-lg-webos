@@ -17,11 +17,11 @@ def tar(files):
         for name,raw in files.items():
             info=tarfile.TarInfo(name);info.size=len(raw);info.mode=0o600;archive.addfile(info,io.BytesIO(raw))
     return output.getvalue()
-def ipk(app='com.gathin.tvhome',foreign=False):
+def ipk(app='com.gathin.tvhome',foreign=False,version='1.0.0'):
     prefix='usr/palm/applications/'+app+'/'
-    files={prefix+'appinfo.json':json.dumps({'id':app,'version':'1.0.0','type':'web','main':'index.html','systemUpdateProtocol':1}).encode(),prefix+'index.html':b'Home','usr/palm/packages/'+app+'/packageinfo.json':json.dumps({'id':app,'app':app,'version':'1.0.0','services':[]}).encode()}
+    files={prefix+'appinfo.json':json.dumps({'id':app,'version':version,'type':'web','main':'index.html','systemUpdateProtocol':1}).encode(),prefix+'index.html':b'Home','usr/palm/packages/'+app+'/packageinfo.json':json.dumps({'id':app,'app':app,'version':version,'services':[]}).encode()}
     if foreign:files['etc/passwd']=b'bad'
-    parts={'debian-binary':b'2.0\n','control.tar.gz':tar({'control':('Package: '+app+'\nVersion: 1.0.0\n').encode()}),'data.tar.gz':tar(files)};out=b'!<arch>\n'
+    parts={'debian-binary':b'2.0\n','control.tar.gz':tar({'control':('Package: '+app+'\nVersion: '+version+'\n').encode()}),'data.tar.gz':tar(files)};out=b'!<arch>\n'
     for name,data in parts.items():out+=(name+'/').ljust(16).encode()+b'0           0     0     100644  '+str(len(data)).ljust(10).encode()+b'`\n'+data+(b'\n' if len(data)%2 else b'')
     return out
 
@@ -47,6 +47,51 @@ class DeviceBase(unittest.TestCase):
         self.store.write('baseline',value)
 
 class Tests(DeviceBase):
+    def test_root_registration_follows_screensaver_across_interrupted_update_and_rollback(self):
+        from types import SimpleNamespace
+        snapshot_path = self.device.root_state / 'ls2-provision-snapshot.json'
+        snapshot_path.parent.mkdir()
+        files = {name: self.root / name for name in ('api', 'client', 'role', 'service')}
+        base = ['theme-receiver-v1', 'wallpaper-media-v1']
+        enhanced = base + ['screensaver-v1']
+
+        def plan(original, caps):
+            return {name: data.encode() + (b':screensaver' if 'screensaver-v1' in caps and name != 'service' else b':normal')
+                    for name, data in original.items()}
+
+        original = {name: name for name in files}
+        old_policy, new_policy = plan(original, base), plan(original, enhanced)
+        snapshot = {'capabilities': base, 'files': {}}
+        for name, path in files.items():
+            path.write_bytes(old_policy[name])
+            snapshot['files'][str(path)] = {
+                'original': original[name], 'original_sha256': digest(original[name].encode()),
+                'installed_sha256': digest(old_policy[name]), 'mode': 0o600,
+                'uid': os.getuid(), 'gid': os.getgid(),
+            }
+        snapshot_path.write_text(json.dumps(snapshot))
+        provision = SimpleNamespace(FILES=files, plan=plan)
+        atomic = self.device.atomic
+
+        def interrupt(path, data, *args, **kwargs):
+            if path == files['client']:
+                raise InterruptedError('power lost')
+            atomic(path, data, *args, **kwargs)
+
+        self.device.atomic = interrupt
+        with self.assertRaises(InterruptedError):
+            self.device.repair_root_registration(provision, screensaver=True)
+        self.assertEqual(files['api'].read_bytes(), new_policy['api'])
+        self.assertEqual(json.loads(snapshot_path.read_text()), snapshot)
+
+        self.device.atomic = atomic
+        self.device.repair_root_registration(provision, screensaver=True)
+        self.assertEqual({name: path.read_bytes() for name, path in files.items()}, new_policy)
+        self.assertEqual(json.loads(snapshot_path.read_text())['capabilities'], enhanced)
+        self.device.repair_root_registration(provision, screensaver=False)
+        self.assertEqual({name: path.read_bytes() for name, path in files.items()}, old_policy)
+        self.assertEqual(json.loads(snapshot_path.read_text()), snapshot)
+
     def test_package_foreign_paths_and_identity_rejected(self):
         raw=ipk();descriptor={'name':'home','application':'com.gathin.tvhome','version':'1.0.0','sha256':digest(raw),'size':len(raw),'kind':'ipk'};self.assertTrue(self.device.inspect(raw,descriptor))
         raw=ipk(foreign=True);descriptor.update(sha256=digest(raw),size=len(raw))
@@ -413,7 +458,7 @@ class RootRollbackDataTests(DeviceBase):
         for c,name in zip(prior['components'],('root','root-updater','root-infrastructure')):
             c.update(name=name,application=self.mod.IDENTITIES[name],kind='infrastructure' if name=='root-infrastructure' else 'ipk')
             if c['kind']=='ipk':
-                raw=ipk(c['application']);c.update(sha256=digest(raw),size=len(raw))
+                raw=ipk(c['application'], version=c['version']);c.update(sha256=digest(raw),size=len(raw))
                 (self.root/'state/cache'/c['sha256']).write_bytes(raw)
         candidate=copy.deepcopy(prior);candidate['release']='v1.1.0'
         for c in candidate['components']:c['version']='1.1.0'
@@ -429,6 +474,12 @@ class RootRollbackDataTests(DeviceBase):
         self.device.require_components=lambda:self.mod.Device.require_components(self.device)
         self.device.integrity=lambda **kw:None;self.device.routing_safe=lambda:True;self.device.now=lambda:1000;self.device.launch=lambda edition:None
         self.device.snapshot_mutable=lambda:None;self.device.restore_mutable=lambda:None;self.device.repair_registrations=lambda:None
+        self.device._verify_release=lambda value, edition: value
+        failed_root=candidate['components'][0]
+        raw=ipk(failed_root['application'],version=failed_root['version'])
+        failed_root.update(sha256=digest(raw),size=len(raw))
+        (self.root/'state/cache'/failed_root['sha256']).write_bytes(raw)
+        self.store.write('transaction',tx)
         actual=self.device.verify_installed
         self.device.verify_installed=lambda c:actual(c) if c['name']=='root' else True
         (self.root/'installed/usr/palm/applications/com.cleanyourtv.root.preview/appinfo.json').unlink()

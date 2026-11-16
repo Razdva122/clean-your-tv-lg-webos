@@ -167,11 +167,15 @@
         HomeThemePanel.activate(groups[index].id === 'themes');
       if (root.HomeWallpaperPanel)
         HomeWallpaperPanel.activate(groups[index].id === 'wallpapers');
+      if (root.HomeScreensaver)
+        HomeScreensaver.activate(groups[index].id === 'screensaver');
       scrollHint();
     }
     var weatherReady = root.HomeWeather
       ? root.HomeWeather.mountSettings(panel, card, groups)
       : null;
+    if (root.HomeScreensaver)
+      HomeScreensaver.mountSettings(panel, card, groups);
     groups.forEach(function (group, i) {
       var tab = document.createElement('button'),
         pane = document.createElement('section'),
@@ -183,19 +187,21 @@
       tab.setAttribute('aria-controls', 'settings-pane-' + group.id);
       tab.appendChild(
         createIcon(
-          group.id === 'wallpapers'
-            ? 'M3 3h18v18H3zM3 16l6-6 5 5 3-3 4 4M16 7h.01'
-            : paths[
-                [
-                  'home',
-                  'appearance',
-                  'themes',
-                  'language',
-                  'updates',
-                  'advanced',
-                  'developer'
-                ].indexOf(group.id)
-              ]
+          group.id === 'screensaver'
+            ? 'M4 4h16v12H4zM8 21h8M12 16v5M12 7v4l3 2'
+            : group.id === 'wallpapers'
+              ? 'M3 3h18v18H3zM3 16l6-6 5 5 3-3 4 4M16 7h.01'
+              : paths[
+                  [
+                    'home',
+                    'appearance',
+                    'themes',
+                    'language',
+                    'updates',
+                    'advanced',
+                    'developer'
+                  ].indexOf(group.id)
+                ]
         )
       );
       var text = document.createElement('span');
@@ -384,6 +390,23 @@
           if (best) {
             best.focus();
             return true;
+          }
+          if (key === 37 || key === 39) {
+            var from = panes[current].querySelector(
+              key === 37 ? '.background-library' : '.background-preview'
+            );
+            var to = panes[current].querySelector(
+              key === 37 ? '.background-preview' : '.background-library'
+            );
+            if (from && to && from.contains(active)) {
+              var opposite = list.filter(function (el) {
+                return to.contains(el);
+              })[0];
+              if (opposite) {
+                opposite.focus();
+                return true;
+              }
+            }
           }
           if (key === 37 || key === 38) {
             tabs[current].focus();

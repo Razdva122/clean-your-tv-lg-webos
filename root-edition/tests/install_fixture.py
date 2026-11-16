@@ -53,6 +53,12 @@ class CurrentInstallation:
         self.up_store.write('bootstrap',{'phase':'complete'})
         raw=(self.payload/'root'/root_manifest['package']).read_bytes();digest=hashlib.sha256(raw).hexdigest();(self.updater/'cache'/(digest+'.ipk')).write_bytes(raw)
         self.up_store.write('current',{'version':json.loads((self.payload/'root/release.json').read_text())['version'],'size':len(raw),'sha256':digest,'local':True})
+        companion=updater_package.root_companion(raw,self.up_store.read('current'))
+        if companion:
+            for name, data in companion[1].items():
+                target=self.installed/name
+                target.parent.mkdir(parents=True,exist_ok=True)
+                target.write_bytes(data)
         up_raw=(self.payload/'root-updater/root-updater.ipk').read_bytes();files=package.data_files(up_raw)
         self.up_store.write('installed-package',{'schema':1,'files':{n:hashlib.sha256(b).hexdigest() for n,b in files.items()},'executable':[n for n in files if n.endswith('/startup.sh')]})
         profile={'schema':1,'inventory':{'apps':[{'id':'fixture.app','title':'Saved profile','icon':'data:image/png;base64,AA=='}],'inputs':[]},'config':{'columns':5,'dockApps':['fixture.app'],'hiddenApps':[]},'settings':{'tvhome.language':'en'}}

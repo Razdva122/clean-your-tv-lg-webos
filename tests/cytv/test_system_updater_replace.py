@@ -60,8 +60,13 @@ class FlowFixture:
         self.ns={'__name__':'replacement_flow'};exec(module.support_source(),self.ns);exec(module.SCRIPT,self.ns)
         self.bundle=self.base/'bundle';self.bundle.mkdir(mode=0o700);self.system=self.base/'system';self.installed=self.base/'sdk';self.installed.mkdir()
         self.root=self.base/'root';self.root.mkdir();self.root_marker=self.root/'root-code';self.root_marker.write_bytes(b'Root remains exact');self.profile=self.root/'user-profile';self.profile.write_bytes(b'personal layout')
-        self.home=self.root/'persistent-intent.json';self.home.write_text('{"enabled":false,"phase":"disabled"}');self.home.chmod(0o600);self.ns['HOME_FILES']=(self.home,)
+        self.home=self.root/'persistent-intent.json';self.home.write_text('{"enabled":false,"phase":"disabled"}');self.home.chmod(0o600)
+        self.override=self.root/'owned-override.json';self.ns.update(HOME_OVERRIDE=self.override,HOME_FILES=(self.home,self.override))
         self.calls=[];self.fault=None;self.removals=0
+        self.refreshes=[]
+        stock='com.webos.app.home'
+        self.runtime_status={'intent':{'enabled':False,'phase':'disabled'},'effective':{'sam_home':stock,
+                             'profiles':{'defaultApps':{'categories':{'home':stock}},'idleApp':{'appId':stock,'support':True}}}}
         self.store=Store(self.base/'installation',uid=os.getuid());self.ownership=Ownership(self.store)
         self.meta=self.make_bundle(self.bundle)
         self.make_system(self.system,self.bundle)
@@ -75,6 +80,9 @@ class FlowFixture:
             def _root_integrity(self):
                 if env.root_marker.read_bytes()!=b'Root remains exact':raise ValueError('Root proof changed')
             def installed(self,app):raise ValueError('Foreign application')
+            def runtime(self,mode):
+                env.assertEqual(mode,'status')
+                return env.runtime_status
             def owner_identity(self,app):
                 if app!=env.ns['APP']:raise ValueError('Foreign owner')
                 return {'id':app,'version':(env.appdir/'version').read_text()}
@@ -124,7 +132,7 @@ class FlowFixture:
         return value
     def cleanup_action(self,action,**kw):
         self.calls.append(action);state=Path(kw['state'])
-        if action=='status':return {'present':True,'ownership_verified':True}
+        if action=='status':return {'present':True,'ownership_verified':True,'bootstrap_complete':True,'edition':'root','disabled':False}
         if action=='disable':
             Store(state,uid=os.getuid()).write('cytv-removal',{'phase':'disabled','archive':kw['destination']})
             if self.fault=='disable':raise KeyboardInterrupt('disable interrupted')
@@ -137,21 +145,27 @@ class FlowFixture:
         self.assertEqual(app,self.ns['APP']);self.removals+=1;self.calls.append('sdk-remove');shutil.rmtree(self.appdir)
         if self.fault=='remove':raise KeyboardInterrupt('submission outcome unknown')
         return {'completed':True,'event':{'details':{'packageId':app}}}
-    def provision(self,bundle,baseline):
+    def provision(self,bundle,baseline,refresh=None):
+        self.refreshes.append(refresh)
         self.calls.append('provision');self.make_system(self.system,bundle)
-        self.appdir.mkdir(parents=True,exist_ok=True);(self.appdir/'version').write_text('1.2.9')
+        files = self.setup.package_files(self.setup.safe(Path(bundle)/'system-updater.ipk'))
+        info = json.loads(files['usr/palm/applications/'+self.ns['APP']+'/appinfo.json'])
+        self.appdir.mkdir(parents=True, exist_ok=True)
+        (self.appdir/'version').write_text(info['version'])
         if self.fault=='provision':raise KeyboardInterrupt('new bootstrap in progress')
         return {'installed':True}
-    def resume(self,bundle):self.calls.append('resume');self.verify_bundle(bundle);return {'installed':True}
-    def run_replacement(self,bundle=None,source_sha='a'*64):
-        return self.ns['replace'](bundle or self.bundle,self.setup,self.cleanup,self.manager,self.store,self.ownership,self.remove,lambda t,a:t.get('completed') is True and t['event']['details']['packageId']==a,lambda owner:None,system=self.system,source_sha=source_sha)
+    def resume(self,bundle,refresh=None):
+        self.refreshes.append(refresh)
+        self.calls.append('resume');self.verify_bundle(bundle);return {'installed':True}
+    def run_replacement(self,bundle=None,source_sha='a'*64,**options):
+        return self.ns['replace'](bundle or self.bundle,self.setup,self.cleanup,self.manager,self.store,self.ownership,self.remove,lambda t,a:t.get('completed') is True and t['event']['details']['packageId']==a,lambda owner:None,system=self.system,source_sha=source_sha,**options)
 
 class FlowTests(FlowFixture, unittest.TestCase):
     def test_other_target_versions_are_rejected_before_device_changes(self):
-        for version in ('1.2.1','1.2.2','1.2.3','1.2.4','1.2.5','1.2.6','1.2.7','1.2.8','1.2.10'):
+        for version in ('1.2.1','1.2.2','1.2.3','1.2.4','1.2.5','1.2.6','1.2.7','1.2.8','1.2.11'):
             with self.subTest(version=version):
                 self.make_bundle(self.bundle,version=version)
-                with self.assertRaisesRegex(ValueError,'fixed System Updater 1.2.9 bundle'):
+                with self.assertRaisesRegex(ValueError,'supported System Updater bundle'):
                     self.run_replacement()
                 self.assertEqual(self.calls,[]);self.assertEqual(self.removals,0)
                 self.assertIsNone(self.store.read('system-replacement'))
@@ -231,6 +245,44 @@ class FlowTests(FlowFixture, unittest.TestCase):
         with self.assertRaises(ValueError):self.run_replacement()
         self.assertEqual(self.removals,0)
 
+class StockHomeFlowTests(FlowFixture, unittest.TestCase):
+    def setUp(self):
+        super().setUp()
+        self.make_bundle(self.bundle, version='1.2.10')
+        (self.appdir/'version').write_text('1.2.9')
+
+    def test_unverified_stock_home_refuses_before_reservation(self):
+        for check in ('intent', 'override', 'sam', 'profile', 'idle', 'idle-support'):
+            with self.subTest(check=check):
+                self.doCleanups()
+                self.setUp()
+                effective=self.runtime_status['effective']
+                if check=='intent':self.runtime_status['intent']={'enabled':True,'phase':'active'}
+                if check=='override':self.override.write_text('retained override')
+                if check=='sam':effective['sam_home']='com.cleanyourtv.root.preview'
+                if check=='profile':effective['profiles']['defaultApps']['categories']['home']='unknown'
+                if check=='idle':effective['profiles']['idleApp']['appId']='unknown'
+                if check=='idle-support':effective['profiles']['idleApp']['support']=False
+                with self.assertRaisesRegex(ValueError, 'Return to LG Home'):
+                    self.run_replacement()
+                self.assertIsNone(self.ownership.status())
+                self.assertIsNone(self.store.read('system-replacement'))
+                self.assertNotIn('disable',self.calls)
+                self.assertEqual(self.removals,0)
+
+    def test_stock_home_replacement_and_resume_forward_scan_only_callback(self):
+        self.runtime_status['intent']=None
+        def refresh():
+            pass
+        self.fault='provision'
+        with self.assertRaises(KeyboardInterrupt):
+            self.run_replacement(refresh=refresh)
+        self.fault=None
+        self.assertEqual(self.run_replacement(refresh=refresh)['version'],'1.2.10')
+        self.assertEqual(self.refreshes,[refresh,refresh])
+        self.assertEqual(self.removals,1)
+
+
 class Retained111FlowTests(FlowTests):
     """Run interruption/integrity coverage against the retained public owner."""
     def setUp(self):
@@ -299,6 +351,131 @@ class HistoricalReplacementTests(FlowFixture, unittest.TestCase):
         self.assertEqual((root/'completed-replacement.json').read_bytes(),raw)
         self.assertNotEqual(self.store.read('system-replacement')['id'],old['id'])
         self.assertTrue(Path(old['archive']).is_dir());self.assertEqual(self.removals,1)
+    def test_published_supervisor_can_migrate_after_completed_replacement(self):
+        self.run_replacement()
+        old = self.store.read('system-replacement')
+        root = Path(self.store.root) / ('system-replacement-' + old['id'])
+        bundle = self.bundle.parent / 'new-bundle'
+        self.make_bundle(bundle, version='1.2.10')
+        result = self.run_replacement(bundle)
+        self.assertEqual(result['version'], '1.2.10')
+        self.assertTrue(result['root_unchanged'])
+        self.assertTrue(result['home_unchanged'])
+        self.assertTrue(result['profile_storage_untouched'])
+        self.assertTrue((root / 'completed-replacement.json').is_file())
+
+    def fresh_root_bootstrap(self):
+        import shutil
+        historical, root = self.historical()
+        shutil.rmtree(historical['archive'])
+        shutil.rmtree(self.system)
+        self.make_system(self.system, self.bundle)
+        (self.appdir/'version').write_text('1.2.9')
+        raw = (self.bundle/'system-updater.ipk').read_bytes()
+        files = self.setup.package_files(raw)
+        for name, data in files.items():
+            path = self.installed/name
+            path.write_bytes(data)
+        self.setup.installed_data = lambda path, *args: Path(path).read_bytes()
+        active = Store(self.system, uid=os.getuid())
+        binding = active.read('bootstrap-bundle')
+        active.write('installed-package', {'schema': 1, 'package': dict(binding['package'], version='1.2.9', local=True),
+                     'files': {name: self.ns['digest'](raw) for name, raw in files.items()}})
+        active.write('installed-terminal', {'completed': True, 'event': {'id': self.ns['APP'], 'statusValue': 30,
+                     'details': {'packageId': self.ns['APP'], 'client': 'com.webos.lunasend-123',
+                                 'ipkFile': '/var/lib/clean-your-tv-installer/cytv-root-install-test/package.ipk'}}})
+        active.write('bootstrap', {'phase': 'complete', 'edition': 'root', 'hardware_validated': False})
+        active.write('baseline', {'edition': 'root'})
+        self.store.write('operation', {'schema': 1, 'id': 'f'*32, 'owner': 'system-bootstrap',
+                         'journal': 'bootstrap.json', 'stage': 'complete', 'terminal': True})
+        bundle = self.bundle.parent/'new-bundle'
+        self.make_bundle(bundle, version='1.2.10')
+        return historical, root, active, bundle
+
+    def test_same_replacement_bundle_is_eligible_after_fresh_published_bootstrap(self):
+        history, root, _, bundle = self.fresh_root_bootstrap()
+        self.make_bundle(root/'bundle', version='1.2.10')
+        history['bundle_sha256'] = self.ns['digest']((root/'bundle/bundle.json').read_bytes())
+        self.assertEqual(history['bundle_sha256'], self.ns['digest']((bundle/'bundle.json').read_bytes()))
+        self.store.write('system-replacement', history)
+        result = self.run_replacement(bundle, source_sha='b'*64)
+        self.assertEqual(result['version'], '1.2.10')
+        self.assertTrue(result['home_unchanged'])
+        self.assertEqual(self.removals, 1)
+        self.assertTrue((root/'completed-replacement.json').exists())
+
+    def test_fresh_verified_root_bootstrap_retires_history_with_missing_archive(self):
+        from unittest.mock import patch
+        for point in ('reservation', 'active-journal'):
+            with self.subTest(point=point):
+                self.doCleanups()
+                self.setUp()
+                historical, root, active, bundle = self.fresh_root_bootstrap()
+                old = (Path(self.store.root)/'system-replacement.json').read_bytes()
+                write = Store.write
+
+                def interrupt(store, name, value):
+                    result = write(store, name, value)
+                    if ((point == 'reservation' and name == 'operation' and value['stage'] == 'reserved')
+                            or (point == 'active-journal' and name == 'system-replacement' and value['stage'] == 'capture')):
+                        raise KeyboardInterrupt('reservation written before response')
+                    return result
+
+                with patch.object(Store, 'write', new=interrupt):
+                    with self.assertRaises(KeyboardInterrupt):
+                        self.run_replacement(bundle)
+                self.assertEqual(self.removals, 0)
+                self.assertEqual(self.ownership.status()['stage'], 'reserved')
+                if point == 'reservation':
+                    self.assertEqual((Path(self.store.root)/'system-replacement.json').read_bytes(), old)
+                    self.assertFalse((root/'completed-replacement.json').exists())
+                else:
+                    self.assertEqual((root/'completed-replacement.json').read_bytes(), old)
+                    self.assertEqual(self.store.read('system-replacement')['stage'], 'capture')
+                with self.assertRaises(ValueError):
+                    self.run_replacement(bundle, source_sha='9'*64)
+                terminal = active.read('installed-terminal')
+                changed = dict(terminal, event=dict(terminal['event'], details=dict(terminal['event']['details'], client='com.webos.lunasend-124')))
+                active.write('installed-terminal', changed)
+                with self.assertRaises(ValueError):
+                    self.run_replacement(bundle)
+                self.assertEqual(self.removals, 0)
+                active.write('installed-terminal', terminal)
+                self.assertEqual(self.run_replacement(bundle)['version'], '1.2.10')
+                self.assertEqual((root/'completed-replacement.json').read_bytes(), old)
+                self.assertFalse(Path(historical['archive']).exists())
+                self.assertEqual(self.removals, 1)
+
+    def test_fresh_bootstrap_rejects_incomplete_or_damaged_evidence_before_mutation(self):
+        for damage in ('bootstrap', 'terminal', 'binding', 'package', 'payload', 'owner', 'archive', 'still-live'):
+            with self.subTest(damage=damage):
+                self.doCleanups()
+                self.setUp()
+                historical, root, active, bundle = self.fresh_root_bootstrap()
+                if damage == 'bootstrap':
+                    active.write('bootstrap', {'phase': 'accepted-supervisor', 'edition': 'root'})
+                elif damage == 'terminal':
+                    active.write('installed-terminal', {'completed': False})
+                elif damage == 'binding':
+                    active.write('bootstrap-bundle', dict(active.read('bootstrap-bundle'), schema=2))
+                elif damage == 'package':
+                    pin = active.read('bootstrap-bundle')['package']['sha256']
+                    (self.system/'cache'/(pin+'.ipk')).write_bytes(b'wrong package')
+                elif damage == 'payload':
+                    (self.appdir/'appinfo.json').write_bytes(b'wrong SDK payload')
+                elif damage == 'owner':
+                    self.store.write('operation', dict(self.ownership.status(), owner='system-update'))
+                elif damage == 'archive':
+                    Path(historical['archive']).mkdir()
+                else:
+                    self.make_system(self.system, root/'bundle')
+                    (self.appdir/'version').write_text('1.1.1')
+                with self.assertRaises((ValueError, OSError)):
+                    self.run_replacement(bundle)
+                self.assertEqual(self.removals, 0)
+                self.assertNotIn('disable', self.calls)
+                self.assertFalse((root/'completed-replacement.json').exists())
+
     def test_historical_proof_damage_never_retires_or_disables(self):
         for damage in ('archive','bundle','baseline','owner','foreign-active','foreign-aborted','collision','unfinished','source-only'):
             with self.subTest(damage=damage):
@@ -422,7 +599,12 @@ class BoundaryTests(unittest.TestCase):
                 remote.run.side_effect=RuntimeError('preflight rejected before changes')
                 with self.assertRaises(UserError):installer.replace_system_updater()
                 self.assertIsNone(store.pending(profile));python.assert_called_once_with(operations.ROOT_STATE)
-                remote.run.side_effect=None;remote.run.return_value=json.dumps({'installed':True,'version':'1.2.9','root_unchanged':True,'home_unchanged':True,'profile_storage_untouched':True})
+                remote.run.side_effect=None
+                remote.run.return_value=json.dumps({'reason':'stock-home-required'})
+                with self.assertRaisesRegex(UserError,'Return to LG Home'):
+                    installer.replace_system_updater()
+                self.assertIsNone(store.pending(profile))
+                remote.run.return_value=json.dumps({'installed':True,'version':'1.2.9','root_unchanged':True,'home_unchanged':True,'profile_storage_untouched':True})
                 self.assertTrue(installer.replace_system_updater()['installed']);self.assertIsNone(store.pending(profile))
                 remote.run.return_value=json.dumps({'installed':True,'version':'1.2.1','root_unchanged':True,'home_unchanged':True,'profile_storage_untouched':True})
                 with self.assertRaises(UserError):installer.replace_system_updater()

@@ -103,8 +103,11 @@ class Manager:
     @staticmethod
     def _success(e):return isinstance(e['terminal'],dict) and e['terminal'].get('success') is True
 
-    @staticmethod
-    def _unknown(tx):return any(c['name']!='root-infrastructure' and c[leg]['intent'] and c[leg]['terminal'] is None for c in tx['components'] for leg in ('installEvidence','rollbackEvidence'))
+    def _unknown(self, tx):
+        if hasattr(self.io, 'screensaver_pending') and self.io.screensaver_pending(tx):
+            return True
+        return any(c['name']!='root-infrastructure' and c[leg]['intent'] and c[leg]['terminal'] is None
+                   for c in tx['components'] for leg in ('installEvidence','rollbackEvidence'))
 
     def _can_rollback(self,tx):
         return not tx['rollbackAttempted'] and not self._unknown(tx) and any(c['installEvidence']['terminal'] is not None for c in tx['components']) and tx['phase'] not in ('rolled-back','aborted')
@@ -159,6 +162,8 @@ class Manager:
         if key not in self._launched:self.io.launch(tx['edition']);self._launched.add(key)
 
     def _begin_health(self,tx,rollback):
+        if hasattr(self.io, 'sync_screensaver'):
+            self.io.sync_screensaver(tx, rollback)
         selected=tx['prior' if rollback else 'candidate']
         if not self._verify_set(selected):return self._save(tx,'recovery-required' if rollback else 'rolling-back','Installed component verification failed')
         tx['launched']=self._now();tx['deadline']=tx['launched']+HEALTH_SECONDS
@@ -256,6 +261,8 @@ class Manager:
                         if receipt.get('transaction')!=tx['id'] or receipt.get('version')!=self._launcher_version(tx,rollback) or type(receipt.get('at')) not in (int,float) or not tx['launched']<=receipt['at']<tx['deadline']:raise ValueError('Invalid health receipt')
                         selected=tx['prior' if rollback else 'candidate']
                         if not self._verify_set(selected):raise ValueError('Health component verification failed')
+                        if hasattr(self.io, 'verify_screensaver') and not self.io.verify_screensaver(tx, rollback):
+                            raise ValueError('Health screensaver package verification failed')
                         self.store.write('current-'+tx['edition'],selected);return self._save(tx,'rolled-back' if rollback else 'complete')
                     if now<tx['launched'] or now>=tx['deadline']:return self._save(tx,'recovery-required' if rollback else 'rolling-back','Launcher profile readiness timed out')
                     self._launch(tx);return self.status()

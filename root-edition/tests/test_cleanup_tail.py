@@ -20,7 +20,7 @@ SOURCE=Path(__file__).resolve().parents[1]/'cleanup_tail.js'
 RUNTIME='/var/lib/clean-your-tv-python/4a71641c8d5536175e404a961624e8656eba30e97b5026f6bd7dc31e4bbeaaea'
 STATE='/var/lib/clean-your-tv-installation'
 ID='a'*32
-APPS=('com.cleanyourtv.root.preview','com.cleanyourtv.root.updater','com.cleanyourtv.system.updater','com.cleanyourtv.updater','com.local.nativehome','com.gathin.tvhome')
+APPS=('com.cleanyourtv.root.preview','com.cleanyourtv.root.updater','com.cleanyourtv.system.updater','com.cleanyourtv.updater','com.local.nativehome','com.gathin.tvhome','com.cleanyourtv.screensaver')
 def packages():
     return {app:{'state':'absent','readback':{'app':app,'absent':True}} for app in APPS}
 HARNESS=r'''
@@ -191,7 +191,7 @@ class CleanupTail(unittest.TestCase):
         self.assertFalse(reply['restart_required'])
 
     def test_finalizer_accepts_fallback_catalog_and_still_checks_package_paths(self):
-        owned=self.base/'media/developer/apps/usr/palm/applications/com.local.nativehome'
+        owned=self.base/'media/developer/apps/usr/palm/applications/com.cleanyourtv.screensaver'
         owned.mkdir(parents=True)
         result,reply=self.run_tail(DEV_CATALOG_DENIED='1')
         self.assertEqual(reply['cleanup_error'],'package-remains')
@@ -226,6 +226,7 @@ class CleanupTail(unittest.TestCase):
         result,_=self.run_tail();self.assertEqual(result.returncode,0,result.stderr)
         record=json.loads((self.state/('clean-removal-'+ID+'.json')).read_text())
         record.pop('final_fence');record.pop('final_original_lease')
+        record['packages'].pop('com.cleanyourtv.screensaver')
         self.write('clean-removal-'+ID+'.json',record)
         self.write('operation.json',dict(schema=1,id='b'*32,owner='clean-removal',journal='product-'+ID+'.json',stage='verified-clean',terminal=False))
         result,reply=self.run_tail(MODE='finalize')

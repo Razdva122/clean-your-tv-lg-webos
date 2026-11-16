@@ -22,6 +22,7 @@ MAPPINGS = {
     '50-clean-your-tv-root': '58-clean-your-tv-root-updatetest',
     'com.cleanyourtv.root.updater': UPDATER,
     'com.cleanyourtv.root.preview': APP,
+    'com.cleanyourtv.screensaver': 'com.cleanyourtv.screensaver.updatetest',
     'clean-your-tv-root-updater': 'clean-your-tv-root-updaterlab',
     'clean-your-tv-root': 'clean-your-tv-root-updatetest',
 }

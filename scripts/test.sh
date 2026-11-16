@@ -91,6 +91,7 @@ node tests/settings-diagnostics.cjs
 node tests/helper-entry.cjs
 node tests/helper-service-status.cjs
 node tests/helper-published-ui.cjs
+node --test tests/screensaver-{policy,controller,lg,helper,transport,idle,media,settings,native,native-wiring}.cjs root-edition/service/test-screensaver{,-register}.cjs
 node tests/home-control.cjs
 node tests/home-control-bridge.cjs
 node tests/home-control-jail.cjs

@@ -85,6 +85,8 @@ function wallpaperEnvelope(buffer, browser) {
     v.schemaVersion !== 1 ||
     v.kind !== 'wallpaper' ||
     ['phone', 'cytv'].indexOf(v.source) < 0 ||
+    (v.mediaKind !== undefined &&
+      ['photo', 'video'].indexOf(v.mediaKind) < 0) ||
     (browser && v.source !== 'phone') ||
     !Array.isArray(v.variants)
   )
@@ -364,7 +366,11 @@ exports.create = function (options) {
       require('./wallpaper-cache')
         .space(0)
         .then(function (storage) {
-          reply(200, { wallpaperProtocol: 1, videoCacheStorage: storage });
+          reply(200, {
+            wallpaperProtocol: 1,
+            mediaKind: true,
+            videoCacheStorage: storage
+          });
         });
       return;
     }

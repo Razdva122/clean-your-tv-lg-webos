@@ -37,8 +37,10 @@ def tracked_files(prefix):
                 'native/service': ['native/service/app-inventory.js']}
     if prefix == 'launcher':
         required[prefix] += ['launcher/' + name for name in THEME_FILES]
+        required[prefix] += ['launcher/screensaver-' + name for name in ('idle.js', 'personal.js', 'settings.js', 'settings.css')]
     if prefix == 'native/app':
         required[prefix] += [p.relative_to(ROOT).as_posix() for p in (ROOT/'native/app/vendor/ws-legacy').rglob('*') if p.is_file()]
+        required[prefix] += ['native/app/screensaver-' + name + '.js' for name in ('controller', 'lg', 'owner')]
     for name in sorted(set(result.stdout.splitlines()) | set(required.get(prefix, []))):
         path = ROOT / name
         if path.is_symlink() or not path.is_file():
@@ -49,10 +51,16 @@ def tracked_files(prefix):
 
 def pack_app(appfiles, servicefiles, architecture='all', helper=False):
     if helper:
+        from scripts.screensaver_package import runtime_files
+        if 'screensaver-controller.js' in appfiles:
+            appfiles = dict(appfiles, **runtime_files())
         servicefiles = dict(servicefiles, **{name: appfiles[name] for name in ('state-permissions.js', 'contract-events.js')})
         appfiles, servicefiles = compile_helper(appfiles), compile_helper(servicefiles)
     info = json.loads(appfiles['appinfo.json'])
     if info.get('type') == 'web':
+        if 'screensaver-settings.js' in appfiles:
+            from scripts.screensaver_package import settings_script
+            appfiles = dict(appfiles, **{'screensaver-config.js': settings_script()})
         appfiles = compile_web(appfiles)
     app, version = info['id'], info['version']
     service = json.loads(servicefiles['services.json'])['id']
@@ -261,6 +269,8 @@ def build_payload():
         app['app-inventory.js'] = service['app-inventory.js']
         helper = pack_app(app, service, architecture='arm', helper=True)
     (payload / 'helper.ipk').write_bytes(helper)
+    from scripts.screensaver_package import build as screensaver_package
+    (payload / 'screensaver.ipk').write_bytes(screensaver_package())
     launcher = {n: b for n, b in tracked_files('launcher').items() if n != 'apps.js' and not n.startswith('icons/')}
     launcher['config.js'] = b'window.CONFIG = {columns:5,dockApps:[],hiddenApps:["com.gathin.tvhome","com.local.nativehome"]};\n'
     launcher['apps.js'] = b'window.TV_APPS = {apps:[],inputs:[]};\n'
@@ -308,6 +318,8 @@ def build_payload():
                     target.write_bytes(path.read_bytes())
     manifest = {'schema': 1, 'launcher': 'launcher.ipk', 'helper': 'helper.ipk', 'graphics': GRAPHICS,
                 'legacy_root_beta': 'legacy-root-beta',
+                'screensaver': package.SCREENSAVER_IPK,
+                'screensaver_version': json.loads((ROOT / 'screensaver/appinfo.json').read_text())['version'],
                 'home_version': json.loads(launcher['appinfo.json'])['version'],
                 'helper_version': versions['helper'],
                 'root_backends': ROOT_BACKENDS,

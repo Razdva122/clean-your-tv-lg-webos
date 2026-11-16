@@ -79,6 +79,13 @@ class BuildTests(unittest.TestCase):
             service_prefix = 'usr/palm/services/com.cleanyourtv.root.preview.service/'
             self.assertEqual({n[len(service_prefix):] for n in files if n.startswith(service_prefix)}, {'service.js', 'startup-diagnostics.js', 'app-inventory.js', 'presentation-context.js', 'handlers.js', 'services.json', 'package.json', 'boot-recover.sh', 'activity.json'})
             self.assertEqual(json.loads(files[service_prefix+'package.json'])['wallpaperMediaProtocol'],1)
+            self.assertEqual(json.loads(files[service_prefix+'package.json'])['screensaverProtocol'],1)
+            self.assertIn(b"loadScreensaver('./screensaver-register')",files[service_prefix+'service.js'])
+            self.assertIn(prefix + 'screensaver-settings.js', files)
+            inline = files[service_prefix+'service.js'].split(b"var Service = require('webos-service');", 1)[0]
+            probe = inline + b"\nif (typeof loadScreensaver('./screensaver-register') !== 'function' || typeof loadScreensaver('./screensaver-runtime/controller').create !== 'function') process.exit(1);"
+            executed = subprocess.run(['node', '-'], input=probe, capture_output=True)
+            self.assertEqual(executed.returncode, 0, executed.stderr.decode())
             self.assertIn(b'themeReceiverStart',files[service_prefix+'service.js'])
             self.assertNotIn(b"require('./theme-receiver')",files[service_prefix+'service.js'])
             with tarfile.open(fileobj=io.BytesIO(parts['data.tar.gz'])) as archive:
@@ -91,7 +98,7 @@ class BuildTests(unittest.TestCase):
                 self.assertGreaterEqual(archive.getmember('control').mtime, 1577836800)
             release = json.loads((first / 'release.json').read_text())
             self.assertFalse(release['hardware_validated'])
-            self.assertEqual(release['capabilities'],['theme-receiver-v1','wallpaper-media-v1'])
+            self.assertEqual(release['capabilities'],['theme-receiver-v1','wallpaper-media-v1','screensaver-v1'])
             # Recovery and runtime provisioning have different contracts but share a filename.
             spec = importlib.util.spec_from_file_location('root_build_recovery_provision', ROOT / 'provision.py')
             provision = importlib.util.module_from_spec(spec)
@@ -99,7 +106,7 @@ class BuildTests(unittest.TestCase):
             original={'service':'Exec=/usr/bin/run-js-service -n '+str(provision.SERVICE),'role':json.dumps({'appId':provision.NAME}),'client':'{}','api':'{}'}
             api=json.loads(provision.plan(original,provision.snapshot_capabilities(release))['api'])
             methods=api[provision.NAME+'.control']
-            for method in ('wallpaperCacheStart','wallpaperCacheWrite','wallpaperCacheCommit','wallpaperCacheKeepAlive','wallpaperCacheStop'):
+            for method in ('wallpaperCacheStart','wallpaperCacheWrite','wallpaperCacheCommit','wallpaperCacheKeepAlive','wallpaperCacheStop','screensaverStatus','screensaverConfigure','screensaverPreview','screensaverActivity','screensaverEligible','screensaverStop'):
                 self.assertIn(provision.NAME+'/'+method,methods)
                 self.assertIn(method.encode(),files[service_prefix+'service.js'])
             for name, digest in release['files'].items():

@@ -198,6 +198,8 @@ class Manager:
         evidence = tx['rollbackEvidence' if rollback else 'installEvidence']
         if evidence['terminal'] is None:
             return self._save(tx, 'recovery-required', 'installer outcome unknown; terminal evidence required')
+        if self._success(evidence) and hasattr(self.io, 'sync_screensaver'):
+            self.io.sync_screensaver(tx, rollback)
         if rollback:
             if not self._success(evidence):
                 return self._save(tx, 'recovery-required', 'rollback failed; no retry permitted')
@@ -283,6 +285,8 @@ class Manager:
                     self._launch(tx)
                     return tx
                 if phase == 'rolling-back':
+                    if hasattr(self.io, 'screensaver_pending') and self.io.screensaver_pending(tx):
+                        return self._save(tx, 'recovery-required', 'Screensaver package outcome unconfirmed')
                     if tx['installEvidence']['terminal'] is None:
                         return self._save(tx, 'recovery-required', 'original installer outcome unknown')
                     if tx['rollbackAttempted']: return self._terminal(tx, True)
@@ -355,6 +359,8 @@ class Manager:
             if tx is None or tx['phase'] in {'rolled-back', 'aborted'}: return tx
             if tx['rollbackAttempted']:
                 return tx
+            if hasattr(self.io, 'screensaver_pending') and self.io.screensaver_pending(tx):
+                return self._save(tx, 'recovery-required', 'Screensaver package outcome unconfirmed')
             if tx['phase'] == 'complete' and self.io.installed().get('version') != tx['candidate']['version']:
                 raise ValueError('installed version changed since confirmed update')
             if tx['installEvidence']['terminal'] is None:

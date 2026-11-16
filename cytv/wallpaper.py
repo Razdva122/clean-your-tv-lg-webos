@@ -147,7 +147,7 @@ def prepare(path, crop=None, cancel=None, progress=lambda message: None):
             break
     else:
         raise ValueError('Wallpaper exceeds the TV size limit.')
-    result = dict(schemaVersion=1, kind='wallpaper', source='cytv', image=asset(bytes(data),'image/jpeg',poster.width(),poster.height()),variants=[])
+    result = dict(schemaVersion=1, kind='wallpaper', source='cytv', mediaKind='photo', image=asset(bytes(data),'image/jpeg',poster.width(),poster.height()),variants=[])
     storage.local(width*height*4+2*(UHD_LIMIT+FHD_LIMIT)+1024*1024, progress)
     with tempfile.TemporaryDirectory(prefix='cytv-wallpaper-') as directory:
         source = Path(directory) / 'crop.png'
@@ -220,7 +220,7 @@ def prepare_video(path, cancel=None, progress=lambda message: None):
                 break
         else:
             raise ValueError('Wallpaper exceeds the TV size limit.')
-        result = dict(schemaVersion=1,kind='wallpaper',source='cytv',
+        result = dict(schemaVersion=1,kind='wallpaper',source='cytv', mediaKind='video',
                       image=asset(bytes(data),'image/jpeg',image.width(),image.height()),variants=[])
         for quality,width,height,limit,ceiling in [('4k',3840,2160,UHD_LIMIT,8_000_000),('1080p',1920,1080,FHD_LIMIT,2_000_000)]:
             if quality == '4k' and (crop[2] < width or crop[3] < height):
@@ -378,6 +378,10 @@ def upload(host, pin, envelope, cancel=None, progress=lambda message: None):
         except (ValueError,UnicodeError): raise ValueError('Invalid TV response.') from None
         if not isinstance(capabilities,dict) or type(capabilities.get('wallpaperProtocol')) is not int or capabilities['wallpaperProtocol'] != 1:
             raise ValueError('Update Clean Your TV to receive personal wallpapers.')
+        if capabilities.get('mediaKind') is not True and 'mediaKind' in envelope:
+            # Older Home builds require the original exact envelope keys.
+            old_envelope = {key: value for key, value in envelope.items() if key != 'mediaKind'}
+            body = json.dumps(old_envelope,separators=(',',':')).encode('utf-8')
         required = sum(item['size'] for item in envelope.get('variants', [])) + 1024*1024
         snapshot = capabilities.get('videoCacheStorage')
         available = snapshot.get('available') if isinstance(snapshot, dict) else None

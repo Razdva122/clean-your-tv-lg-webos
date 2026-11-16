@@ -19,6 +19,8 @@ THEME_FILES = WEATHER_FILES + [
     'wallpaper-library.js',
     'wallpaper-stream.js',
     'wallpapers/black-hole-stream.mp4',
+    'wallpapers/alpine-preview.jpg',
+    'wallpapers/ribbon-preview.jpg',
     'wallpaper-qr.js',
     'theme-data.js',
     'theme-store.js',

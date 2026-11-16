@@ -66,6 +66,57 @@ if ((fs.statSync(dir).mode & 0o7777) !== 0o2770) {
       false
     );
     assert.equal((await send('shell', { command: 'noop' })).returnValue, false);
+    const settings = {
+      enabled: true,
+      scope: 'cytv',
+      mode: 'clock',
+      assetId: '',
+      idleTimeoutMs: 60000,
+      clock: { locale: 'ru', hour12: true }
+    };
+    assert.equal(
+      (
+        await send('screensaverConfigure', {
+          ...settings,
+          path: '/tmp/example'
+        })
+      ).returnValue,
+      false
+    );
+    assert.equal(
+      (await send('screensaverPreview', { id: 'foreign' })).returnValue,
+      false
+    );
+    assert.equal(
+      (
+        await send('screensaverConfigure', {
+          ...settings,
+          clock: { locale: 'ru', hour12: 'true' }
+        })
+      ).returnValue,
+      false
+    );
+    pending = send('screensaverConfigure', settings);
+    req = JSON.parse(
+      fs.readFileSync(path.join(dir, 'home-request.json'), 'utf8')
+    );
+    assert.equal(req.method, 'screensaverConfigure');
+    assert.deepEqual(req.settings, settings);
+    storage.atomicRecord(
+      dir,
+      'home-response',
+      JSON.stringify({
+        id: req.id,
+        returnValue: true,
+        available: true,
+        state: settings
+      })
+    );
+    queue.shift()();
+    assert.deepEqual(
+      JSON.parse(JSON.stringify((await pending).state)),
+      settings
+    );
     const input = create(fs, dir, {
       inputs: true,
       now: () => now,

@@ -44,6 +44,11 @@ function manifest(edition = 'no-root') {
 }
 assert.equal(policy.validate(manifest()).components.length, 3);
 assert.equal(policy.validate(manifest('root')).edition, 'root');
+assert.equal(
+  policy.validate({ ...manifest('root'), supervisor: 2 }).supervisor,
+  2
+);
+assert.throws(() => policy.validate({ ...manifest('root'), supervisor: 3 }));
 for (const change of [
   (m) => (m.components[0].application = 'org.foreign'),
   (m) => (m.components[0].url = base + '../evil.ipk'),
@@ -248,7 +253,12 @@ assert.equal(
     .minimumSupervisorVersion,
   '1.2.9'
 );
-for (const value of ['1.2.10', '2.0.0', 'bad', null, 111])
+assert.equal(
+  policy.validate({ ...gated, minimumSupervisorVersion: '1.2.10' })
+    .minimumSupervisorVersion,
+  '1.2.10'
+);
+for (const value of ['1.2.11', '2.0.0', 'bad', null, 111])
   assert.throws(() =>
     policy.validate({ ...gated, minimumSupervisorVersion: value })
   );

@@ -3,12 +3,12 @@
   width: 100%;
   min-width: 0;
 }
-#homeWallpaperPanel .wallpaper-summary {
+.wallpaper-summary {
   display: flex;
   align-items: center;
   margin-bottom: 16px;
 }
-#homeWallpaperPanel #wallpaperPreview {
+.wallpaper-preview-image {
   display: block;
   width: 45%;
   max-width: 400px;
@@ -18,15 +18,16 @@
   border-radius: 8px;
   background: #111820;
 }
-#homeWallpaperPanel #wallpaperPreview[hidden] {
+.wallpaper-preview-image[hidden] {
   display: none;
 }
-#homeWallpaperPanel .wallpaper-info {
+.wallpaper-info {
   flex: 1;
   min-width: 0;
   margin-left: 24px;
 }
-#homeWallpaperPanel h4 {
+#homeWallpaperPanel h4,
+.wallpaper-summary h4 {
   font-size: 28px;
   margin: 0 0 12px;
   overflow-wrap: break-word;
@@ -38,7 +39,7 @@
   margin: 8px 0;
   overflow-wrap: break-word;
 }
-#homeWallpaperPanel .wallpaper-quality,
+.wallpaper-quality,
 #homeWallpaperPanel .wallpaper-dim {
   display: flex;
   flex-wrap: wrap;
@@ -48,7 +49,8 @@
 #homeWallpaperPanel .wallpaper-dim p {
   width: 100%;
 }
-#homeWallpaperPanel button {
+#homeWallpaperPanel button,
+.wallpaper-quality button {
   box-sizing: border-box;
   width: auto;
   min-height: 56px;
@@ -62,25 +64,29 @@
   border-radius: 8px;
   cursor: pointer;
 }
-#homeWallpaperPanel button[aria-pressed='true'] {
+#homeWallpaperPanel button[aria-pressed='true'],
+.wallpaper-quality button[aria-pressed='true'] {
   border-color: #bcd8f6;
   background: #263e56;
 }
-#homeWallpaperPanel button:focus {
+#homeWallpaperPanel button:focus,
+.wallpaper-quality button:focus {
   outline: 3px solid #dbe9ff;
   outline-offset: 3px;
   background: #384b65;
   color: #fff;
 }
-#homeWallpaperPanel button:disabled {
+#homeWallpaperPanel button:disabled,
+.wallpaper-quality button:disabled {
   opacity: 0.5;
   cursor: default;
 }
 @media (max-width: 1280px) {
-  #homeWallpaperPanel #wallpaperPreview {
+  .wallpaper-preview-image {
     max-height: 160px;
   }
-  #homeWallpaperPanel h4 {
+  #homeWallpaperPanel h4,
+  .wallpaper-summary h4 {
     font-size: 25px;
   }
 }
@@ -138,4 +144,279 @@
   font-size: 20px;
   margin-top: 6px;
   color: #c5d0dd;
+}
+
+.wallpaper-media-badges {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 4px 0;
+}
+.wallpaper-media-badges span {
+  margin: 0 8px 6px 0;
+  padding: 3px 9px;
+  border: 1px solid #526170;
+  border-radius: 6px;
+  color: #f5f7fa;
+  background: #263442;
+  font-size: 18px;
+}
+
+.wallpaper-media-gallery {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0 -10px 6px 0;
+}
+.wallpaper-media-gallery h5 {
+  margin: 8px 0;
+  font-size: 22px;
+  width: 100%;
+}
+#homeWallpaperPanel .wallpaper-media-gallery button.wallpaper-media-card,
+.wallpaper-media-gallery button.wallpaper-media-card {
+  box-sizing: border-box;
+  width: calc(25% - 10px);
+  margin: 0 10px 10px 0;
+  padding: 8px;
+  text-align: left;
+}
+.wallpaper-media-card img {
+  display: block;
+  width: 100%;
+  height: 120px;
+  margin: 0 0 8px;
+  border-radius: 4px;
+  object-fit: cover;
+}
+.wallpaper-media-card img[hidden] {
+  display: none;
+}
+.wallpaper-media-card strong,
+.wallpaper-media-card small {
+  display: block;
+}
+.wallpaper-media-card .wallpaper-media-badges span {
+  margin-bottom: 2px;
+}
+@media (max-width: 1280px) {
+  #homeWallpaperPanel .wallpaper-media-gallery button.wallpaper-media-card,
+  .wallpaper-media-gallery button.wallpaper-media-card {
+    width: calc(50% - 10px);
+  }
+  .wallpaper-media-card img {
+    height: 92px;
+  }
+}
+
+.background-layout {
+  display: flex;
+  align-items: flex-start;
+  margin: 0 -14px;
+}
+.background-preview,
+.background-library {
+  box-sizing: border-box;
+  width: 50%;
+  min-width: 0;
+  padding: 0 14px;
+}
+.background-preview .wallpaper-summary {
+  position: relative;
+  display: block;
+  margin: 0 0 8px;
+}
+.background-preview .wallpaper-preview-image,
+.background-focus-preview img {
+  width: 100%;
+  height: 236px;
+  max-width: none;
+  max-height: none;
+  object-fit: contain;
+  box-sizing: border-box;
+}
+.background-preview .wallpaper-info {
+  margin: 8px 0 0;
+}
+.background-preview h4,
+#homeWallpaperPanel .background-preview h4 {
+  margin: 0 0 4px;
+}
+#homeWallpaperPanel .background-preview p {
+  font-size: 18px;
+  margin: 4px 0;
+}
+.background-preview .wallpaper-quality,
+.background-library .wallpaper-quality {
+  margin: 0 0 5px;
+}
+.background-preview button,
+.background-tabs button {
+  white-space: nowrap;
+}
+.background-library .wallpaper-media-gallery {
+  margin-top: 8px;
+}
+#homeWallpaperPanel .background-library button.wallpaper-media-card,
+.background-library .wallpaper-media-gallery button.wallpaper-media-card {
+  width: calc(33.333% - 10px);
+  padding: 8px;
+  font-size: 20px;
+}
+.background-library .wallpaper-media-card img,
+.background-clock-face {
+  display: block;
+  width: 100%;
+  height: 84px;
+  object-fit: cover;
+}
+.background-library .wallpaper-media-card img[hidden] {
+  display: none;
+}
+.background-clock-face {
+  box-sizing: border-box;
+  margin-bottom: 8px;
+  padding-top: 23px;
+  font-family: monospace;
+  font-size: 27px;
+  text-align: center;
+  border-radius: 4px;
+  background: #151e29;
+}
+.background-library .wallpaper-media-badges span {
+  font-size: 15px;
+  margin-right: 4px;
+  padding: 2px 5px;
+}
+.background-library .background-tabs button,
+#homeWallpaperPanel .background-library .background-tabs button {
+  margin-top: 0;
+}
+#homeWallpaperPanel .background-source-action button {
+  font-size: 20px;
+  min-height: 44px;
+  padding: 5px 12px;
+}
+.background-focus-preview {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--ctv-settings-bg, #10151c);
+  pointer-events: none;
+}
+.background-focus-preview strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 26px;
+}
+.background-options {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid #303842;
+}
+.background-options > * {
+  margin: 0 12px 8px 0;
+}
+.wallpaper-fullscreen {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 10000;
+  background: #000;
+}
+.wallpaper-fullscreen img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.wallpaper-fullscreen button {
+  position: absolute;
+  z-index: 2;
+  right: 28px;
+  bottom: 28px;
+  min-height: 52px;
+  padding: 12px 20px;
+  border: 2px solid #afc7e5;
+  border-radius: 8px;
+  color: #f5f7fa;
+  background: #172231;
+  font-size: 23px;
+}
+body.ctv-wallpaper-fullscreen #ctvWallpaper {
+  z-index: 10001;
+}
+body.ctv-wallpaper-fullscreen.ctv-wallpaper-playing .wallpaper-fullscreen {
+  background: transparent;
+  z-index: 10002;
+}
+body.ctv-wallpaper-playing .wallpaper-fullscreen img {
+  visibility: hidden;
+}
+@media (max-width: 1280px) {
+  .background-layout {
+    margin: 0 -9px;
+  }
+  .background-preview,
+  .background-library {
+    padding: 0 9px;
+  }
+  .background-preview .wallpaper-preview-image,
+  .background-focus-preview img {
+    height: 126px;
+  }
+  .background-library .wallpaper-media-card img,
+  .background-clock-face {
+    height: 58px;
+  }
+  .background-clock-face {
+    padding-top: 13px;
+  }
+  #homeWallpaperPanel .background-library button.wallpaper-media-card,
+  .background-library .wallpaper-media-gallery button.wallpaper-media-card {
+    font-size: 16px;
+  }
+  .background-library .wallpaper-media-badges span {
+    font-size: 12px;
+  }
+}
+
+.background-media-details {
+  margin-top: 8px;
+}
+@media (max-width: 1280px) {
+  #homeWallpaperPanel .background-preview button,
+  #settings-pane-screensaver .background-preview button,
+  #homeWallpaperPanel .background-library .background-tabs button,
+  .background-library .background-tabs button {
+    min-height: 38px;
+    padding: 5px 8px;
+    margin: 0 6px 6px 0;
+    font-size: 17px;
+  }
+}
+
+#homeWallpaperPanel #wallpaperFullscreen,
+#screensaverPreview {
+  border-color: #a4bfdf;
+  background: #283f58;
+  color: #fff;
+}
+
+.background-preview-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+.background-preview-actions > button {
+  margin-right: 10px;
+}
+.background-preview-actions .background-formats {
+  margin: 0;
 }

@@ -40,6 +40,7 @@ function field(name) {
     'controller.log.previous': 'logger-previous',
     'controller.pid': 'pid',
     'home-control.json': 'home-preference',
+    'screensaver-preference.json': 'screensaver-preference',
     'startup-state.json': 'startup-state'
   };
   if (Object.prototype.hasOwnProperty.call(names, name)) return names[name];
@@ -1164,6 +1165,7 @@ function prepare(directory, log, initializeControl) {
 var records = {
   control: ['control.json', 432, 'app'],
   'home-preference': ['home-control.json', 432, 'app', 65536],
+  'screensaver-preference': ['screensaver-preference.json', 432, 'app', 4096],
   'startup-state': ['startup-state.json', 420, 'service', 65536],
   pid: ['controller.pid', 420, 'app', 128],
   logger: ['controller.log', 420, 'app', 131072]

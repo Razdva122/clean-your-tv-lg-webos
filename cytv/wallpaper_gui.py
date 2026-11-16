@@ -105,7 +105,7 @@ class WallpaperDialog(QDialog):
             try:
                 envelope = wallpaper.prepare_video(path,cancel=self.cancel_event,progress=self.events.progress.emit) if is_video else wallpaper.prepare(path,crop=crop,cancel=self.cancel_event,progress=self.events.progress.emit)
                 wallpaper.upload(host,pin,envelope,cancel=self.cancel_event,progress=self.events.progress.emit)
-                message = 'Received by TV. Choose Apply on the TV to use this wallpaper.'
+                message = 'Received by TV. Check the background on the TV.'
             except wallpaper.Cancelled: message = 'Cancelled. Your current TV wallpaper is unchanged.'
             except (ValueError,OSError,UserError) as error:
                 message = COMPUTER_STORAGE_FULL if is_storage_full(error) else str(error)

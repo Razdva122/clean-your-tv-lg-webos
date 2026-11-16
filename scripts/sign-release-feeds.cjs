@@ -106,7 +106,8 @@ function signFeeds(
         throw Error('system-release-set-required');
       if (
         edition === 'root' &&
-        manifests.system[key].minimumSupervisorVersion !== '1.1.1'
+        manifests.system[key].minimumSupervisorVersion !==
+          (manifests.system[key].supervisor === 2 ? '1.2.10' : '1.1.1')
       )
         throw Error('root-minimum-supervisor-required');
       const launcher = manifests.system[key].components.find(

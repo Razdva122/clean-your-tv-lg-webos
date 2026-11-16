@@ -76,6 +76,8 @@ class PreviewTest(unittest.TestCase):
                 if file.is_file():
                     self.assertEqual((output / file.relative_to(ROOT)).read_bytes(), file.read_bytes())
             for edition in ('launcher', 'root-launcher'):
+                self.assertEqual((output / edition / 'screensaver-config.js').read_bytes(),
+                                 (ROOT / 'screensaver/settings.js').read_bytes())
                 config = (output / edition / 'config.js').read_text()
                 self.assertIn('window.CONFIG = ', config)
                 self.assertIn('window.CONFIG.dockApps = ' + json.dumps([app['id'] for app in apps['apps'][:5]]) + ';', config)
@@ -171,6 +173,11 @@ class PreviewTest(unittest.TestCase):
             self.assertNotIn('profile-bootstrap.js', root)
             self.assertEqual(json.loads(get('/root-launcher/apps.js').removeprefix('window.TV_APPS = ').rstrip(';\n'))['apps'][0]['id'], 'com.beb.plxnative')
             page = get('/launcher/index.html')
+            for edition in ('launcher', 'root-launcher'):
+                self.assertEqual(get('/' + edition + '/screensaver-config.js'),
+                                 (ROOT / 'screensaver/settings.js').read_text())
+                self.assertEqual(get('/' + edition + '/screensaver-settings.js'),
+                                 (ROOT / 'launcher/screensaver-settings.js').read_text())
             self.assertLess(page.index('/preview/bridge.js'), page.index('profile-bootstrap.js'))
             self.assertEqual(get('/launcher/style.css'), (ROOT / 'launcher/style.css').read_text())
             apps = json.loads(get('/launcher/apps.js').removeprefix('window.TV_APPS = ').rstrip(';\n'))
