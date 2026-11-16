@@ -111,7 +111,8 @@ Se il programma non riesce a verificare il riavvio completo richiesto, salva e a
 
 Nell’installer desktop apri **Operazione di manutenzione → Modifica le impostazioni LG (Debloat)** con la connessione TV salvata. Seleziona le impostazioni da modificare, scegli **Applica le impostazioni selezionate** e controlla i risultati. Se è in sospeso un’operazione precedente, scegli prima **Esamina le opzioni di ripristino** con la connessione originale salvata.
 
-[Ripristino dopo un rollback di Root](../RECOVERY.md#standalone-root-updater-rollback-readiness)
+- [Root Updater](../RECOVERY.md#standalone-root-updater-rollback-readiness)
+- [Root System Updater](../RECOVERY.md#root-system-rollback-readiness-candidate)
 
 <!-- Legacy anchors retained for existing links. Detailed references: -->
 <a id="requisiti"></a>

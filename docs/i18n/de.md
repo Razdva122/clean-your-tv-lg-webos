@@ -111,7 +111,8 @@ Kann der Installer den angeforderten vollständigen Neustart nicht bestätigen, 
 
 Öffnen Sie im Desktop-Installer **Wartungsaktion → LG-Einstellungen anpassen (Debloat)** mit der gespeicherten TV-Verbindung. Wählen Sie die gewünschten Einstellungen aus, klicken Sie auf **Ausgewählte Einstellungen anwenden** und prüfen Sie die Ergebnisse. Ist ein früherer Vorgang offen, wählen Sie zuerst **Wiederherstellungsoptionen prüfen** mit dessen ursprünglicher gespeicherter Verbindung.
 
-[Wiederherstellung nach einem Root-Rollback](../RECOVERY.md#standalone-root-updater-rollback-readiness)
+- [Root Updater](../RECOVERY.md#standalone-root-updater-rollback-readiness)
+- [Root System Updater](../RECOVERY.md#root-system-rollback-readiness-candidate)
 
 <!-- Legacy anchors retained for existing links. Detailed references: -->
 <a id="optionales-python-für-root-in-v110"></a>

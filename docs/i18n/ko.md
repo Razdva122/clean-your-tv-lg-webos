@@ -111,7 +111,8 @@ TV 모델, 펌웨어, No-root 또는 Root, 설치 기기, 실패한 단계와 �
 
 데스크톱 설치 프로그램에서 저장된 TV 연결로 **유지 관리 작업 → LG 설정 조정 (Debloat)**을 엽니다. 변경할 설정을 선택하고 **선택한 설정 적용**을 누른 다음 결과를 확인하세요. 이전 작업이 해결되지 않았다면 먼저 원래 저장된 연결로 **복구 옵션 확인**을 선택하세요.
 
-[Root 롤백 후 복구](../RECOVERY.md#standalone-root-updater-rollback-readiness)
+- [Root Updater](../RECOVERY.md#standalone-root-updater-rollback-readiness)
+- [Root System Updater](../RECOVERY.md#root-system-rollback-readiness-candidate)
 
 <!-- Legacy anchors retained for existing links. Detailed references: -->
 <a id="root용-선택적-python-런타임"></a>

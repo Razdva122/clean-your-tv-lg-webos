@@ -111,7 +111,8 @@ TV मॉडल, फ़र्मवेयर, No-root या Root, स्था�
 
 डेस्कटॉप इंस्टॉलर में टीवी के सहेजे गए कनेक्शन का इस्तेमाल करके **रखरखाव कार्य → LG सेटिंग बदलें (Debloat)** खोलें। जिन सेटिंग को बदलना है उन्हें चुनें, **चुनी गई सेटिंग लागू करें** दबाएँ और नतीजे देखें। अगर कोई पिछली कार्रवाई लंबित है, तो पहले उसके मूल सहेजे गए कनेक्शन से **पुनर्प्राप्ति विकल्प जाँचें** चुनें।
 
-[Root रोलबैक के बाद रिकवरी](../RECOVERY.md#standalone-root-updater-rollback-readiness)
+- [Root Updater](../RECOVERY.md#standalone-root-updater-rollback-readiness)
+- [Root System Updater](../RECOVERY.md#root-system-rollback-readiness-candidate)
 
 <!-- Legacy anchors retained for existing links. Detailed references: -->
 <a id="root-क-लए-वकलपक-python"></a>

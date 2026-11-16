@@ -111,7 +111,8 @@ No-root: 要重新啟動 Home 控制，請開啟 Home Helper，選擇啟動 Help
 
 在桌面安裝程式中，使用已儲存的電視連線開啟 **維護操作 → 調整 LG 設定（Debloat）**。選取要變更的設定，選擇 **套用選取的設定**，然後查看結果。如果先前的操作尚未解決，請先使用原有的已儲存連線選擇 **檢查復原選項**。
 
-[Root 回復舊版後的復原](../RECOVERY.md#standalone-root-updater-rollback-readiness)
+- [Root Updater](../RECOVERY.md#standalone-root-updater-rollback-readiness)
+- [Root System Updater](../RECOVERY.md#root-system-rollback-readiness-candidate)
 
 <!-- Legacy anchors retained for existing links. Detailed references: -->
 <a id="v110-起的可選-root-python"></a>

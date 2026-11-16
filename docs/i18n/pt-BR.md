@@ -111,7 +111,8 @@ Se o instalador não conseguir verificar a reinicialização completa solicitada
 
 No instalador para computador, abra **Ação de manutenção → Ajustar as configurações da LG (Debloat)** com a conexão salva da TV. Selecione as configurações que quer alterar, escolha **Aplicar configurações selecionadas** e confira os resultados. Se houver uma operação pendente, escolha primeiro **Revisar opções de recuperação** com a conexão original salva.
 
-[Recuperação após reverter uma atualização do Root](../RECOVERY.md#standalone-root-updater-rollback-readiness)
+- [Root Updater](../RECOVERY.md#standalone-root-updater-rollback-readiness)
+- [Root System Updater](../RECOVERY.md#root-system-rollback-readiness-candidate)
 
 <!-- Legacy anchors retained for existing links. Detailed references: -->
 <a id="python-opcional-para-root"></a>

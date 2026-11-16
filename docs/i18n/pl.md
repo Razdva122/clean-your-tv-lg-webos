@@ -111,7 +111,8 @@ Jeśli instalator nie może potwierdzić wymaganego pełnego restartu, zapisz i 
 
 W instalatorze na komputerze otwórz **Czynność konserwacyjna → Dostosuj ustawienia LG (Debloat)** z zapisanym połączeniem z TV. Wybierz ustawienia do zmiany, kliknij **Zastosuj wybrane ustawienia** i sprawdź wyniki. Jeśli poprzednia operacja pozostaje nierozstrzygnięta, najpierw wybierz **Sprawdź opcje odzyskiwania** z jej pierwotnym zapisanym połączeniem.
 
-[Odzyskiwanie po cofnięciu aktualizacji Root](../RECOVERY.md#standalone-root-updater-rollback-readiness)
+- [Root Updater](../RECOVERY.md#standalone-root-updater-rollback-readiness)
+- [Root System Updater](../RECOVERY.md#root-system-rollback-readiness-candidate)
 
 <!-- Legacy anchors retained for existing links. Detailed references: -->
 <a id="opcjonalny-python-dla-root"></a>

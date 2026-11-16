@@ -111,7 +111,8 @@ Si el instalador no puede verificar el reinicio completo solicitado, guarda y ad
 
 En el instalador de escritorio, abre **Acción de mantenimiento → Ajustar la configuración de LG (Debloat)** con la conexión guardada del televisor. Selecciona los ajustes que quieras cambiar, elige **Aplicar los ajustes seleccionados** y revisa los resultados. Si hay una operación pendiente, elige primero **Revisar opciones de recuperación** con su conexión original guardada.
 
-[Recuperación tras una reversión de Root](../RECOVERY.md#standalone-root-updater-rollback-readiness)
+- [Root Updater](../RECOVERY.md#standalone-root-updater-rollback-readiness)
+- [Root System Updater](../RECOVERY.md#root-system-rollback-readiness-candidate)
 
 <!-- Legacy anchors retained for existing links. Detailed references: -->
 <a id="python-opcional-para-root-en-v110"></a>

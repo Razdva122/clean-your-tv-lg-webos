@@ -115,7 +115,8 @@ No-root: Для возобновления откройте Home Helper, выб�
 
 В настольном установщике откройте **Обслуживание → Изменить настройки LG (отключение функций)** и используйте сохранённое подключение к ТВ. Отметьте нужные настройки, нажмите **Применить выбранные настройки** и проверьте результаты. Если осталась незавершённая операция, сначала выберите **Проверить варианты восстановления** с её исходным сохранённым подключением.
 
-[Восстановление после отката Root](../RECOVERY.md#standalone-root-updater-rollback-readiness)
+- [Root Updater](../RECOVERY.md#standalone-root-updater-rollback-readiness)
+- [Root System Updater](../RECOVERY.md#root-system-rollback-readiness-candidate)
 
 <!-- Legacy anchors retained for existing links. Detailed references: -->
 <a id="необязательный-python-для-root-в-v110"></a>

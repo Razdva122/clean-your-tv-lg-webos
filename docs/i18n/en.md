@@ -113,7 +113,8 @@ If the installer cannot verify the requested full restart, save and attach its d
 
 In the desktop installer, open **Maintenance action → Adjust LG settings (Debloat)** with your saved TV connection. Select the settings you want to change, choose **Apply selected settings**, then review the results. If an earlier operation is unresolved, choose **Review recovery options** with its original saved connection first.
 
-[Recovery after a Root rollback](../RECOVERY.md#standalone-root-updater-rollback-readiness)
+- [Root Updater](../RECOVERY.md#standalone-root-updater-rollback-readiness)
+- [Root System Updater](../RECOVERY.md#root-system-rollback-readiness-candidate)
 
 <!-- Legacy anchors retained for existing links. Detailed references: -->
 <a id="optional-python-for-root-in-v110"></a>

@@ -98,7 +98,8 @@ Pokud instalátor nemůže ověřit požadovaný úplný restart, uložte a při
 
 V desktopovém instalátoru otevřete **Údržba → Upravit nastavení LG (Debloat)** a použijte uložené připojení k TV. Vyberte nastavení, která chcete změnit, klikněte na **Použít vybraná nastavení** a zkontrolujte výsledky. Pokud je předchozí operace nedokončená, zvolte nejprve **Prověřit možnosti obnovy** s původním uloženým připojením.
 
-[Obnova po návratu k předchozí verzi Root](../RECOVERY.md#standalone-root-updater-rollback-readiness)
+- [Root Updater](../RECOVERY.md#standalone-root-updater-rollback-readiness)
+- [Root System Updater](../RECOVERY.md#root-system-rollback-readiness-candidate)
 
 <!-- Legacy anchors retained for existing links. -->
 <a id="automatické-rozlišení-grafiky-kandidát"></a>

@@ -111,7 +111,8 @@ Si l’installateur ne peut pas vérifier le redémarrage complet demandé, enre
 
 Dans l’installateur de bureau, ouvrez **Action de maintenance → Ajuster les réglages LG (Debloat)** avec la connexion TV enregistrée. Sélectionnez les réglages à modifier, choisissez **Appliquer les réglages sélectionnés**, puis vérifiez les résultats. Si une opération reste en attente, choisissez d’abord **Examiner les options de récupération** avec sa connexion d’origine enregistrée.
 
-[Récupération après un retour à la version précédente de Root](../RECOVERY.md#standalone-root-updater-rollback-readiness)
+- [Root Updater](../RECOVERY.md#standalone-root-updater-rollback-readiness)
+- [Root System Updater](../RECOVERY.md#root-system-rollback-readiness-candidate)
 
 <!-- Legacy anchors retained for existing links. Detailed references: -->
 <a id="python-facultatif-pour-root-dans-v110"></a>
