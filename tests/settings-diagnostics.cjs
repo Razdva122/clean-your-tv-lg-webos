@@ -62,7 +62,7 @@ const document = {
   addEventListener() {},
   activeElement: { focus() {} }
 };
-const window = {};
+const window = { addEventListener() {} };
 const context = {
   window,
   document,
@@ -141,7 +141,7 @@ assert.equal(ids.homeRoutingToggle.hidden, false);
 assert.equal(ids.homeRoutingToggle.disabled, true);
 assert.equal(ids.homeRoutingRetry.hidden, false);
 assert.equal(ids.homeRoutingToggle.attrs['aria-checked'], undefined);
-assert.match(ids.homeRoutingStatus.textContent, /unknown/);
+assert.equal(ids.homeRoutingToggle.attrs['data-home-state'], 'unknown');
 ids.homeVisit.onclick();
 pending.openLGHome({
   returnValue: false,
