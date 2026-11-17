@@ -54,6 +54,11 @@
       "pr": 683,
       "issues": [],
       "summary": "Restore No-root Helper controls, authenticate historical Root System replacement and sign a private System QA catalog"
+    },
+    {
+      "pr": 684,
+      "issues": [],
+      "summary": "Admit legacy No-root captures, release Helper locks reliably and preserve the verified standalone screensaver on update and rollback"
     }
   ],
   "excluded": [],
