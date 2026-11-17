@@ -20,6 +20,24 @@ def fixture(root):
         (root/(name+'.ipk')).write_bytes(package.ipk(app,version,files))
 
 class BuildTests(unittest.TestCase):
+    def test_only_verified_cancellation_fence_passes_handoff_preflight(self):
+        setup = load('setup')
+        with tempfile.TemporaryDirectory() as tmp:
+            state = Path(tmp).resolve()/'system'
+            state.mkdir(mode=0o700)
+            marker = state/'bootstrap.json'
+            marker.write_text('{"phase":"cancellation-admitted"}')
+            setup.require_unprovisioned(state, cancelled_fence=True)
+            with self.assertRaises(FileExistsError):
+                setup.require_unprovisioned(state)
+            marker.write_text('{"phase":"prepared"}')
+            with self.assertRaises(FileExistsError):
+                setup.require_unprovisioned(state, cancelled_fence=True)
+            marker.write_text('{"phase":"cancellation-admitted"}')
+            (state/'code').mkdir()
+            with self.assertRaises(FileExistsError):
+                setup.require_unprovisioned(state, cancelled_fence=True)
+
     def test_no_root_system_bootstrap_takes_only_completed_clean_handoff(self):
         import os
         import sys

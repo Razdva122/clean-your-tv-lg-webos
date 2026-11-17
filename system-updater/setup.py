@@ -324,10 +324,23 @@ def installed_data(path,expected,installed,edition):
     return read_verified(path,sha256=digest(expected),limit=32*1024*1024,installed=installed,uid=os.geteuid())
 
 
-def preflight(bundle,baseline,state=STATE,installed=INSTALLED,base=BASE,hook=HOOK):
+def require_unprovisioned(state, *, cancelled_fence=False):
+    state = Path(state)
+    if not os.path.lexists(state):
+        return
+    if cancelled_fence:
+        info = state.lstat()
+        if (stat.S_ISDIR(info.st_mode) and info.st_uid == os.geteuid()
+                and not info.st_mode & 0o022
+                and {path.name for path in state.iterdir()} <= {'bootstrap.json', 'daemon.lock', 'worker.lock'}
+                and json.loads(safe(state/'bootstrap.json', os.geteuid())) == {'phase':'cancellation-admitted'}):
+            return
+    raise FileExistsError('Supervisor setup exists; inspect retained state from computer before changing it')
+
+
+def preflight(bundle,baseline,state=STATE,installed=INSTALLED,base=BASE,hook=HOOK,*,cancelled_fence=False):
     require_normal_root()
-    state=Path(state)
-    if os.path.lexists(state):raise FileExistsError('Supervisor setup exists; inspect retained state from computer before changing it')
+    require_unprovisioned(state, cancelled_fence=cancelled_fence)
     require_legacy_idle()
     bundle=Path(bundle);baseline=Path(baseline);manifest=verify_bundle(bundle);current=verify_baseline(baseline,bundle)
     require_transition_home(installed,current['edition'])
@@ -504,7 +517,7 @@ def execute(bundle,baseline,alias,identity=None,run=subprocess.run,edition=None,
     else:argv+=['--edition',edition]
     return run(['ssh',*options,alias,shlex.join(argv)],check=True,stdin=subprocess.DEVNULL)
 
-def bootstrap_operation(edition, resume, check, ownership=None, read=None):
+def bootstrap_operation(edition, resume, check, ownership=None, read=None, *, handoff_check=None):
     from installation import (JOURNALS, Ownership, archive_component_fences,
                               completed_no_root_fence, component_locks, device_operation)
     options={}
@@ -543,9 +556,9 @@ def bootstrap_operation(edition, resume, check, ownership=None, read=None):
                      Path('/var/webos-profile/override/clean-your-tv-root.json')):
             if os.path.lexists(path):raise ValueError('Root or supervisor startup state remains')
         # Snapshot and validate the No-root baseline before moving any fences.
-        check()
-        checked = True
         with component_locks(roots,ownership.store.uid):
+            (handoff_check or check)()
+            checked = True
             from installation import _optional_record
             plan = _optional_record(ownership.store, 'component-fences-plan-'+record['operation'])
             successor = lease['id']
@@ -604,7 +617,7 @@ def main():
         from installation import Ownership, read_journal, JOURNALS
         with tempfile.TemporaryDirectory(prefix='system-baseline-') as tmp:
             selected=[args.baseline]
-            def eligible():
+            def eligible(cancelled_fence=False):
                 require_normal_root()
                 if args.resume:
                     current=Ownership().status()
@@ -614,11 +627,11 @@ def main():
                 if selected[0] is None:
                     if not args.edition:parser.error('--edition is required without --baseline')
                     # Snapshot is private staging only, under the global mutex.
-                    if os.path.lexists(STATE):raise FileExistsError('Supervisor setup exists; inspect or explicitly --resume')
+                    require_unprovisioned(STATE, cancelled_fence=cancelled_fence)
                     selected[0]=snapshot(args.bundle,args.edition,Path(tmp)/'baseline')
-                preflight(args.bundle,selected[0])
+                preflight(args.bundle,selected[0],cancelled_fence=cancelled_fence)
             edition=(lambda: verify_baseline(args.baseline,args.bundle)['edition']) if args.baseline else args.edition
-            with bootstrap_operation(edition,args.resume,eligible):
+            with bootstrap_operation(edition,args.resume,eligible,handoff_check=lambda:eligible(cancelled_fence=True)):
                 print(json.dumps(resume(args.bundle) if args.resume else provision(args.bundle,selected[0])))
         return
     verify_bundle(args.bundle);baseline=verify_baseline(args.baseline,args.bundle) if args.baseline else {'edition':args.edition}
