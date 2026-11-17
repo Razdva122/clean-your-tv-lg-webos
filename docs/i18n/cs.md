@@ -145,7 +145,7 @@ Při odinstalaci můžete potvrdit obnovení uložených původních nastavení 
 
 Po úspěšné instalaci vyberte Classic, Liquid Glass nebo Ribbon a zapněte či vypněte počasí. Ribbon počasí nepodporuje; Liquid Glass používá stručný formát. Město se odhaduje podle připojení a lze je změnit v Home.
 
-No-root s Developer Mode nabízí automatické prodloužení (Beta); nadále sledujte oficiální časovač. U nových instalací No-root přes stávající root SSH se karta Developer Mode nezobrazuje. Root umožňuje přes Homebrew Channel blokovat aktualizace firmwaru LG včetně bezpečnostních; je nutný skutečný restart přes Homebrew Channel. Aktualizace CYTV jsou samostatné.
+No-root s Developer Mode nabízí automatické prodloužení; nadále sledujte oficiální časovač. U nových instalací No-root přes stávající root SSH se karta Developer Mode nezobrazuje. Root umožňuje přes Homebrew Channel blokovat aktualizace firmwaru LG včetně bezpečnostních; je nutný skutečný restart přes Homebrew Channel. Aktualizace CYTV jsou samostatné.
 
 Ponechat aktuální nastavení přeskočí přizpůsobení. Přepínač zobrazuje aktuální stav funkce režimu. Nezměněná nastavení zůstanou zachována. Přeinstalace Root nadále odstraní nastavení CYTV podle popisu výše. Ověřte vzhled na TV a nepotvrzené volby v Home před opakováním.
 

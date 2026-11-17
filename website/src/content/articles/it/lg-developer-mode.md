@@ -24,7 +24,7 @@ Mantieni riservate le chiavi di abbinamento e le informazioni di connessione. Us
 
 Apri l'app Developer Mode di LG, controlla il tempo residuo e prolunga la sessione quando è disponibile la connessione richiesta. Segui le istruzioni aggiornate di LG senza affidarti a un numero fisso di ore riportato in un vecchio articolo. Un tentativo di rinnovo non dimostra che il rinnovo sia riuscito: controlla poi il tempo residuo visualizzato.
 
-Clean Your TV offre un rinnovo automatico facoltativo in versione beta, disattivato per impostazione predefinita. Se lo attivi, continua a controllare lo stato effettivo di Developer Mode. Non elimina i requisiti di sessione di LG e non rende permanente una modalità disattivata.
+Clean Your TV offre un rinnovo automatico facoltativo, disattivato per impostazione predefinita. Se lo attivi, continua a controllare lo stato effettivo di Developer Mode. Non elimina i requisiti di sessione di LG e non rende permanente una modalità disattivata.
 
 ## Cosa fare se il launcher scompare o Home apre LG Home?
 

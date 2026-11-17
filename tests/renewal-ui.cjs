@@ -223,8 +223,12 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8876';
     await page.keyboard.press('Enter');
     await page
       .locator('#renewalStatus')
-      .filter({ hasText: 'Auto-renewal enabled (Beta)' })
+      .filter({ hasText: 'Auto-renewal enabled' })
       .waitFor();
+    assert.doesNotMatch(
+      await page.locator('#developerSettings').innerText(),
+      /\bBeta\b/i
+    );
 
     await page.locator('#renewalDiagnostics').click();
     assert.equal(
@@ -308,7 +312,7 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8876';
     await page.locator('[data-category=developer]').waitFor();
     assert.deepEqual(errors, []);
     console.log(
-      'PASS Beta UI, updates, navigation and Developer Mode visibility by installation method'
+      'PASS renewal UI, updates, navigation and Developer Mode visibility by installation method'
     );
   } finally {
     await browser.close();

@@ -47,7 +47,7 @@
       ],
       [
         "Developer Mode expired or apps disappeared",
-        "Expiry can remove sideloaded apps. Open Developer Mode and check the official session status. Before expiry, press EXTEND while the TV is online. Automatic renewal is optional Beta and off by default; continue monitoring the official timer. If apps are already missing, check the existing installation state before reinstalling. Never enable Developer Mode over existing root."
+        "Expiry can remove sideloaded apps. Open Developer Mode and check the official session status. Before expiry, press EXTEND while the TV is online. Automatic renewal is optional and off by default; continue monitoring the official timer. If apps are already missing, check the existing installation state before reinstalling. Never enable Developer Mode over existing root."
       ],
       [
         "Home still opens LG Home",
@@ -116,7 +116,7 @@
       ],
       [
         "Developer Mode ist abgelaufen oder Apps fehlen",
-        "Nach Ablauf können seitlich installierte Apps entfernt werden. Developer Mode öffnen und den offiziellen Sitzungsstatus prüfen. Vor Ablauf bei online verbundenem TV EXTEND drücken. Automatische Verlängerung ist optionale Beta und standardmäßig aus; den Timer weiterhin kontrollieren. Fehlen bereits Apps, vor einer Neuinstallation den vorhandenen Installationsstatus prüfen. Developer Mode nie über bestehendem Root aktivieren."
+        "Nach Ablauf können seitlich installierte Apps entfernt werden. Developer Mode öffnen und den offiziellen Sitzungsstatus prüfen. Vor Ablauf bei online verbundenem TV EXTEND drücken. Automatische Verlängerung ist optional und standardmäßig aus; den Timer weiterhin kontrollieren. Fehlen bereits Apps, vor einer Neuinstallation den vorhandenen Installationsstatus prüfen. Developer Mode nie über bestehendem Root aktivieren."
       ],
       [
         "Home öffnet weiterhin LG Home",
@@ -185,7 +185,7 @@
       ],
       [
         "Developer Mode caducó o desaparecieron apps",
-        "La caducidad puede eliminar apps instaladas fuera de la tienda. Abre Developer Mode y consulta el estado oficial de la sesión. Antes de caducar, pulsa EXTEND con el TV conectado a internet. La renovación automática es Beta opcional y está desactivada por defecto; sigue comprobando el temporizador. Si ya faltan apps, comprueba el estado de la instalación antes de reinstalar. Nunca actives Developer Mode sobre root existente."
+        "La caducidad puede eliminar apps instaladas fuera de la tienda. Abre Developer Mode y consulta el estado oficial de la sesión. Antes de caducar, pulsa EXTEND con el TV conectado a internet. La renovación automática es opcional y está desactivada por defecto; sigue comprobando el temporizador. Si ya faltan apps, comprueba el estado de la instalación antes de reinstalar. Nunca actives Developer Mode sobre root existente."
       ],
       [
         "Home sigue abriendo LG Home",
@@ -254,7 +254,7 @@
       ],
       [
         "Developer Mode expirou ou os apps sumiram",
-        "A expiração pode remover apps instalados fora da loja. Abra Developer Mode e confira o estado oficial da sessão. Antes de expirar, pressione EXTEND com a TV online. A renovação automática é Beta opcional e vem desativada; continue verificando o timer. Se já faltam apps, confira a instalação existente antes de reinstalar. Nunca ative Developer Mode sobre root existente."
+        "A expiração pode remover apps instalados fora da loja. Abra Developer Mode e confira o estado oficial da sessão. Antes de expirar, pressione EXTEND com a TV online. A renovação automática é opcional e vem desativada; continue verificando o timer. Se já faltam apps, confira a instalação existente antes de reinstalar. Nunca ative Developer Mode sobre root existente."
       ],
       [
         "Home ainda abre o LG Home",
@@ -323,7 +323,7 @@
       ],
       [
         "Developer Mode a expiré ou des applications ont disparu",
-        "L’expiration peut supprimer les applications installées hors boutique. Ouvrez Developer Mode et vérifiez l’état officiel de la session. Avant expiration, appuyez sur EXTEND avec le TV en ligne. Le renouvellement automatique est une Beta facultative, désactivée par défaut ; surveillez toujours le minuteur. Si des apps manquent déjà, vérifiez l’installation existante avant de réinstaller. N’activez jamais Developer Mode sur un accès root existant."
+        "L’expiration peut supprimer les applications installées hors boutique. Ouvrez Developer Mode et vérifiez l’état officiel de la session. Avant expiration, appuyez sur EXTEND avec le TV en ligne. Le renouvellement automatique est facultatif, désactivé par défaut ; surveillez toujours le minuteur. Si des apps manquent déjà, vérifiez l’installation existante avant de réinstaller. N’activez jamais Developer Mode sur un accès root existant."
       ],
       [
         "Home ouvre toujours LG Home",
@@ -392,7 +392,7 @@
       ],
       [
         "Developer Mode è scaduto o mancano app",
-        "La scadenza può rimuovere app installate fuori dallo store. Apri Developer Mode e controlla lo stato ufficiale della sessione. Prima della scadenza premi EXTEND con la TV online. Il rinnovo automatico è Beta opzionale e disattivato inizialmente; controlla comunque il timer. Se mancano già app, verifica lo stato dell’installazione prima di reinstallare. Non attivare mai Developer Mode sopra root esistente."
+        "La scadenza può rimuovere app installate fuori dallo store. Apri Developer Mode e controlla lo stato ufficiale della sessione. Prima della scadenza premi EXTEND con la TV online. Il rinnovo automatico è opzionale e disattivato inizialmente; controlla comunque il timer. Se mancano già app, verifica lo stato dell’installazione prima di reinstallare. Non attivare mai Developer Mode sopra root esistente."
       ],
       [
         "Home apre ancora LG Home",
@@ -461,7 +461,7 @@
       ],
       [
         "Developer Mode가 만료되었거나 앱이 사라졌어요",
-        "만료되면 직접 설치한 앱이 삭제될 수 있습니다. Developer Mode를 열어 공식 세션 상태를 확인하세요. 만료 전에 TV가 온라인일 때 EXTEND를 누르세요. 자동 갱신은 선택적인 Beta이고 기본적으로 꺼져 있으니 공식 타이머를 계속 확인하세요. 앱이 이미 없다면 재설치 전에 기존 설치 상태를 확인하세요. 기존 root 위에 Developer Mode를 켜지 마세요."
+        "만료되면 직접 설치한 앱이 삭제될 수 있습니다. Developer Mode를 열어 공식 세션 상태를 확인하세요. 만료 전에 TV가 온라인일 때 EXTEND를 누르세요. 자동 갱신은 선택 사항이며 기본적으로 꺼져 있으니 공식 타이머를 계속 확인하세요. 앱이 이미 없다면 재설치 전에 기존 설치 상태를 확인하세요. 기존 root 위에 Developer Mode를 켜지 마세요."
       ],
       [
         "Home을 눌러도 LG Home이 열려요",
@@ -530,7 +530,7 @@
       ],
       [
         "Developer Mode खत्म हो गया या ऐप गायब हैं",
-        "सत्र खत्म होने पर बाहर से इंस्टॉल ऐप हट सकते हैं। Developer Mode खोलकर आधिकारिक सत्र स्थिति जाँचें। समाप्ति से पहले टीवी ऑनलाइन हो तो EXTEND दबाएँ। अपने आप नवीनीकरण वैकल्पिक Beta है और शुरू में बंद है; आधिकारिक टाइमर जाँचते रहें। ऐप पहले ही गायब हों तो दोबारा इंस्टॉल करने से पहले मौजूदा स्थिति जाँचें। पहले से root वाले टीवी पर Developer Mode चालू न करें।"
+        "सत्र खत्म होने पर बाहर से इंस्टॉल ऐप हट सकते हैं। Developer Mode खोलकर आधिकारिक सत्र स्थिति जाँचें। समाप्ति से पहले टीवी ऑनलाइन हो तो EXTEND दबाएँ। अपने आप नवीनीकरण वैकल्पिक है और शुरू में बंद है; आधिकारिक टाइमर जाँचते रहें। ऐप पहले ही गायब हों तो दोबारा इंस्टॉल करने से पहले मौजूदा स्थिति जाँचें। पहले से root वाले टीवी पर Developer Mode चालू न करें।"
       ],
       [
         "Home अभी भी LG Home खोलता है",
@@ -599,7 +599,7 @@
       ],
       [
         "Developer Mode wygasł lub zniknęły aplikacje",
-        "Wygaśnięcie może usunąć aplikacje spoza sklepu. Otwórz Developer Mode i sprawdź oficjalny stan sesji. Przed wygaśnięciem naciśnij EXTEND przy TV podłączonym do internetu. Automatyczne odnawianie to opcjonalna Beta, domyślnie wyłączona; nadal kontroluj licznik. Jeśli aplikacji już brakuje, sprawdź istniejącą instalację przed ponowną instalacją. Nie włączaj Developer Mode na istniejącym root."
+        "Wygaśnięcie może usunąć aplikacje spoza sklepu. Otwórz Developer Mode i sprawdź oficjalny stan sesji. Przed wygaśnięciem naciśnij EXTEND przy TV podłączonym do internetu. Automatyczne odnawianie jest opcjonalne i domyślnie wyłączone; nadal kontroluj licznik. Jeśli aplikacji już brakuje, sprawdź istniejącą instalację przed ponowną instalacją. Nie włączaj Developer Mode na istniejącym root."
       ],
       [
         "Home nadal otwiera LG Home",
@@ -668,7 +668,7 @@
       ],
       [
         "Истёк Developer Mode или исчезли приложения",
-        "После истечения сессии установленные вне магазина приложения могут удалиться. Откройте Developer Mode и проверьте официальный статус сессии. До истечения нажимайте EXTEND при подключённом к интернету ТВ. Автопродление — необязательная Beta, по умолчанию выключено; продолжайте следить за таймером. Если приложения уже исчезли, перед переустановкой проверьте состояние текущей установки. Не включайте Developer Mode поверх существующего root."
+        "После истечения сессии установленные вне магазина приложения могут удалиться. Откройте Developer Mode и проверьте официальный статус сессии. До истечения нажимайте EXTEND при подключённом к интернету ТВ. Автопродление — необязательная функция, по умолчанию она выключена; продолжайте следить за таймером. Если приложения уже исчезли, перед переустановкой проверьте состояние текущей установки. Не включайте Developer Mode поверх существующего root."
       ],
       [
         "Кнопка Home по-прежнему открывает LG Home",
@@ -737,7 +737,7 @@
       ],
       [
         "Developer Mode 到期或应用消失",
-        "到期可能删除侧载应用。打开 Developer Mode，查看官方会话状态。在到期前让电视联网并按 EXTEND。自动续期是可选的 Beta，默认关闭；仍需检查官方计时器。如果应用已经缺失，请先检查现有安装状态再考虑重新安装。不要在已有 root 的电视上开启 Developer Mode。"
+        "到期可能删除侧载应用。打开 Developer Mode，查看官方会话状态。在到期前让电视联网并按 EXTEND。自动续期是可选功能，默认关闭；仍需检查官方计时器。如果应用已经缺失，请先检查现有安装状态再考虑重新安装。不要在已有 root 的电视上开启 Developer Mode。"
       ],
       [
         "Home 仍然打开 LG Home",
@@ -806,7 +806,7 @@
       ],
       [
         "Developer Mode 到期或應用程式消失",
-        "到期可能刪除側載應用程式。開啟 Developer Mode，查看官方工作階段狀態。在到期前讓電視連網並按 EXTEND。自動續期是選用的 Beta，預設關閉；仍需檢查官方計時器。如果應用程式已經缺少，請先檢查現有安裝狀態再考慮重新安裝。不要在已有 root 的電視上開啟 Developer Mode。"
+        "到期可能刪除側載應用程式。開啟 Developer Mode，查看官方工作階段狀態。在到期前讓電視連網並按 EXTEND。自動續期是選用功能，預設關閉；仍需檢查官方計時器。如果應用程式已經缺少，請先檢查現有安裝狀態再考慮重新安裝。不要在已有 root 的電視上開啟 Developer Mode。"
       ],
       [
         "Home 仍然開啟 LG Home",
@@ -875,7 +875,7 @@
       ],
       [
         "Developer Mode vypršel nebo zmizely aplikace",
-        "Po vypršení mohou být odebrány ručně nainstalované aplikace. Otevřete Developer Mode a zkontrolujte oficiální stav relace. Před vypršením stiskněte EXTEND, když je televizor online. Automatické prodlužování je volitelná funkce Beta a ve výchozím stavu je vypnuté; nadále sledujte oficiální časovač. Pokud aplikace již chybí, před novou instalací zkontrolujte stávající stav. Nikdy nezapínejte Developer Mode na televizoru se stávajícím rootem."
+        "Po vypršení mohou být odebrány ručně nainstalované aplikace. Otevřete Developer Mode a zkontrolujte oficiální stav relace. Před vypršením stiskněte EXTEND, když je televizor online. Automatické prodlužování je volitelná funkce a ve výchozím stavu je vypnuté; nadále sledujte oficiální časovač. Pokud aplikace již chybí, před novou instalací zkontrolujte stávající stav. Nikdy nezapínejte Developer Mode na televizoru se stávajícím rootem."
       ],
       [
         "Home stále otevírá LG Home",

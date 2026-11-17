@@ -12,7 +12,7 @@ No-root zvolte, pokud váš televizor LG používá Developer Mode. Root zvolte 
 
 No-root při nastavení používá LG Developer Mode, Key Server a místní párování. Home Helper běží na televizoru a obsluhuje tlačítko Home tam, kde to zařízení a firmware podporují. Pro každodenní používání nemusíte nechávat zapnutý počítač ani telefon.
 
-Trvalým požadavkem je Developer Mode: prodlužujte jeho relaci před vypršením. LG upozorňuje, že aplikace nainstalované přes Developer Mode mohou být po vypnutí režimu nebo vypršení relace odebrány. Automatické prodlužování v projektu je volitelná funkce beta, ve výchozím nastavení vypnutá; nepovažujte ji za záruku. Než se na tuto edici spolehnete, přečtěte si [průvodce Developer Mode](/clean-your-tv-lg-webos/cs/articles/lg-developer-mode/).
+Trvalým požadavkem je Developer Mode: prodlužujte jeho relaci před vypršením. LG upozorňuje, že aplikace nainstalované přes Developer Mode mohou být po vypnutí režimu nebo vypršení relace odebrány. Automatické prodlužování v projektu je volitelná funkce, ve výchozím nastavení vypnutá; nepovažujte ji za záruku. Než se na tuto edici spolehnete, přečtěte si [průvodce Developer Mode](/clean-your-tv-lg-webos/cs/articles/lg-developer-mode/).
 
 ## Co vyžaduje Root?
 
