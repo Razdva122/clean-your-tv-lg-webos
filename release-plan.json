@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "version": "1.23.1",
+  "version": "1.24.0",
   "changes": [
     {
       "pr": 689,
@@ -22,6 +22,58 @@
         687
       ],
       "summary": "Explain explicit No-root Debloat write rejections; the separate Home routing report is unresolved"
+    },
+    {
+      "pr": 693,
+      "issues": [
+        418
+      ],
+      "summary": "Use bundled Restore to recover eligible retained C1 activation and verify stock Home"
+    },
+    {
+      "pr": 694,
+      "issues": [
+        686
+      ],
+      "summary": "Reconnect and retain a Home diagnostics capture across temporary SSH loss; the separate wake-routing failure remains open"
+    },
+    {
+      "pr": 695,
+      "issues": [
+        160
+      ],
+      "summary": "Record Root Beta repair failures and inspect interrupted deployment status without writes"
+    },
+    {
+      "pr": 696,
+      "issues": [
+        615
+      ],
+      "summary": "Allow the existing Root Beta lease call through legacy W19P LS2; other activation failures remain open"
+    },
+    {
+      "pr": 697,
+      "issues": [
+        101
+      ],
+      "summary": "Handle firmware-owned shared SDK containers with expected package digests and recognize read-only stock Home"
+    },
+    {
+      "pr": 698,
+      "issues": [
+        152
+      ],
+      "summary": "Finish an eligible retained legacy Helper removal after a verified reboot; the original startup problem remains open"
+    },
+    {
+      "pr": 699,
+      "issues": [],
+      "summary": "Remove Beta labeling from opt-in Developer Mode auto-renewal"
+    },
+    {
+      "pr": 700,
+      "issues": [],
+      "summary": "Offer optional app-grid sorting by successful launches, with explicit installer choices and AirPlay coverage"
     }
   ],
   "excluded": [],
