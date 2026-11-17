@@ -49,6 +49,11 @@
       "pr": 682,
       "issues": [],
       "summary": "Explain and restart a stopped Home Helper from No-root Home and Screensaver settings"
+    },
+    {
+      "pr": 683,
+      "issues": [],
+      "summary": "Recover No-root Helper start controls and authenticate historical Root System replacement; sign a private System QA catalog"
     }
   ],
   "excluded": [],
