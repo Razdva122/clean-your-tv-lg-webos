@@ -2,6 +2,7 @@
 import json
 import os
 import subprocess
+import sys
 from contextlib import ExitStack, contextmanager
 from unittest.mock import patch
 from pathlib import Path
@@ -11,6 +12,30 @@ from test_c1_gate_bundle import load, static_arm
 
 
 class KeyfilterIntegrationTests(unittest.TestCase):
+    def test_node012_bundle_grants_lease_to_legacy_private_bus(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder).resolve()
+            helper = root / 'guardian'
+            helper.write_bytes(static_arm())
+            bundle = root / 'bundle'
+            load('build').build(bundle, experimental_c1_keyfilter=helper, legacy_node_beta=True)
+            subprocess.run([sys.executable, '-c',
+                            "from deploy import verify_bundle; verify_bundle('.', allow_experimental=True)"],
+                           cwd=bundle, check=True, capture_output=True)
+            release = json.loads((bundle/'release.json').read_bytes())
+            provision = load('provision')
+            original = {
+                'service': '[D-BUS Service]\nName='+provision.NAME+'\nExec=/usr/bin/run-js-service -n '+str(provision.SERVICE),
+                'role': json.dumps({'appId': provision.NAME}),
+            }
+            legacy = provision.plan(original, release['capabilities'])
+            current = provision.plan(original, provision.COMPOSITOR_CAPABILITIES)
+            legacy_api = json.loads(legacy['api'])
+            self.assertEqual(legacy_api.pop('private'), [provision.LEASE_NAME+'/c1Lease', provision.LEASE_NAME+'/c1Home'])
+            self.assertEqual(legacy_api, json.loads(current['api']))
+            self.assertEqual({k: v for k, v in legacy.items() if k != 'api'},
+                             {k: v for k, v in current.items() if k != 'api'})
+
     def test_new_bundle_selects_only_compositor_assets_and_guard(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder).resolve()
@@ -95,6 +120,22 @@ class PrivateAliasProvisionTests(unittest.TestCase):
         with self.fixture() as (p,state,alias,original,files):
             p.apply();files['service'].write_text(original['service']);p.repair_pending(allow_original=True)
             self.assertIn('Name='+p.NAME+';'+p.LEASE_NAME,files['service'].read_text());self.assertFalse(alias.exists());p.repair_pending()
+
+    def test_pending_repair_replays_each_saved_lease_policy(self):
+        provision = load('provision')
+        for capabilities in (provision.COMPOSITOR_CAPABILITIES, provision.LEGACY_NODE_COMPOSITOR_CAPABILITIES):
+            with self.subTest(capabilities=capabilities), self.fixture() as (p,state,_,original,files):
+                release = state/'release.json'
+                release.write_text(json.dumps({'capabilities': capabilities}))
+                p.apply()
+                installed = files['api'].read_bytes()
+                self.assertEqual('private' in json.loads(installed), capabilities == p.LEGACY_NODE_COMPOSITOR_CAPABILITIES)
+                release.write_text(json.dumps({'capabilities': p.WALLPAPER_CAPABILITIES}))
+                files['api'].write_text(original['api'])
+                p.repair_pending(allow_original=True)
+                self.assertEqual(files['api'].read_bytes(), installed)
+                snapshot = json.loads((state/'ls2-provision-snapshot.json').read_bytes())
+                self.assertEqual(snapshot['capabilities'], capabilities)
 
     def test_foreign_activation_names_or_changed_record_are_never_overwritten(self):
         with self.fixture() as (p,state,alias,original,files):

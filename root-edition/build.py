@@ -194,7 +194,7 @@ def build(output, version='0.0.1', legacy_node_prototype=False, resolution=None,
         if keyfilter:
             release['routing'] = 'compositor-keyfilter-v1'
             release['compositor_admission'] = 3
-            release['capabilities'].append('c1-keyfilter-v1')
+            release['capabilities'].append('c1-keyfilter-v2' if legacy_node_beta else 'c1-keyfilter-v1')
     from deploy import SUPPORT_FILES, RUNTIME_FILES, checked_file
     source = Path(__file__).resolve().parent
     support = {name: checked_file(source, name) for name in SUPPORT_FILES}
