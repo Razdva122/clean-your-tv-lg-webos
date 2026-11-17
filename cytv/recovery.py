@@ -159,6 +159,18 @@ def recover(installer, ask, write, non_interactive=False, initial_observation=No
             raise
         installer.tv_info.update(status=result)
         pending = installer.store.pending(installer.profile)
+        from .root_gate import beta_repair_available, repair_beta_recovery
+        if (pending is None and installer.profile.get('root_variant') == 'node012-beta'
+                and beta_repair_available(installer, result)):
+            from .root_runtime import require_idle
+
+            require_idle(installer.store, installer.profile)
+            write('Repair the existing Root Beta recovery service and check its status. The app stays installed and LG Home stays selected.')
+            if prompts.confirm('Repair the existing Root Beta recovery service?', ask, write):
+                repair_beta_recovery(installer)
+                installer.tv_info['status'] = {'deployment_stage': 'installed-recovery-only'}
+                write('Root Beta recovery service answered and its integrity was verified.')
+            return
         assessment = _assessment(installer.profile, pending, result)
         if assessment['reason'] == 'root-deployment-missing':
             write('This removes Root, Root Updater, their services and startup hooks, plus any installed No-root Home, Helper and Updater.')

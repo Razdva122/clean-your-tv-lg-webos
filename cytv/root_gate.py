@@ -87,9 +87,10 @@ def validate_bundle(data, resolution):
     return manifest, release
 
 
-def source_bundle(installer):
+def source_bundle(installer, resolution=None):
     capability = installer.manifest['root_backends'][BACKEND]
-    resolution = installer.tv_info['graphics_resolution']
+    if resolution is None:
+        resolution = installer.tv_info['graphics_resolution']
     if (capability.get('experimental') is not True or capability.get('hardware_validated') is not False
             or capability.get('graphics') != GRAPHICS or resolution not in GRAPHICS):
         raise ValueError('Invalid native graphics capability')
@@ -117,6 +118,48 @@ def source_bundle(installer):
             release.get('routing') != 'compositor-keyfilter-v1' or release.get('compositor_admission') != 3):
         raise ValueError('Generic compositor admission requires a matching mount-free payload')
     return data
+
+
+def beta_repair_available(installer, result):
+    stage = result.get('deployment_stage')
+    if stage == 'provision-finalize-starting':
+        return True
+    if stage != 'installed-recovery-only':
+        return False
+    # Recovery may have verified status and committed the stage just before an
+    # interruption prevented the device from marking its deploy lease terminal.
+    path = '/var/lib/clean-your-tv-installation/operation.json'
+    raw = installer.remote.run(f'if [ -f {path} ] && [ ! -L {path} ]; then head -c 4096 {path}; fi')
+    if not raw.strip():
+        return False
+    lease = json.loads(raw)
+    return (isinstance(lease, dict) and lease.get('owner') == 'deploy'
+            and lease.get('journal') == 'deploy.json' and lease.get('terminal') is False)
+
+
+def repair_beta_recovery(installer):
+    from .root_install_recovery import run
+
+    # Only stage the authenticated recovery support. Graphics and the IPK
+    # belong to the installed package, which the device checks in place.
+    data = source_bundle(installer, resolution='1920x1080')
+    stage = '/tmp/cytv-c1-root-'+uuid.uuid4().hex
+    installer.remote.run('umask 077; mkdir '+shlex.quote(stage))
+    for name, raw in data.items():
+        if name.endswith('.ipk'):
+            continue
+        target = stage+'/'+name
+        installer.remote.run('mkdir -p '+shlex.quote(str(PurePosixPath(target).parent)))
+        installer.remote.upload(target, raw, mode=0o600)
+    reply = json.loads(run(installer, stage, 'provision.py', ['repair_beta_recovery'], timeout=180))
+    if reply != {'returnValue': True, 'status_verified': True, 'home_changed': False}:
+        raise UserError('Root Beta recovery status could not be verified. Keep recovery data.',
+                        reason_code='root-operation-unconfirmed')
+    try:
+        installer.remote.run('rm -rf '+shlex.quote(stage))
+    except (OSError, RuntimeError):
+        pass  # The TV can retire the verified temporary support on restart.
+    return reply
 
 
 def native_proof(device):

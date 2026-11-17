@@ -32,6 +32,32 @@ class FailureJourneys(unittest.TestCase):
         self.assertIn(('recovery', self.profile), self.events)
         self.assertEqual(self.store.pending(self.profile), before)
 
+    def test_beta_finalize_repair_requires_confirmation_without_local_receipt(self):
+        self.store.finish(self.profile)
+        profile = dict(self.profile, root_variant='node012-beta')
+        installer = Mock(store=self.store, profile=profile, tv_info={})
+        observation = {'deployment_stage': 'provision-finalize-starting',
+                       'pending': None, 'can_resume_root_setup': False}
+        with patch('cytv.root_gate.repair_beta_recovery') as repair:
+            recover(installer, lambda _: 'n', self.write, initial_observation=observation)
+            repair.assert_not_called()
+            recover(installer, lambda _: 'y', self.write, initial_observation=observation)
+            repair.assert_called_once_with(installer)
+        installer.uninstall_project.assert_not_called()
+        installer.activate_root.assert_not_called()
+        self.assertIsNone(self.store.pending(profile))
+
+    def test_beta_completed_stage_only_offers_repair_for_unfinished_deploy_lease(self):
+        from cytv.root_gate import beta_repair_available
+
+        installer = Mock()
+        result = {'deployment_stage': 'installed-recovery-only'}
+        lease = {'owner': 'deploy', 'journal': 'deploy.json', 'terminal': True}
+        installer.remote.run.return_value = json.dumps(lease)
+        self.assertFalse(beta_repair_available(installer, result))
+        installer.remote.run.return_value = json.dumps(dict(lease, terminal=False))
+        self.assertTrue(beta_repair_available(installer, result))
+
     def test_cancelled_pending_install_exports_report_and_recovery(self):
         before = self.store.pending(self.profile)
         with patch('cytv.cli.package.verify_payload', return_value={}):
