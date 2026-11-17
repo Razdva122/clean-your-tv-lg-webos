@@ -172,3 +172,7 @@ Dopo l’installazione riuscita, scegli Classic, Liquid Glass o Ribbon e attiva 
 No-root con Developer Mode offre il rinnovo automatico (Beta); continua a controllare il timer ufficiale. Nelle nuove installazioni No-root tramite un accesso SSH root esistente, la scheda Developer Mode è nascosta. Root consente di bloccare gli aggiornamenti firmware LG tramite Homebrew Channel, inclusi quelli di sicurezza; serve un vero riavvio tramite Homebrew Channel. Gli aggiornamenti CYTV restano separati.
 
 Mantieni le impostazioni attuali salta la personalizzazione. L’interruttore mostra lo stato attuale della funzione del modo. Le impostazioni non modificate vengono conservate. Reinstallare Root rimuove comunque le preferenze CYTV come descritto sopra. Controlla l’aspetto sulla TV e le opzioni non confermate in Home prima di riprovare.
+
+## Aggiornamenti su un televisore con root
+
+Se è configurato System Updater con aggiornamento autonomo, usa **Aggiornamenti software → Aggiorna tutto** per Root o No-root su un televisore con root. Lascia il televisore acceso fino al termine. Per riparare solo l’aggiornatore, apri Home e scegli **Aggiornamenti software → Ripristino → Reinstalla System Updater**; Home e le impostazioni vengono conservati. No-root senza accesso root continua a usare l’installazione dal computer.

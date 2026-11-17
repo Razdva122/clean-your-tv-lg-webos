@@ -1999,11 +1999,11 @@ print('CYTV_ROOT_FILES_OK')
         return {'restored': True, 'pending': self.store.pending(self.profile)}
 
     def system_updater_cleanup(self, action, archive=None):
-        from .system_updater_remove import COMMAND
+        from .system_updater_remove import COMMAND, SCRIPT
         args = [self._python(), '-c', COMMAND, action]
         if archive is not None:
             args.append(archive)
-        reply = json.loads(self.remote.run(self._python_command(args), timeout=60))
+        reply = json.loads(self.remote.run(self._python_command(args), data=SCRIPT.encode(), timeout=60))
         if not isinstance(reply, dict):
             raise UserError('Updater permissions removal could not be verified.')
         return reply

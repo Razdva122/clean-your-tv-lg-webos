@@ -300,6 +300,9 @@ def assemble(artifacts, output, versions, commit, build_commit=None):
             'hardware_evidence': json.loads((ROOT / 'release-plan.json').read_text()).get('acceptance', 'No physical acceptance recorded.'),
             'acceptance_build': json.loads((ROOT / 'release-plan.json').read_text()).get('acceptance_build')}
     approval = assemble_homebrew(artifacts, output, selected_homebrew_approval())
+    bootstrap = output / 'system-bootstrap-manifest.json'
+    if bootstrap.exists():
+        info['system_engine'] = json.loads(bootstrap.read_text())['engine']
     if approval is not None: info['homebrew'] = approval
     (output / 'BUILD-INFO.json').write_text(json.dumps(info, indent=2) + '\n')
     (output / 'SHA256SUMS').write_text(''.join(hashlib.sha256(p.read_bytes()).hexdigest() + '  ' + p.name + '\n' for p in sorted(output.iterdir())))

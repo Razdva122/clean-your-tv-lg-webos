@@ -170,3 +170,18 @@ class OriginalIntentCallbackTests(CoreBase):
         result=self.Manager(self.store,self.io).run()
         self.assertEqual(result['phase'],'recovery-required')
         self.assertIsNone(result['components'][2]['installEvidence']['terminal'])
+
+class ReservedEngineHandoffTests(CoreBase):
+    def test_reserved_profile_survives_crash_before_child_journal(self):
+        identifier='e'*32
+        self.store.write('profile-'+identifier,profile())
+        tx=self.m.install('no-root','v1.1.0',profile(),operation=identifier)
+        self.assertEqual(tx['id'],identifier)
+        self.assertEqual(tx['profile'],'profile-'+identifier)
+        self.assertFalse(any(call.startswith('install:') for call in self.io.calls))
+    def test_reserved_handoff_refuses_changed_immutable_profile(self):
+        identifier='e'*32
+        altered=profile();altered['config']['columns']=6
+        self.store.write('profile-'+identifier,altered)
+        with self.assertRaises(ValueError):self.m.install('no-root','v1.1.0',profile(),operation=identifier)
+        self.assertIsNone(self.store.read('transaction'))

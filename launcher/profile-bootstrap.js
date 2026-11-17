@@ -215,6 +215,13 @@
         var inventory = JSON.parse(
           JSON.stringify(window.TV_APPS || { apps: [], inputs: [] })
         );
+        inventory.apps.forEach(function (app) {
+          if (
+            typeof app.iconColor !== 'string' ||
+            !/^#[0-9a-fA-F]{6}$/.test(app.iconColor)
+          )
+            delete app.iconColor;
+        });
         var s = {
           schema: 1,
           inventory: inventory,

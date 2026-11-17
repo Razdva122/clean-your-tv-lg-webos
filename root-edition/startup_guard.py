@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
-from package_identity import identity, worker_allowed, TransitionUnknown
+from package_identity import identity, worker_allowed, TransitionUnknown, system_recovery_allowed
 
 OWNERS={'com.cleanyourtv.root.preview':Path('/var/lib/clean-your-tv-root'),
         'com.cleanyourtv.root.updater':Path('/var/lib/clean-your-tv-root-updater'),
@@ -27,7 +27,11 @@ def start(owner):
         if owner=='com.cleanyourtv.root.preview':return False
         try:identity(owner,purpose='worker',installed=INSTALLED,full=True)
         except TransitionUnknown:pass
-        except (OSError,ValueError,TypeError,KeyError):return False
+        except (OSError,ValueError,TypeError,KeyError):
+            if owner!='com.cleanyourtv.system.updater':return False
+            try:
+                if not system_recovery_allowed(OWNERS[owner]):return False
+            except (OSError,ValueError,TypeError,KeyError,subprocess.SubprocessError):return False
     state=OWNERS[owner]
     if owner=='com.cleanyourtv.root.preview':
         subprocess.run(['/bin/sh',str(state/'service/boot-recover.sh'),'mark'],check=True)

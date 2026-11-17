@@ -1,5 +1,7 @@
 # Development and technical references
 
+- [System Updater self-update](SYSTEM-SELF-UPDATE.md): rooted execution, engine and supervisor recovery, publication and key rotation.
+
 - [Focused CI checks](CI-CHECKS.md): routing boundaries, safety gates and measurements.
 
 [User documentation](../README.md) · [Contributing](../../CONTRIBUTING.md) ·

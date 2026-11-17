@@ -7,6 +7,13 @@ its name: choose the version when the candidate's scope is known.
 
 ## Collect changes without choosing a version
 
+For releases with the self-updating System Updater, preserve the stable bootstrap
+catalog and verify the [engine publication contract](development/SYSTEM-SELF-UPDATE.md#build-and-publication).
+An engine-capable release cannot omit its engine assets. At freeze, include
+affected Root and No-root/root upgrade, own-package recovery and unchanged-client
+cases in the canonical verification ledger; unit tests do not replace final
+artifact/device acceptance.
+
 1. Create `release/next` from `main`, or fast-forward the existing branch to
    `main` after the previous release. Use merge commits for all PRs. Squash and
    rebase merging are disabled to preserve ancestry across release cycles.

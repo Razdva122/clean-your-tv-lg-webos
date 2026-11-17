@@ -692,6 +692,23 @@ async function settle() {
           assert.notEqual(installed.translated[locale][source], source);
     }
   }
+  const repair = harness({ edition: 'root' });
+  repair.offer.selfUpdate = true;
+  repair.offer.canRepair = true;
+  await repair.window.SystemUpdates.open({ edition: 'root' });
+  await settle();
+  repair.ids.systemUpdateRecovery.click();
+  await settle();
+  assert.equal(
+    repair.ids.systemUpdateInstall.textContent,
+    'Reinstall System Updater'
+  );
+  repair.ids.systemUpdateInstall.click();
+  assert.equal(repair.confirmation.opts.title, 'Reinstall System Updater?');
+  repair.confirmation.accept();
+  await settle();
+  assert.equal(repair.calls.filter((c) => c.method === 'repair').length, 1);
+  assert.equal(repair.calls.filter((c) => c.method === 'install').length, 0);
   console.log(
     'PASS shared system UI editions, confirmation/capture, durable polling, recovery, absence fallback and remote navigation'
   );

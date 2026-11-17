@@ -6,12 +6,31 @@ const fs = require('node:fs'),
 const rootPolicy = require('../root-edition/updater/fetch'),
   homePolicy = require('../updater-service/policy'),
   systemPolicy = require('../system-updater/policy');
+function signBootstrap(
+  catalog,
+  releases,
+  privateKey,
+  publicKey,
+  keyChain = []
+) {
+  if (!require('node:util').isDeepStrictEqual(catalog.releases, releases))
+    throw Error('engine-product-manifests-mismatch');
+  const bytes = Buffer.from(JSON.stringify(catalog, null, 2) + '\n');
+  const envelope = {
+    payload: bytes.toString('base64'),
+    signature: crypto.sign('RSA-SHA256', bytes, privateKey).toString('base64')
+  };
+  if (keyChain.length) envelope.keyChain = keyChain;
+  require('../system-updater/engine-policy').verify(envelope, publicKey);
+  return envelope;
+}
 function signFeeds(
   manifests,
   privateKey,
   publicKey = fs.readFileSync(
     path.join(__dirname, '../updater-service/release-public.pem')
-  )
+  ),
+  bootstrap = {}
 ) {
   function sign(manifest, policy) {
     const bytes = Buffer.from(JSON.stringify(manifest, null, 2) + '\n');
@@ -127,9 +146,17 @@ function signFeeds(
       );
     }
   }
+  if (manifests.bootstrap)
+    result['system-bootstrap-v1.json'] = signBootstrap(
+      manifests.bootstrap,
+      manifests.system,
+      bootstrap.privateKey || privateKey,
+      bootstrap.publicKey || publicKey,
+      bootstrap.keyChain || []
+    );
   return result;
 }
-module.exports = { signFeeds };
+module.exports = { signFeeds, signBootstrap };
 if (require.main === module) {
   try {
     const [input, output] = process.argv.slice(2);
@@ -144,7 +171,19 @@ if (require.main === module) {
     };
     if (!require('node:util').isDeepStrictEqual(manifests.graphics, graphics))
       throw Error('graphics-release-contract-required');
-    const feeds = signFeeds(manifests, key);
+    const bootstrapKey = process.env.BOOTSTRAP_SIGNING_PRIVATE_KEY || key;
+    delete process.env.BOOTSTRAP_SIGNING_PRIVATE_KEY;
+    const keyChain = JSON.parse(
+      process.env.BOOTSTRAP_SIGNING_KEY_CHAIN || '[]'
+    );
+    delete process.env.BOOTSTRAP_SIGNING_KEY_CHAIN;
+    const feeds = signFeeds(manifests, key, undefined, {
+      privateKey: bootstrapKey,
+      keyChain,
+      publicKey: fs.readFileSync(
+        path.join(__dirname, '../system-updater/bootstrap-public.pem')
+      )
+    });
     fs.mkdirSync(output, { recursive: true });
     for (const [name, feed] of Object.entries(feeds))
       fs.writeFileSync(

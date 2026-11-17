@@ -20,6 +20,24 @@ def fixture(root):
         (root/(name+'.ipk')).write_bytes(package.ipk(app,version,files))
 
 class BuildTests(unittest.TestCase):
+    def test_only_verified_cancellation_fence_passes_handoff_preflight(self):
+        setup = load('setup')
+        with tempfile.TemporaryDirectory() as tmp:
+            state = Path(tmp).resolve()/'system'
+            state.mkdir(mode=0o700)
+            marker = state/'bootstrap.json'
+            marker.write_text('{"phase":"cancellation-admitted"}')
+            setup.require_unprovisioned(state, cancelled_fence=True)
+            with self.assertRaises(FileExistsError):
+                setup.require_unprovisioned(state)
+            marker.write_text('{"phase":"prepared"}')
+            with self.assertRaises(FileExistsError):
+                setup.require_unprovisioned(state, cancelled_fence=True)
+            marker.write_text('{"phase":"cancellation-admitted"}')
+            (state/'code').mkdir()
+            with self.assertRaises(FileExistsError):
+                setup.require_unprovisioned(state, cancelled_fence=True)
+
     def test_no_root_system_bootstrap_takes_only_completed_clean_handoff(self):
         import os
         import sys
@@ -63,11 +81,27 @@ class BuildTests(unittest.TestCase):
                         with setup.bootstrap_operation('no-root', False, lambda: None, ownership=ownership, read=read):
                             self.fail('unverified handoff admitted')
                 store.write('no-root-'+successor, dict(binding, completed=True))
+                def reject_baseline():
+                    raise ValueError('invalid baseline')
+                with self.assertRaisesRegex(ValueError, 'invalid baseline'):
+                    with setup.bootstrap_operation('no-root', False, reject_baseline, ownership=ownership, read=read):
+                        self.fail('invalid baseline admitted')
+                self.assertTrue(all(root.exists() for root in roots))
                 with setup.bootstrap_operation('no-root', False, lambda: None, ownership=ownership, read=read):
                     self.assertEqual(ownership.status()['owner'], 'system-bootstrap')
                     self.assertTrue(all(not root.exists() for root in roots))
                     archived = path/'installation'/('component-fences-'+original)
                     self.assertEqual([ (archived/root.name).stat().st_ino for root in roots], inodes)
+                # Simulate an earlier bootstrap that archived the fences but
+                # never published its reservation, followed by No-root repair.
+                new_operation, new_lease = '7'*32, '8'*32
+                store.write('no-root-'+new_operation,
+                            dict(binding, completed=True, operation=new_operation, lease=new_lease))
+                store.write('operation', dict(schema=1, id=new_lease, owner='no-root', stage='reserved',
+                                              journal='no-root-'+new_operation+'.json', terminal=False))
+                with setup.bootstrap_operation('no-root', False, lambda: None, ownership=ownership, read=read):
+                    self.assertEqual(ownership.status()['owner'], 'system-bootstrap')
+                    self.assertEqual([(archived/root.name).stat().st_ino for root in roots], inodes)
                 reserved=ownership.status()
                 self.assertEqual(reserved['stage'], 'reserved')
                 with setup.bootstrap_operation('no-root', False, lambda: None, ownership=ownership, read=read):
@@ -197,7 +231,7 @@ class BuildTests(unittest.TestCase):
             files=package.data_files((a/'system-updater.ipk').read_bytes())
             service='usr/palm/services/com.cleanyourtv.system.updater.service/'
             self.assertEqual(json.loads(files[service+'services.json'])['id'],'com.cleanyourtv.system.updater.service')
-            self.assertEqual(build.VERSION,'1.2.10')
+            self.assertEqual(build.VERSION,'1.2.11')
             self.assertEqual(json.loads(files[service+'package.json'])['version'],build.VERSION)
             self.assertEqual(json.loads(files['usr/palm/applications/com.cleanyourtv.system.updater/appinfo.json'])['version'],build.VERSION)
             policy_version=subprocess.check_output(['node','-p','require(process.argv[1]).supervisorVersion',str(ROOT/'system-updater/policy.js')],text=True).strip()

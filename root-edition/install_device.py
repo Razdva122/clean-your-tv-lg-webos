@@ -45,6 +45,68 @@ def checked_store(path, uid=0):
 def sha(raw): return hashlib.sha256(raw).hexdigest()
 
 
+def component_journal_snapshot():
+    """Capture the canonical writer inventory using this adapter's fixed roots."""
+    from installation import JOURNALS
+    roots=((JOURNALS['deploy'][0].parent,ROOT),
+           (JOURNALS['root-bootstrap'][0].parent,UPDATER),
+           (JOURNALS['system-bootstrap'][0].parent,SUPERVISOR))
+    result={}
+    for name,(path,_,_) in JOURNALS.items():
+        matches=[target/path.relative_to(source) for source,target in roots if path.is_relative_to(source)]
+        if len(matches)!=1:raise ValueError('unknown_component_journal_root')
+        result[name]=read_journal(matches[0])
+    return result
+
+
+def supervisor_staging_hashes(state,uid):
+    """Classify self-update IPKs as owned DATA before retiring their private cache."""
+    from package_identity import _package, SYSTEM
+    from updater.package import archive
+    root=Path(state)/'engine-state'
+    if not os.path.lexists(root):return set()
+    store=checked_store(root,uid);descriptors=[]
+    for name,keys in (('supervisor-generation',('package',)),('supervisor-migration',('candidate','prior'))):
+        record=_optional_record(store,name)
+        if record is None:continue
+        if not isinstance(record,dict) or record.get('schema')!=1:raise ValueError('invalid_supervisor_staging_receipt')
+        for key in keys:
+            value=record.get(key)
+            if not isinstance(value,dict):raise ValueError('invalid_supervisor_staging_receipt')
+            descriptors.append(dict(value,local=True))
+    hashes=set()
+    # Successful installers may retain their public staging directory when
+    # unlink fails. Later migrations replace the latest receipts but retain
+    # these private own-IPKs, so classify the whole dedicated cache before
+    # retiring any of it. Filenames alone never authorize an external unlink.
+    cache=root/'cache'
+    if os.path.lexists(cache):
+        os.close(checked_store(cache,uid)._directory())
+        entries=list(cache.iterdir())
+        if len(entries)>4096:raise ValueError('supervisor_cache_inventory_too_large')
+        for path in entries:
+            if not re.fullmatch('[a-f0-9]{64}\\.ipk',path.name):continue
+            raw=safe_bytes(path,limit=32*1024*1024,uid=uid)
+            digest=path.stem
+            if sha(raw)!=digest:raise ValueError('supervisor_cache_digest_mismatch')
+            files=archive(members(raw)['data.tar.gz'])
+            info=json.loads(files.get('usr/palm/applications/'+SYSTEM+'/appinfo.json',b'{}'))
+            descriptor={'version':info.get('version'),'sha256':digest,'size':len(raw),'local':True}
+            _package(SYSTEM,path,descriptor,uid)
+            hashes.add(digest)
+    for descriptor in descriptors:
+        digest=descriptor.get('sha256')
+        if not isinstance(digest,str) or not re.fullmatch('[a-f0-9]{64}',digest):raise ValueError('invalid_supervisor_staging_receipt')
+        cached=root/'cache'/(digest+'.ipk')
+        if not os.path.lexists(cached):cached=Path(state)/'cache'/(digest+'.ipk')
+        # A plan may precede cache creation. Missing bytes grant no authority
+        # over an external staging directory, which still fails classification.
+        if not os.path.lexists(cached):continue
+        _package(SYSTEM,cached,descriptor,uid)
+        hashes.add(digest)
+    return hashes
+
+
 def verify_package_modes(raw, installed):
     # Archive modes describe deterministic desired package metadata only. SDK
     # ordinary rwx drift cannot authenticate installed bytes or privileged exec.
@@ -669,12 +731,7 @@ class LocalDevice:
                 # A component that held its own lock before our first attempt
                 # may have advanced since the initial snapshot. Preserve both
                 # observations; only this lock-held one informs absence/drain.
-                record['fenced_components']={
-                    'deploy':read_journal(ROOT/'deploy.json'),
-                    'root-bootstrap':read_journal(UPDATER/'bootstrap.json'),
-                    'root-update':read_journal(UPDATER/'transaction.json'),
-                    'system-bootstrap':read_journal(SUPERVISOR/'bootstrap.json'),
-                    'system-update':read_journal(SUPERVISOR/'transaction.json')}
+                record['fenced_components']=component_journal_snapshot()
                 latest=record['fenced_components']['deploy'] or {}
                 from clean_removal import PRE_ACTIVATION
                 record['routing_never_applied']=(latest.get('stage') in PRE_ACTIVATION and not any(
@@ -897,6 +954,10 @@ class LocalDevice:
                     if filename.endswith('.ipk') and isinstance(digest,str) and re.fullmatch('[a-f0-9]{64}',digest):hashes.add(digest)
             record['staging_hashes']=sorted(hashes)
             self.ownership.store.write('clean-removal-'+record['operation'],record)
+        hashes=set(record['staging_hashes'])|supervisor_staging_hashes(SUPERVISOR,uid)
+        if hashes!=set(record['staging_hashes']):
+            record['staging_hashes']=sorted(hashes)
+            self.ownership.store.write('clean-removal-'+record['operation'],record)
         roots=(ROOT,UPDATER,SUPERVISOR)
         for index,root in enumerate(roots):
             if not os.path.lexists(root):continue
@@ -1021,7 +1082,8 @@ class LocalDevice:
         prefixes=tuple(str(p).encode()+b'/' for p in paths)
         requests=(str(self.ownership.store.root)+'/request-').encode()
         mutators=(b'deploy.py',b'provision.py',b'install_driver.py',b'setup-updater.py',
-                  b'setup-system-updater.py',b'system_setup.py',b'run-updater.py',b'run-system-updater.py')
+                  b'setup-system-updater.py',b'system_setup.py',b'run-updater.py',b'run-system-updater.py',
+                  b'engine-entry.py',b'service-entry.py')
         identities=tuple((app+suffix).encode() for app in APPS for suffix in ('','.service','.renewal'))
         for process in PROC.iterdir():
             if not process.name.isdigit() or int(process.name)==os.getpid():continue
@@ -1034,15 +1096,16 @@ class LocalDevice:
             executable=b''
             try:executable=os.readlink(process/'exe').encode().removesuffix(b' (deleted)');args.append(executable)
             except FileNotFoundError:pass
-            if same_boot:
+            if same_boot or all_processes:
                 if any(arg in identities for arg in argv):raise ValueError('live_original_worker')
+                try:args.append(os.readlink(process/'cwd').encode())
+                except FileNotFoundError:pass
+            if same_boot:
                 if any(re.fullmatch(rb'(?:node|python[0-9.]*)',arg.rsplit(b'/',1)[-1]) for arg in (argv[:1]+[executable])):
                     script=1
                     while script<len(argv) and argv[script] in (b'-B',b'-I',b'-u'):script+=1
                     if script>=len(argv) or not re.fullmatch(rb'/.*\.(?:js|cjs|mjs|py|pyc)',argv[script]):
                         raise ValueError('live_original_worker')
-                try:args.append(os.readlink(process/'cwd').encode())
-                except FileNotFoundError:pass
                 if argv and re.fullmatch(rb'(?:sh|ash|bash|dash|zsh|ksh)',argv[0].rsplit(b'/',1)[-1]):
                     if any(any(prefix[:-1] in arg for prefix in prefixes) or any(identity in arg for identity in identities) for arg in argv[1:]):
                         raise ValueError('live_original_worker')

@@ -172,3 +172,7 @@ After successful installation, choose Classic, Liquid Glass or Ribbon and turn H
 No-root with Developer Mode offers optional auto-renewal (Beta); keep monitoring the official timer. New No-root installations through existing root SSH hide the Developer Mode tab. Root offers LG firmware update blocking through Homebrew Channel, including security updates; a real restart through Homebrew Channel is required. This is separate from CYTV updates.
 
 Choose Keep current settings to skip customization. The mode switch shows its current On/Off state. Unchanged mode settings are kept. Root reinstallation still removes saved CYTV preferences as described above. Check the chosen appearance on the TV; an optional setting reported as unconfirmed needs checking in Home settings before retrying.
+
+## Updates on a rooted TV
+
+If a self-updating System Updater has been set up, use **Software updates → Update all** for Root or No-root on a rooted TV. Keep the TV powered on until it finishes. To repair only the updater, open Home and choose **Software updates → Recovery → Reinstall System Updater**; Home and your settings stay unchanged. No-root without root still uses the computer installation method.

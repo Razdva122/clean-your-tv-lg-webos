@@ -1,5 +1,7 @@
 # Release history and device evidence
 
+- [System Updater self-update implementation, 2026-11-16](2026-11-16-system-self-update-implementation.md): Root/No-root rooted executor, focused checks and outstanding device acceptance.
+
 - [Helper ordinary-data mode policy, 2026-11-16](2026-11-16-helper-data-mode-policy.md): shared rwx-independent data reads, preserved credential/Stop boundaries and focused development verification.
 
 - [v1.20.8 candidate verification, 2026-11-15](2026-11-15-release-1.20.8-rc-verification.md)

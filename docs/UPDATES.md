@@ -76,6 +76,18 @@ status; retain supervisor and recovery state.
 
 ## Updating every component from the TV
 
+For installations provisioned with the self-updating System Updater, **Update all**
+also prepares the updater needed by the selected release. Root and No-root on a
+rooted TV keep their installed edition. Companion resources travel with the signed
+edition package. Older retained supervisors do not gain this capability merely by
+installing a new Home package. [Architecture and acceptance scope](development/SYSTEM-SELF-UPDATE.md).
+
+In **Recovery**, **Reinstall System Updater** repairs the updater without
+reinstalling Home or replacing its settings. Open Home to use this action, since
+the standalone recovery app cannot capture the full launcher profile. Before
+product installation starts, **Cancel updater operation** cancels updater work;
+ordinary product rollback continues to restore its saved settings snapshot.
+
 **Update all** uses a signed release set for the installed edition:
 
 - No-root: Home, Home Helper and Home Updater.
