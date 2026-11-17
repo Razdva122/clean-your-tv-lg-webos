@@ -169,16 +169,18 @@ reuses their recovery contracts rather than adding a competing updater.
 | Component `python-launcher` and `python-runtime.json` | Existing binding under each Root/Root Updater/System Updater private state directory; launcher 0700, receipt 0600, plus checked `python_binding.py`/`python_boot.js`. Maintenance reuses the original verified interpreter without downloads. |
 | `/tmp/cytv-product-<id>/`, `/tmp/clean-your-tv-root-<id>/`, `/tmp/cytv-root-updater-<id>/`, `/tmp/cytv-system-updater-<id>/` | Existing host-transfer staging (private umask 077); not new public endpoints or durable authority. Failed staging may remain and must not be confused with completion. |
 
-The package-DATA policy permits observed UID 501 at the exact real shared
-`/media/developer/apps/usr/palm/packages` metadata container. PR #88 additionally
-permits that owner at the exact shared `services` container only for independently
-SHA256-pinned DATA reads. Own application/service/package leaves and files remain
-root-owned; neither exception grants private-code or execution authority. Ordinary observed SDK 0777 is
-accepted only by digest-required DATA reads with independent private expected
-bytes; unanchored reads and every private path remain nonwritable by group/others.
-Other owner checks and fd/path/inode bindings remain strict.
-Other foreign container owners are refused. This is a metadata-reading exception,
-not permission to execute shared code or change shared ownership/modes.
+Independently SHA256-pinned package DATA reads allow any owner on the exact
+shared SDK containers `apps`, `apps/usr`, `apps/usr/palm`, and their
+`applications`, `packages` and `services` containers. The expected hash comes
+from a separately trusted source. Own package leaves and files still require
+trusted owners, and descriptor/path/inode bindings remain strict. Unanchored
+reads retain strict leaf permissions and the legacy UID 501 allowance for the
+exact shared `packages` container. Private code and state use separate readers.
+
+The shared removal program also allows different owners on these SDK containers.
+It enters each verified parent without following symlinks before removing a
+project path authorized by the removal flow. The caller, private directory and
+staging ownership requirements remain in force.
 
 Package-managed product scopes remain `/media/developer/apps/usr/palm/` under
 `applications/<app>`, `services/<app>.service`, and `packages/<app>` for

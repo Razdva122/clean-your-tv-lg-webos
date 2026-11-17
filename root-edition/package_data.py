@@ -1,10 +1,9 @@
 """Bounded installed-package DATA reads; never authorize execution from this tree.
 
-Unanchored reads keep strict own leaves. Independently pinned reads tolerate
-ordinary SDK rwx drift; private readers stay strict. The shared packages container
-and pinned DATA reads through the exact services container permit observed owner 501;
-UID 1001 on the exact packages/services containers is accepted only for independently
-pinned DATA; this grants no execution authority.
+Unanchored reads keep strict own leaves and the legacy packages-container owner.
+Independently pinned reads tolerate ordinary SDK rwx drift and do not depend on
+the owner of the shared SDK containers. Package leaves and files still require
+trusted owners.
 Directory descriptors bind every open and are checked again after reading; concurrent
 package replacement fails shut.
 """
@@ -41,17 +40,15 @@ def _read(path,limit,uid,installed,verified):
     if (len(relative)<5 or relative[:2]!=('usr','palm') or relative[2] not in ('applications','services','packages')
             or relative[3] not in (OWNERS if relative[2]!='services' else {n+'.service' for n in OWNERS})):
         raise ValueError('Foreign package path')
-    shared={installed,*list(installed.parents)[:-1],installed/'usr',installed/'usr/palm',installed/'usr/palm'/relative[2]}
+    sdk_containers={installed,installed/'usr',installed/'usr/palm',installed/'usr/palm'/relative[2]}
+    shared=sdk_containers.union(list(installed.parents)[:-1])
     descriptors=[];bindings=[]
     def directory(info,name):
-        # Shared SDK metadata storage is DATA, distinct from strict package leaves.
-        owners=(0,uid,501) if (name==installed/'usr/palm/packages' or
-                              (verified and name==installed/'usr/palm/services')) else (0,uid)
-        if verified and name in (installed/'usr/palm/packages',installed/'usr/palm/services'):
-            owners=(*owners,1001)
+        owners=(0,uid,501) if name==installed/'usr/palm/packages' else (0,uid)
+        owner_allowed=(verified and name in sdk_containers) or info.st_uid in owners
         special=info.st_mode&0o7000
         if name in shared:special&=~stat.S_ISVTX  # Shared /tmp may be legitimately sticky.
-        if not stat.S_ISDIR(info.st_mode) or info.st_uid not in owners or (special or (not verified and name not in shared and info.st_mode&0o022)):
+        if not stat.S_ISDIR(info.st_mode) or not owner_allowed or (special or (not verified and name not in shared and info.st_mode&0o022)):
             raise ValueError('Unsafe package directory')
     def identity(info):return (info.st_dev,info.st_ino)
     def file_identity(info):return (info.st_dev,info.st_ino,info.st_size,info.st_mtime_ns,info.st_ctime_ns)

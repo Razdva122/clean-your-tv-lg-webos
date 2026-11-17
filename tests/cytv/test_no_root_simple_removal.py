@@ -1333,7 +1333,7 @@ class SimpleRemoval(unittest.TestCase):
         parents=[developer,developer/'apps',developer/'apps/usr',base,
                  base/'applications',base/'packages',base/'services',developer/'temp']
         owners={p:(0,0) for p in parents}
-        for kind in ('packages','services'):owners[base/kind]=(501,20)
+        owners.update({p:(4242,20) for p in parents[1:-1]})
         for app,service in [('com.local.nativehome','com.local.nativehome.service'),('com.gathin.tvhome','com.gathin.tvhome.renewal')]:
             for directory in (base/'applications'/app,base/'services'/service):
                 directory.mkdir(parents=True,exist_ok=True);directory.chmod(0o777);owners[directory]=(0,0)
@@ -1568,6 +1568,24 @@ class SimpleRemoval(unittest.TestCase):
         with self.assertRaises(UserError):self.remove()
         self.assertEqual(keep.read_text(),'preserve')
         self.assertFalse(any(uri.endswith('/dev/remove') for uri,_ in self.remote.calls))
+
+    def test_sweep_refuses_sdk_ancestor_swap_even_when_package_inode_matches(self):
+        own=self.own_file('apps/usr/palm/applications/com.local.nativehome/keep.json','preserve')
+        container=own.parent.parent
+        moved=container.with_name('applications-moved')
+        inject=(
+            'var originalOpen=fs.openSync,swapped=false,container='+json.dumps(str(container))+
+            ',moved='+json.dumps(str(moved))+';'
+            'fs.openSync=function(p){var full=path.resolve(p);'
+            'if(!swapped&&(full===container||full===container+"/com.local.nativehome")){'
+            'swapped=true;fs.renameSync(container,moved);fs.symlinkSync(moved,container);}'
+            'return originalOpen.apply(fs,arguments);};'
+        )
+        self.remote.transform=lambda code:code.replace('function remove(p,expected)',inject+'function remove(p,expected)')
+        result=self.cleanup._device(self.installer,'sweep')
+        self.assertIn({'scope':'com.local.nativehome app','reason':'unsafe-path'},result['blocked'])
+        self.assertTrue(container.is_symlink())
+        self.assertEqual((moved/own.parent.name/own.name).read_text(),'preserve')
 
     def test_shared_sdk_ancestry_exception_does_not_admit_writable_uuid_stage(self):
         identifier='a'*32
@@ -2015,14 +2033,14 @@ class SimpleRemoval(unittest.TestCase):
         self.remove();self.reboot();self.assertTrue(self.remove()['verified_clean'])
         self.assertEqual(foreign.read_text(),'preserve')
 
-    def test_shared_container_exception_does_not_cover_foreign_applications_owner(self):
-        own=self.own_file('apps/usr/palm/applications/com.local.nativehome/keep.json')
-        own.parent.parent.chmod(0o777)
-        self.model_owners({own.parent.parent:(4242,4242)})
+    def test_shared_container_exception_does_not_cover_foreign_helper_state_owner(self):
+        own=self.own_file('apps/usr/palm/applications/com.local.nativehome/state/keep.json')
+        own.parent.chmod(0o777)
+        self.model_owners({own.parent:(4242,4242)})
         try:
             with self.assertRaises(UserError):self.remove()
             self.assertTrue(own.exists())
-        finally:own.parent.parent.chmod(0o755)
+        finally:own.parent.chmod(0o755)
 
     @unittest.skipIf(getattr(os,'getuid',lambda:-1)()==0,'tests unprivileged rejection')
     def test_root_package_action_rejects_unprivileged_call_and_arbitrary_id(self):

@@ -53,26 +53,22 @@ function exact(p,dir){
 }
 function same(a,b){return a.dev===b.dev&&a.ino===b.ino;}
 function fail(){throw Error('unsafe-path');}
-var sdkContainers=[path.dirname(base),base,base+'/applications',base+'/packages',base+'/services'];
-var sharedRootDirectories=sdkContainers.concat([publicRoot,'/media/developer','/media/developer/apps'],
- apps.map(function(app){return base+'/applications/'+app;}),
- services.map(function(service){return base+'/services/'+service;}));
-function sharedSdkDirectory(p,s){
- var mode=s.mode&4095;
- if(s.uid===0&&mode===511&&sharedRootDirectories.indexOf(p)>=0)return true;
- // Retail SDK trees can be owned by the platform account below apps/.
- // Keep the existing packages/services compatibility for older SDK views.
- if((p===base+'/packages'||p===base+'/services')&&[1001,501].indexOf(s.uid)>=0)return true;
- return sdkContainers.indexOf(p)>=0&&s.uid===1001&&s.gid===1001&&mode===511;
-}
+var packageContainers=['/media/developer/apps','/media/developer/apps/usr',base,
+ base+'/applications',base+'/packages',base+'/services'];
 function ancestry(p){
+ var chain=[];
  for(;;){
-  var s=fs.lstatSync(p);
-  if(!s.isDirectory()||s.isSymbolicLink())fail();
-  if(!sharedSdkDirectory(p,s)&&([0,uid,5999].indexOf(s.uid)<0||
-     ((s.mode&2)&&!(s.uid===0&&(s.mode&512)))))fail();
-  if(path.dirname(p)===p)break;
-  p=path.dirname(p);
+  var s=fs.lstatSync(p),container=packageContainers.indexOf(p)>=0;
+  var legacy=p===publicRoot||p==='/media/developer'||
+   apps.some(function(app){return p===base+'/applications/'+app;})||
+   services.some(function(service){return p===base+'/services/'+service;});
+  // Shared SDK containers can have different owners across firmware. Private
+  // state and staging paths still use the existing ownership and mode checks.
+  var shared=(container&&!(s.mode&3584))||(legacy&&s.uid===0&&(s.mode&4095)===511);
+  if(!s.isDirectory()||s.isSymbolicLink()||(container&&(s.mode&3584))||
+    (!shared&&[0,uid,5999].indexOf(s.uid)<0)||((s.mode&2)&&!shared&&!(s.uid===0&&(s.mode&512))))fail();
+  chain.push({name:path.basename(p)||'/',stat:s});
+  var parent=path.dirname(p);if(parent===p)return chain.reverse();p=parent;
  }
 }
 function at(p,expected,fn){
@@ -81,15 +77,29 @@ function at(p,expected,fn){
  finally{fs.closeSync(fd);process.chdir(prior);if(!same(priorStat,fs.statSync('.')))fail();}
 }
 function remove(p,expected){
- ancestry(path.dirname(p));var s=fs.lstatSync(p);if(!same(s,expected))fail();
- if(!s.isDirectory()){if(!s.isFile()&&!s.isSymbolicLink())fail();at(path.dirname(p),fs.lstatSync(path.dirname(p)),function(fd){if(!same(s,fs.lstatSync(path.basename(p))))fail();fs.unlinkSync(path.basename(p));fs.fsyncSync(fd);});return;}
+ var chain=ancestry(path.dirname(p)),leaf=path.basename(p);
  var count=0;
  function walk(name,pin,depth){if(depth>32)fail();at(name,pin,function(fd){fs.readdirSync('.').forEach(function(child){
   if(++count>65536)fail();var item=fs.lstatSync(child);
   if(item.isDirectory()){walk(child,item,depth+1);if(!same(item,fs.lstatSync(child)))fail();fs.rmdirSync(child);}
   else{if(!item.isFile()&&!item.isSymbolicLink())fail();if(!same(item,fs.lstatSync(child)))fail();fs.unlinkSync(child);}
  });fs.fsyncSync(fd);});}
- walk(p,s,0);at(path.dirname(p),fs.lstatSync(path.dirname(p)),function(fd){if(!same(s,fs.lstatSync(path.basename(p))))fail();fs.rmdirSync(path.basename(p));fs.fsyncSync(fd);});
+ // Enter each verified parent relative to the previous one. Opening the
+ // full path again would let an intermediate symlink bypass the leaf pin.
+ function enter(i){
+  var parent=chain[i];
+  at(parent.name,parent.stat,function(fd){
+   if(i+1<chain.length){enter(i+1);return;}
+   var s=fs.lstatSync(leaf);if(!same(s,expected))fail();
+   if(s.isDirectory()){
+    walk(leaf,s,0);if(!same(s,fs.lstatSync(leaf)))fail();fs.rmdirSync(leaf);
+   }else{
+    if(!s.isFile()&&!s.isSymbolicLink())fail();fs.unlinkSync(leaf);
+   }
+   fs.fsyncSync(fd);
+  });
+ }
+ enter(0);
 }
 function blocked(scope,error){reply.blocked.push({scope:scope,reason:error.code==='EACCES'||error.code==='EPERM'?'permission-denied':'unsafe-path'});}
 function visit(p,scope){try{var s=exists(p);if(!s)return;if(input.action==='sweep'||input.action==='root-package')remove(p,s);if(exists(p))reply.present.push(scope);}catch(e){blocked(scope,e);}}

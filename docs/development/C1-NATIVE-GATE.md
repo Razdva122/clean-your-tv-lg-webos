@@ -47,11 +47,11 @@ the common `/usr/lib/qt5` alias is accepted without writing through it. The live
 filter verifies its Qt key/policy, timer, Luna and application-manager APIs before
 subscribing. Missing APIs leave Home with LG and prevent guardian activation.
 
-### Stock executable ownership (next release, #454)
+### Stock executable ownership
 
 The host preflight, schema2/3 compositor reader and native guardian accept a
-stock Home executable up to 16 MiB. UID 0 remains the ordinary owner. UID 1001
-is accepted only on SquashFS; the device reader and guardian also require its
+stock Home executable up to 16 MiB. UID 0 remains the ordinary owner. Any
+non-root owner requires SquashFS. The device reader and guardian also require its
 opened descriptor's filesystem to be read-only. The reader runs the existing
 `stat -f -c %t` utility against its inherited `/proc/self/fd` descriptor, with a
 five-second deadline. Missing/unknown filesystem evidence refuses admission.
@@ -66,9 +66,8 @@ System Profile and emergency-input checks. Legacy schema1 executable-mount
 admission is unchanged. No system file is chowned, chmodded or rewritten.
 
 Rebuild the common computer/Android installer and ordinary/Beta Root support
-bundles with the matching runtime and guardian. This source change is not yet
-published and does not establish C1 compatibility. See the
-[focused verification and remaining device scope](../history/2026-11-10-issue454-stock-home-admission.md).
+bundles with the matching runtime and guardian. For historical device evidence
+and limits, see the [initial UID 1001 investigation](../history/2026-11-10-issue454-stock-home-admission.md).
 
 A configured KeyFilters field alone does not prove compatibility. The existing
 guardian authenticates `/usr/bin/com.webos.app.home` and returns to LG by launching
