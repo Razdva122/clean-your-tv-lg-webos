@@ -1,5 +1,6 @@
 """Issue-ready diagnostics built from allowlisted metadata, never raw logs."""
 from datetime import datetime, timezone
+import errno
 import json
 from pathlib import Path
 import platform
@@ -11,7 +12,7 @@ import uuid
 from . import __version__, debloat, diagnostic_context as context
 from .state import private_write
 from .terminal import console
-from .errors import TVConnectionError, DeveloperKeyError, UserError, TVCommandError, TVRejected, PythonPreflightError, PythonCacheError, root_recovery_details
+from .errors import TVConnectionError, DeveloperKeyError, UserError, TVCommandError, TVRejected, PythonPreflightError, PythonCacheError, connection_interrupted, root_recovery_details
 
 ISSUE_URL = 'https://github.com/Razdva122/clean-your-tv-lg-webos/issues/new'
 KERNEL_ARCHES = context.KERNEL_ARCHES
@@ -206,7 +207,7 @@ def _observe_home_diagnostic_directory(remote, directory):
         return None  # Keep the original upload failure if this probe also fails.
 
 
-def collect_home_report(remote, store, profile, write):
+def collect_home_report(remote, store, profile, write, *, reconnect=None):
     """One bounded observation window, exported without raw logs or credentials."""
     if profile['edition'] != 'no-root':
         raise UserError('Home Helper diagnostics is available for No-root installations.')
@@ -215,7 +216,12 @@ def collect_home_report(remote, store, profile, write):
     def command(name):
         remote.upload(directory + '/control.json',
                       json.dumps({'cmd': name, 'nonce': session}).encode(), mode=0o640)
-    records = []
+    log = directory + '/controller.log'
+    read_log = (
+        f'if [ -f {log}.previous ]; then tail -c 131072 {log}.previous || exit; fi; '
+        f'tail -c 131072 {log}'
+    )
+    records = {}
     triggers = {'started', 'sample', 'home', 'launch-request', 'launch-result',
                 'launch-timeout', 'foreground', 'monitor', 'monitor-reset', 'expired', 'stopped'}
     monitors = {'starting', 'reset', 'screen-watch-connected', 'screen-watch-unavailable',
@@ -227,10 +233,31 @@ def collect_home_report(remote, store, profile, write):
         command('diagnostics-start')
         while True:
             failure_stage = 'log-read'
-            raw = remote.run('tail -c 262144 ' + directory + '/controller.log')
+            try:
+                if remote is None:
+                    remote = reconnect()
+                raw = remote.run(read_log)
+            except Exception as error:
+                if reconnect is None or not (connection_interrupted(error)
+                        or isinstance(error, EOFError)
+                        or getattr(error, 'errno', None) in (errno.ENETDOWN, errno.ENETUNREACH)
+                        or getattr(error, 'reason_code', None) in ('ssh-exit-status-missing', 'operation-timeout')):
+                    raise
+                # Helper records to disk while SSH is unavailable. Reuse the
+                # original nonce and never start a second recording.
+                remote = None
+                if time.monotonic() - beginning < 68:
+                    time.sleep(2)
+                    if time.monotonic() - beginning < 70:
+                        continue
+                if not started:
+                    raise
+                write('TV connection was interrupted. Saving an incomplete Home button diagnostic report.')
+                break
             failure_stage = None
-            records = []
             for line in raw.splitlines():
+                if line in records:
+                    continue
                 try:
                     item = json.loads(line)
                 except ValueError:
@@ -254,9 +281,9 @@ def collect_home_report(remote, store, profile, write):
                 if item.get('monitorReason') in (None, 'state-permissions', 'missing-pairing-key', 'pairing-required'):
                     clean['monitorReason'] = item.get('monitorReason')
                 clean['foregroundSource'] = 'subscription-cache'
-                records.append(clean)
-            started = started or any(r['trigger'] == 'started' for r in records)
-            complete = any(r['trigger'] == 'expired' for r in records)
+                records[line] = clean
+                started = started or clean['trigger'] == 'started'
+                complete = complete or clean['trigger'] == 'expired'
             elapsed = time.monotonic() - beginning
             if not started and elapsed >= 5:
                 failure_stage = 'start-unacknowledged'
@@ -274,13 +301,16 @@ def collect_home_report(remote, store, profile, write):
             error.home_diagnostic_directory = _observe_home_diagnostic_directory(remote, directory)
         raise
     finally:
-        try:
-            command('diagnostics-stop')
-        except Exception:
-            pass  # The Helper also expires its own window after 60 seconds.
+        if remote is not None:
+            try:
+                command('diagnostics-stop')
+            except Exception:
+                pass  # The Helper also expires its own window after 60 seconds.
     path = create_report(store, 'home-diagnostics', profile, 'home-diagnostics-complete')
     report = json.loads(path.read_text())
-    report['helper_diagnostics'] = {'schema': 1, 'complete': complete, 'records': records}
+    report['helper_diagnostics'] = {'schema': 1, 'complete': complete, 'records': list(records.values())}
+    if failure_stage:
+        report['helper_diagnostics']['failure_stage'] = failure_stage
     report['privacy'] = 'Contains observed application IDs, routing state and timing. No addresses, keys, app inventory or raw TV logs are collected.'
     private_write(path, json.dumps(report, indent=2).encode())
     return path
