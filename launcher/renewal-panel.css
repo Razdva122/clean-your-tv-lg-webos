@@ -985,6 +985,26 @@
   display: none;
 }
 
+/* Keep the primary app actions visible alongside sorting on HD screens. */
+@media (max-height: 800px) {
+  #settings-pane-appearance > h3 {
+    padding-bottom: 8px;
+    margin-bottom: 8px;
+  }
+  #settings-pane-appearance .settings-subheading {
+    margin: 4px 0 6px;
+  }
+  #settings-pane-appearance .settings-subheading:first-of-type {
+    display: none;
+  }
+  #settings-pane-appearance .settings-layout > button {
+    margin-bottom: 8px;
+  }
+  #homeUsageSortHint {
+    margin-bottom: 8px;
+  }
+}
+
 /* Keep Appearance scroll geometry when a theme owns its column count. */
 .settings-pane .settings-layout.home-columns-entry.hidden {
   display: flex;

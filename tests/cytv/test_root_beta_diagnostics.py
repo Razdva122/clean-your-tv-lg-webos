@@ -1,4 +1,5 @@
 import json
+import shlex
 from pathlib import Path
 import subprocess
 import sys
@@ -43,15 +44,32 @@ class BetaDiagnosticsTests(unittest.TestCase):
         remote.upload.assert_not_called()
 
     def test_private_python_binding_failure_exports_only_fixed_stage(self):
-        from cytv.root_install_recovery import RECOVERY_ENTRY
+        from cytv import root_install_recovery
+        from cytv.operations import Installer
 
         with TemporaryDirectory() as folder:
             root = Path(folder)
             (root/'python_binding.py').write_text(
                 "def verify_binding(_): raise ValueError('private binding path')\n")
-            result = subprocess.run([sys.executable, '-I', '-B', '-c', RECOVERY_ENTRY,
-                                     folder, str(root/'provision.py'), 'repair_beta_recovery'],
-                                    capture_output=True, text=True)
+            # Model the POSIX TV path, including on a Windows installer host.
+            stage = root.as_posix()
+            observed = []
+
+            def execute(command, *, timeout):
+                argv = shlex.split(command)
+                self.assertEqual(argv[-2:], [stage+'/provision.py', 'repair_beta_recovery'])
+                result = subprocess.run(argv, capture_output=True, text=True, timeout=timeout)
+                observed.append(result)
+                raise TVCommandError(result.returncode)
+
+            installer = Mock()
+            installer._python_command = Installer._python_command
+            installer.remote.run.side_effect = execute
+            with patch.object(root_install_recovery, 'recovery_python', return_value=sys.executable):
+                with self.assertRaises(TVCommandError):
+                    root_install_recovery.run(installer, stage, 'provision.py',
+                                              ['repair_beta_recovery'], timeout=10)
+            result, = observed
         self.assertEqual(result.returncode, 1)
         self.assertEqual(result.stderr, '')
         self.assertEqual(json.loads(result.stdout), {'returnValue': False,

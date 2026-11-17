@@ -134,6 +134,29 @@ class GuiTests(unittest.TestCase):
         for first, second in zip(items, items[1:]):
             self.assertLess(first.geometry().bottom(), second.geometry().top())
 
+    def test_setup_usage_choice_fits_with_wide_platform_metrics(self):
+        from cytv import i18n, install_settings as settings
+        for edition in ('root', 'no-root'):
+            with self.subTest(edition=edition):
+                w = Wizard()
+                self.addCleanup(w.close)
+                i18n.set_language('ru')
+                w.resize(900, 680)
+                w.selected_profile = {'edition': edition}
+                w.show_prompt(Prompt(settings.PROMPT))
+                w.show()
+                self.app.processEvents()
+                scroll = w.form.findChild(QScrollArea, 'installationSettings')
+                usage = w.form.findChild(QComboBox, 'usage_sort')
+                # Model a wide translated native combo that fits on its own.
+                usage.setMinimumWidth(scroll.viewport().width() - 40)
+                self.app.processEvents()
+                self.app.processEvents()
+                self.assertLessEqual(scroll.widget().width(), scroll.viewport().width())
+                self.assertLessEqual(usage.width(), scroll.viewport().width())
+                self.assertEqual(usage.count(), 3)
+                self.assertIsNone(usage.currentData())
+
     def test_setup_form_filters_mode_and_disables_weather_for_ribbon(self):
         import json
         from cytv.gui_style import ThemeCard, ToggleSwitch

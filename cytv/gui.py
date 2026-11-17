@@ -1127,10 +1127,6 @@ class Wizard(QMainWindow):
                 toggle.updateGeometry()
                 hint.setText(tr('Current setting unavailable. Check it in Home settings.'))
             switches[key] = toggle
-        usage_row = QWidget()
-        usage_layout = QHBoxLayout(usage_row)
-        usage_layout.setContentsMargins(0, 0, 0, 0)
-        usage_layout.setSpacing(16)
         usage_label = WrappedLabel(tr(settings.USAGE_SORT))
         usage_label.setObjectName('settingTitle')
         usage_sort = Select()
@@ -1139,9 +1135,8 @@ class Wizard(QMainWindow):
         for label, value in (('Keep current settings', None), ('On', True), ('Off', False)):
             usage_sort.addItem(tr(label), value)
         usage_label.setBuddy(usage_sort)
-        usage_layout.addWidget(usage_label, 1)
-        usage_layout.addWidget(usage_sort)
-        fields.addWidget(usage_row)
+        fields.addWidget(usage_label)
+        fields.addWidget(usage_sort)
         usage_help = WrappedLabel(tr(settings.USAGE_SORT_HELP))
         usage_help.setObjectName('settingHint')
         fields.addWidget(usage_help)
