@@ -372,10 +372,12 @@ if(input.action==='idle'){
  };
  var checkIdle=function(){
   reply.idle=true;
+  reply.proc_enumerated=false;
   reply.project_running=false;
   reply.installer_running=false;
   // Keep observed Homebrew activity even if it exits during this poll.
   try{var proc='/proc/',pids=fs.readdirSync(proc).filter(function(pid){return /^[1-9][0-9]*$/.test(pid)&&Number(pid)!==process.pid;});
+   reply.proc_enumerated=pids.length<=4096;
    if(pids.length>4096)reply.idle=false;
    pids.forEach(function(pid){try{
     var args=fs.readFileSync(proc+pid+'/cmdline','utf8').split('\0').filter(Boolean),argc=args.length;
@@ -820,7 +822,7 @@ def _remove_input_shortcut(installer):
             or _input_request(installer, 'deleteDevice', {'appId': APPS[1]}).get('returnValue') is True)
 
 
-def restore_stock_home(installer):
+def restore_stock_home(installer, *, allow_legacy_launch_ack=False):
     """Verify stock controls when SAM cannot confirm the LG Home launch."""
     uri='com.webos.applicationManager/'
     home = 'com.webos.app.home'
@@ -843,6 +845,7 @@ def restore_stock_home(installer):
            'com.webos.app.hdmi1','com.webos.app.hdmi2','com.webos.app.hdmi3','com.webos.app.hdmi4'}
     message = 'Removal could not be verified. Review recovery options before continuing.'
     method = uri + 'getForegroundAppInfo'
+    live_tv = 'com.webos.app.livetv'
     with ExitStack() as connection:
         paired = None
 
@@ -863,6 +866,8 @@ def restore_stock_home(installer):
                         paired = connection.enter_context(SSAP(profile['host'], installer.store.device_dir(profile),
                                                                installer.progress, reuse_only=True))
                     except (OSError, ValueError, UserError, WebSocketException) as exc:
+                        if legacy_home and allow_legacy_launch_ack:
+                            return None
                         raise UserError(message, reason_code='controls-unverified') from exc
             if paired is not None:
                 try:
@@ -889,11 +894,18 @@ def restore_stock_home(installer):
                 return
             raise UserError(message, reason_code='controls-unverified')
 
-        if foreground() in stock:
+        active = foreground()
+        if active in stock:
             return
-        # Fixed built-in source only; require foreground confirmation after launch.
-        launched = installer.remote.luna(uri+'launch', {'id':'com.webos.app.livetv'})
+        launched = installer.remote.luna(uri+'launch', {'id':live_tv})
         if not isinstance(launched, dict) or launched.get('returnValue') is not True:
+            raise UserError(message, reason_code='controls-unverified')
+        if active is None:
+            # Legacy SAM can launch the fixed stock app even when neither
+            # transport can read its foreground. Require its own positive reply.
+            if ('errorCode' not in launched and not launched.get('pairingType')
+                    and launched.get('appId', live_tv) == live_tv and launched.get('id', live_tv) == live_tv):
+                return
             raise UserError(message, reason_code='controls-unverified')
         deadline = monotonic() + 5
         while (remaining := deadline - monotonic()) > 0:
@@ -913,6 +925,9 @@ def continue_removal(installer, expected_pending):
     profile = installer.profile
     store = installer.store
     guard = profile.get('connection') != 'root-ssh'
+    retained_helper_reboot = (guard and pending.get('stage') == 'verified-clean'
+                              and pending.get('cleanup_helper_kernel_changed') is True
+                              and pending.get('removals', {}).get(APPS[0]) == 'terminal')
 
     terminals_this_pass = set()
     surviving_registrations = set()
@@ -929,14 +944,15 @@ def continue_removal(installer, expected_pending):
     def check(value, **options):
         _check_access(value, guard=guard, **options)
 
-    def wait_for_stopped_processes(require_idle, *, verify_after_remove=False):
+    def wait_for_stopped_processes(require_idle, *, verify_after_remove=False, allow_opaque=False):
         idle = device('idle', after_stop=True, wait_for_idle=True)
         check(defer_catalogued_paths(idle) if not verify_after_remove else idle,
               defer_packages=True, action='idle')
         if idle.get('project_running') is True:
             raise UserError('A Clean Your TV process did not stop in time. Removal data was kept.',
                             reason_code='cleanup-check-failed')
-        return idle.get('project_running') is False and (not require_idle or idle.get('idle') is True)
+        return idle.get('project_running') is False and (not require_idle or idle.get('idle') is True
+            or allow_opaque and idle.get('proc_enumerated') is True)
 
     # The fixed IDs from this goal's package requests still need readback
     # if a vendor request changes the SDK's public legacy view.
@@ -963,8 +979,9 @@ def continue_removal(installer, expected_pending):
                 _exact_developer_app(installer, app) for app in APPS if app in sam_apps)):
             raise UserError('Final cleanup could not be verified. Review recovery options before continuing.',
                             reason_code='cleanup-check-failed')
-        return final, wait_for_stopped_processes(
-            require_idle or final.get('empty_helper_dirs_retained') is True, verify_after_remove=True)
+        retained_helper = final.get('empty_helper_dirs_retained') is True
+        return final, wait_for_stopped_processes(require_idle or retained_helper, verify_after_remove=True,
+            allow_opaque=retained_helper_reboot and retained_helper)
 
     def finish(result):
         from .root_no_root_handoff import release
@@ -1035,9 +1052,11 @@ def continue_removal(installer, expected_pending):
     reused_restart = proof is not None and pending.get('cleanup_boot_verified') is True
     restarted = reused_restart
     new_kernel = reused_restart
+    observed_new_kernel = reused_restart and pending.get('cleanup_helper_kernel_changed') is True
     if proof is not None and not reused_restart and not pending.get('cleanup_boot_release_started'):
         boot = _device(installer, 'boot-probe', proof=proof)
         new_kernel = boot.get('boot_id') not in (None, proof.get('kernel'))
+        observed_new_kernel = new_kernel and boot['boot_restarted'] is True
         critical = set(boot_triggers) & {
             'package-removal-unverified', 'original-configuration-unverified',
             'original-package-unverified', 'homebrew-request-unverified', 'catalog-helper-stop-unverified'}
@@ -1057,6 +1076,7 @@ def continue_removal(installer, expected_pending):
         if proof is None or rearm or pending.get('cleanup_boot_release_started'):
             installer.store.checkpoint(installer.profile, stage=stage, cleanup_boot_proof=None,
                                        cleanup_boot_verified=False, cleanup_boot_release_started=False,
+                                       cleanup_helper_kernel_changed=False,
                                        removal_reason=stage, cleanup_restart_triggers=triggers)
             proof = _device(installer, 'boot-create')['boot_proof']
             installer.store.checkpoint(installer.profile, cleanup_boot_proof=proof)
@@ -1182,11 +1202,25 @@ def continue_removal(installer, expected_pending):
     if bound_package_pending and not original_package_settled and not targets.intersection(APPS):
         return require_restart(['original-package-unverified'], rearm=proof is not None
                                and 'original-package-unverified' not in boot_triggers)
+    terminal_helper_only = (guard and removals.get(APPS[0]) == 'terminal' and not submitted
+                            and not apps.intersection(APPS) and targets <= {APPS[0]}
+                            and not resident and not cancellation and not older_pending
+                            and (previous is None or isinstance(previous, dict)
+                                 and previous.get('action') == 'uninstall'))
+    retained_helper_reboot = (terminal_helper_only and observed_new_kernel
+                              and 'process-idle-unverified' in boot_triggers)
     installer.progress('Restoring TV controls…')
     idle_helper = False
     if guard and removals.get(APPS[0]) == 'terminal':
         before_stop = device('idle')
-        idle_helper = before_stop.get('idle') is True and before_stop.get('project_running') is False
+        if before_stop.get('project_running') is False:
+            idle_helper = (before_stop.get('idle') is True or retained_helper_reboot
+                           and before_stop.get('proc_enumerated') is True)
+            if terminal_helper_only and not idle_helper:
+                residue = device('inventory', allow_empty_helper=True)
+                check(residue, defer_packages=True)
+                if residue.get('empty_helper_dirs_retained') is True:
+                    return require_restart(['process-idle-unverified'], rearm=restarted)
     stopped = device('stop', allow_empty_helper=idle_helper)
     helper_stop_blocked = any(row.get('scope') == 'helper-control' for row in stopped['blocked'])
     helper_stop_restarted = not guard and new_kernel and 'catalog-helper-stop-unverified' in boot_triggers
@@ -1249,7 +1283,7 @@ def continue_removal(installer, expected_pending):
     installer.store.checkpoint(installer.profile, cleanup_inputs_pending=not inputs_removed)
     if guard:
         device('inventory')
-    restore_stock_home(installer)
+    restore_stock_home(installer, allow_legacy_launch_ack=retained_helper_reboot and idle_helper)
     installer.store.checkpoint(installer.profile, stage='controls-restored')
     external_update = current.get('external_update_hint')
     if external_update is not None:
@@ -1347,7 +1381,8 @@ def continue_removal(installer, expected_pending):
         raise UserError('TV controls could not be verified. Review recovery options before continuing.', reason_code='controls-unverified')
     if proof is not None and not pending.get('cleanup_boot_release_started'):
         if restarted:
-            store.checkpoint(profile, cleanup_boot_verified=True)
+            store.checkpoint(profile, cleanup_boot_verified=True,
+                             cleanup_helper_kernel_changed=retained_helper_reboot)
         else:
             store.checkpoint(profile, cleanup_boot_release_started=True)
         _device(installer, 'boot-retire' if restarted else 'boot-release', proof=proof)
@@ -1360,5 +1395,7 @@ def continue_removal(installer, expected_pending):
     if final['present'] or final['blocked'] or swept['blocked']:
         result['temporary_files_retained'] = True
         installer.progress('Some temporary recovery files were kept.')
-    store.checkpoint(profile, stage='verified-clean', removal_reason='removal-verified', result=result)
+    store.checkpoint(profile, stage='verified-clean', removal_reason='removal-verified', result=result,
+                     cleanup_helper_kernel_changed=retained_helper_reboot and
+                     result.get('empty_helper_dirs_retained') is True)
     return finish(result)

@@ -2285,6 +2285,94 @@ class SimpleRemoval(unittest.TestCase):
         self.assertTrue(json.loads(report.read_text())['removal']['empty_helper_dirs_retained'])
         self.assertFalse(self.vendor_removals())
 
+    @unittest.skipIf(getattr(os, 'getuid', lambda: -1)() == 0, 'unprivileged SDK model')
+    def test_terminal_helper_reboots_once_and_can_restore_stock_without_saved_pairing(self):
+        app = self.cleanup.APPS[0]
+        helper = self.root / 'developer/apps/usr/palm/applications' / app
+        state = helper / 'state'
+        state.mkdir(parents=True)
+        helper.chmod(0o555)
+        self.addCleanup(helper.chmod, 0o755)
+        opaque = self.root / 'proc/987654'
+        opaque.mkdir(parents=True)
+        cmdline = opaque / 'cmdline'
+        cmdline.write_bytes(b'/usr/bin/node\0-e\0opaque\0')
+        self.store.begin(self.profile, 'uninstall')
+        self.store.request_clean_removal(self.profile)
+        self.store.checkpoint(self.profile, stage='private-cleanup', removals={app: 'terminal'})
+        self.legacy_home()
+        self.assertTrue(self.remove()['restart_required'])
+        self.assertEqual(list(state.iterdir()), [])
+        self.assertTrue(self.remove()['restart_required'])
+        self.assertEqual(list(state.iterdir()), [])
+
+        self.reboot()
+        from cytv.errors import TVRejected
+        original = self.remote.luna
+        attempted = []
+        reply = {'returnValue': True, 'appId': 'org.foreign.app'}
+
+        def luna(uri, payload, **options):
+            if uri.endswith('/getForegroundAppInfo'):
+                raise TVRejected('Denied', {'returnValue': False, 'errorCode': -1}, uri)
+            if uri.endswith('/launch') and payload['id'] == 'com.webos.app.livetv':
+                attempted.append(payload['id'])
+                return reply
+            return original(uri, payload, **options)
+
+        self.remote.luna = luna
+        with self.assertRaises(UserError) as caught:
+            self.remove()
+        self.assertEqual(caught.exception.reason_code, 'controls-unverified')
+        self.assertIsNotNone(self.store.pending(self.profile))
+
+        # Positive launch proof cannot cover an observed surviving Helper.
+        reply['appId'] = 'com.webos.app.livetv'
+        cmdline.write_bytes((app + '\0').encode())
+        with self.assertRaises(UserError) as caught:
+            self.remove()
+        self.assertEqual(caught.exception.reason_code, 'controls-unverified')
+        self.assertIsNotNone(self.store.pending(self.profile))
+        cmdline.write_bytes(b'/usr/bin/node\0-e\0opaque\0')
+
+        checkpoint = self.store.checkpoint
+
+        def interrupt(profile, **fields):
+            if fields.get('stage') == 'verified-clean':
+                raise OSError('fixture host interruption after retiring the boot marker')
+            checkpoint(profile, **fields)
+
+        with patch.object(self.store, 'checkpoint', side_effect=interrupt), self.assertRaises(OSError):
+            self.remove()
+        result = self.remove()
+        self.assertTrue(result['verified_clean'])
+        self.assertTrue(result['empty_helper_dirs_retained'])
+        self.assertEqual(list(state.iterdir()), [])
+        self.assertEqual(attempted, ['com.webos.app.livetv'] * 3)
+        self.assertFalse(self.vendor_removals())
+        self.assertIsNone(self.store.pending(self.profile))
+
+    @unittest.skipIf(getattr(os, 'getuid', lambda: -1)() == 0, 'unprivileged SDK model')
+    def test_terminal_helper_with_no_process_listing_stays_pending_after_reboot(self):
+        app = self.cleanup.APPS[0]
+        helper = self.root / 'developer/apps/usr/palm/applications' / app
+        (helper / 'state').mkdir(parents=True)
+        helper.chmod(0o555)
+        self.addCleanup(helper.chmod, 0o755)
+        proc = self.root / 'proc'
+        (proc / '987654').mkdir(parents=True)
+        (proc / '987654/cmdline').write_bytes(b'/bin/sh\0opaque\0')
+        self.store.begin(self.profile, 'uninstall')
+        self.store.request_clean_removal(self.profile)
+        self.store.checkpoint(self.profile, stage='private-cleanup', removals={app: 'terminal'})
+        proc.rename(self.root / 'hidden-proc')
+        self.assertTrue(self.remove()['restart_required'])
+        self.reboot()
+        self.assertTrue(self.remove()['restart_required'])
+        self.assertIsNotNone(self.store.pending(self.profile))
+        self.assertEqual(list((helper / 'state').iterdir()), [])
+        self.assertFalse(self.vendor_removals())
+
     def test_sweep_permission_denial_without_a_scope_keeps_the_cleanup_error(self):
         with self.assertRaises(UserError) as caught:
             self.cleanup._check_access({
