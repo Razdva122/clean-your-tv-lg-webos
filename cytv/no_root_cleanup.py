@@ -132,8 +132,42 @@ function rootResidue(directory,app,service,area){
  }catch(e){blocked(scope,e);}
 }
 function developerBlocked(scope,error){blocked(scope,error);reply.blocked[reply.blocked.length-1].developer_path=true;}
+function retainEmptyHelper(p,expected){
+ try{
+  ancestry(path.dirname(p));
+  var snapshot=[],index=0;
+  var unchanged=function(a,b){
+   return same(a,b)&&a.mode===b.mode&&a.uid===b.uid&&a.gid===b.gid&&
+    a.mtime.getTime()===b.mtime.getTime()&&a.ctime.getTime()===b.ctime.getTime();
+  };
+  var visitDirectory=function(name,stat,depth,verify){
+   if(depth>32||index>=4096||!stat.isDirectory()||stat.dev!==expected.dev||
+      [0,uid,5999].indexOf(stat.uid)<0)fail();
+   if(verify){
+    if(!snapshot[index]||!unchanged(snapshot[index],stat))fail();
+   }else snapshot.push(stat);
+   index++;
+   at(name,stat,function(fd){
+    fs.readdirSync('.').sort().forEach(function(child){
+     visitDirectory(child,fs.lstatSync(child),depth+1,verify);
+    });
+    if(!unchanged(stat,fs.fstatSync(fd)))fail();
+   });
+   if(!unchanged(stat,fs.lstatSync(name)))fail();
+  };
+  if(!unchanged(expected,exact(p,true)))return false;
+  // Reopen the same directory tree to catch replacements and late entries.
+  visitDirectory(p,expected,0,false);
+  index=0;
+  visitDirectory(p,exact(p,true),0,true);
+  if(index!==snapshot.length)return false;
+  reply.empty_helper_dirs_retained=true;
+  return true;
+ }catch(e){return false;}
+}
 function developerVisit(p,scope,app){
  var s;
+ var allowEmpty=input.allow_empty_helper===true&&scope===apps[0]+' app';
  try{
   s=exact(p,!!app);if(!s)return true;
   if(app&&input.action==='inventory'){
@@ -148,7 +182,16 @@ function developerVisit(p,scope,app){
    if((!permits(s,7)||!permits(parent,3))&&reply.protected_targets.indexOf(app)<0)
     reply.protected_targets.push(app);
   }
-  if(input.action==='sweep')remove(p,s);
+  if(input.action==='sweep'){
+   try{remove(p,s);}
+   catch(e){
+    if(allowEmpty&&(e.code==='EACCES'||e.code==='EPERM')){
+     var current=exact(p,true);
+     if(current&&same(s,current)&&retainEmptyHelper(p,current))return false;
+    }
+    throw e;
+   }
+  }else if(allowEmpty&&input.action==='inventory'&&retainEmptyHelper(p,s))return false;
   if(!exact(p,!!app))return true;
   reply.present.push(scope);
  }catch(e){
@@ -371,7 +414,14 @@ function helperState(state){
 }
 if(input.action==='stop'){
  var state=base+'/applications/'+apps[0]+'/state',s=null;
- try{s=input.guard_owner?exact(state,true):exists(state);}
+ try{
+  s=input.guard_owner?exact(state,true):exists(state);
+  // An already removed, proven idle Helper has no reader for a new Stop latch.
+  if(s&&input.allow_empty_helper===true){
+   var helper=path.dirname(state);
+   if(retainEmptyHelper(helper,exact(helper,true)))s=null;
+  }
+ }
  catch(e){if(input.guard_owner)developerBlocked('helper-control',e);else blocked('helper-control',e);}
  if(s)try{
   helperState(state);
@@ -573,7 +623,8 @@ def _missing_capsule_receipt(previous):
             'default_root': observer.ROOT, 'roots': [observer.ROOT, observer.JAIL_ROOT]}
 
 
-def _device(installer, action, proof=None, *, after_stop=False, wait_for_idle=False, guard=False):
+def _device(installer, action, proof=None, *, after_stop=False, wait_for_idle=False, guard=False,
+            allow_empty_helper=False):
     pending = installer.store.pending(installer.profile) or {}
     request = {'action':action, 'staging_ids':pending.get('cleanup_staging_ids', []),
                'removal':pending.get('removal_operation'), 'proof':proof}
@@ -582,6 +633,9 @@ def _device(installer, action, proof=None, *, after_stop=False, wait_for_idle=Fa
         from . import no_root_observer
         from .errors import connection_interrupted
         request['guard_owner'] = True
+        if (allow_empty_helper and action in ('inventory', 'sweep', 'stop')
+                and pending.get('removals', {}).get(APPS[0]) == 'terminal'):
+            request['allow_empty_helper'] = True
         previous = pending.get('previous')
         if (isinstance(previous, dict) and previous.get('recovery_protocol') == no_root_observer.PROTOCOL
                 and previous.get('action') == 'install'):
@@ -895,19 +949,22 @@ def continue_removal(installer, expected_pending):
             error.no_root_cleanup = no_root_cleanup_details({'action': 'sweep', 'blocked_areas': ['ls2-registration']})
             raise error
 
-    def verify_functional(require_idle):
-        final = device('inventory')
+    def verify_functional(require_idle, allow_empty_helper=False):
+        final = device('inventory', allow_empty_helper=allow_empty_helper)
         check(final)
         check_surviving_registrations()
         remaining = [scope for scope in final['present']
                      if scope != 'installer-staging' and not scope.startswith('installer-staging ')]
         catalog_remains = {app['id'] for app in installer.installed_apps()}.intersection(APPS)
         sam_apps = APPS if final.get('legacy_layout') else sam_readback
+        if final.get('empty_helper_dirs_retained') is True:
+            sam_apps = set(sam_apps) | {APPS[0]}
         if remaining or catalog_remains or (guard and any(
                 _exact_developer_app(installer, app) for app in APPS if app in sam_apps)):
             raise UserError('Final cleanup could not be verified. Review recovery options before continuing.',
                             reason_code='cleanup-check-failed')
-        return final, wait_for_stopped_processes(require_idle, verify_after_remove=True)
+        return final, wait_for_stopped_processes(
+            require_idle or final.get('empty_helper_dirs_retained') is True, verify_after_remove=True)
 
     def finish(result):
         from .root_no_root_handoff import release
@@ -919,13 +976,26 @@ def continue_removal(installer, expected_pending):
                 installer.progress('Some temporary recovery files were kept.')
         if result.get('legacy_registrations_unverified'):
             installer.progress('Developer Mode could not inspect all legacy service registration directories.')
+        if result.get('empty_helper_dirs_retained') is True:
+            # Controls and history operations ran after the first readback.
+            final, stopped = verify_functional(True, allow_empty_helper=True)
+            if not stopped:
+                raise UserError('Removal could not be verified. Review recovery options before continuing.',
+                                reason_code='cleanup-check-failed')
+            if final.get('empty_helper_dirs_retained') is True:
+                installer.progress('Empty Helper directories were left on the TV.')
+            else:
+                result = dict(result)
+                del result['empty_helper_dirs_retained']
+                store.checkpoint(profile, result=result)
         release(installer)
         store.finish_clean_removal(profile)
         return result
 
     if pending.get('stage') == 'verified-clean':
         _, stopped = verify_functional(not guard or pending.get('removal_reason') in (
-            'original-writer-active', 'ownership-conflict', 'cleanup-check-failed'))
+            'original-writer-active', 'ownership-conflict', 'cleanup-check-failed'),
+            allow_empty_helper=pending['result'].get('empty_helper_dirs_retained') is True)
         if not stopped or (guard and not _input_absent(installer)):
             raise UserError('TV controls could not be verified. Recovery data was kept.', reason_code='controls-unverified')
         return finish(pending['result'])
@@ -1113,7 +1183,11 @@ def continue_removal(installer, expected_pending):
         return require_restart(['original-package-unverified'], rearm=proof is not None
                                and 'original-package-unverified' not in boot_triggers)
     installer.progress('Restoring TV controls…')
-    stopped = device('stop')
+    idle_helper = False
+    if guard and removals.get(APPS[0]) == 'terminal':
+        before_stop = device('idle')
+        idle_helper = before_stop.get('idle') is True and before_stop.get('project_running') is False
+    stopped = device('stop', allow_empty_helper=idle_helper)
     helper_stop_blocked = any(row.get('scope') == 'helper-control' for row in stopped['blocked'])
     helper_stop_restarted = not guard and new_kernel and 'catalog-helper-stop-unverified' in boot_triggers
     unverified_helper_stop = not guard and APPS[0] in apps and helper_stop_blocked and not helper_stop_restarted
@@ -1257,10 +1331,11 @@ def continue_removal(installer, expected_pending):
         raise UserError('The TV package result could not be verified.', reason_code='removal-failed')
     installer.progress('Removing project files…')
     store.checkpoint(profile, stage='private-cleanup')
-    swept = device('sweep')
+    swept = device('sweep', allow_empty_helper=True)
     check(swept, action='sweep')
     installer.progress('Verifying removal…')
-    final, process_stopped = verify_functional(not restarted or reused_restart or invalid_stop_record)
+    final, process_stopped = verify_functional(not restarted or reused_restart or invalid_stop_record,
+        allow_empty_helper=swept.get('empty_helper_dirs_retained') is True)
     if not process_stopped:
         return require_restart(['process-idle-unverified'], rearm=restarted)
     if guard:
@@ -1277,6 +1352,8 @@ def continue_removal(installer, expected_pending):
             store.checkpoint(profile, cleanup_boot_release_started=True)
         _device(installer, 'boot-retire' if restarted else 'boot-release', proof=proof)
     result = {'removed': True, 'verified_clean': True}
+    if final.get('empty_helper_dirs_retained') is True:
+        result['empty_helper_dirs_retained'] = True
     if (final.get('legacy_registrations_unverified')
             or guard and current.get('legacy_layout') and not final.get('legacy_layout')):
         result['legacy_registrations_unverified'] = True

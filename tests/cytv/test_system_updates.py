@@ -32,6 +32,21 @@ class Remote:
 
 
 class SystemBootstrapTests(unittest.TestCase):
+    def test_cleanup_streams_fixed_source_without_exceeding_ssh_command_limit(self):
+        from unittest.mock import MagicMock
+        from cytv.system_updater_remove import SCRIPT, COMMAND
+        remote = Remote()
+        remote.run = MagicMock(return_value='{"present":false}')
+        installer = self.installer(remote)
+        installer._python = lambda: '/opt/bin/python3'
+        self.assertEqual(installer.system_updater_cleanup('status'), {'present':False})
+        args, options = remote.run.call_args
+        self.assertLess(len(args[0]), 8000)
+        self.assertIn('/opt/bin/python3', args[0])
+        self.assertEqual(options['data'], SCRIPT.encode())
+        self.assertEqual(options['timeout'], 60)
+        self.assertLess(len(COMMAND), 1024)
+
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)

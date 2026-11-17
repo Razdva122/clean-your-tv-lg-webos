@@ -147,6 +147,12 @@ function verifySystemRelease(
       (manifest.supervisor === 2 ? '1.2.10' : '1.1.1')
   )
     throw Error('root-minimum-supervisor-required');
+  if (
+    manifest.edition === 'no-root' &&
+    manifest.supervisor === 2 &&
+    manifest.minimumSupervisorVersion !== '1.2.11'
+  )
+    throw Error('no-root-minimum-supervisor-required');
   if (manifest.release !== build.tag)
     throw Error('system-release-tag-mismatch');
   for (const item of manifest.components) {
@@ -245,6 +251,27 @@ function verifyHomebrewOrigin(installer, folder, download) {
       .digest('hex') !== installer.sha256
   )
     throw Error('homebrew-origin-package-mismatch');
+}
+function verifyEngineRelease(envelope, build, raw, releases, key) {
+  const catalog = require('../system-updater/engine-policy').verify(
+    envelope,
+    key
+  );
+  const equal = require('node:util').isDeepStrictEqual;
+  if (
+    !equal(catalog.engine, build.system_engine) ||
+    Object.values(catalog.releases).some((m) => m.release !== build.tag)
+  )
+    throw Error('engine-build-mismatch');
+  if (!equal(catalog.releases, releases))
+    throw Error('engine-product-manifests-mismatch');
+  if (
+    raw.length !== catalog.engine.size ||
+    crypto.createHash('sha256').update(raw).digest('hex') !==
+      catalog.engine.sha256
+  )
+    throw Error('engine-package-mismatch');
+  return catalog;
 }
 function main(args) {
   const [tag, option] = args;
@@ -502,6 +529,7 @@ function main(args) {
         }
       }
     }
+    const verifiedSystem = {};
     for (const variant of variants) {
       const edition = variant.replace(/-720p$/, '');
       const envelope = JSON.parse(
@@ -524,12 +552,42 @@ function main(args) {
           ]);
         assets[filename] = fs.readFileSync(path.join(folder, filename));
       }
-      verifySystemRelease(
+      verifiedSystem[variant] = verifySystemRelease(
         envelope,
         build,
         assets,
         key,
         variant.endsWith('-720p') ? '1280x720' : '1920x1080'
+      );
+    }
+    const hasBootstrap = releaseAssets.some(
+      (a) => a.name === 'system-bootstrap-v1.json'
+    );
+    if (hasBootstrap !== Boolean(build.system_engine))
+      throw Error('engine-assets-mismatch');
+    if (build.system_engine) {
+      const name = 'system-engine_' + build.system_engine.version + '.tar.gz';
+      gh([
+        'release',
+        'download',
+        tag,
+        '--pattern',
+        'system-bootstrap-v1.json',
+        '--pattern',
+        name,
+        '--dir',
+        folder
+      ]);
+      verifyEngineRelease(
+        JSON.parse(
+          fs.readFileSync(path.join(folder, 'system-bootstrap-v1.json'))
+        ),
+        build,
+        fs.readFileSync(path.join(folder, name)),
+        verifiedSystem,
+        fs.readFileSync(
+          path.join(__dirname, '../system-updater/bootstrap-public.pem')
+        )
       );
     }
     process.stdout.write(
@@ -554,6 +612,7 @@ function main(args) {
   }
 }
 module.exports = {
+  verifyEngineRelease,
   verifyHdHomeInventory,
   verifyGraphicsInventory,
   verifyRootRelease,

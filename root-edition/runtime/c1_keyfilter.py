@@ -446,19 +446,31 @@ def native(args, root=STATE, uid=0, timeout=12, *, allow_ui_failure=False):
     if len(reply.stdout)>16384:
         raise ValueError('Native compositor recovery failed; retain evidence')
     if reply.returncode:
-        if not (allow_ui_failure and args == ['--restore'] and reply.returncode == 1):
-            raise ValueError('Native compositor recovery failed; retain evidence')
-        value = json.loads(reply.stdout)
-        if not isinstance(value, dict) or value.get('returnValue') is not False:
-            raise ValueError('Native compositor recovery failed; retain evidence')
-        validate_native(dict(value, returnValue=True))
-        reason = value['reason']
+        error = ValueError('Native compositor recovery failed; retain evidence')
+        if args != ['--restore']:
+            raise error
+        try:
+            value = json.loads(reply.stdout)
+        except (ValueError, RecursionError):
+            raise error from None
+        if (not isinstance(value, dict) or value.get('returnValue') is not False
+                or value.get('backend') != BACKEND or value.get('routing') != ROUTING):
+            raise error
+        reason = value.get('reason')
+        error.native_reason = reason
+        if not allow_ui_failure or reply.returncode != 1:
+            raise error
+        try:
+            validate_native(dict(value, returnValue=True))
+        except ValueError as invalid:
+            invalid.native_reason = reason
+            raise
         if reason == 'effect_busy':
             error = ValueError('Native compositor effect lock unavailable; retain evidence')
             error.native_reason = reason
             raise error
         if reason != 'ui_release_failed':
-            raise ValueError('Native compositor recovery failed; retain evidence')
+            raise error
         if not stopped_stock(value):
             error = ValueError('Native stop retirement unverified; retain evidence')
             error.native_reason = reason
@@ -648,27 +660,42 @@ def restore_for_removal(root, uid):
         return restore_locked(root, uid, for_removal=True)
 
 
-def restore_locked(root,uid, *, for_removal=False):
+def restore_locked(root,uid, *, for_removal=False, explicit_restore=False):
     ui_failure = None
-    if for_removal:
-        restored = native(['--restore'], root, uid, allow_ui_failure=True)
-        if restored['returnValue'] is False:
-            ui_failure = restored
-    else:
-        native(['--restore'],root,uid)
+    try:
+        if for_removal or explicit_restore:
+            restored = native(['--restore'], root, uid, allow_ui_failure=True)
+            if restored['returnValue'] is False:
+                ui_failure = restored
+        else:
+            native(['--restore'],root,uid)
+    except Exception as error:
+        if not for_removal and not getattr(error, 'restore_check', None):
+            error.restore_check = 'native-restore-unverified'
+        raise
     check = 'native-stop-unverified'
     try:
         after=validate_native(native(['--status'],root,uid))
         if ui_failure is not None and (not stopped_stock(after) or after['token'] != ui_failure['token']):
             raise ValueError('Native stop retirement unverified; retain evidence')
         generic=selection(root,uid)['schema']==3
-        if after['healthy'] or not after['stopped'] or after['guardian_pid'] or (not generic and not after['stock_verified']):
+        if after['healthy'] or not after['stopped'] or after['guardian_pid']:
             raise ValueError('Native stop retirement unverified; retain evidence')
+        if not generic and not after['stock_verified']:
+            if not for_removal:
+                check = 'stock-home-unverified'
+            raise ValueError('Native stop retirement unverified; retain evidence')
+        if not for_removal:
+            check = 'intent-write-failed'
         write_intent(root,False,after['token'],'recovering',uid)
+        if not for_removal:
+            check = 'controller-stop-unverified'
         stop_controller(root,uid)
         check = 'stock-routing-unverified'
         change_chain(root,False,uid)
         if not after['stock_verified']:
+            if not for_removal:
+                check = 'stock-home-unverified'
             raise ValueError('Home identity changed; owned filter removed, recovery evidence retained')
         if ui_failure is not None:
             check = 'stock-foreground-unverified'
@@ -696,9 +723,15 @@ def restore_locked(root,uid, *, for_removal=False):
     except Exception as error:
         if ui_failure is not None:
             error.native_reason = ui_failure['reason']
+        if ui_failure is not None or not for_removal:
             error.restore_check = check
         raise
-    write_intent(root,False,after['token'],'disabled',uid)
+    try:
+        write_intent(root,False,after['token'],'disabled',uid)
+    except Exception as error:
+        if not for_removal:
+            error.restore_check = 'intent-write-failed'
+        raise
     return 'restored'
 
 
@@ -812,7 +845,7 @@ def execute(mode,transaction=None,root=STATE,uid=0):
         if mode in ('restore','boot'):
             # No failed-attempt retry or same-boot automatic rearm. The filter
             # retains fail-open semantics until an explicit Enable.
-            return restore_locked(root,uid)
+            return restore_locked(root,uid,explicit_restore=mode=='restore')
         if mode in ('enable','trial','intent-trial','emergency-trial'):
             return enable_locked(root,uid,0 if mode=='enable' else 60)
     raise ValueError('Unsupported compositor lifecycle operation')

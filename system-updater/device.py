@@ -83,6 +83,17 @@ class Device:
     def integrity(self,*,enforce=True):
         self.require_normal_root()
         if os.path.lexists(self.state/'cytv-removal.json'):raise ValueError('System updater removal is in progress. Continue removal from the computer.')
+        if self.code != self.state/'code' and (self.state/'engine-state').is_dir():
+            from .bootstrap import pinned_integrity, Bootstrap
+            pinned_integrity(self.state)
+            runtime = Bootstrap(self.state, uid=self.uid)
+            trial = runtime.store.read('trial')
+            choices = [runtime.store.read('active')]
+            if trial: choices.append(trial.get('candidate'))
+            if not any(record and runtime.slots.verify_slot(record) == self.code for record in choices):
+                raise ValueError('Unregistered System engine')
+            if enforce:self.enforce_legacy_lockdown()
+            return {'schema':1,'engine':str(self.code)}
         receipt=self.store.read('infrastructure')
         if not isinstance(receipt,dict) or receipt.get('schema')!=1 or not isinstance(receipt.get('code'),dict) or not receipt['code']:raise ValueError('One-time System Updater setup required')
         for name,expected in receipt['code'].items():
@@ -96,8 +107,18 @@ class Device:
 
     def fetch(self,method,payload=None,binary=False):
         if method not in ('offer','verify','package'):raise ValueError('Invalid verifier operation')
+        verifier=self.code/'system_updater/policy.js'
+        if method=='offer' and (self.state/'engine-state').is_dir():
+            from .bootstrap import Bootstrap
+            transition=Bootstrap(self.state,uid=self.uid).transaction()
+            if transition and transition['edition']==payload['edition']:
+                verifier=self.code/'system_updater/engine-policy.js'
+                payload={'proof':{'bootstrap':transition['proof'],'variant':transition['variant']}}
+                method='product-offer'
+        elif method in ('verify','package') and isinstance((payload or {}).get('proof'),dict) and 'bootstrap' in payload['proof']:
+            verifier=self.code/'system_updater/engine-policy.js';method='product-'+method
         try:
-            result=subprocess.run(['/usr/bin/node',str(self.code/'system_updater/policy.js'),method],input=json.dumps(payload or {}).encode(),stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=80,check=True)
+            result=subprocess.run(['/usr/bin/node',str(verifier),method],input=json.dumps(payload or {}).encode(),stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=80,check=True)
         except (subprocess.CalledProcessError,subprocess.TimeoutExpired,OSError) as error:
             reason='verification-error'
             if isinstance(error,subprocess.TimeoutExpired):reason='connection-error'
@@ -211,21 +232,45 @@ class Device:
 
     def cache_bytes(self,c):return safe_bytes(self.cached(c),limit=64*1024*1024,uid=self.uid)
 
-    def _infra_inventory(self):
-        pinned=json.loads(safe_bytes(self.code/'infrastructure-paths.json',limit=65536,uid=self.uid))
-        if not isinstance(pinned,list) or not pinned or len(set(pinned))!=len(pinned):raise ValueError('Invalid pinned infrastructure inventory')
-        for name in pinned:
+    @staticmethod
+    def _infra_names(names):
+        if not isinstance(names,(list,set)) or not names or len(set(names))!=len(names):raise ValueError('Invalid pinned infrastructure inventory')
+        for name in names:
             if isinstance(name,str) and name.startswith('support/') and name not in ('support/python_binding.py','support/python_boot.js','support/package_data.py','support/package_identity.py','support/updater/store.py','support/updater/package.py','support/startup_guard.py'):raise ValueError('Foreign infrastructure support path')
             if not isinstance(name,str):raise ValueError('Unsafe managed infrastructure path')
             path=PurePosixPath(name)
-            if path.is_absolute() or '..' in path.parts or str(path)!=name or len(path.parts)<2 or path.parts[0] not in ('runtime','service','updater','support'):raise ValueError('Unsafe managed infrastructure path')
+            if path.is_absolute() or '..' in path.parts or str(path)!=name or '\\' in name or len(path.parts)<2 or path.parts[0] not in ('runtime','service','updater','support'):raise ValueError('Unsafe managed infrastructure path')
+        return set(names)
+
+    def _infra_pinned(self, code=None):
+        return self._infra_names(json.loads(safe_bytes((code or self.code)/'infrastructure-paths.json',limit=65536,uid=self.uid)))
+
+    def _infra_history(self):
+        releases=[self.store.read('current-root')]
+        tx=self.store.read('transaction')
+        if tx and tx.get('edition')=='root':releases.append(tx.get('prior'))
+        return [c for r in releases if r for c in r.get('components',[]) if c['name']=='root-infrastructure']
+
+    def _infra_inventory(self):
+        pinned=self._infra_pinned()
         baseline=self.store.read('baseline')
         if not baseline or baseline.get('edition')!='root':raise ValueError('Root infrastructure baseline unavailable')
         c=next((c for c in baseline['components'] if c['name']=='root-infrastructure'),None)
         if not c or not isinstance(c.get('files'),dict):raise ValueError('Missing infrastructure baseline inventory')
         absent=c.get('absent',[])
-        if not isinstance(absent,list) or any(not isinstance(name,str) for name in absent) or len(set(absent))!=len(absent) or set(c['files'])&set(absent) or set(c['files'])|set(absent)!=set(pinned):raise ValueError('Baseline does not partition pinned infrastructure inventory')
-        return set(pinned)
+        initial=self.state/'code'
+        initial_pinned=self._infra_pinned(initial) if (initial/'infrastructure-paths.json').exists() else pinned
+        if not isinstance(absent,list) or any(not isinstance(name,str) for name in absent) or len(set(absent))!=len(absent) or set(c['files'])&set(absent) or set(c['files'])|set(absent)!=initial_pinned:raise ValueError('Baseline does not partition pinned infrastructure inventory')
+        inventory=pinned|initial_pinned
+        # Historical archives are authenticated by their release proof before
+        # mutation. Their bounded paths remain addressable for exact rollback,
+        # even when a newer engine adds or removes entries from its own list.
+        for old in self._infra_history():
+            raw=self.cache_bytes(old)
+            if len(raw)!=old['size'] or digest(raw)!=old['sha256']:raise ValueError('Historical infrastructure changed')
+            inventory |= self._infra_names(list(archive(raw)))
+            inventory |= set(old.get('absent',[]))
+        return self._infra_names(inventory)
 
     def inspect(self,raw,c):
         if len(raw)!=c['size'] or digest(raw)!=c['sha256']:raise ValueError('Package hash mismatch')
@@ -235,8 +280,9 @@ class Device:
             inventory=self._infra_inventory();hashes={name:digest(value) for name,value in files.items()}
             if c.get('local') is True:
                 absent=c.get('absent',[]);recorded=c.get('files')
-                if not isinstance(recorded,dict) or not isinstance(absent,list) or any(not isinstance(n,str) for n in absent) or len(set(absent))!=len(absent) or set(recorded)&set(absent) or set(recorded)|set(absent)!=inventory or hashes!=recorded:raise ValueError('Local infrastructure inventory/hash mismatch')
-            elif set(files)!=inventory:raise ValueError('Infrastructure inventory changed; computer migration required')
+                if not isinstance(recorded,dict) or not isinstance(absent,list) or any(not isinstance(n,str) for n in absent) or len(set(absent))!=len(absent) or set(recorded)&set(absent) or not (set(recorded)|set(absent))<=inventory or hashes!=recorded:raise ValueError('Local infrastructure inventory/hash mismatch')
+            elif set(files)!=self._infra_pinned() and c not in self._infra_history():raise ValueError('Infrastructure inventory changed; computer migration required')
+            if not set(files)<=inventory:raise ValueError('Infrastructure path outside authenticated inventories')
             return hashes
         app=IDENTITIES.get(c['name'])
         if not app or c.get('application')!=app:raise ValueError('Foreign application component')
@@ -250,6 +296,8 @@ class Device:
         service_prefixes=tuple('usr/palm/services/'+s+'/' for s in services)
         if any(not (name.startswith(prefix) or name.startswith(service_prefixes) or name==info) for name in files):raise ValueError('Foreign package payload')
         state_markers={prefix+'state/.keep','usr/palm/services/'+app+'.service/state/.keep'} if app=='com.local.nativehome' else set()
+        if app == 'com.gathin.tvhome':
+            state_markers.add('usr/palm/services/com.gathin.tvhome.renewal/state/home-control/.keep')
         if any('/state/' in name and (name not in state_markers or files[name]!=b'') for name in files):raise ValueError('Mutable state in package payload')
         appinfo=json.loads(files.get(prefix+'appinfo.json',b'{}'));pkg=json.loads(files.get(info,b'{}'))
         if appinfo.get('id')!=app or appinfo.get('version')!=c['version'] or pkg.get('id')!=app or pkg.get('app')!=app or pkg.get('version')!=c['version'] or not isinstance(pkg.get('services'),list) or set(pkg['services'])-services:raise ValueError('Package application identity mismatch')
@@ -307,6 +355,16 @@ class Device:
             if name not in ('support/python_binding.py','support/python_boot.js','support/package_data.py','support/package_identity.py','support/updater/store.py','support/updater/package.py','support/startup_guard.py'):raise ValueError('Foreign infrastructure support path')
             return self.root_state/relative
         return (self.root_updater/'code' if kind=='updater' else self.root_state/kind)/relative
+
+    def _retire_infrastructure(self, target, previous):
+        # Deletions are the symmetric difference of authenticated complete
+        # inventories, and only exact original bytes may be removed.
+        for name in set(previous)-set(target):
+            path=self._infra_path(name)
+            if not os.path.lexists(path):continue
+            if digest(safe_bytes(path,uid=self.uid))!=digest(previous[name]):
+                raise ValueError('Managed infrastructure changed; refuse removal')
+            path.unlink();self.sync(path.parent)
 
     def _refresh_root_receipts(self,hashes):
         proof_path=self.root_state/'recovery-provision.json';proof=json.loads(safe_bytes(proof_path,limit=1024*1024,uid=self.uid))
@@ -378,15 +436,10 @@ class Device:
                 if not path.parent.exists():
                     path.parent.mkdir(parents=True,mode=0o700);self.sync(path.parent.parent)
                 self.atomic(path,value,mode)
-            # A local rollback can remove only paths explicitly absent before
-            # bootstrap, and only while bytes still match the trusted candidate.
-            tx=self.store.read('transaction');candidate=next(item for item in tx['candidate']['components'] if item['name']=='root-infrastructure')
-            candidate_hashes=self.inspect(self.cache_bytes(candidate),candidate)
-            for name in c.get('absent',[]):
-                path=self._infra_path(name)
-                if not os.path.lexists(path):continue
-                if digest(safe_bytes(path,uid=self.uid))!=candidate_hashes[name]:raise ValueError('Candidate-created infrastructure changed; refuse removal')
-                path.unlink();self.sync(path.parent)
+            tx=self.store.read('transaction')
+            other=next(item for item in tx['candidate' if rollback or c.get('local') else 'prior']['components'] if item['name']=='root-infrastructure')
+            other_files=archive(self.cache_bytes(other))
+            self._retire_infrastructure(files,other_files)
             self._refresh_root_receipts(hashes)
             if screensaver is None:
                 self.repair_registrations()
@@ -407,22 +460,25 @@ class Device:
 
     def screensaver_pending(self, tx):
         from .support.package import companion_outcome_pending
-        return tx['edition'] == 'root' and companion_outcome_pending(self.store, tx)
+        return companion_outcome_pending(self.store, tx)
 
     def screensaver_components(self, tx, rollback):
-        from .support.package import root_companion
+        from .support.package import root_companion, companion_files
 
         def companion(release):
-            self._verify_release(release, 'root')
-            component = next(item for item in release['components'] if item['name'] == 'root')
-            return root_companion(self.cache_bytes(component), component)
+            self._verify_release(release, tx['edition'])
+            name = 'root' if tx['edition'] == 'root' else 'home'
+            component = next(item for item in release['components'] if item['name'] == name)
+            raw = self.cache_bytes(component)
+            if name == 'root': return root_companion(raw, component)
+            self.inspect(raw, component)
+            return companion_files(package_archive(members(raw)['data.tar.gz']),
+                                   'usr/palm/applications/com.gathin.tvhome/')
 
         candidate, prior = companion(tx['candidate']), companion(tx['prior'])
         return (prior, candidate) if rollback else (candidate, prior)
 
     def sync_screensaver(self, tx, rollback):
-        if tx['edition'] != 'root':
-            return
         from .support.package import companion_journal_name, sync_companion
         target, prior = self.screensaver_components(tx, rollback)
         name = companion_journal_name(tx, rollback)
@@ -435,8 +491,6 @@ class Device:
         sync_companion(self.installed_root, target, prior, journal, self.state, uid=self.uid)
 
     def verify_screensaver(self, tx, rollback):
-        if tx['edition'] != 'root':
-            return True
         from .support.package import installed_companion
         target, prior = self.screensaver_components(tx, rollback)
         return (target is None and prior is None) or installed_companion(self.installed_root, target, self.uid)
@@ -812,7 +866,7 @@ class Device:
         for name in self._infra_inventory():
             path=self._infra_path(name)
             if not os.path.lexists(path):
-                if name not in absent:raise ValueError('Required managed infrastructure is missing')
+                if name in expected[0] and name in expected[1] and name not in absent:raise ValueError('Required managed infrastructure is missing')
                 continue
             current=digest(safe_bytes(path,limit=32*1024*1024,uid=self.uid))
             if current not in (expected[0].get(name),expected[1].get(name)):raise ValueError('Managed infrastructure conflict; computer recovery required')

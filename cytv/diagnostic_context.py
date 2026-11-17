@@ -182,6 +182,9 @@ def tv_summary(value):
                 detail['reason'] = 'ssh-exit-status-missing'
             elif 0 <= code <= 255:
                 detail['exit_status'] = code
+        if detail['step'] == 'restore' and detail['reason'] == 'ssh-command-failed':
+            from .errors import root_restore_failure_details
+            detail.update(root_restore_failure_details(failure))
         if detail['reason'] == 'connection-interrupted' and failure.get('reconnect_failed') is True:
             detail['reconnect_failed'] = True
         result['root_activation_restore_failure'] = detail
@@ -457,7 +460,8 @@ def status_summary(value):
     if updater:
         result['system_updater'] = {key: updater[key] for key in ('present', 'bootstrap_complete', 'disabled') if type(updater.get(key)) is bool}
     runtime = mapping(device.get('result', device))
-    for key in ('removed','verified_clean','private_cleanup_verified','legacy_registrations_unverified'):
+    for key in ('removed','verified_clean','private_cleanup_verified','legacy_registrations_unverified',
+                'empty_helper_dirs_retained'):
         if type(value.get(key)) is bool:result[key]=value[key]
     for key in ('guardian_active', 'journal_exists', 'recovery_integrity_verified', 'home_enabled'):
         if type(runtime.get(key)) is bool:

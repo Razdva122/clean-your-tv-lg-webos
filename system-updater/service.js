@@ -1,6 +1,8 @@
 'use strict';
 function pythonCommand() {
-  return require('./python_boot').command(require('path').dirname(__dirname));
+  return require('./python_boot').command(
+    '/var/lib/clean-your-tv-system-updater'
+  );
 }
 
 var Service = require('webos-service'),
@@ -20,6 +22,7 @@ var fields = {
   check: ['edition'],
   status: [],
   install: ['edition', 'release', 'profile'],
+  repair: ['edition', 'profile'],
   restoreProfile: ['edition'],
   healthy: ['edition', 'transaction', 'version'],
   rollback: [],
@@ -49,7 +52,7 @@ function createDispatch(execute) {
     if (allowed.indexOf('edition') >= 0 && !launchers[payload.edition])
       throw Error('invalid-edition');
     if (
-      ['install', 'restoreProfile', 'healthy'].indexOf(method) >= 0 &&
+      ['install', 'repair', 'restoreProfile', 'healthy'].indexOf(method) >= 0 &&
       id !== launchers[payload.edition]
     )
       throw Error('caller-not-authorized');
@@ -90,7 +93,10 @@ var service = new Service(SERVICE),
       if (process.getuid() !== 0) return reject(Error('root-service-required'));
       var child = execFile(
         pythonCommand(),
-        [__dirname + '/run-system-updater.py', method],
+        [
+          '/var/lib/clean-your-tv-system-updater/code/run-system-updater.py',
+          method
+        ],
         { timeout: 100000, maxBuffer: 8 * 1024 * 1024 },
         function (error, stdout) {
           try {

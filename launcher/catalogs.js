@@ -4251,3 +4251,136 @@ HomeI18n.add({
     'OK Pick up   ·   Back Exit': 'OK 拿起   ·   返回離開'
   }
 });
+
+HomeI18n.add({
+  'en': {
+    'Reinstall System Updater': 'Reinstall System Updater',
+    'Reinstall System Updater?': 'Reinstall System Updater?',
+    'Reinstall only System Updater. Home and your settings will stay unchanged. Keep the TV powered on.':
+      'Reinstall only System Updater. Home and your settings will stay unchanged. Keep the TV powered on.',
+    'Cancel updater operation': 'Cancel updater operation',
+    'Cancel updater operation?': 'Cancel updater operation?',
+    'Cancel this updater operation and keep Home and your settings unchanged.':
+      'Cancel this updater operation and keep Home and your settings unchanged.'
+  },
+  'ru': {
+    'Reinstall System Updater': 'Переустановить System Updater',
+    'Reinstall System Updater?': 'Переустановить System Updater?',
+    'Reinstall only System Updater. Home and your settings will stay unchanged. Keep the TV powered on.':
+      'Переустановится только System Updater. Home и ваши настройки сохранятся. Не выключайте телевизор.',
+    'Cancel updater operation': 'Отменить операцию обновления',
+    'Cancel updater operation?': 'Отменить операцию обновления?',
+    'Cancel this updater operation and keep Home and your settings unchanged.':
+      'Отменить эту операцию обновления, сохранив Home и ваши настройки.'
+  },
+  'de': {
+    'Reinstall System Updater': 'System Updater neu installieren',
+    'Reinstall System Updater?': 'System Updater neu installieren?',
+    'Reinstall only System Updater. Home and your settings will stay unchanged. Keep the TV powered on.':
+      'Nur System Updater wird neu installiert. Home und Ihre Einstellungen bleiben erhalten. Lassen Sie den Fernseher eingeschaltet.',
+    'Cancel updater operation': 'Updater-Vorgang abbrechen',
+    'Cancel updater operation?': 'Updater-Vorgang abbrechen?',
+    'Cancel this updater operation and keep Home and your settings unchanged.':
+      'Diesen Updater-Vorgang abbrechen. Home und Ihre Einstellungen bleiben erhalten.'
+  },
+  'es': {
+    'Reinstall System Updater': 'Reinstalar System Updater',
+    'Reinstall System Updater?': '¿Reinstalar System Updater?',
+    'Reinstall only System Updater. Home and your settings will stay unchanged. Keep the TV powered on.':
+      'Solo se reinstalará System Updater. Home y tus ajustes se conservarán. Mantén el televisor encendido.',
+    'Cancel updater operation': 'Cancelar operación del actualizador',
+    'Cancel updater operation?': '¿Cancelar la operación del actualizador?',
+    'Cancel this updater operation and keep Home and your settings unchanged.':
+      'Cancelar esta operación del actualizador conservando Home y tus ajustes.'
+  },
+  'pt-BR': {
+    'Reinstall System Updater': 'Reinstalar System Updater',
+    'Reinstall System Updater?': 'Reinstalar System Updater?',
+    'Reinstall only System Updater. Home and your settings will stay unchanged. Keep the TV powered on.':
+      'Somente o System Updater será reinstalado. O Home e suas configurações serão preservados. Mantenha a TV ligada.',
+    'Cancel updater operation': 'Cancelar operação de atualização',
+    'Cancel updater operation?': 'Cancelar operação de atualização?',
+    'Cancel this updater operation and keep Home and your settings unchanged.':
+      'Cancelar esta operação de atualização preservando o Home e suas configurações.'
+  },
+  'fr': {
+    'Reinstall System Updater': 'Réinstaller System Updater',
+    'Reinstall System Updater?': 'Réinstaller System Updater ?',
+    'Reinstall only System Updater. Home and your settings will stay unchanged. Keep the TV powered on.':
+      'Seul System Updater sera réinstallé. Home et vos réglages seront conservés. Gardez le téléviseur allumé.',
+    'Cancel updater operation': 'Annuler l’opération de mise à jour',
+    'Cancel updater operation?': 'Annuler l’opération de mise à jour ?',
+    'Cancel this updater operation and keep Home and your settings unchanged.':
+      'Annuler cette opération de mise à jour en conservant Home et vos réglages.'
+  },
+  'it': {
+    'Reinstall System Updater': 'Reinstalla System Updater',
+    'Reinstall System Updater?': 'Reinstallare System Updater?',
+    'Reinstall only System Updater. Home and your settings will stay unchanged. Keep the TV powered on.':
+      'Verrà reinstallato solo System Updater. Home e le impostazioni saranno conservati. Lascia il televisore acceso.',
+    'Cancel updater operation': 'Annulla l’operazione di aggiornamento',
+    'Cancel updater operation?': 'Annullare l’operazione di aggiornamento?',
+    'Cancel this updater operation and keep Home and your settings unchanged.':
+      'Annulla questa operazione di aggiornamento conservando Home e le impostazioni.'
+  },
+  'pl': {
+    'Reinstall System Updater': 'Zainstaluj ponownie System Updater',
+    'Reinstall System Updater?': 'Zainstalować ponownie System Updater?',
+    'Reinstall only System Updater. Home and your settings will stay unchanged. Keep the TV powered on.':
+      'Ponownie zainstalowany zostanie tylko System Updater. Home i ustawienia zostaną zachowane. Pozostaw telewizor włączony.',
+    'Cancel updater operation': 'Anuluj operację aktualizacji',
+    'Cancel updater operation?': 'Anulować operację aktualizacji?',
+    'Cancel this updater operation and keep Home and your settings unchanged.':
+      'Anuluj tę operację aktualizacji, zachowując Home i ustawienia.'
+  },
+  'cs': {
+    'Reinstall System Updater': 'Přeinstalovat System Updater',
+    'Reinstall System Updater?': 'Přeinstalovat System Updater?',
+    'Reinstall only System Updater. Home and your settings will stay unchanged. Keep the TV powered on.':
+      'Přeinstaluje se pouze System Updater. Home a vaše nastavení zůstanou zachovány. Nechte televizor zapnutý.',
+    'Cancel updater operation': 'Zrušit operaci aktualizace',
+    'Cancel updater operation?': 'Zrušit operaci aktualizace?',
+    'Cancel this updater operation and keep Home and your settings unchanged.':
+      'Zrušit tuto operaci aktualizace a zachovat Home a vaše nastavení.'
+  },
+  'ko': {
+    'Reinstall System Updater': 'System Updater 다시 설치',
+    'Reinstall System Updater?': 'System Updater를 다시 설치할까요?',
+    'Reinstall only System Updater. Home and your settings will stay unchanged. Keep the TV powered on.':
+      'System Updater만 다시 설치합니다. Home과 설정은 유지됩니다. TV 전원을 켜 두세요.',
+    'Cancel updater operation': '업데이트 작업 취소',
+    'Cancel updater operation?': '업데이트 작업을 취소할까요?',
+    'Cancel this updater operation and keep Home and your settings unchanged.':
+      'Home과 설정을 유지하고 이 업데이트 작업을 취소합니다.'
+  },
+  'hi': {
+    'Reinstall System Updater': 'System Updater फिर से इंस्टॉल करें',
+    'Reinstall System Updater?': 'System Updater फिर से इंस्टॉल करें?',
+    'Reinstall only System Updater. Home and your settings will stay unchanged. Keep the TV powered on.':
+      'केवल System Updater फिर से इंस्टॉल होगा। Home और आपकी सेटिंग्स सुरक्षित रहेंगी। टीवी चालू रखें।',
+    'Cancel updater operation': 'अपडेट प्रक्रिया रद्द करें',
+    'Cancel updater operation?': 'अपडेट प्रक्रिया रद्द करें?',
+    'Cancel this updater operation and keep Home and your settings unchanged.':
+      'Home और आपकी सेटिंग्स सुरक्षित रखते हुए इस अपडेट प्रक्रिया को रद्द करें।'
+  },
+  'zh-Hans': {
+    'Reinstall System Updater': '重新安装 System Updater',
+    'Reinstall System Updater?': '重新安装 System Updater？',
+    'Reinstall only System Updater. Home and your settings will stay unchanged. Keep the TV powered on.':
+      '仅重新安装 System Updater。Home 和设置将保留。请保持电视开机。',
+    'Cancel updater operation': '取消更新操作',
+    'Cancel updater operation?': '取消更新操作？',
+    'Cancel this updater operation and keep Home and your settings unchanged.':
+      '取消此次更新操作，保留 Home 和设置。'
+  },
+  'zh-Hant': {
+    'Reinstall System Updater': '重新安裝 System Updater',
+    'Reinstall System Updater?': '重新安裝 System Updater？',
+    'Reinstall only System Updater. Home and your settings will stay unchanged. Keep the TV powered on.':
+      '僅重新安裝 System Updater。Home 和設定將保留。請保持電視開機。',
+    'Cancel updater operation': '取消更新作業',
+    'Cancel updater operation?': '取消更新作業？',
+    'Cancel this updater operation and keep Home and your settings unchanged.':
+      '取消此次更新作業，保留 Home 和設定。'
+  }
+});

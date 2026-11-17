@@ -10,13 +10,14 @@ import os
 from pathlib import Path, PurePosixPath
 import re
 import stat
+import subprocess
 
 try:
     from updater.store import Store, encode
-    from updater.package import members, archive
+    from updater.package import members, archive, safe_bytes
 except ModuleNotFoundError:
     from system_updater.support.store import Store, encode
-    from system_updater.support.package import members, archive
+    from system_updater.support.package import members, archive, safe_bytes
 from package_data import read_verified
 
 ROOT='com.cleanyourtv.root.preview'
@@ -43,6 +44,48 @@ def store(path,uid):
 def _record(path,name,uid):
     if not os.path.lexists(path):return None
     return store(path,uid).read(name)
+
+
+def system_helper(state, method, *, uid=0):
+    """Run only the pinned private reader, never import another runtime's code.
+
+The fixed interpreter binding is itself part of the checked code inventory.
+Every pinned import is checked before Node/Python executes any private code.
+"""
+    if method not in ('own-package', 'engine-recovery'):
+        raise ValueError('Unknown private System reader')
+    state = Path(state); code = state/'code'
+    receipt = _record(state, 'infrastructure', uid)
+    required = {'python_boot.js', 'run-system-updater.py', 'system_updater/bootstrap.py'}
+    if (not isinstance(receipt,dict) or receipt.get('schema') != 1
+            or not isinstance(receipt.get('code'),dict) or not required <= set(receipt['code'])):
+        raise ValueError('Missing pinned System recovery inventory')
+    for name, expected in receipt['code'].items():
+        path = PurePosixPath(name)
+        if path.is_absolute() or '..' in path.parts or str(path) != name or '\\' in name:
+            raise ValueError('Unsafe System recovery inventory')
+        if digest(safe_bytes(code/name, limit=4*1024*1024, uid=uid)) != _sha(expected):
+            raise ValueError('Pinned System recovery code changed')
+    env = {key:value for key,value in os.environ.items()
+           if not key.startswith('PYTHON') and key not in ('NODE_OPTIONS','NODE_PATH')}
+    env.update(PYTHONDONTWRITEBYTECODE='1', PYTHONNOUSERSITE='1')
+    result = subprocess.run(['/usr/bin/node', str(code/'python_boot.js'), str(state),
+                             str(code/'run-system-updater.py'), method],
+                            input=b'{}', stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                            timeout=90, check=False, cwd=code, env=env)
+    if result.returncode or len(result.stdout) > 2*1024*1024:
+        raise ValueError('Private System reader failed')
+    response = json.loads(result.stdout)
+    if not isinstance(response,dict) or set(response) != {'returnValue','result'} or response['returnValue'] is not True:
+        raise ValueError('Invalid private System reader reply')
+    return response['result']
+
+
+def system_recovery_allowed(state, *, uid=0):
+    """An uncertain own-IPK window admits only its independently proven owner."""
+    if not os.path.lexists(Path(state)/'engine-state/transaction.json'):
+        return False
+    return system_helper(state, 'engine-recovery', uid=uid) is True
 
 
 def _sha(value):
@@ -255,6 +298,11 @@ def inventory(owner,*,purpose='current',states=None,uid=0):
     states=STATES if states is None else states
     root,updater,system=(Path(states[o]) for o in (ROOT,UPDATER,SYSTEM))
     if owner==SYSTEM:
+        if os.path.lexists(system/'engine-state/supervisor-generation.json'):
+            files = system_helper(system, 'own-package', uid=uid)
+            if files is None:
+                raise ValueError('System generation is missing authenticated package proof')
+            return dict(_inventory(SYSTEM, files))
         binding=_record(system,'bootstrap-bundle',uid);receipt=_record(system,'installed-package',uid)
         terminal=_record(system,'installed-terminal',uid);bootstrap=_record(system,'bootstrap',uid)
         from installation import terminal_install
@@ -357,6 +405,16 @@ def worker_allowed(owner,*,states=None,uid=0):
     """Do not wake a standalone writer while the System writer owns recovery."""
     if owner!=UPDATER:return True
     states=STATES if states is None else states
+    engine = _record(Path(states[SYSTEM])/'engine-state', 'transaction', uid)
+    if engine is not None:
+        if (not isinstance(engine,dict) or engine.get('schema') != 1
+                or not isinstance(engine.get('id'),str) or not re.fullmatch('[a-f0-9]{32}',engine['id'])):
+            raise ValueError('Invalid System engine ownership journal')
+        if engine.get('phase') not in ('complete','aborted'):
+            return False
+    lease = _record(Path('/var/lib/clean-your-tv-installation'), 'operation', uid)
+    if isinstance(lease,dict) and lease.get('owner') == 'system-engine' and lease.get('terminal') is not True:
+        return False
     tx=_record(Path(states[SYSTEM]),'transaction',uid)
     if tx is None:return True
     tx=_journal(tx,True)
@@ -380,6 +438,8 @@ def identity(owner,*,purpose='current',states=None,installed=INSTALLED,uid=0,ful
         # external deletion. Only its original private manager may reconcile it.
         active_states=STATES if states is None else states
         if purpose=='worker':
+            if owner == SYSTEM and system_recovery_allowed(Path(active_states[SYSTEM]),uid=uid):
+                raise TransitionUnknown('System own-package replacement requires original recovery') from error
             sources=[(UPDATER,False)] if owner==ROOT else []
             if owner in (ROOT,UPDATER):sources.append((SYSTEM,True))
             for writer,system in sources:

@@ -362,6 +362,7 @@ def retry_staging_at_startup():
 
 
 JOURNALS = {
+    'system-engine': (Path('/var/lib/clean-your-tv-system-updater/engine-state/transaction.json'), 'phase', {'complete','aborted'}),
     'deploy': (Path('/var/lib/clean-your-tv-root/deploy.json'), 'stage', {'installed-recovery-only','uninstalled-state-retained'}),
     'root-bootstrap': (Path('/var/lib/clean-your-tv-root-updater/bootstrap.json'), 'phase', {'complete'}),
     'root-update': (Path('/var/lib/clean-your-tv-root-updater/transaction.json'), 'phase', {'complete','rolled-back','aborted'}),

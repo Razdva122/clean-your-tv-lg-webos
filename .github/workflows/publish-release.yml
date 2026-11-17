@@ -75,6 +75,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           UPDATE_SIGNING_PRIVATE_KEY: ${{ secrets.UPDATE_SIGNING_PRIVATE_KEY }}
+          BOOTSTRAP_SIGNING_PRIVATE_KEY: ${{ secrets.BOOTSTRAP_SIGNING_PRIVATE_KEY }}
+          BOOTSTRAP_SIGNING_KEY_CHAIN: ${{ vars.BOOTSTRAP_SIGNING_KEY_CHAIN }}
           RELEASE_TAG: ${{ inputs.tag }}
         run: python scripts/prepare-release.py "$RELEASE_TAG" "$RUNNER_TEMP/signed-release"
       - name: Upload, verify and publish

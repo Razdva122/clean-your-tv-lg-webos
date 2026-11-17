@@ -4,6 +4,7 @@ import argparse
 import ast
 import hashlib
 import json
+import runpy
 from pathlib import Path
 import sys
 
@@ -13,7 +14,8 @@ from cytv import package
 
 SERVICE='com.cleanyourtv.system.updater.service'
 APP='com.cleanyourtv.system.updater'
-VERSION='1.2.10'
+VERSION='1.2.11'
+ENGINE_VERSION='1.2.11'
 APPS={'home':'com.gathin.tvhome','helper':'com.local.nativehome','updater':'com.cleanyourtv.updater','root':'com.cleanyourtv.root.preview','root-updater':'com.cleanyourtv.root.updater'}
 
 def digest(raw):return hashlib.sha256(raw).hexdigest()
@@ -32,7 +34,7 @@ def build(output, legacy_node_prototype=False, legacy_node_beta=False):
     output=Path(output).absolute()
     if '..' in output.parts or any(p.is_symlink() for p in (output,*output.parents)):raise ValueError('Indirect output')
     code={'system_updater/__init__.py':b'', 'system_updater/support/__init__.py':b''}
-    for name in ('core.py','device.py','cli.py','policy.js'):
+    for name in ('core.py','device.py','cli.py','policy.js','engine-policy.js','bootstrap-trust.js','bootstrap-public.pem','bootstrap.py','activation.py','bootstrap_migration.py','supervisor_io.py'):
         code['system_updater/'+name]=source(ROOT/'system-updater'/name)
     for name in ('store.py','package.py','profile.py','luna.py'):
         code['system_updater/support/'+name]=source(ROOT/'root-edition/updater'/name)
@@ -47,7 +49,9 @@ def build(output, legacy_node_prototype=False, legacy_node_beta=False):
     infra=['support/python_binding.py','support/python_boot.js','support/package_data.py','support/package_identity.py','support/updater/store.py','support/updater/package.py','support/startup_guard.py']+['service/'+n for n in private]+['runtime/'+n for n in runtime]+['updater/updater/'+n for n in updater]+['updater/'+n for n in support]+['updater/updater/release-public.pem','updater/service.js','updater/run-updater.py','updater/services.json','updater/package.json']
     code['infrastructure-paths.json']=(json.dumps(sorted(infra))+'\n').encode()
     code['service.js']=source(ROOT/'system-updater/service.js')
-    code['run-system-updater.py']=b'from system_updater.cli import entry\nentry()\n'
+    code['run-system-updater.py']=b'import sys\nsys.dont_write_bytecode = True\nfrom system_updater.bootstrap import entry\nentry()\n'
+    code['engine-entry.py']=b'import sys\nsys.dont_write_bytecode = True\nfrom system_updater.cli import entry\nentry()\n'
+    code['service-entry.py']=b'import sys\nsys.dont_write_bytecode = True\nfrom system_updater.bootstrap import service_entry\nservice_entry()\n'
     code['services.json']=(json.dumps({'id':SERVICE,'services':[{'name':SERVICE}]})+'\n').encode()
     code['package.json']=(json.dumps({'name':SERVICE,'version':VERSION,'main':'service.js'})+'\n').encode()
     sp='usr/palm/services/'+SERVICE+'/'
@@ -60,6 +64,8 @@ def build(output, legacy_node_prototype=False, legacy_node_beta=False):
            'usr/palm/packages/'+APP+'/packageinfo.json':json.dumps({'id':APP,'version':VERSION,'app':APP,'services':[SERVICE]}).encode()}
     sys.path.insert(0,str(ROOT/'root-edition'))
     from startup_hook import packaged_content
+    permissions=runpy.run_path(str(ROOT/'system-updater/setup.py'))['permission_plan']()
+    code['permissions.json']=(json.dumps(permissions,sort_keys=True)+'\n').encode()
     files[ap+'startup.sh']=packaged_content(APP)
     code['system-updater.ipk']=package.ipk(APP,VERSION,files,executable={ap+'startup.sh'})
     code['setup-system-updater.py']=source(ROOT/'system-updater/setup.py')
@@ -72,7 +78,7 @@ def build(output, legacy_node_prototype=False, legacy_node_beta=False):
     output.mkdir(parents=True,exist_ok=False)
     for name,raw in code.items():
         target=output/name;target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(raw)
-    (output/'bundle.json').write_text(json.dumps({'schema':1,'supervisor':1,'health_lock_wait_seconds':10,'files':{n:digest(b) for n,b in sorted(code.items())}},indent=2)+'\n')
+    (output/'bundle.json').write_text(json.dumps({'schema':1,'supervisor':1,'engine_version':ENGINE_VERSION,'health_lock_wait_seconds':10,'files':{n:digest(b) for n,b in sorted(code.items())}},indent=2)+'\n')
     return output/'system-updater.ipk'
 
 def component(name,raw,local=True,release=None,graphics="1920x1080"):
@@ -131,9 +137,11 @@ def release_set(payload,edition,release,local=True,notes='Computer-provisioned b
         if local:item.update(local=True,files=files,absent=[])
         else:item['url']='https://github.com/Razdva122/clean-your-tv-lg-webos/releases/download/'+release+'/root-infrastructure_'+item['version']+('_720p' if graphics=='1280x720' and raw!=infrastructure(payload)[0] else '')+'.tar.gz'
         components.append(item)
-    companion = not local and edition == 'root' and 'usr/palm/applications/com.cleanyourtv.root.preview/screensaver-companion/manifest.json' in package.data_files(raws['root'])
+    app_component = 'root' if edition == 'root' else 'home'
+    companion = not local and 'usr/palm/applications/'+APPS[app_component]+'/screensaver-companion/manifest.json' in package.data_files(raws[app_component])
     manifest={'schema':1,'edition':edition,'release':release,'supervisor':2 if companion else 1,'notes':notes,'components':components}
-    if edition=='root' and not local:manifest['minimumSupervisorVersion']=VERSION if companion else '1.1.1'
+    if edition=='root' and not local:manifest['minimumSupervisorVersion']='1.2.10' if companion else '1.1.1'
+    if edition=='no-root' and companion:manifest['minimumSupervisorVersion']='1.2.11'
     return manifest,raws
 
 def prepare_baseline(payload,edition,output,release=None,graphics="1920x1080"):
@@ -144,7 +152,46 @@ def prepare_baseline(payload,edition,output,release=None,graphics="1920x1080"):
     (output/'baseline.json').write_text(json.dumps(manifest,indent=2)+'\n')
     return output
 
-def prepare_release(payload,output,release,notes):
+
+def engine_archive(bundle):
+    """Package exactly the engine code retained in the complete installer."""
+    bundle = Path(bundle)
+    manifest = json.loads(source(bundle / 'bundle.json'))
+    return engine_archive_files(manifest, lambda name: source(bundle / name))
+
+
+def engine_archive_files(manifest, read):
+    files = {}
+    for name, expected in sorted(manifest['files'].items()):
+        package.safe_name(name)
+        raw = read(name)
+        if digest(raw) != expected:
+            raise ValueError('Engine bundle hash mismatch: ' + name)
+        if name != 'setup-system-updater.py':
+            files[name] = raw
+    if 'engine-entry.py' not in files:
+        raise ValueError('Engine entry point missing')
+    inventory = {name: digest(raw) for name, raw in files.items()}
+    files['engine.json'] = (json.dumps({'schema': 1, 'version': manifest.get('engine_version', ENGINE_VERSION),
+                                      'files': inventory}, sort_keys=True) + '\n').encode()
+    return package.tgz(files, directories=False)
+
+
+def engine_catalog(raw, manifests, release):
+    expected = {'root', 'root-720p', 'no-root', 'no-root-720p'}
+    if set(manifests) != expected or any(m.get('release') != release for m in manifests.values()):
+        raise ValueError('Complete matching engine release inventory required')
+    return {'schema': 1, 'engine': {
+        'version': ENGINE_VERSION, 'bootstrap': 1, 'minimumPython': '3.9.0',
+        'minimumNode': 8, 'sha256': digest(raw), 'size': len(raw),
+        'url': 'https://github.com/Razdva122/clean-your-tv-lg-webos/releases/download/'
+               + release + '/system-engine_' + ENGINE_VERSION + '.tar.gz'},
+        'releases': manifests}
+
+def prepare_release(payload,output,release,notes,*,historical=False):
+    bundle = Path(payload) / 'system-updater'
+    if not historical and not (bundle / 'engine-entry.py').is_file():
+        raise ValueError('Complete self-updating engine bundle required')
     output=Path(output);output.mkdir(parents=True,exist_ok=True)
     manifests={}
     variants=('1920x1080','1280x720') if (Path(payload)/'launcher-720p.ipk').exists() else ('1920x1080',)
@@ -157,6 +204,11 @@ def prepare_release(payload,output,release,notes):
             if target.exists() and target.read_bytes()!=raw:raise ValueError('Release asset collision')
             target.write_bytes(raw)
     (output/'system-manifests.json').write_text(json.dumps(manifests,indent=2)+'\n')
+    if (bundle / 'engine-entry.py').is_file():
+        raw = engine_archive(bundle)
+        catalog = engine_catalog(raw, manifests, release)
+        (output / ('system-engine_' + ENGINE_VERSION + '.tar.gz')).write_bytes(raw)
+        (output / 'system-bootstrap-manifest.json').write_text(json.dumps(catalog, indent=2) + '\n')
     return manifests
 
 if __name__=='__main__':

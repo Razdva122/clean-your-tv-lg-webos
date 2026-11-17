@@ -93,7 +93,22 @@ function caller(id) {
     await dispatch(caller('com.cleanyourtv.root.updater'), 'rollback', {}),
     'ok'
   );
-  assert.equal(Object.keys(handlers).length, 7);
+  assert.equal(
+    await dispatch(caller('com.gathin.tvhome'), 'repair', {
+      edition: 'no-root',
+      profile: {}
+    }),
+    'ok'
+  );
+  await assert.rejects(
+    () =>
+      dispatch(caller('com.cleanyourtv.root.updater'), 'repair', {
+        edition: 'root',
+        profile: {}
+      }),
+    /authorized/
+  );
+  assert.equal(Object.keys(handlers).length, 8);
   console.log('System updater authorization tests passed');
 })().catch((e) => {
   console.error(e);

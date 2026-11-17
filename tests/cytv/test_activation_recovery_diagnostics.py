@@ -181,6 +181,36 @@ class ActivationDiagnosticTests(unittest.TestCase):
         self.assertNotIn('root_activation_restore_failure', diagnostic_context.tv_summary(self.installer.tv_info))
 
 
+
+    def test_native_restore_failure_survives_ssh_and_report_without_raw_reply(self):
+        from cytv.transport import SSH
+        self.store.checkpoint(self.profile, stage='enable', activation_restore_pending=True,
+                              activation_restore='unverified')
+        remote = SSH(MagicMock())
+        remote._command_channel = MagicMock()
+        state = copy.deepcopy(self.device)
+        state['intent']['enabled'] = True
+        root_reply = {'returnValue': False, 'error': 'PRIVATE', 'root_restore_failure': {
+            'restore_check': 'native-restore-unverified', 'native_reason': 'ui_release_failed',
+            'token': 'PRIVATE'}}
+        def replies(_channel, _timeout):
+            if remote._command_channel.call_count == 1:
+                yield json.dumps({'returnValue': True, 'result': state}).encode()
+                return
+            yield json.dumps(root_reply).encode()
+            raise TVCommandError(1)
+        remote.chunks = replies
+        self.installer.remote = remote
+        with self.assertRaises(UserError) as caught:
+            recover(self.installer, lambda _: 'y', Console(lambda *_: None))
+        report = self.report_failure(caught.exception)
+        self.assertNotIn('PRIVATE', json.dumps(report))
+        detail = report['tv']['root_activation_restore_failure']
+        self.assertEqual(detail, {'step': 'restore', 'reason': 'ssh-command-failed', 'exit_status': 1,
+                                  'restore_check': 'native-restore-unverified', 'native_reason': 'ui_release_failed'})
+        self.assertEqual(remote._command_channel.call_count, 2)
+        self.assertTrue(self.store.pending(self.profile)['activation_restore_pending'])
+
     def test_activation_restore_transport_failure_preserves_failed_step(self):
         state = copy.deepcopy(self.device)
         state['intent']['enabled'] = True

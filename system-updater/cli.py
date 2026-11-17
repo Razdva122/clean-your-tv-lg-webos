@@ -29,7 +29,7 @@ def validate_request(method,payload):
 
 
 def spawn_worker():
-    subprocess.Popen([sys.executable,str(Path(__file__).resolve().parents[1]/'run-system-updater.py'),'worker'],stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,start_new_session=True,close_fds=True)
+    subprocess.Popen([sys.executable,str(STATE/'code/run-system-updater.py'),'worker'],stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,start_new_session=True,close_fds=True)
 
 
 def handle(method,payload,store,device,wake=spawn_worker):
@@ -128,6 +128,53 @@ def healthy_operation(payload,store,device):
         return
 
 
+def engine_request(method, payload, store, device):
+    if method=='engine-state':
+        if set(payload)!={'edition'} or payload['edition'] not in ('root','no-root'):raise ValueError('Invalid state request')
+        device.integrity(enforce=False);device.require_components()
+        baseline=device._baseline(payload['edition'])
+        if not device.verify_baseline(baseline):raise ValueError('Installed baseline changed')
+        return {'edition':payload['edition'],'release':baseline['release'],'resolution':device.graphics_resolution(),
+                'components':[{'name':c['name'],'version':c['version']} for c in baseline['components']]}
+    if method=='engine-profile':
+        if set(payload)!={'edition','profile'}:raise ValueError('Invalid profile request')
+        from .core import validate_profile
+        return validate_profile(payload['profile'],payload['edition'])
+    from installation import Ownership
+    from .bootstrap import Bootstrap
+    runtime = Bootstrap()
+    tx = runtime.active_transition()
+    owner = Ownership().status()
+    if (set(payload) != {'operation'} or not tx or tx['id'] != payload['operation']
+            or not owner or owner['owner'] != 'system-engine' or owner['terminal']):
+        raise ValueError('Original engine transition required')
+    device.integrity()
+    device.require_components()
+    prior = device._baseline(tx['edition'])
+    if not device.verify_baseline(prior): raise ValueError('Engine cannot verify the retained baseline')
+    if method == 'engine-health':
+        # Resolve the signed target with this engine before committing activation.
+        if tx.get('engineOnly'):
+            manifest=device.fetch('verify',{'proof':{'bootstrap':tx['proof'],'variant':tx['variant']}})
+            if manifest['release']!=tx['release']:raise ValueError('Engine target changed')
+            return {'operation':tx['id'],'ready':True}
+        offer = device.offer(tx['edition'])
+        if not offer['canInstall'] or offer['release'] != tx['release']:
+            raise ValueError('Engine cannot install the selected release')
+        return {'operation':tx['id'], 'ready':True}
+    if tx['phase'] != 'handoff': raise ValueError('Engine is not ready for product reservation')
+    current = store.read('transaction')
+    if current and current.get('id') == tx['id']:
+        return Manager(store,device).status()
+    if current != tx['previousTransaction']: raise ValueError('Retained product transaction changed')
+    profile = runtime.store.read(tx['profile'])
+    import hashlib
+    from .support.store import encode
+    if hashlib.sha256(encode(profile)).hexdigest() != tx['profileDigest']:
+        raise ValueError('Transition profile changed')
+    return Manager(store,device).install(tx['edition'], tx['release'], profile, operation=tx['id'])
+
+
 def main():
     if os.geteuid()!=0:raise PermissionError('Root System Updater service required')
     if len(sys.argv)!=2:raise ValueError('Expected one supervisor operation')
@@ -136,6 +183,8 @@ def main():
     raw=sys.stdin.buffer.read(4*1024*1024+1)
     if len(raw)>4*1024*1024:raise ValueError('Request too large')
     payload=json.loads(raw or b'{}')
+    if method in ('engine-health','engine-reserve','engine-state','engine-profile'):
+        return engine_request(method,payload,store,device)
     validate_request(method,payload)
     if method in ('status','check','restoreProfile'):
         return handle(method,payload,store,device)

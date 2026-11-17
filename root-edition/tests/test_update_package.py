@@ -15,6 +15,16 @@ from updater.package import inspect_package, verify_payload
 
 
 class PackageTests(unittest.TestCase):
+    def test_generic_package_admission_does_not_change_companion_parent_authority(self):
+        from unittest.mock import patch
+        from updater import package
+        foreign = 'usr/palm/applications/com.cleanyourtv.root.updater/'
+        with patch.object(package, 'PREFIX', foreign):
+            self.assertIsNone(package.companion_files({}))
+            self.assertIsNone(package.companion_files({}, 'usr/palm/applications/com.gathin.tvhome/'))
+            with self.assertRaisesRegex(ValueError, 'Foreign companion parent'):
+                package.companion_files({}, foreign)
+
     def package(self, files):
         spec = importlib.util.spec_from_file_location('root_update_builder', ROOT/'build.py')
         builder = importlib.util.module_from_spec(spec); spec.loader.exec_module(builder)
