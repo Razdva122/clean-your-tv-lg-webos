@@ -501,3 +501,35 @@ test('diagnostics reports unavailable monitoring, clears stale foreground, stops
   assert.equal(c.logs.at(-1).monitorReason, null);
   assert.equal(c.logs.at(-1).foreground, HOME);
 });
+
+test('the original diagnostic session records standby wake and the next app', () => {
+  const c = controller();
+  c.fg(HOME);
+  c.command('diagnostics-start');
+  c.power({ state: 'Suspend' });
+  c.advance(12000);
+  c.fg(COVER);
+  c.power({ state: 'Active' });
+  c.advance(400);
+  c.homeCalls().at(-1).reply();
+  c.fg(HOME);
+  c.fg('youtube.leanback.v4');
+  c.advance(60000);
+
+  const records = c.logs.filter((record) => record.event === 'home-diagnostic');
+  assert.equal(records[0].trigger, 'started');
+  assert.equal(records.at(-1).trigger, 'expired');
+  assert(records.every((record) => record.session === records[0].session));
+  assert(
+    records.some(
+      (record) => record.trigger === 'launch-request' && record.id === HOME
+    )
+  );
+  assert(
+    records.some(
+      (record) =>
+        record.trigger === 'foreground' &&
+        record.foreground === 'youtube.leanback.v4'
+    )
+  );
+});
