@@ -321,6 +321,56 @@ class HelperBootPauseTests(DeviceBase):
     def test_reboot_never_reenables_helper_boot_implicitly(self):
         self.device._suspend_helper(self.tx);self.device.boot=lambda:'boot-two';self.device.finish(self.tx);self.assertFalse(json.loads(self.startup.read_bytes())['enabled'])
 
+class LegacyNoRootCompanionTests(DeviceBase):
+    def setUp(self):
+        super().setUp()
+        from system_updater.support.package import SCREENSAVER_FILES, SCREENSAVER_INFO, SCREENSAVER_PREFIX
+
+        self.files={SCREENSAVER_PREFIX+name:name.encode() for name in SCREENSAVER_FILES}
+        self.files[SCREENSAVER_INFO]=b'package metadata'
+        self.home_hash='a'*64
+        files={'usr/palm/applications/com.gathin.tvhome/index.html':digest(b'published Home')}
+        self.home_pin=digest(json.dumps(files,sort_keys=True).encode())
+        files['usr/palm/applications/com.gathin.tvhome/apps.js']=digest(b'personalized')
+        self.device.cache_bytes=lambda component:b'captured Home'
+        self.device.inspect=lambda raw,component:dict(files)
+        self.tx={'edition':'no-root','id':'d'*32,'prior':{'release':'v0.0.0','components':[
+            {'name':'home','sha256':self.home_hash,'version':'1.20.0','local':True},
+        ]}}
+
+    def write_files(self):
+        for name,raw in self.files.items():
+            path=self.device.installed_root/name
+            path.parent.mkdir(parents=True,exist_ok=True)
+            path.write_bytes(raw)
+
+    def test_captures_exact_standalone_files_before_update_and_reads_them_after_replacement(self):
+        from unittest.mock import patch
+
+        pin=digest(json.dumps({name:digest(raw) for name,raw in self.files.items()},sort_keys=True).encode())
+        self.write_files()
+        with patch.object(self.mod,'LEGACY_NO_ROOT_HOME',{self.home_pin},create=True), \
+             patch.object(self.mod,'LEGACY_NO_ROOT_SCREENSAVER',pin,create=True):
+            with self.assertRaisesRegex(ValueError,'baseline was not captured'):
+                self.device.legacy_no_root_companion(self.tx)
+            old=self.device.legacy_no_root_companion(self.tx,capture=True)
+            self.assertEqual(old,('0.0.5',self.files))
+            replaced=self.device.installed_root/next(iter(self.files))
+            replaced.write_bytes(b'replaced by new release')
+            self.assertEqual(self.device.legacy_no_root_companion(self.tx),old)
+
+    def test_refuses_unverified_old_screensaver_and_records_verified_absence(self):
+        from unittest.mock import patch
+
+        with patch.object(self.mod,'LEGACY_NO_ROOT_HOME',{self.home_pin},create=True):
+            self.assertIsNone(self.device.legacy_no_root_companion(self.tx,capture=True))
+            self.write_files()
+            self.assertIsNone(self.device.legacy_no_root_companion(self.tx))
+            self.tx['id']='e'*32
+            with self.assertRaisesRegex(ValueError,'verified legacy No-root screensaver'):
+                self.device.legacy_no_root_companion(self.tx,capture=True)
+        self.assertIsNone(Store(self.device.state/'legacy-no-root-screensaver',uid=os.getuid()).read('baseline-'+self.tx['id']))
+
 class PrivateServiceTests(DeviceBase):
     def test_private_recovery_service_has_fixed_destination_and_receipts(self):
         files={'runtime/cli.py':b'runtime','service/service.js':b'new-service','updater/service.js':b'updater'}
