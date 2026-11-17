@@ -303,6 +303,69 @@ class RuntimeTests(unittest.TestCase):
             self.k.stop_controller(self.root,self.uid)
         self.assertFalse(record.exists())
 
+    def test_same_boot_recovery_preserves_active_home_until_explicit_off(self):
+        self.admission = self.generic()
+        self.prepare()
+        active = dict(self.proof(), state='armed', healthy=True, stock_verified=False,
+                      stopped=False, guardian_pid=123)
+        self.k.write_intent(self.root, True, active['token'], 'active', self.uid)
+        chain = [self.k.filter_entry(self.root)]
+        self.k.atomic(self.root/'c1-keyfilter/ownership.json',
+                      dict(schema=1, entry=chain[0], token=active['token']), self.uid)
+
+        def native(args, *_args, **_kwargs):
+            if args == ['--restore']:
+                active.update(self.proof(), reason='explicit_off')
+            return active.copy()
+
+        with patch.object(self.k, 'native', side_effect=native) as guard, \
+                patch.object(self.k, 'read_chain', side_effect=lambda: chain.copy()), \
+                patch.object(self.k, 'write_chain', side_effect=lambda value, **_: chain.__setitem__(slice(None), value)), \
+                patch.object(self.k, 'verify_ready', return_value={'integrity_verified': True}):
+            for _ in range(2):
+                reply = self.k.execute('boot', root=self.root, uid=self.uid)
+                self.assertIsInstance(reply, dict, 'Same-boot callback stopped Home routing')
+                self.assertTrue(reply['effective']['routing_active'])
+            self.assertTrue(all(call.args[0] == ['--status'] for call in guard.call_args_list))
+            self.assertEqual(self.k.execute('restore', root=self.root, uid=self.uid), 'restored')
+            self.assertEqual(active['reason'], 'explicit_off')
+            self.assertEqual(chain, [])
+            self.assertFalse(self.k.read_intent(self.root, self.uid)['enabled'])
+
+    def test_boot_restores_when_same_boot_active_routing_cannot_be_proven(self):
+        self.prepare()
+        active = dict(self.proof(), state='armed', healthy=True, stock_verified=False,
+                      stopped=False, guardian_pid=123)
+        intent = self.k.write_intent(self.root, True, active['token'], 'active', self.uid)
+        own = self.k.filter_entry(self.root)
+        cases = (
+            ('previous boot', dict(intent, boot='00000000-0000-0000-0000-000000000001'), active, [own], True),
+            ('wrong token', dict(intent, token='2'*32), active, [own], True),
+            ('stopped guardian', intent, dict(self.proof(), reason='emergency'), [own], True),
+            ('missing filter', intent, active, [], True),
+            ('invalid recovery', intent, active, [own], False),
+            ('trial', dict(intent, phase='trial', enabled=False), active, [own], True),
+        )
+        for name, saved, proof, chain, verified in cases:
+            with self.subTest(name=name):
+                self.k.atomic(self.root/'c1-keyfilter/intent.json', saved, self.uid)
+                with patch.object(self.k, 'native', return_value=proof), \
+                        patch.object(self.k, 'read_chain', return_value=chain), \
+                        patch.object(self.k, 'verify_ready', return_value={'integrity_verified': verified}), \
+                        patch.object(self.k, 'restore_locked', return_value='restored') as restore:
+                    self.assertEqual(self.k.execute('boot', root=self.root, uid=self.uid), 'restored')
+                    restore.assert_called_once_with(self.root, self.uid, explicit_restore=False)
+
+    def test_same_boot_recovery_still_handles_interrupted_filter_write(self):
+        self.prepare()
+        self.k.write_intent(self.root, True, '1'*32, 'active', self.uid)
+        (self.root/'c1-keyfilter/pending.json').touch()
+        with patch.object(self.k, 'status') as status, \
+                patch.object(self.k, 'restore_locked', return_value='restored') as restore:
+            self.assertEqual(self.k.execute('boot', root=self.root, uid=self.uid), 'restored')
+            status.assert_not_called()
+            restore.assert_called_once_with(self.root, self.uid, explicit_restore=False)
+
     def test_schema3_configd_reset_cancels_lifecycle_return_without_reinstalling(self):
         self.admission=self.generic();self.prepare()
         self.k.write_intent(self.root,True,'1'*32,'active',self.uid)
