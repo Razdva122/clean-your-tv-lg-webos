@@ -632,6 +632,10 @@ class Device:
             value=self.runtime('status');intent=value.get('intent');effective=value.get('effective',{});profiles=effective.get('profiles',{})
             routes=[effective.get('sam_home'),profiles.get('defaultApps',{}).get('categories',{}).get('home'),profiles.get('idleApp',{}).get('appId')]
             return (not intent or intent.get('phase')=='disabled') and routes==['com.webos.app.home']*3 and profiles.get('idleApp',{}).get('support') is True
+        # A preference first written after suspension still needs a pause
+        # before the next component replacement.
+        if os.path.lexists(self._renewal_settings()) and self.store.read('renewal-pause-'+self._cycle(tx)) is None:
+            self._pause_renewal(tx)
         return not self._helper_processes()
 
     def _mutable_paths(self):
@@ -890,10 +894,12 @@ class Device:
 
     def _pause_renewal(self,tx):
         self._stop_renewal();path=self._renewal_settings();name='renewal-pause-'+self._cycle(tx);ticket=self.store.read(name)
-        if not path.exists():
-            parent=path.parent.parent;owner=parent.stat();path.parent.mkdir(mode=0o700,exist_ok=True)
-            os.chown(path.parent,owner.st_uid,owner.st_gid)
-            self.atomic(path,b'{"enabled":false}',owner=(owner.st_uid,owner.st_gid))
+        if ticket is None and not os.path.lexists(path):
+            # The service is disabled by default. Leave its state directory and
+            # settings-file creation under the service's ownership.
+            self._cancel_renewal()
+            if not os.path.lexists(path):return
+            self._stop_renewal()
         raw=safe_bytes(path,limit=65536);state=json.loads(raw);info=path.stat()
         if not isinstance(state,dict) or type(state.get('enabled')) is not bool:raise ValueError('Invalid renewal settings')
         pause=state.get('updatePause')

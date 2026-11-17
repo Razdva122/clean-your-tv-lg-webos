@@ -172,6 +172,37 @@ class PreferenceBase(DeviceBase):
         self.tx={'id':'a'*32,'edition':'no-root','phase':'complete'};self.store.write('transaction',self.tx)
 
 class PreferenceTests(PreferenceBase):
+    def test_missing_renewal_settings_stay_missing_through_update(self):
+        self.settings.unlink()
+        self.settings.parent.chmod(0o2770)
+        directory = self.settings.parent.stat()
+
+        self.device._pause_renewal(self.tx)
+
+        self.assertEqual(self.events, ['stop', 'cancel'])
+        self.assertFalse(self.settings.exists())
+        current = self.settings.parent.stat()
+        self.assertEqual((current.st_mode, current.st_uid, current.st_gid),
+                         (directory.st_mode, directory.st_uid, directory.st_gid))
+        self.assertIsNone(self.store.read('renewal-pause-' + self.tx['id']))
+        self.assertEqual(self.device._finish_renewal(self.tx), {'status': 'unchanged'})
+        self.assertEqual(self.events, ['stop', 'cancel'])
+
+    def test_renewal_enabled_after_default_pause_is_paused_before_install(self):
+        self.settings.unlink()
+        self.device._pause_renewal(self.tx)
+        self.settings.write_text('{"enabled":true,"preferenceTouched":true}')
+        self.settings.chmod(0o640)
+        self.device._helper_processes = lambda: []
+
+        self.assertTrue(self.device.routing_safe())
+
+        state = json.loads(self.settings.read_bytes())
+        self.assertFalse(state['enabled'])
+        self.assertTrue(state['updatePause']['wasEnabled'])
+        self.assertEqual(self.settings.stat().st_mode & 0o777, 0o640)
+        self.assertTrue(self.store.read('renewal-pause-' + self.tx['id'])['confirmed'])
+
     def test_renewal_is_durably_paused_before_replacement(self):
         self.device._pause_renewal(self.tx);state=json.loads(self.settings.read_bytes());self.assertFalse(state['enabled']);self.assertTrue(state['updatePause']['wasEnabled']);self.assertEqual(self.events,['stop','cancel']);self.assertTrue(self.store.read('renewal-pause-'+self.tx['id'])['confirmed'])
     def test_explicit_renewal_disable_during_update_wins(self):
