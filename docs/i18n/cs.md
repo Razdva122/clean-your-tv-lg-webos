@@ -117,6 +117,8 @@ V desktopovém instalátoru otevřete **Údržba → Upravit nastavení LG (Debl
 
 ## Nastavení
 
+V nabídce **Nastavení → Vzhled** zapněte **Nejčastěji používané aplikace první**. Pořadí v doku se zachová. Podržením OK upravíte ruční pořadí nebo skryjete dlaždici. Vypnutím volby se vrátíte k ručnímu pořadí. Volbu najdete také na konci nastavení v instalátoru cytv.
+
 Pomocí ↑ ↓ vyberte kategorii a pomocí → nebo OK do ní vstupte. ← se vrací ke kategoriím; Zpět se nejprve vrátí k nim a poté zavře nastavení. Při návratu do sekce se obnoví poslední dostupný ovládací prvek. Ve Sloupcích šipky odpovídají mřížce se třemi sloupci. V Jazyku se zaměří vybraný jazyk.
 
 V **Nastavení → Vaše obrazovka Home → Formát času** vyberte **Automaticky (podle nastavení TV)**, **12hodinový** nebo **24hodinový** formát.

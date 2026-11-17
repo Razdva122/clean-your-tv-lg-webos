@@ -488,8 +488,8 @@
         if (window.HomeLayoutPanel) window.HomeLayoutPanel.open();
         return;
       }
-      if (index === 10) {
-        if (window.HomeAppControls) HomeAppControls.toggle();
+      if (index === 10 || index === 19) {
+        if (window.HomeAppControls) HomeAppControls.toggle(index === 19);
         return;
       }
       if (index === 14) {
@@ -669,105 +669,106 @@
       back.className = 'renewal-actions';
       footer.appendChild(back);
       buttons = [];
-      [3, 1, 9, 8, 10, 11, 18, 14, 5, 4, 0, 17, 7, 6, 2, 12, 15, 16].forEach(
-        function (i) {
-          var labels = [
-            'TV settings',
-            'Open LG Home',
-            'Back to Home',
-            'Change Home',
-            'Software updates',
-            'Language',
-            'LG firmware updates',
-            'HDMI sound',
-            'Columns',
-            'Themes',
-            'Show Add app tile',
-            'Add app',
-            'Check status',
-            'Show inputs on Home',
-            'Preview inputs on focus',
-            'LG Channels / Live TV',
-            'YouTube',
-            'LG Notifications',
-            'Edit tiles'
-          ];
-          var b = document.createElement('button');
-          b.textContent = t(i === 6 ? 'Block LG firmware updates' : labels[i]);
-          if (i === 12) {
-            b.hidden = true;
-            b.disabled = true;
-          }
-          if (i === 3) b.className = 'home-routing-switch';
-          var target =
-            i === 15 || i === 16
-              ? sourceActions
-              : i === 10 || i === 11 || i === 14 || i === 18
-                ? apps
-                : i === 9
-                  ? themes
-                  : i === 8
-                    ? layout
-                    : i === 6 || i === 7
-                      ? firmware
-                      : i === 3 || i === 12 || i === 1
-                        ? homeActions
-                        : i === 4 || i === 0 || i === 5 || i === 17
-                          ? links
-                          : back;
-          if (i === 10) {
-            b.id = 'homeShowAddApp';
-            b.className = 'home-routing-switch';
-            b.setAttribute('role', 'switch');
-            b.setAttribute('aria-checked', 'true');
-          }
-          if (i === 14) {
-            b.id = 'homePreviewInputs';
-            b.className = 'home-routing-switch';
-            b.setAttribute('role', 'switch');
-            b.setAttribute('aria-checked', 'true');
-          }
-          if (i === 15 || i === 16) {
-            b.className = 'home-routing-switch';
-            b.setAttribute('role', 'switch');
-            b.setAttribute('aria-checked', String(sources[sourceKeys[i - 15]]));
-            b.setAttribute('aria-describedby', 'rootStartupHint');
-            b.disabled = true;
-          }
-          if (i === 11) b.id = 'homeAddApp';
-          if (i === 18) b.id = 'homeEditTiles';
-          if (i === 9) {
-            b.hidden = true;
-            b.disabled = true;
-          }
-          if (i === 8) b.id = 'homeColumns';
-          if (i === 1) {
-            b.className = 'home-visit-button';
-            b.setAttribute('aria-describedby', 'rootHomeVisitHint');
-          }
-          b.onclick = function () {
-            selected = i;
-            activate(i);
-          };
-          b.onfocus = function () {
-            selected = i;
-          };
-          if (i === 4) {
-            var dot = document.createElement('span');
-            dot.className = 'settings-update-dot';
-            dot.setAttribute('aria-hidden', 'true');
-            b.appendChild(dot);
-          }
-          if (i === 4 || i === 0 || i === 5 || i === 17) {
-            var arrow = document.createElement('span');
-            arrow.className = 'settings-chevron';
-            arrow.setAttribute('aria-hidden', 'true');
-            b.appendChild(arrow);
-          }
-          target.appendChild(b);
-          buttons[i] = b;
+      [
+        3, 1, 9, 8, 19, 10, 11, 18, 14, 5, 4, 0, 17, 7, 6, 2, 12, 15, 16
+      ].forEach(function (i) {
+        var labels = [
+          'TV settings',
+          'Open LG Home',
+          'Back to Home',
+          'Change Home',
+          'Software updates',
+          'Language',
+          'LG firmware updates',
+          'HDMI sound',
+          'Columns',
+          'Themes',
+          'Show Add app tile',
+          'Add app',
+          'Check status',
+          'Show inputs on Home',
+          'Preview inputs on focus',
+          'LG Channels / Live TV',
+          'YouTube',
+          'LG Notifications',
+          'Edit tiles',
+          'Sort by most used'
+        ];
+        var b = document.createElement('button');
+        b.textContent = t(i === 6 ? 'Block LG firmware updates' : labels[i]);
+        if (i === 12) {
+          b.hidden = true;
+          b.disabled = true;
         }
-      );
+        if (i === 3) b.className = 'home-routing-switch';
+        var target =
+          i === 15 || i === 16
+            ? sourceActions
+            : i === 10 || i === 11 || i === 14 || i === 18 || i === 19
+              ? apps
+              : i === 9
+                ? themes
+                : i === 8
+                  ? layout
+                  : i === 6 || i === 7
+                    ? firmware
+                    : i === 3 || i === 12 || i === 1
+                      ? homeActions
+                      : i === 4 || i === 0 || i === 5 || i === 17
+                        ? links
+                        : back;
+        if (i === 10 || i === 19) {
+          b.id = i === 10 ? 'homeShowAddApp' : 'homeUsageSort';
+          b.className = 'home-routing-switch';
+          b.setAttribute('role', 'switch');
+          b.setAttribute('aria-checked', String(i === 10));
+        }
+        if (i === 14) {
+          b.id = 'homePreviewInputs';
+          b.className = 'home-routing-switch';
+          b.setAttribute('role', 'switch');
+          b.setAttribute('aria-checked', 'true');
+        }
+        if (i === 15 || i === 16) {
+          b.className = 'home-routing-switch';
+          b.setAttribute('role', 'switch');
+          b.setAttribute('aria-checked', String(sources[sourceKeys[i - 15]]));
+          b.setAttribute('aria-describedby', 'rootStartupHint');
+          b.disabled = true;
+        }
+        if (i === 11) b.id = 'homeAddApp';
+        if (i === 18) b.id = 'homeEditTiles';
+        if (i === 9) {
+          b.hidden = true;
+          b.disabled = true;
+        }
+        if (i === 8) b.id = 'homeColumns';
+        if (i === 1) {
+          b.className = 'home-visit-button';
+          b.setAttribute('aria-describedby', 'rootHomeVisitHint');
+        }
+        b.onclick = function () {
+          selected = i;
+          activate(i);
+        };
+        b.onfocus = function () {
+          selected = i;
+        };
+        if (i === 4) {
+          var dot = document.createElement('span');
+          dot.className = 'settings-update-dot';
+          dot.setAttribute('aria-hidden', 'true');
+          b.appendChild(dot);
+        }
+        if (i === 4 || i === 0 || i === 5 || i === 17) {
+          var arrow = document.createElement('span');
+          arrow.className = 'settings-chevron';
+          arrow.setAttribute('aria-hidden', 'true');
+          b.appendChild(arrow);
+        }
+        target.appendChild(b);
+        buttons[i] = b;
+      });
       themes.id = 'homeThemeHost';
       if (window.HomeThemePanel) HomeThemePanel.mount(themes);
       var appsError = text(apps, 'p', '');

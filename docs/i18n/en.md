@@ -143,6 +143,8 @@ In the desktop installer, open **Maintenance action → Adjust LG settings (Debl
 
 ## Settings
 
+Under **Settings → Appearance**, turn on **Sort by most used** to bring apps you launch often to the top of the grid. The dock keeps its order. Hold OK to edit in manual order, including moving a tile to Hide. Turn the switch off to return to your manual order. You can also choose this at the end of the cytv installer’s Settings step.
+
 Use ↑ ↓ to choose a category and → or OK to enter it. ← returns to categories; Back returns there first, then closes settings. Within a section, returning from categories restores the last available control. In Columns, arrows follow the three-column grid. In Language, entry focuses the selected language.
 
 In **Settings → Your Home screen → Clock format**, choose **Automatic (TV locale)**, **12-hour**, or **24-hour**.

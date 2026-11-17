@@ -1127,8 +1127,30 @@ class Wizard(QMainWindow):
                 toggle.updateGeometry()
                 hint.setText(tr('Current setting unavailable. Check it in Home settings.'))
             switches[key] = toggle
+        usage_row = QWidget()
+        usage_layout = QHBoxLayout(usage_row)
+        usage_layout.setContentsMargins(0, 0, 0, 0)
+        usage_layout.setSpacing(16)
+        usage_label = WrappedLabel(tr(settings.USAGE_SORT))
+        usage_label.setObjectName('settingTitle')
+        usage_sort = Select()
+        usage_sort.setObjectName('usage_sort')
+        usage_sort.setAccessibleName(tr(settings.USAGE_SORT))
+        for label, value in (('Keep current settings', None), ('On', True), ('Off', False)):
+            usage_sort.addItem(tr(label), value)
+        usage_label.setBuddy(usage_sort)
+        usage_layout.addWidget(usage_label, 1)
+        usage_layout.addWidget(usage_sort)
+        fields.addWidget(usage_row)
+        usage_help = WrappedLabel(tr(settings.USAGE_SORT_HELP))
+        usage_help.setObjectName('settingHint')
+        fields.addWidget(usage_help)
+
         def save():
             value = {'theme': group.checkedButton().key, 'weather': weather.isChecked()}
+            usage_choice = usage_sort.currentData()
+            if usage_choice is not None:
+                value['usage_sort'] = usage_choice
             for key, toggle in switches.items():
                 if toggle.isEnabled() and toggle.isChecked() != current[key]:
                     value[key] = toggle.isChecked()

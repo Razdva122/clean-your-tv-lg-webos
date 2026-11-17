@@ -59,6 +59,7 @@ const http = require('node:http');
                     id: 'a'.repeat(32),
                     theme: 'liquid-glass',
                     weather: true,
+                    usage_sort: true,
                     ...(edition === 'root-launcher'
                       ? { tv_name: 'Setup TV' }
                       : {})
@@ -94,12 +95,23 @@ const http = require('node:http');
         assert.equal(await page.title(), 'Setup TV');
       await page.locator('#btnSettings').click();
       assert.equal(await page.locator('#homeTvName').count(), 0);
+      await page.locator('[data-category=appearance]').click();
+      assert.equal(
+        await page.locator('#homeUsageSort').getAttribute('aria-checked'),
+        'true'
+      );
+      await page.keyboard.press('Escape');
       await page.keyboard.press('Escape');
       // Initial launch params on a later startup also run after profile readiness.
       await page.addInitScript(() => {
         window.PalmSystem = {
           launchParams: JSON.stringify({
-            cytvSetup: { id: 'b'.repeat(32), theme: 'ribbon', weather: false }
+            cytvSetup: {
+              id: 'b'.repeat(32),
+              theme: 'ribbon',
+              weather: false,
+              usage_sort: false
+            }
           })
         };
       });
@@ -114,6 +126,12 @@ const http = require('node:http');
           () => JSON.parse(localStorage.getItem('tvhome.weather.v1')).enabled
         ),
         false
+      );
+      await page.locator('#btnSettings').click();
+      await page.locator('[data-category=appearance]').click();
+      assert.equal(
+        await page.locator('#homeUsageSort').getAttribute('aria-checked'),
+        'false'
       );
       assert.deepEqual(errors, []);
       await page.close();

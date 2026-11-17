@@ -120,7 +120,12 @@ const profiles = [
               setTimeout(
                 () =>
                   this.onservicecallback(
-                    JSON.stringify({ returnValue: uri.endsWith('/launch') })
+                    JSON.stringify({
+                      returnValue:
+                        uri.endsWith('/launch') &&
+                        (params.id !== 'airplay' ||
+                          window.airplayMode !== 'launch-error')
+                    })
                   ),
                 0
               );
@@ -478,6 +483,21 @@ const profiles = [
           )
         );
         await page.locator('#appPicker [data-app-id="airplay"]').click();
+        async function toggleUsageSort() {
+          await page.locator('#btnSettings').click();
+          await page.locator('[data-category=appearance]').click();
+          await page.locator('#homeUsageSort').click();
+          await page.keyboard.press('Escape');
+          await page.keyboard.press('Escape');
+          await page.locator('#renewalPanel').waitFor({ state: 'hidden' });
+        }
+        const airplayCount = () =>
+          page.evaluate(
+            () =>
+              JSON.parse(localStorage.getItem('tvhome.usage.v1')).counts
+                .airplay || 0
+          );
+        await toggleUsageSort();
         // Closing the picker exposes grid tiles under the pointer. Park it
         // outside the grid before selecting the app for remote-control tests.
         await page.mouse.move(0, 0);
@@ -501,6 +521,7 @@ const profiles = [
           [],
           'successful AirPlay page must not launch the app again'
         );
+        assert.equal(await airplayCount(), 1, 'AirPlay page counts one open');
         await page.evaluate(() => {
           window.airplayMode = 'error';
         });
@@ -512,6 +533,11 @@ const profiles = [
           ['airplay'],
           'explicit AirPlay failure uses normal launch'
         );
+        assert.equal(
+          await airplayCount(),
+          2,
+          'successful fallback counts one open'
+        );
         await returnHome();
         await page.evaluate(() => {
           window.launches = [];
@@ -519,6 +545,7 @@ const profiles = [
         });
         await page.keyboard.press('Enter');
         await page.clock.fastForward(10000);
+        await page.clock.runFor(1); // Deliver the fallback's asynchronous reply.
         assert.deepEqual(
           await page.evaluate(() => launches),
           ['airplay'],
@@ -534,6 +561,21 @@ const profiles = [
           ['airplay'],
           'late AirPlay error must not launch twice'
         );
+        assert.equal(
+          await airplayCount(),
+          3,
+          'late replies cannot add a count'
+        );
+        await returnHome();
+        await page.evaluate(() => {
+          window.launches = [];
+          window.airplayMode = 'launch-error';
+        });
+        await page.keyboard.press('Enter');
+        await page.clock.runFor(100);
+        assert.deepEqual(await page.evaluate(() => launches), ['airplay']);
+        assert.equal(await airplayCount(), 3, 'failed fallback does not count');
+        await toggleUsageSort();
         await returnHome();
         const restored = await page.evaluate(() => {
           let removed = 0;
