@@ -7,6 +7,9 @@
   System Updater 1.2.10 can use the [one-time computer
   replacement](UPDATES.md#update-root-from-v1220). Replacement verifies retained
   records from the earlier supervisor format (#675).
+- No-root System updates preserve existing Home profiles and the disabled
+  Developer Mode renewal preference. Rollback can restore the verified
+  standalone Screensaver from v1.22.0 (#684, #685).
 - No-root Home and Screensaver settings can explain a stopped Home Helper
   and offer **Start Helper**. If the status is unavailable, you can retry the
   check or explicitly confirm a start. The settings check again after launch
