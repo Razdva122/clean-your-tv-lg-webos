@@ -1,6 +1,6 @@
 """Removal adapters for the existing product coordinator; retained code is data.
 
-All methods run under Ownership.removal. Package terminal authority remains in
+Removal runs under Ownership.removal. Package terminal authority remains in
 observed_install; this module never infers an old install outcome from absence.
 """
 from contextlib import contextmanager, ExitStack
@@ -69,7 +69,7 @@ def activities(device):
     return rows
 
 
-def runtime_restore(payload, uid=0):
+def runtime_restore(payload, uid=0, *, activation_token=None):
     """Called in an isolated interpreter with only the current verified bundle.
 
     Native restore reads its original inverse/inode journal; the executable is
@@ -102,7 +102,19 @@ def runtime_restore(payload, uid=0):
         finally:os.close(fd)
         backend.binary=lambda root,uid:path
     selection_raw=safe_bytes(backend.STATE/'home-backend.json',uid=uid) if backend is not None else None
-    restored = backend.restore_for_removal(backend.STATE, uid) if compositor else cli.main('restore')
+    if activation_token is not None:
+        if not compositor or not re.fullmatch('[a-f0-9]{32}', activation_token):
+            raise ValueError('retained_compositor_activation_required')
+        from update_guard import control
+        with control(backend.STATE, uid), backend.operation(backend.STATE, uid):
+            if safe_bytes(backend.STATE/'home-backend.json', uid=uid) != selection_raw:
+                raise ValueError('native_recovery_selection_changed')
+            current = backend.native(['--status'], backend.STATE, uid)
+            if current['token'] != activation_token:
+                raise ValueError('native_recovery_attempt_changed')
+            restored = backend.restore_locked(backend.STATE, uid, explicit_restore=True)
+    else:
+        restored = backend.restore_for_removal(backend.STATE, uid) if compositor else cli.main('restore')
     result={'returnValue':True,'result':restored}
     if selection_raw is not None and result['result']=='restored':
         if safe_bytes(backend.STATE/'home-backend.json',uid=uid)!=selection_raw:
@@ -151,6 +163,27 @@ def compositor_stock_report(payload, *, retire_orphan=False):
 def runtime_restore_report(payload, uid=0):
     report = _cleanup_child_report(runtime_restore, payload, uid)
     return report['result'] if report['returnValue'] else report
+
+
+def activation_restore_entry(args):
+    """Run the verified restore stage without entering the removal coordinator."""
+    import deploy
+    from updater.bootstrap import verify_bundle
+
+    if len(args) != 3 or args[1] != '--restore-activation':
+        raise ValueError('retained_compositor_activation_required')
+    deploy.require_device()
+    verify_bundle(Path(__file__).resolve().parent)
+    try:
+        return runtime_restore(args[0], activation_token=args[2])
+    except Exception as error:
+        if not (hasattr(error, 'restore_check') or hasattr(error, 'native_reason')):
+            return {'returnValue': False}
+        from transport import root_restore_failure_details
+        return {'returnValue': False, 'root_restore_failure': root_restore_failure_details({
+            'restore_check': getattr(error, 'restore_check', None),
+            'native_reason': getattr(error, 'native_reason', None),
+        })}
 
 
 def _cleanup_child_report(action, *args, **kwargs):
@@ -539,3 +572,9 @@ def compact_audit(record, store):
         if re.fullmatch(r'(?:request|submission|removal)-[a-f0-9]{32}\.json',path.name):
             value=store.read(path.name)
             if isinstance(value,dict):store.write(path.name,safe(value))
+
+
+if __name__ == '__main__':
+    reply = activation_restore_entry(sys.argv[1:])
+    print(json.dumps(reply), flush=True)
+    sys.exit(0 if reply['returnValue'] is True else 1)

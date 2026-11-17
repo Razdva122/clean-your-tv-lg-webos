@@ -1096,7 +1096,7 @@ else:
                 if not self.helper_retry():
                     raise UserError('Root is installed, but Home Helper has not stopped. Press Home three times within two seconds (older Helper: hold Home for two seconds), release all buttons, then use Home settings > Turn on Home control. Run cytv status or cytv restore before reinstalling.') from None
 
-    def recover_failed_activation(self):
+    def recover_failed_activation(self, *, verified_support=False):
         """Compensate our activation through the ownership-checked restore path.
 
         Keep the original stage/error, including when the compensation fails.
@@ -1112,19 +1112,36 @@ else:
         self.store.checkpoint(self.profile, activation_restore_pending=True, activation_restore='unverified')
         self.progress('Restoring LG Home…')
         from .errors import connection_interrupted
+        restored_token = None
         for attempt in range(2):
-            step = 'initial-status'
+            step = 'final-status' if restored_token is not None else 'initial-status'
             try:
                 current = self.root_action('status').get('result', {})
                 if current.get('recovery', {}).get('integrity_verified') is not True:
                     self.tv_info[diagnostic_key] = {'step': step, 'reason': 'integrity-unverified'}
                     return False
-                if not self.root_setup_inactive(current):
+                if verified_support and current.get('backend') != 'c1-native-gate':
+                    raise UserError('Root operation was not confirmed. Run cytv status; retain recovery state.',
+                                    reason_code='root-operation-unconfirmed')
+                if restored_token is not None:
+                    if (not self.root_setup_inactive(current)
+                            or current.get('effective', {}).get('token') != restored_token):
+                        self.tv_info[diagnostic_key] = {'step': 'final-status', 'reason': 'stock-home-unverified'}
+                        return False
+                elif not self.root_setup_inactive(current):
                     step = 'restore'
-                    self.root_action('restore')
+                    effective = current.get('effective', {})
+                    if (verified_support and current.get('backend') == 'c1-native-gate'
+                            and effective.get('routing') == 'compositor-keyfilter-v1'):
+                        from .root_install_recovery import restore_activation
+                        restored_token = effective.get('token')
+                        restore_activation(self, restored_token)
+                    else:
+                        self.root_action('restore')
                     step = 'final-status'
                     after = self.root_action('status').get('result', {})
-                    if not self.root_setup_inactive(after):
+                    if (not self.root_setup_inactive(after)
+                            or restored_token is not None and after.get('effective', {}).get('token') != restored_token):
                         integrity = diagnostics.context.mapping(diagnostics.context.mapping(after).get('recovery'))
                         reason = ('stock-home-unverified' if integrity.get('integrity_verified') is True
                                   else 'integrity-unverified')

@@ -182,6 +182,57 @@ class ActivationDiagnosticTests(unittest.TestCase):
 
 
 
+
+    def test_review_restores_retained_c1_using_only_verified_bundle(self):
+        from unittest.mock import call
+        self.store.checkpoint(self.profile, home_backend='c1-native-gate', stage='enable',
+                              activation_restore_pending=True, activation_restore='unverified')
+        original = self.store.pending(self.profile)
+        token = '1'*32
+        old = {'backend': 'c1-native-gate', 'recovery': {'integrity_verified': True},
+               'intent': {'enabled': False, 'token': token}, 'effective': {
+                   'returnValue': True, 'backend': 'c1-native-gate', 'profiles': None, 'token': token,
+                   'routing': 'compositor-keyfilter-v1', 'stopped': True, 'healthy': False,
+                   'mounted': False, 'guardian_pid': 0, 'stock_verified': False,
+                   'filter_installed': True, 'routing_active': False}}
+        current = copy.deepcopy(old)
+        current['effective'].update(stock_verified=True, filter_installed=False)
+        calls = []
+
+        def retained_runtime(action):
+            calls.append(action)
+            if action != 'status':
+                raise TVCommandError(1)
+            return {'result': current if 'verified-restore' in calls else old}
+
+        def verified_bundle(*args, **kwargs):
+            calls.append('verified-restore')
+            return json.dumps({'returnValue': True, 'result': 'restored',
+                               'native_restored_sha256': 'a'*64})
+
+        self.installer.root_action = MagicMock(side_effect=retained_runtime)
+        self.installer.observe_recovery = MagicMock(return_value={'device': current})
+        self.installer.upload_product = MagicMock(return_value='/tmp/cytv-product-'+'0'*32)
+        self.installer.product_action = MagicMock(side_effect=AssertionError('package command'))
+        self.installer.uninstall_project = MagicMock(side_effect=AssertionError('package removal'))
+        with patch('cytv.root_install_recovery.run', side_effect=verified_bundle) as runner, \
+                patch('cytv.package.verify_payload', return_value={}):
+            recover(self.installer, lambda _: 'y', Console(lambda *_: None))
+        self.assertEqual(calls, ['status', 'verified-restore', 'status'])
+        self.assertEqual(self.installer.upload_product.call_args, call(self.installer.payload/'root-c1'))
+        stage = self.installer.upload_product.return_value
+        self.assertEqual(runner.call_args.args, (self.installer, stage+'/root-updater',
+                         'clean_removal.py', [stage+'/root', '--restore-activation', token]))
+        self.assertEqual(self.store.pending(self.profile), {
+            **original, 'activation_restore_pending': False, 'activation_restore': 'verified'})
+        self.installer.product_action.assert_not_called()
+        self.installer.uninstall_project.assert_not_called()
+
+        with patch('cytv.root_install_recovery.run', side_effect=AssertionError('already restored')):
+            recover(self.installer, lambda _: 'y', Console(lambda *_: None))
+        self.installer.upload_product.assert_called_once()
+        self.assertEqual(calls[-1], 'status')
+
     def test_native_restore_failure_survives_ssh_and_report_without_raw_reply(self):
         from cytv.transport import SSH
         self.store.checkpoint(self.profile, stage='enable', activation_restore_pending=True,

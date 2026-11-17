@@ -3,6 +3,7 @@ import hashlib
 import json
 import re
 import shlex
+from . import package
 from .errors import TVCommandError, UserError
 
 RECOVERY_ENTRY = r'''
@@ -44,6 +45,36 @@ def run(installer, stage, script, args, timeout):
     # Subsequent package readback must not run a retained binding module.
     installer._selected_python=python
     return raw
+
+
+def restore_activation(installer, token):
+    if not isinstance(token, str) or not re.fullmatch('[a-f0-9]{32}', token):
+        raise UserError('Root operation was not confirmed. Run cytv status; retain recovery state.',
+                        reason_code='root-operation-unconfirmed')
+    package.verify_payload(installer.payload)
+    stage = installer.upload_product(installer.payload/'root-c1')
+    finished = False
+    try:
+        raw = run(installer, stage+'/root-updater', 'clean_removal.py',
+                  [stage+'/root', '--restore-activation', token], timeout=180)
+        finished = True
+        reply = json.loads(raw)
+        proof = reply.get('native_restored_sha256') if isinstance(reply, dict) else None
+        if (not isinstance(reply, dict) or reply.get('returnValue') is not True
+                or reply.get('result') != 'restored' or not isinstance(proof, str)
+                or not re.fullmatch('[a-f0-9]{64}', proof)):
+            raise UserError('Root operation was not confirmed. Run cytv status; retain recovery state.',
+                            reason_code='root-operation-unconfirmed')
+    except TVCommandError as error:
+        finished = error.exit_status is not None and error.exit_status >= 0
+        raise
+    finally:
+        # Leave only the temporary bundle when the child may still be running.
+        if finished:
+            try:
+                installer.remote.run('rm -rf '+shlex.quote(stage))
+            except (OSError, RuntimeError):
+                pass
 
 
 def invoke(installer, action, pending, proof=None):
