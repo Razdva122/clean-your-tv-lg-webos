@@ -63,7 +63,7 @@ class RuntimeTests(unittest.TestCase):
             'restore_check': 'native-restore-unverified', 'native_reason': 'retirement_failed'})
         self.assertNotIn('PRIVATE', output.getvalue())
 
-    def test_large_stock_home_is_read_with_immutable_uid1001_proof(self):
+    def test_large_stock_home_is_read_with_immutable_nonroot_proof(self):
         import hashlib
         import stat
         import struct
@@ -75,7 +75,7 @@ class RuntimeTests(unittest.TestCase):
         original=os.fstat
         def attributes(fd):
             observed=original(fd)
-            return SimpleNamespace(st_uid=1001,st_nlink=observed.st_nlink,
+            return SimpleNamespace(st_uid=1002,st_nlink=observed.st_nlink,
                 st_mode=observed.st_mode,st_size=observed.st_size,st_dev=observed.st_dev,st_ino=observed.st_ino,st_mtime_ns=observed.st_mtime_ns,st_ctime_ns=observed.st_ctime_ns)
         with patch.object(self.k.legacy,'TARGET',target), patch.object(self.k.legacy,'trusted_directory'), patch.object(os,'fstat',side_effect=attributes), patch.object(os,'fstatvfs',create=True,return_value=SimpleNamespace(f_flag=1)), patch.object(self.k.legacy.subprocess,'run',return_value=SimpleNamespace(stdout=b'73717368\n',returncode=0)) as filesystem:
             self.assertEqual(hashlib.sha256(self.k.legacy.native_home()).hexdigest(),hashlib.sha256(content).hexdigest())
@@ -96,7 +96,7 @@ class RuntimeTests(unittest.TestCase):
                     filesystem.return_value=SimpleNamespace(stdout=magic,returncode=0)
                     with self.assertRaises(ValueError): self.k.legacy.native_home()
             filesystem.return_value=SimpleNamespace(stdout=b'73717368\n',returncode=0)
-            for change in (dict(st_uid=1002),dict(st_nlink=2),dict(st_mode=stat.S_IFREG|0o777),dict(st_mode=stat.S_IFREG|0o4755),dict(st_size=16777217)):
+            for change in (dict(st_nlink=2),dict(st_mode=stat.S_IFREG|0o777),dict(st_mode=stat.S_IFREG|0o4755),dict(st_size=16777217)):
                 value=dict(st_uid=1001,st_nlink=1,st_mode=stat.S_IFREG|0o755,st_size=4530960);value.update(change)
                 with self.subTest(change=change), patch.object(os,'fstat',return_value=SimpleNamespace(**value)):
                     with self.assertRaises(ValueError): self.k.legacy.native_home()
@@ -303,6 +303,69 @@ class RuntimeTests(unittest.TestCase):
             self.k.stop_controller(self.root,self.uid)
         self.assertFalse(record.exists())
 
+    def test_same_boot_recovery_preserves_active_home_until_explicit_off(self):
+        self.admission = self.generic()
+        self.prepare()
+        active = dict(self.proof(), state='armed', healthy=True, stock_verified=False,
+                      stopped=False, guardian_pid=123)
+        self.k.write_intent(self.root, True, active['token'], 'active', self.uid)
+        chain = [self.k.filter_entry(self.root)]
+        self.k.atomic(self.root/'c1-keyfilter/ownership.json',
+                      dict(schema=1, entry=chain[0], token=active['token']), self.uid)
+
+        def native(args, *_args, **_kwargs):
+            if args == ['--restore']:
+                active.update(self.proof(), reason='explicit_off')
+            return active.copy()
+
+        with patch.object(self.k, 'native', side_effect=native) as guard, \
+                patch.object(self.k, 'read_chain', side_effect=lambda: chain.copy()), \
+                patch.object(self.k, 'write_chain', side_effect=lambda value, **_: chain.__setitem__(slice(None), value)), \
+                patch.object(self.k, 'verify_ready', return_value={'integrity_verified': True}):
+            for _ in range(2):
+                reply = self.k.execute('boot', root=self.root, uid=self.uid)
+                self.assertIsInstance(reply, dict, 'Same-boot callback stopped Home routing')
+                self.assertTrue(reply['effective']['routing_active'])
+            self.assertTrue(all(call.args[0] == ['--status'] for call in guard.call_args_list))
+            self.assertEqual(self.k.execute('restore', root=self.root, uid=self.uid), 'restored')
+            self.assertEqual(active['reason'], 'explicit_off')
+            self.assertEqual(chain, [])
+            self.assertFalse(self.k.read_intent(self.root, self.uid)['enabled'])
+
+    def test_boot_restores_when_same_boot_active_routing_cannot_be_proven(self):
+        self.prepare()
+        active = dict(self.proof(), state='armed', healthy=True, stock_verified=False,
+                      stopped=False, guardian_pid=123)
+        intent = self.k.write_intent(self.root, True, active['token'], 'active', self.uid)
+        own = self.k.filter_entry(self.root)
+        cases = (
+            ('previous boot', dict(intent, boot='00000000-0000-0000-0000-000000000001'), active, [own], True),
+            ('wrong token', dict(intent, token='2'*32), active, [own], True),
+            ('stopped guardian', intent, dict(self.proof(), reason='emergency'), [own], True),
+            ('missing filter', intent, active, [], True),
+            ('invalid recovery', intent, active, [own], False),
+            ('trial', dict(intent, phase='trial', enabled=False), active, [own], True),
+        )
+        for name, saved, proof, chain, verified in cases:
+            with self.subTest(name=name):
+                self.k.atomic(self.root/'c1-keyfilter/intent.json', saved, self.uid)
+                with patch.object(self.k, 'native', return_value=proof), \
+                        patch.object(self.k, 'read_chain', return_value=chain), \
+                        patch.object(self.k, 'verify_ready', return_value={'integrity_verified': verified}), \
+                        patch.object(self.k, 'restore_locked', return_value='restored') as restore:
+                    self.assertEqual(self.k.execute('boot', root=self.root, uid=self.uid), 'restored')
+                    restore.assert_called_once_with(self.root, self.uid, explicit_restore=False)
+
+    def test_same_boot_recovery_still_handles_interrupted_filter_write(self):
+        self.prepare()
+        self.k.write_intent(self.root, True, '1'*32, 'active', self.uid)
+        (self.root/'c1-keyfilter/pending.json').touch()
+        with patch.object(self.k, 'status') as status, \
+                patch.object(self.k, 'restore_locked', return_value='restored') as restore:
+            self.assertEqual(self.k.execute('boot', root=self.root, uid=self.uid), 'restored')
+            status.assert_not_called()
+            restore.assert_called_once_with(self.root, self.uid, explicit_restore=False)
+
     def test_schema3_configd_reset_cancels_lifecycle_return_without_reinstalling(self):
         self.admission=self.generic();self.prepare()
         self.k.write_intent(self.root,True,'1'*32,'active',self.uid)
@@ -430,6 +493,75 @@ class RuntimeTests(unittest.TestCase):
     def test_review_recovery_reconciles_ui_failure_on_reported_c1(self):
         self.admission.update(model='OLED65C1PSA', firmware='03.53.45', webos='6.5.3')
         self.check_ui_failure_recovery(lambda: self.k.execute('restore', root=self.root, uid=self.uid))
+
+
+    def test_verified_activation_restore_uses_current_guard_on_retained_c1(self):
+        import hashlib
+        from types import SimpleNamespace
+        from unittest.mock import Mock
+        import clean_removal
+
+        work = self.root
+        self.root = work/'retained'
+        self.root.mkdir(mode=0o700)
+        self.admission.update(model='OLED65C1PSA', firmware='03.53.45', webos='6.5.3')
+        self.prepare()
+        token = '1'*32
+        own = self.k.filter_entry(self.root)
+        vendor = {'file': '/usr/lib/qt5/qml/KeyFilters/systemUi.js', 'handler': 'handleSystemKeys'}
+        chain = [own, vendor]
+        self.k.atomic(self.root/'c1-keyfilter/ownership.json', dict(schema=1, entry=own, token=token), self.uid)
+        retained_script = self.root/'runtime/c1_keyfilter.py'
+        retained_script.parent.mkdir(mode=0o700)
+        retained_script.write_text('raise AssertionError("retained mutation code executed")')
+        selection_path = self.root/'home-backend.json'
+        selection = selection_path.read_bytes()
+        payload = work/'current'
+        guard = payload/'runtime/c1-keyfilter-guard'
+        guard.parent.mkdir(parents=True)
+        guard.write_bytes(b'verified current executable')
+        guard.chmod(0o600)
+        manifest = {'files': {'runtime/c1-keyfilter-guard': hashlib.sha256(guard.read_bytes()).hexdigest()}}
+        installed = Mock(STATE=self.root)
+        installed.selection.side_effect = self.k.selection
+        cli = Mock()
+        cli.gate_backend.return_value = installed
+        replies = Mock(side_effect=[
+            {'returnValue': True, 'appId': self.k.STOCK},
+            {'returnValue': True, 'foregroundAppInfo': [{'appId': self.k.STOCK, 'windowType': self.k.HOME}]},
+        ])
+        native_actions = []
+
+        def run(argv, **_):
+            self.assertEqual(argv[0], str(guard))
+            native_actions.append(argv[-1])
+            value = self.proof()
+            if argv[-1] == '--restore':
+                value.update(returnValue=False, reason='ui_release_failed')
+            return SimpleNamespace(stdout=json.dumps(value).encode(), returncode=int(not value['returnValue']))
+
+        with patch.dict(sys.modules, {'cli': cli}), patch.object(sys, 'path', list(sys.path)), \
+                patch.object(self.k, 'STATE', self.root), patch.object(self.k, 'binary'), \
+                patch.object(self.k.subprocess, 'run', side_effect=run), \
+                patch.object(self.k, 'luna', replies), \
+                patch.object(self.k, 'read_chain', side_effect=lambda: list(chain)), \
+                patch.object(self.k, 'write_chain', side_effect=lambda value: chain.__setitem__(slice(None), value)) as write, \
+                patch('deploy.verify_bundle', return_value=manifest), \
+                patch('deploy.checked_file', return_value=guard.read_bytes()):
+            with self.assertRaisesRegex(ValueError, 'native_recovery_attempt_changed'):
+                clean_removal.runtime_restore(payload, self.uid, activation_token='2'*32)
+            write.assert_not_called()
+            self.assertEqual(native_actions, ['--status'])
+            native_actions.clear()
+
+            reply = clean_removal.runtime_restore(payload, self.uid, activation_token=token)
+            self.assertEqual(reply['result'], 'restored')
+            self.assertEqual(reply['native_restored_sha256'], hashlib.sha256(selection).hexdigest())
+            self.assertEqual(chain, [vendor])
+            self.assertEqual(native_actions, ['--status', '--restore', '--status', '--status'])
+            self.assertEqual(self.k.read_intent(self.root, self.uid)['phase'], 'disabled')
+        self.assertEqual(selection_path.read_bytes(), selection)
+        cli.main.assert_not_called()
 
     def check_ui_failure_recovery(self, restore):
         from types import SimpleNamespace

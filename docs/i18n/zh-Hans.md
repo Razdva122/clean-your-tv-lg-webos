@@ -141,6 +141,8 @@ No-root: 要重新启动 Home 控制，请打开 Home Helper，选择启动 Help
 
 ## 使用设置
 
+在**设置 → 外观**中开启**常用应用优先**。快捷栏保留原有顺序。长按 OK 可按手动顺序移动或隐藏磁贴。关闭此选项即可恢复手动顺序。 也可在 cytv 安装程序的设置末尾选择此选项。
+
 用 ↑ ↓ 选择分类，再按 → 或 OK 进入。← 返回分类；返回键先回到分类，再关闭设置。重新进入分类时，焦点返回上次可用的控件。“列数”中的方向键对应三列网格。“语言”会聚焦当前选中的语言。
 
 在 **设置 → 您的 Home 主屏幕 → 时间格式** 中选择 **自动（电视区域设置）**、**12 小时制**或 **24 小时制**。
@@ -169,7 +171,7 @@ No-root: 要重新启动 Home 控制，请打开 Home Helper，选择启动 Help
 
 安装成功后，选择 Classic、Liquid Glass 或 Ribbon，并开启或关闭主屏幕天气。Ribbon 不支持天气；Liquid Glass 使用简短格式。城市根据网络连接估算，可在 Home 设置中更改。
 
-Developer Mode 的 No-root 提供自动续期（测试版）；请继续检查官方计时器。通过现有 root SSH 新安装 No-root 时，设置中会隐藏 Developer Mode 标签页。Root 可通过 Homebrew Channel 阻止 LG 固件更新，包括安全更新；需要通过 Homebrew Channel 真正重启电视。CYTV 更新单独管理。
+Developer Mode 的 No-root 提供自动续期；请继续检查官方计时器。通过现有 root SSH 新安装 No-root 时，设置中会隐藏 Developer Mode 标签页。Root 可通过 Homebrew Channel 阻止 LG 固件更新，包括安全更新；需要通过 Homebrew Channel 真正重启电视。CYTV 更新单独管理。
 
 选择“保留当前设置”可跳过自定义。开关显示模式功能当前的开启或关闭状态。未更改的设置会保留。重新安装 Root 仍会按上文说明删除 CYTV 设置。请在电视上检查外观；重试前请在 Home 设置中检查未确认的选项。
 

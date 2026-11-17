@@ -117,6 +117,8 @@ V desktopovém instalátoru otevřete **Údržba → Upravit nastavení LG (Debl
 
 ## Nastavení
 
+V nabídce **Nastavení → Vzhled** zapněte **Nejčastěji používané aplikace první**. Pořadí v doku se zachová. Podržením OK upravíte ruční pořadí nebo skryjete dlaždici. Vypnutím volby se vrátíte k ručnímu pořadí. Volbu najdete také na konci nastavení v instalátoru cytv.
+
 Pomocí ↑ ↓ vyberte kategorii a pomocí → nebo OK do ní vstupte. ← se vrací ke kategoriím; Zpět se nejprve vrátí k nim a poté zavře nastavení. Při návratu do sekce se obnoví poslední dostupný ovládací prvek. Ve Sloupcích šipky odpovídají mřížce se třemi sloupci. V Jazyku se zaměří vybraný jazyk.
 
 V **Nastavení → Vaše obrazovka Home → Formát času** vyberte **Automaticky (podle nastavení TV)**, **12hodinový** nebo **24hodinový** formát.
@@ -145,7 +147,7 @@ Při odinstalaci můžete potvrdit obnovení uložených původních nastavení 
 
 Po úspěšné instalaci vyberte Classic, Liquid Glass nebo Ribbon a zapněte či vypněte počasí. Ribbon počasí nepodporuje; Liquid Glass používá stručný formát. Město se odhaduje podle připojení a lze je změnit v Home.
 
-No-root s Developer Mode nabízí automatické prodloužení (Beta); nadále sledujte oficiální časovač. U nových instalací No-root přes stávající root SSH se karta Developer Mode nezobrazuje. Root umožňuje přes Homebrew Channel blokovat aktualizace firmwaru LG včetně bezpečnostních; je nutný skutečný restart přes Homebrew Channel. Aktualizace CYTV jsou samostatné.
+No-root s Developer Mode nabízí automatické prodloužení; nadále sledujte oficiální časovač. U nových instalací No-root přes stávající root SSH se karta Developer Mode nezobrazuje. Root umožňuje přes Homebrew Channel blokovat aktualizace firmwaru LG včetně bezpečnostních; je nutný skutečný restart přes Homebrew Channel. Aktualizace CYTV jsou samostatné.
 
 Ponechat aktuální nastavení přeskočí přizpůsobení. Přepínač zobrazuje aktuální stav funkce režimu. Nezměněná nastavení zůstanou zachována. Přeinstalace Root nadále odstraní nastavení CYTV podle popisu výše. Ověřte vzhled na TV a nepotvrzené volby v Home před opakováním.
 

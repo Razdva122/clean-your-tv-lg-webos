@@ -85,6 +85,29 @@
         app.icon = icons[app.id];
     });
   }
+  var usageKey = 'tvhome.usage.v1';
+  function readUsage(storage) {
+    var usage;
+    try {
+      usage = JSON.parse(storage.getItem(usageKey));
+    } catch (_) {}
+    return {
+      enabled: !!usage && usage.enabled === true,
+      counts:
+        usage &&
+        usage.counts &&
+        typeof usage.counts === 'object' &&
+        !Array.isArray(usage.counts)
+          ? usage.counts
+          : {}
+    };
+  }
+  function writeUsage(storage, enabled, counts) {
+    var value = JSON.stringify({ enabled: enabled, counts: counts });
+    storage.setItem(usageKey, value);
+    if (storage.getItem(usageKey) !== value)
+      throw Error('Usage preference not saved');
+  }
   function create(storage, inventory, config, readInputs, packaged) {
     var catalog = clean(inventory),
       hidden = unique(config.hiddenApps || []),
@@ -92,6 +115,9 @@
       saved,
       showAddApp = true,
       catalogConfirmed = false;
+    var usage = readUsage(storage),
+      usageSorted = usage.enabled,
+      counts = Object.create(null);
     try {
       saved = JSON.parse(storage.getItem(KEY));
       if (
@@ -143,6 +169,21 @@
         clean(packaged.apps),
         packaged.fallbackIcon
       );
+    catalog.forEach(function (app) {
+      var count = usage.counts[app.id];
+      if (Number.isSafeInteger(count) && count > 0) counts[app.id] = count;
+    });
+    function saveUsage(enabled, launchedId) {
+      var next = Object.create(null);
+      catalog.forEach(function (app) {
+        var count = counts[app.id] || 0;
+        if (app.id === launchedId && count < Number.MAX_SAFE_INTEGER) count++;
+        if (count) next[app.id] = count;
+      });
+      writeUsage(storage, enabled, next);
+      counts = next;
+      usageSorted = enabled;
+    }
     function inputTiles() {
       return (readInputs ? readInputs() : [])
         .filter(function (input) {
@@ -170,6 +211,26 @@
         .filter(function (a) {
           return a && hidden.indexOf(a.id) < 0;
         });
+    }
+    function ordered(dockSize) {
+      var apps = visible();
+      if (!usageSorted) return apps;
+      var rank = [];
+      for (var i = dockSize; i < apps.length; i++) {
+        if (!apps[i].input) rank.push(i);
+      }
+      var sorted = rank
+        .slice()
+        .sort(function (a, b) {
+          return (counts[apps[b].id] || 0) - (counts[apps[a].id] || 0) || a - b;
+        })
+        .map(function (i) {
+          return apps[i];
+        });
+      rank.forEach(function (position, i) {
+        apps[position] = sorted[i];
+      });
+      return apps;
     }
     function save(nextIds, nextHidden, nextShowAddApp) {
       nextIds = unique(nextIds);
@@ -204,6 +265,16 @@
     }
     return {
       visible: visible,
+      ordered: ordered,
+      usageSorted: function () {
+        return usageSorted;
+      },
+      setUsageSort: function (enabled) {
+        saveUsage(enabled === true);
+      },
+      recordLaunch: function (id) {
+        if (usageSorted) saveUsage(true, id);
+      },
       firstInput: function () {
         for (var i = 0; i < ids.length; i++) {
           var id = ids[i];
@@ -376,6 +447,9 @@
     create: create,
     installed: installed,
     key: KEY,
-    replaceFallbackIcons: replaceFallbackIcons
+    replaceFallbackIcons: replaceFallbackIcons,
+    setUsageSort: function (storage, enabled) {
+      writeUsage(storage, enabled, readUsage(storage).counts);
+    }
   };
 });

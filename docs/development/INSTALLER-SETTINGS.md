@@ -11,7 +11,7 @@ opens customization or repeats optional service writes.
 | Home screen name (existing primary launch point) | Available | — | — |
 | Classic, Liquid Glass, Ribbon | Yes | Yes | Yes |
 | Home weather | Yes | Yes | Yes |
-| Developer Mode auto-renewal Beta | No | Yes | No |
+| Developer Mode auto-renewal | No | Yes | No |
 | LG firmware update blocking | Yes | No | No |
 
 Ribbon disables weather. Liquid Glass retains its existing compact renderer.

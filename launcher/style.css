@@ -762,6 +762,12 @@ body.editing #glass {
 #appPickerClose {
   padding: 16px 28px;
 }
+#homeUsageSortHint {
+  margin: 0 0 12px;
+  color: #bfc8d4;
+  font-size: 21px;
+  line-height: 1.35;
+}
 #hideApp[hidden],
 #editHint[hidden],
 #appUndo[hidden],

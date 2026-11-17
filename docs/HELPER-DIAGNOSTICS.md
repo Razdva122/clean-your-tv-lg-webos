@@ -14,6 +14,16 @@ Choose the TV and No-root connection using the existing connection flow.
 
 No terminal commands, manual log collection or separate C5 Helper are required.
 
+### Capture a problem after waking the TV
+
+Keep Home Helper enabled. Start recording and wait for the prompt to press Home.
+For a wake test, use Power to turn the TV off and back on while the installer
+stays open. Reproduce the problem as soon as Home appears. The installer can
+reconnect to the same TV and read the original recording while the Helper's
+recording is still available. If the connection does not return in time, save
+the incomplete report and note what appeared on screen. A full restart of the
+Helper can end the recording early.
+
 ## Release handoff
 
 [v1.1.0 stable](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.1.0) contains Helper 0.6.19 and cytv 0.3.0 with this diagnostic workflow. Download the stable installer for new feedback. Helper 0.6.19 still needs physical-TV acceptance; diagnostic capture alone does not establish that C5 or another model is fixed. The earlier v1.0.3 diagnostic baseline was Helper 0.6.18 / cytv 0.2.16.

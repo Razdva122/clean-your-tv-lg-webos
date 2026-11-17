@@ -6,13 +6,13 @@ HomeI18n.add({
       'All installed apps are already on Home.',
     'App hidden. Restore it with Add app.':
       'App hidden. Restore it with Add app.',
-    'Auto-renewal enabled (Beta)': 'Auto-renewal enabled (Beta)',
+    'Auto-renewal enabled': 'Auto-renewal enabled',
     'Auto-renewal off': 'Auto-renewal off',
     'Automatic (system language)': 'Automatic (system language)',
     'Back': 'Back',
     'Back to Home': 'Back to Home',
-    'Beta: renewal is not yet verified on no-root TVs. Keep checking the timer in the Developer Mode app.':
-      'Beta: renewal is not yet verified on no-root TVs. Keep checking the timer in the Developer Mode app.',
+    'Keep checking the timer in the official Developer Mode app.':
+      'Keep checking the timer in the official Developer Mode app.',
     "Can't open {app}": "Can't open {app}",
     'Change Home': 'Open Clean Your TV with the Home button',
     'Change was not confirmed. Check the switch and try again.':
@@ -45,7 +45,7 @@ HomeI18n.add({
       "Couldn't restore app. Please try again.",
     "Couldn't save changes. Please try again.":
       "Couldn't save changes. Please try again.",
-    'Developer Mode auto-renewal (Beta)': 'Developer Mode auto-renewal (Beta)',
+    'Developer Mode auto-renewal': 'Developer Mode auto-renewal',
     'Developer Mode keeps Home installed. Auto-renewal tries to extend its session while your TV is on and online.':
       'Developer Mode keeps Home installed. Auto-renewal tries to extend its session while your TV is on and online.',
     'Disable could not be saved. Retry before restarting the service.':
@@ -180,7 +180,6 @@ HomeI18n.add({
     'Hold Back for 1.2 seconds to open LG Home.':
       'Hold Back for 1.2 seconds to open LG Home.',
     'Developer Mode': 'Developer Mode',
-    'Beta': 'Beta',
     'Home Helper': 'Home Helper',
     'Home button settings': 'Home button settings',
     'Start Helper': 'Start Helper',
@@ -229,13 +228,13 @@ HomeI18n.add({
       'Alle installierten Apps sind bereits auf Home.',
     'App hidden. Restore it with Add app.':
       'App ausgeblendet. Mit „App hinzufügen“ wiederherstellen.',
-    'Auto-renewal enabled (Beta)': 'Automatische Verlängerung aktiv (Beta)',
+    'Auto-renewal enabled': 'Automatische Verlängerung aktiv',
     'Auto-renewal off': 'Automatische Verlängerung aus',
     'Automatic (system language)': 'Automatisch (Systemsprache)',
     'Back': 'Zurück',
     'Back to Home': 'Zurück zu Home',
-    'Beta: renewal is not yet verified on no-root TVs. Keep checking the timer in the Developer Mode app.':
-      'Beta: Die Verlängerung ist auf No-root-TVs noch nicht bestätigt. Prüfen Sie weiterhin den Timer in der Developer Mode-App.',
+    'Keep checking the timer in the official Developer Mode app.':
+      'Prüfen Sie weiterhin den Timer in der offiziellen Developer-Mode-App.',
     "Can't open {app}": '{app} kann nicht geöffnet werden',
     'Change Home': 'Clean Your TV mit der Home-Taste öffnen',
     'Change was not confirmed. Check the switch and try again.':
@@ -268,8 +267,7 @@ HomeI18n.add({
       'App konnte nicht wiederhergestellt werden. Bitte erneut versuchen.',
     "Couldn't save changes. Please try again.":
       'Änderungen konnten nicht gespeichert werden. Bitte erneut versuchen.',
-    'Developer Mode auto-renewal (Beta)':
-      'Developer Mode automatisch verlängern (Beta)',
+    'Developer Mode auto-renewal': 'Developer Mode automatisch verlängern',
     'Developer Mode keeps Home installed. Auto-renewal tries to extend its session while your TV is on and online.':
       'Developer Mode hält Home installiert. Die automatische Verlängerung versucht, die Sitzung bei eingeschaltetem und verbundenem TV zu verlängern.',
     'Disable could not be saved. Retry before restarting the service.':
@@ -408,7 +406,6 @@ HomeI18n.add({
     'Hold Back for 1.2 seconds to open LG Home.':
       'Zurück 1,2 Sekunden halten, um LG Home zu öffnen.',
     'Developer Mode': 'Entwicklermodus',
-    'Beta': 'Beta',
     'Home Helper': 'Home Helper',
     'Home button settings': 'Home-Taste einrichten',
     'Start Helper': 'Helper starten',
@@ -458,13 +455,13 @@ HomeI18n.add({
       'Todas las aplicaciones instaladas ya están en Home.',
     'App hidden. Restore it with Add app.':
       'Aplicación oculta. Recupérala con «Añadir app».',
-    'Auto-renewal enabled (Beta)': 'Renovación automática activada (Beta)',
+    'Auto-renewal enabled': 'Renovación automática activada',
     'Auto-renewal off': 'Renovación automática desactivada',
     'Automatic (system language)': 'Automático (idioma del sistema)',
     'Back': 'Atrás',
     'Back to Home': 'Volver a Home',
-    'Beta: renewal is not yet verified on no-root TVs. Keep checking the timer in the Developer Mode app.':
-      'Beta: la renovación aún no está verificada en televisores sin root. Sigue comprobando el temporizador en la aplicación Developer Mode.',
+    'Keep checking the timer in the official Developer Mode app.':
+      'Sigue comprobando el temporizador en la aplicación oficial Developer Mode.',
     "Can't open {app}": 'No se puede abrir {app}',
     'Change Home': 'Abrir Clean Your TV con el botón Home',
     'Change was not confirmed. Check the switch and try again.':
@@ -497,8 +494,7 @@ HomeI18n.add({
       'No se pudo restaurar la aplicación. Inténtalo de nuevo.',
     "Couldn't save changes. Please try again.":
       'No se pudieron guardar los cambios. Inténtalo de nuevo.',
-    'Developer Mode auto-renewal (Beta)':
-      'Renovación automática de Developer Mode (Beta)',
+    'Developer Mode auto-renewal': 'Renovación automática de Developer Mode',
     'Developer Mode keeps Home installed. Auto-renewal tries to extend its session while your TV is on and online.':
       'Developer Mode mantiene Home instalado. La renovación automática intenta ampliar la sesión mientras el televisor está encendido y conectado.',
     'Disable could not be saved. Retry before restarting the service.':
@@ -637,7 +633,6 @@ HomeI18n.add({
     'Hold Back for 1.2 seconds to open LG Home.':
       'Mantén Atrás 1,2 segundos para abrir LG Home.',
     'Developer Mode': 'Modo de desarrollador',
-    'Beta': 'Beta',
     'Home Helper': 'Home Helper',
     'Home button settings': 'Configurar botón Home',
     'Start Helper': 'Iniciar Helper',
@@ -686,13 +681,13 @@ HomeI18n.add({
       'Todos os aplicativos instalados já estão no Home.',
     'App hidden. Restore it with Add app.':
       'Aplicativo oculto. Restaure com «Adicionar app».',
-    'Auto-renewal enabled (Beta)': 'Renovação automática ativada (Beta)',
+    'Auto-renewal enabled': 'Renovação automática ativada',
     'Auto-renewal off': 'Renovação automática desativada',
     'Automatic (system language)': 'Automático (idioma do sistema)',
     'Back': 'Voltar',
     'Back to Home': 'Voltar ao Home',
-    'Beta: renewal is not yet verified on no-root TVs. Keep checking the timer in the Developer Mode app.':
-      'Beta: a renovação ainda não foi verificada em TVs sem root. Continue conferindo o cronômetro no aplicativo Developer Mode.',
+    'Keep checking the timer in the official Developer Mode app.':
+      'Continue verificando o temporizador no aplicativo oficial Developer Mode.',
     "Can't open {app}": 'Não foi possível abrir {app}',
     'Change Home': 'Abrir Clean Your TV com o botão Home',
     'Change was not confirmed. Check the switch and try again.':
@@ -725,8 +720,7 @@ HomeI18n.add({
       'Não foi possível restaurar o aplicativo. Tente novamente.',
     "Couldn't save changes. Please try again.":
       'Não foi possível salvar as alterações. Tente novamente.',
-    'Developer Mode auto-renewal (Beta)':
-      'Renovação automática do Developer Mode (Beta)',
+    'Developer Mode auto-renewal': 'Renovação automática do Developer Mode',
     'Developer Mode keeps Home installed. Auto-renewal tries to extend its session while your TV is on and online.':
       'Developer Mode mantém o Home instalado. A renovação automática tenta estender a sessão enquanto a TV está ligada e conectada.',
     'Disable could not be saved. Retry before restarting the service.':
@@ -865,7 +859,6 @@ HomeI18n.add({
     'Hold Back for 1.2 seconds to open LG Home.':
       'Segure Voltar por 1,2 segundos para abrir o LG Home.',
     'Developer Mode': 'Modo de Desenvolvedor',
-    'Beta': 'Beta',
     'Home Helper': 'Home Helper',
     'Home button settings': 'Configurar botão Home',
     'Start Helper': 'Iniciar Helper',
@@ -914,13 +907,13 @@ HomeI18n.add({
       'Toutes les applications installées sont déjà sur Home.',
     'App hidden. Restore it with Add app.':
       'Application masquée. Rétablissez-la avec « Ajouter une app ».',
-    'Auto-renewal enabled (Beta)': 'Renouvellement automatique activé (Beta)',
+    'Auto-renewal enabled': 'Renouvellement automatique activé',
     'Auto-renewal off': 'Renouvellement automatique désactivé',
     'Automatic (system language)': 'Automatique (langue du système)',
     'Back': 'Retour',
     'Back to Home': 'Retour à Home',
-    'Beta: renewal is not yet verified on no-root TVs. Keep checking the timer in the Developer Mode app.':
-      'Beta : le renouvellement n’est pas encore vérifié sur les TV sans root. Continuez à vérifier le compteur dans l’application Developer Mode.',
+    'Keep checking the timer in the official Developer Mode app.':
+      'Continuez à vérifier le compteur dans l’application officielle Developer Mode.',
     "Can't open {app}": 'Impossible d’ouvrir {app}',
     'Change Home': 'Ouvrir Clean Your TV avec le bouton Home',
     'Change was not confirmed. Check the switch and try again.':
@@ -953,8 +946,8 @@ HomeI18n.add({
       'Impossible de restaurer l’application. Réessayez.',
     "Couldn't save changes. Please try again.":
       'Impossible d’enregistrer les modifications. Réessayez.',
-    'Developer Mode auto-renewal (Beta)':
-      'Renouvellement automatique de Developer Mode (Beta)',
+    'Developer Mode auto-renewal':
+      'Renouvellement automatique de Developer Mode',
     'Developer Mode keeps Home installed. Auto-renewal tries to extend its session while your TV is on and online.':
       'Developer Mode maintient Home installé. Le renouvellement automatique tente de prolonger la session lorsque la TV est allumée et connectée.',
     'Disable could not be saved. Retry before restarting the service.':
@@ -1094,7 +1087,6 @@ HomeI18n.add({
     'Hold Back for 1.2 seconds to open LG Home.':
       'Maintenez Retour 1,2 seconde pour ouvrir LG Home.',
     'Developer Mode': 'Mode développeur',
-    'Beta': 'Bêta',
     'Home Helper': 'Home Helper',
     'Home button settings': 'Configurer le bouton Home',
     'Start Helper': 'Démarrer Helper',
@@ -1143,13 +1135,13 @@ HomeI18n.add({
       'Tutte le app installate sono già su Home.',
     'App hidden. Restore it with Add app.':
       'App nascosta. Ripristinala con «Aggiungi app».',
-    'Auto-renewal enabled (Beta)': 'Rinnovo automatico attivato (Beta)',
+    'Auto-renewal enabled': 'Rinnovo automatico attivato',
     'Auto-renewal off': 'Rinnovo automatico disattivato',
     'Automatic (system language)': 'Automatico (lingua del sistema)',
     'Back': 'Indietro',
     'Back to Home': 'Torna a Home',
-    'Beta: renewal is not yet verified on no-root TVs. Keep checking the timer in the Developer Mode app.':
-      'Beta: il rinnovo non è ancora verificato sui TV senza root. Continua a controllare il timer nell’app Developer Mode.',
+    'Keep checking the timer in the official Developer Mode app.':
+      'Continua a controllare il timer nell’app ufficiale Developer Mode.',
     "Can't open {app}": 'Impossibile aprire {app}',
     'Change Home': 'Aprire Clean Your TV con il tasto Home',
     'Change was not confirmed. Check the switch and try again.':
@@ -1182,8 +1174,7 @@ HomeI18n.add({
       'Impossibile ripristinare l’app. Riprova.',
     "Couldn't save changes. Please try again.":
       'Impossibile salvare le modifiche. Riprova.',
-    'Developer Mode auto-renewal (Beta)':
-      'Rinnovo automatico di Developer Mode (Beta)',
+    'Developer Mode auto-renewal': 'Rinnovo automatico di Developer Mode',
     'Developer Mode keeps Home installed. Auto-renewal tries to extend its session while your TV is on and online.':
       'Developer Mode mantiene Home installato. Il rinnovo automatico tenta di prolungare la sessione mentre il TV è acceso e connesso.',
     'Disable could not be saved. Retry before restarting the service.':
@@ -1322,7 +1313,6 @@ HomeI18n.add({
     'Hold Back for 1.2 seconds to open LG Home.':
       'Tieni premuto Indietro per 1,2 secondi per aprire LG Home.',
     'Developer Mode': 'Modalità sviluppatore',
-    'Beta': 'Beta',
     'Home Helper': 'Home Helper',
     'Home button settings': 'Configura il tasto Home',
     'Start Helper': 'Avvia Helper',
@@ -1370,13 +1360,13 @@ HomeI18n.add({
       '설치된 모든 앱이 이미 Home에 있습니다.',
     'App hidden. Restore it with Add app.':
       '앱을 숨겼습니다. 앱 추가로 다시 표시하세요.',
-    'Auto-renewal enabled (Beta)': '자동 갱신 켜짐 (베타)',
+    'Auto-renewal enabled': '자동 갱신 켜짐',
     'Auto-renewal off': '자동 갱신 꺼짐',
     'Automatic (system language)': '자동 (시스템 언어)',
     'Back': '뒤로',
     'Back to Home': 'Home으로 돌아가기',
-    'Beta: renewal is not yet verified on no-root TVs. Keep checking the timer in the Developer Mode app.':
-      '베타: 루팅하지 않은 TV에서는 갱신이 아직 검증되지 않았습니다. Developer Mode 앱의 타이머를 계속 확인하세요.',
+    'Keep checking the timer in the official Developer Mode app.':
+      '공식 Developer Mode 앱에서 타이머를 계속 확인하세요.',
     "Can't open {app}": '{app}을(를) 열 수 없습니다',
     'Change Home': 'Home 버튼으로 Clean Your TV 열기',
     'Change was not confirmed. Check the switch and try again.':
@@ -1408,7 +1398,7 @@ HomeI18n.add({
       '앱을 복원하지 못했습니다. 다시 시도하세요.',
     "Couldn't save changes. Please try again.":
       '변경 사항을 저장하지 못했습니다. 다시 시도하세요.',
-    'Developer Mode auto-renewal (Beta)': 'Developer Mode 자동 갱신 (베타)',
+    'Developer Mode auto-renewal': 'Developer Mode 자동 갱신',
     'Developer Mode keeps Home installed. Auto-renewal tries to extend its session while your TV is on and online.':
       'Developer Mode는 Home이 설치된 상태를 유지합니다. 자동 갱신은 TV가 켜져 있고 온라인일 때 세션 연장을 시도합니다.',
     'Disable could not be saved. Retry before restarting the service.':
@@ -1544,7 +1534,6 @@ HomeI18n.add({
     'Hold Back for 1.2 seconds to open LG Home.':
       '뒤로 버튼을 1.2초 동안 누르면 LG Home이 열립니다.',
     'Developer Mode': '개발자 모드',
-    'Beta': '베타',
     'Home Helper': 'Home Helper',
     'Home button settings': 'Home 버튼 설정',
     'Start Helper': 'Helper 시작',
@@ -1593,13 +1582,13 @@ HomeI18n.add({
       'सभी इंस्टॉल किए ऐप पहले से Home पर हैं।',
     'App hidden. Restore it with Add app.':
       'ऐप छिपा दिया गया। ऐप जोड़ें से वापस लाएँ।',
-    'Auto-renewal enabled (Beta)': 'अपने-आप नवीनीकरण चालू (बीटा)',
+    'Auto-renewal enabled': 'अपने-आप नवीनीकरण चालू',
     'Auto-renewal off': 'अपने-आप नवीनीकरण बंद',
     'Automatic (system language)': 'स्वचालित (सिस्टम की भाषा)',
     'Back': 'वापस',
     'Back to Home': 'Home पर वापस जाएँ',
-    'Beta: renewal is not yet verified on no-root TVs. Keep checking the timer in the Developer Mode app.':
-      'बीटा: बिना root वाले टीवी पर नवीनीकरण की पुष्टि अभी नहीं हुई है। Developer Mode ऐप में टाइमर देखते रहें।',
+    'Keep checking the timer in the official Developer Mode app.':
+      'आधिकारिक Developer Mode ऐप में टाइमर देखते रहें।',
     "Can't open {app}": '{app} नहीं खुल सका',
     'Change Home': 'Home बटन से Clean Your TV खोलें',
     'Change was not confirmed. Check the switch and try again.':
@@ -1630,8 +1619,7 @@ HomeI18n.add({
       'ऐप बहाल नहीं हो सका। फिर कोशिश करें।',
     "Couldn't save changes. Please try again.":
       'बदलाव सहेजे नहीं जा सके। फिर कोशिश करें।',
-    'Developer Mode auto-renewal (Beta)':
-      'Developer Mode का अपने-आप नवीनीकरण (बीटा)',
+    'Developer Mode auto-renewal': 'Developer Mode का अपने-आप नवीनीकरण',
     'Developer Mode keeps Home installed. Auto-renewal tries to extend its session while your TV is on and online.':
       'Developer Mode, Home को इंस्टॉल रखता है। अपने-आप नवीनीकरण टीवी चालू और ऑनलाइन रहने पर सत्र बढ़ाने की कोशिश करता है।',
     'Disable could not be saved. Retry before restarting the service.':
@@ -1768,7 +1756,6 @@ HomeI18n.add({
     'Hold Back for 1.2 seconds to open LG Home.':
       'LG Home खोलने के लिए वापस बटन 1.2 सेकंड दबाए रखें।',
     'Developer Mode': 'डेवलपर मोड',
-    'Beta': 'बीटा',
     'Home Helper': 'Home Helper',
     'Home button settings': 'Home बटन सेटिंग',
     'Start Helper': 'Helper शुरू करें',
@@ -1817,13 +1804,13 @@ HomeI18n.add({
       'Wszystkie zainstalowane aplikacje są już na Home.',
     'App hidden. Restore it with Add app.':
       'Aplikacja ukryta. Przywróć ją przez „Dodaj aplikację”.',
-    'Auto-renewal enabled (Beta)': 'Automatyczne odnawianie włączone (Beta)',
+    'Auto-renewal enabled': 'Automatyczne odnawianie włączone',
     'Auto-renewal off': 'Automatyczne odnawianie wyłączone',
     'Automatic (system language)': 'Automatycznie (język systemu)',
     'Back': 'Wstecz',
     'Back to Home': 'Wróć do Home',
-    'Beta: renewal is not yet verified on no-root TVs. Keep checking the timer in the Developer Mode app.':
-      'Beta: odnawianie nie zostało jeszcze zweryfikowane na telewizorach bez roota. Nadal sprawdzaj licznik w aplikacji Developer Mode.',
+    'Keep checking the timer in the official Developer Mode app.':
+      'Nadal sprawdzaj licznik w oficjalnej aplikacji Developer Mode.',
     "Can't open {app}": 'Nie można otworzyć {app}',
     'Change Home': 'Otwieraj Clean Your TV przyciskiem Home',
     'Change was not confirmed. Check the switch and try again.':
@@ -1856,8 +1843,7 @@ HomeI18n.add({
       'Nie udało się przywrócić aplikacji. Spróbuj ponownie.',
     "Couldn't save changes. Please try again.":
       'Nie udało się zapisać zmian. Spróbuj ponownie.',
-    'Developer Mode auto-renewal (Beta)':
-      'Automatyczne odnawianie Developer Mode (Beta)',
+    'Developer Mode auto-renewal': 'Automatyczne odnawianie Developer Mode',
     'Developer Mode keeps Home installed. Auto-renewal tries to extend its session while your TV is on and online.':
       'Developer Mode pozwala zachować zainstalowane Home. Automatyczne odnawianie próbuje przedłużyć sesję, gdy TV jest włączony i połączony z siecią.',
     'Disable could not be saved. Retry before restarting the service.':
@@ -1997,7 +1983,6 @@ HomeI18n.add({
     'Hold Back for 1.2 seconds to open LG Home.':
       'Przytrzymaj Wstecz przez 1,2 sekundy, aby otworzyć LG Home.',
     'Developer Mode': 'Tryb dewelopera',
-    'Beta': 'Beta',
     'Home Helper': 'Home Helper',
     'Home button settings': 'Ustawienia przycisku Home',
     'Start Helper': 'Uruchom Helper',
@@ -2046,13 +2031,13 @@ HomeI18n.add({
       'Все установленные приложения уже на Home.',
     'App hidden. Restore it with Add app.':
       'Приложение скрыто. Верните его через «Добавить приложение».',
-    'Auto-renewal enabled (Beta)': 'Автопродление включено (Бета)',
+    'Auto-renewal enabled': 'Автопродление включено',
     'Auto-renewal off': 'Автопродление выключено',
     'Automatic (system language)': 'Автоматически (язык системы)',
     'Back': 'Назад',
     'Back to Home': 'Вернуться на Home',
-    'Beta: renewal is not yet verified on no-root TVs. Keep checking the timer in the Developer Mode app.':
-      'Бета: продление пока не проверено на телевизорах без root. Продолжайте следить за таймером в приложении Developer Mode.',
+    'Keep checking the timer in the official Developer Mode app.':
+      'Продолжайте следить за таймером в официальном приложении Developer Mode.',
     "Can't open {app}": 'Не удалось открыть {app}',
     'Change Home': 'Открывать Clean Your TV кнопкой Home',
     'Change was not confirmed. Check the switch and try again.':
@@ -2085,7 +2070,7 @@ HomeI18n.add({
       'Не удалось вернуть приложение. Повторите попытку.',
     "Couldn't save changes. Please try again.":
       'Не удалось сохранить изменения. Повторите попытку.',
-    'Developer Mode auto-renewal (Beta)': 'Автопродление Developer Mode (Бета)',
+    'Developer Mode auto-renewal': 'Автопродление Developer Mode',
     'Developer Mode keeps Home installed. Auto-renewal tries to extend its session while your TV is on and online.':
       'Developer Mode сохраняет Home установленным. Автопродление пытается продлить сессию, пока телевизор включён и подключён к сети.',
     'Disable could not be saved. Retry before restarting the service.':
@@ -2224,7 +2209,6 @@ HomeI18n.add({
     'Hold Back for 1.2 seconds to open LG Home.':
       'Удерживайте Назад 1,2 секунды для открытия LG Home.',
     'Developer Mode': 'Режим разработчика',
-    'Beta': 'Бета',
     'Home Helper': 'Home Helper',
     'Home button settings': 'Настроить кнопку Home',
     'Start Helper': 'Запустить Helper',
@@ -2949,13 +2933,13 @@ HomeI18n.add({
       '所有已安装的应用都已在 Home 中。',
     'App hidden. Restore it with Add app.':
       '应用已隐藏。可通过“添加应用”恢复。',
-    'Auto-renewal enabled (Beta)': '自动续期已开启（Beta）',
+    'Auto-renewal enabled': '自动续期已开启',
     'Auto-renewal off': '自动续期已关闭',
     'Automatic (system language)': '自动（系统语言）',
     'Back': '返回',
     'Back to Home': '返回 Home',
-    'Beta: renewal is not yet verified on no-root TVs. Keep checking the timer in the Developer Mode app.':
-      'Beta：尚未在无 root 权限的电视上验证续期功能。请继续检查 Developer Mode 应用中的倒计时。',
+    'Keep checking the timer in the official Developer Mode app.':
+      '请继续检查官方 Developer Mode 应用中的倒计时。',
     "Can't open {app}": '无法打开 {app}',
     'Change Home': '按 Home 键打开 Clean Your TV',
     'Change was not confirmed. Check the switch and try again.':
@@ -2983,7 +2967,7 @@ HomeI18n.add({
       '无法保存完整配置。未安装任何内容。',
     "Couldn't restore app. Please try again.": '无法恢复应用。请重试。',
     "Couldn't save changes. Please try again.": '无法保存更改。请重试。',
-    'Developer Mode auto-renewal (Beta)': 'Developer Mode 自动续期（Beta）',
+    'Developer Mode auto-renewal': 'Developer Mode 自动续期',
     'Developer Mode keeps Home installed. Auto-renewal tries to extend its session while your TV is on and online.':
       'Developer Mode 可让 Home 保持安装状态。自动续期会在电视开机并联网时尝试延长会话。',
     'Disable could not be saved. Retry before restarting the service.':
@@ -3115,7 +3099,6 @@ HomeI18n.add({
     'Hold Back for 1.2 seconds to open LG Home.':
       '按住返回键 1.2 秒可打开 LG Home。',
     'Developer Mode': 'Developer Mode',
-    'Beta': 'Beta',
     'Home Helper': 'Home Helper',
     'Home button settings': 'Home 键设置',
     'Start Helper': '启动 Helper',
@@ -3221,13 +3204,13 @@ HomeI18n.add({
       '所有已安裝的應用程式都已在 Home 中。',
     'App hidden. Restore it with Add app.':
       '應用程式已隱藏。可透過「新增應用程式」恢復。',
-    'Auto-renewal enabled (Beta)': '自動續期已開啟（Beta）',
+    'Auto-renewal enabled': '自動續期已開啟',
     'Auto-renewal off': '自動續期已關閉',
     'Automatic (system language)': '自動（系統語言）',
     'Back': '返回',
     'Back to Home': '返回 Home',
-    'Beta: renewal is not yet verified on no-root TVs. Keep checking the timer in the Developer Mode app.':
-      'Beta：尚未在無 root 權限的電視上驗證續期功能。請持續檢查 Developer Mode 應用程式中的倒數計時。',
+    'Keep checking the timer in the official Developer Mode app.':
+      '請持續檢查官方 Developer Mode 應用程式中的倒數計時。',
     "Can't open {app}": '無法開啟 {app}',
     'Change Home': '按 Home 鍵開啟 Clean Your TV',
     'Change was not confirmed. Check the switch and try again.':
@@ -3255,7 +3238,7 @@ HomeI18n.add({
       '無法儲存完整設定檔。未安裝任何內容。',
     "Couldn't restore app. Please try again.": '無法還原應用程式。請再試一次。',
     "Couldn't save changes. Please try again.": '無法儲存變更。請再試一次。',
-    'Developer Mode auto-renewal (Beta)': 'Developer Mode 自動續期（Beta）',
+    'Developer Mode auto-renewal': 'Developer Mode 自動續期',
     'Developer Mode keeps Home installed. Auto-renewal tries to extend its session while your TV is on and online.':
       'Developer Mode 可讓 Home 保持安裝狀態。自動續期會在電視開機並連網時嘗試延長工作階段。',
     'Disable could not be saved. Retry before restarting the service.':
@@ -3388,7 +3371,6 @@ HomeI18n.add({
     'Hold Back for 1.2 seconds to open LG Home.':
       '按住返回鍵 1.2 秒可開啟 LG Home。',
     'Developer Mode': 'Developer Mode',
-    'Beta': 'Beta',
     'Home Helper': 'Home Helper',
     'Home button settings': 'Home 鍵設定',
     'Start Helper': '啟動 Helper',
@@ -3802,13 +3784,13 @@ HomeI18n.add({
       'Všechny nainstalované aplikace už jsou na Home.',
     'App hidden. Restore it with Add app.':
       'Aplikace je skrytá. Obnovíte ji pomocí Přidat aplikaci.',
-    'Auto-renewal enabled (Beta)': 'Automatické prodlužování zapnuto (Beta)',
+    'Auto-renewal enabled': 'Automatické prodlužování zapnuto',
     'Auto-renewal off': 'Automatické prodlužování vypnuto',
     'Automatic (system language)': 'Automaticky (jazyk systému)',
     'Back': 'Zpět',
     'Back to Home': 'Zpět na Home',
-    'Beta: renewal is not yet verified on no-root TVs. Keep checking the timer in the Developer Mode app.':
-      'Beta: prodlužování zatím není ověřeno na televizorech bez rootu. Průběžně kontrolujte časovač v aplikaci Developer Mode.',
+    'Keep checking the timer in the official Developer Mode app.':
+      'Průběžně kontrolujte časovač v oficiální aplikaci Developer Mode.',
     "Can't open {app}": 'Nelze otevřít {app}',
     'Change Home': 'Otevírat Clean Your TV tlačítkem Home',
     'Change was not confirmed. Check the switch and try again.':
@@ -3841,8 +3823,7 @@ HomeI18n.add({
       'Aplikaci se nepodařilo obnovit. Zkuste to znovu.',
     "Couldn't save changes. Please try again.":
       'Změny se nepodařilo uložit. Zkuste to znovu.',
-    'Developer Mode auto-renewal (Beta)':
-      'Automatické prodlužování Developer Mode (Beta)',
+    'Developer Mode auto-renewal': 'Automatické prodlužování Developer Mode',
     'Developer Mode keeps Home installed. Auto-renewal tries to extend its session while your TV is on and online.':
       'Developer Mode udržuje Home nainstalovaný. Automatické prodlužování se pokouší prodloužit jeho relaci, když je televizor zapnutý a připojený k internetu.',
     'Disable could not be saved. Retry before restarting the service.':
@@ -3979,7 +3960,6 @@ HomeI18n.add({
     'Hold Back for 1.2 seconds to open LG Home.':
       'Podržením tlačítka Zpět na 1,2 sekundy otevřete LG Home.',
     'Developer Mode': 'Developer Mode',
-    'Beta': 'Beta',
     'Home Helper': 'Home Helper',
     'Home button settings': 'Nastavení tlačítka Home',
     'Start Helper': 'Spustit Helper',
@@ -4382,5 +4362,73 @@ HomeI18n.add({
     'Cancel updater operation?': '取消更新作業？',
     'Cancel this updater operation and keep Home and your settings unchanged.':
       '取消此次更新作業，保留 Home 和設定。'
+  }
+});
+
+HomeI18n.add({
+  'en': {
+    'Sort by most used': 'Sort by most used',
+    'Frequently opened apps move up in the grid. The dock keeps its order.':
+      'Frequently opened apps move up in the grid. The dock keeps its order.'
+  },
+  'de': {
+    'Sort by most used': 'Häufig genutzte Apps zuerst',
+    'Frequently opened apps move up in the grid. The dock keeps its order.':
+      'Häufig geöffnete Apps rücken in der Übersicht nach oben. Die Reihenfolge im Dock bleibt erhalten.'
+  },
+  'es': {
+    'Sort by most used': 'Ordenar por frecuencia de uso',
+    'Frequently opened apps move up in the grid. The dock keeps its order.':
+      'Las apps que más abres suben en la cuadrícula. El dock conserva su orden.'
+  },
+  'pt-BR': {
+    'Sort by most used': 'Ordenar por frequência de uso',
+    'Frequently opened apps move up in the grid. The dock keeps its order.':
+      'Os apps que você mais abre sobem na grade. O dock mantém a ordem.'
+  },
+  'fr': {
+    'Sort by most used': 'Applications les plus utilisées en premier',
+    'Frequently opened apps move up in the grid. The dock keeps its order.':
+      'Les applications souvent ouvertes remontent dans la grille. Le dock garde son ordre.'
+  },
+  'it': {
+    'Sort by most used': 'App più usate per prime',
+    'Frequently opened apps move up in the grid. The dock keeps its order.':
+      'Le app che apri più spesso salgono nella griglia. Il dock mantiene il suo ordine.'
+  },
+  'ko': {
+    'Sort by most used': '자주 쓰는 앱 먼저',
+    'Frequently opened apps move up in the grid. The dock keeps its order.':
+      '자주 여는 앱이 그리드 위로 올라옵니다. 독의 순서는 유지됩니다.'
+  },
+  'hi': {
+    'Sort by most used': 'ज़्यादा इस्तेमाल होने वाले ऐप पहले',
+    'Frequently opened apps move up in the grid. The dock keeps its order.':
+      'जो ऐप आप अक्सर खोलते हैं, वे ग्रिड में ऊपर आ जाते हैं। डॉक का क्रम वही रहता है।'
+  },
+  'pl': {
+    'Sort by most used': 'Najczęściej używane na początku',
+    'Frequently opened apps move up in the grid. The dock keeps its order.':
+      'Często otwierane aplikacje trafiają wyżej w siatce. Kolejność w doku jest zachowana.'
+  },
+  'ru': {
+    'Sort by most used': 'Часто открываемые',
+    'Frequently opened apps move up in the grid. The dock keeps its order.':
+      'Часто запускаемые приложения поднимаются выше в сетке. Порядок в доке сохраняется.'
+  },
+  'zh-Hans': {
+    'Sort by most used': '常用应用优先',
+    'Frequently opened apps move up in the grid. The dock keeps its order.':
+      '经常打开的应用会在网格中上移。快捷栏顺序保持不变。'
+  },
+  'zh-Hant': {
+    'Sort by most used': '常用應用程式優先',
+    'Frequently opened apps move up in the grid. The dock keeps its order.':
+      '經常開啟的應用程式會在格狀清單中往上移。快捷列順序維持原樣。'
+  },
+  'cs': {
+    'Sort by most used': 'Nejčastěji používané aplikace první',
+    'Frequently opened apps move up in the grid. The dock keeps its order.':
+      'Často otevírané aplikace se v mřížce posunou výš. Pořadí v doku zůstane stejné.'
   }
 });

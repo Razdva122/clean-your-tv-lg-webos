@@ -141,6 +141,8 @@ Ausführliche Referenzen auf Englisch: [Voraussetzungen](../COMPATIBILITY.md) ·
 
 ## Einstellungen
 
+Aktiviere unter **Einstellungen → Darstellung** die Option **Häufig genutzte Apps zuerst**. Die Reihenfolge im Dock bleibt erhalten. Halte OK gedrückt, um Kacheln in der manuellen Reihenfolge zu verschieben oder auszublenden. Schalte die Option aus, um zur manuellen Reihenfolge zurückzukehren. Die Option gibt es auch am Ende der Einstellungen im cytv-Installationsprogramm.
+
 Wähle mit ↑ ↓ eine Kategorie und öffne sie mit → oder OK. ← führt zu den Kategorien zurück; Zurück führt zuerst dorthin und schließt danach die Einstellungen. Beim erneuten Betreten bleibt der Fokus auf dem letzten verfügbaren Element. Unter Spalten folgen die Pfeile dem dreispaltigen Raster. Unter Sprache wird die gewählte Sprache fokussiert.
 
 Wählen Sie unter **Einstellungen → Ihr Home-Bildschirm → Uhrzeitformat** zwischen **Automatisch (TV-Region)**, **12 Stunden** und **24 Stunden**.
@@ -169,7 +171,7 @@ Bei der Deinstallation können Sie die gespeicherten ursprünglichen Debloat-Ein
 
 Wähle nach erfolgreicher Installation Classic, Liquid Glass oder Ribbon und schalte das Wetter ein oder aus. Ribbon unterstützt kein Wetter; Liquid Glass nutzt das Kurzformat. Der ungefähre Ort wird über die Internetverbindung ermittelt und lässt sich in Home ändern.
 
-No-root mit Developer Mode bietet automatische Verlängerung (Beta); prüfe weiterhin den offiziellen Timer. Bei neuen No-root-Installationen über vorhandenes root-SSH wird der Tab Developer Mode ausgeblendet. Root bietet über Homebrew Channel eine Sperre für LG-Firmwareupdates, einschließlich Sicherheitsupdates; ein echter Neustart über Homebrew Channel ist erforderlich. CYTV-Updates bleiben separat.
+No-root mit Developer Mode bietet automatische Verlängerung; prüfe weiterhin den offiziellen Timer. Bei neuen No-root-Installationen über vorhandenes root-SSH wird der Tab Developer Mode ausgeblendet. Root bietet über Homebrew Channel eine Sperre für LG-Firmwareupdates, einschließlich Sicherheitsupdates; ein echter Neustart über Homebrew Channel ist erforderlich. CYTV-Updates bleiben separat.
 
 Mit Aktuelle Einstellungen beibehalten überspringst du die Anpassung. Der Schalter zeigt den aktuellen Ein/Aus-Zustand der Modusfunktion. Unveränderte Einstellungen bleiben erhalten. Die Root-Neuinstallation entfernt weiterhin gespeicherte CYTV-Einstellungen wie oben beschrieben. Prüfe das Aussehen am TV und unbestätigte Optionen vor einem neuen Versuch in Home.
 

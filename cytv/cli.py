@@ -845,7 +845,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                 write('Open an app on the TV. Recording lasts one minute and saves one report with application IDs and timing.')
                 if not prompts.confirm('Ready to record? Continue and wait for the Home prompt.', ask, write, default=True):
                     return 0
-                report = diagnostics.collect_home_report(remote, store, profile, write)
+                report = diagnostics.collect_home_report(remote, store, profile, write, reconnect=reconnect_tv)
                 write.report(report)
             elif args.command == 'clean-wam-cache':
                 from . import wam_cleanup

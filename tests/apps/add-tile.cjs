@@ -8,7 +8,7 @@ const storage = {
   getItem: (k) => values.get(k) ?? null,
   setItem: (k, v) => values.set(k, v)
 };
-const inventory = ['a', 'b'].map((id) => ({
+const inventory = ['a', 'b', 'c', 'd'].map((id) => ({
   id,
   title: id,
   icon: 'data:image/png;base64,YQ=='
@@ -96,6 +96,24 @@ assert.equal(
 storage.setItem = setItem;
 library.setShowAddApp(true);
 assert.equal(create(storage, inventory, config).showAddApp(), true);
+library.save(['b', 'a', 'c', 'd'], []);
+const ids = (apps) => apps.map((a) => a.id);
+assert.deepEqual(ids(library.ordered(1)), ['b', 'a', 'c', 'd']);
+library.recordLaunch('d'); // Disabled installations do not collect launches.
+library.setUsageSort(true);
+assert.deepEqual(ids(library.ordered(1)), ['b', 'a', 'c', 'd']);
+library.recordLaunch('d');
+library.recordLaunch('c');
+library.recordLaunch('d');
+library = create(storage, inventory, config);
+assert.deepEqual(ids(library.ordered(1)), ['b', 'd', 'c', 'a']);
+assert.deepEqual(ids(library.visible()), ['b', 'a', 'c', 'd']);
+library.save(['b', 'a', 'c'], ['d']);
+assert.deepEqual(ids(library.ordered(1)), ['b', 'c', 'a']);
+library.save(['b', 'a', 'c', 'd'], []);
+assert.deepEqual(ids(library.ordered(1)), ['b', 'd', 'c', 'a']);
+library.setUsageSort(false);
+assert.deepEqual(ids(library.ordered(1)), ['b', 'a', 'c', 'd']);
 console.log(
-  'PASS Add app tile default, reload, editing, profile restore and storage failure'
+  'PASS app visibility and usage sorting defaults, reload, editing and storage failure'
 );

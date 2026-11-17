@@ -143,6 +143,8 @@ Riferimenti dettagliati in inglese: [requisiti](../COMPATIBILITY.md) · [comandi
 
 ## Impostazioni
 
+In **Impostazioni → Aspetto**, attiva **App più usate per prime**. Il dock mantiene il suo ordine. Tieni premuto OK per spostare o nascondere un riquadro nell’ordine manuale. Disattiva l’opzione per tornare all’ordine manuale. L’opzione è disponibile anche in fondo alle impostazioni del programma di installazione cytv.
+
 Usa ↑ ↓ per scegliere una categoria e → oppure OK per aprirla. ← torna alle categorie; Indietro torna prima alle categorie e poi chiude le impostazioni. Rientrando in una sezione, il focus torna all’ultimo controllo disponibile. In Colonne, le frecce seguono la griglia a tre colonne. In Lingua, il focus va alla lingua selezionata.
 
 In **Impostazioni → La tua schermata Home → Formato dell’ora**, scegli **Automatico (regione del TV)**, **12 ore** o **24 ore**.
@@ -171,7 +173,7 @@ Durante la disinstallazione puoi ripristinare le impostazioni originali salvate 
 
 Dopo l’installazione riuscita, scegli Classic, Liquid Glass o Ribbon e attiva o disattiva il meteo. Ribbon non supporta il meteo; Liquid Glass usa il formato compatto. La città viene stimata dalla connessione e può essere modificata in Home.
 
-No-root con Developer Mode offre il rinnovo automatico (Beta); continua a controllare il timer ufficiale. Nelle nuove installazioni No-root tramite un accesso SSH root esistente, la scheda Developer Mode è nascosta. Root consente di bloccare gli aggiornamenti firmware LG tramite Homebrew Channel, inclusi quelli di sicurezza; serve un vero riavvio tramite Homebrew Channel. Gli aggiornamenti CYTV restano separati.
+No-root con Developer Mode offre il rinnovo automatico; continua a controllare il timer ufficiale. Nelle nuove installazioni No-root tramite un accesso SSH root esistente, la scheda Developer Mode è nascosta. Root consente di bloccare gli aggiornamenti firmware LG tramite Homebrew Channel, inclusi quelli di sicurezza; serve un vero riavvio tramite Homebrew Channel. Gli aggiornamenti CYTV restano separati.
 
 Mantieni le impostazioni attuali salta la personalizzazione. L’interruttore mostra lo stato attuale della funzione del modo. Le impostazioni non modificate vengono conservate. Reinstallare Root rimuove comunque le preferenze CYTV come descritto sopra. Controlla l’aspetto sulla TV e le opzioni non confermate in Home prima di riprovare.
 

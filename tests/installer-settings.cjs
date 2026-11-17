@@ -98,3 +98,26 @@ assert.equal(
   false
 );
 assert.equal(values.get('tvhome.name'), 'New');
+const appLibrary = require('../launcher/app-library');
+const usageSetup = create({ localStorage: storage, AppLibrary: appLibrary });
+values.set(
+  'tvhome.usage.v1',
+  JSON.stringify({ enabled: true, counts: { a: 5 } })
+);
+assert.equal(
+  usageSetup.apply({ cytvSetup: { id: 'f'.repeat(32), usage_sort: 'off' } }),
+  false
+);
+assert.equal(
+  usageSetup.apply({ cytvSetup: { id: 'f'.repeat(32), usage_sort: false } }),
+  true
+);
+assert.deepEqual(JSON.parse(values.get('tvhome.usage.v1')), {
+  enabled: false,
+  counts: { a: 5 }
+});
+assert.equal(
+  usageSetup.apply({ cytvSetup: { id: 'f'.repeat(32), usage_sort: true } }),
+  false
+);
+console.log('PASS post-install sorting preserves launch counts');

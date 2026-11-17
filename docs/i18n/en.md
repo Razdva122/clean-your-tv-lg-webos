@@ -143,6 +143,8 @@ In the desktop installer, open **Maintenance action → Adjust LG settings (Debl
 
 ## Settings
 
+Under **Settings → Appearance**, turn on **Sort by most used** to bring apps you launch often to the top of the grid. The dock keeps its order. Hold OK to edit in manual order, including moving a tile to Hide. Turn the switch off to return to your manual order. You can also choose this at the end of the cytv installer’s Settings step.
+
 Use ↑ ↓ to choose a category and → or OK to enter it. ← returns to categories; Back returns there first, then closes settings. Within a section, returning from categories restores the last available control. In Columns, arrows follow the three-column grid. In Language, entry focuses the selected language.
 
 In **Settings → Your Home screen → Clock format**, choose **Automatic (TV locale)**, **12-hour**, or **24-hour**.
@@ -171,7 +173,7 @@ During removal, you can choose to restore the saved original Debloat settings. I
 
 After successful installation, choose Classic, Liquid Glass or Ribbon and turn Home weather on or off. Ribbon does not support weather; Liquid Glass uses the compact format. Weather can find an approximate city through your internet connection; change it later in Home settings.
 
-No-root with Developer Mode offers optional auto-renewal (Beta); keep monitoring the official timer. New No-root installations through existing root SSH hide the Developer Mode tab. Root offers LG firmware update blocking through Homebrew Channel, including security updates; a real restart through Homebrew Channel is required. This is separate from CYTV updates.
+No-root with Developer Mode offers optional auto-renewal; keep monitoring the official timer. New No-root installations through existing root SSH hide the Developer Mode tab. Root offers LG firmware update blocking through Homebrew Channel, including security updates; a real restart through Homebrew Channel is required. This is separate from CYTV updates.
 
 Choose Keep current settings to skip customization. The mode switch shows its current On/Off state. Unchanged mode settings are kept. Root reinstallation still removes saved CYTV preferences as described above. Check the chosen appearance on the TV; an optional setting reported as unconfirmed needs checking in Home settings before retrying.
 

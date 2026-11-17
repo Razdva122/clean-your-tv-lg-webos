@@ -141,6 +141,8 @@ Références détaillées en anglais: [prérequis](../COMPATIBILITY.md) · [comm
 
 ## Réglages
 
+Dans **Réglages → Apparence**, activez **Applications les plus utilisées en premier**. L’ordre du dock est conservé. Maintenez OK pour déplacer ou masquer une tuile dans l’ordre manuel. Désactivez l’option pour revenir à l’ordre manuel. L’option figure aussi à la fin des réglages du programme d’installation cytv.
+
 Utilisez ↑ ↓ pour choisir une catégorie, puis → ou OK pour y entrer. ← revient aux catégories ; Retour y revient d’abord, puis ferme les réglages. En revenant dans une section, le dernier contrôle disponible reprend le focus. Dans Colonnes, les flèches suivent la grille de trois colonnes. Dans Langue, le focus se place sur la langue choisie.
 
 Dans **Réglages → Votre écran Home → Format de l’heure**, choisissez **Automatique (région du téléviseur)**, **12 heures** ou **24 heures**.
@@ -169,7 +171,7 @@ Lors de la désinstallation, vous pouvez rétablir les valeurs d’origine enreg
 
 Après une installation réussie, choisissez Classic, Liquid Glass ou Ribbon et activez ou désactivez la météo. Ribbon ne prend pas en charge la météo ; Liquid Glass utilise le format compact. La ville est estimée selon votre connexion et peut être modifiée dans Home.
 
-No-root avec Developer Mode propose la prolongation automatique (Bêta) ; surveillez toujours le compteur officiel. Dans les nouvelles installations No-root via un accès SSH root existant, l’onglet Developer Mode est masqué. Root permet de bloquer les mises à jour du micrologiciel LG via Homebrew Channel, y compris celles de sécurité ; un vrai redémarrage via Homebrew Channel est requis. Les mises à jour CYTV restent distinctes.
+No-root avec Developer Mode propose la prolongation automatique ; surveillez toujours le compteur officiel. Dans les nouvelles installations No-root via un accès SSH root existant, l’onglet Developer Mode est masqué. Root permet de bloquer les mises à jour du micrologiciel LG via Homebrew Channel, y compris celles de sécurité ; un vrai redémarrage via Homebrew Channel est requis. Les mises à jour CYTV restent distinctes.
 
 Conserver les réglages actuels permet de passer la personnalisation. L’interrupteur affiche l’état actuel de la fonction du mode. Les réglages inchangés sont conservés. La réinstallation Root supprime toujours les préférences CYTV comme indiqué plus haut. Vérifiez l’apparence sur le TV et les options non confirmées dans Home avant de réessayer.
 

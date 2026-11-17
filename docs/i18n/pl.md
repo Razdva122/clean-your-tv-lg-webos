@@ -142,6 +142,8 @@ Szczegółowe instrukcje po angielsku: [wymagania](../COMPATIBILITY.md) · [ster
 
 ## Ustawienia
 
+W **Ustawienia → Wygląd** włącz opcję **Najczęściej używane na początku**. Kolejność w doku jest zachowana. Przytrzymaj OK, aby przesunąć lub ukryć kafelek w kolejności ręcznej. Wyłącz opcję, aby wrócić do kolejności ręcznej. Opcja jest również na końcu ustawień w instalatorze cytv.
+
 Wybierz kategorię przyciskami ↑ ↓ i wejdź do niej przez → lub OK. ← wraca do kategorii; Wstecz najpierw wraca do nich, a potem zamyka ustawienia. Po ponownym wejściu sekcja przywraca fokus na ostatnim dostępnym elemencie. W Kolumnach strzałki odpowiadają siatce trzech kolumn. W Języku fokus trafia na wybrany język.
 
 W **Ustawienia → Twój ekran Home → Format godziny** wybierz **Automatycznie (region telewizora)**, **12-godzinny** lub **24-godzinny**.
@@ -170,7 +172,7 @@ Podczas odinstalowywania możesz przywrócić zapisane początkowe ustawienia De
 
 Po udanej instalacji wybierz Classic, Liquid Glass lub Ribbon i włącz albo wyłącz pogodę. Ribbon nie obsługuje pogody; Liquid Glass używa formatu kompaktowego. Miasto jest szacowane z połączenia i można je zmienić w Home.
 
-No-root z Developer Mode oferuje automatyczne przedłużanie (Beta); nadal sprawdzaj oficjalny licznik. W nowych instalacjach No-root przez istniejący dostęp root SSH karta Developer Mode jest ukryta. Root pozwala blokować aktualizacje firmware LG przez Homebrew Channel, w tym aktualizacje bezpieczeństwa; wymagany jest pełny restart przez Homebrew Channel. Aktualizacje CYTV są oddzielne.
+No-root z Developer Mode oferuje automatyczne przedłużanie; nadal sprawdzaj oficjalny licznik. W nowych instalacjach No-root przez istniejący dostęp root SSH karta Developer Mode jest ukryta. Root pozwala blokować aktualizacje firmware LG przez Homebrew Channel, w tym aktualizacje bezpieczeństwa; wymagany jest pełny restart przez Homebrew Channel. Aktualizacje CYTV są oddzielne.
 
 Zachowaj obecne ustawienia pomija dostosowanie. Przełącznik pokazuje obecny stan funkcji trybu. Niezmienione ustawienia są zachowywane. Ponowna instalacja Root nadal usuwa preferencje CYTV zgodnie z opisem powyżej. Sprawdź wygląd na TV, a niepotwierdzone opcje w Home przed kolejną próbą.
 

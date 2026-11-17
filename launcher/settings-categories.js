@@ -246,6 +246,16 @@
         });
       if (group.id === 'home' && root.HomeI18n) mountClockFormat(pane);
       if (group.id === 'appearance') {
+        var usageSort = pane.querySelector('#homeUsageSort');
+        if (usageSort) {
+          var hint = document.createElement('p');
+          hint.id = 'homeUsageSortHint';
+          hint.textContent = t(
+            'Frequently opened apps move up in the grid. The dock keeps its order.'
+          );
+          usageSort.parentNode.insertBefore(hint, usageSort);
+          usageSort.setAttribute('aria-describedby', hint.id);
+        }
         [
           [
             'Columns',

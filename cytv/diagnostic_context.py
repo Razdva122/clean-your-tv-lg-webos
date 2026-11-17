@@ -47,6 +47,7 @@ STAGES = ('unknown', 'blocked', 'reserved', 'root-deploy', 'root-updater', 'supe
           'readback', 'complete', 'absent', 'incomplete-state', 'installed-recovery-only',
           'uninstalled-state-retained', 'pending', 'coordinator-upload', 'coordinator-submitted')
 STAGES += ('requested','original-writers-fenced','controls-restored','package-removal','private-cleanup','verified-clean')
+STAGES += ('provision-finalize-starting',)
 CODES = ('unknown_operation', 'operation_pending', 'verified', 'installation_requires_recovery',
          'operation_requires_recovery', 'recovery_evidence_required', 'continuation_requires_recovery',
          'historical_completion_is_not_current', 'installer-runtime-mismatch', 'clean-handoff-refused')
@@ -160,6 +161,9 @@ def root_home_button_readback(value):
 def tv_summary(value):
     value = mapping(value)
     result = metadata(value)
+    if 'root_beta_state' in value:
+        from .root_passive import beta_summary
+        result['root_beta_state'] = beta_summary(value['root_beta_state'])
     if 'icon_inventory' in value:
         icons = mapping(value['icon_inventory'])
         result['icon_inventory'] = {'schema': 1, 'status': choice(icons.get('status'),
@@ -212,7 +216,7 @@ def tv_summary(value):
         settings = mapping(value['installation_settings'])
         result['installation_settings'] = {
             key: choice(settings[key], ('requested-in-home', 'saved', 'saved-restart-required', 'unconfirmed'))
-            for key in ('theme', 'weather', 'renewal', 'block_updates', 'tv_name', 'launchpoint_title') if key in settings}
+            for key in ('theme', 'weather', 'renewal', 'block_updates', 'tv_name', 'launchpoint_title', 'usage_sort') if key in settings}
     for key, allowed in (('helper_state', HELPER_STATES), ('kernel_arch', KERNEL_ARCHES),
                          ('userland_abi', ('arm32', 'arm64', 'other', 'unknown')),
                          ('graphics_resolution', ('1280x720', '1920x1080'))):
@@ -545,6 +549,10 @@ def failure_summary(value):
     from .errors import root_driver_details
     driver=root_driver_details(value.get('root_driver'))
     if driver:result['root_driver']=driver
+    from .errors import root_beta_repair_details
+    beta_repair = root_beta_repair_details(value.get('root_beta_repair_failure'))
+    if beta_repair:
+        result['root_beta_repair_failure'] = beta_repair
     if 'no_root_cleanup' in value:
         from .errors import no_root_cleanup_details
         result['no_root_cleanup'] = no_root_cleanup_details(value['no_root_cleanup'])

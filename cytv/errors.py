@@ -303,6 +303,20 @@ def root_recovery_details(value):
     return result
 
 
+def root_beta_repair_details(value):
+    stages = ('python-select', 'python-binding', 'support-start', 'device', 'deploy-lease',
+              'provision-lock', 'retained-release', 'deployment-stage', 'original-timeout',
+              'routing-selection', 'installed-package', 'ls2-registration', 'runner',
+              'pending-proof', 'stock-home', 'write-runner', 'write-pending-proof',
+              'manifest', 'status', 'register', 'startup-hook', 'publish', 'final-status',
+              'write-deployment-stage', 'close-deploy-lease')
+    if not isinstance(value, dict) or value.get('stage') not in stages:
+        return {}
+    detail = root_recovery_details({**value, 'phase': 'status'})
+    detail.pop('phase', None)
+    return {'stage': value['stage'], **detail}
+
+
 # Fixed runtime categories shared by the trusted launcher and report revalidation.
 OBSERVER_EXCEPTION_NAMES = ('Error', 'TypeError', 'SyntaxError', 'ReferenceError', 'RangeError')
 OBSERVER_EXCEPTION_CODES = ('MODULE_NOT_FOUND', 'ERR_DLOPEN_FAILED', 'EACCES', 'EPERM',

@@ -24,6 +24,7 @@ PRIVATE_FILES = ('service.js','startup-diagnostics.js','app-inventory.js','handl
 RECEIVER_CAPABILITIES = ['theme-receiver-v1']
 WALLPAPER_CAPABILITIES = RECEIVER_CAPABILITIES + ['wallpaper-media-v1']
 COMPOSITOR_CAPABILITIES = WALLPAPER_CAPABILITIES + ['c1-keyfilter-v1']
+LEGACY_NODE_COMPOSITOR_CAPABILITIES = WALLPAPER_CAPABILITIES + ['c1-keyfilter-v2']
 
 def snapshot_capabilities(saved):
     capabilities = saved.get('capabilities', [])
@@ -31,7 +32,7 @@ def snapshot_capabilities(saved):
     # An OTA can retain an older registration contract. Add only the
     # screensaver methods and keep that contract intact for rollback.
     with_screensaver = tuple(base + ['screensaver-v1'] for base in ordinary)
-    if capabilities not in ordinary + (COMPOSITOR_CAPABILITIES,) + with_screensaver:
+    if capabilities not in ordinary + (COMPOSITOR_CAPABILITIES, LEGACY_NODE_COMPOSITOR_CAPABILITIES) + with_screensaver:
         raise ValueError('Unknown recovery capabilities')
     return capabilities
 SYSTEM_FILES = tuple(Path(x) for x in ('/usr/bin/node','/usr/palm/services/jsservicelauncher/bootstrap-node.js','/usr/palm/services/jsservicelauncher/bootstrap.js'))
@@ -132,7 +133,8 @@ def plan(original, capabilities=None):
         clients[NAME].append('application.launcher')
         role['permissions'][0]['outbound'] += ['com.webos.applicationManager','com.webos.service.tvpower']
     apis = {NAME+'.control':[NAME+'/'+x for x in control],'activities.callbacks':[NAME+'/boot'],NAME+'.admin':[NAME+'/'+x for x in ('status','restore','register','unregister')]}
-    if 'c1-keyfilter-v1' in capabilities:
+    compositor = capabilities in (COMPOSITOR_CAPABILITIES, LEGACY_NODE_COMPOSITOR_CAPABILITIES)
+    if compositor:
         names=[line for line in original['service'].splitlines() if line.startswith('Name=')]
         if names not in (['Name='+NAME],['Name='+NAME+';']):
             raise ValueError('Unexpected compositor activation names')
@@ -142,9 +144,13 @@ def plan(original, capabilities=None):
         # Running W21 compositor clients already hold the named stock group
         # 'all'. A policy scan does not refresh their cached client groups.
         apis['all'] = [LEASE_NAME+'/c1Lease', LEASE_NAME+'/c1Home']
+        if capabilities == LEGACY_NODE_COMPOSITOR_CAPABILITIES:
+            # W19's stock legacy LS2 role reaches these methods via 'private'.
+            # The alias and broker still accept only the two compositor senders.
+            apis['private'] = apis['all']
     result = {'service': original['service'].replace(expected,'Exec='+str(RUNNER)).encode(),
             'role':encoded(role), 'client':encoded(clients), 'api':encoded(apis)}
-    if 'c1-keyfilter-v1' in capabilities:
+    if compositor:
         # LS2 reads Name as a semicolon-delimited GLib string list. Keep the
         # SDK manifest's existing service-file path and exact rollback shape.
         result['service']=result['service'].replace(names[0].encode(),('Name='+NAME+';'+LEASE_NAME).encode())
@@ -469,6 +475,10 @@ def finalize(*, record_failure=True, firmware_permissions=True, writer=None):
         if record_failure:
             try: write(STATE/'recovery-failure.json',encoded(report))
             except (OSError, ValueError): pass
+        else:
+            error.beta_repair_failure = {'stage': phase, **{
+                key: report[key] for key in ('reason', 'luna_reason', 'luna_error_code',
+                    'startup_state', 'startup_exit_status') if key in report}}
         raise
 
 
@@ -506,12 +516,13 @@ def beta_repair_write(path, data, mode=0o600):
     write(path, data, mode)
 
 
-def repair_beta_recovery():
+def repair_beta_recovery(checkpoint=lambda stage: None):
     """Finish a v1.21.0 native Beta status timeout with its existing app."""
     from deploy import APP
     from package_identity import bootstrap_inventory
     from runtime import c1_keyfilter
 
+    checkpoint('retained-release')
     if not LEGACY_NODE_BETA:
         raise ValueError('Root Beta recovery support required')
     release = json.loads(secure(STATE/'release.json'))
@@ -519,27 +530,34 @@ def repair_beta_recovery():
             release.get('home_backend'), release.get('routing'), release.get('compositor_admission')) != (
             APP, '0.20.0', 'node012-beta', 'c1-native-gate', 'compositor-keyfilter-v1', 3):
         raise ValueError('Unsupported retained Beta package')
+    checkpoint('deployment-stage')
     deployment = json.loads(secure(STATE/'deploy.json'))
     stage = deployment.get('stage')
     if (deployment != {'version': 1, 'app': APP, 'stage': stage}
             or stage not in ('provision-finalize-starting', 'installed-recovery-only')):
         raise ValueError('Original Beta provisioning stage required')
+    checkpoint('original-timeout')
     failure = json.loads(secure(STATE/'recovery-failure.json'))
     if (failure.get('schema'), failure.get('phase'), failure.get('reason'),
             failure.get('startup_state'), failure.get('startup_exit_status')) != (1, 'status', 'timeout', 'exited', 0):
         raise ValueError('Original Beta recovery timeout required')
+    checkpoint('routing-selection')
     if any(os.path.lexists(STATE/name) for name in ('profile-trial.json', 'persistent-intent.json',
             'persistent-binding.json', 'boot-continuation.json', 'profile-candidate.stage')):
         raise ValueError('Active or retained Home routing prevents Beta repair')
     selection = c1_keyfilter.selection(STATE)
     if not selection or selection['schema'] != 3 or selection['native_sha256'] != release.get('native_sha256'):
         raise ValueError('Original Beta compositor selection required')
+    checkpoint('installed-package')
     bootstrap_inventory(STATE)
+    checkpoint('ls2-registration')
     verify_beta_repair_registration()
+    checkpoint('runner')
     expected_runner = runner_bytes()
     old_runner = expected_runner.replace(b'--disable-activity-creation ', b'', 1)
     if secure(RUNNER) not in (old_runner, expected_runner):
         raise ValueError('Retained Beta runner changed')
+    checkpoint('pending-proof')
     observed = manifest()
     old_manifest = dict(observed, files=dict(observed['files'], **{str(RUNNER): sha(old_runner)}))
     new_manifest = dict(observed, files=dict(observed['files'], **{str(RUNNER): sha(expected_runner)}))
@@ -552,24 +570,70 @@ def repair_beta_recovery():
             or have_ready and (observed != new_manifest or saved_manifest != new_manifest
                                or json.loads(secure(ready)) != new_manifest)):
         raise ValueError('Retained Beta recovery manifest changed')
+    checkpoint('stock-home')
     prepare_stock_home()
 
     # Runner first allows retry after either atomic write. Recheck every other
     # manifest member before accepting a mixture of the two known runner bytes.
     if observed != new_manifest:
+        checkpoint('write-runner')
         beta_repair_write(RUNNER, expected_runner, 0o700)
     if saved_manifest != new_manifest:
+        checkpoint('write-pending-proof')
         beta_repair_write(pending, encoded(new_manifest))
     if not have_ready:
+        checkpoint('manifest')
         finalize(record_failure=False, firmware_permissions=False, writer=beta_repair_write)
+    checkpoint('final-status')
     status = rpc('status')
     if (status.get('root') is not True
             or status.get('result', {}).get('recovery', {}).get('integrity_verified') is not True):
         raise ValueError('Repaired Beta recovery status could not be verified')
     if stage != 'installed-recovery-only':
+        checkpoint('write-deployment-stage')
         beta_repair_write(STATE/'deploy.json', encoded(
             {'version': 1, 'app': APP, 'stage': 'installed-recovery-only'}))
     return {'returnValue': True, 'status_verified': True, 'home_changed': False}
+
+
+def beta_repair_command():
+    stage = 'device'
+
+    def checkpoint(value):
+        nonlocal stage
+        stage = value
+
+    try:
+        from deploy import require_device, require_node
+        from installation import Ownership, device_operation
+        require_device()
+        require_node()
+        checkpoint('deploy-lease')
+        owner = Ownership()
+
+        def existing_deploy():
+            lease = owner.status()
+            if (not lease or lease['owner'] != 'deploy' or lease['journal'] != 'deploy.json'
+                    or lease['terminal']):
+                raise ValueError('Original Beta deploy reservation required')
+
+        with device_operation('deploy', recovery=True, ownership=owner, check=existing_deploy):
+            checkpoint('provision-lock')
+            fd = os.open(STATE/'provision.lock', os.O_RDWR|os.O_NOFOLLOW|os.O_NONBLOCK)
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX|fcntl.LOCK_NB)
+                result = repair_beta_recovery(checkpoint)
+            finally:
+                os.close(fd)
+            checkpoint('close-deploy-lease')
+    except Exception as error:
+        detail = {'stage': stage, 'reason': 'failed'}
+        if isinstance(error, RecoveryRPCError):
+            detail.update(error.details)
+        detail.update(getattr(error, 'beta_repair_failure', {}))
+        print(json.dumps({'returnValue': False, 'root_beta_repair_failure': detail}), flush=True)
+        raise SystemExit(1) from None
+    print(json.dumps(result))
 
 
 def disable_trials():
@@ -646,24 +710,7 @@ def main():
                           'sequence':['install package and runtime','apply','refresh LS2','finalize'],
                           'rollback':['restore runtime','cancel owned activity','restore exact LS2 snapshots','refresh LS2']} ,indent=2))
     elif command == 'repair_beta_recovery':
-        from deploy import require_device, require_node
-        from installation import Ownership, device_operation
-        require_device()
-        require_node()
-        owner = Ownership()
-        def existing_deploy():
-            lease = owner.status()
-            if (not lease or lease['owner'] != 'deploy' or lease['journal'] != 'deploy.json'
-                    or lease['terminal']):
-                raise ValueError('Original Beta deploy reservation required')
-        with device_operation('deploy', recovery=True, ownership=owner, check=existing_deploy):
-            fd = os.open(STATE/'provision.lock', os.O_RDWR|os.O_NOFOLLOW|os.O_NONBLOCK)
-            try:
-                fcntl.flock(fd, fcntl.LOCK_EX|fcntl.LOCK_NB)
-                result = repair_beta_recovery()
-            finally:
-                os.close(fd)
-        print(json.dumps(result))
+        beta_repair_command()
     else:
         fd = os.open(STATE/'provision.lock', os.O_CREAT|os.O_RDWR|os.O_NOFOLLOW, 0o600)
         try:

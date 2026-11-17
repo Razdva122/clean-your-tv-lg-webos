@@ -24,7 +24,7 @@ Bewahren Sie Kopplungsschlüssel und Verbindungsdaten vertraulich auf. Verwenden
 
 Öffnen Sie LGs Developer-Mode-App, prüfen Sie die verbleibende Sitzungszeit und verlängern Sie sie, solange die erforderliche Verbindung besteht. Folgen Sie LGs aktuellen Anweisungen, statt sich auf eine feste Stundenanzahl aus einem älteren Artikel zu verlassen. Ein Verlängerungsversuch beweist keinen Erfolg: Kontrollieren Sie anschließend die angezeigte Restzeit.
 
-Clean Your TV bietet eine optionale automatische Verlängerung als Beta-Funktion an, die standardmäßig ausgeschaltet ist. Wenn Sie sie aktivieren, prüfen Sie weiterhin den tatsächlichen Developer-Mode-Status. Sie hebt LGs Sitzungsanforderungen nicht auf und macht einen deaktivierten Modus nicht dauerhaft aktiv.
+Clean Your TV bietet eine optionale automatische Verlängerung an, die standardmäßig ausgeschaltet ist. Wenn Sie sie aktivieren, prüfen Sie weiterhin den tatsächlichen Developer-Mode-Status. Sie hebt LGs Sitzungsanforderungen nicht auf und macht einen deaktivierten Modus nicht dauerhaft aktiv.
 
 ## Was tun, wenn der Launcher verschwindet oder Home LG Home öffnet?
 

@@ -55,7 +55,7 @@ and creating your own theme.
 ## Download and install
 
 <!-- release:downloads -->
-Current stable release: **[v1.23.0](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.23.0)** — [release notes](docs/RELEASE-1.23.0.md).
+Current stable release: **[v1.24.0](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.24.0)** — [release notes](docs/RELEASE-1.24.0.md).
 <!-- /release:downloads -->
 
 [![Download Windows x64 graphical installer — GUI ZIP](assets/brand/downloads/windows.svg)](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/latest/download/cytv-windows-x64-desktop.zip)
@@ -114,7 +114,7 @@ interface and 4K Dolby Vision playback on compatible TVs.
 
 - Test results are specific to devices and versions. Read [compatibility](docs/COMPATIBILITY.md); a successful install alone does not prove daily reliability.
 - The original **1.3.0 Root updater cannot install 1.4.0 through OTA**. Keep recovery records and read [the update limitations](docs/UPDATES.md) before attempting that transition.
-- No-root needs an active Developer Mode session. Automatic renewal is optional Beta; continue monitoring LG's official timer.
+- No-root needs an active Developer Mode session. Automatic renewal is optional; continue monitoring LG's official timer.
 - The on-TV **Homebrew Installer is unreleased**. Use the published computer/Android installer; [candidate details](homebrew/README.md) are for coordinated testing.
 
 <a id="languages"></a>
@@ -143,12 +143,12 @@ For contributors: [build and technical references](docs/development/README.md),
 <!-- release:components -->
 | Component | Stable version |
 | --- | --- |
-| cytv installer | 0.21.1 |
-| Home | 1.20.1 |
+| cytv installer | 0.21.2 |
+| Home | 1.20.2 |
 | Home Helper | 0.9.0 |
-| Root edition | 0.21.1 |
-| Both edition Updaters | 0.6.1 |
-| Android installer / versionCode | 0.20.1 / 48 |
+| Root edition | 0.21.2 |
+| Both edition Updaters | 0.6.2 |
+| Android installer / versionCode | 0.20.2 / 49 |
 <!-- /release:components -->
 
 v1.15.0 fresh System Updater: 1.2.8 / protocol 1. v1.14.0 used 1.2.7. Existing supervisors stay pinned; installed 1.1.2 has no general replacement path. See the [delivery limits](docs/RELEASE-1.13.0.md).

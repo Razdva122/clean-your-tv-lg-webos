@@ -301,6 +301,99 @@ const { assert, chromium, stage, open } = require('./browser.cjs');
       } finally {
         await page.close();
       }
+      const sorted = await open(browser, site, edition, 2);
+      try {
+        const page = sorted.page;
+        const ids = () =>
+          page
+            .locator('#tiles [data-app-id]')
+            .evaluateAll((items) => items.map((el) => el.dataset.appId));
+        const manual = await ids();
+        const target = manual[3];
+        const settings = async () => {
+          await page.locator('#btnSettings').dispatchEvent('click');
+          await page.locator('[data-category=appearance]').click();
+        };
+        await settings();
+        const sort = page.locator('#homeUsageSort');
+        assert.equal(await sort.count(), 1, 'usage sorting is available');
+        assert.equal(
+          await sort.evaluate(
+            (el) => el.parentElement.querySelector('button').id
+          ),
+          'homeUsageSort'
+        );
+        assert.equal(
+          await sort.evaluate((el) => el.previousElementSibling.id),
+          'homeUsageSortHint'
+        );
+        assert(await sort.getAttribute('aria-describedby'));
+        assert.equal(await sort.getAttribute('aria-checked'), 'false');
+        await sort.focus();
+        await page.keyboard.press('Enter');
+        assert.equal(await sort.getAttribute('aria-checked'), 'true');
+        await page.keyboard.press('Escape');
+        await page.keyboard.press('Escape');
+        await page.locator(`#tiles [data-app-id="${target}"]`).click();
+        await page.waitForFunction(
+          () =>
+            Object.keys(
+              JSON.parse(localStorage.getItem('tvhome.usage.v1')).counts
+            ).length
+        );
+        await page.evaluate(() =>
+          document.dispatchEvent(new Event('webOSRelaunch'))
+        );
+        const ranked = [
+          manual[0],
+          manual[1],
+          target,
+          manual[2],
+          ...manual.slice(4)
+        ];
+        assert.deepEqual(await ids(), ranked);
+        await settings();
+        await page.locator('#homeEditTiles').click();
+        assert.deepEqual(
+          await ids(),
+          manual,
+          'explicit editing uses manual order'
+        );
+        await page.keyboard.press('Escape');
+        assert.deepEqual(
+          await ids(),
+          ranked,
+          'leaving editing restores ranked order'
+        );
+        await page.keyboard.down('Enter');
+        await page.waitForTimeout(700);
+        await page.keyboard.up('Enter');
+        assert.deepEqual(await ids(), manual);
+        assert.equal(
+          await page.locator('#tiles .moving').getAttribute('data-app-id'),
+          target
+        );
+        for (let i = 0; i < Math.ceil(manual.length / 2); i++)
+          await page.keyboard.press('ArrowDown');
+        await page.keyboard.press('Enter');
+        assert.deepEqual(
+          await ids(),
+          manual.filter((id) => id !== target)
+        );
+        await page.keyboard.press('Enter'); // Undo the hide.
+        assert.deepEqual(await ids(), ranked);
+        await page.reload();
+        await page.waitForFunction(() => window.RootLauncherRendered === true);
+        assert.deepEqual(await ids(), ranked, 'sorting survives a fresh Home');
+        await settings();
+        assert.equal(await sort.getAttribute('aria-checked'), 'true');
+        await sort.click();
+        assert.deepEqual(await ids(), manual);
+        assert.deepEqual(sorted.errors, []);
+        console.log('PASS usage sorting, dock, hide and undo: ' + edition);
+      } finally {
+        await sorted.page.close();
+      }
     }
   } finally {
     await browser.close();

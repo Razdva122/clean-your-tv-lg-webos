@@ -690,6 +690,32 @@ class CleanupTail(unittest.TestCase):
         self.write('clean-removal-'+ID+'.json',self.record)
         result,reply=self.run_tail();self.assertEqual(result.returncode,0,result.stderr)
 
+    def test_resumed_cleanup_retires_unlisted_python_bytecode_cache(self):
+        cache = self.runtime / 'lib/__pycache__'
+        cache.mkdir(mode=0o700)
+        (cache / 'secret.cpython-313.pyc').write_bytes(b'cache; never execute')
+        (cache / 'secret.cpython-313.opt-1.pyc').write_bytes(b'optimized cache')
+        result, reply = self.run_tail()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(reply['stage'], 'verified-clean')
+        self.assertFalse(self.runtime.exists())
+
+    def test_resumed_cleanup_preserves_unknown_cache_members(self):
+        cache = self.runtime / 'lib/__pycache__'
+        cache.mkdir(mode=0o700)
+        source = self.runtime / 'lib/secret.py'
+        valid = cache / 'secret.cpython-313.pyc'
+        valid.write_bytes(b'generated cache')
+        unknown = cache / 'other.cpython-313.pyc'
+        unknown.write_bytes(b'foreign file')
+        result, reply = self.run_tail()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(reply['cleanup_error'], 'unknown-runtime-member')
+        self.assertTrue(source.exists())
+        self.assertTrue(valid.exists())
+        self.assertTrue(unknown.exists())
+        self.assertEqual(json.loads((self.base / 'mutations.json').read_text()), [])
+
     def test_changed_owned_runtime_bytes_are_removed_without_execution(self):
         (self.runtime/'lib/secret.py').write_text('changed old bytes; never execute')
         result,reply=self.run_tail()

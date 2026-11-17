@@ -24,7 +24,7 @@ Gardez les clés d’appairage et les informations de connexion privées. Utilis
 
 Ouvrez l’application Developer Mode de LG, vérifiez le temps de session restant et prolongez-la lorsque la connexion nécessaire est disponible. Suivez les instructions actuelles de LG plutôt qu’un nombre d’heures fixe cité dans un ancien article. Une tentative de renouvellement ne prouve pas sa réussite : vérifiez ensuite le temps restant affiché.
 
-Clean Your TV propose un renouvellement automatique facultatif en version bêta, désactivé par défaut. Si vous l’activez, continuez à vérifier l’état réel de Developer Mode. Cette fonction ne supprime pas les exigences de session de LG et ne rend pas permanent un mode désactivé.
+Clean Your TV propose un renouvellement automatique facultatif, désactivé par défaut. Si vous l’activez, continuez à vérifier l’état réel de Developer Mode. Cette fonction ne supprime pas les exigences de session de LG et ne rend pas permanent un mode désactivé.
 
 ## Que faire si le lanceur disparaît ou si Home ouvre LG Home ?
 

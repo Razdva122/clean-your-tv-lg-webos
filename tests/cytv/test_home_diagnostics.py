@@ -1,4 +1,7 @@
+import errno
 import json
+import os
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -32,6 +35,138 @@ class HomeDiagnosticsTests(unittest.TestCase):
             self.assertEqual(len(list(path.parent.glob('*.json'))), 1)
             self.assertNotIn('PAIRINGKEY', path.read_text())
             self.assertEqual(remote.commands[-1]['cmd'], 'diagnostics-stop')
+
+    def test_cli_recovers_the_same_recording_after_standby_disconnect(self):
+        from paramiko import SSHException
+        from cytv import cli
+
+        before = Mock()
+        after = Mock()
+        clock = [0]
+
+        def line(trigger, **fields):
+            request = json.loads(before.upload.call_args_list[0].args[1])
+            return json.dumps(dict(event='home-diagnostic', session=request['nonce'],
+                                   trigger=trigger, **fields))
+
+        def first_read(command):
+            if before.run.call_count == 1:
+                return line('started', time=1)
+            raise SSHException('session closed during standby')
+
+        before.run.side_effect = first_read
+        def read_after_wake(command):
+            events = [line('started', time=1)]
+            if clock[0] >= 12:
+                events.append(line('foreground', time=12000, foreground='com.gathin.tvhome'))
+            if clock[0] >= 13:
+                events.append(line('foreground', time=13000, foreground='youtube.leanback.v4'))
+            if clock[0] >= 23:
+                events.append(line('launch-request', time=23000, id='com.gathin.tvhome', private='PRIVATE'))
+            if clock[0] >= 60:
+                events.append(line('expired', time=60001))
+            return '\n'.join(events)
+
+        after.run.side_effect = read_after_wake
+        def tv_still_asleep():
+            clock[0] += 12
+            raise OSError(errno.ENETUNREACH, 'network unreachable during standby')
+
+        def connect_to_tv(*args, **kwargs):
+            if connect.call_count == 1:
+                return before
+            if connect.call_count == 2:
+                tv_still_asleep()
+            return after
+
+        connect = Mock(side_effect=connect_to_tv)
+        with tempfile.TemporaryDirectory() as tmp, patch('time.monotonic', side_effect=lambda: clock[0]), \
+                patch('cytv.diagnostics.time.sleep', side_effect=lambda seconds: clock.__setitem__(0, clock[0] + seconds)):
+            code = cli.main(['home-diagnostics', '--host', '192.0.2.55', '--edition', 'no-root',
+                             '--data-dir', tmp, '--language', 'en'], ask=lambda _: 'y',
+                            write=lambda _: None, connect=connect)
+            self.assertEqual(code, 0)
+            path, = (Path(tmp) / 'reports').glob('diagnostic-*.json')
+            raw = path.read_text()
+            capture = json.loads(raw)['helper_diagnostics']
+            self.assertTrue(capture['complete'])
+            self.assertEqual([record['trigger'] for record in capture['records']],
+                             ['started', 'foreground', 'foreground', 'launch-request', 'expired'])
+            self.assertEqual(capture['records'][2]['foreground'], 'youtube.leanback.v4')
+            self.assertNotIn('PRIVATE', raw)
+        self.assertEqual(connect.call_count, 3)
+        for attempt in connect.call_args_list[1:]:
+            self.assertEqual(attempt.kwargs, {'persist': False})
+            self.assertFalse(attempt.args[3]('untrusted-key', False))
+        before.close.assert_called_once()
+        after.close.assert_called_once()
+        before.upload.assert_called_once()
+        after.upload.assert_called_once()
+        start = json.loads(before.upload.call_args.args[1])
+        stop = json.loads(after.upload.call_args.args[1])
+        self.assertEqual(start['cmd'], 'diagnostics-start')
+        self.assertEqual(stop, {'cmd': 'diagnostics-stop', 'nonce': start['nonce']})
+
+    @unittest.skipUnless(os.name == 'posix', 'Requires a POSIX shell for the TV command')
+    def test_reads_rotated_wake_events_in_order(self):
+        remote = Mock()
+        with tempfile.TemporaryDirectory() as tmp:
+            def read_log(command):
+                log = Path(tmp) / 'controller.log'
+                start = json.loads(remote.upload.call_args.args[1])
+                def event(trigger):
+                    return json.dumps(dict(event='home-diagnostic', session=start['nonce'],
+                                           trigger=trigger)) + '\n'
+                log.with_suffix('.log.previous').write_text(event('started') + event('foreground'))
+                log.write_text(event('foreground') + event('launch-request') + event('expired'))
+                return subprocess.check_output(command.replace(
+                    '/media/developer/apps/usr/palm/applications/com.local.nativehome/state', tmp),
+                    shell=True, text=True)
+
+            remote.run.side_effect = read_log
+            path = diagnostics.collect_home_report(remote, state.Store(tmp),
+                state.target('192.0.2.55', 'no-root'), Mock())
+            capture = json.loads(path.read_text())['helper_diagnostics']
+        self.assertTrue(capture['complete'])
+        self.assertEqual([record['trigger'] for record in capture['records']],
+                         ['started', 'foreground', 'launch-request', 'expired'])
+
+    def test_saves_partial_recording_when_tv_does_not_reconnect_in_time(self):
+        remote = Mock()
+
+        def read_log(command):
+            if remote.run.call_count > 1:
+                raise TVCommandError(-1)
+            request = json.loads(remote.upload.call_args.args[1])
+            return json.dumps(dict(event='home-diagnostic', session=request['nonce'], trigger='started'))
+
+        remote.run.side_effect = read_log
+        reconnect = Mock(side_effect=ConnectionRefusedError)
+        write = Mock()
+        with tempfile.TemporaryDirectory() as tmp, patch('time.sleep'), \
+                patch('time.monotonic', side_effect=[0, 0, 2, 4, 70]):
+            path = diagnostics.collect_home_report(remote, state.Store(tmp),
+                state.target('192.0.2.55', 'no-root'), write, reconnect=reconnect)
+            report = json.loads(path.read_text())['helper_diagnostics']
+        self.assertFalse(report['complete'])
+        self.assertEqual(report['failure_stage'], 'log-read')
+        self.assertEqual([record['trigger'] for record in report['records']], ['started'])
+        reconnect.assert_called_once()
+        remote.upload.assert_called_once()
+        self.assertIn('incomplete', write.call_args.args[0])
+
+    def test_does_not_retry_when_reconnect_rejects_host_identity(self):
+        remote = Mock()
+        remote.run.side_effect = ConnectionResetError()
+        reconnect = Mock(side_effect=UserError('Host key was not verified.',
+                                              reason_code='ssh-identity-unverified'))
+        with tempfile.TemporaryDirectory() as tmp, patch('time.sleep'):
+            with self.assertRaisesRegex(UserError, 'Host key was not verified') as failure:
+                diagnostics.collect_home_report(remote, state.Store(tmp),
+                    state.target('192.0.2.55', 'no-root'), Mock(), reconnect=reconnect)
+        self.assertEqual(failure.exception.home_diagnostic_stage, 'log-read')
+        reconnect.assert_called_once()
+        remote.upload.assert_called_once()
 
     def test_unsupported_helper_stops_and_explains_without_waiting_a_minute(self):
         class Remote:

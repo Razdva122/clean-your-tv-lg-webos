@@ -134,6 +134,29 @@ class GuiTests(unittest.TestCase):
         for first, second in zip(items, items[1:]):
             self.assertLess(first.geometry().bottom(), second.geometry().top())
 
+    def test_setup_usage_choice_fits_with_wide_platform_metrics(self):
+        from cytv import i18n, install_settings as settings
+        for edition in ('root', 'no-root'):
+            with self.subTest(edition=edition):
+                w = Wizard()
+                self.addCleanup(w.close)
+                i18n.set_language('ru')
+                w.resize(900, 680)
+                w.selected_profile = {'edition': edition}
+                w.show_prompt(Prompt(settings.PROMPT))
+                w.show()
+                self.app.processEvents()
+                scroll = w.form.findChild(QScrollArea, 'installationSettings')
+                usage = w.form.findChild(QComboBox, 'usage_sort')
+                # Model a wide translated native combo that fits on its own.
+                usage.setMinimumWidth(scroll.viewport().width() - 40)
+                self.app.processEvents()
+                self.app.processEvents()
+                self.assertLessEqual(scroll.widget().width(), scroll.viewport().width())
+                self.assertLessEqual(usage.width(), scroll.viewport().width())
+                self.assertEqual(usage.count(), 3)
+                self.assertIsNone(usage.currentData())
+
     def test_setup_form_filters_mode_and_disables_weather_for_ribbon(self):
         import json
         from cytv.gui_style import ThemeCard, ToggleSwitch
@@ -170,6 +193,30 @@ class GuiTests(unittest.TestCase):
             if specific:
                 self.assertTrue(answer[specific])
 
+    def test_setup_usage_sort_can_be_preserved_enabled_or_disabled(self):
+        import json
+        from cytv.desktop import Channel
+        from cytv import install_settings as settings
+        for edition in ('root', 'no-root'):
+            for choice in (None, True, False):
+                with self.subTest(edition=edition, choice=choice):
+                    w = Wizard()
+                    self.addCleanup(w.close)
+                    w.channel = Channel(lambda *_: None)
+                    w.selected_profile = {'edition': edition}
+                    w.show_prompt(Prompt(settings.PROMPT))
+                    usage = w.form.findChild(QComboBox, 'usage_sort')
+                    self.assertIsNotNone(usage)
+                    self.assertIsNone(usage.currentData())
+                    if choice is not None:
+                        usage.setCurrentIndex(usage.findData(choice))
+                    next(b for b in w.form.findChildren(QPushButton) if b.text() == 'Continue').click()
+                    value = json.loads(w.channel.answers.get_nowait())
+                    if choice is None:
+                        self.assertNotIn('usage_sort', value)
+                    else:
+                        self.assertIs(value['usage_sort'], choice)
+
     def test_setup_switch_preserves_current_value_and_allows_explicit_off(self):
         import json
         from cytv.gui_style import ToggleSwitch
@@ -189,6 +236,7 @@ class GuiTests(unittest.TestCase):
             value = json.loads(w.channel.answers.get_nowait())
             if change: self.assertIs(value['block_updates'],False)
             else: self.assertNotIn('block_updates',value)
+            self.assertNotIn('usage_sort', value)
 
     def test_theme_cards_and_switch_work_from_keyboard(self):
         from PySide6.QtTest import QTest

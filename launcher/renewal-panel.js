@@ -38,11 +38,11 @@
         '<div id="settingsMain" class="renewal-card settings-main"><div class="settings-heading"><h2>Home settings</h2><span class="settings-edition">No-root Edition</span></div><section class="settings-home"><h3>Your Home screen</h3><p>Home is your app screen. Home Helper makes the Home button open it.</p><p id="homeRoutingStatus" class="settings-status" aria-live="polite">Checking Home control…</p>',
         '<div class="renewal-actions home-routing-actions"><button id="homeRoutingToggle" class="home-routing-switch" role="switch" aria-checked="false" aria-describedby="homeRoutingStatus" disabled>Change Home</button><button id="homeRoutingStart" hidden>Start Helper</button><button id="homeRoutingRetry" hidden>Try again</button><button id="homeVisit" class="home-visit-button" aria-describedby="homeVisitHint">Open LG Home</button></div><p id="homeVisitHint" class="home-visit-hint">Open LG Home once, keeping your Home choice.</p>',
         '<div class="renewal-actions settings-layout"><div id="homeThemeHost"></div></div><div class="renewal-actions settings-layout"><button id="homeColumns">Columns</button></div></section>',
-        '<div id="homeAppSettings" class="renewal-actions settings-layout"><button id="homeShowAddApp" class="home-routing-switch" role="switch" aria-checked="true">Show Add app tile</button><button id="homeAddApp">Add app</button><button id="homeEditTiles">Edit tiles</button><button id="homePreviewInputs" class="home-routing-switch" role="switch" aria-checked="true">Preview inputs on focus</button><p id="homeAppsError" role="alert"></p></div>',
-        '<div class="renewal-actions settings-links settings-section"><button id="homeLanguage">Language<span class="settings-chevron" aria-hidden="true"></span></button><button id="renewalUpdates">Software updates<span class="settings-update-dot" aria-hidden="true"></span><span class="settings-chevron" aria-hidden="true"></span></button><button id="renewalTV">TV settings<span class="settings-chevron" aria-hidden="true"></span></button><button id="renewalNotifications">LG Notifications<span class="settings-chevron" aria-hidden="true"></span></button></div><div class="renewal-actions settings-developer"><button id="developerOpen" aria-controls="developerSettings" aria-describedby="renewalSummary"><span><span>Developer Mode</span> <span class="settings-beta">Beta</span><span id="renewalSummary" class="renewal-summary" aria-live="polite">Checking auto-renewal…</span></span><span class="settings-chevron" aria-hidden="true"></span></button></div><div class="settings-footer">',
+        '<div id="homeAppSettings" class="renewal-actions settings-layout"><button id="homeUsageSort" class="home-routing-switch" role="switch" aria-checked="false">Sort by most used</button><button id="homeShowAddApp" class="home-routing-switch" role="switch" aria-checked="true">Show Add app tile</button><button id="homeAddApp">Add app</button><button id="homeEditTiles">Edit tiles</button><button id="homePreviewInputs" class="home-routing-switch" role="switch" aria-checked="true">Preview inputs on focus</button><p id="homeAppsError" role="alert"></p></div>',
+        '<div class="renewal-actions settings-links settings-section"><button id="homeLanguage">Language<span class="settings-chevron" aria-hidden="true"></span></button><button id="renewalUpdates">Software updates<span class="settings-update-dot" aria-hidden="true"></span><span class="settings-chevron" aria-hidden="true"></span></button><button id="renewalTV">TV settings<span class="settings-chevron" aria-hidden="true"></span></button><button id="renewalNotifications">LG Notifications<span class="settings-chevron" aria-hidden="true"></span></button></div><div class="renewal-actions settings-developer"><button id="developerOpen" aria-controls="developerSettings" aria-describedby="renewalSummary"><span><span>Developer Mode</span><span id="renewalSummary" class="renewal-summary" aria-live="polite">Checking auto-renewal…</span></span><span class="settings-chevron" aria-hidden="true"></span></button></div><div class="settings-footer">',
         '<div class="renewal-actions"><button id="renewalClose">Back to Home</button></div></div>',
-        '</div><div id="developerSettings" class="renewal-card hidden"><div class="settings-heading"><h2>Developer Mode</h2><span class="settings-edition">Beta</span></div><div class="developer-content"><div id="renewalStatus" aria-live="polite">Checking auto-renewal…</div>',
-        '<div class="renewal-actions"><button id="renewalToggle" class="home-routing-switch" role="switch" aria-checked="false">Turn on auto-renewal</button></div><p class="renewal-warning">Beta: renewal is not yet verified on no-root TVs. Keep checking the timer in the Developer Mode app.</p>',
+        '</div><div id="developerSettings" class="renewal-card hidden"><div class="settings-heading"><h2>Developer Mode</h2></div><div class="developer-content"><div id="renewalStatus" aria-live="polite">Checking auto-renewal…</div>',
+        '<div class="renewal-actions"><button id="renewalToggle" class="home-routing-switch" role="switch" aria-checked="false">Turn on auto-renewal</button></div><p class="renewal-warning">Keep checking the timer in the official Developer Mode app.</p>',
         '<div class="renewal-actions"><button id="renewalCheck">Check session</button><button id="renewalDiagnostics" aria-expanded="false" aria-controls="renewalDetails">Show diagnostics</button></div><p>Keep Developer Mode active: open it before the timer runs out and press EXTEND while the TV is online. If it expires, LG can remove these apps.</p><p>Developer Mode keeps Home installed. Auto-renewal tries to extend its session while your TV is on and online.</p><p id="renewalHistory" class="renewal-history"></p><pre id="renewalDetails" class="hidden"></pre></div><div class="settings-footer"><div class="renewal-actions"><button id="developerBack">Back</button></div></div>',
         '</div>'
       ].join('')
@@ -448,7 +448,7 @@
       if (!state) return;
       var last = state.last || {};
       var text = state.enabled
-        ? tr('Auto-renewal enabled (Beta)')
+        ? tr('Auto-renewal enabled')
         : tr('Auto-renewal off');
       var brief = text;
       if (last.status && last.status !== 'healthy' && last.status !== 'renewed')
@@ -653,7 +653,6 @@
         result = 'unknown';
       var report = {
         serviceVersion: serviceVersion,
-        beta: true,
         enabled:
           state && typeof state.enabled === 'boolean' ? state.enabled : null,
         status: result,
@@ -750,6 +749,9 @@
       HomeThemePanel.mount(document.getElementById('homeThemeHost'));
     document.getElementById('homeShowAddApp').onclick = function () {
       if (window.HomeAppControls) HomeAppControls.toggle();
+    };
+    document.getElementById('homeUsageSort').onclick = function () {
+      if (window.HomeAppControls) HomeAppControls.toggle(true);
     };
     document.getElementById('homePreviewInputs').onclick = function () {
       if (window.HomeInputShelf) HomeInputShelf.togglePreview();
