@@ -280,12 +280,96 @@ class HelperBootPauseTests(DeviceBase):
         super().setUp();self.device._helper_processes=lambda:[];self.device.boot=lambda:'boot-one';self.device.rpc=lambda uri,payload:{'returnValue':True}
         self.tx={'id':'b'*32,'edition':'no-root','phase':'complete'};self.store.write('transaction',self.tx)
         self.startup=self.root/'installed/usr/palm/services/com.local.nativehome.service/state/startup-state.json';self.startup.parent.mkdir(parents=True);self.original=b'{"enabled":true,"schema":3,"boot":"boot-one"}';self.startup.write_bytes(self.original)
+    def test_helper_cleanup_retries_busy_relay_lock_after_process_exit(self):
+        import subprocess
+        from unittest.mock import patch
+
+        process=[(100,False,1)]
+        with patch.object(self.device,'_helper_processes',side_effect=[process,process,[],[],[]]), \
+             patch.object(self.device,'_signal_checked'), \
+             patch('system_updater.device.subprocess.run',side_effect=[
+                 subprocess.CompletedProcess([],18),subprocess.CompletedProcess([],0),
+             ]) as cleanup:
+            self.device._suspend_helper(self.tx)
+        self.assertEqual(cleanup.call_count,2)
+        self.assertTrue(self.store.read('helper-resume-'+self.tx['id'])['suspended'])
+
+    def test_helper_cleanup_rechecks_saved_running_ticket_after_failure(self):
+        import subprocess
+        from unittest.mock import patch
+
+        process=[(100,False,1)]
+        with patch.object(self.device,'_helper_processes',side_effect=[process,process,[],[]]), \
+             patch.object(self.device,'_signal_checked'), \
+             patch('system_updater.device.subprocess.run',return_value=subprocess.CompletedProcess([],11)) as cleanup:
+            with self.assertRaisesRegex(ValueError,'Held remote keys could not be released'):
+                self.device._suspend_helper(self.tx)
+            self.assertEqual(cleanup.call_count,1)
+        self.assertFalse(self.store.read('helper-resume-'+self.tx['id'])['suspended'])
+        with patch('system_updater.device.subprocess.run',return_value=subprocess.CompletedProcess([],0)) as cleanup:
+            self.device._suspend_helper(self.tx)
+        self.assertEqual(cleanup.call_count,1)
+        self.assertTrue(self.store.read('helper-resume-'+self.tx['id'])['suspended'])
+        with patch('system_updater.device.subprocess.run',return_value=subprocess.CompletedProcess([],0)) as cleanup:
+            self.device._suspend_helper(self.tx)
+        cleanup.assert_not_called()
+
     def test_helper_boot_is_paused_during_transaction_and_restored_on_same_boot(self):
         self.device._suspend_helper(self.tx);self.assertFalse(json.loads(self.startup.read_bytes())['enabled']);self.device.finish(self.tx);self.assertEqual(self.startup.read_bytes(),self.original)
     def test_explicit_disable_during_pause_wins(self):
         self.device._suspend_helper(self.tx);self.startup.write_bytes(b'{"enabled":false}');self.device.finish(self.tx);self.assertEqual(self.startup.read_bytes(),b'{"enabled":false}')
     def test_reboot_never_reenables_helper_boot_implicitly(self):
         self.device._suspend_helper(self.tx);self.device.boot=lambda:'boot-two';self.device.finish(self.tx);self.assertFalse(json.loads(self.startup.read_bytes())['enabled'])
+
+class LegacyNoRootCompanionTests(DeviceBase):
+    def setUp(self):
+        super().setUp()
+        from system_updater.support.package import SCREENSAVER_FILES, SCREENSAVER_INFO, SCREENSAVER_PREFIX
+
+        self.files={SCREENSAVER_PREFIX+name:name.encode() for name in SCREENSAVER_FILES}
+        self.files[SCREENSAVER_INFO]=b'package metadata'
+        self.home_hash='a'*64
+        files={'usr/palm/applications/com.gathin.tvhome/index.html':digest(b'published Home')}
+        self.home_pin=digest(json.dumps(files,sort_keys=True).encode())
+        files['usr/palm/applications/com.gathin.tvhome/apps.js']=digest(b'personalized')
+        self.device.cache_bytes=lambda component:b'captured Home'
+        self.device.inspect=lambda raw,component:dict(files)
+        self.tx={'edition':'no-root','id':'d'*32,'prior':{'release':'v0.0.0','components':[
+            {'name':'home','sha256':self.home_hash,'version':'1.20.0','local':True},
+        ]}}
+
+    def write_files(self):
+        for name,raw in self.files.items():
+            path=self.device.installed_root/name
+            path.parent.mkdir(parents=True,exist_ok=True)
+            path.write_bytes(raw)
+
+    def test_captures_exact_standalone_files_before_update_and_reads_them_after_replacement(self):
+        from unittest.mock import patch
+
+        pin=digest(json.dumps({name:digest(raw) for name,raw in self.files.items()},sort_keys=True).encode())
+        self.write_files()
+        with patch.object(self.mod,'LEGACY_NO_ROOT_HOME',{self.home_pin},create=True), \
+             patch.object(self.mod,'LEGACY_NO_ROOT_SCREENSAVER',pin,create=True):
+            with self.assertRaisesRegex(ValueError,'baseline was not captured'):
+                self.device.legacy_no_root_companion(self.tx)
+            old=self.device.legacy_no_root_companion(self.tx,capture=True)
+            self.assertEqual(old,('0.0.5',self.files))
+            replaced=self.device.installed_root/next(iter(self.files))
+            replaced.write_bytes(b'replaced by new release')
+            self.assertEqual(self.device.legacy_no_root_companion(self.tx),old)
+
+    def test_refuses_unverified_old_screensaver_and_records_verified_absence(self):
+        from unittest.mock import patch
+
+        with patch.object(self.mod,'LEGACY_NO_ROOT_HOME',{self.home_pin},create=True):
+            self.assertIsNone(self.device.legacy_no_root_companion(self.tx,capture=True))
+            self.write_files()
+            self.assertIsNone(self.device.legacy_no_root_companion(self.tx))
+            self.tx['id']='e'*32
+            with self.assertRaisesRegex(ValueError,'verified legacy No-root screensaver'):
+                self.device.legacy_no_root_companion(self.tx,capture=True)
+        self.assertIsNone(Store(self.device.state/'legacy-no-root-screensaver',uid=os.getuid()).read('baseline-'+self.tx['id']))
 
 class PrivateServiceTests(DeviceBase):
     def test_private_recovery_service_has_fixed_destination_and_receipts(self):

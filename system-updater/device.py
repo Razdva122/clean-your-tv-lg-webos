@@ -25,6 +25,15 @@ ROOT_UPDATER=Path('/var/lib/clean-your-tv-root-updater')
 INSTALLED=Path('/media/developer/apps')
 VERIFICATION_ERROR='Update information could not be verified. Nothing was installed.'
 
+# Published v1.22.0 computer bundle 43891859803. The older Home IPKs
+# shipped with a separate Screensaver 0.0.5 and have no companion recipe.
+# The Home DATA fingerprints omit only the installer-generated apps.js.
+LEGACY_NO_ROOT_HOME={
+    'eec310bb69551968a6800daac10c91a559b2c0cf549429c58d0f72edf1bee4c7',
+    '8fbc637350f12b8754ece97245eae611669fd0073350c5f45bbb1019d5104425',
+}
+LEGACY_NO_ROOT_SCREENSAVER='aac434f211b6e72c5bc8f3f70f4bfa6798907819c417eecdea96218a2549fbbc'
+
 
 class OfferUnavailable(ValueError):
     def __init__(self,reason):
@@ -326,6 +335,10 @@ class Device:
             raw=self.fetch('package',{'proof':candidate['proof'],'name':c['name']},binary=True);self.inspect(raw,c)
             self.atomic(target,raw,0o600,exclusive=True)
         for c in candidate['components']+prior['components']:self.inspect(self.cache_bytes(c),c)
+        if candidate['edition']=='no-root':
+            tx=self.store.read('transaction')
+            if tx is not None:
+                self.screensaver_components(tx,False,capture_legacy=True)
 
     @staticmethod
     def sync(path):
@@ -462,7 +475,69 @@ class Device:
         from .support.package import companion_outcome_pending
         return companion_outcome_pending(self.store, tx)
 
-    def screensaver_components(self, tx, rollback):
+    def legacy_no_root_companion(self, tx, *, capture=False):
+        from .support.package import (SCREENSAVER, SCREENSAVER_FILES, SCREENSAVER_INFO,
+                                      SCREENSAVER_PREFIX, companion_archive, installed_companion)
+        from .support.store import Store
+
+        prior=tx['prior']
+        home=next(c for c in prior['components'] if c['name']=='home')
+        name='baseline-'+tx['id']
+        directory=self.state/'legacy-no-root-screensaver'
+        cached=directory/'screensaver.ipk'
+        saved=Store(directory,uid=self.uid) if os.path.lexists(directory) else None
+        record=saved.read(name) if saved is not None else None
+        if record is not None and (not isinstance(record,dict) or type(record.get('present')) is not bool):
+            raise ValueError('Invalid saved legacy screensaver baseline')
+        eligible=False
+        known=prior['release']=='v1.22.0' or (prior['release']=='v0.0.0' and home.get('local') is True)
+        if home['version']=='1.20.0' and known:
+            hashes=self.inspect(self.cache_bytes(home),home)
+            hashes.pop('usr/palm/applications/com.gathin.tvhome/apps.js',None)
+            eligible=digest(json.dumps(hashes,sort_keys=True).encode()) in LEGACY_NO_ROOT_HOME
+        absent={'home':home['sha256'],'present':False}
+        present={'home':home['sha256'],'present':True}
+        if record is None and not capture:
+            if eligible:raise ValueError('Legacy No-root screensaver baseline was not captured')
+            return None
+        if record == absent:
+            if capture and not installed_companion(self.installed_root,None,self.uid):
+                raise ValueError('Legacy No-root screensaver absence changed before update')
+            return None
+        if record is None and installed_companion(self.installed_root,None,self.uid):
+            (saved or Store(directory,uid=self.uid)).write(name,absent)
+            return None
+        if not eligible or (record is not None and record!=present):
+            raise ValueError('Installed screensaver has no verified legacy No-root baseline')
+
+        def verify(files):
+            hashes={name:digest(data) for name,data in files.items()}
+            if digest(json.dumps(hashes,sort_keys=True).encode())!=LEGACY_NO_ROOT_SCREENSAVER:
+                raise ValueError('Installed screensaver does not match the verified legacy No-root screensaver')
+            return files
+
+        if capture and os.path.lexists(self.installed_root/'usr/palm/services'/(SCREENSAVER+'.service')):
+            raise ValueError('Unexpected legacy No-root screensaver service')
+        if record == present:
+            raw=safe_bytes(cached,limit=64*1024*1024,uid=self.uid)
+            result='0.0.5',verify(archive(members(raw)['data.tar.gz']))
+            if capture and not installed_companion(self.installed_root,result,self.uid):
+                raise ValueError('Legacy No-root screensaver changed before update')
+            return result
+
+        paths={SCREENSAVER_PREFIX+name for name in SCREENSAVER_FILES}|{SCREENSAVER_INFO}
+        files=verify({name:safe_bytes(self.installed_root/name) for name in sorted(paths)})
+        if not installed_companion(self.installed_root,('0.0.5',files),self.uid):
+            raise ValueError('Legacy No-root screensaver changed before update')
+        saved=saved or Store(directory,uid=self.uid)
+        if os.path.lexists(cached):
+            verify(archive(members(safe_bytes(cached,limit=64*1024*1024,uid=self.uid))['data.tar.gz']))
+        else:
+            self.atomic(cached,companion_archive('0.0.5',files),exclusive=True)
+        saved.write(name,present)
+        return '0.0.5',files
+
+    def screensaver_components(self, tx, rollback, *, capture_legacy=False):
         from .support.package import root_companion, companion_files
 
         def companion(release):
@@ -476,6 +551,8 @@ class Device:
                                    'usr/palm/applications/com.gathin.tvhome/')
 
         candidate, prior = companion(tx['candidate']), companion(tx['prior'])
+        if tx['edition']=='no-root' and candidate is not None and prior is None:
+            prior=self.legacy_no_root_companion(tx,capture=capture_legacy)
         return (prior, candidate) if rollback else (candidate, prior)
 
     def sync_screensaver(self, tx, rollback):
@@ -648,9 +725,18 @@ class Device:
         end=time.monotonic()+5
         while self._helper_processes() and time.monotonic()<end:time.sleep(.05)
         if self._helper_processes():raise ValueError('Helper input ownership remains active')
-        if processes:
-            result=subprocess.run([str(helper/'relay'),'cleanup'],stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=5,check=False)
-            if result.returncode!=0:raise ValueError('Held remote keys could not be released')
+        if processes or (ticket['running'] and not ticket['suspended']):
+            deadline=time.monotonic()+5
+            while True:
+                remaining=deadline-time.monotonic()
+                if remaining<=0:raise ValueError('Held remote keys could not be released: relay lock still unavailable')
+                result=subprocess.run([str(helper/'relay'),'cleanup'],stdin=subprocess.DEVNULL,
+                                      stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=remaining,check=False)
+                if result.returncode==0:break
+                # The cmdline can vanish before the exiting relay closes its lock.
+                if result.returncode!=18 or self._helper_processes():
+                    raise ValueError(f'Held remote keys could not be released: relay exit {result.returncode}')
+                time.sleep(.05)
         ticket['suspended']=True;self.store.write(ticket_name,ticket)
 
     def repair_registrations(self, *, screensaver=None):

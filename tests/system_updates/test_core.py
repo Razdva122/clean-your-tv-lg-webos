@@ -66,6 +66,42 @@ class CoreBase(unittest.TestCase):
         self.fail(tx)
 
 class Tests(CoreBase):
+    def test_no_root_capture_admits_empty_discovery_color_before_storing_profile(self):
+        captured=profile()
+        captured['inventory']['apps']=[
+            {'id':'test.app','title':'Test app','icon':'data:image/png;base64,AAAA','iconColor':''},
+            {'id':'test.color','title':'Colored app','icon':'data:image/png;base64,AAAA','iconColor':'#123abc'},
+        ]
+        tx=self.m.install('no-root','v1.1.0',captured)
+        self.advance('verifying')
+        apps=self.m.restore_profile('no-root')['profile']['inventory']['apps']
+        self.assertNotIn('iconColor',apps[0])
+        self.assertEqual(apps[1]['iconColor'],'#123abc')
+        self.assertEqual(captured['inventory']['apps'][0]['iconColor'],'')
+        self.assertEqual(self.m.status()['id'],tx['id'])
+
+    def test_bootstrap_admits_empty_color_before_engine_reservation(self):
+        from system_updater.cli import engine_request
+        from system_updater.core import validate_profile
+
+        captured=profile()
+        captured['inventory']['apps']=[
+            {'id':'test.app','title':'Test app','icon':'data:image/png;base64,AAAA','iconColor':''},
+        ]
+        checked=engine_request('engine-profile',{'edition':'no-root','profile':captured},self.store,self.io)
+        self.assertNotIn('iconColor',checked['inventory']['apps'][0])
+        with self.assertRaisesRegex(ValueError,'invalid icon color'):
+            validate_profile(captured,'no-root')
+
+    def test_no_root_capture_still_rejects_other_invalid_colors(self):
+        captured=profile()
+        captured['inventory']['apps']=[
+            {'id':'test.app','title':'Test app','icon':'data:image/png;base64,AAAA','iconColor':'red'},
+        ]
+        with self.assertRaisesRegex(ValueError,'invalid icon color'):
+            self.m.install('no-root','v1.1.0',captured)
+        self.assertIsNone(self.store.read('transaction'))
+
     def test_reserves_before_mutation_and_caches_whole_set(self):
         tx=self.reserve();self.assertEqual(tx['phase'],'preparing');self.assertFalse(any(c.startswith('install:') for c in self.io.calls))
         self.advance('verifying');self.assertLess(self.io.calls.index('cache-all'),self.io.calls.index('suspend'))
