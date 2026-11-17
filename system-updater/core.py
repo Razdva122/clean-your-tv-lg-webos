@@ -42,9 +42,17 @@ def release_set(value,edition):
     return result
 
 
-def validate_profile(value,edition):
+def validate_profile(value,edition,*,captured=False):
     if edition not in SETS or not isinstance(value,dict):raise ValueError('Invalid profile edition')
     data=copy.deepcopy(value);renewal=data.pop('renewal',None)
+    # Older No-root Home includes an empty color when webOS has no icon tint.
+    # Normalize the capture before it becomes the authenticated rollback snapshot.
+    inventory=data.get('inventory')
+    apps=inventory.get('apps') if isinstance(inventory,dict) else None
+    if captured and edition=='no-root' and isinstance(apps,list):
+        for app in apps:
+            if isinstance(app,dict) and app.get('iconColor')=='':
+                del app['iconColor']
     # Ordinary Home also stores the display layout preference.
     settings=data.get('settings',{})
     layout=settings.pop('tvhome.layout',None)
@@ -129,7 +137,7 @@ class Manager:
         return value
 
     def install(self,edition,release,profile,operation=None):
-        snapshot=validate_profile(profile,edition)
+        snapshot=validate_profile(profile,edition,captured=True)
         if not isinstance(release,str) or not release.startswith('v'):raise ValueError('Invalid release')
         version(release[1:])
         with self.store.lock():

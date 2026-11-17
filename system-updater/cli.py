@@ -139,7 +139,7 @@ def engine_request(method, payload, store, device):
     if method=='engine-profile':
         if set(payload)!={'edition','profile'}:raise ValueError('Invalid profile request')
         from .core import validate_profile
-        return validate_profile(payload['profile'],payload['edition'])
+        return validate_profile(payload['profile'],payload['edition'],captured=True)
     from installation import Ownership
     from .bootstrap import Bootstrap
     runtime = Bootstrap()

@@ -648,9 +648,18 @@ class Device:
         end=time.monotonic()+5
         while self._helper_processes() and time.monotonic()<end:time.sleep(.05)
         if self._helper_processes():raise ValueError('Helper input ownership remains active')
-        if processes:
-            result=subprocess.run([str(helper/'relay'),'cleanup'],stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=5,check=False)
-            if result.returncode!=0:raise ValueError('Held remote keys could not be released')
+        if processes or (ticket['running'] and not ticket['suspended']):
+            deadline=time.monotonic()+5
+            while True:
+                remaining=deadline-time.monotonic()
+                if remaining<=0:raise ValueError('Held remote keys could not be released: relay lock still unavailable')
+                result=subprocess.run([str(helper/'relay'),'cleanup'],stdin=subprocess.DEVNULL,
+                                      stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=remaining,check=False)
+                if result.returncode==0:break
+                # The cmdline can vanish before the exiting relay closes its lock.
+                if result.returncode!=18 or self._helper_processes():
+                    raise ValueError(f'Held remote keys could not be released: relay exit {result.returncode}')
+                time.sleep(.05)
         ticket['suspended']=True;self.store.write(ticket_name,ticket)
 
     def repair_registrations(self, *, screensaver=None):
