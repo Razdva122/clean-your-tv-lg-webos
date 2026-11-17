@@ -991,6 +991,20 @@ function retire(path, inventory, pin, removeRoot, scratch) {
     plan = [];
   if (pin && (info.dev !== pin.dev || info.ino !== pin.ino))
     throw Error('cleanup-root-changed');
+  // The retired runtime is never executed. Only cache paths derived from
+  // sources in its saved inventory may be absent from that inventory.
+  var cacheDirectories = Object.create(null),
+    cacheFiles = Object.create(null);
+  Object.keys(inventory || {}).forEach(function (source) {
+    if (!source.endsWith('.py')) return;
+    var separator = source.lastIndexOf('/') + 1,
+      directory = source.slice(0, separator) + '__pycache__',
+      stem = directory + '/' + source.slice(separator, -3) + '.cpython-313';
+    cacheDirectories[directory] = true;
+    ['', '.opt-1', '.opt-2'].forEach(function (optimization) {
+      cacheFiles[stem + optimization + '.pyc'] = true;
+    });
+  });
   function scan(fd, prefix) {
     fs.readdirSync(at(fd))
       .sort()
@@ -1013,6 +1027,7 @@ function retire(path, inventory, pin, removeRoot, scratch) {
         if (info.isDirectory()) {
           if (
             inventory &&
+            !cacheDirectories[relative] &&
             !Object.keys(inventory).some(function (n) {
               return n.indexOf(relative + '/') === 0;
             })
@@ -1038,7 +1053,10 @@ function retire(path, inventory, pin, removeRoot, scratch) {
           if (!inventory && !scratch && !prefix)
             throw Error('unknown-support-member');
           if (inventory) {
-            if (!Object.prototype.hasOwnProperty.call(inventory, relative))
+            if (
+              !Object.prototype.hasOwnProperty.call(inventory, relative) &&
+              !cacheFiles[relative]
+            )
               throw Error('unknown-runtime-member');
             var file = fs.openSync(
               full,
