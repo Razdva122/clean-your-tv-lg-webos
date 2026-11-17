@@ -99,6 +99,8 @@ No-root 紅外線遙控支援：短按並放開 Home 後，預定約 700 毫秒�
 
 No-root: 要重新啟動 Home 控制，請開啟 Home Helper，選擇啟動 Helper 並確認。已儲存的主畫面選擇會保留。 Root：在 Home 設定中啟用 **更改 Home（Change Home）** 恢復。**開啟 LG Home（Open LG Home）** 只打開 LG Home 一次，不更改路由。要持續使用 LG Home，請關閉 **更改 Home（Change Home）**。不要同時執行兩種控制器。若故障重復出現，請保持 LG Home 啟用。
 
+如果 Home Helper 已停止，也可以在 Home 主畫面或螢幕保護程式設定中選擇**啟動 Helper**。啟動後狀態會自動更新。
+
 電視上的自動更新不會重新啟動已停止的 Helper。如需單獨恢復，請使用啟動 Helper；不要刪除停止檔案。
 
 ## 需要協助？

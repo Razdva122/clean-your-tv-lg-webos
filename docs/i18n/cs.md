@@ -88,6 +88,8 @@ Pro opětovné zapnutí No-root otevřete **Home Helper**, zvolte spuštění He
 
 Automatické aktualizace v TV nespouštějí zastavený Helper. Pro samostatné obnovení použijte Spustit Helper; nemažte soubory Stop.
 
+Pokud je Home Helper zastavený, můžete také zvolit **Spustit Helper** v nastavení obrazovky Home nebo spořiče. Stav se po spuštění automaticky aktualizuje.
+
 ## Potřebujete pomoc?
 
 Pokud podpora požádá o výstup příkazu SSH, otevřete v instalátoru na počítači **Diagnostika → Spustit příkaz SSH** a vyberte stávající připojení k televizoru. Zkontrolujte televizor a uživatele SSH, vložte příkaz a klikněte na **Spustit** a **Zkopírovat výstup**. Zkopírovaný text obsahuje stdout, stderr a návratový kód.

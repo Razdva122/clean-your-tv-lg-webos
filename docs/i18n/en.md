@@ -101,6 +101,8 @@ To edit with short presses, open **Home settings → Appearance → Edit tiles**
 
 No-root: To restart Home control, open Home Helper, choose Start Helper and confirm. Your saved Home screen choice is kept. Root: turn **Change Home** on in Home settings to resume. **Open LG Home** opens LG Home once without changing routing. To restore LG Home as the persistent destination, turn **Change Home** off. Do not run both controllers together. If a failure repeats, leave LG Home active.
 
+If Home Helper is stopped, you can also choose **Start Helper** in the Home screen or Screensaver settings. The status updates automatically after startup.
+
 Automatic updates on the TV do not restart a stopped Helper. To resume it separately, use Start Helper; do not delete Stop files.
 
 ## Need help?

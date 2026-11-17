@@ -197,6 +197,12 @@ HomeI18n.add({
     'Start Helper to use Home control again. Your saved Home screen choice will be used.':
       'Start Helper to use Home control again. Your saved Home screen choice will be used.',
     'Status is unavailable.': 'Status is unavailable.',
+    'Home Helper is stopped.': 'Home Helper is stopped.',
+    'Could not check which screen the Home button opens.':
+      'Could not check which screen the Home button opens.',
+    'Could not check screensaver availability.':
+      'Could not check screensaver availability.',
+    'Could not start Home Helper.': 'Could not start Home Helper.',
     'Try refreshing. If this continues, reinstall the complete Home package from your computer.':
       'Try refreshing. If this continues, reinstall the complete Home package from your computer.',
     'No recovery needed.': 'No recovery needed.',
@@ -419,6 +425,13 @@ HomeI18n.add({
     'Start Helper to use Home control again. Your saved Home screen choice will be used.':
       'Starten Sie Helper, um Home wieder zu steuern. Ihre gespeicherte Home-Auswahl wird verwendet.',
     'Status is unavailable.': 'Status ist nicht verfügbar.',
+    'Home Helper is stopped.': 'Home Helper ist angehalten.',
+    'Could not check which screen the Home button opens.':
+      'Es konnte nicht geprüft werden, welchen Bildschirm die Home-Taste öffnet.',
+    'Could not check screensaver availability.':
+      'Die Verfügbarkeit des Bildschirmschoners konnte nicht geprüft werden.',
+    'Could not start Home Helper.':
+      'Home Helper konnte nicht gestartet werden.',
     'Try refreshing. If this continues, reinstall the complete Home package from your computer.':
       'Aktualisieren Sie den Status. Bleibt das Problem bestehen, installieren Sie das vollständige Home-Paket vom Computer neu.',
     'No recovery needed.': 'Keine Wiederherstellung erforderlich.',
@@ -641,6 +654,12 @@ HomeI18n.add({
     'Start Helper to use Home control again. Your saved Home screen choice will be used.':
       'Inicia Helper para volver a controlar Home. Se usará tu pantalla de inicio guardada.',
     'Status is unavailable.': 'No se pudo consultar el estado.',
+    'Home Helper is stopped.': 'Home Helper está detenido.',
+    'Could not check which screen the Home button opens.':
+      'No se pudo comprobar qué pantalla abre el botón Home.',
+    'Could not check screensaver availability.':
+      'No se pudo comprobar si el protector de pantalla está disponible.',
+    'Could not start Home Helper.': 'No se pudo iniciar Home Helper.',
     'Try refreshing. If this continues, reinstall the complete Home package from your computer.':
       'Actualiza el estado. Si persiste, reinstala el paquete completo de Home desde el ordenador.',
     'No recovery needed.': 'No se necesita recuperación.',
@@ -863,6 +882,12 @@ HomeI18n.add({
     'Start Helper to use Home control again. Your saved Home screen choice will be used.':
       'Inicie o Helper para controlar o Home novamente. A escolha de tela inicial salva será usada.',
     'Status is unavailable.': 'Não foi possível consultar o status.',
+    'Home Helper is stopped.': 'O Home Helper está parado.',
+    'Could not check which screen the Home button opens.':
+      'Não foi possível verificar qual tela o botão Home abre.',
+    'Could not check screensaver availability.':
+      'Não foi possível verificar se a proteção de tela está disponível.',
+    'Could not start Home Helper.': 'Não foi possível iniciar o Home Helper.',
     'Try refreshing. If this continues, reinstall the complete Home package from your computer.':
       'Atualize o status. Se persistir, reinstale o pacote completo do Home pelo computador.',
     'No recovery needed.': 'Não é necessário restaurar.',
@@ -1086,6 +1111,12 @@ HomeI18n.add({
     'Start Helper to use Home control again. Your saved Home screen choice will be used.':
       'Démarrez Helper pour contrôler Home à nouveau. Votre choix d’écran d’accueil enregistré sera utilisé.',
     'Status is unavailable.': 'Impossible de consulter l’état.',
+    'Home Helper is stopped.': 'Home Helper est arrêté.',
+    'Could not check which screen the Home button opens.':
+      'Impossible de vérifier quel écran la touche Home ouvre.',
+    'Could not check screensaver availability.':
+      'Impossible de vérifier si l’économiseur d’écran est disponible.',
+    'Could not start Home Helper.': 'Impossible de démarrer Home Helper.',
     'Try refreshing. If this continues, reinstall the complete Home package from your computer.':
       'Actualisez l’état. Si le problème persiste, réinstallez le paquet Home complet depuis votre ordinateur.',
     'No recovery needed.': 'Aucune restauration nécessaire.',
@@ -1308,6 +1339,12 @@ HomeI18n.add({
     'Start Helper to use Home control again. Your saved Home screen choice will be used.':
       'Avvia Helper per controllare di nuovo Home. Verrà usata la schermata iniziale salvata.',
     'Status is unavailable.': 'Impossibile verificare lo stato.',
+    'Home Helper is stopped.': 'Home Helper è fermo.',
+    'Could not check which screen the Home button opens.':
+      'Impossibile verificare quale schermata apre il tasto Home.',
+    'Could not check screensaver availability.':
+      'Impossibile verificare se il salvaschermo è disponibile.',
+    'Could not start Home Helper.': 'Impossibile avviare Home Helper.',
     'Try refreshing. If this continues, reinstall the complete Home package from your computer.':
       'Aggiorna lo stato. Se il problema persiste, reinstalla il pacchetto Home completo dal computer.',
     'No recovery needed.': 'Nessun ripristino necessario.',
@@ -1524,6 +1561,12 @@ HomeI18n.add({
     'Start Helper to use Home control again. Your saved Home screen choice will be used.':
       'Home 제어를 다시 사용하려면 Helper를 시작하세요. 저장된 홈 화면 선택이 적용됩니다.',
     'Status is unavailable.': '상태를 확인할 수 없습니다.',
+    'Home Helper is stopped.': 'Home Helper가 중지되었습니다.',
+    'Could not check which screen the Home button opens.':
+      'Home 버튼으로 열리는 화면을 확인할 수 없습니다.',
+    'Could not check screensaver availability.':
+      '화면 보호기를 사용할 수 있는지 확인할 수 없습니다.',
+    'Could not start Home Helper.': 'Home Helper를 시작할 수 없습니다.',
     'Try refreshing. If this continues, reinstall the complete Home package from your computer.':
       '상태를 새로 고치세요. 문제가 계속되면 컴퓨터에서 전체 Home 패키지를 다시 설치하세요.',
     'No recovery needed.': '복원이 필요하지 않습니다.',
@@ -1742,6 +1785,12 @@ HomeI18n.add({
     'Start Helper to use Home control again. Your saved Home screen choice will be used.':
       'Home नियंत्रण फिर उपयोग करने के लिए Helper शुरू करें। आपका सहेजा हुआ होम स्क्रीन विकल्प लागू होगा।',
     'Status is unavailable.': 'स्थिति उपलब्ध नहीं है।',
+    'Home Helper is stopped.': 'Home Helper रुका हुआ है।',
+    'Could not check which screen the Home button opens.':
+      'जाँच नहीं हो सकी कि Home बटन कौन-सी स्क्रीन खोलता है।',
+    'Could not check screensaver availability.':
+      'स्क्रीनसेवर की उपलब्धता की जाँच नहीं हो सकी।',
+    'Could not start Home Helper.': 'Home Helper शुरू नहीं हो सका।',
     'Try refreshing. If this continues, reinstall the complete Home package from your computer.':
       'स्थिति रीफ़्रेश करें। समस्या बनी रहे तो कंप्यूटर से पूरा Home पैकेज दोबारा इंस्टॉल करें।',
     'No recovery needed.': 'पुनर्स्थापना की आवश्यकता नहीं है।',
@@ -1965,6 +2014,12 @@ HomeI18n.add({
     'Start Helper to use Home control again. Your saved Home screen choice will be used.':
       'Uruchom Helper, aby znów sterować Home. Zostanie użyty zapisany wybór ekranu głównego.',
     'Status is unavailable.': 'Nie można sprawdzić stanu.',
+    'Home Helper is stopped.': 'Home Helper jest zatrzymany.',
+    'Could not check which screen the Home button opens.':
+      'Nie udało się sprawdzić, który ekran otwiera przycisk Home.',
+    'Could not check screensaver availability.':
+      'Nie udało się sprawdzić dostępności wygaszacza.',
+    'Could not start Home Helper.': 'Nie udało się uruchomić Home Helpera.',
     'Try refreshing. If this continues, reinstall the complete Home package from your computer.':
       'Odśwież stan. Jeśli problem nie ustąpi, zainstaluj ponownie pełny pakiet Home z komputera.',
     'No recovery needed.': 'Przywracanie nie jest potrzebne.',
@@ -2186,6 +2241,12 @@ HomeI18n.add({
     'Start Helper to use Home control again. Your saved Home screen choice will be used.':
       'Запустить Helper для управления Home? Будет использован сохранённый выбор домашнего экрана.',
     'Status is unavailable.': 'Не удалось проверить состояние.',
+    'Home Helper is stopped.': 'Home Helper остановлен.',
+    'Could not check which screen the Home button opens.':
+      'Не удалось проверить, какой экран открывает кнопка Home.',
+    'Could not check screensaver availability.':
+      'Не удалось проверить доступность заставки.',
+    'Could not start Home Helper.': 'Не удалось запустить Home Helper.',
     'Try refreshing. If this continues, reinstall the complete Home package from your computer.':
       'Обновите состояние. Если проблема сохраняется, переустановите полный комплект Home с компьютера.',
     'No recovery needed.': 'Восстановление не требуется.',
@@ -3071,6 +3132,12 @@ HomeI18n.add({
     'Start Helper to use Home control again. Your saved Home screen choice will be used.':
       '启动 Helper 以再次使用 Home 控制。将使用您保存的 Home 主屏幕选择。',
     'Status is unavailable.': '无法获取状态。',
+    'Home Helper is stopped.': 'Home Helper 已停止。',
+    'Could not check which screen the Home button opens.':
+      '无法确认 Home 按钮会打开哪个界面。',
+    'Could not check screensaver availability.':
+      '无法检查屏幕保护程序是否可用。',
+    'Could not start Home Helper.': '无法启动 Home Helper。',
     'Try refreshing. If this continues, reinstall the complete Home package from your computer.':
       '请尝试刷新。如果问题持续，请从电脑重新安装完整的 Home 软件包。',
     'No recovery needed.': '无需恢复。',
@@ -3338,6 +3405,12 @@ HomeI18n.add({
     'Start Helper to use Home control again. Your saved Home screen choice will be used.':
       '啟動 Helper 以再次使用 Home 控制。將使用您儲存的 Home 主畫面選擇。',
     'Status is unavailable.': '無法取得狀態。',
+    'Home Helper is stopped.': 'Home Helper 已停止。',
+    'Could not check which screen the Home button opens.':
+      '無法確認 Home 按鈕會開啟哪個畫面。',
+    'Could not check screensaver availability.':
+      '無法檢查螢幕保護程式是否可用。',
+    'Could not start Home Helper.': '無法啟動 Home Helper。',
     'Try refreshing. If this continues, reinstall the complete Home package from your computer.':
       '請嘗試重新整理。如果問題持續，請從電腦重新安裝完整的 Home 套件。',
     'No recovery needed.': '無需還原。',
@@ -3923,6 +3996,12 @@ HomeI18n.add({
     'Start Helper to use Home control again. Your saved Home screen choice will be used.':
       'Spuštěním Helper obnovíte ovládání Home. Použije se uložená volba obrazovky Home.',
     'Status is unavailable.': 'Stav není dostupný.',
+    'Home Helper is stopped.': 'Home Helper je zastavený.',
+    'Could not check which screen the Home button opens.':
+      'Nepodařilo se ověřit, kterou obrazovku tlačítko Home otevře.',
+    'Could not check screensaver availability.':
+      'Nepodařilo se ověřit dostupnost spořiče obrazovky.',
+    'Could not start Home Helper.': 'Home Helper se nepodařilo spustit.',
     'Try refreshing. If this continues, reinstall the complete Home package from your computer.':
       'Zkuste obnovit stav. Pokud problém trvá, z počítače znovu nainstalujte úplný balíček Home.',
     'No recovery needed.': 'Obnovení není potřeba.',

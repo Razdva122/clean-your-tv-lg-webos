@@ -99,6 +99,8 @@ Pour modifier les tuiles avec des appuis courts, ouvrez **Paramètres de Home �
 
 No-root: Pour relancer le contrôle de Home, ouvrez Home Helper, choisissez Démarrer Helper et confirmez. Votre choix d’écran Home est conservé. Root: activez **Changer Home** dans les paramètres de Home pour reprendre. **Ouvrir LG Home** ouvre LG Home une fois sans modifier la destination de Home. Pour rétablir LG Home comme destination permanente, désactivez **Changer Home**. N’exécutez jamais les deux contrôleurs ensemble. Si la panne revient, laissez LG Home actif.
 
+Si Home Helper est arrêté, vous pouvez aussi choisir **Démarrer Helper** dans les paramètres de l’écran Home ou de l’économiseur d’écran. L’état se met à jour automatiquement après le démarrage.
+
 Les mises à jour automatiques sur le téléviseur ne redémarrent pas Helper arrêté. Utilisez Démarrer Helper pour le relancer séparément ; ne supprimez pas les fichiers d’arrêt.
 
 ## Besoin d’aide ?

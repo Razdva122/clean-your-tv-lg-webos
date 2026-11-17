@@ -99,6 +99,8 @@ Pfeile wählen eine Kachel, OK öffnet sie; OK gedrückt halten zum Verschieben.
 
 No-root: Öffnen Sie zum Neustart der Home-Steuerung Home Helper, wählen Sie Helper starten und bestätigen Sie. Ihre gespeicherte Home-Auswahl bleibt erhalten. Root: **Home ändern** in den Home-Einstellungen einschalten, um fortzufahren. **LG Home öffnen** öffnet LG Home einmalig, ohne das Home-Ziel zu ändern. Für LG Home als dauerhaftes Ziel **Home ändern** ausschalten. Beide Steuerungen nie gleichzeitig betreiben. Bei wiederholtem Fehler LG Home aktiv lassen.
 
+Wenn Home Helper angehalten ist, können Sie auch in den Einstellungen für den Home-Bildschirm oder den Bildschirmschoner **Helper starten** wählen. Der Status wird nach dem Start automatisch aktualisiert.
+
 Automatische Updates am TV starten einen angehaltenen Helper nicht neu. Nutzen Sie zum separaten Fortsetzen Helper starten; löschen Sie keine Stoppdateien.
 
 ## Brauchen Sie Hilfe?
