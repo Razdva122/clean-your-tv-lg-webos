@@ -82,10 +82,11 @@
     }
   ],
   "excluded": [],
-  "acceptance": "",
+  "acceptance": "LG OLED55C3RLA, firmware 43.21.71 / SDK 11.2.0, macOS ARM64 installer. Exact signed QA delivery from run 44183093626 binds build 44165933088:3, CLI ZIP SHA256 6052c7d7ce7e90ed5c9a399e4d3f1a08a60f7c4a7df5f6bc1e5672602c417114 and engine 1.2.12 SHA256 2a1f8b7d3e16eae046f8600b08af80c513bf047821808e6fcf0d5b636c4a3b2d. Root and rooted No-root forward Update all, same-version System Repair, ordinary product rollback, exact installed package hashes, rendered profile equality, network Home and verified software restart passed. Root preserved Off and explicit On; No-root preserved disabled renewal. Live sorting roundtrip passed in both editions. Physical Magic Remote, audio, standby, AC cold boot and unrooted No-root transport were not newly exercised. Reporter-specific retained C1/B9/W19P/EF950V and wake states remain limited to documented host/firmware evidence. Full selected-case reconciliation and hashes: docs/history/2026-11-17-release-1.23.1-rc-verification.md.",
   "build": {
     "run_id": 44165933088,
     "attempt": 3,
     "source": "36d690777c26b146992d9b056c7eee50de4b6d83"
-  }
+  },
+  "acceptance_build": "44165933088:3"
 }
