@@ -1,7 +1,56 @@
 {
   "schema": 1,
-  "version": null,
-  "changes": [],
+  "version": "1.23.0",
+  "changes": [
+    {
+      "pr": 672,
+      "issues": [],
+      "summary": "Focus translated installation guides on first setup, keeping links to advanced procedures"
+    },
+    {
+      "pr": 673,
+      "issues": [
+        654
+      ],
+      "summary": "Record the owner-reported No-root installation on LG 43UQ75003LF"
+    },
+    {
+      "pr": 675,
+      "issues": [],
+      "summary": "Allow System Updater self-update, verified repair and signed delivery for Root and No-root on rooted TVs"
+    },
+    {
+      "pr": 676,
+      "issues": [
+        160
+      ],
+      "summary": "Repair the retained Root Beta recovery service in place when verified; B9 device confirmation pending"
+    },
+    {
+      "pr": 677,
+      "issues": [
+        418
+      ],
+      "summary": "Reconcile a retained Root filter after a specific verified refusal; C1 device confirmation pending"
+    },
+    {
+      "pr": 680,
+      "issues": [
+        152
+      ],
+      "summary": "Finish verified No-root removal with only protected empty Helper directories left; EF950V startup remains unresolved"
+    },
+    {
+      "pr": 681,
+      "issues": [],
+      "summary": "Give the screensaver companion its own landscape icon"
+    },
+    {
+      "pr": 682,
+      "issues": [],
+      "summary": "Explain and restart a stopped Home Helper from No-root Home and Screensaver settings"
+    }
+  ],
   "excluded": [],
   "acceptance": ""
 }

@@ -484,11 +484,11 @@ controls, audio, standby or cold boot; check actual behavior separately. [Connec
 
 ## Replace the Root System Updater
 
-For a Root installation from v1.21.0 with System Updater 1.2.9,
-the installer containing System Updater 1.2.10 can replace that supervisor in
-place. This prepares the TV for the signed Root update format that installs
-and rolls back the screensaver together with the other Root components.
-Earlier supported source versions 1.1.0 and 1.1.1 are also eligible.
+For a Root installation with System Updater 1.2.10, use the complete installer
+containing System Updater 1.2.11 to prepare the self-updating supervisor.
+For the earlier transition from 1.2.9 to 1.2.10, use the matching v1.22.0
+installer. Its replacement also supports source versions 1.1.0 and 1.1.1.
+Use the matching installer when resuming an interrupted replacement.
 
 After any current update or rollback has completed, choose **Return to LG Home**
 in the installer if Clean Your TV is active as Home. From the command line, use
@@ -510,7 +510,7 @@ transaction or backup also blocks replacement, even if marked complete; preserve
 it for review rather than deleting it to force replacement. It does not patch
 retained pinned code in place or replay an uncertain remove/install request.
 
-Published v1.13.0 includes fresh System Updater 1.2.7; v1.12.1 included 1.2.6. Only installed 1.1.0/1.1.1 sources are admitted by the explicit replacement. Retained 1.1.2 and 1.2.x have no general replacement path. A completed earlier
+Replacement admits only the documented source versions for the matching installer. A completed earlier
 replacement to 1.1.1 can start a new target operation only
 after the installer authenticates its saved bundle, baseline, original archive,
 terminal removal and current owner, and confirms that later recovery has finished.
@@ -523,6 +523,21 @@ the same command and installer bundle, or save diagnostics and stop if its outco
 is uncertain. Do not remove journals or archives to force setup. A failed readiness
 transaction must be recovered first; replacement does not bypass it. Verify the
 new System Updater version and actual Home/controls after completion.
+
+## Repair an interrupted Root Beta setup
+
+If Root Beta stopped while preparing its recovery service, use the saved Root
+connection with the complete installer and run:
+
+```sh
+cytv recover --edition root --root-variant node012-beta
+```
+
+Confirm **Repair the existing Root Beta recovery service?** if the installer
+offers it. This checks the service and keeps the existing app installed with
+LG Home selected. Home activation is a separate action. If the installer cannot
+verify recovery or offers a different action, save its diagnostic report and
+keep the existing recovery records.
 
 ## Private Python and low /var space
 

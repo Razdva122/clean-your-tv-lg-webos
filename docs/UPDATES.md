@@ -183,6 +183,22 @@ In 1.6.0, installer builds contain both HD/FHD packages. New or explicitly migra
 
 ## System support
 
+### Update Root from v1.22.0
+
+If your Root installation uses System Updater 1.2.10, use **Return to LG Home**
+in the computer installer and [replace the supervisor](RECOVERY.md#replace-the-root-system-updater-candidate)
+with the installer containing System Updater 1.2.11. Open Clean Your TV from the
+TV app list and select **Home settings → Software updates → Update all**.
+The supervisor replacement preserves the installed Root packages and launcher
+profile. Use **Rollback** on the same screen to return to the previous Root release
+after an update.
+
+For No-root on a rooted TV, fresh computer preparation with the compatible
+bundle enables the self-updating path. A retained No-root System Updater 1.2.10
+cannot migrate in place through this Root replacement command. Use the
+computer installer for No-root product updates when the retained updater
+cannot accept the new format.
+
 ### Update Root from v1.21.0
 
 If System Updater 1.2.9 is installed, use **Return to LG Home** in the
