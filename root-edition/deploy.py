@@ -85,7 +85,12 @@ def verify_bundle(bundle, allow_experimental=False):
         expected.update(('runtime/c1-keyfilter-guard', 'runtime/c1_keyfilter.py', 'runtime/c1-home-filter.js'))
         if 'runtime/c1-home-gate' in manifest.get('files',{}):
             expected.add('runtime/c1-home-gate')  # Removal-only schema-1 executor; never fresh install routing.
-        if release.get('capabilities') != ['theme-receiver-v1','wallpaper-media-v1','c1-keyfilter-v1']:
+        capabilities = release.get('capabilities')
+        base = ['theme-receiver-v1', 'wallpaper-media-v1']
+        contracts = [base + ['c1-keyfilter-v1']]
+        if LEGACY_NODE_BETA:
+            contracts.append(base + ['c1-keyfilter-v2'])
+        if capabilities not in contracts:
             raise ValueError('Invalid compositor routing capabilities')
     if manifest.get('package') != package or set(manifest.get('files', {})) != expected:
         raise ValueError('Unexpected bundle inventory')

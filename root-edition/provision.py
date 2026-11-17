@@ -24,6 +24,7 @@ PRIVATE_FILES = ('service.js','startup-diagnostics.js','app-inventory.js','handl
 RECEIVER_CAPABILITIES = ['theme-receiver-v1']
 WALLPAPER_CAPABILITIES = RECEIVER_CAPABILITIES + ['wallpaper-media-v1']
 COMPOSITOR_CAPABILITIES = WALLPAPER_CAPABILITIES + ['c1-keyfilter-v1']
+LEGACY_NODE_COMPOSITOR_CAPABILITIES = WALLPAPER_CAPABILITIES + ['c1-keyfilter-v2']
 
 def snapshot_capabilities(saved):
     capabilities = saved.get('capabilities', [])
@@ -31,7 +32,7 @@ def snapshot_capabilities(saved):
     # An OTA can retain an older registration contract. Add only the
     # screensaver methods and keep that contract intact for rollback.
     with_screensaver = tuple(base + ['screensaver-v1'] for base in ordinary)
-    if capabilities not in ordinary + (COMPOSITOR_CAPABILITIES,) + with_screensaver:
+    if capabilities not in ordinary + (COMPOSITOR_CAPABILITIES, LEGACY_NODE_COMPOSITOR_CAPABILITIES) + with_screensaver:
         raise ValueError('Unknown recovery capabilities')
     return capabilities
 SYSTEM_FILES = tuple(Path(x) for x in ('/usr/bin/node','/usr/palm/services/jsservicelauncher/bootstrap-node.js','/usr/palm/services/jsservicelauncher/bootstrap.js'))
@@ -132,7 +133,8 @@ def plan(original, capabilities=None):
         clients[NAME].append('application.launcher')
         role['permissions'][0]['outbound'] += ['com.webos.applicationManager','com.webos.service.tvpower']
     apis = {NAME+'.control':[NAME+'/'+x for x in control],'activities.callbacks':[NAME+'/boot'],NAME+'.admin':[NAME+'/'+x for x in ('status','restore','register','unregister')]}
-    if 'c1-keyfilter-v1' in capabilities:
+    compositor = capabilities in (COMPOSITOR_CAPABILITIES, LEGACY_NODE_COMPOSITOR_CAPABILITIES)
+    if compositor:
         names=[line for line in original['service'].splitlines() if line.startswith('Name=')]
         if names not in (['Name='+NAME],['Name='+NAME+';']):
             raise ValueError('Unexpected compositor activation names')
@@ -142,9 +144,13 @@ def plan(original, capabilities=None):
         # Running W21 compositor clients already hold the named stock group
         # 'all'. A policy scan does not refresh their cached client groups.
         apis['all'] = [LEASE_NAME+'/c1Lease', LEASE_NAME+'/c1Home']
+        if capabilities == LEGACY_NODE_COMPOSITOR_CAPABILITIES:
+            # W19's stock legacy LS2 role reaches these methods via 'private'.
+            # The alias and broker still accept only the two compositor senders.
+            apis['private'] = apis['all']
     result = {'service': original['service'].replace(expected,'Exec='+str(RUNNER)).encode(),
             'role':encoded(role), 'client':encoded(clients), 'api':encoded(apis)}
-    if 'c1-keyfilter-v1' in capabilities:
+    if compositor:
         # LS2 reads Name as a semicolon-delimited GLib string list. Keep the
         # SDK manifest's existing service-file path and exact rollback shape.
         result['service']=result['service'].replace(names[0].encode(),('Name='+NAME+';'+LEASE_NAME).encode())
