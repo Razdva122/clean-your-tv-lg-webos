@@ -842,9 +842,21 @@ def enable_locked(root,uid,seconds):
 def execute(mode,transaction=None,root=STATE,uid=0):
     if mode=='status': return status(root,uid)
     with operation(root,uid):
+        if mode=='boot' and not os.path.lexists(Path(root)/'c1-keyfilter/pending.json'):
+            try:
+                intent = read_intent(root, uid)
+                # ActivityManager can deliver recovery while Home is already
+                # armed. Keep only a verified activation from this boot.
+                if (intent['enabled'] and intent['phase'] == 'active'
+                        and intent['boot'] == boot_identity()):
+                    current = status(root, uid)
+                    if (current['intent'] == intent
+                            and current['recovery'].get('integrity_verified') is True):
+                        return current
+            except (OSError, ValueError, RuntimeError, subprocess.SubprocessError):
+                pass  # Unverified activation still needs stock Home recovery.
         if mode in ('restore','boot'):
-            # No failed-attempt retry or same-boot automatic rearm. The filter
-            # retains fail-open semantics until an explicit Enable.
+            # Boot recovery never arms or reinstalls the filter.
             return restore_locked(root,uid,explicit_restore=mode=='restore')
         if mode in ('enable','trial','intent-trial','emergency-trial'):
             return enable_locked(root,uid,0 if mode=='enable' else 60)
