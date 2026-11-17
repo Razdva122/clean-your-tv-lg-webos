@@ -53,9 +53,14 @@
     {
       "pr": 683,
       "issues": [],
-      "summary": "Recover No-root Helper start controls and authenticate historical Root System replacement; sign a private System QA catalog"
+      "summary": "Restore No-root Helper controls, authenticate historical Root System replacement and sign a private System QA catalog"
     }
   ],
   "excluded": [],
-  "acceptance": ""
+  "acceptance": "",
+  "build": {
+    "run_id": 44052108345,
+    "attempt": 1,
+    "source": "08aff548a8e2107691d92b1cc5a6163a913deef0"
+  }
 }
