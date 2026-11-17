@@ -5,6 +5,23 @@ try:
 except ImportError:
  from profile_plan import CANDIDATE, STOCK
 
+def root_restore_failure_details(value):
+    """Keep fixed restore diagnostics, never arguments or native reply text."""
+    if not isinstance(value, dict):
+        return {}
+    result = {}
+    check = value.get('restore_check')
+    if check in ('native-restore-unverified', 'native-stop-unverified', 'stock-home-unverified',
+                 'controller-stop-unverified', 'stock-routing-unverified', 'intent-write-failed',
+                 'stock-foreground-unverified', 'stock-surface-unverified'):
+        result['restore_check'] = check
+    reason = value.get('native_reason')
+    if reason in ('state_untrusted', 'config_invalid', 'restore_blocked', 'retirement_failed',
+                  'recovery_busy', 'effect_busy', 'ui_release_failed', 'explicit_off'):
+        result['native_reason'] = reason
+    return result
+
+
 def call(uri,payload,timeout=5,allow_failure=False):
  # Keep stdin open until a reply. Closing it makes this TV's luna-send exit early.
  p=subprocess.Popen(['/usr/bin/luna-send','-n','1',uri,json.dumps(payload)],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE)

@@ -14,7 +14,7 @@ import tempfile
 import time
 import uuid
 import device_adapter as d
-from transport import call as luna
+from transport import call as luna, root_restore_failure_details
 
 
 def gate_backend():
@@ -778,6 +778,18 @@ def audio_entry(args):
         return dict(returnValue=False, errorCode='unavailable')
 
 
+def runtime_failure(mode, error):
+    reply = {'returnValue': False, 'error': str(error)}
+    if mode == 'restore':
+        detail = root_restore_failure_details({
+            'restore_check': getattr(error, 'restore_check', None),
+            'native_reason': getattr(error, 'native_reason', None),
+        })
+        if detail:
+            reply['root_restore_failure'] = detail
+    return reply
+
+
 if __name__ == '__main__':
     if len(sys.argv) > 1 and sys.argv[1] == 'audio':
         print(json.dumps(audio_entry(sys.argv[2:])), flush=True)
@@ -791,11 +803,12 @@ if __name__ == '__main__':
             print(json.dumps({'returnValue':False,'error':'Startup choices unavailable'}),flush=True)
             sys.exit(1)
     else:
+        mode = sys.argv[1] if len(sys.argv) in (2,3) else ''
         try:
-            result = main(sys.argv[1] if len(sys.argv) in (2,3) else '', sys.argv[2] if len(sys.argv) == 3 else None)
+            result = main(mode, sys.argv[2] if len(sys.argv) == 3 else None)
             print(json.dumps({'returnValue':True,'result':result}), flush=True)
             if isinstance(result, str) and result in ('recovering', 'conflict'):
                 sys.exit(2)
         except Exception as exc:
-            print(json.dumps({'returnValue':False,'error':str(exc)}), flush=True)
+            print(json.dumps(runtime_failure(mode, exc)), flush=True)
             sys.exit(1)

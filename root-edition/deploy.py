@@ -147,7 +147,18 @@ def runtime(mode, run=command):
 
 
 def restore(run=command):
-    reply = runtime('restore', run)
+    try:
+        reply = runtime('restore', run)
+    except subprocess.CalledProcessError as error:
+        if isinstance(error.stdout, bytes) and len(error.stdout) <= 4096:
+            try:
+                failure = json.loads(error.stdout)
+            except (ValueError, RecursionError):
+                failure = None
+            if isinstance(failure, dict) and failure.get('returnValue') is False and 'root_restore_failure' in failure:
+                from runtime.transport import root_restore_failure_details
+                error.root_restore_failure = root_restore_failure_details(failure['root_restore_failure'])
+        raise
     if reply.get('result') not in ('absent', 'restored'):
         raise ValueError('Recovery incomplete; state retained: ' + str(reply))
     return reply
@@ -492,6 +503,8 @@ def entrypoint():
         reply={'returnValue':False,'instruction':'Stop; retain state and inspect. Do not repeat installation.'}
         detail=install_failure(exc)
         if detail is not None:reply['root_install_failure']=detail
+        elif getattr(exc, 'root_restore_failure', None):
+            reply['root_restore_failure'] = exc.root_restore_failure
         else:reply['error']=str(exc)
         print(json.dumps(reply),flush=True)
         sys.exit(1)

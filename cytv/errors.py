@@ -240,6 +240,23 @@ class TVNotReady(TVConnectionError):
                          close_code=1008, reason_code='tv-not-ready')
 
 
+def root_restore_failure_details(value):
+    """Keep fixed restore diagnostics, never arguments or native reply text."""
+    if not isinstance(value, dict):
+        return {}
+    result = {}
+    check = value.get('restore_check')
+    if check in ('native-restore-unverified', 'native-stop-unverified', 'stock-home-unverified',
+                 'controller-stop-unverified', 'stock-routing-unverified', 'intent-write-failed',
+                 'stock-foreground-unverified', 'stock-surface-unverified'):
+        result['restore_check'] = check
+    reason = value.get('native_reason')
+    if reason in ('state_untrusted', 'config_invalid', 'restore_blocked', 'retirement_failed',
+                  'recovery_busy', 'effect_busy', 'ui_release_failed', 'explicit_off'):
+        result['native_reason'] = reason
+    return result
+
+
 def root_driver_details(value, *, keep_attempt=False):
     """Fixed driver callsites only; no remote prose, paths or attempt in reports."""
     if not isinstance(value,dict) or type(value.get('schema',1)) is not int or value.get('schema',1)!=1:return {}
