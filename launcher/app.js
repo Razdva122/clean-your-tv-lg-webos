@@ -286,6 +286,13 @@
   }
   // Canonical Home owns one persistent CARD and has no transient controller.
   window.HomePresentationController = null;
+  function recordTileLaunch(appId) {
+    try {
+      library.recordLaunch(appId);
+    } catch (_) {
+      // Launch still succeeds if local preferences cannot be written.
+    }
+  }
   function launchApp(appId, title, params, fromTile) {
     callLuna(
       'luna://com.webos.applicationManager/launch',
@@ -294,13 +301,7 @@
         params: params || {}
       },
       function (n) {
-        if (fromTile && n.returnValue === true) {
-          try {
-            library.recordLaunch(appId);
-          } catch (_) {
-            // Launch still succeeds if local preferences cannot be written.
-          }
-        }
+        if (fromTile && n.returnValue === true) recordTileLaunch(appId);
         false === n.returnValue &&
           showToast(
             tr("Can't open {app}", {
@@ -629,7 +630,9 @@
         {},
         function (result) {
           if (!result || !result.returnValue) {
-            launchApp(item.app.id, item.app.title);
+            launchApp(item.app.id, item.app.title, null, true);
+          } else if (result.returnValue === true) {
+            recordTileLaunch(item.app.id);
           }
         },
         5000

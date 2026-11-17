@@ -154,11 +154,6 @@ class GuiTests(unittest.TestCase):
             self.assertEqual([card.key for card in cards], ['classic', 'liquid-glass', 'ribbon'])
             self.assertTrue(all(not card.preview.isNull() for card in cards))
             weather = w.form.findChild(ToggleSwitch, 'weather')
-            usage = w.form.findChild(ToggleSwitch, 'usage_sort')
-            self.assertIsNotNone(usage)
-            self.assertIs(w.form.findChildren(ToggleSwitch)[-1], usage)
-            self.assertFalse(usage.isChecked())
-            usage.click()
             weather.setChecked(True)
             cards[2].click()
             self.assertFalse(weather.isEnabled())
@@ -172,9 +167,32 @@ class GuiTests(unittest.TestCase):
             answer = json.loads(w.channel.answers.get_nowait())
             self.assertEqual(answer['theme'], 'ribbon')
             self.assertFalse(answer['weather'])
-            self.assertIs(answer['usage_sort'], True)
             if specific:
                 self.assertTrue(answer[specific])
+
+    def test_setup_usage_sort_can_be_preserved_enabled_or_disabled(self):
+        import json
+        from cytv.desktop import Channel
+        from cytv import install_settings as settings
+        for edition in ('root', 'no-root'):
+            for choice in (None, True, False):
+                with self.subTest(edition=edition, choice=choice):
+                    w = Wizard()
+                    self.addCleanup(w.close)
+                    w.channel = Channel(lambda *_: None)
+                    w.selected_profile = {'edition': edition}
+                    w.show_prompt(Prompt(settings.PROMPT))
+                    usage = w.form.findChild(QComboBox, 'usage_sort')
+                    self.assertIsNotNone(usage)
+                    self.assertIsNone(usage.currentData())
+                    if choice is not None:
+                        usage.setCurrentIndex(usage.findData(choice))
+                    next(b for b in w.form.findChildren(QPushButton) if b.text() == 'Continue').click()
+                    value = json.loads(w.channel.answers.get_nowait())
+                    if choice is None:
+                        self.assertNotIn('usage_sort', value)
+                    else:
+                        self.assertIs(value['usage_sort'], choice)
 
     def test_setup_switch_preserves_current_value_and_allows_explicit_off(self):
         import json
