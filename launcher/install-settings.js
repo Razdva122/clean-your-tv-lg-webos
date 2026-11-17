@@ -27,11 +27,15 @@
       typeof value.id !== 'string' ||
       !/^[a-f0-9]{32}$/.test(value.id) ||
       Object.keys(value).some(function (key) {
-        return ['id', 'theme', 'weather', 'tv_name'].indexOf(key) < 0;
+        return (
+          ['id', 'theme', 'weather', 'tv_name', 'usage_sort'].indexOf(key) < 0
+        );
       }) ||
       (value.theme !== undefined &&
         ['classic', 'liquid-glass', 'ribbon'].indexOf(value.theme) < 0) ||
       (value.weather !== undefined && typeof value.weather !== 'boolean') ||
+      (value.usage_sort !== undefined &&
+        typeof value.usage_sort !== 'boolean') ||
       (value.theme === 'ribbon' && value.weather === true)
     )
       return false;
@@ -67,6 +71,8 @@
       save('tvhome.weather.v1', JSON.stringify(weather));
     }
     if (value.tv_name !== undefined) save('tvhome.name', value.tv_name);
+    if (value.usage_sort !== undefined)
+      root.AppLibrary.setUsageSort(root.localStorage, value.usage_sort);
     save(marker, value.id);
     return true;
   }

@@ -1127,8 +1127,17 @@ class Wizard(QMainWindow):
                 toggle.updateGeometry()
                 hint.setText(tr('Current setting unavailable. Check it in Home settings.'))
             switches[key] = toggle
+        usage_sort, _ = switch_row('usage_sort', settings.USAGE_SORT, settings.USAGE_SORT_HELP)
+        usage_sort_changed = False
+        def change_usage_sort(_checked):
+            nonlocal usage_sort_changed
+            usage_sort_changed = True
+        usage_sort.toggled.connect(change_usage_sort)
+
         def save():
             value = {'theme': group.checkedButton().key, 'weather': weather.isChecked()}
+            if usage_sort_changed:
+                value['usage_sort'] = usage_sort.isChecked()
             for key, toggle in switches.items():
                 if toggle.isEnabled() and toggle.isChecked() != current[key]:
                     value[key] = toggle.isChecked()

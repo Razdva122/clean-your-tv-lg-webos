@@ -154,6 +154,11 @@ class GuiTests(unittest.TestCase):
             self.assertEqual([card.key for card in cards], ['classic', 'liquid-glass', 'ribbon'])
             self.assertTrue(all(not card.preview.isNull() for card in cards))
             weather = w.form.findChild(ToggleSwitch, 'weather')
+            usage = w.form.findChild(ToggleSwitch, 'usage_sort')
+            self.assertIsNotNone(usage)
+            self.assertIs(w.form.findChildren(ToggleSwitch)[-1], usage)
+            self.assertFalse(usage.isChecked())
+            usage.click()
             weather.setChecked(True)
             cards[2].click()
             self.assertFalse(weather.isEnabled())
@@ -167,6 +172,7 @@ class GuiTests(unittest.TestCase):
             answer = json.loads(w.channel.answers.get_nowait())
             self.assertEqual(answer['theme'], 'ribbon')
             self.assertFalse(answer['weather'])
+            self.assertIs(answer['usage_sort'], True)
             if specific:
                 self.assertTrue(answer[specific])
 
@@ -189,6 +195,7 @@ class GuiTests(unittest.TestCase):
             value = json.loads(w.channel.answers.get_nowait())
             if change: self.assertIs(value['block_updates'],False)
             else: self.assertNotIn('block_updates',value)
+            self.assertNotIn('usage_sort', value)
 
     def test_theme_cards_and_switch_work_from_keyboard(self):
         from PySide6.QtTest import QTest

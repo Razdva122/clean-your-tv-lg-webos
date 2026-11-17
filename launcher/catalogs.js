@@ -4384,3 +4384,71 @@ HomeI18n.add({
       '取消此次更新作業，保留 Home 和設定。'
   }
 });
+
+HomeI18n.add({
+  'en': {
+    'Sort by most used': 'Sort by most used',
+    'Frequently opened apps move up in the grid. The dock keeps its order.':
+      'Frequently opened apps move up in the grid. The dock keeps its order.'
+  },
+  'de': {
+    'Sort by most used': 'Häufig genutzte Apps zuerst',
+    'Frequently opened apps move up in the grid. The dock keeps its order.':
+      'Häufig geöffnete Apps rücken in der Übersicht nach oben. Die Reihenfolge im Dock bleibt erhalten.'
+  },
+  'es': {
+    'Sort by most used': 'Ordenar por frecuencia de uso',
+    'Frequently opened apps move up in the grid. The dock keeps its order.':
+      'Las apps que más abres suben en la cuadrícula. El dock conserva su orden.'
+  },
+  'pt-BR': {
+    'Sort by most used': 'Ordenar por frequência de uso',
+    'Frequently opened apps move up in the grid. The dock keeps its order.':
+      'Os apps que você mais abre sobem na grade. O dock mantém a ordem.'
+  },
+  'fr': {
+    'Sort by most used': 'Applications les plus utilisées en premier',
+    'Frequently opened apps move up in the grid. The dock keeps its order.':
+      'Les applications souvent ouvertes remontent dans la grille. Le dock garde son ordre.'
+  },
+  'it': {
+    'Sort by most used': 'App più usate per prime',
+    'Frequently opened apps move up in the grid. The dock keeps its order.':
+      'Le app che apri più spesso salgono nella griglia. Il dock mantiene il suo ordine.'
+  },
+  'ko': {
+    'Sort by most used': '자주 쓰는 앱 먼저',
+    'Frequently opened apps move up in the grid. The dock keeps its order.':
+      '자주 여는 앱이 그리드 위로 올라옵니다. 독의 순서는 유지됩니다.'
+  },
+  'hi': {
+    'Sort by most used': 'ज़्यादा इस्तेमाल होने वाले ऐप पहले',
+    'Frequently opened apps move up in the grid. The dock keeps its order.':
+      'जो ऐप आप अक्सर खोलते हैं, वे ग्रिड में ऊपर आ जाते हैं। डॉक का क्रम वही रहता है।'
+  },
+  'pl': {
+    'Sort by most used': 'Najczęściej używane na początku',
+    'Frequently opened apps move up in the grid. The dock keeps its order.':
+      'Często otwierane aplikacje trafiają wyżej w siatce. Kolejność w doku jest zachowana.'
+  },
+  'ru': {
+    'Sort by most used': 'Часто открываемые',
+    'Frequently opened apps move up in the grid. The dock keeps its order.':
+      'Часто запускаемые приложения поднимаются выше в сетке. Порядок в доке сохраняется.'
+  },
+  'zh-Hans': {
+    'Sort by most used': '常用应用优先',
+    'Frequently opened apps move up in the grid. The dock keeps its order.':
+      '经常打开的应用会在网格中上移。快捷栏顺序保持不变。'
+  },
+  'zh-Hant': {
+    'Sort by most used': '常用應用程式優先',
+    'Frequently opened apps move up in the grid. The dock keeps its order.':
+      '經常開啟的應用程式會在格狀清單中往上移。快捷列順序維持原樣。'
+  },
+  'cs': {
+    'Sort by most used': 'Nejčastěji používané aplikace první',
+    'Frequently opened apps move up in the grid. The dock keeps its order.':
+      'Často otevírané aplikace se v mřížce posunou výš. Pořadí v doku zůstane stejné.'
+  }
+});

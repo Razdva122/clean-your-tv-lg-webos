@@ -286,7 +286,7 @@
   }
   // Canonical Home owns one persistent CARD and has no transient controller.
   window.HomePresentationController = null;
-  function launchApp(appId, title, params) {
+  function launchApp(appId, title, params, fromTile) {
     callLuna(
       'luna://com.webos.applicationManager/launch',
       {
@@ -294,6 +294,13 @@
         params: params || {}
       },
       function (n) {
+        if (fromTile && n.returnValue === true) {
+          try {
+            library.recordLaunch(appId);
+          } catch (_) {
+            // Launch still succeeds if local preferences cannot be written.
+          }
+        }
         false === n.returnValue &&
           showToast(
             tr("Can't open {app}", {
@@ -495,7 +502,20 @@
     return tiles.length - (last && last.add ? 1 : 0);
   }
   function setTileEditMode(active) {
+    var previous = tileEditMode;
     tileEditMode = active && editableTileCount() > 0;
+    if (
+      previous !== tileEditMode &&
+      library &&
+      library.usageSorted() &&
+      !moveState
+    ) {
+      var focused = tiles[focusedTile];
+      if (orderTiles(orderedApps())) {
+        focusedTile = Math.max(0, tiles.indexOf(focused));
+        layoutTiles();
+      }
+    }
     editHint.hidden = !tileEditMode;
     if (tileEditMode) editHint.textContent = tr('OK Pick up   ·   Back Exit');
   }
@@ -517,10 +537,36 @@
       return false;
     }
   }
+  function orderedApps() {
+    return tileEditMode
+      ? library.visible()
+      : library.ordered(layoutGeometry.dock ? columnCount : 0);
+  }
+  function orderTiles(apps) {
+    var previous = tiles.slice();
+    var focused = previous[focusedTile];
+    var positions = Object.create(null);
+    apps.forEach(function (app, index) {
+      positions[app.id] = index;
+    });
+    tiles.sort(function (a, b) {
+      if (a.add || b.add) return Number(!!a.add) - Number(!!b.add);
+      var left = positions[a.app.id],
+        right = positions[b.app.id];
+      return (
+        (left === undefined ? apps.length : left) -
+        (right === undefined ? apps.length : right)
+      );
+    });
+    focusedTile = Math.max(0, tiles.indexOf(focused));
+    return tiles.some(function (item, index) {
+      return item !== previous[index];
+    });
+  }
   function rebuild(focusId) {
     inputTilesDirty = false;
     tilesContainer.innerHTML = '';
-    tiles = library.visible().map(createTile);
+    tiles = orderedApps().map(createTile);
     if (tileEditMode && !tiles.length) setTileEditMode(false);
     if (library.showAddApp()) {
       var el = document.createElement('div');
@@ -589,7 +635,7 @@
         5000
       );
     } else {
-      launchApp(item.app.id, item.app.title);
+      launchApp(item.app.id, item.app.title, null, true);
     }
   }
   function cancelHold() {
@@ -650,6 +696,9 @@
     clearPressed();
     if (!item || item.add || moveState || pickerOpen || undoState) {
       return;
+    }
+    if (library.usageSorted() && orderTiles(library.visible())) {
+      layoutTiles();
     }
     moveState = {
       item: item,
@@ -764,9 +813,11 @@
     hideButton.hidden = true;
     setTileEditMode(false);
     item.el.remove();
+    var next = tiles[Math.min(focusedTile, tiles.length - 1)];
+    if (library.usageSorted()) orderTiles(orderedApps());
     layoutTiles();
     focusZone = 'none';
-    focusTile(Math.min(focusedTile, tiles.length - 1));
+    focusTile(tiles.indexOf(next));
     undoState = {
       ids: snapshot
         .filter(function (tile) {
@@ -983,11 +1034,15 @@
         var button = getElement('homeShowAddApp');
         if (button)
           button.setAttribute('aria-checked', String(library.showAddApp()));
+        var sort = getElement('homeUsageSort');
+        if (sort)
+          sort.setAttribute('aria-checked', String(library.usageSorted()));
       },
-      toggle: function () {
+      toggle: function (sort) {
         var error = getElement('homeAppsError');
         try {
-          library.setShowAddApp(!library.showAddApp());
+          if (sort) library.setUsageSort(!library.usageSorted());
+          else library.setShowAddApp(!library.showAddApp());
           if (error) error.textContent = '';
           var id = tiles[focusedTile] && tiles[focusedTile].app.id;
           rebuild(id);
@@ -1385,6 +1440,8 @@
     layoutState.onchange = function (state) {
       updateGeometry(state.columns, state.preset, state.ribbon);
       scrollOffset = 0;
+      if (library && library.usageSorted() && !moveState)
+        orderTiles(orderedApps());
       layoutTiles();
       renderShelf();
       'shelf' !== focusZone && focusTile(focusedTile);
@@ -2437,6 +2494,7 @@
     hideSelected = false;
     hideButton.hidden = true;
     setTileEditMode(tileEditMode);
+    if (library.usageSorted() && !tileEditMode) orderTiles(orderedApps());
     layoutTiles();
     focusTile(tiles.indexOf(item));
   }
@@ -2450,6 +2508,7 @@
     dismissUndo();
     if (tileEditMode) setTileEditMode(false);
     moveState && finishMoving(false);
+    if (library.usageSorted() && orderTiles(orderedApps())) layoutTiles();
     updateClock();
     'inputs' === focusZone && inputsPanel.classList.add('hidden');
     topButtons.forEach(function (e) {

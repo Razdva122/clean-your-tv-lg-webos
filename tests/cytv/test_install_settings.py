@@ -28,11 +28,12 @@ class SettingsTests(unittest.TestCase):
             remote = MagicMock()
             remote.luna.return_value = {'returnValue': True}
             installer = SimpleNamespace(remote=remote, profile=profile, tv_info={})
-            settings.apply_services(installer, {'theme':'classic','weather':True}, lambda *_:None)
+            settings.apply_services(installer, {'theme':'classic','weather':True,'usage_sort':False}, lambda *_:None)
             uri, payload = remote.luna.call_args.args
             self.assertEqual(uri, 'com.webos.applicationManager/launch')
             self.assertEqual(payload['id'], app)
             self.assertEqual(payload['params']['cytvSetup']['theme'], 'classic')
+            self.assertIs(payload['params']['cytvSetup']['usage_sort'], False)
             self.assertEqual(installer.tv_info['installation_settings']['weather'], 'requested-in-home')
 
     def test_customization_is_requested_only_after_successful_install(self):
@@ -85,10 +86,13 @@ class SettingsTests(unittest.TestCase):
                 self.assertIn('0', options)
                 self.assertIn('2', options)
                 return '0'
+            if 'Sort by most used' in prompt:
+                self.assertIn('2', options)
+                return '2'
             self.assertIn('n', options, 'Android must offer an explicit off choice')
             return 'n'
         result = settings.collect({'edition': 'no-root'}, ask, output)
-        self.assertEqual(result, {'theme': 'classic', 'weather': False})
+        self.assertEqual(result, {'theme': 'classic', 'weather': False, 'usage_sort': False})
 
     def test_diagnostics_keep_only_known_setting_results(self):
         from cytv.diagnostic_context import tv_summary
@@ -103,6 +107,7 @@ class SettingsTests(unittest.TestCase):
             ({'edition': 'no-root'}, {'block_updates': True}),
             ({'edition': 'root'}, {'theme': 'external'}),
             ({'edition': 'root'}, {'weather': 1}),
+            ({'edition': 'root'}, {'usage_sort': 1}),
             ({'edition': 'root'}, {'theme': 'ribbon', 'weather': True}),
         ]:
             with self.subTest(value=value), self.assertRaises(ValueError):
