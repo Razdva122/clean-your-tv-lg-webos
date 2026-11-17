@@ -74,6 +74,11 @@
       "pr": 700,
       "issues": [],
       "summary": "Offer optional app-grid sorting by successful launches, with explicit installer choices and AirPlay coverage"
+    },
+    {
+      "pr": 701,
+      "issues": [],
+      "summary": "Fit translated desktop and HD Home settings and execute the actual POSIX recovery command in Windows diagnostic tests"
     }
   ],
   "excluded": [],
