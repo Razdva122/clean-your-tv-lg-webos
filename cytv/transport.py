@@ -436,7 +436,7 @@ class SSH:
                 # Keep only the fixed envelope, never raw failed stdout/stderr.
                 if sum(map(len,output))<=4096:
                     try:
-                        from .errors import root_driver_details, root_restore_failure_details
+                        from .errors import root_driver_details, root_restore_failure_details, root_beta_repair_details
                         reply=json.loads(b''.join(output))
                         if isinstance(reply,dict) and reply.get('returnValue') is False:
                             detail=root_driver_details(reply.get('root_install_failure'),keep_attempt=True)
@@ -444,6 +444,9 @@ class SSH:
                             detail = root_restore_failure_details(reply.get('root_restore_failure'))
                             if detail:
                                 error.root_restore_failure = detail
+                            detail = root_beta_repair_details(reply.get('root_beta_repair_failure'))
+                            if detail:
+                                error.root_beta_repair_failure = detail
                     except (ValueError, TypeError, RecursionError):pass
                 # Root's historic <=4096 parser above remains independent.
                 from .contract_events import export_events, record, envelope_failure

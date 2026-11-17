@@ -3,12 +3,10 @@ import json
 import re
 
 
-PROGRAM = r'''
+READERS = r'''
 (function () {
  'use strict';
  var fs=require('fs'),c=require('constants'),crypto=require('crypto');
- var identifier=OPERATION,base='/var/lib/clean-your-tv-installation';
- var out={schema:1},pin='4a71641c8d5536175e404a961624e8656eba30e97b5026f6bd7dc31e4bbeaaea';
  function fail(status){var e=Error();e.category=status;throw e;}
  function directory(p){
   var s=fs.lstatSync(p);
@@ -39,6 +37,11 @@ PROGRAM = r'''
  function parse(raw){try{return JSON.parse(raw.bytes.toString('utf8'));}catch(_){fail('unsafe');}}
  function sha(raw){return crypto.createHash('sha256').update(raw).digest('hex');}
  function digest(s){return typeof s==='string'&&/^[a-f0-9]{64}$/.test(s);}
+'''
+
+PROGRAM = READERS + r'''
+ var identifier=OPERATION,base='/var/lib/clean-your-tv-installation';
+ var out={schema:1},pin='4a71641c8d5536175e404a961624e8656eba30e97b5026f6bd7dc31e4bbeaaea';
  function pythonState(state){
   var runtime='/var/lib/clean-your-tv-python/'+pin;
   var launcher=optional(state+'/python-launcher',4096,18),receipt=optional(state+'/python-runtime.json',65536);
@@ -127,6 +130,98 @@ PROGRAM = r'''
  console.log(JSON.stringify(out));
 }());
 '''
+
+
+BETA_PROGRAM = READERS + r'''
+ var root='/var/lib/clean-your-tv-root', runner=root+'/run-recovery-service';
+ var original='#!/bin/sh\nset -eu\n[ "$#" -eq 0 ] || exit 2\ncd '+root+'/service\n'+
+  'export NODE_PATH=/usr/palm/frameworks:/usr/lib/nodejs:/usr/lib/node_modules\n'+
+  'exec /usr/bin/node /usr/palm/services/jsservicelauncher/bootstrap-node.js -- '+
+  root+'/bootstrap.pid /var/palm/ls2-dev '+root+'/service\n';
+ var patched=original.replace('bootstrap-node.js -- ','bootstrap-node.js --disable-activity-creation -- ');
+ var originalHash=sha(original), patchedHash=sha(patched), sampled={};
+ function classify(hash){
+  return hash===originalHash?'original':hash===patchedHash?'patched':'other';
+ }
+ function sample(path,limit){
+  var raw=optional(path,limit,18);
+  sampled[path]={limit:limit,hash:raw?sha(raw.bytes):null};
+  return raw;
+ }
+ function proof(name){
+  var raw=sample(root+'/'+name,1024*1024);
+  if(!raw)return 'missing';
+  var value=parse(raw);
+  return value&&value.version===1&&value.mode==='recovery-only'&&value.files?
+   classify(value.files[runner]):'other';
+ }
+ function receipt(name){return sample(root+'/'+name,65536)?'present':'missing';}
+ var out={status:'unavailable'};
+ try{
+  if(process.getuid()!==0)fail('unsafe');
+  var deployed=sample(root+'/deploy.json',65536);
+  var stage=deployed?parse(deployed):null;
+  var launch=sample(runner,4096);
+  var leaseRaw=sample('/var/lib/clean-your-tv-installation/operation.json',65536);
+  var lease=leaseRaw?parse(leaseRaw):null;
+  var startupRaw=sample(root+'/recovery-service.json',65536);
+  var startup=startupRaw?parse(startupRaw):null;
+  out={
+   status:'read',
+   deployment_stage:stage&&stage.app==='com.cleanyourtv.root.preview'?
+    stage.stage:'unknown',
+   runner:launch?classify(sha(launch.bytes)):'missing',
+   pending_proof:proof('recovery-provision.pending.json'),
+   ready_proof:proof('recovery-provision.json'),
+   activity_receipt:receipt('activity-registration.json'),
+   startup_hook_receipt:receipt('startup-hook.json'),
+   deploy_lease:!leaseRaw?'missing':lease&&lease.schema===1&&lease.owner==='deploy'&&
+    lease.journal==='deploy.json'&&typeof lease.terminal==='boolean'?
+    (lease.terminal?'terminal':'open'):'other',
+   last_startup:!startupRaw?'missing':startup&&startup.schema===1?startup.phase:'unknown'
+  };
+  if(startup&&startup.phase==='exited')out.last_exit_status=startup.exit_status;
+  Object.keys(sampled).forEach(function(path){
+   var sample=sampled[path], current=optional(path,sample.limit,18);
+   if((current?sha(current.bytes):null)!==sample.hash)fail('inconsistent');
+  });
+ }catch(e){out={status:e.category==='inconsistent'?'inconsistent':'unavailable'};}
+ console.log(JSON.stringify(out));
+}());
+'''
+
+
+def beta_summary(value):
+    if not isinstance(value, dict):
+        return {'status': 'unavailable'}
+    result = {'status': value['status'] if value.get('status') in (
+        'read', 'inconsistent', 'unavailable') else 'unavailable'}
+    if result['status'] != 'read':
+        return result
+    file_states = ('original', 'patched', 'other', 'missing')
+    for key, allowed in (
+            ('deployment_stage', ('provision-finalize-starting', 'installed-recovery-only', 'unknown')),
+            ('runner', file_states), ('pending_proof', file_states), ('ready_proof', file_states),
+            ('activity_receipt', ('present', 'missing')), ('startup_hook_receipt', ('present', 'missing')),
+            ('deploy_lease', ('terminal', 'open', 'missing', 'other')),
+            ('last_startup', ('starting', 'exited', 'missing', 'unknown'))):
+        if value.get(key) in allowed:
+            result[key] = value[key]
+    code = value.get('last_exit_status')
+    if result.get('last_startup') == 'exited' and type(code) is int and 0 <= code <= 255:
+        result['last_exit_status'] = code
+    return result
+
+
+def collect_beta(remote):
+    try:
+        raw = remote.run('env -u NODE_OPTIONS -u NODE_PATH /usr/bin/node',
+                         data=BETA_PROGRAM.encode(), timeout=15)
+        if len(raw) <= 4096:
+            return beta_summary(json.loads(raw))
+    except (OSError, RuntimeError, ValueError, TypeError):
+        pass
+    return {'status': 'unavailable'}
 
 
 def program(operation, pending=None):

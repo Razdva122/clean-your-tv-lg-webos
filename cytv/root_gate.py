@@ -138,6 +138,7 @@ def beta_repair_available(installer, result):
 
 
 def repair_beta_recovery(installer):
+    from .root_passive import collect_beta
     from .root_install_recovery import run
 
     # Only stage the authenticated recovery support. Graphics and the IPK
@@ -151,7 +152,10 @@ def repair_beta_recovery(installer):
         target = stage+'/'+name
         installer.remote.run('mkdir -p '+shlex.quote(str(PurePosixPath(target).parent)))
         installer.remote.upload(target, raw, mode=0o600)
-    reply = json.loads(run(installer, stage, 'provision.py', ['repair_beta_recovery'], timeout=180))
+    try:
+        reply = json.loads(run(installer, stage, 'provision.py', ['repair_beta_recovery'], timeout=180))
+    finally:
+        installer.tv_info['root_beta_state'] = collect_beta(installer.remote)
     if reply != {'returnValue': True, 'status_verified': True, 'home_changed': False}:
         raise UserError('Root Beta recovery status could not be verified. Keep recovery data.',
                         reason_code='root-operation-unconfirmed')
