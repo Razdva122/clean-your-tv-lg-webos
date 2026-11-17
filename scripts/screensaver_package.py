@@ -12,7 +12,7 @@ from cytv.package import ipk
 from scripts.tv_web_build import compile_web
 
 APP_ID = "com.cleanyourtv.screensaver"
-WEB_FILES = ("appinfo.json", "index.html", "renderer.js", "settings.js", "style.css")
+WEB_FILES = ("appinfo.json", "icon.png", "index.html", "renderer.js", "settings.js", "style.css")
 BACKGROUNDS = {
     "alpine-photo.jpg": "alpine/assets/bachsee.jpg",
     "ribbon-photo.jpg": "ribbon/assets/wallpaper.jpg",
@@ -64,7 +64,6 @@ def root_bundle(source):
 
 def popup_files():
     files = {name: (ROOT / "screensaver" / name).read_bytes() for name in WEB_FILES}
-    files["icon.png"] = (ROOT / "launcher/brand-v2-icon.png").read_bytes()
     files.update({"backgrounds/" + name: (ROOT / "themes" / source).read_bytes()
                   for name, source in BACKGROUNDS.items()})
     for theme in ("alpine", "ribbon"):

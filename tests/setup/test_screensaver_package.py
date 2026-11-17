@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 import unittest
 
 from cytv.package import data_files
@@ -16,6 +17,8 @@ class ScreensaverPackageTests(unittest.TestCase):
         self.assertEqual(manifest["id"], "com.cleanyourtv.screensaver")
         self.assertEqual(manifest["defaultWindowType"], "popup")
         self.assertIs(manifest["visible"], False)
+        icon = files[prefix + manifest["icon"]]
+        self.assertTrue(icon == Path("screensaver/icon.png").read_bytes(), "Expected the dedicated screensaver icon")
         self.assertFalse(manifest.get("requiredACG"))
         self.assertFalse(manifest.get("privilegedJail"))
         self.assertEqual(set(files), {
@@ -31,8 +34,6 @@ class ScreensaverPackageTests(unittest.TestCase):
 
     def test_helper_embeds_canonical_runtime_in_app_jail_only(self):
         import runpy
-        from pathlib import Path
-
         builder = runpy.run_path("scripts/build-cytv.py")
         app = builder["tracked_files"]("native/app")
         app["screensaver-controller.js"] = Path("native/app/screensaver-controller.js").read_bytes()
@@ -48,7 +49,6 @@ class ScreensaverPackageTests(unittest.TestCase):
         import runpy
         import sys
 
-        from pathlib import Path
         from scripts.screensaver_package import settings_script
 
         builder = runpy.run_path("scripts/build-cytv.py")
