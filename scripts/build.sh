@@ -57,7 +57,16 @@ import runpy
 from pathlib import Path
 from scripts.theme_receiver import inject
 from scripts.helper_build import compile_helper
+from scripts.screensaver_package import add_root_resources
 import shutil
+home = Path('build/home-app')
+prefix = 'usr/palm/applications/com.gathin.tvhome/'
+home_files = {prefix + p.relative_to(home).as_posix(): p.read_bytes() for p in home.rglob('*') if p.is_file()}
+add_root_resources(home_files, prefix)
+for name, data in home_files.items():
+    target = home / name.removeprefix(prefix)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_bytes(data)
 sources = runpy.run_path('scripts/build-cytv.py')['tracked_files']('renewal-service')
 # The service runs on the TV's Node (0.12 on webOS 3.x): compile it like Helper.
 files = inject({name: data for name, data in sources.items() if not name.startswith('state/')})

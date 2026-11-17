@@ -104,6 +104,7 @@ Helper-free first-install mode promising that behavior.
 - OLED42C24LA — No-root — firmware 43.21.94 — webOS SDK 11.2.0 — v1.21.0 — owner confirmed an in-place upgrade from Helper 0.8.4, short Home after explicit Start Helper, and automatic startup and short Home after a full remote restart.
 - LG C3 — No-root — webOS 26
 - LG C5 77″ — No-root
+- 43UQ75003LF — No-root — firmware 04.60.92 — webOS 7.6.0 — owner reports successful installation on Windows 11; individual checks were not described. [Owner report #654](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/654)
 <!-- compatibility-reports:end -->
 
 - LG UM7450PLA — No-root — firmware 05.40.97 — webOS 4.5 — release v1.14.0. [Owner report #473](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/473)

@@ -41,7 +41,7 @@ class ReleaseTests(unittest.TestCase):
             (payload/'root-updater/service.js').write_bytes(b'fixed updater')
             (payload/'root/bundle.json').write_text(json.dumps({'package':'root.ipk','files':{'runtime/cli.py':build.digest(b'fixed runtime'),'python_binding.py':build.digest(b'fixed binding'),'python_boot.js':build.digest(b'fixed boot'),**{name:build.digest(b'fixed '+name.encode()) for name in ('package_data.py','package_identity.py','updater/store.py','updater/package.py','startup_guard.py')}}}))
             (payload/'root-updater/bundle.json').write_text(json.dumps({'files':{'service.js':build.digest(b'fixed updater'),'root-updater.ipk':build.digest((payload/'root-updater/root-updater.ipk').read_bytes())}}))
-            output=path/'release';manifests=build.prepare_release(payload,output,'v1.0.3','Changes')
+            output=path/'release';manifests=build.prepare_release(payload,output,'v1.0.3','Changes',historical=True)
             self.assertEqual(manifests['root']['minimumSupervisorVersion'],'1.1.1')
             self.assertNotIn('minimumSupervisorVersion',manifests['no-root'])
             files={p.name:p.read_bytes() for p in output.iterdir()}
@@ -62,7 +62,7 @@ class ReleaseTests(unittest.TestCase):
                 entries=package.data_files((payload/source).read_bytes());name='usr/palm/applications/'+app+'/appinfo.json'
                 info=json.loads(entries[name]);info['resolution']='1280x720';entries[name]=json.dumps(info).encode()
                 (payload/target).write_bytes(package.ipk(app,info['version'],entries))
-            all_manifests=build.prepare_release(payload,output,'v1.0.3','Changes')
+            all_manifests=build.prepare_release(payload,output,'v1.0.3','Changes',historical=True)
             self.assertEqual(set(all_manifests),{'root','no-root','root-720p','no-root-720p'})
             all_files={p.name:p.read_bytes() for p in output.iterdir()}
             prepare.verify_system_assets(all_manifests,{'tag':'v1.0.3','versions':versions},all_files)

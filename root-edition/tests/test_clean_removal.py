@@ -913,6 +913,100 @@ def luna(uri, payload):
         self.assertTrue(all(not path.exists() for path in names))
         self.assertEqual(driver.ownership.store.read('routing-backup-'+identifier),{'profile-trial.json':original})
 
+    def test_self_update_staged_package_is_classified_before_cache_retirement(self):
+        import hashlib, json, install_device, observed_install
+        from cytv.package import ipk
+        driver,identifier,root,updater,payload,calls,present=self.fixture()
+        driver.device.ownership=driver.ownership
+        system=install_device.SUPERVISOR;system.mkdir(mode=0o700);engine=Store(system/'engine-state',uid=os.getuid())
+        cache=system/'engine-state/cache';cache.mkdir()
+        app='com.cleanyourtv.system.updater'
+        files={'usr/palm/applications/'+app+'/appinfo.json':json.dumps({'id':app,'type':'web','version':'1.2.12'}).encode(),
+               'usr/palm/packages/'+app+'/packageinfo.json':json.dumps({'id':app,'app':app,'version':'1.2.12','services':[app+'.service']}).encode()}
+        raw=ipk(app,'1.2.12',files);digest=hashlib.sha256(raw).hexdigest()
+        descriptor={'version':'1.2.12','size':len(raw),'sha256':digest}
+        (cache/(digest+'.ipk')).write_bytes(raw)
+        engine.write('supervisor-migration',{'schema':1,'candidate':descriptor,'prior':descriptor,'phase':'recovery-required'})
+        staging=root.parent/'installer-staging';stage=staging/'cytv-root-install-fixture';stage.mkdir(parents=True)
+        package=stage/'package.ipk';package.write_bytes(raw)
+        record={'operation':identifier}
+        with patch.object(observed_install,'STAGING_ROOT',staging):
+            driver.device.retire_clean_private(record)
+        self.assertIn(digest,record['staging_hashes'])
+        self.assertFalse(package.exists())
+        self.assertFalse((system/'engine-state').exists())
+
+    def test_self_update_live_entries_and_rewritten_service_cannot_be_retired(self):
+        import install_device
+        driver,identifier,root,updater,payload,calls,present=self.fixture()
+        driver.device.ownership=driver.ownership
+        process=install_device.PROC/'12345';process.mkdir()
+        command=process/'cmdline'
+        slot=install_device.SUPERVISOR/'engine-state/slots/a';slot.mkdir(parents=True)
+        record={'original':{'operation':identifier}}
+        for entry in ('engine-entry.py','service-entry.py'):
+            command.write_bytes(b'/usr/bin/python3\0-B\0'+os.fsencode(slot/entry)+b'\0worker\0')
+            with self.subTest(entry=entry),self.assertRaisesRegex(ValueError,'live_original_worker'):
+                driver.device.clean_quiescent(record)
+        command.write_bytes(b'com.cleanyourtv.system.updater.service\0')
+        (process/'cwd').symlink_to(slot)
+        (process/'exe').symlink_to('/usr/bin/node')
+        with self.assertRaisesRegex(ValueError,'live_original_worker'):
+            driver.device.clean_quiescent(record,all_processes=True,same_boot=False)
+
+    def test_component_fence_snapshot_includes_original_engine_journal(self):
+        import install_device
+        from installation import JOURNALS
+        self.fixture()
+        system=install_device.SUPERVISOR;system.mkdir(mode=0o700)
+        engine=Store(system/'engine-state',uid=os.getuid())
+        transaction={'schema':1,'id':'a'*32,'phase':'migrating','lease':'b'*32}
+        engine.write('transaction',transaction)
+        captured=install_device.component_journal_snapshot()
+        self.assertEqual(set(captured),set(JOURNALS))
+        self.assertEqual(captured['system-engine'],transaction)
+        self.assertEqual(engine.read('transaction'),transaction)
+
+    def test_self_update_cleanup_never_classifies_foreign_cached_package(self):
+        import hashlib,json,install_device
+        from cytv.package import ipk
+        self.fixture()
+        system=install_device.SUPERVISOR;system.mkdir(mode=0o700);(system/'cache').mkdir()
+        engine=Store(system/'engine-state',uid=os.getuid())
+        app='com.foreign.package'
+        raw=ipk(app,'1.0.0',{'usr/palm/applications/'+app+'/appinfo.json':json.dumps({'id':app,'type':'web','version':'1.0.0'}).encode()})
+        descriptor={'version':'1.0.0','sha256':hashlib.sha256(raw).hexdigest(),'size':len(raw)}
+        cached=system/'cache'/(descriptor['sha256']+'.ipk');cached.write_bytes(raw)
+        engine.write('supervisor-generation',{'schema':1,'package':descriptor})
+        with self.assertRaises(ValueError):install_device.supervisor_staging_hashes(system,os.getuid())
+        self.assertEqual(cached.read_bytes(),raw)
+
+    def test_old_self_update_staging_survives_multiple_generations_until_clean_removal(self):
+        import hashlib,json,install_device,observed_install
+        from cytv.package import ipk
+        driver,identifier,root,updater,payload,calls,present=self.fixture()
+        driver.device.ownership=driver.ownership
+        system=install_device.SUPERVISOR;system.mkdir(mode=0o700)
+        engine=Store(system/'engine-state',uid=os.getuid());cache=system/'engine-state/cache';cache.mkdir()
+        app='com.cleanyourtv.system.updater'
+        files={'usr/palm/applications/'+app+'/appinfo.json':json.dumps({'id':app,'type':'web','version':'1.2.12'}).encode(),
+               'usr/palm/packages/'+app+'/packageinfo.json':json.dumps({'id':app,'app':app,'version':'1.2.12','services':[app+'.service']}).encode()}
+        raw=ipk(app,'1.2.12',files);digest=hashlib.sha256(raw).hexdigest()
+        (cache/(digest+'.ipk')).write_bytes(raw)
+        # A later operation replaced the only generation/migration references;
+        # the old successful installer failed to unlink its public staging file.
+        candidate={'version':'1.2.14','size':100,'sha256':'a'*64}
+        prior={'version':'1.2.13','size':100,'sha256':'b'*64}
+        engine.write('supervisor-generation',{'schema':1,'package':candidate})
+        engine.write('supervisor-migration',{'schema':1,'candidate':candidate,'prior':prior,'phase':'complete'})
+        staging=root.parent/'installer-staging';stage=staging/'cytv-root-install-retained';stage.mkdir(parents=True)
+        package=stage/'package.ipk';package.write_bytes(raw)
+        record={'operation':identifier}
+        with patch.object(observed_install,'STAGING_ROOT',staging):driver.device.retire_clean_private(record)
+        self.assertFalse(package.exists())
+        self.assertFalse(cache.exists())
+        self.assertIn(digest,driver.ownership.store.read('clean-removal-'+identifier)['staging_hashes'])
+
     def test_retry_retires_root_update_receipts_from_existing_private_cleanup(self):
         driver, identifier, root, updater, _, calls, _ = self.fixture()
         self.assertEqual(driver.clean_remove(identifier)['stage'], 'restart-required')

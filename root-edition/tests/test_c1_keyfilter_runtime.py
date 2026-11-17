@@ -13,6 +13,56 @@ sys.path[:0] = [str(ROOT / 'runtime'), str(ROOT)]
 
 
 class RuntimeTests(unittest.TestCase):
+
+    def test_restore_failure_preserves_native_reason_without_accepting_refusal(self):
+        from types import SimpleNamespace
+        failure = dict(self.proof(), returnValue=False, reason='ui_release_failed')
+        with patch.object(self.k, 'binary'), patch.object(self.k.subprocess, 'run',
+                return_value=SimpleNamespace(returncode=1, stdout=json.dumps(failure).encode())), \
+                patch.object(self.k, 'change_chain') as change:
+            with self.assertRaisesRegex(ValueError, 'Native compositor recovery failed') as caught:
+                self.k.restore_locked(self.root, self.uid)
+            change.assert_not_called()
+        self.assertEqual(caught.exception.native_reason, 'ui_release_failed')
+        self.assertEqual(caught.exception.restore_check, 'native-restore-unverified')
+
+    def test_restore_failure_distinguishes_stock_home_identity(self):
+        with patch.object(self.k, 'native', side_effect=[{}, dict(self.proof(), stock_verified=False)]), \
+                patch.object(self.k, 'selection', return_value={'schema': 2}), \
+                patch.object(self.k, 'change_chain') as change:
+            with self.assertRaisesRegex(ValueError, 'Native stop retirement unverified') as caught:
+                self.k.restore_locked(self.root, self.uid)
+            change.assert_not_called()
+        self.assertEqual(caught.exception.restore_check, 'stock-home-unverified')
+
+
+    def test_restore_failure_survives_runtime_and_deploy_envelopes(self):
+        import contextlib
+        import io
+        import subprocess
+        import cli as runtime_cli
+        import deploy
+
+        failure = ValueError('PRIVATE')
+        failure.restore_check = 'native-restore-unverified'
+        failure.native_reason = 'retirement_failed'
+        child_reply = runtime_cli.runtime_failure('restore', failure)
+        child_reply['root_restore_failure']['token'] = 'PRIVATE'
+
+        def command(_args):
+            raise subprocess.CalledProcessError(1, ['PRIVATE'], output=json.dumps(child_reply).encode())
+
+        with patch.object(deploy, 'python_command', return_value=sys.executable), \
+                patch.object(deploy, 'main', side_effect=lambda: deploy.restore(run=command)), \
+                contextlib.redirect_stdout(io.StringIO()) as output, self.assertRaises(SystemExit) as caught:
+            deploy.entrypoint()
+        self.assertEqual(caught.exception.code, 1)
+        outer = json.loads(output.getvalue())
+        self.assertFalse(outer['returnValue'])
+        self.assertEqual(outer['root_restore_failure'], {
+            'restore_check': 'native-restore-unverified', 'native_reason': 'retirement_failed'})
+        self.assertNotIn('PRIVATE', output.getvalue())
+
     def test_large_stock_home_is_read_with_immutable_uid1001_proof(self):
         import hashlib
         import stat
@@ -367,23 +417,30 @@ class RuntimeTests(unittest.TestCase):
     def test_restore_stops_native_before_removing_filter(self):
         self.prepare(); calls=[]; chain=[self.k.filter_entry(self.root)]
         self.k.atomic(self.root/'c1-keyfilter/ownership.json',dict(schema=1,entry=chain[0],token='1'*32),self.uid)
-        def native(args,*a): calls.append(args[0]); return self.proof()
+        def native(args,*a,**kw): calls.append(args[0]); return self.proof()
         def write(value): calls.append('chain'); chain[:]=value
         with patch.object(self.k,'native',side_effect=native), patch.object(self.k,'read_chain',side_effect=lambda:list(chain)), patch.object(self.k,'write_chain',side_effect=write):
             self.assertEqual(self.k.execute('restore',root=self.root,uid=self.uid),'restored')
         self.assertLess(calls.index('--restore'),calls.index('chain'))
 
     def test_removal_reconciles_ui_failure_only_with_fresh_stock_proof(self):
+        self.admission = dict(self.generic(), model='OLED48A19LA', firmware='03.53.45', webos='6.5.3')
+        self.check_ui_failure_recovery(lambda: self.k.restore_for_removal(self.root, self.uid))
+
+    def test_review_recovery_reconciles_ui_failure_on_reported_c1(self):
+        self.admission.update(model='OLED65C1PSA', firmware='03.53.45', webos='6.5.3')
+        self.check_ui_failure_recovery(lambda: self.k.execute('restore', root=self.root, uid=self.uid))
+
+    def check_ui_failure_recovery(self, restore):
         from types import SimpleNamespace
 
-        self.admission = dict(self.generic(), model='OLED48A19LA', firmware='03.53.45', webos='6.5.3')
         self.prepare()
         own = self.k.filter_entry(self.root)
         vendor = {'file': '/usr/lib/qt5/qml/KeyFilters/systemUi.js', 'handler': 'handleSystemKeys'}
         self.k.atomic(self.root/'c1-keyfilter/ownership.json', dict(schema=1, entry=own, token='1'*32), self.uid)
         for case in ('stock', 'explicit-stock', 'other-foreground', 'cytv-overlay', 'stock-changed',
                      'other-attempt', 'lock-failed', 'display-false', 'display-float',
-                     'hidden', 'absent', 'malformed-visibility'):
+                     'hidden', 'absent', 'malformed-visibility', 'retirement-failed', 'malformed-proof', 'readback-drift'):
             with self.subTest(case=case):
                 chain = [own, vendor]
                 initial = self.proof()
@@ -395,8 +452,14 @@ class RuntimeTests(unittest.TestCase):
                     stopped['token'] = '2'*32
                 if case == 'lock-failed':
                     failure['reason'] = 'effect_busy'
+                if case == 'retirement-failed':
+                    failure['reason'] = 'retirement_failed'
+                if case == 'malformed-proof':
+                    del failure['guardian_pid']
                 def run(argv, **kwargs):
                     value = failure if argv[-1] == '--restore' else stopped
+                    if case == 'readback-drift' and argv[-1] == '--status' and chain == [vendor]:
+                        value = dict(stopped, token='2'*32)
                     return SimpleNamespace(stdout=json.dumps(value).encode(), returncode=int(not value['returnValue']))
                 def write(value, **kwargs):
                     chain[:] = value
@@ -427,14 +490,19 @@ class RuntimeTests(unittest.TestCase):
                         patch.object(self.k, 'write_chain', side_effect=write), \
                         patch.object(self.k, 'luna', side_effect=read_foreground):
                     if case in ('stock', 'explicit-stock'):
-                        self.assertEqual(self.k.restore_for_removal(self.root, self.uid), 'restored')
+                        self.assertEqual(restore(), 'restored')
                         self.assertEqual(chain, [vendor])
                         self.assertEqual(self.k.read_intent(self.root, self.uid)['phase'], 'disabled')
                     else:
                         with self.assertRaises(ValueError) as caught:
-                            self.k.restore_for_removal(self.root, self.uid)
-                        self.assertEqual(getattr(caught.exception, 'native_reason', None),
-                                         'effect_busy' if case == 'lock-failed' else 'ui_release_failed')
+                            restore()
+                        if case in ('other-attempt', 'lock-failed', 'retirement-failed',
+                                    'stock-changed', 'malformed-proof'):
+                            self.assertEqual(chain, [own, vendor])
+                        else:
+                            self.assertEqual(self.k.read_intent(self.root, self.uid)['phase'], 'recovering')
+                        self.assertFalse(self.k.read_intent(self.root, self.uid)['enabled'])
+                        self.assertEqual(caught.exception.native_reason, failure['reason'])
 
     def test_lifecycle_replay_cancel_and_unknown_visibility(self):
         policy=self.k.ReturnPolicy('1'*32)

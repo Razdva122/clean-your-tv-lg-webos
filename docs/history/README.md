@@ -1,5 +1,7 @@
 # Release history and device evidence
 
+- [System Updater self-update implementation, 2026-11-16](2026-11-16-system-self-update-implementation.md): Root/No-root rooted executor, focused checks and outstanding device acceptance.
+
 - [Helper ordinary-data mode policy, 2026-11-16](2026-11-16-helper-data-mode-policy.md): shared rwx-independent data reads, preserved credential/Stop boundaries and focused development verification.
 
 - [v1.20.8 candidate verification, 2026-11-15](2026-11-15-release-1.20.8-rc-verification.md)
@@ -236,6 +238,8 @@ one model or artifact does not certify later releases or a different TV.
 - [0.9.0](../RELEASE-0.9.0.md)
 
 ## Acceptance and validation
+
+- [v1.23.0 candidate verification](2026-11-17-release-1.23.0-rc-verification.md): package preflight, tracked CI and selected device cases.
 
 - [1.6.0 final acceptance follow-up, 2026-11-02](2026-11-02-release-1.6.0-final-acceptance.md): accepted standby limitation, advanced controls, frozen-renderer/observer recovery, genuine failsafe and native Android/exact System fixtures; replacement-build binding is recorded separately.
 

@@ -9,7 +9,9 @@ from urllib.parse import quote
 
 ROOT=Path(__file__).resolve().parents[1]
 REPO='Razdva122/clean-your-tv-lg-webos'
-BUILD_JOBS=runpy.run_path(str(ROOT/'scripts/release-flow.py'))['BUILD_JOBS']
+RELEASE_FLOW=runpy.run_path(str(ROOT/'scripts/release-flow.py'))
+BUILD_JOBS=RELEASE_FLOW['BUILD_JOBS']
+VERIFY_BUILD_INPUTS=RELEASE_FLOW['INPUTS']['verify_inputs']
 MAX_ARCHIVE=128*1024*1024
 # Common CLI carries both Home resolutions and normal/Beta Root runtimes.
 MAX_CLI_ARCHIVE=384*1024*1024
@@ -223,12 +225,34 @@ def recheck(metadata):
     if metadata.get('direct_tv') is True:options['direct_tv']=True
     if inspect_build(metadata['run_id'],metadata['release'],**options)!=metadata:raise ValueError('Candidate run, attempt or artifact changed')
 
-def prepare(metadata,source,output):
+def verify_system_pin(metadata):
+    if metadata.get('preliminary') or metadata.get('direct_tv'):
+        raise ValueError('System QA requires a complete pinned build')
+    branch=api('git/ref/heads/release%2Fnext')
+    head=branch.get('object', {}).get('sha','')
+    checkout=subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip()
+    if branch.get('ref')!='refs/heads/release/next' or not re.fullmatch('[a-f0-9]{40}',head) or head!=checkout:
+        raise ValueError('System QA requires the current release/next checkout')
+    plan=contents('release-plan.json',head)
+    expected={k:metadata[k] for k in ('source','run_id','attempt')}
+    if plan.get('build')!=expected or 'v'+str(plan.get('version'))!=metadata['release']:
+        raise ValueError('System QA requires the currently selected release build')
+    VERIFY_BUILD_INPUTS(metadata['source'],head,ROOT)
+
+
+def system_notes(metadata):
+    return ('Unpublished System QA only; source '+metadata['source']+
+            '; build '+str(metadata['run_id'])+':'+str(metadata['attempt'])+
+            '; artifact '+metadata['artifact']['sha256']+'.')
+
+
+def prepare(metadata,source,output,*,system_qa=False):
     source=Path(source).resolve(strict=True);output=Path(output).absolute()
     if subprocess.check_output(['git','rev-parse','HEAD'],cwd=source,text=True).strip()!=metadata['source'] or subprocess.check_output(['git','status','--porcelain'],cwd=source).strip():
         raise ValueError('Clean checkout of the exact build source is required')
     if (source/'updater-service/release-public.pem').read_bytes()!=(ROOT/'updater-service/release-public.pem').read_bytes():raise ValueError('Candidate release key differs from trusted signing tools')
     recheck(metadata)
+    if system_qa:verify_system_pin(metadata)
     if metadata.get('direct_tv') is True:
         prepare_direct(metadata,output)
         return
@@ -246,11 +270,41 @@ def prepare(metadata,source,output):
         for name,_ in entries:
             relative=safe_name(name.replace('\\','/')[len('payload/'):]);target=payload/relative
             target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(packaged.extract(name))
-        prepare_inputs(metadata,source,payload,output,notes_for(metadata))
-    manifest=json.loads((output/'manifest.json').read_text())
-    metadata=dict(metadata,files={c['url'].rsplit('/',1)[1]:c['sha256'] for c in manifest['components']})
+        if system_qa:
+            prepare_system_inputs(metadata,payload,output)
+        else:
+            prepare_inputs(metadata,source,payload,output,notes_for(metadata))
+    if system_qa:
+        metadata=dict(metadata,files={path.name:digest(path.read_bytes()) for path in sorted(output.iterdir())})
+    else:
+        manifest=json.loads((output/'manifest.json').read_text())
+        metadata=dict(metadata,files={c['url'].rsplit('/',1)[1]:c['sha256'] for c in manifest['components']})
     (output/'PROVENANCE.json').write_text(json.dumps(metadata,indent=2)+'\n')
     recheck({k:v for k,v in metadata.items() if k!='files'})
+
+def prepare_system_inputs(metadata,payload,output):
+    # Use only the signing workflow's source and parse the candidate as data.
+    sys.path.insert(0,str(ROOT))
+    from cytv import package
+    package.verify_payload(payload)
+    runpy.run_path(str(ROOT/'scripts/build-cytv.py'))['verify_release_versions'](payload,metadata['versions'])
+    build=runpy.run_path(str(ROOT/'system-updater/build.py'))
+    verification=runpy.run_path(str(ROOT/'scripts/prepare-release.py'))
+    bundle=payload/'system-updater'
+    if (bundle/'system_updater/bootstrap-public.pem').read_bytes()!=(ROOT/'system-updater/bootstrap-public.pem').read_bytes():
+        raise ValueError('Candidate bootstrap trust root mismatch')
+    if json.loads((bundle/'bundle.json').read_text()).get('engine_version')!=build['ENGINE_VERSION']:
+        raise ValueError('Candidate engine version differs from signing tools')
+    output.mkdir(parents=True,exist_ok=False)
+    manifests=build['prepare_release'](payload,output,metadata['release'],system_notes(metadata))
+    if set(manifests)!={'root','root-720p','no-root','no-root-720p'}:
+        raise ValueError('All four System variants are required')
+    files={item.name:item.read_bytes() for item in output.iterdir()}
+    verification['verify_system_assets'](manifests,{'tag':metadata['release'],'versions':metadata['versions']},files)
+    catalog=json.loads(files['system-bootstrap-manifest.json'])
+    raw=files['system-engine_'+build['ENGINE_VERSION']+'.tar.gz']
+    verification['verify_engine_transition'](catalog['engine'],raw,build['engine_archive'](bundle),None)
+
 
 def prepare_inputs(metadata,source,payload,output,notes):
     # Preliminary branches supply data only. Never execute candidate code in a
@@ -266,18 +320,23 @@ def notes_for(metadata):
 
 def main():
     os.umask(0o077)
-    p=argparse.ArgumentParser(description=__doc__);p.add_argument('action',choices=('inspect','prepare','recheck'));p.add_argument('--run-id',type=int);p.add_argument('--tag');p.add_argument('--metadata',type=Path,required=True);p.add_argument('--source',type=Path);p.add_argument('--output',type=Path);p.add_argument('--preliminary',action='store_true');p.add_argument('--direct-tv',action='store_true');p.add_argument('--source-sha');p.add_argument('--branch');args=p.parse_args()
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('action',choices=('inspect','prepare','recheck'));p.add_argument('--run-id',type=int);p.add_argument('--tag');p.add_argument('--metadata',type=Path,required=True);p.add_argument('--source',type=Path);p.add_argument('--output',type=Path);p.add_argument('--preliminary',action='store_true');p.add_argument('--direct-tv',action='store_true');p.add_argument('--system-qa',action='store_true');p.add_argument('--source-sha');p.add_argument('--branch');args=p.parse_args()
     if args.action=='inspect':
         if not args.run_id or not args.tag:p.error('inspect needs --run-id and --tag')
-        value=inspect_build(args.run_id,args.tag,preliminary=args.preliminary,source_sha=args.source_sha,branch=args.branch,direct_tv=args.direct_tv);args.metadata.parent.mkdir(parents=True,exist_ok=True);args.metadata.write_text(json.dumps(value,indent=2)+'\n')
+        value=inspect_build(args.run_id,args.tag,preliminary=args.preliminary,source_sha=args.source_sha,branch=args.branch,direct_tv=args.direct_tv)
+        if args.system_qa:verify_system_pin(value)
+        args.metadata.parent.mkdir(parents=True,exist_ok=True);args.metadata.write_text(json.dumps(value,indent=2)+'\n')
         if os.environ.get('GITHUB_OUTPUT'):
             with open(os.environ['GITHUB_OUTPUT'],'a') as f:f.write('source='+value['source']+'\nattempt='+str(value['attempt'])+'\n')
     else:
         value=json.loads(args.metadata.read_text())
-        if args.action=='recheck':recheck(value)
+        if args.action=='recheck':
+            recheck(value)
+            if args.system_qa:verify_system_pin(value)
         else:
             if not args.source or not args.output:p.error('prepare needs --source and --output')
-            prepare(value,args.source,args.output)
-    print('Verified Root-only candidate inputs; no release published.')
+            prepare(value,args.source,args.output,system_qa=args.system_qa)
+    scope='System catalog' if args.system_qa else 'Root-only'
+    print('Verified '+scope+' candidate inputs; no release published.')
 
 if __name__=='__main__':main()

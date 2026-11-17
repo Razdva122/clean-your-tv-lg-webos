@@ -43,6 +43,14 @@ function manifest(edition = 'no-root') {
   };
 }
 assert.equal(policy.validate(manifest()).components.length, 3);
+assert.equal(
+  policy.validate({
+    ...manifest(),
+    supervisor: 2,
+    minimumSupervisorVersion: '1.2.11'
+  }).supervisor,
+  2
+);
 assert.equal(policy.validate(manifest('root')).edition, 'root');
 assert.equal(
   policy.validate({ ...manifest('root'), supervisor: 2 }).supervisor,
@@ -57,7 +65,7 @@ for (const change of [
   (m) => m.components.push(m.components[0]),
   (m) => (m.components[0].command = 'reboot'),
   (m) => (m.release = 'v9.9.9'),
-  (m) => (m.supervisor = 2),
+  (m) => (m.supervisor = 3),
   (m) => (m.components[0].size = 1e12)
 ]) {
   const m = manifest();
@@ -258,12 +266,14 @@ assert.equal(
     .minimumSupervisorVersion,
   '1.2.10'
 );
-for (const value of ['1.2.11', '2.0.0', 'bad', null, 111])
+for (const value of ['1.2.12', '2.0.0', 'bad', null, 111])
   assert.throws(() =>
     policy.validate({ ...gated, minimumSupervisorVersion: value })
   );
-assert.throws(() =>
+assert.equal(
   policy.validate({ ...manifest(), minimumSupervisorVersion: '1.1.1' })
+    .minimumSupervisorVersion,
+  '1.1.1'
 );
 const originalSource = require('child_process').execFileSync(
   process.env.PYTHON || 'python3',

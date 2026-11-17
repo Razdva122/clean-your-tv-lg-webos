@@ -1,9 +1,5 @@
 # Clean Your TV — user guide
 
-Root Edition only: set the **Home screen name** on the final installer page. Leave it blank to keep the current name, or use `--tv-name` in the CLI.
-
-Before a new installation, the computer installer checks for a newer stable installer on GitHub. Choose “Open GitHub and download the latest version” to stop and download it, or “No, install this version” to continue explicitly. If the check fails, you can continue. Pending operations and recovery skip the check.
-
 Clean Your TV gives your LG webOS TV a personal Home screen: your apps in your order, without sponsored rows in this menu. Install from a computer or Android phone; the computer can be switched off afterward.
 
 ## 1. Download the installer
@@ -27,11 +23,9 @@ Turn on the TV and connect it and your computer or phone to the same home networ
 - **No-root** — if you do not have root access. Set up Developer Mode below.
 - **Root** — if you already have root SSH access. The installer does not root the TV. Do not enable Developer Mode on that TV; keep SSH access and recovery data.
 
-For Root, the installer checks and selects an available Home control method. If compatibility cannot be verified, setup stops; do not bypass the failed check.
-
 If the installer offers **No-root**, you can continue with your existing root SSH connection. Developer Mode is unnecessary for this option.
 
-**No-root → Root:** If No-root was installed again after full removal, switching to Root may require cleanup first. Back up Home preferences, choose **Uninstall Clean Your TV** with the saved Root connection and wait for verified removal. This also removes No-root Home and Helper. Then install Root; keep recovery records.
+[Detailed installation guide](../INSTALL.md) · [Compatibility](../COMPATIBILITY.md)
 
 ### Developer Mode setup (No-root)
 
@@ -66,20 +60,12 @@ The desktop wizard selects your system language automatically; its language sele
 1. In CYTV, choose **Set up my TV**. On a computer, select a discovered TV; on Android, enter its IP address. If discovery finds nothing, enter the address manually.
 2. Choose **No-root** or **Root** and check the selected TV before continuing.
 3. For No-root, enter the code from Developer Mode and approve the TV prompt. For Root, use your existing SSH credentials; approve a new SSH identity only for your own TV on a trusted network. If a saved key has changed, stop and investigate.
-4. Follow the wizard. Keep the TV on, stay on the same network and leave CYTV open until it finishes. Do not force-stop the Android app. Root activates Home control immediately after preparing recovery.
-
-Root setup continues with a warning if TV inputs cannot be read but the application list is valid. Inputs may be missing from Home; a failed or empty application list still stops setup. Save the diagnostic report if the warning persists.
-
-Root setup can automatically disable a recognized Home replacement so CYTV can take over the Home button. If setup stops, save the diagnostic report.
+4. Follow the wizard. Keep the TV on, stay on the same network and leave CYTV open until it finishes. Do not force-stop the Android app.
 
 ## 5. Check your remote
 
 1. Open another TV app and briefly press **Home**. Clean Your TV should open. Tell the wizard what you saw; leave the check skipped if you did not test it.
-2. Check arrows, OK, Back, volume and sound. Test standby/wake and a start after disconnecting power separately. A successful installation alone does not check these actions.
-
-No-root setup turns Home on after verifying the packages unless Helper was stopped. After a Stop, use **Start Helper** on the TV to resume. You can turn Home off later in Settings.
-
-Use the original saved connection and recovery data. If they are lost, reconnect to the same TV and choose Uninstall Clean Your TV. Finish verified removal before setup; do not delete reservation files. If removal stops, save the diagnostic report.
+2. Check arrows, OK, Back, volume and sound.
 
 <a id="everyday-use-and-recovery"></a>
 
@@ -89,10 +75,6 @@ To open the TV's notification center from Clean Your TV, choose **Home settings 
 
 To pin an HDMI input, select it in **+ / Add app**. Press OK to switch to it. Hold OK to move or hide its tile.
 
-If the installer says “Root setup is unfinished, but its deployment record is missing on the TV.”: Choose Review recovery options to remove Clean Your TV, then start setup separately. Full removal also removes No-root Home and Helper; back up preferences first.
-
-No-root IR support: a short Home release schedules Clean after about 700 ms; LG Home may flash first. Held Home stays with webOS, and triple Home still stops Helper. Access on stock Developer Mode TVs remains unverified; do not change input permissions.
-
 Arrows select tiles; OK opens them; hold OK to reorder. Short Back retains the app's navigation and exit confirmation. Short Home opens Clean Your TV while Home control is active. Hold Back for 1.2 seconds to open LG Home once. The Home-control switch and your settings remain unchanged.
 
 To edit with short presses, open **Home settings → Appearance → Edit tiles**. Press OK to pick up a tile, move it with the arrows, then press OK to place it. Back cancels the move or exits tile editing.
@@ -101,13 +83,11 @@ To edit with short presses, open **Home settings → Appearance → Edit tiles**
 
 No-root: To restart Home control, open Home Helper, choose Start Helper and confirm. Your saved Home screen choice is kept. Root: turn **Change Home** on in Home settings to resume. **Open LG Home** opens LG Home once without changing routing. To restore LG Home as the persistent destination, turn **Change Home** off. Do not run both controllers together. If a failure repeats, leave LG Home active.
 
-Automatic updates on the TV do not restart a stopped Helper. To resume it separately, use Start Helper; do not delete Stop files.
+If Home Helper is stopped, you can also choose **Start Helper** in the Home screen or Screensaver settings. The status updates automatically after startup.
 
 ## Need help?
 
-If support asks for SSH command output, open **Diagnostics → Run SSH command** in the desktop installer and select your existing TV connection. Check the TV and SSH user, paste the command, then click **Run** and **Copy output**. The copied text includes stdout, stderr and the exit code.
-
-If `ssh-identity-changed` appears after a reset or SSH change, stop: CYTV blocked the changed saved key before sign-in. The first-use trust prompt cannot replace it, and a pending uninstall does not explain the mismatch. Keep the original saved profile, keys and recovery records. For a saved Root profile with a pending uninstall, the console can record the independently verified fingerprint. The earlier uninstall stays blocked. See [changed SSH identity recovery](../RECOVERY.md#ssh-identity-changed).
+If you see `ssh-identity-changed`, stop and verify the TV’s SSH key. [Recovery after an SSH key change](../RECOVERY.md#ssh-identity-changed)
 
 For your own No-root TV after a factory reset, choose **Reconnect after factory reset** when the installer reports a changed key. Follow the prompts on your trusted home network. The installer keeps the previous profile and removal record.
 
@@ -123,19 +103,11 @@ For help, include TV model, firmware, No-root or Root, installer device, failed 
 
 Choose **Uninstall Clean Your TV** in Maintenance with the same saved TV connection. Confirm once. Removal deletes known project apps and files that are present and skips absent items, including after a partial installation.
 
-On older TVs without a separate LG Home app, No-root removal may switch to Live TV. Keep the TV on and follow any requested restart; do not delete recovery records or reset the TV.
-
 When asked, disconnect the TV from power, reconnect it, wait for the network and choose **Try again**. Standby or Quick Start is not a full restart; CYTV does not restart the TV automatically. If access is denied, use the requested Root connection; if the TV is busy, wait and retry. Success appears only after final cleanup is verified. Keep your keys and original reports. The emergency controls and sharing consent above still apply.
 
 If the installer cannot verify removal, final cleanup, TV controls or the package result, or reports changed project paths, choose **Review recovery options** with the original saved connection. Confirm continuation separately if the installer offers it.
 
 If the installer cannot verify the requested full restart, save and attach its diagnostic report. Keep the saved connection and recovery data. Do not keep repeating power cycles or clear the unfinished operation manually.
-
-Failed or interrupted setup offers recovery directly. If No-root setup cannot continue, confirm full removal once. Removal automatically retries transient connection loss and a busy CYTV worker up to three attempts. If Root access is required, choose **Connect using Root** for the same TV; verified Root cleanup also finishes its blocked No-root removal. A failed Root activation attempts to restore and verify LG Home without repeating activation. Cancellation with unfinished work keeps a diagnostic report and recovery actions. Emergency-stop state remains unchanged.
-
-If removal stops after a temporary connection loss, check the network and choose **Try again** when offered to continue the same removal. If sign-in fails, the connection cannot be verified, or the result is unclear, choose **Review recovery options**. If **Connection details** is offered, use it to check the connection or select an existing Root SSH key for the recovery check. The saved TV address, edition, port and host-key verification stay fixed. If the installer offers to continue removal after review, confirm separately.
-
-When reinstalling No-root, the wizard tries to stop Helper automatically. Use Home only if prompted, then confirm the recheck. The installer waits for busy package operations and Clean Your TV processes before continuing No-root removal. If the installer requests a restart, complete it and retry. Input-service failure allows safe package cleanup, but success still requires verified shortcut cleanup.
 
 **Reinstall Root:** Choose **Set up my TV → Root** with the saved connection and confirm **Reinstall Root?**. The installer restores LG Home and fully removes Clean Your TV, including its updaters, Home Helper and saved preferences. After verified removal, it installs and activates the packages and Root runtime bundled with that installer. Other TV apps and existing root/SSH access are preserved. If removal stops or requests a full restart, finish it before starting setup again. **Uninstall Clean Your TV** alone never starts another installation.
 
@@ -143,7 +115,8 @@ When reinstalling No-root, the wizard tries to stop Helper automatically. Use Ho
 
 In the desktop installer, open **Maintenance action → Adjust LG settings (Debloat)** with your saved TV connection. Select the settings you want to change, choose **Apply selected settings**, then review the results. If an earlier operation is unresolved, choose **Review recovery options** with its original saved connection first.
 
-After a rollback readiness error, use the original saved Root connection. Choose **Recover Root Updater rollback** or **Recover Root System Updater rollback**, depending on which updater reported the error, and confirm. For Root System Updater only, select **Start a new audited attempt after the previous deadline** if the previous attempt expired and the [recovery instructions](../RECOVERY.md#root-system-rollback-readiness-candidate) permit another attempt.
+- [Root Updater](../RECOVERY.md#standalone-root-updater-rollback-readiness)
+- [Root System Updater](../RECOVERY.md#root-system-rollback-readiness-candidate)
 
 <!-- Legacy anchors retained for existing links. Detailed references: -->
 <a id="optional-python-for-root-in-v110"></a>
@@ -201,3 +174,7 @@ After successful installation, choose Classic, Liquid Glass or Ribbon and turn H
 No-root with Developer Mode offers optional auto-renewal (Beta); keep monitoring the official timer. New No-root installations through existing root SSH hide the Developer Mode tab. Root offers LG firmware update blocking through Homebrew Channel, including security updates; a real restart through Homebrew Channel is required. This is separate from CYTV updates.
 
 Choose Keep current settings to skip customization. The mode switch shows its current On/Off state. Unchanged mode settings are kept. Root reinstallation still removes saved CYTV preferences as described above. Check the chosen appearance on the TV; an optional setting reported as unconfirmed needs checking in Home settings before retrying.
+
+## Updates on a rooted TV
+
+If a self-updating System Updater has been set up, use **Software updates → Update all** for Root or No-root on a rooted TV. Keep the TV powered on until it finishes. To repair only the updater, open Home and choose **Software updates → Recovery → Reinstall System Updater**; Home and your settings stay unchanged. No-root without root still uses the computer installation method.

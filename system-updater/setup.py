@@ -25,7 +25,15 @@ BASE=Path('/var/luna-service2-dev')
 HOOK=Path('/var/lib/webosbrew/init.d/52-clean-your-tv-system-updater')
 ROOT_UPDATER_TRANSACTION=Path('/var/lib/clean-your-tv-root-updater/transaction.json')
 APPS={'home':'com.gathin.tvhome','helper':'com.local.nativehome','updater':'com.cleanyourtv.updater','root':'com.cleanyourtv.root.preview','root-updater':'com.cleanyourtv.root.updater'}
-CODE={'startup_hook.py','package_data.py','package_identity.py','startup_guard.py','installation.py','python_boot.js','python_binding.py','infrastructure-paths.json','system_updater/__init__.py','system_updater/support/__init__.py','system_updater/core.py','system_updater/device.py','system_updater/cli.py','system_updater/policy.js','system_updater/release-public.pem','system_updater/ca-bundle.crt','system_updater/ca-LICENSE.txt','system_updater/support/store.py','system_updater/support/package.py','system_updater/support/profile.py','system_updater/support/luna.py','observed_install.py','installer_status.py','service.js','run-system-updater.py','services.json','package.json'}
+ENGINE_CODE = {
+    'service-entry.py', 'permissions.json', 'engine-entry.py',
+    'system_updater/activation.py', 'system_updater/bootstrap.py',
+    'system_updater/bootstrap_migration.py', 'system_updater/supervisor_io.py',
+    'system_updater/bootstrap-trust.js', 'system_updater/bootstrap-public.pem',
+    'system_updater/engine-policy.js',
+}
+LEGACY_CODE={'startup_hook.py','package_data.py','package_identity.py','startup_guard.py','installation.py','python_boot.js','python_binding.py','infrastructure-paths.json','system_updater/__init__.py','system_updater/support/__init__.py','system_updater/core.py','system_updater/device.py','system_updater/cli.py','system_updater/policy.js','system_updater/release-public.pem','system_updater/ca-bundle.crt','system_updater/ca-LICENSE.txt','system_updater/support/store.py','system_updater/support/package.py','system_updater/support/profile.py','system_updater/support/luna.py','observed_install.py','installer_status.py','service.js','run-system-updater.py','services.json','package.json'}
+CODE = LEGACY_CODE | ENGINE_CODE
 
 def require_normal_root(root=Path('/var/lib/clean-your-tv-root')):
     if any(os.path.lexists(Path(root)/name) for name in ('home-backend.json','c1-gate','c1-keyfilter','runtime/c1_gate.py','runtime/c1_keyfilter.py','runtime/c1-home-gate','runtime/c1-keyfilter-guard')):
@@ -70,11 +78,23 @@ def package_files(raw):
     if set(parts)!={'debian-binary','control.tar.gz','data.tar.gz'} or parts['debian-binary']!=b'2.0\n':raise ValueError('Invalid IPK inventory')
     return entries(parts['data.tar.gz'])
 
-def verify_bundle(bundle):
-    bundle=Path(bundle);manifest=json.loads(safe(bundle/'bundle.json'))
-    if manifest.get('schema')!=1 or manifest.get('supervisor')!=1 or set(manifest.get('files',{}))!=CODE|{'setup-system-updater.py','system-updater.ipk'}:raise ValueError('Unexpected supervisor bundle inventory')
-    for name,sha in manifest['files'].items():
-        if digest(safe(bundle/name))!=sha:raise ValueError('Supervisor bundle hash mismatch')
+def verify_bundle(bundle, *, historical_manifest=None):
+    bundle = Path(bundle)
+    if historical_manifest is None:
+        manifest = json.loads(safe(bundle/'bundle.json'))
+    else:
+        manifest = json.loads(historical_manifest)
+    files = manifest.get('files')
+    extras = {'setup-system-updater.py', 'system-updater.ipk'}
+    inventories = [CODE | extras]
+    if historical_manifest is not None and 'engine_version' not in manifest:
+        inventories.append(LEGACY_CODE | extras)
+    if (manifest.get('schema') != 1 or manifest.get('supervisor') != 1
+            or not isinstance(files, dict) or set(files) not in inventories):
+        raise ValueError('Unexpected supervisor bundle inventory')
+    for name, sha in files.items():
+        if digest(safe(bundle/name)) != sha:
+            raise ValueError('Supervisor bundle hash mismatch')
     return manifest
 
 def infrastructure_name(name):
@@ -246,7 +266,7 @@ def permission_plan():
     for app in ('com.gathin.tvhome','com.cleanyourtv.root.preview','com.cleanyourtv.updater','com.cleanyourtv.root.updater'):
         for pattern in (app,app+'-*'):clients[pattern]=[group]+([launcher] if app in ('com.gathin.tvhome','com.cleanyourtv.root.preview') else [])
     return {'role.json':{'appId':SERVICE,'type':'regular','allowedNames':[SERVICE],'permissions':[{'service':SERVICE,'inbound':list(clients),'outbound':[]}]},
-            'client.json':clients,'api.json':{group:[SERVICE+'/'+m for m in ('check','status','rollback','reconcile')],launcher:[SERVICE+'/'+m for m in ('install','restoreProfile','healthy')]}}
+            'client.json':clients,'api.json':{group:[SERVICE+'/'+m for m in ('check','status','rollback','reconcile')],launcher:[SERVICE+'/'+m for m in ('install','repair','restoreProfile','healthy')]}}
 
 def atomic(path,raw,mode=0o600):
     path=Path(path);raw=raw.encode() if isinstance(raw,str) else raw
@@ -324,10 +344,23 @@ def installed_data(path,expected,installed,edition):
     return read_verified(path,sha256=digest(expected),limit=32*1024*1024,installed=installed,uid=os.geteuid())
 
 
-def preflight(bundle,baseline,state=STATE,installed=INSTALLED,base=BASE,hook=HOOK):
+def require_unprovisioned(state, *, cancelled_fence=False):
+    state = Path(state)
+    if not os.path.lexists(state):
+        return
+    if cancelled_fence:
+        info = state.lstat()
+        if (stat.S_ISDIR(info.st_mode) and info.st_uid == os.geteuid()
+                and not info.st_mode & 0o022
+                and {path.name for path in state.iterdir()} <= {'bootstrap.json', 'daemon.lock', 'worker.lock'}
+                and json.loads(safe(state/'bootstrap.json', os.geteuid())) == {'phase':'cancellation-admitted'}):
+            return
+    raise FileExistsError('Supervisor setup exists; inspect retained state from computer before changing it')
+
+
+def preflight(bundle,baseline,state=STATE,installed=INSTALLED,base=BASE,hook=HOOK,*,cancelled_fence=False):
     require_normal_root()
-    state=Path(state)
-    if os.path.lexists(state):raise FileExistsError('Supervisor setup exists; inspect retained state from computer before changing it')
+    require_unprovisioned(state, cancelled_fence=cancelled_fence)
     require_legacy_idle()
     bundle=Path(bundle);baseline=Path(baseline);manifest=verify_bundle(bundle);current=verify_baseline(baseline,bundle)
     require_transition_home(installed,current['edition'])
@@ -415,7 +448,7 @@ def finish_registration(bundle,baseline,state=STATE,installed=INSTALLED,base=BAS
     expected='Exec=/usr/bin/run-js-service -n '+str(Path(installed)/'usr/palm/services'/SERVICE)
     if original['service'].decode().splitlines().count(expected)!=1 or json.loads(original['role']).get('appId')!=SERVICE:raise ValueError('Unexpected supervisor registration')
     runner=state/'run-service'
-    atomic(runner,'#!/bin/sh\nset -eu\n[ "$#" -eq 0 ] || exit 2\ncd '+str(code)+'\nexport NODE_PATH=/usr/palm/frameworks:/usr/lib/nodejs:/usr/lib/node_modules\nexec /usr/bin/node /usr/palm/services/jsservicelauncher/bootstrap-node.js -- '+str(state/'bootstrap.pid')+' /var/palm/ls2-dev '+str(code)+'\n',0o700)
+    atomic(runner,'#!/bin/sh\nset -eu\n[ "$#" -eq 0 ] || exit 2\nunset NODE_OPTIONS NODE_PATH\nexec /usr/bin/node '+str(code/'python_boot.js')+' '+str(state)+' '+str(code/'service-entry.py')+' service\n',0o700)
     plan=permission_plan();role=json.loads(original['role']);role.update(plan['role.json'])
     updated={'service':original['service'].decode().replace(expected,'Exec='+str(runner)).encode(),'role':json.dumps(role).encode(),'client':json.dumps(plan['client.json']).encode(),'api':json.dumps(plan['api.json']).encode()}
     expected={'files':{str(paths[k]):{'original':original[k].decode(),'installed':v.decode()} for k,v in updated.items()}}
@@ -504,7 +537,7 @@ def execute(bundle,baseline,alias,identity=None,run=subprocess.run,edition=None,
     else:argv+=['--edition',edition]
     return run(['ssh',*options,alias,shlex.join(argv)],check=True,stdin=subprocess.DEVNULL)
 
-def bootstrap_operation(edition, resume, check, ownership=None, read=None):
+def bootstrap_operation(edition, resume, check, ownership=None, read=None, *, handoff_check=None):
     from installation import (JOURNALS, Ownership, archive_component_fences,
                               completed_no_root_fence, component_locks, device_operation)
     options={}
@@ -518,6 +551,7 @@ def bootstrap_operation(edition, resume, check, ownership=None, read=None):
     reserved=bool(current and not current['terminal'] and
                   (current['owner'],current['journal'],current['stage'])==('system-bootstrap',journal.name,'reserved')
                   and (edition() if callable(edition) else edition)=='no-root')
+    checked = False
 
     def require_absence(apps):
         for app in apps:
@@ -531,6 +565,7 @@ def bootstrap_operation(edition, resume, check, ownership=None, read=None):
                     raise ValueError('Root or supervisor registration remains')
 
     def handoff(lease):
+        nonlocal checked
         if lease['owner']!='no-root' or (edition() if callable(edition) else edition)!='no-root':
             return False
         record=completed_no_root_fence(ownership.store,lease)
@@ -540,8 +575,38 @@ def bootstrap_operation(edition, resume, check, ownership=None, read=None):
         for path in (HOOK,HOOK.with_name('50-clean-your-tv-root'),HOOK.with_name('51-clean-your-tv-root-updater'),
                      Path('/var/webos-profile/override/clean-your-tv-root.json')):
             if os.path.lexists(path):raise ValueError('Root or supervisor startup state remains')
+        # Snapshot and validate the No-root baseline before moving any fences.
         with component_locks(roots,ownership.store.uid):
-            archive_component_fences(ownership.store,record,lease['id'],roots,require_cancelled=True)
+            (handoff_check or check)()
+            checked = True
+            from installation import _optional_record
+            plan = _optional_record(ownership.store, 'component-fences-plan-'+record['operation'])
+            successor = lease['id']
+            if isinstance(plan, dict) and plan.get('successor') != successor:
+                # An earlier bootstrap may have archived every fence and failed
+                # before reserving System ownership. Reuse only that exact
+                # fully archived plan and authenticate its completed No-root leg.
+                if any(os.path.lexists(root) for root in roots):
+                    raise ValueError('component_fence_conflict')
+                earlier = plan.get('successor')
+                if not isinstance(earlier, str) or not re.fullmatch('[a-f0-9]{32}', earlier):
+                    raise ValueError('component_fence_conflict')
+                from itertools import islice
+                names = list(islice(Path(ownership.store.root).glob('no-root-*.json'), 4097))
+                matches = []
+                if len(names) > 4096:
+                    raise ValueError('component_fence_conflict')
+                for path in names:
+                    binding = _optional_record(ownership.store, path.name)
+                    if isinstance(binding, dict) and binding.get('lease') == earlier:
+                        matches.append(path.name)
+                if len(matches) != 1:
+                    raise ValueError('component_fence_conflict')
+                prior = dict(lease, id=earlier, journal=matches[0])
+                if completed_no_root_fence(ownership.store, prior) != record:
+                    raise ValueError('component_fence_conflict')
+                successor = earlier
+            archive_component_fences(ownership.store,record,successor,roots,require_cancelled=True)
         return True
 
     def eligible():
@@ -551,7 +616,8 @@ def bootstrap_operation(edition, resume, check, ownership=None, read=None):
             if ownership.status()!=current or os.path.lexists(journal.parent) or os.path.lexists(HOOK):
                 raise ValueError('Reserved supervisor bootstrap requires recovery')
             require_absence((APP,))
-        check()
+        if not checked:
+            check()
     options['ownership']=ownership
     return device_operation('system-bootstrap',recovery=reserved,check=eligible,
                             handoff=None if reserved else handoff,**options)
@@ -571,7 +637,7 @@ def main():
         from installation import Ownership, read_journal, JOURNALS
         with tempfile.TemporaryDirectory(prefix='system-baseline-') as tmp:
             selected=[args.baseline]
-            def eligible():
+            def eligible(cancelled_fence=False):
                 require_normal_root()
                 if args.resume:
                     current=Ownership().status()
@@ -581,11 +647,11 @@ def main():
                 if selected[0] is None:
                     if not args.edition:parser.error('--edition is required without --baseline')
                     # Snapshot is private staging only, under the global mutex.
-                    if os.path.lexists(STATE):raise FileExistsError('Supervisor setup exists; inspect or explicitly --resume')
+                    require_unprovisioned(STATE, cancelled_fence=cancelled_fence)
                     selected[0]=snapshot(args.bundle,args.edition,Path(tmp)/'baseline')
-                preflight(args.bundle,selected[0])
+                preflight(args.bundle,selected[0],cancelled_fence=cancelled_fence)
             edition=(lambda: verify_baseline(args.baseline,args.bundle)['edition']) if args.baseline else args.edition
-            with bootstrap_operation(edition,args.resume,eligible):
+            with bootstrap_operation(edition,args.resume,eligible,handoff_check=lambda:eligible(cancelled_fence=True)):
                 print(json.dumps(resume(args.bundle) if args.resume else provision(args.bundle,selected[0])))
         return
     verify_bundle(args.bundle);baseline=verify_baseline(args.baseline,args.bundle) if args.baseline else {'edition':args.edition}

@@ -1,86 +1,77 @@
 {
   "schema": 1,
-  "version": "1.22.0",
+  "version": "1.23.0",
   "changes": [
     {
-      "pr": 657,
-      "issues": [
-        454
-      ],
-      "summary": "Hand off verified Home replacements during Root setup"
-    },
-    {
-      "pr": 660,
-      "issues": [
-        505
-      ],
-      "summary": "Clarify unavailable Home Helper status"
-    },
-    {
-      "pr": 661,
-      "issues": [
-        615
-      ],
-      "summary": "Capture installer evidence after failed Root Home checks"
-    },
-    {
-      "pr": 662,
+      "pr": 672,
       "issues": [],
-      "summary": "Remove plus signs from weather temperatures"
+      "summary": "Focus translated installation guides on first setup, keeping links to advanced procedures"
     },
     {
-      "pr": 665,
+      "pr": 673,
       "issues": [
-        653
+        654
       ],
-      "summary": "Record confirmed C2 No-root upgrade on firmware 43.21.94"
+      "summary": "Record the owner-reported No-root installation on LG 43UQ75003LF"
     },
     {
-      "pr": 666,
-      "issues": [
-        505,
-        653
-      ],
-      "summary": "Read ordinary Helper data after webOS resets file permissions"
-    },
-    {
-      "pr": 667,
-      "issues": [
-        664
-      ],
-      "summary": "Reconnect No-root TVs after a factory reset"
-    },
-    {
-      "pr": 668,
-      "issues": [
-        389
-      ],
-      "summary": "Recover Root restore from managed Python bytecode cache"
-    },
-    {
-      "pr": 669,
+      "pr": 675,
       "issues": [],
-      "summary": "Deliver the screensaver and Root supervisor migration"
+      "summary": "Allow System Updater self-update, verified repair and signed delivery for Root and No-root on rooted TVs"
     },
     {
-      "pr": 670,
+      "pr": 676,
       "issues": [
         160
       ],
-      "summary": "Keep Root Beta recovery dispatch independent of LG activity creation"
+      "summary": "Repair the retained Root Beta recovery service in place when verified; B9 device confirmation pending"
     },
     {
-      "pr": 671,
+      "pr": 677,
+      "issues": [
+        418
+      ],
+      "summary": "Reconcile a retained Root filter after a specific verified refusal; C1 device confirmation pending"
+    },
+    {
+      "pr": 680,
+      "issues": [
+        152
+      ],
+      "summary": "Finish verified No-root removal with only protected empty Helper directories left; EF950V startup remains unresolved"
+    },
+    {
+      "pr": 681,
       "issues": [],
-      "summary": "Fix wallpaper panel overflow in the v1.22.0 candidate"
+      "summary": "Give the screensaver companion its own landscape icon"
+    },
+    {
+      "pr": 682,
+      "issues": [],
+      "summary": "Explain and restart a stopped Home Helper from No-root Home and Screensaver settings"
+    },
+    {
+      "pr": 683,
+      "issues": [],
+      "summary": "Restore No-root Helper controls, authenticate historical Root System replacement and sign a private System QA catalog"
+    },
+    {
+      "pr": 684,
+      "issues": [],
+      "summary": "Admit legacy No-root captures, release Helper locks reliably and preserve the verified standalone screensaver on update and rollback"
+    },
+    {
+      "pr": 685,
+      "issues": [],
+      "summary": "Preserve the default Developer Mode renewal preference and its ownership during No-root System updates"
     }
   ],
   "excluded": [],
-  "acceptance": "LG OLED55C3RLA (43.21.71, webOS SDK 11.2.0), macOS ARM64, paired network remote. Exact signed Root update from v1.21.0 after migration to System Updater 1.2.10 and ordinary rollback passed with original profile and routes. Root screensaver preview and 30-second idle, exact Home 1.20.0 and Helper 0.9.0 install, Home screensaver preview, and Restore passed. See docs/history/2026-11-16-release-1.22.0-rc-verification.md for hashes, scope and untested paths.",
+  "acceptance": "LG OLED55C3RLA, firmware 43.21.71, macOS ARM64. Exact private production-signed Root and rooted No-root System 1.2.10 to 1.2.11 updates migrated the engine and own IPK and completed the edition update. Profiles, Developer Mode renewal state on No-root, Screensaver, network Home, same-version repair, ordinary product rollback and verified software restart passed. Exact Helper evidence carries from 44052108345:1. Engine SHA-256 637dc606d8c4fdeb1f5560b6dbe3f7e35c9a738254637b74b95bdaf2a6f83b98. Earlier published System 1.2.10 uses desktop replacement. B9, reported C1 and EF950V retain offline evidence, and genuinely unrooted System self-update remains outside this acceptance. See docs/history/2026-11-17-release-1.23.0-rc-verification.md.",
   "build": {
-    "run_id": 43891859803,
-    "attempt": 2,
-    "source": "1f96bac815cd1c852d3251c1c71edbcaffd631f2"
+    "run_id": 44089437175,
+    "attempt": 1,
+    "source": "84ba42bcca7a552f133e3c816dc592b9dfcc8616"
   },
-  "acceptance_build": "43891859803:2"
+  "acceptance_build": "44089437175:1"
 }

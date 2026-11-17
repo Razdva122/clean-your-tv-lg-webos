@@ -10,6 +10,7 @@ import zlib
 REPLACEMENT_SOURCES = {
     '1.2.9': ('1.1.0', '1.1.1'),
     '1.2.10': ('1.1.0', '1.1.1', '1.2.9'),
+    '1.2.11': ('1.2.10',),
 }
 
 
@@ -187,8 +188,11 @@ def fresh_bootstrap_proof(setup,cleanup,manager,system,lease):
 
 def completed_evidence(job,setup,manager,store,system,terminal_removal,fresh=False):
     root=Path(store.root)/('system-replacement-'+job['id']);directory(root)
-    bundle=root/'bundle';manifest=setup.verify_bundle(bundle)
-    if digest(read(bundle/'bundle.json'))!=job['bundle_sha256']:raise ValueError('Historical replacement bundle changed')
+    bundle=root/'bundle'
+    manifest_raw=read(bundle/'bundle.json')
+    if digest(manifest_raw)!=job['bundle_sha256']:raise ValueError('Historical replacement bundle changed')
+    # Verify the exact pinned manifest without reading a second copy.
+    manifest=setup.verify_bundle(bundle,historical_manifest=manifest_raw)
     if digest(read(root/'baseline/baseline.json'))!=job['baseline_sha256']:raise ValueError('Historical replacement baseline changed')
     # Historical Root bytes can have legitimately advanced since completion.
     # Authenticate that backup without comparing it to today's installed Root.
@@ -203,7 +207,9 @@ def completed_evidence(job,setup,manager,store,system,terminal_removal,fresh=Fal
     package={'sha256':digest(raw),'size':len(raw)}
     same_binding=binding['bundle']==manifest or binding['package']==package
     archive=Path(job['archive'])
-    if not fresh or same_binding or os.path.lexists(archive):
+    # A verified fresh bootstrap has its own terminal and installed-package
+    # evidence, even when it reused the same bundle as the completed replacement.
+    if not fresh or os.path.lexists(archive):
         archive_proof(archive,job)
     if (not fresh or same_binding) and (info.get('version')!=live_version
             or binding['bundle']!=manifest or binding['package']!=package
@@ -249,7 +255,6 @@ def replace(bundle,setup,cleanup,manager,store,ownership,remove,terminal_removal
                     bootstrap=evidence.get('lease') if isinstance(evidence,dict) else None
                     if not completed_bootstrap(bootstrap,job):
                         raise ValueError('Unknown reserved Root supervisor bootstrap admission')
-            completed_evidence(job,setup,manager,store,system,terminal_removal,fresh=bootstrap is not None)
             retired=job;job=None
         else:
             if not lease or lease['id']!=job['id'] or lease['owner']!='system-replace' or lease['journal']!='system-replacement.json':raise ValueError('Replacement ownership changed')
@@ -258,13 +263,13 @@ def replace(bundle,setup,cleanup,manager,store,ownership,remove,terminal_removal
         # Inspect every proof before reserving a new operation or disabling code.
         old=old_proof(manager,system)
         if manager.io.owner_identity(APP)['version'] not in REPLACEMENT_SOURCES[target_version]:raise ValueError('Installed System Updater is not supported by this replacement bundle')
-        if target_version=='1.2.10':require_stock_home(manager)
+        if target_version in ('1.2.10','1.2.11'):require_stock_home(manager)
         if bootstrap is None:cleanup.operate('status',state=system)
         resume=lease['id'] if lease and not lease['terminal'] and lease['owner']=='system-replace' and lease['journal']=='system-replacement.json' and lease['stage']=='reserved' else None
     def eligible():
         nonlocal bootstrap_admission
         pending_journals('system-bootstrap' if job is not None and job['stage']=='provision' else 'system-replace')
-        if target_version=='1.2.10' and (job is None or job['stage']=='capture'):
+        if target_version in ('1.2.10','1.2.11') and (job is None or job['stage']=='capture'):
             require_stock_home(manager)
         if job is not None and job['stage']=='capture' and 'bootstrap_admission' in job:
             admission=job['bootstrap_admission']
@@ -277,11 +282,12 @@ def replace(bundle,setup,cleanup,manager,store,ownership,remove,terminal_removal
             # Bind a new admission even if power fails before a lease is written.
             if ownership.status()!=lease:raise ValueError('Replacement ownership changed before retirement admission')
             if store.read('system-replacement')!=retired or old_proof(manager,system)!=old:raise ValueError('Historical replacement or live state changed before retirement')
-            target=completed_evidence(retired,setup,manager,store,system,terminal_removal,fresh=bootstrap is not None)
-            raw=read(Path(store.root)/'system-replacement.json')
-            plan={'schema':1,'bundle_sha256':bundle_sha,'source_sha256':source_sha,'journal_sha256':digest(raw),'old':old}
             if bootstrap is not None:
                 bootstrap_admission=fresh_bootstrap_proof(setup,cleanup,manager,system,bootstrap)
+            target=completed_evidence(retired,setup,manager,store,system,terminal_removal,fresh=bootstrap_admission is not None)
+            raw=read(Path(store.root)/'system-replacement.json')
+            plan={'schema':1,'bundle_sha256':bundle_sha,'source_sha256':source_sha,'journal_sha256':digest(raw),'old':old}
+            if bootstrap_admission is not None:
                 plan['bootstrap']=bootstrap_admission
             history=type(store)(target.parent,uid=manager.io.uid);previous=history.read('next-replacement')
             if previous is not None and previous!=plan:raise ValueError('Continue historical retirement with the same installer source and bundle')
@@ -309,7 +315,7 @@ def replace(bundle,setup,cleanup,manager,store,ownership,remove,terminal_removal
             if retired is not None:
                 # Preserve exact old bytes durably before atomically replacing
                 # the active journal; it never disappears between operations.
-                target=completed_evidence(retired,setup,manager,store,system,terminal_removal,fresh=bootstrap is not None)
+                target=completed_evidence(retired,setup,manager,store,system,terminal_removal,fresh=bootstrap_admission is not None)
                 raw=read(Path(store.root)/'system-replacement.json')
                 if os.path.lexists(target):
                     if read(target)!=raw:raise ValueError('Historical replacement retirement collision')

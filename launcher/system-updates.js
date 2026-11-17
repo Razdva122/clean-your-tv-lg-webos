@@ -244,17 +244,25 @@
       notesHeading.hidden = notes.hidden = recovery || !offer || !offer.notes;
       buttons[0].hidden = recovery;
       buttons[0].disabled = busy || polling;
-      buttons[1].hidden = recovery;
+      buttons[1].hidden = recovery && !(offer && offer.selfUpdate);
+      buttons[1].textContent = t(
+        recovery ? 'Reinstall System Updater' : 'Update all'
+      );
       buttons[1].disabled =
         busy ||
         polling ||
         !!active() ||
         !profileAvailable() ||
         !offer ||
-        !offer.canInstall;
+        !(recovery ? offer.canRepair : offer.canInstall);
       buttons[2].textContent = t(recovery ? 'Refresh status' : 'Recovery');
       buttons[2].disabled = busy || polling;
       buttons[3].hidden = !recovery;
+      buttons[3].textContent = t(
+        transaction && transaction.engineUpdate
+          ? 'Cancel updater operation'
+          : 'Roll back'
+      );
       buttons[3].disabled =
         busy || polling || !transaction || transaction.canRollback !== true;
       buttons[4].textContent = t(options.standalone ? 'Open Home' : 'Back');
@@ -273,9 +281,10 @@
     }
     function readOffer(edition) {
       return rpc('check', { edition: edition }).then(function (value) {
-        // Installed supervisors are immutable; older ones compare release tags only.
+        // Older supervisors compare release tags only. New engines can update independently.
         if (
           value &&
+          !value.selfUpdate &&
           value.canInstall &&
           value.components &&
           value.components.length &&
@@ -370,18 +379,24 @@
     }
     function install() {
       if (buttons[1].disabled || !visible()) return;
+      var repair = recovery;
       var request = generation,
         release = offer.release;
       confirm(
         {
-          title: 'Install system update?',
-          message:
-            t('Available: {version}', { version: release }) +
-            '\n' +
-            t(
-              'Home will close during installation. Your apps and settings will be saved.'
-            ),
-          action: 'Install update'
+          title: repair
+            ? 'Reinstall System Updater?'
+            : 'Install system update?',
+          message: repair
+            ? t(
+                'Reinstall only System Updater. Home and your settings will stay unchanged. Keep the TV powered on.'
+              )
+            : t('Available: {version}', { version: release }) +
+              '\n' +
+              t(
+                'Home will close during installation. Your apps and settings will be saved.'
+              ),
+          action: repair ? 'Reinstall System Updater' : 'Install update'
         },
         function () {
           if (
@@ -412,11 +427,12 @@
                 throw Error(
                   'Could not save your complete profile. Nothing was installed.'
                 );
-              return rpc('install', {
+              var payload = {
                 edition: options.edition,
-                release: release,
                 profile: profile
-              });
+              };
+              if (!repair) payload.release = release;
+              return rpc(repair ? 'repair' : 'install', payload);
             })
             .then(function (state) {
               if (request === generation && state) transaction = state;
@@ -519,7 +535,7 @@
         if (!recovery) {
           recovery = true;
           render(true);
-          refresh(false);
+          refresh(true);
         } else {
           stickyError = '';
           operation('reconcile', {});
@@ -531,11 +547,19 @@
           id = transaction.id;
         confirm(
           {
-            title: 'Restore previous system?',
-            message: t(
-              'Restore all previous components and pre-update settings. Settings changed after the update will be lost. Keep the TV powered on.'
-            ),
-            action: 'Restore previous system'
+            title: transaction.engineUpdate
+              ? 'Cancel updater operation?'
+              : 'Restore previous system?',
+            message: transaction.engineUpdate
+              ? t(
+                  'Cancel this updater operation and keep Home and your settings unchanged.'
+                )
+              : t(
+                  'Restore all previous components and pre-update settings. Settings changed after the update will be lost. Keep the TV powered on.'
+                ),
+            action: transaction.engineUpdate
+              ? 'Cancel updater operation'
+              : 'Restore previous system'
           },
           function () {
             if (

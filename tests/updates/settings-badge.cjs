@@ -113,6 +113,7 @@ function harness(root, system = false, blurHidden = true) {
     }
   };
   const window = root ? { RootUpdates: updates } : { HomeUpdates: updates };
+  window.addEventListener = () => {};
   window.HomeLayoutState = {
     state: () => ({ allowColumnOverride: allowColumns, columns: 5 })
   };
@@ -309,7 +310,7 @@ function harness(root, system = false, blurHidden = true) {
       'unknown status must not expose an off switch'
     );
     assert.equal(home.routing().disabled, true);
-    assert.match(home.routingStatus().textContent, /unknown/);
+    assert.equal(home.routing().attrs['data-home-state'], 'unknown');
   }
   if (!home.routing().disabled) home.routing().focus();
   home.close();

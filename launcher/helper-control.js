@@ -228,6 +228,50 @@
         }
       );
     }
+    function checkStopped(callback) {
+      rpc('luna://com.local.nativehome.service/status', {}, function (reply) {
+        // Some firmware rejects this endpoint even with Helper installed.
+        if (
+          !reply ||
+          reply.returnValue !== true ||
+          typeof reply.blocked !== 'boolean' ||
+          typeof reply.running !== 'boolean'
+        ) {
+          callback(null);
+          return;
+        }
+        callback(reply.blocked && !reply.running);
+      });
+    }
+    function confirmStart(onStart, onReply) {
+      window.HomeI18n.confirm(
+        {
+          title: 'Start Helper?',
+          message:
+            'Start Helper to use Home control again. Your saved Home screen choice will be used.',
+          action: 'Start Helper'
+        },
+        function () {
+          if (onStart() === false) return;
+          rpc(
+            'luna://com.webos.applicationManager/launch',
+            {
+              id: 'com.local.nativehome',
+              params: { nativeHomeStart: true, nativeHomePanel: true }
+            },
+            function (reply) {
+              var accepted = !!(reply && reply.returnValue === true);
+              onReply(accepted);
+              if (accepted) {
+                var event = document.createEvent('Event');
+                event.initEvent('home-helper-start-requested', false, false);
+                document.dispatchEvent(event);
+              }
+            }
+          );
+        }
+      );
+    }
     function build() {
       panel = document.createElement('section');
       panel.className = 'root-settings helper-panel';
@@ -275,39 +319,25 @@
             return;
           }
           if (i === 3) return refresh();
-          window.HomeI18n.confirm(
-            {
-              title: 'Start Helper?',
-              message: t(
-                'Start Helper to use Home control again. Your saved Home screen choice will be used.'
-              ),
-              action: 'Start Helper'
-            },
+          confirmStart(
             function () {
-              if (panel.hidden || busy) return;
+              if (panel.hidden || busy) return false;
               busy = true;
               buttons[2].disabled = true;
               status.textContent = t('Starting Helper…');
-              rpc(
-                'luna://com.webos.applicationManager/launch',
-                {
-                  id: 'com.local.nativehome',
-                  params: { nativeHomeStart: true, nativeHomePanel: true }
-                },
-                function (r) {
-                  busy = false;
-                  buttons[2].disabled = false;
-                  if (!r || !r.returnValue) {
-                    status.textContent = t(
-                      'Helper is unavailable. Reinstall the complete Home package from your computer.'
-                    );
-                    return;
-                  }
-                  setTimeout(function () {
-                    if (!panel.hidden) refresh();
-                  }, 1500);
-                }
-              );
+            },
+            function (accepted) {
+              busy = false;
+              buttons[2].disabled = false;
+              if (!accepted) {
+                status.textContent = t(
+                  'Helper is unavailable. Reinstall the complete Home package from your computer.'
+                );
+                return;
+              }
+              setTimeout(function () {
+                if (!panel.hidden) refresh();
+              }, 1500);
             }
           );
         };
@@ -392,7 +422,11 @@
     document.addEventListener('webOSRelaunch', function (e) {
       if (launchParams(e)) open();
     });
-    window.HomeHelper = { open: open };
+    window.HomeHelper = {
+      open: open,
+      checkStopped: checkStopped,
+      confirmStart: confirmStart
+    };
     if (launchParams()) open();
   })();
 });

@@ -5,7 +5,7 @@ var crypto = require('crypto'),
   fs = require('fs'),
   URL = require('url').URL;
 // Keep aligned with build.VERSION and the packaged app/service metadata.
-var SUPERVISOR_VERSION = '1.2.10';
+var SUPERVISOR_VERSION = '1.2.11';
 var REPO = 'https://github.com/Razdva122/clean-your-tv-lg-webos/releases/';
 var IDENTITIES = {
   home: 'com.gathin.tvhome',
@@ -91,14 +91,14 @@ function validate(m) {
   ];
   if (
     m &&
-    m.edition === 'root' &&
+    (m.edition === 'root' || m.edition === 'no-root') &&
     Object.prototype.hasOwnProperty.call(m, 'minimumSupervisorVersion')
   )
     required.push('minimumSupervisorVersion');
   if (
     !fields(m, required) ||
     m.schema !== 1 ||
-    (m.supervisor !== 1 && !(m.edition === 'root' && m.supervisor === 2)) ||
+    (m.supervisor !== 1 && m.supervisor !== 2) ||
     !SETS[m.edition] ||
     typeof m.release !== 'string' ||
     m.release[0] !== 'v' ||

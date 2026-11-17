@@ -76,6 +76,18 @@ status; retain supervisor and recovery state.
 
 ## Updating every component from the TV
 
+For installations provisioned with the self-updating System Updater, **Update all**
+also prepares the updater needed by the selected release. Root and No-root on a
+rooted TV keep their installed edition. Companion resources travel with the signed
+edition package. Older retained supervisors do not gain this capability merely by
+installing a new Home package. [Architecture and acceptance scope](development/SYSTEM-SELF-UPDATE.md).
+
+In **Recovery**, **Reinstall System Updater** repairs the updater without
+reinstalling Home or replacing its settings. Open Home to use this action, since
+the standalone recovery app cannot capture the full launcher profile. Before
+product installation starts, **Cancel updater operation** cancels updater work;
+ordinary product rollback continues to restore its saved settings snapshot.
+
 **Update all** uses a signed release set for the installed edition:
 
 - No-root: Home, Home Helper and Home Updater.
@@ -170,6 +182,22 @@ In 1.6.0, installer builds contain both HD/FHD packages. New or explicitly migra
 <a id="candidate-system-support"></a>
 
 ## System support
+
+### Update Root from v1.22.0
+
+If your Root installation uses System Updater 1.2.10, use **Return to LG Home**
+in the computer installer and [replace the supervisor](RECOVERY.md#replace-the-root-system-updater-candidate)
+with the installer containing System Updater 1.2.11. Open Clean Your TV from the
+TV app list and select **Home settings → Software updates → Update all**.
+The supervisor replacement preserves the installed Root packages and launcher
+profile. Use **Rollback** on the same screen to return to the previous Root release
+after an update.
+
+For No-root on a rooted TV, fresh computer preparation with the compatible
+bundle enables the self-updating path. A retained No-root System Updater 1.2.10
+cannot migrate in place through this Root replacement command. Use the
+computer installer for No-root product updates when the retained updater
+cannot accept the new format.
 
 ### Update Root from v1.21.0
 

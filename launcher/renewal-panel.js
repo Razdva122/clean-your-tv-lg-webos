@@ -36,7 +36,7 @@
     panel.innerHTML = ht(
       [
         '<div id="settingsMain" class="renewal-card settings-main"><div class="settings-heading"><h2>Home settings</h2><span class="settings-edition">No-root Edition</span></div><section class="settings-home"><h3>Your Home screen</h3><p>Home is your app screen. Home Helper makes the Home button open it.</p><p id="homeRoutingStatus" class="settings-status" aria-live="polite">Checking Home control…</p>',
-        '<div class="renewal-actions home-routing-actions"><button id="homeRoutingToggle" class="home-routing-switch" role="switch" aria-checked="false" aria-describedby="homeRoutingStatus" disabled>Change Home</button><button id="homeRoutingRetry" hidden>Try again</button><button id="homeVisit" class="home-visit-button" aria-describedby="homeVisitHint">Open LG Home</button></div><p id="homeVisitHint" class="home-visit-hint">Open LG Home once, keeping your Home choice.</p>',
+        '<div class="renewal-actions home-routing-actions"><button id="homeRoutingToggle" class="home-routing-switch" role="switch" aria-checked="false" aria-describedby="homeRoutingStatus" disabled>Change Home</button><button id="homeRoutingStart" hidden>Start Helper</button><button id="homeRoutingRetry" hidden>Try again</button><button id="homeVisit" class="home-visit-button" aria-describedby="homeVisitHint">Open LG Home</button></div><p id="homeVisitHint" class="home-visit-hint">Open LG Home once, keeping your Home choice.</p>',
         '<div class="renewal-actions settings-layout"><div id="homeThemeHost"></div></div><div class="renewal-actions settings-layout"><button id="homeColumns">Columns</button></div></section>',
         '<div id="homeAppSettings" class="renewal-actions settings-layout"><button id="homeShowAddApp" class="home-routing-switch" role="switch" aria-checked="true">Show Add app tile</button><button id="homeAddApp">Add app</button><button id="homeEditTiles">Edit tiles</button><button id="homePreviewInputs" class="home-routing-switch" role="switch" aria-checked="true">Preview inputs on focus</button><p id="homeAppsError" role="alert"></p></div>',
         '<div class="renewal-actions settings-links settings-section"><button id="homeLanguage">Language<span class="settings-chevron" aria-hidden="true"></span></button><button id="renewalUpdates">Software updates<span class="settings-update-dot" aria-hidden="true"></span><span class="settings-chevron" aria-hidden="true"></span></button><button id="renewalTV">TV settings<span class="settings-chevron" aria-hidden="true"></span></button><button id="renewalNotifications">LG Notifications<span class="settings-chevron" aria-hidden="true"></span></button></div><div class="renewal-actions settings-developer"><button id="developerOpen" aria-controls="developerSettings" aria-describedby="renewalSummary"><span><span>Developer Mode</span> <span class="settings-beta">Beta</span><span id="renewalSummary" class="renewal-summary" aria-live="polite">Checking auto-renewal…</span></span><span class="settings-chevron" aria-hidden="true"></span></button></div><div class="settings-footer">',
@@ -176,9 +176,12 @@
     var homeToggle = document.getElementById('homeRoutingToggle'),
       homeVisit = document.getElementById('homeVisit'),
       homeRetry = document.getElementById('homeRoutingRetry'),
+      homeStart = document.getElementById('homeRoutingStart'),
       homeStatus = document.getElementById('homeRoutingStatus'),
       homeEnabled = null,
-      homeBusy = false;
+      homeBusy = false,
+      homeStatusRetry = null,
+      homeStatusRetries = 0;
     function hideHomeChoice() {
       var focused = document.activeElement === homeToggle;
       homeToggle.hidden = false;
@@ -273,11 +276,16 @@
         homeRetry.hidden = false;
         homeToggle.setAttribute('data-home-state', 'unknown');
         homeStatus.textContent = tr(
-          'Home status is unknown. The Home button may still work.'
+          'Could not check which screen the Home button opens.'
         );
         return;
       }
-      var retryFocused = document.activeElement === homeRetry;
+      homeStatusRetries = 0;
+      var retryFocused =
+        document.activeElement === homeRetry ||
+        document.activeElement === homeStart;
+      homeStart.hidden = true;
+      homeStart.disabled = false;
       homeRetry.hidden = true;
       homeToggle.setAttribute('data-home-state', 'known');
       homeEnabled = r.enabled;
@@ -296,15 +304,90 @@
         focus(index);
     }
     function refreshHome() {
-      if (homeBusy) return;
+      if (homeBusy || homeStatusRetry !== null || !openNow() || document.hidden)
+        return;
       homeBusy = true;
       homeRetry.disabled = true;
+      homeStart.disabled = true;
       homeToggle.setAttribute('data-home-state', 'checking');
       hideHomeChoice();
-      homeStatus.textContent = tr('Checking Home control…');
-      homeRPC('homeStatus', {}, renderHome);
+      homeStatus.textContent = tr(
+        homeStatusRetries ? 'Starting Helper…' : 'Checking Home control…'
+      );
+      homeRPC('homeStatus', {}, function (reply) {
+        if (
+          reply &&
+          reply.returnValue === true &&
+          typeof reply.enabled === 'boolean'
+        ) {
+          renderHome(reply);
+          return;
+        }
+        if (homeStatusRetries > 0) {
+          homeStatusRetries--;
+          if (homeStatusRetries) {
+            homeBusy = false;
+            homeStatusRetry = setTimeout(function () {
+              homeStatusRetry = null;
+              refreshHome();
+            }, 1000);
+            return;
+          }
+        }
+        function unavailable(stopped) {
+          renderHome(reply);
+          // Offer the confirmed start action even when status is unknown.
+          homeStart.hidden = stopped === false;
+          homeStart.disabled = false;
+          homeVisit.disabled = stopped === true;
+          homeRetry.hidden = stopped === true;
+          if (stopped === true)
+            homeStatus.textContent = tr('Home Helper is stopped.');
+        }
+        if (!window.HomeHelper) {
+          unavailable(false);
+          return;
+        }
+        var generation = homeGeneration;
+        HomeHelper.checkStopped(function (stopped) {
+          if (generation !== homeGeneration) return;
+          if (homeStatusRetries) {
+            homeBusy = false;
+            refreshHome();
+          } else unavailable(stopped);
+        });
+      });
     }
     homeRetry.onclick = refreshHome;
+    homeStart.onclick = function () {
+      if (homeBusy || homeStatusRetries) return;
+      var generation = homeGeneration;
+      HomeHelper.confirmStart(
+        function () {
+          if (generation !== homeGeneration || !openNow() || homeBusy)
+            return false;
+          homeBusy = true;
+          homeStart.disabled = true;
+          homeStatus.textContent = tr('Starting Helper…');
+        },
+        function (accepted) {
+          if (generation !== homeGeneration) return;
+          homeBusy = false;
+          if (!accepted) {
+            homeStart.disabled = false;
+            homeStatus.textContent = tr('Could not start Home Helper.');
+          }
+        }
+      );
+    };
+    document.addEventListener('home-helper-start-requested', function () {
+      if (!openNow()) return;
+      homeStatusRetries = 4;
+      refreshHome();
+    });
+    window.addEventListener('focus', function () {
+      if (homeEnabled === null && homeStatusRetry === null) refreshHome();
+    });
     homeToggle.onclick = function () {
       if (homeBusy || homeEnabled === null) return;
       homeBusy = true;
@@ -641,6 +724,10 @@
       showDeveloper(false);
     };
     function close() {
+      homeGeneration++;
+      clearTimeout(homeStatusRetry);
+      homeStatusRetry = null;
+      homeStatusRetries = 0;
       if (window.HomeWallpaperPanel) HomeWallpaperPanel.unmount();
       if (window.HomeThemePanel) HomeThemePanel.unmount();
       panel.classList.add('hidden');
@@ -834,6 +921,8 @@
         homeGeneration++;
         homeBusy = false;
         homeRetry.hidden = true;
+        homeStart.hidden = true;
+        homeStart.disabled = false;
         homeReplies = {};
         main.classList.remove('hidden');
         developer.classList.add('hidden');

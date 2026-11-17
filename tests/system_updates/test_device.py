@@ -129,6 +129,23 @@ class Tests(DeviceBase):
 if __name__=='__main__':unittest.main()
 
 class ExistingPackageTests(DeviceBase):
+    def test_home_accepts_only_empty_channel_marker(self):
+        from cytv.package import ipk as build_ipk, data_files
+        app = 'com.gathin.tvhome'
+        marker = 'usr/palm/services/com.gathin.tvhome.renewal/state/home-control/.keep'
+        files = data_files(ipk(app))
+        def inspect(contents):
+            files[marker] = contents
+            raw = build_ipk(app, '1.0.0', files)
+            return self.device.inspect(raw, dict(name='home', application=app, version='1.0.0',
+                                                kind='ipk', sha256=digest(raw), size=len(raw)))
+        self.assertTrue(inspect(b''))
+        with self.assertRaisesRegex(ValueError, 'Mutable state'):
+            inspect(b'nonempty')
+        files[marker.replace('.keep', 'foreign.json')] = b''
+        with self.assertRaisesRegex(ValueError, 'Mutable state'):
+            inspect(b'')
+
     def test_public_ordinary_package_directory_entries_are_supported(self):
         import sys
         sys.path.insert(0,str(Path(__file__).resolve().parents[2]))
@@ -155,6 +172,37 @@ class PreferenceBase(DeviceBase):
         self.tx={'id':'a'*32,'edition':'no-root','phase':'complete'};self.store.write('transaction',self.tx)
 
 class PreferenceTests(PreferenceBase):
+    def test_missing_renewal_settings_stay_missing_through_update(self):
+        self.settings.unlink()
+        self.settings.parent.chmod(0o2770)
+        directory = self.settings.parent.stat()
+
+        self.device._pause_renewal(self.tx)
+
+        self.assertEqual(self.events, ['stop', 'cancel'])
+        self.assertFalse(self.settings.exists())
+        current = self.settings.parent.stat()
+        self.assertEqual((current.st_mode, current.st_uid, current.st_gid),
+                         (directory.st_mode, directory.st_uid, directory.st_gid))
+        self.assertIsNone(self.store.read('renewal-pause-' + self.tx['id']))
+        self.assertEqual(self.device._finish_renewal(self.tx), {'status': 'unchanged'})
+        self.assertEqual(self.events, ['stop', 'cancel'])
+
+    def test_renewal_enabled_after_default_pause_is_paused_before_install(self):
+        self.settings.unlink()
+        self.device._pause_renewal(self.tx)
+        self.settings.write_text('{"enabled":true,"preferenceTouched":true}')
+        self.settings.chmod(0o640)
+        self.device._helper_processes = lambda: []
+
+        self.assertTrue(self.device.routing_safe())
+
+        state = json.loads(self.settings.read_bytes())
+        self.assertFalse(state['enabled'])
+        self.assertTrue(state['updatePause']['wasEnabled'])
+        self.assertEqual(self.settings.stat().st_mode & 0o777, 0o640)
+        self.assertTrue(self.store.read('renewal-pause-' + self.tx['id'])['confirmed'])
+
     def test_renewal_is_durably_paused_before_replacement(self):
         self.device._pause_renewal(self.tx);state=json.loads(self.settings.read_bytes());self.assertFalse(state['enabled']);self.assertTrue(state['updatePause']['wasEnabled']);self.assertEqual(self.events,['stop','cancel']);self.assertTrue(self.store.read('renewal-pause-'+self.tx['id'])['confirmed'])
     def test_explicit_renewal_disable_during_update_wins(self):
@@ -263,12 +311,96 @@ class HelperBootPauseTests(DeviceBase):
         super().setUp();self.device._helper_processes=lambda:[];self.device.boot=lambda:'boot-one';self.device.rpc=lambda uri,payload:{'returnValue':True}
         self.tx={'id':'b'*32,'edition':'no-root','phase':'complete'};self.store.write('transaction',self.tx)
         self.startup=self.root/'installed/usr/palm/services/com.local.nativehome.service/state/startup-state.json';self.startup.parent.mkdir(parents=True);self.original=b'{"enabled":true,"schema":3,"boot":"boot-one"}';self.startup.write_bytes(self.original)
+    def test_helper_cleanup_retries_busy_relay_lock_after_process_exit(self):
+        import subprocess
+        from unittest.mock import patch
+
+        process=[(100,False,1)]
+        with patch.object(self.device,'_helper_processes',side_effect=[process,process,[],[],[]]), \
+             patch.object(self.device,'_signal_checked'), \
+             patch('system_updater.device.subprocess.run',side_effect=[
+                 subprocess.CompletedProcess([],18),subprocess.CompletedProcess([],0),
+             ]) as cleanup:
+            self.device._suspend_helper(self.tx)
+        self.assertEqual(cleanup.call_count,2)
+        self.assertTrue(self.store.read('helper-resume-'+self.tx['id'])['suspended'])
+
+    def test_helper_cleanup_rechecks_saved_running_ticket_after_failure(self):
+        import subprocess
+        from unittest.mock import patch
+
+        process=[(100,False,1)]
+        with patch.object(self.device,'_helper_processes',side_effect=[process,process,[],[]]), \
+             patch.object(self.device,'_signal_checked'), \
+             patch('system_updater.device.subprocess.run',return_value=subprocess.CompletedProcess([],11)) as cleanup:
+            with self.assertRaisesRegex(ValueError,'Held remote keys could not be released'):
+                self.device._suspend_helper(self.tx)
+            self.assertEqual(cleanup.call_count,1)
+        self.assertFalse(self.store.read('helper-resume-'+self.tx['id'])['suspended'])
+        with patch('system_updater.device.subprocess.run',return_value=subprocess.CompletedProcess([],0)) as cleanup:
+            self.device._suspend_helper(self.tx)
+        self.assertEqual(cleanup.call_count,1)
+        self.assertTrue(self.store.read('helper-resume-'+self.tx['id'])['suspended'])
+        with patch('system_updater.device.subprocess.run',return_value=subprocess.CompletedProcess([],0)) as cleanup:
+            self.device._suspend_helper(self.tx)
+        cleanup.assert_not_called()
+
     def test_helper_boot_is_paused_during_transaction_and_restored_on_same_boot(self):
         self.device._suspend_helper(self.tx);self.assertFalse(json.loads(self.startup.read_bytes())['enabled']);self.device.finish(self.tx);self.assertEqual(self.startup.read_bytes(),self.original)
     def test_explicit_disable_during_pause_wins(self):
         self.device._suspend_helper(self.tx);self.startup.write_bytes(b'{"enabled":false}');self.device.finish(self.tx);self.assertEqual(self.startup.read_bytes(),b'{"enabled":false}')
     def test_reboot_never_reenables_helper_boot_implicitly(self):
         self.device._suspend_helper(self.tx);self.device.boot=lambda:'boot-two';self.device.finish(self.tx);self.assertFalse(json.loads(self.startup.read_bytes())['enabled'])
+
+class LegacyNoRootCompanionTests(DeviceBase):
+    def setUp(self):
+        super().setUp()
+        from system_updater.support.package import SCREENSAVER_FILES, SCREENSAVER_INFO, SCREENSAVER_PREFIX
+
+        self.files={SCREENSAVER_PREFIX+name:name.encode() for name in SCREENSAVER_FILES}
+        self.files[SCREENSAVER_INFO]=b'package metadata'
+        self.home_hash='a'*64
+        files={'usr/palm/applications/com.gathin.tvhome/index.html':digest(b'published Home')}
+        self.home_pin=digest(json.dumps(files,sort_keys=True).encode())
+        files['usr/palm/applications/com.gathin.tvhome/apps.js']=digest(b'personalized')
+        self.device.cache_bytes=lambda component:b'captured Home'
+        self.device.inspect=lambda raw,component:dict(files)
+        self.tx={'edition':'no-root','id':'d'*32,'prior':{'release':'v0.0.0','components':[
+            {'name':'home','sha256':self.home_hash,'version':'1.20.0','local':True},
+        ]}}
+
+    def write_files(self):
+        for name,raw in self.files.items():
+            path=self.device.installed_root/name
+            path.parent.mkdir(parents=True,exist_ok=True)
+            path.write_bytes(raw)
+
+    def test_captures_exact_standalone_files_before_update_and_reads_them_after_replacement(self):
+        from unittest.mock import patch
+
+        pin=digest(json.dumps({name:digest(raw) for name,raw in self.files.items()},sort_keys=True).encode())
+        self.write_files()
+        with patch.object(self.mod,'LEGACY_NO_ROOT_HOME',{self.home_pin},create=True), \
+             patch.object(self.mod,'LEGACY_NO_ROOT_SCREENSAVER',pin,create=True):
+            with self.assertRaisesRegex(ValueError,'baseline was not captured'):
+                self.device.legacy_no_root_companion(self.tx)
+            old=self.device.legacy_no_root_companion(self.tx,capture=True)
+            self.assertEqual(old,('0.0.5',self.files))
+            replaced=self.device.installed_root/next(iter(self.files))
+            replaced.write_bytes(b'replaced by new release')
+            self.assertEqual(self.device.legacy_no_root_companion(self.tx),old)
+
+    def test_refuses_unverified_old_screensaver_and_records_verified_absence(self):
+        from unittest.mock import patch
+
+        with patch.object(self.mod,'LEGACY_NO_ROOT_HOME',{self.home_pin},create=True):
+            self.assertIsNone(self.device.legacy_no_root_companion(self.tx,capture=True))
+            self.write_files()
+            self.assertIsNone(self.device.legacy_no_root_companion(self.tx))
+            self.tx['id']='e'*32
+            with self.assertRaisesRegex(ValueError,'verified legacy No-root screensaver'):
+                self.device.legacy_no_root_companion(self.tx,capture=True)
+        self.assertIsNone(Store(self.device.state/'legacy-no-root-screensaver',uid=os.getuid()).read('baseline-'+self.tx['id']))
 
 class PrivateServiceTests(DeviceBase):
     def test_private_recovery_service_has_fixed_destination_and_receipts(self):
@@ -542,3 +674,26 @@ class InfrastructureOfferTests(DeviceBase):
 
     def test_downloaded_candidate_hash_mismatch_is_not_offered(self):
         self.assertFalse(self.offer({'runtime/cli.py':b'new'},corrupt=True)['canInstall'])
+
+class EngineInfrastructureEvolutionTests(DeviceBase):
+    def test_new_engine_inventory_preserves_old_snapshot_and_removes_only_pinned_bytes(self):
+        old_files={'runtime/old.py':b'old','runtime/keep.py':b'old keep'}
+        new_files={'runtime/new.py':b'new','runtime/keep.py':b'new keep'}
+        old,new=tar(old_files),tar(new_files)
+        prior={'name':'root-infrastructure','kind':'infrastructure','version':'1.0.0','sha256':digest(old),'size':len(old),'local':True,'files':{n:digest(v) for n,v in old_files.items()}}
+        candidate={'name':'root-infrastructure','kind':'infrastructure','version':'2.0.0','sha256':digest(new),'size':len(new)}
+        self.baseline({'edition':'root','components':[prior]})
+        original=self.root/'state/code';original.mkdir()
+        (original/'infrastructure-paths.json').write_text(json.dumps(list(old_files)))
+        (self.device.code/'infrastructure-paths.json').write_text(json.dumps(list(new_files)))
+        self.store.write('transaction',{'edition':'root','prior':{'components':[prior]},'candidate':{'components':[candidate]}})
+        for c,raw in ((prior,old),(candidate,new)):(self.root/'state/cache'/c['sha256']).write_bytes(raw)
+        self.assertEqual(self.device.inspect(old,prior),prior['files'])
+        self.assertEqual(self.device.inspect(new,candidate),{n:digest(v) for n,v in new_files.items()})
+        for name,value in old_files.items():
+            target=self.device._infra_path(name);target.parent.mkdir(exist_ok=True,parents=True);target.write_bytes(value)
+        self.device.validate_infrastructure_transition()
+        self.device._retire_infrastructure(new_files,old_files)
+        self.assertFalse(self.device._infra_path('runtime/old.py').exists())
+        target=self.device._infra_path('runtime/new.py');target.write_bytes(b'foreign')
+        with self.assertRaises(ValueError):self.device._retire_infrastructure(old_files,new_files)

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Prepare signed OTA assets from published/draft bundles; never execute bundle code."""
 import argparse
+import ast
 import base64
 import hashlib
 import gzip
@@ -33,6 +34,31 @@ def version(value):
 
 def digest(raw):
     return hashlib.sha256(raw).hexdigest()
+
+
+def verify_engine_transition(engine, raw, installer_raw, prior):
+    if raw != installer_raw:
+        raise ValueError('Engine differs from exact installer bundle')
+    if len(raw) != engine['size'] or digest(raw) != engine['sha256']:
+        raise ValueError('Engine release package mismatch')
+    current = version(engine['version'])
+    if prior:
+        previous = version(prior['version'])
+        if current < previous:
+            raise ValueError('Engine version regression')
+        if current == previous and engine['sha256'] != prior['sha256']:
+            raise ValueError('Engine changed without version bump')
+
+
+def source_engine_version(commit):
+    content = json.loads(gh('api', 'repos/' + REPO + '/contents/system-updater/build.py?ref=' + commit))
+    tree = ast.parse(base64.b64decode(content['content']))
+    for node in tree.body:
+        if isinstance(node, ast.Assign) and any(isinstance(t, ast.Name) and t.id == 'ENGINE_VERSION' for t in node.targets):
+            value = ast.literal_eval(node.value)
+            version(value)
+            return value
+    return None
 
 
 def validate_versions(versions):
@@ -219,7 +245,7 @@ def verify_system_assets(manifests,build,files):
         graphics='1280x720' if key.endswith('-720p') else '1920x1080'
         expected_supervisor = '1.2.10' if manifest.get('supervisor') == 2 else '1.1.1'
         if edition=='root' and manifest.get('minimumSupervisorVersion')!=expected_supervisor:raise ValueError('Root minimum supervisor mismatch')
-        if edition=='no-root' and 'minimumSupervisorVersion' in manifest:raise ValueError('Unexpected No-root minimum supervisor')
+        if edition=='no-root' and manifest.get('minimumSupervisorVersion')!=('1.2.11' if manifest.get('supervisor')==2 else None):raise ValueError('No-root minimum supervisor mismatch')
         if manifest.get('edition')!=edition or manifest.get('release')!=build['tag'] or manifest.get('schema')!=1 or manifest.get('supervisor') not in (1, 2) or {c['name'] for c in manifest['components']}!=names or len(manifest['components'])!=len(names):raise ValueError('Invalid system release set')
         for item in manifest['components']:
             filename=item['url'].rsplit('/',1)[1]
@@ -227,8 +253,7 @@ def verify_system_assets(manifests,build,files):
             raw=files[filename]
             if digest(raw)!=item['sha256'] or len(raw)!=item['size']:raise ValueError('System release asset hash mismatch')
             if item['name'] in ('root', 'home'):
-                has_companion = (edition == 'root' and
-                    'usr/palm/applications/com.cleanyourtv.root.preview/screensaver-companion/manifest.json' in data_files(raw))
+                has_companion = 'usr/palm/applications/'+apps[item['name']]+'/screensaver-companion/manifest.json' in data_files(raw)
                 if manifest['supervisor'] != (2 if has_companion else 1):
                     raise ValueError('System release screensaver protocol mismatch')
             key={'root-infrastructure':'root','root-updater':'updater'}.get(item['name'],item['name'])
@@ -299,6 +324,9 @@ def bundles(meta, folder):
         verify_homebrew_source(build, commit)
     versions = build['versions']
     validate_versions(versions)
+    expected_engine = source_engine_version(commit)
+    if expected_engine != (build.get('system_engine') or {}).get('version'):
+        raise ValueError('Engine capability differs from committed source')
     home_name = 'clean-your-tv-no-root-' + versions['home'] + '.zip'
     download(meta, home_name, folder)
     with zipfile.ZipFile(folder / home_name) as archive:
@@ -306,6 +334,19 @@ def bundles(meta, folder):
         hd_name=APPS['home']+'_'+versions['home']+'_720p_all.ipk'
         home_hd=archive.read(hd_name) if hd_name in archive.namelist() else None
         helper = archive.read(APPS['helper'] + '_' + versions['helper'] + '_arm.ipk')
+        no_root_engine = None
+        if expected_engine:
+            inventory = json.loads(archive.read('system-updater/bundle.json'))
+            if inventory.get('engine_version') != expected_engine:
+                raise ValueError('No-root installer engine version differs from source')
+            def read_no_root_engine(name):
+                safe_name(name)
+                matches = [m for m in archive.infolist() if m.filename == 'system-updater/' + name]
+                if len(matches) != 1 or matches[0].is_dir() or matches[0].file_size > 4*1024*1024:
+                    raise ValueError('Invalid No-root installer engine file')
+                return archive.read(matches[0])
+            builder = runpy.run_path(str(ROOT/'system-updater/build.py'))
+            no_root_engine = builder['engine_archive_files'](inventory, read_no_root_engine)
     root_name = 'clean-your-tv-root-' + versions['root'] + '.tar.gz'
     download(meta, root_name, folder)
     suffix = '/build/root-candidate/' + APPS['root'] + '_' + versions['root'] + '_all.ipk'
@@ -317,7 +358,28 @@ def bundles(meta, folder):
         hd_members=[m for m in archive if m.name.endswith(hd_suffix) and m.isfile() and m.size<=32*1024*1024]
         if len(hd_members)>1:raise ValueError('Ambiguous HD Root package')
         root_hd=archive.extractfile(hd_members[0]).read() if hd_members else None
+        engine_raw = None
+        if expected_engine:
+            suffix = '/build/system-updater/bundle.json'
+            entries = [m for m in archive.getmembers() if m.name.endswith(suffix) and m.isfile()]
+            if len(entries) != 1:
+                raise ValueError('Missing installer engine inventory')
+            prefix = entries[0].name[:-len('bundle.json')]
+            inventory = json.loads(archive.extractfile(entries[0]).read())
+            if inventory.get('engine_version') != expected_engine:
+                raise ValueError('Installer engine version differs from source')
+            def read_engine(name):
+                safe_name(name)
+                matches = [m for m in archive.getmembers() if m.name == prefix + name]
+                if len(matches) != 1 or not matches[0].isfile() or matches[0].size > 4*1024*1024:
+                    raise ValueError('Invalid installer engine file')
+                return archive.extractfile(matches[0]).read()
+            builder = runpy.run_path(str(ROOT/'system-updater/build.py'))
+            engine_raw = builder['engine_archive_files'](inventory, read_engine)
+            if engine_raw != no_root_engine:
+                raise ValueError('Root and No-root installer engines differ')
     packages={'home':home,'helper':helper,'root':root}
+    if engine_raw is not None: packages['system-engine'] = engine_raw
     if home_hd is not None:packages['home-720p']=home_hd
     if root_hd is not None:packages['root-720p']=root_hd
     return build,packages
@@ -427,6 +489,18 @@ def main():
                 kind=item['name']+('-720p' if variant.endswith('-720p') and item['name'] in ('home','root') else '')
                 if kind in packages and system_files[item['url'].rsplit('/',1)[1]]!=packages[kind]:raise ValueError('System release package differs from exact bundle: '+kind)
         files.update(system_files)
+        if build.get('system_engine'):
+            bootstrap = json.loads(download(meta, 'system-bootstrap-manifest.json', tmp/'current'))
+            if bootstrap.get('engine') != build['system_engine'] or bootstrap.get('releases') != system:
+                raise ValueError('Engine bootstrap differs from exact release build')
+            engine = bootstrap['engine']
+            name = 'system-engine_' + engine['version'] + '.tar.gz'
+            if engine['url'] != URL + args.tag + '/' + name:
+                raise ValueError('Engine release URL mismatch')
+            raw = download(meta, name, tmp/'current')
+            verify_engine_transition(engine, raw, packages['system-engine'], prior_build.get('system_engine'))
+            manifests['bootstrap'] = bootstrap
+            files[name] = raw
         files.update(prepare_homebrew(build, prior_build,
             lambda name: download(meta, name, tmp/'current'),
             lambda name: download(prior_meta, name, tmp/'previous')))

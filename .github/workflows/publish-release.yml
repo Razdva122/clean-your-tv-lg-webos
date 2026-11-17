@@ -22,6 +22,10 @@ on:
         description: 'Root QA only: successful release/next cytv build run; requires publish=false'
         type: string
         default: ''
+      system_candidate_qa:
+        description: 'Sign a private System bootstrap catalog for the pinned full candidate; requires publish=false'
+        type: boolean
+        default: false
       direct_tv_qa:
         description: 'Use the explicit direct Root TV candidate artifact; requires preliminary_root_qa and publish=false'
         type: boolean
@@ -45,7 +49,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   publish:
-    if: github.ref == 'refs/heads/main' && !inputs.candidate_build_run && !inputs.preliminary_root_qa && !inputs.candidate_source_sha && !inputs.candidate_branch && !inputs.direct_tv_qa
+    if: github.ref == 'refs/heads/main' && !inputs.candidate_build_run && !inputs.preliminary_root_qa && !inputs.candidate_source_sha && !inputs.candidate_branch && !inputs.direct_tv_qa && !inputs.system_candidate_qa
     environment: release-signing
     permissions:
       contents: write
@@ -75,6 +79,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           UPDATE_SIGNING_PRIVATE_KEY: ${{ secrets.UPDATE_SIGNING_PRIVATE_KEY }}
+          BOOTSTRAP_SIGNING_PRIVATE_KEY: ${{ secrets.BOOTSTRAP_SIGNING_PRIVATE_KEY }}
+          BOOTSTRAP_SIGNING_KEY_CHAIN: ${{ vars.BOOTSTRAP_SIGNING_KEY_CHAIN }}
           RELEASE_TAG: ${{ inputs.tag }}
         run: python scripts/prepare-release.py "$RELEASE_TAG" "$RUNNER_TEMP/signed-release"
       - name: Upload, verify and publish
@@ -122,6 +128,7 @@ jobs:
           path: qa-tools
           ref: ${{ github.sha }}
           persist-credentials: false
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -133,6 +140,7 @@ jobs:
         run: |
           python -m unittest discover -s tests/setup -p test_root_candidate_feeds.py
           node tests/updates/root-candidate-signing.cjs
+          node tests/system_updates/candidate-signing.cjs
           python -m unittest discover -s tests/setup -p test_direct_tv_candidate.py
       - name: Install legacy CLI archive reader only for CLI candidates
         if: inputs.direct_tv_qa == false
@@ -146,10 +154,15 @@ jobs:
           RELEASE_TAG: ${{ inputs.tag }}
           PRELIMINARY: ${{ inputs.preliminary_root_qa }}
           DIRECT_TV: ${{ inputs.direct_tv_qa }}
+          SYSTEM_QA: ${{ inputs.system_candidate_qa }}
           SOURCE_SHA: ${{ inputs.candidate_source_sha }}
           SOURCE_BRANCH: ${{ inputs.candidate_branch }}
         run: |
           args=()
+          if [ "$SYSTEM_QA" = true ]; then
+            [ "$PRELIMINARY" = false ] && [ "$DIRECT_TV" = false ] || exit 1
+            args+=(--system-qa)
+          fi
           if [ "$DIRECT_TV" = true ]; then
             [ "$PRELIMINARY" = true ] || { echo "Direct TV builds are preliminary QA only"; exit 1; }
             args+=(--direct-tv)
@@ -165,24 +178,41 @@ jobs:
           ref: ${{ steps.candidate.outputs.source }}
           path: candidate-source
           persist-credentials: false
-      - name: Verify exact archive and prepare only Root packages before exposing the key
+      - name: Verify exact archive and prepare admitted package data before exposing the key
         working-directory: qa-tools
         env:
           GH_TOKEN: ${{ github.token }}
-        run: python scripts/root-candidate-feeds.py prepare --metadata "$RUNNER_TEMP/root-candidate.json" --source ../candidate-source --output "$RUNNER_TEMP/signed-root-candidate"
+          SYSTEM_QA: ${{ inputs.system_candidate_qa }}
+        run: |
+          args=()
+          if [ "$SYSTEM_QA" = true ]; then args+=(--system-qa); fi
+          python scripts/root-candidate-feeds.py prepare --metadata "$RUNNER_TEMP/root-candidate.json" --source ../candidate-source --output "$RUNNER_TEMP/signed-root-candidate" "${args[@]}"
       - name: Sign and verify only the admitted Root manifest
+        if: inputs.system_candidate_qa == false
         working-directory: qa-tools
         env:
           UPDATE_SIGNING_PRIVATE_KEY: ${{ secrets.UPDATE_SIGNING_PRIVATE_KEY }}
         run: node scripts/sign-root-candidate.cjs "$RUNNER_TEMP/signed-root-candidate"
+      - name: Sign the admitted System bootstrap catalog
+        if: inputs.system_candidate_qa == true
+        working-directory: qa-tools
+        env:
+          UPDATE_SIGNING_PRIVATE_KEY: ${{ secrets.UPDATE_SIGNING_PRIVATE_KEY }}
+          BOOTSTRAP_SIGNING_PRIVATE_KEY: ${{ secrets.BOOTSTRAP_SIGNING_PRIVATE_KEY }}
+          BOOTSTRAP_SIGNING_KEY_CHAIN: ${{ vars.BOOTSTRAP_SIGNING_KEY_CHAIN }}
+        run: node scripts/sign-system-candidate.cjs "$RUNNER_TEMP/signed-root-candidate"
       - name: Refuse changed build attempts or archives before artifact delivery
         working-directory: qa-tools
         env:
           GH_TOKEN: ${{ github.token }}
-        run: python scripts/root-candidate-feeds.py recheck --metadata "$RUNNER_TEMP/root-candidate.json"
+          SYSTEM_QA: ${{ inputs.system_candidate_qa }}
+        run: |
+          args=()
+          if [ "$SYSTEM_QA" = true ]; then args+=(--system-qa); fi
+          python scripts/root-candidate-feeds.py recheck --metadata "$RUNNER_TEMP/root-candidate.json" "${args[@]}"
       - uses: actions/upload-artifact@v4
         with:
-          name: signed-root-candidate-${{ inputs.candidate_build_run }}-${{ steps.candidate.outputs.attempt }}
+          name: ${{ inputs.system_candidate_qa && 'signed-system-candidate' || 'signed-root-candidate' }}-${{ inputs.candidate_build_run }}-${{ steps.candidate.outputs.attempt }}
           retention-days: 90
           path: ${{ runner.temp }}/signed-root-candidate/
           if-no-files-found: error

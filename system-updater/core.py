@@ -42,9 +42,17 @@ def release_set(value,edition):
     return result
 
 
-def validate_profile(value,edition):
+def validate_profile(value,edition,*,captured=False):
     if edition not in SETS or not isinstance(value,dict):raise ValueError('Invalid profile edition')
     data=copy.deepcopy(value);renewal=data.pop('renewal',None)
+    # Older No-root Home includes an empty color when webOS has no icon tint.
+    # Normalize the capture before it becomes the authenticated rollback snapshot.
+    inventory=data.get('inventory')
+    apps=inventory.get('apps') if isinstance(inventory,dict) else None
+    if captured and edition=='no-root' and isinstance(apps,list):
+        for app in apps:
+            if isinstance(app,dict) and app.get('iconColor')=='':
+                del app['iconColor']
     # Ordinary Home also stores the display layout preference.
     settings=data.get('settings',{})
     layout=settings.pop('tvhome.layout',None)
@@ -128,8 +136,8 @@ class Manager:
         if hashlib.sha256(encode(value)).hexdigest()!=tx['profileDigest']:raise ValueError('Profile digest mismatch')
         return value
 
-    def install(self,edition,release,profile):
-        snapshot=validate_profile(profile,edition)
+    def install(self,edition,release,profile,operation=None):
+        snapshot=validate_profile(profile,edition,captured=True)
         if not isinstance(release,str) or not release.startswith('v'):raise ValueError('Invalid release')
         version(release[1:])
         with self.store.lock():
@@ -142,7 +150,12 @@ class Manager:
             candidate=release_set(offer.get('candidate'),edition);prior=release_set(offer.get('prior'),edition)
             if candidate['release']!=release or version(release[1:])<=version(prior['release'][1:]) or not self.io.verify_baseline(prior):raise ValueError('Installed baseline or signed offer changed')
             if any(version(c['version'])<version(p['version']) for c,p in zip(candidate['components'],prior['components'])):raise ValueError('Component downgrade is not permitted')
-            identifier=uuid.uuid4().hex;name='profile-'+identifier;self.store.write(name,snapshot)
+            identifier=operation or uuid.uuid4().hex
+            if not re.fullmatch('[a-f0-9]{32}',identifier):raise ValueError('Invalid reserved operation')
+            name='profile-'+identifier
+            saved=self.store.read(name) if operation else None
+            if saved is None:self.store.write(name,snapshot)
+            elif saved!=snapshot:raise ValueError('Reserved profile changed')
             if self.store.read(name)!=snapshot:raise ValueError('Profile readback failed')
             evidence=lambda:{'intent':False,'submitted':None,'terminal':None}
             now=self._now();tx={'schema':1,'id':identifier,'edition':edition,'release':release,'candidate':candidate,'prior':prior,

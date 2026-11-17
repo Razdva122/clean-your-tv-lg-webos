@@ -23,6 +23,57 @@ class StartupTests(unittest.TestCase):
         context = patch.object(p, 'prepare_stock_home')
         context.start(); self.addCleanup(context.stop)
 
+    def test_beta_repair_retries_without_replacing_package_or_activation(self):
+        import deploy
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            runner = root/'run-recovery-service'
+            pending = root/'recovery-provision.pending.json'
+            installed = root/'installed-app'
+            installed.write_bytes(b'installed app')
+            release = {'application_id': deploy.APP, 'version': '0.20.0',
+                       'runtime_variant': 'node012-beta', 'home_backend': 'c1-native-gate',
+                       'routing': 'compositor-keyfilter-v1', 'compositor_admission': 3,
+                       'native_sha256': 'a'*64}
+            (root/'release.json').write_text(json.dumps(release))
+            (root/'deploy.json').write_text(json.dumps(
+                {'version': 1, 'app': deploy.APP, 'stage': 'provision-finalize-starting'}))
+            (root/'recovery-failure.json').write_text(json.dumps(
+                {'schema': 1, 'phase': 'status', 'reason': 'timeout',
+                 'startup_state': 'exited', 'startup_exit_status': 0}))
+            with patch.multiple(p, STATE=root, RUNNER=runner, LEGACY_NODE_BETA=True, FILES={}), \
+                    patch.object(p, 'secure', side_effect=Path.read_bytes), \
+                    patch.object(p, 'manifest', side_effect=lambda: {'files': {str(runner): p.sha(runner.read_bytes())}}), \
+                    patch.object(p, 'verify_beta_repair_registration'), \
+                    patch('package_identity.bootstrap_inventory') as verify_package, \
+                    patch('runtime.c1_keyfilter.selection', return_value={'schema': 3, 'native_sha256': 'a'*64}), \
+                    patch.object(p, 'finalize', side_effect=[TimeoutError(), None]) as finalize, \
+                    patch.object(p, 'rpc', return_value={'root': True, 'result': {'recovery': {'integrity_verified': True}}}) as status:
+                runner.write_bytes(p.runner_bytes().replace(b'--disable-activity-creation ', b''))
+                original_proof = p.manifest()
+                pending.write_bytes(p.encoded({'files': {str(runner): '0'*64}}))
+                with self.assertRaisesRegex(ValueError, 'manifest changed'):
+                    p.repair_beta_recovery()
+                self.assertNotIn(b'--disable-activity-creation ', runner.read_bytes())
+                finalize.assert_not_called()
+                pending.write_bytes(p.encoded(original_proof))
+                runner.with_name(runner.name+'.root-preview-tmp').write_bytes(p.runner_bytes()[:15])
+                with self.assertRaises(TimeoutError):
+                    p.repair_beta_recovery()
+                self.assertEqual(pending.read_bytes(), p.encoded(p.manifest()))
+                self.assertEqual(runner.read_bytes(), p.runner_bytes())
+                self.assertEqual(json.loads((root/'deploy.json').read_bytes())['stage'], 'provision-finalize-starting')
+                result = p.repair_beta_recovery()
+                self.assertTrue(result['status_verified'])
+                self.assertEqual(json.loads((root/'deploy.json').read_bytes())['stage'], 'installed-recovery-only')
+                status.assert_called_once_with('status')
+                self.assertEqual(finalize.call_count, 2)
+                verify_package.assert_called_with(root)
+                (root/'recovery-provision.json').write_bytes(pending.read_bytes())
+                self.assertTrue(p.repair_beta_recovery()['status_verified'])
+                self.assertEqual(finalize.call_count, 2)
+            self.assertEqual(installed.read_bytes(), b'installed app')
+
     def test_beta_uses_lg_local_activity_before_bootstrap_positionals(self):
         with patch.object(p, 'LEGACY_NODE_BETA', True):
             command = shlex.split(p.runner_bytes().decode().splitlines()[-1])
