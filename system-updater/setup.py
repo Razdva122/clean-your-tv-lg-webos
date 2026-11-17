@@ -25,7 +25,15 @@ BASE=Path('/var/luna-service2-dev')
 HOOK=Path('/var/lib/webosbrew/init.d/52-clean-your-tv-system-updater')
 ROOT_UPDATER_TRANSACTION=Path('/var/lib/clean-your-tv-root-updater/transaction.json')
 APPS={'home':'com.gathin.tvhome','helper':'com.local.nativehome','updater':'com.cleanyourtv.updater','root':'com.cleanyourtv.root.preview','root-updater':'com.cleanyourtv.root.updater'}
-CODE={'service-entry.py','permissions.json','system_updater/bootstrap_migration.py','system_updater/supervisor_io.py','system_updater/bootstrap-trust.js','system_updater/bootstrap-public.pem','engine-entry.py','system_updater/engine-policy.js','system_updater/bootstrap.py','system_updater/activation.py','startup_hook.py','package_data.py','package_identity.py','startup_guard.py','installation.py','python_boot.js','python_binding.py','infrastructure-paths.json','system_updater/__init__.py','system_updater/support/__init__.py','system_updater/core.py','system_updater/device.py','system_updater/cli.py','system_updater/policy.js','system_updater/release-public.pem','system_updater/ca-bundle.crt','system_updater/ca-LICENSE.txt','system_updater/support/store.py','system_updater/support/package.py','system_updater/support/profile.py','system_updater/support/luna.py','observed_install.py','installer_status.py','service.js','run-system-updater.py','services.json','package.json'}
+ENGINE_CODE = {
+    'service-entry.py', 'permissions.json', 'engine-entry.py',
+    'system_updater/activation.py', 'system_updater/bootstrap.py',
+    'system_updater/bootstrap_migration.py', 'system_updater/supervisor_io.py',
+    'system_updater/bootstrap-trust.js', 'system_updater/bootstrap-public.pem',
+    'system_updater/engine-policy.js',
+}
+LEGACY_CODE={'startup_hook.py','package_data.py','package_identity.py','startup_guard.py','installation.py','python_boot.js','python_binding.py','infrastructure-paths.json','system_updater/__init__.py','system_updater/support/__init__.py','system_updater/core.py','system_updater/device.py','system_updater/cli.py','system_updater/policy.js','system_updater/release-public.pem','system_updater/ca-bundle.crt','system_updater/ca-LICENSE.txt','system_updater/support/store.py','system_updater/support/package.py','system_updater/support/profile.py','system_updater/support/luna.py','observed_install.py','installer_status.py','service.js','run-system-updater.py','services.json','package.json'}
+CODE = LEGACY_CODE | ENGINE_CODE
 
 def require_normal_root(root=Path('/var/lib/clean-your-tv-root')):
     if any(os.path.lexists(Path(root)/name) for name in ('home-backend.json','c1-gate','c1-keyfilter','runtime/c1_gate.py','runtime/c1_keyfilter.py','runtime/c1-home-gate','runtime/c1-keyfilter-guard')):
@@ -70,11 +78,23 @@ def package_files(raw):
     if set(parts)!={'debian-binary','control.tar.gz','data.tar.gz'} or parts['debian-binary']!=b'2.0\n':raise ValueError('Invalid IPK inventory')
     return entries(parts['data.tar.gz'])
 
-def verify_bundle(bundle):
-    bundle=Path(bundle);manifest=json.loads(safe(bundle/'bundle.json'))
-    if manifest.get('schema')!=1 or manifest.get('supervisor')!=1 or set(manifest.get('files',{}))!=CODE|{'setup-system-updater.py','system-updater.ipk'}:raise ValueError('Unexpected supervisor bundle inventory')
-    for name,sha in manifest['files'].items():
-        if digest(safe(bundle/name))!=sha:raise ValueError('Supervisor bundle hash mismatch')
+def verify_bundle(bundle, *, historical_manifest=None):
+    bundle = Path(bundle)
+    if historical_manifest is None:
+        manifest = json.loads(safe(bundle/'bundle.json'))
+    else:
+        manifest = json.loads(historical_manifest)
+    files = manifest.get('files')
+    extras = {'setup-system-updater.py', 'system-updater.ipk'}
+    inventories = [CODE | extras]
+    if historical_manifest is not None and 'engine_version' not in manifest:
+        inventories.append(LEGACY_CODE | extras)
+    if (manifest.get('schema') != 1 or manifest.get('supervisor') != 1
+            or not isinstance(files, dict) or set(files) not in inventories):
+        raise ValueError('Unexpected supervisor bundle inventory')
+    for name, sha in files.items():
+        if digest(safe(bundle/name)) != sha:
+            raise ValueError('Supervisor bundle hash mismatch')
     return manifest
 
 def infrastructure_name(name):

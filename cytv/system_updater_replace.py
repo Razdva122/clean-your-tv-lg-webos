@@ -188,8 +188,11 @@ def fresh_bootstrap_proof(setup,cleanup,manager,system,lease):
 
 def completed_evidence(job,setup,manager,store,system,terminal_removal,fresh=False):
     root=Path(store.root)/('system-replacement-'+job['id']);directory(root)
-    bundle=root/'bundle';manifest=setup.verify_bundle(bundle)
-    if digest(read(bundle/'bundle.json'))!=job['bundle_sha256']:raise ValueError('Historical replacement bundle changed')
+    bundle=root/'bundle'
+    manifest_raw=read(bundle/'bundle.json')
+    if digest(manifest_raw)!=job['bundle_sha256']:raise ValueError('Historical replacement bundle changed')
+    # Verify the exact pinned manifest without reading a second copy.
+    manifest=setup.verify_bundle(bundle,historical_manifest=manifest_raw)
     if digest(read(root/'baseline/baseline.json'))!=job['baseline_sha256']:raise ValueError('Historical replacement baseline changed')
     # Historical Root bytes can have legitimately advanced since completion.
     # Authenticate that backup without comparing it to today's installed Root.

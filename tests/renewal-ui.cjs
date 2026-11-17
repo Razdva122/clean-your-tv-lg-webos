@@ -47,7 +47,8 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8876';
                   notes: ''
                 };
             } else if (uri === 'luna://com.local.nativehome.service/status') {
-              if (!helperStatusAvailable) r.returnValue = false;
+              if (!helperStatusAvailable)
+                r = { returnValue: false, errorCode: -1 };
               else {
                 r.blocked = helperStopped;
                 r.running = !helperStopped;
@@ -157,23 +158,51 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8876';
       await page.reload();
       await page.locator('#tiles .item').first().waitFor();
     }
-    await page.evaluate(() => {
-      helperStopped = true;
-      helperStatusAvailable = false;
-    });
-    await page.locator('#btnSettings').click();
-    await page.locator('[data-category=home]').click();
-    await page
-      .getByText('Could not check which screen the Home button opens.')
-      .waitFor();
-    assert(await page.locator('#homeRoutingStart').isHidden());
-    assert(await page.locator('#homeRoutingRetry').isVisible());
-    await page.locator('[data-category=screensaver]').click();
-    await page.getByText('Could not check screensaver availability.').waitFor();
-    assert(await page.locator('#screensaverStartHelper').isHidden());
-    assert(await page.locator('#screensaverStatusRetry').isVisible());
-    await page.reload();
-    await page.locator('#tiles .item').first().waitFor();
+    for (const category of ['home', 'screensaver']) {
+      // C3 after Restore: the broker rejects both requests and the native
+      // Helper status endpoint replies with an error instead of a stop flag.
+      await page.evaluate(() => {
+        helperStopped = true;
+        helperStatusAvailable = false;
+      });
+      await page.locator('#btnSettings').click();
+      await page.locator('[data-category=' + category + ']').click();
+      const pane = page.locator('#settings-pane-' + category);
+      await pane
+        .getByText(
+          category === 'home'
+            ? 'Could not check which screen the Home button opens.'
+            : 'Could not check screensaver availability.'
+        )
+        .waitFor({ timeout: 6000 });
+      const start = pane.getByRole('button', { name: 'Start Helper' });
+      await start.waitFor({ timeout: 3000 });
+      assert(await pane.getByRole('button', { name: 'Try again' }).isVisible());
+      assert(!(await pane.getByText('Home Helper is stopped.').isVisible()));
+      assert(await page.evaluate(() => !helperStarting && helperStopped));
+      await start.click();
+      const dialog = page.locator('#homeConfirmation');
+      await dialog.getByRole('button', { name: 'Cancel' }).click();
+      assert(await page.evaluate(() => !helperStarting && helperStopped));
+      await start.click();
+      await dialog.getByRole('button', { name: 'Start Helper' }).click();
+      await page.waitForFunction(() => !helperStopped);
+      await page.waitForFunction(() => {
+        const toggle = document.querySelector('#homeRoutingToggle');
+        return (
+          toggle.getAttribute('data-home-state') === 'known' &&
+          toggle.getAttribute('aria-checked') === 'true'
+        );
+      });
+      if (category === 'home')
+        await page.locator('[data-category=screensaver]').click();
+      await page.waitForFunction(
+        () => !document.getElementById('screensaverEnabled').disabled
+      );
+      assert(await start.isHidden());
+      await page.reload();
+      await page.locator('#tiles .item').first().waitFor();
+    }
     await page.locator('#btnSettings').click();
     await page.locator('[data-category=developer]').click();
     await page

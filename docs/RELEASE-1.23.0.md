@@ -5,9 +5,12 @@
   **Recovery → Reinstall System Updater** repairs the installed updater version
   while keeping Home and its settings. Existing Root installations with
   System Updater 1.2.10 can use the [one-time computer
-  replacement](UPDATES.md#update-root-from-v1220) (#675).
+  replacement](UPDATES.md#update-root-from-v1220). Replacement verifies retained
+  records from the earlier supervisor format (#675).
 - No-root Home and Screensaver settings can explain a stopped Home Helper
-  and offer **Start Helper**. The settings check again after launch (#682).
+  and offer **Start Helper**. If the status is unavailable, you can retry the
+  check or explicitly confirm a start. The settings check again after launch
+  (#682).
 - The screensaver package has its own landscape icon (#681).
 - Root Beta can repair an eligible interrupted recovery-service setup in place
   after confirmation. Setup does not activate Home as part of the repair.

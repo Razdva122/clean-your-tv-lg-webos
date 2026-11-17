@@ -404,7 +404,13 @@
     var editable = canEdit();
     var startHelper = host.querySelector('#screensaverStartHelper');
     var retry = host.querySelector('#screensaverStatusRetry');
-    startHelper.hidden = available || !helperStopped;
+    startHelper.hidden =
+      rootEdition() ||
+      available ||
+      !(
+        helperStopped === true ||
+        (statusUnconfirmed && helperStopped === null)
+      );
     startHelper.disabled = startHelper.hidden || helperStarting;
     retry.hidden =
       rootEdition() ||

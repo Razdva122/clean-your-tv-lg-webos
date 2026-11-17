@@ -75,6 +75,25 @@ A product-key change without valid bootstrap signing configuration fails closed.
 Private keys never belong in Git or on the TV. Retain an offline root and a
 bounded delegation route; this does not recover from compromise of all trust.
 
+## Sign a pinned candidate catalog
+
+After the complete candidate succeeds and the release plan pins its run and
+attempt, dispatch the protected signing workflow on `release/next`:
+
+```sh
+gh workflow run publish-release.yml --ref release/next \
+  -f publish=false -f system_candidate_qa=true \
+  -f tag=vX.Y.Z -f candidate_build_run=RUN_ID
+```
+
+The Actions artifact `signed-system-candidate-RUN_ID-ATTEMPT` contains the
+catalog, four edition/graphics manifests, exact packages, engine archive and
+build provenance. It stays separate from the public release feed. Verify it
+against the pinned bootstrap public key. The TV's ordinary online updater
+still requests the published channel, so signing the artifact establishes
+signature and package evidence. Live delivery also needs a supported way to
+present the unpublished assets and a compatible starting engine.
+
 ## Verification scope
 
 Keep the [original acceptance case IDs](../superpowers/plans/2026-11-16-updater-self-update.md#9-release-acceptance-and-future-publication-gate).
