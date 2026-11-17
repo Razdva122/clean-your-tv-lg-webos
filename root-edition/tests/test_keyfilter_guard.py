@@ -115,7 +115,7 @@ class KeyfilterGuardTests(unittest.TestCase):
         out, err = p.communicate(timeout=7)
         self.assertEqual(err, '')
         return json.loads(out)
-    def test_stock_identity_accepts_only_immutable_uid1001_home(self):
+    def test_stock_identity_requires_immutable_home_for_nonroot_owners(self):
         # Interpose only kernel observations; execute the guardian's actual
         # identity check against the real configured file, including its inode.
         with (self.root/'home').open('wb') as stream: stream.truncate(4530960)
@@ -177,7 +177,7 @@ int main(void) {
             '-DCYTV_KEYFILTER_FIXTURE',f'-DFIXTURE_ROOT="{self.root}"',
             str(harness),'-o',str(binary)],check=True,capture_output=True)
         result=subprocess.run([str(binary)],check=True,capture_output=True,text=True)
-        self.assertEqual(result.stdout.strip(),'1 0 0 0 0')
+        self.assertEqual(result.stdout.strip(),'1 0 0 1 0')
 
     def test_selfcheck_and_stock_contract(self):
         s, rc = self.run_guard('--selfcheck'); self.assertEqual(rc, 0)

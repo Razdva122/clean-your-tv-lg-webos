@@ -95,35 +95,35 @@ class PackageDataTests(unittest.TestCase):
                 raw=self.read_as_root(self.metadata,{self.metadata.parent.parent:owner})
                 self.assertEqual(json.loads(raw)['id'],self.owner)
 
-    def test_verified_services_container_uid501_accepts_only_pinned_data(self):
+    def test_verified_sdk_containers_accept_any_owner_for_pinned_data(self):
         service=self.root/'usr/palm/services'/(self.owner+'.service')/'service.js'
         service.parent.mkdir(parents=True);service.parent.chmod(0o755)
         service.parent.parent.chmod(0o777);service.write_bytes(b'checked service data');service.chmod(0o644)
+        for path in (self.file,self.metadata,service):
+            for owner in (501,1001,4242):
+                with self.subTest(path=path,owner=owner):
+                    owners = dict.fromkeys((self.root,self.root/'usr',self.root/'usr/palm',path.parent.parent),owner)
+                    self.assertEqual(self.read_as_root(path,owners,verified=True),path.read_bytes())
+                    with self.assertRaises(ValueError):
+                        self.read_as_root(path,owners)
+
+    def test_verified_services_container_rejects_symlink(self):
+        service=self.root/'usr/palm/services'/(self.owner+'.service')/'service.js'
+        service.parent.mkdir(parents=True)
+        service.write_bytes(b'checked service data')
         container=service.parent.parent
-        self.assertEqual(self.read_as_root(service,{container:501},verified=True),service.read_bytes())
-        with self.assertRaises(ValueError):self.read_as_root(service,{container:501})
-        for attacked in (self.root,self.root/'usr',self.root/'usr/palm',service.parent,service):
-            with self.subTest(path=attacked),self.assertRaises(ValueError):
-                self.read_as_root(service,{container:501,attacked:501},verified=True)
-        for owner in (500,502,1000):
-            with self.subTest(owner=owner),self.assertRaises(ValueError):
-                self.read_as_root(service,{container:owner},verified=True)
         saved=container.with_name('services-saved');container.rename(saved);container.symlink_to(saved.name,target_is_directory=True)
         with self.assertRaises((ValueError,OSError)):
             self.read_as_root(service,{saved:501},verified=True)
 
-    def test_c2_uid1001_shared_containers_accept_only_independently_pinned_data(self):
-        service=self.root/'usr/palm/services'/(self.owner+'.service')/'service.js'
-        service.parent.mkdir(parents=True);service.parent.parent.chmod(0o777)
-        service.write_bytes(b'checked C2 service data');service.chmod(0o644)
-        for path in (self.metadata,service):
-            container=path.parent.parent
-            with self.subTest(path=path):
-                self.assertEqual(self.read_as_root(path,{container:1001},verified=True),path.read_bytes())
-                with self.assertRaises(ValueError):self.read_as_root(path,{container:1001})
-                for attacked in (self.root,self.root/'usr',self.root/'usr/palm',path.parent,path):
-                    with self.subTest(attacked=attacked),self.assertRaises(ValueError):
-                        self.read_as_root(path,{container:1001,attacked:1001},verified=True)
+    def test_verified_data_keeps_owner_checks_outside_shared_sdk_containers(self):
+        nested = self.file.parent / 'nested'
+        nested.mkdir()
+        path = nested / self.file.name
+        path.write_bytes(self.file.read_bytes())
+        for attacked in (self.root.parent,self.file.parent,nested,path):
+            with self.subTest(attacked=attacked),self.assertRaises(ValueError):
+                self.read_as_root(path,{attacked:1001},verified=True)
 
     def test_metadata_uid_exception_rejects_other_owners_and_every_noncontainer_path(self):
         container=self.metadata.parent.parent

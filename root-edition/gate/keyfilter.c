@@ -267,7 +267,7 @@ static int stock_identity(void) {
   if (ok && s.st_uid != TRUST_UID) {
     struct statfs fs;
     struct statvfs vfs;
-    ok = s.st_uid == 1001 && !fstatfs(fd, &fs) && !fstatvfs(fd, &vfs) &&
+    ok = !fstatfs(fd, &fs) && !fstatvfs(fd, &vfs) &&
          (vfs.f_flag & ST_RDONLY);
 #ifdef __linux__
     ok = ok && fs.f_type == 0x73717368;

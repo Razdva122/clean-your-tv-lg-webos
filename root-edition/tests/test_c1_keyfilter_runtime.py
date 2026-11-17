@@ -63,7 +63,7 @@ class RuntimeTests(unittest.TestCase):
             'restore_check': 'native-restore-unverified', 'native_reason': 'retirement_failed'})
         self.assertNotIn('PRIVATE', output.getvalue())
 
-    def test_large_stock_home_is_read_with_immutable_uid1001_proof(self):
+    def test_large_stock_home_is_read_with_immutable_nonroot_proof(self):
         import hashlib
         import stat
         import struct
@@ -75,7 +75,7 @@ class RuntimeTests(unittest.TestCase):
         original=os.fstat
         def attributes(fd):
             observed=original(fd)
-            return SimpleNamespace(st_uid=1001,st_nlink=observed.st_nlink,
+            return SimpleNamespace(st_uid=1002,st_nlink=observed.st_nlink,
                 st_mode=observed.st_mode,st_size=observed.st_size,st_dev=observed.st_dev,st_ino=observed.st_ino,st_mtime_ns=observed.st_mtime_ns,st_ctime_ns=observed.st_ctime_ns)
         with patch.object(self.k.legacy,'TARGET',target), patch.object(self.k.legacy,'trusted_directory'), patch.object(os,'fstat',side_effect=attributes), patch.object(os,'fstatvfs',create=True,return_value=SimpleNamespace(f_flag=1)), patch.object(self.k.legacy.subprocess,'run',return_value=SimpleNamespace(stdout=b'73717368\n',returncode=0)) as filesystem:
             self.assertEqual(hashlib.sha256(self.k.legacy.native_home()).hexdigest(),hashlib.sha256(content).hexdigest())
@@ -96,7 +96,7 @@ class RuntimeTests(unittest.TestCase):
                     filesystem.return_value=SimpleNamespace(stdout=magic,returncode=0)
                     with self.assertRaises(ValueError): self.k.legacy.native_home()
             filesystem.return_value=SimpleNamespace(stdout=b'73717368\n',returncode=0)
-            for change in (dict(st_uid=1002),dict(st_nlink=2),dict(st_mode=stat.S_IFREG|0o777),dict(st_mode=stat.S_IFREG|0o4755),dict(st_size=16777217)):
+            for change in (dict(st_nlink=2),dict(st_mode=stat.S_IFREG|0o777),dict(st_mode=stat.S_IFREG|0o4755),dict(st_size=16777217)):
                 value=dict(st_uid=1001,st_nlink=1,st_mode=stat.S_IFREG|0o755,st_size=4530960);value.update(change)
                 with self.subTest(change=change), patch.object(os,'fstat',return_value=SimpleNamespace(**value)):
                     with self.assertRaises(ValueError): self.k.legacy.native_home()

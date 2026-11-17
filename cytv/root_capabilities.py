@@ -253,16 +253,16 @@ def native_header_predicate(result, info):
     if not isinstance(result, str) or len(result) > 2048:
         return 'invalid-output'
     metadata, _, headers = result.partition('\n')
-    meta = re.fullmatch(r'(0|1001) 1 ([0-7]{3,4}) ([0-9]{1,10})', metadata)
-    if not meta:
+    meta = re.fullmatch(r'(0|[1-9][0-9]{0,9}) 1 ([0-7]{3,4}) ([0-9]{1,10})', metadata)
+    if not meta or int(meta[1]) >= 2**32 - 1:
         return 'metadata-invalid'
     if not 52 <= int(meta[3]) <= 16*1024*1024:
         return 'size-out-of-range'
     mode = int(meta[2], 8)
     shell, separator, home = headers.partition('CYTV_HOME_ELF')
     home, filesystem_marker, filesystem = home.partition('CYTV_HOME_FS')
-    # UID 1001 is a vendor owner only on an immutable SquashFS image.
-    if meta[1] == '1001' and (not filesystem_marker or filesystem.strip() != '73717368'):
+    # SquashFS identifies non-root stock Home without relying on a particular UID.
+    if meta[1] != '0' and (not filesystem_marker or filesystem.strip() != '73717368'):
         return 'vendor-filesystem-unverified'
     if not mode & 0o111 or mode & 0o7022:
         if info is not None:

@@ -61,11 +61,10 @@ def native_home():
     with os.fdopen(fd, 'rb') as stream:
         info = os.fstat(fd)
         limit = 16 * 1024 * 1024
-        if (not stat.S_ISREG(info.st_mode) or info.st_uid not in (0, 1001)
-                or info.st_nlink != 1 or info.st_mode & 0o7022
+        if (not stat.S_ISREG(info.st_mode) or info.st_nlink != 1 or info.st_mode & 0o7022
                 or not info.st_mode & 0o111 or not 52 <= info.st_size <= limit):
             raise ValueError('Unsafe stock Home executable')
-        if info.st_uid == 1001:
+        if info.st_uid != 0:
             # Inspect the inherited descriptor, not a separately resolved path.
             # SquashFS is immutable; a read-only bind of a mutable file is not.
             try:
