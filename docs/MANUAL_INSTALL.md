@@ -83,8 +83,8 @@ Home IPK's name follows `launcher/appinfo.json`.
 
 For account and session setup, see [LG's official guide](https://webostv.developer.lge.com/develop/getting-started/developer-mode-app).
 Monitor the official timer: Developer Mode expiry can lead to removal of
-sideloaded apps. Built-in Beta renewal is off by default, and actual renewal
-has not yet been validated. [Beta details](DEVELOPER-MODE-BETA.md).
+sideloaded apps. Auto-renewal is off by default. Check the official timer to confirm an
+extension. [Auto-renewal details](DEVELOPER-MODE-BETA.md).
 
 ## 3. No-root: tools and two separate pairings
 

@@ -24,7 +24,7 @@ Párovací klíče a údaje o připojení uchovávejte v soukromí. Použijte zv
 
 Otevřete aplikaci Developer Mode od LG, zkontrolujte zbývající čas relace a prodlužte ji, když je dostupné požadované připojení. Řiďte se aktuálními pokyny LG místo pevného počtu hodin uvedeného ve starém článku. Pokus o prodloužení není důkazem úspěchu: poté zkontrolujte zobrazený zbývající čas.
 
-Clean Your TV nabízí volitelné automatické prodlužování jako funkci beta, která je ve výchozím nastavení vypnutá. Pokud ji zapnete, dál kontrolujte skutečný stav Developer Mode. Funkce neruší požadavky LG na relaci a nezajistí trvalou platnost vypnutého režimu.
+Clean Your TV nabízí volitelné automatické prodlužování, které je ve výchozím nastavení vypnuté. Pokud ho zapnete, dál kontrolujte skutečný stav Developer Mode. Funkce neruší požadavky LG na relaci a nezajistí trvalou platnost vypnutého režimu.
 
 ## Co když launcher zmizí nebo Home otevírá LG Home?
 

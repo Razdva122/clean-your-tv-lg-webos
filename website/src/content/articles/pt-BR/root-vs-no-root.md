@@ -12,7 +12,7 @@ Escolha No-root se sua TV LG usa o Developer Mode. Escolha Root somente se ela j
 
 O No-root usa LG Developer Mode, Key Server e pareamento local durante a configuração. O Home Helper funciona na TV e controla o botão Home quando o dispositivo e o firmware permitem. Você não precisa deixar um computador ou celular ligado para o uso diário.
 
-O requisito contínuo é o Developer Mode: renove a sessão antes de expirar. A LG avisa que os aplicativos instalados pelo Developer Mode podem ser removidos quando ele é desativado ou a sessão expira. A renovação automática do projeto é um recurso beta opcional, desativado por padrão; não a considere uma garantia. Leia o [guia do Developer Mode](/clean-your-tv-lg-webos/pt-BR/articles/lg-developer-mode/) antes de depender dessa edição.
+O requisito contínuo é o Developer Mode: renove a sessão antes de expirar. A LG avisa que os aplicativos instalados pelo Developer Mode podem ser removidos quando ele é desativado ou a sessão expira. A renovação automática do projeto é um recurso opcional, desativado por padrão; não a considere uma garantia. Leia o [guia do Developer Mode](/clean-your-tv-lg-webos/pt-BR/articles/lg-developer-mode/) antes de depender dessa edição.
 
 ## O que o Root exige?
 

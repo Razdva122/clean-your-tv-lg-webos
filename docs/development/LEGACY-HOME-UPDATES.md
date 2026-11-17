@@ -17,7 +17,7 @@ Available in v0.8.1. Published signed Home update and rollback were verified on 
 
 Home Settings → Software updates → Check for updates shows installed and available Home versions. The separate **Home Updater** app owns the backup and recovery journal. Installation requires root, Homebrew Channel and the scoped LS2 permission setup below. The no-root launcher remains supported with computer-assisted updates; checking releases through this updater also depends on access to Homebrew's metadata API and is not promised on an unrooted TV.
 
-Developer Mode renewal Beta is paused automatically before installation and its prior preference is restored after verified success or rollback. Users do not have to disable it manually. Helper code, emergency-stop markers, autostart configuration and system Home profiles are not changed.
+Developer Mode auto-renewal is paused automatically before installation and its prior preference is restored after verified success or rollback. Users do not have to disable it manually. Helper code, emergency-stop markers, autostart configuration and system Home profiles are not changed.
 
 The first upgrade to Home 1.2.0 requires a personalized package using the existing sync/build flow. Subsequent in-app updates require an installed Home version at least 1.2.0 and a signed matching previous package. Never install an empty generic package over a pre-1.2.0 installation expecting migration.
 

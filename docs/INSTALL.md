@@ -61,8 +61,8 @@ Local Network access when asked.
 Use the TV code, not your LG password. If the code is missing, enable Key Server.
 Approve the separate control-pairing request on the TV when it appears.
 Before the Developer Mode timer expires, open the app and press **EXTEND** while
-online. Expiry can remove sideloaded apps. Auto-renewal is optional, off by default
-and [Beta](DEVELOPER-MODE-BETA.md); keep checking the official timer.
+online. Expiry can remove sideloaded apps. [Auto-renewal](DEVELOPER-MODE-BETA.md) is optional and off by default.
+Keep checking the official timer.
 
 The installer checks Helper's TV Node.js requirement before changing packages.
 See [LG's instructions](https://webostv.developer.lge.com/develop/getting-started/developer-mode-app).
@@ -117,7 +117,7 @@ Before choosing a theme, use **Debloat** to select which LG ads, recommendations
 
 After successful installation, choose Classic, Liquid Glass or Ribbon and turn Home weather on or off. Ribbon does not support weather; Liquid Glass uses the compact format. Weather can find an approximate city through your internet connection; change it later in Home settings.
 
-No-root with Developer Mode offers optional auto-renewal (Beta); keep monitoring the official timer. No-root through existing root SSH does not use this option. Root offers LG firmware update blocking through Homebrew Channel, including security updates; a real restart through Homebrew Channel is required. This is separate from CYTV updates.
+No-root with Developer Mode offers optional auto-renewal; keep monitoring the official timer. No-root through existing root SSH does not use this option. Root offers LG firmware update blocking through Homebrew Channel, including security updates; a real restart through Homebrew Channel is required. This is separate from CYTV updates.
 
 Choose Keep current settings to skip customization. The mode switch shows its current On/Off state. Unchanged mode settings are kept. Root reinstallation still removes saved CYTV preferences as described above. Check the chosen appearance on the TV; an optional setting reported as unconfirmed needs checking in Home settings before retrying.
 

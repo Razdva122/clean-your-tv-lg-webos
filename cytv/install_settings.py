@@ -9,7 +9,8 @@ TITLE = 'Set up your Clean Your TV'
 PROMPT = 'Clean Your TV settings: '
 THEMES = (('classic', 'Classic'), ('liquid-glass', 'Liquid Glass'), ('ribbon', 'Ribbon'))
 WEATHER_HELP = 'Weather uses an approximate city from your internet connection. Change the city later in Home settings.'
-RENEWAL_HELP = 'Auto-renewal is experimental. Keep checking the timer in the official Developer Mode app.'
+RENEWAL_TITLE = 'Developer Mode auto-renewal'
+RENEWAL_HELP = 'Keep checking the timer in the official Developer Mode app.'
 FIRMWARE_HELP = 'Requires Homebrew Channel with root. Also blocks firmware security updates. A real TV restart is required; standby is not enough.'
 
 
@@ -105,7 +106,7 @@ def collect(profile, ask, write, current=None):
             result['block_updates'] = enabled
     elif profile.get('connection') != 'root-ssh':
         write(RENEWAL_HELP)
-        enabled = service_choice('Developer Mode auto-renewal (Beta)', ask, write)
+        enabled = service_choice(RENEWAL_TITLE, ask, write)
         if enabled is not None:
             result['renewal'] = enabled
     return validate(result, profile)
@@ -190,6 +191,6 @@ def apply_services(installer, value, write):
             # Never retry an uncertain write or misreport core installation as failed.
             # Raw API errors can contain device details and stay out of progress output.
             results[key] = 'unconfirmed'
-            name = tr('Developer Mode auto-renewal (Beta)' if key == 'renewal' else 'Block LG firmware updates')
+            name = tr(RENEWAL_TITLE if key == 'renewal' else 'Block LG firmware updates')
             write(tr('Optional setting unconfirmed: {setting}').format(setting=name))
             write('Check this setting in Home settings before trying again. Installation of Clean Your TV completed separately.')

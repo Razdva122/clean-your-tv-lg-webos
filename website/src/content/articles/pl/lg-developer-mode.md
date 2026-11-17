@@ -24,7 +24,7 @@ Zachowaj klucze parowania i dane połączenia w tajemnicy. Korzystaj z opublikow
 
 Otwórz aplikację Developer Mode firmy LG, sprawdź pozostały czas sesji i przedłuż ją, gdy dostępne jest wymagane połączenie. Kieruj się aktualnymi instrukcjami LG, zamiast polegać na stałej liczbie godzin podanej w starym artykule. Sama próba przedłużenia nie potwierdza sukcesu: po niej sprawdź wyświetlany pozostały czas.
 
-Clean Your TV oferuje opcjonalne automatyczne przedłużanie jako funkcję beta, domyślnie wyłączoną. Jeśli ją włączysz, nadal sprawdzaj rzeczywisty stan Developer Mode. Funkcja nie znosi wymagań LG dotyczących sesji i nie utrwala wyłączonego trybu.
+Clean Your TV oferuje opcjonalne automatyczne przedłużanie, domyślnie wyłączone. Jeśli je włączysz, nadal sprawdzaj rzeczywisty stan Developer Mode. Funkcja nie znosi wymagań LG dotyczących sesji i nie utrwala wyłączonego trybu.
 
 ## Co zrobić, gdy launcher zniknie lub Home otwiera LG Home?
 

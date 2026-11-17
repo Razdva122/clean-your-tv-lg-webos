@@ -1,10 +1,10 @@
-name: Developer Mode auto-renewal Beta feedback
-description: Report confirmed renewal or a problem with the opt-in Beta.
-title: "[Renewal Beta] "
+name: Developer Mode auto-renewal feedback
+description: Report confirmed renewal or a problem with automatic renewal.
+title: "[Renewal] "
 body:
   - type: markdown
     attributes:
-      value: "Thank you for testing. Keep monitoring the official Developer Mode timer. Never share account credentials, session tokens, token files, or authenticated request URLs."
+      value: "Check the timer in the official Developer Mode app. Never share account credentials, session tokens, token files, or authenticated request URLs."
   - type: input
     id: model
     attributes:

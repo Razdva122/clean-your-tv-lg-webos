@@ -114,7 +114,7 @@ interface and 4K Dolby Vision playback on compatible TVs.
 
 - Test results are specific to devices and versions. Read [compatibility](docs/COMPATIBILITY.md); a successful install alone does not prove daily reliability.
 - The original **1.3.0 Root updater cannot install 1.4.0 through OTA**. Keep recovery records and read [the update limitations](docs/UPDATES.md) before attempting that transition.
-- No-root needs an active Developer Mode session. Automatic renewal is optional Beta; continue monitoring LG's official timer.
+- No-root needs an active Developer Mode session. Automatic renewal is optional; continue monitoring LG's official timer.
 - The on-TV **Homebrew Installer is unreleased**. Use the published computer/Android installer; [candidate details](homebrew/README.md) are for coordinated testing.
 
 <a id="languages"></a>

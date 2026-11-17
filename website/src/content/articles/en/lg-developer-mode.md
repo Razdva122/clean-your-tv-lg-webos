@@ -24,7 +24,7 @@ Keep pairing keys and connection details private. Use the published installer fr
 
 Open LG's Developer Mode app, check the remaining session time and extend it while the required connection is available. Follow LG's current instructions rather than relying on a fixed number of hours quoted in an old article. A renewal attempt is not evidence of success: check the displayed remaining time afterwards.
 
-Clean Your TV offers optional automatic renewal as a beta feature, disabled by default. If you enable it, keep checking the actual Developer Mode state. It does not remove LG's session requirements or make a disabled mode permanent.
+Clean Your TV offers optional automatic renewal, disabled by default. If you enable it, keep checking the actual Developer Mode state. It does not remove LG's session requirements or make a disabled mode permanent.
 
 ## What if the launcher disappears or Home opens LG Home?
 
