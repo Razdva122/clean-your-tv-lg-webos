@@ -56,6 +56,7 @@ RESULTS = {
     'already': ('✓', '#b4ada4', 'Already in the requested state'),
     'verified': ('✓', '#90cfad', 'Successfully applied and verified'),
     'failed': ('×', '#ff8580', 'Could not change the setting'),
+    'write-rejected': ('×', '#ff8580', 'The TV rejected the request to change this setting.'),
     'firmware-blocked': ('×', '#ff8580', 'This TV firmware blocks changing this setting in No-root.'),
     'unverified': ('✓', '#b4ada4', 'Command sent. The result could not be verified.'),
 }
@@ -354,12 +355,13 @@ def run(installer, ask, write, *, diagnostic=None, maintenance=False):
     except (OSError, ValueError):
         write.error('Could not apply Debloat settings.')
         return
-    # The factory SSAP allowlist for this model and firmware excludes all Debloat keys (#610).
-    if (not installer.remote.root and installer.tv_info.get('modelName') == '55UK7500PSA'
-            and installer.tv_info.get('firmwareVersion') == '05.50.70'):
+    if not installer.remote.root:
+        # The factory SSAP allowlist on this model and firmware excludes all Debloat keys (#610).
+        known_firmware_block = (installer.tv_info.get('modelName') == '55UK7500PSA'
+                                and installer.tv_info.get('firmwareVersion') == '05.50.70')
         for key in results:
             if events[key] == 'write-rejected':
-                results[key] = 'firmware-blocked'
+                results[key] = 'firmware-blocked' if known_firmware_block else 'write-rejected'
     if write.frontend == 'desktop':
         write.debloat_results(results)
         prompts.answer(ask, REVIEW)
