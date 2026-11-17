@@ -33,6 +33,9 @@ def removal_summary(pending):
     result = {'state':'cleanup-in-progress',
             'stage':stage, 'reason':reason if reason in REMOVAL_REASONS else 'removal-requested',
             'original_outcome':outcome if outcome in ('complete', 'recovery_required') else 'unknown'}
+    proof = pending.get('result')
+    if stage == 'verified-clean' and type(proof) is dict and proof.get('empty_helper_dirs_retained') is True:
+        result['empty_helper_dirs_retained'] = True
     triggers = pending.get('cleanup_restart_triggers')
     if stage == 'restart-required' and type(triggers) is list:
         known = {item for item in triggers if type(item) is str and item in RESTART_TRIGGERS}

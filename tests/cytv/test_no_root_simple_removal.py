@@ -2181,6 +2181,110 @@ class SimpleRemoval(unittest.TestCase):
         self.assertEqual(foreign.read_text(), 'preserve')
         self.assertIsNone(self.store.pending(self.profile))
 
+    @unittest.skipIf(getattr(os, 'getuid', lambda: -1)() == 0, 'unprivileged SDK model')
+    def test_terminal_helper_can_leave_a_tree_containing_only_directories(self):
+        (self.root / 'proc').mkdir()
+        helper = self.root / 'developer/apps/usr/palm/applications/com.local.nativehome'
+        (helper / 'state' / 'nested').mkdir(parents=True)
+        (helper / '.extra').mkdir()
+        foreign = self.own_file('unrelated/keep.json', 'preserve')
+        self.store.begin(self.profile, 'uninstall')
+        self.store.request_clean_removal(self.profile)
+        self.store.checkpoint(self.profile, stage='private-cleanup', removals={self.cleanup.APPS[0]: 'terminal'})
+        helper.chmod(0o555)
+        self.addCleanup(lambda: helper.chmod(0o755) if helper.exists() else None)
+
+        self.assertEqual(self.remove(), {
+            'removed': True, 'verified_clean': True, 'empty_helper_dirs_retained': True,
+        })
+        self.assertTrue(helper.is_dir())
+        self.assertFalse(any(path.is_file() for path in helper.rglob('*')))
+        self.assertIn('Empty Helper directories were left on the TV.', self.progress)
+        self.assertIsNone(self.store.pending(self.profile))
+        self.assertFalse(self.vendor_removals())
+        self.assertEqual(foreign.read_text(), 'preserve')
+
+    @unittest.skipIf(getattr(os, 'getuid', lambda: -1)() == 0, 'unprivileged SDK model')
+    def test_file_returning_after_helper_sweep_blocks_completion(self):
+        (self.root / 'proc').mkdir()
+        helper = self.root / 'developer/apps/usr/palm/applications/com.local.nativehome'
+        child = helper / 'child'
+        child.mkdir(parents=True)
+        self.store.begin(self.profile, 'uninstall')
+        self.store.request_clean_removal(self.profile)
+        self.store.checkpoint(self.profile, stage='private-cleanup', removals={self.cleanup.APPS[0]: 'terminal'})
+        helper.chmod(0o555)
+        self.addCleanup(helper.chmod, 0o755)
+        original = self.cleanup._device
+        checked = False
+
+        def observe(installer, action, **options):
+            nonlocal checked
+            if action == 'inventory' and checked:
+                (child / 'returned').write_text('fixture')
+            reply = original(installer, action, **options)
+            if action == 'inventory' and reply.get('empty_helper_dirs_retained') is True:
+                checked = True
+            return reply
+
+        with patch.object(self.cleanup, '_device', side_effect=observe), self.assertRaises(UserError):
+            self.remove()
+        self.assertTrue((child / 'returned').is_file())
+        self.assertIsNotNone(self.store.pending(self.profile))
+        self.assertFalse(self.vendor_removals())
+
+    @unittest.skipIf(getattr(os, 'getuid', lambda: -1)() == 0, 'unprivileged SDK model')
+    def test_terminal_helper_directory_retention_requires_sam_absence(self):
+        app = self.cleanup.APPS[0]
+        (self.root / 'proc').mkdir()
+        helper = self.root / 'developer/apps/usr/palm/applications' / app
+        helper.mkdir(parents=True)
+        helper.parent.chmod(0o555)
+        self.addCleanup(helper.parent.chmod, 0o755)
+        self.remote.apps.add(app)
+        self.remote.sam[app] = {'returnValue': True, 'appInfo': {
+            'id': app, 'folderPath': '/media/developer/apps/usr/palm/applications/' + app,
+        }}
+
+        with self.assertRaises(UserError) as caught:
+            self.remove()
+        self.assertEqual(caught.exception.reason_code, 'cleanup-check-failed')
+        self.assertEqual(self.store.pending(self.profile)['removals'], {app: 'terminal'})
+        self.assertEqual(self.vendor_removals(), [app])
+
+    @unittest.skipIf(getattr(os, 'getuid', lambda: -1)() == 0, 'unprivileged SDK model')
+    def test_verified_helper_directory_retention_is_checked_again_on_retry(self):
+        (self.root / 'proc').mkdir()
+        helper = self.root / 'developer/apps/usr/palm/applications/com.local.nativehome'
+        (helper / 'extra').mkdir(parents=True)
+        self.store.begin(self.profile, 'uninstall')
+        self.store.request_clean_removal(self.profile)
+        self.store.checkpoint(self.profile, stage='private-cleanup', removals={self.cleanup.APPS[0]: 'terminal'})
+        helper.chmod(0o555)
+        self.addCleanup(helper.chmod, 0o755)
+        with patch.object(self.store, 'finish_clean_removal', side_effect=OSError('fixture interruption')):
+            with self.assertRaises(OSError):
+                self.remove()
+        pending = self.store.pending(self.profile)
+        self.assertEqual(pending['stage'], 'verified-clean')
+        self.assertTrue(pending['result']['empty_helper_dirs_retained'])
+
+        extra = helper / 'extra'
+        link = extra / 'unexpected'
+        foreign = self.own_file('unrelated/keep.json', 'preserve')
+        link.symlink_to(foreign)
+        with self.assertRaises(UserError):
+            self.remove()
+        self.assertTrue(link.is_symlink())
+        self.assertEqual(foreign.read_text(), 'preserve')
+        self.assertEqual(self.store.pending(self.profile)['stage'], 'verified-clean')
+        link.unlink()
+        self.assertTrue(self.remove()['verified_clean'])
+        from cytv import diagnostics
+        report = diagnostics.create_report(self.store, 'recover', self.profile, 'recover')
+        self.assertTrue(json.loads(report.read_text())['removal']['empty_helper_dirs_retained'])
+        self.assertFalse(self.vendor_removals())
+
     def test_sweep_permission_denial_without_a_scope_keeps_the_cleanup_error(self):
         with self.assertRaises(UserError) as caught:
             self.cleanup._check_access({
