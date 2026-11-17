@@ -1366,6 +1366,16 @@ else:
     def status(self):
         diagnostics.context.collect_node_version(self.remote, self.tv_info)
         pending=self.store.pending(self.profile)
+        if self.profile.get('root_variant') == 'node012-beta':
+            from .root_passive import collect_beta
+            observation = collect_beta(self.remote)
+            self.tv_info['root_beta_state'] = observation
+            if pending is None and observation.get('deployment_stage') == 'provision-finalize-starting':
+                stage = observation['deployment_stage']
+                result = {'device': {'deployment_stage': stage}, 'pending': None, 'reconciled': None,
+                          'reconciliation': None, 'can_resume_root_setup': False, 'deployment_stage': stage}
+                self.tv_info['status'] = result
+                return result
         if pending and pending.get('recovery_protocol')=='clean-removal-v1':
             return self.observe_recovery()
         try:
