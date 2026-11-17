@@ -389,13 +389,14 @@ class HistoricalReplacementTests(FlowFixture, unittest.TestCase):
         self.assertTrue(result['profile_storage_untouched'])
         self.assertTrue((root / 'completed-replacement.json').is_file())
 
-    def fresh_root_bootstrap(self):
+    def fresh_root_bootstrap(self, *, live_version="1.2.9", target_version="1.2.10"):
         import shutil
         historical, root = self.historical()
         shutil.rmtree(historical['archive'])
         shutil.rmtree(self.system)
+        self.make_bundle(self.bundle, version=live_version)
         self.make_system(self.system, self.bundle)
-        (self.appdir/'version').write_text('1.2.9')
+        (self.appdir/'version').write_text(live_version)
         raw = (self.bundle/'system-updater.ipk').read_bytes()
         files = self.setup.package_files(raw)
         for name, data in files.items():
@@ -404,7 +405,7 @@ class HistoricalReplacementTests(FlowFixture, unittest.TestCase):
         self.setup.installed_data = lambda path, *args: Path(path).read_bytes()
         active = Store(self.system, uid=os.getuid())
         binding = active.read('bootstrap-bundle')
-        active.write('installed-package', {'schema': 1, 'package': dict(binding['package'], version='1.2.9', local=True),
+        active.write('installed-package', {'schema': 1, 'package': dict(binding['package'], version=live_version, local=True),
                      'files': {name: self.ns['digest'](raw) for name, raw in files.items()}})
         active.write('installed-terminal', {'completed': True, 'event': {'id': self.ns['APP'], 'statusValue': 30,
                      'details': {'packageId': self.ns['APP'], 'client': 'com.webos.lunasend-123',
@@ -414,7 +415,7 @@ class HistoricalReplacementTests(FlowFixture, unittest.TestCase):
         self.store.write('operation', {'schema': 1, 'id': 'f'*32, 'owner': 'system-bootstrap',
                          'journal': 'bootstrap.json', 'stage': 'complete', 'terminal': True})
         bundle = self.bundle.parent/'new-bundle'
-        self.make_bundle(bundle, version='1.2.10')
+        self.make_bundle(bundle, version=target_version)
         return historical, root, active, bundle
 
     def test_completed_pre_engine_bundle_can_retire_after_fresh_bootstrap(self):
@@ -482,6 +483,53 @@ class HistoricalReplacementTests(FlowFixture, unittest.TestCase):
         (bundle / 'service.js').write_bytes(b'changed')
         with self.assertRaisesRegex(ValueError, 'Supervisor bundle hash mismatch'):
             verify_history()
+
+    def same_binding_without_archive(self):
+        history, root, active, target = self.fresh_root_bootstrap(
+            live_version='1.2.10', target_version='1.2.11')
+        historical_bundle = root / 'bundle'
+        manifest = self.make_bundle(historical_bundle, version='1.2.10')
+        binding = active.read('bootstrap-bundle')
+        self.assertEqual(binding['bundle'], manifest)
+        self.assertEqual(binding['package']['sha256'], manifest['files']['system-updater.ipk'])
+        history['bundle_sha256'] = self.ns['digest']((historical_bundle / 'bundle.json').read_bytes())
+        self.store.write('system-replacement', history)
+        self.assertFalse(Path(history['archive']).exists())
+        return history, root, active, target
+
+    def test_same_binding_can_retire_without_archive_after_verified_fresh_bootstrap(self):
+        history, root, _, target = self.same_binding_without_archive()
+        historical_bytes = (Path(self.store.root) / 'system-replacement.json').read_bytes()
+
+        result = self.run_replacement(target)
+
+        self.assertEqual(result['version'], '1.2.11')
+        self.assertEqual((root / 'completed-replacement.json').read_bytes(), historical_bytes)
+        self.assertFalse(Path(history['archive']).exists())
+        self.assertEqual(self.removals, 1)
+        self.assertEqual(self.profile.read_bytes(), b'personal layout')
+
+    def test_same_binding_without_archive_still_requires_fresh_bootstrap_proof(self):
+        history, root, active, target = self.same_binding_without_archive()
+        bootstrap = self.ownership.status()
+        self.store.write('operation', dict(bootstrap, owner='system-update',
+                                            journal='transaction.json', stage='rolled-back'))
+        with self.assertRaisesRegex(ValueError, 'requires terminal ownership'):
+            self.run_replacement(target)
+        self.store.write('operation', bootstrap)
+        archive = Path(history['archive'])
+        archive.write_bytes(b'invalid retained archive')
+        with self.assertRaisesRegex(ValueError, 'Original System archive proof mismatch'):
+            self.run_replacement(target)
+        archive.unlink()
+        active.write('installed-terminal', {'completed': False})
+        with self.assertRaisesRegex(ValueError, 'Completed Root supervisor bootstrap evidence required'):
+            self.run_replacement(target)
+        self.assertEqual(self.store.read('system-replacement'), history)
+        self.assertEqual(self.ownership.status(), bootstrap)
+        self.assertFalse((root / 'completed-replacement.json').exists())
+        self.assertEqual(self.removals, 0)
+        self.assertNotIn('disable', self.calls)
 
     def test_same_replacement_bundle_is_eligible_after_fresh_published_bootstrap(self):
         history, root, _, bundle = self.fresh_root_bootstrap()
