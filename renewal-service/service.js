@@ -88,7 +88,7 @@ manager = require('./manager')({
     return call('luna://com.palm.activitymanager/create', {
       activity: {
         name: activityName,
-        description: 'Opt-in Developer Mode renewal Beta',
+        description: 'Opt-in Developer Mode renewal',
         type: { foreground: true, persist: true },
         schedule: { interval: '1h' },
         callback: {
@@ -110,7 +110,6 @@ manager = require('./manager')({
 function respond(m, state) {
   m.respond({
     returnValue: true,
-    beta: true,
     version: require('./package.json').version,
     state: state
   });

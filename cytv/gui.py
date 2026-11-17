@@ -1107,7 +1107,7 @@ class Wizard(QMainWindow):
         switches = {}
         current = self.install_settings_current
         feature = ('block_updates', 'Block LG firmware updates', 'We recommend restarting the TV after applying.') if profile['edition'] == 'root' else (
-            ('renewal', 'Developer Mode auto-renewal (Beta)', 'Beta: monitor the official Developer Mode timer.')
+            ('renewal', settings.RENEWAL_TITLE, settings.RENEWAL_HELP)
             if profile.get('connection') != 'root-ssh' else None)
         if feature:
             fields.addSpacing(8)

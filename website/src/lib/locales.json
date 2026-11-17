@@ -16,7 +16,7 @@
       "Choose a theme that feels like home",
       "Use your TV remote"
     ],
-    "noRoot": "No-root uses LG Developer Mode and Home Helper. Keep the Developer Mode session active; expiry can remove sideloaded apps. Automatic renewal is optional Beta and off by default.",
+    "noRoot": "No-root uses LG Developer Mode and Home Helper. Keep the Developer Mode session active; expiry can remove sideloaded apps. Automatic renewal is optional and off by default.",
     "root": "Root uses existing root access and compatible TV services. The installer does not root your TV. Do not enable Developer Mode on an already rooted setup or run both Home controls together.",
     "compatibility": "Compatibility depends on the exact TV model, firmware, webOS version and remote. A successful installation does not prove Home routing, sound, standby or cold boot. Check the recorded tests and known limits before installing.",
     "themes": "Start with Classic, Liquid Glass or Ribbon, then explore community themes. Change themes in Settings → Themes on your TV. The browser demo lets you compare layouts; TV functions are simulated.",
@@ -54,7 +54,7 @@
       "Ein Theme nach deinem Geschmack",
       "Mit der TV-Fernbedienung bedienen"
     ],
-    "noRoot": "No-root nutzt LG Developer Mode und Home Helper. Developer Mode muss aktiv bleiben; nach Ablauf können seitlich installierte Apps entfernt werden. Automatische Verlängerung ist optionale Beta und standardmäßig aus.",
+    "noRoot": "No-root nutzt LG Developer Mode und Home Helper. Developer Mode muss aktiv bleiben; nach Ablauf können seitlich installierte Apps entfernt werden. Automatische Verlängerung ist optional und standardmäßig aus.",
     "root": "Root nutzt vorhandenen Root-Zugriff und kompatible TV-Dienste. Der Installer rootet den Fernseher nicht. Auf einem gerooteten Fernseher Developer Mode nicht aktivieren und beide Home-Steuerungen nicht gleichzeitig betreiben.",
     "compatibility": "Kompatibilität hängt von TV-Modell, Firmware, webOS-Version und Fernbedienung ab. Eine erfolgreiche Installation bestätigt weder Home-Steuerung noch Ton, Bereitschaft oder Kaltstart. Vorher dokumentierte Tests und Grenzen prüfen.",
     "themes": "Mit Classic, Liquid Glass oder Ribbon beginnen und Community-Themes entdecken. Am TV unter Einstellungen → Themes wechseln. Die Browser-Demo zeigt die Layouts; TV-Funktionen werden simuliert.",
@@ -92,7 +92,7 @@
       "Elige un tema a tu gusto",
       "Usa el mando del televisor"
     ],
-    "noRoot": "No-root utiliza LG Developer Mode y Home Helper. Mantén activa la sesión: al caducar pueden eliminarse las apps instaladas fuera de la tienda. La renovación automática es Beta opcional y está desactivada por defecto.",
+    "noRoot": "No-root utiliza LG Developer Mode y Home Helper. Mantén activa la sesión: al caducar pueden eliminarse las apps instaladas fuera de la tienda. La renovación automática es opcional y está desactivada por defecto.",
     "root": "Root utiliza acceso root existente y servicios compatibles del televisor. El instalador no obtiene root. No actives Developer Mode sobre una instalación con root ni utilices ambos controles de Home a la vez.",
     "compatibility": "La compatibilidad depende del modelo exacto, firmware, versión de webOS y mando. Una instalación correcta no verifica Home, sonido, suspensión ni arranque en frío. Consulta las pruebas y limitaciones antes de instalar.",
     "themes": "Empieza con Classic, Liquid Glass o Ribbon y explora temas de la comunidad. Cámbialos en Ajustes → Temas en el televisor. Compara diseños en la demo; las funciones del televisor se simulan.",
@@ -130,7 +130,7 @@
       "Escolha um tema com a sua cara",
       "Use o controle da TV"
     ],
-    "noRoot": "No-root usa LG Developer Mode e Home Helper. Mantenha a sessão ativa: ao expirar, apps instalados fora da loja podem ser removidos. A renovação automática é Beta opcional e vem desativada.",
+    "noRoot": "No-root usa LG Developer Mode e Home Helper. Mantenha a sessão ativa: ao expirar, apps instalados fora da loja podem ser removidos. A renovação automática é opcional e vem desativada.",
     "root": "Root usa acesso root já existente e serviços compatíveis da TV. O instalador não faz root. Não ative Developer Mode em uma instalação com root nem use os dois controles de Home ao mesmo tempo.",
     "compatibility": "A compatibilidade depende do modelo exato, firmware, versão do webOS e controle. Instalar com sucesso não comprova Home, som, espera ou inicialização a frio. Consulte os testes e limites antes de instalar.",
     "themes": "Comece com Classic, Liquid Glass ou Ribbon e explore temas da comunidade. Troque em Configurações → Temas na TV. Compare os layouts na demonstração; as funções da TV são simuladas.",
@@ -168,7 +168,7 @@
       "Un thème à votre goût",
       "Utilisez la télécommande du téléviseur"
     ],
-    "noRoot": "No-root utilise LG Developer Mode et Home Helper. Gardez la session active : son expiration peut supprimer les applications installées hors boutique. Le renouvellement automatique est une Beta facultative, désactivée par défaut.",
+    "noRoot": "No-root utilise LG Developer Mode et Home Helper. Gardez la session active : son expiration peut supprimer les applications installées hors boutique. Le renouvellement automatique est facultatif, désactivé par défaut.",
     "root": "Root utilise un accès root existant et des services TV compatibles. L’installateur ne roote pas le téléviseur. N’activez pas Developer Mode sur une installation root et n’utilisez pas les deux contrôles Home simultanément.",
     "compatibility": "La compatibilité dépend du modèle exact, du firmware, de la version de webOS et de la télécommande. Une installation réussie ne valide pas Home, le son, la veille ou le démarrage à froid. Consultez les tests et limites avant l’installation.",
     "themes": "Commencez avec Classic, Liquid Glass ou Ribbon, puis découvrez les thèmes communautaires. Changez-les dans Paramètres → Thèmes sur le téléviseur. Comparez les dispositions dans la démo ; les fonctions TV sont simulées.",
@@ -206,7 +206,7 @@
       "Scegli un tema che ti somiglia",
       "Usa il telecomando della TV"
     ],
-    "noRoot": "No-root usa LG Developer Mode e Home Helper. Mantieni attiva la sessione: alla scadenza le app installate fuori dallo store possono essere rimosse. Il rinnovo automatico è Beta opzionale e disattivato per impostazione predefinita.",
+    "noRoot": "No-root usa LG Developer Mode e Home Helper. Mantieni attiva la sessione: alla scadenza le app installate fuori dallo store possono essere rimosse. Il rinnovo automatico è opzionale e disattivato per impostazione predefinita.",
     "root": "Root usa accesso root già esistente e servizi TV compatibili. Il programma di installazione non esegue il root. Non attivare Developer Mode su una TV con root e non usare entrambi i controlli Home contemporaneamente.",
     "compatibility": "La compatibilità dipende dal modello preciso, firmware, versione webOS e telecomando. Un’installazione riuscita non verifica Home, audio, standby o avvio a freddo. Consulta prove e limiti prima di installare.",
     "themes": "Inizia con Classic, Liquid Glass o Ribbon e scopri i temi della community. Cambiali in Impostazioni → Temi sulla TV. Confronta i layout nella demo; le funzioni TV sono simulate.",
@@ -237,7 +237,7 @@
       "마음에 드는 테마 선택",
       "TV 리모컨으로 조작"
     ],
-    "noRoot": "No-root는 LG Developer Mode와 Home Helper를 사용합니다. 세션을 활성 상태로 유지하세요. 만료되면 직접 설치한 앱이 삭제될 수 있습니다. 자동 갱신은 선택 사항인 Beta이며 기본적으로 꺼져 있습니다.",
+    "noRoot": "No-root는 LG Developer Mode와 Home Helper를 사용합니다. 세션을 활성 상태로 유지하세요. 만료되면 직접 설치한 앱이 삭제될 수 있습니다. 자동 갱신은 선택 사항이며 기본적으로 꺼져 있습니다.",
     "root": "Root는 기존 root 권한과 호환되는 TV 서비스를 사용합니다. 설치 프로그램이 root 권한을 얻어 주지는 않습니다. 이미 root 설정된 TV에서 Developer Mode를 켜거나 두 Home 제어를 함께 실행하지 마세요.",
     "compatibility": "호환성은 정확한 TV 모델, 펌웨어, webOS 버전과 리모컨에 따라 다릅니다. 설치 성공만으로 Home 전환, 소리, 대기 복귀나 콜드 부팅이 검증되지는 않습니다. 설치 전에 테스트 기록과 제한을 확인하세요.",
     "themes": "Classic, Liquid Glass, Ribbon으로 시작하고 커뮤니티 테마도 살펴보세요. TV의 설정 → 테마에서 변경할 수 있습니다. 브라우저 데모에서 레이아웃을 비교하세요. TV 기능은 시뮬레이션입니다.",
@@ -275,7 +275,7 @@
       "अपनी पसंद की थीम चुनें",
       "टीवी रिमोट से चलाएँ"
     ],
-    "noRoot": "No-root में LG Developer Mode और Home Helper का उपयोग होता है। सत्र चालू रखें; समय समाप्त होने पर बाहर से इंस्टॉल किए ऐप हट सकते हैं। अपने आप नवीनीकरण वैकल्पिक Beta है और शुरू में बंद रहता है।",
+    "noRoot": "No-root में LG Developer Mode और Home Helper का उपयोग होता है। सत्र चालू रखें; समय समाप्त होने पर बाहर से इंस्टॉल किए ऐप हट सकते हैं। अपने आप नवीनीकरण वैकल्पिक है और शुरू में बंद रहता है।",
     "root": "Root के लिए पहले से root पहुँच और अनुकूल टीवी सेवाएँ चाहिए। इंस्टॉलर टीवी को root नहीं करता। पहले से root वाले टीवी पर Developer Mode चालू न करें और दोनों Home नियंत्रण एक साथ न चलाएँ।",
     "compatibility": "अनुकूलता टीवी के सटीक मॉडल, फ़र्मवेयर, webOS संस्करण और रिमोट पर निर्भर करती है। सफल इंस्टॉलेशन से Home नियंत्रण, आवाज़, स्टैंडबाय या कोल्ड बूट की पुष्टि नहीं होती। पहले दर्ज परीक्षण और सीमाएँ पढ़ें।",
     "themes": "Classic, Liquid Glass या Ribbon से शुरू करें और समुदाय की थीम देखें। टीवी पर सेटिंग्स → थीम में बदलें। ब्राउज़र डेमो में लेआउट की तुलना करें; टीवी के कार्य सिमुलेट किए जाते हैं।",
@@ -313,7 +313,7 @@
       "Wybierz motyw dla siebie",
       "Obsługa pilotem telewizora"
     ],
-    "noRoot": "No-root korzysta z LG Developer Mode i Home Helper. Utrzymuj aktywną sesję: po wygaśnięciu aplikacje spoza sklepu mogą zostać usunięte. Automatyczne odnawianie to opcjonalna Beta, domyślnie wyłączona.",
+    "noRoot": "No-root korzysta z LG Developer Mode i Home Helper. Utrzymuj aktywną sesję: po wygaśnięciu aplikacje spoza sklepu mogą zostać usunięte. Automatyczne odnawianie jest opcjonalne i domyślnie wyłączone.",
     "root": "Root korzysta z istniejącego dostępu root i zgodnych usług TV. Instalator nie rootuje telewizora. Nie włączaj Developer Mode na zrootowanym TV i nie uruchamiaj obu sposobów sterowania Home jednocześnie.",
     "compatibility": "Zgodność zależy od dokładnego modelu, firmware, wersji webOS i pilota. Udana instalacja nie potwierdza działania Home, dźwięku, czuwania ani zimnego startu. Najpierw sprawdź wyniki testów i ograniczenia.",
     "themes": "Zacznij od Classic, Liquid Glass lub Ribbon i odkryj motywy społeczności. Zmieniaj je w Ustawienia → Motywy na TV. Porównaj układy w wersji demonstracyjnej; funkcje TV są symulowane.",
@@ -351,7 +351,7 @@
       "Выберите тему под себя",
       "Управляйте пультом телевизора"
     ],
-    "noRoot": "No-root использует LG Developer Mode и Home Helper. Поддерживайте сессию активной: после её истечения установленные вне магазина приложения могут удалиться. Автопродление — необязательная Beta, по умолчанию выключено.",
+    "noRoot": "No-root использует LG Developer Mode и Home Helper. Поддерживайте сессию активной: после её истечения установленные вне магазина приложения могут удалиться. Автопродление — необязательная функция, по умолчанию она выключена.",
     "root": "Root использует уже имеющийся root-доступ и совместимые службы ТВ. Установщик не получает root. Не включайте Developer Mode поверх root и не запускайте оба способа управления Home одновременно.",
     "compatibility": "Совместимость зависит от точной модели, прошивки, версии webOS и пульта. Успешная установка не подтверждает работу Home, звука, выхода из ожидания или холодного старта. Перед установкой прочитайте результаты проверок и ограничения.",
     "themes": "Начните с Classic, Liquid Glass или Ribbon и попробуйте темы сообщества. Меняйте их на телевизоре в Настройки → Темы. Сравнивайте варианты в браузерном демо; функции телевизора в нём имитируются.",
@@ -378,7 +378,7 @@
     "headline": "你的电视，你的主屏幕。",
     "summary": "为 LG webOS 打造个性化主屏幕：自己的应用、排列顺序和可配置的程序坞。此启动器内没有赞助推荐行。",
     "features": ["把常用应用放在前面", "选择喜欢的主题", "使用电视遥控器操作"],
-    "noRoot": "No-root 使用 LG Developer Mode 和 Home Helper。请保持会话有效；到期后，侧载应用可能被删除。自动续期是可选的 Beta 功能，默认关闭。",
+    "noRoot": "No-root 使用 LG Developer Mode 和 Home Helper。请保持会话有效；到期后，侧载应用可能被删除。自动续期是可选功能，默认关闭。",
     "root": "Root 使用已有的 root 权限和兼容的电视服务。安装程序不会为电视获取 root。不要在已有 root 的电视上启用 Developer Mode，也不要同时运行两种 Home 控制。",
     "compatibility": "兼容性取决于准确的电视型号、固件、webOS 版本和遥控器。安装成功不代表 Home 路由、声音、待机唤醒或冷启动已经验证。安装前请查看测试记录和已知限制。",
     "themes": "从 Classic、Liquid Glass 或 Ribbon 开始，也可以探索社区主题。在电视的设置 → 主题中切换。浏览器演示可比较布局；电视功能均为模拟。",
@@ -416,7 +416,7 @@
       "選擇喜歡的佈景主題",
       "使用電視遙控器操作"
     ],
-    "noRoot": "No-root 使用 LG Developer Mode 和 Home Helper。請保持工作階段有效；到期後，側載應用程式可能被刪除。自動續期是選用的 Beta 功能，預設關閉。",
+    "noRoot": "No-root 使用 LG Developer Mode 和 Home Helper。請保持工作階段有效；到期後，側載應用程式可能被刪除。自動續期是選用功能，預設關閉。",
     "root": "Root 使用既有的 root 權限與相容的電視服務。安裝程式不會替電視取得 root。請勿在已有 root 的電視上啟用 Developer Mode，也不要同時執行兩種 Home 控制。",
     "compatibility": "相容性取決於確切的電視型號、韌體、webOS 版本及遙控器。安裝成功不代表 Home 路由、聲音、待機喚醒或冷啟動已經驗證。安裝前請查看測試紀錄和已知限制。",
     "themes": "從 Classic、Liquid Glass 或 Ribbon 開始，也可以探索社群佈景主題。在電視的設定 → 佈景主題中切換。瀏覽器示範可比較版面；電視功能均為模擬。",
@@ -454,7 +454,7 @@
       "Vyberte si motiv podle svého vkusu",
       "Používejte dálkový ovladač televizoru"
     ],
-    "noRoot": "No-root používá LG Developer Mode a Home Helper. Udržujte relaci Developer Mode aktivní; po vypršení mohou být odebrány ručně nainstalované aplikace. Automatické prodlužování je volitelná funkce Beta a ve výchozím stavu je vypnuté.",
+    "noRoot": "No-root používá LG Developer Mode a Home Helper. Udržujte relaci Developer Mode aktivní; po vypršení mohou být odebrány ručně nainstalované aplikace. Automatické prodlužování je volitelná funkce a ve výchozím stavu je vypnuté.",
     "root": "Root používá stávající přístup root a kompatibilní služby televizoru. Instalátor přístup root nezískává. Nezapínejte Developer Mode na televizoru, který již má root, a nespouštějte oba způsoby ovládání Home současně.",
     "compatibility": "Kompatibilita závisí na přesném modelu televizoru, firmwaru, verzi webOS a ovladači. Úspěšná instalace neověřuje přesměrování Home, zvuk, pohotovostní režim ani studený start. Před instalací si přečtěte zaznamenané testy a známá omezení.",
     "themes": "Začněte s motivem Classic, Liquid Glass nebo Ribbon a poté prozkoumejte komunitní motivy. Motiv změníte v Nastavení → Motivy na televizoru. Ukázka v prohlížeči umožňuje porovnat rozvržení; funkce televizoru jsou simulované.",

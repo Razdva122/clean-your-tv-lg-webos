@@ -27,7 +27,7 @@ Start with a task. You do not need the developer reports to install or use Clean
 ## Specific features
 
 - [Root overview](../root-edition/README.md), [Root recovery](../root-edition/RECOVERY.md), and [whole-edition updates](UPDATES.md).
-- [Developer Mode renewal Beta](DEVELOPER-MODE-BETA.md): optional; monitor the official timer.
+- [Developer Mode auto-renewal](DEVELOPER-MODE-BETA.md): optional; monitor the official timer.
 - [Private Python for eligible rooted TVs](OPTIONAL-PYTHON.md).
 - [Optional native cache cleanup](WAM-CLEANUP.md).
 - [LG firmware update blocking](LG-FIRMWARE-UPDATES.md): read the startup and verification limits.
