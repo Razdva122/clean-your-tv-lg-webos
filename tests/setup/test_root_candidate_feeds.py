@@ -12,6 +12,30 @@ class AdmissionTests(unittest.TestCase):
   self.versions={'release':'1.5.0','cytv':'0.6.0','home':'1.6.0','helper':'0.6.20','root':'0.6.0','updater':'0.3.3','android':'0.5.0','android_version_code':15}
  def check(self,run=None,jobs=None,tag='v1.5.0',published=()):return m.validate_run(self.run if run is None else run,self.jobs if jobs is None else jobs,tag,self.versions,published)
  def test_complete_origin_build_is_admitted(self):self.assertEqual(self.check()['source'],'a'*40)
+ def test_system_qa_checks_the_current_pin_and_rejects_preliminary(self):
+  from unittest.mock import patch
+  metadata=self.check()
+  pin={key:metadata[key] for key in ('source','run_id','attempt')}
+  head='c'*40
+  ref={'ref':'refs/heads/release/next','object':{'sha':head}}
+  with patch.object(m,'api',return_value=ref), patch.object(m.subprocess,'check_output',return_value=head):
+   with patch.object(m,'contents',return_value={'version':'1.5.0','build':pin}) as load, patch.object(m,'VERIFY_BUILD_INPUTS') as verify:
+    m.verify_system_pin(metadata)
+    load.assert_called_once_with('release-plan.json',head)
+    verify.assert_called_once_with(metadata['source'],head,m.ROOT)
+    verify.side_effect=ValueError('Candidate build inputs changed')
+    with self.assertRaisesRegex(ValueError,'inputs changed'):
+     m.verify_system_pin(metadata)
+    with self.assertRaisesRegex(ValueError,'complete pinned build'):
+     m.verify_system_pin(dict(metadata,preliminary=True))
+    with self.assertRaisesRegex(ValueError,'currently selected'):
+     m.verify_system_pin(dict(metadata,attempt=2))
+   with patch.object(m,'contents',return_value={'version':'1.5.0'}):
+    with self.assertRaisesRegex(ValueError,'currently selected'):
+     m.verify_system_pin(metadata)
+  with patch.object(m,'api',return_value=ref), patch.object(m.subprocess,'check_output',return_value='d'*40):
+   with self.assertRaisesRegex(ValueError,'current release/next checkout'):
+    m.verify_system_pin(metadata)
  def test_foreign_or_incomplete_runs_are_rejected(self):
   cases=[('head_branch','main'),('event','pull_request'),('path','.github/workflows/tests.yml'),('status','in_progress'),('conclusion','failure'),('run_attempt',0),('head_sha','bad'),('head_repository',{'full_name':'foreign/repo'})]
   for field,value in cases:

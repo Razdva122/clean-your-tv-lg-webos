@@ -336,11 +336,13 @@
         }
         function unavailable(stopped) {
           renderHome(reply);
-          homeStart.hidden = !stopped;
+          // Offer the confirmed start action even when status is unknown.
+          homeStart.hidden = stopped === false;
           homeStart.disabled = false;
-          homeVisit.disabled = stopped;
-          homeRetry.hidden = stopped;
-          if (stopped) homeStatus.textContent = tr('Home Helper is stopped.');
+          homeVisit.disabled = stopped === true;
+          homeRetry.hidden = stopped === true;
+          if (stopped === true)
+            homeStatus.textContent = tr('Home Helper is stopped.');
         }
         if (!window.HomeHelper) {
           unavailable(false);

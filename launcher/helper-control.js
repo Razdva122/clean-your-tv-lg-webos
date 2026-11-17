@@ -230,14 +230,17 @@
     }
     function checkStopped(callback) {
       rpc('luna://com.local.nativehome.service/status', {}, function (reply) {
-        callback(
-          !!(
-            reply &&
-            reply.returnValue === true &&
-            reply.blocked === true &&
-            reply.running !== true
-          )
-        );
+        // Some firmware rejects this endpoint even with Helper installed.
+        if (
+          !reply ||
+          reply.returnValue !== true ||
+          typeof reply.blocked !== 'boolean' ||
+          typeof reply.running !== 'boolean'
+        ) {
+          callback(null);
+          return;
+        }
+        callback(reply.blocked && !reply.running);
       });
     }
     function confirmStart(onStart, onReply) {
