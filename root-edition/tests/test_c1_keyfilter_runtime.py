@@ -494,6 +494,75 @@ class RuntimeTests(unittest.TestCase):
         self.admission.update(model='OLED65C1PSA', firmware='03.53.45', webos='6.5.3')
         self.check_ui_failure_recovery(lambda: self.k.execute('restore', root=self.root, uid=self.uid))
 
+
+    def test_verified_activation_restore_uses_current_guard_on_retained_c1(self):
+        import hashlib
+        from types import SimpleNamespace
+        from unittest.mock import Mock
+        import clean_removal
+
+        work = self.root
+        self.root = work/'retained'
+        self.root.mkdir(mode=0o700)
+        self.admission.update(model='OLED65C1PSA', firmware='03.53.45', webos='6.5.3')
+        self.prepare()
+        token = '1'*32
+        own = self.k.filter_entry(self.root)
+        vendor = {'file': '/usr/lib/qt5/qml/KeyFilters/systemUi.js', 'handler': 'handleSystemKeys'}
+        chain = [own, vendor]
+        self.k.atomic(self.root/'c1-keyfilter/ownership.json', dict(schema=1, entry=own, token=token), self.uid)
+        retained_script = self.root/'runtime/c1_keyfilter.py'
+        retained_script.parent.mkdir(mode=0o700)
+        retained_script.write_text('raise AssertionError("retained mutation code executed")')
+        selection_path = self.root/'home-backend.json'
+        selection = selection_path.read_bytes()
+        payload = work/'current'
+        guard = payload/'runtime/c1-keyfilter-guard'
+        guard.parent.mkdir(parents=True)
+        guard.write_bytes(b'verified current executable')
+        guard.chmod(0o600)
+        manifest = {'files': {'runtime/c1-keyfilter-guard': hashlib.sha256(guard.read_bytes()).hexdigest()}}
+        installed = Mock(STATE=self.root)
+        installed.selection.side_effect = self.k.selection
+        cli = Mock()
+        cli.gate_backend.return_value = installed
+        replies = Mock(side_effect=[
+            {'returnValue': True, 'appId': self.k.STOCK},
+            {'returnValue': True, 'foregroundAppInfo': [{'appId': self.k.STOCK, 'windowType': self.k.HOME}]},
+        ])
+        native_actions = []
+
+        def run(argv, **_):
+            self.assertEqual(argv[0], str(guard))
+            native_actions.append(argv[-1])
+            value = self.proof()
+            if argv[-1] == '--restore':
+                value.update(returnValue=False, reason='ui_release_failed')
+            return SimpleNamespace(stdout=json.dumps(value).encode(), returncode=int(not value['returnValue']))
+
+        with patch.dict(sys.modules, {'cli': cli}), patch.object(sys, 'path', list(sys.path)), \
+                patch.object(self.k, 'STATE', self.root), patch.object(self.k, 'binary'), \
+                patch.object(self.k.subprocess, 'run', side_effect=run), \
+                patch.object(self.k, 'luna', replies), \
+                patch.object(self.k, 'read_chain', side_effect=lambda: list(chain)), \
+                patch.object(self.k, 'write_chain', side_effect=lambda value: chain.__setitem__(slice(None), value)) as write, \
+                patch('deploy.verify_bundle', return_value=manifest), \
+                patch('deploy.checked_file', return_value=guard.read_bytes()):
+            with self.assertRaisesRegex(ValueError, 'native_recovery_attempt_changed'):
+                clean_removal.runtime_restore(payload, self.uid, activation_token='2'*32)
+            write.assert_not_called()
+            self.assertEqual(native_actions, ['--status'])
+            native_actions.clear()
+
+            reply = clean_removal.runtime_restore(payload, self.uid, activation_token=token)
+            self.assertEqual(reply['result'], 'restored')
+            self.assertEqual(reply['native_restored_sha256'], hashlib.sha256(selection).hexdigest())
+            self.assertEqual(chain, [vendor])
+            self.assertEqual(native_actions, ['--status', '--restore', '--status', '--status'])
+            self.assertEqual(self.k.read_intent(self.root, self.uid)['phase'], 'disabled')
+        self.assertEqual(selection_path.read_bytes(), selection)
+        cli.main.assert_not_called()
+
     def check_ui_failure_recovery(self, restore):
         from types import SimpleNamespace
 

@@ -139,9 +139,15 @@ def recover(installer, ask, write, non_interactive=False, initial_observation=No
             return
     try:
         pending = installer.store.pending(installer.profile)
-        if pending and pending.get('activation_restore_pending') is True:
-            if not installer.recover_failed_activation():
+        activation_restore = pending and pending.get('activation_restore_pending') is True
+        if (initial_observation is None and pending and pending.get('home_backend') == 'c1-native-gate'
+                and (activation_restore or pending.get('activation_restore') == 'verified')):
+            if not installer.recover_failed_activation(verified_support=True):
                 raise UserError(BLOCKED, reason_code='pending-operation')
+            plan(write, 'complete', 'LG Home is restored.', 'Save diagnostic report…')
+            return
+        if activation_restore and not installer.recover_failed_activation():
+            raise UserError(BLOCKED, reason_code='pending-operation')
         try:
             result = installer.observe_recovery() if initial_observation is None else initial_observation
         except Exception as error:
