@@ -81,6 +81,8 @@ HDMI 입력을 고정하려면 **+ / 앱 추가**에서 선택하세요. OK를 �
 
 No-root: Home 제어를 다시 시작하려면 Home Helper를 열고 Helper 시작을 선택한 다음 확인하세요. 저장된 Home 화면 선택은 유지됩니다. Root는 Home 설정에서 **Home 변경**을 켜서 재개하세요. **LG Home 열기**는 Home의 연결 대상을 바꾸지 않고 LG Home을 한 번 엽니다. LG Home을 계속 사용할 기본 대상으로 복원하려면 **Home 변경**을 끄세요. 두 제어 프로그램을 동시에 실행하지 마세요. 문제가 반복되면 LG Home을 유지하세요.
 
+Home Helper가 중지되면 Home 화면이나 화면 보호기 설정에서도 **Helper 시작**을 선택할 수 있습니다. 시작 후 상태가 자동으로 갱신됩니다.
+
 ## 도움이 필요하신가요?
 
 `ssh-identity-changed`가 표시되면 중단하고 TV의 SSH 키를 확인하세요. [SSH 키 변경 후 복구](../RECOVERY.md#ssh-identity-changed)

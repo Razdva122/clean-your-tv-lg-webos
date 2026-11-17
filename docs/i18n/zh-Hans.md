@@ -81,6 +81,8 @@ Developer Mode 让 CYTV 可以在没有 root 的电视上安装应用。
 
 No-root: 要重新启动 Home 控制，请打开 Home Helper，选择启动 Helper 并确认。已保存的主屏幕选择会保留。 Root：在 Home 设置中启用 **更改 Home（Change Home）** 恢复。**打开 LG Home（Open LG Home）** 只打开 LG Home 一次，不更改路由。要持续使用 LG Home，请关闭 **更改 Home（Change Home）**。不要同时运行两种控制器。若故障重复出现，请保持 LG Home 启用。
 
+如果 Home Helper 已停止，也可以在 Home 主屏幕或屏幕保护程序设置中选择**启动 Helper**。启动后状态会自动更新。
+
 ## 需要帮助？
 
 如果显示 `ssh-identity-changed`，请停止操作并验证电视的 SSH 密钥。 [SSH 密钥变更后的恢复](../RECOVERY.md#ssh-identity-changed)

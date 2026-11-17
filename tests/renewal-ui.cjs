@@ -18,6 +18,9 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8876';
     await page.addInitScript((versions) => {
       window.calls = [];
       window.renewEnabled = false;
+      window.helperStopped = false;
+      window.helperStarting = false;
+      window.helperStatusAvailable = true;
       window.PalmServiceBridge = function () {
         this.cancel = () => clearTimeout(this.timer);
         this.call = (uri, data) => {
@@ -43,9 +46,39 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8876';
                   reason: 'current',
                   notes: ''
                 };
-            } else if (uri === 'luna://com.gathin.tvhome.renewal/homeStatus')
-              r.enabled = false;
-            else if (uri.startsWith('luna://com.gathin.tvhome.renewal/')) {
+            } else if (uri === 'luna://com.local.nativehome.service/status') {
+              if (!helperStatusAvailable) r.returnValue = false;
+              else {
+                r.blocked = helperStopped;
+                r.running = !helperStopped;
+              }
+            } else if (
+              uri === 'luna://com.webos.applicationManager/launch' &&
+              p.id === 'com.local.nativehome' &&
+              p.params?.nativeHomeStart &&
+              p.params.nativeHomePanel
+            ) {
+              helperStarting = true;
+              setTimeout(() => {
+                helperStopped = false;
+                helperStarting = false;
+              }, 1750);
+            } else if (uri === 'luna://com.gathin.tvhome.renewal/homeStatus') {
+              if (helperStopped) r.returnValue = false;
+              else
+                r.enabled = calls.some(
+                  (call) => call.p.id === 'com.local.nativehome'
+                );
+            } else if (
+              uri === 'luna://com.gathin.tvhome.renewal/screensaverStatus'
+            ) {
+              if (helperStopped) r.returnValue = false;
+              else
+                Object.assign(r, {
+                  available: true,
+                  state: { enabled: false }
+                });
+            } else if (uri.startsWith('luna://com.gathin.tvhome.renewal/')) {
               if (uri.endsWith('/enable')) renewEnabled = true;
               if (uri.endsWith('/disable')) renewEnabled = false;
               r.state = {
@@ -87,6 +120,60 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8876';
       ),
       0
     );
+    for (const category of ['home', 'screensaver']) {
+      await page.evaluate(() => {
+        helperStopped = true;
+      });
+      await page.locator('#btnSettings').click();
+      await page.locator('[data-category=' + category + ']').click();
+      const pane = page.locator('#settings-pane-' + category);
+      await pane
+        .getByText('Home Helper is stopped.', { exact: false })
+        .waitFor({
+          timeout: 5000
+        });
+      assert.equal(
+        await page.evaluate(() => helperStopped && !helperStarting),
+        true
+      );
+      await pane.getByRole('button', { name: 'Start Helper' }).click();
+      await page
+        .locator('#homeConfirmation')
+        .getByRole('button', { name: 'Start Helper' })
+        .click();
+      await page.waitForFunction(() => !helperStopped);
+      await page.waitForFunction(() => {
+        const toggle = document.querySelector('#homeRoutingToggle');
+        return (
+          toggle.getAttribute('data-home-state') === 'known' &&
+          toggle.getAttribute('aria-checked') === 'true'
+        );
+      });
+      if (category === 'home')
+        await page.locator('[data-category=screensaver]').click();
+      await page.waitForFunction(
+        () => !document.getElementById('screensaverEnabled').disabled
+      );
+      await page.reload();
+      await page.locator('#tiles .item').first().waitFor();
+    }
+    await page.evaluate(() => {
+      helperStopped = true;
+      helperStatusAvailable = false;
+    });
+    await page.locator('#btnSettings').click();
+    await page.locator('[data-category=home]').click();
+    await page
+      .getByText('Could not check which screen the Home button opens.')
+      .waitFor();
+    assert(await page.locator('#homeRoutingStart').isHidden());
+    assert(await page.locator('#homeRoutingRetry').isVisible());
+    await page.locator('[data-category=screensaver]').click();
+    await page.getByText('Could not check screensaver availability.').waitFor();
+    assert(await page.locator('#screensaverStartHelper').isHidden());
+    assert(await page.locator('#screensaverStatusRetry').isVisible());
+    await page.reload();
+    await page.locator('#tiles .item').first().waitFor();
     await page.locator('#btnSettings').click();
     await page.locator('[data-category=developer]').click();
     await page

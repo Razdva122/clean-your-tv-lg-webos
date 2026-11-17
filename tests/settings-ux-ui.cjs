@@ -245,7 +245,7 @@ const fs = require('node:fs');
               .getAttribute('aria-checked'),
             null
           );
-          assert(await page.locator('#homeRoutingRetry').isVisible());
+          await page.locator('#homeRoutingRetry').waitFor({ state: 'visible' });
           await page.evaluate(() => (window.homeStatusFails = false));
           await page.locator('#homeRoutingRetry').click();
           await page.waitForFunction(

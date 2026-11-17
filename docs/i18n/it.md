@@ -81,6 +81,8 @@ Per modificare con pressioni brevi, apri **Impostazioni Home → Aspetto → Mod
 
 No-root: Per riavviare il controllo Home, apri Home Helper, scegli Avvia Helper e conferma. La tua scelta della schermata Home viene mantenuta. Root: attiva **Cambia Home** nelle impostazioni Home per riprendere. **Apri LG Home** apre LG Home una volta senza cambiare la destinazione di Home. Per ripristinare LG Home come destinazione permanente, disattiva **Cambia Home**. Non eseguire entrambi i controllori insieme. Se il problema ricompare, lascia attivo LG Home.
 
+Se Home Helper è fermo, puoi anche scegliere **Avvia Helper** nelle impostazioni della schermata Home o del salvaschermo. Lo stato si aggiorna automaticamente dopo l’avvio.
+
 ## Serve aiuto?
 
 Se compare `ssh-identity-changed`, fermati e verifica la chiave SSH del televisore. [Ripristino dopo una modifica della chiave SSH](../RECOVERY.md#ssh-identity-changed)

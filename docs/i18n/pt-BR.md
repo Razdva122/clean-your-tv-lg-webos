@@ -81,6 +81,8 @@ Para editar com toques curtos, abra **Configurações do Home → Aparência →
 
 No-root: Para reiniciar o controle de Home, abra Home Helper, escolha Iniciar Helper e confirme. Sua tela Home escolhida será mantida. Root: ative **Alterar Home** nas configurações do Home para retomar. **Abrir LG Home** abre LG Home uma vez sem mudar o destino de Home. Para restaurar LG Home como destino permanente, desative **Alterar Home**. Nunca execute os dois controladores juntos. Se a falha voltar, mantenha LG Home ativo.
 
+Se o Home Helper estiver parado, você também pode selecionar **Iniciar Helper** nas configurações da tela Home ou da proteção de tela. O status é atualizado automaticamente após a inicialização.
+
 ## Precisa de ajuda?
 
 Se aparecer `ssh-identity-changed`, pare e verifique a chave SSH da TV. [Recuperação após mudança da chave SSH](../RECOVERY.md#ssh-identity-changed)

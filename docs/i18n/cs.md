@@ -68,6 +68,8 @@ Pro úpravy krátkými stisky otevřete **Nastavení Home → Vzhled → Upravit
 
 Pro opětovné zapnutí No-root otevřete **Home Helper**, zvolte spuštění Helperu a potvrďte. Pro Root zapněte **Změnit Home** v nastavení Home. **Otevřít LG Home** otevře původní prostředí jen jednou; pro trvalé používání LG Home vypněte Změnit Home. Nespouštějte oba ovladače Home současně. Při opakované chybě nechte LG Home aktivní.
 
+Pokud je Home Helper zastavený, můžete také zvolit **Spustit Helper** v nastavení obrazovky Home nebo spořiče. Stav se po spuštění automaticky aktualizuje.
+
 ## Potřebujete pomoc?
 
 Pokud se zobrazí chyba `ssh-identity-changed`, zastavte se a ověřte klíč televizoru. [Obnova po změně klíče SSH](../RECOVERY.md#ssh-identity-changed)

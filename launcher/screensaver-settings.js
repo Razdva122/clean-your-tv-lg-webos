@@ -12,6 +12,10 @@
   var statusPending = false;
   var statusRetry = null;
   var statusRetries = 0;
+  var helperStarting = false;
+  var helperStopped = false;
+  var statusUnconfirmed = false;
+  var helperLaunchFailed = false;
   var host = null;
   var started = false;
   var localFocused = true;
@@ -398,6 +402,18 @@
     var focused = doc.activeElement;
     var enabled = host.querySelector('#screensaverEnabled');
     var editable = canEdit();
+    var startHelper = host.querySelector('#screensaverStartHelper');
+    var retry = host.querySelector('#screensaverStatusRetry');
+    startHelper.hidden = available || !helperStopped;
+    startHelper.disabled = startHelper.hidden || helperStarting;
+    retry.hidden =
+      rootEdition() ||
+      !statusUnconfirmed ||
+      available ||
+      helperStopped ||
+      helperStarting;
+    retry.disabled = retry.hidden;
+    retry.parentNode.hidden = startHelper.hidden && retry.hidden;
     enabled.setAttribute('aria-checked', String(state.enabled));
     enabled.textContent =
       t('Screensaver') + ': ' + t(state.enabled ? 'On' : 'Off');
@@ -484,14 +500,29 @@
       !known
         ? 'Checking screensaver availability…'
         : !available
-          ? 'Screensaver is unavailable on this TV.'
+          ? helperStarting
+            ? 'Starting Helper…'
+            : helperLaunchFailed
+              ? 'Could not start Home Helper.'
+              : helperStopped
+                ? 'Home Helper is stopped.'
+                : statusUnconfirmed && !rootEdition()
+                  ? 'Could not check screensaver availability.'
+                  : 'Screensaver is unavailable on this TV.'
           : !state.enabled
             ? 'Turn on the screensaver to edit its settings.'
             : ''
     );
-    if (settingsActive && host.contains(focused) && focused.disabled) {
+    if (
+      settingsActive &&
+      host.contains(focused) &&
+      (focused.disabled || focused.hidden)
+    ) {
       if (clearGalleryFocus) clearGalleryFocus();
       if (!enabled.disabled) enabled.focus();
+      else if (!startHelper.hidden && !startHelper.disabled)
+        startHelper.focus();
+      else if (!retry.hidden) retry.focus();
       else host.querySelector('.screensaver-status').focus();
     }
   }
@@ -509,9 +540,9 @@
     available = reply.available;
     return true;
   }
-  function retryRootStatus(recheck) {
+  function retryStatus(recheck) {
     if (
-      !rootEdition() ||
+      (!rootEdition() && !helperStarting) ||
       !settingsActive ||
       statusRetry !== null ||
       statusRetries >= 3 ||
@@ -538,15 +569,33 @@
     rpc('screensaverStatus', {}, function (reply, channelBusy) {
       statusPending = false;
       if (epoch !== requestEpoch) return;
-      if (!accepted(reply)) {
-        if (channelBusy && known) return;
+      statusUnconfirmed = !accepted(reply);
+      if (statusUnconfirmed) {
+        if (channelBusy && known && !helperStarting) return;
         known = true;
         available = false;
       }
+      if (available) {
+        statusRetries = 0;
+        helperStarting = helperStopped = helperLaunchFailed = false;
+      } else {
+        retryStatus();
+        if (helperStarting && statusRetry === null) helperStarting = false;
+        if (
+          !rootEdition() &&
+          !helperStarting &&
+          settingsActive &&
+          root.HomeHelper
+        ) {
+          root.HomeHelper.checkStopped(function (stopped) {
+            if (epoch !== requestEpoch || !settingsActive) return;
+            helperStopped = stopped;
+            render();
+          });
+        }
+      }
       render();
       tick();
-      if (available) statusRetries = 0;
-      else retryRootStatus();
       syncClock();
     });
   }
@@ -595,7 +644,7 @@
       var ok = accepted(reply);
       render();
       if (!ok && !clockSync) status('Could not save screensaver settings.');
-      if (!ok || !available) retryRootStatus(true);
+      if (!ok || !available) retryStatus(true);
       contextActive = false;
       releaseMedia();
       handoff = null;
@@ -880,6 +929,13 @@
     }
     if (locale && locale.ready) locale.ready(preferencesReady);
     else preferencesReady();
+    doc.addEventListener('home-helper-start-requested', function () {
+      if (rootEdition() || !settingsActive) return;
+      helperStarting = true;
+      helperLaunchFailed = false;
+      statusRetries = 0;
+      refresh();
+    });
     doc.addEventListener('home-clock-format-change', function () {
       renderQuality();
       syncClock();
@@ -1032,6 +1088,33 @@
     output.tabIndex = -1;
     toggle.setAttribute('aria-describedby', output.id);
     host.appendChild(output);
+    var recovery = doc.createElement('div');
+    recovery.className = 'renewal-actions';
+    recovery.hidden = true;
+    host.appendChild(recovery);
+    var startHelper = button(
+      recovery,
+      'screensaverStartHelper',
+      'Start Helper'
+    );
+    startHelper.onclick = function () {
+      root.HomeHelper.confirmStart(
+        function () {
+          if (!settingsActive || helperStarting) return false;
+          helperStarting = true;
+          helperLaunchFailed = false;
+          render();
+        },
+        function (accepted) {
+          if (accepted) return;
+          helperStarting = false;
+          helperLaunchFailed = true;
+          render();
+        }
+      );
+    };
+    var retry = button(recovery, 'screensaverStatusRetry', 'Try again');
+    retry.onclick = refresh;
 
     var layout = panelUi.backgroundLayout(host);
     var options = doc.createElement('div');
@@ -1266,6 +1349,7 @@
       } else {
         if (statusRetry !== null) root.clearTimeout(statusRetry);
         statusRetry = null;
+        helperStarting = false;
         clearMediaPreview();
         if (clearGalleryFocus) clearGalleryFocus();
         if (host && root.HomeWallpaperPanel) {
