@@ -101,6 +101,8 @@ Nennen Sie TV-Modell, Firmware, No-root oder Root, Installationsgerät, Schritt 
 
 Wenn No-root **Speicherprüfung wiederholen** anbietet, wähle die Schaltfläche, um denselben Fernseher ohne Änderungen erneut zu prüfen. Bestätige die Installation nach erfolgreicher Prüfung separat. Bei einem offenen Vorgang wähle **Wiederherstellungsoptionen prüfen**.
 
+Wenn das Desktop-Installationsprogramm die Pakete geprüft hat, die Home-Taste aber Clean Your TV nicht öffnet, wählen Sie auf der Ergebnisseite bei No-root **Home-Taste diagnostizieren** und bei Root **TV-Status prüfen**.
+
 [Problem melden](../FEEDBACK.md) · [Wiederherstellung — Englisch](../RECOVERY.md) · [Aktualisieren oder entfernen — Englisch](../MAINTENANCE.md) · [Andere Sprachen](../LANGUAGES.md)
 
 ### Einfache Entfernung

@@ -101,6 +101,8 @@ Informe modelo, firmware, No-root ou Root, dispositivo de instalação, etapa e 
 
 Se o No-root oferecer **Repetir a verificação de armazenamento**, selecione essa opção para repetir a verificação de somente leitura na mesma TV. Confirme a instalação separadamente após uma verificação bem-sucedida. Se houver uma operação pendente, escolha **Revisar opções de recuperação**.
 
+Se o instalador de desktop verificar os pacotes, mas o botão Home não abrir o Clean Your TV, escolha **Diagnóstico do botão Home** para No-root ou **Verificar status da TV** para Root na tela de resultados.
+
 [Relatar problema](../FEEDBACK.md) · [Recuperação — inglês](../RECOVERY.md) · [Atualizar ou remover — inglês](../MAINTENANCE.md) · [Outros idiomas](../LANGUAGES.md)
 
 ### Remoção simples

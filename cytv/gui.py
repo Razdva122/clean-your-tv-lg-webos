@@ -829,6 +829,7 @@ class Wizard(QMainWindow):
                                      and self.saved_root_reinstall(Store(), self.selected_profile))
             doctor_ready = (value == 0 and self.command == 'doctor' and self.doctor_result is not None
                             and self.selected_profile is not None and not self.recovery_plan and not recover)
+            home_failed = self.check_results.get('home-button', {}).get('status') == 'fail'
             setup_review = False
             if value == 0 and not self.recovery_plan and 'packages' in self.check_results:
                 confirmed = all(self.check_results.get(key, {}).get('status') == 'pass'
@@ -893,6 +894,13 @@ class Wizard(QMainWindow):
                 from .recovery_ui import removal_connection_failure
                 if removal_connection_failure(self.recovery_plan, self.failure_help):
                     self.button('Connection details', lambda: self.edit_connection(profile, removal=True))
+            elif (value == 0 and (not self.recovery_plan or completed) and self.selected_profile
+                  and home_failed and self.check_results.get('packages', {}).get('status') == 'pass'):
+                profile = dict(self.selected_profile)
+                if profile['edition'] == 'no-root':
+                    self.button('Home button diagnostics', lambda: self.start('home-diagnostics', profile))
+                else:
+                    self.button('Check TV status', lambda: self.start('status', profile))
             connection_help = (failed and self.failure_help and self.failure_help.get('can_edit_connection')
                                and self.failure_help['code'].startswith(('ssh-', 'developer-key-'))
                                and self.selected_profile and not self.recovery_plan and not self.recovery_profile
@@ -924,7 +932,7 @@ class Wizard(QMainWindow):
                     self.subtitle.setText(tr('Save the report from this failed attempt and attach it to your issue. Recovery data has been kept.'))
             elif failed and not no_root_status:
                 self.subtitle.setText(tr('A diagnostic report could not be created. Include the visible error when opening an issue.'))
-            if (failed and not cleanup) or self.check_results.get('home-button', {}).get('status') == 'fail':
+            if (failed and not cleanup) or home_failed:
                 self.button('Open an issue', lambda: QDesktopServices.openUrl(QUrl(diagnostics.ISSUE_URL)),
                             layout=report_actions if connection_help else None)
             self.button('Back to start', self.home,

@@ -184,6 +184,13 @@ read-only check on the same TV. After a successful check, confirm
 **Install these versions?** to continue setup. If an unfinished operation
 appears, follow **Review recovery options**.
 
+The completion screen shows package verification, startup readback and your
+physical Home-button result separately. If the packages are verified but Home
+didn't open Clean Your TV, choose **Home button diagnostics** in No-root and
+follow the recording prompts. In Root, choose **Check TV status** to read the
+current Home routing. Both use the same TV connection. You can save the original
+report before starting the check.
+
 On failure, read the explanation, click **Save diagnostic report…**, then
 **Open an issue**. Include your steps, expected/actual results, TV model and firmware.
 Review the JSON report before attaching it. Do not attach your profile folder or keys.

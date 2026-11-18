@@ -1178,24 +1178,88 @@ class GuiTests(unittest.TestCase):
         self.assertNotIn('--root-variant', calls[1])
         self.assertEqual(calls[1][calls[1].index('--edition') + 1], 'no-root')
 
-    def test_setup_result_requires_all_three_distinct_checks(self):
+    def test_setup_result_shows_package_readback_with_untested_home(self):
+        from cytv.checks import CheckList
+        from cytv.outcomes import SetupOutcome, UNTESTED
+        from cytv.terminal import Console
         w = Wizard(); self.addCleanup(w.close)
-        w.command = 'install'
-        w.receive('check', {'id':'ssh','label':'SSH connection and sign-in','status':'pass','detail':''})
-        for key, label, status in [('packages','Installed packages','pass'),
-                ('startup','Startup readback','pass'),
-                ('home-button','Home button — your observation','unknown')]:
-            w.receive('check', {'id':key,'label':label,'status':status,'detail':''})
-        w.receive('done',0)
+        checks = CheckList(lambda event: w.receive('check', event))
+        outcome = SetupOutcome(checks, {})
+        outcome.begin()
+        checks.update('ssh', 'pass')
+        outcome.packages_verified()
+        outcome.startup_observed('process-observed')
+        w.receive('done', 0)
         self.assertEqual(w.title.text(), 'Review TV checks')
-        text = w.check_panel.toPlainText()
-        self.assertLess(text.index('Installed packages'), text.index('SSH connection and sign-in'))
-        w.receive('check', {'id':'home-button','label':'Home button — your observation','status':'fail','detail':''})
-        w.receive('done',0)
-        self.assertEqual(w.title.text(), 'Review TV checks')
-        w.receive('check', {'id':'home-button','label':'Home button — your observation','status':'pass','detail':''})
-        w.receive('done',0)
+        result = w.check_panel.toPlainText()
+        self.assertLess(result.index('Installed packages'), result.index('SSH connection and sign-in'))
+        self.assertIn('Home button — your observation', result)
+        self.assertIn(UNTESTED, result)
+        self.assertEqual(w.check_results['packages']['status'], 'pass')
+        self.assertEqual(w.check_results['home-button']['status'], 'unknown')
+
+        outcome.review_home(lambda _: '1', Console(lambda _: None))
+        w.receive('done', 0)
         self.assertEqual(w.title.text(), 'Home button confirmed by you')
+
+    def test_setup_result_keeps_accepted_launch_separate_from_home(self):
+        from cytv.checks import CheckList
+        from cytv.outcomes import SetupOutcome
+        w = Wizard(); self.addCleanup(w.close)
+        outcome = SetupOutcome(CheckList(lambda event: w.receive('check', event)), {})
+        outcome.begin()
+        outcome.packages_verified()
+        outcome.launch_accepted()
+        w.receive('done', 0)
+        self.assertEqual(w.title.text(), 'Review TV checks')
+        result = w.check_panel.toPlainText()
+        self.assertIn('Launch request accepted. Runtime startup has not been verified.', result)
+        self.assertEqual(w.check_results['startup']['status'], 'unknown')
+        self.assertEqual(w.check_results['home-button']['status'], 'unknown')
+
+    def test_setup_result_offers_routing_check_after_verified_packages_and_failed_home(self):
+        from cytv.checks import CheckList
+        from cytv.outcomes import SetupOutcome
+        from cytv.terminal import Console
+        report = Path(self.directory.name) / 'report.json'
+        report.write_text('{}')
+        for profile, label, command in (
+                ({'host': '192.0.2.10', 'port': 2222, 'edition': 'no-root', 'connection': 'root-ssh'},
+                 'Home button diagnostics', 'home-diagnostics'),
+                ({'host': '192.0.2.20', 'port': 2200, 'edition': 'root', 'root_variant': 'node012-beta'},
+                 'Check TV status', 'status')):
+            with self.subTest(edition=profile['edition']):
+                calls = []
+                w = Wizard(run=lambda args, **kw: calls.append(args) or 0)
+                self.addCleanup(w.close)
+                if profile['edition'] == 'root':
+                    w.command = 'recover'
+                    w.receive('recovery-plan', {'state': 'complete', 'summary': 'Review TV checks',
+                                                'next_step': 'Save diagnostic report…'})
+                w.receive('selected-profile', profile)
+                outcome = SetupOutcome(CheckList(lambda event: w.receive('check', event)), {})
+                outcome.begin()
+                outcome.packages_verified()
+                outcome.startup_observed('process-observed' if command == 'home-diagnostics' else 'root-state-verified')
+                outcome.review_home(lambda _: '2', Console(lambda _: None))
+                w.receive('report', report)
+                w.receive('done', 0)
+                self.assertEqual(w.title.text(), 'Review TV checks')
+                self.assertEqual(w.check_results['packages']['status'], 'pass')
+                self.assertEqual(w.check_results['home-button']['status'], 'fail')
+                buttons = {button.text(): button for button in w.form.findChildren(QPushButton)}
+                self.assertIn('Save diagnostic report…', buttons)
+                self.assertNotIn('Try again', buttons)
+                self.assertNotIn('Continue setup', buttons)
+                self.assertEqual(calls, [])
+                buttons[label].click()
+                self.pump(lambda: not w.running)
+                self.assertEqual(len(calls), 1)
+                args = calls[0]
+                self.assertEqual(args[0], command)
+                self.assertIn('--no-discovery', args)
+                for field, value in profile.items():
+                    self.assertEqual(args[args.index('--' + field.replace('_', '-')) + 1], str(value))
 
     def test_steps_follow_events_without_marking_failed_install_complete(self):
         w = Wizard()

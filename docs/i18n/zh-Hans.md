@@ -101,6 +101,8 @@ No-root: 要重新启动 Home 控制，请打开 Home Helper，选择启动 Help
 
 如果 No-root 提供**重新检查存储空间**，请选择它，在同一台电视上重新执行只读检查。检查通过后，请单独确认安装。如果发现未完成的操作，请选择**检查恢复选项**。
 
+如果桌面安装程序已验证安装包，但按 Home 键无法打开 Clean Your TV，请在结果页面为 No-root 选择**Home 按钮诊断**，为 Root 选择**检查电视状态**。
+
 [报告问题](../FEEDBACK.md) · [详细恢复说明（英文）](../RECOVERY.md) · [更新或卸载（英文）](../MAINTENANCE.md) · [其他语言](../LANGUAGES.md)
 
 ### 简单移除

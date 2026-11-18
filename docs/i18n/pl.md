@@ -101,6 +101,8 @@ Podaj model TV, firmware, No-root lub Root, urządzenie instalujące, krok i kom
 
 Jeśli No-root oferuje **Ponów sprawdzanie pamięci**, wybierz tę opcję, aby sprawdzić ten sam telewizor w trybie tylko do odczytu. Po udanej kontroli potwierdź instalację osobno. Jeśli instalator wykryje niezakończoną operację, wybierz **Sprawdź opcje odzyskiwania**.
 
+Jeśli instalator na komputerze zweryfikuje pakiety, ale przycisk Home nie otwiera Clean Your TV, na ekranie wyników wybierz **Diagnostyka przycisku Home** dla No-root lub **Sprawdź stan telewizora** dla Root.
+
 [Zgłoś problem](../FEEDBACK.md) · [Odzyskiwanie — angielski](../RECOVERY.md) · [Aktualizacja i usuwanie — angielski](../MAINTENANCE.md) · [Inne języki](../LANGUAGES.md)
 
 ### Proste usuwanie
