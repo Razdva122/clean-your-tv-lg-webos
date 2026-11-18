@@ -87,10 +87,11 @@
     }
   ],
   "excluded": [],
-  "acceptance": "",
+  "acceptance": "LG OLED55C3RLA (43.21.71, SDK 11.2.0), exact macOS ARM64 installer, all seven selected C3 cases passed: No-root upgrade and live broker, LG Home Restore, Root setup and Home, network standby/wake, Root Off across verified restart, and original No-root rollback with preferences and routing verified. Model-specific native routing, physical remote, AC cycle, audio and on-device OTA remain outside this C3 pass. See docs/history/2026-11-19-release-1.25.0-rc1-verification.md for hashes and evidence.",
   "build": {
     "run_id": 44400187083,
     "attempt": 2,
     "source": "e4a3cbe719aea089e8cbbe088be19fc5e45d28ec"
-  }
+  },
+  "acceptance_build": "44400187083:2"
 }

@@ -1,5 +1,7 @@
 # Release history and device evidence
 
+- [v1.25.0 RC1 verification ledger](2026-11-19-release-1.25.0-rc1-verification.md)
+
 - [Issue 678 retained Root inspection diagnostics, 2026-11-18](2026-11-18-issue678-root-inspection.md)
 
 - [v1.23.1 and v1.24.0 candidate verification ledger](2026-11-17-release-1.23.1-rc-verification.md)
