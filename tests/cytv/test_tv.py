@@ -190,6 +190,81 @@ class InventoryTests(unittest.TestCase):
                 self.assertEqual([a['id'] for a in inventory['apps']], ['video'])
                 self.assertEqual(inventory['inputs'], [{'appId': 'com.webos.app.hdmi1', 'label': 'HDMI_1'}])
 
+    def test_fresh_paired_inventory_can_continue_without_hdmi(self):
+        from websockets.exceptions import ConnectionClosedError
+        from cytv.errors import UserError
+
+        denied = {'type': 'error', 'error': '401 insufficient permissions'}
+        refused = {'type': 'error', 'error': '404 no such service or method'}
+        cases = [
+            ('no attached inputs', {'payload': {'devices': []}}, True, None, True),
+            ('denied', denied, True, None, False),
+            ('unsupported', refused, True, None, False),
+            ('missing field', {'payload': {}}, True, None, False),
+            ('malformed payload', {'payload': None}, True, None, False),
+            ('malformed list', {'payload': {'devices': [None, {}]}}, True, None, False),
+            ('unproven fresh setup', denied, False, UserError, None),
+            ('update with missing field', {'payload': {}}, False, ValueError, None),
+            ('lost pairing', {'type': 'error', 'error': '401 not registered'}, True, UserError, None),
+            ('pairing prompt', {'payload': {'pairingType': 'PROMPT'}}, True, UserError, None),
+            ('connection closed', ConnectionClosedError(None, None, None), True, TVConnectionError, None),
+            ('input query timeout', TimeoutError(), True, UserError, None),
+        ]
+        for name, input_reply, fresh, failure, inputs_available in cases:
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as tmp:
+                class Socket:
+                    def send(self, raw):
+                        self.request = json.loads(raw)
+
+                    def recv(self, timeout):
+                        if self.request['type'] == 'register':
+                            return json.dumps({'id': self.request['id'], 'type': 'registered',
+                                               'payload': {'client-key': 'test-key'}})
+                        uri = self.request['uri']
+                        if uri.endswith('/listLaunchPoints'):
+                            reply = {'payload': {'launchPoints': [{'id': 'video', 'title': 'Video'}]}}
+                        elif uri.endswith('/getExternalInputList'):
+                            if isinstance(input_reply, Exception):
+                                raise input_reply
+                            reply = input_reply
+                        else:
+                            reply = {'payload': {'apps': []}}
+                        return json.dumps({'id': self.request['id'], **reply})
+
+                    def close(self):
+                        pass
+
+                with patch('websockets.sync.client.connect', return_value=Socket()):
+                    with SSAP('192.0.2.10', tmp, lambda _: None) as session:
+                        if failure:
+                            with self.assertRaises(failure):
+                                session.inventory(b'fallback', allow_missing_inputs=lambda: fresh)
+                        else:
+                            result = session.inventory(b'fallback', allow_missing_inputs=lambda: fresh)
+                            self.assertEqual([a['id'] for a in result['apps']], ['video'])
+                            self.assertEqual(result['inputs'], [])
+                            self.assertIs(session.inputs_available, inputs_available)
+
+    def test_partial_inventory_requires_a_usable_application_query(self):
+        from cytv.errors import UserError
+
+        good_apps = {'launchPoints': [{'id': 'video', 'title': 'Video'}]}
+        cases = [
+            ({}, {'apps': []}, good_apps, ValueError),
+            (good_apps, {'apps': []}, {'launchPoints': []}, ValueError),
+            (good_apps, {'apps': []}, TVConnectionError('Closed'), TVConnectionError),
+            (good_apps, {'apps': []}, UserError('Pairing was lost'), UserError),
+            (good_apps, TVConnectionError('Closed'), good_apps, TVConnectionError),
+            (good_apps, UserError('Pairing was lost'), good_apps, UserError),
+        ]
+        for initial, optional_apps, confirmed, failure in cases:
+            with self.subTest(initial=initial, optional_apps=optional_apps, confirmed=confirmed):
+                session = SSAP('192.0.2.10', '.', lambda _: None)
+                session.key = 'test-key'
+                with patch.object(session, 'call', side_effect=[initial, {}, optional_apps, confirmed]):
+                    with self.assertRaises(failure):
+                        session.inventory(b'fallback', allow_missing_inputs=lambda: True)
+
     def test_ssap_rejects_error_instead_of_empty_success(self):
         session = SSAP('192.0.2.10', '.')
         class Socket:

@@ -41,6 +41,8 @@ Use the code from the TV, not your LG account password. If no code is visible, t
 
 Pairing is a separate step: when the TV asks, approve CYTV with your remote.
 
+If a first No-root setup warns that it could not read HDMI inputs, you can continue with the applications it found.
+
 Keep Developer Mode active: open it before the timer runs out and press EXTEND while the TV is online. If it expires, LG can remove these apps.
 
 <a id="install-and-select-a-language"></a>

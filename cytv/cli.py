@@ -769,13 +769,19 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                                     phase = 'read-inventory'
                                     checks.update('inventory', 'running', '')
                                     try:
-                                        inventory = tv.inventory((payload / 'fallback.png').read_bytes())
+                                        inventory = tv.inventory(
+                                            (payload / 'fallback.png').read_bytes(),
+                                            allow_missing_inputs=installer.may_omit_no_root_inputs,
+                                        )
                                     finally:
                                         icon_counts = getattr(tv, 'icon_diagnostics', None)
                                         if type(icon_counts) is dict:
                                             tv_info['icon_inventory'] = icon_counts
                                     key = tv.key
-                                    checks.update('inventory', 'pass')
+                                    if getattr(tv, 'inputs_available', None) is False:
+                                        checks.update('inventory', 'unknown', 'Warning: TV inputs could not be read. Continuing with applications only.')
+                                    else:
+                                        checks.update('inventory', 'pass')
                                 break
                             except TVNotReady:
                                 checks.finish_running()

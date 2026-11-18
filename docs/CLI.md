@@ -265,6 +265,8 @@ installation uses `[Y/n]` (Enter continues). Removal and restore still require a
    Root privileges and the required webOS environment are verified after login.
 5. Fresh applications, icons and inputs are read from the TV; packages are
    personalized locally. No personal inventory is included in distributed builds.
+   If a first No-root setup warns that it could not read HDMI inputs, it can
+   continue with the applications it found.
    Keep the TV on with its Home screen visible. Some TVs keep SSH active in
    standby but reject the remote-control connection with `1008 / EWS`. The wizard
    then asks you to turn on the TV with its remote and press Enter to check again;

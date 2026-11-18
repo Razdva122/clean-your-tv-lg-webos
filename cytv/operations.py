@@ -1339,6 +1339,14 @@ else:
             raise UserError('Could not read installed applications.', reason_code='inventory-unavailable')
         return apps
 
+    def may_omit_no_root_inputs(self):
+        from .no_root_cleanup import APPS
+
+        if getattr(self, '_root_handoff', None):
+            return False
+        return all(isinstance(app, dict) and isinstance(app.get('id'), str) and app['id']
+                   and app['id'] not in APPS for app in self.installed_apps())
+
     def version_summary(self):
         observed = self.installed_apps()
         self.tv_info['components'] = diagnostics.context.status_summary({'device': {'apps': observed}}).get('components', {})

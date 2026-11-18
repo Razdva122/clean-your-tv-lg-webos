@@ -1267,13 +1267,62 @@ class CLITests(unittest.TestCase):
             self.assertEqual(code, 0, output)
             self.assertEqual(len(calls), 1)
             self.assertEqual(ssap.call_count, 2)
-            session.inventory.assert_called_once_with(b'test-fallback')
+            session.inventory.assert_called_once_with(
+                b'test-fallback', allow_missing_inputs=installer.return_value.may_omit_no_root_inputs
+            )
             installer.return_value.install.assert_called_once_with(inventory, None, False)
             installer.return_value.trial.assert_not_called()
             self.assertIn('Packages installed; Home Helper launch requested.', output)
             report = json.loads(next(Path(tmp).glob('reports/*.json')).read_text())
             self.assertEqual(report['tv'].get('icon_inventory'), session.icon_diagnostics)
             self.assertNotRegex(output.lower(), r'trial|countdown|keep using|preview release')
+
+    def test_no_root_partial_inventory_continues_only_for_fresh_setup(self):
+        from unittest.mock import Mock
+        from cytv.operations import HOME, Installer
+
+        fresh = [{'id': 'video'}]
+        missing = {'payload': {}}
+        cases = [
+            (fresh, {'payload': {'devices': []}}, 0, False),
+            (fresh, missing, 0, True),
+            (fresh, {'type': 'error', 'error': '401 insufficient permissions'}, 0, True),
+            ([{'id': HOME}], missing, 1, False),
+            ([{'title': 'No ID'}], missing, 1, False),
+        ]
+        for apps, input_reply, expected_code, show_warning in cases:
+            with self.subTest(apps=apps, input_reply=input_reply), tempfile.TemporaryDirectory() as tmp, \
+                 patch('cytv.cli.package.verify_payload', return_value={}), \
+                 patch('cytv.cli.payload_dir', return_value=Path(tmp)), \
+                 patch.object(Installer, 'version_summary', return_value=[]), \
+                 patch.object(Installer, 'preflight'), patch.object(Installer, 'select_graphics'), \
+                 patch.object(Installer, 'installed_apps', return_value=apps), \
+                 patch.object(Installer, 'install', return_value={}) as install, \
+                 patch('websockets.sync.client.connect') as connect:
+                (Path(tmp) / 'fallback.png').write_bytes(b'test-fallback')
+                socket = connect.return_value
+                socket.recv.side_effect = list(map(json.dumps, [
+                    {'id': 'register_0', 'type': 'registered', 'payload': {'client-key': 'test-key'}},
+                    {'id': 'cytv_1', 'payload': {'launchPoints': [{'id': 'video', 'title': 'Video'}]}},
+                    {'id': 'cytv_2', **input_reply},
+                    {'id': 'cytv_3', 'payload': {'apps': []}},
+                    {'id': 'cytv_4', 'payload': {'launchPoints': [{'id': 'video', 'title': 'Video'}]}},
+                ]))
+                code, output, _ = self.run_cli(['install', '--host', '192.0.2.10', '--edition', 'no-root',
+                                                '--data-dir', tmp, '--non-interactive', '--yes', '--language', 'en'],
+                                               remote=Mock())
+                warning = 'Warning: TV inputs could not be read. Continuing with applications only.'
+                self.assertEqual(code, expected_code, output)
+                self.assertEqual(warning in ' '.join(output.split()), show_warning, output)
+                if expected_code == 0:
+                    install.assert_called_once()
+                    inventory, key, migrate = install.call_args.args
+                    self.assertEqual([a['id'] for a in inventory['apps']], ['video'])
+                    self.assertEqual(inventory['inputs'], [])
+                    self.assertEqual(key, 'test-key')
+                    self.assertFalse(migrate)
+                else:
+                    install.assert_not_called()
 
     def test_installation_failure_is_never_caught_as_inventory_retry(self):
         from cytv.errors import TVNotReady

@@ -41,6 +41,8 @@ Utilisez le code du TV, pas le mot de passe du compte LG. Si aucun code n’appa
 
 L’appairage est une étape distincte: quand le TV le demande, autorisez CYTV avec la télécommande.
 
+Si un avertissement indique que les entrées HDMI n’ont pas pu être lues lors de la première installation de No-root, vous pouvez continuer avec les applications détectées.
+
 Gardez Developer Mode actif: avant la fin du compte à rebours, ouvrez-le et appuyez sur EXTEND avec le TV connecté à Internet. À expiration, LG peut supprimer ces apps.
 
 <a id="installation-et-langue"></a>

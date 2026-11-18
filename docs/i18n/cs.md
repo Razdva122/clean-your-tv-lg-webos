@@ -33,6 +33,8 @@ Pokud instalátor nabídne **No-root**, můžete pokračovat přes stávající 
 
 Použijte kód z TV, nikoli heslo účtu LG. Pokud kód nevidíte, zapněte Key Server. Při samostatné žádosti o párování povolte CYTV dálkovým ovladačem.
 
+Pokud při první instalaci No-root instalátor upozorní, že nemohl načíst vstupy HDMI, můžete pokračovat s nalezenými aplikacemi.
+
 Před vypršením časovače otevřete Developer Mode a při připojení TV k internetu stiskněte **EXTEND**. Po vypršení může LG takto instalované aplikace odstranit.
 
 ## 3. Otevřete instalátor
