@@ -213,10 +213,11 @@ class SimpleRemoval(unittest.TestCase):
             return original(uri, payload, **kwargs)
 
         self.remote.luna = luna
-        malformed = [{'id': 'org.example.player'}, {'id': None}]
-        for reply, error_type, reason in (
-                ({'returnValue': False, 'errorCode': -1}, TVRejected, 'user-error'),
-                ({'returnValue': True, 'apps': malformed}, UserError, 'inventory-unavailable')):
+        malformed = ({'returnValue': True, 'apps': [{'id': 'org.example.player'}, {'id': invalid}]}
+                     for invalid in (None, '', '   '))
+        cases = [({'returnValue': False, 'errorCode': -1}, TVRejected, 'user-error')]
+        cases.extend((value, UserError, 'inventory-unavailable') for value in malformed)
+        for reply, error_type, reason in cases:
             with self.subTest(reply=reply):
                 with self.assertRaises(error_type) as caught:
                     self.remove()
