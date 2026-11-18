@@ -52,6 +52,7 @@ QPushButton[primary="true"]:hover { background: #605447; border-color: #b49c7e; 
 QPushButton[primary="true"]:pressed { background: #443b32; }
 QPushButton[primary="true"]:focus { border-color: #fff8eb; }
 QPushButton:disabled { background: #272521; color: #a79a88; border-color: #51483e; }
+QPushButton#doctorReport { padding: 10px 8px; }
 QPushButton#setupTV { background: #e0d4c4; color: #1d1c1a; border: 2px solid #e0d4c4; font-size: 18px; font-weight: 600; min-height: 32px; padding: 12px 16px; }
 QPushButton#setupTV:hover { background: #f3ede3; border-color: #f3ede3; }
 QPushButton#setupTV:pressed { background: #c9b89f; border-color: #c9b89f; }
