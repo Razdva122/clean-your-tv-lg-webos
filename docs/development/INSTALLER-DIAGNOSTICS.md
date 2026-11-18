@@ -781,9 +781,11 @@ requires current proof for the operation. `owner-input-required` identifies
 actions such as restoring the trusted connection, supplying confirmation or
 restarting the TV. A successful read with no verified operation can return
 `checked`. A noninteractive `status` uses read-only observations and keeps the
-saved receipt. Some Root recovery proofs require an interactive review with
-verified support code. Installation results report the physical Home-button
-check separately under `setup_outcome`.
+saved receipt. The plain console saves a redacted report if the check fails or
+can only gather partial TV information. `status --result-json` returns its
+result on stdout without writing a report. Some Root recovery proofs require an
+interactive review with verified support code. Installation results report the
+physical Home-button check separately under `setup_outcome`.
 
 
 ## Stock-compositor cleanup probe failure (source preparation)

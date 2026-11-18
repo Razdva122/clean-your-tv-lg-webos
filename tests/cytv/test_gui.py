@@ -10,7 +10,7 @@ from unittest.mock import patch
 from pathlib import Path
 try:
     from PySide6.QtWidgets import QApplication, QPushButton, QLineEdit, QComboBox, QRadioButton, QDialog, QLabel, QScrollArea, QCheckBox
-    from cytv.gui import Wizard
+    from cytv.gui import Wizard, configure_appearance
     from cytv.desktop import Prompt
     HAS_QT = True
 except ImportError:
@@ -876,6 +876,7 @@ class GuiTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.app = QApplication.instance() or QApplication([])
+        configure_appearance(cls.app, Path(__file__).resolve().parents[2] / 'launcher/fonts')
 
     def setUp(self):
         from cytv import i18n
@@ -971,7 +972,6 @@ class GuiTests(unittest.TestCase):
 
     def test_select_popup_has_no_light_bands(self):
         from cytv.gui_style import Select, STYLE
-        self.app.setStyle('Fusion')
         select = Select()
         self.addCleanup(select.close)
         select.setStyleSheet(STYLE)
@@ -1575,12 +1575,9 @@ class GuiTests(unittest.TestCase):
         w.close()
 
     def test_chinese_fonts_follow_startup_and_language_changes(self):
-        from PySide6.QtGui import QFontDatabase, QTextLayout
+        from PySide6.QtGui import QTextLayout
         from cytv import i18n
         from cytv.gui_style import STYLE
-        fonts = Path(__file__).resolve().parents[2] / 'launcher/fonts'
-        for name in ('SC', 'TC'):
-            self.assertGreaterEqual(QFontDatabase.addApplicationFont(str(fonts / ('NotoSans%s.ttf' % name))), 0)
         i18n.configure('zh-Hant')
         w = Wizard()
         self.addCleanup(w.close)

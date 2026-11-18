@@ -805,31 +805,26 @@ def begin(installer, action, artifacts, versions, expected, configuration, setup
                            private_root=selected, root_handoff=handoff)
     fresh_install = action == 'install'
     review = getattr(installer, 'storage_preflight_review', None) if fresh_install else None
-    retried = False
-
-    def check_read_only(command):
-        nonlocal retried
-        options = {'fresh_install': fresh_install, 'read_only_storage': command == 'storage-check'}
+    needs_selection = not root_ssh
+    for retry in (False, True):
         try:
-            return invoke(installer.remote, check_plan, command, **options)
+            if needs_selection:
+                selected = invoke(installer.remote, check_plan, 'storage-select', fresh_install=fresh_install)['root']
+                if selected == ROOT:
+                    selected = None  # Preserve legacy plans and capsule bindings.
+                else:
+                    check_plan['private_root'] = selected
+                needs_selection = False
+            if review is not None:
+                invoke(installer.remote, check_plan, 'storage-check', fresh_install=True, read_only_storage=True)
+                if retry:
+                    review(None)
+            invoke(installer.remote, check_plan, 'storage-check', fresh_install=fresh_install)
+            break
         except UserError as error:
-            if review is None or retried or error.reason_code != 'storage-preflight-failed':
+            if review is None or retry or error.reason_code != 'storage-preflight-failed':
                 raise
             review(error)
-        retried = True
-        return invoke(installer.remote, check_plan, command, **options)
-
-    if not root_ssh:
-        selected = check_read_only('storage-select')['root']
-        if selected == ROOT:
-            selected = None  # Preserve legacy plans and capsule bindings.
-        else:
-            check_plan['private_root'] = selected
-    if review is not None:
-        check_read_only('storage-check')
-        if retried:
-            review(None)
-    invoke(installer.remote, check_plan, 'storage-check', fresh_install=fresh_install)
     before_staging = getattr(installer, 'before_no_root_staging', None) if fresh_install else None
     if before_staging is not None:
         before_staging()

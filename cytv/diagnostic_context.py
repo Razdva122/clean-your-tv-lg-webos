@@ -773,13 +773,12 @@ def history(report, store, profile, error, pending, *, create=True):
         directory = store.device_path(profile) / 'diagnostic-failures'
         if directory.is_symlink():
             raise ValueError('Indirect diagnostic directory')
-        if create:
-            directory.mkdir(parents=True, mode=0o700, exist_ok=True)
         identifier = mapping(pending).get('diagnostic_id')
         if type(identifier) is str and re.fullmatch(r'[a-f0-9]{32}', identifier):
             path = directory / (identifier + '.json')
             if (create and error is not None and getattr(store, 'diagnostic_created', None) == identifier
                     and report['action'] == getattr(store, 'diagnostic_action', None)):
+                directory.mkdir(parents=True, mode=0o700, exist_ok=True)
                 _write_first_failure(path, report)
             if path.exists() or path.is_symlink():
                 result['first_failure'] = failure_summary(read_record(path))

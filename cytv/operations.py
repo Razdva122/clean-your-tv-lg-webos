@@ -23,6 +23,9 @@ UPDATER_APP = 'com.cleanyourtv.root.updater'
 SYSTEM_UPDATER_APP = 'com.cleanyourtv.system.updater'
 SYSTEM_UPDATER_STATE = '/var/lib/clean-your-tv-system-updater'
 
+PREVIOUS_ROOT_RECOVERY = ('Previous Root installation needs recovery. Run cytv status or cytv restore. '
+                          'Reinstallation has not started; recovery data was left unchanged.')
+
 # Trusted host code: the target copy cannot bootstrap verification of itself.
 # Keep this pre-execution validator aligned with root-edition/python_boot.js.
 _RETAINED_PYTHON_CHECK = r'''
@@ -719,20 +722,7 @@ with os.fdopen(f,'rb') as stream:
                     raise ExistingRoot('Root is already installed or recovery state remains. Connect interactively to review reinstallation; existing state was left unchanged.')
         else:
             if install and self.profile.get('connection') == 'root-ssh':
-                from .root_runtime import FRESH_PROBE
-                fresh_state = self.remote.run(FRESH_PROBE, timeout=10).strip()
-                if fresh_state != 'CYTV_FRESH_ROOT':
-                    message = ('Previous Root installation needs recovery. Run cytv status or cytv restore. '
-                               'Reinstallation has not started; recovery data was left unchanged.')
-                    if fresh_only:
-                        error = UserError(message)
-                        error.root_alternative_retained = fresh_state == 'CYTV_RETAINED_ROOT'
-                        raise error
-                    from .root_no_root_handoff import probe
-                    try:
-                        self._root_handoff=probe(self)
-                    except (OSError,ValueError,RuntimeError):
-                        raise UserError(message) from None
+                self._root_handoff = self._read_root_handoff(fresh_only=fresh_only)
             self.checks.update('architecture', 'running')
             arch = self.remote.run('uname -m').strip()
             self.tv_info.update(kernel_arch=arch if arch in diagnostics.KERNEL_ARCHES else 'unknown',
@@ -761,25 +751,51 @@ with os.fdopen(f,'rb') as stream:
                                    '' if node.strip() == 'CYTV_NODE_READY' else 'Home Helper requires TV Node.js 0.10.15 or newer. Installation has not started.')
                 if node.strip() != 'CYTV_NODE_READY':
                     raise UserError('Home Helper requires TV Node.js 0.10.15 or newer. Installation has not started.')
-            self.checks.update('root-conflict', 'running')
-            root_state = self.remote.run(
-                'if [ -e /var/webos-profile/override/clean-your-tv-root.json ] || '
-                '[ -L /var/webos-profile/override/clean-your-tv-root.json ] || '
-                '[ -e /var/lib/clean-your-tv-root/home-backend.json ] || '
-                '[ -L /var/lib/clean-your-tv-root/home-backend.json ] || '
-                '[ -e /var/lib/clean-your-tv-root/c1-gate ] || '
-                '[ -L /var/lib/clean-your-tv-root/c1-gate ] || '
-                '[ -e /var/lib/clean-your-tv-root/runtime/c1-home-gate ] || '
-                '[ -L /var/lib/clean-your-tv-root/runtime/c1-home-gate ]; then printf CYTV_ROOT_STATE; fi')
-            self.checks.update('root-conflict', 'fail' if root_state.strip() else 'pass',
-                               'Root Home routing is present. Restore it with cytv --edition root restore first.' if root_state.strip() else '')
-            if root_state.strip():
-                raise UserError('Root Home routing is present. Restore it with cytv --edition root restore first.')
+            self._check_root_routing()
             if not install or defer_helper:
                 return
-            self.prepare_install_helper(stop_running_helper)
+            self.prepare_install_helper(stop_running_helper, recheck_routing=False)
 
-    def prepare_install_helper(self, stop_running_helper):
+    def _read_root_handoff(self, *, fresh_only):
+        from .root_runtime import FRESH_PROBE
+        state = self.remote.run(FRESH_PROBE, timeout=10).strip()
+        if state == 'CYTV_FRESH_ROOT':
+            return None
+        if fresh_only:
+            error = UserError(PREVIOUS_ROOT_RECOVERY)
+            error.root_alternative_retained = state == 'CYTV_RETAINED_ROOT'
+            raise error
+        from .root_no_root_handoff import probe
+        try:
+            return probe(self)
+        except (OSError, ValueError, RuntimeError):
+            raise UserError(PREVIOUS_ROOT_RECOVERY) from None
+
+    def _check_root_routing(self):
+        self.checks.update('root-conflict', 'running')
+        root_state = self.remote.run(
+            'if [ -e /var/webos-profile/override/clean-your-tv-root.json ] || '
+            '[ -L /var/webos-profile/override/clean-your-tv-root.json ] || '
+            '[ -e /var/lib/clean-your-tv-root/home-backend.json ] || '
+            '[ -L /var/lib/clean-your-tv-root/home-backend.json ] || '
+            '[ -e /var/lib/clean-your-tv-root/c1-gate ] || '
+            '[ -L /var/lib/clean-your-tv-root/c1-gate ] || '
+            '[ -e /var/lib/clean-your-tv-root/runtime/c1-home-gate ] || '
+            '[ -L /var/lib/clean-your-tv-root/runtime/c1-home-gate ]; then printf CYTV_ROOT_STATE; fi')
+        self.checks.update('root-conflict', 'fail' if root_state.strip() else 'pass',
+                           'Root Home routing is present. Restore it with cytv --edition root restore first.' if root_state.strip() else '')
+        if root_state.strip():
+            raise UserError('Root Home routing is present. Restore it with cytv --edition root restore first.')
+
+    def prepare_install_helper(self, stop_running_helper, *, recheck_routing=True):
+        if recheck_routing:
+            if self.profile.get('connection') == 'root-ssh':
+                self.checks.update('root-conflict', 'running')
+                # Storage and staging are bound to the original clean-removal handoff.
+                selected = getattr(self, '_root_handoff', None)
+                if self._read_root_handoff(fresh_only=selected is None) != selected:
+                    raise UserError(PREVIOUS_ROOT_RECOVERY)
+            self._check_root_routing()
         self.checks.update('helper-idle', 'running')
         helper = self.helper_state()
         if helper == 'running' and stop_running_helper:
@@ -1631,8 +1647,11 @@ else:
                 passive and self.profile['edition'] == 'root' and pending and pending.get('product_operation')):
             # A failed submission/status (including SSH 127) does not authorize
             # staging a replacement driver or executing retained binding code.
-            observed=collect(self.remote,pending.get('product_operation'),pending)
-            event=dict(operation=pending['product_operation'],action='install',state='recovery_required',
+            # The passive reader understands installation journals only. Other
+            # saved goals may be reported without running a coordinator on TV.
+            observed = (collect(self.remote, pending['product_operation'], pending)
+                        if pending['action'] == 'install' else {'schema': 1, 'status': 'unavailable'})
+            event=dict(operation=pending['product_operation'],action=pending['action'],state='recovery_required',
                        stage='blocked',code='operation_requires_recovery',can_resume=False,
                        resume_reason='recovery_evidence_required',passive=observed)
             if native_pending and observed.get('status')=='read':

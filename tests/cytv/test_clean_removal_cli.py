@@ -192,6 +192,29 @@ class CleanupConnectionWire(unittest.TestCase):
             self.assertEqual(remote.run.call_args.args[0], 'env -u NODE_OPTIONS -u NODE_PATH /usr/bin/node')
             remote.upload.assert_not_called()
 
+    def test_passive_status_preserves_legacy_root_uninstall_goal(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            store = state.Store(tmp)
+            profile = state.target('192.0.2.50', 'root')
+            store.save(profile)
+            (store.device_dir(profile) / 'known_hosts').write_bytes(b'original pin')
+            store.begin(profile, 'uninstall', stage='coordinator-submitted', product_operation='a' * 32)
+            before = store.pending(profile)
+            remote = Mock()
+            remote.run.return_value = 'CYTV_NODE_VERSION v8.12.0'
+            lines = []
+            code = cli.main(['status', '--result-json', '--data-dir', tmp],
+                            connect=lambda *args: remote, write=lines.append)
+            self.assertEqual(code, 0)
+            result, = map(json.loads, lines)
+            event = result['device']['product']
+            self.assertEqual(event['action'], 'uninstall')
+            self.assertEqual(event['operation'], before['product_operation'])
+            self.assertFalse(event['can_resume'])
+            self.assertEqual(event['passive']['status'], 'unavailable')
+            self.assertEqual(store.pending(profile), before)
+            remote.upload.assert_not_called()
+
     def test_removal_result_distinguishes_restart_from_verified_completion(self):
         for restart, expected in ((True, {'state': 'owner-input-required', 'action': 'restart-tv'}),
                                   (False, {'state': 'verified-completion', 'action': 'none'})):

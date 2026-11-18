@@ -1,6 +1,7 @@
 """Exercise the desktop recovery journey with real CLI/state and simulated TV IO."""
 import json
 import hashlib
+import itertools
 import os
 import shlex
 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
@@ -48,16 +49,19 @@ class DesktopRecoveryTests(unittest.TestCase):
         self.assertEqual(self.remote.uploads, {})
 
     def test_storage_preflight_retries_only_failed_check_before_install_confirmation(self):
-        for decision in ('cancel-retry', 'cancel-install', 'pending', 'late-pending', 'legacy-uninstall', 'identity',
-                         'check-fails-again', 'install'):
-            with self.subTest(decision=decision):
+        read = ('storage-check', True)
+        writable = ('storage-check', False)
+        selected = ('storage-select', True)
+        decisions = ('cancel-retry', 'cancel-install', 'pending', 'late-pending', 'legacy-uninstall',
+                     'identity', 'check-fails-again', 'install')
+        for failed_check, decision in itertools.product((read, writable), decisions):
+            with self.subTest(failed_check=failed_check, decision=decision):
                 self.store.finish(self.profile)
                 self.remote = Remote()
                 self.remote.close = lambda: None
                 original = self.remote.run
                 checks = []
-                read = ('storage-check', True)
-                selected = ('storage-select', True)
+                before_retry = [selected, read] if failed_check == read else [selected, read, writable]
                 failure_count = 2 if decision == 'check-fails-again' else 1
                 def run(command, **kwargs):
                     if command.startswith('unset NODE_OPTIONS NODE_PATH && /usr/bin/node -e '):
@@ -67,11 +71,12 @@ class DesktopRecoveryTests(unittest.TestCase):
                         if action in ('storage-select', 'storage-check'):
                             read_only = "case 'storage-check':result=storageCheck();break;" not in args[-2]
                             checks.append((action, read_only))
-                            if action == 'storage-check' and read_only and checks.count(read) <= failure_count:
-                                if decision == 'check-fails-again':
+                            if checks[-1] == failed_check and checks.count(failed_check) <= failure_count:
+                                if failed_check == writable or decision == 'check-fails-again':
                                     return json.dumps({
                                         'operation': request['plan']['operation'],
-                                        'observer_error': {'exception_code': 'EACCES', 'filesystem_operation': 'lstat',
+                                        'observer_error': {'exception_code': 'EACCES',
+                                                           'filesystem_operation': 'lstat' if read_only else 'mkdir',
                                                            'storage_area': 'private-storage'},
                                     })
                                 return 'MALFORMED'
@@ -88,7 +93,7 @@ class DesktopRecoveryTests(unittest.TestCase):
                 self.pump(lambda: self.button(w, 'Retry storage check') is not None or not w.running)
                 retry = self.button(w, 'Retry storage check')
                 self.assertIsNotNone(retry, w.details.toPlainText())
-                self.assertEqual(checks, [selected, read])
+                self.assertEqual(checks, before_retry)
                 self.assertIsNone(self.store.pending(self.profile))
                 self.assertEqual(self.remote.observers, {})
                 self.assertEqual(self.remote.uploads, {})
@@ -100,7 +105,7 @@ class DesktopRecoveryTests(unittest.TestCase):
                 elif decision == 'identity':
                     (self.store.device_dir(self.profile) / 'known_hosts').write_bytes(b'different pin')
                     retry.click()
-                elif decision == 'check-fails-again':
+                elif decision == 'check-fails-again' and failed_check == read:
                     self.assertIn('verify that its SSH account can access', w.content.toPlainText())
                     retry.click()
                 else:
@@ -109,12 +114,12 @@ class DesktopRecoveryTests(unittest.TestCase):
                     self.assertIsNotNone(w.pending, w.details.toPlainText())
                     self.assertEqual(w.pending.title, 'Install these versions?')
                     self.assertEqual(w.pending.default, 'n')
-                    self.assertEqual(checks, [selected, read, read])
+                    self.assertEqual(checks, before_retry + [read])
                     self.assertEqual(self.remote.observers, {})
                     self.assertEqual(self.remote.uploads, {})
                     if decision == 'late-pending':
                         self.store.begin(self.profile, 'install', stage='pending')
-                    w.submit('y' if decision in ('install', 'late-pending') else 'n')
+                    w.submit('y' if decision in ('install', 'late-pending', 'check-fails-again') else 'n')
                     if decision == 'install':
                         self.pump(lambda: w.pending is not None or not w.running)
                         if w.pending:
@@ -138,11 +143,11 @@ class DesktopRecoveryTests(unittest.TestCase):
                     self.assertEqual(w.failure_help['code'], 'ssh-identity')
                     (self.store.device_dir(self.profile) / 'known_hosts').write_bytes(b'original pin')
                 if decision in ('cancel-retry', 'pending', 'legacy-uninstall', 'identity'):
-                    self.assertEqual(checks, [selected, read])
-                elif decision == 'install':
-                    self.assertEqual(checks, [selected, read, read, ('storage-check', False)])
+                    self.assertEqual(checks, before_retry)
+                elif decision == 'install' or decision == 'check-fails-again' and failed_check == writable:
+                    self.assertEqual(checks, before_retry + [read, writable])
                 else:
-                    self.assertEqual(checks, [selected, read, read])
+                    self.assertEqual(checks, before_retry + [read])
                 self.assertIsNone(self.button(w, 'Retry storage check'))
                 w.close()
 

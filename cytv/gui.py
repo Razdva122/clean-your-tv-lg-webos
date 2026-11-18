@@ -1798,15 +1798,19 @@ class Wizard(QMainWindow):
             event.accept()
 
 
-def main():
-    app = QApplication(sys.argv[:1])
-    for font in (cli.payload_dir() / 'fonts').glob('*.ttf'):
+def configure_appearance(app, fonts):
+    for font in fonts.glob('Noto*.ttf'):
         QFontDatabase.addApplicationFont(str(font))
     QFont.insertSubstitutions(app.font().family(), ['Noto Sans', 'Noto Sans Devanagari', 'Noto Sans KR'])
+    app.setStyle('Fusion')
+
+
+def main():
+    app = QApplication(sys.argv[:1])
+    configure_appearance(app, cli.payload_dir() / 'fonts')
     app.setApplicationName('Clean Your TV')
     app.setOrganizationName('CleanYourTV')
     app.setWindowIcon(QIcon(str(cli.payload_dir() / 'installer.png')))
-    app.setStyle('Fusion')
     window = Wizard()
     window.show()
     if '--smoke-test' in sys.argv:

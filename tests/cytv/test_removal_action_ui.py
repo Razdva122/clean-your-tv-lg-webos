@@ -177,6 +177,35 @@ class RemovalActionUITests(unittest.TestCase):
         self.assertEqual(self.fixture.connections, [])
         self.assertIsNone(self.fixture.store.pending(profile))
 
+    def test_confirmed_removal_rechecks_original_pin_after_connection_loss(self):
+        from hashlib import sha256
+        from cytv import cli
+        from cytv.desktop import DesktopConsole
+
+        fixture = self.fixture
+        profile = fixture.profile
+        pending = fixture.store.request_clean_removal(profile)
+        directory = fixture.store.device_path(profile)
+        pin = directory / 'known_hosts'
+        expected_pin = sha256(pin.read_bytes()).hexdigest()
+        evidence = {path: path.read_bytes() for path in (
+            directory / 'operation.json', directory / 'profile.json', directory / pending['original_receipt'])}
+        attempts = []
+
+        def connect(profile, directory, secret, trust, *, persist):
+            attempts.append((profile, persist))
+            raise TimeoutError('connection interrupted')
+
+        with patch('cytv.cli.sleep', side_effect=lambda _: pin.write_bytes(b'replacement pin')):
+            code = cli.main(['uninstall', '--edition', profile['edition'], '--host', profile['host'],
+                             '--port', str(profile['port']), '--removal-operation', pending['removal_operation'],
+                             '--removal-pin', expected_pin, '--data-dir', str(fixture.root)],
+                            connect=connect, payload_root=fixture.payload, write=DesktopConsole(lambda *_: None))
+        self.assertEqual(attempts, [(profile, False)])
+        self.assertEqual(code, 2)
+        self.assertEqual({path: path.read_bytes() for path in evidence}, evidence)
+        self.assertEqual(pin.read_bytes(), b'replacement pin')
+
     def test_retryable_connection_interruption_does_not_offer_root(self):
         self.save_root_connection()
         window, _ = self.removal_window(failure={'code':'ssh-timeout', 'title':'Connection timed out',

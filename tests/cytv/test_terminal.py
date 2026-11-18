@@ -74,6 +74,29 @@ class TerminalTests(unittest.TestCase):
         self.assertEqual(json.loads(lines[0])['exit_code'], code)
         ask.assert_not_called()
 
+    def test_noninteractive_status_error_on_unsaved_tv_writes_only_the_report(self):
+        import json
+        from pathlib import Path
+        from tempfile import TemporaryDirectory
+        from unittest.mock import Mock
+        from cytv import cli, i18n
+
+        self.addCleanup(i18n.set_language, i18n.language_choice())
+        connect = Mock(side_effect=ConnectionRefusedError('private transport details'))
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            code = cli.main(['status', '--non-interactive', '--host', '192.0.2.55',
+                             '--edition', 'root', '--data-dir', directory, '--language', 'en'],
+                            connect=connect, write=lambda _: None)
+            self.assertEqual(code, 1)
+            connect.assert_called_once()
+            report, = (root / 'reports').glob('*.json')
+            self.assertEqual(set(root.rglob('*')), {report.parent, report})
+            text = report.read_text()
+            self.assertEqual(json.loads(text)['phase'], 'ssh-connect')
+            self.assertNotIn('private transport details', text)
+            self.assertNotIn('192.0.2.55', text)
+
     def test_argument_errors_use_red_stderr(self):
         from cytv.cli import LanguageParser
         output = io.StringIO()

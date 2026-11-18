@@ -351,6 +351,7 @@ def _run(args, ask, write, connect, secret, search, inspect, payload_root, check
     from .desktop import DesktopConsole, SSH_COMMAND_PROMPT
 
     read_only = args.non_interactive and args.command == 'status'
+    export_report = not (read_only and args.result_json)
     try:
         if args.language is not None and not read_only:
             i18n.configure(args.language, args.data_dir)
@@ -711,7 +712,7 @@ def _run(args, ask, write, connect, secret, search, inspect, payload_root, check
             checks.update('ssh', 'running')
             write('Connecting to the TV…')
             def connect_tv(pinned, directory=None, confirm=trust):
-                if pinned_root_removal:
+                if removal_pin is not None:
                     store.connection_profile(profile, expected_pin=removal_pin)
                 pairing = {'previous_host_key_type': old_key_type} if directory is not None else {}
                 if directory is None:
@@ -749,7 +750,7 @@ def _run(args, ask, write, connect, secret, search, inspect, payload_root, check
                 diagnostics.context.collect_node_version(remote, tv_info)
                 write('SSH connection verified. Full TV checks and recovery details are unavailable.')
                 write.status_result(diagnostics.context.tv_summary(tv_info))
-                if not read_only:
+                if export_report:
                     diagnostics.save_result(write, store, args.command, profile, 'partial-tv-observation',
                                             tv_info, checks=checks.results)
                 return 0
@@ -942,24 +943,20 @@ def _run(args, ask, write, connect, secret, search, inspect, payload_root, check
                     write('Press Home three times within two seconds (older Helper: hold Home for two seconds), then release all buttons and wait for LG Home.')
                     return prompts.confirm('Try stopping Helper again?', ask, write, default=True)
 
-                def prepare_no_root(check):
-                    auto_stop = True
-                    while True:
-                        try:
-                            check(auto_stop)
-                            return True
-                        except UserError as error:
-                            auto_stop = False
-                            if error.reason_code != 'helper-running' or args.non_interactive:
-                                raise
-                            if not helper_retry():
-                                return False
-
                 def prepare_no_root_staging():
                     nonlocal phase
                     phase = 'inspect-installation'
-                    if not prepare_no_root(installer.prepare_install_helper):
-                        raise EOFError
+                    auto_stop = True
+                    while True:
+                        try:
+                            installer.prepare_install_helper(auto_stop)
+                            break
+                        except UserError as error:
+                            if error.reason_code != 'helper-running' or args.non_interactive:
+                                raise
+                            if not helper_retry():
+                                raise EOFError
+                            auto_stop = False
                     phase = 'install-packages'
 
                 installer.helper_retry = helper_retry
@@ -1212,9 +1209,10 @@ def _run(args, ask, write, connect, secret, search, inspect, payload_root, check
                 else:
                     write.status_result(result)
             if not read_only and args.command in ('install', 'status', 'restore', 'recover', 'uninstall'):
-                # The next action after this removal result is a TV restart.
-                # Keep the wait limited to the saved connection and boot check.
-                if args.command != 'uninstall' or result.get('restart_required') is not True:
+                # Recovery can end before the owner agrees to inspect the TV.
+                # A removal waiting for restart needs only the boot check.
+                if (args.command != 'recover' and
+                        (args.command != 'uninstall' or result.get('restart_required') is not True)):
                     diagnostics.observe_root_python_inventory(remote, profile, tv_info)
                 diagnostics.save_result(write, store, args.command, profile,
                     'install-complete' if args.command == 'install' else phase, tv_info,
@@ -1314,15 +1312,11 @@ def _run(args, ask, write, connect, secret, search, inspect, payload_root, check
             write(FEEDBACK)
         if remote is not None:
             if (failure is not None and not partial and not read_only
-                    and args.command in ('install', 'status', 'doctor', 'restore', 'recover', 'uninstall')):
+                    and args.command in ('install', 'status', 'doctor', 'restore', 'uninstall')):
                 diagnostics.observe_root_python_inventory(remote, profile, tv_info)
             remote.close()
 
-    if read_only:
-        if write.frontend == 'console':
-            write('Include the visible error when opening an issue.')
-            write.issue(diagnostics.load_issue_draft(None, args.command))
-    else:
+    if export_report:
         diagnostics.suggest_issue(write, store, args.command, profile, phase, failure, tv_info,
                                   checks=checks.results, status=tv_info.get('status'),
                                   ask=None if args.non_interactive else ask)
