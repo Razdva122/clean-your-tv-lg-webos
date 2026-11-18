@@ -258,6 +258,7 @@ class RecoveryActionTests(unittest.TestCase):
             profile = state.target('tv.local', 'root')
             store.request_clean_removal(profile)
             store.checkpoint(profile, stage='restart-required', removal_reason='restart-required')
+            pending = store.pending(profile)
             for error, code, condition in cases:
                 with self.subTest(error=type(error), condition=condition):
                     events = []
@@ -267,7 +268,10 @@ class RecoveryActionTests(unittest.TestCase):
                     removal_plan(write, store, profile, failure=help)
                     plan = [value for kind, value in events if kind == 'recovery-plan'][-1]
                     self.assertEqual(plan['removal_action']['condition'], condition)
-                    self.assertTrue(plan['restart_required'])
+                    self.assertFalse(plan['restart_required'])
+                    self.assertEqual(plan['reason'], 'removal-recheck-required')
+                    self.assertEqual(store.pending(profile), pending)
+                    self.assertNotIn('Restart the TV', plan['next_step'])
                     self.assertNotIn('PRIVATE', str(events))
 
     def test_recover_emits_current_failure_advice_over_the_saved_restart(self):
@@ -296,9 +300,13 @@ class RecoveryActionTests(unittest.TestCase):
                         recover(installer, lambda _: 'y', write)
                     plan = [value for kind, value in events if kind == 'recovery-plan'][-1]
                     self.assertEqual(plan['removal_action']['condition'], condition)
-                    self.assertEqual(plan['reason'], 'restart-required')
-                    self.assertTrue(plan['restart_required'])
-                    if condition != 'restart':
+                    if condition == 'restart':
+                        self.assertEqual(plan['reason'], 'restart-required')
+                        self.assertTrue(plan['restart_required'])
+                        self.assertIn('Restart the TV', plan['next_step'])
+                    else:
+                        self.assertEqual(plan['reason'], 'removal-recheck-required')
+                        self.assertFalse(plan['restart_required'])
                         self.assertNotIn('Restart the TV', plan['summary'])
                         self.assertNotIn('Restart the TV', plan['next_step'])
                     self.assertEqual(store.pending(profile), pending)
@@ -329,12 +337,17 @@ class RecoveryActionTests(unittest.TestCase):
                                      {'action':'check','condition':'unverified','requires_change':True})
                     self.assertNotIn('PRIVATE', str(plan))
             store.checkpoint(profile, stage='restart-required', removal_reason=None)
+            pending = store.pending(profile)
             installer = Mock(store=store, profile=profile)
             installer.observe_recovery.return_value = {'device': {}}
             recover(installer, lambda _: 'n', write, initial_observation={})
             plan = [value for kind, value in events if kind == 'recovery-plan'][-1]
             self.assertEqual(plan.get('removal_action'),
-                             {'action':'retry-removal','condition':'restart','requires_change':True})
+                             {'action':'check','condition':'unverified','requires_change':True})
+            self.assertFalse(plan['restart_required'])
+            self.assertEqual(plan['next_step'], 'Check the TV state before deciding whether a restart is needed.')
+            self.assertEqual(store.pending(profile), pending)
+            installer.continue_clean_removal.assert_not_called()
 
     def test_unexpected_observation_diagnostics_are_pure_fixed_and_optional(self):
         from cytv.contract_events import Recorder, current_recorder
