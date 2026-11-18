@@ -3,6 +3,13 @@
   "version": null,
   "changes": [
     {
+      "pr": 714,
+      "issues": [
+        710
+      ],
+      "summary": "Resume guarded Root Home after verified startup on LG 65NANO913NA"
+    },
+    {
       "pr": 718,
       "issues": [
         201,
