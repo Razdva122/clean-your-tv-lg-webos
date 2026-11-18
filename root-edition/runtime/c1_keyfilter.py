@@ -77,6 +77,18 @@ def selection(root=STATE, uid=0):
     return value
 
 
+def reboot_resume_supported(descriptor):
+    if not descriptor or descriptor['schema'] != 3:
+        return False
+    device = descriptor['admission']
+    return (device['model'], device['firmware'], device['webos']) == ('65NANO913NA', '04.64.00', '5.6.2')
+
+
+def boot_session():
+    from intent_runtime import boot_identity as startup_identity
+    return startup_identity()
+
+
 def validate_chain(value):
     if not isinstance(value,list) or len(value)>128:
         raise ValueError('Unknown configd filter chain')
@@ -394,19 +406,30 @@ def write_config(root, admission, token, uid=0):
     atomic(private_directory(root,uid)/'config',data,uid,raw=True)
 
 
-def write_intent(root, enabled, token, phase, uid=0):
+def write_intent(root, enabled, token, phase, uid=0, *, session=None):
     value=dict(schema=1,enabled=enabled,token=token,phase=phase,boot=boot_identity())
+    if session is not None:
+        if not valid_resume_session(value, session):
+            raise ValueError('Invalid compositor boot session')
+        value['session'] = session
     atomic(private_directory(root,uid)/'intent.json',value,uid)
     return value
 
 
+def valid_resume_session(intent, session):
+    return (intent['enabled'] and intent['phase'] == 'active'
+            and isinstance(session, str)
+            and re.fullmatch(re.escape(intent['boot']) + r':session-[0-9a-f]{32}', session) is not None)
+
+
 def read_intent(root=STATE, uid=0):
     value=json.loads(secure(private_directory(root,uid)/'intent.json',uid,4096))
-    if (not isinstance(value,dict) or set(value)!={'schema','enabled','token','phase','boot'}
+    if (not isinstance(value,dict) or set(value)-{'session'}!={'schema','enabled','token','phase','boot'}
             or type(value['schema']) is not int or value['schema']!=1 or type(value['enabled']) is not bool
             or value['phase'] not in ('disabled','starting','active','trial','recovering')
             or not isinstance(value['token'],str) or not legacy.TOKEN.fullmatch(value['token'])
-            or not isinstance(value['boot'],str) or str(uuid.UUID(value['boot']))!=value['boot']):
+            or not isinstance(value['boot'],str) or str(uuid.UUID(value['boot']))!=value['boot']
+            or ('session' in value and not valid_resume_session(value, value['session']))):
         raise ValueError('Invalid compositor intent')
     return value
 
@@ -522,9 +545,9 @@ def status(root=STATE, uid=0):
 
 
 @contextmanager
-def operation(root=STATE,uid=0):
+def operation(root=STATE,uid=0, *, name='operation.lock'):
     import fcntl
-    path=private_directory(root,uid)/'operation.lock'
+    path=private_directory(root,uid)/name
     fd=os.open(path,os.O_CREAT|os.O_RDWR|os.O_NOFOLLOW|os.O_NONBLOCK,0o600)
     try:
         info=os.fstat(fd)
@@ -610,7 +633,7 @@ def process_start(pid):
     return int(fields[19])
 
 
-def stop_controller(root,uid):
+def stop_controller(root,uid, *, prior_session=False):
     path=private_directory(root,uid)/'controller.json'
     try: value=json.loads(secure(path,uid,4096))
     except FileNotFoundError: return
@@ -631,6 +654,9 @@ def stop_controller(root,uid):
     pid=value['pid']
     try:
         if process_start(pid)!=value['start']:
+            if prior_session:
+                path.unlink()
+                return
             raise ValueError('Lifecycle controller PID changed; retain evidence')
         # The native stop latch makes the controller exit on its next bounded
         # status read. Never signal a PID across a check/kill race on old kernels
@@ -660,10 +686,12 @@ def restore_for_removal(root, uid):
         return restore_locked(root, uid, for_removal=True)
 
 
-def restore_locked(root,uid, *, for_removal=False, explicit_restore=False):
+def restore_locked(root,uid, *, for_removal=False, explicit_restore=False, routing_only=False):
     ui_failure = None
     try:
-        if for_removal or explicit_restore:
+        if routing_only:
+            native(['--restore-routing'],root,uid)
+        elif for_removal or explicit_restore:
             restored = native(['--restore'], root, uid, allow_ui_failure=True)
             if restored['returnValue'] is False:
                 ui_failure = restored
@@ -773,7 +801,26 @@ def start_controller(root,uid,token,control_fd,log):
         if ready_write is not None: os.close(ready_write)
 
 
-def enable_locked(root,uid,seconds):
+def rotate_boot_config(root, uid, admission, prior_token, token):
+    # Use the native guardian's state lock. A direct Restore may latch Off
+    # independently of the Python operation lock.
+    with operation(root, uid, name='lock'):
+        directory = private_directory(root, uid)
+        config = secure(directory/'config', uid, 512)
+        if not config.startswith(b'CYTV-C1-KEYFILTER-1\ntoken ' + prior_token.encode('ascii') + b'\n'):
+            raise ValueError('Preceding compositor token changed')
+        try:
+            stop = secure(directory/'stopped', uid, 160)
+        except FileNotFoundError:
+            pass
+        else:
+            match = re.fullmatch(rb'([0-9a-f]{32}) ([a-z_]{1,63})\n', stop)
+            if match is None or (match[1] == prior_token.encode('ascii') and match[2] != b'normal_shutdown'):
+                raise ValueError('Preceding compositor stop requires explicit Enable')
+        write_config(root, admission, token, uid)
+
+
+def enable_locked(root,uid,seconds, *, session=None, resume_token=None):
     descriptor=selection(root,uid)
     if descriptor is None: raise ValueError('Compositor backend not selected')
     if verify_ready().get('integrity_verified') is not True:
@@ -792,8 +839,15 @@ def enable_locked(root,uid,seconds):
     helper=binary(root,uid)
     # Verify the filter is protected before configd is allowed to read it.
     secure(Path(root)/'runtime/c1-home-filter.js',uid,65536)
+    if resume_token is not None:
+        from boot_gate import observation
+        if observation() != (True, False) or boot_session() != session:
+            raise ValueError('Normal compositor startup proof changed')
     token=uuid.uuid4().hex
-    write_config(root,descriptor['admission'],token,uid)
+    if resume_token is not None:
+        rotate_boot_config(root, uid, descriptor['admission'], resume_token, token)
+    else:
+        write_config(root,descriptor['admission'],token,uid)
     write_intent(root,seconds==0,token,'starting',uid)
     fds=[]; children=[]
     try:
@@ -813,7 +867,8 @@ def enable_locked(root,uid,seconds):
             pass_fds=(input_write,),stdin=subprocess.DEVNULL,stdout=log,stderr=log,start_new_session=True,close_fds=True)
         children.append(observer)
         os.close(input_write); fds.remove(input_write)
-        guard=subprocess.Popen([str(helper),'--guard',token,str(input_read),str(control_read),str(ready_write),str(seconds)],
+        guard_mode = '--guard-resumable' if session is not None else '--guard'
+        guard=subprocess.Popen([str(helper),guard_mode,token,str(input_read),str(control_read),str(ready_write),str(seconds)],
             pass_fds=(input_read,control_read,ready_write),stdin=subprocess.DEVNULL,stdout=log,stderr=log,
             env={'PATH':'/usr/bin:/bin','LANG':'C'},start_new_session=True,close_fds=True)
         children.append(guard)
@@ -822,12 +877,17 @@ def enable_locked(root,uid,seconds):
         after=validate_native(native(['--status'],root,uid))
         if not after['healthy'] or after['token']!=token:
             raise ValueError('Guardian stopped during activation')
-        write_intent(root,seconds==0,token,'trial' if seconds else 'active',uid)
+        write_intent(root,seconds==0,token,'trial' if seconds else 'active',uid,session=session)
         result=status(root,uid)
         if not result['effective']['healthy']: raise ValueError('Compositor lease not active')
         return result
     except BaseException:
-        try: restore_locked(root,uid)
+        try:
+            if resume_token is None:
+                if session is not None:
+                    restore_locked(root, uid, routing_only=True)
+                else:
+                    restore_locked(root,uid)
         finally:
             for child in children:
                 if child.poll() is None:
@@ -839,8 +899,44 @@ def enable_locked(root,uid,seconds):
         for fd in fds: os.close(fd)
 
 
+def resume_after_boot(root, uid, intent, session):
+    # Consume the previous session's authorization before any new filter write.
+    # An interruption must not allow the boot callback to submit Enable again.
+    write_intent(root, False, intent['token'], 'recovering', uid)
+    chain = read_chain()
+    if reconcile(chain, root, False) != chain:
+        raise ValueError('Previous compositor filter is still present')
+    stock_chain(chain)
+    retired = validate_native(native(['--retire-boot', intent['token']], root, uid))
+    eligible = (retired['state'], retired['stopped'], retired['reason']) in (
+        ('stock', False, 'boot_retired'), ('stopped', True, 'normal_shutdown'))
+    if (not eligible or not retired['stock_verified'] or retired['token'] != intent['token']
+            or retired['guardian_pid']):
+        raise ValueError('Previous compositor guardian retirement unverified')
+    stop_controller(root, uid, prior_session=True)
+    return enable_locked(root, uid, 0, session=session, resume_token=intent['token'])
+
+
+def boot_resume_observation(root, uid):
+    from boot_gate import wait
+    try:
+        intent = read_intent(root, uid)
+        previous = intent.get('session')
+        if previous is not None:
+            session = boot_session()
+            if session != previous:
+                # Off can acquire the operation lock while startup is still pending.
+                return intent, session, wait()
+    except (OSError, ValueError, RuntimeError, subprocess.SubprocessError):
+        pass
+    return None, None, False
+
+
 def execute(mode,transaction=None,root=STATE,uid=0):
     if mode=='status': return status(root,uid)
+    resumable = reboot_resume_supported(selection(root, uid))
+    previous, session, normal = (boot_resume_observation(root, uid)
+                                 if mode == 'boot' and resumable else (None, None, False))
     with operation(root,uid):
         if mode=='boot' and not os.path.lexists(Path(root)/'c1-keyfilter/pending.json'):
             try:
@@ -848,17 +944,24 @@ def execute(mode,transaction=None,root=STATE,uid=0):
                 # ActivityManager can deliver recovery while Home is already
                 # armed. Keep only a verified activation from this boot.
                 if (intent['enabled'] and intent['phase'] == 'active'
-                        and intent['boot'] == boot_identity()):
+                        and intent['boot'] == boot_identity() and intent != previous):
                     current = status(root, uid)
                     if (current['intent'] == intent
                             and current['recovery'].get('integrity_verified') is True):
                         return current
+                if resumable and normal and intent == previous:
+                    from boot_gate import observation
+                    if observation() == (True, False) and boot_session() == session:
+                        return resume_after_boot(root, uid, intent, session)
             except (OSError, ValueError, RuntimeError, subprocess.SubprocessError):
                 pass  # Unverified activation still needs stock Home recovery.
         if mode in ('restore','boot'):
-            # Boot recovery never arms or reinstalls the filter.
+            if mode == 'boot' and resumable:
+                return restore_locked(root, uid, routing_only=True)
             return restore_locked(root,uid,explicit_restore=mode=='restore')
         if mode in ('enable','trial','intent-trial','emergency-trial'):
+            if mode == 'enable' and resumable:
+                return enable_locked(root, uid, 0, session=boot_session())
             return enable_locked(root,uid,0 if mode=='enable' else 60)
     raise ValueError('Unsupported compositor lifecycle operation')
 

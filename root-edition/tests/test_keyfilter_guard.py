@@ -59,13 +59,14 @@ class KeyfilterGuardTests(unittest.TestCase):
         p = subprocess.run([str(self.binary), *args], capture_output=True, text=True, timeout=8)
         self.assertEqual(p.stderr, '')
         return json.loads(p.stdout), p.returncode
-    def spawn(self, seconds=0, ready=(True, True), broker=True):
+    def spawn(self, seconds=0, ready=(True, True), broker=True, *, resumable=False):
         ir, iw = os.pipe(); cr, cw = os.pipe(); rr, rw = os.pipe()
         # Queue the tiny fixture records while our read ends are still open;
         # a stopped guardian may refuse and close its inherited ends at once.
         for flag, fd in zip(ready, (iw, cw)):
             if flag: os.write(fd, b'READY\n')
-        p = subprocess.Popen([str(self.binary), '--guard', TOKEN, str(ir), str(cr), str(rw), str(seconds)],
+        mode = '--guard-resumable' if resumable else '--guard'
+        p = subprocess.Popen([str(self.binary), mode, TOKEN, str(ir), str(cr), str(rw), str(seconds)],
                              pass_fds=(ir, cr, rw), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         for fd in (ir, cr, rw): os.close(fd)
         self.guards.append((p, (iw, cw)))
@@ -75,8 +76,8 @@ class KeyfilterGuardTests(unittest.TestCase):
                 self.run_guard('--lease')
                 if select.select([rr], [], [], .03)[0]: break
         return p, iw, cw, rr
-    def armed(self, seconds=0):
-        p, iw, cw, rr = self.spawn(seconds)
+    def armed(self, seconds=0, *, resumable=False):
+        p, iw, cw, rr = self.spawn(seconds, resumable=resumable)
         self.assertTrue(select.select([rr], [], [], 3)[0])
         ack = os.read(rr, 128); os.close(rr)
         self.assertEqual(ack, f'ARMED {TOKEN}\n'.encode())
@@ -334,6 +335,72 @@ int main(void) {
         self.assertEqual(calls,[
             '-n 1 luna://com.webos.applicationManager/closeByAppId {"id":"com.cleanyourtv.root.preview"}',
             '-n 1 luna://com.webos.applicationManager/launch {"id":"com.webos.app.home"}'])
+    def test_boot_retirement_refuses_live_guard_and_preserves_emergency_stop(self):
+        p, iw, _ = self.armed()
+        self.assertNotEqual(self.run_guard('--retire-boot', TOKEN)[1], 0)
+        self.assertTrue(self.run_guard('--status')[0]['healthy'])
+        os.write(iw, b'ESCAPE\n')
+        self.finish(p)
+        latch = self.root/'state/stopped'
+        saved = latch.read_bytes()
+        self.assertNotEqual(self.run_guard('--retire-boot', TOKEN)[1], 0)
+        self.assertEqual(self.run_guard('--restore-routing')[1], 0)
+        self.assertEqual(latch.read_bytes(), saved)
+
+    def test_verified_system_shutdown_allows_retirement_but_explicit_off_revokes_it(self):
+        systemctl = self.root/'systemctl'
+        systemctl.write_text('#!/bin/sh\n[ "$*" = is-system-running ] || exit 4\nprintf "stopping\\n"\nexit 1\n')
+        systemctl.chmod(0o700)
+        p, _, _ = self.armed(resumable=True)
+        p.terminate()
+        self.finish(p)
+        latch = self.root/'state/stopped'
+        self.assertEqual(latch.read_text(), f'{TOKEN} normal_shutdown\n')
+        self.assertFalse((self.root/'luna-calls').exists())
+        result, rc = self.run_guard('--retire-boot', TOKEN)
+        self.assertEqual(rc, 0)
+        self.assertTrue(result['stopped'])
+        self.assertEqual(result['reason'], 'normal_shutdown')
+        self.assertEqual(latch.read_text(), f'{TOKEN} normal_shutdown\n')
+        self.assertEqual(self.run_guard('--restore-routing')[1], 0)
+        self.assertEqual(latch.read_text(), f'{TOKEN} explicit_off\n')
+        self.assertNotEqual(self.run_guard('--retire-boot', TOKEN)[1], 0)
+
+    def test_emergency_escape_during_system_shutdown_still_vetoes_rearm(self):
+        systemctl = self.root/'systemctl'
+        probing = self.root/'systemctl-probing'
+        systemctl.write_text('#!/bin/sh\ntouch "'+str(probing)+'"\nsleep .25\nprintf "stopping\\n"\nexit 1\n')
+        systemctl.chmod(0o700)
+        p, iw, _ = self.armed(resumable=True)
+        p.terminate()
+        deadline = time.monotonic() + 1
+        while not probing.exists():
+            self.assertLess(time.monotonic(), deadline)
+            time.sleep(.005)
+        self.assertFalse(self.run_guard('--status')[0]['healthy'])
+        self.assertNotEqual(self.run_guard('--home', TOKEN)[1], 0)
+        os.write(iw, b'ESCAPE\n')
+        self.finish(p)
+        self.assertEqual((self.root/'state/stopped').read_text(), f'{TOKEN} escape\n')
+        self.assertNotEqual(self.run_guard('--retire-boot', TOKEN)[1], 0)
+        self.assertNotIn('launch {"id":"com.cleanyourtv.root.preview"}',
+                         (self.root/'luna-calls').read_text())
+
+    def test_boot_retires_dead_guard_without_changing_the_stop_latch_or_ui(self):
+        p, _, _ = self.armed()
+        p.kill()
+        p.communicate(timeout=2)
+        self.assertTrue((self.root/'state/active').is_file())
+        self.assertNotEqual(self.run_guard('--retire-boot', 'b'*32)[1], 0)
+        result, rc = self.run_guard('--retire-boot', TOKEN)
+        self.assertEqual(rc, 0)
+        self.assertEqual(result['guardian_pid'], 0)
+        self.assertTrue(result['stock_verified'])
+        self.assertFalse(result['stopped'])
+        self.assertFalse((self.root/'luna-calls').exists())
+        self.assertEqual(self.run_guard('--restore-routing')[1], 0)
+        self.assertFalse((self.root/'luna-calls').exists())
+
     def test_standalone_restore_releases_ui(self):
         s,rc=self.run_guard('--restore'); self.assertEqual(rc,0)
         self.assertTrue(s['stopped']); self.assertTrue((self.root/'luna-calls').is_file(),'standalone native restore must release UI')

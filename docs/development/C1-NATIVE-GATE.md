@@ -104,9 +104,27 @@ claim stock proof or delete evidence.
 If configd resets the volatile filter, the lifecycle controller stops its lease
 and cancels return; it never automatically reinstalls the filter.
 
-Boot reconciliation restores rather than rearms. Lease loss, safety stop and
-power recovery require explicit Enable. Changed model, firmware, SDK or Home
-fingerprint requires fresh admission; recovery does not require fresh admission.
+On LG 65NANO913NA with firmware 04.64.00 and SDK 5.6.2, an explicit Enable
+can authorize one rearm after a verified normal startup. The active intent
+records the existing volatile startup session alongside the kernel boot ID.
+The boot callback requires a new session, the normal startup marker, no
+Homebrew failsafe, no pending filter write, a clean vendor chain and native
+retirement of the preceding guardian. The preceding guardian can retire
+without a latch after abrupt power loss or with a normal-shutdown latch
+after systemd confirms that the system is stopping. Other stop reasons
+veto continuation. The callback consumes the previous authorization
+before starting a new guarded activation. The filter remains volatile. Any refusal or activation failure takes the boot path back
+to stock routing without requesting a foreground app change. Explicit Off
+and native safety stops require another explicit Enable. An older intent with
+no startup session grants no automatic rearm. Other schema3 devices keep
+restore-only boot reconciliation.
+
+The same LG firmware uses the vendor local-activity switch in the private
+recovery runner. This lets the startup service dispatch its recovery methods
+without waiting on LG per-request activity creation. Persistent registration
+for the normal startup callback still uses Activity Manager. See [#710](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/710).
+
+Changed model, firmware, SDK or Home fingerprint requires fresh admission; recovery does not require fresh admission.
 No SAM/input daemon restart, Home/checkpoint mount, CRIU change, input injection
 or network endpoint is added. Normal OTA remains disabled; there is no in-place
 migration from another Home integration.

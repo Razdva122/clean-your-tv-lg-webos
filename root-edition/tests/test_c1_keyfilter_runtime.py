@@ -356,6 +356,174 @@ class RuntimeTests(unittest.TestCase):
                     self.assertEqual(self.k.execute('boot', root=self.root, uid=self.uid), 'restored')
                     restore.assert_called_once_with(self.root, self.uid, explicit_restore=False)
 
+    def test_reported_schema3_rearms_once_on_a_new_normal_session(self):
+        import intent_runtime
+        from unittest.mock import Mock
+        self.admission = dict(self.generic(), model='65NANO913NA', firmware='04.64.00', webos='5.6.2')
+        self.prepare()
+        boot = self.k.boot_identity()
+        old_session = boot + ':session-' + 'a'*32
+        new_session = boot + ':session-' + 'b'*32
+        token = '1'*32
+        self.k.write_config(self.root, self.admission, token, self.uid)
+        self.k.write_intent(self.root, True, token, 'active', self.uid, session=old_session)
+        script = self.root/'runtime/c1-home-filter.js'
+        script.parent.mkdir()
+        script.write_text('filter')
+        script.chmod(0o600)
+        stock = [{'file':'/usr/lib/qml/KeyFilters/systemUi.js', 'handler':'handleSystemKeys'}]
+        chain = stock.copy()
+        writes = []
+
+        def write(value, *, volatile):
+            self.assertTrue(volatile)
+            chain[:] = value
+            writes.append(value.copy())
+
+        def native(args, *_args, **_options):
+            if args[0] == '--retire-boot':
+                self.assertEqual(args, ['--retire-boot', token])
+                return dict(self.proof(), reason='normal_shutdown')
+            self.assertEqual(args, ['--status'])
+            if chain == stock:
+                return self.proof()
+            current = self.k.read_intent(self.root, self.uid)
+            return dict(self.proof(), token=current['token'], state='armed', healthy=True,
+                        guardian_pid=123, stopped=False, stock_verified=False)
+
+        child = Mock()
+        child.poll.return_value = None
+        with patch.object(intent_runtime, 'boot_identity', return_value=new_session), \
+                patch('boot_gate.wait', return_value=True) as normal, \
+                patch('boot_gate.observation', return_value=(True, False)), \
+                patch.object(self.k, 'read_chain', side_effect=lambda: chain.copy()), \
+                patch.object(self.k, 'write_chain', side_effect=write), \
+                patch.object(self.k, 'verify_ready', return_value={'integrity_verified':True}), \
+                patch.object(self.k, 'probe', return_value=self.admission), \
+                patch.object(self.k, 'binary', return_value=Path('/fixture')), \
+                patch('helper_bridge.require_idle'), patch('python_binding.command', return_value='/python'), \
+                patch.object(self.k, 'native', side_effect=native), \
+                patch.object(self.k, 'start_controller', return_value=child), \
+                patch.object(self.k, 'read_handshake'), \
+                patch.object(self.k.subprocess, 'Popen', return_value=child) as start:
+            result = self.k.execute('boot', root=self.root, uid=self.uid)
+            replay = self.k.execute('boot', root=self.root, uid=self.uid)
+            self.assertTrue(result['effective']['routing_active'])
+            self.assertEqual(result, replay)
+            self.assertEqual(result['intent']['session'], new_session)
+            self.assertNotEqual(result['intent']['token'], token)
+            self.assertEqual(writes, [[self.k.filter_entry(self.root), *stock]])
+            self.assertEqual(start.call_count, 2)
+            self.assertEqual(start.call_args.args[0][:2], ['/fixture', '--guard-resumable'])
+            normal.assert_called_once()
+
+    def test_reported_schema3_boot_failure_and_stop_leave_routing_with_lg(self):
+        import intent_runtime
+        self.admission = dict(self.generic(), model='65NANO913NA', firmware='04.64.00', webos='5.6.2')
+        self.prepare()
+        boot = self.k.boot_identity()
+        old_session = boot + ':session-' + 'a'*32
+        new_session = boot + ':session-' + 'b'*32
+        token = '1'*32
+        stock = [{'file':'/usr/lib/qml/KeyFilters/systemUi.js', 'handler':'handleSystemKeys'}]
+        for case in ('emergency-stop', 'boot-gate', 'activation-failure', 'same-session'):
+            with self.subTest(case=case):
+                intent = self.k.write_intent(self.root, True, token, 'active', self.uid)
+                self.k.atomic(self.root/'c1-keyfilter/intent.json', dict(intent, session=old_session), self.uid)
+                retired = dict(self.proof(), state='stock', stopped=False, reason='boot_retired')
+                with patch.object(intent_runtime, 'boot_identity',
+                                  return_value=old_session if case=='same-session' else new_session), \
+                        patch('boot_gate.wait', return_value=case!='boot-gate'), \
+                        patch('boot_gate.observation', return_value=(True, False)), \
+                        patch.object(self.k, 'read_chain', return_value=stock), \
+                        patch.object(self.k, 'native', return_value=retired,
+                                     side_effect=ValueError('native stop latched') if case=='emergency-stop' else None), \
+                        patch.object(self.k, 'enable_locked', side_effect=TimeoutError('startup failed')) as enable, \
+                        patch.object(self.k, 'restore_locked', return_value='restored') as restore:
+                    self.assertEqual(self.k.execute('boot', root=self.root, uid=self.uid), 'restored')
+                    restore.assert_called_once_with(self.root, self.uid, routing_only=True)
+                    self.assertEqual(enable.call_count, int(case=='activation-failure'))
+
+    def test_reported_schema3_failed_controller_restores_the_written_chain(self):
+        import intent_runtime
+        self.admission = dict(self.generic(), model='65NANO913NA', firmware='04.64.00', webos='5.6.2')
+        self.prepare()
+        boot = self.k.boot_identity()
+        token = '1'*32
+        self.k.write_config(self.root, self.admission, token, self.uid)
+        self.k.write_intent(self.root, True, token, 'active', self.uid, session=boot+':session-'+'a'*32)
+        script = self.root/'runtime/c1-home-filter.js'
+        script.parent.mkdir()
+        script.write_text('filter')
+        script.chmod(0o600)
+        stock = [{'file':'/usr/lib/qml/KeyFilters/systemUi.js', 'handler':'handleSystemKeys'}]
+        chain = stock.copy()
+        writes = []
+
+        def write(value, *, volatile):
+            self.assertTrue(volatile)
+            chain[:] = value
+            writes.append(value.copy())
+
+        def native(args, *_args, **_options):
+            if args[0] == '--retire-boot':
+                return dict(self.proof(), reason='normal_shutdown')
+            if args[0] == '--restore-routing':
+                self.assertEqual(chain, [self.k.filter_entry(self.root), *stock])
+            else:
+                self.assertEqual(args, ['--status'])
+            return self.proof()
+
+        with patch.object(intent_runtime, 'boot_identity', return_value=boot+':session-'+'b'*32), \
+                patch('boot_gate.wait', return_value=True), \
+                patch('boot_gate.observation', return_value=(True, False)), \
+                patch.object(self.k, 'verify_ready', return_value={'integrity_verified':True}), \
+                patch.object(self.k, 'probe', return_value=self.admission), \
+                patch.object(self.k, 'binary', return_value=Path('/fixture')), \
+                patch('helper_bridge.require_idle'), \
+                patch.object(self.k, 'luna', side_effect=AssertionError('no forced UI release at boot')), \
+                patch.object(self.k, 'read_chain', side_effect=lambda: chain.copy()), \
+                patch.object(self.k, 'write_chain', side_effect=write), \
+                patch.object(self.k, 'native', side_effect=native), \
+                patch.object(self.k, 'start_controller', side_effect=TimeoutError('startup')) as start:
+            self.assertEqual(self.k.execute('boot', root=self.root, uid=self.uid), 'restored')
+            start.assert_called_once()
+            self.assertEqual(writes, [[self.k.filter_entry(self.root), *stock], stock])
+            self.assertEqual(chain, stock)
+            self.assertEqual(self.k.read_intent(self.root, self.uid)['phase'], 'disabled')
+            self.assertFalse((self.root/'c1-keyfilter/pending.json').exists())
+
+    def test_direct_native_off_vetoes_rotation_after_boot_retirement(self):
+        self.admission = dict(self.generic(), model='65NANO913NA', firmware='04.64.00', webos='5.6.2')
+        self.prepare()
+        token = '1'*32
+        directory = self.root/'c1-keyfilter'
+        self.k.write_config(self.root, self.admission, token, self.uid)
+        config = (directory/'config').read_bytes()
+        self.k.atomic(directory/'stopped', (token+' explicit_off\n').encode(), self.uid, raw=True)
+        with self.assertRaisesRegex(ValueError, 'explicit Enable'):
+            self.k.rotate_boot_config(self.root, self.uid, self.admission, token, '2'*32)
+        self.assertEqual((directory/'config').read_bytes(), config)
+
+    def test_reported_schema3_off_during_boot_wait_cancels_continuation(self):
+        import intent_runtime
+        self.admission = dict(self.generic(), model='65NANO913NA', firmware='04.64.00', webos='5.6.2')
+        self.prepare()
+        boot = self.k.boot_identity()
+        self.k.write_intent(self.root, True, '1'*32, 'active', self.uid, session=boot+':session-'+'a'*32)
+
+        def wait():
+            with self.k.operation(self.root, self.uid):
+                self.k.write_intent(self.root, False, '1'*32, 'disabled', self.uid)
+            return True
+
+        with patch.object(intent_runtime, 'boot_identity', return_value=boot+':session-'+'b'*32), \
+                patch('boot_gate.wait', side_effect=wait), \
+                patch.object(self.k, 'native', side_effect=AssertionError('do not retire or reactivate')) as native, \
+                patch.object(self.k, 'restore_locked', return_value='restored'):
+            self.assertEqual(self.k.execute('boot', root=self.root, uid=self.uid), 'restored')
+            native.assert_not_called()
+
     def test_same_boot_recovery_still_handles_interrupted_filter_write(self):
         self.prepare()
         self.k.write_intent(self.root, True, '1'*32, 'active', self.uid)

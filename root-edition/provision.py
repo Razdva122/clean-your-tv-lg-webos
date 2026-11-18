@@ -73,6 +73,15 @@ def write(path, data, mode=0o600):
 def encoded(value):
     return (json.dumps(value, sort_keys=True, indent=2)+'\n').encode()
 
+def use_lg_local_activity():
+    if LEGACY_NODE_BETA:
+        return True
+    if not os.path.lexists(STATE/'home-backend.json'):
+        return False
+    from runtime import c1_gate, c1_keyfilter
+    return c1_keyfilter.reboot_resume_supported(c1_gate.selection(STATE))
+
+
 def runner_bytes():
     # Follow the firmware's bootstrap argument contract, without evaluating a
     # writable Homebrew wrapper or modifying the system run-js-service script.
@@ -82,7 +91,7 @@ def runner_bytes():
             'cd '+str(PRIVATE_SERVICE)+'\n'
             'export NODE_PATH=/usr/palm/frameworks:/usr/lib/nodejs:/usr/lib/node_modules\n'
             'exec /usr/bin/node '+('' if LEGACY_NODE_BETA else '--require '+str(PRIVATE_SERVICE/'startup-diagnostics.js')+' ')+'/usr/palm/services/jsservicelauncher/bootstrap-node.js '
-            +('--disable-activity-creation ' if LEGACY_NODE_BETA else '')+'-- '
+            +('--disable-activity-creation ' if use_lg_local_activity() else '')+'-- '
             +str(STATE/'bootstrap.pid')+' /var/palm/ls2-dev '+str(PRIVATE_SERVICE)+'\n').encode()
 
 def prepare_private_service():
