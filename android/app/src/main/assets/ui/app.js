@@ -40,7 +40,8 @@ let auth = 'password',
 const checks = new Map();
 let recoveryPlan = null,
   failureHelp = null;
-let removalConnection = false;
+let removalConnection = false,
+  restartReview = false;
 let running = false,
   resultCode = null,
   logs = [],
@@ -219,9 +220,18 @@ function connectionFailure() {
 function restartPresentation() {
   return (
     restartNeeded() &&
+    !restartReview &&
     !connectionFailure() &&
     (!recoveryPlan?.removal_action ||
       recoveryPlan.removal_action.condition === 'restart')
+  );
+}
+function removalTitle() {
+  if (connectionFailure()) return t('removalConnection');
+  if (restartReview) return t('recoveryReview');
+  return (
+    recoveryPlan.titleText ||
+    t(restartPresentation() ? 'restartRemoval' : 'removalPending')
   );
 }
 function recoveryDetails() {
@@ -244,10 +254,19 @@ function recoveryDetails() {
     )
       detail = failureHelp.nextStep;
     else if (connectionFailure()) detail = detail || t('connectionInterrupted');
+    else if (restartReview) detail = t('recheckRestart');
     else if (restartPresentation()) detail = t('fullRestart');
     else detail = detail || t('removalUnconfirmed');
   }
   return `<div class="recovery-info">${recoveryPlan.stageText && !restartNeeded() && !connectionFailure() ? `<p>${esc(recoveryPlan.stageText)}</p>` : ''}${detail ? `<p role="status">${esc(detail)}</p>` : ''}${!isCleanup() ? `<p>${esc(recoveryPlan.nextStep)}</p>` : ''}</div>`;
+}
+function retryThroughRecovery() {
+  return (
+    recoveryPlan?.removal_action?.action === 'retry-removal' &&
+    (action === 'recover' ||
+      restartNeeded() ||
+      recoveryPlan.reason === 'removal-recheck-required')
+  );
 }
 function removalPrimary() {
   const decision = recoveryPlan?.removal_action?.action;
@@ -256,6 +275,12 @@ function removalPrimary() {
       edition === 'root' ? 'toConnection' : 'connectRoot',
       'connect-root',
       'key'
+    );
+  if (retryThroughRecovery())
+    return primary(
+      restartReview ? 'recoveryReview' : 'tryAgain',
+      'recover',
+      'refresh'
     );
   if (decision === 'retry-removal')
     return primary('tryAgain', 'retry-removal', 'refresh');
@@ -267,7 +292,9 @@ function canReviewRecovery() {
   return (
     recoveryPlan &&
     recoveryPlan.disposition !== 'no-root-package-check' &&
-    ((isCleanup() && recoveryPlan.removal_action?.action === 'check') ||
+    ((isCleanup() &&
+      (retryThroughRecovery() ||
+        recoveryPlan.removal_action?.action === 'check')) ||
       (recoveryPlan.state !== 'complete' &&
         Array.isArray(recoveryPlan.actions) &&
         ((recoveryPlan.state === 'review' &&
@@ -352,7 +379,7 @@ function result() {
     : cancelled
       ? 'cancelledDesc'
       : 'failedDesc';
-  return `<div class="result-symbol ${complete ? '' : needsReview ? 'review-symbol' : 'error-symbol'}">${icon(complete ? 'check' : 'alert')}</div><section class="center progress-copy ${!ok && !cancelled && !waitingCleanup ? 'error-result' : ''}"><h1>${cancelled ? t('cancelled') : recoveryPlan ? (recovered ? esc(recoveryPlan.summary) : isCleanup() ? (connectionFailure() ? t('removalConnection') : recoveryPlan.titleText ? esc(recoveryPlan.titleText) : t(restartPresentation() ? 'restartRemoval' : 'removalPending')) : t('recoveryReview')) : ok && setup ? t(verified ? 'homeObserved' : 'tvChecksReview') : failureHelp ? esc(failureHelp.title) : t(title)}</h1><p>${recoveryPlan ? esc(recovered ? recoveryPlan.nextStep : isCleanup() ? t('removalPending') : recoveryPlan.summary) : ok && setup ? t('tvChecksDesc') : failureHelp ? esc(failureHelp.detail) : t(desc)}</p><div class="target">${editionName()}<span> / </span>${esc(host)}</div></section>${!ok && !waitingCleanup && errorLogs.size ? `<p class="error-summary error-text" role="alert">${esc([...errorLogs].at(-1))}</p>` : ''}${checkList()}${recoveryPlan?.stockSurfaceText ? `<div class="recovery-info"><p>${esc(recoveryPlan.stockSurfaceText)}</p></div>` : ''}${ok && !recoveryPlan && action === 'install' ? `<div class="recovery-info"><h3>${t('recoveryTitle')}</h3><p>${t('recoveryDesc')}</p><div class="gesture"><kbd>Home</kbd> × 3 <span class="muted"> / 2 ${t('seconds')}</span></div></div>` : ''}${ok && !recoveryPlan && action === 'install' && edition === 'no-root' ? `<div class="recovery-info"><p>${t('tryHomeHelp')}</p><p>${t('resumeHomeHelp')}</p>${selectedConnection === 'root-ssh' ? '' : `<p>${t('sessionHelp')}</p>`}</div>` : ''}${recoveryPlan && !recovered ? recoveryDetails() : ''}${failureHelp && !isCleanup() ? `<section class="recovery-info" role="note"><p>${esc(failureHelp.nextStep)}</p></section>` : ''}${supportDraft}${logBlock()}<footer class="bottom">${report ? `<button class="${recoveryAction ? 'secondary' : 'primary'}" data-action="save-report">${t('saveReport')}${icon('file')}</button>` : ''}${recoveryPlan ? `${recoveryAction}${isCleanup() && !recovered && connectionFailure() ? `<button class="secondary" data-action="to-connection">${t('toConnection')}</button>` : ''}<button class="secondary" data-action="home">${t('done')}</button>` : !ok ? `${!failureHelp || failureHelp.canEditConnection ? `<button class="secondary" data-action="to-connection">${t('toConnection')}</button>` : ''}<button class="text-button maintenance-link" data-action="home">${t('done')}</button>` : report ? `<button class="secondary" data-action="home">${t('done')}</button>` : primary('done', 'home', 'check')}</footer>`;
+  return `<div class="result-symbol ${complete ? '' : needsReview ? 'review-symbol' : 'error-symbol'}">${icon(complete ? 'check' : 'alert')}</div><section class="center progress-copy ${!ok && !cancelled && !waitingCleanup ? 'error-result' : ''}"><h1>${cancelled ? t('cancelled') : recoveryPlan ? (recovered ? esc(recoveryPlan.summary) : isCleanup() ? esc(removalTitle()) : t('recoveryReview')) : ok && setup ? t(verified ? 'homeObserved' : 'tvChecksReview') : failureHelp ? esc(failureHelp.title) : t(title)}</h1><p>${recoveryPlan ? esc(recovered ? recoveryPlan.nextStep : isCleanup() ? t('removalPending') : recoveryPlan.summary) : ok && setup ? t('tvChecksDesc') : failureHelp ? esc(failureHelp.detail) : t(desc)}</p><div class="target">${editionName()}<span> / </span>${esc(host)}</div></section>${!ok && !waitingCleanup && errorLogs.size ? `<p class="error-summary error-text" role="alert">${esc([...errorLogs].at(-1))}</p>` : ''}${checkList()}${recoveryPlan?.stockSurfaceText ? `<div class="recovery-info"><p>${esc(recoveryPlan.stockSurfaceText)}</p></div>` : ''}${ok && !recoveryPlan && action === 'install' ? `<div class="recovery-info"><h3>${t('recoveryTitle')}</h3><p>${t('recoveryDesc')}</p><div class="gesture"><kbd>Home</kbd> × 3 <span class="muted"> / 2 ${t('seconds')}</span></div></div>` : ''}${ok && !recoveryPlan && action === 'install' && edition === 'no-root' ? `<div class="recovery-info"><p>${t('tryHomeHelp')}</p><p>${t('resumeHomeHelp')}</p>${selectedConnection === 'root-ssh' ? '' : `<p>${t('sessionHelp')}</p>`}</div>` : ''}${recoveryPlan && !recovered ? recoveryDetails() : ''}${failureHelp && !isCleanup() ? `<section class="recovery-info" role="note"><p>${esc(failureHelp.nextStep)}</p></section>` : ''}${supportDraft}${logBlock()}<footer class="bottom">${report ? `<button class="${recoveryAction ? 'secondary' : 'primary'}" data-action="save-report">${t('saveReport')}${icon('file')}</button>` : ''}${recoveryPlan ? `${recoveryAction}${isCleanup() && !recovered && connectionFailure() ? `<button class="secondary" data-action="to-connection">${t('toConnection')}</button>` : ''}<button class="secondary" data-action="home">${t('done')}</button>` : !ok ? `${!failureHelp || failureHelp.canEditConnection ? `<button class="secondary" data-action="to-connection">${t('toConnection')}</button>` : ''}<button class="text-button maintenance-link" data-action="home">${t('done')}</button>` : report ? `<button class="secondary" data-action="home">${t('done')}</button>` : primary('done', 'home', 'check')}</footer>`;
 }
 function wallpapers() {
   return `${step()}<section class="page-intro"><h1>${t('wallpapers')}</h1><p>${t('wallpaperInstructions')}</p></section><div class="wallpaper-limit" role="note">${icon('alert')}<p>${t('wallpaperLimit')}</p></div><footer class="bottom"><div class="footnote">${icon('wifi')}${t('networkFoot')}</div></footer>`;
@@ -550,7 +577,7 @@ function updateLog() {
   const tasks = document.getElementById('tasks');
   if (tasks) tasks.innerHTML = taskList();
 }
-window.receiveNative = function (event) {
+window.receiveNative = function (event, fromSnapshot = false) {
   if (event.kind === 'inspection') {
     if (event.host !== host) return;
     inspecting = false;
@@ -568,6 +595,7 @@ window.receiveNative = function (event) {
     render();
   } else if (event.kind === 'started') {
     removalConnection = false;
+    restartReview = false;
     running = true;
     recoveryPlan = null;
     failureHelp = null;
@@ -601,6 +629,7 @@ window.receiveNative = function (event) {
     failureHelp = event;
   } else if (event.kind === 'recovery-plan') {
     recoveryPlan = event;
+    restartReview = fromSnapshot && isCleanup() && restartNeeded();
     if (screen === 'progress') updateLog();
   } else if (event.kind === 'log') {
     logs.push(String(event.text));
@@ -772,7 +801,8 @@ document.addEventListener('click', (event) => {
     removalConnection = isCleanup();
     if (removalConnection)
       action =
-        recoveryPlan?.removal_action?.action === 'retry-removal'
+        recoveryPlan?.removal_action?.action === 'retry-removal' &&
+        !retryThroughRecovery()
           ? 'uninstall'
           : 'recover';
     screen = 'connection';
@@ -824,11 +854,21 @@ dialog.addEventListener('keydown', (event) => {
     answer(document.getElementById('prompt-value').value);
   }
 });
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && isCleanup() && restartNeeded()) {
+    restartReview = true;
+    if (screen === 'result') render();
+  }
+});
 render();
 if (native) {
   try {
     const events = JSON.parse(CYTV.snapshot());
-    for (const event of events) receiveNative(event);
+    for (const saved of events) {
+      // The service stores each event as a serialized JSON string.
+      const event = typeof saved === 'string' ? JSON.parse(saved) : saved;
+      receiveNative(event, true);
+    }
   } catch {
     info(t('replayError'), true);
   }

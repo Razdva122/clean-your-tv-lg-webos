@@ -15,18 +15,144 @@ let browser;
   });
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
-  await page.addInitScript(
-    () =>
-      (window.CYTV = {
-        snapshot: () => '[]',
-        hasKey: () => false,
-        start: () => {},
-        answer: () => {}
-      })
-  );
+  await page.addInitScript(() => {
+    window.requests = [];
+    window.CYTV = {
+      snapshot: () => sessionStorage.getItem('operation-events') || '[]',
+      hasKey: () => true,
+      start: (raw) => requests.push(JSON.parse(raw)),
+      answer: () => {}
+    };
+  });
   await page.goto(
     'file://' + path.resolve(__dirname, '../app/src/main/assets/ui/index.html')
   );
+  for (const [edition, port] of [
+    ['root', 2222],
+    ['no-root', 9922]
+  ]) {
+    const config = {
+      host: '192.0.2.10',
+      edition,
+      port,
+      action: 'uninstall',
+      language: 'en',
+      useImportedKey: edition === 'root'
+    };
+    const started = { kind: 'started', config };
+    const terminal = [
+      {
+        kind: 'recovery-plan',
+        state: 'waiting',
+        disposition: 'clean-removal',
+        removed: false,
+        verified_clean: false,
+        restart_required: true,
+        removal_action: {
+          action: 'retry-removal',
+          condition: 'restart',
+          requires_change: true
+        },
+        actions: ['continue-removal'],
+        titleText: 'Restart the TV to finish removal',
+        blockerText: 'Disconnect it from power and choose Try again.'
+      },
+      { kind: 'finished', code: 0 }
+    ];
+    await page.evaluate((event) => {
+      // Operation.snapshot() returns a JSON array of serialized events.
+      sessionStorage.setItem(
+        'operation-events',
+        JSON.stringify([JSON.stringify(event)])
+      );
+    }, started);
+    await page.setViewportSize({ width: 740, height: 320 });
+    await page.reload();
+    assert.equal(await page.locator('[role=progressbar]').count(), 1);
+    assert.equal(
+      await page.locator('h1').innerText(),
+      'Uninstall Clean Your TV'
+    );
+    assert.deepEqual(await page.evaluate(() => requests), []);
+
+    // The existing Activity gets callbacks even while its WebView is hidden.
+    await page.evaluate((events) => {
+      Object.defineProperty(document, 'hidden', {
+        configurable: true,
+        value: true
+      });
+      document.dispatchEvent(new Event('visibilitychange'));
+      for (const event of events) receiveNative(event);
+      delete document.hidden;
+      document.dispatchEvent(new Event('visibilitychange'));
+    }, terminal);
+    assert.equal(await page.locator('[data-action=retry-removal]').count(), 0);
+    assert.equal(await page.locator('[data-action=recover]').count(), 1);
+    assert.equal(
+      await page.locator('h1').innerText(),
+      'Review recovery options'
+    );
+    assert.deepEqual(await page.evaluate(() => requests), []);
+
+    await page.evaluate(
+      (events) => {
+        sessionStorage.setItem(
+          'operation-events',
+          JSON.stringify(events.map((event) => JSON.stringify(event)))
+        );
+      },
+      [started, ...terminal]
+    );
+    await page.setViewportSize({ width: 320, height: 740 });
+    await page.reload();
+    assert.equal(
+      await page.locator('h1').innerText(),
+      'Review recovery options'
+    );
+    assert.equal(await page.locator('[data-action=retry-removal]').count(), 0);
+    assert.match(
+      await page.locator('.recovery-info').innerText(),
+      /check the TV state/i
+    );
+    assert.deepEqual(await page.evaluate(() => requests), []);
+    await page.getByRole('button', { name: 'Review recovery options' }).click();
+    const recovery = { ...config, action: 'recover' };
+    assert.deepEqual(await page.evaluate(() => requests), [recovery]);
+
+    // A failed connection can replace an earlier restart result, including
+    // during a removal whose retained reason was projected as recheck-required.
+    const failedAction = edition === 'root' ? 'recover' : 'uninstall';
+    await page.evaluate(
+      (config) => {
+        receiveNative({ kind: 'started', config });
+        receiveNative({
+          kind: 'recovery-plan',
+          state: 'blocked',
+          disposition: 'clean-removal',
+          restart_required: false,
+          reason:
+            config.action === 'recover'
+              ? 'connection-interrupted'
+              : 'removal-recheck-required',
+          connection_failure: true,
+          removal_action: {
+            action: 'retry-removal',
+            condition: 'transient',
+            requires_change: false
+          }
+        });
+        receiveNative({ kind: 'finished', code: 2 });
+      },
+      { ...config, action: failedAction }
+    );
+    if (edition === 'root') {
+      await page.getByRole('button', { name: 'Try again' }).click();
+    } else {
+      await page.locator('[data-action=to-connection]').click();
+      await page.locator('[data-action=start]').click();
+    }
+    assert.deepEqual(await page.evaluate(() => requests), [recovery, recovery]);
+  }
   const variants = [
     { restart_required: true },
     { removal: { stage: 'restart-required' } },
@@ -223,7 +349,7 @@ let browser;
   assert.deepEqual(errors, []);
   await browser.close();
   console.log(
-    'PASS removal restart semantics: five contradictory completion variants, five malformed shapes, current connection/auth priority, safe status fallback/report behavior, semantic-only cleanup proof and unchanged Home-off completion'
+    'PASS removal restart semantics: native snapshot, rotation, background return, guarded reconnect, five contradictory completion variants, five malformed shapes, current connection/auth priority, safe status fallback/report behavior, semantic-only cleanup proof and unchanged Home-off completion'
   );
 })().catch(async (error) => {
   console.error(error);
