@@ -21,6 +21,8 @@
 - Home diagnostics can retain one bounded recording across a Helper restart
   or wake. The underlying YouTube redirection is still under investigation
   (#711, #686).
+- Home diagnostics over Root SSH writes its commands in the shared Helper
+  state group so the active Helper can read them (#717).
 
 | Component | v1.24.0 | v1.24.1 |
 | --- | --- | --- |
