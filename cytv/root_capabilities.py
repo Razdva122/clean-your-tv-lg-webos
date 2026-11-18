@@ -31,7 +31,9 @@ C1_PROBE_STATES = ('admitted', 'request-failed', 'identity-rejected', 'identity-
                    'native-home-rejected')
 RIBBON_PROBE_STATES = ('readable', 'rejected', 'timeout', 'invalid-reply', 'unconfirmed')
 LEGACY_RIBBON = 'This TV uses the LG Home ribbon and has no System Profile or KeyFilters support.'
-NATIVE_HOME_UNAVAILABLE_MESSAGE = 'Root cannot control Home on this TV. You can try No-root using the existing SSH connection.'
+NATIVE_HOME_UNAVAILABLE_MESSAGE = 'Root cannot control Home on this TV.'
+UNSUPPORTED_EXPERIMENTAL_HOME = ('legacy-ribbon', 'native-home-unavailable',
+                                 'keyfilters-not-configured', 'keyfilters-service-absent')
 
 
 def keyfilter_probe(info, state, code=None, *, predicate=None):
@@ -45,8 +47,10 @@ def keyfilter_probe(info, state, code=None, *, predicate=None):
 
 
 class RootCapabilityError(UserError):
-    def __init__(self, message='Required Root Home interfaces could not be verified. Setup stopped; keep recovery data and save the report.'):
+    def __init__(self, message='Required Root Home interfaces could not be verified. Setup stopped; keep recovery data and save the report.',
+                 *, experimental_failure=None):
         super().__init__(message, reason_code='root-home-interfaces')
+        self.experimental_failure = experimental_failure
 
 
 class NativeHomeScriptError(RootCapabilityError):
@@ -68,7 +72,7 @@ class NoRootAlternativeError(RootCapabilityError):
 
 class LegacyRibbonError(NoRootAlternativeError):
     def __init__(self):
-        super().__init__(LEGACY_RIBBON)
+        super().__init__(LEGACY_RIBBON, experimental_failure='legacy-ribbon')
 
 
 def ribbon_probe(remote):
@@ -464,22 +468,36 @@ def verify(remote, checklist, info, allow_c1=False, allow_compositor=False, *, d
                 return info['home_backend']
             if failure is not None:
                 info['root_compositor_failure'] = failure
-            requirements[name] = 'fail'
+            # A rejected KeyFilters query alone cannot establish incompatibility.
+            # When System Profile is absent, an independent native read can.
+            keyfilters_rejected = (failure == 'keyfilters-request-failed' and
+                                   info.get('root_keyfilters_probe', {}).get('state') == 'rejected')
+            if not diagnose and keyfilters_rejected:
+                probe_native_home(remote, info, inspect_mount=False)
+            native_unavailable = failure == 'native-home-unavailable' or (
+                keyfilters_rejected and info.get('root_native_home_probe') == 'unavailable')
             if failure == 'native-home-script':
                 admission_error = native_home_script_error(info)
-                checklist.update(name, 'fail', str(admission_error))
-            elif failure == 'native-home-unavailable':
-                checklist.update(name, 'fail', NATIVE_HOME_UNAVAILABLE_MESSAGE)
-                admission_error = NoRootAlternativeError(NATIVE_HOME_UNAVAILABLE_MESSAGE)
+                detail = str(admission_error)
+            elif native_unavailable:
+                detail = NATIVE_HOME_UNAVAILABLE_MESSAGE
+                admission_error = NoRootAlternativeError(detail, experimental_failure='native-home-unavailable')
             else:
                 if failure in ('keyfilters-not-configured', 'keyfilters-service-absent'):
                     info['root_ribbon_probe'] = ribbon_probe(remote)
                 if info.get('root_ribbon_probe') == 'readable':
-                    checklist.update(name, 'fail', LEGACY_RIBBON)
+                    detail = LEGACY_RIBBON
                     admission_error = LegacyRibbonError()
                 else:
-                    checklist.update(name,'fail','System Profile is absent and a supported experimental Home backend was not verified.')
-                    admission_error = RootCapabilityError()
+                    detail = 'System Profile is absent and a supported experimental Home backend was not verified.'
+                    failed_check = failure or 'c1-probe-failed'
+                    if failed_check == 'c1-probe-failed' and info.get('root_c1_probe') == 'native-home-rejected':
+                        failed_check = 'native-home-incompatible'
+                    admission_error = RootCapabilityError(experimental_failure=failed_check)
+            status = ('fail' if failure == 'native-home-script' or
+                      admission_error.experimental_failure in UNSUPPORTED_EXPERIMENTAL_HOME else 'unknown')
+            requirements[name] = status
+            checklist.update(name, status, detail)
             if not diagnose:
                 raise admission_error
             continue

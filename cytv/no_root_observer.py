@@ -637,17 +637,31 @@ def private_root(plan):
     return root
 
 
-def observation_error(command, failure, error=None):
+def observation_error(command, failure, error=None, *, fresh_install=False, details=None):
+    details = details if details is not None else no_root_observer_details({'command': command, 'failure': failure})
     # Preserve typed errors (including storage guidance and numeric SSH status),
     # while arbitrary transport exception messages stay private.
     if not isinstance(error, UserError):
-        error = UserError('The original No-root observation could not be verified. Recovery data was kept.',
-                          reason_code='pending-operation')
-    error.no_root_observer = no_root_observer_details({'command': command, 'failure': failure})
+        storage_preflight = fresh_install and command in ('storage-select', 'storage-check')
+        reason = details.get('observer_reason')
+        # Selection reports an unsafe parent only when the jail root already exists.
+        reservation_conflict = (failure == 'foreign-operation' or reason == 'foreign-reservation'
+                                or command == 'storage-select' and reason == 'unsafe-directory')
+        if storage_preflight and not reservation_conflict:
+            error = UserError('The TV storage check failed before any package request was sent.',
+                              reason_code='storage-preflight-failed')
+        else:
+            error = UserError('The original No-root observation could not be verified. Recovery data was kept.',
+                              reason_code='pending-operation')
+    error.no_root_observer = details
     return error
 
 
-def invoke(remote, plan, command, slot=None, source=None, proof=None, data=None):
+def invoke(remote, plan, command, slot=None, source=None, proof=None, data=None, *, fresh_install=False,
+           read_only_storage=False):
+    def failure_error(failure, error=None, details=None):
+        return observation_error(command, failure, error, fresh_install=fresh_install, details=details)
+
     request = dict(root=private_root(plan), public_root=PUBLIC_ROOT, plan=plan, command=command, slot=slot)
     if plan.get('connection') == 'root-ssh':
         if not getattr(remote, 'root', False):
@@ -660,12 +674,14 @@ def invoke(remote, plan, command, slot=None, source=None, proof=None, data=None)
             refuse()
         request['alternate_root'] = JAIL_ROOT
         program_source = STORAGE_SELECT
-    if command == 'storage-inspect':
-        if plan.get('connection') != 'root-ssh' or 'root_handoff' in plan:
+    if command == 'storage-inspect' or read_only_storage:
+        if read_only_storage and command != 'storage-check':
             refuse()
-        program_source = program_source.replace("case 'storage-check':result=storageCheck();break;", """case 'storage-inspect':
- ancestry(path.dirname(publicRoot),true);
- if(exists(publicRoot))ancestry(publicRoot,true);
+        if command == 'storage-inspect' and (plan.get('connection') != 'root-ssh' or 'root_handoff' in plan):
+            refuse()
+        program_source = program_source.replace("case 'storage-check':result=storageCheck();break;", f"case '{command}':" + """
+ if(plan.connection==='root-ssh'&&!exists(publicRoot))ancestry(path.dirname(publicRoot),true);
+ else ancestry(publicRoot,true);
  if(exists(path.dirname(root)))ancestry(path.dirname(root));
  if(exists(root))directory(root,true);
  if(exists(active)){directory(active,true);if(fs.readdirSync(active).length)fail('foreign-reservation');}
@@ -702,7 +718,9 @@ def invoke(remote, plan, command, slot=None, source=None, proof=None, data=None)
 """.replace('NAMES', canonical(OBSERVER_EXCEPTION_NAMES)).replace('CODES', canonical(OBSERVER_EXCEPTION_CODES)).replace('REASONS', canonical(OBSERVER_REASONS)).replace('FILESYSTEM_OPERATIONS', canonical(OBSERVER_FILESYSTEM_OPERATIONS))
     try:
         # POSIX unset avoids depending on the TV env utility supporting -u.
-        if 'root_handoff' in plan:
+        # The read-only check inspects directory metadata only. The writable
+        # check and staging still use the native Root handoff lock when needed.
+        if 'root_handoff' in plan and not read_only_storage:
             from .root_no_root_handoff import call
             loaded=getattr(remote,'_cytv_root_handoff_support',None)
             if not loaded:refuse()
@@ -713,30 +731,30 @@ def invoke(remote, plan, command, slot=None, source=None, proof=None, data=None)
                              shlex.quote(program) + ' ' + shlex.quote(canonical(request)),
                              data=data, timeout=100 if data is not None else 30)
     except UnicodeError:
-        raise observation_error(command, 'invalid-json') from None
+        raise failure_error('invalid-json') from None
     except (OSError, RuntimeError, ValueError, KeyError, TypeError) as error:
         failure = ('command-failed' if isinstance(error, TVCommandError) else
                    'timeout' if isinstance(error, TimeoutError) or getattr(error, 'reason_code', None) == 'operation-timeout' else
                    'connection-interrupted' if getattr(error, 'reason_code', None) == 'connection-interrupted' else
                    'transport-error')
-        raise observation_error(command, failure, error) from None
+        raise failure_error(failure, error) from None
     try:
         reply = json.loads(raw)
     except (ValueError, TypeError):
-        raise observation_error(command, 'invalid-json') from None
+        raise failure_error('invalid-json') from None
     if not isinstance(reply, dict):
-        raise observation_error(command, 'invalid-reply')
+        raise failure_error('invalid-reply')
     if reply.get('operation') != plan['operation']:
-        raise observation_error(command, 'foreign-operation')
+        raise failure_error('foreign-operation')
     if 'observer_error' in reply:
         if type(reply['observer_error']) is not dict:
-            raise observation_error(command, 'invalid-reply')
+            raise failure_error('invalid-reply')
         details = no_root_observer_details(dict(reply['observer_error'], command=command, failure='observer-error'))
         storage_error = (UserError(TV_STORAGE_FULL, reason_code='tv-storage-full')
                          if details['exception_code'] in ('ENOSPC', 'EDQUOT') else None)
-        error = observation_error(command, 'observer-error', storage_error)
-        error.no_root_observer = details
-        raise error
+        raise failure_error('observer-error', storage_error, details)
+    if command == 'storage-select' and reply.get('root') not in (ROOT, JAIL_ROOT):
+        raise failure_error('invalid-reply')
     return reply
 
 
@@ -775,23 +793,43 @@ def inspect_root_ssh_storage(installer, bundles, ramfs):
 
 
 def begin(installer, action, artifacts, versions, expected, configuration, setup_activation=False, ramfs=False):
+    if installer.store.pending(installer.profile):
+        refuse()
     operation = uuid.uuid4().hex
-    installer.store.check_capsule_storage(installer.profile, operation)
+    installer.store.check_capsule_storage(installer.profile)
     # No package request or durable pending receipt until storage is usable.
     root_ssh = installer.profile.get('connection') == 'root-ssh'
     handoff=getattr(installer,'_root_handoff',None)
     selected = root_ssh_storage(installer, ramfs) if root_ssh else None
     check_plan = make_plan(operation, uuid.uuid4().hex, action, artifacts, versions, PUBLIC_ROOT, root_ssh=root_ssh,
                            private_root=selected, root_handoff=handoff)
-    if not root_ssh:
-        selected = invoke(installer.remote, check_plan, 'storage-select').get('root')
-        if type(selected) is not str or selected not in (ROOT, JAIL_ROOT):
-            refuse()
-        if selected == ROOT:
-            selected = None  # Preserve legacy plans and capsule bindings.
-        else:
-            check_plan['private_root'] = selected
-    invoke(installer.remote, check_plan, 'storage-check')
+    fresh_install = action == 'install'
+    review = getattr(installer, 'storage_preflight_review', None) if fresh_install else None
+    needs_selection = not root_ssh
+    for retry in (False, True):
+        try:
+            if needs_selection:
+                selected = invoke(installer.remote, check_plan, 'storage-select', fresh_install=fresh_install)['root']
+                if selected == ROOT:
+                    selected = None  # Preserve legacy plans and capsule bindings.
+                else:
+                    check_plan['private_root'] = selected
+                needs_selection = False
+            if review is not None:
+                invoke(installer.remote, check_plan, 'storage-check', fresh_install=True, read_only_storage=True)
+                if retry:
+                    review(None)
+            invoke(installer.remote, check_plan, 'storage-check', fresh_install=fresh_install)
+            break
+        except UserError as error:
+            if review is None or retry or error.reason_code != 'storage-preflight-failed':
+                raise
+            review(error)
+    before_staging = getattr(installer, 'before_no_root_staging', None) if fresh_install else None
+    if before_staging is not None:
+        before_staging()
+    elif fresh_install and setup_activation:
+        installer.prepare_install_helper(True)
     install_stop = getattr(installer, '_install_stop_generation', None) if setup_activation else None
     if setup_activation:
         installer._install_stop_generation = None
@@ -1066,9 +1104,18 @@ def snapshot(installer, value):
     return result
 
 
-def observe(installer, pending):
+def _install_packages_complete(plan, result):
+    return (plan['action'] == 'install' and result['reservation'] == 'active'
+            and all(slot['terminal'] == 'success' and not slot.get('reason') for slot in result['slots']))
+
+
+def observe(installer, pending, *, read_only=False):
     value=capsule(installer,pending)
     if 'root_handoff' in value['plan']:
+        if read_only:
+            # Handoff observation would stage a temporary gate on the TV.
+            return dict(device={}, pending=pending, reconciled=None, can_resume_root_setup=False,
+                        no_root_ready=False, no_root_reason='observation-unverified')
         from .root_no_root_handoff import continuation
         if continuation(installer,value['plan']) in ('unclaimed','unprepared'):
             return dict(device={'observer':{'operation':value['plan']['operation']}},pending=pending,
@@ -1105,8 +1152,10 @@ def observe(installer, pending):
                     and all(slot['submission'] == 'prepared' for slot in result['slots'])):
                 ready = False
                 reason = 'original-staging-unverified'
+    configuration_remaining = (ready and _install_packages_complete(value['plan'], result)
+                               and 'prepared' in result['configuration'].values())
     return dict(device={'observer':result},pending=pending,reconciled=None,can_resume_root_setup=False,
-                no_root_ready=ready,no_root_reason=reason)
+                no_root_ready=ready,no_root_reason=reason,no_root_configuration_remaining=configuration_remaining)
 
 
 def valid_generation(value):
@@ -1344,9 +1393,7 @@ def continue_operation(installer, expected_pending):
     if not result.get('closed'):
         # An attached install with all vendor replies can finish from the
         # installed packages. No new request needs the temporary IPKs.
-        packages_installed = (plan['action'] == 'install' and result['reservation'] == 'active'
-                              and all(slot['terminal'] == 'success' and not slot.get('reason')
-                                      for slot in result['slots']))
+        packages_installed = _install_packages_complete(plan, result)
         if not packages_installed and result['reservation'] in ('prepared','active'):
             invoke(installer.remote,plan,'prepare',source=value['source'])
         invoke(installer.remote,plan,'attach')

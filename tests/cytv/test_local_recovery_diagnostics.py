@@ -9,7 +9,7 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
-from cytv import diagnostics, diagnostic_context, no_root_observer as observer
+from cytv import cli, diagnostics, diagnostic_context, no_root_observer as observer
 from cytv.errors import UserError, LocalRecoveryError
 from cytv.state import Store, target
 
@@ -115,7 +115,7 @@ class LocalRecoveryTests(unittest.TestCase):
     def test_full_local_disk_keeps_computer_storage_guidance(self):
         with patch('cytv.state.tempfile.TemporaryFile', side_effect=OSError(errno.ENOSPC, 'PRIVATE-DATA')):
             with self.assertRaises(UserError) as caught:
-                self.store.check_capsule_storage(self.profile, self.operation)
+                self.store.check_capsule_storage(self.profile)
         self.assertEqual(caught.exception.reason_code, 'computer-storage-full')
         report = json.loads(diagnostics.create_report(self.store, 'install', self.profile,
                                                       'install-packages', caught.exception).read_text())
@@ -126,7 +126,7 @@ class LocalRecoveryTests(unittest.TestCase):
     def test_full_disk_during_profile_creation_keeps_computer_storage_guidance(self):
         with patch.object(self.store, 'device_dir', side_effect=OSError(errno.ENOSPC, 'PRIVATE-DATA')):
             with self.assertRaises(UserError) as caught:
-                self.store.check_capsule_storage(self.profile, self.operation)
+                self.store.check_capsule_storage(self.profile)
         self.assertEqual(caught.exception.reason_code, 'computer-storage-full')
         self.assertEqual(caught.exception.local_recovery['reason'], 'directory-access')
         self.assertIsNone(self.store.pending(self.profile))
@@ -134,9 +134,53 @@ class LocalRecoveryTests(unittest.TestCase):
     def test_local_probe_removes_temporary_file_without_creating_a_journal(self):
         directory = self.store.device_dir(self.profile)
         before = set(directory.iterdir())
-        self.store.check_capsule_storage(self.profile, self.operation)
+        self.store.check_capsule_storage(self.profile)
         self.assertEqual(set(directory.iterdir()), before)
         self.assertIsNone(self.store.pending(self.profile))
+
+    def test_fresh_cli_checks_local_writes_before_connecting_to_the_tv(self):
+        for number, message in ((errno.EROFS, 'Check write access to the application data folder'),
+                                (errno.ENOSPC, 'Not enough space on this computer')):
+            with self.subTest(errno=number):
+                connect = Mock(side_effect=AssertionError('SSH must remain untouched'))
+                output = []
+                with patch('cytv.cli.package.verify_payload', return_value={}), \
+                     patch('cytv.state.tempfile.TemporaryFile', side_effect=OSError(number, 'PRIVATE-DATA')):
+                    result = cli.main(['install', '--host', 'test-tv', '--edition', 'no-root',
+                                       '--data-dir', str(self.store.root), '--non-interactive', '--yes', '--language', 'en'],
+                                      write=output.append, connect=connect)
+                self.assertEqual(result, 2, output)
+                self.assertIn(message, '\n'.join(output))
+                self.assertIn('Installation stopped before package submission.', '\n'.join(output))
+                self.assertIsNone(self.store.pending(self.profile))
+                connect.assert_not_called()
+
+    def test_desktop_preference_write_failure_still_identifies_local_storage(self):
+        from cytv.desktop import DesktopConsole
+
+        events = []
+        connect = Mock(side_effect=AssertionError('SSH must remain untouched'))
+        with patch('cytv.state.private_write', side_effect=OSError(errno.ENOSPC, 'PRIVATE-DATA')):
+            result = cli.main(['install', '--language', 'en', '--data-dir', str(self.store.root)],
+                              write=DesktopConsole(lambda *event: events.append(event)), connect=connect)
+        self.assertEqual(result, 2)
+        guide, = [value for kind, value in events if kind == 'failure-help']
+        self.assertEqual(guide['code'], 'computer-storage-full')
+        self.assertTrue(guide['can_retry_setup'])
+        connect.assert_not_called()
+
+    def test_local_precheck_never_offers_retry_with_an_unresolved_receipt(self):
+        from cytv.failure_help import for_error
+
+        self.saved()
+        original = self.store.pending(self.profile)
+        with patch('cytv.state.tempfile.TemporaryFile', side_effect=OSError(errno.EROFS, 'PRIVATE-DATA')):
+            with self.assertRaises(LocalRecoveryError) as caught:
+                self.store.check_capsule_storage(self.profile)
+        guide = for_error(caught.exception, 'install-packages', self.profile, original)
+        self.assertEqual(guide['code'], 'computer-storage-unavailable')
+        self.assertFalse(guide.get('can_retry_setup'))
+        self.assertEqual(self.store.pending(self.profile), original)
 
     def test_new_messages_translate_in_every_installer_locale(self):
         from cytv import i18n

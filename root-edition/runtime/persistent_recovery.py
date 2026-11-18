@@ -33,7 +33,7 @@ class Coordinator:
                     or info.st_nlink != 1 or info.st_mode & 0o022):
                 raise ValueError('Unsafe operation lock')
             fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            if self.store.read() != expected: raise ValueError('Stale operation')
+            if expected is not None and self.store.read() != expected: raise ValueError('Stale operation')
             yield
         finally:
             os.close(fd)
@@ -88,10 +88,14 @@ class Coordinator:
         event.update(fields)
         return self.store.apply(expected, event)
 
-    def exit(self, expected, reason='exit'):
+    def exit(self, expected=None, reason='exit', *, emergency=False, cleanup_disabled=True):
         if reason not in ('exit','fault'): raise ValueError('Invalid stop reason')
         with self.locked(expected):
-            intent, effect = self.event(expected, reason)
+            # Explicit Off reads under the operation lock, so a late proof
+            # committed between UI status and Off cannot invalidate the request.
+            if expected is None: expected = self.store.read()
+            cancel = expected['phase'] == 'disabled' and (reason == 'exit' or emergency)
+            intent, effect = self.event(expected, 'cancel-rearm' if cancel else reason)
             try:
                 from cli import inhibit
                 inhibit(d.STATE)
@@ -110,8 +114,22 @@ class Coordinator:
                     try: print(json.dumps(dict(event='home-ui-cleanup',result=cleanup)),file=sys.stderr,flush=True)
                     except Exception: pass
                 return result
-            d.native_input_disable()
+            if cleanup_disabled: d.native_input_disable()
             return dict(intent=intent,effect=effect)
+
+    def retain_late_standby(self, expected, binding, fault_at, deadline):
+        from intent_runtime import boot_identity
+        from shutdown_state import late_standby
+        with self.locked(expected):
+            route = self.route(binding['transaction'])
+            if (self.read_binding() != dict(binding, restored=True)
+                    or route['state'] != 'restored' or os.path.lexists(d.TARGET)
+                    or not d.home_present(purpose='live') or d.FAILSAFE.exists()
+                    or d.read() != route['baseline'] or boot_identity() != expected['boot']
+                    or not late_standby(binding['transaction'], expected['boot'], fault_at, deadline)):
+                return False
+            self.event(expected, 'late-standby')
+            return True
 
     def boot(self, expected, boot, token, failsafe):
         with self.locked(expected):
@@ -295,7 +313,7 @@ class Coordinator:
                 raise
 
 
-def bound_exit(transaction, reason=None):
+def bound_exit(transaction, reason=None, *, fault_at=None):
     """Return None for a legacy trial; otherwise disable bound intent and restore."""
     from persistent_store import Store
     c = Coordinator(Store(d.STATE))
@@ -325,9 +343,12 @@ def bound_exit(transaction, reason=None):
         except Exception:
             c.exit(intent, reason='fault')
             raise
-    from shutdown_state import stopping
+    from shutdown_state import LATE_WAIT, cached_stopping, stopping, wait_late_standby
     eligible = safe and current_boot == intent['boot'] and reason != 'escape' and intent['enabled']
-    proof = stopping(transaction) if eligible and intent['phase'] == 'active' else None
+    proof = None
+    if eligible and intent['phase'] == 'active':
+        proof = ((fault_at is not None and cached_stopping(transaction, before=fault_at)) if reason == 'device_removed'
+                 else stopping(transaction))
     shutdown = eligible and (intent['phase'] == 'stopping' or (intent['phase'] == 'active' and proof))
     try:
         print(json.dumps(dict(event='bound-exit-decision',transaction=transaction,reason=reason,
@@ -341,5 +362,18 @@ def bound_exit(transaction, reason=None):
         try: print('Confirmed system shutdown: retaining active intent for boot recovery', flush=True)
         except Exception: pass
         return c.shutdown(intent)
-    result = c.exit(intent, reason='fault')
-    return result.get('restored_transaction') == transaction
+    result = c.exit(intent, reason='fault', emergency=reason == 'escape')
+    restored = result.get('restored_transaction') == transaction
+    if (restored and eligible and intent['phase'] == 'active'
+            and reason == 'device_removed' and fault_at is not None):
+        deadline = fault_at + LATE_WAIT
+        # Stock routing is already verified, and the old observer is never
+        # restarted here. A later Off, startup or newer binding wins the lock.
+        try:
+            if wait_late_standby(transaction, current_boot, fault_at, deadline):
+                if c.retain_late_standby(result['intent'], binding, fault_at, deadline):
+                    try: print('Confirmed late standby after restoring stock Home', flush=True)
+                    except OSError: pass
+        except (OSError, ValueError, RuntimeError):
+            pass
+    return restored

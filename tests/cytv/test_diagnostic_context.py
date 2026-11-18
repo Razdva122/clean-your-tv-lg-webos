@@ -278,6 +278,70 @@ class ContextTests(unittest.TestCase):
         self.assertEqual(later['ssh_command']['exit_status'], 1)
         self.assertEqual((self.store.device_dir(self.profile) / 'operation.json').read_bytes(), before)
 
+    def test_issue_draft_from_doctor_keeps_original_install_failure(self):
+        self.store.begin(self.profile, 'install')
+        with patch('cytv.diagnostics.__version__', '0.13.0'):
+            self.report('install', 'install-packages',
+                        UserError('PRIVATE', reason_code='storage-preflight-failed'))
+        self.store = state.Store(self.tmp.name)
+        doctor = self.report('doctor', 'ssh-connect', TVCommandError(255))
+        draft = diagnostics.issue_draft(doctor)
+        self.assertIn('No-root install', draft['title'])
+        self.assertIn('storage preflight failed', draft['title'])
+        self.assertIn('Goal: install', draft['body'])
+        self.assertIn('Edition: No-root', draft['body'])
+        self.assertIn('Installer version: 0.13.0', draft['body'])
+        self.assertIn('Observed phase: install-packages', draft['body'])
+        self.assertIn('Reason: storage-preflight-failed', draft['body'])
+        self.assertIn('Later observation: doctor at ssh-connect (ssh-command-failed)', draft['body'])
+
+        later = self.report('doctor', 'doctor-complete', checks={'ssh': {'status': 'pass'}})
+        draft = diagnostics.issue_draft(later)
+        self.assertIn('Reason: storage-preflight-failed', draft['body'])
+        self.assertIn('Later observation: doctor at doctor-complete', draft['body'])
+        self.assertIn('Last verified outcome: SSH connection and sign-in verified', draft['body'])
+
+    def test_issue_draft_identifies_previous_attempt_when_doctor_has_no_pending_operation(self):
+        self.report('install', 'inspect-installation', TVCommandError(1))
+        draft = diagnostics.issue_draft(self.report('doctor', 'doctor-complete'))
+        self.assertIn('Goal: install', draft['body'])
+        self.assertIn('Previous attempt phase: inspect-installation', draft['body'])
+        self.assertIn('Later observation: doctor at doctor-complete', draft['body'])
+
+    def test_issue_draft_keeps_later_removal_and_original_install_distinct(self):
+        self.profile = state.target('192.0.2.55', 'root')
+        self.store.begin(self.profile, 'install')
+        self.report('install', 'activate-root', TVCommandError(127))
+        self.store.request_clean_removal(self.profile)
+        failed = self.report('uninstall', 'uninstall',
+                             UserError('PRIVATE', reason_code='controls-unverified'))
+        draft = diagnostics.issue_draft(failed)
+        self.assertIn('Goal: uninstall', draft['body'])
+        self.assertIn('Reason: controls-unverified', draft['body'])
+        self.assertIn('Earlier failure: install at activate-root (ssh-command-failed)', draft['body'])
+
+        self.store.checkpoint(self.profile, stage='verified-clean', removal_reason='removal-verified',
+                              result={'removed': True, 'verified_clean': True})
+        self.store.finish_clean_removal(self.profile)
+        completed = self.report('uninstall', 'uninstall', status={'removed': True, 'verified_clean': True})
+        draft = diagnostics.issue_draft(completed)
+        self.assertIn('Last verified outcome: Clean Your TV removal verified', draft['body'])
+        self.assertIn('Earlier failure: install at activate-root (ssh-command-failed)', draft['body'])
+        self.assertIn('Later observation: uninstall at uninstall', draft['body'])
+
+    def test_issue_draft_distinguishes_reinstall_from_install_before_removal(self):
+        self.profile = state.target('192.0.2.55', 'root')
+        self.store.begin(self.profile, 'install')
+        self.report('install', 'activate-root', TVCommandError(127))
+        self.store.request_clean_removal(self.profile)
+
+        reinstall = self.report('install', 'remove-existing-root',
+                                UserError('PRIVATE', reason_code='controls-unverified'))
+        draft = diagnostics.issue_draft(reinstall)
+        self.assertIn('Observed phase: remove-existing-root', draft['body'])
+        self.assertIn('Reason: controls-unverified', draft['body'])
+        self.assertIn('Earlier failure: install at activate-root (ssh-command-failed)', draft['body'])
+
     def test_new_operation_and_other_tv_do_not_inherit_old_error(self):
         self.store.begin(self.profile, 'install')
         self.report('install', 'install-helper', TVCommandError(127))

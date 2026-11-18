@@ -711,6 +711,7 @@ class LocalDevice:
         """Full removal using current support, old snapshots and original locks."""
         from clean_removal import locks, routes, remove_packages, restore_registrations, validate_restored_root_api, boot_format, verified_restart, cleanup_step
         import deploy, provision, startup_hook
+        evidence = self.removal_evidence = {'cleanup': 'pending'}
         roots=(ROOT,UPDATER,SUPERVISOR)
         uid=self.ownership.store.uid
         with locks(roots,uid):
@@ -761,6 +762,7 @@ class LocalDevice:
                     else:store.write('bootstrap',{'phase':'cancellation-admitted'})
                 record['done'].append('original-writers-fenced');save('original-writers-fenced')
             startup_failed=bool(record.get('cleanup_startup_unavailable')) and not restarted
+            checked_routes = None
             if 'controls-restored' not in record['done']:
                 save('original-writers-fenced')
                 with cleanup_step('routing-inverse'):
@@ -845,21 +847,25 @@ class LocalDevice:
                 with cleanup_step('legacy-permissions'):
                     self.cleanup('legacy_permissions')
                 with cleanup_step('home-readback'):
-                    record['routes']=routes(self,record,retire_orphan=True)
+                    checked_routes = record['routes'] = routes(self,record,retire_orphan=True)
                 record['done'].append('controls-restored');save('controls-restored')
             elif record.get('routes') == {'mode': 'stock-profiles'}:
                 with cleanup_step('home-readback'):
-                    if routes(self, record) != record['routes']:
+                    checked_routes = routes(self, record)
+                    if checked_routes != record['routes']:
                         raise ValueError('routing_evidence_changed')
             # Recheck before destructive work: a retry must not erase newly
             # appeared routing evidence and then use its absence as proof.
             if isinstance(record.get('routes'),dict) and record['routes'].get('mode')=='stock-compositor':
                 if not self.compositor_stock_eligible(record) or routes(self,record)!=record['routes']:
                     raise ValueError('routing_evidence_changed')
+                checked_routes = record['routes']
             if (record.get('routing_never_applied') is True
                     and record.get('profileless_cleanup_eligible') is True
                     and not self.routing_untouched(record)):
                 raise ValueError('routing_evidence_changed')
+            if checked_routes:
+                evidence['stock'] = 'routing-verified'
             self.remove_owned_registrations()
             stopped=self.shared_cleanup('stop',record)
             if (stopped.get('controller_running') or startup_failed) and restarted:
@@ -882,7 +888,7 @@ class LocalDevice:
                 save('package-removal')
             package_error = None
             try:
-                remove_packages(self, record, save, present=present)
+                remove_packages(self, record, save, present=present, evidence=evidence)
                 if 'package-removal' not in record['done']:
                     self.cleanup('app_permissions')
                 if not packages_complete:

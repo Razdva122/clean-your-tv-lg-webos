@@ -118,7 +118,8 @@ class Inventory:
         self.download_remaining = ICON_DOWNLOAD_BUDGET
         self.resize_remaining = RESIZED_ICON_BUDGET
         self.icon_diagnostics = {'schema': 1, 'status': 'reading', **dict.fromkeys(
-            ('apps', 'embedded', 'fallback', 'missing_uri', 'rejected_uri', 'fetch_failed', 'invalid_image'), 0)}
+            ('apps', 'embedded', 'fallback', 'missing_uri', 'rejected_uri', 'fetch_failed', 'invalid_image',
+             'skipped_apps'), 0)}
 
     def icon(self, app, alternatives=()):
         fields = ('extraLargeIcon', 'largeIcon', 'mediumLargeIcon', 'icon', 'miniicon', 'favicon')
@@ -216,17 +217,31 @@ class Inventory:
             launchpoints = include_tuner(launchpoints, installed)
         apps, seen = [], set()
         for app in launchpoints:
-            if not isinstance(app, dict) or app.get('hidden'):
+            if not isinstance(app, dict):
+                self.icon_diagnostics['skipped_apps'] += 1
+                continue
+            if app.get('hidden'):
                 continue
             appid, title = app.get('id'), app.get('title')
-            if not isinstance(appid, str) or not 0 < len(appid) <= 256 or not isinstance(title, str) or len(title) > 256:
+            if not isinstance(appid, str) or not 0 < len(appid) <= 256:
                 raise ValueError('Invalid TV application metadata')
+            if not isinstance(title, str) or len(title) > 256:
+                # The launch point still supplies the ID used by the Helper for routing.
+                # Recover the display title only from a matching, bounded source.
+                titles = (source.get('title') for source in alternatives.get(appid, ()))
+                title = next((candidate for candidate in titles
+                              if isinstance(candidate, str) and 0 < len(candidate) <= 256), None)
+                if title is None:
+                    raise ValueError('Invalid TV application metadata')
+                self.icon_diagnostics['skipped_apps'] += 1
             if appid in seen:
                 continue
             seen.add(appid)
             self.icon_diagnostics['apps'] += 1
             apps.append({'id': appid, 'title': title, 'icon': self.icon(app, alternatives.get(appid, ())),
                          'iconColor': str(app.get('iconColor') or app.get('bgColor') or '')[:64]})
+        if not apps:
+            raise ValueError('No usable apps were read from the TV. Installation stopped.')
         devices = []
         for device in inputs:
             if not isinstance(device, dict) or not isinstance(device.get('appId'), str):
@@ -238,6 +253,10 @@ class Inventory:
         if self.resize_remaining < RESIZED_ICON_BUDGET:
             result['fallbackIcon'] = 'data:image/png;base64,' + base64.b64encode(self.fallback).decode()
         return result
+
+
+class _SSAPDataUnavailable(UserError):
+    """A matched method refusal or a response with an unusable payload."""
 
 
 class SSAP:
@@ -256,7 +275,7 @@ class SSAP:
         saved = json.loads(keyfile.read_text()) if keyfile.exists() else {}
         key = saved.get('key') if isinstance(saved, dict) else None
         if self.reuse_only and not (isinstance(key, str) and 0 < len(key) <= 1024):
-            raise UserError('No saved TV remote-control pairing is available.')
+            raise UserError('No saved TV remote-control pairing is available.', reason_code='pairing-required')
         payload = {'forcePairing': False,
                    'manifest': {'manifestVersion': 1, 'appVersion': '1.1', 'permissions': permissions}}
         if not self.reuse_only:
@@ -272,7 +291,8 @@ class SSAP:
             self.ws = connect(f'wss://{self.host}:3001', ssl=tv_context(compatible=True),
                               open_timeout=connect_timeout, max_size=8 * 1024 * 1024, proxy=None)
         try:
-            self.progress('Checking TV remote-control access…' if key else 'Accept the remote-control pairing request on the TV if shown…')
+            self.progress('Checking TV remote-control access…' if self.reuse_only
+                          else 'Accept the remote-control pairing request on the TV if shown…')
             self.ws.send(json.dumps({'id': 'register_0', 'type': 'register', 'payload': payload}))
             deadline = time.monotonic() + (5 if self.reuse_only else 65)
             while time.monotonic() < deadline:
@@ -281,17 +301,17 @@ class SSAP:
                     raise ValueError('Invalid TV pairing response')
                 response = reply.get('payload', {})
                 if reply.get('type') == 'error':
-                    raise UserError('TV pairing was rejected. Check the on-screen request and local network access.',
-                                    reason_code='pairing-rejected' if self.settings_write else 'user-error')
+                    raise TVConnectionError('TV pairing was rejected. Check the on-screen request and local network access.',
+                                            reason_code='pairing-rejected')
                 if self.reuse_only and response.get('pairingType'):
-                    raise UserError('The TV did not accept the saved remote-control pairing.')
+                    raise UserError('The TV did not accept the saved remote-control pairing.', reason_code='pairing-required')
                 if reply.get('type') == 'registered':
                     registered = response.get('client-key')
                     if not isinstance(registered, str) or not 0 < len(registered) <= 1024:
                         raise ValueError('Invalid TV pairing response')
                     if self.reuse_only:
                         if reply.get('id') != 'register_0' or registered != key:
-                            raise UserError('The TV did not accept the saved remote-control pairing.')
+                            raise UserError('The TV did not accept the saved remote-control pairing.', reason_code='pairing-required')
                     else:
                         private_write(keyfile, json.dumps({'key': registered}).encode())
                     self.key = registered
@@ -326,11 +346,18 @@ class SSAP:
                 if reply.get('id') != request:
                     continue
                 payload = reply.get('payload', {})
-                if reply.get('type') == 'error' or (isinstance(payload, dict) and payload.get('returnValue') is False):
-                    raise UserError('TV permission was denied. Check pairing and run cytv doctor.',
-                                    reason_code='ssap-request-rejected' if self.settings_write else 'user-error')
-                if reply.get('type', 'response') != 'response' or not isinstance(payload, dict):
+                if (reply.get('type') == 'error' or isinstance(payload, dict)
+                        and (payload.get('returnValue') is False or payload.get('pairingType'))):
+                    error_type = UserError
+                    if reply.get('type') == 'error' and payload == {} and reply.get('error') in (
+                            '401 insufficient permissions', '404 no such service or method'):
+                        error_type = _SSAPDataUnavailable
+                    raise error_type('TV permission was denied. Check pairing and run cytv doctor.',
+                                     reason_code='ssap-request-rejected' if self.settings_write else 'user-error')
+                if reply.get('type', 'response') != 'response':
                     raise UserError('Invalid TV remote-control reply')
+                if not isinstance(payload, dict):
+                    raise _SSAPDataUnavailable('Invalid TV remote-control reply')
                 return payload
             raise UserError('Reading TV applications timed out. Keep the TV on and check the connection.')
         except ConnectionClosed as exc:
@@ -338,19 +365,45 @@ class SSAP:
         except TimeoutError as exc:
             raise UserError('Reading TV applications timed out. Keep the TV on and check the connection.') from exc
 
-    def inventory(self, fallback):
+    def inventory(self, fallback, *, allow_missing_inputs=None):
         self.icon_diagnostics = {'schema': 1, 'status': 'unavailable'}
-        points = self.call('ssap://com.webos.applicationManager/listLaunchPoints').get('launchPoints')
-        inputs = self.call('ssap://tv/getExternalInputList').get('devices')
+        self.inputs_available = None
+        launch_points = 'ssap://com.webos.applicationManager/listLaunchPoints'
+        points = self.call(launch_points).get('launchPoints')
+        input_error = None
+        try:
+            inputs = self.call('ssap://tv/getExternalInputList').get('devices')
+        except _SSAPDataUnavailable as error:
+            input_error, inputs = error, None
+        inputs_available = isinstance(inputs, list) and len(inputs) <= 100 and (
+            not inputs or any(isinstance(item, dict) and isinstance(item.get('appId'), str)
+                              and item['appId'] for item in inputs))
+        if not inputs_available:
+            if not isinstance(points, list) or len(points) > 300:
+                raise ValueError('Unexpected TV inventory')
+            if allow_missing_inputs is None or not self.key or allow_missing_inputs() is not True:
+                if input_error is not None:
+                    raise input_error
+                raise ValueError('Unexpected TV inventory')
+            inputs = []
         # listLaunchPoints can omit the installed broadcast tuner entirely.
         # Unsupported optional discovery must not break the normal inventory.
         try:
             installed = self.call('ssap://com.webos.applicationManager/listApps')
-        except (UserError, json.JSONDecodeError, AttributeError):
-            # The wire parser assumes an object; optional malformed JSON or a
-            # non-object reply must not discard the successful baseline reads.
+        except (UserError, json.JSONDecodeError, AttributeError) as error:
+            # An optional catalog may be unreadable, but the partial inventory
+            # requires a session without an unresolved connection/pairing error.
+            if (not inputs_available and isinstance(error, UserError)
+                    and not isinstance(error, _SSAPDataUnavailable)):
+                raise
             installed = None
         apps = installed.get('apps') if isinstance(installed, dict) and installed.get('returnValue') is not False else None
+        if not inputs_available:
+            # A second required read confirms pairing and transport still work
+            # after the optional queries. Use the latest application list.
+            points = self.call(launch_points).get('launchPoints')
         inventory = Inventory(self.host, fallback)
         self.icon_diagnostics = inventory.icon_diagnostics
-        return inventory.build(points, inputs, apps)
+        result = inventory.build(points, inputs, apps)
+        self.inputs_available = inputs_available
+        return result

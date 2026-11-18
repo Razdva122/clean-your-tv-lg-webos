@@ -8,6 +8,7 @@ LABELS = {
     'ssh': 'SSH connection and sign-in', 'root-user': 'Root privileges',
     'python3': 'TV Python executable', 'python-json': 'Python json module',
     'python-fcntl': 'Python fcntl module', 'python-version': 'TV Python 3.9+',
+    'python-runtime': 'TV Python 3.9+',
     'node-version': 'TV Node.js 8+', 'luna-send': 'webOS Luna command',
     'apps-directory': 'webOS applications directory',
     'luna-services-directory': 'webOS service directory',
@@ -17,7 +18,7 @@ LABELS = {
     'helper-idle': 'Home Helper is stopped',
     'pairing': 'TV remote-control pairing', 'inventory': 'Read TV applications and inputs',
 }
-PYTHON_HINT = 'Setup can prepare private Python only after the other requirements pass; doctor does not install it.'
+PYTHON_REQUIREMENTS = frozenset(('python3', 'python-json', 'python-fcntl', 'python-version'))
 FAILED_HINT = 'The requirement failed or could not be verified. Save the diagnostic report.'
 
 
@@ -31,9 +32,9 @@ class CheckList:
         names = ROOT_REQUIREMENTS if edition == 'root' else ('architecture', 'helper-node', 'root-conflict', 'helper-idle')
         if edition=='root':
             from .root_capabilities import CALLS
-            names = (*names, *CALLS)
+            names = ('python-runtime', *names, *CALLS)
         for name in ('ssh', *names, *(('pairing',) if edition!='root' else ()), 'inventory'):
-            detail = PYTHON_HINT if name == 'python3' else ''
+            detail = ''
             if action == 'doctor' and name in ('pairing', 'inventory'):
                 detail = 'Not performed by doctor; this step runs during installation.'
             if action == 'doctor' and name in ('helper-node', 'helper-idle'):
@@ -49,12 +50,16 @@ class CheckList:
             event['label'] = 'TV Node.js 0.12.2 — Beta'
         if event != previous:
             self.results[name] = event
-            self.emit(dict(event))
+            if name not in PYTHON_REQUIREMENTS:
+                self.emit(dict(event))
 
     def finish_running(self, cancelled=False):
         for name, result in list(self.results.items()):
             if result['status'] == 'running':
-                self.update(name, 'unknown' if cancelled else 'fail', FAILED_HINT)
+                if name == 'python-runtime':
+                    self.update(name, 'unknown')
+                else:
+                    self.update(name, 'unknown' if cancelled else 'fail', FAILED_HINT)
 
     def probe(self, name, run):
         self.update(name, 'running')
@@ -64,6 +69,5 @@ class CheckList:
             self.update(name, 'unknown', FAILED_HINT)
             raise
         self.update(name, 'pass' if result is True else 'fail' if result is False else 'unknown',
-                    PYTHON_HINT if result is not True and name == 'python3'
-                    else FAILED_HINT if result is None else '')
+                    FAILED_HINT if result is None else '')
         return result

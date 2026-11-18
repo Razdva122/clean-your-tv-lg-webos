@@ -54,16 +54,25 @@ class ConsoleProfileAccessTests(unittest.TestCase):
             profile = directory / 'profile.json'
             (directory / 'known_hosts').write_bytes(b'private original pin')
             original = {path: path.read_bytes() for path in directory.iterdir()}
+            arguments = [*COMMAND, 'status', '--host', host, '--edition', 'root', '--port', '1',
+                         '--language', 'en', '--data-dir', tmp]
             with deny_profile_read(profile):
                 with self.assertRaises(PermissionError):
                     profile.read_bytes()
-                result = subprocess.run([*COMMAND, 'status', '--non-interactive',
-                                         '--host', host, '--edition', 'root', '--port', '1',
-                                         '--language', 'en', '--data-dir', tmp], cwd=ROOT,
+                before = set(Path(tmp).rglob('*'))
+                machine = subprocess.run([*arguments, '--result-json'], cwd=ROOT,
+                                         stdin=subprocess.DEVNULL, capture_output=True, timeout=30)
+                self.assertEqual(machine.returncode, 2, (machine.stdout, machine.stderr))
+                value = json.loads(machine.stdout)
+                self.assertEqual(value['exit_code'], machine.returncode)
+                self.assertNotIn('report_path', value)
+                self.assertEqual(set(Path(tmp).rglob('*')), before)
+                result = subprocess.run([*arguments, '--non-interactive'], cwd=ROOT,
                                         stdin=subprocess.DEVNULL, capture_output=True, timeout=30)
             self.assertEqual(result.returncode, 2, (result.stdout, result.stderr))
             self.assertIn(b'saved TV connections could not be read', b' '.join(result.stdout.split()))
             path, = (Path(tmp) / 'reports').glob('*.json')
+            self.assertIn(os.fsencode(path.name), result.stdout)
             text = path.read_text()
             report = json.loads(text)
             self.assertEqual(report['frontend'], 'console')

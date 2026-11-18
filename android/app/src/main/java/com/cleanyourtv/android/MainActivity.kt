@@ -127,13 +127,16 @@ class MainActivity : Activity() {
             } catch (_: Exception) { ui.post { emit("{\"kind\":\"error\",\"text\":\"Invalid request\"}") } }
         }
         @JavascriptInterface fun saveReport() {
-            if (!Operation.active) ui.post {
-                val report = diagnosticReport() ?: return@post
-                startActivityForResult(Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
-                    addCategory(Intent.CATEGORY_OPENABLE)
-                    type = "application/json"
-                    putExtra(Intent.EXTRA_TITLE, report.name)
-                }, 9)
+            ui.post {
+                if (Operation.active) return@post
+                try {
+                    val report = checkNotNull(diagnosticReport())
+                    startActivityForResult(Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                        addCategory(Intent.CATEGORY_OPENABLE)
+                        type = "application/json"
+                        putExtra(Intent.EXTRA_TITLE, report.name)
+                    }, 9)
+                } catch (_: Exception) { emit("{\"kind\":\"report-error\"}") }
             }
         }
         @JavascriptInterface fun answer(json: String) {

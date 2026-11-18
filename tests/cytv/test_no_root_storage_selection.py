@@ -10,6 +10,7 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
 
+from cytv import failure_help
 from cytv import no_root_observer as observer
 from cytv.errors import UserError
 
@@ -92,6 +93,38 @@ class StorageSelection(unittest.TestCase):
         with self.assertRaises(UserError):
             observer.invoke(self.remote, self.plan, 'storage-select')
         self.assertTrue(Path(self.private).exists())
+
+    def test_inaccessible_legacy_staging_guides_developer_mode_access(self):
+        self.jail.chmod(0o777)
+        selected = observer.invoke(self.remote, self.plan, 'storage-select')['root']
+        self.assertEqual(selected, self.legacy)
+        with self.assertRaises(UserError) as caught:
+            observer.invoke(self.remote, self.plan, 'storage-check', fresh_install=True)
+        self.assertEqual(caught.exception.reason_code, 'storage-preflight-failed')
+        self.assertEqual(caught.exception.no_root_observer['exception_code'], 'EACCES')
+        guide = failure_help.for_error(caught.exception, 'install-packages', {'edition': 'no-root'})
+        self.assertIsNotNone(guide)
+        self.assertEqual(guide['code'], 'tv-storage-unavailable')
+        self.assertIn('Developer Mode', guide['next_step'])
+        self.assertFalse(Path(self.legacy).exists())
+        self.assertFalse(Path(self.private).exists())
+        self.assertEqual(list(self.public.iterdir()), [])
+
+    def test_foreign_storage_reservation_routes_to_review_without_writes(self):
+        self.blocked.chmod(0o755)
+        Path(self.legacy).mkdir(mode=0o700)
+        Path(self.private).mkdir(mode=0o700)
+        marker = Path(self.legacy) / 'keep'
+        marker.write_bytes(b'original')
+        with self.assertRaises(UserError) as caught:
+            observer.invoke(self.remote, self.plan, 'storage-select', fresh_install=True)
+        self.assertEqual(caught.exception.reason_code, 'pending-operation')
+        guide = failure_help.for_error(caught.exception, 'install-packages', {'edition': 'no-root'})
+        self.assertEqual(guide['code'], 'no-root-reservation')
+        self.assertIn('original saved connection', guide['next_step'])
+        self.assertEqual(marker.read_bytes(), b'original')
+        self.assertEqual(list(Path(self.private).iterdir()), [])
+        self.assertEqual(list(self.public.iterdir()), [])
 
     def test_foreign_owned_jail_parent_is_not_selected(self):
         # Substitute only unavailable host ownership metadata, retaining the

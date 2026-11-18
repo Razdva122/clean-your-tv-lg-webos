@@ -24,6 +24,9 @@ BACKEND = legacy.BACKEND
 ROUTING = 'compositor-keyfilter-v1'
 KEY = 'com.webos.surfacemanager.keyFilters'
 STOCK = 'com.webos.app.home'
+LIVE_TV = 'com.webos.app.livetv'
+# Identical stock short-Home handler in LG W20P and W20H firmware 04.64.00.
+WEBOS5_RIBBON_SYSTEM_UI_SHA256 = 'c61f1a202c8237eeb9ad51fa49b26f23d21d39af9aa5639a69e5a1c504585e67'
 CARD = '_WEBOS_WINDOW_TYPE_CARD'
 HOME = '_WEBOS_WINDOW_TYPE_HOME'
 SCREENSAVER = ('com.webos.app.screensaver', '_WEBOS_WINDOW_TYPE_SCREENSAVER')
@@ -75,6 +78,35 @@ def selection(root=STATE, uid=0):
             or not (legacy.admission_valid(value['admission']) if value['schema']==2 else admission_valid(value['admission']))):
         raise ValueError('Invalid compositor selection; retain recovery evidence')
     return value
+
+
+def reboot_resume_supported(descriptor):
+    if not descriptor or descriptor['schema'] != 3:
+        return False
+    device = descriptor['admission']
+    return (device['model'], device['firmware'], device['webos']) == ('65NANO913NA', '04.64.00', '5.6.2')
+
+
+def require_stock_home_destination():
+    # On the verified webOS 5.6.2 firmware the stock key filter follows
+    # defaultApps.home, independently of our configd filter or native Home file.
+    reply = luna('luna://com.webos.settingsservice/getSystemSettings',
+                 {'category': 'general', 'keys': ['defaultApps']}, allow_failure=True)
+    settings = reply.get('settings')
+    defaults = settings.get('defaultApps') if isinstance(settings, dict) else None
+    if isinstance(defaults, str):
+        try:
+            defaults = json.loads(defaults)
+        except (ValueError, RecursionError):
+            defaults = None
+    if (reply.get('returnValue') is not True or not isinstance(defaults, dict)
+            or defaults.get('home') not in (STOCK, 'com.webos.app.fullhome')):
+        raise ValueError('Explicit LG Home destination not verified')
+
+
+def boot_session():
+    from intent_runtime import boot_identity as startup_identity
+    return startup_identity()
 
 
 def validate_chain(value):
@@ -394,19 +426,30 @@ def write_config(root, admission, token, uid=0):
     atomic(private_directory(root,uid)/'config',data,uid,raw=True)
 
 
-def write_intent(root, enabled, token, phase, uid=0):
+def write_intent(root, enabled, token, phase, uid=0, *, session=None):
     value=dict(schema=1,enabled=enabled,token=token,phase=phase,boot=boot_identity())
+    if session is not None:
+        if not valid_resume_session(value, session):
+            raise ValueError('Invalid compositor boot session')
+        value['session'] = session
     atomic(private_directory(root,uid)/'intent.json',value,uid)
     return value
 
 
+def valid_resume_session(intent, session):
+    return (intent['enabled'] and intent['phase'] == 'active'
+            and isinstance(session, str)
+            and re.fullmatch(re.escape(intent['boot']) + r':session-[0-9a-f]{32}', session) is not None)
+
+
 def read_intent(root=STATE, uid=0):
     value=json.loads(secure(private_directory(root,uid)/'intent.json',uid,4096))
-    if (not isinstance(value,dict) or set(value)!={'schema','enabled','token','phase','boot'}
+    if (not isinstance(value,dict) or set(value)-{'session'}!={'schema','enabled','token','phase','boot'}
             or type(value['schema']) is not int or value['schema']!=1 or type(value['enabled']) is not bool
             or value['phase'] not in ('disabled','starting','active','trial','recovering')
             or not isinstance(value['token'],str) or not legacy.TOKEN.fullmatch(value['token'])
-            or not isinstance(value['boot'],str) or str(uuid.UUID(value['boot']))!=value['boot']):
+            or not isinstance(value['boot'],str) or str(uuid.UUID(value['boot']))!=value['boot']
+            or ('session' in value and not valid_resume_session(value, value['session']))):
         raise ValueError('Invalid compositor intent')
     return value
 
@@ -522,9 +565,9 @@ def status(root=STATE, uid=0):
 
 
 @contextmanager
-def operation(root=STATE,uid=0):
+def operation(root=STATE,uid=0, *, name='operation.lock'):
     import fcntl
-    path=private_directory(root,uid)/'operation.lock'
+    path=private_directory(root,uid)/name
     fd=os.open(path,os.O_CREAT|os.O_RDWR|os.O_NOFOLLOW|os.O_NONBLOCK,0o600)
     try:
         info=os.fstat(fd)
@@ -588,7 +631,7 @@ def can_return(surfaces,power,proof,token,foreground=None):
     return stock_surfaces(rows)
 
 
-def stock_surfaces(rows, *, allow_screensaver=False):
+def stock_surfaces(rows, *, allow_screensaver=False, background=None):
     for row in rows:
         # The single-display broker may omit displayId and visible.
         if (not isinstance(row,dict) or type(row.get('displayId',0)) is not int or row.get('displayId',0)!=0
@@ -597,6 +640,8 @@ def stock_surfaces(rows, *, allow_screensaver=False):
             return False
         app, window = row.get('appId'), row.get('windowType')
         if allow_screensaver and (app, window) == SCREENSAVER:
+            continue
+        if background is not None and (app, window) == (background, CARD):
             continue
         if app != STOCK or window not in (CARD, HOME):
             return False
@@ -610,7 +655,7 @@ def process_start(pid):
     return int(fields[19])
 
 
-def stop_controller(root,uid):
+def stop_controller(root,uid, *, prior_session=False):
     path=private_directory(root,uid)/'controller.json'
     try: value=json.loads(secure(path,uid,4096))
     except FileNotFoundError: return
@@ -631,6 +676,9 @@ def stop_controller(root,uid):
     pid=value['pid']
     try:
         if process_start(pid)!=value['start']:
+            if prior_session:
+                path.unlink()
+                return
             raise ValueError('Lifecycle controller PID changed; retain evidence')
         # The native stop latch makes the controller exit on its next bounded
         # status read. Never signal a PID across a check/kill race on old kernels
@@ -655,15 +703,35 @@ def stopped_stock(proof):
             and not proof['healthy'] and proof['guardian_pid'] == 0)
 
 
+def verify_webos5_ribbon_route(chain):
+    handler = next(entry['file'] for entry in stock_chain(chain)
+                   if entry['file'].endswith('/systemUi.js') and entry['handler'] == 'handleSystemKeys')
+    if hashlib.sha256(vendor_script(handler)).hexdigest() != WEBOS5_RIBBON_SYSTEM_UI_SHA256:
+        raise ValueError('Stock LG Home ribbon handler unverified; retain evidence')
+    reply = luna('luna://com.webos.settingsservice/getSystemSettings',
+                 {'category': 'general', 'keys': ['defaultApps']})
+    settings = reply.get('settings') if isinstance(reply, dict) else None
+    defaults = settings.get('defaultApps') if isinstance(settings, dict) else None
+    if isinstance(defaults, str):
+        defaults = json.loads(defaults)
+    if (not isinstance(reply, dict) or reply.get('returnValue') is not True
+            or not isinstance(defaults, dict) or defaults.get('home') != STOCK):
+        raise ValueError('Stock LG Home ribbon destination unverified; retain evidence')
+
+
 def restore_for_removal(root, uid):
     with operation(root, uid):
         return restore_locked(root, uid, for_removal=True)
 
 
-def restore_locked(root,uid, *, for_removal=False, explicit_restore=False):
+def restore_locked(root,uid, *, for_removal=False, explicit_restore=False, routing_only=False):
+    verify_destination = routing_only or (
+        explicit_restore and not for_removal and reboot_resume_supported(selection(root, uid)))
     ui_failure = None
     try:
-        if for_removal or explicit_restore:
+        if verify_destination:
+            native(['--restore-routing'],root,uid)
+        elif for_removal or explicit_restore:
             restored = native(['--restore'], root, uid, allow_ui_failure=True)
             if restored['returnValue'] is False:
                 ui_failure = restored
@@ -678,7 +746,8 @@ def restore_locked(root,uid, *, for_removal=False, explicit_restore=False):
         after=validate_native(native(['--status'],root,uid))
         if ui_failure is not None and (not stopped_stock(after) or after['token'] != ui_failure['token']):
             raise ValueError('Native stop retirement unverified; retain evidence')
-        generic=selection(root,uid)['schema']==3
+        selected = selection(root, uid)
+        generic = selected['schema'] == 3
         if after['healthy'] or not after['stopped'] or after['guardian_pid']:
             raise ValueError('Native stop retirement unverified; retain evidence')
         if not generic and not after['stock_verified']:
@@ -697,11 +766,21 @@ def restore_locked(root,uid, *, for_removal=False, explicit_restore=False):
             if not for_removal:
                 check = 'stock-home-unverified'
             raise ValueError('Home identity changed; owned filter removed, recovery evidence retained')
-        if ui_failure is not None:
+        if verify_destination:
+            stock_chain(read_chain())
+            require_stock_home_destination()
+            current = validate_native(native(['--status'], root, uid))
+            if not stopped_stock(current) or current['token'] != after['token']:
+                raise ValueError('Stock LG Home routing unverified; retain evidence')
+        elif ui_failure is not None:
             check = 'stock-foreground-unverified'
             foreground = luna('luna://com.webos.applicationManager/getForegroundAppInfo', {})
-            if (not isinstance(foreground, dict) or foreground.get('returnValue') is not True
-                    or foreground.get('appId') != STOCK):
+            app = (foreground.get('appId') if isinstance(foreground, dict)
+                   and foreground.get('returnValue') is True else None)
+            # On webOS 5 SAM can report the Live TV card under the stock Home ribbon.
+            ribbon = (for_removal and generic and app == LIVE_TV
+                      and selected['admission']['webos'].startswith('5.'))
+            if app != STOCK and not ribbon:
                 raise ValueError('Stock LG Home foreground unverified; retain evidence')
             # SAM can report LG Home underneath an application overlay. The LG
             # screensaver can also cover its stock card after idle (#615).
@@ -710,15 +789,17 @@ def restore_locked(root,uid, *, for_removal=False, explicit_restore=False):
             rows = surfaces.get('foregroundAppInfo') if isinstance(surfaces, dict) else None
             if (not isinstance(rows, list) or not 1 <= len(rows) <= 128
                     or surfaces.get('returnValue') is not True
-                    or not stock_surfaces(rows, allow_screensaver=True)
-                    or not any(row.get('appId') == STOCK and row.get('visible', True) is True
-                               for row in rows)):
+                    or not stock_surfaces(rows, allow_screensaver=not ribbon, background=LIVE_TV if ribbon else None)
+                    or not any(row['appId'] == STOCK and row.get('visible', True) is True
+                               and (not ribbon or row['windowType'] == HOME) for row in rows)):
                 raise ValueError('Stock LG Home surface unverified; retain evidence')
             check = 'stock-routing-unverified'
             chain = read_chain()
+            if ribbon:
+                verify_webos5_ribbon_route(chain)
             current = native(['--status'], root, uid)
             if (not stopped_stock(current) or current['token'] != after['token']
-                    or reconcile(chain, root, False) != chain):
+                    or reconcile(chain, root, False) != chain or ribbon and read_chain() != chain):
                 raise ValueError('Stock LG Home routing unverified; retain evidence')
     except Exception as error:
         if ui_failure is not None:
@@ -773,7 +854,26 @@ def start_controller(root,uid,token,control_fd,log):
         if ready_write is not None: os.close(ready_write)
 
 
-def enable_locked(root,uid,seconds):
+def rotate_boot_config(root, uid, admission, prior_token, token):
+    # Use the native guardian's state lock. A direct Restore may latch Off
+    # independently of the Python operation lock.
+    with operation(root, uid, name='lock'):
+        directory = private_directory(root, uid)
+        config = secure(directory/'config', uid, 512)
+        if not config.startswith(b'CYTV-C1-KEYFILTER-1\ntoken ' + prior_token.encode('ascii') + b'\n'):
+            raise ValueError('Preceding compositor token changed')
+        try:
+            stop = secure(directory/'stopped', uid, 160)
+        except FileNotFoundError:
+            pass
+        else:
+            match = re.fullmatch(rb'([0-9a-f]{32}) ([a-z_]{1,63})\n', stop)
+            if match is None or (match[1] == prior_token.encode('ascii') and match[2] != b'normal_shutdown'):
+                raise ValueError('Preceding compositor stop requires explicit Enable')
+        write_config(root, admission, token, uid)
+
+
+def enable_locked(root,uid,seconds, *, session=None, resume_token=None):
     descriptor=selection(root,uid)
     if descriptor is None: raise ValueError('Compositor backend not selected')
     if verify_ready().get('integrity_verified') is not True:
@@ -787,13 +887,22 @@ def enable_locked(root,uid,seconds):
         raise ValueError('Restore interrupted filter transaction before enabling')
     if probe()!=descriptor['admission']:
         raise ValueError('C1 admission changed')
+    if reboot_resume_supported(descriptor):
+        require_stock_home_destination()
     from helper_bridge import require_idle
     require_idle()
     helper=binary(root,uid)
     # Verify the filter is protected before configd is allowed to read it.
     secure(Path(root)/'runtime/c1-home-filter.js',uid,65536)
+    if resume_token is not None:
+        from boot_gate import observation
+        if observation() != (True, False) or boot_session() != session:
+            raise ValueError('Normal compositor startup proof changed')
     token=uuid.uuid4().hex
-    write_config(root,descriptor['admission'],token,uid)
+    if resume_token is not None:
+        rotate_boot_config(root, uid, descriptor['admission'], resume_token, token)
+    else:
+        write_config(root,descriptor['admission'],token,uid)
     write_intent(root,seconds==0,token,'starting',uid)
     fds=[]; children=[]
     try:
@@ -813,7 +922,8 @@ def enable_locked(root,uid,seconds):
             pass_fds=(input_write,),stdin=subprocess.DEVNULL,stdout=log,stderr=log,start_new_session=True,close_fds=True)
         children.append(observer)
         os.close(input_write); fds.remove(input_write)
-        guard=subprocess.Popen([str(helper),'--guard',token,str(input_read),str(control_read),str(ready_write),str(seconds)],
+        guard_mode = '--guard-resumable' if session is not None else '--guard'
+        guard=subprocess.Popen([str(helper),guard_mode,token,str(input_read),str(control_read),str(ready_write),str(seconds)],
             pass_fds=(input_read,control_read,ready_write),stdin=subprocess.DEVNULL,stdout=log,stderr=log,
             env={'PATH':'/usr/bin:/bin','LANG':'C'},start_new_session=True,close_fds=True)
         children.append(guard)
@@ -822,12 +932,17 @@ def enable_locked(root,uid,seconds):
         after=validate_native(native(['--status'],root,uid))
         if not after['healthy'] or after['token']!=token:
             raise ValueError('Guardian stopped during activation')
-        write_intent(root,seconds==0,token,'trial' if seconds else 'active',uid)
+        write_intent(root,seconds==0,token,'trial' if seconds else 'active',uid,session=session)
         result=status(root,uid)
         if not result['effective']['healthy']: raise ValueError('Compositor lease not active')
         return result
     except BaseException:
-        try: restore_locked(root,uid)
+        try:
+            if resume_token is None:
+                if session is not None:
+                    restore_locked(root, uid, routing_only=True)
+                else:
+                    restore_locked(root,uid)
         finally:
             for child in children:
                 if child.poll() is None:
@@ -839,8 +954,44 @@ def enable_locked(root,uid,seconds):
         for fd in fds: os.close(fd)
 
 
+def resume_after_boot(root, uid, intent, session):
+    # Consume the previous session's authorization before any new filter write.
+    # An interruption must not allow the boot callback to submit Enable again.
+    write_intent(root, False, intent['token'], 'recovering', uid)
+    chain = read_chain()
+    if reconcile(chain, root, False) != chain:
+        raise ValueError('Previous compositor filter is still present')
+    stock_chain(chain)
+    retired = validate_native(native(['--retire-boot', intent['token']], root, uid))
+    eligible = (retired['state'], retired['stopped'], retired['reason']) in (
+        ('stock', False, 'boot_retired'), ('stopped', True, 'normal_shutdown'))
+    if (not eligible or not retired['stock_verified'] or retired['token'] != intent['token']
+            or retired['guardian_pid']):
+        raise ValueError('Previous compositor guardian retirement unverified')
+    stop_controller(root, uid, prior_session=True)
+    return enable_locked(root, uid, 0, session=session, resume_token=intent['token'])
+
+
+def boot_resume_observation(root, uid):
+    from boot_gate import wait
+    try:
+        intent = read_intent(root, uid)
+        previous = intent.get('session')
+        if previous is not None:
+            session = boot_session()
+            if session != previous:
+                # Off can acquire the operation lock while startup is still pending.
+                return intent, session, wait()
+    except (OSError, ValueError, RuntimeError, subprocess.SubprocessError):
+        pass
+    return None, None, False
+
+
 def execute(mode,transaction=None,root=STATE,uid=0):
     if mode=='status': return status(root,uid)
+    resumable = reboot_resume_supported(selection(root, uid))
+    previous, session, normal = (boot_resume_observation(root, uid)
+                                 if mode == 'boot' and resumable else (None, None, False))
     with operation(root,uid):
         if mode=='boot' and not os.path.lexists(Path(root)/'c1-keyfilter/pending.json'):
             try:
@@ -848,17 +999,24 @@ def execute(mode,transaction=None,root=STATE,uid=0):
                 # ActivityManager can deliver recovery while Home is already
                 # armed. Keep only a verified activation from this boot.
                 if (intent['enabled'] and intent['phase'] == 'active'
-                        and intent['boot'] == boot_identity()):
+                        and intent['boot'] == boot_identity() and intent != previous):
                     current = status(root, uid)
                     if (current['intent'] == intent
                             and current['recovery'].get('integrity_verified') is True):
                         return current
+                if resumable and normal and intent == previous:
+                    from boot_gate import observation
+                    if observation() == (True, False) and boot_session() == session:
+                        return resume_after_boot(root, uid, intent, session)
             except (OSError, ValueError, RuntimeError, subprocess.SubprocessError):
                 pass  # Unverified activation still needs stock Home recovery.
         if mode in ('restore','boot'):
-            # Boot recovery never arms or reinstalls the filter.
+            if mode == 'boot' and resumable:
+                return restore_locked(root, uid, routing_only=True)
             return restore_locked(root,uid,explicit_restore=mode=='restore')
         if mode in ('enable','trial','intent-trial','emergency-trial'):
+            if mode == 'enable' and resumable:
+                return enable_locked(root, uid, 0, session=boot_session())
             return enable_locked(root,uid,0 if mode=='enable' else 60)
     raise ValueError('Unsupported compositor lifecycle operation')
 

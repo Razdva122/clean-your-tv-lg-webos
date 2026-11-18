@@ -211,6 +211,11 @@ s.homeCallbacks[0](
   })
 );
 assert.strictEqual(s.launches.length, 1, 'late callback has no second effect');
+s.reply(lease(2));
+assert.strictEqual(s.key(false), 1, 'finish the captured press after timeout');
+assert.strictEqual(s.key(true), 0, 'late renewal cannot steal the next press');
+assert.strictEqual(s.key(false), 0, 'LG receives the next release as well');
+assert.strictEqual(s.sends.length, 1, 'no second native launch was submitted');
 s = setup();
 s.reply(lease(1));
 s.key(true);

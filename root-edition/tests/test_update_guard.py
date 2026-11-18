@@ -36,6 +36,11 @@ class GuardTests(unittest.TestCase):
             root=Path(tmp).resolve();update_guard.reserve('a'*32,root,os.getuid())
             with patch.object(cli.d,'STATE',root),patch.object(cli.d,'EXPECTED_UID',os.getuid()),patch.object(cli.os,'geteuid',return_value=0):
                 with self.assertRaises(RuntimeError):cli.main('enable')
+                with patch.object(cli, 'gate_backend') as selected:
+                    selected.return_value.execute.return_value = 'restored'
+                    self.assertEqual(cli.main('boot'), 'restored')
+                    selected.return_value.execute.assert_called_once_with(
+                        'restore', root=root, uid=os.getuid())
 
 
 if __name__=='__main__':unittest.main()

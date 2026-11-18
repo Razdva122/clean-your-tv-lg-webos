@@ -1,7 +1,10 @@
 """Numbered terminal wizard and small maintenance command surface."""
 import argparse
+from contextlib import nullcontext
+import functools
 import getpass
 import hashlib
+import inspect as signature_inspect
 import io
 import json
 from pathlib import Path
@@ -10,10 +13,10 @@ from time import sleep
 from types import SimpleNamespace
 
 from . import __version__, package, state, i18n
-from .errors import ExistingRoot, LocalRecoveryError, TVNotReady, UserError
-from .desktop import EXPLICIT_TV_CHOICE
+from .errors import ExistingRoot, LocalRecoveryError, TVConnectionError, TVNotReady, UserError, is_storage_full
+from .desktop import EXPLICIT_TV_CHOICE, RETRY_STORAGE_PROMPT
 from .operations import Installer, require_root_reinstall_cleanup
-from .terminal import Console, supports_ansi
+from .terminal import Console, ResultConsole, supports_ansi
 from . import diagnostics, discovery, inspect_tv, prompts, install_settings, debloat
 
 
@@ -57,6 +60,8 @@ def parser(desktop=False):
     if desktop:
         commands += ('ssh-command',)
         result.add_argument('--resume-root-reinstall', action='store_true', help=argparse.SUPPRESS)
+        result.add_argument('--removal-operation', help=argparse.SUPPRESS)
+        result.add_argument('--removal-pin', help=argparse.SUPPRESS)
     result.add_argument('command', nargs='?', default='install', choices=commands)
     result.add_argument('--language', choices=tuple(i18n.LANGUAGES), help=i18n.translate('Interface language (auto uses the computer language)'))
     result.add_argument('--version', action='store_true', help=i18n.translate('Print installer version'))
@@ -69,6 +74,7 @@ def parser(desktop=False):
     result.add_argument('--port', type=int, help=i18n.translate('SSH port (No-root: 9922; Root: 22)'))
     result.add_argument('--identity', type=Path, help=i18n.translate('Existing Root SSH private key'))
     result.add_argument('--data-dir', type=Path, help=i18n.translate('Private local profile directory'))
+    result.add_argument('--result-json', action='store_true', help='Print one JSON result and never prompt')
     result.add_argument('--non-interactive', action='store_true', help=i18n.translate('Never prompt; needs a saved, trusted connection'))
     result.add_argument('--use-bundled-version', action='store_true', help=i18n.translate('Non-interactive install: explicitly use this installer even if a newer version is available'))
     result.add_argument('--yes', action='store_true', help=i18n.translate('Accept install/remove summary; does not accept SSH trust'))
@@ -83,7 +89,7 @@ def parser(desktop=False):
     return result
 
 
-def explain_failure(write, store, profile, phase, error):
+def explain_failure(write, store, profile, phase, error, *, offer_actions=True):
     from .failure_help import for_error
 
     def has_reset_source():
@@ -95,14 +101,18 @@ def explain_failure(write, store, profile, phase, error):
         return True
 
     pending = store.diagnostic_pending if hasattr(store, 'diagnostic_pending') else store.pending(profile) if profile else None
+    if profile and phase in ('status', 'doctor', 'recover'):
+        from .recovery import no_root_package_check_plan
+        if no_root_package_check_plan(write, profile, pending, error=error):
+            return None
     help = for_error(error, phase, profile, pending, has_reset_source=has_reset_source)
     if help:
         write.failure_help(help)
         if help['code'] == 'ssh-identity' and profile and profile['edition'] == 'root' and (pending or {}).get('action') == 'uninstall':
             write.raw('https://github.com/Razdva122/clean-your-tv-lg-webos/blob/release/next/docs/RECOVERY.md#ssh-identity-changed')
-        if help['code'] in ('removal-not-submitted','no-root-recovery'):
+        if offer_actions and help['code'] in ('removal-not-submitted','no-root-recovery'):
             write.recovery(profile)
-        if phase != 'recover' and pending and pending.get('action') in ('install', 'activate-root'):
+        if offer_actions and phase != 'recover' and pending and pending.get('action') in ('install', 'activate-root'):
             from .recovery import offer_install_recovery
             offer_install_recovery(write, store, profile)
     return help
@@ -117,6 +127,67 @@ def removal_connection_message(store, profile, phase, error):
         return None
     store.checkpoint(profile,removal_reason='connection-interrupted')
     return 'Connection to the TV was interrupted. Check the connection and try again.'
+
+
+def _connect_via(callback, profile, directory, secret, trust, *, persist):
+    """Use the optional persistence flag while preserving four-argument embedders."""
+    options = {}
+    if not persist:
+        try:
+            signature_inspect.signature(callback).bind(profile, directory, secret, trust, persist=False)
+            options['persist'] = False
+        except (TypeError, ValueError):
+            pass
+    return callback(profile, directory, secret, trust, **options)
+
+
+def storage_preflight_review(store, profile, ask, write):
+    """Keep retry on the authenticated SSH session and the exact saved profile."""
+    directory = store.device_path(profile)
+    known = directory / 'known_hosts'
+    try:
+        pin = hashlib.sha256(known.read_bytes()).hexdigest() if not known.is_symlink() else None
+    except OSError:
+        pin = None
+
+    def guard():
+        from .root_runtime import require_idle
+        try:
+            require_idle(store, profile)
+        except UserError:
+            pending = store.pending(profile)
+            if pending and pending.get('action') not in ('install', 'activate-root') and pending.get(
+                    'recovery_protocol') != 'clean-removal-v1':
+                from .recovery import plan, REVIEW
+                write.recovery(profile)
+                plan(write, 'review', REVIEW)
+            raise
+        if pin is None or store.device_path(profile) != directory:
+            raise UserError('SSH host key was not verified. Connection cancelled.',
+                            reason_code='ssh-identity-unverified')
+        original, _ = store.connection_profile(profile, expected_pin=pin)
+        if original != profile:
+            raise UserError('SSH host key was not verified. Connection cancelled.',
+                            reason_code='ssh-identity-unverified')
+
+    def review(error):
+        guard()
+        if error is None:
+            write('The read-only storage check passed. Confirm installation to continue.')
+            question = 'Install these versions?'
+        else:
+            from .failure_help import for_error
+            write(str(error))
+            help = for_error(error, 'install-packages', profile)
+            if help and help['code'] == 'tv-storage-unavailable':
+                write(help['next_step'])
+            write('Repeat the read-only check on the same TV.')
+            question = RETRY_STORAGE_PROMPT
+        if not prompts.confirm(question, ask, write):
+            raise EOFError
+        guard()
+
+    return review
 
 
 def choose_profile(args, store, ask, write, search, inspect):
@@ -263,30 +334,69 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
     language_parser = LanguageParser(prog='cytv', add_help=False)
     language_parser.add_argument('--language', choices=tuple(i18n.LANGUAGES))
     language_parser.add_argument('--data-dir', type=Path)
-    language_args, _ = language_parser.parse_known_args(argv)
-    try:
-        i18n.configure(language_args.language, language_args.data_dir)
-    except OSError:
-        i18n.set_language(language_args.language or 'auto')
-        (write if isinstance(write, Console) else Console(write)).error('Could not save language preference', heading=True)
-        (write if isinstance(write, Console) else Console(write)).error('Check write access to the application data folder and try again.')
-        return 2
+    language_args, _ = language_parser.parse_known_args(raw_args)
+    i18n.configure(data_dir=language_args.data_dir)
+    if language_args.language is not None:
+        i18n.set_language(language_args.language)
+    from .desktop import DesktopConsole
+    args = parser(desktop=isinstance(write, DesktopConsole)).parse_args(raw_args)
+    args.non_interactive |= args.result_json
+    if args.result_json:
+        write = ResultConsole(write)
+    code = _run(args, ask, write, connect, secret, search, inspect, payload_root, check_updates)
+    return write.finish(code) if args.result_json else code
+
+
+def _run(args, ask, write, connect, secret, search, inspect, payload_root, check_updates):
     from .desktop import DesktopConsole, SSH_COMMAND_PROMPT
-    args = parser(desktop=isinstance(write, DesktopConsole)).parse_args(argv)
+
+    read_only = args.non_interactive and args.command == 'status'
+    export_report = not (read_only and args.result_json)
+    try:
+        if args.language is not None and not read_only:
+            i18n.configure(args.language, args.data_dir)
+    except OSError as error:
+        from .failure_help import for_error
+        i18n.set_language(args.language or 'auto')
+        write = write if isinstance(write, Console) else Console(write)
+        write.error('Could not save language preference', heading=True)
+        local_error = LocalRecoveryError('storage-unavailable', 'ancestor', storage_full=is_storage_full(error),
+                                         write_precheck=True)
+        write.failure_help(for_error(local_error, 'select-tv'))
+        return 2
     if args.version:
-        write('cytv ' + __version__)
+        if isinstance(write, ResultConsole):
+            write.status_result({'version': __version__})
+        else:
+            write('cytv ' + __version__)
         return 0
     write = write if isinstance(write, Console) else Console(write, interactive=False if args.non_interactive else None)
     from .checks import CheckList
     checks = CheckList(write.check)
     ask = write.reader(ask)
-    remote = None
+    remote = failure = None
     store, profile, phase, tv_info = state.Store(args.data_dir), None, 'select-tv', {'frontend':getattr(write,'frontend','console')}
     partial = False
+    saved_review = None
     if args.command == 'trust-root-ssh':
+        if args.non_interactive:
+            write.command_outcome('owner-input-required', 'review-ssh-identity')
         from .ssh_identity_review import run
         return run(args, store, ask, write)
     try:
+        removal_operation = getattr(args, 'removal_operation', None)
+        removal_pin = getattr(args, 'removal_pin', None)
+        pinned_root_removal = (removal_pin is not None and removal_operation is None
+                               and args.edition == 'root' and args.host and args.port is not None
+                               and not (args.non_interactive or args.yes))
+        if removal_pin is not None and (args.command != 'uninstall'
+                                       or removal_operation is None and not pinned_root_removal):
+            raise UserError('Removal evidence changed. Recovery data was kept.', reason_code='pending-operation')
+        if removal_operation is not None and (args.command not in ('restore', 'uninstall')
+                or not args.host or not args.edition or args.port is None or args.non_interactive):
+            raise UserError('Removal evidence changed. Recovery data was kept.', reason_code='pending-operation')
+        if args.non_interactive and args.reconnect_after_reset:
+            write.command_outcome('owner-input-required', 'run-interactively')
         if args.reconnect_after_reset and (
                 args.command != 'install' or args.edition != 'no-root' or not args.host
                 or args.connection or args.identity or args.non_interactive or args.yes):
@@ -313,14 +423,27 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
         if args.report and args.command != 'doctor':
             raise UserError('--report is available with cytv doctor.')
         if args.command == 'clean-wam-cache' and args.non_interactive:
+            write.command_outcome('owner-input-required', 'run-interactively')
             raise UserError('WAM cleanup requires interactive confirmation; --yes does not authorize it.')
         if args.command == 'debloat' and args.non_interactive:
+            write.command_outcome('owner-input-required', 'run-interactively')
             raise UserError('Debloat requires interactive selection of the settings to change.')
         if args.non_interactive:
             def no_ask(_):
+                write.command_outcome('owner-input-required', 'run-interactively')
                 raise UserError('Non-interactive mode needs --host and --edition or one saved profile; pairing and SSH trust must already be completed.')
             ask = no_ask
             secret = no_ask
+        packaged_desktop_setup = (args.command == 'install' and isinstance(write, DesktopConsole)
+                                  and getattr(sys, 'frozen', False))
+        if packaged_desktop_setup:
+            phase = 'prepare-payload'
+            try:
+                package.check_payload_files(Path(payload_root) if payload_root is not None else payload_dir())
+            except (OSError, ValueError):
+                write('Installation has not started.')
+                raise UserError('Use a complete installer build.') from None
+            phase = 'select-tv'
         if args.command == 'install' and not args.non_interactive:
             write.heading('Clean Your TV  /  Installation')
             write('TV > Edition > Connection > Install > Settings')
@@ -343,9 +466,35 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
         reinstall_step = store.root_reinstall(profile) if desktop_install else None
         if reinstall_step:
             profile = state.target(**dict(profile, root_variant=reinstall_step.variant))
-        write.selected_profile(profile)
         if getattr(args, 'resume_root_reinstall', False) and not reinstall_step:
             raise UserError('There is no saved Root reinstallation to continue.')
+        if args.command == 'install' and not args.reconnect_after_reset:
+            from .root_runtime import saved_operation_for_review
+            phase = 'review-saved-operation'
+            saved_review = saved_operation_for_review(store, profile)
+            if saved_review:
+                guidance = 'An earlier operation is unresolved. Choose Review recovery options or run cytv recover with the original TV connection.'
+                if args.non_interactive:
+                    write.command_outcome('waiting-for-evidence', 'check')
+                    raise UserError(guidance, reason_code='pending-operation')
+                selected = profile
+                original = saved_review.profile
+                write(guidance)
+                write('TV: ' + original['host'])
+                kind = ('Root (SSH)' if original['edition'] == 'root' else
+                        'No-root (Root SSH)' if original.get('connection') == 'root-ssh' else
+                        'No-root (Developer Mode)')
+                write(i18n.translate('Edition: {edition}').format(edition=i18n.translate(kind)))
+                write(i18n.translate('SSH port: {port}').format(port=original['port']))
+                write('Checking recovery does not reinstall or remove packages. Root checks may run verified support code.')
+                from .recovery import SAVED_CONNECTION_PROMPT
+                if not prompts.confirm(SAVED_CONNECTION_PROMPT, ask, write):
+                    return 130
+                profile = original
+                args.command = 'recover'
+                desktop_install = False
+                reinstall_step = None
+        write.selected_profile(profile)
         if reinstall_step:
             write.root_reinstall()
             if not getattr(args, 'resume_root_reinstall', False) and not prompts.confirm('Continue Root reinstallation?', ask, write):
@@ -398,8 +547,11 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
             if profile['edition'] == 'root':
                 write('Root will stop the old Home Helper, turn on Home control and open Clean Your TV Home.')
             write('Check controls on the TV after installation.')
-        retry_removal=(args.command=='uninstall' and (store.pending(profile) or {}).get('recovery_protocol')=='clean-removal-v1')
+        retry_removal = args.command == 'uninstall' and not pinned_root_removal and (removal_operation is not None or
+            (store.pending(profile) or {}).get('recovery_protocol') == 'clean-removal-v1')
         if args.command in ('install', 'uninstall', 'restore', 'enable-system-updates', 'enable-firmware-access', 'disable-firmware-access', 'recover-system-rollback', 'recover-root-rollback', 'replace-system-updater') and not (args.yes or retry_removal or args.reconnect_after_reset or reinstall_step):
+            if args.command == 'uninstall':
+                write('LG Home will be restored. Clean Your TV, its updaters, Home Helper and saved preferences will be removed.')
             if args.command == 'uninstall' and profile['edition'] == 'root':
                 write('This removes Root, Root Updater, their services and startup hooks, plus any installed No-root Home, Helper and Updater.')
                 write('Recovery records are retained for diagnostics. Other TV apps stay installed.')
@@ -412,7 +564,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                 write('Start a new audited attempt after the previous deadline')
             if not prompts.confirm(verb + '?', ask, write, default=args.command == 'install'):
                 write('Cancelled. No TV changes were made.')
-                return 0
+                return 130 if desktop_install else 0
         # Canonicalize the selected local build root (macOS /var is an OS
         # alias); authenticated support members still reject indirect children.
         payload, manifest = (Path(payload_root) if payload_root is not None else payload_dir()).resolve(), {}
@@ -428,8 +580,13 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                 phase = 'prepare-payload'
             try:
                 manifest = package.verify_payload(payload)
-            except FileNotFoundError:
-                raise UserError('Release payload is missing. Download a built cytv executable or run python scripts/build-cytv.py --payload-only from source.') from None
+            except (OSError, ValueError) as error:
+                if packaged_desktop_setup and args.command == 'install':
+                    write('Installation has not started.')
+                    raise UserError('Use a complete installer build.') from None
+                if isinstance(error, FileNotFoundError):
+                    raise UserError('Release payload is missing. Download a built cytv executable or run python scripts/build-cytv.py --payload-only from source.') from None
+                raise
             if args.migrate_home and profile['edition'] != 'root':
                 raise UserError('--migrate-home applies only to Root installation.')
         reinstall_payload = (hashlib.sha256(json.dumps([profile.get('root_variant'), manifest], sort_keys=True).encode()).hexdigest()
@@ -437,6 +594,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
 
         def trust(value, root):
             if args.non_interactive:
+                write.command_outcome('owner-input-required', 'review-ssh-identity')
                 raise UserError('This TV is not remembered yet. Connect interactively once to confirm it on your trusted home network.')
             if not prompts.trust_tv(profile['host'], profile['port'], value, ask, write):
                 raise EOFError
@@ -462,7 +620,30 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
             return secret(localized)
 
         from .transport import SSH, CredentialPrompt
-        with store.lock(profile), diagnostics.context.operation_context(store, profile):
+        observe_while_busy = (args.command == 'status' and not partial and profile['edition'] == 'no-root'
+                              and profile.get('connection') != 'root-ssh')
+        lock_options = {'allow_observation': True} if observe_while_busy else {}
+        lock = nullcontext(True) if read_only else store.lock(profile, **lock_options)
+        with lock as writer, (
+                nullcontext() if writer is False else diagnostics.context.operation_context(store, profile)):
+            if writer is False:
+                from .recovery import active_operation_plan, refresh_active_no_root
+                connector = functools.partial(_connect_via, connect) if connect else SSH.connect
+                try:
+                    refresh_active_no_root(store, profile, payload, write, connector)
+                except Exception as error:
+                    if getattr(error, 'reason_code', None) == 'operation-active':
+                        raise
+                    write.error(str(error) if isinstance(error, UserError) else 'The TV package result could not be verified.')
+                    active_operation_plan(write, profile)
+                    return 2
+                return 0
+            if removal_operation is not None:
+                from .recovery import confirmed_uninstall
+                pending = store.pending(profile)
+                if (confirmed_uninstall(pending) != removal_operation
+                        or args.command == 'restore' and pending.get('stage') in ('restart-required', 'verified-clean')):
+                    raise UserError('Removal evidence changed. Recovery data was kept.', reason_code='pending-operation')
             if desktop_install and store.root_reinstall(profile) != reinstall_step:
                 raise UserError('The saved Root reinstallation changed. Return to the start screen and check again.')
             if reinstall_step and reinstall_step.payload != reinstall_payload:
@@ -476,6 +657,9 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                     raise UserError('An earlier operation is unresolved. Choose Review recovery options or run cytv recover with the original TV connection.',
                                     reason_code='pending-operation') from None
             recovering = False
+            if args.command == 'install' and profile['edition'] == 'no-root' and not store.pending(profile):
+                # Check again before staging as pairing can take time.
+                store.check_capsule_storage(profile)
             if args.reconnect_after_reset:
                 from .no_root_reconnect import original_pins, reconnect
                 old_key_type, old_pins = original_pins(store, profile)
@@ -483,6 +667,8 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                 write('Only continue for your own TV on your trusted home network.')
                 if not prompts.confirm('Start a new No-root connection after a factory reset?', ask, write, default=False):
                     raise EOFError
+            elif saved_review:
+                recovering = True
             elif partial:
                 directory = store.device_path(profile)
                 state.require_original_ssh_identity(directory)
@@ -490,12 +676,14 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                     raise UserError('The original saved TV connection and host key are required for recovery. Recovery data was kept.',
                                     reason_code='ssh-identity-unverified')
             else:
-                profile, recovering = store.connection_profile(profile, expected_pin=reinstall_step.pin if reinstall_step else None)
+                profile, recovering = store.connection_profile(
+                    profile, expected_pin=reinstall_step.pin if reinstall_step else removal_pin,
+                    **({'create': False} if read_only else {}))
                 if reinstall_step:
                     profile = state.target(**dict(profile, root_variant=reinstall_step.variant))
             # An explicit sign-in key may change; the saved TV identity and pin
             # must still be resolved and verified before using it.
-            if (recovering and args.identity and (reinstall_step or args.command in ('uninstall', 'recover')
+            if (recovering and not saved_review and args.identity and (reinstall_step or args.command in ('uninstall', 'recover', 'restore')
                     and (profile['edition'] == 'root' or profile.get('connection') == 'root-ssh')
                     and (store.pending(profile) or {}).get('recovery_protocol') == 'clean-removal-v1')):
                 profile = dict(profile, identity=str(args.identity.expanduser().resolve()))
@@ -507,7 +695,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
             observer_support = (not partial and profile.get('connection') == 'root-ssh'
                 and (store.pending(profile) or {}).get('recovery_protocol') == 'no-root-original-stream-v1'
                 and args.command in ('status', 'doctor', 'recover'))
-            if args.command in ('uninstall','recover') and cleanup:
+            if args.command in ('uninstall','recover') and cleanup and not saved_review:
                 removal_plan(write,store,profile,state='waiting',connecting=True)
             if (args.command in ('uninstall','recover') and cleanup) or observer_support:
                 try:manifest=package.verify_payload(payload)
@@ -524,21 +712,17 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
             checks.update('ssh', 'running')
             write('Connecting to the TV…')
             def connect_tv(pinned, directory=None, confirm=trust):
+                if removal_pin is not None:
+                    store.connection_profile(profile, expected_pin=removal_pin)
                 pairing = {'previous_host_key_type': old_key_type} if directory is not None else {}
                 if directory is None:
-                    directory = store.device_path(profile) if partial else store.device_dir(profile)
+                    if saved_review:
+                        directory = saved_review.directory
+                    else:
+                        directory = store.device_path(profile) if partial or read_only else store.device_dir(profile)
                 if connect:
-                    # Older embedders accept exactly four positional arguments.
-                    import inspect as signature_inspect
-                    options = {}
-                    if pinned:
-                        try:
-                            signature_inspect.signature(connect).bind(profile, directory, secret_with_help, trust, persist=False)
-                            options['persist'] = False
-                        except TypeError:
-                            pass
-                    return connect(profile, directory, secret_with_help,
-                                   (lambda *_: False) if pinned else confirm, **options)
+                    return _connect_via(connect, profile, directory, secret_with_help,
+                                        (lambda *_: False) if pinned else confirm, persist=not pinned)
                 return SSH.connect(profile, directory, secret_with_help, confirm,
                                    identity_prompt=None if pinned or args.non_interactive else lambda: prompts.root_credentials(ask, write),
                                    persist=not pinned, **pairing)
@@ -546,11 +730,14 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
             from .errors import connection_interrupted
             for attempt in range(3 if cleanup else 1):
                 try:
+                    if saved_review and saved_operation_for_review(store, selected) != saved_review:
+                        raise UserError('Recovery evidence changed. Check recovery again; recovery data was kept.',
+                                        reason_code='pending-operation')
                     if args.reconnect_after_reset:
                         remote = reconnect(store, profile, lambda directory, confirm: connect_tv(False, directory, confirm),
                                            trust, old_pins)
                     else:
-                        remote = connect_tv(recovering or partial)
+                        remote = connect_tv(recovering or partial or read_only)
                     break
                 except Exception as error:
                     if not cleanup or attempt == 2 or not connection_interrupted(error):
@@ -562,9 +749,10 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                 diagnostics.context.collect_metadata(remote, tv_info)
                 diagnostics.context.collect_node_version(remote, tv_info)
                 write('SSH connection verified. Full TV checks and recovery details are unavailable.')
-                write.raw(json.dumps(diagnostics.context.tv_summary(tv_info), indent=2))
-                diagnostics.save_result(write, store, args.command, profile, 'partial-tv-observation',
-                                        tv_info, checks=checks.results)
+                write.status_result(diagnostics.context.tv_summary(tv_info))
+                if export_report:
+                    diagnostics.save_result(write, store, args.command, profile, 'partial-tv-observation',
+                                            tv_info, checks=checks.results)
                 return 0
             if args.command == 'ssh-command':
                 phase = 'ssh-command'
@@ -580,7 +768,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
 
             if not recovering and args.command in ('install', 'status', 'doctor', 'recover', 'debloat'):
                 diagnostics.context.collect_metadata(remote, tv_info)
-            if not recovering:
+            if not recovering and not read_only:
                 store.save(profile)
                 pending=store.pending(profile)
                 if pending and pending.get('recovery_protocol')=='clean-removal-v1' and pending.get('connection_pending') is True:
@@ -681,9 +869,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                                     installer.select_graphics()
                                     installer.preflight(install=True, home_interfaces=True)
                     except RootCapabilityError as error:
-                        if isinstance(error, NativeHomeScriptError):
-                            raise
-                        if profile.get('root_variant') != BETA and not isinstance(error, NoRootAlternativeError):
+                        if not isinstance(error, NoRootAlternativeError):
                             raise
                         if args.migrate_home:
                             raise UserError('Choose an alternative edition without --migrate-home. Installation has not started.')
@@ -695,11 +881,17 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                     if (not reinstall and profile['edition'] == 'root' and not profile.get('root_variant')
                             and installer.manifest.get('root_backends', {}).get('c1-native-gate')):
                         from .home_handoff import handoff_pending
-                        home_pending = handoff_pending(remote)
+                        try:
+                            home_pending = handoff_pending(remote)
+                        except (UserError, OSError, TimeoutError) as error:
+                            if home_conflict is not None:
+                                raise home_conflict from error
+                            raise
                 if reinstall:
                     if args.migrate_home:
                         raise UserError('For Root reinstallation, omit --migrate-home. The installer reads a fresh TV inventory before replacing Root.')
                     if args.non_interactive:
+                        write.command_outcome('owner-input-required', 'confirm-reinstallation')
                         raise UserError('Root is already installed or recovery state remains. Run the installer interactively to confirm reinstallation. --yes does not approve replacing Root.')
                     write.heading('Versions on the TV → versions in this installer')
                     for row in installer.version_summary():
@@ -710,7 +902,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                     write('Earlier recovery records are kept on this computer. If removal cannot finish, the new installation will not start.')
                     if not prompts.confirm('Reinstall Root?', ask, write):
                         write('Existing Root and recovery data left unchanged.')
-                        return 0
+                        return 130 if desktop_install else 0
                     if reinstall_payload:
                         installer.root_reinstall_payload = reinstall_payload
                         write.root_reinstall()
@@ -721,31 +913,59 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                         write(row)
                     if not args.yes and not prompts.confirm('Install these versions?', ask, write, default=True):
                         write('Cancelled. No TV changes were made.')
-                        return 0
+                        return 130 if desktop_install else 0
                 if home_conflict is not None or home_pending:
                     from .home_handoff import takeover
-                    if not takeover(installer, pending=home_pending):
+
+                    def confirm_home_handoff():
+                        if args.non_interactive:
+                            write.command_outcome('owner-input-required', 'confirm-home-handoff')
+                            message = 'Run the installer interactively to confirm replacing the current Home integration.'
+                            if home_conflict is None:
+                                raise UserError(message)
+                            write(message)
+                            raise home_conflict
+                        write('The installer can restore LG Home before continuing Root setup.')
+                        if not prompts.confirm('Replace the current Home integration?', ask, write):
+                            raise EOFError
+
+                    if not takeover(installer, confirm_home_handoff, pending=home_pending,
+                                    provision=not args.non_interactive):
                         if home_pending:
                             raise UserError('Root operation was not confirmed. Run cytv status; retain recovery state.',
                                             reason_code='root-operation-unconfirmed')
                         raise home_conflict
                     installer.preflight(install=True, home_interfaces=True)
-                if profile['edition'] == 'no-root':
+                def helper_retry():
+                    if args.non_interactive:
+                        return False
+                    write.heading('Stop Home Helper on the TV')
+                    write('Press Home three times within two seconds (older Helper: hold Home for two seconds), then release all buttons and wait for LG Home.')
+                    return prompts.confirm('Try stopping Helper again?', ask, write, default=True)
+
+                def prepare_no_root_staging():
+                    nonlocal phase
                     phase = 'inspect-installation'
                     auto_stop = True
                     while True:
                         try:
-                            installer.preflight(install=True, stop_running_helper=auto_stop)
+                            installer.prepare_install_helper(auto_stop)
                             break
                         except UserError as error:
-                            auto_stop = False
                             if error.reason_code != 'helper-running' or args.non_interactive:
                                 raise
-                            write.heading('Stop Home Helper on the TV')
-                            write('Press Home three times within two seconds (older Helper: hold Home for two seconds), then release all buttons and wait for LG Home.')
-                            if not prompts.confirm('Try stopping Helper again?', ask, write, default=True):
-                                write('Cancelled. Installation has not started.')
-                                return 0
+                            if not helper_retry():
+                                raise EOFError
+                            auto_stop = False
+                    phase = 'install-packages'
+
+                installer.helper_retry = helper_retry
+                if profile['edition'] == 'no-root':
+                    phase = 'inspect-installation'
+                    if not args.non_interactive and write.frontend in ('console', 'desktop', 'android'):
+                        installer.storage_preflight_review = storage_preflight_review(store, profile, ask, write)
+                    installer.before_no_root_staging = prepare_no_root_staging
+                    installer.preflight(install=True, defer_helper=True)
                 if not resume:
                     installer.select_graphics()
                 phase = 'read-inventory'
@@ -764,24 +984,39 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                             try:
                                 phase = 'pair-tv'
                                 checks.update('pairing', 'running', '')
-                                with SSAP(profile['host'], store.device_dir(profile), write) as tv:
+                                pairing = {'reuse_only': True} if args.non_interactive else {}
+                                with SSAP(profile['host'], store.device_dir(profile), write, **pairing) as tv:
                                     checks.update('pairing', 'pass')
                                     phase = 'read-inventory'
                                     checks.update('inventory', 'running', '')
                                     try:
-                                        inventory = tv.inventory((payload / 'fallback.png').read_bytes())
+                                        inventory = tv.inventory(
+                                            (payload / 'fallback.png').read_bytes(),
+                                            allow_missing_inputs=installer.may_omit_no_root_inputs,
+                                        )
                                     finally:
                                         icon_counts = getattr(tv, 'icon_diagnostics', None)
                                         if type(icon_counts) is dict:
                                             tv_info['icon_inventory'] = icon_counts
                                     key = tv.key
-                                    checks.update('inventory', 'pass')
+                                    if getattr(tv, 'inputs_available', None) is False:
+                                        checks.update('inventory', 'unknown', 'Warning: TV inputs could not be read. Continuing with applications only.')
+                                    else:
+                                        checks.update('inventory', 'pass')
                                 break
                             except TVNotReady:
                                 checks.finish_running()
                                 if args.non_interactive:
                                     raise
                                 prompts.wait_for_tv(ask, write)
+                            except TVConnectionError as error:
+                                if phase != 'pair-tv' or error.reason_code != 'pairing-rejected' or args.non_interactive:
+                                    raise
+                                checks.update('pairing', 'fail', '')
+                                write('TV pairing was rejected.')
+                                write('Keep the TV on and approve the next pairing request with the remote.')
+                                if not prompts.confirm('Try pairing again?', ask, write):
+                                    raise
                     write(f"Read {len(inventory['apps'])} applications.")
                 phase = 'install-packages'
                 def progress(message):
@@ -801,13 +1036,6 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                              'Keeping the previous recovery state in an archive…': 'archive-root-state'}.get(message, phase)
                     write(message)
                 installer.progress = progress
-                def helper_retry():
-                    if args.non_interactive:
-                        return False
-                    write.heading('Stop Home Helper on the TV')
-                    write('Press Home three times within two seconds (older Helper: hold Home for two seconds), then release all buttons and wait for LG Home.')
-                    return prompts.confirm('Try stopping Helper again?', ask, write, default=True)
-                installer.helper_retry = helper_retry
                 if resume:
                     result = installer.resume_root_setup()
                 else:
@@ -830,6 +1058,16 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                 phase = 'verify-home-button'
                 installer.outcome.review_home(ask, write, args.non_interactive or setup_cancelled)
                 installer.observe_failed_root_home_button()
+                if isinstance(write, ResultConsole):
+                    from .outcomes import summary
+                    setup_outcome = summary(tv_info.get('setup_outcome'))
+                    write.status_result({'setup_outcome': setup_outcome})
+                    if setup_outcome['startup'] == 'stopped-during-setup':
+                        write.command_outcome('owner-input-required', 'start-helper')
+                    elif setup_outcome['startup'] in ('process-observed', 'root-state-verified'):
+                        write.command_outcome('verified-completion', 'none')
+                    elif setup_outcome['packages'] == 'verified':
+                        write.command_outcome('waiting-for-evidence', 'check')
                 if profile['edition'] == 'root':
                     write.heading('Review TV checks')
                     if result.get('backend') != 'c1-native-gate':
@@ -847,8 +1085,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                 else:
                     write('Three short Home presses within two seconds return to LG Home. To restart Home control, open Home Helper, choose Start Helper and confirm. Your saved Home screen choice is kept.')
                     if result.get('activation_cancelled') is not True:
-                        write("After installation, press Home to try it. If LG Home opens, open Home Helper from the TV's apps.")
-                        write('Packages installed; Home Helper launch requested. Check short Home, arrows/OK, Back, volume, standby and cold boot.')
+                        write('Packages installed. Home Helper launch requested.')
                     if profile.get('connection') == 'root-ssh':
                         write('No-root is installed using root SSH. Keep this saved connection for status, recovery and removal.')
                     else:
@@ -857,7 +1094,9 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
             elif args.command == 'recover':
                 from .recovery import recover
                 phase = 'recover'
-                recover(installer, ask, write, args.non_interactive)
+                if saved_review:
+                    write.recovery(profile)
+                recover(installer, ask, write, args.non_interactive, review_confirmed=bool(saved_review))
             elif args.command == 'replace-system-updater':
                 phase = args.command
                 installer.replace_system_updater()
@@ -887,12 +1126,15 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
             elif args.command == 'home-diagnostics':
                 phase = 'home-diagnostics'
                 if args.non_interactive:
+                    write.command_outcome('owner-input-required', 'run-interactively')
                     raise UserError('Open Home button diagnostics in the installer to record a Home press.')
                 write.heading('Home button diagnostics')
-                write('Open an app on the TV. Recording lasts one minute and saves one report with application IDs and timing.')
+                from .outcomes import HOME_START
+                write(HOME_START)
+                write('Recording lasts up to three minutes and saves one report with application IDs and timing.')
                 if not prompts.confirm('Ready to record? Continue and wait for the Home prompt.', ask, write, default=True):
                     return 0
-                report = diagnostics.collect_home_report(remote, store, profile, write, reconnect=reconnect_tv)
+                report = diagnostics.collect_home_report(remote, store, profile, write, reconnect=reconnect_tv, ask=ask)
                 write.report(report)
             elif args.command == 'clean-wam-cache':
                 from . import wam_cleanup
@@ -921,18 +1163,35 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                 result = installer.status()
                 write.doctor_result(result)
                 if args.report:
+                    diagnostics.observe_root_python_inventory(remote, profile, tv_info)
                     diagnostics.save_result(write, store, args.command, profile, 'doctor-complete', tv_info, checks=checks.results, status=result)
             else:
                 phase = args.command
-                if args.command == 'uninstall':
+                if read_only:
+                    pending = store.pending(profile)
+                    result = installer.status(read_only=True)
+                    from .recovery_state import assess
+                    from .recovery_ui import command_outcome
+                    if store.pending(profile) != pending:
+                        write.command_outcome('waiting-for-evidence', 'check')
+                    elif isinstance(write, ResultConsole):
+                        if outcome := command_outcome(assess(profile, pending, result)):
+                            write.command_outcome(*outcome)
+                elif args.command == 'uninstall':
                     if not args.non_interactive:
                         debloat.offer_restore(remote, store, profile, ask, write)
                     result = installer.uninstall(full_project=True)
                 else:
                     result = getattr(installer, args.command)()
-                if result.get('verified_clean') is True and result.get('removed') is True:
-                    write.recovery_plan({'state':'complete','disposition':'clean-removal','verified_clean':True,'removed':True,
-                                         'summary':'Clean Your TV removal is verified.','next_step':'Other TV apps stay installed.'})
+                if args.command == 'restore' and removal_operation is not None:
+                    from .recovery import restored_for_uninstall
+                    restored_for_uninstall(write, profile, removal_operation, result,
+                                           evidence=tv_info.get('removal_evidence'))
+                if isinstance(write, ResultConsole):
+                    write.status_result(result)
+                from .recovery import verified_removal_plan
+                if verified_removal_plan(write, profile, result, evidence=tv_info.get('removal_evidence'),
+                                         next_step='Other TV apps stay installed.'):
                     write.heading('Clean Your TV removed')
                     write('Clean Your TV removed. Its apps, startup and Home-button control were removed.')
                     if result.get('temporary_files_retained'):
@@ -941,14 +1200,20 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                         write('Only ownership backups and minimal removal records were kept.')
                 elif result.get('restart_required') is True:
                     from .recovery import removal_plan
-                    removal_plan(write,store,profile,state='waiting',restart_observed=True)
+                    removal_plan(write,store,profile,state='waiting',restart_observed=True,
+                                 evidence=tv_info.get('removal_evidence'))
                 elif (result.get('reconciled') or '').startswith('updater-not-started'):
                     write.heading('Ready to reinstall Root')
                     write('The previous attempt stopped before Root Updater setup. Recovery and installed files are verified; the previous operation report was saved.')
                     write('Return to the start screen, choose Set up my TV and confirm reinstallation. In the console, run cytv install.')
                 else:
-                    write.raw(json.dumps(result, indent=2))
-            if args.command in ('install', 'status', 'restore', 'recover', 'uninstall'):
+                    write.status_result(result)
+            if not read_only and args.command in ('install', 'status', 'restore', 'recover', 'uninstall'):
+                # Recovery can end before the owner agrees to inspect the TV.
+                # A removal waiting for restart needs only the boot check.
+                if (args.command != 'recover' and
+                        (args.command != 'uninstall' or result.get('restart_required') is not True)):
+                    diagnostics.observe_root_python_inventory(remote, profile, tv_info)
                 diagnostics.save_result(write, store, args.command, profile,
                     'install-complete' if args.command == 'install' else phase, tv_info,
                     checks=checks.results, status=result if args.command in ('status', 'restore', 'uninstall') else tv_info.get('status'))
@@ -957,6 +1222,11 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
             if args.command in ('status', 'doctor', 'restore'):
                 pending = store.pending(profile)
                 if pending:
+                    if pending.get('recovery_protocol') == 'no-root-original-stream-v1':
+                        from .recovery import no_root_package_check_plan
+                        from .recovery_state import assess
+                        if no_root_package_check_plan(write, profile, pending, assess(profile, pending, result)):
+                            return 0
                     from .recovery import missing_root_deployment_plan
                     write.recovery(profile)
                     missing_root_deployment_plan(write, profile, pending, result)
@@ -969,20 +1239,46 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
             write('Cancelled')
             return 130
         from .recovery import cancelled
-        cancelled(write, store, profile, args.command, phase, tv_info, checks.results)
+        cancelled(write, store, profile, args.command, phase, tv_info, checks.results, save_report=not read_only)
         return 130
     except UserError as exc:
         checks.finish_running()
+        if profile and exc.reason_code == 'operation-active':
+            from .failure_help import for_error
+            from .recovery import active_operation_plan
+            active_operation_plan(write, profile, failure=for_error(exc, phase, profile, store.pending(profile)))
+            return 2
         write.error('Could not complete this step', heading=True)
-        write.error((None if partial else removal_connection_message(store, profile, phase, exc)) or str(exc))
+        unverified_review = saved_review and remote is None
+        write.error((None if partial or unverified_review or read_only else
+                     removal_connection_message(store, profile, phase, exc)) or str(exc))
         if phase in ('pair-tv', 'read-inventory'):
             write('Installation has not started. No TV packages were changed by this attempt.')
         if not partial:
             from .recovery import removal_plan
-            help = explain_failure(write, store, profile, phase, exc)
-            removal_plan(write, store, profile, failure=help, error=exc, phase=phase)
-        diagnostics.suggest_issue(write, store, args.command, profile, phase, exc, tv_info, checks=checks.results, status=tv_info.get('status'))
-        return 2
+            help = explain_failure(write, store, profile, phase, exc, offer_actions=not unverified_review)
+            if not unverified_review:
+                removal_plan(write, store, profile, failure=help, error=exc, phase=phase,
+                             evidence=tv_info.get('removal_evidence'))
+        if isinstance(write, ResultConsole):
+            pending = getattr(store, 'diagnostic_pending', None)
+            owner_actions = {
+                'ssh-identity-unverified': 'review-ssh-identity',
+                'tv-not-ready': 'wake-tv',
+                'pairing-required': 'approve-tv-pairing',
+                'pairing-rejected': 'approve-tv-pairing',
+                'pairing-timeout': 'approve-tv-pairing',
+                'helper-running': 'stop-helper',
+            }
+            if args.non_interactive and phase == 'recover' and exc.reason_code == 'user-error':
+                write.command_outcome('owner-input-required', 'review-recovery')
+            elif action := owner_actions.get(exc.reason_code):
+                write.command_outcome('owner-input-required', action)
+            elif exc.reason_code == 'storage-preflight-failed' and not pending:
+                write.command_outcome('retryable-check', 'check-storage')
+            elif pending and write.outcome is None:
+                write.command_outcome('waiting-for-evidence', 'check')
+        failure, exit_code = exc, 2
     except Exception as exc:
         checks.finish_running()
         write.error('Could not complete this step', heading=True)
@@ -992,23 +1288,39 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
             'AuthenticationException': 'SSH authentication failed. Check your key/password; for No-root check Developer Mode and Key Server.',
             'ModuleNotFoundError': 'Source dependencies are missing. Install cytv/requirements.txt or use a built cytv executable.',
         }
-        message = None if partial else removal_connection_message(store, profile, phase, exc)
+        unverified_review = saved_review and remote is None
+        message = None if partial or unverified_review or read_only else removal_connection_message(store, profile, phase, exc)
         write.error(message or ('Could not read the TV applications. Keep the TV on and accept its pairing request. Installation has not started.'
               if phase in ('pair-tv', 'read-inventory') and kind != 'ModuleNotFoundError' else hints.get(kind,
               'Removal could not be verified. Review recovery options before continuing.' if args.command=='uninstall'
               else 'Operation could not be confirmed. Save the diagnostic report and keep recovery data; do not retry blindly.')))
         if not partial:
             from .recovery import removal_plan
-            help = explain_failure(write, store, profile, phase, exc)
-            removal_plan(write, store, profile, failure=help, error=exc, phase=phase)
-        diagnostics.suggest_issue(write, store, args.command, profile, phase, exc, tv_info, checks=checks.results, status=tv_info.get('status'))
-        return 1
+            help = explain_failure(write, store, profile, phase, exc, offer_actions=not unverified_review)
+            if not unverified_review:
+                removal_plan(write, store, profile, failure=help, error=exc, phase=phase,
+                             evidence=tv_info.get('removal_evidence'))
+        if isinstance(write, ResultConsole) and write.outcome is None:
+            if kind in ('BadHostKeyException', 'AuthenticationException', 'AuthFailure', 'AgentLoginFailed'):
+                write.command_outcome('owner-input-required', 'review-ssh-identity')
+            elif getattr(store, 'diagnostic_pending', None):
+                write.command_outcome('waiting-for-evidence', 'check')
+        failure, exit_code = exc, 1
     finally:
         if profile and profile.get('root_variant') == 'node012-beta' and args.command == 'install':
             from .root_runtime import FEEDBACK
             write(FEEDBACK)
         if remote is not None:
+            if (failure is not None and not partial and not read_only
+                    and args.command in ('install', 'status', 'doctor', 'restore', 'uninstall')):
+                diagnostics.observe_root_python_inventory(remote, profile, tv_info)
             remote.close()
+
+    if export_report:
+        diagnostics.suggest_issue(write, store, args.command, profile, phase, failure, tv_info,
+                                  checks=checks.results, status=tv_info.get('status'),
+                                  ask=None if args.non_interactive else ask)
+    return exit_code
 
 
 def interactive_main(*args, **kwargs):

@@ -55,8 +55,8 @@ class CLITests(unittest.TestCase):
                             connect=lambda *_: remote, ask=lambda _: self.fail('Unexpected prompt'),
                             write=output.append, payload_root=fixture.payload)
         self.assertEqual(code, 2, '\n'.join(output))
-        self.assertIn('No-root — reduced functionality', '\n'.join(output))
-        self.assertIn('Root Beta — not sufficiently tested', '\n'.join(output))
+        self.assertNotIn('No-root — reduced functionality', '\n'.join(output))
+        self.assertNotIn('Root Beta — not sufficiently tested', '\n'.join(output))
         select_beta.assert_not_called()
         ssap.assert_not_called()
         self.assertFalse(remote.uploads)
@@ -105,6 +105,12 @@ class CLITests(unittest.TestCase):
     def test_root_node_failure_can_complete_no_root_using_the_same_ssh(self):
         self.assert_no_root_install_after_root_preflight(choose_beta=False)
 
+    def test_root_node_failure_hides_no_root_when_storage_is_full(self):
+        self.assert_no_root_install_after_root_preflight(choose_beta=False, storage_full=True)
+
+    def test_root_node_failure_offers_no_choice_during_retained_recovery(self):
+        self.assert_no_root_install_after_root_preflight(choose_beta=True, retained_root=True)
+
     def test_root_beta_ribbon_fallback_completes_no_root_using_the_same_ssh(self):
         self.assert_no_root_install_after_root_preflight(choose_beta=True)
 
@@ -114,14 +120,20 @@ class CLITests(unittest.TestCase):
     def test_root_beta_home_refusal_hides_no_root_when_storage_is_full(self):
         self.assert_no_root_install_after_root_preflight(choose_beta=True, generic=True, storage_full=True)
 
+    def test_root_beta_home_timeout_does_not_offer_no_root(self):
+        self.assert_no_root_install_after_root_preflight(choose_beta=True, home_unknown=True)
+
     def test_root_native_home_unavailable_uses_the_same_checked_alternative(self):
         self.assert_no_root_install_after_root_preflight(choose_beta=False, native_missing=True)
+
+    def test_root_home_refusal_preserves_recovery_when_the_no_root_alternative_is_blocked(self):
+        self.assert_no_root_install_after_root_preflight(choose_beta=False, native_missing=True, retained_root=True)
 
     def test_root_beta_with_keyfilters_but_without_native_home_offers_no_root(self):
         self.assert_no_root_install_after_root_preflight(choose_beta=True, native_missing=True)
 
     def assert_no_root_install_after_root_preflight(self, choose_beta, generic=False, storage_full=False,
-                                                   native_missing=False):
+                                                   native_missing=False, home_unknown=False, retained_root=False):
         from cytv.errors import TVCommandError
         from cytv.root_capabilities import NATIVE_HEADERS, NATIVE_HOME_UNAVAILABLE
         from cytv.root_runtime import VENDOR_PROBE
@@ -160,6 +172,8 @@ class CLITests(unittest.TestCase):
                     return {'returnValue': True, 'configs': {key: [
                         {'file': '/usr/lib/qt5/qml/KeyFilters/systemUi.js', 'handler': 'handleSystemKeys'}]}}
                 if choose_beta and uri.endswith('/getConfigs'):
+                    if home_unknown:
+                        raise TimeoutError
                     if generic:
                         reply = {'missingConfigs': ['com.webos.surfacemanager.keyFilters'],
                                  'errorCode': -1, 'returnValue': True,
@@ -177,8 +191,9 @@ class CLITests(unittest.TestCase):
             def run(self, command, data=None, timeout=30):
                 if command == '/usr/bin/node --version':return 'v0.12.2'
                 if command == VENDOR_PROBE: return 'CYTV_VENDOR_READY'
-                if 'CYTV_FRESH_ROOT' in command:return 'CYTV_FRESH_ROOT'
-                if native_missing and command == NATIVE_HEADERS:
+                if 'CYTV_FRESH_ROOT' in command:
+                    return 'CYTV_RETAINED_ROOT' if retained_root else 'CYTV_FRESH_ROOT'
+                if (native_missing or generic) and command == NATIVE_HEADERS:
                     raise TVCommandError(NATIVE_HOME_UNAVAILABLE)
                 if not native_missing and 'process.versions.node.split' in command and 'CYTV_ROOT_READY' in command:
                     return 'CYTV_ROOT_MISSING'
@@ -204,7 +219,7 @@ class CLITests(unittest.TestCase):
         remote=LegacyTV()
         output=[]
         offers=[]
-        answers = iter(('2', '1') if choose_beta else ('1',))
+        answers = iter(('1',) if not choose_beta or storage_full else ('2', '1'))
         def ask(prompt):
             if 'Alternative edition' in prompt:
                 offers.append(prompt)
@@ -221,11 +236,20 @@ class CLITests(unittest.TestCase):
                           connect=lambda *_:remote, ask=ask,
                           write=output.append, payload_root=fixture.payload)
         profiles=state.Store(fixture.root/'cli-state').profiles()
-        if storage_full:
+        if storage_full or home_unknown or retained_root:
             self.assertEqual(code, 2, '\n'.join(output))
-            self.assertEqual(len(offers), 1)
+            self.assertEqual(len(offers), int(choose_beta and not retained_root))
+            self.assertEqual('\n'.join(output).count('No-root — reduced functionality'), int(home_unknown))
+            if storage_full and choose_beta:
+                self.assertIn('[1] Root Beta — not sufficiently tested', '\n'.join(output))
+            if retained_root and native_missing:
+                report_path, = (fixture.root / 'cli-state/reports').glob('diagnostic-*.json')
+                report = json.loads(report_path.read_text())
+                self.assertEqual(report['guidance']['code'], 'root-home-unsupported')
+                self.assertIn('Choose Review recovery options for the same saved TV connection.', '\n'.join(output))
             self.assertFalse(any(profile['edition'] == 'no-root' for profile in profiles))
             self.assertFalse(remote.uploads)
+            ssap.assert_not_called()
             return
         self.assertEqual(code,0,'\n'.join(output))
         selected=next(p for p in profiles if p['edition']=='no-root')
@@ -233,9 +257,10 @@ class CLITests(unittest.TestCase):
         self.assertEqual(selected['port'],22)
         self.assertNotIn('PRIVATE-PAIRING','\n'.join(output))
         self.assertIn('--tv-name was skipped', '\n'.join(output))
-        if native_missing:
+        if native_missing or generic:
             self.assertIn('Root cannot control Home on this TV.', '\n'.join(output))
-        elif choose_beta and not generic:
+            self.assertIn('Installation stopped before package submission.', '\n'.join(output))
+        elif choose_beta:
             self.assertIn('This TV uses the LG Home ribbon', '\n'.join(output))
         if generic:
             self.assertEqual(len(offers), 2)
@@ -657,9 +682,9 @@ class CLITests(unittest.TestCase):
                 else:
                     getattr(operation, command).assert_called_once_with()
 
-    def test_root_setup_continues_after_automatic_home_handoff(self):
+    def test_root_setup_requires_owner_choice_for_verified_home_handoff(self):
         from cytv.errors import UserError
-        from cytv.home_handoff import PROGRAM
+        from cytv.home_handoff import PENDING_CHECK, PROGRAM
         from cytv.root_capabilities import NATIVE_HEADERS, NATIVE_HOME_MOUNT_PROBE
         from tests.cytv.test_operations import Remote
 
@@ -667,10 +692,19 @@ class CLITests(unittest.TestCase):
         class TV(Remote):
             root = True
             restored = False
+
+            def __init__(self, recognized, pending_unreadable):
+                super().__init__()
+                self.recognized = recognized
+                self.pending_unreadable = pending_unreadable
+                self.handoff_steps = []
+
             def close(self):
                 pass
 
             def run(self, command, data=None, **options):
+                if command == PENDING_CHECK and self.pending_unreadable:
+                    raise TimeoutError
                 if command == NATIVE_HEADERS and not self.restored:
                     return '1001 1 755 4530960\nCYTV_HOME_ELF\nCYTV_HOME_FS\nef53\n'
                 if command == NATIVE_HOME_MOUNT_PROBE:
@@ -679,40 +713,69 @@ class CLITests(unittest.TestCase):
                     return 'CYTV_HOME_LIBC_READY'
                 if data == PROGRAM.encode():
                     if command.endswith(' ' + 'a' * 64):
+                        self.handoff_steps.append('apply')
                         self.restored = True
                         return 'CYTV_HOME_HANDOFF_COMPLETE'
-                    return json.dumps({'plan': 'a' * 64})
+                    self.handoff_steps.append('inspect')
+                    return json.dumps({'plan': 'a' * 64} if self.recognized else {})
                 return super().run(command, data=data, **options)
 
             def luna(self, uri, payload, **options):
                 if uri.endswith('/getSystemInfo'):
                     return {'returnValue': True, 'modelName': 'OLED55C16LA',
                             'firmwareVersion': '03.53.45', 'sdkVersion': '6.5.3'}
-                if not self.restored and uri.endswith('/getProfiles'):
-                    return {'returnValue': False, 'errorCode': -1,
-                            'errorText': 'Service does not exist: com.webos.service.systemprofile.'}
+                if uri.endswith('/getProfiles'):
+                    if self.restored:
+                        self.handoff_steps.append('recheck')
+                    else:
+                        return {'returnValue': False, 'errorCode': -1,
+                                'errorText': 'Service does not exist: com.webos.service.systemprofile.'}
                 if not self.restored and uri.endswith('/getConfigs'):
                     return {'returnValue': True, 'configs': {'com.webos.surfacemanager.keyFilters': [
                         {'file': '/var/lib/third-party/filter.js', 'handler': 'handle'}]}}
                 return super().luna(uri, payload, **options)
 
-        with tempfile.TemporaryDirectory() as tmp, \
-                patch('cytv.cli.payload_dir', return_value=Path(tmp)), \
-                patch('cytv.cli.package.verify_payload', return_value=manifest), \
-                patch('cytv.operations.Installer.select_graphics'), \
-                patch('cytv.operations.Installer.version_summary', return_value=[]), \
-                patch('cytv.operations.Installer._select_python', return_value='/usr/bin/python3'), \
-                patch('cytv.operations.Installer.root_inventory', return_value={'apps': []}), \
-                patch('cytv.operations.Installer.install', side_effect=UserError('Reached install boundary')) as install:
-            (Path(tmp) / 'fallback.png').write_bytes(b'fixture')
-            remote = TV()
-            code, output, _ = self.run_cli(
-                ['install', '--host', '192.0.2.10', '--edition', 'root', '--data-dir', tmp,
-                 '--yes', '--non-interactive', '--language', 'en'], remote=remote)
-            self.assertEqual(code, 2, output)
-            self.assertIn('Reached install boundary', output)
-            self.assertTrue(remote.restored)
-            install.assert_called_once()
+        for choice, recognized, unattended, pending_unreadable in (
+                ('y', True, False, False), ('', True, False, False), ('', True, True, False),
+                ('', False, False, False), ('', False, False, True)):
+            with self.subTest(choice=choice, recognized=recognized, unattended=unattended,
+                              pending_unreadable=pending_unreadable), \
+                    tempfile.TemporaryDirectory() as tmp, \
+                    patch('cytv.cli.payload_dir', return_value=Path(tmp)), \
+                    patch('cytv.cli.package.verify_payload', return_value=manifest), \
+                    patch('cytv.operations.Installer.select_graphics'), \
+                    patch('cytv.operations.Installer.version_summary', return_value=[]), \
+                    patch('cytv.operations.Installer._select_python', return_value='/usr/bin/python3') as select_python, \
+                    patch('cytv.operations.Installer.root_inventory', return_value={'apps': []}), \
+                    patch('cytv.operations.Installer.install', side_effect=UserError('Reached install boundary')) as install:
+                (Path(tmp) / 'fallback.png').write_bytes(b'fixture')
+                remote = TV(recognized, pending_unreadable)
+                args = ['install', '--host', '192.0.2.10', '--edition', 'root', '--data-dir', tmp,
+                        '--yes', '--language', 'en']
+                if unattended:
+                    args.append('--result-json')
+                code, output, _ = self.run_cli(args, [choice] if recognized and not unattended else [], remote=remote)
+                if choice == 'y':
+                    self.assertEqual(code, 2, output)
+                    self.assertIn('Reached install boundary', output)
+                    self.assertEqual(remote.handoff_steps, ['inspect', 'apply', 'recheck'])
+                    install.assert_called_once()
+                else:
+                    self.assertEqual(code, 130 if recognized and not unattended else 2, output)
+                    self.assertEqual(remote.handoff_steps, [] if pending_unreadable else ['inspect'])
+                    install.assert_not_called()
+                if unattended:
+                    self.assertEqual(json.loads(output)['outcome'], {
+                        'state': 'owner-input-required', 'action': 'confirm-home-handoff',
+                    })
+                    select_python.assert_called_once_with(provision=False)
+                else:
+                    self.assertEqual(output.count('Replace the current Home integration?'),
+                                     int(recognized), output)
+                if not recognized or unattended:
+                    report, = (Path(tmp) / 'reports').glob('diagnostic-*.json')
+                    stored = json.loads(report.read_text())
+                    self.assertEqual(stored['reason_code'], 'root-home-interfaces')
 
     def test_root_setup_leaves_unverified_native_home_script_untouched(self):
         import struct
@@ -1267,13 +1330,102 @@ class CLITests(unittest.TestCase):
             self.assertEqual(code, 0, output)
             self.assertEqual(len(calls), 1)
             self.assertEqual(ssap.call_count, 2)
-            session.inventory.assert_called_once_with(b'test-fallback')
+            session.inventory.assert_called_once_with(
+                b'test-fallback', allow_missing_inputs=installer.return_value.may_omit_no_root_inputs
+            )
             installer.return_value.install.assert_called_once_with(inventory, None, False)
             installer.return_value.trial.assert_not_called()
-            self.assertIn('Packages installed; Home Helper launch requested.', output)
+            self.assertIn('Packages installed. Home Helper launch requested.', output)
             report = json.loads(next(Path(tmp).glob('reports/*.json')).read_text())
             self.assertEqual(report['tv'].get('icon_inventory'), session.icon_diagnostics)
             self.assertNotRegex(output.lower(), r'trial|countdown|keep using|preview release')
+
+    def test_pairing_refusal_only_retries_with_confirmation_on_the_same_tv(self):
+        from unittest.mock import Mock
+        from cytv.errors import TVConnectionError
+
+        for flags, answers, retry in (([], ['y'], True), ([], ['n'], False), (['--non-interactive'], [], False)):
+            with self.subTest(flags=flags, answers=answers), tempfile.TemporaryDirectory() as tmp, \
+                 patch('cytv.cli.package.verify_payload', return_value={}), \
+                 patch('cytv.cli.payload_dir', return_value=Path(tmp)), \
+                 patch('cytv.tv.SSAP') as ssap, patch('cytv.cli.Installer') as installer:
+                (Path(tmp) / 'fallback.png').write_bytes(b'fallback')
+                profile = state.target('192.0.2.10', 'no-root', 19922)
+                store = state.Store(tmp)
+                store.save(profile)
+                session = ssap.return_value
+                session.key = 'saved-pairing'
+                session.inventory.return_value = {'apps': [], 'inputs': []}
+                session.__enter__.side_effect = [TVConnectionError('Refused', reason_code='pairing-rejected'), session]
+                code, output, calls = self.run_cli([
+                    'install', '--host', profile['host'], '--port', str(profile['port']), '--edition', profile['edition'],
+                    '--data-dir', tmp, '--language', 'en', '--yes', *flags,
+                ], answers, remote=Mock())
+                self.assertEqual(code, 0 if retry else 2, output)
+                self.assertEqual(len(calls), 1)
+                self.assertEqual(ssap.call_count, 2 if retry else 1)
+                self.assertTrue(all(call.args[:2] == (profile['host'], store.device_dir(profile))
+                                    for call in ssap.call_args_list))
+                self.assertEqual('Try pairing again?' in output, not flags)
+                self.assertNotIn('removal', output.lower())
+                if retry:
+                    installer.return_value.install.assert_called_once_with(session.inventory.return_value, session.key, False)
+                else:
+                    installer.return_value.install.assert_not_called()
+                    self.assertIsNone(store.pending(profile))
+                    report = json.loads(next(Path(tmp).glob('reports/*.json')).read_text())
+                    self.assertEqual(report['guidance'], {'code': 'tv-pairing-rejected', 'pending': False})
+                    self.assertEqual(report['connection']['reason_code'], 'pairing-rejected')
+
+    def test_no_root_partial_inventory_continues_only_for_fresh_setup(self):
+        from unittest.mock import Mock
+        from cytv.operations import HOME, Installer
+
+        fresh = [{'id': 'video'}]
+        missing = {'payload': {}}
+        cases = [
+            (fresh, {'payload': {'devices': []}}, 0, False),
+            (fresh, missing, 0, True),
+            (fresh, {'type': 'error', 'error': '401 insufficient permissions'}, 0, True),
+            ([{'id': HOME}], missing, 1, False),
+            ([{'title': 'No ID'}], missing, 1, False),
+        ]
+        for apps, input_reply, expected_code, show_warning in cases:
+            with self.subTest(apps=apps, input_reply=input_reply), tempfile.TemporaryDirectory() as tmp, \
+                 patch('cytv.cli.package.verify_payload', return_value={}), \
+                 patch('cytv.cli.payload_dir', return_value=Path(tmp)), \
+                 patch.object(Installer, 'version_summary', return_value=[]), \
+                 patch.object(Installer, 'preflight'), patch.object(Installer, 'select_graphics'), \
+                 patch.object(Installer, 'installed_apps', return_value=apps), \
+                 patch.object(Installer, 'install', return_value={}) as install, \
+                 patch('websockets.sync.client.connect') as connect:
+                (Path(tmp) / 'fallback.png').write_bytes(b'test-fallback')
+                profile = state.target('192.0.2.10', 'no-root')
+                keyfile = state.Store(tmp).device_dir(profile) / 'ssap.json'
+                keyfile.write_text(json.dumps({'key': 'test-key'}))
+                socket = connect.return_value
+                socket.recv.side_effect = list(map(json.dumps, [
+                    {'id': 'register_0', 'type': 'registered', 'payload': {'client-key': 'test-key'}},
+                    {'id': 'cytv_1', 'payload': {'launchPoints': [{'id': 'video', 'title': 'Video'}]}},
+                    {'id': 'cytv_2', **input_reply},
+                    {'id': 'cytv_3', 'payload': {'apps': []}},
+                    {'id': 'cytv_4', 'payload': {'launchPoints': [{'id': 'video', 'title': 'Video'}]}},
+                ]))
+                code, output, _ = self.run_cli(['install', '--host', '192.0.2.10', '--edition', 'no-root',
+                                                '--data-dir', tmp, '--non-interactive', '--yes', '--language', 'en'],
+                                               remote=Mock())
+                warning = 'Warning: TV inputs could not be read. Continuing with applications only.'
+                self.assertEqual(code, expected_code, output)
+                self.assertEqual(warning in ' '.join(output.split()), show_warning, output)
+                if expected_code == 0:
+                    install.assert_called_once()
+                    inventory, key, migrate = install.call_args.args
+                    self.assertEqual([a['id'] for a in inventory['apps']], ['video'])
+                    self.assertEqual(inventory['inputs'], [])
+                    self.assertEqual(key, 'test-key')
+                    self.assertFalse(migrate)
+                else:
+                    install.assert_not_called()
 
     def test_installation_failure_is_never_caught_as_inventory_retry(self):
         from cytv.errors import TVNotReady

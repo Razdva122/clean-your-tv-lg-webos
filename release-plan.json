@@ -1,64 +1,97 @@
 {
   "schema": 1,
-  "version": "1.24.1",
+  "version": "1.25.0",
   "changes": [
     {
-      "pr": 704,
-      "issues": [],
-      "summary": "Continue Desktop setup after a successful connection check and refresh recovery restart guidance"
-    },
-    {
-      "pr": 705,
+      "pr": 714,
       "issues": [
-        692
+        710
       ],
-      "summary": "Fix Node 0.12.2 Root Beta removal and verify LS2 rollback before package removal"
+      "summary": "Resume guarded Root Home after verified startup on LG 65NANO913NA"
     },
     {
-      "pr": 706,
+      "pr": 716,
       "issues": [
-        160
+        710
       ],
-      "summary": "Accept the nested final status during in-place Root Beta repair; B9 confirmation remains open"
+      "summary": "Cover delayed replies and rollback in guarded Root Home"
     },
     {
-      "pr": 707,
-      "issues": [],
-      "summary": "Resume confirmed Desktop Root reinstallation across interrupted cleanup or native installation"
-    },
-    {
-      "pr": 708,
+      "pr": 718,
       "issues": [
-        615
+        201,
+        389,
+        409,
+        417,
+        440,
+        472,
+        495,
+        519,
+        529,
+        615,
+        635,
+        643,
+        664
       ],
-      "summary": "Restore retained compositor Root through Set up my TV \u2192 Root \u2192 Reinstall Root (resets saved CYTV preferences)"
+      "summary": "Help owners complete and recover installer operations"
     },
     {
-      "pr": 709,
-      "issues": [],
-      "summary": "Keep an active global Root screensaver through a brief status gap"
-    },
-    {
-      "pr": 711,
+      "pr": 719,
       "issues": [
-        686
+        678
       ],
-      "summary": "Retain Home diagnostics across Helper restart and wake; original routing failure remains open"
+      "summary": "Preserve Root inspection and final-cleanup refusal diagnostics"
     },
     {
-      "pr": 717,
+      "pr": 721,
       "issues": [
-        686
+        720
       ],
-      "summary": "Write Home diagnostics commands from Root SSH in the shared Helper state group"
+      "summary": "Recover No-root Home status and app refresh after channel permission drift"
+    },
+    {
+      "pr": 723,
+      "issues": [
+        702
+      ],
+      "summary": "Restore LG Home before retaining late standby intent"
+    },
+    {
+      "pr": 725,
+      "issues": [
+        418
+      ],
+      "summary": "Record confirmed C1 Root compatibility from #418"
+    },
+    {
+      "pr": 726,
+      "issues": [
+        722
+      ],
+      "summary": "Fix Root removal with LG Home ribbon on webOS 5"
+    },
+    {
+      "pr": 727,
+      "issues": [
+        152
+      ],
+      "summary": "Fix stale profile blocks after verified removal (#152)"
+    },
+    {
+      "pr": 728,
+      "issues": [
+        615,
+        702
+      ],
+      "summary": "Recover emergency input observation after device recreation"
     }
   ],
   "excluded": [],
-  "acceptance": "2026-11-18, project LG OLED55C3RLA, firmware 43.21.71, webOS SDK 11.2.0. Selected macOS ARM64 CLI archive SHA-256 862ef9830e7acf08bcbcfd1851534474cfcd6f252deb6ee103a547e73b2aa955. On No-root Home 1.20.3 and Helper 0.9.1, ordinary Root SSH diagnostics started, resumed under a new Helper controller after a verified software restart, and expired without a persisted start request. Network HOME from Media Player reached No-root after restart. All 624 embedded payload and trusted support files matched RC2. Reused the matching signed Root and No-root updates and rollbacks on C3, Root screensaver and Desktop recovery evidence recorded in PR #703. Selected Android APK SHA-256 8cce5683def9b4104735ecc50078ce1619bc5aa2132586d356c96bec6d89514e. Published code 49 upgraded to code 50 with the original signer on an isolated API 35 ARM64 emulator. Four synthetic files were preserved and idle launch did not replay the pending operation. The maintainer approved release from RC3 with live W19P removal (#692), B9 repair and Home activation (#160), and retained C1 compositor activation (#615) left open. Physical Magic Remote, AC cold boot and audio were outside the C3 pass. Original YouTube routing (#686) remains unresolved. See PR #703 for the case ledger.",
+  "acceptance": "LG OLED55C3RLA (43.21.71, SDK 11.2.0), exact macOS ARM64 installer, all seven selected C3 cases passed: No-root upgrade and live broker, LG Home Restore, Root setup and Home, network standby/wake, Root Off across verified restart, and original No-root rollback with preferences and routing verified. Model-specific native routing, physical remote, AC cycle, audio and on-device OTA remain outside this C3 pass. See docs/history/2026-11-19-release-1.25.0-rc1-verification.md for hashes and evidence.",
   "build": {
-    "run_id": 44331212562,
+    "run_id": 44400187083,
     "attempt": 2,
-    "source": "4a34c8e7dc3b407a02799c998352d3660cccfd32"
+    "source": "e4a3cbe719aea089e8cbbe088be19fc5e45d28ec"
   },
-  "acceptance_build": "44331212562:2"
+  "acceptance_build": "44400187083:2"
 }

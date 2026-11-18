@@ -120,7 +120,12 @@ def remove(app, timeout=120):
     if not isinstance(event,dict):raise OutcomeUnknown('Invalid removal reply')
     details=event.get('details',{})
     if event.get('returnValue') is False or 'errorCode' in event or not isinstance(details,dict) or 'errorCode' in details:
-     raise OutcomeUnknown('Removal failed; retain state')
+     error=OutcomeUnknown('Removal failed; retain state')
+     if (isinstance(details,dict) and event.get('id',app)==app and details.get('id',app)==app
+         and (event.get('returnValue') is False or type(event.get('errorCode')) is int
+              or type(details.get('errorCode')) is int)):
+      error.package_rejected=True
+     raise error
     if event.get('id',app)!=app:continue
     state=details.get('state')
     if isinstance(state,str) and state.lower() in ('removed','success'):

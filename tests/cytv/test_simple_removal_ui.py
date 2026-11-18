@@ -1,4 +1,5 @@
 """Real Qt workers/widgets for the simple same-goal removal presentation."""
+import json
 import unittest
 
 from tests.cytv import test_desktop_recovery as desktop_fixture
@@ -14,6 +15,146 @@ class SimpleRemovalUITests(unittest.TestCase):
         self.fixture = desktop_fixture.DesktopRecoveryTests()
         self.fixture.setUp()
         self.addCleanup(self.fixture.doCleanups)
+
+    def prepare_root_restore(self, *, restore_result='restored'):
+        from tests.cytv.clean_removal_fixture import prepare
+
+        prepare(self.fixture)
+        remote = self.fixture.remote
+        remote.installed = [{'id': 'com.cleanyourtv.root.preview', 'version': '1.2.2'}]
+        original_run = remote.run
+        clean_requested = False
+
+        def run(command, **kwargs):
+            nonlocal clean_requested
+            if 'deploy.py restore' in command:
+                remote.calls.append(('run', command))
+                return json.dumps({'returnValue': True, 'result': restore_result})
+            if 'install_driver.py clean-remove' in command:
+                if not clean_requested:
+                    clean_requested = True
+                    pending = self.fixture.store.pending(self.fixture.profile)
+                    return json.dumps({'operation': pending['product_operation'], 'state': 'recovery_required',
+                        'stage': 'original-writers-fenced', 'reason': 'controls-unverified',
+                        'cleanup_error': 'cleanup-check-failed',
+                        'last_failure': {'stage': 'original-writers-fenced', 'cleanup_step': 'runtime-restore'}})
+                remote.installed = []
+            return original_run(command, **kwargs)
+
+        remote.run = run
+
+    def start_uninstall_and_restore(self):
+        w = self.fixture.window()
+        w.start('uninstall', self.fixture.profile)
+        self.fixture.pump(lambda: w.pending is not None)
+        w.submit('y')
+        self.fixture.pump(lambda: not w.running)
+        restore = self.fixture.button(w, 'Return to LG Home')
+        self.assertIsNotNone(restore, w.details.toPlainText())
+        restore.click()
+        self.fixture.pump(lambda: w.pending is not None or not w.running)
+        self.assertIsNotNone(w.pending, w.content.toPlainText())
+        return w
+
+    def package_removals(self):
+        return [call[2]['id'] for call in self.fixture.remote.calls
+                if call[0] == 'luna' and call[1].endswith('/dev/remove')]
+
+    def test_verified_restore_offers_continuation_of_the_confirmed_uninstall(self):
+        self.prepare_root_restore()
+        w = self.start_uninstall_and_restore()
+        store, profile = self.fixture.store, self.fixture.profile
+        operation = store.pending(profile)['removal_operation']
+        w.submit('y')
+        self.fixture.pump(lambda: not w.running)
+        self.assertEqual(w.title.text(), 'LG Home is restored.')
+        self.assertEqual(w.rail_title.text(), 'Uninstall Clean Your TV')
+        self.assertEqual(self.package_removals(), [])
+        self.assertEqual(len(self.fixture.remote.installed), 1)
+        self.assertEqual(self.fixture.device_removals, [])
+
+        continuation = self.fixture.button(w, 'Continue removal')
+        self.assertIsNotNone(continuation)
+        continuation.click()
+        self.fixture.pump(lambda: not w.running or w.pending is not None)
+        self.assertIsNone(w.pending)
+        self.assertEqual(w.title.text(), 'Clean Your TV removal is verified.', w.content.toPlainText())
+        self.assertEqual(self.fixture.device_removals, ['d'*32])
+        self.assertEqual(self.fixture.remote.installed, [])
+        self.assertEqual(self.fixture.connections, [profile] * 3)
+        receipt = json.loads((store.device_dir(profile) / 'clean-removal.json').read_bytes())
+        self.assertEqual(receipt['removal_operation'], operation)
+        self.assertIsNone(store.pending(profile))
+
+    def test_standalone_restore_keeps_apps_even_with_an_existing_removal_request(self):
+        self.fixture.remote.installed = [{'id': 'com.gathin.tvhome'}, {'id': 'com.local.nativehome'}]
+        store, profile = self.fixture.store, self.fixture.profile
+        for kind in ('none', 'legacy', 'confirmed'):
+            with self.subTest(kind=kind):
+                store.finish(profile)
+                if kind == 'legacy':
+                    store.begin(profile, 'uninstall', stage='controls-restored')
+                elif kind == 'confirmed':
+                    store.request_clean_removal(profile)
+                original = store.pending(profile)
+                w = self.fixture.window()
+                start = len(self.fixture.remote.calls)
+                self.fixture.check(w, 'restore')
+                self.assertIn(('luna', 'com.webos.applicationManager/launch', {'id': 'com.webos.app.home'}),
+                              self.fixture.remote.calls[start:])
+                self.assertEqual(self.package_removals(), [])
+                self.assertEqual(len(self.fixture.remote.installed), 2)
+                self.assertIsNone(self.fixture.button(w, 'Continue removal'))
+                self.assertEqual(store.pending(profile), original)
+                w.close()
+
+    def test_cancel_before_uninstall_consent_keeps_apps_and_creates_no_request(self):
+        self.fixture.remote.installed = [{'id': 'com.gathin.tvhome'}, {'id': 'com.local.nativehome'}]
+        store, profile = self.fixture.store, self.fixture.profile
+        store.finish(profile)
+        w = self.fixture.window()
+        w.start('uninstall', profile)
+        self.fixture.pump(lambda: w.pending is not None)
+        w.submit(None)
+        self.fixture.pump(lambda: not w.running)
+        self.assertIsNone(store.pending(profile))
+        self.assertEqual(self.fixture.connections, [])
+        self.assertEqual(self.package_removals(), [])
+        self.assertIsNone(self.fixture.button(w, 'Return to LG Home'))
+        self.assertIsNone(self.fixture.button(w, 'Continue removal'))
+
+    def test_unverified_or_cancelled_restore_never_offers_to_continue_removal(self):
+        from cytv.state import target
+
+        for response in ('n', 'y'):
+            with self.subTest(response=response):
+                self.fixture.store.finish(target('192.0.2.10', 'root'))
+                self.prepare_root_restore(restore_result='absent')
+                w = self.start_uninstall_and_restore()
+                w.submit(response)
+                self.fixture.pump(lambda: not w.running)
+                self.assertNotEqual(w.title.text(), 'LG Home is restored.')
+                self.assertIsNone(self.fixture.button(w, 'Continue removal'))
+                self.assertEqual(self.fixture.device_removals, [])
+                self.assertEqual(len(self.fixture.remote.installed), 1)
+                w.close()
+
+    def test_stale_restore_result_cannot_start_a_new_removal(self):
+        self.prepare_root_restore()
+        w = self.start_uninstall_and_restore()
+        w.submit('y')
+        self.fixture.pump(lambda: not w.running)
+        store, profile = self.fixture.store, self.fixture.profile
+        store.finish(profile)
+        replacement = store.request_clean_removal(profile)
+        connections = self.fixture.connections.copy()
+
+        self.fixture.button(w, 'Continue removal').click()
+        self.fixture.pump(lambda: not w.running or w.pending is not None)
+        self.assertIsNone(w.pending)
+        self.assertEqual(self.fixture.connections, connections)
+        self.assertEqual(self.fixture.device_removals, [])
+        self.assertEqual(store.pending(profile), replacement)
 
     def test_connection_loss_try_again_runs_same_uninstall_target(self):
         attempts = []

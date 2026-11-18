@@ -5,54 +5,28 @@ body:
   - type: markdown
     attributes:
       value: |
-        Attach the existing diagnostic JSON saved after the failed attempt or recovery check.
-        Do not repeat installation or run another diagnostic check just to fill this form.
-        The report contains installer/OS versions, observed state and the failed step without raw exception text.
-        Review it before posting. Never attach SSH keys, pairing tokens, your profile folder, IP addresses, SSIDs or app inventories.
-  - type: dropdown
-    id: edition
-    attributes:
-      label: Edition
-      options:
-        - No-root
-        - Root
-    validations:
-      required: true
-  - type: dropdown
-    id: desktop
-    attributes:
-      label: Installer device and operating system
-      options:
-        - Windows
-        - macOS Apple Silicon
-        - macOS Intel
-        - Linux
-        - Android phone or tablet
-        - Other / unknown
-    validations:
-      required: true
-  - type: input
-    id: tv
-    attributes:
-      label: TV model and firmware
-      placeholder: 'Example: OLED55C3RLA, 43.21.71 (no serial number)'
+        Use what you already observed. Do not repeat installation or run another check to fill in this form.
   - type: textarea
     id: reproduction
     attributes:
-      label: What did you do?
-      description: Name the wizard step or cytv command without addresses/key paths. Describe the state you already observed; do not repeat a failed setup.
+      label: What were you trying to do?
+      description: Name the installer step or command and what you expected to happen. Leave out addresses and key paths.
     validations:
       required: true
   - type: textarea
     id: expected
     attributes:
-      label: What did you expect, and what happened instead?
+      label: What is visible now?
+      description: Describe what the installer or TV shows. If you could not connect to the TV or save a report, say where you got stuck and describe any visible error without private details.
     validations:
       required: true
   - type: textarea
     id: diagnostic
     attributes:
-      label: Diagnostic report and error message
-      description: Attach the existing diagnostic JSON after reviewing it, or say it is unavailable. Include the installer version if no report was saved. Do not attach private profiles, keys or raw logs.
-    validations:
-      required: true
+      label: Saved diagnostic report
+      description: Attach the existing JSON report. If Save diagnostic report is still available for this attempt, use it to save and attach the report.
+  - type: input
+    id: details
+    attributes:
+      label: Details missing from the report
+      description: If a detail is missing or you have no report, add what you know about the edition (No-root or Root), installer version and platform, and TV model and firmware. Leave out serial numbers.

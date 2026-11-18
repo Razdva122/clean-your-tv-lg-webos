@@ -8,13 +8,14 @@ import traceback
 import time
 import re
 import uuid
+from urllib.parse import urlencode
 
 from . import __version__, debloat, diagnostic_context as context
 from .state import private_write
 from .terminal import console
 from .errors import TVConnectionError, DeveloperKeyError, UserError, TVCommandError, TVRejected, PythonPreflightError, PythonCacheError, connection_interrupted, root_recovery_details
 
-ISSUE_URL = 'https://github.com/Razdva122/clean-your-tv-lg-webos/issues/new'
+ISSUE_URL = 'https://github.com/Razdva122/clean-your-tv-lg-webos/issues/new?template=cytv.yml'
 KERNEL_ARCHES = context.KERNEL_ARCHES
 ROOT_REQUIREMENTS = context.ROOT_REQUIREMENTS
 
@@ -29,7 +30,7 @@ def create_report(store, action, profile, phase, error=None, tv_info=None, *, ch
         'action': action, 'edition': profile.get('edition') if profile else None,
         'phase': phase,
         'error_type': type(error).__name__ if error else None,
-        'pending': {'action': context.choice(pending.get('action'), (*context.ACTIONS, 'activate-root', 'setup-root-updater', 'archive-root-state')),
+        'pending': {'action': context.choice(pending.get('action'), context.PENDING_ACTIONS),
                     'stage': context.choice(pending.get('stage'), (*context.STAGES, 'enable', 'setup', 'verify', 'upload', 'removing', 'stop-helper'))} if pending else None,
         'trace': [{'file': Path(frame.filename).name, 'function': frame.name, 'line': frame.lineno}
                   for frame in traceback.extract_tb(error.__traceback__)[-12:]] if error else [],
@@ -173,6 +174,57 @@ def create_report(store, action, profile, phase, error=None, tv_info=None, *, ch
     return path
 
 
+def issue_draft(report):
+    """Return a title and editable plain text from a local diagnostic export."""
+    summary = context.issue_summary(report)
+    edition = {'no-root': 'No-root', 'root': 'Root'}.get(summary['edition'], 'unknown')
+    goal, phase, reason = (summary[key] for key in ('goal', 'phase', 'reason'))
+    subject = goal.replace('-', ' ') if goal != 'unknown' else 'Installer'
+    if edition != 'unknown':
+        subject = edition + ' ' + subject
+    detail = phase if phase not in (goal, 'unknown') else reason
+    if detail != 'unknown':
+        subject += ': ' + detail.replace('-', ' ').replace('_', ' ').lower()
+        if reason not in (detail, 'unknown'):
+            subject += ' (' + reason.replace('-', ' ').replace('_', ' ').lower() + ')'
+
+    phase_label = 'Previous attempt phase' if summary['previous_attempt'] else 'Observed phase'
+    lines = [
+        'Goal: ' + goal,
+        'Edition: ' + edition,
+        'Installer version: ' + (summary['version'] or 'unknown'),
+        phase_label + ': ' + phase,
+        'Reason: ' + reason,
+        'Last verified outcome: ' + summary['outcome'],
+    ]
+    for label, item in (('Earlier failure', summary['earlier']), ('Later observation', summary['later'])):
+        if item:
+            observation = item['action'] + ' at ' + item['phase']
+            if item['reason'] != 'unknown':
+                observation += ' (' + item['reason'] + ')'
+            lines.append(label + ': ' + observation)
+    return {'title': '[cytv] ' + subject, 'body': '\n'.join(lines)}
+
+
+def load_issue_draft(path, action):
+    if path is not None:
+        try:
+            return issue_draft(json.loads(path.read_text(encoding='utf-8')))
+        except (OSError, ValueError, RecursionError):
+            pass
+    return issue_draft({'action': action})
+
+
+def issue_url(title):
+    return ISSUE_URL + '&' + urlencode({'title': title})
+
+
+def observe_root_python_inventory(remote, profile, tv_info):
+    if profile and profile.get('edition') == 'root':
+        from .root_passive import collect_runtime_inventory
+        tv_info['root_python_inventory'] = collect_runtime_inventory(remote)
+
+
 def save_result(write, store, action, profile, phase, tv_info=None, *, checks=None, status=None):
     """A failed optional export must not turn successful device work into failure."""
     write = console(write)
@@ -185,19 +237,25 @@ def save_result(write, store, action, profile, phase, tv_info=None, *, checks=No
         return None
 
 
-def suggest_issue(write, store, action, profile, phase, error, tv_info=None, *, checks=None, status=None):
+def suggest_issue(write, store, action, profile, phase, error, tv_info=None, *, checks=None, status=None, ask=None):
     write = console(write)
-    write.heading('Need help? Open an issue')
-    write(ISSUE_URL)
+    console_issue = write.frontend == 'console'
+    if not console_issue:
+        write.heading('Need help? Open an issue')
+        write(ISSUE_URL)
+    path = None
     try:
         path = create_report(store, action, profile, phase, error, tv_info, checks=checks, status=status)
         write.heading('Attach this diagnostic report')
         write.report(path)
     except (OSError, ValueError):
         write.error('Could not save a diagnostic file. Include cytv ' + __version__ + ', your desktop OS, edition and failed step: ' + phase + '.')
+        if console_issue:
+            write('Include the visible error when opening an issue.')
     write('')
     write('Include your steps, expected/actual result and TV model/firmware.')
-    write('Review the report. Do not attach keys or your profile folder.')
+    if console_issue:
+        write.issue(load_issue_draft(path, action), ask=ask)
 
 
 def _observe_home_diagnostic_directory(remote, directory):
@@ -211,8 +269,10 @@ def _observe_home_diagnostic_directory(remote, directory):
         return None  # Keep the original upload failure if this probe also fails.
 
 
-def collect_home_report(remote, store, profile, write, *, reconnect=None):
+def collect_home_report(remote, store, profile, write, *, reconnect=None, ask=None):
     """One bounded observation window, exported without raw logs or credentials."""
+    from .outcomes import HOME_PRESS, HOME_RESULTS, ask_home_result, home_result_fields
+
     if profile['edition'] != 'no-root':
         raise UserError('Home Helper diagnostics is available for No-root installations.')
     session = uuid.uuid4().hex
@@ -318,7 +378,8 @@ def collect_home_report(remote, store, profile, write, *, reconnect=None):
                 break
             if started and not announced:
                 announced = True
-                write('Press Home once on the TV remote. Leave the remote untouched while the report is collected.')
+                write(HOME_PRESS)
+                write('Leave the remote untouched while the report is collected.')
             time.sleep(2)
     except Exception as error:
         if failure_stage:
@@ -332,12 +393,18 @@ def collect_home_report(remote, store, profile, write, *, reconnect=None):
                 command('diagnostics-stop')
             except Exception:
                 pass  # Helper expires the bounded request even if SSH remains unavailable.
+    elapsed_ms = int((time.monotonic() - beginning) * 1000)
+    destination = None
+    if announced and ask is not None:
+        destination = ask_home_result(ask, write)
+        write(HOME_RESULTS[destination][3])
     path = create_report(store, 'home-diagnostics', profile, 'home-diagnostics-complete')
     report = json.loads(path.read_text())
-    report['helper_diagnostics'] = {'schema': 1, 'complete': complete, 'records': list(records.values())}
+    report['helper_diagnostics'] = {'schema': 1, 'complete': complete, 'records': list(records.values()),
+                                    **home_result_fields(destination)}
     report['helper_diagnostics']['connection'] = {
         'successful_reads': read_count, 'reconnect_attempts': reconnect_count,
-        'elapsed_ms': int((time.monotonic() - beginning) * 1000)
+        'elapsed_ms': elapsed_ms
     }
     if failure_stage:
         report['helper_diagnostics']['failure_stage'] = failure_stage

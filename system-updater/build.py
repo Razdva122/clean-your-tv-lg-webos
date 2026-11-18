@@ -15,7 +15,7 @@ from cytv import package
 SERVICE='com.cleanyourtv.system.updater.service'
 APP='com.cleanyourtv.system.updater'
 VERSION='1.2.11'
-ENGINE_VERSION='1.2.12'
+ENGINE_VERSION='1.2.13'
 APPS={'home':'com.gathin.tvhome','helper':'com.local.nativehome','updater':'com.cleanyourtv.updater','root':'com.cleanyourtv.root.preview','root-updater':'com.cleanyourtv.root.updater'}
 
 def digest(raw):return hashlib.sha256(raw).hexdigest()

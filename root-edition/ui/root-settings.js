@@ -270,6 +270,16 @@
       clearTimeout(statusTimer);
       statusTimer = null;
     }
+    function standbyResumePending(status) {
+      return !!(
+        status.intent &&
+        status.intent.phase === 'stopping' &&
+        status.journal &&
+        status.journal.state === 'restored' &&
+        status.effective &&
+        status.effective.sam_home === 'com.webos.app.home'
+      );
+    }
     function showHomeChoice(state, active) {
       var button = buttons[3];
       button.setAttribute('data-home-state', state);
@@ -340,10 +350,17 @@
               status.effective && status.effective.backend === 'c1-native-gate'
             );
             var phase = status.intent && status.intent.phase,
-              active = phase === 'active';
+              active = phase === 'active',
+              pendingResume = standbyResumePending(status);
             buttons[3].disabled =
-              !!phase && phase !== 'active' && phase !== 'disabled';
-            showHomeChoice(buttons[3].disabled ? 'checking' : 'known', active);
+              !!phase &&
+              phase !== 'active' &&
+              phase !== 'disabled' &&
+              !pendingResume;
+            showHomeChoice(
+              buttons[3].disabled ? 'checking' : 'known',
+              active || pendingResume
+            );
             message.textContent = t(
               active
                 ? 'Home and return from apps open Clean Your TV.'
@@ -415,16 +432,18 @@
     });
     function changeMode() {
       if (!rootStatus || buttons[3].disabled || busy) return;
-      var active = rootStatus.intent && rootStatus.intent.phase === 'active';
+      var turnOff =
+        (rootStatus.intent && rootStatus.intent.phase === 'active') ||
+        standbyResumePending(rootStatus);
       stopModePoll();
       busy = true;
       buttons.forEach(function (b) {
         b.disabled = true;
       });
       message.textContent = t(
-        active ? 'Turning off Home control…' : 'Turning on Home control…'
+        turnOff ? 'Turning off Home control…' : 'Turning on Home control…'
       );
-      (active ? exit() : control('enable'))
+      (turnOff ? exit() : control('enable'))
         .then(function () {
           busy = false;
           buttons.forEach(function (b) {

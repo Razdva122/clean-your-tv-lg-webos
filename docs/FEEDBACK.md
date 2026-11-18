@@ -8,6 +8,16 @@ with every TV using the same model name.
 
 ## What to include
 
+For an installer, connection or recovery problem, use the [installer problem form](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/new?template=cytv.yml).
+For an existing problem, add new evidence to its issue instead of opening a duplicate.
+
+- Say what you were trying to do and what the installer or TV shows now. If you could not connect to the TV or save a report, describe where you got stuck and any visible error without private details.
+- Attach the report you already saved. If **Save diagnostic report** is still available for this attempt, use it to save and attach the report. Use what you already observed. Do not repeat installation or run another check to fill in the form.
+- If the edition, installer version or platform, or TV model and firmware are missing from the report, include what you know. If you have no report, provide the same details if known. Leave out the TV serial number.
+
+Use the [installation result form](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/new?template=installation-result.yml)
+to share an installation result or how you resolved a problem. Include the following details.
+
 - TV model, webOS/firmware version and remote type, if known. Do not include a serial number.
 - No-root or Root; the published release and installed component versions, if available.
 - Installer platform and version: Windows, macOS, Linux or Android.
@@ -16,20 +26,16 @@ with every TV using the same model name.
 - Problems encountered, steps that resolved them, and any remaining problem. Distinguish observed results from a suspected cause.
 
 A good title is **Installation result: TV model / firmware / edition**.
-Use the [installation result form](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/new?template=installation-result.yml).
-For an existing problem, add new evidence to its issue instead of opening a duplicate.
 
 <a id="unreleased-installer-diagnostic-context"></a>
 
 ## Installer diagnostic context
 
-Save the report from the original failed attempt before running another check.
 Current installers retain a recorded first error separately from later status
 errors and include checklist results plus a filtered Doctor/status summary.
 Successful setup, status and restore also offer a report. Older failures cannot
 be reconstructed retroactively; missing primary evidence is explicitly marked.
-Known TV and CYTV versions are included when readable; supply missing details
-from TV settings without posting a serial number. A successful Doctor check is
+Known TV and CYTV versions are included when readable. A successful Doctor check is
 not confirmation that installation or physical Home works. Older releases such as v1.5.4 lack this diagnostic context. [Fields and limits](development/INSTALLER-DIAGNOSTICS.md).
 
 ## Keep private data private

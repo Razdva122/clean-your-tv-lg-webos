@@ -294,3 +294,27 @@ class FirmwarePowerStageTests(unittest.TestCase):
   self.off_stages(power)
   self.assertIsNone(power.event(dict(returnValue=True,state='Active')))
   self.assertEqual(power.wake_count,1)
+
+
+class LateStandbyTests(PowerFixture, unittest.TestCase):
+ def test_recorded_c3_sequence_is_bounded_to_the_same_attempt_and_session(self):
+  for outcome in ('complete','expired','already-off','broken','stream-lost'):
+   with self.subTest(outcome=outcome):
+    p=s.PowerState('tx','boot-a')
+    self.event(p,'Active',True)
+    for at,stage in zip((10.,10.089,10.185),s.PREPARE):
+     with patch.object(s.time,'monotonic',return_value=at):
+      p.event(dict(returnValue=True,state='Active',onOff='off',processing=stage))
+    with patch.object(s.time,'monotonic',return_value=10.3):
+     self.assertFalse(s.late_standby('tx','boot-a',10.2,10.95))
+     if outcome=='broken': self.event(p,'Active')
+    at=10.501 if outcome=='expired' else 10.464
+    with patch.object(s.time,'monotonic',return_value=at):
+     self.event(p,'Active Standby')
+     if outcome=='stream-lost': p.close('eof')
+     self.assertEqual(s.late_standby('tx','boot-a',10.47 if outcome=='already-off' else 10.2,10.95),
+                      outcome=='complete')
+     self.assertFalse(s.late_standby('other','boot-a',10.2,10.95))
+     self.assertFalse(s.late_standby('tx','other-boot',10.2,10.95))
+    with patch.object(s.time,'monotonic',return_value=10.951):
+     self.assertFalse(s.late_standby('tx','boot-a',10.2,10.95))
