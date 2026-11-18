@@ -27,6 +27,13 @@
         720
       ],
       "summary": "Recover No-root Home status and app refresh after channel permission drift"
+    },
+    {
+      "pr": 725,
+      "issues": [
+        418
+      ],
+      "summary": "Record confirmed C1 Root compatibility from #418"
     }
   ],
   "excluded": [],
