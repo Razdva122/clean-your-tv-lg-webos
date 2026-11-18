@@ -181,6 +181,29 @@ class OriginalOperationIntegration(unittest.TestCase):
         self.installer=operations.Installer(self.remote,self.store,self.profile,fixture.payload,fixture.manifest,lambda *_:None)
         self.inventory=fixture.inventory
 
+    def test_verified_removal_reconciles_other_profile_before_fresh_install(self):
+        from cytv.errors import UserError
+        from cytv.root_runtime import require_idle
+        self.store.save(self.profile)
+        other = state.target(self.profile['host'], 'root')
+        self.store.save(other)
+        self.store.begin(other, 'install', stage='setup')
+        original = (self.store.device_dir(other) / 'operation.json').read_bytes()
+        with self.assertRaises(UserError) as blocked:
+            require_idle(self.store, self.profile)
+        self.assertEqual(blocked.exception.reason_code, 'pending-operation')
+        # Execute the actual No-root removal and package install adapters; only
+        # the transport/vendor commands are local fixtures. No TV is connected.
+        (self.root / 'proc').mkdir()
+        self.assertTrue(self.installer.uninstall_project()['verified_clean'])
+        self.assertIsNone(self.store.pending(other))
+        archive, = self.store.device_dir(other).glob('operation-superseded-*.json')
+        self.assertEqual(archive.read_bytes(), original)
+        require_idle(self.store, self.profile)
+        self.installer.install(self.inventory, 'fresh-secret')
+        self.assertIsNone(self.store.pending(self.profile))
+        self.assertEqual((self.root / 'requests').read_text().splitlines(), list(observer.APPS))
+
     def include_screensaver_companion(self):
         app = 'com.cleanyourtv.screensaver'
         prefix = 'usr/palm/applications/' + app + '/'

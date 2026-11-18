@@ -18,6 +18,20 @@ operation or unknown/incomplete deployment stage blocks even without a host
 receipt. Existing current/complete Root removal proof can reconcile its receipt;
 no new proof source or orphan adoption is introduced.
 
+After verified full-project removal, the installer reconciles older `install`
+and `uninstall` receipts in other saved connections at the same host address,
+including other editions and ports. It saves their original bytes as
+`operation-superseded-<removal-id>-<receipt-hash>.json` and copies the completed
+proof as `superseded-removal-<removal-id>.json` before clearing the active slot.
+The install admission gate also applies this to completed removals saved by older
+installers, so an already confirmed cleanup does not require another TV removal.
+This runs under the existing TV lock. A source with a pending operation, an SSH
+identity review, incomplete removal, corrupt target receipt, another action or
+host, or a receipt written at/after completion does not qualify. Local file
+modification times supply chronology for the legacy format: clock rollback or
+external rewriting/restoration of proof files can invalidate that ordering.
+This is a local reconciliation heuristic, not a new device transaction proof.
+
 No-root supports only existing pending install and pending/removing uninstall
 receipts. Except for the pre-submission case below, offering removal requires a positive bounded ten-second
 `appInstallService/status` response with an empty apps list and rejects conflicting

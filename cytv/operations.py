@@ -2208,6 +2208,7 @@ print('CYTV_PROJECT_REMOVED')
                                 result={'removed':True, 'verified_clean':True},
                                 root_removal_operation=expected_pending['removal_operation'])
                             self.store.finish_clean_removal(profile)
+                    self.store.reconcile_removed_profiles(self.profile)
                 return result
             except Exception as error:
                 lost = connection_interrupted(error)
