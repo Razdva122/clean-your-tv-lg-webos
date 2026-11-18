@@ -47,8 +47,9 @@ SAVED_PROFILE_ACCESS = 'Some saved TV connections could not be read. Close other
 
 class LocalRecoveryError(UserError):
     """Fixed local failure categories; no paths, account names or raw exceptions."""
-    def __init__(self, reason, location='capsule', *, mode=None, owner=None, storage_full=False):
+    def __init__(self, reason, location='capsule', *, mode=None, owner=None, storage_full=False, write_precheck=False):
         self.local_recovery = local_recovery_details(dict(reason=reason, location=location, mode=mode, owner=owner))
+        self.write_precheck = write_precheck
         reason = self.local_recovery['reason']
         if reason == 'profile-access':
             super().__init__(SAVED_PROFILE_ACCESS)
@@ -61,7 +62,8 @@ class LocalRecoveryError(UserError):
                    'The saved recovery operation is incompatible with this installer.' if reason == 'source-incompatible' else
                    'The original private recovery file could not be verified.')
         super().__init__((COMPUTER_STORAGE_FULL if storage_full else message) + ' Recovery data was kept.',
-                         reason_code='computer-storage-full' if storage_full else 'pending-operation')
+                         reason_code=('computer-storage-full' if storage_full else
+                                      'computer-storage-unavailable' if write_precheck else 'pending-operation'))
 
 
 def connection_interrupted(error):

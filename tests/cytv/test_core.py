@@ -43,9 +43,10 @@ class StateTests(unittest.TestCase):
             with patch.object(state.os, 'name', 'nt'), patch.dict('sys.modules', msvcrt=MagicMock()), \
                     patch.object(Path, 'open', return_value=stream), \
                     patch.object(state.os, 'fstat', return_value=SimpleNamespace(st_size=0)):
-                with self.assertRaises(PermissionError):
+                with self.assertRaises(state.LocalRecoveryError) as caught:
                     with store.lock(profile, allow_observation=True):
                         self.fail('local write failure entered observation')
+                self.assertTrue(caught.exception.write_precheck)
 
     def test_same_tv_cannot_run_root_and_no_root_sessions_at_once(self):
         with tempfile.TemporaryDirectory() as tmp:

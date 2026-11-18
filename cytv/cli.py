@@ -13,7 +13,7 @@ from time import sleep
 from types import SimpleNamespace
 
 from . import __version__, package, state, i18n
-from .errors import ExistingRoot, LocalRecoveryError, TVConnectionError, TVNotReady, UserError
+from .errors import ExistingRoot, LocalRecoveryError, TVConnectionError, TVNotReady, UserError, is_storage_full
 from .desktop import EXPLICIT_TV_CHOICE, RETRY_STORAGE_PROMPT
 from .operations import Installer, require_root_reinstall_cleanup
 from .terminal import Console, supports_ansi
@@ -336,10 +336,14 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
     language_args, _ = language_parser.parse_known_args(argv)
     try:
         i18n.configure(language_args.language, language_args.data_dir)
-    except OSError:
+    except OSError as error:
+        from .failure_help import for_error
         i18n.set_language(language_args.language or 'auto')
-        (write if isinstance(write, Console) else Console(write)).error('Could not save language preference', heading=True)
-        (write if isinstance(write, Console) else Console(write)).error('Check write access to the application data folder and try again.')
+        write = write if isinstance(write, Console) else Console(write)
+        write.error('Could not save language preference', heading=True)
+        local_error = LocalRecoveryError('storage-unavailable', 'ancestor', storage_full=is_storage_full(error),
+                                         write_precheck=True)
+        write.failure_help(for_error(local_error, 'select-tv'))
         return 2
     from .desktop import DesktopConsole, SSH_COMMAND_PROMPT
     args = parser(desktop=isinstance(write, DesktopConsole)).parse_args(argv)
@@ -619,6 +623,9 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                     raise UserError('An earlier operation is unresolved. Choose Review recovery options or run cytv recover with the original TV connection.',
                                     reason_code='pending-operation') from None
             recovering = False
+            if args.command == 'install' and profile['edition'] == 'no-root' and not store.pending(profile):
+                # Check again before staging as pairing can take time.
+                store.check_capsule_storage(profile)
             if args.reconnect_after_reset:
                 from .no_root_reconnect import original_pins, reconnect
                 old_key_type, old_pins = original_pins(store, profile)
@@ -903,11 +910,8 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                     phase = 'inspect-installation'
                     if not args.non_interactive and write.frontend in ('console', 'desktop', 'android'):
                         installer.storage_preflight_review = storage_preflight_review(store, profile, ask, write)
-                        installer.before_no_root_staging = prepare_no_root_staging
-                        installer.preflight(install=True, defer_helper=True)
-                    elif not prepare_no_root(lambda auto_stop: installer.preflight(install=True, stop_running_helper=auto_stop)):
-                        write('Cancelled. Installation has not started.')
-                        return 0
+                    installer.before_no_root_staging = prepare_no_root_staging
+                    installer.preflight(install=True, defer_helper=True)
                 if not resume:
                     installer.select_graphics()
                 phase = 'read-inventory'

@@ -28,7 +28,8 @@ REASONS = ('unknown', 'user-error', 'ssh-command-failed', 'ssh-exit-status-missi
            'inventory-unavailable', 'graphics-unverified', 'root-home-interfaces', 'native-home-script', 'foreign-home-handoff-required',
            'root-worker-busy', 'root-access-required', 'removal-failed',
            'cleanup-check-failed', 'controls-unverified', 'ownership-conflict', 'connection-interrupted',
-           'operation-timeout', 'tv-storage-full', 'tv-storage-ramfs', 'tv-storage-unavailable', 'storage-preflight-failed')
+           'operation-timeout', 'tv-storage-full', 'tv-storage-ramfs', 'tv-storage-unavailable', 'storage-preflight-failed',
+           'computer-storage-full', 'computer-storage-unavailable')
 REASONS += ACTIVATION_CODES
 REASONS += ('installer-runtime-mismatch', 'clean-handoff-refused', 'foreign-home-restore-failed', 'pairing-rejected')
 ACTIONS = ('recover', 'install', 'uninstall', 'restore', 'status', 'doctor', 'home-diagnostics',

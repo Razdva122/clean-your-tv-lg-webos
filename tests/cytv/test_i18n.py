@@ -70,11 +70,11 @@ class LanguageTests(unittest.TestCase):
                     self.assertEqual(events[-1][1].credential_type, kind)
 
     def test_fixed_failure_guidance_translates_in_every_installer_locale(self):
-        from cytv.failure_help import GUIDES, ROOT_STORAGE_ACCESS
+        from cytv.failure_help import GUIDES, LOCAL_STORAGE_SPACE, ROOT_STORAGE_ACCESS
         from cytv.checks import LABELS
         lang=self.language()
         messages={text for guide in GUIDES.values() for text in guide[:3]}
-        messages.add(ROOT_STORAGE_ACCESS)
+        messages.update((ROOT_STORAGE_ACCESS, LOCAL_STORAGE_SPACE))
         messages.update(LABELS[key] for key in ('home-settings','home-profiles'))
         for code in set(lang.LANGUAGES)-{'en','auto'}:
             lang.set_language(code)

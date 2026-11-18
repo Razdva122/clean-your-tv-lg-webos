@@ -127,6 +127,11 @@ Status alone does not delete recovery records or restart installation.
 
 These messages are included from published v1.12.1 onward; v1.12.0 did not include them.
 
+If a fresh setup stops because the installer cannot write its local files, check
+write access to the installer’s application data folder or free space on its
+drive, then choose **Try again** or rerun your setup command. Keep the saved
+connection and any existing recovery files.
+
 A local recovery storage refusal concerns the computer or Android app storage,
 not a TV package-status reply. It can mean that a directory's ownership or
 permissions did not pass verification, before the recovery file was read. It does

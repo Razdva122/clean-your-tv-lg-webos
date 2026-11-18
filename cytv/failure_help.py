@@ -2,7 +2,7 @@
 import errno
 import socket
 
-from .errors import DeveloperKeyError, TVConnectionError, TVRejected, is_storage_full, TV_STORAGE_FULL, TV_STORAGE_RAMFS, COMPUTER_STORAGE_FULL, no_root_cleanup_details, no_root_observer_details
+from .errors import DeveloperKeyError, LocalRecoveryError, TVConnectionError, TVRejected, is_storage_full, TV_STORAGE_FULL, TV_STORAGE_RAMFS, COMPUTER_STORAGE_FULL, no_root_cleanup_details, no_root_observer_details
 from .recovery_state import REMOVAL_FAILURE_PHASES, REMOVAL_REASONS, unsubmitted_removal
 from .root_action_failure import ACTIVATION_CODES, ACTIVATION_DETAILS
 from .storage import TVStorageShortfall
@@ -11,6 +11,8 @@ NETWORK = 'Keep the TV on and use the same home network. Review the selected TV 
 DEVELOPER = 'Leave Developer Mode open with Key Server on. Use the current TV passphrase exactly; do not turn Developer Mode off or delete the saved profile.'
 REPORT = 'Save the diagnostic report and keep the saved connection and recovery data. Do not reset the TV or repeat setup to force progress.'
 ROOT_STORAGE_ACCESS = 'Verify that the selected Root SSH account can access the affected storage location on the TV.'
+LOCAL_STORAGE_ACCESS = 'Check write access to the application data folder and try again.'
+LOCAL_STORAGE_SPACE = 'Free space on the drive that holds the installer’s application data, then try again.'
 NETWORK_FAILURES = ('ssh-unreachable', 'ssh-protocol', 'ssh-access-denied', 'ssh-refused', 'ssh-timeout')
 AUTH_FAILURES = ('ssh-auth-root', 'ssh-auth-no-root', 'ssh-key-file', 'ssh-identity',
                  'developer-key-server', 'developer-key-unlock', 'developer-key-response')
@@ -35,6 +37,8 @@ GUIDES = {
         'Keep Developer Mode active and verify that its SSH account can access the affected storage location on the TV.', False),
     'tv-storage-ramfs': ('Available TV storage could not be determined.', TV_STORAGE_RAMFS, REPORT, False),
     'computer-storage-full': ('Not enough space on this computer', COMPUTER_STORAGE_FULL, REPORT, False),
+    'computer-storage-unavailable': ('The installer could not write to this computer',
+        'Local recovery storage could not be verified.', LOCAL_STORAGE_ACCESS, False),
     'ssh-access-denied': ('Network access was denied', 'This computer blocked the connection before SSH sign-in.',
         "Review this app's network permissions and firewall or VPN rules, then check the connection again.", True),
     'ssh-refused': ('The TV refused the connection', 'The selected SSH port is not accepting connections.',
@@ -125,6 +129,7 @@ def for_error(error, phase, profile=None, pending=None, *, has_reset_source=None
     root_ssh = edition == 'root' or profile.get('connection') == 'root-ssh'
     names = {cls.__name__ for cls in type(error).__mro__}
     reason = getattr(error, 'reason_code', None)
+    local_write = isinstance(error, LocalRecoveryError) and error.write_precheck
     if getattr(error, 'local_recovery', {}).get('reason') == 'operation-access' and reason != 'computer-storage-full':
         return None  # The installer already explains the local storage failure.
     clean_removal = isinstance(pending, dict) and pending.get('recovery_protocol') == 'clean-removal-v1'
@@ -135,6 +140,8 @@ def for_error(error, phase, profile=None, pending=None, *, has_reset_source=None
     elif reason == 'installer-runtime-mismatch' and edition == 'root':
         code = reason
     elif reason in ('tv-storage-full', 'tv-storage-ramfs'):
+        code = reason
+    elif local_write:
         code = reason
     elif reason == 'computer-storage-full' or is_storage_full(error):
         code = 'computer-storage-full'
@@ -184,7 +191,14 @@ def for_error(error, phase, profile=None, pending=None, *, has_reset_source=None
     if code is None:
         return None
     title, detail, next_step, edit = GUIDES[code]
-    if code == 'tv-storage-full' and isinstance(error, TVStorageShortfall):
+    if local_write:
+        if pending:
+            next_step = REPORT
+        else:
+            next_step = LOCAL_STORAGE_SPACE if code == 'computer-storage-full' else LOCAL_STORAGE_ACCESS
+            if edition == 'no-root' and phase in ('prepare-payload', 'install-packages'):
+                detail = 'Installation stopped before package submission.'
+    elif code == 'tv-storage-full' and isinstance(error, TVStorageShortfall):
         detail, next_step = str(error), TV_STORAGE_FULL
     elif code == 'tv-storage-unavailable' and root_ssh:
         next_step = ROOT_STORAGE_ACCESS
@@ -194,6 +208,8 @@ def for_error(error, phase, profile=None, pending=None, *, has_reset_source=None
         next_step += ' Keep the original saved TV connection and recovery data; do not replace or edit the connection to bypass recovery.'
     result = {'code':code, 'title':title, 'detail':detail, 'next_step':next_step,
               'pending':bool(pending), 'can_edit_connection':edit and not bool(pending)}
+    if local_write and not pending:
+        result['can_retry_setup'] = True
     if ('BadHostKeyException' in names and phase == 'ssh-connect' and edition == 'no-root'
             and not root_ssh and (not pending or pending.get('action') == 'uninstall')
             and has_reset_source is not None and has_reset_source()):

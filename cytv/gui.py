@@ -68,6 +68,7 @@ class Wizard(QMainWindow):
         self.debloat_results = {}
         self.recovery_plan = None
         self.failure_help = None
+        self.reconnecting_after_reset = False
         self.removal_operation = None
         self.removal_watch = None
         self.worker = None
@@ -613,6 +614,7 @@ class Wizard(QMainWindow):
         self.recovery_profile = None
         self.selected_profile = None
         self.reinstalling_root = resume_root_reinstall
+        self.reconnecting_after_reset = reconnect_after_reset
         self.removal_operation = removal_operation
         self.doctor_result = None
         self.install_settings_current = {}
@@ -932,6 +934,13 @@ class Wizard(QMainWindow):
                 if sys.platform == 'darwin' and self.failure_help['code'] in ('ssh-access-denied', 'ssh-unreachable', 'ssh-timeout'):
                     self.button('Open System Settings', self.open_network_settings, layout=actions)
                 self.button('Change connection', lambda: self.edit_connection(profile), layout=actions)
+            retry_local_storage = (failed and self.command == 'install' and not self.reinstalling_root
+                                   and not self.recovery_plan and not self.recovery_profile
+                                   and (self.failure_help or {}).get('can_retry_setup'))
+            if retry_local_storage:
+                profile = dict(self.selected_profile) if self.selected_profile else None
+                retry_options = {'reconnect_after_reset': True} if self.reconnecting_after_reset and profile else {}
+                self.button('Try again', lambda: self.start('install', profile, **retry_options), True).setFocus()
             if failed and self.failure_help and self.failure_help.get('can_reconnect_after_reset') and self.selected_profile:
                 reset_profile = dict(self.selected_profile)
                 self.button('Reconnect after factory reset',
@@ -943,7 +952,7 @@ class Wizard(QMainWindow):
             if self.report:
                 save_report = self.button('Save diagnostic report…', self.save_report,
                                           (failed or setup_review) and not retry_removal and not connection_help
-                                          and not resume_root_reinstall and not status_refresh,
+                                          and not resume_root_reinstall and not status_refresh and not retry_local_storage,
                                           layout=report_actions)
                 if doctor_ready:
                     save_report.setObjectName('doctorReport')
@@ -956,7 +965,8 @@ class Wizard(QMainWindow):
                             layout=report_actions if connection_help else None)
             self.button('Back to start', self.home,
                         not doctor_ready and not connection_help and not retry_removal and not recover
-                        and not continue_removal and not resume_root_reinstall and not status_refresh and not ((failed or setup_review) and self.report),
+                        and not continue_removal and not resume_root_reinstall and not status_refresh and not retry_local_storage
+                        and not ((failed or setup_review) and self.report),
                         layout=report_actions if retry_removal else None)
             failed_checks = [result for result in self.check_results.values() if result['status'] in ('fail', 'unknown')]
             if failed and failed_checks:

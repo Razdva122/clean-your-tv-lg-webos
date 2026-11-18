@@ -1,5 +1,5 @@
 """Per-TV private profiles and durable operation receipts."""
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
 import errno
 import hashlib
 import ipaddress
@@ -156,9 +156,7 @@ class Store:
     def save(self, profile):
         private_write(self.device_dir(profile) / 'profile.json', json.dumps(target(**profile)).encode())
 
-    def _capsule_path(self, profile, operation, *, create=True):
-        if not isinstance(operation, str) or not re.fullmatch('[a-f0-9]{32}', operation):
-            raise LocalRecoveryError('operation-invalid', 'operation')
+    def _capsule_directory(self, profile, *, create=True):
         try:
             directory = self.device_dir(profile) if create else self.device_path(profile)
         except OSError as error:
@@ -195,19 +193,31 @@ class Store:
             if os.name != 'nt' and (info.st_mode & 0o022 and not (info.st_uid == 0 and info.st_mode & stat.S_ISVTX)
                                    or parent == directory and info.st_mode & 0o077):
                 raise LocalRecoveryError('directory-permissions', **details)
-        return directory / ('capsule-' + operation + '.json')
+        return directory
 
-    def check_capsule_storage(self, profile, operation):
+    def _capsule_path(self, profile, operation, *, create=True):
+        if not isinstance(operation, str) or not re.fullmatch('[a-f0-9]{32}', operation):
+            raise LocalRecoveryError('operation-invalid', 'operation')
+        return self._capsule_directory(profile, create=create) / ('capsule-' + operation + '.json')
+
+    def check_capsule_storage(self, profile):
         """Exercise private local writes before recording an operation or contacting its observer."""
-        path = self._capsule_path(profile, operation)
         try:
-            with tempfile.TemporaryFile(dir=path.parent) as stream:
+            directory = self._capsule_directory(profile)
+        except LocalRecoveryError as error:
+            if error.local_recovery['reason'] in ('profile-invalid', 'profile-access'):
+                raise
+            raise LocalRecoveryError(**error.local_recovery, write_precheck=True,
+                                     storage_full=error.reason_code == 'computer-storage-full') from None
+        try:
+            with tempfile.TemporaryFile(dir=directory) as stream:
                 stream.write(b'CYTV')
                 stream.flush()
                 os.fsync(stream.fileno())
-            sync_directory(path.parent)
+            sync_directory(directory)
         except OSError as error:
-            raise LocalRecoveryError('storage-unavailable', 'profile', storage_full=is_storage_full(error)) from None
+            raise LocalRecoveryError('storage-unavailable', 'profile', storage_full=is_storage_full(error),
+                                     write_precheck=True) from None
 
     def save_capsule(self, profile, operation, value):
         """Exclusive original bytes, durable before any remote effect."""
@@ -547,17 +557,22 @@ class Store:
     @contextmanager
     def lock(self, profile, *, allow_observation=False):
         """Reserve this TV for writes, or yield False for an explicit read-only path."""
-        self.root.mkdir(parents=True, exist_ok=True, mode=0o700)
         name = 'session-' + hashlib.sha256(profile['host'].encode()).hexdigest()[:24] + '.lock'
-        with (self.root / name).open('a+b') as stream:
-            stream.seek(0)
-            if os.name == 'nt':
-                import msvcrt
-                # Windows denies reads of a byte locked by another session.
-                if os.fstat(stream.fileno()).st_size == 0:
-                    stream.write(b'0')
-                    stream.flush()
+        with ExitStack() as stack:
+            try:
+                self.root.mkdir(parents=True, exist_ok=True, mode=0o700)
+                stream = stack.enter_context((self.root / name).open('a+b'))
                 stream.seek(0)
+                if os.name == 'nt':
+                    import msvcrt
+                    # Windows denies reads of a byte locked by another session.
+                    if os.fstat(stream.fileno()).st_size == 0:
+                        stream.write(b'0')
+                        stream.flush()
+                    stream.seek(0)
+            except OSError as error:
+                raise LocalRecoveryError('storage-unavailable', 'ancestor', storage_full=is_storage_full(error),
+                                         write_precheck=True) from None
             try:
                 if os.name == 'nt':
                     msvcrt.locking(stream.fileno(), msvcrt.LK_NBLCK, 1)

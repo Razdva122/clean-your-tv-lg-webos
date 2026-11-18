@@ -1052,6 +1052,35 @@ class GuiTests(unittest.TestCase):
         self.assertEqual(calls,[])
         w.home();self.assertIsNone(w.failure_help)
 
+    def test_local_precheck_results_offer_an_explicit_setup_retry(self):
+        import errno
+        from cytv.failure_help import for_error
+        from cytv.state import Store, target
+
+        profile = target('test-tv', 'no-root')
+        for number, title, next_step in (
+                (errno.EROFS, 'The installer could not write to this computer', 'write access'),
+                (errno.ENOSPC, 'Not enough space on this computer', 'Free space')):
+            with self.subTest(errno=number):
+                w = Wizard()
+                self.addCleanup(w.close)
+                w.command = 'install'
+                w.receive('selected-profile', profile)
+                with patch('cytv.state.tempfile.TemporaryFile', side_effect=OSError(number, 'PRIVATE-DATA')):
+                    with self.assertRaises(RuntimeError) as caught:
+                        Store(self.directory.name).check_capsule_storage(profile)
+                with patch.object(w, 'start') as start:
+                    help = for_error(caught.exception, 'install-packages', profile)
+                    if help:
+                        w.receive('failure-help', help)
+                    w.receive('done', 2)
+                    self.assertEqual(w.title.text(), title)
+                    self.assertIn(next_step, w.subtitle.text())
+                    start.assert_not_called()
+                    next(button for button in w.form.findChildren(QPushButton)
+                         if button.text() == 'Try again').click()
+                    start.assert_called_once_with('install', profile)
+
     def test_foreign_home_restore_help_hands_control_to_existing_integration(self):
         from cytv.failure_help import for_error
         from cytv.root_capabilities import ForeignHomeHandoffRequired

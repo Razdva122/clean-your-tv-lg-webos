@@ -258,6 +258,10 @@ Before a new No-root receipt, local storage validation exercises a temporary
 private write/flush/fsync and directory sync. Failure creates no pending journal
 or capsule and does not invoke the TV observer. This is an early usability check,
 not a reservation of disk capacity; later failures retain ordinary pending state.
+Starting a fresh No-root setup also checks the destination before opening the
+SSH connection. A refusal during these checks produces computer-storage
+guidance. Setup can be retried after the user corrects the problem and the
+installer finds no pending operation.
 No ownership/permissions are changed, no old source is executed, and no recovery
 or removal confirmation is bypassed. Existing old reports cannot gain a newly
 invented cause. These source changes require rebuilt installers.

@@ -1264,6 +1264,23 @@ class OriginalOperationIntegration(unittest.TestCase):
         self.installer.install(self.inventory, 'original-secret')
         self.assertEqual((self.root/'requests').read_text().splitlines(), list(observer.APPS))
 
+    def test_local_storage_refusal_precedes_helper_stop_and_package_submission(self):
+        import errno
+        from cytv.errors import LocalRecoveryError
+
+        for number in (errno.EROFS, errno.ENOSPC):
+            with self.subTest(errno=number):
+                with patch.object(self.installer, 'helper_state', return_value='running'), \
+                     patch.object(self.installer, 'stop_helper_for_install', return_value='idle') as stop, \
+                     patch('cytv.state.tempfile.TemporaryFile', side_effect=OSError(number, 'PRIVATE-DATA')):
+                    with self.assertRaises(LocalRecoveryError):
+                        self.installer.install(self.inventory, 'original-secret')
+                stop.assert_not_called()
+                self.assertIsNone(self.store.pending(self.profile))
+                self.assertFalse((self.root / 'requests').exists())
+        self.installer.install(self.inventory, 'original-secret')
+        self.assertEqual((self.root / 'requests').read_text().splitlines(), list(observer.APPS))
+
     def test_removal_transport_loss_cannot_be_sealed_by_empty_eim_inventory(self):
         self.installer.install(self.inventory,'original-secret')
         (self.root/'requests').write_text('')

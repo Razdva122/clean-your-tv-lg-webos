@@ -909,7 +909,7 @@ printf '%s' "$cytv_state"
         if self.profile['edition']=='root':
             self.preflight(install=not reinstall, home_interfaces=True)
         elif self.before_no_root_staging is None:
-            self.preflight(install=True, stop_running_helper=True)
+            self.preflight(install=True, defer_helper=True)
         if self.profile['edition'] == 'root':
             return self.install_root(inventory, migrate, reinstall)
         if not ssap_key:

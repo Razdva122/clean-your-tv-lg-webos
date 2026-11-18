@@ -796,7 +796,7 @@ def begin(installer, action, artifacts, versions, expected, configuration, setup
     if installer.store.pending(installer.profile):
         refuse()
     operation = uuid.uuid4().hex
-    installer.store.check_capsule_storage(installer.profile, operation)
+    installer.store.check_capsule_storage(installer.profile)
     # No package request or durable pending receipt until storage is usable.
     root_ssh = installer.profile.get('connection') == 'root-ssh'
     handoff=getattr(installer,'_root_handoff',None)
@@ -833,6 +833,8 @@ def begin(installer, action, artifacts, versions, expected, configuration, setup
     before_staging = getattr(installer, 'before_no_root_staging', None) if fresh_install else None
     if before_staging is not None:
         before_staging()
+    elif fresh_install and setup_activation:
+        installer.prepare_install_helper(True)
     install_stop = getattr(installer, '_install_stop_generation', None) if setup_activation else None
     if setup_activation:
         installer._install_stop_generation = None

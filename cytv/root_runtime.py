@@ -167,6 +167,7 @@ def offer(installer, args, ask, write, *, home_error=None):
     require_idle(installer.store, installer.profile)
     if no_root_verified and choice == 1:
         selected = no_root
+        installer.store.check_capsule_storage(selected)
         # Preserve the already authenticated exact host key and SSAP connection.
         source = installer.store.device_dir(previous)
         target = installer.store.device_dir(selected)
