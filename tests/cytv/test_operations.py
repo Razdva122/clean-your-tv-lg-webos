@@ -1392,6 +1392,31 @@ class OperationTests(unittest.TestCase):
         self.assertTrue(any(c[0] == 'upload' and c[1].endswith('ssap-key.json') and c[2] == 0o640 for c in remote.calls))
         self.assertIsNone(self.store.pending(installer.profile))
 
+    def test_no_root_update_keeps_helper_app_ids_after_display_title_recovery(self):
+        from unittest.mock import patch
+        from cytv.tv import SSAP
+
+        remote = Remote()
+        installer = self.installer(remote)
+        remote.installed = [{'id': operations.HOME, 'version': '1.2.1'},
+                            {'id': operations.HELPER, 'version': '0.6.12'}]
+        app_ids = ['org.example.first', 'org.example.second']
+        path = operations.HELPER_STATE + '/apps.json'
+        remote.uploads[path] = json.dumps(app_ids).encode()
+        session = SSAP('192.0.2.10', '.', lambda _: None)
+        with patch.object(session, 'call', side_effect=[
+                {'launchPoints': [{'id': app_ids[0], 'title': None}, {'id': app_ids[1], 'title': 'Second'}]},
+                {'devices': []},
+                {'apps': [{'id': app_ids[0], 'title': 'First'}]}]):
+            inventory = session.inventory(b'fallback')
+        installer.install(inventory, 'synthetic-key')
+        self.assertIn(('upload', path, 0o644), remote.calls)
+        self.assertEqual(json.loads(remote.uploads[path]), app_ids)
+        launcher = next(data for name, data in remote.uploads.items() if name.endswith('/launcher.ipk'))
+        packaged = package.data_files(launcher)['usr/palm/applications/' + operations.HOME + '/apps.js']
+        display = json.loads(packaged.decode().splitlines()[0].removeprefix('window.TV_APPS = ').removesuffix(';'))
+        self.assertEqual([(app['id'], app['title']) for app in display['apps']], list(zip(app_ids, ('First', 'Second'))))
+
     def test_failed_helper_install_does_not_install_home_or_launch_and_blocks_retry(self):
         remote = Remote(fail=operations.HELPER)
         installer = self.installer(remote)

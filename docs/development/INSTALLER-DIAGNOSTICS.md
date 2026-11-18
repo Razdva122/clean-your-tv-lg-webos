@@ -27,8 +27,10 @@ cannot be reconstructed. Root's separate icon reader is not instrumented here.
 - `fetch_failed`: accepted candidates whose existing download raises an I/O or
   value error, including TLS/HTTP failures and the existing size check.
 - `invalid_image`: downloaded candidates without a supported image signature.
+- `skipped_apps` counts non-object launch points and malformed display titles
+  replaced with a title from an entry that supplied the same app ID.
 
-Cause counters count candidates, except `missing_uri` which counts apps. One app
+Icon failure counters count candidates. `missing_uri` counts apps. One app
 can fail a larger candidate and embed a smaller one, so cause counts need not
 match fallback counts. Only fixed numeric counters (0–1800) and fixed statuses
 are exported and revalidated in report/history projections. No URIs, paths,

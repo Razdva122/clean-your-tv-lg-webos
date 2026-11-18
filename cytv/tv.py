@@ -118,7 +118,8 @@ class Inventory:
         self.download_remaining = ICON_DOWNLOAD_BUDGET
         self.resize_remaining = RESIZED_ICON_BUDGET
         self.icon_diagnostics = {'schema': 1, 'status': 'reading', **dict.fromkeys(
-            ('apps', 'embedded', 'fallback', 'missing_uri', 'rejected_uri', 'fetch_failed', 'invalid_image'), 0)}
+            ('apps', 'embedded', 'fallback', 'missing_uri', 'rejected_uri', 'fetch_failed', 'invalid_image',
+             'skipped_apps'), 0)}
 
     def icon(self, app, alternatives=()):
         fields = ('extraLargeIcon', 'largeIcon', 'mediumLargeIcon', 'icon', 'miniicon', 'favicon')
@@ -216,17 +217,31 @@ class Inventory:
             launchpoints = include_tuner(launchpoints, installed)
         apps, seen = [], set()
         for app in launchpoints:
-            if not isinstance(app, dict) or app.get('hidden'):
+            if not isinstance(app, dict):
+                self.icon_diagnostics['skipped_apps'] += 1
+                continue
+            if app.get('hidden'):
                 continue
             appid, title = app.get('id'), app.get('title')
-            if not isinstance(appid, str) or not 0 < len(appid) <= 256 or not isinstance(title, str) or len(title) > 256:
+            if not isinstance(appid, str) or not 0 < len(appid) <= 256:
                 raise ValueError('Invalid TV application metadata')
+            if not isinstance(title, str) or len(title) > 256:
+                # The launch point still supplies the ID used by the Helper for routing.
+                # Recover the display title only from a matching, bounded source.
+                titles = (source.get('title') for source in alternatives.get(appid, ()))
+                title = next((candidate for candidate in titles
+                              if isinstance(candidate, str) and 0 < len(candidate) <= 256), None)
+                if title is None:
+                    raise ValueError('Invalid TV application metadata')
+                self.icon_diagnostics['skipped_apps'] += 1
             if appid in seen:
                 continue
             seen.add(appid)
             self.icon_diagnostics['apps'] += 1
             apps.append({'id': appid, 'title': title, 'icon': self.icon(app, alternatives.get(appid, ())),
                          'iconColor': str(app.get('iconColor') or app.get('bgColor') or '')[:64]})
+        if not apps:
+            raise ValueError('No usable apps were read from the TV. Installation stopped.')
         devices = []
         for device in inputs:
             if not isinstance(device, dict) or not isinstance(device.get('appId'), str):
@@ -390,7 +405,5 @@ class SSAP:
         inventory = Inventory(self.host, fallback)
         self.icon_diagnostics = inventory.icon_diagnostics
         result = inventory.build(points, inputs, apps)
-        if not inputs_available and not result['apps']:
-            raise ValueError('No usable apps were read from the TV. Installation stopped.')
         self.inputs_available = inputs_available
         return result

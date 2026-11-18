@@ -129,7 +129,7 @@ class DiagnosticTests(unittest.TestCase):
     def test_icon_counts_are_allowlisted_again_before_report_and_history_export(self):
         counts = {'schema': 'PRIVATE', 'status': 'complete', 'apps': 7, 'embedded': 2,
                   'fallback': 5, 'missing_uri': 1, 'rejected_uri': 2,
-                  'fetch_failed': 2, 'invalid_image': 1, 'PRIVATE': 'PRIVATE'}
+                  'fetch_failed': 2, 'invalid_image': 1, 'skipped_apps': 1, 'PRIVATE': 'PRIVATE'}
         with tempfile.TemporaryDirectory() as tmp:
             path = diagnostics.create_report(state.Store(tmp), 'install', None, 'read-inventory',
                                              tv_info={'icon_inventory': counts})

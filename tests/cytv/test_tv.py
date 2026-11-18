@@ -29,8 +29,38 @@ class InventoryTests(unittest.TestCase):
         self.assertEqual(getattr(inventory, 'icon_diagnostics', None), {
             'schema': 1, 'status': 'complete', 'apps': 7, 'embedded': 2,
             'fallback': 5, 'missing_uri': 1, 'rejected_uri': 2,
-            'fetch_failed': 2, 'invalid_image': 1})
+            'fetch_failed': 2, 'invalid_image': 1, 'skipped_apps': 0})
         self.assertNotIn('PRIVATE', json.dumps(inventory.icon_diagnostics))
+
+    def test_invalid_display_title_uses_installed_metadata_for_the_same_app_id(self):
+        inventory = Inventory('192.0.2.10', b'fallback')
+        first = {'id': 'org.example.first', 'title': {'PRIVATE': 'malformed'}}
+        second = {'id': 'org.example.second', 'title': 'Second'}
+        matching = {'id': first['id'], 'title': 'First'}
+        result = inventory.build([first, second], [], [None, matching])
+        self.assertEqual([(a['id'], a['title']) for a in result['apps']],
+                         [(first['id'], 'First'), (second['id'], 'Second')])
+        self.assertEqual(inventory.icon_diagnostics['skipped_apps'], 1)
+        self.assertNotIn('PRIVATE', json.dumps(inventory.icon_diagnostics))
+
+        for points, installed in (
+                ([first, second], None),
+                ([first, second], [{'id': 'org.example.different', 'title': 'First'}]),
+                ([first, second], [matching] + [None] * 300),
+                ([dict(first, id=None), second], [matching])):
+            with self.subTest(points=points, installed=installed):
+                with self.assertRaisesRegex(ValueError, 'Invalid TV application metadata'):
+                    inventory.build(points, [], installed)
+
+    def test_ssap_refuses_an_unusable_application_list_even_with_available_inputs(self):
+        session = SSAP('192.0.2.10', '.', lambda _: None)
+        with patch.object(session, 'call', side_effect=[
+                {'launchPoints': [None, {'id': 'hidden', 'hidden': True}]},
+                {'devices': [{'appId': 'com.webos.app.hdmi1'}]},
+                {'apps': []}]):
+            with self.assertRaisesRegex(ValueError, 'No usable apps were read'):
+                session.inventory(b'fallback')
+        self.assertEqual(session.icon_diagnostics['skipped_apps'], 1)
 
     def test_ssap_retains_icon_diagnostics_on_inventory_failure(self):
         session = object.__new__(SSAP)
