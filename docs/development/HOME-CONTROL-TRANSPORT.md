@@ -45,8 +45,13 @@ packaged owner. Renewal therefore creates a private child directory using its
 own UID and the existing shared group. Both runtimes check the original
 directory and require the child to have mode 2770 before reading or writing
 records there. They ignore existing records in the outer directory while it
-has mode 0775. Other unexpected modes, symlinks and failed mode checks still
-refuse access. The usual 2770 directory uses the existing record paths.
+has mode 0775. If that private child is itself widened to 0775, the Renewal
+request writer can reclaim a child it still owns in the shared group. It keeps
+the child owner-only while discarding the fixed transient records, then
+restores mode 2770. A new request can resume an interrupted repair. The same
+procedure applies to a boot-specific child in mode 0775 even when the boot ID
+has stayed the same. Other unexpected modes, symlinks and failed mode checks
+still refuse access. The usual 2770 directory uses the existing record paths.
 
 The stock Developer Mode startup script on C3 firmware 43.21.96 recursively
 sets mode 0777 under `/media/developer` and `/tmp/developer`. When a setup

@@ -350,6 +350,68 @@ if (process.platform !== 'linux' || process.getuid() !== 0) {
         quotedDrifted +
         ',"catalog-response")!=="answer")process.exit(8);'
     );
+
+    const channelCode =
+      'var s=require(' + bootModule + '),d=' + quotedDrifted + ';';
+    function verifyPrivateRecovery(child, mode) {
+      const stale = path.join(child, 'home-request.json');
+      fs.writeFileSync(stale, 'stale Home request');
+      fs.chownSync(stale, 6923, 5000);
+      fs.chmodSync(stale, 0o775);
+      const staleFd = fs.openSync(stale, 'r+');
+      try {
+        fs.chmodSync(child, mode);
+        if (mode === 0o775) {
+          run(
+            5431,
+            channelCode +
+              'try{s.atomicRecord(d,"home-request","refused");process.exit(8)}catch(e){if(e.message!=="unsafe-storage")throw e}'
+          );
+          a.equal(fs.statSync(child).mode & 0o7777, 0o775);
+          a.equal(fs.readFileSync(stale, 'utf8'), 'stale Home request');
+        }
+        run(
+          5431,
+          channelCode +
+            'try{s.readChannelRecord(d,"home-request");process.exit(8)}catch(e){if(e.message!=="unsafe-storage" && e.code!=="EACCES")throw e}'
+        );
+        run(
+          6923,
+          channelCode + 's.atomicRecord(d,"catalog-request","refreshed");'
+        );
+        a.equal(fs.statSync(child).mode & 0o7777, 0o2770);
+        a.deepEqual(fs.readdirSync(child), ['catalog-request.json']);
+        fs.writeSync(staleFd, 'still the old inode');
+        a.equal(fs.existsSync(stale), false);
+        run(
+          5431,
+          channelCode +
+            'if(s.readChannelRecord(d,"catalog-request")!=="refreshed")process.exit(8);' +
+            's.atomicRecord(d,"catalog-response","new apps");'
+        );
+        run(
+          6923,
+          channelCode +
+            'if(s.readChannelRecord(d,"catalog-response")!=="new apps")process.exit(8);' +
+            's.atomicRecord(d,"home-request","current status");'
+        );
+        run(
+          5431,
+          channelCode +
+            'if(s.readChannelRecord(d,"home-request")!=="current status")process.exit(8);' +
+            's.atomicRecord(d,"home-response","enabled");'
+        );
+        run(
+          6923,
+          channelCode +
+            'if(s.readChannelRecord(d,"home-response")!=="enabled")process.exit(8);'
+        );
+      } finally {
+        fs.closeSync(staleFd);
+      }
+    }
+    verifyPrivateRecovery(privateChannel, 0o775);
+    verifyPrivateRecovery(privateChannel, 0o2700);
     // Replay the stock recursive chmod against both channel directories and
     // the records retained from previous boots.
     fs.chmodSync(renewal, 0o777);
@@ -360,8 +422,6 @@ if (process.platform !== 'linux' || process.getuid() !== 0) {
     fs.chmodSync(oldRequest, 0o777);
     // A retained writer can keep its old descriptor open across chmod.
     const oldDescriptor = fs.openSync(oldRequest, 'w');
-    const channelCode =
-      'var s=require(' + bootModule + '),d=' + quotedDrifted + ';';
     run(6923, channelCode + 's.atomicRecord(d,"home-request","boot request");');
     run(
       5431,
@@ -376,6 +436,11 @@ if (process.platform !== 'linux' || process.getuid() !== 0) {
     );
     a.equal(fs.statSync(drifted).mode & 0o7777, 0o777);
     a.equal(fs.readFileSync(oldRequest, 'utf8'), '');
+
+    const bootId = fs
+      .readFileSync('/proc/sys/kernel/random/boot_id', 'utf8')
+      .trim();
+    verifyPrivateRecovery(path.join(drifted, '.private-' + bootId), 0o775);
 
     const repairChannel =
       'var s=require(' +
