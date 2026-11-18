@@ -42,3 +42,7 @@ recovery activity and startup hook, and did not boot a retail B9. The device
 owner's matching failure cause, real Python and compositor readback, startup
 hook, persistent activity, recovery after real reboot, and Home activation
 remain to be verified on hardware. No TV was contacted or changed.
+
+The [final-status envelope investigation](2026-11-18-issue160-final-status-envelope.md)
+corrects the simplified Python child fixture used above. The earlier replay
+did not validate the actual nested CLI status envelope.
