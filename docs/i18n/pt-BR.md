@@ -95,17 +95,13 @@ Se aparecer `ssh-identity-changed`, pare e verifique a chave SSH da TV. [Recuper
 
 Após redefinir sua TV No-root para os padrões de fábrica, escolha **Reconectar após a redefinição de fábrica** quando a chave mudar. Siga as instruções na sua rede doméstica confiável. O perfil anterior e o registro de remoção são preservados.
 
-Se a instalação foi interrompida, use a mesma conexão salva e escolha primeiro **Verificar estado da TV**. Continue apenas pela recuperação oferecida pelo assistente. Se o estado for desconhecido, salve o relatório de diagnóstico e pare; preserve os dados de recuperação e não repita a instalação às cegas.
-
-Durante a recuperação, mantenha o controle de Home desativado e preserve os relatórios originais e a conexão salva. Confirme a inspeção e as alterações separadamente. Siga o guia detalhado para a versão instalada; não force a reinstalação nem apague o estado de recuperação.
-
-Informe modelo, firmware, No-root ou Root, dispositivo de instalação, etapa e mensagem de erro. Remova senhas, chaves, endereços e dados pessoais antes de compartilhar o relatório. Ele não é publicado automaticamente.
+Se a instalação no computador ficar incompleta, selecione **Revisar opções de recuperação** na tela de resultados. Na pergunta **Verificar opções de recuperação?**, escolha **Continuar**. O assistente usa a mesma conexão salva com a TV. No No-root, se o resultado dos pacotes ainda for desconhecido e **Verificar status da TV** estiver disponível, use esse botão primeiro. Confirme a alteração oferecida separadamente. Se a instalação continuar bloqueada, preserve a conexão salva e os dados de recuperação.
 
 Se o No-root oferecer **Repetir a verificação de armazenamento**, selecione essa opção para repetir a verificação de somente leitura na mesma TV. Confirme a instalação separadamente após uma verificação bem-sucedida. Se houver uma operação pendente, escolha **Revisar opções de recuperação**.
 
 Se o instalador de desktop verificar os pacotes, mas o botão Home não abrir o Clean Your TV, escolha **Diagnóstico do botão Home** para No-root ou **Verificar status da TV** para Root na tela de resultados. O No-root mostra o resultado já registrado. Use **Salvar relatório de diagnóstico** para guardar uma cópia.
 
-Se o instalador no computador falhar, selecione **Relatar um problema** para revisar e copiar o rascunho. Se houver um relatório de diagnóstico salvo, anexe-o ao formulário.
+Para guardar uma cópia no computador, escolha **Salvar relatório de diagnóstico…** na tela de resultados. Se precisar de ajuda, selecione **Relatar um problema**, revise o rascunho e escolha **Copiar rascunho** e **Abrir formulário**. Cole o rascunho e anexe o relatório salvo, se disponível.
 
 [Relatar problema](../FEEDBACK.md) · [Recuperação — inglês](../RECOVERY.md) · [Atualizar ou remover — inglês](../MAINTENANCE.md) · [Outros idiomas](../LANGUAGES.md)
 
@@ -123,7 +119,7 @@ Se o instalador não conseguir verificar a remoção, a limpeza final, os contro
 
 Se o instalador não conseguir verificar a reinicialização completa solicitada, salve e anexe o relatório de diagnóstico. Mantenha a conexão salva e os dados de recuperação. Não repita os ciclos de energia nem apague manualmente a operação pendente.
 
-Após a confirmação da remoção, você pode fechar o instalador no computador ou escolher **Configurar minha TV** para iniciar uma nova instalação na mesma TV com a mesma edição e conexão.
+Quando o instalador no computador mostrar **A remoção de Clean Your TV foi verificada.**, escolha **Fechar** para terminar ou **Configurar minha TV** para iniciar uma nova instalação na mesma TV, com a mesma edição e conexão.
 
 **Reinstalar o Root:** Escolha **Configurar minha TV → Root** com a conexão salva e confirme **Reinstalar Root?**. O instalador restaura o LG Home e remove completamente o Clean Your TV, incluindo seus atualizadores, Home Helper e preferências salvas. Após verificar a remoção, instala e ativa os pacotes e o ambiente Root incluídos nesse instalador. Os outros apps da TV e o acesso root/SSH existente são preservados. Se o assistente no computador pausar, abra o mesmo instalador e escolha **Continuar a reinstalação do Root**. Após a verificação da remoção, escolha **Continuar a instalação do Root**. **Desinstalar Clean Your TV** sozinho nunca inicia outra instalação.
 

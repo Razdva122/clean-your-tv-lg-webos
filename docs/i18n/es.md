@@ -95,17 +95,13 @@ Si aparece `ssh-identity-changed`, detente y verifica la clave SSH del televisor
 
 Tras restablecer tu televisor No-root de fábrica, elige **Volver a conectar tras el restablecimiento de fábrica** cuando cambie la clave. Sigue los pasos en tu red doméstica de confianza. Se conservan el perfil anterior y el registro de desinstalación.
 
-Si se interrumpe la instalación, usa la misma conexión guardada y comienza por **Comprobar estado del TV**. Continúa solo mediante la recuperación que ofrezca el asistente. Si el estado es desconocido, guarda el informe de diagnóstico y detente; conserva los datos de recuperación y no repitas la instalación a ciegas.
-
-Durante la recuperación, mantén desactivado el control de Home y conserva los informes originales y la conexión guardada. Confirma la inspección y los cambios por separado. Sigue la guía detallada correspondiente a tu versión instalada; no fuerces la reinstalación ni borres el estado de recuperación.
-
-Indica modelo, firmware, No-root o Root, dispositivo de instalación, paso y mensaje de error. Elimina contraseñas, claves, direcciones y datos personales antes de compartir el informe. No se publica automáticamente.
+Si la instalación en el ordenador queda sin terminar, en la pantalla de resultados elige **Revisar opciones de recuperación** y pulsa **Continuar** cuando aparezca **¿Comprobar las opciones de recuperación?**. El asistente usa la misma conexión guardada. En No-root, si se desconoce el resultado de los paquetes, elige primero **Ver estado del televisor** si aparece. Confirma por separado el cambio que se ofrezca. Si la instalación sigue bloqueada, conserva la conexión guardada y los datos de recuperación.
 
 Si No-root ofrece **Repetir la comprobación de almacenamiento**, elige esa opción para repetir la comprobación de solo lectura en el mismo televisor. Confirma la instalación por separado cuando se complete la comprobación. Si el instalador detecta una operación pendiente, elige **Revisar opciones de recuperación**.
 
 Si el instalador de escritorio verifica los paquetes pero el botón Home no abre Clean Your TV, elige **Diagnóstico del botón Home** para No-root o **Ver estado del televisor** para Root en la pantalla de resultados. No-root muestra el resultado ya registrado. Usa **Guardar informe de diagnóstico** para guardar una copia.
 
-Si falla el instalador de escritorio, selecciona **Informar de un problema** para revisar y copiar el borrador. Adjunta al formulario el informe de diagnóstico guardado, si está disponible.
+Para conservar una copia en el ordenador, pulsa **Guardar informe de diagnóstico…** en la pantalla de resultados. Si necesitas ayuda, elige **Informar de un problema** para revisar el borrador y luego **Copiar borrador** y **Abrir formulario**. Pega el borrador y adjunta el informe guardado si está disponible.
 
 [Informar de un problema](../FEEDBACK.md) · [Recuperación — inglés](../RECOVERY.md) · [Actualizar o eliminar — inglés](../MAINTENANCE.md) · [Otros idiomas](../LANGUAGES.md)
 
@@ -123,7 +119,7 @@ Si el instalador no puede verificar la desinstalación, la limpieza final, los c
 
 Si el instalador no puede verificar el reinicio completo solicitado, guarda y adjunta el informe de diagnóstico. Conserva la conexión guardada y los datos de recuperación. No repitas los cortes de alimentación ni borres manualmente la operación pendiente.
 
-Una vez comprobada la eliminación, puedes cerrar el instalador de escritorio o elegir **Configurar mi televisor** para iniciar una nueva instalación en el mismo televisor con la misma edición y conexión.
+Cuando el instalador de escritorio muestre **Se verificó la eliminación de Clean Your TV.**, elige **Cerrar** para terminar o **Configurar mi televisor** para iniciar una nueva instalación en el mismo televisor con la misma edición y conexión.
 
 **Reinstalar Root:** Elige **Configurar mi televisor → Root** con la conexión guardada y confirma **¿Reinstalar Root?**. El instalador restaura LG Home y elimina por completo Clean Your TV, incluidos sus actualizadores, Home Helper y las preferencias guardadas. Tras verificar la eliminación, instala y activa los paquetes y el entorno Root incluidos en ese instalador. Se conservan las demás apps del TV y el acceso root/SSH existente. Si el asistente de escritorio se detiene, abre el mismo instalador y elige **Continuar la reinstalación de Root**. Cuando se verifique la eliminación, elige **Continuar la instalación de Root**. **Desinstalar Clean Your TV** por sí solo nunca inicia otra instalación.
 

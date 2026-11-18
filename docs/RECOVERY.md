@@ -1,5 +1,9 @@
 # Recover TV controls or an interrupted installation
 
+[Finish an interrupted installation](#finish-an-interrupted-installation) ·
+[Continue removal after restoring Home](#continue-removal-after-restoring-home) ·
+[Finish after verified removal](#finish-after-verified-removal)
+
 > **Experimental compositor routing (#364):** experimental compositor recovery stops routing
 > before removing only its own filter. Safety/power stops require explicit
 > re-enable. If Home identity changed, the owned filter can be released after
@@ -108,164 +112,103 @@ method and reset history privately if requested. Keep raw profiles and keys priv
 
 ## Interrupted setup or removal
 
-### Root setup is unfinished and its deployment record is missing
+Keep the original TV connection and recovery data. On desktop, start from the
+current result screen. To return later, open **Maintenance action**, select the
+action you need, and choose **Run selected maintenance action**. Select the same
+saved TV when asked. On Android, open **Maintenance** to find
+**Review recovery options**, **Installation status**, **Restore LG Home** and
+**Uninstall Clean Your TV**.
 
-Keep the saved Root connection. Choose **Review recovery options** and confirm
-full removal if you want to start over. This removes all Clean Your TV editions,
-including No-root Home and Helper; back up preferences first. Removal checks the
-current TV state and verifies cleanup separately from the old installation result.
-After verified removal, start a new setup separately. Cancelling the prompt leaves
-the interrupted installation and its recovery data unchanged. If removal fails,
-use its existing continuation flow and save the diagnostic report.
+<a id="interrupted-setup-or-removal-in-110"></a>
+<a id="interrupted-no-root-installation-in-the-unpublished-140-candidate"></a>
+<a id="root-setup-is-unfinished-and-its-deployment-record-is-missing"></a>
 
-An absent deployment record is not proof that the old installation did nothing.
-Status alone does not delete recovery records or restart installation.
+### Finish an interrupted installation
+
+From the unfinished setup result, choose **Review recovery options**, then
+**Continue** at **Check recovery options?**. If setup already asked to review an
+earlier operation for a saved connection, **Review recovery options** starts
+that check on its original connection. Review the result before confirming a
+change.
+
+- **No-root:** If the package result could not be verified, choose
+  **Check TV status** when offered. Once the wizard verifies what can continue,
+  choose **Review recovery options** and confirm **Finish No-root configuration?**
+  or **Continue the original No-root operation?** if offered. This finishes the
+  verified work using the existing setup. If you cancelled Home activation,
+  open **Home Helper** on the TV, choose **Start Helper** and confirm when ready.
+- **Root:** If Root and Root Updater are verified, select **Continue setup and
+  turn on Home control**, then **Continue** at **Finish Root setup?**. This
+  continues with the installed packages. On eligible TVs you can instead select
+  **Finish setup with LG Home and Home control off**, then choose **Continue**
+  at **Finish Root setup with Home control off?**. If **Check TV status** says
+  **Ready to reinstall Root**, choose **Back to start**, then **Set up my TV**
+  with the same saved connection and confirm **Reinstall Root?**. C1 Beta uses
+  its own [Root Beta recovery](#repair-an-interrupted-root-beta-setup).
+- **Removal offered:** If the installer offers **Remove remaining Clean Your TV
+  packages?**, continue only if you want to start over. For Root with a missing
+  deployment record, removal covers both editions, including No-root Home and
+  Helper. Back up preferences before confirming. Start a new setup after
+  verified removal.
+- **Still blocked:** Keep the saved connection and choose
+  **Save diagnostic report…** if available. Follow the current screen if it
+  offers a new check.
+
+<a id="next-candidate-original-operation-recovery-and-full-removal"></a>
+<a id="original-operation-recovery-and-full-removal-published-v1110"></a>
+
+### Continue removal after restoring Home
+
+To remove the apps, select **Uninstall Clean Your TV** under
+**Maintenance action** and confirm on the saved TV. This removes project apps
+and files that are present, including after a partial setup.
+
+- If the removal result offers **Return to LG Home**, choose it and confirm.
+  The restore result can show **LG Home is restored.** while apps remain.
+  Choose **Continue removal** to resume that already approved removal.
+  On some older No-root TVs the installer may observe Live TV or an HDMI input
+  as the stock screen. Follow the offered action.
+- If you chose **Return to LG Home** directly from **Maintenance action**, the
+  apps stay installed. Open that menu and choose **Uninstall Clean Your TV**
+  only if you want to remove them. On Android after **Restore LG Home**, choose
+  **Back to start**, then open **Maintenance** to uninstall the apps separately.
+- If the current result asks you to fully restart the TV, disconnect and
+  reconnect power and turn it on. When the installer sees it again, choose
+  **Continue removal** if offered, or **Try again** to check manually.
+  **Cancel** stops waiting. Standby and Quick Start do not count as a full
+  restart. If the installer cannot verify the restart, save the diagnostic
+  report and keep the recovery data.
+- If the TV is busy or disconnected, resolve the condition and choose
+  **Try again** when offered. For unverified controls, package results or final
+  cleanup, choose **Review recovery options**. Confirm any offered continuation
+  separately. If No-root cleanup specifically requires Root, choose
+  **Connect using Root** when offered for the same TV. If you already have Root
+  access but no saved connection, use it through **Uninstall Clean Your TV**
+  in **Maintenance action**. Without existing Root access, keep the recovery
+  data for the unfinished cleanup.
+
+### Finish after verified removal
+
+When you see **Clean Your TV removal is verified.**, choose **Close** to finish
+or **Set up my TV** to start a new setup on the same TV with the same edition and
+connection. A confirmed Root reinstallation offers **Continue Root installation**
+after its removal phase. On Android, choose **Back to start** after verified
+removal, then **Set up TV** and select the TV again if you want to set it up.
+
+If recovery remains blocked, choose **Save diagnostic report…** from the desktop
+result or **Save report** on Android, if offered. To ask for help, use the
+[desktop report controls](DESKTOP_INSTALL.md#review-interrupted-setup-or-removal)
+or [share the result](FEEDBACK.md).
 
 <a id="unreleased-local-recovery-storage-messages"></a>
 
 ### Local recovery storage messages
 
-These messages are included from published v1.12.1 onward; v1.12.0 did not include them.
-
-If a fresh setup stops because the installer cannot write its local files, check
-write access to the installer’s application data folder or free space on its
-drive, then choose **Try again** or rerun your setup command. Keep the saved
-connection and any existing recovery files.
-
-A local recovery storage refusal concerns the computer or Android app storage,
-not a TV package-status reply. It can mean that a directory's ownership or
-permissions did not pass verification, before the recovery file was read. It does
-not by itself mean that saved data disappeared. Keep the original files and
-permissions unchanged and save a diagnostic report for review; do not publish
-private paths, profiles or recovery capsules. New reports distinguish these
-categories without exposing paths or account names; see
-[local diagnostic fields and limits](development/INSTALLER-DIAGNOSTICS.md#local-recovery-storage-next-candidate-201).
-An older incompatible observer still uses separately confirmed removal through
-the existing recovery journey. A clearer message does not permit replay or prove
-the original package outcome.
-
-<a id="next-candidate-original-operation-recovery-and-full-removal"></a>
-
-### Original-operation recovery and full removal (published v1.11.0)
-
-These instructions apply to published v1.11.0 and later. For removal, select **Uninstall Clean Your TV** on desktop or
-Android (`cytv uninstall`) using the saved TV connection. Confirm the removal
-once. A failed or partial installation does not need to complete first: remove
-known project apps/files that are present and skip items that are absent.
-
-1. CYTV stops project controls and removes present project packages and files.
-2. When asked, disconnect the TV from power, reconnect it and wait for the TV and
-   network to return. Standby and Quick Start are not a full restart. CYTV does
-   not restart the TV automatically.
-3. If the desktop installer is waiting for the saved TV, select **Continue
-   removal** when offered. **Cancel** stops waiting. Use **Try again** when a
-   manual check is needed. This continues the same approved removal goal on
-   the saved TV.
-   The installer checks the actual boot change and remaining files, then performs
-   the final sweep. Success requires both removed and verified-clean results.
-
-Developer Mode removal checks the current TV state and waits briefly for busy
-installation work and Clean Your TV processes to finish. It can complete on the
-same boot after an interrupted setup if those checks pass. If webOS denies
-package-status access, the installer can use the original install's verified
-terminal receipts. The installer may report retained temporary installation
-archives after confirming that apps, services and Home controls were removed.
-With the v1.20.3 installer, **Try again** can also finish a No-root removal on
-the same boot if a transient Helper Stop failure clears and current checks
-confirm cleanup can proceed. Follow a restart request if it remains after the
-retry. Live or unverifiable project processes and unfinished old work can still
-require a full restart. Pending final verification is shown as remaining cleanup;
-a connection interruption and an actual package-removal refusal have separate
-results. Pending cleanup never appears as verified success.
-
-When cleanup, package results, TV controls or project paths cannot be verified,
-choose **Review recovery options**. Keep the original saved connection and
-report. Reviewing the saved operation does not establish that the TV is clean;
-continuing removal requires a separate confirmation and current backend checks.
-Only a known connection interruption, busy operation or requested restart offers
-**Try again** after the stated condition is resolved.
-
-If the installer cannot verify a requested full restart, save and attach its
-diagnostic report and keep the saved connection and recovery data. Do not keep
-repeating power cycles or clear the unfinished operation manually.
-
-If the connection is interrupted, check it and select **Try again**. Existing
-installation history remains available; an old generic failure is not assigned
-an invented cause. If the installer confirms some project files require Root
-access, final cleanup needs existing Root SSH access to the same TV. If another
-operation is running, wait for it to finish and try again.
-A failed check stays visible; it is never converted to green completion. Keep
-keys and original reports, and do not reinstall or clear Android app data to
-retry removal. Missing files are skipped; absence is not itself an error.
-
-Failed or interrupted setup offers recovery directly. While the outcome of an
-original No-root package request is unknown, choose **Check TV status**
-(`cytv status`) with the saved TV connection and keep the recovery data. After
-verification, choose **Review recovery options** and confirm continuation if it
-is offered. If recovery offers full removal, that action requires separate
-confirmation. Removal automatically retries transient connection loss and a
-busy CYTV worker up to three attempts. On desktop, choose **Connect using Root**
-if it appears for a saved Root connection to the same TV. If you already have
-Root SSH access and the installer has no saved connection for it, use your
-existing Root connection in Maintenance after confirming it is the same TV.
-Without existing Root access, cleanup remains incomplete. Keep the recovery
-data. Verified Root cleanup also finishes its blocked No-root removal. A failed
-Root activation attempts to restore and verify LG Home without repeating
-activation. Cancellation with unfinished work keeps a diagnostic report and
-recovery actions. Emergency-stop state remains unchanged.
-
-**v1.13.0:** verified full removal leaves the TV ready for a new Root or No-root installation. Minimal inactive removal receipts prevent old work from resuming; do not delete them manually. Finish recovery first if removal or its current checks are incomplete.
-
-**Published removal support:** on older TVs without a separate
-LG Home app, No-root removal can use a freshly verified LG stock screen and may
-switch to Live TV. Keep the TV on and follow any restart request. Continue with
-**Try again** using the original saved connection; do not delete journals, clear
-Android app data or reset the TV. The updated Root remover also verifies a
-matching completed cleanup when the local recovery record still shows pending;
-matching history alone does not establish current absence.
-
-On desktop, if **Return to LG Home** appears on the removal screen, choose it.
-After the installer verifies restoration, choose **Continue removal** for the
-same saved TV. Choosing **Return to LG Home** directly from Maintenance keeps
-the apps installed.
-
-Emergency controls above stay available. For setup recovery, eligible Root
-can still finish with LG Home and Home control off; that goal does not require
-activating Clean Home.
-Physical Home, sound, standby and cold boot are separate observations. A restart
-used by removal does not certify any of those checks. Candidate source tests do
-not establish compatibility or successful recovery on a reporter's TV. See the
-[maintained failure-injection matrix](development/INSTALLER-RECOVERY-MATRIX.md).
-
-The version-specific recovery sections below describe their published scope.
-The Remove action is available even when earlier setup is incomplete.
-
-<a id="interrupted-setup-or-removal-in-110"></a>
-<a id="interrupted-no-root-installation-in-the-unpublished-140-candidate"></a>
-
-In 1.6.0, use cytv (desktop or Android) to select the **same saved
-TV connection** and choose **Review recovery options**. Console: `cytv recover`.
-If setup finds a retained operation, it enters this journey and stops before a
-fresh installation.
-
-1. Confirm **Check recovery options?** (default **No**). Inspection does not
-   reinstall/remove packages. Root inspection may stage and execute verified
-   support code; it is not a passive TV read.
-2. A verified Root installation can offer **Finish Root setup?** with a separate
-   default-No confirmation. Existing Root/updater checks run again before activation.
-3. No-root can offer **Remove remaining Clean Your TV packages?**, separately
-   confirmed with No by default. In 1.6.0 the package-service idle guard must
-   succeed before this offer and again before removal. The 1.7.0 exception
-   for an unstarted removal is described below. Removal restores LG Home
-   and may reset Home preferences. **New installation never starts automatically.**
-4. Unknown, denied, busy, incomplete or conflicting state stops the journey and
-   offers a diagnostic report. Keep local/TV journals and the saved connection;
-   do not repeat removal, delete receipts or reset Developer Mode to force setup.
-
-`--yes` cannot approve recovery checks or changes; noninteractive recovery stops.
-A displayed plan is advice only, never authorization or a saved resume token.
-Legacy operations can remain blocked. This does not supply missing terminal
-installer evidence for #201 or certify recovery on #216's TV.
+If a fresh setup cannot write its local files, check write access to the
+installer's application data folder or free disk space, then choose
+**Try again** if offered. If the installer refuses to read existing recovery
+files, keep those files and choose **Save diagnostic report…**. A local
+storage error does not establish what happened on the TV.
 
 <a id="failed-root-activation-unreleased"></a>
 

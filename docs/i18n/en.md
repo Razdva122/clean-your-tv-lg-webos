@@ -97,17 +97,13 @@ If you see `ssh-identity-changed`, stop and verify the TV’s SSH key. [Recovery
 
 For your own No-root TV after a factory reset, choose **Reconnect after factory reset** when the installer reports a changed key. Follow the prompts on your trusted home network. The installer keeps the previous profile and removal record.
 
-If installation was interrupted, use the same saved connection and choose **Check TV status** first. Continue only through the recovery action offered by the wizard. If the state is unknown, save the diagnostic report and stop; keep recovery data and do not blindly repeat installation.
-
-During recovery, keep Home control off and retain the original diagnostic reports and saved connection. Confirm inspection and changes separately. Follow the detailed recovery guide for your installed version; do not force reinstallation or clear recovery state.
-
-For help, include TV model, firmware, No-root or Root, installer device, failed step and error message. Remove passwords, keys, addresses and personal data before sharing a report. Reports are not published automatically.
+If setup is unfinished on desktop, choose **Review recovery options** on the result screen and **Continue** at **Check recovery options?**. The wizard uses the same saved TV connection. For No-root, use **Check TV status** first if the package result is unknown and that button is offered. Confirm the offered change separately. If setup stays blocked, keep the saved connection and recovery data.
 
 If No-root offers **Retry storage check**, choose it to repeat the read-only check on the same TV. Confirm installation separately after the check passes. If the installer finds an unfinished operation, use **Review recovery options**.
 
 If the desktop installer verifies the packages but Home doesn't open Clean Your TV, choose **Home button diagnostics** for No-root or **Check TV status** for Root on the results screen. No-root shows your recorded result. Use **Save diagnostic report** to keep a copy.
 
-After a desktop installer failure, select **Open an issue** to review and copy your draft. Attach the saved diagnostic report in the issue form if available.
+To keep a copy on desktop, select **Save diagnostic report…** on the result screen. For help, choose **Open an issue** to review the draft, then **Copy draft** and **Open issue form**. Paste the draft and attach the saved report if available.
 
 [Report a problem](../FEEDBACK.md) · [Detailed recovery](../RECOVERY.md) · [Update or remove](../MAINTENANCE.md) · [Other languages](../LANGUAGES.md)
 
@@ -125,7 +121,7 @@ If the installer cannot verify removal, final cleanup, TV controls or the packag
 
 If the installer cannot verify the requested full restart, save and attach its diagnostic report. Keep the saved connection and recovery data. Do not keep repeating power cycles or clear the unfinished operation manually.
 
-After verified removal, you can close the desktop installer or choose **Set up my TV** to start a new setup on the same TV with the same edition and connection.
+When the desktop result shows **Clean Your TV removal is verified.**, choose **Close** to finish or **Set up my TV** to start a new setup on the same TV with the same edition and connection.
 
 **Reinstall Root:** Choose **Set up my TV → Root** with the saved connection and confirm **Reinstall Root?**. The installer restores LG Home and fully removes Clean Your TV, including its updaters, Home Helper and saved preferences. After verified removal, it installs and activates the packages and Root runtime bundled with that installer. Other TV apps and existing root/SSH access are preserved. If the desktop wizard pauses, open the same installer and choose **Continue Root reinstallation**. After it verifies removal, choose **Continue Root installation**. **Uninstall Clean Your TV** alone never starts another installation.
 

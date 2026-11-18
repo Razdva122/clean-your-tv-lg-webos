@@ -95,17 +95,13 @@ Halten Sie bei `ssh-identity-changed` an und überprüfen Sie den SSH-Schlüssel
 
 Wenn Sie Ihren No-root-Fernseher auf die Werkseinstellungen zurückgesetzt haben, wählen Sie bei geändertem Schlüssel **Nach dem Werksreset erneut verbinden**. Folgen Sie den Schritten in Ihrem vertrauenswürdigen Heimnetz. Das alte Profil und der Deinstallationseintrag bleiben erhalten.
 
-Nach einer unterbrochenen Installation verwenden Sie dieselbe gespeicherte Verbindung und zuerst **TV-Status prüfen**. Fahren Sie nur mit der vom Assistenten angebotenen Wiederherstellung fort. Bei unbekanntem Zustand Diagnosebericht speichern und stoppen; Wiederherstellungsdaten behalten und nicht blind neu installieren.
-
-Lassen Sie während der Wiederherstellung die Home-Steuerung ausgeschaltet und bewahren Sie die ursprünglichen Diagnoseberichte und die gespeicherte Verbindung auf. Bestätigen Sie Prüfung und Änderungen getrennt. Folgen Sie der ausführlichen Anleitung für Ihre installierte Version; erzwingen Sie keine Neuinstallation und löschen Sie keinen Wiederherstellungszustand.
-
-Nennen Sie TV-Modell, Firmware, No-root oder Root, Installationsgerät, Schritt und Fehlermeldung. Entfernen Sie vor dem Teilen Passwörter, Schlüssel, Adressen und persönliche Daten. Berichte werden nicht automatisch veröffentlicht.
+Ist die Installation am Computer noch offen, wählen Sie im Ergebnis **Wiederherstellungsoptionen prüfen** und bei **Wiederherstellungsoptionen prüfen?** die Schaltfläche **Weiter**. Der Assistent verwendet dieselbe gespeicherte TV-Verbindung. Ist bei No-root das Paketergebnis unklar, wählen Sie zuerst **TV-Status prüfen**, sofern die Schaltfläche angeboten wird. Bestätigen Sie angebotene Änderungen separat. Bleibt die Einrichtung blockiert, behalten Sie die gespeicherte Verbindung und die Wiederherstellungsdaten.
 
 Wenn No-root **Speicherprüfung wiederholen** anbietet, wähle die Schaltfläche, um denselben Fernseher ohne Änderungen erneut zu prüfen. Bestätige die Installation nach erfolgreicher Prüfung separat. Bei einem offenen Vorgang wähle **Wiederherstellungsoptionen prüfen**.
 
 Wenn das Desktop-Installationsprogramm die Pakete geprüft hat, die Home-Taste aber Clean Your TV nicht öffnet, wählen Sie auf der Ergebnisseite bei No-root **Home-Taste diagnostizieren** und bei Root **TV-Status prüfen**. Bei No-root wird das bereits erfasste Ergebnis angezeigt. Den Bericht können Sie über **Diagnosebericht speichern** sichern.
 
-Wählen Sie nach einem Fehler im Desktop-Installer **Problem melden**, prüfen und kopieren Sie den Entwurf und hängen Sie den gespeicherten Diagnosebericht an, falls vorhanden.
+Sichern Sie den Bericht am Computer mit **Diagnosebericht speichern…** auf der Ergebnisseite. Wenn Sie Hilfe brauchen, wählen Sie **Problem melden**, prüfen den Entwurf und wählen **Entwurf kopieren** und **Meldeformular öffnen**. Fügen Sie den Entwurf ein und hängen Sie den gespeicherten Bericht an, falls vorhanden.
 
 [Problem melden](../FEEDBACK.md) · [Wiederherstellung — Englisch](../RECOVERY.md) · [Aktualisieren oder entfernen — Englisch](../MAINTENANCE.md) · [Andere Sprachen](../LANGUAGES.md)
 
@@ -123,7 +119,7 @@ Wenn der Installer die Entfernung, die abschließende Bereinigung, die TV-Steuer
 
 Kann der Installer den angeforderten vollständigen Neustart nicht bestätigen, speichern Sie den Diagnosebericht und hängen Sie ihn an. Behalten Sie die gespeicherte Verbindung und Wiederherstellungsdaten. Wiederholen Sie die Stromunterbrechung nicht ständig und löschen Sie den unvollständigen Vorgang nicht manuell.
 
-Nach bestätigter Entfernung können Sie den Desktop-Installer schließen oder mit **Meinen Fernseher einrichten** eine neue Einrichtung am selben Fernseher mit derselben Verbindung und Edition starten.
+Sobald am Computer **Entfernung von Clean Your TV ist bestätigt.** angezeigt wird, wählen Sie **Schließen**. Mit **Meinen Fernseher einrichten** können Sie die Einrichtung am selben Fernseher mit derselben Verbindung und Edition neu starten.
 
 **Root neu installieren:** Wählen Sie mit der gespeicherten Verbindung **Meinen Fernseher einrichten → Root** und bestätigen Sie **Root neu installieren?**. Der Installer stellt LG Home wieder her und entfernt Clean Your TV samt Updatern, Home Helper und gespeicherten Einstellungen vollständig. Nach verifizierter Entfernung installiert und aktiviert er die enthaltenen Pakete und die Root-Laufzeit. Andere TV-Apps und bestehender Root-/SSH-Zugriff bleiben erhalten. Wenn der Desktop-Assistent pausiert, öffnen Sie denselben Installer und wählen Sie **Root-Neuinstallation fortsetzen**. Nach bestätigter Entfernung wählen Sie **Root-Installation fortsetzen**. **Clean Your TV deinstallieren** allein startet keine neue Installation.
 

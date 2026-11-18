@@ -82,17 +82,13 @@ Pokud se zobrazí chyba `ssh-identity-changed`, zastavte se a ověřte klíč te
 
 Po obnovení továrního nastavení vlastní TV s No-root vyberte při změně klíče **Připojit znovu po obnovení továrního nastavení**. Postupujte podle pokynů v důvěryhodné domácí síti. Původní profil a záznam o odinstalaci se zachovají.
 
-Po přerušené instalaci použijte stejné uložené připojení a nejprve kontrolu stavu TV (**Check TV status**). Pokračujte jen nabízenou obnovou. Pokud je stav neznámý, uložte diagnostickou zprávu a zastavte se. Zachovejte data obnovy a neopakujte instalaci naslepo.
-
-Během obnovy ponechte ovládání Home vypnuté a zachovejte původní diagnostické zprávy i uložené připojení. Kontrolu a změny potvrzujte samostatně. Postupujte podle podrobného návodu pro nainstalovanou verzi; nevynucujte novou instalaci ani nemažte stav obnovy.
-
-Uveďte model TV, firmware, No-root nebo Root, instalační zařízení, krok a chybovou zprávu. Před sdílením odstraňte hesla, klíče, adresy a osobní údaje. Zpráva se nezveřejňuje automaticky.
+Pokud instalace na počítači zůstala nedokončená, na obrazovce s výsledkem vyberte **Prověřit možnosti obnovy** a u otázky **Prověřit možnosti obnovy?** zvolte **Pokračovat**. Průvodce použije stejné uložené připojení k TV. Pokud výsledek operace s balíčky No-root není známý a instalátor nabízí tlačítko **Zkontrolovat stav televizoru**, použijte ho nejdřív. Nabídnutou změnu potvrďte zvlášť. Pokud instalaci stále nelze dokončit, zachovejte uložené připojení i data obnovy.
 
 Pokud No-root nabídne **Zopakovat kontrolu úložiště**, zvolte tuto možnost a zopakujte kontrolu pouze pro čtení na stejném televizoru. Po úspěšné kontrole potvrďte instalaci zvlášť. Pokud instalátor zjistí nedokončenou operaci, zvolte **Prověřit možnosti obnovy**.
 
 Pokud ověřená instalace neotevře Clean Your TV tlačítkem Home, zvolte na obrazovce výsledků v No-root **Diagnostika tlačítka Home** nebo v Root **Zkontrolovat stav televizoru**. No-root zobrazí již zaznamenaný výsledek. Zprávu můžete uložit tlačítkem **Uložit diagnostickou zprávu**.
 
-Po neúspěchu v instalátoru na počítači otevřete **Nahlásit problém**, prohlédněte a zkopírujte návrh a k formuláři přiložte uloženou diagnostickou zprávu, pokud je k dispozici.
+Chcete-li si zprávu ponechat, na obrazovce s výsledkem na počítači zvolte **Uložit diagnostickou zprávu…**. Pokud potřebujete pomoc, otevřete **Nahlásit problém**, prohlédněte návrh a použijte **Zkopírovat návrh** a **Otevřít formulář**. Vložte návrh a přiložte uloženou zprávu, pokud ji máte.
 
 [Nahlásit problém — anglicky](../FEEDBACK.md) · [Obnovení — anglicky](../RECOVERY.md) · [Aktualizace a odstranění — anglicky](../MAINTENANCE.md) · [Další jazyky](../LANGUAGES.md)
 
@@ -110,7 +106,7 @@ Pokud instalátor nemůže ověřit odebrání, závěrečný úklid, ovládán�
 
 Pokud instalátor nemůže ověřit požadovaný úplný restart, uložte a přiložte diagnostickou zprávu. Zachovejte uložené připojení a data obnovy. Neopakujte stále odpojování napájení a nemažte ručně nedokončenou operaci.
 
-Po ověřeném odebrání můžete instalátor zavřít nebo zvolit **Nastavit televizor** a zahájit novou instalaci na stejném televizoru se stejným připojením a edicí.
+Když se na počítači zobrazí **Odebrání Clean Your TV je ověřeno.**, můžete instalátor ukončit tlačítkem **Zavřít**. Tlačítko **Nastavit televizor** spustí novou instalaci na stejném televizoru se stejným připojením a edicí.
 
 **Přeinstalace Root:** S uloženým připojením zvolte **Nastavit televizor → Root** a potvrďte **Přeinstalovat Root?**. Instalátor obnoví LG Home a zcela odstraní Clean Your TV včetně aktualizátorů, Home Helper a uložených předvoleb. Po ověření odstranění nainstaluje a aktivuje balíčky a prostředí Root dodané v tomto instalátoru. Ostatní aplikace TV a stávající přístup root/SSH zůstanou zachovány. Pokud se průvodce v počítači zastaví, otevřete stejný instalátor a zvolte **Pokračovat v přeinstalaci Root**. Po ověření odstranění zvolte **Pokračovat v instalaci Root**. Samotné **Odinstalovat Clean Your TV** nikdy nespustí novou instalaci.
 
