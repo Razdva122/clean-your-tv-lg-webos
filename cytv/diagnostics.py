@@ -221,8 +221,19 @@ def collect_home_report(remote, store, profile, write, *, reconnect=None):
         request = {'cmd': name, 'nonce': session}
         if name == 'diagnostics-start':
             request['durationMs'] = 180000
-        remote.upload(directory + '/control.json',
-                      json.dumps(request).encode(), mode=0o640)
+        raw = json.dumps(request)
+        if profile.get('connection') == 'root-ssh':
+            from .tv_sources import node_adapter
+            # Root SSH uploads use the SSH group. Publish in the checked
+            # Helper state group so the controller can read the request.
+            script = node_adapter('state-permissions',
+                f"contract.atomicRecord({json.dumps(directory)}, 'control', {json.dumps(raw)});"
+                "process.stdout.write('CYTV_DIAGNOSTIC_REQUEST_WRITTEN');")
+            result = remote.run('/usr/bin/node', data=script.encode(), timeout=15)
+            if result.strip() != 'CYTV_DIAGNOSTIC_REQUEST_WRITTEN':
+                raise UserError('TV upload could not be verified. Existing destination was not confirmed.')
+        else:
+            remote.upload(directory + '/control.json', raw.encode(), mode=0o640)
     log = directory + '/controller.log'
     read_log = (
         f'if [ -f {log}.previous ]; then tail -c 131072 {log}.previous || exit; fi; '

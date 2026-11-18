@@ -11,6 +11,47 @@ from cytv.errors import TVCommandError, UserError
 
 
 class HomeDiagnosticsTests(unittest.TestCase):
+    @unittest.skipUnless(os.name == 'posix', 'requires POSIX file group ownership')
+    def test_root_ssh_publishes_diagnostics_with_the_helper_state_group(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            directory = Path(tmp).resolve() / 'helper-state'
+            directory.mkdir()
+            group = (5000 if os.getuid() == 0 else
+                     next((gid for gid in os.getgroups() if gid != os.getegid()), os.getegid()))
+            os.chown(directory, -1, group)
+            control = directory / 'control.json'
+            control.write_text('{}')
+            control.chmod(0o640)
+            os.chown(control, -1, os.getegid())
+            requests = []
+            permissions = []
+
+            class Remote:
+                def upload(self, path, data, mode):
+                    raise AssertionError('Root SSH upload leaves the control record in the SSH group')
+
+                def run(self, command, data=None, timeout=None):
+                    if command == '/usr/bin/node':
+                        script = data.replace(
+                            b'/media/developer/apps/usr/palm/applications/com.local.nativehome/state',
+                            str(directory).encode())
+                        result = subprocess.check_output(['node'], input=script).decode()
+                        requests.append(json.loads(control.read_text()))
+                        current = control.stat()
+                        permissions.append((current.st_gid, current.st_mode & 0o777))
+                        return result
+                    return '\n'.join(json.dumps(dict(event='home-diagnostic',
+                        session=requests[0]['nonce'], trigger=trigger))
+                        for trigger in ('started', 'expired'))
+
+            report = diagnostics.collect_home_report(Remote(), state.Store(tmp),
+                state.target('192.0.2.55', 'no-root', connection='root-ssh'), Mock())
+            self.assertTrue(json.loads(report.read_text())['helper_diagnostics']['complete'])
+            self.assertEqual(permissions, [(group, 0o660), (group, 0o660)])
+            start, stop = requests
+            self.assertEqual(start['cmd'], 'diagnostics-start')
+            self.assertEqual(stop, {'cmd': 'diagnostics-stop', 'nonce': start['nonce']})
+
     def test_collects_one_allowlisted_report_and_stops_recording(self):
         class Remote:
             def __init__(self): self.commands = []
