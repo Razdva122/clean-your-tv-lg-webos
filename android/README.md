@@ -107,6 +107,11 @@ the same connection and asks you to confirm installation separately. If the
 result of a submitted package request is unknown, choose **Installation
 status** and keep the recovery data.
 
+If an operation fails and a report is available, tap the issue draft title on
+the result screen to review the failed step. Choose **Save report** to export
+the existing JSON through Android's file picker and attach it to your issue
+when you are ready.
+
 Published Android exposes install, status, inspection, restore and explicit removal
 in Maintenance; use its retained connection and evidence. An interrupted No-root removal needs its
 verified continuation and separate confirmation; an unknown removal outcome stays

@@ -34,7 +34,7 @@ let selectedConnection = null,
   rootVariant = null;
 let inspecting = false,
   detected = null,
-  reportReady = false;
+  report = null;
 let auth = 'password',
   keyReady = native ? CYTV.hasKey() : false;
 const checks = new Map();
@@ -318,6 +318,10 @@ function result() {
     (ok && setup && !verified);
   const recoveryAction = recoveryPlan ? recoveryPrimary(recovered) : '';
   const cancelled = resultCode === 130;
+  const draft = !ok && !cancelled ? report?.draft : null;
+  const supportDraft = draft
+    ? `<details class="log"><summary>${icon('file')}${esc(draft.title)}</summary><pre>${esc(draft.body)}</pre></details>`
+    : '';
   const waitingCleanup =
     isCleanup() &&
     !connectionFailure() &&
@@ -348,7 +352,7 @@ function result() {
     : cancelled
       ? 'cancelledDesc'
       : 'failedDesc';
-  return `<div class="result-symbol ${complete ? '' : needsReview ? 'review-symbol' : 'error-symbol'}">${icon(complete ? 'check' : 'alert')}</div><section class="center progress-copy ${!ok && !cancelled && !waitingCleanup ? 'error-result' : ''}"><h1>${cancelled ? t('cancelled') : recoveryPlan ? (recovered ? esc(recoveryPlan.summary) : isCleanup() ? (connectionFailure() ? t('removalConnection') : recoveryPlan.titleText ? esc(recoveryPlan.titleText) : t(restartPresentation() ? 'restartRemoval' : 'removalPending')) : t('recoveryReview')) : ok && setup ? t(verified ? 'homeObserved' : 'tvChecksReview') : failureHelp ? esc(failureHelp.title) : t(title)}</h1><p>${recoveryPlan ? esc(recovered ? recoveryPlan.nextStep : isCleanup() ? t('removalPending') : recoveryPlan.summary) : ok && setup ? t('tvChecksDesc') : failureHelp ? esc(failureHelp.detail) : t(desc)}</p><div class="target">${editionName()}<span> / </span>${esc(host)}</div></section>${!ok && !waitingCleanup && errorLogs.size ? `<p class="error-summary error-text" role="alert">${esc([...errorLogs].at(-1))}</p>` : ''}${checkList()}${ok && !recoveryPlan && action === 'install' ? `<div class="recovery-info"><h3>${t('recoveryTitle')}</h3><p>${t('recoveryDesc')}</p><div class="gesture"><kbd>Home</kbd> × 3 <span class="muted"> / 2 ${t('seconds')}</span></div></div>` : ''}${ok && !recoveryPlan && action === 'install' && edition === 'no-root' ? `<div class="recovery-info"><p>${t('tryHomeHelp')}</p><p>${t('resumeHomeHelp')}</p>${selectedConnection === 'root-ssh' ? '' : `<p>${t('sessionHelp')}</p>`}</div>` : ''}${recoveryPlan && !recovered ? recoveryDetails() : ''}${failureHelp && !isCleanup() ? `<section class="recovery-info" role="note"><p>${esc(failureHelp.nextStep)}</p></section>` : ''}${logBlock()}<footer class="bottom">${reportReady ? `<button class="${recoveryAction ? 'secondary' : 'primary'}" data-action="save-report">${t('saveReport')}${icon('file')}</button>` : ''}${recoveryPlan ? `${recoveryAction}${isCleanup() && !recovered && connectionFailure() ? `<button class="secondary" data-action="to-connection">${t('toConnection')}</button>` : ''}<button class="secondary" data-action="home">${t('done')}</button>` : !ok ? `${!failureHelp || failureHelp.canEditConnection ? `<button class="secondary" data-action="to-connection">${t('toConnection')}</button>` : ''}<button class="text-button maintenance-link" data-action="home">${t('done')}</button>` : reportReady ? `<button class="secondary" data-action="home">${t('done')}</button>` : primary('done', 'home', 'check')}</footer>`;
+  return `<div class="result-symbol ${complete ? '' : needsReview ? 'review-symbol' : 'error-symbol'}">${icon(complete ? 'check' : 'alert')}</div><section class="center progress-copy ${!ok && !cancelled && !waitingCleanup ? 'error-result' : ''}"><h1>${cancelled ? t('cancelled') : recoveryPlan ? (recovered ? esc(recoveryPlan.summary) : isCleanup() ? (connectionFailure() ? t('removalConnection') : recoveryPlan.titleText ? esc(recoveryPlan.titleText) : t(restartPresentation() ? 'restartRemoval' : 'removalPending')) : t('recoveryReview')) : ok && setup ? t(verified ? 'homeObserved' : 'tvChecksReview') : failureHelp ? esc(failureHelp.title) : t(title)}</h1><p>${recoveryPlan ? esc(recovered ? recoveryPlan.nextStep : isCleanup() ? t('removalPending') : recoveryPlan.summary) : ok && setup ? t('tvChecksDesc') : failureHelp ? esc(failureHelp.detail) : t(desc)}</p><div class="target">${editionName()}<span> / </span>${esc(host)}</div></section>${!ok && !waitingCleanup && errorLogs.size ? `<p class="error-summary error-text" role="alert">${esc([...errorLogs].at(-1))}</p>` : ''}${checkList()}${ok && !recoveryPlan && action === 'install' ? `<div class="recovery-info"><h3>${t('recoveryTitle')}</h3><p>${t('recoveryDesc')}</p><div class="gesture"><kbd>Home</kbd> × 3 <span class="muted"> / 2 ${t('seconds')}</span></div></div>` : ''}${ok && !recoveryPlan && action === 'install' && edition === 'no-root' ? `<div class="recovery-info"><p>${t('tryHomeHelp')}</p><p>${t('resumeHomeHelp')}</p>${selectedConnection === 'root-ssh' ? '' : `<p>${t('sessionHelp')}</p>`}</div>` : ''}${recoveryPlan && !recovered ? recoveryDetails() : ''}${failureHelp && !isCleanup() ? `<section class="recovery-info" role="note"><p>${esc(failureHelp.nextStep)}</p></section>` : ''}${supportDraft}${logBlock()}<footer class="bottom">${report ? `<button class="${recoveryAction ? 'secondary' : 'primary'}" data-action="save-report">${t('saveReport')}${icon('file')}</button>` : ''}${recoveryPlan ? `${recoveryAction}${isCleanup() && !recovered && connectionFailure() ? `<button class="secondary" data-action="to-connection">${t('toConnection')}</button>` : ''}<button class="secondary" data-action="home">${t('done')}</button>` : !ok ? `${!failureHelp || failureHelp.canEditConnection ? `<button class="secondary" data-action="to-connection">${t('toConnection')}</button>` : ''}<button class="text-button maintenance-link" data-action="home">${t('done')}</button>` : report ? `<button class="secondary" data-action="home">${t('done')}</button>` : primary('done', 'home', 'check')}</footer>`;
 }
 function wallpapers() {
   return `${step()}<section class="page-intro"><h1>${t('wallpapers')}</h1><p>${t('wallpaperInstructions')}</p></section><div class="wallpaper-limit" role="note">${icon('alert')}<p>${t('wallpaperLimit')}</p></div><footer class="bottom"><div class="footnote">${icon('wifi')}${t('networkFoot')}</div></footer>`;
@@ -451,7 +455,7 @@ function start(retry = false) {
   recoveryPlan = null;
   failureHelp = null;
   hadError = false;
-  reportReady = false;
+  report = null;
   logs = [];
   errorLogs.clear();
   checks.clear();
@@ -568,7 +572,7 @@ window.receiveNative = function (event) {
     recoveryPlan = null;
     failureHelp = null;
     hadError = false;
-    reportReady = false;
+    report = null;
     logs = [];
     errorLogs.clear();
     checks.clear();
@@ -631,7 +635,7 @@ window.receiveNative = function (event) {
     screen = 'result';
     render();
   } else if (event.kind === 'report-ready') {
-    reportReady = true;
+    report = event;
     if (screen === 'result') render();
   } else if (event.kind === 'report-saved') {
     info(t('reportSaved'));

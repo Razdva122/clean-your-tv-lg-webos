@@ -17,10 +17,12 @@ let browser;
     localStorage.setItem('cytv-language', 'en');
     window.requests = [];
     window.answers = [];
+    window.exports = 0;
     window.CYTV = {
       snapshot: () => '[]',
       hasKey: () => true,
       answer: (raw) => answers.push(JSON.parse(raw)),
+      saveReport: () => exports++,
       start: (raw) => requests.push(JSON.parse(raw))
     };
   });
@@ -187,8 +189,64 @@ let browser;
       assert.notEqual(calls[0].yes, true);
     }
   }
+  await page.context().setOffline(true);
+  await page.evaluate((profile) => {
+    requests.length = 0;
+    receiveNative({
+      kind: 'started',
+      config: { ...profile, action: 'install' }
+    });
+    receiveNative({
+      kind: 'report-ready',
+      name: 'diagnostic-123456abcdef.json',
+      draft: {
+        title: '[cytv] No-root install: install packages',
+        body: 'Observed phase: install-packages\nReason: FAILED_IPKG_INSTALL'
+      }
+    });
+    receiveNative({ kind: 'finished', code: 2 });
+  }, profile);
+  const draft = page.getByText('[cytv] No-root install: install packages', {
+    exact: true
+  });
+  assert.equal(await draft.isVisible(), true);
+  await draft.click();
+  assert.equal(
+    await page.getByText(/Reason: FAILED_IPKG_INSTALL/).isVisible(),
+    true
+  );
+  assert.deepEqual(await page.evaluate(() => [exports, requests]), [0, []]);
+
+  const save = page.getByRole('button', { name: 'Save report' });
+  await save.click(); // The picker was cancelled, so Android sends no result event.
+  assert.equal(await save.isVisible(), true);
+  assert.equal(await draft.isVisible(), true);
+  assert.deepEqual(await page.evaluate(() => [exports, requests]), [1, []]);
+
+  await save.click();
+  await page.evaluate(() => receiveNative({ kind: 'report-error' }));
+  assert.equal(
+    await page
+      .getByText('Could not save the report. Please try again.')
+      .isVisible(),
+    true
+  );
+  await page.locator('[data-action=close-info]').click();
+  assert.equal(await save.isVisible(), true);
+  assert.equal(await draft.isVisible(), true);
+  assert.deepEqual(await page.evaluate(() => [exports, requests]), [2, []]);
+
+  await page.evaluate((profile) => {
+    receiveNative({
+      kind: 'started',
+      config: { ...profile, action: 'install' }
+    });
+    receiveNative({ kind: 'finished', code: 2 });
+  }, profile);
+  assert.equal(await save.count(), 0);
+  assert.equal(await draft.count(), 0);
   await browser.close();
-  console.log('Android recovery policy dispatch passed for both editions.');
+  console.log('Android recovery policy and offline diagnostic export passed.');
 })().catch(async (error) => {
   if (browser) await browser.close();
   console.error(error);

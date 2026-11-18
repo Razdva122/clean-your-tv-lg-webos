@@ -383,10 +383,50 @@ class BridgeTests(unittest.TestCase):
             self.assertEqual(json.loads(report.read_text())['contract_events'],error.contract_events)
             callbacks=module.Callbacks(native,directory=tmp)
             callbacks.write('  '+str(report))
-            self.assertEqual(native.events[0],{'kind':'report-ready','name':report.name})
+            self.assertEqual(native.events[0]['kind'], 'report-ready')
+            self.assertEqual(native.events[0]['name'], report.name)
             native.events.clear();other=Path(tmp)/'private.json';other.write_text('{}')
             callbacks.write(str(other))
             self.assertFalse(any(e['kind']=='report-ready' for e in native.events))
+
+    def test_failure_report_event_keeps_the_original_failed_step_and_sanitizes_the_draft(self):
+        module = self.module()
+        events = []
+
+        class Native:
+            def emit(self, raw):
+                events.append(json.loads(raw))
+
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp) / 'reports'
+            folder.mkdir()
+            path = folder / 'diagnostic-123456abcdef.json'
+            report = {'action': 'doctor', 'edition': 'no-root', 'phase': 'ssh-connect',
+                      'reason_code': 'ssh-timeout', 'host': '192.0.2.50',
+                      'first_failure': {'action': 'install', 'phase': 'install-packages',
+                                        'cytv_version': '1.2.3',
+                                        'luna': {'reason': 'FAILED_IPKG_INSTALL'}},
+                      'trace': 'private exception'}
+            path.write_text(json.dumps(report))
+            console = module.AndroidConsole(module.Callbacks(Native(), directory=tmp))
+            console.report(path)
+            event = next(event for event in events if event['kind'] == 'report-ready')
+            self.assertEqual(event['name'], path.name)
+            draft = event.get('draft', {})
+            self.assertIn('No-root install: install packages', draft.get('title', ''))
+            self.assertIn('Observed phase: install-packages', draft['body'])
+            self.assertIn('Reason: FAILED_IPKG_INSTALL', draft['body'])
+            self.assertIn('Later observation: doctor at ssh-connect (ssh-timeout)', draft['body'])
+            for private in (report['host'], report['trace'], str(path)):
+                self.assertNotIn(private, json.dumps(event))
+            self.assertEqual(json.loads(path.read_text()), report)
+
+            # An unreadable summary leaves the existing file available to export.
+            events.clear()
+            path.write_text('invalid JSON')
+            console.report(path)
+            event = next(event for event in events if event['kind'] == 'report-ready')
+            self.assertEqual(event, {'kind': 'report-ready', 'name': path.name})
 
     def test_edition_defaults_and_identity_path(self):
         module = self.module()

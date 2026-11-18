@@ -3,7 +3,7 @@ import json
 import re
 from pathlib import Path
 
-from cytv import cli, state, i18n
+from cytv import cli, diagnostics, state, i18n
 from cytv.desktop import RETRY_STORAGE_CHECK, RETRY_STORAGE_PROMPT
 from cytv.transport import SSH
 from cytv.terminal import Console
@@ -45,7 +45,16 @@ class Callbacks:
         if self.directory and message.strip().endswith('.json'):
             path = Path(message.strip())
             if path.is_file() and path.resolve().parent == self.directory / 'reports' and re.fullmatch(r'diagnostic-[a-f0-9]{12}\.json', path.name):
-                self.emit(kind='report-ready', name=path.name)
+                event = dict(kind='report-ready', name=path.name)
+                limit = 1048576  # Match the native export limit.
+                try:
+                    with path.open('rb') as stream:
+                        content = stream.read(limit + 1)
+                    if len(content) <= limit:
+                        event['draft'] = diagnostics.issue_draft(json.loads(content))
+                except (OSError, ValueError, RecursionError):
+                    pass  # Keep the existing export available if its draft cannot be read.
+                self.emit(**event)
         self.context.append(message)
         self.context = self.context[-60:]
         self.emit(kind='log', text=message)
@@ -180,7 +189,7 @@ class AndroidConsole(Console):
 
 def inspect_root_recovery(config, callbacks, payload=None):
     """Use original Android records for the submitted-install read, not a new CLI login."""
-    from cytv import diagnostics, prompts, root_passive
+    from cytv import prompts, root_passive
     from cytv.errors import UserError
     from cytv.recovery import plan, REVIEW, KEPT, BLOCKED
     i18n.set_language(config.get('language', 'ru'))
