@@ -859,7 +859,7 @@ class Wizard(QMainWindow):
                 self.badge.setText(self.title.text())
             if resume_root_reinstall:
                 profile = dict(self.selected_profile)
-                self.offer_root_reinstall(profile).setFocus()
+                self.offer_root_reinstall(profile)
                 if (self.failure_help or {}).get('code', '').startswith('ssh-'):
                     self.button('Connection details', lambda: self.edit_connection(profile, removal=True, reinstall=True))
                 elif recover or (retry_removal and self.recovery_plan.get('state') == 'blocked'):
@@ -875,11 +875,11 @@ class Wizard(QMainWindow):
                 self.title.setText(tr(self.recovery_plan['summary']))
                 self.badge.setText(self.title.text())
                 self.subtitle.setText(tr(self.recovery_plan['next_step']))
-                self.button('Check TV status', lambda: self.start('status', profile), True).setFocus()
+                self.button('Check TV status', lambda: self.start('status', profile), True)
             elif continue_removal:
                 profile = dict(self.recovery_profile)
                 self.button('Continue removal', lambda: self.start('uninstall', profile,
-                            removal_operation=continue_removal), True).setFocus()
+                            removal_operation=continue_removal), True)
             elif doctor_ready:
                 self.show_doctor_success()
             elif completed and cleanup and self.recovery_profile is not None:
@@ -893,7 +893,7 @@ class Wizard(QMainWindow):
                 if restore_for_removal:
                     self.rail_title.setText(tr('Uninstall Clean Your TV'))
                     self.button('Return to LG Home', lambda: self.start('restore', profile,
-                                removal_operation=restore_for_removal), True).setFocus()
+                                removal_operation=restore_for_removal), True)
                     self.button('Review recovery options', lambda: self.start('recover', profile))
                 elif self.command == 'restore' and advice['action'] == 'retry-removal':
                     self.button('Try again', lambda: self.start('restore', profile,
@@ -935,7 +935,7 @@ class Wizard(QMainWindow):
                                and not resume_root_reinstall)
             if connection_help:
                 profile = dict(self.selected_profile)
-                self.button('Check connection again', lambda: self.start('doctor', profile), True).setFocus()
+                self.button('Check connection again', lambda: self.start('doctor', profile), True)
                 actions = QHBoxLayout()
                 self.form_layout.addLayout(actions)
                 if sys.platform == 'darwin' and self.failure_help['code'] in ('ssh-access-denied', 'ssh-unreachable', 'ssh-timeout'):
@@ -947,7 +947,7 @@ class Wizard(QMainWindow):
             if retry_local_storage:
                 profile = dict(self.selected_profile) if self.selected_profile else None
                 retry_options = {'reconnect_after_reset': True} if self.reconnecting_after_reset and profile else {}
-                self.button('Try again', lambda: self.start('install', profile, **retry_options), True).setFocus()
+                self.button('Try again', lambda: self.start('install', profile, **retry_options), True)
             if failed and self.failure_help and self.failure_help.get('can_reconnect_after_reset') and self.selected_profile:
                 reset_profile = dict(self.selected_profile)
                 self.button('Reconnect after factory reset',
@@ -961,8 +961,7 @@ class Wizard(QMainWindow):
                                           (failed or setup_review) and not retry_removal and not connection_help
                                           and not resume_root_reinstall and not status_refresh and not retry_local_storage,
                                           layout=report_actions)
-                if doctor_ready:
-                    save_report.setObjectName('doctorReport')
+                save_report.setObjectName('resultReport')
                 if failed and not status_refresh:
                     self.subtitle.setText(tr('Save the report from this failed attempt and attach it to your issue. Recovery data has been kept.'))
             elif failed and not status_refresh:
@@ -1029,6 +1028,12 @@ class Wizard(QMainWindow):
 
             if removal_reconnect and retry_button is not None:
                 self.watch_removal_tv(profile, removal_reconnect, retry_button)
+            else:
+                # QMainWindow buttons need focus for Return to activate the default.
+                default_action = next((button for button in self.form.findChildren(QPushButton)
+                                       if button.isDefault()), None)
+                if default_action is not None:
+                    default_action.setFocus()
 
     def watch_removal_tv(self, profile, reconnect, retry_button):
         from .recovery import wait_for_removal_tv
@@ -1104,7 +1109,7 @@ class Wizard(QMainWindow):
         self.details_toggle.setChecked(False)
         self.details.hide()
         profile = dict(self.selected_profile)
-        self.button('Continue setup', lambda: self.start('install', profile), True).setFocus()
+        self.button('Continue setup', lambda: self.start('install', profile), True)
 
     def open_network_settings(self):
         try:

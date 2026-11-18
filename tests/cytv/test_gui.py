@@ -269,6 +269,96 @@ class GuiTests(unittest.TestCase):
         self.assertTrue(proceed.isDefault())
         self.assertEqual(actions['Сохранить диагностический отчёт…'].width(), proceed.width())
 
+    def test_translated_recovery_result_actions_fit_and_follow_keyboard(self):
+        from PySide6.QtCore import Qt
+        from PySide6.QtTest import QSignalSpy, QTest
+        from cytv import i18n
+        from cytv.errors import LocalRecoveryError
+        from cytv.failure_help import for_error
+        from cytv.recovery import SEPARATE
+
+        no_root = {'host': '192.0.2.10', 'port': 9922, 'edition': 'no-root'}
+        root = {'host': '192.0.2.10', 'port': 22, 'edition': 'root'}
+        removal = {'disposition': 'clean-removal', 'summary': 'Removal is still in progress.'}
+        restart = dict(removal, state='waiting', reason='restart-required')
+        complete = dict(removal, state='complete', removed=True, verified_clean=True,
+                        summary='Clean Your TV removal is verified.',
+                        next_step=SEPARATE)
+        storage_error = LocalRecoveryError('directory-access', storage_full=True, write_precheck=True)
+        reset_error = type('BadHostKeyException', (Exception,), {})()
+        report_action = 'Save diagnostic report…'
+        cases = (
+            ('install', [('selected-profile', no_root), ('failure-help',
+                for_error(storage_error, 'prepare-payload', no_root))], 2, 'Try again', None),
+            ('uninstall', [('recovery', no_root), ('recovery-plan', restart)], 2, 'Try again', None),
+            ('uninstall', [('root-reinstall', True), ('selected-profile', root),
+                ('recovery', root), ('recovery-plan', restart)], 2, 'Continue Root reinstallation', None),
+            ('install', [('selected-profile', no_root), ('failure-help',
+                for_error(reset_error, 'ssh-connect', no_root, has_reset_source=lambda: True))],
+                2, report_action, 'Reconnect after factory reset'),
+            ('uninstall', [('recovery', no_root), ('recovery-plan', complete)],
+                0, 'Back to start', 'Set up my TV'),
+        )
+        report = Path(self.directory.name) / 'result.json'
+        report.write_text('{}', encoding='utf-8')
+        for language in i18n.LANGUAGES:
+            if language == 'auto':
+                continue
+            for command, events, result, primary, secondary in cases:
+                with self.subTest(language=language, action=primary, command=command):
+                    with patch('cytv.i18n.system_languages', return_value=[language]):
+                        w = Wizard()
+                    try:
+                        w.resize(w.minimumSize())
+                        w.show()
+                        w.activateWindow()
+                        self.app.processEvents()
+                        w.preview.hide()
+                        w.command = command
+                        w.button('Continue', lambda: None).setFocus()
+                        for event, payload in events:
+                            w.receive(event, payload)
+                        w.receive('text', 'Read the result below before continuing.')
+                        w.receive('report', report)
+                        with (patch.object(w, 'saved_root_reinstall', return_value=True),
+                              patch.object(w, 'start'), patch.object(w, 'home'), patch.object(w, 'save_report')):
+                            w.receive('done', result)
+                            self.app.processEvents()
+
+                            self.assertEqual(w.size(), w.minimumSize())
+                            buttons = w.form.findChildren(QPushButton)
+                            actions = {b.text(): b for b in buttons}
+                            default = actions[i18n.translate(primary)]
+                            export = actions[i18n.translate(report_action)]
+                            self.assertEqual([b for b in buttons if b.isDefault()], [default])
+                            self.assertIs(self.app.focusWidget(), default)
+                            primary_clicks = QSignalSpy(default.clicked)
+                            QTest.keyClick(default, Qt.Key.Key_Return)
+                            self.assertEqual(primary_clicks.count(), 1)
+
+                            reached = set()
+                            while (focused := self.app.focusWidget()) not in reached:
+                                self.assertIsNotNone(focused)
+                                reached.add(focused)
+                                QTest.keyClick(focused, Qt.Key.Key_Tab)
+                            for button in buttons:
+                                self.assertIn(button, reached)
+                                self.assertTrue(w.rect().contains(button.mapTo(w, button.rect().bottomRight())),
+                                                button.text())
+                                self.assertGreaterEqual(button.width(), button.minimumSizeHint().width(), button.text())
+                            if secondary:
+                                action = actions[i18n.translate(secondary)]
+                                action.setFocus()
+                                secondary_clicks = QSignalSpy(action.clicked)
+                                QTest.keyClick(action, Qt.Key.Key_Return)
+                                self.assertEqual(secondary_clicks.count(), 0)
+                            export.setFocus()
+                            export_clicks = QSignalSpy(export.clicked)
+                            QTest.keyClick(export, Qt.Key.Key_Space)
+                            self.assertEqual(export_clicks.count(), 1)
+                    finally:
+                        w.close()
+
     def test_debloat_restoration_defaults_to_skip_without_cancelling_removal(self):
         from cytv import debloat, i18n
         from cytv.desktop import Channel
@@ -1328,6 +1418,7 @@ class GuiTests(unittest.TestCase):
         for button in w.form.findChildren(QPushButton):
             self.assertTrue(w.rect().contains(button.mapTo(w, button.rect().bottomRight())))
             self.assertGreaterEqual(button.height(), 44)
+            self.assertGreaterEqual(button.width(), button.minimumSizeHint().width(), button.text())
 
     def test_edited_connection_is_validated_and_checked_without_installation(self):
         calls = []
