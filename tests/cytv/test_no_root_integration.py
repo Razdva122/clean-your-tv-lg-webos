@@ -1848,6 +1848,9 @@ class OriginalOperationIntegration(unittest.TestCase):
         self.assertEqual(questions, [])
         self.assertIn(('recovery', self.profile), events)
         self.assertEqual((receipt.read_bytes(), capsule.read_bytes()), evidence)
+        self.publish_stop()
+        stop_generation = Path(operations.HELPER_STATE) / 'stop-generation'
+        stopped = stop_generation.read_bytes()
         reopen('recover')
         self.assertEqual(len(questions), 2)
         self.assertIsNone(self.store.pending(self.profile))
@@ -1856,6 +1859,12 @@ class OriginalOperationIntegration(unittest.TestCase):
                          {'key': 'original-secret'})
         self.assertEqual(vendor_status_checks, [])
         self.assertFalse(any(call[1].endswith('/dev/remove') for call in self.remote.calls))
+        self.assertFalse(any(call[0] == 'luna' and call[1].endswith('/launch') for call in self.remote.calls))
+        self.assertEqual(stop_generation.read_bytes(), stopped)
+        self.assertEqual(stop_generation.with_name('blocked').read_bytes(), b'explicit-stop')
+        completion = [value for kind, value in events if kind == 'recovery-plan'][-1]
+        self.assertEqual(completion['state'], 'complete')
+        self.assertIn('choose Start Helper', completion['next_step'])
 
     def test_recovery_finishes_configuration_with_unusable_staging(self):
         from cytv.desktop import DesktopConsole

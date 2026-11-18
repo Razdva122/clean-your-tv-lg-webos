@@ -6,6 +6,7 @@ from time import monotonic
 from . import prompts
 from .errors import TVRejected, UserError
 from .operations import require_removal_idle
+from .outcomes import START_HELPER
 from .recovery_state import assess, observation_diagnostics, setup_actions, unsubmitted_removal
 from .recovery_ui import removal_action
 
@@ -372,8 +373,9 @@ def recover(installer, ask, write, non_interactive=False, initial_observation=No
                 return
             plan(write,'ready','The original No-root operation can continue its verified remaining work. Unknown package requests will not be repeated.',actions=assessment['actions'])
             if prompts.confirm('Continue the original No-root operation?',ask,write):
-                installer.continue_no_root(pending)
-                plan(write,'complete','Recovery record finished. Original evidence was archived.',SEPARATE)
+                completed = installer.continue_no_root(pending)
+                next_step = START_HELPER if completed.get('activation_cancelled') is True else SEPARATE
+                plan(write, 'complete', 'Recovery record finished. Original evidence was archived.', next_step)
             else:write(KEPT)
             return
         if 'inspect-support' in assessment['actions']:
