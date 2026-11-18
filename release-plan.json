@@ -41,6 +41,13 @@
         418
       ],
       "summary": "Record confirmed C1 Root compatibility from #418"
+    },
+    {
+      "pr": 727,
+      "issues": [
+        152
+      ],
+      "summary": "Fix stale profile blocks after verified removal (#152)"
     }
   ],
   "excluded": [],
