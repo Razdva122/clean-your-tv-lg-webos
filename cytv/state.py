@@ -542,6 +542,53 @@ class Store:
         self.finish(profile)
         self.diagnostic_removal=value
 
+    def reconcile_removed_profiles(self, profile):
+        """Archive superseded install/removal goals under the caller's TV lock.
+
+        Full-project removal verifies device state across editions. Older local
+        receipts at that address must not keep blocking a fresh installation.
+        Keep the original receipt and the removal proof before clearing its slot.
+        """
+        profiles = [profile, *self.profiles(require_operation_profiles=True)]
+        sources = {self.device_path(p): p for p in profiles if p['host'] == profile['host']}
+        for directory, source in sources.items():
+            completed = directory / 'clean-removal.json'
+            if (directory.is_symlink() or completed.is_symlink() or self.pending(source)
+                    or (directory / SSH_IDENTITY_REVIEW).exists()
+                    or (directory / SSH_IDENTITY_REVIEW).is_symlink()):
+                continue
+            raw, receipt = self._read_operation(completed, require_access=True)
+            result = receipt.get('result') if receipt else None
+            if (not receipt or receipt.get('recovery_protocol') != 'clean-removal-v1'
+                    or receipt.get('action') != 'uninstall' or receipt.get('full_project') is not True
+                    or receipt.get('stage') != 'verified-clean' or not isinstance(result, dict)
+                    or result.get('removed') is not True or result.get('verified_clean') is not True
+                    or result.get('restart_required') is True
+                    or not re.fullmatch('[a-f0-9]{32}', str(receipt.get('removal_operation', '')))):
+                continue
+            cutoff = completed.stat().st_mtime_ns
+            operation = receipt['removal_operation']
+            for other_directory in sources:
+                pending_path = other_directory / 'operation.json'
+                if (other_directory == directory or other_directory.is_symlink() or pending_path.is_symlink()
+                        or (other_directory / SSH_IDENTITY_REVIEW).exists()
+                        or (other_directory / SSH_IDENTITY_REVIEW).is_symlink()):
+                    continue
+                original, pending = self._read_operation(pending_path, require_access=True)
+                if not pending or pending.get('action') not in ('install', 'uninstall'):
+                    continue
+                original_stat = pending_path.stat()
+                if original_stat.st_mtime_ns >= cutoff:
+                    continue
+                archive = 'operation-superseded-' + operation + '-' + hashlib.sha256(original).hexdigest()[:12] + '.json'
+                private_write(other_directory / archive, original)
+                private_write(other_directory / ('superseded-removal-' + operation + '.json'), raw)
+                # Cooperating writers share the TV lock; also retain a receipt
+                # changed externally while the archive was being written.
+                if pending_path.stat() == original_stat and pending_path.read_bytes() == original:
+                    pending_path.unlink()
+                    sync_directory(other_directory)
+
     def recovery(self, profile, action):
         path = self.device_dir(profile) / ('recovery-' + uuid.uuid4().hex + '.json')
         private_write(path, json.dumps({'action': action, 'stage': 'pending'}).encode())
