@@ -23,6 +23,29 @@ except ImportError:
 
 @unittest.skipUnless(HAS_QT, 'Desktop build dependencies are optional for CLI tests')
 class DesktopRecoveryTests(unittest.TestCase):
+    def test_root_setup_offers_one_choice_to_review_the_original_no_root_removal(self):
+        self.store.finish(self.profile)
+        original = state.target(self.profile['host'], 'no-root', 2222, connection='root-ssh')
+        self.store.save(original)
+        (self.store.device_dir(original) / 'known_hosts').write_bytes(b'original pin')
+        pending = self.store.request_clean_removal(original)
+        w = self.window()
+        w.start('install', state.target(original['host'], 'root'))
+        self.pump(lambda: w.pending is not None or not w.running)
+        self.assertEqual(self.connections, [])
+        review = self.button(w, 'Review recovery options')
+        self.assertIsNotNone(review, w.details.toPlainText())
+        self.assertTrue(self.button(w, 'Cancel').isDefault())
+        review.click()
+        self.pump(lambda: w.pending is not None or not w.running)
+        self.assertEqual(self.connections, [original])
+        self.assertEqual(w.recovery_profile, original)
+        self.assertEqual(w.pending.title, 'Continue removing Clean Your TV?')
+        w.submit('n')
+        self.pump(lambda: not w.running)
+        self.assertEqual(self.store.pending(original), pending)
+        self.assertEqual(self.remote.uploads, {})
+
     def test_storage_preflight_retries_only_failed_check_before_install_confirmation(self):
         for decision in ('cancel-retry', 'cancel-install', 'pending', 'late-pending', 'legacy-uninstall', 'identity',
                          'check-fails-again', 'install'):

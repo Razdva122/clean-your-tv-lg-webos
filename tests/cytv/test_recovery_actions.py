@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 from cytv import state
 from cytv.desktop import DesktopConsole
@@ -14,6 +14,144 @@ from cytv.terminal import Console
 
 
 class RecoveryActionTests(unittest.TestCase):
+    def test_root_setup_reviews_the_original_no_root_uninstall_with_one_choice(self):
+        from cytv import cli
+        from cytv.operations import Installer
+
+        for frontend in ('console', 'desktop'):
+            with self.subTest(frontend=frontend), tempfile.TemporaryDirectory() as tmp:
+                store = state.Store(tmp)
+                original = state.target('tv.local', 'no-root', 2222, Path(tmp) / 'saved-key',
+                                        connection='root-ssh')
+                store.save(original)
+                directory = store.device_path(original)
+                (directory / 'known_hosts').write_bytes(b'original pin')
+                store.request_clean_removal(original)
+                before = {path.name: path.read_bytes() for path in directory.iterdir()}
+                connected, prompts, events = [], [], []
+                remote = Mock()
+
+                def connect(profile, path, secret, trust, *, persist=True):
+                    connected.append((profile, path, persist, trust('changed fingerprint', True)))
+                    return remote
+
+                def answer(prompt):
+                    prompts.append(prompt)
+                    return 'y' if len(prompts) == 1 else 'n'
+
+                write = (DesktopConsole(lambda kind, value: events.append((kind, value))) if frontend == 'desktop'
+                         else Console(lambda value: events.append(value)))
+                with patch('cytv.cli.package.verify_payload', return_value={}), \
+                        patch.object(Installer, 'continue_clean_removal', side_effect=AssertionError('Removal requires consent')):
+                    code = cli.main(['install', '--host', 'tv.local', '--edition', 'root',
+                                     '--identity', str(Path(tmp) / 'root-only-key'),
+                                     '--data-dir', tmp, '--language', 'en'],
+                                    ask=answer, connect=connect, write=write)
+
+                self.assertEqual(code, 0, events)
+                self.assertEqual(len(prompts), 2, prompts)
+                self.assertIn('Review recovery options for this saved connection?', prompts[0])
+                self.assertIn('Continue removing Clean Your TV?', prompts[1])
+                self.assertEqual(connected, [(original, directory, False, False)])
+                if frontend == 'desktop':
+                    self.assertIn(('recovery', original), events)
+                remote.close.assert_called_once()
+                self.assertIsNone(store.saved_profile(state.target('tv.local', 'root')))
+                self.assertEqual({path.name: path.read_bytes() for path in directory.iterdir() if path.is_file()}, before)
+
+    def test_root_setup_keeps_unavailable_or_ambiguous_original_profile_records(self):
+        from cytv import cli
+
+        for condition, message in (
+                ('missing-profile', 'The original saved TV connection is missing'),
+                ('inaccessible-profile', 'Some saved TV connections could not be read'),
+                ('missing-pin', 'The original saved TV connection and host key are required'),
+                ('ambiguous', 'More than one saved TV connection')):
+            with self.subTest(condition=condition), tempfile.TemporaryDirectory() as tmp:
+                store = state.Store(tmp)
+                original = state.target('tv.local', 'no-root', 4234)
+                store.save(original)
+                directory = store.device_path(original)
+                known = directory / 'known_hosts'
+                known.write_bytes(b'original pin')
+                store.request_clean_removal(original)
+                if condition == 'missing-profile':
+                    (directory / 'profile.json').unlink()
+                elif condition == 'missing-pin':
+                    known.unlink()
+                elif condition == 'ambiguous':
+                    other = state.target('tv.local', 'no-root', 2222, connection='root-ssh')
+                    store.save(other)
+                    store.request_clean_removal(other)
+                before = {path: path.read_bytes() for path in Path(tmp).glob('*/*') if path.is_file()}
+                messages = []
+                no_io = Mock(side_effect=AssertionError('A blocked review must not connect or prompt'))
+                read_text = Path.read_text
+
+                def read(path, *args, **kwargs):
+                    if path == directory / 'profile.json' and condition == 'inaccessible-profile':
+                        raise PermissionError('PRIVATE path')
+                    return read_text(path, *args, **kwargs)
+
+                with patch.object(Path, 'read_text', read):
+                    code = cli.main(['install', '--host', 'tv.local', '--edition', 'root',
+                                     '--data-dir', tmp, '--language', 'en'],
+                                    ask=no_io, connect=no_io, write=messages.append)
+                self.assertEqual(code, 2, messages)
+                no_io.assert_not_called()
+                self.assertIn(message, ' '.join(' '.join(messages).split()))
+                self.assertEqual({path: path.read_bytes() for path in before}, before)
+
+    def test_root_setup_stops_on_cancel_or_changed_ssh_identity(self):
+        from cytv import cli
+        from paramiko import BadHostKeyException, ECDSAKey
+
+        for outcome in ('cancel', 'non-interactive', 'changed-identity', 'receipt-changed'):
+            with self.subTest(outcome=outcome), tempfile.TemporaryDirectory() as tmp:
+                store = state.Store(tmp)
+                original = state.target('tv.local', 'no-root')
+                store.save(original)
+                directory = store.device_path(original)
+                (directory / 'known_hosts').write_bytes(b'original pin')
+                store.request_clean_removal(original)
+                before = {path.name: path.read_bytes() for path in directory.iterdir()}
+                messages, prompts, attempts = [], [], []
+
+                def answer(prompt):
+                    prompts.append(prompt)
+                    if outcome == 'receipt-changed':
+                        store.checkpoint(original, stage='removal-in-progress')
+                        before['operation.json'] = (directory / 'operation.json').read_bytes()
+                    return 'n' if outcome == 'cancel' else 'y'
+
+                def connect(profile, path, secret, trust, *, persist=True):
+                    attempts.append((profile, path, persist, trust('different fingerprint', False)))
+                    raise BadHostKeyException(profile['host'], ECDSAKey.generate(), ECDSAKey.generate())
+
+                with patch('cytv.cli.package.verify_payload', return_value={}), \
+                        patch('cytv.cli.Installer') as installer:
+                    flags = ['--non-interactive', '--yes'] if outcome == 'non-interactive' else []
+                    code = cli.main(['install', '--host', 'tv.local', '--edition', 'root',
+                                     '--data-dir', tmp, '--language', 'en', *flags],
+                                    ask=answer, connect=connect, write=messages.append)
+                if outcome == 'non-interactive':
+                    self.assertEqual(prompts, [])
+                else:
+                    self.assertEqual(len(prompts), 1, messages)
+                    self.assertIn('Review recovery options for this saved connection?', prompts[0])
+                if outcome == 'cancel':
+                    self.assertEqual(code, 130)
+                    self.assertEqual(attempts, [])
+                elif outcome in ('receipt-changed', 'non-interactive'):
+                    self.assertEqual(code, 2)
+                    self.assertEqual(attempts, [])
+                else:
+                    self.assertEqual(code, 1)
+                    self.assertEqual(attempts, [(original, directory, False, False)])
+                    self.assertIn('TV identity changed', ' '.join(messages))
+                installer.assert_not_called()
+                self.assertEqual({path.name: path.read_bytes() for path in directory.iterdir() if path.is_file()}, before)
+
     def test_setup_projection_obeys_assessment_priority(self):
         from cytv.recovery_state import setup_actions
         root = {'edition':'root'}

@@ -204,11 +204,12 @@ Existing console commands remain available in the separately distributed CLI.
 
 If a No-root installation or removal remains unfinished after **Check TV status**, connection
 diagnostics or **Return to LG Home**, click **Review recovery options**. The wizard
-keeps the same TV, edition and SSH port, even when several connections are saved.
-It asks before inspection and before each supported change, with No selected by
-default. Recovery never starts a new installation automatically. **Set up my TV**
-also enters recovery when it finds a retained operation. Returning to LG Home
-alone does not complete removal. If the result of a No-root package request is
+uses the saved connection for the operation. If setup finds a single unfinished
+operation from another edition at that address, choose **Review recovery options**
+to connect using its original profile and verify the TV's saved SSH identity.
+The wizard asks before inspection and before each supported change, with No
+selected by default. Start a new installation separately after recovery.
+Returning to LG Home alone does not complete removal. If the result of a No-root package request is
 still unknown, choose **Check TV status** and keep the recovery data. Confirm
 continuation when the installer verifies the original request and offers to resume.
 

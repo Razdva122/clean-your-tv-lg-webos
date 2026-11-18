@@ -8,6 +8,7 @@ from .recovery_state import assess, observation_diagnostics, setup_actions, unsu
 from .recovery_ui import removal_action
 
 REVIEW = 'Review recovery options'
+SAVED_CONNECTION_PROMPT = 'Review recovery options for this saved connection?'
 KEPT = 'Recovery data kept. Installation has not restarted.'
 BLOCKED = 'Recovery could not be verified. Save the diagnostic report and keep recovery data. Do not repeat removal.'
 SEPARATE = 'Recovery finished. Start a new setup separately when you are ready.'
@@ -190,12 +191,12 @@ def removal_plan(write, store, profile, state='blocked', connecting=False, failu
     return True
 
 
-def recover(installer, ask, write, non_interactive=False, initial_observation=None):
+def recover(installer, ask, write, non_interactive=False, initial_observation=None, *, review_confirmed=False):
     """Review first; never implicitly reinstall, erase receipts or retry a mutation."""
     plan(write, 'review', REVIEW)
     if non_interactive:
         raise UserError('Recovery requires interactive confirmation. --yes does not approve recovery.')
-    if initial_observation is None:
+    if initial_observation is None and not review_confirmed:
         write('Checking recovery does not reinstall or remove packages. Root checks may run verified support code.')
         if not prompts.confirm('Check recovery options?', ask, write):
             write(KEPT)

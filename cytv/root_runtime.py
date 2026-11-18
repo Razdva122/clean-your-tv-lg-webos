@@ -1,5 +1,9 @@
 """Explicit legacy choices before any installation submission."""
+import hashlib
+import json
 import re
+from pathlib import Path
+from typing import NamedTuple
 
 from . import state, prompts
 from .errors import UserError
@@ -55,13 +59,57 @@ def alternatives(value):
     return ('no-root', BETA) if value == 'v0.12.2' else ('no-root',)
 
 
-def require_idle(store, profile, replacing=None):
-    for saved in [profile, *store.profiles()]:
-        pending = store.pending(saved)
-        if replacing is not None and saved == profile and pending == replacing:
+class SavedOperationReview(NamedTuple):
+    profile: dict
+    directory: Path
+    evidence: dict
+
+
+def _blocking_operations(store, profile, replacing=None):
+    blocked = {}
+    for saved in [profile, *store.profiles(require_operation_profiles=True)]:
+        if saved['host'] != profile['host']:
             continue
-        if saved['host'] == profile['host'] and pending:
-            raise UserError('Previous operation is unresolved. Run cytv status or cytv restore; do not retry installation.', reason_code='pending-operation')
+        pending = store.pending(saved)
+        if pending and not (replacing is not None and saved == profile and pending == replacing):
+            blocked[store.device_path(saved)] = saved, pending
+    return blocked
+
+
+def require_idle(store, profile, replacing=None):
+    if _blocking_operations(store, profile, replacing):
+        raise UserError('Previous operation is unresolved. Run cytv status or cytv restore; do not retry installation.',
+                        reason_code='pending-operation')
+
+
+def saved_operation_for_review(store, selected):
+    """An address only locates candidates; the original connection owns review."""
+    blocked = _blocking_operations(store, selected)
+    if len(blocked) > 1:
+        raise UserError('More than one saved TV connection at this address has an unfinished operation. '
+                        'Choose Review recovery options for the same saved TV connection. Recovery data was kept.',
+                        reason_code='pending-operation')
+    if not blocked:
+        return None
+    directory, (candidate, pending) = next(iter(blocked.items()))
+    if candidate['edition'] == selected['edition']:
+        return None
+
+    from .ssh_identity_review import original_evidence
+    try:
+        if directory.is_symlink() or pending['action'] == 'unknown':
+            raise ValueError('Unverified recovery records')
+        evidence = original_evidence(directory)
+        if json.loads(evidence['operation.json']) != pending:
+            raise ValueError('Recovery record changed')
+        pin = hashlib.sha256(evidence['known_hosts']).hexdigest()
+        original, recovered = store.connection_profile(candidate, expected_pin=pin)
+        if not recovered or original != candidate or store.device_path(original) != directory:
+            raise ValueError('Recovery connection changed')
+    except (OSError, ValueError):
+        raise UserError('The original saved TV connection and host key are required for recovery. Recovery data was kept.',
+                        reason_code='ssh-identity-unverified') from None
+    return SavedOperationReview(original, directory, evidence)
 
 
 def offer(installer, args, ask, write, *, home_error=None):

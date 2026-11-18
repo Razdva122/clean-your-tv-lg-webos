@@ -325,7 +325,7 @@ class Store:
         """Read an exact saved connection key without creating its directory."""
         return self._saved_profile(self.device_path(selector))
 
-    def profiles(self, *, on_profile_error=None, already_read=None):
+    def profiles(self, *, on_profile_error=None, already_read=None, require_operation_profiles=False):
         def report_error(error):
             if on_profile_error is None:
                 raise error from None
@@ -352,6 +352,18 @@ class Store:
             else:
                 if profile is not None:
                     result.append(profile)
+                elif require_operation_profiles:
+                    # The directory name is a hash. Without the profile we
+                    # cannot determine which TV owns its receipt.
+                    try:
+                        (active / 'operation.json').lstat()
+                    except FileNotFoundError:
+                        pass
+                    except OSError:
+                        raise LocalRecoveryError('operation-access', 'operation') from None
+                    else:
+                        raise UserError('The original saved TV connection is missing. Recovery data was kept.',
+                                        reason_code='pending-operation')
         return sorted(result, key=lambda p: (p['host'], p['port'], p['edition']))
 
     @staticmethod

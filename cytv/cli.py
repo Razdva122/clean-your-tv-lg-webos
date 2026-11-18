@@ -84,7 +84,7 @@ def parser(desktop=False):
     return result
 
 
-def explain_failure(write, store, profile, phase, error):
+def explain_failure(write, store, profile, phase, error, *, offer_actions=True):
     from .failure_help import for_error
 
     def has_reset_source():
@@ -105,9 +105,9 @@ def explain_failure(write, store, profile, phase, error):
         write.failure_help(help)
         if help['code'] == 'ssh-identity' and profile and profile['edition'] == 'root' and (pending or {}).get('action') == 'uninstall':
             write.raw('https://github.com/Razdva122/clean-your-tv-lg-webos/blob/release/next/docs/RECOVERY.md#ssh-identity-changed')
-        if help['code'] in ('removal-not-submitted','no-root-recovery'):
+        if offer_actions and help['code'] in ('removal-not-submitted','no-root-recovery'):
             write.recovery(profile)
-        if phase != 'recover' and pending and pending.get('action') in ('install', 'activate-root'):
+        if offer_actions and phase != 'recover' and pending and pending.get('action') in ('install', 'activate-root'):
             from .recovery import offer_install_recovery
             offer_install_recovery(write, store, profile)
     return help
@@ -337,6 +337,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
     remote = None
     store, profile, phase, tv_info = state.Store(args.data_dir), None, 'select-tv', {'frontend':getattr(write,'frontend','console')}
     partial = False
+    saved_review = None
     if args.command == 'trust-root-ssh':
         from .ssh_identity_review import run
         return run(args, store, ask, write)
@@ -401,9 +402,34 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
         reinstall_step = store.root_reinstall(profile) if desktop_install else None
         if reinstall_step:
             profile = state.target(**dict(profile, root_variant=reinstall_step.variant))
-        write.selected_profile(profile)
         if getattr(args, 'resume_root_reinstall', False) and not reinstall_step:
             raise UserError('There is no saved Root reinstallation to continue.')
+        if args.command == 'install' and not args.reconnect_after_reset:
+            from .root_runtime import saved_operation_for_review
+            phase = 'review-saved-operation'
+            saved_review = saved_operation_for_review(store, profile)
+            if saved_review:
+                guidance = 'An earlier operation is unresolved. Choose Review recovery options or run cytv recover with the original TV connection.'
+                if args.non_interactive:
+                    raise UserError(guidance, reason_code='pending-operation')
+                selected = profile
+                original = saved_review.profile
+                write(guidance)
+                write('TV: ' + original['host'])
+                kind = ('Root (SSH)' if original['edition'] == 'root' else
+                        'No-root (Root SSH)' if original.get('connection') == 'root-ssh' else
+                        'No-root (Developer Mode)')
+                write(i18n.translate('Edition: {edition}').format(edition=i18n.translate(kind)))
+                write(i18n.translate('SSH port: {port}').format(port=original['port']))
+                write('Checking recovery does not reinstall or remove packages. Root checks may run verified support code.')
+                from .recovery import SAVED_CONNECTION_PROMPT
+                if not prompts.confirm(SAVED_CONNECTION_PROMPT, ask, write):
+                    return 130
+                profile = original
+                args.command = 'recover'
+                desktop_install = False
+                reinstall_step = None
+        write.selected_profile(profile)
         if reinstall_step:
             write.root_reinstall()
             if not getattr(args, 'resume_root_reinstall', False) and not prompts.confirm('Continue Root reinstallation?', ask, write):
@@ -547,6 +573,8 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                 write('Only continue for your own TV on your trusted home network.')
                 if not prompts.confirm('Start a new No-root connection after a factory reset?', ask, write, default=False):
                     raise EOFError
+            elif saved_review:
+                recovering = True
             elif partial:
                 directory = store.device_path(profile)
                 state.require_original_ssh_identity(directory)
@@ -559,7 +587,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                     profile = state.target(**dict(profile, root_variant=reinstall_step.variant))
             # An explicit sign-in key may change; the saved TV identity and pin
             # must still be resolved and verified before using it.
-            if (recovering and args.identity and (reinstall_step or args.command in ('uninstall', 'recover', 'restore')
+            if (recovering and not saved_review and args.identity and (reinstall_step or args.command in ('uninstall', 'recover', 'restore')
                     and (profile['edition'] == 'root' or profile.get('connection') == 'root-ssh')
                     and (store.pending(profile) or {}).get('recovery_protocol') == 'clean-removal-v1')):
                 profile = dict(profile, identity=str(args.identity.expanduser().resolve()))
@@ -571,7 +599,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
             observer_support = (not partial and profile.get('connection') == 'root-ssh'
                 and (store.pending(profile) or {}).get('recovery_protocol') == 'no-root-original-stream-v1'
                 and args.command in ('status', 'doctor', 'recover'))
-            if args.command in ('uninstall','recover') and cleanup:
+            if args.command in ('uninstall','recover') and cleanup and not saved_review:
                 removal_plan(write,store,profile,state='waiting',connecting=True)
             if (args.command in ('uninstall','recover') and cleanup) or observer_support:
                 try:manifest=package.verify_payload(payload)
@@ -590,7 +618,10 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
             def connect_tv(pinned, directory=None, confirm=trust):
                 pairing = {'previous_host_key_type': old_key_type} if directory is not None else {}
                 if directory is None:
-                    directory = store.device_path(profile) if partial else store.device_dir(profile)
+                    if saved_review:
+                        directory = saved_review.directory
+                    else:
+                        directory = store.device_path(profile) if partial else store.device_dir(profile)
                 if connect:
                     # Older embedders accept exactly four positional arguments.
                     import inspect as signature_inspect
@@ -610,6 +641,9 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
             from .errors import connection_interrupted
             for attempt in range(3 if cleanup else 1):
                 try:
+                    if saved_review and saved_operation_for_review(store, selected) != saved_review:
+                        raise UserError('Recovery evidence changed. Check recovery again; recovery data was kept.',
+                                        reason_code='pending-operation')
                     if args.reconnect_after_reset:
                         remote = reconnect(store, profile, lambda directory, confirm: connect_tv(False, directory, confirm),
                                            trust, old_pins)
@@ -941,7 +975,9 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
             elif args.command == 'recover':
                 from .recovery import recover
                 phase = 'recover'
-                recover(installer, ask, write, args.non_interactive)
+                if saved_review:
+                    write.recovery(profile)
+                recover(installer, ask, write, args.non_interactive, review_confirmed=bool(saved_review))
             elif args.command == 'replace-system-updater':
                 phase = args.command
                 installer.replace_system_updater()
@@ -1066,13 +1102,16 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
     except UserError as exc:
         checks.finish_running()
         write.error('Could not complete this step', heading=True)
-        write.error((None if partial else removal_connection_message(store, profile, phase, exc)) or str(exc))
+        unverified_review = saved_review and remote is None
+        write.error((None if partial or unverified_review else
+                     removal_connection_message(store, profile, phase, exc)) or str(exc))
         if phase in ('pair-tv', 'read-inventory'):
             write('Installation has not started. No TV packages were changed by this attempt.')
         if not partial:
             from .recovery import removal_plan
-            help = explain_failure(write, store, profile, phase, exc)
-            removal_plan(write, store, profile, failure=help, error=exc, phase=phase)
+            help = explain_failure(write, store, profile, phase, exc, offer_actions=not unverified_review)
+            if not unverified_review:
+                removal_plan(write, store, profile, failure=help, error=exc, phase=phase)
         diagnostics.suggest_issue(write, store, args.command, profile, phase, exc, tv_info, checks=checks.results, status=tv_info.get('status'))
         return 2
     except Exception as exc:
@@ -1084,15 +1123,17 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
             'AuthenticationException': 'SSH authentication failed. Check your key/password; for No-root check Developer Mode and Key Server.',
             'ModuleNotFoundError': 'Source dependencies are missing. Install cytv/requirements.txt or use a built cytv executable.',
         }
-        message = None if partial else removal_connection_message(store, profile, phase, exc)
+        unverified_review = saved_review and remote is None
+        message = None if partial or unverified_review else removal_connection_message(store, profile, phase, exc)
         write.error(message or ('Could not read the TV applications. Keep the TV on and accept its pairing request. Installation has not started.'
               if phase in ('pair-tv', 'read-inventory') and kind != 'ModuleNotFoundError' else hints.get(kind,
               'Removal could not be verified. Review recovery options before continuing.' if args.command=='uninstall'
               else 'Operation could not be confirmed. Save the diagnostic report and keep recovery data; do not retry blindly.')))
         if not partial:
             from .recovery import removal_plan
-            help = explain_failure(write, store, profile, phase, exc)
-            removal_plan(write, store, profile, failure=help, error=exc, phase=phase)
+            help = explain_failure(write, store, profile, phase, exc, offer_actions=not unverified_review)
+            if not unverified_review:
+                removal_plan(write, store, profile, failure=help, error=exc, phase=phase)
         diagnostics.suggest_issue(write, store, args.command, profile, phase, exc, tv_info, checks=checks.results, status=tv_info.get('status'))
         return 1
     finally:
