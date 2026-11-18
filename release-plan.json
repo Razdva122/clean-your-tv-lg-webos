@@ -1,7 +1,27 @@
 {
   "schema": 1,
   "version": null,
-  "changes": [],
+  "changes": [
+    {
+      "pr": 718,
+      "issues": [
+        201,
+        389,
+        409,
+        417,
+        440,
+        472,
+        495,
+        519,
+        529,
+        615,
+        635,
+        643,
+        664
+      ],
+      "summary": "Help owners complete and recover installer operations"
+    }
+  ],
   "excluded": [],
   "acceptance": ""
 }
