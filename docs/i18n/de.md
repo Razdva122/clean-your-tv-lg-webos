@@ -107,7 +107,9 @@ Wenn No-root **Speicherprüfung wiederholen** anbietet, wähle die Schaltfläche
 
 Unter Wartung **Clean Your TV deinstallieren** mit derselben gespeicherten TV-Verbindung wählen. Einmal bestätigen. Vorhandene bekannte Projekt-Apps und Dateien werden entfernt, fehlende übersprungen, auch nach einer Teilinstallation.
 
-Wenn aufgefordert, den TV vom Strom trennen, wieder anschließen, auf das Netzwerk warten und **Erneut versuchen** wählen. Standby oder Quick Start ist kein vollständiger Neustart; CYTV startet den TV nicht automatisch neu. Bei verweigertem Zugriff die angeforderte Root-Verbindung verwenden; bei beschäftigtem TV warten und erneut versuchen. Erfolg erscheint erst nach bestätigter abschließender Bereinigung. Schlüssel und Originalberichte behalten. Notfallsteuerung und Zustimmung zum Teilen gelten weiter.
+Wenn aufgefordert, den TV vom Strom trennen, wieder anschließen, auf das Netzwerk warten. Standby oder Quick Start ist kein vollständiger Neustart; CYTV startet den TV nicht automatisch neu. Bei verweigertem Zugriff die angeforderte Root-Verbindung verwenden; bei beschäftigtem TV warten und erneut versuchen. Erfolg erscheint erst nach bestätigter abschließender Bereinigung. Schlüssel und Originalberichte behalten. Notfallsteuerung und Zustimmung zum Teilen gelten weiter.
+
+Wenn das Installationsprogramm am Computer auf den TV wartet, wählen Sie **Entfernung fortsetzen**, sobald die Schaltfläche erscheint. Mit **Abbrechen** beenden Sie das Warten und mit **Erneut versuchen** prüfen Sie die Verbindung manuell.
 
 Wenn bei der Entfernung **Zu LG Home zurückkehren** angezeigt wird, wählen Sie diese Option. Nach bestätigter Wiederherstellung wählen Sie **Entfernung fortsetzen**. Wenn Sie direkt über die Wartung zu LG Home zurückkehren, bleiben die Apps installiert.
 

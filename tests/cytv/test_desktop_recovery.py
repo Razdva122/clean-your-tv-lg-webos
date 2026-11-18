@@ -6,6 +6,7 @@ import shlex
 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 from pathlib import Path
 import tempfile
+import threading
 import time
 import unittest
 from unittest.mock import patch
@@ -273,6 +274,131 @@ class DesktopRecoveryTests(unittest.TestCase):
                                 for row in auth[1:]))
             w.channel.answer(None)
             self.pump(lambda: not w.running)
+
+    def test_uninstall_waits_for_the_same_tv_and_preserves_the_confirmed_removal(self):
+        from paramiko import BadHostKeyException
+        from cytv.operations import Installer
+
+        old_boot = '00000000-0000-0000-0000-000000000001'
+        new_boot = '00000000-0000-0000-0000-000000000002'
+        for outcome in ('ready', 'already-online', 'legacy-reconnect', 'timeout', 'same-boot',
+                        'cancel', 'changed-tv', 'changed-pin', 'stale-operation', 'root'):
+            with self.subTest(outcome=outcome):
+                self.store.finish(self.profile)
+                if outcome == 'root':
+                    self.profile = state.target(self.profile['host'], 'root', 2222)
+                    self.store.save(self.profile)
+                pin = self.store.device_dir(self.profile) / 'known_hosts'
+                pin.write_bytes(b'original pin')
+                self.connections.clear()
+                cleanup_calls, connections, reads = [], [], []
+                started, release = threading.Event(), threading.Event()
+                self.addCleanup(release.set)
+
+                def cleanup(installer, pending):
+                    cleanup_calls.append(pending['removal_operation'])
+                    if len(cleanup_calls) == 1:
+                        installer.store.checkpoint(installer.profile, stage='restart-required',
+                            removal_reason='restart-required',
+                            cleanup_boot_proof=None if outcome in ('root', 'legacy-reconnect') else {'kernel':old_boot},
+                            cleanup_boot_id=old_boot if outcome == 'root' else None)
+                        return {'restart_required':True}
+                    result = {'removed':True, 'verified_clean':True}
+                    installer.store.checkpoint(installer.profile, stage='verified-clean',
+                                               removal_reason='removal-verified', result=result)
+                    installer.store.finish_clean_removal(installer.profile)
+                    return result
+
+                class Probe:
+                    def run(probe, command, *, timeout):
+                        reads.append(command)
+                        self.assertEqual(command, 'cat /proc/sys/kernel/random/boot_id')
+                        return old_boot if outcome == 'same-boot' or (
+                            len(reads) == 1 and outcome != 'already-online') else new_boot
+
+                    def close(probe):
+                        pass
+
+                def connect(profile, directory, secret, trust, *, persist):
+                    self.assertEqual(profile, self.profile)
+                    self.assertEqual(directory, self.store.device_path(self.profile))
+                    self.assertFalse(persist)
+                    self.assertFalse(trust(None, None))
+                    connections.append(profile)
+                    started.set()
+                    if outcome == 'changed-tv':
+                        raise BadHostKeyException(profile['host'], None, None)
+                    if outcome == 'cancel':
+                        release.wait(2)
+                        return Probe()
+                    if outcome == 'timeout' or outcome in ('ready', 'legacy-reconnect') and len(connections) == 1:
+                        raise TimeoutError('SSH did not answer')
+                    return Probe()
+
+                with (patch.object(Installer, 'continue_clean_removal', cleanup),
+                      patch('cytv.transport.SSH.connect', side_effect=connect),
+                      patch('cytv.gui.REMOVAL_RECONNECT_SECONDS', 0.15 if outcome in ('timeout', 'same-boot') else 2),
+                      patch('cytv.recovery.REMOVAL_RECONNECT_INTERVAL', 0.01)):
+                    w = self.window()
+                    w.start('uninstall', self.profile)
+                    self.pump(lambda: w.pending is not None or not w.running)
+                    self.assertIsNotNone(w.pending)
+                    w.submit('y')
+                    self.pump(lambda: started.is_set() or not w.running)
+                    self.assertTrue(started.is_set(), 'No background observation started after the restart request')
+                    original = self.store.pending(self.profile)
+                    if outcome == 'cancel':
+                        observed = w.worker
+                        self.assertTrue(w.cancel.isEnabled())
+                        self.assertEqual(w.cancel.text(), 'Cancel')
+                        w.cancel.click()
+                        self.assertFalse(w.running)
+                        release.set()
+                        observed.join(2)
+                        self.assertFalse(observed.is_alive())
+                        self.app.processEvents()
+                        self.assertEqual(connections, [self.profile])
+                        self.assertEqual(reads, [])
+                    else:
+                        self.pump(lambda: not w.running)
+                    self.assertEqual(self.store.pending(self.profile), original)
+                    self.assertEqual(cleanup_calls, [original['removal_operation']])
+                    self.assertEqual(self.remote.calls, [])
+                    self.assertEqual(self.connections, [self.profile])
+
+                    if outcome in ('ready', 'already-online', 'legacy-reconnect', 'changed-pin', 'stale-operation', 'root'):
+                        action = self.button(w, 'Continue removal')
+                        self.assertIsNotNone(action, w.subtitle.text())
+                        self.assertEqual(len(reads), {'already-online':1, 'legacy-reconnect':0}.get(outcome, 2))
+                        if outcome == 'changed-pin':
+                            pin.write_bytes(b'replacement pin')
+                        if outcome == 'stale-operation':
+                            self.store.finish(self.profile)
+                        action.click()
+                        self.pump(lambda: w.pending is not None or not w.running)
+                        self.assertIsNone(w.pending)
+                        if outcome in ('changed-pin', 'stale-operation'):
+                            self.assertEqual(self.connections, [self.profile])
+                            self.assertEqual(cleanup_calls, [original['removal_operation']])
+                            if outcome == 'changed-pin':
+                                self.assertEqual(w.failure_help['code'], 'ssh-identity')
+                            else:
+                                self.assertIn('Removal evidence changed.', w.content.toPlainText())
+                                self.assertIsNone(self.store.pending(self.profile))
+                        else:
+                            self.assertEqual(self.connections, [self.profile] * 2)
+                            self.assertEqual(cleanup_calls, [original['removal_operation']] * 2)
+                            self.assertEqual(w.title.text(), 'Clean Your TV removal is verified.')
+                    else:
+                        self.assertIsNone(self.button(w, 'Continue removal'))
+                        self.assertIsNotNone(self.button(w, 'Try again'))
+                        if outcome == 'changed-tv':
+                            self.assertEqual(connections, [self.profile])
+                            self.assertEqual(reads, [])
+                        if outcome in ('timeout', 'same-boot'):
+                            self.assertGreater(len(connections), 1)
+                            self.assertIn('Try again', w.subtitle.text())
+                    w.close()
 
     def test_root_reinstall_finalizes_verified_checkpoint_without_touching_the_tv(self):
         import hashlib

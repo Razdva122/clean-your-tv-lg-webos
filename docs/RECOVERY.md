@@ -152,8 +152,10 @@ known project apps/files that are present and skip items that are absent.
 2. When asked, disconnect the TV from power, reconnect it and wait for the TV and
    network to return. Standby and Quick Start are not a full restart. CYTV does
    not restart the TV automatically.
-3. Select **Try again**. This repeats the same approved removal goal on the same
-   saved connection, without a recovery wizard or another initial confirmation.
+3. If the desktop installer is waiting for the saved TV, select **Continue
+   removal** when offered. **Cancel** stops waiting. Use **Try again** when a
+   manual check is needed. This continues the same approved removal goal on
+   the saved TV.
    The installer checks the actual boot change and remaining files, then performs
    the final sweep. Success requires both removed and verified-clean results.
 

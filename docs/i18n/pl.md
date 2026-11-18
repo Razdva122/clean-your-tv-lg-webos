@@ -107,7 +107,9 @@ Jeśli No-root oferuje **Ponów sprawdzanie pamięci**, wybierz tę opcję, aby 
 
 Wybierz **Odinstaluj Clean Your TV** w Konserwacji dla tego samego zapisanego połączenia. Potwierdź raz. Znane aplikacje i pliki projektu, które istnieją, zostaną usunięte; brakujące zostaną pominięte, także po częściowej instalacji.
 
-Gdy pojawi się prośba, odłącz zasilanie TV, podłącz ponownie, poczekaj na sieć i wybierz **Spróbuj ponownie**. Czuwanie lub Quick Start nie jest pełnym restartem; CYTV nie uruchamia TV ponownie automatycznie. Przy odmowie dostępu użyj żądanego połączenia Root; gdy TV jest zajęty, poczekaj i ponów. Sukces pojawi się dopiero po weryfikacji końcowego czyszczenia. Zachowaj klucze i oryginalne raporty. Sterowanie awaryjne i zgoda na udostępnianie nadal obowiązują.
+Gdy pojawi się prośba, odłącz zasilanie TV, podłącz ponownie, poczekaj na połączenie z siecią. Czuwanie lub Quick Start nie jest pełnym restartem; CYTV nie uruchamia TV ponownie automatycznie. Przy odmowie dostępu użyj żądanego połączenia Root; gdy TV jest zajęty, poczekaj i ponów. Sukces pojawi się dopiero po weryfikacji końcowego czyszczenia. Zachowaj klucze i oryginalne raporty. Sterowanie awaryjne i zgoda na udostępnianie nadal obowiązują.
+
+Jeśli instalator na komputerze czeka na TV, wybierz **Kontynuuj odinstalowanie**, gdy pojawi się ta opcja. Wybierz **Anuluj**, aby przerwać oczekiwanie, lub **Spróbuj ponownie**, aby ręcznie sprawdzić połączenie.
 
 Jeśli na ekranie odinstalowywania pojawi się opcja **Wróć do LG Home**, wybierz ją. Gdy instalator potwierdzi przywrócenie, wybierz **Kontynuuj odinstalowanie**. Powrót do LG Home bezpośrednio z menu konserwacji pozostawia aplikacje zainstalowane.
 

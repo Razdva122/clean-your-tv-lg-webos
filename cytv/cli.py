@@ -58,6 +58,7 @@ def parser(desktop=False):
         commands += ('ssh-command',)
         result.add_argument('--resume-root-reinstall', action='store_true', help=argparse.SUPPRESS)
         result.add_argument('--removal-operation', help=argparse.SUPPRESS)
+        result.add_argument('--removal-pin', help=argparse.SUPPRESS)
     result.add_argument('command', nargs='?', default='install', choices=commands)
     result.add_argument('--language', choices=tuple(i18n.LANGUAGES), help=i18n.translate('Interface language (auto uses the computer language)'))
     result.add_argument('--version', action='store_true', help=i18n.translate('Print installer version'))
@@ -343,6 +344,9 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
         return run(args, store, ask, write)
     try:
         removal_operation = getattr(args, 'removal_operation', None)
+        removal_pin = getattr(args, 'removal_pin', None)
+        if removal_pin is not None and (removal_operation is None or args.command != 'uninstall'):
+            raise UserError('Removal evidence changed. Recovery data was kept.', reason_code='pending-operation')
         if removal_operation is not None and (args.command not in ('restore', 'uninstall')
                 or not args.host or not args.edition or args.port is None or args.non_interactive):
             raise UserError('Removal evidence changed. Recovery data was kept.', reason_code='pending-operation')
@@ -482,7 +486,8 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
             if profile['edition'] == 'root':
                 write('Root will stop the old Home Helper, turn on Home control and open Clean Your TV Home.')
             write('Check controls on the TV after installation.')
-        retry_removal=(args.command=='uninstall' and (store.pending(profile) or {}).get('recovery_protocol')=='clean-removal-v1')
+        retry_removal = args.command == 'uninstall' and (removal_operation is not None or
+            (store.pending(profile) or {}).get('recovery_protocol') == 'clean-removal-v1')
         if args.command in ('install', 'uninstall', 'restore', 'enable-system-updates', 'enable-firmware-access', 'disable-firmware-access', 'recover-system-rollback', 'recover-root-rollback', 'replace-system-updater') and not (args.yes or retry_removal or args.reconnect_after_reset or reinstall_step):
             if args.command == 'uninstall' and profile['edition'] == 'root':
                 write('This removes Root, Root Updater, their services and startup hooks, plus any installed No-root Home, Helper and Updater.')
@@ -582,7 +587,8 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                     raise UserError('The original saved TV connection and host key are required for recovery. Recovery data was kept.',
                                     reason_code='ssh-identity-unverified')
             else:
-                profile, recovering = store.connection_profile(profile, expected_pin=reinstall_step.pin if reinstall_step else None)
+                profile, recovering = store.connection_profile(
+                    profile, expected_pin=reinstall_step.pin if reinstall_step else removal_pin)
                 if reinstall_step:
                     profile = state.target(**dict(profile, root_variant=reinstall_step.variant))
             # An explicit sign-in key may change; the saved TV identity and pin

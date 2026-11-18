@@ -215,7 +215,7 @@ continuation when the installer verifies the original request and offers to resu
 
 In published v1.11.0 and later, **Uninstall Clean Your TV** uses a simple removal flow:
 confirm once, stop/remove known present project items, fully restart the TV when
-asked, then choose **Try again** for the final sweep. Disconnect and reconnect
+asked, then continue the final sweep. Disconnect and reconnect
 power; standby and Quick Start are not enough. CYTV never restarts the TV
 itself. Missing items are skipped, including after a partial setup. Connection
 loss needs a connection check and Try again on the same saved TV, without another
@@ -225,13 +225,18 @@ proof. Eligible Root setup may still finish separately with LG Home/Home control
 off. Physical checks remain separate. See the
 [removal flow](RECOVERY.md#next-candidate-original-operation-recovery-and-full-removal).
 
+After a restart request, the desktop installer can wait for the saved TV to
+return. Choose **Continue removal** when offered. **Cancel** stops waiting.
+If the installer cannot confirm the TV is ready, use **Try again** to check it
+manually.
+
 If **Return to LG Home** appears on the removal screen, choose it. After the
 installer verifies restoration, choose **Continue removal** to resume the same
 removal on the saved TV. Choosing **Return to LG Home** directly from
 Maintenance keeps the apps installed.
 
 For unfinished removal, the primary action follows the current result. A known
-connection interruption, busy operation or required restart offers **Try again**
+connection interruption or busy operation offers **Try again**
 for the same approved goal after the condition is resolved. When the installer can
 identify the blocked step, it says whether it could verify the TV controls, the
 package removal result or cleanup of project files. Choose **Review recovery

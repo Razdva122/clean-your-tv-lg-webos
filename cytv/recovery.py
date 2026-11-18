@@ -1,5 +1,7 @@
 """An explicit recovery journey; backend receipts remain the only authority."""
+import hashlib
 import re
+from time import monotonic
 
 from . import prompts
 from .errors import TVRejected, UserError
@@ -39,6 +41,71 @@ def confirmed_uninstall(pending):
         return None
     operation = pending.get('removal_operation')
     return operation if isinstance(operation, str) and re.fullmatch(r'[0-9a-f]{32}', operation) else None
+
+
+REMOVAL_RECONNECT_INTERVAL = 2
+_BOOT_ID = re.compile(r'[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}')
+
+
+def _removal_reconnect(store, profile, pending):
+    operation = confirmed_uninstall(pending)
+    if not operation or pending.get('connection_pending') is True:
+        return None
+    try:
+        known = store.device_path(profile) / 'known_hosts'
+        if known.is_symlink() or not (key := known.read_bytes()):
+            return None
+    except (OSError, UserError):
+        return None
+    proof = pending.get('cleanup_boot_proof')
+    boot = pending.get('cleanup_boot_id') or (proof.get('kernel') if isinstance(proof, dict) else None)
+    return {'operation':operation, 'pin':hashlib.sha256(key).hexdigest(),
+            'boot':boot if isinstance(boot, str) and _BOOT_ID.fullmatch(boot) else None}
+
+
+def wait_for_removal_tv(store, profile, reconnect, stop, deadline):
+    """Observe only the pinned SSH connection and, when available, the boot ID."""
+    from paramiko import BadHostKeyException
+    from .errors import connection_interrupted
+    from .transport import SSH
+
+    def no_credentials(_):
+        raise EOFError
+
+    offline = False
+    while not stop.is_set() and monotonic() < deadline:
+        try:
+            if confirmed_uninstall(store.pending(profile)) != reconnect['operation']:
+                return 'unavailable'
+            saved, _ = store.connection_profile(profile, expected_pin=reconnect['pin'])
+            remote = SSH.connect(saved, store.device_path(saved), no_credentials, lambda *_: False, persist=False)
+            try:
+                if stop.is_set() or monotonic() >= deadline:
+                    return 'timeout'
+                if reconnect['boot']:
+                    boot = remote.run('cat /proc/sys/kernel/random/boot_id', timeout=5).strip()
+                    ready = bool(_BOOT_ID.fullmatch(boot) and boot != reconnect['boot'])
+                else:
+                    # For older records, connectivity alone can offer the existing
+                    # check. The continuation still has to verify the restart.
+                    ready = offline
+                if ready:
+                    store.connection_profile(profile, expected_pin=reconnect['pin'])
+                    if confirmed_uninstall(store.pending(profile)) == reconnect['operation']:
+                        return 'ready'
+                    return 'unavailable'
+            finally:
+                remote.close()
+        except BadHostKeyException:
+            return 'identity'
+        except Exception as error:
+            if getattr(error, 'reason_code', None) == 'ssh-identity-unverified':
+                return 'identity'
+            if not connection_interrupted(error):
+                return 'unavailable'
+            offline = True
+        stop.wait(max(0, min(REMOVAL_RECONNECT_INTERVAL, deadline - monotonic())))
+    return 'timeout'
 
 
 def restored_for_uninstall(write, profile, operation, result):
@@ -186,6 +253,10 @@ def removal_plan(write, store, profile, state='blocked', connecting=False, failu
     elif not connecting:
         value.update(summary=value['removal_presentation']['title_text'],
                      next_step=detail['blocker_text'] or value['next_step'])
+    if (getattr(write, 'frontend', None) == 'desktop'
+            and (restart_observed or (failure or {}).get('code') == 'restart-required')
+            and (reconnect := _removal_reconnect(store, profile, pending))):
+        value['removal_reconnect'] = reconnect
     _write_removal_plan(write, value, pending=pending, failure=failure, allow_requested=connecting,
                         restart_observed=restart_observed)
     return True
