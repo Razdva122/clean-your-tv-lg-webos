@@ -322,6 +322,7 @@ var resumeGuardUntil = 0,
 // Opt-in, bounded observation only; never changes routing or starts another watcher.
 var diagnosticUntil = 0,
   diagnosticExpires = 0,
+  diagnosticControl = null,
   diagnosticAsleep = false,
   diagnosticNext = 0,
   homeSequence = 0,
@@ -332,6 +333,16 @@ function diagnostic(trigger, details) {
   if (!diagnosticUntil) return;
   var now = monotonic();
   if (now >= diagnosticUntil && trigger !== 'expired') {
+    if (diagnosticControl) {
+      // Retire this capture before publishing its terminal event. A newer
+      // installer command still belongs to its own capture.
+      try {
+        storage.atomicRecord(data, 'control', '{}', {
+          expectedControl: diagnosticControl
+        });
+      } catch (ignore) {}
+      diagnosticControl = null;
+    }
     diagnostic('expired');
     diagnosticUntil = 0;
     return;
@@ -360,7 +371,11 @@ function diagnostic(trigger, details) {
     )
   );
 }
-function diagnosticCommand(cmd, nonce, expires, restored, durationMs) {
+function diagnosticCommand(command, raw, restored) {
+  var cmd = command.cmd,
+    nonce = command.nonce,
+    expires = command.expires,
+    durationMs = command.durationMs;
   if (cmd === 'diagnostics-start') {
     if (durationMs !== undefined) {
       if (
@@ -376,11 +391,16 @@ function diagnosticCommand(cmd, nonce, expires, restored, durationMs) {
         expires: expires
       });
       try {
-        storage.atomicRecord(data, 'control', request);
+        if (
+          !storage.atomicRecord(data, 'control', request, {
+            expectedControl: raw
+          })
+        )
+          return;
       } catch (ignore) {
         return;
       }
-      lastCommand = request;
+      lastCommand = raw = request;
     }
     if (
       expires !== undefined &&
@@ -391,6 +411,7 @@ function diagnosticCommand(cmd, nonce, expires, restored, durationMs) {
     )
       return;
     diagnosticExpires = expires || 0;
+    diagnosticControl = diagnosticExpires ? raw : null;
     diagnosticAsleep = false;
     diagnosticSession =
       typeof nonce === 'string' && /^[a-f0-9]{32}$/.test(nonce) ? nonce : null;
@@ -408,6 +429,7 @@ function diagnosticCommand(cmd, nonce, expires, restored, durationMs) {
   if (cmd === 'diagnostics-stop') {
     diagnostic('stopped');
     diagnosticUntil = 0;
+    diagnosticControl = null;
   }
 }
 // Restore the bounded request before startup launches or subscriptions can fire.
@@ -415,12 +437,7 @@ try {
   var retainedControl = fs.readFileSync(data + '/control.json', 'utf8');
   var retainedRequest = JSON.parse(retainedControl);
   if (retainedRequest.cmd === 'diagnostics-start' && retainedRequest.expires) {
-    diagnosticCommand(
-      retainedRequest.cmd,
-      retainedRequest.nonce,
-      retainedRequest.expires,
-      true
-    );
+    diagnosticCommand(retainedRequest, retainedControl, true);
     lastCommand = retainedControl;
   }
 } catch (ignore) {}
@@ -1291,13 +1308,7 @@ var timer = setInterval(function () {
     if (raw !== lastCommand) {
       lastCommand = raw;
       var command = JSON.parse(raw);
-      diagnosticCommand(
-        command.cmd,
-        command.nonce,
-        command.expires,
-        false,
-        command.durationMs
-      );
+      diagnosticCommand(command, raw);
       if (command.cmd === 'startup-status')
         service.call(
           'luna://com.local.nativehome.service/status',

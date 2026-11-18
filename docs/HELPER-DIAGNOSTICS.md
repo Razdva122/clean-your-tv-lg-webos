@@ -53,7 +53,8 @@ initialization and resumes it before startup launch requests. The same-process
 standby path retains recording until wake, followed by up to one minute of
 observation within the original three-minute limit. Requests without an expiry
 retain the legacy one-minute behavior. Expired requests and unrelated commands
-are cleared during startup as before.
+are cleared during startup as before. Completing a capture removes its saved
+request so a later Helper restart does not resume it.
 
 Records include recognized Home presses, correlated launch requests and replies,
 foreground observations, periodic samples, monitor status, and routing state.

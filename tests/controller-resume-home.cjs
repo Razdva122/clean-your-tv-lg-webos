@@ -696,3 +696,20 @@ test('monitor loss retains wake capture when the power subscription disconnects 
     1
   );
 });
+
+test('completed capture does not resume after Helper restarts without SSH', () => {
+  const before = controller({ pid: 11 });
+  before.command('diagnostics-start', { durationMs: 180000 });
+  before.advance(61000);
+  assert(before.logs.some((record) => record.trigger === 'expired'));
+
+  const after = controller({
+    initialControl: before.files.get(before.dir + 'control.json'),
+    startedAt: 85000,
+    pid: 22
+  });
+  assert.equal(
+    after.logs.some((record) => record.event === 'home-diagnostic'),
+    false
+  );
+});

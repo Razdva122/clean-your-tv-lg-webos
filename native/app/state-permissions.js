@@ -1347,7 +1347,13 @@ prepare.atomicRecord = function (directory, kind, bytes, options) {
   )
     fail();
   var record = records[kind],
-    role = record[2];
+    role = record[2],
+    expectedControl = options ? options.expectedControl : undefined;
+  if (
+    expectedControl !== undefined &&
+    (kind !== 'control' || typeof expectedControl !== 'string')
+  )
+    fail();
   if (options && options.role !== undefined) {
     if (role !== 'channel' || ['app', 'channel'].indexOf(options.role) < 0)
       fail();
@@ -1360,7 +1366,13 @@ prepare.atomicRecord = function (directory, kind, bytes, options) {
     output: record[0]
   };
   function write(s) {
-    s.write(record[0], buffer(bytes), record[1], Infinity, false);
+    var previous;
+    if (expectedControl !== undefined) {
+      previous = s.read(record[0], 4096, false, true);
+      if (!previous || previous.bytes.toString('utf8') !== expectedControl)
+        return false;
+    }
+    s.write(record[0], buffer(bytes), record[1], Infinity, false, previous);
     return true;
   }
   return role === 'channel'

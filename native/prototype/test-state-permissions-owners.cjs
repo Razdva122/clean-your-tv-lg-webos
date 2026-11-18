@@ -592,3 +592,28 @@ test(
     a.equal(fs.statSync(control).mode & 0o777, 0o660);
   }
 );
+
+test(
+  'conditional diagnostic cleanup preserves a newer control command',
+  { keyMode: 0o640 },
+  (f) => {
+    const pathToControl = path.join(f.state, 'control.json');
+    const capture = '{"cmd":"diagnostics-start","nonce":"old"}';
+    const next = '{"cmd":"diagnostics-stop","nonce":"new"}';
+    fs.writeFileSync(pathToControl, next, { mode: 0o660 });
+    a.equal(
+      f.permissions.atomicRecord(f.state, 'control', '{}', {
+        expectedControl: capture
+      }),
+      false
+    );
+    a.equal(fs.readFileSync(pathToControl, 'utf8'), next);
+    a.equal(
+      f.permissions.atomicRecord(f.state, 'control', '{}', {
+        expectedControl: next
+      }),
+      true
+    );
+    a.equal(fs.readFileSync(pathToControl, 'utf8'), '{}');
+  }
+);
