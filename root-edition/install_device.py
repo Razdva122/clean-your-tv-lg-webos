@@ -36,6 +36,19 @@ class InstallerRuntimeMismatch(ValueError):
         super().__init__('Installed Root runtime differs from this installer; use verified removal and fresh setup')
 
 
+# Keep in sync with cytv/root_clean_tail.py. The TV coordinator is packaged separately.
+# Node 0.12 rejects the "-" entry point. Drain the verified bytes before
+# executing them. A fixed first argument preserves the script's selectors and
+# prevents modern Node from treating "inspect" as its debugger command.
+CLEAN_TAIL_STDIN = """
+var chunks = [];
+process.stdin.on('data', function (chunk) { chunks.push(chunk); });
+process.stdin.on('end', function () {
+    eval(Buffer.concat(chunks).toString('utf8'));
+});
+"""
+
+
 def checked_store(path, uid=0):
     # Read-only inspection must never provision a state directory.
     store=Store.__new__(Store);store.root=str(path);store.uid=uid
@@ -1291,7 +1304,7 @@ class LocalDevice:
             self.cleanup_tail_started=True
             descriptors=(self.ownership.fd,promotion if promotion is not None else -1,self.ownership.store.lock_fd)
             gate_hash='-'
-            result=subprocess.run(['/usr/bin/node','-','finish',record['operation'],'-',*map(str,descriptors),gate_hash,record['removal']],input=source,
+            result=subprocess.run(['/usr/bin/node','-e',CLEAN_TAIL_STDIN,'cytv-cleanup-tail','finish',record['operation'],'-',*map(str,descriptors),gate_hash,record['removal']],input=source,
                 stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=180,pass_fds=tuple(fd for fd in descriptors if fd>=0),
                 env={key:value for key,value in os.environ.items() if key not in ('NODE_OPTIONS','NODE_PATH')})
             reply=json.loads(result.stdout)

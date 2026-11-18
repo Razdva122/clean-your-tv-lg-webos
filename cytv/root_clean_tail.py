@@ -8,6 +8,18 @@ import uuid
 from .errors import UserError, TVCommandError
 
 
+# Node 0.12 rejects the "-" entry point. Drain the verified bytes before
+# executing them. A fixed first argument preserves the script's selectors and
+# prevents modern Node from treating "inspect" as its debugger command.
+CLEAN_TAIL_STDIN = """
+var chunks = [];
+process.stdin.on('data', function (chunk) { chunks.push(chunk); });
+process.stdin.on('end', function () {
+    eval(Buffer.concat(chunks).toString('utf8'));
+});
+"""
+
+
 def gate_bytes(installer):
     name='installer-support/lifecycle-gate';path=installer.payload/name
     raw=path.read_bytes();digest=hashlib.sha256(raw).hexdigest()
@@ -28,8 +40,9 @@ def resume(installer, pending):
     if not re.fullmatch('[a-f0-9]{32}',operation):raise ValueError('Invalid cleanup operation')
     removal=pending.get('removal_target_intent',pending['removal_operation'])
     if not isinstance(removal,str) or not re.fullmatch('[a-f0-9]{32}',removal):raise ValueError('Invalid cleanup removal intent')
-    node=['env','-u','NODE_OPTIONS','-u','NODE_PATH','/usr/bin/node','-']
-    observation=json.loads(installer.remote.run(shlex.join([*node,'inspect',operation,'-','0','-1','-1','-',removal]),data=source,timeout=30))
+    node=['/usr/bin/node','-e',CLEAN_TAIL_STDIN,'cytv-cleanup-tail']
+    env=['env','-u','NODE_OPTIONS','-u','NODE_PATH']
+    observation=json.loads(installer.remote.run(shlex.join([*env,*node,'inspect',operation,'-','0','-1','-1','-',removal]),data=source,timeout=30))
     if observation.get('operation')!=operation or observation.get('removal')!=removal:raise UserError('Removal evidence changed. Recovery data was kept.')
     if observation.get('state')=='not-ready':return None
     if observation.get('state')=='coordinator-ready':return {'recheck_boot':True}
@@ -44,7 +57,7 @@ def resume(installer, pending):
     installer.store.checkpoint(installer.profile,root_tail_stages=stages)
     installer.remote.run('umask 077; mkdir '+stage)
     installer.remote.upload(stage+'/gate',raw,mode=0o755)
-    command=['env','-u','NODE_OPTIONS','-u','NODE_PATH',stage+'/gate','root-clean-lock','/usr/bin/node','-',
+    command=[*env,stage+'/gate','root-clean-lock',*node,
              'finish',operation,','.join(stages),'3','4','5',digest,removal]
     # Native gate opens only the existing Root ownership inode; a fresh UUID
     # identifies this disposable support directory, never an operation lease.
