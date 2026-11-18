@@ -34,7 +34,7 @@ class ScreensaverRuntimeTests(unittest.TestCase):
     def test_current_verified_generation_only_and_no_private_tokens(self):
         result=s.screensaver_status();self.assertTrue(result['owner']['active']);self.assertEqual(result['owner']['generation'],8)
         self.assertTrue(result['foregroundOwn']);self.assertEqual(result['validForMs'],1200)
-        self.assertNotIn('private-',json.dumps(result));self.assertFalse(result['state']['enabled'])
+        self.assertNotIn('private-',json.dumps(result))
         self.assertTrue(result['popupInstalled'])
     def test_companion_requires_verified_id_web_type_and_popup_metadata(self):
         for info in ({'returnValue':False}, {'returnValue':True,'appInfo':{}},
@@ -86,6 +86,12 @@ class ScreensaverRuntimeTests(unittest.TestCase):
             self.power=state;self.assertIsNone(s.screensaver_status()['owner'])
         self.power='Active'
         with patch.object(s,'startup_require',side_effect=[None,ValueError('owner changed')]):self.assertIsNone(s.screensaver_status()['owner'])
+    def test_missing_preference_enables_screensaver_and_saved_off_is_preserved(self):
+        state = s.screensaver_status()['state']
+        self.assertIs(state['enabled'], True)
+        s.screensaver_configure(dict(state, enabled=False))
+        self.assertIs(s.screensaver_status()['state']['enabled'], False)
+
     def test_fresh_settings_choose_ambient_with_optional_clock(self):
         state = s.screensaver_settings()
         self.assertEqual(state['mode'], 'ambient')

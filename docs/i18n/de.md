@@ -155,6 +155,8 @@ Ausführliche Referenzen auf Englisch: [Voraussetzungen](../COMPATIBILITY.md) ·
 
 ## Einstellungen
 
+Ohne gespeicherte Einstellung ist der Bildschirmschoner standardmäßig eingeschaltet. Sie können ihn in den Home-Einstellungen unter **Bildschirmschoner** ausschalten.
+
 Aktiviere unter **Einstellungen → Darstellung** die Option **Häufig genutzte Apps zuerst**. Die Reihenfolge im Dock bleibt erhalten. Halte OK gedrückt, um Kacheln in der manuellen Reihenfolge zu verschieben oder auszublenden. Schalte die Option aus, um zur manuellen Reihenfolge zurückzukehren. Die Option gibt es auch am Ende der Einstellungen im cytv-Installationsprogramm.
 
 Wähle mit ↑ ↓ eine Kategorie und öffne sie mit → oder OK. ← führt zu den Kategorien zurück; Zurück führt zuerst dorthin und schließt danach die Einstellungen. Beim erneuten Betreten bleibt der Fokus auf dem letzten verfügbaren Element. Unter Spalten folgen die Pfeile dem dreispaltigen Raster. Unter Sprache wird die gewählte Sprache fokussiert.

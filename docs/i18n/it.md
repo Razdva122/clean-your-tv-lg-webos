@@ -157,6 +157,8 @@ Riferimenti dettagliati in inglese: [requisiti](../COMPATIBILITY.md) · [comandi
 
 ## Impostazioni
 
+Se non hai ancora salvato una preferenza, il salvaschermo è attivo per impostazione predefinita. Puoi disattivarlo da **Impostazioni di Home → Salvaschermo**.
+
 In **Impostazioni → Aspetto**, attiva **App più usate per prime**. Il dock mantiene il suo ordine. Tieni premuto OK per spostare o nascondere un riquadro nell’ordine manuale. Disattiva l’opzione per tornare all’ordine manuale. L’opzione è disponibile anche in fondo alle impostazioni del programma di installazione cytv.
 
 Usa ↑ ↓ per scegliere una categoria e → oppure OK per aprirla. ← torna alle categorie; Indietro torna prima alle categorie e poi chiude le impostazioni. Rientrando in una sezione, il focus torna all’ultimo controllo disponibile. In Colonne, le frecce seguono la griglia a tre colonne. In Lingua, il focus va alla lingua selezionata.

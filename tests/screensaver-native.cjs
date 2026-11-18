@@ -76,8 +76,20 @@ const config = {
   assetId: '',
   idleTimeoutMs: 60000
 };
+test('No-root enables the screensaver if no preference exists', async () => {
+  const f = fixture({
+    loadSettings() {
+      throw Object.assign(new Error('Missing preference'), { code: 'ENOENT' });
+    }
+  });
+  f.owner.installed(['com.cleanyourtv.screensaver']);
+  f.owner.foreground('com.gathin.tvhome');
+  assert.equal((await f.owner.handle('screensaverEligible')).started, true);
+});
+
 test('No-root owner controls activation and persisted settings', async () => {
-  let f = fixture();
+  const savedOff = { ...config, enabled: false };
+  let f = fixture({ loadSettings: () => savedOff });
   assert.equal(f.owner.handle('screensaverStatus').state.enabled, false);
   assert.equal(f.owner.handle('screensaverStatus').available, false);
   assert.deepEqual(f.calls, []);
@@ -151,7 +163,7 @@ test('No-root owner controls activation and persisted settings', async () => {
     { mode: 'photo', assetId: 'approved-id' },
     { mode: 'video', assetId: 'approved-id' }
   ]) {
-    f = fixture();
+    f = fixture({ loadSettings: () => savedOff });
     f.owner.installed(['com.cleanyourtv.screensaver']);
     f.owner.foreground('com.gathin.tvhome');
     const result = f.owner.handle('screensaverConfigure', {
@@ -162,7 +174,7 @@ test('No-root owner controls activation and persisted settings', async () => {
     assert.notEqual((await f.owner.handle('screensaverPreview')).started, true);
     assert.equal(f.calls.includes('enable'), false);
   }
-  f = fixture();
+  f = fixture({ loadSettings: () => savedOff });
   f.owner.installed(['com.cleanyourtv.screensaver']);
   f.owner.foreground('com.gathin.tvhome');
   for (const invalid of [
