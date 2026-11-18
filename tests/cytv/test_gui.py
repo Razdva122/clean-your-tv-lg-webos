@@ -1244,29 +1244,36 @@ class GuiTests(unittest.TestCase):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
         store = Store(directory.name)
-        profile = target('192.0.2.10', 'no-root')
+        profile = target('192.0.2.10', 'no-root', 9923)
         calls = []
         window = Wizard(run=lambda args, **kwargs: calls.append(args) or 0)
         self.addCleanup(window.close)
-        window.receive('selected-profile', profile)
         console = Channel(window.receive).console
-        explain_failure(console, store, profile, 'ssh-connect', error)
-        window.receive('done', 1)
-        labels = [button.text() for button in window.form.findChildren(QPushButton)]
-        self.assertNotIn('Reconnect after factory reset', labels)
 
-        store.save(profile)
-        store.begin(profile, 'uninstall', stage='restart-required')
         key = RSAKey.generate(2048)
-        (store.device_path(profile) / 'known_hosts').write_text(
-            f"[{profile['host']}]:{profile['port']} {key.get_name()} {key.get_base64()}\n")
-        explain_failure(console, store, profile, 'ssh-connect', error)
-        window.receive('done', 1)
-        buttons = {button.text(): button for button in window.form.findChildren(QPushButton)}
-        buttons['Reconnect after factory reset'].click()
+        root_ssh = target(profile['host'], 'no-root', profile['port'], connection='root-ssh')
+        for saved in (profile, root_ssh):
+            store.save(saved)
+            (store.device_path(saved) / 'known_hosts').write_text(
+                f"[{saved['host']}]:{saved['port']} {key.get_name()} {key.get_base64()}\n")
+
+        def actions(selected):
+            window.receive('selected-profile', selected)
+            explain_failure(console, store, selected, 'ssh-connect', error)
+            window.receive('done', 1)
+            return {button.text(): button for button in window.form.findChildren(QPushButton)}
+
+        action = 'Reconnect after factory reset'
+        self.assertNotIn(action, actions(target('192.0.2.11', 'no-root', profile['port'])))
+        store.begin(profile, 'install', stage='coordinator-submitted')
+        self.assertNotIn(action, actions(profile))
+        store.finish(profile)
+        store.begin(profile, 'uninstall', stage='restart-required')
+        self.assertNotIn(action, actions(root_ssh))
+        actions(profile)[action].click()
         self.pump(lambda: not window.running)
-        self.assertEqual(calls[0][:3], ['install', '--reconnect-after-reset', '--host'])
-        self.assertIn('192.0.2.10', calls[0])
+        self.assertEqual(calls[0][:-2], ['install', '--reconnect-after-reset', '--host', '192.0.2.10',
+                                        '--edition', 'no-root', '--port', '9923', '--no-discovery'])
 
     def test_macos_timeout_keeps_network_checklist_with_optional_permission_advice(self):
         from cytv.failure_help import for_error
