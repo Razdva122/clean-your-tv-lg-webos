@@ -1,5 +1,8 @@
 'use strict';
 
+// One bounded status command (2 s) plus one monitor interval (500 ms).
+var STATUS_RETRY_WINDOW_MS = 2500;
+
 // Fixed Home-only RPCs. Runtime snapshots attest the existing Root generation;
 // no web payload can choose a generation, process, path or launch destination.
 module.exports = function (service, options) {
@@ -10,6 +13,7 @@ module.exports = function (service, options) {
     state = settings.normalize(),
     observation = null,
     expires = 0,
+    refreshFailed = false,
     revision = 0,
     disposed = false,
     polling = false,
@@ -48,9 +52,28 @@ module.exports = function (service, options) {
           observation.owner &&
           binding.generation === observation.owner.generation &&
           now() < binding.expires)) &&
+      !refreshFailed &&
       now() < expires
       ? observation.owner
       : null;
+  }
+  function adapterOwner() {
+    var current = owner();
+    if (
+      current ||
+      !globalMode() ||
+      !state.enabled ||
+      monitor === null ||
+      !observation ||
+      !observation.owner ||
+      observation.popupInstalled !== true ||
+      expires === 0 ||
+      !(now() < expires + STATUS_RETRY_WINDOW_MS)
+    )
+      return current;
+    // A missed read can keep the current popup connected for a bounded time.
+    // The adapter requires fresh authority to launch or defer stock LG.
+    return Object.assign({}, observation.owner, { stale: true });
   }
   function available() {
     var value = owner();
@@ -94,10 +117,10 @@ module.exports = function (service, options) {
     now: now,
     setInterval: schedule,
     clearInterval: unschedule,
-    getOwner: owner,
-    context: function () {
+    getOwner: adapterOwner,
+    context: function (continuing) {
       return {
-        popupSupported: canStart(),
+        popupSupported: continuing === true || canStart(),
         previewEligible: localForeground(),
         inAppEligible: localForeground(),
         globalTriggerVerified: globalMode(),
@@ -158,16 +181,28 @@ module.exports = function (service, options) {
     binding = null;
     adapter.reconcile();
   }
-  function invalidate() {
-    if (!(globalMode() && state.enabled && monitor !== null)) stop();
-    observation = null;
-    expires = 0;
+  function invalidate(command) {
+    if (
+      command === 'status' &&
+      globalMode() &&
+      state.enabled &&
+      monitor !== null
+    )
+      refreshFailed = true;
+    else {
+      stop();
+      observation = null;
+      expires = 0;
+    }
     adapter.reconcile();
   }
   function apply(snapshot, began, expected) {
     if (disposed || expected !== revision) return false;
+    var previous = observation && observation.owner;
+    var previousExpires = expires;
     state = settings.normalize(snapshot && snapshot.state);
     observation = snapshot && typeof snapshot === 'object' ? snapshot : null;
+    refreshFailed = false;
     if (
       personal &&
       (!observation ||
@@ -179,17 +214,26 @@ module.exports = function (service, options) {
       personal = null;
     var ttl = snapshot && snapshot.validForMs;
     var observedAt = snapshot && snapshot.observedAtMs;
+    var received = now();
     expires =
       typeof observedAt === 'number' &&
       Math.floor(observedAt) === observedAt &&
       observedAt >= began &&
-      observedAt <= now() &&
+      observedAt <= received &&
       typeof ttl === 'number' &&
       isFinite(ttl) &&
       ttl > 0 &&
       ttl <= 1500
         ? observedAt + ttl
         : 0;
+    if (expires > 0 && expires <= received) {
+      // A reply that arrived expired cannot renew the retry window.
+      var current = observation && observation.owner;
+      expires =
+        previous && current && previous.generation === current.generation
+          ? Math.min(previousExpires, expires)
+          : 0;
+    }
     adapter.reconcile();
     if (globalMode() && state.enabled) {
       // Keep watching the saved opt-in even when boot or standby temporarily
@@ -215,11 +259,22 @@ module.exports = function (service, options) {
       })
       .then(
         function (snapshot) {
-          if (snapshot) apply(snapshot, began, expected);
-          return snapshot;
+          var retryable =
+            command === 'status' &&
+            snapshot &&
+            snapshot.retryable === true &&
+            snapshot.state &&
+            snapshot.state.enabled === true &&
+            snapshot.state.scope === 'global';
+          if (snapshot && !retryable) {
+            apply(snapshot, began, expected);
+            return snapshot;
+          }
+          if (!disposed && expected === revision) invalidate(command);
+          return null;
         },
         function () {
-          if (expected === revision) invalidate();
+          if (!disposed && expected === revision) invalidate(command);
           return null;
         }
       );
@@ -323,7 +378,6 @@ module.exports = function (service, options) {
       execute(command, command === 'configure' ? payload : null, expected).then(
         function (snapshot) {
           if (!snapshot || expected !== revision || disposed) {
-            if (!snapshot && expected === revision && !disposed) invalidate();
             message.respond(response(false, false));
             return;
           }
