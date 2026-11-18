@@ -755,6 +755,7 @@ class DesktopRecoveryTests(unittest.TestCase):
         w = self.window()
         w.start('uninstall')
         self.pump(lambda: w.pending is not None)
+        self.assertIn('saved preferences will be removed.', w.content.toPlainText())
         w.submit('y')
         self.pump(lambda: not w.running)
         self.assertEqual(w.title.text(), 'Clean Your TV removal is verified.', w.content.toPlainText())
@@ -762,6 +763,9 @@ class DesktopRecoveryTests(unittest.TestCase):
         self.assertIsNone(self.store.pending(self.profile))
         self.assertIsNone(self.store.root_reinstall(self.profile))
         self.assertIsNone(self.button(w, 'Continue Root reinstallation'))
+        self.assertTrue(self.button(w, 'Back to start').isDefault())
+        self.assertFalse(self.button(w, 'Set up my TV').isDefault())
+        self.assertEqual(self.connections, [self.profile])
         self.assertEqual(self.device_removals, ['d'*32])
         receipt = json.loads((self.store.device_dir(self.profile)/'clean-removal.json').read_bytes())
         self.assertEqual(receipt['previous'], json.loads(original))
@@ -770,6 +774,7 @@ class DesktopRecoveryTests(unittest.TestCase):
 
     def test_recover_clean_removal_publishes_proof_accepted_by_strict_ui(self):
         from tests.cytv.clean_removal_fixture import prepare
+        self.store.finish(self.profile)
         original=prepare(self)
         self.store.request_clean_removal(self.profile)
         w=self.window()
@@ -789,6 +794,18 @@ class DesktopRecoveryTests(unittest.TestCase):
         self.assertIs(w.recovery_plan.get('verified_clean'),True)
         self.assertIsNot(w.recovery_plan.get('restart_required'),True)
         self.assertIsNone(self.button(w,'Try again'))
+        setup = self.button(w, 'Set up my TV')
+        self.assertIsNotNone(setup)
+        self.assertEqual(self.connections, [self.profile])
+        setup.click()
+        self.pump(lambda: w.pending is not None)
+        self.assertEqual(w.selected_profile, self.profile)
+        self.assertEqual(w.pending.title, 'Connect to check installed versions?')
+        w.submit('n')
+        self.pump(lambda: not w.running)
+        self.assertEqual(w.title.text(), 'Cancelled')
+        self.assertEqual(self.connections, [self.profile])
+        self.assertEqual(self.device_removals, ['d'*32])
 
     def test_cleanup_reviews_recovery_even_with_old_advisory_actions(self):
         def runner(argv, **kwargs):
@@ -804,6 +821,7 @@ class DesktopRecoveryTests(unittest.TestCase):
         w.start('uninstall', self.profile)
         self.pump(lambda: not w.running)
         self.assertEqual(w.title.text(), 'Finish Clean Your TV cleanup')
+        self.assertIsNone(self.button(w, 'Set up my TV'))
         self.assertNotEqual(w.title.property('state'), 'error')
         self.assertIn('Verifying removal…', w.subtitle.text())
         self.assertIn('Final cleanup could not be verified.', w.subtitle.text())

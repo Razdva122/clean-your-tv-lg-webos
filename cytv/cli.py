@@ -514,6 +514,8 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
         retry_removal = args.command == 'uninstall' and (removal_operation is not None or
             (store.pending(profile) or {}).get('recovery_protocol') == 'clean-removal-v1')
         if args.command in ('install', 'uninstall', 'restore', 'enable-system-updates', 'enable-firmware-access', 'disable-firmware-access', 'recover-system-rollback', 'recover-root-rollback', 'replace-system-updater') and not (args.yes or retry_removal or args.reconnect_after_reset or reinstall_step):
+            if args.command == 'uninstall':
+                write('LG Home will be restored. Clean Your TV, its updaters, Home Helper and saved preferences will be removed.')
             if args.command == 'uninstall' and profile['edition'] == 'root':
                 write('This removes Root, Root Updater, their services and startup hooks, plus any installed No-root Home, Helper and Updater.')
                 write('Recovery records are retained for diagnostics. Other TV apps stay installed.')
@@ -1103,10 +1105,9 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                     from .recovery import restored_for_uninstall
                     restored_for_uninstall(write, profile, removal_operation, result,
                                            evidence=tv_info.get('removal_evidence'))
-                if result.get('verified_clean') is True and result.get('removed') is True:
-                    write.recovery_plan({'state':'complete','disposition':'clean-removal','verified_clean':True,'removed':True,
-                                         'removal_evidence':tv_info.get('removal_evidence'),
-                                         'summary':'Clean Your TV removal is verified.','next_step':'Other TV apps stay installed.'})
+                from .recovery import verified_removal_plan
+                if verified_removal_plan(write, profile, result, evidence=tv_info.get('removal_evidence'),
+                                         next_step='Other TV apps stay installed.'):
                     write.heading('Clean Your TV removed')
                     write('Clean Your TV removed. Its apps, startup and Home-button control were removed.')
                     if result.get('temporary_files_retained'):

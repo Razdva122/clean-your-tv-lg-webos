@@ -215,6 +215,19 @@ def _write_removal_plan(write, value, *, pending=None, failure=None, allow_reque
     write.recovery_plan(dict(value, removal_action=removal_action(evidence, failure)))
 
 
+def verified_removal_plan(write, profile, result, *, evidence=None, next_step=SEPARATE):
+    """Publish terminal cleanup proof and bind the optional desktop setup to its TV."""
+    if (result.get('removed') is not True or result.get('verified_clean') is not True
+            or result.get('restart_required') is True):
+        return False
+    if write.frontend == 'desktop':
+        write.recovery(profile)
+    _write_removal_plan(write, {'state': 'complete', 'disposition': 'clean-removal',
+        'removed': True, 'verified_clean': True, 'restart_required': False,
+        'removal_evidence': evidence, 'summary': 'Clean Your TV removal is verified.', 'next_step': next_step})
+    return True
+
+
 def missing_root_deployment_plan(write, profile, pending, observation):
     """Explain missing evidence without repeating reads or granting recovery."""
     assessment = assess(profile, pending, observation)
@@ -285,10 +298,7 @@ def remove_before_reinstall(installer, ask, write, *, load_payload=False, next_s
             raise UserError('Release payload is missing. Download a built cytv executable or run python scripts/build-cytv.py --payload-only from source.') from None
     completed = installer.uninstall_project()
     evidence = getattr(installer, 'tv_info', {}).get('removal_evidence')
-    if completed.get('removed') is True and completed.get('verified_clean') is True and completed.get('restart_required') is not True:
-        _write_removal_plan(write, {'state':'complete','disposition':'clean-removal','removed':True,'verified_clean':True,
-            'summary':'Clean Your TV removal is verified.','next_step':SEPARATE,'removal_evidence':evidence})
-    else:
+    if not verified_removal_plan(write, installer.profile, completed, evidence=evidence):
         removal_plan(write, installer.store, installer.profile, state='waiting',
                      restart_observed=completed.get('restart_required') is True, evidence=evidence)
 
@@ -432,15 +442,11 @@ def recover(installer, ask, write, non_interactive=False, initial_observation=No
                 pending=pending, allow_requested=True)
             if prompts.confirm('Continue removing Clean Your TV?',ask,write):
                 completed=installer.continue_clean_removal(pending)
-                restart = completed.get('restart_required') is True
-                if restart or completed.get('verified_clean') is not True or completed.get('removed') is not True:
-                    error_type = _RemovalRestartRequired if restart else UserError
+                if not verified_removal_plan(write, installer.profile, completed,
+                                             evidence=installer.tv_info.get('removal_evidence')):
+                    error_type = _RemovalRestartRequired if completed.get('restart_required') is True else UserError
                     raise error_type('Removal is still in progress. Recovery data and the remaining cleanup step were kept.',
                                      reason_code='pending-operation')
-                _write_removal_plan(write, {'state':'complete','disposition':'clean-removal',
-                                     'removed':completed['removed'],'verified_clean':completed['verified_clean'],'restart_required':False,
-                                     'removal_evidence':installer.tv_info.get('removal_evidence'),
-                                     'summary':'Clean Your TV removal is verified.','next_step':SEPARATE})
             else:write(KEPT)
             return
         if pending and pending.get('recovery_protocol')=='no-root-original-stream-v1':

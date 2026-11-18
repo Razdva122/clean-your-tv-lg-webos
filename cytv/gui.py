@@ -879,6 +879,9 @@ class Wizard(QMainWindow):
                             removal_operation=continue_removal), True).setFocus()
             elif doctor_ready:
                 self.show_doctor_success()
+            elif completed and cleanup and self.recovery_profile is not None:
+                profile = dict(self.recovery_profile)
+                self.button('Set up my TV', lambda: self.start('install', profile))
             elif retry_removal:
                 profile = dict(self.recovery_profile)
                 from .recovery_ui import removal_action, projected_removal_action

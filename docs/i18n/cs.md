@@ -106,6 +106,8 @@ Pokud instalátor nemůže ověřit odebrání, závěrečný úklid, ovládán�
 
 Pokud instalátor nemůže ověřit požadovaný úplný restart, uložte a přiložte diagnostickou zprávu. Zachovejte uložené připojení a data obnovy. Neopakujte stále odpojování napájení a nemažte ručně nedokončenou operaci.
 
+Po ověřeném odebrání můžete instalátor zavřít nebo zvolit **Nastavit televizor** a zahájit novou instalaci na stejném televizoru se stejným připojením a edicí.
+
 **Přeinstalace Root:** S uloženým připojením zvolte **Nastavit televizor → Root** a potvrďte **Přeinstalovat Root?**. Instalátor obnoví LG Home a zcela odstraní Clean Your TV včetně aktualizátorů, Home Helper a uložených předvoleb. Po ověření odstranění nainstaluje a aktivuje balíčky a prostředí Root dodané v tomto instalátoru. Ostatní aplikace TV a stávající přístup root/SSH zůstanou zachovány. Pokud se průvodce v počítači zastaví, otevřete stejný instalátor a zvolte **Pokračovat v přeinstalaci Root**. Po ověření odstranění zvolte **Pokračovat v instalaci Root**. Samotné **Odinstalovat Clean Your TV** nikdy nespustí novou instalaci.
 
 ### Úprava nastavení LG a dokončení obnovy Root

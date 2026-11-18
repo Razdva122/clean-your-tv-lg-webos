@@ -179,8 +179,9 @@ instruction. Recovery receipts and device-side cleanup guards remain intact.
 If a confirmed Root reinstallation pauses, open the same desktop installer
 and choose **Continue Root reinstallation**. It reconnects to the same TV and
 continues any unfinished cleanup. After removal is verified, choose
-**Continue Root installation**. A standalone **Uninstall Clean Your TV** ends
-with removal.
+**Continue Root installation**. After a standalone **Uninstall Clean Your TV**
+or a recovery that verifies full removal, you can close the installer or choose
+**Set up my TV** to start a fresh setup using the same TV, edition and connection.
 
 Passwords are masked. SSH identity changes still block the connection. While TV
 changes are in progress, the window waits for the step to finish instead of
