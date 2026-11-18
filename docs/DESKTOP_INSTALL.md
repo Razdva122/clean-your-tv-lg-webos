@@ -179,6 +179,11 @@ Passwords are masked. SSH identity changes still block the connection. While TV
 changes are in progress, the window waits for the step to finish instead of
 terminating the installer halfway through an operation.
 
+When No-root offers **Retry storage check**, select it to repeat the failed
+read-only check on the same TV. After a successful check, confirm
+**Install these versions?** to continue setup. If an unfinished operation
+appears, follow **Review recovery options**.
+
 On failure, read the explanation, click **Save diagnostic report…**, then
 **Open an issue**. Include your steps, expected/actual results, TV model and firmware.
 Review the JSON report before attaching it. Do not attach your profile folder or keys.

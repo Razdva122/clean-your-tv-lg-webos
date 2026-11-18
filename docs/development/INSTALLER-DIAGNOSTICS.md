@@ -698,12 +698,13 @@ Typed SSH and storage errors keep their existing reasons. A foreign operation
 reply or reservation still reports `pending-operation`, and a lost reply
 after a package request still requires review of the original operation.
 
-The context is added only by the launcher wrapper. Developer Mode and Root SSH
-observer source bytes, source hashes and capsule bindings are unchanged. No
-additional TV command, filesystem operation, permission change, automatic retry
-or recovery action is introduced. Detached/asynchronous worker errors remain
-outside this synchronous error envelope. Rebuilt host and Android installers
-are required for delivery; these additions are not in published CYTV 0.12.0.
+The launcher wrapper adds the context. Interactive desktop and console setup
+inspect storage before running the existing write probe. If the observer
+classifies the failure as `storage-preflight-failed`, the user can repeat the
+failed read-only check once with the original TV connection. Installation
+requires a separate confirmation after a passing retry. Developer Mode and
+Root SSH capsule source bytes and hashes remain unchanged. Detached and
+asynchronous worker errors are outside this synchronous error envelope.
 
 `first_failure` belongs to the pending operation's diagnostic ID, not the TV's
 entire installation history. Different timestamps across exports do not establish

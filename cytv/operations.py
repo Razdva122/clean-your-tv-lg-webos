@@ -149,6 +149,8 @@ class Installer:
         self.remote, self.store, self.profile = remote, store, profile
         self.payload, self.manifest, self.progress = Path(payload), manifest, progress
         self.helper_retry = lambda: False
+        self.storage_preflight_review = None
+        self.before_no_root_staging = None
         self.reconnect = None
         self.root_reinstall_payload = None
         self.tv_info = tv_info if tv_info is not None else {}
@@ -590,7 +592,7 @@ with os.fdopen(f,'rb') as stream:
         return reply
 
     def preflight(self, install=False, home_interfaces=False, stop_running_helper=False, *, fresh_only=False,
-                  diagnose=False):
+                  diagnose=False, defer_helper=False):
         from .root_capabilities import CALLS, clear_home_observations, verify
         clear_home_observations(self.tv_info)
         for name in CALLS:
@@ -745,20 +747,23 @@ with os.fdopen(f,'rb') as stream:
                                'Root Home routing is present. Restore it with cytv --edition root restore first.' if root_state.strip() else '')
             if root_state.strip():
                 raise UserError('Root Home routing is present. Restore it with cytv --edition root restore first.')
-            if not install:
+            if not install or defer_helper:
                 return
-            self.checks.update('helper-idle', 'running')
-            helper = self.helper_state()
-            if helper == 'running' and stop_running_helper:
-                helper = self.stop_helper_for_install()
-            self.tv_info['helper_state'] = helper
-            self.checks.update('helper-idle', 'unknown' if helper == 'uncertain' else 'fail' if helper == 'running' else 'pass')
-            if helper == 'running':
-                raise UserError('Home Helper is running. Installation has not started; installed versions are unchanged. Press Home three times within two seconds (older Helper: hold Home for two seconds) to stop it, then rerun installation.', reason_code='helper-running')
-            if helper == 'uncertain':
-                raise UserError('Home Helper state could not be verified. Installation has not started; installed versions are unchanged. Run Check TV status and save a diagnostic report before retrying. Do not delete Helper state files.', reason_code='helper-state-unverified')
-            if helper == 'stale':
-                self.progress('A stale Helper PID file was found; no Helper process is running. Continuing installation without deleting state files.')
+            self.prepare_install_helper(stop_running_helper)
+
+    def prepare_install_helper(self, stop_running_helper):
+        self.checks.update('helper-idle', 'running')
+        helper = self.helper_state()
+        if helper == 'running' and stop_running_helper:
+            helper = self.stop_helper_for_install()
+        self.tv_info['helper_state'] = helper
+        self.checks.update('helper-idle', 'unknown' if helper == 'uncertain' else 'fail' if helper == 'running' else 'pass')
+        if helper == 'running':
+            raise UserError('Home Helper is running. Installation has not started; installed versions are unchanged. Press Home three times within two seconds (older Helper: hold Home for two seconds) to stop it, then rerun installation.', reason_code='helper-running')
+        if helper == 'uncertain':
+            raise UserError('Home Helper state could not be verified. Installation has not started; installed versions are unchanged. Run Check TV status and save a diagnostic report before retrying. Do not delete Helper state files.', reason_code='helper-state-unverified')
+        if helper == 'stale':
+            self.progress('A stale Helper PID file was found; no Helper process is running. Continuing installation without deleting state files.')
 
     def stop_helper_for_install(self):
         from .helper_stop import INSTALL_PROGRAM
@@ -903,7 +908,7 @@ printf '%s' "$cytv_state"
         self.select_graphics()
         if self.profile['edition']=='root':
             self.preflight(install=not reinstall, home_interfaces=True)
-        else:
+        elif self.before_no_root_staging is None:
             self.preflight(install=True, stop_running_helper=True)
         if self.profile['edition'] == 'root':
             return self.install_root(inventory, migrate, reinstall)

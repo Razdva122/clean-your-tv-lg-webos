@@ -101,6 +101,8 @@ During recovery, keep Home control off and retain the original diagnostic report
 
 For help, include TV model, firmware, No-root or Root, installer device, failed step and error message. Remove passwords, keys, addresses and personal data before sharing a report. Reports are not published automatically.
 
+If No-root offers **Retry storage check**, choose it to repeat the read-only check on the same TV. Confirm installation separately after the check passes. If the installer finds an unfinished operation, use **Review recovery options**.
+
 [Report a problem](../FEEDBACK.md) · [Detailed recovery](../RECOVERY.md) · [Update or remove](../MAINTENANCE.md) · [Other languages](../LANGUAGES.md)
 
 ### Straightforward removal

@@ -99,6 +99,8 @@ Durante la recuperación, mantén desactivado el control de Home y conserva los 
 
 Indica modelo, firmware, No-root o Root, dispositivo de instalación, paso y mensaje de error. Elimina contraseñas, claves, direcciones y datos personales antes de compartir el informe. No se publica automáticamente.
 
+Si No-root ofrece **Repetir la comprobación de almacenamiento**, elige esa opción para repetir la comprobación de solo lectura en el mismo televisor. Confirma la instalación por separado cuando se complete la comprobación. Si el instalador detecta una operación pendiente, elige **Revisar opciones de recuperación**.
+
 [Informar de un problema](../FEEDBACK.md) · [Recuperación — inglés](../RECOVERY.md) · [Actualizar o eliminar — inglés](../MAINTENANCE.md) · [Otros idiomas](../LANGUAGES.md)
 
 ### Eliminación sencilla

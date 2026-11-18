@@ -86,6 +86,8 @@ Během obnovy ponechte ovládání Home vypnuté a zachovejte původní diagnost
 
 Uveďte model TV, firmware, No-root nebo Root, instalační zařízení, krok a chybovou zprávu. Před sdílením odstraňte hesla, klíče, adresy a osobní údaje. Zpráva se nezveřejňuje automaticky.
 
+Pokud No-root nabídne **Zopakovat kontrolu úložiště**, zvolte tuto možnost a zopakujte kontrolu pouze pro čtení na stejném televizoru. Po úspěšné kontrole potvrďte instalaci zvlášť. Pokud instalátor zjistí nedokončenou operaci, zvolte **Prověřit možnosti obnovy**.
+
 [Nahlásit problém — anglicky](../FEEDBACK.md) · [Obnovení — anglicky](../RECOVERY.md) · [Aktualizace a odstranění — anglicky](../MAINTENANCE.md) · [Další jazyky](../LANGUAGES.md)
 
 ### Jednoduché odebrání

@@ -99,6 +99,8 @@ Lassen Sie während der Wiederherstellung die Home-Steuerung ausgeschaltet und b
 
 Nennen Sie TV-Modell, Firmware, No-root oder Root, Installationsgerät, Schritt und Fehlermeldung. Entfernen Sie vor dem Teilen Passwörter, Schlüssel, Adressen und persönliche Daten. Berichte werden nicht automatisch veröffentlicht.
 
+Wenn No-root **Speicherprüfung wiederholen** anbietet, wähle die Schaltfläche, um denselben Fernseher ohne Änderungen erneut zu prüfen. Bestätige die Installation nach erfolgreicher Prüfung separat. Bei einem offenen Vorgang wähle **Wiederherstellungsoptionen prüfen**.
+
 [Problem melden](../FEEDBACK.md) · [Wiederherstellung — Englisch](../RECOVERY.md) · [Aktualisieren oder entfernen — Englisch](../MAINTENANCE.md) · [Andere Sprachen](../LANGUAGES.md)
 
 ### Einfache Entfernung

@@ -11,7 +11,7 @@ from types import SimpleNamespace
 
 from . import __version__, package, state, i18n
 from .errors import ExistingRoot, LocalRecoveryError, TVNotReady, UserError
-from .desktop import EXPLICIT_TV_CHOICE
+from .desktop import EXPLICIT_TV_CHOICE, RETRY_STORAGE_PROMPT
 from .operations import Installer, require_root_reinstall_cleanup
 from .terminal import Console, supports_ansi
 from . import diagnostics, discovery, inspect_tv, prompts, install_settings, debloat
@@ -117,6 +117,51 @@ def removal_connection_message(store, profile, phase, error):
         return None
     store.checkpoint(profile,removal_reason='connection-interrupted')
     return 'Connection to the TV was interrupted. Check the connection and try again.'
+
+
+def storage_preflight_review(store, profile, ask, write):
+    """Keep retry on the authenticated SSH session and the exact saved profile."""
+    directory = store.device_path(profile)
+    known = directory / 'known_hosts'
+    try:
+        pin = hashlib.sha256(known.read_bytes()).hexdigest() if not known.is_symlink() else None
+    except OSError:
+        pin = None
+
+    def guard():
+        from .root_runtime import require_idle
+        try:
+            require_idle(store, profile)
+        except UserError:
+            pending = store.pending(profile)
+            if pending and pending.get('action') not in ('install', 'activate-root') and pending.get(
+                    'recovery_protocol') != 'clean-removal-v1':
+                from .recovery import plan, REVIEW
+                write.recovery(profile)
+                plan(write, 'review', REVIEW)
+            raise
+        if pin is None or store.device_path(profile) != directory:
+            raise UserError('SSH host key was not verified. Connection cancelled.',
+                            reason_code='ssh-identity-unverified')
+        original, _ = store.connection_profile(profile, expected_pin=pin)
+        if original != profile:
+            raise UserError('SSH host key was not verified. Connection cancelled.',
+                            reason_code='ssh-identity-unverified')
+
+    def review(error):
+        guard()
+        if error is None:
+            write('The read-only storage check passed. Confirm installation to continue.')
+            question = 'Install these versions?'
+        else:
+            write(str(error))
+            write('Repeat the read-only check on the same TV.')
+            question = RETRY_STORAGE_PROMPT
+        if not prompts.confirm(question, ask, write):
+            raise EOFError
+        guard()
+
+    return review
 
 
 def choose_profile(args, store, ask, write, search, inspect):
@@ -730,22 +775,43 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                                             reason_code='root-operation-unconfirmed')
                         raise home_conflict
                     installer.preflight(install=True, home_interfaces=True)
-                if profile['edition'] == 'no-root':
-                    phase = 'inspect-installation'
+                def helper_retry():
+                    if args.non_interactive:
+                        return False
+                    write.heading('Stop Home Helper on the TV')
+                    write('Press Home three times within two seconds (older Helper: hold Home for two seconds), then release all buttons and wait for LG Home.')
+                    return prompts.confirm('Try stopping Helper again?', ask, write, default=True)
+
+                def prepare_no_root(check):
                     auto_stop = True
                     while True:
                         try:
-                            installer.preflight(install=True, stop_running_helper=auto_stop)
-                            break
+                            check(auto_stop)
+                            return True
                         except UserError as error:
                             auto_stop = False
                             if error.reason_code != 'helper-running' or args.non_interactive:
                                 raise
-                            write.heading('Stop Home Helper on the TV')
-                            write('Press Home three times within two seconds (older Helper: hold Home for two seconds), then release all buttons and wait for LG Home.')
-                            if not prompts.confirm('Try stopping Helper again?', ask, write, default=True):
-                                write('Cancelled. Installation has not started.')
-                                return 0
+                            if not helper_retry():
+                                return False
+
+                def prepare_no_root_staging():
+                    nonlocal phase
+                    phase = 'inspect-installation'
+                    if not prepare_no_root(installer.prepare_install_helper):
+                        raise EOFError
+                    phase = 'install-packages'
+
+                installer.helper_retry = helper_retry
+                if profile['edition'] == 'no-root':
+                    phase = 'inspect-installation'
+                    if not args.non_interactive and write.frontend in ('console', 'desktop'):
+                        installer.storage_preflight_review = storage_preflight_review(store, profile, ask, write)
+                        installer.before_no_root_staging = prepare_no_root_staging
+                        installer.preflight(install=True, defer_helper=True)
+                    elif not prepare_no_root(lambda auto_stop: installer.preflight(install=True, stop_running_helper=auto_stop)):
+                        write('Cancelled. Installation has not started.')
+                        return 0
                 if not resume:
                     installer.select_graphics()
                 phase = 'read-inventory'
@@ -807,13 +873,6 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                              'Keeping the previous recovery state in an archive…': 'archive-root-state'}.get(message, phase)
                     write(message)
                 installer.progress = progress
-                def helper_retry():
-                    if args.non_interactive:
-                        return False
-                    write.heading('Stop Home Helper on the TV')
-                    write('Press Home three times within two seconds (older Helper: hold Home for two seconds), then release all buttons and wait for LG Home.')
-                    return prompts.confirm('Try stopping Helper again?', ask, write, default=True)
-                installer.helper_retry = helper_retry
                 if resume:
                     result = installer.resume_root_setup()
                 else:

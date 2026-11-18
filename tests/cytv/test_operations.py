@@ -106,11 +106,14 @@ class Remote:
             if no_root_observer.STORAGE_SELECT in code:
                 request=json.loads(args[-1])
                 return json.dumps({'operation':request['plan']['operation'],'root':request['root']})
+            if "var protocol='no-root-original-stream-v1'" in code:
+                request = json.loads(args[-1])
+                if request['command'] == 'storage-check':
+                    return json.dumps({'operation': request['plan']['operation']})
             if no_root_observer.PROGRAM in code:
                 import hashlib
                 request=json.loads(args[-1]);plan=request['plan'];action=request['command'];index=request.get('slot')
                 operation=plan['operation']
-                if action=='storage-check':return json.dumps({'operation':operation})
                 if action=='prepare':
                     self.observers.setdefault(operation,{'protocol':no_root_observer.PROTOCOL,'operation':operation,'plan_sha256':hashlib.sha256(no_root_observer.canonical(plan).encode()).hexdigest(),
                          'reservation':'active','closed':None,'configuration':{step:'prepared' for step in (('files','eim','launch') if plan['action']=='install' else ('restore',))},

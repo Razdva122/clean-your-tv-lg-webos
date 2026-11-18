@@ -657,7 +657,8 @@ def observation_error(command, failure, error=None, *, fresh_install=False, deta
     return error
 
 
-def invoke(remote, plan, command, slot=None, source=None, proof=None, data=None, *, fresh_install=False):
+def invoke(remote, plan, command, slot=None, source=None, proof=None, data=None, *, fresh_install=False,
+           read_only_storage=False):
     def failure_error(failure, error=None, details=None):
         return observation_error(command, failure, error, fresh_install=fresh_install, details=details)
 
@@ -673,12 +674,14 @@ def invoke(remote, plan, command, slot=None, source=None, proof=None, data=None,
             refuse()
         request['alternate_root'] = JAIL_ROOT
         program_source = STORAGE_SELECT
-    if command == 'storage-inspect':
-        if plan.get('connection') != 'root-ssh' or 'root_handoff' in plan:
+    if command == 'storage-inspect' or read_only_storage:
+        if read_only_storage and command != 'storage-check':
             refuse()
-        program_source = program_source.replace("case 'storage-check':result=storageCheck();break;", """case 'storage-inspect':
- ancestry(path.dirname(publicRoot),true);
- if(exists(publicRoot))ancestry(publicRoot,true);
+        if command == 'storage-inspect' and (plan.get('connection') != 'root-ssh' or 'root_handoff' in plan):
+            refuse()
+        program_source = program_source.replace("case 'storage-check':result=storageCheck();break;", f"case '{command}':" + """
+ if(plan.connection==='root-ssh'&&!exists(publicRoot))ancestry(path.dirname(publicRoot),true);
+ else ancestry(publicRoot,true);
  if(exists(path.dirname(root)))ancestry(path.dirname(root));
  if(exists(root))directory(root,true);
  if(exists(active)){directory(active,true);if(fs.readdirSync(active).length)fail('foreign-reservation');}
@@ -715,7 +718,9 @@ def invoke(remote, plan, command, slot=None, source=None, proof=None, data=None,
 """.replace('NAMES', canonical(OBSERVER_EXCEPTION_NAMES)).replace('CODES', canonical(OBSERVER_EXCEPTION_CODES)).replace('REASONS', canonical(OBSERVER_REASONS)).replace('FILESYSTEM_OPERATIONS', canonical(OBSERVER_FILESYSTEM_OPERATIONS))
     try:
         # POSIX unset avoids depending on the TV env utility supporting -u.
-        if 'root_handoff' in plan:
+        # The read-only check inspects directory metadata only. The writable
+        # check and staging still use the native Root handoff lock when needed.
+        if 'root_handoff' in plan and not read_only_storage:
             from .root_no_root_handoff import call
             loaded=getattr(remote,'_cytv_root_handoff_support',None)
             if not loaded:refuse()
@@ -799,13 +804,35 @@ def begin(installer, action, artifacts, versions, expected, configuration, setup
     check_plan = make_plan(operation, uuid.uuid4().hex, action, artifacts, versions, PUBLIC_ROOT, root_ssh=root_ssh,
                            private_root=selected, root_handoff=handoff)
     fresh_install = action == 'install'
+    review = getattr(installer, 'storage_preflight_review', None) if fresh_install else None
+    retried = False
+
+    def check_read_only(command):
+        nonlocal retried
+        options = {'fresh_install': fresh_install, 'read_only_storage': command == 'storage-check'}
+        try:
+            return invoke(installer.remote, check_plan, command, **options)
+        except UserError as error:
+            if review is None or retried or error.reason_code != 'storage-preflight-failed':
+                raise
+            review(error)
+        retried = True
+        return invoke(installer.remote, check_plan, command, **options)
+
     if not root_ssh:
-        selected = invoke(installer.remote, check_plan, 'storage-select', fresh_install=fresh_install)['root']
+        selected = check_read_only('storage-select')['root']
         if selected == ROOT:
             selected = None  # Preserve legacy plans and capsule bindings.
         else:
             check_plan['private_root'] = selected
+    if review is not None:
+        check_read_only('storage-check')
+        if retried:
+            review(None)
     invoke(installer.remote, check_plan, 'storage-check', fresh_install=fresh_install)
+    before_staging = getattr(installer, 'before_no_root_staging', None) if fresh_install else None
+    if before_staging is not None:
+        before_staging()
     install_stop = getattr(installer, '_install_stop_generation', None) if setup_activation else None
     if setup_activation:
         installer._install_stop_generation = None

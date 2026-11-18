@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (QApplication, QFileDialog, QFrame, QHBoxLayout,
 
 from cytv import __version__, cli, debloat, diagnostics, i18n
 from cytv.i18n import translate as tr
-from cytv.desktop import EXPLICIT_TV_CHOICE, Channel, SSH_COMMAND_PROMPT
+from cytv.desktop import EXPLICIT_TV_CHOICE, Channel, SSH_COMMAND_PROMPT, RETRY_STORAGE_CHECK, RETRY_STORAGE_PROMPT
 from cytv.errors import LocalRecoveryError
 from cytv.state import Store
 from cytv.gui_style import STYLE, TVPreview, Select, EditionOption, BrandSignature, WrappedLabel, ThemeCard, ToggleSwitch
@@ -1308,6 +1308,11 @@ class Wizard(QMainWindow):
         if prompt.label == SETTINGS_PROMPT:
             self.show_install_settings()
             return
+        if prompt.title == RETRY_STORAGE_PROMPT:
+            self.title.setText(tr(RETRY_STORAGE_CHECK))
+            self.subtitle.hide()
+            self.button(RETRY_STORAGE_CHECK, lambda: self.submit('y'), True).setFocus()
+            return
         if prompt.secret:
             developer = prompt.credential_type == 'developer'
             title = {'developer':'Developer Mode code (Passphrase)', 'key':'SSH key passphrase',
@@ -1522,6 +1527,8 @@ class Wizard(QMainWindow):
         if self.pending.secret:
             self.content.clear()
             self.title.setText(tr('Connecting to your TV'))
+        elif self.pending.title == RETRY_STORAGE_PROMPT:
+            self.title.setText(tr('Review and install'))
         self.pending = None
         if self.check_results and not ssh_command:
             self.check_panel.show()

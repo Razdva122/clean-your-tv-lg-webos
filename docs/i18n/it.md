@@ -99,6 +99,8 @@ Durante il ripristino, lascia disattivato il controllo Home e conserva i rapport
 
 Indica modello TV, firmware, No-root o Root, dispositivo di installazione, passaggio e messaggio di errore. Rimuovi password, chiavi, indirizzi e dati personali prima di condividere il rapporto. Non viene pubblicato automaticamente.
 
+Se No-root offre **Ripeti controllo dello spazio**, scegli questa opzione per ripetere il controllo in sola lettura sulla stessa TV. Dopo il controllo, conferma l’installazione separatamente. Se c’è un’operazione in sospeso, scegli **Esamina le opzioni di ripristino**.
+
 [Segnala un problema](../FEEDBACK.md) · [Ripristino — inglese](../RECOVERY.md) · [Aggiornare o rimuovere — inglese](../MAINTENANCE.md) · [Altre lingue](../LANGUAGES.md)
 
 ### Rimozione semplice

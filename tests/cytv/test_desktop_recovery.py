@@ -23,6 +23,96 @@ except ImportError:
 
 @unittest.skipUnless(HAS_QT, 'Desktop build dependencies are optional for CLI tests')
 class DesktopRecoveryTests(unittest.TestCase):
+    def test_storage_preflight_retries_only_failed_check_before_install_confirmation(self):
+        for decision in ('cancel-retry', 'cancel-install', 'pending', 'late-pending', 'legacy-uninstall', 'identity',
+                         'check-fails-again', 'install'):
+            with self.subTest(decision=decision):
+                self.store.finish(self.profile)
+                self.remote = Remote()
+                self.remote.close = lambda: None
+                original = self.remote.run
+                checks = []
+                read = ('storage-check', True)
+                selected = ('storage-select', True)
+                failure_count = 2 if decision == 'check-fails-again' else 1
+                def run(command, **kwargs):
+                    if command.startswith('unset NODE_OPTIONS NODE_PATH && /usr/bin/node -e '):
+                        args = shlex.split(command)
+                        request = json.loads(args[-1]) if args[-1].startswith('{') else {}
+                        action = request.get('command')
+                        if action in ('storage-select', 'storage-check'):
+                            read_only = "case 'storage-check':result=storageCheck();break;" not in args[-2]
+                            checks.append((action, read_only))
+                            if action == 'storage-check' and read_only and checks.count(read) <= failure_count:
+                                return 'MALFORMED'
+                    return original(command, **kwargs)
+                self.remote.run = run
+
+                w = self.window()
+                w.start('install', self.profile)
+                for expected in ('Connect to check installed versions?', 'Install these versions?'):
+                    self.pump(lambda: w.pending is not None or not w.running)
+                    self.assertIsNotNone(w.pending, w.details.toPlainText())
+                    self.assertEqual(w.pending.title, expected)
+                    w.submit('y')
+                self.pump(lambda: self.button(w, 'Retry storage check') is not None or not w.running)
+                retry = self.button(w, 'Retry storage check')
+                self.assertIsNotNone(retry, w.details.toPlainText())
+                self.assertEqual(checks, [selected, read])
+                self.assertIsNone(self.store.pending(self.profile))
+                self.assertEqual(self.remote.observers, {})
+                self.assertEqual(self.remote.uploads, {})
+                if decision == 'cancel-retry':
+                    w.submit('n')
+                elif decision in ('pending', 'legacy-uninstall'):
+                    self.store.begin(self.profile, 'uninstall' if decision == 'legacy-uninstall' else 'install', stage='pending')
+                    retry.click()
+                elif decision == 'identity':
+                    (self.store.device_dir(self.profile) / 'known_hosts').write_bytes(b'different pin')
+                    retry.click()
+                elif decision == 'check-fails-again':
+                    retry.click()
+                else:
+                    retry.click()
+                    self.pump(lambda: w.pending is not None or not w.running)
+                    self.assertIsNotNone(w.pending, w.details.toPlainText())
+                    self.assertEqual(w.pending.title, 'Install these versions?')
+                    self.assertEqual(w.pending.default, 'n')
+                    self.assertEqual(checks, [selected, read, read])
+                    self.assertEqual(self.remote.observers, {})
+                    self.assertEqual(self.remote.uploads, {})
+                    if decision == 'late-pending':
+                        self.store.begin(self.profile, 'install', stage='pending')
+                    w.submit('y' if decision in ('install', 'late-pending') else 'n')
+                    if decision == 'install':
+                        self.pump(lambda: w.pending is not None or not w.running)
+                        if w.pending:
+                            w.submit(None)
+                self.pump(lambda: not w.running)
+                installs = [c for c in self.remote.calls if c[:2] == ('luna', 'com.webos.appInstallService/dev/install')]
+                self.assertEqual(len(installs), 2 if decision == 'install' else 0)
+                self.assertFalse(any(c[0] == 'luna' and c[1].endswith('/remove') for c in self.remote.calls))
+                self.assertEqual(self.connections[-1], self.profile)
+                if decision != 'install':
+                    self.assertEqual(self.remote.observers, {})
+                    self.assertEqual(self.remote.uploads, {})
+                if decision in ('pending', 'late-pending', 'legacy-uninstall'):
+                    self.assertIsNotNone(self.button(w, 'Review recovery options'))
+                    self.assertEqual(self.store.pending(self.profile)['stage'], 'pending')
+                else:
+                    self.assertIsNone(self.store.pending(self.profile))
+                if decision == 'identity':
+                    self.assertEqual(w.failure_help['code'], 'ssh-identity')
+                    (self.store.device_dir(self.profile) / 'known_hosts').write_bytes(b'original pin')
+                if decision in ('cancel-retry', 'pending', 'legacy-uninstall', 'identity'):
+                    self.assertEqual(checks, [selected, read])
+                elif decision == 'install':
+                    self.assertEqual(checks, [selected, read, read, ('storage-check', False)])
+                else:
+                    self.assertEqual(checks, [selected, read, read])
+                self.assertIsNone(self.button(w, 'Retry storage check'))
+                w.close()
+
     def test_root_reinstall_resumes_after_restart_ssh_refusal_and_reopening(self):
         import errno
         from paramiko.ssh_exception import NoValidConnectionsError

@@ -99,6 +99,8 @@ Durante a recuperação, mantenha o controle de Home desativado e preserve os re
 
 Informe modelo, firmware, No-root ou Root, dispositivo de instalação, etapa e mensagem de erro. Remova senhas, chaves, endereços e dados pessoais antes de compartilhar o relatório. Ele não é publicado automaticamente.
 
+Se o No-root oferecer **Repetir a verificação de armazenamento**, selecione essa opção para repetir a verificação de somente leitura na mesma TV. Confirme a instalação separadamente após uma verificação bem-sucedida. Se houver uma operação pendente, escolha **Revisar opções de recuperação**.
+
 [Relatar problema](../FEEDBACK.md) · [Recuperação — inglês](../RECOVERY.md) · [Atualizar ou remover — inglês](../MAINTENANCE.md) · [Outros idiomas](../LANGUAGES.md)
 
 ### Remoção simples

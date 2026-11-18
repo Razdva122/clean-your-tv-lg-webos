@@ -99,6 +99,8 @@ Podczas odzyskiwania pozostaw sterowanie Home wyłączone i zachowaj oryginalne 
 
 Podaj model TV, firmware, No-root lub Root, urządzenie instalujące, krok i komunikat błędu. Usuń hasła, klucze, adresy i dane osobiste przed udostępnieniem raportu. Raport nie jest publikowany automatycznie.
 
+Jeśli No-root oferuje **Ponów sprawdzanie pamięci**, wybierz tę opcję, aby sprawdzić ten sam telewizor w trybie tylko do odczytu. Po udanej kontroli potwierdź instalację osobno. Jeśli instalator wykryje niezakończoną operację, wybierz **Sprawdź opcje odzyskiwania**.
+
 [Zgłoś problem](../FEEDBACK.md) · [Odzyskiwanie — angielski](../RECOVERY.md) · [Aktualizacja i usuwanie — angielski](../MAINTENANCE.md) · [Inne języki](../LANGUAGES.md)
 
 ### Proste usuwanie

@@ -321,10 +321,11 @@ alone does not finish removal. The removal confirmation cannot be bypassed with
 ### Uncertain No-root package operations (#201)
 
 If No-root setup says the TV storage check failed before any package request,
-the installer stopped at that check. Keep the saved TV connection and save the
-diagnostic report if the check keeps failing. If the installer finds an
-unfinished operation or a reservation conflict, follow its recovery instructions
-before starting setup again.
+use **Retry storage check** when offered to repeat the read-only check on the
+same TV. Confirm installation separately after it passes. Keep the saved TV
+connection and save the diagnostic report if the check keeps failing. If the
+installer finds an unfinished operation or a reservation conflict, follow its
+recovery instructions before starting setup again.
 
 **Check TV status** keeps the pending install/removal journal even if app versions
 and hashes match or manually removed apps are absent. Those observations do not

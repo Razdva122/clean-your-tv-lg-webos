@@ -8,6 +8,8 @@ from .terminal import Console
 
 SSH_COMMAND_PROMPT = 'Run SSH command'
 EXPLICIT_TV_CHOICE = 'TV number: '
+RETRY_STORAGE_CHECK = 'Retry storage check'
+RETRY_STORAGE_PROMPT = 'Retry storage check?'
 
 
 @dataclass(repr=False)

@@ -99,6 +99,8 @@ Pendant la récupération, laissez le contrôle de Home désactivé et conservez
 
 Indiquez modèle de TV, micrologiciel, No-root ou Root, appareil d’installation, étape et message d’erreur. Retirez mots de passe, clés, adresses et données personnelles avant de partager le rapport. Rien n’est publié automatiquement.
 
+Si No-root propose **Relancer la vérification du stockage**, choisissez cette option pour vérifier le même téléviseur en lecture seule. Une fois la vérification réussie, confirmez l’installation séparément. Si une opération reste en cours, choisissez **Examiner les options de récupération**.
+
 [Signaler un problème](../FEEDBACK.md) · [Récupération — anglais](../RECOVERY.md) · [Mettre à jour ou supprimer — anglais](../MAINTENANCE.md) · [Autres langues](../LANGUAGES.md)
 
 ### Suppression simple
