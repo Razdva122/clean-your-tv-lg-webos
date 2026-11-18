@@ -1,9 +1,9 @@
 {
-  "from_helper": "0.8.7",
-  "to_helper": "0.9.0",
-  "rollback_home": "1.19.0",
-  "rollback_sha256": "b927e77425c4fdd0e8f135d9a8c693cbdee26d6f8b727dfb3230feef5bab257f",
-  "prior_helper_sha256": "1d329657d9232763c1fd7cfa8b3ab7ac7ef46f4b296d75148caba902953a8839",
-  "candidate_archive_sha256": "4642eb1490123eb480c95bd16e9c9583f6b479c2b11927b7105a2b9f39ef666e",
-  "acceptance": "2026-11-16 project LG OLED55C3RLA, firmware 43.21.71, webOS SDK 11.2.0, macOS ARM64 source installer cytv 0.21.0, No-root with the saved Root SSH connection. Project-key signed v1.21.0 feeds authenticated published Home 1.19.0 and Helper 0.8.7. The ordinary installer installed Home 1.19.0 with exact Helper 0.9.0 (IPK SHA-256 3f1a5cf9dc79e1a4160687890df973f37632acf1b386d66ef894ef975f24b66c). Installed Home metadata and both copies of the Helper state-permissions module matched. Explicit Start Helper via its regular launch parameters allowed network HOME from Media Player to reach Clean Your TV through LG Home and stay there one second. Installer Restore returned that route to LG Home. Ordinary rollback restored published Helper 0.8.7, with matching files and idle operation records, and network HOME stayed on LG Home. Physical Magic Remote, audio, standby, AC cold boot and OTA were outside this probe."
+  "from_helper": "0.9.0",
+  "to_helper": "0.9.1",
+  "rollback_home": "1.20.2",
+  "rollback_sha256": "f11dd9ca2672949ca76e2dc91431020aaf8cde4f502f488c43f0ef304382c05c",
+  "prior_helper_sha256": "3f1a5cf9dc79e1a4160687890df973f37632acf1b386d66ef894ef975f24b66c",
+  "candidate_archive_sha256": "1818383f6fba23f99becfb0cdcf3971f7cde7c3e4417c2f9bda3082544ea290c",
+  "acceptance": "2026-11-18 project LG OLED55C3RLA, firmware 43.21.71, webOS SDK 11.2.0. Mac ARM64 source installer cytv 0.21.3, No-root over the saved Root SSH connection. The production-key-signed v1.24.0 feeds authenticate Home 1.20.2 and Helper 0.9.0. Ordinary setup installed published Home 1.20.2 with exact Helper 0.9.1 (IPK SHA-256 af3db481891c46b76f260000416b76f041a5758a120de81c2e5779904c2c86a2). Readback verified Home app metadata, Helper app and service metadata, controller code and both copies of state-permissions.js. Explicit Start Helper used the published app launch parameters. A single network HOME from Media Player reached Clean Your TV and held for one second. Ordinary Restore returned the network route to LG Home. Ordinary installer downgrade returned to the published Helper 0.9.0 beside Home 1.20.2. Package files and idle host operation receipts matched, and stock network Home held after the downgrade. Physical Magic Remote, standby/wake diagnostics, audio, AC cold boot and OTA were outside this pre-dispatch probe."
 }

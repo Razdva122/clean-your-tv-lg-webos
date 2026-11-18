@@ -321,6 +321,9 @@ var resumeGuardUntil = 0,
   lastLaunchSettledAt = 0;
 // Opt-in, bounded observation only; never changes routing or starts another watcher.
 var diagnosticUntil = 0,
+  diagnosticExpires = 0,
+  diagnosticControl = null,
+  diagnosticAsleep = false,
   diagnosticNext = 0,
   homeSequence = 0,
   lastHomeAt = null,
@@ -330,6 +333,16 @@ function diagnostic(trigger, details) {
   if (!diagnosticUntil) return;
   var now = monotonic();
   if (now >= diagnosticUntil && trigger !== 'expired') {
+    if (diagnosticControl) {
+      // Retire this capture before publishing its terminal event. A newer
+      // installer command still belongs to its own capture.
+      try {
+        storage.atomicRecord(data, 'control', '{}', {
+          expectedControl: diagnosticControl
+        });
+      } catch (ignore) {}
+      diagnosticControl = null;
+    }
     diagnostic('expired');
     diagnosticUntil = 0;
     return;
@@ -339,6 +352,7 @@ function diagnostic(trigger, details) {
       {
         event: 'home-diagnostic',
         session: diagnosticSession,
+        controllerPid: process.pid,
         trigger: trigger,
         homeSequence: homeSequence,
         sinceHomeMs: lastHomeAt === null ? null : Math.round(now - lastHomeAt),
@@ -357,21 +371,76 @@ function diagnostic(trigger, details) {
     )
   );
 }
-function diagnosticCommand(cmd, nonce) {
+function diagnosticCommand(command, raw, restored) {
+  var cmd = command.cmd,
+    nonce = command.nonce,
+    expires = command.expires,
+    durationMs = command.durationMs;
   if (cmd === 'diagnostics-start') {
+    if (durationMs !== undefined) {
+      if (
+        durationMs !== 180000 ||
+        typeof nonce !== 'string' ||
+        !/^[a-f0-9]{32}$/.test(nonce)
+      )
+        return;
+      expires = Date.now() + durationMs;
+      var request = JSON.stringify({
+        cmd: cmd,
+        nonce: nonce,
+        expires: expires
+      });
+      try {
+        if (
+          !storage.atomicRecord(data, 'control', request, {
+            expectedControl: raw
+          })
+        )
+          return;
+      } catch (ignore) {
+        return;
+      }
+      lastCommand = raw = request;
+    }
+    if (
+      expires !== undefined &&
+      (typeof expires !== 'number' ||
+        !isFinite(expires) ||
+        expires <= Date.now() ||
+        expires - Date.now() > 180000)
+    )
+      return;
+    diagnosticExpires = expires || 0;
+    diagnosticControl = diagnosticExpires ? raw : null;
+    diagnosticAsleep = false;
     diagnosticSession =
       typeof nonce === 'string' && /^[a-f0-9]{32}$/.test(nonce) ? nonce : null;
-    diagnosticUntil = monotonic() + 60000;
+    diagnosticUntil =
+      monotonic() +
+      Math.min(
+        60000,
+        diagnosticExpires ? diagnosticExpires - Date.now() : 60000
+      );
     diagnosticNext = monotonic() + 1000;
     homeSequence = 0;
     lastHomeAt = null;
-    diagnostic('started', { durationMs: 60000 });
+    diagnostic(restored ? 'resumed' : 'started', { durationMs: 60000 });
   }
   if (cmd === 'diagnostics-stop') {
     diagnostic('stopped');
     diagnosticUntil = 0;
+    diagnosticControl = null;
   }
 }
+// Restore the bounded request before startup launches or subscriptions can fire.
+try {
+  var retainedControl = fs.readFileSync(data + '/control.json', 'utf8');
+  var retainedRequest = JSON.parse(retainedControl);
+  if (retainedRequest.cmd === 'diagnostics-start' && retainedRequest.expires) {
+    diagnosticCommand(retainedRequest, retainedControl, true);
+    lastCommand = retainedControl;
+  }
+} catch (ignore) {}
 function screenLog(x) {
   if (x.event.indexOf('screen-watch-') === 0) {
     monitor = x.event;
@@ -1239,7 +1308,7 @@ var timer = setInterval(function () {
     if (raw !== lastCommand) {
       lastCommand = raw;
       var command = JSON.parse(raw);
-      diagnosticCommand(command.cmd, command.nonce);
+      diagnosticCommand(command, raw);
       if (command.cmd === 'startup-status')
         service.call(
           'luna://com.local.nativehome.service/status',
@@ -1450,6 +1519,18 @@ var screenWatch = require('./screen-watch')(
   data,
   screenLog,
   function (id) {
+    if (
+      diagnosticUntil &&
+      diagnosticExpires &&
+      diagnosticAsleep &&
+      id &&
+      id !== 'com.webos.app.cpcover'
+    ) {
+      diagnosticAsleep = false;
+      diagnosticUntil =
+        monotonic() +
+        Math.max(0, Math.min(60000, diagnosticExpires - Date.now()));
+    }
     if (screensaverOwner) screensaverOwner.foreground(id);
     if (id === 'com.webos.app.home') {
       if (lgHomeSince === null) lgHomeSince = monotonic();
@@ -1499,6 +1580,11 @@ var screenWatch = require('./screen-watch')(
     lgHomeSince = null;
     screenPolicy.reset();
     refreshWatchCatalog();
+    if (diagnosticUntil && diagnosticExpires) {
+      diagnosticAsleep = true;
+      diagnosticUntil =
+        monotonic() + Math.max(0, diagnosticExpires - Date.now());
+    }
     diagnostic('monitor-reset');
   },
   function (p) {
@@ -1509,6 +1595,18 @@ var screenWatch = require('./screen-watch')(
       onOff: p.onOff
     });
     var power = powerPolicy.observe(p, monotonic());
+    if (diagnosticUntil && diagnosticExpires) {
+      var remaining = diagnosticExpires - Date.now();
+      if (power.cancelPresentation) {
+        diagnosticAsleep = true;
+        diagnosticUntil = monotonic() + Math.max(0, remaining);
+      } else if (diagnosticAsleep && power.settledActive) {
+        diagnosticAsleep = false;
+        diagnosticUntil = monotonic() + Math.max(0, Math.min(60000, remaining));
+      }
+      diagnostic('power', { powerState: p.state });
+    }
+
     var wasActive = screensaverPowerActive;
     screensaverPowerActive = p.state === 'Active';
     if (!screensaverPowerActive) stopScreensaver();
