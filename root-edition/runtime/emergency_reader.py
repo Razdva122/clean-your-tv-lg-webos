@@ -136,7 +136,9 @@ def observe(fd, health, keys_released, *, report_device_gone=False):
                     # Mark the read boundary before logging or supervisor scheduling.
                     send(('DEVICE_GONE %.9f' % time.monotonic()).encode('ascii'))
                 report('active', 'read_error', exc)
-                if exc.errno == errno.ENODEV:
+                # The persistent supervisor already owns recovery after
+                # DEVICE_GONE. Only the native guardian path may reconnect here.
+                if exc.errno == errno.ENODEV and not report_device_gone:
                     if reconnect_deadline is None:
                         reconnect_deadline = time.monotonic() + .75
                     try:

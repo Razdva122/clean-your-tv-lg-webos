@@ -151,22 +151,25 @@ class FaultDiagnosticsTests(unittest.TestCase):
   import contextlib,errno,io,json
   import emergency_reader as reader
   from unittest.mock import patch
-  for phase, typed in (('startup',True),('active',True),('active',False)):
-   with self.subTest(phase=phase,typed=typed):
+  for phase, typed, code in (('startup',True,errno.ENODEV),
+                             ('active',True,errno.ENODEV),
+                             ('active',True,errno.EIO),
+                             ('active',False,errno.EIO)):
+   with self.subTest(phase=phase,typed=typed,code=code):
     hr,hw=os.pipe();log=io.StringIO()
-    reads=([BlockingIOError()] if phase=='active' else [])+[OSError(errno.EIO,'private device text')]
+    reads=([BlockingIOError()] if phase=='active' else [])+[OSError(code,'private device text')]
     try:
-     with patch.object(reader.os,'set_blocking'),patch.object(reader.os,'read',side_effect=reads),patch.object(reader.select,'select',return_value=([42],[],[])),contextlib.redirect_stderr(log):
+     with patch.object(reader.os,'set_blocking'),patch.object(reader.os,'read',side_effect=reads),patch.object(reader.select,'select',return_value=([42],[],[])),patch.object(reader,'open_remote',side_effect=AssertionError('Terminal loss must not reconnect')),contextlib.redirect_stderr(log):
       with self.assertRaises(OSError):reader.observe(42,hw,lambda:True,report_device_gone=typed)
      os.close(hw);hw=None
      frames=os.read(hr,256).splitlines()
-     if phase=='active' and typed:
+     if phase=='active' and typed and code==errno.ENODEV:
       self.assertEqual(len(frames),2)
       self.assertEqual(frames[0],b'READY')
       self.assertRegex(frames[1],rb'^DEVICE_GONE [0-9]+\.[0-9]{9}$')
      else:self.assertEqual(frames,[b'READY'] if phase=='active' else [])
      self.assertTrue(log.getvalue(), 'I/O failure must identify its phase and errno')
-     self.assertEqual(json.loads(log.getvalue()),{'event':'input-observer-fault','phase':phase,'reason':'read_error','errno':5})
+     self.assertEqual(json.loads(log.getvalue()),{'event':'input-observer-fault','phase':phase,'reason':'read_error','errno':code})
     finally:
      os.close(hr)
      if hw is not None:os.close(hw)
