@@ -25,7 +25,8 @@ if(typeof c.O_NOFOLLOW""",
     ).replace("var result;\nswitch(input.command){", r"""
 function cancel(){
  var goal=input.goal, fence='cancel-removal.json', prepared=opdir+'/reservation';
- if(plan.action!=='install'||!/^[a-f0-9]{32}$/.test(goal))fail('invalid-cancellation');
+ var beforeRequest=input.inspect&&input.receipt&&goal===null;
+ if(plan.action!=='install'||(!beforeRequest&&!/^[a-f0-9]{32}$/.test(goal)))fail('invalid-cancellation');
  if(!exists(opdir)||!exists(opdir+'/prepared.json'))return {};
  var inActive=exists(active+'/'+marker)||exists(active+'/'+fence);
  if(!inActive&&!exists(prepared)&&!exists(opdir+'/closed.json')){
@@ -46,6 +47,7 @@ function cancel(){
       !owner&&!closure&&!input.finalizing)fail('foreign-reservation');
   if(owner&&bound(json(name+'/'+marker)).nonce!==identity.nonce)fail('foreign-reservation');
   if(marked){
+   if(beforeRequest)fail('foreign-reservation');
    // Recover the extra link if the previous process died during publication.
    var leaf=fs.lstatSync(fence);
    if(leaf.nlink===2&&exists(tmp)&&same(leaf,fs.lstatSync(tmp))){

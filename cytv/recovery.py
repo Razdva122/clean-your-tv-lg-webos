@@ -270,8 +270,8 @@ def cancelled(write, store, profile, action, phase, tv_info=None, checks=None):
     diagnostics.save_result(write, store, action, profile, phase, tv_info, checks=checks)
 
 
-def remove_before_reinstall(installer, ask, write, *, load_payload=False):
-    plan(write, 'ready', 'Finish removing Clean Your TV before installing again. LG Home will be restored and remaining Clean Your TV packages removed.')
+def remove_before_reinstall(installer, ask, write, *, load_payload=False, next_step=KEPT):
+    plan(write, 'ready', 'Finish removing Clean Your TV before installing again. LG Home will be restored and remaining Clean Your TV packages removed.', next_step)
     if installer.profile['edition'] == 'no-root':
         write('LG Home will be restored. Clean Your TV, its updaters, Home Helper and saved preferences will be removed.')
     if not prompts.confirm('Remove remaining Clean Your TV packages?', ask, write):
@@ -366,8 +366,23 @@ def recover(installer, ask, write, non_interactive=False, initial_observation=No
                     diagnostics.create_report(installer.store, 'recover', installer.profile, 'recover', error)
                 except (OSError, ValueError, TypeError):
                     pass
-                if not no_root_package_check_plan(write, installer.profile, pending, error=error):
-                    remove_before_reinstall(installer, ask, write)
+                if no_root_package_check_plan(write, installer.profile, pending, error=error):
+                    return
+                next_step = KEPT
+                if (pending.get('action') == 'install' and installer.profile.get('connection') != 'root-ssh'
+                        and getattr(error, 'local_recovery', {}).get('reason') == 'capsule-missing'):
+                    from .no_root_cleanup import inspect_binding
+                    from .recovery_ui import REMOVAL_BLOCKERS
+
+                    # Review the original evidence before recording a removal request.
+                    binding = inspect_binding(installer, pending={'previous': pending})
+                    installer.tv_info['status'] = {'removal_binding': binding}
+                    if binding['reservation'] in ('conflict', 'unverified'):
+                        plan(write, 'blocked', REMOVAL_BLOCKERS['ownership-conflict'], 'Save diagnostic report…')
+                        return
+                    if binding['reservation'] == 'matched':
+                        next_step = 'Continue the remaining cleanup for this TV.'
+                remove_before_reinstall(installer, ask, write, next_step=next_step)
                 return
             raise
         installer.tv_info.update(status=result)

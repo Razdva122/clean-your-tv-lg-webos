@@ -218,6 +218,9 @@ class OriginalOperationIntegration(unittest.TestCase):
         self.assertIsNone(self.store.pending(self.profile))
 
     def test_screensaver_install_can_be_cancelled_when_the_local_capsule_is_missing(self):
+        from unittest.mock import Mock
+        from cytv.recovery import recover
+
         self.include_screensaver_companion()
         (self.root / 'proc').mkdir()
         self.remote.cut = True
@@ -226,9 +229,36 @@ class OriginalOperationIntegration(unittest.TestCase):
         pending = self.store.pending(self.profile)
         capsule = self.store.device_dir(self.profile) / ('capsule-' + pending['observer_operation'] + '.json')
         capsule.unlink()
+        cancellation = self.root / 'private/active/cancel-removal.json'
 
-        result = self.installer.uninstall_project()
-        self.assertTrue(result['verified_clean'])
+        expected = dict(pending['expected'])
+        expected[operations.HELPER_STATE + '/apps.json'] = '0' * 64
+        self.store.checkpoint(self.profile, expected=expected)
+        mismatched = self.store.pending(self.profile)
+        ask, write = Mock(return_value='y'), Mock(frontend='desktop')
+        recover(self.installer, ask, write, review_confirmed=True)
+        ask.assert_not_called()
+        refusal = write.recovery_plan.call_args.args[0]
+        self.assertEqual(refusal['state'], 'blocked')
+        self.assertEqual(refusal['next_step'], 'Save diagnostic report…')
+        self.assertEqual(self.store.pending(self.profile), mismatched)
+        self.assertFalse(cancellation.exists())
+        self.assertFalse(any(call[1].endswith('/dev/remove') for call in self.remote.calls))
+
+        self.store.checkpoint(self.profile, expected=pending['expected'])
+        ask.return_value = 'n'
+        recover(self.installer, ask, write, review_confirmed=True)
+        ask.assert_called_once_with('Remove remaining Clean Your TV packages? [y/N]: ')
+        offer = write.recovery_plan.call_args.args[0]
+        self.assertEqual(offer['state'], 'ready')
+        self.assertEqual(offer['next_step'], 'Continue the remaining cleanup for this TV.')
+        self.assertEqual(self.store.pending(self.profile), pending)
+        self.assertFalse(cancellation.exists())
+        self.assertFalse(any(call[1].endswith('/dev/remove') for call in self.remote.calls))
+
+        ask.return_value = 'y'
+        recover(self.installer, ask, write, review_confirmed=True)
+        self.assertTrue(write.recovery_plan.call_args.args[0]['verified_clean'])
         self.assertIsNone(self.store.pending(self.profile))
         self.assertEqual((self.root / 'requests').read_text().splitlines(), [operations.HELPER])
         self.assertEqual([call[2]['id'] for call in self.remote.calls if call[1].endswith('/dev/remove')],
