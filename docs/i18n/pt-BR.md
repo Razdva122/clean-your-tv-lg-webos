@@ -103,6 +103,8 @@ Se o No-root oferecer **Repetir a verificação de armazenamento**, selecione es
 
 Se o instalador de desktop verificar os pacotes, mas o botão Home não abrir o Clean Your TV, escolha **Diagnóstico do botão Home** para No-root ou **Verificar status da TV** para Root na tela de resultados.
 
+Se o instalador no computador falhar, selecione **Relatar um problema** para revisar e copiar o rascunho. Se houver um relatório de diagnóstico salvo, anexe-o ao formulário.
+
 [Relatar problema](../FEEDBACK.md) · [Recuperação — inglês](../RECOVERY.md) · [Atualizar ou remover — inglês](../MAINTENANCE.md) · [Outros idiomas](../LANGUAGES.md)
 
 ### Remoção simples

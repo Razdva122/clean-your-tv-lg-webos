@@ -103,6 +103,8 @@ Wenn No-root **Speicherprüfung wiederholen** anbietet, wähle die Schaltfläche
 
 Wenn das Desktop-Installationsprogramm die Pakete geprüft hat, die Home-Taste aber Clean Your TV nicht öffnet, wählen Sie auf der Ergebnisseite bei No-root **Home-Taste diagnostizieren** und bei Root **TV-Status prüfen**.
 
+Wählen Sie nach einem Fehler im Desktop-Installer **Problem melden**, prüfen und kopieren Sie den Entwurf und hängen Sie den gespeicherten Diagnosebericht an, falls vorhanden.
+
 [Problem melden](../FEEDBACK.md) · [Wiederherstellung — Englisch](../RECOVERY.md) · [Aktualisieren oder entfernen — Englisch](../MAINTENANCE.md) · [Andere Sprachen](../LANGUAGES.md)
 
 ### Einfache Entfernung

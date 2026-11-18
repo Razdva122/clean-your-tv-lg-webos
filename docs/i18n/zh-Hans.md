@@ -103,6 +103,8 @@ No-root: 要重新启动 Home 控制，请打开 Home Helper，选择启动 Help
 
 如果桌面安装程序已验证安装包，但按 Home 键无法打开 Clean Your TV，请在结果页面为 No-root 选择**Home 按钮诊断**，为 Root 选择**检查电视状态**。
 
+桌面安装程序出错后，选择**提交问题**可查看并复制草稿。如果有已保存的诊断报告，请将其附到表单中。
+
 [报告问题](../FEEDBACK.md) · [详细恢复说明（英文）](../RECOVERY.md) · [更新或卸载（英文）](../MAINTENANCE.md) · [其他语言](../LANGUAGES.md)
 
 ### 简单移除

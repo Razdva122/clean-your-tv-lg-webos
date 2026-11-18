@@ -6,6 +6,56 @@ from cytv.terminal import Console
 
 
 class TerminalTests(unittest.TestCase):
+    def test_issue_draft_browser_requires_opt_in_and_leaves_a_link_if_unavailable(self):
+        from urllib.parse import parse_qs, urlparse
+
+        draft = {'title': '[cytv] Установка / 電視 & Home', 'body': 'My own observation'}
+        for answer in ('', 'q', 'y'):
+            with self.subTest(answer=answer):
+                lines = []
+                ui = Console(lines.append, interactive=True)
+                with patch('cytv.terminal.webbrowser.open', return_value=False) as browser:
+                    ui.issue(draft, ask=lambda _: answer)
+                self.assertIn(draft['title'], lines)
+                self.assertIn(draft['body'], lines)
+                link = next(line for line in lines if line.startswith('https://github.com/'))
+                self.assertEqual(parse_qs(urlparse(link).query),
+                                 {'template': ['cytv.yml'], 'title': [draft['title']]})
+                if answer == 'y':
+                    browser.assert_called_once_with(link)
+                    self.assertIn('Could not open the browser', '\n'.join(lines))
+                else:
+                    browser.assert_not_called()
+
+    def test_failed_noninteractive_console_prepares_a_draft_without_a_diagnostic(self):
+        from pathlib import Path
+        from tempfile import TemporaryDirectory
+        from unittest.mock import Mock
+        from cytv import cli, i18n
+
+        self.addCleanup(i18n.set_language, i18n.resolved_language())
+
+        lines = []
+        connect = Mock(side_effect=OSError('PRIVATE TRANSPORT'))
+        ask = Mock(side_effect=AssertionError('Unexpected prompt'))
+        ui = Console(lines.append, interactive=True)
+        with TemporaryDirectory() as directory, \
+             patch('cytv.diagnostics.create_report', side_effect=OSError('PRIVATE REPORT PATH')), \
+             patch('cytv.terminal.webbrowser.open') as browser:
+            code = cli.main(['status', '--host', '192.0.2.55', '--edition', 'root',
+                             '--non-interactive', '--language', 'en', '--data-dir', directory],
+                            connect=connect, ask=ask, write=ui)
+            self.assertEqual(list(Path(directory).glob('reports/*.json')), [])
+        self.assertEqual(code, 1)
+        output = '\n'.join(lines)
+        self.assertIn('template=cytv.yml', output)
+        self.assertIn('Reason: unknown', output)
+        self.assertIn('Include the visible error', output)
+        self.assertNotIn('PRIVATE', output)
+        connect.assert_called_once()
+        ask.assert_not_called()
+        browser.assert_not_called()
+
     def test_argument_errors_use_red_stderr(self):
         from cytv.cli import LanguageParser
         output = io.StringIO()

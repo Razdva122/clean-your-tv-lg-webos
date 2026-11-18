@@ -1155,8 +1155,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
             if not unverified_review:
                 removal_plan(write, store, profile, failure=help, error=exc, phase=phase,
                              evidence=tv_info.get('removal_evidence'))
-        diagnostics.suggest_issue(write, store, args.command, profile, phase, exc, tv_info, checks=checks.results, status=tv_info.get('status'))
-        return 2
+        failure, exit_code = exc, 2
     except Exception as exc:
         checks.finish_running()
         write.error('Could not complete this step', heading=True)
@@ -1178,14 +1177,18 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
             if not unverified_review:
                 removal_plan(write, store, profile, failure=help, error=exc, phase=phase,
                              evidence=tv_info.get('removal_evidence'))
-        diagnostics.suggest_issue(write, store, args.command, profile, phase, exc, tv_info, checks=checks.results, status=tv_info.get('status'))
-        return 1
+        failure, exit_code = exc, 1
     finally:
         if profile and profile.get('root_variant') == 'node012-beta' and args.command == 'install':
             from .root_runtime import FEEDBACK
             write(FEEDBACK)
         if remote is not None:
             remote.close()
+
+    diagnostics.suggest_issue(write, store, args.command, profile, phase, failure, tv_info,
+                              checks=checks.results, status=tv_info.get('status'),
+                              ask=None if args.non_interactive else ask)
+    return exit_code
 
 
 def interactive_main(*args, **kwargs):

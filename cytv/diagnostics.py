@@ -8,13 +8,14 @@ import traceback
 import time
 import re
 import uuid
+from urllib.parse import urlencode
 
 from . import __version__, debloat, diagnostic_context as context
 from .state import private_write
 from .terminal import console
 from .errors import TVConnectionError, DeveloperKeyError, UserError, TVCommandError, TVRejected, PythonPreflightError, PythonCacheError, connection_interrupted, root_recovery_details
 
-ISSUE_URL = 'https://github.com/Razdva122/clean-your-tv-lg-webos/issues/new'
+ISSUE_URL = 'https://github.com/Razdva122/clean-your-tv-lg-webos/issues/new?template=cytv.yml'
 KERNEL_ARCHES = context.KERNEL_ARCHES
 ROOT_REQUIREMENTS = context.ROOT_REQUIREMENTS
 
@@ -205,6 +206,19 @@ def issue_draft(report):
     return {'title': '[cytv] ' + subject, 'body': '\n'.join(lines)}
 
 
+def load_issue_draft(path, action):
+    if path is not None:
+        try:
+            return issue_draft(json.loads(path.read_text(encoding='utf-8')))
+        except (OSError, ValueError, RecursionError):
+            pass
+    return issue_draft({'action': action})
+
+
+def issue_url(title):
+    return ISSUE_URL + '&' + urlencode({'title': title})
+
+
 def save_result(write, store, action, profile, phase, tv_info=None, *, checks=None, status=None):
     """A failed optional export must not turn successful device work into failure."""
     write = console(write)
@@ -217,19 +231,25 @@ def save_result(write, store, action, profile, phase, tv_info=None, *, checks=No
         return None
 
 
-def suggest_issue(write, store, action, profile, phase, error, tv_info=None, *, checks=None, status=None):
+def suggest_issue(write, store, action, profile, phase, error, tv_info=None, *, checks=None, status=None, ask=None):
     write = console(write)
-    write.heading('Need help? Open an issue')
-    write(ISSUE_URL)
+    console_issue = write.frontend == 'console'
+    if not console_issue:
+        write.heading('Need help? Open an issue')
+        write(ISSUE_URL)
+    path = None
     try:
         path = create_report(store, action, profile, phase, error, tv_info, checks=checks, status=status)
         write.heading('Attach this diagnostic report')
         write.report(path)
     except (OSError, ValueError):
         write.error('Could not save a diagnostic file. Include cytv ' + __version__ + ', your desktop OS, edition and failed step: ' + phase + '.')
+        if console_issue:
+            write('Include the visible error when opening an issue.')
     write('')
     write('Include your steps, expected/actual result and TV model/firmware.')
-    write('Review the report. Do not attach keys or your profile folder.')
+    if console_issue:
+        write.issue(load_issue_draft(path, action), ask=ask)
 
 
 def _observe_home_diagnostic_directory(remote, directory):

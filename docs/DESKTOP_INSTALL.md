@@ -193,9 +193,16 @@ follow the recording prompts. In Root, choose **Check TV status** to read the
 current Home routing. Both use the same TV connection. You can save the original
 report before starting the check.
 
-On failure, read the explanation, click **Save diagnostic report…**, then
-**Open an issue**. Include your steps, expected/actual results, TV model and firmware.
-Review the JSON report before attaching it. Do not attach your profile folder or keys.
+On failure, read the explanation and choose **Open an issue** to review an
+editable local draft. Choose **Copy draft**, then **Open issue form** to open the
+installer problem form with your title. Paste the draft into the form, describe
+what you were trying to do and attach the saved diagnostic report. If a report
+is unavailable, include the visible error. You submit the issue yourself. If the
+browser cannot open, copy the link from the draft window.
+
+The console prints the draft, the report path when available, and the form link.
+At the browser prompt, press Enter to keep the draft in the terminal or type
+`y` to open the form.
 
 When an earlier installation was interrupted, **Set up my TV** checks its state
 before proceeding. If Root and Root Updater are already installed and verified,
@@ -252,12 +259,11 @@ package removal result or cleanup of project files. Choose **Review recovery
 options** for these results or for changed project paths. If the package result is
 unknown, review the saved operation before trying to remove any packages again.
 The review asks separately before continuing removal. **Save diagnostic report…**
-remains available. For other failed steps, saving the report is the primary action.
-Save that attempt's report with the normal file dialog and attach it to your issue.
-You can do this directly from the installer. Cancelling the file dialog or choosing
-an unwritable destination keeps the original report available. If report creation
-failed, the window says so; include the visible error instead. Unknown outcomes
-still stop the process, with no automatic retry or deletion of recovery evidence.
+remains available. You can save that attempt's report from the results screen or
+from the issue draft. Cancelling the file dialog or choosing an unwritable
+destination keeps the original report available. If report creation failed,
+include the visible error in the issue form. Unknown outcomes still stop the
+process. Keep the recovery evidence.
 
 ## Remove the project from a rooted TV
 

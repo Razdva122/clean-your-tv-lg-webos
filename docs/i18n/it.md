@@ -103,6 +103,8 @@ Se No-root offre **Ripeti controllo dello spazio**, scegli questa opzione per ri
 
 Se il programma di installazione desktop verifica i pacchetti ma il tasto Home non apre Clean Your TV, scegli **Diagnostica del tasto Home** per No-root o **Controlla lo stato della TV** per Root nella schermata dei risultati.
 
+Se l’installer sul computer non riesce a completare un passaggio, scegli **Segnala un problema** per rivedere e copiare la bozza. Se disponibile, allega al modulo il rapporto diagnostico salvato.
+
 [Segnala un problema](../FEEDBACK.md) · [Ripristino — inglese](../RECOVERY.md) · [Aggiornare o rimuovere — inglese](../MAINTENANCE.md) · [Altre lingue](../LANGUAGES.md)
 
 ### Rimozione semplice

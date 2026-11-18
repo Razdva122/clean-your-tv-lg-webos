@@ -18,6 +18,82 @@ except ImportError:
 
 @unittest.skipUnless(HAS_QT, 'Desktop build dependencies are optional for CLI tests')
 class GuiTests(unittest.TestCase):
+    def test_issue_draft_can_be_cancelled_or_edited_before_opening_the_form(self):
+        from urllib.parse import parse_qs, urlparse
+        from PySide6.QtWidgets import QPlainTextEdit
+
+        calls = []
+        w = Wizard(run=lambda *args, **kwargs: calls.append(args))
+        self.addCleanup(w.close)
+        report = Path(self.directory.name) / 'diagnostic.json'
+        report.write_text('{"action":"install","edition":"no-root","phase":"install-packages"}',
+                          encoding='utf-8')
+        previous_report = report.read_bytes()
+        w.receive('report', report)
+        w.receive('done', 2)
+        issue = next(button for button in w.form.findChildren(QPushButton)
+                     if button.text() == 'Open an issue')
+
+        def preview():
+            issue.click()
+            return next(dialog for dialog in w.findChildren(QDialog) if dialog.isVisible())
+
+        with patch('cytv.gui.QDesktopServices.openUrl', return_value=False) as browser:
+            dialog = preview()
+            next(button for button in dialog.findChildren(QPushButton)
+                 if button.text() == 'Cancel').click()
+            browser.assert_not_called()
+
+            dialog = preview()
+            title = next(entry for entry in dialog.findChildren(QLineEdit) if not entry.isReadOnly())
+            editor = dialog.findChild(QPlainTextEdit)
+            self.assertIn('No-root install', title.text())
+            self.assertIn('Observed phase: install-packages', editor.toPlainText())
+            title.setText('[cytv] Установка / 電視 & Home')
+            editor.appendPlainText('My own observation')
+            buttons = {button.text(): button for button in dialog.findChildren(QPushButton)}
+            buttons['Copy draft'].click()
+            self.assertIn('My own observation', QApplication.clipboard().text())
+            browser.assert_not_called()
+
+            exported = report.with_name('exported.json')
+            with patch('cytv.gui.QFileDialog.getSaveFileName', return_value=(str(exported), 'JSON')):
+                buttons['Save diagnostic report…'].click()
+            self.assertEqual(exported.read_bytes(), previous_report)
+
+            buttons['Open issue form'].click()
+            browser.assert_called_once()
+            link = browser.call_args.args[0].toString()
+            parsed = urlparse(link)
+            self.assertEqual((parsed.netloc, parsed.path),
+                             ('github.com', '/Razdva122/clean-your-tv-lg-webos/issues/new'))
+            self.assertEqual(parse_qs(parsed.query),
+                             {'template': ['cytv.yml'], 'title': [title.text()]})
+            fallback = next(entry for entry in dialog.findChildren(QLineEdit) if entry.isReadOnly())
+            self.assertTrue(fallback.isVisible())
+            self.assertEqual(parse_qs(urlparse(fallback.text()).query), parse_qs(parsed.query))
+            self.assertTrue(dialog.isVisible())
+        self.assertEqual(report.read_bytes(), previous_report)
+        self.assertEqual(calls, [])
+
+    def test_issue_draft_handles_a_missing_diagnostic(self):
+        from PySide6.QtWidgets import QPlainTextEdit
+        w = Wizard()
+        self.addCleanup(w.close)
+        report = Path(self.directory.name) / 'diagnostic.json'
+        report.write_text('{}', encoding='utf-8')
+        w.receive('report', report)
+        w.receive('done', 2)
+        report.unlink()
+        with patch('cytv.gui.QDesktopServices.openUrl') as browser:
+            next(button for button in w.form.findChildren(QPushButton)
+                 if button.text() == 'Open an issue').click()
+            dialog = next(dialog for dialog in w.findChildren(QDialog) if dialog.isVisible())
+            self.assertIn('Reason: unknown', dialog.findChild(QPlainTextEdit).toPlainText())
+            self.assertTrue(any('Include the visible error' in label.text()
+                                for label in dialog.findChildren(QLabel)))
+            browser.assert_not_called()
+
     def test_successful_doctor_continues_setup_with_the_checked_connection(self):
         for profile in (
                 {'host':'192.0.2.10','port':2222,'edition':'root','root_variant':'node012-beta'},

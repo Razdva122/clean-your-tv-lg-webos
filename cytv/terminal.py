@@ -3,6 +3,7 @@ import os
 import shutil
 import sys
 import textwrap
+import webbrowser
 from .i18n import translate as tr
 
 
@@ -87,6 +88,35 @@ class Console:
     def report(self, path):
         self.heading('Diagnostic report')
         self.raw('  ' + str(path.resolve()))
+
+    def issue(self, draft, *, ask=None):
+        from .diagnostics import issue_url
+        from .prompts import confirm
+
+        url = issue_url(draft['title'])
+        self.heading('Issue draft')
+        self.raw(draft['title'])
+        self.raw('')
+        self.raw(draft['body'])
+        self('')
+        self('Copy the draft into the issue form. Only you can submit it.')
+        self.raw(url)
+        if ask is None:
+            return
+        if not self.interactive and not (self.raw is print and sys.stdin and sys.stdin.isatty()
+                                         and sys.stdout and sys.stdout.isatty()):
+            return
+        try:
+            if not confirm('Open issue form?', ask, self):
+                return
+        except (EOFError, KeyboardInterrupt, StopIteration):
+            return
+        try:
+            if webbrowser.open(url):
+                return
+        except (OSError, webbrowser.Error):
+            pass
+        self.error('Could not open the browser. Open the displayed link manually.')
 
     def doctor_result(self, value):
         import json

@@ -103,6 +103,8 @@ Si No-root ofrece **Repetir la comprobación de almacenamiento**, elige esa opci
 
 Si el instalador de escritorio verifica los paquetes pero el botón Home no abre Clean Your TV, elige **Diagnóstico del botón Home** para No-root o **Ver estado del televisor** para Root en la pantalla de resultados.
 
+Si falla el instalador de escritorio, selecciona **Informar de un problema** para revisar y copiar el borrador. Adjunta al formulario el informe de diagnóstico guardado, si está disponible.
+
 [Informar de un problema](../FEEDBACK.md) · [Recuperación — inglés](../RECOVERY.md) · [Actualizar o eliminar — inglés](../MAINTENANCE.md) · [Otros idiomas](../LANGUAGES.md)
 
 ### Eliminación sencilla

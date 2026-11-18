@@ -935,8 +935,8 @@ class Wizard(QMainWindow):
                     self.subtitle.setText(tr('Save the report from this failed attempt and attach it to your issue. Recovery data has been kept.'))
             elif failed and not status_refresh:
                 self.subtitle.setText(tr('A diagnostic report could not be created. Include the visible error when opening an issue.'))
-            if (failed and not cleanup and not active_operation) or home_failed:
-                self.button('Open an issue', lambda: QDesktopServices.openUrl(QUrl(diagnostics.ISSUE_URL)),
+            if (failed and not active_operation) or home_failed:
+                self.button('Open an issue', self.show_issue_draft,
                             layout=report_actions if connection_help else None)
             self.button('Back to start', self.home,
                         not doctor_ready and not connection_help and not retry_removal and not recover
@@ -1658,8 +1658,68 @@ class Wizard(QMainWindow):
         self.progress.show()
         self.channel.answer(value)
 
-    def save_report(self):
-        filename, _ = QFileDialog.getSaveFileName(self, tr('Save diagnostic report'), self.report.name, 'JSON (*.json)')
+    def show_issue_draft(self):
+        draft = diagnostics.load_issue_draft(self.report, self.command)
+        dialog = QDialog(self)
+        dialog.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+        dialog.setWindowTitle(tr('Issue draft'))
+        dialog.resize(640, 440)
+        layout = QVBoxLayout(dialog)
+        hint = WrappedLabel(tr('Copy the draft into the issue form. Only you can submit it.'))
+        layout.addWidget(hint)
+
+        title = QLineEdit(draft['title'])
+        title.setMaxLength(256)
+        title.setAccessibleName(tr('Issue title'))
+        title_label = QLabel(tr('Issue title'))
+        title_label.setBuddy(title)
+        layout.addWidget(title_label)
+        layout.addWidget(title)
+        editor = QPlainTextEdit(draft['body'])
+        editor.setAccessibleName(tr('Issue draft'))
+        editor.setTabChangesFocus(True)
+        layout.addWidget(editor)
+
+        has_report = self.report is not None and self.report.is_file()
+        instructions = ('Attach this diagnostic report' if has_report else
+                        'Include the visible error when opening an issue.')
+        layout.addWidget(WrappedLabel(tr(instructions)))
+        fallback_message = 'Could not open the browser. Open the displayed link manually.'
+        fallback = QWidget()
+        fallback_layout = QVBoxLayout(fallback)
+        fallback_layout.setContentsMargins(0, 0, 0, 0)
+        fallback_layout.addWidget(WrappedLabel(tr(fallback_message)))
+        link = QLineEdit()
+        link.setAccessibleName(tr('Issue form link'))
+        link.setReadOnly(True)
+        fallback_layout.addWidget(link)
+        layout.addWidget(fallback)
+        fallback.hide()
+
+        def open_form():
+            url = diagnostics.issue_url(title.text().strip() or draft['title'])
+            if not QDesktopServices.openUrl(QUrl(url)):
+                link.setText(url)
+                fallback.show()
+                link.setFocus()
+                link.selectAll()
+            else:
+                fallback.hide()
+
+        actions = QHBoxLayout()
+        layout.addLayout(actions)
+        self.button('Copy draft', lambda: QApplication.clipboard().setText(editor.toPlainText()), layout=actions)
+        if has_report:
+            self.button('Save diagnostic report…', lambda: self.save_report(dialog), layout=actions)
+        self.button('Open issue form', open_form, layout=actions)
+        self.button('Cancel', dialog.reject, layout=actions)
+        for button in dialog.findChildren(QPushButton):
+            button.setAutoDefault(False)
+        editor.setFocus()
+        dialog.open()
+
+    def save_report(self, parent=None):
+        filename, _ = QFileDialog.getSaveFileName(parent or self, tr('Save diagnostic report'), self.report.name, 'JSON (*.json)')
         if filename:
             try:
                 if Path(filename).resolve() != self.report.resolve():

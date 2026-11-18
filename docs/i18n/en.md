@@ -105,6 +105,8 @@ If No-root offers **Retry storage check**, choose it to repeat the read-only che
 
 If the desktop installer verifies the packages but Home doesn't open Clean Your TV, choose **Home button diagnostics** for No-root or **Check TV status** for Root on the results screen.
 
+After a desktop installer failure, select **Open an issue** to review and copy your draft. Attach the saved diagnostic report in the issue form if available.
+
 [Report a problem](../FEEDBACK.md) · [Detailed recovery](../RECOVERY.md) · [Update or remove](../MAINTENANCE.md) · [Other languages](../LANGUAGES.md)
 
 ### Straightforward removal

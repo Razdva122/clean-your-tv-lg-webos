@@ -103,6 +103,8 @@ Si No-root propose **Relancer la vérification du stockage**, choisissez cette o
 
 Si l’installateur de bureau a vérifié les paquets mais que la touche Home n’ouvre pas Clean Your TV, choisissez **Diagnostic du bouton Home** avec No-root ou **Vérifier l’état du téléviseur** avec Root sur l’écran des résultats.
 
+Si l’installation échoue sur ordinateur, choisissez **Signaler un problème** pour relire et copier le brouillon. Joignez au formulaire le rapport de diagnostic enregistré, s’il est disponible.
+
 [Signaler un problème](../FEEDBACK.md) · [Récupération — anglais](../RECOVERY.md) · [Mettre à jour ou supprimer — anglais](../MAINTENANCE.md) · [Autres langues](../LANGUAGES.md)
 
 ### Suppression simple

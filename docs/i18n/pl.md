@@ -103,6 +103,8 @@ Jeśli No-root oferuje **Ponów sprawdzanie pamięci**, wybierz tę opcję, aby 
 
 Jeśli instalator na komputerze zweryfikuje pakiety, ale przycisk Home nie otwiera Clean Your TV, na ekranie wyników wybierz **Diagnostyka przycisku Home** dla No-root lub **Sprawdź stan telewizora** dla Root.
 
+Po błędzie w instalatorze na komputerze wybierz **Zgłoś problem**, aby przejrzeć i skopiować szkic. Jeśli masz zapisany raport diagnostyczny, dołącz go do formularza.
+
 [Zgłoś problem](../FEEDBACK.md) · [Odzyskiwanie — angielski](../RECOVERY.md) · [Aktualizacja i usuwanie — angielski](../MAINTENANCE.md) · [Inne języki](../LANGUAGES.md)
 
 ### Proste usuwanie
