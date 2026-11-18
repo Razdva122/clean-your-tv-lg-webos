@@ -159,7 +159,11 @@ def storage_preflight_review(store, profile, ask, write):
             write('The read-only storage check passed. Confirm installation to continue.')
             question = 'Install these versions?'
         else:
+            from .failure_help import for_error
             write(str(error))
+            help = for_error(error, 'install-packages', profile)
+            if help and help['code'] == 'tv-storage-unavailable':
+                write(help['next_step'])
             write('Repeat the read-only check on the same TV.')
             question = RETRY_STORAGE_PROMPT
         if not prompts.confirm(question, ask, write):

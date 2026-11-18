@@ -5,10 +5,12 @@ import socket
 from .errors import DeveloperKeyError, TVConnectionError, TVRejected, is_storage_full, TV_STORAGE_FULL, TV_STORAGE_RAMFS, COMPUTER_STORAGE_FULL, no_root_cleanup_details, no_root_observer_details
 from .recovery_state import REMOVAL_FAILURE_PHASES, REMOVAL_REASONS, unsubmitted_removal
 from .root_action_failure import ACTIVATION_CODES, ACTIVATION_DETAILS
+from .storage import TVStorageShortfall
 
 NETWORK = 'Keep the TV on and use the same home network. Review the selected TV address and SSH port, Local Network access and VPN isolation.'
 DEVELOPER = 'Leave Developer Mode open with Key Server on. Use the current TV passphrase exactly; do not turn Developer Mode off or delete the saved profile.'
 REPORT = 'Save the diagnostic report and keep the saved connection and recovery data. Do not reset the TV or repeat setup to force progress.'
+ROOT_STORAGE_ACCESS = 'Verify that the selected Root SSH account can access the affected storage location on the TV.'
 NETWORK_FAILURES = ('ssh-unreachable', 'ssh-protocol', 'ssh-access-denied', 'ssh-refused', 'ssh-timeout')
 AUTH_FAILURES = ('ssh-auth-root', 'ssh-auth-no-root', 'ssh-key-file', 'ssh-identity',
                  'developer-key-server', 'developer-key-unlock', 'developer-key-response')
@@ -28,6 +30,9 @@ GUIDES = {
         False,
     ),
     'tv-storage-full': ('Not enough space on the TV', TV_STORAGE_FULL, REPORT, False),
+    'tv-storage-unavailable': ('TV storage could not be verified',
+        'Installation stopped before package submission.',
+        'Keep Developer Mode active and verify that its SSH account can access the affected storage location on the TV.', False),
     'tv-storage-ramfs': ('Available TV storage could not be determined.', TV_STORAGE_RAMFS, REPORT, False),
     'computer-storage-full': ('Not enough space on this computer', COMPUTER_STORAGE_FULL, REPORT, False),
     'ssh-access-denied': ('Network access was denied', 'This computer blocked the connection before SSH sign-in.',
@@ -154,10 +159,14 @@ def for_error(error, phase, profile=None, pending=None, *, has_reset_source=None
         elif isinstance(error,(OSError,TimeoutError)) or 'NoValidConnectionsError' in names:
             code = network_failure_code(error)
     observer = no_root_observer_details(getattr(error, 'no_root_observer', None))
-    if (code is None and edition == 'no-root' and phase == 'install-packages'
-            and observer.get('command') in ('storage-check', 'storage-select')
-            and observer.get('observer_reason') == 'foreign-reservation'):
+    storage_observer = (edition == 'no-root' and phase == 'install-packages'
+                        and observer.get('command') in ('storage-check', 'storage-select'))
+    if code is None and storage_observer and observer.get('observer_reason') == 'foreign-reservation':
         code = 'no-root-reservation'
+    if code is None and not pending and (reason == 'tv-storage-unavailable' or
+            reason == 'storage-preflight-failed' and storage_observer
+            and observer.get('exception_code') in ('EACCES', 'EPERM', 'EROFS')):
+        code = 'tv-storage-unavailable'
     if code is None and edition == 'root' and phase in ('activate-root', 'recover') and reason in ACTIVATION_CODES:
         code = reason
     if code is None and clean_removal:
@@ -169,6 +178,10 @@ def for_error(error, phase, profile=None, pending=None, *, has_reset_source=None
     if code is None:
         return None
     title, detail, next_step, edit = GUIDES[code]
+    if code == 'tv-storage-full' and isinstance(error, TVStorageShortfall):
+        detail, next_step = str(error), TV_STORAGE_FULL
+    elif code == 'tv-storage-unavailable' and root_ssh:
+        next_step = ROOT_STORAGE_ACCESS
     if pending and code.startswith(('ssh-', 'developer-key-')):
         if code in ('ssh-unreachable', 'ssh-timeout', 'ssh-protocol'):
             next_step = 'Keep the TV awake on the same home network. Check network access and VPN isolation using the original trusted connection.'

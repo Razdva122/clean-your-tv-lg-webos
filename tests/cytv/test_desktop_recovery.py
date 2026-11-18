@@ -44,6 +44,12 @@ class DesktopRecoveryTests(unittest.TestCase):
                             read_only = "case 'storage-check':result=storageCheck();break;" not in args[-2]
                             checks.append((action, read_only))
                             if action == 'storage-check' and read_only and checks.count(read) <= failure_count:
+                                if decision == 'check-fails-again':
+                                    return json.dumps({
+                                        'operation': request['plan']['operation'],
+                                        'observer_error': {'exception_code': 'EACCES', 'filesystem_operation': 'lstat',
+                                                           'storage_area': 'private-storage'},
+                                    })
                                 return 'MALFORMED'
                     return original(command, **kwargs)
                 self.remote.run = run
@@ -71,6 +77,7 @@ class DesktopRecoveryTests(unittest.TestCase):
                     (self.store.device_dir(self.profile) / 'known_hosts').write_bytes(b'different pin')
                     retry.click()
                 elif decision == 'check-fails-again':
+                    self.assertIn('verify that its SSH account can access', w.content.toPlainText())
                     retry.click()
                 else:
                     retry.click()
@@ -101,6 +108,8 @@ class DesktopRecoveryTests(unittest.TestCase):
                     self.assertEqual(self.store.pending(self.profile)['stage'], 'pending')
                 else:
                     self.assertIsNone(self.store.pending(self.profile))
+                if decision == 'check-fails-again':
+                    self.assertEqual(w.failure_help['code'], 'tv-storage-unavailable')
                 if decision == 'identity':
                     self.assertEqual(w.failure_help['code'], 'ssh-identity')
                     (self.store.device_dir(self.profile) / 'known_hosts').write_bytes(b'original pin')
