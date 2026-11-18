@@ -1763,6 +1763,100 @@ class OriginalOperationIntegration(unittest.TestCase):
         self.assertFalse((self.store.device_dir(self.profile)/('capsule-'+pending['observer_operation']+'.json')).exists())
         self.assertFalse(any(call[0]=='luna' and call[1].endswith('appInstallService/status') for call in self.remote.calls))
 
+    def test_reopened_installer_checks_unknown_package_then_resumes_original(self):
+        from cytv import cli
+        from cytv.desktop import DesktopConsole
+        from cytv.errors import UserError
+
+        fixture = json.loads((Path(__file__).parent / 'fixtures/no-root-terminal-authority.json').read_text())
+        case = next(case for case in fixture['cases'] if case['action'] == 'install')
+        status_replies = iter((case['late_status_snapshot'], case['unbound_live_terminal']))
+        original_luna = self.remote.luna
+        vendor_status_checks = []
+
+        def luna(uri, payload, **kwargs):
+            if uri == 'com.webos.appInstallService/status':
+                vendor_status_checks.append(uri)
+                return next(status_replies)
+            return original_luna(uri, payload, **kwargs)
+
+        self.remote.luna = luna
+        self.remote.cut = True
+        with self.assertRaisesRegex(RuntimeError, 'observation could not be verified'):
+            self.installer.install(self.inventory, 'original-secret')
+        self.assertEqual((self.root / 'requests').read_text().splitlines(), [operations.HELPER])
+        pending = self.store.pending(self.profile)
+        directory = self.store.device_dir(self.profile)
+        self.store.save(self.profile)
+        (directory / 'known_hosts').write_text('trusted-by-fixture\n')
+        receipt = directory / 'operation.json'
+        capsule = directory / ('capsule-' + pending['observer_operation'] + '.json')
+        evidence = receipt.read_bytes(), capsule.read_bytes()
+
+        # The vendor has installed Helper. Hold back its bound terminal to
+        # simulate a status read before the detached observer publishes it.
+        terminal = self.root / 'private/operations' / pending['observer_operation'] / 'terminal-0.json'
+        withheld = terminal.rename(self.root / 'withheld-terminal.json')
+        events, questions = [], []
+        write = DesktopConsole(lambda kind, value: events.append((kind, value)))
+
+        def reopen(command, expected_code=0):
+            events.clear()
+            questions.clear()
+
+            def ask(question):
+                questions.append(question)
+                return 'y' if 'Check recovery options?' in question or 'Continue the original No-root' in question else 'n'
+
+            args = [command, '--host', self.profile['host'], '--edition', 'no-root',
+                    '--data-dir', str(self.store.root), '--language', 'en']
+            self.assertEqual(cli.main(args, write=write, ask=ask, connect=lambda *_: self.remote,
+                                      payload_root=self.installer.payload), expected_code, events)
+
+        def check_unknown(command, reason, expected_code=0):
+            reopen(command, expected_code)
+            self.assertEqual(len(questions), int(command == 'recover'), questions)
+            plans = [value for kind, value in events if kind == 'recovery-plan']
+            self.assertTrue(plans, events)
+            self.assertEqual(plans[-1].get('reason'), reason)
+            self.assertEqual(plans[-1]['actions'], ['check', 'retain-evidence'])
+            self.assertEqual((receipt.read_bytes(), capsule.read_bytes()), evidence)
+            self.assertEqual((self.root / 'requests').read_text().splitlines(), [operations.HELPER])
+            self.assertFalse((Path(operations.HELPER_STATE) / 'ssap-key.json').exists())
+
+        for command in ('recover', 'status'):
+            with self.subTest(command=command):
+                check_unknown(command, 'original-terminal-unknown')
+
+        original_run = self.remote.run
+
+        def disconnected_status(command, data=None, timeout=30):
+            words = split_observer_command(command)
+            if '-e' in words and observer.PROGRAM in words[words.index('-e') + 1]:
+                if json.loads(words[-1])['command'] == 'status':
+                    raise UserError('TV SSH connection closed.', reason_code='connection-interrupted')
+            return original_run(command, data, timeout)
+
+        with patch.object(self.remote, 'run', disconnected_status):
+            with self.subTest(command='recover with disconnected observer'):
+                check_unknown('recover', 'connection-interrupted')
+            with self.subTest(command='status with disconnected observer'):
+                check_unknown('status', 'connection-interrupted', expected_code=2)
+
+        withheld.rename(terminal)
+        reopen('status')
+        self.assertEqual(questions, [])
+        self.assertIn(('recovery', self.profile), events)
+        self.assertEqual((receipt.read_bytes(), capsule.read_bytes()), evidence)
+        reopen('recover')
+        self.assertEqual(len(questions), 2)
+        self.assertIsNone(self.store.pending(self.profile))
+        self.assertEqual((self.root / 'requests').read_text().splitlines(), list(observer.APPS))
+        self.assertEqual(json.loads((Path(operations.HELPER_STATE) / 'ssap-key.json').read_text()),
+                         {'key': 'original-secret'})
+        self.assertEqual(vendor_status_checks, [])
+        self.assertFalse(any(call[1].endswith('/dev/remove') for call in self.remote.calls))
+
     def test_recovery_finishes_configuration_with_unusable_staging(self):
         from cytv.desktop import DesktopConsole
         from cytv.recovery import recover

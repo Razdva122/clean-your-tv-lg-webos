@@ -109,7 +109,7 @@ Wybierz **Odinstaluj Clean Your TV** w Konserwacji dla tego samego zapisanego po
 
 Gdy pojawi się prośba, odłącz zasilanie TV, podłącz ponownie, poczekaj na sieć i wybierz **Spróbuj ponownie**. Czuwanie lub Quick Start nie jest pełnym restartem; CYTV nie uruchamia TV ponownie automatycznie. Przy odmowie dostępu użyj żądanego połączenia Root; gdy TV jest zajęty, poczekaj i ponów. Sukces pojawi się dopiero po weryfikacji końcowego czyszczenia. Zachowaj klucze i oryginalne raporty. Sterowanie awaryjne i zgoda na udostępnianie nadal obowiązują.
 
-Jeśli instalator nie może zweryfikować odinstalowania, końcowego czyszczenia, sterowania telewizorem lub wyniku operacji na pakietach albo zgłasza zmianę ścieżek projektu, wybierz **Sprawdź opcje odzyskiwania** z pierwotnym zapisanym połączeniem. Gdy instalator zaproponuje kontynuację, potwierdź ją osobno.
+Jeśli instalator nie może zweryfikować odinstalowania, końcowego czyszczenia, sterowania telewizorem lub wyniku operacji na pakietach albo zgłasza zmianę ścieżek projektu, wybierz **Sprawdź opcje odzyskiwania** z pierwotnym zapisanym połączeniem. Gdy instalator zaproponuje kontynuację, potwierdź ją osobno. Jeśli podczas odzyskiwania instalacji No-root pojawi się opcja **Sprawdź stan telewizora**, wybierz ją i zachowaj dane odzyskiwania.
 
 Jeśli instalator nie może potwierdzić wymaganego pełnego restartu, zapisz i dołącz raport diagnostyczny. Zachowaj zapisane połączenie i dane odzyskiwania. Nie odłączaj wielokrotnie zasilania ani nie kasuj ręcznie niedokończonej operacji.
 

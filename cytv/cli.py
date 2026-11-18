@@ -95,6 +95,10 @@ def explain_failure(write, store, profile, phase, error):
         return True
 
     pending = store.diagnostic_pending if hasattr(store, 'diagnostic_pending') else store.pending(profile) if profile else None
+    if profile and phase in ('status', 'doctor', 'recover'):
+        from .recovery import no_root_package_check_plan
+        if no_root_package_check_plan(write, profile, pending, error=error):
+            return None
     help = for_error(error, phase, profile, pending, has_reset_source=has_reset_source)
     if help:
         write.failure_help(help)
@@ -1022,6 +1026,11 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
             if args.command in ('status', 'doctor', 'restore'):
                 pending = store.pending(profile)
                 if pending:
+                    if pending.get('recovery_protocol') == 'no-root-original-stream-v1':
+                        from .recovery import no_root_package_check_plan
+                        from .recovery_state import assess
+                        if no_root_package_check_plan(write, profile, pending, assess(profile, pending, result)):
+                            return 0
                     from .recovery import missing_root_deployment_plan
                     write.recovery(profile)
                     missing_root_deployment_plan(write, profile, pending, result)

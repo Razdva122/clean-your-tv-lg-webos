@@ -63,6 +63,27 @@ def missing_root_deployment_plan(write, profile, pending, observation):
     return True
 
 
+def no_root_package_check_plan(write, profile, pending, assessment=None, *, error=None):
+    if (not pending or pending.get('action') != 'install'
+            or pending.get('recovery_protocol') != 'no-root-original-stream-v1'):
+        return False
+    if error is not None:
+        observer_error = getattr(error, 'no_root_observer', {})
+        failure = observer_error.get('failure')
+        if (observer_error.get('command') != 'status'
+                or failure not in ('connection-interrupted', 'timeout', 'transport-error')):
+            return False
+        reason = 'connection-interrupted' if failure == 'connection-interrupted' else 'observation-unverified'
+        assessment = dict(state='blocked', reason=reason, actions=['check', 'retain-evidence'])
+    elif not assessment or assessment['reason'] != 'original-terminal-unknown':
+        return False
+    write.recovery(profile)
+    next_step = 'Keep recovery state and run cytv status.' if write.frontend == 'console' else 'Keep recovery data.'
+    write.recovery_plan(dict(assessment, disposition='no-root-package-check',
+                            summary='The TV package result could not be verified.', next_step=next_step))
+    return True
+
+
 def offer_install_recovery(write, store, profile):
     pending = store.pending(profile) if profile else None
     if not pending or pending.get('action') not in ('install', 'activate-root'):
@@ -176,7 +197,8 @@ def recover(installer, ask, write, non_interactive=False, initial_observation=No
                     diagnostics.create_report(installer.store, 'recover', installer.profile, 'recover', error)
                 except (OSError, ValueError, TypeError):
                     pass
-                remove_before_reinstall(installer, ask, write)
+                if not no_root_package_check_plan(write, installer.profile, pending, error=error):
+                    remove_before_reinstall(installer, ask, write)
                 return
             raise
         installer.tv_info.update(status=result)
@@ -236,6 +258,8 @@ def recover(installer, ask, write, non_interactive=False, initial_observation=No
             else:write(KEPT)
             return
         if pending and pending.get('recovery_protocol')=='no-root-original-stream-v1':
+            if no_root_package_check_plan(write, installer.profile, pending, assessment):
+                return
             if 'continue-no-root' not in assessment['actions']:
                 remove_before_reinstall(installer, ask, write)
                 return

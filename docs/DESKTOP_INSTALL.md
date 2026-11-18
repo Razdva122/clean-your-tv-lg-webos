@@ -208,7 +208,9 @@ keeps the same TV, edition and SSH port, even when several connections are saved
 It asks before inspection and before each supported change, with No selected by
 default. Recovery never starts a new installation automatically. **Set up my TV**
 also enters recovery when it finds a retained operation. Returning to LG Home
-alone does not complete removal. Unknown package/setup outcomes keep their data.
+alone does not complete removal. If the result of a No-root package request is
+still unknown, choose **Check TV status** and keep the recovery data. Confirm
+continuation when the installer verifies the original request and offers to resume.
 
 In published v1.11.0 and later, **Uninstall Clean Your TV** uses a simple removal flow:
 confirm once, stop/remove known present project items, fully restart the TV when

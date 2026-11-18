@@ -779,6 +779,8 @@ class Wizard(QMainWindow):
                     cursor.removeSelectedText()
             self.reading.verticalScrollBar().setValue(0)
             cleanup = self.command == 'uninstall' or self.recovery_plan is not None and self.recovery_plan.get('disposition') == 'clean-removal'
+            no_root_status = (self.recovery_profile is not None
+                              and (self.recovery_plan or {}).get('disposition') == 'no-root-package-check')
             completed = False
             recover = (not cleanup and self.recovery_profile is not None and
                        ((self.recovery_plan is None and
@@ -824,6 +826,12 @@ class Wizard(QMainWindow):
                 self.badge.setText(self.title.text())
                 self.subtitle.setText(tr('Checking recovery does not reinstall or remove packages. Root checks may run verified support code.'))
                 self.button('Review recovery options', lambda: self.start('recover', profile), not failed)
+            elif no_root_status:
+                profile = dict(self.recovery_profile)
+                self.title.setText(tr(self.recovery_plan['summary']))
+                self.badge.setText(self.title.text())
+                self.subtitle.setText(tr(self.recovery_plan['next_step']))
+                self.button('Check TV status', lambda: self.start('status', profile), True).setFocus()
             elif doctor_ready:
                 self.show_doctor_success()
             elif retry_removal:
@@ -867,20 +875,20 @@ class Wizard(QMainWindow):
             if self.report:
                 save_report = self.button('Save diagnostic report…', self.save_report,
                                           (failed or setup_review) and not retry_removal and not connection_help
-                                          and not resume_root_reinstall,
+                                          and not resume_root_reinstall and not no_root_status,
                                           layout=report_actions)
                 if doctor_ready:
                     save_report.setObjectName('doctorReport')
-                if failed:
+                if failed and not no_root_status:
                     self.subtitle.setText(tr('Save the report from this failed attempt and attach it to your issue. Recovery data has been kept.'))
-            elif failed:
+            elif failed and not no_root_status:
                 self.subtitle.setText(tr('A diagnostic report could not be created. Include the visible error when opening an issue.'))
             if (failed and not cleanup) or self.check_results.get('home-button', {}).get('status') == 'fail':
                 self.button('Open an issue', lambda: QDesktopServices.openUrl(QUrl(diagnostics.ISSUE_URL)),
                             layout=report_actions if connection_help else None)
             self.button('Back to start', self.home,
                         not doctor_ready and not connection_help and not retry_removal and not recover
-                        and not resume_root_reinstall and not ((failed or setup_review) and self.report),
+                        and not resume_root_reinstall and not no_root_status and not ((failed or setup_review) and self.report),
                         layout=report_actions if retry_removal else None)
             failed_checks = [result for result in self.check_results.values() if result['status'] in ('fail', 'unknown')]
             if failed and failed_checks:

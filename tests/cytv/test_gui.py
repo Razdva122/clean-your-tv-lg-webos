@@ -102,6 +102,34 @@ class GuiTests(unittest.TestCase):
         self.assertEqual(w.subtitle.text(), KEPT)
         w.running = False
 
+    def test_unknown_package_result_rechecks_status_on_the_saved_connection(self):
+        profile = {'host':'192.0.2.10', 'port':9922, 'edition':'no-root'}
+        for command, code, reason in (
+                ('recover', 0, 'original-terminal-unknown'), ('status', 2, 'connection-interrupted')):
+            with self.subTest(command=command):
+                calls = []
+                w = Wizard(run=lambda args, **kw: calls.append(args) or 0)
+                self.addCleanup(w.close)
+                w.command = command
+                w.receive('recovery', profile)
+                w.receive('recovery-plan', {'state':'blocked', 'disposition':'no-root-package-check',
+                    'reason':reason, 'summary':'The TV package result could not be verified.',
+                    'next_step':'Keep recovery data.', 'actions':['check', 'retain-evidence']})
+                w.receive('report', __file__)
+                w.receive('done', code)
+                buttons = {b.text(): b for b in w.form.findChildren(QPushButton)}
+                self.assertIn('Check TV status', buttons)
+                self.assertTrue(buttons['Check TV status'].isDefault())
+                self.assertFalse(buttons['Save diagnostic report…'].isDefault())
+                self.assertFalse(buttons['Back to start'].isDefault())
+                self.assertIn('package result', w.title.text())
+                buttons['Check TV status'].click()
+                self.pump(lambda: not w.running)
+                self.assertEqual(len(calls), 1)
+                self.assertEqual(calls[0][0], 'status')
+                for field, value in profile.items():
+                    self.assertEqual(calls[0][calls[0].index('--'+field)+1], str(value))
+
     def test_successful_doctor_russian_actions_fit_minimum_window(self):
         from cytv import i18n
         w = Wizard(); self.addCleanup(w.close)
