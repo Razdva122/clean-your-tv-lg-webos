@@ -27,6 +27,7 @@ let opened = 0;
 let subscriptions = 0;
 let acquiredMedia = 0;
 let releasedMedia = 0;
+let expireOnNextOwnerRead = false;
 let nextTimer = 0;
 const timers = new Set();
 const launches = [];
@@ -58,7 +59,13 @@ const adapter = create({
   controller,
   createLG,
   service,
-  getOwner: () => owner,
+  getOwner: () => {
+    if (!expireOnNextOwnerRead) return owner;
+    expireOnNextOwnerRead = false;
+    const fresh = { ...owner };
+    owner.stale = true;
+    return fresh;
+  },
   context: () => ({
     popupSupported,
     previewEligible: true,
@@ -296,6 +303,47 @@ assert.equal(
   'a new verified owner starts a new cycle'
 );
 ready();
+const visibleRenderer = currentIdentity();
+const beforeStatusGap = subscriptions;
+owner.stale = true;
+adapter.reconcile();
+assert.equal(
+  ready().close,
+  false,
+  'a short status gap preserves the current renderer'
+);
+assert.equal(adapter.getSession(), null, 'stale Root status cannot defer LG');
+assert.equal(adapter.preview(10), false, 'stale Root status cannot launch');
+lgRequest('104');
+assert.equal(acknowledgements.at(-1).ack, true);
+assert.equal(
+  subscriptions,
+  beforeStatusGap,
+  'the LG subscription stays connected'
+);
+owner.stale = false;
+assert.deepEqual(adapter.getSession().sessionId, visibleRenderer.sessionId);
+lgRequest('105');
+assert.equal(
+  acknowledgements.at(-1).ack,
+  false,
+  'fresh status restores the current session'
+);
+expireOnNextOwnerRead = true;
+lgRequest('106');
+assert.equal(
+  acknowledgements.at(-1).ack,
+  true,
+  'a deadline crossed during the session read must yield to LG'
+);
+assert.equal(ready().close, false);
+owner = null;
+adapter.reconcile();
+assert.equal(
+  currentIdentity(),
+  null,
+  'owner revocation closes the existing renderer'
+);
 adapter.dispose();
 assert.equal(timers.size, 0, 'dispose clears owned polling');
 assert.equal(adapter.enable(10), false, 'disposed adapter never restarts');

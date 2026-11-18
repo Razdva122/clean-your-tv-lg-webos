@@ -370,11 +370,12 @@ class CleanupTail(unittest.TestCase):
             self.assert_completion_pending_after_retirement()
 
     def test_actual_stdin_entry_reaches_selector_guard_with_readonly_global_crypto(self):
+        from install_device import CLEAN_TAIL_STDIN
         # Node 20+ exposes getter-only global WebCrypto for stdin scripts. Model
         # that binding on Node 8 too; the VM harness has a separate global scope.
         source = ("'use strict';\nObject.defineProperty(global,'crypto',"
                   "{configurable:true,get:function(){return {};}});\n" + SOURCE.read_text())
-        result = subprocess.run([os.environ.get('NODE8','node'), '-', 'inspect', '../foreign',
+        result = subprocess.run([os.environ.get('NODE8','node'), '-e', CLEAN_TAIL_STDIN, 'cytv-cleanup-tail', 'inspect', '../foreign',
                                  '-', '0', '-1', '-1', '-', 'd'*32],
                                 input=source, capture_output=True, text=True, timeout=15)
         self.assertEqual(result.returncode, 1, result.stderr)
@@ -383,7 +384,7 @@ class CleanupTail(unittest.TestCase):
             'operation':'../foreign', 'removal':'d'*32, 'state':'recovery_required',
             'stage':'private-cleanup', 'current':False, 'reason':'private-cleanup-incomplete','cleanup_error':'invalid-cleanup-selector'})
 
-    def first_handoff(self, managed_executor=False, executable_symlink=False, native=False, diagnostic=False):
+    def first_handoff(self, managed_executor=False, executable_symlink=False, native=False, diagnostic=False, node012=False):
         import fcntl
         import install_device
         import python_binding
@@ -400,7 +401,11 @@ class CleanupTail(unittest.TestCase):
             import sys
             executable.unlink();executable.symlink_to(sys.executable)
         payload=self.base/'payload';(payload/'root-updater').mkdir(parents=True)
-        (payload/'root-updater/cleanup_tail.js').write_bytes(SOURCE.read_bytes())
+        source = SOURCE.read_bytes()
+        if node012:
+            from scripts.root_node_build import compile_root_beta
+            source = compile_root_beta({'cleanup_tail.js': source})['cleanup_tail.js']
+        (payload/'root-updater/cleanup_tail.js').write_bytes(source)
         boot=self.boot_directory() if native else None
         if native:
             import shutil
@@ -414,10 +419,12 @@ class CleanupTail(unittest.TestCase):
         run=subprocess.run;calls=[]
         def node(args,**kwargs):
             calls.append(args)
-            self.assertEqual(args[:3],['/usr/bin/node','-','finish'])
+            self.assertEqual(args[0], '/usr/bin/node')
+            selectors = args[-8:]
+            self.assertEqual(selectors[0], 'finish')
             if native:
                 self.assertEqual(kwargs['pass_fds'],(ownership,store.lock_fd))
-                self.assertEqual(args[6],'-1')
+                self.assertEqual(selectors[4],'-1')
             source=kwargs['input'].decode()
             # Fixed TV paths and RPCs use the existing real-file Node harness.
             # Python's first inventory/lock/handoff production path is unchanged.
@@ -427,12 +434,15 @@ class CleanupTail(unittest.TestCase):
             source=source.replace('/proc/sys/kernel/random/boot_id',str(self.base/'proc/sys/kernel/random/boot_id'))
             source=source.replace("'/tmp/clean-your-tv-root-boot'",repr(str(self.base/'tmp/clean-your-tv-root-boot')))
             target=self.base/'first-tail.js';target.write_text(source)
-            harness=self.base/'first-harness.js'
-            harness.write_text(HARNESS.replace('/var/',str(self.base/'var')+'/'))
-            env={**kwargs['env'],'OWNERSHIP_FD':args[5],'PROMOTION_FD':args[6],'WORKER_FD':args[7],
+            harness = HARNESS.replace('/var/', str(self.base/'var')+'/')
+            harness = harness.replace('base=process.argv[2],source=process.argv[3]',
+                                      'base="/",source='+json.dumps(str(target)))
+            harness = harness.replace('fake.versions=', 'fake.argv=process.argv;fake.versions=')
+            env={**kwargs['env'],'OWNERSHIP_FD':selectors[3],'PROMOTION_FD':selectors[4],'WORKER_FD':selectors[5],
                  'MUTATION_LOG':str(self.base/'first-mutations.json')}
             if diagnostic:env['FOREIGN_ROUTE']='1'
-            result=run([os.environ.get('NODE8','node'),str(harness),'/',str(target)],
+            runtime = os.environ['NODE012'] if node012 else os.environ.get('NODE8', 'node')
+            result=run([runtime, *args[1:]], input=harness.encode(),
                        stdout=subprocess.PIPE,stderr=subprocess.PIPE,env=env,pass_fds=kwargs['pass_fds'],timeout=15)
             self.assertEqual(result.returncode,1 if diagnostic else 0,result.stderr.decode())
             return result
@@ -467,7 +477,7 @@ class CleanupTail(unittest.TestCase):
                 if native:
                     self.assertFalse(self.runtime.parent.exists())
                     self.assertFalse(boot.exists())
-                    self.assertEqual(calls[0][6],'-1')
+                    self.assertEqual(calls[0][-4],'-1')
                     self.assertEqual(self.record['runtime_cleanup']['files'],{})
                     self.assertIs(self.record['runtime_cleanup']['promotion_required'],False)
                     saved=json.loads((self.state/('clean-removal-'+ID+'.json')).read_text())
@@ -494,6 +504,11 @@ class CleanupTail(unittest.TestCase):
 
     def test_first_handoff_external_executor_retires_changed_unused_runtime(self):
         self.first_handoff()
+
+    @unittest.skipUnless(os.environ.get('NODE012'), 'Exact Node 0.12.2 is optional on the host')
+    def test_first_handoff_executes_cleanup_on_node012(self):
+        self.assertEqual(subprocess.check_output([os.environ['NODE012'], '--version']).strip(), b'v0.12.2')
+        self.first_handoff(node012=True)
 
     def test_first_handoff_damaged_managed_executor_is_refused_before_node(self):
         self.first_handoff(managed_executor=True)

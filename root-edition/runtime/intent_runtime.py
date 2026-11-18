@@ -584,17 +584,22 @@ def screensaver_status():
         transaction = current.read_binding()['transaction']
         boot = boot_identity()
         startup_require(current, intent, transaction, boot)
-        installed = _screensaver_luna('luna://com.webos.applicationManager/getAppInfo', {'id':_SCREENSAVER_POPUP}, timeout=.5)
-        info = installed.get('appInfo')
-        if (installed.get('returnValue') is not True or not isinstance(info, dict)
-                or info.get('id') != _SCREENSAVER_POPUP or info.get('type') != 'web'
-                or info.get('defaultWindowType') != 'popup'):
+        try:
+            installed = _screensaver_luna('luna://com.webos.applicationManager/getAppInfo', {'id':_SCREENSAVER_POPUP}, timeout=.5)
+            info = installed.get('appInfo')
+            if (installed.get('returnValue') is not True or not isinstance(info, dict)
+                    or info.get('id') != _SCREENSAVER_POPUP or info.get('type') != 'web'
+                    or info.get('defaultWindowType') != 'popup'):
+                return result
+            # Anchor the lifetime before reading the foreground on the shared
+            # monotonic clock, after the expensive owner checks.
+            observed_at_ms = _screensaver_math.floor(time.monotonic() * 1000)
+            foreground = _screensaver_luna('luna://com.webos.surfacemanager/getForegroundAppInfo', {}, timeout=.5)
+            power = _screensaver_luna('luna://com.webos.service.tvpower/power/getPowerState', {}, timeout=.5)
+        except TimeoutError:
+            startup_require(current, intent, transaction, boot)
+            result['retryable'] = True
             return result
-        # CLOCK_MONOTONIC is shared by Python and Node on the TV. Anchor the
-        # lifetime before reading foreground, after the expensive owner checks.
-        observed_at_ms = _screensaver_math.floor(time.monotonic() * 1000)
-        foreground = _screensaver_luna('luna://com.webos.surfacemanager/getForegroundAppInfo', {}, timeout=.5)
-        power = _screensaver_luna('luna://com.webos.service.tvpower/power/getPowerState', {}, timeout=.5)
         startup_require(current, intent, transaction, boot)
         ttl = screensaver_remaining_health_ms(transaction)
         if power.get('returnValue') is not True or power.get('state') != 'Active' or ttl <= 0:
@@ -606,7 +611,7 @@ def screensaver_status():
                       popupOwn=(screensaver_foreground_own(foreground, popup=True)
                                 or screensaver_foreground_own(foreground, popup=True, foreign=True)),
                       observedAtMs=observed_at_ms, validForMs=ttl)
-    except (OSError, ValueError, RuntimeError, KeyError, TypeError, TimeoutError):
+    except (OSError, ValueError, RuntimeError, KeyError, TypeError):
         pass
     return result
 

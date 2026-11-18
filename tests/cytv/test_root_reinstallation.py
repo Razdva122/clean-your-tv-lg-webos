@@ -11,7 +11,7 @@ from cytv import cli, state
 
 
 class RootReinstallationFlowTests(unittest.TestCase):
-    def run_install(self, pending=False, approve=True, non_interactive=False):
+    def run_install(self, pending=False, approve=True, non_interactive=False, native=False):
         with tempfile.TemporaryDirectory() as tmp, patch('cytv.cli.Installer') as cls, \
                 patch('cytv.cli.package.verify_payload', return_value={}):
             (Path(tmp) / 'fallback.png').write_bytes(b'fallback')
@@ -22,7 +22,13 @@ class RootReinstallationFlowTests(unittest.TestCase):
                 (store.device_dir(profile) / 'known_hosts').write_bytes(b'original pin')
                 store.begin(profile, 'activate-root', stage='enable')
             inst = cls.return_value
-            inst.preflight.side_effect = ExistingRoot('existing')
+            if native:
+                def retained_native(**_):
+                    cls.call_args.kwargs['tv_info']['home_backend'] = 'c1-native-gate'
+                    raise ExistingRoot('existing')
+                inst.preflight.side_effect = retained_native
+            else:
+                inst.preflight.side_effect = ExistingRoot('existing')
             inst.status.return_value = {'deployment_stage': 'installed-recovery-only',
                                        'device': {'result': {'recovery': {'integrity_verified': True}}}}
             inst.version_summary.return_value = []
@@ -45,6 +51,12 @@ class RootReinstallationFlowTests(unittest.TestCase):
         self.assertTrue(any('Reinstall Root?' in q for q in questions), questions)
         self.assertEqual(inst.install.call_args.kwargs, {'reinstall': 'installed'})
         inst.uninstall_project.assert_not_called()  # The real install validates its replacement first.
+
+    def test_retained_native_runtime_offers_confirmed_reinstallation(self):
+        code, inst, questions, output = self.run_install(native=True)
+        self.assertEqual(code, 0, str(output))
+        self.assertTrue(any('Reinstall Root?' in q for q in questions), questions)
+        self.assertEqual(inst.install.call_args.kwargs, {'reinstall': 'installed'})
 
     def test_pending_activation_offers_reinstallation_instead_of_old_runtime_retry(self):
         code, inst, questions, output = self.run_install(pending=True)

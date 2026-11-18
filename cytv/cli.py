@@ -689,8 +689,6 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                             raise UserError('Choose an alternative edition without --migrate-home. Installation has not started.')
                         offer(installer, args, ask, write, home_error=error)
                     except ExistingRoot:
-                        if tv_info.get('home_backend') == 'c1-native-gate':
-                            raise UserError('Root is already installed or recovery state remains. Use cytv status or cytv restore; reinstallation has not started.')
                         reinstall = 'installed'
                     if args.tv_name is not None and profile['edition'] == 'no-root':
                         write('--tv-name was skipped because the selected edition is No-root.')

@@ -1,7 +1,9 @@
 import hashlib
 import json
+import os
 from pathlib import Path
 import shlex
+import subprocess
 import tempfile
 from types import SimpleNamespace
 import unittest
@@ -35,6 +37,64 @@ class RootTailWire(unittest.TestCase):
         for command in commands:
             if 'inspect' in command or 'finish' in command:self.assertEqual(command[-1],'d'*32)
         self.installer.store.finish_clean_removal.assert_not_called()
+
+    @unittest.skipUnless(os.environ.get('NODE012'), 'Exact Node 0.12.2 is optional on the host')
+    def test_resume_launches_both_entrypoints_on_node012(self):
+        node = os.environ['NODE012']
+        self.assertEqual(subprocess.check_output([node, '--version']).strip(), b'v0.12.2')
+        bundle = self.installer.payload / 'root-updater'
+        source = b"""
+var argv = process.argv;
+var finish = argv[2] === 'finish';
+if (argv.length !== 10 || (!finish && argv[2] !== 'inspect'))
+    throw Error('invalid selector');
+process.stdout.write(JSON.stringify({
+    operation: argv[3], removal: argv[9],
+    state: finish ? 'complete' : 'tail-ready',
+    descriptors: argv.slice(5, 8), gate: argv[8]
+}));
+"""
+        (bundle / 'cleanup_tail.js').write_bytes(source)
+        (bundle / 'bundle.json').write_text(json.dumps({
+            'files': {'cleanup_tail.js': hashlib.sha256(source).hexdigest()}
+        }))
+        modes = []
+
+        def run(command, **kwargs):
+            args = shlex.split(command)
+            if '/usr/bin/node' not in args:
+                return ''
+            if 'finish' in args:
+                self.assertEqual(args[6], 'root-clean-lock')
+            result = subprocess.run([node, *args[args.index('/usr/bin/node') + 1:]],
+                                    input=kwargs['data'], capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            reply = json.loads(result.stdout)
+            modes.append(reply['state'])
+            return result.stdout.decode()
+
+        self.installer.remote.run.side_effect = run
+        reply = resume(self.installer, self.pending)
+        self.assertEqual(modes, ['tail-ready', 'complete'])
+        self.assertEqual(reply['descriptors'], ['3', '4', '5'])
+        self.assertEqual(reply['gate'], hashlib.sha256(b'current verified gate').hexdigest())
+
+    def test_changed_cleanup_source_refuses_before_remote_execution(self):
+        (self.installer.payload / 'root-updater' / 'cleanup_tail.js').write_bytes(b'changed')
+        with self.assertRaisesRegex(UserError, 'support code is missing or changed'):
+            resume(self.installer, self.pending)
+        self.installer.remote.run.assert_not_called()
+
+    def test_changed_gate_refuses_before_finish_or_upload(self):
+        (self.installer.payload / 'installer-support' / 'lifecycle-gate').write_bytes(b'changed')
+        self.installer.remote.run.return_value = json.dumps({
+            'operation': 'a' * 32, 'removal': 'd' * 32, 'state': 'tail-ready',
+        })
+        with self.assertRaisesRegex(UserError, 'support code is missing or changed'):
+            resume(self.installer, self.pending)
+        self.installer.remote.run.assert_called_once()
+        self.assertIn('inspect', shlex.split(self.installer.remote.run.call_args.args[0]))
+        self.installer.remote.upload.assert_not_called()
 
     def test_changed_observed_intent_refuses_before_staging(self):
         self.installer.remote.run.return_value=json.dumps({'operation':'a'*32,'removal':'e'*32,'state':'tail-ready'})

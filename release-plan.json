@@ -1,7 +1,32 @@
 {
   "schema": 1,
-  "version": null,
-  "changes": [],
+  "version": "1.24.1",
+  "changes": [
+    {
+      "pr": 704,
+      "issues": [],
+      "summary": "Continue Desktop setup after a successful connection check and refresh recovery restart guidance"
+    },
+    {
+      "pr": 705,
+      "issues": [
+        692
+      ],
+      "summary": "Fix Node 0.12.2 Root Beta removal and verify LS2 rollback before package removal"
+    },
+    {
+      "pr": 708,
+      "issues": [
+        615
+      ],
+      "summary": "Restore retained compositor Root through Set up my TV \u2192 Root \u2192 Reinstall Root (resets saved CYTV preferences)"
+    },
+    {
+      "pr": 709,
+      "issues": [],
+      "summary": "Keep an active global Root screensaver through a brief status gap"
+    }
+  ],
   "excluded": [],
   "acceptance": ""
 }
