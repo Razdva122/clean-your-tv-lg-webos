@@ -982,7 +982,10 @@ class Wizard(QMainWindow):
                 if not self.recovery_plan:
                     self.title.setText(tr(self.failure_help['title']))
                     self.badge.setText(self.title.text())
-                self.subtitle.setText(tr(self.failure_help['next_step']))
+                messages = [self.failure_help['next_step']]
+                if self.failure_help['code'] in ('root-home-unsupported', 'root-home-unconfirmed'):
+                    messages.insert(0, self.failure_help['detail'])
+                self.subtitle.setText('\n'.join(tr(message) for message in messages))
                 if not self.report and not active_operation:
                     self.subtitle.setText(self.subtitle.text()+'\n'+tr('A diagnostic report could not be created. Include the visible error when opening an issue.'))
             if self.recovery_plan:

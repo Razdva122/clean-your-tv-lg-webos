@@ -718,14 +718,19 @@ with os.fdopen(f,'rb') as stream:
         else:
             if install and self.profile.get('connection') == 'root-ssh':
                 from .root_runtime import FRESH_PROBE
-                if self.remote.run(FRESH_PROBE, timeout=10).strip() != 'CYTV_FRESH_ROOT':
+                fresh_state = self.remote.run(FRESH_PROBE, timeout=10).strip()
+                if fresh_state != 'CYTV_FRESH_ROOT':
+                    message = ('Previous Root installation needs recovery. Run cytv status or cytv restore. '
+                               'Reinstallation has not started; recovery data was left unchanged.')
+                    if fresh_only:
+                        error = UserError(message)
+                        error.root_alternative_retained = fresh_state == 'CYTV_RETAINED_ROOT'
+                        raise error
                     from .root_no_root_handoff import probe
                     try:
-                        if fresh_only:
-                            raise ValueError('Retained Root state')
                         self._root_handoff=probe(self)
                     except (OSError,ValueError,RuntimeError):
-                        raise UserError('Previous Root installation needs recovery. Run cytv status or cytv restore. Reinstallation has not started; recovery data was left unchanged.') from None
+                        raise UserError(message) from None
             self.checks.update('architecture', 'running')
             arch = self.remote.run('uname -m').strip()
             self.tv_info.update(kernel_arch=arch if arch in diagnostics.KERNEL_ARCHES else 'unknown',

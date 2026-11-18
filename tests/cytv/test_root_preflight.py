@@ -8,6 +8,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import Mock
 
 from cytv import cli, diagnostics, state
 from cytv.errors import UserError, TVCommandError
@@ -132,6 +133,42 @@ class RootPreflightTests(unittest.TestCase):
             self.assertEqual(json.loads(report.read_text())['tv']['root_requirements'],
                              {'root-user': 'pass', 'python3': 'unknown'})
             self.assertNotIn('PRIVATE-', report.read_text())
+
+    def test_experimental_home_result_distinguishes_missing_native_home_from_timeout(self):
+        from cytv.checks import CheckList
+        from cytv.failure_help import for_error
+        from cytv.root_capabilities import NATIVE_HOME_UNAVAILABLE, NoRootAlternativeError, RootCapabilityError, verify
+
+        profile = {'edition': 'root', 'root_variant': 'node012-beta'}
+        missing_profiles = {'returnValue': False, 'errorCode': -1,
+                            'errorText': 'Service does not exist: com.webos.service.systemprofile.'}
+        identity = {'returnValue': True, 'modelName': '43UK6450PLC',
+                    'firmwareVersion': '05.50.70', 'sdkVersion': '4.4.0'}
+        keyfilters = {'returnValue': True, 'configs': {'com.webos.surfacemanager.keyFilters': [
+            {'file': '/usr/lib/qt5/qml/KeyFilters/systemUi.js', 'handler': 'handleSystemKeys'},
+        ]}}
+        for keyfilters_reply, expected, capability, status in (
+                (keyfilters, 'root-home-unsupported', 'LG Home executable', 'fail'),
+                (TimeoutError('PRIVATE-LUNA-REPLY'), 'root-home-unconfirmed', 'KeyFilters', 'unknown')):
+            with self.subTest(expected=expected):
+                remote = Mock()
+                remote.luna.side_effect = [missing_profiles, identity, identity, keyfilters_reply]
+                remote.run.side_effect = TVCommandError(NATIVE_HOME_UNAVAILABLE)
+                checks = CheckList()
+                with self.assertRaises(RootCapabilityError) as stopped:
+                    verify(remote, checks, {}, allow_c1=True, allow_compositor=True)
+                error = stopped.exception
+                self.assertEqual(isinstance(error, NoRootAlternativeError), status == 'fail')
+                self.assertEqual(checks.results['home-profiles']['status'], status)
+                help = for_error(error, 'inspect-installation', profile)
+                self.assertEqual(help['code'], expected)
+                self.assertIn(capability, help['detail'])
+                self.assertIn('Installation stopped before package submission.', help['detail'])
+                self.assertEqual('cytv doctor' in help['next_step'], status == 'unknown')
+                self.assertNotIn('PRIVATE-', str(help))
+                self.assertNotIn('stopped before package submission', for_error(error, 'doctor', profile)['detail'])
+                recovery = for_error(error, 'inspect-installation', profile, pending={'action': 'activate-root'})
+                self.assertNotIn('cytv doctor', recovery['next_step'])
 
     def test_unknown_reply_blocks_install_without_exposing_remote_text(self):
         class Remote:

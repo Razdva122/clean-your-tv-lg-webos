@@ -141,7 +141,7 @@ def offer(installer, args, ask, write, *, home_error=None):
     except UserError as error:
         if home_error is not None:
             write(str(error))
-            raise home_error from None
+            raise home_error from error
         root_clear = candidate.checks.results.get('root-conflict', {}).get('status') == 'pass'
         if not beta or not root_clear or error.reason_code == 'pending-operation':
             raise
@@ -155,7 +155,10 @@ def offer(installer, args, ask, write, *, home_error=None):
     if home_error is None:
         write(translate('Ordinary Root requires Node.js 8+. Detected TV Node.js: {version}').format(version=value))
     else:
-        write(str(home_error))
+        from .failure_help import for_error
+        guidance = for_error(home_error, 'inspect-installation', previous)
+        write(guidance['title'])
+        write(guidance['detail'])
     if no_root_verified:
         write.option(1, NO_ROOT_TITLE, NO_ROOT_DETAIL)
     if beta:

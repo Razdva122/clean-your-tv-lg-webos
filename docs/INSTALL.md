@@ -40,6 +40,12 @@ checks whether **No-root** can run over your existing root SSH connection.
 Choose it explicitly to continue with Home and Home Helper. This option does
 not require Developer Mode.
 
+If setup reports that Root cannot control Home, repeating the same Root setup
+will reach the same stop. Use **No-root** if the installer offers it. If setup
+could not verify a Home requirement, use the connection diagnostics or run
+`cytv doctor`. If you already have unfinished Root setup or removal, use its
+saved connection to review recovery first.
+
 If No-root was installed again after full removal, switching to Root may require cleanup first. Back up Home preferences, choose **Uninstall Clean Your TV** with the saved Root connection and wait for verified removal. This also removes No-root Home and Helper. Then install Root; keep recovery records.
 
 ## 2. Prepare your TV and computer

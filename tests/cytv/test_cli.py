@@ -126,6 +126,9 @@ class CLITests(unittest.TestCase):
     def test_root_native_home_unavailable_uses_the_same_checked_alternative(self):
         self.assert_no_root_install_after_root_preflight(choose_beta=False, native_missing=True)
 
+    def test_root_home_refusal_preserves_recovery_when_the_no_root_alternative_is_blocked(self):
+        self.assert_no_root_install_after_root_preflight(choose_beta=False, native_missing=True, retained_root=True)
+
     def test_root_beta_with_keyfilters_but_without_native_home_offers_no_root(self):
         self.assert_no_root_install_after_root_preflight(choose_beta=True, native_missing=True)
 
@@ -239,6 +242,11 @@ class CLITests(unittest.TestCase):
             self.assertEqual('\n'.join(output).count('No-root — reduced functionality'), int(home_unknown))
             if storage_full and choose_beta:
                 self.assertIn('[1] Root Beta — not sufficiently tested', '\n'.join(output))
+            if retained_root and native_missing:
+                report_path, = (fixture.root / 'cli-state/reports').glob('diagnostic-*.json')
+                report = json.loads(report_path.read_text())
+                self.assertEqual(report['guidance']['code'], 'root-home-unsupported')
+                self.assertIn('Choose Review recovery options for the same saved TV connection.', '\n'.join(output))
             self.assertFalse(any(profile['edition'] == 'no-root' for profile in profiles))
             self.assertFalse(remote.uploads)
             ssap.assert_not_called()
@@ -251,6 +259,7 @@ class CLITests(unittest.TestCase):
         self.assertIn('--tv-name was skipped', '\n'.join(output))
         if native_missing or generic:
             self.assertIn('Root cannot control Home on this TV.', '\n'.join(output))
+            self.assertIn('Installation stopped before package submission.', '\n'.join(output))
         elif choose_beta:
             self.assertIn('This TV uses the LG Home ribbon', '\n'.join(output))
         if generic:

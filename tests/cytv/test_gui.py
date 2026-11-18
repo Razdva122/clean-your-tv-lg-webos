@@ -1052,6 +1052,24 @@ class GuiTests(unittest.TestCase):
         self.assertEqual(calls,[])
         w.home();self.assertIsNone(w.failure_help)
 
+    def test_root_home_result_shows_capability_and_package_stage(self):
+        from cytv.failure_help import for_error
+        from cytv.root_capabilities import RootCapabilityError
+        from cytv.state import target
+
+        profile = target('test-tv', 'root')
+        w = Wizard()
+        self.addCleanup(w.close)
+        w.command = 'install'
+        w.receive('selected-profile', profile)
+        error = RootCapabilityError(experimental_failure='keyfilters-request-failed')
+        w.receive('failure-help', for_error(error, 'inspect-installation', profile))
+        w.receive('done', 2)
+        self.assertIn('could not verify KeyFilters', w.subtitle.text())
+        self.assertIn('Installation stopped before package submission.', w.subtitle.text())
+        self.assertIn('cytv doctor', w.subtitle.text())
+        self.assertNotIn('Try again', {button.text() for button in w.findChildren(QPushButton)})
+
     def test_local_precheck_results_offer_an_explicit_setup_retry(self):
         import errno
         from cytv.failure_help import for_error

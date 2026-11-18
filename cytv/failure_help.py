@@ -2,9 +2,12 @@
 import errno
 import socket
 
-from .errors import DeveloperKeyError, LocalRecoveryError, TVConnectionError, TVRejected, is_storage_full, TV_STORAGE_FULL, TV_STORAGE_RAMFS, COMPUTER_STORAGE_FULL, no_root_cleanup_details, no_root_observer_details
+from .errors import DeveloperKeyError, LocalRecoveryError, TVConnectionError, TVRejected, UserError, is_storage_full, TV_STORAGE_FULL, TV_STORAGE_RAMFS, COMPUTER_STORAGE_FULL, no_root_cleanup_details, no_root_observer_details
 from .recovery_state import REMOVAL_FAILURE_PHASES, REMOVAL_REASONS, unsubmitted_removal
 from .root_action_failure import ACTIVATION_CODES, ACTIVATION_DETAILS
+from .root_capabilities import (
+    LEGACY_RIBBON, NATIVE_HOME_UNAVAILABLE_MESSAGE, UNSUPPORTED_EXPERIMENTAL_HOME, RootCapabilityError,
+)
 from .storage import TVStorageShortfall
 
 NETWORK = 'Keep the TV on and use the same home network. Review the selected TV address and SSH port, Local Network access and VPN isolation.'
@@ -23,6 +26,25 @@ NATIVE_HOME_SCRIPT = (
     'Use the existing integration’s own supported procedure to return to LG Home. Then choose Diagnostics → Check connection and create a diagnostic report.',
     False,
 )
+HOME_KEYFILTERS_UNAVAILABLE = 'The required Home KeyFilters configuration is unavailable.'
+HOME_KEYFILTERS_UNCONFIRMED = 'The experimental Home check could not verify KeyFilters.'
+HOME_SYSTEM_INFO_UNCONFIRMED = 'The experimental Home check could not verify the TV system information.'
+HOME_EXECUTABLE_UNCONFIRMED = 'The experimental Home check could not verify the native LG Home executable.'
+EXPERIMENTAL_HOME_DETAILS = {
+    'legacy-ribbon': LEGACY_RIBBON,
+    'native-home-unavailable': 'The required native LG Home executable is unavailable.',
+    'keyfilters-not-configured': HOME_KEYFILTERS_UNAVAILABLE,
+    'keyfilters-service-absent': HOME_KEYFILTERS_UNAVAILABLE,
+    'keyfilters-request-failed': HOME_KEYFILTERS_UNCONFIRMED,
+    'keyfilters-incompatible': HOME_KEYFILTERS_UNCONFIRMED,
+    'c1-probe-failed': HOME_SYSTEM_INFO_UNCONFIRMED,
+    'system-info-request-failed': HOME_SYSTEM_INFO_UNCONFIRMED,
+    'system-info-invalid': HOME_SYSTEM_INFO_UNCONFIRMED,
+    'native-home-request-failed': HOME_EXECUTABLE_UNCONFIRMED,
+    'native-home-incompatible': HOME_EXECUTABLE_UNCONFIRMED,
+}
+HOME_NOT_SUBMITTED = 'Installation stopped before package submission.'
+HOME_RECHECK = 'Run the connection diagnostics again. In the console, run cytv doctor.'
 GUIDES = {
     'native-home-script': NATIVE_HOME_SCRIPT,
     'foreign-home-handoff-required': (
@@ -66,6 +88,10 @@ GUIDES = {
         'The installed Root runtime differs from the verified package in this installer. Home activation has not started.',
         'Choose Set up my TV and confirm Reinstall Root. The installer verifies removal before installing its current packages and runtime.', False),
     'root-home-interfaces': ('Required Root Home interfaces are not verified', 'Root setup requires readable Home settings and Home profiles. The check could not establish that contract.', REPORT, False),
+    'root-home-unsupported': (NATIVE_HOME_UNAVAILABLE_MESSAGE, EXPERIMENTAL_HOME_DETAILS['native-home-unavailable'],
+                              'Save the diagnostic report.', False),
+    'root-home-unconfirmed': ('Required Root Home interfaces are not verified', HOME_SYSTEM_INFO_UNCONFIRMED,
+                               HOME_RECHECK, False),
     'recovery-status-rejected': ('TV refused the package status check',
         'Recovery cannot verify the earlier package operation on this TV.', REPORT, False),
     'removal-not-submitted': ('Removal stopped before package deletion',
@@ -129,6 +155,8 @@ def for_error(error, phase, profile=None, pending=None, *, has_reset_source=None
     root_ssh = edition == 'root' or profile.get('connection') == 'root-ssh'
     names = {cls.__name__ for cls in type(error).__mro__}
     reason = getattr(error, 'reason_code', None)
+    home_failure = (error.experimental_failure if edition == 'root'
+                    and phase in ('inspect-installation', 'doctor') and isinstance(error, RootCapabilityError) else None)
     local_write = isinstance(error, LocalRecoveryError) and error.write_precheck
     if getattr(error, 'local_recovery', {}).get('reason') == 'operation-access' and reason != 'computer-storage-full':
         return None  # The installer already explains the local storage failure.
@@ -150,6 +178,8 @@ def for_error(error, phase, profile=None, pending=None, *, has_reset_source=None
         code = 'recovery-status-rejected'
     elif reason == 'foreign-home-handoff-required' and edition == 'root':
         code = reason
+    elif home_failure in EXPERIMENTAL_HOME_DETAILS:
+        code = 'root-home-unsupported' if home_failure in UNSUPPORTED_EXPERIMENTAL_HOME else 'root-home-unconfirmed'
     elif reason in ('root-home-interfaces','root-requirements','native-home-script') and edition=='root':
         code = reason
     elif reason in ('ssh-trust-record', 'ssh-identity-unverified') or 'BadHostKeyException' in names:
@@ -191,7 +221,16 @@ def for_error(error, phase, profile=None, pending=None, *, has_reset_source=None
     if code is None:
         return None
     title, detail, next_step, edit = GUIDES[code]
-    if local_write:
+    if code in ('root-home-unsupported', 'root-home-unconfirmed'):
+        detail = EXPERIMENTAL_HOME_DETAILS[home_failure]
+        if pending:
+            next_step = REPORT
+        elif phase == 'inspect-installation':
+            detail += '\n' + HOME_NOT_SUBMITTED
+            if isinstance(error.__cause__, UserError) and getattr(error.__cause__, 'root_alternative_retained', False):
+                detail += '\n' + 'Previous Root installation needs recovery.'
+                next_step = 'Choose Review recovery options for the same saved TV connection.'
+    elif local_write:
         if pending:
             next_step = REPORT
         else:
