@@ -1058,9 +1058,11 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                     result = getattr(installer, args.command)()
                 if args.command == 'restore' and removal_operation is not None:
                     from .recovery import restored_for_uninstall
-                    restored_for_uninstall(write, profile, removal_operation, result)
+                    restored_for_uninstall(write, profile, removal_operation, result,
+                                           evidence=tv_info.get('removal_evidence'))
                 if result.get('verified_clean') is True and result.get('removed') is True:
                     write.recovery_plan({'state':'complete','disposition':'clean-removal','verified_clean':True,'removed':True,
+                                         'removal_evidence':tv_info.get('removal_evidence'),
                                          'summary':'Clean Your TV removal is verified.','next_step':'Other TV apps stay installed.'})
                     write.heading('Clean Your TV removed')
                     write('Clean Your TV removed. Its apps, startup and Home-button control were removed.')
@@ -1070,7 +1072,8 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                         write('Only ownership backups and minimal removal records were kept.')
                 elif result.get('restart_required') is True:
                     from .recovery import removal_plan
-                    removal_plan(write,store,profile,state='waiting',restart_observed=True)
+                    removal_plan(write,store,profile,state='waiting',restart_observed=True,
+                                 evidence=tv_info.get('removal_evidence'))
                 elif (result.get('reconciled') or '').startswith('updater-not-started'):
                     write.heading('Ready to reinstall Root')
                     write('The previous attempt stopped before Root Updater setup. Recovery and installed files are verified; the previous operation report was saved.')
@@ -1117,7 +1120,8 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
             from .recovery import removal_plan
             help = explain_failure(write, store, profile, phase, exc, offer_actions=not unverified_review)
             if not unverified_review:
-                removal_plan(write, store, profile, failure=help, error=exc, phase=phase)
+                removal_plan(write, store, profile, failure=help, error=exc, phase=phase,
+                             evidence=tv_info.get('removal_evidence'))
         diagnostics.suggest_issue(write, store, args.command, profile, phase, exc, tv_info, checks=checks.results, status=tv_info.get('status'))
         return 2
     except Exception as exc:
@@ -1139,7 +1143,8 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
             from .recovery import removal_plan
             help = explain_failure(write, store, profile, phase, exc, offer_actions=not unverified_review)
             if not unverified_review:
-                removal_plan(write, store, profile, failure=help, error=exc, phase=phase)
+                removal_plan(write, store, profile, failure=help, error=exc, phase=phase,
+                             evidence=tv_info.get('removal_evidence'))
         diagnostics.suggest_issue(write, store, args.command, profile, phase, exc, tv_info, checks=checks.results, status=tv_info.get('status'))
         return 1
     finally:

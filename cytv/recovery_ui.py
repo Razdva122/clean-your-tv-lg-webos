@@ -6,7 +6,7 @@ from .recovery_state import REMOVAL_FAILURE_PHASES
 REMOVAL_STAGES = {
     'requested':'Removal has been requested.',
     'original-writers-fenced':'Previous setup work is stopped.',
-    'controls-restored':'TV controls are restored.',
+    'controls-restored':'Checking the remaining removal steps…',
     'package-removal':'Removing Clean Your TV packages…',
     'private-cleanup':'Removing private setup data…',
     'restart-required':'Restart the TV to finish removal',
@@ -165,6 +165,38 @@ def _saved_removal_presentation(plan, failure):
     return value if type(value) is dict else {}
 
 
+def _removal_evidence(plan):
+    value = plan.get('removal_evidence')
+    return value if type(value) is dict else {}
+
+
+def removal_milestones(plan, failure=None):
+    """Describe readback separately from terminal removal and physical input."""
+    if plan.get('disposition') != 'clean-removal' and not plan.get('continue_removal'):
+        return ()
+    evidence = _removal_evidence(plan)
+    complete = removal_action(plan, failure)['condition'] == 'complete'
+    stock = evidence.get('stock')
+    stock_text = {
+        'routing-verified':'Home routing was verified. Physical remote untested.',
+        'stock-observed':'A stock TV screen was observed. Physical remote untested.',
+        'launch-accepted':'The TV accepted a stock app launch. Physical remote untested.',
+    }.get(stock if type(stock) is str else None, 'Stock controls are unknown.')
+    packages = evidence.get('packages')
+    if complete or packages == 'absent':
+        package_text = 'Clean Your TV packages are absent.'
+    elif packages == 'helper-present':
+        package_text = 'Home Helper is still installed.'
+    elif packages == 'present':
+        package_text = 'Clean Your TV packages are still installed.'
+    else:
+        package_text = 'Package absence is unknown.'
+    cleanup_text = ('Final cleanup is verified.' if complete else
+                    'Final cleanup remains to be verified.' if evidence.get('cleanup') == 'pending' else
+                    'Final cleanup is unknown.')
+    return stock_text, package_text, cleanup_text
+
+
 def removal_title(plan, failure=None):
     saved = _saved_removal_presentation(plan, failure)
     if type(saved.get('title_text')) is str:
@@ -174,6 +206,10 @@ def removal_title(plan, failure=None):
     condition = _presentation_condition(plan, failure)
     if condition == 'restart':
         return 'Restart the TV to finish removal'
+    evidence = _removal_evidence(plan)
+    if (evidence.get('stock') in ('routing-verified', 'stock-observed')
+            and evidence.get('packages') in ('helper-present', 'present')):
+        return 'Removal is partly complete.'
     reason = _presentation_reason(plan, failure)
     if reason == 'controls-unverified':
         return 'TV controls could not be verified.'

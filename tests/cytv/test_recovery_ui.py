@@ -3,6 +3,69 @@ import unittest
 
 
 class RecoveryPresentationTests(unittest.TestCase):
+    def test_current_stock_readback_and_installed_helper_show_partial_removal(self):
+        from cytv.recovery_ui import removal_milestones, removal_title
+
+        plan = {'state':'blocked', 'disposition':'clean-removal',
+                'removal_evidence':{'stock':'stock-observed', 'packages':'helper-present', 'cleanup':'pending'}}
+        self.assertEqual(removal_title(plan, {'code':'removal-terminal-unknown'}), 'Removal is partly complete.')
+        self.assertEqual(removal_milestones(plan), (
+            'A stock TV screen was observed. Physical remote untested.',
+            'Home Helper is still installed.',
+            'Final cleanup remains to be verified.',
+        ))
+
+    def test_launch_acknowledgement_and_saved_stage_do_not_verify_controls(self):
+        from types import SimpleNamespace
+        from cytv.no_root_cleanup import restore_stock_home
+        from cytv.recovery_ui import removal_milestones
+
+        plan = {'state':'blocked', 'disposition':'clean-removal',
+                'removal':{'stage':'controls-restored'}}
+        self.assertEqual(removal_milestones(plan), (
+            'Stock controls are unknown.', 'Package absence is unknown.', 'Final cleanup is unknown.',
+        ))
+        remote = SimpleNamespace(luna=lambda uri, body: {'returnValue':True})
+        stock = restore_stock_home(SimpleNamespace(remote=remote))
+        plan['removal_evidence'] = {'stock':stock, 'packages':['PRIVATE']}
+        self.assertEqual(removal_milestones(plan), (
+            'The TV accepted a stock app launch. Physical remote untested.',
+            'Package absence is unknown.',
+            'Final cleanup is unknown.',
+        ))
+
+    def test_clean_milestones_require_existing_terminal_proof(self):
+        from cytv.recovery_ui import removal_milestones
+
+        plan = {'state':'complete', 'disposition':'clean-removal', 'removed':True, 'verified_clean':True}
+        self.assertEqual(removal_milestones(plan), (
+            'Stock controls are unknown.', 'Clean Your TV packages are absent.', 'Final cleanup is verified.',
+        ))
+        for incomplete in ({'verified_clean':1}, {'state':'blocked'}, {'restart_required':True}):
+            self.assertNotIn('Final cleanup is verified.', removal_milestones(dict(plan, **incomplete)))
+        self.assertNotIn('Final cleanup is verified.', removal_milestones(plan, {'code':'ssh-timeout'}))
+
+    def test_desktop_keeps_partial_milestones_on_the_finished_screen(self):
+        from tests.cytv import test_desktop_recovery as desktop
+
+        if not desktop.HAS_QT:
+            self.skipTest('Qt is optional for console-only tests')
+        fixture = desktop.DesktopRecoveryTests()
+        fixture.setUpClass()
+        fixture.setUp()
+        self.addCleanup(fixture.doCleanups)
+        window = fixture.window()
+        window.command = 'uninstall'
+        window.receive('recovery-plan', {
+            'state':'blocked', 'disposition':'clean-removal', 'summary':'Review recovery options',
+            'removal_evidence':{'stock':'routing-verified', 'packages':'helper-present', 'cleanup':'pending'},
+        })
+        window.receive('done', 2)
+        self.assertEqual(window.title.text(), 'Removal is partly complete.')
+        self.assertIn('Home routing was verified. Physical remote untested.', window.subtitle.text())
+        self.assertIn('Home Helper is still installed.', window.subtitle.text())
+        self.assertIn('Final cleanup remains to be verified.', window.subtitle.text())
+
     def test_removal_action_classifies_only_fixed_evidence(self):
         from cytv.recovery_ui import removal_action
         plan = {'disposition':'clean-removal'}

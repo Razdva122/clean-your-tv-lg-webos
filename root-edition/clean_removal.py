@@ -427,12 +427,21 @@ def validate_package_receipts(record):
             raise ValueError('package_absence_unverified')
 
 
-def remove_packages(device, record, save, *, present=None):
+def remove_packages(device, record, save, *, present=None, evidence=None):
     """Retry explicit removal against current presence, keeping old outcomes separate."""
     from observed_install import remove
     errors = []
     if present is None:
         present = device.apps()
+
+    def observe_catalog(apps):
+        if evidence is not None:
+            if 'com.local.nativehome' in apps:
+                evidence['packages'] = 'helper-present'
+            elif any(app in apps for app in APPS):
+                evidence['packages'] = 'present'
+
+    observe_catalog(present)
     checked = {}
     changed = False
     for app in APPS:
@@ -452,6 +461,8 @@ def remove_packages(device, record, save, *, present=None):
                 record['packages'][app] = {'state': 'removing'}
                 save('package-removal')
                 changed = True
+                if evidence is not None:
+                    evidence.pop('packages', None)
                 terminal = remove(app, timeout=150)
                 if not terminal_removal(terminal, app):
                     raise ValueError('package_removal_unconfirmed')
@@ -466,6 +477,7 @@ def remove_packages(device, record, save, *, present=None):
     if changed:
         try:
             present = device.apps()
+            observe_catalog(present)
         except (OSError, RuntimeError, ValueError, subprocess.SubprocessError):
             if errors:
                 raise errors[0]
@@ -478,6 +490,8 @@ def remove_packages(device, record, save, *, present=None):
             save('package-removal')
     if errors:
         raise errors[0]
+    if evidence is not None:
+        evidence['packages'] = 'absent'
 
 
 def compact_audit(record, store):

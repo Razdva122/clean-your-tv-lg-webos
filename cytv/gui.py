@@ -738,10 +738,11 @@ class Wizard(QMainWindow):
             self.steps.hide()
             if not self.reinstalling_root and self.removal_operation is None:
                 self.rail_title.setText(tr('Review recovery options'))
-            from .recovery_ui import removal_details
+            from .recovery_ui import removal_details, removal_milestones
             detail = removal_details(self.recovery_plan)
+            milestones = removal_milestones(self.recovery_plan)
             if detail:
-                self.subtitle.setText('\n'.join(tr(text) for text in detail.values() if text))
+                self.subtitle.setText('\n'.join(tr(text) for text in (*detail.values(), *milestones) if text))
                 self.subtitle.show()
             else:
                 self.subtitle.setText(tr(self.recovery_plan.get('next_step', self.recovery_plan['summary'])))
@@ -950,7 +951,7 @@ class Wizard(QMainWindow):
                 if not self.report:
                     self.subtitle.setText(self.subtitle.text()+'\n'+tr('A diagnostic report could not be created. Include the visible error when opening an issue.'))
             if self.recovery_plan:
-                from .recovery_ui import removal_details, removal_connection_failure, removal_title, removal_waiting
+                from .recovery_ui import removal_details, removal_connection_failure, removal_milestones, removal_title, removal_waiting
                 detail = removal_details(self.recovery_plan, self.failure_help)
                 connection = removal_connection_failure(self.recovery_plan, self.failure_help)
                 show_restart = restart and not connection
@@ -967,6 +968,9 @@ class Wizard(QMainWindow):
                     if self.failure_help and self.failure_help.get('code') in ('ssh-auth-root','ssh-auth-no-root','ssh-key-file','ssh-identity','developer-key-server','developer-key-unlock','developer-key-response'):
                         message = self.failure_help['next_step']
                     self.subtitle.setText(tr(message)+('' if show_restart or connection else '\n'+tr(detail.get('stage_text', ''))))
+                milestones = removal_milestones(self.recovery_plan, self.failure_help)
+                if milestones:
+                    self.subtitle.setText('\n'.join((self.subtitle.text(), *(tr(text) for text in milestones))))
 
             if connection_help:
                 self.subtitle.setText(tr(self.failure_help['detail']))

@@ -108,11 +108,17 @@ def wait_for_removal_tv(store, profile, reconnect, stop, deadline):
     return 'timeout'
 
 
-def restored_for_uninstall(write, profile, operation, result):
+def restored_for_uninstall(write, profile, operation, result, *, evidence=None):
     """A verified Restore can offer to continue the original Uninstall."""
     if result.get('restored') is True or (result.get('returnValue') is True and result.get('result') == 'restored'):
         write.recovery(profile)
-        write.recovery_plan({'state':'complete', 'summary':'LG Home is restored.',
+        if evidence is None:
+            evidence = {'cleanup':'pending'}
+            if result.get('returnValue') is True and result.get('result') == 'restored':
+                evidence['stock'] = 'routing-verified'
+        summary = ('The TV accepted a stock app launch.' if evidence.get('stock') == 'launch-accepted'
+                   else 'LG Home is restored.')
+        write.recovery_plan({'state':'complete', 'summary':summary, 'removal_evidence':evidence,
             'next_step':'Continue the remaining cleanup for this TV.', 'continue_removal':operation})
 
 
@@ -195,7 +201,7 @@ def cancelled(write, store, profile, action, phase, tv_info=None, checks=None):
               else 'Cancelled. If an installation was submitted, run cytv status before retrying.')
         return
     write('Cancelled. If an installation was submitted, run cytv status before retrying.')
-    if not removal_plan(write, store, profile, state='waiting'):
+    if not removal_plan(write, store, profile, state='waiting', evidence=tv_info.get('removal_evidence') if tv_info else None):
         offer_install_recovery(write, store, profile)
     from . import diagnostics
     diagnostics.save_result(write, store, action, profile, phase, tv_info, checks=checks)
@@ -215,15 +221,17 @@ def remove_before_reinstall(installer, ask, write, *, load_payload=False):
         except FileNotFoundError:
             raise UserError('Release payload is missing. Download a built cytv executable or run python scripts/build-cytv.py --payload-only from source.') from None
     completed = installer.uninstall_project()
+    evidence = getattr(installer, 'tv_info', {}).get('removal_evidence')
     if completed.get('removed') is True and completed.get('verified_clean') is True and completed.get('restart_required') is not True:
         _write_removal_plan(write, {'state':'complete','disposition':'clean-removal','removed':True,'verified_clean':True,
-            'summary':'Clean Your TV removal is verified.','next_step':SEPARATE})
+            'summary':'Clean Your TV removal is verified.','next_step':SEPARATE,'removal_evidence':evidence})
     else:
         removal_plan(write, installer.store, installer.profile, state='waiting',
-                     restart_observed=completed.get('restart_required') is True)
+                     restart_observed=completed.get('restart_required') is True, evidence=evidence)
 
 
-def removal_plan(write, store, profile, state='blocked', connecting=False, failure=None, *, error=None, phase='recover', restart_observed=False):
+def removal_plan(write, store, profile, state='blocked', connecting=False, failure=None, *, error=None, phase='recover',
+                 restart_observed=False, evidence=None):
     """Expose only current safe assessment fields, with the selected TV bound."""
     if not profile:return False
     pending=store.pending(profile)
@@ -242,7 +250,7 @@ def removal_plan(write, store, profile, state='blocked', connecting=False, failu
         'summary':'Restart the TV to finish removal' if restart else 'Removal has been requested. Continue the remaining cleanup for this TV.',
         'next_step':('Restart the TV completely: disconnect it from power, reconnect it, then choose Try again. Standby is not a full restart.' if restart
                      else 'Connect to the TV to continue cleanup.' if connecting else 'Continue the remaining cleanup for this TV.'),
-        'removal':summary,'actions':assessment['actions'],'reason':summary['reason']}
+        'removal':summary,'actions':assessment['actions'],'reason':summary['reason'],'removal_evidence':evidence}
     from .recovery_ui import removal_connection_failure, removal_details, removal_title, removal_waiting
     detail = removal_details(value, failure)
     value.update(connection_failure=removal_connection_failure(value, failure),
@@ -352,6 +360,7 @@ def recover(installer, ask, write, non_interactive=False, initial_observation=No
                                      reason_code='pending-operation')
                 _write_removal_plan(write, {'state':'complete','disposition':'clean-removal',
                                      'removed':completed['removed'],'verified_clean':completed['verified_clean'],'restart_required':False,
+                                     'removal_evidence':installer.tv_info.get('removal_evidence'),
                                      'summary':'Clean Your TV removal is verified.','next_step':SEPARATE})
             else:write(KEPT)
             return
@@ -480,7 +489,8 @@ def recover(installer, ask, write, non_interactive=False, initial_observation=No
             raise UserError(BLOCKED, reason_code='pending-operation')
         plan(write, 'complete', 'Finished', SEPARATE)
     except Exception as error:
-        if removal_plan(write,installer.store,installer.profile,error=error):raise
+        if removal_plan(write,installer.store,installer.profile,error=error,
+                        evidence=getattr(installer, 'tv_info', {}).get('removal_evidence')):raise
         from .failure_help import for_error
         help = for_error(error, 'recover', installer.profile, installer.store.pending(installer.profile))
         if help and help['code'] != 'pending-operation':

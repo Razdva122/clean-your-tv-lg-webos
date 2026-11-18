@@ -2053,9 +2053,10 @@ print('CYTV_ROOT_FILES_OK')
                 else:
                     eim_error = True
         from .no_root_cleanup import restore_stock_home
-        restore_stock_home(self)
+        stock = restore_stock_home(self)
         if eim_error:
             raise UserError('LG Home launch was requested, but input restoration removal is unconfirmed. Keep recovery state and run cytv doctor before uninstalling.')
+        getattr(self, 'tv_info', {})['removal_evidence'] = {'stock':stock, 'cleanup':'pending'}
         return {'restored': True, 'pending': self.store.pending(self.profile)}
 
     def system_updater_cleanup(self, action, archive=None):
@@ -2123,6 +2124,7 @@ print('CYTV_PROJECT_REMOVED')
         reconnect = getattr(self, 'reconnect', None)
         lost = False
         for attempt in range(3):
+            getattr(self, 'tv_info', {}).pop('removal_evidence', None)
             try:
                 if lost:
                     self.remote = reconnect()
@@ -2190,6 +2192,8 @@ print('CYTV_PROJECT_REMOVED')
         return self._continue_root_clean_removal(pending)
 
     def _continue_root_clean_removal(self, pending):
+        tv_info = getattr(self, 'tv_info', {})
+        tv_info.pop('removal_evidence', None)
         if (self.profile['edition']=='no-root' and pending.get('root_cleanup_node')=='0.12.2'
                 and self.manifest.get('runtime_variant')!='node012-beta'):
             from .root_runtime import select_payload
@@ -2241,6 +2245,9 @@ print('CYTV_PROJECT_REMOVED')
             self.store.checkpoint(self.profile,removal_target_operation=selected,removal_target_lease=lease,removal_target_intent=goal)
             reply=self.product_action('clean-remove',selected,stage,retire_stages=tuple(dict.fromkeys(retire_stages)),
                                       removal_intent=goal,removal_lease=lease or '-')
+        evidence = reply.get('removal_evidence')
+        if type(evidence) is dict:
+            tv_info['removal_evidence'] = evidence
         from .recovery_state import REMOVAL_STAGES, REMOVAL_REASONS
         phase=reply.get('stage')
         if phase in REMOVAL_STAGES:

@@ -400,6 +400,11 @@ class Coordinator:
                 record.update(stage=stage,state='recovery_required')
                 self.store.write(name,record)
                 self.ownership.stage(lease,stage)
+            def observed(**fields):
+                evidence = getattr(self.device, 'removal_evidence', None)
+                if type(evidence) is dict:
+                    fields['removal_evidence'] = evidence
+                return dict(record, **fields)
             try:
                 record.pop('cleanup_error',None)
                 if record['stage']=='verified-clean':record.pop('runtime_cleanup',None)
@@ -407,13 +412,13 @@ class Coordinator:
                 if record['result'].get('restart_required'):
                     record.update(stage='restart-required',reason='restart-required',current=False)
                     self.store.write(name,record)
-                    return record
+                    return observed()
                 from clean_removal import compact_audit
                 compact_audit(record,self.store)
                 self.store.write(name,record)
                 if hasattr(self.device,'finish_clean_tail'):
                     tail=self.device.finish_clean_tail(record)
-                    if tail is not None:return dict(record,**tail)
+                    if tail is not None:return observed(**tail)
                 if self.device.verify_clean(record) is not True: raise ValueError('clean_readback_unverified')
                 if hasattr(self.device,'retire_current_support'):self.device.retire_current_support()
                 self._finish_clean(record,lease)
@@ -422,7 +427,7 @@ class Coordinator:
                 if getattr(self.device,'cleanup_tail_started',False):
                     # The independent child owns this receipt after interpreter
                     # retirement starts. Parent errors cannot overwrite its proof.
-                    return dict(record,state='recovery_required',current=False,reason='private-cleanup-incomplete')
+                    return observed(state='recovery_required',current=False,reason='private-cleanup-incomplete')
                 if record.get('cleanup_error') != 'removal-failed':
                     record['last_failure']=dict(failure_summary(error),stage=record['stage'])
                     record.setdefault('failure',record['last_failure'])
@@ -432,7 +437,7 @@ class Coordinator:
                          'private-cleanup':'private-cleanup-incomplete','verified-clean':'ownership-conflict','restart-required':'restart-required'}
                 record.update(state='recovery_required',current=False,reason=reasons[record['stage']])
                 self.store.write(name,record)
-            return record
+            return observed()
 
 
     def resume(self, identifier, payload, final_readback_only=False):
