@@ -173,6 +173,54 @@ const fs = require('node:fs');
             )
           );
         });
+        await check('late standby Home can be turned off', async () => {
+          await page.evaluate(() => {
+            const bridge = PalmServiceBridge.prototype;
+            const call = bridge.call;
+            bridge.call = function (uri, payload) {
+              if (uri.endsWith('/restore')) window.standbyRestoreCalled = true;
+              if (!uri.endsWith('/status') || window.standbyRestoreCalled)
+                return call.call(this, uri, payload);
+              this.onservicecallback(
+                JSON.stringify({
+                  returnValue: true,
+                  result: {
+                    returnValue: true,
+                    result: {
+                      intent: { phase: 'stopping' },
+                      journal: { state: 'restored' },
+                      effective: { sam_home: 'com.webos.app.home' }
+                    }
+                  }
+                })
+              );
+            };
+            window.resetStandbyBridge = () => (bridge.call = call);
+            document.dispatchEvent(new Event('webOSRelaunch'));
+          });
+          try {
+            const control = page.locator(
+              'button.home-routing-switch[data-home-state]'
+            );
+            await page.waitForFunction(
+              () =>
+                document
+                  .querySelector('button.home-routing-switch[data-home-state]')
+                  .getAttribute('aria-checked') === 'true'
+            );
+            assert(await control.isEnabled());
+            await control.click();
+            await page.waitForFunction(() => window.standbyRestoreCalled);
+            await page.waitForFunction(
+              () =>
+                document
+                  .querySelector('button.home-routing-switch[data-home-state]')
+                  .getAttribute('aria-checked') === 'false'
+            );
+          } finally {
+            await page.evaluate(() => window.resetStandbyBridge());
+          }
+        });
         await category('advanced');
         await page.evaluate(() => {
           const Original = PalmServiceBridge;

@@ -18,6 +18,10 @@ class Tests(unittest.TestCase):
   self.assertEqual(len(reasons),1);return result
  def test_escape_is_terminal(self):self.assertEqual(self.run_stream(b'READY\nPING\nESCAPE\n'),'escape')
  def test_eof_requests_recovery(self):self.assertEqual(self.run_stream(b'READY\n'),'observer_exit')
+ def test_device_removal_requires_reader_readiness(self):
+  self.assertEqual(self.run_stream(b'READY\nDEVICE_GONE 0.01\n'),'device_removed')
+  self.assertEqual(self.run_stream(b'DEVICE_GONE 0.01\n'),'bad_protocol')
+  self.assertEqual(self.run_stream(b'READY\nESCAPE\nDEVICE_GONE 0.01\n'),'escape')
  def test_input_loss_requests_recovery(self):self.assertEqual(self.run_stream(b'READY\nLOST\n'),'input_lost')
  def test_unknown_message_does_not_renew_health(self):self.assertEqual(self.run_stream(b'READY\nwrong\n'),'bad_protocol')
  def test_ping_without_ready_is_rejected(self):self.assertEqual(self.run_stream(b'PING\n'),'bad_protocol')

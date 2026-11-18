@@ -344,7 +344,7 @@ class IntegrationTests(unittest.TestCase):
             binding=root/'persistent-binding.json';binding.write_text('{}')
             c=SimpleNamespace(binding=binding,store=SimpleNamespace(read=lambda:dict(intent)),
                 read_binding=lambda:dict(transaction='route',generation=3,token='old'),
-                exit=lambda value,reason:dict(restored_transaction='route'))
+                exit=lambda value, *, reason, emergency: dict(restored_transaction='route'))
             with patch.object(recovery.d,'STATE',root),patch.object(recovery.d,'EXPECTED_UID',uid),patch.object(recovery,'Coordinator',return_value=c):
                 recovery.bound_exit('stale-route','escape')
                 self.assertFalse((root/'update-home-cancel.json').exists())

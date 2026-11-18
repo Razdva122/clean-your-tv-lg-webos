@@ -58,7 +58,7 @@ class RuntimeTests(unittest.TestCase):
  def test_bound_restore_uses_intent_coordinator(self):
   c=Mock(binding=self.root/'missing-binding');c.store.read.return_value={'phase':'active'};c.exit.return_value={'restored_transaction':'tx'}
   with patch.object(r,'coordinator',return_value=c):self.assertEqual(r.restore(),'restored')
-  c.exit.assert_called_once_with({'phase':'active'})
+  c.exit.assert_called_once_with(cleanup_disabled=False)
  def test_live_bounded_guard_is_preserved_on_duplicate_boot(self):
   c=Mock(binding=self.root/'missing-binding');s={'boot':'same','phase':'trial'};c.store.read.return_value=s
   with patch.object(r,'coordinator',return_value=c),patch.object(r,'boot_identity',return_value='same'),patch.object(r.d.FAILSAFE.__class__,'exists',return_value=False),patch.object(r.d,'safe_json',return_value={}),patch.object(r.d,'active_guardian',return_value=True):
