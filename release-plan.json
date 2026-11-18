@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "version": null,
+  "version": "1.25.0",
   "changes": [
     {
       "pr": 714,
@@ -8,6 +8,13 @@
         710
       ],
       "summary": "Resume guarded Root Home after verified startup on LG 65NANO913NA"
+    },
+    {
+      "pr": 716,
+      "issues": [
+        710
+      ],
+      "summary": "Cover delayed replies and rollback in guarded Root Home"
     },
     {
       "pr": 718,
