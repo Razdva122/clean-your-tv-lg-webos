@@ -34,6 +34,7 @@ REASONS += ('installer-runtime-mismatch', 'clean-handoff-refused', 'foreign-home
 ACTIONS = ('recover', 'install', 'uninstall', 'restore', 'status', 'doctor', 'home-diagnostics',
            'enable-system-updates', 'enable-firmware-access', 'disable-firmware-access',
            'recover-system-rollback', 'recover-root-rollback', 'replace-system-updater', 'clean-wam-cache', 'debloat')
+PENDING_ACTIONS = (*ACTIONS, 'activate-root', 'setup-root-updater', 'archive-root-state')
 PHASES = ('launch-helper', 'verify-home-button', 'select-tv', 'inspect-tv', 'select-edition', 'prepare-payload', 'ssh-connect',
           'inspect-installation', 'pair-tv', 'read-inventory', 'install-packages',
           'install-helper', 'install-home', 'configure-helper', 'configure-home', 'install-root',
@@ -575,6 +576,104 @@ def failure_summary(value):
     if 'contract_events' in value:
         result['contract_events'] = export_events(value['contract_events'])
     return result
+
+
+def _issue_observation(value):
+    from .failure_help import report_summary
+
+    value = mapping(value)
+    reason = choice(value.get('reason_code'), REASONS)
+    if reason in ('unknown', 'user-error'):
+        package_reason = choice(mapping(value.get('luna')).get('reason'), PACKAGE_FAILURE_REASONS)
+        guidance = report_summary(value.get('guidance'))['code']
+        if package_reason != 'unknown':
+            reason = package_reason
+        else:
+            reason = 'unknown' if guidance in ('pending-operation', 'no-root-recovery') else guidance
+    exit_status = mapping(value.get('ssh_command')).get('exit_status')
+    if reason == 'ssh-command-failed' and type(exit_status) is int and exit_status == -1:
+        reason = 'ssh-exit-status-missing'
+    return {'action': choice(value.get('action'), PENDING_ACTIONS),
+            'phase': choice(value.get('phase'), PHASES),
+            'reason': reason}
+
+
+def _issue_verified_outcome(value):
+    status = mapping(value.get('status'))
+    if status.get('verified_clean') is True and status.get('removed') is True:
+        return 'Clean Your TV removal verified'
+    if value.get('action') == 'install' and value.get('phase') == 'install-complete' and value.get('error_type') is None:
+        return 'Installation completed'
+    if mapping(value.get('activation_recovery')).get('lg_home') == 'verified':
+        return 'LG Home restoration verified'
+    for assessment in (mapping(status.get('assessment')), mapping(value.get('recovery'))):
+        state, reason = assessment.get('state'), assessment.get('reason')
+        if state == 'terminal-verified' and reason == 'removal-verified':
+            return 'Clean Your TV removal verified'
+        if state == 'terminal-verified' and reason == 'activation-verified':
+            return 'Root activation verified'
+        if state == 'product-ready' and reason == 'final-readback-verified':
+            return 'Installation readback verified'
+        if state == 'setup-ready' and reason == 'packages-verified':
+            return 'Installed packages verified'
+    if mapping(value.get('checks')).get('ssh') == 'pass':
+        return 'SSH connection and sign-in verified'
+    return None
+
+
+def issue_summary(value):
+    """Select the operation's evidence from a saved report without reading the TV."""
+    value = mapping(value)
+    current = _issue_observation(value)
+    original = mapping(value.get('first_failure'))
+    original_observation = _issue_observation(original)
+    pending = mapping(value.get('pending'))
+    removal = mapping(value.get('removal'))
+    goal = current['action']
+    previous_attempt = False
+    if goal in ('doctor', 'recover', 'status'):
+        if pending:
+            goal = choice(pending.get('action'), PENDING_ACTIONS)
+        elif removal:
+            goal = 'uninstall'
+        elif original:
+            goal = original_observation['action']
+        else:
+            previous = mapping(value.get('previous_attempt_failure'))
+            if previous.get('action') == 'install':
+                original = previous
+                original_observation = _issue_observation(original)
+                goal = 'install'
+                previous_attempt = True
+
+    primary = {}
+    # During a reinstall, clean removal can retain an unrelated install failure.
+    if original and original_observation['action'] == goal and (not removal or goal == 'uninstall'):
+        primary = original
+    else:
+        # Clean removal inherits the original install record. Its own first
+        # failure can be in the intermediate history for that same removal.
+        intermediate = value.get('intermediate_failures')
+        if removal and goal == 'uninstall' and type(intermediate) is list:
+            primary = next((failure for failure in intermediate
+                            if mapping(failure).get('action') == goal), {})
+        if not primary and current['action'] == goal and current['reason'] != 'pending-operation':
+            primary = value
+
+    observed = _issue_observation(primary)
+    later = (current if primary is not value and
+             (current != observed or value.get('timestamp_utc') != primary.get('timestamp_utc')) else None)
+    return {
+        'goal': goal,
+        'edition': choice(value.get('edition'), ('no-root', 'root')),
+        'version': version(primary.get('cytv_version')) if primary else version(value.get('cytv_version')),
+        'phase': observed['phase'],
+        'reason': observed['reason'],
+        'outcome': _issue_verified_outcome(value) or _issue_verified_outcome(primary) or 'unknown',
+        'previous_attempt': previous_attempt,
+        'earlier': original_observation if original and original is not primary else None,
+        'later': later,
+    }
 
 
 def read_record(path):

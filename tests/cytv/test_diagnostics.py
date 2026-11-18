@@ -8,6 +8,51 @@ from cytv import cli, diagnostics, state
 
 
 class DiagnosticTests(unittest.TestCase):
+    def test_issue_draft_does_not_infer_cause_in_older_report(self):
+        report = {'schema': 1, 'cytv_version': '0.13.0', 'edition': 'root',
+                  'action': 'doctor', 'phase': 'ssh-connect',
+                  'pending': {'action': 'install', 'stage': 'pending'},
+                  'error_type': 'OSError', 'reason_code': 'ssh-timeout'}
+        draft = diagnostics.issue_draft(report)
+        self.assertIn('Root install', draft['title'])
+        self.assertIn('Observed phase: unknown', draft['body'])
+        self.assertIn('Reason: unknown', draft['body'])
+        self.assertIn('Later observation: doctor at ssh-connect (ssh-timeout)', draft['body'])
+        self.assertIn('Last verified outcome: unknown', draft['body'])
+
+    def test_issue_draft_keeps_missing_legacy_failure_reason_unknown(self):
+        legacy = {'action': 'install', 'edition': 'root', 'phase': 'activate-root',
+                  'error_type': 'UserError', 'guidance': {'code': 'pending-operation'}}
+        for report in (legacy, dict(legacy, reason_code='user-error')):
+            with self.subTest(report=report):
+                draft = diagnostics.issue_draft(report)
+                self.assertIn('Observed phase: activate-root', draft['body'])
+                self.assertIn('Reason: unknown', draft['body'])
+
+    def test_issue_draft_does_not_copy_untrusted_fields(self):
+        private = ('192.0.2.55', 'ssh-password', '/Users/owner/private', 'com.private.app', 'raw exception')
+        report = {'action': 'install', 'edition': private[0], 'cytv_version': private[1],
+                  'phase': private[2], 'reason_code': private[4], 'error_type': private[4],
+                  'trace': [{'file': private[2]}], 'apps': [private[3]],
+                  'checks': {private[2]: 'pass'}, 'status': {'removed': True, 'verified_clean': 'true'},
+                  'luna': {'reason': private[4]}, 'guidance': {'code': private[1]}}
+        draft = diagnostics.issue_draft(report)
+        self.assertIn('Goal: install', draft['body'])
+        self.assertIn('Edition: unknown', draft['body'])
+        self.assertIn('Installer version: unknown', draft['body'])
+        self.assertIn('Observed phase: unknown', draft['body'])
+        self.assertIn('Reason: unknown', draft['body'])
+        self.assertIn('Last verified outcome: unknown', draft['body'])
+        for value in private:
+            self.assertNotIn(value, draft['title'])
+            self.assertNotIn(value, draft['body'])
+
+    def test_issue_draft_uses_allowlisted_package_rejection_reason(self):
+        report = {'action': 'install', 'edition': 'no-root', 'phase': 'install-packages',
+                  'reason_code': 'user-error', 'luna': {'reason': 'FAILED_IPKG_INSTALL'}}
+        draft = diagnostics.issue_draft(report)
+        self.assertIn('Reason: FAILED_IPKG_INSTALL', draft['body'])
+
     def test_closed_ssh_channel_reports_unknown_removal_completion(self):
         from cytv.errors import TVCommandError
 

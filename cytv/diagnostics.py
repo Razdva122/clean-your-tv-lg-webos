@@ -29,7 +29,7 @@ def create_report(store, action, profile, phase, error=None, tv_info=None, *, ch
         'action': action, 'edition': profile.get('edition') if profile else None,
         'phase': phase,
         'error_type': type(error).__name__ if error else None,
-        'pending': {'action': context.choice(pending.get('action'), (*context.ACTIONS, 'activate-root', 'setup-root-updater', 'archive-root-state')),
+        'pending': {'action': context.choice(pending.get('action'), context.PENDING_ACTIONS),
                     'stage': context.choice(pending.get('stage'), (*context.STAGES, 'enable', 'setup', 'verify', 'upload', 'removing', 'stop-helper'))} if pending else None,
         'trace': [{'file': Path(frame.filename).name, 'function': frame.name, 'line': frame.lineno}
                   for frame in traceback.extract_tb(error.__traceback__)[-12:]] if error else [],
@@ -171,6 +171,38 @@ def create_report(store, action, profile, phase, error=None, tv_info=None, *, ch
     path = store.root / 'reports' / ('diagnostic-' + uuid.uuid4().hex[:12] + '.json')
     private_write(path, json.dumps(report, indent=2).encode())
     return path
+
+
+def issue_draft(report):
+    """Return a title and editable plain text from a local diagnostic export."""
+    summary = context.issue_summary(report)
+    edition = {'no-root': 'No-root', 'root': 'Root'}.get(summary['edition'], 'unknown')
+    goal, phase, reason = (summary[key] for key in ('goal', 'phase', 'reason'))
+    subject = goal.replace('-', ' ') if goal != 'unknown' else 'Installer'
+    if edition != 'unknown':
+        subject = edition + ' ' + subject
+    detail = phase if phase not in (goal, 'unknown') else reason
+    if detail != 'unknown':
+        subject += ': ' + detail.replace('-', ' ').replace('_', ' ').lower()
+        if reason not in (detail, 'unknown'):
+            subject += ' (' + reason.replace('-', ' ').replace('_', ' ').lower() + ')'
+
+    phase_label = 'Previous attempt phase' if summary['previous_attempt'] else 'Observed phase'
+    lines = [
+        'Goal: ' + goal,
+        'Edition: ' + edition,
+        'Installer version: ' + (summary['version'] or 'unknown'),
+        phase_label + ': ' + phase,
+        'Reason: ' + reason,
+        'Last verified outcome: ' + summary['outcome'],
+    ]
+    for label, item in (('Earlier failure', summary['earlier']), ('Later observation', summary['later'])):
+        if item:
+            observation = item['action'] + ' at ' + item['phase']
+            if item['reason'] != 'unknown':
+                observation += ' (' + item['reason'] + ')'
+            lines.append(label + ': ' + observation)
+    return {'title': '[cytv] ' + subject, 'body': '\n'.join(lines)}
 
 
 def save_result(write, store, action, profile, phase, tv_info=None, *, checks=None, status=None):
