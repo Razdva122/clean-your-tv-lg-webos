@@ -1,5 +1,6 @@
 """Offline widget checks; never connect to a TV."""
 import os
+import runpy
 import sys
 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 import tempfile
@@ -18,6 +19,24 @@ except ImportError:
 
 @unittest.skipUnless(HAS_QT, 'Desktop build dependencies are optional for CLI tests')
 class GuiTests(unittest.TestCase):
+    def test_incomplete_frozen_distribution_keeps_maintenance_on_the_welcome_screen(self):
+        shown = []
+        with patch.object(sys, 'frozen', True, create=True), \
+             patch.object(sys, '_MEIPASS', self.directory.name, create=True), \
+             patch.object(sys, 'argv', ['cytv-desktop']), \
+             patch('cytv.gui.QApplication', return_value=self.app), \
+             patch.object(self.app, 'exec', return_value=0), \
+             patch.object(Wizard, 'show', lambda window: shown.append(window)), self.assertRaises(SystemExit) as exit:
+            runpy.run_module('cytv.desktop_entry', run_name='__main__')
+        self.assertEqual(exit.exception.code, 0)
+        window, = shown
+        self.addCleanup(window.close)
+        self.assertIn('Use a complete installer build.', window.content.toPlainText())
+        self.assertNotIn('Turn on your LG webOS TV', window.content.toPlainText())
+        self.assertFalse(window.findChild(QPushButton, 'setupTV').isEnabled())
+        self.assertTrue(window.maintenance_toggle.isEnabled())
+        self.assertTrue(window.diagnostics_toggle.isEnabled())
+
     def test_issue_draft_can_be_cancelled_or_edited_before_opening_the_form(self):
         from urllib.parse import parse_qs, urlparse
         from PySide6.QtWidgets import QPlainTextEdit

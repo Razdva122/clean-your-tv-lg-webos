@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (QApplication, QFileDialog, QFrame, QHBoxLayout,
                               QLabel, QLineEdit, QMainWindow, QMessageBox, QProgressBar,
                               QPushButton, QTextBrowser, QPlainTextEdit, QVBoxLayout, QWidget, QButtonGroup, QDialog, QScrollArea, QLayout, QCheckBox)
 
-from cytv import __version__, cli, debloat, diagnostics, i18n
+from cytv import __version__, cli, debloat, diagnostics, i18n, package
 from cytv.i18n import translate as tr
 from cytv.desktop import EXPLICIT_TV_CHOICE, Channel, SSH_COMMAND_PROMPT, RETRY_STORAGE_CHECK, RETRY_STORAGE_PROMPT
 from cytv.errors import LocalRecoveryError
@@ -370,17 +370,29 @@ class Wizard(QMainWindow):
         self.set_error_state(False)
         self.badge.setText(tr('Before you begin'))
         self.rail_title.setText(tr('Set up my TV'))
-        self.rail_note.setText(tr('Keep your TV on and watch for a pairing request.'))
         for label, title in zip(self.step_names, ('Connect to your TV', 'Choose your edition', 'Prepare the TV connection', 'Review and install', debloat.TITLE, 'Set up your Clean Your TV')):
             label.setText(tr(title))
-        self.title.setText(tr('Make your TV feel like yours'))
-        self.subtitle.setText(tr('Install Root or No-root. We will help you choose.'))
-        self.content.setHtml('<h3>' + html.escape(tr('Before you begin')) + '</h3><p>' + html.escape(tr('Turn on your LG webOS TV and connect it to the same home network as this computer.')) + '</p><p>' + html.escape(tr('cytv will look for your TV automatically. Keep the remote nearby to approve pairing on the TV.')) + '</p>')
+        payload_ready = True
+        try:
+            if getattr(sys, 'frozen', False):
+                package.check_payload_files(cli.payload_dir())
+        except (OSError, ValueError):
+            payload_ready = False
+        if payload_ready:
+            self.rail_note.setText(tr('Keep your TV on and watch for a pairing request.'))
+            self.title.setText(tr('Make your TV feel like yours'))
+            self.subtitle.setText(tr('Install Root or No-root. We will help you choose.'))
+            self.content.setHtml('<h3>' + html.escape(tr('Before you begin')) + '</h3><p>' + html.escape(tr('Turn on your LG webOS TV and connect it to the same home network as this computer.')) + '</p><p>' + html.escape(tr('cytv will look for your TV automatically. Keep the remote nearby to approve pairing on the TV.')) + '</p>')
+        else:
+            self.rail_note.clear()
+            self.title.setText(tr('Could not start this operation'))
+            self.subtitle.setText(tr('Installation has not started.'))
+            self.content.setPlainText(tr('Use a complete installer build.'))
         self.reading.verticalScrollBar().setValue(0)
         store = Store()
         reinstalls = [profile for profile in store.profiles(on_profile_error=lambda _: None)
                       if self.saved_root_reinstall(store, profile)]
-        if reinstalls:
+        if payload_ready and reinstalls:
             if len(reinstalls) == 1:
                 self.offer_root_reinstall(reinstalls[0])
             else:
@@ -393,6 +405,7 @@ class Wizard(QMainWindow):
                     'install', targets.currentData(), resume_root_reinstall=True), True)
         setup = self.button('Set up my TV', lambda: self.start('install'), not reinstalls)
         setup.setObjectName('setupTV')
+        setup.setEnabled(payload_ready)
         self.form_layout.addSpacing(6)
         secondary = QWidget()
         secondary.setObjectName('homeSecondaryActions')

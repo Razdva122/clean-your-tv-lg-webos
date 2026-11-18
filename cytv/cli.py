@@ -399,6 +399,16 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                 raise UserError('Non-interactive mode needs --host and --edition or one saved profile; pairing and SSH trust must already be completed.')
             ask = no_ask
             secret = no_ask
+        packaged_desktop_setup = (args.command == 'install' and isinstance(write, DesktopConsole)
+                                  and getattr(sys, 'frozen', False))
+        if packaged_desktop_setup:
+            phase = 'prepare-payload'
+            try:
+                package.check_payload_files(Path(payload_root) if payload_root is not None else payload_dir())
+            except (OSError, ValueError):
+                write('Installation has not started.')
+                raise UserError('Use a complete installer build.') from None
+            phase = 'select-tv'
         if args.command == 'install' and not args.non_interactive:
             write.heading('Clean Your TV  /  Installation')
             write('TV > Edition > Connection > Install > Settings')
@@ -532,8 +542,13 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                 phase = 'prepare-payload'
             try:
                 manifest = package.verify_payload(payload)
-            except FileNotFoundError:
-                raise UserError('Release payload is missing. Download a built cytv executable or run python scripts/build-cytv.py --payload-only from source.') from None
+            except (OSError, ValueError) as error:
+                if packaged_desktop_setup and args.command == 'install':
+                    write('Installation has not started.')
+                    raise UserError('Use a complete installer build.') from None
+                if isinstance(error, FileNotFoundError):
+                    raise UserError('Release payload is missing. Download a built cytv executable or run python scripts/build-cytv.py --payload-only from source.') from None
+                raise
             if args.migrate_home and profile['edition'] != 'root':
                 raise UserError('--migrate-home applies only to Root installation.')
         reinstall_payload = (hashlib.sha256(json.dumps([profile.get('root_variant'), manifest], sort_keys=True).encode()).hexdigest()

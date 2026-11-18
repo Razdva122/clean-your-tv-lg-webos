@@ -64,6 +64,11 @@ See [Apple's first-launch guidance](https://support.apple.com/en-mo/102445).
 
 ### If setup reports missing or invalid embedded graphics packages
 
+If the desktop installer asks for a complete installer build, download the
+desktop installer for your computer again and extract or install the full
+package before opening it. On Windows, keep the `_internal` folder next to the
+executable.
+
 Affected macOS bundles can reject their normal package-folder alias even when the
 IPKs and manifest hashes are valid. Release 1.7.1 (cytv 0.8.1) corrects that validation; both rebuilt macOS bundles
 passed their package-selection checks. If this message persists with the complete
