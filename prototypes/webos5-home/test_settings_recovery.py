@@ -85,6 +85,41 @@ enable(journal, lambda: json.loads(settings.read_text()), write, explicit=True)
         self.assertEqual(recovery.restore(self.journal, self.read, write_without_ack), 'restored')
         self.assertEqual(calls, [{'home': 'com.webos.app.fullhome'}])
 
+    def test_stock_read_does_not_prove_stop_while_activation_may_still_commit(self):
+        stock = 'com.webos.app.fullhome'
+        self.write({'home': stock})
+        queued = []
+
+        def submit(record):
+            queued.append(record)
+            raise TimeoutError('reply deadline expired before the commit')
+
+        with self.assertRaises(TimeoutError):
+            recovery.enable(self.journal, self.read, submit, explicit=True)
+        with self.assertRaisesRegex(ValueError, 'activation is unresolved'):
+            recovery.restore(self.journal, self.read, self.write)
+        self.assertEqual(self.read()['home'], stock)
+        self.write(queued.pop())
+        self.assertEqual(recovery.restore(self.journal, self.read, self.write), 'restored')
+        self.assertEqual(self.read()['home'], stock)
+
+    def test_uncertain_restore_does_not_submit_a_second_write(self):
+        self.write({'home': 'com.webos.app.home'})
+        recovery.enable(self.journal, self.read, self.write, explicit=True)
+        queued = []
+
+        def submit(record):
+            queued.append(record)
+            raise TimeoutError('reply deadline expired before the commit')
+
+        with self.assertRaises(TimeoutError):
+            recovery.restore(self.journal, self.read, submit)
+        with self.assertRaisesRegex(ValueError, 'restore is unresolved'):
+            recovery.restore(self.journal, self.read, submit)
+        self.assertEqual(queued, [{'home': 'com.webos.app.home'}])
+        self.write(queued.pop())
+        self.assertEqual(recovery.restore(self.journal, self.read, submit), 'restored')
+
 
 if __name__ == '__main__':
     unittest.main()

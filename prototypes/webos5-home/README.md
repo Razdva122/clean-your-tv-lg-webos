@@ -15,7 +15,10 @@ assignment. A separate process can use that journal after the writer dies.
 Restore latches Stop before writing, keeps the latest unrelated defaults and
 refuses to overwrite a foreign Home choice. A reply lost after a completed
 write is reconciled through readback. The fixtures terminate a writer after
-committing the settings change and before it can acknowledge it.
+committing the settings change and before it can acknowledge it. With a
+possibly outstanding activation, reading the original stock value cannot
+complete Stop. With a possibly outstanding rollback, a second rollback
+submission is refused until the original outcome is known.
 
 The temporary-file simulation has synchronous commits and no compositor cache.
 A live adapter needs to establish when a timed-out settings mutation has

@@ -78,11 +78,16 @@ def restore(journal, read, write):
             if read_record(read).get('home') != stock:
                 raise ValueError('Home selection changed after Stop')
             return 'restored'
-        atomic(journal, {'stock': stock, 'phase': 'stopping'}, os.getuid())
         record = read_record(read)
-        if record.get('home') == ROOT_HOME:
+        home = record.get('home')
+        if state['phase'] == 'pending' and home == stock:
+            raise ValueError('Previous activation is unresolved')
+        if state['phase'] == 'stopping' and home == ROOT_HOME:
+            raise ValueError('Previous restore is unresolved')
+        if home == ROOT_HOME:
+            atomic(journal, {'stock': stock, 'phase': 'stopping'}, os.getuid())
             write_and_verify(read, write, dict(record, home=stock))
-        elif record.get('home') != stock:
+        elif home != stock:
             raise ValueError('Home selection changed outside this transaction')
         atomic(journal, {'stock': stock, 'phase': 'stopped'}, os.getuid())
         return 'restored'
