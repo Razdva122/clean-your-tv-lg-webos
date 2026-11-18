@@ -66,6 +66,8 @@ L’assistente usa inizialmente la lingua del sistema e salva una scelta esplici
 
 Nel programma di installazione desktop, dopo la verifica della connessione, scegli **Continua la configurazione** per mantenere la stessa connessione ed edizione. La procedura spiega lo stato di una precedente installazione; i risultati tecnici sono in **Dettagli**. Se un’operazione precedente richiede un ripristino, usa prima l’azione proposta. Prima delle modifiche vengono controllate le versioni installate e richiesta la conferma. Le richieste di riavvio salvate vengono ricontrollate; la procedura chiede un riavvio solo se la pulizia corrente lo richiede.
 
+Se durante l’installazione Root viene proposta la sostituzione dell’integrazione Home attuale, conferma solo se vuoi ripristinare LG Home e proseguire. Se rifiuti, resta attiva la Home attuale.
+
 ## 5. Controlla il telecomando
 
 1. Apri un’altra app sulla TV e premi brevemente **Home**. Deve aprirsi Clean Your TV. Indica nella procedura guidata ciò che hai visto; salta la verifica se non l’hai eseguita.

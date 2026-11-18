@@ -66,6 +66,8 @@ O assistente usa inicialmente o idioma do sistema e salva sua escolha explícita
 
 No instalador para computador, após verificar a conexão, escolha **Continuar configuração** para manter a mesma conexão e edição. O assistente explica o estado de uma instalação anterior; os resultados técnicos ficam em **Detalhes**. Se uma operação anterior precisar de recuperação, use primeiro a ação de recuperação oferecida. A configuração verifica as versões instaladas e pede confirmação antes de alterações. As solicitações de reinicialização salvas são verificadas novamente; o assistente só pede para reiniciar quando a limpeza atual exige isso.
 
+Se a instalação do Root oferecer a substituição da integração atual do Home, confirme apenas se quiser restaurar o LG Home e continuar. Se recusar, o Home atual continua em uso.
+
 ## 5. Confira o controle remoto
 
 1. Abra outro app na TV e pressione **Home** brevemente. Clean Your TV deve abrir. Informe ao assistente o que você viu; pule a verificação se não a realizou.

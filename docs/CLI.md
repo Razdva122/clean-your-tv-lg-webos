@@ -316,6 +316,12 @@ using the recorded destination and state identity before installation can contin
 Reinstallation uses a fresh inventory; `--migrate-home` is refused for that flow
 so an invalid migration source cannot be discovered only after removing old Root.
 
+If Root setup verifies a supported handoff from another Home integration, confirm
+**Replace the current Home integration?** to restore and recheck LG Home before
+installation. Declining keeps the current Home. This choice requires interactive
+confirmation even with `--yes`. If the installer cannot verify a safe handoff, use
+the existing integration’s own procedure to restore LG Home.
+
 No-root replacement tries to stop a running Helper and verifies that it exited.
 If Helper is still running, press Home three times within two seconds (older Helper:
 hold Home for two seconds) and recheck. An unknown process state blocks replacement.

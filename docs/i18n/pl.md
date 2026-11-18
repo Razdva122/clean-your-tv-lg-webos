@@ -66,6 +66,8 @@ Kreator początkowo używa języka systemu i zapamiętuje wybrany język. Na tel
 
 W instalatorze na komputer po udanym sprawdzeniu połączenia wybierz **Kontynuuj konfigurację**, aby zachować to samo połączenie i edycję. Kreator wyjaśnia stan wcześniejszej instalacji; wyniki techniczne są w szczegółach. Jeśli poprzednia operacja wymaga odzyskiwania, najpierw użyj proponowanego działania odzyskiwania. Konfigurator sprawdzi zainstalowane wersje i poprosi o potwierdzenie przed zmianami. Zapisane żądania restartu są sprawdzane ponownie; kreator prosi o restart tylko wtedy, gdy wymaga go bieżące czyszczenie.
 
+Jeśli instalator Root zaproponuje zastąpienie obecnej integracji Home, potwierdź tylko wtedy, gdy chcesz przywrócić LG Home i kontynuować. Odmowa zachowa obecny ekran Home.
+
 ## 5. Sprawdź pilota
 
 1. Otwórz inną aplikację na TV i krótko naciśnij **Home**. Powinien otworzyć się Clean Your TV. W kreatorze zaznacz, co zobaczyłeś; pomiń test, jeśli go nie wykonałeś.

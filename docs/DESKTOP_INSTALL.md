@@ -176,6 +176,11 @@ restart again. Before connection, during review or after cancellation, the
 wizard asks to check the TV state instead of repeating an old power-cycle
 instruction. Recovery receipts and device-side cleanup guards remain intact.
 
+If Root setup offers **Replace the current Home integration?**, confirm to
+restore LG Home and continue. The installer rechecks LG Home before installing.
+Declining keeps the current Home in use. If a supported handoff cannot be
+verified, use the current integration’s own procedure to restore LG Home.
+
 If a confirmed Root reinstallation pauses, open the same desktop installer
 and choose **Continue Root reinstallation**. It reconnects to the same TV and
 continues any unfinished cleanup. After removal is verified, choose

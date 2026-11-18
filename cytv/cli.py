@@ -880,7 +880,12 @@ def _run(args, ask, write, connect, secret, search, inspect, payload_root, check
                     if (not reinstall and profile['edition'] == 'root' and not profile.get('root_variant')
                             and installer.manifest.get('root_backends', {}).get('c1-native-gate')):
                         from .home_handoff import handoff_pending
-                        home_pending = handoff_pending(remote)
+                        try:
+                            home_pending = handoff_pending(remote)
+                        except (UserError, OSError, TimeoutError) as error:
+                            if home_conflict is not None:
+                                raise home_conflict from error
+                            raise
                 if reinstall:
                     if args.migrate_home:
                         raise UserError('For Root reinstallation, omit --migrate-home. The installer reads a fresh TV inventory before replacing Root.')
@@ -910,7 +915,21 @@ def _run(args, ask, write, connect, secret, search, inspect, payload_root, check
                         return 130 if desktop_install else 0
                 if home_conflict is not None or home_pending:
                     from .home_handoff import takeover
-                    if not takeover(installer, pending=home_pending):
+
+                    def confirm_home_handoff():
+                        if args.non_interactive:
+                            write.command_outcome('owner-input-required', 'confirm-home-handoff')
+                            message = 'Run the installer interactively to confirm replacing the current Home integration.'
+                            if home_conflict is None:
+                                raise UserError(message)
+                            write(message)
+                            raise home_conflict
+                        write('The installer can restore LG Home before continuing Root setup.')
+                        if not prompts.confirm('Replace the current Home integration?', ask, write):
+                            raise EOFError
+
+                    if not takeover(installer, confirm_home_handoff, pending=home_pending,
+                                    provision=not args.non_interactive):
                         if home_pending:
                             raise UserError('Root operation was not confirmed. Run cytv status; retain recovery state.',
                                             reason_code='root-operation-unconfirmed')

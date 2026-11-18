@@ -66,6 +66,8 @@ Der Desktop-Assistent verwendet zunächst die Systemsprache und speichert eine a
 
 Wähle im Desktop-Installationsprogramm nach erfolgreicher Verbindungsprüfung **Einrichtung fortsetzen**, um dieselbe TV-Verbindung und Edition zu behalten. Der Assistent erklärt den Zustand einer früheren Installation; technische Ergebnisse stehen unter **Details**. Falls eine frühere Aktion Wiederherstellung erfordert, nutze zuerst die angebotene Wiederherstellung. Vor Änderungen prüft die Einrichtung installierte Versionen und fragt nach Bestätigung. Gespeicherte Neustartanforderungen werden erneut geprüft; der Assistent fordert einen Neustart nur an, wenn die aktuelle Bereinigung ihn benötigt.
 
+Wenn der Installer anbietet, die aktuelle Home-Integration zu ersetzen, bestätigen Sie nur, wenn Sie LG Home wiederherstellen und die Root-Installation fortsetzen möchten. Wenn Sie ablehnen, bleibt das aktuelle Home aktiv.
+
 ## 5. Fernbedienung prüfen
 
 1. Öffnen Sie eine andere TV-App und drücken Sie kurz **Home**. Clean Your TV sollte erscheinen. Geben Sie im Assistenten Ihre Beobachtung an; überspringen Sie den Test, wenn Sie ihn nicht durchgeführt haben.

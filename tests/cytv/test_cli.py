@@ -682,9 +682,9 @@ class CLITests(unittest.TestCase):
                 else:
                     getattr(operation, command).assert_called_once_with()
 
-    def test_root_setup_continues_after_automatic_home_handoff(self):
+    def test_root_setup_requires_owner_choice_for_verified_home_handoff(self):
         from cytv.errors import UserError
-        from cytv.home_handoff import PROGRAM
+        from cytv.home_handoff import PENDING_CHECK, PROGRAM
         from cytv.root_capabilities import NATIVE_HEADERS, NATIVE_HOME_MOUNT_PROBE
         from tests.cytv.test_operations import Remote
 
@@ -692,10 +692,19 @@ class CLITests(unittest.TestCase):
         class TV(Remote):
             root = True
             restored = False
+
+            def __init__(self, recognized, pending_unreadable):
+                super().__init__()
+                self.recognized = recognized
+                self.pending_unreadable = pending_unreadable
+                self.handoff_steps = []
+
             def close(self):
                 pass
 
             def run(self, command, data=None, **options):
+                if command == PENDING_CHECK and self.pending_unreadable:
+                    raise TimeoutError
                 if command == NATIVE_HEADERS and not self.restored:
                     return '1001 1 755 4530960\nCYTV_HOME_ELF\nCYTV_HOME_FS\nef53\n'
                 if command == NATIVE_HOME_MOUNT_PROBE:
@@ -704,40 +713,69 @@ class CLITests(unittest.TestCase):
                     return 'CYTV_HOME_LIBC_READY'
                 if data == PROGRAM.encode():
                     if command.endswith(' ' + 'a' * 64):
+                        self.handoff_steps.append('apply')
                         self.restored = True
                         return 'CYTV_HOME_HANDOFF_COMPLETE'
-                    return json.dumps({'plan': 'a' * 64})
+                    self.handoff_steps.append('inspect')
+                    return json.dumps({'plan': 'a' * 64} if self.recognized else {})
                 return super().run(command, data=data, **options)
 
             def luna(self, uri, payload, **options):
                 if uri.endswith('/getSystemInfo'):
                     return {'returnValue': True, 'modelName': 'OLED55C16LA',
                             'firmwareVersion': '03.53.45', 'sdkVersion': '6.5.3'}
-                if not self.restored and uri.endswith('/getProfiles'):
-                    return {'returnValue': False, 'errorCode': -1,
-                            'errorText': 'Service does not exist: com.webos.service.systemprofile.'}
+                if uri.endswith('/getProfiles'):
+                    if self.restored:
+                        self.handoff_steps.append('recheck')
+                    else:
+                        return {'returnValue': False, 'errorCode': -1,
+                                'errorText': 'Service does not exist: com.webos.service.systemprofile.'}
                 if not self.restored and uri.endswith('/getConfigs'):
                     return {'returnValue': True, 'configs': {'com.webos.surfacemanager.keyFilters': [
                         {'file': '/var/lib/third-party/filter.js', 'handler': 'handle'}]}}
                 return super().luna(uri, payload, **options)
 
-        with tempfile.TemporaryDirectory() as tmp, \
-                patch('cytv.cli.payload_dir', return_value=Path(tmp)), \
-                patch('cytv.cli.package.verify_payload', return_value=manifest), \
-                patch('cytv.operations.Installer.select_graphics'), \
-                patch('cytv.operations.Installer.version_summary', return_value=[]), \
-                patch('cytv.operations.Installer._select_python', return_value='/usr/bin/python3'), \
-                patch('cytv.operations.Installer.root_inventory', return_value={'apps': []}), \
-                patch('cytv.operations.Installer.install', side_effect=UserError('Reached install boundary')) as install:
-            (Path(tmp) / 'fallback.png').write_bytes(b'fixture')
-            remote = TV()
-            code, output, _ = self.run_cli(
-                ['install', '--host', '192.0.2.10', '--edition', 'root', '--data-dir', tmp,
-                 '--yes', '--non-interactive', '--language', 'en'], remote=remote)
-            self.assertEqual(code, 2, output)
-            self.assertIn('Reached install boundary', output)
-            self.assertTrue(remote.restored)
-            install.assert_called_once()
+        for choice, recognized, unattended, pending_unreadable in (
+                ('y', True, False, False), ('', True, False, False), ('', True, True, False),
+                ('', False, False, False), ('', False, False, True)):
+            with self.subTest(choice=choice, recognized=recognized, unattended=unattended,
+                              pending_unreadable=pending_unreadable), \
+                    tempfile.TemporaryDirectory() as tmp, \
+                    patch('cytv.cli.payload_dir', return_value=Path(tmp)), \
+                    patch('cytv.cli.package.verify_payload', return_value=manifest), \
+                    patch('cytv.operations.Installer.select_graphics'), \
+                    patch('cytv.operations.Installer.version_summary', return_value=[]), \
+                    patch('cytv.operations.Installer._select_python', return_value='/usr/bin/python3') as select_python, \
+                    patch('cytv.operations.Installer.root_inventory', return_value={'apps': []}), \
+                    patch('cytv.operations.Installer.install', side_effect=UserError('Reached install boundary')) as install:
+                (Path(tmp) / 'fallback.png').write_bytes(b'fixture')
+                remote = TV(recognized, pending_unreadable)
+                args = ['install', '--host', '192.0.2.10', '--edition', 'root', '--data-dir', tmp,
+                        '--yes', '--language', 'en']
+                if unattended:
+                    args.append('--result-json')
+                code, output, _ = self.run_cli(args, [choice] if recognized and not unattended else [], remote=remote)
+                if choice == 'y':
+                    self.assertEqual(code, 2, output)
+                    self.assertIn('Reached install boundary', output)
+                    self.assertEqual(remote.handoff_steps, ['inspect', 'apply', 'recheck'])
+                    install.assert_called_once()
+                else:
+                    self.assertEqual(code, 130 if recognized and not unattended else 2, output)
+                    self.assertEqual(remote.handoff_steps, [] if pending_unreadable else ['inspect'])
+                    install.assert_not_called()
+                if unattended:
+                    self.assertEqual(json.loads(output)['outcome'], {
+                        'state': 'owner-input-required', 'action': 'confirm-home-handoff',
+                    })
+                    select_python.assert_called_once_with(provision=False)
+                else:
+                    self.assertEqual(output.count('Replace the current Home integration?'),
+                                     int(recognized), output)
+                if not recognized or unattended:
+                    report, = (Path(tmp) / 'reports').glob('diagnostic-*.json')
+                    stored = json.loads(report.read_text())
+                    self.assertEqual(stored['reason_code'], 'root-home-interfaces')
 
     def test_root_setup_leaves_unverified_native_home_script_untouched(self):
         import struct

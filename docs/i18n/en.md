@@ -66,6 +66,8 @@ The desktop wizard selects your system language automatically; its language sele
 
 On desktop, after a successful connection check, choose **Continue setup** to keep the same TV connection and edition. The wizard explains any previous installation; technical results are under **Details**. If an earlier operation needs recovery, use the offered recovery action first. Setup checks installed versions and asks for confirmation before changes. The wizard rechecks saved restart requests; a restart is requested only when the current cleanup confirms it is needed.
 
+If Root setup offers to replace the current Home integration, confirm only if you want to restore LG Home and continue. Declining keeps the current Home in use.
+
 ## 5. Check your remote
 
 1. Open another TV app and briefly press **Home**. Clean Your TV should open. Tell the wizard what you saw; leave the check skipped if you did not test it.

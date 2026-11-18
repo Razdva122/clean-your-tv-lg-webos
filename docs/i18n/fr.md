@@ -66,6 +66,8 @@ L’assistant utilise initialement la langue du système et mémorise votre choi
 
 Dans l’installateur pour ordinateur, après une vérification réussie de la connexion, choisissez **Continuer la configuration** pour conserver la même connexion et la même édition. L’assistant explique l’état d’une installation précédente ; les résultats techniques sont dans **Détails**. Si une opération précédente nécessite une récupération, utilisez d’abord l’action proposée. L’assistant vérifie les versions installées et demande confirmation avant toute modification. Les demandes de redémarrage enregistrées sont revérifiées ; l’assistant ne demande un redémarrage que si le nettoyage en cours le nécessite.
 
+Si l’installateur Root propose de remplacer l’intégration Home actuelle, confirmez uniquement si vous souhaitez rétablir LG Home et poursuivre. En cas de refus, le Home actuel reste actif.
+
 ## 5. Vérifier la télécommande
 
 1. Ouvrez une autre application sur la TV et appuyez brièvement sur **Home**. Clean Your TV doit s’ouvrir. Indiquez votre observation dans l’assistant ; ignorez le test si vous ne l’avez pas effectué.

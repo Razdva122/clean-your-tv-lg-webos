@@ -66,6 +66,8 @@ El asistente de escritorio usa inicialmente el idioma del sistema y guarda una s
 
 En el instalador de escritorio, tras comprobar la conexión, elige **Continuar configuración** para conservar la misma conexión y edición. El asistente explica el estado de una instalación anterior; los resultados técnicos están en **Detalles**. Si una operación anterior necesita recuperación, usa primero la acción de recuperación ofrecida. Antes de realizar cambios se comprueban las versiones instaladas y se pide confirmación. Las solicitudes de reinicio guardadas se comprueban de nuevo; el asistente solo pide reiniciar cuando la limpieza actual lo requiere.
 
+Si al instalar Root se te ofrece reemplazar la integración de Home actual, confirma solo si quieres restaurar LG Home y continuar. Si rechazas la oferta, se mantiene el Home actual.
+
 ## 5. Comprueba el mando
 
 1. Abre otra app del TV y pulsa brevemente **Home**. Debe abrirse Clean Your TV. Indica al asistente lo que viste; omite la prueba si no la hiciste.

@@ -55,6 +55,8 @@ Jazyk vyberte v instalátoru; na Androidu je volba vpravo nahoře. Jazyk TV se n
 
 V instalátoru pro počítač po úspěšné kontrole připojení zvolte **Pokračovat v nastavení**. Zachová se stejné připojení k televizoru a edice. Průvodce vysvětlí stav předchozí instalace; technické výsledky jsou v podrobnostech. Pokud předchozí operace vyžaduje obnovení, nejprve použijte nabídnutou akci obnovení. Průvodce před změnami zkontroluje nainstalované verze a požádá o potvrzení. Uložené požadavky na restart se znovu ověřují; průvodce požádá o restart pouze tehdy, když ho vyžaduje aktuální čištění.
 
+Pokud instalátor Root nabídne nahrazení současné integrace Home, potvrďte je jen tehdy, pokud chcete obnovit LG Home a pokračovat. Při odmítnutí zůstane současný Home aktivní.
+
 ## 5. Vyzkoušejte ovladač
 
 1. Otevřete jinou aplikaci na TV a krátce stiskněte **Home**. Má se otevřít Clean Your TV. V průvodci uveďte, co jste viděli; pokud jste test neprovedli, přeskočte ho.
