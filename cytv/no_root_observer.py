@@ -1107,6 +1107,11 @@ def snapshot(installer, value):
     return result
 
 
+def _install_packages_complete(plan, result):
+    return (plan['action'] == 'install' and result['reservation'] == 'active'
+            and all(slot['terminal'] == 'success' and not slot.get('reason') for slot in result['slots']))
+
+
 def observe(installer, pending):
     value=capsule(installer,pending)
     if 'root_handoff' in value['plan']:
@@ -1146,8 +1151,10 @@ def observe(installer, pending):
                     and all(slot['submission'] == 'prepared' for slot in result['slots'])):
                 ready = False
                 reason = 'original-staging-unverified'
+    configuration_remaining = (ready and _install_packages_complete(value['plan'], result)
+                               and 'prepared' in result['configuration'].values())
     return dict(device={'observer':result},pending=pending,reconciled=None,can_resume_root_setup=False,
-                no_root_ready=ready,no_root_reason=reason)
+                no_root_ready=ready,no_root_reason=reason,no_root_configuration_remaining=configuration_remaining)
 
 
 def valid_generation(value):
@@ -1385,9 +1392,7 @@ def continue_operation(installer, expected_pending):
     if not result.get('closed'):
         # An attached install with all vendor replies can finish from the
         # installed packages. No new request needs the temporary IPKs.
-        packages_installed = (plan['action'] == 'install' and result['reservation'] == 'active'
-                              and all(slot['terminal'] == 'success' and not slot.get('reason')
-                                      for slot in result['slots']))
+        packages_installed = _install_packages_complete(plan, result)
         if not packages_installed and result['reservation'] in ('prepared','active'):
             invoke(installer.remote,plan,'prepare',source=value['source'])
         invoke(installer.remote,plan,'attach')

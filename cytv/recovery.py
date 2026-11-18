@@ -372,8 +372,14 @@ def recover(installer, ask, write, non_interactive=False, initial_observation=No
             if 'continue-no-root' not in assessment['actions']:
                 remove_before_reinstall(installer, ask, write)
                 return
-            plan(write,'ready','The original No-root operation can continue its verified remaining work. Unknown package requests will not be repeated.',actions=assessment['actions'])
-            if prompts.confirm('Continue the original No-root operation?',ask,write):
+            if result.get('no_root_configuration_remaining') is True:
+                plan(write, 'ready', 'Installed No-root packages are verified.',
+                     'Finish configuration using the installed packages.', actions=assessment['actions'])
+                question = 'Finish No-root configuration?'
+            else:
+                plan(write,'ready','The original No-root operation can continue its verified remaining work. Unknown package requests will not be repeated.',actions=assessment['actions'])
+                question = 'Continue the original No-root operation?'
+            if prompts.confirm(question, ask, write):
                 completed = installer.continue_no_root(pending)
                 next_step = START_HELPER if completed.get('activation_cancelled') is True else SEPARATE
                 plan(write, 'complete', 'Recovery record finished. Original evidence was archived.', next_step)

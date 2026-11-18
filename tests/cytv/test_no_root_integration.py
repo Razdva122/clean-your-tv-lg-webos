@@ -1866,10 +1866,7 @@ class OriginalOperationIntegration(unittest.TestCase):
         self.assertEqual(completion['state'], 'complete')
         self.assertIn('choose Start Helper', completion['next_step'])
 
-    def test_recovery_finishes_configuration_with_unusable_staging(self):
-        from cytv.desktop import DesktopConsole
-        from cytv.recovery import recover
-
+    def interrupt_install_after_packages(self):
         original_run = self.remote.run
 
         def disconnect_after_packages(command, data=None, timeout=30):
@@ -1886,10 +1883,51 @@ class OriginalOperationIntegration(unittest.TestCase):
                 self.installer.install(self.inventory, 'original-secret')
         pending = self.store.pending(self.profile)
         self.assertEqual((self.root / 'requests').read_text().splitlines(), list(observer.APPS))
+        self.assertFalse((Path(operations.HELPER_STATE) / 'ssap-key.json').exists())
+        return pending
+
+    def test_reopened_installer_offers_configuration_without_staged_packages(self):
+        from cytv import cli
+        from cytv.desktop import DesktopConsole
+
+        pending = self.interrupt_install_after_packages()
+        staging = self.root / 'public' / ('cytv-' + pending['observer_operation'])
+        shutil.rmtree(staging)
+        self.store.save(self.profile)
+        (self.store.device_dir(self.profile) / 'known_hosts').write_text('trusted-by-fixture\n')
+        questions, plans = [], []
+
+        def ask(question):
+            questions.append(question)
+            return 'y' if ('Check recovery options?' in question or 'Finish No-root configuration?' in question) else 'n'
+
+        def emit(kind, value):
+            if kind == 'recovery-plan':
+                plans.append(value)
+
+        args = ['recover', '--host', self.profile['host'], '--edition', 'no-root',
+                '--data-dir', str(self.store.root), '--language', 'en']
+        before = len(self.remote.calls)
+        self.assertEqual(cli.main(args, write=DesktopConsole(emit), ask=ask, connect=lambda *_: self.remote,
+                                  payload_root=self.installer.payload), 0)
+        self.assertTrue(any('Finish No-root configuration?' in question for question in questions), questions)
+        self.assertEqual(plans[-1]['state'], 'complete')
+        self.assertFalse(any(call[0] == 'observer' and call[1] in ('prepare', 'artifacts', 'upload-artifact', 'start')
+                             for call in self.remote.calls[before:]))
+        self.assertEqual((self.root / 'requests').read_text().splitlines(), list(observer.APPS))
+        self.assertFalse(staging.exists())
+        self.assertEqual(json.loads((Path(operations.HELPER_STATE) / 'ssap-key.json').read_text()),
+                         {'key': 'original-secret'})
+        self.assertIsNone(self.store.pending(self.profile))
+
+    def test_recovery_finishes_configuration_with_unusable_staging(self):
+        from cytv.desktop import DesktopConsole
+        from cytv.recovery import recover
+
+        pending = self.interrupt_install_after_packages()
         staging = self.root / 'public' / ('cytv-' + pending['observer_operation'])
         staging.chmod(0o775)
         staged = {file.name: file.read_bytes() for file in staging.iterdir()}
-        self.assertFalse((Path(operations.HELPER_STATE) / 'ssap-key.json').exists())
         installed = Path(self.base) / 'applications' / operations.HOME / 'appinfo.json'
         original = installed.read_bytes()
         installed.write_bytes(b'{}')
