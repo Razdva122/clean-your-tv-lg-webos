@@ -337,10 +337,11 @@ def recover(installer, ask, write, non_interactive=False, initial_observation=No
                 from .recovery_ui import REMOVAL_BLOCKERS
                 message = REMOVAL_BLOCKERS[summary['reason']]
                 binding = result.get('removal_binding', {})
+                waiting = assessment['state'] == 'waiting'
                 next_step = message if 'connect-root' in assessment['actions'] else (
                     'Choose Review recovery options for the same saved TV connection.'
-                    if binding.get('capsule') != 'verified' else KEPT)
-                _write_removal_plan(write, {'state':'blocked', 'disposition':'clean-removal',
+                    if waiting or binding.get('capsule') != 'verified' else KEPT)
+                _write_removal_plan(write, {'state':'waiting' if waiting else 'blocked', 'disposition':'clean-removal',
                     'summary':message, 'next_step':next_step, 'removal':summary, 'actions':assessment['actions']},
                     pending=pending)
                 write(message)

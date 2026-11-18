@@ -708,6 +708,32 @@ def inspect_binding(installer):
     return _device(installer, 'binding', guard=True)
 
 
+def _package_installer_idle(installer, pending, *, optional_monitor):
+    from .operations import require_removal_idle
+    try:
+        idle = require_removal_idle(installer.remote, installer.profile, pending,
+                                    report_busy=True, optional_monitor=optional_monitor)
+    except TVRejected as error:
+        if not error.package_status_denied:
+            raise
+        return False
+    return idle is not False
+
+
+def inspect_package_removal(installer, pending):
+    """Read the LG installer monitor for a submitted request without changing its receipt."""
+    removals = pending.get('removals', {})
+    if not isinstance(removals, dict) or not any(removals.get(app) == 'submitted' for app in APPS):
+        return None
+    try:
+        idle = _package_installer_idle(installer, pending, optional_monitor=True)
+    except UserError as error:
+        if error.reason_code != 'original-writer-active':
+            raise
+        return 'busy'
+    return 'idle' if idle else 'unverified'
+
+
 def _protected_package(row):
     """Only permission failures in fixed No-root OS-owned namespaces qualify."""
     if row.get('reason') != 'permission-denied':
@@ -801,9 +827,15 @@ def _remove_package(installer, app):
             error.removal_failure_phase = 'removal-terminal-unknown'
             raise error
     except TVRejected as error:
-        error.args = ('The TV package result could not be verified. Review recovery options before continuing.',)
         error.reason_code = 'removal-failed'
-        if not error.definite_package_removal_rejection(app):
+        if error.definite_package_removal_rejection(app):
+            error.args = ('The TV rejected removal. Check the error details and try again.',)
+        else:
+            error.args = ('The TV package result could not be verified. Review recovery options before continuing.',)
+            error.removal_failure_phase = 'removal-terminal-unknown'
+        raise
+    except UserError as error:
+        if isinstance(error, LunaReplyUnconfirmed) or error.reason_code == 'operation-timeout':
             error.removal_failure_phase = 'removal-terminal-unknown'
         raise
 
@@ -1152,17 +1184,11 @@ def continue_removal(installer, expected_pending):
     uncertain_install = previous is not None or resident
     package_idle = False
     if uncertain_install or submitted:
-        from .operations import require_removal_idle
         deadline = monotonic() + 20
         waiting = False
         while True:
             try:
-                observed_idle = require_removal_idle(
-                    installer.remote, profile, pending, report_busy=True,
-                    optional_monitor=guard)
-            except TVRejected as error:
-                if not error.package_status_denied:
-                    raise
+                package_idle = _package_installer_idle(installer, pending, optional_monitor=guard)
             except UserError as error:
                 if error.reason_code != 'original-writer-active':
                     raise
@@ -1174,8 +1200,6 @@ def continue_removal(installer, expected_pending):
                     raise
                 sleep(min(1, remaining))
                 continue
-            else:
-                package_idle = observed_idle is not False
             break
 
     if guard:

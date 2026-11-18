@@ -110,6 +110,9 @@ def removal_action(plan, failure=None):
     actions = plan.get('actions')
     if reason == 'root-access-required' or (type(actions) is list and 'connect-root' in actions):
         return _removal_action_result('access')
+    if (reason == 'original-writer-active' and plan.get('state') == 'waiting'
+            and type(actions) is list and 'check' in actions and 'continue-removal' not in actions):
+        return _removal_action_result('unverified')
     if reason in ('connection-interrupted', 'root-worker-busy', 'original-writer-active'):
         return _removal_action_result('transient')
     if restart and reason in (None, 'restart-required', 'removal-requested'):

@@ -115,6 +115,8 @@ def assess(profile, pending, observation=None):
                 return result(removal['state'], 'ownership-conflict', 'check', 'retain-evidence')
             if binding.get('reservation') in ('matched', 'absent', 'interrupted') and reason == 'ownership-conflict':
                 reason = 'removal-recheck-required'
+        if observation.get('package_removal_monitor') == 'busy':
+            return result('waiting', 'original-writer-active', 'check', 'retain-evidence')
         return result(removal['state'], reason, 'continue-removal', 'retain-evidence')
     if observation.get('active_operation') is not None:
         return result('blocked', 'foreign-operation', 'check', 'retain-evidence')

@@ -1452,11 +1452,17 @@ else:
             if self.profile['edition']=='root':
                 self.collect_root_diagnostics()
             elif self.profile.get('connection') != 'root-ssh':
-                from .no_root_cleanup import inspect_binding
+                from .no_root_cleanup import inspect_binding, inspect_package_removal
                 binding = inspect_binding(self)
                 result['removal_binding'] = binding
+                if binding.get('reservation') in ('matched', 'absent', 'interrupted'):
+                    monitor = inspect_package_removal(self, pending)
+                    if monitor is not None:
+                        result['package_removal_monitor'] = monitor
                 result['assessment'] = assess(self.profile, pending, result)
                 result['removal']['reason'] = result['assessment']['reason']
+                if result.get('package_removal_monitor') == 'busy':
+                    result['removal']['stage'] = 'package-removal'
             return result
         initial = assess(self.profile, pending)
         result = ({'device': {}, 'pending': pending, 'can_resume_root_setup': False}
