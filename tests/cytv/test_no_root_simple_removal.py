@@ -169,6 +169,62 @@ class SimpleRemoval(unittest.TestCase):
         self.assertFalse(any(uri.endswith('/launch') and body['id']=='com.webos.app.livetv'
                              for uri,body in self.remote.calls))
 
+    def test_manually_removed_packages_preserve_legacy_pending_uninstall_until_restart(self):
+        from cytv.transport import terminal_reply
+
+        (self.root / 'proc').mkdir()
+        self.remote.apps = {'org.example.player'}
+        self.store.begin(self.profile, 'uninstall', stage='removing', removals={operations.HELPER: 'submitted'})
+        directory = self.store.device_dir(self.profile)
+        original_receipt = (directory / 'operation.json').read_bytes()
+        original = self.remote.luna
+
+        def luna(uri, payload, **kwargs):
+            if uri == 'com.webos.appInstallService/status':
+                self.remote.calls.append((uri, payload))
+                terminal_reply({'returnValue': False, 'errorCode': -1}, uri=uri)
+            return original(uri, payload, **kwargs)
+
+        self.remote.luna = luna
+        self.assertTrue(self.remove()['restart_required'])
+        pending = self.store.pending(self.profile)
+        self.assertEqual(pending['cleanup_restart_triggers'], ['prior-operation-unresolved'])
+        self.assertEqual((directory / pending['original_receipt']).read_bytes(), original_receipt)
+        self.assertFalse(self.vendor_removals())
+
+        self.reboot()
+        self.assertTrue(self.remove()['verified_clean'])
+        self.assertIsNone(self.store.pending(self.profile))
+        self.assertEqual(self.remote.apps, {'org.example.player'})
+        self.assertFalse(self.vendor_removals())
+
+    def test_unreadable_package_catalog_cannot_verify_manual_removal(self):
+        from cytv.transport import terminal_reply
+
+        (self.root / 'proc').mkdir()
+        self.installer.tv_info = {}
+        original = self.remote.luna
+
+        def luna(uri, payload, **kwargs):
+            if uri.endswith('/dev/listApps'):
+                self.remote.calls.append((uri, payload))
+                terminal_reply(reply, uri=uri)
+                return reply
+            return original(uri, payload, **kwargs)
+
+        self.remote.luna = luna
+        malformed = [{'id': 'org.example.player'}, {'id': None}]
+        for reply, error_type, reason in (
+                ({'returnValue': False, 'errorCode': -1}, TVRejected, 'user-error'),
+                ({'returnValue': True, 'apps': malformed}, UserError, 'inventory-unavailable')):
+            with self.subTest(reply=reply):
+                with self.assertRaises(error_type) as caught:
+                    self.remove()
+                self.assertEqual(caught.exception.reason_code, reason)
+                self.assertEqual(self.store.pending(self.profile)['stage'], 'requested')
+                self.assertNotIn('packages', self.installer.tv_info['removal_evidence'])
+                self.assertFalse(self.vendor_removals())
+
     def test_inherited_removal_uses_paired_foreground_when_public_luna_refuses(self):
         (self.root / 'proc').mkdir()
         self.store.begin(self.profile, 'install', stage='pending')

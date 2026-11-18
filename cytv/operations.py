@@ -1340,7 +1340,8 @@ else:
     def installed_apps(self, timeout=30):
         reply = self.remote.luna('com.webos.applicationManager/dev/listApps', {}, timeout=timeout)
         apps = reply.get('apps')
-        if not isinstance(apps, list):
+        if not isinstance(apps, list) or any(
+                not isinstance(app, dict) or not isinstance(app.get('id'), str) or not app['id'] for app in apps):
             raise UserError('Could not read installed applications.', reason_code='inventory-unavailable')
         return apps
 
