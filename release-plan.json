@@ -44,13 +44,15 @@
         686
       ],
       "summary": "Retain Home diagnostics across Helper restart and wake; original routing failure remains open"
+    },
+    {
+      "pr": 717,
+      "issues": [
+        686
+      ],
+      "summary": "Write Home diagnostics commands from Root SSH in the shared Helper state group"
     }
   ],
   "excluded": [],
-  "acceptance": "",
-  "build": {
-    "run_id": 44300372716,
-    "attempt": 2,
-    "source": "ce0819697c5ef15f6dfc735262730360ca7ea627"
-  }
+  "acceptance": ""
 }
