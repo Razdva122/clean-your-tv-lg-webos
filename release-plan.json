@@ -1,7 +1,15 @@
 {
   "schema": 1,
   "version": null,
-  "changes": [],
+  "changes": [
+    {
+      "pr": 708,
+      "issues": [
+        615
+      ],
+      "summary": "Restore retained compositor Root through Set up my TV \u2192 Root \u2192 Reinstall Root (resets saved CYTV preferences)"
+    }
+  ],
   "excluded": [],
   "acceptance": ""
 }
