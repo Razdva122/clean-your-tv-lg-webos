@@ -390,7 +390,9 @@ class SimpleRemoval(unittest.TestCase):
                 self.assertEqual(case.store.pending(case.profile)['cleanup_restart_triggers'],
                                  ['invalid-helper-stop-record'])
                 case.boot_marker().unlink()
-                self.assertTrue(case.remove()['restart_required'])
+                with self.assertRaises(UserError) as same_boot:
+                    case.remove()
+                self.assertEqual(same_boot.exception.reason_code, 'restart-unverified')
                 self.assertTrue(invalid.exists())
                 self.assertFalse(any(uri == remove_uri for uri, _ in case.remote.calls))
 
@@ -987,7 +989,9 @@ class SimpleRemoval(unittest.TestCase):
         self.assertTrue(self.remove()['verified_clean'])
 
     def test_restricted_tmp_keeps_unresolved_install_when_package_status_is_denied(self):
+        from cytv.desktop import DesktopConsole
         from cytv.diagnostics import create_report
+        from cytv.recovery import recover
 
         self.remote.volatile_mode = 0o111
         (self.root / 'proc').mkdir()
@@ -1008,11 +1012,30 @@ class SimpleRemoval(unittest.TestCase):
         pending = self.store.pending(self.profile)
         self.assertEqual(pending['cleanup_boot_proof'], {'schema': 2, 'kind': 'kernel-only',
             'goal': pending['removal_operation'], 'kernel': self.remote.boot})
-        self.assertTrue(self.remove()['restart_required'])
+        self.installer.tv_info = {}
+        events = []
+        write = DesktopConsole(lambda kind, value: events.append((kind, value)))
+        with patch.object(self.cleanup, '_device', wraps=self.cleanup._device) as device:
+            for _ in range(2):
+                with self.assertRaises(UserError) as unconfirmed:
+                    recover(self.installer, lambda prompt: 'y', write)
+                self.assertEqual(unconfirmed.exception.reason_code, 'restart-unverified')
+                plan = [value for kind, value in events if kind == 'recovery-plan'][-1]
+                self.assertFalse(plan['restart_required'])
+                self.assertFalse(plan['verified_clean'])
+                self.assertIn('The TV restart could not be verified.', plan['next_step'])
+                current = self.store.pending(self.profile)
+                self.assertEqual(current['cleanup_boot_proof'], pending['cleanup_boot_proof'])
+                self.assertEqual(current['removal_operation'], pending['removal_operation'])
+        boot_actions = [call.args[1] for call in device.call_args_list if call.args[1].startswith('boot-')]
+        self.assertEqual(boot_actions, ['boot-probe', 'boot-probe'])
         report = json.loads(create_report(self.store, 'status', self.profile, 'status', None).read_text())
         self.assertEqual(report['removal']['restart_triggers'], ['prior-operation-unresolved'])
         self.reboot()
-        self.assertTrue(self.remove()['verified_clean'])
+        recover(self.installer, lambda prompt: 'y', write)
+        plan = [value for kind, value in events if kind == 'recovery-plan'][-1]
+        self.assertTrue(plan['verified_clean'])
+        self.assertIsNone(self.store.pending(self.profile))
 
     def test_kernel_only_proof_never_uses_marker_absence_or_retires_same_boot(self):
         self.remote.volatile_mode=0o111
@@ -1142,7 +1165,10 @@ class SimpleRemoval(unittest.TestCase):
         marker=self.boot_marker();self.assertTrue(marker.exists())
         proof=self.store.pending(self.profile)['cleanup_boot_proof']
         self.assertEqual(proof['kernel'],self.remote.boot)
-        self.assertTrue(self.remove()['restart_required']);self.assertTrue(marker.exists())
+        with self.assertRaises(UserError) as same_boot:
+            self.remove()
+        self.assertEqual(same_boot.exception.reason_code, 'restart-unverified')
+        self.assertTrue(marker.exists())
         marker.unlink()  # Model the measured C3 volatile reset, kernel UUID reused.
         self.assertTrue(self.remove()['verified_clean'])
         (self.root/'proc').mkdir(exist_ok=True)  # Current idle proof for a new explicit goal.
@@ -1471,10 +1497,12 @@ class SimpleRemoval(unittest.TestCase):
         run = self.remote.run
         self.remote.run = lambda command, **kw: 'CYTV_FRESH_ROOT' if command == FRESH_PROBE else run(command, **kw)
 
-        for _ in range(2):
-            self.assertTrue(self.remove()['restart_required'])
-            self.assertTrue(state.is_dir())
-            self.assertFalse(any(uri.endswith('/dev/remove') for uri, _ in self.remote.calls))
+        self.assertTrue(self.remove()['restart_required'])
+        with self.assertRaises(UserError) as same_boot:
+            self.remove()
+        self.assertEqual(same_boot.exception.reason_code, 'restart-unverified')
+        self.assertTrue(state.is_dir())
+        self.assertFalse(any(uri.endswith('/dev/remove') for uri, _ in self.remote.calls))
 
         self.reboot()
         self.assertTrue(self.remove()['verified_clean'])
@@ -1792,15 +1820,16 @@ class SimpleRemoval(unittest.TestCase):
 
             with self.assertRaises(UserError) as same_boot:
                 run('y', 'y')
-            self.assertEqual(same_boot.exception.reason_code, 'pending-operation')
-            self.assertTrue(plans[-1]['restart_required'])
+            self.assertEqual(same_boot.exception.reason_code, 'restart-unverified')
+            self.assertFalse(plans[-1]['restart_required'])
             self.assertFalse(plans[-1]['verified_clean'])
             assert_files_kept()
 
             self.boot_marker().unlink()
-            with self.assertRaises(UserError):
+            with self.assertRaises(UserError) as unconfirmed:
                 run('y', 'y')
-            self.assertTrue(plans[-1]['restart_required'])
+            self.assertEqual(unconfirmed.exception.reason_code, 'restart-unverified')
+            self.assertFalse(plans[-1]['restart_required'])
             assert_files_kept()
 
             self.reboot()
@@ -2328,7 +2357,9 @@ class SimpleRemoval(unittest.TestCase):
         self.legacy_home()
         self.assertTrue(self.remove()['restart_required'])
         self.assertEqual(list(state.iterdir()), [])
-        self.assertTrue(self.remove()['restart_required'])
+        with self.assertRaises(UserError) as same_boot:
+            self.remove()
+        self.assertEqual(same_boot.exception.reason_code, 'restart-unverified')
         self.assertEqual(list(state.iterdir()), [])
 
         self.reboot()

@@ -55,10 +55,12 @@ def _write_removal_plan(write, value, *, pending=None, failure=None, allow_reque
             and (failure or {}).get('code') != 'restart-required'):
         # A persisted request is history, not a fresh instruction to power-cycle.
         # Keep the receipt intact; project only the need to check current state.
-        removal = dict(value.get('removal', {}), reason='removal-recheck-required')
+        reason = ('restart-unverified' if (failure or {}).get('code') == 'restart-unverified'
+                  else 'removal-recheck-required')
+        removal = dict(value.get('removal', {}), reason=reason)
         removal.pop('stage', None)
         value = dict(value, removed=False, verified_clean=False, restart_required=False,
-                     reason='removal-recheck-required', removal=removal)
+                     reason=reason, removal=removal)
         if failure is None:
             message = 'Check the TV state before deciding whether a restart is needed.'
             value.update(summary=REVIEW, next_step=message,

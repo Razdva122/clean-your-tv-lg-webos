@@ -9,7 +9,8 @@ REASONS = ('no-pending-operation', 'removal-not-submitted', 'terminal-evidence-m
 ACTIONS = ('check', 'inspect-support', 'continue-product', 'continue-no-root', 'cancel-install', 'continue-setup', 'finish-home-off', 'reconcile', 'retain-evidence', 'continue-removal', 'connect-root')
 REMOVAL_STAGES = ('requested', 'original-writers-fenced', 'controls-restored', 'package-removal', 'private-cleanup', 'restart-required', 'verified-clean')
 REMOVAL_REASONS = ('removal-requested', 'original-writer-active', 'ownership-conflict', 'controls-unverified',
-                   'removal-terminal-unknown', 'private-cleanup-incomplete', 'removal-verified', 'removal-recheck-required', 'restart-required',
+                   'removal-terminal-unknown', 'private-cleanup-incomplete', 'removal-verified',
+                   'removal-recheck-required', 'restart-required', 'restart-unverified',
                    'root-worker-busy','root-access-required','removal-failed','cleanup-check-failed',
                    'connection-interrupted','connection-unverified')
 RESTART_TRIGGERS = ('controller-still-running', 'protected-package-access', 'startup-disable-unverified',

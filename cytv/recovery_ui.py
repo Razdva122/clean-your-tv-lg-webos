@@ -21,6 +21,7 @@ REMOVAL_BLOCKERS = {
     'removal-terminal-unknown':'Review recovery options before trying to remove packages again.',
     'private-cleanup-incomplete':'Final cleanup could not be verified. Review recovery options before continuing.',
     'restart-required':'Restart the TV completely: disconnect it from power, reconnect it, then choose Try again. Standby is not a full restart.',
+    'restart-unverified':'The TV restart could not be verified. Save the diagnostic report and keep recovery data.',
     'connection-interrupted':'Connection to the TV was interrupted. Check the connection and try again.',
     'connection-unverified':'Removal could not be verified. Review recovery options before continuing.',
     'root-access-required':'Some project files require Root access. Reconnect using Root to finish removal.',

@@ -1090,7 +1090,8 @@ def continue_removal(installer, expected_pending):
                                                         if trigger != 'homebrew-request-unverified')]
         if rearm and proof is not None and not pending.get('cleanup_boot_release_started'):
             _device(installer, 'boot-release', proof=proof)
-        if proof is None or rearm or pending.get('cleanup_boot_release_started'):
+        reuse_proof = proof is not None and not rearm and not pending.get('cleanup_boot_release_started')
+        if not reuse_proof:
             installer.store.checkpoint(installer.profile, stage=stage, cleanup_boot_proof=None,
                                        cleanup_boot_verified=False, cleanup_boot_release_started=False,
                                        cleanup_helper_kernel_changed=False,
@@ -1103,15 +1104,17 @@ def continue_removal(installer, expected_pending):
         if observed_writer:
             raise UserError('A Homebrew package request was observed. Wait for it to settle before continuing.',
                             reason_code='original-writer-active')
-        if (guard and pending.get('removal_reason') in ('restart-required', 'removal-terminal-unknown')
-                and proof is not None and not rearm and set(triggers).issubset(boot_triggers)
-                and reason in ('package-removal-unverified', 'original-configuration-unverified',
-                                    'original-package-unverified', 'homebrew-request-unverified')):
-            # Preserve this boot baseline. The retry UI can report the current
-            # unresolved request without sending the same power-cycle steps.
-            store.checkpoint(profile, stage='package-removal', removal_reason='removal-terminal-unknown')
-            raise UserError('The TV still has an unconfirmed earlier request. Try again after it settles or the TV fully restarts.',
-                            reason_code='removal-terminal-unknown')
+        if reuse_proof and set(triggers).issubset(boot_triggers):
+            if guard and reason in ('package-removal-unverified', 'original-configuration-unverified',
+                                    'original-package-unverified', 'homebrew-request-unverified'):
+                store.checkpoint(profile, stage='package-removal', removal_reason='removal-terminal-unknown')
+                raise UserError('The TV still has an unconfirmed earlier request. Try again after it settles or the TV fully restarts.',
+                                reason_code='removal-terminal-unknown')
+            # This check still needs the original proof. Keep its baseline and
+            # surface the current result without repeating the power-cycle steps.
+            store.checkpoint(profile, removal_reason='restart-unverified')
+            raise UserError('The TV restart could not be verified. Save the diagnostic report and keep recovery data.',
+                            reason_code='restart-unverified')
         installer.progress(RESTART_MESSAGE)
         return {'removed': False, 'verified_clean': False, 'restart_required': True}
 
