@@ -41,6 +41,7 @@ class RootGateTests(unittest.TestCase):
         self.remote=Remote();self.store=state.Store(self.root/'host');self.profile=state.target('fixture.local','root')
         self.progress=[];self.actions=[]
         self.installer=SimpleNamespace(payload=self.payload,manifest=self.manifest,tv_info={'graphics_resolution':'1920x1080'},store=self.store,profile=self.profile,remote=self.remote,progress=self.progress.append,outcome=SimpleNamespace(packages_verified=Mock()),root_action=self.action,activate_root=self.activate)
+        self.installer.root_reinstall_payload = None
         self.installer.product_action=Mock(side_effect=AssertionError('normal coordinator used'))
         self.installer.upload_product=Mock(side_effect=AssertionError('normal product uploaded'))
         self.installer.verify_root_updater=Mock(side_effect=AssertionError('normal updater used'))
@@ -83,6 +84,50 @@ class RootGateTests(unittest.TestCase):
         self.assertTrue(result['home_changed'])
         self.assertEqual(self.installer.product_action.call_args.args[0],'native-install')
         self.assertNotIn('install',self.actions)
+
+    def test_native_reinstall_tracks_upload_and_submission_without_changing_recovery(self):
+        from cytv.root_passive import is_native_pending
+
+        digest = 'b' * 64
+        (self.store.device_dir(self.profile) / 'known_hosts').write_bytes(b'original pin')
+        self.store.request_clean_removal(self.profile, root_reinstall_payload=digest)
+        self.store.checkpoint(self.profile, stage='verified-clean',
+                              result={'removed': True, 'verified_clean': True})
+        self.store.finish_clean_removal(self.profile)
+        saved = self.store.root_reinstall(self.profile)
+        self.installer.root_reinstall_payload = digest
+        self.installer._native_clean_install = True
+
+        def check_lineage(pending):
+            step = self.store.root_reinstall(self.profile)
+            self.assertIsNotNone(step)
+            self.assertEqual((step.stage, step.payload, step.variant, step.pin),
+                             ('installing', saved.payload, saved.variant, saved.pin))
+            self.assertNotIn('recovery_protocol', pending)
+            return step
+
+        def upload(bundle):
+            pending = self.store.pending(self.profile)
+            self.assertEqual(pending['stage'], 'upload')
+            self.assertNotIn('product_operation', pending)
+            self.assertFalse(is_native_pending(pending))
+            self.assertEqual(check_lineage(pending).operation, pending['diagnostic_id'])
+            return '/tmp/cytv-product-' + 'a' * 32
+
+        def submit(action, operation, stage):
+            pending = self.store.pending(self.profile)
+            self.assertEqual(action, 'native-install')
+            self.assertTrue(is_native_pending(pending))
+            self.assertEqual(check_lineage(pending).operation, operation)
+            return {'state': 'recovery_required'}
+
+        self.installer.upload_product = Mock(side_effect=upload)
+        self.installer.product_action = Mock(side_effect=submit)
+        with self.assertRaises(UserError) as caught:
+            root_gate.install(self.installer, self.inventory)
+        self.assertEqual(caught.exception.reason_code, 'pending-operation')
+        self.installer.product_action.assert_called_once()
+        self.assertEqual(self.store.root_reinstall(self.profile).stage, 'installing')
 
     def test_rejected_clean_handoff_leaves_no_pending_install(self):
         self.installer._native_clean_install=True

@@ -111,7 +111,7 @@ If the installer cannot verify removal, final cleanup, TV controls or the packag
 
 If the installer cannot verify the requested full restart, save and attach its diagnostic report. Keep the saved connection and recovery data. Do not keep repeating power cycles or clear the unfinished operation manually.
 
-**Reinstall Root:** Choose **Set up my TV → Root** with the saved connection and confirm **Reinstall Root?**. The installer restores LG Home and fully removes Clean Your TV, including its updaters, Home Helper and saved preferences. After verified removal, it installs and activates the packages and Root runtime bundled with that installer. Other TV apps and existing root/SSH access are preserved. If removal stops or requests a full restart, finish it before starting setup again. **Uninstall Clean Your TV** alone never starts another installation.
+**Reinstall Root:** Choose **Set up my TV → Root** with the saved connection and confirm **Reinstall Root?**. The installer restores LG Home and fully removes Clean Your TV, including its updaters, Home Helper and saved preferences. After verified removal, it installs and activates the packages and Root runtime bundled with that installer. Other TV apps and existing root/SSH access are preserved. If the desktop wizard pauses, open the same installer and choose **Continue Root reinstallation**. After it verifies removal, choose **Continue Root installation**. **Uninstall Clean Your TV** alone never starts another installation.
 
 ### Adjust LG settings and finish a Root rollback
 

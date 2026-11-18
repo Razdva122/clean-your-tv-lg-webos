@@ -23,6 +23,158 @@ except ImportError:
 
 @unittest.skipUnless(HAS_QT, 'Desktop build dependencies are optional for CLI tests')
 class DesktopRecoveryTests(unittest.TestCase):
+    def test_root_reinstall_resumes_after_restart_ssh_refusal_and_reopening(self):
+        import errno
+        from paramiko.ssh_exception import NoValidConnectionsError
+        from cytv.errors import ExistingRoot
+        from cytv.operations import Installer
+        self.store.finish(self.profile)
+        self.profile = state.target('192.0.2.10', 'root', 2222)
+        self.store.save(self.profile)
+        (self.store.device_dir(self.profile) / 'known_hosts').write_bytes(b'original pin')
+        cleanup_calls, installs, auth = [], [], []
+        online = True
+
+        def connect(profile, directory, secret, trust, *, persist=True):
+            auth.append((profile, directory, persist, trust(None, None) if not persist else None))
+            if not online:
+                socket_error = ConnectionRefusedError(errno.ECONNREFUSED, 'SSH still starting')
+                raise NoValidConnectionsError({(profile['host'], profile['port']):socket_error})
+            return self.remote
+
+        self.connect = connect
+
+        def cleanup(installer, pending):
+            cleanup_calls.append(pending['removal_operation'])
+            if len(cleanup_calls) == 1:
+                installer.store.checkpoint(installer.profile, stage='restart-required', removal_reason='restart-required')
+                return {'restart_required':True}
+            if len(cleanup_calls) != 2:
+                self.fail('Already verified cleanup was repeated')
+            result = {'removed':True, 'verified_clean':True}
+            installer.store.checkpoint(installer.profile, stage='verified-clean', removal_reason='removal-verified', result=result)
+            installer.store.finish_clean_removal(installer.profile)
+            return result
+
+        def preflight(installer, install=False, **kwargs):
+            if install and len(cleanup_calls) != 2:
+                raise ExistingRoot('Existing Root')
+
+        def install(installer, inventory, key, migrate, reinstall=None):
+            if reinstall:
+                installer.prepare_root_reinstall()
+            self.assertEqual(len(cleanup_calls), 2)
+            self.assertIsNone(installer.store.pending(installer.profile))
+            self.assertEqual(installer.profile, self.profile)
+            installs.append(installer.profile)
+            return {}
+
+        with (
+            patch.object(Installer, 'continue_clean_removal', cleanup),
+            patch.object(Installer, 'preflight', preflight),
+            patch.object(Installer, 'select_graphics'),
+            patch.object(Installer, 'version_summary', return_value=[]),
+            patch.object(Installer, 'root_inventory', return_value=self.inventory),
+            patch.object(Installer, 'install', install),
+            patch('cytv.cli.sleep'),
+        ):
+            w = self.window()
+            w.start('install', self.profile)
+            self.pump(lambda: w.pending is not None)
+            self.assertEqual(w.pending.title, 'Connect to check installed versions?')
+            w.submit('y')
+            self.pump(lambda: w.pending is not None or not w.running)
+            self.assertIsNotNone(w.pending, w.details.toPlainText())
+            self.assertEqual(w.pending.title, 'Reinstall Root?')
+            w.submit('y')
+            self.pump(lambda: not w.running)
+            self.assertIn('Disconnect the TV from power', w.subtitle.text())
+            self.assertIn('Continue Root reinstallation', w.subtitle.text())
+            self.assertEqual(len(cleanup_calls), 1)
+            w.close()
+
+            # A separate host attempt before the TV's SSH service has come back.
+            online = False
+            w = self.window()
+            continuation = self.button(w, 'Continue Root reinstallation')
+            self.assertIsNotNone(continuation)
+            continuation.click()
+            self.pump(lambda: not w.running)
+            self.assertEqual(len(cleanup_calls), 1)
+            self.assertEqual(w.failure_help['code'], 'ssh-refused')
+            self.assertNotIn('Restart the TV', w.subtitle.text())
+            self.assertEqual(w.rail_title.text(), 'Reinstall Root using this installer')
+            self.assertIsNotNone(self.button(w, 'Continue Root reinstallation'))
+            w.close()
+
+            online = True
+            w = self.window()
+            self.button(w, 'Continue Root reinstallation').click()
+            self.pump(lambda: w.pending is not None)
+            self.assertEqual(w.pending.title, 'Continue Root installation?')
+            self.assertEqual(cleanup_calls, [cleanup_calls[0]] * 2)
+            self.assertEqual(installs, [])
+            w.submit(None)  # Close the installer at the boundary between removal and install.
+            self.pump(lambda: not w.running)
+            w.close()
+
+            with patch('cytv.cli.package.verify_payload', return_value=dict(self.manifest, home_version='changed')):
+                attempts = len(auth)
+                w = self.window()
+                self.button(w, 'Continue Root reinstallation').click()
+                self.pump(lambda: not w.running)
+                self.assertIn('same installer build', w.content.toPlainText())
+                self.assertEqual(len(auth), attempts)
+                w.close()
+
+            pin = self.store.device_dir(self.profile) / 'known_hosts'
+            pin.write_bytes(b'different pin')
+            w = self.window()
+            self.button(w, 'Continue Root reinstallation').click()
+            self.pump(lambda: not w.running)
+            self.assertEqual(w.failure_help['code'], 'ssh-identity')
+            self.assertEqual(len(auth), attempts)
+            w.close()
+            pin.write_bytes(b'original pin')
+            # A separate inspection may change the saved runtime preference.
+            self.store.save(dict(self.profile, root_variant='node012-beta'))
+
+            w = self.window()
+            self.button(w, 'Continue Root reinstallation').click()
+            self.pump(lambda: w.pending is not None)
+            self.assertEqual(w.pending.title, 'Continue Root installation?')
+            self.button(w, 'Continue Root installation').click()
+            self.pump(lambda: w.pending is not None)
+            self.assertEqual(len(installs), 1)
+            self.assertEqual(cleanup_calls, [cleanup_calls[0]] * 2)
+            self.assertTrue(all(row == (self.profile, self.store.device_dir(self.profile), False, False)
+                                for row in auth[1:]))
+            w.channel.answer(None)
+            self.pump(lambda: not w.running)
+
+    def test_root_reinstall_finalizes_verified_checkpoint_without_touching_the_tv(self):
+        import hashlib
+        from cytv.operations import Installer
+        self.store.finish(self.profile)
+        self.profile = state.target('192.0.2.10', 'root')
+        self.store.save(self.profile)
+        (self.store.device_dir(self.profile) / 'known_hosts').write_bytes(b'original pin')
+        digest = hashlib.sha256(json.dumps([None, self.manifest], sort_keys=True).encode()).hexdigest()
+        self.store.request_clean_removal(self.profile, root_reinstall_payload=digest)
+        self.store.checkpoint(self.profile, stage='verified-clean', result={'removed':True, 'verified_clean':True})
+        with patch.object(Installer, 'continue_clean_removal') as cleanup, patch.object(Installer, 'preflight') as preflight:
+            w = self.window()
+            self.button(w, 'Continue Root reinstallation').click()
+            self.pump(lambda: w.pending is not None or not w.running)
+            self.assertIsNotNone(w.pending, w.details.toPlainText())
+            self.assertEqual(w.pending.title, 'Continue Root installation?')
+            self.assertEqual(self.store.root_reinstall(self.profile).stage, 'removed')
+            self.assertIsNone(self.store.pending(self.profile))
+            w.submit('n')
+            self.pump(lambda: not w.running)
+            cleanup.assert_not_called()
+            preflight.assert_not_called()
+
     def test_doctor_success_routes_real_cli_result_to_details_and_preserves_selected_tv(self):
         self.store.finish(self.profile)
         w = self.window()
@@ -279,6 +431,8 @@ class DesktopRecoveryTests(unittest.TestCase):
         self.assertEqual(w.title.text(), 'Clean Your TV removal is verified.', w.content.toPlainText())
         self.assertTrue(w.recovery_plan['verified_clean'])
         self.assertIsNone(self.store.pending(self.profile))
+        self.assertIsNone(self.store.root_reinstall(self.profile))
+        self.assertIsNone(self.button(w, 'Continue Root reinstallation'))
         self.assertEqual(self.device_removals, ['d'*32])
         receipt = json.loads((self.store.device_dir(self.profile)/'clean-removal.json').read_bytes())
         self.assertEqual(receipt['previous'], json.loads(original))

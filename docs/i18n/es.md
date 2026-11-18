@@ -109,7 +109,7 @@ Si el instalador no puede verificar la desinstalación, la limpieza final, los c
 
 Si el instalador no puede verificar el reinicio completo solicitado, guarda y adjunta el informe de diagnóstico. Conserva la conexión guardada y los datos de recuperación. No repitas los cortes de alimentación ni borres manualmente la operación pendiente.
 
-**Reinstalar Root:** Elige **Configurar mi televisor → Root** con la conexión guardada y confirma **¿Reinstalar Root?**. El instalador restaura LG Home y elimina por completo Clean Your TV, incluidos sus actualizadores, Home Helper y las preferencias guardadas. Tras verificar la eliminación, instala y activa los paquetes y el entorno Root incluidos en ese instalador. Se conservan las demás apps del TV y el acceso root/SSH existente. Si la eliminación se detiene o pide un reinicio completo, termínala antes de iniciar otra vez la configuración. **Desinstalar Clean Your TV** por sí solo nunca inicia otra instalación.
+**Reinstalar Root:** Elige **Configurar mi televisor → Root** con la conexión guardada y confirma **¿Reinstalar Root?**. El instalador restaura LG Home y elimina por completo Clean Your TV, incluidos sus actualizadores, Home Helper y las preferencias guardadas. Tras verificar la eliminación, instala y activa los paquetes y el entorno Root incluidos en ese instalador. Se conservan las demás apps del TV y el acceso root/SSH existente. Si el asistente de escritorio se detiene, abre el mismo instalador y elige **Continuar la reinstalación de Root**. Cuando se verifique la eliminación, elige **Continuar la instalación de Root**. **Desinstalar Clean Your TV** por sí solo nunca inicia otra instalación.
 
 ### Ajustar la configuración de LG y completar la recuperación de Root
 
