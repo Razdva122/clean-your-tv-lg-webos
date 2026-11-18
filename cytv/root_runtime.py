@@ -115,53 +115,57 @@ def saved_operation_for_review(store, selected):
 def offer(installer, args, ask, write, *, home_error=None):
     """Offer a compatible edition before submitting any installation."""
     require_idle(installer.store, installer.profile)
+    if args.non_interactive:
+        if home_error is not None:
+            raise home_error
+        raise UserError('Choose an alternative edition interactively; --yes does not select Root Beta.', reason_code='root-requirements')
     previous = dict(installer.profile)
     no_root = state.target(previous['host'], 'no-root', previous['port'], previous.get('identity'), connection='root-ssh')
+    beta = False
+    node_error = 'Root requirements failed or could not be verified: node-version. Check the diagnostic report.'
     if home_error is None:
         value = installer.remote.run('/usr/bin/node --version', timeout=10).strip()
         options = alternatives(value)
         if not options:
-            raise UserError('Root requirements failed or could not be verified: node-version. Check the diagnostic report.', reason_code='root-requirements')
+            raise UserError(node_error, reason_code='root-requirements')
         installer.tv_info['node_version'] = value[1:]
         installer.tv_info['node_version_status'] = 'read'
-    else:
-        if args.non_interactive:
-            raise home_error
-        from .operations import Installer
-        payload, manifest = installer._ordinary_payload or (installer.payload, installer.manifest)
-        candidate = Installer(installer.remote, installer.store, no_root, payload, manifest,
-                              progress=lambda _: None)
-        try:
-            candidate.check_no_root_alternative()
-        except UserError as error:
+        beta = BETA in options and installer.manifest.get('legacy_root_beta') == 'legacy-root-beta'
+    from .operations import Installer
+    payload, manifest = installer._ordinary_payload or (installer.payload, installer.manifest)
+    candidate = Installer(installer.remote, installer.store, no_root, payload, manifest,
+                          progress=lambda _: None)
+    no_root_verified = False
+    try:
+        candidate.check_no_root_alternative()
+    except UserError as error:
+        if home_error is not None:
             write(str(error))
             raise home_error from None
-        except (OSError, RuntimeError, ValueError, KeyError, TypeError):
-            raise home_error from None
-        options = ('no-root',)
-    if home_error is None and installer.remote.run(FRESH_PROBE, timeout=10).strip() != 'CYTV_FRESH_ROOT':
-        from .root_no_root_handoff import probe
-        try:installer._root_handoff=probe(installer)
-        except (OSError,ValueError,RuntimeError):
-            raise UserError('Previous Root installation needs recovery. Run cytv status or cytv restore. Reinstallation has not started; recovery data was left unchanged.') from None
+        root_clear = candidate.checks.results.get('root-conflict', {}).get('status') == 'pass'
+        if not beta or not root_clear or error.reason_code == 'pending-operation':
+            raise
+        write(str(error))
+    except (OSError, RuntimeError, ValueError, KeyError, TypeError):
+        raise (home_error or UserError(node_error, reason_code='root-requirements')) from None
+    else:
+        no_root_verified = True
     write.heading('Choose an alternative edition')
     from .i18n import translate
     if home_error is None:
         write(translate('Ordinary Root requires Node.js 8+. Detected TV Node.js: {version}').format(version=value))
     else:
         write(str(home_error))
-    write.option(1, NO_ROOT_TITLE, NO_ROOT_DETAIL)
-    beta = BETA in options and installer.manifest.get('legacy_root_beta') == 'legacy-root-beta'
+    if no_root_verified:
+        write.option(1, NO_ROOT_TITLE, NO_ROOT_DETAIL)
     if beta:
-        write.option(2, BETA_TITLE, NOTICE)
+        write.option(2 if no_root_verified else 1, BETA_TITLE, NOTICE)
     write.option(0, 'Cancel')
-    if args.non_interactive:
-        raise UserError('Choose an alternative edition interactively; --yes does not select Root Beta.', reason_code='root-requirements')
-    choice = prompts.number(ask, write, 'Alternative edition [0]: ', 0, 2 if beta else 1, default=0)
+    choice = prompts.number(ask, write, 'Alternative edition [0]: ', 0, int(no_root_verified) + int(beta), default=0)
     if choice == 0:
         raise EOFError
     require_idle(installer.store, installer.profile)
-    if choice == 1:
+    if no_root_verified and choice == 1:
         selected = no_root
         # Preserve the already authenticated exact host key and SSAP connection.
         source = installer.store.device_dir(previous)

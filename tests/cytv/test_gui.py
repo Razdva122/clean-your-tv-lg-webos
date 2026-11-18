@@ -470,6 +470,15 @@ class GuiTests(unittest.TestCase):
         self.assertFalse(w.form.findChildren(QComboBox))
         self.assertEqual(len(w.form.findChildren(QPushButton)),2)
 
+    def test_only_beta_alternative_uses_beta_action(self):
+        from cytv import i18n
+        from cytv.root_runtime import BETA_TITLE, NOTICE
+        w = Wizard()
+        self.addCleanup(w.close)
+        i18n.set_language('en')
+        w.show_prompt(Prompt('Alternative edition [0]: ', [('1', BETA_TITLE, NOTICE), ('0', 'Cancel', '')]))
+        self.assertIn('Try Root Beta', [button.text() for button in w.form.findChildren(QPushButton)])
+
     def test_beta_confirmation_names_the_action_and_cancel(self):
         from cytv.desktop import Channel
         for choice, action in (('y','Try Root Beta'),('n','Cancel')):

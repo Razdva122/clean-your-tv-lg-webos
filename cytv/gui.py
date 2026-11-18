@@ -19,6 +19,7 @@ from cytv import __version__, cli, debloat, diagnostics, i18n
 from cytv.i18n import translate as tr
 from cytv.desktop import EXPLICIT_TV_CHOICE, Channel, SSH_COMMAND_PROMPT, RETRY_STORAGE_CHECK, RETRY_STORAGE_PROMPT
 from cytv.errors import LocalRecoveryError
+from cytv.root_runtime import BETA_TITLE
 from cytv.state import Store
 from cytv.gui_style import STYLE, TVPreview, Select, EditionOption, BrandSignature, WrappedLabel, ThemeCard, ToggleSwitch
 
@@ -1528,7 +1529,7 @@ class Wizard(QMainWindow):
                 description = WrappedLabel(tr(detail))
                 description.setObjectName('choiceDetail')
                 column.addWidget(description)
-                action = 'Install No-root' if key == '1' else 'Try Root Beta'
+                action = 'Try Root Beta' if name == BETA_TITLE else 'Install No-root'
                 self.button(action, lambda _checked=False, selected=key: self.submit(selected), layout=column)
                 rows.addWidget(card)
             cancel = self.button('Cancel', lambda: self.submit('0'))

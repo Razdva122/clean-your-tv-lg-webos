@@ -34,10 +34,11 @@ insufficient; old in-compositor LG panels remain unsupported. This fresh-install
 experimental path still has no target-TV physical acceptance or normal OTA support.
 Root access alone does not establish compatibility.
 
-If Root Beta cannot verify the required Home interfaces, or Root detects an
-unsupported LG Home ribbon or missing native Home, it checks whether **No-root** can be
-offered over your existing root SSH connection. Choose it explicitly to continue
-with Home and Home Helper. This option does not require Developer Mode.
+If the TV runs an older Node.js version than ordinary Root requires, or the
+installer confirms an unsupported LG Home ribbon or missing native Home, it
+checks whether **No-root** can run over your existing root SSH connection.
+Choose it explicitly to continue with Home and Home Helper. This option does
+not require Developer Mode.
 
 If No-root was installed again after full removal, switching to Root may require cleanup first. Back up Home preferences, choose **Uninstall Clean Your TV** with the saved Root connection and wait for verified removal. This also removes No-root Home and Helper. Then install Root; keep recovery records.
 

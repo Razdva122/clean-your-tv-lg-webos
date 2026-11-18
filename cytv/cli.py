@@ -785,9 +785,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                                     installer.select_graphics()
                                     installer.preflight(install=True, home_interfaces=True)
                     except RootCapabilityError as error:
-                        if isinstance(error, NativeHomeScriptError):
-                            raise
-                        if profile.get('root_variant') != BETA and not isinstance(error, NoRootAlternativeError):
+                        if not isinstance(error, NoRootAlternativeError):
                             raise
                         if args.migrate_home:
                             raise UserError('Choose an alternative edition without --migrate-home. Installation has not started.')

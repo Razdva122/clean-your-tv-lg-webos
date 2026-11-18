@@ -459,8 +459,12 @@ uncertain Root footprints follow the existing authenticated recovery route.
 When System Profile and KeyFilters are confirmed absent, `tv.root_ribbon_probe`
 records the Surface Manager Home state result. A valid Home entry still lets
 interactive setup offer No-root over the existing Root SSH connection.
-Likewise, a native Home path unavailable after KeyFilters pass can still offer
-No-root. Separate Doctor observations do not change these setup decisions.
+Setup can also offer No-root when it confirms native Home is unavailable after
+KeyFilters pass or return a definite rejection. In the latter case the original
+KeyFilters failure remains in the report. An unconfirmed Home capability stops
+setup. An older verified Node.js version can also trigger the No-root check.
+Each offer requires a successful independent No-root preflight using the
+same Root SSH connection. Separate Doctor observations do not change setup decisions.
 
 The report excludes raw replies, command output and Home routes. The installer
 revalidates these fields when exporting current and retained failures.

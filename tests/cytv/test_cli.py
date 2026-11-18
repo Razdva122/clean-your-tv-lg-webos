@@ -55,8 +55,8 @@ class CLITests(unittest.TestCase):
                             connect=lambda *_: remote, ask=lambda _: self.fail('Unexpected prompt'),
                             write=output.append, payload_root=fixture.payload)
         self.assertEqual(code, 2, '\n'.join(output))
-        self.assertIn('No-root — reduced functionality', '\n'.join(output))
-        self.assertIn('Root Beta — not sufficiently tested', '\n'.join(output))
+        self.assertNotIn('No-root — reduced functionality', '\n'.join(output))
+        self.assertNotIn('Root Beta — not sufficiently tested', '\n'.join(output))
         select_beta.assert_not_called()
         ssap.assert_not_called()
         self.assertFalse(remote.uploads)
@@ -105,6 +105,12 @@ class CLITests(unittest.TestCase):
     def test_root_node_failure_can_complete_no_root_using_the_same_ssh(self):
         self.assert_no_root_install_after_root_preflight(choose_beta=False)
 
+    def test_root_node_failure_hides_no_root_when_storage_is_full(self):
+        self.assert_no_root_install_after_root_preflight(choose_beta=False, storage_full=True)
+
+    def test_root_node_failure_offers_no_choice_during_retained_recovery(self):
+        self.assert_no_root_install_after_root_preflight(choose_beta=True, retained_root=True)
+
     def test_root_beta_ribbon_fallback_completes_no_root_using_the_same_ssh(self):
         self.assert_no_root_install_after_root_preflight(choose_beta=True)
 
@@ -114,6 +120,9 @@ class CLITests(unittest.TestCase):
     def test_root_beta_home_refusal_hides_no_root_when_storage_is_full(self):
         self.assert_no_root_install_after_root_preflight(choose_beta=True, generic=True, storage_full=True)
 
+    def test_root_beta_home_timeout_does_not_offer_no_root(self):
+        self.assert_no_root_install_after_root_preflight(choose_beta=True, home_unknown=True)
+
     def test_root_native_home_unavailable_uses_the_same_checked_alternative(self):
         self.assert_no_root_install_after_root_preflight(choose_beta=False, native_missing=True)
 
@@ -121,7 +130,7 @@ class CLITests(unittest.TestCase):
         self.assert_no_root_install_after_root_preflight(choose_beta=True, native_missing=True)
 
     def assert_no_root_install_after_root_preflight(self, choose_beta, generic=False, storage_full=False,
-                                                   native_missing=False):
+                                                   native_missing=False, home_unknown=False, retained_root=False):
         from cytv.errors import TVCommandError
         from cytv.root_capabilities import NATIVE_HEADERS, NATIVE_HOME_UNAVAILABLE
         from cytv.root_runtime import VENDOR_PROBE
@@ -160,6 +169,8 @@ class CLITests(unittest.TestCase):
                     return {'returnValue': True, 'configs': {key: [
                         {'file': '/usr/lib/qt5/qml/KeyFilters/systemUi.js', 'handler': 'handleSystemKeys'}]}}
                 if choose_beta and uri.endswith('/getConfigs'):
+                    if home_unknown:
+                        raise TimeoutError
                     if generic:
                         reply = {'missingConfigs': ['com.webos.surfacemanager.keyFilters'],
                                  'errorCode': -1, 'returnValue': True,
@@ -177,8 +188,9 @@ class CLITests(unittest.TestCase):
             def run(self, command, data=None, timeout=30):
                 if command == '/usr/bin/node --version':return 'v0.12.2'
                 if command == VENDOR_PROBE: return 'CYTV_VENDOR_READY'
-                if 'CYTV_FRESH_ROOT' in command:return 'CYTV_FRESH_ROOT'
-                if native_missing and command == NATIVE_HEADERS:
+                if 'CYTV_FRESH_ROOT' in command:
+                    return 'CYTV_RETAINED_ROOT' if retained_root else 'CYTV_FRESH_ROOT'
+                if (native_missing or generic) and command == NATIVE_HEADERS:
                     raise TVCommandError(NATIVE_HOME_UNAVAILABLE)
                 if not native_missing and 'process.versions.node.split' in command and 'CYTV_ROOT_READY' in command:
                     return 'CYTV_ROOT_MISSING'
@@ -204,7 +216,7 @@ class CLITests(unittest.TestCase):
         remote=LegacyTV()
         output=[]
         offers=[]
-        answers = iter(('2', '1') if choose_beta else ('1',))
+        answers = iter(('1',) if not choose_beta or storage_full else ('2', '1'))
         def ask(prompt):
             if 'Alternative edition' in prompt:
                 offers.append(prompt)
@@ -221,11 +233,15 @@ class CLITests(unittest.TestCase):
                           connect=lambda *_:remote, ask=ask,
                           write=output.append, payload_root=fixture.payload)
         profiles=state.Store(fixture.root/'cli-state').profiles()
-        if storage_full:
+        if storage_full or home_unknown or retained_root:
             self.assertEqual(code, 2, '\n'.join(output))
-            self.assertEqual(len(offers), 1)
+            self.assertEqual(len(offers), int(choose_beta and not retained_root))
+            self.assertEqual('\n'.join(output).count('No-root — reduced functionality'), int(home_unknown))
+            if storage_full and choose_beta:
+                self.assertIn('[1] Root Beta — not sufficiently tested', '\n'.join(output))
             self.assertFalse(any(profile['edition'] == 'no-root' for profile in profiles))
             self.assertFalse(remote.uploads)
+            ssap.assert_not_called()
             return
         self.assertEqual(code,0,'\n'.join(output))
         selected=next(p for p in profiles if p['edition']=='no-root')
@@ -233,9 +249,9 @@ class CLITests(unittest.TestCase):
         self.assertEqual(selected['port'],22)
         self.assertNotIn('PRIVATE-PAIRING','\n'.join(output))
         self.assertIn('--tv-name was skipped', '\n'.join(output))
-        if native_missing:
+        if native_missing or generic:
             self.assertIn('Root cannot control Home on this TV.', '\n'.join(output))
-        elif choose_beta and not generic:
+        elif choose_beta:
             self.assertIn('This TV uses the LG Home ribbon', '\n'.join(output))
         if generic:
             self.assertEqual(len(offers), 2)

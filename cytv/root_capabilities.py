@@ -31,7 +31,7 @@ C1_PROBE_STATES = ('admitted', 'request-failed', 'identity-rejected', 'identity-
                    'native-home-rejected')
 RIBBON_PROBE_STATES = ('readable', 'rejected', 'timeout', 'invalid-reply', 'unconfirmed')
 LEGACY_RIBBON = 'This TV uses the LG Home ribbon and has no System Profile or KeyFilters support.'
-NATIVE_HOME_UNAVAILABLE_MESSAGE = 'Root cannot control Home on this TV. You can try No-root using the existing SSH connection.'
+NATIVE_HOME_UNAVAILABLE_MESSAGE = 'Root cannot control Home on this TV.'
 
 
 def keyfilter_probe(info, state, code=None, *, predicate=None):
@@ -464,11 +464,19 @@ def verify(remote, checklist, info, allow_c1=False, allow_compositor=False, *, d
                 return info['home_backend']
             if failure is not None:
                 info['root_compositor_failure'] = failure
+            # A rejected KeyFilters query alone cannot establish incompatibility.
+            # When System Profile is absent, an independent native read can.
+            keyfilters_rejected = (failure == 'keyfilters-request-failed' and
+                                   info.get('root_keyfilters_probe', {}).get('state') == 'rejected')
+            if not diagnose and keyfilters_rejected:
+                probe_native_home(remote, info, inspect_mount=False)
+            native_unavailable = failure == 'native-home-unavailable' or (
+                keyfilters_rejected and info.get('root_native_home_probe') == 'unavailable')
             requirements[name] = 'fail'
             if failure == 'native-home-script':
                 admission_error = native_home_script_error(info)
                 checklist.update(name, 'fail', str(admission_error))
-            elif failure == 'native-home-unavailable':
+            elif native_unavailable:
                 checklist.update(name, 'fail', NATIVE_HOME_UNAVAILABLE_MESSAGE)
                 admission_error = NoRootAlternativeError(NATIVE_HOME_UNAVAILABLE_MESSAGE)
             else:
