@@ -1,6 +1,6 @@
 """Opt-in fixed-path kernel integration, ONLY inside a disposable Linux container.
 
-The controller supplies the compiled current native gate and exact Node 8. No
+The controller supplies the compiled current native gate and a TV Node runtime. No
 TV, network or host paths are used. Ordinary development runs skip this module.
 """
 import fcntl
@@ -14,6 +14,8 @@ import sys
 import tempfile
 import unittest
 
+from cytv.root_clean_tail import CLEAN_TAIL_STDIN as RESUME_STDIN
+from install_device import CLEAN_TAIL_STDIN as DEVICE_STDIN
 from test_cleanup_tail import HARNESS, ID, RUNTIME, SOURCE, STATE, packages
 
 
@@ -46,7 +48,16 @@ class CleanupTailHandoff(unittest.TestCase):
             fd=os.open(path,os.O_RDWR|os.O_CREAT|os.O_EXCL,0o600);descriptors.append(fd);fcntl.flock(fd,fcntl.LOCK_EX|fcntl.LOCK_NB)
         inodes=[p.stat().st_ino for p in paths]
         with tempfile.TemporaryDirectory() as temporary:
-            harness=Path(temporary)/'harness.js';harness.write_text(HARNESS)
+            harness = HARNESS.replace('base=process.argv[2],source=process.argv[3]',
+                                      'base="/",source='+json.dumps(str(SOURCE)))
+            harness = harness.replace('fake.versions=', 'fake.argv=process.argv;fake.versions=')
+
+            def run_tail(prefix, loader, fds, inherited=()):
+                args = [*prefix, node, '-e', loader, 'cytv-cleanup-tail', 'finish', ID, '-',
+                        *map(str, fds), '-', 'd'*32]
+                return subprocess.run(args, input=harness, env=env, pass_fds=inherited,
+                                      capture_output=True, text=True, timeout=20)
+
             # Harness uses the real /proc FD namespace; fixed TV RPCs alone are
             # bounded fixture replies. The gate/Ownership files are REAL paths.
             env={**os.environ,'CYTV_REAL_PROC_FD':'1','OWNERSHIP_FD':str(descriptors[1]),
@@ -55,21 +66,20 @@ class CleanupTailHandoff(unittest.TestCase):
             try:
                 blocked=subprocess.run([gate,'root-clean-lock',node,'-e','process.exit(99)'],capture_output=True,timeout=10)
                 self.assertEqual(blocked.returncode,75,blocked.stderr)
-                first=subprocess.run([node,str(harness),'/',str(SOURCE)],env=env,pass_fds=tuple(descriptors),capture_output=True,text=True,timeout=20)
+                first = run_tail([], DEVICE_STDIN, [descriptors[1], descriptors[2], descriptors[0]], tuple(descriptors))
                 self.assertEqual(json.loads(first.stdout)['reason'],'private-cleanup-incomplete',first.stderr)
-                self.assertFalse((runtime/'bin/python3.13').exists())
+                self.assertFalse((runtime/'bin/python3.13').exists(), first.stdout + first.stderr)
                 self.assertTrue((runtime/'lib/secret.py').exists())
             finally:
                 for fd in descriptors:os.close(fd)
             # No Python in the deleted runtime is needed to regain all original
             # inodes and finish exactly the remaining cleanup with current JS.
             env.pop('FAIL_MEMBER');env.update(OWNERSHIP_FD='3',PROMOTION_FD='4',WORKER_FD='5')
-            command=[gate,'root-clean-lock',node,str(harness),'/',str(SOURCE)]
-            second=subprocess.run(command,env=env,capture_output=True,text=True,timeout=20)
+            second = run_tail([gate, 'root-clean-lock'], RESUME_STDIN, [3, 4, 5])
             self.assertEqual(second.returncode,0,second.stderr)
             self.assertTrue(json.loads(second.stdout)['result']['private_cleanup_verified'])
             self.assertFalse(runtime.exists());self.assertEqual([p.stat().st_ino for p in paths],inodes)
-            again=subprocess.run(command,env=env,capture_output=True,text=True,timeout=20)
+            again = run_tail([gate, 'root-clean-lock'], RESUME_STDIN, [3, 4, 5])
             self.assertEqual(again.returncode,0,again.stderr)
             remaining=json.loads(Path(env['MUTATION_LOG']).read_text())
             self.assertEqual(remaining, [])
