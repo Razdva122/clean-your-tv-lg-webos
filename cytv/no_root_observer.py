@@ -637,17 +637,30 @@ def private_root(plan):
     return root
 
 
-def observation_error(command, failure, error=None):
+def observation_error(command, failure, error=None, *, fresh_install=False, details=None):
+    details = details if details is not None else no_root_observer_details({'command': command, 'failure': failure})
     # Preserve typed errors (including storage guidance and numeric SSH status),
     # while arbitrary transport exception messages stay private.
     if not isinstance(error, UserError):
-        error = UserError('The original No-root observation could not be verified. Recovery data was kept.',
-                          reason_code='pending-operation')
-    error.no_root_observer = no_root_observer_details({'command': command, 'failure': failure})
+        storage_preflight = fresh_install and command in ('storage-select', 'storage-check')
+        reason = details.get('observer_reason')
+        # Selection reports an unsafe parent only when the jail root already exists.
+        reservation_conflict = (failure == 'foreign-operation' or reason == 'foreign-reservation'
+                                or command == 'storage-select' and reason == 'unsafe-directory')
+        if storage_preflight and not reservation_conflict:
+            error = UserError('The TV storage check failed before any package request was sent.',
+                              reason_code='storage-preflight-failed')
+        else:
+            error = UserError('The original No-root observation could not be verified. Recovery data was kept.',
+                              reason_code='pending-operation')
+    error.no_root_observer = details
     return error
 
 
-def invoke(remote, plan, command, slot=None, source=None, proof=None, data=None):
+def invoke(remote, plan, command, slot=None, source=None, proof=None, data=None, *, fresh_install=False):
+    def failure_error(failure, error=None, details=None):
+        return observation_error(command, failure, error, fresh_install=fresh_install, details=details)
+
     request = dict(root=private_root(plan), public_root=PUBLIC_ROOT, plan=plan, command=command, slot=slot)
     if plan.get('connection') == 'root-ssh':
         if not getattr(remote, 'root', False):
@@ -713,30 +726,30 @@ def invoke(remote, plan, command, slot=None, source=None, proof=None, data=None)
                              shlex.quote(program) + ' ' + shlex.quote(canonical(request)),
                              data=data, timeout=100 if data is not None else 30)
     except UnicodeError:
-        raise observation_error(command, 'invalid-json') from None
+        raise failure_error('invalid-json') from None
     except (OSError, RuntimeError, ValueError, KeyError, TypeError) as error:
         failure = ('command-failed' if isinstance(error, TVCommandError) else
                    'timeout' if isinstance(error, TimeoutError) or getattr(error, 'reason_code', None) == 'operation-timeout' else
                    'connection-interrupted' if getattr(error, 'reason_code', None) == 'connection-interrupted' else
                    'transport-error')
-        raise observation_error(command, failure, error) from None
+        raise failure_error(failure, error) from None
     try:
         reply = json.loads(raw)
     except (ValueError, TypeError):
-        raise observation_error(command, 'invalid-json') from None
+        raise failure_error('invalid-json') from None
     if not isinstance(reply, dict):
-        raise observation_error(command, 'invalid-reply')
+        raise failure_error('invalid-reply')
     if reply.get('operation') != plan['operation']:
-        raise observation_error(command, 'foreign-operation')
+        raise failure_error('foreign-operation')
     if 'observer_error' in reply:
         if type(reply['observer_error']) is not dict:
-            raise observation_error(command, 'invalid-reply')
+            raise failure_error('invalid-reply')
         details = no_root_observer_details(dict(reply['observer_error'], command=command, failure='observer-error'))
         storage_error = (UserError(TV_STORAGE_FULL, reason_code='tv-storage-full')
                          if details['exception_code'] in ('ENOSPC', 'EDQUOT') else None)
-        error = observation_error(command, 'observer-error', storage_error)
-        error.no_root_observer = details
-        raise error
+        raise failure_error('observer-error', storage_error, details)
+    if command == 'storage-select' and reply.get('root') not in (ROOT, JAIL_ROOT):
+        raise failure_error('invalid-reply')
     return reply
 
 
@@ -775,6 +788,8 @@ def inspect_root_ssh_storage(installer, bundles, ramfs):
 
 
 def begin(installer, action, artifacts, versions, expected, configuration, setup_activation=False, ramfs=False):
+    if installer.store.pending(installer.profile):
+        refuse()
     operation = uuid.uuid4().hex
     installer.store.check_capsule_storage(installer.profile, operation)
     # No package request or durable pending receipt until storage is usable.
@@ -783,15 +798,14 @@ def begin(installer, action, artifacts, versions, expected, configuration, setup
     selected = root_ssh_storage(installer, ramfs) if root_ssh else None
     check_plan = make_plan(operation, uuid.uuid4().hex, action, artifacts, versions, PUBLIC_ROOT, root_ssh=root_ssh,
                            private_root=selected, root_handoff=handoff)
+    fresh_install = action == 'install'
     if not root_ssh:
-        selected = invoke(installer.remote, check_plan, 'storage-select').get('root')
-        if type(selected) is not str or selected not in (ROOT, JAIL_ROOT):
-            refuse()
+        selected = invoke(installer.remote, check_plan, 'storage-select', fresh_install=fresh_install)['root']
         if selected == ROOT:
             selected = None  # Preserve legacy plans and capsule bindings.
         else:
             check_plan['private_root'] = selected
-    invoke(installer.remote, check_plan, 'storage-check')
+    invoke(installer.remote, check_plan, 'storage-check', fresh_install=fresh_install)
     install_stop = getattr(installer, '_install_stop_generation', None) if setup_activation else None
     if setup_activation:
         installer._install_stop_generation = None

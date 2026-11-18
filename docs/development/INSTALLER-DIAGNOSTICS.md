@@ -691,10 +691,12 @@ Both fields are revalidated in current reports and retained failure history;
 older envelopes/records without them remain valid and do not gain invented data.
 
 For example, `storage-check` / `EACCES` / `mkdir` / `public-staging` narrows a
-failure to creation in SDK staging. It does not identify the denying policy or
-authorize chmod/chown, cleanup or retry. The storage check precedes creation of
-a new pending operation and package submission, so the generic
-`pending-operation` reason alone does not establish that pending exists.
+failure to creation in SDK staging. For a fresh install, a generic failure in
+`storage-select` or `storage-check` reports `storage-preflight-failed` before a
+new receipt or package request. The report keeps the command and failure details.
+Typed SSH and storage errors keep their existing reasons. A foreign operation
+reply or reservation still reports `pending-operation`, and a lost reply
+after a package request still requires review of the original operation.
 
 The context is added only by the launcher wrapper. Developer Mode and Root SSH
 observer source bytes, source hashes and capsule bindings are unchanged. No
