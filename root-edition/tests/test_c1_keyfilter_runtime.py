@@ -169,10 +169,14 @@ class RuntimeTests(unittest.TestCase):
             # A separate, whole read-only system image is not a Home takeover.
             stock_mount='2 1 179:27 / /usr ro,relatime - squashfs /dev/mmcblk0p27 ro\n'
             from types import SimpleNamespace
-            # macOS dev_t is signed 32-bit, but Python major/minor need an unsigned value.
+            # Encode Linux mountinfo device pairs without using the host's dev_t.
             def device_id(major, minor):
-                value = os.makedev(major, minor)
-                return value & 0xffffffff if sys.platform == 'darwin' else value
+                return major * 256 + minor
+
+            for name, extract in (('major', lambda dev: dev // 256), ('minor', lambda dev: dev % 256)):
+                override = patch.object(self.k.os, name, side_effect=extract)
+                override.start()
+                self.addCleanup(override.stop)
             with patch.object(self.k,'STOCK_APPINFO',Path('/usr/palm/applications/com.webos.app.home/appinfo.json')),patch.object(self.k.legacy,'TARGET',Path('/usr/bin/com.webos.app.home')),patch.object(self.k.os,'stat',return_value=SimpleNamespace(st_dev=device_id(179,27))):
                 mountinfo.write_text(stock_mount)
                 self.k.require_generic_environment()
