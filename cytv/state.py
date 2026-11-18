@@ -551,14 +551,15 @@ class Store:
         name = 'session-' + hashlib.sha256(profile['host'].encode()).hexdigest()[:24] + '.lock'
         with (self.root / name).open('a+b') as stream:
             stream.seek(0)
+            if os.name == 'nt':
+                import msvcrt
+                # Windows denies reads of a byte locked by another session.
+                if os.fstat(stream.fileno()).st_size == 0:
+                    stream.write(b'0')
+                    stream.flush()
+                stream.seek(0)
             try:
                 if os.name == 'nt':
-                    import msvcrt
-                    # Windows denies reads of a byte locked by another session.
-                    # Inspect its size without reading before attempting the lock.
-                    if os.fstat(stream.fileno()).st_size == 0:
-                        stream.write(b'0'); stream.flush()
-                    stream.seek(0)
                     msvcrt.locking(stream.fileno(), msvcrt.LK_NBLCK, 1)
                 else:
                     import fcntl

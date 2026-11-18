@@ -1,4 +1,5 @@
 """Private state and package boundaries: no network or TV required."""
+import errno
 import gzip
 import hashlib
 import io
@@ -21,7 +22,7 @@ class StateTests(unittest.TestCase):
             stream=MagicMock()
             stream.__enter__.return_value=stream
             stream.read.side_effect=PermissionError('Windows denies reads of locked byte')
-            locking=MagicMock(side_effect=PermissionError('already locked'))
+            locking=MagicMock(side_effect=PermissionError(errno.EACCES, 'already locked'))
             module=SimpleNamespace(locking=locking,LK_NBLCK=1,LK_UNLCK=0)
             with patch.object(state.os,'name','nt'), patch.dict('sys.modules',msvcrt=module), \
                  patch.object(Path,'open',return_value=stream), \
@@ -29,6 +30,22 @@ class StateTests(unittest.TestCase):
                 with self.assertRaisesRegex(state.UserError,'Another cytv session'):
                     with store.lock(profile):self.fail('busy lock entered')
             stream.read.assert_not_called()
+
+    def test_windows_lock_file_write_error_is_not_a_busy_tv(self):
+        from types import SimpleNamespace
+        from unittest.mock import MagicMock, patch
+        with tempfile.TemporaryDirectory() as tmp:
+            store = state.Store(tmp)
+            profile = state.target('tv.local', 'no-root')
+            stream = MagicMock()
+            stream.__enter__.return_value = stream
+            stream.write.side_effect = PermissionError(errno.EACCES, 'read-only local storage')
+            with patch.object(state.os, 'name', 'nt'), patch.dict('sys.modules', msvcrt=MagicMock()), \
+                    patch.object(Path, 'open', return_value=stream), \
+                    patch.object(state.os, 'fstat', return_value=SimpleNamespace(st_size=0)):
+                with self.assertRaises(PermissionError):
+                    with store.lock(profile, allow_observation=True):
+                        self.fail('local write failure entered observation')
 
     def test_same_tv_cannot_run_root_and_no_root_sessions_at_once(self):
         with tempfile.TemporaryDirectory() as tmp:
