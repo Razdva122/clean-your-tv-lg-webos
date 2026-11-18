@@ -162,6 +162,10 @@ explains any previous installation, including disabled Home control. Technical
 JSON remains collapsed under **Details**, and saving a report is optional. Setup
 checks installed versions and retains its normal confirmations and recovery
 gates. An unfinished operation offers **Review recovery options** first.
+A saved restart request is historical until the current cleanup requests a
+restart again. Before connection, during review or after cancellation, the
+wizard asks to check the TV state instead of repeating an old power-cycle
+instruction. Recovery receipts and device-side cleanup guards remain intact.
 
 Passwords are masked. SSH identity changes still block the connection. While TV
 changes are in progress, the window waits for the step to finish instead of

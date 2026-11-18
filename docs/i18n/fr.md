@@ -62,7 +62,7 @@ L’assistant utilise initialement la langue du système et mémorise votre choi
 3. No-root: saisissez le code de Developer Mode et acceptez la demande sur la TV. Root: utilisez vos identifiants SSH. N’acceptez une nouvelle identité SSH que pour votre propre TV sur un réseau fiable. Si une clé enregistrée a changé, arrêtez-vous et recherchez la cause.
 4. Suivez l’assistant. Gardez la TV allumée, le même réseau et CYTV ouvert jusqu’à la fin. Ne forcez pas l’arrêt de l’application Android.
 
-Dans l’installateur pour ordinateur, après une vérification réussie de la connexion, choisissez **Continuer la configuration** pour conserver la même connexion et la même édition. L’assistant explique l’état d’une installation précédente ; les résultats techniques sont dans **Détails**. Si une opération précédente nécessite une récupération, utilisez d’abord l’action proposée. L’assistant vérifie les versions installées et demande confirmation avant toute modification.
+Dans l’installateur pour ordinateur, après une vérification réussie de la connexion, choisissez **Continuer la configuration** pour conserver la même connexion et la même édition. L’assistant explique l’état d’une installation précédente ; les résultats techniques sont dans **Détails**. Si une opération précédente nécessite une récupération, utilisez d’abord l’action proposée. L’assistant vérifie les versions installées et demande confirmation avant toute modification. Les demandes de redémarrage enregistrées sont revérifiées ; l’assistant ne demande un redémarrage que si le nettoyage en cours le nécessite.
 
 ## 5. Vérifier la télécommande
 

@@ -1289,6 +1289,10 @@ Setup will check the existing installation before continuing.|Die Einrichtung pr
 Setup will check installed versions and ask before making changes.|Die Einrichtung prüft die installierten Versionen und fragt vor Änderungen nach.|La configuración comprobará las versiones instaladas y pedirá confirmación antes de realizar cambios.|A configuração verificará as versões instaladas e pedirá confirmação antes de fazer alterações.|L’assistant vérifiera les versions installées et demandera confirmation avant toute modification.|La configurazione controllerà le versioni installate e chiederà conferma prima di apportare modifiche.|설치된 버전을 확인하고 변경 전에 확인을 요청합니다.|सेटअप स्थापित संस्करणों की जाँच करेगा और बदलाव करने से पहले पूछेगा।|Konfigurator sprawdzi zainstalowane wersje i poprosi o zgodę przed zmianami.|Мастер проверит установленные версии и запросит подтверждение перед изменениями.|设置程序将检查已安装的版本，并在更改前请求确认。|設定程式將檢查已安裝的版本，並在變更前要求確認。|Průvodce zkontroluje nainstalované verze a před změnami požádá o potvrzení.
 """
 
+ROWS += """
+Check the TV state before deciding whether a restart is needed.|Prüfe den aktuellen TV-Zustand, bevor du entscheidest, ob ein Neustart nötig ist.|Comprueba el estado del TV antes de decidir si necesita reiniciarse.|Verifique o estado da TV antes de decidir se é necessário reiniciá-la.|Vérifiez l’état du téléviseur avant de déterminer si un redémarrage est nécessaire.|Controlla lo stato della TV prima di decidere se è necessario riavviarla.|재시작이 필요한지 결정하기 전에 TV 상태를 확인하세요.|पुनः शुरू करना आवश्यक है या नहीं, यह तय करने से पहले TV की स्थिति जाँचें।|Sprawdź stan telewizora, aby ustalić, czy potrzebny jest restart.|Проверьте состояние телевизора, чтобы определить, нужен ли перезапуск.|请先检查电视状态，再确定是否需要重启。|請先檢查電視狀態，再確定是否需要重新啟動。|Nejprve zkontrolujte stav televizoru a zjistěte, zda je nutný restart.
+"""
+
 MESSAGES = {}
 for row in ROWS.strip().splitlines():
     if not row.strip():

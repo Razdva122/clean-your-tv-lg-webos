@@ -62,7 +62,7 @@ El asistente de escritorio usa inicialmente el idioma del sistema y guarda una s
 3. No-root: introduce el código de Developer Mode y acepta la solicitud en el TV. Root: usa tus credenciales SSH. Acepta una nueva identidad SSH solo para tu propio TV en una red de confianza. Si cambia una clave guardada, detente e investiga.
 4. Sigue el asistente. Mantén el TV encendido, la misma red y CYTV abierto hasta que termine. No fuerces el cierre de la app Android.
 
-En el instalador de escritorio, tras comprobar la conexión, elige **Continuar configuración** para conservar la misma conexión y edición. El asistente explica el estado de una instalación anterior; los resultados técnicos están en **Detalles**. Si una operación anterior necesita recuperación, usa primero la acción de recuperación ofrecida. Antes de realizar cambios se comprueban las versiones instaladas y se pide confirmación.
+En el instalador de escritorio, tras comprobar la conexión, elige **Continuar configuración** para conservar la misma conexión y edición. El asistente explica el estado de una instalación anterior; los resultados técnicos están en **Detalles**. Si una operación anterior necesita recuperación, usa primero la acción de recuperación ofrecida. Antes de realizar cambios se comprueban las versiones instaladas y se pide confirmación. Las solicitudes de reinicio guardadas se comprueban de nuevo; el asistente solo pide reiniciar cuando la limpieza actual lo requiere.
 
 ## 5. Comprueba el mando
 

@@ -62,7 +62,7 @@ The desktop wizard selects your system language automatically; its language sele
 3. For No-root, enter the code from Developer Mode and approve the TV prompt. For Root, use your existing SSH credentials; approve a new SSH identity only for your own TV on a trusted network. If a saved key has changed, stop and investigate.
 4. Follow the wizard. Keep the TV on, stay on the same network and leave CYTV open until it finishes. Do not force-stop the Android app.
 
-On desktop, after a successful connection check, choose **Continue setup** to keep the same TV connection and edition. The wizard explains any previous installation; technical results are under **Details**. If an earlier operation needs recovery, use the offered recovery action first. Setup checks installed versions and asks for confirmation before changes.
+On desktop, after a successful connection check, choose **Continue setup** to keep the same TV connection and edition. The wizard explains any previous installation; technical results are under **Details**. If an earlier operation needs recovery, use the offered recovery action first. Setup checks installed versions and asks for confirmation before changes. The wizard rechecks saved restart requests; a restart is requested only when the current cleanup confirms it is needed.
 
 ## 5. Check your remote
 

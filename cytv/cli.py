@@ -894,7 +894,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                         write('Only ownership backups and minimal removal records were kept.')
                 elif result.get('restart_required') is True:
                     from .recovery import removal_plan
-                    removal_plan(write,store,profile,state='waiting')
+                    removal_plan(write,store,profile,state='waiting',restart_observed=True)
                 elif (result.get('reconciled') or '').startswith('updater-not-started'):
                     write.heading('Ready to reinstall Root')
                     write('The previous attempt stopped before Root Updater setup. Recovery and installed files are verified; the previous operation report was saved.')

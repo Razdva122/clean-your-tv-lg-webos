@@ -28,7 +28,21 @@ def plan(write, state, summary, next_step=KEPT, actions=None):
     write.recovery_plan(value)
 
 
-def _write_removal_plan(write, value, *, pending=None, failure=None, allow_requested=False):
+def _write_removal_plan(write, value, *, pending=None, failure=None, allow_requested=False, restart_observed=False):
+    from .recovery_ui import removal_restart_required
+    if (removal_restart_required(value) and not restart_observed
+            and (failure or {}).get('code') != 'restart-required'):
+        # A persisted request is history, not a fresh instruction to power-cycle.
+        # Keep the receipt intact; project only the need to check current state.
+        removal = dict(value.get('removal', {}), reason='removal-recheck-required')
+        removal.pop('stage', None)
+        value = dict(value, removed=False, verified_clean=False, restart_required=False,
+                     reason='removal-recheck-required', removal=removal)
+        if failure is None:
+            message = 'Check the TV state before deciding whether a restart is needed.'
+            value.update(summary=REVIEW, next_step=message,
+                         removal_presentation={'stage_text':'Verifying removal…', 'blocker_text':message,
+                                               'title_text':REVIEW, 'waiting':False})
     evidence = value
     if pending is not None and value['removal']['reason'] == 'removal-requested':
         # The public assessment also uses this reason for missing or unknown
@@ -90,10 +104,11 @@ def remove_before_reinstall(installer, ask, write, *, load_payload=False):
         _write_removal_plan(write, {'state':'complete','disposition':'clean-removal','removed':True,'verified_clean':True,
             'summary':'Clean Your TV removal is verified.','next_step':SEPARATE})
     else:
-        removal_plan(write, installer.store, installer.profile, state='waiting')
+        removal_plan(write, installer.store, installer.profile, state='waiting',
+                     restart_observed=completed.get('restart_required') is True)
 
 
-def removal_plan(write, store, profile, state='blocked', connecting=False, failure=None, *, error=None, phase='recover'):
+def removal_plan(write, store, profile, state='blocked', connecting=False, failure=None, *, error=None, phase='recover', restart_observed=False):
     """Expose only current safe assessment fields, with the selected TV bound."""
     if not profile:return False
     pending=store.pending(profile)
@@ -123,7 +138,8 @@ def removal_plan(write, store, profile, state='blocked', connecting=False, failu
     elif not connecting:
         value.update(summary=value['removal_presentation']['title_text'],
                      next_step=detail['blocker_text'] or value['next_step'])
-    _write_removal_plan(write, value, pending=pending, failure=failure, allow_requested=connecting)
+    _write_removal_plan(write, value, pending=pending, failure=failure, allow_requested=connecting,
+                        restart_observed=restart_observed)
     return True
 
 

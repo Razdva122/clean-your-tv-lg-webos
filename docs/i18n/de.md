@@ -62,7 +62,7 @@ Der Desktop-Assistent verwendet zunächst die Systemsprache und speichert eine a
 3. No-root: Geben Sie den Code aus Developer Mode ein und bestätigen Sie die Anfrage am TV. Root: Verwenden Sie Ihren SSH-Zugang. Bestätigen Sie eine neue SSH-Identität nur für Ihren eigenen TV im vertrauenswürdigen Netz. Bei einem geänderten gespeicherten Schlüssel stoppen und die Ursache klären.
 4. Folgen Sie dem Assistenten. Lassen Sie TV und CYTV eingeschaltet und wechseln Sie bis zum Abschluss nicht das Netzwerk. Beenden Sie die Android-App nicht zwangsweise.
 
-Wähle im Desktop-Installationsprogramm nach erfolgreicher Verbindungsprüfung **Einrichtung fortsetzen**, um dieselbe TV-Verbindung und Edition zu behalten. Der Assistent erklärt den Zustand einer früheren Installation; technische Ergebnisse stehen unter **Details**. Falls eine frühere Aktion Wiederherstellung erfordert, nutze zuerst die angebotene Wiederherstellung. Vor Änderungen prüft die Einrichtung installierte Versionen und fragt nach Bestätigung.
+Wähle im Desktop-Installationsprogramm nach erfolgreicher Verbindungsprüfung **Einrichtung fortsetzen**, um dieselbe TV-Verbindung und Edition zu behalten. Der Assistent erklärt den Zustand einer früheren Installation; technische Ergebnisse stehen unter **Details**. Falls eine frühere Aktion Wiederherstellung erfordert, nutze zuerst die angebotene Wiederherstellung. Vor Änderungen prüft die Einrichtung installierte Versionen und fragt nach Bestätigung. Gespeicherte Neustartanforderungen werden erneut geprüft; der Assistent fordert einen Neustart nur an, wenn die aktuelle Bereinigung ihn benötigt.
 
 ## 5. Fernbedienung prüfen
 

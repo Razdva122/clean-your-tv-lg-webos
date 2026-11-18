@@ -117,8 +117,10 @@ class BridgeTests(unittest.TestCase):
                     android_plan = native.events[-1]
                     self.assertEqual(desktop_plan.get('removal_action'), expected)
                     self.assertEqual(android_plan.get('removal_action'), expected)
-                    self.assertEqual(android_plan.get('reason'), 'restart-required')
-                    self.assertTrue(android_plan['restart_required'])
+                    self.assertEqual(android_plan.get('reason'), 'removal-recheck-required')
+                    self.assertFalse(android_plan['restart_required'])
+                    self.assertEqual(store.pending(profile)['stage'], 'restart-required')
+                    self.assertEqual(store.pending(profile)['removal_reason'], 'restart-required')
                     self.assertIs(android_plan['connection_failure'], True)
 
     def test_current_cleanup_failure_replaces_saved_restart_wording(self):
@@ -140,11 +142,12 @@ class BridgeTests(unittest.TestCase):
             store.checkpoint(profile, stage='restart-required', removal_reason='restart-required')
             removal_plan(console, store, profile,
                          error=UserError('PRIVATE', reason_code='cleanup-check-failed'))
+            self.assertEqual(store.pending(profile)['stage'], 'restart-required')
         event = native.events[-1]
         self.assertEqual(event['removal_action']['condition'], 'unverified')
         self.assertEqual(event['titleText'], event['summary'])
         self.assertEqual(event['blockerText'], event['nextStep'])
-        self.assertTrue(event['restart_required'])
+        self.assertFalse(event['restart_required'])
         self.assertIs(event['connection_failure'], False)
         self.assertNotIn('Restart the TV', str(event))
         self.assertNotIn('PRIVATE', str(event))
