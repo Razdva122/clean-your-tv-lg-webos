@@ -77,6 +77,7 @@ def _blocking_operations(store, profile, replacing=None):
 
 
 def require_idle(store, profile, replacing=None):
+    store.reconcile_removed_profiles(profile)
     if _blocking_operations(store, profile, replacing):
         raise UserError('Previous operation is unresolved. Run cytv status or cytv restore; do not retry installation.',
                         reason_code='pending-operation')

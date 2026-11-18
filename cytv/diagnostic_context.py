@@ -20,6 +20,27 @@ ROOT_COMMAND_DETAILS = (
     ('root_interpreter', ('system-python', 'private-python')),
 )
 
+# Fixed refusal codes emitted by cleanup_tail.js, plus coordinator categories.
+CLEANUP_ERRORS = (
+    'boot-session-remains', 'cleanup-member-changed', 'cleanup-readback-malformed',
+    'cleanup-readback-unavailable', 'cleanup-root-changed', 'different-removal-intent',
+    'incomplete-removal-receipts', 'invalid-cleanup-selector', 'invalid-runtime-inventory',
+    'invalid-support-stage', 'invalid-tail-stage', 'invalid-tail-stages',
+    'no-root-private-cleanup-required', 'no-root-private-readback-unavailable',
+    'original-lock-changed', 'original-lock-required', 'original-promotion-lock-missing',
+    'original-removal-required', 'oversized-cleanup-record', 'owned-activity-remains',
+    'owned-input-remains', 'owned-private-registration-remains', 'owned-process-still-used',
+    'owned-registration-remains', 'owned-route-remains', 'package-absence-unverified',
+    'package-remains', 'private-member-remains', 'restart-required', 'route-changed',
+    'runtime-cleanup-proof-required', 'runtime-member-changed', 'startup-remains',
+    'unexpected-promotion-lock', 'unknown-ownership-receipt', 'unknown-runtime-directory',
+    'unknown-runtime-member', 'unknown-support-directory', 'unknown-support-member',
+    'unknown-tail-stage', 'unsafe-cleanup-directory', 'unsafe-cleanup-member',
+    'cleanup-guard-failed', 'root-access-required', 'root-worker-busy',
+    'removal-failed', 'cleanup-check-failed',
+)
+
+
 REASONS = ('unknown', 'user-error', 'ssh-command-failed', 'ssh-exit-status-missing',
            'ssh-unreachable', 'ssh-access-denied', 'ssh-refused', 'ssh-timeout',
            'ssh-authentication', 'ssh-identity-changed', 'ssh-trust-record', 'ssh-identity-unverified', 'host-runtime',
@@ -405,6 +426,23 @@ def product_summary(value):
               (('state', STATES), ('stage', STAGES), ('code', CODES)) if key in value}
     for key in ('failure','last_failure'):
         if key in value:result[key] = worker_summary(value[key])
+    if 'cleanup_error' in value:
+        result['cleanup_error'] = choice(value['cleanup_error'], CLEANUP_ERRORS)
+    if 'removal_reason' in value:
+        from .recovery_state import REMOVAL_REASONS
+        result['removal_reason'] = choice(value['removal_reason'], REMOVAL_REASONS)
+    if 'installation' in value:
+        installation = mapping(value['installation'])
+        result['installation'] = {
+            'state': choice(installation.get('state'), STATES),
+            'reason': choice(installation.get('reason'), (
+                'invalid_snapshot', 'unsupported_device', 'retained_operation',
+                'verified_components', 'supported_migration', 'component_mismatch',
+                'no_installation', 'verified_clean_removal')),
+            **{key: installation[key] for key in
+               ('can_install', 'can_maintain', 'clean_removal_verified')
+               if type(installation.get(key)) is bool},
+        }
     if value.get('protocol')=='clean-removal-v1':
         from .recovery_state import REMOVAL_REASONS
         result['removal_reason']=choice(value.get('reason'),REMOVAL_REASONS)
@@ -431,6 +469,29 @@ def removal_binding_summary(value):
         'capsule': choice(value.get('capsule'), ('verified', 'no-original-install', 'unverified', *LOCAL_RECOVERY_REASONS)),
         'reservation': choice(value.get('reservation'), ('matched', 'absent', 'conflict', 'unverified', 'interrupted')),
     }
+
+
+def native_root_summary(value):
+    from .root_activation_diagnostics import COMPOSITOR_STOPS
+    value = mapping(value)
+    effective = mapping(value.get('effective', value))
+    result = {
+        'backend': choice(value.get('backend'), ('c1-native-gate',)),
+        'effective_backend': choice(effective.get('effective_backend', effective.get('backend')),
+                                    ('c1-native-gate',)),
+        'routing': choice(effective.get('routing'), ('compositor-keyfilter-v1',)),
+        'state': choice(effective.get('state'), ('stock', 'stopped', 'armed', 'blocked')),
+        'reason': choice(effective.get('reason'), ('none', *COMPOSITOR_STOPS)),
+    }
+    for key in ('returnValue', 'stock_verified', 'mounted', 'healthy', 'stopped',
+                'filter_installed', 'routing_active', 'guardian_recorded', 'profiles_absent'):
+        if type(effective.get(key)) is bool:
+            result[key] = effective[key]
+    if type(effective.get('guardian_pid')) is int and effective['guardian_pid'] >= 0:
+        result['guardian_recorded'] = effective['guardian_pid'] > 1
+    if 'profiles' in effective:
+        result['profiles_absent'] = effective['profiles'] is None
+    return result
 
 
 def status_summary(value):
@@ -498,6 +559,9 @@ def status_summary(value):
     for key in ('guardian_active', 'journal_exists', 'recovery_integrity_verified', 'home_enabled'):
         if type(runtime.get(key)) is bool:
             result[key] = runtime[key]
+    if ('native_root' in device or runtime.get('backend') == 'c1-native-gate'
+            or mapping(runtime.get('effective')).get('backend') == 'c1-native-gate'):
+        result['native_root'] = native_root_summary(device.get('native_root', runtime))
     recovery = mapping(runtime.get('recovery'))
     if type(recovery.get('integrity_verified')) is bool:
         result['recovery_integrity_verified'] = recovery['integrity_verified']
