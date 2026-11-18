@@ -111,7 +111,7 @@ Wählen Sie nach einem Fehler im Desktop-Installer **Problem melden**, prüfen u
 
 Unter Wartung **Clean Your TV deinstallieren** mit derselben gespeicherten TV-Verbindung wählen. Einmal bestätigen. Vorhandene bekannte Projekt-Apps und Dateien werden entfernt, fehlende übersprungen, auch nach einer Teilinstallation.
 
-Wenn aufgefordert, den TV vom Strom trennen, wieder anschließen, auf das Netzwerk warten. Standby oder Quick Start ist kein vollständiger Neustart; CYTV startet den TV nicht automatisch neu. Bei verweigertem Zugriff die angeforderte Root-Verbindung verwenden; bei beschäftigtem TV warten und erneut versuchen. Erfolg erscheint erst nach bestätigter abschließender Bereinigung. Schlüssel und Originalberichte behalten. Notfallsteuerung und Zustimmung zum Teilen gelten weiter.
+Wenn aufgefordert, den TV vom Strom trennen, wieder anschließen, auf das Netzwerk warten. Standby oder Quick Start ist kein vollständiger Neustart; CYTV startet den TV nicht automatisch neu. Wenn die Bereinigung Root-Zugriff erfordert, verwenden Sie den vorhandenen Root-Zugang zu demselben TV. Ohne diesen Zugang bleibt die Bereinigung unvollständig. Wenn der TV beschäftigt ist, warten Sie und versuchen Sie es erneut. Erfolg erscheint erst nach bestätigter abschließender Bereinigung. Schlüssel und Originalberichte behalten. Notfallsteuerung und Zustimmung zum Teilen gelten weiter.
 
 Wenn das Installationsprogramm am Computer auf den TV wartet, wählen Sie **Entfernung fortsetzen**, sobald die Schaltfläche erscheint. Mit **Abbrechen** beenden Sie das Warten und mit **Erneut versuchen** prüfen Sie die Verbindung manuell.
 

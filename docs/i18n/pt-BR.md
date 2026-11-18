@@ -111,7 +111,7 @@ Se o instalador no computador falhar, selecione **Relatar um problema** para rev
 
 Escolha **Desinstalar Clean Your TV** em Manutenção usando a mesma conexão salva. Confirme uma vez. Os apps e arquivos conhecidos do projeto presentes são removidos; os ausentes são ignorados, inclusive após instalação parcial.
 
-Quando solicitado, desconecte a TV da tomada, reconecte, aguarde a rede voltar. Espera ou Quick Start não é reinicialização completa; CYTV não reinicia a TV automaticamente. Se o acesso for negado, use a conexão Root solicitada; se a TV estiver ocupada, aguarde e tente novamente. O sucesso só aparece após verificar a limpeza final. Preserve as chaves e os relatórios originais. Continuam válidos os controles de emergência e o consentimento para compartilhar.
+Quando solicitado, desconecte a TV da tomada, reconecte, aguarde a rede voltar. Espera ou Quick Start não é reinicialização completa; CYTV não reinicia a TV automaticamente. Se a limpeza exigir acesso Root, use a conexão Root existente com a mesma TV. Sem esse acesso, a limpeza fica incompleta. Se a TV estiver ocupada, aguarde e tente novamente. O sucesso só aparece após verificar a limpeza final. Preserve as chaves e os relatórios originais. Continuam válidos os controles de emergência e o consentimento para compartilhar.
 
 Se o instalador no computador estiver aguardando a TV, escolha **Continuar a remoção** quando a opção aparecer. Escolha **Cancelar** para parar de aguardar ou **Tentar novamente** para verificar a conexão manualmente.
 

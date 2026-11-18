@@ -96,7 +96,7 @@ Po neúspěchu v instalátoru na počítači otevřete **Nahlásit problém**, p
 
 Vyberte v Údržbě **Odinstalovat Clean Your TV** se stejným uloženým připojením TV. Potvrďte jednou. Přítomné známé aplikace a soubory projektu se odeberou, chybějící se přeskočí, i po částečné instalaci.
 
-Na výzvu odpojte TV od napájení, znovu připojte, počkejte na síť. Pohotovost nebo Quick Start není úplný restart; CYTV TV automaticky nerestartuje. Při odmítnutí přístupu použijte požadované připojení Root; pokud je TV zaneprázdněn, počkejte a zkuste znovu. Úspěch se zobrazí až po ověření závěrečného úklidu. Zachovejte klíče a původní zprávy. Nouzové ovládání a souhlas se sdílením výše platí dál.
+Na výzvu odpojte TV od napájení, znovu připojte, počkejte na síť. Pohotovost nebo Quick Start není úplný restart; CYTV TV automaticky nerestartuje. Pokud uklízení vyžaduje Root, použijte stávající přístup Root ke stejnému televizoru. Bez něj zůstane úklid nedokončený. Pokud je TV zaneprázdněný, počkejte a zkuste to znovu. Úspěch se zobrazí až po ověření závěrečného úklidu. Zachovejte klíče a původní zprávy. Nouzové ovládání a souhlas se sdílením výše platí dál.
 
 Pokud instalátor na počítači čeká na TV, vyberte **Pokračovat v odinstalaci**, až se tato možnost zobrazí. Tlačítkem **Zrušit** čekání ukončíte a tlačítkem **Zkusit znovu** spojení ověříte ručně.
 

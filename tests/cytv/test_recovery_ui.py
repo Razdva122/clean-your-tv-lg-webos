@@ -81,8 +81,9 @@ class RecoveryPresentationTests(unittest.TestCase):
             ({'state':'complete','removed':True,'verified_clean':1}, None, check),
             ({'state':'ready','removed':True,'verified_clean':True}, None, check),
             ({'removal':{'stage':'verified-clean','reason':'removal-verified'}}, None, check),
-            ({'actions':['connect-root']}, None, access),
+            ({'actions':['connect-root']}, None, check),
             ({'reason':'root-access-required'}, None, access),
+            ({'reason':'root-access-required','connection_failure':True}, None, check),
             ({'removal':{'stage':'restart-required'}}, None, restart),
             (dict(terminal, restart_required=True), None, restart),
             (dict(terminal, restart_required=True), {'code':'ssh-auth-root'}, check),
@@ -99,7 +100,7 @@ class RecoveryPresentationTests(unittest.TestCase):
             ({'reason':'removal-failed','removal':{'stage':'restart-required'}}, None, check),
             ({'reason':'root-worker-busy','removal':{'stage':'restart-required'}}, None, retry),
             ({'reason':'connection-interrupted','removal':{'stage':'restart-required'}}, None, retry),
-            ({'reason':'connection-interrupted','actions':['connect-root']}, None, access),
+            ({'reason':'connection-interrupted','actions':['connect-root']}, None, retry),
             ({'reason':'removal-failed','removal':{'reason':'connection-interrupted'}}, None, check),
             ({'reason':'connection-interrupted'}, {'code':'recovery-status-rejected'}, check),
             ({'reason':'root-worker-busy','removal':{'reason':'controls-unverified'}}, None, retry),
@@ -131,6 +132,14 @@ class RecoveryPresentationTests(unittest.TestCase):
                  'removal_action':{'action':'none','condition':'complete','requires_change':False}}
         self.assertEqual(projected_removal_action(value),
                          {'action':'check','condition':'unverified','requires_change':True})
+
+    def test_precomputed_access_needs_an_explicit_removal_blocker(self):
+        from cytv.recovery_ui import projected_removal_action
+        plan = {'disposition':'clean-removal', 'actions':['connect-root'],
+                'removal_action':{'action':'connect-root','condition':'access','requires_change':True}}
+        self.assertEqual(projected_removal_action(plan)['action'], 'check')
+        self.assertEqual(projected_removal_action(dict(plan, reason='connection-interrupted'))['action'],
+                         'retry-removal')
 
     def test_connection_pending_cleanup_and_package_refusal_have_distinct_results(self):
         from cytv.recovery_ui import removal_title, removal_waiting

@@ -111,7 +111,7 @@ Si falla el instalador de escritorio, selecciona **Informar de un problema** par
 
 Elige **Desinstalar Clean Your TV** en Mantenimiento con la misma conexión guardada. Confirma una vez. Se eliminan las apps y archivos conocidos del proyecto que estén presentes y se omiten los ausentes, incluso después de una instalación parcial.
 
-Cuando se indique, desconecta la alimentación del TV, vuelve a conectarla, espera a que vuelva la red. Espera o Quick Start no es un reinicio completo; CYTV no reinicia el TV automáticamente. Si se deniega el acceso, usa la conexión Root solicitada; si el TV está ocupado, espera y reintenta. Solo se muestra éxito tras verificar la limpieza final. Conserva las claves y los informes originales. Siguen vigentes los controles de emergencia y el consentimiento para compartir.
+Cuando se indique, desconecta la alimentación del TV, vuelve a conectarla, espera a que vuelva la red. Espera o Quick Start no es un reinicio completo; CYTV no reinicia el TV automáticamente. Si la limpieza requiere acceso Root, usa tu conexión Root existente al mismo TV. Sin ese acceso, la limpieza queda incompleta. Si el TV está ocupado, espera y reintenta. Solo se muestra éxito tras verificar la limpieza final. Conserva las claves y los informes originales. Siguen vigentes los controles de emergencia y el consentimiento para compartir.
 
 Si el instalador de escritorio espera al TV, elige **Continuar la desinstalación** cuando aparezca. Elige **Cancelar** para dejar de esperar o **Intentar de nuevo** para comprobar la conexión manualmente.
 

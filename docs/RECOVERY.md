@@ -191,8 +191,9 @@ repeating power cycles or clear the unfinished operation manually.
 
 If the connection is interrupted, check it and select **Try again**. Existing
 installation history remains available; an old generic failure is not assigned
-an invented cause. If the OS denies access, use the requested Root connection.
-If another operation is actually running, wait for it to finish and try again.
+an invented cause. If the installer confirms some project files require Root
+access, final cleanup needs existing Root SSH access to the same TV. If another
+operation is running, wait for it to finish and try again.
 A failed check stays visible; it is never converted to green completion. Keep
 keys and original reports, and do not reinstall or clear Android app data to
 retry removal. Missing files are skipped; absence is not itself an error.
@@ -203,11 +204,15 @@ original No-root package request is unknown, choose **Check TV status**
 verification, choose **Review recovery options** and confirm continuation if it
 is offered. If recovery offers full removal, that action requires separate
 confirmation. Removal automatically retries transient connection loss and a
-busy CYTV worker up to three attempts. If Root access is required, choose
-**Connect using Root** for the same TV. Verified Root cleanup also finishes its
-blocked No-root removal. A failed Root activation attempts to restore and verify
-LG Home without repeating activation. Cancellation with unfinished work keeps a
-diagnostic report and recovery actions. Emergency-stop state remains unchanged.
+busy CYTV worker up to three attempts. On desktop, choose **Connect using Root**
+if it appears for a saved Root connection to the same TV. If you already have
+Root SSH access and the installer has no saved connection for it, use your
+existing Root connection in Maintenance after confirming it is the same TV.
+Without existing Root access, cleanup remains incomplete. Keep the recovery
+data. Verified Root cleanup also finishes its blocked No-root removal. A failed
+Root activation attempts to restore and verify LG Home without repeating
+activation. Cancellation with unfinished work keeps a diagnostic report and
+recovery actions. Emergency-stop state remains unchanged.
 
 **v1.13.0:** verified full removal leaves the TV ready for a new Root or No-root installation. Minimal inactive removal receipts prevent old work from resuming; do not delete them manually. Finish recovery first if removal or its current checks are incomplete.
 

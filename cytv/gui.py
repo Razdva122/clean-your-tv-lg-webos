@@ -837,6 +837,7 @@ class Wizard(QMainWindow):
             removal_reconnect = ((self.recovery_plan or {}).get('removal_reconnect')
                                  if value != 130 and retry_removal and self.command in ('uninstall', 'recover') else None)
             retry_button = None
+            missing_root_connection = False
             continue_removal = (self.removal_operation if self.command == 'restore' and completed
                                 and self.recovery_profile
                                 and self.recovery_plan.get('continue_removal') == self.removal_operation else None)
@@ -903,8 +904,14 @@ class Wizard(QMainWindow):
                     self.button('Connection details', lambda: self.edit_connection(profile, removal=True), True)
                 elif advice['action'] == 'connect-root':
                     from .recovery_ui import root_removal_profile
-                    root_profile = root_removal_profile(Store(), profile)
-                    self.button('Connect using Root', lambda: self.start('uninstall', root_profile), True)
+                    saved_root = root_removal_profile(Store(), profile)
+                    if saved_root is not None:
+                        root_profile, root_pin = saved_root
+                        self.button('Connect using Root',
+                                    lambda: self.start('uninstall', root_profile, removal_pin=root_pin), True)
+                    else:
+                        missing_root_connection = True
+                        self.button('Review recovery options', lambda: self.start('recover', profile), True)
                 elif advice['action'] == 'retry-removal':
                     operation = removal_reconnect['operation'] if removal_reconnect else self.removal_operation
                     pin = removal_reconnect['pin'] if removal_reconnect else None
@@ -991,6 +998,8 @@ class Wizard(QMainWindow):
                     message = detail.get('blocker_text') or 'Removal could not be verified. Review recovery options before continuing.'
                     if restore_for_removal:
                         message = 'Restore LG Home before continuing removal.'
+                    elif missing_root_connection:
+                        message = 'Without existing Root access, cleanup remains incomplete. Keep the recovery data.'
                     if resume_root_reinstall and show_restart:
                         message = 'Disconnect the TV from power, reconnect it, and turn it on. Then choose Continue Root reinstallation. Standby is not a full restart.'
                     if self.failure_help and self.failure_help.get('code') in ('ssh-auth-root','ssh-auth-no-root','ssh-key-file','ssh-identity','developer-key-server','developer-key-unlock','developer-key-response'):

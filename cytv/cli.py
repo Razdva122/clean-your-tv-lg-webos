@@ -364,7 +364,11 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
     try:
         removal_operation = getattr(args, 'removal_operation', None)
         removal_pin = getattr(args, 'removal_pin', None)
-        if removal_pin is not None and (removal_operation is None or args.command != 'uninstall'):
+        pinned_root_removal = (removal_pin is not None and removal_operation is None
+                               and args.edition == 'root' and args.host and args.port is not None
+                               and not (args.non_interactive or args.yes))
+        if removal_pin is not None and (args.command != 'uninstall'
+                                       or removal_operation is None and not pinned_root_removal):
             raise UserError('Removal evidence changed. Recovery data was kept.', reason_code='pending-operation')
         if removal_operation is not None and (args.command not in ('restore', 'uninstall')
                 or not args.host or not args.edition or args.port is None or args.non_interactive):
@@ -515,7 +519,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
             if profile['edition'] == 'root':
                 write('Root will stop the old Home Helper, turn on Home control and open Clean Your TV Home.')
             write('Check controls on the TV after installation.')
-        retry_removal = args.command == 'uninstall' and (removal_operation is not None or
+        retry_removal = args.command == 'uninstall' and not pinned_root_removal and (removal_operation is not None or
             (store.pending(profile) or {}).get('recovery_protocol') == 'clean-removal-v1')
         if args.command in ('install', 'uninstall', 'restore', 'enable-system-updates', 'enable-firmware-access', 'disable-firmware-access', 'recover-system-rollback', 'recover-root-rollback', 'replace-system-updater') and not (args.yes or retry_removal or args.reconnect_after_reset or reinstall_step):
             if args.command == 'uninstall':
@@ -677,6 +681,8 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
             checks.update('ssh', 'running')
             write('Connecting to the TV…')
             def connect_tv(pinned, directory=None, confirm=trust):
+                if pinned_root_removal:
+                    store.connection_profile(profile, expected_pin=removal_pin)
                 pairing = {'previous_host_key_type': old_key_type} if directory is not None else {}
                 if directory is None:
                     if saved_review:

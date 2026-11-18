@@ -111,7 +111,7 @@ Po błędzie w instalatorze na komputerze wybierz **Zgłoś problem**, aby przej
 
 Wybierz **Odinstaluj Clean Your TV** w Konserwacji dla tego samego zapisanego połączenia. Potwierdź raz. Znane aplikacje i pliki projektu, które istnieją, zostaną usunięte; brakujące zostaną pominięte, także po częściowej instalacji.
 
-Gdy pojawi się prośba, odłącz zasilanie TV, podłącz ponownie, poczekaj na połączenie z siecią. Czuwanie lub Quick Start nie jest pełnym restartem; CYTV nie uruchamia TV ponownie automatycznie. Przy odmowie dostępu użyj żądanego połączenia Root; gdy TV jest zajęty, poczekaj i ponów. Sukces pojawi się dopiero po weryfikacji końcowego czyszczenia. Zachowaj klucze i oryginalne raporty. Sterowanie awaryjne i zgoda na udostępnianie nadal obowiązują.
+Gdy pojawi się prośba, odłącz zasilanie TV, podłącz ponownie, poczekaj na połączenie z siecią. Czuwanie lub Quick Start nie jest pełnym restartem; CYTV nie uruchamia TV ponownie automatycznie. Jeśli czyszczenie wymaga dostępu Root, użyj istniejącego połączenia Root z tym samym telewizorem. Bez tego dostępu czyszczenie pozostanie niekompletne. Gdy TV jest zajęty, poczekaj i spróbuj ponownie. Sukces pojawi się dopiero po weryfikacji końcowego czyszczenia. Zachowaj klucze i oryginalne raporty. Sterowanie awaryjne i zgoda na udostępnianie nadal obowiązują.
 
 Jeśli instalator na komputerze czeka na TV, wybierz **Kontynuuj odinstalowanie**, gdy pojawi się ta opcja. Wybierz **Anuluj**, aby przerwać oczekiwanie, lub **Spróbuj ponownie**, aby ręcznie sprawdzić połączenie.
 

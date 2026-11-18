@@ -11,7 +11,7 @@ from time import monotonic, sleep
 
 from .errors import (TVRejected, UserError, TVCommandError, TV_STORAGE_FULL, CLEANUP_BOOT_ACTIONS,
                      OBSERVER_EXCEPTION_NAMES, OBSERVER_EXCEPTION_CODES,
-                     OBSERVER_FILESYSTEM_OPERATIONS, connection_interrupted, no_root_cleanup_details)
+                     OBSERVER_FILESYSTEM_OPERATIONS, ROOT_CLEANUP_ACCESS_REQUIRED, connection_interrupted, no_root_cleanup_details)
 from .transport import LunaReplyUnconfirmed
 from .package import SCREENSAVER_APP
 
@@ -20,7 +20,6 @@ from .tv_sources import node_loader, trusted_source
 APPS = ('com.local.nativehome', 'com.gathin.tvhome', 'com.cleanyourtv.updater', SCREENSAVER_APP)
 STARTUP_SERVICES = ('com.local.nativehome.service', 'com.gathin.tvhome.renewal')
 RESTART_MESSAGE = 'Restart the TV completely, then choose Try again to finish removal.'
-ROOT_MESSAGE = 'Some project files require Root access. Reconnect using Root to finish removal.'
 
 # Shared with Root's current trusted cleanup bundle. No retained TV source is
 # executed, no arbitrary paths are accepted, and Root owner backups are untouched.
@@ -769,7 +768,7 @@ def _check_access(value, defer_packages=False, *, action='inventory', guard=Fals
     access_denied = [row for row in blocked if row.get('reason') == 'permission-denied']
     root_required = value['root_present'] or any(not row.get('developer_path') for row in access_denied)
     if root_required or access_denied:
-        error = (UserError(ROOT_MESSAGE, reason_code='root-access-required') if root_required else
+        error = (UserError(ROOT_CLEANUP_ACCESS_REQUIRED, reason_code='root-access-required') if root_required else
                  UserError('Developer Mode could not verify removal of some project files. Save a diagnostic report from Recovery options.',
                            reason_code='cleanup-check-failed'))
         if action == 'sweep' or not root_required:
@@ -1086,7 +1085,7 @@ def continue_removal(installer, expected_pending):
         observe_catalog(apps)
         if apps.intersection(('com.cleanyourtv.root.preview', 'com.cleanyourtv.root.updater',
                               'com.cleanyourtv.system.updater')):
-            raise UserError(ROOT_MESSAGE, reason_code='root-access-required')
+            raise UserError(ROOT_CLEANUP_ACCESS_REQUIRED, reason_code='root-access-required')
         # An older cytv may have left an inert cleanup package registered.
         carriers = {app['id'] for app in app_info
                     if app.get('title') == 'Clean Your TV cleanup' and app.get('visible') is False}

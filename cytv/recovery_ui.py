@@ -1,5 +1,6 @@
 """Shared bounded recovery wording for desktop and Android; never authority."""
 
+from .errors import ROOT_CLEANUP_ACCESS_REQUIRED, UserError
 from .failure_help import AUTH_FAILURES, CONNECTION_FAILURES, transient_connection_failure
 from .recovery_state import REMOVAL_FAILURE_PHASES
 
@@ -24,7 +25,7 @@ REMOVAL_BLOCKERS = {
     'restart-unverified':'The TV restart could not be verified. Save the diagnostic report and keep recovery data.',
     'connection-interrupted':'Connection to the TV was interrupted. Check the connection and try again.',
     'connection-unverified':'Removal could not be verified. Review recovery options before continuing.',
-    'root-access-required':'Some project files require Root access. Reconnect using Root to finish removal.',
+    'root-access-required':ROOT_CLEANUP_ACCESS_REQUIRED,
     'root-worker-busy':'Another Clean Your TV operation is still running. Wait for it to finish, then choose Try again.',
     'removal-failed':'The TV package result could not be verified. Review recovery options before continuing.',
     'cleanup-check-failed':'Removal could not be verified. Review recovery options before continuing.',
@@ -52,13 +53,28 @@ _REMOVAL_ACTIONS = {
 
 
 def root_removal_profile(store, source):
-    """Choose connection details only; normal Root sign-in/trust still applies."""
-    from .state import target
-    if source['edition'] == 'root':
-        return dict(source)
-    saved = [profile for profile in store.profiles()
-             if profile['host'] == source['host'] and profile['edition'] == 'root']
-    return saved[0] if len(saved) == 1 else target(source['host'], 'root')
+    """Offer one saved Root connection and its own pin for explicit confirmation."""
+    import hashlib
+    import paramiko
+    from .ssh_identity_review import read_record
+
+    try:
+        saved = [profile for profile in store.profiles()
+                 if profile['host'] == source['host'] and profile['edition'] == 'root']
+        if len(saved) != 1:
+            return None
+        profile = saved[0]
+        known = store.device_path(profile) / 'known_hosts'
+        host, port = profile['host'], profile['port']
+        name = host if port == 22 else f'[{host}]:{port}'
+        pin = hashlib.sha256(read_record(known)).hexdigest()
+        if paramiko.HostKeys(str(known)).lookup(name):
+            original, pinned = store.connection_profile(profile, expected_pin=pin)
+            if pinned and original == profile:
+                return original, pin
+    except (OSError, UserError, ValueError, paramiko.SSHException, paramiko.hostkeys.InvalidHostKey):
+        pass
+    return None
 
 
 def removal_connection_failure(plan, failure=None):
@@ -108,7 +124,7 @@ def removal_action(plan, failure=None):
         return _removal_action_result('complete')
     reason = _removal_reason(plan)
     actions = plan.get('actions')
-    if reason == 'root-access-required' or (type(actions) is list and 'connect-root' in actions):
+    if reason == 'root-access-required' and not interrupted and not restart:
         return _removal_action_result('access')
     if (reason == 'original-writer-active' and plan.get('state') == 'waiting'
             and type(actions) is list and 'check' in actions and 'continue-removal' not in actions):
@@ -129,7 +145,7 @@ def projected_removal_action(plan):
         condition = value.get('condition')
         if type(condition) is str and condition in _REMOVAL_ACTIONS:
             bounded = _removal_action_result(condition)
-            if value == bounded and (condition != 'complete' or bounded == removal_action(plan)):
+            if value == bounded and (condition not in ('access', 'complete') or bounded == removal_action(plan)):
                 return bounded
     return removal_action(plan)
 

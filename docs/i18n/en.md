@@ -113,7 +113,7 @@ After a desktop installer failure, select **Open an issue** to review and copy y
 
 Choose **Uninstall Clean Your TV** in Maintenance with the same saved TV connection. Confirm once. Removal deletes known project apps and files that are present and skips absent items, including after a partial installation.
 
-When asked, disconnect the TV from power, reconnect it, wait for the network. Standby or Quick Start is not a full restart; CYTV does not restart the TV automatically. If access is denied, use the requested Root connection; if the TV is busy, wait and retry. Success appears only after final cleanup is verified. Keep your keys and original reports. The emergency controls and sharing consent above still apply.
+When asked, disconnect the TV from power, reconnect it, wait for the network. Standby or Quick Start is not a full restart; CYTV does not restart the TV automatically. If cleanup requires Root access, use your existing Root connection to the same TV. Without existing Root access, cleanup remains incomplete. If the TV is busy, wait and retry. Success appears only after final cleanup is verified. Keep your keys and original reports. The emergency controls and sharing consent above still apply.
 
 If the desktop installer waits for the TV, choose **Continue removal** when it appears. Choose **Cancel** to stop waiting or **Try again** to check manually.
 

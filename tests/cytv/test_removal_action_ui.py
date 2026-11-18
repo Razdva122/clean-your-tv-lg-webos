@@ -1,5 +1,6 @@
 """Command dispatch follows the advisory policy without changing backend authority."""
 import unittest
+from unittest.mock import patch
 from tests.cytv import test_desktop_recovery as desktop_fixture
 
 
@@ -83,6 +84,107 @@ class RemovalActionUITests(unittest.TestCase):
                 self.assertEqual([argv[0] for argv in calls], ['uninstall', 'recover'])
                 self.assertNotIn('--yes', calls[-1])
                 window.close()
+
+    def removal_window(self, *, failure=None, reason='root-access-required'):
+        from cytv.recovery import removal_plan
+        from cytv import cli
+
+        fixture = self.fixture
+        fixture.store.request_clean_removal(fixture.profile)
+        fixture.store.checkpoint(fixture.profile, stage='private-cleanup', removal_reason=reason)
+        window = fixture.window()
+        calls = []
+
+        def runner(argv, **kwargs):
+            calls.append(argv)
+            if len(calls) == 1:
+                if failure:
+                    kwargs['write'].failure_help(failure)
+                removal_plan(kwargs['write'], fixture.store, fixture.profile, failure=failure,
+                             evidence={'stock':'routing-verified', 'packages':'absent', 'cleanup':'pending'})
+                return 2
+            def connect(profile, directory, secret, trust, *, persist=True):
+                self.assertFalse(persist)
+                self.assertFalse(trust('replacement fingerprint', True))
+                return fixture.connect(profile)
+            return cli.main(argv + ['--data-dir', str(fixture.root)], payload_root=fixture.payload,
+                            connect=connect, **kwargs)
+
+        window.run = runner
+        window.start('uninstall', fixture.profile)
+        fixture.pump(lambda: not window.running)
+        return window, calls
+
+    def save_root_connection(self, host=None, port=2222):
+        from paramiko import RSAKey
+        from cytv.state import target
+
+        profile = target(host or self.fixture.profile['host'], 'root', port,
+                         self.fixture.root / 'root.key', root_variant='node012-beta')
+        self.fixture.store.save(profile)
+        path = self.fixture.store.device_path(profile) / 'known_hosts'
+        key = RSAKey.generate(1024)
+        path.write_text(f"[{profile['host']}]:{port} {key.get_name()} {key.get_base64()}\n")
+        return profile, path
+
+    def test_verified_access_requirement_uses_the_saved_root_connection(self):
+        profile, _ = self.save_root_connection()
+        self.save_root_connection(host='192.0.2.12')
+        window, calls = self.removal_window()
+        self.assertIn('Root access', window.subtitle.text())
+        self.assertIn('Clean Your TV packages are absent.', window.subtitle.text())
+        self.assertIn('Final cleanup remains to be verified.', window.subtitle.text())
+        self.fixture.button(window, 'Connect using Root').click()
+        self.fixture.pump(lambda: window.pending is not None)
+        self.assertEqual(window.pending.title, 'Restore LG Home and remove this edition?')
+        self.assertEqual(self.fixture.connections, [])
+        self.assertIn('--removal-pin', calls[-1])
+
+        with (patch('cytv.root_runtime.select_payload', return_value=(self.fixture.payload, self.fixture.manifest)),
+              patch('cytv.operations.Installer.continue_clean_removal',
+                    return_value={'verified_clean':True, 'removed':True}) as remove):
+            window.submit('y')
+            self.fixture.pump(lambda: not window.running)
+        self.assertEqual(self.fixture.connections, [profile])
+        remove.assert_called_once()
+        self.assertEqual(window.title.text(), 'Clean Your TV removal is verified.')
+
+    def test_missing_or_ambiguous_root_connection_leaves_cleanup_incomplete(self):
+        for situation in ('other-tv', 'unpinned', 'multiple'):
+            with self.subTest(situation=situation):
+                if situation == 'other-tv':
+                    self.save_root_connection(host='192.0.2.12')
+                elif situation == 'unpinned':
+                    _, pin = self.save_root_connection()
+                    pin.unlink()
+                else:
+                    self.save_root_connection()
+                    self.save_root_connection(port=3333)
+                window, calls = self.removal_window()
+                self.assertIsNone(self.fixture.button(window, 'Connect using Root'))
+                self.assertIsNotNone(self.fixture.button(window, 'Review recovery options'))
+                self.assertIn('Without existing Root access, cleanup remains incomplete.', window.subtitle.text())
+                self.assertEqual(len(calls), 1)
+
+    def test_changed_saved_root_pin_stops_before_sign_in(self):
+        profile, pin = self.save_root_connection()
+        window, _ = self.removal_window()
+        pin.write_text('replacement')
+        self.fixture.button(window, 'Connect using Root').click()
+        self.fixture.pump(lambda: window.pending is not None)
+        window.submit('y')
+        self.fixture.pump(lambda: not window.running)
+        self.assertEqual(self.fixture.connections, [])
+        self.assertIsNone(self.fixture.store.pending(profile))
+
+    def test_retryable_connection_interruption_does_not_offer_root(self):
+        self.save_root_connection()
+        window, _ = self.removal_window(failure={'code':'ssh-timeout', 'title':'Connection timed out',
+                                                'next_step':'Retry the connection.', 'detail':'The connection was interrupted.'})
+        self.assertIsNotNone(self.fixture.button(window, 'Try again'))
+        self.assertIsNone(self.fixture.button(window, 'Connect using Root'))
+        self.assertNotIn('Root access', window.subtitle.text())
+        self.assertEqual(self.fixture.connections, [])
 
     def test_existing_root_access_review_keeps_custom_connection(self):
         from PySide6.QtWidgets import QLineEdit

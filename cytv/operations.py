@@ -11,7 +11,7 @@ from time import sleep
 import uuid
 
 from . import package, i18n, diagnostics, graphics, storage
-from .errors import UserError, TVRejected, ExistingRoot, TVCommandError, root_recovery_details
+from .errors import UserError, TVRejected, ExistingRoot, TVCommandError, ROOT_CLEANUP_ACCESS_REQUIRED, root_recovery_details
 
 HOME = 'com.gathin.tvhome'
 HELPER = 'com.local.nativehome'
@@ -2272,7 +2272,7 @@ print('CYTV_PROJECT_REMOVED')
         failure=reply.get('cleanup_error')
         messages={
             'root-worker-busy':'Another Clean Your TV operation is still running. Wait for it to finish, then choose Try again.',
-            'root-access-required':'Some project files require Root access. Reconnect using Root to finish removal.',
+            'root-access-required':ROOT_CLEANUP_ACCESS_REQUIRED,
             'removal-failed':'The TV package result could not be verified. Review recovery options before continuing.',
             'cleanup-check-failed':'Final cleanup could not be verified. Review recovery options before continuing.'}
         def incomplete(code):

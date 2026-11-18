@@ -111,7 +111,7 @@ Si l’installation échoue sur ordinateur, choisissez **Signaler un problème**
 
 Choisissez **Désinstaller Clean Your TV** dans Maintenance avec la même connexion enregistrée. Confirmez une fois. Les applications et fichiers connus du projet présents sont supprimés ; les éléments absents sont ignorés, même après une installation partielle.
 
-Quand demandé, débranchez l’alimentation TV, rebranchez-la, attendez le retour du réseau. Veille ou Quick Start n’est pas un redémarrage complet ; CYTV ne redémarre pas le téléviseur automatiquement. Si l’accès est refusé, utilisez la connexion Root demandée ; si le téléviseur est occupé, patientez et réessayez. Le succès apparaît seulement après vérification du nettoyage final. Gardez les clés et rapports d’origine. Les commandes d’urgence et le consentement au partage restent applicables.
+Quand demandé, débranchez l’alimentation TV, rebranchez-la, attendez le retour du réseau. Veille ou Quick Start n’est pas un redémarrage complet ; CYTV ne redémarre pas le téléviseur automatiquement. Si le nettoyage nécessite un accès Root, utilisez votre connexion Root existante au même téléviseur. Sans cet accès, le nettoyage reste incomplet. Si le téléviseur est occupé, patientez et réessayez. Le succès apparaît seulement après vérification du nettoyage final. Gardez les clés et rapports d’origine. Les commandes d’urgence et le consentement au partage restent applicables.
 
 Si l’installateur sur ordinateur attend le téléviseur, choisissez **Poursuivre la désinstallation** quand le bouton apparaît. Choisissez **Annuler** pour arrêter l’attente ou **Réessayer** pour vérifier la connexion manuellement.
 
