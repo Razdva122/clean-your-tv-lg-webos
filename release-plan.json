@@ -57,6 +57,13 @@
       "summary": "Record confirmed C1 Root compatibility from #418"
     },
     {
+      "pr": 726,
+      "issues": [
+        722
+      ],
+      "summary": "Fix Root removal with LG Home ribbon on webOS 5"
+    },
+    {
       "pr": 727,
       "issues": [
         152
