@@ -33,7 +33,10 @@ def root_removal_failure_phase(reply):
         return None
     from .diagnostic_context import worker_summary
     # Tail and observation-only replies can include a previous worker failure.
-    latest = worker_summary(reply.get('last_failure')) if reply.get('cleanup_error') == 'cleanup-check-failed' else {}
+    failure = reply.get('cleanup_error')
+    latest = worker_summary(reply.get('last_failure')) if failure in ('cleanup-check-failed', 'removal-failed') else {}
+    if failure == 'removal-failed':
+        return None if latest.get('package_rejected') is True else 'removal-terminal-unknown'
     if latest.get('cleanup_step') not in (None, 'unknown'):
         # The worker's allowlisted cleanup steps restore or check stock controls.
         return 'controls-unverified'

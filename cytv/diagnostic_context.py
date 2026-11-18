@@ -354,6 +354,8 @@ def worker_summary(value):
                   'unsafe-cleanup-directory', 'unsafe-cleanup-member', 'cleanup-guard-failed'), None)
     if inspect_check is not None:result['inspect_check']=inspect_check
     if 'stage' in value:result['stage']=choice(value['stage'],STAGES)
+    if value.get('package_rejected') is True:
+        result['package_rejected']=True
     if 'cleanup_step' in value:
         result['cleanup_step']=choice(value['cleanup_step'],('routing-inverse','runtime-restore',
             'provision-rollback','startup-hook','legacy-lockdown','registration-restore','legacy-permissions','home-readback'))

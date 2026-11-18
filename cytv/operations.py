@@ -2245,8 +2245,9 @@ print('CYTV_PROJECT_REMOVED')
         def incomplete(code):
             from .recovery_state import root_removal_failure_phase
             from .recovery_ui import REMOVAL_BLOCKERS
-            phase_reason = root_removal_failure_phase(reply) if code == 'cleanup-check-failed' else None
-            error = UserError(REMOVAL_BLOCKERS[phase_reason] if phase_reason else messages[code], reason_code=code)
+            phase_reason = root_removal_failure_phase(reply) if code in ('cleanup-check-failed', 'removal-failed') else None
+            message = REMOVAL_BLOCKERS[phase_reason] if phase_reason and code == 'cleanup-check-failed' else messages[code]
+            error = UserError(message, reason_code=code)
             error.removal_failure_phase = phase_reason
             return error
 

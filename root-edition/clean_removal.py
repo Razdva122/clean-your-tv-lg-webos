@@ -504,6 +504,8 @@ def compact_audit(record, store):
             or (k in ('exit_status','errno') and type(v) is int and -255<=v<=4095)}
         if type(value.get('stage')) is str and value['stage'] in phases:
             result['stage']=value['stage']
+        if value.get('package_rejected') is True:
+            result['package_rejected']=True
         step=value.get('cleanup_step')
         if step in ('routing-inverse','runtime-restore','provision-rollback','startup-hook',
                     'legacy-lockdown','registration-restore','legacy-permissions','home-readback'):
