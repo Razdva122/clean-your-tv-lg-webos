@@ -54,10 +54,11 @@
     }
   ],
   "excluded": [],
-  "acceptance": "",
+  "acceptance": "2026-11-18, project LG OLED55C3RLA, firmware 43.21.71, webOS SDK 11.2.0. Selected macOS ARM64 CLI archive SHA-256 862ef9830e7acf08bcbcfd1851534474cfcd6f252deb6ee103a547e73b2aa955. On No-root Home 1.20.3 and Helper 0.9.1, ordinary Root SSH diagnostics started, resumed under a new Helper controller after a verified software restart, and expired without a persisted start request. Network HOME from Media Player reached No-root after restart. All 624 embedded payload and trusted support files matched RC2. Reused the matching signed Root and No-root updates and rollbacks on C3, Root screensaver and Desktop recovery evidence recorded in PR #703. Selected Android APK SHA-256 8cce5683def9b4104735ecc50078ce1619bc5aa2132586d356c96bec6d89514e. Published code 49 upgraded to code 50 with the original signer on an isolated API 35 ARM64 emulator. Four synthetic files were preserved and idle launch did not replay the pending operation. The maintainer approved release from RC3 with live W19P removal (#692), B9 repair and Home activation (#160), and retained C1 compositor activation (#615) left open. Physical Magic Remote, AC cold boot and audio were outside the C3 pass. Original YouTube routing (#686) remains unresolved. See PR #703 for the case ledger.",
   "build": {
     "run_id": 44331212562,
     "attempt": 2,
     "source": "4a34c8e7dc3b407a02799c998352d3660cccfd32"
-  }
+  },
+  "acceptance_build": "44331212562:2"
 }
