@@ -69,6 +69,14 @@
         152
       ],
       "summary": "Fix stale profile blocks after verified removal (#152)"
+    },
+    {
+      "pr": 728,
+      "issues": [
+        615,
+        702
+      ],
+      "summary": "Recover emergency input observation after device recreation"
     }
   ],
   "excluded": [],
