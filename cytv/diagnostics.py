@@ -231,7 +231,7 @@ def collect_home_report(remote, store, profile, write, *, reconnect=None):
                 "process.stdout.write('CYTV_DIAGNOSTIC_REQUEST_WRITTEN');")
             result = remote.run('/usr/bin/node', data=script.encode(), timeout=15)
             if result.strip() != 'CYTV_DIAGNOSTIC_REQUEST_WRITTEN':
-                raise UserError('Home Helper diagnostic request could not be verified.')
+                raise UserError('TV upload could not be verified. Existing destination was not confirmed.')
         else:
             remote.upload(directory + '/control.json', raw.encode(), mode=0o640)
     log = directory + '/controller.log'
