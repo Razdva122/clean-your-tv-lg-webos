@@ -535,6 +535,12 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
             pass
 
     def root_action(self, action, bundle=None, migrate=False, experimental=False, *, timeout=None):
+        if action == 'status':
+            # A failed new read must not advertise an earlier runtime observation.
+            observed = self.tv_info.setdefault('status', {}).setdefault('device', {})
+            for key in ('result', 'native_root', 'guardian_active', 'journal_exists',
+                        'recovery_integrity_verified', 'home_enabled'):
+                observed.pop(key, None)
         driver = (bundle or ROOT_STATE) + '/deploy.py'
         args = [self._python(ROOT_STATE), driver, action]
         if bundle:
@@ -585,6 +591,9 @@ with os.fdopen(f,'rb') as stream:
             raise
         if action == 'enable': self.collect_root_diagnostics(cursor)
         reply = json.loads(raw)
+        if action == 'status' and isinstance(reply, dict):
+            # Retain only bounded data, even in the in-memory diagnostic context.
+            observed.update(diagnostics.context.status_summary({'device': reply}))
         if not isinstance(reply, dict) or reply.get('returnValue') is not True:
             raise UserError('Root operation was not confirmed. Run cytv status; retain recovery state.', reason_code='root-operation-unconfirmed')
         return reply
@@ -635,6 +644,8 @@ with os.fdopen(f,'rb') as stream:
                 if all(checks[name]=='pass' for name in checks if name not in python_names):
                     if not install and self.native_root_present():
                         device = self.root_action('status').get('result', {})
+                        status = self.tv_info.setdefault('status', {})
+                        status.setdefault('device', {})['native_root'] = diagnostics.context.native_root_summary(device)
                         if device.get('backend') != 'c1-native-gate' or not (self.root_active(device) or self.root_setup_inactive(device)):
                             raise UserError('Root operation was not confirmed. Run cytv status; retain recovery state.', reason_code='root-operation-unconfirmed')
                         self.tv_info['home_backend'] = 'c1-native-gate'

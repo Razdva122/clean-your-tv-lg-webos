@@ -1,5 +1,7 @@
 # Release history and device evidence
 
+- [Issue 678 retained Root inspection diagnostics, 2026-11-18](2026-11-18-issue678-root-inspection.md)
+
 - [v1.23.1 and v1.24.0 candidate verification ledger](2026-11-17-release-1.23.1-rc-verification.md)
 
 - [System Updater self-update implementation, 2026-11-16](2026-11-16-system-self-update-implementation.md): Root/No-root rooted executor, focused checks and outstanding device acceptance.
