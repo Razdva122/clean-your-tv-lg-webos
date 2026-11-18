@@ -271,8 +271,8 @@ function session(directory, options, action) {
       fail('safe-mode', s, limit);
     return s;
   }
-  function read(name, limit, writable) {
-    var s = leaf(name, limit),
+  function read(name, limit, writable, replacingOutput) {
+    var s = leaf(name, limit, replacingOutput),
       fd;
     if (!s) return null;
     try {
@@ -1078,8 +1078,40 @@ function prepare(directory, log, initializeControl) {
             actual(s.stat)
           )
         );
-      if (initializeControl)
-        s.write('control.json', buffer('{}'), 432, Infinity, false);
+      if (initializeControl) {
+        var retainedDiagnostic = '{}';
+        var control = s.leaf('control.json', Infinity, true);
+        if (control && control.size <= 4096) {
+          // A firmware-expanded output is replaced below. Its diagnostic data
+          // remains inert and must pass the nonce and expiry checks first.
+          var previous = s.read('control.json', 4096, false, true);
+          try {
+            var request = JSON.parse(previous.bytes.toString('utf8'));
+            var remaining = request.expires - Date.now();
+            if (
+              request.cmd === 'diagnostics-start' &&
+              typeof request.nonce === 'string' &&
+              /^[a-f0-9]{32}$/.test(request.nonce) &&
+              typeof request.expires === 'number' &&
+              isFinite(request.expires) &&
+              remaining > 0 &&
+              remaining <= 180000
+            )
+              retainedDiagnostic = JSON.stringify({
+                cmd: request.cmd,
+                nonce: request.nonce,
+                expires: request.expires
+              });
+          } catch (ignore) {}
+        }
+        s.write(
+          'control.json',
+          buffer(retainedDiagnostic),
+          432,
+          Infinity,
+          false
+        );
+      }
       var ok = true;
       try {
         var key = s.read('ssap-key.json', 65536);

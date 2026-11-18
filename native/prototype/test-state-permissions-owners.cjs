@@ -547,3 +547,48 @@ test(
     a.equal(fs.readdirSync(f.state).length, 3);
   }
 );
+
+test(
+  'startup retains only a live bounded diagnostic request',
+  { keyMode: 0o640 },
+  (f) => {
+    const control = path.join(f.state, 'control.json');
+    const request = {
+      cmd: 'diagnostics-start',
+      nonce: 'a'.repeat(32),
+      expires: Date.now() + 120000
+    };
+    fs.writeFileSync(control, JSON.stringify(request), { mode: 0o660 });
+    a.equal(f.run(5367, true), true);
+    a.deepEqual(JSON.parse(fs.readFileSync(control, 'utf8')), request);
+    for (const value of [
+      { ...request, expires: Date.now() - 1 },
+      { ...request, expires: Date.now() + 3600000 },
+      { ...request, nonce: 'invalid' },
+      { ...request, cmd: 'stall-controller' }
+    ]) {
+      fs.writeFileSync(control, JSON.stringify(value));
+      a.equal(f.run(5367, true), true);
+      a.equal(fs.readFileSync(control, 'utf8'), '{}');
+    }
+  }
+);
+
+test(
+  'boot-expanded control retains bounded diagnostics and repairs output mode',
+  { directoryMode: 0o777, keyMode: 0o640 },
+  (f) => {
+    const control = path.join(f.state, 'control.json');
+    const request = {
+      cmd: 'diagnostics-start',
+      nonce: 'e'.repeat(32),
+      expires: Date.now() + 120000
+    };
+    fs.writeFileSync(control, JSON.stringify(request));
+    fs.chmodSync(control, 0o777);
+    f.owners.set(control, { uid: 5999, gid: 5000 });
+    a.equal(f.run(5367, true), true);
+    a.deepEqual(JSON.parse(fs.readFileSync(control, 'utf8')), request);
+    a.equal(fs.statSync(control).mode & 0o777, 0o660);
+  }
+);

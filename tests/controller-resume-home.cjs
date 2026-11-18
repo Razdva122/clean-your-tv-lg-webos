@@ -7,8 +7,14 @@ const test = require('node:test'),
 const HOME = 'com.gathin.tvhome',
   LG = 'com.webos.app.home',
   COVER = 'com.webos.app.cpcover';
-function controller({ automatic = true, blocked = false } = {}) {
-  let now = 1000,
+function controller({
+  automatic = true,
+  blocked = false,
+  initialControl = null,
+  startedAt = 1000,
+  pid = 1
+} = {}) {
+  let now = startedAt,
     seq = 0,
     worker,
     watch,
@@ -85,7 +91,8 @@ function controller({ automatic = true, blocked = false } = {}) {
         return require('./storage-fixture.cjs').create(
           fakefs,
           (d, log, initialize) => {
-            if (initialize) files.set(dir + 'control.json', '{}');
+            if (initialize)
+              files.set(dir + 'control.json', initialControl || '{}');
             return true;
           }
         );
@@ -117,7 +124,7 @@ function controller({ automatic = true, blocked = false } = {}) {
     },
     process: {
       argv: ['node', 'app', JSON.stringify({ nativeHomeAuto: automatic })],
-      pid: 1,
+      pid: pid,
       getuid: () => 5431,
       hrtime: () => [Math.floor(now / 1000), (now % 1000) * 1e6],
       on() {},
@@ -170,12 +177,13 @@ function controller({ automatic = true, blocked = false } = {}) {
     rpc,
     fg: (id) => watch.fg(id),
     watchLog: (x) => watch.log(x),
-    command(cmd) {
+    command(cmd, options = {}) {
       files.set(
         dir + 'control.json',
         JSON.stringify({
           cmd,
-          nonce: (++requestId).toString(16).padStart(32, '0')
+          nonce: (++requestId).toString(16).padStart(32, '0'),
+          ...options
         })
       );
       advance(400);
@@ -531,5 +539,160 @@ test('the original diagnostic session records standby wake and the next app', ()
         record.trigger === 'foreground' &&
         record.foreground === 'youtube.leanback.v4'
     )
+  );
+});
+
+test('restored recording observes startup before the first Home activation', () => {
+  const request = {
+    cmd: 'diagnostics-start',
+    nonce: 'a'.repeat(32),
+    expires: 180000
+  };
+  const c = controller({ initialControl: JSON.stringify(request) });
+  const records = c.logs.filter((record) => record.event === 'home-diagnostic');
+  assert.equal(records[0].trigger, 'resumed');
+  assert(
+    records.some(
+      (record) => record.trigger === 'launch-request' && record.id === HOME
+    )
+  );
+  assert(records.every((record) => record.session === request.nonce));
+  c.fg('youtube.leanback.v4');
+  c.advance(62000);
+  assert(c.logs.some((record) => record.trigger === 'expired'));
+});
+
+test('standby longer than one minute keeps the wake recording bounded', () => {
+  const c = controller({
+    initialControl: JSON.stringify({
+      cmd: 'diagnostics-start',
+      nonce: 'b'.repeat(32),
+      expires: 180000
+    })
+  });
+  c.power({ state: 'Suspend' });
+  c.advance(80000);
+  assert.equal(
+    c.logs.some((record) => record.trigger === 'expired'),
+    false
+  );
+  c.power({ state: 'Active' });
+  c.advance(400);
+  c.homeCalls().at(-1).reply();
+  c.fg('youtube.leanback.v4');
+  c.advance(61000);
+  const records = c.logs.filter((record) => record.event === 'home-diagnostic');
+  assert(
+    records.some(
+      (record) => record.trigger === 'power' && record.powerState === 'Active'
+    )
+  );
+  assert(records.some((record) => record.foreground === 'youtube.leanback.v4'));
+  assert.equal(records.at(-1).trigger, 'expired');
+});
+
+test('one diagnostic request spans two Helper processes and expires once', () => {
+  const request = {
+    cmd: 'diagnostics-start',
+    nonce: 'c'.repeat(32),
+    expires: 180000
+  };
+  const before = controller({
+    initialControl: JSON.stringify(request),
+    pid: 11
+  });
+  before.fg(HOME);
+  before.power({ state: 'Suspend' });
+  before.reset();
+  before.watchLog({ event: 'screen-watch-disconnected' });
+  before.advance(4000);
+
+  const after = controller({
+    initialControl: before.files.get(before.dir + 'control.json'),
+    startedAt: 85000,
+    pid: 22
+  });
+  after.fg(HOME);
+  after.fg('youtube.leanback.v4');
+  after.advance(61000);
+  const records = before.logs
+    .concat(after.logs)
+    .filter((record) => record.event === 'home-diagnostic');
+  assert(records.every((record) => record.session === request.nonce));
+  assert.deepEqual(
+    [...new Set(records.map((record) => record.controllerPid))],
+    [11, 22]
+  );
+  assert(
+    records.some(
+      (record) =>
+        record.trigger === 'launch-request' && record.controllerPid === 22
+    )
+  );
+  assert(
+    records.some(
+      (record) =>
+        record.foreground === 'youtube.leanback.v4' &&
+        record.controllerPid === 22
+    )
+  );
+  assert.equal(
+    records.filter((record) => record.trigger === 'expired').length,
+    1
+  );
+});
+
+test('an expired restored request never reopens diagnostic recording', () => {
+  const c = controller({
+    initialControl: JSON.stringify({
+      cmd: 'diagnostics-start',
+      nonce: 'd'.repeat(32),
+      expires: 999
+    })
+  });
+  c.advance(1000);
+  assert.equal(
+    c.logs.some((record) => record.event === 'home-diagnostic'),
+    false
+  );
+});
+
+test('installer TTL is converted to a TV-clock deadline once before acknowledgement', () => {
+  const c = controller({ startedAt: 10000000 });
+  c.command('diagnostics-start', { durationMs: 180000 });
+  const request = JSON.parse(c.files.get(c.dir + 'control.json'));
+  assert.equal(request.durationMs, undefined);
+  assert.equal(request.expires, 10180400);
+  const records = c.logs.filter((record) => record.event === 'home-diagnostic');
+  assert.equal(records[0].trigger, 'started');
+  c.advance(2000);
+  assert.equal(
+    c.logs.filter((record) => record.trigger === 'started').length,
+    1
+  );
+});
+
+test('monitor loss retains wake capture when the power subscription disconnects first', () => {
+  const c = controller();
+  c.command('diagnostics-start', { durationMs: 180000 });
+  c.reset();
+  c.watchLog({ event: 'screen-watch-disconnected' });
+  c.advance(80000);
+  assert.equal(
+    c.logs.some((record) => record.trigger === 'expired'),
+    false
+  );
+  c.fg('youtube.leanback.v4');
+  c.advance(61000);
+  assert(
+    c.logs.some(
+      (record) =>
+        record.trigger === 'foreground' &&
+        record.foreground === 'youtube.leanback.v4'
+    )
+  );
+  assert.equal(
+    c.logs.filter((record) => record.trigger === 'expired').length,
+    1
   );
 });

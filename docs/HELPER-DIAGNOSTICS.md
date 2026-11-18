@@ -19,10 +19,14 @@ No terminal commands, manual log collection or separate C5 Helper are required.
 Keep Home Helper enabled. Start recording and wait for the prompt to press Home.
 For a wake test, use Power to turn the TV off and back on while the installer
 stays open. Reproduce the problem as soon as Home appears. The installer can
-reconnect to the same TV and read the original recording while the Helper's
-recording is still available. If the connection does not return in time, save
-the incomplete report and note what appeared on screen. A full restart of the
-Helper can end the recording early.
+reconnect to the same TV and continue collecting the original session after
+Helper restarts. Keep the installer open until it offers the report. A wake
+capture can take just over three minutes. If the capture remains incomplete,
+save the report and note what appeared on screen.
+
+This workflow requires both the installer and Helper containing the bounded
+restart recording protocol. Updating the installer alone cannot preserve a
+request that an older Helper clears at startup.
 
 ## Release handoff
 
@@ -41,9 +45,23 @@ The ordinary Helper has an opt-in 60-second observation window. It adds no
 launches, retries, input grabs or second foreground watcher. The existing control
 channel handles `diagnostics-start` and `diagnostics-stop`; the installer handles
 these automatically. A random session ID separates each capture from old logs.
+A new installer requests a three-minute lifetime. Helper converts it to an
+expiry using the TV clock and persists it before acknowledging recording.
+This avoids depending on the computer and TV clocks matching.
+Helper preserves only a valid, unexpired diagnostic request during control
+initialization and resumes it before startup launch requests. The same-process
+standby path retains recording until wake, followed by up to one minute of
+observation within the original three-minute limit. Requests without an expiry
+retain the legacy one-minute behavior. Expired requests and unrelated commands
+are cleared during startup as before.
 
 Records include recognized Home presses, correlated launch requests and replies,
 foreground observations, periodic samples, monitor status, and routing state.
+Restarted controllers emit `resumed` with the same capture nonce and include
+their process ID in each diagnostic record. Power events identify the observed
+state. The export also includes successful SSH read and reconnect attempt
+counts plus elapsed capture time. These fields distinguish a disconnected
+collector from a readable log whose diagnostic session stopped producing data.
 The controller start record advertises `diagnosticsSchema: 1`.
 
 Foreground samples use the existing subscription cache and carry its age; they
