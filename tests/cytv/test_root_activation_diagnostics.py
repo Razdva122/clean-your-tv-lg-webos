@@ -93,6 +93,28 @@ class ActivationSnapshotTests(unittest.TestCase):
         self.assertEqual(self.snapshot(before['cursor'])['health_log']['scope'],'historical-tail')
 
 
+    def test_resume_session_is_validated_without_exporting_it(self):
+        boot = '12345678-1234-1234-1234-123456789abc'
+        token = 'a' * 32
+        directory = self.root/'c1-keyfilter'
+        directory.mkdir(mode=0o700)
+        kernel_boot = self.root/'boot-id'
+        kernel_boot.write_text(boot + '\n')
+        self.namespace['BOOT'] = kernel_boot
+        config = f'CYTV-C1-KEYFILTER-1\ntoken {token}\nboot {boot}\ndev 1\nino 2\nsize 3\nmtime_ns 4\n'
+        session = boot + ':session-' + 'b'*32
+        intent = dict(schema=1, enabled=True, phase='active', token=token, boot=boot, session=session)
+        for name, text in (('config', config), ('intent.json', json.dumps(intent)),
+                           ('stopped', f'{token} normal_shutdown\n')):
+            path = directory/name
+            path.write_text(text)
+            path.chmod(0o600)
+        report = self.snapshot()
+        self.assertEqual(report['compositor']['original_stop'], 'normal_shutdown')
+        self.assertNotIn(session, json.dumps(report))
+        (directory/'intent.json').write_text(json.dumps(dict(intent, phase='starting')))
+        self.assertEqual(self.snapshot()['compositor'], {'status':'unsafe'})
+
     def test_retained_compositor_stop_and_guardian_reply(self):
         boot = '12345678-1234-1234-1234-123456789abc'
         token = 'a' * 32
