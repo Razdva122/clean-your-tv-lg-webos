@@ -36,6 +36,13 @@
       "summary": "Recover No-root Home status and app refresh after channel permission drift"
     },
     {
+      "pr": 723,
+      "issues": [
+        702
+      ],
+      "summary": "Restore LG Home before retaining late standby intent"
+    },
+    {
       "pr": 725,
       "issues": [
         418
