@@ -324,7 +324,7 @@ class DesktopRecoveryTests(unittest.TestCase):
         self.inventory = {'apps': [{'id': 'youtube', 'title': 'YouTube',
                                    'icon': 'data:image/png;base64,AA=='}], 'inputs': []}
         from types import SimpleNamespace
-        ssap = SimpleNamespace(key='PRIVATE-PAIRING-KEY', inventory=lambda icon: self.inventory)
+        ssap = SimpleNamespace(key='PRIVATE-PAIRING-KEY', inventory=lambda icon, *, allow_missing_inputs=False: self.inventory)
         for target, kwargs in [
             ('cytv.state.default_dir', {'return_value': self.root}),
             ('cytv.i18n.system_languages', {'return_value': ['en']}),
