@@ -18,6 +18,10 @@ EVENT = struct.Struct('<IIHHi')
 NAME = b'LGE M-RCU - Builtin [0]'
 
 
+class InputUnavailable(ValueError):
+    """The validated channel is temporarily absent during device recreation."""
+
+
 def query(fd, nr, size):
     value = bytearray(size)
     fcntl.ioctl(fd, 0x80000000 | (size << 16) | (ord('E') << 8) | nr, value, True)
@@ -37,11 +41,17 @@ def open_remote():
                 raise
             try:
                 if not stat.S_ISCHR(os.fstat(fd).st_mode): raise ValueError('Not an input device')
-                if bytes(query(fd, 6, 256)).split(b'\0')[0] != NAME: continue
+                try:
+                    name = bytes(query(fd, 6, 256)).split(b'\0')[0]
+                except OSError as exc:
+                    if exc.errno == errno.ENODEV: continue
+                    raise
+                if name != NAME: continue
                 found.append(fd); fd = None
             finally:
                 if fd is not None: os.close(fd)
-        if len(found) != 1: raise ValueError('Validated input channel missing or ambiguous')
+        if not found: raise InputUnavailable('Validated input channel missing')
+        if len(found) != 1: raise ValueError('Validated input channel ambiguous')
         return found.pop()
     finally:
         for fd in found: os.close(fd)
@@ -63,6 +73,27 @@ def observe(fd, health, keys_released, *, report_device_gone=False):
     def lost(phase, reason):
         report(phase, reason)
         send(b'LOST')
+    def reconnect(deadline):
+        while time.monotonic() < deadline:
+            replacement = None
+            try:
+                replacement = open_remote()
+                keys = query(replacement, 0x21, 128)
+                if any(not keys[code // 8] & (1 << (code % 8)) for code in (773, 412)):
+                    raise ValueError('Emergency Home/Back input capabilities not verified')
+                released = not any(query(replacement, 0x18, 256))
+                if released and time.monotonic() < deadline:
+                    # Keep the caller's descriptor ownership and close-on-exec.
+                    os.dup2(replacement, fd, inheritable=False)
+                    return True
+            except InputUnavailable:
+                pass
+            except OSError as exc:
+                if exc.errno not in (errno.ENODEV, errno.ENXIO, errno.ENOENT): raise
+            finally:
+                if replacement is not None: os.close(replacement)
+            time.sleep(min(.02, max(0, deadline - time.monotonic())))
+        return False
     def drain(history):
         for _ in range(64):
             try: data = os.read(fd, EVENT.size * 64)
@@ -96,6 +127,7 @@ def observe(fd, health, keys_released, *, report_device_gone=False):
     policy = TripleHome(); back = LongBack(); send(b'READY')
     while True:
         select.select([fd], [], [], .1)
+        reconnect_deadline = None
         for _ in range(64):
             try: data = os.read(fd, EVENT.size * 64)
             except BlockingIOError: break
@@ -104,6 +136,20 @@ def observe(fd, health, keys_released, *, report_device_gone=False):
                     # Mark the read boundary before logging or supervisor scheduling.
                     send(('DEVICE_GONE %.9f' % time.monotonic()).encode('ascii'))
                 report('active', 'read_error', exc)
+                # The persistent supervisor already owns recovery after
+                # DEVICE_GONE. Only the native guardian path may reconnect here.
+                if exc.errno == errno.ENODEV and not report_device_gone:
+                    if reconnect_deadline is None:
+                        reconnect_deadline = time.monotonic() + .75
+                    try:
+                        resumed = reconnect(reconnect_deadline)
+                    except (OSError, ValueError):
+                        resumed = False
+                    if not resumed:
+                        lost('active', 'reconnect_failed'); return
+                    # No gesture may span two kernel input-device instances.
+                    policy = TripleHome(); back = LongBack()
+                    continue
                 raise
             if not data: lost('active', 'eof'); return
             if len(data) % EVENT.size: lost('active', 'partial_event'); return

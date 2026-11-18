@@ -151,22 +151,194 @@ class FaultDiagnosticsTests(unittest.TestCase):
   import contextlib,errno,io,json
   import emergency_reader as reader
   from unittest.mock import patch
-  for phase, typed in (('startup',True),('active',True),('active',False)):
-   with self.subTest(phase=phase,typed=typed):
+  for phase, typed, code in (('startup',True,errno.ENODEV),
+                             ('active',True,errno.ENODEV),
+                             ('active',True,errno.EIO),
+                             ('active',False,errno.EIO)):
+   with self.subTest(phase=phase,typed=typed,code=code):
     hr,hw=os.pipe();log=io.StringIO()
-    reads=([BlockingIOError()] if phase=='active' else [])+[OSError(errno.ENODEV,'private device text')]
+    reads=([BlockingIOError()] if phase=='active' else [])+[OSError(code,'private device text')]
     try:
-     with patch.object(reader.os,'set_blocking'),patch.object(reader.os,'read',side_effect=reads),patch.object(reader.select,'select',return_value=([42],[],[])),contextlib.redirect_stderr(log):
+     with patch.object(reader.os,'set_blocking'),patch.object(reader.os,'read',side_effect=reads),patch.object(reader.select,'select',return_value=([42],[],[])),patch.object(reader,'open_remote',side_effect=AssertionError('Terminal loss must not reconnect')),contextlib.redirect_stderr(log):
       with self.assertRaises(OSError):reader.observe(42,hw,lambda:True,report_device_gone=typed)
      os.close(hw);hw=None
      frames=os.read(hr,256).splitlines()
-     if phase=='active' and typed:
+     if phase=='active' and typed and code==errno.ENODEV:
       self.assertEqual(len(frames),2)
       self.assertEqual(frames[0],b'READY')
       self.assertRegex(frames[1],rb'^DEVICE_GONE [0-9]+\.[0-9]{9}$')
      else:self.assertEqual(frames,[b'READY'] if phase=='active' else [])
      self.assertTrue(log.getvalue(), 'I/O failure must identify its phase and errno')
-     self.assertEqual(json.loads(log.getvalue()),{'event':'input-observer-fault','phase':phase,'reason':'read_error','errno':19})
+     self.assertEqual(json.loads(log.getvalue()),{'event':'input-observer-fault','phase':phase,'reason':'read_error','errno':code})
     finally:
      os.close(hr)
      if hw is not None:os.close(hw)
+
+class ReconnectTests(unittest.TestCase):
+    def replay(self, reads, candidates=None, query=None, clock=None):
+        import contextlib
+        import io
+        import emergency_reader as reader
+        from contextlib import ExitStack
+        from unittest.mock import patch
+
+        def capabilities(fd, nr, size):
+            bits = bytearray(size)
+            if nr == 0x21:
+                for code in (773, 412):
+                    bits[code // 8] |= 1 << (code % 8)
+            return bits
+
+        messages = []
+        with ExitStack() as stack:
+            for target, name, options in (
+                (reader.os, 'set_blocking', {}),
+                (reader.os, 'read', {'side_effect': reads}),
+                (reader.os, 'write', {'side_effect': lambda fd, data: messages.append(data) or len(data)}),
+                (reader.select, 'select', {'return_value': ([42], [], [])}),
+                (reader, 'query', {'side_effect': query or capabilities}),
+            ):
+                stack.enter_context(patch.object(target, name, **options))
+            replace = stack.enter_context(patch.object(reader.os, 'dup2'))
+            close = stack.enter_context(patch.object(reader.os, 'close'))
+            opened = stack.enter_context(patch.object(reader, 'open_remote', side_effect=candidates or [43]))
+            if clock:
+                stack.enter_context(patch.object(reader.time, 'monotonic', side_effect=clock))
+                stack.enter_context(patch.object(reader.time, 'sleep'))
+            stack.enter_context(contextlib.redirect_stderr(io.StringIO()))
+            reader.observe(42, 99, lambda: True)
+        return messages, replace, close, opened
+
+    def taps(self, count, start=0):
+        import emergency_reader as reader
+        return b''.join(reader.EVENT.pack(2, (start + tap * 300 + offset) * 1000, 1, 773, value)
+                        for tap in range(count) for offset, value in ((0, 1), (100, 0)))
+
+    def test_enodev_replacement_keeps_health_and_emergency_escape(self):
+        import errno
+        messages, replace, close, _ = self.replay([
+            BlockingIOError(), OSError(errno.ENODEV, 'gone'), self.taps(3)])
+        replace.assert_called_once_with(43, 42, inheritable=False)
+        close.assert_called_once_with(43)
+        self.assertEqual(messages, [b'READY\n', b'ESCAPE\n'])
+
+    def test_partial_gesture_cannot_cross_input_device_instances(self):
+        import errno
+        messages, _, _, _ = self.replay([
+            BlockingIOError(), self.taps(2), OSError(errno.ENODEV, 'gone'),
+            self.taps(1, 600), BlockingIOError(), b''])
+        self.assertEqual(messages, [b'READY\n', b'PING\n', b'LOST\n'])
+
+    def test_temporarily_missing_device_is_retried_without_a_heartbeat(self):
+        import errno
+        import emergency_reader as reader
+        messages, _, _, opened = self.replay([
+            BlockingIOError(), OSError(errno.ENODEV, 'gone'), self.taps(3)],
+            candidates=[reader.InputUnavailable('missing'), 43])
+        self.assertEqual(opened.call_count, 2)
+        self.assertEqual(messages, [b'READY\n', b'ESCAPE\n'])
+
+    def test_reconnect_timeout_reports_loss_without_renewing_health(self):
+        import errno
+        import emergency_reader as reader
+        messages, replace, _, _ = self.replay([
+            BlockingIOError(), OSError(errno.ENODEV, 'gone')],
+            candidates=[reader.InputUnavailable('missing')], clock=[0, 0, 1, 1])
+        self.assertEqual(messages, [b'READY\n', b'LOST\n'])
+        replace.assert_not_called()
+
+    def test_ambiguous_or_unusable_replacement_fails_open(self):
+        import errno
+        for candidate in (ValueError('ambiguous'), OSError(errno.EACCES, 'denied')):
+            with self.subTest(candidate=candidate):
+                messages, replace, _, _ = self.replay([
+                    BlockingIOError(), OSError(errno.ENODEV, 'gone')], candidates=[candidate])
+                self.assertEqual(messages, [b'READY\n', b'LOST\n'])
+                replace.assert_not_called()
+
+    def test_repeated_enodev_never_renews_health_and_keeps_one_deadline(self):
+        import errno
+        from itertools import count
+        clock = count(0, .1)
+        messages, _, _, opened = self.replay(
+            [BlockingIOError()] + [OSError(errno.ENODEV, 'gone')] * 10,
+            candidates=[43] * 10, clock=lambda: next(clock))
+        self.assertEqual(messages, [b'READY\n', b'LOST\n'])
+        self.assertLess(opened.call_count, 10)
+
+    def test_held_keys_cannot_publish_replacement_health(self):
+        import errno
+        from itertools import count
+        clock = count(0, .1)
+        def held(fd, nr, size):
+            bits = bytearray(size)
+            for code in (773, 412):
+                bits[code // 8] |= 1 << (code % 8)
+            return bits
+        messages, replace, _, _ = self.replay(
+            [BlockingIOError(), OSError(errno.ENODEV, 'gone')],
+            candidates=[43] * 10, query=held, clock=lambda: next(clock))
+        self.assertEqual(messages, [b'READY\n', b'LOST\n'])
+        replace.assert_not_called()
+
+    def test_long_back_still_opens_lg_home_after_replacement(self):
+        import errno
+        import emergency_reader as reader
+        from itertools import count
+        clock = count(0, .1)
+        messages, _, _, _ = self.replay(
+            [BlockingIOError(), OSError(errno.ENODEV, 'gone'),
+             reader.EVENT.pack(2, 0, 1, 412, 1)] + [BlockingIOError()] * 20 + [b''],
+            clock=lambda: next(clock))
+        self.assertEqual(messages.count(b'LGHOME\n'), 1)
+        self.assertNotIn(b'ESCAPE\n', messages)
+
+    def test_replacement_requires_home_and_back_capabilities(self):
+        import errno
+        messages, replace, close, _ = self.replay([
+            BlockingIOError(), OSError(errno.ENODEV, 'gone')], query=lambda fd, nr, size: bytearray(size))
+        self.assertEqual(messages, [b'READY\n', b'LOST\n'])
+        replace.assert_not_called()
+        close.assert_called_once_with(43)
+
+    def test_real_descriptor_replacement_delivers_emergency_and_closes_new_fd(self):
+        import contextlib
+        import errno
+        import io
+        import emergency_reader as reader
+        from unittest.mock import patch
+        old_read, old_write = os.pipe()
+        new_read, new_write = os.pipe()
+        health_read, health_write = os.pipe()
+        original_read = os.read
+        reads = 0
+        def device_read(fd, size):
+            nonlocal reads
+            reads += 1
+            if reads == 2:
+                raise OSError(errno.ENODEV, 'device replaced')
+            return original_read(fd, size)
+        def query(fd, nr, size):
+            bits = bytearray(size)
+            if nr == 0x21:
+                for code in (773, 412):
+                    bits[code // 8] |= 1 << (code % 8)
+            return bits
+        try:
+            os.write(new_write, self.taps(3))
+            os.set_blocking(new_read, False)
+            with patch.object(reader.os, 'read', side_effect=device_read), \
+                    patch.object(reader, 'open_remote', return_value=new_read), \
+                    patch.object(reader, 'query', side_effect=query), \
+                    contextlib.redirect_stderr(io.StringIO()):
+                reader.observe(old_read, health_write, lambda: True)
+            self.assertEqual(original_read(health_read, 128), b'READY\nESCAPE\n')
+            self.assertFalse(os.get_inheritable(old_read))
+            with self.assertRaises(OSError):
+                os.fstat(new_read)
+            new_read = None
+        finally:
+            for fd in (old_read, old_write, new_read, new_write, health_read, health_write):
+                if fd is not None:
+                    try: os.close(fd)
+                    except OSError: pass
