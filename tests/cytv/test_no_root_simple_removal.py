@@ -294,7 +294,14 @@ class SimpleRemoval(unittest.TestCase):
                     if uri.endswith('/launch'):raise error
                     return original(uri,payload,**kwargs)
                 self.remote.luna=luna
-                with self.assertRaises(type(error)):self.remove()
+                with self.assertRaises(type(error)):
+                    self.remove()
+                pending = self.store.pending(self.profile)
+                if isinstance(error, TVRejected):
+                    self.assertEqual(pending['removal_failure_phase'], 'controls-unverified')
+                else:
+                    self.assertIsNone(pending.get('removal_failure_phase'))
+                    self.assertEqual(pending['removal_reason'], 'connection-interrupted')
                 self.assertFalse(any(uri.endswith('/dev/remove') for uri,_ in self.remote.calls))
                 self.assertTrue(self.remote.apps)
 
@@ -2494,6 +2501,8 @@ class SimpleRemoval(unittest.TestCase):
         self.assertEqual(caught.exception.reason_code, 'cleanup-check-failed')
         pending = self.store.pending(self.profile)
         self.assertEqual(pending['removals'], {app:'terminal'})
+        self.assertEqual(pending['removal_failure_phase'], 'removal-terminal-unknown')
+        self.assertEqual(pending['removal_reason'], 'cleanup-check-failed')
         with self.assertRaises(UserError):
             self.remove()  # A positive exact result still matters on retry.
         self.remote.sam.clear()

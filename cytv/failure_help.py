@@ -2,8 +2,8 @@
 import errno
 import socket
 
-from .errors import DeveloperKeyError, TVConnectionError, TVRejected, is_storage_full, TV_STORAGE_FULL, TV_STORAGE_RAMFS, COMPUTER_STORAGE_FULL, no_root_observer_details
-from .recovery_state import unsubmitted_removal
+from .errors import DeveloperKeyError, TVConnectionError, TVRejected, is_storage_full, TV_STORAGE_FULL, TV_STORAGE_RAMFS, COMPUTER_STORAGE_FULL, no_root_cleanup_details, no_root_observer_details
+from .recovery_state import REMOVAL_FAILURE_PHASES, REMOVAL_REASONS, unsubmitted_removal
 from .root_action_failure import ACTIVATION_CODES, ACTIVATION_DETAILS
 
 NETWORK = 'Keep the TV on and use the same home network. Review the selected TV address and SSH port, Local Network access and VPN isolation.'
@@ -194,7 +194,11 @@ def removal_failure(error, phase, profile=None, pending=None, help=None):
     if getattr(error, 'removal_restart_required', False) is True:
         return {'code':'restart-required'}
     reason = getattr(error, 'reason_code', None)
-    from .recovery_state import REMOVAL_REASONS
+    diagnosed_phase = getattr(error, 'removal_failure_phase', None)
+    if diagnosed_phase in REMOVAL_FAILURE_PHASES.values():
+        return {'code':diagnosed_phase}
+    if reason == 'cleanup-check-failed' and no_root_cleanup_details(getattr(error, 'no_root_cleanup', None)).get('action') == 'sweep':
+        return {'code':'private-cleanup-incomplete'}
     if reason in REMOVAL_REASONS:
         return {'code':reason}
     if (isinstance(error, (TimeoutError, ConnectionResetError, ConnectionAbortedError, BrokenPipeError))

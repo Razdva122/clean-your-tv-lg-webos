@@ -45,6 +45,47 @@ class RootRecoveryDiagnosticsTests(unittest.TestCase):
                 self.assertNotIn('192.0.2.1',report.read_text())
                 self.assertNotIn('pid',data['root_recovery'])
 
+    def test_current_root_control_failure_wins_over_prior_package_failure(self):
+        from cytv.recovery import removal_plan
+        from cytv.errors import UserError
+        from tests.cytv.test_full_uninstall import FullUninstallTests
+
+        fixture = FullUninstallTests()
+        self.addCleanup(fixture.doCleanups)
+        installer, remote, store, profile, _, _ = fixture.fixture('failed')
+        run = remote.run.side_effect
+        first_failure = {'exception_type': 'ValueError', 'stage': 'package-removal'}
+        latest_failure = {'exception_type': 'ValueError', 'stage': 'private-cleanup',
+                          'cleanup_step': 'home-readback'}
+        def fail_controls(command, **kwargs):
+            raw = run(command, **kwargs)
+            if '/install_driver.py clean-remove ' not in command:
+                return raw
+            reply = json.loads(raw)
+            return json.dumps(dict(reply, stage='private-cleanup', reason='private-cleanup-incomplete',
+                                   cleanup_error='cleanup-check-failed', failure=first_failure,
+                                   last_failure={**latest_failure, 'message': 'PRIVATE'}))
+        remote.run.side_effect = fail_controls
+        with self.assertRaises(UserError) as caught:
+            installer.uninstall_project()
+
+        plans = []
+        write = SimpleNamespace(recovery=lambda _profile: None, recovery_plan=plans.append)
+        removal_plan(write, store, profile, error=caught.exception, phase='uninstall')
+        self.assertEqual(plans[-1]['summary'], 'TV controls could not be verified.')
+        self.assertNotIn('Removing private setup data…', str(plans[-1]))
+        self.assertNotIn('PRIVATE', str(plans[-1]))
+        self.assertEqual(plans[-1]['removal_action']['action'], 'check')
+        removal_plan(write, store, profile)
+        self.assertEqual(plans[-1]['summary'], 'TV controls could not be verified.')
+
+        report = diagnostics.create_report(store, 'uninstall', profile, 'uninstall', caught.exception,
+                                           installer.tv_info, status=installer.tv_info['status'])
+        product = json.loads(report.read_text())['status']['product']
+        self.assertEqual(product['failure'], first_failure)
+        self.assertEqual(product['last_failure'], latest_failure)
+        self.assertNotIn('PRIVATE', report.read_text())
+
     def test_unavailable_or_untrusted_diagnostics_never_replace_failure(self):
         for raw in (OSError('unavailable'), 'not JSON', '[]', '{"schema":99}',
                     '{"schema":1,"attempt":"old","phase":"status","reason":"negative-reply","luna_error_code":-1}',

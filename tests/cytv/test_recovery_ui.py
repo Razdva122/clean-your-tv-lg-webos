@@ -93,8 +93,8 @@ class RecoveryPresentationTests(unittest.TestCase):
         from cytv.recovery_ui import removal_details
         self.assertEqual(removal_details({'disposition':'clean-removal','removal':{
             'stage':'private-cleanup','reason':'removal-terminal-unknown'}}), {
-                'stage_text':'Removing private setup data…',
-                'blocker_text':'The TV package result could not be verified. Review recovery options before continuing.'})
+                'stage_text':'Verifying removal…',
+                'blocker_text':'Review recovery options before trying to remove packages again.'})
 
     def test_unknown_codes_do_not_become_private_main_ui_text_or_completion(self):
         from cytv.recovery_ui import removal_details

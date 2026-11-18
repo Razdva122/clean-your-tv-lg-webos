@@ -40,6 +40,44 @@ class RemovalActionUITests(unittest.TestCase):
                 self.assertNotIn('--yes', calls[-1])
                 window.close()
 
+    def test_unverified_controls_and_package_results_have_distinct_guidance(self):
+        from cytv.errors import UserError
+        from cytv.recovery import removal_plan
+
+        self.fixture.store.request_clean_removal(self.fixture.profile)
+        for stage, reason, title, instruction in (
+                ('original-writers-fenced', 'controls-unverified',
+                 'TV controls could not be verified.',
+                 'Review recovery options before continuing.'),
+                ('package-removal', 'removal-terminal-unknown',
+                 'The TV package result could not be verified.',
+                 'Review recovery options before trying to remove packages again.'),
+                ('requested', 'unknown',
+                 'Removal is not finished yet.',
+                 'Removal could not be verified. Review recovery options before continuing.')):
+            with self.subTest(reason=reason):
+                self.fixture.store.checkpoint(self.fixture.profile, stage=stage, removal_reason=reason)
+                calls = []
+                def runner(argv, **kwargs):
+                    calls.append(argv)
+                    if argv[0] == 'uninstall':
+                        removal_plan(kwargs['write'], self.fixture.store, self.fixture.profile,
+                                     error=UserError('PRIVATE', reason_code=reason), phase='uninstall')
+                    return 2
+                window = self.fixture.window()
+                window.run = runner
+                window.start('uninstall', self.fixture.profile)
+                self.fixture.pump(lambda: not window.running)
+                self.assertEqual(window.title.text(), title)
+                self.assertIn(instruction, window.subtitle.text())
+                self.assertNotIn('PRIVATE', window.subtitle.text())
+                self.assertIsNone(self.fixture.button(window, 'Try again'))
+                self.fixture.button(window, 'Review recovery options').click()
+                self.fixture.pump(lambda: not window.running)
+                self.assertEqual([argv[0] for argv in calls], ['uninstall', 'recover'])
+                self.assertNotIn('--yes', calls[-1])
+                window.close()
+
     def test_existing_root_access_review_keeps_custom_connection(self):
         from PySide6.QtWidgets import QLineEdit
         profile = dict(self.fixture.profile, edition='root', port=2222, root_variant='node012-beta')

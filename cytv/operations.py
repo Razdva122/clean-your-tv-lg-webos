@@ -2096,7 +2096,7 @@ print('CYTV_PROJECT_REMOVED')
     def continue_clean_removal(self, expected_pending):
         from .errors import connection_interrupted
         from .failure_help import CONNECTION_FAILURES, removal_failure, transient_connection_failure
-        from .recovery_state import REMOVAL_REASONS
+        from .recovery_state import REMOVAL_FAILURE_PHASES, REMOVAL_REASONS
         # Root's verified full-project absence also completes blocked No-root
         # goals for this host. Never use an old receipt or cross-host proof.
         related = []
@@ -2129,13 +2129,19 @@ print('CYTV_PROJECT_REMOVED')
                 pending = self.store.pending(self.profile)
                 if pending:
                     failure = removal_failure(error, 'uninstall', self.profile, pending)
+                    checkpoint = {}
                     if transient_connection_failure(failure):
-                        self.store.checkpoint(self.profile, removal_reason='connection-interrupted')
+                        checkpoint['removal_reason'] = 'connection-interrupted'
                     elif lost or failure['code'] in CONNECTION_FAILURES:
-                        self.store.checkpoint(self.profile, removal_reason='connection-unverified')
+                        checkpoint['removal_reason'] = 'connection-unverified'
                     elif reason in REMOVAL_REASONS and (self.profile['edition'] == 'no-root' or reason in
                             ('root-access-required', 'root-worker-busy', 'removal-failed')):
-                        self.store.checkpoint(self.profile, removal_reason=reason)
+                        checkpoint['removal_reason'] = reason
+                    phase_reason = failure['code'] if failure['code'] in REMOVAL_FAILURE_PHASES.values() and not lost else None
+                    if phase_reason or pending.get('removal_failure_phase'):
+                        checkpoint['removal_failure_phase'] = phase_reason
+                    if checkpoint:
+                        self.store.checkpoint(self.profile, **checkpoint)
                 if not reconnect or attempt == 2 or not (lost or reason == 'root-worker-busy'):
                     if self.profile['edition']=='root' and not lost:
                         self.collect_root_diagnostics()
@@ -2236,9 +2242,17 @@ print('CYTV_PROJECT_REMOVED')
             'root-access-required':'Some project files require Root access. Reconnect using Root to finish removal.',
             'removal-failed':'The TV package result could not be verified. Review recovery options before continuing.',
             'cleanup-check-failed':'Final cleanup could not be verified. Review recovery options before continuing.'}
+        def incomplete(code):
+            from .recovery_state import root_removal_failure_phase
+            from .recovery_ui import REMOVAL_BLOCKERS
+            phase_reason = root_removal_failure_phase(reply) if code == 'cleanup-check-failed' else None
+            error = UserError(REMOVAL_BLOCKERS[phase_reason] if phase_reason else messages[code], reason_code=code)
+            error.removal_failure_phase = phase_reason
+            return error
+
         if failure in messages:
             self.store.checkpoint(self.profile,removal_reason=failure)
-            raise UserError(messages[failure],reason_code=failure)
+            raise incomplete(failure)
         result=reply.get('result',{})
         if result.get('restart_required') is True:
             self.store.checkpoint(self.profile,stage='restart-required',removal_reason='restart-required',cleanup_boot_id=reply.get('cleanup_boot_id'))
@@ -2246,7 +2260,7 @@ print('CYTV_PROJECT_REMOVED')
         if (reply.get('state')!='complete' or phase!='verified-clean'
                 or result.get('removed') is not True or result.get('private_cleanup_verified') is not True
                 or reply.get('current') is not True):
-            raise UserError(messages['cleanup-check-failed'],reason_code='cleanup-check-failed')
+            raise incomplete('cleanup-check-failed')
         result=dict(result,verified_clean=True)
         self.store.checkpoint(self.profile,stage='verified-clean',removal_reason='removal-verified',result=result)
         self.store.finish_clean_removal(self.profile)

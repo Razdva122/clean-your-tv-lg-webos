@@ -1,6 +1,7 @@
 """Shared bounded recovery wording for desktop and Android; never authority."""
 
 from .failure_help import AUTH_FAILURES, CONNECTION_FAILURES, transient_connection_failure
+from .recovery_state import REMOVAL_FAILURE_PHASES
 
 REMOVAL_STAGES = {
     'requested':'Removal has been requested.',
@@ -17,7 +18,7 @@ REMOVAL_BLOCKERS = {
     'original-writer-active':'The TV is busy. Wait a moment and try again.',
     'ownership-conflict':'The current TV installer reservation could not be verified.',
     'controls-unverified':'TV controls could not be verified. Review recovery options before continuing.',
-    'removal-terminal-unknown':'The TV package result could not be verified. Review recovery options before continuing.',
+    'removal-terminal-unknown':'Review recovery options before trying to remove packages again.',
     'private-cleanup-incomplete':'Final cleanup could not be verified. Review recovery options before continuing.',
     'restart-required':'Restart the TV completely: disconnect it from power, reconnect it, then choose Try again. Standby is not a full restart.',
     'connection-interrupted':'Connection to the TV was interrupted. Check the connection and try again.',
@@ -25,7 +26,7 @@ REMOVAL_BLOCKERS = {
     'root-access-required':'Some project files require Root access. Reconnect using Root to finish removal.',
     'root-worker-busy':'Another Clean Your TV operation is still running. Wait for it to finish, then choose Try again.',
     'removal-failed':'The TV package result could not be verified. Review recovery options before continuing.',
-    'cleanup-check-failed':'Final cleanup could not be verified. Review recovery options before continuing.',
+    'cleanup-check-failed':'Removal could not be verified. Review recovery options before continuing.',
     'removal-verified':'',
     'removal-recheck-required':'Connect to the TV to verify the saved removal result.',
 }
@@ -112,7 +113,7 @@ def removal_action(plan, failure=None):
         return _removal_action_result('transient')
     if restart and reason in (None, 'restart-required', 'removal-requested'):
         return _removal_action_result('restart')
-    if reason == 'removal-requested':
+    if reason == 'removal-requested' and _saved_failure_phase(plan) is None:
         return _removal_action_result('transient')
     return _removal_action_result('unverified')
 
@@ -135,9 +136,22 @@ def _presentation_condition(plan, failure):
     return removal_action(plan, failure)['condition']
 
 
+def _saved_failure_phase(plan):
+    removal = plan.get('removal')
+    phase = removal.get('failure_phase') if type(removal) is dict else None
+    reason = _removal_reason(plan)
+    if reason in (None, 'removal-requested', 'cleanup-check-failed', 'removal-failed', *REMOVAL_FAILURE_PHASES.values()):
+        return phase if phase in REMOVAL_FAILURE_PHASES.values() else None
+    return None
+
+
 def _presentation_reason(plan, failure):
     if failure is None:
-        reason = _removal_reason(plan)
+        reason = _saved_failure_phase(plan) or _removal_reason(plan)
+        removal = plan.get('removal')
+        if (reason == 'cleanup-check-failed' and type(removal) is dict
+                and removal.get('stage') == 'private-cleanup'):
+            reason = 'private-cleanup-incomplete'
     else:
         reason = failure.get('code') if type(failure) is dict else None
     return reason if type(reason) is str and reason != 'restart-required' and reason in REMOVAL_BLOCKERS else None
@@ -160,7 +174,11 @@ def removal_title(plan, failure=None):
     if condition == 'restart':
         return 'Restart the TV to finish removal'
     reason = _presentation_reason(plan, failure)
-    if reason in ('private-cleanup-incomplete', 'cleanup-check-failed'):
+    if reason == 'controls-unverified':
+        return 'TV controls could not be verified.'
+    if reason == 'removal-terminal-unknown':
+        return 'The TV package result could not be verified.'
+    if reason == 'private-cleanup-incomplete':
         return 'Finish Clean Your TV cleanup'
     removal = plan.get('removal') if type(plan.get('removal')) is dict else {}
     if condition == 'access' and removal.get('stage') == 'private-cleanup':
@@ -177,7 +195,7 @@ def removal_waiting(plan, failure=None):
     if type(saved.get('waiting')) is bool:
         return saved['waiting']
     return (_presentation_condition(plan, failure) == 'restart' or _presentation_reason(plan, failure) in
-            ('private-cleanup-incomplete', 'cleanup-check-failed', 'root-worker-busy', 'original-writer-active'))
+            ('private-cleanup-incomplete', 'root-worker-busy', 'original-writer-active'))
 
 
 def removal_details(plan, failure=None):
@@ -207,8 +225,9 @@ def removal_details(plan, failure=None):
         reason = 'root-access-required'
         if stage == 'restart-required':
             stage = 'private-cleanup'
-    elif reason in ('private-cleanup-incomplete', 'cleanup-check-failed'):
-        stage = 'verified-clean'
+    elif reason in ('controls-unverified', 'removal-terminal-unknown', 'removal-failed',
+                    'private-cleanup-incomplete', 'cleanup-check-failed'):
+        stage = None
     elif stage == 'restart-required':
         stage = None
     return {'stage_text':REMOVAL_STAGES.get(stage, 'Verifying removal…'),

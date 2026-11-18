@@ -217,13 +217,15 @@ off. Physical checks remain separate. See the
 
 For unfinished removal, the primary action follows the current result. A known
 connection interruption, busy operation or required restart offers **Try again**
-for the same approved goal after the condition is resolved. Unverified cleanup,
-package results, TV controls or changed project paths offer **Review recovery
-options**. That review keeps the saved operation and asks separately before
-continuing removal. **Save diagnostic report…** remains available. For other failed
-steps, saving the report is the primary action. Save that attempt's report with
-the normal file dialog and attach it to your issue; no
-terminal or later `doctor` run is needed. Cancelling the file dialog or choosing
+for the same approved goal after the condition is resolved. When the installer can
+identify the blocked step, it says whether it could verify the TV controls, the
+package removal result or cleanup of project files. Choose **Review recovery
+options** for these results or for changed project paths. If the package result is
+unknown, review the saved operation before trying to remove any packages again.
+The review asks separately before continuing removal. **Save diagnostic report…**
+remains available. For other failed steps, saving the report is the primary action.
+Save that attempt's report with the normal file dialog and attach it to your issue.
+You can do this directly from the installer. Cancelling the file dialog or choosing
 an unwritable destination keeps the original report available. If report creation
 failed, the window says so; include the visible error instead. Unknown outcomes
 still stop the process, with no automatic retry or deletion of recovery evidence.

@@ -797,10 +797,14 @@ def _remove_package(installer, app):
         reply = installer.remote.luna(uri, {'id': app, 'subscribe': True}, terminal='removed', timeout=150)
         if (not isinstance(reply, dict) or not terminal_reply(reply, 'removed', uri)
                 or reply.get('id', app) != app or reply.get('details', {}).get('id', app) != app):
-            raise UserError('The TV package result could not be verified.', reason_code='removal-failed')
+            error = UserError('The TV package result could not be verified.', reason_code='removal-failed')
+            error.removal_failure_phase = 'removal-terminal-unknown'
+            raise error
     except TVRejected as error:
         error.args = ('The TV package result could not be verified. Review recovery options before continuing.',)
         error.reason_code = 'removal-failed'
+        if not error.definite_package_removal_rejection(app):
+            error.removal_failure_phase = 'removal-terminal-unknown'
         raise
 
 
@@ -985,10 +989,13 @@ def continue_removal(installer, expected_pending):
         sam_apps = APPS if final.get('legacy_layout') else sam_readback
         if final.get('empty_helper_dirs_retained') is True:
             sam_apps = set(sam_apps) | {APPS[0]}
-        if remaining or catalog_remains or (guard and any(
-                _exact_developer_app(installer, app) for app in APPS if app in sam_apps)):
-            raise UserError('Final cleanup could not be verified. Review recovery options before continuing.',
-                            reason_code='cleanup-check-failed')
+        packages_remain = bool(catalog_remains) or (not remaining and guard and any(
+            _exact_developer_app(installer, app) for app in APPS if app in sam_apps))
+        if remaining or packages_remain:
+            error = UserError('Final cleanup could not be verified. Review recovery options before continuing.',
+                              reason_code='cleanup-check-failed')
+            error.removal_failure_phase = 'removal-terminal-unknown' if packages_remain else 'private-cleanup-incomplete'
+            raise error
         retained_helper = final.get('empty_helper_dirs_retained') is True
         return final, wait_for_stopped_processes(require_idle or retained_helper, verify_after_remove=True,
             allow_opaque=retained_helper_reboot and retained_helper)
@@ -1293,7 +1300,11 @@ def continue_removal(installer, expected_pending):
     installer.store.checkpoint(installer.profile, cleanup_inputs_pending=not inputs_removed)
     if guard:
         device('inventory')
-    restore_stock_home(installer, allow_legacy_launch_ack=retained_helper_reboot and idle_helper)
+    try:
+        restore_stock_home(installer, allow_legacy_launch_ack=retained_helper_reboot and idle_helper)
+    except TVRejected as error:
+        error.removal_failure_phase = 'controls-unverified'
+        raise
     installer.store.checkpoint(installer.profile, stage='controls-restored')
     external_update = current.get('external_update_hint')
     if external_update is not None:

@@ -20,6 +20,33 @@ STATES += ('cleanup-in-progress', 'verified-clean')
 REASONS += REMOVAL_REASONS
 
 
+REMOVAL_FAILURE_PHASES = {
+    'original-writers-fenced': 'controls-unverified',
+    'package-removal': 'removal-terminal-unknown',
+    'private-cleanup': 'private-cleanup-incomplete',
+}
+
+
+def root_removal_failure_phase(reply):
+    """Locate an incomplete current Root attempt using bounded worker evidence."""
+    if reply.get('state') != 'recovery_required':
+        return None
+    from .diagnostic_context import worker_summary
+    # Tail and observation-only replies can include a previous worker failure.
+    latest = worker_summary(reply.get('last_failure')) if reply.get('cleanup_error') == 'cleanup-check-failed' else {}
+    if latest.get('cleanup_step') not in (None, 'unknown'):
+        # The worker's allowlisted cleanup steps restore or check stock controls.
+        return 'controls-unverified'
+    phase = REMOVAL_FAILURE_PHASES.get(latest.get('stage'))
+    if phase:
+        return phase
+    reason = reply.get('reason')
+    if reason in REMOVAL_FAILURE_PHASES.values():
+        return reason
+    stage = reply.get('stage')
+    return REMOVAL_FAILURE_PHASES.get(stage) if type(stage) is str else None
+
+
 def removal_summary(pending):
     """Fixed safe projection; neither old success nor this advice grants effects."""
     pending = pending if type(pending) is dict else {}
@@ -33,6 +60,11 @@ def removal_summary(pending):
     result = {'state':'cleanup-in-progress',
             'stage':stage, 'reason':reason if reason in REMOVAL_REASONS else 'removal-requested',
             'original_outcome':outcome if outcome in ('complete', 'recovery_required') else 'unknown'}
+    phase_reason = pending.get('removal_failure_phase')
+    if (reason not in ('restart-required', 'removal-verified', 'removal-recheck-required')
+            and stage not in ('restart-required', 'verified-clean')
+            and phase_reason in REMOVAL_FAILURE_PHASES.values()):
+        result['failure_phase'] = phase_reason
     proof = pending.get('result')
     if stage == 'verified-clean' and type(proof) is dict and proof.get('empty_helper_dirs_retained') is True:
         result['empty_helper_dirs_retained'] = True
