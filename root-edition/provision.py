@@ -586,8 +586,13 @@ def repair_beta_recovery(checkpoint=lambda stage: None):
         finalize(record_failure=False, firmware_permissions=False, writer=beta_repair_write)
     checkpoint('final-status')
     status = rpc('status')
+    # LS2 handlers wrap the Python CLI envelope in their own result.
+    runtime = status.get('result')
+    result = runtime.get('result') if isinstance(runtime, dict) else None
+    recovery = result.get('recovery') if isinstance(result, dict) else None
     if (status.get('root') is not True
-            or status.get('result', {}).get('recovery', {}).get('integrity_verified') is not True):
+            or not isinstance(runtime, dict) or runtime.get('returnValue') is not True
+            or not isinstance(recovery, dict) or recovery.get('integrity_verified') is not True):
         raise ValueError('Repaired Beta recovery status could not be verified')
     if stage != 'installed-recovery-only':
         checkpoint('write-deployment-stage')
