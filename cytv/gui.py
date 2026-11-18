@@ -816,11 +816,15 @@ class Wizard(QMainWindow):
                 self.button('Reconnect after factory reset',
                             lambda: self.start('install', reset_profile, reconnect_after_reset=True))
             report_actions = None
-            if doctor_ready or connection_help or (retry_removal and self.report):
+            if connection_help or (retry_removal and self.report):
                 report_actions = QHBoxLayout()
                 self.form_layout.addLayout(report_actions)
             if self.report:
-                self.button('Save diagnostic report…', self.save_report, (failed or setup_review) and not retry_removal and not connection_help, layout=report_actions)
+                save_report = self.button('Save diagnostic report…', self.save_report,
+                                          (failed or setup_review) and not retry_removal and not connection_help,
+                                          layout=report_actions)
+                if doctor_ready:
+                    save_report.setObjectName('doctorReport')
                 if failed:
                     self.subtitle.setText(tr('Save the report from this failed attempt and attach it to your issue. Recovery data has been kept.'))
             elif failed:
@@ -830,7 +834,7 @@ class Wizard(QMainWindow):
                             layout=report_actions if connection_help else None)
             self.button('Back to start', self.home,
                         not doctor_ready and not connection_help and not retry_removal and not recover and not ((failed or setup_review) and self.report),
-                        layout=report_actions if retry_removal or doctor_ready else None)
+                        layout=report_actions if retry_removal else None)
             failed_checks = [result for result in self.check_results.values() if result['status'] in ('fail', 'unknown')]
             if failed and failed_checks:
                 self.subtitle.setText(tr('Failed') + ': ' + ', '.join(tr(result['label']) for result in failed_checks) + '\n' + self.subtitle.text())

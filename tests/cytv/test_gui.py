@@ -120,8 +120,10 @@ class GuiTests(unittest.TestCase):
         for button in (w.details_toggle, w.cancel, *w.form.findChildren(QPushButton)):
             self.assertTrue(w.rect().contains(button.mapTo(w, button.rect().bottomRight())), button.text())
             self.assertGreaterEqual(button.width(), button.minimumSizeHint().width(), button.text())
-        self.assertTrue(next(b for b in w.form.findChildren(QPushButton)
-                             if b.text() == 'Продолжить настройку').isDefault())
+        actions = {button.text(): button for button in w.form.findChildren(QPushButton)}
+        proceed = actions['Продолжить настройку']
+        self.assertTrue(proceed.isDefault())
+        self.assertEqual(actions['Сохранить диагностический отчёт…'].width(), proceed.width())
 
     def test_debloat_restoration_defaults_to_skip_without_cancelling_removal(self):
         from cytv import debloat, i18n
