@@ -101,7 +101,7 @@ Podaj model TV, firmware, No-root lub Root, urządzenie instalujące, krok i kom
 
 Jeśli No-root oferuje **Ponów sprawdzanie pamięci**, wybierz tę opcję, aby sprawdzić ten sam telewizor w trybie tylko do odczytu. Po udanej kontroli potwierdź instalację osobno. Jeśli instalator wykryje niezakończoną operację, wybierz **Sprawdź opcje odzyskiwania**.
 
-Jeśli instalator na komputerze zweryfikuje pakiety, ale przycisk Home nie otwiera Clean Your TV, na ekranie wyników wybierz **Diagnostyka przycisku Home** dla No-root lub **Sprawdź stan telewizora** dla Root.
+Jeśli instalator na komputerze zweryfikuje pakiety, ale przycisk Home nie otwiera Clean Your TV, na ekranie wyników wybierz **Diagnostyka przycisku Home** dla No-root lub **Sprawdź stan telewizora** dla Root. W No-root zobaczysz zapisany wynik. Wybierz **Zapisz raport diagnostyczny**, aby zachować kopię.
 
 Po błędzie w instalatorze na komputerze wybierz **Zgłoś problem**, aby przejrzeć i skopiować szkic. Jeśli masz zapisany raport diagnostyczny, dołącz go do formularza.
 

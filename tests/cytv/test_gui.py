@@ -1432,13 +1432,19 @@ class GuiTests(unittest.TestCase):
                 self.assertNotIn('Continue setup', buttons)
                 self.assertEqual(calls, [])
                 buttons[label].click()
-                self.pump(lambda: not w.running)
-                self.assertEqual(len(calls), 1)
-                args = calls[0]
-                self.assertEqual(args[0], command)
-                self.assertIn('--no-discovery', args)
-                for field, value in profile.items():
-                    self.assertEqual(args[args.index('--' + field.replace('_', '-')) + 1], str(value))
+                if command == 'home-diagnostics':
+                    self.assertFalse(w.running)
+                    self.assertEqual(calls, [])
+                    self.assertEqual(w.title.text(), 'Home button diagnostics')
+                    self.assertEqual(w.report, report)
+                else:
+                    self.pump(lambda: not w.running)
+                    self.assertEqual(len(calls), 1)
+                    args = calls[0]
+                    self.assertEqual(args[0], command)
+                    self.assertIn('--no-discovery', args)
+                    for field, value in profile.items():
+                        self.assertEqual(args[args.index('--' + field.replace('_', '-')) + 1], str(value))
 
     def test_steps_follow_events_without_marking_failed_install_complete(self):
         w = Wizard()

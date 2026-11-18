@@ -193,11 +193,19 @@ read-only check on the same TV. After a successful check, confirm
 appears, follow **Review recovery options**.
 
 The completion screen shows package verification, startup readback and your
-physical Home-button result separately. If the packages are verified but Home
-didn't open Clean Your TV, choose **Home button diagnostics** in No-root and
-follow the recording prompts. In Root, choose **Check TV status** to read the
-current Home routing. Both use the same TV connection. You can save the original
-report before starting the check.
+physical Home-button result separately. For the Home check, start with an app
+or TV input on screen. Briefly press Home once on the physical remote and
+select what appeared. If you used a phone or network remote, choose **Skip**.
+
+If Clean Your TV Home appears, you can continue using it. If LG Home appears,
+check whether Home control is active. If the screen stays the same, keep the
+current setup and save the diagnostic report.
+
+In No-root, choose **Home button diagnostics** on the results screen to review
+what you already reported and save the existing report. If a recording of a
+physical press is still needed, open **Home button diagnostics** from the
+Maintenance menu. In Root, choose **Check TV status** to read current
+Home routing on the same TV connection.
 
 On failure, read the explanation and choose **Open an issue** to review an
 editable local draft. Choose **Copy draft**, then **Open issue form** to open the

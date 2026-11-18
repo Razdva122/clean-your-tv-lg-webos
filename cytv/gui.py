@@ -926,7 +926,7 @@ class Wizard(QMainWindow):
                   and home_failed and self.check_results.get('packages', {}).get('status') == 'pass'):
                 profile = dict(self.selected_profile)
                 if profile['edition'] == 'no-root':
-                    self.button('Home button diagnostics', lambda: self.start('home-diagnostics', profile))
+                    self.button('Home button diagnostics', self.show_reported_home_result)
                 else:
                     self.button('Check TV status', lambda: self.start('status', profile))
             connection_help = (failed and self.failure_help and self.failure_help.get('can_edit_connection')
@@ -1755,6 +1755,11 @@ class Wizard(QMainWindow):
             button.setAutoDefault(False)
         editor.setFocus()
         dialog.open()
+
+    def show_reported_home_result(self):
+        self.title.setText(tr('Home button diagnostics'))
+        self.subtitle.setText(tr('Your Home-button result is already recorded. Review it below.'))
+        self.badge.setText(self.title.text())
 
     def save_report(self, parent=None):
         filename, _ = QFileDialog.getSaveFileName(parent or self, tr('Save diagnostic report'), self.report.name, 'JSON (*.json)')

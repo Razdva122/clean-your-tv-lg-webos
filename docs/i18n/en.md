@@ -103,7 +103,7 @@ For help, include TV model, firmware, No-root or Root, installer device, failed 
 
 If No-root offers **Retry storage check**, choose it to repeat the read-only check on the same TV. Confirm installation separately after the check passes. If the installer finds an unfinished operation, use **Review recovery options**.
 
-If the desktop installer verifies the packages but Home doesn't open Clean Your TV, choose **Home button diagnostics** for No-root or **Check TV status** for Root on the results screen.
+If the desktop installer verifies the packages but Home doesn't open Clean Your TV, choose **Home button diagnostics** for No-root or **Check TV status** for Root on the results screen. No-root shows your recorded result. Use **Save diagnostic report** to keep a copy.
 
 After a desktop installer failure, select **Open an issue** to review and copy your draft. Attach the saved diagnostic report in the issue form if available.
 

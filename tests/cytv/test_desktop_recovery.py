@@ -1179,8 +1179,8 @@ class DesktopRecoveryTests(unittest.TestCase):
         w.submit('{}')  # Skip optional customization.
         self.pump(lambda: w.pending is not None)
         self.assertIn('Home button result', w.pending.label)
-        self.assertEqual(w.pending.default, '3')
-        self.assertEqual([key for key, _, _ in w.pending.options], ['1','2','3'])
+        self.assertEqual(w.pending.default, '4')
+        self.assertEqual([key for key, _, _ in w.pending.options], ['1','2','3','4'])
         self.assertEqual(w.check_results['packages']['status'], 'pass')
         self.assertEqual(w.check_results['home-button']['status'], 'unknown')
         w.submit('2')
@@ -1200,6 +1200,20 @@ class DesktopRecoveryTests(unittest.TestCase):
         self.assertEqual(len(installs),2)
         self.assertTrue(all(profile == self.profile for profile in self.connections))
         self.assertNotIn('PRIVATE-PAIRING-KEY', w.report.read_text())
+        self.assertEqual(report['tv']['setup_outcome']['home_destination'], 'lg-home')
+        self.assertEqual(w.content.toPlainText().count('physical TV remote'), 1)
+        self.assertIn('Open an app or TV input', w.content.toPlainText())
+        original_report = w.report
+        connections = list(self.connections)
+        calls = list(self.remote.calls)
+        self.button(w, 'Home button diagnostics').click()
+        self.assertEqual(w.title.text(), 'Home button diagnostics')
+        self.assertIn('already recorded', w.subtitle.text())
+        self.assertEqual(w.report, original_report)
+        self.assertIsNone(w.pending)
+        self.assertEqual(self.connections, connections)
+        self.assertEqual(self.remote.calls, calls)
+
 
     def test_skipped_home_check_is_saved_as_untested_after_successful_packages(self):
         self.store.finish(self.profile)

@@ -101,7 +101,7 @@ Indica modelo, firmware, No-root o Root, dispositivo de instalación, paso y men
 
 Si No-root ofrece **Repetir la comprobación de almacenamiento**, elige esa opción para repetir la comprobación de solo lectura en el mismo televisor. Confirma la instalación por separado cuando se complete la comprobación. Si el instalador detecta una operación pendiente, elige **Revisar opciones de recuperación**.
 
-Si el instalador de escritorio verifica los paquetes pero el botón Home no abre Clean Your TV, elige **Diagnóstico del botón Home** para No-root o **Ver estado del televisor** para Root en la pantalla de resultados.
+Si el instalador de escritorio verifica los paquetes pero el botón Home no abre Clean Your TV, elige **Diagnóstico del botón Home** para No-root o **Ver estado del televisor** para Root en la pantalla de resultados. No-root muestra el resultado ya registrado. Usa **Guardar informe de diagnóstico** para guardar una copia.
 
 Si falla el instalador de escritorio, selecciona **Informar de un problema** para revisar y copiar el borrador. Adjunta al formulario el informe de diagnóstico guardado, si está disponible.
 

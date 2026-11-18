@@ -101,7 +101,7 @@ Indica modello TV, firmware, No-root o Root, dispositivo di installazione, passa
 
 Se No-root offre **Ripeti controllo dello spazio**, scegli questa opzione per ripetere il controllo in sola lettura sulla stessa TV. Dopo il controllo, conferma l’installazione separatamente. Se c’è un’operazione in sospeso, scegli **Esamina le opzioni di ripristino**.
 
-Se il programma di installazione desktop verifica i pacchetti ma il tasto Home non apre Clean Your TV, scegli **Diagnostica del tasto Home** per No-root o **Controlla lo stato della TV** per Root nella schermata dei risultati.
+Se il programma di installazione desktop verifica i pacchetti ma il tasto Home non apre Clean Your TV, scegli **Diagnostica del tasto Home** per No-root o **Controlla lo stato della TV** per Root nella schermata dei risultati. No-root mostra il risultato già registrato. Usa **Salva rapporto diagnostico** per conservarne una copia.
 
 Se l’installer sul computer non riesce a completare un passaggio, scegli **Segnala un problema** per rivedere e copiare la bozza. Se disponibile, allega al modulo il rapporto diagnostico salvato.
 

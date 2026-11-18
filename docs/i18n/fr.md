@@ -101,7 +101,7 @@ Indiquez modèle de TV, micrologiciel, No-root ou Root, appareil d’installatio
 
 Si No-root propose **Relancer la vérification du stockage**, choisissez cette option pour vérifier le même téléviseur en lecture seule. Une fois la vérification réussie, confirmez l’installation séparément. Si une opération reste en cours, choisissez **Examiner les options de récupération**.
 
-Si l’installateur de bureau a vérifié les paquets mais que la touche Home n’ouvre pas Clean Your TV, choisissez **Diagnostic du bouton Home** avec No-root ou **Vérifier l’état du téléviseur** avec Root sur l’écran des résultats.
+Si l’installateur de bureau a vérifié les paquets mais que la touche Home n’ouvre pas Clean Your TV, choisissez **Diagnostic du bouton Home** avec No-root ou **Vérifier l’état du téléviseur** avec Root sur l’écran des résultats. Avec No-root, le résultat déjà enregistré s’affiche. Utilisez **Enregistrer le rapport de diagnostic** pour en conserver une copie.
 
 Si l’installation échoue sur ordinateur, choisissez **Signaler un problème** pour relire et copier le brouillon. Joignez au formulaire le rapport de diagnostic enregistré, s’il est disponible.
 

@@ -31,10 +31,46 @@ class HomeDiagnosticsTests(unittest.TestCase):
                 state.target('192.0.2.55', 'no-root'), lambda text: None)
             value = json.loads(path.read_text())
             self.assertTrue(value['helper_diagnostics']['complete'])
+            self.assertEqual(value['helper_diagnostics']['home_button'], 'not-tested')
             self.assertEqual(len(value['helper_diagnostics']['records']), 3)
             self.assertEqual(len(list(path.parent.glob('*.json'))), 1)
             self.assertNotIn('PAIRINGKEY', path.read_text())
             self.assertEqual(remote.commands[-1]['cmd'], 'diagnostics-stop')
+
+    def test_diagnostic_requires_explicit_physical_observation(self):
+        from cytv.terminal import Console
+
+        for answer, destination, result in (
+                (None, None, 'not-tested'), ('4', None, 'not-tested'),
+                ('2', 'lg-home', 'not-working'), ('3', 'no-visible-response', 'not-working'),
+                ('1', 'cytv-home', 'confirmed-by-user')):
+            with self.subTest(answer=answer), tempfile.TemporaryDirectory() as tmp, patch('time.sleep'):
+                remote, output = Mock(), []
+
+                def read_log(command):
+                    session = json.loads(remote.upload.call_args.args[1])['nonce']
+                    # Foreground and home events alone cannot identify the input source.
+                    events = [{'trigger': 'started', 'foreground': 'com.webos.app.mediadiscovery'}]
+                    if remote.run.call_count > 1:
+                        events += [{'trigger': 'home'}, {'trigger': 'foreground', 'foreground': 'com.gathin.tvhome'},
+                                   {'trigger': 'expired'}]
+                    return '\n'.join(json.dumps(dict(event='home-diagnostic', session=session, **event))
+                                     for event in events)
+
+                remote.run.side_effect = read_log
+                ask = None if answer is None else Mock(return_value=answer)
+                path = diagnostics.collect_home_report(remote, state.Store(tmp),
+                    state.target('192.0.2.55', 'no-root'), Console(output.append), ask=ask)
+                report = json.loads(path.read_text())['helper_diagnostics']
+                self.assertEqual(report['home_button'], result)
+                self.assertEqual(report.get('home_destination'), destination)
+                text = ' '.join(' '.join(output).split())
+                self.assertEqual(text.count('physical TV remote'), 1)
+                self.assertIn('Clean Your TV Home should open.', text)
+                if ask is not None:
+                    ask.assert_called_once()
+                self.assertEqual([json.loads(call.args[1])['cmd'] for call in remote.upload.call_args_list],
+                                 ['diagnostics-start', 'diagnostics-stop'])
 
     def test_report_686_replay_keeps_waiting_for_restarted_helper(self):
         # The six observed events end at 4.268 s, then SSH reads stale logs.
@@ -155,13 +191,15 @@ class HomeDiagnosticsTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp, patch('time.monotonic', side_effect=lambda: clock[0]), \
                 patch('cytv.diagnostics.time.sleep', side_effect=lambda seconds: clock.__setitem__(0, clock[0] + seconds)):
             code = cli.main(['home-diagnostics', '--host', '192.0.2.55', '--edition', 'no-root',
-                             '--data-dir', tmp, '--language', 'en'], ask=lambda _: 'y',
+                             '--data-dir', tmp, '--language', 'en'],
+                            ask=lambda prompt: '' if 'Home button result' in prompt else 'y',
                             write=lambda _: None, connect=connect)
             self.assertEqual(code, 0)
             path, = (Path(tmp) / 'reports').glob('diagnostic-*.json')
             raw = path.read_text()
             capture = json.loads(raw)['helper_diagnostics']
             self.assertTrue(capture['complete'])
+            self.assertEqual(capture['home_button'], 'not-tested')
             self.assertEqual([record['trigger'] for record in capture['records']],
                              ['started', 'foreground', 'foreground', 'launch-request', 'expired'])
             self.assertEqual(capture['records'][2]['foreground'], 'youtube.leanback.v4')

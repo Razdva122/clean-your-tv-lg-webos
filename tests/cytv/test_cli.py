@@ -1297,7 +1297,7 @@ class CLITests(unittest.TestCase):
             )
             installer.return_value.install.assert_called_once_with(inventory, None, False)
             installer.return_value.trial.assert_not_called()
-            self.assertIn('Packages installed; Home Helper launch requested.', output)
+            self.assertIn('Packages installed. Home Helper launch requested.', output)
             report = json.loads(next(Path(tmp).glob('reports/*.json')).read_text())
             self.assertEqual(report['tv'].get('icon_inventory'), session.icon_diagnostics)
             self.assertNotRegex(output.lower(), r'trial|countdown|keep using|preview release')

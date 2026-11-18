@@ -1069,8 +1069,7 @@ def _run(args, ask, write, connect, secret, search, inspect, payload_root, check
                 else:
                     write('Three short Home presses within two seconds return to LG Home. To restart Home control, open Home Helper, choose Start Helper and confirm. Your saved Home screen choice is kept.')
                     if result.get('activation_cancelled') is not True:
-                        write("After installation, press Home to try it. If LG Home opens, open Home Helper from the TV's apps.")
-                        write('Packages installed; Home Helper launch requested. Check short Home, arrows/OK, Back, volume, standby and cold boot.')
+                        write('Packages installed. Home Helper launch requested.')
                     if profile.get('connection') == 'root-ssh':
                         write('No-root is installed using root SSH. Keep this saved connection for status, recovery and removal.')
                     else:
@@ -1114,10 +1113,12 @@ def _run(args, ask, write, connect, secret, search, inspect, payload_root, check
                     write.command_outcome('owner-input-required', 'run-interactively')
                     raise UserError('Open Home button diagnostics in the installer to record a Home press.')
                 write.heading('Home button diagnostics')
-                write('Open an app on the TV. Recording lasts one minute and saves one report with application IDs and timing.')
+                from .outcomes import HOME_START
+                write(HOME_START)
+                write('Recording lasts up to three minutes and saves one report with application IDs and timing.')
                 if not prompts.confirm('Ready to record? Continue and wait for the Home prompt.', ask, write, default=True):
                     return 0
-                report = diagnostics.collect_home_report(remote, store, profile, write, reconnect=reconnect_tv)
+                report = diagnostics.collect_home_report(remote, store, profile, write, reconnect=reconnect_tv, ask=ask)
                 write.report(report)
             elif args.command == 'clean-wam-cache':
                 from . import wam_cleanup

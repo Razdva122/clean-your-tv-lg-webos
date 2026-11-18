@@ -101,7 +101,7 @@ Nennen Sie TV-Modell, Firmware, No-root oder Root, Installationsgerät, Schritt 
 
 Wenn No-root **Speicherprüfung wiederholen** anbietet, wähle die Schaltfläche, um denselben Fernseher ohne Änderungen erneut zu prüfen. Bestätige die Installation nach erfolgreicher Prüfung separat. Bei einem offenen Vorgang wähle **Wiederherstellungsoptionen prüfen**.
 
-Wenn das Desktop-Installationsprogramm die Pakete geprüft hat, die Home-Taste aber Clean Your TV nicht öffnet, wählen Sie auf der Ergebnisseite bei No-root **Home-Taste diagnostizieren** und bei Root **TV-Status prüfen**.
+Wenn das Desktop-Installationsprogramm die Pakete geprüft hat, die Home-Taste aber Clean Your TV nicht öffnet, wählen Sie auf der Ergebnisseite bei No-root **Home-Taste diagnostizieren** und bei Root **TV-Status prüfen**. Bei No-root wird das bereits erfasste Ergebnis angezeigt. Den Bericht können Sie über **Diagnosebericht speichern** sichern.
 
 Wählen Sie nach einem Fehler im Desktop-Installer **Problem melden**, prüfen und kopieren Sie den Entwurf und hängen Sie den gespeicherten Diagnosebericht an, falls vorhanden.
 

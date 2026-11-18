@@ -263,8 +263,10 @@ def _observe_home_diagnostic_directory(remote, directory):
         return None  # Keep the original upload failure if this probe also fails.
 
 
-def collect_home_report(remote, store, profile, write, *, reconnect=None):
+def collect_home_report(remote, store, profile, write, *, reconnect=None, ask=None):
     """One bounded observation window, exported without raw logs or credentials."""
+    from .outcomes import HOME_PRESS, HOME_RESULTS, ask_home_result, home_result_fields
+
     if profile['edition'] != 'no-root':
         raise UserError('Home Helper diagnostics is available for No-root installations.')
     session = uuid.uuid4().hex
@@ -359,7 +361,8 @@ def collect_home_report(remote, store, profile, write, *, reconnect=None):
                 break
             if started and not announced:
                 announced = True
-                write('Press Home once on the TV remote. Leave the remote untouched while the report is collected.')
+                write(HOME_PRESS)
+                write('Leave the remote untouched while the report is collected.')
             time.sleep(2)
     except Exception as error:
         if failure_stage:
@@ -373,12 +376,18 @@ def collect_home_report(remote, store, profile, write, *, reconnect=None):
                 command('diagnostics-stop')
             except Exception:
                 pass  # Helper expires the bounded request even if SSH remains unavailable.
+    elapsed_ms = int((time.monotonic() - beginning) * 1000)
+    destination = None
+    if announced and ask is not None:
+        destination = ask_home_result(ask, write)
+        write(HOME_RESULTS[destination][3])
     path = create_report(store, 'home-diagnostics', profile, 'home-diagnostics-complete')
     report = json.loads(path.read_text())
-    report['helper_diagnostics'] = {'schema': 1, 'complete': complete, 'records': list(records.values())}
+    report['helper_diagnostics'] = {'schema': 1, 'complete': complete, 'records': list(records.values()),
+                                    **home_result_fields(destination)}
     report['helper_diagnostics']['connection'] = {
         'successful_reads': read_count, 'reconnect_attempts': reconnect_count,
-        'elapsed_ms': int((time.monotonic() - beginning) * 1000)
+        'elapsed_ms': elapsed_ms
     }
     if failure_stage:
         report['helper_diagnostics']['failure_stage'] = failure_stage
