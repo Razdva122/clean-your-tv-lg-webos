@@ -1293,6 +1293,43 @@ class CLITests(unittest.TestCase):
             self.assertEqual(report['tv'].get('icon_inventory'), session.icon_diagnostics)
             self.assertNotRegex(output.lower(), r'trial|countdown|keep using|preview release')
 
+    def test_pairing_refusal_only_retries_with_confirmation_on_the_same_tv(self):
+        from unittest.mock import Mock
+        from cytv.errors import TVConnectionError
+
+        for flags, answers, retry in (([], ['y'], True), ([], ['n'], False), (['--non-interactive'], [], False)):
+            with self.subTest(flags=flags, answers=answers), tempfile.TemporaryDirectory() as tmp, \
+                 patch('cytv.cli.package.verify_payload', return_value={}), \
+                 patch('cytv.cli.payload_dir', return_value=Path(tmp)), \
+                 patch('cytv.tv.SSAP') as ssap, patch('cytv.cli.Installer') as installer:
+                (Path(tmp) / 'fallback.png').write_bytes(b'fallback')
+                profile = state.target('192.0.2.10', 'no-root', 19922)
+                store = state.Store(tmp)
+                store.save(profile)
+                session = ssap.return_value
+                session.key = 'saved-pairing'
+                session.inventory.return_value = {'apps': [], 'inputs': []}
+                session.__enter__.side_effect = [TVConnectionError('Refused', reason_code='pairing-rejected'), session]
+                code, output, calls = self.run_cli([
+                    'install', '--host', profile['host'], '--port', str(profile['port']), '--edition', profile['edition'],
+                    '--data-dir', tmp, '--language', 'en', '--yes', *flags,
+                ], answers, remote=Mock())
+                self.assertEqual(code, 0 if retry else 2, output)
+                self.assertEqual(len(calls), 1)
+                self.assertEqual(ssap.call_count, 2 if retry else 1)
+                self.assertTrue(all(call.args[:2] == (profile['host'], store.device_dir(profile))
+                                    for call in ssap.call_args_list))
+                self.assertEqual('Try pairing again?' in output, not flags)
+                self.assertNotIn('removal', output.lower())
+                if retry:
+                    installer.return_value.install.assert_called_once_with(session.inventory.return_value, session.key, False)
+                else:
+                    installer.return_value.install.assert_not_called()
+                    self.assertIsNone(store.pending(profile))
+                    report = json.loads(next(Path(tmp).glob('reports/*.json')).read_text())
+                    self.assertEqual(report['guidance'], {'code': 'tv-pairing-rejected', 'pending': False})
+                    self.assertEqual(report['connection']['reason_code'], 'pairing-rejected')
+
     def test_no_root_partial_inventory_continues_only_for_fresh_setup(self):
         from unittest.mock import Mock
         from cytv.operations import HOME, Installer

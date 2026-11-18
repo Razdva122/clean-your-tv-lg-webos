@@ -53,6 +53,8 @@ GUIDES = {
     'developer-key-server': ('Check Developer Mode Key Server', 'The TV key could not be obtained from Key Server.', DEVELOPER, True),
     'developer-key-response': ('Check Developer Mode Key Server', 'Key Server returned an unexpected response; it was not accepted.', DEVELOPER, True),
     'developer-key-unlock': ('The TV key could not be unlocked', 'The passphrase or key format could not be verified.', DEVELOPER, True),
+    'tv-pairing-rejected': ('TV pairing was rejected.', 'Installation has not started. No TV packages were changed by this attempt.',
+        'Keep the TV on and approve the next pairing request with the remote.', False),
     'tv-pairing': ('TV pairing was not confirmed', 'The TV control connection or its pairing response was not confirmed.',
         'Keep the TV awake and review its CYTV pairing request with the remote. Do not reset pairing or reinstall packages to solve a connection check.', True),
     'root-requirements': ('Root prerequisites are not ready', 'SSH access alone does not establish the required TV runtime or Home interfaces.', REPORT, False),
@@ -147,7 +149,7 @@ def for_error(error, phase, profile=None, pending=None, *, has_reset_source=None
         code = ('developer-key-server' if reason=='key-server-unavailable' else
                 'developer-key-unlock' if reason=='key-unlock' else 'developer-key-response')
     elif isinstance(error, TVConnectionError) and phase in ('pair-tv','read-inventory'):
-        code = 'tv-pairing'
+        code = 'tv-pairing-rejected' if phase == 'pair-tv' and reason == 'pairing-rejected' else 'tv-pairing'
     elif phase == 'ssh-connect' or removal_ssh_error:
         if 'AuthenticationException' in names:
             code = 'ssh-auth-root' if root_ssh else 'ssh-auth-no-root'

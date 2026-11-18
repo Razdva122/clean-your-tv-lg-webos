@@ -10,7 +10,7 @@ from time import sleep
 from types import SimpleNamespace
 
 from . import __version__, package, state, i18n
-from .errors import ExistingRoot, LocalRecoveryError, TVNotReady, UserError
+from .errors import ExistingRoot, LocalRecoveryError, TVConnectionError, TVNotReady, UserError
 from .desktop import EXPLICIT_TV_CHOICE, RETRY_STORAGE_PROMPT
 from .operations import Installer, require_root_reinstall_cleanup
 from .terminal import Console, supports_ansi
@@ -911,6 +911,14 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                                 if args.non_interactive:
                                     raise
                                 prompts.wait_for_tv(ask, write)
+                            except TVConnectionError as error:
+                                if phase != 'pair-tv' or error.reason_code != 'pairing-rejected' or args.non_interactive:
+                                    raise
+                                checks.update('pairing', 'fail', '')
+                                write('TV pairing was rejected.')
+                                write('Keep the TV on and approve the next pairing request with the remote.')
+                                if not prompts.confirm('Try pairing again?', ask, write):
+                                    raise
                     write(f"Read {len(inventory['apps'])} applications.")
                 phase = 'install-packages'
                 def progress(message):

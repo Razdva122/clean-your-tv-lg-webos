@@ -39,7 +39,7 @@ Developer Mode lets CYTV install apps on a TV without root.
 
 Use the code from the TV, not your LG account password. If no code is visible, turn on Key Server.
 
-Pairing is a separate step: when the TV asks, approve CYTV with your remote.
+Pairing is a separate step: when the TV asks, approve CYTV with your remote. If the TV rejects the request, confirm the retry in CYTV. It uses the same TV connection.
 
 If a first No-root setup warns that it could not read HDMI inputs, you can continue with the applications it found.
 

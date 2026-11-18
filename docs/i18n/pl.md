@@ -39,7 +39,7 @@ Developer Mode pozwala CYTV instalować aplikacje na TV bez roota.
 
 Użyj kodu z TV, a nie hasła konta LG. Jeśli kodu nie widać, włącz Key Server.
 
-Parowanie to osobny krok: gdy TV zapyta, zatwierdź CYTV pilotem.
+Parowanie to osobny krok: gdy TV zapyta, zatwierdź CYTV pilotem. Jeśli telewizor odrzuci prośbę, potwierdź w CYTV ponowienie parowania z tym samym telewizorem.
 
 Jeśli przy pierwszej instalacji No-root pojawi się ostrzeżenie, że nie udało się odczytać wejść HDMI, możesz kontynuować instalację z wykrytymi aplikacjami.
 

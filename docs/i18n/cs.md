@@ -31,7 +31,7 @@ Pokud instalátor nabídne **No-root**, můžete pokračovat přes stávající 
 4. Zapněte **Key Server** a ponechte Developer Mode otevřený. **IP Address** je adresa TV, kterou zadáte do CYTV.
 5. Použijte šestiznakový kód **Passphrase** z obrazovky TV. Rozlišujte velká a malá písmena.
 
-Použijte kód z TV, nikoli heslo účtu LG. Pokud kód nevidíte, zapněte Key Server. Při samostatné žádosti o párování povolte CYTV dálkovým ovladačem.
+Použijte kód z TV, nikoli heslo účtu LG. Pokud kód nevidíte, zapněte Key Server. Při samostatné žádosti o párování povolte CYTV dálkovým ovladačem. Pokud TV žádost odmítne, potvrďte v CYTV opakování párování se stejným televizorem.
 
 Pokud při první instalaci No-root instalátor upozorní, že nemohl načíst vstupy HDMI, můžete pokračovat s nalezenými aplikacemi.
 

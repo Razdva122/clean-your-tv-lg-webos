@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from cytv.tv import Inventory, SSAP
 from cytv.errors import TVNotReady, TVConnectionError
@@ -321,6 +321,50 @@ class InventoryTests(unittest.TestCase):
         self.assertEqual(caught.exception.close_code, 1008)
         self.assertEqual(caught.exception.reason_code, 'tv-not-ready')
         self.assertIn('remote', str(caught.exception))
+
+    def test_saved_pairing_can_prompt_and_wait_for_late_confirmation(self):
+        socket = Mock()
+        elapsed = 0
+
+        def receive(*, timeout):
+            nonlocal elapsed
+            if elapsed == 0:
+                self.assertGreaterEqual(timeout, 60)
+                elapsed = 50
+                return json.dumps({'type': 'response', 'payload': {'pairingType': 'PROMPT'}})
+            self.assertGreaterEqual(timeout, 10)
+            return json.dumps({'type': 'registered', 'payload': {'client-key': 'updated'}})
+
+        socket.recv.side_effect = receive
+        progress = Mock()
+        with tempfile.TemporaryDirectory() as tmp, \
+             patch('websockets.sync.client.connect', return_value=socket), \
+             patch('cytv.tv.time', Mock(monotonic=lambda: elapsed)):
+            (Path(tmp) / 'ssap.json').write_text('{"key":"saved"}')
+            with SSAP('192.0.2.10', tmp, progress) as tv:
+                self.assertEqual(tv.key, 'updated')
+            register = json.loads(socket.send.call_args.args[0])['payload']
+            self.assertEqual(register['client-key'], 'saved')
+            self.assertEqual(register['pairingType'], 'PROMPT')
+            progress.assert_called_once_with('Accept the remote-control pairing request on the TV if shown…')
+
+    def test_registration_refusal_is_typed_and_preserves_saved_pairing(self):
+        from cytv.failure_help import for_error
+
+        socket = Mock()
+        socket.recv.return_value = json.dumps({'type': 'error', 'id': 'register_0', 'error': 'PRIVATE'})
+        with tempfile.TemporaryDirectory() as tmp, patch('websockets.sync.client.connect', return_value=socket):
+            key = Path(tmp) / 'ssap.json'
+            key.write_text('{"key":"saved"}')
+            with self.assertRaises(TVConnectionError) as caught, SSAP('192.0.2.10', tmp, Mock()):
+                self.fail('Rejected pairing must not register')
+            self.assertEqual(key.read_text(), '{"key":"saved"}')
+        socket.close.assert_called_once()
+        self.assertEqual(caught.exception.reason_code, 'pairing-rejected')
+        self.assertNotIn('PRIVATE', str(caught.exception))
+        guide = for_error(caught.exception, 'pair-tv', {'edition': 'no-root'})
+        self.assertEqual(guide['code'], 'tv-pairing-rejected')
+        self.assertFalse(guide['can_edit_connection'])
 
     def test_pairing_timeout_and_other_policy_closes_do_not_become_standby_retry(self):
         from websockets.exceptions import ConnectionClosedError

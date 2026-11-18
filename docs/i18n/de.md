@@ -39,7 +39,7 @@ Mit Developer Mode kann CYTV Apps auf einem TV ohne Root installieren.
 
 Verwenden Sie den Code vom TV, nicht das Passwort Ihres LG-Kontos. Wird kein Code angezeigt, schalten Sie Key Server ein.
 
-Die Kopplung ist ein eigener Schritt: Bestätigen Sie CYTV mit der Fernbedienung, wenn der TV danach fragt.
+Die Kopplung ist ein eigener Schritt: Bestätigen Sie CYTV mit der Fernbedienung, wenn der TV danach fragt. Wenn der TV die Anfrage ablehnt, bestätigen Sie in CYTV einen neuen Versuch mit demselben TV.
 
 Wenn sich die HDMI-Eingänge bei der ersten No-root-Einrichtung nicht lesen lassen, können Sie nach dem Hinweis mit den gefundenen Apps fortfahren.
 

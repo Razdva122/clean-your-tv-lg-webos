@@ -149,6 +149,8 @@ See the [localized installation, use and recovery guides](LANGUAGES.md).
   Connection detection sets the current choice to match the detected connection; you can select either edition. Root privileges are verified after sign-in.
 - Review the TV and edition, then click **Continue**. No-root requests control
   pairing on the TV; Root reads the catalog through its authenticated SSH connection.
+  If the TV rejects pairing, choose **Continue** at **Try pairing again?** to
+  send a new request to the same TV. Approve it with the remote when it appears.
   If a first No-root setup warns that it could not read HDMI inputs, you can
   continue with the applications it found.
 - Root checks Python 3.9+, TV Node.js 8+, root/Homebrew services and input support.

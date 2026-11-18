@@ -276,7 +276,8 @@ class SSAP:
             self.ws = connect(f'wss://{self.host}:3001', ssl=tv_context(compatible=True),
                               open_timeout=connect_timeout, max_size=8 * 1024 * 1024, proxy=None)
         try:
-            self.progress('Checking TV remote-control access…' if key else 'Accept the remote-control pairing request on the TV if shown…')
+            self.progress('Checking TV remote-control access…' if self.reuse_only
+                          else 'Accept the remote-control pairing request on the TV if shown…')
             self.ws.send(json.dumps({'id': 'register_0', 'type': 'register', 'payload': payload}))
             deadline = time.monotonic() + (5 if self.reuse_only else 65)
             while time.monotonic() < deadline:
@@ -285,8 +286,8 @@ class SSAP:
                     raise ValueError('Invalid TV pairing response')
                 response = reply.get('payload', {})
                 if reply.get('type') == 'error':
-                    raise UserError('TV pairing was rejected. Check the on-screen request and local network access.',
-                                    reason_code='pairing-rejected' if self.settings_write else 'user-error')
+                    raise TVConnectionError('TV pairing was rejected. Check the on-screen request and local network access.',
+                                            reason_code='pairing-rejected')
                 if self.reuse_only and response.get('pairingType'):
                     raise UserError('The TV did not accept the saved remote-control pairing.')
                 if reply.get('type') == 'registered':
