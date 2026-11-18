@@ -144,8 +144,8 @@ For contributors: [build and technical references](docs/development/README.md),
 | Component | Stable version |
 | --- | --- |
 | cytv installer | 0.21.3 |
-| Home | 1.20.2 |
-| Home Helper | 0.9.0 |
+| Home | 1.20.3 |
+| Home Helper | 0.9.1 |
 | Root edition | 0.21.3 |
 | Both edition Updaters | 0.6.2 |
 | Android installer / versionCode | 0.20.3 / 50 |

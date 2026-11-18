@@ -13,13 +13,21 @@
 - An already-open global Root screensaver can survive a brief status gap.
   Opening a new screensaver or deferring LG's screensaver still requires
   fresh Root status (#709).
+- In-place Root Beta repair now reads the final service reply correctly.
+  Recovery and activation on the reported B9 still need confirmation (#706, #160).
+- If the Desktop wizard closes, SSH drops or the TV restarts during a
+  confirmed Root reinstallation, resume it from the saved TV and phase.
+  Verified cleanup resumes with installation (#707).
+- Home diagnostics can retain one bounded recording across a Helper restart
+  or wake. The underlying YouTube redirection is still under investigation
+  (#711, #686).
 
 | Component | v1.24.0 | v1.24.1 |
 | --- | --- | --- |
 | cytv installer | 0.21.2 | 0.21.3 |
 | Android installer / versionCode | 0.20.2 / 49 | 0.20.3 / 50 |
-| Home FHD/HD | 1.20.2 | 1.20.2 |
-| Home Helper | 0.9.0 | 0.9.0 |
+| Home FHD/HD | 1.20.2 | 1.20.3 |
+| Home Helper | 0.9.0 | 0.9.1 |
 | Root edition | 0.21.2 | 0.21.3 |
 | Both edition Updaters | 0.6.2 | 0.6.2 |
 | System Updater IPK | 1.2.11 | 1.2.11 |
