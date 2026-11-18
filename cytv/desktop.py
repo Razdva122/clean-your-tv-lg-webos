@@ -99,6 +99,9 @@ class DesktopConsole(Console):
     def report(self, path):
         self.emit('report', str(path.resolve()))
 
+    def doctor_result(self, value):
+        self.emit('doctor-result', value)
+
     def check(self, event):
         self.emit('check', event)
 

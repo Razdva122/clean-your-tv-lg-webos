@@ -279,6 +279,25 @@ class LanguageTests(unittest.TestCase):
                         with self.subTest(file=path.name, line=node.lineno, language=code, text=sentence):
                             self.assertNotEqual(lang.translate(sentence), sentence)
 
+    def test_successful_desktop_doctor_guidance_is_translated_in_every_locale(self):
+        lang = self.language()
+        messages = (
+            'Connected to your TV', 'Continue setup',
+            'Continue setup using the same TV connection and edition.',
+            'Connection checked. Continue to review setup.',
+            'A previous Clean Your TV installation was found, but its Home control is off.',
+            'A previous Clean Your TV installation was found. Home control is enabled.',
+            'Clean Your TV components were found on this TV.',
+            'Ready to set up Clean Your TV.',
+            'Setup will check the existing installation before continuing.',
+            'Setup will check installed versions and ask before making changes.',
+        )
+        for code in set(lang.LANGUAGES) - {'en', 'auto'}:
+            lang.set_language(code)
+            for message in messages:
+                with self.subTest(language=code, message=message):
+                    self.assertNotEqual(lang.translate(message), message)
+
     def test_neutral_edition_guidance_is_translated_in_every_language(self):
         lang = self.language()
         messages = (
