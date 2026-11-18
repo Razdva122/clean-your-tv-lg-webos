@@ -395,8 +395,9 @@ class RuntimeTests(unittest.TestCase):
         stock = [{'file': '/usr/lib/qml/KeyFilters/systemUi.js', 'handler': 'handleSystemKeys'}]
         token = '1'*32
         self.k.atomic(self.root/'c1-keyfilter/ownership.json', dict(schema=1, entry=own, token=token), self.uid)
-        for destination in (self.k.STOCK, 'com.webos.app.fullhome', self.k.APP):
+        for destination in (self.k.STOCK, 'com.webos.app.fullhome', self.k.APP, 'org.example.home'):
             with self.subTest(destination=destination):
+                is_stock = destination in (self.k.STOCK, 'com.webos.app.fullhome')
                 chain = [own, *stock]
 
                 def native(args, *_args, **_options):
@@ -412,7 +413,7 @@ class RuntimeTests(unittest.TestCase):
                         patch.object(self.k, 'read_chain', side_effect=lambda: chain.copy()), \
                         patch.object(self.k, 'write_chain', side_effect=lambda value, **_: chain.__setitem__(slice(None), value)), \
                         patch.object(self.k, 'luna', side_effect=settings):
-                    if destination == self.k.APP:
+                    if not is_stock:
                         with self.assertRaisesRegex(ValueError, 'LG Home destination') as caught:
                             self.k.execute('restore', root=self.root, uid=self.uid)
                         self.assertEqual(caught.exception.restore_check, 'stock-routing-unverified')
@@ -421,7 +422,7 @@ class RuntimeTests(unittest.TestCase):
                     self.assertEqual(chain, stock)
                     intent = self.k.read_intent(self.root, self.uid)
                     self.assertFalse(intent['enabled'])
-                    self.assertEqual(intent['phase'], 'recovering' if destination == self.k.APP else 'disabled')
+                    self.assertEqual(intent['phase'], 'disabled' if is_stock else 'recovering')
 
     def test_reported_schema3_rearms_once_on_a_new_normal_session(self):
         import intent_runtime
@@ -513,6 +514,12 @@ class RuntimeTests(unittest.TestCase):
                     self.assertEqual(enable.call_count, int(case=='activation-failure'))
 
     def test_reported_schema3_failed_controller_restores_the_written_chain(self):
+        self.check_reported_schema3_interrupted_rearm(lost_ack=False)
+
+    def test_reported_schema3_lost_configd_ack_rolls_back_once_and_stays_off(self):
+        self.check_reported_schema3_interrupted_rearm(lost_ack=True)
+
+    def check_reported_schema3_interrupted_rearm(self, *, lost_ack):
         import intent_runtime
         self.admission = dict(self.generic(), model='65NANO913NA', firmware='04.64.00', webos='5.6.2')
         self.prepare()
@@ -532,12 +539,16 @@ class RuntimeTests(unittest.TestCase):
             self.assertTrue(volatile)
             chain[:] = value
             writes.append(value.copy())
+            if lost_ack and len(writes) == 1:
+                self.assertTrue((self.root/'c1-keyfilter/pending.json').exists())
+                raise TimeoutError('configd committed without replying')
 
         def native(args, *_args, **_options):
             if args[0] == '--retire-boot':
                 return dict(self.proof(), reason='normal_shutdown')
             if args[0] == '--restore-routing':
-                self.assertEqual(chain, [self.k.filter_entry(self.root), *stock])
+                expected = [self.k.filter_entry(self.root), *stock] if len(writes) == 1 else stock
+                self.assertEqual(chain, expected)
             else:
                 self.assertEqual(args, ['--status'])
             return self.proof()
@@ -555,7 +566,8 @@ class RuntimeTests(unittest.TestCase):
                 patch.object(self.k, 'native', side_effect=native), \
                 patch.object(self.k, 'start_controller', side_effect=TimeoutError('startup')) as start:
             self.assertEqual(self.k.execute('boot', root=self.root, uid=self.uid), 'restored')
-            start.assert_called_once()
+            self.assertEqual(self.k.execute('boot', root=self.root, uid=self.uid), 'restored')
+            self.assertEqual(start.call_count, 0 if lost_ack else 1)
             self.assertEqual(writes, [[self.k.filter_entry(self.root), *stock], stock])
             self.assertEqual(chain, stock)
             self.assertEqual(self.k.read_intent(self.root, self.uid)['phase'], 'disabled')
