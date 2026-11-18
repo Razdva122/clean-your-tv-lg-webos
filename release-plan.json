@@ -22,6 +22,13 @@
       "summary": "Help owners complete and recover installer operations"
     },
     {
+      "pr": 719,
+      "issues": [
+        678
+      ],
+      "summary": "Preserve Root inspection and final-cleanup refusal diagnostics"
+    },
+    {
       "pr": 721,
       "issues": [
         720
