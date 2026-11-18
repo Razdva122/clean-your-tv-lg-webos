@@ -72,6 +72,31 @@ class RootReinstallationTests(unittest.TestCase):
     installer = fixture.OperationTests.installer
     root_bundle = fixture.OperationTests.root_bundle
 
+    def test_reinstall_successor_keeps_goal_until_real_install_finishes(self):
+        self.root_bundle()
+        inst = self.installer(fixture.Remote(), 'root')
+        digest = 'a' * 64
+        (self.store.device_dir(inst.profile) / 'known_hosts').write_bytes(b'original pin')
+        self.store.request_clean_removal(inst.profile, root_reinstall_payload=digest)
+        self.store.checkpoint(inst.profile, stage='verified-clean',
+                              result={'removed':True, 'verified_clean':True})
+        self.store.finish_clean_removal(inst.profile)
+        saved = self.store.root_reinstall(inst.profile)
+        self.assertEqual((saved.stage, saved.payload), ('removed', digest))
+        inst.root_reinstall_payload = digest
+        inst.uninstall_project = Mock(side_effect=AssertionError('Completed cleanup cannot run again'))
+        original = inst.await_product
+
+        def deliver(*args, **kwargs):
+            active = self.store.root_reinstall(inst.profile)
+            self.assertEqual((active.stage, active.payload), ('installing', digest))
+            self.assertNotEqual(active.operation, saved.operation)
+            return original(*args, **kwargs)
+
+        inst.await_product = deliver
+        self.assertTrue(inst.install(self.inventory)['home_changed'])
+        self.assertIsNone(self.store.root_reinstall(inst.profile))
+
     def test_self_consistent_old_runtime_requires_explicit_reinstallation(self):
         self.root_bundle()
         remote = fixture.Remote()

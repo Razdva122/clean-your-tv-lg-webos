@@ -167,6 +167,12 @@ restart again. Before connection, during review or after cancellation, the
 wizard asks to check the TV state instead of repeating an old power-cycle
 instruction. Recovery receipts and device-side cleanup guards remain intact.
 
+If a confirmed Root reinstallation pauses, open the same desktop installer
+and choose **Continue Root reinstallation**. It reconnects to the same TV and
+continues any unfinished cleanup. After removal is verified, choose
+**Continue Root installation**. A standalone **Uninstall Clean Your TV** ends
+with removal.
+
 Passwords are masked. SSH identity changes still block the connection. While TV
 changes are in progress, the window waits for the step to finish instead of
 terminating the installer halfway through an operation.

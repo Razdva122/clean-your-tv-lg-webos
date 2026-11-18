@@ -1,6 +1,7 @@
 """Numbered terminal wizard and small maintenance command surface."""
 import argparse
 import getpass
+import hashlib
 import io
 import json
 from pathlib import Path
@@ -11,7 +12,7 @@ from types import SimpleNamespace
 from . import __version__, package, state, i18n
 from .errors import ExistingRoot, LocalRecoveryError, TVNotReady, UserError
 from .desktop import EXPLICIT_TV_CHOICE
-from .operations import Installer
+from .operations import Installer, require_root_reinstall_cleanup
 from .terminal import Console, supports_ansi
 from . import diagnostics, discovery, inspect_tv, prompts, install_settings, debloat
 
@@ -55,6 +56,7 @@ def parser(desktop=False):
     commands = ('install', 'status', 'doctor', 'home-diagnostics', 'recover', 'trust-root-ssh', 'restore', 'uninstall', 'enable-system-updates', 'enable-firmware-access', 'disable-firmware-access', 'recover-system-rollback', 'recover-root-rollback', 'replace-system-updater', 'clean-wam-cache', 'debloat')
     if desktop:
         commands += ('ssh-command',)
+        result.add_argument('--resume-root-reinstall', action='store_true', help=argparse.SUPPRESS)
     result.add_argument('command', nargs='?', default='install', choices=commands)
     result.add_argument('--language', choices=tuple(i18n.LANGUAGES), help=i18n.translate('Interface language (auto uses the computer language)'))
     result.add_argument('--version', action='store_true', help=i18n.translate('Print installer version'))
@@ -337,7 +339,17 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
             # reconcile receipts. Partial selection only admits SSH metadata.
         if args.tv_name is not None and profile['edition'] != 'root':
             raise UserError('--tv-name requires Root Edition.')
+        desktop_install = isinstance(write, DesktopConsole) and args.command == 'install' and not args.non_interactive
+        reinstall_step = store.root_reinstall(profile) if desktop_install else None
+        if reinstall_step:
+            profile = state.target(**dict(profile, root_variant=reinstall_step.variant))
         write.selected_profile(profile)
+        if getattr(args, 'resume_root_reinstall', False) and not reinstall_step:
+            raise UserError('There is no saved Root reinstallation to continue.')
+        if reinstall_step:
+            write.root_reinstall()
+            if not getattr(args, 'resume_root_reinstall', False) and not prompts.confirm('Continue Root reinstallation?', ask, write):
+                return 130
         setup = {}
         if args.command == 'replace-system-updater':
             if profile['edition'] != 'root': raise UserError('System Updater replacement requires an existing Root connection.')
@@ -353,11 +365,11 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                 raise UserError('WAM cleanup requires an existing Root SSH connection.')
             if store.pending(profile):
                 raise UserError('Resolve the pending installation or removal before clearing WAM data. Keep recovery records.')
-        if check_updates and args.command == 'install' and not store.pending(profile):
+        if check_updates and args.command == 'install' and not reinstall_step and not store.pending(profile):
             from .installer_update import offer
             if not offer(ask, write, args.non_interactive, args.use_bundled_version):
                 return 0
-        if args.command == 'install':
+        if args.command == 'install' and not reinstall_step:
             phase = 'prepare-payload'
             write.step(3, 'Prepare the TV connection')
             if profile['edition'] == 'root':
@@ -387,7 +399,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                 write('Root will stop the old Home Helper, turn on Home control and open Clean Your TV Home.')
             write('Check controls on the TV after installation.')
         retry_removal=(args.command=='uninstall' and (store.pending(profile) or {}).get('recovery_protocol')=='clean-removal-v1')
-        if args.command in ('install', 'uninstall', 'restore', 'enable-system-updates', 'enable-firmware-access', 'disable-firmware-access', 'recover-system-rollback', 'recover-root-rollback', 'replace-system-updater') and not (args.yes or retry_removal or args.reconnect_after_reset):
+        if args.command in ('install', 'uninstall', 'restore', 'enable-system-updates', 'enable-firmware-access', 'disable-firmware-access', 'recover-system-rollback', 'recover-root-rollback', 'replace-system-updater') and not (args.yes or retry_removal or args.reconnect_after_reset or reinstall_step):
             if args.command == 'uninstall' and profile['edition'] == 'root':
                 write('This removes Root, Root Updater, their services and startup hooks, plus any installed No-root Home, Helper and Updater.')
                 write('Recovery records are retained for diagnostics. Other TV apps stay installed.')
@@ -420,6 +432,8 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                 raise UserError('Release payload is missing. Download a built cytv executable or run python scripts/build-cytv.py --payload-only from source.') from None
             if args.migrate_home and profile['edition'] != 'root':
                 raise UserError('--migrate-home applies only to Root installation.')
+        reinstall_payload = (hashlib.sha256(json.dumps([profile.get('root_variant'), manifest], sort_keys=True).encode()).hexdigest()
+                             if desktop_install and profile['edition'] == 'root' else None)
 
         def trust(value, root):
             if args.non_interactive:
@@ -449,6 +463,10 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
 
         from .transport import SSH, CredentialPrompt
         with store.lock(profile), diagnostics.context.operation_context(store, profile):
+            if desktop_install and store.root_reinstall(profile) != reinstall_step:
+                raise UserError('The saved Root reinstallation changed. Return to the start screen and check again.')
+            if reinstall_step and reinstall_step.payload != reinstall_payload:
+                raise UserError('Continue Root reinstallation using the same installer build.')
             if args.command == 'debloat':
                 from .root_runtime import require_idle
                 phase = 'debloat'
@@ -472,12 +490,14 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                     raise UserError('The original saved TV connection and host key are required for recovery. Recovery data was kept.',
                                     reason_code='ssh-identity-unverified')
             else:
-                profile, recovering = store.connection_profile(profile)
+                profile, recovering = store.connection_profile(profile, expected_pin=reinstall_step.pin if reinstall_step else None)
+                if reinstall_step:
+                    profile = state.target(**dict(profile, root_variant=reinstall_step.variant))
             # An explicit sign-in key may change; the saved TV identity and pin
             # must still be resolved and verified before using it.
-            if (recovering and args.identity and args.command in ('uninstall', 'recover')
+            if (recovering and args.identity and (reinstall_step or args.command in ('uninstall', 'recover')
                     and (profile['edition'] == 'root' or profile.get('connection') == 'root-ssh')
-                    and (store.pending(profile) or {}).get('recovery_protocol') == 'clean-removal-v1'):
+                    and (store.pending(profile) or {}).get('recovery_protocol') == 'clean-removal-v1')):
                 profile = dict(profile, identity=str(args.identity.expanduser().resolve()))
             if args.command=='uninstall':
                 if not recovering:store.save(profile)
@@ -591,8 +611,22 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                 home_pending = False
                 resume = False
                 pending = store.pending(profile)
+                if reinstall_step and reinstall_step.stage in ('removing', 'verified'):
+                    phase = 'remove-existing-root'
+                    if reinstall_step.stage == 'verified':
+                        # The device proof was saved before the host retired its active receipt.
+                        store.finish_clean_removal(profile)
+                    else:
+                        write('Restoring LG Home and removing the previous Clean Your TV installation…')
+                        require_root_reinstall_cleanup(installer.continue_clean_removal(pending))
+                    reinstall_step = reinstall_step._replace(stage='removed')
+                    if store.root_reinstall(profile) != reinstall_step:
+                        raise UserError('The saved Root reinstallation changed. Return to the start screen and check again.')
+                    pending = None
+                continue_after_cleanup = bool(reinstall_step and reinstall_step.stage == 'removed')
                 replacing_activation = (profile['edition'] == 'root' and pending
                     and pending.get('action') == 'activate-root'
+                    and not reinstall_step
                     and pending.get('home_backend') != 'c1-native-gate')
                 if pending and not replacing_activation:
                     from .recovery import recover
@@ -603,11 +637,22 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                     return 0
                 from .root_runtime import require_idle, BETA, NOTICE
                 require_idle(store, profile, replacing=pending if replacing_activation else None)
-                if profile.get('root_variant') == BETA:
+                if profile.get('root_variant') == BETA and not continue_after_cleanup:
                     write(NOTICE)
                     if args.non_interactive or not prompts.confirm('Install experimental Root Beta?', ask, write):
                         raise EOFError
-                if profile['edition'] == 'root' and not resume:
+                if continue_after_cleanup:
+                    phase = 'inspect-installation'
+                    write('Clean Your TV removal is verified.')
+                    if not prompts.confirm('Continue Root installation?', ask, write):
+                        return 130
+                    installer.select_graphics()
+                    try:
+                        installer.preflight(install=True, home_interfaces=True)
+                    except ExistingRoot:
+                        raise UserError('A Root installation was found after removal. Check the TV status before continuing.') from None
+                    installer.root_reinstall_payload = reinstall_payload
+                elif profile['edition'] == 'root' and not resume:
                     installer.select_graphics()
                     phase = 'inspect-installation'
                     from .root_capabilities import NativeHomeScriptError, NoRootAlternativeError, RootCapabilityError
@@ -668,7 +713,10 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                     if not prompts.confirm('Reinstall Root?', ask, write):
                         write('Existing Root and recovery data left unchanged.')
                         return 0
-                if not reinstall and not resume:
+                    if reinstall_payload:
+                        installer.root_reinstall_payload = reinstall_payload
+                        write.root_reinstall()
+                if not reinstall and not resume and not continue_after_cleanup:
                     phase = 'inspect-installation'
                     write.heading('Versions on the TV → versions in this installer')
                     for row in installer.version_summary():
@@ -751,6 +799,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                              'Turning on Root Home control…': 'activate-root',
                              'Opening Clean Your TV Home…': 'launch-root',
                              'Restoring LG Home and removing the previous Root…': 'remove-existing-root',
+                             'Restoring LG Home and removing the previous Clean Your TV installation…': 'remove-existing-root',
                              'Keeping the previous recovery state in an archive…': 'archive-root-state'}.get(message, phase)
                     write(message)
                 installer.progress = progress
