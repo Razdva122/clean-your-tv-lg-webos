@@ -111,10 +111,18 @@ def _legacy_native_recovery(c=None):
 def restore():
     c = coordinator()
     if c is None or later_legacy_trial(c): return _legacy_native_recovery(c)
-    intent = c.store.read()
-    if intent['phase'] == 'disabled': return _legacy_native_recovery(c)
-    result = c.exit(intent)
-    return 'restored' if result.get('restored_transaction') else None
+    # A late standby decision may briefly own the operation lock after the
+    # stock profile is restored. Retry contention before applying explicit Off.
+    deadline = time.monotonic() + 1
+    while True:
+        try:
+            result = c.exit(cleanup_disabled=False)
+            break
+        except BlockingIOError:
+            if time.monotonic() >= deadline: raise
+            time.sleep(.01)
+    if result.get('restored_transaction'): return 'restored'
+    return _legacy_native_recovery(c)
 
 
 def boot():
