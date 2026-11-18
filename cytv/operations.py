@@ -1435,6 +1435,29 @@ else:
                 and 'passive' not in result['device'].get('product', {})):
             self.collect_root_diagnostics()
 
+    def observe_clean_removal(self, pending):
+        """Check the given removal receipt and its TV monitor without writing the receipt."""
+        from .recovery_state import assess, removal_summary
+
+        result={'device':{},'pending':pending,'assessment':assess(self.profile,pending),
+                'removal':removal_summary(pending),'can_resume_root_setup':False}
+        self.tv_info['status']=result
+        if self.profile['edition']=='root':
+            self.collect_root_diagnostics()
+        elif self.profile.get('connection') != 'root-ssh':
+            from .no_root_cleanup import inspect_binding, inspect_package_removal
+            binding = inspect_binding(self, pending=pending)
+            result['removal_binding'] = binding
+            if binding.get('reservation') in ('matched', 'absent', 'interrupted'):
+                monitor = inspect_package_removal(self, pending)
+                if monitor is not None:
+                    result['package_removal_monitor'] = monitor
+            result['assessment'] = assess(self.profile, pending, result)
+            result['removal']['reason'] = result['assessment']['reason']
+            if result.get('package_removal_monitor') == 'busy':
+                result['removal']['stage'] = 'package-removal'
+        return result
+
     def observe_recovery(self):
         """Read current proofs without clearing or archiving the host receipt.
 
@@ -1445,25 +1468,7 @@ else:
         self.tv_info.pop('root_setup_recovery', None)
         pending = self.store.pending(self.profile)
         if pending and pending.get('recovery_protocol')=='clean-removal-v1':
-            from .recovery_state import removal_summary
-            result={'device':{},'pending':pending,'assessment':assess(self.profile,pending),
-                    'removal':removal_summary(pending),'can_resume_root_setup':False}
-            self.tv_info['status']=result
-            if self.profile['edition']=='root':
-                self.collect_root_diagnostics()
-            elif self.profile.get('connection') != 'root-ssh':
-                from .no_root_cleanup import inspect_binding, inspect_package_removal
-                binding = inspect_binding(self)
-                result['removal_binding'] = binding
-                if binding.get('reservation') in ('matched', 'absent', 'interrupted'):
-                    monitor = inspect_package_removal(self, pending)
-                    if monitor is not None:
-                        result['package_removal_monitor'] = monitor
-                result['assessment'] = assess(self.profile, pending, result)
-                result['removal']['reason'] = result['assessment']['reason']
-                if result.get('package_removal_monitor') == 'busy':
-                    result['removal']['stage'] = 'package-removal'
-            return result
+            return self.observe_clean_removal(pending)
         initial = assess(self.profile, pending)
         result = ({'device': {}, 'pending': pending, 'can_resume_root_setup': False}
                   if initial['reason'] in ('unsupported-receipt', 'inherited-operation')

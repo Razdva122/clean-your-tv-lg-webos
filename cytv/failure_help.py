@@ -67,6 +67,8 @@ GUIDES = {
     'removal-not-submitted': ('Removal stopped before package deletion',
         'No package removal request was submitted.',
         'Choose Review recovery options for the same saved TV connection. Removal requires a separate confirmation; setup starts separately.', False),
+    'operation-active': ('Another operation is active for this TV', 'Another cytv session is using this TV.',
+        'Run cytv status.', False),
     'pending-operation': ('An earlier operation is unresolved', 'This failure does not prove that the earlier package operation finished.',
         'Save the report and keep the original saved connection and recovery data. Use only verified recovery; do not blindly retry setup, Restore or removal.', False),
     'no-root-reservation': ('An earlier TV operation needs review',
@@ -128,7 +130,9 @@ def for_error(error, phase, profile=None, pending=None, *, has_reset_source=None
     clean_removal = isinstance(pending, dict) and pending.get('recovery_protocol') == 'clean-removal-v1'
     removal_ssh_error = clean_removal and bool(names.intersection(('SSHException', 'NoValidConnectionsError')))
     code = None
-    if reason == 'installer-runtime-mismatch' and edition == 'root':
+    if reason == 'operation-active':
+        code = reason
+    elif reason == 'installer-runtime-mismatch' and edition == 'root':
         code = reason
     elif reason in ('tv-storage-full', 'tv-storage-ramfs'):
         code = reason

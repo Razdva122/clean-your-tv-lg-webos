@@ -501,6 +501,100 @@ class OriginalOperationIntegration(unittest.TestCase):
         self.installer.install(self.inventory, 'fresh-secret')
         self.assertEqual((self.root / 'requests').read_text().splitlines(), [operations.HELPER, *observer.APPS])
 
+    def test_second_recovery_window_can_refresh_the_original_package_result(self):
+        from concurrent.futures import ThreadPoolExecutor
+        from threading import Event
+        from cytv import cli
+        from cytv.desktop import DesktopConsole
+
+        self.remote.cut = True
+        with self.store.lock(self.profile), self.assertRaises(RuntimeError):
+            self.installer.install(self.inventory, 'original-secret')
+        self.store.save(self.profile)
+        directory = self.store.device_path(self.profile)
+        (directory / 'known_hosts').write_text('trusted-by-fixture\n')
+        watching, refresh_finished = Event(), Event()
+        run = self.remote.run
+
+        def pause_writer(command, data=None, timeout=30):
+            result = run(command, data, timeout)
+            if not watching.is_set() and self.remote.calls[-1] == ('observer', 'readback', 1):
+                watching.set()
+                self.assertTrue(refresh_finished.wait(15))
+            return result
+
+        self.remote.run = pause_writer
+        flags = ['--edition', 'no-root', '--data-dir', str(self.store.root), '--language', 'en']
+
+        def open_window(command, events, connect, *, host=self.profile['host']):
+            return cli.main([command, '--host', host, *flags], ask=lambda _: 'y',
+                            write=DesktopConsole(lambda *event: events.append(event)), connect=connect)
+
+        writer, second, refreshed, unrelated = [], [], [], []
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            first = pool.submit(open_window, 'recover', writer, lambda *_: self.remote)
+            try:
+                self.assertTrue(watching.wait(15), writer)
+                original = (directory / 'operation.json').read_bytes()
+
+                def rejected_connect(*_):
+                    self.fail('A second recovery window must not connect as a writer')
+
+                self.assertEqual(open_window('recover', second, rejected_connect), 2, second)
+                self.assertIn('operation-active', [value['code'] for kind, value in second if kind == 'failure-help'])
+                self.assertIn('operation-active', [value.get('disposition') for kind, value in second if kind == 'recovery-plan'])
+
+                def reader_connect(profile, saved, secret, trust, *, persist):
+                    self.assertEqual((profile, saved, persist), (self.profile, directory, False))
+                    self.assertFalse(trust(None, False))
+                    return self.remote
+
+                def changed_receipt(*_, persist):
+                    (directory / 'operation.json').unlink()
+                    return self.remote
+
+                offset = len(self.remote.calls)
+                try:
+                    self.assertEqual(open_window('status', [], changed_receipt), 2)
+                    self.assertEqual(len(self.remote.calls), offset)
+                finally:
+                    (directory / 'operation.json').write_bytes(original)
+
+                def receipt_clears_with_the_reply(command, data=None, timeout=30):
+                    result = pause_writer(command, data, timeout)
+                    if self.remote.calls[-1] == ('observer', 'status', None):
+                        (directory / 'operation.json').unlink(missing_ok=True)
+                    return result
+
+                cleared = []
+                try:
+                    self.remote.run = receipt_clears_with_the_reply
+                    self.assertEqual(open_window('status', cleared, reader_connect), 2, cleared)
+                    self.assertFalse(any(kind == 'text' and '"terminal":' in value
+                                         for kind, value in cleared), cleared)
+                finally:
+                    self.remote.run = pause_writer
+                    (directory / 'operation.json').write_bytes(original)
+
+                offset = len(self.remote.calls)
+                self.assertEqual(open_window('status', refreshed, reader_connect), 0, refreshed)
+                self.assertTrue(any(kind == 'text' and '"terminal": "success"' in value
+                                    for kind, value in refreshed), refreshed)
+                self.assertTrue(all(call[1] in ('status', 'artifacts') for call in self.remote.calls[offset:]
+                                    if call[0] == 'observer'))
+                self.assertEqual((directory / 'operation.json').read_bytes(), original)
+                self.assertEqual(open_window('status', [], lambda profile, saved, secret, trust: self.remote), 0)
+
+                other = Remote()
+                other.close = lambda: None
+                self.assertEqual(open_window('status', unrelated, lambda *_: other, host='other-tv'), 0, unrelated)
+                self.assertTrue(other.calls)
+                self.assertEqual((self.root / 'requests').read_text().splitlines(), list(observer.APPS))
+            finally:
+                refresh_finished.set()
+            self.assertEqual(first.result(timeout=15), 0, writer)
+        self.assertIsNone(self.store.pending(self.profile))
+
     def test_owned_fence_survives_lost_acknowledgement_and_blocks_old_attach(self):
         from cytv.errors import UserError
         (self.root / 'proc').mkdir()

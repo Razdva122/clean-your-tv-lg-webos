@@ -130,6 +130,27 @@ class GuiTests(unittest.TestCase):
                 for field, value in profile.items():
                     self.assertEqual(calls[0][calls[0].index('--'+field)+1], str(value))
 
+    def test_active_operation_only_offers_status_for_the_original_connection(self):
+        profile = {'host':'192.0.2.10', 'port':9922, 'edition':'no-root'}
+        calls = []
+        w = Wizard(run=lambda args, **kw: calls.append(args) or 0)
+        self.addCleanup(w.close)
+        w.command = 'uninstall'
+        w.receive('recovery', profile)
+        w.receive('recovery-plan', {'state':'waiting', 'disposition':'operation-active',
+            'summary':'Another operation is active for this TV', 'next_step':'Check TV status', 'actions':['check']})
+        w.receive('done', 2)
+
+        buttons = {button.text(): button for button in w.form.findChildren(QPushButton)}
+        self.assertSetEqual(set(buttons), {'Check TV status', 'Back to start'})
+        self.assertEqual(w.title.text(), 'Another operation is active for this TV')
+        buttons['Check TV status'].click()
+        self.pump(lambda: not w.running)
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(calls[0][0], 'status')
+        for field, value in profile.items():
+            self.assertEqual(calls[0][calls[0].index('--'+field)+1], str(value))
+
     def test_successful_doctor_russian_actions_fit_minimum_window(self):
         from cytv import i18n
         w = Wizard(); self.addCleanup(w.close)

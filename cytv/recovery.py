@@ -1,5 +1,6 @@
 """An explicit recovery journey; backend receipts remain the only authority."""
 import hashlib
+import json
 import re
 from time import monotonic
 
@@ -42,6 +43,66 @@ def confirmed_uninstall(pending):
         return None
     operation = pending.get('removal_operation')
     return operation if isinstance(operation, str) and re.fullmatch(r'[0-9a-f]{32}', operation) else None
+
+
+def active_operation_plan(write, profile, *, failure=None):
+    from .failure_help import GUIDES
+
+    title, _, next_step, _ = GUIDES['operation-active']
+    if write.frontend == 'desktop':
+        next_step = 'Check TV status'
+        write.recovery(profile)
+    if failure is not None:
+        write.failure_help(dict(failure, next_step=next_step))
+    write.recovery_plan({'state':'waiting', 'disposition':'operation-active', 'summary':title,
+                         'next_step':next_step, 'actions':['check']})
+
+
+def refresh_active_no_root(store, profile, payload, write, connect):
+    """Read the supported operation through its saved SSH connection without a writer lock."""
+    from .diagnostic_context import status_summary
+    from .no_root_observer import PROTOCOL, observe
+    from .operations import Installer
+
+    directory = store.device_path(profile)
+    pending = store.pending(profile) or {}
+    protocol = pending.get('recovery_protocol')
+    operation_key = 'observer_operation' if protocol == PROTOCOL else 'removal_operation'
+    operation = pending.get(operation_key)
+    if protocol not in (PROTOCOL, 'clean-removal-v1') or not operation:
+        raise UserError('Another cytv session is using this TV.', reason_code='operation-active')
+
+    def current_receipt():
+        receipt = store.pending(profile) or {}
+        if (store.device_path(profile) != directory
+                or (receipt.get('recovery_protocol'), receipt.get(operation_key)) != (protocol, operation)):
+            raise UserError('Recovery evidence changed. Check recovery again; recovery data was kept.',
+                            reason_code='pending-operation')
+        return receipt
+
+    missing_connection = 'The original saved TV connection and host key are required for recovery. Recovery data was kept.'
+
+    def no_credentials(_):
+        raise UserError(missing_connection, reason_code='ssh-identity-unverified')
+
+    saved, recovering = store.connection_profile(profile)
+    current_receipt()
+    if not recovering:
+        raise UserError(missing_connection, reason_code='ssh-identity-unverified')
+    remote = connect(saved, directory, no_credentials, lambda *_: False, persist=False)
+    try:
+        pending = current_receipt()
+        installer = Installer(remote, store, saved, payload, {}, write)
+        result = observe(installer, pending) if protocol == PROTOCOL else installer.observe_clean_removal(pending)
+    finally:
+        remote.close()
+    current_receipt()
+    summary = status_summary(result)
+    summary.pop('assessment', None)
+    if result.get('package_removal_monitor') in ('busy', 'idle', 'unverified'):
+        summary['package_removal_monitor'] = result['package_removal_monitor']
+    write.raw(json.dumps(summary, indent=2))
+    active_operation_plan(write, saved)
 
 
 REMOVAL_RECONNECT_INTERVAL = 2

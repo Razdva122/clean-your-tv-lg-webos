@@ -1,5 +1,6 @@
 """Per-TV private profiles and durable operation receipts."""
 from contextlib import contextmanager
+import errno
 import hashlib
 import ipaddress
 import json
@@ -544,30 +545,33 @@ class Store:
         private_write(self.device_dir(profile) / 'operation.json', json.dumps(current).encode())
 
     @contextmanager
-    def lock(self, profile):
+    def lock(self, profile, *, allow_observation=False):
+        """Reserve this TV for writes, or yield False for an explicit read-only path."""
         self.root.mkdir(parents=True, exist_ok=True, mode=0o700)
         name = 'session-' + hashlib.sha256(profile['host'].encode()).hexdigest()[:24] + '.lock'
         with (self.root / name).open('a+b') as stream:
             stream.seek(0)
-            if os.name == 'nt':
-                import msvcrt
-                # Windows denies reads of a byte locked by another session.
-                # Inspect its size without reading before attempting the lock.
-                if os.fstat(stream.fileno()).st_size == 0:
-                    stream.write(b'0'); stream.flush()
-                stream.seek(0)
-                try:
-                    msvcrt.locking(stream.fileno(), msvcrt.LK_NBLCK, 1)
-                except OSError:
-                    raise UserError('Another cytv session is using this TV.') from None
-            else:
-                import fcntl
-                try:
-                    fcntl.flock(stream, fcntl.LOCK_EX | fcntl.LOCK_NB)
-                except OSError:
-                    raise UserError('Another cytv session is using this TV.') from None
             try:
-                yield
+                if os.name == 'nt':
+                    import msvcrt
+                    # Windows denies reads of a byte locked by another session.
+                    # Inspect its size without reading before attempting the lock.
+                    if os.fstat(stream.fileno()).st_size == 0:
+                        stream.write(b'0'); stream.flush()
+                    stream.seek(0)
+                    msvcrt.locking(stream.fileno(), msvcrt.LK_NBLCK, 1)
+                else:
+                    import fcntl
+                    fcntl.flock(stream, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except OSError as error:
+                if error.errno not in (errno.EACCES, errno.EAGAIN, errno.EDEADLK):
+                    raise
+                if allow_observation:
+                    yield False
+                    return
+                raise UserError('Another cytv session is using this TV.', reason_code='operation-active') from None
+            try:
+                yield True
             finally:
                 if os.name == 'nt':
                     stream.seek(0); msvcrt.locking(stream.fileno(), msvcrt.LK_UNLCK, 1)

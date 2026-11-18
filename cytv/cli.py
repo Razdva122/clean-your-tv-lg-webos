@@ -1,7 +1,10 @@
 """Numbered terminal wizard and small maintenance command surface."""
 import argparse
+from contextlib import nullcontext
+import functools
 import getpass
 import hashlib
+import inspect as signature_inspect
 import io
 import json
 from pathlib import Path
@@ -123,6 +126,18 @@ def removal_connection_message(store, profile, phase, error):
         return None
     store.checkpoint(profile,removal_reason='connection-interrupted')
     return 'Connection to the TV was interrupted. Check the connection and try again.'
+
+
+def _connect_via(callback, profile, directory, secret, trust, *, persist):
+    """Use the optional persistence flag while preserving four-argument embedders."""
+    options = {}
+    if not persist:
+        try:
+            signature_inspect.signature(callback).bind(profile, directory, secret, trust, persist=False)
+            options['persist'] = False
+        except (TypeError, ValueError):
+            pass
+    return callback(profile, directory, secret, trust, **options)
 
 
 def storage_preflight_review(store, profile, ask, write):
@@ -551,7 +566,23 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
             return secret(localized)
 
         from .transport import SSH, CredentialPrompt
-        with store.lock(profile), diagnostics.context.operation_context(store, profile):
+        observe_while_busy = (args.command == 'status' and not partial and profile['edition'] == 'no-root'
+                              and profile.get('connection') != 'root-ssh')
+        lock_options = {'allow_observation': True} if observe_while_busy else {}
+        with store.lock(profile, **lock_options) as writer, (
+                nullcontext() if writer is False else diagnostics.context.operation_context(store, profile)):
+            if writer is False:
+                from .recovery import active_operation_plan, refresh_active_no_root
+                connector = functools.partial(_connect_via, connect) if connect else SSH.connect
+                try:
+                    refresh_active_no_root(store, profile, payload, write, connector)
+                except Exception as error:
+                    if getattr(error, 'reason_code', None) == 'operation-active':
+                        raise
+                    write.error(str(error) if isinstance(error, UserError) else 'The TV package result could not be verified.')
+                    active_operation_plan(write, profile)
+                    return 2
+                return 0
             if removal_operation is not None:
                 from .recovery import confirmed_uninstall
                 pending = store.pending(profile)
@@ -629,17 +660,8 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                     else:
                         directory = store.device_path(profile) if partial else store.device_dir(profile)
                 if connect:
-                    # Older embedders accept exactly four positional arguments.
-                    import inspect as signature_inspect
-                    options = {}
-                    if pinned:
-                        try:
-                            signature_inspect.signature(connect).bind(profile, directory, secret_with_help, trust, persist=False)
-                            options['persist'] = False
-                        except TypeError:
-                            pass
-                    return connect(profile, directory, secret_with_help,
-                                   (lambda *_: False) if pinned else confirm, **options)
+                    return _connect_via(connect, profile, directory, secret_with_help,
+                                        (lambda *_: False) if pinned else confirm, persist=not pinned)
                 return SSH.connect(profile, directory, secret_with_help, confirm,
                                    identity_prompt=None if pinned or args.non_interactive else lambda: prompts.root_credentials(ask, write),
                                    persist=not pinned, **pairing)
@@ -1116,6 +1138,11 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
         return 130
     except UserError as exc:
         checks.finish_running()
+        if profile and exc.reason_code == 'operation-active':
+            from .failure_help import for_error
+            from .recovery import active_operation_plan
+            active_operation_plan(write, profile, failure=for_error(exc, phase, profile, store.pending(profile)))
+            return 2
         write.error('Could not complete this step', heading=True)
         unverified_review = saved_review and remote is None
         write.error((None if partial or unverified_review else

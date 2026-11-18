@@ -795,9 +795,10 @@ class Wizard(QMainWindow):
                     cursor.movePosition(QTextCursor.MoveOperation.Start, QTextCursor.MoveMode.KeepAnchor)
                     cursor.removeSelectedText()
             self.reading.verticalScrollBar().setValue(0)
-            cleanup = self.command == 'uninstall' or self.recovery_plan is not None and self.recovery_plan.get('disposition') == 'clean-removal'
-            no_root_status = (self.recovery_profile is not None
-                              and (self.recovery_plan or {}).get('disposition') == 'no-root-package-check')
+            disposition = (self.recovery_plan or {}).get('disposition')
+            active_operation = disposition == 'operation-active'
+            cleanup = not active_operation and (self.command == 'uninstall' or disposition == 'clean-removal')
+            status_refresh = self.recovery_profile is not None and disposition in ('no-root-package-check', 'operation-active')
             completed = False
             recover = (not cleanup and self.recovery_profile is not None and
                        ((self.recovery_plan is None and
@@ -827,7 +828,7 @@ class Wizard(QMainWindow):
             restore_for_removal = (self.recovery_plan.get('restore_for_removal')
                                    if retry_removal and value not in (0, 130)
                                    and self.command in ('uninstall', 'recover') else None)
-            resume_root_reinstall = (self.reinstalling_root and self.selected_profile is not None
+            resume_root_reinstall = (not active_operation and self.reinstalling_root and self.selected_profile is not None
                                      and self.saved_root_reinstall(Store(), self.selected_profile))
             doctor_ready = (value == 0 and self.command == 'doctor' and self.doctor_result is not None
                             and self.selected_profile is not None and not self.recovery_plan and not recover)
@@ -853,7 +854,7 @@ class Wizard(QMainWindow):
                 self.badge.setText(self.title.text())
                 self.subtitle.setText(tr('Checking recovery does not reinstall or remove packages. Root checks may run verified support code.'))
                 self.button('Review recovery options', lambda: self.start('recover', profile), not failed)
-            elif no_root_status:
+            elif status_refresh:
                 profile = dict(self.recovery_profile)
                 self.title.setText(tr(self.recovery_plan['summary']))
                 self.badge.setText(self.title.text())
@@ -926,20 +927,20 @@ class Wizard(QMainWindow):
             if self.report:
                 save_report = self.button('Save diagnostic report…', self.save_report,
                                           (failed or setup_review) and not retry_removal and not connection_help
-                                          and not resume_root_reinstall and not no_root_status,
+                                          and not resume_root_reinstall and not status_refresh,
                                           layout=report_actions)
                 if doctor_ready:
                     save_report.setObjectName('doctorReport')
-                if failed and not no_root_status:
+                if failed and not status_refresh:
                     self.subtitle.setText(tr('Save the report from this failed attempt and attach it to your issue. Recovery data has been kept.'))
-            elif failed and not no_root_status:
+            elif failed and not status_refresh:
                 self.subtitle.setText(tr('A diagnostic report could not be created. Include the visible error when opening an issue.'))
-            if (failed and not cleanup) or home_failed:
+            if (failed and not cleanup and not active_operation) or home_failed:
                 self.button('Open an issue', lambda: QDesktopServices.openUrl(QUrl(diagnostics.ISSUE_URL)),
                             layout=report_actions if connection_help else None)
             self.button('Back to start', self.home,
                         not doctor_ready and not connection_help and not retry_removal and not recover
-                        and not continue_removal and not resume_root_reinstall and not no_root_status and not ((failed or setup_review) and self.report),
+                        and not continue_removal and not resume_root_reinstall and not status_refresh and not ((failed or setup_review) and self.report),
                         layout=report_actions if retry_removal else None)
             failed_checks = [result for result in self.check_results.values() if result['status'] in ('fail', 'unknown')]
             if failed and failed_checks:
@@ -949,7 +950,7 @@ class Wizard(QMainWindow):
                     self.title.setText(tr(self.failure_help['title']))
                     self.badge.setText(self.title.text())
                 self.subtitle.setText(tr(self.failure_help['next_step']))
-                if not self.report:
+                if not self.report and not active_operation:
                     self.subtitle.setText(self.subtitle.text()+'\n'+tr('A diagnostic report could not be created. Include the visible error when opening an issue.'))
             if self.recovery_plan:
                 from .recovery_ui import removal_details, removal_connection_failure, removal_milestones, removal_title, removal_waiting

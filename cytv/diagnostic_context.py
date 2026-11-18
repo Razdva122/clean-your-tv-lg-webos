@@ -432,7 +432,7 @@ def status_summary(value):
                       'readback':choice(mapping(slot).get('readback'),('not-checked','matches')),
                       'reason':choice(mapping(slot).get('reason'),('malformed-reply','malformed-utf8','oversized-stream',
                           'oversized-reply','too-many-replies','oversized-stderr','observation-timeout','sender-unavailable',
-                          'sender-stdin-lost','stream-ended','terminal-persistence-unverified'))} for slot in slots[:2]]}
+                          'sender-stdin-lost','stream-ended','terminal-persistence-unverified'))} for slot in slots[:3]]}
     if 'cancellation' in value:
         cancellation=mapping(value['cancellation'])
         result['cancellation']={'state':choice(cancellation.get('state'),('blocked','admissible','admitted',

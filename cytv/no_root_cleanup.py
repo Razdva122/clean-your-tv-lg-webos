@@ -636,8 +636,9 @@ def _missing_capsule_receipt(previous):
 
 
 def _device(installer, action, proof=None, *, after_stop=False, wait_for_idle=False, guard=False,
-            allow_empty_helper=False):
-    pending = installer.store.pending(installer.profile) or {}
+            allow_empty_helper=False, pending=None):
+    if pending is None:
+        pending = installer.store.pending(installer.profile) or {}
     request = {'action':action, 'staging_ids':pending.get('cleanup_staging_ids', []),
                'removal':pending.get('removal_operation'), 'proof':proof}
     capsule = 'no-original-install'
@@ -704,8 +705,8 @@ def _device(installer, action, proof=None, *, after_stop=False, wait_for_idle=Fa
     return value
 
 
-def inspect_binding(installer):
-    return _device(installer, 'binding', guard=True)
+def inspect_binding(installer, *, pending=None):
+    return _device(installer, 'binding', guard=True, pending=pending)
 
 
 def _package_installer_idle(installer, pending, *, optional_monitor):
