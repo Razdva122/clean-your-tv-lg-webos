@@ -4,6 +4,7 @@ import re
 from pathlib import Path
 
 from cytv import cli, state, i18n
+from cytv.desktop import RETRY_STORAGE_CHECK, RETRY_STORAGE_PROMPT
 from cytv.transport import SSH
 from cytv.terminal import Console
 
@@ -55,13 +56,13 @@ class Callbacks:
             raise EOFError
         return str(answer)
 
-    def ask(self, prompt):
+    def ask(self, prompt, **confirmation):
         options, self.options = self.options, []
         event = {'kind':'question', 'text':prompt, 'context':'\n'.join(self.context), 'defaultNo':'[y/N]' in prompt}
         if options:
             match = re.search(r'\[(\d+)\]', prompt)
             event.update(options=options, defaultChoice=match.group(1) if match else '')
-        return self.request(**event)
+        return self.request(**event, **confirmation)
 
     def secret(self, prompt):
         if hasattr(prompt, 'credential_type'):
@@ -104,6 +105,17 @@ class AndroidConsole(Console):
         self.callbacks.options.append({'value':str(key), 'label':i18n.translate(label),
                                        'detail':i18n.translate(detail)})
 
+    def reader(self, ask):
+        read = super().reader(ask)
+
+        def read_prompt(prompt):
+            if prompt == f'{RETRY_STORAGE_PROMPT} [y/N]: ':
+                return ask(self.prompt(prompt), reason='storage-preflight-failed',
+                           actions=['retry-storage-check'], confirmLabel=i18n.translate(RETRY_STORAGE_CHECK))
+            return read(prompt)
+
+        return read_prompt
+
     def failure_help(self, value):
         super().failure_help(value)
         self.callbacks.emit(kind='failure-help', code=value['code'], title=i18n.translate(value['title']),
@@ -129,8 +141,9 @@ class AndroidConsole(Console):
         optional['restart_required'] = removal_restart_required(value)
         if value.get('disposition') == 'clean-removal':
             optional['removal_action'] = projected_removal_action(value)
-        if type(value.get('actions')) is list:
-            optional['actions'] = [item for item in value['actions'] if type(item) is str and item in ACTIONS]
+        actions = value.get('actions', ['check'] if value['state'] == 'review' else None)
+        if type(actions) is list:
+            optional['actions'] = [item for item in actions if type(item) is str and item in ACTIONS]
         removal = value.get('removal') if type(value.get('removal')) is dict else {}
         reason = value.get('reason', removal.get('reason'))
         if type(reason) is str and reason in REASONS:

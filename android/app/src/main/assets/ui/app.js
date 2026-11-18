@@ -259,17 +259,28 @@ function removalPrimary() {
     );
   if (decision === 'retry-removal')
     return primary('tryAgain', 'retry-removal', 'refresh');
-  // Missing or unknown advice must not turn into another package mutation.
-  return primary('recoveryReview', 'recover', 'refresh');
+  if (decision === 'check')
+    return primary('recoveryReview', 'recover', 'refresh');
+  return primary('statusTool', 'check-status', 'shield');
 }
 function canReviewRecovery() {
   return (
     recoveryPlan &&
-    (recoveryPlan.state === 'review' ||
+    recoveryPlan.disposition !== 'no-root-package-check' &&
+    ((isCleanup() && recoveryPlan.removal_action?.action === 'check') ||
       (recoveryPlan.state !== 'complete' &&
         Array.isArray(recoveryPlan.actions) &&
-        recoveryPlan.actions.includes('continue-removal')))
+        ((recoveryPlan.state === 'review' &&
+          recoveryPlan.actions.includes('check')) ||
+          recoveryPlan.actions.includes('continue-removal'))))
   );
+}
+function recoveryPrimary(recovered) {
+  if (recovered) return '';
+  if (isCleanup()) return removalPrimary();
+  if (canReviewRecovery())
+    return primary('recoveryReview', 'recover', 'refresh');
+  return primary('statusTool', 'check-status', 'shield');
 }
 function taskList() {
   if (action !== 'install') return '';
@@ -305,6 +316,7 @@ function result() {
     (!!recoveryPlan && !complete) ||
     (ok && action === 'uninstall' && !complete) ||
     (ok && setup && !verified);
+  const recoveryAction = recoveryPlan ? recoveryPrimary(recovered) : '';
   const cancelled = resultCode === 130;
   const waitingCleanup =
     isCleanup() &&
@@ -336,7 +348,7 @@ function result() {
     : cancelled
       ? 'cancelledDesc'
       : 'failedDesc';
-  return `<div class="result-symbol ${complete ? '' : needsReview ? 'review-symbol' : 'error-symbol'}">${icon(complete ? 'check' : 'alert')}</div><section class="center progress-copy ${!ok && !cancelled && !waitingCleanup ? 'error-result' : ''}"><h1>${cancelled ? t('cancelled') : recoveryPlan ? (recovered ? esc(recoveryPlan.summary) : isCleanup() ? (connectionFailure() ? t('removalConnection') : recoveryPlan.titleText ? esc(recoveryPlan.titleText) : t(restartPresentation() ? 'restartRemoval' : 'removalPending')) : t('recoveryReview')) : ok && setup ? t(verified ? 'homeObserved' : 'tvChecksReview') : failureHelp ? esc(failureHelp.title) : t(title)}</h1><p>${recoveryPlan ? esc(recovered ? recoveryPlan.nextStep : isCleanup() ? t('removalPending') : recoveryPlan.summary) : ok && setup ? t('tvChecksDesc') : failureHelp ? esc(failureHelp.detail) : t(desc)}</p><div class="target">${editionName()}<span> / </span>${esc(host)}</div></section>${!ok && !waitingCleanup && errorLogs.size ? `<p class="error-summary error-text" role="alert">${esc([...errorLogs].at(-1))}</p>` : ''}${checkList()}${ok && !recoveryPlan && action === 'install' ? `<div class="recovery-info"><h3>${t('recoveryTitle')}</h3><p>${t('recoveryDesc')}</p><div class="gesture"><kbd>Home</kbd> × 3 <span class="muted"> / 2 ${t('seconds')}</span></div></div>` : ''}${ok && !recoveryPlan && action === 'install' && edition === 'no-root' ? `<div class="recovery-info"><p>${t('tryHomeHelp')}</p><p>${t('resumeHomeHelp')}</p>${selectedConnection === 'root-ssh' ? '' : `<p>${t('sessionHelp')}</p>`}</div>` : ''}${recoveryPlan && !recovered ? recoveryDetails() : ''}${failureHelp && !isCleanup() ? `<section class="recovery-info" role="note"><p>${esc(failureHelp.nextStep)}</p></section>` : ''}${logBlock()}<footer class="bottom">${reportReady ? `<button class="${recoveryPlan && isCleanup() && !recovered ? 'secondary' : 'primary'}" data-action="save-report">${t('saveReport')}${icon('file')}</button>` : ''}${recoveryPlan ? `${isCleanup() && !recovered ? removalPrimary() : canReviewRecovery() ? primary('recoveryReview', 'recover', 'refresh') : ''}${isCleanup() && !recovered && connectionFailure() ? `<button class="secondary" data-action="to-connection">${t('toConnection')}</button>` : ''}<button class="secondary" data-action="home">${t('done')}</button>` : !ok ? `${!failureHelp || failureHelp.canEditConnection ? `<button class="secondary" data-action="to-connection">${t('toConnection')}</button>` : ''}<button class="text-button maintenance-link" data-action="home">${t('done')}</button>` : reportReady ? `<button class="secondary" data-action="home">${t('done')}</button>` : primary('done', 'home', 'check')}</footer>`;
+  return `<div class="result-symbol ${complete ? '' : needsReview ? 'review-symbol' : 'error-symbol'}">${icon(complete ? 'check' : 'alert')}</div><section class="center progress-copy ${!ok && !cancelled && !waitingCleanup ? 'error-result' : ''}"><h1>${cancelled ? t('cancelled') : recoveryPlan ? (recovered ? esc(recoveryPlan.summary) : isCleanup() ? (connectionFailure() ? t('removalConnection') : recoveryPlan.titleText ? esc(recoveryPlan.titleText) : t(restartPresentation() ? 'restartRemoval' : 'removalPending')) : t('recoveryReview')) : ok && setup ? t(verified ? 'homeObserved' : 'tvChecksReview') : failureHelp ? esc(failureHelp.title) : t(title)}</h1><p>${recoveryPlan ? esc(recovered ? recoveryPlan.nextStep : isCleanup() ? t('removalPending') : recoveryPlan.summary) : ok && setup ? t('tvChecksDesc') : failureHelp ? esc(failureHelp.detail) : t(desc)}</p><div class="target">${editionName()}<span> / </span>${esc(host)}</div></section>${!ok && !waitingCleanup && errorLogs.size ? `<p class="error-summary error-text" role="alert">${esc([...errorLogs].at(-1))}</p>` : ''}${checkList()}${ok && !recoveryPlan && action === 'install' ? `<div class="recovery-info"><h3>${t('recoveryTitle')}</h3><p>${t('recoveryDesc')}</p><div class="gesture"><kbd>Home</kbd> × 3 <span class="muted"> / 2 ${t('seconds')}</span></div></div>` : ''}${ok && !recoveryPlan && action === 'install' && edition === 'no-root' ? `<div class="recovery-info"><p>${t('tryHomeHelp')}</p><p>${t('resumeHomeHelp')}</p>${selectedConnection === 'root-ssh' ? '' : `<p>${t('sessionHelp')}</p>`}</div>` : ''}${recoveryPlan && !recovered ? recoveryDetails() : ''}${failureHelp && !isCleanup() ? `<section class="recovery-info" role="note"><p>${esc(failureHelp.nextStep)}</p></section>` : ''}${logBlock()}<footer class="bottom">${reportReady ? `<button class="${recoveryAction ? 'secondary' : 'primary'}" data-action="save-report">${t('saveReport')}${icon('file')}</button>` : ''}${recoveryPlan ? `${recoveryAction}${isCleanup() && !recovered && connectionFailure() ? `<button class="secondary" data-action="to-connection">${t('toConnection')}</button>` : ''}<button class="secondary" data-action="home">${t('done')}</button>` : !ok ? `${!failureHelp || failureHelp.canEditConnection ? `<button class="secondary" data-action="to-connection">${t('toConnection')}</button>` : ''}<button class="text-button maintenance-link" data-action="home">${t('done')}</button>` : reportReady ? `<button class="secondary" data-action="home">${t('done')}</button>` : primary('done', 'home', 'check')}</footer>`;
 }
 function wallpapers() {
   return `${step()}<section class="page-intro"><h1>${t('wallpapers')}</h1><p>${t('wallpaperInstructions')}</p></section><div class="wallpaper-limit" role="note">${icon('alert')}<p>${t('wallpaperLimit')}</p></div><footer class="bottom"><div class="footnote">${icon('wifi')}${t('networkFoot')}</div></footer>`;
@@ -487,7 +499,15 @@ function showPrompt(event) {
   } else if (Array.isArray(event.options) && event.options.length) {
     content = `<div class="dialog-icon">${icon('log')}</div><h2 id="prompt-title">${t('reviewTitle')}</h2><div class="context" tabindex="0">${esc(event.context || event.text)}</div><div class="dialog-actions">${event.options.map((option) => `<button class="${option.value === event.defaultChoice ? 'primary' : 'secondary'}" data-action="choice-prompt" data-value="${esc(option.value)}">${esc(option.label)}${option.detail ? `<span>${esc(option.detail)}</span>` : ''}</button>`).join('')}<button class="text-button" data-action="cancel-prompt">${t('cancel')}</button></div>`;
   } else {
-    content = `<div class="dialog-icon">${icon('log')}</div><h2 id="prompt-title">${t('reviewTitle')}</h2><p>${t('reviewDesc')}</p><div class="context" tabindex="0">${esc(event.context || event.text)}</div><div class="dialog-actions">${primary('continue', 'confirm', 'check')}<button class="text-button" data-action="cancel-prompt">${t('cancel')}</button></div>`;
+    const storageRetry =
+      event.reason === 'storage-preflight-failed' &&
+      Array.isArray(event.actions) &&
+      event.actions.includes('retry-storage-check') &&
+      event.confirmLabel;
+    const confirm = storageRetry
+      ? `<button class="primary" data-action="confirm">${esc(event.confirmLabel)}${icon('refresh')}</button>`
+      : primary('continue', 'confirm', 'check');
+    content = `<div class="dialog-icon">${icon('log')}</div><h2 id="prompt-title">${t('reviewTitle')}</h2><p>${t('reviewDesc')}</p><div class="context" tabindex="0">${esc(event.context || event.text)}</div><div class="dialog-actions">${confirm}<button class="text-button" data-action="cancel-prompt">${t('cancel')}</button></div>`;
   }
   dialog.innerHTML = content;
   if (!dialog.open) dialog.showModal();
@@ -558,6 +578,8 @@ window.receiveNative = function (event) {
     host = c.host;
     edition = c.edition;
     selectedConnection = c.connection || null;
+    if (typeof c.useImportedKey === 'boolean')
+      auth = c.useImportedKey ? 'key' : 'password';
     rootVariant = c.root_variant || null;
     port = String(c.port || (edition === 'root' ? 22 : 9922));
     action = c.action || 'install';
@@ -722,6 +744,9 @@ document.addEventListener('click', (event) => {
     }
     screen = 'connection';
     render();
+  } else if (cmd === 'check-status') {
+    action = 'status';
+    start(true);
   } else if (cmd === 'retry-removal') {
     action = 'uninstall';
     start(true);

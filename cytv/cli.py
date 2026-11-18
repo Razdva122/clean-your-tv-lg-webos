@@ -862,7 +862,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                 installer.helper_retry = helper_retry
                 if profile['edition'] == 'no-root':
                     phase = 'inspect-installation'
-                    if not args.non_interactive and write.frontend in ('console', 'desktop'):
+                    if not args.non_interactive and write.frontend in ('console', 'desktop', 'android'):
                         installer.storage_preflight_review = storage_preflight_review(store, profile, ask, write)
                         installer.before_no_root_staging = prepare_no_root_staging
                         installer.preflight(install=True, defer_helper=True)

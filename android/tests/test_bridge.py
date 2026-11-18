@@ -9,6 +9,88 @@ SOURCE = Path(__file__).resolve().parents[1] / 'app/src/main/python/android_brid
 
 
 class BridgeTests(unittest.TestCase):
+    def test_storage_retry_rechecks_only_the_failed_read_before_confirming_setup(self):
+        import shlex
+        from cytv import i18n
+        from tests.cytv.test_desktop_recovery import DesktopRecoveryTests
+
+        fixture = DesktopRecoveryTests()
+        self.addCleanup(fixture.doCleanups)
+        fixture.setUp()
+        fixture.store.finish(fixture.profile)
+        original_run = fixture.remote.run
+        checks = []
+
+        def run(command, **kwargs):
+            if command.startswith('unset NODE_OPTIONS NODE_PATH && /usr/bin/node -e '):
+                args = shlex.split(command)
+                request = json.loads(args[-1]) if args[-1].startswith('{') else {}
+                if request.get('command') in ('storage-select', 'storage-check'):
+                    checks.append(request['command'])
+                    if checks == ['storage-select', 'storage-check']:
+                        return 'MALFORMED'
+            return original_run(command, **kwargs)
+
+        class Native:
+            def __init__(self):
+                self.questions = []
+                self.errors = []
+
+            def emit(self, raw):
+                event = json.loads(raw)
+                if event['kind'] == 'error':
+                    self.errors.append(event['text'])
+
+            def request(self, raw):
+                event = json.loads(raw)
+                self.questions.append(event)
+                return 'n' if checks == ['storage-select', 'storage-check', 'storage-check'] else 'y'
+
+        fixture.remote.run = run
+        bridge = self.module()
+        native = Native()
+        config = dict(fixture.profile, action='install', language='ru')
+        with patch.object(bridge.SSH, 'connect', side_effect=lambda profile, *_args, **_kwargs: fixture.connect(profile)):
+            code = bridge.run(json.dumps(config), fixture.root, fixture.payload, '', native)
+        retry = next((q for q in native.questions if q.get('reason') == 'storage-preflight-failed'), None)
+        self.assertIsNotNone(retry, (checks, native.errors))
+        self.assertEqual(retry['actions'], ['retry-storage-check'])
+        self.assertEqual(retry['confirmLabel'], i18n.translate('Retry storage check'))
+        self.assertNotEqual(retry['confirmLabel'], 'Retry storage check')
+        self.assertTrue(retry['defaultNo'])
+        self.assertTrue(native.questions[-1]['defaultNo'])
+        self.assertEqual(checks, ['storage-select', 'storage-check', 'storage-check'])
+        self.assertEqual(fixture.connections, [fixture.profile])
+        self.assertEqual(code, 130)
+        self.assertIsNone(fixture.store.pending(fixture.profile))
+        self.assertEqual(fixture.remote.uploads, {})
+        self.assertFalse(any(c[0] == 'luna' and c[1].endswith('/install') for c in fixture.remote.calls))
+
+    def test_submitted_package_check_projects_the_same_reason_and_action_on_both_frontends(self):
+        from cytv.desktop import DesktopConsole
+        from cytv.recovery import no_root_package_check_plan
+        from cytv.state import target
+
+        module = self.module()
+        android_events, desktop_events = [], []
+
+        class Native:
+            def emit(self, raw):
+                android_events.append(json.loads(raw))
+
+        profile = target('192.0.2.10', 'no-root', 2222, connection='root-ssh')
+        pending = {'action': 'install', 'recovery_protocol': 'no-root-original-stream-v1'}
+        assessment = {'state': 'blocked', 'reason': 'original-terminal-unknown',
+                      'actions': ['check', 'retain-evidence']}
+        for console in (module.AndroidConsole(module.Callbacks(Native())),
+                        DesktopConsole(lambda kind, value: desktop_events.append((kind, value)))):
+            self.assertTrue(no_root_package_check_plan(console, profile, pending, assessment))
+        desktop = next(value for kind, value in desktop_events if kind == 'recovery-plan')
+        for field in ('disposition', 'reason', 'actions'):
+            self.assertEqual(android_events[-1][field], desktop[field])
+        self.assertEqual(android_events[-1]['disposition'], 'no-root-package-check')
+        self.assertNotIn(profile['host'], json.dumps(android_events))
+
     def test_selected_profile_event_preserves_choices_without_identity_paths(self):
         module = self.module()
         class Native:
@@ -183,6 +265,7 @@ class BridgeTests(unittest.TestCase):
         module.AndroidConsole(callbacks).recovery({'host':'PRIVATE-TARGET'})
         event = native.events[-1]
         self.assertEqual((event['kind'], event['state']), ('recovery-plan', 'review'))
+        self.assertIn('check', event['actions'])
         self.assertNotIn('PRIVATE-TARGET', json.dumps(native.events))
         callbacks.ask('Remove remaining Clean Your TV packages? [y/N]: ')
         self.assertTrue(native.events[-1]['defaultNo'])

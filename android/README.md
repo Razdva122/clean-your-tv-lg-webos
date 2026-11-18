@@ -102,6 +102,11 @@ check status before reinstalling. The app retains operation receipts and does
 not automatically repeat installation after process death. Keep the same TV,
 edition and SSH port; pending or unknown outcomes need inspection.
 
+If No-root setup offers **Retry storage check**, the app repeats the read on
+the same connection and asks you to confirm installation separately. If the
+result of a submitted package request is unknown, choose **Installation
+status** and keep the recovery data.
+
 Published Android exposes install, status, inspection, restore and explicit removal
 in Maintenance; use its retained connection and evidence. An interrupted No-root removal needs its
 verified continuation and separate confirmation; an unknown removal outcome stays
