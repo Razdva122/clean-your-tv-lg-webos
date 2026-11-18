@@ -1266,6 +1266,8 @@ function channelSession(directory, settings, create, action) {
         fail('directory', 'valid-record');
       name += '-' + boot;
     }
+    var channel = directory + '/' + name;
+    settings.channelParent = { path: directory, stat: outer.stat };
     if (create) {
       outer.check();
       try {
@@ -1293,11 +1295,34 @@ function channelSession(directory, settings, create, action) {
         } finally {
           if (fd !== undefined) fs.closeSync(fd);
         }
+      } else if (
+        child.isDirectory() &&
+        child.uid === outer.uid &&
+        child.gid === outer.stat.gid &&
+        ((child.mode & 4095) === 509 || (child.mode & 4095) === 1472)
+      ) {
+        // Only the request writer can reclaim its own 0775 child or resume
+        // an interrupted 2700 repair. Drop the old records before reopening.
+        session(
+          channel,
+          {
+            role: 'channel-parent',
+            operation: settings.operation,
+            repairChannel: true,
+            channelParent: settings.channelParent
+          },
+          function (repair) {
+            if (!unchanged(child, repair.stat))
+              fail('directory', 'stable-inode', actual(repair.stat));
+            repair.setDirectoryMode(1472);
+            repair.discardChannelRecords();
+            repair.setDirectoryMode(1528);
+          }
+        );
       }
     }
     outer.check();
-    settings.channelParent = { path: directory, stat: outer.stat };
-    return session(directory + '/' + name, settings, action);
+    return session(channel, settings, action);
   });
 }
 prepare.readChannelRecord = function (directory, kind) {
