@@ -373,7 +373,7 @@ def _run(args, ask, write, connect, secret, search, inspect, payload_root, check
     from .checks import CheckList
     checks = CheckList(write.check)
     ask = write.reader(ask)
-    remote = None
+    remote = failure = None
     store, profile, phase, tv_info = state.Store(args.data_dir), None, 'select-tv', {'frontend':getattr(write,'frontend','console')}
     partial = False
     saved_review = None
@@ -1166,6 +1166,7 @@ def _run(args, ask, write, connect, secret, search, inspect, payload_root, check
                 result = installer.status()
                 write.doctor_result(result)
                 if args.report:
+                    diagnostics.observe_root_python_inventory(remote, profile, tv_info)
                     diagnostics.save_result(write, store, args.command, profile, 'doctor-complete', tv_info, checks=checks.results, status=result)
             else:
                 phase = args.command
@@ -1211,6 +1212,7 @@ def _run(args, ask, write, connect, secret, search, inspect, payload_root, check
                 else:
                     write.status_result(result)
             if not read_only and args.command in ('install', 'status', 'restore', 'recover', 'uninstall'):
+                diagnostics.observe_root_python_inventory(remote, profile, tv_info)
                 diagnostics.save_result(write, store, args.command, profile,
                     'install-complete' if args.command == 'install' else phase, tv_info,
                     checks=checks.results, status=result if args.command in ('status', 'restore', 'uninstall') else tv_info.get('status'))
@@ -1308,6 +1310,9 @@ def _run(args, ask, write, connect, secret, search, inspect, payload_root, check
             from .root_runtime import FEEDBACK
             write(FEEDBACK)
         if remote is not None:
+            if (failure is not None and not partial and not read_only
+                    and args.command in ('install', 'status', 'doctor', 'restore', 'recover', 'uninstall')):
+                diagnostics.observe_root_python_inventory(remote, profile, tv_info)
             remote.close()
 
     if read_only:

@@ -219,6 +219,12 @@ def issue_url(title):
     return ISSUE_URL + '&' + urlencode({'title': title})
 
 
+def observe_root_python_inventory(remote, profile, tv_info):
+    if profile and profile.get('edition') == 'root':
+        from .root_passive import collect_runtime_inventory
+        tv_info['root_python_inventory'] = collect_runtime_inventory(remote)
+
+
 def save_result(write, store, action, profile, phase, tv_info=None, *, checks=None, status=None):
     """A failed optional export must not turn successful device work into failure."""
     write = console(write)

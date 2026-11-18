@@ -37,13 +37,14 @@ class PassiveBootstrapTests(unittest.TestCase):
         for kind,value in (('request',self.request),('submission',self.submission)):
             self.write(self.base+'/'+kind+'-'+self.identifier+'.json',json.dumps(value).encode())
 
-    def collect(self,foreign=False,pending=None):
+    def collect(self,foreign=False,pending=None, *, source=None):
         harness=r'''
 var fs=require('fs'),vm=require('vm'),path=require('path'),c=require('constants');
 var fixture=JSON.parse(process.argv[1]),code=JSON.parse(process.argv[2]),foreign=process.argv[3]==='true';
 function local(p){if(typeof p!=='string'||p[0]!=='/'||p.indexOf('..')>=0)throw Error('unexpected-path');return path.join(fixture,p);}
 function stat(s){s.uid=foreign&&s.isFile()?123:0;return s;}
 var ro={lstatSync:function(p){return stat(fs.lstatSync(local(p)));},
+ readdirSync:function(p){return fs.readdirSync(local(p));},
  openSync:function(p,flags){if((flags&3)!==0||!(flags&c.O_NOFOLLOW))throw Error('not-read-only');return fs.openSync(local(p),flags);},
  fstatSync:function(fd){return stat(fs.fstatSync(fd));},readSync:fs.readSync.bind(fs),closeSync:fs.closeSync.bind(fs)};
 var output=[];
@@ -53,7 +54,7 @@ process.stdout.write(JSON.stringify(output));
 '''
         before={str(p):(p.read_bytes(),p.stat().st_mode) for p in self.root.rglob('*') if p.is_file() and not p.is_symlink()}
         run=subprocess.run([os.environ.get('ROOT_DIAGNOSTIC_NODE','node'),'-e',harness,json.dumps(str(self.root)),
-                            json.dumps(root_passive.program(self.identifier,pending)),str(foreign).lower()],capture_output=True,text=True,check=True)
+                            json.dumps(source or root_passive.program(self.identifier,pending)),str(foreign).lower()],capture_output=True,text=True,check=True)
         output=json.loads(run.stdout);self.assertEqual(len(output),1)
         for secret in ('PRIVATE','PASSWORD','ADDRESS',self.identifier,self.worker):self.assertNotIn(secret,run.stdout)
         after={str(p):(p.read_bytes(),p.stat().st_mode) for p in self.root.rglob('*') if p.is_file() and not p.is_symlink()}
@@ -152,6 +153,52 @@ process.stdout.write(JSON.stringify(output));
     def test_updater_binding_is_not_misreported_as_system_default(self):
         self.write('/var/lib/clean-your-tv-root-updater/python-launcher',b'foreign launcher must not run')
         self.assertEqual(self.collect()['status'],'inconsistent')
+
+    def test_installed_python_inventory_is_classified_read_only_in_the_standard_report(self):
+        from unittest.mock import Mock
+        from cytv import diagnostics, state
+        from cytv.python_runtime import RUNTIME_ROOT, SHA256
+
+        remote = Mock()
+        remote.run.side_effect = lambda command, *, data, timeout: json.dumps(self.collect(source=data.decode()))
+        store = state.Store(self.root/'local-diagnostics')
+        profile = state.target('fixture.invalid', 'root')
+
+        def observed():
+            tv_info = {}
+            diagnostics.observe_root_python_inventory(remote, profile, tv_info)
+            path = diagnostics.create_report(store, 'doctor', profile, 'doctor-complete', tv_info=tv_info)
+            report = path.read_text()
+            self.assertNotIn('PRIVATE', report)
+            self.assertNotIn(RUNTIME_ROOT, report)
+            return json.loads(report)['tv']['root_python_inventory']
+
+        self.assertEqual(observed(), {'status': 'absent'})
+        runtime = RUNTIME_ROOT + '/' + SHA256
+        files = {'bin/python3.13': b'PRIVATE executable must not run', 'lib/PRIVATE.py': b'PRIVATE source'}
+        for name, raw in files.items():
+            self.write(runtime + '/' + name, raw)
+        (self.root/(runtime + '/bin/python3.13').lstrip('/')).chmod(0o700)
+        inventory = self.write(runtime + '/.cytv-runtime.json', json.dumps({
+            'schema': 1, 'archive_sha256': SHA256,
+            'files': {name: hashlib.sha256(raw).hexdigest() for name, raw in files.items()},
+        }).encode())
+        self.assertEqual(observed(), {'status': 'matching', 'matching_files': 2,
+                                      'generated_entries': 0, 'unexpected_entries': 0})
+        self.write(runtime + '/lib/__pycache__/PRIVATE.cpython-313.opt-1.pyc', b'PRIVATE cache')
+        self.assertEqual(observed(), {'status': 'generated', 'matching_files': 2,
+                                      'generated_entries': 2, 'unexpected_entries': 0})
+        self.write(runtime + '/lib/__pycache__/UNEXPECTED.cpython-313.pyc', b'PRIVATE cache')
+        self.write(runtime + '/bin/python3.13', b'PRIVATE changed executable')
+        self.assertEqual(observed(), {'status': 'unexpected', 'matching_files': 1,
+                                      'generated_entries': 2, 'unexpected_entries': 2})
+        inventory.write_bytes(b'{PRIVATE invalid inventory')
+        self.assertEqual(observed(), {'status': 'unreadable'})
+        inventory.unlink()
+        self.assertEqual(observed(), {'status': 'unreadable'})
+        remote.run.side_effect = OSError('PRIVATE connection error')
+        self.assertEqual(observed(), {'status': 'unknown'})
+        remote.upload.assert_not_called()
 
     def test_remote_output_cannot_export_arbitrary_text(self):
         from unittest.mock import Mock

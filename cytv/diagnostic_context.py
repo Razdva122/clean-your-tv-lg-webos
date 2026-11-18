@@ -150,6 +150,25 @@ def inventory_failures(value):
     return result
 
 
+def root_python_inventory_summary(value):
+    from .python_runtime import MAX_FILES
+
+    value = mapping(value)
+    observed = choice(value.get('status'), ('absent', 'unreadable', 'matching', 'generated', 'unexpected'))
+    if observed in ('matching', 'generated', 'unexpected'):
+        counts = {key: value.get(key) for key in ('matching_files', 'generated_entries', 'unexpected_entries')}
+        if (not all(type(count) is int and 0 <= count <= 7 * MAX_FILES for count in counts.values())
+                or counts['matching_files'] > MAX_FILES
+                or counts['matching_files'] + counts['unexpected_entries'] == 0):
+            return {'status': 'unknown'}
+        expected = ('unexpected' if counts['unexpected_entries'] else
+                    'generated' if counts['generated_entries'] else 'matching')
+        if observed != expected:
+            return {'status': 'unknown'}
+        return {'status': observed, **counts}
+    return {'status': observed}
+
+
 def root_home_button_readback(value):
     from .root_activation_diagnostics import COMPOSITOR_STOPS
     value = mapping(value)
@@ -203,6 +222,8 @@ def tv_summary(value):
                                   for key in ('applications','inputs')}
     if 'root_inventory_failures' in value:
         result['root_inventory_failures']=inventory_failures(value['root_inventory_failures'])
+    if 'root_python_inventory' in value:
+        result['root_python_inventory'] = root_python_inventory_summary(value['root_python_inventory'])
     if version(value.get('node_version')):
         result['node_version'] = value['node_version']
     if 'node_version_status' in value:

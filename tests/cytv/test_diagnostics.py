@@ -389,6 +389,32 @@ class DiagnosticTests(unittest.TestCase):
                 'node_version_status': 'missing',
                 'kernel_arch': 'aarch64', 'userland_abi': 'arm64', 'arm32_supported': False})
 
+    def test_root_doctor_exports_python_inventory_through_the_existing_report(self):
+        from unittest.mock import Mock
+        from cytv.errors import UserError
+
+        for failure in (None, UserError('PRIVATE', reason_code='pending-operation')):
+            with self.subTest(failure=bool(failure)), tempfile.TemporaryDirectory() as tmp, \
+                    patch('cytv.cli.Installer') as installer:
+                remote = Mock()
+                remote.run.return_value = json.dumps({'status': 'generated', 'matching_files': 2,
+                    'generated_entries': 1, 'unexpected_entries': 0, 'path': '/PRIVATE/cache'})
+                installer.return_value.status.return_value = {'device': {}}
+                installer.return_value.preflight.side_effect = failure
+                code = cli.main(['doctor', '--report', '--host', '192.0.2.55', '--edition', 'root',
+                                 '--data-dir', tmp], write=lambda _: None, connect=lambda *args: remote)
+                self.assertEqual(code, 2 if failure else 0)
+                report_path, = Path(tmp).glob('reports/*.json')
+                report = report_path.read_text()
+                self.assertNotIn('PRIVATE', report)
+                value = json.loads(report)
+                self.assertEqual(value['tv']['root_python_inventory'], {'status': 'generated',
+                    'matching_files': 2, 'generated_entries': 1, 'unexpected_entries': 0})
+                if failure:
+                    self.assertEqual(value['reason_code'], 'pending-operation')
+                self.assertEqual(remote.run.call_args.args[0], 'env -u NODE_OPTIONS -u NODE_PATH /usr/bin/node')
+                remote.upload.assert_not_called()
+
     def test_cli_failure_provides_issue_link_report_and_requested_debug_details(self):
         with tempfile.TemporaryDirectory() as tmp:
             output = []
