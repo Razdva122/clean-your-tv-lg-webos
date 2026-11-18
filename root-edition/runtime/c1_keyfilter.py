@@ -24,6 +24,9 @@ BACKEND = legacy.BACKEND
 ROUTING = 'compositor-keyfilter-v1'
 KEY = 'com.webos.surfacemanager.keyFilters'
 STOCK = 'com.webos.app.home'
+LIVE_TV = 'com.webos.app.livetv'
+# Identical stock short-Home handler in LG W20P and W20H firmware 04.64.00.
+WEBOS5_RIBBON_SYSTEM_UI_SHA256 = 'c61f1a202c8237eeb9ad51fa49b26f23d21d39af9aa5639a69e5a1c504585e67'
 CARD = '_WEBOS_WINDOW_TYPE_CARD'
 HOME = '_WEBOS_WINDOW_TYPE_HOME'
 SCREENSAVER = ('com.webos.app.screensaver', '_WEBOS_WINDOW_TYPE_SCREENSAVER')
@@ -628,7 +631,7 @@ def can_return(surfaces,power,proof,token,foreground=None):
     return stock_surfaces(rows)
 
 
-def stock_surfaces(rows, *, allow_screensaver=False):
+def stock_surfaces(rows, *, allow_screensaver=False, background=None):
     for row in rows:
         # The single-display broker may omit displayId and visible.
         if (not isinstance(row,dict) or type(row.get('displayId',0)) is not int or row.get('displayId',0)!=0
@@ -637,6 +640,8 @@ def stock_surfaces(rows, *, allow_screensaver=False):
             return False
         app, window = row.get('appId'), row.get('windowType')
         if allow_screensaver and (app, window) == SCREENSAVER:
+            continue
+        if background is not None and (app, window) == (background, CARD):
             continue
         if app != STOCK or window not in (CARD, HOME):
             return False
@@ -698,6 +703,22 @@ def stopped_stock(proof):
             and not proof['healthy'] and proof['guardian_pid'] == 0)
 
 
+def verify_webos5_ribbon_route(chain):
+    handler = next(entry['file'] for entry in stock_chain(chain)
+                   if entry['file'].endswith('/systemUi.js') and entry['handler'] == 'handleSystemKeys')
+    if hashlib.sha256(vendor_script(handler)).hexdigest() != WEBOS5_RIBBON_SYSTEM_UI_SHA256:
+        raise ValueError('Stock LG Home ribbon handler unverified; retain evidence')
+    reply = luna('luna://com.webos.settingsservice/getSystemSettings',
+                 {'category': 'general', 'keys': ['defaultApps']})
+    settings = reply.get('settings') if isinstance(reply, dict) else None
+    defaults = settings.get('defaultApps') if isinstance(settings, dict) else None
+    if isinstance(defaults, str):
+        defaults = json.loads(defaults)
+    if (not isinstance(reply, dict) or reply.get('returnValue') is not True
+            or not isinstance(defaults, dict) or defaults.get('home') != STOCK):
+        raise ValueError('Stock LG Home ribbon destination unverified; retain evidence')
+
+
 def restore_for_removal(root, uid):
     with operation(root, uid):
         return restore_locked(root, uid, for_removal=True)
@@ -725,7 +746,8 @@ def restore_locked(root,uid, *, for_removal=False, explicit_restore=False, routi
         after=validate_native(native(['--status'],root,uid))
         if ui_failure is not None and (not stopped_stock(after) or after['token'] != ui_failure['token']):
             raise ValueError('Native stop retirement unverified; retain evidence')
-        generic=selection(root,uid)['schema']==3
+        selected = selection(root, uid)
+        generic = selected['schema'] == 3
         if after['healthy'] or not after['stopped'] or after['guardian_pid']:
             raise ValueError('Native stop retirement unverified; retain evidence')
         if not generic and not after['stock_verified']:
@@ -753,8 +775,12 @@ def restore_locked(root,uid, *, for_removal=False, explicit_restore=False, routi
         elif ui_failure is not None:
             check = 'stock-foreground-unverified'
             foreground = luna('luna://com.webos.applicationManager/getForegroundAppInfo', {})
-            if (not isinstance(foreground, dict) or foreground.get('returnValue') is not True
-                    or foreground.get('appId') != STOCK):
+            app = (foreground.get('appId') if isinstance(foreground, dict)
+                   and foreground.get('returnValue') is True else None)
+            # On webOS 5 SAM can report the Live TV card under the stock Home ribbon.
+            ribbon = (for_removal and generic and app == LIVE_TV
+                      and selected['admission']['webos'].startswith('5.'))
+            if app != STOCK and not ribbon:
                 raise ValueError('Stock LG Home foreground unverified; retain evidence')
             # SAM can report LG Home underneath an application overlay. The LG
             # screensaver can also cover its stock card after idle (#615).
@@ -763,15 +789,17 @@ def restore_locked(root,uid, *, for_removal=False, explicit_restore=False, routi
             rows = surfaces.get('foregroundAppInfo') if isinstance(surfaces, dict) else None
             if (not isinstance(rows, list) or not 1 <= len(rows) <= 128
                     or surfaces.get('returnValue') is not True
-                    or not stock_surfaces(rows, allow_screensaver=True)
-                    or not any(row.get('appId') == STOCK and row.get('visible', True) is True
-                               for row in rows)):
+                    or not stock_surfaces(rows, allow_screensaver=not ribbon, background=LIVE_TV if ribbon else None)
+                    or not any(row['appId'] == STOCK and row.get('visible', True) is True
+                               and (not ribbon or row['windowType'] == HOME) for row in rows)):
                 raise ValueError('Stock LG Home surface unverified; retain evidence')
             check = 'stock-routing-unverified'
             chain = read_chain()
+            if ribbon:
+                verify_webos5_ribbon_route(chain)
             current = native(['--status'], root, uid)
             if (not stopped_stock(current) or current['token'] != after['token']
-                    or reconcile(chain, root, False) != chain):
+                    or reconcile(chain, root, False) != chain or ribbon and read_chain() != chain):
                 raise ValueError('Stock LG Home routing unverified; retain evidence')
     except Exception as error:
         if ui_failure is not None:

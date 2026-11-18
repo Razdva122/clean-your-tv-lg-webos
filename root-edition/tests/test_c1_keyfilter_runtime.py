@@ -726,6 +726,87 @@ class RuntimeTests(unittest.TestCase):
         self.admission = dict(self.generic(), model='OLED48A19LA', firmware='03.53.45', webos='6.5.3')
         self.check_ui_failure_recovery(lambda: self.k.restore_for_removal(self.root, self.uid))
 
+    def test_webos5_ribbon_removal_with_live_tv_foreground(self):
+        import hashlib
+
+        self.admission = dict(self.generic(), model='50UN7300AUD', firmware='04.64.00', webos='5.6.2')
+        work = self.root
+        vendor = {'file': '/usr/lib/qt5/qml/KeyFilters/systemUi.js', 'handler': 'handleSystemKeys'}
+        stopped = self.proof()
+        failure = dict(stopped, returnValue=False, reason='ui_release_failed')
+        live_tv = {'appId': 'com.webos.app.livetv', 'windowType': self.k.CARD}
+        ribbon = {'appId': self.k.STOCK, 'windowType': self.k.HOME, 'visible': True}
+        settings_uri = 'luna://com.webos.settingsservice/getSystemSettings'
+        for case in ('ribbon', 'ribbon-only', 'string-settings', 'live-tv-only', 'hidden-ribbon',
+                     'project-overlay', 'foreign-filter', 'unknown-script', 'foreign-home',
+                     'unknown-home', 'bad-settings', 'chain-drift', 'other-attempt', 'ordinary-restore', 'other-sdk'):
+            with self.subTest(case=case):
+                self.root = work/case
+                self.root.mkdir(mode=0o700)
+                self.admission['webos'] = '6.5.3' if case == 'other-sdk' else '5.6.2'
+                self.prepare()
+                own = self.k.filter_entry(self.root)
+                self.k.atomic(self.root/'c1-keyfilter/ownership.json',
+                              dict(schema=1, entry=own, token='1'*32), self.uid)
+                chain = [own, vendor]
+                if case == 'foreign-filter':
+                    chain.append({'file': '/foreign/home.js', 'handler': 'otherHome'})
+                surfaces = {
+                    'ribbon-only': [ribbon],
+                    'live-tv-only': [live_tv],
+                    'hidden-ribbon': [dict(ribbon, visible=False), live_tv],
+                    'project-overlay': [ribbon, live_tv, {'appId': self.k.APP, 'windowType': self.k.CARD}],
+                }.get(case, [ribbon, live_tv])
+                defaults = {
+                    'foreign-home': {'home': 'other.home'},
+                    'unknown-home': {},
+                    'bad-settings': '{"home":',
+                    'string-settings': json.dumps({'home': self.k.STOCK}),
+                }.get(case, {'home': self.k.STOCK})
+                replies = {
+                    'luna://com.webos.applicationManager/getForegroundAppInfo':
+                        {'returnValue': True, 'appId': live_tv['appId']},
+                    'luna://com.webos.surfacemanager/getForegroundAppInfo':
+                        {'returnValue': True, 'foregroundAppInfo': surfaces},
+                    settings_uri: {'returnValue': True, 'settings': {'defaultApps': defaults}},
+                }
+                current = dict(stopped, token='2'*32) if case == 'other-attempt' else stopped
+                def native(args, *_args, **_kwargs):
+                    if args == ['--restore']:
+                        return failure
+                    return current if chain == [vendor] else stopped
+                def write(value, **_kwargs):
+                    chain[:] = value
+                def read_luna(uri, _payload):
+                    if uri == settings_uri and case == 'chain-drift':
+                        chain.append({'file': '/foreign/home.js', 'handler': 'otherHome'})
+                    return replies[uri]
+
+                factory_script = b'factory-system-ui'
+                script = b'unknown-system-ui' if case == 'unknown-script' else factory_script
+                with patch.object(self.k, 'native', side_effect=native), \
+                        patch.object(self.k, 'read_chain', side_effect=lambda: list(chain)), \
+                        patch.object(self.k, 'write_chain', side_effect=write), \
+                        patch.object(self.k, 'luna', side_effect=read_luna) as luna, \
+                        patch.object(self.k, 'vendor_script', return_value=script), \
+                        patch.object(self.k, 'WEBOS5_RIBBON_SYSTEM_UI_SHA256',
+                                     hashlib.sha256(factory_script).hexdigest(), create=True):
+                    if case in ('ribbon', 'ribbon-only', 'string-settings'):
+                        self.assertEqual(self.k.restore_for_removal(self.root, self.uid), 'restored')
+                        self.assertEqual(chain, [vendor])
+                        self.assertEqual(self.k.read_intent(self.root, self.uid)['phase'], 'disabled')
+                        luna.assert_any_call(settings_uri, {'category': 'general', 'keys': ['defaultApps']})
+                    else:
+                        with self.assertRaises(ValueError) as caught:
+                            if case == 'ordinary-restore':
+                                self.k.restore_locked(self.root, self.uid, explicit_restore=True)
+                            else:
+                                self.k.restore_for_removal(self.root, self.uid)
+                        self.assertEqual(caught.exception.native_reason, 'ui_release_failed')
+                        if case == 'chain-drift':
+                            self.assertEqual(caught.exception.restore_check, 'stock-routing-unverified')
+                        self.assertEqual(self.k.read_intent(self.root, self.uid)['phase'], 'recovering')
+
     def test_review_recovery_reconciles_ui_failure_on_reported_c1(self):
         self.admission.update(model='OLED65C1PSA', firmware='03.53.45', webos='6.5.3')
         self.check_ui_failure_recovery(lambda: self.k.execute('restore', root=self.root, uid=self.uid))
