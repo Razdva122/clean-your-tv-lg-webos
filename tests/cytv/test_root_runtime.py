@@ -57,7 +57,8 @@ class RuntimeChoices(unittest.TestCase):
             self.assertEqual(result.returncode,0)
             self.assertEqual(result.stdout,'CYTV_RETAINED_ROOT')
 
-    def test_choice_cancel_yes_flag_and_fallback_preserve_transport(self):
+    @patch('cytv.operations.Installer.check_no_root_alternative', return_value=None)
+    def test_choice_cancel_yes_flag_and_fallback_preserve_transport(self, _preflight):
         from cytv.root_runtime import offer
         from cytv.checks import CheckList
         from cytv.terminal import Console
@@ -72,6 +73,7 @@ class RuntimeChoices(unittest.TestCase):
                 store.save(profile)
                 state.private_write(store.device_dir(profile)/'known_hosts', b'PINNED-IDENTITY')
                 installer = SimpleNamespace(store=store, profile=profile, remote=Remote(), manifest={}, tv_info={},
+                                             _ordinary_payload=None, payload=Path(tmp),
                                              checks=CheckList(), use_runtime_variant=lambda:None)
                 args = SimpleNamespace(non_interactive=False, yes=True)
                 if answer == '1':
@@ -119,7 +121,8 @@ class RuntimeChoices(unittest.TestCase):
                 self.assertIsNone(store.pending(profile))
                 remote.upload.assert_not_called()
 
-    def test_explicit_beta_needs_second_confirmation(self):
+    @patch('cytv.operations.Installer.check_no_root_alternative', return_value=None)
+    def test_explicit_beta_needs_second_confirmation(self, _preflight):
         from cytv.root_runtime import offer
         from cytv.checks import CheckList
         from cytv.terminal import Console
@@ -133,6 +136,7 @@ class RuntimeChoices(unittest.TestCase):
                 selected = []
                 installer = SimpleNamespace(store=store, profile=profile, remote=Remote(), tv_info={},
                     manifest={'legacy_root_beta':'legacy-root-beta'}, checks=CheckList(),
+                    _ordinary_payload=None, payload=Path(tmp),
                     use_runtime_variant=lambda:selected.append(True))
                 answers = iter(['2', accepted])
                 if accepted:

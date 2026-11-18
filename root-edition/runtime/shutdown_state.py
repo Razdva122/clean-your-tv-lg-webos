@@ -12,6 +12,10 @@ import device_adapter as d
 import persistent_health as health
 import intent_runtime as startup_policy
 
+LATE_WAIT = .75
+PREPARE_WINDOW = .5
+PREPARE = ('Request Power Off', 'Request Active Standby', 'Prepare Active Standby')
+
 
 def query():
     try:
@@ -22,7 +26,7 @@ def query():
     except (OSError,subprocess.TimeoutExpired): return False
 
 
-def record(transaction, source="systemd", boot=None):
+def record(transaction, source="systemd", boot=None, *, prepared=None):
     from intent_runtime import boot_identity
     current = boot_identity()
     if boot is None: boot = current
@@ -33,14 +37,16 @@ def record(transaction, source="systemd", boot=None):
     fd,name=tempfile.mkstemp(dir=health.ROOT,prefix='.shutdown-')
     try:
         with os.fdopen(fd,'w') as out:
-            json.dump(dict(transaction=transaction,boot=boot,issued=time.monotonic(),source=source),out)
+            value = dict(transaction=transaction,boot=boot,issued=time.monotonic(),source=source)
+            if prepared is not None: value['prepared'] = prepared
+            json.dump(value,out)
         os.replace(name,health.path(transaction).with_suffix('.power' if source == 'firmware-power' else '.shutdown'))
         return True
     finally:
         if os.path.exists(name):os.unlink(name)
 
 
-def stopping(transaction=None):
+def cached_stopping(transaction=None, *, before=None):
     if transaction is not None:
         try:
             from intent_runtime import boot_identity
@@ -49,11 +55,40 @@ def stopping(transaction=None):
             for suffix in ('.shutdown','.power'):
                 try: v=d.safe_json(health.path(transaction).with_suffix(suffix))
                 except FileNotFoundError: continue
-                if (v.get('transaction') == transaction and v.get('boot') == boot_identity()
-                        and finite(v.get('issued')) and 0 <= time.monotonic()-v['issued'] < 5):
+                if (isinstance(v, dict) and v.get('transaction') == transaction
+                        and v.get('boot') == boot_identity() and finite(v.get('issued'))
+                        and 0 <= time.monotonic()-v['issued'] < 5
+                        and (before is None or v['issued'] <= before)):
                     return True
         except (OSError,ValueError):pass
-    return query()
+    return False
+
+
+def stopping(transaction=None):
+    return cached_stopping(transaction) or query()
+
+
+def late_standby(transaction, boot, fault_at, deadline):
+    # Only the complete, uninterrupted firmware sequence can create this
+    # evidence. A normal Active frame, EOF or parser error clears it.
+    try:
+        d.trusted_dir(health.ROOT)
+        v = d.safe_json(health.path(transaction).with_suffix('.power'))
+        from persistent_lease import finite
+        issued, prepared = v.get('issued'), v.get('prepared')
+        now = time.monotonic()
+        return (v.get('transaction') == transaction and v.get('boot') == boot
+                and v.get('source') == 'firmware-power' and finite(issued) and finite(prepared)
+                and 0 <= prepared < fault_at < issued <= now <= deadline
+                and issued - prepared <= PREPARE_WINDOW)
+    except (OSError, ValueError, AttributeError): return False
+
+
+def wait_late_standby(transaction, boot, fault_at, deadline):
+    while time.monotonic() < deadline:
+        if late_standby(transaction, boot, fault_at, deadline): return True
+        time.sleep(min(.02, max(0, deadline-time.monotonic())))
+    return False
 
 
 class PowerReason:
@@ -86,7 +121,9 @@ class PowerReason:
 
 class PowerState:
     """A live ON -> shutdown transition; initial/reconnected OFF is never proof."""
-    def __init__(self, transaction, boot):
+    def __init__(self, transaction, boot, hold=lambda until:None):
+        self.hold = hold
+        self.reset_preparation()
         self.transaction = transaction
         self.boot = boot
         self.primed = False
@@ -130,7 +167,31 @@ class PowerState:
                 try: os.unlink(name)
                 except OSError: pass
 
+    def reset_preparation(self):
+        self.prepare_at = None
+        self.prepare_step = 0
+
+    def preparation(self, value):
+        now = time.monotonic()
+        stage = value.get('processing')
+        off = value['state'] == 'Active' and value.get('onOff') == 'off'
+        if off and self.primed and self.on and stage == PREPARE[0]:
+            self.prepare_at, self.prepare_step = now, 1
+            self.hold(now + PREPARE_WINDOW + LATE_WAIT)
+        elif self.prepare_at is not None and now-self.prepare_at <= PREPARE_WINDOW:
+            if off and self.prepare_step < len(PREPARE) and stage == PREPARE[self.prepare_step]:
+                self.prepare_step += 1
+            elif value['state'] == 'Active Standby' and self.prepare_step == len(PREPARE):
+                prepared = self.prepare_at
+                self.reset_preparation()
+                return prepared
+            else: self.reset_preparation()
+        else: self.reset_preparation()
+        return None
+
     def close(self, reason='closed'):
+        self.reset_preparation()
+        self.hold(0)
         self.on = False
         self.asleep = False
         self.revision += 1
@@ -144,6 +205,7 @@ class PowerState:
                 or not self.primed and value.get('subscribed') is not True):
             self.close('invalid-subscription')
             raise ValueError('Invalid power subscription')
+        prepared = self.preparation(value)
         state=value['state']
         diagnostic = None if self.primed else 'initial-state'
         if state == 'Active':
@@ -172,7 +234,8 @@ class PowerState:
         elif state in ('Active Standby','Power Off'):
             self.revision += 1
             if self.primed and self.on:
-                record(self.transaction,source='firmware-power',boot=self.boot)
+                options = {'prepared': prepared} if prepared is not None else {}
+                record(self.transaction,source='firmware-power',boot=self.boot,**options)
                 if not self.asleep: self.off_count += 1
                 self.asleep = True
                 diagnostic = 'off-observed'
@@ -187,7 +250,7 @@ def observe_power(transaction, boot, stop):
     # pipe closes if the guardian dies. Unknown/lost streams revoke their proof.
     power=None;child=None;reason='stopped'
     try:
-        power=PowerState(transaction,boot)
+        power=PowerState(transaction,boot,getattr(stop,'hold_power',lambda until:None))
         child=subprocess.Popen(['/usr/bin/luna-send','-i',
             'luna://com.webos.service.tvpower/power/getPowerState','{"subscribe":true}'],
             stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,close_fds=True)
@@ -215,6 +278,7 @@ def observe_power(transaction, boot, stop):
                     # A partial frame may complete later, but cannot leave a
                     # previous OFF frame authoritative while parsing is uncertain.
                     power.clear()
+                    power.reset_preparation()
                     # Framing alone is not an unknown power state: retain a
                     # proven OFF until a complete valid ON.
                     power.revision += 1
@@ -237,8 +301,19 @@ class Monitor(threading.Event):
     def __init__(self):
         super().__init__()
         self.threads=[]
+        self.power_until=0
+
+    def hold_power(self, until):
+        self.power_until=until
 
     def close(self):
+        # Keep the power monitor available for the bounded late decision
+        # without delaying profile recovery or enabling any routing.
+        cap = time.monotonic() + PREPARE_WINDOW + LATE_WAIT
+        while not self.is_set():
+            remaining = min(cap, self.power_until) - time.monotonic()
+            if remaining <= 0: break
+            self.wait(min(.02, remaining))
         self.set()
         for thread in self.threads: thread.join(timeout=2)
 

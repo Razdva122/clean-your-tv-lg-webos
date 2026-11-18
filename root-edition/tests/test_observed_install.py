@@ -100,6 +100,18 @@ class RemoveTests(unittest.TestCase):
   self.assertTrue(self.run_remove({'returnValue':True,'details':{'state':'removed'}})['completed'])
  def test_terminal_success(self):
   self.assertTrue(self.run_remove({'returnValue':True,'details':{'state':'SUCCESS'}})['completed'])
+ def test_terminal_rejection_requires_a_well_formed_reply_for_the_requested_package(self):
+  from install_driver import failure_summary
+  for event,rejected in (
+   ({'returnValue':False,'id':'test.app','errorCode':-102},True),
+   ({'returnValue':False,'id':'other','errorCode':-102},False),
+   ({'returnValue':False,'details':[]},False),
+   ({'returnValue':True,'subscribed':True},False),
+  ):
+   with self.subTest(event=event):
+    with self.assertRaises(OutcomeUnknown) as caught:
+     self.run_remove(event)
+    self.assertIs(failure_summary(caught.exception).get('package_rejected',False),rejected)
  def test_acceptance_or_error_never_completes(self):
   for event in ({'returnValue':True,'subscribed':True}, {'returnValue':False,'details':{'state':'removed'}}, {'returnValue':True,'details':{'state':'not removed'}}, {'returnValue':True,'id':'other','details':{'state':'removed'}}):
    with self.subTest(event=event), self.assertRaises(OutcomeUnknown):self.run_remove(event)

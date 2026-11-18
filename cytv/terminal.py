@@ -1,8 +1,10 @@
 """Small terminal layout with a readable plain-text fallback."""
+import json
 import os
 import shutil
 import sys
 import textwrap
+import webbrowser
 from .i18n import translate as tr
 
 
@@ -88,9 +90,43 @@ class Console:
         self.heading('Diagnostic report')
         self.raw('  ' + str(path.resolve()))
 
+    def issue(self, draft, *, ask=None):
+        from .diagnostics import issue_url
+        from .prompts import confirm
+
+        url = issue_url(draft['title'])
+        self.heading('Issue draft')
+        self.raw(draft['title'])
+        self.raw('')
+        self.raw(draft['body'])
+        self('')
+        self('Copy the draft into the issue form. Only you can submit it.')
+        self.raw(url)
+        if ask is None:
+            return
+        if not self.interactive and not (self.raw is print and sys.stdin and sys.stdin.isatty()
+                                         and sys.stdout and sys.stdout.isatty()):
+            return
+        try:
+            if not confirm('Open issue form?', ask, self):
+                return
+        except (EOFError, KeyboardInterrupt, StopIteration):
+            return
+        try:
+            if webbrowser.open(url):
+                return
+        except (OSError, webbrowser.Error):
+            pass
+        self.error('Could not open the browser. Open the displayed link manually.')
+
     def doctor_result(self, value):
-        import json
         self.raw(json.dumps(value, indent=2))
+
+    def status_result(self, value):
+        self.raw(json.dumps(value, indent=2))
+
+    def command_outcome(self, state, action):
+        pass
 
     def check(self, event):
         from .checks import STATUS
@@ -116,6 +152,46 @@ class Console:
     def recovery_plan(self, value):
         self.heading(value['summary'])
         self(value['next_step'])
+        if self.frontend == 'console' and value.get('disposition') == 'clean-removal':
+            from .recovery_ui import observed_stock_surface
+            if surface := observed_stock_surface(value.get('removal_evidence')):
+                self(surface)
+
+
+class ResultConsole(Console):
+    """Return one machine-readable result without terminal progress text."""
+
+    def __init__(self, write):
+        super().__init__(lambda _: None, interactive=False)
+        self.output = write.raw if isinstance(write, Console) else write
+        self.result = {}
+        self.outcome = None
+        self.report_path = None
+
+    def status_result(self, value):
+        self.result = value
+
+    doctor_result = status_result
+
+    def report(self, path):
+        self.report_path = str(path.resolve())
+
+    def command_outcome(self, state, action):
+        self.outcome = {'state': state, 'action': action}
+
+    def recovery_plan(self, value):
+        from .recovery_ui import command_outcome
+        if outcome := command_outcome(value):
+            self.command_outcome(*outcome)
+
+    def finish(self, exit_code):
+        fallback = {0: 'checked', 130: 'cancelled'}.get(exit_code, 'failed')
+        value = dict(self.result, exit_code=exit_code,
+                     outcome=self.outcome or {'state': fallback, 'action': 'none'})
+        if self.report_path is not None:
+            value['report_path'] = self.report_path
+        self.output(json.dumps(value))
+        return exit_code
 
 
 def console(write):

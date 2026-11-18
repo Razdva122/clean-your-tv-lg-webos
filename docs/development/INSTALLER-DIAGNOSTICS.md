@@ -27,8 +27,10 @@ cannot be reconstructed. Root's separate icon reader is not instrumented here.
 - `fetch_failed`: accepted candidates whose existing download raises an I/O or
   value error, including TLS/HTTP failures and the existing size check.
 - `invalid_image`: downloaded candidates without a supported image signature.
+- `skipped_apps` counts non-object launch points and malformed display titles
+  replaced with a title from an entry that supplied the same app ID.
 
-Cause counters count candidates, except `missing_uri` which counts apps. One app
+Icon failure counters count candidates. `missing_uri` counts apps. One app
 can fail a larger candidate and embed a smaller one, so cause counts need not
 match fallback counts. Only fixed numeric counters (0–1800) and fixed statuses
 are exported and revalidated in report/history projections. No URIs, paths,
@@ -256,6 +258,10 @@ Before a new No-root receipt, local storage validation exercises a temporary
 private write/flush/fsync and directory sync. Failure creates no pending journal
 or capsule and does not invoke the TV observer. This is an early usability check,
 not a reservation of disk capacity; later failures retain ordinary pending state.
+Starting a fresh No-root setup also checks the destination before opening the
+SSH connection. A refusal during these checks produces computer-storage
+guidance. Setup can be retried after the user corrects the problem and the
+installer finds no pending operation.
 No ownership/permissions are changed, no old source is executed, and no recovery
 or removal confirmation is bypassed. Existing old reports cannot gain a newly
 invented cause. These source changes require rebuilt installers.
@@ -459,8 +465,12 @@ uncertain Root footprints follow the existing authenticated recovery route.
 When System Profile and KeyFilters are confirmed absent, `tv.root_ribbon_probe`
 records the Surface Manager Home state result. A valid Home entry still lets
 interactive setup offer No-root over the existing Root SSH connection.
-Likewise, a native Home path unavailable after KeyFilters pass can still offer
-No-root. Separate Doctor observations do not change these setup decisions.
+Setup can also offer No-root when it confirms native Home is unavailable after
+KeyFilters pass or return a definite rejection. In the latter case the original
+KeyFilters failure remains in the report. An unconfirmed Home capability stops
+setup. An older verified Node.js version can also trigger the No-root check.
+Each offer requires a successful independent No-root preflight using the
+same Root SSH connection. Separate Doctor observations do not change setup decisions.
 
 The report excludes raw replies, command output and Home routes. The installer
 revalidates these fields when exporting current and retained failures.
@@ -691,17 +701,20 @@ Both fields are revalidated in current reports and retained failure history;
 older envelopes/records without them remain valid and do not gain invented data.
 
 For example, `storage-check` / `EACCES` / `mkdir` / `public-staging` narrows a
-failure to creation in SDK staging. It does not identify the denying policy or
-authorize chmod/chown, cleanup or retry. The storage check precedes creation of
-a new pending operation and package submission, so the generic
-`pending-operation` reason alone does not establish that pending exists.
+failure to creation in SDK staging. For a fresh install, a generic failure in
+`storage-select` or `storage-check` reports `storage-preflight-failed` before a
+new receipt or package request. The report keeps the command and failure details.
+Typed SSH and storage errors keep their existing reasons. A foreign operation
+reply or reservation still reports `pending-operation`, and a lost reply
+after a package request still requires review of the original operation.
 
-The context is added only by the launcher wrapper. Developer Mode and Root SSH
-observer source bytes, source hashes and capsule bindings are unchanged. No
-additional TV command, filesystem operation, permission change, automatic retry
-or recovery action is introduced. Detached/asynchronous worker errors remain
-outside this synchronous error envelope. Rebuilt host and Android installers
-are required for delivery; these additions are not in published CYTV 0.12.0.
+The launcher wrapper adds the context. Interactive desktop and console setup
+inspect storage before running the existing write probe. If the observer
+classifies the failure as `storage-preflight-failed`, the user can repeat the
+failed read-only check once with the original TV connection. Installation
+requires a separate confirmation after a passing retry. Developer Mode and
+Root SSH capsule source bytes and hashes remain unchanged. Detached and
+asynchronous worker errors are outside this synchronous error envelope.
 
 `first_failure` belongs to the pending operation's diagnostic ID, not the TV's
 entire installation history. Different timestamps across exports do not establish
@@ -752,6 +765,27 @@ Creating or saving a report uses local evidence only. It never starts Helper,
 repairs storage, adds a permission/endpoint or repeats a TV test. Desktop and
 Android export the same bounded standard report. Diagnostics remain advisory;
 existing storage, lifecycle and recovery proofs still authorize every effect.
+
+
+## Noninteractive console results
+
+Add `--result-json` to read one JSON object on stdout. This also enables
+`--non-interactive`. The process exit code retains its existing meaning and
+also appears as `exit_code`. Existing status fields remain at the top level.
+An exported report's location appears as `report_path` when available.
+
+Use `outcome.state` and `outcome.action` when deciding what the caller can do
+next. `retryable-check` offers a read-only check. `waiting-for-evidence` keeps an
+unresolved operation attached to its original request. `verified-completion`
+requires current proof for the operation. `owner-input-required` identifies
+actions such as restoring the trusted connection, supplying confirmation or
+restarting the TV. A successful read with no verified operation can return
+`checked`. A noninteractive `status` uses read-only observations and keeps the
+saved receipt. The plain console saves a redacted report if the check fails or
+can only gather partial TV information. `status --result-json` returns its
+result on stdout without writing a report. Some Root recovery proofs require an
+interactive review with verified support code. Installation results report the
+physical Home-button check separately under `setup_outcome`.
 
 
 ## Stock-compositor cleanup probe failure (source preparation)

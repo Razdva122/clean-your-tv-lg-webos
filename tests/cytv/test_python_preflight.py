@@ -6,6 +6,9 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
+from cytv.checks import CheckList
+from cytv.operations import Installer
+
 from cytv import diagnostics, python_runtime as runtime, state
 from cytv.errors import UserError
 
@@ -83,3 +86,102 @@ class PreflightTests(unittest.TestCase):
                 runtime._check_space(None, 250000)
             self.assertIn('1 MiB', str(caught.exception))
             self.assertEqual(caught.exception.required_kib, 250000)
+
+
+class RootPythonResultTests(unittest.TestCase):
+    python_probes = ('python3', 'python-json', 'python-fcntl', 'python-version')
+
+    class Remote:
+        def __init__(self, *, node=True, abi=True):
+            self.node = node
+            self.abi = abi
+            self.commands = []
+
+        def run(self, command, **kwargs):
+            self.commands.append(command)
+            if 'CYTV_ROOT_READY' in command:
+                missing = ('/usr/bin/python3' in command or '/verified/python' in command
+                           or ('/usr/bin/node' in command and not self.node))
+                return 'CYTV_ROOT_MISSING' if missing else 'CYTV_ROOT_READY'
+            if 'CYTV_TARGET_READY' in command:
+                return 'CYTV_TARGET_READY' if self.abi else 'CYTV_TARGET_ERROR abi'
+            return ''
+
+    def setUp(self):
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        self.store = state.Store(os.path.realpath(temporary.name))
+        self.events = []
+        self.progress = []
+        self.checks = CheckList(self.events.append)
+        self.profile = {'edition': 'root', 'host': '192.0.2.10'}
+
+    def installer(self, remote):
+        self.checks.prepare('root', 'install')
+        return Installer(remote, self.store, self.profile, '.', {}, progress=self.progress.append, checks=self.checks)
+
+    def report(self, installer, error):
+        path = diagnostics.create_report(self.store, 'install', self.profile, 'preflight', error,
+                                         installer.tv_info, checks=self.checks.results)
+        return json.loads(path.read_text())
+
+    def test_missing_python_is_one_result_and_node_blocks_provisioning(self):
+        remote = self.Remote(node=False)
+        installer = self.installer(remote)
+        with self.assertRaises(UserError) as caught:
+            installer.preflight(install=True)
+        self.assertIn('node-version', str(caught.exception))
+        self.assertIn('TV Python 3.9+', str(caught.exception))
+        self.assertNotIn('CYTV_TARGET_READY', '\n'.join(remote.commands))
+        rows = {event['id']: event for event in self.events}
+        self.assertEqual(rows['python-runtime']['status'], 'fail')
+        self.assertTrue(rows.keys().isdisjoint(self.python_probes))
+        report = self.report(installer, caught.exception)
+        self.assertNotIn('python-runtime', report['checks'])
+        for name in self.python_probes:
+            self.assertEqual(report['checks'][name], 'fail')
+            self.assertEqual(report['tv']['root_requirements'][name], 'fail')
+
+    def test_cache_invalidated_after_preparation_is_still_a_host_cache_failure(self):
+        remote = self.Remote()
+        installer = self.installer(remote)
+        cache = self.store.root / 'python-cache'
+        cache.mkdir(mode=0o700)
+        archive = cache / (runtime.SHA256 + '.tar.gz')
+        archive.write_bytes(b'invalid')
+        with patch.object(runtime, 'prime_cache', return_value=archive):
+            with self.assertRaises(UserError) as caught:
+                installer.preflight(install=True)
+        self.assertIn('The TV passed the checks to prepare private Python.', self.progress)
+        self.assertIn('Remove its pinned archive', str(caught.exception))
+        self.assertEqual(self.report(installer, caught.exception)['python_cache'], {'reason': 'cache-invalid'})
+        self.assertEqual(self.checks.results['python-runtime']['status'], 'fail')
+        self.assertEqual(archive.read_bytes(), b'invalid')
+
+    def test_cache_read_failure_points_to_local_data_folder(self):
+        installer = self.installer(self.Remote())
+        archive = self.store.root / 'python-cache' / (runtime.SHA256 + '.tar.gz')
+        with patch.object(runtime, 'prime_cache', return_value=archive):
+            with self.assertRaises(UserError) as caught:
+                installer.preflight(install=True)
+        self.assertIn('Check write access to the application data folder', str(caught.exception))
+        self.assertEqual(self.report(installer, caught.exception)['python_cache'], {'reason': 'cache-access'})
+
+    def test_incompatible_tv_stops_before_cache_access(self):
+        remote = self.Remote(abi=False)
+        installer = self.installer(remote)
+        with self.assertRaisesRegex(UserError, 'The TV ABI check failed') as caught:
+            installer.preflight(install=True)
+        self.assertNotIn('The TV passed the checks to prepare private Python.', self.progress)
+        self.assertFalse((self.store.root / 'python-cache').exists())
+        self.assertEqual(self.report(installer, caught.exception)['python_runtime'], {'reason': 'abi'})
+        self.assertEqual(self.checks.results['python-runtime']['status'], 'fail')
+
+    def test_python_failing_root_probes_is_never_selected_for_activation(self):
+        remote = self.Remote()
+        installer = self.installer(remote)
+        with patch.object(installer, '_select_python', return_value='/verified/python'):
+            with self.assertRaisesRegex(UserError, 'Private Python installation could not be verified'):
+                installer.preflight(install=True)
+        self.assertNotEqual(installer._selected_python, '/verified/python')
+        self.assertFalse(any('CYTV_EXISTING_ROOT' in command for command in remote.commands))

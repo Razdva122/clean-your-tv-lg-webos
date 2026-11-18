@@ -213,19 +213,41 @@ def screensaver_payload(root, manifest):
     return raw, version
 
 
+def _payload_manifest(root):
+    manifest = json.loads((root / 'payload.json').read_text())
+    if not isinstance(manifest, dict) or not isinstance(manifest.get('files'), dict):
+        raise ValueError('Invalid embedded payload manifest')
+    if not manifest['files']:
+        raise ValueError('Empty embedded payload')
+    return manifest
+
+
+def _payload_file(root, name):
+    path = root / safe_name(name)
+    if not path.is_file() or path.is_symlink():
+        raise ValueError('Embedded payload integrity mismatch')
+    return path
+
+
+def check_payload_files(root):
+    """Check availability at desktop startup, before reading package bytes."""
+    root = Path(root)
+    for name in _payload_manifest(root)['files']:
+        _payload_file(root, name)
+
+
 def verify_payload(root):
     root = Path(root)
-    manifest = json.loads((root / 'payload.json').read_text())
+    manifest = _payload_manifest(root)
     for name, digest in manifest['files'].items():
-        path = root / safe_name(name)
-        if not path.is_file() or path.is_symlink() or hashlib.sha256(path.read_bytes()).hexdigest() != digest:
+        path = _payload_file(root, name)
+        raw = path.read_bytes()
+        if hashlib.sha256(raw).hexdigest() != digest:
             raise ValueError('Embedded payload integrity mismatch')
         # Integrity alone cannot detect CRLF introduced before the build hashes.
-        files = data_files(path.read_bytes()) if name.endswith('.ipk') else {name: path.read_bytes()}
+        files = data_files(raw) if name.endswith('.ipk') else {name: raw}
         for script, data in files.items():
             if script.endswith('.sh') and b'\r' in data:
                 raise ValueError('POSIX script must use LF line endings: ' + name + ': ' + script)
-    if not manifest['files']:
-        raise ValueError('Empty embedded payload')
     screensaver_payload(root, manifest)
     return manifest

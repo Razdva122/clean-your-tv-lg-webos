@@ -279,6 +279,9 @@ let browser;
       receiveNative({
         kind: 'recovery-plan',
         state,
+        ...(state === 'review'
+          ? { actions: ['check', 'retain-evidence'] }
+          : {}),
         summary: 'Проверка восстановления',
         nextStep: 'Сохраните отчёт'
       });

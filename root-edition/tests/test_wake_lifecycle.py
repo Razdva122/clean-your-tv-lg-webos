@@ -168,6 +168,73 @@ class WakeLifecycleTests(unittest.TestCase):
             self.assertTrue(bound_exit('route-a', reason='observer_exit'))
         self.assert_stays_off()
 
+    def run_late_standby_fault(self, intervening=lambda:None):
+        power = shutdown_state.PowerState('route-a', self.session)
+        start = time.monotonic()
+        with patch.object(shutdown_state.time, 'monotonic', return_value=start):
+            power.event(dict(state='Active', returnValue=True, subscribed=True))
+            for stage in shutdown_state.PREPARE:
+                power.event(dict(state='Active', returnValue=True, processing=stage, onOff='off'))
+        fault = start + .2
+        def after_restore(transaction, boot, fault_at, deadline):
+            self.assertEqual(self.read(), self.baseline)
+            self.assertFalse(self.target.exists())
+            self.assertEqual(self.store.read()['phase'], 'disabled')
+            intervening()
+            with patch.object(shutdown_state.time, 'monotonic', return_value=start+.464):
+                power.event(dict(state='Active Standby', returnValue=True))
+                self.assertTrue(shutdown_state.late_standby(transaction, boot, fault_at, deadline))
+            return True
+        with patch.object(shutdown_state.time, 'monotonic', return_value=start+.465), \
+             patch.object(shutdown_state, 'wait_late_standby', side_effect=after_restore):
+            self.assertTrue(bound_exit('route-a', reason='device_removed', fault_at=fault))
+
+    def test_device_removed_restores_before_late_standby_and_rearms_on_new_startup(self):
+        self.run_late_standby_fault()
+        self.assertEqual(self.store.read()['phase'], 'stopping')
+        self.assertEqual(self.read(), self.baseline)
+        self.assertEqual(self.dispatch(), 'shutdown-pending')
+        self.assertEqual(self.read(), self.baseline)
+        self.new_startup()
+        self.assertEqual(self.dispatch()['intent']['phase'], 'active')
+        self.assertEqual(self.c.read_binding()['transaction'], 'route-b')
+
+    def test_standby_already_delivered_to_watchdog_still_restores_when_after_input_fault(self):
+        power = shutdown_state.PowerState('route-a', self.session)
+        start = time.monotonic()
+        with patch.object(shutdown_state.time, 'monotonic', return_value=start):
+            power.event(dict(state='Active', returnValue=True, subscribed=True))
+            for stage in shutdown_state.PREPARE:
+                power.event(dict(state='Active', returnValue=True, processing=stage, onOff='off'))
+        with patch.object(shutdown_state.time, 'monotonic', return_value=start+.464):
+            power.event(dict(state='Active Standby', returnValue=True))
+            self.assertTrue(shutdown_state.cached_stopping('route-a'))
+            self.assertTrue(bound_exit('route-a', reason='device_removed', fault_at=start+.2))
+        self.assertEqual(self.read(), self.baseline)
+        self.assertEqual(self.store.read()['phase'], 'stopping')
+
+    def test_off_after_fault_restore_cancels_late_standby(self):
+        self.run_late_standby_fault(runtime.restore)
+        self.assert_stays_off()
+
+    def test_escape_after_fault_restore_cancels_late_standby(self):
+        self.run_late_standby_fault(lambda: bound_exit('route-a', reason='escape'))
+        self.assert_stays_off()
+
+    def test_off_after_late_standby_stays_off(self):
+        self.run_late_standby_fault()
+        self.assertEqual(self.store.read()['phase'], 'stopping')
+        runtime.restore()
+        self.assert_stays_off()
+
+    def test_late_standby_cannot_activate_without_fresh_input_or_guardian(self):
+        self.run_late_standby_fault()
+        self.new_startup()
+        with self.assertRaises(FileNotFoundError):
+            self.dispatch(guardian=False)
+        self.assertFalse(self.store.read()['enabled'])
+        self.assertEqual(self.launches, [])
+
     def test_explicit_off_stays_off_after_new_startup(self):
         self.c.exit(self.intent)
         self.assert_stays_off()

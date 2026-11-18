@@ -1,11 +1,13 @@
 """Exercise the desktop recovery journey with real CLI/state and simulated TV IO."""
 import json
 import hashlib
+import itertools
 import os
 import shlex
 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 from pathlib import Path
 import tempfile
+import threading
 import time
 import unittest
 from unittest.mock import patch
@@ -23,6 +25,132 @@ except ImportError:
 
 @unittest.skipUnless(HAS_QT, 'Desktop build dependencies are optional for CLI tests')
 class DesktopRecoveryTests(unittest.TestCase):
+    def test_root_setup_offers_one_choice_to_review_the_original_no_root_removal(self):
+        self.store.finish(self.profile)
+        original = state.target(self.profile['host'], 'no-root', 2222, connection='root-ssh')
+        self.store.save(original)
+        (self.store.device_dir(original) / 'known_hosts').write_bytes(b'original pin')
+        pending = self.store.request_clean_removal(original)
+        w = self.window()
+        w.start('install', state.target(original['host'], 'root'))
+        self.pump(lambda: w.pending is not None or not w.running)
+        self.assertEqual(self.connections, [])
+        review = self.button(w, 'Review recovery options')
+        self.assertIsNotNone(review, w.details.toPlainText())
+        self.assertTrue(self.button(w, 'Cancel').isDefault())
+        review.click()
+        self.pump(lambda: w.pending is not None or not w.running)
+        self.assertEqual(self.connections, [original])
+        self.assertEqual(w.recovery_profile, original)
+        self.assertEqual(w.pending.title, 'Continue removing Clean Your TV?')
+        w.submit('n')
+        self.pump(lambda: not w.running)
+        self.assertEqual(self.store.pending(original), pending)
+        self.assertEqual(self.remote.uploads, {})
+
+    def test_storage_preflight_retries_only_failed_check_before_install_confirmation(self):
+        read = ('storage-check', True)
+        writable = ('storage-check', False)
+        selected = ('storage-select', True)
+        decisions = ('cancel-retry', 'cancel-install', 'pending', 'late-pending', 'legacy-uninstall',
+                     'identity', 'check-fails-again', 'install')
+        for failed_check, decision in itertools.product((read, writable), decisions):
+            with self.subTest(failed_check=failed_check, decision=decision):
+                self.store.finish(self.profile)
+                self.remote = Remote()
+                self.remote.close = lambda: None
+                original = self.remote.run
+                checks = []
+                before_retry = [selected, read] if failed_check == read else [selected, read, writable]
+                failure_count = 2 if decision == 'check-fails-again' else 1
+                def run(command, **kwargs):
+                    if command.startswith('unset NODE_OPTIONS NODE_PATH && /usr/bin/node -e '):
+                        args = shlex.split(command)
+                        request = json.loads(args[-1]) if args[-1].startswith('{') else {}
+                        action = request.get('command')
+                        if action in ('storage-select', 'storage-check'):
+                            read_only = "case 'storage-check':result=storageCheck();break;" not in args[-2]
+                            checks.append((action, read_only))
+                            if checks[-1] == failed_check and checks.count(failed_check) <= failure_count:
+                                if failed_check == writable or decision == 'check-fails-again':
+                                    return json.dumps({
+                                        'operation': request['plan']['operation'],
+                                        'observer_error': {'exception_code': 'EACCES',
+                                                           'filesystem_operation': 'lstat' if read_only else 'mkdir',
+                                                           'storage_area': 'private-storage'},
+                                    })
+                                return 'MALFORMED'
+                    return original(command, **kwargs)
+                self.remote.run = run
+
+                w = self.window()
+                w.start('install', self.profile)
+                for expected in ('Connect to check installed versions?', 'Install these versions?'):
+                    self.pump(lambda: w.pending is not None or not w.running)
+                    self.assertIsNotNone(w.pending, w.details.toPlainText())
+                    self.assertEqual(w.pending.title, expected)
+                    w.submit('y')
+                self.pump(lambda: self.button(w, 'Retry storage check') is not None or not w.running)
+                retry = self.button(w, 'Retry storage check')
+                self.assertIsNotNone(retry, w.details.toPlainText())
+                self.assertEqual(checks, before_retry)
+                self.assertIsNone(self.store.pending(self.profile))
+                self.assertEqual(self.remote.observers, {})
+                self.assertEqual(self.remote.uploads, {})
+                if decision == 'cancel-retry':
+                    w.submit('n')
+                elif decision in ('pending', 'legacy-uninstall'):
+                    self.store.begin(self.profile, 'uninstall' if decision == 'legacy-uninstall' else 'install', stage='pending')
+                    retry.click()
+                elif decision == 'identity':
+                    (self.store.device_dir(self.profile) / 'known_hosts').write_bytes(b'different pin')
+                    retry.click()
+                elif decision == 'check-fails-again' and failed_check == read:
+                    self.assertIn('verify that its SSH account can access', w.content.toPlainText())
+                    retry.click()
+                else:
+                    retry.click()
+                    self.pump(lambda: w.pending is not None or not w.running)
+                    self.assertIsNotNone(w.pending, w.details.toPlainText())
+                    self.assertEqual(w.pending.title, 'Install these versions?')
+                    self.assertEqual(w.pending.default, 'n')
+                    self.assertEqual(checks, before_retry + [read])
+                    self.assertEqual(self.remote.observers, {})
+                    self.assertEqual(self.remote.uploads, {})
+                    if decision == 'late-pending':
+                        self.store.begin(self.profile, 'install', stage='pending')
+                    w.submit('y' if decision in ('install', 'late-pending', 'check-fails-again') else 'n')
+                    if decision == 'install':
+                        self.pump(lambda: w.pending is not None or not w.running)
+                        if w.pending:
+                            w.submit(None)
+                self.pump(lambda: not w.running)
+                installs = [c for c in self.remote.calls if c[:2] == ('luna', 'com.webos.appInstallService/dev/install')]
+                self.assertEqual(len(installs), 2 if decision == 'install' else 0)
+                self.assertFalse(any(c[0] == 'luna' and c[1].endswith('/remove') for c in self.remote.calls))
+                self.assertEqual(self.connections[-1], self.profile)
+                if decision != 'install':
+                    self.assertEqual(self.remote.observers, {})
+                    self.assertEqual(self.remote.uploads, {})
+                if decision in ('pending', 'late-pending', 'legacy-uninstall'):
+                    self.assertIsNotNone(self.button(w, 'Review recovery options'))
+                    self.assertEqual(self.store.pending(self.profile)['stage'], 'pending')
+                else:
+                    self.assertIsNone(self.store.pending(self.profile))
+                if decision == 'check-fails-again':
+                    self.assertEqual(w.failure_help['code'], 'tv-storage-unavailable')
+                if decision == 'identity':
+                    self.assertEqual(w.failure_help['code'], 'ssh-identity')
+                    (self.store.device_dir(self.profile) / 'known_hosts').write_bytes(b'original pin')
+                if decision in ('cancel-retry', 'pending', 'legacy-uninstall', 'identity'):
+                    self.assertEqual(checks, before_retry)
+                elif decision == 'install' or decision == 'check-fails-again' and failed_check == writable:
+                    self.assertEqual(checks, before_retry + [read, writable])
+                else:
+                    self.assertEqual(checks, before_retry + [read])
+                self.assertIsNone(self.button(w, 'Retry storage check'))
+                w.close()
+
     def test_root_reinstall_resumes_after_restart_ssh_refusal_and_reopening(self):
         import errno
         from paramiko.ssh_exception import NoValidConnectionsError
@@ -152,6 +280,131 @@ class DesktopRecoveryTests(unittest.TestCase):
             w.channel.answer(None)
             self.pump(lambda: not w.running)
 
+    def test_uninstall_waits_for_the_same_tv_and_preserves_the_confirmed_removal(self):
+        from paramiko import BadHostKeyException
+        from cytv.operations import Installer
+
+        old_boot = '00000000-0000-0000-0000-000000000001'
+        new_boot = '00000000-0000-0000-0000-000000000002'
+        for outcome in ('ready', 'already-online', 'legacy-reconnect', 'timeout', 'same-boot',
+                        'cancel', 'changed-tv', 'changed-pin', 'stale-operation', 'root'):
+            with self.subTest(outcome=outcome):
+                self.store.finish(self.profile)
+                if outcome == 'root':
+                    self.profile = state.target(self.profile['host'], 'root', 2222)
+                    self.store.save(self.profile)
+                pin = self.store.device_dir(self.profile) / 'known_hosts'
+                pin.write_bytes(b'original pin')
+                self.connections.clear()
+                cleanup_calls, connections, reads = [], [], []
+                started, release = threading.Event(), threading.Event()
+                self.addCleanup(release.set)
+
+                def cleanup(installer, pending):
+                    cleanup_calls.append(pending['removal_operation'])
+                    if len(cleanup_calls) == 1:
+                        installer.store.checkpoint(installer.profile, stage='restart-required',
+                            removal_reason='restart-required',
+                            cleanup_boot_proof=None if outcome in ('root', 'legacy-reconnect') else {'kernel':old_boot},
+                            cleanup_boot_id=old_boot if outcome == 'root' else None)
+                        return {'restart_required':True}
+                    result = {'removed':True, 'verified_clean':True}
+                    installer.store.checkpoint(installer.profile, stage='verified-clean',
+                                               removal_reason='removal-verified', result=result)
+                    installer.store.finish_clean_removal(installer.profile)
+                    return result
+
+                class Probe:
+                    def run(probe, command, *, timeout):
+                        reads.append(command)
+                        self.assertEqual(command, 'cat /proc/sys/kernel/random/boot_id')
+                        return old_boot if outcome == 'same-boot' or (
+                            len(reads) == 1 and outcome != 'already-online') else new_boot
+
+                    def close(probe):
+                        pass
+
+                def connect(profile, directory, secret, trust, *, persist):
+                    self.assertEqual(profile, self.profile)
+                    self.assertEqual(directory, self.store.device_path(self.profile))
+                    self.assertFalse(persist)
+                    self.assertFalse(trust(None, None))
+                    connections.append(profile)
+                    started.set()
+                    if outcome == 'changed-tv':
+                        raise BadHostKeyException(profile['host'], None, None)
+                    if outcome == 'cancel':
+                        release.wait(2)
+                        return Probe()
+                    if outcome == 'timeout' or outcome in ('ready', 'legacy-reconnect') and len(connections) == 1:
+                        raise TimeoutError('SSH did not answer')
+                    return Probe()
+
+                with (patch.object(Installer, 'continue_clean_removal', cleanup),
+                      patch('cytv.transport.SSH.connect', side_effect=connect),
+                      patch('cytv.gui.REMOVAL_RECONNECT_SECONDS', 0.15 if outcome in ('timeout', 'same-boot') else 2),
+                      patch('cytv.recovery.REMOVAL_RECONNECT_INTERVAL', 0.01)):
+                    w = self.window()
+                    w.start('uninstall', self.profile)
+                    self.pump(lambda: w.pending is not None or not w.running)
+                    self.assertIsNotNone(w.pending)
+                    w.submit('y')
+                    self.pump(lambda: started.is_set() or not w.running)
+                    self.assertTrue(started.is_set(), 'No background observation started after the restart request')
+                    original = self.store.pending(self.profile)
+                    if outcome == 'cancel':
+                        observed = w.worker
+                        self.assertTrue(w.cancel.isEnabled())
+                        self.assertEqual(w.cancel.text(), 'Cancel')
+                        w.cancel.click()
+                        self.assertFalse(w.running)
+                        release.set()
+                        observed.join(2)
+                        self.assertFalse(observed.is_alive())
+                        self.app.processEvents()
+                        self.assertEqual(connections, [self.profile])
+                        self.assertEqual(reads, [])
+                    else:
+                        self.pump(lambda: not w.running)
+                    self.assertEqual(self.store.pending(self.profile), original)
+                    self.assertEqual(cleanup_calls, [original['removal_operation']])
+                    self.assertEqual(self.remote.calls, [])
+                    self.assertEqual(self.connections, [self.profile])
+
+                    if outcome in ('ready', 'already-online', 'legacy-reconnect', 'changed-pin', 'stale-operation', 'root'):
+                        action = self.button(w, 'Continue removal')
+                        self.assertIsNotNone(action, w.subtitle.text())
+                        self.assertEqual(len(reads), {'already-online':1, 'legacy-reconnect':0}.get(outcome, 2))
+                        if outcome == 'changed-pin':
+                            pin.write_bytes(b'replacement pin')
+                        if outcome == 'stale-operation':
+                            self.store.finish(self.profile)
+                        action.click()
+                        self.pump(lambda: w.pending is not None or not w.running)
+                        self.assertIsNone(w.pending)
+                        if outcome in ('changed-pin', 'stale-operation'):
+                            self.assertEqual(self.connections, [self.profile])
+                            self.assertEqual(cleanup_calls, [original['removal_operation']])
+                            if outcome == 'changed-pin':
+                                self.assertEqual(w.failure_help['code'], 'ssh-identity')
+                            else:
+                                self.assertIn('Removal evidence changed.', w.content.toPlainText())
+                                self.assertIsNone(self.store.pending(self.profile))
+                        else:
+                            self.assertEqual(self.connections, [self.profile] * 2)
+                            self.assertEqual(cleanup_calls, [original['removal_operation']] * 2)
+                            self.assertEqual(w.title.text(), 'Clean Your TV removal is verified.')
+                    else:
+                        self.assertIsNone(self.button(w, 'Continue removal'))
+                        self.assertIsNotNone(self.button(w, 'Try again'))
+                        if outcome == 'changed-tv':
+                            self.assertEqual(connections, [self.profile])
+                            self.assertEqual(reads, [])
+                        if outcome in ('timeout', 'same-boot'):
+                            self.assertGreater(len(connections), 1)
+                            self.assertIn('Try again', w.subtitle.text())
+                    w.close()
+
     def test_root_reinstall_finalizes_verified_checkpoint_without_touching_the_tv(self):
         import hashlib
         from cytv.operations import Installer
@@ -189,6 +442,87 @@ class DesktopRecoveryTests(unittest.TestCase):
         self.assertIn('Connect to check installed versions', w.pending.title)
         w.submit('n')
         self.pump(lambda: not w.running)
+        self.assertEqual(w.title.text(), 'Cancelled')
+        self.assertNotEqual(w.step_rows[-1].property('state'), 'complete')
+        self.assertEqual(self.connections, [self.profile])
+
+    def test_doctor_continues_to_version_review_and_cancel_keeps_tv_unchanged(self):
+        self.store.finish(self.profile)
+        current = [{'id': 'com.gathin.tvhome', 'version': '1.2.2'},
+                   {'id': 'com.local.nativehome', 'version': '0.6.13'}]
+        original = self.remote.run
+
+        def run(command, **kwargs):
+            if self.remote.installed and 'CYTV_HELPER_IDLE' in command:
+                self.remote.calls.append(('run', command))
+                return 'CYTV_HELPER_ACTIVE'
+            return original(command, **kwargs)
+
+        self.remote.run = run
+        for installed, expected in (([], 'Home: Not installed → 1.2.2 (Install)'),
+                                    (current, 'Home: 1.2.2 → 1.2.2 (Reinstall)')):
+            with self.subTest(installed=bool(installed)):
+                self.remote.installed = list(installed)
+                self.remote.calls.clear()
+                self.connections.clear()
+                w = self.window()
+                self.check(w)
+                self.assertEqual(w.title.text(), 'Connected to your TV')
+                self.assertNotIn('packages', w.check_results)
+                self.button(w, 'Continue setup').click()
+                self.pump(lambda: w.pending is not None)
+                self.assertEqual(w.pending.title, 'Connect to check installed versions?')
+                w.submit('y')
+                self.pump(lambda: w.pending is not None or not w.running)
+                self.assertIsNotNone(w.pending, w.content.toPlainText())
+                self.assertEqual(w.pending.title, 'Install these versions?')
+                self.assertIn(expected, w.content.toPlainText())
+                self.button(w, 'No, go back / cancel this operation').click()
+                self.pump(lambda: not w.running)
+                self.assertEqual(w.title.text(), 'Cancelled')
+                self.assertNotEqual(w.step_rows[-1].property('state'), 'complete')
+                self.assertEqual(self.connections, [self.profile, self.profile])
+                self.assertEqual(self.remote.installed, installed)
+                self.assertEqual(self.remote.uploads, {})
+                self.assertFalse(any(c[0] == 'luna' and c[1].endswith(('/install', '/remove', '/launch'))
+                                     for c in self.remote.calls))
+                self.assertIsNone(self.store.pending(self.profile))
+                w.close()
+
+    def test_doctor_continues_to_root_reinstall_review_and_cancel_keeps_root(self):
+        self.store.finish(self.profile)
+        self.profile = state.target('192.0.2.10', 'root', 2222)
+        self.store.save(self.profile)
+        (self.store.device_dir(self.profile) / 'known_hosts').write_bytes(b'original pin')
+        original = self.remote.run
+
+        def run(command, **kwargs):
+            if 'deploy.json' in command:
+                return '{"stage":"installed-recovery-only"}'
+            if 'CYTV_EXISTING_ROOT' in command:
+                return 'CYTV_EXISTING_ROOT'
+            return original(command, **kwargs)
+
+        self.remote.run = run
+        with (patch.object(cli.Installer, 'select_graphics'),
+              patch.object(cli.Installer, 'version_summary', return_value=['Root: 1.2.2 → 1.2.2 (Reinstall)'])):
+            w = self.window()
+            self.check(w)
+            self.assertEqual(w.title.text(), 'Connected to your TV', w.details.toPlainText())
+            self.button(w, 'Continue setup').click()
+            self.pump(lambda: w.pending is not None)
+            self.button(w, 'Continue').click()
+            self.pump(lambda: w.pending is not None or not w.running)
+            self.assertIsNotNone(w.pending, w.content.toPlainText())
+            self.assertEqual(w.pending.title, 'Reinstall Root?')
+            self.button(w, 'No, go back / cancel this operation').click()
+            self.pump(lambda: not w.running)
+        self.assertEqual(w.title.text(), 'Cancelled')
+        self.assertNotEqual(w.step_rows[-1].property('state'), 'complete')
+        self.assertEqual(self.connections, [self.profile, self.profile])
+        self.assertIsNone(self.store.pending(self.profile))
+        self.assertIsNone(self.store.root_reinstall(self.profile))
+        self.assert_no_root_mutation()
 
     @classmethod
     def setUpClass(cls):
@@ -234,7 +568,7 @@ class DesktopRecoveryTests(unittest.TestCase):
         self.inventory = {'apps': [{'id': 'youtube', 'title': 'YouTube',
                                    'icon': 'data:image/png;base64,AA=='}], 'inputs': []}
         from types import SimpleNamespace
-        ssap = SimpleNamespace(key='PRIVATE-PAIRING-KEY', inventory=lambda icon: self.inventory)
+        ssap = SimpleNamespace(key='PRIVATE-PAIRING-KEY', inventory=lambda icon, *, allow_missing_inputs=False: self.inventory)
         for target, kwargs in [
             ('cytv.state.default_dir', {'return_value': self.root}),
             ('cytv.i18n.system_languages', {'return_value': ['en']}),
@@ -426,6 +760,7 @@ class DesktopRecoveryTests(unittest.TestCase):
         w = self.window()
         w.start('uninstall')
         self.pump(lambda: w.pending is not None)
+        self.assertIn('saved preferences will be removed.', w.content.toPlainText())
         w.submit('y')
         self.pump(lambda: not w.running)
         self.assertEqual(w.title.text(), 'Clean Your TV removal is verified.', w.content.toPlainText())
@@ -433,6 +768,9 @@ class DesktopRecoveryTests(unittest.TestCase):
         self.assertIsNone(self.store.pending(self.profile))
         self.assertIsNone(self.store.root_reinstall(self.profile))
         self.assertIsNone(self.button(w, 'Continue Root reinstallation'))
+        self.assertTrue(self.button(w, 'Back to start').isDefault())
+        self.assertFalse(self.button(w, 'Set up my TV').isDefault())
+        self.assertEqual(self.connections, [self.profile])
         self.assertEqual(self.device_removals, ['d'*32])
         receipt = json.loads((self.store.device_dir(self.profile)/'clean-removal.json').read_bytes())
         self.assertEqual(receipt['previous'], json.loads(original))
@@ -441,6 +779,7 @@ class DesktopRecoveryTests(unittest.TestCase):
 
     def test_recover_clean_removal_publishes_proof_accepted_by_strict_ui(self):
         from tests.cytv.clean_removal_fixture import prepare
+        self.store.finish(self.profile)
         original=prepare(self)
         self.store.request_clean_removal(self.profile)
         w=self.window()
@@ -460,6 +799,18 @@ class DesktopRecoveryTests(unittest.TestCase):
         self.assertIs(w.recovery_plan.get('verified_clean'),True)
         self.assertIsNot(w.recovery_plan.get('restart_required'),True)
         self.assertIsNone(self.button(w,'Try again'))
+        setup = self.button(w, 'Set up my TV')
+        self.assertIsNotNone(setup)
+        self.assertEqual(self.connections, [self.profile])
+        setup.click()
+        self.pump(lambda: w.pending is not None)
+        self.assertEqual(w.selected_profile, self.profile)
+        self.assertEqual(w.pending.title, 'Connect to check installed versions?')
+        w.submit('n')
+        self.pump(lambda: not w.running)
+        self.assertEqual(w.title.text(), 'Cancelled')
+        self.assertEqual(self.connections, [self.profile])
+        self.assertEqual(self.device_removals, ['d'*32])
 
     def test_cleanup_reviews_recovery_even_with_old_advisory_actions(self):
         def runner(argv, **kwargs):
@@ -475,6 +826,7 @@ class DesktopRecoveryTests(unittest.TestCase):
         w.start('uninstall', self.profile)
         self.pump(lambda: not w.running)
         self.assertEqual(w.title.text(), 'Finish Clean Your TV cleanup')
+        self.assertIsNone(self.button(w, 'Set up my TV'))
         self.assertNotEqual(w.title.property('state'), 'error')
         self.assertIn('Verifying removal…', w.subtitle.text())
         self.assertIn('Final cleanup could not be verified.', w.subtitle.text())
@@ -832,8 +1184,8 @@ class DesktopRecoveryTests(unittest.TestCase):
         w.submit('{}')  # Skip optional customization.
         self.pump(lambda: w.pending is not None)
         self.assertIn('Home button result', w.pending.label)
-        self.assertEqual(w.pending.default, '3')
-        self.assertEqual([key for key, _, _ in w.pending.options], ['1','2','3'])
+        self.assertEqual(w.pending.default, '4')
+        self.assertEqual([key for key, _, _ in w.pending.options], ['1','2','3','4'])
         self.assertEqual(w.check_results['packages']['status'], 'pass')
         self.assertEqual(w.check_results['home-button']['status'], 'unknown')
         w.submit('2')
@@ -853,6 +1205,20 @@ class DesktopRecoveryTests(unittest.TestCase):
         self.assertEqual(len(installs),2)
         self.assertTrue(all(profile == self.profile for profile in self.connections))
         self.assertNotIn('PRIVATE-PAIRING-KEY', w.report.read_text())
+        self.assertEqual(report['tv']['setup_outcome']['home_destination'], 'lg-home')
+        self.assertEqual(w.content.toPlainText().count('physical TV remote'), 1)
+        self.assertIn('Open an app or TV input', w.content.toPlainText())
+        original_report = w.report
+        connections = list(self.connections)
+        calls = list(self.remote.calls)
+        self.button(w, 'Home button diagnostics').click()
+        self.assertEqual(w.title.text(), 'Home button diagnostics')
+        self.assertIn('already recorded', w.subtitle.text())
+        self.assertEqual(w.report, original_report)
+        self.assertIsNone(w.pending)
+        self.assertEqual(self.connections, connections)
+        self.assertEqual(self.remote.calls, calls)
+
 
     def test_skipped_home_check_is_saved_as_untested_after_successful_packages(self):
         self.store.finish(self.profile)

@@ -1,5 +1,7 @@
 # Release history and device evidence
 
+- [Issue 678 retained Root inspection diagnostics, 2026-11-18](2026-11-18-issue678-root-inspection.md)
+
 - [v1.23.1 and v1.24.0 candidate verification ledger](2026-11-17-release-1.23.1-rc-verification.md)
 
 - [System Updater self-update implementation, 2026-11-16](2026-11-16-system-self-update-implementation.md): Root/No-root rooted executor, focused checks and outstanding device acceptance.
@@ -207,6 +209,7 @@ one model or artifact does not certify later releases or a different TV.
 - [Root Node prototype integration, 2026-10-31](2026-10-31-root-node-prototype.md): host-only exact-runtime checks for #194; Node 8+ admission and unresolved #160/#164 device support remain unchanged.
 
 - [Passive Root diagnostic preparation, 2026-10-31](2026-10-31-root-passive-diagnostics.md): reviewed initial read-only procedure for #161; actual recovery remains blocked on owner evidence.
+- [Issue 152 profile reconciliation, 2026-11-18](2026-11-18-issue152-profile-reconciliation.md): verified removal supersedes older local install/removal goals across saved connections; offline reproduction and limits.
 - [No-root recovery and legacy WebKit, 2026-10-31](2026-10-31-ef950-recovery-webkit.md): integrated source/host checks for #212; original #152 device recovery and controls remain unverified.
 - [Supervised 1.5.0 candidate findings, 2026-10-30](2026-10-30-supervised-candidate-findings.md): owner observations and installed-TV automation; eight regressions remain separate from later fixes.
 - [Unattended candidate preparation, 2026-10-30](2026-10-30-unattended-candidate-readiness.md): exact artifact/host checks and their remaining device gates.
@@ -270,6 +273,8 @@ one model or artifact does not certify later releases or a different TV.
 - [Root initial stable record](../../root-edition/ROOT-STABLE-0.1.0.md), [Root 0.1.1](../../root-edition/ROOT-0.1.1.md), [earlier Root stable acceptance](../development/ROOT-STABLE-ACCEPTANCE.md), [RC19](../development/ROOT-RC19-VALIDATION.md), [update TV validation](../development/ROOT-UPDATES-TV-VALIDATION.md).
 
 ## Audits, investigations and original plans
+
+- [Installer support baseline, 2026-11-18](2026-11-18-installer-support-baseline.md)
 
 - [Home transport source QA, 2026-10-29](HOME-CONTROL-TRANSPORT-QA-2026-10-29.md): scoped project C3 jail, status/control and physical Home results; final release acceptance remains separate.
 

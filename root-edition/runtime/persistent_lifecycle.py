@@ -6,7 +6,7 @@ Boot identifiers must distinguish snapshot resumes that reset monotonic uptime.
 """
 PHASES = ('disabled', 'trial', 'active', 'stopping', 'recovering', 'starting')
 FIELDS = {'version', 'generation', 'phase', 'enabled', 'boot', 'token'}
-EVENTS = ('enable', 'confirmed', 'boot', 'restored', 'ready', 'exit', 'fault', 'shutdown', 'resume')
+EVENTS = ('enable', 'confirmed', 'boot', 'restored', 'ready', 'exit', 'fault', 'shutdown', 'resume', 'late-standby', 'cancel-rearm')
 
 
 def initial():
@@ -70,6 +70,15 @@ def transition(state, event):
         new.update(generation=state['generation']+1, phase='recovering', enabled=resume,
                    boot=event['boot'], token=event['token'])
         effect = 'recover'
+    elif kind == 'cancel-rearm':
+        if state['phase'] != 'disabled': raise ValueError('Expected disabled Home')
+        if state['generation']: new['generation'] += 1
+        effect = 'none'
+    elif kind == 'late-standby':
+        if state['phase'] != 'disabled' or not state['generation']:
+            raise ValueError('Expected verified disabled fallback')
+        new.update(phase='stopping', enabled=True)
+        effect = 'none'
     elif kind == 'shutdown':
         if state['phase'] not in ('active', 'stopping') or not state['enabled']:
             raise ValueError('Only confirmed mode can enter shutdown')

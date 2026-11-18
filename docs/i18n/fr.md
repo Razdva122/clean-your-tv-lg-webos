@@ -39,7 +39,9 @@ Developer Mode permet à CYTV d’installer des apps sur un TV sans root.
 
 Utilisez le code du TV, pas le mot de passe du compte LG. Si aucun code n’apparaît, activez Key Server.
 
-L’appairage est une étape distincte: quand le TV le demande, autorisez CYTV avec la télécommande.
+L’appairage est une étape distincte: quand le TV le demande, autorisez CYTV avec la télécommande. Si le téléviseur refuse la demande, confirmez dans CYTV que vous souhaitez réessayer avec le même téléviseur.
+
+Si un avertissement indique que les entrées HDMI n’ont pas pu être lues lors de la première installation de No-root, vous pouvez continuer avec les applications détectées.
 
 Gardez Developer Mode actif: avant la fin du compte à rebours, ouvrez-le et appuyez sur EXTEND avec le TV connecté à Internet. À expiration, LG peut supprimer ces apps.
 
@@ -63,6 +65,8 @@ L’assistant utilise initialement la langue du système et mémorise votre choi
 4. Suivez l’assistant. Gardez la TV allumée, le même réseau et CYTV ouvert jusqu’à la fin. Ne forcez pas l’arrêt de l’application Android.
 
 Dans l’installateur pour ordinateur, après une vérification réussie de la connexion, choisissez **Continuer la configuration** pour conserver la même connexion et la même édition. L’assistant explique l’état d’une installation précédente ; les résultats techniques sont dans **Détails**. Si une opération précédente nécessite une récupération, utilisez d’abord l’action proposée. L’assistant vérifie les versions installées et demande confirmation avant toute modification. Les demandes de redémarrage enregistrées sont revérifiées ; l’assistant ne demande un redémarrage que si le nettoyage en cours le nécessite.
+
+Si l’installateur Root propose de remplacer l’intégration Home actuelle, confirmez uniquement si vous souhaitez rétablir LG Home et poursuivre. En cas de refus, le Home actuel reste actif.
 
 ## 5. Vérifier la télécommande
 
@@ -91,11 +95,13 @@ Si `ssh-identity-changed` s’affiche, arrêtez-vous et vérifiez la clé SSH du
 
 Après avoir réinitialisé votre téléviseur No-root aux réglages d’usine, choisissez **Reconnecter après la réinitialisation d’usine** si la clé a changé. Suivez les étapes sur votre réseau domestique de confiance. L’ancien profil et le dossier de désinstallation sont conservés.
 
-Après une interruption, utilisez la même connexion enregistrée et commencez par **Vérifier l’état du téléviseur**. Continuez uniquement avec l’action de récupération proposée par l’assistant. Si l’état est inconnu, enregistrez le rapport de diagnostic et arrêtez-vous ; conservez les données de récupération et ne réinstallez pas à l’aveugle.
+Si l’installation reste inachevée sur ordinateur, choisissez **Examiner les options de récupération** sur l’écran des résultats, puis **Continuer** à la question **Vérifier les options de récupération ?**. L’assistant utilise la même connexion enregistrée au téléviseur. Avec No-root, si le résultat concernant les paquets est inconnu, choisissez d’abord **Vérifier l’état du téléviseur** si ce bouton est proposé. Confirmez séparément la modification proposée. Si l’installation reste bloquée, conservez la connexion et les données de récupération.
 
-Pendant la récupération, laissez le contrôle de Home désactivé et conservez les rapports de diagnostic originaux ainsi que la connexion enregistrée. Confirmez séparément la vérification et les modifications. Suivez le guide détaillé pour votre version installée ; ne forcez pas la réinstallation et n’effacez pas l’état de récupération.
+Si No-root propose **Relancer la vérification du stockage**, choisissez cette option pour vérifier le même téléviseur en lecture seule. Une fois la vérification réussie, confirmez l’installation séparément. Si une opération reste en cours, choisissez **Examiner les options de récupération**.
 
-Indiquez modèle de TV, micrologiciel, No-root ou Root, appareil d’installation, étape et message d’erreur. Retirez mots de passe, clés, adresses et données personnelles avant de partager le rapport. Rien n’est publié automatiquement.
+Si l’installateur de bureau a vérifié les paquets mais que la touche Home n’ouvre pas Clean Your TV, choisissez **Diagnostic du bouton Home** avec No-root ou **Vérifier l’état du téléviseur** avec Root sur l’écran des résultats. Avec No-root, le résultat déjà enregistré s’affiche. Utilisez **Enregistrer le rapport de diagnostic** pour en conserver une copie.
+
+Pour garder une copie sur ordinateur, choisissez **Enregistrer le rapport de diagnostic…** sur l’écran des résultats. Pour demander de l’aide, choisissez **Signaler un problème**, relisez le brouillon, puis choisissez **Copier le brouillon** et **Ouvrir le formulaire**. Collez le brouillon et joignez le rapport enregistré si vous en avez un.
 
 [Signaler un problème](../FEEDBACK.md) · [Récupération — anglais](../RECOVERY.md) · [Mettre à jour ou supprimer — anglais](../MAINTENANCE.md) · [Autres langues](../LANGUAGES.md)
 
@@ -103,11 +109,17 @@ Indiquez modèle de TV, micrologiciel, No-root ou Root, appareil d’installatio
 
 Choisissez **Désinstaller Clean Your TV** dans Maintenance avec la même connexion enregistrée. Confirmez une fois. Les applications et fichiers connus du projet présents sont supprimés ; les éléments absents sont ignorés, même après une installation partielle.
 
-Quand demandé, débranchez l’alimentation TV, rebranchez-la, attendez le réseau et choisissez **Réessayer**. Veille ou Quick Start n’est pas un redémarrage complet ; CYTV ne redémarre pas le téléviseur automatiquement. Si l’accès est refusé, utilisez la connexion Root demandée ; si le téléviseur est occupé, patientez et réessayez. Le succès apparaît seulement après vérification du nettoyage final. Gardez les clés et rapports d’origine. Les commandes d’urgence et le consentement au partage restent applicables.
+Quand demandé, débranchez l’alimentation TV, rebranchez-la, attendez le retour du réseau. Veille ou Quick Start n’est pas un redémarrage complet ; CYTV ne redémarre pas le téléviseur automatiquement. Si le nettoyage nécessite un accès Root, utilisez votre connexion Root existante au même téléviseur. Sans cet accès, le nettoyage reste incomplet. Si le téléviseur est occupé, patientez et réessayez. Le succès apparaît seulement après vérification du nettoyage final. Gardez les clés et rapports d’origine. Les commandes d’urgence et le consentement au partage restent applicables.
 
-Si l’installateur ne peut pas vérifier la suppression, le nettoyage final, les commandes du téléviseur ou le résultat de l’opération sur les paquets, ou signale des chemins de projet modifiés, choisissez **Examiner les options de récupération** avec la connexion d’origine enregistrée. Confirmez séparément la poursuite si l’installateur la propose.
+Si l’installateur sur ordinateur attend le téléviseur, choisissez **Poursuivre la désinstallation** quand le bouton apparaît. Choisissez **Annuler** pour arrêter l’attente ou **Réessayer** pour vérifier la connexion manuellement.
+
+Si **Revenir à LG Home** apparaît pendant la désinstallation, sélectionnez cette option. Une fois la restauration vérifiée, choisissez **Poursuivre la désinstallation**. Si vous revenez à LG Home directement depuis le menu de maintenance, les applications restent installées.
+
+Si l’installateur ne peut pas vérifier la suppression, le nettoyage final, les commandes du téléviseur ou le résultat de l’opération sur les paquets, ou signale des chemins de projet modifiés, choisissez **Examiner les options de récupération** avec la connexion d’origine enregistrée. Confirmez séparément la poursuite si l’installateur la propose. Si la récupération d’une installation No-root propose **Vérifier l’état du téléviseur**, choisissez cette option et conservez les données de récupération.
 
 Si l’installateur ne peut pas vérifier le redémarrage complet demandé, enregistrez et joignez le rapport de diagnostic. Conservez la connexion enregistrée et les données de récupération. Ne répétez pas les coupures de courant et n’effacez pas manuellement l’opération inachevée.
+
+Quand l’installateur sur ordinateur affiche **La suppression de Clean Your TV est vérifiée.**, choisissez **Fermer** pour terminer ou **Configurer mon téléviseur** pour lancer une nouvelle installation sur le même téléviseur avec la même édition et la même connexion.
 
 **Réinstaller Root :** Choisissez **Configurer mon téléviseur → Root** avec la connexion enregistrée et confirmez **Réinstaller Root ?**. L’installateur rétablit LG Home et supprime entièrement Clean Your TV, ses outils de mise à jour, Home Helper et les préférences enregistrées. Après vérification de la suppression, il installe et active les paquets et l’environnement Root fournis avec cet installateur. Les autres apps du TV et l’accès root/SSH existant sont conservés. Si l’assistant sur ordinateur s’interrompt, ouvrez le même installateur et choisissez **Reprendre la réinstallation de Root**. Après vérification de la suppression, choisissez **Poursuivre l’installation de Root**. **Désinstaller Clean Your TV** seul ne lance jamais une nouvelle installation.
 

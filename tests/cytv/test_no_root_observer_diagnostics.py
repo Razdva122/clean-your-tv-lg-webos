@@ -81,6 +81,81 @@ class ObserverDiagnosticsTests(unittest.TestCase):
                 self.assertEqual(report['no_root_observer'], {'command': 'status', 'failure': expected})
                 self.assertNotIn('ssh_command', report)
 
+    def failed_install_preflight(self, failure_command, reply):
+        store = state.Store(Path(self.tmp.name) / 'fresh')
+        calls = []
+
+        def run(command, **kwargs):
+            request = json.loads(shlex.split(command)[-1])
+            current = request['command']
+            calls.append(current)
+            if current == failure_command:
+                if isinstance(reply, BaseException):
+                    raise reply
+                return reply(request['plan']['operation'])
+            self.assertEqual(current, 'storage-select')
+            return json.dumps({'operation': request['plan']['operation'], 'root': observer.ROOT})
+
+        installer = SimpleNamespace(remote=SimpleNamespace(run=run), store=store, profile=self.profile)
+        with self.assertRaises(UserError) as caught:
+            observer.begin(installer, 'install', {'helper.ipk': b'helper', 'launcher.ipk': b'home'},
+                           dict(zip(observer.APPS, ['1', '2'])), {}, {})
+        expected = ['storage-select', 'storage-check'] if failure_command == 'storage-check' else ['storage-select']
+        self.assertEqual(calls, expected)
+        self.assertIsNone(store.pending(self.profile))
+        self.assertEqual(list(store.device_dir(self.profile).glob('capsule-*.json')), [])
+        return caught.exception, store
+
+    def test_invalid_storage_reply_is_a_preflight_failure_without_a_package_request(self):
+        cases = [
+            ('storage-select', lambda op: json.dumps({'operation': op, 'root': '/PRIVATE'}), 'invalid-reply'),
+            ('storage-check', lambda op: 'PRIVATE-NOT-JSON', 'invalid-json'),
+            ('storage-check', lambda op: '[]', 'invalid-reply'),
+        ]
+        for command, reply, failure in cases:
+            with self.subTest(command=command, failure=failure):
+                error, store = self.failed_install_preflight(command, reply)
+                self.assertEqual(error.reason_code, 'storage-preflight-failed')
+                self.assertEqual(error.no_root_observer, {'command': command, 'failure': failure})
+                report = diagnostics.create_report(store, 'install', self.profile, 'install-packages', error)
+                text = report.read_text()
+                self.assertNotIn('PRIVATE', text)
+                value = json.loads(text)
+                self.assertIsNone(value['pending'])
+                self.assertEqual(value['reason_code'], 'storage-preflight-failed')
+
+    def test_foreign_storage_reply_and_reservation_keep_recovery_classification(self):
+        for command in ('storage-select', 'storage-check'):
+            with self.subTest(command=command):
+                error, _ = self.failed_install_preflight(command, lambda op: json.dumps({'operation': 'PRIVATE'}))
+                self.assertEqual(error.reason_code, 'pending-operation')
+                self.assertEqual(error.no_root_observer, {'command': command, 'failure': 'foreign-operation'})
+                error, _ = self.failed_install_preflight(command, lambda op: json.dumps({
+                    'operation': op, 'observer_error': {'observer_reason': 'foreign-reservation'}}))
+                self.assertEqual(error.reason_code, 'pending-operation')
+                self.assertEqual(error.no_root_observer['observer_reason'], 'foreign-reservation')
+
+    def test_existing_receipt_blocks_a_fresh_attempt_before_the_storage_checks(self):
+        def run(*args, **kwargs):
+            self.fail('The original operation must be reviewed before running a fresh check.')
+        installer = SimpleNamespace(remote=SimpleNamespace(run=run), store=self.store, profile=self.profile)
+        with self.assertRaises(UserError) as caught:
+            observer.begin(installer, 'install', {'helper.ipk': b'helper', 'launcher.ipk': b'home'},
+                           dict(zip(observer.APPS, ['1', '2'])), {}, {})
+        self.assertEqual(caught.exception.reason_code, 'pending-operation')
+        self.assertEqual(self.journal.read_bytes(), self.before)
+
+    def test_storage_keeps_typed_command_errors_and_lost_start_keeps_recovery(self):
+        original = TVCommandError(127)
+        error, _ = self.failed_install_preflight('storage-check', original)
+        self.assertIs(error, original)
+        self.assertEqual(error.diagnostic_reason, 'ssh-command-failed')
+        self.assertEqual(error.no_root_observer, {'command': 'storage-check', 'failure': 'command-failed'})
+        report = self.report(self.failure('PRIVATE-NOT-JSON', 'start'), 'recover')
+        self.assertEqual(report['reason_code'], 'pending-operation')
+        self.assertEqual(report['no_root_observer'], {'command': 'start', 'failure': 'invalid-json'})
+        self.assertEqual(report['recovery']['actions'], ['check', 'retain-evidence'])
+
     def test_actual_ssh_deadline_is_reported_as_timeout(self):
         from cytv.transport import SSH
         def run(*args, **kwargs):
@@ -209,6 +284,7 @@ class ObserverDiagnosticsTests(unittest.TestCase):
                     with self.assertRaises(UserError) as caught:
                         observer.begin(installer, 'install', {'helper.ipk': b'helper', 'launcher.ipk': b'home'},
                                        dict(zip(observer.APPS, ['1', '2'])), {}, {})
+                    self.assertEqual(caught.exception.reason_code, 'storage-preflight-failed')
                     details = caught.exception.no_root_observer
                     self.assertEqual(details['command'], 'storage-check')
                     self.assertEqual(details['exception_code'], 'EACCES')
@@ -218,6 +294,22 @@ class ObserverDiagnosticsTests(unittest.TestCase):
                     self.assertEqual(len(calls), 2)  # Read-only selection, then the single storage check.
                     self.assertEqual(list(public.iterdir()), [])
                     self.assertEqual(list(private.iterdir()), [])
+
+                    active = private / 'active'
+                    active.mkdir(mode=0o700)
+                    marker = active / 'owner'
+                    marker.write_bytes(b'original-reservation')
+                    calls.clear()
+                    with self.assertRaises(UserError) as caught:
+                        observer.begin(installer, 'install', {'helper.ipk': b'helper', 'launcher.ipk': b'home'},
+                                       dict(zip(observer.APPS, ['1', '2'])), {}, {})
+                    self.assertEqual(caught.exception.reason_code, 'pending-operation')
+                    self.assertEqual(caught.exception.no_root_observer['observer_reason'], 'foreign-reservation')
+                    self.assertIsNone(store.pending(self.profile))
+                    self.assertEqual(len(calls), 2)
+                    self.assertEqual(marker.read_bytes(), b'original-reservation')
+                    marker.unlink()
+                    active.rmdir()
 
     @unittest.skipIf(os.name == 'nt' or not shutil.which('node'), 'Requires POSIX shell and Node')
     def test_wrapper_classifies_only_fixed_filesystem_categories_on_supported_runtimes(self):

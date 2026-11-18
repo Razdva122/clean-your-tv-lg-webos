@@ -8,6 +8,51 @@ from cytv import cli, diagnostics, state
 
 
 class DiagnosticTests(unittest.TestCase):
+    def test_issue_draft_does_not_infer_cause_in_older_report(self):
+        report = {'schema': 1, 'cytv_version': '0.13.0', 'edition': 'root',
+                  'action': 'doctor', 'phase': 'ssh-connect',
+                  'pending': {'action': 'install', 'stage': 'pending'},
+                  'error_type': 'OSError', 'reason_code': 'ssh-timeout'}
+        draft = diagnostics.issue_draft(report)
+        self.assertIn('Root install', draft['title'])
+        self.assertIn('Observed phase: unknown', draft['body'])
+        self.assertIn('Reason: unknown', draft['body'])
+        self.assertIn('Later observation: doctor at ssh-connect (ssh-timeout)', draft['body'])
+        self.assertIn('Last verified outcome: unknown', draft['body'])
+
+    def test_issue_draft_keeps_missing_legacy_failure_reason_unknown(self):
+        legacy = {'action': 'install', 'edition': 'root', 'phase': 'activate-root',
+                  'error_type': 'UserError', 'guidance': {'code': 'pending-operation'}}
+        for report in (legacy, dict(legacy, reason_code='user-error')):
+            with self.subTest(report=report):
+                draft = diagnostics.issue_draft(report)
+                self.assertIn('Observed phase: activate-root', draft['body'])
+                self.assertIn('Reason: unknown', draft['body'])
+
+    def test_issue_draft_does_not_copy_untrusted_fields(self):
+        private = ('192.0.2.55', 'ssh-password', '/Users/owner/private', 'com.private.app', 'raw exception')
+        report = {'action': 'install', 'edition': private[0], 'cytv_version': private[1],
+                  'phase': private[2], 'reason_code': private[4], 'error_type': private[4],
+                  'trace': [{'file': private[2]}], 'apps': [private[3]],
+                  'checks': {private[2]: 'pass'}, 'status': {'removed': True, 'verified_clean': 'true'},
+                  'luna': {'reason': private[4]}, 'guidance': {'code': private[1]}}
+        draft = diagnostics.issue_draft(report)
+        self.assertIn('Goal: install', draft['body'])
+        self.assertIn('Edition: unknown', draft['body'])
+        self.assertIn('Installer version: unknown', draft['body'])
+        self.assertIn('Observed phase: unknown', draft['body'])
+        self.assertIn('Reason: unknown', draft['body'])
+        self.assertIn('Last verified outcome: unknown', draft['body'])
+        for value in private:
+            self.assertNotIn(value, draft['title'])
+            self.assertNotIn(value, draft['body'])
+
+    def test_issue_draft_uses_allowlisted_package_rejection_reason(self):
+        report = {'action': 'install', 'edition': 'no-root', 'phase': 'install-packages',
+                  'reason_code': 'user-error', 'luna': {'reason': 'FAILED_IPKG_INSTALL'}}
+        draft = diagnostics.issue_draft(report)
+        self.assertIn('Reason: FAILED_IPKG_INSTALL', draft['body'])
+
     def test_closed_ssh_channel_reports_unknown_removal_completion(self):
         from cytv.errors import TVCommandError
 
@@ -84,7 +129,7 @@ class DiagnosticTests(unittest.TestCase):
     def test_icon_counts_are_allowlisted_again_before_report_and_history_export(self):
         counts = {'schema': 'PRIVATE', 'status': 'complete', 'apps': 7, 'embedded': 2,
                   'fallback': 5, 'missing_uri': 1, 'rejected_uri': 2,
-                  'fetch_failed': 2, 'invalid_image': 1, 'PRIVATE': 'PRIVATE'}
+                  'fetch_failed': 2, 'invalid_image': 1, 'skipped_apps': 1, 'PRIVATE': 'PRIVATE'}
         with tempfile.TemporaryDirectory() as tmp:
             path = diagnostics.create_report(state.Store(tmp), 'install', None, 'read-inventory',
                                              tv_info={'icon_inventory': counts})
@@ -343,6 +388,32 @@ class DiagnosticTests(unittest.TestCase):
             self.assertEqual(json.loads(reports[0].read_text())['tv'], {
                 'node_version_status': 'missing',
                 'kernel_arch': 'aarch64', 'userland_abi': 'arm64', 'arm32_supported': False})
+
+    def test_root_doctor_exports_python_inventory_through_the_existing_report(self):
+        from unittest.mock import Mock
+        from cytv.errors import UserError
+
+        for failure in (None, UserError('PRIVATE', reason_code='pending-operation')):
+            with self.subTest(failure=bool(failure)), tempfile.TemporaryDirectory() as tmp, \
+                    patch('cytv.cli.Installer') as installer:
+                remote = Mock()
+                remote.run.return_value = json.dumps({'status': 'generated', 'matching_files': 2,
+                    'generated_entries': 1, 'unexpected_entries': 0, 'path': '/PRIVATE/cache'})
+                installer.return_value.status.return_value = {'device': {}}
+                installer.return_value.preflight.side_effect = failure
+                code = cli.main(['doctor', '--report', '--host', '192.0.2.55', '--edition', 'root',
+                                 '--data-dir', tmp], write=lambda _: None, connect=lambda *args: remote)
+                self.assertEqual(code, 2 if failure else 0)
+                report_path, = Path(tmp).glob('reports/*.json')
+                report = report_path.read_text()
+                self.assertNotIn('PRIVATE', report)
+                value = json.loads(report)
+                self.assertEqual(value['tv']['root_python_inventory'], {'status': 'generated',
+                    'matching_files': 2, 'generated_entries': 1, 'unexpected_entries': 0})
+                if failure:
+                    self.assertEqual(value['reason_code'], 'pending-operation')
+                self.assertEqual(remote.run.call_args.args[0], 'env -u NODE_OPTIONS -u NODE_PATH /usr/bin/node')
+                remote.upload.assert_not_called()
 
     def test_cli_failure_provides_issue_link_report_and_requested_debug_details(self):
         with tempfile.TemporaryDirectory() as tmp:

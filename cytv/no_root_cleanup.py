@@ -11,7 +11,7 @@ from time import monotonic, sleep
 
 from .errors import (TVRejected, UserError, TVCommandError, TV_STORAGE_FULL, CLEANUP_BOOT_ACTIONS,
                      OBSERVER_EXCEPTION_NAMES, OBSERVER_EXCEPTION_CODES,
-                     OBSERVER_FILESYSTEM_OPERATIONS, connection_interrupted, no_root_cleanup_details)
+                     OBSERVER_FILESYSTEM_OPERATIONS, ROOT_CLEANUP_ACCESS_REQUIRED, connection_interrupted, no_root_cleanup_details)
 from .transport import LunaReplyUnconfirmed
 from .package import SCREENSAVER_APP
 
@@ -20,7 +20,6 @@ from .tv_sources import node_loader, trusted_source
 APPS = ('com.local.nativehome', 'com.gathin.tvhome', 'com.cleanyourtv.updater', SCREENSAVER_APP)
 STARTUP_SERVICES = ('com.local.nativehome.service', 'com.gathin.tvhome.renewal')
 RESTART_MESSAGE = 'Restart the TV completely, then choose Try again to finish removal.'
-ROOT_MESSAGE = 'Some project files require Root access. Reconnect using Root to finish removal.'
 
 # Shared with Root's current trusted cleanup bundle. No retained TV source is
 # executed, no arbitrary paths are accepted, and Root owner backups are untouched.
@@ -636,8 +635,9 @@ def _missing_capsule_receipt(previous):
 
 
 def _device(installer, action, proof=None, *, after_stop=False, wait_for_idle=False, guard=False,
-            allow_empty_helper=False):
-    pending = installer.store.pending(installer.profile) or {}
+            allow_empty_helper=False, pending=None):
+    if pending is None:
+        pending = installer.store.pending(installer.profile) or {}
     request = {'action':action, 'staging_ids':pending.get('cleanup_staging_ids', []),
                'removal':pending.get('removal_operation'), 'proof':proof}
     capsule = 'no-original-install'
@@ -704,8 +704,34 @@ def _device(installer, action, proof=None, *, after_stop=False, wait_for_idle=Fa
     return value
 
 
-def inspect_binding(installer):
-    return _device(installer, 'binding', guard=True)
+def inspect_binding(installer, *, pending=None):
+    return _device(installer, 'binding', guard=True, pending=pending)
+
+
+def _package_installer_idle(installer, pending, *, optional_monitor):
+    from .operations import require_removal_idle
+    try:
+        idle = require_removal_idle(installer.remote, installer.profile, pending,
+                                    report_busy=True, optional_monitor=optional_monitor)
+    except TVRejected as error:
+        if not error.package_status_denied:
+            raise
+        return False
+    return idle is not False
+
+
+def inspect_package_removal(installer, pending):
+    """Read the LG installer monitor for a submitted request without changing its receipt."""
+    removals = pending.get('removals', {})
+    if not isinstance(removals, dict) or not any(removals.get(app) == 'submitted' for app in APPS):
+        return None
+    try:
+        idle = _package_installer_idle(installer, pending, optional_monitor=True)
+    except UserError as error:
+        if error.reason_code != 'original-writer-active':
+            raise
+        return 'busy'
+    return 'idle' if idle else 'unverified'
 
 
 def _protected_package(row):
@@ -742,7 +768,7 @@ def _check_access(value, defer_packages=False, *, action='inventory', guard=Fals
     access_denied = [row for row in blocked if row.get('reason') == 'permission-denied']
     root_required = value['root_present'] or any(not row.get('developer_path') for row in access_denied)
     if root_required or access_denied:
-        error = (UserError(ROOT_MESSAGE, reason_code='root-access-required') if root_required else
+        error = (UserError(ROOT_CLEANUP_ACCESS_REQUIRED, reason_code='root-access-required') if root_required else
                  UserError('Developer Mode could not verify removal of some project files. Save a diagnostic report from Recovery options.',
                            reason_code='cleanup-check-failed'))
         if action == 'sweep' or not root_required:
@@ -797,10 +823,20 @@ def _remove_package(installer, app):
         reply = installer.remote.luna(uri, {'id': app, 'subscribe': True}, terminal='removed', timeout=150)
         if (not isinstance(reply, dict) or not terminal_reply(reply, 'removed', uri)
                 or reply.get('id', app) != app or reply.get('details', {}).get('id', app) != app):
-            raise UserError('The TV package result could not be verified.', reason_code='removal-failed')
+            error = UserError('The TV package result could not be verified.', reason_code='removal-failed')
+            error.removal_failure_phase = 'removal-terminal-unknown'
+            raise error
     except TVRejected as error:
-        error.args = ('The TV package result could not be verified. Review recovery options before continuing.',)
         error.reason_code = 'removal-failed'
+        if error.definite_package_removal_rejection(app):
+            error.args = ('The TV rejected removal. Check the error details and try again.',)
+        else:
+            error.args = ('The TV package result could not be verified. Review recovery options before continuing.',)
+            error.removal_failure_phase = 'removal-terminal-unknown'
+        raise
+    except UserError as error:
+        if isinstance(error, LunaReplyUnconfirmed) or error.reason_code == 'operation-timeout':
+            error.removal_failure_phase = 'removal-terminal-unknown'
         raise
 
 
@@ -833,7 +869,7 @@ def _remove_input_shortcut(installer):
 
 
 def restore_stock_home(installer, *, allow_legacy_launch_ack=False):
-    """Verify stock controls when SAM cannot confirm the LG Home launch."""
+    """Distinguish a launch acknowledgement from a foreground observation."""
     uri='com.webos.applicationManager/'
     home = 'com.webos.app.home'
     legacy_home = False
@@ -849,7 +885,7 @@ def restore_stock_home(installer, *, allow_legacy_launch_ack=False):
             raise
     else:
         if isinstance(result,dict) and result.get('returnValue') is True:
-            return
+            return {'stock': 'launch-accepted'}
         raise UserError('Removal could not be verified. Review recovery options before continuing.', reason_code='controls-unverified')
     stock={home,'com.webos.app.livetv',
            'com.webos.app.hdmi1','com.webos.app.hdmi2','com.webos.app.hdmi3','com.webos.app.hdmi4'}
@@ -901,12 +937,12 @@ def restore_stock_home(installer, *, allow_legacy_launch_ack=False):
                     raise
                 raise UserError(message, reason_code='controls-unverified') from error
             if app == home:
-                return
+                return {'stock': 'stock-observed', 'stock_surface': app}
             raise UserError(message, reason_code='controls-unverified')
 
         active = foreground()
         if active in stock:
-            return
+            return {'stock': 'stock-observed', 'stock_surface': active}
         launched = installer.remote.luna(uri+'launch', {'id':live_tv})
         if not isinstance(launched, dict) or launched.get('returnValue') is not True:
             raise UserError(message, reason_code='controls-unverified')
@@ -915,12 +951,13 @@ def restore_stock_home(installer, *, allow_legacy_launch_ack=False):
             # transport can read its foreground. Require its own positive reply.
             if ('errorCode' not in launched and not launched.get('pairingType')
                     and launched.get('appId', live_tv) == live_tv and launched.get('id', live_tv) == live_tv):
-                return
+                return {'stock': 'launch-accepted'}
             raise UserError(message, reason_code='controls-unverified')
         deadline = monotonic() + 5
         while (remaining := deadline - monotonic()) > 0:
-            if foreground(remaining) in stock:
-                return
+            active = foreground(remaining)
+            if active in stock:
+                return {'stock': 'stock-observed', 'stock_surface': active}
             sleep(min(.1, remaining))
         raise UserError(message, reason_code='controls-unverified')
 
@@ -934,6 +971,7 @@ def continue_removal(installer, expected_pending):
                       and previous.get('stage') == 'pending' and 'recovery_protocol' not in previous)
     profile = installer.profile
     store = installer.store
+    evidence = getattr(installer, 'tv_info', {})['removal_evidence'] = {'cleanup': 'pending'}
     guard = profile.get('connection') != 'root-ssh'
     retained_helper_reboot = (guard and pending.get('stage') == 'verified-clean'
                               and pending.get('cleanup_helper_kernel_changed') is True
@@ -953,6 +991,15 @@ def continue_removal(installer, expected_pending):
 
     def check(value, **options):
         _check_access(value, guard=guard, **options)
+
+    def observe_catalog(apps):
+        if APPS[0] in apps:
+            evidence['packages'] = 'helper-present'
+        elif any(app in apps for app in APPS):
+            evidence['packages'] = 'present'
+        else:
+            # Catalogue absence alone cannot rule out a legacy package.
+            evidence.pop('packages', None)
 
     def wait_for_stopped_processes(require_idle, *, verify_after_remove=False, allow_opaque=False):
         idle = device('idle', after_stop=True, wait_for_idle=True)
@@ -982,13 +1029,18 @@ def continue_removal(installer, expected_pending):
         remaining = [scope for scope in final['present']
                      if scope != 'installer-staging' and not scope.startswith('installer-staging ')]
         catalog_remains = {app['id'] for app in installer.installed_apps()}.intersection(APPS)
+        observe_catalog(catalog_remains)
         sam_apps = APPS if final.get('legacy_layout') else sam_readback
         if final.get('empty_helper_dirs_retained') is True:
             sam_apps = set(sam_apps) | {APPS[0]}
-        if remaining or catalog_remains or (guard and any(
-                _exact_developer_app(installer, app) for app in APPS if app in sam_apps)):
-            raise UserError('Final cleanup could not be verified. Review recovery options before continuing.',
-                            reason_code='cleanup-check-failed')
+        packages_remain = bool(catalog_remains) or (not remaining and guard and any(
+            _exact_developer_app(installer, app) for app in APPS if app in sam_apps))
+        if remaining or packages_remain:
+            error = UserError('Final cleanup could not be verified. Review recovery options before continuing.',
+                              reason_code='cleanup-check-failed')
+            error.removal_failure_phase = 'removal-terminal-unknown' if packages_remain else 'private-cleanup-incomplete'
+            raise error
+        evidence['packages'] = 'absent'
         retained_helper = final.get('empty_helper_dirs_retained') is True
         return final, wait_for_stopped_processes(require_idle or retained_helper, verify_after_remove=True,
             allow_opaque=retained_helper_reboot and retained_helper)
@@ -1030,9 +1082,10 @@ def continue_removal(installer, expected_pending):
     def catalog():
         app_info = installer.installed_apps()
         apps = {app['id'] for app in app_info}
+        observe_catalog(apps)
         if apps.intersection(('com.cleanyourtv.root.preview', 'com.cleanyourtv.root.updater',
                               'com.cleanyourtv.system.updater')):
-            raise UserError(ROOT_MESSAGE, reason_code='root-access-required')
+            raise UserError(ROOT_CLEANUP_ACCESS_REQUIRED, reason_code='root-access-required')
         # An older cytv may have left an inert cleanup package registered.
         carriers = {app['id'] for app in app_info
                     if app.get('title') == 'Clean Your TV cleanup' and app.get('visible') is False}
@@ -1083,7 +1136,8 @@ def continue_removal(installer, expected_pending):
                                                         if trigger != 'homebrew-request-unverified')]
         if rearm and proof is not None and not pending.get('cleanup_boot_release_started'):
             _device(installer, 'boot-release', proof=proof)
-        if proof is None or rearm or pending.get('cleanup_boot_release_started'):
+        reuse_proof = proof is not None and not rearm and not pending.get('cleanup_boot_release_started')
+        if not reuse_proof:
             installer.store.checkpoint(installer.profile, stage=stage, cleanup_boot_proof=None,
                                        cleanup_boot_verified=False, cleanup_boot_release_started=False,
                                        cleanup_helper_kernel_changed=False,
@@ -1096,15 +1150,17 @@ def continue_removal(installer, expected_pending):
         if observed_writer:
             raise UserError('A Homebrew package request was observed. Wait for it to settle before continuing.',
                             reason_code='original-writer-active')
-        if (guard and pending.get('removal_reason') in ('restart-required', 'removal-terminal-unknown')
-                and proof is not None and not rearm and set(triggers).issubset(boot_triggers)
-                and reason in ('package-removal-unverified', 'original-configuration-unverified',
-                                    'original-package-unverified', 'homebrew-request-unverified')):
-            # Preserve this boot baseline. The retry UI can report the current
-            # unresolved request without sending the same power-cycle steps.
-            store.checkpoint(profile, stage='package-removal', removal_reason='removal-terminal-unknown')
-            raise UserError('The TV still has an unconfirmed earlier request. Try again after it settles or the TV fully restarts.',
-                            reason_code='removal-terminal-unknown')
+        if reuse_proof and set(triggers).issubset(boot_triggers):
+            if guard and reason in ('package-removal-unverified', 'original-configuration-unverified',
+                                    'original-package-unverified', 'homebrew-request-unverified'):
+                store.checkpoint(profile, stage='package-removal', removal_reason='removal-terminal-unknown')
+                raise UserError('The TV still has an unconfirmed earlier request. Try again after it settles or the TV fully restarts.',
+                                reason_code='removal-terminal-unknown')
+            # This check still needs the original proof. Keep its baseline and
+            # surface the current result without repeating the power-cycle steps.
+            store.checkpoint(profile, removal_reason='restart-unverified')
+            raise UserError('The TV restart could not be verified. Save the diagnostic report and keep recovery data.',
+                            reason_code='restart-unverified')
         installer.progress(RESTART_MESSAGE)
         return {'removed': False, 'verified_clean': False, 'restart_required': True}
 
@@ -1129,17 +1185,11 @@ def continue_removal(installer, expected_pending):
     uncertain_install = previous is not None or resident
     package_idle = False
     if uncertain_install or submitted:
-        from .operations import require_removal_idle
         deadline = monotonic() + 20
         waiting = False
         while True:
             try:
-                observed_idle = require_removal_idle(
-                    installer.remote, profile, pending, report_busy=True,
-                    optional_monitor=guard)
-            except TVRejected as error:
-                if not error.package_status_denied:
-                    raise
+                package_idle = _package_installer_idle(installer, pending, optional_monitor=guard)
             except UserError as error:
                 if error.reason_code != 'original-writer-active':
                     raise
@@ -1151,8 +1201,6 @@ def continue_removal(installer, expected_pending):
                     raise
                 sleep(min(1, remaining))
                 continue
-            else:
-                package_idle = observed_idle is not False
             break
 
     if guard:
@@ -1293,7 +1341,11 @@ def continue_removal(installer, expected_pending):
     installer.store.checkpoint(installer.profile, cleanup_inputs_pending=not inputs_removed)
     if guard:
         device('inventory')
-    restore_stock_home(installer, allow_legacy_launch_ack=retained_helper_reboot and idle_helper)
+    try:
+        evidence.update(restore_stock_home(installer, allow_legacy_launch_ack=retained_helper_reboot and idle_helper))
+    except TVRejected as error:
+        error.removal_failure_phase = 'controls-unverified'
+        raise
     installer.store.checkpoint(installer.profile, stage='controls-restored')
     external_update = current.get('external_update_hint')
     if external_update is not None:
@@ -1316,6 +1368,7 @@ def continue_removal(installer, expected_pending):
             raise UserError('Removal could not be verified. Review recovery options before continuing.', reason_code='cleanup-check-failed')
         return require_restart(['process-idle-unverified'], rearm=restarted)
     rejected = None
+    unchanged_apps = apps.copy()
     for app, message in zip(APPS, ('Removing Helper…', 'Removing Home…', 'Removing the updater…', 'Removing the screensaver…')):
         if app not in targets:
             continue
@@ -1338,6 +1391,8 @@ def continue_removal(installer, expected_pending):
             checkpoint['cleanup_restart_triggers'] = [
                 trigger for trigger in boot_triggers if trigger != 'package-removal-unverified']
         store.checkpoint(profile, **checkpoint)
+        unchanged_apps.discard(app)
+        observe_catalog(unchanged_apps)
         try:
             _remove_package(installer, app)
         except TVRejected as error:
@@ -1371,8 +1426,11 @@ def continue_removal(installer, expected_pending):
     if bound_package_pending and not original_package_settled:
         return require_restart(['original-package-unverified'], rearm=proof is not None
                                and 'original-package-unverified' not in boot_triggers)
-    if not guard and any(entry['id'] in APPS for entry in installer.installed_apps()):
-        raise UserError('The TV package result could not be verified.', reason_code='removal-failed')
+    if not guard:
+        remaining_apps = {entry['id'] for entry in installer.installed_apps()}
+        observe_catalog(remaining_apps)
+        if any(app in remaining_apps for app in APPS):
+            raise UserError('The TV package result could not be verified.', reason_code='removal-failed')
     installer.progress('Removing project files…')
     store.checkpoint(profile, stage='private-cleanup')
     swept = device('sweep', allow_empty_helper=True)

@@ -1,56 +1,62 @@
 {
   "schema": 1,
-  "version": "1.24.1",
+  "version": null,
   "changes": [
     {
-      "pr": 704,
-      "issues": [],
-      "summary": "Continue Desktop setup after a successful connection check and refresh recovery restart guidance"
-    },
-    {
-      "pr": 705,
+      "pr": 718,
       "issues": [
-        692
+        201,
+        389,
+        409,
+        417,
+        440,
+        472,
+        495,
+        519,
+        529,
+        615,
+        635,
+        643,
+        664
       ],
-      "summary": "Fix Node 0.12.2 Root Beta removal and verify LS2 rollback before package removal"
+      "summary": "Help owners complete and recover installer operations"
     },
     {
-      "pr": 706,
+      "pr": 719,
       "issues": [
-        160
+        678
       ],
-      "summary": "Accept the nested final status during in-place Root Beta repair; B9 confirmation remains open"
+      "summary": "Preserve Root inspection and final-cleanup refusal diagnostics"
     },
     {
-      "pr": 707,
-      "issues": [],
-      "summary": "Resume confirmed Desktop Root reinstallation across interrupted cleanup or native installation"
-    },
-    {
-      "pr": 708,
+      "pr": 721,
       "issues": [
-        615
+        720
       ],
-      "summary": "Restore retained compositor Root through Set up my TV \u2192 Root \u2192 Reinstall Root (resets saved CYTV preferences)"
+      "summary": "Recover No-root Home status and app refresh after channel permission drift"
     },
     {
-      "pr": 709,
-      "issues": [],
-      "summary": "Keep an active global Root screensaver through a brief status gap"
-    },
-    {
-      "pr": 711,
+      "pr": 723,
       "issues": [
-        686
+        702
       ],
-      "summary": "Retain Home diagnostics across Helper restart and wake; original routing failure remains open"
+      "summary": "Restore LG Home before retaining late standby intent"
+    },
+    {
+      "pr": 725,
+      "issues": [
+        418
+      ],
+      "summary": "Record confirmed C1 Root compatibility from #418"
+    },
+    {
+      "pr": 727,
+      "issues": [
+        152
+      ],
+      "summary": "Fix stale profile blocks after verified removal (#152)"
     }
   ],
   "excluded": [],
-  "acceptance": "",
-  "build": {
-    "run_id": 44300372716,
-    "attempt": 2,
-    "source": "ce0819697c5ef15f6dfc735262730360ca7ea627"
-  }
+  "acceptance": ""
 }

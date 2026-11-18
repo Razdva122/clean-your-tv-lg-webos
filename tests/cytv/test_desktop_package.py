@@ -1,12 +1,84 @@
 import os
+import hashlib
 import runpy
 import shutil
+import sys
 import tempfile
 import unittest
 import zipfile
 import json
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import Mock, patch
+
+
+class FrozenDesktopInstallTests(unittest.TestCase):
+    def test_setup_checks_declared_files_before_selecting_a_tv(self):
+        from cytv import cli
+        from cytv.desktop import DesktopConsole
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            payload = root / 'payload'
+            payload.mkdir()
+            fixture = b'synthetic installer resource'
+            (payload / 'payload.json').write_text(json.dumps({
+                'files': {'fallback.png': hashlib.sha256(fixture).hexdigest()},
+            }))
+            events = []
+            write = DesktopConsole(lambda kind, value: events.append((kind, value)))
+            args = ['install', '--data-dir', str(root / 'data'), '--language', 'en']
+            with patch.object(sys, 'frozen', True, create=True), \
+                 patch.object(sys, '_MEIPASS', str(root), create=True), \
+                 patch('cytv.cli.choose_profile', side_effect=EOFError) as choose, \
+                 patch('cytv.transport.SSH') as ssh:
+                self.assertEqual(cli.main(args, write=write), 2)
+                self.assertIn(('error', 'Use a complete installer build.'), events)
+                choose.assert_not_called()
+                ssh.assert_not_called()
+
+                # An ordinary distribution need not advertise experimental Root Beta.
+                (payload / 'fallback.png').write_bytes(fixture)
+                for edition in ('no-root', 'root'):
+                    self.assertEqual(cli.main(args + ['--edition', edition], write=write), 130)
+                self.assertEqual(choose.call_count, 2)
+                ssh.assert_not_called()
+
+                # The strict packaged entry point also verifies the actual manifest.
+                offline_args = ['cytv-desktop', '--check-payload', '--data-dir', str(root / 'data')]
+                with patch.object(sys, 'argv', offline_args), self.assertRaises(SystemExit) as passed:
+                    runpy.run_module('cytv.desktop_entry', run_name='__main__')
+                self.assertEqual(passed.exception.code, 0)
+
+            # The earlier availability check still requires a full integrity check before sign-in.
+            (payload / 'fallback.png').write_bytes(b'tampered')
+            events.clear()
+            with patch.object(sys, 'frozen', True, create=True), \
+                 patch.object(sys, '_MEIPASS', str(root), create=True), \
+                 patch('cytv.transport.SSH.connect') as connect:
+                self.assertEqual(cli.main(
+                    args + ['--host', '192.0.2.55', '--edition', 'no-root', '--yes', '--non-interactive'],
+                    write=write), 2)
+                self.assertIn(('error', 'Use a complete installer build.'), events)
+                connect.assert_not_called()
+
+    def test_doctor_report_and_restore_remain_available_with_an_incomplete_payload(self):
+        from cytv import cli
+        from cytv.desktop import DesktopConsole
+        with tempfile.TemporaryDirectory() as directory, \
+             patch.object(sys, 'frozen', True, create=True), \
+             patch.object(sys, '_MEIPASS', directory, create=True), \
+             patch('cytv.cli.Installer') as installer:
+            installer.return_value.status.return_value = {'device': {'helper_state': 'stopped'}}
+            installer.return_value.restore.return_value = {'restored': True}
+            args = ['--host', '192.0.2.55', '--edition', 'no-root', '--data-dir', directory]
+            events = []
+            write = DesktopConsole(lambda kind, value: events.append((kind, value)))
+            self.assertEqual(cli.main(['doctor', '--report', *args], write=write,
+                                      connect=lambda *args: Mock()), 0)
+            report = next(value for kind, value in events if kind == 'report')
+            self.assertEqual(json.loads(Path(report).read_text())['phase'], 'doctor-complete')
+            self.assertEqual(cli.main(['restore', '--yes', *args], write=write,
+                                      connect=lambda *args: Mock()), 0)
+            installer.return_value.restore.assert_called_once_with()
 
 
 class WindowsDesktopPackageTests(unittest.TestCase):

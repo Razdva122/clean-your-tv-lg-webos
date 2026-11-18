@@ -100,5 +100,29 @@ class RemovalIntentTests(unittest.TestCase):
         with self.assertRaises(UserError):self.store.finish_clean_removal(self.profile)
 
 
+class RemovalResultTests(unittest.TestCase):
+    def test_stock_foreground_names_the_observed_surface_in_console_and_recovery(self):
+        from cytv import i18n
+        from cytv.recovery import restored_for_uninstall
+        from cytv.terminal import Console
+
+        language = i18n.language_choice()
+        i18n.set_language('en')
+        self.addCleanup(i18n.set_language, language)
+        lines = []
+        console = Console(lines.append)
+        evidence = {'stock': 'stock-observed', 'stock_surface': 'com.webos.app.livetv'}
+        console.recovery_plan({
+            'state': 'complete', 'summary': 'Clean Your TV removal is verified.',
+            'next_step': 'Other TV apps stay installed.', 'disposition': 'clean-removal',
+            'removal_evidence': evidence,
+        })
+        self.assertIn('Observed Live TV.', '\n'.join(lines))
+        lines.clear()
+        restored_for_uninstall(console, {}, 'saved-removal', {'restored': True}, evidence=evidence)
+        self.assertIn('Observed Live TV.', '\n'.join(lines))
+        self.assertNotIn('LG Home is restored.', '\n'.join(lines))
+
+
 if __name__ == '__main__':
     unittest.main()

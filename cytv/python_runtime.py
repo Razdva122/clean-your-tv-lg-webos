@@ -541,7 +541,14 @@ def select_python(remote, cache_dir, progress, provision=False):
         try: _preflight(remote)
         except PythonPreflightError: raise
         except (UserError, OSError): raise PythonPreflightError() from None
-        raw = _verified_bytes(prime_cache(cache_dir, progress))
+        progress('The TV passed the checks to prepare private Python.')
+        archive = prime_cache(cache_dir, progress)
+        try:
+            raw = _verified_bytes(archive)
+        except UserError:
+            raise PythonCacheError('cache-invalid') from None
+        except OSError:
+            raise PythonCacheError('cache-access') from None
         progress('Preparing the verified private Python runtime…')
         normalized_directory = tempfile.TemporaryDirectory(prefix='cytv-python-')
         payload = Path(normalized_directory.name)/'runtime.tar.gz'

@@ -7,6 +7,35 @@ boot/wake launch requests and added configurable native startup choices; see
 [the current native contract](ROOT-NATIVE-INPUT.md). Historical device outcomes
 below are retained with their original scope.
 
+## Late standby after loss of the input device (#702)
+
+On the maintainer C3, firmware 43.21.71, a stock power subscription observed
+Request Power Off, Request Active Standby, Prepare Active Standby and Active
+Standby over 464 ms. This capture had no running Root observer. The reporter's
+G3 reached observer recovery without valid shutdown evidence, and the next
+startup preserved the resulting disabled intent.
+
+An active input read returning ENODEV now reports device removal to the
+watchdog. Without shutdown proof already recorded before the read failed,
+recovery verifies the stock Home profile without waiting for a new systemd
+query. Only a complete firmware sequence for the same transaction and
+startup can retain intent afterward. The first preparation frame must precede
+the fault, the final standby frame must follow it, and the sequence must fit
+within 500 ms. Evidence acceptance also ends 750 ms after the fault, including
+time spent restoring. Ambiguous input, loss of the power subscription, and
+unrelated or stale evidence do not grant this exception.
+
+The retained intent uses the existing stopping state with a restored stock
+profile. It cannot reactivate in that session. A new normal startup must pass
+the existing failsafe, package, guardian and input readiness checks before any
+new profile publication. Explicit Off and emergency triple-Home revoke
+eligibility, including after the stock profile has already been restored.
+No new durable file or permissions are introduced.
+
+Host checks inject ENODEV and replay the observed transition. The firmware
+ordering around input teardown and recovery latency on a Root-enabled TV
+remain unverified. Keep the original G3 report open pending device evidence.
+
 ## Captured firmware preparation stages (2026-11-03)
 
 The [new owner-supervised reproduction](../history/2026-11-03-root-standby-power-stages.md)

@@ -105,6 +105,7 @@ Helper-free first-install mode promising that behavior.
 - LG C3 — No-root — webOS 26
 - LG C5 77″ — No-root
 - 43UQ75003LF — No-root — firmware 04.60.92 — webOS 7.6.0 — owner reports successful installation on Windows 11; individual checks were not described. [Owner report #654](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/654)
+- OLED65C1PSA — Root — firmware 03.53.45 — webOS SDK 6.5.3 — v1.24.0 — owner confirmed removal through Review recovery options after an interrupted removal and TV restart, successful Root reinstallation, and physical short Home from another app opening CYTV Home. [Owner confirmation #418](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/418#issuecomment-6987290015)
 <!-- compatibility-reports:end -->
 
 - LG UM7450PLA — No-root — firmware 05.40.97 — webOS 4.5 — release v1.14.0. [Owner report #473](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/473)
@@ -115,6 +116,7 @@ These are reports for the listed configurations, not a guarantee for every firmw
 
 | Configuration | Evidence and limits |
 | --- | --- |
+| OLED65C1PSA (C1) / firmware 03.53.45 / SDK 6.5.3, Root | v1.24.0 Windows desktop installer using the same saved Root SSH connection. Restore returned LG Home and physical Home opened it. Removal subsequently lost its SSH result and the TV restarted; Review recovery options completed the existing removal, then Root setup completed. Physical short Home from another app opened CYTV Home. Exact remote and newly installed Root component version were not reported. Emergency Stop, audio, standby/wake, AC cold boot and OTA/rollback were not confirmed. [Owner confirmation #418](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/418#issuecomment-6987290015) |
 | OLED42C24LA (C2) / firmware 43.21.94, No-root Developer Mode | v1.21.0 (cytv 0.20.9, Home 1.19.0, Helper 0.8.7). The in-place upgrade completed. Short Home worked after explicit Start Helper. A full restart from the remote restored the vendor's `0777` directory mode, and Helper started automatically and routed short Home. Installer platform, exact remote model, emergency Stop, audio, standby, AC cold boot and OTA/rollback were not reported. [Owner confirmation #653](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/653#issuecomment-6910629293) |
 | OLED55C3RLA / firmware 43.21.71, Root | [v1.13.0 exact-artifact acceptance](history/2026-11-08-release-1.13.0-artifacts.md): signed update/rollback/forward through retained System 1.2.5, physical short/triple Home, remote off/on, AC cold boot and audible playback. [Exact Helper transition](history/2026-11-08-helper-0.8.0-compatibility.md) is separate No-root evidence. Earlier [1.6.0](history/2026-11-02-release-1.6.0-final-acceptance.md) and [1.4.0](RELEASE-1.4.0-ACCEPTANCE.md) observations retain their original scope. No guarantee of immediate first-screen startup or other models. |
 | OLED55C46LA (C4), No-root | Earlier community Helper results have outstanding firmware/input and long-Back confirmation. [Original reports](history/COMPATIBILITY.md#historical-110-hardware-evidence). |

@@ -455,7 +455,7 @@ class RecoveryWidgets(unittest.TestCase):
                 w.receive('done', code)
                 self.assertIsNotNone(self.fixture.button(w, 'Review recovery options'))
 
-    def test_root_blocker_shows_real_reason_and_connect_root_action(self):
+    def test_root_blocker_with_no_saved_root_connection_reports_incomplete_cleanup(self):
         w = self.fixture.window()
         with patch('cytv.no_root_cleanup._device', return_value={
                 'schema':1, 'root_present':['Root state'], 'present':[], 'blocked':[]}):
@@ -464,9 +464,6 @@ class RecoveryWidgets(unittest.TestCase):
             w.submit('y')
             self.fixture.pump(lambda: not w.running)
         self.assertIn('Root access', w.subtitle.text())
-        button = self.fixture.button(w, 'Connect using Root')
-        self.assertIsNotNone(button)
-        with patch.object(w, 'start') as start:
-            button.click()
-        self.assertEqual(start.call_args.args[0], 'uninstall')
-        self.assertEqual(start.call_args.args[1], state.target(self.fixture.profile['host'], 'root'))
+        self.assertIn('cleanup remains incomplete', w.subtitle.text())
+        self.assertIsNone(self.fixture.button(w, 'Connect using Root'))
+        self.assertIsNotNone(self.fixture.button(w, 'Review recovery options'))

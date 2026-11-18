@@ -38,13 +38,13 @@ def completed(transaction):
     return j['transaction'] != transaction or j['state'] in ('restored','conflict')
 
 
-def recover(transaction, reason):
+def recover(transaction, reason, *, fault_at=None):
     record({'event':'emergency-recovery','transaction':transaction,'reason':reason,
             'pid':os.getpid(),'uptime':time.monotonic()})
     for _ in range(30):
         try:
             from persistent_recovery import bound_exit
-            bound = bound_exit(transaction, reason=reason)
+            bound = bound_exit(transaction, reason=reason, fault_at=fault_at)
             result = 'restored' if bound is True else d.restore_once(expected_transaction=transaction)
         except (OSError, ValueError, RuntimeError): result = 'recovering'
         if result == 'superseded': return True  # No writes to a later transaction.
@@ -97,7 +97,8 @@ def supervise(transaction):
                     require_guardian(transaction);break
                 except (OSError,ValueError):time.sleep(min(.1,max(0,deadline-time.monotonic())))
             else:raise RuntimeError('Guardian not ready within guarded startup deadline')
-        observer = subprocess.Popen([d.current_executable(), str(Path(__file__).with_name('emergency_reader.py')), str(w)],
+        observer = subprocess.Popen([d.current_executable(), str(Path(__file__).with_name('emergency_reader.py')),
+                                     str(w), '--report-device-gone'],
                                     pass_fds=(w,), stdin=subprocess.DEVNULL, close_fds=True)
         os.close(w); w = None
         sequence = [0]
@@ -129,9 +130,17 @@ def supervise(transaction):
                 except Exception as exc: record({'screen_launch_error':str(exc)})
             visit[0] = threading.Thread(target=launch, daemon=True)
             visit[0].start()
-        reason = watch(r, lambda why:recover(transaction, why), timeout=HEARTBEAT_TIMEOUT,
+        fault_at = None
+        def device_gone(at):
+            nonlocal fault_at
+            fault_at = at
+        def recover_observer(why):
+            if fault_at is None: return recover(transaction, why)
+            return recover(transaction, why, fault_at=fault_at)
+        reason = watch(r, recover_observer, timeout=HEARTBEAT_TIMEOUT,
                        on_ready=lambda:None if bound else save_ready(transaction, observer),
-                       finished=lambda:completed(transaction), on_ping=ping, on_lg_home=open_lg_home)
+                       finished=lambda:completed(transaction), on_ping=ping, on_lg_home=open_lg_home,
+                       on_device_gone=device_gone)
         record({'event':'emergency-monitor-ended','reason':reason,'transaction':transaction})
     except Exception as exc:
         try:
