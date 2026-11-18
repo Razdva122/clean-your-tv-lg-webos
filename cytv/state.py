@@ -394,13 +394,19 @@ class Store:
         variant = receipt.get('root_reinstall_variant')
         pin = receipt.get('root_reinstall_pin')
         installing = pending and pending['action'] in ('install', 'activate-root')
+        native = (installing and pending.get('home_backend') == 'c1-native-gate'
+                  and pending.get('requires_updater') is False and 'recovery_protocol' not in pending
+                  and (pending['action'] == 'activate-root' or pending.get('stage') in ('upload', 'setup')))
         operation = receipt.get('product_operation' if installing else 'removal_operation')
+        if native and 'product_operation' not in receipt:
+            # An upload receipt has a host identity before it has a device operation.
+            operation = receipt.get('diagnostic_id')
         if (not isinstance(payload, str) or not re.fullmatch('[a-f0-9]{64}', payload)
                 or variant not in (None, 'node012-beta')
                 or not isinstance(pin, str) or not re.fullmatch('[a-f0-9]{64}', pin)
                 or not isinstance(operation, str) or not re.fullmatch('[a-f0-9]{32}', operation)):
             return None
-        if installing and pending.get('recovery_protocol') == 'root-final-readback-v1':
+        if installing and (native or pending.get('recovery_protocol') == 'root-final-readback-v1'):
             return RootReinstall('installing', payload, operation, variant, pin)
         if (receipt['action'] != 'uninstall' or receipt.get('recovery_protocol') != 'clean-removal-v1'
                 or receipt.get('full_project') is not True):
@@ -411,6 +417,15 @@ class Store:
                 and result.get('restart_required') is not True):
             return RootReinstall('verified' if pending else 'removed', payload, operation, variant, pin)
         return RootReinstall('removing', payload, operation, variant, pin) if pending else None
+
+    def root_reinstall_lineage(self, profile, payload):
+        if payload is None:
+            return {}
+        saved = self.root_reinstall(profile)
+        if not saved or saved.stage != 'removed' or saved.payload != payload:
+            raise UserError('The saved Root reinstallation changed. Return to the start screen and check again.')
+        return {'root_reinstall_payload': saved.payload, 'root_reinstall_variant': saved.variant,
+                'root_reinstall_pin': saved.pin}
 
     def begin(self, profile, action, **values):
         path = self.device_dir(profile) / 'operation.json'

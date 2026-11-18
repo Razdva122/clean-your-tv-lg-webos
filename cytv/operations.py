@@ -985,13 +985,7 @@ printf '%s' "$cytv_state"
             if reinstall:
                 self.prepare_root_reinstall()
                 self.preflight(install=True, home_interfaces=True)
-            continuation = {}
-            if self.root_reinstall_payload:
-                saved = self.store.root_reinstall(self.profile)
-                if not saved or saved.stage != 'removed' or saved.payload != self.root_reinstall_payload:
-                    raise UserError('The saved Root reinstallation changed. Return to the start screen and check again.')
-                continuation = {'root_reinstall_payload':saved.payload, 'root_reinstall_variant':saved.variant,
-                                'root_reinstall_pin':saved.pin}
+            continuation = self.store.root_reinstall_lineage(self.profile, self.root_reinstall_payload)
             operation=uuid.uuid4().hex
             self.store.begin(self.profile,'install',release_sha=release_sha,bundle_sha=bundle_sha,migrate=migrate,
                              requires_updater=True,product_operation=operation,stage='coordinator-upload',

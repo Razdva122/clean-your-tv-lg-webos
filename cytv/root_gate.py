@@ -223,6 +223,7 @@ def install(installer, inventory, migrate=False, reinstall=None):
         if not getattr(installer, '_native_clean_install', False):
             raise UserError('The previous cleanup could not be verified. Installation has not started.',
                             reason_code='clean-handoff-refused')
+    continuation = installer.store.root_reinstall_lineage(installer.profile, installer.root_reinstall_payload)
     from . import storage
     storage.install(installer.remote, prepared, installer.progress, root=True)
     if installer.tv_info.get('home_backend_schema') == 2:
@@ -236,7 +237,7 @@ def install(installer, inventory, migrate=False, reinstall=None):
                        if installer.tv_info.get('home_backend_schema') == 3 else NOTICE)
     installer.store.begin(installer.profile, 'install', release_sha=digest(prepared['release.json']),
                           bundle_sha=digest(prepared['bundle.json']), migrate=False, requires_updater=False,
-                          home_backend=BACKEND, stage='upload')
+                          home_backend=BACKEND, stage='upload', **continuation)
     installer.progress('Uploading Root and recovery runtime…')
     if getattr(installer,'_native_clean_install',False):
         with tempfile.TemporaryDirectory(prefix='cytv-c1-root-') as folder:
