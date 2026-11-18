@@ -57,17 +57,8 @@ The start screen also has **Wallpapers**, which explains the TV-hosted QR upload
 
 ## Interrupted Root installation inspection (1.8.2)
 
-Published v1.11.0 includes **Uninstall Clean Your TV** in Maintenance.
-Use the same saved TV and confirm removal once. Present known project apps/files
-are removed; missing ones are skipped, including after a partial installation.
-When prompted, disconnect/reconnect TV power, wait for the network, then choose
-**Try again** to perform the final sweep. Standby/Quick Start is not a full
-restart; CYTV does not reboot the TV itself. A lost connection offers the same
-Try again action without another recovery wizard or initial removal confirmation.
-Actual access denial asks for Root access, and actual busy work asks you to wait.
-Success requires both removed and verified-clean results. Keep app data, keys and
-original reports. Eligible Root Home-off setup remains a separate completed goal;
-physical Home, sound, standby and cold boot remain separate observations. Removal and the original-operation inspection below are separate actions.
+Published v1.11.0 introduced **Uninstall Clean Your TV** in Maintenance. See
+[the removal instructions](#recovery-and-private-data) for the current controls.
 
 Published 1.8.2 (Android 0.8.2 / versionCode 22) includes a bounded inspection
 path for an original Root `install / coordinator-submitted` operation. It reads
@@ -101,6 +92,26 @@ Open **Maintenance** from the start screen. After an interruption,
 check status before reinstalling. The app retains operation receipts and does
 not automatically repeat installation after process death. Keep the same TV,
 edition and SSH port; pending or unknown outcomes need inspection.
+
+To remove Clean Your TV, choose **Uninstall Clean Your TV** on the saved TV and
+confirm removal. CYTV skips missing project apps and files. Other TV apps stay
+installed. If the removal screen calls for a restart, disconnect and reconnect
+TV power, wait for the network, then choose **Try again**. Standby and Quick
+Start leave the TV running. If the app shows **Review recovery options** after
+returning from the background or rotating, check the TV from there before
+deciding whether it needs another restart. Confirm the remaining cleanup when
+prompted. Follow any connection, Root access or wait instructions on the removal
+screen. Keep app data, keys and original reports.
+
+If No-root setup offers **Retry storage check**, the app repeats the read on
+the same connection and asks you to confirm installation separately. If the
+result of a submitted package request is unknown, choose **Installation
+status** and keep the recovery data.
+
+If an operation fails and a report is available, tap the issue draft title on
+the result screen to review the failed step. Choose **Save report** to export
+the existing JSON through Android's file picker and attach it to your issue
+when you are ready.
 
 Published Android exposes install, status, inspection, restore and explicit removal
 in Maintenance; use its retained connection and evidence. An interrupted No-root removal needs its

@@ -64,6 +64,11 @@ See [Apple's first-launch guidance](https://support.apple.com/en-mo/102445).
 
 ### If setup reports missing or invalid embedded graphics packages
 
+If the desktop installer asks for a complete installer build, download the
+desktop installer for your computer again and extract or install the full
+package before opening it. On Windows, keep the `_internal` folder next to the
+executable.
+
 Affected macOS bundles can reject their normal package-folder alias even when the
 IPKs and manifest hashes are valid. Release 1.7.1 (cytv 0.8.1) corrects that validation; both rebuilt macOS bundles
 passed their package-selection checks. If this message persists with the complete
@@ -149,6 +154,10 @@ See the [localized installation, use and recovery guides](LANGUAGES.md).
   Connection detection sets the current choice to match the detected connection; you can select either edition. Root privileges are verified after sign-in.
 - Review the TV and edition, then click **Continue**. No-root requests control
   pairing on the TV; Root reads the catalog through its authenticated SSH connection.
+  If the TV rejects pairing, choose **Continue** at **Try pairing again?** to
+  send a new request to the same TV. Approve it with the remote when it appears.
+  If a first No-root setup warns that it could not read HDMI inputs, you can
+  continue with the applications it found.
 - Root checks Python 3.9+, TV Node.js 8+, root/Homebrew services and input support.
   Eligible ARMv7 TVs without suitable Python can receive a separate pinned runtime
   over SSH; this does not certify older-TV compatibility. Root activates Home
@@ -167,66 +176,69 @@ restart again. Before connection, during review or after cancellation, the
 wizard asks to check the TV state instead of repeating an old power-cycle
 instruction. Recovery receipts and device-side cleanup guards remain intact.
 
+If Root setup offers **Replace the current Home integration?**, confirm to
+restore LG Home and continue. The installer rechecks LG Home before installing.
+Declining keeps the current Home in use. If a supported handoff cannot be
+verified, use the current integration’s own procedure to restore LG Home.
+
 If a confirmed Root reinstallation pauses, open the same desktop installer
 and choose **Continue Root reinstallation**. It reconnects to the same TV and
 continues any unfinished cleanup. After removal is verified, choose
-**Continue Root installation**. A standalone **Uninstall Clean Your TV** ends
-with removal.
+**Continue Root installation**.
 
 Passwords are masked. SSH identity changes still block the connection. While TV
 changes are in progress, the window waits for the step to finish instead of
 terminating the installer halfway through an operation.
 
-On failure, read the explanation, click **Save diagnostic report…**, then
-**Open an issue**. Include your steps, expected/actual results, TV model and firmware.
-Review the JSON report before attaching it. Do not attach your profile folder or keys.
+When No-root offers **Retry storage check**, select it to repeat the failed
+read-only check on the same TV. After a successful check, confirm
+**Install these versions?** to continue setup. If an unfinished operation
+appears, follow **Review recovery options**.
 
-When an earlier installation was interrupted, **Set up my TV** checks its state
-before proceeding. If Root and Root Updater are already installed and verified,
-choose **Finish Root setup** to activate Home without reinstalling the packages.
-If the earlier attempt stopped before updater setup, the wizard verifies recovery
-and offers reinstallation in the same flow. Unverified states remain blocked;
-save the diagnostic report instead of deleting recovery files.
+The completion screen shows package verification, startup readback and your
+physical Home-button result separately. For the Home check, start with an app
+or TV input on screen. Briefly press Home once on the physical remote and
+select what appeared. If you used a phone or network remote, choose **Skip**.
 
-The start page also offers status, diagnostics, return to LG Home and uninstall.
-Existing console commands remain available in the separately distributed CLI.
+If Clean Your TV Home appears, you can continue using it. If LG Home appears,
+check whether Home control is active. If the screen stays the same, keep the
+current setup and save the diagnostic report.
+
+In No-root, choose **Home button diagnostics** on the results screen to review
+what you already reported and save the existing report. If a recording of a
+physical press is still needed, open **Home button diagnostics** from the
+**Maintenance action** menu. In Root, choose **Check TV status** to read current
+Home routing on the same TV connection.
 
 <a id="guided-no-root-recovery-and-reinstallation-in-130"></a>
 
 ### Review interrupted setup or removal
 
-If a No-root installation or removal remains unfinished after **Check TV status**, connection
-diagnostics or **Return to LG Home**, click **Review recovery options**. The wizard
-keeps the same TV, edition and SSH port, even when several connections are saved.
-It asks before inspection and before each supported change, with No selected by
-default. Recovery never starts a new installation automatically. **Set up my TV**
-also enters recovery when it finds a retained operation. Returning to LG Home
-alone does not complete removal. Unknown package/setup outcomes keep their data.
+- **Setup is unfinished.** Choose **Review recovery options** on the result
+  screen, then **Continue** at **Check recovery options?**. The wizard reuses the
+  saved connection for the interrupted operation, including when it was for
+  another edition. If a No-root package result is unknown and the wizard offers
+  **Check TV status**, use it first. Confirm any offered change separately.
+  See [the No-root and Root setup choices](RECOVERY.md#finish-an-interrupted-installation).
+- **LG Home is restored.** If you chose **Return to LG Home**
+  during **Uninstall Clean Your TV**, choose **Continue removal** when it appears.
+  If you returned to LG Home from **Maintenance action**, the apps stay
+  installed. Use **Uninstall Clean Your TV** in that menu to remove them.
+- **Clean Your TV removal is verified.** Choose **Close** to finish or
+  **Set up my TV** to start a new setup on the same TV, using the same connection
+  and edition. If you are already in a confirmed Root reinstallation, use
+  **Continue Root installation**.
 
-In published v1.11.0 and later, **Uninstall Clean Your TV** uses a simple removal flow:
-confirm once, stop/remove known present project items, fully restart the TV when
-asked, then choose **Try again** for the final sweep. Disconnect and reconnect
-power; standby and Quick Start are not enough. CYTV never restarts the TV
-itself. Missing items are skipped, including after a partial setup. Connection
-loss needs a connection check and Try again on the same saved TV, without another
-recovery wizard. An actual access denial asks for Root; an actual busy operation
-asks you to wait and try again. Completion needs both removed and verified-clean
-proof. Eligible Root setup may still finish separately with LG Home/Home control
-off. Physical checks remain separate. See the
-[removal flow](RECOVERY.md#next-candidate-original-operation-recovery-and-full-removal).
+Follow a [restart or cleanup instruction](RECOVERY.md#next-candidate-original-operation-recovery-and-full-removal)
+only when the current removal result asks for it. Keep the saved connection
+and recovery data if the TV's state remains uncertain.
 
-For unfinished removal, the primary action follows the current result. A known
-connection interruption, busy operation or required restart offers **Try again**
-for the same approved goal after the condition is resolved. Unverified cleanup,
-package results, TV controls or changed project paths offer **Review recovery
-options**. That review keeps the saved operation and asks separately before
-continuing removal. **Save diagnostic report…** remains available. For other failed
-steps, saving the report is the primary action. Save that attempt's report with
-the normal file dialog and attach it to your issue; no
-terminal or later `doctor` run is needed. Cancelling the file dialog or choosing
-an unwritable destination keeps the original report available. If report creation
-failed, the window says so; include the visible error instead. Unknown outcomes
-still stop the process, with no automatic retry or deletion of recovery evidence.
+To keep the result locally, choose **Save diagnostic report…** when offered. If
+you want help, choose **Open an issue** on the results screen to review the
+editable draft. Choose **Copy draft**, then **Open issue form** when ready.
+Paste the draft and attach the saved diagnostic report. If the report could
+not be created, include the visible error. If the browser cannot open, copy
+the link from the draft window. You submit the issue yourself.
 
 ## Remove the project from a rooted TV
 

@@ -437,7 +437,7 @@ class CapabilityTests(unittest.TestCase):
 
     def test_legacy_ribbon_requires_positive_readback_and_confirmed_missing_routing(self):
         from cytv.errors import TVRejected
-        from cytv.root_capabilities import RootCapabilityError, verify
+        from cytv.root_capabilities import NATIVE_HEADERS, RootCapabilityError, verify
 
         missing = {'returnValue': False, 'errorCode': -1,
                    'errorText': 'Service does not exist: com.webos.service.systemprofile.'}
@@ -470,7 +470,10 @@ class CapabilityTests(unittest.TestCase):
                 self.assertEqual(report.get('root_ribbon_probe'), probe)
                 self.assertNotIn('drop-me', str(report))
                 self.assertNotIn('home_backend', info)
-                remote.run.assert_not_called()
+                if config is config_denied:
+                    remote.run.assert_called_once_with(NATIVE_HEADERS, timeout=5)
+                else:
+                    remote.run.assert_not_called()
 
     def test_generic_permission_denial_never_enters_native_admission(self):
         from cytv.root_capabilities import verify,RootCapabilityError

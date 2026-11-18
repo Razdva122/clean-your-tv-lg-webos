@@ -3,7 +3,8 @@ import json
 import re
 from pathlib import Path
 
-from cytv import cli, state, i18n
+from cytv import cli, diagnostics, state, i18n
+from cytv.desktop import RETRY_STORAGE_CHECK, RETRY_STORAGE_PROMPT
 from cytv.transport import SSH
 from cytv.terminal import Console
 
@@ -44,7 +45,16 @@ class Callbacks:
         if self.directory and message.strip().endswith('.json'):
             path = Path(message.strip())
             if path.is_file() and path.resolve().parent == self.directory / 'reports' and re.fullmatch(r'diagnostic-[a-f0-9]{12}\.json', path.name):
-                self.emit(kind='report-ready', name=path.name)
+                event = dict(kind='report-ready', name=path.name)
+                limit = 1048576  # Match the native export limit.
+                try:
+                    with path.open('rb') as stream:
+                        content = stream.read(limit + 1)
+                    if len(content) <= limit:
+                        event['draft'] = diagnostics.issue_draft(json.loads(content))
+                except (OSError, ValueError, RecursionError):
+                    pass  # Keep the existing export available if its draft cannot be read.
+                self.emit(**event)
         self.context.append(message)
         self.context = self.context[-60:]
         self.emit(kind='log', text=message)
@@ -55,13 +65,13 @@ class Callbacks:
             raise EOFError
         return str(answer)
 
-    def ask(self, prompt):
+    def ask(self, prompt, **confirmation):
         options, self.options = self.options, []
         event = {'kind':'question', 'text':prompt, 'context':'\n'.join(self.context), 'defaultNo':'[y/N]' in prompt}
         if options:
             match = re.search(r'\[(\d+)\]', prompt)
             event.update(options=options, defaultChoice=match.group(1) if match else '')
-        return self.request(**event)
+        return self.request(**event, **confirmation)
 
     def secret(self, prompt):
         if hasattr(prompt, 'credential_type'):
@@ -104,6 +114,17 @@ class AndroidConsole(Console):
         self.callbacks.options.append({'value':str(key), 'label':i18n.translate(label),
                                        'detail':i18n.translate(detail)})
 
+    def reader(self, ask):
+        read = super().reader(ask)
+
+        def read_prompt(prompt):
+            if prompt == f'{RETRY_STORAGE_PROMPT} [y/N]: ':
+                return ask(self.prompt(prompt), reason='storage-preflight-failed',
+                           actions=['retry-storage-check'], confirmLabel=i18n.translate(RETRY_STORAGE_CHECK))
+            return read(prompt)
+
+        return read_prompt
+
     def failure_help(self, value):
         super().failure_help(value)
         self.callbacks.emit(kind='failure-help', code=value['code'], title=i18n.translate(value['title']),
@@ -120,8 +141,8 @@ class AndroidConsole(Console):
 
     def recovery_plan(self, value):
         super().recovery_plan(value)
-        from cytv.recovery_ui import (projected_removal_action, removal_details, removal_restart_required,
-                                      removal_title, removal_waiting)
+        from cytv.recovery_ui import (observed_stock_surface, projected_removal_action, removal_details,
+                                      removal_restart_required, removal_title, removal_waiting)
         from cytv.recovery_state import ACTIONS, REASONS
         optional = {key:value[key] for key in ('disposition',) if key in value}
         optional.update({key:value[key] for key in ('removed','verified_clean','connection_failure')
@@ -129,8 +150,11 @@ class AndroidConsole(Console):
         optional['restart_required'] = removal_restart_required(value)
         if value.get('disposition') == 'clean-removal':
             optional['removal_action'] = projected_removal_action(value)
-        if type(value.get('actions')) is list:
-            optional['actions'] = [item for item in value['actions'] if type(item) is str and item in ACTIONS]
+            if surface := observed_stock_surface(value.get('removal_evidence')):
+                optional['stockSurfaceText'] = i18n.translate(surface)
+        actions = value.get('actions', ['check'] if value['state'] == 'review' else None)
+        if type(actions) is list:
+            optional['actions'] = [item for item in actions if type(item) is str and item in ACTIONS]
         removal = value.get('removal') if type(value.get('removal')) is dict else {}
         reason = value.get('reason', removal.get('reason'))
         if type(reason) is str and reason in REASONS:
@@ -167,7 +191,7 @@ class AndroidConsole(Console):
 
 def inspect_root_recovery(config, callbacks, payload=None):
     """Use original Android records for the submitted-install read, not a new CLI login."""
-    from cytv import diagnostics, prompts, root_passive
+    from cytv import prompts, root_passive
     from cytv.errors import UserError
     from cytv.recovery import plan, REVIEW, KEPT, BLOCKED
     i18n.set_language(config.get('language', 'ru'))

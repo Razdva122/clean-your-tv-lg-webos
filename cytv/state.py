@@ -1,5 +1,6 @@
 """Per-TV private profiles and durable operation receipts."""
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
+import errno
 import hashlib
 import ipaddress
 import json
@@ -155,9 +156,7 @@ class Store:
     def save(self, profile):
         private_write(self.device_dir(profile) / 'profile.json', json.dumps(target(**profile)).encode())
 
-    def _capsule_path(self, profile, operation, *, create=True):
-        if not isinstance(operation, str) or not re.fullmatch('[a-f0-9]{32}', operation):
-            raise LocalRecoveryError('operation-invalid', 'operation')
+    def _capsule_directory(self, profile, *, create=True):
         try:
             directory = self.device_dir(profile) if create else self.device_path(profile)
         except OSError as error:
@@ -194,19 +193,31 @@ class Store:
             if os.name != 'nt' and (info.st_mode & 0o022 and not (info.st_uid == 0 and info.st_mode & stat.S_ISVTX)
                                    or parent == directory and info.st_mode & 0o077):
                 raise LocalRecoveryError('directory-permissions', **details)
-        return directory / ('capsule-' + operation + '.json')
+        return directory
 
-    def check_capsule_storage(self, profile, operation):
+    def _capsule_path(self, profile, operation, *, create=True):
+        if not isinstance(operation, str) or not re.fullmatch('[a-f0-9]{32}', operation):
+            raise LocalRecoveryError('operation-invalid', 'operation')
+        return self._capsule_directory(profile, create=create) / ('capsule-' + operation + '.json')
+
+    def check_capsule_storage(self, profile):
         """Exercise private local writes before recording an operation or contacting its observer."""
-        path = self._capsule_path(profile, operation)
         try:
-            with tempfile.TemporaryFile(dir=path.parent) as stream:
+            directory = self._capsule_directory(profile)
+        except LocalRecoveryError as error:
+            if error.local_recovery['reason'] in ('profile-invalid', 'profile-access'):
+                raise
+            raise LocalRecoveryError(**error.local_recovery, write_precheck=True,
+                                     storage_full=error.reason_code == 'computer-storage-full') from None
+        try:
+            with tempfile.TemporaryFile(dir=directory) as stream:
                 stream.write(b'CYTV')
                 stream.flush()
                 os.fsync(stream.fileno())
-            sync_directory(path.parent)
+            sync_directory(directory)
         except OSError as error:
-            raise LocalRecoveryError('storage-unavailable', 'profile', storage_full=is_storage_full(error)) from None
+            raise LocalRecoveryError('storage-unavailable', 'profile', storage_full=is_storage_full(error),
+                                     write_precheck=True) from None
 
     def save_capsule(self, profile, operation, value):
         """Exclusive original bytes, durable before any remote effect."""
@@ -256,9 +267,9 @@ class Store:
         path.unlink()
         sync_directory(path.parent)
 
-    def connection_profile(self, selected, *, expected_pin=None):
+    def connection_profile(self, selected, *, expected_pin=None, create=True):
         """Resolve pending work to its original saved identity, before connecting."""
-        directory = self.device_dir(selected)
+        directory = self.device_dir(selected) if create else self.device_path(selected)
         require_original_ssh_identity(directory)
         _, pending = self._read_operation(directory / 'operation.json', require_access=True)
         if pending is None and expected_pin is None:
@@ -325,7 +336,7 @@ class Store:
         """Read an exact saved connection key without creating its directory."""
         return self._saved_profile(self.device_path(selector))
 
-    def profiles(self, *, on_profile_error=None, already_read=None):
+    def profiles(self, *, on_profile_error=None, already_read=None, require_operation_profiles=False):
         def report_error(error):
             if on_profile_error is None:
                 raise error from None
@@ -352,6 +363,18 @@ class Store:
             else:
                 if profile is not None:
                     result.append(profile)
+                elif require_operation_profiles:
+                    # The directory name is a hash. Without the profile we
+                    # cannot determine which TV owns its receipt.
+                    try:
+                        (active / 'operation.json').lstat()
+                    except FileNotFoundError:
+                        pass
+                    except OSError:
+                        raise LocalRecoveryError('operation-access', 'operation') from None
+                    else:
+                        raise UserError('The original saved TV connection is missing. Recovery data was kept.',
+                                        reason_code='pending-operation')
         return sorted(result, key=lambda p: (p['host'], p['port'], p['edition']))
 
     @staticmethod
@@ -532,30 +555,39 @@ class Store:
         private_write(self.device_dir(profile) / 'operation.json', json.dumps(current).encode())
 
     @contextmanager
-    def lock(self, profile):
-        self.root.mkdir(parents=True, exist_ok=True, mode=0o700)
+    def lock(self, profile, *, allow_observation=False):
+        """Reserve this TV for writes, or yield False for an explicit read-only path."""
         name = 'session-' + hashlib.sha256(profile['host'].encode()).hexdigest()[:24] + '.lock'
-        with (self.root / name).open('a+b') as stream:
-            stream.seek(0)
-            if os.name == 'nt':
-                import msvcrt
-                # Windows denies reads of a byte locked by another session.
-                # Inspect its size without reading before attempting the lock.
-                if os.fstat(stream.fileno()).st_size == 0:
-                    stream.write(b'0'); stream.flush()
-                stream.seek(0)
-                try:
-                    msvcrt.locking(stream.fileno(), msvcrt.LK_NBLCK, 1)
-                except OSError:
-                    raise UserError('Another cytv session is using this TV.') from None
-            else:
-                import fcntl
-                try:
-                    fcntl.flock(stream, fcntl.LOCK_EX | fcntl.LOCK_NB)
-                except OSError:
-                    raise UserError('Another cytv session is using this TV.') from None
+        with ExitStack() as stack:
             try:
-                yield
+                self.root.mkdir(parents=True, exist_ok=True, mode=0o700)
+                stream = stack.enter_context((self.root / name).open('a+b'))
+                stream.seek(0)
+                if os.name == 'nt':
+                    import msvcrt
+                    # Windows denies reads of a byte locked by another session.
+                    if os.fstat(stream.fileno()).st_size == 0:
+                        stream.write(b'0')
+                        stream.flush()
+                    stream.seek(0)
+            except OSError as error:
+                raise LocalRecoveryError('storage-unavailable', 'ancestor', storage_full=is_storage_full(error),
+                                         write_precheck=True) from None
+            try:
+                if os.name == 'nt':
+                    msvcrt.locking(stream.fileno(), msvcrt.LK_NBLCK, 1)
+                else:
+                    import fcntl
+                    fcntl.flock(stream, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except OSError as error:
+                if error.errno not in (errno.EACCES, errno.EAGAIN, errno.EDEADLK):
+                    raise
+                if allow_observation:
+                    yield False
+                    return
+                raise UserError('Another cytv session is using this TV.', reason_code='operation-active') from None
+            try:
+                yield True
             finally:
                 if os.name == 'nt':
                     stream.seek(0); msvcrt.locking(stream.fileno(), msvcrt.LK_UNLCK, 1)

@@ -13,6 +13,13 @@ SUMMARY = 'Storage estimate ({location}): required {required} MiB; available {av
 UNKNOWN = 'Storage estimate ({location}): required {required} MiB; available and shortfall could not be determined.'
 
 
+class TVStorageShortfall(UserError):
+    """Measured shortfalls formatted from installer-owned locations and budgets."""
+
+    def __init__(self, estimates):
+        super().__init__('\n'.join(estimates), reason_code='tv-storage-full')
+
+
 def mib(value, up=True):
     units = (value * 10 + (1048575 if up else 0)) // 1048576
     return f'{units / 10:.1f}'
@@ -45,7 +52,8 @@ def check(remote, requirements, progress, *, allow_tmp_ramfs=False):
         fields = rows[-1].split() if rows else []
         if len(fields) != 6 or not re.fullmatch(r'[0-9]{1,16}', fields[3]):
             progress(UNKNOWN.format(location=location, required=mib(required + RESERVE)))
-            raise UserError('Available TV storage could not be determined. Installation stopped before package submission.')
+            raise UserError('Available TV storage could not be determined. Installation stopped before package submission.',
+                            reason_code='tv-storage-unavailable')
         if (location == fields[5] == '/tmp' and fields[1:4] == ['0', '0', '0']
                 and _tmp_is_ramfs(remote)):
             ramfs_tmp = True
@@ -67,7 +75,7 @@ def check(remote, requirements, progress, *, allow_tmp_ramfs=False):
         if needed > available:
             failed.append(message)
     if failed:
-        raise UserError('\n'.join(failed), reason_code='tv-storage-full')
+        raise TVStorageShortfall(failed)
     if ramfs_tmp and not allow_tmp_ramfs:
         raise UserError(TV_STORAGE_RAMFS + ' Installation stopped before package submission.',
                         reason_code='tv-storage-ramfs')

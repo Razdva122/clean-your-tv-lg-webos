@@ -23,6 +23,8 @@ const words = {
     'restartRemoval': 'Restartujte TV pro dokončení odebrání',
     'fullRestart':
       'Úplně restartujte TV: odpojte napájení, znovu je připojte a zvolte Zkusit znovu. Pohotovostní režim není úplný restart.',
+    'recheckRestart':
+      'Nejprve zkontrolujte stav televizoru a zjistěte, zda je nutný restart.',
     'connectionInterrupted':
       'Spojení s TV bylo přerušeno. Zkontrolujte připojení a zkuste to znovu.',
     'removalUnconfirmed':
@@ -221,6 +223,8 @@ const words = {
     'restartRemoval': 'Перезапустите ТВ для завершения удаления',
     'fullRestart':
       'Полностью перезапустите ТВ: отключите питание, подключите снова и выберите «Попробовать снова». Режим ожидания не является полным перезапуском.',
+    'recheckRestart':
+      'Проверьте состояние телевизора, чтобы определить, нужен ли перезапуск.',
     'connectionInterrupted':
       'Соединение с ТВ прервано. Проверьте подключение и попробуйте снова.',
     'removalUnconfirmed':
@@ -417,6 +421,8 @@ const words = {
     'restartRemoval': 'Restart the TV to finish removal',
     'fullRestart':
       'Restart the TV completely: disconnect it from power, reconnect it, then choose Try again. Standby is not a full restart.',
+    'recheckRestart':
+      'Check the TV state before deciding whether a restart is needed.',
     'connectionInterrupted':
       'Connection to the TV was interrupted. Check the connection and try again.',
     'removalUnconfirmed':
@@ -612,6 +618,8 @@ const words = {
     'restartRemoval': 'TV neu starten, um die Entfernung abzuschließen',
     'fullRestart':
       'TV vollständig neu starten: vom Strom trennen, wieder anschließen und Erneut versuchen wählen. Standby ist kein vollständiger Neustart.',
+    'recheckRestart':
+      'Prüfe den aktuellen TV-Zustand, bevor du entscheidest, ob ein Neustart nötig ist.',
     'connectionInterrupted':
       'Die Verbindung zum TV wurde unterbrochen. Verbindung prüfen und erneut versuchen.',
     'removalUnconfirmed':
@@ -816,6 +824,8 @@ const words = {
     'restartRemoval': 'Redémarrez le téléviseur pour terminer la suppression',
     'fullRestart':
       'Redémarrez complètement le téléviseur : débranchez l’alimentation, rebranchez-la, puis choisissez Réessayer. La veille n’est pas un redémarrage complet.',
+    'recheckRestart':
+      'Vérifiez l’état du téléviseur avant de déterminer si un redémarrage est nécessaire.',
     'connectionInterrupted':
       'La connexion au téléviseur a été interrompue. Vérifiez la connexion et réessayez.',
     'removalUnconfirmed':
@@ -1020,6 +1030,8 @@ const words = {
     'restartRemoval': 'Riavvia la TV per completare la rimozione',
     'fullRestart':
       'Riavvia completamente la TV: scollega l’alimentazione, ricollegala, poi scegli Riprova. Lo standby non è un riavvio completo.',
+    'recheckRestart':
+      'Controlla lo stato della TV prima di decidere se è necessario riavviarla.',
     'connectionInterrupted':
       'La connessione alla TV si è interrotta. Controlla la connessione e riprova.',
     'removalUnconfirmed':
@@ -1220,6 +1232,8 @@ const words = {
     'restartRemoval': 'Reinicia el TV para terminar la eliminación',
     'fullRestart':
       'Reinicia el TV por completo: desconéctalo de la corriente, vuelve a conectarlo y elige Intentar de nuevo. El modo de espera no es un reinicio completo.',
+    'recheckRestart':
+      'Comprueba el estado del TV antes de decidir si necesita reiniciarse.',
     'connectionInterrupted':
       'Se interrumpió la conexión con el TV. Comprueba la conexión e inténtalo de nuevo.',
     'removalUnconfirmed':
@@ -1419,6 +1433,8 @@ const words = {
     'restartRemoval': 'Reinicie a TV para concluir a remoção',
     'fullRestart':
       'Reinicie a TV por completo: desconecte da tomada, conecte novamente e escolha Tentar novamente. O modo de espera não é uma reinicialização completa.',
+    'recheckRestart':
+      'Verifique o estado da TV antes de decidir se é necessário reiniciá-la.',
     'connectionInterrupted':
       'A conexão com a TV foi interrompida. Verifique a conexão e tente novamente.',
     'removalUnconfirmed':
@@ -1620,6 +1636,8 @@ const words = {
     'restartRemoval': 'Uruchom TV ponownie, aby zakończyć usuwanie',
     'fullRestart':
       'Uruchom TV całkowicie ponownie: odłącz zasilanie, podłącz je ponownie i wybierz Spróbuj ponownie. Czuwanie nie jest pełnym restartem.',
+    'recheckRestart':
+      'Sprawdź stan telewizora, aby ustalić, czy potrzebny jest restart.',
     'connectionInterrupted':
       'Połączenie z TV zostało przerwane. Sprawdź połączenie i spróbuj ponownie.',
     'removalUnconfirmed':
@@ -1818,6 +1836,7 @@ const words = {
     'restartRemoval': '제거를 완료하려면 TV를 다시 시작하세요',
     'fullRestart':
       'TV를 완전히 다시 시작하세요. 전원을 분리했다가 다시 연결한 후 다시 시도를 선택하세요. 대기 모드는 완전한 재시작이 아닙니다.',
+    'recheckRestart': '재시작이 필요한지 결정하기 전에 TV 상태를 확인하세요.',
     'connectionInterrupted':
       'TV 연결이 끊겼습니다. 연결을 확인하고 다시 시도하세요.',
     'removalUnconfirmed':
@@ -2007,6 +2026,8 @@ const words = {
     'restartRemoval': 'हटाना पूरा करने के लिए TV पुनः शुरू करें',
     'fullRestart':
       'TV पूरी तरह पुनः शुरू करें: बिजली से अलग करें, फिर जोड़ें और फिर कोशिश करें चुनें। स्टैंडबाय पूर्ण पुनः आरंभ नहीं है।',
+    'recheckRestart':
+      'पुनः शुरू करना आवश्यक है या नहीं, यह तय करने से पहले TV की स्थिति जाँचें।',
     'connectionInterrupted':
       'TV से कनेक्शन टूट गया। कनेक्शन जाँचें और फिर कोशिश करें।',
     'removalUnconfirmed':
@@ -2192,6 +2213,7 @@ const words = {
     'restartRemoval': '重启电视以完成移除',
     'fullRestart':
       '请完全重启电视：断开电源，重新连接，然后选择“重试”。待机不等于完全重启。',
+    'recheckRestart': '请先检查电视状态，再确定是否需要重启。',
     'connectionInterrupted': '与电视的连接已中断。请检查连接并重试。',
     'removalUnconfirmed': '无法确认移除。请检查连接并重试。',
 
@@ -2364,6 +2386,7 @@ const words = {
     'restartRemoval': '重新啟動電視以完成移除',
     'fullRestart':
       '請完全重新啟動電視：斷開電源，重新連接，然後選擇「重試」。待機不等於完全重新啟動。',
+    'recheckRestart': '請先檢查電視狀態，再確定是否需要重新啟動。',
     'connectionInterrupted': '與電視的連線已中斷。請檢查連線並重試。',
     'removalUnconfirmed': '無法確認移除。請檢查連線並重試。',
 

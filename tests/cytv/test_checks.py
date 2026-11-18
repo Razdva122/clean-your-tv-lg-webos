@@ -31,7 +31,8 @@ class CheckTests(unittest.TestCase):
                         inst.preflight(install=True)
                         prepare.assert_called_once_with(provision=True)
                         self.assertEqual(checks.results['python3']['status'], 'pass')
-                        self.assertTrue(any(e['id']=='python3' and e['status']=='fail' for e in events))
+                        python_statuses = [event['status'] for event in events if event['id'] == 'python-runtime']
+                        self.assertEqual(python_statuses, ['pending', 'running', 'pass'])
                     else:
                         with self.assertRaises(UserError): inst.preflight(install=True)
                         prepare.assert_not_called()
@@ -69,7 +70,7 @@ class CheckTests(unittest.TestCase):
         self.assertEqual(checks['ssh']['status'], 'pass')
         self.assertEqual(checks['root-user']['status'], 'pass')
         self.assertEqual(checks['node-version']['status'], 'fail')
-        self.assertEqual(checks['python3']['status'], 'fail')
+        self.assertEqual(checks['python-runtime']['status'], 'fail')
         self.assertNotIn('pairing',checks,'Root uses SSH inventory, not SSAP pairing')
         ssap.assert_not_called()
 

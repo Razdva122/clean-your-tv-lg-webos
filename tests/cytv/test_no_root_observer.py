@@ -92,6 +92,32 @@ sys.stdin.read()
 
 @unittest.skipIf(os.name=='nt','The TV observer uses POSIX process and filesystem primitives')
 class ObserverProcesses(unittest.TestCase):
+    def test_read_only_storage_check_leaves_directories_unchanged_and_refuses_a_reservation(self):
+        from types import SimpleNamespace
+        from cytv.errors import UserError
+
+        with tempfile.TemporaryDirectory(dir=PROCESS_TMP) as root:
+            h = Harness(root)
+
+            def run(command, **kwargs):
+                args = shlex.split(command)
+                request = dict(json.loads(args[-1]), **h.config)
+                return subprocess.check_output([h.runtime, '-e', args[-2], json.dumps(request)], text=True)
+
+            remote = SimpleNamespace(run=run)
+            self.assertEqual(observer.invoke(remote, h.plan, 'storage-check',
+                                             fresh_install=True, read_only_storage=True),
+                             {'operation': h.plan['operation']})
+            self.assertFalse((h.root / 'private').exists())
+            self.assertEqual(list((h.root / 'public').iterdir()), [])
+            (h.root / 'private').mkdir(mode=0o700)
+            (h.root / 'private' / 'active').mkdir(mode=0o700)
+            (h.root / 'private' / 'active' / 'existing').touch()
+            with self.assertRaises(UserError) as error:
+                observer.invoke(remote, h.plan, 'storage-check', fresh_install=True, read_only_storage=True)
+            self.assertEqual(error.exception.reason_code, 'pending-operation')
+            self.assertEqual(error.exception.no_root_observer['observer_reason'], 'foreign-reservation')
+
     def test_recovery_offers_confirmed_removal_when_remaining_package_has_unsafe_staging(self):
         from types import SimpleNamespace
         from unittest.mock import Mock, patch

@@ -1,6 +1,6 @@
 import unittest
 from unittest.mock import Mock
-from cytv import storage, package
+from cytv import failure_help, package, storage
 from cytv.errors import UserError
 
 class StorageTests(unittest.TestCase):
@@ -14,12 +14,23 @@ class StorageTests(unittest.TestCase):
         self.assertIn('required 32.0 MiB', str(caught.exception))
         self.assertIn('available 9.7 MiB', str(caught.exception))
         self.assertIn('shortfall 22.3 MiB', str(caught.exception))
+        guide = failure_help.for_error(caught.exception, 'install-packages', {'edition': 'root'})
+        self.assertEqual(guide['code'], 'tv-storage-full')
+        self.assertIn('required 32.0 MiB', guide['detail'])
+        self.assertIn('available 9.7 MiB', guide['detail'])
+        self.assertIn('Free space', guide['next_step'])
         remote.upload.assert_not_called()
 
     def test_unknown_capacity_is_not_invented(self):
         remote = Mock(); remote.run.return_value = 'PRIVATE invalid result'
         messages = []
-        with self.assertRaises(UserError): storage.check(remote, {'/tmp': 1024}, messages.append)
+        with self.assertRaises(UserError) as caught:
+            storage.check(remote, {'/tmp': 1024}, messages.append)
+        guide = failure_help.for_error(caught.exception, 'install-packages', {'edition': 'root'})
+        self.assertIsNotNone(guide)
+        self.assertEqual(guide['code'], 'tv-storage-unavailable')
+        self.assertIn('Root SSH', guide['next_step'])
+        self.assertNotIn('PRIVATE', str(guide))
         self.assertIn('could not be determined', messages[0])
         self.assertNotIn('PRIVATE', str(messages))
 

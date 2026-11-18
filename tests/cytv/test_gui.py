@@ -1,5 +1,6 @@
 """Offline widget checks; never connect to a TV."""
 import os
+import runpy
 import sys
 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 import tempfile
@@ -9,7 +10,7 @@ from unittest.mock import patch
 from pathlib import Path
 try:
     from PySide6.QtWidgets import QApplication, QPushButton, QLineEdit, QComboBox, QRadioButton, QDialog, QLabel, QScrollArea, QCheckBox
-    from cytv.gui import Wizard
+    from cytv.gui import Wizard, configure_appearance
     from cytv.desktop import Prompt
     HAS_QT = True
 except ImportError:
@@ -18,6 +19,100 @@ except ImportError:
 
 @unittest.skipUnless(HAS_QT, 'Desktop build dependencies are optional for CLI tests')
 class GuiTests(unittest.TestCase):
+    def test_incomplete_frozen_distribution_keeps_maintenance_on_the_welcome_screen(self):
+        shown = []
+        with patch.object(sys, 'frozen', True, create=True), \
+             patch.object(sys, '_MEIPASS', self.directory.name, create=True), \
+             patch.object(sys, 'argv', ['cytv-desktop']), \
+             patch('cytv.gui.QApplication', return_value=self.app), \
+             patch.object(self.app, 'exec', return_value=0), \
+             patch.object(Wizard, 'show', lambda window: shown.append(window)), self.assertRaises(SystemExit) as exit:
+            runpy.run_module('cytv.desktop_entry', run_name='__main__')
+        self.assertEqual(exit.exception.code, 0)
+        window, = shown
+        self.addCleanup(window.close)
+        self.assertIn('Use a complete installer build.', window.content.toPlainText())
+        self.assertNotIn('Turn on your LG webOS TV', window.content.toPlainText())
+        self.assertFalse(window.findChild(QPushButton, 'setupTV').isEnabled())
+        self.assertTrue(window.maintenance_toggle.isEnabled())
+        self.assertTrue(window.diagnostics_toggle.isEnabled())
+
+    def test_issue_draft_can_be_cancelled_or_edited_before_opening_the_form(self):
+        from urllib.parse import parse_qs, urlparse
+        from PySide6.QtWidgets import QPlainTextEdit
+
+        calls = []
+        w = Wizard(run=lambda *args, **kwargs: calls.append(args))
+        self.addCleanup(w.close)
+        report = Path(self.directory.name) / 'diagnostic.json'
+        report.write_text('{"action":"install","edition":"no-root","phase":"install-packages"}',
+                          encoding='utf-8')
+        previous_report = report.read_bytes()
+        w.receive('report', report)
+        w.receive('done', 2)
+        issue = next(button for button in w.form.findChildren(QPushButton)
+                     if button.text() == 'Open an issue')
+
+        def preview():
+            issue.click()
+            return next(dialog for dialog in w.findChildren(QDialog) if dialog.isVisible())
+
+        with patch('cytv.gui.QDesktopServices.openUrl', return_value=False) as browser:
+            dialog = preview()
+            next(button for button in dialog.findChildren(QPushButton)
+                 if button.text() == 'Cancel').click()
+            browser.assert_not_called()
+
+            dialog = preview()
+            title = next(entry for entry in dialog.findChildren(QLineEdit) if not entry.isReadOnly())
+            editor = dialog.findChild(QPlainTextEdit)
+            self.assertIn('No-root install', title.text())
+            self.assertIn('Observed phase: install-packages', editor.toPlainText())
+            title.setText('[cytv] Установка / 電視 & Home')
+            editor.appendPlainText('My own observation')
+            buttons = {button.text(): button for button in dialog.findChildren(QPushButton)}
+            buttons['Copy draft'].click()
+            self.assertIn('My own observation', QApplication.clipboard().text())
+            browser.assert_not_called()
+
+            exported = report.with_name('exported.json')
+            with patch('cytv.gui.QFileDialog.getSaveFileName', return_value=(str(exported), 'JSON')):
+                buttons['Save diagnostic report…'].click()
+            self.assertEqual(exported.read_bytes(), previous_report)
+
+            buttons['Open issue form'].click()
+            browser.assert_called_once()
+            link = browser.call_args.args[0].toString()
+            parsed = urlparse(link)
+            self.assertEqual((parsed.netloc, parsed.path),
+                             ('github.com', '/Razdva122/clean-your-tv-lg-webos/issues/new'))
+            self.assertEqual(parse_qs(parsed.query),
+                             {'template': ['cytv.yml'], 'title': [title.text()]})
+            fallback = next(entry for entry in dialog.findChildren(QLineEdit) if entry.isReadOnly())
+            self.assertTrue(fallback.isVisible())
+            self.assertEqual(parse_qs(urlparse(fallback.text()).query), parse_qs(parsed.query))
+            self.assertTrue(dialog.isVisible())
+        self.assertEqual(report.read_bytes(), previous_report)
+        self.assertEqual(calls, [])
+
+    def test_issue_draft_handles_a_missing_diagnostic(self):
+        from PySide6.QtWidgets import QPlainTextEdit
+        w = Wizard()
+        self.addCleanup(w.close)
+        report = Path(self.directory.name) / 'diagnostic.json'
+        report.write_text('{}', encoding='utf-8')
+        w.receive('report', report)
+        w.receive('done', 2)
+        report.unlink()
+        with patch('cytv.gui.QDesktopServices.openUrl') as browser:
+            next(button for button in w.form.findChildren(QPushButton)
+                 if button.text() == 'Open an issue').click()
+            dialog = next(dialog for dialog in w.findChildren(QDialog) if dialog.isVisible())
+            self.assertIn('Reason: unknown', dialog.findChild(QPlainTextEdit).toPlainText())
+            self.assertTrue(any('Include the visible error' in label.text()
+                                for label in dialog.findChildren(QLabel)))
+            browser.assert_not_called()
+
     def test_successful_doctor_continues_setup_with_the_checked_connection(self):
         for profile in (
                 {'host':'192.0.2.10','port':2222,'edition':'root','root_variant':'node012-beta'},
@@ -102,6 +197,55 @@ class GuiTests(unittest.TestCase):
         self.assertEqual(w.subtitle.text(), KEPT)
         w.running = False
 
+    def test_unknown_package_result_rechecks_status_on_the_saved_connection(self):
+        profile = {'host':'192.0.2.10', 'port':9922, 'edition':'no-root'}
+        for command, code, reason in (
+                ('recover', 0, 'original-terminal-unknown'), ('status', 2, 'connection-interrupted')):
+            with self.subTest(command=command):
+                calls = []
+                w = Wizard(run=lambda args, **kw: calls.append(args) or 0)
+                self.addCleanup(w.close)
+                w.command = command
+                w.receive('recovery', profile)
+                w.receive('recovery-plan', {'state':'blocked', 'disposition':'no-root-package-check',
+                    'reason':reason, 'summary':'The TV package result could not be verified.',
+                    'next_step':'Keep recovery data.', 'actions':['check', 'retain-evidence']})
+                w.receive('report', __file__)
+                w.receive('done', code)
+                buttons = {b.text(): b for b in w.form.findChildren(QPushButton)}
+                self.assertIn('Check TV status', buttons)
+                self.assertTrue(buttons['Check TV status'].isDefault())
+                self.assertFalse(buttons['Save diagnostic report…'].isDefault())
+                self.assertFalse(buttons['Back to start'].isDefault())
+                self.assertIn('package result', w.title.text())
+                buttons['Check TV status'].click()
+                self.pump(lambda: not w.running)
+                self.assertEqual(len(calls), 1)
+                self.assertEqual(calls[0][0], 'status')
+                for field, value in profile.items():
+                    self.assertEqual(calls[0][calls[0].index('--'+field)+1], str(value))
+
+    def test_active_operation_only_offers_status_for_the_original_connection(self):
+        profile = {'host':'192.0.2.10', 'port':9922, 'edition':'no-root'}
+        calls = []
+        w = Wizard(run=lambda args, **kw: calls.append(args) or 0)
+        self.addCleanup(w.close)
+        w.command = 'uninstall'
+        w.receive('recovery', profile)
+        w.receive('recovery-plan', {'state':'waiting', 'disposition':'operation-active',
+            'summary':'Another operation is active for this TV', 'next_step':'Check TV status', 'actions':['check']})
+        w.receive('done', 2)
+
+        buttons = {button.text(): button for button in w.form.findChildren(QPushButton)}
+        self.assertSetEqual(set(buttons), {'Check TV status', 'Back to start'})
+        self.assertEqual(w.title.text(), 'Another operation is active for this TV')
+        buttons['Check TV status'].click()
+        self.pump(lambda: not w.running)
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(calls[0][0], 'status')
+        for field, value in profile.items():
+            self.assertEqual(calls[0][calls[0].index('--'+field)+1], str(value))
+
     def test_successful_doctor_russian_actions_fit_minimum_window(self):
         from cytv import i18n
         w = Wizard(); self.addCleanup(w.close)
@@ -124,6 +268,96 @@ class GuiTests(unittest.TestCase):
         proceed = actions['Продолжить настройку']
         self.assertTrue(proceed.isDefault())
         self.assertEqual(actions['Сохранить диагностический отчёт…'].width(), proceed.width())
+
+    def test_translated_recovery_result_actions_fit_and_follow_keyboard(self):
+        from PySide6.QtCore import Qt
+        from PySide6.QtTest import QSignalSpy, QTest
+        from cytv import i18n
+        from cytv.errors import LocalRecoveryError
+        from cytv.failure_help import for_error
+        from cytv.recovery import SEPARATE
+
+        no_root = {'host': '192.0.2.10', 'port': 9922, 'edition': 'no-root'}
+        root = {'host': '192.0.2.10', 'port': 22, 'edition': 'root'}
+        removal = {'disposition': 'clean-removal', 'summary': 'Removal is still in progress.'}
+        restart = dict(removal, state='waiting', reason='restart-required')
+        complete = dict(removal, state='complete', removed=True, verified_clean=True,
+                        summary='Clean Your TV removal is verified.',
+                        next_step=SEPARATE)
+        storage_error = LocalRecoveryError('directory-access', storage_full=True, write_precheck=True)
+        reset_error = type('BadHostKeyException', (Exception,), {})()
+        report_action = 'Save diagnostic report…'
+        cases = (
+            ('install', [('selected-profile', no_root), ('failure-help',
+                for_error(storage_error, 'prepare-payload', no_root))], 2, 'Try again', None),
+            ('uninstall', [('recovery', no_root), ('recovery-plan', restart)], 2, 'Try again', None),
+            ('uninstall', [('root-reinstall', True), ('selected-profile', root),
+                ('recovery', root), ('recovery-plan', restart)], 2, 'Continue Root reinstallation', None),
+            ('install', [('selected-profile', no_root), ('failure-help',
+                for_error(reset_error, 'ssh-connect', no_root, has_reset_source=lambda: True))],
+                2, report_action, 'Reconnect after factory reset'),
+            ('uninstall', [('recovery', no_root), ('recovery-plan', complete)],
+                0, 'Back to start', 'Set up my TV'),
+        )
+        report = Path(self.directory.name) / 'result.json'
+        report.write_text('{}', encoding='utf-8')
+        for language in i18n.LANGUAGES:
+            if language == 'auto':
+                continue
+            for command, events, result, primary, secondary in cases:
+                with self.subTest(language=language, action=primary, command=command):
+                    with patch('cytv.i18n.system_languages', return_value=[language]):
+                        w = Wizard()
+                    try:
+                        w.resize(w.minimumSize())
+                        w.show()
+                        w.activateWindow()
+                        self.app.processEvents()
+                        w.preview.hide()
+                        w.command = command
+                        w.button('Continue', lambda: None).setFocus()
+                        for event, payload in events:
+                            w.receive(event, payload)
+                        w.receive('text', 'Read the result below before continuing.')
+                        w.receive('report', report)
+                        with (patch.object(w, 'saved_root_reinstall', return_value=True),
+                              patch.object(w, 'start'), patch.object(w, 'home'), patch.object(w, 'save_report')):
+                            w.receive('done', result)
+                            self.app.processEvents()
+
+                            self.assertEqual(w.size(), w.minimumSize())
+                            buttons = w.form.findChildren(QPushButton)
+                            actions = {b.text(): b for b in buttons}
+                            default = actions[i18n.translate(primary)]
+                            export = actions[i18n.translate(report_action)]
+                            self.assertEqual([b for b in buttons if b.isDefault()], [default])
+                            self.assertIs(self.app.focusWidget(), default)
+                            primary_clicks = QSignalSpy(default.clicked)
+                            QTest.keyClick(default, Qt.Key.Key_Return)
+                            self.assertEqual(primary_clicks.count(), 1)
+
+                            reached = set()
+                            while (focused := self.app.focusWidget()) not in reached:
+                                self.assertIsNotNone(focused)
+                                reached.add(focused)
+                                QTest.keyClick(focused, Qt.Key.Key_Tab)
+                            for button in buttons:
+                                self.assertIn(button, reached)
+                                self.assertTrue(w.rect().contains(button.mapTo(w, button.rect().bottomRight())),
+                                                button.text())
+                                self.assertGreaterEqual(button.width(), button.minimumSizeHint().width(), button.text())
+                            if secondary:
+                                action = actions[i18n.translate(secondary)]
+                                action.setFocus()
+                                secondary_clicks = QSignalSpy(action.clicked)
+                                QTest.keyClick(action, Qt.Key.Key_Return)
+                                self.assertEqual(secondary_clicks.count(), 0)
+                            export.setFocus()
+                            export_clicks = QSignalSpy(export.clicked)
+                            QTest.keyClick(export, Qt.Key.Key_Space)
+                            self.assertEqual(export_clicks.count(), 1)
+                    finally:
+                        w.close()
 
     def test_debloat_restoration_defaults_to_skip_without_cancelling_removal(self):
         from cytv import debloat, i18n
@@ -442,6 +676,15 @@ class GuiTests(unittest.TestCase):
         self.assertFalse(w.form.findChildren(QComboBox))
         self.assertEqual(len(w.form.findChildren(QPushButton)),2)
 
+    def test_only_beta_alternative_uses_beta_action(self):
+        from cytv import i18n
+        from cytv.root_runtime import BETA_TITLE, NOTICE
+        w = Wizard()
+        self.addCleanup(w.close)
+        i18n.set_language('en')
+        w.show_prompt(Prompt('Alternative edition [0]: ', [('1', BETA_TITLE, NOTICE), ('0', 'Cancel', '')]))
+        self.assertIn('Try Root Beta', [button.text() for button in w.form.findChildren(QPushButton)])
+
     def test_beta_confirmation_names_the_action_and_cancel(self):
         from cytv.desktop import Channel
         for choice, action in (('y','Try Root Beta'),('n','Cancel')):
@@ -633,6 +876,7 @@ class GuiTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.app = QApplication.instance() or QApplication([])
+        configure_appearance(cls.app, Path(__file__).resolve().parents[2] / 'launcher/fonts')
 
     def setUp(self):
         from cytv import i18n
@@ -728,7 +972,6 @@ class GuiTests(unittest.TestCase):
 
     def test_select_popup_has_no_light_bands(self):
         from cytv.gui_style import Select, STYLE
-        self.app.setStyle('Fusion')
         select = Select()
         self.addCleanup(select.close)
         select.setStyleSheet(STYLE)
@@ -899,6 +1142,53 @@ class GuiTests(unittest.TestCase):
         self.assertEqual(calls,[])
         w.home();self.assertIsNone(w.failure_help)
 
+    def test_root_home_result_shows_capability_and_package_stage(self):
+        from cytv.failure_help import for_error
+        from cytv.root_capabilities import RootCapabilityError
+        from cytv.state import target
+
+        profile = target('test-tv', 'root')
+        w = Wizard()
+        self.addCleanup(w.close)
+        w.command = 'install'
+        w.receive('selected-profile', profile)
+        error = RootCapabilityError(experimental_failure='keyfilters-request-failed')
+        w.receive('failure-help', for_error(error, 'inspect-installation', profile))
+        w.receive('done', 2)
+        self.assertIn('could not verify KeyFilters', w.subtitle.text())
+        self.assertIn('Installation stopped before package submission.', w.subtitle.text())
+        self.assertIn('cytv doctor', w.subtitle.text())
+        self.assertNotIn('Try again', {button.text() for button in w.findChildren(QPushButton)})
+
+    def test_local_precheck_results_offer_an_explicit_setup_retry(self):
+        import errno
+        from cytv.failure_help import for_error
+        from cytv.state import Store, target
+
+        profile = target('test-tv', 'no-root')
+        for number, title, next_step in (
+                (errno.EROFS, 'The installer could not write to this computer', 'write access'),
+                (errno.ENOSPC, 'Not enough space on this computer', 'Free space')):
+            with self.subTest(errno=number):
+                w = Wizard()
+                self.addCleanup(w.close)
+                w.command = 'install'
+                w.receive('selected-profile', profile)
+                with patch('cytv.state.tempfile.TemporaryFile', side_effect=OSError(number, 'PRIVATE-DATA')):
+                    with self.assertRaises(RuntimeError) as caught:
+                        Store(self.directory.name).check_capsule_storage(profile)
+                with patch.object(w, 'start') as start:
+                    help = for_error(caught.exception, 'install-packages', profile)
+                    if help:
+                        w.receive('failure-help', help)
+                    w.receive('done', 2)
+                    self.assertEqual(w.title.text(), title)
+                    self.assertIn(next_step, w.subtitle.text())
+                    start.assert_not_called()
+                    next(button for button in w.form.findChildren(QPushButton)
+                         if button.text() == 'Try again').click()
+                    start.assert_called_once_with('install', profile)
+
     def test_foreign_home_restore_help_hands_control_to_existing_integration(self):
         from cytv.failure_help import for_error
         from cytv.root_capabilities import ForeignHomeHandoffRequired
@@ -1062,29 +1352,36 @@ class GuiTests(unittest.TestCase):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
         store = Store(directory.name)
-        profile = target('192.0.2.10', 'no-root')
+        profile = target('192.0.2.10', 'no-root', 9923)
         calls = []
         window = Wizard(run=lambda args, **kwargs: calls.append(args) or 0)
         self.addCleanup(window.close)
-        window.receive('selected-profile', profile)
         console = Channel(window.receive).console
-        explain_failure(console, store, profile, 'ssh-connect', error)
-        window.receive('done', 1)
-        labels = [button.text() for button in window.form.findChildren(QPushButton)]
-        self.assertNotIn('Reconnect after factory reset', labels)
 
-        store.save(profile)
-        store.begin(profile, 'uninstall', stage='restart-required')
         key = RSAKey.generate(2048)
-        (store.device_path(profile) / 'known_hosts').write_text(
-            f"[{profile['host']}]:{profile['port']} {key.get_name()} {key.get_base64()}\n")
-        explain_failure(console, store, profile, 'ssh-connect', error)
-        window.receive('done', 1)
-        buttons = {button.text(): button for button in window.form.findChildren(QPushButton)}
-        buttons['Reconnect after factory reset'].click()
+        root_ssh = target(profile['host'], 'no-root', profile['port'], connection='root-ssh')
+        for saved in (profile, root_ssh):
+            store.save(saved)
+            (store.device_path(saved) / 'known_hosts').write_text(
+                f"[{saved['host']}]:{saved['port']} {key.get_name()} {key.get_base64()}\n")
+
+        def actions(selected):
+            window.receive('selected-profile', selected)
+            explain_failure(console, store, selected, 'ssh-connect', error)
+            window.receive('done', 1)
+            return {button.text(): button for button in window.form.findChildren(QPushButton)}
+
+        action = 'Reconnect after factory reset'
+        self.assertNotIn(action, actions(target('192.0.2.11', 'no-root', profile['port'])))
+        store.begin(profile, 'install', stage='coordinator-submitted')
+        self.assertNotIn(action, actions(profile))
+        store.finish(profile)
+        store.begin(profile, 'uninstall', stage='restart-required')
+        self.assertNotIn(action, actions(root_ssh))
+        actions(profile)[action].click()
         self.pump(lambda: not window.running)
-        self.assertEqual(calls[0][:3], ['install', '--reconnect-after-reset', '--host'])
-        self.assertIn('192.0.2.10', calls[0])
+        self.assertEqual(calls[0][:-2], ['install', '--reconnect-after-reset', '--host', '192.0.2.10',
+                                        '--edition', 'no-root', '--port', '9923', '--no-discovery'])
 
     def test_macos_timeout_keeps_network_checklist_with_optional_permission_advice(self):
         from cytv.failure_help import for_error
@@ -1121,6 +1418,7 @@ class GuiTests(unittest.TestCase):
         for button in w.form.findChildren(QPushButton):
             self.assertTrue(w.rect().contains(button.mapTo(w, button.rect().bottomRight())))
             self.assertGreaterEqual(button.height(), 44)
+            self.assertGreaterEqual(button.width(), button.minimumSizeHint().width(), button.text())
 
     def test_edited_connection_is_validated_and_checked_without_installation(self):
         calls = []
@@ -1150,24 +1448,94 @@ class GuiTests(unittest.TestCase):
         self.assertNotIn('--root-variant', calls[1])
         self.assertEqual(calls[1][calls[1].index('--edition') + 1], 'no-root')
 
-    def test_setup_result_requires_all_three_distinct_checks(self):
+    def test_setup_result_shows_package_readback_with_untested_home(self):
+        from cytv.checks import CheckList
+        from cytv.outcomes import SetupOutcome, UNTESTED
+        from cytv.terminal import Console
         w = Wizard(); self.addCleanup(w.close)
-        w.command = 'install'
-        w.receive('check', {'id':'ssh','label':'SSH connection and sign-in','status':'pass','detail':''})
-        for key, label, status in [('packages','Installed packages','pass'),
-                ('startup','Startup readback','pass'),
-                ('home-button','Home button — your observation','unknown')]:
-            w.receive('check', {'id':key,'label':label,'status':status,'detail':''})
-        w.receive('done',0)
+        checks = CheckList(lambda event: w.receive('check', event))
+        outcome = SetupOutcome(checks, {})
+        outcome.begin()
+        checks.update('ssh', 'pass')
+        outcome.packages_verified()
+        outcome.startup_observed('process-observed')
+        w.receive('done', 0)
         self.assertEqual(w.title.text(), 'Review TV checks')
-        text = w.check_panel.toPlainText()
-        self.assertLess(text.index('Installed packages'), text.index('SSH connection and sign-in'))
-        w.receive('check', {'id':'home-button','label':'Home button — your observation','status':'fail','detail':''})
-        w.receive('done',0)
-        self.assertEqual(w.title.text(), 'Review TV checks')
-        w.receive('check', {'id':'home-button','label':'Home button — your observation','status':'pass','detail':''})
-        w.receive('done',0)
+        result = w.check_panel.toPlainText()
+        self.assertLess(result.index('Installed packages'), result.index('SSH connection and sign-in'))
+        self.assertIn('Home button — your observation', result)
+        self.assertIn(UNTESTED, result)
+        self.assertEqual(w.check_results['packages']['status'], 'pass')
+        self.assertEqual(w.check_results['home-button']['status'], 'unknown')
+
+        outcome.review_home(lambda _: '1', Console(lambda _: None))
+        w.receive('done', 0)
         self.assertEqual(w.title.text(), 'Home button confirmed by you')
+
+    def test_setup_result_keeps_accepted_launch_separate_from_home(self):
+        from cytv.checks import CheckList
+        from cytv.outcomes import SetupOutcome
+        w = Wizard(); self.addCleanup(w.close)
+        outcome = SetupOutcome(CheckList(lambda event: w.receive('check', event)), {})
+        outcome.begin()
+        outcome.packages_verified()
+        outcome.launch_accepted()
+        w.receive('done', 0)
+        self.assertEqual(w.title.text(), 'Review TV checks')
+        result = w.check_panel.toPlainText()
+        self.assertIn('Launch request accepted. Runtime startup has not been verified.', result)
+        self.assertEqual(w.check_results['startup']['status'], 'unknown')
+        self.assertEqual(w.check_results['home-button']['status'], 'unknown')
+
+    def test_setup_result_offers_routing_check_after_verified_packages_and_failed_home(self):
+        from cytv.checks import CheckList
+        from cytv.outcomes import SetupOutcome
+        from cytv.terminal import Console
+        report = Path(self.directory.name) / 'report.json'
+        report.write_text('{}')
+        for profile, label, command in (
+                ({'host': '192.0.2.10', 'port': 2222, 'edition': 'no-root', 'connection': 'root-ssh'},
+                 'Home button diagnostics', 'home-diagnostics'),
+                ({'host': '192.0.2.20', 'port': 2200, 'edition': 'root', 'root_variant': 'node012-beta'},
+                 'Check TV status', 'status')):
+            with self.subTest(edition=profile['edition']):
+                calls = []
+                w = Wizard(run=lambda args, **kw: calls.append(args) or 0)
+                self.addCleanup(w.close)
+                if profile['edition'] == 'root':
+                    w.command = 'recover'
+                    w.receive('recovery-plan', {'state': 'complete', 'summary': 'Review TV checks',
+                                                'next_step': 'Save diagnostic report…'})
+                w.receive('selected-profile', profile)
+                outcome = SetupOutcome(CheckList(lambda event: w.receive('check', event)), {})
+                outcome.begin()
+                outcome.packages_verified()
+                outcome.startup_observed('process-observed' if command == 'home-diagnostics' else 'root-state-verified')
+                outcome.review_home(lambda _: '2', Console(lambda _: None))
+                w.receive('report', report)
+                w.receive('done', 0)
+                self.assertEqual(w.title.text(), 'Review TV checks')
+                self.assertEqual(w.check_results['packages']['status'], 'pass')
+                self.assertEqual(w.check_results['home-button']['status'], 'fail')
+                buttons = {button.text(): button for button in w.form.findChildren(QPushButton)}
+                self.assertIn('Save diagnostic report…', buttons)
+                self.assertNotIn('Try again', buttons)
+                self.assertNotIn('Continue setup', buttons)
+                self.assertEqual(calls, [])
+                buttons[label].click()
+                if command == 'home-diagnostics':
+                    self.assertFalse(w.running)
+                    self.assertEqual(calls, [])
+                    self.assertEqual(w.title.text(), 'Home button diagnostics')
+                    self.assertEqual(w.report, report)
+                else:
+                    self.pump(lambda: not w.running)
+                    self.assertEqual(len(calls), 1)
+                    args = calls[0]
+                    self.assertEqual(args[0], command)
+                    self.assertIn('--no-discovery', args)
+                    for field, value in profile.items():
+                        self.assertEqual(args[args.index('--' + field.replace('_', '-')) + 1], str(value))
 
     def test_steps_follow_events_without_marking_failed_install_complete(self):
         w = Wizard()
@@ -1207,12 +1575,9 @@ class GuiTests(unittest.TestCase):
         w.close()
 
     def test_chinese_fonts_follow_startup_and_language_changes(self):
-        from PySide6.QtGui import QFontDatabase, QTextLayout
+        from PySide6.QtGui import QTextLayout
         from cytv import i18n
         from cytv.gui_style import STYLE
-        fonts = Path(__file__).resolve().parents[2] / 'launcher/fonts'
-        for name in ('SC', 'TC'):
-            self.assertGreaterEqual(QFontDatabase.addApplicationFont(str(fonts / ('NotoSans%s.ttf' % name))), 0)
         i18n.configure('zh-Hant')
         w = Wizard()
         self.addCleanup(w.close)

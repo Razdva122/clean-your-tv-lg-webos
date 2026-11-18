@@ -721,8 +721,8 @@ def handoff_pending(remote):
     return remote.run(PENDING_CHECK, timeout=5).strip() == 'CYTV_HOME_HANDOFF_PENDING'
 
 
-def takeover(installer, *, pending=False):
-    """Run only from ordinary Root setup for a native conflict or an interrupted handoff."""
+def takeover(installer, confirm, *, pending=False, provision=True):
+    """Resume an interrupted handoff or require confirmation of a newly verified plan."""
     from .root_capabilities import NATIVE_HOME_MOUNT_PROBE
     remote = installer.remote
     try:
@@ -730,7 +730,7 @@ def takeover(installer, *, pending=False):
             mount = remote.run(NATIVE_HOME_MOUNT_PROBE, timeout=5).strip()
             if mount not in ('file-mount', 'file-and-parent-mounts'):
                 return False
-        python = installer._select_python(provision=True)
+        python = installer._select_python(provision=provision or pending)
         # The selected runtime smoke does not exercise libffi. Probe it
         # separately before opening the handoff transaction.
         required = installer._python_command([
@@ -741,6 +741,8 @@ def takeover(installer, *, pending=False):
         except (UserError, OSError, TimeoutError):
             libc_ready = False
         if not libc_ready:
+            if not pending:
+                return False
             raise UserError('Root operation was not confirmed. Run cytv status; retain recovery state.',
                             reason_code='root-operation-unconfirmed')
         command = installer._python_command([python, '-I', '-B', '-'])
@@ -763,6 +765,7 @@ def takeover(installer, *, pending=False):
         return False
     if not isinstance(plan, str) or not re.fullmatch(r'[0-9a-f]{64}', plan):
         return False
+    confirm()
     installer.progress('Restoring LG Home…')
     try:
         installer._selected_python = python

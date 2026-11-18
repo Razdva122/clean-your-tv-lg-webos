@@ -1,5 +1,6 @@
 """Per-attempt observations, never deployment or recovery authority."""
 from . import prompts
+from .terminal import console
 
 FIELDS = {
     'packages': ('not-verified', 'verified'),
@@ -11,11 +12,47 @@ UNTESTED = 'The physical Home button has not been checked. A launch acknowledgem
 REVIEW = 'Review TV checks'
 START_HELPER = 'Packages verified. Open Home Helper on the TV and choose Start Helper when ready.'
 
+HOME_START = 'Open an app or TV input so neither Home screen is showing.'
+HOME_PRESS = 'Briefly press Home once on the physical TV remote. Clean Your TV Home should open.'
+HOME_RESULTS = {
+    'cytv-home': ('Clean Your TV Home opened', 'confirmed-by-user', 'pass',
+                  'You confirmed this physical Home press. Continue using Clean Your TV Home.'),
+    'lg-home': ('LG Home opened', 'not-working', 'fail',
+                'LG Home opened. Check Home control status before changing setup.'),
+    'no-visible-response': ('The screen did not change', 'not-working', 'fail',
+                            'The screen did not change. Keep the current setup and save the diagnostic report.'),
+    None: ('Skip / no physical press or another result', 'not-tested', 'unknown', UNTESTED),
+}
+
+
+def ask_home_result(ask, write):
+    write = console(write)
+    write('Choose what you saw after the physical press. For a phone or network remote, choose Skip.')
+    options = tuple(HOME_RESULTS)
+    for index, (label, _, _, _) in enumerate(HOME_RESULTS.values(), 1):
+        write.option(index, label)
+    try:
+        return options[prompts.number(ask, write, 'Home button result [4]: ', 1, 4, default=4) - 1]
+    except (EOFError, KeyboardInterrupt, StopIteration):
+        return None
+
+
+def home_result_fields(destination):
+    fields = {'home_button': HOME_RESULTS[destination][1]}
+    if destination is not None:
+        fields['home_destination'] = destination
+    return fields
+
 
 def summary(value):
     value = value if type(value) is dict else {}
-    return {key: value[key] if type(value.get(key)) is str and value[key] in allowed else 'unknown'
-            for key, allowed in FIELDS.items()}
+    result = {key: value[key] if type(value.get(key)) is str and value[key] in allowed else 'unknown'
+              for key, allowed in FIELDS.items()}
+    destination = value.get('home_destination')
+    if type(destination) is str and destination in HOME_RESULTS:
+        if result['home_button'] == HOME_RESULTS[destination][1]:
+            result['home_destination'] = destination
+    return result
 
 
 class SetupOutcome:
@@ -58,26 +95,20 @@ class SetupOutcome:
         self.checks.update('startup', 'unknown', START_HELPER)
 
     def review_home(self, ask, write, non_interactive=False):
-        self.values['home_button'] = 'not-tested'
-        self.checks.update('home-button', 'unknown', UNTESTED)
+        if self.values['home_button'] != 'not-tested':
+            return
         if self.values['startup'] == 'stopped-during-setup':
             write(START_HELPER)
             return
         if non_interactive:
             return
         write.heading('Check the physical Home button')
-        write('On the TV, open another app, then briefly press Home once on your remote. Did Clean Your TV Home appear?')
-        write('Choose only what you observed. This records a local result; it does not change Home control or publish a report.')
-        write.option(1, 'Clean Your TV Home opened')
-        write.option(2, 'LG Home opened or Home did not work')
-        write.option(3, 'Not tested / skip')
-        try:
-            choice = prompts.number(ask, write, 'Home button result [3]: ', 1, 3, default=3)
-        except (EOFError, KeyboardInterrupt, StopIteration):
-            choice = 3
-        self.values['home_button'] = {1: 'confirmed-by-user', 2: 'not-working', 3: 'not-tested'}[choice]
-        detail = {1: 'You confirmed this physical Home press. Other controls, sound and power transitions remain untested.',
-                  2: 'You reported that Home did not open Clean Your TV. Save the report; do not repeat installation.',
-                  3: UNTESTED}[choice]
-        self.checks.update('home-button', {1: 'pass', 2: 'fail', 3: 'unknown'}[choice], detail)
+        write(HOME_START)
+        write(HOME_PRESS)
+        destination = ask_home_result(ask, write)
+        self.values.update(home_result_fields(destination))
+        _, _, status, detail = HOME_RESULTS[destination]
+        self.checks.update('home-button', status, detail)
+        if status == 'pass' and write.frontend == 'console':
+            write(detail)
         write.heading(REVIEW)
