@@ -586,8 +586,13 @@ def repair_beta_recovery(checkpoint=lambda stage: None):
         finalize(record_failure=False, firmware_permissions=False, writer=beta_repair_write)
     checkpoint('final-status')
     status = rpc('status')
+    # LS2 handlers wrap the Python CLI envelope in their own result.
+    runtime = status.get('result')
+    result = runtime.get('result') if isinstance(runtime, dict) else None
+    recovery = result.get('recovery') if isinstance(result, dict) else None
     if (status.get('root') is not True
-            or status.get('result', {}).get('recovery', {}).get('integrity_verified') is not True):
+            or not isinstance(runtime, dict) or runtime.get('returnValue') is not True
+            or not isinstance(recovery, dict) or recovery.get('integrity_verified') is not True):
         raise ValueError('Repaired Beta recovery status could not be verified')
     if stage != 'installed-recovery-only':
         checkpoint('write-deployment-stage')
@@ -649,20 +654,69 @@ def disable_trials():
         finally: os.close(directory)
     finally: os.close(fd)
 
+def verify_restored_files(saved):
+    if (saved.get('version') != 1 or saved.get('service') != NAME
+            or saved.get('phase') != 'rolled-back'
+            or set(saved['files']) != {str(p) for p in FILES.values()}
+            or os.path.lexists(STATE/'recovery-provision.json')):
+        raise ValueError('Restored LS2 snapshot required')
+    for path, entry in saved['files'].items():
+        file = Path(path)
+        if sha(entry['original'].encode()) != entry['original_sha256'] or sha(secure(file)) != entry['original_sha256']:
+            raise ValueError('Restored LS2 file drift: '+path)
+        info = file.stat()
+        if (stat.S_IMODE(info.st_mode), info.st_uid, info.st_gid) != (entry['mode'], entry['uid'], entry['gid']):
+            raise ValueError('Restored LS2 metadata drift: '+path)
+
+
+def verify_beta_removal_registration(rpc, saved=None):
+    """Check the live hub before submitting a legacy preview package removal."""
+    expected = {}
+    if saved is not None:
+        verify_restored_files(saved)
+        for group, methods in json.loads(saved['files'][str(FILES['api'])]['original']).items():
+            for method in methods:
+                if method.startswith(NAME+'/'):
+                    expected.setdefault(method[len(NAME):], set()).add(group)
+
+    def api(service):
+        reply = rpc('com.webos.service.bus/queryServicePermissions', {'service': service})
+        methods = reply.get('api') if isinstance(reply, dict) and reply.get('returnValue') is True else None
+        if not isinstance(methods, dict) or any(
+                not isinstance(method, str) or not isinstance(groups, list)
+                or not all(isinstance(group, str) for group in groups)
+                for method, groups in methods.items()):
+            raise ValueError('LS2 permission readback unverified')
+        return methods
+
+    def restored():
+        # W19P reports generic wildcard grants even for an absent alias.
+        if {'/c1Lease', '/c1Home'}.intersection(api(LEASE_NAME)):
+            return False
+        if not expected:
+            return True
+        actual = api(NAME)
+        return all(groups.issubset(actual.get(method, ())) for method, groups in expected.items())
+
+    if restored():
+        return
+    # scan-services only queues a signal. On a retry the controls checkpoint
+    # may already be present, so request a fresh scan when readback is stale.
+    refresh()
+    deadline = time.monotonic() + 3
+    while not restored():
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise ValueError('LS2 registration restore unverified')
+        time.sleep(min(.1, remaining))
+
+
 def rollback(restored=None):
     saved = json.loads(secure(STATE/'ls2-provision-snapshot.json'))
     if saved.get('version') != 1 or saved.get('service') != NAME or set(saved['files']) != {str(p) for p in FILES.values()}:
         raise ValueError('Invalid provision snapshot')
     if saved.get('phase') == 'rolled-back':
-        if os.path.lexists(STATE/'recovery-provision.json'):
-            raise ValueError('Unexpected readiness after rollback')
-        for path,entry in saved['files'].items():
-            file = Path(path)
-            if sha(entry['original'].encode()) != entry['original_sha256'] or sha(secure(file)) != entry['original_sha256']:
-                raise ValueError('Restored LS2 file drift: '+path)
-            info = file.stat()
-            if (stat.S_IMODE(info.st_mode),info.st_uid,info.st_gid) != (entry['mode'],entry['uid'],entry['gid']):
-                raise ValueError('Restored LS2 metadata drift: '+path)
+        verify_restored_files(saved)
         import system_permissions
         system_permissions.remove(secure)
         import startup_hook

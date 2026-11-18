@@ -11,7 +11,7 @@ from cytv import cli, state
 
 
 class RootReinstallationFlowTests(unittest.TestCase):
-    def run_install(self, pending=False, approve=True, non_interactive=False):
+    def run_install(self, pending=False, approve=True, non_interactive=False, native=False):
         with tempfile.TemporaryDirectory() as tmp, patch('cytv.cli.Installer') as cls, \
                 patch('cytv.cli.package.verify_payload', return_value={}):
             (Path(tmp) / 'fallback.png').write_bytes(b'fallback')
@@ -22,7 +22,13 @@ class RootReinstallationFlowTests(unittest.TestCase):
                 (store.device_dir(profile) / 'known_hosts').write_bytes(b'original pin')
                 store.begin(profile, 'activate-root', stage='enable')
             inst = cls.return_value
-            inst.preflight.side_effect = ExistingRoot('existing')
+            if native:
+                def retained_native(**_):
+                    cls.call_args.kwargs['tv_info']['home_backend'] = 'c1-native-gate'
+                    raise ExistingRoot('existing')
+                inst.preflight.side_effect = retained_native
+            else:
+                inst.preflight.side_effect = ExistingRoot('existing')
             inst.status.return_value = {'deployment_stage': 'installed-recovery-only',
                                        'device': {'result': {'recovery': {'integrity_verified': True}}}}
             inst.version_summary.return_value = []
@@ -45,6 +51,12 @@ class RootReinstallationFlowTests(unittest.TestCase):
         self.assertTrue(any('Reinstall Root?' in q for q in questions), questions)
         self.assertEqual(inst.install.call_args.kwargs, {'reinstall': 'installed'})
         inst.uninstall_project.assert_not_called()  # The real install validates its replacement first.
+
+    def test_retained_native_runtime_offers_confirmed_reinstallation(self):
+        code, inst, questions, output = self.run_install(native=True)
+        self.assertEqual(code, 0, str(output))
+        self.assertTrue(any('Reinstall Root?' in q for q in questions), questions)
+        self.assertEqual(inst.install.call_args.kwargs, {'reinstall': 'installed'})
 
     def test_pending_activation_offers_reinstallation_instead_of_old_runtime_retry(self):
         code, inst, questions, output = self.run_install(pending=True)
@@ -71,6 +83,31 @@ class RootReinstallationTests(unittest.TestCase):
     setUp = fixture.OperationTests.setUp
     installer = fixture.OperationTests.installer
     root_bundle = fixture.OperationTests.root_bundle
+
+    def test_reinstall_successor_keeps_goal_until_real_install_finishes(self):
+        self.root_bundle()
+        inst = self.installer(fixture.Remote(), 'root')
+        digest = 'a' * 64
+        (self.store.device_dir(inst.profile) / 'known_hosts').write_bytes(b'original pin')
+        self.store.request_clean_removal(inst.profile, root_reinstall_payload=digest)
+        self.store.checkpoint(inst.profile, stage='verified-clean',
+                              result={'removed':True, 'verified_clean':True})
+        self.store.finish_clean_removal(inst.profile)
+        saved = self.store.root_reinstall(inst.profile)
+        self.assertEqual((saved.stage, saved.payload), ('removed', digest))
+        inst.root_reinstall_payload = digest
+        inst.uninstall_project = Mock(side_effect=AssertionError('Completed cleanup cannot run again'))
+        original = inst.await_product
+
+        def deliver(*args, **kwargs):
+            active = self.store.root_reinstall(inst.profile)
+            self.assertEqual((active.stage, active.payload), ('installing', digest))
+            self.assertNotEqual(active.operation, saved.operation)
+            return original(*args, **kwargs)
+
+        inst.await_product = deliver
+        self.assertTrue(inst.install(self.inventory)['home_changed'])
+        self.assertIsNone(self.store.root_reinstall(inst.profile))
 
     def test_self_consistent_old_runtime_requires_explicit_reinstallation(self):
         self.root_bundle()

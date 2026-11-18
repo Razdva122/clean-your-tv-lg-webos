@@ -1,92 +1,64 @@
 {
   "schema": 1,
-  "version": "1.24.0",
+  "version": "1.24.1",
   "changes": [
     {
-      "pr": 689,
-      "issues": [
-        389
-      ],
-      "summary": "Resume retained Root removal with generated Python cache files; exact reporter cleanup remains unverified"
+      "pr": 704,
+      "issues": [],
+      "summary": "Continue Desktop setup after a successful connection check and refresh recovery restart guidance"
     },
     {
-      "pr": 690,
+      "pr": 705,
       "issues": [
-        615
+        692
       ],
-      "summary": "Preserve verified active Root Home in same-boot recovery; reporting-device confirmation is pending"
+      "summary": "Fix Node 0.12.2 Root Beta removal and verify LS2 rollback before package removal"
     },
     {
-      "pr": 691,
-      "issues": [
-        687
-      ],
-      "summary": "Explain explicit No-root Debloat write rejections; the separate Home routing report is unresolved"
-    },
-    {
-      "pr": 693,
-      "issues": [
-        418
-      ],
-      "summary": "Use bundled Restore to recover eligible retained C1 activation and verify stock Home"
-    },
-    {
-      "pr": 694,
-      "issues": [
-        686
-      ],
-      "summary": "Reconnect and retain a Home diagnostics capture across temporary SSH loss; the separate wake-routing failure remains open"
-    },
-    {
-      "pr": 695,
+      "pr": 706,
       "issues": [
         160
       ],
-      "summary": "Record Root Beta repair failures and inspect interrupted deployment status without writes"
+      "summary": "Accept the nested final status during in-place Root Beta repair; B9 confirmation remains open"
     },
     {
-      "pr": 696,
+      "pr": 707,
+      "issues": [],
+      "summary": "Resume confirmed Desktop Root reinstallation across interrupted cleanup or native installation"
+    },
+    {
+      "pr": 708,
       "issues": [
         615
       ],
-      "summary": "Allow the existing Root Beta lease call through legacy W19P LS2; other activation failures remain open"
+      "summary": "Restore retained compositor Root through Set up my TV \u2192 Root \u2192 Reinstall Root (resets saved CYTV preferences)"
     },
     {
-      "pr": 697,
+      "pr": 709,
+      "issues": [],
+      "summary": "Keep an active global Root screensaver through a brief status gap"
+    },
+    {
+      "pr": 711,
       "issues": [
-        101
+        686
       ],
-      "summary": "Handle firmware-owned shared SDK containers with expected package digests and recognize read-only stock Home"
+      "summary": "Retain Home diagnostics across Helper restart and wake; original routing failure remains open"
     },
     {
-      "pr": 698,
+      "pr": 717,
       "issues": [
-        152
+        686
       ],
-      "summary": "Finish an eligible retained legacy Helper removal after a verified reboot; the original startup problem remains open"
-    },
-    {
-      "pr": 699,
-      "issues": [],
-      "summary": "Remove Beta labeling from opt-in Developer Mode auto-renewal"
-    },
-    {
-      "pr": 700,
-      "issues": [],
-      "summary": "Offer optional app-grid sorting by successful launches, with explicit installer choices and AirPlay coverage"
-    },
-    {
-      "pr": 701,
-      "issues": [],
-      "summary": "Fit translated desktop and HD Home settings and execute the actual POSIX recovery command in Windows diagnostic tests"
+      "summary": "Write Home diagnostics commands from Root SSH in the shared Helper state group"
     }
   ],
   "excluded": [],
-  "acceptance": "LG OLED55C3RLA, firmware 43.21.71 / SDK 11.2.0, macOS ARM64 installer. Exact signed QA delivery from run 44183093626 binds build 44165933088:3, CLI ZIP SHA256 6052c7d7ce7e90ed5c9a399e4d3f1a08a60f7c4a7df5f6bc1e5672602c417114 and engine 1.2.12 SHA256 2a1f8b7d3e16eae046f8600b08af80c513bf047821808e6fcf0d5b636c4a3b2d. Root and rooted No-root forward Update all, same-version System Repair, ordinary product rollback, exact installed package hashes, rendered profile equality, network Home and verified software restart passed. Root preserved Off and explicit On; No-root preserved disabled renewal. Live sorting roundtrip passed in both editions. Physical Magic Remote, audio, standby, AC cold boot and unrooted No-root transport were not newly exercised. Reporter-specific retained C1/B9/W19P/EF950V and wake states remain limited to documented host/firmware evidence. Full selected-case reconciliation and hashes: docs/history/2026-11-17-release-1.23.1-rc-verification.md.",
+  "acceptance": "2026-11-18, project LG OLED55C3RLA, firmware 43.21.71, webOS SDK 11.2.0. Selected macOS ARM64 CLI archive SHA-256 862ef9830e7acf08bcbcfd1851534474cfcd6f252deb6ee103a547e73b2aa955. On No-root Home 1.20.3 and Helper 0.9.1, ordinary Root SSH diagnostics started, resumed under a new Helper controller after a verified software restart, and expired without a persisted start request. Network HOME from Media Player reached No-root after restart. All 624 embedded payload and trusted support files matched RC2. Reused the matching signed Root and No-root updates and rollbacks on C3, Root screensaver and Desktop recovery evidence recorded in PR #703. Selected Android APK SHA-256 8cce5683def9b4104735ecc50078ce1619bc5aa2132586d356c96bec6d89514e. Published code 49 upgraded to code 50 with the original signer on an isolated API 35 ARM64 emulator. Four synthetic files were preserved and idle launch did not replay the pending operation. The maintainer approved release from RC3 with live W19P removal (#692), B9 repair and Home activation (#160), and retained C1 compositor activation (#615) left open. Physical Magic Remote, AC cold boot and audio were outside the C3 pass. Original YouTube routing (#686) remains unresolved. See PR #703 for the case ledger.",
   "build": {
-    "run_id": 44165933088,
-    "attempt": 3,
-    "source": "36d690777c26b146992d9b056c7eee50de4b6d83"
+    "run_id": 44331212562,
+    "attempt": 2,
+    "source": "4a34c8e7dc3b407a02799c998352d3660cccfd32"
   },
-  "acceptance_build": "44165933088:3"
+  "acceptance_build": "44331212562:2"
 }

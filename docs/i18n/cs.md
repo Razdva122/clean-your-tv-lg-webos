@@ -51,6 +51,8 @@ Jazyk vyberte v instalátoru; na Androidu je volba vpravo nahoře. Jazyk TV se n
 3. No-root: zadejte kód z Developer Mode a potvrďte žádost na TV. Root: použijte svůj stávající SSH přístup. Novou SSH identitu potvrďte pouze pro vlastní TV v důvěryhodné síti. Pokud se uložený klíč změnil, zastavte se a zjistěte příčinu.
 4. Postupujte podle průvodce. Nechte TV zapnutou, neměňte síť a nezavírejte CYTV do dokončení. Na Androidu nevynucujte ukončení aplikace.
 
+V instalátoru pro počítač po úspěšné kontrole připojení zvolte **Pokračovat v nastavení**. Zachová se stejné připojení k televizoru a edice. Průvodce vysvětlí stav předchozí instalace; technické výsledky jsou v podrobnostech. Pokud předchozí operace vyžaduje obnovení, nejprve použijte nabídnutou akci obnovení. Průvodce před změnami zkontroluje nainstalované verze a požádá o potvrzení. Uložené požadavky na restart se znovu ověřují; průvodce požádá o restart pouze tehdy, když ho vyžaduje aktuální čištění.
+
 ## 5. Vyzkoušejte ovladač
 
 1. Otevřete jinou aplikaci na TV a krátce stiskněte **Home**. Má se otevřít Clean Your TV. V průvodci uveďte, co jste viděli; pokud jste test neprovedli, přeskočte ho.
@@ -94,7 +96,7 @@ Pokud instalátor nemůže ověřit odebrání, závěrečný úklid, ovládán�
 
 Pokud instalátor nemůže ověřit požadovaný úplný restart, uložte a přiložte diagnostickou zprávu. Zachovejte uložené připojení a data obnovy. Neopakujte stále odpojování napájení a nemažte ručně nedokončenou operaci.
 
-**Přeinstalace Root:** S uloženým připojením zvolte **Nastavit televizor → Root** a potvrďte **Přeinstalovat Root?**. Instalátor obnoví LG Home a zcela odstraní Clean Your TV včetně aktualizátorů, Home Helper a uložených předvoleb. Po ověření odstranění nainstaluje a aktivuje balíčky a prostředí Root dodané v tomto instalátoru. Ostatní aplikace TV a stávající přístup root/SSH zůstanou zachovány. Pokud se odstranění zastaví nebo požádá o úplný restart, dokončete je před novým spuštěním instalace. Samotné **Odinstalovat Clean Your TV** nikdy nespustí novou instalaci.
+**Přeinstalace Root:** S uloženým připojením zvolte **Nastavit televizor → Root** a potvrďte **Přeinstalovat Root?**. Instalátor obnoví LG Home a zcela odstraní Clean Your TV včetně aktualizátorů, Home Helper a uložených předvoleb. Po ověření odstranění nainstaluje a aktivuje balíčky a prostředí Root dodané v tomto instalátoru. Ostatní aplikace TV a stávající přístup root/SSH zůstanou zachovány. Pokud se průvodce v počítači zastaví, otevřete stejný instalátor a zvolte **Pokračovat v přeinstalaci Root**. Po ověření odstranění zvolte **Pokračovat v instalaci Root**. Samotné **Odinstalovat Clean Your TV** nikdy nespustí novou instalaci.
 
 ### Úprava nastavení LG a dokončení obnovy Root
 

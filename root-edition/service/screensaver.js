@@ -60,29 +60,45 @@ module.exports = function (options) {
     } catch (_) {}
   }
 
+  function maintains(active, current) {
+    return (
+      current &&
+      current.generation === active.generation &&
+      (current.stale !== true ||
+        (active.controller && active.controller.ownsPopup()))
+    );
+  }
+
   function reconcile() {
     var current = disposed ? null : ownership();
-    if (run && (!current || current.generation !== run.generation)) release();
+    if (run && !maintains(run, current)) release();
     return current;
   }
 
   function matches(generation) {
     var current = reconcile();
-    return !!(current && current.generation === generation);
+    return !!(
+      current &&
+      current.stale !== true &&
+      current.generation === generation
+    );
+  }
+
+  function readSession(active) {
+    if (!active || !active.controller) return null;
+    var session = active.controller.getSession();
+    // Rendering can outlive a poll deadline. Check freshness after reading it
+    // so a deadline crossed during this read cannot defer the LG saver.
+    return matches(active.generation) && run === active ? session : null;
   }
 
   function context(active) {
     var current = ownership();
-    if (
-      disposed ||
-      run !== active ||
-      !current ||
-      current.generation !== active.generation
-    )
+    if (disposed || run !== active || !maintains(active, current))
       return { ownerHealthy: false, popupSupported: false };
     var supplied;
     try {
-      supplied = options.context() || {};
+      supplied = options.context(current.stale === true) || {};
     } catch (_) {
       return { ownerHealthy: false, popupSupported: false };
     }
@@ -159,8 +175,7 @@ module.exports = function (options) {
           return active.controller.startGlobal(done);
         },
         getSession: function () {
-          if (!matches(generation) || run !== active) return null;
-          return active.controller.getSession();
+          return readSession(active);
         }
       });
       active.monitor = schedule(reconcile, 250);
@@ -206,8 +221,7 @@ module.exports = function (options) {
     powerInactive: stop,
     stop: stop,
     getSession: function () {
-      reconcile();
-      return run ? run.controller.getSession() : null;
+      return readSession(run);
     },
     reconcile: reconcile,
     dispose: function () {

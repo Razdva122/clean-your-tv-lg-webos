@@ -99,6 +99,9 @@ class DesktopConsole(Console):
     def report(self, path):
         self.emit('report', str(path.resolve()))
 
+    def doctor_result(self, value):
+        self.emit('doctor-result', value)
+
     def check(self, event):
         self.emit('check', event)
 
@@ -124,6 +127,9 @@ class DesktopConsole(Console):
 
     def ssh_command_result(self, result):
         self.emit('ssh-command-result', result)
+
+    def root_reinstall(self):
+        self.emit('root-reinstall', None)
 
     def installation_settings(self, value):
         self.emit('installation-settings', {key:value[key] for key in ('renewal','block_updates') if type(value.get(key)) is bool})

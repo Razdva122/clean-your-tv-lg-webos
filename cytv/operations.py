@@ -134,12 +134,23 @@ def require_removal_idle(remote, profile, pending, *, report_busy=False, optiona
         raise UserError('TV installer is not confirmed idle. Keep the receipt and run cytv status before removal.', reason_code='pending-operation')
 
 
+def require_root_reinstall_cleanup(result):
+    if result.get('restart_required') is True:
+        from .recovery import _RemovalRestartRequired
+        raise _RemovalRestartRequired('Removal is still in progress. Recovery data and the remaining cleanup step were kept.',
+                                      reason_code='pending-operation')
+    if result.get('removed') is not True or result.get('verified_clean') is not True:
+        raise UserError('Removal is not finished. Continue removal in this installer before installing again.',
+                        reason_code='pending-operation')
+
+
 class Installer:
     def __init__(self, remote, store, profile, payload, manifest, progress=print, tv_info=None, checks=None):
         self.remote, self.store, self.profile = remote, store, profile
         self.payload, self.manifest, self.progress = Path(payload), manifest, progress
         self.helper_retry = lambda: False
         self.reconnect = None
+        self.root_reinstall_payload = None
         self.tv_info = tv_info if tv_info is not None else {}
         from .checks import CheckList
         self.checks = checks if checks is not None else CheckList()
@@ -974,10 +985,11 @@ printf '%s' "$cytv_state"
             if reinstall:
                 self.prepare_root_reinstall()
                 self.preflight(install=True, home_interfaces=True)
+            continuation = self.store.root_reinstall_lineage(self.profile, self.root_reinstall_payload)
             operation=uuid.uuid4().hex
             self.store.begin(self.profile,'install',release_sha=release_sha,bundle_sha=bundle_sha,migrate=migrate,
                              requires_updater=True,product_operation=operation,stage='coordinator-upload',
-                             recovery_protocol='root-final-readback-v1')
+                             recovery_protocol='root-final-readback-v1', **continuation)
             self.progress('Uploading Root and recovery runtime…')
             stage=self.upload_product(bundle)
             self.store.checkpoint(self.profile,stage='coordinator-submitted',product_payload=stage)
@@ -1892,7 +1904,12 @@ print('CYTV_BOOTSTRAP_IDLE')
         if self.profile['edition'] != 'root':
             raise UserError('Reinstallation requires Root access.')
         self.progress('Restoring LG Home and removing the previous Clean Your TV installation…')
-        result = self.uninstall_project()
+        if self.root_reinstall_payload:
+            pending = self.store.request_clean_removal(self.profile, root_reinstall_payload=self.root_reinstall_payload)
+            result = self.continue_clean_removal(pending)
+            require_root_reinstall_cleanup(result)
+        else:
+            result = self.uninstall_project()
         if (result.get('removed') is not True or result.get('verified_clean') is not True
                 or result.get('restart_required') is True or self.store.pending(self.profile)):
             raise UserError('Removal is not finished. Continue removal in this installer before installing again.',

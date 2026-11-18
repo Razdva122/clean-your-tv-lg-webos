@@ -11,6 +11,47 @@ from cytv.errors import TVCommandError, UserError
 
 
 class HomeDiagnosticsTests(unittest.TestCase):
+    @unittest.skipUnless(os.name == 'posix', 'requires POSIX file group ownership')
+    def test_root_ssh_publishes_diagnostics_with_the_helper_state_group(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            directory = Path(tmp).resolve() / 'helper-state'
+            directory.mkdir()
+            group = (5000 if os.getuid() == 0 else
+                     next((gid for gid in os.getgroups() if gid != os.getegid()), os.getegid()))
+            os.chown(directory, -1, group)
+            control = directory / 'control.json'
+            control.write_text('{}')
+            control.chmod(0o640)
+            os.chown(control, -1, os.getegid())
+            requests = []
+            permissions = []
+
+            class Remote:
+                def upload(self, path, data, mode):
+                    raise AssertionError('Root SSH upload leaves the control record in the SSH group')
+
+                def run(self, command, data=None, timeout=None):
+                    if command == '/usr/bin/node':
+                        script = data.replace(
+                            b'/media/developer/apps/usr/palm/applications/com.local.nativehome/state',
+                            str(directory).encode())
+                        result = subprocess.check_output(['node'], input=script).decode()
+                        requests.append(json.loads(control.read_text()))
+                        current = control.stat()
+                        permissions.append((current.st_gid, current.st_mode & 0o777))
+                        return result
+                    return '\n'.join(json.dumps(dict(event='home-diagnostic',
+                        session=requests[0]['nonce'], trigger=trigger))
+                        for trigger in ('started', 'expired'))
+
+            report = diagnostics.collect_home_report(Remote(), state.Store(tmp),
+                state.target('192.0.2.55', 'no-root', connection='root-ssh'), Mock())
+            self.assertTrue(json.loads(report.read_text())['helper_diagnostics']['complete'])
+            self.assertEqual(permissions, [(group, 0o660), (group, 0o660)])
+            start, stop = requests
+            self.assertEqual(start['cmd'], 'diagnostics-start')
+            self.assertEqual(stop, {'cmd': 'diagnostics-stop', 'nonce': start['nonce']})
+
     def test_collects_one_allowlisted_report_and_stops_recording(self):
         class Remote:
             def __init__(self): self.commands = []
@@ -35,6 +76,78 @@ class HomeDiagnosticsTests(unittest.TestCase):
             self.assertEqual(len(list(path.parent.glob('*.json'))), 1)
             self.assertNotIn('PAIRINGKEY', path.read_text())
             self.assertEqual(remote.commands[-1]['cmd'], 'diagnostics-stop')
+
+    def test_report_686_replay_keeps_waiting_for_restarted_helper(self):
+        # The six observed events end at 4.268 s, then SSH reads stale logs.
+        prefix = [
+            ('started', 0), ('sample', 1379), ('monitor-reset', 2390),
+            ('monitor', 2439), ('sample', 2855), ('sample', 4268),
+        ]
+        clock = [0]
+        remote = Mock()
+        def read_log(command):
+            request = json.loads(remote.upload.call_args_list[0].args[1])
+            events = [dict(event='home-diagnostic', session=request['nonce'],
+                           trigger=trigger, time=offset)
+                      for trigger, offset in prefix]
+            if clock[0] >= 85:
+                events.extend([
+                    dict(event='home-diagnostic', session=request['nonce'],
+                         trigger='resumed', time=85000, controllerPid=22),
+                    dict(event='home-diagnostic', session=request['nonce'],
+                         trigger='launch-request', time=85001, id='com.gathin.tvhome'),
+                    dict(event='home-diagnostic', session=request['nonce'],
+                         trigger='foreground', time=86000, foreground='youtube.leanback.v4'),
+                ])
+            if clock[0] >= 146:
+                events.append(dict(event='home-diagnostic', session=request['nonce'],
+                                   trigger='expired', time=146000))
+            return '\n'.join(map(json.dumps, events))
+        remote.run.side_effect = read_log
+        with tempfile.TemporaryDirectory() as tmp, patch('time.monotonic', side_effect=lambda: clock[0]), \
+                patch('time.sleep', side_effect=lambda seconds: clock.__setitem__(0, clock[0] + seconds)):
+            path = diagnostics.collect_home_report(remote, state.Store(tmp),
+                state.target('192.0.2.55', 'no-root'), Mock())
+            capture = json.loads(path.read_text())['helper_diagnostics']
+        self.assertTrue(capture['complete'])
+        self.assertEqual(len(capture['records']), 10)
+        self.assertEqual(capture['records'][6]['trigger'], 'resumed')
+        self.assertEqual(capture['records'][8]['foreground'], 'youtube.leanback.v4')
+        self.assertEqual(len(remote.upload.call_args_list), 2)
+        self.assertLessEqual(clock[0], 190)
+
+    def test_disconnect_before_monitor_reset_waits_for_late_helper_restart(self):
+        clock = [0]
+        before, after = Mock(), Mock()
+        def event(trigger, **fields):
+            request = json.loads(before.upload.call_args_list[0].args[1])
+            return json.dumps(dict(event='home-diagnostic', session=request['nonce'],
+                                   trigger=trigger, **fields))
+        def read_before(command):
+            if before.run.call_count == 1:
+                return event('started', time=1)
+            raise ConnectionResetError()
+        before.run.side_effect = read_before
+        after.run.return_value = ''
+        after.run.side_effect = lambda command: '\n'.join([
+            event('resumed', time=85000, controllerPid=22),
+            event('foreground', time=86000, foreground='youtube.leanback.v4'),
+            event('expired', time=146000)])
+        def reconnect():
+            if clock[0] < 85:
+                raise ConnectionRefusedError()
+            return after
+        with tempfile.TemporaryDirectory() as tmp, patch('time.monotonic', side_effect=lambda: clock[0]), \
+                patch('time.sleep', side_effect=lambda seconds: clock.__setitem__(0, clock[0] + seconds)):
+            path = diagnostics.collect_home_report(before, state.Store(tmp),
+                state.target('192.0.2.55', 'no-root'), Mock(), reconnect=reconnect)
+            capture = json.loads(path.read_text())['helper_diagnostics']
+        self.assertTrue(capture['complete'])
+        self.assertGreater(clock[0], 70)
+        self.assertGreater(capture['connection']['reconnect_attempts'], 1)
+        self.assertEqual(capture['records'][1]['trigger'], 'resumed')
+        self.assertEqual(json.loads(before.upload.call_args.args[1])['durationMs'], 180000)
+        self.assertEqual(json.loads(after.upload.call_args.args[1])['cmd'], 'diagnostics-stop')
 
     def test_cli_recovers_the_same_recording_after_standby_disconnect(self):
         from paramiko import SSHException
@@ -144,7 +257,7 @@ class HomeDiagnosticsTests(unittest.TestCase):
         reconnect = Mock(side_effect=ConnectionRefusedError)
         write = Mock()
         with tempfile.TemporaryDirectory() as tmp, patch('time.sleep'), \
-                patch('time.monotonic', side_effect=[0, 0, 2, 4, 70]):
+                patch('time.monotonic', side_effect=[0, 0, 2, 4, 190, 190]):
             path = diagnostics.collect_home_report(remote, state.Store(tmp),
                 state.target('192.0.2.55', 'no-root'), write, reconnect=reconnect)
             report = json.loads(path.read_text())['helper_diagnostics']

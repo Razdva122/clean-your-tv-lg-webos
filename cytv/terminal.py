@@ -88,6 +88,10 @@ class Console:
         self.heading('Diagnostic report')
         self.raw('  ' + str(path.resolve()))
 
+    def doctor_result(self, value):
+        import json
+        self.raw(json.dumps(value, indent=2))
+
     def check(self, event):
         from .checks import STATUS
         message = '[' + tr(STATUS[event['status']]) + '] ' + tr(event['label'])

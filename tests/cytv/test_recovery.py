@@ -8,6 +8,57 @@ from cytv.terminal import Console
 
 
 class RecoveryTests(unittest.TestCase):
+    def test_saved_restart_request_is_not_a_current_restart_instruction(self):
+        from cytv.desktop import DesktopConsole
+        from cytv.recovery import removal_plan
+        from cytv.recovery_ui import removal_restart_required, removal_details
+        self.store.request_clean_removal(self.profile)
+        self.store.checkpoint(self.profile, stage='restart-required', removal_reason='restart-required')
+        original = self.store.pending(self.profile)
+        for connecting in (True, False):
+            events = []
+            write = DesktopConsole(lambda *event: events.append(event))
+            removal_plan(write, self.store, self.profile, connecting=connecting)
+            result = next(value for kind, value in events if kind == 'recovery-plan')
+            self.assertFalse(removal_restart_required(result))
+            self.assertNotIn('Restart the TV', str(removal_details(result)))
+            self.assertNotIn('Restart the TV', result['summary'] + result['next_step'])
+            self.assertEqual(self.store.pending(self.profile), original)
+
+    def test_recovery_review_does_not_repeat_saved_restart_before_continuation(self):
+        from cytv.desktop import DesktopConsole
+        from cytv.recovery import recover
+        from cytv.recovery_ui import removal_restart_required
+        self.store.request_clean_removal(self.profile)
+        self.store.checkpoint(self.profile, stage='restart-required', removal_reason='restart-required')
+        original = self.store.pending(self.profile)
+        events = []
+        write = DesktopConsole(lambda *event: events.append(event))
+        answers = iter(['y', 'n'])
+        recover(self.installer, lambda _: next(answers), write)
+        plans = [value for kind, value in events if kind == 'recovery-plan']
+        self.assertTrue(plans)
+        self.assertTrue(all(not removal_restart_required(value) for value in plans))
+        self.assertNotIn('Restart the TV', str(events))
+        self.assertEqual(self.store.pending(self.profile), original)
+
+    def test_current_cleanup_restart_reply_still_requests_a_restart(self):
+        from cytv.desktop import DesktopConsole
+        from cytv.recovery import remove_before_reinstall
+        from cytv.recovery_ui import removal_restart_required, removal_details
+        self.store.request_clean_removal(self.profile)
+        def current_cleanup():
+            self.store.checkpoint(self.profile, stage='restart-required', removal_reason='restart-required')
+            return {'removed':False, 'verified_clean':False, 'restart_required':True}
+        self.installer.uninstall_project.side_effect = current_cleanup
+        events = []
+        remove_before_reinstall(self.installer, lambda _: 'y', DesktopConsole(lambda *event: events.append(event)))
+        result = [value for kind, value in events if kind == 'recovery-plan'][-1]
+        self.assertTrue(removal_restart_required(result))
+        self.assertIn('Restart the TV', removal_details(result)['blocker_text'])
+        self.assertFalse(result['verified_clean'])
+        self.assertIsNotNone(self.store.pending(self.profile))
+
     def setUp(self):
         tmp = tempfile.TemporaryDirectory(); self.addCleanup(tmp.cleanup)
         self.store = state.Store(tmp.name)

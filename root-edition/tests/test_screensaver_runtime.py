@@ -50,6 +50,22 @@ class ScreensaverRuntimeTests(unittest.TestCase):
         for method in ('_screensaver_verify','_screensaver_require_idle','startup_require','screensaver_remaining_health_ms'):
             with self.subTest(method=method),patch.object(s,method,side_effect=ValueError('private-token')):
                 result=s.screensaver_status();self.assertIsNone(result['owner']);self.assertFalse(result['foregroundOwn']);self.assertNotIn('private-token',json.dumps(result))
+    def test_luna_timeouts_are_retryable_but_guard_refusals_are_authoritative(self):
+        for endpoint in ('getAppInfo', 'getForegroundAppInfo', 'getPowerState'):
+            def read(uri, payload, timeout):
+                if uri.endswith('/' + endpoint):
+                    raise TimeoutError('private-token')
+                return self.luna(uri, payload, timeout)
+            with self.subTest(endpoint=endpoint), patch.object(s, '_screensaver_luna', read):
+                result = s.screensaver_status()
+                self.assertIsNone(result['owner'])
+                self.assertIs(result.get('retryable'), True)
+                self.assertNotIn('private-token', json.dumps(result))
+        with patch.object(s, 'startup_require', side_effect=TimeoutError('guard failed')):
+            self.assertNotIn('retryable', s.screensaver_status())
+        with patch.object(s, '_screensaver_luna', side_effect=TimeoutError('slow webOS')), \
+             patch.object(s, 'startup_require', side_effect=[None, ValueError('owner changed')]):
+            self.assertNotIn('retryable', s.screensaver_status())
     def test_foreground_rejects_unknown_other_apps_and_allows_only_owned_popup(self):
         for surfaces,want in [([],False),([{'appId':'youtube','windowType':'_WEBOS_WINDOW_TYPE_CARD'}],False),(self.surfaces+[{'appId':'com.cleanyourtv.screensaver','windowType':'_WEBOS_WINDOW_TYPE_POPUP'}],True),(self.surfaces+[{'appId':'com.palm.app.settings','windowType':'_WEBOS_WINDOW_TYPE_OVERLAY'}],False),(self.surfaces+[{}],False)]:
             self.surfaces=surfaces;self.assertEqual(s.screensaver_status()['foregroundOwn'],want)

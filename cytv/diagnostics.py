@@ -218,20 +218,36 @@ def collect_home_report(remote, store, profile, write, *, reconnect=None):
     session = uuid.uuid4().hex
     directory = '/media/developer/apps/usr/palm/applications/com.local.nativehome/state'
     def command(name):
-        remote.upload(directory + '/control.json',
-                      json.dumps({'cmd': name, 'nonce': session}).encode(), mode=0o640)
+        request = {'cmd': name, 'nonce': session}
+        if name == 'diagnostics-start':
+            request['durationMs'] = 180000
+        raw = json.dumps(request)
+        if profile.get('connection') == 'root-ssh':
+            from .tv_sources import node_adapter
+            # Root SSH uploads use the SSH group. Publish in the checked
+            # Helper state group so the controller can read the request.
+            script = node_adapter('state-permissions',
+                f"contract.atomicRecord({json.dumps(directory)}, 'control', {json.dumps(raw)});"
+                "process.stdout.write('CYTV_DIAGNOSTIC_REQUEST_WRITTEN');")
+            result = remote.run('/usr/bin/node', data=script.encode(), timeout=15)
+            if result.strip() != 'CYTV_DIAGNOSTIC_REQUEST_WRITTEN':
+                raise UserError('TV upload could not be verified. Existing destination was not confirmed.')
+        else:
+            remote.upload(directory + '/control.json', raw.encode(), mode=0o640)
     log = directory + '/controller.log'
     read_log = (
         f'if [ -f {log}.previous ]; then tail -c 131072 {log}.previous || exit; fi; '
         f'tail -c 131072 {log}'
     )
     records = {}
-    triggers = {'started', 'sample', 'home', 'launch-request', 'launch-result',
+    triggers = {'started', 'resumed', 'power', 'sample', 'home', 'launch-request', 'launch-result',
                 'launch-timeout', 'foreground', 'monitor', 'monitor-reset', 'expired', 'stopped'}
     monitors = {'starting', 'reset', 'screen-watch-connected', 'screen-watch-unavailable',
                 'screen-watch-error', 'screen-watch-disconnected'}
     started = complete = announced = False
     beginning = time.monotonic()
+    wait_until = 190
+    read_count = reconnect_count = 0
     failure_stage = 'start-upload'
     try:
         command('diagnostics-start')
@@ -239,8 +255,10 @@ def collect_home_report(remote, store, profile, write, *, reconnect=None):
             failure_stage = 'log-read'
             try:
                 if remote is None:
+                    reconnect_count += 1
                     remote = reconnect()
                 raw = remote.run(read_log)
+                read_count += 1
             except Exception as error:
                 if reconnect is None or not (connection_interrupted(error)
                         or isinstance(error, EOFError)
@@ -250,9 +268,9 @@ def collect_home_report(remote, store, profile, write, *, reconnect=None):
                 # Helper records to disk while SSH is unavailable. Reuse the
                 # original nonce and never start a second recording.
                 remote = None
-                if time.monotonic() - beginning < 68:
+                if time.monotonic() - beginning < wait_until - 2:
                     time.sleep(2)
-                    if time.monotonic() - beginning < 70:
+                    if time.monotonic() - beginning < wait_until:
                         continue
                 if not started:
                     raise
@@ -269,7 +287,7 @@ def collect_home_report(remote, store, profile, write, *, reconnect=None):
                 if not isinstance(item, dict) or item.get('event') != 'home-diagnostic' or item.get('session') != session or not isinstance(item.get('trigger'), str) or item['trigger'] not in triggers:
                     continue
                 clean = {'trigger': item['trigger']}
-                for name in ('time', 'homeSequence', 'sinceHomeMs', 'foregroundAgeMs', 'launchSequence', 'durationMs'):
+                for name in ('time', 'homeSequence', 'sinceHomeMs', 'foregroundAgeMs', 'launchSequence', 'durationMs', 'controllerPid'):
                     value = item.get(name)
                     if value is None or type(value) is int and 0 <= value <= 10**15:
                         clean[name] = value
@@ -284,15 +302,19 @@ def collect_home_report(remote, store, profile, write, *, reconnect=None):
                     clean['monitor'] = item['monitor']
                 if item.get('monitorReason') in (None, 'state-permissions', 'missing-pairing-key', 'pairing-required'):
                     clean['monitorReason'] = item.get('monitorReason')
+                if item.get('powerState') in ('Active', 'Suspend', 'Active Standby',
+                        'Request Power Off', 'Prepare Power Off', 'Request Suspend',
+                        'Request Active Standby', 'Prepare Active Standby'):
+                    clean['powerState'] = item['powerState']
                 clean['foregroundSource'] = 'subscription-cache'
                 records[line] = clean
-                started = started or clean['trigger'] == 'started'
+                started = started or clean['trigger'] in ('started', 'resumed')
                 complete = complete or clean['trigger'] == 'expired'
             elapsed = time.monotonic() - beginning
             if not started and elapsed >= 5:
                 failure_stage = 'start-unacknowledged'
                 raise UserError('Helper did not start diagnostics. Update to a release containing diagnostics and start Helper in Home settings, then try again.')
-            if complete or elapsed >= 70:
+            if complete or elapsed >= wait_until:
                 break
             if started and not announced:
                 announced = True
@@ -309,10 +331,14 @@ def collect_home_report(remote, store, profile, write, *, reconnect=None):
             try:
                 command('diagnostics-stop')
             except Exception:
-                pass  # The Helper also expires its own window after 60 seconds.
+                pass  # Helper expires the bounded request even if SSH remains unavailable.
     path = create_report(store, 'home-diagnostics', profile, 'home-diagnostics-complete')
     report = json.loads(path.read_text())
     report['helper_diagnostics'] = {'schema': 1, 'complete': complete, 'records': list(records.values())}
+    report['helper_diagnostics']['connection'] = {
+        'successful_reads': read_count, 'reconnect_attempts': reconnect_count,
+        'elapsed_ms': int((time.monotonic() - beginning) * 1000)
+    }
     if failure_stage:
         report['helper_diagnostics']['failure_stage'] = failure_stage
     report['privacy'] = 'Contains observed application IDs, routing state and timing. No addresses, keys, app inventory or raw TV logs are collected.'

@@ -62,6 +62,8 @@ O assistente usa inicialmente o idioma do sistema e salva sua escolha explícita
 3. No-root: digite o código do Developer Mode e aceite a solicitação na TV. Root: use suas credenciais SSH. Aceite uma nova identidade SSH apenas para sua própria TV em uma rede confiável. Se uma chave salva mudou, pare e investigue.
 4. Siga o assistente. Mantenha a TV ligada, a mesma rede e o CYTV aberto até terminar. Não force a parada do app Android.
 
+No instalador para computador, após verificar a conexão, escolha **Continuar configuração** para manter a mesma conexão e edição. O assistente explica o estado de uma instalação anterior; os resultados técnicos ficam em **Detalhes**. Se uma operação anterior precisar de recuperação, use primeiro a ação de recuperação oferecida. A configuração verifica as versões instaladas e pede confirmação antes de alterações. As solicitações de reinicialização salvas são verificadas novamente; o assistente só pede para reiniciar quando a limpeza atual exige isso.
+
 ## 5. Confira o controle remoto
 
 1. Abra outro app na TV e pressione **Home** brevemente. Clean Your TV deve abrir. Informe ao assistente o que você viu; pule a verificação se não a realizou.
@@ -107,7 +109,7 @@ Se o instalador não conseguir verificar a remoção, a limpeza final, os contro
 
 Se o instalador não conseguir verificar a reinicialização completa solicitada, salve e anexe o relatório de diagnóstico. Mantenha a conexão salva e os dados de recuperação. Não repita os ciclos de energia nem apague manualmente a operação pendente.
 
-**Reinstalar o Root:** Escolha **Configurar minha TV → Root** com a conexão salva e confirme **Reinstalar Root?**. O instalador restaura o LG Home e remove completamente o Clean Your TV, incluindo seus atualizadores, Home Helper e preferências salvas. Após verificar a remoção, instala e ativa os pacotes e o ambiente Root incluídos nesse instalador. Os outros apps da TV e o acesso root/SSH existente são preservados. Se a remoção parar ou solicitar uma reinicialização completa, termine-a antes de iniciar a configuração novamente. **Desinstalar Clean Your TV** sozinho nunca inicia outra instalação.
+**Reinstalar o Root:** Escolha **Configurar minha TV → Root** com a conexão salva e confirme **Reinstalar Root?**. O instalador restaura o LG Home e remove completamente o Clean Your TV, incluindo seus atualizadores, Home Helper e preferências salvas. Após verificar a remoção, instala e ativa os pacotes e o ambiente Root incluídos nesse instalador. Os outros apps da TV e o acesso root/SSH existente são preservados. Se o assistente no computador pausar, abra o mesmo instalador e escolha **Continuar a reinstalação do Root**. Após a verificação da remoção, escolha **Continuar a instalação do Root**. **Desinstalar Clean Your TV** sozinho nunca inicia outra instalação.
 
 ### Alterar configurações da LG e concluir a recuperação do Root
 

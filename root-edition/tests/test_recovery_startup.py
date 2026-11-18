@@ -48,7 +48,18 @@ class StartupTests(unittest.TestCase):
                     patch('package_identity.bootstrap_inventory') as verify_package, \
                     patch('runtime.c1_keyfilter.selection', return_value={'schema': 3, 'native_sha256': 'a'*64}), \
                     patch.object(p, 'finalize', side_effect=[TimeoutError(), None]) as finalize, \
-                    patch.object(p, 'rpc', return_value={'root': True, 'result': {'recovery': {'integrity_verified': True}}}) as status:
+                    patch.object(p, 'rpc') as status:
+                # The real service handler wraps the Python CLI envelope.
+                reply = subprocess.check_output(['node', '-e', """
+const handlers = require(process.argv[1])(() => Promise.resolve({
+  returnValue: true, result: {recovery: {integrity_verified: true}}
+}));
+handlers.status({}).then(reply => {
+  reply.root = true;
+  console.log(JSON.stringify(reply));
+});
+""", str(ROOT/'service/handlers.js')])
+                status.return_value = json.loads(reply)
                 runner.write_bytes(p.runner_bytes().replace(b'--disable-activity-creation ', b''))
                 original_proof = p.manifest()
                 pending.write_bytes(p.encoded({'files': {str(runner): '0'*64}}))
@@ -71,6 +82,19 @@ class StartupTests(unittest.TestCase):
                 verify_package.assert_called_with(root)
                 (root/'recovery-provision.json').write_bytes(pending.read_bytes())
                 self.assertTrue(p.repair_beta_recovery()['status_verified'])
+                self.assertEqual(finalize.call_count, 2)
+                good = status.return_value
+                for bad in (
+                        dict(good, root=False),
+                        dict(good, result={'returnValue': False, 'result': good['result']['result']}),
+                        dict(good, result={'returnValue': True, 'result': {'recovery': {'integrity_verified': False}}}),
+                        dict(good, result=None),
+                        dict(good, result={'returnValue': True, 'result': None}),
+                        dict(good, result={'returnValue': True, 'result': {'recovery': None}})):
+                    with self.subTest(reply=bad):
+                        status.return_value = bad
+                        with self.assertRaisesRegex(ValueError, 'status could not be verified'):
+                            p.repair_beta_recovery()
                 self.assertEqual(finalize.call_count, 2)
             self.assertEqual(installed.read_bytes(), b'installed app')
 

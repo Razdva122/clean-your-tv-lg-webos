@@ -427,11 +427,12 @@ def validate_package_receipts(record):
             raise ValueError('package_absence_unverified')
 
 
-def remove_packages(device, record, save):
+def remove_packages(device, record, save, *, present=None):
     """Retry explicit removal against current presence, keeping old outcomes separate."""
     from observed_install import remove
     errors = []
-    present = device.apps()
+    if present is None:
+        present = device.apps()
     checked = {}
     changed = False
     for app in APPS:

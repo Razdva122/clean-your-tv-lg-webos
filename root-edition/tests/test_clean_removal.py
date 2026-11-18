@@ -1233,6 +1233,39 @@ def luna(uri, payload):
         import json
         return Coordinator(device,owner,read),identifier,root,updater,payload,calls,present
 
+    def test_beta_preview_removal_requires_live_ls2_readback_even_after_controls_checkpoint(self):
+        import install_device
+        driver, identifier, _, _, _, calls, present = self.fixture()
+        import provision
+        rpc = driver.device.rpc
+        replies = iter(({'returnValue': True, 'api': None},
+                        {'returnValue': True, 'api': {'/c1Lease': ['all']}},
+                        {'returnValue': True, 'api': {'/c1Lease': ['all']}},
+                        {'returnValue': True, 'api': {'/*': ['all']}}))
+        method = 'com.webos.service.bus/queryServicePermissions'
+
+        def readback(uri, data):
+            if uri == method:
+                self.assertEqual(data, {'service': provision.LEASE_NAME})
+                calls.append('ls2-readback')
+                return next(replies)
+            return rpc(uri, data)
+
+        driver.device.rpc = readback
+        with patch.object(provision, 'LEGACY_NODE_BETA', True), \
+             patch.object(provision, 'refresh'), \
+             patch.object(provision.time, 'monotonic', side_effect=[0, 4]):
+            for _ in range(2):
+                blocked = driver.clean_remove(identifier)
+                self.assertIn('controls-restored', blocked['done'])
+                self.assertEqual(blocked['last_failure']['cleanup_step'], 'provision-rollback')
+                self.assertIn(install_device.APP, present)
+                self.assertFalse(any(name.startswith('remove-') for name in calls))
+            driver.clean_remove(identifier)
+            removed = 'remove-'+install_device.APP
+            self.assertIn(removed, calls)
+            self.assertEqual(calls[calls.index(removed)-1], 'ls2-readback')
+
     def test_final_activity_checks_preserve_foreign_prefix_but_refuse_known_services(self):
         from clean_removal import APPS
         driver,identifier,*_=self.fixture();rpc=driver.device.rpc

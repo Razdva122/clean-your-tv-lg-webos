@@ -10,7 +10,7 @@ function create(io, prepare) {
     function () {
       return true;
     };
-  result.atomicRecord = function (directory, kind, bytes) {
+  result.atomicRecord = function (directory, kind, bytes, options) {
     var name =
       {
         control: 'control.json',
@@ -19,10 +19,18 @@ function create(io, prepare) {
         'home-preference': 'home-control.json',
         'startup-state': 'startup-state.json'
       }[kind] || kind + '.json';
+    if (
+      options &&
+      options.expectedControl !== undefined &&
+      io.readFileSync(directory + '/' + name, 'utf8') !==
+        options.expectedControl
+    )
+      return false;
     if (/-(request|response)$/.test(kind) && io.renameSync) {
       io.writeFileSync(directory + '/.fixture-record', bytes);
       io.renameSync(directory + '/.fixture-record', directory + '/' + name);
     } else io.writeFileSync(directory + '/' + name, bytes);
+    return true;
   };
   result.readRecord = function (directory, kind) {
     var name = {

@@ -202,7 +202,7 @@ def install(installer, inventory, migrate=False, reinstall=None):
     under the installation mutex before creating Root state or submitting IPKs.
     This host path never stages a normal updater or retries a failed native setup.
     """
-    if migrate or reinstall is not None:
+    if migrate or reinstall not in (None, 'installed'):
         raise UserError('Experimental Home setup requires a fresh installation without migration. Existing recovery data was kept.')
     if installer.store.pending(installer.profile):
         raise UserError('Previous operation is unresolved. Run cytv status or cytv restore; do not retry installation.', reason_code='pending-operation')
@@ -217,6 +217,13 @@ def install(installer, inventory, migrate=False, reinstall=None):
             validate_bundle(prepared, installer.tv_info['graphics_resolution'])
     except (OSError, ValueError, KeyError, TypeError, AttributeError, EOFError, tarfile.TarError) as error:
         raise UserError('Experimental Home packages are missing or invalid. Use a complete installer build. Installation has not started.') from error
+    if reinstall:
+        installer.prepare_root_reinstall()
+        installer.preflight(install=True, home_interfaces=True)
+        if not getattr(installer, '_native_clean_install', False):
+            raise UserError('The previous cleanup could not be verified. Installation has not started.',
+                            reason_code='clean-handoff-refused')
+    continuation = installer.store.root_reinstall_lineage(installer.profile, installer.root_reinstall_payload)
     from . import storage
     storage.install(installer.remote, prepared, installer.progress, root=True)
     if installer.tv_info.get('home_backend_schema') == 2:
@@ -230,7 +237,7 @@ def install(installer, inventory, migrate=False, reinstall=None):
                        if installer.tv_info.get('home_backend_schema') == 3 else NOTICE)
     installer.store.begin(installer.profile, 'install', release_sha=digest(prepared['release.json']),
                           bundle_sha=digest(prepared['bundle.json']), migrate=False, requires_updater=False,
-                          home_backend=BACKEND, stage='upload')
+                          home_backend=BACKEND, stage='upload', **continuation)
     installer.progress('Uploading Root and recovery runtime…')
     if getattr(installer,'_native_clean_install',False):
         with tempfile.TemporaryDirectory(prefix='cytv-c1-root-') as folder:

@@ -31,7 +31,8 @@ function fixture(whenReady = () => Promise.resolve(true)) {
     };
   let adapterOptions,
     deliveryMs = 0,
-    launchOK = true;
+    launchOK = true,
+    readFailed = false;
   const adapter = {
     enable(g) {
       calls.push(['enable', g]);
@@ -92,6 +93,8 @@ function fixture(whenReady = () => Promise.resolve(true)) {
       operations.push(command);
       payloads.push(payload);
       if (command === 'configure') snapshot = { ...snapshot, state: payload };
+      if (readFailed && command === 'status')
+        return Promise.reject(new Error('Root status timed out'));
       const observedAtMs = snapshot.observedAtMs ?? time + deliveryMs;
       time += deliveryMs;
       return Promise.resolve({ ...snapshot, observedAtMs });
@@ -130,6 +133,9 @@ function fixture(whenReady = () => Promise.resolve(true)) {
     },
     setDeliveryMs(n) {
       deliveryMs = n;
+    },
+    setReadFailed(value) {
+      readFailed = value;
     },
     getSnapshot() {
       return snapshot;
@@ -341,15 +347,88 @@ function fixture(whenReady = () => Promise.resolve(true)) {
   );
   f.setTime(3500);
   assert.equal(
-    f.options().getOwner(),
-    null,
+    f.options().context().globalEligible,
+    false,
     'the observation still expires before authorizing a launch'
+  );
+  assert.equal(
+    f.options().getOwner()?.stale,
+    true,
+    'a late poll must leave time for an existing global popup to recover'
   );
   for (const observedAtMs of [3499, 3501]) {
     f.setDeliveryMs(0);
     f.setSnapshot({ ...f.getSnapshot(), observedAtMs });
     assert.equal((await f.request('screensaverStatus')).available, false);
+    assert.equal(
+      f.options().getOwner(),
+      null,
+      'invalid timestamps revoke ownership'
+    );
   }
+  f.api.dispose();
+
+  f = fixture();
+  f.setSnapshot({ ...awake });
+  await f.api.resume();
+  f.setSnapshot({
+    ...awake,
+    owner: null,
+    popupInstalled: false,
+    validForMs: 0,
+    retryable: true
+  });
+  assert.equal((await f.request('screensaverStatus')).available, false);
+  assert.equal(
+    f.options().getOwner()?.stale,
+    true,
+    'a Luna timeout can be retried'
+  );
+  f.setSnapshot({ ...awake });
+  await f.api.resume();
+  f.setReadFailed(true);
+  assert.equal((await f.request('screensaverStatus')).available, false);
+  assert.equal(f.options().getOwner()?.stale, true);
+  f.setTime(4999);
+  assert.equal((await f.request('screensaverStatus')).available, false);
+  assert.equal(f.options().getOwner()?.stale, true);
+  f.setTime(5000);
+  assert.equal(
+    f.options().getOwner(),
+    null,
+    'failed polls cannot extend the retry window'
+  );
+  f.setReadFailed(false);
+  await f.api.resume();
+  assert.equal(f.options().context().globalEligible, true);
+  f.setTime(8000);
+  f.setSnapshot({ ...awake, observedAtMs: 8000, validForMs: 200 });
+  f.setDeliveryMs(700);
+  assert.equal((await f.request('screensaverStatus')).available, false);
+  assert.equal(f.options().getOwner()?.stale, true);
+  f.setTime(9000);
+  assert.equal(
+    f.options().getOwner(),
+    null,
+    'a reply received expired cannot renew the retry window'
+  );
+  f.setDeliveryMs(0);
+  f.setSnapshot({ ...awake });
+  await f.api.resume();
+  f.setReadFailed(true);
+  await f.api.resume();
+  await f.request('screensaverStop');
+  assert.equal(f.options().getOwner(), null, 'Stop revokes the retry window');
+  f.setReadFailed(false);
+  await f.api.resume();
+  f.setSnapshot({ ...awake, owner: null, validForMs: 0 });
+  await f.api.resume();
+  assert.equal(
+    f.options().getOwner(),
+    null,
+    'an explicit owner loss revokes immediately'
+  );
+  f.api.dispose();
 
   f = fixture();
   await f.request('screensaverConfigure', {

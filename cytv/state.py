@@ -10,8 +10,17 @@ import stat
 from sys import platform
 import tempfile
 from time import sleep
+from typing import NamedTuple, Optional
 import uuid
 from .errors import UserError, LocalRecoveryError, is_storage_full
+
+
+class RootReinstall(NamedTuple):
+    stage: str
+    payload: str
+    operation: str
+    variant: Optional[str]
+    pin: str
 
 
 def sync_directory(path):
@@ -247,22 +256,25 @@ class Store:
         path.unlink()
         sync_directory(path.parent)
 
-    def connection_profile(self, selected):
+    def connection_profile(self, selected, *, expected_pin=None):
         """Resolve pending work to its original saved identity, before connecting."""
         directory = self.device_dir(selected)
         require_original_ssh_identity(directory)
         _, pending = self._read_operation(directory / 'operation.json', require_access=True)
-        if pending is None:
+        if pending is None and expected_pin is None:
             return selected, False
+        pending = pending or {}
         try:
             path = directory / 'profile.json'
             known = directory / 'known_hosts'
-            if (pending.get('recovery_protocol')=='clean-removal-v1' and pending.get('connection_pending') is True
+            if (expected_pin is None and pending.get('recovery_protocol')=='clean-removal-v1' and pending.get('connection_pending') is True
                     and 'previous' not in pending and not path.is_symlink() and not known.is_symlink() and not known.exists()):
                 original=self._read_profile(path)
                 if any(original[k]!=selected[k] for k in ('host','edition','port')):raise ValueError('foreign profile')
                 return original,False  # First connection still requires explicit normal host-key trust.
-            if path.is_symlink() or known.is_symlink() or not known.read_bytes():
+            if path.is_symlink() or known.is_symlink() or not (pins := known.read_bytes()):
+                raise ValueError('missing trust')
+            if expected_pin is not None and hashlib.sha256(pins).hexdigest() != expected_pin:
                 raise ValueError('missing trust')
             original = self._read_profile(path)
             if any(original[k] != selected[k] for k in ('host', 'edition', 'port')):
@@ -365,6 +377,56 @@ class Store:
     def pending(self, profile):
         return self._read_operation(self.device_path(profile) / 'operation.json')[1]
 
+    def root_reinstall(self, profile):
+        """Return the host's saved reinstall step and payload, never TV authority."""
+        if profile['edition'] != 'root':
+            return None
+        pending = self.pending(profile)
+        receipt = pending
+        if receipt is None:
+            path = self.device_path(profile) / 'clean-removal.json'
+            if path.is_symlink():
+                return None
+            _, receipt = self._read_operation(path)
+        if not receipt:
+            return None
+        payload = receipt.get('root_reinstall_payload')
+        variant = receipt.get('root_reinstall_variant')
+        pin = receipt.get('root_reinstall_pin')
+        installing = pending and pending['action'] in ('install', 'activate-root')
+        native = (installing and pending.get('home_backend') == 'c1-native-gate'
+                  and pending.get('requires_updater') is False and 'recovery_protocol' not in pending
+                  and (pending['action'] == 'activate-root' or pending.get('stage') in ('upload', 'setup')))
+        operation = receipt.get('product_operation' if installing else 'removal_operation')
+        if native and 'product_operation' not in receipt:
+            # An upload receipt has a host identity before it has a device operation.
+            operation = receipt.get('diagnostic_id')
+        if (not isinstance(payload, str) or not re.fullmatch('[a-f0-9]{64}', payload)
+                or variant not in (None, 'node012-beta')
+                or not isinstance(pin, str) or not re.fullmatch('[a-f0-9]{64}', pin)
+                or not isinstance(operation, str) or not re.fullmatch('[a-f0-9]{32}', operation)):
+            return None
+        if installing and (native or pending.get('recovery_protocol') == 'root-final-readback-v1'):
+            return RootReinstall('installing', payload, operation, variant, pin)
+        if (receipt['action'] != 'uninstall' or receipt.get('recovery_protocol') != 'clean-removal-v1'
+                or receipt.get('full_project') is not True):
+            return None
+        result = receipt.get('result')
+        if (receipt.get('stage') == 'verified-clean' and isinstance(result, dict)
+                and result.get('removed') is True and result.get('verified_clean') is True
+                and result.get('restart_required') is not True):
+            return RootReinstall('verified' if pending else 'removed', payload, operation, variant, pin)
+        return RootReinstall('removing', payload, operation, variant, pin) if pending else None
+
+    def root_reinstall_lineage(self, profile, payload):
+        if payload is None:
+            return {}
+        saved = self.root_reinstall(profile)
+        if not saved or saved.stage != 'removed' or saved.payload != payload:
+            raise UserError('The saved Root reinstallation changed. Return to the start screen and check again.')
+        return {'root_reinstall_payload': saved.payload, 'root_reinstall_variant': saved.variant,
+                'root_reinstall_pin': saved.pin}
+
     def begin(self, profile, action, **values):
         path = self.device_dir(profile) / 'operation.json'
         diagnostic_id = uuid.uuid4().hex
@@ -395,7 +457,7 @@ class Store:
         path.unlink(missing_ok=True)
         sync_directory(path.parent)
 
-    def request_clean_removal(self, profile):
+    def request_clean_removal(self, profile, *, root_reinstall_payload=None):
         """Record desired absence under the host lock, without TV authority."""
         directory = self.device_path(profile)
         operation_path = directory / 'operation.json'
@@ -415,6 +477,20 @@ class Store:
                  'recovery_protocol':'clean-removal-v1', 'removal_operation':identifier,
                  'product_operation':identifier, 'diagnostic_id':uuid.uuid4().hex,
                  'stage':'requested', 'removal_reason':'removal-requested'}
+        if root_reinstall_payload is not None:
+            if profile['edition'] != 'root' or not re.fullmatch('[a-f0-9]{64}', root_reinstall_payload):
+                raise ValueError('Invalid Root reinstall payload')
+            known = directory / 'known_hosts'
+            require_original_ssh_identity(directory)
+            try:
+                if known.is_symlink() or not (pins := known.read_bytes()):
+                    raise ValueError('missing trust')
+            except (OSError, ValueError):
+                raise UserError('The original saved TV connection and host key are required for recovery. Recovery data was kept.',
+                                reason_code='ssh-identity-unverified') from None
+            value['root_reinstall_payload'] = root_reinstall_payload
+            value['root_reinstall_variant'] = profile.get('root_variant')
+            value['root_reinstall_pin'] = hashlib.sha256(pins).hexdigest()
         if previous is None and not (directory/'known_hosts').exists():value['connection_pending']=True
         if previous is not None:
             original = 'removal-original-' + identifier + '.json'
