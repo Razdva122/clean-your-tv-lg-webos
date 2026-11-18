@@ -600,7 +600,8 @@ with os.fdopen(f,'rb') as stream:
                 self.checks.update(name, 'pending', '')
         diagnostics.context.collect_node_version(self.remote, self.tv_info)
         if self.profile['edition'] == 'root':
-            from .python_runtime import SYSTEM_PROBE
+            from .checks import LABELS, PYTHON_REQUIREMENTS
+            from .python_runtime import INSTALL_ERROR, SYSTEM_PROBE
             probes = ('test "$(id -u)" = 0', 'test -x /usr/bin/python3',
                       'test -x /usr/bin/luna-send', 'test -d /media/developer/apps',
                       'test -d /var/luna-service2-dev',
@@ -614,6 +615,7 @@ with os.fdopen(f,'rb') as stream:
                     raise UserError('Root Beta vendor modules could not be loaded. Installation has not started. Save the diagnostic report.', reason_code='root-requirements')
             checks = dict.fromkeys(diagnostics.ROOT_REQUIREMENTS, 'unknown')
             self.tv_info['root_requirements'] = checks
+            self.checks.update('python-runtime', 'running')
             python = self._python()
             def check(name, probe):
                 # Keep independent import diagnostics when an earlier import failed;
@@ -628,13 +630,21 @@ with os.fdopen(f,'rb') as stream:
                     return {'CYTV_ROOT_READY': True, 'CYTV_ROOT_MISSING': False}.get(reply)
                 result = self.checks.probe(name, run)
                 checks[name] = {True: 'pass', False: 'fail'}.get(result, 'unknown')
+            def python_status():
+                statuses = {checks[name] for name in PYTHON_REQUIREMENTS}
+                return 'fail' if 'fail' in statuses else 'unknown' if 'unknown' in statuses else 'pass'
+
             for name, probe in zip(diagnostics.ROOT_REQUIREMENTS, probes):
                 check(name, probe)
-            python_names = {'python3', 'python-json', 'python-fcntl', 'python-version'}
+            python_result = python_status()
+            other_requirements_pass = all(result == 'pass' for name, result in checks.items()
+                                          if name not in PYTHON_REQUIREMENTS)
+            if python_result == 'pass' or not install or not other_requirements_pass:
+                self.checks.update('python-runtime', python_result)
             observe_blocked_home = False
             if home_interfaces:
                 backend = self.manifest.get('root_backends', {}).get('c1-native-gate')
-                if all(checks[name]=='pass' for name in checks if name not in python_names):
+                if other_requirements_pass:
                     if not install and self.native_root_present():
                         device = self.root_action('status').get('result', {})
                         if device.get('backend') != 'c1-native-gate' or not (self.root_active(device) or self.root_setup_inactive(device)):
@@ -652,14 +662,25 @@ with os.fdopen(f,'rb') as stream:
                     checks.update(dict.fromkeys(CALLS, 'unknown'))
                     observe_blocked_home = (diagnose and backend is not None and checks['root-user'] == 'pass'
                                             and checks['luna-send'] == 'pass')
-            if (install and any(checks[name] != 'pass' for name in python_names)
-                    and all(result == 'pass' for name, result in checks.items() if name not in python_names)):
-                self.checks.update('python3', 'running')
-                python = self._selected_python = self._select_python(provision=True)
-                for name, probe in zip(diagnostics.ROOT_REQUIREMENTS, probes):
-                    if name in python_names:
-                        check(name, probe)
-            failed = [name for name, result in checks.items() if result != 'pass']
+            if (install and python_result != 'pass'
+                    and all(result == 'pass' for name, result in checks.items() if name not in PYTHON_REQUIREMENTS)):
+                try:
+                    python = self._select_python(provision=True)
+                    for name, probe in zip(diagnostics.ROOT_REQUIREMENTS, probes):
+                        if name in PYTHON_REQUIREMENTS:
+                            check(name, probe)
+                except UserError:
+                    self.checks.update('python-runtime', 'fail')
+                    raise
+                python_result = python_status()
+                if python_result != 'pass':
+                    self.checks.update('python-runtime', python_result)
+                    raise UserError(INSTALL_ERROR)
+                self._selected_python = python
+            self.checks.update('python-runtime', python_result)
+            failed = [name for name, result in checks.items() if result != 'pass' and name not in PYTHON_REQUIREMENTS]
+            if python_result != 'pass':
+                failed.append(i18n.translate(LABELS['python-runtime']))
             if failed:
                 if observe_blocked_home:
                     try:

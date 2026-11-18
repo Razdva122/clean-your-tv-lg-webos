@@ -79,11 +79,18 @@ class PythonCacheError(UserError):
     """Allowlisted host acquisition failure; never carry remote exception text."""
     DOWNLOAD_ERROR = 'The private Python download could not be verified. Check the connection or prepare the Python cache again.'
     CACHE_ERROR = 'The private Python cache is unsafe or damaged. Remove its pinned archive and prepare the cache again.'
+    CACHE_ACCESS_ERROR = ('The private Python cache could not be read or saved. '
+                          'Check write access to the application data folder and try again.')
 
     def __init__(self, reason='unknown'):
         self.reason = reason if reason in ('network', 'tls', 'http', 'response-policy',
             'size', 'sha256', 'deadline', 'cache-access', 'cache-replace', 'cache-invalid') else 'unknown'
-        super().__init__(self.CACHE_ERROR if self.reason == 'cache-invalid' else self.DOWNLOAD_ERROR)
+        messages = {
+            'cache-invalid': self.CACHE_ERROR,
+            'cache-access': self.CACHE_ACCESS_ERROR,
+            'cache-replace': self.CACHE_ACCESS_ERROR,
+        }
+        super().__init__(messages.get(self.reason, self.DOWNLOAD_ERROR))
 
 
 class PythonPreflightError(UserError):

@@ -326,7 +326,9 @@ def collect_metadata(remote, info):
 
 def checks_summary(value):
     from .checks import LABELS, STATUS
-    return {key: choice(mapping(item).get('status'), STATUS) for key, item in mapping(value).items() if key in LABELS}
+    # Export the individual Python probes. The aggregate is for the installer UI.
+    return {key: choice(mapping(item).get('status'), STATUS) for key, item in mapping(value).items()
+            if key in LABELS and key != 'python-runtime'}
 
 
 def worker_summary(value):

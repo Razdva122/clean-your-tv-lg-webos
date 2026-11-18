@@ -79,14 +79,16 @@ class RootPreflightTests(unittest.TestCase):
         return Remote()
 
     @unittest.skipUnless(os.name == 'posix', 'TV shell probes require POSIX Python with fcntl')
-    def test_each_missing_requirement_is_named_and_all_checks_are_reported(self):
+    def test_missing_requirements_are_explained_and_individual_checks_are_reported(self):
         for failed in REQUIREMENTS:
             with self.subTest(failed=failed), tempfile.TemporaryDirectory() as tmp:
                 info = {}
                 remote = self.remote(Path(tmp), (failed,))
                 installer = Installer(remote, None, {'edition': 'root'}, '.', {}, tv_info=info)
-                with self.assertRaisesRegex(UserError, failed):
+                with self.assertRaises(UserError) as caught:
                     installer.preflight()
+                label = 'TV Python 3.9+' if failed.startswith('python') else failed
+                self.assertIn(label, str(caught.exception))
                 expected = dict.fromkeys(REQUIREMENTS, 'pass')
                 expected[failed] = 'fail'
                 if failed == 'python3':
@@ -118,7 +120,8 @@ class RootPreflightTests(unittest.TestCase):
             checks = json.loads(report.read_text())['tv']['root_requirements']
             self.assertEqual(checks['python-fcntl'], 'fail')
             self.assertEqual(checks['luna-services-directory'], 'fail')
-            self.assertIn('python-fcntl', '\n'.join(output))
+            self.assertIn('TV Python 3.9+', '\n'.join(output))
+            self.assertNotIn('python-fcntl', '\n'.join(output))
             self.assertNotIn('PRIVATE-', report.read_text() + '\n'.join(output))
 
     def test_report_filters_untrusted_requirement_names_and_values(self):
