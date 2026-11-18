@@ -437,6 +437,87 @@ class DesktopRecoveryTests(unittest.TestCase):
         self.assertIn('Connect to check installed versions', w.pending.title)
         w.submit('n')
         self.pump(lambda: not w.running)
+        self.assertEqual(w.title.text(), 'Cancelled')
+        self.assertNotEqual(w.step_rows[-1].property('state'), 'complete')
+        self.assertEqual(self.connections, [self.profile])
+
+    def test_doctor_continues_to_version_review_and_cancel_keeps_tv_unchanged(self):
+        self.store.finish(self.profile)
+        current = [{'id': 'com.gathin.tvhome', 'version': '1.2.2'},
+                   {'id': 'com.local.nativehome', 'version': '0.6.13'}]
+        original = self.remote.run
+
+        def run(command, **kwargs):
+            if self.remote.installed and 'CYTV_HELPER_IDLE' in command:
+                self.remote.calls.append(('run', command))
+                return 'CYTV_HELPER_ACTIVE'
+            return original(command, **kwargs)
+
+        self.remote.run = run
+        for installed, expected in (([], 'Home: Not installed → 1.2.2 (Install)'),
+                                    (current, 'Home: 1.2.2 → 1.2.2 (Reinstall)')):
+            with self.subTest(installed=bool(installed)):
+                self.remote.installed = list(installed)
+                self.remote.calls.clear()
+                self.connections.clear()
+                w = self.window()
+                self.check(w)
+                self.assertEqual(w.title.text(), 'Connected to your TV')
+                self.assertNotIn('packages', w.check_results)
+                self.button(w, 'Continue setup').click()
+                self.pump(lambda: w.pending is not None)
+                self.assertEqual(w.pending.title, 'Connect to check installed versions?')
+                w.submit('y')
+                self.pump(lambda: w.pending is not None or not w.running)
+                self.assertIsNotNone(w.pending, w.content.toPlainText())
+                self.assertEqual(w.pending.title, 'Install these versions?')
+                self.assertIn(expected, w.content.toPlainText())
+                self.button(w, 'No, go back / cancel this operation').click()
+                self.pump(lambda: not w.running)
+                self.assertEqual(w.title.text(), 'Cancelled')
+                self.assertNotEqual(w.step_rows[-1].property('state'), 'complete')
+                self.assertEqual(self.connections, [self.profile, self.profile])
+                self.assertEqual(self.remote.installed, installed)
+                self.assertEqual(self.remote.uploads, {})
+                self.assertFalse(any(c[0] == 'luna' and c[1].endswith(('/install', '/remove', '/launch'))
+                                     for c in self.remote.calls))
+                self.assertIsNone(self.store.pending(self.profile))
+                w.close()
+
+    def test_doctor_continues_to_root_reinstall_review_and_cancel_keeps_root(self):
+        self.store.finish(self.profile)
+        self.profile = state.target('192.0.2.10', 'root', 2222)
+        self.store.save(self.profile)
+        (self.store.device_dir(self.profile) / 'known_hosts').write_bytes(b'original pin')
+        original = self.remote.run
+
+        def run(command, **kwargs):
+            if 'deploy.json' in command:
+                return '{"stage":"installed-recovery-only"}'
+            if 'CYTV_EXISTING_ROOT' in command:
+                return 'CYTV_EXISTING_ROOT'
+            return original(command, **kwargs)
+
+        self.remote.run = run
+        with (patch.object(cli.Installer, 'select_graphics'),
+              patch.object(cli.Installer, 'version_summary', return_value=['Root: 1.2.2 → 1.2.2 (Reinstall)'])):
+            w = self.window()
+            self.check(w)
+            self.assertEqual(w.title.text(), 'Connected to your TV', w.details.toPlainText())
+            self.button(w, 'Continue setup').click()
+            self.pump(lambda: w.pending is not None)
+            self.button(w, 'Continue').click()
+            self.pump(lambda: w.pending is not None or not w.running)
+            self.assertIsNotNone(w.pending, w.content.toPlainText())
+            self.assertEqual(w.pending.title, 'Reinstall Root?')
+            self.button(w, 'No, go back / cancel this operation').click()
+            self.pump(lambda: not w.running)
+        self.assertEqual(w.title.text(), 'Cancelled')
+        self.assertNotEqual(w.step_rows[-1].property('state'), 'complete')
+        self.assertEqual(self.connections, [self.profile, self.profile])
+        self.assertIsNone(self.store.pending(self.profile))
+        self.assertIsNone(self.store.root_reinstall(self.profile))
+        self.assert_no_root_mutation()
 
     @classmethod
     def setUpClass(cls):

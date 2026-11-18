@@ -526,7 +526,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                 write('Start a new audited attempt after the previous deadline')
             if not prompts.confirm(verb + '?', ask, write, default=args.command == 'install'):
                 write('Cancelled. No TV changes were made.')
-                return 0
+                return 130 if desktop_install else 0
         # Canonicalize the selected local build root (macOS /var is an OS
         # alias); authenticated support members still reject indirect children.
         payload, manifest = (Path(payload_root) if payload_root is not None else payload_dir()).resolve(), {}
@@ -849,7 +849,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                     write('Earlier recovery records are kept on this computer. If removal cannot finish, the new installation will not start.')
                     if not prompts.confirm('Reinstall Root?', ask, write):
                         write('Existing Root and recovery data left unchanged.')
-                        return 0
+                        return 130 if desktop_install else 0
                     if reinstall_payload:
                         installer.root_reinstall_payload = reinstall_payload
                         write.root_reinstall()
@@ -860,7 +860,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                         write(row)
                     if not args.yes and not prompts.confirm('Install these versions?', ask, write, default=True):
                         write('Cancelled. No TV changes were made.')
-                        return 0
+                        return 130 if desktop_install else 0
                 if home_conflict is not None or home_pending:
                     from .home_handoff import takeover
                     if not takeover(installer, pending=home_pending):
