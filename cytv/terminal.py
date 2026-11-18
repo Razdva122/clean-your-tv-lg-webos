@@ -1,4 +1,5 @@
 """Small terminal layout with a readable plain-text fallback."""
+import json
 import os
 import shutil
 import sys
@@ -119,8 +120,13 @@ class Console:
         self.error('Could not open the browser. Open the displayed link manually.')
 
     def doctor_result(self, value):
-        import json
         self.raw(json.dumps(value, indent=2))
+
+    def status_result(self, value):
+        self.raw(json.dumps(value, indent=2))
+
+    def command_outcome(self, state, action):
+        pass
 
     def check(self, event):
         from .checks import STATUS
@@ -150,6 +156,42 @@ class Console:
             from .recovery_ui import observed_stock_surface
             if surface := observed_stock_surface(value.get('removal_evidence')):
                 self(surface)
+
+
+class ResultConsole(Console):
+    """Return one machine-readable result without terminal progress text."""
+
+    def __init__(self, write):
+        super().__init__(lambda _: None, interactive=False)
+        self.output = write.raw if isinstance(write, Console) else write
+        self.result = {}
+        self.outcome = None
+        self.report_path = None
+
+    def status_result(self, value):
+        self.result = value
+
+    doctor_result = status_result
+
+    def report(self, path):
+        self.report_path = str(path.resolve())
+
+    def command_outcome(self, state, action):
+        self.outcome = {'state': state, 'action': action}
+
+    def recovery_plan(self, value):
+        from .recovery_ui import command_outcome
+        if outcome := command_outcome(value):
+            self.command_outcome(*outcome)
+
+    def finish(self, exit_code):
+        fallback = {0: 'checked', 130: 'cancelled'}.get(exit_code, 'failed')
+        value = dict(self.result, exit_code=exit_code,
+                     outcome=self.outcome or {'state': fallback, 'action': 'none'})
+        if self.report_path is not None:
+            value['report_path'] = self.report_path
+        self.output(json.dumps(value))
+        return exit_code
 
 
 def console(write):

@@ -767,6 +767,25 @@ Android export the same bounded standard report. Diagnostics remain advisory;
 existing storage, lifecycle and recovery proofs still authorize every effect.
 
 
+## Noninteractive console results
+
+Add `--result-json` to read one JSON object on stdout. This also enables
+`--non-interactive`. The process exit code retains its existing meaning and
+also appears as `exit_code`. Existing status fields remain at the top level.
+An exported report's location appears as `report_path` when available.
+
+Use `outcome.state` and `outcome.action` when deciding what the caller can do
+next. `retryable-check` offers a read-only check. `waiting-for-evidence` keeps an
+unresolved operation attached to its original request. `verified-completion`
+requires current proof for the operation. `owner-input-required` identifies
+actions such as restoring the trusted connection, supplying confirmation or
+restarting the TV. A successful read with no verified operation can return
+`checked`. A noninteractive `status` uses read-only observations and keeps the
+saved receipt. Some Root recovery proofs require an interactive review with
+verified support code. Installation results report the physical Home-button
+check separately under `setup_outcome`.
+
+
 ## Stock-compositor cleanup probe failure (source preparation)
 
 The isolated Python stock-compositor observation previously retained only its

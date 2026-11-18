@@ -6,7 +6,7 @@ from unittest.mock import Mock, patch
 
 from paramiko import AuthenticationException
 from cytv import cli, diagnostics, state
-from cytv.errors import TVCommandError
+from cytv.errors import TVCommandError, UserError
 from cytv.terminal import Console
 
 
@@ -123,3 +123,93 @@ class CleanupConnectionWire(unittest.TestCase):
                 self.assertEqual(write.plans[-1]['removal_action']['action'], 'check')
                 self.assertNotEqual(store.pending(profile)['removal_reason'], 'connection-interrupted')
                 self.assertEqual(store.pending(profile)['stage'], 'restart-required')
+
+    def test_result_json_reports_storage_preflight_retry_without_resubmission(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            remote = Mock()
+            lines = []
+            (Path(tmp) / 'fallback.png').write_bytes(b'fixture')
+            manifest = {'files': {}, 'home_version': '1.0.0', 'helper_version': '1.0.0'}
+            with patch('cytv.cli.package.verify_payload', return_value=manifest), \
+                 patch('cytv.tv.SSAP') as ssap, \
+                 patch.object(cli.Installer, 'preflight'), \
+                 patch.object(cli.Installer, 'select_graphics'), \
+                 patch.object(cli.Installer, 'installed_apps', return_value=[]), \
+                 patch.object(cli.Installer, 'install', side_effect=UserError(
+                     'Storage check failed', reason_code='storage-preflight-failed')):
+                ssap.return_value.__enter__.return_value.inventory.return_value = {'apps': []}
+                code = cli.main(['install', '--host', '192.0.2.50', '--edition', 'no-root',
+                                 '--connection', 'root-ssh', '--data-dir', tmp, '--yes', '--result-json'],
+                                connect=lambda *args: remote, write=lines.append, payload_root=tmp)
+            self.assertEqual(code, 2)
+            value, = map(json.loads, lines)
+            self.assertEqual(value['outcome'], {'state': 'retryable-check', 'action': 'check-storage'})
+            self.assertIsNone(state.Store(tmp).pending(state.target('192.0.2.50', 'no-root', connection='root-ssh')))
+
+    def test_status_reports_pending_no_root_removal_without_writes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            store = state.Store(tmp)
+            profile = state.target('192.0.2.50', 'no-root')
+            directory = store.device_dir(profile)
+            store.save(profile)
+            (directory / 'known_hosts').write_bytes(b'original pin')
+            store.request_clean_removal(profile)
+            before = {path.relative_to(tmp): path.read_bytes()
+                      for path in Path(tmp).rglob('*') if path.is_file()}
+            lines = []
+            remote = Mock()
+            with patch('cytv.no_root_cleanup.inspect_binding', return_value={'reservation': 'matched'}), \
+                 patch('cytv.no_root_cleanup.inspect_package_removal', return_value='busy'):
+                code = cli.main(['status', '--data-dir', tmp, '--language', 'en', '--result-json'],
+                                connect=lambda *args, persist: remote, write=lines.append)
+            self.assertEqual(code, 0)
+            value, = map(json.loads, lines)
+            self.assertEqual(value['outcome'], {'state': 'waiting-for-evidence', 'action': 'check'})
+            self.assertEqual(value['assessment']['state'], 'waiting')
+            self.assertEqual(value['package_removal_monitor'], 'busy')
+            self.assertEqual(value['pending'], store.pending(profile))
+            self.assertEqual({path.relative_to(tmp): path.read_bytes()
+                              for path in Path(tmp).rglob('*') if path.is_file()}, before)
+
+    def test_status_reads_pending_root_product_without_staging_support(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            store = state.Store(tmp)
+            profile = state.target('192.0.2.50', 'root')
+            store.save(profile)
+            (store.device_dir(profile) / 'known_hosts').write_bytes(b'original pin')
+            store.begin(profile, 'install', stage='verify', product_operation='a' * 32)
+            original = store.pending(profile)
+            remote = Mock()
+            remote.run.side_effect = ['CYTV_NODE_VERSION v8.12.0', '{"schema":1,"status":"missing"}']
+            lines = []
+            code = cli.main(['status', '--result-json', '--data-dir', tmp],
+                            connect=lambda *args: remote, write=lines.append)
+            self.assertEqual(code, 0)
+            value, = map(json.loads, lines)
+            self.assertEqual(value['outcome'], {'state': 'waiting-for-evidence', 'action': 'check'})
+            self.assertEqual(value['device']['product']['passive']['status'], 'missing')
+            self.assertEqual(store.pending(profile), original)
+            self.assertEqual(remote.run.call_args.args[0], 'env -u NODE_OPTIONS -u NODE_PATH /usr/bin/node')
+            remote.upload.assert_not_called()
+
+    def test_removal_result_distinguishes_restart_from_verified_completion(self):
+        for restart, expected in ((True, {'state': 'owner-input-required', 'action': 'restart-tv'}),
+                                  (False, {'state': 'verified-completion', 'action': 'none'})):
+            with self.subTest(restart=restart), tempfile.TemporaryDirectory() as tmp:
+                store = state.Store(tmp)
+                profile = state.target('192.0.2.50', 'root')
+                store.save(profile)
+                (store.device_dir(profile) / 'known_hosts').write_bytes(b'original pin')
+                store.request_clean_removal(profile)
+                if restart:
+                    store.checkpoint(profile, stage='restart-required', removal_reason='restart-required')
+                proof = {'removed': not restart, 'verified_clean': not restart, 'restart_required': restart}
+                lines = []
+                with patch('cytv.cli.package.verify_payload', return_value={'files': {}}), \
+                     patch.object(cli.Installer, 'uninstall', return_value=proof):
+                    code = cli.main(['uninstall', '--data-dir', tmp, '--yes', '--result-json'],
+                                    connect=lambda *args: Mock(), write=lines.append, payload_root=tmp)
+                self.assertEqual(code, 0)
+                value, = map(json.loads, lines)
+                self.assertEqual(value['outcome'], expected)
+                self.assertEqual({key: value[key] for key in proof}, proof)

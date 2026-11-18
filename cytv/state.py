@@ -267,9 +267,9 @@ class Store:
         path.unlink()
         sync_directory(path.parent)
 
-    def connection_profile(self, selected, *, expected_pin=None):
+    def connection_profile(self, selected, *, expected_pin=None, create=True):
         """Resolve pending work to its original saved identity, before connecting."""
-        directory = self.device_dir(selected)
+        directory = self.device_dir(selected) if create else self.device_path(selected)
         require_original_ssh_identity(directory)
         _, pending = self._read_operation(directory / 'operation.json', require_access=True)
         if pending is None and expected_pin is None:

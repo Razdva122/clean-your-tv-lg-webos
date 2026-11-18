@@ -536,7 +536,7 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
             # This observation is optional and does not reopen the completed install.
             pass
 
-    def root_action(self, action, bundle=None, migrate=False, experimental=False, *, timeout=None):
+    def root_action(self, action, bundle=None, migrate=False, experimental=False, *, timeout=None, read_only=False):
         driver = (bundle or ROOT_STATE) + '/deploy.py'
         args = [self._python(ROOT_STATE), driver, action]
         if bundle:
@@ -548,6 +548,8 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
             args.append('--experimental-c1-gate')
         attempt = uuid.uuid4().hex if action == 'install' else None
         command = self._python_command(args)
+        if read_only:
+            command = 'PYTHONDONTWRITEBYTECODE=1 ' + command
         if attempt: command = 'env CYTV_ROOT_INSTALL_ATTEMPT='+attempt+' '+command
         if action == 'enable' and isinstance(self.tv_info.get('status'), dict):
             self.tv_info['status']['observation_phase']='before-enable'
@@ -1433,7 +1435,7 @@ else:
                 time.sleep(min(1, remaining))
         raise UserError('Installed version did not match the package. Run cytv status; do not retry blindly.', reason_code='version-mismatch')
 
-    def status(self):
+    def status(self, *, read_only=False):
         diagnostics.context.collect_node_version(self.remote, self.tv_info)
         pending=self.store.pending(self.profile)
         if self.profile.get('root_variant') == 'node012-beta':
@@ -1449,7 +1451,7 @@ else:
         if pending and pending.get('recovery_protocol')=='clean-removal-v1':
             return self.observe_recovery()
         try:
-            result=self._status()
+            result=self._status(reconcile=False, passive=True) if read_only else self._status()
         except Exception:
             if self.profile['edition']=='root':
                 self.collect_root_diagnostics()
@@ -1606,14 +1608,14 @@ else:
         self.store.finish(self.profile)
         return {'reconciled': reason}
 
-    def _status(self, reconcile=True, trusted_recovery=False):
+    def _status(self, reconcile=True, trusted_recovery=False, *, passive=False):
         self.tv_info.pop('root_setup_recovery', None)
         pending = self.store.pending(self.profile)
         restoring = bool(pending and pending.get('activation_restore_pending') is True)
         reconcile = reconcile and not restoring
         if pending and pending.get('recovery_protocol') == 'no-root-original-stream-v1':
             from .no_root_observer import observe
-            result = observe(self, pending)
+            result = observe(self, pending, read_only=True) if passive else observe(self, pending)
             if self.profile['edition'] == 'no-root':
                 diagnostics.context.collect_contract_events(self.remote, self.tv_info)
             return result
@@ -1625,18 +1627,19 @@ else:
         from .root_passive import collect, is_native_pending
         native_pending = self.profile['edition']=='root' and is_native_pending(pending)
         if native_pending or (self.profile['edition']=='root' and pending and pending.get('action')=='install'
-                and pending.get('stage')=='coordinator-submitted' and not trusted_recovery):
+                and pending.get('stage')=='coordinator-submitted' and not trusted_recovery) or (
+                passive and self.profile['edition'] == 'root' and pending and pending.get('product_operation')):
             # A failed submission/status (including SSH 127) does not authorize
             # staging a replacement driver or executing retained binding code.
-            passive=collect(self.remote,pending.get('product_operation'),pending)
+            observed=collect(self.remote,pending.get('product_operation'),pending)
             event=dict(operation=pending['product_operation'],action='install',state='recovery_required',
                        stage='blocked',code='operation_requires_recovery',can_resume=False,
-                       resume_reason='recovery_evidence_required',passive=passive)
-            if native_pending and passive.get('status')=='read':
-                event.update(stage=passive['stage'],code='installation_requires_recovery',home_changed=False)
-                if 'failure' in passive:event['failure']=passive['failure']
+                       resume_reason='recovery_evidence_required',passive=observed)
+            if native_pending and observed.get('status')=='read':
+                event.update(stage=observed['stage'],code='installation_requires_recovery',home_changed=False)
+                if 'failure' in observed:event['failure']=observed['failure']
             return dict(device={'product':event},pending=pending,reconciled=None,can_resume_root_setup=False)
-        if not pending and self.profile['edition']=='root' and not self.native_root_present():
+        if not passive and not pending and self.profile['edition']=='root' and not self.native_root_present():
             try:
                 inspected=self.product_action('inspect')
                 active=inspected.get('active_operation')
@@ -1692,7 +1695,7 @@ else:
                                   'else printf \'{"stage":"absent"}\'; fi')
             journal = json.loads(raw)
             stage = journal.get('stage')
-            if stage=='cancellation-admitted':
+            if stage=='cancellation-admitted' and not passive:
                 installation=self.root_installation()
                 if installation.get('clean_removal_verified') is True and installation.get('can_install') is True:
                     return {'device':{'installation':installation},'deployment_stage':'verified-clean',
@@ -1706,7 +1709,7 @@ else:
                     pending = None
                     reconciled = 'root-archive-' + readback['state']
             if stage == 'installed-recovery-only':
-                result = self.root_action('status')
+                result = self.root_action('status', **({'read_only': True} if passive else {}))
                 if (pending and not restoring and pending['action'] == 'activate-root'
                         and self.root_active(result.get('result', {}))
                         and (reconcile or self.root_files_match(pending))

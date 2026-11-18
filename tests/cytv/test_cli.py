@@ -1362,6 +1362,9 @@ class CLITests(unittest.TestCase):
                  patch.object(Installer, 'install', return_value={}) as install, \
                  patch('websockets.sync.client.connect') as connect:
                 (Path(tmp) / 'fallback.png').write_bytes(b'test-fallback')
+                profile = state.target('192.0.2.10', 'no-root')
+                keyfile = state.Store(tmp).device_dir(profile) / 'ssap.json'
+                keyfile.write_text(json.dumps({'key': 'test-key'}))
                 socket = connect.return_value
                 socket.recv.side_effect = list(map(json.dumps, [
                     {'id': 'register_0', 'type': 'registered', 'payload': {'client-key': 'test-key'}},

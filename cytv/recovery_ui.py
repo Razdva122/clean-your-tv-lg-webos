@@ -150,6 +150,33 @@ def projected_removal_action(plan):
     return removal_action(plan)
 
 
+def command_outcome(plan):
+    """Project machine advice from the same evidence as the recovery actions."""
+    state = plan.get('state')
+    reason = plan.get('reason')
+    if plan.get('disposition') == 'clean-removal':
+        condition = projected_removal_action(plan)['condition']
+        if condition == 'complete':
+            return 'verified-completion', 'none'
+        if condition == 'restart':
+            return 'owner-input-required', 'restart-tv'
+        if condition == 'access':
+            return 'owner-input-required', 'connect-root'
+        if condition == 'transient' and reason != 'removal-requested':
+            return 'retryable-check', 'check'
+    if reason in ('removal-failed', 'original-vendor-failure'):
+        return 'failed', 'check'
+    if state == 'terminal-verified':
+        return 'verified-completion', 'none'
+    if state in ('ready', 'setup-ready', 'product-ready', 'cancellation-ready'):
+        return 'owner-input-required', 'review-recovery'
+    if state == 'pre-submission':
+        return 'retryable-check', 'check'
+    if state in ('waiting', 'blocked', 'cleanup-in-progress', 'review'):
+        return 'waiting-for-evidence', 'check'
+    return None
+
+
 def _presentation_condition(plan, failure):
     if failure is None:
         return projected_removal_action(plan)['condition']

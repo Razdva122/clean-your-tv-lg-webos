@@ -1114,9 +1114,13 @@ def _install_packages_complete(plan, result):
             and all(slot['terminal'] == 'success' and not slot.get('reason') for slot in result['slots']))
 
 
-def observe(installer, pending):
+def observe(installer, pending, *, read_only=False):
     value=capsule(installer,pending)
     if 'root_handoff' in value['plan']:
+        if read_only:
+            # Handoff observation would stage a temporary gate on the TV.
+            return dict(device={}, pending=pending, reconciled=None, can_resume_root_setup=False,
+                        no_root_ready=False, no_root_reason='observation-unverified')
         from .root_no_root_handoff import continuation
         if continuation(installer,value['plan']) in ('unclaimed','unprepared'):
             return dict(device={'observer':{'operation':value['plan']['operation']}},pending=pending,

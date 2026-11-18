@@ -275,7 +275,7 @@ class SSAP:
         saved = json.loads(keyfile.read_text()) if keyfile.exists() else {}
         key = saved.get('key') if isinstance(saved, dict) else None
         if self.reuse_only and not (isinstance(key, str) and 0 < len(key) <= 1024):
-            raise UserError('No saved TV remote-control pairing is available.')
+            raise UserError('No saved TV remote-control pairing is available.', reason_code='pairing-required')
         payload = {'forcePairing': False,
                    'manifest': {'manifestVersion': 1, 'appVersion': '1.1', 'permissions': permissions}}
         if not self.reuse_only:
@@ -304,14 +304,14 @@ class SSAP:
                     raise TVConnectionError('TV pairing was rejected. Check the on-screen request and local network access.',
                                             reason_code='pairing-rejected')
                 if self.reuse_only and response.get('pairingType'):
-                    raise UserError('The TV did not accept the saved remote-control pairing.')
+                    raise UserError('The TV did not accept the saved remote-control pairing.', reason_code='pairing-required')
                 if reply.get('type') == 'registered':
                     registered = response.get('client-key')
                     if not isinstance(registered, str) or not 0 < len(registered) <= 1024:
                         raise ValueError('Invalid TV pairing response')
                     if self.reuse_only:
                         if reply.get('id') != 'register_0' or registered != key:
-                            raise UserError('The TV did not accept the saved remote-control pairing.')
+                            raise UserError('The TV did not accept the saved remote-control pairing.', reason_code='pairing-required')
                     else:
                         private_write(keyfile, json.dumps({'key': registered}).encode())
                     self.key = registered

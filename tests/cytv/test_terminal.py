@@ -56,6 +56,24 @@ class TerminalTests(unittest.TestCase):
         ask.assert_not_called()
         browser.assert_not_called()
 
+    def test_json_result_requires_no_input_and_retains_the_exit_code(self):
+        import json
+        from tempfile import TemporaryDirectory
+        from unittest.mock import Mock
+        from cytv import cli, i18n
+
+        self.addCleanup(i18n.set_language, i18n.language_choice())
+        ask = Mock(side_effect=AssertionError('Unexpected prompt'))
+        lines = []
+        with TemporaryDirectory() as directory:
+            code = cli.main(['status', '--result-json', '--language', 'en', '--data-dir', directory],
+                            ask=ask, secret=ask, write=lines.append)
+        self.assertEqual(code, 2)
+        self.assertEqual(len(lines), 1)
+        self.assertEqual(json.loads(lines[0])['outcome']['state'], 'owner-input-required')
+        self.assertEqual(json.loads(lines[0])['exit_code'], code)
+        ask.assert_not_called()
+
     def test_argument_errors_use_red_stderr(self):
         from cytv.cli import LanguageParser
         output = io.StringIO()

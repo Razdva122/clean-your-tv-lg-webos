@@ -1,6 +1,5 @@
 """An explicit recovery journey; backend receipts remain the only authority."""
 import hashlib
-import json
 import re
 from time import monotonic
 
@@ -101,7 +100,7 @@ def refresh_active_no_root(store, profile, payload, write, connect):
     summary.pop('assessment', None)
     if result.get('package_removal_monitor') in ('busy', 'idle', 'unverified'):
         summary['package_removal_monitor'] = result['package_removal_monitor']
-    write.raw(json.dumps(summary, indent=2))
+    write.status_result(summary)
     active_operation_plan(write, saved)
 
 
@@ -269,7 +268,7 @@ def offer_install_recovery(write, store, profile):
     return True
 
 
-def cancelled(write, store, profile, action, phase, tv_info=None, checks=None):
+def cancelled(write, store, profile, action, phase, tv_info=None, checks=None, *, save_report=True):
     """Stopping host interaction does not cancel an accepted TV request."""
     pending = store.pending(profile) if profile else None
     if not pending:
@@ -279,8 +278,9 @@ def cancelled(write, store, profile, action, phase, tv_info=None, checks=None):
     write('Cancelled. If an installation was submitted, run cytv status before retrying.')
     if not removal_plan(write, store, profile, state='waiting', evidence=tv_info.get('removal_evidence') if tv_info else None):
         offer_install_recovery(write, store, profile)
-    from . import diagnostics
-    diagnostics.save_result(write, store, action, profile, phase, tv_info, checks=checks)
+    if save_report:
+        from . import diagnostics
+        diagnostics.save_result(write, store, action, profile, phase, tv_info, checks=checks)
 
 
 def remove_before_reinstall(installer, ask, write, *, load_payload=False, next_step=KEPT):
