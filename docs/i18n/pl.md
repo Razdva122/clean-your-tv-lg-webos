@@ -62,6 +62,8 @@ Kreator początkowo używa języka systemu i zapamiętuje wybrany język. Na tel
 3. No-root: wpisz kod z Developer Mode i zaakceptuj prośbę na TV. Root: użyj swoich danych SSH. Akceptuj nową tożsamość SSH tylko dla własnego TV w zaufanej sieci. Jeśli zapisany klucz się zmienił, zatrzymaj się i ustal przyczynę.
 4. Postępuj według kreatora. Zostaw TV włączony, nie zmieniaj sieci i nie zamykaj CYTV do końca. Nie wymuszaj zatrzymania aplikacji Android.
 
+W instalatorze na komputer po udanym sprawdzeniu połączenia wybierz **Kontynuuj konfigurację**, aby zachować to samo połączenie i edycję. Kreator wyjaśnia stan wcześniejszej instalacji; wyniki techniczne są w szczegółach. Jeśli poprzednia operacja wymaga odzyskiwania, najpierw użyj proponowanego działania odzyskiwania. Konfigurator sprawdzi zainstalowane wersje i poprosi o potwierdzenie przed zmianami.
+
 ## 5. Sprawdź pilota
 
 1. Otwórz inną aplikację na TV i krótko naciśnij **Home**. Powinien otworzyć się Clean Your TV. W kreatorze zaznacz, co zobaczyłeś; pomiń test, jeśli go nie wykonałeś.

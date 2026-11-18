@@ -872,7 +872,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                     installer.preflight()
                 write('Connection and basic requirements passed. This does not certify hardware compatibility.')
                 result = installer.status()
-                write.raw(json.dumps(result, indent=2))
+                write.doctor_result(result)
                 if args.report:
                     diagnostics.save_result(write, store, args.command, profile, 'doctor-complete', tv_info, checks=checks.results, status=result)
             else:

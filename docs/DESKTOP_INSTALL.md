@@ -155,6 +155,14 @@ See the [localized installation, use and recovery guides](LANGUAGES.md).
   control and opens Clean Your TV Home immediately. There is
   no trial countdown or Keep confirmation.
 
+After **Check connection and create a diagnostic report** succeeds, the main
+action is **Continue setup**. It reuses the checked TV, edition and SSH connection;
+it does not repeat discovery or start installation automatically. The result
+explains any previous installation, including disabled Home control. Technical
+JSON remains collapsed under **Details**, and saving a report is optional. Setup
+checks installed versions and retains its normal confirmations and recovery
+gates. An unfinished operation offers **Review recovery options** first.
+
 Passwords are masked. SSH identity changes still block the connection. While TV
 changes are in progress, the window waits for the step to finish instead of
 terminating the installer halfway through an operation.

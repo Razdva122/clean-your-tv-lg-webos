@@ -62,6 +62,8 @@ O assistente usa inicialmente o idioma do sistema e salva sua escolha explícita
 3. No-root: digite o código do Developer Mode e aceite a solicitação na TV. Root: use suas credenciais SSH. Aceite uma nova identidade SSH apenas para sua própria TV em uma rede confiável. Se uma chave salva mudou, pare e investigue.
 4. Siga o assistente. Mantenha a TV ligada, a mesma rede e o CYTV aberto até terminar. Não force a parada do app Android.
 
+No instalador para computador, após verificar a conexão, escolha **Continuar configuração** para manter a mesma conexão e edição. O assistente explica o estado de uma instalação anterior; os resultados técnicos ficam em **Detalhes**. Se uma operação anterior precisar de recuperação, use primeiro a ação de recuperação oferecida. A configuração verifica as versões instaladas e pede confirmação antes de alterações.
+
 ## 5. Confira o controle remoto
 
 1. Abra outro app na TV e pressione **Home** brevemente. Clean Your TV deve abrir. Informe ao assistente o que você viu; pule a verificação se não a realizou.

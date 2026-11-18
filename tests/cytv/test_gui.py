@@ -18,6 +18,111 @@ except ImportError:
 
 @unittest.skipUnless(HAS_QT, 'Desktop build dependencies are optional for CLI tests')
 class GuiTests(unittest.TestCase):
+    def test_successful_doctor_continues_setup_with_the_checked_connection(self):
+        for profile in (
+                {'host':'192.0.2.10','port':2222,'edition':'root','root_variant':'node012-beta'},
+                {'host':'192.0.2.20','port':22,'edition':'no-root','connection':'root-ssh'}):
+            with self.subTest(profile=profile):
+                calls = []
+                w = Wizard(run=lambda args, **kw: calls.append(args) or 0)
+                self.addCleanup(w.close)
+                w.command = 'doctor'
+                w.receive('selected-profile', profile)
+                w.receive('text', 'Connecting to the TV…')
+                w.receive('doctor-result', {'device':{}, 'deployment_stage':'absent', 'pending':None})
+                w.receive('done', 0)
+                self.assertEqual(calls, [], 'A check must not start setup automatically')
+                self.assertEqual(w.title.text(), 'Connected to your TV')
+                self.assertNotIn('deployment_stage', w.content.toPlainText())
+                self.assertIn('deployment_stage', w.details.toPlainText())
+                self.assertTrue(w.details.isHidden())
+                buttons = {b.text():b for b in w.form.findChildren(QPushButton)}
+                self.assertTrue(buttons['Continue setup'].isDefault())
+                self.assertFalse(buttons['Back to start'].isDefault())
+                buttons['Continue setup'].click()
+                self.pump(lambda: not w.running)
+                args = calls[0]
+                self.assertEqual(args[0], 'install')
+                for field, value in profile.items():
+                    self.assertEqual(args[args.index('--'+field.replace('_','-'))+1], str(value))
+                self.assertNotIn('--yes', args)
+                self.assertNotIn('--report', args)
+                self.assertIsNone(w.doctor_result)
+
+    def test_doctor_explains_previous_root_installation_without_claiming_acceptance(self):
+        w = Wizard(); self.addCleanup(w.close)
+        w.command = 'doctor'
+        w.receive('selected-profile', {'host':'192.0.2.10','port':22,'edition':'root'})
+        w.receive('doctor-result', {'deployment_stage':'installed-recovery-only',
+            'device':{'result':{'intent':{'enabled':False},'recovery':{'integrity_verified':True}}},
+            'pending':None,'can_resume_root_setup':False})
+        w.receive('done', 0)
+        self.assertIn('previous Clean Your TV installation', w.content.toPlainText())
+        self.assertIn('Home control is off', w.content.toPlainText())
+        self.assertIn('ask before making changes', w.content.toPlainText())
+        self.assertNotIn('integrity_verified', w.content.toPlainText())
+        w.details_toggle.click()
+        self.assertFalse(w.details.isHidden())
+        self.assertIn('integrity_verified', w.details.toPlainText())
+        w.home()
+        self.assertIsNone(w.doctor_result)
+
+    def test_doctor_keeps_recovery_ahead_of_setup_and_never_offers_setup_on_failure(self):
+        for result, code in (({'pending':{'action':'install'}}, 0),
+                             ({'active_operation':'a'*32}, 0), ({}, 1), ({}, 130)):
+            with self.subTest(result=result, code=code):
+                w = Wizard(); self.addCleanup(w.close)
+                w.command = 'doctor'
+                w.receive('selected-profile', {'host':'192.0.2.10','port':22,'edition':'root'})
+                w.receive('doctor-result', result)
+                w.receive('done', code)
+                buttons = {b.text():b for b in w.form.findChildren(QPushButton)}
+                self.assertNotIn('Continue setup', buttons)
+                if code == 0:
+                    self.assertIn('Review recovery options', buttons)
+                    self.assertTrue(buttons['Review recovery options'].isDefault())
+
+    def test_recovery_review_replaces_the_previous_restart_banner(self):
+        from cytv.recovery import REVIEW, KEPT
+        from cytv.desktop import Channel
+        w = Wizard(); self.addCleanup(w.close)
+        w.command = 'recover'
+        w.running = True
+        w.channel = Channel(lambda *_: None)
+        w.receive('recovery-plan', {'state':'waiting', 'disposition':'clean-removal',
+            'summary':'Restart the TV to finish removal', 'reason':'restart-required',
+            'removal':{'stage':'restart-required'}, 'actions':['continue-removal']})
+        w.receive('text', 'Restart the TV completely, then choose Try again to finish removal.')
+        w.receive('recovery-plan', {'state':'review','summary':REVIEW,'next_step':KEPT})
+        w.receive('text', KEPT)
+        w.show_prompt(Prompt('Check recovery options? [y/N]: '))
+        self.assertNotIn('Restart the TV', w.subtitle.text())
+        self.assertNotIn('Restart the TV', w.content.toPlainText())
+        self.assertIn('Restart the TV', w.details.toPlainText())
+        self.assertEqual(w.subtitle.text(), KEPT)
+        w.running = False
+
+    def test_successful_doctor_russian_actions_fit_minimum_window(self):
+        from cytv import i18n
+        w = Wizard(); self.addCleanup(w.close)
+        i18n.set_language('ru'); self.addCleanup(i18n.set_language, 'en')
+        w.home(); w.resize(900, 680); w.show(); w.preview.hide()
+        w.command = 'doctor'
+        w.receive('selected-profile', {'host':'192.0.2.10','port':22,'edition':'root'})
+        w.receive('doctor-result', {'deployment_stage':'installed-recovery-only',
+            'device':{'result':{'intent':{'enabled':False}}}, 'pending':None})
+        report = Path(self.directory.name) / 'doctor.json'; report.write_text('{}')
+        w.receive('report', report)
+        w.receive('done', 0)
+        self.app.processEvents()
+        self.assertIn('управление Home выключено', w.content.toPlainText())
+        self.assertNotIn('home_enabled', w.content.toPlainText())
+        for button in (w.details_toggle, w.cancel, *w.form.findChildren(QPushButton)):
+            self.assertTrue(w.rect().contains(button.mapTo(w, button.rect().bottomRight())), button.text())
+            self.assertGreaterEqual(button.width(), button.minimumSizeHint().width(), button.text())
+        self.assertTrue(next(b for b in w.form.findChildren(QPushButton)
+                             if b.text() == 'Продолжить настройку').isDefault())
+
     def test_debloat_restoration_defaults_to_skip_without_cancelling_removal(self):
         from cytv import debloat, i18n
         from cytv.desktop import Channel

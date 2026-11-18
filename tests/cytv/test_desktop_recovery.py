@@ -23,6 +23,21 @@ except ImportError:
 
 @unittest.skipUnless(HAS_QT, 'Desktop build dependencies are optional for CLI tests')
 class DesktopRecoveryTests(unittest.TestCase):
+    def test_doctor_success_routes_real_cli_result_to_details_and_preserves_selected_tv(self):
+        self.store.finish(self.profile)
+        w = self.window()
+        self.check(w)
+        self.assertEqual(w.title.text(), 'Connected to your TV')
+        self.assertNotIn('helper_state', w.content.toPlainText())
+        self.assertIn('helper_state', w.details.toPlainText())
+        self.assertTrue(w.details.isHidden())
+        self.button(w, 'Continue setup').click()
+        self.pump(lambda: w.pending is not None)
+        self.assertEqual(w.selected_profile, self.profile)
+        self.assertIn('Connect to check installed versions', w.pending.title)
+        w.submit('n')
+        self.pump(lambda: not w.running)
+
     @classmethod
     def setUpClass(cls):
         cls.app = QApplication.instance() or QApplication([])

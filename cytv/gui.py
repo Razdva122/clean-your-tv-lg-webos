@@ -56,6 +56,7 @@ class Wizard(QMainWindow):
         self.report = None
         self.recovery_profile = None
         self.selected_profile = None
+        self.doctor_result = None
         self.install_settings_current = {}
         self.debloat_results = {}
         self.recovery_plan = None
@@ -334,6 +335,7 @@ class Wizard(QMainWindow):
         self.reset_checks()
         self.recovery_profile = None
         self.selected_profile = None
+        self.doctor_result = None
         self.install_settings_current = {}
         self.debloat_results = {}
         self.recovery_plan = None
@@ -561,6 +563,7 @@ class Wizard(QMainWindow):
         self.ssh_command_result = None
         self.recovery_profile = None
         self.selected_profile = None
+        self.doctor_result = None
         self.install_settings_current = {}
         self.debloat_results = {}
         self.recovery_plan = None
@@ -672,6 +675,12 @@ class Wizard(QMainWindow):
             path = Path(value)
             if path.is_file():
                 self.report = path
+        elif kind == 'doctor-result':
+            self.doctor_result = dict(value)
+            self.details.append('<pre>' + html.escape(json.dumps(value, indent=2)) + '</pre>')
+            self.details_toggle.show()
+            if (value.get('pending') or value.get('active_operation')) and self.selected_profile:
+                self.recovery_profile = dict(self.selected_profile)
         elif kind == 'failure-help':
             self.failure_help = dict(value)
         elif kind == 'recovery-plan':
@@ -683,6 +692,12 @@ class Wizard(QMainWindow):
             if detail:
                 self.subtitle.setText('\n'.join(tr(text) for text in detail.values() if text))
                 self.subtitle.show()
+            else:
+                self.subtitle.setText(tr(self.recovery_plan.get('next_step', self.recovery_plan['summary'])))
+                self.subtitle.show()
+                if self.running and self.command == 'recover' and self.recovery_plan['state'] == 'review':
+                    # The saved cleanup stage is history until this review reads the TV.
+                    self.content.clear()
         elif kind == 'recovery':
             self.recovery_profile = dict(value)
         elif kind == 'selected-profile':
@@ -748,6 +763,8 @@ class Wizard(QMainWindow):
                 self.subtitle.setText(tr(self.recovery_plan.get('next_step', '') if completed else self.recovery_plan['summary']))
                 self.badge.setText(self.title.text())
             retry_removal = cleanup and not completed and self.recovery_profile is not None
+            doctor_ready = (value == 0 and self.command == 'doctor' and self.doctor_result is not None
+                            and self.selected_profile is not None and not self.recovery_plan and not recover)
             setup_review = False
             if value == 0 and not self.recovery_plan and 'packages' in self.check_results:
                 confirmed = all(self.check_results.get(key, {}).get('status') == 'pass'
@@ -762,6 +779,8 @@ class Wizard(QMainWindow):
                 self.badge.setText(self.title.text())
                 self.subtitle.setText(tr('Checking recovery does not reinstall or remove packages. Root checks may run verified support code.'))
                 self.button('Review recovery options', lambda: self.start('recover', profile), not failed)
+            elif doctor_ready:
+                self.show_doctor_success()
             elif retry_removal:
                 profile = dict(self.recovery_profile)
                 from .recovery_ui import removal_action, projected_removal_action
@@ -797,7 +816,7 @@ class Wizard(QMainWindow):
                 self.button('Reconnect after factory reset',
                             lambda: self.start('install', reset_profile, reconnect_after_reset=True))
             report_actions = None
-            if connection_help or (retry_removal and self.report):
+            if doctor_ready or connection_help or (retry_removal and self.report):
                 report_actions = QHBoxLayout()
                 self.form_layout.addLayout(report_actions)
             if self.report:
@@ -810,8 +829,8 @@ class Wizard(QMainWindow):
                 self.button('Open an issue', lambda: QDesktopServices.openUrl(QUrl(diagnostics.ISSUE_URL)),
                             layout=report_actions if connection_help else None)
             self.button('Back to start', self.home,
-                        not connection_help and not retry_removal and not recover and not ((failed or setup_review) and self.report),
-                        layout=report_actions if retry_removal else None)
+                        not doctor_ready and not connection_help and not retry_removal and not recover and not ((failed or setup_review) and self.report),
+                        layout=report_actions if retry_removal or doctor_ready else None)
             failed_checks = [result for result in self.check_results.values() if result['status'] in ('fail', 'unknown')]
             if failed and failed_checks:
                 self.subtitle.setText(tr('Failed') + ': ' + ', '.join(tr(result['label']) for result in failed_checks) + '\n' + self.subtitle.text())
@@ -851,6 +870,35 @@ class Wizard(QMainWindow):
                 self.content.setHtml(''.join('<p>'+html.escape(tr(message))+'</p>' for message in messages))
                 self.content.moveCursor(self.content.textCursor().MoveOperation.Start)
                 self.check_panel.hide()
+
+    def show_doctor_success(self):
+        """Offer the normal setup path; its installation/recovery gates still apply."""
+        result = self.doctor_result
+        device = result.get('device', {})
+        state = diagnostics.context.status_summary(result)
+        stage = state.get('deployment_stage')
+        if stage == 'installed-recovery-only' and state.get('home_enabled') is False:
+            message = 'A previous Clean Your TV installation was found, but its Home control is off.'
+        elif stage == 'installed-recovery-only' and state.get('home_enabled') is True:
+            message = 'A previous Clean Your TV installation was found. Home control is enabled.'
+        elif device.get('apps'):
+            message = 'Clean Your TV components were found on this TV.'
+        elif stage in ('absent', 'uninstalled-state-retained'):
+            message = 'Ready to set up Clean Your TV.'
+        else:
+            message = 'Setup will check the existing installation before continuing.'
+        self.title.setText(tr('Connected to your TV'))
+        self.badge.setText(self.title.text())
+        self.subtitle.setText(tr('Continue setup using the same TV connection and edition.'))
+        self.rail_title.setText(tr('Set up my TV'))
+        self.rail_note.setText(tr('Connection checked. Continue to review setup.'))
+        self.content.setHtml(''.join('<p>' + html.escape(tr(text)) + '</p>' for text in (
+            message, 'Setup will check installed versions and ask before making changes.')))
+        self.check_panel.hide()
+        self.details_toggle.setChecked(False)
+        self.details.hide()
+        profile = dict(self.selected_profile)
+        self.button('Continue setup', lambda: self.start('install', profile), True).setFocus()
 
     def open_network_settings(self):
         try:
