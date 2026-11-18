@@ -146,6 +146,10 @@ class Console:
     def recovery_plan(self, value):
         self.heading(value['summary'])
         self(value['next_step'])
+        if self.frontend == 'console' and value.get('disposition') == 'clean-removal':
+            from .recovery_ui import observed_stock_surface
+            if surface := observed_stock_surface(value.get('removal_evidence')):
+                self(surface)
 
 
 def console(write):

@@ -886,7 +886,7 @@ def restore_stock_home(installer, *, allow_legacy_launch_ack=False):
             raise
     else:
         if isinstance(result,dict) and result.get('returnValue') is True:
-            return 'launch-accepted'
+            return {'stock': 'launch-accepted'}
         raise UserError('Removal could not be verified. Review recovery options before continuing.', reason_code='controls-unverified')
     stock={home,'com.webos.app.livetv',
            'com.webos.app.hdmi1','com.webos.app.hdmi2','com.webos.app.hdmi3','com.webos.app.hdmi4'}
@@ -938,12 +938,12 @@ def restore_stock_home(installer, *, allow_legacy_launch_ack=False):
                     raise
                 raise UserError(message, reason_code='controls-unverified') from error
             if app == home:
-                return 'stock-observed'
+                return {'stock': 'stock-observed', 'stock_surface': app}
             raise UserError(message, reason_code='controls-unverified')
 
         active = foreground()
         if active in stock:
-            return 'stock-observed'
+            return {'stock': 'stock-observed', 'stock_surface': active}
         launched = installer.remote.luna(uri+'launch', {'id':live_tv})
         if not isinstance(launched, dict) or launched.get('returnValue') is not True:
             raise UserError(message, reason_code='controls-unverified')
@@ -952,12 +952,13 @@ def restore_stock_home(installer, *, allow_legacy_launch_ack=False):
             # transport can read its foreground. Require its own positive reply.
             if ('errorCode' not in launched and not launched.get('pairingType')
                     and launched.get('appId', live_tv) == live_tv and launched.get('id', live_tv) == live_tv):
-                return 'launch-accepted'
+                return {'stock': 'launch-accepted'}
             raise UserError(message, reason_code='controls-unverified')
         deadline = monotonic() + 5
         while (remaining := deadline - monotonic()) > 0:
-            if foreground(remaining) in stock:
-                return 'stock-observed'
+            active = foreground(remaining)
+            if active in stock:
+                return {'stock': 'stock-observed', 'stock_surface': active}
             sleep(min(.1, remaining))
         raise UserError(message, reason_code='controls-unverified')
 
@@ -1342,7 +1343,7 @@ def continue_removal(installer, expected_pending):
     if guard:
         device('inventory')
     try:
-        evidence['stock'] = restore_stock_home(installer, allow_legacy_launch_ack=retained_helper_reboot and idle_helper)
+        evidence.update(restore_stock_home(installer, allow_legacy_launch_ack=retained_helper_reboot and idle_helper))
     except TVRejected as error:
         error.removal_failure_phase = 'controls-unverified'
         raise

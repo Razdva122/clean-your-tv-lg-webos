@@ -161,9 +161,14 @@ class SimpleRemoval(unittest.TestCase):
         self.assertIsNone(self.store.pending(self.profile))
 
     def test_manually_removed_packages_with_stock_hdmi_foreground_finish_without_stock_home_app(self):
+        from cytv.recovery_ui import removal_milestones
+
         (self.root/'proc').mkdir()
         self.legacy_home('com.webos.app.hdmi2')
+        self.installer.tv_info = {}
         self.assertTrue(self.remove()['verified_clean'])
+        plan = {'disposition': 'clean-removal', **self.installer.tv_info}
+        self.assertIn('Observed HDMI 2.', removal_milestones(plan)[0])
         self.assertIsNone(self.store.pending(self.profile))
         self.assertFalse(any(uri.endswith('/dev/remove') for uri,_ in self.remote.calls))
         self.assertFalse(any(uri.endswith('/launch') and body['id']=='com.webos.app.livetv'
@@ -298,6 +303,7 @@ class SimpleRemoval(unittest.TestCase):
     def test_missing_home_does_not_accept_unrelated_foreground_or_unconfirmed_stock_launch(self):
         (self.root/'proc').mkdir()
         self.legacy_home('third.party.app')
+        self.installer.tv_info = {}
         original=self.remote.luna
         def luna(uri,payload,**kwargs):
             if uri.endswith('/launch') and payload['id']=='com.webos.app.livetv':
@@ -307,6 +313,7 @@ class SimpleRemoval(unittest.TestCase):
         self.remote.luna=luna
         with self.assertRaises(UserError):self.remove()
         self.assertIsNotNone(self.store.pending(self.profile))
+        self.assertNotIn('stock', self.installer.tv_info['removal_evidence'])
 
     def test_missing_home_with_malformed_foreground_never_launches_another_app_or_removes_packages(self):
         original=self.remote.luna
@@ -328,6 +335,7 @@ class SimpleRemoval(unittest.TestCase):
 
     def test_missing_home_does_not_hide_foreground_connection_loss(self):
         self.remote.apps=set(self.cleanup.APPS[:2]);self.legacy_home()
+        self.installer.tv_info = {}
         original=self.remote.luna
         def luna(uri,payload,**kwargs):
             if uri.endswith('/getForegroundAppInfo'):
@@ -338,6 +346,7 @@ class SimpleRemoval(unittest.TestCase):
         self.assertEqual(caught.exception.reason_code,'connection-interrupted')
         self.assertTrue(self.remote.apps)
         self.assertFalse(any(uri.endswith('/dev/remove') for uri,_ in self.remote.calls))
+        self.assertNotIn('stock', self.installer.tv_info['removal_evidence'])
 
     def test_other_stock_home_launch_errors_and_connection_loss_still_stop_before_package_remove(self):
         original=self.remote.luna

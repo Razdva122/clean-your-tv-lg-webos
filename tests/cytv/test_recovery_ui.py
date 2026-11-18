@@ -27,7 +27,7 @@ class RecoveryPresentationTests(unittest.TestCase):
         ))
         remote = SimpleNamespace(luna=lambda uri, body: {'returnValue':True})
         stock = restore_stock_home(SimpleNamespace(remote=remote))
-        plan['removal_evidence'] = {'stock':stock, 'packages':['PRIVATE']}
+        plan['removal_evidence'] = {**stock, 'packages':['PRIVATE']}
         self.assertEqual(removal_milestones(plan), (
             'The TV accepted a stock app launch. Physical remote untested.',
             'Package absence is unknown.',

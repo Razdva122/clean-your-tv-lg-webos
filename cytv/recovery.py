@@ -9,7 +9,7 @@ from .errors import TVRejected, UserError
 from .operations import require_removal_idle
 from .outcomes import START_HELPER
 from .recovery_state import assess, observation_diagnostics, setup_actions, unsubmitted_removal
-from .recovery_ui import removal_action
+from .recovery_ui import observed_stock_surface, removal_action
 
 REVIEW = 'Review recovery options'
 SAVED_CONNECTION_PROMPT = 'Review recovery options for this saved connection?'
@@ -178,8 +178,9 @@ def restored_for_uninstall(write, profile, operation, result, *, evidence=None):
             evidence = {'cleanup':'pending'}
             if result.get('returnValue') is True and result.get('result') == 'restored':
                 evidence['stock'] = 'routing-verified'
-        summary = ('The TV accepted a stock app launch.' if evidence.get('stock') == 'launch-accepted'
-                   else 'LG Home is restored.')
+        summary = observed_stock_surface(evidence) or (
+            'The TV accepted a stock app launch.' if evidence.get('stock') == 'launch-accepted'
+            else 'LG Home is restored.')
         write.recovery_plan({'state':'complete', 'summary':summary, 'removal_evidence':evidence,
             'next_step':'Continue the remaining cleanup for this TV.', 'continue_removal':operation})
 

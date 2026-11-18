@@ -141,8 +141,8 @@ class AndroidConsole(Console):
 
     def recovery_plan(self, value):
         super().recovery_plan(value)
-        from cytv.recovery_ui import (projected_removal_action, removal_details, removal_restart_required,
-                                      removal_title, removal_waiting)
+        from cytv.recovery_ui import (observed_stock_surface, projected_removal_action, removal_details,
+                                      removal_restart_required, removal_title, removal_waiting)
         from cytv.recovery_state import ACTIONS, REASONS
         optional = {key:value[key] for key in ('disposition',) if key in value}
         optional.update({key:value[key] for key in ('removed','verified_clean','connection_failure')
@@ -150,6 +150,8 @@ class AndroidConsole(Console):
         optional['restart_required'] = removal_restart_required(value)
         if value.get('disposition') == 'clean-removal':
             optional['removal_action'] = projected_removal_action(value)
+            if surface := observed_stock_surface(value.get('removal_evidence')):
+                optional['stockSurfaceText'] = i18n.translate(surface)
         actions = value.get('actions', ['check'] if value['state'] == 'review' else None)
         if type(actions) is list:
             optional['actions'] = [item for item in actions if type(item) is str and item in ACTIONS]

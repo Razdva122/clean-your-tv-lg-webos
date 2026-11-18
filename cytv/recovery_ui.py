@@ -173,6 +173,19 @@ def _removal_evidence(plan):
     return value if type(value) is dict else {}
 
 
+def observed_stock_surface(evidence):
+    if type(evidence) is not dict or evidence.get('stock') != 'stock-observed':
+        return None
+    surface = evidence.get('stock_surface')
+    if surface == 'com.webos.app.home':
+        return 'Observed LG Home. Physical remote untested.'
+    if surface == 'com.webos.app.livetv':
+        return 'Observed Live TV. Physical remote untested.'
+    if surface in ('com.webos.app.hdmi1', 'com.webos.app.hdmi2', 'com.webos.app.hdmi3', 'com.webos.app.hdmi4'):
+        return 'Observed HDMI {input}. Physical remote untested.'.format(input=surface[-1])
+    return None
+
+
 def removal_milestones(plan, failure=None):
     """Describe readback separately from terminal removal and physical input."""
     if plan.get('disposition') != 'clean-removal' and not plan.get('continue_removal'):
@@ -180,7 +193,7 @@ def removal_milestones(plan, failure=None):
     evidence = _removal_evidence(plan)
     complete = removal_action(plan, failure)['condition'] == 'complete'
     stock = evidence.get('stock')
-    stock_text = {
+    stock_text = observed_stock_surface(evidence) or {
         'routing-verified':'Home routing was verified. Physical remote untested.',
         'stock-observed':'A stock TV screen was observed. Physical remote untested.',
         'launch-accepted':'The TV accepted a stock app launch. Physical remote untested.',

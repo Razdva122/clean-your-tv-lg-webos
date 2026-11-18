@@ -2066,10 +2066,10 @@ print('CYTV_ROOT_FILES_OK')
                 else:
                     eim_error = True
         from .no_root_cleanup import restore_stock_home
-        stock = restore_stock_home(self)
+        stock_evidence = restore_stock_home(self)
         if eim_error:
             raise UserError('LG Home launch was requested, but input restoration removal is unconfirmed. Keep recovery state and run cytv doctor before uninstalling.')
-        getattr(self, 'tv_info', {})['removal_evidence'] = {'stock':stock, 'cleanup':'pending'}
+        getattr(self, 'tv_info', {})['removal_evidence'] = {**stock_evidence, 'cleanup':'pending'}
         return {'restored': True, 'pending': self.store.pending(self.profile)}
 
     def system_updater_cleanup(self, action, archive=None):
