@@ -1212,7 +1212,10 @@ def _run(args, ask, write, connect, secret, search, inspect, payload_root, check
                 else:
                     write.status_result(result)
             if not read_only and args.command in ('install', 'status', 'restore', 'recover', 'uninstall'):
-                diagnostics.observe_root_python_inventory(remote, profile, tv_info)
+                # The next action after this removal result is a TV restart.
+                # Keep the wait limited to the saved connection and boot check.
+                if args.command != 'uninstall' or result.get('restart_required') is not True:
+                    diagnostics.observe_root_python_inventory(remote, profile, tv_info)
                 diagnostics.save_result(write, store, args.command, profile,
                     'install-complete' if args.command == 'install' else phase, tv_info,
                     checks=checks.results, status=result if args.command in ('status', 'restore', 'uninstall') else tv_info.get('status'))
