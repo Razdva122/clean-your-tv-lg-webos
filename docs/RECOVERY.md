@@ -212,9 +212,14 @@ Android app data or reset the TV. The updated Root remover also verifies a
 matching completed cleanup when the local recovery record still shows pending;
 matching history alone does not establish current absence.
 
-Returning to LG Home alone remains separate from removal. Emergency controls
-above stay available. For setup recovery, eligible Root can still finish with
-LG Home and Home control off; that goal does not require activating Clean Home.
+On desktop, if **Return to LG Home** appears on the removal screen, choose it.
+After the installer verifies restoration, choose **Continue removal** for the
+same saved TV. Choosing **Return to LG Home** directly from Maintenance keeps
+the apps installed.
+
+Emergency controls above stay available. For setup recovery, eligible Root
+can still finish with LG Home and Home control off; that goal does not require
+activating Clean Home.
 Physical Home, sound, standby and cold boot are separate observations. A restart
 used by removal does not certify any of those checks. Candidate source tests do
 not establish compatibility or successful recovery on a reporter's TV. See the

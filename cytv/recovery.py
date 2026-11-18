@@ -1,4 +1,6 @@
 """An explicit recovery journey; backend receipts remain the only authority."""
+import re
+
 from . import prompts
 from .errors import TVRejected, UserError
 from .operations import require_removal_idle
@@ -28,9 +30,28 @@ def plan(write, state, summary, next_step=KEPT, actions=None):
     write.recovery_plan(value)
 
 
+def confirmed_uninstall(pending):
+    """Return the identity of a saved explicit Uninstall goal."""
+    if (type(pending) is not dict or pending.get('recovery_protocol') != 'clean-removal-v1'
+            or pending.get('action') != 'uninstall' or pending.get('full_project') is not True
+            or 'root_reinstall_payload' in pending):
+        return None
+    operation = pending.get('removal_operation')
+    return operation if isinstance(operation, str) and re.fullmatch(r'[0-9a-f]{32}', operation) else None
+
+
+def restored_for_uninstall(write, profile, operation, result):
+    """A verified Restore can offer to continue the original Uninstall."""
+    if result.get('restored') is True or (result.get('returnValue') is True and result.get('result') == 'restored'):
+        write.recovery(profile)
+        write.recovery_plan({'state':'complete', 'summary':'LG Home is restored.',
+            'next_step':'Continue the remaining cleanup for this TV.', 'continue_removal':operation})
+
+
 def _write_removal_plan(write, value, *, pending=None, failure=None, allow_requested=False, restart_observed=False):
     from .recovery_ui import removal_restart_required
-    if (removal_restart_required(value) and not restart_observed
+    restart = removal_restart_required(value)
+    if (restart and not restart_observed
             and (failure or {}).get('code') != 'restart-required'):
         # A persisted request is history, not a fresh instruction to power-cycle.
         # Keep the receipt intact; project only the need to check current state.
@@ -49,6 +70,9 @@ def _write_removal_plan(write, value, *, pending=None, failure=None, allow_reque
         # journal codes. Only the explicit request gets transient advice.
         if not allow_requested or pending.get('removal_reason') != 'removal-requested':
             evidence = dict(value, reason=None, removal=dict(value['removal'], reason=None))
+    if (getattr(write, 'frontend', None) == 'desktop' and (failure or {}).get('code') == 'controls-unverified'
+            and not restart and (operation := confirmed_uninstall(pending))):
+        value = dict(value, restore_for_removal=operation)
     write.recovery_plan(dict(value, removal_action=removal_action(evidence, failure)))
 
 

@@ -109,6 +109,8 @@ Scegli **Disinstalla Clean Your TV** in Manutenzione con la stessa connessione s
 
 Quando richiesto, scollega l’alimentazione della TV, ricollegala, attendi la rete e scegli **Riprova**. Standby o Quick Start non è un riavvio completo; CYTV non riavvia automaticamente la TV. Se l’accesso è negato, usa la connessione Root richiesta; se la TV è occupata, attendi e riprova. Il successo appare solo dopo la verifica della pulizia finale. Conserva chiavi e rapporti originali. Restano validi i comandi di emergenza e il consenso alla condivisione.
 
+Se nella schermata di rimozione appare **Torna a LG Home**, seleziona questa opzione. Dopo che l’installer ha verificato il ripristino, scegli **Continua la rimozione**. Se torni a LG Home direttamente dal menu di manutenzione, le app restano installate.
+
 Se l’installer non riesce a verificare la rimozione, la pulizia finale, i comandi della TV o l’esito dell’operazione sui pacchetti, oppure segnala percorsi del progetto cambiati, scegli **Esamina le opzioni di ripristino** con la connessione originale salvata. Se l’installer propone di proseguire, conferma a parte. Se il ripristino di un’installazione No-root propone **Controlla lo stato della TV**, scegli questa opzione e conserva i dati di ripristino.
 
 Se il programma non riesce a verificare il riavvio completo richiesto, salva e allega il rapporto diagnostico. Conserva la connessione salvata e i dati di ripristino. Non ripetere le interruzioni di alimentazione e non cancellare manualmente l’operazione incompleta.

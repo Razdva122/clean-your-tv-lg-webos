@@ -63,6 +63,7 @@ class Wizard(QMainWindow):
         self.debloat_results = {}
         self.recovery_plan = None
         self.failure_help = None
+        self.removal_operation = None
         self.worker = None
         self.setWindowTitle('Clean Your TV')
         self.resize(1060, 820)
@@ -570,7 +571,7 @@ class Wizard(QMainWindow):
                            lambda: self.start('install', profile, resume_root_reinstall=True), True)
 
     def start(self, command, profile=None, *, new_recovery_attempt=False, reconnect_after_reset=False,
-              resume_root_reinstall=False):
+              resume_root_reinstall=False, removal_operation=None):
         if getattr(getattr(self, 'wallpaper_dialog', None), 'busy', False):
             return
         if self.running:
@@ -586,13 +587,14 @@ class Wizard(QMainWindow):
         self.steps.setVisible(command == 'install')
         self.update_steps(1)
         self.badge.setText(tr('Connecting to your TV' if command == 'install' else 'Diagnostics' if command == 'ssh-command' else 'Maintenance action'))
-        self.rail_title.setText(tr(self.operation_title))
+        self.rail_title.setText(tr('Uninstall Clean Your TV' if removal_operation else self.operation_title))
         self.language.setEnabled(False)
         self.report = None
         self.ssh_command_result = None
         self.recovery_profile = None
         self.selected_profile = None
         self.reinstalling_root = resume_root_reinstall
+        self.removal_operation = removal_operation
         self.doctor_result = None
         self.install_settings_current = {}
         self.debloat_results = {}
@@ -616,6 +618,8 @@ class Wizard(QMainWindow):
                 args = [command, '--report'] if command == 'doctor' else [command]
                 if resume_root_reinstall:
                     args.append('--resume-root-reinstall')
+                if removal_operation is not None:
+                    args.extend(['--removal-operation', removal_operation])
                 if reconnect_after_reset:
                     args.append('--reconnect-after-reset')
                 if command == 'recover-system-rollback' and new_recovery_attempt:
@@ -721,7 +725,7 @@ class Wizard(QMainWindow):
         elif kind == 'recovery-plan':
             self.recovery_plan = dict(value)
             self.steps.hide()
-            if not self.reinstalling_root:
+            if not self.reinstalling_root and self.removal_operation is None:
                 self.rail_title.setText(tr('Review recovery options'))
             from .recovery_ui import removal_details
             detail = removal_details(self.recovery_plan)
@@ -801,6 +805,12 @@ class Wizard(QMainWindow):
                 self.subtitle.setText(tr(self.recovery_plan.get('next_step', '') if completed else self.recovery_plan['summary']))
                 self.badge.setText(self.title.text())
             retry_removal = cleanup and not completed and self.recovery_profile is not None
+            continue_removal = (self.removal_operation if self.command == 'restore' and completed
+                                and self.recovery_profile
+                                and self.recovery_plan.get('continue_removal') == self.removal_operation else None)
+            restore_for_removal = (self.recovery_plan.get('restore_for_removal')
+                                   if retry_removal and value not in (0, 130)
+                                   and self.command in ('uninstall', 'recover') else None)
             resume_root_reinstall = (self.reinstalling_root and self.selected_profile is not None
                                      and self.saved_root_reinstall(Store(), self.selected_profile))
             doctor_ready = (value == 0 and self.command == 'doctor' and self.doctor_result is not None
@@ -832,6 +842,10 @@ class Wizard(QMainWindow):
                 self.badge.setText(self.title.text())
                 self.subtitle.setText(tr(self.recovery_plan['next_step']))
                 self.button('Check TV status', lambda: self.start('status', profile), True).setFocus()
+            elif continue_removal:
+                profile = dict(self.recovery_profile)
+                self.button('Continue removal', lambda: self.start('uninstall', profile,
+                            removal_operation=continue_removal), True).setFocus()
             elif doctor_ready:
                 self.show_doctor_success()
             elif retry_removal:
@@ -839,14 +853,25 @@ class Wizard(QMainWindow):
                 from .recovery_ui import removal_action, projected_removal_action
                 advice = (removal_action(self.recovery_plan, self.failure_help) if self.failure_help
                           else projected_removal_action(self.recovery_plan))
-                if advice['action'] == 'connect-root' and profile['edition'] == 'root':
+                if restore_for_removal:
+                    self.rail_title.setText(tr('Uninstall Clean Your TV'))
+                    self.button('Return to LG Home', lambda: self.start('restore', profile,
+                                removal_operation=restore_for_removal), True).setFocus()
+                    self.button('Review recovery options', lambda: self.start('recover', profile))
+                elif self.command == 'restore' and advice['action'] == 'retry-removal':
+                    self.button('Try again', lambda: self.start('restore', profile,
+                                removal_operation=self.removal_operation), True)
+                elif self.command == 'restore':
+                    self.button('Review recovery options', lambda: self.start('recover', profile), True)
+                elif advice['action'] == 'connect-root' and profile['edition'] == 'root':
                     self.button('Connection details', lambda: self.edit_connection(profile, removal=True), True)
                 elif advice['action'] == 'connect-root':
                     from .recovery_ui import root_removal_profile
                     root_profile = root_removal_profile(Store(), profile)
                     self.button('Connect using Root', lambda: self.start('uninstall', root_profile), True)
                 elif advice['action'] == 'retry-removal':
-                    self.button('Try again', lambda: self.start('uninstall', profile), True)
+                    self.button('Try again', lambda: self.start('uninstall', profile,
+                                removal_operation=self.removal_operation), True)
                 else:
                     self.button('Review recovery options', lambda: self.start('recover', profile), True)
                 from .recovery_ui import removal_connection_failure
@@ -888,7 +913,7 @@ class Wizard(QMainWindow):
                             layout=report_actions if connection_help else None)
             self.button('Back to start', self.home,
                         not doctor_ready and not connection_help and not retry_removal and not recover
-                        and not resume_root_reinstall and not no_root_status and not ((failed or setup_review) and self.report),
+                        and not continue_removal and not resume_root_reinstall and not no_root_status and not ((failed or setup_review) and self.report),
                         layout=report_actions if retry_removal else None)
             failed_checks = [result for result in self.check_results.values() if result['status'] in ('fail', 'unknown')]
             if failed and failed_checks:
@@ -911,6 +936,8 @@ class Wizard(QMainWindow):
                         self.set_error_state(False)
                     self.badge.setText(self.title.text())
                     message = detail.get('blocker_text') or 'Removal could not be verified. Review recovery options before continuing.'
+                    if restore_for_removal:
+                        message = 'Restore LG Home before continuing removal.'
                     if resume_root_reinstall and show_restart:
                         message = 'Disconnect the TV from power, reconnect it, and turn it on. Then choose Continue Root reinstallation. Standby is not a full restart.'
                     if self.failure_help and self.failure_help.get('code') in ('ssh-auth-root','ssh-auth-no-root','ssh-key-file','ssh-identity','developer-key-server','developer-key-unlock','developer-key-response'):
@@ -972,9 +999,12 @@ class Wizard(QMainWindow):
         from .recovery_ui import removal_action, projected_removal_action
         advice = (removal_action(self.recovery_plan, self.failure_help) if self.failure_help
                   else projected_removal_action(self.recovery_plan or {})) if removal else {}
-        resume_command = 'uninstall' if advice.get('action') == 'retry-removal' else 'recover'
+        resume_command = 'recover'
         if reinstall:
             resume_command = 'install'
+        elif advice.get('action') == 'retry-removal':
+            resume_command = 'restore' if self.command == 'restore' else 'uninstall'
+        bound_removal = self.removal_operation if resume_command in ('restore', 'uninstall') else None
         self.clear_form()
         self.set_error_state(False)
         self.title.setText(tr('Connection details'))
@@ -1004,7 +1034,7 @@ class Wizard(QMainWindow):
             if reinstall:
                 self.start('install', edited, resume_root_reinstall=True)
             else:
-                self.start(resume_command if removal else 'doctor', edited)
+                self.start(resume_command if removal else 'doctor', edited, removal_operation=bound_removal)
 
         def check():
             from .state import target
@@ -1022,7 +1052,7 @@ class Wizard(QMainWindow):
                 if filename:
                     reconnect(dict(profile, identity=filename))
             self.button('Choose key file…', choose_key)
-        label = {'install':'Continue Root reinstallation', 'uninstall':'Try again',
+        label = {'install':'Continue Root reinstallation', 'uninstall':'Try again', 'restore':'Try again',
                  'recover':'Review recovery options'}[resume_command] if removal else 'Check connection again'
         self.button(label, check, True)
         self.button('Back to start', self.home)

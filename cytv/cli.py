@@ -57,6 +57,7 @@ def parser(desktop=False):
     if desktop:
         commands += ('ssh-command',)
         result.add_argument('--resume-root-reinstall', action='store_true', help=argparse.SUPPRESS)
+        result.add_argument('--removal-operation', help=argparse.SUPPRESS)
     result.add_argument('command', nargs='?', default='install', choices=commands)
     result.add_argument('--language', choices=tuple(i18n.LANGUAGES), help=i18n.translate('Interface language (auto uses the computer language)'))
     result.add_argument('--version', action='store_true', help=i18n.translate('Print installer version'))
@@ -336,6 +337,10 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
         from .ssh_identity_review import run
         return run(args, store, ask, write)
     try:
+        removal_operation = getattr(args, 'removal_operation', None)
+        if removal_operation is not None and (args.command not in ('restore', 'uninstall')
+                or not args.host or not args.edition or args.port is None or args.non_interactive):
+            raise UserError('Removal evidence changed. Recovery data was kept.', reason_code='pending-operation')
         if args.reconnect_after_reset and (
                 args.command != 'install' or args.edition != 'no-root' or not args.host
                 or args.connection or args.identity or args.non_interactive or args.yes):
@@ -512,6 +517,12 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
 
         from .transport import SSH, CredentialPrompt
         with store.lock(profile), diagnostics.context.operation_context(store, profile):
+            if removal_operation is not None:
+                from .recovery import confirmed_uninstall
+                pending = store.pending(profile)
+                if (confirmed_uninstall(pending) != removal_operation
+                        or args.command == 'restore' and pending.get('stage') in ('restart-required', 'verified-clean')):
+                    raise UserError('Removal evidence changed. Recovery data was kept.', reason_code='pending-operation')
             if desktop_install and store.root_reinstall(profile) != reinstall_step:
                 raise UserError('The saved Root reinstallation changed. Return to the start screen and check again.')
             if reinstall_step and reinstall_step.payload != reinstall_payload:
@@ -544,7 +555,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                     profile = state.target(**dict(profile, root_variant=reinstall_step.variant))
             # An explicit sign-in key may change; the saved TV identity and pin
             # must still be resolved and verified before using it.
-            if (recovering and args.identity and (reinstall_step or args.command in ('uninstall', 'recover')
+            if (recovering and args.identity and (reinstall_step or args.command in ('uninstall', 'recover', 'restore')
                     and (profile['edition'] == 'root' or profile.get('connection') == 'root-ssh')
                     and (store.pending(profile) or {}).get('recovery_protocol') == 'clean-removal-v1')):
                 profile = dict(profile, identity=str(args.identity.expanduser().resolve()))
@@ -999,6 +1010,9 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
                     result = installer.uninstall(full_project=True)
                 else:
                     result = getattr(installer, args.command)()
+                if args.command == 'restore' and removal_operation is not None:
+                    from .recovery import restored_for_uninstall
+                    restored_for_uninstall(write, profile, removal_operation, result)
                 if result.get('verified_clean') is True and result.get('removed') is True:
                     write.recovery_plan({'state':'complete','disposition':'clean-removal','verified_clean':True,'removed':True,
                                          'summary':'Clean Your TV removal is verified.','next_step':'Other TV apps stay installed.'})

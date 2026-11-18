@@ -224,6 +224,11 @@ proof. Eligible Root setup may still finish separately with LG Home/Home control
 off. Physical checks remain separate. See the
 [removal flow](RECOVERY.md#next-candidate-original-operation-recovery-and-full-removal).
 
+If **Return to LG Home** appears on the removal screen, choose it. After the
+installer verifies restoration, choose **Continue removal** to resume the same
+removal on the saved TV. Choosing **Return to LG Home** directly from
+Maintenance keeps the apps installed.
+
 For unfinished removal, the primary action follows the current result. A known
 connection interruption, busy operation or required restart offers **Try again**
 for the same approved goal after the condition is resolved. When the installer can

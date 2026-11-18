@@ -111,6 +111,8 @@ Choose **Uninstall Clean Your TV** in Maintenance with the same saved TV connect
 
 When asked, disconnect the TV from power, reconnect it, wait for the network and choose **Try again**. Standby or Quick Start is not a full restart; CYTV does not restart the TV automatically. If access is denied, use the requested Root connection; if the TV is busy, wait and retry. Success appears only after final cleanup is verified. Keep your keys and original reports. The emergency controls and sharing consent above still apply.
 
+If **Return to LG Home** appears on the removal screen, choose it. Once the installer verifies the restoration, select **Continue removal**. Choosing **Return to LG Home** directly from Maintenance keeps the apps installed.
+
 If the installer cannot verify removal, final cleanup, TV controls or the package result, or reports changed project paths, choose **Review recovery options** with the original saved connection. Confirm continuation separately if the installer offers it. If No-root installation recovery offers **Check TV status**, choose it and keep the recovery data.
 
 If the installer cannot verify the requested full restart, save and attach its diagnostic report. Keep the saved connection and recovery data. Do not keep repeating power cycles or clear the unfinished operation manually.

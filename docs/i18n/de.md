@@ -109,6 +109,8 @@ Unter Wartung **Clean Your TV deinstallieren** mit derselben gespeicherten TV-Ve
 
 Wenn aufgefordert, den TV vom Strom trennen, wieder anschließen, auf das Netzwerk warten und **Erneut versuchen** wählen. Standby oder Quick Start ist kein vollständiger Neustart; CYTV startet den TV nicht automatisch neu. Bei verweigertem Zugriff die angeforderte Root-Verbindung verwenden; bei beschäftigtem TV warten und erneut versuchen. Erfolg erscheint erst nach bestätigter abschließender Bereinigung. Schlüssel und Originalberichte behalten. Notfallsteuerung und Zustimmung zum Teilen gelten weiter.
 
+Wenn bei der Entfernung **Zu LG Home zurückkehren** angezeigt wird, wählen Sie diese Option. Nach bestätigter Wiederherstellung wählen Sie **Entfernung fortsetzen**. Wenn Sie direkt über die Wartung zu LG Home zurückkehren, bleiben die Apps installiert.
+
 Wenn der Installer die Entfernung, die abschließende Bereinigung, die TV-Steuerung oder das Ergebnis des Paketvorgangs nicht bestätigen kann oder geänderte Projektpfade meldet, wählen Sie **Wiederherstellungsoptionen prüfen** mit der ursprünglichen gespeicherten Verbindung. Bestätigen Sie die Fortsetzung separat, wenn der Installer sie anbietet. Wenn bei der Wiederherstellung einer No-root-Installation **TV-Status prüfen** angeboten wird, wählen Sie diese Option und behalten Sie die Wiederherstellungsdaten.
 
 Kann der Installer den angeforderten vollständigen Neustart nicht bestätigen, speichern Sie den Diagnosebericht und hängen Sie ihn an. Behalten Sie die gespeicherte Verbindung und Wiederherstellungsdaten. Wiederholen Sie die Stromunterbrechung nicht ständig und löschen Sie den unvollständigen Vorgang nicht manuell.

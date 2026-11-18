@@ -48,7 +48,7 @@ class RemovalActionUITests(unittest.TestCase):
         for stage, reason, title, instruction in (
                 ('original-writers-fenced', 'controls-unverified',
                  'TV controls could not be verified.',
-                 'Review recovery options before continuing.'),
+                 'Restore LG Home before continuing removal.'),
                 ('package-removal', 'removal-terminal-unknown',
                  'The TV package result could not be verified.',
                  'Review recovery options before trying to remove packages again.'),
@@ -71,6 +71,12 @@ class RemovalActionUITests(unittest.TestCase):
                 self.assertEqual(window.title.text(), title)
                 self.assertIn(instruction, window.subtitle.text())
                 self.assertNotIn('PRIVATE', window.subtitle.text())
+                restore = self.fixture.button(window, 'Return to LG Home')
+                if reason == 'controls-unverified':
+                    self.assertIsNotNone(restore)
+                    self.assertTrue(restore.isDefault())
+                else:
+                    self.assertIsNone(restore)
                 self.assertIsNone(self.fixture.button(window, 'Try again'))
                 self.fixture.button(window, 'Review recovery options').click()
                 self.fixture.pump(lambda: not window.running)

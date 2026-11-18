@@ -109,6 +109,8 @@ Elige **Desinstalar Clean Your TV** en Mantenimiento con la misma conexión guar
 
 Cuando se indique, desconecta la alimentación del TV, vuelve a conectarla, espera la red y elige **Intentar de nuevo**. Espera o Quick Start no es un reinicio completo; CYTV no reinicia el TV automáticamente. Si se deniega el acceso, usa la conexión Root solicitada; si el TV está ocupado, espera y reintenta. Solo se muestra éxito tras verificar la limpieza final. Conserva las claves y los informes originales. Siguen vigentes los controles de emergencia y el consentimiento para compartir.
 
+Si aparece **Volver a LG Home** en la pantalla de desinstalación, selecciónalo. Cuando el instalador verifique la restauración, elige **Continuar la desinstalación**. Si eliges **Volver a LG Home** directamente desde Mantenimiento, las aplicaciones se conservan.
+
 Si el instalador no puede verificar la desinstalación, la limpieza final, los controles del televisor o el resultado de la operación de paquetes, o indica que cambiaron rutas del proyecto, elige **Revisar opciones de recuperación** con la conexión original guardada. Confirma la continuación por separado si el instalador la ofrece. Si la recuperación de una instalación No-root ofrece **Ver estado del televisor**, elige esa opción y conserva los datos de recuperación.
 
 Si el instalador no puede verificar el reinicio completo solicitado, guarda y adjunta el informe de diagnóstico. Conserva la conexión guardada y los datos de recuperación. No repitas los cortes de alimentación ni borres manualmente la operación pendiente.

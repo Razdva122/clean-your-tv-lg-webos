@@ -96,6 +96,8 @@ Vyberte v Údržbě **Odinstalovat Clean Your TV** se stejným uloženým připo
 
 Na výzvu odpojte TV od napájení, znovu připojte, počkejte na síť a vyberte **Zkusit znovu**. Pohotovost nebo Quick Start není úplný restart; CYTV TV automaticky nerestartuje. Při odmítnutí přístupu použijte požadované připojení Root; pokud je TV zaneprázdněn, počkejte a zkuste znovu. Úspěch se zobrazí až po ověření závěrečného úklidu. Zachovejte klíče a původní zprávy. Nouzové ovládání a souhlas se sdílením výše platí dál.
 
+Pokud se na obrazovce odinstalace zobrazí **Návrat k LG Home**, zvolte tuto možnost a po ověření obnovení vyberte **Pokračovat v odinstalaci**. Při samostatném návratu k LG Home z nabídky Údržba zůstanou aplikace nainstalované.
+
 Pokud instalátor nemůže ověřit odebrání, závěrečný úklid, ovládání TV či výsledek operace s balíčky nebo hlásí změnu cest projektu, zvolte **Prověřit možnosti obnovy** s původním uloženým připojením. Nabídne-li instalátor pokračování, potvrďte je samostatně. Pokud instalátor při obnově instalace No-root nabídne **Zkontrolovat stav televizoru**, zvolte tuto možnost a zachovejte data obnovy.
 
 Pokud instalátor nemůže ověřit požadovaný úplný restart, uložte a přiložte diagnostickou zprávu. Zachovejte uložené připojení a data obnovy. Neopakujte stále odpojování napájení a nemažte ručně nedokončenou operaci.
