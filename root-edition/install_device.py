@@ -870,12 +870,19 @@ class LocalDevice:
             if stopped.get('controller_running') or startup_failed or restart_first and not restarted:
                 save('restart-required')
                 return {'removed':False,'verified_clean':False,'restart_required':True}
+            present = None
+            if provision.LEGACY_NODE_BETA:
+                present = self.apps()
+                if APP in present:
+                    with cleanup_step('provision-rollback'):
+                        snapshot = read_journal(ROOT/'ls2-provision-snapshot.json')
+                        provision.verify_beta_removal_registration(self.rpc, snapshot)
             packages_complete = 'package-removal' in record['done']
             if not packages_complete:
                 save('package-removal')
             package_error = None
             try:
-                remove_packages(self, record, save)
+                remove_packages(self, record, save, present=present)
                 if 'package-removal' not in record['done']:
                     self.cleanup('app_permissions')
                 if not packages_complete:
