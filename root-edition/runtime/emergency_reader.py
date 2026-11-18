@@ -57,7 +57,7 @@ def open_remote():
         for fd in found: os.close(fd)
 
 
-def observe(fd, health, keys_released):
+def observe(fd, health, keys_released, *, report_device_gone=False):
     os.set_blocking(fd, False)
     def send(message):
         data = message + b'\n'
@@ -132,6 +132,9 @@ def observe(fd, health, keys_released):
             try: data = os.read(fd, EVENT.size * 64)
             except BlockingIOError: break
             except OSError as exc:
+                if report_device_gone and exc.errno == errno.ENODEV:
+                    # Mark the read boundary before logging or supervisor scheduling.
+                    send(('DEVICE_GONE %.9f' % time.monotonic()).encode('ascii'))
                 report('active', 'read_error', exc)
                 if exc.errno == errno.ENODEV:
                     if reconnect_deadline is None:
@@ -162,7 +165,9 @@ def observe(fd, health, keys_released):
 
 
 if __name__ == '__main__':
-    if os.geteuid() != 0 or len(sys.argv) != 2: raise SystemExit('Root and private health fd required')
-    health = int(sys.argv[1]); fd = open_remote()
-    try: observe(fd, health, lambda: not any(query(fd, 0x18, 256)))
+    args = sys.argv[1:]
+    if os.geteuid() != 0 or not (len(args) == 1 or len(args) == 2 and args[1] == '--report-device-gone'):
+        raise SystemExit('Root and private health fd required')
+    health = int(args[0]); fd = open_remote()
+    try: observe(fd, health, lambda: not any(query(fd, 0x18, 256)), report_device_gone=len(args) == 2)
     finally: os.close(fd); os.close(health)

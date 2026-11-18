@@ -151,15 +151,20 @@ class FaultDiagnosticsTests(unittest.TestCase):
   import contextlib,errno,io,json
   import emergency_reader as reader
   from unittest.mock import patch
-  for phase in ('startup','active'):
-   with self.subTest(phase=phase):
+  for phase, typed in (('startup',True),('active',True),('active',False)):
+   with self.subTest(phase=phase,typed=typed):
     hr,hw=os.pipe();log=io.StringIO()
     reads=([BlockingIOError()] if phase=='active' else [])+[OSError(errno.EIO,'private device text')]
     try:
      with patch.object(reader.os,'set_blocking'),patch.object(reader.os,'read',side_effect=reads),patch.object(reader.select,'select',return_value=([42],[],[])),contextlib.redirect_stderr(log):
-      with self.assertRaises(OSError):reader.observe(42,hw,lambda:True)
+      with self.assertRaises(OSError):reader.observe(42,hw,lambda:True,report_device_gone=typed)
      os.close(hw);hw=None
-     self.assertEqual(os.read(hr,256),b'READY\n' if phase=='active' else b'')
+     frames=os.read(hr,256).splitlines()
+     if phase=='active' and typed:
+      self.assertEqual(len(frames),2)
+      self.assertEqual(frames[0],b'READY')
+      self.assertRegex(frames[1],rb'^DEVICE_GONE [0-9]+\.[0-9]{9}$')
+     else:self.assertEqual(frames,[b'READY'] if phase=='active' else [])
      self.assertTrue(log.getvalue(), 'I/O failure must identify its phase and errno')
      self.assertEqual(json.loads(log.getvalue()),{'event':'input-observer-fault','phase':phase,'reason':'read_error','errno':5})
     finally:
