@@ -5,6 +5,7 @@ import re
 TV_STORAGE_FULL = 'The TV reported insufficient storage space. Free space on the affected TV partition; deleting apps may free a different partition.'
 TV_STORAGE_RAMFS = 'The TV uses ramfs for /tmp, so available temporary storage could not be measured.'
 COMPUTER_STORAGE_FULL = 'Not enough space on this computer. Free space on the system or temporary drive.'
+ROOT_CLEANUP_ACCESS_REQUIRED = 'Some project files require Root access to finish removal.'
 
 
 def is_storage_full(error):
@@ -47,8 +48,9 @@ SAVED_PROFILE_ACCESS = 'Some saved TV connections could not be read. Close other
 
 class LocalRecoveryError(UserError):
     """Fixed local failure categories; no paths, account names or raw exceptions."""
-    def __init__(self, reason, location='capsule', *, mode=None, owner=None, storage_full=False):
+    def __init__(self, reason, location='capsule', *, mode=None, owner=None, storage_full=False, write_precheck=False):
         self.local_recovery = local_recovery_details(dict(reason=reason, location=location, mode=mode, owner=owner))
+        self.write_precheck = write_precheck
         reason = self.local_recovery['reason']
         if reason == 'profile-access':
             super().__init__(SAVED_PROFILE_ACCESS)
@@ -61,7 +63,8 @@ class LocalRecoveryError(UserError):
                    'The saved recovery operation is incompatible with this installer.' if reason == 'source-incompatible' else
                    'The original private recovery file could not be verified.')
         super().__init__((COMPUTER_STORAGE_FULL if storage_full else message) + ' Recovery data was kept.',
-                         reason_code='computer-storage-full' if storage_full else 'pending-operation')
+                         reason_code=('computer-storage-full' if storage_full else
+                                      'computer-storage-unavailable' if write_precheck else 'pending-operation'))
 
 
 def connection_interrupted(error):
@@ -76,11 +79,18 @@ class PythonCacheError(UserError):
     """Allowlisted host acquisition failure; never carry remote exception text."""
     DOWNLOAD_ERROR = 'The private Python download could not be verified. Check the connection or prepare the Python cache again.'
     CACHE_ERROR = 'The private Python cache is unsafe or damaged. Remove its pinned archive and prepare the cache again.'
+    CACHE_ACCESS_ERROR = ('The private Python cache could not be read or saved. '
+                          'Check write access to the application data folder and try again.')
 
     def __init__(self, reason='unknown'):
         self.reason = reason if reason in ('network', 'tls', 'http', 'response-policy',
             'size', 'sha256', 'deadline', 'cache-access', 'cache-replace', 'cache-invalid') else 'unknown'
-        super().__init__(self.CACHE_ERROR if self.reason == 'cache-invalid' else self.DOWNLOAD_ERROR)
+        messages = {
+            'cache-invalid': self.CACHE_ERROR,
+            'cache-access': self.CACHE_ACCESS_ERROR,
+            'cache-replace': self.CACHE_ACCESS_ERROR,
+        }
+        super().__init__(messages.get(self.reason, self.DOWNLOAD_ERROR))
 
 
 class PythonPreflightError(UserError):
@@ -231,7 +241,8 @@ class TVConnectionError(UserError):
     def __init__(self, message, close_code=None, reason_code='connection-closed'):
         super().__init__(message)
         self.close_code = close_code if isinstance(close_code, int) and 1000 <= close_code <= 4999 else None
-        self.reason_code = reason_code if reason_code in ('tv-not-ready', 'connection-closed', 'pairing-timeout') else 'connection-closed'
+        self.reason_code = reason_code if reason_code in (
+            'tv-not-ready', 'connection-closed', 'pairing-timeout', 'pairing-rejected') else 'connection-closed'
 
 
 class TVNotReady(TVConnectionError):

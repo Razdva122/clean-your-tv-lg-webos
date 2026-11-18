@@ -39,7 +39,9 @@ Developer Mode pozwala CYTV instalować aplikacje na TV bez roota.
 
 Użyj kodu z TV, a nie hasła konta LG. Jeśli kodu nie widać, włącz Key Server.
 
-Parowanie to osobny krok: gdy TV zapyta, zatwierdź CYTV pilotem.
+Parowanie to osobny krok: gdy TV zapyta, zatwierdź CYTV pilotem. Jeśli telewizor odrzuci prośbę, potwierdź w CYTV ponowienie parowania z tym samym telewizorem.
+
+Jeśli przy pierwszej instalacji No-root pojawi się ostrzeżenie, że nie udało się odczytać wejść HDMI, możesz kontynuować instalację z wykrytymi aplikacjami.
 
 Utrzymuj Developer Mode aktywny: przed końcem odliczania otwórz aplikację i naciśnij EXTEND, gdy TV ma internet. Po wygaśnięciu LG może usunąć te aplikacje.
 
@@ -63,6 +65,8 @@ Kreator początkowo używa języka systemu i zapamiętuje wybrany język. Na tel
 4. Postępuj według kreatora. Zostaw TV włączony, nie zmieniaj sieci i nie zamykaj CYTV do końca. Nie wymuszaj zatrzymania aplikacji Android.
 
 W instalatorze na komputer po udanym sprawdzeniu połączenia wybierz **Kontynuuj konfigurację**, aby zachować to samo połączenie i edycję. Kreator wyjaśnia stan wcześniejszej instalacji; wyniki techniczne są w szczegółach. Jeśli poprzednia operacja wymaga odzyskiwania, najpierw użyj proponowanego działania odzyskiwania. Konfigurator sprawdzi zainstalowane wersje i poprosi o potwierdzenie przed zmianami. Zapisane żądania restartu są sprawdzane ponownie; kreator prosi o restart tylko wtedy, gdy wymaga go bieżące czyszczenie.
+
+Jeśli instalator Root zaproponuje zastąpienie obecnej integracji Home, potwierdź tylko wtedy, gdy chcesz przywrócić LG Home i kontynuować. Odmowa zachowa obecny ekran Home.
 
 ## 5. Sprawdź pilota
 
@@ -91,11 +95,13 @@ Jeśli zobaczysz `ssh-identity-changed`, przerwij i zweryfikuj klucz SSH telewiz
 
 Po przywróceniu ustawień fabrycznych własnego telewizora No-root wybierz **Połącz ponownie po resecie fabrycznym**, gdy klucz się zmieni. Postępuj zgodnie z instrukcjami w zaufanej sieci domowej. Poprzedni profil i zapis odinstalowania zostaną zachowane.
 
-Po przerwaniu instalacji użyj tego samego zapisanego połączenia i najpierw wybierz **Sprawdź stan TV**. Kontynuuj tylko przez odzyskiwanie zaproponowane przez kreator. Gdy stan jest nieznany, zapisz raport diagnostyczny i zatrzymaj się; zachowaj dane odzyskiwania i nie ponawiaj instalacji w ciemno.
+Jeśli instalacja na komputerze pozostała niedokończona, na ekranie wyników wybierz **Sprawdź opcje odzyskiwania**, a przy pytaniu **Sprawdzić opcje odzyskiwania?** wybierz **Kontynuuj**. Kreator użyje tego samego zapisanego połączenia z telewizorem. Jeśli wynik operacji na pakietach No-root jest nieznany i widzisz przycisk **Sprawdź stan telewizora**, wybierz go najpierw. Potwierdź proponowaną zmianę osobno. Jeśli instalacja nadal jest zablokowana, zachowaj zapisane połączenie i dane odzyskiwania.
 
-Podczas odzyskiwania pozostaw sterowanie Home wyłączone i zachowaj oryginalne raporty diagnostyczne oraz zapisane połączenie. Kontrolę i zmiany potwierdzaj osobno. Postępuj zgodnie ze szczegółowym przewodnikiem dla zainstalowanej wersji; nie wymuszaj ponownej instalacji ani nie usuwaj stanu odzyskiwania.
+Jeśli No-root oferuje **Ponów sprawdzanie pamięci**, wybierz tę opcję, aby sprawdzić ten sam telewizor w trybie tylko do odczytu. Po udanej kontroli potwierdź instalację osobno. Jeśli instalator wykryje niezakończoną operację, wybierz **Sprawdź opcje odzyskiwania**.
 
-Podaj model TV, firmware, No-root lub Root, urządzenie instalujące, krok i komunikat błędu. Usuń hasła, klucze, adresy i dane osobiste przed udostępnieniem raportu. Raport nie jest publikowany automatycznie.
+Jeśli instalator na komputerze zweryfikuje pakiety, ale przycisk Home nie otwiera Clean Your TV, na ekranie wyników wybierz **Diagnostyka przycisku Home** dla No-root lub **Sprawdź stan telewizora** dla Root. W No-root zobaczysz zapisany wynik. Wybierz **Zapisz raport diagnostyczny**, aby zachować kopię.
+
+Aby zachować kopię na komputerze, na ekranie wyników wybierz **Zapisz raport diagnostyczny…**. Jeśli potrzebujesz pomocy, wybierz **Zgłoś problem**, przejrzyj szkic, a następnie wybierz **Kopiuj szkic** i **Otwórz formularz**. Wklej szkic i dołącz zapisany raport, jeśli go masz.
 
 [Zgłoś problem](../FEEDBACK.md) · [Odzyskiwanie — angielski](../RECOVERY.md) · [Aktualizacja i usuwanie — angielski](../MAINTENANCE.md) · [Inne języki](../LANGUAGES.md)
 
@@ -103,11 +109,17 @@ Podaj model TV, firmware, No-root lub Root, urządzenie instalujące, krok i kom
 
 Wybierz **Odinstaluj Clean Your TV** w Konserwacji dla tego samego zapisanego połączenia. Potwierdź raz. Znane aplikacje i pliki projektu, które istnieją, zostaną usunięte; brakujące zostaną pominięte, także po częściowej instalacji.
 
-Gdy pojawi się prośba, odłącz zasilanie TV, podłącz ponownie, poczekaj na sieć i wybierz **Spróbuj ponownie**. Czuwanie lub Quick Start nie jest pełnym restartem; CYTV nie uruchamia TV ponownie automatycznie. Przy odmowie dostępu użyj żądanego połączenia Root; gdy TV jest zajęty, poczekaj i ponów. Sukces pojawi się dopiero po weryfikacji końcowego czyszczenia. Zachowaj klucze i oryginalne raporty. Sterowanie awaryjne i zgoda na udostępnianie nadal obowiązują.
+Gdy pojawi się prośba, odłącz zasilanie TV, podłącz ponownie, poczekaj na połączenie z siecią. Czuwanie lub Quick Start nie jest pełnym restartem; CYTV nie uruchamia TV ponownie automatycznie. Jeśli czyszczenie wymaga dostępu Root, użyj istniejącego połączenia Root z tym samym telewizorem. Bez tego dostępu czyszczenie pozostanie niekompletne. Gdy TV jest zajęty, poczekaj i spróbuj ponownie. Sukces pojawi się dopiero po weryfikacji końcowego czyszczenia. Zachowaj klucze i oryginalne raporty. Sterowanie awaryjne i zgoda na udostępnianie nadal obowiązują.
 
-Jeśli instalator nie może zweryfikować odinstalowania, końcowego czyszczenia, sterowania telewizorem lub wyniku operacji na pakietach albo zgłasza zmianę ścieżek projektu, wybierz **Sprawdź opcje odzyskiwania** z pierwotnym zapisanym połączeniem. Gdy instalator zaproponuje kontynuację, potwierdź ją osobno.
+Jeśli instalator na komputerze czeka na TV, wybierz **Kontynuuj odinstalowanie**, gdy pojawi się ta opcja. Wybierz **Anuluj**, aby przerwać oczekiwanie, lub **Spróbuj ponownie**, aby ręcznie sprawdzić połączenie.
+
+Jeśli na ekranie odinstalowywania pojawi się opcja **Wróć do LG Home**, wybierz ją. Gdy instalator potwierdzi przywrócenie, wybierz **Kontynuuj odinstalowanie**. Powrót do LG Home bezpośrednio z menu konserwacji pozostawia aplikacje zainstalowane.
+
+Jeśli instalator nie może zweryfikować odinstalowania, końcowego czyszczenia, sterowania telewizorem lub wyniku operacji na pakietach albo zgłasza zmianę ścieżek projektu, wybierz **Sprawdź opcje odzyskiwania** z pierwotnym zapisanym połączeniem. Gdy instalator zaproponuje kontynuację, potwierdź ją osobno. Jeśli podczas odzyskiwania instalacji No-root pojawi się opcja **Sprawdź stan telewizora**, wybierz ją i zachowaj dane odzyskiwania.
 
 Jeśli instalator nie może potwierdzić wymaganego pełnego restartu, zapisz i dołącz raport diagnostyczny. Zachowaj zapisane połączenie i dane odzyskiwania. Nie odłączaj wielokrotnie zasilania ani nie kasuj ręcznie niedokończonej operacji.
+
+Gdy instalator na komputerze wyświetli **Usunięcie Clean Your TV potwierdzono.**, wybierz **Zamknij**, aby zakończyć, lub **Skonfiguruj telewizor**, aby rozpocząć nową instalację na tym samym telewizorze z tą samą edycją i połączeniem.
 
 **Ponowna instalacja Root:** Wybierz **Skonfiguruj telewizor → Root** z zapisanym połączeniem i potwierdź **Zainstalować Root ponownie?**. Instalator przywraca LG Home i całkowicie usuwa Clean Your TV, jego aktualizatory, Home Helper i zapisane ustawienia. Po zweryfikowaniu usunięcia instaluje i aktywuje pakiety oraz środowisko Root dołączone do tego instalatora. Inne aplikacje TV i istniejący dostęp root/SSH zostają zachowane. Jeśli kreator na komputerze się zatrzyma, otwórz ten sam instalator i wybierz **Kontynuuj ponowną instalację Root**. Po zweryfikowaniu usunięcia wybierz **Kontynuuj instalację Root**. Samo **Odinstaluj Clean Your TV** nigdy nie uruchamia nowej instalacji.
 

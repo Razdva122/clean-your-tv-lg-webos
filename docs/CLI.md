@@ -265,6 +265,8 @@ installation uses `[Y/n]` (Enter continues). Removal and restore still require a
    Root privileges and the required webOS environment are verified after login.
 5. Fresh applications, icons and inputs are read from the TV; packages are
    personalized locally. No personal inventory is included in distributed builds.
+   If a first No-root setup warns that it could not read HDMI inputs, it can
+   continue with the applications it found.
    Keep the TV on with its Home screen visible. Some TVs keep SSH active in
    standby but reject the remote-control connection with `1008 / EWS`. The wizard
    then asks you to turn on the TV with its remote and press Enter to check again;
@@ -313,6 +315,12 @@ or bypasses a conflict. Interrupted archive submission is reconciled by `cytv st
 using the recorded destination and state identity before installation can continue.
 Reinstallation uses a fresh inventory; `--migrate-home` is refused for that flow
 so an invalid migration source cannot be discovered only after removing old Root.
+
+If Root setup verifies a supported handoff from another Home integration, confirm
+**Replace the current Home integration?** to restore and recheck LG Home before
+installation. Declining keeps the current Home. This choice requires interactive
+confirmation even with `--yes`. If the installer cannot verify a safe handoff, use
+the existing integration’s own procedure to restore LG Home.
 
 No-root replacement tries to stop a running Helper and verifies that it exited.
 If Helper is still running, press Home three times within two seconds (older Helper:

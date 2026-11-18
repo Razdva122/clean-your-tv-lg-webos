@@ -49,12 +49,14 @@ REASONS = ('unknown', 'user-error', 'ssh-command-failed', 'ssh-exit-status-missi
            'inventory-unavailable', 'graphics-unverified', 'root-home-interfaces', 'native-home-script', 'foreign-home-handoff-required',
            'root-worker-busy', 'root-access-required', 'removal-failed',
            'cleanup-check-failed', 'controls-unverified', 'ownership-conflict', 'connection-interrupted',
-           'operation-timeout', 'tv-storage-full', 'tv-storage-ramfs')
+           'operation-timeout', 'tv-storage-full', 'tv-storage-ramfs', 'tv-storage-unavailable', 'storage-preflight-failed',
+           'computer-storage-full', 'computer-storage-unavailable')
 REASONS += ACTIVATION_CODES
-REASONS += ('installer-runtime-mismatch', 'clean-handoff-refused', 'foreign-home-restore-failed')
+REASONS += ('installer-runtime-mismatch', 'clean-handoff-refused', 'foreign-home-restore-failed', 'pairing-rejected')
 ACTIONS = ('recover', 'install', 'uninstall', 'restore', 'status', 'doctor', 'home-diagnostics',
            'enable-system-updates', 'enable-firmware-access', 'disable-firmware-access',
            'recover-system-rollback', 'recover-root-rollback', 'replace-system-updater', 'clean-wam-cache', 'debloat')
+PENDING_ACTIONS = (*ACTIONS, 'activate-root', 'setup-root-updater', 'archive-root-state')
 PHASES = ('launch-helper', 'verify-home-button', 'select-tv', 'inspect-tv', 'select-edition', 'prepare-payload', 'ssh-connect',
           'inspect-installation', 'pair-tv', 'read-inventory', 'install-packages',
           'install-helper', 'install-home', 'configure-helper', 'configure-home', 'install-root',
@@ -169,6 +171,25 @@ def inventory_failures(value):
     return result
 
 
+def root_python_inventory_summary(value):
+    from .python_runtime import MAX_FILES
+
+    value = mapping(value)
+    observed = choice(value.get('status'), ('absent', 'unreadable', 'matching', 'generated', 'unexpected'))
+    if observed in ('matching', 'generated', 'unexpected'):
+        counts = {key: value.get(key) for key in ('matching_files', 'generated_entries', 'unexpected_entries')}
+        if (not all(type(count) is int and 0 <= count <= 7 * MAX_FILES for count in counts.values())
+                or counts['matching_files'] > MAX_FILES
+                or counts['matching_files'] + counts['unexpected_entries'] == 0):
+            return {'status': 'unknown'}
+        expected = ('unexpected' if counts['unexpected_entries'] else
+                    'generated' if counts['generated_entries'] else 'matching')
+        if observed != expected:
+            return {'status': 'unknown'}
+        return {'status': observed, **counts}
+    return {'status': observed}
+
+
 def root_home_button_readback(value):
     from .root_activation_diagnostics import COMPOSITOR_STOPS
     value = mapping(value)
@@ -189,7 +210,8 @@ def tv_summary(value):
         icons = mapping(value['icon_inventory'])
         result['icon_inventory'] = {'schema': 1, 'status': choice(icons.get('status'),
             ('reading', 'complete', 'unavailable'), 'unavailable')}
-        for key in ('apps', 'embedded', 'fallback', 'missing_uri', 'rejected_uri', 'fetch_failed', 'invalid_image'):
+        for key in ('apps', 'embedded', 'fallback', 'missing_uri', 'rejected_uri', 'fetch_failed', 'invalid_image',
+                    'skipped_apps'):
             count = icons.get(key)
             if type(count) is int and 0 <= count <= 1800:
                 result['icon_inventory'][key] = count
@@ -221,6 +243,8 @@ def tv_summary(value):
                                   for key in ('applications','inputs')}
     if 'root_inventory_failures' in value:
         result['root_inventory_failures']=inventory_failures(value['root_inventory_failures'])
+    if 'root_python_inventory' in value:
+        result['root_python_inventory'] = root_python_inventory_summary(value['root_python_inventory'])
     if version(value.get('node_version')):
         result['node_version'] = value['node_version']
     if 'node_version_status' in value:
@@ -344,7 +368,9 @@ def collect_metadata(remote, info):
 
 def checks_summary(value):
     from .checks import LABELS, STATUS
-    return {key: choice(mapping(item).get('status'), STATUS) for key, item in mapping(value).items() if key in LABELS}
+    # Export the individual Python probes. The aggregate is for the installer UI.
+    return {key: choice(mapping(item).get('status'), STATUS) for key, item in mapping(value).items()
+            if key in LABELS and key != 'python-runtime'}
 
 
 def worker_summary(value):
@@ -375,6 +401,8 @@ def worker_summary(value):
                   'unsafe-cleanup-directory', 'unsafe-cleanup-member', 'cleanup-guard-failed'), None)
     if inspect_check is not None:result['inspect_check']=inspect_check
     if 'stage' in value:result['stage']=choice(value['stage'],STAGES)
+    if value.get('package_rejected') is True:
+        result['package_rejected']=True
     if 'cleanup_step' in value:
         result['cleanup_step']=choice(value['cleanup_step'],('routing-inverse','runtime-restore',
             'provision-rollback','startup-hook','legacy-lockdown','registration-restore','legacy-permissions','home-readback'))
@@ -490,7 +518,7 @@ def status_summary(value):
                       'readback':choice(mapping(slot).get('readback'),('not-checked','matches')),
                       'reason':choice(mapping(slot).get('reason'),('malformed-reply','malformed-utf8','oversized-stream',
                           'oversized-reply','too-many-replies','oversized-stderr','observation-timeout','sender-unavailable',
-                          'sender-stdin-lost','stream-ended','terminal-persistence-unverified'))} for slot in slots[:2]]}
+                          'sender-stdin-lost','stream-ended','terminal-persistence-unverified'))} for slot in slots[:3]]}
     if 'cancellation' in value:
         cancellation=mapping(value['cancellation'])
         result['cancellation']={'state':choice(cancellation.get('state'),('blocked','admissible','admitted',
@@ -549,7 +577,7 @@ def failure_summary(value):
     result = {'action': choice(value.get('action'), ACTIONS),
               'phase': choice(value.get('phase'), PHASES),
               'reason_code': choice(value.get('reason_code'), REASONS)}
-    error_types = ('RootCapabilityError', 'UserError', 'LocalRecoveryError', 'TVCommandError', 'TVRejected', 'LunaReplyUnconfirmed',
+    error_types = ('RootCapabilityError', 'UserError', 'TVStorageShortfall', 'LocalRecoveryError', 'TVCommandError', 'TVRejected', 'LunaReplyUnconfirmed',
                    'PythonCacheError',
                    'PythonPreflightError', 'DeveloperKeyError', 'TVConnectionError',
                    'AuthenticationException', 'BadHostKeyException', 'NoValidConnectionsError',
@@ -639,6 +667,104 @@ def failure_summary(value):
     return result
 
 
+def _issue_observation(value):
+    from .failure_help import report_summary
+
+    value = mapping(value)
+    reason = choice(value.get('reason_code'), REASONS)
+    if reason in ('unknown', 'user-error'):
+        package_reason = choice(mapping(value.get('luna')).get('reason'), PACKAGE_FAILURE_REASONS)
+        guidance = report_summary(value.get('guidance'))['code']
+        if package_reason != 'unknown':
+            reason = package_reason
+        else:
+            reason = 'unknown' if guidance in ('pending-operation', 'no-root-recovery') else guidance
+    exit_status = mapping(value.get('ssh_command')).get('exit_status')
+    if reason == 'ssh-command-failed' and type(exit_status) is int and exit_status == -1:
+        reason = 'ssh-exit-status-missing'
+    return {'action': choice(value.get('action'), PENDING_ACTIONS),
+            'phase': choice(value.get('phase'), PHASES),
+            'reason': reason}
+
+
+def _issue_verified_outcome(value):
+    status = mapping(value.get('status'))
+    if status.get('verified_clean') is True and status.get('removed') is True:
+        return 'Clean Your TV removal verified'
+    if value.get('action') == 'install' and value.get('phase') == 'install-complete' and value.get('error_type') is None:
+        return 'Installation completed'
+    if mapping(value.get('activation_recovery')).get('lg_home') == 'verified':
+        return 'LG Home restoration verified'
+    for assessment in (mapping(status.get('assessment')), mapping(value.get('recovery'))):
+        state, reason = assessment.get('state'), assessment.get('reason')
+        if state == 'terminal-verified' and reason == 'removal-verified':
+            return 'Clean Your TV removal verified'
+        if state == 'terminal-verified' and reason == 'activation-verified':
+            return 'Root activation verified'
+        if state == 'product-ready' and reason == 'final-readback-verified':
+            return 'Installation readback verified'
+        if state == 'setup-ready' and reason == 'packages-verified':
+            return 'Installed packages verified'
+    if mapping(value.get('checks')).get('ssh') == 'pass':
+        return 'SSH connection and sign-in verified'
+    return None
+
+
+def issue_summary(value):
+    """Select the operation's evidence from a saved report without reading the TV."""
+    value = mapping(value)
+    current = _issue_observation(value)
+    original = mapping(value.get('first_failure'))
+    original_observation = _issue_observation(original)
+    pending = mapping(value.get('pending'))
+    removal = mapping(value.get('removal'))
+    goal = current['action']
+    previous_attempt = False
+    if goal in ('doctor', 'recover', 'status'):
+        if pending:
+            goal = choice(pending.get('action'), PENDING_ACTIONS)
+        elif removal:
+            goal = 'uninstall'
+        elif original:
+            goal = original_observation['action']
+        else:
+            previous = mapping(value.get('previous_attempt_failure'))
+            if previous.get('action') == 'install':
+                original = previous
+                original_observation = _issue_observation(original)
+                goal = 'install'
+                previous_attempt = True
+
+    primary = {}
+    # During a reinstall, clean removal can retain an unrelated install failure.
+    if original and original_observation['action'] == goal and (not removal or goal == 'uninstall'):
+        primary = original
+    else:
+        # Clean removal inherits the original install record. Its own first
+        # failure can be in the intermediate history for that same removal.
+        intermediate = value.get('intermediate_failures')
+        if removal and goal == 'uninstall' and type(intermediate) is list:
+            primary = next((failure for failure in intermediate
+                            if mapping(failure).get('action') == goal), {})
+        if not primary and current['action'] == goal and current['reason'] != 'pending-operation':
+            primary = value
+
+    observed = _issue_observation(primary)
+    later = (current if primary is not value and
+             (current != observed or value.get('timestamp_utc') != primary.get('timestamp_utc')) else None)
+    return {
+        'goal': goal,
+        'edition': choice(value.get('edition'), ('no-root', 'root')),
+        'version': version(primary.get('cytv_version')) if primary else version(value.get('cytv_version')),
+        'phase': observed['phase'],
+        'reason': observed['reason'],
+        'outcome': _issue_verified_outcome(value) or _issue_verified_outcome(primary) or 'unknown',
+        'previous_attempt': previous_attempt,
+        'earlier': original_observation if original and original is not primary else None,
+        'later': later,
+    }
+
+
 def read_record(path):
     if path.is_symlink():
         raise ValueError('Indirect diagnostic record')
@@ -711,13 +837,12 @@ def history(report, store, profile, error, pending, *, create=True):
         directory = store.device_path(profile) / 'diagnostic-failures'
         if directory.is_symlink():
             raise ValueError('Indirect diagnostic directory')
-        if create:
-            directory.mkdir(parents=True, mode=0o700, exist_ok=True)
         identifier = mapping(pending).get('diagnostic_id')
         if type(identifier) is str and re.fullmatch(r'[a-f0-9]{32}', identifier):
             path = directory / (identifier + '.json')
             if (create and error is not None and getattr(store, 'diagnostic_created', None) == identifier
                     and report['action'] == getattr(store, 'diagnostic_action', None)):
+                directory.mkdir(parents=True, mode=0o700, exist_ok=True)
                 _write_first_failure(path, report)
             if path.exists() or path.is_symlink():
                 result['first_failure'] = failure_summary(read_record(path))

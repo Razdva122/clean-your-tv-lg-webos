@@ -92,13 +92,23 @@ let browser;
           1,
           language + '/' + reason
         );
-        assert.equal(await page.locator('[data-action=recover]').count(), 0);
+        const nextAction =
+          reason === 'restart-required' ? 'recover' : 'retry-removal';
+        assert.equal(
+          await page.locator('[data-action=recover]').count(),
+          reason === 'restart-required' ? 1 : 0
+        );
+        if (reason === 'restart-required')
+          assert.equal(
+            await page.locator('[data-action=retry-removal]').count(),
+            0
+          );
         assert.equal(
           await page
             .locator(
               reason === 'root-access-required'
                 ? '[data-action=connect-root]'
-                : '[data-action=retry-removal]'
+                : `[data-action=${nextAction}]`
             )
             .innerText(),
           reason === 'root-access-required'
@@ -179,9 +189,13 @@ let browser;
             assert.equal(review.root_variant, target.root_variant);
           }
           continue;
-        } else await page.locator('[data-action=retry-removal]').click();
+        } else await page.locator(`[data-action=${nextAction}]`).click();
         const request = await page.evaluate(() => requests.at(-1));
-        for (const key of ['host', 'edition', 'port', 'action', 'language'])
+        assert.equal(
+          request.action,
+          reason === 'restart-required' ? 'recover' : 'uninstall'
+        );
+        for (const key of ['host', 'edition', 'port', 'language'])
           assert.equal(request[key], target[key], key);
         assert.equal(
           await page.locator('dialog[open]').count(),
@@ -243,7 +257,7 @@ let browser;
   );
   await browser.close();
   console.log(
-    'PASS simple Android removal: 13 locales, both editions, full restart/connection/busy/access instructions, direct same-goal retry and both final proof flags'
+    'PASS simple Android removal: 13 locales, both editions, restart recovery, connection/busy/access instructions, same-goal retry and both final proof flags'
   );
 })().catch(async (error) => {
   console.error(error);

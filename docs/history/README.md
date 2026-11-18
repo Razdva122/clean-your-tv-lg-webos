@@ -273,6 +273,8 @@ one model or artifact does not certify later releases or a different TV.
 
 ## Audits, investigations and original plans
 
+- [Installer support baseline, 2026-11-18](2026-11-18-installer-support-baseline.md)
+
 - [Home transport source QA, 2026-10-29](HOME-CONTROL-TRANSPORT-QA-2026-10-29.md): scoped project C3 jail, status/control and physical Home results; final release acceptance remains separate.
 
 - [Earlier documentation audit](../DOCUMENTATION-AUDIT.md), [1.2.0 documentation audit](../DOCUMENTATION-AUDIT-1.2.0.md), [issue-status audit](../ISSUE-STATUS-AUDIT.md).

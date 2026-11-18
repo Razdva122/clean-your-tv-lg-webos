@@ -21,7 +21,8 @@ for language in i18n.LANGUAGES:
  if language=='auto':continue
  i18n.set_language(language);native=Native();console=module.AndroidConsole(module.Callbacks(native))
  console.recovery_plan({'state':'blocked','disposition':'clean-removal','summary':'Removal is still in progress.','next_step':'Continue the remaining cleanup for this TV.',
-  'actions':['continue-removal','retain-evidence'],'removal':{'stage':'private-cleanup','reason':'private-cleanup-incomplete'}})
+  'actions':['continue-removal','retain-evidence'],'removal':{'stage':'private-cleanup','reason':'private-cleanup-incomplete'},
+  'removal_evidence':{'stock':'stock-observed','stock_surface':'com.webos.app.hdmi2'}})
  result[language]=native.events[-1]
 print(json.dumps(result))
 `
@@ -56,7 +57,7 @@ let browser;
     for (const proof of [null, false, true]) {
       for (const edition of ['root', 'no-root']) {
         await page.evaluate(
-          ({ disposition, proof, edition }) => {
+          ({ disposition, proof, edition, surface }) => {
             receiveNative({
               kind: 'started',
               config: { host: '192.0.2.10', edition, action: 'uninstall' }
@@ -70,10 +71,21 @@ let browser;
             };
             if (disposition !== null) plan.disposition = disposition;
             if (proof !== null) plan.verified_clean = proof;
+            if (surface) plan.stockSurfaceText = surface;
             receiveNative(plan);
             receiveNative({ kind: 'finished', code: 0 });
           },
-          { disposition, proof, edition }
+          {
+            disposition,
+            proof,
+            edition,
+            surface:
+              disposition === 'clean-removal' &&
+              proof === true &&
+              edition === 'no-root'
+                ? details.en.stockSurfaceText
+                : null
+          }
         );
         const complete = disposition === 'clean-removal' && proof === true;
         assert.equal(
@@ -85,6 +97,14 @@ let browser;
           await page.locator('h1').innerText(),
           complete ? 'Completion received' : 'Removal is not finished yet.'
         );
+        if (complete && edition === 'no-root') {
+          assert.equal(
+            await page
+              .getByText(details.en.stockSurfaceText, { exact: true })
+              .count(),
+            1
+          );
+        }
       }
     }
   }
@@ -115,12 +135,15 @@ let browser;
     await page.evaluate(() => receiveNative({ kind: 'finished', code: 2 }));
     assert.equal(await page.locator('.review-symbol').count(), 1);
     assert.equal(await page.locator('h1').innerText(), event.titleText);
+    assert(event.stockSurfaceText.includes('HDMI 2'), language);
+    assert(
+      (await page.locator('body').innerText()).includes(event.stockSurfaceText)
+    );
     assert.equal(await page.locator('.error-result').count(), 0);
     assert.equal(await page.locator('.error-summary').count(), 0);
-    assert(
-      (await page.locator('.recovery-info').innerText()).includes(
-        event.blockerText
-      )
+    assert.equal(
+      await page.getByText(event.blockerText, { exact: true }).count(),
+      1
     );
     assert.equal(await page.locator('[data-action=retry-removal]').count(), 0);
     await page.evaluate((event) => {

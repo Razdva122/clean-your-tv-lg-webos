@@ -9,7 +9,8 @@ REASONS = ('no-pending-operation', 'removal-not-submitted', 'terminal-evidence-m
 ACTIONS = ('check', 'inspect-support', 'continue-product', 'continue-no-root', 'cancel-install', 'continue-setup', 'finish-home-off', 'reconcile', 'retain-evidence', 'continue-removal', 'connect-root')
 REMOVAL_STAGES = ('requested', 'original-writers-fenced', 'controls-restored', 'package-removal', 'private-cleanup', 'restart-required', 'verified-clean')
 REMOVAL_REASONS = ('removal-requested', 'original-writer-active', 'ownership-conflict', 'controls-unverified',
-                   'removal-terminal-unknown', 'private-cleanup-incomplete', 'removal-verified', 'removal-recheck-required', 'restart-required',
+                   'removal-terminal-unknown', 'private-cleanup-incomplete', 'removal-verified',
+                   'removal-recheck-required', 'restart-required', 'restart-unverified',
                    'root-worker-busy','root-access-required','removal-failed','cleanup-check-failed',
                    'connection-interrupted','connection-unverified')
 RESTART_TRIGGERS = ('controller-still-running', 'protected-package-access', 'startup-disable-unverified',
@@ -18,6 +19,36 @@ RESTART_TRIGGERS = ('controller-still-running', 'protected-package-access', 'sta
                     'original-configuration-unverified', 'original-package-unverified', 'homebrew-request-unverified')
 STATES += ('cleanup-in-progress', 'verified-clean')
 REASONS += REMOVAL_REASONS
+
+
+REMOVAL_FAILURE_PHASES = {
+    'original-writers-fenced': 'controls-unverified',
+    'package-removal': 'removal-terminal-unknown',
+    'private-cleanup': 'private-cleanup-incomplete',
+}
+
+
+def root_removal_failure_phase(reply):
+    """Locate an incomplete current Root attempt using bounded worker evidence."""
+    if reply.get('state') != 'recovery_required':
+        return None
+    from .diagnostic_context import worker_summary
+    # Tail and observation-only replies can include a previous worker failure.
+    failure = reply.get('cleanup_error')
+    latest = worker_summary(reply.get('last_failure')) if failure in ('cleanup-check-failed', 'removal-failed') else {}
+    if failure == 'removal-failed':
+        return None if latest.get('package_rejected') is True else 'removal-terminal-unknown'
+    if latest.get('cleanup_step') not in (None, 'unknown'):
+        # The worker's allowlisted cleanup steps restore or check stock controls.
+        return 'controls-unverified'
+    phase = REMOVAL_FAILURE_PHASES.get(latest.get('stage'))
+    if phase:
+        return phase
+    reason = reply.get('reason')
+    if reason in REMOVAL_FAILURE_PHASES.values():
+        return reason
+    stage = reply.get('stage')
+    return REMOVAL_FAILURE_PHASES.get(stage) if type(stage) is str else None
 
 
 def removal_summary(pending):
@@ -33,6 +64,11 @@ def removal_summary(pending):
     result = {'state':'cleanup-in-progress',
             'stage':stage, 'reason':reason if reason in REMOVAL_REASONS else 'removal-requested',
             'original_outcome':outcome if outcome in ('complete', 'recovery_required') else 'unknown'}
+    phase_reason = pending.get('removal_failure_phase')
+    if (reason not in ('restart-required', 'removal-verified', 'removal-recheck-required')
+            and stage not in ('restart-required', 'verified-clean')
+            and phase_reason in REMOVAL_FAILURE_PHASES.values()):
+        result['failure_phase'] = phase_reason
     proof = pending.get('result')
     if stage == 'verified-clean' and type(proof) is dict and proof.get('empty_helper_dirs_retained') is True:
         result['empty_helper_dirs_retained'] = True
@@ -79,6 +115,8 @@ def assess(profile, pending, observation=None):
                 return result(removal['state'], 'ownership-conflict', 'check', 'retain-evidence')
             if binding.get('reservation') in ('matched', 'absent', 'interrupted') and reason == 'ownership-conflict':
                 reason = 'removal-recheck-required'
+        if observation.get('package_removal_monitor') == 'busy':
+            return result('waiting', 'original-writer-active', 'check', 'retain-evidence')
         return result(removal['state'], reason, 'continue-removal', 'retain-evidence')
     if observation.get('active_operation') is not None:
         return result('blocked', 'foreign-operation', 'check', 'retain-evidence')

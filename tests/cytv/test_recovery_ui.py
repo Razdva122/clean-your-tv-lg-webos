@@ -3,6 +3,69 @@ import unittest
 
 
 class RecoveryPresentationTests(unittest.TestCase):
+    def test_current_stock_readback_and_installed_helper_show_partial_removal(self):
+        from cytv.recovery_ui import removal_milestones, removal_title
+
+        plan = {'state':'blocked', 'disposition':'clean-removal',
+                'removal_evidence':{'stock':'stock-observed', 'packages':'helper-present', 'cleanup':'pending'}}
+        self.assertEqual(removal_title(plan, {'code':'removal-terminal-unknown'}), 'Removal is partly complete.')
+        self.assertEqual(removal_milestones(plan), (
+            'A stock TV screen was observed. Physical remote untested.',
+            'Home Helper is still installed.',
+            'Final cleanup remains to be verified.',
+        ))
+
+    def test_launch_acknowledgement_and_saved_stage_do_not_verify_controls(self):
+        from types import SimpleNamespace
+        from cytv.no_root_cleanup import restore_stock_home
+        from cytv.recovery_ui import removal_milestones
+
+        plan = {'state':'blocked', 'disposition':'clean-removal',
+                'removal':{'stage':'controls-restored'}}
+        self.assertEqual(removal_milestones(plan), (
+            'Stock controls are unknown.', 'Package absence is unknown.', 'Final cleanup is unknown.',
+        ))
+        remote = SimpleNamespace(luna=lambda uri, body: {'returnValue':True})
+        stock = restore_stock_home(SimpleNamespace(remote=remote))
+        plan['removal_evidence'] = {**stock, 'packages':['PRIVATE']}
+        self.assertEqual(removal_milestones(plan), (
+            'The TV accepted a stock app launch. Physical remote untested.',
+            'Package absence is unknown.',
+            'Final cleanup is unknown.',
+        ))
+
+    def test_clean_milestones_require_existing_terminal_proof(self):
+        from cytv.recovery_ui import removal_milestones
+
+        plan = {'state':'complete', 'disposition':'clean-removal', 'removed':True, 'verified_clean':True}
+        self.assertEqual(removal_milestones(plan), (
+            'Stock controls are unknown.', 'Clean Your TV packages are absent.', 'Final cleanup is verified.',
+        ))
+        for incomplete in ({'verified_clean':1}, {'state':'blocked'}, {'restart_required':True}):
+            self.assertNotIn('Final cleanup is verified.', removal_milestones(dict(plan, **incomplete)))
+        self.assertNotIn('Final cleanup is verified.', removal_milestones(plan, {'code':'ssh-timeout'}))
+
+    def test_desktop_keeps_partial_milestones_on_the_finished_screen(self):
+        from tests.cytv import test_desktop_recovery as desktop
+
+        if not desktop.HAS_QT:
+            self.skipTest('Qt is optional for console-only tests')
+        fixture = desktop.DesktopRecoveryTests()
+        fixture.setUpClass()
+        fixture.setUp()
+        self.addCleanup(fixture.doCleanups)
+        window = fixture.window()
+        window.command = 'uninstall'
+        window.receive('recovery-plan', {
+            'state':'blocked', 'disposition':'clean-removal', 'summary':'Review recovery options',
+            'removal_evidence':{'stock':'routing-verified', 'packages':'helper-present', 'cleanup':'pending'},
+        })
+        window.receive('done', 2)
+        self.assertEqual(window.title.text(), 'Removal is partly complete.')
+        self.assertIn('Home routing was verified. Physical remote untested.', window.subtitle.text())
+        self.assertIn('Home Helper is still installed.', window.subtitle.text())
+        self.assertIn('Final cleanup remains to be verified.', window.subtitle.text())
+
     def test_removal_action_classifies_only_fixed_evidence(self):
         from cytv.recovery_ui import removal_action
         plan = {'disposition':'clean-removal'}
@@ -18,8 +81,9 @@ class RecoveryPresentationTests(unittest.TestCase):
             ({'state':'complete','removed':True,'verified_clean':1}, None, check),
             ({'state':'ready','removed':True,'verified_clean':True}, None, check),
             ({'removal':{'stage':'verified-clean','reason':'removal-verified'}}, None, check),
-            ({'actions':['connect-root']}, None, access),
+            ({'actions':['connect-root']}, None, check),
             ({'reason':'root-access-required'}, None, access),
+            ({'reason':'root-access-required','connection_failure':True}, None, check),
             ({'removal':{'stage':'restart-required'}}, None, restart),
             (dict(terminal, restart_required=True), None, restart),
             (dict(terminal, restart_required=True), {'code':'ssh-auth-root'}, check),
@@ -36,7 +100,7 @@ class RecoveryPresentationTests(unittest.TestCase):
             ({'reason':'removal-failed','removal':{'stage':'restart-required'}}, None, check),
             ({'reason':'root-worker-busy','removal':{'stage':'restart-required'}}, None, retry),
             ({'reason':'connection-interrupted','removal':{'stage':'restart-required'}}, None, retry),
-            ({'reason':'connection-interrupted','actions':['connect-root']}, None, access),
+            ({'reason':'connection-interrupted','actions':['connect-root']}, None, retry),
             ({'reason':'removal-failed','removal':{'reason':'connection-interrupted'}}, None, check),
             ({'reason':'connection-interrupted'}, {'code':'recovery-status-rejected'}, check),
             ({'reason':'root-worker-busy','removal':{'reason':'controls-unverified'}}, None, retry),
@@ -69,6 +133,14 @@ class RecoveryPresentationTests(unittest.TestCase):
         self.assertEqual(projected_removal_action(value),
                          {'action':'check','condition':'unverified','requires_change':True})
 
+    def test_precomputed_access_needs_an_explicit_removal_blocker(self):
+        from cytv.recovery_ui import projected_removal_action
+        plan = {'disposition':'clean-removal', 'actions':['connect-root'],
+                'removal_action':{'action':'connect-root','condition':'access','requires_change':True}}
+        self.assertEqual(projected_removal_action(plan)['action'], 'check')
+        self.assertEqual(projected_removal_action(dict(plan, reason='connection-interrupted'))['action'],
+                         'retry-removal')
+
     def test_connection_pending_cleanup_and_package_refusal_have_distinct_results(self):
         from cytv.recovery_ui import removal_title, removal_waiting
         def plan(reason):
@@ -93,8 +165,8 @@ class RecoveryPresentationTests(unittest.TestCase):
         from cytv.recovery_ui import removal_details
         self.assertEqual(removal_details({'disposition':'clean-removal','removal':{
             'stage':'private-cleanup','reason':'removal-terminal-unknown'}}), {
-                'stage_text':'Removing private setup data…',
-                'blocker_text':'The TV package result could not be verified. Review recovery options before continuing.'})
+                'stage_text':'Verifying removal…',
+                'blocker_text':'Review recovery options before trying to remove packages again.'})
 
     def test_unknown_codes_do_not_become_private_main_ui_text_or_completion(self):
         from cytv.recovery_ui import removal_details

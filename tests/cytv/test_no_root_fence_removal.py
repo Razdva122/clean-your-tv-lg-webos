@@ -1,12 +1,14 @@
-"""A successful No-root successor must be removable with its existing Root SSH."""
+"""Verify admission and request ownership during No-root removal."""
 import hashlib
 import json
+import os
 from pathlib import Path
+import shutil
 import tempfile
 import unittest
 from unittest.mock import Mock, patch
 
-from cytv.errors import UserError
+from cytv.errors import TVRejected, UserError
 from cytv.operations import Installer
 from cytv.state import Store,target
 
@@ -89,3 +91,142 @@ class InertRootRemoval(unittest.TestCase):
         pending=self.store.pending(self.profile)
         self.assertNotEqual(pending.get('removal_target_intent'),'f'*32)
         self.assertEqual(self.installer.product_action.call_count,1)
+
+
+@unittest.skipIf(os.name == 'nt' or not shutil.which('node'), 'POSIX TV filesystem model requires Node')
+class VendorRemoval(unittest.TestCase):
+    def setUp(self):
+        from tests.cytv import test_no_root_simple_removal as fixture
+
+        self.case = fixture.SimpleRemoval()
+        self.case.setUp()
+        self.addCleanup(self.case.doCleanups)
+        self.case.installer.tv_info = {}
+        (self.case.root / 'proc').mkdir()
+        self.app = self.case.cleanup.APPS[1]
+        self.case.remote.apps.add(self.app)
+
+    def test_timeout_refreshes_original_vendor_request_without_resubmitting(self):
+        from cytv.recovery import recover
+
+        remote = self.case.remote
+        original = remote.luna
+        state = 'busy'
+
+        def luna(uri, payload, **options):
+            if uri.endswith('/dev/remove'):
+                remote.calls.append((uri, payload))
+                raise UserError('TV operation timed out. Run cytv status before retrying.',
+                                reason_code='operation-timeout')
+            if uri.endswith('/status'):
+                if state == 'busy':
+                    remote.calls.append((uri, payload))
+                    return {'returnValue': True, 'status': {'apps': [self.app]}}
+                if state == 'denied':
+                    raise TVRejected('Denied', {'returnValue': False, 'errorCode': -1}, uri)
+            return original(uri, payload, **options)
+
+        remote.luna = luna
+        store, profile = self.case.store, self.case.profile
+        goal = store.request_clean_removal(profile)['removal_operation']
+        with self.assertRaises(UserError) as timeout:
+            self.case.remove()
+        self.assertEqual(timeout.exception.reason_code, 'operation-timeout')
+        pending = store.pending(profile)
+        self.assertEqual(pending['removals'], {self.app: 'submitted'})
+        self.assertEqual(pending.get('removal_failure_phase'), 'removal-terminal-unknown')
+        before = len(remote.calls)
+        for _ in range(2):
+            observation = self.case.installer.status()
+            self.assertEqual(observation['assessment'],
+                             {'state': 'waiting', 'reason': 'original-writer-active',
+                              'actions': ['check', 'retain-evidence']})
+            self.assertEqual(store.pending(profile), pending)
+        self.assertEqual([uri for uri, _ in remote.calls[before:]], ['com.webos.appInstallService/status'] * 2)
+
+        write, ask = Mock(), Mock()
+        recover(self.case.installer, ask, write, review_confirmed=True)
+        ask.assert_not_called()
+        plan = write.recovery_plan.call_args.args[0]
+        self.assertEqual(plan['state'], 'waiting')
+        self.assertEqual(plan['removal_action']['action'], 'check')
+
+        state = 'denied'
+        self.assertIn('continue-removal', self.case.installer.status()['assessment']['actions'])
+        self.assertEqual(store.pending(profile), pending)
+        self.assertTrue(self.case.remove()['restart_required'])
+        pending = store.pending(profile)
+        state = 'busy'
+        recover(self.case.installer, ask, write, review_confirmed=True)
+        plan = write.recovery_plan.call_args.args[0]
+        self.assertEqual(plan['removal']['reason'], 'original-writer-active')
+        self.assertEqual(plan['removal_action']['action'], 'check')
+        self.assertEqual(store.pending(profile), pending)
+
+        # The same vendor request finishes after the transport timeout.
+        state = 'idle'
+        remote.apps.remove(self.app)
+        self.assertIn('continue-removal', self.case.installer.status()['assessment']['actions'])
+        self.assertEqual(store.pending(profile), pending)
+        self.assertTrue(self.case.remove()['verified_clean'])
+        self.assertEqual(self.case.vendor_removals(), [self.app])
+        completed = json.loads((store.device_dir(profile) / 'clean-removal.json').read_text())
+        self.assertEqual(completed['removal_operation'], goal)
+
+    def test_acceptance_reply_requires_a_terminal_and_rejection_names_removal(self):
+        from cytv.transport import LunaReplyUnconfirmed, SSH
+
+        remote = self.case.remote
+        original = remote.luna
+        ssh = object.__new__(SSH)
+        ssh.root = False
+        ssh.channel = Mock()
+        ssh.chunks = Mock()
+        accepted = b'{"returnValue":true,"details":{"state":"removing"}}'
+
+        def luna(uri, payload, **options):
+            return ssh.luna(uri, payload, **options) if uri.endswith('/dev/remove') else original(uri, payload, **options)
+
+        remote.luna = luna
+        store, profile = self.case.store, self.case.profile
+        goal = store.request_clean_removal(profile)['removal_operation']
+        ssh.chunks.return_value = iter((accepted, b'{"returnValue":false,"errorCode":-102}'))
+        with self.assertRaisesRegex(TVRejected, 'The TV rejected removal') as rejected:
+            self.case.remove()
+        self.assertEqual(rejected.exception.luna['operation'], 'package-remove')
+        self.assertEqual(store.pending(profile)['removals'], {})
+
+        ssh.chunks.return_value = iter((accepted,))
+        with self.assertRaises(LunaReplyUnconfirmed):
+            self.case.remove()
+        pending = store.pending(profile)
+        self.assertEqual(pending['removals'], {self.app: 'submitted'})
+        self.assertEqual(pending.get('removal_failure_phase'), 'removal-terminal-unknown')
+        self.assertEqual(pending['removal_operation'], goal)
+
+    def test_delayed_terminal_reply_completes_the_original_vendor_call(self):
+        from cytv.transport import SSH
+
+        remote = self.case.remote
+        original = remote.luna
+        ssh = object.__new__(SSH)
+        ssh.root = False
+        ssh.channel = Mock()
+        store, profile = self.case.store, self.case.profile
+        goal = store.request_clean_removal(profile)['removal_operation']
+
+        def replies(channel, timeout):
+            yield b'{"returnValue":true,"details":{"state":"removing"}}'
+            self.assertEqual(store.pending(profile)['removals'], {self.app: 'submitted'})
+            remote.apps.remove(self.app)
+            yield b'{"returnValue":true,"details":{"state":"removed"}}'
+
+        def luna(uri, payload, **options):
+            return ssh.luna(uri, payload, **options) if uri.endswith('/dev/remove') else original(uri, payload, **options)
+
+        ssh.chunks = replies
+        remote.luna = luna
+        self.assertTrue(self.case.remove()['verified_clean'])
+        self.assertEqual(ssh.channel.call_count, 1)
+        completed = json.loads((store.device_dir(profile) / 'clean-removal.json').read_text())
+        self.assertEqual(completed['removal_operation'], goal)

@@ -1,4 +1,4 @@
-"""Operation-bound passive Root reads. No retained code, staging or continuation."""
+"""Passive Root diagnostics. No retained code, staging or continuation."""
 import json
 import re
 
@@ -11,6 +11,7 @@ READERS = r'''
  function directory(p){
   var s=fs.lstatSync(p);
   if(!s.isDirectory()||s.uid!==0||(s.mode&18))fail('unsafe');
+  return s;
  }
  function read(p,limit,tail,mask){
   for(var parent=p.slice(0,p.lastIndexOf('/'));parent;parent=parent.slice(0,parent.lastIndexOf('/')))directory(parent);
@@ -130,6 +131,101 @@ PROGRAM = READERS + r'''
  console.log(JSON.stringify(out));
 }());
 '''
+
+
+RUNTIME_INVENTORY_PROGRAM = READERS + r'''
+ // Compare against the installed manifest as data. No binding or admission proof.
+ var slot=RUNTIME_SLOT, pin=RUNTIME_PIN, manifest=slot+'/.cytv-runtime.json';
+ var out={status:'unreadable'};
+ function has(items, key){return Object.prototype.hasOwnProperty.call(items,key);}
+ try{
+  if(process.getuid()!==0)fail('unsafe');
+  try{
+   directory('/');
+   var parent='';
+   slot.slice(1).split('/').forEach(function(part){parent+='/'+part;directory(parent);});
+  }catch(e){if(e.code==='ENOENT')fail('absent');throw e;}
+  if(!fs.lstatSync(manifest).isFile())fail('unsafe');
+  var raw=read(manifest,4*1024*1024,0,18), inventory=parse(raw), files=inventory.files;
+  if(inventory.schema!==1||inventory.archive_sha256!==pin||!files||typeof files!=='object'||
+     Array.isArray(files)||!has(files,'bin/python3.13'))fail('unsafe');
+  var names=Object.keys(files), expectedDirectories=Object.create(null), caches=Object.create(null);
+  var cacheDirectories=Object.create(null), seen=Object.create(null);
+  if(names.length>RUNTIME_FILE_LIMIT)fail('unsafe');
+  names.forEach(function(name){
+   var parts=name.split('/');
+   if(name==='.cytv-runtime.json'||name.length>512||/[^A-Za-z0-9_+.,@=/-]/.test(name)||
+      parts.some(function(part){return !part||part==='.'||part==='..';})||!digest(files[name]))fail('unsafe');
+   var leaf=parts.pop(), parent=parts.length?parts.join('/')+'/':'';
+   for(var i=1;i<=parts.length;i++){
+    var dir=parts.slice(0,i).join('/');
+    if(has(files,dir))fail('unsafe');
+    expectedDirectories[dir]=true;
+   }
+   if(leaf.slice(-3)==='.py'){
+    var cacheDir=parent+'__pycache__', stem=cacheDir+'/'+leaf.slice(0,-3)+'.cpython-313';
+    cacheDirectories[cacheDir]=true;
+    ['', '.opt-1', '.opt-2'].forEach(function(suffix){caches[stem+suffix+'.pyc']=true;});
+   }
+  });
+  var matching=0, generated=0, unexpected=0, entries=0, bytes=0;
+  var scan=function(path,prefix){
+   var before=directory(path), children=fs.readdirSync(path);
+   entries+=children.length;
+   if(entries>6*RUNTIME_FILE_LIMIT)fail('unsafe');
+   children.forEach(function(leaf){
+    var full=path+'/'+leaf, name=prefix+leaf;
+    if(full===manifest)return;
+    var info=fs.lstatSync(full), owned=info.uid===0&&!(info.mode&18);
+    if(has(files,name)){
+     seen[name]=true;
+     if(owned&&info.isFile()&&info.nlink===1&&(name!=='bin/python3.13'||(info.mode&73))){
+      bytes+=info.size;
+      if(bytes>RUNTIME_BYTE_LIMIT)fail('unsafe');
+      if(sha(read(full,info.size,0,18).bytes)===files[name]){matching++;return;}
+     }
+     unexpected++;
+    }else if(owned&&info.isDirectory()&&(expectedDirectories[name]||cacheDirectories[name])){
+     if(!expectedDirectories[name])generated++;
+     scan(full,name+'/');
+    }else if(owned&&info.isFile()&&info.nlink===1&&caches[name]){
+     generated++;
+    }else{
+     unexpected++;
+    }
+   });
+   var after=directory(path);
+   if(after.dev!==before.dev||after.ino!==before.ino||after.mtime.getTime()!==before.mtime.getTime()||
+      after.ctime.getTime()!==before.ctime.getTime())fail('unsafe');
+  };
+  scan(slot,'');
+  unexpected+=names.length-Object.keys(seen).length;
+  if(sha(read(manifest,4*1024*1024,0,18).bytes)!==sha(raw.bytes))fail('unsafe');
+  out={status:unexpected?'unexpected':generated?'generated':'matching',
+       matching_files:matching,generated_entries:generated,unexpected_entries:unexpected};
+ }catch(e){if(e.category==='absent')out={status:'absent'};}
+ console.log(JSON.stringify(out));
+}());
+'''
+
+
+def collect_runtime_inventory(remote):
+    from .diagnostic_context import root_python_inventory_summary
+    from .python_runtime import RUNTIME_ROOT, SHA256, MAX_FILES, MAX_UNPACKED
+
+    program = (RUNTIME_INVENTORY_PROGRAM
+               .replace('RUNTIME_SLOT', json.dumps(RUNTIME_ROOT + '/' + SHA256))
+               .replace('RUNTIME_PIN', json.dumps(SHA256))
+               .replace('RUNTIME_FILE_LIMIT', str(MAX_FILES))
+               .replace('RUNTIME_BYTE_LIMIT', str(MAX_UNPACKED)))
+    try:
+        raw = remote.run('env -u NODE_OPTIONS -u NODE_PATH /usr/bin/node',
+                         data=program.encode(), timeout=15)
+        if type(raw) is str and len(raw) <= 256:
+            return root_python_inventory_summary(json.loads(raw))
+    except Exception:
+        pass  # The report must keep the original operation result.
+    return {'status': 'unknown'}
 
 
 BETA_PROGRAM = READERS + r'''

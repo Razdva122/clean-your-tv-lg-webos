@@ -192,6 +192,13 @@ class SimpleRemoval(unittest.TestCase):
         driver.clean_remove(identifier,intent='d'*32)
         self.boot='22222222-2222-2222-2222-222222222222'
         completed=driver.clean_remove(identifier,intent='d'*32)
+        journal = 'clean-removal-' + identifier
+        history = driver.store.read(journal)
+        self.assertEqual(history['removal'], 'd'*32)
+        self.assertTrue(history['audit_compacted'])
+        evidence = completed.pop('removal_evidence')
+        self.assertEqual(evidence['packages'], 'absent')
+        self.assertEqual(completed, history)
         self.restage(driver,payload)
         target=driver.removal_target('e'*32)
         self.assertEqual(target['target_operation'],'e'*32)
@@ -200,7 +207,7 @@ class SimpleRemoval(unittest.TestCase):
         self.assertEqual(result['stage'],'verified-clean',result)
         result=driver.clean_remove('e'*32,intent='e'*32)
         self.assertEqual(result['state'],'complete')
-        self.assertEqual(driver.store.read('clean-removal-'+identifier),completed)
+        self.assertEqual(driver.store.read(journal), history)
 
     def test_current_removal_goal_drift_is_rejected_under_original_lock(self):
         from installation import Busy

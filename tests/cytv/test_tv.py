@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from cytv.tv import Inventory, SSAP
 from cytv.errors import TVNotReady, TVConnectionError
@@ -29,8 +29,38 @@ class InventoryTests(unittest.TestCase):
         self.assertEqual(getattr(inventory, 'icon_diagnostics', None), {
             'schema': 1, 'status': 'complete', 'apps': 7, 'embedded': 2,
             'fallback': 5, 'missing_uri': 1, 'rejected_uri': 2,
-            'fetch_failed': 2, 'invalid_image': 1})
+            'fetch_failed': 2, 'invalid_image': 1, 'skipped_apps': 0})
         self.assertNotIn('PRIVATE', json.dumps(inventory.icon_diagnostics))
+
+    def test_invalid_display_title_uses_installed_metadata_for_the_same_app_id(self):
+        inventory = Inventory('192.0.2.10', b'fallback')
+        first = {'id': 'org.example.first', 'title': {'PRIVATE': 'malformed'}}
+        second = {'id': 'org.example.second', 'title': 'Second'}
+        matching = {'id': first['id'], 'title': 'First'}
+        result = inventory.build([first, second], [], [None, matching])
+        self.assertEqual([(a['id'], a['title']) for a in result['apps']],
+                         [(first['id'], 'First'), (second['id'], 'Second')])
+        self.assertEqual(inventory.icon_diagnostics['skipped_apps'], 1)
+        self.assertNotIn('PRIVATE', json.dumps(inventory.icon_diagnostics))
+
+        for points, installed in (
+                ([first, second], None),
+                ([first, second], [{'id': 'org.example.different', 'title': 'First'}]),
+                ([first, second], [matching] + [None] * 300),
+                ([dict(first, id=None), second], [matching])):
+            with self.subTest(points=points, installed=installed):
+                with self.assertRaisesRegex(ValueError, 'Invalid TV application metadata'):
+                    inventory.build(points, [], installed)
+
+    def test_ssap_refuses_an_unusable_application_list_even_with_available_inputs(self):
+        session = SSAP('192.0.2.10', '.', lambda _: None)
+        with patch.object(session, 'call', side_effect=[
+                {'launchPoints': [None, {'id': 'hidden', 'hidden': True}]},
+                {'devices': [{'appId': 'com.webos.app.hdmi1'}]},
+                {'apps': []}]):
+            with self.assertRaisesRegex(ValueError, 'No usable apps were read'):
+                session.inventory(b'fallback')
+        self.assertEqual(session.icon_diagnostics['skipped_apps'], 1)
 
     def test_ssap_retains_icon_diagnostics_on_inventory_failure(self):
         session = object.__new__(SSAP)
@@ -190,6 +220,81 @@ class InventoryTests(unittest.TestCase):
                 self.assertEqual([a['id'] for a in inventory['apps']], ['video'])
                 self.assertEqual(inventory['inputs'], [{'appId': 'com.webos.app.hdmi1', 'label': 'HDMI_1'}])
 
+    def test_fresh_paired_inventory_can_continue_without_hdmi(self):
+        from websockets.exceptions import ConnectionClosedError
+        from cytv.errors import UserError
+
+        denied = {'type': 'error', 'error': '401 insufficient permissions'}
+        refused = {'type': 'error', 'error': '404 no such service or method'}
+        cases = [
+            ('no attached inputs', {'payload': {'devices': []}}, True, None, True),
+            ('denied', denied, True, None, False),
+            ('unsupported', refused, True, None, False),
+            ('missing field', {'payload': {}}, True, None, False),
+            ('malformed payload', {'payload': None}, True, None, False),
+            ('malformed list', {'payload': {'devices': [None, {}]}}, True, None, False),
+            ('unproven fresh setup', denied, False, UserError, None),
+            ('update with missing field', {'payload': {}}, False, ValueError, None),
+            ('lost pairing', {'type': 'error', 'error': '401 not registered'}, True, UserError, None),
+            ('pairing prompt', {'payload': {'pairingType': 'PROMPT'}}, True, UserError, None),
+            ('connection closed', ConnectionClosedError(None, None, None), True, TVConnectionError, None),
+            ('input query timeout', TimeoutError(), True, UserError, None),
+        ]
+        for name, input_reply, fresh, failure, inputs_available in cases:
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as tmp:
+                class Socket:
+                    def send(self, raw):
+                        self.request = json.loads(raw)
+
+                    def recv(self, timeout):
+                        if self.request['type'] == 'register':
+                            return json.dumps({'id': self.request['id'], 'type': 'registered',
+                                               'payload': {'client-key': 'test-key'}})
+                        uri = self.request['uri']
+                        if uri.endswith('/listLaunchPoints'):
+                            reply = {'payload': {'launchPoints': [{'id': 'video', 'title': 'Video'}]}}
+                        elif uri.endswith('/getExternalInputList'):
+                            if isinstance(input_reply, Exception):
+                                raise input_reply
+                            reply = input_reply
+                        else:
+                            reply = {'payload': {'apps': []}}
+                        return json.dumps({'id': self.request['id'], **reply})
+
+                    def close(self):
+                        pass
+
+                with patch('websockets.sync.client.connect', return_value=Socket()):
+                    with SSAP('192.0.2.10', tmp, lambda _: None) as session:
+                        if failure:
+                            with self.assertRaises(failure):
+                                session.inventory(b'fallback', allow_missing_inputs=lambda: fresh)
+                        else:
+                            result = session.inventory(b'fallback', allow_missing_inputs=lambda: fresh)
+                            self.assertEqual([a['id'] for a in result['apps']], ['video'])
+                            self.assertEqual(result['inputs'], [])
+                            self.assertIs(session.inputs_available, inputs_available)
+
+    def test_partial_inventory_requires_a_usable_application_query(self):
+        from cytv.errors import UserError
+
+        good_apps = {'launchPoints': [{'id': 'video', 'title': 'Video'}]}
+        cases = [
+            ({}, {'apps': []}, good_apps, ValueError),
+            (good_apps, {'apps': []}, {'launchPoints': []}, ValueError),
+            (good_apps, {'apps': []}, TVConnectionError('Closed'), TVConnectionError),
+            (good_apps, {'apps': []}, UserError('Pairing was lost'), UserError),
+            (good_apps, TVConnectionError('Closed'), good_apps, TVConnectionError),
+            (good_apps, UserError('Pairing was lost'), good_apps, UserError),
+        ]
+        for initial, optional_apps, confirmed, failure in cases:
+            with self.subTest(initial=initial, optional_apps=optional_apps, confirmed=confirmed):
+                session = SSAP('192.0.2.10', '.', lambda _: None)
+                session.key = 'test-key'
+                with patch.object(session, 'call', side_effect=[initial, {}, optional_apps, confirmed]):
+                    with self.assertRaises(failure):
+                        session.inventory(b'fallback', allow_missing_inputs=lambda: True)
+
     def test_ssap_rejects_error_instead_of_empty_success(self):
         session = SSAP('192.0.2.10', '.')
         class Socket:
@@ -246,6 +351,50 @@ class InventoryTests(unittest.TestCase):
         self.assertEqual(caught.exception.close_code, 1008)
         self.assertEqual(caught.exception.reason_code, 'tv-not-ready')
         self.assertIn('remote', str(caught.exception))
+
+    def test_saved_pairing_can_prompt_and_wait_for_late_confirmation(self):
+        socket = Mock()
+        elapsed = 0
+
+        def receive(*, timeout):
+            nonlocal elapsed
+            if elapsed == 0:
+                self.assertGreaterEqual(timeout, 60)
+                elapsed = 50
+                return json.dumps({'type': 'response', 'payload': {'pairingType': 'PROMPT'}})
+            self.assertGreaterEqual(timeout, 10)
+            return json.dumps({'type': 'registered', 'payload': {'client-key': 'updated'}})
+
+        socket.recv.side_effect = receive
+        progress = Mock()
+        with tempfile.TemporaryDirectory() as tmp, \
+             patch('websockets.sync.client.connect', return_value=socket), \
+             patch('cytv.tv.time', Mock(monotonic=lambda: elapsed)):
+            (Path(tmp) / 'ssap.json').write_text('{"key":"saved"}')
+            with SSAP('192.0.2.10', tmp, progress) as tv:
+                self.assertEqual(tv.key, 'updated')
+            register = json.loads(socket.send.call_args.args[0])['payload']
+            self.assertEqual(register['client-key'], 'saved')
+            self.assertEqual(register['pairingType'], 'PROMPT')
+            progress.assert_called_once_with('Accept the remote-control pairing request on the TV if shown…')
+
+    def test_registration_refusal_is_typed_and_preserves_saved_pairing(self):
+        from cytv.failure_help import for_error
+
+        socket = Mock()
+        socket.recv.return_value = json.dumps({'type': 'error', 'id': 'register_0', 'error': 'PRIVATE'})
+        with tempfile.TemporaryDirectory() as tmp, patch('websockets.sync.client.connect', return_value=socket):
+            key = Path(tmp) / 'ssap.json'
+            key.write_text('{"key":"saved"}')
+            with self.assertRaises(TVConnectionError) as caught, SSAP('192.0.2.10', tmp, Mock()):
+                self.fail('Rejected pairing must not register')
+            self.assertEqual(key.read_text(), '{"key":"saved"}')
+        socket.close.assert_called_once()
+        self.assertEqual(caught.exception.reason_code, 'pairing-rejected')
+        self.assertNotIn('PRIVATE', str(caught.exception))
+        guide = for_error(caught.exception, 'pair-tv', {'edition': 'no-root'})
+        self.assertEqual(guide['code'], 'tv-pairing-rejected')
+        self.assertFalse(guide['can_edit_connection'])
 
     def test_pairing_timeout_and_other_policy_closes_do_not_become_standby_retry(self):
         from websockets.exceptions import ConnectionClosedError

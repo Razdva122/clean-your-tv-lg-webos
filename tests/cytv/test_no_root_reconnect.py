@@ -71,8 +71,10 @@ class NoRootReconnectTests(unittest.TestCase):
         import paramiko
 
         from cytv.cli import main
+        from cytv import i18n
         from cytv.transport import fingerprint
 
+        self.addCleanup(i18n.set_language, i18n.language_choice())
         old_key = paramiko.RSAKey.generate(2048)
         new_key = paramiko.RSAKey.generate(2048)
         (self.original / 'known_hosts').write_text(
@@ -80,6 +82,9 @@ class NoRootReconnectTests(unittest.TestCase):
         before = self.contents(self.original)
         remote = Mock()
         prompts = []
+        output = []
+        args = ['install', '--host', self.profile['host'], '--edition', 'no-root',
+                '--no-discovery', '--language', 'en', '--data-dir', str(self.store.root)]
 
         def ask(prompt):
             label = str(prompt)
@@ -99,9 +104,21 @@ class NoRootReconnectTests(unittest.TestCase):
                 patch('cytv.diagnostic_context.collect_metadata'), \
                 patch('cytv.cli.Installer') as installer, \
                 patch('cytv.recovery.recover') as recover:
-            code = main(['install', '--reconnect-after-reset', '--host', self.profile['host'],
-                         '--edition', 'no-root', '--no-discovery', '--data-dir', str(self.store.root)],
-                        ask=ask, connect=connect, write=lambda _: None)
+            changed_key = Mock(side_effect=paramiko.BadHostKeyException(self.profile['host'], new_key, old_key))
+            self.assertEqual(main(args + ['--yes'], ask=ask, connect=changed_key, write=output.append), 1)
+            changed_key.assert_called_once()
+            self.assertEqual(changed_key.call_args.args[:2], (self.profile, self.original))
+            self.assertEqual(changed_key.call_args.kwargs, {'persist': False})
+            self.assertTrue(any('TV identity changed since the last trusted connection' in line for line in output))
+
+            reset_args = args + ['--reconnect-after-reset']
+            no_connection = Mock()
+            self.assertEqual(main(reset_args, ask=lambda _: '', connect=no_connection, write=output.append), 130)
+            no_connection.assert_not_called()
+            self.assertEqual(self.store.device_path(self.profile), self.original)
+            self.assertEqual(self.contents(self.original), before)
+
+            code = main(reset_args, ask=ask, connect=connect, write=output.append)
         self.assertEqual(code, 0, prompts)
         self.assertTrue(any('Start a new No-root connection after a factory reset?' in p for p in prompts))
         self.assertTrue(any('Connect and remember this TV?' in p for p in prompts))

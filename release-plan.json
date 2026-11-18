@@ -1,56 +1,7 @@
 {
   "schema": 1,
-  "version": "1.24.1",
-  "changes": [
-    {
-      "pr": 704,
-      "issues": [],
-      "summary": "Continue Desktop setup after a successful connection check and refresh recovery restart guidance"
-    },
-    {
-      "pr": 705,
-      "issues": [
-        692
-      ],
-      "summary": "Fix Node 0.12.2 Root Beta removal and verify LS2 rollback before package removal"
-    },
-    {
-      "pr": 706,
-      "issues": [
-        160
-      ],
-      "summary": "Accept the nested final status during in-place Root Beta repair; B9 confirmation remains open"
-    },
-    {
-      "pr": 707,
-      "issues": [],
-      "summary": "Resume confirmed Desktop Root reinstallation across interrupted cleanup or native installation"
-    },
-    {
-      "pr": 708,
-      "issues": [
-        615
-      ],
-      "summary": "Restore retained compositor Root through Set up my TV \u2192 Root \u2192 Reinstall Root (resets saved CYTV preferences)"
-    },
-    {
-      "pr": 709,
-      "issues": [],
-      "summary": "Keep an active global Root screensaver through a brief status gap"
-    },
-    {
-      "pr": 711,
-      "issues": [
-        686
-      ],
-      "summary": "Retain Home diagnostics across Helper restart and wake; original routing failure remains open"
-    }
-  ],
+  "version": null,
+  "changes": [],
   "excluded": [],
-  "acceptance": "",
-  "build": {
-    "run_id": 44300372716,
-    "attempt": 2,
-    "source": "ce0819697c5ef15f6dfc735262730360ca7ea627"
-  }
+  "acceptance": ""
 }
