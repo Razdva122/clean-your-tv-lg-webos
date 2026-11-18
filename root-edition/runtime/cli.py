@@ -277,7 +277,7 @@ def reconcile_firmware_access():
 def _restore_home(cancel_resume):
     gate = gate_backend()
     if gate is not None:
-        return gate.restore(d.STATE, d.EXPECTED_UID)
+        return gate.execute('restore', root=d.STATE, uid=d.EXPECTED_UID)
     try:
         inhibit(d.STATE)
     except Exception: pass  # Optional audio state must never block Home recovery.

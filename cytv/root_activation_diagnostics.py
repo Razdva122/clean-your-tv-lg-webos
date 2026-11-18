@@ -9,7 +9,8 @@ import json
 COMPOSITOR_STOPS = ('broker_expired', 'controller_expired', 'controller_lost', 'escape',
                     'explicit_off', 'external_stop', 'home_changed', 'home_failed',
                     'input_expired', 'input_lost', 'journal_failed', 'lease_expired',
-                    'lg_home', 'malformed_input', 'ready_failed', 'signal',
+                    'lg_home', 'malformed_input', 'normal_shutdown', 'ready_failed',
+                    'shutdown_input_unverified', 'signal',
                     'state_busy', 'trial_expired')
 
 PROGRAM = r'''
@@ -88,10 +89,16 @@ def compositor_identity(directory, uid):
         raise ValueError('invalid config')
     token, boot = (item.decode('ascii') for item in match.groups())
     value = unique_json(intent)
-    if (type(value) is not dict or set(value) != {'schema', 'enabled', 'token', 'phase', 'boot'}
+    if (type(value) is not dict or set(value) - {'session'} != {'schema', 'enabled', 'token', 'phase', 'boot'}
             or type(value['schema']) is not int or value['schema'] != 1 or type(value['enabled']) is not bool
             or value['phase'] not in ('disabled', 'starting', 'active', 'trial', 'recovering')):
         raise ValueError('invalid intent')
+    if 'session' in value:
+        session = value['session']
+        if (value['enabled'] is not True or value['phase'] != 'active'
+                or value['boot'] != boot or type(session) is not str
+                or not re.fullmatch(re.escape(boot) + r':session-[a-f0-9]{32}', session)):
+            raise ValueError('invalid startup session')
     stamp = tuple((item.st_dev, item.st_ino, item.st_ctime_ns) for item in (info, config_info, intent_info))
     return (token, boot), (value['token'], value['boot']), (stamp, config, intent)
 

@@ -29,6 +29,7 @@
 #define VOLATILE FIXTURE_ROOT "/volatile"
 #define HOME FIXTURE_ROOT "/home"
 #define LUNA FIXTURE_ROOT "/luna"
+#define SYSTEMCTL FIXTURE_ROOT "/systemctl"
 #define BOOT FIXTURE_ROOT "/boot"
 #define TRUST_UID getuid()
 #else
@@ -36,6 +37,7 @@
 #define VOLATILE "/tmp/clean-your-tv-root-keyfilter"
 #define HOME "/usr/bin/com.webos.app.home"
 #define LUNA "/usr/bin/luna-send"
+#define SYSTEMCTL "/bin/systemctl"
 #define BOOT "/proc/sys/kernel/random/boot_id"
 #define TRUST_UID 0
 #endif
@@ -346,7 +348,9 @@ static int stop(const char *reason) {
   int latched = latch_read(old);
   if (latched < 0)
     return 0;
-  if (latched > 0)
+  /* A later explicit Off can revoke a normal shutdown's restart authority.
+   * An emergency or fault stop is sticky for the lifetime of this token. */
+  if (latched > 0 && strcmp(old,"normal_shutdown"))
     reason = old;
   snprintf(b, sizeof(b), "%s %s\n", cfg.token, reason);
   return save("stopped", b) && save("outcome", b);
@@ -677,9 +681,10 @@ static int literal(struct json *j, int id, const char *s) {
          !memcmp(j->s + j->t[id].start, s, strlen(s));
 }
 /* Child has a new process group, fixed argv/env, capped output and deadline. */
-static int luna(const char *method, const char *app) {
+static int child_output(char *const args[], char *b, size_t limit, int *exit_status,
+                        int timeout, int honor_interrupt) {
   int out[2], in[2];
-  if (!secure(LUNA, 0) || !trusted_parents(LUNA) || access(LUNA, X_OK))
+  if (!secure(args[0], 0) || !trusted_parents(args[0]) || access(args[0], X_OK))
     return 0;
   if (pipe(out))
     return 0;
@@ -716,39 +721,35 @@ static int luna(const char *method, const char *app) {
     if (effect_fd>=0) fcntl(effect_fd,F_SETFD,0);
     for (unsigned long f = 3; f < max; f++)
       if ((int)f!=effect_fd) close((int)f);
-    char payload[160];
-    snprintf(payload, sizeof(payload), "{\"id\":\"%s\"}", app);
-    char *args[] = {LUNA,    "-n",
-                    "1",     (char *)method,
-                    payload, NULL};
     char *env[] = {"PATH=/usr/bin:/bin", "LANG=C", NULL};
-    execve(LUNA, args, env);
+    execve(args[0], args, env);
     _exit(127);
   }
   setpgid(pid, pid);
   close(out[1]);
   close(in[0]);
   fcntl(out[0], F_SETFL, O_NONBLOCK);
-  char b[LIMIT + 1];
   size_t n = 0;
-  long long deadline = now_ms() + 2000;
+  long long deadline = now_ms() + timeout;
   int status = 0, done = 0, ok = 1;
-  while (!done) {
-    if (now_ms() >= deadline || interrupted) {
-      ok = 0;
-      break;
+  for (;;) {
+    if (!done) {
+      if (now_ms() >= deadline || (honor_interrupt && interrupted)) {
+        ok = 0;
+        break;
+      }
+      struct pollfd p = {out[0], POLLIN | POLLHUP, 0};
+      if (poll(&p, 1, 25) < 0 && errno != EINTR) {
+        ok = 0;
+        break;
+      }
     }
-    struct pollfd p = {out[0], POLLIN | POLLHUP, 0};
-    int z = poll(&p, 1, 25);
-    if (z < 0 && errno != EINTR) {
-      ok = 0;
-      break;
-    }
+    /* One final drain after waitpid sees the exit closes the read/exit race. */
     for (;;) {
-      ssize_t r = read(out[0], b + n, LIMIT - n);
+      ssize_t r = read(out[0], b + n, limit - n);
       if (r > 0) {
         n += (size_t)r;
-        if (n >= LIMIT) {
+        if (n >= limit) {
           ok = 0;
           break;
         }
@@ -757,7 +758,7 @@ static int luna(const char *method, const char *app) {
       else
         break;
     }
-    if (!ok)
+    if (done || !ok)
       break;
     pid_t w = waitpid(pid, &status, WNOHANG);
     if (w == pid)
@@ -785,9 +786,26 @@ static int luna(const char *method, const char *app) {
   }
   close(in[1]);
   close(out[0]);
-  if (!ok || memchr(b, 0, n) || !WIFEXITED(status) || WEXITSTATUS(status))
+  if (!ok || memchr(b, 0, n) || !WIFEXITED(status))
     return 0;
   b[n] = 0;
+  *exit_status = WEXITSTATUS(status);
+  return 1;
+}
+static int normal_shutdown(void) {
+  char output[64];
+  int status;
+  char *args[] = {SYSTEMCTL, "is-system-running", NULL};
+  return child_output(args,output,sizeof(output)-1,&status,500,0) &&
+         status==1 && !strcmp(output,"stopping\n");
+}
+static int luna(const char *method, const char *app) {
+  char payload[160], b[LIMIT + 1];
+  int status;
+  snprintf(payload, sizeof(payload), "{\"id\":\"%s\"}", app);
+  char *args[] = {LUNA, "-n", "1", (char *)method, payload, NULL};
+  if (!child_output(args,b,LIMIT,&status,2000,1) || status)
+    return 0;
   struct json j;
   if (!parse(&j,b)) return 0;
   if (literal(&j,field(&j,0,"returnValue"),"true")) return 1;
@@ -810,7 +828,7 @@ static int release_ui(void) {
                     "com.webos.app.home");
   return closed && launched;
 }
-static int guard(const char *token,int input,int control,int ready,int seconds,int lock) {
+static int guard(const char *token,int input,int control,int ready,int seconds,int lock,int resumable) {
   char why[64];
   if (!boot_matches || !hex32(token) || strcmp(token,cfg.token) ||
       !channel_fd(input,0) || !channel_fd(control,0) || !channel_fd(ready,1) ||
@@ -869,17 +887,52 @@ static int guard(const char *token,int input,int control,int ready,int seconds,i
     close(lock);
   }
   if (ready>=0) close(ready);
-  close(input); close(control);
   lock=lock_wait(3000);
   if (lock<0) return reply(0,1,"recovery_busy");
   if (!same_config() || active_read()!=1 || active.pid!=(long)getpid() ||
       active.start!=process_start(getpid())) { close(lock); return reply(0,1,"stale_attempt"); }
+  if (resumable && armed && (!strcmp(reason,"signal") || !strcmp(reason,"input_lost") ||
+                            !strcmp(reason,"controller_lost")) &&
+      pulse_write("health",0,0,0)) {
+    /* Revoke launch authority before querying systemd. Keep reading the
+     * emergency channels until the final durable reason is selected. */
+    close(lock);
+    if (normal_shutdown()) {
+      struct pollfd fds[2]={{input,POLLIN,0},{control,POLLIN,0}};
+      reason="normal_shutdown";
+      for (int i=0;i<128;i++) {
+        int result=poll(fds,2,0);
+        if (result<0 || (fds[0].revents&(POLLERR|POLLNVAL)) || (fds[1].revents&(POLLERR|POLLNVAL))) {
+          reason="shutdown_input_unverified";
+          break;
+        }
+        if (!result || (!(fds[0].revents&POLLIN) && !(fds[1].revents&POLLIN))) break;
+        for (int x=0;x<2;x++) {
+          if (!(fds[x].revents&POLLIN)) continue;
+          const char *queued=consume(fds[x].fd,&channels[x],x);
+          if (queued && strcmp(queued,"input_lost") && strcmp(queued,"controller_lost")) {
+            reason=queued;
+            break;
+          }
+        }
+        if (strcmp(reason,"normal_shutdown")) break;
+        if (i==127) reason="shutdown_input_unverified";
+      }
+      if (!strcmp(reason,"normal_shutdown") && (channels[0].len || channels[1].len))
+        reason="shutdown_input_unverified";
+    }
+    lock=lock_wait(3000);
+    if (lock<0) return reply(0,1,"recovery_busy");
+    if (!same_config() || active_read()!=1 || active.pid!=(long)getpid() ||
+        active.start!=process_start(getpid())) { close(lock); return reply(0,1,"stale_attempt"); }
+  }
+  close(input); close(control);
   /* Explicit restore owns UI release after this process has retired. */
   int delegated=latch_read(why)>0 && !strcmp(why,"explicit_off");
   int ok=stop(reason);
   /* Identity is unchanged and this guardian is retiring. Keep records on error. */
   if (ok) ok=erase("active");
-  if (ok && !delegated) {
+  if (ok && !delegated && strcmp(reason,"normal_shutdown")) {
     close(lock);
     effect_fd=private_lock("effect.lock",3000);
     if (effect_fd<0 || !release_ui()) { ok=0; reason="ui_release_failed"; }
@@ -889,7 +942,7 @@ static int guard(const char *token,int input,int control,int ready,int seconds,i
   }
   int rc=reply(ok,1,reason); close(lock); return rc;
 }
-static int restore(int lock) {
+static int restore(int lock, int routing_only) {
   int latched=stop("explicit_off"); /* Guardian observes this under its state lock. */
   int jr=active_read();
   if (!latched || jr<0) { int rc=reply(0,1,"restore_blocked"); close(lock); return rc; }
@@ -912,7 +965,7 @@ static int restore(int lock) {
     close(lock);
     effect_fd=private_lock("effect.lock",3000);
     if (effect_fd<0) { ok=0; reason="effect_busy"; }
-    else if (!release_ui()) { ok=0; reason="ui_release_failed"; }
+    else if (!routing_only && !release_ui()) { ok=0; reason="ui_release_failed"; }
     if (effect_fd>=0) { close(effect_fd); effect_fd=-1; }
     lock=lock_state();
     if (lock<0) return reply(0,0,"recovery_busy");
@@ -933,7 +986,14 @@ int main(int argc,char **argv) {
     effect_fd=private_lock("effect.lock",3000);
     if (effect_fd<0) return reply(0,0,"effect_busy");
   }
-  int lock=argc==2 && !strcmp(argv[1],"--restore") ? lock_wait(4000):lock_state();
+  int boot_retire=argc==3 && !strcmp(argv[1],"--retire-boot");
+  if (boot_retire) {
+    effect_fd=private_lock("effect.lock",3000);
+    if (effect_fd<0) return reply(0,0,"effect_busy");
+  }
+  int routing_only=argc==2 && !strcmp(argv[1],"--restore-routing");
+  int restoring=routing_only || (argc==2 && !strcmp(argv[1],"--restore"));
+  int lock=restoring ? lock_wait(4000):lock_state();
   if (lock<0) return reply(0,0,"state_untrusted");
   if (!config_read()) { memset(&cfg,0,sizeof(cfg)); close(lock); return reply(0,0,"config_invalid"); }
   if (argc==2 && !strcmp(argv[1],"--status")) {
@@ -962,7 +1022,18 @@ int main(int argc,char **argv) {
     int rc=reply(ok,1,ok ? "home_launched":"home_failed");
     close(lock); close(effect_fd); effect_fd=-1; return rc;
   }
-  if (argc==2 && !strcmp(argv[1],"--restore")) return restore(lock);
+  if (restoring) return restore(lock,routing_only);
+  if (boot_retire) {
+    /* Retire only a dead predecessor. A matching latch permits continuation
+     * solely for a confirmed normal shutdown. */
+    char why[64];
+    int latched=latch_read(why);
+    int ok=!strcmp(argv[2],cfg.token) && active_read()>=0 && !active_live() &&
+           (latched==0 || (latched>0 && !strcmp(why,"normal_shutdown"))) &&
+           stock_identity() && erase("active");
+    int rc=reply(ok,1,ok && latched>0 ? "normal_shutdown":ok ? "boot_retired":"boot_retire_refused");
+    close(lock); return rc;
+  }
   if (argc==2 && !strcmp(argv[1],"--lease")) {
     char why[64]; int jr=active_read(), stopped=latch_read(why);
     int ok=jr>=0 && stopped>=0;
@@ -984,7 +1055,8 @@ int main(int argc,char **argv) {
     }
     int rc=reply(ok,1,"none"); close(lock); return rc;
   }
-  if (argc==7 && !strcmp(argv[1],"--guard")) {
+  int resumable=argc==7 && !strcmp(argv[1],"--guard-resumable");
+  if (argc==7 && (!strcmp(argv[1],"--guard") || resumable)) {
     unsigned long long values[4];
     for (int x=0;x<4;x++) {
       char *s=argv[x+3]; errno=0;
@@ -993,7 +1065,7 @@ int main(int argc,char **argv) {
       if (errno || values[x]>INT_MAX) { close(lock); return reply(0,1,"arguments_invalid"); }
     }
     if (values[3]>60) { close(lock); return reply(0,1,"arguments_invalid"); }
-    return guard(argv[2],(int)values[0],(int)values[1],(int)values[2],(int)values[3],lock);
+    return guard(argv[2],(int)values[0],(int)values[1],(int)values[2],(int)values[3],lock,resumable);
   }
   int rc=reply(0,1,"arguments_invalid"); close(lock); return rc;
 }
