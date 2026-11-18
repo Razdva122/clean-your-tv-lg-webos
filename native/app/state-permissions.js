@@ -451,7 +451,7 @@ function session(directory, options, action) {
         (!current ||
           !unchanged(original.stat, current) ||
           (original.bytes &&
-            read(name, limit).bytes.toString('hex') !==
+            read(name, limit, false, true).bytes.toString('hex') !==
               original.bytes.toString('hex')))
       )
         fail();

@@ -617,3 +617,23 @@ test(
     a.equal(fs.readFileSync(pathToControl, 'utf8'), '{}');
   }
 );
+
+test(
+  'conditional diagnostic cleanup repairs a firmware-expanded control file',
+  { keyMode: 0o640 },
+  (f) => {
+    const control = path.join(f.state, 'control.json');
+    const request = '{"cmd":"diagnostics-start","nonce":"last"}';
+    fs.writeFileSync(control, request);
+    fs.chmodSync(control, 0o777);
+    f.owners.set(control, { uid: 5999, gid: 5000 });
+    a.equal(
+      f.permissions.atomicRecord(f.state, 'control', '{}', {
+        expectedControl: request
+      }),
+      true
+    );
+    a.equal(fs.readFileSync(control, 'utf8'), '{}');
+    a.equal(fs.statSync(control).mode & 0o777, 0o660);
+  }
+);
