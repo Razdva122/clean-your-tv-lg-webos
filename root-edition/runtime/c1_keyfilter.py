@@ -84,6 +84,23 @@ def reboot_resume_supported(descriptor):
     return (device['model'], device['firmware'], device['webos']) == ('65NANO913NA', '04.64.00', '5.6.2')
 
 
+def require_stock_home_destination():
+    # On the verified webOS 5.6.2 firmware the stock key filter follows
+    # defaultApps.home, independently of our configd filter or native Home file.
+    reply = luna('luna://com.webos.settingsservice/getSystemSettings',
+                 {'category': 'general', 'keys': ['defaultApps']}, allow_failure=True)
+    settings = reply.get('settings')
+    defaults = settings.get('defaultApps') if isinstance(settings, dict) else None
+    if isinstance(defaults, str):
+        try:
+            defaults = json.loads(defaults)
+        except (ValueError, RecursionError):
+            defaults = None
+    if (reply.get('returnValue') is not True or not isinstance(defaults, dict)
+            or defaults.get('home') not in (STOCK, 'com.webos.app.fullhome')):
+        raise ValueError('Explicit LG Home destination not verified')
+
+
 def boot_session():
     from intent_runtime import boot_identity as startup_identity
     return startup_identity()
@@ -687,9 +704,11 @@ def restore_for_removal(root, uid):
 
 
 def restore_locked(root,uid, *, for_removal=False, explicit_restore=False, routing_only=False):
+    verify_destination = routing_only or (
+        explicit_restore and not for_removal and reboot_resume_supported(selection(root, uid)))
     ui_failure = None
     try:
-        if routing_only:
+        if verify_destination:
             native(['--restore-routing'],root,uid)
         elif for_removal or explicit_restore:
             restored = native(['--restore'], root, uid, allow_ui_failure=True)
@@ -725,7 +744,13 @@ def restore_locked(root,uid, *, for_removal=False, explicit_restore=False, routi
             if not for_removal:
                 check = 'stock-home-unverified'
             raise ValueError('Home identity changed; owned filter removed, recovery evidence retained')
-        if ui_failure is not None:
+        if verify_destination:
+            stock_chain(read_chain())
+            require_stock_home_destination()
+            current = validate_native(native(['--status'], root, uid))
+            if not stopped_stock(current) or current['token'] != after['token']:
+                raise ValueError('Stock LG Home routing unverified; retain evidence')
+        elif ui_failure is not None:
             check = 'stock-foreground-unverified'
             foreground = luna('luna://com.webos.applicationManager/getForegroundAppInfo', {})
             if (not isinstance(foreground, dict) or foreground.get('returnValue') is not True
@@ -834,6 +859,8 @@ def enable_locked(root,uid,seconds, *, session=None, resume_token=None):
         raise ValueError('Restore interrupted filter transaction before enabling')
     if probe()!=descriptor['admission']:
         raise ValueError('C1 admission changed')
+    if reboot_resume_supported(descriptor):
+        require_stock_home_destination()
     from helper_bridge import require_idle
     require_idle()
     helper=binary(root,uid)

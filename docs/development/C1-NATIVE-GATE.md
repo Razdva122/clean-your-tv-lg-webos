@@ -119,6 +119,16 @@ and native safety stops require another explicit Enable. An older intent with
 no startup session grants no automatic rearm. Other schema3 devices keep
 restore-only boot reconciliation.
 
+On this firmware the factory short-Home handler follows the Settings Service
+`general/defaultApps.home` value. Enable and automatic rearm require an explicit
+LG destination, either `com.webos.app.home` (ribbon) or
+`com.webos.app.fullhome` (fullscreen). An absent, unreadable or third-party
+destination does not authorize activation. CYTV does not write the setting.
+Explicit Restore retires our routing and checks the factory chain and setting
+without forcing Home into the foreground. The ribbon can leave Live TV or HDMI
+as SAM's foreground app. Check the next physical Home press to verify which
+surface actually opens.
+
 The same LG firmware uses the vendor local-activity switch in the private
 recovery runner. This lets the startup service dispatch its recovery methods
 without waiting on LG per-request activity creation. Persistent registration

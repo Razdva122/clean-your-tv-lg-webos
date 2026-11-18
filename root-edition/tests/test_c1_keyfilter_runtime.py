@@ -14,6 +14,12 @@ sys.path[:0] = [str(ROOT / 'runtime'), str(ROOT)]
 
 class RuntimeTests(unittest.TestCase):
 
+    def read_factory_home_setting(self, uri, payload, *, allow_failure):
+        self.assertEqual(uri, 'luna://com.webos.settingsservice/getSystemSettings')
+        self.assertEqual(payload, {'category': 'general', 'keys': ['defaultApps']})
+        self.assertTrue(allow_failure)
+        return {'returnValue': True, 'settings': {'defaultApps': {'home': self.k.STOCK}}}
+
     def test_restore_failure_preserves_native_reason_without_accepting_refusal(self):
         from types import SimpleNamespace
         failure = dict(self.proof(), returnValue=False, reason='ui_release_failed')
@@ -163,8 +169,11 @@ class RuntimeTests(unittest.TestCase):
             # A separate, whole read-only system image is not a Home takeover.
             stock_mount='2 1 179:27 / /usr ro,relatime - squashfs /dev/mmcblk0p27 ro\n'
             from types import SimpleNamespace
-            # Use the host dev_t representation so os.major/minor can decode it.
-            with patch.object(self.k,'STOCK_APPINFO',Path('/usr/palm/applications/com.webos.app.home/appinfo.json')),patch.object(self.k.legacy,'TARGET',Path('/usr/bin/com.webos.app.home')),patch.object(self.k.os,'stat',return_value=SimpleNamespace(st_dev=os.makedev(179,27))):
+            # macOS dev_t is signed 32-bit, but Python major/minor need an unsigned value.
+            def device_id(major, minor):
+                value = os.makedev(major, minor)
+                return value & 0xffffffff if sys.platform == 'darwin' else value
+            with patch.object(self.k,'STOCK_APPINFO',Path('/usr/palm/applications/com.webos.app.home/appinfo.json')),patch.object(self.k.legacy,'TARGET',Path('/usr/bin/com.webos.app.home')),patch.object(self.k.os,'stat',return_value=SimpleNamespace(st_dev=device_id(179,27))):
                 mountinfo.write_text(stock_mount)
                 self.k.require_generic_environment()
                 for invalid in (
@@ -186,9 +195,9 @@ class RuntimeTests(unittest.TestCase):
                 bsp = '3 1 179:29 / /overlay/bsppart ro - squashfs /dev/mmcblk0p29 ro\n'
                 overlay = '2 1 0:34 / /usr rw - overlay overlay ro,lowerdir=/overlay/bsppart/bsp/usr:/usr\n'
                 devices = {
-                    '/usr/bin/com.webos.app.home': os.makedev(179, 27),
-                    '/usr/palm/applications/com.webos.app.home': os.makedev(0, 34),
-                    '/overlay/bsppart/bsp/usr': os.makedev(179, 29),
+                    '/usr/bin/com.webos.app.home': device_id(179, 27),
+                    '/usr/palm/applications/com.webos.app.home': device_id(0, 34),
+                    '/overlay/bsppart/bsp/usr': device_id(179, 29),
                 }
                 with patch.object(self.k.os, 'stat', side_effect=lambda path, **kw: SimpleNamespace(st_dev=devices[str(path)])), patch.object(self.k.legacy, 'trusted_directory') as trusted:
                     mountinfo.write_text(root + overlay + bsp)
@@ -213,7 +222,7 @@ class RuntimeTests(unittest.TestCase):
                             with self.assertRaisesRegex(ValueError, 'covered by a mount'):
                                 self.k.require_generic_environment()
                     mountinfo.write_text(root + overlay + bsp)
-                    devices['/overlay/bsppart/bsp/usr'] = os.makedev(179, 30)
+                    devices['/overlay/bsppart/bsp/usr'] = device_id(179, 30)
                     with self.assertRaisesRegex(ValueError, 'covered by a mount'):
                         self.k.require_generic_environment()
             mountinfo.write_text('1 0 0:1 / / rw - squashfs /dev/root ro\n')
@@ -356,6 +365,60 @@ class RuntimeTests(unittest.TestCase):
                     self.assertEqual(self.k.execute('boot', root=self.root, uid=self.uid), 'restored')
                     restore.assert_called_once_with(self.root, self.uid, explicit_restore=False)
 
+    def test_reported_schema3_refuses_enable_without_an_explicit_lg_destination(self):
+        self.admission = dict(self.generic(), model='65NANO913NA', firmware='04.64.00', webos='5.6.2')
+        self.prepare()
+        stock = [{'file': '/usr/lib/qml/KeyFilters/systemUi.js', 'handler': 'handleSystemKeys'}]
+        for defaults in ({}, {'home': self.k.APP}, {'home': None}, '{"home":'):
+            with self.subTest(defaults=defaults), \
+                    patch.object(self.k, 'probe', return_value=self.admission), \
+                    patch.object(self.k, 'verify_ready', return_value={'integrity_verified': True}), \
+                    patch.object(self.k, 'native', return_value=self.proof()), \
+                    patch.object(self.k, 'read_chain', return_value=stock), \
+                    patch.object(self.k, 'luna', return_value={'returnValue': True,
+                                 'settings': {'defaultApps': defaults}}), \
+                    patch.object(self.k, 'write_config') as write_config, \
+                    patch.object(self.k, 'change_chain') as change:
+                with self.assertRaisesRegex(ValueError, 'LG Home destination'):
+                    self.k.enable_locked(self.root, self.uid, 0)
+                write_config.assert_not_called()
+                change.assert_not_called()
+
+    def test_reported_schema3_explicit_restore_verifies_routing_without_forcing_foreground(self):
+        self.admission = dict(self.generic(), model='65NANO913NA', firmware='04.64.00', webos='5.6.2')
+        self.prepare()
+        own = self.k.filter_entry(self.root)
+        stock = [{'file': '/usr/lib/qml/KeyFilters/systemUi.js', 'handler': 'handleSystemKeys'}]
+        token = '1'*32
+        self.k.atomic(self.root/'c1-keyfilter/ownership.json', dict(schema=1, entry=own, token=token), self.uid)
+        for destination in (self.k.STOCK, 'com.webos.app.fullhome', self.k.APP):
+            with self.subTest(destination=destination):
+                chain = [own, *stock]
+
+                def native(args, *_args, **_options):
+                    self.assertIn(args, (['--restore-routing'], ['--status']))
+                    return self.proof()
+
+                def settings(uri, payload, **options):
+                    reply = self.read_factory_home_setting(uri, payload, **options)
+                    reply['settings']['defaultApps'] = json.dumps({'home': destination})
+                    return reply
+
+                with patch.object(self.k, 'native', side_effect=native), \
+                        patch.object(self.k, 'read_chain', side_effect=lambda: chain.copy()), \
+                        patch.object(self.k, 'write_chain', side_effect=lambda value, **_: chain.__setitem__(slice(None), value)), \
+                        patch.object(self.k, 'luna', side_effect=settings):
+                    if destination == self.k.APP:
+                        with self.assertRaisesRegex(ValueError, 'LG Home destination') as caught:
+                            self.k.execute('restore', root=self.root, uid=self.uid)
+                        self.assertEqual(caught.exception.restore_check, 'stock-routing-unverified')
+                    else:
+                        self.assertEqual(self.k.execute('restore', root=self.root, uid=self.uid), 'restored')
+                    self.assertEqual(chain, stock)
+                    intent = self.k.read_intent(self.root, self.uid)
+                    self.assertFalse(intent['enabled'])
+                    self.assertEqual(intent['phase'], 'recovering' if destination == self.k.APP else 'disabled')
+
     def test_reported_schema3_rearms_once_on_a_new_normal_session(self):
         import intent_runtime
         from unittest.mock import Mock
@@ -401,6 +464,7 @@ class RuntimeTests(unittest.TestCase):
                 patch.object(self.k, 'verify_ready', return_value={'integrity_verified':True}), \
                 patch.object(self.k, 'probe', return_value=self.admission), \
                 patch.object(self.k, 'binary', return_value=Path('/fixture')), \
+                patch.object(self.k, 'luna', side_effect=self.read_factory_home_setting), \
                 patch('helper_bridge.require_idle'), patch('python_binding.command', return_value='/python'), \
                 patch.object(self.k, 'native', side_effect=native), \
                 patch.object(self.k, 'start_controller', return_value=child), \
@@ -481,7 +545,7 @@ class RuntimeTests(unittest.TestCase):
                 patch.object(self.k, 'probe', return_value=self.admission), \
                 patch.object(self.k, 'binary', return_value=Path('/fixture')), \
                 patch('helper_bridge.require_idle'), \
-                patch.object(self.k, 'luna', side_effect=AssertionError('no forced UI release at boot')), \
+                patch.object(self.k, 'luna', side_effect=self.read_factory_home_setting), \
                 patch.object(self.k, 'read_chain', side_effect=lambda: chain.copy()), \
                 patch.object(self.k, 'write_chain', side_effect=write), \
                 patch.object(self.k, 'native', side_effect=native), \
