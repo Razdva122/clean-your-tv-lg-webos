@@ -357,17 +357,17 @@ if (process.platform !== 'linux' || process.getuid() !== 0) {
       const stale = path.join(child, 'home-request.json');
       fs.writeFileSync(stale, 'stale Home request');
       fs.chownSync(stale, 6923, 5000);
-      fs.chmodSync(stale, 0o775);
+      fs.chmodSync(stale, mode === 0o777 ? 0o777 : 0o775);
       const staleFd = fs.openSync(stale, 'r+');
       try {
         fs.chmodSync(child, mode);
-        if (mode === 0o775) {
+        if (mode === 0o775 || mode === 0o777) {
           run(
             5431,
             channelCode +
               'try{s.atomicRecord(d,"home-request","refused");process.exit(8)}catch(e){if(e.message!=="unsafe-storage")throw e}'
           );
-          a.equal(fs.statSync(child).mode & 0o7777, 0o775);
+          a.equal(fs.statSync(child).mode & 0o7777, mode);
           a.equal(fs.readFileSync(stale, 'utf8'), 'stale Home request');
         }
         run(
@@ -441,6 +441,7 @@ if (process.platform !== 'linux' || process.getuid() !== 0) {
       .readFileSync('/proc/sys/kernel/random/boot_id', 'utf8')
       .trim();
     verifyPrivateRecovery(path.join(drifted, '.private-' + bootId), 0o775);
+    verifyPrivateRecovery(path.join(drifted, '.private-' + bootId), 0o777);
 
     const repairChannel =
       'var s=require(' +

@@ -1255,8 +1255,9 @@ function channelSession(directory, settings, create, action) {
   return session(directory, outerSettings, function (outer) {
     if ((outer.stat.mode & 4095) === 1528) return action(outer);
     var name = '.private',
+      bootChannel = (outer.stat.mode & 4095) === 511,
       fd;
-    if ((outer.stat.mode & 4095) === 511) {
+    if (bootChannel) {
       if (outer.stat.uid !== 5999 || outer.stat.gid !== 5000)
         fail('directory', 'trusted-owner', actual(outer.stat));
       var boot = fs
@@ -1299,10 +1300,12 @@ function channelSession(directory, settings, create, action) {
         child.isDirectory() &&
         child.uid === outer.uid &&
         child.gid === outer.stat.gid &&
-        ((child.mode & 4095) === 509 || (child.mode & 4095) === 1472)
+        ((child.mode & 4095) === 509 ||
+          (child.mode & 4095) === 1472 ||
+          (bootChannel && (child.mode & 4095) === 511))
       ) {
-        // Only the request writer can reclaim its own 0775 child or resume
-        // an interrupted 2700 repair. Drop the old records before reopening.
+        // The kernel boot ID may survive a reboot while firmware widens its
+        // child directory. Only its owner can discard old records and reopen it.
         session(
           channel,
           {
