@@ -1,9 +1,9 @@
 {
-  "release": "1.25.0",
+  "release": "1.25.1",
   "cytv": "0.22.0",
   "home": "1.20.4",
   "helper": "0.9.2",
-  "root": "0.22.0",
+  "root": "0.22.1",
   "updater": "0.6.3",
   "android": "0.21.0",
   "android_version_code": 51
