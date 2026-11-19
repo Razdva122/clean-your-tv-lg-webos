@@ -1,4 +1,4 @@
-import json,os,sys,tempfile,time,unittest
+import fcntl,json,os,sys,tempfile,time,unittest
 from pathlib import Path
 from unittest.mock import patch
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'runtime'))
@@ -62,6 +62,33 @@ class HealthTests(IntegrationFixture, unittest.TestCase):
   h.publish('route-a',1)
   self.assertEqual(h.path('route-a').stat().st_mode & 0o777,0o600)
   self.assertFalse((self.root/'lease.json').exists())
+
+ def test_guardian_does_not_restore_during_established_session_lock_contention(self):
+  import intent_runtime
+  self.bp.stop();boot_identity=intent_runtime.boot_identity
+  proc=self.root/'proc';kernel=proc/'sys/kernel/random/boot_id'
+  kernel.parent.mkdir(parents=True);kernel.write_text('kernel-a\n')
+  session=self.root/'boot';identity=boot_identity(proc,session)
+  self.intent=dict(self.intent,boot=identity)
+  self.store.path.write_text(json.dumps(self.intent))
+  read_json=d.safe_json;trial_reads=0
+  with (session/'session.lock').open('rb') as writer:
+   def read(path):
+    nonlocal trial_reads
+    if path==self.root/'profile-trial.json':
+     trial_reads+=1
+     if trial_reads==1:fcntl.flock(writer,fcntl.LOCK_EX|fcntl.LOCK_NB)
+     else:return dict(transaction='route-a',state='restored')
+    return read_json(path)
+   self.bp=patch.object(intent_runtime,'boot_identity',side_effect=lambda:boot_identity(proc,session))
+   self.bp.start()
+   restored=[]
+   with patch.object(h.time,'monotonic',return_value=10):
+    h.publish('route-a',1)
+    with patch.object(d,'safe_json',side_effect=read):
+     self.assertEqual(h.run('route-a',restored.append),'restored')
+   self.assertEqual(restored,[])
+   self.assertTrue(h.authorized('route-a'))
 
  # Exercise the actual publisher/reader contract at a binary exponent boundary.
  def test_publisher_two_seconds_are_valid_at_float_boundaries(self):
