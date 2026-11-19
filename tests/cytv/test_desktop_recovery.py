@@ -121,7 +121,8 @@ class DesktopRecoveryTests(unittest.TestCase):
                         self.store.begin(self.profile, 'install', stage='pending')
                     w.submit('y' if decision in ('install', 'late-pending', 'check-fails-again') else 'n')
                     if decision == 'install':
-                        self.pump(lambda: w.pending is not None or not w.running)
+                        # This leg runs both package installs before the next prompt.
+                        self.pump(lambda: w.pending is not None or not w.running, timeout=30)
                         if w.pending:
                             w.submit(None)
                 self.pump(lambda: not w.running)
@@ -599,8 +600,8 @@ class DesktopRecoveryTests(unittest.TestCase):
                 result.return_value.__enter__.return_value = ssap
         self.addCleanup(i18n.set_language, 'en')
 
-    def pump(self, predicate):
-        deadline = time.monotonic() + 5
+    def pump(self, predicate, *, timeout=5):
+        deadline = time.monotonic() + timeout
         while not predicate() and time.monotonic() < deadline:
             self.app.processEvents()
             time.sleep(.005)
