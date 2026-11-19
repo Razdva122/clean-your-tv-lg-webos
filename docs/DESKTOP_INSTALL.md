@@ -338,3 +338,7 @@ for you. Pending installations still require the normal status/recovery check.
 These changes require rebuilt candidate Home/services and desktop CYTV packages.
 They do not change published downloads. Host/browser tests are not physical-TV
 acceptance; model/firmware-specific storage and installer behavior remain untested.
+
+Root Beta startup migration uses `cytv migrate-root-beta --edition root --root-variant node012-beta` with the saved Root SSH connection and **Change Home** off. It keeps the application and preferences. A saved removal can be superseded only when its original device evidence proves cleanup has not started. Interrupted migration continues with the same installer payload. To restore the saved private runtime, keep Change Home off and add `--rollback-beta-startup` to that command. Recovery records and the inverse remain on the TV.
+
+If migration cannot verify a submitted LG Home selection, keep the diagnostic and migration records. With Change Home off, use the same command with `--rollback-beta-startup` to restore the prior private runtime. An uncertain Home-setting submission is resolved by readback and is never sent again automatically. A previously absent LG Home override may become explicit during migration; appearance and startup-source preferences are preserved.

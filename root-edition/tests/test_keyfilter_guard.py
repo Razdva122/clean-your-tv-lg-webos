@@ -366,10 +366,99 @@ int main(void) {
         self.assertEqual(latch.read_text(), f'{TOKEN} explicit_off\n')
         self.assertNotEqual(self.run_guard('--retire-boot', TOKEN)[1], 0)
 
-    def test_emergency_escape_during_system_shutdown_still_vetoes_rearm(self):
+    def test_capabilities_are_static_and_do_not_require_or_change_state(self):
+        before = {p.relative_to(self.root): p.read_bytes()
+                  for p in self.root.rglob('*') if p.is_file()}
+        (self.root/'state/config').unlink()
+        before.pop(Path('state/config'))
+        result, rc = self.run_guard('--capabilities')
+        self.assertEqual(rc, 0)
+        self.assertEqual(result, {'returnValue': True, 'backend': 'c1-native-gate',
+            'routing': 'compositor-keyfilter-v1', 'protocol': 1,
+            'resumable_guard': True, 'boot_retirement': True,
+            'shutdown_probes': ['systemd-is-system-running-v1', 'upstart-shutdown-jobs-v1']})
+        after = {p.relative_to(self.root): p.read_bytes()
+                 for p in self.root.rglob('*') if p.is_file()}
+        self.assertEqual(after, before)
+
+    def test_upstart_shutdown_probe_requires_known_running_jobs_and_is_bounded(self):
+        # Exercise the real bounded subprocess/parser directly without needing
+        # a simulated TV session for every invalid daemon response.
+        source = self.root/'shutdown-probe.c'
+        source.write_text('#define main guardian_main\n#include "'+str(SOURCE)+
+                          '"\n#undef main\nint main(void) { return !normal_shutdown(); }\n')
+        binary = self.root/'shutdown-probe'
+        subprocess.run(['cc', '-std=c11', '-Wall', '-Wextra', '-Werror',
+            '-DCYTV_KEYFILTER_FIXTURE', f'-DFIXTURE_ROOT="{self.root}"',
+            str(source), '-o', str(binary)], check=True, capture_output=True)
+        initctl = self.root/'initctl'
+        def script(body):
+            initctl.write_text('#!/bin/sh\n'+body+'\n')
+            initctl.chmod(0o700)
+        def check(expected):
+            started = time.monotonic()
+            p = subprocess.run([str(binary)], capture_output=True, timeout=2)
+            self.assertEqual(p.returncode, 0 if expected else 1, p.stderr)
+            self.assertLess(time.monotonic()-started, 1.5)
+        check(False)  # Unsupported init system.
+        for job in ('shutdown', 'reboot'):
+            with self.subTest(running_job=job):
+                script('case "$*" in "status '+job+'") echo "'+job+' start/running, process 42" ;; '
+                       '"status shutdown"|"status reboot") echo "${2} stop/waiting" ;; *) exit 4 ;; esac')
+                check(True)
+        script('case "$*" in "status shutdown"|"status reboot") echo "${2} stop/waiting" ;; *) exit 4 ;; esac')
+        check(False)  # Both factory jobs are inactive during normal operation.
+        for reply in ('shutdown stop/waiting', 'shutdown start/starting',
+                      'shutdown start/running', 'shutdown start/running, process 0',
+                      'shutdown start/running, process -1', 'shutdown start/running, process 42 extra',
+                      'shutdown start/running, process 999999999999999999999999999999',
+                      'reboot start/running, process 42', 'shutdown stop/running'):
+            with self.subTest(reply=reply):
+                script('printf "%s\\n" "'+reply+'"')
+                check(False)
+        for body in ('echo "shutdown start/running, process 42"; exit 1',
+                     'printf "shutdown start/running, process 42\\nextra\\n"',
+                     'printf "shutdown start/running, process 42\\000\\n"',
+                     'sleep 5', 'printf "%01000d" 0', 'exit 1'):
+            with self.subTest(body=body):
+                script(body)
+                check(False)
+        script('echo "shutdown start/running, process 42"')
+        initctl.chmod(0o722)
+        check(False)
+        initctl.chmod(0o700)
         systemctl = self.root/'systemctl'
-        probing = self.root/'systemctl-probing'
-        systemctl.write_text('#!/bin/sh\ntouch "'+str(probing)+'"\nsleep .25\nprintf "stopping\\n"\nexit 1\n')
+        for body in ('echo running; exit 0', 'sleep 5', 'exit 1'):
+            systemctl.write_text('#!/bin/sh\n'+body+'\n')
+            systemctl.chmod(0o700)
+            check(False)  # A systemd probe failure must not fall through.
+
+    def test_verified_upstart_shutdown_allows_retirement(self):
+        initctl = self.root/'initctl'
+        initctl.write_text('#!/bin/sh\n[ "$*" = "status shutdown" ] || exit 4\n'
+                           'echo "shutdown start/running, process 42"\n')
+        initctl.chmod(0o700)
+        p, _, _ = self.armed(resumable=True)
+        p.terminate()
+        self.finish(p)
+        self.assertEqual((self.root/'state/stopped').read_text(), f'{TOKEN} normal_shutdown\n')
+        self.assertFalse((self.root/'luna-calls').exists())
+        result, rc = self.run_guard('--retire-boot', TOKEN)
+        self.assertEqual(rc, 0)
+        self.assertEqual(result['reason'], 'normal_shutdown')
+        self.assertEqual(self.run_guard('--restore-routing')[1], 0)
+        self.assertNotEqual(self.run_guard('--retire-boot', TOKEN)[1], 0)
+
+    def test_emergency_escape_during_system_shutdown_still_vetoes_rearm(self):
+        self.shutdown_escape('systemctl', 'stopping', 1)
+
+    def test_emergency_escape_during_upstart_shutdown_still_vetoes_rearm(self):
+        self.shutdown_escape('initctl', 'shutdown start/running, process 42', 0)
+
+    def shutdown_escape(self, command, response, status):
+        systemctl = self.root/command
+        probing = self.root/'shutdown-probing'
+        systemctl.write_text('#!/bin/sh\ntouch "'+str(probing)+'"\nsleep .25\nprintf "'+response+'\\n"\nexit '+str(status)+'\n')
         systemctl.chmod(0o700)
         p, iw, _ = self.armed(resumable=True)
         p.terminate()

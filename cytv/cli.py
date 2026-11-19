@@ -56,12 +56,13 @@ def parser(desktop=False):
     result._positionals.title = i18n.translate('positional arguments')
     result._optionals.title = i18n.translate('options')
     result.add_argument('-h', '--help', action='help', help=i18n.translate('Show this help message and exit'))
-    commands = ('install', 'status', 'doctor', 'home-diagnostics', 'recover', 'trust-root-ssh', 'restore', 'uninstall', 'enable-system-updates', 'enable-firmware-access', 'disable-firmware-access', 'recover-system-rollback', 'recover-root-rollback', 'replace-system-updater', 'clean-wam-cache', 'debloat')
+    commands = ('install', 'status', 'doctor', 'home-diagnostics', 'migrate-root-beta', 'recover', 'trust-root-ssh', 'restore', 'uninstall', 'enable-system-updates', 'enable-firmware-access', 'disable-firmware-access', 'recover-system-rollback', 'recover-root-rollback', 'replace-system-updater', 'clean-wam-cache', 'debloat')
     if desktop:
         commands += ('ssh-command',)
         result.add_argument('--resume-root-reinstall', action='store_true', help=argparse.SUPPRESS)
         result.add_argument('--removal-operation', help=argparse.SUPPRESS)
         result.add_argument('--removal-pin', help=argparse.SUPPRESS)
+    result.add_argument('--rollback-beta-startup', action='store_true', help=i18n.translate('Roll back a private Root Beta startup migration'))
     result.add_argument('command', nargs='?', default='install', choices=commands)
     result.add_argument('--language', choices=tuple(i18n.LANGUAGES), help=i18n.translate('Interface language (auto uses the computer language)'))
     result.add_argument('--version', action='store_true', help=i18n.translate('Print installer version'))
@@ -422,6 +423,10 @@ def _run(args, ask, write, connect, secret, search, inspect, payload_root, check
             raise UserError('--migrate-home applies only to Root installation.')
         if args.report and args.command != 'doctor':
             raise UserError('--report is available with cytv doctor.')
+        if args.rollback_beta_startup and args.command != 'migrate-root-beta':
+            raise UserError('--rollback-beta-startup requires migrate-root-beta.')
+        if args.command == 'migrate-root-beta' and args.non_interactive:
+            raise UserError('Root Beta migration requires interactive confirmation. --yes does not authorize it.')
         if args.command == 'clean-wam-cache' and args.non_interactive:
             write.command_outcome('owner-input-required', 'run-interactively')
             raise UserError('WAM cleanup requires interactive confirmation; --yes does not authorize it.')
@@ -793,6 +798,13 @@ def _run(args, ask, write, connect, secret, search, inspect, payload_root, check
                 remote = connect_tv(True)
                 return remote
             installer.reconnect = reconnect_tv
+            if args.command == 'migrate-root-beta':
+                from .beta_startup_migration import run as migrate_beta_startup
+                phase = 'migrate-root-beta'
+                migrated = migrate_beta_startup(installer, ask, write, rollback=args.rollback_beta_startup)
+                if migrated is not None:
+                    diagnostics.save_result(write, store, args.command, profile, phase, tv_info, checks=checks.results)
+                return 0
             if args.command == 'install':
                 reinstall = None
                 home_conflict = None

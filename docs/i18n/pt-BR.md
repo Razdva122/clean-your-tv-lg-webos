@@ -77,6 +77,8 @@ Se a instalação do Root oferecer a substituição da integração atual do Hom
 
 ## 6. Uso e recuperação
 
+Para migrar o ambiente de inicialização da Root Beta existente, desative **Change Home** e execute `cytv migrate-root-beta --edition root --root-variant node012-beta` usando a conexão Root SSH salva. O aplicativo e as preferências são preservados. A migração para se uma remoção anterior já alterou a instalação. Ao concluir, ative Change Home e escolha as fontes de inicialização nas configurações Home.
+
 Para fixar uma entrada HDMI, selecione-a em **+ / Adicionar aplicativo**. Pressione OK para mudar para a entrada. Mantenha OK pressionado para mover ou ocultar o bloco.
 
 Setas selecionam; OK abre; segure OK para reorganizar. Um toque em Voltar mantém a navegação e a confirmação de saída do aplicativo. Home abre o lançador com o controle ativo. Segure Voltar por 1,2 segundos para abrir LG Home uma vez. O interruptor de controle do Home e suas configurações não mudam.

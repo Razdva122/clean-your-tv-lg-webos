@@ -77,6 +77,8 @@ Developer Mode 讓 CYTV 可以在沒有 root 的電視上安裝應用程式。
 
 ## 6. 日常使用與恢復
 
+若要遷移現有 Root Beta 的啟動執行環境，請關閉 **Change Home**，再透過已儲存的 Root SSH 連線執行 `cytv migrate-root-beta --edition root --root-variant node012-beta`。應用程式與偏好設定會保留。如果先前的移除作業已變更安裝，遷移會停止。完成後，開啟 Change Home，並在 Home 設定中選擇啟動來源。
+
 若要固定 HDMI 輸入來源，請在 **+ / 新增應用程式** 中選取它。按 OK 可切換至該輸入來源。長按 OK 可移動或隱藏圖塊。
 
 方向鍵選擇圖塊，OK 打開，按住 OK 調整順序。短按返回保留應用本身的導航和退出確認。啟用 Home 控制時，短按 Home 打開 Clean Your TV。按住返回 1.2 秒會臨時打開 LG Home 一次，不改變 Home 控制開關和設定。

@@ -77,6 +77,8 @@ If Root setup offers to replace the current Home integration, confirm only if yo
 
 ## 6. Everyday use and recovery
 
+To migrate the existing Root Beta startup runtime, turn **Change Home** off and run `cytv migrate-root-beta --edition root --root-variant node012-beta` with the saved Root SSH connection. The application and preferences are kept. Migration stops if an earlier removal has already changed the installation. After completion, turn Change Home on and choose the startup sources in Home settings.
+
 To open the TV's notification center from Clean Your TV, choose **Home settings → Advanced → LG Notifications**.
 
 To pin an HDMI input, select it in **+ / Add app**. Press OK to switch to it. Hold OK to move or hide its tile.

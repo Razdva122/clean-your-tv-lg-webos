@@ -33,6 +33,7 @@
 #define HOME FIXTURE_ROOT "/home"
 #define LUNA FIXTURE_ROOT "/luna"
 #define SYSTEMCTL FIXTURE_ROOT "/systemctl"
+#define INITCTL FIXTURE_ROOT "/initctl"
 #define BOOT FIXTURE_ROOT "/boot"
 #define TRUST_UID getuid()
 #else
@@ -41,6 +42,7 @@
 #define HOME "/usr/bin/com.webos.app.home"
 #define LUNA "/usr/bin/luna-send"
 #define SYSTEMCTL "/bin/systemctl"
+#define INITCTL "/sbin/initctl"
 #define BOOT "/proc/sys/kernel/random/boot_id"
 #define TRUST_UID 0
 #endif
@@ -627,12 +629,40 @@ static int child_output(char *const args[], char *b, size_t limit, int *exit_sta
   *exit_status = WEXITSTATUS(status);
   return 1;
 }
+/* Only the factory shutdown/reboot scripts establish Upstart shutdown intent.
+ * RUNLEVEL belongs to the event/job environment, not a proven global variable.
+ * Unknown state, a missing job or an unavailable daemon is never authorization. */
+static int upstart_shutdown_job(const char *job) {
+  char output[128], expected[64];
+  int status;
+  char *args[] = {INITCTL, "status", (char *)job, NULL};
+  if (!child_output(args,output,sizeof(output)-1,&status,500,0) || status)
+    return -1;
+  snprintf(expected,sizeof(expected),"%s stop/waiting\n",job);
+  if (!strcmp(output,expected)) return 0;
+  snprintf(expected,sizeof(expected),"%s start/running, process ",job);
+  size_t prefix=strlen(expected), n=strlen(output);
+  if (strncmp(output,expected,prefix) || n<=prefix+1 || output[n-1]!='\n' ||
+      !digits(output+prefix,n-prefix-1)) return -1;
+  errno=0;
+  unsigned long long pid=strtoull(output+prefix,NULL,10);
+  return !errno && pid>1 && pid<=INT_MAX ? 1:-1;
+}
 static int normal_shutdown(void) {
   char output[64];
   int status;
-  char *args[] = {SYSTEMCTL, "is-system-running", NULL};
-  return child_output(args,output,sizeof(output)-1,&status,500,0) &&
-         status==1 && !strcmp(output,"stopping\n");
+  struct stat s;
+  /* A present systemd observer owns the decision, even when it fails. Never
+   * turn its timeout/error into permission through another init adapter. */
+  if (!lstat(SYSTEMCTL,&s)) {
+    char *args[] = {SYSTEMCTL, "is-system-running", NULL};
+    return child_output(args,output,sizeof(output)-1,&status,500,0) &&
+           status==1 && !strcmp(output,"stopping\n");
+  }
+  if (errno!=ENOENT || !trusted_parents(INITCTL) || !secure(INITCTL,0) ||
+      access(INITCTL,X_OK)) return 0;
+  int shutdown=upstart_shutdown_job("shutdown");
+  return shutdown==1 || (shutdown==0 && upstart_shutdown_job("reboot")==1);
 }
 static int luna(const char *method, const char *app) {
   char payload[160], b[CYTV_JSON_LIMIT + 1];
@@ -729,7 +759,7 @@ static int guard(const char *token,int input,int control,int ready,int seconds,i
   if (resumable && armed && (!strcmp(reason,"signal") || !strcmp(reason,"input_lost") ||
                             !strcmp(reason,"controller_lost")) &&
       pulse_write("health",0,0,0)) {
-    /* Revoke launch authority before querying systemd. Keep reading the
+    /* Revoke launch authority before querying the init daemon. Keep reading the
      * emergency channels until the final durable reason is selected. */
     close(lock);
     if (normal_shutdown()) {
@@ -809,6 +839,14 @@ static int restore(int lock, int routing_only) {
 }
 int main(int argc,char **argv) {
   umask(077);
+  /* Static implementation features only; no state, daemon or device access. */
+  if (argc==2 && !strcmp(argv[1],"--capabilities")) {
+    puts("{\"returnValue\":true,\"backend\":\"c1-native-gate\","
+         "\"routing\":\"compositor-keyfilter-v1\",\"protocol\":1,"
+         "\"resumable_guard\":true,\"boot_retirement\":true,"
+         "\"shutdown_probes\":[\"systemd-is-system-running-v1\",\"upstart-shutdown-jobs-v1\"]}");
+    return 0;
+  }
   if (argc==2 && !strcmp(argv[1],"--selfcheck")) {
     int ok=hex32("0123456789abcdef0123456789abcdef") &&
            parse_proc_start("42 (guardian) S 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 12345 0\n")==12345;
