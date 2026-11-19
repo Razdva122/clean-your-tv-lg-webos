@@ -45,13 +45,13 @@
       "pr": 737,
       "issues": [],
       "summary": "Load shared settings CSS in the Columns geometry test"
+    },
+    {
+      "pr": 743,
+      "issues": [],
+      "summary": "Require rendered Root Home before System profile capture"
     }
   ],
   "excluded": [],
-  "acceptance": "",
-  "build": {
-    "run_id": 44501274032,
-    "attempt": 1,
-    "source": "a25505053c1920961f6d085061eceb84fc3a6362"
-  }
+  "acceptance": ""
 }
