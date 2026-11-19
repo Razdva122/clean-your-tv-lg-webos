@@ -465,6 +465,28 @@ try {
     new URL(articlePage.url()).pathname,
     base + 'zh-Hant/articles/change-lg-webos-home-screen/'
   );
+  const compatibilityUrl = host + base + 'ru/compatibility/';
+  await articlePage.goto(compatibilityUrl);
+  const series = articlePage.locator('.compatibility-reports details').filter({
+    has: articlePage.locator('#reported-series-c1')
+  });
+  const version = articlePage.locator('.version-groups details').filter({
+    has: articlePage.locator('#reported-webos-6')
+  });
+  const model = series.locator('#reported-tv-c1-65-root-issue418');
+  assert.equal(await series.getAttribute('open'), null);
+  assert.equal(await version.getAttribute('open'), null);
+  assert.equal(await model.isVisible(), false);
+  await series.locator('summary').focus();
+  await articlePage.keyboard.press('Enter');
+  await model.waitFor({ state: 'visible' });
+  await model.locator('a[href="#reported-webos-6"]').click();
+  await version.locator('#reported-webos-6').waitFor({ state: 'visible' });
+  await articlePage.goto(compatibilityUrl + '#reported-webos-6');
+  await version.locator('a[href="#reported-tv-c1-65-root-issue418"]').click();
+  await model.waitFor({ state: 'visible' });
+  await series.locator('summary').click();
+  assert.equal(await model.isVisible(), false);
   await articleContext.close();
   const page = await browser.newPage();
   page.on('pageerror', (e) => errors.push(e.message));

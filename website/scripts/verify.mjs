@@ -3,6 +3,7 @@ import './verify-articles.mjs';
 import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { parse } from '../../node_modules/parse5/dist/index.js';
+import { updateReadmeCompatibility } from './update-readme-compatibility.mjs';
 const root = fileURLToPath(new URL('../dist/', import.meta.url));
 const base = 'https://razdva122.github.io/clean-your-tv-lg-webos/';
 const locales = [
@@ -58,6 +59,14 @@ const reports = JSON.parse(
 ).reports;
 const visibleReports = reports.filter(
   (report) => report.showOnWebsite === true
+);
+const readme = readFileSync(
+  new URL('../../README.md', import.meta.url),
+  'utf8'
+);
+assert(
+  readme === updateReadmeCompatibility(readme, reports),
+  'README compatibility block is stale. Run node website/scripts/update-readme-compatibility.mjs'
 );
 const compatibilityDoc = readFileSync(
   new URL('../../docs/COMPATIBILITY.md', import.meta.url),
@@ -124,6 +133,10 @@ for (const lang of locales) {
   assert(
     support[lang].reportsTitle?.trim(),
     lang + ' missing device reports heading'
+  );
+  assert(
+    support[lang].reportResults.partial?.trim(),
+    lang + ' missing limited-operation result label'
   );
   assert.equal(
     translations[lang].nav.length,
@@ -290,14 +303,101 @@ for (const lang of locales)
         route + ' device list visibility'
       );
       if (list) {
-        const items = nodes(list).filter((n) => n.tagName === 'li');
+        const items = nodes(list).filter((n) => attr(n, 'data-report-id'));
+        for (const [groupId, expectedReports] of [
+          ['reported-series-c1', ['c1-65-root-issue418', 'c1-77-c12la-noroot']],
+          ['reported-series-c2', ['c2-42-noroot', 'c2-reddit-noroot']],
+          [
+            'reported-series-c3',
+            ['c3-65-noroot', 'c3-maintainer-root', 'c3-reddit-noroot']
+          ],
+          [
+            'reported-series-nanocell',
+            ['50nano756pa-noroot', 'nano80asa-noroot', '55nano81ana-noroot']
+          ],
+          ['reported-series-qned', ['qned75ura-noroot', '65qned80sra-noroot']],
+          [
+            'reported-series-um-un',
+            ['43um7600plb-noroot', 'um7450pla-noroot', 'un7000-noroot']
+          ],
+          ['reported-series-uj-uk', ['49uj750v-noroot', 'uk6400plf-noroot']],
+          [
+            'reported-series-up-uq-ur',
+            ['55up7000pua-noroot', 'uq7500-43-noroot', 'ur9100-noroot']
+          ],
+          ['reported-series-lb-lm', ['lb650v-32-noroot', 'lm6370psb-noroot']],
+          ['reported-webos-3', ['49uj750v-noroot', 'uj6050-60-noroot']],
+          ['reported-webos-4', ['sk8100-noroot']],
+          ['reported-webos-4.5-5', ['um7450pla-noroot', '55um7450pla-noroot']],
+          [
+            'reported-webos-25',
+            ['b3-noroot', 'c2-42-noroot', 'c2-reddit-noroot']
+          ],
+          [
+            'reported-webos-26',
+            ['g3-83-noroot', 'c3-maintainer-root', 'c3-reddit-noroot']
+          ]
+        ]) {
+          const group = all.find((n) => attr(n, 'id') === groupId);
+          assert(group, route + ' missing compatibility group ' + groupId);
+          const content = nodes(group);
+          const details = group.parentNode;
+          assert.equal(
+            details.tagName,
+            'details',
+            route + ' disclosure ' + groupId
+          );
+          assert.equal(
+            attr(details, 'open'),
+            undefined,
+            route + ' initially collapsed ' + groupId
+          );
+          const summary = details.childNodes.find(
+            (n) => n.tagName === 'summary'
+          );
+          const count =
+            summary &&
+            nodes(summary).find((n) => attr(n, 'class') === 'group-count');
+          assert(count, route + ' missing model count ' + groupId);
+          const ids = new Set(content.map((n) => attr(n, 'data-report-id')));
+          const links = new Set(content.map((n) => attr(n, 'href')));
+          const groupReports = visibleReports.filter(
+            ({ id }) => ids.has(id) || links.has('#reported-tv-' + id)
+          );
+          assert.equal(
+            attr(details.parentNode, 'class')
+              ?.split(/\s+/)
+              .includes('confirmed'),
+            groupReports.some(({ result }) => result === 'controls-tested'),
+            route + ' group confirmation styling ' + groupId
+          );
+          const models = new Set(groupReports.map(({ model }) => model));
+          assert(
+            nodes(count).some(
+              (n) =>
+                n.value?.trim() ===
+                new Intl.NumberFormat(lang).format(models.size)
+            ),
+            route + ' incorrect model count ' + groupId
+          );
+          for (const id of expectedReports.filter((id) =>
+            visibleReports.some((report) => report.id === id)
+          )) {
+            assert(
+              ids.has(id) || links.has('#reported-tv-' + id),
+              route + ' missing ' + id + ' in ' + groupId
+            );
+          }
+        }
         assert.equal(
           items.length,
           visibleReports.length,
           route + ' confirmed model count'
         );
         assert(
-          !nodes(list).some((n) => n.tagName === 'a'),
+          nodes(list)
+            .filter((n) => n.tagName === 'a')
+            .every((n) => attr(n, 'href')?.startsWith('#reported-webos-')),
           route + ' device list must not show evidence links'
         );
         for (const report of visibleReports) {
@@ -305,6 +405,29 @@ for (const lang of locales)
             (n) => attr(n, 'data-report-id') === report.id
           );
           assert(item, route + ' missing confirmed model ' + report.id);
+          assert.equal(
+            attr(item, 'class')?.split(/\s+/).includes('confirmed'),
+            report.result === 'controls-tested',
+            route + ' confirmation styling for ' + report.id
+          );
+          assert(
+            nodes(item).some((n) => n.tagName === 'h4'),
+            route + ' missing device card heading ' + report.id
+          );
+          const versionLinks = nodes(item).filter((n) => n.tagName === 'a');
+          assert(versionLinks.length > 0, route + ' device card version link');
+          for (const link of versionLinks) {
+            const version = all.find(
+              (n) => '#' + attr(n, 'id') === attr(link, 'href')
+            );
+            assert(
+              version &&
+                nodes(version).some(
+                  (n) => attr(n, 'href') === '#reported-tv-' + report.id
+                ),
+              route + ' missing reciprocal link for ' + report.id
+            );
+          }
           const text = nodes(item)
             .filter((n) => n.nodeName === '#text')
             .map((n) => n.value)
@@ -312,8 +435,10 @@ for (const lang of locales)
           for (const value of [
             report.model,
             report.firmware,
-            report.webos,
-            report.release
+            report.webos ?? support[lang].unknownWebos,
+            report.release,
+            support[lang].reportResults[report.result],
+            support[lang].reportSources[report.evidenceKind]
           ].filter(Boolean))
             assert(
               text.includes(value),

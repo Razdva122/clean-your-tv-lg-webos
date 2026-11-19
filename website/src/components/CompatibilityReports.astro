@@ -2,6 +2,7 @@
 import { z } from 'astro/zod';
 import data from '../../../docs/compatibility-reports.json';
 import { support } from '../lib/support';
+import { webosCategory } from '../lib/webos.mjs';
 import type { Locale } from '../lib/site';
 interface Props {
   lang: Locale;
@@ -20,41 +21,424 @@ const { reports } = z
         firmware: text.nullable(),
         webos: text.nullable(),
         release: text.nullable(),
+        result: z.enum(['controls-tested', 'reported-working', 'partial']),
+        evidenceKind: z.enum(['public-owner-report', 'maintainer-qa']),
         showOnWebsite: z.boolean().optional()
       })
     )
   })
   .parse(data);
-const visible = reports.filter((report) => report.showOnWebsite === true);
+const visible = reports
+  .filter((report) => report.showOnWebsite === true)
+  .sort((a, b) => a.result.localeCompare(b.result));
+
+const lcdFamilies: Record<string, string> = {
+  NANO: 'NanoCell',
+  QNED: 'QNED',
+  SK: 'SK',
+  LB: 'LB / LM',
+  LM: 'LB / LM',
+  UJ: 'UJ / UK',
+  UK: 'UJ / UK',
+  UM: 'UM / UN',
+  UN: 'UM / UN',
+  UP: 'UP / UQ / UR',
+  UQ: 'UP / UQ / UR',
+  UR: 'UP / UQ / UR'
+};
+
+function modelSeries(model: string) {
+  const code = model.toUpperCase().replace(/^LG\s+/, '');
+  const oledSeries = code.match(
+    /^(?:OLED(?:\d{2,3})?)?([ABCEGMWZ][\dX])(?=\D|\d[A-Z]|$)/
+  )?.[1];
+  const lcdPrefix = code.match(/^(?:\d{2,3})?([A-Z]+)(?=\d)/)?.[1];
+  return oledSeries ?? lcdFamilies[lcdPrefix ?? ''] ?? model.toUpperCase();
+}
+
+const modelGroups = new Map<string, typeof visible>([['C1', []]]);
+const versionGroups = new Map<string, typeof visible>([
+  ['3', []],
+  ['4', []],
+  ['4.5-5', []]
+]);
+for (const report of visible) {
+  const series = modelSeries(report.model);
+  const version = webosCategory(report.webos);
+  if (!modelGroups.has(series)) modelGroups.set(series, []);
+  if (!versionGroups.has(version)) versionGroups.set(version, []);
+  modelGroups.get(series)?.push(report);
+  versionGroups.get(version)?.push(report);
+}
+
+const countFormat = new Intl.NumberFormat(lang);
+const modelCount = (reports: typeof visible) =>
+  countFormat.format(new Set(reports.map((report) => report.model)).size);
+const hasVerifiedHome = (reports: typeof visible) =>
+  reports.some(({ result }) => result === 'controls-tested');
+const compareGroup = (a: string, b: string) =>
+  a.localeCompare(b, 'en', { numeric: true });
+const seriesGroups = [...modelGroups].sort(([a], [b]) => compareGroup(a, b));
+const platformGroups = [...versionGroups].sort(([a], [b]) =>
+  compareGroup(a, b)
+);
 ---
 
 {visible.length > 0 && (
-  <section aria-labelledby="reported-tvs-title">
-    <h2 id="reported-tvs-title">{t.reportsTitle}</h2>
-    <ul class="compatibility-reports">
-      {visible.map((report) => (
-        <li data-report-id={report.id}>
-          <strong>{report.model}</strong>
-          {report.edition && (
-            <> — {report.edition === 'root' ? 'Root' : 'No-root'}</>
-          )}
-          {report.firmware && (
-            <>
-              ; {t.firmwareLabel} {report.firmware}
-            </>
-          )}
-          {report.webos && (
-            <>
-              ; {t.webosLabel} {report.webos}
-            </>
-          )}
-          {report.release && (
-            <>
-              ; {t.releaseLabel} {report.release}
-            </>
-          )}
-        </li>
-      ))}
-    </ul>
-  </section>
+  <>
+    <section aria-labelledby="reported-tvs-title">
+      <div class="report-heading">
+        <h2 id="reported-tvs-title">{t.reportsTitle}</h2>
+        <a href="#reported-webos-title">{t.reportVersionsTitle} ↓</a>
+      </div>
+      <ul class="compatibility-reports" role="list">
+        {seriesGroups.map(([series, reports]) => (
+          <li
+            class:list={[
+              'report-group',
+              { confirmed: hasVerifiedHome(reports) }
+            ]}
+            data-series={series}
+          >
+            <details>
+              <summary>
+                <h3>
+                  {series}
+                  <span class="group-count">
+                    <span class="visually-hidden">{t.reportsTitle} </span>
+                    {modelCount(reports)}
+                  </span>
+                </h3>
+              </summary>
+              <div
+                class="group-content"
+                id={
+                  'reported-series-' +
+                  series.toLowerCase().replace(/[^a-z0-9-]+/g, '-')
+                }
+              >
+                {reports.length ? (
+                  <ul class="series-models" role="list">
+                    {reports.map((report) => (
+                      <li
+                        class:list={[
+                          'report-card',
+                          { confirmed: report.result === 'controls-tested' }
+                        ]}
+                        id={'reported-tv-' + report.id}
+                        data-report-id={report.id}
+                      >
+                        <div class="report-card-heading">
+                          <h4>{report.model}</h4>
+                          {report.edition && (
+                            <span class="edition-label">
+                              {report.edition === 'root' ? 'Root' : 'No-root'}
+                            </span>
+                          )}
+                        </div>
+                        <p class="report-result">
+                          {t.reportResults[report.result]}
+                        </p>
+                        <dl>
+                          <div>
+                            <dt>{t.webosLabel}</dt>
+                            <dd>
+                              <a
+                                href={
+                                  '#reported-webos-' +
+                                  webosCategory(report.webos)
+                                }
+                              >
+                                {report.webos ?? t.unknownWebos}
+                              </a>
+                            </dd>
+                          </div>
+                          {report.firmware && (
+                            <div>
+                              <dt>{t.firmwareLabel}</dt>
+                              <dd>{report.firmware}</dd>
+                            </div>
+                          )}
+                          {report.release && (
+                            <div>
+                              <dt>{t.releaseLabel}</dt>
+                              <dd>{report.release}</dd>
+                            </div>
+                          )}
+                        </dl>
+                        <small class="report-source">
+                          {t.reportSources[report.evidenceKind]}
+                        </small>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p class="empty-group">{t.noCatalogResults}</p>
+                )}
+              </div>
+            </details>
+          </li>
+        ))}
+      </ul>
+    </section>
+
+    <section aria-labelledby="reported-webos-title">
+      <h2 id="reported-webos-title">{t.reportVersionsTitle}</h2>
+      <ul class="version-groups" role="list">
+        {platformGroups.map(([version, reports]) => (
+          <li
+            class:list={[
+              'report-group',
+              {
+                confirmed: version !== 'unknown' && hasVerifiedHome(reports)
+              }
+            ]}
+          >
+            <details>
+              <summary>
+                <h3>
+                  <span>
+                    {version === 'unknown'
+                      ? t.unknownWebos
+                      : 'webOS ' + version.replace('-', '–')}
+                  </span>
+                  <span class="group-count">
+                    <span class="visually-hidden">{t.reportsTitle} </span>
+                    {modelCount(reports)}
+                  </span>
+                </h3>
+              </summary>
+              <div class="group-content" id={'reported-webos-' + version}>
+                {reports.length ? (
+                  <ul class="version-models" role="list">
+                    {reports.map((report) => (
+                      <li>
+                        <a href={'#reported-tv-' + report.id}>{report.model}</a>
+                        <span
+                          class:list={{
+                            'report-result': report.result === 'controls-tested'
+                          }}
+                        >
+                          {t.reportResults[report.result]}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p class="empty-group">{t.noCatalogResults}</p>
+                )}
+              </div>
+            </details>
+          </li>
+        ))}
+      </ul>
+    </section>
+  </>
 )}
+
+<style>
+  .report-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    column-gap: var(--space-md);
+    margin-block-start: var(--space-2xl);
+    margin-block-end: var(--space-lg);
+  }
+
+  .report-heading h2 {
+    margin: 0;
+  }
+
+  .report-heading a {
+    padding-block: var(--space-sm);
+    font-size: var(--text-sm);
+  }
+
+  ul:is(.compatibility-reports, .version-groups) {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+    align-items: start;
+    gap: var(--space-xs);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  li.report-group,
+  li.report-card {
+    min-width: 0;
+    margin: 0;
+    padding: var(--space-md);
+    border: 1px solid var(--color-rule);
+    border-radius: var(--radius-card);
+    background: var(--color-paper-2);
+    scroll-margin-top: calc(var(--header-height) + var(--space-md));
+  }
+
+  li.report-group {
+    padding: 0;
+  }
+
+  .report-group summary {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    min-height: var(--control-height);
+    padding: var(--space-xs) var(--space-md);
+    border-radius: var(--radius-card);
+    list-style: none;
+    cursor: pointer;
+  }
+
+  .report-group summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .report-group summary:hover {
+    background: var(--color-paper-3);
+  }
+
+  .report-group summary::after {
+    content: '';
+    flex: 0 0 auto;
+    width: 0.45em;
+    height: 0.45em;
+    border-right: 1px solid currentColor;
+    border-bottom: 1px solid currentColor;
+    transform: rotate(45deg);
+  }
+
+  .report-group details[open] > summary::after {
+    transform: rotate(225deg);
+  }
+
+  .report-group h3 {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    margin: 0;
+    font-size: var(--text-md);
+  }
+
+  .group-count {
+    min-width: 1.75em;
+    color: var(--color-ink-2);
+    font-size: var(--text-xs);
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+  }
+
+  .group-content {
+    padding: 0 var(--space-md) var(--space-md);
+    scroll-margin-top: var(--control-height);
+  }
+
+  li.confirmed {
+    border-color: color-mix(in srgb, var(--color-success) 35%, transparent);
+    background: color-mix(in srgb, var(--color-success) 10%, var(--color-paper));
+  }
+
+  li.report-card:target,
+  .report-group:has(.group-content:target) {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  .report-card-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--space-2xs) var(--space-xs);
+  }
+
+  .report-card h4 {
+    margin: 0;
+    font-size: var(--text-lg);
+  }
+
+  .edition-label {
+    color: var(--color-ink-2);
+    font-size: var(--text-xs);
+  }
+
+  .report-card p.report-result {
+    margin: var(--space-2xs) 0 var(--space-sm);
+    font-size: var(--text-sm);
+    font-weight: 600;
+  }
+
+  .report-card.confirmed .report-result,
+  .version-models .report-result {
+    color: var(--color-success);
+  }
+
+  .report-card dl {
+    margin: var(--space-sm) 0 0;
+    font-size: var(--text-sm);
+  }
+
+  .report-card dl div {
+    display: flex;
+    flex-wrap: wrap;
+    column-gap: var(--space-xs);
+  }
+
+  .report-card dt,
+  .report-source {
+    color: var(--color-muted);
+  }
+
+  .report-card dd {
+    margin: 0;
+  }
+
+  .report-source {
+    display: block;
+    margin-top: var(--space-sm);
+    font-size: var(--text-xs);
+  }
+
+  ul.series-models {
+    display: grid;
+    gap: var(--space-xs);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .series-models .report-card {
+    padding: var(--space-sm);
+  }
+
+  .report-group .empty-group {
+    margin: var(--space-xs) 0 0;
+    font-size: var(--text-sm);
+    color: var(--color-muted);
+  }
+
+  ul.version-models {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .version-models li {
+    margin: 0;
+    padding: var(--space-xs) 0;
+    border-top: 1px solid var(--color-rule);
+    font-size: var(--text-sm);
+  }
+
+  .version-models li:last-child {
+    padding-bottom: 0;
+  }
+
+  .version-models span {
+    display: block;
+    font-size: var(--text-xs);
+  }
+</style>

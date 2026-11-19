@@ -4,6 +4,18 @@ const text = z.string().trim().min(1);
 const pair = z.tuple([text, text]);
 const schema = z.strictObject({
   reportsTitle: text,
+  reportVersionsTitle: text,
+  unknownWebos: text,
+  noCatalogResults: text,
+  reportResults: z.strictObject({
+    'controls-tested': text,
+    'reported-working': text,
+    partial: text
+  }),
+  reportSources: z.strictObject({
+    'public-owner-report': text,
+    'maintainer-qa': text
+  }),
   firmwareLabel: text,
   webosLabel: text,
   releaseLabel: text,
