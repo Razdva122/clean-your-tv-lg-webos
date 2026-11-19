@@ -55,7 +55,7 @@ and creating your own theme.
 ## Download and install
 
 <!-- release:downloads -->
-Current stable release: **[v1.25.0](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.25.0)** — [release notes](docs/RELEASE-1.25.0.md).
+Current stable release: **[v1.26.0](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.26.0)** — [release notes](docs/RELEASE-1.26.0.md).
 <!-- /release:downloads -->
 
 [![Download Windows x64 graphical installer — GUI ZIP](assets/brand/downloads/windows.svg)](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/latest/download/cytv-windows-x64-desktop.zip)
@@ -143,12 +143,12 @@ For contributors: [build and technical references](docs/development/README.md),
 <!-- release:components -->
 | Component | Stable version |
 | --- | --- |
-| cytv installer | 0.22.0 |
-| Home | 1.20.4 |
-| Home Helper | 0.9.2 |
-| Root edition | 0.22.0 |
-| Both edition Updaters | 0.6.3 |
-| Android installer / versionCode | 0.21.0 / 51 |
+| cytv installer | 0.23.0 |
+| Home | 1.20.5 |
+| Home Helper | 0.9.3 |
+| Root edition | 0.23.0 |
+| Both edition Updaters | 0.6.4 |
+| Android installer / versionCode | 0.22.0 / 52 |
 <!-- /release:components -->
 
 v1.15.0 fresh System Updater: 1.2.8 / protocol 1. v1.14.0 used 1.2.7. Existing supervisors stay pinned; installed 1.1.2 has no general replacement path. See the [delivery limits](docs/RELEASE-1.13.0.md).

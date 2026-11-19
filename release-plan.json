@@ -1,7 +1,47 @@
 {
   "schema": 1,
-  "version": null,
-  "changes": [],
+  "version": "1.26.0",
+  "changes": [
+    {
+      "pr": 730,
+      "issues": [
+        686
+      ],
+      "summary": "Preserve active apps during late automatic Helper startup; confirmation on reported webOS 4.5 TV pending"
+    },
+    {
+      "pr": 731,
+      "issues": [],
+      "summary": "Show Root reinstall restart waits clearly and report why cleanup paused"
+    },
+    {
+      "pr": 732,
+      "issues": [],
+      "summary": "Fix Home profile languages, Android prompts and CI routing; share packaging and runtime code"
+    },
+    {
+      "pr": 733,
+      "issues": [],
+      "summary": "Enable the screensaver by default and align the app sorting switch"
+    },
+    {
+      "pr": 734,
+      "issues": [],
+      "summary": "Document tested TVs by webOS generation"
+    },
+    {
+      "pr": 735,
+      "issues": [
+        152
+      ],
+      "summary": "Finish No-root cleanup for verified empty service directories; original EF950V report remains open"
+    },
+    {
+      "pr": 736,
+      "issues": [],
+      "summary": "Fix LG screensaver request rollover and Root subscription recovery"
+    }
+  ],
   "excluded": [],
   "acceptance": ""
 }
