@@ -13,3 +13,4 @@ android/tests/auto-recovery-journey.cjs browser-core
 android/tests/recovery-action.cjs browser-core
 android/tests/restart-result.cjs browser-core
 android/tests/ui.cjs browser-core
+android/tests/localization.cjs browser-core

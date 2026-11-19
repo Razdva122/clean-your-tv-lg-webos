@@ -267,9 +267,10 @@ installer and device runtime retain all four shards. The workflow invokes
 `tv-runtime` unit. Pinned legacy Node downloads are needed only for fresh units.
 
 Browser core (legacy build, geometry, settings, development UI and Android UI
-journeys) runs in `browser-core`. Changes to the Android browser tests select
-that job alongside the Android runtime. The preview profile and Android browser
-step use the same test membership list as the path selector in
+journeys) runs in `browser-core`. Changes to the Android browser tests or the
+WebView's HTML, CSS and JavaScript entry files select that job alongside the
+Android runtime. The preview profile and Android browser step use the same
+test membership list as the path selector in
 `scripts/ci-test-membership.txt`.
 Full candidates also run three `browser-themes` shards in
 parallel. The `browser` job requires core success and, for a full candidate,

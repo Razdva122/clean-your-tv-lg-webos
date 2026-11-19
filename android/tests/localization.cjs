@@ -91,9 +91,12 @@ let browser;
 (async () => {
   browser = await chromium.launch({
     headless: true,
+    channel: process.env.BROWSER_CHANNEL,
     executablePath:
       process.env.CYTV_CHROME ||
-      '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+      (process.platform === 'darwin'
+        ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+        : undefined)
   });
   const page = await browser.newPage({
     viewport: { width: 320, height: 740 },

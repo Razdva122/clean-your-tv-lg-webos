@@ -8,6 +8,10 @@ import subprocess
 
 COMPONENTS = ('ui', 'tv', 'installer', 'android', 'setup', 'preview', 'tv-runtime', 'browser-core')
 TEST_RUNNERS = dict(line.split() for line in Path(__file__).with_name('ci-test-membership.txt').read_text().splitlines())
+ANDROID_WEBVIEW_PATHS = {
+    f'android/app/src/main/assets/ui/{name}'
+    for name in ('app.js', 'translations.js', 'index.html', 'style.css')
+}
 WEATHER_PR_PATHS = frozenset({
     'launcher/weather-data.js',
     'tests/weather/data.cjs',
@@ -59,6 +63,8 @@ def components(paths):
                 selected.add('android')
         elif path.startswith('android/'):
             selected.add('android')
+            if path in ANDROID_WEBVIEW_PATHS:
+                selected.add('browser-core')
         elif path.startswith('tests/cytv/'):
             selected.add('installer')
         elif path.startswith('tests/setup/'):

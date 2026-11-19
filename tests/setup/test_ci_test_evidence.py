@@ -155,6 +155,7 @@ class EvidenceTests(unittest.TestCase):
             ('android/tests/recovery-action.cjs', {'android', 'browser-core', 'setup'}),
             ('android/tests/restart-result.cjs', {'android', 'browser-core', 'setup'}),
             ('android/tests/ui.cjs', {'android', 'browser-core', 'setup'}),
+            ('android/tests/localization.cjs', {'android', 'browser-core', 'setup'}),
             ('tests/updates/feed.cjs', {'tv-runtime', 'setup'}),
             ('tests/apps/inventory-fallback.cjs', {'tv-runtime', 'setup'}),
             ('tests/i18n/coverage.cjs', {'tv-runtime', 'setup'}),
@@ -183,7 +184,8 @@ class EvidenceTests(unittest.TestCase):
                                  {key for key in before if key[0] in expected})
 
     def test_unknown_shared_policy_product_and_dependency_mutations_invalidate_every_unit(self):
-        paths = ('new/product.py', 'scripts/ci-test-evidence.py', 'scripts/test.sh',
+        paths = ('new/product.py', 'android/app/src/main/assets/ui/app.js',
+                 'scripts/ci-test-evidence.py', 'scripts/test.sh',
                  'scripts/ci-test-membership.txt', 'tests/themes/ribbon-reference-ui.cjs',
                  '.github/workflows/tests.yml', 'package-lock.json', 'scripts/build-requirements.txt',
                  'tests/setup/test_ci_test_evidence.py', 'tests/setup/test_release_inputs.py',
