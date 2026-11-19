@@ -40,6 +40,11 @@
       "pr": 736,
       "issues": [],
       "summary": "Fix LG screensaver request rollover and Root subscription recovery"
+    },
+    {
+      "pr": 737,
+      "issues": [],
+      "summary": "Load shared settings CSS in the Columns geometry test"
     }
   ],
   "excluded": [],
