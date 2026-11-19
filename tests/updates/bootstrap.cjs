@@ -1,7 +1,9 @@
 const assert = require('assert'),
   vm = require('vm'),
   fs = require('fs'),
-  data = require('../../launcher/user-data');
+  data = require('../../launcher/user-data'),
+  updaterData = require('../../updater-service/user-data'),
+  { preferences } = require('../../scripts/sync-home-profile-languages.cjs');
 const profile = {
   schema: 1,
   inventory: {
@@ -85,70 +87,62 @@ context.PalmServiceBridge = function () {
     );
   };
 };
-let captured, captureError;
-context.HomeProfile.capture((e, p) => {
-  captureError = e;
-  captured = p;
-});
-assert(!captureError);
-assert(captured);
-assert.equal(captured.renewal.enabled, false);
+for (const language of preferences()) {
+  map.set('tvhome.language', language);
+  let captured, captureError;
+  context.HomeProfile.capture((error, result) => {
+    captureError = error;
+    captured = result;
+  });
+  assert.ifError(captureError);
+  assert.equal(captured.renewal.enabled, false);
+  assert.equal(captured.settings['tvhome.language'], language);
+
+  // The independently packaged updater must accept the same snapshot.
+  const backup = updaterData.validate(JSON.parse(JSON.stringify(captured)));
+  let pref = language === 'en' ? 'auto' : 'en',
+    reloads = 0;
+  const restoring = {
+    ...context,
+    TV_APPS: { apps: [], inputs: [] },
+    CONFIG: {},
+    localStorage: {
+      getItem: () => null,
+      setItem: (key, value) => {
+        if (key === 'tvhome.language') pref = value;
+      },
+      removeItem() {}
+    },
+    HomeI18n: {
+      ready: (cb) => cb(),
+      preference: () => pref,
+      refresh: () => 'en'
+    },
+    location: { reload: () => reloads++ },
+    PalmServiceBridge: function () {
+      this.cancel = () => {};
+      this.call = (uri) => {
+        if (uri.endsWith('/restore'))
+          this.onservicecallback(
+            JSON.stringify({ returnValue: true, result: backup })
+          );
+        else if (uri.endsWith('/restoreHistory'))
+          this.onservicecallback(JSON.stringify({ returnValue: true }));
+      };
+    }
+  };
+  restoring.window = restoring;
+  vm.runInNewContext(
+    fs.readFileSync('launcher/profile-bootstrap.js', 'utf8'),
+    restoring
+  );
+  assert.equal(pref, language);
+  // A change to auto must reload even if both choices resolve to English.
+  assert.equal(reloads, 1, language);
+}
 assert(renewalCalls.every((uri) => uri.endsWith('/status')));
 console.log(
-  'PASS enabled renewal permits profile capture without changing its preference'
-);
-// Restoring an explicit preference to auto must reload even if both currently
-// resolve to English, so the TV system locale can be queried on the new startup.
-let pref = 'en',
-  reloads = 0,
-  restoreScript;
-const restoring = {
-  ...context,
-  TV_APPS: { apps: [], inputs: [] },
-  CONFIG: {},
-  localStorage: {
-    getItem: () => null,
-    setItem: (k, v) => {
-      if (k === 'tvhome.language') pref = v;
-    },
-    removeItem() {}
-  },
-  HomeI18n: {
-    ready: (cb) => cb(),
-    preference: () => pref,
-    refresh: () => 'en'
-  },
-  location: { reload: () => reloads++ },
-  document: {
-    ...context.document,
-    body: {
-      appendChild: (s) => {
-        restoreScript = s;
-      }
-    }
-  },
-  PalmServiceBridge: function () {
-    this.cancel = () => {};
-    this.call = (uri) => {
-      if (uri.endsWith('/restore'))
-        this.onservicecallback(
-          JSON.stringify({
-            returnValue: true,
-            result: { ...profile, settings: { 'tvhome.language': 'auto' } }
-          })
-        );
-    };
-  }
-};
-restoring.window = restoring;
-vm.runInNewContext(
-  fs.readFileSync('launcher/profile-bootstrap.js', 'utf8'),
-  restoring
-);
-assert.equal(pref, 'auto');
-assert.equal(reloads, 1, 'restore must reinitialize TV auto-detection');
-console.log(
-  'PASS restored language preference reinitializes automatic TV locale'
+  'PASS Home languages survive capture and independent updater restore'
 );
 
 // The installed app manifest, not a source literal, supplies the health version.
