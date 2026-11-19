@@ -55,6 +55,11 @@
       "pr": 747,
       "issues": [],
       "summary": "Keep active Root Home boot-session reads independent of writer lock contention"
+    },
+    {
+      "pr": 752,
+      "issues": [],
+      "summary": "Give the desktop storage preflight regression enough time to observe both simulated package installs on Intel Mac"
     }
   ],
   "excluded": [],
