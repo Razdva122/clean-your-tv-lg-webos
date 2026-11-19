@@ -123,6 +123,8 @@ Sobald am Computer **Entfernung von Clean Your TV ist bestätigt.** angezeigt wi
 
 **Root neu installieren:** Wählen Sie mit der gespeicherten Verbindung **Meinen Fernseher einrichten → Root** und bestätigen Sie **Root neu installieren?**. Der Installer stellt LG Home wieder her und entfernt Clean Your TV samt Updatern, Home Helper und gespeicherten Einstellungen vollständig. Nach verifizierter Entfernung installiert und aktiviert er die enthaltenen Pakete und die Root-Laufzeit. Andere TV-Apps und bestehender Root-/SSH-Zugriff bleiben erhalten. Wenn der Desktop-Assistent pausiert, öffnen Sie denselben Installer und wählen Sie **Root-Neuinstallation fortsetzen**. Nach bestätigter Entfernung wählen Sie **Root-Installation fortsetzen**. **Clean Your TV deinstallieren** allein startet keine neue Installation.
 
+Wenn der Assistent bei der Bereinigung einen vollständigen Neustart verlangt, trennen Sie den Fernseher vom Strom, schließen Sie ihn wieder an und schalten Sie ihn ein. Wählen Sie nach dem Start **Ich habe den TV neu gestartet — prüfen und fortfahren**.
+
 ### LG-Einstellungen ändern und Root-Rollback abschließen
 
 Öffnen Sie im Desktop-Installer **Wartungsaktion → LG-Einstellungen anpassen (Debloat)** mit der gespeicherten TV-Verbindung. Wählen Sie die gewünschten Einstellungen aus, klicken Sie auf **Ausgewählte Einstellungen anwenden** und prüfen Sie die Ergebnisse. Ist ein früherer Vorgang offen, wählen Sie zuerst **Wiederherstellungsoptionen prüfen** mit dessen ursprünglicher gespeicherter Verbindung.

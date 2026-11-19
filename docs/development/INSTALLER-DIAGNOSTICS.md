@@ -411,8 +411,20 @@ Helper Stop record, cleanup requires a changed kernel boot ID, confirmation
 that startup was disabled, and a fresh process check before package removal.
 The installer saves the codes with the restart
 checkpoint so they remain available in both status and failed-retry reports.
-An older checkpoint may omit the field. The Root cleanup adapter records its
-own restart checkpoint and reason. These codes describe the earlier decision.
+Root cleanup exports the same field. Each code identifies a check that required a restart.
+
+| Root restart trigger | Observation |
+| --- | --- |
+| `controller-still-running` | The controller was still running after the stop request. |
+| `startup-disable-unverified` | Cleanup could not confirm that a legacy startup service was disabled. |
+| `resident-installer-evidence` | Cleanup found operation records from the resident installer. |
+| `updater-transaction-unresolved` | The updater transaction indicated installation, rollback or pending recovery. |
+| `process-idle-unverified` | The process scan could not rule out a running worker before its deadline. |
+| `prior-operation-unresolved` | The original install request had no completed outcome. |
+| `owned-process-still-used` | The final cleanup helper reported project resources still in use and requested a restart. |
+
+An older checkpoint may omit the field. The codes describe the saved decision.
+Resuming a Root reinstallation checks current cleanup before proceeding.
 
 <a id="root-admission-and-connection-advice-unreleased"></a>
 

@@ -50,7 +50,20 @@ class SimpleRemoval(unittest.TestCase):
         proc=root.parent/'proc/123';proc.mkdir()
         (proc/'cmdline').write_bytes(b'com.local.nativehome\0\0')
         (proc/'exe').symlink_to('/usr/bin/node')
-        self.assertEqual(driver.clean_remove(identifier)['stage'],'restart-required')
+        self.assertEqual(driver.clean_remove(identifier)['result']['restart_triggers'], ['process-idle-unverified'])
+
+    def test_installer_records_and_pending_update_report_their_own_restart_triggers(self):
+        driver, identifier, *_ = self.prepare()
+        shared_cleanup = driver.device.shared_cleanup
+        def shared(action, record, **kwargs):
+            result = shared_cleanup(action, record, **kwargs)
+            if action == 'inventory':
+                result.update(resident_installer=True, external_update_hint='rolling-back')
+            return result
+        driver.device.shared_cleanup = shared
+        reply = driver.clean_remove(identifier)
+        self.assertEqual(reply['result']['restart_triggers'],
+                         ['resident-installer-evidence', 'updater-transaction-unresolved'])
 
     def test_shell_with_delayed_owned_launch_prevents_same_boot_completion(self):
         driver,identifier,root,updater,payload,calls,present=self.prepare()
@@ -67,6 +80,7 @@ class SimpleRemoval(unittest.TestCase):
         self.assertEqual(first['stage'],'restart-required',first)
         self.assertFalse(first['result']['removed'])
         self.assertTrue(first['result']['restart_required'])
+        self.assertEqual(first['result']['restart_triggers'], ['prior-operation-unresolved'])
         self.assertEqual(driver.clean_remove(identifier)['stage'],'restart-required')
         self.boot='22222222-2222-2222-2222-222222222222'
         final=driver.clean_remove(identifier)
@@ -283,6 +297,7 @@ class SimpleRemoval(unittest.TestCase):
         driver.device.shared_cleanup=shared
         first=driver.clean_remove(identifier)
         self.assertEqual(first['stage'],'restart-required',first)
+        self.assertEqual(first['result']['restart_triggers'], ['controller-still-running'])
         self.assertEqual(calls.count('remove-'+APPS[0]),0)
         self.assertTrue((root/'state/ssap.json').exists())
         name='clean-removal-'+identifier;record=driver.ownership.store.read(name)

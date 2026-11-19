@@ -181,7 +181,11 @@ restore LG Home and continue. The installer rechecks LG Home before installing.
 Declining keeps the current Home in use. If a supported handoff cannot be
 verified, use the current integration’s own procedure to restore LG Home.
 
-If a confirmed Root reinstallation pauses, open the same desktop installer
+If cleanup requests a full restart, disconnect the TV from power, reconnect it
+and turn it on. After startup choose **I restarted the TV — check and continue**.
+The installer checks cleanup again before offering to install.
+
+If you closed the wizard during a confirmed Root reinstallation, open the same desktop installer
 and choose **Continue Root reinstallation**. It reconnects to the same TV and
 continues any unfinished cleanup. After removal is verified, choose
 **Continue Root installation**.
