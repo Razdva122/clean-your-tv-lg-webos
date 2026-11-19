@@ -266,8 +266,12 @@ installer and device runtime retain all four shards. The workflow invokes
 (which would run everything). Linux ownership verification is part of the primary
 `tv-runtime` unit. Pinned legacy Node downloads are needed only for fresh units.
 
-Browser core (legacy build, geometry, settings and development UI) runs in
-`browser-core`. Full candidates also run three `browser-themes` shards in
+Browser core (legacy build, geometry, settings, development UI and Android UI
+journeys) runs in `browser-core`. Changes to the Android browser tests select
+that job alongside the Android runtime. The preview profile and Android browser
+step use the same test membership list as the path selector in
+`scripts/ci-test-membership.txt`.
+Full candidates also run three `browser-themes` shards in
 parallel. The `browser` job requires core success and, for a full candidate,
 success of the entire theme matrix. Each shard can reuse only a receipt from
 the corresponding successful full-candidate job.

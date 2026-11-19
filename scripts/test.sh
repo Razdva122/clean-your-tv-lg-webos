@@ -171,13 +171,11 @@ if primary && has android; then
   "$PYTHON" -m unittest discover -s android/tests
 fi
 if on_shard 2 && has preview; then
-  node tests/home-presentation-ui.cjs
-  node tests/root-decoder-ui.cjs
-  node tests/preview-presentation-ui.cjs
-  node tests/themes/ribbon-reference-ui.cjs
-  node tests/themes/ribbon-edit-ui.cjs
-  for test in tests/showcase/{registry,submission-security,remote}.cjs; do node "$test"; done
-  node tests/preview-bridge.cjs
-  node tests/preview-themes-ui.cjs
-  "$PYTHON" -m unittest discover -s tests -p test_preview.py
+  while read -r test runner; do
+    [[ "$runner" == preview ]] || continue
+    case "$test" in
+      *.cjs) node "$test" ;;
+      *.py) "$PYTHON" -m unittest discover -s "$(dirname "$test")" -p "$(basename "$test")" ;;
+    esac
+  done < scripts/ci-test-membership.txt
 fi

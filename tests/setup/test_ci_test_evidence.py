@@ -152,10 +152,14 @@ class EvidenceTests(unittest.TestCase):
             ('homebrew/tests/test_payload.py', {'installer', 'setup'}),
             ('android/tests/test_bridge.py', {'android', 'browser-core', 'setup'}),
             ('android/tests/auto-recovery-journey.cjs', {'android', 'browser-core', 'setup'}),
+            ('android/tests/recovery-action.cjs', {'android', 'browser-core', 'setup'}),
+            ('android/tests/restart-result.cjs', {'android', 'browser-core', 'setup'}),
+            ('android/tests/ui.cjs', {'android', 'browser-core', 'setup'}),
             ('tests/updates/feed.cjs', {'tv-runtime', 'setup'}),
             ('tests/apps/inventory-fallback.cjs', {'tv-runtime', 'setup'}),
             ('tests/i18n/coverage.cjs', {'tv-runtime', 'setup'}),
             ('tests/showcase/registry.cjs', {'preview', 'setup'}),
+            ('tests/root-decoder-ui.cjs', {'preview', 'setup'}),
             ('tests/preview-bridge.cjs', {'preview', 'setup'}),
             ('tests/test_preview.py', {'preview', 'setup'}),
         ]
@@ -180,6 +184,7 @@ class EvidenceTests(unittest.TestCase):
 
     def test_unknown_shared_policy_product_and_dependency_mutations_invalidate_every_unit(self):
         paths = ('new/product.py', 'scripts/ci-test-evidence.py', 'scripts/test.sh',
+                 'scripts/ci-test-membership.txt', 'tests/themes/ribbon-reference-ui.cjs',
                  '.github/workflows/tests.yml', 'package-lock.json', 'scripts/build-requirements.txt',
                  'tests/setup/test_ci_test_evidence.py', 'tests/setup/test_release_inputs.py',
                  'tests/cytv/__init__.py', 'tests/cytv/helper.py', 'tests/cytv/fixtures/input.py',

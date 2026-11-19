@@ -6,7 +6,8 @@ from pathlib import Path
 import re
 import subprocess
 
-COMPONENTS = ('ui', 'tv', 'installer', 'android', 'setup', 'preview', 'tv-runtime')
+COMPONENTS = ('ui', 'tv', 'installer', 'android', 'setup', 'preview', 'tv-runtime', 'browser-core')
+TEST_RUNNERS = dict(line.split() for line in Path(__file__).with_name('ci-test-membership.txt').read_text().splitlines())
 WEATHER_PR_PATHS = frozenset({
     'launcher/weather-data.js',
     'tests/weather/data.cjs',
@@ -52,7 +53,11 @@ def components(paths):
             selected.update(('tv', 'installer', 'setup'))
             if path.startswith(('launcher/', 'root-edition/ui/', 'updater-app/')) or path == 'root-edition/preview.py':
                 selected.add('preview')
-        elif path.startswith(('android/',)):
+        elif runner := TEST_RUNNERS.get(path):
+            selected.add(runner)
+            if path.startswith('android/'):
+                selected.add('android')
+        elif path.startswith('android/'):
             selected.add('android')
         elif path.startswith('tests/cytv/'):
             selected.add('installer')
@@ -62,7 +67,7 @@ def components(paths):
             selected.add('preview')
         elif path.startswith('theme-api/') or path == 'scripts/export-theme-runtime.py':
             selected.update(COMPONENTS)
-        elif path.startswith('preview/') or path in ('scripts/preview.py', 'tests/test_preview.py', 'tests/preview-bridge.cjs'):
+        elif path.startswith('preview/') or path in ('scripts/preview.py', 'tests/home-card-ui.cjs'):
             selected.add('preview')
         elif path.startswith('tests/updates/'):
             selected.update(('tv', 'setup'))
@@ -162,7 +167,9 @@ def main():
         selected = {'setup'}  # Release policy requires full tests from the trusted build.
         weather_paths.clear()
     outputs = {name.replace('-', '_'): name in selected for name in COMPONENTS}
-    outputs.update(weather=bool(weather_paths), any=bool(selected), runtime=bool(selected - {'setup'}), candidate=candidate, installers=installers,
+    outputs.update(weather=bool(weather_paths), any=bool(selected),
+                   runtime=bool(selected - {'setup', 'browser-core'}), candidate=candidate, installers=installers,
+                   browser_core=bool(selected & {'browser-core', 'tv', 'ui'}),
                    full=installers and full_candidate(event, kind, ref),
                    macos=bool(selected & {'tv', 'tv-runtime', 'installer'}))
     lines = ''.join(f'{name}={str(value).lower()}\n' for name, value in outputs.items())
@@ -174,7 +181,7 @@ def main():
     if summary := os.environ.get('GITHUB_STEP_SUMMARY'):
         groups = ', '.join(sorted(selected)) or 'None'
         with open(summary, 'a') as output:
-            output.write(f'### CI scope\n\nRuntime groups: {groups}\n')
+            output.write(f'### CI scope\n\nSelected groups: {groups}\n')
             if weather_paths:
                 paths = ', '.join(f'`{path}`' for path in sorted(weather_paths))
                 output.write(f'\nFocused weather checks selected for {paths}.\n')

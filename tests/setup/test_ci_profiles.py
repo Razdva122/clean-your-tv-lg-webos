@@ -48,7 +48,8 @@ class CIProfiles(unittest.TestCase):
                                 '  shift\ndone\n')
             checkout = temp / 'checkout'
             (checkout / 'scripts').mkdir(parents=True)
-            shutil.copy(ROOT / 'scripts/test.sh', checkout / 'scripts/test.sh')
+            for name in ('test.sh', 'ci-test-membership.txt'):
+                shutil.copy(ROOT / 'scripts' / name, checkout / 'scripts' / name)
             for name in ('root-edition', 'native', 'launcher', 'renewal-service',
                          'updater-service', 'updater-app', 'tests'):
                 (checkout / name).symlink_to(ROOT / name, target_is_directory=True)
@@ -160,7 +161,7 @@ class CIProfiles(unittest.TestCase):
         script = '\n'.join(line[10:] for line in script.splitlines())
         complete = dict(os.environ, SCOPE='success', RUNTIME='success', BROWSER='success', HEIC='success',
                         PYTHON='success', WEATHER='success', BROWSER_REQUIRED='true', PYTHON_REQUIRED='true',
-                        WEATHER_REQUIRED='true')
+                        WEATHER_REQUIRED='true', HEIC_REQUIRED='true')
         def status(**updates):
             return subprocess.run(['bash', '-e', '-c', script], env={**complete, **updates}, capture_output=True).returncode
         self.assertEqual(status(), 0)
@@ -170,7 +171,10 @@ class CIProfiles(unittest.TestCase):
                     self.assertNotEqual(status(**{dependency: state}), 0)
         self.assertIn('needs: [scope, runtime, browser, phone-heic, optional-python, weather]', summary)
         self.assertEqual(status(WEATHER='skipped', WEATHER_REQUIRED='false'), 0)
-        self.assertEqual(status(BROWSER='skipped', HEIC='skipped', PYTHON='skipped', BROWSER_REQUIRED='false', PYTHON_REQUIRED='false'), 0)
+        self.assertEqual(status(BROWSER='skipped', HEIC='skipped', PYTHON='skipped',
+                                BROWSER_REQUIRED='false', HEIC_REQUIRED='false', PYTHON_REQUIRED='false'), 0)
+        self.assertEqual(status(HEIC_REQUIRED='false', HEIC='skipped'), 0)
+        self.assertNotEqual(status(HEIC_REQUIRED='false', HEIC='skipped', BROWSER='skipped'), 0)
         for dependency in ('BROWSER', 'HEIC', 'PYTHON', 'WEATHER'):
             for state in ('failure', 'cancelled', 'unknown', ''):
                 with self.subTest(optional=dependency, state=state):
