@@ -61,8 +61,11 @@ shared group while discarding the fixed transient request/response names.
 At runtime, when the packaged channel is still 0777, Renewal creates a child
 for the current kernel boot ID. Both processes check the parent inode and
 require the shared jailer group and exact mode 2770 on the child before
-handling records. The boot ID keeps records and open descriptors from prior
-boots out of the active channel. The outer directory can still cause denial
+handling records. A new boot ID separates the channel from records and open
+descriptors from earlier boots. If a reboot reuses the ID and widens its child
+to 0777, the request writer can reclaim the child it still owns in the shared
+group. It restricts the directory, discards the fixed transient entries and
+then reopens it at 2770. The outer directory can still cause denial
 of service if its entries are removed or replaced. Requests remain on the
 same-package Renewal service path because webOS does not expose the native
 application name as a callable service.
