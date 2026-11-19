@@ -71,6 +71,12 @@ cache files that correspond to listed sources. This uses the existing runtime
 without downloading a replacement. Restore stops if a listed file has changed
 or an unexpected file cannot be identified as a generated cache entry.
 
+Continuing an existing full removal can also recover recognized bytecode in the
+managed runtime. The installer uses the pinned archive's normalized inventory
+to check the existing files through Node before running Python. It then
+continues the saved removal. The ordinary status and setup checks retain their
+existing inventory verification.
+
 ## Prepare the download for an offline setup
 
 On a computer with Internet access, run:

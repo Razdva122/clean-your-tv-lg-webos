@@ -186,11 +186,12 @@ class Installer:
             args = ['env', '-u', 'PYTHONHOME', '-u', 'PYTHONPATH', 'PYTHONDONTWRITEBYTECODE=1', 'PYTHONNOUSERSITE=1', *args]
         return shlex.join(args)
 
-    def _select_python(self, provision=False):
+    def _select_python(self, provision=False, *, repair_cache=False):
         from .python_runtime import select_python
         from .state import default_dir
         cache = (self.store.root if self.store is not None else default_dir()) / 'python-cache'
-        return select_python(self.remote, cache, self.progress, provision=provision)
+        options = {'repair_cache': True} if repair_cache else {}
+        return select_python(self.remote, cache, self.progress, provision=provision, **options)
 
     def _python(self, state=None, *, repair_cache=False):
         if getattr(self, '_selected_python', None) and not repair_cache:
@@ -398,7 +399,8 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
             if action in ('clean-remove','clean-target','native-install'):
                 # Fresh support imports and a host-verified interpreter; no
                 # retained launcher/binding module executes during full cleanup.
-                python=self._select_python(provision=True)
+                options = {'repair_cache': True} if action in ('clean-remove', 'clean-target') else {}
+                python=self._select_python(provision=True, **options)
                 self._selected_python=python
                 entry='import runpy,sys;sys.path.insert(0,sys.argv.pop(1));sys.argv.pop(0);runpy.run_path(sys.argv[0],run_name="__main__")'
                 args=[python,'-I','-B','-c',entry,driver.rsplit('/',1)[0],driver,action]
