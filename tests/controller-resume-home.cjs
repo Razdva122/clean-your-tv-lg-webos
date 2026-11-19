@@ -12,7 +12,9 @@ function controller({
   blocked = false,
   initialControl = null,
   startedAt = 1000,
-  pid = 1
+  pid = 1,
+  startupForeground = (done) => done(LG),
+  deferStartup = false
 } = {}) {
   let now = startedAt,
     seq = 0,
@@ -118,7 +120,7 @@ function controller({
       if (n === './screen-watch')
         return (d, l, fg, reset, power) => {
           watch = { fg, reset, power, log: l };
-          return { close: reset };
+          return { close: reset, foreground: startupForeground };
         };
       return require('../native/app/' + n.slice(2));
     },
@@ -147,8 +149,10 @@ function controller({
     throw e;
   }
   advance(automatic ? 0 : 1000);
-  calls[0].reply();
-  worker.stdout.emit('data', Buffer.from('READY\n'));
+  if (!deferStartup) {
+    if (calls[0]) calls[0].reply();
+    worker.stdout.emit('data', Buffer.from('READY\n'));
+  }
   function resume() {
     watch.power({ state: 'Suspend' });
     watch.fg(COVER);
@@ -712,4 +716,114 @@ test('completed capture does not resume after Helper restarts without SSH', () =
     after.logs.some((record) => record.event === 'home-diagnostic'),
     false
   );
+});
+
+test('late automatic Helper startup preserves YouTube despite stale Home subscription', () => {
+  const c = controller({
+    startupForeground: (done) => done('youtube.leanback.v4')
+  });
+  assert.equal(c.homeCalls().length, 0);
+  c.advance(12000);
+  assert.equal(c.homeCalls().length, 0);
+  c.worker().stdout.emit('data', Buffer.from('HOME\n'));
+  assert.equal(c.homeCalls().length, 1);
+});
+
+test('startup keeps autolaunch for LG Home and cpcover and retains an already visible Home', () => {
+  for (const [id, expected] of [
+    [LG, 1],
+    [COVER, 1],
+    [HOME, 0]
+  ]) {
+    const c = controller({ startupForeground: (done) => done(id) });
+    assert.equal(c.homeCalls().length, expected, id);
+    assert(c.worker(), 'input worker starts');
+  }
+});
+
+test('startup waits for a fresh reply when the paired screen connection is not ready', () => {
+  let query = 0;
+  const c = controller({
+    deferStartup: true,
+    startupForeground: (done) => done(++query < 3 ? null : LG)
+  });
+  assert.equal(c.homeCalls().length, 0);
+  c.advance(1000);
+  assert.equal(c.homeCalls().length, 1);
+});
+
+test('startup stops waiting after a bounded unknown foreground without stealing an app', () => {
+  const c = controller({
+    deferStartup: true,
+    startupForeground: (done) => done(null)
+  });
+  c.advance(13000);
+  assert.equal(c.homeCalls().length, 0);
+  assert(c.worker(), 'Home input stays available');
+});
+
+test('Stop during the startup query prevents a late automatic launch', () => {
+  let reply;
+  const c = controller({
+    deferStartup: true,
+    startupForeground: (done) => {
+      reply = done;
+    }
+  });
+  c.files.set(c.dir + 'control.json', JSON.stringify({ cmd: 'stop' }));
+  c.advance(400);
+  reply(LG);
+  assert.equal(c.homeCalls().length, 0);
+});
+
+test('a new foreground app during a delayed startup reply wins over the old reply', () => {
+  let reply;
+  const c = controller({
+    deferStartup: true,
+    startupForeground: (done) => {
+      reply = done;
+    }
+  });
+  c.fg('youtube.leanback.v4');
+  reply(LG);
+  assert.equal(c.homeCalls().length, 0);
+});
+
+test('a stale Home subscription during startup cannot override a fresh YouTube reply', () => {
+  let reply;
+  const c = controller({
+    deferStartup: true,
+    startupForeground: (done) => {
+      reply = done;
+    }
+  });
+  c.fg(LG);
+  reply('youtube.leanback.v4');
+  assert.equal(c.homeCalls().length, 0);
+});
+
+test('explicit manual startup keeps its requested Home launch without an automatic query', () => {
+  let queries = 0;
+  const c = controller({
+    automatic: false,
+    startupForeground: () => {
+      queries++;
+    }
+  });
+  assert.equal(c.homeCalls().length, 1);
+  assert.equal(queries, 0);
+});
+
+test('monitor reset during an automatic query retires its old launch', () => {
+  let reply;
+  const c = controller({
+    deferStartup: true,
+    startupForeground: (done) => {
+      reply = done;
+    }
+  });
+  c.reset();
+  reply(LG);
+  assert.equal(c.homeCalls().length, 0);
+  assert(c.worker(), 'Home input stays available after monitor reset');
 });

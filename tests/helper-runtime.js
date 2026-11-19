@@ -186,7 +186,12 @@ var context = {
       return require('./storage-fixture.cjs').create(fakefs);
     if (name === './screen-watch')
       return function () {
-        return { close: function () {} };
+        return {
+          close: function () {},
+          foreground: function (done) {
+            done('com.webos.app.home');
+          }
+        };
       };
     return require(path.join(root, name));
   },

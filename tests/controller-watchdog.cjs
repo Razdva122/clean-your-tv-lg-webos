@@ -27,7 +27,8 @@ function controller({
     seq = 0,
     watch,
     exit,
-    stopReads = 0;
+    stopReads = 0,
+    startupQuery = true;
   const timers = new Map(),
     files = new Map(),
     workers = [],
@@ -142,11 +143,13 @@ function controller({
           watch = { fg, reset, power };
           return {
             close: reset,
-            foreground:
-              foreground ||
-              function (done) {
-                done(null);
-              }
+            foreground: function (done) {
+              if (startupQuery) {
+                startupQuery = false;
+                done('com.webos.app.home');
+              } else if (foreground) foreground(done);
+              else done(null);
+            }
           };
         };
       return require(path.join(source, n));

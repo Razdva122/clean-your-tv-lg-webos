@@ -58,7 +58,12 @@ function run(baseline, scenario) {
       if (name === './screen-watch')
         return (d, l, fg, reset, power) => {
           watch = { fg, reset, power };
-          return { close() {} };
+          return {
+            close() {},
+            foreground(done) {
+              done('com.webos.app.home');
+            }
+          };
         };
       if (name === './resume-policy')
         return require('../native/app/resume-policy');

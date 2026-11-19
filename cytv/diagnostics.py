@@ -301,7 +301,7 @@ def collect_home_report(remote, store, profile, write, *, reconnect=None, ask=No
     )
     records = {}
     triggers = {'started', 'resumed', 'power', 'sample', 'home', 'launch-request', 'launch-result',
-                'launch-timeout', 'foreground', 'monitor', 'monitor-reset', 'expired', 'stopped'}
+                'launch-timeout', 'foreground', 'startup-foreground', 'monitor', 'monitor-reset', 'expired', 'stopped'}
     monitors = {'starting', 'reset', 'screen-watch-connected', 'screen-watch-unavailable',
                 'screen-watch-error', 'screen-watch-disconnected'}
     started = complete = announced = False
