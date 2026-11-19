@@ -21,7 +21,7 @@ class UpdateUiPackageTests(unittest.TestCase):
                          'compile-helper.cjs', 'no_root_assets.py'):
                 shutil.copy(ROOT/'scripts'/name, root/'scripts'/name)
             shutil.copy(ROOT/'package.json', root/'package.json')
-            for name in ('system-updates.js', 'release-notes.js', 'renewal-panel.css', 'i18n.js', 'i18n.css', 'catalogs.js', 'user-data.js'):
+            for name in ('system-updates.js', 'release-notes.js', 'settings-panel.css', 'renewal-panel.css', 'i18n.js', 'i18n.css', 'catalogs.js', 'user-data.js'):
                 shutil.copy(ROOT/'launcher'/name, root/'launcher'/name)
             # The service is compiled for the TV's Node, so its script fixtures must parse.
             for name in ('service.js', 'permissions.js', 'services.json', 'release-public.pem', 'ca-bundle.crt', 'ca-LICENSE.txt'):
@@ -30,12 +30,12 @@ class UpdateUiPackageTests(unittest.TestCase):
                          'root-edition/ui/root-locales.js', 'launcher/fonts/NotoSans.ttf', 'docs/UPDATES.md'):
                 (root/name).write_text('fixture')
             packager = root/'packager'
-            packager.write_text('#!/bin/sh\ntest -s "$1/renewal-panel.css"\n')
+            packager.write_text('#!/bin/sh\ntest -s "$1/settings-panel.css" && test -s "$1/renewal-panel.css"\n')
             packager.chmod(0o755)
             result = subprocess.run(['bash', 'scripts/build-updater.sh'], cwd=root,
                                     env=dict(os.environ, ARES_PACKAGE=str(packager), NODE_PATH=str(ROOT/'node_modules')), capture_output=True, text=True)
             self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
-            stylesheet = (root/'build/updater-app/renewal-panel.css').read_text()
+            stylesheet = (root/'build/updater-app/settings-panel.css').read_text()
             self.assertTrue((root/'build/updater-app/system-updates.js').is_file())
             self.assertTrue((root/'build/updater-app/release-notes.js').is_file())
             self.assertIn('#renewalPanel', stylesheet)

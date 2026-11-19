@@ -13,7 +13,7 @@ def renewal_service_assets(root):
 def updater_app_assets(root):
     launcher = root / 'launcher'
     files = {name: (launcher / name).read_bytes()
-             for name in ('renewal-panel.css', 'i18n.js', 'catalogs.js', 'i18n.css',
+             for name in ('settings-panel.css', 'renewal-panel.css', 'i18n.js', 'catalogs.js', 'i18n.css',
                           'system-updates.js', 'release-notes.js')}
     files['root-locales.js'] = (root / 'root-edition/ui/root-locales.js').read_bytes()
     for font in (launcher / 'fonts').glob('NotoSans*'):

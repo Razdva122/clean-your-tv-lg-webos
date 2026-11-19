@@ -23,6 +23,9 @@ const uiFile = path.join(root, 'launcher/screensaver-settings.js');
         '<body><div id="homeSurface"></div><section id="renewalPanel" role="dialog"><div class="renewal-card"><div class="settings-heading"><h2>Settings</h2></div><div class="settings-footer"><button>Done</button></div></div></section></body>'
       );
       await page.addStyleTag({
+        path: path.join(root, 'launcher/settings-panel.css')
+      });
+      await page.addStyleTag({
         path: path.join(root, 'launcher/renewal-panel.css')
       });
       await page.addStyleTag({
