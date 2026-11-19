@@ -15,6 +15,18 @@ from persistent_recovery import Coordinator
 from persistent_lifecycle import identifier
 
 
+def _read_session(path):
+    try: value = d.safe_json(path)
+    except FileNotFoundError: return None
+    if (not isinstance(value,dict) or set(value) != {'version','kernel','token'}
+            or type(value['version']) is not int or value['version'] != 1
+            or not isinstance(value['kernel'],str) or not identifier(value['kernel'])
+            or not isinstance(value['token'],str) or len(value['token']) != 32
+            or any(c not in '0123456789abcdef' for c in value['token'])):
+        raise ValueError('Invalid startup session')
+    return value
+
+
 def boot_identity(proc=None, session=None):
     # Firmware snapshots can reuse boot_id; btime moves with clock correction.
     # The tested cold-start path clears this private volatile directory.
@@ -26,12 +38,18 @@ def boot_identity(proc=None, session=None):
     try: root.mkdir(mode=0o700)
     except FileExistsError: pass
     d.trusted_dir(root)
+    record = root/'session.json'
     fd = os.open(root/'session.lock', os.O_CREAT|os.O_RDWR|os.O_NOFOLLOW|os.O_NONBLOCK, 0o600)
     try:
         info = os.fstat(fd)
         if (not stat.S_ISREG(info.st_mode) or info.st_uid != d.EXPECTED_UID
                 or info.st_nlink != 1 or info.st_mode & 0o022):
             raise ValueError('Unsafe session lock')
+        # The record is immutable for this kernel boot. Health readers only
+        # need the writer lock when a new session must be created.
+        value = _read_session(record)
+        if value is not None and value['kernel'] == boot:
+            return boot+':session-'+value['token']
         for attempt in range(50):
             try:
                 fcntl.flock(fd, fcntl.LOCK_EX|fcntl.LOCK_NB)
@@ -39,21 +57,13 @@ def boot_identity(proc=None, session=None):
             except BlockingIOError:
                 if attempt == 49: raise
                 time.sleep(.01)
-        try: value = d.safe_json(root/'session.json')
-        except FileNotFoundError: value = None
-        else:
-            if (not isinstance(value,dict) or set(value) != {'version','kernel','token'}
-                    or type(value['version']) is not int or value['version'] != 1
-                    or not isinstance(value['kernel'],str) or not identifier(value['kernel'])
-                    or not isinstance(value['token'],str) or len(value['token']) != 32
-                    or any(c not in '0123456789abcdef' for c in value['token'])):
-                raise ValueError('Invalid startup session')
+        value = _read_session(record)
         if value is None or value['kernel'] != boot:
             value = dict(version=1,kernel=boot,token=uuid.uuid4().hex)
             temp_fd, name = tempfile.mkstemp(dir=root,prefix='.session-')
             try:
                 with os.fdopen(temp_fd,'w') as out: json.dump(value,out)
-                os.replace(name,root/'session.json')
+                os.replace(name,record)
             finally:
                 if os.path.lexists(name): os.unlink(name)
         return boot+':session-'+value['token']
