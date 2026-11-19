@@ -80,11 +80,65 @@ def selection(root=STATE, uid=0):
     return value
 
 
-def reboot_resume_supported(descriptor):
-    if not descriptor or descriptor['schema'] != 3:
+def shutdown_probe():
+    # Identify the running manager. Installed tools alone can be leftovers
+    # from another init system and cannot establish a shutdown contract.
+    init = Path('/proc/1/exe').resolve(strict=True)
+    adapter = {
+        'systemd': ('systemd-is-system-running-v1', '/bin/systemctl'),
+        'init.upstart': ('upstart-shutdown-jobs-v1', '/sbin/initctl'),
+    }.get(init.name)
+    if adapter is None:
+        return None
+    probe, command = adapter
+    command = Path(command)
+    info = command.lstat()
+    if command.parent.lstat().st_uid != 0 or info.st_uid != 0:
+        return None
+    if probe == 'upstart-shutdown-jobs-v1':
+        # Match the native adapter's fallback and its non-symlink initctl.
+        try:
+            Path('/bin/systemctl').lstat()
+        except FileNotFoundError:
+            pass
+        else:
+            return None
+        if not stat.S_ISREG(info.st_mode):
+            return None
+        legacy.trusted_directory(command.parent)
+        for job in ('shutdown', 'reboot'):
+            secure(Path('/etc/init') / (job + '.conf'))
+    for path in (init, command.resolve(strict=True)):
+        legacy.trusted_directory(path.parent)
+        info = path.stat()
+        if (not stat.S_ISREG(info.st_mode) or info.st_uid != 0
+                or info.st_mode & 0o022 or not info.st_mode & 0o111):
+            return None
+    return probe
+
+
+def reboot_resume_supported(descriptor, root=STATE, uid=0):
+    """Read-only prerequisites. Actual continuation still requires a normal boot mark."""
+    if not isinstance(descriptor, dict) or descriptor.get('schema') != 3:
         return False
-    device = descriptor['admission']
-    return (device['model'], device['firmware'], device['webos']) == ('65NANO913NA', '04.64.00', '5.6.2')
+    try:
+        probe = shutdown_probe()
+        if probe is None:
+            return False
+        # Check the boot identity source without creating a volatile session.
+        boot_identity()
+        proof = native(['--capabilities'], root, uid, timeout=1)
+    except (OSError, ValueError, RuntimeError, subprocess.SubprocessError):
+        return False
+    return (isinstance(proof, dict)
+            and set(proof) == {'returnValue', 'backend', 'routing', 'protocol',
+                               'resumable_guard', 'boot_retirement', 'shutdown_probes'}
+            and proof['returnValue'] is True and proof['backend'] == BACKEND and proof['routing'] == ROUTING
+            and type(proof['protocol']) is int and proof['protocol'] == 1
+            and proof['resumable_guard'] is True and proof['boot_retirement'] is True
+            and isinstance(proof['shutdown_probes'], list)
+            and all(isinstance(name, str) for name in proof['shutdown_probes'])
+            and probe in proof['shutdown_probes'])
 
 
 def require_stock_home_destination():
@@ -472,7 +526,7 @@ def prepare(root, native_sha256, admission, uid=0):
     return value
 
 
-def binary(root=STATE, uid=0):
+def binary(root=STATE, uid=0, *, capabilities=False):
     saved=selection(root,uid)
     if saved is None: raise ValueError('Compositor backend not selected')
     private_directory(root,uid)
@@ -480,11 +534,16 @@ def binary(root=STATE, uid=0):
     raw=secure(path,uid,4*1024*1024)
     if hashlib.sha256(raw).hexdigest()!=saved['native_sha256'] or not path.stat().st_mode & 0o111:
         raise ValueError('Verified compositor guardian unavailable')
+    # Old binaries can take the state lock on unknown commands. A command
+    # literal in the verified bytes permits the query, but grants no capability.
+    if capabilities and b'--capabilities\0' not in raw:
+        raise ValueError('Guardian capability query unavailable')
     return path
 
 
 def native(args, root=STATE, uid=0, timeout=12, *, allow_ui_failure=False):
-    reply=subprocess.run([str(binary(root,uid)),*args],stdin=subprocess.DEVNULL,
+    helper = binary(root, uid, capabilities=True) if args == ['--capabilities'] else binary(root, uid)
+    reply=subprocess.run([str(helper),*args],stdin=subprocess.DEVNULL,
         stdout=subprocess.PIPE,stderr=subprocess.PIPE,env={'PATH':'/usr/bin:/bin','LANG':'C'},timeout=timeout,check=False)
     if len(reply.stdout)>16384:
         raise ValueError('Native compositor recovery failed; retain evidence')
@@ -521,6 +580,8 @@ def native(args, root=STATE, uid=0, timeout=12, *, allow_ui_failure=False):
             raise error
         return value
     value=json.loads(reply.stdout)
+    if args==['--capabilities']:
+        return value  # Only reboot_resume_supported interprets this read-only reply.
     if args==['--selfcheck']:
         expected=dict(returnValue=True,backend=BACKEND,routing=ROUTING,selfcheck=True)
         if not isinstance(value,dict) or value!=expected or value.get('selfcheck') is not True or value.get('returnValue') is not True:
@@ -703,10 +764,15 @@ def stopped_stock(proof):
             and not proof['healthy'] and proof['guardian_pid'] == 0)
 
 
+def uses_webos5_ribbon_handler(chain):
+    for entry in stock_chain(chain):
+        if entry['file'].endswith('/systemUi.js') and entry['handler'] == 'handleSystemKeys':
+            return hashlib.sha256(vendor_script(entry['file'])).hexdigest() == WEBOS5_RIBBON_SYSTEM_UI_SHA256
+    return False
+
+
 def verify_webos5_ribbon_route(chain):
-    handler = next(entry['file'] for entry in stock_chain(chain)
-                   if entry['file'].endswith('/systemUi.js') and entry['handler'] == 'handleSystemKeys')
-    if hashlib.sha256(vendor_script(handler)).hexdigest() != WEBOS5_RIBBON_SYSTEM_UI_SHA256:
+    if not uses_webos5_ribbon_handler(chain):
         raise ValueError('Stock LG Home ribbon handler unverified; retain evidence')
     reply = luna('luna://com.webos.settingsservice/getSystemSettings',
                  {'category': 'general', 'keys': ['defaultApps']})
@@ -724,9 +790,27 @@ def restore_for_removal(root, uid):
         return restore_locked(root, uid, for_removal=True)
 
 
+def has_resume_session(root, uid):
+    try:
+        return 'session' in read_intent(root, uid)
+    except (OSError, ValueError):
+        return False
+
+
+def can_restore_routing_only(root, uid):
+    if has_resume_session(root, uid):
+        return True
+    try:
+        require_stock_home_destination()
+        return True
+    except (OSError, ValueError, RuntimeError, subprocess.SubprocessError):
+        return False
+
+
 def restore_locked(root,uid, *, for_removal=False, explicit_restore=False, routing_only=False):
     verify_destination = routing_only or (
-        explicit_restore and not for_removal and reboot_resume_supported(selection(root, uid)))
+        explicit_restore and not for_removal and has_resume_session(root, uid)
+        and reboot_resume_supported(selection(root, uid), root, uid))
     ui_failure = None
     try:
         if verify_destination:
@@ -887,8 +971,18 @@ def enable_locked(root,uid,seconds, *, session=None, resume_token=None):
         raise ValueError('Restore interrupted filter transaction before enabling')
     if probe()!=descriptor['admission']:
         raise ValueError('C1 admission changed')
-    if reboot_resume_supported(descriptor):
-        require_stock_home_destination()
+    resumable = reboot_resume_supported(descriptor, root, uid)
+    if session is not None and not resumable:
+        raise ValueError('Compositor boot resume capability changed')
+    if resumable:
+        try:
+            require_stock_home_destination()
+        except (OSError, ValueError, RuntimeError, subprocess.SubprocessError):
+            if resume_token is not None or uses_webos5_ribbon_handler(before):
+                raise
+            # Existing generic same-session activation still has guard leases
+            # and emergency Stop. It has no authority to arm on another boot.
+            session = None
     from helper_bridge import require_idle
     require_idle()
     helper=binary(root,uid)
@@ -989,9 +1083,10 @@ def boot_resume_observation(root, uid):
 
 def execute(mode,transaction=None,root=STATE,uid=0):
     if mode=='status': return status(root,uid)
-    resumable = reboot_resume_supported(selection(root, uid))
+    resumable = mode in ('boot', 'enable') and reboot_resume_supported(selection(root, uid), root, uid)
     previous, session, normal = (boot_resume_observation(root, uid)
                                  if mode == 'boot' and resumable else (None, None, False))
+    resumed = None
     with operation(root,uid):
         if mode=='boot' and not os.path.lexists(Path(root)/'c1-keyfilter/pending.json'):
             try:
@@ -1007,17 +1102,26 @@ def execute(mode,transaction=None,root=STATE,uid=0):
                 if resumable and normal and intent == previous:
                     from boot_gate import observation
                     if observation() == (True, False) and boot_session() == session:
-                        return resume_after_boot(root, uid, intent, session)
+                        resumed = resume_after_boot(root, uid, intent, session)
             except (OSError, ValueError, RuntimeError, subprocess.SubprocessError):
                 pass  # Unverified activation still needs stock Home recovery.
-        if mode in ('restore','boot'):
-            if mode == 'boot' and resumable:
+        if resumed is None and mode in ('restore','boot'):
+            if mode == 'boot' and resumable and (previous is not None or can_restore_routing_only(root, uid)):
                 return restore_locked(root, uid, routing_only=True)
             return restore_locked(root,uid,explicit_restore=mode=='restore')
         if mode in ('enable','trial','intent-trial','emergency-trial'):
             if mode == 'enable' and resumable:
                 return enable_locked(root, uid, 0, session=boot_session())
             return enable_locked(root,uid,0 if mode=='enable' else 60)
+    if resumed is not None:
+        # Startup policy owns its own operation lock and validates the new
+        # session again before a UI effect. Its failure cannot undo activation.
+        try:
+            from native_startup import after_boot
+            after_boot(resumed, root=root, uid=uid)
+        except Exception:
+            pass
+        return resumed
     raise ValueError('Unsupported compositor lifecycle operation')
 
 

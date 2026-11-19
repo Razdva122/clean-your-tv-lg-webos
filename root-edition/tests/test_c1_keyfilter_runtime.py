@@ -5,8 +5,9 @@ import os
 from pathlib import Path
 import sys
 import tempfile
+from types import SimpleNamespace
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(ROOT / 'runtime'), str(ROOT)]
@@ -369,9 +370,133 @@ class RuntimeTests(unittest.TestCase):
                     self.assertEqual(self.k.execute('boot', root=self.root, uid=self.uid), 'restored')
                     restore.assert_called_once_with(self.root, self.uid, explicit_restore=False)
 
-    def test_reported_schema3_refuses_enable_without_an_explicit_lg_destination(self):
-        self.admission = dict(self.generic(), model='65NANO913NA', firmware='04.64.00', webos='5.6.2')
-        self.prepare()
+    def test_shutdown_probe_requires_running_manager_and_trusted_executable(self):
+        import stat
+        proc_init = Path('/proc/1/exe')
+        for init, command, expected in (
+            ('/lib/systemd/systemd', '/bin/systemctl', 'systemd-is-system-running-v1'),
+            ('/sbin/init.upstart', '/sbin/initctl', 'upstart-shutdown-jobs-v1'),
+            ('/bin/tini', '/bin/systemctl', None),
+        ):
+            trust = SimpleNamespace(st_uid=0, st_mode=stat.S_IFREG | 0o755)
+
+            def resolve(path, *, strict):
+                self.assertTrue(strict)
+                return Path(init) if path == proc_init else path
+
+            systemctl = init != '/sbin/init.upstart'
+
+            def lstat(path):
+                if path == Path('/bin/systemctl') and not systemctl:
+                    raise FileNotFoundError(path)
+                return trust
+
+            with self.subTest(init=init), \
+                    patch.object(Path, 'resolve', autospec=True, side_effect=resolve), \
+                    patch.object(Path, 'lstat', autospec=True, side_effect=lstat), \
+                    patch.object(Path, 'stat', autospec=True, return_value=trust) as file_stat, \
+                    patch.object(self.k.legacy, 'trusted_directory'), \
+                    patch.object(self.k, 'secure') as secure:
+                self.assertEqual(self.k.shutdown_probe(), expected)
+                if expected is not None:
+                    file_stat.assert_any_call(Path(command))
+                    trust.st_mode |= 0o002
+                    self.assertIsNone(self.k.shutdown_probe())
+                    trust.st_mode &= ~0o002
+                else:
+                    file_stat.assert_not_called()
+                if init == '/sbin/init.upstart':
+                    secure.assert_any_call(Path('/etc/init/shutdown.conf'))
+                    secure.assert_any_call(Path('/etc/init/reboot.conf'))
+                    secure.side_effect = FileNotFoundError('job')
+                    self.assertFalse(self.k.reboot_resume_supported({'schema': 3}))
+                    secure.side_effect = None
+                    trust.st_mode = stat.S_IFLNK | 0o777
+                    self.assertIsNone(self.k.shutdown_probe())
+                    trust.st_mode = stat.S_IFREG | 0o755
+                    systemctl = True
+                    self.assertIsNone(self.k.shutdown_probe())
+
+    def test_boot_without_guard_capability_restores_without_waiting_or_rearming(self):
+        self.prepare_schema3()
+        boot = self.k.boot_identity()
+        self.k.write_intent(self.root, True, '1'*32, 'active', self.uid,
+                            session=boot+':session-'+'2'*32)
+        with patch.object(self.k, 'shutdown_probe', return_value=None), \
+                patch.object(self.k, 'boot_resume_observation') as observe, \
+                patch.object(self.k, 'status', side_effect=ValueError('No active guard')), \
+                patch.object(self.k, 'restore_locked', return_value='restored') as restore, \
+                patch.object(self.k, 'enable_locked') as enable:
+            self.assertEqual(self.k.execute('boot', root=self.root, uid=self.uid), 'restored')
+            observe.assert_not_called()
+            enable.assert_not_called()
+            restore.assert_called_once_with(self.root, self.uid, explicit_restore=False)
+
+    def test_reboot_resume_requires_matching_guard_and_shutdown_capabilities(self):
+        descriptor = self.prepare_schema3()
+        systemd = 'systemd-is-system-running-v1'
+        upstart = 'upstart-shutdown-jobs-v1'
+        reply = dict(returnValue=True, backend=self.k.BACKEND, routing=self.k.ROUTING,
+                     protocol=1, resumable_guard=True, boot_retirement=True,
+                     shutdown_probes=[systemd, upstart])
+        for detector in (systemd, upstart, None):
+            for proof, valid in (
+                (reply, True),
+                (dict(reply, shutdown_probes=[systemd]), detector == systemd),
+                (dict(reply, protocol=True), False),
+                (dict(reply, resumable_guard=1), False),
+                (dict(reply, boot_retirement=False), False),
+                (dict(reply, shutdown_probes=systemd), False),
+                (dict(reply, shutdown_probes=[systemd, upstart, None]), False),
+                (dict(reply, returnValue=False), False),
+                ({}, False),
+            ):
+                with self.subTest(detector=detector, proof=proof), \
+                        patch.object(self.k, 'shutdown_probe', return_value=detector), \
+                        patch.object(self.k, 'native', return_value=proof) as native:
+                    self.assertEqual(self.k.reboot_resume_supported(descriptor, self.root, self.uid),
+                                     detector is not None and valid)
+                    if detector is not None:
+                        native.assert_called_once_with(['--capabilities'], self.root, self.uid, timeout=1)
+
+    def test_reboot_resume_refuses_old_untrusted_and_unresponsive_guards(self):
+        descriptor = self.prepare_schema3()
+        with patch.object(self.k, 'shutdown_probe', return_value='upstart-shutdown-jobs-v1'), \
+                patch.object(self.k.subprocess, 'run') as run:
+            self.assertFalse(self.k.reboot_resume_supported(descriptor, self.root, self.uid))
+            run.assert_not_called()  # Missing guard never reaches exec.
+        import hashlib
+        old = b'verified retained guard bytes'
+        data = b'new guard fixture\0--capabilities\0'
+        guard = self.root / 'runtime/c1-keyfilter-guard'
+        guard.parent.mkdir(mode=0o700)
+        guard.write_bytes(old)
+        guard.chmod(0o700)
+        descriptor['native_sha256'] = hashlib.sha256(old).hexdigest()
+        self.k.atomic(self.root/'home-backend.json', descriptor, self.uid)
+        with patch.object(self.k, 'shutdown_probe', return_value='upstart-shutdown-jobs-v1'), \
+                patch.object(self.k.subprocess, 'run') as run:
+            self.assertFalse(self.k.reboot_resume_supported(descriptor, self.root, self.uid))
+            run.assert_not_called()  # Unknown commands on the old guard acquire a state lock.
+        guard.write_bytes(data)
+        descriptor['native_sha256'] = hashlib.sha256(data).hexdigest()
+        self.k.atomic(self.root/'home-backend.json', descriptor, self.uid)
+        for result in (SimpleNamespace(returncode=2, stdout=b''),
+                       SimpleNamespace(returncode=0, stdout=b'not json'),
+                       self.k.subprocess.TimeoutExpired('guard', .5)):
+            with self.subTest(result=result), \
+                    patch.object(self.k, 'shutdown_probe', return_value='upstart-shutdown-jobs-v1'), \
+                    patch.object(self.k.subprocess, 'run', side_effect=[result]) as run:
+                self.assertFalse(self.k.reboot_resume_supported(descriptor, self.root, self.uid))
+                self.assertEqual(run.call_args.args[0], [str(guard), '--capabilities'])
+        guard.write_bytes(data + b'changed')
+        with patch.object(self.k, 'shutdown_probe', return_value='upstart-shutdown-jobs-v1'), \
+                patch.object(self.k.subprocess, 'run') as run:
+            self.assertFalse(self.k.reboot_resume_supported(descriptor, self.root, self.uid))
+            run.assert_not_called()
+
+    def test_resume_refuses_to_arm_without_an_explicit_lg_destination(self):
+        self.prepare_resumable()
         stock = [{'file': '/usr/lib/qml/KeyFilters/systemUi.js', 'handler': 'handleSystemKeys'}]
         for defaults in ({}, {'home': self.k.APP}, {'home': None}, '{"home":'):
             with self.subTest(defaults=defaults), \
@@ -384,13 +509,35 @@ class RuntimeTests(unittest.TestCase):
                     patch.object(self.k, 'write_config') as write_config, \
                     patch.object(self.k, 'change_chain') as change:
                 with self.assertRaisesRegex(ValueError, 'LG Home destination'):
-                    self.k.enable_locked(self.root, self.uid, 0)
+                    self.k.enable_locked(self.root, self.uid, 0, resume_token='1'*32)
                 write_config.assert_not_called()
                 change.assert_not_called()
 
+    def test_missing_stock_destination_keeps_generic_enable_in_the_current_session(self):
+        self.prepare_resumable()
+        stock = [{'file': '/usr/lib/qml/KeyFilters/systemUi.js', 'handler': 'handleSystemKeys'}]
+        session = self.k.boot_identity() + ':session-' + 'a'*32
+        script = self.root / 'runtime/c1-home-filter.js'
+        script.parent.mkdir(mode=0o700)
+        script.write_text('filter')
+        script.chmod(0o600)
+        with patch.object(self.k, 'probe', return_value=self.admission), \
+                patch.object(self.k, 'verify_ready', return_value={'integrity_verified': True}), \
+                patch.object(self.k, 'native', return_value=self.proof()), \
+                patch.object(self.k, 'read_chain', return_value=stock), \
+                patch.object(self.k, 'vendor_script', return_value=b'other compatible vendor handler'), \
+                patch.object(self.k, 'luna', return_value={'returnValue': True,
+                             'settings': {'defaultApps': {}}}), \
+                patch.object(self.k, 'binary', return_value=Path('/fixture')), \
+                patch('helper_bridge.require_idle'), \
+                patch.object(self.k, 'change_chain', side_effect=RuntimeError('interrupted activation')), \
+                patch.object(self.k, 'restore_locked') as restore:
+            with self.assertRaisesRegex(RuntimeError, 'interrupted activation'):
+                self.k.enable_locked(self.root, self.uid, 0, session=session)
+            restore.assert_called_once_with(self.root, self.uid)
+
     def test_reported_schema3_explicit_restore_verifies_routing_without_forcing_foreground(self):
-        self.admission = dict(self.generic(), model='65NANO913NA', firmware='04.64.00', webos='5.6.2')
-        self.prepare()
+        self.prepare_resumable()
         own = self.k.filter_entry(self.root)
         stock = [{'file': '/usr/lib/qml/KeyFilters/systemUi.js', 'handler': 'handleSystemKeys'}]
         token = '1'*32
@@ -398,6 +545,8 @@ class RuntimeTests(unittest.TestCase):
         for destination in (self.k.STOCK, 'com.webos.app.fullhome', self.k.APP, 'org.example.home'):
             with self.subTest(destination=destination):
                 is_stock = destination in (self.k.STOCK, 'com.webos.app.fullhome')
+                session = self.k.boot_identity() + ':session-' + 'a'*32
+                self.k.write_intent(self.root, True, token, 'active', self.uid, session=session)
                 chain = [own, *stock]
 
                 def native(args, *_args, **_options):
@@ -426,9 +575,7 @@ class RuntimeTests(unittest.TestCase):
 
     def test_reported_schema3_rearms_once_on_a_new_normal_session(self):
         import intent_runtime
-        from unittest.mock import Mock
-        self.admission = dict(self.generic(), model='65NANO913NA', firmware='04.64.00', webos='5.6.2')
-        self.prepare()
+        self.prepare_resumable()
         boot = self.k.boot_identity()
         old_session = boot + ':session-' + 'a'*32
         new_session = boot + ':session-' + 'b'*32
@@ -461,7 +608,17 @@ class RuntimeTests(unittest.TestCase):
 
         child = Mock()
         child.poll.return_value = None
-        with patch.object(intent_runtime, 'boot_identity', return_value=new_session), \
+
+        observed = []
+
+        def after_boot(result, *, root, uid):
+            with self.k.operation(root, uid):
+                observed.append(self.k.read_intent(root, uid))
+            raise ValueError('Optional startup policy failed')
+
+        startup = Mock(side_effect=after_boot)
+        with patch.dict(sys.modules, {'native_startup': SimpleNamespace(after_boot=startup)}), \
+                patch.object(intent_runtime, 'boot_identity', return_value=new_session), \
                 patch('boot_gate.wait', return_value=True) as normal, \
                 patch('boot_gate.observation', return_value=(True, False)), \
                 patch.object(self.k, 'read_chain', side_effect=lambda: chain.copy()), \
@@ -485,11 +642,12 @@ class RuntimeTests(unittest.TestCase):
             self.assertEqual(start.call_count, 2)
             self.assertEqual(start.call_args.args[0][:2], ['/fixture', '--guard-resumable'])
             normal.assert_called_once()
+            startup.assert_called_once_with(result, root=self.root, uid=self.uid)
+            self.assertEqual(observed, [result['intent']])
 
     def test_reported_schema3_boot_failure_and_stop_leave_routing_with_lg(self):
         import intent_runtime
-        self.admission = dict(self.generic(), model='65NANO913NA', firmware='04.64.00', webos='5.6.2')
-        self.prepare()
+        self.prepare_resumable()
         boot = self.k.boot_identity()
         old_session = boot + ':session-' + 'a'*32
         new_session = boot + ':session-' + 'b'*32
@@ -500,8 +658,10 @@ class RuntimeTests(unittest.TestCase):
                 intent = self.k.write_intent(self.root, True, token, 'active', self.uid)
                 self.k.atomic(self.root/'c1-keyfilter/intent.json', dict(intent, session=old_session), self.uid)
                 retired = dict(self.proof(), state='stock', stopped=False, reason='boot_retired')
-                with patch.object(intent_runtime, 'boot_identity',
-                                  return_value=old_session if case=='same-session' else new_session), \
+                startup = Mock()
+                with patch.dict(sys.modules, {'native_startup': SimpleNamespace(after_boot=startup)}), \
+                        patch.object(intent_runtime, 'boot_identity',
+                                     return_value=old_session if case=='same-session' else new_session), \
                         patch('boot_gate.wait', return_value=case!='boot-gate'), \
                         patch('boot_gate.observation', return_value=(True, False)), \
                         patch.object(self.k, 'read_chain', return_value=stock), \
@@ -512,6 +672,7 @@ class RuntimeTests(unittest.TestCase):
                     self.assertEqual(self.k.execute('boot', root=self.root, uid=self.uid), 'restored')
                     restore.assert_called_once_with(self.root, self.uid, routing_only=True)
                     self.assertEqual(enable.call_count, int(case=='activation-failure'))
+                    startup.assert_not_called()
 
     def test_reported_schema3_failed_controller_restores_the_written_chain(self):
         self.check_reported_schema3_interrupted_rearm(lost_ack=False)
@@ -521,8 +682,7 @@ class RuntimeTests(unittest.TestCase):
 
     def check_reported_schema3_interrupted_rearm(self, *, lost_ack):
         import intent_runtime
-        self.admission = dict(self.generic(), model='65NANO913NA', firmware='04.64.00', webos='5.6.2')
-        self.prepare()
+        self.prepare_resumable()
         boot = self.k.boot_identity()
         token = '1'*32
         self.k.write_config(self.root, self.admission, token, self.uid)
@@ -574,8 +734,7 @@ class RuntimeTests(unittest.TestCase):
             self.assertFalse((self.root/'c1-keyfilter/pending.json').exists())
 
     def test_direct_native_off_vetoes_rotation_after_boot_retirement(self):
-        self.admission = dict(self.generic(), model='65NANO913NA', firmware='04.64.00', webos='5.6.2')
-        self.prepare()
+        self.prepare_resumable()
         token = '1'*32
         directory = self.root/'c1-keyfilter'
         self.k.write_config(self.root, self.admission, token, self.uid)
@@ -587,8 +746,7 @@ class RuntimeTests(unittest.TestCase):
 
     def test_reported_schema3_off_during_boot_wait_cancels_continuation(self):
         import intent_runtime
-        self.admission = dict(self.generic(), model='65NANO913NA', firmware='04.64.00', webos='5.6.2')
-        self.prepare()
+        self.prepare_resumable()
         boot = self.k.boot_identity()
         self.k.write_intent(self.root, True, '1'*32, 'active', self.uid, session=boot+':session-'+'a'*32)
 
@@ -646,6 +804,16 @@ class RuntimeTests(unittest.TestCase):
 
     def prepare(self):
         return self.k.prepare(self.root, 'a'*64, self.admission, self.uid)
+
+    def prepare_schema3(self):
+        self.admission = dict(self.generic(), model='OLED65B9PLA', firmware='05.50.00', webos='4.10.0')
+        return self.prepare()
+
+    def prepare_resumable(self):
+        self.prepare_schema3()
+        capabilities = patch.object(self.k, 'reboot_resume_supported', return_value=True)
+        capabilities.start()
+        self.addCleanup(capabilities.stop)
 
     def proof(self, **kw):
         return dict(returnValue=True, backend='c1-native-gate', routing='compositor-keyfilter-v1',
