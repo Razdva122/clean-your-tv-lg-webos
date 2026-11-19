@@ -58,6 +58,30 @@ class FailureJourneys(unittest.TestCase):
         installer.remote.run.return_value = json.dumps(dict(lease, terminal=False))
         self.assertTrue(beta_repair_available(installer, result))
 
+    def test_repaired_beta_recover_keeps_app_and_declining_saved_removal_is_readonly(self):
+        self.store.finish(self.profile)
+        profile = dict(self.profile, root_variant='node012-beta')
+        installer = Mock(store=self.store, profile=profile, tv_info={})
+        observation = {'deployment_stage': 'installed-recovery-only', 'pending': None}
+        with patch('cytv.root_gate.beta_repair_available', return_value=False):
+            recover(installer, lambda _: self.fail('Completed repair needs no mutation confirmation'),
+                    self.write, initial_observation=observation)
+            self.assertIsNone(self.store.pending(profile))
+            installer.uninstall_project.assert_not_called()
+            installer.continue_clean_removal.assert_not_called()
+            pending = self.store.request_clean_removal(profile)
+            before = {p.name:p.read_bytes() for p in self.store.device_dir(profile).iterdir() if p.is_file()}
+            questions = []
+            def decline(question):
+                questions.append(question)
+                return 'n'
+            recover(installer, decline, self.write, initial_observation=observation)
+            self.assertTrue(any('Continue removing Clean Your TV?' in q for q in questions))
+            self.assertEqual(self.store.pending(profile), pending)
+            self.assertEqual(before, {p.name:p.read_bytes() for p in self.store.device_dir(profile).iterdir() if p.is_file()})
+            installer.continue_clean_removal.assert_not_called()
+            installer.uninstall_project.assert_not_called()
+
     def test_cancelled_pending_install_exports_report_and_recovery(self):
         before = self.store.pending(self.profile)
         with patch('cytv.cli.package.verify_payload', return_value={}):

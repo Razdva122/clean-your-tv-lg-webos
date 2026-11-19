@@ -405,7 +405,7 @@ def worker_summary(value):
         result['package_rejected']=True
     if 'cleanup_step' in value:
         result['cleanup_step']=choice(value['cleanup_step'],('routing-inverse','runtime-restore',
-            'provision-rollback','startup-hook','legacy-lockdown','registration-restore','legacy-permissions','home-readback'))
+            'provision-rollback','startup-hook','legacy-lockdown','registration-restore','legacy-permissions','home-readback','boot-identity','private-inventory'))
     detail=mapping(value.get('luna'))
     if detail:
         result['luna']={'call':choice(detail.get('call'),('apps-dev','apps','home-settings','home-profiles',
