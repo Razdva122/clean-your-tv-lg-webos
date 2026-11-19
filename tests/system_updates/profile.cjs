@@ -243,6 +243,7 @@ async function startAppearance(h) {
       });
       await tick();
       assert.equal(named.memory.get('tvhome.name'), 'Aashiyaan');
+      named.window.RootLauncherRendered = true;
       for (const options of [undefined, { system: true }]) {
         const profile = await named.window.RootProfile.capture(options);
         assert.equal(profile.settings['tvhome.name'], undefined);
@@ -830,6 +831,7 @@ async function startAppearance(h) {
     'authoritative system snapshot clears absent Root layout'
   );
   root.memory.set('tvhome.layout', layout);
+  root.window.RootLauncherRendered = true;
   assert.equal(
     (await root.window.RootProfile.capture({ system: true })).settings[
       'tvhome.layout'

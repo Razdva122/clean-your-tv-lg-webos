@@ -146,6 +146,25 @@ function harness({
   return { window, calls, scripts, errors, memory };
 }
 (async () => {
+  const starting = harness();
+  await tick();
+  await assert.rejects(
+    starting.window.RootProfile.capture({ system: true }),
+    /Launcher did not finish rendering/
+  );
+  assert(
+    !starting.memory.has(data.key),
+    'early capture must not save inventory'
+  );
+  starting.window.RootLauncherRendered = true;
+  assert.deepStrictEqual(
+    JSON.parse(
+      JSON.stringify(
+        await starting.window.RootProfile.capture({ system: true })
+      )
+    ),
+    { ...profile, settings: {} }
+  );
   for (const after of preferences()) {
     const before = after === 'en' ? 'auto' : 'en';
     const captured = harness({
@@ -537,6 +556,7 @@ function harness({
     }
   });
   await tick();
+  confirmedHost.window.RootLauncherRendered = true;
   const transferable = await confirmedHost.window.RootProfile.capture({
     system: true
   });
@@ -591,6 +611,7 @@ function harness({
     discovered.apps[0].iconColor = color;
     const fresh = harness({ packaged: discovered });
     await tick();
+    fresh.window.RootLauncherRendered = true;
     const captured = await fresh.window.RootProfile.capture({ system: true });
     assert(!Object.hasOwn(captured.inventory.apps[0], 'iconColor'));
     assert.deepStrictEqual(fresh.window.TV_APPS.apps[0].iconColor, color);
