@@ -475,8 +475,10 @@ class GuiTests(unittest.TestCase):
         for first, second in zip(items, items[1:]):
             self.assertLess(first.geometry().bottom(), second.geometry().top())
 
-    def test_setup_usage_choice_fits_with_wide_platform_metrics(self):
+    def test_setup_usage_switch_fits_next_to_its_title(self):
         from cytv import i18n, install_settings as settings
+        from cytv.gui_style import ToggleSwitch
+        self.addCleanup(i18n.set_language, 'en')
         for edition in ('root', 'no-root'):
             with self.subTest(edition=edition):
                 w = Wizard()
@@ -488,15 +490,11 @@ class GuiTests(unittest.TestCase):
                 w.show()
                 self.app.processEvents()
                 scroll = w.form.findChild(QScrollArea, 'installationSettings')
-                usage = w.form.findChild(QComboBox, 'usage_sort')
-                # Model a wide translated native combo that fits on its own.
-                usage.setMinimumWidth(scroll.viewport().width() - 40)
-                self.app.processEvents()
-                self.app.processEvents()
+                usage = w.form.findChild(ToggleSwitch, 'usage_sort')
+                self.assertIsNotNone(usage)
                 self.assertLessEqual(scroll.widget().width(), scroll.viewport().width())
-                self.assertLessEqual(usage.width(), scroll.viewport().width())
-                self.assertEqual(usage.count(), 3)
-                self.assertIsNone(usage.currentData())
+                title = usage.parentWidget().layout().itemAt(0).widget()
+                self.assertLess(title.geometry().right(), usage.geometry().left())
 
     def test_setup_form_filters_mode_and_disables_weather_for_ribbon(self):
         import json
@@ -536,21 +534,26 @@ class GuiTests(unittest.TestCase):
 
     def test_setup_usage_sort_can_be_preserved_enabled_or_disabled(self):
         import json
+        from PySide6.QtCore import Qt
+        from cytv.gui_style import ToggleSwitch
         from cytv.desktop import Channel
         from cytv import install_settings as settings
         for edition in ('root', 'no-root'):
-            for choice in (None, True, False):
-                with self.subTest(edition=edition, choice=choice):
+            for presses, choice in enumerate((None, True, False, None)):
+                with self.subTest(edition=edition, presses=presses):
                     w = Wizard()
                     self.addCleanup(w.close)
                     w.channel = Channel(lambda *_: None)
                     w.selected_profile = {'edition': edition}
                     w.show_prompt(Prompt(settings.PROMPT))
-                    usage = w.form.findChild(QComboBox, 'usage_sort')
+                    usage = w.form.findChild(ToggleSwitch, 'usage_sort')
                     self.assertIsNotNone(usage)
-                    self.assertIsNone(usage.currentData())
-                    if choice is not None:
-                        usage.setCurrentIndex(usage.findData(choice))
+                    self.assertEqual(usage.checkState(), Qt.CheckState.PartiallyChecked)
+                    self.assertEqual(usage.accessibleDescription(), 'Keep current settings')
+                    for _ in range(presses):
+                        usage.click()
+                    expected_description = {None: 'Keep current settings', True: 'On', False: 'Off'}
+                    self.assertEqual(usage.accessibleDescription(), expected_description[choice])
                     next(b for b in w.form.findChildren(QPushButton) if b.text() == 'Continue').click()
                     value = json.loads(w.channel.answers.get_nowait())
                     if choice is None:

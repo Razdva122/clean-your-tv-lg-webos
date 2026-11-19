@@ -1367,14 +1367,14 @@ class Wizard(QMainWindow):
         cards[0].setChecked(True)
         fields.addWidget(cards_row)
         fields.addSpacing(12)
-        def switch_row(key, title, help_text):
+        def switch_row(key, title, help_text, unchanged_text=None):
             row = QWidget()
             layout = QHBoxLayout(row)
             layout.setContentsMargins(0, 0, 0, 0)
             layout.setSpacing(16)
             label = WrappedLabel(tr(title))
             label.setObjectName('settingTitle')
-            toggle = ToggleSwitch(tr(title), tr('On'), tr('Off'))
+            toggle = ToggleSwitch(tr(title), tr('On'), tr('Off'), unchanged_text)
             toggle.setObjectName(key)
             label.setBuddy(toggle)
             layout.addWidget(label, 1)
@@ -1418,25 +1418,13 @@ class Wizard(QMainWindow):
                 toggle.updateGeometry()
                 hint.setText(tr('Current setting unavailable. Check it in Home settings.'))
             switches[key] = toggle
-        usage_label = WrappedLabel(tr(settings.USAGE_SORT))
-        usage_label.setObjectName('settingTitle')
-        usage_sort = Select()
-        usage_sort.setObjectName('usage_sort')
-        usage_sort.setAccessibleName(tr(settings.USAGE_SORT))
-        for label, value in (('Keep current settings', None), ('On', True), ('Off', False)):
-            usage_sort.addItem(tr(label), value)
-        usage_label.setBuddy(usage_sort)
-        fields.addWidget(usage_label)
-        fields.addWidget(usage_sort)
-        usage_help = WrappedLabel(tr(settings.USAGE_SORT_HELP))
-        usage_help.setObjectName('settingHint')
-        fields.addWidget(usage_help)
+        usage_sort, _ = switch_row('usage_sort', settings.USAGE_SORT, settings.USAGE_SORT_HELP,
+                                   tr('Keep current settings'))
 
         def save():
             value = {'theme': group.checkedButton().key, 'weather': weather.isChecked()}
-            usage_choice = usage_sort.currentData()
-            if usage_choice is not None:
-                value['usage_sort'] = usage_choice
+            if usage_sort.checkState() != Qt.CheckState.PartiallyChecked:
+                value['usage_sort'] = usage_sort.isChecked()
             for key, toggle in switches.items():
                 if toggle.isEnabled() and toggle.isChecked() != current[key]:
                     value[key] = toggle.isChecked()

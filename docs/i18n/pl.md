@@ -158,6 +158,8 @@ Szczegółowe instrukcje po angielsku: [wymagania](../COMPATIBILITY.md) · [ster
 
 ## Ustawienia
 
+Jeśli nie zapisano ustawienia, wygaszacz ekranu jest domyślnie włączony. Możesz go wyłączyć w **Ustawieniach Home → Wygaszacz ekranu**.
+
 W **Ustawienia → Wygląd** włącz opcję **Najczęściej używane na początku**. Kolejność w doku jest zachowana. Przytrzymaj OK, aby przesunąć lub ukryć kafelek w kolejności ręcznej. Wyłącz opcję, aby wrócić do kolejności ręcznej. Opcja jest również na końcu ustawień w instalatorze cytv.
 
 Wybierz kategorię przyciskami ↑ ↓ i wejdź do niej przez → lub OK. ← wraca do kategorii; Wstecz najpierw wraca do nich, a potem zamyka ustawienia. Po ponownym wejściu sekcja przywraca fokus na ostatnim dostępnym elemencie. W Kolumnach strzałki odpowiadają siatce trzech kolumn. W Języku fokus trafia na wybrany język.

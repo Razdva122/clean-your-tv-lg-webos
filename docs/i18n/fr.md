@@ -157,6 +157,8 @@ Références détaillées en anglais: [prérequis](../COMPATIBILITY.md) · [comm
 
 ## Réglages
 
+En l’absence de préférence enregistrée, l’économiseur d’écran est activé par défaut. Pour le désactiver, ouvrez **Réglages de Home → Économiseur d’écran**.
+
 Dans **Réglages → Apparence**, activez **Applications les plus utilisées en premier**. L’ordre du dock est conservé. Maintenez OK pour déplacer ou masquer une tuile dans l’ordre manuel. Désactivez l’option pour revenir à l’ordre manuel. L’option figure aussi à la fin des réglages du programme d’installation cytv.
 
 Utilisez ↑ ↓ pour choisir une catégorie, puis → ou OK pour y entrer. ← revient aux catégories ; Retour y revient d’abord, puis ferme les réglages. En revenant dans une section, le dernier contrôle disponible reprend le focus. Dans Colonnes, les flèches suivent la grille de trois colonnes. Dans Langue, le focus se place sur la langue choisie.

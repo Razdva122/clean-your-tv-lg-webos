@@ -158,6 +158,8 @@ Referências detalhadas em inglês: [requisitos](../COMPATIBILITY.md) · [contro
 
 ## Configurações
 
+Quando não há uma preferência salva, o protetor de tela fica ativado por padrão. Para desativá-lo, abra **Configurações do Home → Protetor de tela**.
+
 Em **Configurações → Aparência**, ative **Ordenar por frequência de uso**. A ordem do dock é preservada. Segure OK para mover ou ocultar um bloco na ordem manual. Desative a opção para voltar à ordem manual. A opção também fica no fim das configurações do instalador cytv.
 
 Use ↑ ↓ para escolher uma categoria e → ou OK para entrar. ← volta às categorias; Voltar retorna primeiro a elas e depois fecha as configurações. Ao retornar a uma seção, o foco volta ao último controle disponível. Em Colunas, as setas seguem a grade de três colunas. Em Idioma, o foco entra no idioma selecionado.

@@ -157,6 +157,8 @@ Referencias detalladas en inglés: [requisitos](../COMPATIBILITY.md) · [control
 
 ## Ajustes
 
+Si no hay una preferencia guardada, el protector de pantalla está activado de forma predeterminada. Puedes desactivarlo en **Ajustes de Home → Protector de pantalla**.
+
 En **Ajustes → Apariencia**, activa **Ordenar por frecuencia de uso**. El orden del dock se conserva. Mantén pulsado OK para mover u ocultar una tarjeta en el orden manual. Desactiva la opción para volver al orden manual. La opción también aparece al final de los ajustes del instalador cytv.
 
 Usa ↑ ↓ para elegir una categoría y → u OK para entrar. ← vuelve a las categorías; Atrás vuelve primero a ellas y luego cierra los ajustes. Al volver a una sección se recupera el último control disponible. En Columnas, las flechas siguen la cuadrícula de tres columnas. En Idioma, el foco entra en el idioma seleccionado.
