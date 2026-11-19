@@ -1648,9 +1648,6 @@ else:
             return result
         if self.profile['edition'] == 'no-root':
             diagnostics.context.collect_contract_events(self.remote, self.tv_info)
-        reconciled = None
-        reconciliation = None
-        can_resume = False
         from .root_passive import collect, is_native_pending
         native_pending = self.profile['edition']=='root' and is_native_pending(pending)
         if native_pending or (self.profile['edition']=='root' and pending and pending.get('action')=='install'
@@ -1677,109 +1674,142 @@ else:
                     return {'device':{'product':active},'pending':None,'reconciled':None,'can_resume_root_setup':False,'active_operation':active.get('operation')}
             except (OSError,RuntimeError,ValueError,KeyError):pass
         if pending and pending.get('product_operation') and pending.get('action') in ('install','uninstall'):
-            event=self.product_action('status',pending['product_operation'],verify_current=True,
-                                      **({'trusted_recovery':True} if trusted_recovery else {}))
-            complete=event['state']=='complete' and event.get('current') is True
-            can_resume=False
-            if complete and pending['action']=='install':
-                event=dict(event)
-                reason='current-package-files-unverified'
-                try:
-                    proof=event['result']
-                    if (proof.get('installed')!=package.ROOT_APP or proof.get('home_changed') is not False
-                            or proof.get('verified') is not True or not re.fullmatch('[a-f0-9]{64}',proof.get('baseline_sha',''))):
-                        raise ValueError('current_product_proof_required')
-                    device=self.root_action('status').get('result',{})
-                    reason='stock-routing-unverified'
-                    if self.root_setup_inactive(device):
-                        reason='updater-baseline-unverified'
-                        self.verify_root_updater(event['result']['baseline_sha']);can_resume=True
-                    elif (device.get('effective',{}).get('sam_home')=='com.webos.app.home'
-                          and device.get('effective',{}).get('profiles',{}).get('defaultApps',{}).get('categories',{}).get('home')=='com.webos.app.home'
-                          and device.get('effective',{}).get('profiles',{}).get('idleApp',{}).get('appId')=='com.webos.app.home'):
-                        reason='intent-guardian-unverified'
-                except (RuntimeError,ValueError,KeyError,TypeError):pass
-                if not can_resume:event['setup_reason']=reason
-            if complete and pending['action']=='uninstall':
-                reconciliation='product-removal-verified'
-                if reconcile:
-                    self.store.finish(self.profile)
-                    reconciled=reconciliation
+            event, reconciliation, can_resume = self._observe_product_status(pending, trusted_recovery)
+            reconciled = self._finish_status_transition(reconciliation) if reconcile else None
             return {'device':{'product':event},'pending':self.store.pending(self.profile),'reconciled':reconciled,
                     'reconciliation':reconciliation, 'can_resume_root_setup':can_resume and not restoring}
         if pending and pending.get('action') == 'enable-system-updates':
             report = self.system_updater_cleanup('status')
-            if reconcile and report.get('present') is False:
-                # The root helper also proves no owned bootstrap process can
-                # still create state or submit an installer operation.
-                self.store.finish(self.profile)
-                reconciled = 'system-updater-not-started'
-            elif reconcile and report.get('present') is True and report.get('bootstrap_complete') is True and report.get('disabled') is False:
-                self.store.finish(self.profile)
-                reconciled = 'system-updater-bootstrap-verified'
+            completion = self._system_updater_completion(report) if reconcile else None
+            reconciled = self._finish_status_transition(completion)
             return {'device': {'system_updater': report}, 'pending': self.store.pending(self.profile),
                     'reconciled': reconciled, 'can_resume_root_setup': False}
         if self.profile['edition'] == 'root':
-            raw = self.remote.run('if [ -f ' + ROOT_STATE + '/deploy.json ]; then cat ' + ROOT_STATE + '/deploy.json; '
-                                  'elif [ -e ' + ROOT_STATE + ' ] || [ -L ' + ROOT_STATE + ' ]; then printf \'{"stage":"incomplete-state"}\'; '
-                                  'else printf \'{"stage":"absent"}\'; fi')
-            journal = json.loads(raw)
-            stage = journal.get('stage')
-            if stage=='cancellation-admitted' and not passive:
-                installation=self.root_installation()
-                if installation.get('clean_removal_verified') is True and installation.get('can_install') is True:
-                    return {'device':{'installation':installation},'deployment_stage':'verified-clean',
-                            'pending':self.store.pending(self.profile),'reconciled':None,
-                            'can_resume_root_setup':False,'reconciliation':None}
-            result = {'deployment_stage': stage}
-            if reconcile and pending and pending['action'] == 'archive-root-state':
-                readback = self.root_archive('reconcile', pending.get('archive'), pending.get('identity'))
-                if readback.get('state') in ('archived', 'not-archived'):
-                    self.store.finish(self.profile)
-                    pending = None
-                    reconciled = 'root-archive-' + readback['state']
-            if stage == 'installed-recovery-only':
-                result = self.root_action('status', **({'read_only': True} if passive else {}))
-                if (pending and not restoring and pending['action'] == 'activate-root'
-                        and self.root_active(result.get('result', {}))
-                        and (reconcile or self.root_files_match(pending))
-                        and (pending.get('home_backend') != 'c1-native-gate' or
-                             result.get('result', {}).get('backend') == 'c1-native-gate'
-                             and result.get('result', {}).get('effective', {}).get('token') == pending.get('home_token'))):
-                    reconciliation = 'root-activation-verified'
-                    if reconcile:
-                        self.store.finish(self.profile)
-                        reconciled = ('root-activation-verified' if pending.get('launch_requested') is True
-                                      else 'root-activation-verified; screen launch unconfirmed, press Home to open it')
-                can_resume = self.can_resume_root_setup(pending, result.get('result', {}))
-                if reconcile and self.recover_unstarted_root_updater(pending, result.get('result', {})):
-                    pending = None
-                    reconciled = 'updater-not-started; recovery verified; reinstallation available'
-                if (reconcile and pending and pending['action'] == 'install' and not pending.get('requires_updater')
-                        and pending.get('home_backend') != 'c1-native-gate'
-                        and result.get('result', {}).get('recovery', {}).get('integrity_verified') is True
-                        and self.root_files_match(pending)):
-                    self.store.finish(self.profile)
-                    reconciled = 'root-installation-verified'
-            elif stage == 'uninstalled-state-retained':
-                self.verify_absent(package.ROOT_APP)
-                if reconcile and pending and pending['action'] == 'uninstall' and not pending.get('full_project'):
-                    self.store.finish(self.profile)
-                    reconciled = 'root-removal-verified; TV evidence retained'
-            elif (reconcile and stage == 'absent' and pending and pending['action'] == 'install'
-                  and (pending.get('home_backend') != 'c1-native-gate' or pending.get('stage') == 'upload')):
-                self.verify_absent(package.ROOT_APP)
-                self.store.finish(self.profile)
-                reconciled = 'no-root-installation-submitted'
+            return self._root_deployment_status(pending, reconcile, restoring, passive)
+        device = {'apps': [{k: app.get(k) for k in ('id', 'version')} for app in self.installed_apps()
+                           if app.get('id') in (HOME, HELPER)], 'helper_state': self.helper_state()}
+        # App inventory and files describe a snapshot, not the outcome of an
+        # interrupted installer transaction. No supported terminal readback
+        # is established for these legacy receipts; retain them unchanged.
+        return {'device': device, 'pending': self.store.pending(self.profile), 'reconciled': None,
+                'can_resume_root_setup': False, 'reconciliation': None}
+
+    def _finish_status_transition(self, completion):
+        if completion is not None:
+            self.store.finish(self.profile)
+        return completion
+
+    def _observe_product_status(self, pending, trusted_recovery):
+        event = self.product_action('status', pending['product_operation'], verify_current=True,
+                                    **({'trusted_recovery': True} if trusted_recovery else {}))
+        if event['state'] != 'complete' or event.get('current') is not True:
+            return event, None, False
+        if pending['action'] == 'uninstall':
+            return event, 'product-removal-verified', False
+
+        event = dict(event)
+        reason = 'current-package-files-unverified'
+        try:
+            proof = event['result']
+            if (proof.get('installed') != package.ROOT_APP or proof.get('home_changed') is not False
+                    or proof.get('verified') is not True or not re.fullmatch('[a-f0-9]{64}', proof.get('baseline_sha', ''))):
+                raise ValueError('current_product_proof_required')
+            device = self.root_action('status').get('result', {})
+            reason = 'stock-routing-unverified'
+            if self.root_setup_inactive(device):
+                reason = 'updater-baseline-unverified'
+                self.verify_root_updater(event['result']['baseline_sha'])
+                return event, None, True
+            effective = device.get('effective', {})
+            profiles = effective.get('profiles', {}) if effective.get('sam_home') == 'com.webos.app.home' else {}
+            if (profiles.get('defaultApps', {}).get('categories', {}).get('home') == 'com.webos.app.home'
+                    and profiles.get('idleApp', {}).get('appId') == 'com.webos.app.home'):
+                reason = 'intent-guardian-unverified'
+        except (RuntimeError, ValueError, KeyError, TypeError):
+            pass
+        event['setup_reason'] = reason
+        return event, None, False
+
+    @staticmethod
+    def _system_updater_completion(report):
+        if report.get('present') is False:
+            # The root helper also proves no owned bootstrap process can
+            # still create state or submit an installer operation.
+            return 'system-updater-not-started'
+        if report.get('present') is True and report.get('bootstrap_complete') is True and report.get('disabled') is False:
+            return 'system-updater-bootstrap-verified'
+        return None
+
+    def _root_deployment_status(self, pending, reconcile, restoring, passive):
+        raw = self.remote.run('if [ -f ' + ROOT_STATE + '/deploy.json ]; then cat ' + ROOT_STATE + '/deploy.json; '
+                              'elif [ -e ' + ROOT_STATE + ' ] || [ -L ' + ROOT_STATE + ' ]; then printf \'{"stage":"incomplete-state"}\'; '
+                              'else printf \'{"stage":"absent"}\'; fi')
+        stage = json.loads(raw).get('stage')
+        if stage == 'cancellation-admitted' and not passive:
+            installation = self.root_installation()
+            if installation.get('clean_removal_verified') is True and installation.get('can_install') is True:
+                return {'device': {'installation': installation}, 'deployment_stage': 'verified-clean',
+                        'pending': self.store.pending(self.profile), 'reconciled': None,
+                        'can_resume_root_setup': False, 'reconciliation': None}
+
+        reconciled = None
+        if reconcile and pending and pending['action'] == 'archive-root-state':
+            readback = self.root_archive('reconcile', pending.get('archive'), pending.get('identity'))
+            if readback.get('state') in ('archived', 'not-archived'):
+                # Archive has its own proof. Complete it before further deployment reads.
+                reconciled = self._finish_status_transition('root-archive-' + readback['state'])
+                pending = None
+
+        result = {'deployment_stage': stage}
+        reconciliation = None
+        can_resume = False
+        if stage == 'installed-recovery-only':
+            result = self.root_action('status', **({'read_only': True} if passive else {}))
+            reconciliation, completion, can_resume = self._installed_root_status(
+                pending, result.get('result', {}), reconcile, restoring)
+            reconciled = completion or reconciled
         else:
-            result = {'apps': [{k: app.get(k) for k in ('id', 'version')} for app in self.installed_apps() if app.get('id') in (HOME, HELPER)],
-                      'helper_state': self.helper_state()}
-            # App inventory and files describe a snapshot, not the outcome of an
-            # interrupted installer transaction. No supported terminal readback
-            # is established for these legacy receipts; retain them unchanged.
+            completion = self._root_absence_completion(stage, pending, reconcile)
+            reconciled = self._finish_status_transition(completion) or reconciled
         return {'device': result, 'pending': self.store.pending(self.profile), 'reconciled': reconciled,
                 'can_resume_root_setup': can_resume, 'reconciliation': reconciliation,
-                **({'deployment_stage': stage} if self.profile['edition'] == 'root' else {})}
+                'deployment_stage': stage}
+
+    def _installed_root_status(self, pending, device, reconcile, restoring):
+        reconciliation = None
+        reconciled = None
+        # Explicit recovery needs the original package proof. Ordinary status
+        # also supports legacy activation receipts without those hashes.
+        if (pending and not restoring and pending['action'] == 'activate-root'
+                and self.root_active(device) and (reconcile or self.root_files_match(pending))
+                and (pending.get('home_backend') != 'c1-native-gate' or
+                     device.get('backend') == 'c1-native-gate'
+                     and device.get('effective', {}).get('token') == pending.get('home_token'))):
+            reconciliation = 'root-activation-verified'
+            if reconcile:
+                completion = (reconciliation if pending.get('launch_requested') is True
+                              else reconciliation + '; screen launch unconfirmed, press Home to open it')
+                reconciled = self._finish_status_transition(completion)
+        can_resume = self.can_resume_root_setup(pending, device)
+        if reconcile and self.recover_unstarted_root_updater(pending, device):
+            reconciled = 'updater-not-started; recovery verified; reinstallation available'
+        elif (reconcile and pending and pending['action'] == 'install' and not pending.get('requires_updater')
+              and pending.get('home_backend') != 'c1-native-gate'
+              and device.get('recovery', {}).get('integrity_verified') is True
+              and self.root_files_match(pending)):
+            reconciled = self._finish_status_transition('root-installation-verified')
+        return reconciliation, reconciled, can_resume
+
+    def _root_absence_completion(self, stage, pending, reconcile):
+        if stage == 'uninstalled-state-retained':
+            self.verify_absent(package.ROOT_APP)
+            if reconcile and pending and pending['action'] == 'uninstall' and not pending.get('full_project'):
+                return 'root-removal-verified; TV evidence retained'
+        elif (reconcile and stage == 'absent' and pending and pending['action'] == 'install'
+              and (pending.get('home_backend') != 'c1-native-gate' or pending.get('stage') == 'upload')):
+            self.verify_absent(package.ROOT_APP)
+            return 'no-root-installation-submitted'
+        return None
 
     @staticmethod
     def root_setup_inactive(device):
