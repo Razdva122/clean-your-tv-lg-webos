@@ -18,7 +18,20 @@ if (process.getuid() === 0) {
     );
   } catch (_) {}
 }
-var service = new Service('com.cleanyourtv.root.preview.service');
+// The vendor ActivityManager reads this option while constructing the service.
+// Keep request bookkeeping local without changing the launcher or LS2 grants.
+var launcherArgs = process.argv;
+var service;
+try {
+  if (
+    process.getuid() === 0 &&
+    launcherArgs.indexOf('--disable-activity-creation') === -1
+  )
+    process.argv = launcherArgs.concat('--disable-activity-creation');
+  service = new Service('com.cleanyourtv.root.preview.service');
+} finally {
+  process.argv = launcherArgs;
+}
 
 // Independent subscription lane: a serialized recovery operation cannot delay
 // lease revocation, and normal Root never spawns this C1-only helper.
