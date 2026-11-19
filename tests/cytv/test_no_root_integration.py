@@ -204,6 +204,64 @@ class OriginalOperationIntegration(unittest.TestCase):
         self.assertIsNone(self.store.pending(self.profile))
         self.assertEqual((self.root / 'requests').read_text().splitlines(), list(observer.APPS))
 
+    @unittest.skipIf(getattr(os, 'getuid', lambda: -1)() == 0, 'unprivileged SDK model')
+    def test_fresh_install_and_repeated_remove_over_protected_empty_services(self):
+        (self.root / 'proc').mkdir()
+        # Model the vendor's write access separately from the SDK sweep. The
+        # fake vendor owns these inodes and can restore its own parent modes.
+        vendor_prepare = """
+ services=root/'apps/usr/palm/services'
+ if services.exists():
+  services.chmod(0o755)
+  for directory in services.iterdir():
+   if directory.is_dir(): directory.chmod(0o755)
+"""
+        sender = self.remote.sender.read_text().replace(
+            "if sys.argv[-2].endswith('/install'):\n", "if sys.argv[-2].endswith('/install'):\n" + vendor_prepare)
+        self.remote.sender.write_text(sender)
+        services = self.root / 'apps/usr/palm/services'
+        self.addCleanup(lambda: services.chmod(0o755) if services.exists() else None)
+        original = self.remote.luna
+        def luna(uri, payload, **options):
+            if not uri.endswith('/dev/remove'):
+                return original(uri, payload, **options)
+            if services.exists():
+                services.chmod(0o755)
+                for directory in services.iterdir():
+                    directory.chmod(0o755)
+            reply = original(uri, payload, **options)
+            app = payload['id']
+            service = services / (app + ('.renewal' if app == operations.HOME else '.service'))
+            service.mkdir(parents=True, exist_ok=True)
+            service.chmod(0o555)
+            services.chmod(0o555)
+            return reply
+        self.remote.luna = luna
+        for app, component in ((operations.HELPER, 'helper'), (operations.HOME, 'launcher')):
+            filename = self.installer.manifest[component]
+            artifact = self.installer.payload / filename
+            files = package.data_files(artifact.read_bytes())
+            service = app + ('.renewal' if app == operations.HOME else '.service')
+            files['usr/palm/services/' + service + '/service.js'] = b'// fixture service\n'
+            data = package.ipk(app, self.installer.manifest['helper_version' if component == 'helper' else 'home_version'], files)
+            artifact.write_bytes(data)
+            self.installer.manifest['files'][filename] = hashlib.sha256(data).hexdigest()
+        self.installer.install(self.inventory, 'first-secret')
+        first = self.installer.uninstall_project()
+        self.assertTrue(first['verified_clean'])
+        self.assertTrue(first['empty_service_dirs_retained'])
+        self.assertIsNone(self.store.pending(self.profile))
+        self.installer.install(self.inventory, 'fresh-secret')
+        self.assertIsNone(self.store.pending(self.profile))
+        second = self.installer.uninstall_project()
+        self.assertTrue(second['verified_clean'])
+        self.assertTrue(second['empty_service_dirs_retained'])
+        self.assertIsNone(self.store.pending(self.profile))
+        self.assertTrue(all(not list(p.iterdir()) for p in services.iterdir()))
+        from cytv import diagnostics
+        report = diagnostics.create_report(self.store, 'uninstall', self.profile, 'uninstall')
+        self.assertTrue(json.loads(report.read_text())['removal']['empty_service_dirs_retained'])
+
     def include_screensaver_companion(self):
         app = 'com.cleanyourtv.screensaver'
         prefix = 'usr/palm/applications/' + app + '/'

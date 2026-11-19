@@ -1196,7 +1196,8 @@ def _run(args, ask, write, connect, secret, search, inspect, payload_root, check
                     write('Clean Your TV removed. Its apps, startup and Home-button control were removed.')
                     if result.get('temporary_files_retained'):
                         write('Some temporary recovery files were kept.')
-                    elif result.get('empty_helper_dirs_retained') is not True:
+                    elif not any(result.get(key) is True for key in
+                                 ('empty_helper_dirs_retained', 'empty_service_dirs_retained')):
                         write('Only ownership backups and minimal removal records were kept.')
                 elif result.get('restart_required') is True:
                     from .recovery import removal_plan

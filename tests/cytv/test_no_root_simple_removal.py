@@ -2302,6 +2302,133 @@ class SimpleRemoval(unittest.TestCase):
         self.assertIsNone(self.store.pending(self.profile))
 
     @unittest.skipIf(getattr(os, 'getuid', lambda: -1)() == 0, 'unprivileged SDK model')
+    def test_terminal_packages_can_leave_empty_service_trees(self):
+        (self.root / 'proc').mkdir()
+        services = self.root / 'developer/apps/usr/palm/services'
+        for app, service in zip(self.cleanup.APPS, (
+                'com.local.nativehome.service', 'com.gathin.tvhome.renewal', 'com.cleanyourtv.updater.service')):
+            with self.subTest(service=service):
+                leaf = services / service
+                (leaf / 'empty').mkdir(parents=True)
+                services.chmod(0o555)
+                self.addCleanup(services.chmod, 0o755)
+                self.store.request_clean_removal(self.profile)
+                self.store.checkpoint(self.profile, stage='private-cleanup', removals={app: 'terminal'})
+                result = self.remove()
+                self.assertTrue(result['verified_clean'])
+                self.assertTrue(result['empty_service_dirs_retained'])
+                self.assertIsNone(self.store.pending(self.profile))
+                self.assertTrue(leaf.is_dir())
+                services.chmod(0o755)
+                shutil.rmtree(leaf)
+
+    @unittest.skipIf(getattr(os, 'getuid', lambda: -1)() == 0, 'unprivileged SDK model')
+    def test_service_retention_rejects_files_links_and_missing_own_terminal(self):
+        (self.root / 'proc').mkdir()
+        app, other = self.cleanup.APPS[:2]
+        services = self.root / 'developer/apps/usr/palm/services'
+        leaf = services / 'com.gathin.tvhome.renewal'
+        (leaf / 'nested').mkdir(parents=True)
+        services.chmod(0o555)
+        leaf.chmod(0o555)
+        self.addCleanup(services.chmod, 0o755)
+        self.addCleanup(leaf.chmod, 0o755)
+        self.store.request_clean_removal(self.profile)
+        self.store.checkpoint(self.profile, stage='private-cleanup', removals={app: 'terminal'})
+        raw = self.cleanup._device(self.installer, 'sweep', guard=True, allow_empty_dirs=True)
+        self.assertTrue(raw['blocked'])
+        self.assertIsNot(raw.get('empty_service_dirs_retained'), True)
+        self.store.checkpoint(self.profile, removals={app: 'terminal', other: 'terminal'})
+        residue = leaf / 'keep'
+        leaf.chmod(0o755)
+        residue.write_text('preserve')
+        leaf.chmod(0o555)
+        with self.assertRaises(UserError):
+            self.remove()
+        self.assertEqual(residue.read_text(), 'preserve')
+        leaf.chmod(0o755)
+        residue.unlink()
+        foreign = self.own_file('unrelated/keep', 'preserve')
+        residue.symlink_to(foreign)
+        leaf.chmod(0o555)
+        with self.assertRaises(UserError):
+            self.remove()
+        self.assertTrue(residue.is_symlink())
+        self.assertEqual(foreign.read_text(), 'preserve')
+        leaf.chmod(0o755)
+        residue.unlink()
+        leaf.chmod(0o555)
+        self.assertTrue(self.remove()['verified_clean'])
+
+    @unittest.skipIf(getattr(os, 'getuid', lambda: -1)() == 0, 'unprivileged SDK model')
+    def test_new_service_terminal_does_not_hide_surviving_sam_application(self):
+        app = self.cleanup.APPS[1]
+        (self.root / 'proc').mkdir()
+        leaf = self.root / 'developer/apps/usr/palm/services/com.gathin.tvhome.renewal'
+        leaf.mkdir(parents=True)
+        leaf.parent.chmod(0o555)
+        self.addCleanup(leaf.parent.chmod, 0o755)
+        self.remote.apps.add(app)
+        self.remote.sam[app] = {'returnValue': True, 'appInfo': {
+            'id': app, 'folderPath': '/media/developer/apps/usr/palm/applications/' + app}}
+        with self.assertRaises(UserError):
+            self.remove()
+        self.assertEqual(self.store.pending(self.profile)['removals'][app], 'terminal')
+        self.assertTrue(any(uri.endswith('/getAppInfo') and payload['id'] == app
+                            for uri, payload in self.remote.calls))
+
+    @unittest.skipIf(getattr(os, 'getuid', lambda: -1)() == 0, 'unprivileged SDK model')
+    def test_final_readback_records_new_empty_service_tree(self):
+        app = self.cleanup.APPS[0]
+        (self.root / 'proc').mkdir()
+        helper = self.root / 'developer/apps/usr/palm/applications' / app
+        (helper / 'state').mkdir(parents=True)
+        helper.chmod(0o555)
+        self.addCleanup(helper.chmod, 0o755)
+        self.store.request_clean_removal(self.profile)
+        self.store.checkpoint(self.profile, stage='private-cleanup', removals={app: 'terminal'})
+        service = self.root / 'developer/apps/usr/palm/services/com.local.nativehome.service'
+        self.addCleanup(lambda: service.parent.chmod(0o755) if service.parent.exists() else None)
+        original = self.cleanup._device
+        def readback(installer, action, **options):
+            if action == 'history':
+                service.mkdir(parents=True, exist_ok=True)
+                service.parent.chmod(0o555)
+            return original(installer, action, **options)
+        with patch.object(self.cleanup, '_device', side_effect=readback):
+            result = self.remove()
+        self.assertTrue(result['empty_helper_dirs_retained'])
+        self.assertTrue(result['empty_service_dirs_retained'])
+
+    @unittest.skipIf(getattr(os, 'getuid', lambda: -1)() == 0, 'unprivileged SDK model')
+    def test_verified_service_retention_is_checked_again_on_retry(self):
+        app = self.cleanup.APPS[0]
+        (self.root / 'proc').mkdir()
+        leaf = self.root / 'developer/apps/usr/palm/services/com.local.nativehome.service'
+        leaf.mkdir(parents=True)
+        leaf.parent.chmod(0o555)
+        leaf.chmod(0o555)
+        self.addCleanup(leaf.parent.chmod, 0o755)
+        self.addCleanup(leaf.chmod, 0o755)
+        self.store.request_clean_removal(self.profile)
+        self.store.checkpoint(self.profile, stage='private-cleanup', removals={app: 'terminal'})
+        with patch.object(self.store, 'finish_clean_removal', side_effect=OSError('fixture interruption')):
+            with self.assertRaises(OSError):
+                self.remove()
+        self.assertEqual(self.store.pending(self.profile)['stage'], 'verified-clean')
+        leaf.chmod(0o755)
+        residue = leaf / 'returned'
+        residue.write_text('preserve')
+        leaf.chmod(0o555)
+        with self.assertRaises(UserError):
+            self.remove()
+        self.assertEqual(residue.read_text(), 'preserve')
+        leaf.chmod(0o755)
+        residue.unlink()
+        leaf.chmod(0o555)
+        self.assertTrue(self.remove()['verified_clean'])
+
+    @unittest.skipIf(getattr(os, 'getuid', lambda: -1)() == 0, 'unprivileged SDK model')
     def test_terminal_helper_can_leave_a_tree_containing_only_directories(self):
         (self.root / 'proc').mkdir()
         helper = self.root / 'developer/apps/usr/palm/applications/com.local.nativehome'
