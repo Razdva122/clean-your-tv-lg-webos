@@ -2327,7 +2327,8 @@ print('CYTV_PROJECT_REMOVED')
             self.store.checkpoint(self.profile,stage=phase,removal_reason=reply.get('reason') if reply.get('reason') in REMOVAL_REASONS else 'ownership-conflict')
         if (reply.get('cleanup_error') == 'owned-process-still-used'
                 and reply.get('restart_required') is True):
-            self.store.checkpoint(self.profile,stage='restart-required',removal_reason='restart-required')
+            self.store.checkpoint(self.profile,stage='restart-required',removal_reason='restart-required',
+                                  cleanup_restart_triggers=['owned-process-still-used'])
             return {'removed':False,'verified_clean':False,'restart_required':True}
         failure=reply.get('cleanup_error')
         messages={
@@ -2349,8 +2350,11 @@ print('CYTV_PROJECT_REMOVED')
             raise incomplete(failure)
         result=reply.get('result',{})
         if result.get('restart_required') is True:
-            self.store.checkpoint(self.profile,stage='restart-required',removal_reason='restart-required',cleanup_boot_id=reply.get('cleanup_boot_id'))
-            return dict(result,removed=False,verified_clean=False,restart_required=True)
+            from .recovery_state import restart_triggers
+            triggers = restart_triggers(result.get('restart_triggers'))
+            self.store.checkpoint(self.profile,stage='restart-required',removal_reason='restart-required',
+                                  cleanup_boot_id=reply.get('cleanup_boot_id'), cleanup_restart_triggers=triggers)
+            return dict(result,removed=False,verified_clean=False,restart_required=True,restart_triggers=triggers)
         if (reply.get('state')!='complete' or phase!='verified-clean'
                 or result.get('removed') is not True or result.get('private_cleanup_verified') is not True
                 or reply.get('current') is not True):

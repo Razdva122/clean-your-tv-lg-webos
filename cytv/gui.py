@@ -586,8 +586,22 @@ class Wizard(QMainWindow):
             self.button('Back', lambda: self.show_preparation(index - 1, prompt))
         self.button('Continue', lambda: self.show_preparation(index + 1, prompt), True).setFocus()
 
-    def offer_root_reinstall(self, profile):
-        return self.button('Continue Root reinstallation',
+    def show_root_reinstall_restart(self):
+        title = 'The TV still needs a full restart' if self.checking_saved_reinstall else 'Restart the TV to finish removal'
+        self.title.setText(tr(title))
+        self.badge.setText(tr(title))
+        self.subtitle.setText(tr(self.recovery_plan['next_step']))
+        self.rail_note.setText(tr(title))
+        self.content.hide()
+        self.check_panel.hide()
+        self.offer_root_reinstall(dict(self.selected_profile), after_restart=True).setFocus()
+        if self.report:
+            self.button('Save diagnostic report…', self.save_report)
+        self.button('Back to start', self.home)
+
+    def offer_root_reinstall(self, profile, *, after_restart=False):
+        label = 'I restarted the TV — check and continue' if after_restart else 'Continue Root reinstallation'
+        return self.button(label,
                            lambda: self.start('install', profile, resume_root_reinstall=True), True)
 
     def start(self, command, profile=None, *, new_recovery_attempt=False, reconnect_after_reset=False,
@@ -614,6 +628,7 @@ class Wizard(QMainWindow):
         self.recovery_profile = None
         self.selected_profile = None
         self.reinstalling_root = resume_root_reinstall
+        self.checking_saved_reinstall = resume_root_reinstall
         self.reconnecting_after_reset = reconnect_after_reset
         self.removal_operation = removal_operation
         self.doctor_result = None
@@ -778,13 +793,22 @@ class Wizard(QMainWindow):
             if value == 0 and self.command == 'uninstall' and self.recovery_plan is None:
                 self.recovery_plan = {'state':'review', 'summary':'Removal is not verified.',
                                       'next_step':'Read the result below before continuing.'}
-            self.set_error_state(value not in (0, 130))
             self.language.setEnabled(True)
             self.pending = None
             self.progress.hide()
             self.cancel.setText(tr('Close'))
             self.cancel.setEnabled(True)
             self.clear_form()
+            plan = self.recovery_plan or {}
+            resume_root_reinstall = (self.reinstalling_root and self.selected_profile is not None
+                                     and plan.get('disposition') != 'operation-active'
+                                     and self.saved_root_reinstall(Store(), self.selected_profile))
+            if (resume_root_reinstall and value == 2 and plan.get('disposition') == 'clean-removal'
+                    and plan.get('state') == 'waiting' and not self.failure_help
+                    and plan.get('removal_action', {}).get('condition') == 'restart'):
+                self.show_root_reinstall_restart()
+                return
+            self.set_error_state(value not in (0, 130))
             if self.command == 'ssh-command':
                 if self.ssh_command_result is not None:
                     self.show_ssh_command_result(self.ssh_command_result)
@@ -844,8 +868,6 @@ class Wizard(QMainWindow):
             restore_for_removal = (self.recovery_plan.get('restore_for_removal')
                                    if retry_removal and value not in (0, 130)
                                    and self.command in ('uninstall', 'recover') else None)
-            resume_root_reinstall = (not active_operation and self.reinstalling_root and self.selected_profile is not None
-                                     and self.saved_root_reinstall(Store(), self.selected_profile))
             doctor_ready = (value == 0 and self.command == 'doctor' and self.doctor_result is not None
                             and self.selected_profile is not None and not self.recovery_plan and not recover)
             home_failed = self.check_results.get('home-button', {}).get('status') == 'fail'
@@ -1002,8 +1024,6 @@ class Wizard(QMainWindow):
                         message = 'Restore LG Home before continuing removal.'
                     elif missing_root_connection:
                         message = 'Without existing Root access, cleanup remains incomplete. Keep the recovery data.'
-                    if resume_root_reinstall and show_restart:
-                        message = 'Disconnect the TV from power, reconnect it, and turn it on. Then choose Continue Root reinstallation. Standby is not a full restart.'
                     if self.failure_help and self.failure_help.get('code') in ('ssh-auth-root','ssh-auth-no-root','ssh-key-file','ssh-identity','developer-key-server','developer-key-unlock','developer-key-response'):
                         message = self.failure_help['next_step']
                     self.subtitle.setText(tr(message)+('' if show_restart or connection else '\n'+tr(detail.get('stage_text', ''))))
