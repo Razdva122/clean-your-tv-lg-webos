@@ -10,7 +10,9 @@ RECOVERY_ENTRY = r'''
 import json, runpy, sys
 sys.path.insert(0, sys.argv.pop(1))
 sys.argv.pop(0)
-beta_repair = sys.argv[0].endswith('/provision.py') and sys.argv[1:] == ['repair_beta_recovery']
+repair = dict(repair_beta_recovery='root_beta_repair_failure',
+              repair_root_recovery='root_retained_repair_failure')
+key = repair.get(sys.argv[1]) if len(sys.argv) > 1 and sys.argv[0].endswith('/provision.py') else None
 stage = 'python-binding'
 try:
     from python_binding import verify_binding
@@ -19,9 +21,9 @@ try:
     stage = 'support-start'
     runpy.run_path(sys.argv[0], run_name='__main__')
 except Exception:
-    if not beta_repair:
+    if key is None:
         raise
-    print(json.dumps({'returnValue': False, 'root_beta_repair_failure': {'stage': stage, 'reason': 'failed'}}), flush=True)
+    print(json.dumps({'returnValue': False, key: {'stage': stage, 'reason': 'failed'}}), flush=True)
     raise SystemExit(1) from None
 '''
 
@@ -44,8 +46,11 @@ def run(installer, stage, script, args, timeout):
     except UserError as error:
         if isinstance(error, TVCommandError):
             error.root_boundary='python-select'
-        if script == 'provision.py' and args == ['repair_beta_recovery']:
-            error.root_beta_repair_failure = {'stage': 'python-select', 'reason': 'failed'}
+        if script == 'provision.py' and args:
+            key = {'repair_beta_recovery': 'root_beta_repair_failure',
+                   'repair_root_recovery': 'root_retained_repair_failure'}.get(args[0])
+            if key:
+                setattr(error, key, {'stage': 'python-select', 'reason': 'failed'})
         raise
     invocation=installer._python_command([python,'-I','-B','-c',RECOVERY_ENTRY,stage,stage+'/'+script,*args])
     try:

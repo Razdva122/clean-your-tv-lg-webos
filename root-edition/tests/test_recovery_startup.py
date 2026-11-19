@@ -44,7 +44,7 @@ class StartupTests(unittest.TestCase):
             with patch.multiple(p, STATE=root, RUNNER=runner, LEGACY_NODE_BETA=True, FILES={}), \
                     patch.object(p, 'secure', side_effect=Path.read_bytes), \
                     patch.object(p, 'manifest', side_effect=lambda: {'files': {str(runner): p.sha(runner.read_bytes())}}), \
-                    patch.object(p, 'verify_beta_repair_registration'), \
+                    patch.object(p, 'verify_retained_repair_registration'), \
                     patch('package_identity.bootstrap_inventory') as verify_package, \
                     patch('runtime.c1_keyfilter.selection', return_value={'schema': 3, 'native_sha256': 'a'*64}), \
                     patch.object(p, 'finalize', side_effect=[TimeoutError(), None]) as finalize, \
@@ -97,6 +97,50 @@ handlers.status({}).then(reply => {
                             p.repair_beta_recovery()
                 self.assertEqual(finalize.call_count, 2)
             self.assertEqual(installed.read_bytes(), b'installed app')
+
+    def test_retained_root_repair_checks_original_bundle_and_resumes_with_local_activity(self):
+        import deploy
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            runner = root/'run-recovery-service'
+            release = dict(application_id=deploy.APP, version='0.22.0',
+                           home_backend='c1-native-gate', compositor_admission=3,
+                           routing='compositor-keyfilter-v1', native_sha256='a'*64)
+            (root/'release.json').write_bytes(p.encoded(release))
+            (root/'bundle.json').write_bytes(p.encoded({'files': {}}))
+            (root/'deploy.json').write_bytes(p.encoded(
+                dict(version=1, app=deploy.APP, stage='provision-finalize-starting')))
+            (root/'recovery-failure.json').write_bytes(p.encoded(
+                dict(schema=1, phase='status', reason='timeout', startup_state='exited', startup_exit_status=0)))
+            pins = tuple(p.sha((root/name).read_bytes()) for name in ('release.json', 'bundle.json'))
+            with patch.multiple(p, STATE=root, RUNNER=runner, LEGACY_NODE_BETA=False), \
+                    patch.object(p, 'secure', side_effect=Path.read_bytes), \
+                    patch.object(p, 'manifest', side_effect=lambda: {'files': {str(runner): p.sha(runner.read_bytes())}}), \
+                    patch.object(p, 'verify_retained_repair_registration'), \
+                    patch('package_identity.bootstrap_inventory'), patch('deploy.verify_payload'), \
+                    patch('deploy.SUPPORT_FILES', ()), \
+                    patch('runtime.c1_keyfilter.selection', return_value={'schema': 3, 'native_sha256': 'a'*64}), \
+                    patch.object(p, 'finalize') as finalize, patch.object(p, 'rpc') as status:
+                runner.write_bytes(p.runner_bytes())
+                (root/'recovery-provision.pending.json').write_bytes(p.encoded(p.manifest()))
+                old_runner = runner.read_bytes()
+                status.return_value = {'root': True, 'result': {
+                    'returnValue': True, 'result': {'recovery': {'integrity_verified': True}}}}
+                with self.assertRaisesRegex(ValueError, 'Original Root install receipt'):
+                    p.repair_root_recovery(('0'*64, pins[1]))
+                self.assertEqual(runner.read_bytes(), old_runner)
+                finalize.assert_not_called()
+                def publish(**options):
+                    options['writer'](root/'recovery-provision.json', p.encoded(p.manifest()))
+                finalize.side_effect = publish
+                result = p.repair_root_recovery(pins)
+                self.assertEqual(result, {'returnValue': True, 'status_verified': True, 'home_changed': False})
+                self.assertIn(b'--disable-activity-creation ', runner.read_bytes())
+                self.assertEqual(json.loads((root/'deploy.json').read_bytes())['stage'],
+                                 'installed-recovery-only')
+                self.assertFalse(finalize.call_args.kwargs['firmware_permissions'])
+                self.assertEqual(p.repair_root_recovery(pins), result)
+                self.assertEqual(finalize.call_count, 1)
 
     def test_beta_uses_lg_local_activity_before_bootstrap_positionals(self):
         with patch.object(p, 'LEGACY_NODE_BETA', True):

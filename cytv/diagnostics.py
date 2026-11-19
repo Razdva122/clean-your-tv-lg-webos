@@ -97,9 +97,10 @@ def create_report(store, action, profile, phase, error=None, tv_info=None, *, ch
         driver=root_driver_details(getattr(error,'root_driver',None))
         if driver:report['root_driver']=driver
     from .errors import root_beta_repair_details
-    beta_repair = root_beta_repair_details(getattr(error, 'root_beta_repair_failure', None))
-    if beta_repair:
-        report['root_beta_repair_failure'] = beta_repair
+    for key in ('root_beta_repair_failure', 'root_retained_repair_failure'):
+        detail = root_beta_repair_details(getattr(error, key, None))
+        if detail:
+            report[key] = detail
     if action == phase == 'home-diagnostics':
         stage = context.choice(getattr(error, 'home_diagnostic_stage', None),
                                ('start-upload', 'log-read', 'start-unacknowledged'), None)
