@@ -50,13 +50,13 @@
       "pr": 743,
       "issues": [],
       "summary": "Require rendered Root Home before System profile capture"
+    },
+    {
+      "pr": 747,
+      "issues": [],
+      "summary": "Keep active Root Home boot-session reads independent of writer lock contention"
     }
   ],
   "excluded": [],
-  "acceptance": "",
-  "build": {
-    "run_id": 44545127945,
-    "attempt": 3,
-    "source": "a6c564b37097ffcd5317c171abcc32c35058598c"
-  }
+  "acceptance": ""
 }
