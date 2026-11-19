@@ -158,6 +158,10 @@ const uiFile = path.join(root, 'launcher/screensaver-settings.js');
             { id: 'advanced', label: 'Advanced', elements: [] }
           ]
         );
+        if (!window.ROOT_VERSION) {
+          backend.enabled = true;
+          busyStatus = 1;
+        }
         HomeScreensaver.start();
         view.open();
       });
@@ -169,12 +173,40 @@ const uiFile = path.join(root, 'launcher/screensaver-settings.js');
           .count(),
         1
       );
+      const toggle = page.locator('#screensaverEnabled');
+      if (edition === 'noroot') {
+        await page.waitForFunction(
+          () =>
+            document
+              .querySelector('#screensaverEnabled')
+              .getAttribute('aria-checked') === 'true'
+        );
+        assert.equal(
+          await page.evaluate(
+            () =>
+              calls.filter(({ method }) => method === 'screensaverStatus')
+                .length
+          ),
+          2,
+          'No-root retries a busy first status before showing the enabled default'
+        );
+      }
       await page.locator('[data-category="screensaver"]').focus();
       await page.keyboard.press('ArrowRight');
       assert.equal(
         await page.evaluate(() => document.activeElement.id),
         'screensaverEnabled'
       );
+      if (edition === 'noroot') {
+        await toggle.click();
+        await page.waitForFunction(
+          () =>
+            document
+              .querySelector('#screensaverEnabled')
+              .getAttribute('aria-checked') === 'false'
+        );
+        assert.equal(await page.evaluate(() => backend.enabled), false);
+      }
       assert.equal(
         await page.locator('#screensaverEnabled').getAttribute('aria-checked'),
         'false'
@@ -185,7 +217,6 @@ const uiFile = path.join(root, 'launcher/screensaver-settings.js');
           .getAttribute('aria-pressed'),
         'true'
       );
-      const toggle = page.locator('#screensaverEnabled');
       await page.evaluate(() => {
         busyStatus = 1;
         available = false;

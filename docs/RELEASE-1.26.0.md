@@ -10,6 +10,7 @@
 - Root and No-root updates preserve explicitly selected Simplified and
   Traditional Chinese Home preferences. Android Root setup can keep, change or
   reset the Home screen name (#732).
+- System Update and Repair capture the Root profile once Home has rendered.
 - The screensaver is enabled when you have never set a preference. A saved Off
   choice is preserved. The desktop installation switch for sorting apps starts
   at **Keep current settings** (#733).
