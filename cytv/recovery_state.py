@@ -70,8 +70,10 @@ def removal_summary(pending):
             and phase_reason in REMOVAL_FAILURE_PHASES.values()):
         result['failure_phase'] = phase_reason
     proof = pending.get('result')
-    if stage == 'verified-clean' and type(proof) is dict and proof.get('empty_helper_dirs_retained') is True:
-        result['empty_helper_dirs_retained'] = True
+    if stage == 'verified-clean' and type(proof) is dict:
+        for key in ('empty_helper_dirs_retained', 'empty_service_dirs_retained'):
+            if proof.get(key) is True:
+                result[key] = True
     triggers = pending.get('cleanup_restart_triggers')
     if stage == 'restart-required' and type(triggers) is list:
         known = {item for item in triggers if type(item) is str and item in RESTART_TRIGGERS}

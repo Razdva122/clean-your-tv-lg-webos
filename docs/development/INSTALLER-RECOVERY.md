@@ -32,6 +32,17 @@ modification times supply chronology for the legacy format: clock rollback or
 external rewriting/restoration of proof files can invalidate that ordering.
 This is a local reconciliation heuristic, not a new device transaction proof.
 
+After a scoped terminal package removal, cleanup may leave a tree containing
+only directories in that package's fixed No-root service slot. This extends the
+existing empty Helper application-directory rule to the Helper, Home renewal and
+updater service directories. It does not admit package metadata or other app
+slots. Each service requires its own package's terminal receipt. The same bounded
+inode/owner/directory-only walk runs at sweep, final inventory and resumed
+completion; surviving files, links, processes and observed application/service
+registrations keep removal pending. `empty_service_dirs_retained` records the
+result alongside the existing `empty_helper_dirs_retained` flag. Package install
+continues through the vendor endpoint and can repopulate retained directories.
+
 No-root supports only existing pending install and pending/removing uninstall
 receipts. Except for the pre-submission case below, offering removal requires a positive bounded ten-second
 `appInstallService/status` response with an empty apps list and rejects conflicting
