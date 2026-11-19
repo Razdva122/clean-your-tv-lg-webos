@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "reviewedAt": "2026-11-18",
+  "reviewedAt": "2026-11-19",
   "reports": [
     {
       "id": "g1-noroot",
@@ -485,6 +485,1374 @@
         },
         {
           "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/418#issuecomment-6987290015"
+        }
+      ],
+      "evidenceKind": "public-owner-report"
+    },
+    {
+      "id": "lb650v-32-noroot",
+      "model": "32LB650V-ZN",
+      "firmware": "05.05.90",
+      "webos": "1.4.0",
+      "edition": "no-root",
+      "release": null,
+      "showOnWebsite": true,
+      "result": "partial",
+      "reportedVersions": "Home 1.13.1; Helper 0.7.5",
+      "installer": "Windows desktop reported for initial attempts; successful setup build unknown",
+      "remote": null,
+      "tested": {
+        "install": "Owner reported eventual installation after earlier pairing and runtime hurdles.",
+        "Home": "The launcher opened and was very slow. Short Home routing was unreported.",
+        "emergency": "not reported",
+        "audio": "not reported",
+        "power": "not reported",
+        "OTA_rollback": "not reported"
+      },
+      "limitations": "Removal failed with application launch error -101 and remained pending after a restart. Successful recovery with the later legacy removal fix was not reported.",
+      "sources": [
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/283#issuecomment-6724042805"
+        },
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/283"
+        }
+      ],
+      "evidenceKind": "public-owner-report"
+    },
+    {
+      "id": "43nano766qa-noroot",
+      "model": "43NANO766QA",
+      "firmware": "04.60.91",
+      "webos": "22",
+      "edition": "no-root",
+      "release": "v1.5.4",
+      "showOnWebsite": true,
+      "result": "partial",
+      "reportedVersions": "v1.5.4; cytv 0.6.1; component versions unknown",
+      "installer": "macOS ARM64",
+      "remote": null,
+      "tested": {
+        "install": "No-root setup completed on cytv 0.6.1 after earlier authentication failure",
+        "Home": "Owner reports manually opening Home Helper to recover Clean Your TV",
+        "emergency": "unknown / not explicitly reported",
+        "audio": "not tested",
+        "power": "After TV off/on LG Home opened by default; power mode unspecified",
+        "OTA_rollback": "not tested"
+      },
+      "limitations": "The owner reported having to open Home Helper manually to recover the launcher after power off/on. Persistence after a manual start and short physical Home routing were not established.",
+      "sources": [
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/227#issuecomment-6573089997"
+        },
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/227"
+        }
+      ],
+      "evidenceKind": "public-owner-report"
+    },
+    {
+      "id": "43um7600plb-noroot",
+      "model": "43UM7600PLB",
+      "firmware": "05.40.97",
+      "webos": "4.5",
+      "edition": "no-root",
+      "release": null,
+      "showOnWebsite": true,
+      "result": "partial",
+      "reportedVersions": "reported Clean Your TV 1.20.0; cytv 0.21.0; Helper 0.9.0. Diagnostics performed with v1.24.0 / cytv 0.21.2.",
+      "installer": "Windows",
+      "remote": null,
+      "tested": {
+        "install": "Owner confirmed updating from Helper 0.8.5 to 0.9.0",
+        "Home": "Clean Your TV opens automatically on power-on",
+        "emergency": "Three quick Home presses disabled routing",
+        "audio": "unknown / not explicitly reported",
+        "power": "After remote power-on with Quick Start+ off, YouTube was repeatedly interrupted by Clean Your TV. Delaying app launch 1–2 minutes or enabling Quick Start+ avoided the interruption in the reported tests.",
+        "OTA_rollback": "unknown / not explicitly reported"
+      },
+      "limitations": "Short physical Home was not explicitly tested. Quick Start+ is a workaround; long-term and AC cold-boot behavior remain unconfirmed.",
+      "sources": [
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/686"
+        },
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/686#issuecomment-6994095789"
+        }
+      ],
+      "evidenceKind": "public-owner-report"
+    },
+    {
+      "id": "43up751c0zf-noroot",
+      "model": "43UP751C0ZF",
+      "firmware": "03.53.45",
+      "webos": "SDK 6.5.3",
+      "edition": "no-root",
+      "release": null,
+      "showOnWebsite": true,
+      "result": "partial",
+      "reportedVersions": "cytv 0.21.0",
+      "installer": "Windows AMD64 desktop",
+      "remote": null,
+      "tested": {
+        "install": "unknown / not explicitly reported",
+        "Home": "First Home from an app or Live TV briefly shows Clean Your TV and then LG Home takes over. Second Home from LG Home opens Clean Your TV and stays.",
+        "emergency": "unknown / not explicitly reported",
+        "audio": "unknown / not explicitly reported",
+        "power": "Clean Your TV opened normally at unspecified power-on",
+        "OTA_rollback": "unknown / not explicitly reported"
+      },
+      "limitations": "Nine Debloat writes rejected; Live Plus already in requested state. True cold boot and emergency behavior were not reported.",
+      "sources": [
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/687"
+        }
+      ],
+      "evidenceKind": "public-owner-report"
+    },
+    {
+      "id": "49nano80pna-noroot",
+      "model": "49NANO80PNA",
+      "firmware": "04.64.00",
+      "webos": "SDK 5.6.2",
+      "edition": "no-root",
+      "release": "v1.0.0",
+      "showOnWebsite": true,
+      "result": "partial",
+      "reportedVersions": "v1.0.0 source; Home 1.3.6 with local CSS changes; Helper 0.6.17",
+      "installer": "Source installer, followed by a rebuilt Home package",
+      "remote": null,
+      "tested": {
+        "install": "Source install and replacement of the locally rebuilt Home package",
+        "Home": "Launcher dock, grid and icons render after CSS workaround",
+        "emergency": "unknown / not explicitly reported",
+        "audio": "not tested",
+        "power": "not tested",
+        "OTA_rollback": "not tested"
+      },
+      "limitations": "The original dock and grid were empty. Local CSS changes restored them, with tighter spacing in some panels. Physical Home routing was not described.",
+      "sources": [
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/20#issuecomment-6388040635"
+        }
+      ],
+      "evidenceKind": "public-owner-report"
+    },
+    {
+      "id": "49uj651v-za-noroot",
+      "model": "49UJ651V-ZA",
+      "firmware": "06.10.75",
+      "webos": "3.5",
+      "edition": "no-root",
+      "release": "v1.12.1",
+      "showOnWebsite": true,
+      "result": "partial",
+      "reportedVersions": "v1.12.1; Home 1.13.1; Helper 0.7.5",
+      "installer": "Manual installation of published No-root IPKs over root SSH",
+      "remote": "Standard LG IR remote",
+      "tested": {
+        "install": "Installed both published No-root IPKs and configured the device manually",
+        "Home": "Helper Start worked and Back from YouTube reopened Clean Your TV after approximately one second; physical IR Home opened LG Home",
+        "emergency": "unknown / not explicitly reported",
+        "audio": "Live TV remained audible behind Clean Your TV until an app opened",
+        "power": "Helper started after reboot; Live TV remained audible and TV startup still selected Live TV",
+        "OTA_rollback": "not tested"
+      },
+      "limitations": "Desktop installer stopped at its temporary-space check. The owner manually installed and configured No-root packages on a rooted TV. The separate local IR patch used additional root configuration; published package Home presses opened LG Home.",
+      "sources": [
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/47#issuecomment-6722365004"
+        },
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/207#issuecomment-6704381834"
+        }
+      ],
+      "evidenceKind": "public-owner-report"
+    },
+    {
+      "id": "49uj750v-noroot",
+      "model": "49UJ750V",
+      "firmware": "06.10.65",
+      "webos": "3.5",
+      "edition": "no-root",
+      "release": "v1.0.1",
+      "showOnWebsite": true,
+      "result": "partial",
+      "reportedVersions": "cytv 0.2.15; Home 1.3.7; Helper 0.6.17",
+      "installer": null,
+      "remote": null,
+      "tested": {
+        "install": "No-root update through cytv 0.2.15",
+        "Home": "App icons display and apps launch using arrow keys and OK; Home was used to open the original build, and the button was not separately retested in the update report",
+        "emergency": "unknown / not explicitly reported",
+        "audio": "not tested",
+        "power": "not tested",
+        "OTA_rollback": "not tested"
+      },
+      "limitations": "The updated Home rendered tiles and launched apps. The owner later reported that Helper 0.6.18 failed on the same TV, so this confirms the rendering fix and normal app navigation for the earlier build.",
+      "sources": [
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/20#issuecomment-6390518287"
+        },
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/20"
+        },
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/47"
+        }
+      ],
+      "evidenceKind": "public-owner-report"
+    },
+    {
+      "id": "50nano756pa-noroot",
+      "model": "50NANO756PA",
+      "firmware": "03.53.45",
+      "webos": "6; SDK 6.5.3",
+      "edition": "no-root",
+      "release": null,
+      "showOnWebsite": true,
+      "result": "controls-tested",
+      "reportedVersions": "Home 1.4.2; Helper 0.6.19",
+      "installer": "macOS Apple Silicon, manual source build and install",
+      "remote": null,
+      "tested": {
+        "install": "Manual source build and package installation completed; early input restoration registered",
+        "Home": "Short Home from an app opened Clean Your TV; arrows, OK and volume worked",
+        "emergency": "Triple-Home returned to usable LG Home",
+        "audio": "not tested",
+        "power": "not tested",
+        "OTA_rollback": "not tested"
+      },
+      "limitations": "The Helper panel could not check status and left Home button settings disabled. Start Helper still worked.",
+      "sources": [
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/106"
+        }
+      ],
+      "evidenceKind": "public-owner-report"
+    },
+    {
+      "id": "lb652v-55-noroot",
+      "model": "55LB652V-ZA",
+      "firmware": null,
+      "webos": "1.4.0-2536",
+      "edition": "no-root",
+      "release": "v1.12.0",
+      "showOnWebsite": true,
+      "result": "partial",
+      "reportedVersions": "release v1.12.0; successful-run component versions were not stated",
+      "installer": null,
+      "remote": "Standard LG remote, exact model unknown",
+      "tested": {
+        "install": "v1.12.0 installed successfully after v1.7.1 stopped at the Helper Node.js check.",
+        "Home": "The custom launcher displayed generic house icons from its first launch. The remote Home button was observed showing the stock LG app bar; whether Helper was enabled for that press was not established.",
+        "emergency": "not reported",
+        "audio": "not reported",
+        "power": "not reported",
+        "OTA_rollback": "not reported"
+      },
+      "limitations": "Expected application icons and reliable short Home routing were not confirmed. Firmware number and power, audio and recovery checks were not reported.",
+      "sources": [
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/311#issuecomment-6711772795"
+        },
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/311#issuecomment-6720682122"
+        },
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/311"
+        }
+      ],
+      "evidenceKind": "public-owner-report"
+    },
+    {
+      "id": "55nano81ana-noroot",
+      "model": "55NANO81ANA",
+      "firmware": "04.64.00",
+      "webos": "5.6.2-21",
+      "edition": "no-root",
+      "release": "v1.0.1",
+      "showOnWebsite": true,
+      "result": "partial",
+      "reportedVersions": "v1.0.1; cytv 0.2.15; component versions unknown",
+      "installer": "macOS Apple Silicon",
+      "remote": null,
+      "tested": {
+        "install": "Home installed; Helper installation or startup failed",
+        "Home": "Owner saw Clean Your TV open and run with the apps area empty; physical Home routing was not reported",
+        "emergency": "unknown / not explicitly reported",
+        "audio": "not tested",
+        "power": "not tested",
+        "OTA_rollback": "not tested"
+      },
+      "limitations": "Apps remained invisible in the launcher. The Helper panel reported unavailable and a later attempt still could not install Helper.",
+      "sources": [
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/21#issuecomment-6388756143"
+        },
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/21#issuecomment-6553185151"
+        }
+      ],
+      "evidenceKind": "public-owner-report"
+    },
+    {
+      "id": "55uk7500psa-noroot",
+      "model": "55UK7500PSA",
+      "firmware": "05.50.70",
+      "webos": "SDK 4.4.0",
+      "edition": "no-root",
+      "release": "v1.20.4",
+      "showOnWebsite": true,
+      "result": "controls-tested",
+      "reportedVersions": "v1.18.0 recovery; v1.19.0 fresh install; v1.20.1: cytv 0.20.1, Home 1.18.1, Helper 0.8.4; v1.20.4 retest",
+      "installer": "Windows",
+      "remote": null,
+      "tested": {
+        "install": "v1.18.0 pending removal completed, v1.19.0 fresh setup passed and later reinstalls completed",
+        "Home": "Physical Home worked on v1.19.0, v1.20.1 and v1.20.4",
+        "emergency": "unknown / not explicitly reported",
+        "audio": "unknown / not explicitly reported",
+        "power": "Remote off/on on v1.19.0 showed LG Home briefly before Clean Your TV",
+        "OTA_rollback": "unknown / not explicitly reported"
+      },
+      "limitations": "v1.20.4 identified nine Debloat settings the firmware would not let No-root change. Live Plus was already in the requested state. Cold boot and auto-renewal outcome were not reported.",
+      "sources": [
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/534#issuecomment-6828871492"
+        },
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/579#issuecomment-6856436967"
+        },
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/610#issuecomment-6860724763"
+        }
+      ],
+      "evidenceKind": "public-owner-report"
+    },
+    {
+      "id": "55um7450pla-noroot",
+      "model": "55UM7450PLA",
+      "firmware": "05.40.97",
+      "webos": "SDK 4.10.0",
+      "edition": "no-root",
+      "release": "v1.23.0",
+      "showOnWebsite": true,
+      "result": "partial",
+      "reportedVersions": "release v1.23.0; cytv 0.21.1",
+      "installer": "macOS CLI",
+      "remote": null,
+      "tested": {
+        "install": "No-root over existing root SSH completed with pairing and startup readback after manual cleanup of an earlier failed Root installation and removal of its leftover private Python",
+        "Home": "Physical short Home opened Clean Your TV",
+        "emergency": "Owner observed double Home opening LG Home",
+        "audio": "unknown / not explicitly reported",
+        "power": "unknown / not explicitly reported",
+        "OTA_rollback": "unknown / not explicitly reported"
+      },
+      "limitations": "Uses an already-rooted set; Developer Mode, standby and cold boot were not tested on this setup.",
+      "sources": [
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/692#issuecomment-6956439664"
+        }
+      ],
+      "evidenceKind": "public-owner-report"
+    },
+    {
+      "id": "55up7000pua-noroot",
+      "model": "55UP7000PUA",
+      "firmware": "03.25.45",
+      "webos": "6.2.1",
+      "edition": "no-root",
+      "release": "v1.14.0",
+      "showOnWebsite": true,
+      "result": "partial",
+      "reportedVersions": "Published v1.14.0 Helper 0.8.0; earlier local source Home 1.7.0 and Helper 0.6.21",
+      "installer": "Manual installation of No-root packages via root SSH on a rooted TV",
+      "remote": "Standard LG IR remote only",
+      "tested": {
+        "install": "Packages installed with a nonstandard mixed setup",
+        "Home": "Three IR Home presses from an app each opened Clean Your TV after a brief LG Home flash, before the later worker failure",
+        "emergency": "Triple-Home stopped Helper and returned to LG Home",
+        "audio": "not tested",
+        "power": "Boot autostart worked initially; the later worker failure disabled Home routing across reboot",
+        "OTA_rollback": "not tested"
+      },
+      "limitations": "Root setup failed preflight, so the owner used No-root packages on a rooted TV. On v1.14.0, the worker stopped twice after otherwise successful IR routing, including during a reboot. The resulting stop persisted through subsequent boot until manual start. Magic Remote not tested.",
+      "sources": [
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/207#issuecomment-6749035244"
+        },
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/207#issuecomment-6586510774"
+        }
+      ],
+      "evidenceKind": "public-owner-report"
+    },
+    {
+      "id": "55uq7400psf-noroot",
+      "model": "55UQ7400PSF",
+      "firmware": null,
+      "webos": "22",
+      "edition": "no-root",
+      "release": "v1.16.0",
+      "showOnWebsite": true,
+      "result": "partial",
+      "reportedVersions": "release v1.16.0; cytv 0.17.0; Home 1.15.0; Helper 0.8.0",
+      "installer": "macOS ARM64",
+      "remote": null,
+      "tested": {
+        "install": "unknown / not explicitly reported",
+        "Home": "Short Home from lighter apps stays on Clean Your TV after a brief LG Home flash; from Disney+ LG Home overtakes Clean Your TV",
+        "emergency": "unknown / not explicitly reported",
+        "audio": "unknown / not explicitly reported",
+        "power": "unknown / not explicitly reported",
+        "OTA_rollback": "unknown / not explicitly reported"
+      },
+      "limitations": "Workarounds reported were a second Home press or leaving Disney+ with Back first. Emergency and power behavior were not tested.",
+      "sources": [
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/500"
+        }
+      ],
+      "evidenceKind": "public-owner-report"
+    },
+    {
+      "id": "uj6050-60-noroot",
+      "model": "60UJ6050-UA",
+      "firmware": "06.10.55",
+      "webos": "SDK 3.9.0",
+      "edition": "no-root",
+      "release": null,
+      "showOnWebsite": true,
+      "result": "reported-working",
+      "reportedVersions": null,
+      "installer": "Linux reported earlier in the same thread; successful-run installer version unreported",
+      "remote": null,
+      "tested": {
+        "install": "The owner switched to No-root after Root setup did not proceed and reported that Clean Your TV worked.",
+        "Home": "General working use reported; specific buttons and behaviors were not described.",
+        "emergency": "not reported",
+        "audio": "not reported",
+        "power": "not reported",
+        "OTA_rollback": "not reported"
+      },
+      "limitations": "Working report applies to No-root. Root Home capability was still being investigated. Standby, cold boot and rollback were not reported.",
+      "sources": [
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/410#issuecomment-6882932369"
+        },
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/410"
+        }
+      ],
+      "evidenceKind": "public-owner-report"
+    },
+    {
+      "id": "65qned80sra-noroot",
+      "model": "65QNED80SRA",
+      "firmware": null,
+      "webos": "25; 10.3.2-33 reported",
+      "edition": "no-root",
+      "release": "v1.4.0",
+      "showOnWebsite": true,
+      "result": "partial",
+      "reportedVersions": "v1.4.0; cytv 0.5.0; Helper 0.6.19; Home version unknown",
+      "installer": "macOS Intel desktop",
+      "remote": null,
+      "tested": {
+        "install": "Published No-root desktop installation completed",
+        "Home": "Launcher opened manually; short Home opened Clean Your TV after workaround",
+        "emergency": "Triple-Home returned to LG Home after workaround",
+        "audio": "not tested",
+        "power": "Boot autostart skipped before workaround; no post-workaround power check reported",
+        "OTA_rollback": "not tested"
+      },
+      "limitations": "Without a local state-file workaround, the launcher opened manually but Helper would not start and Home went to LG Home. The workaround left a screen-watching pairing warning.",
+      "sources": [
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/140"
+        }
+      ],
+      "evidenceKind": "public-owner-report"
+    },
+    {
+      "id": "65qned80tsa-noroot",
+      "model": "65QNED80TSA",
+      "firmware": "33.31.75",
+      "webos": "SDK 10.3.2",
+      "edition": "no-root",
+      "release": null,
+      "showOnWebsite": true,
+      "result": "partial",
+      "reportedVersions": "Home 1.2.2; Helper 0.6.13; source 673417f",
+      "installer": "Source installer",
+      "remote": null,
+      "tested": {
+        "install": "Source packages installed and early input registered",
+        "Home": "Launcher rendered and remained in front after local bootstrap removal",
+        "emergency": "unknown / not explicitly reported",
+        "audio": "not tested",
+        "power": "One standby resume stayed on LG Home; a subsequent power cycle returned to Clean Your TV. AC removal was not confirmed",
+        "OTA_rollback": "not tested"
+      },
+      "limitations": "Unmodified launcher closed 0.3–4 s after opening. The locally modified launcher stayed open for 30 s and 60 s. Intermittent standby routing to LG Home was reported separately. The report also names webOS 24.",
+      "sources": [
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/10"
+        }
+      ],
+      "evidenceKind": "public-owner-report"
+    },
+    {
+      "id": "65um7470psa-noroot",
+      "model": "65UM7470PSA",
+      "firmware": null,
+      "webos": "4.5 (build 4.10.2-29)",
+      "edition": "no-root",
+      "release": "v1.16.0",
+      "showOnWebsite": true,
+      "result": "partial",
+      "reportedVersions": "release v1.16.0; cytv 0.17.0; Home 1.15.0; Helper 0.8.0",
+      "installer": "Windows x64 desktop",
+      "remote": null,
+      "tested": {
+        "install": "No-root setup and pairing completed",
+        "Home": "Physical Home opened Clean Your TV with configured apps",
+        "emergency": "Triple Home returned to LG Home",
+        "audio": "unknown / not explicitly reported",
+        "power": "Every cold boot opened a Software updates error; Back restored working Clean Your TV",
+        "OTA_rollback": "unknown / not explicitly reported"
+      },
+      "limitations": "Standby/wake was not fully tested. No owner retest of the cold-boot fix was found.",
+      "sources": [
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/499"
+        }
+      ],
+      "evidenceKind": "public-owner-report"
+    },
+    {
+      "id": "75nano80tsa-noroot",
+      "model": "75NANO80TSA",
+      "firmware": "33.31.75",
+      "webos": "25; SDK 10.3.2",
+      "edition": "no-root",
+      "release": "v1.4.1",
+      "showOnWebsite": true,
+      "result": "partial",
+      "reportedVersions": "v1.4.1 source; Home 1.5.1; Helper 0.6.19",
+      "installer": "macOS Apple Silicon, manual source tooling",
+      "remote": "Magic Remote",
+      "tested": {
+        "install": "Manual No-root source install completed; early input registration could not be confirmed",
+        "Home": "Short Home, arrows, OK, volume and pointer worked before the standby failure",
+        "emergency": "Triple-Home and manual Helper restart worked",
+        "audio": "not tested",
+        "power": "Two standby/wake failures on the reported build; AC cold boot not tested",
+        "OTA_rollback": "not tested"
+      },
+      "limitations": "Helper stopped after standby and needed manual restart. The published standby fix and arrow behavior immediately after wake were not retested in this report.",
+      "sources": [
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/155"
+        }
+      ],
+      "evidenceKind": "public-owner-report"
+    },
+    {
+      "id": "lm6370psb-noroot",
+      "model": "LM6370PSB",
+      "firmware": "05.40.97",
+      "webos": "4.5",
+      "edition": "no-root",
+      "release": null,
+      "showOnWebsite": true,
+      "result": "partial",
+      "reportedVersions": "Home and Helper versions unknown; webOS CLI 3.2.6",
+      "installer": "macOS, source installer with local Node-version parsing and font fixes",
+      "remote": null,
+      "tested": {
+        "install": "Locally corrected source installer completed and updated Home was reinstalled",
+        "Home": "Launcher displayed sharp, readable text after the font workaround; routing unverified",
+        "emergency": "unknown / not explicitly reported",
+        "audio": "not tested",
+        "power": "not tested",
+        "OTA_rollback": "not tested"
+      },
+      "limitations": "The owner reported that No-root worked with local changes, and launcher text became legible after switching to static fonts. Helper showed unavailable after installation. Physical Home was not reported.",
+      "sources": [
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/68"
+        }
+      ],
+      "evidenceKind": "public-owner-report"
+    },
+    {
+      "id": "c2-42-psa-root",
+      "model": "OLED42C2PSA",
+      "firmware": "33.31.68",
+      "webos": "10.3.1-3006 (SDK 10.3.1)",
+      "edition": "root",
+      "release": "v1.15.0",
+      "showOnWebsite": true,
+      "result": "partial",
+      "reportedVersions": "release v1.15.0; cytv 0.16.0; Root 0.15.0",
+      "installer": "Windows desktop reported earlier; successful-run host not restated",
+      "remote": null,
+      "tested": {
+        "install": "v1.15.0 setup completed. A prior interrupted activation was removed through verified recovery.",
+        "Home": "Manual launcher, navigation and opening apps worked. Manually enabling Change Home restored routing once. The switch disabled twice during normal use, leaving the Home button opening LG Home.",
+        "emergency": "not reported",
+        "audio": "Volume and mute worked.",
+        "power": "Standby and return worked in the observed session.",
+        "OTA_rollback": "Root Updates opened and offered no update; no OTA or rollback was performed."
+      },
+      "limitations": "The cause of intermittent routing loss is unknown. Long-term stability, AC cold boot and emergency controls were not confirmed.",
+      "sources": [
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/355#issuecomment-6766778759"
+        },
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/355#issuecomment-6731623764"
+        }
+      ],
+      "evidenceKind": "public-owner-report"
+    },
+    {
+      "id": "b4-48-root",
+      "model": "OLED48B46LA",
+      "firmware": "33.31.75",
+      "webos": "SDK 10.3.2",
+      "edition": "root",
+      "release": null,
+      "showOnWebsite": true,
+      "result": "partial",
+      "reportedVersions": "Root 0.7.0 and 0.8.4 were investigated; exact runtime for the workaround was not stated",
+      "installer": null,
+      "remote": null,
+      "tested": {
+        "install": "Normal Root activation rolled back because it discarded the always-on display category. The owner manually applied a profile override that retained the category.",
+        "Home": "Home opened Clean Your TV after the manual override.",
+        "emergency": "not reported",
+        "audio": "not reported",
+        "power": "Custom routing survived a reboot; AC cold boot was not specified.",
+        "OTA_rollback": "not reported"
+      },
+      "limitations": "Manual configuration only. The owner did not report retesting a published fix through the supported installer. Exact build, standby and AC cold boot are unconfirmed.",
+      "sources": [
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/282#issuecomment-6657735674"
+        },
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/282#issuecomment-6644367117"
+        }
+      ],
+      "evidenceKind": "public-owner-report"
+    },
+    {
+      "id": "oled48c24la-noroot",
+      "model": "OLED48C24LA",
+      "firmware": "43.21.74",
+      "webos": "SDK 11.2.0",
+      "edition": "no-root",
+      "release": null,
+      "showOnWebsite": true,
+      "result": "partial",
+      "reportedVersions": "Home 1.3.8; Helper 0.6.18; source 1d531c6",
+      "installer": "Linux, source installer",
+      "remote": null,
+      "tested": {
+        "install": "Source install completed",
+        "Home": "Short Home and return after app exit worked",
+        "emergency": "Triple-Home stopped Helper; the normal panel could not resume it",
+        "audio": "not tested",
+        "power": "Standby and resume worked; cold boot not reported",
+        "OTA_rollback": "not tested"
+      },
+      "limitations": "After an emergency stop the panel hid Start because firmware denied its status call. The owner verified a direct Helper start and described a local panel workaround. The published panel fix was not retested in the report. The report also names webOS 7.",
+      "sources": [
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/59"
+        }
+      ],
+      "evidenceKind": "public-owner-report"
+    },
+    {
+      "id": "c5-48-noroot",
+      "model": "OLED48C55LA",
+      "firmware": "43.21.77",
+      "webos": null,
+      "edition": "no-root",
+      "release": null,
+      "showOnWebsite": true,
+      "result": "reported-working",
+      "reportedVersions": "v1.20.7 for verified removal; original install versions unknown",
+      "installer": "Windows desktop used for removal; original setup platform unreported",
+      "remote": null,
+      "tested": {
+        "install": "The installed launcher was observed after boot. Removal initially stalled, then succeeded using v1.20.7.",
+        "Home": "Clean Your TV displayed at boot; short Home into Clean Your TV was not reported. LG Home and the remote worked after removal.",
+        "emergency": "Three Home presses returned to LG Home.",
+        "audio": "not reported",
+        "power": "Clean Your TV appeared at one boot; no standby or AC cold-boot protocol was reported.",
+        "OTA_rollback": "not reported"
+      },
+      "limitations": "Boot type and short Home routing into Clean Your TV were not stated. The owner did not report renewed No-root setup after removal.",
+      "sources": [
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/472#issuecomment-6748054482"
+        },
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/472#issuecomment-6882099405"
+        },
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/472"
+        }
+      ],
+      "evidenceKind": "public-owner-report"
+    },
+    {
+      "id": "oled55c11lb-noroot",
+      "model": "OLED55C11LB",
+      "firmware": "03.53.45",
+      "webos": "6.0",
+      "edition": "no-root",
+      "release": null,
+      "showOnWebsite": true,
+      "result": "partial",
+      "reportedVersions": "Home version unknown; Home Helper 0.6.18 with locally rebuilt websocket dependency",
+      "installer": "Manual local Helper package rebuild",
+      "remote": null,
+      "tested": {
+        "install": "Locally rebuilt Helper package installed and started",
+        "Home": "One physical Home press returned to Clean Your TV with the patched Helper",
+        "emergency": "unknown / not explicitly reported",
+        "audio": "not tested",
+        "power": "not tested",
+        "OTA_rollback": "not tested"
+      },
+      "limitations": "Published Helper 0.6.18 exited on this firmware's Node runtime. The owner verified routing after rebuilding Helper with local compatibility changes.",
+      "sources": [
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/54"
+        }
+      ],
+      "evidenceKind": "public-owner-report"
+    },
+    {
+      "id": "c1-55-c14lb-noroot",
+      "model": "OLED55C14LB",
+      "firmware": "03.53.45",
+      "webos": "6",
+      "edition": "no-root",
+      "release": "v1.21.0",
+      "showOnWebsite": true,
+      "result": "reported-working",
+      "reportedVersions": "release v1.21.0; preceding v1.20.3",
+      "installer": "Windows desktop",
+      "remote": null,
+      "tested": {
+        "install": "unknown / not explicitly reported",
+        "Home": "Owner used the launcher and verified the automatic 24-hour clock with the TV set to Danish",
+        "emergency": "unknown / not explicitly reported",
+        "audio": "unknown / not explicitly reported",
+        "power": "unknown / not explicitly reported",
+        "OTA_rollback": "unknown / not explicitly reported"
+      },
+      "limitations": "Home-button routing and power behavior were not reported.",
+      "sources": [
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/608"
+        },
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/608#issuecomment-6900058107"
+        }
+      ],
+      "evidenceKind": "public-owner-report"
+    },
+    {
+      "id": "c1-55-noroot",
+      "model": "OLED55C16LA",
+      "firmware": "03.53.45",
+      "webos": null,
+      "edition": "no-root",
+      "release": null,
+      "showOnWebsite": true,
+      "result": "reported-working",
+      "reportedVersions": null,
+      "installer": null,
+      "remote": null,
+      "tested": {
+        "install": "Owner directly confirmed their earlier No-root installation via Developer Mode worked.",
+        "Home": "General working use reported; individual controls were not described.",
+        "emergency": "not reported",
+        "audio": "not reported",
+        "power": "not reported",
+        "OTA_rollback": "not reported"
+      },
+      "limitations": "Later Root setup failed independently. Exact No-root release, component versions, host platform, Home routing, power behavior and rollback were not reported by the owner.",
+      "sources": [
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/454#issuecomment-6900707375"
+        },
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/454"
+        }
+      ],
+      "evidenceKind": "public-owner-report"
+    },
+    {
+      "id": "c3-55-c35la-noroot",
+      "model": "OLED55C35LA",
+      "firmware": null,
+      "webos": "26 (build 11.2.0-3711)",
+      "edition": "no-root",
+      "release": null,
+      "showOnWebsite": true,
+      "result": "reported-working",
+      "reportedVersions": "earlier cytv 0.20.5; Home 1.18.5; Helper 0.8.4",
+      "installer": "Desktop (OS unspecified)",
+      "remote": null,
+      "tested": {
+        "install": "Prior No-root use reported working; after a factory reset, owner reported success using Reconnect after factory reset",
+        "Home": "unknown / not explicitly reported",
+        "emergency": "Triple Home entered Emergency Stop; owner initially could not resume control",
+        "audio": "unknown / not explicitly reported",
+        "power": "unknown / not explicitly reported",
+        "OTA_rollback": "unknown / not explicitly reported"
+      },
+      "limitations": "Uninstall was stuck before the owner chose factory reset. Exact fresh component versions and short Home after reconnect were not reported. The reported 11.2.0-3711 is a webOS build identifier.",
+      "sources": [
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/664"
+        },
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/664#issuecomment-6942609088"
+        }
+      ],
+      "evidenceKind": "public-owner-report"
+    },
+    {
+      "id": "c4-55-root",
+      "model": "OLED55C46LA",
+      "firmware": "33.31.68",
+      "webos": "10.3.1",
+      "edition": "root",
+      "release": "v1.13.0",
+      "showOnWebsite": true,
+      "result": "reported-working",
+      "reportedVersions": "initial v1.10.0: Root 0.11.0, Home engine 1.11.0 and Root Updater 0.5.0; follow-up requested on v1.13.0 / Root 0.13.2",
+      "installer": null,
+      "remote": null,
+      "tested": {
+        "install": "Observed running on v1.10.0. The owner later confirmed the icon fix after a v1.13.0 retest request.",
+        "Home": "Root Home displayed pinned app tiles. A pinned app had no icon under a large catalog before the fix; the owner later confirmed the fix worked.",
+        "emergency": "not reported",
+        "audio": "not reported",
+        "power": "not reported",
+        "OTA_rollback": "not reported"
+      },
+      "limitations": "The retest did not independently specify installed component versions or confirm physical Home, power, audio or recovery.",
+      "sources": [
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/416"
+        },
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/416#issuecomment-6776935744"
+        },
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/416#issuecomment-6724049226"
+        }
+      ],
+      "evidenceKind": "public-owner-report"
+    },
+    {
+      "id": "c4-55-c47la-noroot",
+      "model": "OLED55C47LA",
+      "firmware": null,
+      "webos": null,
+      "edition": "no-root",
+      "release": null,
+      "showOnWebsite": true,
+      "result": "reported-working",
+      "reportedVersions": "cytv 0.20.6; installed component versions not reported",
+      "installer": null,
+      "remote": null,
+      "tested": {
+        "install": "The original setup observation could not be verified and a later operation reported a busy TV reservation. Removal completed on cytv 0.20.5. The owner then reported setup and operation worked on cytv 0.20.6.",
+        "Home": "Owner reported everything worked; individual Home checks were not described.",
+        "emergency": "not reported",
+        "audio": "not reported",
+        "power": "not reported",
+        "OTA_rollback": "not reported"
+      },
+      "limitations": "Exact firmware, webOS, installer platform, published release, component versions and remote were not reported. No individual Home, emergency, audio, power or rollback results were described.",
+      "sources": [
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/635#issuecomment-6877112869"
+        }
+      ],
+      "evidenceKind": "public-owner-report"
+    },
+    {
+      "id": "c5-55-c5elb-noroot",
+      "model": "OLED55C5ELB",
+      "firmware": "43.21.77",
+      "webos": "26",
+      "edition": "no-root",
+      "release": "v1.24.0",
+      "showOnWebsite": true,
+      "result": "partial",
+      "reportedVersions": "cytv 0.21.2",
+      "installer": "macOS 26.1",
+      "remote": null,
+      "tested": {
+        "install": "Original install and launcher worked; re-enabled Developer Mode and reinstalled after reported removal",
+        "Home": "Short Home again opened Clean Your TV after the later five-minute remote power-off cycle",
+        "emergency": "unknown / not explicitly reported",
+        "audio": "unknown / not explicitly reported",
+        "power": "One-hour off/on originally returned an app unavailable error and LG Home because Developer Mode was off; shorter cycle after reinstall passed",
+        "OTA_rollback": "unknown / not explicitly reported"
+      },
+      "limitations": "Owner corrected the firmware to 43.21.77. Longer off/on after reinstall and AC cold boot remain unconfirmed.",
+      "sources": [
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/715"
+        },
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/715#issuecomment-6980841960"
+        },
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/715#issuecomment-6981279896"
+        }
+      ],
+      "evidenceKind": "public-owner-report"
+    },
+    {
+      "id": "c9-55-noroot",
+      "model": "OLED55C9PLA",
+      "firmware": "05.30.25",
+      "webos": "4.5 / SDK 4.9.0",
+      "edition": "no-root",
+      "release": "v1.20.7",
+      "showOnWebsite": true,
+      "result": "partial",
+      "reportedVersions": "release v1.20.7; cytv 0.20.7; Home 1.18.6; Helper 0.8.5",
+      "installer": "Arch Linux x86_64 CLI",
+      "remote": "Magic Remote",
+      "tested": {
+        "install": "Verified old removal after its AC restart checkpoint, then separate fresh and successful No-root install over existing root SSH",
+        "Home": "Owner confirmed physical short Home opened Clean Your TV from another app or input",
+        "emergency": "unknown / not explicitly reported",
+        "audio": "unknown / not explicitly reported",
+        "power": "unknown / not explicitly reported",
+        "OTA_rollback": "unknown / not explicitly reported"
+      },
+      "limitations": "Existing root SSH on a rooted TV. The power cycle was for removal. Installed-system cold boot was not tested.",
+      "sources": [
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/626#issuecomment-6881622004"
+        }
+      ],
+      "evidenceKind": "public-owner-report"
+    },
+    {
+      "id": "g5-55-g59ls-noroot",
+      "model": "OLED55G59LS",
+      "firmware": "43.21.96",
+      "webos": null,
+      "edition": "no-root",
+      "release": "v1.20.5",
+      "showOnWebsite": true,
+      "result": "reported-working",
+      "reportedVersions": "v1.13.2 previous working release; v1.20.5 confirmed",
+      "installer": "macOS ARM64",
+      "remote": null,
+      "tested": {
+        "install": "Owner reported a successful update to v1.20.5 after earlier No-root recovery and removal failures",
+        "Home": "Owner reported everything working on v1.20.5 without giving individual checks",
+        "emergency": "unknown / not explicitly reported",
+        "audio": "unknown / not explicitly reported",
+        "power": "unknown / not explicitly reported",
+        "OTA_rollback": "unknown / not explicitly reported"
+      },
+      "limitations": "The earlier AC disconnect was troubleshooting. Home-button, post-install power, rollback and audio behavior were not specifically confirmed.",
+      "sources": [
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/529"
+        },
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/529#issuecomment-6874596992"
+        }
+      ],
+      "evidenceKind": "public-owner-report"
+    },
+    {
+      "id": "c1-65-11lb-root",
+      "model": "OLED65C11LB",
+      "firmware": "03.53.45",
+      "webos": null,
+      "edition": "root",
+      "release": "v1.24.0",
+      "showOnWebsite": true,
+      "result": "partial",
+      "reportedVersions": "cytv 0.20.9 and 0.21.2; Root component versions unreported",
+      "installer": "macOS reported earlier; latest host not restated",
+      "remote": null,
+      "tested": {
+        "install": "Root installation completed with cytv 0.20.9. Removal and a fresh installation completed with 0.21.2.",
+        "Home": "Owner opened the Root settings on the TV. After fresh installation, Home still opened LG Home and the setting for Clean Your TV routing reverted to off.",
+        "emergency": "Triple Home returned to LG Home on cytv 0.20.9; the owner could not re-enable custom routing afterward.",
+        "audio": "not reported",
+        "power": "not reported",
+        "OTA_rollback": "not reported"
+      },
+      "limitations": "Persistent routing and the wider launcher controls remain unconfirmed.",
+      "sources": [
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/389#issuecomment-6971032548"
+        },
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/389#issuecomment-6896855060"
+        },
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/389#issuecomment-6722244289"
+        }
+      ],
+      "evidenceKind": "public-owner-report"
+    },
+    {
+      "id": "c2-65-noroot",
+      "model": "OLED65C2PUA",
+      "firmware": "43.21.94",
+      "webos": null,
+      "edition": "no-root",
+      "release": null,
+      "showOnWebsite": true,
+      "result": "reported-working",
+      "reportedVersions": "cytv 0.20.7; Home 1.18.6; Helper 0.8.5",
+      "installer": "Desktop (OS unspecified)",
+      "remote": "Magic Remote",
+      "tested": {
+        "install": "unknown / not explicitly reported",
+        "Home": "Owner used arrow focus and held the center wheel on a launcher tile; the selected app opened",
+        "emergency": "unknown / not explicitly reported",
+        "audio": "unknown / not explicitly reported",
+        "power": "unknown / not explicitly reported",
+        "OTA_rollback": "unknown / not explicitly reported"
+      },
+      "limitations": "Long OK launches the tile instead of rearranging it. Physical Home routing, emergency and power behavior were not reported.",
+      "sources": [
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/646"
+        },
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/646#issuecomment-6890484857"
+        }
+      ],
+      "evidenceKind": "public-owner-report"
+    },
+    {
+      "id": "c3-65-la-noroot",
+      "model": "OLED65C3LA",
+      "firmware": null,
+      "webos": null,
+      "edition": "no-root",
+      "release": null,
+      "showOnWebsite": true,
+      "result": "reported-working",
+      "reportedVersions": "source at ef80d24; Home 1.7.0; Helper 0.6.21",
+      "installer": "Source build; host platform unknown",
+      "remote": null,
+      "tested": {
+        "install": "Owner tested a theme on the installed launcher using Receive from computer.",
+        "Home": "Wallpaper, text legibility, focused dock tile glow and Inputs menu were observed on the TV.",
+        "emergency": "not reported",
+        "audio": "not reported",
+        "power": "not reported",
+        "OTA_rollback": "not reported"
+      },
+      "limitations": "Short Home routing, audio, standby, cold boot and rollback were not tested or not reported.",
+      "sources": [
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/279"
+        }
+      ],
+      "evidenceKind": "public-owner-report"
+    },
+    {
+      "id": "oled65c57la-noroot",
+      "model": "OLED65C57LA",
+      "firmware": "43.21.77",
+      "webos": "SDK 11.2.0",
+      "edition": "no-root",
+      "release": null,
+      "showOnWebsite": true,
+      "result": "partial",
+      "reportedVersions": "Home 1.4.1; Helper 0.6.19",
+      "installer": "Windows, source install from Ubuntu under WSL",
+      "remote": "2025 Magic Remote without number keys",
+      "tested": {
+        "install": "Source install completed and synced apps",
+        "Home": "Short Home opened Clean Your TV; arrows, OK and volume worked before standby",
+        "emergency": "Triple-Home returned to LG Home and manual Helper relaunch worked before standby",
+        "audio": "not tested",
+        "power": "Standby/wake caused arrow loss; cold boot not reported",
+        "OTA_rollback": "not tested"
+      },
+      "limitations": "After standby, arrows failed even in LG Home while the pointer still worked. Arrows recovered roughly 2–3 minutes after closing Helper. The launcher’s Open LG Home action also failed and the owner later uninstalled the packages. The report also names webOS 25.",
+      "sources": [
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/96"
+        },
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/96#issuecomment-6425544335"
+        }
+      ],
+      "evidenceKind": "public-owner-report"
+    },
+    {
+      "id": "oled65c5pua-noroot",
+      "model": "OLED65C5PUA",
+      "firmware": null,
+      "webos": "26; SDK 11.2.0-3706",
+      "edition": "no-root",
+      "release": null,
+      "showOnWebsite": true,
+      "result": "partial",
+      "reportedVersions": "Home 1.4.1; Helper 0.6.19; Android diagnostic app v1.2.0 (cytv 0.3.1)",
+      "installer": "Termux on Android, source installer with a local Node preflight workaround",
+      "remote": null,
+      "tested": {
+        "install": "Full source installer updated Home and Helper after a host-side preflight workaround",
+        "Home": "Physical Home from an app opens Clean Your TV",
+        "emergency": "unknown / not explicitly reported",
+        "audio": "not tested",
+        "power": "Owner reported a cold boot directly to Clean Your TV; AC removal was unspecified",
+        "OTA_rollback": "not tested"
+      },
+      "limitations": "The source installer needed a local Node preflight workaround. The Helper status panel still reported unavailable and the Android guided diagnostic could not connect.",
+      "sources": [
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/12#issuecomment-6401658552"
+        },
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/12"
+        }
+      ],
+      "evidenceKind": "public-owner-report"
+    },
+    {
+      "id": "g3-65-root",
+      "model": "OLED65G39LA",
+      "firmware": "43.21.71",
+      "webos": "26 / SDK 11.2.0",
+      "edition": "root",
+      "release": "v1.21.0",
+      "showOnWebsite": true,
+      "result": "partial",
+      "reportedVersions": "v1.20.3 earlier Root package; v1.21.0 Root 0.20.0, Root Updater 0.5.6 / runtime 0.4.0; cytv CLI 0.21.2 for readback",
+      "installer": "Linux x86_64 CLI for readback",
+      "remote": null,
+      "tested": {
+        "install": "Prior update completed with launcher confirmation",
+        "Home": "Re-enabling Change Home from the launcher restored routing; standby failure disabled it again",
+        "emergency": "unknown / not explicitly reported",
+        "audio": "unknown / not explicitly reported",
+        "power": "One settings reboot reached Root Home. Overnight inactivity standby/wake instead reached LG Home and disabled routing.",
+        "OTA_rollback": "unknown / not explicitly reported"
+      },
+      "limitations": "No owner confirmation of the released observer fix. Short physical Home and AC cold boot were not separately established.",
+      "sources": [
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/702"
+        },
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/702#issuecomment-6971796945"
+        }
+      ],
+      "evidenceKind": "public-owner-report"
+    },
+    {
+      "id": "c1-77-c12la-noroot",
+      "model": "OLED77C12LA",
+      "firmware": "03.53.45",
+      "webos": "SDK 6.5.3",
+      "edition": "no-root",
+      "release": "v1.24.0",
+      "showOnWebsite": true,
+      "result": "controls-tested",
+      "reportedVersions": "release v1.24.0",
+      "installer": "macOS Apple Silicon desktop",
+      "remote": "Magic Remote",
+      "tested": {
+        "install": "Fresh stock Developer Mode install completed",
+        "Home": "Owner confirmed Home routing works before and after an AC cycle",
+        "emergency": "Triple Home returned to LG Home and persisted until Start Helper",
+        "audio": "unknown / not explicitly reported",
+        "power": "After remote power-on and AC cold boot Clean Your TV appears about 30 seconds after LG Home",
+        "OTA_rollback": "unknown / not explicitly reported"
+      },
+      "limitations": "Home settings could not read routing state and Add app did not refresh after about 40 minutes. Start Helper and a ten-minute AC disconnect did not resolve those UI issues.",
+      "sources": [
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/720"
+        }
+      ],
+      "evidenceKind": "public-owner-report"
+    },
+    {
+      "id": "c3-77-noroot",
+      "model": "OLED77C34LA",
+      "firmware": "43.21.96",
+      "webos": "SDK 11.2.0",
+      "edition": "no-root",
+      "release": "v1.21.0",
+      "showOnWebsite": true,
+      "result": "controls-tested",
+      "reportedVersions": "v1.16.0: cytv 0.17.0, Home 1.15.0, Helper 0.8.0; v1.21.0: cytv 0.20.9, Home 1.19.0, Helper 0.8.7",
+      "installer": "Windows desktop",
+      "remote": "Magic Remote",
+      "tested": {
+        "install": "Fresh installation completed; v1.21.0 updated the existing installation",
+        "Home": "Short Home passed on v1.16.0; v1.21.0 short Home passed after the documented Start Helper action",
+        "emergency": "Triple Home switched to LG Home; Start Helper restored Home routing on v1.21.0",
+        "audio": "unknown / not explicitly reported",
+        "power": "Standby/wake and true AC cold boot passed on v1.16.0",
+        "OTA_rollback": "unknown / not explicitly reported"
+      },
+      "limitations": "Initial report calls the OS webOS 23 and gives SDK 11.2.0. App Exit needed Start Helper on v1.16.0. Helper status readout remained unavailable on tested v1.21.0 even after Home control returned. Power was not confirmed on v1.21.0.",
+      "sources": [
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/495"
+        },
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/495#issuecomment-6788948702"
+        },
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/505#issuecomment-6899878930"
+        }
+      ],
+      "evidenceKind": "public-owner-report"
+    },
+    {
+      "id": "g5-77-g5rla-root",
+      "model": "OLED77G5RLA",
+      "firmware": "43.21.77",
+      "webos": "SDK 11.2.0",
+      "edition": "root",
+      "release": null,
+      "showOnWebsite": true,
+      "result": "reported-working",
+      "reportedVersions": "prior working Root version unspecified; failed reinstall with cytv 0.20.0; verified removal on v1.20.3 / cytv 0.20.3",
+      "installer": "Windows desktop",
+      "remote": null,
+      "tested": {
+        "install": "unknown / not explicitly reported",
+        "Home": "Owner reported the earlier Root installation was working without giving individual checks",
+        "emergency": "unknown / not explicitly reported",
+        "audio": "unknown / not explicitly reported",
+        "power": "unknown / not explicitly reported",
+        "OTA_rollback": "A later reinstall failed during cleanup; the owner confirmed removal verified on v1.20.3"
+      },
+      "limitations": "No new Root installation after removal. Exact version and routing details on the previous working install were not established.",
+      "sources": [
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/588"
+        },
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/588#issuecomment-6858509395"
+        }
+      ],
+      "evidenceKind": "public-owner-report"
+    },
+    {
+      "id": "qned75ura-noroot",
+      "model": "QNED75URA",
+      "firmware": "33.31.75",
+      "webos": "25 / SDK 10.3.2",
+      "edition": "no-root",
+      "release": "v1.20.4",
+      "showOnWebsite": true,
+      "result": "controls-tested",
+      "reportedVersions": "release v1.20.4; Home 1.18.3; Helper 0.8.4",
+      "installer": "macOS ARM64",
+      "remote": null,
+      "tested": {
+        "install": "unknown / not explicitly reported",
+        "Home": "Owner describes pressing Home to open Clean Your TV and opening its Inputs menu",
+        "emergency": "unknown / not explicitly reported",
+        "audio": "unknown / not explicitly reported",
+        "power": "Incorrect input state persisted across standby/wake and AC cold boot",
+        "OTA_rollback": "unknown / not explicitly reported"
+      },
+      "limitations": "Unplugged HDMI inputs were shown as connected despite power cycling, disabling CEC, and clearing connection history. Remote type and emergency result were left as placeholders.",
+      "sources": [
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/627"
+        }
+      ],
+      "evidenceKind": "public-owner-report"
+    },
+    {
+      "id": "uk6400plf-noroot",
+      "model": "UK6400PLF",
+      "firmware": "05.50.7",
+      "webos": "4.x",
+      "edition": "no-root",
+      "release": null,
+      "showOnWebsite": true,
+      "result": "controls-tested",
+      "reportedVersions": "Successful update version unspecified; preceding failed routing on v1.12.1 / cytv 0.13.1, Home 1.13.1, Helper 0.7.5",
+      "installer": null,
+      "remote": "LG IR AKB75095307",
+      "tested": {
+        "install": "Owner reported a successful update after the earlier Helper failure",
+        "Home": "Physical Home showed LG tiles for about one second, then Clean Your TV opened and worked normally",
+        "emergency": "unknown / not explicitly reported",
+        "audio": "unknown / not explicitly reported",
+        "power": "unknown / not explicitly reported",
+        "OTA_rollback": "unknown / not explicitly reported"
+      },
+      "limitations": "Firmware spelling is as reported. Later release and exact component versions were unspecified.",
+      "sources": [
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/599"
+        },
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/599#issuecomment-6882805138"
+        },
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/599#issuecomment-6910680910"
+        }
+      ],
+      "evidenceKind": "public-owner-report"
+    },
+    {
+      "id": "um7450pla-noroot",
+      "model": "UM7450PLA",
+      "firmware": "05.40.97",
+      "webos": "4.5",
+      "edition": "no-root",
+      "release": "v1.14.0",
+      "showOnWebsite": true,
+      "result": "controls-tested",
+      "reportedVersions": "release v1.14.0; cytv 0.15.0; Home 1.13.3; Helper 0.8.0",
+      "installer": "macOS ARM64 (26.7.2)",
+      "remote": "Magic Remote",
+      "tested": {
+        "install": "Developer Mode setup completed and Helper process verified",
+        "Home": "Physical Home opened Clean Your TV and displayed configured apps",
+        "emergency": "unknown / not explicitly reported",
+        "audio": "unknown / not explicitly reported",
+        "power": "unknown / not explicitly reported",
+        "OTA_rollback": "unknown / not explicitly reported"
+      },
+      "limitations": "Standby, cold boot, Developer Mode expiry, rollback and extended daily use were untested.",
+      "sources": [
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/473"
         }
       ],
       "evidenceKind": "public-owner-report"

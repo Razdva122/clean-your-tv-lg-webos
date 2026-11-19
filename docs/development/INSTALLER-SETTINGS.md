@@ -108,6 +108,10 @@ with a bounded read-only request. A known value initializes the mode switch;
 failed reads leave it disabled and explicitly untested. An unchanged switch is
 omitted from the write request. The console/Android **Keep current settings**
 choice also omits service writes. Explicit On/Off requests remain distinct.
+
+Home stores app sorting locally. The desktop switch starts at **Keep current
+settings** and cycles through **On** and **Off**. Continuing from the middle
+position omits the sorting preference from the appearance request.
 There is no automatic retry after an uncertain write. Each optional failure is
 reported separately from core package installation. Redacted diagnostics retain
 only fixed result categories under `tv.installation_settings`; appearance remains

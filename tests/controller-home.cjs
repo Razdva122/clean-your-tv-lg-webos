@@ -93,7 +93,7 @@ const context = {
         watch = { fg, power };
         return {
           foreground(done) {
-            done('test.app');
+            done(worker ? 'test.app' : 'com.webos.app.home');
           },
           close() {}
         };

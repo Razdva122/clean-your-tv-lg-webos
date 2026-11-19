@@ -14,7 +14,7 @@ APP_ID = 'com.cleanyourtv.root.preview'
 SOURCE = Path(__file__).resolve().parents[1] / 'launcher'
 # Explicit public-source inventory: never recursively copy a developer workspace.
 FILES = (
-    'appinfo.json', 'home-presentation.js', 'viewport.js', 'release-notes.js', 'system-updates.js', 'index.html', 'app.js', 'app-library.js', 'input-sources.js', 'input-preview.js','i18n.js', 'catalogs.js', 'i18n.css', 'style.css', 'theme-defaults.css', 'theme-policy.js', 'theme-runtime.js', 'home-layout.js', 'layout-panel.js', 'settings-categories.js', 'layout-panel.css',
+    'appinfo.json', 'home-presentation.js', 'viewport.js', 'release-notes.js', 'system-updates.js', 'index.html', 'app.js', 'app-library.js', 'input-sources.js', 'input-preview.js','i18n.js', 'catalogs.js', 'i18n.css', 'style.css', 'theme-defaults.css', 'theme-policy.js', 'theme-runtime.js', 'home-layout.js', 'layout-panel.js', 'settings-categories.js', 'layout-panel.css', 'settings-panel.css',
     'brand-v2-icon.png', 'brand-v2-largeIcon.png', 'splash.png',
     'fonts/outfit-300.ttf', 'fonts/outfit-400.ttf', 'fonts/outfit-500.ttf', 'fonts/outfit-700.ttf', 'fonts/NotoSans.ttf', 'fonts/NotoSans-OFL.txt', 'fonts/NotoSansDevanagari.ttf', 'fonts/NotoSansDevanagari-OFL.txt', 'fonts/NotoSansKR.ttf', 'fonts/NotoSansKR-OFL.txt', 'fonts/NotoSansSC.ttf', 'fonts/NotoSansSC-OFL.txt', 'fonts/NotoSansTC.ttf', 'fonts/NotoSansTC-OFL.txt', 'fonts/OFL.txt',
 )
@@ -62,7 +62,8 @@ def prepare(version='0.0.1', resolution=None):
     tags = ['<script src="' + name + '"></script>' for name in (
         'renewal-panel.js',
         'user-data.js', 'update-panel.js')]
-    tags.append('<link rel="stylesheet" href="renewal-panel.css">')
+    tags.extend('<link rel="stylesheet" href="' + name + '">' for name in (
+        'settings-panel.css', 'renewal-panel.css'))
     for tag in tags:
         # Prettier uses an optional HTML void-element closing slash.
         pattern = re.escape(tag[:-1]) + r'\s*/?>' if tag.startswith('<link ') else re.escape(tag)
@@ -73,7 +74,7 @@ def prepare(version='0.0.1', resolution=None):
     entry = '<script src="profile-bootstrap.js"></script>'
     if html.count(entry) != 1:
         raise ValueError('Unexpected launcher entry')
-    files['index.html'] = html.replace(entry, '<link rel="stylesheet" href="root-settings.css">\n  <script>window.ROOT_VERSION = ' + json.dumps(version) + ';</script>\n  <script src="root-locales.js"></script>\n  <script src="root-audio-locales.js"></script>\n  <script src="root-exit.js"></script>\n  <script src="root-firmware-control.js"></script>\n  <script src="root-firmware.js"></script>\n  <script src="root-audio.js"></script>\n  <script src="root-settings.js"></script>\n  <script src="root-updates.js"></script>\n  <script src="tv-name.js"></script>\n  <script src="root-profile-data.js"></script>\n  <script src="root-profile.js"></script>').encode()
+    files['index.html'] = html.replace(entry, '<link rel="stylesheet" href="settings-panel.css">\n  <link rel="stylesheet" href="root-settings.css">\n  <script>window.ROOT_VERSION = ' + json.dumps(version) + ';</script>\n  <script src="root-locales.js"></script>\n  <script src="root-audio-locales.js"></script>\n  <script src="root-exit.js"></script>\n  <script src="root-firmware-control.js"></script>\n  <script src="root-firmware.js"></script>\n  <script src="root-audio.js"></script>\n  <script src="root-settings.js"></script>\n  <script src="root-updates.js"></script>\n  <script src="tv-name.js"></script>\n  <script src="root-profile-data.js"></script>\n  <script src="root-profile.js"></script>').encode()
     files['appinfo.json'] = (json.dumps(info, indent=2) + '\n').encode()
     for name in UI_FILES:
         path = UI / name

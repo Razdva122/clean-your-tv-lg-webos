@@ -1,15 +1,17 @@
 const { chromium } = require('playwright');
 const assert = require('node:assert/strict');
 const path = require('node:path');
-const fs = require('node:fs');
 
 let browser;
 (async () => {
   browser = await chromium.launch({
     headless: true,
+    channel: process.env.BROWSER_CHANNEL,
     executablePath:
       process.env.CYTV_CHROME ||
-      '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+      (process.platform === 'darwin'
+        ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+        : undefined)
   });
   const page = await browser.newPage({
     locale: 'ru-RU',
@@ -197,6 +199,61 @@ let browser;
   await page.evaluate(() => receiveNative({ kind: 'key-imported' }));
   assert.equal(await page.locator('#host').inputValue(), '192.168.1.88');
   assert.equal(await page.locator('#port').inputValue(), '2222');
+  await page.evaluate(() =>
+    receiveNative({
+      kind: 'started',
+      config: { host: '192.168.1.88', edition: 'root', action: 'install' }
+    })
+  );
+  const nameTitle = 'Название экрана Home';
+  const nameHint = 'Оставьте поле пустым, чтобы сохранить текущее название.';
+  const nameError = 'Название должно содержать не более 48 символов.';
+  const nameInput = page.getByRole('textbox', { name: nameTitle });
+  for (const [id, value, useKeyboard] of [
+    ['keep-name', '', false],
+    ['custom-name', 'Café 홈 <TV>', true]
+  ]) {
+    await page.evaluate((event) => receiveNative(event), {
+      kind: 'text',
+      id,
+      text: nameTitle,
+      hint: nameHint
+    });
+    await nameInput.waitFor({ timeout: 1000 });
+    assert.equal(await nameInput.inputValue(), '');
+    assert.equal(await nameInput.getAttribute('type'), 'text');
+    assert.equal(await nameInput.getAttribute('aria-describedby'), 'name-hint');
+    assert.equal(
+      await page.getByText(nameHint, { exact: true }).isVisible(),
+      true
+    );
+    if (useKeyboard) {
+      await nameInput.fill(value);
+      await nameInput.press('Enter');
+    } else {
+      await page
+        .getByRole('button', { name: 'Продолжить', exact: true })
+        .click();
+    }
+    assert.deepEqual(await page.evaluate(() => window.requests.at(-1)), {
+      id,
+      value
+    });
+  }
+  await page.evaluate((event) => receiveNative(event), {
+    kind: 'text',
+    id: 'invalid-name',
+    text: nameTitle,
+    hint: nameHint,
+    error: nameError
+  });
+  assert.equal(await nameInput.getAttribute('aria-invalid'), 'true');
+  assert.equal(await page.getByRole('alert').textContent(), nameError);
+  await page.getByRole('button', { name: 'Отменить', exact: true }).click();
+  assert.deepEqual(await page.evaluate(() => window.requests.at(-1)), {
+    id: 'invalid-name',
+    value: null
+  });
   for (const width of [320, 375, 412, 768, 1024]) {
     await page.setViewportSize({ width, height: 892 });
     assert.equal(
@@ -209,7 +266,7 @@ let browser;
   }
   assert.deepEqual(errors, []);
   console.log(
-    'Android UI: validation, both editions, explicit trust, secret separation, recovery and responsive widths passed.'
+    'Android UI: validation, both editions, explicit trust, secret separation, Home name, recovery and responsive widths passed.'
   );
   await browser.close();
 })().catch(async (e) => {

@@ -304,7 +304,7 @@ def remove_before_reinstall(installer, ask, write, *, load_payload=False, next_s
 
 
 def removal_plan(write, store, profile, state='blocked', connecting=False, failure=None, *, error=None, phase='recover',
-                 restart_observed=False, evidence=None):
+                 restart_observed=False, evidence=None, restart_instruction=None):
     """Expose only current safe assessment fields, with the selected TV bound."""
     if not profile:return False
     pending=store.pending(profile)
@@ -326,6 +326,8 @@ def removal_plan(write, store, profile, state='blocked', connecting=False, failu
         'removal':summary,'actions':assessment['actions'],'reason':summary['reason'],'removal_evidence':evidence}
     from .recovery_ui import removal_connection_failure, removal_details, removal_title, removal_waiting
     detail = removal_details(value, failure)
+    if restart and restart_observed and restart_instruction:
+        detail['blocker_text'] = restart_instruction
     value.update(connection_failure=removal_connection_failure(value, failure),
                  removal_presentation={**detail, 'title_text':removal_title(value, failure),
                                        'waiting':removal_waiting(value, failure)})

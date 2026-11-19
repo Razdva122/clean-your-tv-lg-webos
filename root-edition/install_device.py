@@ -740,7 +740,6 @@ class LocalDevice:
             private=self.shared_cleanup('inventory',record)
             record['cleanup_staging_ids']=private.get('staging_ids',[])
             if private.get('external_update_hint'):record['previous_update_status']=private['external_update_hint']
-            restart_first=private.get('resident_installer') or private.get('external_update_hint')
             if 'original-writers-fenced' not in record['done']:
                 # A component that held its own lock before our first attempt
                 # may have advanced since the initial snapshot. Preserve both
@@ -873,9 +872,18 @@ class LocalDevice:
                 record['cleanup_boot_id']=current_boot
                 record.pop('cleanup_verified_boot_id',None)
                 restarted=False
-            if stopped.get('controller_running') or startup_failed or restart_first and not restarted:
+            triggers = []
+            if stopped.get('controller_running'):
+                triggers.append('controller-still-running')
+            if startup_failed:
+                triggers.append('startup-disable-unverified')
+            if not restarted and private.get('resident_installer'):
+                triggers.append('resident-installer-evidence')
+            if not restarted and private.get('external_update_hint'):
+                triggers.append('updater-transaction-unresolved')
+            if triggers:
                 save('restart-required')
-                return {'removed':False,'verified_clean':False,'restart_required':True}
+                return {'removed':False, 'verified_clean':False, 'restart_required':True, 'restart_triggers':triggers}
             present = None
             if provision.LEGACY_NODE_BETA:
                 present = self.apps()
@@ -930,8 +938,12 @@ class LocalDevice:
             original_request=record['original'].get('request')
             unresolved_original=isinstance(original_request,dict) and original_request.get('state')!='complete'
             if not restarted and (not processes_stopped or unresolved_original):
+                if not processes_stopped:
+                    triggers.append('process-idle-unverified')
+                if unresolved_original:
+                    triggers.append('prior-operation-unresolved')
                 save('restart-required')
-                return {'removed':False,'verified_clean':False,'restart_required':True}
+                return {'removed':False, 'verified_clean':False, 'restart_required':True, 'restart_triggers':triggers}
             # The independent Node tail repeats the complete current proof;
             # this flag only selects which boot precondition it must enforce.
             record['cleanup_without_restart']=not restarted

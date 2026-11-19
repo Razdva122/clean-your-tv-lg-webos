@@ -278,17 +278,25 @@ class ThemeCard(QRadioButton):
 
 
 class ToggleSwitch(QCheckBox):
-    """Two-state switch retaining native checked state, focus and Space behavior."""
-    def __init__(self, title, on_text, off_text):
+    """Switch retaining native check states, focus and Space behavior."""
+    def __init__(self, title, on_text, off_text, unchanged_text=None):
         super().__init__(title)
         self.on_text, self.off_text = on_text, off_text
         self.setAccessibleName(title)
-        self.setTristate(False)
+        self.unchanged_text = unchanged_text
+        self.setTristate(unchanged_text is not None)
+        if self.isTristate():
+            self.setCheckState(Qt.CheckState.PartiallyChecked)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setFixedHeight(44)
         self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
-        self.toggled.connect(lambda enabled:self.setAccessibleDescription(on_text if enabled else off_text))
-        self.setAccessibleDescription(off_text)
+        self.stateChanged.connect(lambda _: self.setAccessibleDescription(self.state_text()))
+        self.setAccessibleDescription(self.state_text())
+
+    def state_text(self):
+        if self.checkState() == Qt.CheckState.PartiallyChecked:
+            return self.unchanged_text
+        return self.on_text if self.isChecked() else self.off_text
 
     def state_font(self):
         font = QFont(self.font())
@@ -297,7 +305,8 @@ class ToggleSwitch(QCheckBox):
 
     def sizeHint(self):
         metrics = QFontMetrics(self.state_font())
-        return QSize(max(metrics.horizontalAdvance(self.on_text), metrics.horizontalAdvance(self.off_text))+76, 44)
+        labels = (self.on_text, self.off_text, self.unchanged_text or '')
+        return QSize(max(metrics.horizontalAdvance(label) for label in labels) + 76, 44)
 
     def minimumSizeHint(self):
         return self.sizeHint()
@@ -308,19 +317,23 @@ class ToggleSwitch(QCheckBox):
     def paintEvent(self, event):
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
-        enabled, checked = self.isEnabled(), self.isChecked()
+        enabled = self.isEnabled()
+        checked = self.checkState() == Qt.CheckState.Checked
         if not enabled: p.setOpacity(.45)
         p.setFont(self.state_font())
         p.setPen(QColor('#f3ede3' if checked else '#c0b5a5'))
         p.drawText(QRectF(0, 0, self.width()-64, 44), Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter,
-                   self.on_text if checked else self.off_text)
+                   self.state_text())
         track = QRectF(self.width()-54, 8, 50, 28)
         p.setPen(QPen(QColor('#b9d4c5' if checked else '#8e7b68'), 1))
         p.setBrush(QColor('#b9d4c5' if checked else '#302c27'))
         p.drawRoundedRect(track, 14, 14)
         p.setPen(Qt.PenStyle.NoPen)
         p.setBrush(QColor('#1d1c1a' if checked else '#e0d4c4'))
-        p.drawEllipse(QRectF(track.left()+(25 if checked else 4), 12, 20, 20))
+        thumb_offset = 25 if checked else 4
+        if self.checkState() == Qt.CheckState.PartiallyChecked:
+            thumb_offset = 15
+        p.drawEllipse(QRectF(track.left() + thumb_offset, 12, 20, 20))
         if self.hasFocus():
             p.setBrush(Qt.BrushStyle.NoBrush)
             p.setPen(QPen(QColor('#f3ede3'), 1, Qt.PenStyle.DotLine))

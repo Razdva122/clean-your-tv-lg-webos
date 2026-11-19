@@ -7,7 +7,7 @@ module.exports = function (options) {
   var createAdapter =
     options.createAdapter || require('./screensaver-controller');
   var now = options.now;
-  var state = settings.normalize({});
+  var state = settings.normalize({ enabled: true });
   var installed = false;
   var foreground = null;
   var armed = false;

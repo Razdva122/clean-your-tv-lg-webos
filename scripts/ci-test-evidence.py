@@ -22,6 +22,7 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 INPUTS = runpy.run_path(str(ROOT / 'scripts/release-inputs.py'))
+TEST_RUNNERS = dict(line.split() for line in Path(__file__).with_name('ci-test-membership.txt').read_text().splitlines())
 RUNTIME = {'ui', 'tv-runtime', 'setup', 'installer', 'android', 'preview'}
 KINDS = {'runtime': RUNTIME, 'browser': {'browser-core', 'browser-themes'}, 'optional': {'optional-python'},
          'desktop': {'installer-host'}}
@@ -93,16 +94,13 @@ def test_units(path, entry):
             or path in {'homebrew/tests/runtime.cjs', 'homebrew/tests/bridge.cjs', 'homebrew/tests/ui.cjs'}):
         return {'installer'}
     if (re.fullmatch(r'android/tests/test_[^/]+\.py', path)
-            or path == 'android/tests/auto-recovery-journey.cjs'):
+            or TEST_RUNNERS.get(path) == 'browser-core'):
         return {'android', 'browser-core'}
     if (re.fullmatch(r'tests/updates/[^/]+\.cjs', path)
             or (re.fullmatch(r'tests/apps/[^/]+\.cjs', path) and path != 'tests/apps/ui.cjs')
             or (re.fullmatch(r'tests/i18n/[^/]+\.cjs', path) and path != 'tests/i18n/browser.cjs')):
         return {'tv-runtime'}
-    if path in {'tests/showcase/registry.cjs', 'tests/showcase/submission-security.cjs',
-                'tests/showcase/remote.cjs', 'tests/home-presentation-ui.cjs',
-                'tests/root-decoder-ui.cjs', 'tests/preview-presentation-ui.cjs',
-                'tests/preview-bridge.cjs', 'tests/preview-themes-ui.cjs', 'tests/test_preview.py'}:
+    if TEST_RUNNERS.get(path) == 'preview' and not path.startswith('tests/themes/'):
         return {'preview'}
     return None
 

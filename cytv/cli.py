@@ -1243,6 +1243,15 @@ def _run(args, ask, write, connect, secret, search, inspect, payload_root, check
         cancelled(write, store, profile, args.command, phase, tv_info, checks.results, save_report=not read_only)
         return 130
     except UserError as exc:
+        from .recovery import _RemovalRestartRequired, removal_plan
+        if args.command == 'install' and isinstance(exc, _RemovalRestartRequired):
+            checks.finish_running(cancelled=True)
+            removal_plan(write, store, profile, state='waiting', restart_observed=True,
+                         evidence=tv_info.get('removal_evidence'),
+                         restart_instruction='Disconnect the TV from power, reconnect it, and turn it on. Standby is not a full restart.')
+            diagnostics.save_result(write, store, args.command, profile, phase, tv_info,
+                                    checks=checks.results, status=tv_info.get('status'))
+            return 2
         checks.finish_running()
         if profile and exc.reason_code == 'operation-active':
             from .failure_help import for_error

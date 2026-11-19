@@ -1416,6 +1416,7 @@ def luna(uri, payload):
         first=driver.clean_remove(identifier)
         self.assertEqual(first['stage'],'restart-required',first)
         self.assertEqual(first['cleanup_startup_unavailable'],[service])
+        self.assertIn('startup-disable-unverified', first['result']['restart_triggers'])
         self.assertIs(first['result']['removed'],False)
         self.assertIs(first['result']['verified_clean'],False)
         self.assertFalse(any(name.startswith('remove-') for name in calls))

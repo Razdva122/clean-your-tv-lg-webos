@@ -474,7 +474,7 @@ def startup_entry(args):
 import math as _screensaver_math
 from transport import call as _screensaver_luna
 
-_SCREENSAVER_DEFAULTS = dict(enabled=False, scope='cytv', mode='ambient', assetId='', idleTimeoutMs=60000, clockOverlay=True, quality='auto')
+_SCREENSAVER_DEFAULTS = dict(enabled=True, scope='cytv', mode='ambient', assetId='', idleTimeoutMs=60000, clockOverlay=True, quality='auto')
 _SCREENSAVER_HOME = 'com.cleanyourtv.root.preview'
 _SCREENSAVER_POPUP = 'com.cleanyourtv.screensaver'
 

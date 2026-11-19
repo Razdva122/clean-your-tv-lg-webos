@@ -29,7 +29,8 @@ class SimpleRootWire(unittest.TestCase):
                 if not self.restarted:
                     return json.dumps({'operation':'e'*32,'state':'recovery_required','stage':'restart-required',
                         'reason':'restart-required','cleanup_boot_id':'11111111-1111-1111-1111-111111111111',
-                        'result':{'removed':False,'verified_clean':False,'restart_required':True}})
+                        'result':{'removed':False,'verified_clean':False,'restart_required':True,
+                                  'restart_triggers':['prior-operation-unresolved','PRIVATE',{}]}})
                 return json.dumps({'operation':'e'*32,'state':'complete','stage':'verified-clean','current':True,
                     'result':{'removed':True,'verified_clean':True,'private_cleanup_verified':True}})
             return original(command,**kwargs)
@@ -44,6 +45,11 @@ class SimpleRootWire(unittest.TestCase):
         self.assertEqual(pending['product_operation'],'d'*32)
         self.assertEqual(pending['removal_target_operation'],'e'*32)
         self.assertEqual(pending['stage'],'restart-required')
+        from cytv.diagnostics import create_report
+        report = json.loads(create_report(self.store, 'install', self.profile, 'remove-existing-root').read_text())
+        self.assertEqual(report['removal']['restart_triggers'], ['prior-operation-unresolved'])
+        self.assertNotIn('PRIVATE', str(pending))
+        self.assertEqual(first['restart_triggers'], ['prior-operation-unresolved'])
         self.restarted=True
         self.assertTrue(installer.uninstall(full_project=True)['verified_clean'])
         self.assertIsNone(self.store.pending(self.profile))
@@ -120,6 +126,8 @@ class SimpleRootWire(unittest.TestCase):
         self.assertTrue(result['restart_required'])
         self.assertFalse(result['verified_clean'])
         self.assertEqual(self.store.pending(self.profile)['removal_reason'],'restart-required')
+
+        self.assertEqual(self.store.pending(self.profile)['cleanup_restart_triggers'], ['owned-process-still-used'])
 
         reply['restart_required']=False
         with patch('cytv.root_clean_tail.resume',return_value=reply):

@@ -123,6 +123,8 @@ Gdy instalator na komputerze wyświetli **Usunięcie Clean Your TV potwierdzono.
 
 **Ponowna instalacja Root:** Wybierz **Skonfiguruj telewizor → Root** z zapisanym połączeniem i potwierdź **Zainstalować Root ponownie?**. Instalator przywraca LG Home i całkowicie usuwa Clean Your TV, jego aktualizatory, Home Helper i zapisane ustawienia. Po zweryfikowaniu usunięcia instaluje i aktywuje pakiety oraz środowisko Root dołączone do tego instalatora. Inne aplikacje TV i istniejący dostęp root/SSH zostają zachowane. Jeśli kreator na komputerze się zatrzyma, otwórz ten sam instalator i wybierz **Kontynuuj ponowną instalację Root**. Po zweryfikowaniu usunięcia wybierz **Kontynuuj instalację Root**. Samo **Odinstaluj Clean Your TV** nigdy nie uruchamia nowej instalacji.
 
+Jeśli podczas czyszczenia kreator poprosi o pełny restart, odłącz telewizor od zasilania, podłącz go ponownie i włącz. Po uruchomieniu wybierz **Telewizor został ponownie uruchomiony — sprawdź i kontynuuj**.
+
 ### Zmiana ustawień LG i dokończenie odzyskiwania Root
 
 W instalatorze na komputerze otwórz **Czynność konserwacyjna → Dostosuj ustawienia LG (Debloat)** z zapisanym połączeniem z TV. Wybierz ustawienia do zmiany, kliknij **Zastosuj wybrane ustawienia** i sprawdź wyniki. Jeśli poprzednia operacja pozostaje nierozstrzygnięta, najpierw wybierz **Sprawdź opcje odzyskiwania** z jej pierwotnym zapisanym połączeniem.
@@ -155,6 +157,8 @@ Szczegółowe instrukcje po angielsku: [wymagania](../COMPATIBILITY.md) · [ster
 <a id="proste-usuwanie-v1110"></a>
 
 ## Ustawienia
+
+Jeśli nie zapisano ustawienia, wygaszacz ekranu jest domyślnie włączony. Możesz go wyłączyć w **Ustawieniach Home → Wygaszacz ekranu**.
 
 W **Ustawienia → Wygląd** włącz opcję **Najczęściej używane na początku**. Kolejność w doku jest zachowana. Przytrzymaj OK, aby przesunąć lub ukryć kafelek w kolejności ręcznej. Wyłącz opcję, aby wrócić do kolejności ręcznej. Opcja jest również na końcu ustawień w instalatorze cytv.
 

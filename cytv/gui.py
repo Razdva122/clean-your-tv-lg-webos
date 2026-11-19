@@ -586,8 +586,22 @@ class Wizard(QMainWindow):
             self.button('Back', lambda: self.show_preparation(index - 1, prompt))
         self.button('Continue', lambda: self.show_preparation(index + 1, prompt), True).setFocus()
 
-    def offer_root_reinstall(self, profile):
-        return self.button('Continue Root reinstallation',
+    def show_root_reinstall_restart(self):
+        title = 'The TV still needs a full restart' if self.checking_saved_reinstall else 'Restart the TV to finish removal'
+        self.title.setText(tr(title))
+        self.badge.setText(tr(title))
+        self.subtitle.setText(tr(self.recovery_plan['next_step']))
+        self.rail_note.setText(tr(title))
+        self.content.hide()
+        self.check_panel.hide()
+        self.offer_root_reinstall(dict(self.selected_profile), after_restart=True).setFocus()
+        if self.report:
+            self.button('Save diagnostic report…', self.save_report)
+        self.button('Back to start', self.home)
+
+    def offer_root_reinstall(self, profile, *, after_restart=False):
+        label = 'I restarted the TV — check and continue' if after_restart else 'Continue Root reinstallation'
+        return self.button(label,
                            lambda: self.start('install', profile, resume_root_reinstall=True), True)
 
     def start(self, command, profile=None, *, new_recovery_attempt=False, reconnect_after_reset=False,
@@ -614,6 +628,7 @@ class Wizard(QMainWindow):
         self.recovery_profile = None
         self.selected_profile = None
         self.reinstalling_root = resume_root_reinstall
+        self.checking_saved_reinstall = resume_root_reinstall
         self.reconnecting_after_reset = reconnect_after_reset
         self.removal_operation = removal_operation
         self.doctor_result = None
@@ -778,13 +793,22 @@ class Wizard(QMainWindow):
             if value == 0 and self.command == 'uninstall' and self.recovery_plan is None:
                 self.recovery_plan = {'state':'review', 'summary':'Removal is not verified.',
                                       'next_step':'Read the result below before continuing.'}
-            self.set_error_state(value not in (0, 130))
             self.language.setEnabled(True)
             self.pending = None
             self.progress.hide()
             self.cancel.setText(tr('Close'))
             self.cancel.setEnabled(True)
             self.clear_form()
+            plan = self.recovery_plan or {}
+            resume_root_reinstall = (self.reinstalling_root and self.selected_profile is not None
+                                     and plan.get('disposition') != 'operation-active'
+                                     and self.saved_root_reinstall(Store(), self.selected_profile))
+            if (resume_root_reinstall and value == 2 and plan.get('disposition') == 'clean-removal'
+                    and plan.get('state') == 'waiting' and not self.failure_help
+                    and plan.get('removal_action', {}).get('condition') == 'restart'):
+                self.show_root_reinstall_restart()
+                return
+            self.set_error_state(value not in (0, 130))
             if self.command == 'ssh-command':
                 if self.ssh_command_result is not None:
                     self.show_ssh_command_result(self.ssh_command_result)
@@ -844,8 +868,6 @@ class Wizard(QMainWindow):
             restore_for_removal = (self.recovery_plan.get('restore_for_removal')
                                    if retry_removal and value not in (0, 130)
                                    and self.command in ('uninstall', 'recover') else None)
-            resume_root_reinstall = (not active_operation and self.reinstalling_root and self.selected_profile is not None
-                                     and self.saved_root_reinstall(Store(), self.selected_profile))
             doctor_ready = (value == 0 and self.command == 'doctor' and self.doctor_result is not None
                             and self.selected_profile is not None and not self.recovery_plan and not recover)
             home_failed = self.check_results.get('home-button', {}).get('status') == 'fail'
@@ -1002,8 +1024,6 @@ class Wizard(QMainWindow):
                         message = 'Restore LG Home before continuing removal.'
                     elif missing_root_connection:
                         message = 'Without existing Root access, cleanup remains incomplete. Keep the recovery data.'
-                    if resume_root_reinstall and show_restart:
-                        message = 'Disconnect the TV from power, reconnect it, and turn it on. Then choose Continue Root reinstallation. Standby is not a full restart.'
                     if self.failure_help and self.failure_help.get('code') in ('ssh-auth-root','ssh-auth-no-root','ssh-key-file','ssh-identity','developer-key-server','developer-key-unlock','developer-key-response'):
                         message = self.failure_help['next_step']
                     self.subtitle.setText(tr(message)+('' if show_restart or connection else '\n'+tr(detail.get('stage_text', ''))))
@@ -1347,14 +1367,14 @@ class Wizard(QMainWindow):
         cards[0].setChecked(True)
         fields.addWidget(cards_row)
         fields.addSpacing(12)
-        def switch_row(key, title, help_text):
+        def switch_row(key, title, help_text, unchanged_text=None):
             row = QWidget()
             layout = QHBoxLayout(row)
             layout.setContentsMargins(0, 0, 0, 0)
             layout.setSpacing(16)
             label = WrappedLabel(tr(title))
             label.setObjectName('settingTitle')
-            toggle = ToggleSwitch(tr(title), tr('On'), tr('Off'))
+            toggle = ToggleSwitch(tr(title), tr('On'), tr('Off'), unchanged_text)
             toggle.setObjectName(key)
             label.setBuddy(toggle)
             layout.addWidget(label, 1)
@@ -1398,25 +1418,13 @@ class Wizard(QMainWindow):
                 toggle.updateGeometry()
                 hint.setText(tr('Current setting unavailable. Check it in Home settings.'))
             switches[key] = toggle
-        usage_label = WrappedLabel(tr(settings.USAGE_SORT))
-        usage_label.setObjectName('settingTitle')
-        usage_sort = Select()
-        usage_sort.setObjectName('usage_sort')
-        usage_sort.setAccessibleName(tr(settings.USAGE_SORT))
-        for label, value in (('Keep current settings', None), ('On', True), ('Off', False)):
-            usage_sort.addItem(tr(label), value)
-        usage_label.setBuddy(usage_sort)
-        fields.addWidget(usage_label)
-        fields.addWidget(usage_sort)
-        usage_help = WrappedLabel(tr(settings.USAGE_SORT_HELP))
-        usage_help.setObjectName('settingHint')
-        fields.addWidget(usage_help)
+        usage_sort, _ = switch_row('usage_sort', settings.USAGE_SORT, settings.USAGE_SORT_HELP,
+                                   tr('Keep current settings'))
 
         def save():
             value = {'theme': group.checkedButton().key, 'weather': weather.isChecked()}
-            usage_choice = usage_sort.currentData()
-            if usage_choice is not None:
-                value['usage_sort'] = usage_choice
+            if usage_sort.checkState() != Qt.CheckState.PartiallyChecked:
+                value['usage_sort'] = usage_sort.isChecked()
             for key, toggle in switches.items():
                 if toggle.isEnabled() and toggle.isChecked() != current[key]:
                     value[key] = toggle.isChecked()

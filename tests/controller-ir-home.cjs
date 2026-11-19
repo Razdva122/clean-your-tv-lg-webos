@@ -69,7 +69,7 @@ const context = {
     if (n === './screen-watch')
       return () => ({
         foreground(done) {
-          done('test.app');
+          done('com.webos.app.home');
         },
         close() {}
       });

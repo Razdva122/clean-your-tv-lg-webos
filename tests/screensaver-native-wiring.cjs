@@ -135,7 +135,7 @@ async function request(method, settings, channel = {}) {
     'authenticated screensaver status must reach native owner'
   );
   assert.equal(status.available, true);
-  assert.equal(status.state.enabled, false);
+  assert.equal(status.state.enabled, true);
   const settings = {
     enabled: true,
     scope: 'cytv',
