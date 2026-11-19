@@ -470,7 +470,7 @@ static int pending(void) {
          (!i || fresh(i)) && (!c || fresh(c)) &&
          ((pulse_read("broker",&b,&u,&unused) && fresh(b)) || absent(VOLATILE "/broker"));
 }
-static int reply(int success, int valid, const char *reason) {
+static int reply_with_input_timeout(int success, int valid, const char *reason, const char *phase) {
   char why[64];
   int jr=valid ? active_read() : -1;
   int stopped=valid ? latch_read(why) : -1;
@@ -481,10 +481,14 @@ static int reply(int success, int valid, const char *reason) {
   if (stopped>0 && !strcmp(reason,"none")) reason=why;
   printf("{\"returnValue\":%s,\"backend\":\"c1-native-gate\",\"routing\":\"compositor-keyfilter-v1\","
          "\"state\":\"%s\",\"mounted\":false,\"healthy\":%s,\"stock_verified\":%s,"
-         "\"stopped\":%s,\"token\":\"%s\",\"guardian_pid\":%ld,\"reason\":\"%s\",\"profiles\":null}\n",
+         "\"stopped\":%s,\"token\":\"%s\",\"guardian_pid\":%ld,\"reason\":\"%s\",\"profiles\":null%s%s%s}\n",
          success&&valid ? "true":"false",state,healthy ? "true":"false",stock ? "true":"false",
-         stopped!=0 ? "true":"false",cfg.token,jr>0 ? active.pid:0,reason);
+         stopped!=0 ? "true":"false",cfg.token,jr>0 ? active.pid:0,reason,
+         phase ? ",\"input_timeout_phase\":\"":"", phase ? phase:"", phase ? "\"":"");
   return success&&valid ? 0:1;
+}
+static int reply(int success, int valid, const char *reason) {
+  return reply_with_input_timeout(success, valid, reason, NULL);
 }
 static int channel_fd(int fd, int output) {
   struct stat s; int flags=fcntl(fd,F_GETFL);
@@ -691,6 +695,7 @@ static int guard(const char *token,int input,int control,int ready,int seconds,i
   long long born=active.born;
   int armed=0;
   const char *reason=NULL;
+  const char *input_timeout_phase=NULL;
   while (!reason) {
     struct pollfd fds[2]={{input,POLLIN|POLLHUP,0},{control,POLLIN|POLLHUP,0}};
     int z=poll(fds,2,20);
@@ -708,7 +713,10 @@ static int guard(const char *token,int input,int control,int ready,int seconds,i
     else if (latch_read(why)!=0) reason="external_stop";
     else if (!stock_identity()) reason="home_changed";
     else if (seconds && now-born>=seconds*1000LL) reason="trial_expired";
-    else if (now-(channels[0].ready ? channels[0].last:born)>=2000) reason="input_expired";
+    else if (now-(channels[0].ready ? channels[0].last:born)>=2000) {
+      reason="input_expired";
+      input_timeout_phase=channels[0].ready ? "waiting-for-ping":"waiting-for-ready";
+    }
     else if (now-(channels[1].ready ? channels[1].last:born)>=2000) reason="controller_expired";
     else if ((broker && !fresh(b)) ||
              (!broker && (armed || !absent(VOLATILE "/broker") || now-born>=2000))) reason="broker_expired";
@@ -775,7 +783,7 @@ static int guard(const char *token,int input,int control,int ready,int seconds,i
     lock=lock_state();
     if (lock<0) return reply(0,0,"recovery_busy");
   }
-  int rc=reply(ok,1,reason); close(lock); return rc;
+  int rc=reply_with_input_timeout(ok,1,reason,input_timeout_phase); close(lock); return rc;
 }
 static int restore(int lock, int routing_only) {
   int latched=stop("explicit_off"); /* Guardian observes this under its state lock. */

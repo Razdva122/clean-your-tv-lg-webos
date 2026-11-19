@@ -141,7 +141,7 @@ def root_diagnostics_summary(value):
     if type(log.get('supervisor_error')) is bool:result['health_log']['supervisor_error']=log['supervisor_error']
     compositor=mapping(value.get('compositor'))
     if compositor:
-        from .root_activation_diagnostics import COMPOSITOR_STOPS
+        from .root_activation_diagnostics import COMPOSITOR_STOPS, INPUT_TIMEOUT_PHASES
         observed={'status':choice(compositor.get('status'),
             ('read','missing','unsafe','unavailable','stale','inconsistent'))}
         if observed['status']=='read':
@@ -151,6 +151,9 @@ def root_diagnostics_summary(value):
                 observed['scope']=choice(compositor.get('scope'), ('retained','since-enable'))
                 if compositor.get('guardian_release')=='ui_release_failed':
                     observed['guardian_release']='ui_release_failed'
+                phase=compositor.get('input_timeout_phase')
+                if stop=='input_expired' and phase in INPUT_TIMEOUT_PHASES:
+                    observed['input_timeout_phase']=phase
             else:
                 observed['status']='unknown'
         result['compositor']=observed
