@@ -270,6 +270,43 @@ class BridgeTests(unittest.TestCase):
         callbacks.ask('Remove remaining Clean Your TV packages? [y/N]: ')
         self.assertTrue(native.events[-1]['defaultNo'])
 
+    def test_root_customization_collects_an_optional_home_name(self):
+        from cytv import i18n, install_settings
+
+        bridge = self.module()
+        self.addCleanup(i18n.set_language, 'en')
+        i18n.set_language('ru')
+        scenarios = [([''], None), (['  Cafe\u0301 홈  '], 'Café 홈'),
+                     (['x' * 49, 'Home'], 'Home'), (['exit'], 'exit')]
+        for names, expected in scenarios:
+            with self.subTest(names=names):
+                questions = []
+                answers = iter(['y', '1', *names, 'n', '0', '0'])
+
+                class Native:
+                    def emit(self, raw):
+                        pass
+
+                    def request(self, raw):
+                        questions.append(json.loads(raw))
+                        return next(answers)
+
+                callbacks = bridge.Callbacks(Native())
+                console = bridge.AndroidConsole(callbacks)
+                settings = install_settings.collect({'edition': 'root'}, console.reader(callbacks.ask), console)
+                self.assertEqual(settings, {'theme': 'classic', 'weather': False, **(
+                    {'tv_name': expected} if expected is not None else {})})
+                self.assertEqual([event['kind'] for event in questions],
+                                 ['question', 'question', *(['text'] * len(names)),
+                                  'question', 'question', 'question'])
+                event = questions[2]
+                self.assertEqual(event['text'], 'Название экрана Home')
+                self.assertEqual(event['hint'], 'Оставьте поле пустым, чтобы сохранить текущее название.')
+                self.assertNotIn('options', event)
+                if len(names) > 1:
+                    self.assertEqual(questions[3]['error'], i18n.translate(
+                        'Home screen name must contain at most 48 characters, without control characters.'))
+
     def test_home_observation_choices_are_semantic_and_default_to_skip(self):
         module = self.module()
         class Native:
