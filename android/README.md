@@ -47,6 +47,11 @@ The [visible TV checklist](../docs/CLI.md#visible-tv-checks-unreleased) shows in
    a compatible TV loader/libc is still required. Working system Python skips this download.
    See [runtime limits](../docs/OPTIONAL-PYTHON.md). CYTV does not root or flash the TV.
 
+After a Root installation, choose **Set up your Clean Your TV** to enter a
+**Home screen name**. Tap **Continue** with the field empty to keep the current
+name. Enter up to 48 characters for a custom name, or enter `Home` to reset it.
+See [Home screen naming](../docs/CLI.md#name-the-home-screen-root-edition).
+
 Older 32-bit phones and x86 devices are not included in this APK. The UI includes install, status and restore; explicit removal is available in Maintenance; automatic discovery is not exposed. The full TV app inventory is imported automatically. Compatible whole-edition TV updates require separate computer-assisted System
 Updater bootstrap with root/Homebrew services. Unrooted TVs use the installer.
 The APK does not expose that bootstrap action; see [updates](../root-edition/UPDATES.md).

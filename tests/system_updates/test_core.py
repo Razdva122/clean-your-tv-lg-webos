@@ -93,6 +93,18 @@ class Tests(CoreBase):
         with self.assertRaisesRegex(ValueError,'invalid icon color'):
             validate_profile(captured,'no-root')
 
+    def test_both_editions_admit_chinese_language_preferences(self):
+        from system_updater.cli import engine_request
+
+        for edition in ('root', 'no-root'):
+            for language in ('zh-Hans', 'zh-Hant', 'auto'):
+                with self.subTest(edition=edition, language=language):
+                    captured = profile()
+                    captured['settings']['tvhome.language'] = language
+                    checked = engine_request(
+                        'engine-profile', {'edition': edition, 'profile': captured}, self.store, self.io)
+                    self.assertEqual(checked, captured)
+
     def test_no_root_capture_still_rejects_other_invalid_colors(self):
         captured=profile()
         captured['inventory']['apps']=[

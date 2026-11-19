@@ -14,12 +14,14 @@ compatibility evidence.
 | `launcher/style.css` | Trusted document structure, positioning, scrolling, hit areas, focus geometry and stacking; packaged Outfit font faces |
 | `launcher/theme-defaults.css` | Classic Home appearance, organized by background, header, dock, cards, library and Inputs |
 | `launcher/i18n.css` | Packaged language fallbacks, localized header adjustments and standard language/confirmation dialogs |
-| `launcher/renewal-panel.css` | Standard No-root settings, renewal and update dialogs |
-| `root-edition/ui/root-settings.css` | Standard Root settings, firmware, audio and update dialogs |
+| `launcher/settings-panel.css` | Settings and update dialog styles shared by both Home editions and recovery companions |
+| `launcher/renewal-panel.css` | No-root settings, renewal and Helper diagnostics styles |
+| `root-edition/ui/root-settings.css` | Root settings, firmware, audio and startup-source styles |
 | `launcher/layout-panel.css` | Standard shared Columns control |
 
 Load structure before Classic appearance, then trusted dialog and localization
-styles. Keep cascade order, media-query order and existing specificity when
+styles. Load the shared settings stylesheet immediately before the edition stylesheet.
+Keep cascade order, media-query order and existing specificity when
 moving declarations. The build transforms supported source syntax for Chromium
 38; the compatibility check examines emitted CSS. Runtime CSS custom properties
 are not a prerequisite.

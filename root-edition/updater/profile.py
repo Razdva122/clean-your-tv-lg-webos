@@ -5,6 +5,24 @@ import re
 from .store import MAX_BYTES, encode
 import json
 
+# From the Home menu. Regenerate with scripts/sync-home-profile-languages.cjs --write.
+LANGUAGES = (
+    'auto',
+    'en',
+    'cs',
+    'de',
+    'es',
+    'pt-BR',
+    'fr',
+    'it',
+    'ko',
+    'hi',
+    'pl',
+    'ru',
+    'zh-Hans',
+    'zh-Hant',
+)
+
 
 def _fields(value, required, optional=()):
     if not isinstance(value, dict) or not set(required) <= value.keys() or set(value) - set(required) - set(optional):
@@ -61,7 +79,7 @@ def validate(value):
     _ids(config['dockApps']); _ids(config['hiddenApps'])
     if 'liveTvApp' in config: _text(config['liveTvApp'], empty=True)
     _fields(value['settings'], (), ('tvhome.order', 'tvhome.language'))
-    if 'tvhome.language' in value['settings'] and value['settings']['tvhome.language'] not in ('auto', 'en', 'cs', 'de', 'es', 'pt-BR', 'fr', 'it', 'ko', 'hi', 'pl', 'ru'):
+    if 'tvhome.language' in value['settings'] and value['settings']['tvhome.language'] not in LANGUAGES:
         raise ValueError('invalid language')
     if 'tvhome.order' in value['settings']:
         _text(value['settings']['tvhome.order'], MAX_BYTES, empty=True)

@@ -10,11 +10,9 @@ class ProfileLanguageTests(unittest.TestCase):
         profile = {'schema': 1, 'inventory': {'apps': [], 'inputs': []},
                    'config': {'columns': 5, 'dockApps': [], 'hiddenApps': []},
                    'settings': {'tvhome.language': 'cs'}}
-        for locale in ('pt-BR', 'cs'):
+        for locale in ('auto', 'pt-BR', 'cs', 'zh-Hans', 'zh-Hant'):
             profile['settings']['tvhome.language'] = locale
             self.assertEqual(validate(profile)['settings']['tvhome.language'], locale)
-        profile['settings']['tvhome.language'] = 'auto'
-        self.assertEqual(validate(profile)['settings']['tvhome.language'], 'auto')
         profile['settings']['tvhome.language'] = '<script>'
         with self.assertRaises(ValueError):
             validate(profile)

@@ -8,28 +8,6 @@ const { words, languages } = vm.runInNewContext(
   fs.readFileSync(path.join(ui, 'translations.js'), 'utf8') +
     ';({words,languages})'
 );
-const resolver = vm.runInNewContext(
-  fs
-    .readFileSync(path.join(ui, 'app.js'), 'utf8')
-    .match(/function resolveLanguage\(tag\)\{[^\n]+/)[0] + ';resolveLanguage',
-  { languages }
-);
-for (const [tag, selected] of [
-  ['cs', 'cs'],
-  ['cs-CZ', 'cs'],
-  ['CS_cz', 'cs'],
-  ['zh', 'zh-Hans'],
-  ['zh-CN', 'zh-Hans'],
-  ['zh-SG', 'zh-Hans'],
-  ['zh-TW', 'zh-Hant'],
-  ['zh-HK', 'zh-Hant'],
-  ['zh-MO', 'zh-Hant'],
-  ['zh-Hant-CN', 'zh-Hant'],
-  ['zh-Hans-TW', 'zh-Hans'],
-  ['ZH_hAnT_sG', 'zh-Hant'],
-  ['zh-Hans-HK', 'zh-Hans']
-])
-  assert.equal(resolver(tag), selected, tag);
 const expected = [
   'cs',
   'de',
@@ -113,9 +91,12 @@ let browser;
 (async () => {
   browser = await chromium.launch({
     headless: true,
+    channel: process.env.BROWSER_CHANNEL,
     executablePath:
       process.env.CYTV_CHROME ||
-      '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+      (process.platform === 'darwin'
+        ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+        : undefined)
   });
   const page = await browser.newPage({
     viewport: { width: 320, height: 740 },
@@ -141,6 +122,26 @@ let browser;
   });
   const url = 'file://' + path.join(ui, 'index.html');
   await page.goto(url);
+  for (const [tag, selected] of [
+    ['cs', 'cs'],
+    ['cs-CZ', 'cs'],
+    ['CS_cz', 'cs'],
+    ['zh', 'zh-Hans'],
+    ['zh-CN', 'zh-Hans'],
+    ['zh-SG', 'zh-Hans'],
+    ['zh-TW', 'zh-Hant'],
+    ['zh-HK', 'zh-Hant'],
+    ['zh-MO', 'zh-Hant'],
+    ['zh-Hant-CN', 'zh-Hant'],
+    ['zh-Hans-TW', 'zh-Hans'],
+    ['ZH_hAnT_sG', 'zh-Hant'],
+    ['zh-Hans-HK', 'zh-Hans']
+  ])
+    assert.equal(
+      await page.evaluate((tag) => resolveLanguage(tag), tag),
+      selected,
+      tag
+    );
   assert.equal(await page.locator('.language').textContent(), 'RU');
   await page.locator('#host').fill('192.168.1.50');
   for (const code of expected) {
