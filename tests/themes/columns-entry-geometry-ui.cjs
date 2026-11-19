@@ -25,6 +25,7 @@ const source = (file) => fs.readFileSync(path.join(root, file), 'utf8');
         try {
           await page.setContent(
             '<style>' +
+              source('launcher/settings-panel.css') +
               source(edition + '.css') +
               '#content{height:50vh;width:900px;overflow:auto}#themes{height:850px}</style>' +
               (edition.indexOf('root-edition') === 0
