@@ -272,6 +272,40 @@ function lgRequest(timestamp) {
 }
 owner.generation = 9;
 assert.equal(adapter.enable(9), true);
+const subscriptionBeforeIdleGap = subscription;
+const cancellationsBeforeIdleGap = cancelled;
+const launchesBeforeIdleGap = launches.length;
+const repliesBeforeIdleGap = acknowledgements.length;
+owner.stale = true;
+adapter.reconcile();
+lgRequest('99');
+assert.equal(
+  cancelled,
+  cancellationsBeforeIdleGap,
+  'brief polling gap keeps the LG subscription'
+);
+assert.equal(
+  acknowledgements.length,
+  repliesBeforeIdleGap + 1,
+  'LG still gets a reply during the gap'
+);
+assert.equal(
+  acknowledgements.at(-1).ack,
+  true,
+  'stale ownership leaves LG in charge'
+);
+assert.equal(
+  launches.length,
+  launchesBeforeIdleGap,
+  'stale ownership cannot launch'
+);
+owner.stale = false;
+assert.equal(adapter.enable(9), true);
+assert.equal(
+  subscription,
+  subscriptionBeforeIdleGap,
+  'recovery uses the same LG subscription'
+);
 lgRequest('100');
 assert.equal(ready().close, false);
 assert.equal(acknowledgements.at(-1).ack, false);

@@ -61,12 +61,9 @@ module.exports = function (options) {
   }
 
   function maintains(active, current) {
-    return (
-      current &&
-      current.generation === active.generation &&
-      (current.stale !== true ||
-        (active.controller && active.controller.ownsPopup()))
-    );
+    // A brief status gap must not cancel the subscription while LG may
+    // already be waiting for its reply. Only fresh status may defer LG.
+    return current && current.generation === active.generation;
   }
 
   function reconcile() {
