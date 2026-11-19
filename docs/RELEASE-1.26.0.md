@@ -13,6 +13,8 @@
 - System Update and Repair capture the Root profile once Home has rendered.
 - Root Home reads the current boot session while its writer lock is busy,
   preventing an unnecessary Home recovery in that case (#747).
+- Root Home opens normally after System Updater setup, and No-root recovers
+  its Home control channel when the TV widens permissions at startup (#755).
 - The screensaver is enabled when you have never set a preference. A saved Off
   choice is preserved. The desktop installation switch for sorting apps starts
   at **Keep current settings** (#733).

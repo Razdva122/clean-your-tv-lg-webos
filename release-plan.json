@@ -60,6 +60,11 @@
       "pr": 752,
       "issues": [],
       "summary": "Give the desktop storage preflight regression enough time to observe both simulated package installs on Intel Mac"
+    },
+    {
+      "pr": 755,
+      "issues": [],
+      "summary": "Restore No-root Home control after a reused boot identity and let normal HOME reopen Root after System setup"
     }
   ],
   "excluded": [],
