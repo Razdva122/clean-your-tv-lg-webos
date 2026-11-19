@@ -157,3 +157,21 @@ This is separate from the opt-in Home event recording that requires a running
 Helper. [Caller outcomes and 720p boundaries](development/HOME-GRAPHICS-RESOLUTION.md),
 [passive IR preparation](development/PASSIVE-REMOTE-DIAGNOSTICS.md). No new physical
 acceptance is claimed, and no extra owner-device operation is authorized here.
+
+
+## Automatic startup foreground check
+
+Before its automatic startup launch, Helper requests the current foreground
+through the paired local screen connection. It opens Home over LG Home or the
+startup cover. An already visible Clean Your TV Home remains in place. An app
+such as YouTube keeps the foreground while Helper starts its input handling.
+
+The query is separate from the foreground subscription, which can retain an old
+Home observation on some firmware. A newer app observation during the request
+also prevents a late startup launch. If the connection has not become ready,
+Helper retries for up to twelve seconds. If the foreground remains unknown,
+the startup launch is skipped and the Home button remains available.
+An explicit manual start keeps its requested Home opening.
+
+A diagnostic capture records `startup-foreground` with the query result in
+`id`. The usual `foreground` field still describes the subscription cache.

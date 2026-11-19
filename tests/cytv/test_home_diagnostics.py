@@ -64,6 +64,7 @@ class HomeDiagnosticsTests(unittest.TestCase):
                     {'event':'home-diagnostic','session':'old','trigger':'home'},
                     {'event':'home-diagnostic','session':session,'trigger':'started','time':1},
                     {'event':'home-diagnostic','session':session,'trigger':'foreground','foreground':'com.webos.app.home','foregroundAgeMs':0,'secret':'PAIRINGKEY'},
+                    {'event':'home-diagnostic','session':session,'trigger':'startup-foreground','id':'youtube.leanback.v4'},
                     {'event':'home-diagnostic','session':session,'trigger':'expired','time':2},
                 ])
         with tempfile.TemporaryDirectory() as tmp:
@@ -73,7 +74,8 @@ class HomeDiagnosticsTests(unittest.TestCase):
             value = json.loads(path.read_text())
             self.assertTrue(value['helper_diagnostics']['complete'])
             self.assertEqual(value['helper_diagnostics']['home_button'], 'not-tested')
-            self.assertEqual(len(value['helper_diagnostics']['records']), 3)
+            self.assertEqual(len(value['helper_diagnostics']['records']), 4)
+            self.assertEqual(value['helper_diagnostics']['records'][2]['id'], 'youtube.leanback.v4')
             self.assertEqual(len(list(path.parent.glob('*.json'))), 1)
             self.assertNotIn('PAIRINGKEY', path.read_text())
             self.assertEqual(remote.commands[-1]['cmd'], 'diagnostics-stop')
