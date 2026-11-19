@@ -16,6 +16,7 @@ from cytv.tv_sources import stage_sources
 from scripts.tv_web_build import compile_web
 from scripts.helper_build import compile_helper
 from scripts.home_assets import THEME_FILES
+from scripts.no_root_assets import renewal_service_assets, updater_app_assets, updater_service_assets
 
 
 def tracked_files(prefix):
@@ -65,10 +66,7 @@ def pack_app(appfiles, servicefiles, architecture='all', helper=False):
     app, version = info['id'], info['version']
     service = json.loads(servicefiles['services.json'])['id']
     if service == 'com.gathin.tvhome.renewal':
-        from scripts.theme_receiver import inject
-        servicefiles = inject(servicefiles)
-        servicefiles.update({name: (ROOT / 'native/app' / name).read_bytes()
-                             for name in ('state-permissions.js', 'contract-events.js')})
+        servicefiles = {**servicefiles, **renewal_service_assets(ROOT)}
     if not helper:
         # Packaged services run on the TV's own Node (0.12 on webOS 3.x), like Helper:
         # uncompiled async functions stop them from loading at all.
@@ -220,13 +218,9 @@ def stage_updater(payload):
     app=tracked_files('updater-app')
     versions=json.loads((ROOT/'release-versions.json').read_text())
     if json.loads(app['appinfo.json'])['version']!=versions['updater']:raise ValueError('No-root Updater version mismatch')
-    for name in ('renewal-panel.css','i18n.js','catalogs.js','i18n.css','system-updates.js','release-notes.js'):
-        app[name]=(ROOT/'launcher'/name).read_bytes()
-    app['root-locales.js']=(ROOT/'root-edition/ui/root-locales.js').read_bytes()
-    for path in (ROOT/'launcher/fonts').glob('NotoSans*'):
-        if path.is_file():app['fonts/'+path.name]=path.read_bytes()
+    app.update(updater_app_assets(ROOT))
     service={n:b for n,b in tracked_files('updater-service').items() if not n.startswith('state/')}
-    service['user-data.js']=(ROOT/'launcher/user-data.js').read_bytes()
+    service.update(updater_service_assets(ROOT))
     (payload/'updater.ipk').write_bytes(pack_app(app,service))
 
 

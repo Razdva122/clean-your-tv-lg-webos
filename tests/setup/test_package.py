@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[2]
 class PackageTests(unittest.TestCase):
     def stage_home_service(self, root):
         # The source build packages the paired Home service from tracked sources.
+        shutil.copytree(ROOT/'theme-receiver', root/'theme-receiver')
         names = subprocess.run(['git', 'ls-files', '--', 'renewal-service'],
                                cwd=ROOT, check=True, capture_output=True, text=True).stdout.splitlines()
         for name in names:

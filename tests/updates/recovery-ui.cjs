@@ -1,6 +1,8 @@
 const assert = require('node:assert/strict'),
   fs = require('node:fs'),
   vm = require('node:vm');
+const appScript = process.argv[2] || 'updater-app/app.js';
+const updater = process.argv[3] || 'com.cleanyourtv.updater.service';
 const elements = {},
   events = {},
   calls = [];
@@ -53,13 +55,14 @@ const i18n = {
     confirmation = { options, accept };
   }
 };
-vm.runInNewContext(fs.readFileSync('updater-app/app.js', 'utf8'), {
+vm.runInNewContext(fs.readFileSync(appScript, 'utf8'), {
   window: { HomeI18n: i18n },
   document,
   PalmServiceBridge: Bridge,
   setTimeout: () => 1,
   clearTimeout: () => {}
 });
+assert(calls.includes('luna://' + updater + '/reconcile'));
 assert.equal(elements.restore.disabled, true);
 status = 'complete';
 assert.equal(typeof events.webOSRelaunch, 'function');

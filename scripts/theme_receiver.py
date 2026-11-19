@@ -8,15 +8,16 @@ ROOT = Path(__file__).resolve().parents[1]
 FILES = ('wallpaper-phone.js', 'core.js', 'wallpaper-cache.js', 'register.js', 'wallpaper-heic.js')
 
 
-def inject(files, standalone=False):
+def inject(files, standalone=False, *, root=None):
+    root = ROOT if root is None else root
     result = dict(files)
     modules = {}
     for name in FILES:
-        source = ROOT / 'theme-receiver' / name
+        source = root / 'theme-receiver' / name
         if source.is_symlink() or not source.is_file():
             raise ValueError('Missing or indirect theme receiver source: ' + name)
         modules[name] = source.read_bytes()
-    decoder = ROOT / 'theme-receiver/vendor/heic/libheif-bundle.txt'
+    decoder = root / 'theme-receiver/vendor/heic/libheif-bundle.txt'
     if decoder.is_symlink() or not decoder.is_file():
         raise ValueError('Missing or indirect HEIC decoder')
     decoder_bytes = decoder.read_bytes()
