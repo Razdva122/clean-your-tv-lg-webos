@@ -169,6 +169,42 @@ class RuntimeTests(unittest.TestCase):
         with patch.object(runtime, 'MAX_UNPACKED', 1), patch.object(runtime.tarfile, 'open', side_effect=AssertionError('unbounded tar parser')):
             with self.assertRaises(UserError): runtime._normalize(bomb)
 
+    def test_linux_download_uses_system_ca_when_openssl_default_file_is_missing(self):
+        raw = archive(GOOD)
+        fedora_ca = '/etc/ssl/cert.pem'
+        legacy_fedora_ca = '/etc/pki/tls/certs/ca-bundle.crt'
+        debian_ca = '/etc/ssl/certs/ca-certificates.crt'
+        paths = types.SimpleNamespace(cafile=None, openssl_cafile_env='SSL_CERT_FILE')
+        for system_ca, default_ca, override, android, expected in (
+                (fedora_ca, None, {}, False, fedora_ca),
+                (legacy_fedora_ca, None, {}, False, legacy_fedora_ca),
+                (debian_ca, None, {}, False, debian_ca),
+                (None, None, {}, False, None),
+                (fedora_ca, '/usr/lib/ssl/cert.pem', {}, False, None),
+                (fedora_ca, None, {'SSL_CERT_FILE': '/custom/cert.pem'}, False, None),
+                (fedora_ca, None, {}, True, None)):
+            paths.cafile = default_ca
+            host = types.SimpleNamespace(platform='linux')
+            if android:
+                host.getandroidapilevel = lambda: 35
+            with self.subTest(system_ca=system_ca, default_ca=default_ca, override=override, android=android), \
+                 patch.dict(os.environ, override, clear=True), \
+                 patch.object(runtime, 'sys', host), \
+                 patch.object(runtime.ssl, 'get_default_verify_paths', return_value=paths), \
+                 patch.object(runtime.Path, 'is_file', lambda path: str(path) == system_ca), \
+                 patch.object(runtime.ssl, 'create_default_context') as create_context, \
+                 patch.object(runtime.urllib.request, 'build_opener') as builder, self.pin_fixture(raw):
+                builder.return_value.open.return_value = Response(raw)
+                with tempfile.TemporaryDirectory() as directory:
+                    cache = Path(directory).resolve()/'cache'
+                    runtime.prime_cache(cache, self.messages.append)
+                context = create_context.return_value
+                self.assertIs(builder.call_args.args[-1]._context, context)
+                if expected:
+                    context.load_verify_locations.assert_called_once_with(cafile=expected)
+                else:
+                    context.load_verify_locations.assert_not_called()
+
     def test_download_failures_never_expose_network_credentials(self):
         with patch.object(runtime.urllib.request, 'build_opener') as builder:
             builder.return_value.open.side_effect = OSError('https://user:secret@example.invalid/?signature=secret')

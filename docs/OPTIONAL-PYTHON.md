@@ -118,6 +118,11 @@ cover the published CLI failure and a local corrected frozen probe. Final rebuil
 CLI/GUI acceptance and the reporter's original environment remain unverified;
 the separate pending Root operation is unchanged.
 
+**Linux trust context:** if frozen OpenSSL's default CA file is missing, the
+downloader looks for a system CA bundle in standard Linux paths, including
+Fedora's. An explicit `SSL_CERT_FILE` takes precedence. Certificate and
+hostname verification remain required.
+
 ## Development validation
 
 Linux CI executes the pinned ARM32 interpreter under QEMU using
