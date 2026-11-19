@@ -124,6 +124,54 @@ assert.equal(
 f.accept();
 f.coordinator.stop();
 
+// C3 tvpowerd sends the low 32 bits of wall-clock microseconds as text.
+for (const [first, second] of [
+  ['4264538688', '150064392'],
+  ['4119666392', '4844096']
+]) {
+  f = fixture();
+  f.start();
+  f.request(first);
+  f.accept();
+  f.setTime(190200);
+  f.setSession({ ...f.session(), lastHeartbeatMs: 190100 });
+  f.request(second);
+  assert.equal(
+    f.calls.length,
+    2,
+    'a new request after rollover must get a reply'
+  );
+  assert.deepEqual(f.calls[1].payload, {
+    clientName: 'com.local.nativehome.screensaver',
+    ack: false,
+    timestamp: second
+  });
+  f.accept();
+  f.request(first);
+  f.request(second);
+  assert.equal(
+    f.calls.length,
+    2,
+    'ignore a delayed pre-wrap request and a duplicate'
+  );
+  f.coordinator.stop();
+}
+
+f = fixture();
+f.start();
+f.request('1250000000');
+f.accept();
+f.setTime(2510000);
+f.setSession({ ...f.session(), lastHeartbeatMs: 2509900 });
+f.request('3750000000');
+assert.equal(
+  f.calls.length,
+  2,
+  'long silence must allow a new ordering window'
+);
+f.accept();
+f.coordinator.stop();
+
 // Regressions here could suppress LG for startup, stale renderer, focus loss or unknown state.
 for (const update of [
   null,
