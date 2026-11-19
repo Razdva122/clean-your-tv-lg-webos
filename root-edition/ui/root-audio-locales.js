@@ -411,3 +411,39 @@ if (window.HomeI18n)
         'Tento zvukový režim zde nelze znovu připojit. Použijte nastavení zvuku LG.'
     }
   });
+
+if (window.HomeI18n)
+  window.HomeI18n.add({
+    'ro': {
+      'Checking HDMI audio…': 'Se verifică sunetul HDMI…',
+      'HDMI sound': 'Sunet HDMI',
+      'Reconnect eARC': 'Reconectează eARC',
+      'Restore HDMI output': 'Restabilește ieșirea HDMI',
+      'Restore saved eARC setting': 'Restaurează setarea eARC salvată',
+      'Recover after power-on': 'Recuperează sunetul după pornire',
+      'For delayed or missing HDMI sound. Reconnecting briefly interrupts audio.':
+        'Pentru sunet HDMI întârziat sau absent. Reconectarea întrerupe sunetul pentru scurt timp.',
+      'Experimental. Reconnects after power-on and standby wake, even when sound already works. Off by default.':
+        'Experimental. Reconectează după pornire și după ieșirea din standby, chiar dacă sunetul funcționează deja. Dezactivat implicit.',
+      'An interrupted attempt may have left eARC off. Restore the saved setting only if you want eARC on.':
+        'O încercare întreruptă poate să fi lăsat eARC dezactivat. Restaurează setarea salvată doar dacă vrei să activezi eARC.',
+      'Audio recovery is unavailable. Check LG sound settings, then retry.':
+        'Recuperarea sunetului nu este disponibilă. Verifică setările de sunet LG și încearcă din nou.',
+      'Reconnecting. You can go back while recovery finishes.':
+        'Se reconectează. Poți reveni în timp ce recuperarea continuă.',
+      'Automatic recovery is saved but its power observer is unavailable. Check status.':
+        'Setarea de recuperare automată a fost salvată, dar monitorizarea pornirii nu este disponibilă. Verifică starea.',
+      'A previous attempt needs explicit setting restoration.':
+        'După o încercare anterioară, setarea trebuie restaurată manual.',
+      'eARC setting restored. Check the sound.':
+        'Setarea eARC a fost restaurată. Verifică sunetul.',
+      'HDMI output restored. Check the sound.':
+        'Ieșirea HDMI a fost restabilită. Verifică sunetul.',
+      'Audio recovery was not confirmed. Check LG sound settings, then retry.':
+        'Recuperarea sunetului HDMI nu a fost confirmată. Verifică sunetul și încearcă din nou.',
+      'HDMI recovery is available.':
+        'Recuperarea sunetului HDMI este disponibilă.',
+      'This audio mode cannot be reconnected here. Use LG sound settings.':
+        'Acest mod audio nu poate fi reconectat de aici. Folosește setările de sunet LG.'
+    }
+  });

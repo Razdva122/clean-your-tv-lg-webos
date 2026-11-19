@@ -97,5 +97,5 @@ for (const locale of Object.keys(catalogs)) {
   assert.equal(elements.status.textContent, tr('No recovery needed.'));
 }
 console.log(
-  'PASS independent updater startup, status, restore confirmation and diagnostic codes in thirteen languages'
+  'PASS independent updater startup, status, restore confirmation and diagnostic codes in fourteen languages'
 );

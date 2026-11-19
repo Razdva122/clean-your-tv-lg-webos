@@ -31,6 +31,7 @@ for (const locale of [
   'ko',
   'hi',
   'pl',
+  'ro',
   'ru',
   'zh-Hans',
   'zh-Hant'
@@ -73,5 +74,5 @@ for (const file of [
 console.log(
   'PASS ' +
     sources.length +
-    ' Root and recovery sources translated in thirteen languages with intact placeholders'
+    ' Root and recovery sources translated in fourteen languages with intact placeholders'
 );

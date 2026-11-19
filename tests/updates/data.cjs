@@ -36,7 +36,7 @@ assert.throws(() =>
 map.set(data.key, 'broken');
 assert.throws(() => data.load(storage));
 console.log('PASS portable inventory and settings');
-for (const locale of ['pt-BR', 'cs']) {
+for (const locale of ['pt-BR', 'cs', 'ro']) {
   const localized = { ...s, settings: { 'tvhome.language': locale } };
   data.apply(storage, localized);
   assert.equal(map.get('tvhome.language'), locale);
