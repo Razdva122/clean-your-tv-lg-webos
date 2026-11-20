@@ -153,7 +153,7 @@ class CIProfiles(unittest.TestCase):
     def test_required_statuses_include_parallel_browser_failures(self):
         workflow = (ROOT / '.github/workflows/tests.yml').read_text()
         summary = re.search(r'^  tests:\n(.*?)(?=^  [^ ]|\Z)', workflow, re.M | re.S).group(1)
-        self.assertRegex(summary, r'needs: \[scope, runtime, browser, phone-heic, optional-python(?:, weather)?\]')
+        self.assertIn('needs: [scope, runtime, browser, phone-heic, optional-python, weather, windows-fixtures]', summary)
         browser = re.search(r'^  browser(?:-core)?:\n(.*?)(?=^  [^ ]|\Z)', workflow, re.M | re.S).group(1)
         self.assertIn('BROWSER_CHANNEL=chromium node tests/tv-dev-ui.cjs', browser)
         self.assertIn('if: always()', summary)
@@ -161,21 +161,22 @@ class CIProfiles(unittest.TestCase):
         script = '\n'.join(line[10:] for line in script.splitlines())
         complete = dict(os.environ, SCOPE='success', RUNTIME='success', BROWSER='success', HEIC='success',
                         PYTHON='success', WEATHER='success', BROWSER_REQUIRED='true', PYTHON_REQUIRED='true',
-                        WEATHER_REQUIRED='true', HEIC_REQUIRED='true')
+                        WEATHER_REQUIRED='true', HEIC_REQUIRED='true',
+                        WINDOWS_FIXTURES='success', WINDOWS_FIXTURES_REQUIRED='true')
         def status(**updates):
             return subprocess.run(['bash', '-e', '-c', script], env={**complete, **updates}, capture_output=True).returncode
         self.assertEqual(status(), 0)
-        for dependency in ('SCOPE', 'RUNTIME', 'BROWSER', 'HEIC', 'PYTHON', 'WEATHER'):
+        for dependency in ('SCOPE', 'RUNTIME', 'BROWSER', 'HEIC', 'PYTHON', 'WEATHER', 'WINDOWS_FIXTURES'):
             for state in ('failure', 'skipped', 'cancelled'):
                 with self.subTest(dependency=dependency, state=state):
                     self.assertNotEqual(status(**{dependency: state}), 0)
-        self.assertIn('needs: [scope, runtime, browser, phone-heic, optional-python, weather]', summary)
         self.assertEqual(status(WEATHER='skipped', WEATHER_REQUIRED='false'), 0)
+        self.assertEqual(status(WINDOWS_FIXTURES='skipped', WINDOWS_FIXTURES_REQUIRED='false'), 0)
         self.assertEqual(status(BROWSER='skipped', HEIC='skipped', PYTHON='skipped',
                                 BROWSER_REQUIRED='false', HEIC_REQUIRED='false', PYTHON_REQUIRED='false'), 0)
         self.assertEqual(status(HEIC_REQUIRED='false', HEIC='skipped'), 0)
         self.assertNotEqual(status(HEIC_REQUIRED='false', HEIC='skipped', BROWSER='skipped'), 0)
-        for dependency in ('BROWSER', 'HEIC', 'PYTHON', 'WEATHER'):
+        for dependency in ('BROWSER', 'HEIC', 'PYTHON', 'WEATHER', 'WINDOWS_FIXTURES'):
             for state in ('failure', 'cancelled', 'unknown', ''):
                 with self.subTest(optional=dependency, state=state):
                     self.assertNotEqual(status(BROWSER_REQUIRED='false', PYTHON_REQUIRED='false', WEATHER_REQUIRED='false', **{dependency: state}), 0)
@@ -203,7 +204,9 @@ class CIProfiles(unittest.TestCase):
         for name in ('cytv/runtime_check.py', 'cytv/requirements.txt', 'cytv/desktop_entry.py',
                      'scripts/desktop_packaging.py'):
             self.assertTrue(any(fnmatch.fnmatchcase(name, pattern) for pattern in paths), name)
-        self.assertFalse(any(fnmatch.fnmatchcase('cytv/transport.py', pattern) for pattern in paths))
+        for name in ('cytv/transport.py', 'tests/cytv/test_python_runtime.py',
+                     'tests/cytv/test_desktop_recovery.py'):
+            self.assertFalse(any(fnmatch.fnmatchcase(name, pattern) for pattern in paths), name)
 
     def test_direct_tv_artifacts_require_affected_safety_before_build_and_upload(self):
         workflow = (ROOT / '.github/workflows/tv-candidate.yml').read_text()

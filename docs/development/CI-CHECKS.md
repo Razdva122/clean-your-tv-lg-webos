@@ -16,6 +16,15 @@ broad suite. The scope summary lists the files that selected the weather job,
 and both required test summaries require it to pass when selected. Full
 candidate builds cover weather through the existing runtime and browser suites.
 
+## Focused Windows installer checks
+
+Ordinary pull requests that change the Python runtime, desktop recovery fixtures,
+desktop entry points, or their scoped CI inputs run both fixture modules on
+`windows-latest`, the release installer's Windows runner. The required test
+summaries include this job when selected. Changes confined to either fixture
+module run the focused Windows checks directly from source. The release
+candidate still runs the complete Windows installer host suite.
+
 ## Parallel test shards
 
 The runtime matrix runs **four shards per selected OS**, with

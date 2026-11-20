@@ -34,6 +34,7 @@ jobs:
       setup: ${{ steps.scope.outputs.setup }}
       preview: ${{ steps.scope.outputs.preview }}
       weather: ${{ steps.scope.outputs.weather }}
+      windows_fixtures: ${{ steps.scope.outputs.windows_fixtures }}
       browser_core: ${{ steps.scope.outputs.browser_core }}
     steps:
       - uses: actions/checkout@v4
@@ -204,6 +205,13 @@ jobs:
         run: |
           BROWSER_CHANNEL=chromium TV_WEB_DIR=build/legacy-ui npm run test:legacy-ui
           npm run test:weather:browser
+
+  windows-fixtures:
+    needs: scope
+    if: needs.scope.outputs.windows_fixtures == 'true'
+    uses: ./.github/workflows/cytv-runtime.yml
+    with:
+      windows_fixtures: true
 
   optional-python:
     needs: scope
@@ -515,7 +523,7 @@ jobs:
           esac
 
   tests:
-    needs: [scope, runtime, browser, phone-heic, optional-python, weather]
+    needs: [scope, runtime, browser, phone-heic, optional-python, weather, windows-fixtures]
     if: always()
     strategy:
       fail-fast: false
@@ -531,10 +539,12 @@ jobs:
           HEIC: ${{ needs.phone-heic.result }}
           PYTHON: ${{ needs.optional-python.result }}
           WEATHER: ${{ needs.weather.result }}
+          WINDOWS_FIXTURES: ${{ needs.windows-fixtures.result }}
           BROWSER_REQUIRED: ${{ needs.scope.outputs.browser_core }}
           HEIC_REQUIRED: ${{ needs.scope.outputs.tv == 'true' || needs.scope.outputs.ui == 'true' }}
           PYTHON_REQUIRED: ${{ needs.scope.outputs.installer }}
           WEATHER_REQUIRED: ${{ needs.scope.outputs.weather }}
+          WINDOWS_FIXTURES_REQUIRED: ${{ needs.scope.outputs.windows_fixtures }}
         run: |
           test "$SCOPE" = success
           test "$RUNTIME" = success
@@ -542,10 +552,12 @@ jobs:
           case "$HEIC" in success|skipped) ;; *) exit 1 ;; esac
           case "$PYTHON" in success|skipped) ;; *) exit 1 ;; esac
           case "$WEATHER" in success|skipped) ;; *) exit 1 ;; esac
+          case "$WINDOWS_FIXTURES" in success|skipped) ;; *) exit 1 ;; esac
           if [ "$BROWSER_REQUIRED" = true ]; then test "$BROWSER" = success; fi
           if [ "$HEIC_REQUIRED" = true ]; then test "$HEIC" = success; fi
           if [ "$PYTHON_REQUIRED" = true ]; then test "$PYTHON" = success; fi
           if [ "$WEATHER_REQUIRED" = true ]; then test "$WEATHER" = success; fi
+          if [ "$WINDOWS_FIXTURES_REQUIRED" = true ]; then test "$WINDOWS_FIXTURES" = success; fi
 
   full-release:
     needs: [tests, browser, phone-heic, optional-python]
