@@ -55,7 +55,7 @@ REASONS += ACTIVATION_CODES
 REASONS += ('installer-runtime-mismatch', 'clean-handoff-refused', 'foreign-home-restore-failed', 'pairing-rejected')
 ACTIONS = ('recover', 'install', 'uninstall', 'restore', 'status', 'doctor', 'home-diagnostics',
            'enable-system-updates', 'enable-firmware-access', 'disable-firmware-access',
-           'recover-system-rollback', 'recover-root-rollback', 'repair-root-recovery', 'replace-system-updater', 'clean-wam-cache', 'debloat')
+           'recover-system-rollback', 'recover-root-rollback', 'repair-root-recovery', 'replace-system-updater', 'migrate-root-beta', 'clean-wam-cache', 'debloat')
 PENDING_ACTIONS = (*ACTIONS, 'activate-root', 'setup-root-updater', 'archive-root-state')
 PHASES = ('launch-helper', 'verify-home-button', 'select-tv', 'inspect-tv', 'select-edition', 'prepare-payload', 'ssh-connect',
           'inspect-installation', 'pair-tv', 'read-inventory', 'install-packages',

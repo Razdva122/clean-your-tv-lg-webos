@@ -151,19 +151,21 @@ handlers.status({}).then(reply => {
             '/var/palm/ls2-dev', str(p.PRIVATE_SERVICE),
         ])
 
-    def test_ordinary_runner_uses_lg_local_activity_on_reported_node8_firmware(self):
+    def test_ordinary_runner_uses_lg_local_activity_with_resume_capability(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
             (root/'home-backend.json').touch()
-            device = {'model': '65NANO913NA', 'firmware': '04.64.00', 'webos': '5.6.2'}
-            with patch.object(p, 'STATE', root), patch('runtime.c1_gate.selection') as selection:
+            device = {'model': 'observed-device', 'firmware': '01.00.00', 'webos': '5.0.0'}
+            with patch.object(p, 'STATE', root), patch('runtime.c1_gate.selection') as selection, \
+                    patch('runtime.c1_keyfilter.reboot_resume_supported', return_value=True) as capability:
                 selection.return_value = {'schema': 3, 'admission': device}
                 command = shlex.split(p.runner_bytes().decode().splitlines()[-1])
                 self.assertEqual(command[2:7], [
                     '--require', str(p.PRIVATE_SERVICE/'startup-diagnostics.js'),
                     '/usr/palm/services/jsservicelauncher/bootstrap-node.js',
                     '--disable-activity-creation', '--'])
-                selection.return_value['admission'] = dict(device, firmware='04.64.01')
+                capability.assert_called_with(selection.return_value)
+                capability.return_value = False
                 self.assertNotIn(b'--disable-activity-creation', p.runner_bytes())
 
     def test_node_records_exit_and_exception_without_swallowing_failure(self):
