@@ -112,6 +112,7 @@ catalog groups the result by the SDK and records the other name in the report.
 - LG C3 — No-root — webOS 26
 - LG C5 77″ — No-root
 - 43UQ75003LF — No-root — firmware 04.60.92 — webOS 7.6.0 — owner reports successful installation on Windows 11; individual checks were not described. [Owner report #654](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/654)
+- OLED55C37LA — Root — firmware 23.20.54 — webOS 24; SDK 9.2.1 — v1.25.0: owner confirmed verified removal after interrupted setup, working LG Home/remote and preserved Homebrew/root. Original installation support remains unresolved. [Recovery result #133](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/133#issuecomment-7035596176)
 - OLED65C1PSA — Root — firmware 03.53.45 — webOS SDK 6.5.3 — v1.24.0 — owner confirmed removal through Review recovery options after an interrupted removal and TV restart, successful Root reinstallation, and physical short Home from another app opening CYTV Home. [Owner confirmation #418](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/418#issuecomment-6987290015)
 - 32LB650V-ZN — No-root — firmware 05.05.90 — webOS 1.4.0 — [partial result (#283)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/283#issuecomment-6724042805)
 - 43NANO766QA — No-root — firmware 04.60.91 — webOS 22 — v1.5.4 — [partial result (#227)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/227#issuecomment-6573089997)

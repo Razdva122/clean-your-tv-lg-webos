@@ -253,6 +253,10 @@ def removal_milestones(plan, failure=None):
     cleanup_text = ('Final cleanup is verified.' if complete else
                     'Final cleanup remains to be verified.' if evidence.get('cleanup') == 'pending' else
                     'Final cleanup is unknown.')
+    # Verified removal can prove that routing was never touched without a Home
+    # API readback. Do not append an unrelated unknown to that completed result.
+    if complete and stock_text == 'Stock controls are unknown.':
+        return package_text, cleanup_text
     return stock_text, package_text, cleanup_text
 
 

@@ -63,6 +63,16 @@ def create_report(store, action, profile, phase, error=None, tv_info=None, *, ch
     if removal and removal.get('recovery_protocol')=='clean-removal-v1':
         from .recovery_state import removal_summary
         report['removal']=removal_summary(removal)
+        # Only this successful observation may promote the saved summary. Retained
+        # receipts alone still require readback and never authorize more effects.
+        current = context.mapping(status)
+        if (pending is None and error is None and action in ('uninstall', 'recover')
+                and removal.get('stage') == 'verified-clean'
+                and removal.get('removal_reason') == 'removal-verified'
+                and all(current.get(key) is True for key in
+                        ('removed', 'verified_clean', 'private_cleanup_verified'))
+                and current.get('restart_required') is not True):
+            report['removal'].update(state='verified-clean', reason='removal-verified')
     from .failure_help import for_error, report_summary, network_failure_causes
     help = for_error(error, phase, profile, pending)
     if help:

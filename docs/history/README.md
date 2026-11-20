@@ -1,5 +1,7 @@
 # Release history and device evidence
 
+- [Issue 133 recovery and offline compatibility start, 2026-11-20](2026-11-20-issue133-recovery-and-offline-start.md): owner-confirmed cleanup, consistent removal results and matching C3 23.20.54 archive discovery; original installation support remains unresolved.
+
 - [Next candidate preparation, 2026-11-20](2026-11-20-next-candidate-preparation.md): staged PR inventory, integration repairs and focused host verification.
 
 - [Issue 692 cleanup exec budget, 2026-11-20](2026-11-20-issue692-cleanup-exec-budget.md): W19P Node 0.12.2 replay, verified-source streaming and package metadata remnants.
