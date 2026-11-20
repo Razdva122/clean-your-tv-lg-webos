@@ -22,6 +22,14 @@ cd android
 
 Output: `android/app/build/outputs/apk/debug/app-debug.apk` relative to the repository root. No release signing material is stored in the repository. The first build downloads dependencies; runtime installation uses the embedded payload. Runtime extraction is cached by the bundled manifest SHA-256, so reinstalling a preview with the same versionCode cannot reuse a different older payload. Staging validates every payload hash and copies only public source modules, excluding Qt/desktop entry points, caches and local profiles. It does not automatically rebuild TV payloads during Gradle execution.
 
+After successful extraction and cleanup, Android retains one payload directory for
+the current APK. A failed extraction preserves the previous ready copy. A later
+operation retries interrupted extraction and cleanup, even when the current copy
+is already ready. No-root continuation uses its private capsule containing the
+original packages and configuration. Root continuation verifies original staging
+or installed state on the TV. These recovery paths keep their private receipts
+and do not pin an APK extraction.
+
 For a release APK, supply the private `CYTV_ANDROID_KEYSTORE` through the protected
 build environment and run `:app:assembleRelease :app:lintRelease`. Output is
 `android/app/build/outputs/apk/release/app-release.apk`. Release packaging fails
@@ -65,6 +73,8 @@ answers are absent from replay. The runner imports `android_bridge` through
 Chaquopy, inspects a loopback SSH banner, then runs a synthetic status operation
 whose fixture closes the connection before authentication. It requires the
 expected SSH negotiation failure and a single terminal event with exit code 1.
+The runner also cancels setup before transport and exercises extraction changes
+across three synthetic manifests while comparing private recovery files byte-for-byte.
 `--upgrade seed` and `--upgrade verify` exercise
 synthetic private-data and unfinished-operation retention across an APK update;
 see [the upgrade procedure](STABLE-READINESS.md). These fixtures do not connect to

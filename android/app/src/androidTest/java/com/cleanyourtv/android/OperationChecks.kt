@@ -10,6 +10,7 @@ import com.chaquo.python.android.AndroidPlatform
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.io.IOException
 import java.net.InetAddress
 import java.net.ServerSocket
 import java.util.UUID
@@ -38,11 +39,15 @@ class OperationChecks : Instrumentation() {
             }
             checkChineseResources()
             checkBridge()
+            checkBridgeCancellation()
+            checkPayloadRetention()
             for (edition in listOf("no-root", "root")) {
                 checkReplay(edition)
             }
             result.putString("stream", "PASS: both editions, single operation, bounded replay, pending prompts and stale answers\n" +
-                "PASS: packaged Python bridge, loopback inspection and synthetic status terminal result\n")
+                "PASS: packaged Python bridge, loopback inspection and synthetic status terminal result\n" +
+
+                "PASS: payload A/B/C retention, interrupted extraction, cleanup retry and private recovery data\n")
             finish(Activity.RESULT_OK, result)
         } catch (error: Throwable) {
             result.putString("stream", "FAIL: ${error.stackTraceToString()}\n")
@@ -50,6 +55,81 @@ class OperationChecks : Instrumentation() {
         } finally {
             Operation.listener = null
             Operation.emit("{\"kind\":\"finished\",\"code\":130}")
+        }
+    }
+
+    private fun checkPayloadRetention() {
+        val fixture = File.createTempFile("payload-fixture-", ".dir", targetContext.filesDir)
+        check(fixture.delete() && fixture.mkdir())
+        try {
+            val key = File(fixture, "identities/test-key")
+            key.parentFile!!.mkdir()
+            key.writeText("TEST FIXTURE ONLY")
+            val state = Python.getInstance().getModule("cytv.state")
+            val store = state.callAttr("Store", File(fixture, "profiles").absolutePath)
+            val privateFiles = mutableListOf(key)
+            for ((edition, port) in listOf("root" to 22, "no-root" to 9922)) {
+                val profile = state.callAttr("target", "192.0.2.123", edition, port, key.absolutePath)
+                store.callAttr("save", profile)
+                store.callAttr("begin", profile, "install")
+                val profileDir = File(store.callAttr("device_dir", profile).toString())
+                privateFiles += File(profileDir, "profile.json")
+                privateFiles += File(profileDir, "operation.json")
+                privateFiles += File(profileDir, "known_hosts").apply { writeText("TEST SSH PIN") }
+                if (edition == "no-root") {
+                    privateFiles += File(profileDir, "capsule-${"a".repeat(32)}.json").apply {
+                        writeText("""{"fixture":"original No-root operation bytes"}""")
+                    }
+                }
+            }
+            // Only digest-named directories in the extraction namespace are cache entries.
+            val unrelated = File(fixture, "payload-other/notes").apply {
+                parentFile!!.mkdir()
+                writeText("TEST NOTES")
+            }
+            privateFiles += unrelated
+            privateFiles += File(fixture, "payload-${"1".repeat(64)}").apply { writeText("TEST FILE") }
+            val before = privateFiles.associateWith { it.readBytes() }
+            fun manifest(id: String) = """{"fixture":"$id"}""".toByteArray()
+            fun extract(id: String) = preparePayload(fixture, manifest(id)) { output ->
+                check(output.mkdir())
+                File(output, "payload.json").writeBytes(manifest(id))
+                File(output, "payload-data").writeText(id)
+            }
+
+            val a = extract("A")
+            var partial: File? = null
+            val failed = runCatching {
+                preparePayload(fixture, manifest("B")) { output ->
+                    partial = output
+                    check(output.mkdir())
+                    File(output, "payload.json").writeBytes(manifest("B"))
+                    File(output, ".ready").createNewFile()
+                    throw IOException("synthetic interrupted copy")
+                }
+            }.exceptionOrNull()
+            check(failed is IOException && failed.message == "synthetic interrupted copy")
+            check(File(a, "payload-data").readText() == "A") { "Failed replacement lost the working payload" }
+
+            val b = extract("B")
+            check(b == partial && File(b, "payload-data").readText() == "B")
+            check(!a.exists()) { "Successful replacement kept superseded payload A" }
+
+            val bMarker = File(b, ".ready")
+            check(bMarker.delete() && bMarker.mkdir())
+            val blocked = File(bMarker, "blocked").apply { writeText("simulate a failed marker deletion") }
+            val c = extract("C")
+            check(b.isDirectory && File(b, "payload-data").readText() == "B")
+            check(blocked.delete())
+            check(preparePayload(fixture, manifest("C")) { error("Ready payload C was recopied") } == c)
+            check(fixture.listFiles()!!.filter { it.isDirectory && it.name.matches(Regex("payload-[0-9a-f]{64}")) } ==
+                listOf(c)) { "Superseded payload cleanup was not retried" }
+            check(File(c, "payload-data").readText() == "C")
+            for ((path, bytes) in before) {
+                check(path.readBytes().contentEquals(bytes)) { "Changed private fixture file ${path.name}" }
+            }
+        } finally {
+            fixture.deleteRecursively()
         }
     }
 
@@ -113,6 +193,31 @@ class OperationChecks : Instrumentation() {
         check(result.getString("kind") == "inspection")
         check(result.getString("host") == "127.0.0.1" && result.getInt("root_port") == port)
         check(result.getBoolean("root_ssh") && !result.getBoolean("developer_ssh"))
+    }
+
+    private fun checkBridgeCancellation() {
+        val bridge = Python.getInstance().getModule("android_bridge")
+        val request = JSONObject().put("host", "127.0.0.1").put("action", "install").put("edition", "root")
+            .put("language", "en").toString()
+        val profiles = File.createTempFile("bridge-fixture-", ".dir", targetContext.filesDir)
+        check(profiles.delete() && profiles.mkdir())
+        check(Operation.begin(request))
+        Operation.listener = { raw ->
+            val event = JSONObject(raw)
+            if (event.getString("kind") == "question") Operation.answer(event.getString("id"), "n")
+        }
+        try {
+            val code = bridge.callAttr("run", request, profiles.absolutePath,
+                File(profiles, "unused-payload").absolutePath, "", InstallerService.Callbacks()).toInt()
+            val resultEvents = events()
+            check(resultEvents.count { it.optString("kind") == "question" } == 1)
+            check(resultEvents.any { it.optString("text").trim() == "Cancelled. No TV changes were made." })
+            check(code == 0 && resultEvents.last().getString("kind") == "finished" &&
+                resultEvents.last().getInt("code") == code && !Operation.active)
+        } finally {
+            Operation.listener = null
+            profiles.deleteRecursively()
+        }
     }
 
     private fun checkChineseResources() {
