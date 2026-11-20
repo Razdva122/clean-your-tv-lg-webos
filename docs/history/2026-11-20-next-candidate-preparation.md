@@ -2,8 +2,7 @@
 
 Preparation started at 11:07:18 UTC+05:00 from v1.26.0 RC6
 (`a9bf96f16c02a7c9fbcecfb65a5f953a0868a09b`, [release PR #729](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/729)).
-This branch stages the following cycle. Its version, release inventory and
-signed artifact selection are pending.
+This work became v1.27.0 RC1 in [release PR #761](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/761).
 
 | PR | Integrated head | Merge | Scope |
 | --- | --- | --- | --- |
@@ -33,7 +32,7 @@ CLI commands, diagnostic actions, and guarded activation and cleanup coverage.
 | 11:11–11:14 | Reproduced and repaired [#754](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/44599003736) failures involving the installed runtime's provisioning module during host test discovery and changed ordinary OTA inventory. Integrated the recovery writer from #746 and confined the migration script to the Beta compositor installer bundle. |
 | 11:11–11:15 | Focused macOS ARM64 checks passed: 131 Root tests (one skip), 10 published-supervisor OTA/rollback tests, 6 migration CLI tests, 26 installer recovery tests, 38 Python runtime tests (two skips), 138 No-root cleanup tests, 10 diagnostic tests, Romanian catalogs and Prettier. The OTA fixture used the existing pinned font cache. |
 | 11:15–11:16 | All 52 native guard tests passed with host process visibility. The published-supervisor package probe also passed against the final packaging layout. |
-| Pending | Combined GitHub CI, signed candidate packages and selected device acceptance. |
+| 11:19 onward | [Combined GitHub CI](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/44687808650), frozen desktop runtime, website/preview and integration policy passed on #759 head `0cd636e0`. |
 
 The first combined run also found a stale fixture assertion for the verified
 Restore fallback. The focused rerun covers the explicit Restore argument.
@@ -47,3 +46,40 @@ Review recovery and localized migration instructions in the release documentatio
 pass. The current v1.26.0 evidence and plan apply to RC6. No TV or private
 reporter data was used for this integration. The original device behavior
 described in open reports needs the corresponding physical acceptance.
+
+## v1.27.0 RC1 freeze
+
+| Time (UTC+05:00) | Work and result |
+| --- | --- |
+| 12:47:54 | Build handoff. Confirmed v1.26.0 publication and successful CI on #759. |
+| 12:48–12:49 | Rehearsed and merged #759 at `528da6e0`; GitHub also marked all twelve original PRs merged. Collected the release inventory and added #160 links where the original PR descriptions used noncanonical wording. |
+| 12:50–12:52 | Matched 15 v1.26.0 assets to SHA256SUMS. Verified four signed System feeds, 12 package bindings and the bootstrapped engine catalog against the pinned keys. BUILD-INFO points to published `fddc12d5` and accepted source `a9bf96f1`. |
+| 12:50–12:52 | Built and verified the local versioned TV payload, including normal and Beta, HD and FHD bundles. Generated four System manifests and the engine archive. Three README metadata tests passed. |
+| Pending | Full candidate dispatch, signed artifacts and selected physical acceptance. |
+
+Helpers remain at 0.9.3. The local candidate matches the published signed
+baseline byte for byte (SHA-256 `89a8d0eec0da5b0795ad239ca620408d3d93d5cb8995480a7f389108598c6f0f`).
+System Updater IPK 1.2.11 also matches byte for byte. The local engine 1.2.15
+(SHA-256 `43f72788d4412a0a2137a5108e17feb4c27cc3865cc6c3b51a1406eb8fa93d79`)
+includes the Romanian profile validator. Local hashes are preflight evidence.
+
+Reviewed README's download and component records, the desktop and translated
+migration instructions, the retained repair flow, optional Python and language
+guides. Existing No-root setup, prerequisites and device compatibility guidance
+remain applicable. The release notes describe changes and link the acceptance
+record. There is no newly verified TV model or firmware here.
+
+### Device cases to bind after the full build
+
+| ID | Changed path and scenario | Evidence required |
+| --- | --- | --- |
+| RC1-01 | Root and No-root Home locale and updater profile | Set Romanian, update through the signed profile path, retain the selection and verify UI, Home and rollback. |
+| RC1-02 | System engine 1.2.15 and installed clients | Verify the existing bootstrap client can update in both editions, then check own-package recovery and rollback through the published baseline. |
+| RC1-03 | Root recovery/activation and changed native guard | On a supported Root fixture or authorized device, verify normal activation, stock fallback, physical emergency Home input, sound and affected cold boot/standby separately. Use the original retained receipt for the repair-specific case. |
+| RC1-04 | Retained legacy Root Beta migration | On an eligible authorized retained configuration, verify migration, source choices, boot resume, explicit Off and rollback without replacing the installed app or losing preferences. |
+| RC1-05 | Root and No-root cleanup | Verify affected removal/recovery transitions, cached Python handling, package metadata cleanup and restored LG Home. |
+| RC1-06 | Android installer with new embedded packages | Verify the signed upgrade from the published app and the affected install/recovery path and controls. |
+
+All cases remain untested on the selected RC1 artifact. Assign artifact hashes
+and available authorized TV preconditions before device operations. Do not
+assume project-device coverage for the reported W19P, B9 or W20H configurations.
