@@ -258,3 +258,31 @@ fixture correction was committed separately, then the superseded CI run was
 cancelled by GitHub as the replacement started. The C3 failure remains
 historical and cannot be attributed to a particular callback from the
 available device evidence.
+
+### Exact RC3 offline verification
+
+[Full candidate run 44745629207, attempt 2](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/44745629207)
+completed at 19:31:28 UTC+05:00 from source `e5977792077ffb9dc3dc323cdad2442a998ab948`. Attempt 1 ran
+from 18:35:22 UTC+05:00 and failed the Windows GUI test for an interrupted
+No-root uninstall. The transition did not finish within its five-second
+test wait. The same test passed on RC2 and passed locally in 3.260 seconds.
+The failed-jobs retry kept the exact source and all successful platform
+packages, including the Android and macOS ARM64 files tested offline below.
+
+- **RC1-04.** Replayed the exact embedded Root Beta bundle
+  `55190b885f08eb053ed7bdc01e8b0ccbb8a86e25250cd35d1466b6fb3d85013f` on the W19H 05.50.00 offline fixture. Factory ARM Node,
+  LS2 and the native guardian verified readiness, unstarted removal handoff,
+  modeled boot/session behavior, migration, retry, rollback and explicit
+  reapply. All 148 installed files and settings matched. The lab needed an
+  absolute QEMU path because the runtime sanitizes its child process PATH.
+  The test package was unchanged. Physical B9 remains deferred.
+- **RC1-06.** Android 0.23.0 / 53 APK
+  `9d0e92f03fdbbfdad7638e2106ba5ac5abc90c90cfb56b07c1dc2930b543ee32` upgraded over published Android 0.22.0 / 52 on
+  the owned ARM64 Android 15 API 35 emulator with the original signer.
+  The app's store verified the retained profile and four seeded files.
+  Native operation checks passed and idle launch caused no recovery replay.
+  The successful Android job was reused by the Windows-only retry.
+- **RC1-01, RC1-02, RC1-03, RC1-05.** The required final device evidence
+  remains blocked by unavailable project hardware. The development release
+  can collect voluntary reports. The stable candidate remains draft with
+  physical acceptance unset.
