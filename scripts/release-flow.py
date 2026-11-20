@@ -333,7 +333,10 @@ def replace_record(body, record):
         raise ValueError('Generated record contains reserved markers')
     block = RECORD_START + '\n' + record.rstrip() + '\n' + RECORD_END
     if RECORD_START not in body and RECORD_END not in body:
-        return body.rstrip() + ('\n\n' if body.strip() else '') + block + '\n'
+        separator = ''
+        if body and not body.endswith('\n\n'):
+            separator = '\n' if body.endswith('\n') else '\n\n'
+        return body + separator + block + '\n'
     if body.count(RECORD_START) != 1 or body.count(RECORD_END) != 1:
         raise ValueError('Ambiguous generated release record markers')
     before, rest = body.split(RECORD_START, 1)
@@ -341,15 +344,15 @@ def replace_record(body, record):
     return before + block + after
 
 
-def candidate_record(root=ROOT):
-    plan = json.loads((root / PLAN).read_text())
+def candidate_record(head, root=ROOT):
+    plan = json.loads(read_at(head, PLAN, root))
     validate_shape(plan)
-    current = json.loads((root / 'release-versions.json').read_text())
+    current = json.loads(read_at(head, 'release-versions.json', root))
     previous = json.loads(git('show', 'origin/main:release-versions.json', root=root))
     pin = INPUTS['build_pin'](plan)
     if pin:
-        INPUTS['verify_inputs'](pin['source'], git('rev-parse', 'HEAD', root=root), root)
-    return render_record(plan, current, previous)
+        INPUTS['verify_inputs'](pin['source'], head, root)
+    return plan.get('version'), render_record(plan, current, previous)
 
 
 def render_record(plan, current, previous):
@@ -374,19 +377,74 @@ def render_record(plan, current, previous):
     return '\n'.join(lines)
 
 
-def sync_record(root=ROOT):
-    head = git('rev-parse', 'HEAD', root=root)
+def open_candidate():
     owner = REPO.split('/')[0]
     prs = api(f'pulls?state=open&base=main&head={owner}:release%2Fnext&per_page=100')
-    if len(prs) != 1:
-        raise ValueError('Expected exactly one open release candidate')
-    pr = api('pulls/' + str(prs[0]['number']))
+    if not isinstance(prs, list):
+        raise ValueError('Invalid open release candidate response from GitHub')
+    if len(prs) > 1:
+        raise ValueError('Found multiple open release candidates; expected exactly one')
+    return prs[0] if prs else None
+
+
+def candidate_head_is_current(head, *, automatic):
+    live_head = api('commits/release%2Fnext')['sha']
+    if not re.fullmatch('[a-f0-9]{40}', live_head):
+        raise ValueError('Invalid live release/next SHA from GitHub')
+    if live_head == head:
+        return True
+    if automatic:
+        print(f'Skipped superseded candidate refresh: checkout {head}; live release/next {live_head}')
+        return False
+    raise ValueError('Candidate advanced; refresh from the current release/next source')
+
+
+def maintain_candidate(root=ROOT, *, automatic=False, create=True):
+    head = git('rev-parse', 'HEAD', root=root)
+    if not candidate_head_is_current(head, automatic=automatic):
+        return
+    candidate = open_candidate()
+    if candidate is None:
+        if not create:
+            raise ValueError('Expected exactly one open release candidate')
+        if not has_next_cycle_changes(head):
+            return
+
+    try:
+        version, record = candidate_record(head, root)
+    except ValueError:
+        # A push during validation can make this checkout's error obsolete.
+        if automatic and not candidate_head_is_current(head, automatic=True):
+            return
+        raise
+    if candidate is None:
+        published = api('releases/latest')['tag_name']
+        if candidate_head_is_current(head, automatic=automatic):
+            create_candidate(head, published, version, record)
+        return
+
+    if not candidate_head_is_current(head, automatic=automatic):
+        return
+    path = 'pulls/' + str(number(candidate['number']))
+    # Fetch the human text last, after validating and rendering the committed record.
+    pr = api(path)
     if pr['head']['sha'] != head:
-        raise ValueError('Candidate advanced; refresh from the current release/next source')
-    body = replace_record(pr.get('body') or '', candidate_record(root))
-    if body != pr.get('body'):
-        api('pulls/' + str(pr['number']), method='PATCH', data={'body': body})
+        if not candidate_head_is_current(head, automatic=automatic):
+            return
+        raise ValueError('Candidate PR head does not match the current release/next source')
+    if (pr['state'] != 'open' or pr['base']['ref'] != 'main'
+            or pr['head']['ref'] != BRANCH or pr['head']['repo']['full_name'] != REPO):
+        raise ValueError('Candidate PR no longer targets main from the repository release/next branch')
+    body = replace_record(pr.get('body') or '', record)
+    if body == pr.get('body'):
+        print('Generated candidate record already current')
+        return
+    api(path, method='PATCH', data={'body': body})
     print('Updated generated candidate record; human sections preserved')
+
+
+def sync_record(root=ROOT):
+    maintain_candidate(root, create=False)
 
 
 def acceptance_report(root=ROOT):
@@ -406,31 +464,28 @@ def remote_json(path, ref):
     return json.loads(base64.b64decode(api('contents/' + path + '?ref=' + ref)['content']))
 
 
-def ensure_candidate():
-    owner = REPO.split('/')[0]
-    existing = api(f'pulls?state=open&base=main&head={owner}:release%2Fnext&per_page=100')
-    if existing:
-        print('Release candidate already exists: ' + existing[0]['html_url'])
-        return existing[0]
-    head = api('commits/release%2Fnext')['sha']
-    comparison = api('compare/main...' + head)
-    if not comparison['ahead_by']:
-        print('No next-cycle changes; no candidate PR needed yet')
-        return None
-    plan = remote_json(PLAN, head)
-    validate_shape(plan)
-    versions = remote_json('release-versions.json', head)
-    published = api('releases/latest')['tag_name']
-    previous = remote_json('release-versions.json', published)
+def has_next_cycle_changes(head):
+    if api('compare/main...' + head)['ahead_by']:
+        return True
+    print('No next-cycle changes; no candidate PR needed yet')
+    return False
+
+
+def create_candidate(head, published, version, record):
+    title = 'v' + version if version else 'Next release candidate'
+    if version:
+        summary = f'Frozen candidate for {title}. See the generated record for the selected build and acceptance.'
+    else:
+        summary = f'Unfrozen draft after {published}. Final target: TBD.'
     body = ['## Release candidate', '',
-            f'Unfrozen draft after {published}. Base: `main`; head: `release/next`.',
-            f'Initial source: `{head}`. Final target remains TBD until freeze.', '',
+            summary,
+            f'Base: `main`. Head: `release/next`. Initial source: `{head}`.', '',
             '## Packaging decisions', '',
             'Record proposed bumps, unchanged component reasons, pinned baselines and rebuild requirements here.', '',
             '## Documentation', '',
             'Record affected guides, verification and remaining limitations here.', '',
             '## Physical acceptance and limitations', '',
-            'No new TV acceptance claimed. Record scenario artifacts, device/state preconditions,',
+            'Record scenario artifacts, device/state preconditions,',
             'observed results, rollback and untested paths here.', '',
             '## Release gates', '',
             '- [ ] Collect implementation PRs/issues in the committed plan.',
@@ -438,11 +493,27 @@ def ensure_candidate():
             '- [ ] Pin a complete trusted build and bind acceptance to its run:attempt.',
             '- [ ] Complete affected documentation and physical acceptance.',
             '- [ ] Verify final Release policy and package/feed delivery.']
-    body = replace_record('\n'.join(body) + '\n', render_record(plan, versions, previous))
-    pr = api('pulls', method='POST', data={'title': 'Next release candidate',
+    body = replace_record('\n'.join(body) + '\n', record)
+    pr = api('pulls', method='POST', data={'title': title,
              'head': BRANCH, 'base': 'main', 'draft': True, 'body': body})
     print('Created release candidate: ' + pr['html_url'])
     return pr
+
+
+def ensure_candidate():
+    existing = open_candidate()
+    if existing is not None:
+        print('Release candidate already exists: ' + existing['html_url'])
+        return existing
+    head = api('commits/release%2Fnext')['sha']
+    if not has_next_cycle_changes(head):
+        return None
+    plan = remote_json(PLAN, head)
+    validate_shape(plan)
+    versions = remote_json('release-versions.json', head)
+    published = api('releases/latest')['tag_name']
+    previous = remote_json('release-versions.json', published)
+    return create_candidate(head, published, plan.get('version'), render_record(plan, versions, previous))
 
 
 def start_cycle(tag):
@@ -602,7 +673,8 @@ def protect():
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('command', choices=['check', 'collect', 'inventory', 'notify', 'protect',
-                                           'ensure-candidate', 'start-cycle', 'refresh-policy', 'sync-record', 'acceptance-report', 'pin-build'])
+                                           'ensure-candidate', 'maintain-candidate', 'start-cycle', 'refresh-policy',
+                                           'sync-record', 'acceptance-report', 'pin-build'])
     parser.add_argument('--tag')
     parser.add_argument('--run-id', type=int)
     parser.add_argument('--source-root', type=Path, default=ROOT)
@@ -618,6 +690,8 @@ def main():
         pin_build(args.run_id, args.source_root)
     elif args.command == 'sync-record':
         sync_record(args.source_root)
+    elif args.command == 'maintain-candidate':
+        maintain_candidate(args.source_root, automatic=os.environ.get('GITHUB_EVENT_NAME') == 'push')
     elif args.command == 'acceptance-report':
         acceptance_report(args.source_root)
     elif args.command == 'collect':
