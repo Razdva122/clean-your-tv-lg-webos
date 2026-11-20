@@ -84,6 +84,39 @@ outside Git and transfers stopped; no complete archive hash is claimed.
 That is expected for incomplete input, not evidence of a defective LG image.
 Resume and authenticate the complete input before interpreting factory files.
 
+## Comparable factory-handler replay
+
+While exact-image acquisition was blocked, reused the complete cached W20H
+04.64.00 / webOS 5.6.2 image from the earlier #710 investigation. This is a
+different hardware generation and SDK; it can validate a replay method and a
+real LG absent-key fallback, not establish C3/9.2.1 behavior.
+
+The [LG archive URL](https://gscs-b2c.lge.com/downloadFile?fileId=D5Fg2suBWGy3YfylwHNNrg)
+is recorded by the archive index. The cached ZIP was rehashed as
+`5f380e6e4e31e9a4ecd5588c28cf5597c99146b300b7ff208cc3c835953706eb`,
+matching the index; the indexed EPK SHA-256 is
+`ba03818a33a7fda0a547a2f98b75332a4e8636c9e8fe9bca8c875ee0243ca574`.
+No new EPK signature claim is made for this reused extraction.
+Extracted `usr/lib/qml/KeyFilters/systemUi.js` hashes to
+`c61f1a202c8237eeb9ad51fa49b26f23d21d39af9aa5639a69e5a1c504585e67`.
+
+Executed that unmodified script with Node 23.11.0 `vm`, supplying modeled
+ribbon permission, disabled first-use/power-only/disable-Home conditions and
+recording application-manager calls. Called `launchHomeApp(773, true)` with
+three `settingsService.getLaunchDefaultApp` values:
+
+| Modeled Home setting | Observed factory request |
+| --- | --- |
+| Absent | `launchDefaultApp(com.webos.app.home, {category: home})` |
+| `com.webos.app.home` | `launch(com.webos.app.home, {launchType: homeKey})` |
+| `com.webos.app.fullhome` | `launch(com.webos.app.fullhome, {launchType: homeKey})` |
+
+All three assertions passed. These are calls into a modeled application
+manager, not real app launches, live Settings Service results or physical key
+acceptance. They show why an absent setting cannot by itself be treated as
+broken stock Home. The exact C3 handler, its application-manager implementation
+and the compositor integration still need the matching complete image.
+
 ## Source boundary and next offline checks
 
 The original failure is explained by v1.4.0 `prepare_stock_home`: with an absent
