@@ -193,10 +193,10 @@ def _failsafe():
     return os.path.lexists(d.FAILSAFE)
 
 
-def _restore():
+def _restore(*,cancel_rearm=True):
     from intent_runtime import restore
     import device_adapter as d
-    result=restore()
+    result=restore(cancel_rearm=cancel_rearm)
     result=d.main('recover') if result is None else result
     if result not in ('restored','absent'):raise ValueError('Home restoration incomplete: '+str(result))
     return result
@@ -425,7 +425,8 @@ def suspend(transaction,root=STATE,uid=0):
         else:
             if 'outcome' in t:raise ValueError('Update Home suspension already finished')
             fresh=False
-        result=_restore()
+        # A retry must retain the verified disabled intent used by finish().
+        result=_restore(cancel_rearm=t['suspended'] is None)
         # Capture the owner's preference and restore routing before the retained
         # rollback anchor changes package authority. Active health must not see
         # an intentionally retargeted current descriptor before ticket capture.

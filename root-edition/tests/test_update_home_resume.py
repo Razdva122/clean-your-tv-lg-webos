@@ -20,7 +20,7 @@ class ResumeTests(unittest.TestCase):
             p=patch.object(guard,name,fn,create=True);p.start();self.addCleanup(p.stop)
         guard.reserve(self.tx,self.root,self.uid)
 
-    def restore(self):
+    def restore(self, *, cancel_rearm=True):
         self.restores+=1;self.intent.update(phase='disabled',enabled=False)
         return 'restored'
 
@@ -286,6 +286,52 @@ class ResumeTests(unittest.TestCase):
 
 
 class IntegrationTests(unittest.TestCase):
+    def test_automatic_recovery_during_update_preserves_the_persisted_intent_for_resume(self):
+        import cli
+        import intent_runtime
+        from persistent_recovery import Coordinator
+        from persistent_store import Store
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            uid = os.getuid()
+            transaction = 'a' * 32
+            store = Store(root)
+            active = dict(version=1, generation=3, phase='active', enabled=True,
+                          boot='boot:1', token='old')
+
+            def restore_route(coordinator, intent):
+                restored, _ = coordinator.event(intent, 'restored')
+                return {'intent': restored, 'restored_transaction': 'route'}
+
+            def enable():
+                updated = dict(active, generation=4, token='new')
+                store._save(updated)
+                return {'intent': updated}
+
+            with patch.multiple(cli.d, STATE=root, EXPECTED_UID=uid), \
+                    patch.object(cli.os, 'geteuid', return_value=0), \
+                    patch.object(cli.d, 'main', return_value='absent'), \
+                    patch.object(cli, 'inhibit'), \
+                    patch.object(cli, 'firmware_access'), \
+                    patch.object(cli, 'reconcile_firmware_access'), \
+                    patch.object(intent_runtime, 'boot_identity', return_value='boot:1'), \
+                    patch.object(Coordinator, '_recover', restore_route), \
+                    patch.object(guard, '_failsafe', return_value=False), \
+                    patch.object(guard, '_enable', side_effect=enable) as activation:
+                store._save(active)
+                guard.reserve(transaction, root, uid)
+                self.assertEqual(cli.main('suspend-update', transaction), 'restored')
+                suspended = store.path.read_bytes()
+                for _ in range(2):
+                    self.assertEqual(cli.main('boot'), 'absent')
+                self.assertEqual(store.path.read_bytes(), suspended)
+                self.assertEqual(cli.main('suspend-update', transaction), 'absent')
+                self.assertEqual(store.path.read_bytes(), suspended)
+                self.assertEqual(cli.main('finish-update', transaction), {'status': 'restored'})
+                activation.assert_called_once_with()
+                self.assertTrue(store.read()['enabled'])
+
     def test_cli_internal_suspend_does_not_cancel_but_explicit_restore_always_does(self):
         import importlib.util
         source=Path(__file__).resolve().parents[1]/'runtime/cli.py'
@@ -296,7 +342,7 @@ class IntegrationTests(unittest.TestCase):
             root=Path(tmp).resolve();uid=os.getuid();tx='a'*32
             guard.reserve(tx,root,uid)
             intent=dict(version=1,generation=1,phase='active',enabled=True,boot='boot:1',token='a')
-            def restore():
+            def restore(*, cancel_rearm=True):
                 if intent['phase']=='disabled':return None
                 intent.update(phase='disabled',enabled=False);return 'restored'
             with patch.object(cli.d,'main',return_value='absent'),patch.object(cli.d,'STATE',root),patch.object(cli.d,'EXPECTED_UID',uid),patch.object(cli.os,'geteuid',return_value=0),patch.object(guard,'_intent',lambda:dict(intent)),patch.object(guard,'_boot',lambda:'boot:1'),patch.object(intent_runtime,'restore',restore):
@@ -316,7 +362,7 @@ class IntegrationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp).resolve();uid=os.getuid();guard.reserve('a'*32,root,uid)
             (root/'update-home-resume.json').write_text('{}')
-            with patch.object(cli.d,'STATE',root),patch.object(cli.d,'EXPECTED_UID',uid),patch.object(cli.os,'geteuid',return_value=0),patch.object(intent_runtime,'restore',lambda:restored.append(True) or 'restored'):
+            with patch.object(cli.d,'STATE',root),patch.object(cli.d,'EXPECTED_UID',uid),patch.object(cli.os,'geteuid',return_value=0),patch.object(intent_runtime,'restore',lambda **_:restored.append(True) or 'restored'):
                 with self.assertRaises(ValueError):cli.main('restore')
         self.assertEqual(restored,[True])
 
@@ -338,7 +384,7 @@ class IntegrationTests(unittest.TestCase):
             root=Path(tmp).resolve();uid=os.getuid();tx='a'*32
             intent=dict(version=1,generation=3,phase='active',enabled=True,boot='boot:1',token='old')
             guard.reserve(tx,root,uid)
-            def restore():intent.update(phase='disabled',enabled=False);return 'restored'
+            def restore(*, cancel_rearm=True):intent.update(phase='disabled',enabled=False);return 'restored'
             with patch.object(guard,'_intent',lambda:dict(intent)),patch.object(guard,'_boot',lambda:'boot:1'),patch.object(guard,'_restore',restore):
                 guard.suspend(tx,root,uid)
             binding=root/'persistent-binding.json';binding.write_text('{}')

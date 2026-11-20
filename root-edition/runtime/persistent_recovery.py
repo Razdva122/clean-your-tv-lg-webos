@@ -88,13 +88,13 @@ class Coordinator:
         event.update(fields)
         return self.store.apply(expected, event)
 
-    def exit(self, expected=None, reason='exit', *, emergency=False, cleanup_disabled=True):
+    def exit(self, expected=None, reason='exit', *, emergency=False, cleanup_disabled=True, cancel_rearm=True):
         if reason not in ('exit','fault'): raise ValueError('Invalid stop reason')
         with self.locked(expected):
             # Explicit Off reads under the operation lock, so a late proof
             # committed between UI status and Off cannot invalidate the request.
             if expected is None: expected = self.store.read()
-            cancel = expected['phase'] == 'disabled' and (reason == 'exit' or emergency)
+            cancel = expected['phase'] == 'disabled' and (emergency or (reason == 'exit' and cancel_rearm))
             intent, effect = self.event(expected, 'cancel-rearm' if cancel else reason)
             try:
                 from cli import inhibit

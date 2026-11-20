@@ -202,3 +202,34 @@ records a conservative skip before activation, so an explicit activation
 pass does not establish automatic continuation after update. The existing
 reports remain the destination for owner tests on other hardware after a
 verified release.
+
+### RC3 Root Home correction and remaining acceptance
+
+The maintainer reported that access to the project C3 would end within five
+minutes and remain unavailable for two days. The last observed state is a
+usable No-root RC2 install. No further TV change was started in that window.
+The previous physical B9 deferral remains in effect.
+
+An on-disk lifecycle regression reproduced RC2's conservative `skipped`
+outcome after an automatic boot callback under the update reservation changed
+the saved disabled intent generation. Review identified a second path through
+repeated suspension after the snapshot was saved. The same regression exposed
+that generation change. This explains how the observed outcome can occur;
+the C3 evidence does not identify which callback actually ran.
+
+Automatic boot recovery and a repeat suspension with a verified disabled
+snapshot now preserve its generation. Explicit Off and emergency escape
+retain cancellation. A suspension interrupted before verified snapshot capture
+still cannot infer permission to enable Home on retry.
+
+| Original case | Remaining evidence on the final candidate |
+| --- | --- |
+| RC1-01 | Verify Romanian through signed No-root Repair and final Root Repair. Use RC2 Direct Install and rendering evidence for unchanged files and matching preconditions. |
+| RC1-02 | Run signed No-root forward, same-IPK Repair and rollback. Repeat the signed Root sequence because the lifecycle runtime in the IPK changed. |
+| RC1-03 | Start signed Root forward from active Home on the published baseline. Require automatic resume and verify paired HOME from Media Player, actual Magic Remote escape, sound, standby and cold boot. The W20H interrupted-setup receipt is unavailable on C3. |
+| RC1-04 | Replay the changed final Root Beta package against the retained B9 fixture. Physical B9 remains explicitly deferred. |
+| RC1-05 | Reuse the ordinary C3 Root removal evidence within its demonstrated scope. Verify the remaining No-root removal and the affected legacy cleanup using its matching fixture. |
+| RC1-06 | Verify the final Android installer upgrade and retained data on the owned emulator if its embedded payload changed. |
+
+Physical acceptance is blocked by C3 availability. The release PR stays draft
+until required evidence is recorded against the selected candidate.

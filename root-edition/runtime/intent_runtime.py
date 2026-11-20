@@ -118,7 +118,7 @@ def _legacy_native_recovery(c=None):
         return result
 
 
-def restore():
+def restore(*, cancel_rearm=True):
     c = coordinator()
     if c is None or later_legacy_trial(c): return _legacy_native_recovery(c)
     # A late standby decision may briefly own the operation lock after the
@@ -126,7 +126,7 @@ def restore():
     deadline = time.monotonic() + 1
     while True:
         try:
-            result = c.exit(cleanup_disabled=False)
+            result = c.exit(cleanup_disabled=False, cancel_rearm=cancel_rearm)
             break
         except BlockingIOError:
             if time.monotonic() >= deadline: raise

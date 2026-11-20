@@ -288,7 +288,9 @@ def _restore_home(cancel_resume):
             cancel(d.STATE,d.EXPECTED_UID)
     finally:
         # Damaged updater evidence must never prevent explicit Home recovery.
-        result = restore()
+        # A boot callback during an update must preserve the recorded disabled
+        # generation. Explicit Off still invalidates pending Home rearming.
+        result = restore(cancel_rearm=cancel_resume)
         result = d.main('recover') if result is None else result
     return result
 
