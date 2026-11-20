@@ -73,10 +73,11 @@
     }
   ],
   "excluded": [],
-  "acceptance": "",
+  "acceptance": "TV-01 through TV-06 passed on the project LG OLED55C3RLA (43.21.71). Signed Root and No-root update, Repair and rollback verified. Original TV profile, screensaver setting and Root routing restored. [Final RC6 evidence](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/729#final-rc6-acceptance-on-the-project-c3).",
   "build": {
     "run_id": 44682949085,
     "attempt": 1,
     "source": "a9bf96f16c02a7c9fbcecfb65a5f953a0868a09b"
-  }
+  },
+  "acceptance_build": "44682949085:1"
 }
