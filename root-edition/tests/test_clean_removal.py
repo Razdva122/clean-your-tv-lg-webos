@@ -687,6 +687,12 @@ class PartialDeviceRemoval(unittest.TestCase):
         self.assertNotIn('PRIVATE',str(result['last_failure']))
 
     def test_current_runtime_child_proof_gates_destructive_removal(self):
+        self.current_runtime_child_proof_gates_destructive_removal()
+
+    def test_reported_webos6_content_home_pair_finishes_original_removal(self):
+        self.current_runtime_child_proof_gates_destructive_removal(content_home=True)
+
+    def current_runtime_child_proof_gates_destructive_removal(self, content_home=False):
         import hashlib
         import json
         import shutil
@@ -702,6 +708,8 @@ class PartialDeviceRemoval(unittest.TestCase):
         guard.setUp()
         admission = dict(model='OLED48A19LA', firmware='03.53.45', webos='6.5.3',
                          target_sha256='b'*64, target=dict(dev=1, ino=2, size=52, mtime_ns=3))
+        if content_home:
+            admission.update(model='65NANO926PB', firmware='03.34.55', webos='6.3.2')
         uid = os.getuid()
         with patch.object(backend, 'boot_identity', return_value=BOOT):
             backend.prepare(root, 'a'*64, admission, uid)
@@ -743,7 +751,7 @@ def read_chain(): return json.loads(Path({str(chain)!r}).read_text())
 def write_chain(value, **kwargs): Path({str(chain)!r}).write_text(json.dumps(value))
 def luna(uri, payload):
     if uri == 'luna://com.webos.applicationManager/getForegroundAppInfo':
-        return dict(returnValue=True, appId=STOCK)
+        return dict(returnValue=True, appId={'content.youtube' if content_home else backend.STOCK!r})
     if uri == 'luna://com.webos.surfacemanager/getForegroundAppInfo':
         return dict(returnValue=True, foregroundAppInfo=json.loads(Path({str(rows)!r}).read_text()))
     raise AssertionError(uri)
@@ -803,7 +811,9 @@ def luna(uri, payload):
                     self.assertTrue(present)
                     self.assertFalse(any(call.startswith('remove-') for call in calls))
                     self.assertEqual(driver.ownership.store.read('request-'+identifier), original)
-            rows.write_text(json.dumps([stock, screensaver]))
+            restored_surfaces = ([dict(stock, appId='content.youtube'), dict(stock, windowType=backend.HOME)]
+                                 if content_home else [stock, screensaver])
+            rows.write_text(json.dumps(restored_surfaces))
             def lose_response(args):
                 result = loaded.command(args)
                 self.assertEqual(result['result'], 'restored')
