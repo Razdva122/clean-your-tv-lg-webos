@@ -594,14 +594,16 @@ def validate_native(value):
     if (not isinstance(value,dict) or set(value)!={'returnValue','backend','routing','state','mounted','healthy','stock_verified','stopped','token','guardian_pid','reason','profiles'}
             or value.get('returnValue') is not True
             or value.get('backend')!=BACKEND or value.get('routing')!=ROUTING or value.get('profiles',{}) is not None
-            or value.get('state') not in ('stock','armed','stopped','blocked')
+            or value.get('state') not in ('stock','armed','stopped','blocked','reconnecting')
             or any(type(value.get(k)) is not bool for k in ('mounted','healthy','stock_verified','stopped'))
             or value['mounted'] or not isinstance(value.get('token'),str) or not legacy.TOKEN.fullmatch(value['token'])
             or type(value.get('guardian_pid')) is not int or value['guardian_pid']<0
             or not isinstance(value.get('reason'),str) or not re.fullmatch(r'[a-z0-9_-]{0,80}',value['reason'])
             or value['healthy'] and (value['state']!='armed' or value['stopped'] or value['guardian_pid']<=1 or value['stock_verified'])
             or value['stock_verified'] and (value['guardian_pid'] or value['healthy'])
-            or value['state']=='armed' and not value['healthy']):
+            or value['state']=='armed' and not value['healthy']
+            or value['state']=='reconnecting' and (value['stopped'] or value['stock_verified']
+                                                   or value['guardian_pid']<=1 or value['reason']!='none')):
         raise ValueError('Incomplete or inconsistent compositor guardian proof')
     return value
 
@@ -617,11 +619,14 @@ def status(root=STATE, uid=0):
     value['routing_active']=value['healthy'] and not value['stopped']
     intent=read_intent(root,uid)
     active=value['healthy'] and not value['stopped'] and intent['token']==value['token'] and intent['phase'] in ('active','trial')
-    phase=intent['phase'] if active else 'disabled' if value['stock_verified'] else 'recovering'
+    reconnecting = (value['state']=='reconnecting' and value['filter_installed']
+                    and intent['phase']=='active' and intent['enabled'] and value['token']==intent['token'])
+    phase=(intent['phase'] if active else 'input-reconnecting' if reconnecting
+           else 'disabled' if value['stock_verified'] else 'recovering')
     try: recovery=verify_ready()
     except (OSError,ValueError,RuntimeError,ImportError): recovery={'integrity_verified':False}
     return dict(backend=BACKEND,routing=ROUTING,experimental=True,effective=value,
-        intent=dict(intent,phase=phase,enabled=bool(active and intent['enabled'])),recovery=recovery,
+        intent=dict(intent,phase=phase,enabled=bool((active or reconnecting) and intent['enabled'])),recovery=recovery,
         candidate=APP,update_home_resume_available=False,persistent_enable_available=recovery.get('integrity_verified') is True)
 
 
@@ -1012,11 +1017,13 @@ def enable_locked(root,uid,seconds, *, session=None, resume_token=None):
         controller=start_controller(root,uid,token,control_write,log); children.append(controller)
         os.close(control_write); fds.remove(control_write)
         from python_binding import command
-        observer=subprocess.Popen([command(root),str(Path(root)/'runtime/emergency_reader.py'),str(input_write)],
+        observer=subprocess.Popen([command(root),str(Path(root)/'runtime/emergency_reader.py'),
+            str(input_write),'--reconnect-on-disconnect' if seconds else '--recover-input'],
             pass_fds=(input_write,),stdin=subprocess.DEVNULL,stdout=log,stderr=log,start_new_session=True,close_fds=True)
         children.append(observer)
         os.close(input_write); fds.remove(input_write)
         guard_mode = '--guard-resumable' if session is not None else '--guard'
+        if not seconds: guard_mode += '-reconnect'
         guard=subprocess.Popen([str(helper),guard_mode,token,str(input_read),str(control_read),str(ready_write),str(seconds)],
             pass_fds=(input_read,control_read,ready_write),stdin=subprocess.DEVNULL,stdout=log,stderr=log,
             env={'PATH':'/usr/bin:/bin','LANG':'C'},start_new_session=True,close_fds=True)
@@ -1334,10 +1341,13 @@ def watch(token,control,ready,root=STATE,uid=0):
             if selection(root,uid)['schema']==3 and not filter_present(root):
                 raise ValueError('Volatile compositor filter lost; explicit Enable required')
             if live: armed=True
-            if not live and (armed or time.monotonic()-started>8):
+            recovering = proof['token']==token and proof['state']=='reconnecting'
+            if not live and not recovering and (armed or time.monotonic()-started>8):
                 raise ValueError('Controller token inactive')
             send(b'PING\n')
-            if armed and policy.due(time.monotonic()):
+            if recovering:
+                policy.pending=None
+            if live and policy.due(time.monotonic()):
                 policy.pending=None
                 generation=policy.generation
                 changed=lambda: generation!=policy.generation or bool(buffer.strip()) or bool(select.select([child.stdout],[],[],0)[0])
