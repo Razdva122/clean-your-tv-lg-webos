@@ -1,5 +1,6 @@
 """SSAP pairing and fresh inventory, with icons embedded as local data URLs."""
 import base64
+from http.client import IncompleteRead
 from io import BytesIO
 import json
 import re
@@ -122,6 +123,10 @@ class Inventory:
              'skipped_apps'), 0)}
 
     def icon(self, app, alternatives=()):
+        data, kind = self.icon_data(app, alternatives)
+        return 'data:image/' + kind + ';base64,' + base64.b64encode(data).decode()
+
+    def icon_data(self, app, alternatives=()):
         fields = ('extraLargeIcon', 'largeIcon', 'mediumLargeIcon', 'icon', 'miniicon', 'favicon')
         candidates = []
         for source in (app, *alternatives):
@@ -161,7 +166,9 @@ class Inventory:
                 self.download_remaining -= min(len(fetched), limit)
                 if not fetched or len(fetched) > limit:
                     raise ValueError('Invalid icon size')
-            except (OSError, ValueError):
+            except (OSError, ValueError, IncompleteRead) as error:
+                if isinstance(error, IncompleteRead):
+                    self.download_remaining -= min(len(error.partial), limit)
                 counts['fetch_failed'] += 1
                 continue
             if fetched.startswith(b'\xff\xd8'):
@@ -194,7 +201,7 @@ class Inventory:
             counts['fallback'] += 1
             if not has_uri:
                 counts['missing_uri'] += 1
-        return 'data:image/' + kind + ';base64,' + base64.b64encode(data).decode()
+        return data, kind
 
     def build(self, launchpoints, inputs, installed=None):
         self.download_remaining = ICON_DOWNLOAD_BUDGET

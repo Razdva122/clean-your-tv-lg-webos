@@ -12,11 +12,10 @@ import asyncio
 import json
 import os
 import sys
-import urllib.request
 from websockets.exceptions import ConnectionClosed
 
 import lgtv
-from cytv.tv import include_tuner
+from cytv.tv import Inventory, include_tuner
 
 APP_DIR = os.path.join(lgtv.HERE, "launcher")
 
@@ -42,21 +41,14 @@ async def main(host, list_only):
 
     icon_dir = os.path.join(APP_DIR, "icons")
     os.makedirs(icon_dir, exist_ok=True)
-    ctx = lgtv.insecure_ctx()
+    with open(os.path.join(APP_DIR, "brand-v2-icon.png"), "rb") as fallback:
+        icons = Inventory(host.lower(), fallback.read())
     apps = []
     for p in points:
         if p.get("hidden"):
             continue
-        url = p.get("largeIcon") if str(p.get("largeIcon", "")).startswith("http") else p.get("icon")
         name = "".join(ch if ch.isalnum() or ch in "._-" else "_" for ch in p["id"]) + ".png"
-        try:
-            data = urllib.request.urlopen(url, context=ctx, timeout=10).read()
-        except Exception as e:
-            print(f"  no icon for {p['id']}: {e}")
-            if p["id"] != "com.webos.app.livetv":
-                continue
-            with open(os.path.join(APP_DIR, "brand-v2-icon.png"), "rb") as fallback:
-                data = fallback.read()
+        data, _ = icons.icon_data(p)
         with open(os.path.join(icon_dir, name), "wb") as f:
             f.write(data)
         apps.append({

@@ -1,14 +1,39 @@
+import base64
+from http.client import IncompleteRead
 import json
 from pathlib import Path
 import tempfile
 import unittest
 from unittest.mock import Mock, patch
 
-from cytv.tv import Inventory, SSAP
+from cytv.tv import ICON_DOWNLOAD_BUDGET, Inventory, SSAP
 from cytv.errors import TVNotReady, TVConnectionError
 
 
 class InventoryTests(unittest.TestCase):
+    def test_interrupted_icon_download_retains_application(self):
+        png = b'\x89PNG\r\n\x1a\noriginal'
+        app = {'id': 'org.example.video', 'title': 'Video',
+               'largeIcon': 'http://192.0.2.10/large', 'icon': 'http://192.0.2.10/small'}
+        for alternate in (png, IncompleteRead(b'partial')):
+            with self.subTest(alternate=alternate):
+                recovered = alternate is png
+                fetch = Mock(side_effect=[IncompleteRead(b'partial'), alternate])
+                inventory = Inventory('192.0.2.10', b'fallback', fetch)
+                result = inventory.build([app], [])
+                self.assertEqual([(a['id'], a['title']) for a in result['apps']],
+                                 [(app['id'], app['title'])])
+                self.assertEqual(fetch.call_count, 2)
+                icon = base64.b64decode(result['apps'][0]['icon'].split(',', 1)[1])
+                self.assertEqual(icon, png if recovered else b'fallback')
+                downloaded = len(b'partial') + (len(png) if recovered else len(b'partial'))
+                self.assertEqual(inventory.download_remaining, ICON_DOWNLOAD_BUDGET - downloaded)
+                self.assertEqual(inventory.icon_diagnostics, {
+                    'schema': 1, 'status': 'complete', 'apps': 1,
+                    'embedded': int(recovered), 'fallback': int(not recovered),
+                    'missing_uri': 0, 'rejected_uri': 0, 'invalid_image': 0, 'skipped_apps': 0,
+                    'fetch_failed': 1 if recovered else 2})
+
     def test_icon_diagnostics_count_causes_without_retaining_metadata(self):
         png = b'\x89PNG\r\n\x1a\noriginal'
         fetched = []
@@ -457,22 +482,31 @@ class LegacySyncTunerTests(unittest.TestCase):
                     asyncio.run(module['main']('192.0.2.10', True))
                 self.assertIn('Video', out.getvalue())
 
-    def test_discovered_tuner_survives_unavailable_icon(self):
+    def test_ordinary_app_and_discovered_tuner_survive_unavailable_icons(self):
         import asyncio, contextlib, io, runpy
         from unittest.mock import AsyncMock
         module = runpy.run_path(str(Path(__file__).resolve().parents[2] / 'sync-apps.py'))
         async def call(ws, uri):
-            if uri.endswith('/listLaunchPoints'): return {'launchPoints': []}
+            if uri.endswith('/listLaunchPoints'):
+                return {'launchPoints': [{'id': 'org.example.video', 'title': 'Video',
+                                          'icon': 'http://192.0.2.10/video.png'}]}
             if uri.endswith('/getExternalInputList'): return {'devices': []}
             return {'returnValue': True, 'apps': [{'id': 'com.webos.app.livetv', 'title': 'TV', 'visible': False}]}
         with tempfile.TemporaryDirectory() as directory:
             module['main'].__globals__['APP_DIR'] = directory
             (Path(directory) / 'brand-v2-icon.png').write_bytes(b'fallback')
-            with patch('lgtv.session', new=AsyncMock(return_value=AsyncMock())), patch('lgtv.call', new=call), patch('urllib.request.urlopen', side_effect=OSError('no icon')), contextlib.redirect_stdout(io.StringIO()):
+            with (patch('lgtv.session', new=AsyncMock(return_value=AsyncMock())),
+                  patch('lgtv.call', new=call),
+                  patch('urllib.request.OpenerDirector.open', side_effect=OSError('no icon')),
+                  contextlib.redirect_stdout(io.StringIO())):
                 asyncio.run(module['main']('192.0.2.10', False))
             script = (Path(directory) / 'apps.js').read_text()
             data = json.loads(script.split('window.TV_APPS = ', 1)[1].rstrip(';\n'))
-            self.assertEqual([a['id'] for a in data['apps']], ['com.webos.app.livetv'])
+            self.assertEqual([(a['id'], a['title'], a['icon']) for a in data['apps']],
+                             [('com.webos.app.livetv', 'TV', 'icons/com.webos.app.livetv.png'),
+                              ('org.example.video', 'Video', 'icons/org.example.video.png')])
+            for app in data['apps']:
+                self.assertEqual((Path(directory) / app['icon']).read_bytes(), b'fallback')
 
 
 class NativeIconQualityTests(unittest.TestCase):

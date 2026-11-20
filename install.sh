@@ -97,7 +97,7 @@ import json
 from pathlib import Path
 s=Path('launcher/apps.js').read_text()
 apps=json.loads(s[s.index('{'):].rstrip().rstrip(';'))['apps']
-if not apps: raise SystemExit('No apps were synced. Check TV pairing and icon-download errors before retrying.')
+if not apps: raise SystemExit('No apps were synced. Check TV pairing and make sure the TV has visible apps before retrying.')
 PY
 stage='building packages'
 bash scripts/build.sh
