@@ -919,6 +919,89 @@ window.WeatherLocales = {
     'Choose city': '選擇城市',
     'Not determined': '未判斷',
     'Back': '返回'
+  },
+  'ro': {
+    'Weather': 'Vremea',
+    'Weather on Home': 'Vremea în Home',
+    'On': 'Pornit',
+    'Off': 'Oprit',
+    'Compact': 'Compact',
+    'Large': 'Mare',
+    'With details': 'Cu detalii',
+    'Forecast': 'Prognoză',
+    'Yekaterinburg': 'Ekaterinburg',
+    'Overcast': 'Înnorat',
+    'Feels like {value}': 'Se simte ca {value}',
+    'Wind': 'Vânt',
+    'Precipitation': 'Precipitații',
+    'Humidity': 'Umiditate',
+    'm/s': 'm/s',
+    'Today': 'Astăzi',
+    'Tomorrow': 'Mâine',
+    'Snow': 'Ninsoare',
+    'Partly cloudy': 'Parțial noros',
+    'Clear': 'Senin',
+    'Choose a format. Its appearance follows your theme.':
+      'Alege un format. Aspectul lui urmează tema ta.',
+    'This theme supports only the compact format.':
+      'Această temă acceptă doar formatul compact.',
+    'Weather is unavailable in Ribbon. Choose another composition.':
+      'Vremea nu este disponibilă în Ribbon. Alege altă compoziție.',
+    'Weather: {city}': 'Vremea: {city}',
+    'Units': 'Unități de măsură',
+    'mph': 'mph',
+    'Location': 'Locație',
+    'Automatic': 'Automată',
+    'Manual': 'Manuală',
+    'Approximate city by IP. VPN can change the result.':
+      'Oraș aproximativ după IP. Un VPN poate schimba rezultatul.',
+    'Search for a city, then select its region and country.':
+      'Caută un oraș, apoi selectează regiunea și țara lui.',
+    'City name': 'Numele orașului',
+    'Search': 'Caută',
+    'Searching…': 'Se caută…',
+    'Enter at least 2 characters.': 'Introdu cel puțin 2 caractere.',
+    'No cities found.': 'Nu s-a găsit niciun oraș.',
+    'Search unavailable. Try again.':
+      'Căutarea nu este disponibilă. Încearcă din nou.',
+    'Choose a city to see the weather.': 'Alege un oraș pentru a vedea vremea.',
+    'Finding city…': 'Se caută orașul…',
+    'Loading weather…': 'Se încarcă vremea…',
+    'Could not find your city. Try manual search.':
+      'Orașul tău nu a putut fi găsit. Încearcă căutarea manuală.',
+    'Weather unavailable. Try again.':
+      'Vremea nu este disponibilă. Încearcă din nou.',
+    'Saved data from {time}': 'Date salvate la {time}',
+    'Updated {time}': 'Actualizat la {time}',
+    'Refresh': 'Reîmprospătează',
+    'City and coordinates are sent to weather services.':
+      'Orașul și coordonatele sunt trimise către serviciile meteo.',
+    'No forecast': 'Fără prognoză',
+    'Fog': 'Ceață',
+    'Drizzle': 'Burniță',
+    'Rain': 'Ploaie',
+    'Showers': 'Averse',
+    'Thunderstorm': 'Furtună',
+    'Unavailable': 'Indisponibil',
+    'Example': 'Exemplu',
+    'Format': 'Format',
+    'Now': 'Acum',
+    'In detail': 'În detaliu',
+    '4 days': '4 zile',
+    'Choose city': 'Alege orașul',
+    'Not determined': 'Nedeterminat',
+    'Back': 'Înapoi',
+    'Data sources': 'Surse de date',
+    'Icons': 'Pictograme',
+    'Values are rounded and converted to your selected units.':
+      'Valorile sunt rotunjite și convertite în unitățile alese.',
+    'Weather source': 'Sursa datelor meteo',
+    'Auto': 'Auto',
+    'Source: {source}': 'Sursă: {source}',
+    'No source data yet': 'Încă nu există date de la sursă',
+    'Terms of service': 'Termeni și condiții',
+    'Daily ranges summarize forecast points.':
+      'Intervalele zilnice rezumă punctele prognozei.'
   }
 };
 

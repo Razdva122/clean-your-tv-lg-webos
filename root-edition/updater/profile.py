@@ -18,6 +18,7 @@ LANGUAGES = (
     'ko',
     'hi',
     'pl',
+    'ro',
     'ru',
     'zh-Hans',
     'zh-Hant',

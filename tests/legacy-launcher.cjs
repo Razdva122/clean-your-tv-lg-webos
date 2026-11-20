@@ -408,8 +408,8 @@ const profiles = [
           .waitFor({ state: 'visible' });
         assert.equal(
           await page.locator('#settingsLanguageChoices button').count(),
-          14,
-          'automatic and thirteen languages must remain reachable without ES2015 APIs'
+          15,
+          'automatic and fourteen languages must remain reachable without ES2015 APIs'
         );
         await page.keyboard.press('ArrowRight');
         assert.equal(

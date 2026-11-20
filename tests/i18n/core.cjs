@@ -43,7 +43,13 @@ assert.equal(
   false,
   'blocked storage must not pretend to persist or reload'
 );
-assert.equal(x.i.languages.length, 13);
+assert.equal(load(['ro-RO']).i.language(), 'ro');
+assert.equal(load(['ro_MD.UTF-8']).i.language(), 'ro');
+assert.equal(load(['en'], 'ro').i.language(), 'ro');
+assert.equal(x.i.setLanguage('ro'), true);
+assert.equal(x.saved['tvhome.language'], 'ro');
+assert.equal(x.i.languages.find((l) => l.code === 'ro').name, 'Română');
+assert.equal(x.i.languages.length, 14);
 assert.equal(load(['cs-CZ']).i.language(), 'cs');
 assert.equal(load(['cs_CZ.UTF-8']).i.language(), 'cs');
 assert.equal(load(['en'], 'cs').i.language(), 'cs');
