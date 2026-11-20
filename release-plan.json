@@ -97,13 +97,13 @@
         739
       ],
       "summary": "Integrate the next cycle and preserve Root recovery and published OTA compatibility"
+    },
+    {
+      "pr": 762,
+      "issues": [],
+      "summary": "Preserve Root Home intent during signed updates"
     }
   ],
   "excluded": [],
-  "acceptance": "",
-  "build": {
-    "run_id": 44700115224,
-    "attempt": 1,
-    "source": "3b49294bda1d2da49e4859f3ca72750ebac08475"
-  }
+  "acceptance": ""
 }

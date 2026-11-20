@@ -9,6 +9,8 @@
   emergency stops authoritative (#751, #754). The migration and rollback passed an
   offline replay with the B9 firmware. Physical startup and remote behavior on
   that model still need confirmation.
+- Root preserves the previously active Home preference during an update when
+  boot recovery runs or the updater repeats a verified suspension (#762).
 - Root recovery uses local request activities on legacy webOS. A separate repair
   command can resume a supported interrupted Root setup from its original saved
   receipt. Diagnostics distinguish initial input readiness from a heartbeat

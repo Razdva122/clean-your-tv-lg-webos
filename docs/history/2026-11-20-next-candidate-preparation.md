@@ -225,7 +225,7 @@ still cannot infer permission to enable Home on retry.
 | Original case | Remaining evidence on the final candidate |
 | --- | --- |
 | RC1-01 | Verify Romanian through signed No-root Repair and final Root Repair. Use RC2 Direct Install and rendering evidence for unchanged files and matching preconditions. |
-| RC1-02 | Run signed No-root forward, same-IPK Repair and rollback. Repeat the signed Root sequence because the lifecycle runtime in the IPK changed. |
+| RC1-02 | Run signed No-root forward, same-IPK Repair and rollback. Repeat the signed Root sequence because the separately signed Root infrastructure changed. |
 | RC1-03 | Start signed Root forward from active Home on the published baseline. Require automatic resume and verify paired HOME from Media Player, actual Magic Remote escape, sound, standby and cold boot. The W20H interrupted-setup receipt is unavailable on C3. |
 | RC1-04 | Replay the changed final Root Beta package against the retained B9 fixture. Physical B9 remains explicitly deferred. |
 | RC1-05 | Reuse the ordinary C3 Root removal evidence within its demonstrated scope. Verify the remaining No-root removal and the affected legacy cleanup using its matching fixture. |
@@ -233,3 +233,28 @@ still cannot infer permission to enable Home on retry.
 
 Physical acceptance is blocked by C3 availability. The release PR stays draft
 until required evidence is recorded against the selected candidate.
+
+### RC3 offline preflight and development publication decision
+
+The project C3 is no longer available. The maintainer authorized a separate,
+opt-in `v1.27.0-dev.3` GitHub prerelease after offline verification, with
+targeted notes in the six affected issues. v1.26.0 remains the stable release.
+A dev publication leaves the v1.27.0 candidate draft and does not record
+physical acceptance or ship stable OTA feeds.
+
+Local preflight verified all four System variants. The Root and Home FHD/HD
+IPKs and Helper are byte-identical to signed RC2. The Helper also matches
+published v1.26.0. The System engine matches RC2 at SHA-256
+`43f72788d4412a0a2137a5108e17feb4c27cc3865cc6c3b51a1406eb8fa93d79`.
+Root infrastructure SHA-256 is
+`99aef72b0c09b1487f9fb0ad0a9fc6d75c56299bee6855971f2c8eae4a19d3d8`.
+Exactly four infrastructure files changed from RC2, all in the Root
+runtime. Protected signing must verify the final delivered bytes.
+
+The focused local pass covered 164 Root tests, three legacy OTA scenarios
+and seven retained rollback anchor scenarios. The first focused CI on #762
+found an older rollback fixture that rejected the new keyword. The verified
+fixture correction was committed separately, then the superseded CI run was
+cancelled by GitHub as the replacement started. The C3 failure remains
+historical and cannot be attributed to a particular callback from the
+available device evidence.
