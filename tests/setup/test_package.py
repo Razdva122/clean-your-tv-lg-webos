@@ -95,10 +95,12 @@ Path('dist/com.gathin.tvhome_9.8.7_all.ipk').write_bytes(ipk('com.gathin.tvhome'
                     'version': '9.8.7'}))
             (root/'renewal-service/state').mkdir()
             (root/'renewal-service/state/settings.json').write_text('PRIVATE')
-            for name in ('state-permissions.js', 'contract-events.js'):
+            for name in ('state-permissions.js', 'contract-events.js', 'helper-entry.js', 'stop-generation.h',
+                         'home-control.js', 'websocket.js', 'screensaver-controller.js', 'screensaver-lg.js',
+                         'screensaver-owner.js'):
                 shutil.copy(ROOT/'native/app'/name, root/'native/app'/name)
             shutil.copy(ROOT/'native/service/app-inventory.js', root/'native/service/app-inventory.js')
-            (root/'native/app/vendor').mkdir()
+            subprocess.run(['git', 'add', 'native/app', 'native/service'], cwd=root, check=True)
             self.stage_screensaver(root)
             (root/'bin').mkdir()
             zig = root/'bin/zig'

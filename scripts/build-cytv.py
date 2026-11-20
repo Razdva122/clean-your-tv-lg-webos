@@ -40,7 +40,6 @@ def tracked_files(prefix):
         required[prefix] += ['launcher/' + name for name in THEME_FILES]
         required[prefix] += ['launcher/screensaver-' + name for name in ('idle.js', 'personal.js', 'settings.js', 'settings.css')]
     if prefix == 'native/app':
-        required[prefix] += [p.relative_to(ROOT).as_posix() for p in (ROOT/'native/app/vendor/ws-legacy').rglob('*') if p.is_file()]
         required[prefix] += ['native/app/screensaver-' + name + '.js' for name in ('controller', 'lg', 'owner')]
     for name in sorted(set(result.stdout.splitlines()) | set(required.get(prefix, []))):
         path = ROOT / name
@@ -50,13 +49,38 @@ def tracked_files(prefix):
     return files
 
 
+def helper_sources():
+    app = {name: raw for name, raw in tracked_files('native/app').items()
+           if not name.startswith('state/')
+           and (name.endswith(('.js', '.json', '.png')) or name.startswith('vendor/'))}
+    service = {name: raw for name, raw in tracked_files('native/service').items()
+               if not name.startswith('state/') and name.endswith(('.js', '.json'))}
+    return app, service
+
+
+def compile_helper_sources(app, service):
+    if 'screensaver-controller.js' in app:
+        from scripts.screensaver_package import runtime_files
+        app = {**app, **runtime_files()}
+    if 'app-inventory.js' in service:
+        app = {**app, 'app-inventory.js': service['app-inventory.js']}
+    # Each jail needs its own copy of the shared modules.
+    service = {**service, **{name: app[name] for name in ('state-permissions.js', 'contract-events.js')}}
+    return compile_helper(app), compile_helper(service)
+
+
+def stage_helper(app_dir, service_dir):
+    app, service = compile_helper_sources(*helper_sources())
+    for directory, files in ((app_dir, app), (service_dir, service)):
+        for name, raw in files.items():
+            target = directory / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(raw)
+
+
 def pack_app(appfiles, servicefiles, architecture='all', helper=False):
     if helper:
-        from scripts.screensaver_package import runtime_files
-        if 'screensaver-controller.js' in appfiles:
-            appfiles = dict(appfiles, **runtime_files())
-        servicefiles = dict(servicefiles, **{name: appfiles[name] for name in ('state-permissions.js', 'contract-events.js')})
-        appfiles, servicefiles = compile_helper(appfiles), compile_helper(servicefiles)
+        appfiles, servicefiles = compile_helper_sources(appfiles, servicefiles)
     info = json.loads(appfiles['appinfo.json'])
     if info.get('type') == 'web':
         if 'screensaver-settings.js' in appfiles:
@@ -82,9 +106,6 @@ def pack_app(appfiles, servicefiles, architecture='all', helper=False):
         files['usr/palm/services/' + service + '/state/home-control/.keep'] = b''
     executables = set()
     if helper:
-        # The service sandbox cannot import modules from the app directory.
-        for name in ('state-permissions.js', 'contract-events.js'):
-            files['usr/palm/services/' + service + '/' + name] = appfiles[name]
         executables = {'usr/palm/applications/' + app + '/' + n for n in ('detach', 'relay', 'resume')}
         files['usr/palm/applications/' + app + '/state/.keep'] = b''
         files['usr/palm/services/' + service + '/state/.keep'] = b''
@@ -252,9 +273,7 @@ def build_payload():
         import ziglang
         zig = Path(ziglang.__file__).parent / ('zig.exe' if os.name == 'nt' else 'zig')
         environment = dict(os.environ, ZIG_GLOBAL_CACHE_DIR=str(work / 'zig-global-cache'), ZIG_LOCAL_CACHE_DIR=str(work / 'zig-cache'))
-        app = tracked_files('native/app')
-        # A developer's local state must never enter the public helper.
-        app = {n: b for n, b in app.items() if (n.endswith(('.js', '.json', '.png')) or n.startswith('vendor/')) and not n.startswith('state/')}
+        app, service = helper_sources()
         for name, sources in {
             'detach': ['native/app/detach.c'],
             'relay': ['native/prototype/relay.c', 'native/prototype/filter.c'],
@@ -264,8 +283,6 @@ def build_payload():
             subprocess.run([str(zig), 'cc', '-target', 'arm-linux-musleabi', '-Os', '-static', '-s',
                             *sources, '-o', str(output)], cwd=ROOT, env=environment, check=True)
             app[name] = output.read_bytes()
-        service = {n: b for n, b in tracked_files('native/service').items() if n.endswith(('.js', '.json')) and not n.startswith('state/')}
-        app['app-inventory.js'] = service['app-inventory.js']
         helper = pack_app(app, service, architecture='arm', helper=True)
     (payload / 'helper.ipk').write_bytes(helper)
     from scripts.screensaver_package import build as screensaver_package
