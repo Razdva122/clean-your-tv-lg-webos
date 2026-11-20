@@ -1036,7 +1036,7 @@ def enable_locked(root,uid,seconds, *, session=None, resume_token=None):
                 if session is not None:
                     restore_locked(root, uid, routing_only=True)
                 else:
-                    restore_locked(root,uid)
+                    restore_locked(root, uid, explicit_restore=True)
         finally:
             for child in children:
                 if child.poll() is None:

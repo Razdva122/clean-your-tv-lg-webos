@@ -222,7 +222,9 @@ if(input.action==='root-package'){
  visit(base+'/applications/'+input.app,input.app+' app');if(input.app!==apps[3])visit(base+'/services/'+service,input.app+' service');visit(base+'/packages/'+input.app,input.app+' package');
  process.stdout.write(JSON.stringify(reply));return;
 }
-['clean-your-tv-root','clean-your-tv-installation','clean-your-tv-python','clean-your-tv-root-updater','clean-your-tv-system-updater'].forEach(function(name){rootHint('/var/lib/'+name,name);});
+// Root preflight can provision the shared Python cache before installing anything.
+// Leave it in place and use actual Root component and ownership state as the fence.
+['clean-your-tv-root','clean-your-tv-installation','clean-your-tv-root-updater','clean-your-tv-system-updater'].forEach(function(name){rootHint('/var/lib/'+name,name);});
 rootHint('/var/webos-profile/override/clean-your-tv-root.json','root-profile');
 services.slice(0,2).forEach(function(service){
  if(input.guard_owner){
