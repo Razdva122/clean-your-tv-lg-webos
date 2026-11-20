@@ -716,7 +716,7 @@ def process_start(pid):
     return int(fields[19])
 
 
-def stop_controller(root,uid, *, prior_session=False):
+def stop_controller(root,uid, *, allow_reused_pid=False):
     path=private_directory(root,uid)/'controller.json'
     try: value=json.loads(secure(path,uid,4096))
     except FileNotFoundError: return
@@ -737,7 +737,7 @@ def stop_controller(root,uid, *, prior_session=False):
     pid=value['pid']
     try:
         if process_start(pid)!=value['start']:
-            if prior_session:
+            if allow_reused_pid:
                 path.unlink()
                 return
             raise ValueError('Lifecycle controller PID changed; retain evidence')
@@ -843,7 +843,9 @@ def restore_locked(root,uid, *, for_removal=False, explicit_restore=False, routi
         write_intent(root,False,after['token'],'recovering',uid)
         if not for_removal:
             check = 'controller-stop-unverified'
-        stop_controller(root,uid)
+        # Some TVs reuse the kernel boot ID after reboot. A different process
+        # start time proves the recorded controller is gone, even on those TVs.
+        stop_controller(root, uid, allow_reused_pid=for_removal and generic and stopped_stock(after))
         check = 'stock-routing-unverified'
         change_chain(root,False,uid)
         if not after['stock_verified']:
@@ -1062,7 +1064,7 @@ def resume_after_boot(root, uid, intent, session):
     if (not eligible or not retired['stock_verified'] or retired['token'] != intent['token']
             or retired['guardian_pid']):
         raise ValueError('Previous compositor guardian retirement unverified')
-    stop_controller(root, uid, prior_session=True)
+    stop_controller(root, uid, allow_reused_pid=True)
     return enable_locked(root, uid, 0, session=session, resume_token=intent['token'])
 
 
