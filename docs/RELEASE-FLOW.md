@@ -47,8 +47,9 @@ on the preparation branch. Product changes should enter through reviewed PRs.
 Every `release/next` → `main` release candidate must maintain a current release
 record in its PR description, starting when the draft is opened. Use the
 [release PR template](../.github/PULL_REQUEST_TEMPLATE/release.md). The **Maintain next release candidate** workflow refreshes a marked generated
-block from the committed plan, versions and selected build. It preserves human
-sections. Use `python3 scripts/release-flow.py sync-record` to refresh explicitly.
+block from the committed plan, versions and selected build. It reads the latest PR
+body before replacing that block. Use `python3 scripts/release-flow.py sync-record`
+from the current `release/next` checkout to refresh the existing PR explicitly.
 Collect the inventory first; proposed bumps, packaging reasons, observations and
 documentation review remain human-maintained.
 
@@ -84,10 +85,19 @@ The description must contain:
   known limitations, untested behavior, rollback evidence and remaining work.
   Keep the checklist current; automated checks are not hardware acceptance.
 
-At freeze, replace tentative version targets with the final values, verify them
-against release metadata and component manifests, link the release notes, and
-record validation of the exact frozen candidate. Until then, explicitly state
-that the PR is an unfrozen draft and which bumps have not been committed.
+At freeze, change the PR title to the release version alone (`vX.Y.Z`). Replace
+tentative version targets with the final values, verify them against release metadata
+and component manifests, link the release notes, and record validation of the exact
+frozen candidate. Until then, state that the PR is an unfrozen draft and identify
+tentative component bumps.
+
+Keep one human-maintained summary at the top of the PR with the currently selected
+build run, attempt and acceptance state, including remaining gates. Link the
+verification ledger and put superseded observations in its dated entries. At release
+handoff and before merge, compare the summary with the generated block and resolve
+any discrepancy. In [PR #729](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/729),
+the title still named RC2 and the introduction named RC3 when the selected build
+and acceptance record referred to RC6.
 
 ### Record release candidate timings
 
@@ -672,12 +682,16 @@ draft PR to `main`. Existing next-cycle work is preserved. A failed publication
 does not reset the branch. Shipping notices still run if next-cycle setup fails.
 
 The **Maintain next release candidate** workflow also checks pushes to
-`release/next` and supports manual dispatch on that branch. It creates a draft
-only when the branch has changes and no open candidate exists, then refreshes the
-marked generated scope/version/build block. Human sections are preserved. Opening the draft does not freeze a version or
-establish artifact/TV acceptance. Maintain its scope and validation record as
-described above. Actions-created commits/PRs do not themselves trigger other
-workflows; subsequent implementation pushes trigger the normal checks.
+`release/next` and supports manual dispatch on that branch. It refreshes the
+generated record in the existing candidate, or creates a draft with that record
+when the branch has changes and no open candidate exists. An automatic run logs
+and skips refresh when its checkout has been superseded by a newer branch head. A stale
+manual dispatch or explicit sync fails. Duplicate candidates and API errors also
+fail. If guarded files changed after pinning, the refresh fails and names the
+changed files. The release coordinator must select a new compatible build and
+record affected acceptance. The trusted Release policy checks build inputs
+independently before merge. Actions-created commits/PRs do not themselves trigger
+other workflows; subsequent implementation pushes trigger the normal checks.
 
 Repository Actions settings must enable **Allow GitHub Actions to create and
 approve pull requests**. These workflows request PR write access and do not

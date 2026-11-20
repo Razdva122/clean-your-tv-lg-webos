@@ -1,7 +1,11 @@
 import base64
+from contextlib import redirect_stdout
 import importlib.util
+import io
 import json
 from pathlib import Path
+import subprocess
+import sys
 import unittest
 from unittest.mock import patch
 
@@ -24,13 +28,20 @@ class NextCandidateTests(unittest.TestCase):
         self.release = {'draft': False, 'prerelease': False, 'tag_name': 'v1.0.3'}
         self.commits = []
         self.refs = []
+        self.pr_writes = []
 
     def api(self, path, *, method='GET', data=None, **kwargs):
         if path.startswith('pulls?'):
             return self.prs
         if path == 'pulls' and method == 'POST':
+            self.pr_writes.append((method, data))
             self.prs.append({**data, 'number': 35, 'html_url': 'https://example.com/pull/35'})
             return self.prs[-1]
+        if path == 'pulls/35':
+            if method == 'PATCH':
+                self.pr_writes.append((method, data))
+                self.prs[0].update(data)
+            return self.prs[0].copy()
         if path.startswith('compare/'):
             return {'ahead_by': self.ahead, 'base_commit': {'sha': self.main},
                     'merge_base_commit': {'sha': self.main}, 'commits': [{'sha': self.head}]}
@@ -76,6 +87,63 @@ class NextCandidateTests(unittest.TestCase):
             flow.ensure_candidate()
         self.assertEqual(self.prs, [])
 
+    def test_maintenance_creates_one_draft_only_when_next_is_ahead(self):
+        self.ahead = 0
+        with patch.object(flow, 'api', side_effect=self.api), \
+             patch.object(flow, 'git', return_value=self.head), \
+             patch.object(flow, 'candidate_record', return_value=('1.0.4', 'current record')):
+            flow.maintain_candidate(automatic=True)
+            self.assertEqual(self.pr_writes, [])
+            self.ahead = 2
+            flow.maintain_candidate(automatic=True)
+        self.assertEqual([method for method, _ in self.pr_writes], ['POST'])
+        self.assertTrue(self.prs[0]['draft'])
+        self.assertEqual(self.prs[0]['title'], 'v1.0.4')
+        self.assertIn('current record', self.prs[0]['body'])
+
+    def test_duplicate_candidates_fail_without_writes(self):
+        self.prs = [{'number': 35}, {'number': 36}]
+        with patch.object(flow, 'api', side_effect=self.api), \
+             patch.object(flow, 'git', return_value=self.head), \
+             self.assertRaisesRegex(ValueError, 'multiple open release candidates'):
+            flow.maintain_candidate(automatic=True)
+        self.assertEqual(self.pr_writes, [])
+
+    def test_superseded_push_is_logged_while_manual_sync_is_strict(self):
+        older = 'f' * 40
+        with patch.object(flow, 'api', side_effect=self.api), \
+             patch.object(flow, 'git', return_value=older), \
+             patch.object(sys, 'argv', ['release-flow.py', 'maintain-candidate']):
+            with patch.dict(flow.os.environ, GITHUB_EVENT_NAME='push'), redirect_stdout(io.StringIO()) as output:
+                flow.main()
+            self.assertIn('superseded', output.getvalue().lower())
+            self.assertIn(older, output.getvalue())
+            self.assertIn(self.head, output.getvalue())
+            with patch.dict(flow.os.environ, GITHUB_EVENT_NAME='workflow_dispatch'), \
+                 self.assertRaisesRegex(ValueError, 'current release/next'):
+                flow.main()
+            with self.assertRaisesRegex(ValueError, 'current release/next'):
+                flow.sync_record()
+        self.assertEqual(self.pr_writes, [])
+
+    def test_manual_sync_requires_an_open_candidate(self):
+        with patch.object(flow, 'api', side_effect=self.api), \
+             patch.object(flow, 'git', return_value=self.head), \
+             self.assertRaisesRegex(ValueError, 'exactly one open release candidate'):
+            flow.sync_record()
+        self.assertEqual(self.pr_writes, [])
+
+    def test_listing_api_error_fails_without_writes(self):
+        failure = subprocess.CalledProcessError(1, ['gh', 'api'])
+        with patch.object(flow, 'git', return_value=self.head), \
+             patch.object(sys, 'argv', ['release-flow.py', 'maintain-candidate']), \
+             patch.dict(flow.os.environ, GITHUB_EVENT_NAME='push'), \
+             patch.object(flow.subprocess, 'check_output',
+                          side_effect=[json.dumps({'sha': self.head}).encode(), failure]) as gh:
+            with self.assertRaises(subprocess.CalledProcessError):
+                flow.main()
+        self.assertEqual([call.args[0][3] for call in gh.call_args_list], ['GET', 'GET'])
+
     def test_verified_publication_resets_plan_on_main_and_opens_next_draft(self):
         self.ahead = 0
         self.plan = {**self.plan, 'version': '1.0.3', 'acceptance': 'Previous acceptance'}
@@ -104,7 +172,6 @@ class NextCandidateTests(unittest.TestCase):
         self.assertEqual(len(self.prs), 1)
 
     def test_failed_feed_verification_never_resets_branch(self):
-        import subprocess
         with patch.object(flow, 'api', side_effect=self.api), \
              patch.object(flow.subprocess, 'run', side_effect=subprocess.CalledProcessError(1, ['node'])), \
              self.assertRaises(subprocess.CalledProcessError):
@@ -120,7 +187,6 @@ class NextCandidateTests(unittest.TestCase):
         self.assertEqual(self.prs, [])
 
     def test_concurrent_branch_change_rejects_reset_without_opening_pr(self):
-        import subprocess
         self.ahead = 0
         def github(path, **kwargs):
             if path == 'git/refs/heads/release/next':
