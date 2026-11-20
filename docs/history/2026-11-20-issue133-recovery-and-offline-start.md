@@ -47,6 +47,16 @@ the recovery-only partial catalog entry and regenerated README. Existing user
 recovery instructions/localized guides need no change: no action or label was
 added. Full installer validation is recorded in the implementation PR.
 
+The installer profile ran 1,778 Python cases with ten skips and exactly four
+failures in unchanged wallpaper GUI tests: a preceding CLI test had selected
+the machine's Russian language, while the wallpaper assertions assumed English.
+Seeding Russian reproduced the same four failures independently of this fix.
+The wallpaper fixture now explicitly selects English and restores the prior
+choice through cleanup. Its eight cases and the five preceding TV-name cases
+passed together from Russian initial state. Only the affected cases were rerun;
+this is not represented as a second fresh all-green installer-profile run.
+Independent review of the test-only correction found no actionable issues.
+
 ## Exact-build archive discovery
 
 The [official C3 support page](https://www.lg.com/uk/support/product-support/cs-OLED55C34LA.AEK/)
