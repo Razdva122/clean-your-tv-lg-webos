@@ -1,5 +1,7 @@
 # Release history and device evidence
 
+- [Issue 152 terminal-service restart loop, 2026-11-20](2026-11-20-issue152-terminal-restart-loop.md): one verified restart covers opaque processes with terminal empty service residue; local reproduction and limits.
+
 - [Next candidate preparation, 2026-11-20](2026-11-20-next-candidate-preparation.md): staged PR inventory, integration repairs and focused host verification.
 
 - [Issue 692 cleanup exec budget, 2026-11-20](2026-11-20-issue692-cleanup-exec-budget.md): W19P Node 0.12.2 replay, verified-source streaming and package metadata remnants.

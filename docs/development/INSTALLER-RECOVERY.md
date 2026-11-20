@@ -43,6 +43,15 @@ registrations keep removal pending. `empty_service_dirs_retained` records the
 result alongside the existing `empty_helper_dirs_retained` flag. Package install
 continues through the vendor endpoint and can repopulate retained directories.
 
+For `process-idle-unverified`, an observed kernel change can settle opaque
+individual processes once every remaining project target has its own terminal
+removal. This applies to retained Helper and service trees; unrelated installed
+apps do not participate in that target test. Final checks still require an
+enumerated process list, no observed project/installer process, directory-only
+residue, absent project apps and checked controls/registrations. A same-boot retry
+does not establish this exception. The existing durable kernel-change field is
+kept across interrupted verified-clean completion, including service-only residue.
+
 No-root supports only existing pending install and pending/removing uninstall
 receipts. Except for the pre-submission case below, offering removal requires a positive bounded ten-second
 `appInstallService/status` response with an empty apps list and rejects conflicting

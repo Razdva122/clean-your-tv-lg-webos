@@ -2544,6 +2544,80 @@ class SimpleRemoval(unittest.TestCase):
         self.assertTrue(json.loads(report.read_text())['removal']['empty_helper_dirs_retained'])
         self.assertFalse(self.vendor_removals())
 
+    def terminal_service_restart_fixture(self, *, helper_tree=True):
+        helper, home = self.cleanup.APPS[:2]
+        if helper_tree:
+            state = self.root / 'developer/apps/usr/palm/applications' / helper / 'state'
+            state.mkdir(parents=True)
+            state.parent.chmod(0o555)
+            self.addCleanup(state.parent.chmod, 0o755)
+        service = self.root / 'developer/apps/usr/palm/services/com.gathin.tvhome.renewal'
+        service.mkdir(parents=True)
+        service.parent.chmod(0o555)
+        self.addCleanup(service.parent.chmod, 0o755)
+        opaque = self.root / 'proc/987654'
+        opaque.mkdir(parents=True)
+        cmdline = opaque / 'cmdline'
+        cmdline.write_bytes(b'/usr/bin/node\0-e\0opaque\0')
+        self.store.request_clean_removal(self.profile)
+        self.store.checkpoint(self.profile, stage='private-cleanup',
+                              removals={helper: 'terminal', home: 'terminal'})
+        self.legacy_home()
+        return cmdline
+
+    @unittest.skipIf(getattr(os, 'getuid', lambda: -1)() == 0, 'unprivileged SDK model')
+    def test_terminal_services_finish_after_one_restart_with_opaque_processes(self):
+        self.terminal_service_restart_fixture()
+        self.assertTrue(self.remove()['restart_required'])
+        self.assertEqual(self.store.pending(self.profile)['cleanup_restart_triggers'], ['process-idle-unverified'])
+        self.reboot()
+        result = self.remove()
+        self.assertTrue(result['verified_clean'], result)
+        self.assertTrue(result['empty_service_dirs_retained'])
+        self.assertIsNone(self.store.pending(self.profile))
+        self.assertFalse(self.vendor_removals())
+
+    @unittest.skipIf(getattr(os, 'getuid', lambda: -1)() == 0, 'unprivileged SDK model')
+    def test_service_only_restart_finishes_with_foreign_app_and_survives_host_interruption(self):
+        cmdline = self.terminal_service_restart_fixture(helper_tree=False)
+        cmdline.chmod(0)
+        self.addCleanup(cmdline.chmod, 0o600)
+        self.remote.apps.add('org.example.keep')
+        self.assertTrue(self.remove()['restart_required'])
+        first = self.store.pending(self.profile)['cleanup_boot_proof']
+        with self.assertRaises(UserError):
+            self.remove()
+        self.assertEqual(self.store.pending(self.profile)['cleanup_boot_proof'], first)
+        self.reboot()
+        with patch.object(self.store, 'finish_clean_removal', side_effect=OSError('fixture host interruption')):
+            with self.assertRaises(OSError):
+                self.remove()
+        self.assertEqual(self.store.pending(self.profile)['stage'], 'verified-clean')
+        self.assertTrue(self.store.pending(self.profile)['cleanup_helper_kernel_changed'])
+        self.assertTrue(self.remove()['verified_clean'])
+        self.assertIn('org.example.keep', self.remote.apps)
+        self.assertFalse(self.vendor_removals())
+
+    @unittest.skipIf(getattr(os, 'getuid', lambda: -1)() == 0, 'unprivileged SDK model')
+    def test_terminal_service_restart_still_rejects_visible_project_process_and_missing_proc(self):
+        cmdline = self.terminal_service_restart_fixture()
+        self.assertTrue(self.remove()['restart_required'])
+        self.reboot()
+        cmdline.write_bytes(b'com.gathin.tvhome.renewal\0')
+        with self.assertRaises(UserError):
+            self.remove()
+        self.assertIsNotNone(self.store.pending(self.profile))
+        cmdline.write_bytes(b'/usr/bin/node\0-e\0opaque\0')
+        proc = self.root / 'proc'
+        proc.rename(self.root / 'hidden-proc')
+        try:
+            result = self.remove()
+        except UserError:
+            pass
+        else:
+            self.assertIsNot(result.get('verified_clean'), True)
+        self.assertIsNotNone(self.store.pending(self.profile))
+
     @unittest.skipIf(getattr(os, 'getuid', lambda: -1)() == 0, 'unprivileged SDK model')
     def test_terminal_helper_reboots_once_and_can_restore_stock_without_saved_pairing(self):
         app = self.cleanup.APPS[0]
