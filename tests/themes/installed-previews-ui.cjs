@@ -14,6 +14,130 @@ for (const name of entry.files.filter((n) => n !== 'cytv-theme.json'))
   envelope.files[name] = fs
     .readFileSync(path.resolve('showcase', entry.base, name))
     .toString('base64');
+async function exerciseRollback(page, rollBack) {
+  const downloads = await page.evaluate(async (input) => {
+    ThemeManager.reset();
+    await ThemeStore.clear();
+    const decode = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+    const manifest = JSON.parse(ThemeData.decode(decode(input.descriptor)));
+    const downloads = [];
+    for (let i = 0; i < 8; i++) {
+      manifest.themeVersion = '2.0.' + i;
+      manifest.requires.minimumHomeVersion = '1.5.1';
+      const descriptor = btoa(
+        String.fromCharCode(...ThemeData.encode(JSON.stringify(manifest)))
+      );
+      const item = await ThemeManager.installEnvelope({
+        schemaVersion: 1,
+        descriptor,
+        files: input.files
+      });
+      downloads.push(item.digest);
+    }
+    manifest.title = 'Compatible replacement';
+    manifest.requires.minimumHomeVersion = '1.4.0';
+    const descriptor = btoa(
+      String.fromCharCode(...ThemeData.encode(JSON.stringify(manifest)))
+    );
+    return {
+      keys: downloads.sort(),
+      compatible: { schemaVersion: 1, descriptor, files: input.files }
+    };
+  }, envelope);
+  rollBack();
+  await page.reload();
+  await page.locator('#tiles .focused').waitFor();
+  await assert.rejects(
+    page.evaluate(
+      (pack) => ThemeManager.installEnvelope(pack),
+      downloads.compatible
+    ),
+    /8 themes maximum/
+  );
+  await page.locator('#btnSettings').click();
+  await page.locator('[data-category=themes]').click();
+  const rows = page
+    .locator('.theme-option')
+    .filter({ hasText: 'Unavailable downloaded theme' });
+  await rows.last().waitFor();
+  assert.equal(await rows.count(), 8);
+  const first = rows.first();
+  assert.deepEqual(await first.getByRole('button').allTextContents(), [
+    'Remove'
+  ]);
+  assert.equal(await first.locator('img').count(), 0);
+  const remove = first.getByRole('button', { name: 'Remove', exact: true });
+  await remove.click();
+  await page.locator('#themeRemoveCancel').click();
+  await remove.waitFor();
+  assert.equal(await rows.count(), 8);
+  await remove.click();
+  await page.locator('#themeRemoveConfirm').click();
+  await page.waitForFunction(
+    () => document.querySelectorAll('.theme-unavailable').length === 7
+  );
+  const added = await page.evaluate(
+    (pack) => ThemeManager.installEnvelope(pack),
+    downloads.compatible
+  );
+  const remaining = await page.evaluate(async (keys) => {
+    const packs = await Promise.all(keys.map((key) => ThemeStore.get(key)));
+    return keys.filter((_, index) => packs[index]);
+  }, downloads.keys);
+  assert.deepEqual(remaining, downloads.keys.slice(1));
+  assert.equal(
+    await page.evaluate(async () => (await ThemeStore.list()).length),
+    8
+  );
+
+  await page.locator('[data-category=language]').click();
+  await page.locator('[data-category=themes]').click();
+  await page
+    .locator('.theme-option')
+    .filter({ hasText: 'Compatible replacement' })
+    .getByRole('button', { name: 'Apply theme', exact: true })
+    .click();
+  await page.waitForFunction(
+    (digest) =>
+      ThemeManager.current().digest === digest && !ThemeManager.current().trial,
+    added.digest
+  );
+
+  // An incomplete package must have a Remove action even without previewable files.
+  await page.evaluate(async (key) => {
+    const pack = await ThemeStore.get(key);
+    delete pack.files[Object.keys(pack.files)[0]];
+    await ThemeStore.put(pack, pack.size);
+  }, added.digest);
+  await page.locator('[data-category=language]').click();
+  await page.locator('[data-category=themes]').click();
+  await rows.nth(7).waitFor();
+  const incomplete = rows.nth(
+    remaining.filter((key) => key < added.digest).length
+  );
+  await assert.rejects(
+    page.evaluate(
+      (key) => ThemeManager.remove({ unavailable: true, storageKey: key }),
+      added.digest
+    ),
+    /Switch to another theme/
+  );
+  await incomplete.getByRole('button', { name: 'Remove', exact: true }).click();
+  await page.getByText('Classic will be restored.', { exact: true }).waitFor();
+  await page.locator('#themeRemoveConfirm').click();
+  await page.waitForFunction(
+    () => document.querySelectorAll('.theme-unavailable').length === 7
+  );
+  assert.equal(
+    await page.evaluate(() => ThemeManager.current().id),
+    'builtin:classic'
+  );
+  assert.equal(
+    await page.evaluate((key) => ThemeStore.get(key), added.digest),
+    undefined
+  );
+}
+
 (async () => {
   const site = stage(),
     server = http.createServer((req, res) => {
@@ -52,8 +176,9 @@ for (const name of entry.files.filter((n) => n !== 'cytv-theme.json'))
           page = await context.newPage();
         page.setDefaultTimeout(10000);
         await context.route(/^https:\/\//, (r) => r.abort());
+        let engineVersion = '1.5.1';
         await context.route('**/appinfo.json', (r) =>
-          r.fulfill({ json: { version: '1.5.1' } })
+          r.fulfill({ json: { version: engineVersion } })
         );
         await page.goto(
           'http://127.0.0.1:' +
@@ -403,6 +528,8 @@ for (const name of entry.files.filter((n) => n !== 'cytv-theme.json'))
           custom.id,
           'closing settings preserves installed selection'
         );
+        if (width === 1280)
+          await exerciseRollback(page, () => (engineVersion = '1.4.0'));
         await context.close();
         console.log(
           'PASS arbitrary cached theme preview offline, Apply/Remove and separate showcase: ' +

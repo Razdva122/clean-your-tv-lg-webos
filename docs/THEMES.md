@@ -80,7 +80,7 @@ The installer verifies API/Home version, rule/asset limits, file sizes and SHA-2
 
 After a successful install, files are stored in this Home application's IndexedDB cache. A normal restart does not contact the author. The TV still needs network access for apps and services that require it; the theme itself can be restored offline.
 
-To update, install a new reviewed catalogue version, use a new version's link, or transfer a fresh development snapshot; select the installed version, or try and keep it through showcase. Updates are explicit: installed themes do not follow GitHub branches automatically. Several versions may be cached independently. Select **Remove** beside a downloaded version and confirm. Removing the active version restores Classic before its files are deleted; cancellation keeps the theme.
+To update, install a new reviewed catalogue version, use a new version's link, or transfer a fresh development snapshot; select the installed version, or try and keep it through showcase. Updates are explicit: installed themes do not follow GitHub branches automatically. Several versions may be cached independently. Select **Remove** beside a downloaded version and confirm. After a Home rollback, incompatible downloads appear as **Unavailable downloaded theme** with the same **Remove** action. Removing the active version restores Classic before its files are deleted; cancellation keeps the theme.
 
 The published 1.8.2 cache is bounded at eight downloaded versions and 64 MiB of payload data, subject to a lower device quota. Remove inactive versions if saving fails. Downloaded themes are removed individually with confirmation; removing the active theme restores Classic first. Built-ins cannot be removed.
 

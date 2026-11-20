@@ -273,10 +273,14 @@
             digest: entry.digest
           });
         });
-        packages.forEach(function (pack) {
+        packages.forEach(function (record) {
           try {
-            var parsed = data.verify(pack, homeVersion);
-            if (parsed.manifest.id.indexOf('github:') !== 0)
+            var pack = record.pack,
+              parsed = data.verify(pack, homeVersion);
+            if (
+              record.key !== pack.digest ||
+              parsed.manifest.id.indexOf('github:') !== 0
+            )
               throw Error('Invalid external identity');
             items.push({
               id: parsed.manifest.id,
@@ -290,7 +294,11 @@
               hasVideo: false
             });
           } catch (_) {
-            notice = 'An invalid cached theme was ignored';
+            items.push({
+              title: 'Unavailable downloaded theme',
+              storageKey: record.key,
+              unavailable: true
+            });
           }
         });
         return items;
@@ -299,6 +307,7 @@
   function preview(item) {
     if (
       !item ||
+      item.unavailable ||
       typeof item.id !== 'string' ||
       item.id.indexOf('github:') !== 0 ||
       !/^[a-f0-9]{64}$/.test(item.digest)
@@ -337,6 +346,8 @@
   }
 
   function begin(s, immediate) {
+    if (s && s.unavailable)
+      return Promise.reject(Error('Theme is not installed'));
     if (trial)
       return Promise.reject(Error('Finish the current theme preview first'));
     var token = ++generation;
@@ -387,6 +398,7 @@
       var installed = items.filter(function (item) {
         return (
           s &&
+          !item.unavailable &&
           item.id === s.id &&
           (item.builtin === true || item.digest === s.digest)
         );
@@ -687,11 +699,12 @@
   }
 
   function remove(s) {
-    if (trial || active.digest === s.digest)
+    var key = s.unavailable ? s.storageKey : s.digest;
+    if (trial || active.digest === key)
       return Promise.reject(
         Error('Switch to another theme before removing this version')
       );
-    return root.ThemeStore.remove(s.digest).then(emit);
+    return root.ThemeStore.remove(key).then(emit);
   }
   root.ThemeManager = {
     start: start,
