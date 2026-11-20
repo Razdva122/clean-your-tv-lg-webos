@@ -27,7 +27,7 @@ JS_ROOTS = ('launcher', 'root-edition/ui', 'updater-app', 'root-edition/updater/
             'homebrew/app', 'android/app/src/main/assets/ui')
 COLLECT = r"""
 const fs=require('fs'),acorn=require('acorn'),postcss=require('postcss'),html=require('parse5');
-const out={'zh-Hans':[],'zh-Hant':[],shared:[]},chinese=['zh-Hans','zh-Hant'],locales=new Set(['en','cs','de','es','pt-BR','fr','it','ko','hi','pl','ru',...chinese]);
+const out={'zh-Hans':[],'zh-Hant':[],shared:[]},chinese=['zh-Hans','zh-Hant'],locales=new Set(['en','cs','de','es','pt-BR','fr','it','ko','hi','pl','ro','ru',...chinese]);
 function known(value){return typeof value==='string'&&(['zh','pt'].includes(value.replace(/_/g,'-').split('-')[0].toLowerCase())||locales.has(value.replace(/_/g,'-').split('-')[0].toLowerCase()));}
 function language(value){const parts=String(value).replace(/_/g,'-').toLowerCase().split('-');return parts[0]==='zh'?(parts.includes('hant')||parts.some(p=>['tw','hk','mo'].includes(p))?'zh-Hant':'zh-Hans'):'foreign';}
 function emit(value,scope){if(scope!=='foreign')out[scope||'shared'].push(value);}

@@ -23,6 +23,9 @@ class KeyfilterIntegrationTests(unittest.TestCase):
                             "from deploy import verify_bundle; verify_bundle('.', allow_experimental=True)"],
                            cwd=bundle, check=True, capture_output=True)
             release = json.loads((bundle/'release.json').read_bytes())
+            deploy = load('deploy')
+            self.assertTrue((bundle/deploy.BETA_MIGRATION_SCRIPT).is_file())
+            self.assertNotIn(deploy.BETA_MIGRATION_SCRIPT, deploy.SUPPORT_FILES)
             provision = load('provision')
             original = {
                 'service': '[D-BUS Service]\nName='+provision.NAME+'\nExec=/usr/bin/run-js-service -n '+str(provision.SERVICE),

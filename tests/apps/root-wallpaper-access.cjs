@@ -8,7 +8,7 @@ for (const failure of [false, true]) {
   const calls = [];
   vm.runInNewContext(source, {
     __dirname: '/private/service',
-    process: { getuid: () => 0 },
+    process: { getuid: () => 0, argv: [] },
     Promise,
     require(name) {
       if (name === 'child_process')

@@ -237,8 +237,8 @@ def startup_validate(sources):
     return dict(sources)
 
 
-def startup_load():
-    try: value=d.safe_json(d.STATE/'startup-policy.json')
+def startup_load(read=None):
+    try: value=read() if read is not None else d.safe_json(d.STATE/'startup-policy.json')
     except FileNotFoundError:return dict(startup_DEFAULTS)
     if (not isinstance(value,dict) or set(value)!={'version','sources'}
             or type(value['version']) is not int or value['version'] not in (1,2)):

@@ -204,6 +204,15 @@ def prime_cache(cache_dir, progress):
         if sys.platform == 'darwin':
             # Frozen Python retains its build host's CA paths, absent on a clean Mac.
             context.load_verify_locations(cafile='/etc/ssl/cert.pem')
+        elif sys.platform == 'linux' and not hasattr(sys, 'getandroidapilevel'):
+            paths = ssl.get_default_verify_paths()
+            # Frozen OpenSSL may use build-host paths absent on the target distro.
+            if not paths.cafile and paths.openssl_cafile_env not in os.environ:
+                for cafile in ('/etc/ssl/cert.pem', '/etc/pki/tls/certs/ca-bundle.crt',
+                               '/etc/ssl/certs/ca-certificates.crt'):
+                    if Path(cafile).is_file():
+                        context.load_verify_locations(cafile=cafile)
+                        break
         opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), _ReleaseRedirect(),
                                             urllib.request.HTTPSHandler(context=context))
         failure = 'cache-access'
@@ -473,6 +482,96 @@ ancestors "$base" || { printf 'CYTV_TARGET_ERROR ownership'; exit 0; }
     except TVCommandError: raise PythonPreflightError('tools') from None
 
 
+_REPAIR_CACHE = r'''
+(function () {
+  var fs=require('fs'),path=require('path'),crypto=require('crypto'),
+      slot=process.argv[1],manifest=slot+'/.cytv-runtime.json',
+      expected=process.argv[2],caches=[],seen=0,entries=0,total=0;
+  function has(files,name){return Object.prototype.hasOwnProperty.call(files,name);}
+  function owned(file,directory){
+    var info=fs.lstatSync(file);
+    if(info.uid!==0||(info.mode&18)||info.isSymbolicLink()||
+       (directory?!info.isDirectory():!info.isFile()||info.nlink!==1))throw Error('unsafe-runtime');
+    return info;
+  }
+  function ancestors(file){
+    for(var parent=path.dirname(file);;parent=path.dirname(parent)){
+      owned(parent,true);
+      if(parent===path.dirname(parent))break;
+    }
+  }
+  function bytes(file){
+    ancestors(file);
+    var info=owned(file,false);
+    if(info.size>256*1024*1024)throw Error('oversized-runtime-file');
+    var constants=require('constants'),
+        fd=fs.openSync(file,constants.O_RDONLY|constants.O_NOFOLLOW|constants.O_NONBLOCK);
+    try{
+      var opened=fs.fstatSync(fd),data=new Buffer(info.size),offset=0;
+      if(info.dev!==opened.dev||info.ino!==opened.ino)throw Error('runtime-changed');
+      while(offset<data.length){
+        var count=fs.readSync(fd,data,offset,data.length-offset,offset);
+        if(!count)throw Error('runtime-changed');
+        offset+=count;
+      }
+      var after=owned(file,false);
+      if(info.dev!==after.dev||info.ino!==after.ino||info.size!==after.size||
+         info.mtime.getTime()!==after.mtime.getTime()||
+         info.ctime.getTime()!==after.ctime.getTime())throw Error('runtime-changed');
+      return data;
+    }finally{fs.closeSync(fd);}
+  }
+  function sha(data){return crypto.createHash('sha256').update(data).digest('hex');}
+  try{
+    if(!path.isAbsolute(slot)||path.normalize(slot)!==slot)throw Error('invalid-runtime');
+    var raw=bytes(manifest);
+    if(sha(raw)!==expected)throw Error('changed-manifest');
+    var inventory=JSON.parse(raw),files=inventory.files,names=Object.keys(files);
+    if(names.length>20000)throw Error('oversized-inventory');
+    function scan(directory){
+      owned(directory,true);
+      fs.readdirSync(directory).forEach(function(name){
+        if(++entries>120000)throw Error('oversized-runtime');
+        var file=path.join(directory,name),relative=path.relative(slot,file),info=fs.lstatSync(file);
+        if(info.isDirectory()){owned(file,true);scan(file);return;}
+        if(file===manifest)return;
+        info=owned(file,false);
+        if(has(files,relative)){
+          total+=info.size;
+          if(total>512*1024*1024||sha(bytes(file))!==files[relative])throw Error('changed-runtime');
+          seen++;
+          return;
+        }
+        var match=/^(.+)\.cpython-313(?:\.opt-[12])?\.pyc$/.exec(name);
+        if(path.basename(directory)!=='__pycache__'||!match||match[0]!==name||
+           !has(files,path.relative(slot,path.join(path.dirname(directory),match[1]+'.py'))))throw Error('unexpected-runtime-file');
+        caches.push({file:file,dev:info.dev,ino:info.ino});
+      });
+    }
+    scan(slot);
+    if(seen!==names.length||sha(bytes(manifest))!==expected)throw Error('incomplete-runtime');
+    caches.forEach(function(entry){
+      ancestors(entry.file);
+      try{
+        var info=owned(entry.file,false);
+        if(info.dev!==entry.dev||info.ino!==entry.ino)throw Error('cache-changed');
+        fs.unlinkSync(entry.file);
+      }catch(error){if(error.code!=='ENOENT')throw error;}
+    });
+    process.stdout.write('CYTV_RUNTIME_CACHE_REPAIRED');
+  }catch(error){process.exitCode=1;}
+}());
+'''
+
+
+def _repair_cache(remote, tree, inventory):
+    manifest = json.dumps(inventory, sort_keys=True, separators=(',', ':')).encode()
+    command = ['env', '-u', 'NODE_OPTIONS', '-u', 'NODE_PATH', '/usr/bin/node', '-e',
+               _REPAIR_CACHE, tree, hashlib.sha256(manifest).hexdigest()]
+    if remote.run(shlex.join(command), timeout=180).strip() != 'CYTV_RUNTIME_CACHE_REPAIRED':
+        raise UserError(INSTALL_ERROR)
+
+
 def _verify(remote, tree, inventory):
     manifest = json.dumps(inventory, sort_keys=True, separators=(',', ':')).encode()
     checksums = ''.join(digest+'  '+name+'\n' for name, digest in sorted(inventory['files'].items()))
@@ -522,7 +621,7 @@ def _smoke(remote, executable):
     if result != 'CYTV_RUNTIME_SMOKE': raise UserError(INSTALL_ERROR)
 
 
-def select_python(remote, cache_dir, progress, provision=False):
+def select_python(remote, cache_dir, progress, provision=False, *, repair_cache=False):
     """Return system Python, or (only when authorized) a verified private slot."""
     try:
         if remote.run(shlex.join(['/usr/bin/python3', '-I', '-B', '-c', SYSTEM_PROBE]), timeout=60).strip() == 'CYTV_SYSTEM_PYTHON':
@@ -560,6 +659,8 @@ def select_python(remote, cache_dir, progress, provision=False):
         executable = slot + '/bin/python3.13'
         exists = _run(remote, 'slot='+shlex.quote(slot)+'\nif [ -e "$slot" ] || [ -L "$slot" ]; then printf CYTV_SLOT_EXISTS; else printf CYTV_SLOT_MISSING; fi\n')
         if exists == 'CYTV_SLOT_EXISTS':
+            if repair_cache:
+                _repair_cache(remote, slot, inventory)
             _verify(remote, slot, inventory); _smoke(remote, executable)
             progress('Using the verified private Python runtime…')
             return executable

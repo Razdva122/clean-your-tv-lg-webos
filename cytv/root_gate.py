@@ -137,10 +137,7 @@ def beta_repair_available(installer, result):
             and lease.get('journal') == 'deploy.json' and lease.get('terminal') is False)
 
 
-def repair_beta_recovery(installer):
-    from .root_passive import collect_beta
-    from .root_install_recovery import run
-
+def stage_recovery_support(installer):
     # Only stage the authenticated recovery support. Graphics and the IPK
     # belong to the installed package, which the device checks in place.
     data = source_bundle(installer, resolution='1920x1080')
@@ -152,18 +149,62 @@ def repair_beta_recovery(installer):
         target = stage+'/'+name
         installer.remote.run('mkdir -p '+shlex.quote(str(PurePosixPath(target).parent)))
         installer.remote.upload(target, raw, mode=0o600)
-    try:
-        reply = json.loads(run(installer, stage, 'provision.py', ['repair_beta_recovery'], timeout=180))
-    finally:
-        installer.tv_info['root_beta_state'] = collect_beta(installer.remote)
+    return stage
+
+
+def verify_repair_reply(installer, stage, reply):
     if reply != {'returnValue': True, 'status_verified': True, 'home_changed': False}:
-        raise UserError('Root Beta recovery status could not be verified. Keep recovery data.',
+        raise UserError('Root recovery status could not be verified. Keep recovery data.',
                         reason_code='root-operation-unconfirmed')
     try:
         installer.remote.run('rm -rf '+shlex.quote(stage))
     except (OSError, RuntimeError):
         pass  # The TV can retire the verified temporary support on restart.
     return reply
+
+
+
+def repair_beta_recovery(installer):
+    from .root_passive import collect_beta
+    from .root_install_recovery import run
+
+    stage = stage_recovery_support(installer)
+    try:
+        reply = json.loads(run(installer, stage, 'provision.py', ['repair_beta_recovery'], timeout=180))
+    finally:
+        installer.tv_info['root_beta_state'] = collect_beta(installer.remote)
+    return verify_repair_reply(installer, stage, reply)
+
+
+def record_native_installation(installer):
+    private_write(installer.store.device_dir(installer.profile)/'installation.json',
+                  json.dumps({'home_backend': BACKEND, 'experimental': True, 'hardware_validated': False}).encode())
+
+
+def repair_retained_root(installer, ask, write):
+    from . import prompts
+    from .root_install_recovery import run
+
+    pending = installer.store.pending(installer.profile) or {}
+    pins = [pending.get('release_sha'), pending.get('bundle_sha')]
+    if (installer.profile['edition'] != 'root' or installer.profile.get('root_variant')
+            or pending.get('action') != 'install' or pending.get('stage') != 'setup'
+            or pending.get('home_backend') != BACKEND
+            or pending.get('migrate') is not False or pending.get('requires_updater') is not False
+            or any(key in pending for key in ('product_operation', 'recovery_protocol', 'activation_restore_pending', 'previous'))
+            or not all(isinstance(pin, str) and re.fullmatch('[a-f0-9]{64}', pin) for pin in pins)):
+        raise UserError('The original unfinished Root installation is required. Keep recovery data.',
+                        reason_code='pending-operation')
+    if not prompts.confirm('Repair the existing Root recovery service?', ask, write):
+        return
+    stage = stage_recovery_support(installer)
+    reply = json.loads(run(installer, stage, 'provision.py', ['repair_root_recovery', *pins], timeout=180))
+    verify_repair_reply(installer, stage, reply)
+    record_native_installation(installer)
+    write('Root recovery service answered and its integrity was verified.')
+    if prompts.confirm('Finish Root setup and turn on Home control?', ask, write):
+        installer.resume_root_setup(expected_pending=pending)
+        installer.outcome.review_home(ask, write)
 
 
 def native_proof(device):
@@ -271,8 +312,7 @@ def install(installer, inventory, migrate=False, reinstall=None):
     if not stock_proof(device) or not isinstance(device.get('recovery'), dict) or device['recovery'].get('integrity_verified') is not True:
         raise UserError('C1 recovery could not be verified. Run cytv status; activation has not started.')
     installer.outcome.packages_verified()
-    private_write(installer.store.device_dir(installer.profile)/'installation.json',
-                  json.dumps({'home_backend': BACKEND, 'experimental': True, 'hardware_validated': False}).encode())
+    record_native_installation(installer)
     installer.store.checkpoint(installer.profile, action='activate-root', stage='stop-helper',
                                requires_updater=False, home_backend=BACKEND)
     launched = installer.activate_root()

@@ -444,9 +444,10 @@ class SSH:
                             detail = root_restore_failure_details(reply.get('root_restore_failure'))
                             if detail:
                                 error.root_restore_failure = detail
-                            detail = root_beta_repair_details(reply.get('root_beta_repair_failure'))
-                            if detail:
-                                error.root_beta_repair_failure = detail
+                            for key in ('root_beta_repair_failure', 'root_retained_repair_failure'):
+                                detail = root_beta_repair_details(reply.get(key))
+                                if detail:
+                                    setattr(error, key, detail)
                     except (ValueError, TypeError, RecursionError):pass
                 # Root's historic <=4096 parser above remains independent.
                 from .contract_events import export_events, record, envelope_failure

@@ -77,6 +77,16 @@ class ContextTests(unittest.TestCase):
         self.assertEqual(unsafe['status']['product']['last_failure']['cleanup_step'],'unknown')
         self.assertNotIn('PRIVATE',json.dumps([report,later,unsafe]))
 
+    def test_early_cleanup_steps_preserve_errno_without_raw_error(self):
+        from cytv.diagnostic_context import product_summary
+        for step in ('boot-identity', 'private-inventory'):
+            with self.subTest(step=step):
+                value = product_summary({'last_failure': {'exception_type':'OSError',
+                    'errno':7, 'stage':'requested', 'cleanup_step':step, 'stderr':'PRIVATE'}})
+                self.assertEqual(value['last_failure'], {'exception_type':'OSError',
+                    'errno':7, 'stage':'requested', 'cleanup_step':step})
+                self.assertNotIn('PRIVATE', json.dumps(value))
+
     def test_cleanup_probe_exception_is_filtered_in_reports_and_saved_history(self):
         self.store.begin(self.profile,'uninstall')
         product={'last_failure':{'exception_type':'CalledProcessError','exit_status':1,'cleanup_step':'home-readback',

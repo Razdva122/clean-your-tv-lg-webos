@@ -796,9 +796,12 @@ if __name__ == '__main__':
     elif len(sys.argv) > 1 and sys.argv[1] == 'startup':
         try:
             if gate_backend() is not None:
-                raise ValueError('Native startup source choices are not admitted for the C1 experiment')
-            from intent_runtime import startup_entry as entry
-            print(json.dumps({'returnValue':True,'result':entry(sys.argv[2:])}),flush=True)
+                from c1_keyfilter import startup_entry
+                result = startup_entry(sys.argv[2:], d.STATE, d.EXPECTED_UID)
+            else:
+                from intent_runtime import startup_entry as entry
+                result = entry(sys.argv[2:])
+            print(json.dumps({'returnValue':True,'result':result}),flush=True)
         except Exception:
             print(json.dumps({'returnValue':False,'error':'Startup choices unavailable'}),flush=True)
             sys.exit(1)

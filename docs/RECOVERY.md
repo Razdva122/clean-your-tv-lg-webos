@@ -501,6 +501,23 @@ is uncertain. Do not remove journals or archives to force setup. A failed readin
 transaction must be recovered first; replacement does not bypass it. Verify the
 new System Updater version and actual Home/controls after completion.
 
+## Repair an interrupted Root 0.22.0 recovery service
+
+Use a console installer that includes the following command with the same saved
+Root connection and data directory as the original setup.
+
+```sh
+cytv repair-root-recovery --edition root
+```
+
+This is for a retained compositor Root 0.22.0 installation that timed out during
+the recovery-service status check and recorded a clean service exit. The command
+requires the original local install receipt, the matching installed package and
+the original on-TV provisioning records. It keeps the installed package and
+verifies the repaired service before offering to finish setup and enable Home
+control in a separate confirmation. If verification fails, keep the original
+recovery data and save the diagnostic report.
+
 ## Repair an interrupted Root Beta setup
 
 If Root Beta stopped while preparing its recovery service, use the saved Root

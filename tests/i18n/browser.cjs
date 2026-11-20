@@ -15,6 +15,7 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8876';
       ko: '설정',
       hi: 'सेटिंग्स',
       pl: 'Ustawienia',
+      ro: 'Setări',
       ru: 'Настройки',
       'zh-Hans': '设置',
       'zh-Hant': '設定'
@@ -146,7 +147,7 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8876';
         await page.locator('[data-category=language]').click();
         assert.equal(
           await page.locator('#settingsLanguageChoices button').count(),
-          14,
+          15,
           'languages are directly available in the category'
         );
         assert.equal(
@@ -214,7 +215,7 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8876';
           ),
           'language'
         );
-        const target = locale === 'cs' ? 'ru' : 'cs';
+        const target = locale === 'ro' ? 'cs' : 'ro';
         await page.locator('[data-language="' + target + '"]').click();
         await page.waitForFunction(
           (code) => document.documentElement.lang === code,
@@ -248,7 +249,7 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8876';
         await context.close();
       }
     console.log(
-      'PASS thirteen TV languages, app name preservation, inline remote navigation, persisted override and automatic reset'
+      'PASS fourteen TV languages, app name preservation, inline remote navigation, persisted override and automatic reset'
     );
     for (const edition of ['launcher', 'root-launcher']) {
       const context = await browser.newContext({

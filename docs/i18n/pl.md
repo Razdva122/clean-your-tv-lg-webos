@@ -77,6 +77,8 @@ Jeśli instalator Root zaproponuje zastąpienie obecnej integracji Home, potwier
 
 ## 6. Obsługa i odzyskiwanie
 
+Aby zmigrować środowisko uruchamiania istniejącej Root Beta, wyłącz **Change Home** i uruchom `cytv migrate-root-beta --edition root --root-variant node012-beta` przez zapisane połączenie Root SSH. Aplikacja i ustawienia zostaną zachowane. Migracja zatrzyma się, jeśli wcześniejsze usuwanie zmieniło już instalację. Po zakończeniu włącz Change Home i wybierz źródła uruchamiania w ustawieniach Home.
+
 Aby przypiąć wejście HDMI, wybierz je w menu **+ / Dodaj aplikację**. Naciśnij OK, aby przełączyć wejście. Przytrzymaj OK, aby przesunąć lub ukryć kafelek.
 
 Strzałki wybierają, OK otwiera; przytrzymaj OK, aby zmienić kolejność. Krótkie Wstecz zachowuje nawigację aplikacji i jej potwierdzenie wyjścia. Home otwiera ekran Clean Your TV, gdy sterowanie jest aktywne. Przytrzymaj Wstecz przez 1,2 sekundy, aby jednorazowo otworzyć LG Home. Przełącznik sterowania Home i ustawienia pozostają bez zmian.
