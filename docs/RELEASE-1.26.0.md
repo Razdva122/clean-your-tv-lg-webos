@@ -18,6 +18,8 @@
 - The screensaver is enabled when you have never set a preference. A saved Off
   choice is preserved. The desktop installation switch for sorting apps starts
   at **Keep current settings** (#733).
+- Background clock updates wait for a running screensaver preview so the
+  preview can open on the first press (#756).
 - The compatibility catalog groups reported results by TV family and webOS
   generation. Each report links to its evidence and describes the observed
   scope (#734).

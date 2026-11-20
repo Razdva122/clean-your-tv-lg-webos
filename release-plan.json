@@ -65,6 +65,11 @@
       "pr": 755,
       "issues": [],
       "summary": "Restore No-root Home control after a reused boot identity and let normal HOME reopen Root after System setup"
+    },
+    {
+      "pr": 756,
+      "issues": [],
+      "summary": "Keep the first screensaver preview from being cancelled by background clock synchronization"
     }
   ],
   "excluded": [],
