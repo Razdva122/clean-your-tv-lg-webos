@@ -61,7 +61,11 @@ python3 android/tests/native.py --serial emulator-5554
 
 This checks both edition contexts, duplicate-operation rejection, bounded replay,
 pending-question retention and stale-answer rejection. It also checks that secret
-answers are absent from replay. `--upgrade seed` and `--upgrade verify` exercise
+answers are absent from replay. The runner imports `android_bridge` through
+Chaquopy, inspects a loopback SSH banner, then runs a synthetic status operation
+whose fixture closes the connection before authentication. It requires the
+expected SSH negotiation failure and a single terminal event with exit code 1.
+`--upgrade seed` and `--upgrade verify` exercise
 synthetic private-data and unfinished-operation retention across an APK update;
 see [the upgrade procedure](STABLE-READINESS.md). These fixtures do not connect to
 a TV and cannot establish physical installation compatibility.

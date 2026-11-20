@@ -5,10 +5,14 @@ import android.app.Instrumentation
 import android.os.Bundle
 import com.chaquo.python.Python
 import com.chaquo.python.PyException
+import com.chaquo.python.PyObject
 import com.chaquo.python.android.AndroidPlatform
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.net.InetAddress
+import java.net.ServerSocket
+import java.util.UUID
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -38,7 +42,7 @@ class OperationChecks : Instrumentation() {
                 checkReplay(edition)
             }
             result.putString("stream", "PASS: both editions, single operation, bounded replay, pending prompts and stale answers\n" +
-                "PASS: packaged Python import and CLI dispatch, local inspection error and negative SSH inspection\n")
+                "PASS: packaged Python bridge, loopback inspection and synthetic status terminal result\n")
             finish(Activity.RESULT_OK, result)
         } catch (error: Throwable) {
             result.putString("stream", "FAIL: ${error.stackTraceToString()}\n")
@@ -53,13 +57,52 @@ class OperationChecks : Instrumentation() {
         if (!Python.isStarted()) Python.start(AndroidPlatform(targetContext))
         val python = Python.getInstance()
         val bridge = python.getModule("android_bridge")
-        val cli = checkNotNull(bridge["cli"])
-        val args = python.getBuiltins().callAttr("str", "--version").callAttr("split")
-        check(cli.callAttr("main", args).toInt() == 0) { "Shared CLI version dispatch failed" }
+        val directory = File(targetContext.cacheDir, "bridge-check-${UUID.randomUUID()}")
+        check(directory.mkdir()) { "Could not create isolated operation state" }
+        try {
+            ServerSocket(0, 1, InetAddress.getByName("127.0.0.1")).use { fixture ->
+                fixture.soTimeout = 15_000
+                val server = Executors.newSingleThreadExecutor()
+                val served = server.submit {
+                    fixture.accept().use { client ->
+                        client.getOutputStream().write("SSH-2.0-CYTVFixture\r\n".toByteArray())
+                    }
+                    // Terminate the status probe before SSH authentication.
+                    fixture.accept().close()
+                }
+                try {
+                    checkBridgeInspection(bridge, fixture.localPort)
+                    val config = JSONObject().put("host", "127.0.0.1").put("port", fixture.localPort)
+                        .put("edition", "root").put("action", "status").put("language", "en").toString()
+                    check(Operation.begin(config))
+                    val code = bridge.callAttr("run", config, directory.absolutePath,
+                        File(directory, "unused-payload").absolutePath, "", InstallerService.Callbacks()).toInt()
+                    served.get(5, TimeUnit.SECONDS)
 
-        val config = """{"host":"127.0.0.1","port":22}"""
+                    val events = events()
+                    check(events.any {
+                        it.optString("kind") == "failure-help" && it.optString("code") == "ssh-protocol"
+                    }) { "Synthetic status did not reach SSH negotiation" }
+                    check(events.none { it.optString("kind") in listOf("secret", "trust", "question") }) {
+                        "Synthetic status requested input"
+                    }
+                    val finished = events.filter { it.optString("kind") == "finished" }.single()
+                    check(code == 1 && finished.getInt("code") == code && !Operation.active) {
+                        "Synthetic status did not finish with the expected SSH failure"
+                    }
+                } finally {
+                    server.shutdownNow()
+                }
+            }
+        } finally {
+            directory.deleteRecursively()
+        }
+    }
+
+    private fun checkBridgeInspection(bridge: PyObject, port: Int) {
+        val config = JSONObject().put("host", "127.0.0.1").put("port", port).toString()
         val localError = JSONObject(inspectionResult(config) {
-            python.getModule("missing_inspection_fixture").toString()
+            Python.getInstance().getModule("missing_inspection_fixture").toString()
         })
         check(localError.getString("kind") == "inspection-error")
         check(localError.getString("host") == "127.0.0.1")
@@ -68,8 +111,8 @@ class OperationChecks : Instrumentation() {
             bridge.callAttr("inspect_connection", config).toString()
         })
         check(result.getString("kind") == "inspection")
-        check(result.getString("host") == "127.0.0.1" && result.getInt("root_port") == 22)
-        check(!result.getBoolean("root_ssh") && !result.getBoolean("developer_ssh"))
+        check(result.getString("host") == "127.0.0.1" && result.getInt("root_port") == port)
+        check(result.getBoolean("root_ssh") && !result.getBoolean("developer_ssh"))
     }
 
     private fun checkChineseResources() {
