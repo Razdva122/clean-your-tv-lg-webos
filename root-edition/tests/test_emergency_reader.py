@@ -175,7 +175,7 @@ class FaultDiagnosticsTests(unittest.TestCase):
      if hw is not None:os.close(hw)
 
 class ReconnectTests(unittest.TestCase):
-    def replay(self, reads, candidates=None, query=None, clock=None):
+    def replay(self, reads, candidates=None, query=None, clock=None, *, c1=False, guardian_events=None):
         import contextlib
         import io
         import emergency_reader as reader
@@ -206,13 +206,65 @@ class ReconnectTests(unittest.TestCase):
                 stack.enter_context(patch.object(reader.time, 'monotonic', side_effect=clock))
                 stack.enter_context(patch.object(reader.time, 'sleep'))
             stack.enter_context(contextlib.redirect_stderr(io.StringIO()))
-            reader.observe(42, 99, lambda: True)
+            if c1:
+                poll = stack.enter_context(patch.object(reader.select, 'poll'))
+                poll.return_value.poll.side_effect = guardian_events or (lambda _: [])
+                reader.observe(42, 99, lambda: True, reconnect_on_disconnect=True)
+            else:
+                reader.observe(42, 99, lambda: True)
         return messages, replace, close, opened
 
     def taps(self, count, start=0):
         import emergency_reader as reader
         return b''.join(reader.EVENT.pack(2, (start + tap * 300 + offset) * 1000, 1, 773, value)
                         for tap in range(count) for offset, value in ((0, 1), (100, 0)))
+
+    def test_c1_reopens_after_eof_and_delivers_escape_before_a_heartbeat(self):
+        import emergency_reader as reader
+        messages, replace, _, opened = self.replay(
+            [BlockingIOError(), b'', self.taps(3)],
+            candidates=[reader.InputUnavailable('missing'), 43], c1=True)
+        self.assertEqual(opened.call_count, 2)
+        replace.assert_called_once_with(43, 42, inheritable=False)
+        self.assertEqual(messages, [b'READY\n', b'ESCAPE\n'])
+
+    def test_c1_replacement_can_renew_only_after_a_valid_read(self):
+        import emergency_reader as reader
+        dropped = reader.EVENT.pack(2, 0, 0, 3, 0)
+        messages, replace, _, _ = self.replay(
+            [BlockingIOError(), b'', BlockingIOError(), dropped], c1=True)
+        replace.assert_called_once_with(43, 42, inheritable=False)
+        self.assertEqual(messages, [b'READY\n', b'PING\n', b'LOST\n'])
+
+    def test_c1_reconnect_abandons_open_descriptor_if_guardian_retires(self):
+        import select
+        messages, replace, close, opened = self.replay(
+            [BlockingIOError(), b''], c1=True,
+            guardian_events=[[], [(99, select.POLLERR)]])
+        opened.assert_called_once()
+        replace.assert_not_called()
+        close.assert_called_once_with(43)
+        self.assertEqual(messages, [b'READY\n'])
+
+    def test_c1_home_activity_while_replacement_keys_are_held_cancels_recovery(self):
+        def held_other_key(fd, nr, size):
+            bits = bytearray(size)
+            for code in ((773, 412) if nr == 0x21 else (116,)):
+                bits[code // 8] |= 1 << (code % 8)
+            return bits
+
+        messages, replace, close, _ = self.replay(
+            [BlockingIOError(), b'', self.taps(3)], c1=True, query=held_other_key)
+        replace.assert_not_called()
+        close.assert_called_once_with(43)
+        self.assertEqual(messages, [b'READY\n', b'LOST\n'])
+
+    def test_c1_reopens_when_old_descriptor_reports_enxio(self):
+        import errno
+        messages, replace, _, _ = self.replay(
+            [BlockingIOError(), OSError(errno.ENXIO, 'gone'), self.taps(3)], c1=True)
+        replace.assert_called_once_with(43, 42, inheritable=False)
+        self.assertEqual(messages, [b'READY\n', b'ESCAPE\n'])
 
     def test_enodev_replacement_keeps_health_and_emergency_escape(self):
         import errno

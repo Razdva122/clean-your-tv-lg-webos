@@ -167,6 +167,15 @@ Triple Home, long Back, Open LG Home, lease loss, controller loss, trial expiry 
 
 State is root-owned under `/var/lib/clean-your-tv-root/c1-keyfilter` (0700), with volatile guardian state under `/tmp/clean-your-tv-root-keyfilter`. The selected marker remains `home-backend.json`. A native guardian requires independent emergency-input, lifecycle-controller and service-broker leases. The filter expires its own in-memory lease and passes Home to LG when authority is lost. Healthy Home requests and lifecycle returns both use the guardian's fixed `--home TOKEN` operation. Durable stop revokes authority before waiting for an in-flight launch and closing only the owned Root app, then requesting LG Home. Recovery never signals a journal PID. SIGKILL cannot execute guardian UI cleanup: the compositor lease expires independently, but explicit Restore may still be needed to close retained Root UI and reconcile the owned chain.
 
+On active C1 input EOF or device-disappearance errors, the observer can rediscover
+the same validated Magic Remote channel within its existing 750 ms window. It
+checks Home and Back capabilities, waits for released keys and processes new input
+before sending another heartbeat. It abandons the candidate if the guardian closes
+the health pipe. The native guardian owns the original lease deadline and stop
+latch throughout. Reconnecting cannot clear explicit Off or an emergency stop.
+A guardian that has already stopped on an expired lease still requires explicit
+Enable after recovery.
+
 The private Root service owns the LS2 alias `com.webos.cleanyourtv.root.lease`.
 Provisioning adds it to the existing activation file's semicolon-delimited `Name`
 field and snapshots the original. The developer package advertises only its

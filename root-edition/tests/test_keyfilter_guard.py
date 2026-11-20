@@ -631,8 +631,12 @@ int main(void) {
             deadline=time.monotonic()+1.5
             while not (self.root/'state/stopped').exists() and time.monotonic()<deadline: time.sleep(.01)
             self.assertTrue((self.root/'state/stopped').exists())
-            # Give restore time to enter retirement waiting. A SIGTERM sent to
-            # the saved PID would be queued while stopped and delivered here.
+            # A reconnect that was already in flight can still write to the
+            # open pipe. Explicit Off must veto that heartbeat under the latch.
+            os.write(iw, b'PING\n')
+            self.assertFalse(self.run_guard('--lease')[0]['healthy'])
+            self.assertNotEqual(self.run_guard('--home', TOKEN)[1], 0)
+            # A SIGTERM sent to the saved PID would be delivered here.
             time.sleep(.15); p.send_signal(signal.SIGCONT)
             s=self.finish(p); self.assertEqual(s['reason'],'external_stop')
             out,_=restore.communicate(timeout=5); result=json.loads(out)
