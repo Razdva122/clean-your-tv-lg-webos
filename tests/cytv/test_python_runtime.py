@@ -191,7 +191,7 @@ class RuntimeTests(unittest.TestCase):
                  patch.dict(os.environ, override, clear=True), \
                  patch.object(runtime, 'sys', host), \
                  patch.object(runtime.ssl, 'get_default_verify_paths', return_value=paths), \
-                 patch.object(runtime.Path, 'is_file', lambda path: str(path) == system_ca), \
+                 patch.object(runtime.Path, 'is_file', lambda path: path.as_posix() == system_ca), \
                  patch.object(runtime.ssl, 'create_default_context') as create_context, \
                  patch.object(runtime.urllib.request, 'build_opener') as builder, self.pin_fixture(raw):
                 builder.return_value.open.return_value = Response(raw)
@@ -597,6 +597,7 @@ if __name__ == '__main__': unittest.main()
 
 
 class RuntimeCacheRecoveryTests(unittest.TestCase):
+    @unittest.skipUnless(os.name == 'posix', 'Requires POSIX TV paths and file metadata')
     def test_recognized_cache_is_removed_only_after_complete_runtime_validation(self):
         import shutil
         import sys

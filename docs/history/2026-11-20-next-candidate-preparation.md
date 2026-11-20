@@ -83,3 +83,17 @@ record. There is no newly verified TV model or firmware here.
 All cases remain untested on the selected RC1 artifact. Assign artifact hashes
 and available authorized TV preconditions before device operations. Do not
 assume project-device coverage for the reported W19P, B9 or W20H configurations.
+
+### RC1 build failure and replacement
+
+[RC1 run 44698305176](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/44698305176)
+started at 12:53:37 UTC+05:00. Its Windows job failed five assertions in two
+fixtures. The Linux CA fixture compared host-native path text to POSIX paths.
+The cache-removal fixture ran TV code requiring POSIX paths and file metadata
+on Windows. The replacement compares POSIX path text and runs the latter
+fixture on POSIX CI. Installer and TV runtime sources and package versions are
+unchanged. The focused macOS suite ran 38 cases (36 passed, two Linux-only
+skips). The same-source failed-job retry cannot pick up these fixture changes.
+The full build workflow queues the replacement behind RC1 without cancelling
+remaining jobs. Review outstanding results against both runs before selecting
+a build. The failed attempt supplied no device acceptance.
