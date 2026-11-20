@@ -128,3 +128,77 @@ against the published checksums before device mutations.
 [RC2 run 44700115224, attempt 1](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/44700115224)
 ran 13:11:12–13:52:06 UTC+05:00. All mandatory platform, runtime and browser
 gates passed. Full build validation used source `3b49294bda1d2da49e4859f3ca72750ebac08475`.
+
+### RC2 C3 observations
+
+Protected signing [44706118549](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/44706118549)
+ran 13:53:22–13:54:35 UTC+05:00. The checked QA archive SHA-256 was
+`772aeedd92e8fa7387e59c826b7021cbeeb49cf78d05b4041f3818f858312248`;
+engine 1.2.15 was `43f72788d4412a0a2137a5108e17feb4c27cc3865cc6c3b51a1406eb8fa93d79`.
+Host installer SHA-256 was `d6280e4a89c8e080332c850bae7ad4ca68a9d2f7149eca10947fa4b9d2328619`.
+The project LG OLED55C3RLA (firmware 43.21.71, SDK 11.2.0, FHD) started
+with published Root 0.22.0 and no System Updater. The verified macOS ARM64
+v1.26.0 installer provisioned the starting System 1.2.14 engine. A paired
+network Home press from Media Player opened the original Root Home before the
+signed update.
+
+| Case | Observation |
+| --- | --- |
+| RC1-01 Root | Romanian rendered after selection and after same-version Repair. The full rendered profile matched. Thirty-one installed package and companion files matched signed RC2. |
+| RC1-01 No-root | Exact signed FHD and HD package inspection verified the Romanian picker and profile allowlist. Live update/profile retention remain unverified. |
+| RC1-02 Root | Authenticated signed offer, forward update to engine 1.2.15 and own-IPK Repair completed using ordinary LS2. Repair moved the engine from slot A to B and preserved the product journal. |
+| RC1-03 Root | **Release blocker.** After the signed forward update, a single paired network HOME from Media Player opened LG Home instead of Root Home. The original intent was active, the suspension captured disabled state, and the resume ticket recorded desired=true, attempted=false, outcome=skipped. Root stayed disabled and the guardian was stopped. Explicit Change Home through the installed RC2 UI subsequently armed the route and paired network HOME reached Root Home. The owner verified triple Home on the physical remote. Network and SSH readback confirmed LG Home, disabled intent and a stopped guardian. Physical audio was not reported. |
+| RC1-04 | Exact firmware replay passed. Physical B9 check was explicitly deferred. |
+| RC1-06 | Exact original-signer Android update passed on the isolated API 35 emulator. |
+
+The owner set a fifteen-minute C3 access limit during the Root rollback.
+Verified restoration of the original state takes precedence over starting
+another edition transition with no assured time to undo it.
+
+Root rollback returned the signed product to v1.25.0 Root 0.22.0 and Root
+Updater 0.6.3. Thirty-one installed package and companion files matched the
+published baseline. The rendered profile matched before/after and the active
+engine stayed at 1.2.15, slot B, with ordinary LS2 returning rolled back.
+Because the owner had explicitly used triple Home, network HOME correctly
+continued to open LG Home after rollback.
+
+The RC2 installer removed temporary Root/System state following a verified
+software restart. The original v1.25.0 Root install was restored at 14:18
+UTC+05:00. Root package hashes and the private origin snapshot matched and
+paired HOME opened Root again. The
+independent System Updater was absent as at the start. The owner subsequently
+allowed leaving a usable No-root or stock configuration within the remaining
+C3 access window.
+
+### RC2 QA exit at 14:23:47 UTC+05:00
+
+After the maintainer removed the requirement to return to the original
+edition, the verified source installer completed a second Root cleanup and
+software restart, then installed No-root RC2 using the existing Root SSH
+connection. The installer returned verified completion. From Media Player,
+paired network HOME briefly showed LG Home and then settled on Clean Your TV
+No-root. Seven Home 1.20.6 and Helper 0.9.3 files matched the signed candidate.
+The Romanian picker rendered Romanian on the installed launcher. The
+all-components hash helper expected a complete System publication layout;
+the ordinary install was verified separately against its two main IPKs.
+C3 was left usable with No-root RC2 at the maintainer's request.
+
+| Original case | Exit disposition |
+| --- | --- |
+| RC1-01 | Root signed Repair retained Romanian and the rendered profile. No-root direct install and Romanian rendered. No-root signed-profile persistence and rollback were blocked by the 15-minute C3 window. |
+| RC1-02 | Root signed forward, same-IPK Repair and rollback passed as package, engine and ordinary LS2 operations. No-root signed transition, own-package Repair and rollback were blocked by the C3 access window. |
+| RC1-03 | **Failed.** Signed Root forward did not resume the previously active Home route. Explicit activation and the physical triple-Home escape passed. Physical sound, standby and cold boot under RC2 were not verified before the C3 access window ended. The W20H repair-specific case requires its original interrupted setup receipt and was unavailable on C3. |
+| RC1-04 | Exact artifact offline pass and explicit maintainer deferral of physical B9 acceptance. |
+| RC1-05 | Ordinary RC2 Root cleanup after verified software restart passed. That verifies the C3 transition, not the affected retained legacy Python-cache or package-stub cases. Known legacy replay and full CI apply within their model limits. The C3 time limit prevented an additional No-root removal cycle. |
+| RC1-06 | Exact signed Android upgrade passed on the owned emulator. |
+
+Reconciliation: six original cases, one complete observed pass, one observed
+failure, three partial cases with concrete live-scope blockers, and one
+explicit physical deferral with offline verification. There is no available
+independent planned TV check after the access cutoff. Do not mark RC2 accepted
+or submit the release PR for publication. The observed Root resume failure
+requires diagnosis and verification with a replacement candidate. Its ticket
+records a conservative skip before activation, so an explicit activation
+pass does not establish automatic continuation after update. The existing
+reports remain the destination for owner tests on other hardware after a
+verified release.
