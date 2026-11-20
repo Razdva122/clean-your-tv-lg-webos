@@ -2,6 +2,7 @@
 """Plan releases and assemble verified public CI artifacts, without signing keys."""
 import argparse
 from datetime import datetime, timezone
+import gzip
 import hashlib
 import io
 import json
@@ -11,6 +12,7 @@ import plistlib
 import re
 import runpy
 import shutil
+import stat
 import subprocess
 import struct
 import sys
@@ -208,6 +210,55 @@ def assemble_homebrew(artifacts, output, approval):
     return approval
 
 
+def archive_mode(mode):
+    return 0o755 if mode & 0o111 else 0o644
+
+
+def write_outer_archives(payload, staging, output, versions, commit):
+    timestamp = int(subprocess.check_output(
+        ['git', 'show', '-s', '--format=%ct', commit], cwd=ROOT, text=True))
+    zip_timestamp = datetime.fromtimestamp(timestamp, timezone.utc).timetuple()[:6]
+    note = 'docs/RELEASE-' + versions['release'] + '.md'
+    entries = {
+        'com.gathin.tvhome_' + versions['home'] + '_all.ipk': payload / 'launcher.ipk',
+        'com.gathin.tvhome_' + versions['home'] + '_720p_all.ipk': payload / 'launcher-720p.ipk',
+        'com.local.nativehome_' + versions['helper'] + '_arm.ipk': payload / 'helper.ipk',
+        'com.cleanyourtv.updater_' + versions['updater'] + '_all.ipk': payload / 'updater.ipk',
+    }
+    entries.update({name: ROOT / name for name in (
+        'docs/MANUAL_INSTALL.md', 'docs/INSTALL.md', 'docs/CLI.md', note, 'LICENSE',
+        'THIRD_PARTY_NOTICES.md', 'scripts/update-permissions.cjs',
+        'scripts/lib/update-permissions.cjs', 'updater-service/permissions.js',
+    )})
+    for path in (payload / 'system-updater').rglob('*'):
+        if path.is_file():
+            entries[path.relative_to(payload).as_posix()] = path
+
+    zip_path = output / ('clean-your-tv-no-root-' + versions['home'] + '.zip')
+    with zipfile.ZipFile(zip_path, 'w') as archive:
+        for name, path in sorted(entries.items()):
+            metadata = path.stat()
+            entry = zipfile.ZipInfo(name, zip_timestamp)
+            entry.create_system = 3  # Unix mode bits, regardless of the assembly host.
+            entry.external_attr = (stat.S_IFREG | archive_mode(metadata.st_mode)) << 16
+            entry.compress_type = zipfile.ZIP_DEFLATED
+            entry.file_size = metadata.st_size
+            with path.open('rb') as source, archive.open(entry, 'w') as target:
+                shutil.copyfileobj(source, target)
+
+    def tar_metadata(entry):
+        entry.mtime = timestamp
+        entry.uid = entry.gid = 0
+        entry.uname = entry.gname = ''
+        entry.mode = 0o755 if entry.isdir() else archive_mode(entry.mode)
+        return entry
+
+    with (output / (staging.name + '.tar.gz')).open('wb') as target:
+        with gzip.GzipFile(filename='', fileobj=target, mode='wb', mtime=timestamp) as compressed:
+            with tarfile.open(fileobj=compressed, mode='w') as archive:
+                archive.add(staging, arcname=staging.name, filter=tar_metadata)
+
+
 def assemble(artifacts, output, versions, commit, build_commit=None):
     from PyInstaller.archive.readers import CArchiveReader
     builder = runpy.run_path(str(ROOT / 'scripts/build-cytv.py'))
@@ -263,7 +314,6 @@ def assemble(artifacts, output, versions, commit, build_commit=None):
             path = payload / package.safe_name(name); path.parent.mkdir(parents=True, exist_ok=True); path.write_bytes(raw)
         package.verify_payload(payload)
         builder['verify_release_versions'](payload, versions)
-        updater = (payload / 'updater.ipk').read_bytes()
         system_builder = runpy.run_path(str(ROOT / 'system-updater/build.py'))
         note = 'docs/RELEASE-' + versions['release'] + '.md'
         system_manifests=system_builder['prepare_release'](payload, output, 'v'+versions['release'], (ROOT / note).read_text()[:3800])
@@ -271,13 +321,6 @@ def assemble(artifacts, output, versions, commit, build_commit=None):
         runpy.run_path(str(ROOT/'scripts/prepare-release.py'))['verify_system_assets'](
             system_manifests,{'tag':'v'+versions['release'],'versions':versions},
             {name:(output/name).read_bytes() for name in system_files})
-        with zipfile.ZipFile(output / ('clean-your-tv-no-root-' + versions['home'] + '.zip'), 'w', zipfile.ZIP_DEFLATED) as archive:
-            archive.write(payload / 'launcher.ipk', 'com.gathin.tvhome_' + versions['home'] + '_all.ipk')
-            archive.write(payload / 'launcher-720p.ipk', 'com.gathin.tvhome_' + versions['home'] + '_720p_all.ipk')
-            archive.write(payload / 'helper.ipk', 'com.local.nativehome_' + versions['helper'] + '_arm.ipk')
-            archive.writestr('com.cleanyourtv.updater_' + versions['updater'] + '_all.ipk', updater)
-            for name in ('docs/MANUAL_INSTALL.md', 'docs/INSTALL.md', 'docs/CLI.md', note, 'LICENSE', 'THIRD_PARTY_NOTICES.md', 'scripts/update-permissions.cjs', 'scripts/lib/update-permissions.cjs', 'updater-service/permissions.js'):
-                archive.write(ROOT / name, name)
         staging = tmp / ('clean-your-tv-root-' + versions['root']); staging.mkdir()
         source = subprocess.check_output(['git', 'archive', commit], cwd=ROOT)
         with tarfile.open(fileobj=io.BytesIO(source)) as archive: archive.extractall(staging, filter='data')
@@ -286,10 +329,7 @@ def assemble(artifacts, output, versions, commit, build_commit=None):
         shutil.copytree(payload / 'root-720p', staging / 'build/root-candidate-720p')
         shutil.copytree(payload / 'root-updater', staging / 'build/root-updater')
         shutil.copytree(payload / 'system-updater', staging / 'build/system-updater')
-        with zipfile.ZipFile(output / ('clean-your-tv-no-root-' + versions['home'] + '.zip'),'a',zipfile.ZIP_DEFLATED) as archive:
-            for path in sorted((payload/'system-updater').rglob('*')):
-                if path.is_file():archive.write(path,'system-updater/'+path.relative_to(payload/'system-updater').as_posix())
-        with tarfile.open(output / (staging.name + '.tar.gz'), 'w:gz') as archive: archive.add(staging, arcname=staging.name)
+        write_outer_archives(payload, staging, output, versions, commit)
     shutil.copyfile(ROOT / note, output / 'RELEASE-NOTES.md')
     build_run = os.environ.get('SOURCE_BUILD_RUN', os.environ.get('GITHUB_RUN_ID', ''))
     info = {'graphics': builder['GRAPHICS'], 'tag': 'v' + versions['release'], 'source_commit': commit, 'build_source_commit': build_commit or commit, 'versions': versions,
