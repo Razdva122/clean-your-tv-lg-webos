@@ -29,6 +29,7 @@ const sources = Object.keys(catalogs.en),
     'ko',
     'hi',
     'pl',
+    'ro',
     'ru',
     'zh-Hans',
     'zh-Hant'
@@ -50,5 +51,5 @@ for (const tag of tags)
 console.log(
   'PASS complete catalogs and interpolation placeholders for ' +
     sources.length +
-    ' UI strings × thirteen TV languages'
+    ' UI strings × fourteen TV languages'
 );

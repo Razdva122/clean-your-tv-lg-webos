@@ -64,6 +64,8 @@ Pokud instalátor Root nabídne nahrazení současné integrace Home, potvrďte 
 
 ## 6. Každodenní ovládání
 
+Chcete-li aktualizovat prostředí automatického spuštění stávající Root Beta, vypněte **Change Home** a spusťte `cytv migrate-root-beta --edition root --root-variant node012-beta` přes uložené připojení Root SSH. Aplikace a nastavení zůstanou zachovány. Pokud předchozí odinstalace již změnila instalaci, migrace se zastaví. Po dokončení zapněte Change Home a vyberte zdroje automatického spuštění v nastavení Home.
+
 Chcete-li připnout vstup HDMI, vyberte ho v nabídce **+ / Přidat aplikaci**. Tlačítkem OK přepnete na tento vstup. Podržením OK můžete dlaždici přesunout nebo skrýt.
 
 Šipky vybírají aplikaci, **OK** ji otevře. Podržením OK můžete měnit pořadí. Krátké **Zpět** zachová navigaci aplikace. Krátké **Home** otevře Clean Your TV při zapnutém ovládání Home. Podržení Zpět po dobu 1,2 sekundy otevře LG Home jednou, bez změny uložených nastavení.

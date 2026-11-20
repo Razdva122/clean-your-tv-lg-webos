@@ -49,7 +49,7 @@ class LiveUpdatePresenceTests(unittest.TestCase):
                 except ObservedHealth:pass
             # Capture through the actual original update reservation/ticket code.
             # Physical profile effects remain the runtime fixture's fixed transport.
-            def restore():
+            def restore(*, cancel_rearm=True):
                 intent=runtime.store.read()
                 if intent['phase']!='disabled':runtime.c.exit(intent)
                 self.assertEqual(runtime.read(),runtime.baseline)

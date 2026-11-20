@@ -169,6 +169,42 @@ class RuntimeTests(unittest.TestCase):
         with patch.object(runtime, 'MAX_UNPACKED', 1), patch.object(runtime.tarfile, 'open', side_effect=AssertionError('unbounded tar parser')):
             with self.assertRaises(UserError): runtime._normalize(bomb)
 
+    def test_linux_download_uses_system_ca_when_openssl_default_file_is_missing(self):
+        raw = archive(GOOD)
+        fedora_ca = '/etc/ssl/cert.pem'
+        legacy_fedora_ca = '/etc/pki/tls/certs/ca-bundle.crt'
+        debian_ca = '/etc/ssl/certs/ca-certificates.crt'
+        paths = types.SimpleNamespace(cafile=None, openssl_cafile_env='SSL_CERT_FILE')
+        for system_ca, default_ca, override, android, expected in (
+                (fedora_ca, None, {}, False, fedora_ca),
+                (legacy_fedora_ca, None, {}, False, legacy_fedora_ca),
+                (debian_ca, None, {}, False, debian_ca),
+                (None, None, {}, False, None),
+                (fedora_ca, '/usr/lib/ssl/cert.pem', {}, False, None),
+                (fedora_ca, None, {'SSL_CERT_FILE': '/custom/cert.pem'}, False, None),
+                (fedora_ca, None, {}, True, None)):
+            paths.cafile = default_ca
+            host = types.SimpleNamespace(platform='linux')
+            if android:
+                host.getandroidapilevel = lambda: 35
+            with self.subTest(system_ca=system_ca, default_ca=default_ca, override=override, android=android), \
+                 patch.dict(os.environ, override, clear=True), \
+                 patch.object(runtime, 'sys', host), \
+                 patch.object(runtime.ssl, 'get_default_verify_paths', return_value=paths), \
+                 patch.object(runtime.Path, 'is_file', lambda path: path.as_posix() == system_ca), \
+                 patch.object(runtime.ssl, 'create_default_context') as create_context, \
+                 patch.object(runtime.urllib.request, 'build_opener') as builder, self.pin_fixture(raw):
+                builder.return_value.open.return_value = Response(raw)
+                with tempfile.TemporaryDirectory() as directory:
+                    cache = Path(directory).resolve()/'cache'
+                    runtime.prime_cache(cache, self.messages.append)
+                context = create_context.return_value
+                self.assertIs(builder.call_args.args[-1]._context, context)
+                if expected:
+                    context.load_verify_locations.assert_called_once_with(cafile=expected)
+                else:
+                    context.load_verify_locations.assert_not_called()
+
     def test_download_failures_never_expose_network_credentials(self):
         with patch.object(runtime.urllib.request, 'build_opener') as builder:
             builder.return_value.open.side_effect = OSError('https://user:secret@example.invalid/?signature=secret')
@@ -440,6 +476,27 @@ class RuntimeTests(unittest.TestCase):
             self.assertTrue(runtime.select_python(remote, self.cache, self.messages.append, True).endswith('/bin/python3.13'))
         self.assertEqual(remote.installed_data, b'hello')
 
+    def test_existing_slot_recovery_precedes_verification_and_python_smoke(self):
+        raw = archive(GOOD)
+        class ExistingRemote(Remote):
+            def run(self, command, data=None, timeout=30):
+                if 'CYTV_SLOT_EXISTS' in command:
+                    return 'CYTV_SLOT_EXISTS'
+                return super().run(command, data, timeout)
+        for repair in (False, True):
+            remote = ExistingRemote(False)
+            events = []
+            with self.pin_fixture(raw), patch.object(runtime, 'prime_cache') as prime:
+                path = Path(self.temp.name) / 'fixture.tar.gz'
+                path.write_bytes(raw)
+                prime.return_value = path
+                with (patch.object(runtime, '_repair_cache', side_effect=lambda *_:events.append('repair')),
+                      patch.object(runtime, '_verify', side_effect=lambda *_:events.append('verify')),
+                      patch.object(runtime, '_smoke', side_effect=lambda *_:events.append('smoke'))):
+                    runtime.select_python(remote, self.cache, self.messages.append, True, repair_cache=repair)
+            self.assertEqual(events, (['repair'] if repair else []) + ['verify', 'smoke'])
+            self.assertEqual(remote.uploads, [])
+
     def test_existing_partial_slot_is_never_overwritten(self):
         raw = archive(GOOD)
         class PartialRemote(Remote):
@@ -537,3 +594,70 @@ class ShellBootstrapTests(unittest.TestCase):
 
 
 if __name__ == '__main__': unittest.main()
+
+
+class RuntimeCacheRecoveryTests(unittest.TestCase):
+    @unittest.skipUnless(os.name == 'posix', 'Requires POSIX TV paths and file metadata')
+    def test_recognized_cache_is_removed_only_after_complete_runtime_validation(self):
+        import shutil
+        import sys
+        node = shutil.which('node')
+        if node is None:
+            self.skipTest('Node is required')
+        for scenario in ('generated', 'retry', 'changed', 'missing', 'unknown', 'symlink', 'hardlink'):
+            with self.subTest(scenario=scenario), tempfile.TemporaryDirectory() as tmp:
+                slot = Path(tmp).resolve() / 'slot'
+                source = slot / 'lib/example.py'
+                source.parent.mkdir(parents=True)
+                source.write_bytes(b'pass')
+                executable = slot / 'bin/python3.13'
+                executable.parent.mkdir()
+                executable.write_bytes(b'fixture; never execute')
+                executable.chmod(0o755)
+                inventory = {'schema':1, 'archive_sha256':runtime.SHA256, 'files':{
+                    'lib/example.py':hashlib.sha256(source.read_bytes()).hexdigest(),
+                    'bin/python3.13':hashlib.sha256(executable.read_bytes()).hexdigest(),
+                }}
+                manifest = json.dumps(inventory, sort_keys=True, separators=(',', ':')).encode()
+                (slot / '.cytv-runtime.json').write_bytes(manifest)
+                cache = slot / 'lib/__pycache__/example.cpython-313.pyc'
+                cache.parent.mkdir()
+                cache.write_bytes(b'cache')
+                if scenario == 'changed': source.write_bytes(b'changed')
+                if scenario == 'missing': source.unlink()
+                if scenario == 'unknown': (cache.parent / 'foreign.pyc').touch()
+                if scenario == 'symlink':
+                    cache.unlink()
+                    cache.symlink_to(source)
+                if scenario == 'hardlink':
+                    cache.unlink()
+                    os.link(source, cache)
+                # Model only the root ownership metadata on a host fixture.
+                bootstrap = "var fs=require('fs'),stat=fs.lstatSync;fs.lstatSync=function(p){var s=stat.apply(fs,arguments);s.uid=0;if(String(p).indexOf(ROOT)!==0)s.mode&=~18;return s;};".replace('ROOT', json.dumps(str(slot.parent)))
+                program = bootstrap + runtime._REPAIR_CACHE
+                args = [node, '-e', program, str(slot), hashlib.sha256(manifest).hexdigest()]
+                result = subprocess.run(args, capture_output=True)
+                allowed = scenario in ('generated', 'retry')
+                self.assertEqual(result.returncode == 0, allowed, result.stderr)
+                self.assertEqual(cache.exists(), not allowed)
+                if allowed:
+                    self.assertEqual(source.read_bytes(), b'pass')
+                    self.assertEqual((slot / '.cytv-runtime.json').read_bytes(), manifest)
+                    self.assertEqual(subprocess.run(args, capture_output=True).returncode, 0)
+
+    def test_clean_product_actions_request_cache_recovery_before_driver(self):
+        from cytv.operations import Installer
+        from unittest.mock import Mock
+        for action in ('clean-target', 'clean-remove', 'native-install'):
+            with self.subTest(action=action):
+                remote = Mock()
+                operation = 'a' * 32
+                remote.run.return_value = json.dumps({'state':'pending', 'operation':operation})
+                installer = Installer(remote, None, {'edition':'root'}, '.', {})
+                with (patch.object(installer, '_select_python', return_value='/usr/bin/python3') as select,
+                      patch.object(installer, 'coordinator_code', return_value='/tmp/coordinator')):
+                    installer.product_action(action, operation)
+                if action in ('clean-target', 'clean-remove'):
+                    select.assert_called_once_with(provision=True, repair_cache=True)
+                else:
+                    select.assert_called_once_with(provision=True)

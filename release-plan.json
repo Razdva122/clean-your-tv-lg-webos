@@ -1,83 +1,114 @@
 {
   "schema": 1,
-  "version": "1.26.0",
+  "version": "1.27.0",
   "changes": [
     {
-      "pr": 730,
+      "pr": 738,
       "issues": [
-        686
+        389
       ],
-      "summary": "Preserve active apps during late automatic Helper startup. confirmation on reported webOS 4.5 TV pending"
+      "summary": "Recover private Python cache before resuming Root removal"
     },
     {
-      "pr": 731,
-      "issues": [],
-      "summary": "Show Root reinstall restart waits clearly and report why cleanup paused"
-    },
-    {
-      "pr": 732,
-      "issues": [],
-      "summary": "Fix Home profile languages, Android prompts and CI routing; share packaging and runtime code"
-    },
-    {
-      "pr": 733,
-      "issues": [],
-      "summary": "Enable the screensaver by default and align the app sorting switch"
-    },
-    {
-      "pr": 734,
-      "issues": [],
-      "summary": "Document tested TVs by webOS generation"
-    },
-    {
-      "pr": 735,
+      "pr": 742,
       "issues": [
-        152
+        739
       ],
-      "summary": "Finish No-root cleanup for verified empty service directories. original EF950V report remains open"
+      "summary": "Use Linux system CAs for private Python downloads"
     },
     {
-      "pr": 736,
-      "issues": [],
-      "summary": "Fix LG screensaver request rollover and Root subscription recovery"
+      "pr": 744,
+      "issues": [
+        712
+      ],
+      "summary": "Add Romanian language to the TV interface"
     },
     {
-      "pr": 737,
-      "issues": [],
-      "summary": "Load shared settings CSS in the Columns geometry test"
+      "pr": 745,
+      "issues": [
+        739
+      ],
+      "summary": "Use local activity dispatch for Root recovery"
     },
     {
-      "pr": 743,
-      "issues": [],
-      "summary": "Require rendered Root Home before System profile capture"
+      "pr": 746,
+      "issues": [
+        739
+      ],
+      "summary": "Repair retained Root 0.22.0 recovery in place"
     },
     {
-      "pr": 747,
-      "issues": [],
-      "summary": "Keep active Root Home boot-session reads independent of writer lock contention"
+      "pr": 749,
+      "issues": [
+        160
+      ],
+      "summary": "Stream Root private cleanup source within legacy exec limits"
     },
     {
-      "pr": 752,
-      "issues": [],
-      "summary": "Give the desktop storage preflight regression enough time to observe both simulated package installs on Intel Mac"
+      "pr": 750,
+      "issues": [
+        160
+      ],
+      "summary": "Document B9 native startup and in-place migration requirements"
     },
     {
-      "pr": 755,
-      "issues": [],
-      "summary": "Restore No-root Home control after a reused boot identity and let normal HOME reopen Root after System setup"
+      "pr": 751,
+      "issues": [
+        160
+      ],
+      "summary": "Gate Root Beta boot resumption on runtime capabilities"
     },
     {
-      "pr": 756,
+      "pr": 753,
+      "issues": [
+        739
+      ],
+      "summary": "Distinguish Root input readiness and heartbeat timeouts"
+    },
+    {
+      "pr": 754,
+      "issues": [
+        160
+      ],
+      "summary": "Migrate retained Root Beta startup in place with capability admission"
+    },
+    {
+      "pr": 757,
+      "issues": [
+        615
+      ],
+      "summary": "Recover No-root cleanup and LG Home after failed Root setup"
+    },
+    {
+      "pr": 758,
+      "issues": [
+        692
+      ],
+      "summary": "Fix legacy Root removal E2BIG and verify package metadata cleanup"
+    },
+    {
+      "pr": 759,
+      "issues": [
+        160,
+        389,
+        615,
+        692,
+        712,
+        739
+      ],
+      "summary": "Integrate the next cycle and preserve Root recovery and published OTA compatibility"
+    },
+    {
+      "pr": 762,
       "issues": [],
-      "summary": "Keep the first screensaver preview from being cancelled by background clock synchronization"
+      "summary": "Preserve Root Home intent during signed updates"
     }
   ],
   "excluded": [],
-  "acceptance": "TV-01 through TV-06 passed on the project LG OLED55C3RLA (43.21.71). Signed Root and No-root update, Repair and rollback verified. Original TV profile, screensaver setting and Root routing restored. [Final RC6 evidence](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/729#final-rc6-acceptance-on-the-project-c3).",
+  "acceptance": "",
   "build": {
-    "run_id": 44682949085,
-    "attempt": 1,
-    "source": "a9bf96f16c02a7c9fbcecfb65a5f953a0868a09b"
-  },
-  "acceptance_build": "44682949085:1"
+    "run_id": 44745629207,
+    "attempt": 2,
+    "source": "e5977792077ffb9dc3dc323cdad2442a998ab948"
+  }
 }

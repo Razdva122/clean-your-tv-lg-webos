@@ -4020,3 +4020,304 @@ if (window.HomeI18n)
         '舊版更新程式的權限已變更；需要透過電腦復原'
     }
   });
+
+if (window.HomeI18n)
+  window.HomeI18n.add({
+    'ro': {
+      'Checking the updated launcher and restored settings…':
+        'Se verifică launcherul actualizat și setările restaurate…',
+      'Update complete. Your apps and settings are preserved.':
+        'Actualizare finalizată. Aplicațiile și setările tale au fost păstrate.',
+      'Recovery': 'Recuperare',
+      'Rollback version: {version}': 'Versiune pentru revenire: {version}',
+      'No saved update is available to roll back.':
+        'Nu există nicio actualizare salvată la care să revii.',
+      'The previous version has already been restored.':
+        'Versiunea anterioară a fost deja restaurată.',
+      'Rollback is blocked until the installer has definitely stopped. Refresh status to check.':
+        'Revenirea rămâne blocată până când programul de instalare s-a oprit complet. Reîmprospătează starea pentru a verifica.',
+      'Restore the previous Home version and pre-update settings. Settings changed after the update will be lost. Keep the TV powered on.':
+        'Restaurează versiunea anterioară de Home și setările dinaintea actualizării. Modificările făcute după actualizare se vor pierde. Lasă televizorul pornit.',
+      'Restore Home {version} and pre-update settings? Settings changed after the update will be lost. Keep the TV powered on.':
+        'Restaurezi Home {version} și setările dinaintea actualizării? Modificările ulterioare se vor pierde. Lasă televizorul pornit.',
+      'Home settings': 'Setări Home',
+      'Root Edition': 'Ediția Root',
+      'Manage Home, software updates and your TV.':
+        'Gestionează Home, actualizările de software și televizorul.',
+      'Your Home screen': 'Ecranul tău Home',
+      'Choose where Home and return from apps take you.':
+        'Alege unde te duc butonul Home și revenirea din aplicații.',
+      'Updates and TV': 'Actualizări și TV',
+      'Update Home or open LG settings for picture, sound and network.':
+        'Actualizează Home sau deschide setările LG pentru imagine, sunet și rețea.',
+      'This button opens LG Home once. Your Home screen choice and settings stay saved.':
+        'Acest buton deschide LG Home o singură dată. Alegerea ecranului Home și setările tale rămân salvate.',
+      'Hold Back for 1.2 seconds to open LG Home. Your settings stay saved.':
+        'Ține apăsat Înapoi 1,2 secunde pentru a deschide LG Home. Setările tale rămân salvate.',
+      'TV settings': 'Setări TV',
+      'Open LG Home': 'Deschide LG Home',
+      'Back to Home': 'Înapoi la Home',
+      'Change Home': 'Deschide Clean Your TV cu butonul Home',
+      'Software updates': 'Actualizări de software',
+      'Language': 'Limbă',
+      'Checking Home control…': 'Se verifică controlul Home…',
+      'Home and return from apps open Clean Your TV.':
+        'Butonul Home și revenirea din aplicații deschid Clean Your TV.',
+      'Home and return from apps open LG Home.':
+        'Butonul Home și revenirea din aplicații deschid LG Home.',
+      'Changing Home control…': 'Se modifică controlul Home…',
+      'Turning off Home control…': 'Se dezactivează controlul Home…',
+      'Turning on Home control…': 'Se activează controlul Home…',
+      'Opening LG Home…': 'Se deschide LG Home…',
+      'Checking whether Home control is on…':
+        'Se verifică dacă este activ controlul Home…',
+      'Response timed out. Check status before retrying.':
+        'Timpul de răspuns a expirat. Verifică starea înainte de a încerca din nou.',
+      'Invalid service response': 'Răspuns nevalid de la serviciu',
+      'Could not open LG Home. Try again.':
+        'LG Home nu a putut fi deschis. Încearcă din nou.',
+      'Root control did not confirm success. Check status before retrying.':
+        'Serviciul Root nu a confirmat reușita. Verifică starea înainte de a încerca din nou.',
+      'Software updates require the one-time computer setup.':
+        'Actualizările software necesită configurarea inițială de pe computer.',
+      'Checking for updates…': 'Se caută actualizări…',
+      'A new version of Home is available.':
+        'Este disponibilă o versiune nouă de Home.',
+      'Your apps and settings stay saved.':
+        'Aplicațiile și setările tale rămân salvate.',
+      'Installed: {version}': 'Instalat: {version}',
+      'Available: {version}': 'Disponibil: {version}',
+      'unknown': 'necunoscută',
+      'This Root version is up to date.': 'Această versiune Root este la zi.',
+      'This release cannot be installed with the current setup.':
+        'Această versiune nu poate fi instalată cu configurația curentă.',
+      'Root Software updates': 'Actualizări software Root',
+      'Try again': 'Încearcă din nou',
+      'Update': 'Actualizează',
+      'Install update': 'Instalează actualizarea',
+      'Recover status': 'Recuperează starea',
+      'Roll back': 'Revino la versiunea anterioară',
+      'Root mode settings': 'Setările modului Root',
+      'Back': 'Înapoi',
+      'Updater unavailable. Run the one-time computer setup for Software updates.':
+        'Programul de actualizare nu este disponibil. Efectuează configurarea inițială pentru actualizări software de pe computer.',
+      'Updater response timed out. Open Recovery to check status.':
+        'Răspunsul programului de actualizare a expirat. Deschide Recuperare pentru a verifica starea.',
+      'Updater operation failed. Open Recovery.':
+        'Operațiunea de actualizare a eșuat. Deschide Recuperare.',
+      'Invalid updater response. Open Recovery.':
+        'Răspuns nevalid de la programul de actualizare. Deschide Recuperare.',
+      'Preparing update and preserving your launcher profile…':
+        'Se pregătește actualizarea și se salvează profilul Home…',
+      'Downloading and verifying both update and rollback packages…':
+        'Se descarcă și se verifică pachetele de actualizare și de revenire…',
+      'Profile and rollback package verified.':
+        'Profilul și pachetul de revenire au fost verificate.',
+      'Restoring LG Home before installation…':
+        'Se restaurează LG Home înainte de instalare…',
+      'Installing Root update. Keep the TV powered on.':
+        'Se instalează actualizarea Root. Lasă televizorul pornit.',
+      'Opening the updated Root launcher…': 'Se deschide Home Root actualizat…',
+      'Restoring the previous Root package and saved profile…':
+        'Se restaurează pachetul Root anterior și profilul salvat…',
+      'Checking the restored Root launcher and saved profile…':
+        'Se verifică aplicația Home Root restaurată și profilul salvat…',
+      'Recovery required. LG Home remains selected. Recover status first; rollback stays blocked until the installer has definitely stopped.':
+        'Este necesară recuperarea. LG Home rămâne selectat. Recuperează mai întâi starea. Revenirea rămâne blocată până când programul de instalare s-a oprit complet.',
+      'Update stopped before replacement. Check status before trying again.':
+        'Actualizarea s-a oprit înainte de înlocuire. Verifică starea înainte de a încerca din nou.',
+      'Inspect the independent updater and recover a previous transaction.':
+        'Verifică programul independent de actualizare și recuperează o operațiune anterioară.',
+      'A verified recovery package for this version is missing. Run the one-time computer setup.':
+        'Lipsește un pachet de recuperare verificat pentru această versiune. Rulează configurarea unică de pe computer.',
+      'Launcher profile could not be restored.':
+        'Profilul Home nu a putut fi restaurat.',
+      'Local profile readback failed': 'Citirea profilului local a eșuat',
+      'Only packaged icons can be preserved':
+        'Pot fi păstrate doar pictogramele incluse în pachet',
+      'Packaged icon is missing or too large':
+        'Pictograma din pachet lipsește sau este prea mare',
+      'Could not read icon': 'Pictograma nu a putut fi citită',
+      'Could not read packaged icon':
+        'Pictograma din pachet nu a putut fi citită',
+      'Stored profile is unreadable. Open Recovery.':
+        'Profilul salvat nu poate fi citit. Deschide Recuperare.',
+      'Launcher could not start': 'Home nu a putut porni',
+      'Launcher did not finish rendering':
+        'Home nu a terminat afișarea interfeței',
+      'Restored launcher tiles do not match the saved profile':
+        'Dalele restaurate din Home nu corespund profilului salvat',
+      'Backup version does not match this Root package':
+        'Versiunea copiei de rezervă nu corespunde acestui pachet Root',
+      'Recovery service did not confirm success. Retry or use host restore.':
+        'Serviciul de recuperare nu a confirmat reușita. Încearcă din nou sau folosește recuperarea de pe computer.',
+      'Exit already in progress': 'Ieșirea este deja în curs',
+      'Recovery incomplete. Keep the recovery state and use host restore.':
+        'Recuperarea este incompletă. Păstrează starea de recuperare și folosește recuperarea de pe computer.',
+      'Original Home is not confirmed. Use host restore.':
+        'Revenirea la aplicația Home originală nu a fost confirmată. Folosește recuperarea de pe computer.',
+      'Home Updater': 'Home Updater',
+      'Root Updater': 'Root Updater',
+      'Independent update recovery. This app does not change Home Helper or system Home profiles.':
+        'Recuperare independentă după actualizare. Această aplicație nu modifică Home Helper sau profilurile Home din sistem.',
+      'Reading status…': 'Se citește starea…',
+      'Refresh status': 'Reîmprospătează starea',
+      'Restore previous Home': 'Restaurează Home-ul anterior',
+      'Open Home': 'Deschide Home',
+      'Update state: {status}': 'Starea actualizării: {status}',
+      'Recovery state: {status}': 'Starea recuperării: {status}',
+      'No transaction, or recovery service is unavailable.':
+        'Nu există nicio operațiune sau serviciul de recuperare nu este disponibil.',
+      'Confirm restore': 'Confirmă restaurarea',
+      'Restore the signed previous Home package. Home Helper will remain unchanged.':
+        'Restaurează pachetul Home anterior semnat. Home Helper rămâne neschimbat.',
+      'Restoring… Keep the TV on.': 'Se restaurează… Lasă televizorul pornit.',
+      'Outcome unknown. Do not retry installation; inspect the transaction first.':
+        'Rezultat necunoscut. Verifică operațiunea înainte de a încerca instalarea din nou.',
+      'Preparing': 'Se pregătește',
+      'Pausing renewal': 'Se întrerupe temporar reînnoirea',
+      'Renewal recovery': 'Se recuperează reînnoirea',
+      'Restoring renewal': 'Se restabilește reînnoirea',
+      'Installing': 'Se instalează',
+      'Awaiting launch': 'Se așteaptă pornirea',
+      'Complete': 'Finalizată',
+      'Rolling back': 'Se revine la versiunea anterioară',
+      'Rolled back': 'Versiunea anterioară a fost restaurată',
+      'Recovery required': 'Este necesară recuperarea',
+      'Aborted': 'Anulată',
+      'Invalid profile fields': 'Câmpuri de profil nevalide',
+      'Invalid profile text': 'Text de profil nevalid',
+      'Invalid app IDs': 'ID-uri de aplicații nevalide',
+      'Duplicate app ID': 'ID de aplicație duplicat',
+      'Profile exceeds 4 MiB': 'Profilul depășește 4 MiB',
+      'Invalid profile schema': 'Schemă de profil nevalidă',
+      'Inventory too large': 'Inventarul este prea mare',
+      'Duplicate inventory ID': 'ID de inventar duplicat',
+      'Invalid embedded icon': 'Pictogramă încorporată nevalidă',
+      'Invalid icon color': 'Culoare nevalidă a pictogramei',
+      'Invalid columns': 'Coloane nevalide',
+      'Invalid language preference': 'Preferință de limbă nevalidă',
+      'Cancel': 'Anulează',
+      'Install Home update?': 'Instalezi actualizarea Home?',
+      'Restore previous Home?': 'Restaurezi Home-ul anterior?',
+      'Home will close during installation. Your apps and settings will be saved.':
+        'Home se va închide în timpul instalării. Aplicațiile și setările tale vor fi salvate.',
+      'The previous Home version and saved settings will be restored.':
+        'Versiunea Home anterioară și setările salvate vor fi restaurate.',
+      'Release notes': 'Note de versiune',
+      '↑ ↓ Read notes · ← → Choose action · Back Close':
+        '↑ ↓ Citește notele · ← → Alege acțiunea · Înapoi Închide',
+      '← → Choose action · Back Open Home':
+        '← → Alege acțiunea · Înapoi Deschide Home',
+      'Home control could not be restored automatically. Open Home settings.':
+        'Controlul Home nu a putut fi restaurat automat. Deschide setările Home.',
+      'Your previous Home screen choice has been restored.':
+        'Alegerea ta anterioară pentru ecranul Home a fost restaurată.',
+      'Home control remains off because it was disabled during the update.':
+        'Controlul Home rămâne oprit, deoarece a fost dezactivat în timpul actualizării.',
+      'Rollback remains available until the next update.':
+        'Revenirea la versiunea anterioară rămâne disponibilă până la următoarea actualizare.',
+      'Previous Root version and profile restored.':
+        'Versiunea Root anterioară și profilul au fost restaurate.',
+      'Software updates. Update available.':
+        'Actualizări de software. Actualizare disponibilă.',
+      'Open LG Home once, keeping your Home choice.':
+        'Deschide LG Home o singură dată, păstrându-ți alegerea pentru Home.',
+      'Hold Back for 1.2 seconds to open LG Home.':
+        'Ține apăsat Înapoi 1,2 secunde pentru a deschide LG Home.',
+      'Developer Mode': 'Developer Mode',
+      'Beta': 'Beta',
+      'Home Helper': 'Home Helper',
+      'Home button settings': 'Setări pentru butonul Home',
+      'Start Helper': 'Pornește Helper',
+      'Start Helper?': 'Pornești Helper?',
+      'Starting Helper…': 'Se pornește Helper…',
+      'Helper opens Home with your remote and helps you return to Home after turning on the TV.':
+        'Helper deschide Home cu telecomanda și te ajută să revii la Home după pornirea televizorului.',
+      'Helper is unavailable. Reinstall the complete Home package from your computer.':
+        'Helper nu este disponibil. Reinstalează pachetul Home complet de pe computer.',
+      'Helper was stopped for safety. Start it only when you are ready to use Home control again.':
+        'Helper a fost oprit din motive de siguranță. Pornește-l doar când ești gata să folosești din nou controlul Home.',
+      'Helper is stopped. Start it to use the Home button and return from apps.':
+        'Helper este oprit. Pornește-l pentru a folosi butonul Home și revenirea din aplicații.',
+      'Start Helper to use Home control again. Your saved Home screen choice will be used.':
+        'Pornește Helper pentru a folosi din nou controlul Home. Se va folosi alegerea salvată pentru ecranul Home.',
+      'Status is unavailable.': 'Starea nu este disponibilă.',
+      'Try refreshing. If this continues, reinstall the complete Home package from your computer.':
+        'Încearcă să reîmprospătezi. Dacă problema persistă, reinstalează pachetul Home complet de pe computer.',
+      'No recovery needed.': 'Nu este necesară recuperarea.',
+      'Open Home to continue.': 'Deschide Home pentru a continua.',
+      'Open Home to continue. If the update caused a problem, you can restore the previous version.':
+        'Deschide Home pentru a continua. Dacă actualizarea a cauzat o problemă, poți restaura versiunea anterioară.',
+      'Recovery needs attention.': 'Recuperarea necesită atenție.',
+      'Refresh status first. If recovery remains unavailable, use the installer on your computer.':
+        'Reîmprospătează mai întâi starea. Dacă recuperarea rămâne indisponibilă, folosește programul de instalare de pe computer.',
+      'An update is in progress.': 'O actualizare este în curs.',
+      'Keep the TV powered on. Status will refresh automatically.':
+        'Ține televizorul pornit. Starea se va reîmprospăta automat.',
+      'Could not open Home.': 'Home nu a putut fi deschis.',
+      'If Home stops working after an update, use this app to restore the previous version. For regular updates, open Home settings.':
+        'Dacă Home nu mai funcționează după o actualizare, folosește această aplicație pentru a restaura versiunea anterioară. Pentru actualizările obișnuite, deschide setările Home.',
+      'Show diagnostics': 'Arată diagnosticarea',
+      'Hide diagnostics': 'Ascunde diagnosticarea',
+      'LG firmware updates': 'Actualizări de firmware LG',
+      'Block LG firmware updates': 'Blochează actualizările de firmware LG',
+      'Check status': 'Verifică starea',
+      'The setting changed elsewhere. Check it before trying again.':
+        'Setarea a fost modificată din alt loc. Verific-o înainte de a încerca din nou.',
+      'The change was not confirmed. Check status before trying again.':
+        'Modificarea nu a fost confirmată. Verifică starea înainte de a încerca din nou.',
+      'Homebrew Channel with root access is required. Check its settings, then retry.':
+        'Este necesar Homebrew Channel cu acces root. Verifică setările sale și încearcă din nou.',
+      'Checking firmware update blocking…':
+        'Se verifică blocarea actualizărilor de firmware…',
+      'Saving firmware update blocking…':
+        'Se salvează blocarea actualizărilor de firmware…',
+      'Uses Homebrew Channel to block LG firmware servers after a TV restart. This also prevents firmware security updates.':
+        'Homebrew Channel blochează serverele de firmware LG după repornirea televizorului. Sunt blocate și actualizările de securitate ale firmware-ului.',
+      'Some TVs check for updates before blocking starts. Existing prompts may remain; router blocking may be needed.':
+        'Unele televizoare caută actualizări înainte de activarea blocării. Mesajele deja afișate pot rămâne. Poate fi necesară blocarea din router.',
+      'Homebrew keeps this setting after Clean Your TV is removed. You can change it in Homebrew Channel.':
+        'Homebrew păstrează setarea după dezinstalarea Clean Your TV. O poți modifica în Homebrew Channel.',
+      'Homebrew blocking is set to on.': 'Blocarea din Homebrew este activată.',
+      'Homebrew blocking is set to off.':
+        'Blocarea din Homebrew este dezactivată.',
+      'Changes apply after a TV restart. Standby is not enough. Active blocking is not verified here.':
+        'Modificările se aplică după repornirea televizorului, nu după ieșirea din standby. Starea efectivă a blocării nu este verificată aici.',
+      'Homebrew denied this app access. Change the setting in Homebrew Channel. On webOS 11, Homebrew needs compatible API permissions.':
+        'Homebrew a refuzat accesul aplicației. Modifică setarea în Homebrew Channel. Pe webOS 11, Homebrew are nevoie de permisiuni API compatibile.',
+      'Homebrew service is unavailable. Open Homebrew Channel, then check status.':
+        'Serviciul Homebrew nu este disponibil. Deschide Homebrew Channel și verifică starea.',
+      'Homebrew is not running as root. Check root access in Homebrew Channel.':
+        'Homebrew nu rulează cu drepturi root. Verifică accesul root în Homebrew Channel.',
+      'Homebrew returned an unsupported configuration response. Check its version, then retry.':
+        'Homebrew a returnat un răspuns de configurare neacceptat. Verifică versiunea și încearcă din nou.',
+      'Homebrew did not respond in time. Check status before trying again.':
+        'Homebrew nu a răspuns la timp. Verifică starea înainte de a încerca din nou.',
+      'Show Add app tile': 'Arată dala Adaugă aplicație',
+      'Add app': 'Adaugă aplicație',
+      'Invalid Add app visibility':
+        'Setare nevalidă pentru afișarea dalei Adaugă aplicație',
+      'Show inputs on Home': 'Arată intrările în Home',
+      'Preview inputs on focus': 'Previzualizează intrările la selectare',
+      'Open Clean Your TV first': 'Deschide mai întâi Clean Your TV',
+      'LG Channels / Live TV': 'LG Channels / TV în direct',
+      'YouTube': 'YouTube',
+      'HDMI': 'HDMI',
+      'Available when Change Home is on.':
+        'Disponibil când controlul Home este activat.',
+      'Checking startup sources…': 'Se verifică sursele de la pornire…',
+      'Choose which previous sources open Clean Your TV first.':
+        'Alege după ce surse folosite anterior se deschide mai întâi Clean Your TV.',
+      'Startup sources unavailable. Reopen Settings to check again.':
+        'Sursele de la pornire nu sunt disponibile. Redeschide Setări pentru a verifica din nou.',
+      'System update transaction changed during startup':
+        'Operațiunea de actualizare a sistemului s-a modificat în timpul pornirii',
+      'System update requires recovery':
+        'Actualizarea sistemului necesită recuperare',
+      'System update profile readiness timed out':
+        'Profilul pentru actualizarea sistemului nu a fost disponibil la timp',
+      'Legacy updater permissions changed; computer recovery required':
+        'Permisiunile programului vechi de actualizare s-au modificat. Este necesară recuperarea de pe computer.'
+    }
+  });

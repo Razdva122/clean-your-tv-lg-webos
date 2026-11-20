@@ -55,7 +55,7 @@ REASONS += ACTIVATION_CODES
 REASONS += ('installer-runtime-mismatch', 'clean-handoff-refused', 'foreign-home-restore-failed', 'pairing-rejected')
 ACTIONS = ('recover', 'install', 'uninstall', 'restore', 'status', 'doctor', 'home-diagnostics',
            'enable-system-updates', 'enable-firmware-access', 'disable-firmware-access',
-           'recover-system-rollback', 'recover-root-rollback', 'replace-system-updater', 'clean-wam-cache', 'debloat')
+           'recover-system-rollback', 'recover-root-rollback', 'repair-root-recovery', 'replace-system-updater', 'migrate-root-beta', 'clean-wam-cache', 'debloat')
 PENDING_ACTIONS = (*ACTIONS, 'activate-root', 'setup-root-updater', 'archive-root-state')
 PHASES = ('launch-helper', 'verify-home-button', 'select-tv', 'inspect-tv', 'select-edition', 'prepare-payload', 'ssh-connect',
           'inspect-installation', 'pair-tv', 'read-inventory', 'install-packages',
@@ -141,7 +141,7 @@ def root_diagnostics_summary(value):
     if type(log.get('supervisor_error')) is bool:result['health_log']['supervisor_error']=log['supervisor_error']
     compositor=mapping(value.get('compositor'))
     if compositor:
-        from .root_activation_diagnostics import COMPOSITOR_STOPS
+        from .root_activation_diagnostics import COMPOSITOR_STOPS, INPUT_TIMEOUT_PHASES
         observed={'status':choice(compositor.get('status'),
             ('read','missing','unsafe','unavailable','stale','inconsistent'))}
         if observed['status']=='read':
@@ -151,6 +151,9 @@ def root_diagnostics_summary(value):
                 observed['scope']=choice(compositor.get('scope'), ('retained','since-enable'))
                 if compositor.get('guardian_release')=='ui_release_failed':
                     observed['guardian_release']='ui_release_failed'
+                phase=compositor.get('input_timeout_phase')
+                if stop=='input_expired' and phase in INPUT_TIMEOUT_PHASES:
+                    observed['input_timeout_phase']=phase
             else:
                 observed['status']='unknown'
         result['compositor']=observed
@@ -405,7 +408,7 @@ def worker_summary(value):
         result['package_rejected']=True
     if 'cleanup_step' in value:
         result['cleanup_step']=choice(value['cleanup_step'],('routing-inverse','runtime-restore',
-            'provision-rollback','startup-hook','legacy-lockdown','registration-restore','legacy-permissions','home-readback'))
+            'provision-rollback','startup-hook','legacy-lockdown','registration-restore','legacy-permissions','home-readback','boot-identity','private-inventory'))
     detail=mapping(value.get('luna'))
     if detail:
         result['luna']={'call':choice(detail.get('call'),('apps-dev','apps','home-settings','home-profiles',
@@ -642,9 +645,10 @@ def failure_summary(value):
     driver=root_driver_details(value.get('root_driver'))
     if driver:result['root_driver']=driver
     from .errors import root_beta_repair_details
-    beta_repair = root_beta_repair_details(value.get('root_beta_repair_failure'))
-    if beta_repair:
-        result['root_beta_repair_failure'] = beta_repair
+    for key in ('root_beta_repair_failure', 'root_retained_repair_failure'):
+        detail = root_beta_repair_details(value.get(key))
+        if detail:
+            result[key] = detail
     if 'no_root_cleanup' in value:
         from .errors import no_root_cleanup_details
         result['no_root_cleanup'] = no_root_cleanup_details(value['no_root_cleanup'])

@@ -1,4 +1,4 @@
-/* Standard theme settings, thirteen UI languages. */
+/* Shared theme settings translations. */
 HomeI18n.add({
   'ru': {
     '{size} MB': '{size} МБ',
@@ -1120,5 +1120,97 @@ HomeI18n.add({
     'Invalid theme receiver response': 'Neplatná odpověď přijímače motivů',
     'Invalid received theme size': 'Neplatná velikost přijatého motivu',
     'Invalid received theme chunk': 'Neplatný blok přijatého motivu'
+  }
+});
+
+/* Romanian TV interface. */
+HomeI18n.add({
+  'ro': {
+    '{size} MB': '{size} MB',
+    'Video wallpaper': 'Fundal video',
+    'Remove theme?': 'Elimini tema?',
+    'Classic will be restored.': 'Classic va fi restaurat.',
+    'Theme network error': 'Eroare de rețea la încărcarea temei',
+    'Could not download theme': 'Tema nu a putut fi descărcată',
+    'Theme file not found': 'Fișierul temei nu a fost găsit',
+    'Theme download timed out': 'Descărcarea temei a expirat',
+    'Switch to another theme before removing this version':
+      'Treci la altă temă înainte de a elimina această versiune',
+    'This is a browser preview. The receiver runs on your TV.':
+      'Aceasta este o previzualizare în browser. Receptorul rulează pe televizor.',
+    'On your TV, open Settings → Themes → Receive from computer. Then use Send to TV on this computer.':
+      'Pe televizor, deschide Setări → Teme → Primește de pe computer. Apoi folosește Send to TV pe acest computer.',
+    'Community themes': 'Teme din comunitate',
+    'Send a theme from your computer': 'Trimite o temă de pe computer',
+    'More options': 'Mai multe opțiuni',
+    'Themes': 'Teme',
+    'Built-in': 'Încorporate',
+    'Downloaded': 'Descărcate',
+    'Selected': 'Selectată',
+    'Remove': 'Elimină',
+    'Add by ID': 'Adaugă după ID',
+    'Restore Classic': 'Restaurează Classic',
+    'Clear downloaded themes': 'Șterge temele descărcate',
+    'Clear': 'Șterge',
+    'Cancel': 'Anulează',
+    'Back': 'Înapoi',
+    'Theme ID': 'ID-ul temei',
+    'Will open: {url}': 'Se va deschide: {url}',
+    'Load': 'Încarcă',
+    'Choose a theme': 'Alege o temă',
+    'Keep this theme?': 'Păstrezi această temă?',
+    'Keep theme': 'Păstrează tema',
+    'Revert': 'Revino',
+    'Loading themes…': 'Se încarcă temele…',
+    'Preparing theme…': 'Se pregătește tema…',
+    'Downloading theme…': 'Se descarcă tema…',
+    'Checking theme source…': 'Se verifică sursa temei…',
+    'This collection is empty': 'Această colecție este goală',
+    'Reverting in {count} seconds': 'Revenire în {count} secunde',
+    'Downloading file {count} of {total}':
+      'Se descarcă fișierul {count} din {total}',
+    'Choose a theme for Home. Settings stay standard.':
+      'Alege o temă pentru Home. Setările rămân cele standard.',
+    'Enter the theme ID, for example 102300a209.':
+      'Introdu ID-ul temei, de exemplu 102300a209.',
+    'Classic will be restored. Downloaded themes will be removed.':
+      'Classic va fi restaurat. Temele descărcate vor fi eliminate.',
+    'Reverting…': 'Se revine…',
+    'Theme showcase': 'Galeria de teme',
+    'Choose a preview to see details.':
+      'Alege o previzualizare pentru a vedea detaliile.',
+    'Try theme': 'Încearcă tema',
+    'Download theme': 'Descarcă tema',
+    'Receive from computer': 'Primește de pe computer',
+    'On the same home network, open Send to TV in the computer preview.':
+      'În aceeași rețea de acasă, deschide Send to TV în previzualizarea de pe computer.',
+    'Six-digit PIN': 'PIN din șase cifre',
+    'Only share on a trusted home network. The PIN expires after 10 minutes.':
+      'Partajează doar într-o rețea de acasă de încredere. PIN-ul expiră după 10 minute.',
+    'Try again': 'Încearcă din nou',
+    'Refresh': 'Reîmprospătează',
+    'Showing bundled themes. Live catalogue could not be refreshed.':
+      'Se afișează temele incluse. Catalogul online nu a putut fi reîmprospătat.',
+    'Apply theme': 'Aplică tema',
+    'All available themes are already installed':
+      'Toate temele disponibile sunt deja instalate',
+    'Starting TV receiver…': 'Se pornește receptorul TV…',
+    'Enter this TV address and PIN in Send to TV on your computer.':
+      'Introdu această adresă a televizorului și PIN-ul în Send to TV pe computer.',
+    'TV address': 'Adresa televizorului',
+    'PIN expires at {time}': 'PIN-ul expiră la {time}',
+    'Waiting for computer…': 'Se așteaptă computerul…',
+    'Receiving theme…': 'Se primește tema…',
+    'Checking received theme…': 'Se verifică tema primită…',
+    'Theme receiver session expired. Try again.':
+      'Sesiunea receptorului de teme a expirat. Încearcă din nou.',
+    'Theme receiver stopped. Try again.':
+      'Receptorul de teme s-a oprit. Încearcă din nou.',
+    'Theme receiver unavailable. Update Home and its service, then try again.':
+      'Receptorul de teme nu este disponibil. Actualizează Home și serviciul său, apoi încearcă din nou.',
+    'Invalid theme receiver response':
+      'Răspuns nevalid de la receptorul de teme',
+    'Invalid received theme size': 'Dimensiune nevalidă a temei primite',
+    'Invalid received theme chunk': 'Fragment nevalid al temei primite'
   }
 });

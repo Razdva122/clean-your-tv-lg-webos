@@ -1,4 +1,4 @@
-/* Shared wallpaper settings: twelve translations plus English source strings. */
+/* Shared wallpaper settings translations. */
 window.HomeWallpaperLocales = {
   'ru': {
     'Built-in': 'Встроенные',
@@ -947,5 +947,101 @@ window.HomeWallpaperLocales = {
     'During HDMI previews, the 4K video wallpaper temporarily switches to a static 1080p image. Disable input previews to keep the wallpaper in 4K.':
       'HDMI 預覽期間，4K 影片桌布會暫時切換為 1080p 靜態圖片。關閉輸入來源預覽即可讓桌布維持 4K。',
     'Disable HDMI previews': '關閉 HDMI 預覽'
+  },
+  'ro': {
+    'Built-in': 'Incluse',
+    'My files': 'Fișierele mele',
+    'Background source': 'Sursa fundalului',
+    'Add a file': 'Adaugă un fișier',
+    'No saved files': 'Nu există fișiere salvate',
+    'Full screen': 'Ecran complet',
+    'Wallpaper preview': 'Previzualizează fundalul',
+    'Close preview': 'Închide previzualizarea',
+    'Still frame': 'Cadru static',
+    'Photo': 'Fotografie',
+    'My photo': 'Fotografia mea',
+    'My video': 'Videoclipul meu',
+    'Video': 'Videoclip',
+    'Remove the saved wallpaper? Upload it again to use it later.':
+      'Elimini fundalul salvat? Încarcă-l din nou pentru a-l folosi mai târziu.',
+    'Wallpapers': 'Fundaluri',
+    'Current theme wallpaper': 'Fundalul temei curente',
+    'TV capability': 'Capacitatea televizorului',
+    '4K supported': '4K acceptat',
+    '4K not detected': '4K nedetectat',
+    'Unknown': 'Necunoscut',
+    'Current mode': 'Modul curent',
+    'No wallpaper': 'Fără fundal',
+    'This theme has no wallpaper.': 'Această temă nu are fundal.',
+    'This wallpaper has no video version.':
+      'Acest fundal nu are versiune video.',
+    'Auto uses detected TV support. Playback may fall back to an image.':
+      'Automat folosește capacitățile detectate ale televizorului. Redarea poate reveni la o imagine.',
+    'Auto': 'Automat',
+    'Image': 'Imagine',
+    'Dimming': 'Estompare',
+    'Less dimming': 'Mai puțin estompat',
+    'More dimming': 'Mai mult estompat',
+    'Reset to theme defaults': 'Revino la valorile implicite ale temei',
+    'Wallpaper quality': 'Calitatea fundalului',
+    'Could not change wallpaper settings.':
+      'Setările fundalului nu au putut fi modificate.',
+    '4K is unavailable. Using a compatible wallpaper.':
+      '4K nu este disponibil. Se folosește un fundal compatibil.',
+    '4K playback failed. Using the image.':
+      'Redarea 4K a eșuat. Se folosește imaginea.',
+    '4K playback failed. Using 1080p.':
+      'Redarea 4K a eșuat. Se folosește 1080p.',
+    'Video playback failed. Using the image.':
+      'Redarea video a eșuat. Se folosește imaginea.',
+    'Wallpaper preferences could not be saved.':
+      'Preferințele pentru fundal nu au putut fi salvate.',
+    'Paused while settings are open':
+      'În pauză cât timp setările sunt deschise',
+    'Video dimensions do not match the theme.':
+      'Dimensiunile videoclipului nu se potrivesc cu tema.',
+    'My wallpaper': 'Fundalul meu',
+    'Saved media': 'Fișiere salvate',
+    'Use saved photo': 'Folosește fotografia salvată',
+    'Use saved video': 'Folosește videoclipul salvat',
+    'Remove personal wallpaper': 'Elimină fundalul personal',
+    'Receive from CYTV': 'Primește de la CYTV',
+    'Upload from phone': 'Încarcă de pe telefon',
+    'Waiting for upload…': 'Se așteaptă încărcarea…',
+    'Wallpaper receiver stopped. Try again.':
+      'Receptorul de fundaluri s-a oprit. Încearcă din nou.',
+    'Phone upload: ordinary image up to 1080p. Sharpness is limited by the TV interface. Use CYTV for native 4K video.':
+      'Încărcare de pe telefon: imagine obișnuită până la 1080p. Claritatea este limitată de interfața televizorului. Folosește CYTV pentru video 4K nativ.',
+    'Theme': 'Temă',
+    'Apply': 'Aplică',
+    'Cancel': 'Anulează',
+    'Uploaded from phone': 'Încărcat de pe telefon',
+    'Uploaded from CYTV': 'Încărcat din CYTV',
+    'Built-in wallpapers': 'Fundaluri încorporate',
+    'Video by': 'Video de',
+    'Non-commercial use': 'Utilizare necomercială',
+    'Storage estimate ({location}): required {required} MiB; available {available} MiB; shortfall {shortfall} MiB.':
+      'Estimare spațiu ({location}): necesar {required} MiB; disponibil {available} MiB; lipsă {shortfall} MiB.',
+    'Storage estimate ({location}): required {required} MiB; available and shortfall could not be determined.':
+      'Estimare spațiu ({location}): necesar {required} MiB; spațiul disponibil și cel lipsă nu au putut fi determinate.',
+    'Not enough space on the TV': 'Spațiu insuficient pe televizor',
+    'Not enough space on this computer': 'Spațiu insuficient pe acest computer',
+    'The TV reported insufficient storage space. Free space on the affected TV partition; deleting apps may free a different partition.':
+      'Televizorul a raportat spațiu de stocare insuficient. Eliberează spațiu pe partiția afectată a televizorului; ștergerea aplicațiilor poate elibera o altă partiție.',
+    'Not enough space on this computer. Free space on the system or temporary drive.':
+      'Spațiu insuficient pe acest computer. Eliberează spațiu pe unitatea de sistem sau pe cea temporară.',
+    'Available TV storage could not be determined.':
+      'Spațiul de stocare disponibil pe televizor nu a putut fi determinat.',
+    'Installation stopped before package submission.':
+      'Instalarea s-a oprit înainte de trimiterea pachetului.',
+    'TV app storage': 'Stocarea aplicațiilor pe televizor',
+    'Theme cache': 'Memoria cache a temelor',
+    'Video cache': 'Memoria cache video',
+    'Computer temporary storage': 'Stocarea temporară a computerului',
+    'Remove a downloaded theme before adding another (8 themes maximum).':
+      'Elimină o temă descărcată înainte de a adăuga alta (maximum 8 teme).',
+    'During HDMI previews, the 4K video wallpaper temporarily switches to a static 1080p image. Disable input previews to keep the wallpaper in 4K.':
+      'În timpul previzualizărilor HDMI, fundalul video 4K trece temporar la o imagine statică 1080p. Dezactivează previzualizările intrărilor pentru a păstra fundalul în 4K.',
+    'Disable HDMI previews': 'Dezactivează previzualizările HDMI'
   }
 };

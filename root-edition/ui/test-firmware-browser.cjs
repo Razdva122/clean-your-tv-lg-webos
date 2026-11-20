@@ -16,6 +16,7 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8879';
       'ko',
       'hi',
       'pl',
+      'ro',
       'ru',
       'zh-Hans',
       'zh-Hant'
@@ -110,7 +111,7 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8879';
     assert.equal(await page.locator('.settings-firmware').count(), 0);
     await page.close();
     console.log(
-      'PASS firmware browser: 13 languages at 1080p/720p, on/off, visible remote focus, Back restoration and No-root isolation'
+      'PASS firmware browser: 14 languages at 1080p/720p, on/off, visible remote focus, Back restoration and No-root isolation'
     );
   } finally {
     await browser.close();

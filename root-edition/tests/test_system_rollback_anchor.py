@@ -62,7 +62,7 @@ with LegacyOTA() as f:
  active=dict(version=1,generation=18,phase='active',enabled=True,boot='boot:fixture',token='owner-enable')
  f.root_store.write('persistent-intent',active)
  enabled=[];captured=[];runtime=f.device.runtime
- def restored():
+ def restored(*,cancel_rearm=True):
   value=f.root_store.read('persistent-intent');value.update(phase='disabled',enabled=False)
   f.root_store.write('persistent-intent',value);return 'restored'
  def enable():

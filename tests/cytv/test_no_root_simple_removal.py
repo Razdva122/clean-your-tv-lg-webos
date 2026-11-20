@@ -1998,6 +1998,18 @@ class SimpleRemoval(unittest.TestCase):
         with self.assertRaisesRegex(UserError,'Root access'):self.remove()
         self.assertTrue(root.exists());self.assertIsNotNone(self.store.pending(self.profile))
 
+    def test_no_root_removal_preserves_standalone_python_cache(self):
+        cache = self.root / 'varlib/clean-your-tv-python'
+        cache.mkdir(mode=0o700)
+        lock = cache / '.install.lock'
+        lock.touch()
+        self.remote.apps = {'com.gathin.tvhome'}
+        self.assertTrue(self.remove()['restart_required'])
+        self.assertNotIn('com.gathin.tvhome', self.remote.apps)
+        self.reboot()
+        self.assertTrue(self.remove()['verified_clean'])
+        self.assertTrue(lock.exists())
+
     @unittest.skipIf(getattr(os, 'getuid', lambda: -1)() == 0, 'unprivileged SDK model')
     def test_no_root_removal_does_not_require_listing_foreign_ls2_roles(self):
         (self.root / 'proc').mkdir()
