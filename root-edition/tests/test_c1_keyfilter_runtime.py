@@ -369,6 +369,45 @@ class RuntimeTests(unittest.TestCase):
                     self.assertEqual(self.k.execute('boot', root=self.root, uid=self.uid), 'restored')
                     restore.assert_called_once_with(self.root, self.uid, explicit_restore=False)
 
+    def test_failed_enable_retires_filter_when_stock_home_is_independently_verified(self):
+        self.admission = dict(self.generic(), model='55UM7450PLA', firmware='05.40.97', webos='4.10.0')
+        self.prepare()
+        filter_file = self.root / 'runtime/c1-home-filter.js'
+        filter_file.parent.mkdir()
+        filter_file.touch(mode=0o600)
+        stock = [{'file': '/usr/lib/qt5/qml/KeyFilters/systemUi.js', 'handler': 'handleSystemKeys'}]
+        chain = stock.copy()
+        stopped = self.proof()
+        failure = TimeoutError('Guardian startup failed')
+
+        def change(root, enabled, uid):
+            chain[:] = self.k.reconcile(chain, root, enabled)
+            if enabled:
+                raise failure
+
+        def native(args, *_args, allow_ui_failure=False):
+            if args == ['--restore']:
+                if not allow_ui_failure:
+                    raise ValueError('Native UI release failed')
+                return dict(stopped, returnValue=False, reason='ui_release_failed')
+            return stopped
+
+        with patch.object(self.k, 'verify_ready', return_value={'integrity_verified': True}), \
+                patch.object(self.k, 'probe', return_value=self.admission), \
+                patch.object(self.k, 'binary'), \
+                patch.object(self.k, 'read_chain', side_effect=lambda: chain.copy()), \
+                patch.object(self.k, 'change_chain', side_effect=change), \
+                patch.object(self.k, 'native', side_effect=native), \
+                patch.object(self.k, 'luna', side_effect=[
+                    {'returnValue': True, 'appId': self.k.STOCK},
+                    {'returnValue': True, 'foregroundAppInfo': [{'appId': self.k.STOCK, 'windowType': self.k.HOME}]},
+                ]), patch('helper_bridge.require_idle'):
+            with self.assertRaises(TimeoutError) as caught:
+                self.k.enable_locked(self.root, self.uid, 0)
+            self.assertIs(caught.exception, failure)
+        self.assertEqual(chain, stock)
+        self.assertEqual(self.k.read_intent(self.root, self.uid)['phase'], 'disabled')
+
     def test_reported_schema3_refuses_enable_without_an_explicit_lg_destination(self):
         self.admission = dict(self.generic(), model='65NANO913NA', firmware='04.64.00', webos='5.6.2')
         self.prepare()
