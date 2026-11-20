@@ -204,6 +204,15 @@ def prime_cache(cache_dir, progress):
         if sys.platform == 'darwin':
             # Frozen Python retains its build host's CA paths, absent on a clean Mac.
             context.load_verify_locations(cafile='/etc/ssl/cert.pem')
+        elif sys.platform == 'linux' and not hasattr(sys, 'getandroidapilevel'):
+            paths = ssl.get_default_verify_paths()
+            # Frozen OpenSSL may use build-host paths absent on the target distro.
+            if not paths.cafile and paths.openssl_cafile_env not in os.environ:
+                for cafile in ('/etc/ssl/cert.pem', '/etc/pki/tls/certs/ca-bundle.crt',
+                               '/etc/ssl/certs/ca-certificates.crt'):
+                    if Path(cafile).is_file():
+                        context.load_verify_locations(cafile=cafile)
+                        break
         opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), _ReleaseRedirect(),
                                             urllib.request.HTTPSHandler(context=context))
         failure = 'cache-access'
