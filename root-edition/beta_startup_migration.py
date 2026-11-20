@@ -52,7 +52,7 @@ class Transaction:
                 raise ValueError('Interrupted migration journal changed')
             temporary.unlink()
         value['phase'] = phase
-        p.beta_repair_write(self.root/JOURNAL, p.encoded(value))
+        p.retained_repair_write(self.root/JOURNAL, p.encoded(value))
 
     def original(self, value, name):
         entry = value['original'][name]
@@ -92,7 +92,7 @@ class Transaction:
                 copy.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
                 if os.path.lexists(copy) and p.secure(copy) != raw:
                     raise ValueError('Unrecorded migration backup changed')
-                p.beta_repair_write(copy, raw, mode)
+                p.retained_repair_write(copy, raw, mode)
                 originals[name] = {'sha256': digest(raw), 'mode': mode}
             else:
                 originals[name] = None
@@ -133,7 +133,7 @@ class Transaction:
             return value
         for temporary in temporary_files:
             temporary.unlink()
-        p.beta_repair_write(self.root/'recovery-provision.json',
+        p.retained_repair_write(self.root/'recovery-provision.json',
                             p.encoded({'version': 1, 'mode': 'startup-migration'}))
         self.save(value, 'writing')
         checkpoint('readiness-revoked')
@@ -144,7 +144,7 @@ class Transaction:
             raw, mode = self.targets[name]
             target = self.root/name
             target.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-            p.beta_repair_write(target, raw, mode)
+            p.retained_repair_write(target, raw, mode)
             checkpoint(name)
         self.save(value, 'published')
         verify()
@@ -158,7 +158,7 @@ class Transaction:
         temporary_files = self.validate(value)
         for temporary in temporary_files:
             temporary.unlink()
-        p.beta_repair_write(self.root/'recovery-provision.json',
+        p.retained_repair_write(self.root/'recovery-provision.json',
                             p.encoded({'version': 1, 'mode': 'startup-migration'}))
         for name in [n for n in self.targets if n != 'recovery-provision.json'] + ['recovery-provision.json']:
             raw = self.original(value, name)
@@ -167,7 +167,7 @@ class Transaction:
                 if os.path.lexists(path):
                     path.unlink()
             else:
-                p.beta_repair_write(path, raw, value['original'][name]['mode'])
+                p.retained_repair_write(path, raw, value['original'][name]['mode'])
         self.save(value, 'rolled-back')
         return value
 
@@ -272,7 +272,7 @@ def ensure_stock_destination():
         return
     if 'home' in defaults:
         raise ValueError('Preserve the existing custom Home destination')
-    p.beta_repair_write(path, p.encoded({'schema': 1, 'original': defaults}))
+    p.retained_repair_write(path, p.encoded({'schema': 1, 'original': defaults}))
     try:
         p.rpc('home-stock')
     except p.RecoveryRPCError:
@@ -359,7 +359,7 @@ def migrate(bundle, *, rollback=False, keep_removal=None):
                 original_path = p.STATE/'beta-startup-original-proof.json'
                 if os.path.lexists(original_path) and p.secure(original_path) != p.encoded(original):
                     raise ValueError('Unrecorded startup migration proof changed')
-                p.beta_repair_write(original_path, p.encoded(original))
+                p.retained_repair_write(original_path, p.encoded(original))
             else:
                 original = json.loads(p.secure(p.STATE/'beta-startup-original-proof.json'))
             tx = Transaction(p.STATE, candidate_targets(bundle, original, metadata=metadata))

@@ -195,7 +195,7 @@ def build(output, version='0.0.1', legacy_node_prototype=False, resolution=None,
             release['routing'] = 'compositor-keyfilter-v1'
             release['compositor_admission'] = 3
             release['capabilities'].append('c1-keyfilter-v2' if legacy_node_beta else 'c1-keyfilter-v1')
-    from deploy import SUPPORT_FILES, RUNTIME_FILES, checked_file
+    from deploy import BETA_MIGRATION_SCRIPT, SUPPORT_FILES, RUNTIME_FILES, checked_file
     source = Path(__file__).resolve().parent
     support = {name: checked_file(source, name) for name in SUPPORT_FILES}
     support.update({'runtime/' + name: checked_file(source, 'runtime/' + name) for name in RUNTIME_FILES})
@@ -204,6 +204,8 @@ def build(output, version='0.0.1', legacy_node_prototype=False, resolution=None,
         support['runtime/' + helper_name] = native_gate
         support['runtime/c1_gate.py'] = checked_file(source, 'runtime/c1_gate.py')
         if keyfilter:
+            if legacy_node_beta:
+                support[BETA_MIGRATION_SCRIPT] = checked_file(source, BETA_MIGRATION_SCRIPT)
             for extra in ('c1_keyfilter.py', 'c1-home-filter.js'):
                 support['runtime/' + extra] = checked_file(source, 'runtime/' + extra)
     if recovery_gate is not None:

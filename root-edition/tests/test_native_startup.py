@@ -13,15 +13,10 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'runtime'))
 import c1_keyfilter as gate
-try:
-    import native_startup as startup
-except ImportError:
-    startup = None
 
 
 class StartupTests(unittest.TestCase):
     def setUp(self):
-        self.assertIsNotNone(startup, 'Native startup policy is missing')
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name).resolve()
@@ -57,7 +52,7 @@ class StartupTests(unittest.TestCase):
         return dict(self.current['effective'])
 
     def after(self):
-        return startup.after_boot(self.result, self.root, self.uid)
+        return gate.startup_after_boot(self.result, self.root, self.uid)
 
     def test_tv_launch_and_repeat_callback(self):
         self.assertEqual(self.after(), 'launched')
@@ -65,12 +60,12 @@ class StartupTests(unittest.TestCase):
         self.assertEqual(self.launch.call_count, 1)
 
     def test_selected_sources_and_hdmi_protection(self):
-        self.assertEqual(startup.status(self.root, self.uid), dict(sources=dict(tv=True,youtube=False),active=True))
+        self.assertEqual(gate.startup_status(self.root, self.uid), dict(sources=dict(tv=True,youtube=False),active=True))
         for app in ('com.webos.app.hdmi1', 'youtube.leanback.v4', gate.APP, '', 'other.app'):
             self.app=app
             self.assertEqual(self.after(), 'preserved')
         self.launch.assert_not_called()
-        startup.configure(dict(tv=False,youtube=True), self.root,self.uid)
+        gate.startup_configure(dict(tv=False,youtube=True), self.root,self.uid)
         self.app='com.webos.app.livetv'; self.assertEqual(self.after(),'preserved')
         self.app='youtube.leanback.v4'; self.assertEqual(self.after(),'launched')
 
@@ -115,7 +110,7 @@ class StartupTests(unittest.TestCase):
         self.launch.assert_not_called()
 
     def test_slow_status_cannot_submit_stale_foreground(self):
-        with patch.object(startup.time,'monotonic',side_effect=[0,0,0,2]):
+        with patch.object(gate.time,'monotonic',side_effect=[0,0,0,2]):
             self.assertEqual(self.after(),'preserved')
         self.launch.assert_not_called()
 
@@ -150,18 +145,18 @@ class StartupTests(unittest.TestCase):
         path=self.root/'startup-policy.json'
         path.write_text(json.dumps(dict(version=1,sources=dict(tv=False,youtube=True,hdmi=True))));path.chmod(0o600)
         before=path.read_bytes()
-        self.assertEqual(startup.entry(['status'],self.root,self.uid)['sources'],dict(tv=False,youtube=True))
+        self.assertEqual(gate.startup_entry(['status'],self.root,self.uid)['sources'],dict(tv=False,youtube=True))
         self.assertEqual(path.read_bytes(),before)
         with patch('sys.stdin',io.TextIOWrapper(io.BytesIO(b'{"tv": true,"youtube": false}'))):
-            self.assertTrue(startup.entry(['configure'],self.root,self.uid)['active'])
+            self.assertTrue(gate.startup_entry(['configure'],self.root,self.uid)['active'])
         self.assertEqual(json.loads(path.read_text()),dict(version=2,sources=dict(tv=True,youtube=False)))
         self.assertEqual(path.stat().st_mode&0o777,0o600)
         self.current['intent']['enabled']=False
-        with self.assertRaises(ValueError):startup.configure(dict(tv=False,youtube=True),self.root,self.uid)
+        with self.assertRaises(ValueError):gate.startup_configure(dict(tv=False,youtube=True),self.root,self.uid)
         self.current['intent']['enabled']=True
         for raw in ('{', '{"version":2,"sources":{"tv":1,"youtube":false}}'):
             path.write_text(raw)
-            with self.assertRaises(ValueError):startup.configure(dict(tv=False,youtube=True),self.root,self.uid)
+            with self.assertRaises(ValueError):gate.startup_configure(dict(tv=False,youtube=True),self.root,self.uid)
             self.assertEqual(path.read_text(),raw)
 
     def test_invalid_receipt_is_retained(self):

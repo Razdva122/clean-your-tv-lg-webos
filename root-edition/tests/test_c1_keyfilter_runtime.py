@@ -573,7 +573,7 @@ class RuntimeTests(unittest.TestCase):
                 patch.object(self.k, 'restore_locked') as restore:
             with self.assertRaisesRegex(RuntimeError, 'interrupted activation'):
                 self.k.enable_locked(self.root, self.uid, 0, session=session)
-            restore.assert_called_once_with(self.root, self.uid)
+            restore.assert_called_once_with(self.root, self.uid, explicit_restore=True)
 
     def test_reported_schema3_explicit_restore_verifies_routing_without_forcing_foreground(self):
         self.prepare_resumable()
@@ -656,7 +656,7 @@ class RuntimeTests(unittest.TestCase):
             raise ValueError('Optional startup policy failed')
 
         startup = Mock(side_effect=after_boot)
-        with patch.dict(sys.modules, {'native_startup': SimpleNamespace(after_boot=startup)}), \
+        with patch.object(self.k, 'startup_after_boot', startup), \
                 patch.object(intent_runtime, 'boot_identity', return_value=new_session), \
                 patch('boot_gate.wait', return_value=True) as normal, \
                 patch('boot_gate.observation', return_value=(True, False)), \
@@ -698,7 +698,7 @@ class RuntimeTests(unittest.TestCase):
                 self.k.atomic(self.root/'c1-keyfilter/intent.json', dict(intent, session=old_session), self.uid)
                 retired = dict(self.proof(), state='stock', stopped=False, reason='boot_retired')
                 startup = Mock()
-                with patch.dict(sys.modules, {'native_startup': SimpleNamespace(after_boot=startup)}), \
+                with patch.object(self.k, 'startup_after_boot', startup), \
                         patch.object(intent_runtime, 'boot_identity',
                                      return_value=old_session if case=='same-session' else new_session), \
                         patch('boot_gate.wait', return_value=case!='boot-gate'), \

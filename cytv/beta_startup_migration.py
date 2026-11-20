@@ -34,6 +34,9 @@ def run(installer, ask, write, *, rollback=False):
     from .root_gate import source_bundle
     from .root_install_recovery import run as device_run
     data = source_bundle(installer, resolution='1920x1080')
+    script = 'beta_startup_migration.py'
+    if script not in data:
+        raise UserError('Root runtime support is missing or changed. Use a complete installer build.')
     stage = '/tmp/cytv-c1-root-'+uuid.uuid4().hex
     installer.remote.run('umask 077; mkdir '+shlex.quote(stage))
     for name, raw in data.items():
@@ -47,7 +50,7 @@ def run(installer, ask, write, *, rollback=False):
         args += ['--preserve-removal', *preserved]
     from .root_passive import collect_beta
     try:
-        reply = json.loads(device_run(installer, stage, 'beta_startup_migration.py', args, timeout=180))
+        reply = json.loads(device_run(installer, stage, script, args, timeout=180))
     finally:
         installer.tv_info['root_beta_state'] = collect_beta(installer.remote)
     expected = 'rolled-back' if rollback else 'complete'

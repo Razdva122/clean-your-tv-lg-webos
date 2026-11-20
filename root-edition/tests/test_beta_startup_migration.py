@@ -1,12 +1,22 @@
 """Migration preserves installation data across retries and byte-exact rollback."""
+import importlib.util
 import json
 import os
 from pathlib import Path
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
 
-import beta_startup_migration as migration
+ROOT = Path(__file__).resolve().parents[1]
+provision_spec = importlib.util.spec_from_file_location('migration_provision', ROOT/'provision.py')
+provision = importlib.util.module_from_spec(provision_spec)
+provision_spec.loader.exec_module(provision)
+migration_spec = importlib.util.spec_from_file_location('device_beta_startup_migration', ROOT/'beta_startup_migration.py')
+migration = importlib.util.module_from_spec(migration_spec)
+# The host test suite also imports runtime/provision.py under the bare name.
+with patch.dict(sys.modules, {'provision': provision}):
+    migration_spec.loader.exec_module(migration)
 
 
 class MigrationTests(unittest.TestCase):
@@ -46,7 +56,7 @@ class MigrationTests(unittest.TestCase):
         observed = []
         self.tx.apply(self.verify, checkpoint=observed.append)
         self.assertEqual(observed[-1], 'recovery-provision.json')
-        with patch.object(migration.p, 'beta_repair_write', side_effect=AssertionError('completed retry wrote')):
+        with patch.object(migration.p, 'retained_repair_write', side_effect=AssertionError('completed retry wrote')):
             self.tx.apply(self.verify)
         self.assertEqual(self.tx.load()['phase'], 'complete')
 
@@ -111,10 +121,6 @@ class MigrationTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.tx.apply(self.verify)
 
-
-if __name__ == '__main__':
-    unittest.main()
-
 class MigrationAdmissionTests(unittest.TestCase):
     def test_unstarted_removal_requires_exact_original_component_state(self):
         from copy import deepcopy
@@ -178,7 +184,7 @@ class MigrationAdmissionTests(unittest.TestCase):
                 return {'release.json':(migration.p.encoded(dict(release,native_sha256='b'*64)),0o600),
                         'bundle.json':(b'{"new":true}',0o600),
                         'recovery-provision.json':(b'{"ready":true}',0o600)}
-            original_write=migration.p.beta_repair_write
+            original_write=migration.p.retained_repair_write
             failed=[False]
             def interrupted(path,*args,**kwargs):
                 result=original_write(path,*args,**kwargs)
@@ -195,10 +201,14 @@ class MigrationAdmissionTests(unittest.TestCase):
                     patch.object(migration,'candidate_targets',side_effect=targets), \
                     patch.object(migration,'require_quiescent') as quiet,patch.object(migration,'ensure_stock_destination'), \
                     patch.object(migration,'verify_status'):
-                with patch.object(migration.p,'beta_repair_write',side_effect=interrupted):
+                with patch.object(migration.p,'retained_repair_write',side_effect=interrupted):
                     with self.assertRaises(InterruptedError):migration.migrate(root)
                 self.assertEqual(migration.migrate(root)['phase'],'complete')
                 self.assertEqual(inventory.call_count,1)
                 self.assertEqual(quiet.call_count,2)
                 self.assertTrue(current[0]['terminal'])
                 self.assertNotEqual(current[0]['id'],'a'*32)
+
+
+if __name__ == '__main__':
+    unittest.main()

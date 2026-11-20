@@ -20,8 +20,9 @@ RUNTIME_FILES = ('bounded_profile_trial.py', 'cli.py', 'update_guard.py', 'devic
                  'helper_bridge.py', 'profile_guardian.py', 'profile_plan.py', 'profile_recovery.py', 'provision.py',
                  'staged_publication.py', 'transport.py', 'emergency_gesture.py', 'emergency_reader.py',
                  'emergency_watchdog.py', 'emergency_trial.py', 'persistent_lifecycle.py',
-                 'boot_gate.py', 'shutdown_state.py', 'persistent_health.py', 'persistent_lease.py', 'persistent_store.py', 'persistent_recovery.py', 'intent_runtime.py', 'native_startup.py')
-SUPPORT_FILES = ('beta_startup_migration.py', 'installation.py', 'updater/store.py', 'updater/package.py', 'setup.py', 'deploy.py', 'provision.py', 'observed_install.py', 'installer_status.py', 'personalize.py', 'system_permissions.py', 'activity.py', 'startup_hook.py','package_data.py','package_identity.py','startup_guard.py', 'python_binding.py', 'python_boot.js')
+                 'boot_gate.py', 'shutdown_state.py', 'persistent_health.py', 'persistent_lease.py', 'persistent_store.py', 'persistent_recovery.py', 'intent_runtime.py')
+BETA_MIGRATION_SCRIPT = 'beta_startup_migration.py'
+SUPPORT_FILES = ('installation.py', 'updater/store.py', 'updater/package.py', 'setup.py', 'deploy.py', 'provision.py', 'observed_install.py', 'installer_status.py', 'personalize.py', 'system_permissions.py', 'activity.py', 'startup_hook.py','package_data.py','package_identity.py','startup_guard.py', 'python_binding.py', 'python_boot.js')
 
 
 def require_device():
@@ -89,6 +90,8 @@ def verify_bundle(bundle, allow_experimental=False):
         base = ['theme-receiver-v1', 'wallpaper-media-v1']
         contracts = [base + ['c1-keyfilter-v1']]
         if LEGACY_NODE_BETA:
+            if BETA_MIGRATION_SCRIPT in manifest.get('files', {}):
+                expected.add(BETA_MIGRATION_SCRIPT)
             contracts.append(base + ['c1-keyfilter-v2'])
         if capabilities not in contracts:
             raise ValueError('Invalid compositor routing capabilities')

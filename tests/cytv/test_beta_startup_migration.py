@@ -31,7 +31,7 @@ class StartupMigrationHostTests(unittest.TestCase):
     def test_preserved_unstarted_removal_is_archived_only_after_verified_success(self):
         pending = self.store.request_clean_removal(self.profile)
         original = (self.store.device_dir(self.profile)/'operation.json').read_bytes()
-        source = {'bundle.json': b'{}', 'runtime/c1-keyfilter-guard': b'guard', 'own.ipk': b'package'}
+        source = {'bundle.json': b'{}', 'beta_startup_migration.py': b'script', 'runtime/c1-keyfilter-guard': b'guard', 'own.ipk': b'package'}
         with patch('cytv.root_gate.source_bundle', return_value=source), \
                 patch('cytv.root_install_recovery.run', return_value=json.dumps(self.reply)) as device:
             self.assertEqual(run(self.installer, lambda _: 'y', self.write), self.reply)
@@ -46,11 +46,18 @@ class StartupMigrationHostTests(unittest.TestCase):
     def test_failed_or_inconsistent_device_reply_keeps_original_request(self):
         pending = self.store.request_clean_removal(self.profile)
         for reply in (dict(self.reply, preferences_preserved=False), dict(self.reply, phase='writing')):
-            with patch('cytv.root_gate.source_bundle', return_value={'bundle.json': b'{}'}), \
+            with patch('cytv.root_gate.source_bundle', return_value={'beta_startup_migration.py': b'script'}), \
                     patch('cytv.root_install_recovery.run', return_value=json.dumps(reply)):
                 with self.assertRaises(UserError):
                     run(self.installer, lambda _: 'y', self.write)
             self.assertEqual(self.store.pending(self.profile), pending)
+
+    def test_bundle_without_migration_script_is_refused_before_upload(self):
+        with patch('cytv.root_gate.source_bundle', return_value={'bundle.json': b'{}'}):
+            with self.assertRaisesRegex(UserError, 'Root runtime support is missing'):
+                run(self.installer, lambda _: 'y', self.write)
+        self.installer.remote.run.assert_not_called()
+        self.installer.remote.upload.assert_not_called()
 
     def test_cli_normal_entry_dispatches_only_dedicated_migration(self):
         from cytv import cli

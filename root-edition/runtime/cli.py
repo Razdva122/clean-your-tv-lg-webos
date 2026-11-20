@@ -796,8 +796,8 @@ if __name__ == '__main__':
     elif len(sys.argv) > 1 and sys.argv[1] == 'startup':
         try:
             if gate_backend() is not None:
-                import native_startup
-                result = native_startup.entry(sys.argv[2:], d.STATE, d.EXPECTED_UID)
+                from c1_keyfilter import startup_entry
+                result = startup_entry(sys.argv[2:], d.STATE, d.EXPECTED_UID)
             else:
                 from intent_runtime import startup_entry as entry
                 result = entry(sys.argv[2:])

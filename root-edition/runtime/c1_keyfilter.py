@@ -1117,12 +1117,151 @@ def execute(mode,transaction=None,root=STATE,uid=0):
         # Startup policy owns its own operation lock and validates the new
         # session again before a UI effect. Its failure cannot undo activation.
         try:
-            from native_startup import after_boot
-            after_boot(resumed, root=root, uid=uid)
+            startup_after_boot(resumed, root=root, uid=uid)
         except Exception:
             pass
         return resumed
     raise ValueError('Unsupported compositor lifecycle operation')
+
+
+def startup_load_policy(root, uid):
+    from intent_runtime import startup_load
+    return startup_load(lambda: json.loads(secure(Path(root)/'startup-policy.json', uid, 4096)))
+
+
+def startup_is_active(value):
+    intent, proof = value['intent'], value['effective']
+    return (intent['enabled'] is True and intent['phase'] == 'active'
+            and proof['healthy'] is True and proof['stopped'] is False
+            and proof['token'] == intent['token']
+            and value['recovery'].get('integrity_verified') is True)
+
+
+def startup_status(root=STATE, uid=0):
+    return dict(sources=startup_load_policy(root, uid), active=startup_is_active(status(root, uid)))
+
+
+def startup_configure(sources, root=STATE, uid=0):
+    from intent_runtime import startup_validate
+    sources = startup_validate(sources)
+    with operation(root, uid):
+        startup_load_policy(root, uid)  # An unreadable old policy remains recovery evidence.
+        current = status(root, uid)
+        if not startup_is_active(current):
+            raise ValueError('Change Home is off or recovery is unverified')
+        atomic(Path(root)/'startup-policy.json', dict(version=2, sources=sources), uid)
+        return dict(sources=sources, active=True)
+
+
+def startup_entry(args, root=STATE, uid=0):
+    if args == ['status']:
+        return startup_status(root, uid)
+    if args == ['configure']:
+        raw = sys.stdin.buffer.read(2049)
+        if len(raw) > 2048:
+            raise ValueError('Oversized startup sources')
+        return startup_configure(json.loads(raw), root, uid)
+    raise ValueError('Unknown startup operation')
+
+
+def startup_require_session(value, expected):
+    from boot_gate import observation
+    intent = value['intent']
+    if (not startup_is_active(value) or intent != expected
+            or intent['boot'] != boot_identity()
+            or not valid_resume_session(intent, intent.get('session'))
+            or intent['session'] != boot_session()
+            or observation() != (True, False)):
+        raise ValueError('Inactive native startup session')
+
+
+def startup_source(reply, deadline):
+    from intent_runtime import startup_CHANNEL, startup_YOUTUBE
+    if not isinstance(reply, dict) or reply.get('returnValue') is not True:
+        return None
+    rows = reply.get('foregroundAppInfo')
+    if not isinstance(rows, list) or len(rows) != 1:
+        return None
+    row = rows[0]
+    if (not isinstance(row, dict) or row.get('windowType') != CARD
+            or type(row.get('displayId', 0)) is not int or row.get('displayId', 0) != 0
+            or row.get('visible', True) is not True or row.get('pip', False) is not False
+            or row.get('multiview', False) is not False or row.get('viewType', 'normal') != 'normal'):
+        return None
+    app = row.get('appId')
+    if app == LIVE_TV:
+        return 'tv'
+    if app == startup_YOUTUBE:
+        return 'youtube'
+    if app == startup_CHANNEL:
+        remaining = deadline-time.monotonic()
+        if remaining <= 0:
+            raise TimeoutError('Native startup deadline')
+        metadata = luna('luna://com.webos.applicationManager/getAppInfo', {'id':app},
+                             timeout=min(.5, remaining))
+        if not isinstance(metadata, dict) or metadata.get('returnValue') is not True:
+            return None
+        info = metadata.get('appInfo')
+        store = '/media/cryptofs/apps/usr/palm/applications/'+app
+        expected = dict(id=app, type='web', vendor='LifeStream ltd.', folderPath=store,
+                        activeFolderPath=store)
+        if (isinstance(info, dict) and all(info.get(k) == v for k, v in expected.items())
+                and info.get('CPApp') is True and info.get('internalInstallationOnly') is True):
+            return 'tv'
+    # HDMI, unknown apps, LG Home and current Root are never startup permission.
+    return None
+
+
+def startup_receipt(root, uid):
+    path = private_directory(root, uid)/'startup-attempt.json'
+    try:
+        value = json.loads(secure(path, uid, 4096))
+    except FileNotFoundError:
+        return path, None
+    if (not isinstance(value, dict) or set(value) != {'schema','boot','session','token'}
+            or type(value['schema']) is not int or value['schema'] != 1
+            or not isinstance(value['boot'], str)
+            or re.fullmatch(r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}', value['boot']) is None
+            or not isinstance(value['token'], str) or not legacy.TOKEN.fullmatch(value['token'])
+            or not valid_resume_session(dict(enabled=True,phase='active',boot=value['boot']), value['session'])):
+        raise ValueError('Invalid startup launch receipt; retain evidence')
+    return path, value
+
+
+def startup_after_boot(result, root=STATE, uid=0):
+    """Call outside the operation lock only after authenticated boot resumption.
+
+    The session is consumed before the native launch barrier. A lost launch
+    acknowledgement must never become a second attempt that steals foreground.
+    """
+    try:
+        with operation(root, uid):
+            expected = result['intent']
+            startup_require_session(result, expected)
+            startup_require_session(status(root, uid), expected)
+            path, prior = startup_receipt(root, uid)
+            attempt = dict(schema=1, boot=expected['boot'], session=expected['session'], token=expected['token'])
+            if prior is not None and prior['session'] == attempt['session']:
+                return 'already-attempted'
+            sources = startup_load_policy(root, uid)
+            deadline = time.monotonic()+1.5
+            reply = luna('luna://com.webos.surfacemanager/getForegroundAppInfo', {}, timeout=.5)
+            selected = startup_source(reply, deadline)
+            if time.monotonic() >= deadline or not sources.get(selected, False):
+                return 'preserved'
+            # Recheck both lifecycle and presentation at the submission boundary.
+            startup_require_session(status(root, uid), expected)
+            fresh = luna('luna://com.webos.surfacemanager/getForegroundAppInfo', {}, timeout=.5)
+            if fresh != reply or time.monotonic() >= deadline:
+                return 'preserved'
+            startup_require_session(status(root, uid), expected)
+            if time.monotonic() >= deadline:
+                return 'preserved'
+            atomic(path, attempt, uid)
+            launch_return(root, uid, expected['token'])
+            return 'launched'
+    except (OSError, ValueError, RuntimeError, KeyError, TypeError, subprocess.SubprocessError):
+        return 'unavailable'
 
 
 def return_ready(root,uid,token,changed):
