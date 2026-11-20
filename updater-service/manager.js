@@ -104,7 +104,7 @@ module.exports = function (io) {
           s.status = 'recovery-required';
         }
         save(s);
-        if (s.status === 'rolled-back') return restore(s, 'rolled-back');
+        if (s.status === 'rolled-back') return await restore(s, 'rolled-back');
       }
       return s;
     } finally {
@@ -122,9 +122,9 @@ module.exports = function (io) {
           s.status
         ) >= 0
       ) {
-        if (s.terminalStatus) return restore(s, s.terminalStatus);
+        if (s.terminalStatus) return await restore(s, s.terminalStatus);
         if (!(await pause(s))) return s;
-        return restore(s, s.pauseAbortStatus || 'aborted');
+        return await restore(s, s.pauseAbortStatus || 'aborted');
       }
       var v = await io.versions();
       s.observedVersion = v.home;
@@ -145,7 +145,7 @@ module.exports = function (io) {
         throw Error('unexpected-health');
       var v = await io.versions();
       if (v.home !== version) throw Error('version-mismatch');
-      return restore(s, 'complete');
+      return await restore(s, 'complete');
     } finally {
       busy = false;
     }
@@ -176,7 +176,7 @@ module.exports = function (io) {
         s.status = 'recovery-required';
       }
       save(s);
-      return s.status === 'rolled-back' ? restore(s, 'rolled-back') : s;
+      return s.status === 'rolled-back' ? await restore(s, 'rolled-back') : s;
     } finally {
       busy = false;
     }
