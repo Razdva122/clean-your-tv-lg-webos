@@ -294,6 +294,22 @@ process.stdout.write(JSON.stringify(calls));
             flow.maintain_candidate(self.root, automatic=True)
         self.assertEqual(self.record_writes, [])
 
+    def test_superseded_refresh_does_not_fail_on_an_obsolete_guarded_pin(self):
+        self.prepare_candidate_record()
+        (self.root / 'product').write_text('guarded input changed after pin')
+        self.head = self.commit('guarded change')
+        self.record_pr['head']['sha'] = self.head
+
+        def github(path, **kwargs):
+            response = self.record_api(path, **kwargs)
+            if path.startswith('pulls?'):
+                self.head = 'f' * 40
+            return response
+
+        with patch.object(flow, 'api', side_effect=github):
+            flow.maintain_candidate(self.root, automatic=True)
+        self.assertEqual(self.record_writes, [])
+
 
 if __name__ == '__main__':
     unittest.main()
