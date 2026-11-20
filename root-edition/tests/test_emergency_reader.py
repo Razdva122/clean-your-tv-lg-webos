@@ -175,7 +175,7 @@ class FaultDiagnosticsTests(unittest.TestCase):
      if hw is not None:os.close(hw)
 
 class ReconnectTests(unittest.TestCase):
-    def replay(self, reads, candidates=None, query=None, clock=None, *, c1=False, guardian_events=None):
+    def replay(self, reads, candidates=None, query=None, clock=None, *, c1=False, guardian_events=None, recover=False):
         import contextlib
         import io
         import emergency_reader as reader
@@ -209,7 +209,7 @@ class ReconnectTests(unittest.TestCase):
             if c1:
                 poll = stack.enter_context(patch.object(reader.select, 'poll'))
                 poll.return_value.poll.side_effect = guardian_events or (lambda _: [])
-                reader.observe(42, 99, lambda: True, reconnect_on_disconnect=True)
+                reader.observe(42, 99, lambda: True, reconnect_on_disconnect=True, recover_input=recover)
             else:
                 reader.observe(42, 99, lambda: True)
         return messages, replace, close, opened
@@ -264,6 +264,41 @@ class ReconnectTests(unittest.TestCase):
         messages, replace, _, _ = self.replay(
             [BlockingIOError(), OSError(errno.ENXIO, 'gone'), self.taps(3)], c1=True)
         replace.assert_called_once_with(43, 42, inheritable=False)
+        self.assertEqual(messages, [b'READY\n', b'ESCAPE\n'])
+
+    def test_c1_rechecks_device_after_scheduler_gap_before_renewing(self):
+        from itertools import chain, count
+        import emergency_reader as reader
+        dropped = reader.EVENT.pack(2, 0, 0, 3, 0)
+        clock = chain([0, 0, 2.1], count(2.2, .1))
+        messages, replace, _, opened = self.replay(
+            [BlockingIOError(), BlockingIOError(), dropped],
+            c1=True, recover=True, clock=lambda: next(clock))
+        opened.assert_called_once()
+        replace.assert_called_once_with(43, 42, inheritable=False)
+        self.assertEqual(messages[0], b'READY\n')
+        self.assertRegex(messages[1], rb'^CHECK [0-9]+\n$')
+        self.assertEqual(messages[2:], [b'LOST\n'])
+
+    def test_c1_revalidates_again_if_first_check_has_no_acknowledgement(self):
+        from itertools import chain, count
+        from unittest.mock import patch
+        import emergency_reader as reader
+        dropped = reader.EVENT.pack(2, 0, 0, 3, 0)
+        clock = chain([0, 0, 2.1], count(2.2, .2))
+        with patch.object(reader, 'recheck_acknowledged', side_effect=[False, True]), \
+             patch.object(reader.time, 'clock_gettime_ns',
+                          side_effect=[10_000_000_000, 10_000_000_000, 10_300_000_000, 10_300_000_000]):
+            messages, _, _, _ = self.replay(
+                [BlockingIOError()] * 5 + [dropped], c1=True, recover=True,
+                clock=lambda: next(clock))
+        self.assertEqual(messages, [b'READY\n', b'CHECK 10000\n',
+                                    b'CHECK 10300\n', b'PING\n', b'LOST\n'])
+
+    def test_c1_triple_home_across_reads_wins_before_recheck(self):
+        messages, _, _, _ = self.replay(
+            [BlockingIOError(), b'', self.taps(2), BlockingIOError(), self.taps(1, 600)],
+            c1=True, recover=True)
         self.assertEqual(messages, [b'READY\n', b'ESCAPE\n'])
 
     def test_enodev_replacement_keeps_health_and_emergency_escape(self):

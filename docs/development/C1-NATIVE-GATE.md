@@ -173,8 +173,15 @@ checks Home and Back capabilities, waits for released keys and processes new inp
 before sending another heartbeat. It abandons the candidate if the guardian closes
 the health pipe. The native guardian owns the original lease deadline and stop
 latch throughout. Reconnecting cannot clear explicit Off or an emergency stop.
-A guardian that has already stopped on an expired lease still requires explicit
-Enable after recovery.
+Persistent C1 Home can also wait for input-only expiry within the same
+guardian attempt. It passes Home to LG as soon as the two-second input lease
+expires. The observer can rediscover and recheck the validated device for up to
+60 seconds of monotonic time. A current controller, broker and fresh monotonic
+input check are required before routing resumes. Pending Home gestures delay
+renewal so triple Home can complete before rearming. Explicit Off, a completed
+emergency stop, a lost controller or broker, and an exhausted recovery window
+keep the route stopped. Trial activation and legacy input protocols retain their
+existing timeouts. This path does not subscribe to firmware power states.
 
 The private Root service owns the LS2 alias `com.webos.cleanyourtv.root.lease`.
 Provisioning adds it to the existing activation file's semicolon-delimited `Name`

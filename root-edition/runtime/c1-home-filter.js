@@ -59,18 +59,22 @@ function init() {
         try {
           var reply =
             typeof payload === 'string' ? JSON.parse(payload) : payload;
+          var reconnecting = reply && reply.reconnecting === true;
+          var keys = reconnecting
+            ? 'backend,healthy,reconnecting,returnValue,routing,sequence,subscribed,token'
+            : 'backend,healthy,returnValue,routing,sequence,subscribed,token';
           if (
             !reply ||
             typeof reply !== 'object' ||
             Array.isArray(reply) ||
-            Object.keys(reply).sort().join(',') !==
-              'backend,healthy,returnValue,routing,sequence,subscribed,token' ||
+            Object.keys(reply).sort().join(',') !== keys ||
             reply.returnValue !== true ||
             reply.subscribed !== true ||
             reply.backend !== 'c1-native-gate' ||
             reply.routing !== 'compositor-keyfilter-v1' ||
             typeof reply.healthy !== 'boolean' ||
-            (cytvC1EverArmed && !reply.healthy) ||
+            (reconnecting && reply.healthy) ||
+            (cytvC1EverArmed && !reply.healthy && !reconnecting) ||
             typeof reply.token !== 'string' ||
             !/^[a-f0-9]{32}$/.test(reply.token) ||
             typeof reply.sequence !== 'number' ||
@@ -116,7 +120,7 @@ function cytvC1DispatchHome() {
   var request = ++cytvC1HomeGeneration;
   var token = cytvC1Token;
   var completed = false;
-  function finish(ok) {
+  function finish(ok, reconnecting) {
     if (
       completed ||
       generation !== cytvC1Generation ||
@@ -127,7 +131,8 @@ function cytvC1DispatchHome() {
     completed = true;
     cytvC1HomePending = false;
     if (!ok) {
-      cytvC1Revoke();
+      if (reconnecting) cytvC1Healthy = false;
+      else cytvC1Revoke();
       applicationManager.launch('com.webos.app.home', '{}');
     }
   }
@@ -144,17 +149,20 @@ function cytvC1DispatchHome() {
         try {
           var reply =
             typeof payload === 'string' ? JSON.parse(payload) : payload;
-          finish(
+          var reconnecting = reply && reply.reconnecting === true;
+          var keys = reconnecting
+            ? 'backend,reconnecting,returnValue,routing,token'
+            : 'backend,returnValue,routing,token';
+          var valid =
             !!reply &&
-              typeof reply === 'object' &&
-              !Array.isArray(reply) &&
-              Object.keys(reply).sort().join(',') ===
-                'backend,returnValue,routing,token' &&
-              reply.returnValue === true &&
-              reply.backend === 'c1-native-gate' &&
-              reply.routing === 'compositor-keyfilter-v1' &&
-              reply.token === token
-          );
+            typeof reply === 'object' &&
+            !Array.isArray(reply) &&
+            Object.keys(reply).sort().join(',') === keys &&
+            reply.returnValue === !reconnecting &&
+            reply.backend === 'c1-native-gate' &&
+            reply.routing === 'compositor-keyfilter-v1' &&
+            reply.token === token;
+          finish(valid && !reconnecting, valid && reconnecting);
         } catch (_) {
           finish(false);
         }

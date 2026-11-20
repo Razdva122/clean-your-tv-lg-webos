@@ -49,13 +49,13 @@ function admission(value, schema) {
     integer(value.target.mtime_ns, 0, Math.pow(2, 63))
   );
 }
-function validNative(value) {
+function validNative(value, reconnectingRefusal) {
   return (
     keys(
       value,
       'returnValue,backend,routing,state,mounted,healthy,stock_verified,stopped,token,guardian_pid,reason,profiles'
     ) &&
-    value.returnValue === true &&
+    value.returnValue === !reconnectingRefusal &&
     value.backend === BACKEND &&
     value.routing === ROUTING &&
     value.mounted === false &&
@@ -66,7 +66,12 @@ function validNative(value) {
       value.guardian_pid > 0) ||
       (value.state === 'stock' &&
         value.healthy === false &&
-        typeof value.stock_verified === 'boolean')) &&
+        typeof value.stock_verified === 'boolean') ||
+      (value.state === 'reconnecting' &&
+        value.healthy === false &&
+        value.stock_verified === false &&
+        value.guardian_pid > 1 &&
+        value.reason === (reconnectingRefusal ? 'home_refused' : 'none'))) &&
     value.profiles === null &&
     typeof value.reason === 'string' &&
     typeof value.token === 'string' &&
@@ -243,7 +248,7 @@ module.exports = function (service, options) {
       elapsed < limit
     );
   }
-  function finishHome(ok) {
+  function finishHome(ok, reconnecting) {
     if (!homePending) return;
     var pending = homePending;
     homePending = null;
@@ -253,12 +258,14 @@ module.exports = function (service, options) {
         pending.child.kill();
       } catch (_) {}
     }
-    return respond(pending.message, {
+    var result = {
       returnValue: ok,
       backend: BACKEND,
       routing: ROUTING,
       token: pending.token
-    });
+    };
+    if (reconnecting) result.reconnecting = true;
+    return respond(pending.message, result);
   }
   function poll() {
     if (!Object.keys(subscribers).length) return stop();
@@ -299,7 +306,9 @@ module.exports = function (service, options) {
             result = JSON.parse(stdout);
             if (
               !validNative(result) ||
-              (everArmed && !result.healthy) ||
+              (everArmed &&
+                !result.healthy &&
+                result.state !== 'reconnecting') ||
               (token && token !== result.token)
             )
               throw Error('Invalid native lease');
@@ -315,19 +324,18 @@ module.exports = function (service, options) {
           token = result.token;
           if (result.healthy) everArmed = true;
           sequence++;
+          var update = {
+            returnValue: true,
+            subscribed: true,
+            backend: BACKEND,
+            routing: ROUTING,
+            healthy: result.healthy,
+            token: token,
+            sequence: sequence
+          };
+          if (result.state === 'reconnecting') update.reconnecting = true;
           Object.keys(subscribers).forEach(function (key) {
-            if (
-              !respond(subscribers[key], {
-                returnValue: true,
-                subscribed: true,
-                backend: BACKEND,
-                routing: ROUTING,
-                healthy: result.healthy,
-                token: token,
-                sequence: sequence
-              })
-            )
-              delete subscribers[key];
+            if (!respond(subscribers[key], update)) delete subscribers[key];
           });
           if (!Object.keys(subscribers).length) stop();
         }
@@ -424,18 +432,24 @@ module.exports = function (service, options) {
         { timeout: 2400, maxBuffer: 8192 },
         function (error, stdout) {
           if (homePending !== pending) return;
+          var reconnecting = false;
           try {
             if (
-              error ||
               pending.generation !== generation ||
               pending.token !== token ||
               !fresh(pending.started, 2500)
             )
               throw Error('Expired Home dispatch');
             var result = JSON.parse(stdout);
+            reconnecting =
+              !!error &&
+              error.code === 1 &&
+              !error.killed &&
+              result.state === 'reconnecting' &&
+              result.reason === 'home_refused';
             if (
-              !validNative(result) ||
-              !result.healthy ||
+              !validNative(result, reconnecting) ||
+              (!reconnecting && (error || !result.healthy)) ||
               result.token !== pending.token
             )
               throw Error('Home dispatch failed');
@@ -447,7 +461,7 @@ module.exports = function (service, options) {
             revoke();
             return;
           }
-          if (!finishHome(true)) revoke();
+          if (!finishHome(!reconnecting, reconnecting)) revoke();
         }
       );
     } catch (_) {

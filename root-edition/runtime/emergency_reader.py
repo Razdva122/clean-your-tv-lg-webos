@@ -58,8 +58,25 @@ def open_remote():
         for fd in found: os.close(fd)
 
 
-def observe(fd, health, keys_released, *, report_device_gone=False, reconnect_on_disconnect=False):
+def recheck_acknowledged(stamp):
+    # Only the guardian's atomically replaced health pulse acknowledges CHECK.
+    # This read suppresses retries; launch authority always remains native.
+    try:
+        path = '/tmp/clean-your-tv-root-keyfilter/health'
+        with os.fdopen(os.open(path, os.O_RDONLY | os.O_CLOEXEC | os.O_NOFOLLOW), 'rb') as source:
+            info = os.fstat(source.fileno())
+            if (not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid()
+                    or stat.S_IMODE(info.st_mode) != 0o600 or info.st_nlink != 1):
+                return False
+            fields = source.read(256).split()
+        return len(fields) == 6 and fields[5] == b'3' and int(fields[3]) >= stamp
+    except (OSError, ValueError):
+        return False
+
+
+def observe(fd, health, keys_released, *, report_device_gone=False, reconnect_on_disconnect=False, recover_input=False):
     os.set_blocking(fd, False)
+    reconnect_on_disconnect = reconnect_on_disconnect or recover_input
     guardian = select.poll() if reconnect_on_disconnect else None
     if guardian is not None:
         guardian.register(health, select.POLLERR | select.POLLHUP | select.POLLNVAL)
@@ -77,16 +94,21 @@ def observe(fd, health, keys_released, *, report_device_gone=False, reconnect_on
     def lost(phase, reason):
         report(phase, reason)
         send(b'LOST')
+    validation_stamp = 0
+    def require_emergency_keys(source):
+        keys = query(source, 0x21, 128)
+        if any(not keys[code // 8] & (1 << (code % 8)) for code in (773, 412)):
+            raise ValueError('Emergency Home/Back input capabilities not verified')
+
     def reconnect(deadline):
+        nonlocal validation_stamp
         while time.monotonic() < deadline:
             if guardian is not None and guardian.poll(0):
                 return None  # The existing guardian retired; there is no route to renew.
             replacement = None
             try:
                 replacement = open_remote()
-                keys = query(replacement, 0x21, 128)
-                if any(not keys[code // 8] & (1 << (code % 8)) for code in (773, 412)):
-                    raise ValueError('Emergency Home/Back input capabilities not verified')
+                require_emergency_keys(replacement)
                 pressed = query(replacement, 0x18, 256)
                 while guardian is not None and any(pressed) and time.monotonic() < deadline:
                     if guardian.poll(0):
@@ -104,6 +126,8 @@ def observe(fd, health, keys_released, *, report_device_gone=False, reconnect_on
                     if guardian is not None and guardian.poll(0):
                         return None
                     # Keep the caller's descriptor ownership and close-on-exec.
+                    if recover_input:
+                        validation_stamp = time.clock_gettime_ns(time.CLOCK_MONOTONIC) // 1_000_000
                     os.dup2(replacement, fd, inheritable=False)
                     return True
             except InputUnavailable:
@@ -145,9 +169,32 @@ def observe(fd, health, keys_released, *, report_device_gone=False, reconnect_on
         time.sleep(min(.02, remaining))
         if not drain(False): return
     policy = TripleHome(); back = LongBack(); send(b'READY')
+    last_heartbeat = time.monotonic() if recover_input else None
+    awaiting_recheck = False
+    last_recovery_home = None
+    offered_at = 0
     while True:
-        select.select([fd], [], [], .1)
         reconnect_deadline = None
+        # A scheduler gap can expire the native lease even while evdev never
+        # returned EOF. Do not let the old descriptor renew it after the gap.
+        if recover_input and not awaiting_recheck and time.monotonic() - last_heartbeat >= 1.5:
+            disconnect_at = time.monotonic()
+            try:
+                resumed = reconnect(disconnect_at + 60)
+            except BrokenPipeError:
+                return
+            except (OSError, ValueError):
+                resumed = False
+            if resumed is None:
+                return
+            if not resumed:
+                lost('active', 'reconnect_failed'); return
+            policy = TripleHome(); back = LongBack()
+            reconnect_deadline = disconnect_at + 60
+            awaiting_recheck = True
+            last_recovery_home = None
+            offered_at = 0
+        select.select([fd], [], [], .1)
         for _ in range(64):
             try: data = os.read(fd, EVENT.size * 64)
             except BlockingIOError: break
@@ -169,7 +216,7 @@ def observe(fd, health, keys_released, *, report_device_gone=False, reconnect_on
                     report('active', 'eof')
             if not data:
                 if reconnect_deadline is None:
-                    reconnect_deadline = time.monotonic() + .75
+                    reconnect_deadline = time.monotonic() + (60 if recover_input else .75)
                 try:
                     resumed = reconnect(reconnect_deadline)
                 except BrokenPipeError:
@@ -183,6 +230,9 @@ def observe(fd, health, keys_released, *, report_device_gone=False, reconnect_on
                 # No gesture may span two kernel input-device instances. Process
                 # fresh events before publishing the first replacement heartbeat.
                 policy = TripleHome(); back = LongBack()
+                awaiting_recheck = recover_input
+                last_recovery_home = None
+                offered_at = 0
                 continue
             if len(data) % EVENT.size: lost('active', 'partial_event'); return
             for offset in range(0, len(data), EVENT.size):
@@ -191,20 +241,56 @@ def observe(fd, health, keys_released, *, report_device_gone=False, reconnect_on
                 if kind == 0 and code == 3: lost('active', 'events_dropped'); return
                 try: fired = policy.event(kind, code, value, sec * 1000 + usec / 1000)
                 except ValueError: lost('active', 'invalid_key_value'); return
-                back.event(kind, code, value, time.monotonic() * 1000)
+                now = time.monotonic()
+                if awaiting_recheck and kind == 1 and code == 773:
+                    last_recovery_home = now
+                back.event(kind, code, value, now * 1000)
                 if fired: send(b'ESCAPE'); return
         else: lost('active', 'drain_limit'); return
         if back.tick(time.monotonic() * 1000): send(b'LGHOME')
-        send(b'PING')
+        if recover_input:
+            now = time.monotonic()
+            if awaiting_recheck:
+                if offered_at and recheck_acknowledged(validation_stamp):
+                    awaiting_recheck = False
+                    last_heartbeat = now
+                    continue
+                if offered_at and now - offered_at < .25:
+                    continue
+                if last_recovery_home is not None and now - last_recovery_home < 2:
+                    continue  # A partial Home gesture can complete on this descriptor.
+                if guardian.poll(0):
+                    return
+                if time.clock_gettime_ns(time.CLOCK_MONOTONIC) // 1_000_000 - validation_stamp >= 250:
+                    try:
+                        require_emergency_keys(fd)
+                        if any(query(fd, 0x18, 256)):
+                            continue
+                    except OSError as exc:
+                        if exc.errno not in DISCONNECTED: raise
+                        awaiting_recheck = False
+                        continue
+                    validation_stamp = time.clock_gettime_ns(time.CLOCK_MONOTONIC) // 1_000_000
+                send(('CHECK %d' % validation_stamp).encode('ascii'))
+                offered_at = now
+                continue
+            elif now - last_heartbeat >= 1.5:
+                continue
+            else:
+                send(b'PING')
+            last_heartbeat = now
+        else:
+            send(b'PING')
 
 
 if __name__ == '__main__':
     args = sys.argv[1:]
-    if os.geteuid() != 0 or not (len(args) == 1 or len(args) == 2 and args[1] in ('--report-device-gone', '--reconnect-on-disconnect')):
+    if os.geteuid() != 0 or not (len(args) == 1 or len(args) == 2 and args[1] in ('--report-device-gone', '--reconnect-on-disconnect', '--recover-input')):
         raise SystemExit('Root and private health fd required')
     health = int(args[0]); fd = open_remote()
     try:
         observe(fd, health, lambda: not any(query(fd, 0x18, 256)),
                 report_device_gone=args[1:] == ['--report-device-gone'],
-                reconnect_on_disconnect=args[1:] == ['--reconnect-on-disconnect'])
+                reconnect_on_disconnect=args[1:] == ['--reconnect-on-disconnect'],
+                recover_input=args[1:] == ['--recover-input'])
     finally: os.close(fd); os.close(health)
