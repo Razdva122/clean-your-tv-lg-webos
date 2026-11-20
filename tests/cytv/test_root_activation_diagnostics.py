@@ -140,6 +140,28 @@ class ActivationSnapshotTests(unittest.TestCase):
         self.assertEqual(self.snapshot().get('compositor'), {
             'status':'read', 'scope':'retained', 'original_stop':'broker_expired',
             'guardian_release':'ui_release_failed'})
+        from cytv.diagnostic_context import root_diagnostics_summary
+        for phase, reason in (('waiting-for-ready', 'input_expired'), ('waiting-for-ping', 'ui_release_failed')):
+            with self.subTest(phase=phase):
+                write('outcome', f'{token} input_expired\n')
+                before = self.snapshot()['cursor']
+                record = dict(json.loads(reply), reason=reason, input_timeout_phase=phase,
+                              returnValue=reason == 'input_expired')
+                write('native.log', json.dumps(record) + '\n')
+                snapshot = self.snapshot(before)
+                expected = {'status':'read', 'scope':'retained', 'original_stop':'input_expired',
+                            'input_timeout_phase':phase}
+                if reason == 'ui_release_failed':
+                    expected['guardian_release'] = reason
+                self.assertEqual(snapshot['compositor'], expected)
+                self.assertEqual(root_diagnostics_summary(snapshot)['compositor'], expected)
+                self.assertNotIn(token, json.dumps(root_diagnostics_summary(snapshot)))
+                for altered in (dict(record, token='b'*32), dict(record, input_timeout_phase='PRIVATE')):
+                    write('native.log', json.dumps(altered) + '\n')
+                    self.assertNotIn('input_timeout_phase', self.snapshot()['compositor'])
+                unsafe = dict(snapshot, compositor=dict(snapshot['compositor'], input_timeout_phase='PRIVATE'))
+                self.assertNotIn('input_timeout_phase', root_diagnostics_summary(unsafe)['compositor'])
+        write('outcome', f'{token} broker_expired\n')
         for invalid in (reply, reply[:-1] + ', "token":"' + token + '"}\n',
                         reply.replace('"guardian_pid": 0', '"guardian_pid": false') + '\n',
                         reply.replace(token, 'b' * 32) + '\n'):

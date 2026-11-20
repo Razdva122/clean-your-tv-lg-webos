@@ -272,6 +272,16 @@ int main(void) {
     def test_observer_eof_latches(self):
         p, iw, cw = self.armed(); os.close(iw)
         s = self.finish(p); self.assertEqual(s['reason'], 'input_lost'); self.assertTrue(s['stock_verified'])
+        self.assertNotIn('input_timeout_phase', s)
+    def test_input_timeout_before_first_ready(self):
+        (self.root/'luna-reply').write_text('{"returnValue":false}')
+        p, iw, cw, rr = self.spawn(ready=(False, True), broker=False)
+        self.addCleanup(os.close, rr)
+        result = self.finish(p)
+        self.assertEqual(os.read(rr, 128), b'')
+        self.assertEqual(result['reason'], 'ui_release_failed')
+        self.assertEqual(result['input_timeout_phase'], 'waiting-for-ready')
+        self.assertEqual((self.root/'state/outcome').read_text(), f'{TOKEN} input_expired\n')
     def test_stale_input_does_not_get_controller_lease(self):
         p, iw, cw = self.armed(); deadline = time.monotonic()+2.5
         while p.poll() is None and time.monotonic()<deadline:
@@ -280,6 +290,9 @@ int main(void) {
             except BrokenPipeError: break
             self.run_guard('--lease')
         s = self.finish(p); self.assertFalse(s['healthy']); self.assertTrue(s['stopped'])
+        self.assertEqual(s['reason'], 'input_expired')
+        self.assertEqual(s['input_timeout_phase'], 'waiting-for-ping')
+        self.assertEqual((self.root/'state/outcome').read_text(), f'{TOKEN} input_expired\n')
     def test_reused_pid_is_not_signalled(self):
         child = subprocess.Popen(['sleep','10'])
         try:

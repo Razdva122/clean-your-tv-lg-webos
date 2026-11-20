@@ -12,6 +12,7 @@ COMPOSITOR_STOPS = ('broker_expired', 'controller_expired', 'controller_lost', '
                     'lg_home', 'malformed_input', 'normal_shutdown', 'ready_failed',
                     'shutdown_input_unverified', 'signal',
                     'state_busy', 'trial_expired')
+INPUT_TIMEOUT_PHASES = ('waiting-for-ready', 'waiting-for-ping')
 
 PROGRAM = r'''
 import hashlib
@@ -28,6 +29,7 @@ BOOT = '/proc/sys/kernel/random/boot_id'
 TOKEN = rb'[a-f0-9]{32}'
 BOOT_ID = rb'[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}'
 COMPOSITOR_STOPS = COMPOSITOR_STOP_VALUES
+INPUT_TIMEOUT_PHASES = INPUT_TIMEOUT_PHASE_VALUES
 COMPONENTS = {'root':'com.cleanyourtv.root.preview',
               'root_updater':'com.cleanyourtv.root.updater',
               'system_updater':'com.cleanyourtv.system.updater'}
@@ -103,11 +105,11 @@ def compositor_identity(directory, uid):
     return (token, boot), (value['token'], value['boot']), (stamp, config, intent)
 
 
-def guardian_release(directory, uid, token):
+def guardian_diagnostics(directory, uid, token, stop):
     try:
         raw, _, offset = read(directory/'native.log', uid, tail=True)
     except (OSError, ValueError):
-        return None
+        return {}
     lines = raw.split(b'\n')[bool(offset):-1]
     keys = {'returnValue', 'backend', 'routing', 'state', 'mounted', 'healthy',
             'stock_verified', 'stopped', 'token', 'guardian_pid', 'reason', 'profiles'}
@@ -118,14 +120,25 @@ def guardian_release(directory, uid, token):
             value = unique_json(line)
         except (ValueError, RecursionError):
             continue
-        if (type(value) is dict and set(value) == keys and value['returnValue'] is False
+        if type(value) is not dict:
+            continue
+        phase = value.pop('input_timeout_phase', None)
+        if (set(value) == keys and type(value['returnValue']) is bool
                 and value['backend'] == 'c1-native-gate' and value['routing'] == 'compositor-keyfilter-v1'
                 and value['state'] == 'stopped' and value['mounted'] is False and value['healthy'] is False
                 and type(value['stock_verified']) is bool and value['stopped'] is True
                 and value['token'] == token and type(value['guardian_pid']) is int and value['guardian_pid'] == 0
-                and value['reason'] == 'ui_release_failed' and value['profiles'] is None):
-            return 'ui_release_failed'
-    return None
+                and value['profiles'] is None):
+            result = {}
+            reason = value['reason']
+            release_failed = reason == 'ui_release_failed' and value['returnValue'] is False
+            if release_failed:
+                result['guardian_release'] = reason
+            if stop == 'input_expired' and (reason == stop or release_failed) and phase in INPUT_TIMEOUT_PHASES:
+                result['input_timeout_phase'] = phase
+            if result:
+                return result
+    return {}
 
 
 def stop_records(directory, uid):
@@ -169,7 +182,8 @@ def compositor(directory, uid, cursor):
                 if reason not in COMPOSITOR_STOPS:
                     raise ValueError('unknown stop reason')
                 reasons.add(reason)
-        release = guardian_release(directory, uid, token) if reasons else None
+        stop = next(iter(reasons)) if len(reasons) == 1 else None
+        guardian = guardian_diagnostics(directory, uid, token, stop) if stop else {}
         try:
             after_stops = stop_records(directory, uid)
             after = compositor_identity(directory, uid)[2]
@@ -183,9 +197,7 @@ def compositor(directory, uid, cursor):
         started = (type(previous) is list and len(previous) == 2
                    and previous[0] != token and previous[1] == identity[1])
         result = {'status':'read', 'scope':'since-enable' if started else 'retained',
-                  'original_stop':reasons.pop()}
-        if release:
-            result['guardian_release'] = release
+                  'original_stop':stop, **guardian}
         return result, list(identity)
     except FileNotFoundError:
         return {'status':'missing'}, None
@@ -253,7 +265,8 @@ if __name__=='__main__':
     if sys.version_info < (3, 9):
         raise ValueError('Unsupported observation interpreter')
     print(json.dumps(snapshot(cursor=json.loads(sys.argv[1]))))
-'''.replace('COMPOSITOR_STOP_VALUES', repr(COMPOSITOR_STOPS))
+'''.replace('COMPOSITOR_STOP_VALUES', repr(COMPOSITOR_STOPS)).replace(
+    'INPUT_TIMEOUT_PHASE_VALUES', repr(INPUT_TIMEOUT_PHASES))
 
 
 def collect(remote, python, cursor=None):
