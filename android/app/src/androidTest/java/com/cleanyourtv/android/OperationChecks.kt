@@ -122,8 +122,11 @@ class OperationChecks : Instrumentation() {
             check(b.isDirectory && File(b, "payload-data").readText() == "B")
             check(blocked.delete())
             check(preparePayload(fixture, manifest("C")) { error("Ready payload C was recopied") } == c)
-            check(fixture.listFiles()!!.filter { it.isDirectory && it.name.matches(Regex("payload-[0-9a-f]{64}")) } ==
-                listOf(c)) { "Superseded payload cleanup was not retried" }
+            // Android's filesDir can use /data/user/0, while preparePayload returns a canonical path.
+            val retained = fixture.canonicalFile.listFiles()!!.filter {
+                it.isDirectory && it.name.matches(Regex("payload-[0-9a-f]{64}"))
+            }
+            check(retained == listOf(c)) { "Expected only payload C after cleanup retry, found ${retained.map { it.name }}" }
             check(File(c, "payload-data").readText() == "C")
             for ((path, bytes) in before) {
                 check(path.readBytes().contentEquals(bytes)) { "Changed private fixture file ${path.name}" }
