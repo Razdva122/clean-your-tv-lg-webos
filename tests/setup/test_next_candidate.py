@@ -91,7 +91,7 @@ class NextCandidateTests(unittest.TestCase):
         self.ahead = 0
         with patch.object(flow, 'api', side_effect=self.api), \
              patch.object(flow, 'git', return_value=self.head), \
-             patch.object(flow, 'candidate_record', return_value=('1.0.4', 'current record')):
+             patch.object(flow, 'candidate_record', return_value=('1.0.4', 'Recorded acceptance: Passed')):
             flow.maintain_candidate(automatic=True)
             self.assertEqual(self.pr_writes, [])
             self.ahead = 2
@@ -99,7 +99,8 @@ class NextCandidateTests(unittest.TestCase):
         self.assertEqual([method for method, _ in self.pr_writes], ['POST'])
         self.assertTrue(self.prs[0]['draft'])
         self.assertEqual(self.prs[0]['title'], 'v1.0.4')
-        self.assertIn('current record', self.prs[0]['body'])
+        self.assertIn('Recorded acceptance: Passed', self.prs[0]['body'])
+        self.assertNotIn('No new TV acceptance claimed', self.prs[0]['body'])
 
     def test_duplicate_candidates_fail_without_writes(self):
         self.prs = [{'number': 35}, {'number': 36}]

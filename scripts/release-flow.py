@@ -410,7 +410,13 @@ def maintain_candidate(root=ROOT, *, automatic=False, create=True):
         if not has_next_cycle_changes(head):
             return
 
-    version, record = candidate_record(head, root)
+    try:
+        version, record = candidate_record(head, root)
+    except ValueError:
+        # A push during validation can make this checkout's error obsolete.
+        if automatic and not candidate_head_is_current(head, automatic=True):
+            return
+        raise
     if candidate is None:
         published = api('releases/latest')['tag_name']
         if candidate_head_is_current(head, automatic=automatic):
@@ -467,7 +473,10 @@ def has_next_cycle_changes(head):
 
 def create_candidate(head, published, version, record):
     title = 'v' + version if version else 'Next release candidate'
-    summary = f'Frozen candidate for {title}.' if version else f'Unfrozen draft after {published}. Final target: TBD.'
+    if version:
+        summary = f'Frozen candidate for {title}. See the generated record for the selected build and acceptance.'
+    else:
+        summary = f'Unfrozen draft after {published}. Final target: TBD.'
     body = ['## Release candidate', '',
             summary,
             f'Base: `main`. Head: `release/next`. Initial source: `{head}`.', '',
@@ -476,7 +485,7 @@ def create_candidate(head, published, version, record):
             '## Documentation', '',
             'Record affected guides, verification and remaining limitations here.', '',
             '## Physical acceptance and limitations', '',
-            'No new TV acceptance claimed. Record scenario artifacts, device/state preconditions,',
+            'Record scenario artifacts, device/state preconditions,',
             'observed results, rollback and untested paths here.', '',
             '## Release gates', '',
             '- [ ] Collect implementation PRs/issues in the committed plan.',
