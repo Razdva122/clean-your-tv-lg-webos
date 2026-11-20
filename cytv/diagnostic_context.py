@@ -55,7 +55,7 @@ REASONS += ACTIVATION_CODES
 REASONS += ('installer-runtime-mismatch', 'clean-handoff-refused', 'foreign-home-restore-failed', 'pairing-rejected')
 ACTIONS = ('recover', 'install', 'uninstall', 'restore', 'status', 'doctor', 'home-diagnostics',
            'enable-system-updates', 'enable-firmware-access', 'disable-firmware-access',
-           'recover-system-rollback', 'recover-root-rollback', 'replace-system-updater', 'clean-wam-cache', 'debloat')
+           'recover-system-rollback', 'recover-root-rollback', 'repair-root-recovery', 'replace-system-updater', 'clean-wam-cache', 'debloat')
 PENDING_ACTIONS = (*ACTIONS, 'activate-root', 'setup-root-updater', 'archive-root-state')
 PHASES = ('launch-helper', 'verify-home-button', 'select-tv', 'inspect-tv', 'select-edition', 'prepare-payload', 'ssh-connect',
           'inspect-installation', 'pair-tv', 'read-inventory', 'install-packages',
@@ -642,9 +642,10 @@ def failure_summary(value):
     driver=root_driver_details(value.get('root_driver'))
     if driver:result['root_driver']=driver
     from .errors import root_beta_repair_details
-    beta_repair = root_beta_repair_details(value.get('root_beta_repair_failure'))
-    if beta_repair:
-        result['root_beta_repair_failure'] = beta_repair
+    for key in ('root_beta_repair_failure', 'root_retained_repair_failure'):
+        detail = root_beta_repair_details(value.get(key))
+        if detail:
+            result[key] = detail
     if 'no_root_cleanup' in value:
         from .errors import no_root_cleanup_details
         result['no_root_cleanup'] = no_root_cleanup_details(value['no_root_cleanup'])

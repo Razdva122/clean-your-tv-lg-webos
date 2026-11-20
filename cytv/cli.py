@@ -56,7 +56,7 @@ def parser(desktop=False):
     result._positionals.title = i18n.translate('positional arguments')
     result._optionals.title = i18n.translate('options')
     result.add_argument('-h', '--help', action='help', help=i18n.translate('Show this help message and exit'))
-    commands = ('install', 'status', 'doctor', 'home-diagnostics', 'recover', 'trust-root-ssh', 'restore', 'uninstall', 'enable-system-updates', 'enable-firmware-access', 'disable-firmware-access', 'recover-system-rollback', 'recover-root-rollback', 'replace-system-updater', 'clean-wam-cache', 'debloat')
+    commands = ('install', 'status', 'doctor', 'home-diagnostics', 'recover', 'trust-root-ssh', 'restore', 'uninstall', 'enable-system-updates', 'enable-firmware-access', 'disable-firmware-access', 'recover-system-rollback', 'recover-root-rollback', 'repair-root-recovery', 'replace-system-updater', 'clean-wam-cache', 'debloat')
     if desktop:
         commands += ('ssh-command',)
         result.add_argument('--resume-root-reinstall', action='store_true', help=argparse.SUPPRESS)
@@ -407,6 +407,8 @@ def _run(args, ask, write, connect, secret, search, inspect, payload_root, check
             raise UserError('--new-recovery-attempt applies only to Root rollback recovery.')
         if args.repair_package_permissions and (args.command!='enable-firmware-access' or args.edition=='no-root'):
             raise UserError('--repair-package-permissions applies only to Root enable-firmware-access.')
+        if args.command == 'repair-root-recovery' and (args.edition != 'root' or args.non_interactive):
+            raise UserError('Run repair-root-recovery interactively with --edition root.')
         if args.prepare_python_runtime:
             phase = 'prepare-python-runtime'
             from .python_runtime import prime_cache
@@ -575,7 +577,7 @@ def _run(args, ask, write, connect, secret, search, inspect, payload_root, check
         )
         if not partial and (check_doctor_payload or (profile.get('root_variant') and args.command not in ('ssh-command', 'debloat')) or args.command in (
                 'install', 'enable-system-updates', 'enable-firmware-access',
-                'disable-firmware-access', 'replace-system-updater')):
+                'disable-firmware-access', 'repair-root-recovery', 'replace-system-updater')):
             if root_doctor:
                 phase = 'prepare-payload'
             try:
@@ -1097,6 +1099,10 @@ def _run(args, ask, write, connect, secret, search, inspect, payload_root, check
                 if saved_review:
                     write.recovery(profile)
                 recover(installer, ask, write, args.non_interactive, review_confirmed=bool(saved_review))
+            elif args.command == 'repair-root-recovery':
+                from .root_gate import repair_retained_root
+                phase = args.command
+                repair_retained_root(installer, ask, write)
             elif args.command == 'replace-system-updater':
                 phase = args.command
                 installer.replace_system_updater()

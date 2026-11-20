@@ -5,6 +5,7 @@ import hashlib
 import fcntl
 import json
 import os
+import re
 from pathlib import Path
 import stat
 import select
@@ -82,7 +83,9 @@ def use_lg_local_activity():
     return c1_keyfilter.reboot_resume_supported(c1_gate.selection(STATE))
 
 
-def runner_bytes():
+def runner_bytes(*, local_activity=None):
+    if local_activity is None:
+        local_activity = use_lg_local_activity()
     # Follow the firmware's bootstrap argument contract, without evaluating a
     # writable Homebrew wrapper or modifying the system run-js-service script.
     # Legacy webos-service can exit idle while Activity Manager stalls dispatch.
@@ -91,7 +94,7 @@ def runner_bytes():
             'cd '+str(PRIVATE_SERVICE)+'\n'
             'export NODE_PATH=/usr/palm/frameworks:/usr/lib/nodejs:/usr/lib/node_modules\n'
             'exec /usr/bin/node '+('' if LEGACY_NODE_BETA else '--require '+str(PRIVATE_SERVICE/'startup-diagnostics.js')+' ')+'/usr/palm/services/jsservicelauncher/bootstrap-node.js '
-            +('--disable-activity-creation ' if use_lg_local_activity() else '')+'-- '
+            +('--disable-activity-creation ' if local_activity else '')+'-- '
             +str(STATE/'bootstrap.pid')+' /var/palm/ls2-dev '+str(PRIVATE_SERVICE)+'\n').encode()
 
 def prepare_private_service():
@@ -491,14 +494,14 @@ def finalize(*, record_failure=True, firmware_permissions=True, writer=None):
         raise
 
 
-def verify_beta_repair_registration():
+def verify_retained_repair_registration():
     snapshot = json.loads(secure(STATE/'ls2-provision-snapshot.json'))
     entries = snapshot['files']
     if (snapshot.get('version') != 1 or snapshot.get('service') != NAME
             or snapshot.get('phase') is not None
             or snapshot_capabilities(snapshot) != COMPOSITOR_CAPABILITIES
             or set(entries) != {str(path) for path in FILES.values()}):
-        raise ValueError('Original Beta LS2 registration required')
+        raise ValueError('Original Root LS2 registration required')
     original = {name: entries[str(path)]['original'] for name, path in FILES.items()}
     updated = plan(original, COMPOSITOR_CAPABILITIES)
     for name, path in FILES.items():
@@ -509,10 +512,10 @@ def verify_beta_repair_registration():
                 or raw != updated[name] or sha(raw) != entry['installed_sha256']
                 or (metadata.st_uid, metadata.st_gid, stat.S_IMODE(metadata.st_mode))
                 != (entry['uid'], entry['gid'], entry['mode'])):
-            raise ValueError('Original Beta LS2 registration changed')
+            raise ValueError('Original Root LS2 registration changed')
 
 
-def beta_repair_write(path, data, mode=0o600):
+def retained_repair_write(path, data, mode=0o600):
     # The deployment and provisioning locks fence the old writer. Only a
     # prefix of this exact output may be left by an interrupted atomic write.
     temporary = path.with_name(path.name+'.root-preview-tmp')
@@ -525,47 +528,73 @@ def beta_repair_write(path, data, mode=0o600):
     write(path, data, mode)
 
 
+def verify_retained_support(pins):
+    from deploy import SUPPORT_FILES
+    release = secure(STATE/'release.json')
+    bundle = secure(STATE/'bundle.json')
+    if tuple(map(sha, (release, bundle))) != pins:
+        raise ValueError('Original Root install receipt does not match')
+    files = json.loads(bundle)['files']
+    for name in SUPPORT_FILES:
+        if sha(secure(STATE/name)) != files.get(name):
+            raise ValueError('Original Root support changed')
+    return json.loads(release)
+
+
 def repair_beta_recovery(checkpoint=lambda stage: None):
-    """Finish a v1.21.0 native Beta status timeout with its existing app."""
-    from deploy import APP
+    return repair_retained_recovery(checkpoint)
+
+
+def repair_root_recovery(pins, checkpoint=lambda stage: None):
+    return repair_retained_recovery(checkpoint, pins=pins)
+
+
+def repair_retained_recovery(checkpoint, *, pins=None):
+    from deploy import APP, verify_payload
     from package_identity import bootstrap_inventory
     from runtime import c1_keyfilter
 
     checkpoint('retained-release')
-    if not LEGACY_NODE_BETA:
-        raise ValueError('Root Beta recovery support required')
-    release = json.loads(secure(STATE/'release.json'))
+    beta = pins is None
+    if LEGACY_NODE_BETA != beta:
+        raise ValueError('Wrong Root recovery support variant')
+    release = json.loads(secure(STATE/'release.json')) if beta else verify_retained_support(pins)
     if (release.get('application_id'), release.get('version'), release.get('runtime_variant'),
             release.get('home_backend'), release.get('routing'), release.get('compositor_admission')) != (
-            APP, '0.20.0', 'node012-beta', 'c1-native-gate', 'compositor-keyfilter-v1', 3):
-        raise ValueError('Unsupported retained Beta package')
+            APP, '0.20.0' if beta else '0.22.0', 'node012-beta' if beta else None,
+            'c1-native-gate', 'compositor-keyfilter-v1', 3):
+        raise ValueError('Unsupported retained Root package')
     checkpoint('deployment-stage')
     deployment = json.loads(secure(STATE/'deploy.json'))
     stage = deployment.get('stage')
     if (deployment != {'version': 1, 'app': APP, 'stage': stage}
             or stage not in ('provision-finalize-starting', 'installed-recovery-only')):
-        raise ValueError('Original Beta provisioning stage required')
+        raise ValueError('Original Root provisioning stage required')
     checkpoint('original-timeout')
     failure = json.loads(secure(STATE/'recovery-failure.json'))
     if (failure.get('schema'), failure.get('phase'), failure.get('reason'),
             failure.get('startup_state'), failure.get('startup_exit_status')) != (1, 'status', 'timeout', 'exited', 0):
-        raise ValueError('Original Beta recovery timeout required')
+        raise ValueError('Original Root recovery timeout required')
     checkpoint('routing-selection')
     if any(os.path.lexists(STATE/name) for name in ('profile-trial.json', 'persistent-intent.json',
             'persistent-binding.json', 'boot-continuation.json', 'profile-candidate.stage')):
-        raise ValueError('Active or retained Home routing prevents Beta repair')
+        raise ValueError('Active or retained Home routing prevents Root repair')
     selection = c1_keyfilter.selection(STATE)
     if not selection or selection['schema'] != 3 or selection['native_sha256'] != release.get('native_sha256'):
-        raise ValueError('Original Beta compositor selection required')
+        raise ValueError('Original Root compositor selection required')
     checkpoint('installed-package')
     bootstrap_inventory(STATE)
+    if not beta:
+        verify_payload(release)
     checkpoint('ls2-registration')
-    verify_beta_repair_registration()
+    verify_retained_repair_registration()
     checkpoint('runner')
-    expected_runner = runner_bytes()
-    old_runner = expected_runner.replace(b'--disable-activity-creation ', b'', 1)
+    if not beta and use_lg_local_activity():
+        raise ValueError('The original runner already used local request activities')
+    expected_runner = runner_bytes(local_activity=True)
+    old_runner = runner_bytes(local_activity=False)
     if secure(RUNNER) not in (old_runner, expected_runner):
-        raise ValueError('Retained Beta runner changed')
+        raise ValueError('Retained Root runner changed')
     checkpoint('pending-proof')
     observed = manifest()
     old_manifest = dict(observed, files=dict(observed['files'], **{str(RUNNER): sha(old_runner)}))
@@ -578,7 +607,7 @@ def repair_beta_recovery(checkpoint=lambda stage: None):
             or stage == 'installed-recovery-only' and not have_ready
             or have_ready and (observed != new_manifest or saved_manifest != new_manifest
                                or json.loads(secure(ready)) != new_manifest)):
-        raise ValueError('Retained Beta recovery manifest changed')
+        raise ValueError('Retained Root recovery manifest changed')
     checkpoint('stock-home')
     prepare_stock_home()
 
@@ -586,13 +615,13 @@ def repair_beta_recovery(checkpoint=lambda stage: None):
     # manifest member before accepting a mixture of the two known runner bytes.
     if observed != new_manifest:
         checkpoint('write-runner')
-        beta_repair_write(RUNNER, expected_runner, 0o700)
+        retained_repair_write(RUNNER, expected_runner, 0o700)
     if saved_manifest != new_manifest:
         checkpoint('write-pending-proof')
-        beta_repair_write(pending, encoded(new_manifest))
+        retained_repair_write(pending, encoded(new_manifest))
     if not have_ready:
         checkpoint('manifest')
-        finalize(record_failure=False, firmware_permissions=False, writer=beta_repair_write)
+        finalize(record_failure=False, firmware_permissions=False, writer=retained_repair_write)
     checkpoint('final-status')
     status = rpc('status')
     # LS2 handlers wrap the Python CLI envelope in their own result.
@@ -602,15 +631,15 @@ def repair_beta_recovery(checkpoint=lambda stage: None):
     if (status.get('root') is not True
             or not isinstance(runtime, dict) or runtime.get('returnValue') is not True
             or not isinstance(recovery, dict) or recovery.get('integrity_verified') is not True):
-        raise ValueError('Repaired Beta recovery status could not be verified')
+        raise ValueError('Repaired Root recovery status could not be verified')
     if stage != 'installed-recovery-only':
         checkpoint('write-deployment-stage')
-        beta_repair_write(STATE/'deploy.json', encoded(
+        retained_repair_write(STATE/'deploy.json', encoded(
             {'version': 1, 'app': APP, 'stage': 'installed-recovery-only'}))
     return {'returnValue': True, 'status_verified': True, 'home_changed': False}
 
 
-def beta_repair_command():
+def retained_repair_command(pins=None):
     stage = 'device'
 
     def checkpoint(value):
@@ -619,7 +648,7 @@ def beta_repair_command():
 
     try:
         from deploy import require_device, require_node
-        from installation import Ownership, device_operation
+        from installation import Ownership, device_operation, pending_journals
         require_device()
         require_node()
         checkpoint('deploy-lease')
@@ -628,24 +657,33 @@ def beta_repair_command():
         def existing_deploy():
             lease = owner.status()
             if (not lease or lease['owner'] != 'deploy' or lease['journal'] != 'deploy.json'
-                    or lease['terminal']):
-                raise ValueError('Original Beta deploy reservation required')
+                    or lease['terminal'] and (pins is None or lease['stage'] != 'installed-recovery-only')):
+                raise ValueError('Original Root deploy reservation required')
+            return lease
 
-        with device_operation('deploy', recovery=True, ownership=owner, check=existing_deploy):
+        if pins is None:
+            lease_context = device_operation('deploy', recovery=True, ownership=owner, check=existing_deploy)
+        else:
+            lease_context = owner.operation('deploy', 'deploy.json', resume=existing_deploy()['id'],
+                                            check=lambda: pending_journals('deploy'))
+        with lease_context as lease:
             checkpoint('provision-lock')
             fd = os.open(STATE/'provision.lock', os.O_RDWR|os.O_NOFOLLOW|os.O_NONBLOCK)
             try:
                 fcntl.flock(fd, fcntl.LOCK_EX|fcntl.LOCK_NB)
-                result = repair_beta_recovery(checkpoint)
+                result = repair_retained_recovery(checkpoint, pins=pins)
             finally:
                 os.close(fd)
             checkpoint('close-deploy-lease')
+            if pins is not None and not lease['terminal']:
+                owner.stage(lease, 'installed-recovery-only', terminal=True)
     except Exception as error:
         detail = {'stage': stage, 'reason': 'failed'}
         if isinstance(error, RecoveryRPCError):
             detail.update(error.details)
         detail.update(getattr(error, 'beta_repair_failure', {}))
-        print(json.dumps({'returnValue': False, 'root_beta_repair_failure': detail}), flush=True)
+        key = 'root_beta_repair_failure' if pins is None else 'root_retained_repair_failure'
+        print(json.dumps({'returnValue': False, key: detail}), flush=True)
         raise SystemExit(1) from None
     print(json.dumps(result))
 
@@ -764,8 +802,15 @@ def rollback(restored=None):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('command', choices=['plan','apply','refresh','finalize','rollback','repair_pending','resume_pending','repair_beta_recovery'])
-    command = parser.parse_args().command
+    parser.add_argument('command', choices=['plan','apply','refresh','finalize','rollback','repair_pending','resume_pending','repair_beta_recovery','repair_root_recovery'])
+    parser.add_argument('pins', nargs='*')
+    args = parser.parse_args()
+    command = args.command
+    if command == 'repair_root_recovery':
+        if len(args.pins) != 2 or any(not re.fullmatch('[0-9a-f]{64}', pin) for pin in args.pins):
+            parser.error('Original Root release and bundle digests required')
+    elif args.pins:
+        parser.error('Only retained Root repair takes digests')
     if os.geteuid() != 0 and command != 'plan': raise ValueError('Root required')
     if command == 'plan':
         print(json.dumps({'service':NAME,'files':{k:str(v) for k,v in FILES.items()},
@@ -773,7 +818,9 @@ def main():
                           'sequence':['install package and runtime','apply','refresh LS2','finalize'],
                           'rollback':['restore runtime','cancel owned activity','restore exact LS2 snapshots','refresh LS2']} ,indent=2))
     elif command == 'repair_beta_recovery':
-        beta_repair_command()
+        retained_repair_command()
+    elif command == 'repair_root_recovery':
+        retained_repair_command(tuple(args.pins))
     else:
         fd = os.open(STATE/'provision.lock', os.O_CREAT|os.O_RDWR|os.O_NOFOLLOW, 0o600)
         try:
