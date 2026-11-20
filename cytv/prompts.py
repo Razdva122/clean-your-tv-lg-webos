@@ -7,6 +7,10 @@ from . import state
 from .terminal import console
 
 NETWORK_GUIDE = 'https://www.lg.com/us/support/help-library/lg-tv-how-to-manually-change-the-dns-server-settings--20150576570174'
+SSH_COMMAND_PROMPT = 'Run SSH command'
+EXPLICIT_TV_CHOICE = 'TV number: '
+RETRY_STORAGE_CHECK = 'Retry storage check'
+RETRY_STORAGE_PROMPT = 'Retry storage check?'
 
 
 def answer(ask, prompt):

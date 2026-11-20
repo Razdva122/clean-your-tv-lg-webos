@@ -50,6 +50,8 @@ const words = {
       'Obě připojení jsou dostupná. Vyberte prostředí, které používáte.',
     'detectedNone':
       'Přístup nebyl zjištěn. Zkontrolujte televizor, síť a režim přístupu nebo vyberte edici ručně.',
+    'inspectionError':
+      'Aplikace nemohla spustit ověření připojení. Zkuste to znovu.',
     'connectionMatch': 'Podle připojení',
     'editionNext': 'Pokračovat',
     'android': 'pro Android',
@@ -250,6 +252,8 @@ const words = {
       'Доступны оба подключения. Выберите окружение, которое используете.',
     'detectedNone':
       'Доступ не определён. Проверьте ТВ, сеть и нужный режим или выберите редакцию вручную.',
+    'inspectionError':
+      'Не удалось запустить проверку подключения в приложении. Попробуйте ещё раз.',
     'connectionMatch': 'По подключению',
     'editionNext': 'Продолжить',
     'android': 'для Android',
@@ -448,6 +452,8 @@ const words = {
       'Both connections are available. Choose the environment you use.',
     'detectedNone':
       'Access was not detected. Check your TV, network and access mode, or choose an edition manually.',
+    'inspectionError':
+      'The app could not start the connection check. Please try again.',
     'connectionMatch': 'Connection match',
     'editionNext': 'Continue',
     'android': 'for Android',
@@ -646,6 +652,8 @@ const words = {
       'Beide Verbindungen sind verfügbar. Wähle die Umgebung, die du nutzt.',
     'detectedNone':
       'Kein Zugriff erkannt. Prüfe Fernseher, Netzwerk und Zugriffsmodus oder wähle die Edition manuell.',
+    'inspectionError':
+      'Die App konnte die Verbindungsprüfung nicht starten. Versuche es erneut.',
     'connectionMatch': 'Passend zur Verbindung',
     'editionNext': 'Weiter',
     'android': 'für Android',
@@ -852,6 +860,8 @@ const words = {
       'Les deux connexions sont disponibles. Choisissez l’environnement que vous utilisez.',
     'detectedNone':
       'Aucun accès détecté. Vérifiez le téléviseur, le réseau et le mode d’accès, ou choisissez une édition manuellement.',
+    'inspectionError':
+      'L’application n’a pas pu lancer la vérification de la connexion. Réessayez.',
     'connectionMatch': 'Selon la connexion',
     'editionNext': 'Continuer',
     'android': 'pour Android',
@@ -1058,6 +1068,8 @@ const words = {
       'Sono disponibili entrambe le connessioni. Scegli l’ambiente che utilizzi.',
     'detectedNone':
       'Nessun accesso rilevato. Controlla TV, rete e modalità di accesso oppure scegli un’edizione manualmente.',
+    'inspectionError':
+      'L’app non è riuscita ad avviare la verifica della connessione. Riprova.',
     'connectionMatch': 'In base alla connessione',
     'editionNext': 'Continua',
     'android': 'per Android',
@@ -1260,6 +1272,8 @@ const words = {
       'Ambas conexiones están disponibles. Elige el entorno que usas.',
     'detectedNone':
       'No se ha detectado acceso. Comprueba el televisor, la red y el modo de acceso, o elige una edición manualmente.',
+    'inspectionError':
+      'La aplicación no pudo iniciar la comprobación de la conexión. Inténtalo de nuevo.',
     'connectionMatch': 'Según la conexión',
     'editionNext': 'Continuar',
     'android': 'para Android',
@@ -1461,6 +1475,8 @@ const words = {
       'As duas conexões estão disponíveis. Escolha o ambiente que você usa.',
     'detectedNone':
       'Nenhum acesso detectado. Verifique a TV, a rede e o modo de acesso ou escolha uma edição manualmente.',
+    'inspectionError':
+      'O aplicativo não conseguiu iniciar a verificação da conexão. Tente novamente.',
     'connectionMatch': 'Conforme a conexão',
     'editionNext': 'Continuar',
     'android': 'para Android',
@@ -1663,6 +1679,8 @@ const words = {
       'Oba połączenia są dostępne. Wybierz środowisko, z którego korzystasz.',
     'detectedNone':
       'Nie wykryto dostępu. Sprawdź telewizor, sieć i tryb dostępu lub wybierz edycję ręcznie.',
+    'inspectionError':
+      'Aplikacja nie mogła rozpocząć sprawdzania połączenia. Spróbuj ponownie.',
     'connectionMatch': 'Według połączenia',
     'editionNext': 'Dalej',
     'android': 'na Androida',
@@ -1863,6 +1881,8 @@ const words = {
       '두 연결 모두 사용할 수 있습니다. 사용 중인 환경을 선택하세요.',
     'detectedNone':
       '접근 가능한 연결을 찾지 못했습니다. TV, 네트워크와 접근 모드를 확인하거나 에디션을 직접 선택하세요.',
+    'inspectionError':
+      '앱에서 연결 확인을 시작하지 못했습니다. 다시 시도하세요.',
     'connectionMatch': '연결에 맞는 에디션',
     'editionNext': '계속',
     'android': 'Android용',
@@ -2052,6 +2072,8 @@ const words = {
       'दोनों कनेक्शन उपलब्ध हैं। अपना उपयोग किया जाने वाला परिवेश चुनें।',
     'detectedNone':
       'ऐक्सेस नहीं मिला। TV, नेटवर्क और ऐक्सेस मोड जाँचें या संस्करण खुद चुनें।',
+    'inspectionError':
+      'ऐप कनेक्शन की जाँच शुरू नहीं कर सका। फिर से कोशिश करें।',
     'connectionMatch': 'कनेक्शन के अनुसार',
     'editionNext': 'आगे बढ़ें',
     'android': 'Android के लिए',
@@ -2234,6 +2256,7 @@ const words = {
     'detectedBoth': '两种连接均可用。请选择您使用的环境。',
     'detectedNone':
       '未检测到访问方式。请检查电视、网络及访问模式，或手动选择版本。',
+    'inspectionError': '应用未能启动连接检查。请重试。',
     'connectionMatch': '适合此连接',
     'editionNext': '继续',
     'android': 'Android 版',
@@ -2407,6 +2430,7 @@ const words = {
     'detectedBoth': '兩種連線皆可用。請選擇您使用的環境。',
     'detectedNone':
       '未偵測到存取方式。請檢查電視、網路及存取模式，或手動選擇版本。',
+    'inspectionError': '應用程式未能啟動連線檢查。請重試。',
     'connectionMatch': '適合此連線',
     'editionNext': '繼續',
     'android': 'Android 版',

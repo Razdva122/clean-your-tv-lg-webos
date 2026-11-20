@@ -33,10 +33,12 @@ class OperationChecks : Instrumentation() {
                 return
             }
             checkChineseResources()
+            checkBridge()
             for (edition in listOf("no-root", "root")) {
                 checkReplay(edition)
             }
-            result.putString("stream", "PASS: both editions, single operation, bounded replay, pending prompts and stale answers\n")
+            result.putString("stream", "PASS: both editions, single operation, bounded replay, pending prompts and stale answers\n" +
+                "PASS: packaged Python import and CLI dispatch, local inspection error and negative SSH inspection\n")
             finish(Activity.RESULT_OK, result)
         } catch (error: Throwable) {
             result.putString("stream", "FAIL: ${error.stackTraceToString()}\n")
@@ -45,6 +47,29 @@ class OperationChecks : Instrumentation() {
             Operation.listener = null
             Operation.emit("{\"kind\":\"finished\",\"code\":130}")
         }
+    }
+
+    private fun checkBridge() {
+        if (!Python.isStarted()) Python.start(AndroidPlatform(targetContext))
+        val python = Python.getInstance()
+        val bridge = python.getModule("android_bridge")
+        val cli = checkNotNull(bridge["cli"])
+        val args = python.getBuiltins().callAttr("str", "--version").callAttr("split")
+        check(cli.callAttr("main", args).toInt() == 0) { "Shared CLI version dispatch failed" }
+
+        val config = """{"host":"127.0.0.1","port":22}"""
+        val localError = JSONObject(inspectionResult(config) {
+            python.getModule("missing_inspection_fixture").toString()
+        })
+        check(localError.getString("kind") == "inspection-error")
+        check(localError.getString("host") == "127.0.0.1")
+        check(!localError.has("root_ssh") && !localError.has("developer_ssh"))
+        val result = JSONObject(inspectionResult(config) {
+            bridge.callAttr("inspect_connection", config).toString()
+        })
+        check(result.getString("kind") == "inspection")
+        check(result.getString("host") == "127.0.0.1" && result.getInt("root_port") == 22)
+        check(!result.getBoolean("root_ssh") && !result.getBoolean("developer_ssh"))
     }
 
     private fun checkChineseResources() {
