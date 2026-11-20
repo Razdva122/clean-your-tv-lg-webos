@@ -30,7 +30,12 @@ class CandidateReuse(unittest.TestCase):
         self.git('config', 'user.email', 'ci@example.invalid')
         (self.root / 'product').write_text('base')
         (self.root / 'release-plan.json').write_text('{}')
-        self.commit('base')
+        versions = {'release': '1.0.4', 'home': '1.3.8', 'helper': '0.6.18',
+                    'cytv': '0.2.16', 'root': '0.1.12', 'updater': '0.1.6',
+                    'android': '0.1.7', 'android_version_code': 8}
+        (self.root / 'release-versions.json').write_text(json.dumps(versions))
+        base = self.commit('base')
+        self.git('update-ref', 'refs/remotes/origin/main', base)
         self.git('checkout', '-b', 'release/next')
         (self.root / 'product').write_text('candidate')
         self.source = self.commit('built source')
@@ -38,10 +43,31 @@ class CandidateReuse(unittest.TestCase):
                     'head_sha': self.source, 'head_branch': 'release/next', 'event': 'workflow_dispatch',
                     'path': '.github/workflows/cytv.yml', 'html_url': 'https://example.invalid/build/42',
                     'head_repository': {'full_name': flow.REPO}}
-        self.plan = {'build': {'run_id': 42, 'attempt': 1, 'source': self.source}}
+        self.plan = {'schema': 1, 'version': '1.0.4', 'changes': [], 'excluded': [],
+                     'acceptance': 'Current acceptance', 'acceptance_build': '42:1',
+                     'build': {'run_id': 42, 'attempt': 1, 'source': self.source}}
         self.write_plan()
         self.head = self.commit('acceptance record')
         self.jobs = [{'name': name, 'conclusion': 'success'} for name in flow.BUILD_JOBS]
+
+    def prepare_candidate_record(self):
+        self.record_pr = {'number': 7, 'state': 'open', 'base': {'ref': 'main'},
+                          'head': {'sha': self.head, 'ref': 'release/next', 'repo': {'full_name': flow.REPO}},
+                          'body': 'Original human text\n\n' + flow.replace_record('', 'old record')}
+        self.record_writes = []
+
+    def record_api(self, path, *, method='GET', data=None):
+        if path == 'commits/release%2Fnext':
+            return {'sha': self.head}
+        if path.startswith('pulls?'):
+            return [self.record_pr.copy()]
+        if path == 'pulls/7' and method == 'GET':
+            return self.record_pr.copy()
+        if path == 'pulls/7' and method == 'PATCH':
+            self.record_writes.append(data)
+            self.record_pr.update(data)
+            return self.record_pr.copy()
+        raise AssertionError((path, method))
 
     def git(self, *args):
         return subprocess.check_output(['git', *args], cwd=self.root, text=True, stderr=subprocess.DEVNULL).strip()
@@ -210,6 +236,63 @@ process.stdout.write(JSON.stringify(calls));
         self.assertIn('Human limitation: cold boot untested.', updated)
         self.assertNotIn('\nold\n', updated)
         self.assertEqual(flow.replace_record(updated, 'new'), updated)
+
+    def test_appending_first_record_preserves_human_trailing_whitespace(self):
+        original = 'Human notes\n\n  '
+        self.assertTrue(flow.replace_record(original, 'record').startswith(original + '\n\n'))
+
+    def test_refresh_updates_only_generated_record_including_current_pin(self):
+        self.prepare_candidate_record()
+        before = 'Human edit after candidate lookup.\n\n'
+        after = '\n\nHuman constraints.  \n'
+
+        def github(path, **kwargs):
+            response = self.record_api(path, **kwargs)
+            if path.startswith('pulls?'):
+                self.record_pr['body'] = before + flow.replace_record('', 'old record').rstrip() + after
+            return response
+
+        self.plan['acceptance'] = 'Uncommitted acceptance'
+        self.write_plan()
+        with patch.object(flow, 'api', side_effect=github):
+            flow.maintain_candidate(self.root, automatic=True)
+        self.assertEqual(len(self.record_writes), 1)
+        self.assertEqual(set(self.record_writes[0]), {'body'})
+        body = self.record_writes[0]['body']
+        self.assertEqual(body.split(flow.RECORD_START)[0], before)
+        self.assertEqual(body.split(flow.RECORD_END)[1], after)
+        self.assertNotIn('old record', body)
+        self.assertIn('Selected build: [42]', body)
+        self.assertIn('attempt 1', body)
+        self.assertIn('Recorded acceptance: Current acceptance', body)
+
+        with patch.object(flow, 'api', side_effect=self.record_api):
+            flow.sync_record(self.root)
+        self.assertEqual(len(self.record_writes), 1)
+
+    def test_refresh_fails_current_stale_pin_without_writes(self):
+        self.prepare_candidate_record()
+        (self.root / 'product').write_text('guarded input changed after pin')
+        self.head = self.commit('guarded change')
+        self.record_pr['head']['sha'] = self.head
+        with patch.object(flow, 'api', side_effect=self.record_api), \
+             self.assertRaisesRegex(ValueError, 'Candidate build inputs changed; rebuild required: product'):
+            flow.maintain_candidate(self.root, automatic=True)
+        self.assertEqual(self.record_writes, [])
+
+    def test_refresh_becomes_noop_if_branch_advances_before_pr_write(self):
+        self.prepare_candidate_record()
+
+        def github(path, **kwargs):
+            response = self.record_api(path, **kwargs)
+            if path.startswith('pulls?'):
+                self.head = 'f' * 40
+                self.record_pr['head']['sha'] = self.head
+            return response
+
+        with patch.object(flow, 'api', side_effect=github):
+            flow.maintain_candidate(self.root, automatic=True)
+        self.assertEqual(self.record_writes, [])
 
 
 if __name__ == '__main__':

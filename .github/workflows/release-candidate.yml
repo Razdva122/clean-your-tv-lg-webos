@@ -21,14 +21,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Open a draft unless the current candidate already exists
+      - name: Maintain the draft and generated release record
         env:
           GH_TOKEN: ${{ github.token }}
-        run: python scripts/release-flow.py ensure-candidate
-      - name: Refresh generated scope, versions and selected build
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          if gh pr list --base main --head release/next --json number --jq 'length' | python -c "import sys; sys.exit(0 if int(sys.stdin.read()) == 1 else 1)"; then
-            python scripts/release-flow.py sync-record
-          fi
+        run: python scripts/release-flow.py maintain-candidate

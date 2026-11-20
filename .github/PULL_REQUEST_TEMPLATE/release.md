@@ -2,6 +2,12 @@
 
 Base: `main`. Head: `release/next` in this repository.
 Keep this PR in draft while collecting changes. Choose the version at freeze.
+At freeze, use only the release version in the title (`vX.Y.Z`).
+
+<!-- Keep one current summary here with the selected build run and attempt,
+acceptance state, remaining gates, and verification ledger link. Put superseded
+observations in the dated ledger. Compare this summary with the generated record
+at release handoff and before merging. -->
 
 Maintain this description after every implementation merge, scope change,
 version decision and validation run. The candidate workflow regenerates its marked block from committed
@@ -79,6 +85,7 @@ Use timestamps with a UTC offset and include failed and cancelled attempts. -->
 - [ ] Rebuilt packages contain the intended changes; pinned baselines and delivery limitations are recorded.
 - [ ] TV acceptance rows include artifact hashes, device/state preconditions and untested paths.
 - [ ] Selected build run/attempt matches `acceptance_build`; changed bytes have affected acceptance.
+- [ ] The version-only title and current summary agree with the generated record.
 - [ ] Complete platform builds and full tests pass for the selected build; candidate inputs are equivalent.
 - [ ] Rollback baseline is verified.
 
