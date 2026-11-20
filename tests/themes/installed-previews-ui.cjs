@@ -61,6 +61,13 @@ async function exerciseRollback(page, rollBack) {
     .filter({ hasText: 'Unavailable downloaded theme' });
   await rows.last().waitFor();
   assert.equal(await rows.count(), 8);
+  const titles = await rows.locator('strong').allTextContents();
+  assert.deepEqual(
+    titles.slice(0, 2),
+    downloads.keys
+      .slice(0, 2)
+      .map((key) => 'Unavailable downloaded theme · ' + key.slice(0, 12))
+  );
   const first = rows.first();
   assert.deepEqual(await first.getByRole('button').allTextContents(), [
     'Remove'
@@ -68,6 +75,7 @@ async function exerciseRollback(page, rollBack) {
   assert.equal(await first.locator('img').count(), 0);
   const remove = first.getByRole('button', { name: 'Remove', exact: true });
   await remove.click();
+  await page.getByText(titles[0], { exact: true }).waitFor();
   await page.locator('#themeRemoveCancel').click();
   await remove.waitFor();
   assert.equal(await rows.count(), 8);

@@ -91,6 +91,8 @@ No-root: Aby wznowić sterowanie Home, otwórz Home Helper, wybierz Uruchom Help
 
 Gdy Home Helper jest zatrzymany, możesz też wybrać **Uruchom Helper** w ustawieniach ekranu Home lub wygaszacza. Stan zaktualizuje się automatycznie po uruchomieniu.
 
+Aby zwolnić miejsce po przywróceniu wcześniejszej wersji Home, otwórz **Ustawienia → Motywy**, wybierz **Usuń** przy niedostępnym pobranym motywie i potwierdź.
+
 ## Potrzebujesz pomocy?
 
 Jeśli zobaczysz `ssh-identity-changed`, przerwij i zweryfikuj klucz SSH telewizora. [Odzyskiwanie po zmianie klucza SSH](../RECOVERY.md#ssh-identity-changed)

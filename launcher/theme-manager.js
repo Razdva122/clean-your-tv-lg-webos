@@ -273,7 +273,7 @@
             digest: entry.digest
           });
         });
-        packages.forEach(function (record) {
+        packages.forEach(function (record, index) {
           try {
             var pack = record.pack,
               parsed = data.verify(pack, homeVersion);
@@ -294,8 +294,21 @@
               hasVideo: false
             });
           } catch (_) {
+            var reference =
+              typeof record.key === 'string' &&
+              /^[a-f0-9]{64}$/.test(record.key)
+                ? record.key.slice(0, 12)
+                : '';
+            if (
+              !reference ||
+              items.some(function (item) {
+                return item.reference === reference;
+              })
+            )
+              reference = '#' + (index + 1);
             items.push({
               title: 'Unavailable downloaded theme',
+              reference: reference,
               storageKey: record.key,
               unavailable: true
             });

@@ -91,6 +91,8 @@ No-root: Para reiniciar o controle de Home, abra Home Helper, escolha Iniciar He
 
 Se o Home Helper estiver parado, você também pode selecionar **Iniciar Helper** nas configurações da tela Home ou da proteção de tela. O status é atualizado automaticamente após a inicialização.
 
+Para liberar espaço após voltar a uma versão anterior do Home, abra **Configurações → Temas**, selecione **Remover** ao lado do tema baixado indisponível e confirme.
+
 ## Precisa de ajuda?
 
 Se aparecer `ssh-identity-changed`, pare e verifique a chave SSH da TV. [Recuperação após mudança da chave SSH](../RECOVERY.md#ssh-identity-changed)

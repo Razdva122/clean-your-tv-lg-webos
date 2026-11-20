@@ -91,6 +91,8 @@ No-root: Pour relancer le contrôle de Home, ouvrez Home Helper, choisissez Dém
 
 Si Home Helper est arrêté, vous pouvez aussi choisir **Démarrer Helper** dans les paramètres de l’écran Home ou de l’économiseur d’écran. L’état se met à jour automatiquement après le démarrage.
 
+Pour libérer de la place après le retour à une version antérieure de Home, ouvrez **Paramètres → Thèmes**, choisissez **Supprimer** pour le thème téléchargé indisponible et confirmez.
+
 ## Besoin d’aide ?
 
 Si `ssh-identity-changed` s’affiche, arrêtez-vous et vérifiez la clé SSH du téléviseur. [Récupération après un changement de clé SSH](../RECOVERY.md#ssh-identity-changed)

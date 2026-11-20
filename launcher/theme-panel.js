@@ -316,7 +316,7 @@
             row.classList.add('theme-unavailable');
             var label = node('div');
             label.className = 'theme-choice';
-            label.appendChild(node('strong', item.title));
+            label.appendChild(node('strong', unavailableLabel(item)));
             row.appendChild(label);
             row.appendChild(installedActions(item));
             return;
@@ -422,6 +422,9 @@
         if (version === view) failed(e);
       }
     );
+  }
+  function unavailableLabel(item) {
+    return t(item.title) + ' · ' + item.reference;
   }
   function installedActions(item) {
     var actions = node('div');
@@ -623,7 +626,9 @@
     mode = 'remove';
     heading(
       'Remove theme?',
-      item.title + (item.version ? ' · ' + item.version : '')
+      item.unavailable
+        ? unavailableLabel(item)
+        : item.title + (item.version ? ' · ' + item.version : '')
     );
     function isActive(theme) {
       return item.unavailable
