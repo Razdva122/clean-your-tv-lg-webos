@@ -32,12 +32,13 @@ CLI commands, diagnostic actions, and guarded activation and cleanup coverage.
 | 11:09–11:11 | Merged twelve pinned PR heads in the isolated worktree. |
 | 11:11–11:14 | Reproduced and repaired [#754](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/44599003736) failures involving the installed runtime's provisioning module during host test discovery and changed ordinary OTA inventory. Integrated the recovery writer from #746 and confined the migration script to the Beta compositor installer bundle. |
 | 11:11–11:15 | Focused macOS ARM64 checks passed: 131 Root tests (one skip), 10 published-supervisor OTA/rollback tests, 6 migration CLI tests, 26 installer recovery tests, 38 Python runtime tests (two skips), 138 No-root cleanup tests, 10 diagnostic tests, Romanian catalogs and Prettier. The OTA fixture used the existing pinned font cache. |
+| 11:15–11:16 | All 52 native guard tests passed with host process visibility. The published-supervisor package probe also passed against the final packaging layout. |
 | Pending | Combined GitHub CI, signed candidate packages and selected device acceptance. |
 
 The first combined run also found a stale fixture assertion for the verified
 Restore fallback. The focused rerun covers the explicit Restore argument.
-Two macOS native guard checks passed with host process visibility after an
-initial sandboxed run could not exercise the PID checks.
+The initial sandboxed native guard run could not exercise the macOS PID checks.
+Two isolated checks confirmed the dependency before the full host-visible run.
 
 Review package bytes before assigning version changes. #744 affects Home/Root
 locale resources and both updater profile validators. Root service, installer
