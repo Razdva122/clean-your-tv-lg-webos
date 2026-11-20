@@ -286,3 +286,24 @@ packages, including the Android and macOS ARM64 files tested offline below.
   remains blocked by unavailable project hardware. The development release
   can collect voluntary reports. The stable candidate remains draft with
   physical acceptance unset.
+
+### Protected QA and development publication
+
+[Protected signing 44754494371](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/44754494371)
+completed at 19:34:42 UTC+05:00. Verified archive SHA-256
+`93bbb19a0ddcca6fccef9f237291568fe5d33420556b3f390aee3183dc31e4c4` and the
+Root/No-root FHD and HD manifests against the pinned CLI and published
+System baseline. Engine 1.2.15 and corrected Root infrastructure matched
+their preflight hashes. The QA catalog is retained for closed device testing.
+
+[v1.27.0-dev.3](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.27.0-dev.3) was published as a GitHub prerelease at 19:58:16 UTC+05:00.
+Verified the tag's frozen source, all 12 asset digests and anonymous access
+to the checksum file. GitHub Latest and all 37 stable asset digests matched
+v1.26.0 before and after publication. The
+[stable feed verifier](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/44758575652)
+rejects dev tags at argument validation before reading any update feeds.
+The dev assets are installers and
+verification metadata. The stable v1.27.0 candidate remains pending device
+acceptance.
+
+Confirmed development release notices in issues [160](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/160#issuecomment-7046298349), [389](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/389#issuecomment-7046266816), [615](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/615#issuecomment-7046269019), [692](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/692#issuecomment-7046270755), [712](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/712#issuecomment-7046272421), [739](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/739#issuecomment-7046274006).
