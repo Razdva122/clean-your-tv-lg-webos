@@ -29,10 +29,20 @@ class BridgeTests(unittest.TestCase):
             source = root / 'android/app/build/generated/python'
             shutil.copy2(SOURCE, source / SOURCE.name)
             result = subprocess.run([
-                sys.executable, '-I', '-c',
-                'import sys; sys.path.insert(0, sys.argv[1]); '
-                'from android_bridge import cli; sys.exit(cli.main(["--version"]))',
-                str(source)
+                sys.executable, '-I', '-c', """
+import sys
+from pathlib import Path
+
+source = Path(sys.argv[1]).resolve()
+sys.path.insert(0, str(source))
+import android_bridge
+
+code = android_bridge.cli.main(["--version"])
+for name, module in sys.modules.items():
+    if name in ("android_bridge", "cytv", "lgtv") or name.startswith("cytv."):
+        assert Path(module.__file__).resolve().is_relative_to(source), (name, module.__file__)
+raise SystemExit(code)
+""", str(source)
             ], cwd=root, capture_output=True, text=True, timeout=30)
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertRegex(result.stdout, r'^cytv \S+\n$')
