@@ -12,6 +12,9 @@ permissions:
   contents: read
 jobs:
   verify:
+    if: >-
+      ${{ !github.event.release.prerelease && !github.event.release.draft &&
+          !contains(inputs.tag || github.event.release.tag_name, '-') }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
