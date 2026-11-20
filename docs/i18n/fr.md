@@ -91,6 +91,8 @@ No-root: Pour relancer le contrôle de Home, ouvrez Home Helper, choisissez Dém
 
 Si Home Helper est arrêté, vous pouvez aussi choisir **Démarrer Helper** dans les paramètres de l’écran Home ou de l’économiseur d’écran. L’état se met à jour automatiquement après le démarrage.
 
+Sur les téléviseurs où LG Home s’ouvre sous forme de panneau, activer ou désactiver **Change Home** dans Root peut redémarrer brièvement l’interface du téléviseur. Après un redémarrage ou une panne, ouvrez Clean Your TV et réactivez **Change Home** pour reprendre le contrôle. LG Home reste accessible.
+
 ## Besoin d’aide ?
 
 Si `ssh-identity-changed` s’affiche, arrêtez-vous et vérifiez la clé SSH du téléviseur. [Récupération après un changement de clé SSH](../RECOVERY.md#ssh-identity-changed)

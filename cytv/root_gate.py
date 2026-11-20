@@ -114,9 +114,15 @@ def source_bundle(installer, resolution=None):
     _, release = validate_bundle(data, resolution)
     if release.get('runtime_variant') != installer.profile.get('root_variant'):
         raise ValueError('Home backend runtime does not match the selected Root variant')
-    if installer.tv_info.get('home_backend_schema') == 3 and (
+    if installer.tv_info.get('home_backend_schema') in (3, 4) and (
             release.get('routing') != 'compositor-keyfilter-v1' or release.get('compositor_admission') != 3):
         raise ValueError('Generic compositor admission requires a matching mount-free payload')
+    if installer.tv_info.get('home_backend_schema') == 4:
+        required = {'runtime/embedded_home.py', 'runtime/embedded-home.qml',
+                    'runtime/embedded-home.js'}
+        if (not required.issubset(data)
+                or b'CYTV-QML-KEYFILTER-1' not in data['runtime/c1-keyfilter-guard']):
+            raise ValueError('Embedded Home requires matching adapter and guardian capabilities')
     return data
 
 
@@ -275,7 +281,7 @@ def install(installer, inventory, migrate=False, reinstall=None):
             raise UserError('GlassHouse Home could not be restored to LG Home. Installation has not started.',
                             reason_code='foreign-home-restore-failed') from error
     installer.progress('Experimental compositor Home: physical controls and power recovery are unverified.'
-                       if installer.tv_info.get('home_backend_schema') == 3 else NOTICE)
+                       if installer.tv_info.get('home_backend_schema') in (3, 4) else NOTICE)
     installer.store.begin(installer.profile, 'install', release_sha=digest(prepared['release.json']),
                           bundle_sha=digest(prepared['bundle.json']), migrate=False, requires_updater=False,
                           home_backend=BACKEND, stage='upload', **continuation)

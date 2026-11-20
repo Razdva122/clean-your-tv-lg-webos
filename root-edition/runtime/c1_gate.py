@@ -54,10 +54,11 @@ def secure(path, uid=0, limit=65536):
         return data
 
 
-def native_home():
+def native_home(*, target=None):
     """Read only the fixed stock executable; never relax private-file ownership."""
-    trusted_directory(TARGET.parent)
-    fd = os.open(TARGET, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    target = TARGET if target is None else Path(target)
+    trusted_directory(target.parent)
+    fd = os.open(target, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
     with os.fdopen(fd, 'rb') as stream:
         info = os.fstat(fd)
         limit = 16 * 1024 * 1024
@@ -126,7 +127,7 @@ def selection(root=STATE, uid=0):
             raise ValueError('Missing experimental Home backend selection; retain recovery evidence')
         return None
     value = json.loads(secure(path, uid, 8192))
-    if isinstance(value, dict) and type(value.get('schema')) is int and value['schema'] in (2,3):
+    if isinstance(value, dict) and type(value.get('schema')) is int and value['schema'] in (2,3,4):
         if __package__:
             from . import c1_keyfilter
         else:

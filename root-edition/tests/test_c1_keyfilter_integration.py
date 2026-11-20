@@ -12,6 +12,19 @@ from test_c1_gate_bundle import load, static_arm
 
 
 class KeyfilterIntegrationTests(unittest.TestCase):
+    def test_embedded_selection_uses_observed_capabilities_without_version_allowlist(self):
+        from runtime import c1_keyfilter
+        for model, firmware, webos in (('W17M-observed', '06.10.75', '3.9.0'),
+                                       ('unlisted-device', '99.0.1', '88.7.6')):
+            marker = {'schema':4, 'backend':c1_keyfilter.BACKEND, 'experimental':True,
+                      'routing':c1_keyfilter.ROUTING, 'native_sha256':'a'*64,
+                      'admission':{'model':model, 'firmware':firmware, 'webos':webos,
+                                   'target_sha256':'b'*64,
+                                   'target':{'dev':1, 'ino':2, 'size':4096, 'mtime_ns':3}}}
+            with self.subTest(model=model), patch.object(c1_keyfilter.os.path, 'lexists', return_value=True), \
+                 patch.object(c1_keyfilter, 'secure', return_value=json.dumps(marker).encode()):
+                self.assertEqual(c1_keyfilter.selection(), marker)
+
     def test_node012_bundle_grants_lease_to_legacy_private_bus(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder).resolve()
@@ -63,7 +76,7 @@ class KeyfilterIntegrationTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 load('deploy').verify_bundle(root / 'bundle')
 
-    def test_lease_permission_is_only_for_compositor_and_only_in_new_mode(self):
+    def test_lease_and_readonly_adapter_permissions_only_in_compositor_mode(self):
         provision = load('provision')
         original = {'service':'[D-BUS Service]\nName='+provision.NAME+'\nExec=/usr/bin/run-js-service -n ' + str(provision.SERVICE),
                     'role':json.dumps({'appId':provision.NAME}).encode()}
@@ -76,14 +89,18 @@ class KeyfilterIntegrationTests(unittest.TestCase):
             input=json.dumps({'service': provision.LEASE_NAME, 'role': role, 'api': api}),
         )
         self.assertEqual(result.returncode, 0, result.stderr)
-        senders = ['com.webos.surfacemanager', 'com.webos.starfish.keyfilters']
+        senders = ['com.webos.surfacemanager', 'com.webos.starfish.keyfilters', 'com.webos.lunasend-*']
         self.assertEqual(role['allowedNames'].pop(), provision.LEASE_NAME)
         self.assertEqual(role['permissions'].pop(), {
             'service': provision.LEASE_NAME, 'inbound': senders, 'outbound': [],
         })
         self.assertEqual(api.pop('all'), [provision.LEASE_NAME+'/c1Lease', provision.LEASE_NAME+'/c1Home'])
+        status_group = provision.LEASE_NAME+'.adapter-status'
+        self.assertEqual(api.pop(status_group), [provision.LEASE_NAME+'/c1AdapterStatus'])
+        clients = json.loads(revised['client'])
+        self.assertEqual(clients.pop('com.webos.lunasend-*'), [status_group])
         self.assertEqual(provision.encoded(role), normal['role'])
-        self.assertEqual(revised['client'], normal['client'])
+        self.assertEqual(provision.encoded(clients), normal['client'])
         self.assertEqual(provision.encoded(api), normal['api'])
         self.assertEqual(revised['service'], normal['service'].replace(
             ('Name=' + provision.NAME).encode(), ('Name=' + provision.NAME + ';' + provision.LEASE_NAME).encode(),

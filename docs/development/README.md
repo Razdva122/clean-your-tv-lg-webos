@@ -99,3 +99,5 @@ launcher demo.
 - [Single Home C3 regression QA, 2026-11-05](../history/2026-11-05-single-home-regressions.md)
 
 - [Home weather and theme integration](WEATHER.md) — formats, trusted data flow, author styling and fork provenance.
+
+- [Embedded LG Home adapter](EMBEDDED-HOME.md): shared C1 backend, capability admission and stock compositor restoration.
