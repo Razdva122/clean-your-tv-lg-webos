@@ -945,6 +945,77 @@ class RuntimeTests(unittest.TestCase):
         self.admission = dict(self.generic(), model='OLED48A19LA', firmware='03.53.45', webos='6.5.3')
         self.check_ui_failure_recovery(lambda: self.k.restore_for_removal(self.root, self.uid))
 
+    def test_webos6_removal_with_home_over_content(self):
+        self.admission = dict(self.generic(), model='65NANO926PB', firmware='03.34.55', webos='6.3.2')
+        work = self.root
+        vendor = {'file': '/usr/lib/qt5/qml/KeyFilters/systemUi.js', 'handler': 'handleSystemKeys'}
+        stopped = self.proof()
+        failure = dict(stopped, returnValue=False, reason='ui_release_failed')
+        content = 'content.youtube'
+        for case in ('home-over-content', 'home-only', 'content-only', 'hidden-home', 'wrong-home-type',
+                     'other-card', 'extra-card', 'duplicate-home', 'project-card', 'helper-card',
+                     'other-display', 'malformed-visible', 'foreign-filter', 'chain-drift',
+                     'foreground-changed', 'other-attempt', 'other-sdk', 'ordinary-restore'):
+            with self.subTest(case=case):
+                self.root = work/case; self.root.mkdir(mode=0o700)
+                self.admission['webos'] = '7.3.2' if case == 'other-sdk' else '6.3.2'
+                self.prepare()
+                background = self.k.APP if case == 'project-card' else (
+                    'com.local.nativehome' if case == 'helper-card' else content)
+                own = self.k.filter_entry(self.root)
+                self.k.atomic(self.root/'c1-keyfilter/ownership.json',
+                              dict(schema=1, entry=own, token='1'*32), self.uid)
+                chain = [own, vendor]
+                if case == 'foreign-filter':
+                    chain.append({'file': '/foreign/home.js', 'handler': 'otherHome'})
+                home = {'appId': self.k.STOCK, 'windowType': self.k.HOME, 'displayId': 0}
+                card = {'appId': background, 'windowType': self.k.CARD, 'displayId': 0}
+                surfaces = {
+                    'home-only': [home],
+                    'content-only': [card],
+                    'hidden-home': [card, dict(home, visible=False)],
+                    'wrong-home-type': [card, dict(home, windowType=self.k.CARD)],
+                    'other-card': [dict(card, appId='other.content'), home],
+                    'extra-card': [card, home, dict(card, appId='extra.content')],
+                    'duplicate-home': [card, home, home],
+                    'other-display': [card, dict(home, displayId=1)],
+                    'malformed-visible': [card, dict(home, visible=1)],
+                }.get(case, [card, home])
+                sam_reads = []
+                def luna(uri, payload):
+                    if uri == 'luna://com.webos.applicationManager/getForegroundAppInfo':
+                        sam_reads.append(uri)
+                        if case == 'chain-drift' and len(sam_reads)>1:
+                            chain.append({'file': '/foreign/home.js', 'handler': 'otherHome'})
+                        app = 'other.content' if case == 'foreground-changed' and len(sam_reads)>1 else background
+                        return {'returnValue': True, 'appId': app}
+                    self.assertEqual(uri, 'luna://com.webos.surfacemanager/getForegroundAppInfo')
+                    return {'returnValue': True, 'foregroundAppInfo': surfaces}
+                native_calls = []
+                def native(args, *_args, **_kwargs):
+                    native_calls.append(args)
+                    if args == ['--restore']:
+                        return failure
+                    if case == 'other-attempt' and len(native_calls)>2:
+                        return dict(stopped, token='2'*32)
+                    return stopped
+                with patch.object(self.k, 'native', side_effect=native), \
+                        patch.object(self.k, 'read_chain', side_effect=lambda: list(chain)), \
+                        patch.object(self.k, 'write_chain', side_effect=lambda value, **kw: chain.__setitem__(slice(None), value)), \
+                        patch.object(self.k, 'luna', side_effect=luna):
+                    if case == 'home-over-content':
+                        self.assertEqual(self.k.restore_for_removal(self.root, self.uid), 'restored')
+                        self.assertEqual(chain, [vendor])
+                        self.assertEqual(self.k.read_intent(self.root, self.uid)['phase'], 'disabled')
+                        self.assertEqual(len(sam_reads), 2)
+                    else:
+                        with self.assertRaises(ValueError):
+                            if case == 'ordinary-restore':
+                                self.k.restore_locked(self.root, self.uid, explicit_restore=True)
+                            else:
+                                self.k.restore_for_removal(self.root, self.uid)
+                        self.assertNotEqual(self.k.read_intent(self.root, self.uid)['phase'], 'disabled')
+
     def test_webos5_ribbon_removal_with_live_tv_foreground(self):
         import hashlib
 
