@@ -541,7 +541,8 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
             # This observation is optional and does not reopen the completed install.
             pass
 
-    def root_action(self, action, bundle=None, migrate=False, experimental=False, *, timeout=None, read_only=False):
+    def root_action(self, action, bundle=None, migrate=False, experimental=False, *,
+                    timeout=None, read_only=False, retry_token=None):
         if action == 'status':
             # A failed new read must not advertise an earlier runtime observation.
             observed = self.tv_info.setdefault('status', {}).setdefault('device', {})
@@ -550,6 +551,11 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
                 observed.pop(key, None)
         driver = (bundle or ROOT_STATE) + '/deploy.py'
         args = [self._python(ROOT_STATE), driver, action]
+        if retry_token is not None:
+            from .root_activation import RETRY_ENABLE
+            if action != 'enable' or not re.fullmatch('[a-f0-9]{32}', retry_token):
+                raise ValueError('Invalid retained activation retry')
+            args = [args[0], '-I', '-B', '-c', RETRY_ENABLE, retry_token]
         if bundle:
             args += ['--bundle', bundle]
         if migrate:
@@ -600,6 +606,10 @@ with os.fdopen(f,'rb') as stream:
             raise
         if action == 'enable': self.collect_root_diagnostics(cursor)
         reply = json.loads(raw)
+        if retry_token is not None and reply == {'returnValue': False, 'retained_retry_refused': True}:
+            from .root_activation import RetryRefused
+            raise RetryRefused('Recovery evidence changed. Check recovery again; recovery data was kept.',
+                               reason_code='pending-operation')
         if action == 'status' and isinstance(reply, dict):
             # Retain only bounded data, even in the in-memory diagnostic context.
             observed.update(diagnostics.context.status_summary({'device': reply}))
@@ -1170,7 +1180,7 @@ else:
                 if not self.helper_retry():
                     raise UserError('Root is installed, but Home Helper has not stopped. Press Home three times within two seconds (older Helper: hold Home for two seconds), release all buttons, then use Home settings > Turn on Home control. Run cytv status or cytv restore before reinstalling.') from None
 
-    def recover_failed_activation(self, *, verified_support=False):
+    def recover_failed_activation(self, *, verified_support=False, expected_token=None, stock_only=False):
         """Compensate our activation through the ownership-checked restore path.
 
         Keep the original stage/error, including when the compensation fails.
@@ -1205,6 +1215,9 @@ else:
                 elif not self.root_setup_inactive(current):
                     step = 'restore'
                     effective = current.get('effective', {})
+                    if stock_only or (expected_token is not None and effective.get('token') != expected_token):
+                        self.tv_info[diagnostic_key] = {'step': step, 'reason': 'operation-unconfirmed'}
+                        return False
                     if (verified_support and current.get('backend') == 'c1-native-gate'
                             and effective.get('routing') == 'compositor-keyfilter-v1'):
                         from .root_install_recovery import restore_activation
@@ -1948,6 +1961,31 @@ else:
         self.store.finish(self.profile)
         self.outcome.packages_verified()
         return {'home_changed':False,'updates_ready':self.profile.get('root_variant') != 'node012-beta','home_control':'disabled'}
+
+    def retained_activation_token(self, pending, observation):
+        from .root_activation import retained_retry_receipt, retained_retry_token
+        if (self.profile['edition'] != 'root' or not retained_retry_receipt(pending)
+                or observation.get('deployment_stage') != 'installed-recovery-only'):
+            return None
+        device = observation.get('device', {}).get('result', {})
+        if self.root_setup_inactive(device) and (token := retained_retry_token(device)):
+            if self.root_files_match(pending) and self.store.pending(self.profile) == pending:
+                return token
+        return None
+
+    def resume_retained_activation(self, expected_pending, token):
+        from .root_activation import activate, retained_retry_receipt
+        from .state import private_write
+        if (not token or self.store.pending(self.profile) != expected_pending
+                or not retained_retry_receipt(expected_pending)
+                or self.retained_activation_token(expected_pending, self.observe_recovery()) != token):
+            raise UserError('Recovery evidence changed. Check recovery again; recovery data was kept.',
+                            reason_code='pending-operation')
+        receipt = self.store.recovery(self.profile, 'resume-root-activation')
+        private_write(receipt, json.dumps({'action': 'resume-root-activation', 'previous': expected_pending}).encode())
+        self.outcome.begin()
+        self.outcome.packages_verified()
+        return activate(self, retry_token=token)
 
     def resume_root_setup(self, expected_pending=None):
         # Revalidate after the user's confirmation; never resubmit package setup.

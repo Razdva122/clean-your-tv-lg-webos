@@ -356,10 +356,12 @@ def recover(installer, ask, write, non_interactive=False, initial_observation=No
             write(KEPT)
             return
     try:
+        from .root_activation import retained_retry_receipt
         pending = installer.store.pending(installer.profile)
         activation_restore = pending and pending.get('activation_restore_pending') is True
         if (initial_observation is None and pending and pending.get('home_backend') == 'c1-native-gate'
-                and (activation_restore or pending.get('activation_restore') == 'verified')):
+                and (activation_restore or pending.get('activation_restore') == 'verified')
+                and not retained_retry_receipt(pending)):
             if not installer.recover_failed_activation(verified_support=True):
                 raise UserError(BLOCKED, reason_code='pending-operation')
             plan(write, 'complete', 'LG Home is restored.', 'Save diagnostic report…')
@@ -399,6 +401,18 @@ def recover(installer, ask, write, non_interactive=False, initial_observation=No
             raise
         installer.tv_info.update(status=result)
         pending = installer.store.pending(installer.profile)
+        if retained_retry_receipt(pending):
+            token = installer.retained_activation_token(pending, result)
+            if not token:
+                raise UserError(BLOCKED, reason_code='pending-operation')
+            plan(write, 'ready', 'LG Home is restored.')
+            if prompts.confirm('Finish Root setup and turn on Home control?', ask, write):
+                installer.resume_retained_activation(pending, token)
+                installer.outcome.review_home(ask, write)
+                plan(write, 'complete', 'Review TV checks', 'Save diagnostic report…')
+            else:
+                write(KEPT)
+            return
         from .root_gate import beta_repair_available, repair_beta_recovery
         if (pending is None and installer.profile.get('root_variant') == 'node012-beta'
                 and beta_repair_available(installer, result)):
