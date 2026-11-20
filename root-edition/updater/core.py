@@ -10,7 +10,7 @@ import math
 import re
 import uuid
 from .profile import validate
-from .store import encode
+from .store import encode, health_receipt_name, validate_health_receipt
 
 PHASES = {'preparing', 'downloading', 'backed-up', 'restoring-route',
           'installing', 'awaiting-launch', 'verifying', 'complete',
@@ -308,16 +308,15 @@ class Manager:
     def _receipt(self, tx, kind):
         value = self.store.read(self._receipt_name(tx,kind))
         if value is None: return None
-        if (not isinstance(value, dict) or value.get('transaction') != tx['id']
-                or value.get('version') != tx['prior' if tx['phase']=='verifying-rollback' else 'candidate']['version']
-                or type(value.get('at')) not in (int, float)
+        validate_health_receipt(value, tx['id'])
+        if (value['version'] != tx['prior' if tx['phase']=='verifying-rollback' else 'candidate']['version']
                 or not tx['launched'] <= value['at'] < tx['deadline']):
             raise ValueError('invalid health receipt')
         return value
 
     @staticmethod
     def _receipt_name(tx,kind):
-        return kind+('-rollback-' if tx['phase']=='verifying-rollback' else '-')+tx['id']
+        return health_receipt_name(tx['id'], kind, tx['phase'] == 'verifying-rollback')
 
     def _health(self, transaction, version, kind):
         tx = self._load()
