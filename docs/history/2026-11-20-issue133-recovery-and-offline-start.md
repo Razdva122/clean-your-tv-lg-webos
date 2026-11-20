@@ -77,6 +77,13 @@ segment signatures but ended on truncated input; it cannot establish complete
 image validity or the presence/absence of a factory service. Vendor files and
 raw extraction logs stay outside Git. No vendor daemon has been run.
 
+Acquisition blocker on this pass: the mirror returned HTTP 429 when resuming
+one of the two bounded range transfers. Existing partial ranges were preserved
+outside Git and transfers stopped; no complete archive hash is claimed.
+`unsquashfs -l` cannot read the directory/ID tables from the available prefix.
+That is expected for incomplete input, not evidence of a defective LG image.
+Resume and authenticate the complete input before interpreting factory files.
+
 ## Source boundary and next offline checks
 
 The original failure is explained by v1.4.0 `prepare_stock_home`: with an absent
