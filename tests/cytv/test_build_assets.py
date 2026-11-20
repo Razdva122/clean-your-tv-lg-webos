@@ -90,16 +90,22 @@ class BuildAssetsTests(unittest.TestCase):
                 self.assertEqual((Path(directory) / packaged).read_bytes(),
                                  (root / 'assets/brand' / master).read_bytes())
 
-    def test_setup_examples_are_staged_for_offline_desktop_use(self):
+    def test_installer_documents_are_staged_for_offline_desktop_use(self):
         import tempfile
         root = Path(__file__).resolve().parents[2]
         build = runpy.run_path(str(root / 'scripts/build-cytv.py'))
         with tempfile.TemporaryDirectory() as directory:
-            build['stage_guide_assets'](Path(directory))
+            payload = Path(directory)
+            guide = root / 'android/app/src/main/assets/ui/guide'
+            build['stage_installer_docs'](payload)
             for name in ('sign-in.png', 'dev-mode.png', 'key-server.png'):
-                actual = (Path(directory) / 'setup-guide' / name).read_bytes()
+                actual = (payload / 'setup-guide' / name).read_bytes()
                 self.assertTrue(actual.startswith(b'\x89PNG\r\n\x1a\n'))
-                self.assertEqual(actual, (root / 'android/app/src/main/assets/ui/guide' / name).read_bytes())
+                self.assertEqual(actual, (guide / name).read_bytes())
+            self.assertEqual((payload / 'setup-guide/README.md').read_bytes(),
+                             (guide / 'README.md').read_bytes())
+            for name in ('LICENSE', 'THIRD_PARTY_NOTICES.md'):
+                self.assertEqual((payload / name).read_bytes(), (root / name).read_bytes())
 
     def test_theme_previews_are_staged_for_offline_desktop_use(self):
         import tempfile

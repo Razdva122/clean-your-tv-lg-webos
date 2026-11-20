@@ -181,11 +181,13 @@ def stage_brand_assets(payload):
         (payload / packaged).write_bytes((ROOT / 'assets/brand' / master).read_bytes())
 
 
-def stage_guide_assets(payload):
+def stage_installer_docs(payload):
     target = payload / 'setup-guide'
     target.mkdir(exist_ok=True)
     for name in ('sign-in.png', 'dev-mode.png', 'key-server.png', 'README.md'):
         shutil.copy2(ROOT / 'android/app/src/main/assets/ui/guide' / name, target / name)
+    for name in ('LICENSE', 'THIRD_PARTY_NOTICES.md'):
+        (payload / name).write_bytes((ROOT / name).read_bytes())
 
 
 def stage_theme_previews(payload):
@@ -285,7 +287,7 @@ def build_payload():
     (payload / 'fallback.png').write_bytes(launcher['brand-v2-icon.png'])
     (payload / 'installer.png').write_bytes((ROOT / 'assets/icons/installer.png').read_bytes())
     stage_brand_assets(payload)
-    stage_guide_assets(payload)
+    stage_installer_docs(payload)
     stage_theme_previews(payload)
     for graphics, paths in GRAPHICS.items():
         subprocess.run([sys.executable, 'root-edition/build.py', '--output', str(payload / paths['root']), '--version', versions['root'], '--resolution', graphics], cwd=ROOT, check=True)
@@ -294,8 +296,6 @@ def build_payload():
     stage_updater(payload)
     subprocess.run([sys.executable,'system-updater/build.py','--output',str(payload/'system-updater')],cwd=ROOT,check=True)
     stage_legacy_root_beta(payload, versions['root'], keyfilter_guard)
-    (payload / 'LICENSE').write_bytes((ROOT / 'LICENSE').read_bytes())
-    (payload / 'THIRD_PARTY_NOTICES.md').write_bytes((ROOT / 'THIRD_PARTY_NOTICES.md').read_bytes())
     shutil.copytree(ROOT / 'cytv/licenses', payload / 'licenses/Qt', dirs_exist_ok=True)
     # Ship dependency license metadata as well as application notices in the executable.
     import importlib.metadata
