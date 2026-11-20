@@ -45,6 +45,19 @@ let browser;
   await page
     .getByRole('button', { name: 'Настроить телевизор', exact: true })
     .click();
+  await page.evaluate(() =>
+    receiveNative({ kind: 'inspection-error', host: '192.168.1.50' })
+  );
+  await page.getByRole('dialog').waitFor({ timeout: 3000 });
+  assert.match(
+    await page.getByRole('dialog').innerText(),
+    /Не удалось запустить проверку подключения/
+  );
+  assert.equal(await page.getByRole('radio').count(), 0);
+  await page.getByRole('button', { name: 'OK', exact: true }).click();
+  await page
+    .getByRole('button', { name: 'Настроить телевизор', exact: true })
+    .click();
   for (const [r, d, selected] of [
     [true, false, 'Root'],
     [false, true, 'No-root'],
@@ -65,6 +78,13 @@ let browser;
     const checked = page.locator('[role=radio][aria-checked=true]');
     assert.equal(await checked.count(), selected ? 1 : 0);
     if (selected) assert((await checked.innerText()).startsWith(selected));
+    if (!r && !d) {
+      assert.match(
+        await page.getByRole('status').innerText(),
+        /Доступ не определён/
+      );
+      assert.equal(await page.getByRole('dialog').count(), 0);
+    }
   }
   await page.getByRole('radio', { name: /Root Уже есть root/ }).click();
   await page.getByRole('button', { name: 'Продолжить', exact: true }).click();

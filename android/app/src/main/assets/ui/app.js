@@ -580,7 +580,12 @@ function updateLog() {
   if (tasks) tasks.innerHTML = taskList();
 }
 window.receiveNative = function (event, fromSnapshot = false) {
-  if (event.kind === 'inspection') {
+  if (event.kind === 'inspection-error') {
+    if (event.host !== host || !inspecting) return;
+    inspecting = false;
+    render();
+    info(t('inspectionError'), true);
+  } else if (event.kind === 'inspection') {
     if (event.host !== host) return;
     inspecting = false;
     detected =
