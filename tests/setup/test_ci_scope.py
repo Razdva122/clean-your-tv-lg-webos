@@ -253,14 +253,30 @@ class CIScope(unittest.TestCase):
                 ('native/service/app-inventory.js', 'false',
                  {'any', 'runtime', 'macos', 'tv_runtime', 'installer', 'setup'}),
                 ('release-plan.json', 'false', {'any', 'setup'}),
-                ('launcher/style.css', 'false', {'any', 'runtime', 'ui', 'preview'}),
+                ('launcher/style.css', 'false', {'any', 'runtime', 'ui', 'preview', 'browser_core'}),
                 ('android/app/build.gradle', 'false', {'any', 'runtime', 'android'}),
+                ('android/app/src/main/java/com/cleanyourtv/android/MainActivity.kt', 'false',
+                 {'any', 'runtime', 'android'}),
+                *((f'android/app/src/main/assets/ui/{name}', 'false',
+                   {'any', 'runtime', 'android', 'browser_core'})
+                  for name in ('app.js', 'translations.js', 'index.html', 'style.css')),
+                ('android/tests/auto-recovery-journey.cjs', 'false',
+                 {'any', 'runtime', 'android', 'browser_core'}),
+                ('android/tests/recovery-action.cjs', 'false',
+                 {'any', 'runtime', 'android', 'browser_core'}),
+                ('android/tests/restart-result.cjs', 'false',
+                 {'any', 'runtime', 'android', 'browser_core'}),
+                ('android/tests/ui.cjs', 'false',
+                 {'any', 'runtime', 'android', 'browser_core'}),
+                ('android/tests/localization.cjs', 'false',
+                 {'any', 'runtime', 'android', 'browser_core'}),
+                ('tests/root-decoder-ui.cjs', 'false', {'any', 'runtime', 'preview'}),
                 ('docs/development/README.md', 'false', set()),
                 ('shared.json', 'false', {'any', 'runtime', 'macos', 'ui', 'tv',
-                                        'tv_runtime', 'installer', 'android', 'setup', 'preview'}),
+                                        'tv_runtime', 'installer', 'android', 'setup', 'preview', 'browser_core'}),
                 ('native/service/app-inventory.js', 'true',
                  {'any', 'runtime', 'macos', 'ui', 'tv', 'tv_runtime',
-                  'installer', 'android', 'setup', 'preview'}),
+                  'installer', 'android', 'setup', 'preview', 'browser_core'}),
             ):
                 output.write_text('')
                 with self.subTest(path=path, full=full), \
@@ -284,9 +300,9 @@ class CIScope(unittest.TestCase):
             (weather, False, {'weather'}),
             ((*weather, 'docs/i18n/en.md'), False, {'weather', 'preview'}),
             ((*weather, 'root-edition/install_device.py'), False,
-             {'weather', 'tv', 'installer', 'setup'}),
+             {'weather', 'tv', 'installer', 'setup', 'browser-core'}),
             ((*weather, 'package-lock.json'), False, {'weather', *scope['COMPONENTS']}),
-            (('launcher/weather-transport.js',), False, {'tv', 'installer', 'setup', 'preview'}),
+            (('launcher/weather-transport.js',), False, {'tv', 'installer', 'setup', 'preview', 'browser-core'}),
             (weather, True, set(scope['COMPONENTS'])),
         )
         with tempfile.TemporaryDirectory() as directory:
@@ -306,6 +322,18 @@ class CIScope(unittest.TestCase):
                 checked = {'weather', *(name.replace('-', '_') for name in scope['COMPONENTS'])}
                 self.assertEqual({name for name in checked if result.get(name) == 'true'},
                                  {name.replace('-', '_') for name in expected})
+
+    def test_preview_test_changes_select_the_preview_runner(self):
+        import runpy
+        route = runpy.run_path(str(ROOT / 'scripts/ci-scope.py'))['components']
+        for path in ('tests/home-presentation-ui.cjs', 'tests/home-card-ui.cjs',
+                     'tests/root-decoder-ui.cjs',
+                     'tests/preview-presentation-ui.cjs', 'tests/themes/ribbon-reference-ui.cjs',
+                     'tests/themes/ribbon-edit-ui.cjs', 'tests/showcase/registry.cjs',
+                     'tests/showcase/submission-security.cjs', 'tests/showcase/remote.cjs',
+                     'tests/preview-bridge.cjs', 'tests/preview-themes-ui.cjs', 'tests/test_preview.py'):
+            with self.subTest(path=path):
+                self.assertEqual(route([path]), {'preview'})
 
     def test_routes_changes_and_shared_dependencies(self):
         path = ROOT / 'scripts/ci-scope.py'

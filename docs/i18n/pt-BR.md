@@ -123,6 +123,8 @@ Quando o instalador no computador mostrar **A remoção de Clean Your TV foi ver
 
 **Reinstalar o Root:** Escolha **Configurar minha TV → Root** com a conexão salva e confirme **Reinstalar Root?**. O instalador restaura o LG Home e remove completamente o Clean Your TV, incluindo seus atualizadores, Home Helper e preferências salvas. Após verificar a remoção, instala e ativa os pacotes e o ambiente Root incluídos nesse instalador. Os outros apps da TV e o acesso root/SSH existente são preservados. Se o assistente no computador pausar, abra o mesmo instalador e escolha **Continuar a reinstalação do Root**. Após a verificação da remoção, escolha **Continuar a instalação do Root**. **Desinstalar Clean Your TV** sozinho nunca inicia outra instalação.
 
+Se o assistente pedir uma reinicialização completa durante a limpeza, tire a TV da tomada, conecte-a novamente e ligue-a. Depois que iniciar, escolha **Já reiniciei a TV — verificar e continuar**.
+
 ### Alterar configurações da LG e concluir a recuperação do Root
 
 No instalador para computador, abra **Ação de manutenção → Ajustar as configurações da LG (Debloat)** com a conexão salva da TV. Selecione as configurações que quer alterar, escolha **Aplicar configurações selecionadas** e confira os resultados. Se houver uma operação pendente, escolha primeiro **Revisar opções de recuperação** com a conexão original salva.
@@ -155,6 +157,8 @@ Referências detalhadas em inglês: [requisitos](../COMPATIBILITY.md) · [contro
 <a id="remoção-simples-v1110"></a>
 
 ## Configurações
+
+Quando não há uma preferência salva, o protetor de tela fica ativado por padrão. Para desativá-lo, abra **Configurações do Home → Protetor de tela**.
 
 Em **Configurações → Aparência**, ative **Ordenar por frequência de uso**. A ordem do dock é preservada. Segure OK para mover ou ocultar um bloco na ordem manual. Desative a opção para voltar à ordem manual. A opção também fica no fim das configurações do instalador cytv.
 

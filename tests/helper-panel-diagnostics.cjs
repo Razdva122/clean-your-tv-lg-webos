@@ -495,6 +495,7 @@ if (process.argv.includes('--browser'))
           await page.setContent(
             '<html><body><button id="previous">Home</button></body></html>'
           );
+          await page.addStyleTag({ path: 'launcher/settings-panel.css' });
           await page.addStyleTag({ path: 'launcher/renewal-panel.css' });
           await page.evaluate((map) => {
             window.calls = [];

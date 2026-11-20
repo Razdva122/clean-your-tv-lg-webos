@@ -38,6 +38,8 @@ class PreviewTests(unittest.TestCase):
             for name in ('native-bootstrap.js', 'helper-control.js', 'renewal-panel.js', 'renewal-panel.css', 'user-data.js', 'update-panel.js', 'profile-bootstrap.js'):
                 self.assertNotIn(name, html)
                 self.assertFalse((app / name).exists())
+            self.assertLess(html.index('settings-panel.css'), html.index('root-settings.css'))
+            self.assertEqual((app / 'settings-panel.css').read_bytes(), (ROOT / 'launcher/settings-panel.css').read_bytes())
             self.assertIn('root-settings.js', html)
             self.assertIn('root-firmware.js', html)
             self.assertLess(html.index('root-firmware-control.js'), html.index('root-firmware.js'))

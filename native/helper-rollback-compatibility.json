@@ -1,9 +1,9 @@
 {
-  "from_helper": "0.9.1",
-  "to_helper": "0.9.2",
-  "rollback_home": "1.20.3",
-  "rollback_sha256": "12a78eec51c8b34348424ab78b0788605c73283387f126e770c296899f211d79",
-  "prior_helper_sha256": "af3db481891c46b76f260000416b76f041a5758a120de81c2e5779904c2c86a2",
-  "candidate_archive_sha256": "f2b514e80b93e8505dda8b437bca27b5743fd224c7cd1321ffd2330c3f8cdbd7",
-  "acceptance": "2026-11-18 project LG OLED55C3RLA, firmware 43.21.71, webOS SDK 11.2.0. Mac ARM64 source installer cytv 0.21.3 with the saved No-root Root SSH connection and network remote. The production-key-signed v1.24.1 feeds authenticated FHD/HD Home 1.20.3 and Helper 0.9.1. Ordinary setup installed published FHD Home 1.20.3 with exact Helper 0.9.2 (IPK SHA-256 0aa4b43c91e6a14151dc29a2ad9975b33933376d00d6f9042059e60116c56da4). Readback matched Home metadata and app.js, Helper app and service metadata and both state-permissions.js copies. Start using the published Home launch parameters succeeded. The first network HOME after launch stayed in LG Home. Published Renewal homeStatus and listApps then returned success with the installed Helper, and Home control was enabled. The next single network HOME from Media Player opened Clean Your TV and held for one second. Ordinary Restore returned the network route to LG Home. The ordinary installer downgraded Helper to signed 0.9.1; installed files, idle receipts and stock network Home verified before restoring the original active Clean Your TV route. Physical remote, standby, AC cold boot, sound, OTA and C1 drift recovery were outside the probe."
+  "from_helper": "0.9.2",
+  "to_helper": "0.9.3",
+  "rollback_home": "1.20.4",
+  "rollback_sha256": "9230471d36e1e3984e06e2f6636eeffea2f7fb9c397b4ca3055559ff35e650f2",
+  "prior_helper_sha256": "0aa4b43c91e6a14151dc29a2ad9975b33933376d00d6f9042059e60116c56da4",
+  "candidate_archive_sha256": "b7c52e679d39947f55733a6c0c0c5d20268200208c7597553437e5797b5b3327",
+  "acceptance": "2026-11-20 project LG OLED55C3RLA, firmware 43.21.71, SDK 11.2.0. Ordinary macOS ARM64 source installer cytv 0.23.0 via the saved No-root Root SSH connection installed exactly the published v1.25.0 Home 1.20.4 FHD and candidate Helper 0.9.3. Candidate Helper IPK SHA-256 89a8d0eec0da5b0795ad239ca620408d3d93d5cb8995480a7f389108598c6f0f. Twelve selected installed application and service files matched both inputs. The installer reported verified completion. The rendered published Home returned enabled from Renewal homeStatus and succeeded on listApps. Paired network HOME from Media Player reached Clean Your TV and remained in the foreground. The published HD archive and rollback Helper remain authenticated by the v1.25.0 feed evidence. Scope is this compatibility pair on C3; physical remote, audio, standby, cold boot, OTA and the reported webOS 4.5 sequence were outside this pair test."
 }

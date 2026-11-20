@@ -527,6 +527,8 @@ function showPrompt(event) {
       ? event.secretType === 'root'
       : /root/i.test(event.text);
     content = `<div class="dialog-icon">${icon('key')}</div><h2 id="prompt-title">${t(key ? 'keySecretTitle' : isRoot ? 'rootSecretTitle' : 'secretTitle')}</h2><p>${t(key ? 'keySecretDesc' : isRoot ? 'rootSecretDesc' : 'secretDesc')}</p>${!key && !isRoot ? guideImage('key-server') : ''}<label class="dialog-label" for="prompt-value">${t(key ? 'keySecretTitle' : isRoot ? 'rootSecretTitle' : 'secretTitle')}</label><input class="prompt-input" id="prompt-value" type="password" autocomplete="off" autocapitalize="off" spellcheck="false"><div class="dialog-actions">${primary('continue', 'secret', 'key')}<button class="text-button" data-action="cancel-prompt">${t('cancel')}</button></div>`;
+  } else if (event.kind === 'text') {
+    content = `<h2 id="prompt-title">${esc(event.text)}</h2><p id="name-hint">${esc(event.hint)}</p>${event.error ? `<p class="error-summary" id="name-error" role="alert">${esc(event.error)}</p>` : ''}<input class="prompt-input" id="prompt-value" type="text" aria-labelledby="prompt-title" aria-describedby="name-hint${event.error ? ' name-error' : ''}"${event.error ? ' aria-invalid="true"' : ''}><div class="dialog-actions">${primary('continue', 'text-prompt', 'check')}<button class="text-button" data-action="cancel-prompt">${t('cancel')}</button></div>`;
   } else if (Array.isArray(event.options) && event.options.length) {
     content = `<div class="dialog-icon">${icon('log')}</div><h2 id="prompt-title">${t('reviewTitle')}</h2><div class="context" tabindex="0">${esc(event.context || event.text)}</div><div class="dialog-actions">${event.options.map((option) => `<button class="${option.value === event.defaultChoice ? 'primary' : 'secondary'}" data-action="choice-prompt" data-value="${esc(option.value)}">${esc(option.label)}${option.detail ? `<span>${esc(option.detail)}</span>` : ''}</button>`).join('')}<button class="text-button" data-action="cancel-prompt">${t('cancel')}</button></div>`;
   } else {
@@ -641,7 +643,7 @@ window.receiveNative = function (event, fromSnapshot = false) {
   } else if (event.kind === 'stage') {
     stage = Math.max(stage, Math.min(3, Math.max(0, Number(event.stage) || 0)));
     updateLog();
-  } else if (['trust', 'secret', 'question'].includes(event.kind)) {
+  } else if (['trust', 'secret', 'text', 'question'].includes(event.kind)) {
     showPrompt(event);
   } else if (event.kind === 'answered') {
     if (pendingPrompt?.id === event.id) {
@@ -791,7 +793,7 @@ document.addEventListener('click', (event) => {
     answer(button.dataset.value);
   } else if (cmd === 'confirm') {
     answer('y');
-  } else if (cmd === 'secret') {
+  } else if (cmd === 'secret' || cmd === 'text-prompt') {
     answer(document.getElementById('prompt-value').value);
   } else if (cmd === 'cancel-prompt') {
     answer(null);
@@ -849,7 +851,12 @@ dialog.addEventListener('cancel', (event) => {
   }
 });
 dialog.addEventListener('keydown', (event) => {
-  if (event.key === 'Enter' && pendingPrompt?.kind === 'secret') {
+  if (
+    event.key === 'Enter' &&
+    !event.isComposing &&
+    (pendingPrompt?.kind === 'secret' ||
+      (pendingPrompt?.kind === 'text' && event.target.id === 'prompt-value'))
+  ) {
     event.preventDefault();
     answer(document.getElementById('prompt-value').value);
   }

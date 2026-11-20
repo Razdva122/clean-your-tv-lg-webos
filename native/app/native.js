@@ -142,7 +142,8 @@ if (!automatic) {
   )
     process.exit(0);
 }
-var lastForeground = null,
+var foregroundSequence = 0,
+  lastForeground = null,
   lastForegroundAt = null,
   monitor = 'starting',
   monitorReason = null,
@@ -289,26 +290,101 @@ function launchHome(reason, done) {
         if (done) done(false);
         return;
       }
-      homeCloseState = 'idle';
-      var params =
-        reason === 'home'
-          ? { cytvHome: { reason: 'home', generation: generation } }
-          : { reason: reason };
-      homeLaunchPending = true;
-      launch(
-        'com.gathin.tvhome',
-        function (ok, known) {
-          // A later accepted launch cannot settle an older timed-out SAM request.
-          homeLaunchPending = false;
-          homeLaunchUnknown = homeLaunchUnknown || !known;
-          if (stopping || stopRequested || visitingLG) {
-            if (homeCloseState === 'closed') homeCloseState = 'idle';
-            invalidatePresentation(!terminalUI);
+      function dispatch() {
+        if (
+          stopping ||
+          stopRequested ||
+          readStop() ||
+          !generationCurrent() ||
+          child !== worker ||
+          visitingLG ||
+          generation !== presentation.generation()
+        ) {
+          if (done) done(true);
+          return;
+        }
+        homeCloseState = 'idle';
+        var params =
+          reason === 'home'
+            ? { cytvHome: { reason: 'home', generation: generation } }
+            : { reason: reason };
+        homeLaunchPending = true;
+        launch(
+          'com.gathin.tvhome',
+          function (ok, known) {
+            // A later accepted launch cannot settle an older timed-out SAM request.
+            homeLaunchPending = false;
+            homeLaunchUnknown = homeLaunchUnknown || !known;
+            if (stopping || stopRequested || visitingLG) {
+              if (homeCloseState === 'closed') homeCloseState = 'idle';
+              invalidatePresentation(!terminalUI);
+            }
+            if (done) done(ok);
+          },
+          params
+        );
+      }
+      if (reason !== 'startup' || !automatic) {
+        dispatch();
+        return;
+      }
+      var deadline = monotonic() + 12000;
+      function checkForeground() {
+        if (
+          stopping ||
+          stopRequested ||
+          readStop() ||
+          !generationCurrent() ||
+          visitingLG ||
+          generation !== presentation.generation()
+        ) {
+          if (done) done(true);
+          return;
+        }
+        var sequence = foregroundSequence;
+        function observed(id) {
+          if (
+            stopping ||
+            stopRequested ||
+            readStop() ||
+            !generationCurrent() ||
+            visitingLG ||
+            generation !== presentation.generation()
+          ) {
+            if (done) done(true);
+            return;
           }
-          if (done) done(ok);
-        },
-        params
-      );
+          // A newer subscription observation wins over an in-flight reply.
+          if (
+            foregroundSequence !== sequence &&
+            lastForeground &&
+            lastForeground !== 'com.webos.app.home' &&
+            lastForeground !== 'com.webos.app.cpcover'
+          )
+            id = lastForeground;
+          diagnostic('startup-foreground', { id: id });
+          if (!id) {
+            if (monotonic() < deadline) {
+              setTimeout(checkForeground, 200);
+              return;
+            }
+            log({ event: 'startup-foreground-unavailable' });
+          } else if (
+            id === 'com.webos.app.home' ||
+            id === 'com.webos.app.cpcover'
+          ) {
+            dispatch();
+            return;
+          } else {
+            log({ event: 'startup-preserved-foreground', id: id });
+          }
+          if (done) done(true);
+        }
+        if (screenWatch && typeof screenWatch.foreground === 'function')
+          screenWatch.foreground(observed);
+        else observed(null);
+      }
+      checkForeground();
     });
   }
   // The canonical Home is a CARD. Its activation must not wait for an overlay
@@ -1519,6 +1595,7 @@ var screenWatch = require('./screen-watch')(
   data,
   screenLog,
   function (id) {
+    foregroundSequence++;
     if (
       diagnosticUntil &&
       diagnosticExpires &&
@@ -1573,6 +1650,7 @@ var screenWatch = require('./screen-watch')(
     screensaverPowerActive = false;
     stopScreensaver();
     invalidatePresentation(false);
+    foregroundSequence++;
     lastForeground = null;
     lastForegroundAt = null;
     monitor = 'reset';

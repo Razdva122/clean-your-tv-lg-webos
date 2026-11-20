@@ -5,6 +5,7 @@ from pathlib import Path
 
 from cytv import cli, diagnostics, state, i18n
 from cytv.desktop import RETRY_STORAGE_CHECK, RETRY_STORAGE_PROMPT
+from cytv.prompts import HomeNamePrompt
 from cytv.transport import SSH
 from cytv.terminal import Console
 
@@ -118,6 +119,11 @@ class AndroidConsole(Console):
         read = super().reader(ask)
 
         def read_prompt(prompt):
+            if isinstance(prompt, HomeNamePrompt):
+                return self.callbacks.request(
+                    kind='text', text=i18n.translate('Home screen name'),
+                    hint=i18n.translate('Leave the field blank to keep the current name.'),
+                    error=i18n.translate(prompt.error))
             if prompt == f'{RETRY_STORAGE_PROMPT} [y/N]: ':
                 return ask(self.prompt(prompt), reason='storage-preflight-failed',
                            actions=['retry-storage-check'], confirmLabel=i18n.translate(RETRY_STORAGE_CHECK))

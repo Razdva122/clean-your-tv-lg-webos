@@ -55,7 +55,7 @@ and creating your own theme.
 ## Download and install
 
 <!-- release:downloads -->
-Current stable release: **[v1.25.0](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.25.0)** — [release notes](docs/RELEASE-1.25.0.md).
+Current stable release: **[v1.26.0](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.26.0)** — [release notes](docs/RELEASE-1.26.0.md).
 <!-- /release:downloads -->
 
 [![Download Windows x64 graphical installer — GUI ZIP](assets/brand/downloads/windows.svg)](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/latest/download/cytv-windows-x64-desktop.zip)
@@ -143,12 +143,12 @@ For contributors: [build and technical references](docs/development/README.md),
 <!-- release:components -->
 | Component | Stable version |
 | --- | --- |
-| cytv installer | 0.22.0 |
-| Home | 1.20.4 |
-| Home Helper | 0.9.2 |
-| Root edition | 0.22.0 |
-| Both edition Updaters | 0.6.3 |
-| Android installer / versionCode | 0.21.0 / 51 |
+| cytv installer | 0.23.0 |
+| Home | 1.20.5 |
+| Home Helper | 0.9.3 |
+| Root edition | 0.23.0 |
+| Both edition Updaters | 0.6.4 |
+| Android installer / versionCode | 0.22.0 / 52 |
 <!-- /release:components -->
 
 v1.15.0 fresh System Updater: 1.2.8 / protocol 1. v1.14.0 used 1.2.7. Existing supervisors stay pinned; installed 1.1.2 has no general replacement path. See the [delivery limits](docs/RELEASE-1.13.0.md).
@@ -158,6 +158,160 @@ See the [1.7.0 release notes](docs/RELEASE-1.7.0.md)
 and historical [1.5.0 TV acceptance and limits](docs/RELEASE-1.5.0.md).
 
 </details>
+
+<!-- compatibility:readme -->
+<details>
+<summary>TV test results by webOS</summary>
+
+✅ Home button verified · ❔ Partial or unconfirmed
+
+<details>
+<summary>❔ webOS 1</summary>
+
+| Home | TV · Edition | Reported webOS |
+| :---: | --- | --- |
+| ❔ | 32LB650V-ZN · No-root | 1.4.0 |
+| ❔ | 55LB652V-ZA · No-root | 1.4.0-2536 |
+
+</details>
+
+<details>
+<summary>❔ webOS 3</summary>
+
+| Home | TV · Edition | Reported webOS |
+| :---: | --- | --- |
+| ❔ | 49UJ651V-ZA · No-root | 3.5 |
+| ❔ | 49UJ750V · No-root | 3.5 |
+| ❔ | 60UJ6050-UA · No-root | SDK 3.9.0 |
+
+</details>
+
+<details>
+<summary>✅ webOS 4</summary>
+
+| Home | TV · Edition | Reported webOS |
+| :---: | --- | --- |
+| ✅ | 55SK8100PLA · No-root | 4; SDK 4.4.0 |
+| ✅ | 55UK7500PSA · No-root | SDK 4.4.0 |
+| ✅ | UK6400PLF · No-root | 4.x |
+
+</details>
+
+<details>
+<summary>✅ webOS 4.5–5</summary>
+
+| Home | TV · Edition | Reported webOS |
+| :---: | --- | --- |
+| ✅ | UM7450PLA · No-root | 4.5 |
+| ❔ | 43UM7600PLB · No-root | 4.5 |
+| ❔ | 49NANO80PNA · No-root | SDK 5.6.2 |
+| ❔ | 55NANO81ANA · No-root | 5.6.2-21 |
+| ❔ | 55UM7450PLA · No-root | SDK 4.10.0 |
+| ❔ | 65UM7470PSA · No-root | 4.5 (build 4.10.2-29) |
+| ❔ | LM6370PSB · No-root | 4.5 |
+| ❔ | OLED55C9PLA · No-root | 4.5 / SDK 4.9.0 |
+
+</details>
+
+<details>
+<summary>✅ webOS 6</summary>
+
+| Home | TV · Edition | Reported webOS |
+| :---: | --- | --- |
+| ✅ | 50NANO756PA · No-root | 6; SDK 6.5.3 |
+| ✅ | OLED55B19LA · No-root | 6; SDK 6.5.3 |
+| ✅ | OLED65C1PSA · Root | SDK 6.5.3 |
+| ✅ | OLED65G19LA · No-root | SDK 6.5.3 |
+| ✅ | OLED77C12LA · No-root | SDK 6.5.3 |
+| ❔ | 43UP751C0ZF · No-root | SDK 6.5.3 |
+| ❔ | 55UP7000PUA · No-root | 6.2.1 |
+| ❔ | OLED55C11LB · No-root | 6.0 |
+| ❔ | OLED55C14LB · No-root | 6 |
+
+</details>
+
+<details>
+<summary>❔ webOS 22</summary>
+
+| Home | TV · Edition | Reported webOS |
+| :---: | --- | --- |
+| ❔ | 43NANO766QA · No-root | 22 |
+| ❔ | 43UQ75003LF · No-root | 7.6.0 |
+| ❔ | 55UQ7400PSF · No-root | 22 |
+
+</details>
+
+<details>
+<summary>✅ webOS 24</summary>
+
+| Home | TV · Edition | Reported webOS |
+| :---: | --- | --- |
+| ✅ | OLED55G36LA · No-root | SDK 9.2.2 |
+
+</details>
+
+<details>
+<summary>✅ webOS 25</summary>
+
+| Home | TV · Edition | Reported webOS |
+| :---: | --- | --- |
+| ✅ | 50NANO80ASA · No-root | 25; SDK10.3.2 |
+| ✅ | 55UR91006LA · No-root | SDK10.3.2 |
+| ✅ | OLED42C24LA · No-root | 10.3.1 |
+| ✅ | OLED55B36LA · No-root | SDK 10.3.2 |
+| ✅ | QNED75URA · No-root | 25 / SDK 10.3.2 |
+| ❔ | 65QNED80SRA · No-root | 25; 10.3.2-33 reported |
+| ❔ | 65QNED80TSA · No-root | SDK 10.3.2 |
+| ❔ | 75NANO80TSA · No-root | 25; SDK 10.3.2 |
+| ❔ | OLED42C2PSA · Root | 10.3.1-3006 (SDK 10.3.1) |
+| ❔ | OLED48B46LA · Root | SDK 10.3.2 |
+| ❔ | OLED55C2PUA · No-root | 10.3.1 / build 3006 |
+| ❔ | OLED55C46LA · Root | 10.3.1 |
+
+</details>
+
+<details>
+<summary>✅ webOS 26</summary>
+
+| Home | TV · Edition | Reported webOS |
+| :---: | --- | --- |
+| ✅ | OLED42C24LA · No-root | SDK 11.2.0 |
+| ✅ | OLED55C3RLA · Root | SDK11.2.0 |
+| ✅ | OLED77C34LA · No-root | SDK 11.2.0 |
+| ✅ | OLED83G36LA · No-root | SDK 11.2.0 |
+| ❔ | LG C3 · No-root | 26 |
+| ❔ | OLED48C24LA · No-root | SDK 11.2.0 |
+| ❔ | OLED55C5ELB · No-root | 26 |
+| ❔ | OLED55C35LA · No-root | 26 (build 11.2.0-3711) |
+| ❔ | OLED65C5PUA · No-root | 26; SDK 11.2.0-3706 |
+| ❔ | OLED65C57LA · No-root | SDK 11.2.0 |
+| ❔ | OLED65G39LA · Root | 26 / SDK 11.2.0 |
+| ❔ | OLED77G5RLA · Root | SDK 11.2.0 |
+
+</details>
+
+<details>
+<summary>❔ Version not reported</summary>
+
+| Home | TV · Edition | Reported webOS |
+| :---: | --- | --- |
+| ❔ | LG C5 77″ · No-root | Not reported |
+| ❔ | OLED48C55LA · No-root | Not reported |
+| ❔ | OLED55C16LA · No-root | Not reported |
+| ❔ | OLED55C47LA · No-root | Not reported |
+| ❔ | OLED55G59LS · No-root | Not reported |
+| ❔ | OLED65C2PUA · No-root | Not reported |
+| ❔ | OLED65C3LA · No-root | Not reported |
+| ❔ | OLED65C3PUA · No-root | Not reported |
+| ❔ | OLED65C11LB · Root | Not reported |
+| ❔ | UN70006LA · No-root | Not reported |
+
+</details>
+
+[Test details and sources](docs/COMPATIBILITY.md#user-reported-working-tvs)
+
+</details>
+<!-- /compatibility:readme -->
 
 <a id="credits"></a>
 

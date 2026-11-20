@@ -63,10 +63,22 @@
       ]
     ],
     "tableHint": "Scroll sideways to compare both editions.",
-    "reportsTitle": "User-confirmed TVs",
+    "reportsTitle": "TV models",
     "firmwareLabel": "Firmware",
     "webosLabel": "webOS",
-    "releaseLabel": "Project release"
+    "releaseLabel": "Project release",
+    "reportVersionsTitle": "webOS versions",
+    "unknownWebos": "Version not reported",
+    "reportResults": {
+      "controls-tested": "Home button verified",
+      "reported-working": "Reported working",
+      "partial": "Works with limitations"
+    },
+    "reportSources": {
+      "public-owner-report": "Owner report",
+      "maintainer-qa": "Project test"
+    },
+    "noCatalogResults": "No reports in this catalog"
   },
   "de": {
     "helpTitle": "Hilfe und Wiederherstellung",
@@ -132,10 +144,22 @@
       ]
     ],
     "tableHint": "Seitlich scrollen, um beide Editionen zu vergleichen.",
-    "reportsTitle": "Von Nutzern bestätigte TVs",
+    "reportsTitle": "TV-Modelle",
     "firmwareLabel": "Firmware",
     "webosLabel": "webOS",
-    "releaseLabel": "Projektversion"
+    "releaseLabel": "Projektversion",
+    "reportVersionsTitle": "webOS-Versionen",
+    "unknownWebos": "Version nicht angegeben",
+    "reportResults": {
+      "controls-tested": "Home-Taste geprüft",
+      "reported-working": "Als funktionsfähig gemeldet",
+      "partial": "Funktioniert mit Einschränkungen"
+    },
+    "reportSources": {
+      "public-owner-report": "Nutzerbericht",
+      "maintainer-qa": "Projekttest"
+    },
+    "noCatalogResults": "Keine Berichte in diesem Katalog"
   },
   "es": {
     "helpTitle": "Ayuda y recuperación",
@@ -201,10 +225,22 @@
       ]
     ],
     "tableHint": "Desplázate horizontalmente para comparar ambas ediciones.",
-    "reportsTitle": "TV confirmados por usuarios",
+    "reportsTitle": "Modelos de TV",
     "firmwareLabel": "Firmware",
     "webosLabel": "webOS",
-    "releaseLabel": "Versión del proyecto"
+    "releaseLabel": "Versión del proyecto",
+    "reportVersionsTitle": "Versiones de webOS",
+    "unknownWebos": "Versión no indicada",
+    "reportResults": {
+      "controls-tested": "Botón Home verificado",
+      "reported-working": "Funcionamiento reportado",
+      "partial": "Funciona con limitaciones"
+    },
+    "reportSources": {
+      "public-owner-report": "Informe del propietario",
+      "maintainer-qa": "Prueba del proyecto"
+    },
+    "noCatalogResults": "No hay informes en este catálogo"
   },
   "pt-BR": {
     "helpTitle": "Ajuda e recuperação",
@@ -270,10 +306,22 @@
       ]
     ],
     "tableHint": "Role para os lados para comparar as duas edições.",
-    "reportsTitle": "TVs confirmadas por usuários",
+    "reportsTitle": "Modelos de TV",
     "firmwareLabel": "Firmware",
     "webosLabel": "webOS",
-    "releaseLabel": "Versão do projeto"
+    "releaseLabel": "Versão do projeto",
+    "reportVersionsTitle": "Versões do webOS",
+    "unknownWebos": "Versão não informada",
+    "reportResults": {
+      "controls-tested": "Botão Home verificado",
+      "reported-working": "Funcionamento relatado",
+      "partial": "Funciona com limitações"
+    },
+    "reportSources": {
+      "public-owner-report": "Relato do proprietário",
+      "maintainer-qa": "Teste do projeto"
+    },
+    "noCatalogResults": "Sem relatos neste catálogo"
   },
   "fr": {
     "helpTitle": "Aide et récupération",
@@ -339,10 +387,22 @@
       ]
     ],
     "tableHint": "Faites défiler horizontalement pour comparer les deux éditions.",
-    "reportsTitle": "TV confirmées par les utilisateurs",
+    "reportsTitle": "Modèles de téléviseurs",
     "firmwareLabel": "Micrologiciel",
     "webosLabel": "webOS",
-    "releaseLabel": "Version du projet"
+    "releaseLabel": "Version du projet",
+    "reportVersionsTitle": "Versions de webOS",
+    "unknownWebos": "Version non renseignée",
+    "reportResults": {
+      "controls-tested": "Bouton Home vérifié",
+      "reported-working": "Fonctionnement signalé",
+      "partial": "Fonctionne avec des limites"
+    },
+    "reportSources": {
+      "public-owner-report": "Retour du propriétaire",
+      "maintainer-qa": "Test du projet"
+    },
+    "noCatalogResults": "Aucun rapport dans ce catalogue"
   },
   "it": {
     "helpTitle": "Aiuto e ripristino",
@@ -408,10 +468,22 @@
       ]
     ],
     "tableHint": "Scorri lateralmente per confrontare entrambe le edizioni.",
-    "reportsTitle": "TV confermate dagli utenti",
+    "reportsTitle": "Modelli di TV",
     "firmwareLabel": "Firmware",
     "webosLabel": "webOS",
-    "releaseLabel": "Versione del progetto"
+    "releaseLabel": "Versione del progetto",
+    "reportVersionsTitle": "Versioni di webOS",
+    "unknownWebos": "Versione non indicata",
+    "reportResults": {
+      "controls-tested": "Tasto Home verificato",
+      "reported-working": "Funzionamento segnalato",
+      "partial": "Funziona con limitazioni"
+    },
+    "reportSources": {
+      "public-owner-report": "Segnalazione del proprietario",
+      "maintainer-qa": "Test del progetto"
+    },
+    "noCatalogResults": "Nessuna segnalazione in questo catalogo"
   },
   "ko": {
     "helpTitle": "도움말 및 복구",
@@ -477,10 +549,22 @@
       ]
     ],
     "tableHint": "옆으로 스크롤하여 두 에디션을 비교하세요.",
-    "reportsTitle": "사용자가 확인한 TV",
+    "reportsTitle": "TV 모델",
     "firmwareLabel": "펌웨어",
     "webosLabel": "webOS",
-    "releaseLabel": "프로젝트 버전"
+    "releaseLabel": "프로젝트 버전",
+    "reportVersionsTitle": "webOS 버전",
+    "unknownWebos": "버전 정보 없음",
+    "reportResults": {
+      "controls-tested": "홈 버튼 확인됨",
+      "reported-working": "작동 보고됨",
+      "partial": "제한적으로 작동"
+    },
+    "reportSources": {
+      "public-owner-report": "소유자 제보",
+      "maintainer-qa": "프로젝트 테스트"
+    },
+    "noCatalogResults": "이 목록에 등록된 보고 없음"
   },
   "hi": {
     "helpTitle": "मदद और रिकवरी",
@@ -546,10 +630,22 @@
       ]
     ],
     "tableHint": "दोनों संस्करणों की तुलना के लिए बगल में स्क्रॉल करें।",
-    "reportsTitle": "उपयोगकर्ताओं द्वारा पुष्टि किए गए टीवी",
+    "reportsTitle": "टीवी मॉडल",
     "firmwareLabel": "फ़र्मवेयर",
     "webosLabel": "webOS",
-    "releaseLabel": "प्रोजेक्ट संस्करण"
+    "releaseLabel": "प्रोजेक्ट संस्करण",
+    "reportVersionsTitle": "webOS के संस्करण",
+    "unknownWebos": "संस्करण की जानकारी नहीं",
+    "reportResults": {
+      "controls-tested": "होम बटन की पुष्टि",
+      "reported-working": "काम करने की सूचना",
+      "partial": "सीमाओं के साथ काम करता है"
+    },
+    "reportSources": {
+      "public-owner-report": "मालिक की रिपोर्ट",
+      "maintainer-qa": "प्रोजेक्ट का परीक्षण"
+    },
+    "noCatalogResults": "इस सूची में कोई रिपोर्ट नहीं है"
   },
   "pl": {
     "helpTitle": "Pomoc i odzyskiwanie",
@@ -615,10 +711,22 @@
       ]
     ],
     "tableHint": "Przewiń w bok, aby porównać obie edycje.",
-    "reportsTitle": "Telewizory potwierdzone przez użytkowników",
+    "reportsTitle": "Modele telewizorów",
     "firmwareLabel": "Oprogramowanie TV",
     "webosLabel": "webOS",
-    "releaseLabel": "Wersja projektu"
+    "releaseLabel": "Wersja projektu",
+    "reportVersionsTitle": "Wersje webOS",
+    "unknownWebos": "Nie podano wersji",
+    "reportResults": {
+      "controls-tested": "Sprawdzono przycisk Home",
+      "reported-working": "Zgłoszono działanie",
+      "partial": "Działa z ograniczeniami"
+    },
+    "reportSources": {
+      "public-owner-report": "Zgłoszenie właściciela",
+      "maintainer-qa": "Test projektu"
+    },
+    "noCatalogResults": "Brak zgłoszeń w tym katalogu"
   },
   "ru": {
     "helpTitle": "Помощь и восстановление",
@@ -684,10 +792,22 @@
       ]
     ],
     "tableHint": "Прокрутите таблицу в сторону, чтобы сравнить обе редакции.",
-    "reportsTitle": "ТВ с подтверждением пользователей",
+    "reportsTitle": "Модели ТВ",
     "firmwareLabel": "Прошивка",
     "webosLabel": "webOS",
-    "releaseLabel": "Релиз проекта"
+    "releaseLabel": "Релиз проекта",
+    "reportVersionsTitle": "Версии webOS",
+    "unknownWebos": "Версия не указана",
+    "reportResults": {
+      "controls-tested": "Кнопка Home проверена",
+      "reported-working": "Владелец сообщил о работе",
+      "partial": "Работа с ограничениями"
+    },
+    "reportSources": {
+      "public-owner-report": "Отчёт владельца",
+      "maintainer-qa": "Тест проекта"
+    },
+    "noCatalogResults": "В каталоге пока нет отчётов"
   },
   "zh-Hans": {
     "helpTitle": "帮助与恢复",
@@ -753,10 +873,22 @@
       ]
     ],
     "tableHint": "横向滚动以比较两个版本。",
-    "reportsTitle": "用户确认可用的电视",
+    "reportsTitle": "电视型号",
     "firmwareLabel": "固件",
     "webosLabel": "webOS",
-    "releaseLabel": "项目版本"
+    "releaseLabel": "项目版本",
+    "reportVersionsTitle": "webOS 版本",
+    "unknownWebos": "未报告版本",
+    "reportResults": {
+      "controls-tested": "已验证主页键",
+      "reported-working": "据报告可用",
+      "partial": "可用，但有限制"
+    },
+    "reportSources": {
+      "public-owner-report": "机主报告",
+      "maintainer-qa": "项目测试"
+    },
+    "noCatalogResults": "此目录暂无报告"
   },
   "zh-Hant": {
     "helpTitle": "說明與復原",
@@ -822,10 +954,22 @@
       ]
     ],
     "tableHint": "橫向捲動以比較兩個版本。",
-    "reportsTitle": "使用者確認可用的電視",
+    "reportsTitle": "電視型號",
     "firmwareLabel": "韌體",
     "webosLabel": "webOS",
-    "releaseLabel": "專案版本"
+    "releaseLabel": "專案版本",
+    "reportVersionsTitle": "webOS 版本",
+    "unknownWebos": "未回報版本",
+    "reportResults": {
+      "controls-tested": "已驗證首頁鍵",
+      "reported-working": "據回報可用",
+      "partial": "可用，但有限制"
+    },
+    "reportSources": {
+      "public-owner-report": "機主回報",
+      "maintainer-qa": "專案測試"
+    },
+    "noCatalogResults": "此目錄暫無回報"
   },
   "cs": {
     "helpTitle": "Pomoc a obnova",
@@ -891,9 +1035,21 @@
       ]
     ],
     "tableHint": "Posunutím do strany porovnáte obě edice.",
-    "reportsTitle": "TV potvrzené uživateli",
+    "reportsTitle": "Modely televizorů",
     "firmwareLabel": "Firmware",
     "webosLabel": "webOS",
-    "releaseLabel": "Verze projektu"
+    "releaseLabel": "Verze projektu",
+    "reportVersionsTitle": "Verze webOS",
+    "unknownWebos": "Verze neuvedena",
+    "reportResults": {
+      "controls-tested": "Tlačítko Home ověřeno",
+      "reported-working": "Nahlášeno jako funkční",
+      "partial": "Funguje s omezeními"
+    },
+    "reportSources": {
+      "public-owner-report": "Hlášení majitele",
+      "maintainer-qa": "Test projektu"
+    },
+    "noCatalogResults": "V tomto katalogu nejsou žádná hlášení"
   }
 }

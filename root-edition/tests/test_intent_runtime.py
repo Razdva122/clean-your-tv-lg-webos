@@ -1,4 +1,4 @@
-import sys,tempfile,unittest
+import fcntl,sys,tempfile,unittest
 from pathlib import Path
 from unittest.mock import patch,Mock
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'runtime'))
@@ -41,6 +41,18 @@ class RuntimeTests(unittest.TestCase):
    self.assertEqual(len(set(identities)),1)
    self.assertEqual(session.stat().st_mode & 0o777,0o700)
    self.assertEqual((session/'session.json').stat().st_mode & 0o777,0o600)
+ def test_current_session_is_readable_during_writer_lock_contention(self):
+  proc=self.root/'proc'
+  kernel=proc/'sys/kernel/random/boot_id';kernel.parent.mkdir(parents=True)
+  kernel.write_text('abc-boot\n')
+  session=self.root/'session'
+  identity=r.boot_identity(proc,session)
+  with (session/'session.lock').open('rb') as writer:
+   fcntl.flock(writer,fcntl.LOCK_EX|fcntl.LOCK_NB)
+   self.assertEqual(r.boot_identity(proc,session),identity)
+   kernel.write_text('different-boot\n')
+   with self.assertRaises(BlockingIOError):r.boot_identity(proc,session)
+  self.assertNotEqual(r.boot_identity(proc,session),identity)
  def test_unsafe_session_is_rejected_without_replacement(self):
   with tempfile.TemporaryDirectory() as tmp:
    p=Path(tmp)/'proc';(p/'sys/kernel/random').mkdir(parents=True)

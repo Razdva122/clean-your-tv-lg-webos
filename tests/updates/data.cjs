@@ -1,5 +1,9 @@
 const assert = require('assert'),
-  data = require('../../launcher/user-data');
+  data = require('../../launcher/user-data'),
+  {
+    syncProfileLanguages
+  } = require('../../scripts/sync-home-profile-languages.cjs');
+syncProfileLanguages();
 const s = {
   schema: 1,
   inventory: {

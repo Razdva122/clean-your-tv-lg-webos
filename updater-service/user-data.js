@@ -3,6 +3,23 @@
   else root.HomeData = factory();
 })(this, function () {
   'use strict';
+  // From the Home menu. Regenerate with scripts/sync-home-profile-languages.cjs --write.
+  var LANGUAGES = [
+    'auto',
+    'en',
+    'cs',
+    'de',
+    'es',
+    'pt-BR',
+    'fr',
+    'it',
+    'ko',
+    'hi',
+    'pl',
+    'ru',
+    'zh-Hans',
+    'zh-Hant'
+  ];
   var KEY = 'tvhome.profile.v1',
     LIMIT = 4 * 1024 * 1024;
   function validate(s) {
@@ -46,20 +63,7 @@
     });
     if (
       s.settings['tvhome.language'] !== undefined &&
-      [
-        'auto',
-        'en',
-        'cs',
-        'de',
-        'es',
-        'pt-BR',
-        'fr',
-        'it',
-        'ko',
-        'hi',
-        'pl',
-        'ru'
-      ].indexOf(s.settings['tvhome.language']) < 0
+      LANGUAGES.indexOf(s.settings['tvhome.language']) < 0
     )
       throw Error('invalid-language');
     if (

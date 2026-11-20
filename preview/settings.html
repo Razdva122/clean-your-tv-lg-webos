@@ -23,7 +23,13 @@
     <script>
       var rootEdition=new URLSearchParams(location.search).get('edition')==='root';
       document.getElementById(rootEdition?'root':'no-root').setAttribute('aria-current','page');
-      var css=document.createElement('link');css.rel='stylesheet';css.href=rootEdition?'/root-launcher/root-settings.css':'/launcher/renewal-panel.css';document.head.appendChild(css);
+      var path = rootEdition ? '/root-launcher/' : '/launcher/';
+      ['settings-panel.css', rootEdition ? 'root-settings.css' : 'renewal-panel.css'].forEach(function (name) {
+        var css = document.createElement('link');
+        css.rel = 'stylesheet';
+        css.href = path + name;
+        document.head.appendChild(css);
+      });
       var files=['/launcher/release-notes.js','/launcher/settings-categories.js'].concat(rootEdition?['/root-launcher/root-exit.js','/root-launcher/root-firmware-control.js','/root-launcher/root-firmware.js','/root-launcher/root-audio.js','/root-launcher/root-settings.js','/root-launcher/root-updates.js']:['/launcher/update-panel.js','/launcher/renewal-panel.js']);
       function next(){if(!files.length){window.RenewalPanel.open();return;}var s=document.createElement('script');s.src=files.shift();s.onload=next;document.body.appendChild(s);}next();
     </script>

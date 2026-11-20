@@ -3,6 +3,23 @@
   else root.RootProfileData = factory();
 })(this, function () {
   'use strict';
+  // From the Home menu. Regenerate with scripts/sync-home-profile-languages.cjs --write.
+  var LANGUAGES = [
+    'auto',
+    'en',
+    'cs',
+    'de',
+    'es',
+    'pt-BR',
+    'fr',
+    'it',
+    'ko',
+    'hi',
+    'pl',
+    'ru',
+    'zh-Hans',
+    'zh-Hant'
+  ];
   var LIMIT = 4 * 1024 * 1024,
     KEY = 'tvhome.root.profile.v1';
   function bytes(value) {
@@ -99,20 +116,7 @@
     );
     if (
       value.settings['tvhome.language'] !== undefined &&
-      [
-        'auto',
-        'en',
-        'cs',
-        'de',
-        'es',
-        'pt-BR',
-        'fr',
-        'it',
-        'ko',
-        'hi',
-        'pl',
-        'ru'
-      ].indexOf(value.settings['tvhome.language']) < 0
+      LANGUAGES.indexOf(value.settings['tvhome.language']) < 0
     )
       throw Error('Invalid language preference');
     if (value.settings['tvhome.order'] !== undefined) {

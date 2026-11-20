@@ -23,6 +23,9 @@ const uiFile = path.join(root, 'launcher/screensaver-settings.js');
         '<body><div id="homeSurface"></div><section id="renewalPanel" role="dialog"><div class="renewal-card"><div class="settings-heading"><h2>Settings</h2></div><div class="settings-footer"><button>Done</button></div></div></section></body>'
       );
       await page.addStyleTag({
+        path: path.join(root, 'launcher/settings-panel.css')
+      });
+      await page.addStyleTag({
         path: path.join(root, 'launcher/renewal-panel.css')
       });
       await page.addStyleTag({
@@ -33,6 +36,8 @@ const uiFile = path.join(root, 'launcher/screensaver-settings.js');
         window.calls = [];
         window.pendingStatus = [];
         window.delayStatus = false;
+        window.pendingPreview = null;
+        window.delayPreview = false;
         window.busyStatus = 0;
         window.busyConfigure = 0;
         window.backend = {
@@ -128,6 +133,8 @@ const uiFile = path.join(root, 'launcher/screensaver-settings.js');
             const send = () => this.onservicecallback(response);
             if (delayStatus && method === 'screensaverStatus')
               pendingStatus.push(send);
+            else if (delayPreview && method === 'screensaverPreview')
+              pendingPreview = send;
             else send();
           };
         };
@@ -155,6 +162,10 @@ const uiFile = path.join(root, 'launcher/screensaver-settings.js');
             { id: 'advanced', label: 'Advanced', elements: [] }
           ]
         );
+        if (!window.ROOT_VERSION) {
+          backend.enabled = true;
+          busyStatus = 1;
+        }
         HomeScreensaver.start();
         view.open();
       });
@@ -166,12 +177,40 @@ const uiFile = path.join(root, 'launcher/screensaver-settings.js');
           .count(),
         1
       );
+      const toggle = page.locator('#screensaverEnabled');
+      if (edition === 'noroot') {
+        await page.waitForFunction(
+          () =>
+            document
+              .querySelector('#screensaverEnabled')
+              .getAttribute('aria-checked') === 'true'
+        );
+        assert.equal(
+          await page.evaluate(
+            () =>
+              calls.filter(({ method }) => method === 'screensaverStatus')
+                .length
+          ),
+          2,
+          'No-root retries a busy first status before showing the enabled default'
+        );
+      }
       await page.locator('[data-category="screensaver"]').focus();
       await page.keyboard.press('ArrowRight');
       assert.equal(
         await page.evaluate(() => document.activeElement.id),
         'screensaverEnabled'
       );
+      if (edition === 'noroot') {
+        await toggle.click();
+        await page.waitForFunction(
+          () =>
+            document
+              .querySelector('#screensaverEnabled')
+              .getAttribute('aria-checked') === 'false'
+        );
+        assert.equal(await page.evaluate(() => backend.enabled), false);
+      }
       assert.equal(
         await page.locator('#screensaverEnabled').getAttribute('aria-checked'),
         'false'
@@ -182,7 +221,6 @@ const uiFile = path.join(root, 'launcher/screensaver-settings.js');
           .getAttribute('aria-pressed'),
         'true'
       );
-      const toggle = page.locator('#screensaverEnabled');
       await page.evaluate(() => {
         busyStatus = 1;
         available = false;
@@ -292,6 +330,70 @@ const uiFile = path.join(root, 'launcher/screensaver-settings.js');
       });
       assert.equal(await date.textContent(), 'Monday');
       assert.equal(await previewTime.textContent(), '12:00 PM');
+      if (edition === 'root') {
+        for (const launches of [true, false]) {
+          await page.evaluate((launches) => {
+            calls = [];
+            delete backend.clock;
+            started = launches;
+            delayStatus = delayPreview = true;
+            HomeScreensaver.activate(true);
+          }, launches);
+          await page.locator('#screensaverPreview').click();
+          await page.waitForFunction(() => pendingPreview !== null);
+          await page.evaluate(() => {
+            delayStatus = false;
+            pendingStatus.splice(0).forEach((send) => send());
+          });
+          const relevantCalls = () =>
+            page.evaluate(() =>
+              calls
+                .map(({ method }) => method)
+                .filter((method) => method !== 'screensaverStatus')
+            );
+          assert.deepEqual(
+            await relevantCalls(),
+            ['screensaverPreview'],
+            'a late status cannot configure the clock during Preview'
+          );
+          await page.evaluate(() => {
+            delayPreview = false;
+            pendingPreview();
+            pendingPreview = null;
+          });
+          if (launches) {
+            await page.clock.runFor(1000);
+            assert.deepEqual(
+              await relevantCalls(),
+              ['screensaverPreview'],
+              'successful Preview retains the handoff until focus returns'
+            );
+            await page.evaluate(() => {
+              delayStatus = true;
+              window.dispatchEvent(new Event('focus'));
+            });
+            await page.clock.runFor(1000);
+            assert.deepEqual(
+              await relevantCalls(),
+              ['screensaverPreview'],
+              'background configure waits for fresh status after focus returns'
+            );
+            await page.evaluate(() => {
+              delayStatus = false;
+              pendingStatus.splice(0).forEach((send) => send());
+            });
+          }
+          await page.clock.runFor(1000);
+          assert.deepEqual(await relevantCalls(), [
+            'screensaverPreview',
+            'screensaverConfigure'
+          ]);
+          assert.deepEqual(await page.evaluate(() => backend.clock), {
+            locale: 'en',
+            hour12: true
+          });
+        }
+      }
       const overlay = page.locator('#screensaverClockOverlay');
       await overlay.focus();
       await page.evaluate(() => {
@@ -371,13 +473,37 @@ const uiFile = path.join(root, 'launcher/screensaver-settings.js');
         await page.locator('#screensaverImport-photo').textContent(),
         /Replace/
       );
+      if (edition === 'root') {
+        await page.evaluate(() => {
+          const prepare = ScreensaverPersonal.prepare;
+          ScreensaverPersonal.prepare = (mode) =>
+            new Promise((resolve) => {
+              window.finishClockOnlyPrepare = () => {
+                ScreensaverPersonal.prepare = prepare;
+                resolve(prepare(mode));
+              };
+            });
+          delete backend.clock;
+          delayStatus = true;
+          HomeScreensaver.activate(true);
+        });
+      }
       await page.locator('#screensaverPreview').click();
+      if (edition === 'root') {
+        await page.waitForFunction(() => window.finishClockOnlyPrepare);
+        await page.evaluate(() => {
+          delayStatus = false;
+          pendingStatus.splice(0).forEach((send) => send());
+          finishClockOnlyPrepare();
+        });
+      }
       await page.waitForFunction(() => mediaCalls.includes('dispose:photo'));
       assert.equal(
         (await page.evaluate(() => calls))
           .filter((r) => r.method === 'screensaverPreview')
           .at(-1).payload.mediaUrl,
-        'http://127.0.0.1:1234/' + 'a'.repeat(32) + '/photo.jpg'
+        'http://127.0.0.1:1234/' + 'a'.repeat(32) + '/photo.jpg',
+        'clock-only status during preparation preserves personal Preview'
       );
       const previewBefore = (await page.evaluate(() => calls)).filter(
         (r) => r.method === 'screensaverPreview'

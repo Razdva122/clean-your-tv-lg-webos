@@ -110,6 +110,8 @@ Když se na počítači zobrazí **Odebrání Clean Your TV je ověřeno.**, mů
 
 **Přeinstalace Root:** S uloženým připojením zvolte **Nastavit televizor → Root** a potvrďte **Přeinstalovat Root?**. Instalátor obnoví LG Home a zcela odstraní Clean Your TV včetně aktualizátorů, Home Helper a uložených předvoleb. Po ověření odstranění nainstaluje a aktivuje balíčky a prostředí Root dodané v tomto instalátoru. Ostatní aplikace TV a stávající přístup root/SSH zůstanou zachovány. Pokud se průvodce v počítači zastaví, otevřete stejný instalátor a zvolte **Pokračovat v přeinstalaci Root**. Po ověření odstranění zvolte **Pokračovat v instalaci Root**. Samotné **Odinstalovat Clean Your TV** nikdy nespustí novou instalaci.
 
+Pokud průvodce během čištění požádá o úplný restart, odpojte televizor od napájení, znovu jej připojte a zapněte. Po spuštění zvolte **Televizor jsem restartoval — ověřit a pokračovat**.
+
 ### Úprava nastavení LG a dokončení obnovy Root
 
 V desktopovém instalátoru otevřete **Údržba → Upravit nastavení LG (Debloat)** a použijte uložené připojení k TV. Vyberte nastavení, která chcete změnit, klikněte na **Použít vybraná nastavení** a zkontrolujte výsledky. Pokud je předchozí operace nedokončená, zvolte nejprve **Prověřit možnosti obnovy** s původním uloženým připojením.
@@ -130,6 +132,8 @@ V desktopovém instalátoru otevřete **Údržba → Upravit nastavení LG (Debl
 <a id="jednoduché-odebrání-v1110"></a>
 
 ## Nastavení
+
+Pokud jste spořič obrazovky ještě nenastavili, je ve výchozím nastavení zapnutý. V nastavení obrazovky Home v části **Spořič obrazovky** jej můžete vypnout.
 
 V nabídce **Nastavení → Vzhled** zapněte **Nejčastěji používané aplikace první**. Pořadí v doku se zachová. Podržením OK upravíte ruční pořadí nebo skryjete dlaždici. Vypnutím volby se vrátíte k ručnímu pořadí. Volbu najdete také na konci nastavení v instalátoru cytv.
 

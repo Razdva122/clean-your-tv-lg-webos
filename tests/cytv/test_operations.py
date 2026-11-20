@@ -736,6 +736,21 @@ class OperationTests(unittest.TestCase):
         self.assertEqual(result['reconciled'], 'root-archive-archived')
         self.assertFalse(any(' uninstall' in command for command in commands))
 
+    def test_archive_receipt_is_reconciled_before_later_root_status_failure(self):
+        from unittest.mock import Mock
+
+        installer = self.installer(Remote(), 'root')
+        self.store.begin(installer.profile, 'archive-root-state',
+                         archive=operations.ROOT_STATE + '.archive-' + 'a' * 32,
+                         identity={'device': 1, 'inode': 2, 'journal': 'b' * 64})
+        installer.remote.run = Mock(return_value='{"stage":"installed-recovery-only"}')
+        installer.root_archive = Mock(return_value={'state': 'not-archived'})
+        installer.root_action = Mock(side_effect=RuntimeError('status failed'))
+
+        with self.assertRaisesRegex(RuntimeError, 'status failed'):
+            installer.status()
+        self.assertIsNone(self.store.pending(installer.profile))
+
     def test_terminal_removal_can_finish_empty_package_cleanup_on_resume(self):
         remote = Remote()
         installer = self.installer(remote)
@@ -836,6 +851,24 @@ class OperationTests(unittest.TestCase):
         result = installer.status()
         self.assertIsNone(result['pending'])
         self.assertEqual(result['reconciled'], 'root-installation-verified')
+
+    def test_read_only_status_keeps_legacy_install_receipt_without_file_readback(self):
+        from unittest.mock import Mock
+
+        installer = self.installer(Remote(), 'root')
+        self.store.begin(installer.profile, 'install', release_sha='a' * 64, bundle_sha='b' * 64)
+        original = self.store.pending(installer.profile)
+        installer.remote.run = Mock(return_value='{"stage":"installed-recovery-only"}')
+        installer.root_action = Mock(return_value={'result': {'recovery': {'integrity_verified': True}}})
+        installer.root_files_match = Mock(return_value=True)
+
+        result = installer.status(read_only=True)
+
+        installer.root_action.assert_called_once_with('status', read_only=True)
+        installer.root_files_match.assert_not_called()
+        self.assertIsNone(result['reconciled'])
+        self.assertEqual(result['pending'], original)
+        self.assertEqual(self.store.pending(installer.profile), original)
 
     def test_pending_native_root_status_reads_receipt_without_python_or_staging(self):
         installer = self.installer(Remote(), 'root')

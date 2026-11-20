@@ -145,15 +145,27 @@ class BuildTests(unittest.TestCase):
             with path.open('wb') as stream:stream.truncate(96*1024*1024+1)
             with self.assertRaisesRegex(ValueError,'Unsafe file'):setup.safe(path)
 
-    def test_registration_refresh_restarts_launcher_without_enabling_home(self):
+    def test_registration_refresh_closes_root_without_launching_it(self):
         setup=load('setup')
-        for edition,app in [('root','com.cleanyourtv.root.preview'),('no-root','com.gathin.tvhome')]:
-            calls=[]
-            def rpc(uri,payload):
-                calls.append((uri,payload));return {'returnValue':True}
-            setup.restart_registered_launcher(edition,rpc)
-            self.assertEqual(calls,[('luna://com.webos.applicationManager/closeByAppId',{'id':app}),
-                                    ('luna://com.webos.applicationManager/launch',{'id':app})])
+        app='com.cleanyourtv.root.preview'
+        for stopped in (False,True):
+            with self.subTest(stopped=stopped):
+                calls=[]
+                def rpc(uri,payload):
+                    calls.append((uri,payload))
+                    if stopped and uri.endswith('/closeByAppId'):
+                        error=RuntimeError('Bus operation rejected');error.stopped_launcher=app;raise error
+                    return {'returnValue':True}
+                setup.restart_registered_launcher('root',rpc)
+                self.assertEqual(calls,[('luna://com.webos.applicationManager/closeByAppId',{'id':app})])
+
+    def test_registration_refresh_restarts_no_root_launcher(self):
+        setup=load('setup');calls=[];app='com.gathin.tvhome'
+        def rpc(uri,payload):
+            calls.append((uri,payload));return {'returnValue':True}
+        setup.restart_registered_launcher('no-root',rpc)
+        self.assertEqual(calls,[('luna://com.webos.applicationManager/closeByAppId',{'id':app}),
+                                ('luna://com.webos.applicationManager/launch',{'id':app})])
 
     def test_registration_refresh_continues_after_previous_close_and_failed_launch(self):
         setup=load('setup');calls=[];attempt=[0]
@@ -165,8 +177,8 @@ class BuildTests(unittest.TestCase):
                 return {'returnValue':True}
             attempt[0]+=1
             return {'returnValue':attempt[0]>1}
-        with self.assertRaisesRegex(ValueError,'launch'):setup.restart_registered_launcher('root',rpc)
-        setup.restart_registered_launcher('root',rpc)
+        with self.assertRaisesRegex(ValueError,'launch'):setup.restart_registered_launcher('no-root',rpc)
+        setup.restart_registered_launcher('no-root',rpc)
         self.assertEqual(len(calls),4)
 
     def test_only_exact_owned_close_reply_identifies_stopped_launcher(self):

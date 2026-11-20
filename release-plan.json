@@ -1,97 +1,83 @@
 {
   "schema": 1,
-  "version": "1.25.0",
+  "version": "1.26.0",
   "changes": [
     {
-      "pr": 714,
+      "pr": 730,
       "issues": [
-        710
+        686
       ],
-      "summary": "Resume guarded Root Home after verified startup on LG 65NANO913NA"
+      "summary": "Preserve active apps during late automatic Helper startup. confirmation on reported webOS 4.5 TV pending"
     },
     {
-      "pr": 716,
-      "issues": [
-        710
-      ],
-      "summary": "Cover delayed replies and rollback in guarded Root Home"
+      "pr": 731,
+      "issues": [],
+      "summary": "Show Root reinstall restart waits clearly and report why cleanup paused"
     },
     {
-      "pr": 718,
-      "issues": [
-        201,
-        389,
-        409,
-        417,
-        440,
-        472,
-        495,
-        519,
-        529,
-        615,
-        635,
-        643,
-        664
-      ],
-      "summary": "Help owners complete and recover installer operations"
+      "pr": 732,
+      "issues": [],
+      "summary": "Fix Home profile languages, Android prompts and CI routing; share packaging and runtime code"
     },
     {
-      "pr": 719,
-      "issues": [
-        678
-      ],
-      "summary": "Preserve Root inspection and final-cleanup refusal diagnostics"
+      "pr": 733,
+      "issues": [],
+      "summary": "Enable the screensaver by default and align the app sorting switch"
     },
     {
-      "pr": 721,
-      "issues": [
-        720
-      ],
-      "summary": "Recover No-root Home status and app refresh after channel permission drift"
+      "pr": 734,
+      "issues": [],
+      "summary": "Document tested TVs by webOS generation"
     },
     {
-      "pr": 723,
-      "issues": [
-        702
-      ],
-      "summary": "Restore LG Home before retaining late standby intent"
-    },
-    {
-      "pr": 725,
-      "issues": [
-        418
-      ],
-      "summary": "Record confirmed C1 Root compatibility from #418"
-    },
-    {
-      "pr": 726,
-      "issues": [
-        722
-      ],
-      "summary": "Fix Root removal with LG Home ribbon on webOS 5"
-    },
-    {
-      "pr": 727,
+      "pr": 735,
       "issues": [
         152
       ],
-      "summary": "Fix stale profile blocks after verified removal (#152)"
+      "summary": "Finish No-root cleanup for verified empty service directories. original EF950V report remains open"
     },
     {
-      "pr": 728,
-      "issues": [
-        615,
-        702
-      ],
-      "summary": "Recover emergency input observation after device recreation"
+      "pr": 736,
+      "issues": [],
+      "summary": "Fix LG screensaver request rollover and Root subscription recovery"
+    },
+    {
+      "pr": 737,
+      "issues": [],
+      "summary": "Load shared settings CSS in the Columns geometry test"
+    },
+    {
+      "pr": 743,
+      "issues": [],
+      "summary": "Require rendered Root Home before System profile capture"
+    },
+    {
+      "pr": 747,
+      "issues": [],
+      "summary": "Keep active Root Home boot-session reads independent of writer lock contention"
+    },
+    {
+      "pr": 752,
+      "issues": [],
+      "summary": "Give the desktop storage preflight regression enough time to observe both simulated package installs on Intel Mac"
+    },
+    {
+      "pr": 755,
+      "issues": [],
+      "summary": "Restore No-root Home control after a reused boot identity and let normal HOME reopen Root after System setup"
+    },
+    {
+      "pr": 756,
+      "issues": [],
+      "summary": "Keep the first screensaver preview from being cancelled by background clock synchronization"
     }
   ],
   "excluded": [],
-  "acceptance": "LG OLED55C3RLA (43.21.71, SDK 11.2.0), exact macOS ARM64 installer, all seven selected C3 cases passed: No-root upgrade and live broker, LG Home Restore, Root setup and Home, network standby/wake, Root Off across verified restart, and original No-root rollback with preferences and routing verified. Model-specific native routing, physical remote, AC cycle, audio and on-device OTA remain outside this C3 pass. See docs/history/2026-11-19-release-1.25.0-rc1-verification.md for hashes and evidence.",
+  "acceptance": "TV-01 through TV-06 passed on the project LG OLED55C3RLA (43.21.71). Signed Root and No-root update, Repair and rollback verified. Original TV profile, screensaver setting and Root routing restored. [Final RC6 evidence](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/729#final-rc6-acceptance-on-the-project-c3).",
   "build": {
-    "run_id": 44400187083,
-    "attempt": 2,
-    "source": "e4a3cbe719aea089e8cbbe088be19fc5e45d28ec"
+    "run_id": 44682949085,
+    "attempt": 1,
+    "source": "a9bf96f16c02a7c9fbcecfb65a5f953a0868a09b"
   },
-  "acceptance_build": "44400187083:2"
+  "acceptance_build": "44682949085:1"
 }

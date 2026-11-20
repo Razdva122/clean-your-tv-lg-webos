@@ -82,6 +82,8 @@
             Error('Stored profile is unreadable. Open Recovery.')
           );
         return Promise.resolve().then(function () {
+          if (options && options.system && window.RootLauncherRendered !== true)
+            throw Error('Launcher did not finish rendering');
           var snapshot = {
             schema: 1,
             inventory: JSON.parse(JSON.stringify(window.TV_APPS)),

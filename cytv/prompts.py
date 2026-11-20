@@ -118,16 +118,28 @@ def confirm(prompt, ask, write, default=False):
         write.error('Type y for yes, n for no, or q to quit. Enter chooses ' + ('yes.' if default else 'no.'))
 
 
+class HomeNamePrompt(str):
+    """Keep the terminal label and carry validation feedback to Android."""
+
+    def __new__(cls, error=''):
+        prompt = super().__new__(cls, 'Home screen name (Enter keeps current name): ')
+        prompt.error = error
+        return prompt
+
+
 def tv_name(ask, write):
     from .package import normalize_tv_name as validate
     write = console(write)
     write.heading('Home screen name')
+    prompt = HomeNamePrompt()
     while True:
         try:
-            value = answer(ask, 'Home screen name (Enter keeps current name): ')
-            return validate(value) if value.strip() else None
+            # Android has an explicit Cancel button, so terminal quit words are valid names there.
+            value = ask(prompt).strip() if write.frontend == 'android' else answer(ask, prompt)
+            return validate(value) if value else None
         except ValueError as error:
-            write.error(str(error))
+            prompt = HomeNamePrompt(str(error))
+            write.error(prompt.error)
 
 
 def wait_for_tv(ask, write):

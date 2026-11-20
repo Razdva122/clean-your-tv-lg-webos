@@ -125,6 +125,8 @@ When the desktop result shows **Clean Your TV removal is verified.**, choose **C
 
 **Reinstall Root:** Choose **Set up my TV → Root** with the saved connection and confirm **Reinstall Root?**. The installer restores LG Home and fully removes Clean Your TV, including its updaters, Home Helper and saved preferences. After verified removal, it installs and activates the packages and Root runtime bundled with that installer. Other TV apps and existing root/SSH access are preserved. If the desktop wizard pauses, open the same installer and choose **Continue Root reinstallation**. After it verifies removal, choose **Continue Root installation**. **Uninstall Clean Your TV** alone never starts another installation.
 
+If the wizard requests a full restart during cleanup, disconnect the TV from power, reconnect it and turn it on. Once it has started, choose **I restarted the TV — check and continue**.
+
 ### Adjust LG settings and finish a Root rollback
 
 In the desktop installer, open **Maintenance action → Adjust LG settings (Debloat)** with your saved TV connection. Select the settings you want to change, choose **Apply selected settings**, then review the results. If an earlier operation is unresolved, choose **Review recovery options** with its original saved connection first.
@@ -156,6 +158,8 @@ In the desktop installer, open **Maintenance action → Adjust LG settings (Debl
 <a id="straightforward-removal-v1110"></a>
 
 ## Settings
+
+The screensaver is on by default when there is no saved preference. To turn it off, open **Home settings → Screensaver**.
 
 Under **Settings → Appearance**, turn on **Sort by most used** to bring apps you launch often to the top of the grid. The dock keeps its order. Hold OK to edit in manual order, including moving a tile to Hide. Turn the switch off to return to your manual order. You can also choose this at the end of the cytv installer’s Settings step.
 

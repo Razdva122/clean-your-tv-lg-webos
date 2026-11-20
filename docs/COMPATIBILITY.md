@@ -87,6 +87,13 @@ Helper-free first-install mode promising that behavior.
 
 ## User-reported working TVs
 
+The catalog includes specific Home button checks, general reports of operation
+and partial results. A partial result covers a launcher observed running with a
+documented limitation or workaround. The [device catalog](compatibility-reports.json)
+records the tested steps, unresolved faults and configurations for each entry.
+When a reported platform name conflicts with the installed SDK version, the
+catalog groups the result by the SDK and records the other name in the report.
+
 <!-- compatibility-reports:start -->
 - OLED65G19LA — No-root — firmware 03.53.45 — webOS SDK 6.5.3 — v1.5.4
 - OLED55B19LA — No-root — firmware 03.53.45 — webOS 6; SDK 6.5.3 — v1.11.0
@@ -106,9 +113,52 @@ Helper-free first-install mode promising that behavior.
 - LG C5 77″ — No-root
 - 43UQ75003LF — No-root — firmware 04.60.92 — webOS 7.6.0 — owner reports successful installation on Windows 11; individual checks were not described. [Owner report #654](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/654)
 - OLED65C1PSA — Root — firmware 03.53.45 — webOS SDK 6.5.3 — v1.24.0 — owner confirmed removal through Review recovery options after an interrupted removal and TV restart, successful Root reinstallation, and physical short Home from another app opening CYTV Home. [Owner confirmation #418](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/418#issuecomment-6987290015)
+- 32LB650V-ZN — No-root — firmware 05.05.90 — webOS 1.4.0 — [partial result (#283)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/283#issuecomment-6724042805)
+- 43NANO766QA — No-root — firmware 04.60.91 — webOS 22 — v1.5.4 — [partial result (#227)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/227#issuecomment-6573089997)
+- 43UM7600PLB — No-root — firmware 05.40.97 — webOS 4.5 — [partial result (#686)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/686)
+- 43UP751C0ZF — No-root — firmware 03.53.45 — webOS SDK 6.5.3 — [partial result (#687)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/687)
+- 49NANO80PNA — No-root — firmware 04.64.00 — webOS SDK 5.6.2 — v1.0.0 — [partial result (#20)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/20#issuecomment-6388040635)
+- 49UJ651V-ZA — No-root — firmware 06.10.75 — webOS 3.5 — v1.12.1 — [partial result (#47)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/47#issuecomment-6722365004)
+- 49UJ750V — No-root — firmware 06.10.65 — webOS 3.5 — v1.0.1 — [partial result (#20)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/20#issuecomment-6390518287)
+- 50NANO756PA — No-root — firmware 03.53.45 — webOS 6; SDK 6.5.3 — [Home button verified (#106)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/106)
+- 55LB652V-ZA — No-root — webOS 1.4.0-2536 — v1.12.0 — [partial result (#311)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/311#issuecomment-6711772795)
+- 55NANO81ANA — No-root — firmware 04.64.00 — webOS 5.6.2-21 — v1.0.1 — [partial result (#21)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/21#issuecomment-6388756143)
+- 55UK7500PSA — No-root — firmware 05.50.70 — webOS SDK 4.4.0 — v1.20.4 — [Home button verified (#534)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/534#issuecomment-6828871492)
+- 55UM7450PLA — No-root — firmware 05.40.97 — webOS SDK 4.10.0 — v1.23.0 — [partial result (#692)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/692#issuecomment-6956439664)
+- 55UP7000PUA — No-root — firmware 03.25.45 — webOS 6.2.1 — v1.14.0 — [partial result (#207)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/207#issuecomment-6749035244)
+- 55UQ7400PSF — No-root — webOS 22 — v1.16.0 — [partial result (#500)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/500)
+- 60UJ6050-UA — No-root — firmware 06.10.55 — webOS SDK 3.9.0 — [owner reported operation (#410)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/410#issuecomment-6882932369)
+- 65QNED80SRA — No-root — webOS 25; 10.3.2-33 reported — v1.4.0 — [partial result (#140)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/140)
+- 65QNED80TSA — No-root — firmware 33.31.75 — webOS SDK 10.3.2 — [partial result (#10)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/10)
+- 65UM7470PSA — No-root — webOS 4.5 (build 4.10.2-29) — v1.16.0 — [partial result (#499)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/499)
+- 75NANO80TSA — No-root — firmware 33.31.75 — webOS 25; SDK 10.3.2 — v1.4.1 — [partial result (#155)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/155)
+- LM6370PSB — No-root — firmware 05.40.97 — webOS 4.5 — [partial result (#68)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/68)
+- OLED42C2PSA — Root — firmware 33.31.68 — webOS 10.3.1-3006 (SDK 10.3.1) — v1.15.0 — [partial result (#355)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/355#issuecomment-6766778759)
+- OLED48B46LA — Root — firmware 33.31.75 — webOS SDK 10.3.2 — [partial result (#282)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/282#issuecomment-6657735674)
+- OLED48C24LA — No-root — firmware 43.21.74 — webOS SDK 11.2.0 — [partial result (#59)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/59)
+- OLED48C55LA — No-root — firmware 43.21.77 — [owner reported operation (#472)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/472#issuecomment-6748054482)
+- OLED55C11LB — No-root — firmware 03.53.45 — webOS 6.0 — [partial result (#54)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/54)
+- OLED55C14LB — No-root — firmware 03.53.45 — webOS 6 — v1.21.0 — [owner reported operation (#608)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/608)
+- OLED55C16LA — No-root — firmware 03.53.45 — [owner reported operation (#454)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/454#issuecomment-6900707375)
+- OLED55C35LA — No-root — webOS 26 (build 11.2.0-3711) — [owner reported operation (#664)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/664)
+- OLED55C46LA — Root — firmware 33.31.68 — webOS 10.3.1 — v1.13.0 — [owner reported operation (#416)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/416)
+- OLED55C47LA — No-root — [owner reported operation (#635)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/635#issuecomment-6877112869)
+- OLED55C5ELB — No-root — firmware 43.21.77 — webOS 26 — v1.24.0 — [partial result (#715)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/715)
+- OLED55C9PLA — No-root — firmware 05.30.25 — webOS 4.5 / SDK 4.9.0 — v1.20.7 — [partial result (#626)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/626#issuecomment-6881622004)
+- OLED55G59LS — No-root — firmware 43.21.96 — v1.20.5 — [owner reported operation (#529)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/529)
+- OLED65C11LB — Root — firmware 03.53.45 — v1.24.0 — [partial result (#389)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/389#issuecomment-6971032548)
+- OLED65C2PUA — No-root — firmware 43.21.94 — [owner reported operation (#646)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/646)
+- OLED65C3LA — No-root — [owner reported operation (#279)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/279)
+- OLED65C57LA — No-root — firmware 43.21.77 — webOS SDK 11.2.0 — [partial result (#96)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/96)
+- OLED65C5PUA — No-root — webOS 26; SDK 11.2.0-3706 — [partial result (#12)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/12#issuecomment-6401658552)
+- OLED65G39LA — Root — firmware 43.21.71 — webOS 26 / SDK 11.2.0 — v1.21.0 — [partial result (#702)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/702)
+- OLED77C12LA — No-root — firmware 03.53.45 — webOS SDK 6.5.3 — v1.24.0 — [Home button verified (#720)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/720)
+- OLED77C34LA — No-root — firmware 43.21.96 — webOS SDK 11.2.0 — v1.21.0 — [Home button verified (#495)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/495)
+- OLED77G5RLA — Root — firmware 43.21.77 — webOS SDK 11.2.0 — [owner reported operation (#588)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/588)
+- QNED75URA — No-root — firmware 33.31.75 — webOS 25 / SDK 10.3.2 — v1.20.4 — [Home button verified (#627)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/627)
+- UK6400PLF — No-root — firmware 05.50.7 — webOS 4.x — [Home button verified (#599)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/599)
+- UM7450PLA — No-root — firmware 05.40.97 — webOS 4.5 — v1.14.0 — [Home button verified (#473)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/473)
 <!-- compatibility-reports:end -->
-
-- LG UM7450PLA — No-root — firmware 05.40.97 — webOS 4.5 — release v1.14.0. [Owner report #473](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/473)
 
 These are reports for the listed configurations, not a guarantee for every firmware or test case. Unreported versions are omitted. Earlier failures and untested paths remain in the evidence below.
 

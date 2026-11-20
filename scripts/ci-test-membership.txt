@@ -1,0 +1,16 @@
+tests/home-presentation-ui.cjs preview
+tests/root-decoder-ui.cjs preview
+tests/preview-presentation-ui.cjs preview
+tests/themes/ribbon-reference-ui.cjs preview
+tests/themes/ribbon-edit-ui.cjs preview
+tests/showcase/registry.cjs preview
+tests/showcase/submission-security.cjs preview
+tests/showcase/remote.cjs preview
+tests/preview-bridge.cjs preview
+tests/preview-themes-ui.cjs preview
+tests/test_preview.py preview
+android/tests/auto-recovery-journey.cjs browser-core
+android/tests/recovery-action.cjs browser-core
+android/tests/restart-result.cjs browser-core
+android/tests/ui.cjs browser-core
+android/tests/localization.cjs browser-core

@@ -508,7 +508,8 @@ int main(void) {
         self.assertEqual(source.count(anchor),1)
         source=source.replace(anchor,'else { armed=1; close(ready); ready=-1; while(access(FIXTURE_ROOT "/ready-release",F_OK)<0)poll(NULL,0,1); }',1)
         subprocess.run(['cc','-std=c11','-Wall','-Wextra','-Werror','-DCYTV_KEYFILTER_FIXTURE',
-                        f'-DFIXTURE_ROOT="{self.root}"','-x','c','-','-o',str(self.binary)],
+                        f'-DFIXTURE_ROOT="{self.root}"','-I',str(SOURCE.parent),
+                        '-x','c','-','-o',str(self.binary)],
                        input=source,text=True,check=True,capture_output=True)
         release=self.root/'ready-release';original=fcntl.flock;contended=[]
         def release_on_contention(fd,operation):

@@ -87,11 +87,19 @@ Public download actions use
 expand hardware compatibility beyond documented version-specific results. Newly
 written website translations have automated/browser checks, not native-speaker
 acceptance. The compatibility page includes localized access/runtime requirements and an owner
-checklist. A short user-confirmed model list reads `../docs/compatibility-reports.json`;
-only records explicitly marked `showOnWebsite: true` appear. It displays models,
-editions and known versions; source links, dates and diagnostic details remain
-in the audit record. Results apply to their recorded versions, not every device
-in a model family. No private diagnostics are copied into website content.
+checklist. The TV series cards and linked webOS generation groups read
+`../docs/compatibility-reports.json`. Only records marked `showOnWebsite: true`
+appear. OLED models are grouped by series, while LCD prefixes are grouped under
+families such as NanoCell and UM / UN. Groups show unique model counts and open
+on demand. Links to a model or webOS generation open the destination group.
+Green model cards indicate a recorded Home button check. A green group has at
+least one such result. Each group shows the result for each listed model.
+Partial results cover observed
+launcher operation with limitations or a workaround. Groups use LG's platform
+names based on the reported webOS version. Model cards preserve reported SDK or
+build details. Empty groups describe coverage in this catalog.
+Source links, dates and diagnostic details remain in the audit record. Results
+apply to the recorded configurations.
 
 ## URLs and publication
 

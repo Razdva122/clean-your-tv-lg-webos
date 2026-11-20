@@ -1,22 +1,41 @@
 #!/usr/bin/env python3
 """Build disposable update fixtures locally. Never connects to a TV."""
 from pathlib import Path
-import hashlib,json,os,re,shutil,subprocess
+import hashlib,json,os,re,shutil,subprocess,sys
 ROOT=Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+from scripts.no_root_assets import renewal_service_assets, updater_app_assets, updater_service_assets
+
 stage=ROOT/'build/update-lab';out=ROOT/'dist/update-lab'
 if stage.exists(): shutil.rmtree(stage)
 if out.exists(): shutil.rmtree(out)
 stage.mkdir(parents=True);out.mkdir(parents=True)
 app='com.cleanyourtv.updatetest';updater='com.cleanyourtv.updaterlab'
 cli=os.environ.get('ARES_PACKAGE','ares-package')
-def clone(source,name):
+def clone(source, name, assets=None):
     dest=stage/name;shutil.copytree(ROOT/source,dest,ignore=shutil.ignore_patterns('state','node_modules'))
+    for path, data in (assets or {}).items():
+        target = dest / path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(data)
     for p in dest.rglob('*'):
         if p.is_file() and p.suffix in ('.js','.json','.html'):
             p.write_text(p.read_text().replace('com.gathin.tvhome',app).replace('com.cleanyourtv.updater',updater))
     return dest
+
+
+def use_lab_updater(directory):
+    # The shared System Updates UI talks to the production system updater.
+    index = directory / 'index.html'
+    entry = '<script src="system-updates.js"></script>'
+    html = index.read_text()
+    if html.count(entry) != 1:
+        raise ValueError('Expected one production System Updates script')
+    index.write_text(html.replace(entry, ''))
+
+
 def package(*dirs): subprocess.run([cli,*map(str,dirs),'-o',str(out)],check=True,cwd=ROOT)
-renewal=clone('renewal-service','renewal')
+renewal=clone('renewal-service', 'renewal', renewal_service_assets(ROOT))
 p=renewal/'service.js';s=p.read_text()
 # Fixture only: no token reads, LG HTTP requests, or real scheduled activities.
 s,count=re.subn(r'\breturn\s+worker\.run\(\s*\)\s*;',"return Promise.resolve({status:'healthy',remainingSeconds:300000});",s)
@@ -26,20 +45,18 @@ s,count=re.subn(r'(?ms)^\s*schedule:\s*function\s*\(\s*\)\s*\{.*?^\}\);',
 if count!=1:raise ValueError('Expected one renewal activity fixture')
 p.write_text(s)
 for version in ('1.2.0','1.2.1'):
-    home=clone('launcher','home-'+version)
+    home=clone('launcher', 'home-'+version,
+               {'screensaver-config.js': (ROOT/'screensaver/settings.js').read_bytes()})
+    use_lab_updater(home)
     for p in home.glob('*.js'): p.write_text(p.read_text().replace(json.loads((ROOT/'launcher/appinfo.json').read_text())['version'],version))
     p=home/'appinfo.json';info=json.loads(p.read_text());info.update(id=app,version=version,title='Update Test '+version,supportGIP=False);p.write_text(json.dumps(info))
     p=home/'index.html';p.write_text(p.read_text().replace('<script src="native-bootstrap.js"></script>','').replace('<script src="helper-control.js"></script>',''))
     for name in ('native-bootstrap.js','helper-control.js'): (home/name).unlink(missing_ok=True)
     (home/'apps.js').write_text('window.TV_APPS='+json.dumps({'apps':[{'id':'com.webos.app.browser','title':'Test Browser Tile','icon':'brand-v2-icon.png'}] if version=='1.2.0' else [],'inputs':[]})+';')
     package(home,renewal)
-service=clone('updater-service','service');ui=clone('updater-app','updater')
-for name in ('i18n.js', 'catalogs.js', 'i18n.css'):
-    shutil.copy2(ROOT/'launcher'/name, ui/name)
-shutil.copy2(ROOT/'root-edition/ui/root-locales.js', ui/'root-locales.js')
-(ui/'fonts').mkdir(exist_ok=True)
-for font in (ROOT/'launcher/fonts').glob('NotoSans*'):
-    shutil.copy2(font, ui/'fonts'/font.name)
+service=clone('updater-service', 'service', updater_service_assets(ROOT))
+ui=clone('updater-app', 'updater', updater_app_assets(ROOT))
+use_lab_updater(ui)
 p=ui/'appinfo.json';info=json.loads(p.read_text());info.update(title='Updater Lab');p.write_text(json.dumps(info))
 p=service/'service.js';s,count=re.subn(r"await\s+require\(\s*(['\"])\./transport\1\s*\)\.get\(\s*channel(?:\s*\+\s*\(\s*resolution\s*===\s*['\"]1280x720['\"]\s*\?\s*['\"]update-720p\.json['\"]\s*:\s*['\"]update\.json['\"]\s*\))?\s*\)","fs.readFileSync(__dirname+'/update.json','utf8')",p.read_text())
 if count!=1:raise ValueError('Expected one updater feed fixture')

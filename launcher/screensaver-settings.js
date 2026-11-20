@@ -614,10 +614,12 @@
   function syncClock() {
     var clock = clockPresentation();
     if (!clock || !known || !available) return;
-    if (busy) {
+    // Configuring the clock would stop a preview or idle activation in progress.
+    if (busy || handoff || statusPending) {
       clockSyncQueued = true;
       return;
     }
+    clockSyncQueued = false;
     if (
       state.clock &&
       state.clock.locale === clock.locale &&
@@ -658,10 +660,6 @@
       if (idle) idle.destroy();
       idle = null;
       tick();
-      if (clockSyncQueued) {
-        clockSyncQueued = false;
-        syncClock();
-      }
     });
   }
   function visible(element) {
@@ -749,11 +747,16 @@
         offer(false);
     }, wait);
   }
+  function activationSettings() {
+    var settings = Object.assign({}, state);
+    delete settings.clock;
+    return JSON.stringify(settings);
+  }
   function offer(preview) {
     if (actionPending || handoff || !running() || !localContext(preview))
       return;
     var attempt = {
-        config: JSON.stringify(state),
+        config: activationSettings(),
         preparing: true,
         preview: preview
       },
@@ -808,7 +811,7 @@
           !current() ||
           !running() ||
           !localContext(preview) ||
-          attempt.config !== JSON.stringify(state)
+          attempt.config !== activationSettings()
         ) {
           if (lease) lease.dispose();
           failed();
@@ -836,6 +839,7 @@
   }
   function tick() {
     if (!started) return;
+    if (clockSyncQueued && !busy && !handoff) syncClock();
     if (receiverSignal && (!settingsActive || !visible(host))) stopReceiver();
     if (!root.CYTVScreensaverIdle) return;
     if (!running()) {

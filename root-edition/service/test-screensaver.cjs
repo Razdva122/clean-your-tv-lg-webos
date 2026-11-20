@@ -22,6 +22,7 @@ let currentIdentity;
 let wireClosed = 0;
 let subscription;
 let cancelled = 0;
+let acceptReply = true;
 let popupSupported;
 let opened = 0;
 let subscriptions = 0;
@@ -52,7 +53,7 @@ const service = {
       'luna://com.webos.service.tvpower/power/responseScreenSaverRequest'
     );
     acknowledgements.push(payload);
-    callback({ payload: { returnValue: true } });
+    callback({ payload: { returnValue: acceptReply } });
   }
 };
 const adapter = create({
@@ -344,6 +345,72 @@ assert.equal(
   null,
   'owner revocation closes the existing renderer'
 );
+owner = {
+  active: true,
+  generation: 11,
+  healthy: true,
+  legacyHelperActive: false
+};
+assert.equal(adapter.enable(11), true);
+time += 5000;
+assert.equal(adapter.preview(11), true);
+assert.equal(ready().close, false);
+const sessionBeforeRejection = currentIdentity();
+const subscriptionBeforeRejection = subscription;
+const startsBeforeRejection = subscriptions;
+const closesBeforeRejection = wireClosed;
+const cancellationsBeforeRejection = cancelled;
+acceptReply = false;
+lgRequest('200');
+assert.equal(cancelled, cancellationsBeforeRejection + 1);
+
+acceptReply = true;
+assert.equal(adapter.enable(11), true);
+assert.equal(
+  subscriptions,
+  startsBeforeRejection + 1,
+  'fresh Root poll restores the LG subscription'
+);
+assert.equal(
+  wireClosed,
+  closesBeforeRejection,
+  'reconnecting keeps the renderer transport'
+);
+assert.deepEqual(currentIdentity(), sessionBeforeRejection);
+lgRequest('201');
+assert.equal(acknowledgements.at(-1).timestamp, '201');
+assert.equal(acknowledgements.at(-1).ack, false);
+subscriptionBeforeRejection.emit('response', {
+  payload: { returnValue: true, state: 'Active', timestamp: '202' }
+});
+assert.equal(
+  acknowledgements.at(-1).timestamp,
+  '201',
+  'cancelled subscription stays inert'
+);
+
+acceptReply = false;
+lgRequest('203');
+assert.equal(adapter.enable(11), true);
+time += 4999;
+assert.equal(adapter.enable(11), true);
+assert.equal(
+  subscriptions,
+  startsBeforeRejection + 1,
+  'retries are spaced after repeated rejection'
+);
+time += 1;
+owner.stale = true;
+assert.equal(adapter.enable(11), false);
+assert.equal(
+  subscriptions,
+  startsBeforeRejection + 1,
+  'stale Root status cannot reconnect'
+);
+owner.stale = false;
+acceptReply = true;
+assert.equal(adapter.enable(11), true);
+assert.equal(subscriptions, startsBeforeRejection + 2);
 adapter.dispose();
 assert.equal(timers.size, 0, 'dispose clears owned polling');
 assert.equal(adapter.enable(10), false, 'disposed adapter never restarts');

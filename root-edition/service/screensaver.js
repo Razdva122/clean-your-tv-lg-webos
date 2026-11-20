@@ -1,5 +1,7 @@
 'use strict';
 
+var LG_RECONNECT_MS = 5000;
+
 // Dormant adapter: the Root service must explicitly supply verified ownership,
 // capability predicates and shared modules before enabling a generation. This
 // module registers no service method, starts no input reader and touches no LG
@@ -111,6 +113,15 @@ module.exports = function (options) {
     return result;
   }
 
+  function startLG(active) {
+    var time = now();
+    if (time < active.nextLGStart || active.lg.status().running) return;
+    // A failed LG reply closes the subscription. Retry on a fresh Root
+    // status without replacing the controller or flooding an unavailable bus.
+    active.nextLGStart = time + LG_RECONNECT_MS;
+    active.lg.start();
+  }
+
   function enable(generation) {
     if (!matches(generation)) return false;
     var available;
@@ -123,7 +134,10 @@ module.exports = function (options) {
       release();
       return false;
     }
-    if (run) return true;
+    if (run) {
+      startLG(run);
+      return true;
+    }
     // A fresh subscription for the same owner must still yield the next
     // request to LG after CYTV used the previous one.
     if (!lgDeferral || lgDeferral.generation !== generation)
@@ -132,6 +146,7 @@ module.exports = function (options) {
       generation: generation,
       controller: null,
       lg: null,
+      nextLGStart: 0,
       monitor: null
     };
     run = active;
@@ -180,7 +195,7 @@ module.exports = function (options) {
       });
       active.monitor = schedule(reconcile, 250);
       active.controller.enable();
-      active.lg.start();
+      startLG(active);
       return true;
     } catch (_) {
       release();

@@ -123,6 +123,8 @@ Quand l’installateur sur ordinateur affiche **La suppression de Clean Your TV 
 
 **Réinstaller Root :** Choisissez **Configurer mon téléviseur → Root** avec la connexion enregistrée et confirmez **Réinstaller Root ?**. L’installateur rétablit LG Home et supprime entièrement Clean Your TV, ses outils de mise à jour, Home Helper et les préférences enregistrées. Après vérification de la suppression, il installe et active les paquets et l’environnement Root fournis avec cet installateur. Les autres apps du TV et l’accès root/SSH existant sont conservés. Si l’assistant sur ordinateur s’interrompt, ouvrez le même installateur et choisissez **Reprendre la réinstallation de Root**. Après vérification de la suppression, choisissez **Poursuivre l’installation de Root**. **Désinstaller Clean Your TV** seul ne lance jamais une nouvelle installation.
 
+Si l’assistant demande un redémarrage complet pendant le nettoyage, débranchez le téléviseur, rebranchez-le et allumez-le. Une fois le démarrage terminé, choisissez **J’ai redémarré le téléviseur — vérifier et continuer**.
+
 ### Modifier les réglages LG et terminer la récupération Root
 
 Dans l’installateur de bureau, ouvrez **Action de maintenance → Ajuster les réglages LG (Debloat)** avec la connexion TV enregistrée. Sélectionnez les réglages à modifier, choisissez **Appliquer les réglages sélectionnés**, puis vérifiez les résultats. Si une opération reste en attente, choisissez d’abord **Examiner les options de récupération** avec sa connexion d’origine enregistrée.
@@ -154,6 +156,8 @@ Références détaillées en anglais: [prérequis](../COMPATIBILITY.md) · [comm
 <a id="suppression-simple-v1110"></a>
 
 ## Réglages
+
+En l’absence de préférence enregistrée, l’économiseur d’écran est activé par défaut. Pour le désactiver, ouvrez **Réglages de Home → Économiseur d’écran**.
 
 Dans **Réglages → Apparence**, activez **Applications les plus utilisées en premier**. L’ordre du dock est conservé. Maintenez OK pour déplacer ou masquer une tuile dans l’ordre manuel. Désactivez l’option pour revenir à l’ordre manuel. L’option figure aussi à la fin des réglages du programme d’installation cytv.
 

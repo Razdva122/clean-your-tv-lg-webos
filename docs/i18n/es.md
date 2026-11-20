@@ -123,6 +123,8 @@ Cuando el instalador de escritorio muestre **Se verificó la eliminación de Cle
 
 **Reinstalar Root:** Elige **Configurar mi televisor → Root** con la conexión guardada y confirma **¿Reinstalar Root?**. El instalador restaura LG Home y elimina por completo Clean Your TV, incluidos sus actualizadores, Home Helper y las preferencias guardadas. Tras verificar la eliminación, instala y activa los paquetes y el entorno Root incluidos en ese instalador. Se conservan las demás apps del TV y el acceso root/SSH existente. Si el asistente de escritorio se detiene, abre el mismo instalador y elige **Continuar la reinstalación de Root**. Cuando se verifique la eliminación, elige **Continuar la instalación de Root**. **Desinstalar Clean Your TV** por sí solo nunca inicia otra instalación.
 
+Si el asistente pide un reinicio completo durante la limpieza, desconecta el televisor de la corriente, vuelve a enchufarlo y enciéndelo. Cuando arranque, elige **Ya reinicié el TV — comprobar y continuar**.
+
 ### Ajustar la configuración de LG y completar la recuperación de Root
 
 En el instalador de escritorio, abre **Acción de mantenimiento → Ajustar la configuración de LG (Debloat)** con la conexión guardada del televisor. Selecciona los ajustes que quieras cambiar, elige **Aplicar los ajustes seleccionados** y revisa los resultados. Si hay una operación pendiente, elige primero **Revisar opciones de recuperación** con su conexión original guardada.
@@ -154,6 +156,8 @@ Referencias detalladas en inglés: [requisitos](../COMPATIBILITY.md) · [control
 <a id="eliminación-sencilla-v1110"></a>
 
 ## Ajustes
+
+Si no hay una preferencia guardada, el protector de pantalla está activado de forma predeterminada. Puedes desactivarlo en **Ajustes de Home → Protector de pantalla**.
 
 En **Ajustes → Apariencia**, activa **Ordenar por frecuencia de uso**. El orden del dock se conserva. Mantén pulsado OK para mover u ocultar una tarjeta en el orden manual. Desactiva la opción para volver al orden manual. La opción también aparece al final de los ajustes del instalador cytv.
 

@@ -5,9 +5,12 @@ let browser;
 (async () => {
   browser = await chromium.launch({
     headless: true,
+    channel: process.env.BROWSER_CHANNEL,
     executablePath:
       process.env.CYTV_CHROME ||
-      '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+      (process.platform === 'darwin'
+        ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+        : undefined)
   });
   const page = await browser.newPage({
     locale: 'en',
@@ -17,11 +20,12 @@ let browser;
   page.on('pageerror', (error) => errors.push(error.message));
   await page.addInitScript(() => {
     window.requests = [];
+    window.answers = [];
     window.CYTV = {
       snapshot: () => sessionStorage.getItem('operation-events') || '[]',
       hasKey: () => true,
       start: (raw) => requests.push(JSON.parse(raw)),
-      answer: () => {}
+      answer: (raw) => answers.push(JSON.parse(raw))
     };
   });
   await page.goto(
@@ -40,6 +44,13 @@ let browser;
       useImportedKey: edition === 'root'
     };
     const started = { kind: 'started', config };
+    const prompt = {
+      kind: 'trust',
+      id: 'ed76d040-adde-4816-b699-e9db7bdf03a9',
+      fingerprint: 'SHA256:Zml4dHVyZQ',
+      root: edition === 'root'
+    };
+    const answered = { kind: 'answered', id: prompt.id };
     const terminal = [
       {
         kind: 'recovery-plan',
@@ -59,13 +70,16 @@ let browser;
       },
       { kind: 'finished', code: 0 }
     ];
-    await page.evaluate((event) => {
-      // Operation.snapshot() returns a JSON array of serialized events.
-      sessionStorage.setItem(
-        'operation-events',
-        JSON.stringify([JSON.stringify(event)])
-      );
-    }, started);
+    await page.evaluate(
+      (events) => {
+        // Operation.snapshot() returns a JSON array of serialized events.
+        sessionStorage.setItem(
+          'operation-events',
+          JSON.stringify(events.map((event) => JSON.stringify(event)))
+        );
+      },
+      [started, { kind: 'log', text: 'Waiting for host key approval' }, prompt]
+    );
     await page.setViewportSize({ width: 740, height: 320 });
     await page.reload();
     assert.equal(await page.locator('[role=progressbar]').count(), 1);
@@ -73,6 +87,19 @@ let browser;
       await page.locator('h1').innerText(),
       'Uninstall Clean Your TV'
     );
+    assert.deepEqual(await page.evaluate(() => requests), []);
+    const approval = page.locator('dialog[open] [data-action=trust]');
+    assert.equal(await approval.count(), 1, 'Replay restores pending approval');
+    assert.equal(
+      await page.locator('dialog[open] .fingerprint').innerText(),
+      prompt.fingerprint
+    );
+    assert.deepEqual(await page.evaluate(() => answers), []);
+    await approval.click();
+    assert.deepEqual(await page.evaluate(() => answers), [
+      { id: prompt.id, value: 'yes' }
+    ]);
+    assert.equal(await page.locator('dialog[open]').count(), 0);
     assert.deepEqual(await page.evaluate(() => requests), []);
 
     // The existing Activity gets callbacks even while its WebView is hidden.
@@ -101,10 +128,12 @@ let browser;
           JSON.stringify(events.map((event) => JSON.stringify(event)))
         );
       },
-      [started, ...terminal]
+      [started, prompt, answered, ...terminal]
     );
     await page.setViewportSize({ width: 320, height: 740 });
     await page.reload();
+    assert.equal(await page.locator('dialog[open]').count(), 0);
+    assert.deepEqual(await page.evaluate(() => answers), []);
     assert.equal(
       await page.locator('h1').innerText(),
       'Review recovery options'
@@ -349,7 +378,7 @@ let browser;
   assert.deepEqual(errors, []);
   await browser.close();
   console.log(
-    'PASS removal restart semantics: native snapshot, rotation, background return, guarded reconnect, five contradictory completion variants, five malformed shapes, current connection/auth priority, safe status fallback/report behavior, semantic-only cleanup proof and unchanged Home-off completion'
+    'PASS removal restart semantics: native snapshot, rotation, pending host approval, background return, guarded reconnect, five contradictory completion variants, five malformed shapes, current connection/auth priority, safe status fallback/report behavior, semantic-only cleanup proof and unchanged Home-off completion'
   );
 })().catch(async (error) => {
   console.error(error);

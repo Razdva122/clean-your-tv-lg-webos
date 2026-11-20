@@ -121,7 +121,8 @@ class DesktopRecoveryTests(unittest.TestCase):
                         self.store.begin(self.profile, 'install', stage='pending')
                     w.submit('y' if decision in ('install', 'late-pending', 'check-fails-again') else 'n')
                     if decision == 'install':
-                        self.pump(lambda: w.pending is not None or not w.running)
+                        # This leg runs both package installs before the next prompt.
+                        self.pump(lambda: w.pending is not None or not w.running, timeout=30)
                         if w.pending:
                             w.submit(None)
                 self.pump(lambda: not w.running)
@@ -174,10 +175,11 @@ class DesktopRecoveryTests(unittest.TestCase):
 
         def cleanup(installer, pending):
             cleanup_calls.append(pending['removal_operation'])
-            if len(cleanup_calls) == 1:
-                installer.store.checkpoint(installer.profile, stage='restart-required', removal_reason='restart-required')
+            if len(cleanup_calls) <= 2:
+                installer.store.checkpoint(installer.profile, stage='restart-required', removal_reason='restart-required',
+                                           cleanup_restart_triggers=['controller-still-running'])
                 return {'restart_required':True}
-            if len(cleanup_calls) != 2:
+            if len(cleanup_calls) != 3:
                 self.fail('Already verified cleanup was repeated')
             result = {'removed':True, 'verified_clean':True}
             installer.store.checkpoint(installer.profile, stage='verified-clean', removal_reason='removal-verified', result=result)
@@ -185,13 +187,13 @@ class DesktopRecoveryTests(unittest.TestCase):
             return result
 
         def preflight(installer, install=False, **kwargs):
-            if install and len(cleanup_calls) != 2:
+            if install and len(cleanup_calls) != 3:
                 raise ExistingRoot('Existing Root')
 
         def install(installer, inventory, key, migrate, reinstall=None):
             if reinstall:
                 installer.prepare_root_reinstall()
-            self.assertEqual(len(cleanup_calls), 2)
+            self.assertEqual(len(cleanup_calls), 3)
             self.assertIsNone(installer.store.pending(installer.profile))
             self.assertEqual(installer.profile, self.profile)
             installs.append(installer.profile)
@@ -217,8 +219,24 @@ class DesktopRecoveryTests(unittest.TestCase):
             w.submit('y')
             self.pump(lambda: not w.running)
             self.assertIn('Disconnect the TV from power', w.subtitle.text())
-            self.assertIn('Continue Root reinstallation', w.subtitle.text())
-            self.assertEqual(len(cleanup_calls), 1)
+            label = 'I restarted the TV — check and continue'
+            for attempt in (1, 2):
+                self.assertEqual(len(cleanup_calls), attempt)
+                expected = 'Restart the TV to finish removal' if attempt == 1 else 'The TV still needs a full restart'
+                self.assertEqual(w.title.text(), expected)
+                self.assertNotEqual(w.title.property('state'), 'error')
+                self.assertNotIn('Could not complete this step', w.details.toPlainText())
+                self.assertNotIn('choose Try again', w.details.toPlainText())
+                self.assertIsNone(self.button(w, 'Open an issue'))
+                self.assertIsNone(self.button(w, 'Try again'))
+                self.assertTrue(self.button(w, label).isDefault())
+                self.assertEqual(installs, [])
+                report = json.loads(w.report.read_text())
+                self.assertIsNone(report['error_type'])
+                self.assertEqual(report['removal']['restart_triggers'], ['controller-still-running'])
+                if attempt == 1:
+                    self.button(w, label).click()
+                    self.pump(lambda: not w.running)
             w.close()
 
             # A separate host attempt before the TV's SSH service has come back.
@@ -228,7 +246,7 @@ class DesktopRecoveryTests(unittest.TestCase):
             self.assertIsNotNone(continuation)
             continuation.click()
             self.pump(lambda: not w.running)
-            self.assertEqual(len(cleanup_calls), 1)
+            self.assertEqual(len(cleanup_calls), 2)
             self.assertEqual(w.failure_help['code'], 'ssh-refused')
             self.assertNotIn('Restart the TV', w.subtitle.text())
             self.assertEqual(w.rail_title.text(), 'Reinstall Root using this installer')
@@ -240,7 +258,7 @@ class DesktopRecoveryTests(unittest.TestCase):
             self.button(w, 'Continue Root reinstallation').click()
             self.pump(lambda: w.pending is not None)
             self.assertEqual(w.pending.title, 'Continue Root installation?')
-            self.assertEqual(cleanup_calls, [cleanup_calls[0]] * 2)
+            self.assertEqual(cleanup_calls, [cleanup_calls[0]] * 3)
             self.assertEqual(installs, [])
             w.submit(None)  # Close the installer at the boundary between removal and install.
             self.pump(lambda: not w.running)
@@ -274,7 +292,7 @@ class DesktopRecoveryTests(unittest.TestCase):
             self.button(w, 'Continue Root installation').click()
             self.pump(lambda: w.pending is not None)
             self.assertEqual(len(installs), 1)
-            self.assertEqual(cleanup_calls, [cleanup_calls[0]] * 2)
+            self.assertEqual(cleanup_calls, [cleanup_calls[0]] * 3)
             self.assertTrue(all(row == (self.profile, self.store.device_dir(self.profile), False, False)
                                 for row in auth[1:]))
             w.channel.answer(None)
@@ -582,8 +600,8 @@ class DesktopRecoveryTests(unittest.TestCase):
                 result.return_value.__enter__.return_value = ssap
         self.addCleanup(i18n.set_language, 'en')
 
-    def pump(self, predicate):
-        deadline = time.monotonic() + 5
+    def pump(self, predicate, *, timeout=5):
+        deadline = time.monotonic() + timeout
         while not predicate() and time.monotonic() < deadline:
             self.app.processEvents()
             time.sleep(.005)

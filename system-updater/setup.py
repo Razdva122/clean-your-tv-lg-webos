@@ -405,13 +405,14 @@ def provision(bundle,baseline,state=STATE,installed=INSTALLED,base=BASE,hook=HOO
 
 
 def restart_registered_launcher(edition,rpc=None):
-    """New LS2 client grants require a new launcher process, not a page reload."""
+    """Close the stale LS2 client and let normal Home routing reopen Root."""
     if edition not in ('root','no-root'):raise ValueError('Unknown launcher edition')
     if rpc is None:
         from system_updater.support.luna import call
         rpc=call
     app=APPS['root' if edition=='root' else 'home']
-    for method in ('closeByAppId','launch'):
+    methods=('closeByAppId',) if edition=='root' else ('closeByAppId','launch')
+    for method in methods:
         try:reply=rpc('luna://com.webos.applicationManager/'+method,{'id':app})
         except RuntimeError as error:
             if method=='closeByAppId' and getattr(error,'stopped_launcher',None)==app:continue

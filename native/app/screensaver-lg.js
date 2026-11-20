@@ -3,6 +3,7 @@
 // The C3 gives clients three seconds to answer. Leave time for LS2 delivery
 // and let firmware proceed if the renderer still has not claimed the window.
 var GLOBAL_READY_MS = 1500;
+var TIMESTAMP_PERIOD_US = 4294967296;
 
 // Ordinary tvpower protocol. Only a fresh, visible and focused renderer may
 // defer LG. A global owner can attempt to show one within the response budget.
@@ -67,9 +68,20 @@ module.exports = function (options) {
     if (typeof value !== 'string' || !/^[0-9]{1,32}$/.test(value)) return null;
     return value.replace(/^0+(?=[0-9])/, '');
   }
-  function isNewer(key, previous) {
+  function isNewer(key, previous, elapsedMs) {
+    if (previous === null) return true;
+    if (key.length <= 10 && previous.length <= 10) {
+      var next = Number(key),
+        last = Number(previous);
+      if (next < TIMESTAMP_PERIOD_US && last < TIMESTAMP_PERIOD_US) {
+        // Some LG firmware sends wall-clock microseconds modulo 2^32.
+        // After half a cycle of silence the old serial no longer orders new requests.
+        if (elapsedMs >= TIMESTAMP_PERIOD_US / 2000) return true;
+        var delta = (next - last + TIMESTAMP_PERIOD_US) % TIMESTAMP_PERIOD_US;
+        return delta > 0 && delta < TIMESTAMP_PERIOD_US / 2;
+      }
+    }
     return (
-      previous === null ||
       key.length > previous.length ||
       (key.length === previous.length && key > previous)
     );
@@ -121,8 +133,11 @@ module.exports = function (options) {
       release(run, 'invalid-request');
       return;
     }
-    if (!isNewer(key, run.lastTimestamp)) return;
+    var receivedAt = now();
+    if (!isNewer(key, run.lastTimestamp, receivedAt - run.lastTimestampAt))
+      return;
     run.lastTimestamp = key;
+    run.lastTimestampAt = receivedAt;
     if (run.offer) {
       run.offer.finish(false);
       return respond(run, payload, true);
@@ -206,6 +221,7 @@ module.exports = function (options) {
         registered: false,
         subscription: null,
         lastTimestamp: null,
+        lastTimestampAt: 0,
         offer: null,
         deferredGlobal: false,
         pending: []

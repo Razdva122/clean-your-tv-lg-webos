@@ -14,7 +14,8 @@ REMOVAL_REASONS = ('removal-requested', 'original-writer-active', 'ownership-con
                    'root-worker-busy','root-access-required','removal-failed','cleanup-check-failed',
                    'connection-interrupted','connection-unverified')
 RESTART_TRIGGERS = ('controller-still-running', 'protected-package-access', 'startup-disable-unverified',
-                    'resident-installer-evidence', 'prior-operation-unresolved', 'process-idle-unverified',
+                    'resident-installer-evidence', 'updater-transaction-unresolved', 'owned-process-still-used',
+                    'prior-operation-unresolved', 'process-idle-unverified',
                     'invalid-helper-stop-record', 'catalog-helper-stop-unverified', 'package-removal-unverified',
                     'original-configuration-unverified', 'original-package-unverified', 'homebrew-request-unverified')
 STATES += ('cleanup-in-progress', 'verified-clean')
@@ -51,6 +52,13 @@ def root_removal_failure_phase(reply):
     return REMOVAL_FAILURE_PHASES.get(stage) if type(stage) is str else None
 
 
+def restart_triggers(value):
+    if type(value) is not list:
+        return []
+    known = {item for item in value if type(item) is str}
+    return [item for item in RESTART_TRIGGERS if item in known]
+
+
 def removal_summary(pending):
     """Fixed safe projection; neither old success nor this advice grants effects."""
     pending = pending if type(pending) is dict else {}
@@ -70,13 +78,12 @@ def removal_summary(pending):
             and phase_reason in REMOVAL_FAILURE_PHASES.values()):
         result['failure_phase'] = phase_reason
     proof = pending.get('result')
-    if stage == 'verified-clean' and type(proof) is dict and proof.get('empty_helper_dirs_retained') is True:
-        result['empty_helper_dirs_retained'] = True
-    triggers = pending.get('cleanup_restart_triggers')
-    if stage == 'restart-required' and type(triggers) is list:
-        known = {item for item in triggers if type(item) is str and item in RESTART_TRIGGERS}
-        if known:
-            result['restart_triggers'] = [item for item in RESTART_TRIGGERS if item in known]
+    if stage == 'verified-clean' and type(proof) is dict:
+        for key in ('empty_helper_dirs_retained', 'empty_service_dirs_retained'):
+            if proof.get(key) is True:
+                result[key] = True
+    if stage == 'restart-required' and (triggers := restart_triggers(pending.get('cleanup_restart_triggers'))):
+        result['restart_triggers'] = triggers
     return result
 
 

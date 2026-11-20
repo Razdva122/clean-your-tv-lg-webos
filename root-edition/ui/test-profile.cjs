@@ -1,6 +1,7 @@
 const assert = require('assert'),
   fs = require('fs'),
-  vm = require('vm');
+  vm = require('vm'),
+  { preferences } = require('../../scripts/sync-home-profile-languages.cjs');
 const path = __dirname + '/root-profile-data.js';
 assert(
   fs.existsSync(path),
@@ -145,15 +146,33 @@ function harness({
   return { window, calls, scripts, errors, memory };
 }
 (async () => {
-  for (const [before, after] of [
-    ['ru', 'ko'],
-    ['en', 'cs'],
-    ['cs', 'auto'],
-    ['en', 'auto'],
-    ['auto', 'en']
-  ]) {
-    const languageProfile = JSON.parse(JSON.stringify(profile));
-    languageProfile.settings['tvhome.language'] = after;
+  const starting = harness();
+  await tick();
+  await assert.rejects(
+    starting.window.RootProfile.capture({ system: true }),
+    /Launcher did not finish rendering/
+  );
+  assert(
+    !starting.memory.has(data.key),
+    'early capture must not save inventory'
+  );
+  starting.window.RootLauncherRendered = true;
+  assert.deepStrictEqual(
+    JSON.parse(
+      JSON.stringify(
+        await starting.window.RootProfile.capture({ system: true })
+      )
+    ),
+    { ...profile, settings: {} }
+  );
+  for (const after of preferences()) {
+    const before = after === 'en' ? 'auto' : 'en';
+    const captured = harness({
+      memory: new Map([['tvhome.language', after]])
+    });
+    await tick();
+    const languageProfile = await captured.window.RootProfile.capture();
+    assert.strictEqual(languageProfile.settings['tvhome.language'], after);
     const memory = new Map([['tvhome.language', before]]),
       restore = {
         profile: languageProfile,
@@ -163,6 +182,7 @@ function harness({
       };
     let changed = harness({ restore, memory, i18n: true });
     await tick();
+    assert.strictEqual(memory.get('tvhome.language'), after);
     assert.deepStrictEqual(
       changed.calls.filter((c) => c[0] === 'reload'),
       [['reload', 'language-change:0.0.1']],
@@ -536,6 +556,7 @@ function harness({
     }
   });
   await tick();
+  confirmedHost.window.RootLauncherRendered = true;
   const transferable = await confirmedHost.window.RootProfile.capture({
     system: true
   });
@@ -590,6 +611,7 @@ function harness({
     discovered.apps[0].iconColor = color;
     const fresh = harness({ packaged: discovered });
     await tick();
+    fresh.window.RootLauncherRendered = true;
     const captured = await fresh.window.RootProfile.capture({ system: true });
     assert(!Object.hasOwn(captured.inventory.apps[0], 'iconColor'));
     assert.deepStrictEqual(fresh.window.TV_APPS.apps[0].iconColor, color);

@@ -1,5 +1,9 @@
 # Release history and device evidence
 
+- [Issue 152 service-directory cleanup, 2026-11-19](2026-11-19-issue152-service-cleanup.md): repeated No-root removal after fresh installation, exact SDK ownership replay and remaining device limits.
+
+- [v1.26.0 RC1 verification ledger](2026-11-19-release-1.26.0-rc1-verification.md)
+
 - [v1.25.0 RC1 verification ledger](2026-11-19-release-1.25.0-rc1-verification.md)
 
 - [Issue 678 retained Root inspection diagnostics, 2026-11-18](2026-11-18-issue678-root-inspection.md)

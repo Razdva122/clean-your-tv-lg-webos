@@ -1,4 +1,5 @@
 """Build-time source injections must survive formatting without missing silently."""
+from html.parser import HTMLParser
 import json
 import os
 from pathlib import Path
@@ -9,8 +10,25 @@ import sys
 import tempfile
 import unittest
 from unittest.mock import patch
+from urllib.parse import unquote, urlsplit
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+class PageAssets(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.local = []
+
+    def handle_starttag(self, tag, attrs):
+        attrs = dict(attrs)
+        url = attrs.get('src') if tag == 'script' else None
+        if tag == 'link' and attrs.get('rel') == 'stylesheet':
+            url = attrs.get('href')
+        if url:
+            parts = urlsplit(url)
+            if not parts.scheme and not parts.netloc and parts.path:
+                self.local.append(unquote(parts.path))
 
 
 class FormattedSourceInjectionTests(unittest.TestCase):
@@ -52,12 +70,15 @@ for (const url of ['https://github.com/Razdva122/clean-your-tv-lg-webos/releases
         run = subprocess.run
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary)
-            for directory in ('launcher', 'renewal-service', 'updater-app', 'updater-service'):
+            for directory in ('launcher', 'renewal-service', 'updater-app', 'updater-service',
+                              'theme-receiver'):
                 shutil.copytree(ROOT / directory, source / directory,
                                 ignore=shutil.ignore_patterns('state', 'node_modules'))
-            for name in ('scripts/build-update-lab.py', 'scripts/update-permissions.cjs',
+            for name in ('scripts/build-update-lab.py', 'scripts/no_root_assets.py',
+                         'scripts/theme_receiver.py', 'scripts/update-permissions.cjs',
                          'scripts/lib/update-permissions.cjs', 'docs/UPDATES.md',
-                         'root-edition/ui/root-locales.js'):
+                         'root-edition/ui/root-locales.js', 'native/app/state-permissions.js',
+                         'native/app/contract-events.js', 'screensaver/settings.js'):
                 target = source / name
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_bytes((ROOT / name).read_bytes())
@@ -70,10 +91,48 @@ for (const url of ['https://github.com/Razdva122/clean-your-tv-lg-webos/releases
                 package.write_bytes(b'isolated package fixture')
                 return subprocess.CompletedProcess(args, 0)
 
-            with patch.dict(os.environ, ARES_PACKAGE='fixture-ares-package'), patch('subprocess.run', package_or_run):
+            with (patch.dict(os.environ, ARES_PACKAGE='fixture-ares-package'),
+                  patch('subprocess.run', package_or_run), patch.object(sys, 'path', sys.path.copy()),
+                  patch.dict(sys.modules)):
+                for name in ('scripts', 'scripts.no_root_assets', 'scripts.theme_receiver'):
+                    sys.modules.pop(name, None)
                 runpy.run_path(str(source / 'scripts/build-update-lab.py'))
-            renewal = source / 'build/update-lab/renewal/service.js'
-            updater = source / 'build/update-lab/service/service.js'
+                self.assertEqual(Path(sys.modules['scripts.no_root_assets'].__file__).resolve(),
+                                 (source / 'scripts/no_root_assets.py').resolve())
+            stage = source / 'build/update-lab'
+            renewal = stage / 'renewal/service.js'
+            updater = stage / 'service/service.js'
+            for name in ('updater', 'home-1.2.0', 'home-1.2.1'):
+                with self.subTest(app=name):
+                    app = stage / name
+                    assets = PageAssets()
+                    assets.feed((app / 'index.html').read_text())
+                    self.assertTrue(assets.local)
+                    self.assertEqual([url for url in assets.local if not (app / url).is_file()], [])
+                    self.assertNotIn('system-updates.js', assets.local)
+            upstream_assets = PageAssets()
+            upstream_assets.feed((ROOT / 'updater-app/index.html').read_text())
+            self.assertEqual([url for url in upstream_assets.local
+                              if not (stage / 'updater' / url).is_file()], [])
+            recovery = run(['node', str(ROOT / 'tests/updates/recovery-ui.cjs'),
+                            str(stage / 'updater/app.js'), 'com.cleanyourtv.updaterlab.service'],
+                           capture_output=True, text=True)
+            self.assertEqual(recovery.returncode, 0, recovery.stdout + recovery.stderr)
+            for name, exported in (('renewal/theme-receiver.js', 'activityHold'),
+                                   ('renewal/state-permissions.js', 'atomicRecord'),
+                                   ('service/user-data.js', 'validate')):
+                with self.subTest(module=name):
+                    result = run(['node', '-e', """
+const assert = require('node:assert/strict');
+assert.equal(typeof require(process.argv[1])[process.argv[2]], 'function');
+""", str(stage / name), exported], capture_output=True, text=True)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+            for name, expected in (('updater/appinfo.json', 'com.cleanyourtv.updaterlab'),
+                                   ('service/services.json', 'com.cleanyourtv.updaterlab.service'),
+                                   ('home-1.2.0/appinfo.json', 'com.cleanyourtv.updatetest'),
+                                   ('home-1.2.1/appinfo.json', 'com.cleanyourtv.updatetest'),
+                                   ('renewal/services.json', 'com.cleanyourtv.updatetest.renewal')):
+                self.assertEqual(json.loads((stage / name).read_text())['id'], expected)
             for script in (renewal, updater):
                 run(['node', '--check', str(script)], check=True, capture_output=True)
             self.assertNotIn('com.palm.activitymanager/', renewal.read_text())
