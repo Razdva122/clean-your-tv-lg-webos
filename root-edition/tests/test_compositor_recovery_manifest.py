@@ -84,6 +84,28 @@ class RecoveryManifestTests(unittest.TestCase):
         self.save()
         self.assertTrue(self.verifier.verify()['integrity_verified'])
 
+    def test_schema4_requires_every_embedded_adapter_asset_in_manifest(self):
+        self.backend(4)
+        assets = [self.write(self.runtime/name, name.encode()) for name in
+                  ('embedded_home.py', 'embedded-home.qml', 'embedded-home.js')]
+        self.files.extend(assets)
+        self.save()
+        self.assertTrue(self.verifier.verify()['integrity_verified'])
+        for path in assets:
+            with self.subTest(asset=path.name):
+                digest = self.proof['files'].pop(str(path))
+                self.persist()
+                with self.assertRaisesRegex(ValueError, 'Incomplete recovery manifest'):
+                    self.verifier.verify()
+                self.proof['files'][str(path)] = digest
+                self.persist()
+                original = path.read_bytes()
+                path.write_bytes(b'changed adapter')
+                with self.assertRaisesRegex(ValueError, 'digest mismatch'):
+                    self.verifier.verify()
+                path.write_bytes(original)
+
+
     def test_schema1_retains_native_gate_requirement(self):
         guard = self.backend(1)
         self.save()

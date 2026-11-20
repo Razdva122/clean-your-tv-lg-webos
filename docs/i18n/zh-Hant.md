@@ -91,6 +91,8 @@ No-root: 要重新啟動 Home 控制，請開啟 Home Helper，選擇啟動 Help
 
 如果 Home Helper 已停止，也可以在 Home 主畫面或螢幕保護程式設定中選擇**啟動 Helper**。啟動後狀態會自動更新。
 
+在 LG Home 以面板形式開啟的電視上，開啟或關閉 Root 的 **Change Home** 可能會讓電視介面短暫重新啟動。重新啟動或發生故障後，請開啟 Clean Your TV 並重新開啟 **Change Home**，以恢復控制。LG Home 仍可使用。
+
 ## 需要協助？
 
 如果顯示 `ssh-identity-changed`，請停止操作並驗證電視的 SSH 金鑰。 [SSH 金鑰變更後的復原](../RECOVERY.md#ssh-identity-changed)

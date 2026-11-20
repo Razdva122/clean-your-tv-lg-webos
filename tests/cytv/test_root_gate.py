@@ -59,6 +59,43 @@ class RootGateTests(unittest.TestCase):
         self.assertIsNone(self.store.pending(self.profile))
         self.assertEqual(self.remote.uploads,{})
 
+    def test_embedded_source_bundle_requires_adapter_guardian_and_admission_contract(self):
+        self.installer.tv_info['home_backend_schema'] = 4
+        helper = b'fixture guardian CYTV-QML-KEYFILTER-1'
+        resources = {'runtime/c1-keyfilter-guard':helper,
+                     'runtime/c1_keyfilter.py':b'keyfilter', 'runtime/c1-home-filter.js':b'filter',
+                     'runtime/embedded_home.py':b'adapter', 'runtime/embedded-home.qml':b'wrapper',
+                     'runtime/embedded-home.js':b'controller'}
+        for name, raw in resources.items():
+            (self.folder/name).write_bytes(raw)
+        release_path = self.folder/'release.json'
+        release = json.loads(release_path.read_bytes())
+        release.update(routing='compositor-keyfilter-v1', compositor_admission=3,
+                       native_sha256=hashlib.sha256(helper).hexdigest())
+        release_path.write_text(json.dumps(release)); self.refresh()
+        self.assertEqual(root_gate.source_bundle(self.installer)['runtime/embedded-home.qml'], b'wrapper')
+
+        for name in ('runtime/embedded_home.py', 'runtime/embedded-home.qml', 'runtime/embedded-home.js'):
+            with self.subTest(missing=name):
+                (self.folder/name).unlink(); self.refresh()
+                with self.assertRaisesRegex(ValueError, 'matching adapter and guardian'):
+                    root_gate.source_bundle(self.installer)
+                (self.folder/name).write_bytes(resources[name])
+        for admission in (None, 2, 4):
+            with self.subTest(admission=admission):
+                release_path.write_text(json.dumps(dict(release, compositor_admission=admission))); self.refresh()
+                with self.assertRaisesRegex(ValueError, 'matching mount-free payload'):
+                    root_gate.source_bundle(self.installer)
+        # Even an authentic bundle hash cannot substitute for guardian protocol support.
+        unsupported = b'guardian without the embedded protocol'
+        (self.folder/'runtime/c1-keyfilter-guard').write_bytes(unsupported)
+        release_path.write_text(json.dumps(dict(release, native_sha256=hashlib.sha256(unsupported).hexdigest())))
+        self.refresh()
+        with self.assertRaisesRegex(ValueError, 'matching adapter and guardian'):
+            root_gate.source_bundle(self.installer)
+        self.assertEqual(self.remote.calls, [])
+        self.assertIsNone(self.store.pending(self.profile))
+
     def test_runtime_variant_cannot_cross_normal_and_beta_payloads(self):
         path = self.folder/'release.json'
         original = json.loads(path.read_bytes())

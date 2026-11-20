@@ -71,8 +71,12 @@ and limits, see the [initial UID 1001 investigation](../history/2026-11-10-issue
 
 A configured KeyFilters field alone does not prove compatibility. The existing
 guardian authenticates `/usr/bin/com.webos.app.home` and returns to LG by launching
-that native application. Firmware with an in-compositor ribbon, a web/Flutter
-Home or no native executable is refused. Glasshouse uses a different recovery
+that native application. This schema2/3 native-Home path refuses firmware with
+an in-compositor ribbon, a web/Flutter Home or no native executable. The separate
+[embedded LG Home adapter](EMBEDDED-HOME.md) reuses the shared leases and guardian
+with schema4 when the compositor exposes the required entry-file and stock-policy
+capabilities; it does not relax the native-Home path's admission checks.
+Glasshouse uses a different recovery
 mechanism for its standalone/ribbon mode: it clears its Home mapping and injects
 a 100 ms key press after a delay; its source also records a B8 HDMI regression
 when forcibly closing the foreground app. That mechanism is not part of this

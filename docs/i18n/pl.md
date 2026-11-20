@@ -91,6 +91,8 @@ No-root: Aby wznowić sterowanie Home, otwórz Home Helper, wybierz Uruchom Help
 
 Gdy Home Helper jest zatrzymany, możesz też wybrać **Uruchom Helper** w ustawieniach ekranu Home lub wygaszacza. Stan zaktualizuje się automatycznie po uruchomieniu.
 
+Na telewizorach, na których LG Home otwiera się jako panel, włączenie lub wyłączenie **Change Home** w Root może na chwilę ponownie uruchomić interfejs telewizora. Po ponownym uruchomieniu lub awarii otwórz Clean Your TV i ponownie włącz **Change Home**, aby wznowić sterowanie. LG Home pozostaje dostępny.
+
 ## Potrzebujesz pomocy?
 
 Jeśli zobaczysz `ssh-identity-changed`, przerwij i zweryfikuj klucz SSH telewizora. [Odzyskiwanie po zmianie klucza SSH](../RECOVERY.md#ssh-identity-changed)

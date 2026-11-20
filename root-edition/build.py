@@ -206,7 +206,7 @@ def build(output, version='0.0.1', legacy_node_prototype=False, resolution=None,
         if keyfilter:
             if legacy_node_beta:
                 support[BETA_MIGRATION_SCRIPT] = checked_file(source, BETA_MIGRATION_SCRIPT)
-            for extra in ('c1_keyfilter.py', 'c1-home-filter.js'):
+            for extra in ('c1_keyfilter.py', 'c1-home-filter.js', 'embedded_home.py', 'embedded-home.qml', 'embedded-home.js'):
                 support['runtime/' + extra] = checked_file(source, 'runtime/' + extra)
     if recovery_gate is not None:
         # Current trusted recovery for retained schema-1 installations only.

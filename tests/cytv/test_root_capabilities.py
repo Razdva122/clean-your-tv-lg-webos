@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 import tempfile
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, call
 from cytv import state
 from cytv.checks import CheckList
 
@@ -16,6 +16,47 @@ PROFILES={'returnValue':True,'profiles':{'defaultApps':{'categories':{'home':'co
 
 
 class CapabilityTests(unittest.TestCase):
+    def test_embedded_compositor_requires_positive_marker_and_native_elf(self):
+        import struct
+        from cytv.root_capabilities import EMBEDDED_HEADERS, embedded_compositor
+        header = struct.pack('<16sHHIIIIIHHHHHH', b'\x7fELF\x01\x01\x01',
+                             3, 40, 1, 64, 52, 0, 0, 52, 32, 2, 0, 0, 0)
+        dump = ' '.join(map(str, header))
+        observed = '0 1 755 50684\n'+dump+'\nCYTV_HOME_ELF\n'+dump
+        marker = '\nCYTV_EMBEDDED_READY\n'
+        for reply, admitted in ((observed+marker, True), (observed, False),
+                                (marker, False), (observed+marker+'extra', False),
+                                (observed.replace('0 1 755', '0 1 777')+marker, False)):
+            with self.subTest(admitted=admitted, reply=reply[:30]):
+                remote = Mock(); remote.run.return_value = reply
+                self.assertEqual(embedded_compositor(remote), admitted)
+                remote.run.assert_called_once_with(EMBEDDED_HEADERS, timeout=8)
+
+    def test_embedded_admission_uses_capabilities_for_alternate_models_and_versions(self):
+        import struct
+        from cytv.root_capabilities import EMBEDDED_HEADERS, verify
+        from cytv.diagnostic_context import tv_summary
+        missing = {'returnValue':False, 'errorCode':-1,
+                   'errorText':'Service does not exist: com.webos.service.systemprofile.'}
+        header = struct.pack('<16sHHIIIIIHHHHHH', b'\x7fELF\x01\x01\x01',
+                             3, 40, 1, 64, 52, 0, 0, 52, 32, 2, 0, 0, 0)
+        dump = ' '.join(map(str, header))
+        observed = '0 1 755 50684\n'+dump+'\nCYTV_HOME_ELF\n'+dump+'\nCYTV_EMBEDDED_READY\n'
+        for model, sdk, firmware in (('60UJ6050-UA','3.9.0','06.10.55'),
+                                      ('unlisted-compositor','12.0.0','99.00.01')):
+            identity = dict(returnValue=True, modelName=model, firmwareVersion=firmware, sdkVersion=sdk)
+            remote = Mock()
+            remote.luna.side_effect = [missing, identity, identity, {'returnValue':True,'configs':{}}]
+            remote.run.return_value = observed
+            info = {}
+            with self.subTest(model=model):
+                self.assertEqual(verify(remote, CheckList(), info, allow_c1=True, allow_compositor=True),
+                                 'c1-native-gate')
+                self.assertEqual(info['home_backend_schema'], 4)
+                self.assertEqual(tv_summary(info)['home_backend_schema'], 4)
+                self.assertNotIn('root_compositor_failure', tv_summary(info))
+                remote.run.assert_called_once_with(EMBEDDED_HEADERS, timeout=8)
+
     def test_doctor_records_home_and_keyfilters_when_both_fail(self):
         from cytv.diagnostic_context import tv_summary
         from cytv.root_capabilities import NATIVE_HEADERS, RootCapabilityError, verify
@@ -437,7 +478,7 @@ class CapabilityTests(unittest.TestCase):
 
     def test_legacy_ribbon_requires_positive_readback_and_confirmed_missing_routing(self):
         from cytv.errors import TVRejected
-        from cytv.root_capabilities import NATIVE_HEADERS, RootCapabilityError, verify
+        from cytv.root_capabilities import EMBEDDED_HEADERS, NATIVE_HEADERS, RootCapabilityError, verify
 
         missing = {'returnValue': False, 'errorCode': -1,
                    'errorText': 'Service does not exist: com.webos.service.systemprofile.'}
@@ -462,6 +503,7 @@ class CapabilityTests(unittest.TestCase):
                 from cytv.diagnostic_context import tv_summary
                 remote = Mock()
                 remote.luna.side_effect = [missing, identity, identity, config, reply]
+                remote.run.return_value = ''  # No positive embedded-compositor capability.
                 info = {}
                 with self.assertRaises(RootCapabilityError) as raised:
                     verify(remote, CheckList(), info, allow_c1=True, allow_compositor=True)
@@ -470,10 +512,10 @@ class CapabilityTests(unittest.TestCase):
                 self.assertEqual(report.get('root_ribbon_probe'), probe)
                 self.assertNotIn('drop-me', str(report))
                 self.assertNotIn('home_backend', info)
+                expected_reads = [call(EMBEDDED_HEADERS, timeout=8)]
                 if config is config_denied:
-                    remote.run.assert_called_once_with(NATIVE_HEADERS, timeout=5)
-                else:
-                    remote.run.assert_not_called()
+                    expected_reads.append(call(NATIVE_HEADERS, timeout=5))
+                self.assertEqual(remote.run.call_args_list, expected_reads)
 
     def test_generic_permission_denial_never_enters_native_admission(self):
         from cytv.root_capabilities import verify,RootCapabilityError

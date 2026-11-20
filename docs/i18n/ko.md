@@ -91,6 +91,8 @@ No-root: Home 제어를 다시 시작하려면 Home Helper를 열고 Helper 시�
 
 Home Helper가 중지되면 Home 화면이나 화면 보호기 설정에서도 **Helper 시작**을 선택할 수 있습니다. 시작 후 상태가 자동으로 갱신됩니다.
 
+LG Home이 패널로 열리는 TV에서는 Root의 **Change Home**을 켜거나 끌 때 TV 인터페이스가 잠시 다시 시작될 수 있습니다. 다시 시작하거나 오류가 발생한 뒤에는 Clean Your TV를 열고 **Change Home**을 다시 켜서 제어를 재개하세요. LG Home은 계속 사용할 수 있습니다.
+
 ## 도움이 필요하신가요?
 
 `ssh-identity-changed`가 표시되면 중단하고 TV의 SSH 키를 확인하세요. [SSH 키 변경 후 복구](../RECOVERY.md#ssh-identity-changed)

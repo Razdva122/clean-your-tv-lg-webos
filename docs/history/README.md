@@ -1,5 +1,7 @@
 # Release history and device evidence
 
+- [Embedded LG Home adapter, 2026-11-20](2026-11-20-embedded-home-adapter.md): capability admission, shared C1 recovery and offline W17M proof boundaries.
+
 - [Next candidate preparation, 2026-11-20](2026-11-20-next-candidate-preparation.md): staged PR inventory, integration repairs and focused host verification.
 
 - [Issue 692 cleanup exec budget, 2026-11-20](2026-11-20-issue692-cleanup-exec-budget.md): W19P Node 0.12.2 replay, verified-source streaming and package metadata remnants.
