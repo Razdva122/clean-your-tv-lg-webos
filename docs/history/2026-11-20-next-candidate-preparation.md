@@ -94,6 +94,37 @@ on Windows. The replacement compares POSIX path text and runs the latter
 fixture on POSIX CI. Installer and TV runtime sources and package versions are
 unchanged. The focused macOS suite ran 38 cases (36 passed, two Linux-only
 skips). The same-source failed-job retry cannot pick up these fixture changes.
-The full build workflow queues the replacement behind RC1 without cancelling
-remaining jobs. Review outstanding results against both runs before selecting
-a build. The failed attempt supplied no device acceptance.
+RC1 was cancelled at 13:11:10 UTC+05:00 at the maintainer’s request to free the
+queue. The failed attempt supplied no device acceptance.
+
+### RC2 artifact preflight and acceptance scope
+
+Release coordination handoff was at 13:17:14 UTC+05:00. The maintainer made
+only the project OLED55C3RLA available. Its paired read-only check and SSH
+release metadata succeeded. The starting Root version was 0.22.0; the
+v1.25.0 rollback installer and original Root/Updater packages were verified
+against the published checksums before device mutations.
+
+- **RC1-06 (emulator).** Exact APK from RC2 run 44700115224:1, SHA-256
+  `507ae5be20f9580792062b9c7bb28d7fccc55c9480288c356bfb0e781c00734e`.
+  Original signing identity verified. ARM64 Android 15 / API 35 userdebug
+  emulator upgraded the signed published v1.26.0 Android 0.22.0 / 52 APK to
+  0.23.0 / 53 via install-r. All four synthetic retained files matched.
+  The real Store and native OperationChecks passed. No pending action replayed
+  on launch. No phone or TV commands were used in this emulator case.
+- **RC1-04 (offline pass, physical deferred).** Verified the candidate macOS
+  archive and 622 embedded payload files, including the Root Beta compositor
+  bundle (manifest SHA-256
+  `2b18ef364a16f62531b3e1615cf4c99268c633704d2a8f3981f5d88a6223a4be`).
+  Replayed that exact bundle in the existing isolated W19H 05.50.00 laboratory.
+  Factory ARM Node, LS2 and native guard verified ready status, an unstarted
+  removal handoff with preserved evidence, migration, retry, rollback and
+  explicit reapply. All 148 installed files and the saved preferences matched.
+  The modeled boot used actual ARM retirement and launched once per verified
+  new session. Physical boot and remote behavior are unverified and were
+  explicitly deferred by the maintainer. Follow-up on other hardware belongs
+  in the existing public reports after verified publication.
+
+[RC2 run 44700115224, attempt 1](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/44700115224)
+ran 13:11:12–13:52:06 UTC+05:00. All mandatory platform, runtime and browser
+gates passed. Full build validation used source `3b49294bda1d2da49e4859f3ca72750ebac08475`.

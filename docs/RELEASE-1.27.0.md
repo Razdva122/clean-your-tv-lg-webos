@@ -6,7 +6,9 @@
 - Root Beta can migrate its retained startup runtime in place while keeping the
   installed app and settings. The runtime checks the native guard and shutdown
   capabilities before allowing reboot resume, and keeps explicit Off and
-  emergency stops authoritative (#751, #754).
+  emergency stops authoritative (#751, #754). The migration and rollback passed an
+  offline replay with the B9 firmware. Physical startup and remote behavior on
+  that model still need confirmation.
 - Root recovery uses local request activities on legacy webOS. A separate repair
   command can resume a supported interrupted Root setup from its original saved
   receipt. Diagnostics distinguish initial input readiness from a heartbeat
