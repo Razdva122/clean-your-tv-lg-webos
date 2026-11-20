@@ -522,7 +522,7 @@ def compact_audit(record, store):
             result['package_rejected']=True
         step=value.get('cleanup_step')
         if step in ('routing-inverse','runtime-restore','provision-rollback','startup-hook',
-                    'legacy-lockdown','registration-restore','legacy-permissions','home-readback'):
+                    'legacy-lockdown','registration-restore','legacy-permissions','home-readback','boot-identity','private-inventory'):
             result['cleanup_step']=step
         # Existing validators assume frame file names are hashable. Ignore
         # malformed optional data without interrupting cleanup.

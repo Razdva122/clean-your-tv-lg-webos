@@ -335,6 +335,48 @@ class SimpleRemoval(unittest.TestCase):
             with self.assertRaises(BlockingIOError):
                 with driver.store.lock(blocking=False):self.fail('acquired active worker')
 
+    def test_requested_failure_identifies_boot_or_private_inventory_without_removing_app(self):
+        for step in ('boot-identity', 'private-inventory'):
+            with self.subTest(step=step):
+                driver, identifier, root, updater, payload, calls, present = self.prepare()
+                installed = set(present)
+                if step == 'boot-identity':
+                    driver.device.boot_id = Mock(side_effect=OSError(7, 'PRIVATE'))
+                else:
+                    driver.device.shared_cleanup = Mock(side_effect=OSError(7, 'PRIVATE'))
+                result = driver.clean_remove(identifier)
+                self.assertEqual(result['stage'], 'requested')
+                self.assertEqual(result['last_failure'], {'exception_type':'OSError', 'errno':7,
+                    'cleanup_step':step, 'stage':'requested'})
+                self.assertEqual(set(present), installed)
+                self.assertFalse(any(call.startswith('remove-') for call in calls))
+
+    def test_shared_private_cleanup_streams_verified_source_instead_of_large_argv(self):
+        driver, identifier, root, updater, payload, calls, present = self.prepare()
+        source = b"console.log(JSON.stringify({schema:1,present:[],blocked:[],root_present:[]}));" + b" " * 140000
+        script = payload/'root-updater/cleanup_no_root_private.js'
+        script.write_bytes(source)
+        manifest = payload/'root-updater/bundle.json'
+        value = json.loads(manifest.read_text())
+        value['files'][script.name] = hashlib.sha256(source).hexdigest()
+        manifest.write_text(json.dumps(value))
+        del driver.device.shared_cleanup
+        driver.device.ownership = driver.ownership
+        run = subprocess.run
+        def actual(args, **kwargs):
+            self.assertLess(max(len(arg) for arg in args), 4096)
+            self.assertEqual(kwargs['input'], source)
+            self.assertNotIn('stdin', kwargs)
+            return run([os.environ.get('NODE8', 'node'), *args[1:]], **kwargs)
+        with patch('install_device.subprocess.run', side_effect=actual):
+            self.assertEqual(driver.device.shared_cleanup('inventory', {})['present'], [])
+        # Hash admission still precedes execution of every byte.
+        script.write_bytes(source + b'changed')
+        with patch('install_device.subprocess.run') as child:
+            with self.assertRaisesRegex(ValueError, 'current_cleanup_support_changed'):
+                driver.device.shared_cleanup('inventory', {})
+            child.assert_not_called()
+
     def test_shared_private_cleanup_restarts_before_old_resident_and_cleans_after_boot(self):
         from cytv.no_root_cleanup import PRIVATE_CLEANUP_PROGRAM
         driver,identifier,root,updater,payload,calls,present=self.prepare()
