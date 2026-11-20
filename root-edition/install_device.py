@@ -689,8 +689,11 @@ class LocalDevice:
         raw=safe_bytes(support/name,uid=self.ownership.store.uid)
         manifest=json.loads(safe_bytes(support/'bundle.json',uid=self.ownership.store.uid))
         if sha(raw)!=manifest['files'].get(name):raise ValueError('current_cleanup_support_changed')
-        result=subprocess.run(['/usr/bin/node','-e',raw.decode(),json.dumps({'action':action,'app':app,'staging_ids':record.get('cleanup_staging_ids',[])})],
-            stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=90,
+        # Reuse the legacy-compatible stdin loader. A full cleanup program in
+        # argv can exceed the TV's exec argument/environment budget.
+        result=subprocess.run(['/usr/bin/node','-e',CLEAN_TAIL_STDIN,'cytv-private-cleanup',
+            json.dumps({'action':action,'app':app,'staging_ids':record.get('cleanup_staging_ids',[])})],
+            input=raw,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=90,
             env={key:value for key,value in os.environ.items() if key not in ('NODE_OPTIONS','NODE_PATH')})
         if result.returncode:raise ValueError('private_cleanup_unconfirmed')
         value=json.loads(result.stdout)

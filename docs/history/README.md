@@ -1,5 +1,7 @@
 # Release history and device evidence
 
+- [Issue 692 cleanup exec budget, 2026-11-20](2026-11-20-issue692-cleanup-exec-budget.md): W19P Node 0.12.2 replay, verified-source streaming and package metadata remnants.
+
 - [Issue 152 service-directory cleanup, 2026-11-19](2026-11-19-issue152-service-cleanup.md): repeated No-root removal after fresh installation, exact SDK ownership replay and remaining device limits.
 
 - [v1.26.0 RC1 verification ledger](2026-11-19-release-1.26.0-rc1-verification.md)
