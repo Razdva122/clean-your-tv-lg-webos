@@ -149,6 +149,7 @@ class ResourceDeliveryTests(unittest.TestCase):
                                  tv_sources.trusted_source(name).encode())
 
     def test_cli_freezer_stages_and_passes_both_trusted_resources(self):
+        from contextlib import nullcontext
         import runpy
         build=runpy.run_path(str(ROOT/'scripts/build-cytv.py'))
         with tempfile.TemporaryDirectory() as tmp:
@@ -160,7 +161,7 @@ class ResourceDeliveryTests(unittest.TestCase):
                     staged=Path(spec.rsplit(os.pathsep,1)[0])
                     for name in tv_sources.NAMES:
                         self.assertEqual((staged/(name+'.js')).read_bytes(),tv_sources.trusted_source(name).encode())
-            with patch.dict(build['main'].__globals__, {'ROOT':project,'build_payload':lambda:project/'payload'}), patch.object(sys,'argv',['build']), patch('subprocess.run',side_effect=run):
+            with patch.dict(build['main'].__globals__, {'ROOT':project,'_payload_build':lambda:nullcontext(project/'payload')}), patch.object(sys,'argv',['build']), patch('subprocess.run',side_effect=run):
                 build['main']()
 
 class EventBoundaryTests(unittest.TestCase):
