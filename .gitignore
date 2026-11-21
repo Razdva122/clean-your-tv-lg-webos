@@ -1,5 +1,6 @@
 # Local TV identity, credentials, generated app inventory and build products
 .lgtv-key.json
+.lgtv-key.json.*
 .env
 *.pem
 !system-updater/bootstrap-public.pem
