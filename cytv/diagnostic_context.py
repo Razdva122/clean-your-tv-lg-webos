@@ -52,7 +52,8 @@ REASONS = ('unknown', 'user-error', 'ssh-command-failed', 'ssh-exit-status-missi
            'operation-timeout', 'tv-storage-full', 'tv-storage-ramfs', 'tv-storage-unavailable', 'storage-preflight-failed',
            'computer-storage-full', 'computer-storage-unavailable')
 REASONS += ACTIVATION_CODES
-REASONS += ('installer-runtime-mismatch', 'clean-handoff-refused', 'foreign-home-restore-failed', 'pairing-rejected')
+REASONS += ('installer-runtime-mismatch', 'clean-handoff-refused', 'foreign-home-restore-failed',
+            'pairing-rejected', 'pairing-connection-refused')
 ACTIONS = ('recover', 'install', 'uninstall', 'restore', 'status', 'doctor', 'home-diagnostics',
            'enable-system-updates', 'enable-firmware-access', 'disable-firmware-access',
            'recover-system-rollback', 'recover-root-rollback', 'repair-root-recovery', 'replace-system-updater', 'migrate-root-beta', 'clean-wam-cache', 'debloat')
