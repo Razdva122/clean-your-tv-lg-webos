@@ -687,6 +687,12 @@ class PartialDeviceRemoval(unittest.TestCase):
         self.assertNotIn('PRIVATE',str(result['last_failure']))
 
     def test_current_runtime_child_proof_gates_destructive_removal(self):
+        self.current_runtime_child_proof_gates_destructive_removal()
+
+    def test_reported_webos6_content_home_pair_finishes_original_removal(self):
+        self.current_runtime_child_proof_gates_destructive_removal(content_home=True)
+
+    def current_runtime_child_proof_gates_destructive_removal(self, content_home=False):
         import hashlib
         import json
         import shutil
@@ -702,6 +708,8 @@ class PartialDeviceRemoval(unittest.TestCase):
         guard.setUp()
         admission = dict(model='OLED48A19LA', firmware='03.53.45', webos='6.5.3',
                          target_sha256='b'*64, target=dict(dev=1, ino=2, size=52, mtime_ns=3))
+        if content_home:
+            admission.update(model='65NANO926PB', firmware='03.34.55', webos='6.3.2')
         uid = os.getuid()
         with patch.object(backend, 'boot_identity', return_value=BOOT):
             backend.prepare(root, 'a'*64, admission, uid)
@@ -743,7 +751,7 @@ def read_chain(): return json.loads(Path({str(chain)!r}).read_text())
 def write_chain(value, **kwargs): Path({str(chain)!r}).write_text(json.dumps(value))
 def luna(uri, payload):
     if uri == 'luna://com.webos.applicationManager/getForegroundAppInfo':
-        return dict(returnValue=True, appId=STOCK)
+        return dict(returnValue=True, appId={'content.youtube' if content_home else backend.STOCK!r})
     if uri == 'luna://com.webos.surfacemanager/getForegroundAppInfo':
         return dict(returnValue=True, foregroundAppInfo=json.loads(Path({str(rows)!r}).read_text()))
     raise AssertionError(uri)
@@ -803,7 +811,9 @@ def luna(uri, payload):
                     self.assertTrue(present)
                     self.assertFalse(any(call.startswith('remove-') for call in calls))
                     self.assertEqual(driver.ownership.store.read('request-'+identifier), original)
-            rows.write_text(json.dumps([stock, screensaver]))
+            restored_surfaces = ([dict(stock, appId='content.youtube'), dict(stock, windowType=backend.HOME)]
+                                 if content_home else [stock, screensaver])
+            rows.write_text(json.dumps(restored_surfaces))
             def lose_response(args):
                 result = loaded.command(args)
                 self.assertEqual(result['result'], 'restored')
@@ -1239,8 +1249,8 @@ def luna(uri, payload):
         import provision
         rpc = driver.device.rpc
         replies = iter(({'returnValue': True, 'api': None},
-                        {'returnValue': True, 'api': {'/c1Lease': ['all']}},
-                        {'returnValue': True, 'api': {'/c1Lease': ['all']}},
+                        {'returnValue': True, 'api': {'/c1AdapterStatus': [provision.LEASE_NAME+'.adapter-status']}},
+                        {'returnValue': True, 'api': {'/c1AdapterStatus': [provision.LEASE_NAME+'.adapter-status']}},
                         {'returnValue': True, 'api': {'/*': ['all']}}))
         method = 'com.webos.service.bus/queryServicePermissions'
 
@@ -2068,7 +2078,9 @@ def luna(uri, payload):
             role, client, api = (json.loads(result[key]) for key in ('role', 'client', 'api'))
             role['permissions'][-1]['inbound'] = [old_sender]
             client[old_sender] = [old_group]
+            client.pop('com.webos.lunasend-*', None)
             api.pop('all', None)
+            api.pop(provision.LEASE_NAME+'.adapter-status', None)
             api[old_group] = [provision.LEASE_NAME+'/c1Lease', provision.LEASE_NAME+'/c1Home']
             return dict(result, role=provision.encoded(role), client=provision.encoded(client),
                         api=provision.encoded(api))
@@ -2244,12 +2256,16 @@ def luna(uri, payload):
             self.assertNotEqual(fresh['lease'], clean['lease'])
             self.assertTrue(ready.exists())
             normal = current_plan(original, provision.WALLPAPER_CAPABILITIES)
-            self.assertEqual(files['client'].read_bytes(), normal['client'])
+            client = json.loads(files['client'].read_bytes())
+            status_group = provision.LEASE_NAME+'.adapter-status'
+            self.assertEqual(client.pop('com.webos.lunasend-*'), [status_group])
+            self.assertEqual(provision.encoded(client), normal['client'])
             self.assertEqual(json.loads(files['role'].read_bytes())['permissions'][-1], {
-                'service': provision.LEASE_NAME, 'inbound': [old_sender, new_sender], 'outbound': [],
+                'service': provision.LEASE_NAME, 'inbound': [old_sender, new_sender, 'com.webos.lunasend-*'], 'outbound': [],
             })
             api = json.loads(files['api'].read_bytes())
             self.assertEqual(api.pop('all'), [provision.LEASE_NAME+'/c1Lease', provision.LEASE_NAME+'/c1Home'])
+            self.assertEqual(api.pop(status_group), [provision.LEASE_NAME+'/c1AdapterStatus'])
             self.assertEqual(provision.encoded(api), normal['api'])
 
     def test_install_inspection_leaves_live_compositor_probe_to_native_install(self):

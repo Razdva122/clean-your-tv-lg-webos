@@ -1,6 +1,10 @@
 import importlib.util
+import hashlib
 import json
 from pathlib import Path
+import shutil
+import subprocess
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -9,6 +13,112 @@ SOURCE = Path(__file__).resolve().parents[1] / 'app/src/main/python/android_brid
 
 
 class BridgeTests(unittest.TestCase):
+    def test_clean_and_incremental_staging_preserve_bridge_runtime(self):
+        from android import stage
+        from cytv.tv_sources import SOURCES
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            shutil.copytree(stage.ROOT / 'cytv', root / 'cytv',
+                            ignore=shutil.ignore_patterns('__pycache__', 'local_notes.py'))
+            for name in ('lgtv.py', 'release-versions.json'):
+                shutil.copy2(stage.ROOT / name, root)
+            for name in ('android/stage.py', *SOURCES.values()):
+                target = root / name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(stage.ROOT / name, target)
+            payload = root / 'build/cytv/payload'
+            payload.mkdir(parents=True)
+            (payload / 'current.txt').write_bytes(b'public payload')
+            (payload / 'payload.json').write_text(json.dumps({
+                'files': {'current.txt': hashlib.sha256(b'public payload').hexdigest()}
+            }))
+            (payload / 'local_notes.txt').write_text('outside manifest')
+
+            def git(*args):
+                return subprocess.run(['git', *args], cwd=root, check=True, capture_output=True, text=True).stdout
+
+            def stage_android(*args):
+                return subprocess.run([sys.executable, 'android/stage.py', *args], cwd=root, check=True,
+                                      capture_output=True, text=True).stdout
+
+            def members(directory):
+                return {p.relative_to(directory).as_posix() for p in directory.rglob('*') if p.is_file()}
+
+            git('init', '-q')
+            git('add', '--', 'cytv', 'lgtv.py')
+            git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-qm', 'Fixture')
+            legacy_output = root / 'android/app/build/generated'
+            stage_android()
+            source = next(legacy_output.rglob('python'))
+            assets = source.with_name('assets')
+            clean_source, clean_assets = members(source), members(assets)
+            self.assertIn('cytv/cli.py', clean_source)
+            self.assertIn('lgtv.py', clean_source)
+            self.assertEqual(clean_assets, {'cytv-build.json', 'payload/payload.json', 'payload/current.txt'})
+
+            local = root / 'cytv/local_notes.py'
+            local.write_text('LOCAL_NOTE = True\n')
+            before = json.loads(stage_android('--describe-inputs'))
+            self.assertTrue(before['outputsMatch'])
+            self.assertEqual(set(before['nativeSources']), set(SOURCES.values()))
+            for name, original in SOURCES.items():
+                self.assertEqual((source / f'cytv/tv/{name}.js').read_bytes(), (root / original).read_bytes())
+            self.assertEqual(set(before['payloadFiles']), {
+                'build/cytv/payload/current.txt', 'build/cytv/payload/payload.json'
+            })
+            for target in (source / 'obsolete.py', assets / 'obsolete.txt', legacy_output / 'other-task.txt'):
+                target.write_text('older output')
+            self.assertFalse(json.loads(stage_android('--describe-inputs'))['outputsMatch'])
+            stage_android()
+            self.assertEqual(members(source), clean_source)
+            self.assertEqual(members(assets), clean_assets)
+            self.assertTrue((legacy_output / 'other-task.txt').is_file())
+            for name in ('__main__', 'desktop', 'desktop_entry', 'gui', 'gui_style', 'installer_update', 'wallpaper', 'wallpaper_gui'):
+                self.assertNotIn(f'cytv/{name}.py', clean_source)
+            self.assertTrue(json.loads(stage_android('--describe-inputs'))['outputsMatch'])
+
+            git('add', '--', 'cytv/local_notes.py')
+            tracked = json.loads(stage_android('--describe-inputs'))['pythonSources']
+            self.assertEqual(set(tracked) - set(before['pythonSources']), {'cytv/local_notes.py'})
+            stage_android()
+            self.assertEqual((source / 'cytv/local_notes.py').read_bytes(), local.read_bytes())
+            local.unlink()
+            stage_android()
+            self.assertEqual(members(source), clean_source)
+            git('restore', '--', 'cytv/local_notes.py')
+            stage_android()
+            self.assertTrue((source / 'cytv/local_notes.py').is_file())
+            git('rm', '-f', '--', 'cytv/local_notes.py')
+            stage_android()
+            self.assertEqual(members(source), clean_source)
+            self.assertEqual(members(assets), clean_assets)
+
+            bridge = root / 'bridge' / SOURCE.name
+            bridge.parent.mkdir()
+            shutil.copy2(SOURCE, bridge)
+            result = subprocess.run([
+                sys.executable, '-I', '-B', '-c', """
+import sys
+from pathlib import Path
+
+source = Path(sys.argv[1]).resolve()
+bridge = Path(sys.argv[2]).resolve()
+sys.path[:0] = [str(bridge), str(source)]
+import android_bridge
+
+code = android_bridge.cli.main(["--version"])
+for name, module in sys.modules.items():
+    if name == "android_bridge":
+        assert Path(module.__file__).resolve().parent == bridge
+    elif name in ("cytv", "lgtv") or name.startswith("cytv."):
+        assert Path(module.__file__).resolve().is_relative_to(source), (name, module.__file__)
+raise SystemExit(code)
+""", str(source), str(bridge.parent),
+            ], cwd=root, capture_output=True, text=True, timeout=30)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertRegex(result.stdout, r'^cytv \S+\n$')
+
     def test_storage_retry_rechecks_only_the_failed_read_before_confirming_setup(self):
         import shlex
         from cytv import i18n

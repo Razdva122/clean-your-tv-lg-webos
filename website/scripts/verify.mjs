@@ -4,6 +4,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { parse } from '../../node_modules/parse5/dist/index.js';
 import { updateReadmeCompatibility } from './update-readme-compatibility.mjs';
+import { webosCategory } from '../src/lib/webos.mjs';
 const root = fileURLToPath(new URL('../dist/', import.meta.url));
 const base = 'https://razdva122.github.io/clean-your-tv-lg-webos/';
 const locales = [
@@ -63,6 +64,32 @@ const visibleReports = reports.filter(
 const readme = readFileSync(
   new URL('../../README.md', import.meta.url),
   'utf8'
+);
+const conflictingVersion = '25; SDK 11.2.0';
+for (const [reported, expected] of [
+  [conflictingVersion, '26'],
+  ['SDK 11.2.0', '26'],
+  ['25; SDK99.0.0', '25'],
+  ['4.5', '4.5-5'],
+  [null, 'unknown']
+]) {
+  assert.equal(
+    webosCategory(reported),
+    expected,
+    `webOS group for ${reported}`
+  );
+}
+const fixtureReadme = updateReadmeCompatibility(readme, [
+  {
+    model: 'Fixture model',
+    webos: conflictingVersion,
+    edition: 'no-root',
+    showOnWebsite: true
+  }
+]);
+assert.match(
+  fixtureReadme,
+  /<summary>❔ webOS 26<\/summary>[^<]*\| Fixture model · No-root \| 25; SDK 11\.2\.0 \|/
 );
 assert(
   readme === updateReadmeCompatibility(readme, reports),
@@ -331,7 +358,12 @@ for (const lang of locales)
           ['reported-webos-4.5-5', ['um7450pla-noroot', '55um7450pla-noroot']],
           [
             'reported-webos-25',
-            ['b3-noroot', 'c2-42-noroot', 'c2-reddit-noroot']
+            [
+              'b3-noroot',
+              'c2-42-noroot',
+              'c2-reddit-noroot',
+              'nano80asa-noroot'
+            ]
           ],
           [
             'reported-webos-26',

@@ -41,6 +41,8 @@ Utilisez le code du TV, pas le mot de passe du compte LG. Si aucun code n’appa
 
 L’appairage est une étape distincte: quand le TV le demande, autorisez CYTV avec la télécommande. Si le téléviseur refuse la demande, confirmez dans CYTV que vous souhaitez réessayer avec le même téléviseur.
 
+Si la connexion à la commande à distance est refusée, laissez le téléviseur allumé et vérifiez depuis votre ordinateur l’accès au port TCP 3001. Choisissez ensuite **Réessayer** dans l’installateur pour ordinateur.
+
 Si un avertissement indique que les entrées HDMI n’ont pas pu être lues lors de la première installation de No-root, vous pouvez continuer avec les applications détectées.
 
 Gardez Developer Mode actif: avant la fin du compte à rebours, ouvrez-le et appuyez sur EXTEND avec le TV connecté à Internet. À expiration, LG peut supprimer ces apps.
@@ -90,6 +92,10 @@ Pour modifier les tuiles avec des appuis courts, ouvrez **Paramètres de Home �
 No-root: Pour relancer le contrôle de Home, ouvrez Home Helper, choisissez Démarrer Helper et confirmez. Votre choix d’écran Home est conservé. Root: activez **Changer Home** dans les paramètres de Home pour reprendre. **Ouvrir LG Home** ouvre LG Home une fois sans modifier la destination de Home. Pour rétablir LG Home comme destination permanente, désactivez **Changer Home**. N’exécutez jamais les deux contrôleurs ensemble. Si la panne revient, laissez LG Home actif.
 
 Si Home Helper est arrêté, vous pouvez aussi choisir **Démarrer Helper** dans les paramètres de l’écran Home ou de l’économiseur d’écran. L’état se met à jour automatiquement après le démarrage.
+
+Sur les téléviseurs où LG Home s’ouvre sous forme de panneau, activer ou désactiver **Change Home** dans Root peut redémarrer brièvement l’interface du téléviseur. Après un redémarrage ou une panne, ouvrez Clean Your TV et réactivez **Change Home** pour reprendre le contrôle. LG Home reste accessible.
+
+Pour libérer de la place après le retour à une version antérieure de Home, ouvrez **Paramètres → Thèmes**, choisissez **Supprimer** pour le thème téléchargé indisponible et confirmez.
 
 ## Besoin d’aide ?
 

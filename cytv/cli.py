@@ -14,7 +14,6 @@ from types import SimpleNamespace
 
 from . import __version__, package, state, i18n
 from .errors import ExistingRoot, LocalRecoveryError, TVConnectionError, TVNotReady, UserError, is_storage_full
-from .desktop import EXPLICIT_TV_CHOICE, RETRY_STORAGE_PROMPT
 from .operations import Installer, require_root_reinstall_cleanup
 from .terminal import Console, ResultConsole, supports_ansi
 from . import diagnostics, discovery, inspect_tv, prompts, install_settings, debloat
@@ -183,7 +182,7 @@ def storage_preflight_review(store, profile, ask, write):
             if help and help['code'] == 'tv-storage-unavailable':
                 write(help['next_step'])
             write('Repeat the read-only check on the same TV.')
-            question = RETRY_STORAGE_PROMPT
+            question = prompts.RETRY_STORAGE_PROMPT
         if not prompts.confirm(question, ask, write):
             raise EOFError
         guard()
@@ -240,7 +239,7 @@ def choose_profile(args, store, ask, write, search, inspect):
                             'No-root (Root SSH)' if saved_profile.get('connection') == 'root-ssh' else
                             'No-root (Developer Mode)')
                     write.option(index, f"{saved_profile['host']}:{saved_profile['port']}", i18n.translate(kind))
-                selected = prompts.number(ask, write, EXPLICIT_TV_CHOICE, 1, len(choices))
+                selected = prompts.number(ask, write, prompts.EXPLICIT_TV_CHOICE, 1, len(choices))
                 profile = choices[selected - 1]
         if profile is None:
             raise next(iter(profile_errors.values()))
@@ -339,8 +338,7 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
     i18n.configure(data_dir=language_args.data_dir)
     if language_args.language is not None:
         i18n.set_language(language_args.language)
-    from .desktop import DesktopConsole
-    args = parser(desktop=isinstance(write, DesktopConsole)).parse_args(raw_args)
+    args = parser(desktop=getattr(write, 'frontend', None) == 'desktop').parse_args(raw_args)
     args.non_interactive |= args.result_json
     if args.result_json:
         write = ResultConsole(write)
@@ -349,8 +347,6 @@ def main(argv=None, ask=input, write=print, connect=None, secret=getpass.getpass
 
 
 def _run(args, ask, write, connect, secret, search, inspect, payload_root, check_updates):
-    from .desktop import DesktopConsole, SSH_COMMAND_PROMPT
-
     read_only = args.non_interactive and args.command == 'status'
     export_report = not (read_only and args.result_json)
     try:
@@ -372,6 +368,7 @@ def _run(args, ask, write, connect, secret, search, inspect, payload_root, check
             write('cytv ' + __version__)
         return 0
     write = write if isinstance(write, Console) else Console(write, interactive=False if args.non_interactive else None)
+    desktop = write.frontend == 'desktop'
     from .checks import CheckList
     checks = CheckList(write.check)
     ask = write.reader(ask)
@@ -441,8 +438,7 @@ def _run(args, ask, write, connect, secret, search, inspect, payload_root, check
                 raise UserError('Non-interactive mode needs --host and --edition or one saved profile; pairing and SSH trust must already be completed.')
             ask = no_ask
             secret = no_ask
-        packaged_desktop_setup = (args.command == 'install' and isinstance(write, DesktopConsole)
-                                  and getattr(sys, 'frozen', False))
+        packaged_desktop_setup = args.command == 'install' and desktop and getattr(sys, 'frozen', False)
         if packaged_desktop_setup:
             phase = 'prepare-payload'
             try:
@@ -469,7 +465,7 @@ def _run(args, ask, write, connect, secret, search, inspect, payload_root, check
             # reconcile receipts. Partial selection only admits SSH metadata.
         if args.tv_name is not None and profile['edition'] != 'root':
             raise UserError('--tv-name requires Root Edition.')
-        desktop_install = isinstance(write, DesktopConsole) and args.command == 'install' and not args.non_interactive
+        desktop_install = desktop and args.command == 'install' and not args.non_interactive
         reinstall_step = store.root_reinstall(profile) if desktop_install else None
         if reinstall_step:
             profile = state.target(**dict(profile, root_variant=reinstall_step.variant))
@@ -766,7 +762,7 @@ def _run(args, ask, write, connect, secret, search, inspect, payload_root, check
                 if not recovering and not store.pending(profile):
                     store.save(profile)
                 write.selected_profile(profile)
-                command = ask(SSH_COMMAND_PROMPT)
+                command = ask(prompts.SSH_COMMAND_PROMPT)
                 if not command.strip():
                     return 130
                 result = remote.run_command(command)
@@ -1031,6 +1027,11 @@ def _run(args, ask, write, connect, secret, search, inspect, payload_root, check
                                 write('Keep the TV on and approve the next pairing request with the remote.')
                                 if not prompts.confirm('Try pairing again?', ask, write):
                                     raise
+                            except ConnectionRefusedError as error:
+                                if phase != 'pair-tv':
+                                    raise
+                                raise TVConnectionError('TV remote-control connection refused',
+                                                        reason_code='pairing-connection-refused') from error
                     write(f"Read {len(inventory['apps'])} applications.")
                 phase = 'install-packages'
                 def progress(message):

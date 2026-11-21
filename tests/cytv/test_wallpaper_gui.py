@@ -18,6 +18,10 @@ if HAS_QT:
 class WallpaperGuiTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls): cls.app=QApplication.instance() or QApplication([])
+    def setUp(self):
+        from cytv import i18n
+        self.addCleanup(i18n.set_language, i18n.language_choice())
+        i18n.set_language('en')
     def test_storage_estimates_remain_visible_after_transfer_status_changes(self):
         dialog=WallpaperDialog(); self.addCleanup(dialog.close)
         message='Storage estimate (Video cache): required 12.0 MiB; available 8.0 MiB; shortfall 4.0 MiB.'

@@ -151,11 +151,13 @@ def plan(original, capabilities=None):
         if names not in (['Name='+NAME],['Name='+NAME+';']):
             raise ValueError('Unexpected compositor activation names')
         role['allowedNames'].append(LEASE_NAME)
-        senders = ['com.webos.surfacemanager', 'com.webos.starfish.keyfilters']
+        senders = ['com.webos.surfacemanager', 'com.webos.starfish.keyfilters', 'com.webos.lunasend-*']
         role['permissions'].append({'service':LEASE_NAME, 'inbound':senders, 'outbound':[]})
         # Running W21 compositor clients already hold the named stock group
         # 'all'. A policy scan does not refresh their cached client groups.
         apis['all'] = [LEASE_NAME+'/c1Lease', LEASE_NAME+'/c1Home']
+        apis[LEASE_NAME+'.adapter-status'] = [LEASE_NAME+'/c1AdapterStatus']
+        clients['com.webos.lunasend-*'] = [LEASE_NAME+'.adapter-status']
         if capabilities == LEGACY_NODE_COMPOSITOR_CAPABILITIES:
             # W19's stock legacy LS2 role reaches these methods via 'private'.
             # The alias and broker still accept only the two compositor senders.
@@ -182,6 +184,11 @@ def manifest():
         native = RUNTIME/('c1-keyfilter-guard' if compositor else 'c1-home-gate')
         if compositor:
             paths.append(RUNTIME/'c1-home-filter.js')
+            embedded = [RUNTIME/name for name in ('embedded-home.qml', 'embedded-home.js')]
+            # Historical compositor bundles did not ship the embedded adapter.
+            # Bind both assets when available, and require them for its selection.
+            if selected.get('schema') == 4 or any(os.path.lexists(path) for path in embedded):
+                paths += embedded
         if sha(secure(native)) != selected['native_sha256']:
             raise ValueError('Experimental native recovery identity changed')
         paths += [STATE/'home-backend.json', native]
@@ -716,8 +723,42 @@ def verify_restored_files(saved):
             raise ValueError('Restored LS2 metadata drift: '+path)
 
 
+def verify_embedded_activation_retired(saved):
+    """Prove restored files and no live/activatable lease alias, not API grants.
+
+    Some hubs reject queryServicePermissions locally in LSCall. An ordinary
+    privileged request consults their live activation table instead. Only the
+    exact hub missing-service result authorizes this embedded removal path.
+    """
+    if saved is None:
+        raise ValueError('Restored LS2 snapshot required')
+    verify_restored_files(saved)
+    from runtime.transport import call
+    refresh()
+    deadline = time.monotonic() + 3
+    expected = dict(returnValue=False, errorCode=-1,
+                    errorText='Service does not exist: '+LEASE_NAME+'.')
+    while True:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise ValueError('LS2 alias activation retirement unverified')
+        reply = call('luna://com.webos.cleanyourtv.root.lease/c1AdapterStatus', {},
+                     timeout=min(1, remaining), named=True, allow_failure=True)
+        if (isinstance(reply, dict) and reply == expected
+                and reply.get('returnValue') is False
+                and type(reply.get('errorCode')) is int):
+            verify_restored_files(saved)
+            return
+        time.sleep(min(.1, remaining))
+
+
 def verify_beta_removal_registration(rpc, saved=None):
     """Check the live hub before submitting a legacy preview package removal."""
+    if os.path.lexists(STATE/'home-backend.json'):
+        from runtime.c1_gate import selection
+        selected = selection(STATE)
+        if selected and selected['schema'] == 4:
+            return verify_embedded_activation_retired(saved)
     expected = {}
     if saved is not None:
         verify_restored_files(saved)
@@ -738,7 +779,7 @@ def verify_beta_removal_registration(rpc, saved=None):
 
     def restored():
         # W19P reports generic wildcard grants even for an absent alias.
-        if {'/c1Lease', '/c1Home'}.intersection(api(LEASE_NAME)):
+        if {'/c1Lease', '/c1Home', '/c1AdapterStatus'}.intersection(api(LEASE_NAME)):
             return False
         if not expected:
             return True

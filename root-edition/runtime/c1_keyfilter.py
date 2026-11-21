@@ -41,11 +41,13 @@ boot_identity = legacy.boot_identity
 verify_ready = legacy.verify_ready
 
 
-def luna(uri,payload,timeout=5,allow_failure=False):
+def luna(uri,payload,timeout=5,allow_failure=False,*,named=False):
     # The controller runs as a standalone private runtime script, independently
     # of the provisioning process's package search path and working directory.
     try: from .transport import call
     except ImportError: from transport import call
+    if named:
+        return call(uri,payload,timeout=timeout,allow_failure=allow_failure,named=True)
     if allow_failure:
         return call(uri,payload,timeout=timeout,allow_failure=True)
     return call(uri,payload,timeout=timeout)
@@ -72,12 +74,23 @@ def selection(root=STATE, uid=0):
         return None
     value = json.loads(secure(path, uid, 8192))
     if (not isinstance(value, dict) or set(value) != {'schema','backend','experimental','routing','native_sha256','admission'}
-            or type(value['schema']) is not int or value['schema'] not in (2,3)
+            or type(value['schema']) is not int or value['schema'] not in (2,3,4)
             or value['backend'] != BACKEND or value['routing'] != ROUTING or value['experimental'] is not True
             or not isinstance(value['native_sha256'],str) or not legacy.DIGEST.fullmatch(value['native_sha256'])
             or not (legacy.admission_valid(value['admission']) if value['schema']==2 else admission_valid(value['admission']))):
         raise ValueError('Invalid compositor selection; retain recovery evidence')
     return value
+
+
+def embedded_adapter(root=STATE, uid=0):
+    selected = selection(root, uid)
+    if selected and selected['schema'] == 4:
+        try:
+            from . import embedded_home
+        except ImportError:
+            import embedded_home
+        return embedded_home
+    return None
 
 
 def shutdown_probe():
@@ -239,6 +252,7 @@ def stock_bsp_overlay(mounts, overlay, critical):
     """Verify the two immutable backing images of the LG BSP overlay."""
     fields, _, _, _, options = overlay
     bsp = Path('/overlay/bsppart/bsp/usr')
+    bsp_home = bsp / 'bin/com.webos.app.home'
     lower = 'lowerdir=' + str(bsp) + ':/usr'
     # LG can report the mount as rw while the overlay superblock is read-only.
     if (fields[3] != '/' or not re.fullmatch(r'0:[0-9]+', fields[2])
@@ -248,7 +262,7 @@ def stock_bsp_overlay(mounts, overlay, critical):
         return False
     images = {}
     for entry, target, filesystem, _, flags in mounts:
-        if not (target == '/' or str(bsp) == target or str(bsp).startswith(target + '/')):
+        if not (target == '/' or str(bsp_home) == target or str(bsp_home).startswith(target + '/')):
             continue
         if (target not in ('/', '/overlay/bsppart') or target in images
                 or entry[3] != '/' or filesystem != 'squashfs'
@@ -263,14 +277,33 @@ def stock_bsp_overlay(mounts, overlay, critical):
 
     legacy.trusted_directory(bsp)
     overlay_device = tuple(map(int, fields[2].split(':')))
-    for path, expected in zip((*critical, bsp), (images['/'], overlay_device, images['/overlay/bsppart'])):
+    for index, (path, expected) in enumerate(zip(
+            (*critical, bsp), (images['/'], overlay_device, images['/overlay/bsppart']))):
         device = os.stat(path, follow_symlinks=False).st_dev
-        if (os.major(device), os.minor(device)) != expected:
+        observed = (os.major(device), os.minor(device))
+        if observed == expected:
+            continue
+        # Overlayfs can assign a lower file its own anonymous device. Both
+        # backing images are immutable and the BSP must not shadow this file.
+        if (index != 0 or str(path) != '/usr/bin/com.webos.app.home'
+                or observed[0] != 0 or observed == overlay_device):
             return False
+        try:
+            directory = bsp_home.parent.lstat()
+        except FileNotFoundError:
+            continue
+        if not stat.S_ISDIR(directory.st_mode):
+            return False
+        legacy.trusted_directory(bsp_home.parent)
+        try:
+            bsp_home.lstat()
+        except FileNotFoundError:
+            continue
+        return False
     return True
 
 
-def require_generic_environment(chain=None, *, removed_apps=None):
+def require_generic_environment(chain=None, *, removed_apps=None, embedded_target=None):
     """Read-only admission. Never repair a foreign route, input or vendor file."""
     missing=luna('luna://com.webos.service.systemprofile/getProfiles',
                  {'names':['defaultApps','idleApp'],'subscribe':False},allow_failure=True)
@@ -284,7 +317,7 @@ def require_generic_environment(chain=None, *, removed_apps=None):
         bindings=json.loads(secure(INPUT_BINDINGS,limit=65536))
         if not isinstance(bindings,dict) or '773' in bindings:
             raise ValueError('Foreign Home input binding; no takeover attempted')
-    critical=(str(legacy.TARGET),str(STOCK_APPINFO.parent))
+    critical=(str(embedded_target),) if embedded_target is not None else (str(legacy.TARGET),str(STOCK_APPINFO.parent))
     mountinfo=MOUNTINFO.read_text()
     if len(mountinfo)>1024*1024: raise ValueError('Oversized mount table')
     mounts=[]
@@ -321,17 +354,18 @@ def require_generic_environment(chain=None, *, removed_apps=None):
                     system_image=True
                     continue
             raise ValueError('Native Home is covered by a mount; no takeover attempted')
-    app=json.loads(secure(STOCK_APPINFO,limit=65536))
-    if (not isinstance(app,dict) or app.get('id')!=STOCK or app.get('type')!='native'
-            or app.get('main') not in (str(legacy.TARGET),'file://'+str(legacy.TARGET))):
-        raise ValueError('Stock native Home manifest not verified')
-    chain = read_chain() if chain is None else chain
-    chain = stock_chain(chain) if removed_apps is None else removal_vendor_chain(chain, removed_apps)
-    for entry in chain:
-        script=vendor_script(entry['file'])
-        if entry['file'].endswith('/systemUi.js') and (
-                b'Qt.Key_Super_L' not in script or not re.search(rb'function\s+handleSystemKeys\s*\(',script)):
-            raise ValueError('Unknown Qt Home filter contract')
+    if embedded_target is None:
+        app=json.loads(secure(STOCK_APPINFO,limit=65536))
+        if (not isinstance(app,dict) or app.get('id')!=STOCK or app.get('type')!='native'
+                or app.get('main') not in (str(legacy.TARGET),'file://'+str(legacy.TARGET))):
+            raise ValueError('Stock native Home manifest not verified')
+        chain = read_chain() if chain is None else chain
+        chain = stock_chain(chain) if removed_apps is None else removal_vendor_chain(chain, removed_apps)
+        for entry in chain:
+            script=vendor_script(entry['file'])
+            if entry['file'].endswith('/systemUi.js') and (
+                    b'Qt.Key_Super_L' not in script or not re.search(rb'function\s+handleSystemKeys\s*\(',script)):
+                raise ValueError('Unknown Qt Home filter contract')
     try: from .emergency_reader import open_remote, query
     except ImportError: from emergency_reader import open_remote, query
     fd=open_remote()
@@ -357,14 +391,20 @@ def reconcile(chain, root, enabled):
     return [own]+rest if enabled else rest
 
 
-def filter_present(root):
+def filter_present(root, uid=0):
+    adapter = embedded_adapter(root, uid)
+    if adapter:
+        return adapter.attached(root)
     chain=read_chain()
     return reconcile(chain,root,False)!=chain
 
 
 def change_chain(root, enabled, uid=0):
+    adapter = embedded_adapter(root, uid)
+    if adapter:
+        return adapter.install(root, uid) if enabled else adapter.remove(root)
     before=read_chain()
-    generic=selection(root,uid)['schema']==3
+    generic=selection(root,uid)['schema'] in (3,4)
     after=reconcile(before,root,enabled)
     if enabled:
         if generic:
@@ -421,8 +461,15 @@ def probe(*, removed_apps=None, retire_orphan=False):
     if os.geteuid()!=0 or sys.platform!='linux':
         raise ValueError('Compositor admission requires an existing root TV session')
     # Keep schema2 admission isolated from schema1 checkpoint prerequisites.
-    before=legacy.TARGET.stat()
-    data=legacy.native_home()
+    try:
+        before=legacy.TARGET.stat()
+        data=legacy.native_home()
+    except FileNotFoundError:
+        try:
+            from . import embedded_home
+        except ImportError:
+            import embedded_home
+        return embedded_home.probe()
     info=luna('luna://com.webos.service.tv.systemproperty/getSystemInfo',
               {'keys':['modelName','firmwareVersion','sdkVersion']})
     known_c1=True
@@ -473,9 +520,10 @@ def private_directory(root, uid=0):
     return directory
 
 
-def write_config(root, admission, token, uid=0):
+def write_config(root, admission, token, uid=0, *, embedded=False):
     target=admission['target']
-    data=('CYTV-C1-KEYFILTER-1\ntoken '+token+'\nboot '+boot_identity()+'\n'+
+    prefix = 'CYTV-QML-KEYFILTER-1' if embedded or (os.path.lexists(Path(root)/'home-backend.json') and embedded_adapter(root, uid)) else 'CYTV-C1-KEYFILTER-1'
+    data=(prefix+'\ntoken '+token+'\nboot '+boot_identity()+'\n'+
           ''.join(key+' '+str(target[key])+'\n' for key in ('dev','ino','size','mtime_ns'))).encode()
     atomic(private_directory(root,uid)/'config',data,uid,raw=True)
 
@@ -516,11 +564,23 @@ def prepare(root, native_sha256, admission, uid=0):
     legacy.trusted_directory(root,uid)
     if any(os.path.lexists(root/name) for name in ('home-backend.json','c1-gate','c1-keyfilter')):
         raise ValueError('Backend already prepared; retain evidence')
+    try:
+        from . import embedded_home
+    except ImportError:
+        import embedded_home
+    embedded = os.path.lexists(embedded_home.COMPOSITOR) and embedded_home.matches(admission)
+    if embedded:
+        guard = secure(root/'runtime/c1-keyfilter-guard', uid, 4*1024*1024)
+        if (hashlib.sha256(guard).hexdigest() != native_sha256
+                or b'CYTV-QML-KEYFILTER-1' not in guard):
+            raise ValueError('Embedded Home guardian capability unavailable')
+        for name in embedded_home.ASSETS:
+            secure(root/'runtime'/name, uid, 256*1024)
     (root/'c1-keyfilter').mkdir(mode=0o700)
     token=uuid.uuid4().hex
-    write_config(root,admission,token,uid)
+    write_config(root,admission,token,uid,embedded=embedded)
     write_intent(root,False,token,'disabled',uid)
-    value=dict(schema=2 if legacy.admission_valid(admission) else 3,backend=BACKEND,experimental=True,routing=ROUTING,
+    value=dict(schema=4 if embedded else 2 if legacy.admission_valid(admission) else 3,backend=BACKEND,experimental=True,routing=ROUTING,
                native_sha256=native_sha256,admission=admission)
     atomic(root/'home-backend.json',value,uid)
     return value
@@ -594,14 +654,16 @@ def validate_native(value):
     if (not isinstance(value,dict) or set(value)!={'returnValue','backend','routing','state','mounted','healthy','stock_verified','stopped','token','guardian_pid','reason','profiles'}
             or value.get('returnValue') is not True
             or value.get('backend')!=BACKEND or value.get('routing')!=ROUTING or value.get('profiles',{}) is not None
-            or value.get('state') not in ('stock','armed','stopped','blocked')
+            or value.get('state') not in ('stock','armed','stopped','blocked','reconnecting')
             or any(type(value.get(k)) is not bool for k in ('mounted','healthy','stock_verified','stopped'))
             or value['mounted'] or not isinstance(value.get('token'),str) or not legacy.TOKEN.fullmatch(value['token'])
             or type(value.get('guardian_pid')) is not int or value['guardian_pid']<0
             or not isinstance(value.get('reason'),str) or not re.fullmatch(r'[a-z0-9_-]{0,80}',value['reason'])
             or value['healthy'] and (value['state']!='armed' or value['stopped'] or value['guardian_pid']<=1 or value['stock_verified'])
             or value['stock_verified'] and (value['guardian_pid'] or value['healthy'])
-            or value['state']=='armed' and not value['healthy']):
+            or value['state']=='armed' and not value['healthy']
+            or value['state']=='reconnecting' and (value['stopped'] or value['stock_verified']
+                                                   or value['guardian_pid']<=1 or value['reason']!='none')):
         raise ValueError('Incomplete or inconsistent compositor guardian proof')
     return value
 
@@ -609,6 +671,17 @@ def validate_native(value):
 def status(root=STATE, uid=0):
     if selection(root,uid) is None: raise ValueError('Compositor backend not selected')
     value=dict(validate_native(native(['--status'],root,uid)))
+    adapter = embedded_adapter(root, uid)
+    if adapter:
+        installed = adapter.current(root)[1] == adapter.wrapper_url(root)
+        value['filter_installed'] = installed
+        value['routing_active'] = value['healthy'] and not value['stopped'] and installed
+        intent = read_intent(root, uid)
+        active = value['routing_active'] and intent['token'] == value['token'] and intent['boot'] == boot_identity()
+        return dict(backend=BACKEND, routing=ROUTING, experimental=True,
+                    effective=value, intent=dict(intent, enabled=bool(active and intent['enabled'])),
+                    recovery=verify_ready(), candidate=APP,
+                    update_home_resume_available=False, persistent_enable_available=False)
     chain=read_chain()
     clean=reconcile(chain,root,False)==chain
     value['stock_verified']=value['stock_verified'] and clean
@@ -617,11 +690,14 @@ def status(root=STATE, uid=0):
     value['routing_active']=value['healthy'] and not value['stopped']
     intent=read_intent(root,uid)
     active=value['healthy'] and not value['stopped'] and intent['token']==value['token'] and intent['phase'] in ('active','trial')
-    phase=intent['phase'] if active else 'disabled' if value['stock_verified'] else 'recovering'
+    reconnecting = (value['state']=='reconnecting' and value['filter_installed']
+                    and intent['phase']=='active' and intent['enabled'] and value['token']==intent['token'])
+    phase=(intent['phase'] if active else 'input-reconnecting' if reconnecting
+           else 'disabled' if value['stock_verified'] else 'recovering')
     try: recovery=verify_ready()
     except (OSError,ValueError,RuntimeError,ImportError): recovery={'integrity_verified':False}
     return dict(backend=BACKEND,routing=ROUTING,experimental=True,effective=value,
-        intent=dict(intent,phase=phase,enabled=bool(active and intent['enabled'])),recovery=recovery,
+        intent=dict(intent,phase=phase,enabled=bool((active or reconnecting) and intent['enabled'])),recovery=recovery,
         candidate=APP,update_home_resume_available=False,persistent_enable_available=recovery.get('integrity_verified') is True)
 
 
@@ -716,11 +792,11 @@ def process_start(pid):
     return int(fields[19])
 
 
-def stop_controller(root,uid, *, prior_session=False):
+def stop_controller(root,uid, *, allow_reused_pid=False):
     path=private_directory(root,uid)/'controller.json'
     try: value=json.loads(secure(path,uid,4096))
     except FileNotFoundError: return
-    generic=selection(root,uid)['schema']==3
+    generic=selection(root,uid)['schema'] in (3,4)
     fields={'pid','start','token','boot'} if generic else {'pid','start','token'}
     if (not isinstance(value,dict) or set(value)!=fields
             or type(value['pid']) is not int or value['pid']<=1 or type(value['start']) is not int
@@ -737,7 +813,7 @@ def stop_controller(root,uid, *, prior_session=False):
     pid=value['pid']
     try:
         if process_start(pid)!=value['start']:
-            if prior_session:
+            if allow_reused_pid:
                 path.unlink()
                 return
             raise ValueError('Lifecycle controller PID changed; retain evidence')
@@ -808,6 +884,7 @@ def can_restore_routing_only(root, uid):
 
 
 def restore_locked(root,uid, *, for_removal=False, explicit_restore=False, routing_only=False):
+    adapter = embedded_adapter(root, uid)
     verify_destination = routing_only or (
         explicit_restore and not for_removal and has_resume_session(root, uid)
         and reboot_resume_supported(selection(root, uid), root, uid))
@@ -815,7 +892,7 @@ def restore_locked(root,uid, *, for_removal=False, explicit_restore=False, routi
     try:
         if verify_destination:
             native(['--restore-routing'],root,uid)
-        elif for_removal or explicit_restore:
+        elif for_removal or explicit_restore or adapter:
             restored = native(['--restore'], root, uid, allow_ui_failure=True)
             if restored['returnValue'] is False:
                 ui_failure = restored
@@ -831,7 +908,7 @@ def restore_locked(root,uid, *, for_removal=False, explicit_restore=False, routi
         if ui_failure is not None and (not stopped_stock(after) or after['token'] != ui_failure['token']):
             raise ValueError('Native stop retirement unverified; retain evidence')
         selected = selection(root, uid)
-        generic = selected['schema'] == 3
+        generic = selected['schema'] in (3,4)
         if after['healthy'] or not after['stopped'] or after['guardian_pid']:
             raise ValueError('Native stop retirement unverified; retain evidence')
         if not generic and not after['stock_verified']:
@@ -843,14 +920,31 @@ def restore_locked(root,uid, *, for_removal=False, explicit_restore=False, routi
         write_intent(root,False,after['token'],'recovering',uid)
         if not for_removal:
             check = 'controller-stop-unverified'
-        stop_controller(root,uid)
+        # Some TVs reuse the kernel boot ID after reboot. A different process
+        # start time proves the recorded controller is gone, even on those TVs.
+        stop_controller(root, uid, allow_reused_pid=for_removal and generic and stopped_stock(after))
         check = 'stock-routing-unverified'
         change_chain(root,False,uid)
         if not after['stock_verified']:
             if not for_removal:
                 check = 'stock-home-unverified'
             raise ValueError('Home identity changed; owned filter removed, recovery evidence retained')
-        if verify_destination:
+        if adapter:
+            # Embedded LG Home has no standalone SAM app or configd chain.
+            # The launch transaction already restores the stock entry point;
+            # confirm it again with the retired guardian before reporting Off.
+            if adapter.current(root)[1] != adapter.STOCK_QML:
+                raise ValueError('Stock embedded compositor routing unverified; retain evidence')
+            current = validate_native(native(['--status'], root, uid))
+            if not stopped_stock(current) or current['token'] != after['token']:
+                raise ValueError('Stock embedded guardian retirement unverified; retain evidence')
+            if ui_failure is not None:
+                # Routing recovery must still run on boot when an LS2 close
+                # fails. Keep removal blocked until owned-window cleanup is
+                # acknowledged; stock routing alone is not full UI cleanup.
+                check = 'stock-surface-unverified'
+                raise ValueError('Stock embedded routing restored; Root window cleanup unverified; retain evidence')
+        elif verify_destination:
             stock_chain(read_chain())
             require_stock_home_destination()
             current = validate_native(native(['--status'], root, uid))
@@ -864,7 +958,13 @@ def restore_locked(root,uid, *, for_removal=False, explicit_restore=False, routi
             # On webOS 5 SAM can report the Live TV card under the stock Home ribbon.
             ribbon = (for_removal and generic and app == LIVE_TV
                       and selected['admission']['webos'].startswith('5.'))
-            if app != STOCK and not ribbon:
+            # webOS 6 keeps the content card in SAM while stock Home is an
+            # independent HOME surface above it (#440).
+            overlay = (for_removal and generic and selected['admission']['webos'].startswith('6.')
+                       and isinstance(app, str) and re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._-]{0,254}', app)
+                       and app != STOCK and not app.startswith('com.cleanyourtv.')
+                       and app not in ('com.local.nativehome', 'com.gathin.tvhome', SCREENSAVER[0], LIVE_TV))
+            if app != STOCK and not (ribbon or overlay):
                 raise ValueError('Stock LG Home foreground unverified; retain evidence')
             # SAM can report LG Home underneath an application overlay. The LG
             # screensaver can also cover its stock card after idle (#615).
@@ -873,17 +973,25 @@ def restore_locked(root,uid, *, for_removal=False, explicit_restore=False, routi
             rows = surfaces.get('foregroundAppInfo') if isinstance(surfaces, dict) else None
             if (not isinstance(rows, list) or not 1 <= len(rows) <= 128
                     or surfaces.get('returnValue') is not True
-                    or not stock_surfaces(rows, allow_screensaver=not ribbon, background=LIVE_TV if ribbon else None)
+                    or not stock_surfaces(rows, allow_screensaver=not (ribbon or overlay),
+                                          background=app if ribbon or overlay else None)
                     or not any(row['appId'] == STOCK and row.get('visible', True) is True
-                               and (not ribbon or row['windowType'] == HOME) for row in rows)):
+                               and (not (ribbon or overlay) or row['windowType'] == HOME) for row in rows)
+                    or overlay and (len(rows) != 2 or sum(row['appId'] == app for row in rows) != 1)):
                 raise ValueError('Stock LG Home surface unverified; retain evidence')
             check = 'stock-routing-unverified'
             chain = read_chain()
             if ribbon:
                 verify_webos5_ribbon_route(chain)
+            if overlay:
+                stock_chain(chain)
+                foreground = luna('luna://com.webos.applicationManager/getForegroundAppInfo', {})
+                if (not isinstance(foreground, dict) or foreground.get('returnValue') is not True
+                        or foreground.get('appId') != app):
+                    raise ValueError('Content foreground changed during stock Home verification')
             current = native(['--status'], root, uid)
             if (not stopped_stock(current) or current['token'] != after['token']
-                    or reconcile(chain, root, False) != chain or ribbon and read_chain() != chain):
+                    or reconcile(chain, root, False) != chain or (ribbon or overlay) and read_chain() != chain):
                 raise ValueError('Stock LG Home routing unverified; retain evidence')
     except Exception as error:
         if ui_failure is not None:
@@ -923,7 +1031,7 @@ def start_controller(root,uid,token,control_fd,log):
             stdin=subprocess.DEVNULL,stdout=log,stderr=log,start_new_session=True,close_fds=True)
         os.close(ready_write); ready_write=None
         record=dict(pid=child.pid,start=process_start(child.pid),token=token)
-        if selection(root,uid)['schema']==3: record['boot']=boot_identity()
+        if selection(root,uid)['schema'] in (3,4): record['boot']=boot_identity()
         atomic(private_directory(root,uid)/'controller.json',record,uid)
         read_handshake(ready_read,('WATCH '+token+'\n').encode(),[child])
         return child
@@ -966,8 +1074,9 @@ def enable_locked(root,uid,seconds, *, session=None, resume_token=None):
     if current['healthy'] or current['guardian_pid'] or not current['stock_verified']:
         raise ValueError('Restore previous compositor attempt before enabling')
     # Existing own entries, including interrupted attempts, require explicit Off.
-    before=read_chain()
-    if reconcile(before,root,False)!=before or os.path.lexists(Path(root)/'c1-keyfilter/pending.json'):
+    adapter = embedded_adapter(root, uid)
+    before = [] if adapter else read_chain()
+    if (not adapter and reconcile(before,root,False)!=before) or os.path.lexists(Path(root)/'c1-keyfilter/pending.json'):
         raise ValueError('Restore interrupted filter transaction before enabling')
     if probe()!=descriptor['admission']:
         raise ValueError('C1 admission changed')
@@ -1012,11 +1121,16 @@ def enable_locked(root,uid,seconds, *, session=None, resume_token=None):
         controller=start_controller(root,uid,token,control_write,log); children.append(controller)
         os.close(control_write); fds.remove(control_write)
         from python_binding import command
-        observer=subprocess.Popen([command(root),str(Path(root)/'runtime/emergency_reader.py'),str(input_write)],
+        recover_input = adapter is None and not seconds
+        observer_args = [command(root), str(Path(root)/'runtime/emergency_reader.py'), str(input_write)]
+        if adapter is None:
+            observer_args.append('--recover-input' if recover_input else '--reconnect-on-disconnect')
+        observer=subprocess.Popen(observer_args,
             pass_fds=(input_write,),stdin=subprocess.DEVNULL,stdout=log,stderr=log,start_new_session=True,close_fds=True)
         children.append(observer)
         os.close(input_write); fds.remove(input_write)
         guard_mode = '--guard-resumable' if session is not None else '--guard'
+        if recover_input: guard_mode += '-reconnect'
         guard=subprocess.Popen([str(helper),guard_mode,token,str(input_read),str(control_read),str(ready_write),str(seconds)],
             pass_fds=(input_read,control_read,ready_write),stdin=subprocess.DEVNULL,stdout=log,stderr=log,
             env={'PATH':'/usr/bin:/bin','LANG':'C'},start_new_session=True,close_fds=True)
@@ -1062,7 +1176,7 @@ def resume_after_boot(root, uid, intent, session):
     if (not eligible or not retired['stock_verified'] or retired['token'] != intent['token']
             or retired['guardian_pid']):
         raise ValueError('Previous compositor guardian retirement unverified')
-    stop_controller(root, uid, prior_session=True)
+    stop_controller(root, uid, allow_reused_pid=True)
     return enable_locked(root, uid, 0, session=session, resume_token=intent['token'])
 
 
@@ -1265,6 +1379,7 @@ def startup_after_boot(result, root=STATE, uid=0):
 
 
 def return_ready(root,uid,token,changed):
+    if selection(root,uid)['schema']==4: return False
     # Every RPC can deliver a lifecycle change concurrently. Discard the entire
     # delayed hint after any such message, including unknown/partial messages.
     intent=read_intent(root,uid)
@@ -1277,7 +1392,7 @@ def return_ready(root,uid,token,changed):
     if changed(): return False
     proof=validate_native(native(['--status'],root,uid,timeout=.3))
     if changed(): return False
-    if selection(root,uid)['schema']==3 and (not filter_present(root) or changed()): return False
+    if selection(root,uid)['schema']==3 and (not filter_present(root,uid) or changed()): return False
     intent=read_intent(root,uid)
     return (intent['token']==token and intent['phase'] in ('active','trial')
             and can_return(surfaces,power,proof,token,foreground))
@@ -1295,18 +1410,29 @@ def launch_return(root,uid,token):
 def watch(token,control,ready,root=STATE,uid=0):
     """Persistent LS2 controller; loss of subscription retires CONTROL lease."""
     if not legacy.TOKEN.fullmatch(token): raise ValueError('Invalid controller token')
-    # Fixed subscription only; stdin remains open for old luna-send versions.
-    child=subprocess.Popen(['/usr/bin/luna-send','-i','luna://com.webos.applicationManager/getAppLifeEvents',
-        '{"subscribe":true}'],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.DEVNULL)
+    embedded = selection(root,uid)['schema'] == 4
+    # Embedded Home has no lifecycle-return feature. Its controller needs only
+    # the same guardian/intent/attachment health loop, without a SAM event API.
+    child = None if embedded else subprocess.Popen(
+        ['/usr/bin/luna-send','-i','luna://com.webos.applicationManager/getAppLifeEvents',
+         '{"subscribe":true}'],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.DEVNULL)
     os.set_blocking(control,False)
     policy=ReturnPolicy(token); buffer=b''; initialized=False; armed=False; started=time.monotonic()
     def send(data):
         if os.write(control,data)!=len(data): raise ValueError('Partial controller health write')
     try:
-        while child.poll() is None:
+        if embedded:
+            send(b'READY\n')
+            message = ('WATCH '+token+'\n').encode()
+            if os.write(ready,message) != len(message):
+                raise ValueError('Controller readiness write failed')
+            os.close(ready); ready=None; initialized=True
+        while child is None or child.poll() is None:
             now=time.monotonic()
             if not initialized and now-started>5: raise ValueError('Lifecycle subscription timeout')
-            if select.select([child.stdout],[],[],.1)[0]:
+            if child is None:
+                time.sleep(.1)
+            if child is not None and select.select([child.stdout],[],[],.1)[0]:
                 data=os.read(child.stdout.fileno(),8192)
                 if not data: raise ValueError('Lifecycle subscription ended')
                 buffer+=data
@@ -1331,13 +1457,16 @@ def watch(token,control,ready,root=STATE,uid=0):
             # At most a brief startup grace while the parent starts the guard.
             proof=validate_native(native(['--status'],root,uid,timeout=.3))
             live=proof['token']==token and proof['healthy'] and not proof['stopped']
-            if selection(root,uid)['schema']==3 and not filter_present(root):
+            if selection(root,uid)['schema'] in (3,4) and not filter_present(root,uid):
                 raise ValueError('Volatile compositor filter lost; explicit Enable required')
             if live: armed=True
-            if not live and (armed or time.monotonic()-started>8):
+            recovering = proof['token']==token and proof['state']=='reconnecting'
+            if not live and not recovering and (armed or time.monotonic()-started>8):
                 raise ValueError('Controller token inactive')
             send(b'PING\n')
-            if armed and policy.due(time.monotonic()):
+            if recovering:
+                policy.pending=None
+            if not embedded and live and policy.due(time.monotonic()):
                 policy.pending=None
                 generation=policy.generation
                 changed=lambda: generation!=policy.generation or bool(buffer.strip()) or bool(select.select([child.stdout],[],[],0)[0])
@@ -1349,9 +1478,10 @@ def watch(token,control,ready,root=STATE,uid=0):
         except OSError: pass
         os.close(control)
         if ready is not None: os.close(ready)
-        if child.poll() is None: child.terminate()
-        try: child.communicate(timeout=1)
-        except subprocess.TimeoutExpired: child.kill(); child.communicate()
+        if child is not None:
+            if child.poll() is None: child.terminate()
+            try: child.communicate(timeout=1)
+            except subprocess.TimeoutExpired: child.kill(); child.communicate()
 
 
 if __name__=='__main__':

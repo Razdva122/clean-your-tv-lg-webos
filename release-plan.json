@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "version": "1.27.0",
+  "version": null,
   "changes": [
     {
       "pr": 738,
@@ -105,10 +105,5 @@
     }
   ],
   "excluded": [],
-  "acceptance": "",
-  "build": {
-    "run_id": 44745629207,
-    "attempt": 2,
-    "source": "e5977792077ffb9dc3dc323cdad2442a998ab948"
-  }
+  "acceptance": ""
 }

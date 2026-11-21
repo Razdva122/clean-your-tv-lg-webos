@@ -34,6 +34,7 @@ function path(p){
 }
 function device(info,p){
  if(process.env.BSP_DEVICE){
+  if(p===base+'/usr/bin/com.webos.app.home'&&process.env.HOME_DEVICE)info.dev=Number(process.env.HOME_DEVICE);
   if(p===base+'/usr/palm/applications/com.webos.app.home')info.dev=1048610;
   if(p===base+'/overlay/bsppart/bsp/usr')info.dev=Number(process.env.BSP_DEVICE);
  }
@@ -948,6 +949,56 @@ class CleanupTail(unittest.TestCase):
         self.assertEqual(reply['stage'], 'verified-clean')
         self.assertFalse(self.runtime.exists())
         self.assertEqual(json.loads((self.state/('routing-backup-'+ID+'.json')).read_text()), self.native_backup)
+
+    def test_anonymous_lower_home_finishes_bsp_cleanup_without_shadow(self):
+        mount, root, bsp, overlay = self.bsp_mounts()
+        mount.write_text(root + overlay + bsp)
+        self.record['routes']['target']['dev'] = 45
+        self.write('clean-removal-'+ID+'.json', self.record)
+        result, reply = self.compositor_tail(BSP_DEVICE=str(179*256+29), HOME_DEVICE='45')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(reply['stage'], 'verified-clean')
+        self.assertFalse(self.runtime.exists())
+
+    def test_anonymous_lower_home_finishes_with_existing_bsp_bin(self):
+        mount, root, bsp, overlay = self.bsp_mounts()
+        (self.base/'overlay/bsppart/bsp/usr/bin').mkdir()
+        mount.write_text(root + overlay + bsp)
+        self.record['routes']['target']['dev'] = 45
+        self.write('clean-removal-'+ID+'.json', self.record)
+        result, reply = self.compositor_tail(BSP_DEVICE=str(179*256+29), HOME_DEVICE='45')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(reply['stage'], 'verified-clean')
+        self.assertFalse(self.runtime.exists())
+
+    def test_anonymous_lower_home_refuses_shadow_symlink_and_nested_mount(self):
+        mount, root, bsp, overlay = self.bsp_mounts()
+        lower_bin = self.base/'overlay/bsppart/bsp/usr/bin'
+        for damage in ('shadow', 'symlink', 'bin-mount', 'home-mount', 'overlay-device', 'foreign-device'):
+            with self.subTest(damage=damage):
+                if damage == 'shadow':
+                    lower_bin.mkdir()
+                    (lower_bin/'com.webos.app.home').write_bytes(b'foreign')
+                elif damage == 'symlink':
+                    lower_bin.symlink_to(self.base/'usr/bin', target_is_directory=True)
+                extra = ''
+                if damage in ('bin-mount', 'home-mount'):
+                    target = '/overlay/bsppart/bsp/usr/bin'
+                    if damage == 'home-mount':
+                        target += '/com.webos.app.home'
+                    extra = f'4 3 0:2 / {target} ro - tmpfs tmpfs ro\n'
+                mount.write_text(root + overlay + bsp + extra)
+                device = '1048610' if damage == 'overlay-device' else str(179*256+30) if damage == 'foreign-device' else '45'
+                self.record['routes']['target']['dev'] = int(device)
+                self.write('clean-removal-'+ID+'.json', self.record)
+                result, _ = self.compositor_tail(BSP_DEVICE=str(179*256+29), HOME_DEVICE=device)
+                self.assertNotEqual(result.returncode, 0)
+                self.assert_completion_pending_after_retirement()
+                if damage == 'shadow':
+                    (lower_bin/'com.webos.app.home').unlink()
+                    lower_bin.rmdir()
+                elif damage == 'symlink':
+                    lower_bin.unlink()
 
     def test_failed_native_handoff_without_deploy_journal_finalizes_on_bsp(self):
         self.compositor_record()

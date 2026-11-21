@@ -17,14 +17,17 @@ def main():
     if not re.fullmatch(r'emulator-\d+', args.serial):
         parser.error('Synthetic fixtures must run on an emulator, not a physical device')
     command = [args.adb, '-s', args.serial, 'shell', 'am', 'instrument', '-w']
-    marker = 'PASS: both editions, single operation, bounded replay, pending prompts and stale answers'
+    markers = (
+        'PASS: both editions, single operation, bounded replay, pending prompts and stale answers',
+        'PASS: packaged Python bridge, loopback inspection and synthetic status terminal result',
+    )
     if args.upgrade:
         command += ['-e', 'upgrade', args.upgrade]
-        marker = f'PASS: upgrade fixture {args.upgrade}; no TV commands'
+        markers = (f'PASS: upgrade fixture {args.upgrade}; no TV commands',)
     command.append('com.cleanyourtv.android.test/com.cleanyourtv.android.OperationChecks')
     result = subprocess.run(command, text=True, capture_output=True, timeout=120, check=True)
     print(result.stdout, end='')
-    if marker not in result.stdout or 'FAIL:' in result.stdout:
+    if not all(marker in result.stdout for marker in markers) or 'FAIL:' in result.stdout:
         raise SystemExit('Native Android checks did not report success\n' + result.stderr)
 
 

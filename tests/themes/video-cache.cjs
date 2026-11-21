@@ -4,10 +4,11 @@ const assert = require('assert/strict'),
   fs = require('fs'),
   http = require('http');
 const core = require('../../theme-receiver/core');
-async function cacheCheck(existing, bytes, expected, quotaFailure = false) {
-  let written = false;
+function cache(existing, quotaFailure = false) {
+  const packages = new Map(existing);
   const database = {
-    transaction() {
+    transaction(_, mode) {
+      const entries = Array.from(packages);
       let aborted = false;
       const tx = {
         abort() {
@@ -21,21 +22,22 @@ async function cacheCheck(existing, bytes, expected, quotaFailure = false) {
               let i = 0;
               function step() {
                 cursor.result =
-                  i < existing.length
+                  i < entries.length
                     ? {
-                        key: 'stored-' + i,
-                        value: existing[i++],
+                        key: entries[i][0],
+                        value: entries[i++][1],
                         continue() {
                           Promise.resolve().then(step);
                         }
                       }
                     : null;
                 cursor.onsuccess();
+                if (!cursor.result && mode === 'readonly') complete();
               }
               Promise.resolve().then(step);
               return cursor;
             },
-            put() {
+            put(pack) {
               if (quotaFailure) {
                 Promise.resolve().then(() =>
                   tx.onerror({
@@ -44,14 +46,21 @@ async function cacheCheck(existing, bytes, expected, quotaFailure = false) {
                 );
                 return;
               }
-              written = true;
-              Promise.resolve().then(() => {
-                if (!aborted) tx.oncomplete();
-              });
+              packages.set(pack.digest, pack);
+              complete();
+            },
+            delete(key) {
+              packages.delete(key);
+              complete();
             }
           };
         }
       };
+      function complete() {
+        Promise.resolve().then(() => {
+          if (!aborted) tx.oncomplete();
+        });
+      }
       return tx;
     }
   };
@@ -71,7 +80,14 @@ async function cacheCheck(existing, bytes, expected, quotaFailure = false) {
     fs.readFileSync('launcher/theme-store.js', 'utf8'),
     context
   );
-  const operation = context.ThemeStore.put(
+  return context.ThemeStore;
+}
+async function cacheCheck(existing, bytes, expected, quotaFailure = false) {
+  const store = cache(
+    existing.map((pack, i) => ['stored-' + i, pack]),
+    quotaFailure
+  );
+  const operation = store.put(
     { digest: 'incoming', descriptor: new ArrayBuffer(bytes), files: {} },
     bytes
   );
@@ -81,7 +97,7 @@ async function cacheCheck(existing, bytes, expected, quotaFailure = false) {
       operation,
       (error) => error.code === 'storage-full' || /8 themes/.test(error.message)
     );
-  assert.equal(written, expected);
+  assert.equal((await store.list()).length, existing.length + Number(expected));
 }
 async function run() {
   const stored = { descriptor: new ArrayBuffer(22 * 1024 * 1024), files: {} };
@@ -98,6 +114,30 @@ async function run() {
     false
   );
   await cacheCheck([], 1024, false, true);
+  // The cursor key remains usable even if one package lacks metadata or files.
+  const storedSmall = { descriptor: new ArrayBuffer(1), files: {} };
+  const incomplete = { digest: 1 };
+  const inventory = [[1, incomplete]].concat(
+    Array.from({ length: 7 }, (_, i) => ['download-' + i, storedSmall])
+  );
+  const store = cache(inventory);
+  const entries = await store.list();
+  assert.deepEqual(
+    Array.from(entries, (entry) => entry.key),
+    inventory.map(([key]) => key)
+  );
+  await store.remove(entries[0].key);
+  await store.put(
+    { digest: 'replacement', descriptor: new ArrayBuffer(1), files: {} },
+    1
+  );
+  assert.deepEqual(
+    Array.from(await store.list(), (entry) => entry.key),
+    inventory
+      .slice(1)
+      .map(([key]) => key)
+      .concat('replacement')
+  );
   const receiver = core.create({ port: 0 });
   const s = await receiver.start();
   function post(body, headers) {

@@ -81,6 +81,9 @@ GUIDES = {
     'developer-key-unlock': ('The TV key could not be unlocked', 'The passphrase or key format could not be verified.', DEVELOPER, True),
     'tv-pairing-rejected': ('TV pairing was rejected.', 'Installation has not started. No TV packages were changed by this attempt.',
         'Keep the TV on and approve the next pairing request with the remote.', False),
+    'pairing-connection-refused': ('TV remote-control connection refused',
+        'Installation has not started. No TV packages were changed by this attempt.',
+        'Leave the TV turned on. Keep both devices on the same home network and check access to TCP port 3001 on the TV before trying again.', False),
     'tv-pairing': ('TV pairing was not confirmed', 'The TV control connection or its pairing response was not confirmed.',
         'Keep the TV awake and review its CYTV pairing request with the remote. Do not reset pairing or reinstall packages to solve a connection check.', True),
     'root-requirements': ('Root prerequisites are not ready', 'SSH access alone does not establish the required TV runtime or Home interfaces.', REPORT, False),
@@ -190,7 +193,12 @@ def for_error(error, phase, profile=None, pending=None, *, has_reset_source=None
         code = ('developer-key-server' if reason=='key-server-unavailable' else
                 'developer-key-unlock' if reason=='key-unlock' else 'developer-key-response')
     elif isinstance(error, TVConnectionError) and phase in ('pair-tv','read-inventory'):
-        code = 'tv-pairing-rejected' if phase == 'pair-tv' and reason == 'pairing-rejected' else 'tv-pairing'
+        code = 'tv-pairing'
+        if phase == 'pair-tv':
+            if reason == 'pairing-connection-refused':
+                code = reason
+            elif reason == 'pairing-rejected':
+                code = 'tv-pairing-rejected'
     elif phase == 'ssh-connect' or removal_ssh_error:
         if 'AuthenticationException' in names:
             code = 'ssh-auth-root' if root_ssh else 'ssh-auth-no-root'
@@ -247,7 +255,7 @@ def for_error(error, phase, profile=None, pending=None, *, has_reset_source=None
         next_step += ' Keep the original saved TV connection and recovery data; do not replace or edit the connection to bypass recovery.'
     result = {'code':code, 'title':title, 'detail':detail, 'next_step':next_step,
               'pending':bool(pending), 'can_edit_connection':edit and not bool(pending)}
-    if local_write and not pending:
+    if (local_write or code == 'pairing-connection-refused') and not pending:
         result['can_retry_setup'] = True
     if ('BadHostKeyException' in names and phase == 'ssh-connect' and edition == 'no-root'
             and not root_ssh and (not pending or pending.get('action') == 'uninstall')

@@ -41,6 +41,8 @@ Usa il codice della TV, non la password del tuo account LG. Se il codice non app
 
 L’associazione è un passaggio separato: quando la TV lo chiede, autorizza CYTV con il telecomando. Se la TV rifiuta la richiesta, conferma in CYTV che vuoi riprovare con la stessa TV.
 
+Se la connessione al controllo remoto della TV viene rifiutata, lascia la TV accesa e verifica dal computer l’accesso alla porta TCP 3001. Poi scegli **Riprova** nel programma di installazione per computer.
+
 Se durante la prima installazione di No-root compare un avviso che gli ingressi HDMI non sono stati letti, puoi continuare con le app rilevate.
 
 Mantieni Developer Mode attivo: prima che scada il timer, aprilo e premi EXTEND con la TV connessa a Internet. Alla scadenza, LG può rimuovere queste app.
@@ -90,6 +92,10 @@ Per modificare con pressioni brevi, apri **Impostazioni Home → Aspetto → Mod
 No-root: Per riavviare il controllo Home, apri Home Helper, scegli Avvia Helper e conferma. La tua scelta della schermata Home viene mantenuta. Root: attiva **Cambia Home** nelle impostazioni Home per riprendere. **Apri LG Home** apre LG Home una volta senza cambiare la destinazione di Home. Per ripristinare LG Home come destinazione permanente, disattiva **Cambia Home**. Non eseguire entrambi i controllori insieme. Se il problema ricompare, lascia attivo LG Home.
 
 Se Home Helper è fermo, puoi anche scegliere **Avvia Helper** nelle impostazioni della schermata Home o del salvaschermo. Lo stato si aggiorna automaticamente dopo l’avvio.
+
+Sui televisori in cui LG Home si apre come pannello, attivare o disattivare **Change Home** in Root può riavviare brevemente l’interfaccia del televisore. Dopo un riavvio o un errore, apri Clean Your TV e riattiva **Change Home** per riprendere il controllo. LG Home resta disponibile.
+
+Per liberare spazio dopo aver ripristinato una versione precedente di Home, apri **Impostazioni → Temi**, scegli **Rimuovi** accanto al tema scaricato non disponibile e conferma.
 
 ## Serve aiuto?
 

@@ -64,6 +64,12 @@ restore LG Home and disable Root intent independently of the web interface.
 once while preserving the routing preference. Long Home can invoke LG features;
 it is not the Root emergency gesture.
 
+The [embedded LG Home adapter](../docs/development/EMBEDDED-HOME.md) reuses the
+compositor backend for capability-admitted TVs with an LG panel inside the
+compositor. Enabling or disabling it may briefly restart the TV interface;
+restart/fault recovery leaves LG Home available and requires explicit re-enable.
+Physical target-TV acceptance remains outstanding.
+
 cytv offers `cytv recover` with the same saved connection for an
 interrupted operation. Inspection and changes have separate default-No prompts;
 Root inspection may stage verified support code and is not fully passive.

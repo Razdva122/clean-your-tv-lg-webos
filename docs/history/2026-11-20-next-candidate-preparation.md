@@ -307,3 +307,31 @@ verification metadata. The stable v1.27.0 candidate remains pending device
 acceptance.
 
 Confirmed development release notices in issues [160](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/160#issuecomment-7046298349), [389](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/389#issuecomment-7046266816), [615](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/615#issuecomment-7046269019), [692](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/692#issuecomment-7046270755), [712](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/712#issuecomment-7046272421), [739](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/739#issuecomment-7046274006).
+
+## RC3 retired from stable consideration on 2026-11-21
+
+The maintainer authorized reopening integration for a replacement candidate.
+The integration pass began at 17:27 UTC+05:00. RC3 remains available as
+[v1.27.0-dev.3](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.27.0-dev.3).
+Run 44745629207:2 is retained above as historical evidence. The replacement
+has no selected build or acceptance record. The six original acceptance case
+IDs remain in scope. Device cases requiring the C3 remain blocked by access.
+
+The development APK installed and upgraded on the emulator. A later
+[operation-level check](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/776)
+found that the packaged installer could not import its desktop bridge.
+RC1-06 is open for the replacement. Verify clean install, upgrade from
+published codes 52 and 53, retained state, and an installer operation on the
+production-signed APK. The Android candidate needs an upgradeable versionCode.
+
+The integration combines the reviewed fixes and audit branches, including the
+stacked Android payload update. It resolves overlapping C1 Settings and lease
+broker changes while retaining explicit LG Home recovery and embedded-adapter
+subscriber cleanup. The embedded LG Home adapter requires target-device
+acceptance before stable delivery. Existing offline evidence does not cover
+installation, rendered Home, physical input, HDMI/audio, standby, boot or rollback.
+
+Focused integration checks passed for 70 compositor runtime cases on Python
+3.11, 20 embedded runtime cases, eight bootstrap flow cases, the native stale
+input case, lease-broker behavior, and the Home CARD browser check in both
+editions. GitHub will validate the combined patch before merge.

@@ -41,6 +41,8 @@ Developer Mode 讓 CYTV 可以在沒有 root 的電視上安裝應用程式。
 
 配對是獨立步驟：電視提示時，請用遙控器允許 CYTV 連線。 如果電視拒絕請求，請在 CYTV 確認重新配對，安裝程式會繼續使用同一台電視的連線。
 
+如果電視遠端控制連線被拒絕，請保持電視開機，並從電腦確認可以存取 TCP 3001 連接埠。然後在電腦版安裝程式中選擇 **重試**。
+
 如果首次安裝 No-root 時出現無法讀取 HDMI 輸入的警告，仍可使用找到的應用程式繼續安裝。
 
 請保持 Developer Mode 有效：計時結束前開啟它，並在電視連網時按 EXTEND。過期後 LG 可能會刪除這些應用程式。
@@ -90,6 +92,10 @@ Developer Mode 讓 CYTV 可以在沒有 root 的電視上安裝應用程式。
 No-root: 要重新啟動 Home 控制，請開啟 Home Helper，選擇啟動 Helper 並確認。已儲存的主畫面選擇會保留。 Root：在 Home 設定中啟用 **更改 Home（Change Home）** 恢復。**開啟 LG Home（Open LG Home）** 只打開 LG Home 一次，不更改路由。要持續使用 LG Home，請關閉 **更改 Home（Change Home）**。不要同時執行兩種控制器。若故障重復出現，請保持 LG Home 啟用。
 
 如果 Home Helper 已停止，也可以在 Home 主畫面或螢幕保護程式設定中選擇**啟動 Helper**。啟動後狀態會自動更新。
+
+在 LG Home 以面板形式開啟的電視上，開啟或關閉 Root 的 **Change Home** 可能會讓電視介面短暫重新啟動。重新啟動或發生故障後，請開啟 Clean Your TV 並重新開啟 **Change Home**，以恢復控制。LG Home 仍可使用。
+
+將 Home 回復到較早版本後，如需釋放空間，開啟**設定 → 主題**，在無法使用的已下載主題旁選擇**移除**並確認。
 
 ## 需要協助？
 

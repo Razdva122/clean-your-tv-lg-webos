@@ -242,7 +242,8 @@ class TVConnectionError(UserError):
         super().__init__(message)
         self.close_code = close_code if isinstance(close_code, int) and 1000 <= close_code <= 4999 else None
         self.reason_code = reason_code if reason_code in (
-            'tv-not-ready', 'connection-closed', 'pairing-timeout', 'pairing-rejected') else 'connection-closed'
+            'tv-not-ready', 'connection-closed', 'pairing-timeout', 'pairing-rejected',
+            'pairing-connection-refused') else 'connection-closed'
 
 
 class TVNotReady(TVConnectionError):

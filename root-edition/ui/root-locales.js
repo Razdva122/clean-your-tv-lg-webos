@@ -43,6 +43,8 @@ if (window.HomeI18n)
         'Home and return from apps open Clean Your TV.',
       'Home and return from apps open LG Home.':
         'Home and return from apps open LG Home.',
+      'Open LG Home to finish Home control recovery.':
+        'Open LG Home to finish Home control recovery.',
       'Changing Home control…': 'Changing Home control…',
       'Turning off Home control…': 'Turning off Home control…',
       'Turning on Home control…': 'Turning on Home control…',
@@ -302,6 +304,8 @@ if (window.HomeI18n)
         'Home und das Verlassen von Apps öffnen Clean Your TV.',
       'Home and return from apps open LG Home.':
         'Home und das Verlassen von Apps öffnen LG Home.',
+      'Open LG Home to finish Home control recovery.':
+        'Öffne LG Home, um die Wiederherstellung der Home-Steuerung abzuschließen.',
       'Changing Home control…': 'Home-Steuerung wird geändert…',
       'Turning off Home control…': 'Home-Steuerung wird deaktiviert…',
       'Turning on Home control…': 'Home-Steuerung wird aktiviert…',
@@ -567,6 +571,8 @@ if (window.HomeI18n)
         'Home y la salida de aplicaciones abren Clean Your TV.',
       'Home and return from apps open LG Home.':
         'Home y la salida de aplicaciones abren LG Home.',
+      'Open LG Home to finish Home control recovery.':
+        'Abre LG Home para completar la recuperación del control de Inicio.',
       'Changing Home control…': 'Cambiando el control de Home…',
       'Turning off Home control…': 'Desactivando el control de Home…',
       'Turning on Home control…': 'Activando el control de Home…',
@@ -832,6 +838,8 @@ if (window.HomeI18n)
         'Home e a saída dos aplicativos abrem o Clean Your TV.',
       'Home and return from apps open LG Home.':
         'Home e a saída dos aplicativos abrem o LG Home.',
+      'Open LG Home to finish Home control recovery.':
+        'Abra o LG Home para concluir a recuperação do controle da tela inicial.',
       'Changing Home control…': 'Alterando o controle do Home…',
       'Turning off Home control…': 'Desativando o controle do Home…',
       'Turning on Home control…': 'Ativando o controle do Home…',
@@ -1095,6 +1103,8 @@ if (window.HomeI18n)
         'Home et la sortie des applications ouvrent Clean Your TV.',
       'Home and return from apps open LG Home.':
         'Home et la sortie des applications ouvrent LG Home.',
+      'Open LG Home to finish Home control recovery.':
+        'Ouvrez LG Home pour terminer la récupération de la commande Home.',
       'Changing Home control…': 'Modification du contrôle de Home…',
       'Turning off Home control…': 'Désactivation du contrôle de Home…',
       'Turning on Home control…': 'Activation du contrôle de Home…',
@@ -1356,6 +1366,8 @@ if (window.HomeI18n)
         'Home e l’uscita dalle app aprono Clean Your TV.',
       'Home and return from apps open LG Home.':
         'Home e l’uscita dalle app aprono LG Home.',
+      'Open LG Home to finish Home control recovery.':
+        'Apri LG Home per completare il ripristino del controllo Home.',
       'Changing Home control…': 'Modifica del controllo di Home…',
       'Turning off Home control…': 'Disattivazione del controllo di Home…',
       'Turning on Home control…': 'Attivazione del controllo di Home…',
@@ -1619,6 +1631,8 @@ if (window.HomeI18n)
         'Home 버튼과 앱 종료 시 Clean Your TV가 열립니다.',
       'Home and return from apps open LG Home.':
         'Home 버튼과 앱 종료 시 LG Home이 열립니다.',
+      'Open LG Home to finish Home control recovery.':
+        '홈 제어 복구를 완료하려면 LG 홈을 여세요.',
       'Changing Home control…': 'Home 제어 변경 중…',
       'Turning off Home control…': 'Home 제어 끄는 중…',
       'Turning on Home control…': 'Home 제어 켜는 중…',
@@ -1874,6 +1888,8 @@ if (window.HomeI18n)
         'Home और ऐप से लौटने पर Clean Your TV खुलता है।',
       'Home and return from apps open LG Home.':
         'Home और ऐप से लौटने पर LG Home खुलता है।',
+      'Open LG Home to finish Home control recovery.':
+        'होम नियंत्रण की बहाली पूरी करने के लिए LG Home खोलें।',
       'Changing Home control…': 'Home नियंत्रण बदला जा रहा है…',
       'Turning off Home control…': 'Home नियंत्रण बंद किया जा रहा है…',
       'Turning on Home control…': 'Home नियंत्रण चालू किया जा रहा है…',
@@ -2133,6 +2149,8 @@ if (window.HomeI18n)
         'Home i wyjście z aplikacji otwierają Clean Your TV.',
       'Home and return from apps open LG Home.':
         'Home i wyjście z aplikacji otwierają LG Home.',
+      'Open LG Home to finish Home control recovery.':
+        'Otwórz LG Home, aby zakończyć przywracanie sterowania przyciskiem Home.',
       'Changing Home control…': 'Zmiana sterowania Home…',
       'Turning off Home control…': 'Wyłączanie sterowania Home…',
       'Turning on Home control…': 'Włączanie sterowania Home…',
@@ -2392,6 +2410,8 @@ if (window.HomeI18n)
         'Кнопка Home и возврат из приложений открывают Clean Your TV.',
       'Home and return from apps open LG Home.':
         'Кнопка Home и возврат из приложений открывают LG Home.',
+      'Open LG Home to finish Home control recovery.':
+        'Откройте LG Home, чтобы завершить восстановление управления кнопкой Home.',
       'Changing Home control…': 'Изменение управления Home…',
       'Turning off Home control…': 'Отключение управления Home…',
       'Turning on Home control…': 'Включение управления Home…',
@@ -2657,6 +2677,8 @@ if (window.HomeI18n)
         '按 Home 键或从应用返回时打开 Clean Your TV。',
       'Home and return from apps open LG Home.':
         '按 Home 键或从应用返回时打开 LG Home。',
+      'Open LG Home to finish Home control recovery.':
+        '打开 LG 主页以完成主页控制的恢复。',
       'Changing Home control…': '正在更改 Home 控制…',
       'Turning off Home control…': '正在关闭 Home 控制…',
       'Turning on Home control…': '正在开启 Home 控制…',
@@ -2902,6 +2924,8 @@ if (window.HomeI18n)
         '按 Home 鍵或從應用程式返回時開啟 Clean Your TV。',
       'Home and return from apps open LG Home.':
         '按 Home 鍵或從應用程式返回時開啟 LG Home。',
+      'Open LG Home to finish Home control recovery.':
+        '開啟 LG 首頁以完成首頁控制的復原。',
       'Changing Home control…': '正在變更 Home 控制…',
       'Turning off Home control…': '正在關閉 Home 控制…',
       'Turning on Home control…': '正在開啟 Home 控制…',
@@ -3370,6 +3394,8 @@ if (window.HomeI18n)
         'Tlačítko Home a návrat z aplikací otevírají Clean Your TV.',
       'Home and return from apps open LG Home.':
         'Tlačítko Home a návrat z aplikací otevírají LG Home.',
+      'Open LG Home to finish Home control recovery.':
+        'Otevřete LG Home a dokončete obnovení ovládání Home.',
       'Changing Home control…': 'Mění se ovládání Home…',
       'Turning off Home control…': 'Vypíná se ovládání Home…',
       'Turning on Home control…': 'Zapíná se ovládání Home…',
@@ -4065,6 +4091,8 @@ if (window.HomeI18n)
         'Butonul Home și revenirea din aplicații deschid Clean Your TV.',
       'Home and return from apps open LG Home.':
         'Butonul Home și revenirea din aplicații deschid LG Home.',
+      'Open LG Home to finish Home control recovery.':
+        'Deschide LG Home pentru a finaliza restaurarea controlului Home.',
       'Changing Home control…': 'Se modifică controlul Home…',
       'Turning off Home control…': 'Se dezactivează controlul Home…',
       'Turning on Home control…': 'Se activează controlul Home…',

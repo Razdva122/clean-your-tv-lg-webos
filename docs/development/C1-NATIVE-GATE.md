@@ -71,8 +71,12 @@ and limits, see the [initial UID 1001 investigation](../history/2026-11-10-issue
 
 A configured KeyFilters field alone does not prove compatibility. The existing
 guardian authenticates `/usr/bin/com.webos.app.home` and returns to LG by launching
-that native application. Firmware with an in-compositor ribbon, a web/Flutter
-Home or no native executable is refused. Glasshouse uses a different recovery
+that native application. This schema2/3 native-Home path refuses firmware with
+an in-compositor ribbon, a web/Flutter Home or no native executable. The separate
+[embedded LG Home adapter](EMBEDDED-HOME.md) reuses the shared leases and guardian
+with schema4 when the compositor exposes the required entry-file and stock-policy
+capabilities; it does not relax the native-Home path's admission checks.
+Glasshouse uses a different recovery
 mechanism for its standalone/ribbon mode: it clears its Home mapping and injects
 a 100 ms key press after a delay; its source also records a B8 HDMI regression
 when forcibly closing the foreground app. That mechanism is not part of this
@@ -167,6 +171,22 @@ Triple Home, long Back, Open LG Home, lease loss, controller loss, trial expiry 
 
 State is root-owned under `/var/lib/clean-your-tv-root/c1-keyfilter` (0700), with volatile guardian state under `/tmp/clean-your-tv-root-keyfilter`. The selected marker remains `home-backend.json`. A native guardian requires independent emergency-input, lifecycle-controller and service-broker leases. The filter expires its own in-memory lease and passes Home to LG when authority is lost. Healthy Home requests and lifecycle returns both use the guardian's fixed `--home TOKEN` operation. Durable stop revokes authority before waiting for an in-flight launch and closing only the owned Root app, then requesting LG Home. Recovery never signals a journal PID. SIGKILL cannot execute guardian UI cleanup: the compositor lease expires independently, but explicit Restore may still be needed to close retained Root UI and reconcile the owned chain.
 
+On active C1 input EOF or device-disappearance errors, the observer can rediscover
+the same validated Magic Remote channel within its existing 750 ms window. It
+checks Home and Back capabilities, waits for released keys and processes new input
+before sending another heartbeat. It abandons the candidate if the guardian closes
+the health pipe. The native guardian owns the original lease deadline and stop
+latch throughout. Reconnecting cannot clear explicit Off or an emergency stop.
+Persistent C1 Home can also wait for input-only expiry within the same
+guardian attempt. It passes Home to LG as soon as the two-second input lease
+expires. The observer can rediscover and recheck the validated device for up to
+60 seconds of monotonic time. A current controller, broker and fresh monotonic
+input check are required before routing resumes. Pending Home gestures delay
+renewal so triple Home can complete before rearming. Explicit Off, a completed
+emergency stop, a lost controller or broker, and an exhausted recovery window
+keep the route stopped. Trial activation and legacy input protocols retain their
+existing timeouts. This path does not subscribe to firmware power states.
+
 The private Root service owns the LS2 alias `com.webos.cleanyourtv.root.lease`.
 Provisioning adds it to the existing activation file's semicolon-delimited `Name`
 field and snapshots the original. The developer package advertises only its
@@ -229,8 +249,26 @@ the driver verifies a read-only `/usr` overlay filesystem with exactly
 `/overlay/bsppart/bsp/usr:/usr` as its lower layers and no upper or work layer.
 It requires distinct read-only MMC SquashFS roots at `/` and `/overlay/bsppart`
 and checks the device numbers of the BSP layer, Home binary and Home app
-directory. It rejects additional mounts covering those paths. Hardware
-acceptance of this layout remains pending.
+directory. Overlayfs can expose a lower-layer file on an anonymous major-zero
+device distinct from the overlay directory device. For this case only, both
+probes additionally require that the BSP layer cannot shadow
+`bin/com.webos.app.home`: its `bin` must be absent or a trusted directory without
+that entry. Symlinks, unreadable paths and nested mounts covering the BSP Home
+path are refused. Other device mismatches remain refusals.
+
+An offline Linux replay with two synthetic SquashFS images reproduced this:
+the base Home was `7:0`, merged Home `0:79`, overlay directory `0:76` and BSP
+`7:1`, with no BSP Home entry. The regression fixtures use the reported MMC
+layout and cover acceptance plus shadow, symlink and mount refusals in Python
+and the final Node cleaner. This validates the filesystem behavior, not TV
+acceptance; hardware acceptance of this layout remains pending.
+
+The later [#519 report](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/519#issuecomment-7052820546)
+retains the native stop reason `escape`: the emergency reader sends `ESCAPE`
+after three released short Home presses and the native guard latches that stop.
+Its status snapshot has no input history to establish which physical or firmware
+events triggered it. This BSP admission change does not clear the stop or
+resume interception automatically.
 
 An early native admission refusal can leave a host pending attempt without a TV
 deployment journal. Missing files do not resolve that attempt. Explicit full

@@ -45,7 +45,7 @@ function fixture(initial = external) {
     },
     ThemeStore: {
       get: async () => ({ id: external.id, digest: external.digest }),
-      list: async () => [{ id: external.id, digest: external.digest }]
+      list: async () => [{ key: external.digest, pack: external }]
     },
     ThemeData: {
       request: async (url) =>

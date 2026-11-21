@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Build public TV payload and a native single-file cytv executable. Never contacts a TV."""
 import argparse
+from contextlib import contextmanager
 import hashlib
 import json
 import os
@@ -8,15 +9,16 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from cytv import package
 from cytv.tv_sources import stage_sources
-from scripts.tv_web_build import compile_web
+from scripts.tv_web_build import build_lock, compile_web
 from scripts.helper_build import compile_helper
 from scripts.home_assets import THEME_FILES
-from scripts.no_root_assets import renewal_service_assets, updater_app_assets, updater_service_assets
+from scripts.no_root_assets import renewal_service_assets, updater_sources
 
 
 def tracked_files(prefix):
@@ -26,7 +28,6 @@ def tracked_files(prefix):
     # Do not include arbitrary untracked files or local profile data.
     required = {'native/app': ['native/app/helper-entry.js', 'native/app/stop-generation.h', 'native/app/state-permissions.js', 'native/app/contract-events.js', 'native/app/home-control.js', 'native/app/websocket.js'],
                 'renewal-service': ['renewal-service/home-control.js', 'renewal-service/diagnostics.js', 'renewal-service/ca-bundle.crt', 'renewal-service/ca-LICENSE.txt'],
-                'updater-service': ['updater-service/ca-bundle.crt', 'updater-service/ca-LICENSE.txt'],
                 'launcher': ['launcher/viewport.js', 'launcher/system-updates.js', 'launcher/helper-control.js', 'launcher/release-notes.js', 'launcher/app-library.js', 'launcher/input-sources.js', 'launcher/input-preview.js','launcher/i18n.js', 'launcher/catalogs.js', 'launcher/i18n.css', 'launcher/theme-defaults.css', 'launcher/theme-policy.js', 'launcher/theme-runtime.js', 'launcher/home-layout.js', 'launcher/layout-panel.js', 'launcher/settings-categories.js', 'launcher/layout-panel.css', 'launcher/settings-panel.css',
                              'launcher/fonts/outfit-300.ttf', 'launcher/fonts/outfit-400.ttf',
                              'launcher/fonts/outfit-500.ttf', 'launcher/fonts/outfit-700.ttf',
@@ -40,7 +41,6 @@ def tracked_files(prefix):
         required[prefix] += ['launcher/' + name for name in THEME_FILES]
         required[prefix] += ['launcher/screensaver-' + name for name in ('idle.js', 'personal.js', 'settings.js', 'settings.css')]
     if prefix == 'native/app':
-        required[prefix] += [p.relative_to(ROOT).as_posix() for p in (ROOT/'native/app/vendor/ws-legacy').rglob('*') if p.is_file()]
         required[prefix] += ['native/app/screensaver-' + name + '.js' for name in ('controller', 'lg', 'owner')]
     for name in sorted(set(result.stdout.splitlines()) | set(required.get(prefix, []))):
         path = ROOT / name
@@ -50,13 +50,38 @@ def tracked_files(prefix):
     return files
 
 
+def helper_sources():
+    app = {name: raw for name, raw in tracked_files('native/app').items()
+           if not name.startswith('state/')
+           and (name.endswith(('.js', '.json', '.png')) or name.startswith('vendor/'))}
+    service = {name: raw for name, raw in tracked_files('native/service').items()
+               if not name.startswith('state/') and name.endswith(('.js', '.json'))}
+    return app, service
+
+
+def compile_helper_sources(app, service):
+    if 'screensaver-controller.js' in app:
+        from scripts.screensaver_package import runtime_files
+        app = {**app, **runtime_files()}
+    if 'app-inventory.js' in service:
+        app = {**app, 'app-inventory.js': service['app-inventory.js']}
+    # Each jail needs its own copy of the shared modules.
+    service = {**service, **{name: app[name] for name in ('state-permissions.js', 'contract-events.js')}}
+    return compile_helper(app), compile_helper(service)
+
+
+def stage_helper(app_dir, service_dir):
+    app, service = compile_helper_sources(*helper_sources())
+    for directory, files in ((app_dir, app), (service_dir, service)):
+        for name, raw in files.items():
+            target = directory / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(raw)
+
+
 def pack_app(appfiles, servicefiles, architecture='all', helper=False):
     if helper:
-        from scripts.screensaver_package import runtime_files
-        if 'screensaver-controller.js' in appfiles:
-            appfiles = dict(appfiles, **runtime_files())
-        servicefiles = dict(servicefiles, **{name: appfiles[name] for name in ('state-permissions.js', 'contract-events.js')})
-        appfiles, servicefiles = compile_helper(appfiles), compile_helper(servicefiles)
+        appfiles, servicefiles = compile_helper_sources(appfiles, servicefiles)
     info = json.loads(appfiles['appinfo.json'])
     if info.get('type') == 'web':
         if 'screensaver-settings.js' in appfiles:
@@ -82,9 +107,6 @@ def pack_app(appfiles, servicefiles, architecture='all', helper=False):
         files['usr/palm/services/' + service + '/state/home-control/.keep'] = b''
     executables = set()
     if helper:
-        # The service sandbox cannot import modules from the app directory.
-        for name in ('state-permissions.js', 'contract-events.js'):
-            files['usr/palm/services/' + service + '/' + name] = appfiles[name]
         executables = {'usr/palm/applications/' + app + '/' + n for n in ('detach', 'relay', 'resume')}
         files['usr/palm/applications/' + app + '/state/.keep'] = b''
         files['usr/palm/services/' + service + '/state/.keep'] = b''
@@ -99,15 +121,16 @@ ROOT_BACKENDS = {'c1-native-gate': {'experimental': True, 'hardware_validated': 
                                   'admission_schema': 3, 'graphics': C1_GRAPHICS}}
 
 
-def stage_c1_root(payload, work, version, run=subprocess.run):
+def stage_c1_root(payload, work, version, run=subprocess.run, *, scratch=None):
     """Compile once with the existing pinned build-only Zig dependency."""
-    helper = Path(work) / 'c1-keyfilter-guard'
+    scratch = Path(work if scratch is None else scratch)
+    helper = scratch / 'c1-keyfilter-guard'
     environment = dict(os.environ, ZIG_GLOBAL_CACHE_DIR=str(Path(work) / 'zig-global-cache'),
                        ZIG_LOCAL_CACHE_DIR=str(Path(work) / 'zig-cache'))
     run([sys.executable, '-m', 'ziglang', 'cc', '-target', 'arm-linux-musleabi',
          '-Os', '-static', '-s', 'root-edition/gate/keyfilter.c', '-o', str(helper)],
         cwd=ROOT, env=environment, check=True)
-    recovery = Path(work) / 'c1-home-gate'
+    recovery = scratch / 'c1-home-gate'
     run([sys.executable, '-m', 'ziglang', 'cc', '-target', 'arm-linux-musleabi',
          '-Os', '-static', '-s', 'root-edition/gate/gate.c', '-o', str(recovery)],
         cwd=ROOT, env=environment, check=True)
@@ -181,11 +204,13 @@ def stage_brand_assets(payload):
         (payload / packaged).write_bytes((ROOT / 'assets/brand' / master).read_bytes())
 
 
-def stage_guide_assets(payload):
+def stage_installer_docs(payload):
     target = payload / 'setup-guide'
     target.mkdir(exist_ok=True)
     for name in ('sign-in.png', 'dev-mode.png', 'key-server.png', 'README.md'):
         shutil.copy2(ROOT / 'android/app/src/main/assets/ui/guide' / name, target / name)
+    for name in ('LICENSE', 'THIRD_PARTY_NOTICES.md'):
+        (payload / name).write_bytes((ROOT / name).read_bytes())
 
 
 def stage_theme_previews(payload):
@@ -215,13 +240,11 @@ def helper_baseline(version):
 
 
 def stage_updater(payload):
-    app=tracked_files('updater-app')
-    versions=json.loads((ROOT/'release-versions.json').read_text())
-    if json.loads(app['appinfo.json'])['version']!=versions['updater']:raise ValueError('No-root Updater version mismatch')
-    app.update(updater_app_assets(ROOT))
-    service={n:b for n,b in tracked_files('updater-service').items() if not n.startswith('state/')}
-    service.update(updater_service_assets(ROOT))
-    (payload/'updater.ipk').write_bytes(pack_app(app,service))
+    app, service = updater_sources(ROOT)
+    versions = json.loads((ROOT / 'release-versions.json').read_text())
+    if json.loads(app['appinfo.json'])['version'] != versions['updater']:
+        raise ValueError('No-root Updater version mismatch')
+    (payload / 'updater.ipk').write_bytes(pack_app(app, service))
 
 
 def stage_installer_support(payload, work):
@@ -237,33 +260,26 @@ def stage_installer_support(payload, work):
                    cwd=ROOT, env=environment, check=True)
 
 
-def build_payload():
-    versions = json.loads((ROOT / "release-versions.json").read_text())
-    work = (ROOT / 'build/cytv').resolve()
-    payload = work / 'payload'
-    if payload.exists():
-        shutil.rmtree(payload)
-    payload.mkdir(parents=True)
+def _prepare_payload(payload, work, versions):
+    # Compiler intermediates stay local to this attempt. Only Zig's own caches
+    # are shared, so a child left running cannot write into a later attempt.
+    scratch = payload.parent
     stage_installer_support(payload, work)
     helper = helper_baseline(versions['helper'])
     if helper is None:
         import ziglang
         zig = Path(ziglang.__file__).parent / ('zig.exe' if os.name == 'nt' else 'zig')
         environment = dict(os.environ, ZIG_GLOBAL_CACHE_DIR=str(work / 'zig-global-cache'), ZIG_LOCAL_CACHE_DIR=str(work / 'zig-cache'))
-        app = tracked_files('native/app')
-        # A developer's local state must never enter the public helper.
-        app = {n: b for n, b in app.items() if (n.endswith(('.js', '.json', '.png')) or n.startswith('vendor/')) and not n.startswith('state/')}
+        app, service = helper_sources()
         for name, sources in {
             'detach': ['native/app/detach.c'],
             'relay': ['native/prototype/relay.c', 'native/prototype/filter.c'],
             'resume': ['native/app/resume.c'],
         }.items():
-            output = work / name
+            output = scratch / name
             subprocess.run([str(zig), 'cc', '-target', 'arm-linux-musleabi', '-Os', '-static', '-s',
                             *sources, '-o', str(output)], cwd=ROOT, env=environment, check=True)
             app[name] = output.read_bytes()
-        service = {n: b for n, b in tracked_files('native/service').items() if n.endswith(('.js', '.json')) and not n.startswith('state/')}
-        app['app-inventory.js'] = service['app-inventory.js']
         helper = pack_app(app, service, architecture='arm', helper=True)
     (payload / 'helper.ipk').write_bytes(helper)
     from scripts.screensaver_package import build as screensaver_package
@@ -285,17 +301,15 @@ def build_payload():
     (payload / 'fallback.png').write_bytes(launcher['brand-v2-icon.png'])
     (payload / 'installer.png').write_bytes((ROOT / 'assets/icons/installer.png').read_bytes())
     stage_brand_assets(payload)
-    stage_guide_assets(payload)
+    stage_installer_docs(payload)
     stage_theme_previews(payload)
     for graphics, paths in GRAPHICS.items():
         subprocess.run([sys.executable, 'root-edition/build.py', '--output', str(payload / paths['root']), '--version', versions['root'], '--resolution', graphics], cwd=ROOT, check=True)
-    keyfilter_guard = stage_c1_root(payload, work, versions['root'])
+    keyfilter_guard = stage_c1_root(payload, work, versions['root'], scratch=scratch)
     subprocess.run([sys.executable, 'root-edition/build_updater.py', '--output', str(payload / 'root-updater')], cwd=ROOT, check=True)
     stage_updater(payload)
     subprocess.run([sys.executable,'system-updater/build.py','--output',str(payload/'system-updater')],cwd=ROOT,check=True)
     stage_legacy_root_beta(payload, versions['root'], keyfilter_guard)
-    (payload / 'LICENSE').write_bytes((ROOT / 'LICENSE').read_bytes())
-    (payload / 'THIRD_PARTY_NOTICES.md').write_bytes((ROOT / 'THIRD_PARTY_NOTICES.md').read_bytes())
     shutil.copytree(ROOT / 'cytv/licenses', payload / 'licenses/Qt', dirs_exist_ok=True)
     # Ship dependency license metadata as well as application notices in the executable.
     import importlib.metadata
@@ -323,9 +337,63 @@ def build_payload():
                 'files': {p.relative_to(payload).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
                           for p in sorted(payload.rglob('*')) if p.is_file()}}
     (payload / 'payload.json').write_text(json.dumps(manifest, indent=2), encoding='utf-8')
-    package.verify_payload(payload)
-    verify_release_versions(payload, versions)
-    return payload
+
+
+@contextmanager
+def _payload_build():
+    work = ROOT / 'build/cytv'
+    workspace = work / '.cytv-payload-build'
+    if workspace.resolve() != workspace:
+        raise ValueError('Indirect payload build directory: ' + str(workspace))
+    workspace.mkdir(parents=True, mode=0o700, exist_ok=True)
+    lock = workspace / '.cytv-payload-build-v1.lock'
+    if any(workspace.iterdir()) and not lock.exists():
+        raise ValueError('Unmanaged payload build directory: ' + str(workspace))
+
+    output, previous, attempts = work / 'payload', workspace / 'previous', workspace / 'attempts'
+    with build_lock(lock):
+        if any(path.name not in (lock.name, previous.name, attempts.name) for path in workspace.iterdir()):
+            raise ValueError('Unmanaged payload build directory: ' + str(workspace))
+        for path in (output, previous, attempts):
+            if path.is_symlink() or (path.exists() and (not path.is_dir() or path.resolve() != path)):
+                raise ValueError('Invalid payload build directory: ' + str(path))
+
+        # After an interruption between renames, restore the previous payload.
+        if previous.exists():
+            if output.exists():
+                shutil.rmtree(previous)
+            else:
+                previous.rename(output)
+        if attempts.exists():
+            shutil.rmtree(attempts)
+        attempts.mkdir()
+        try:
+            staged = Path(tempfile.mkdtemp(dir=attempts)) / 'payload'
+            staged.mkdir()
+            versions = json.loads((ROOT / 'release-versions.json').read_text())
+            _prepare_payload(staged, work, versions)
+            package.verify_payload(staged)
+            verify_release_versions(staged, versions)
+            # Replace whole directories. Unlocked readers can briefly see
+            # an absent path between these renames, never the unverified tree.
+            if output.exists():
+                output.rename(previous)
+            staged.rename(output)
+        except BaseException:
+            if previous.exists() and not output.exists():
+                previous.rename(output)
+            raise
+        finally:
+            shutil.rmtree(attempts)
+        if previous.exists():
+            shutil.rmtree(previous)
+
+        yield output
+
+
+def build_payload():
+    with _payload_build() as payload:
+        return payload
 
 
 def main():
@@ -333,10 +401,13 @@ def main():
     parser.add_argument('--payload-only', action='store_true', help='Build and verify TV assets, without freezing')
     parser.add_argument('--desktop', action='store_true', help='Also build the Windows GUI ZIP, macOS app or Debian package')
     args = parser.parse_args()
-    payload = build_payload()
-    print('Public TV payload verified:', payload)
-    if args.payload_only:
-        return
+    with _payload_build() as payload:
+        print('Public TV payload verified:', payload)
+        if not args.payload_only:
+            build_host(payload, args.desktop)
+
+
+def build_host(payload, desktop):
     trusted = ROOT / 'build/cytv/trusted-js'
     stage_sources(trusted)
     environment = dict(os.environ, PYINSTALLER_CONFIG_DIR=str(ROOT / 'build/cytv/pyinstaller-cache'))
@@ -352,7 +423,7 @@ def main():
     subprocess.run([str(executable), '--check-payload'], check=True)
     subprocess.run([str(executable), '--check-runtime'], check=True)
     print('Built:', executable)
-    if args.desktop:
+    if desktop:
         from desktop_packaging import build_desktop
         from cytv import __version__
         build_desktop(ROOT, payload, environment, __version__)

@@ -963,10 +963,10 @@ class Wizard(QMainWindow):
                 if sys.platform == 'darwin' and self.failure_help['code'] in ('ssh-access-denied', 'ssh-unreachable', 'ssh-timeout'):
                     self.button('Open System Settings', self.open_network_settings, layout=actions)
                 self.button('Change connection', lambda: self.edit_connection(profile), layout=actions)
-            retry_local_storage = (failed and self.command == 'install' and not self.reinstalling_root
+            retry_setup = (failed and self.command == 'install' and not self.reinstalling_root
                                    and not self.recovery_plan and not self.recovery_profile
                                    and (self.failure_help or {}).get('can_retry_setup'))
-            if retry_local_storage:
+            if retry_setup:
                 profile = dict(self.selected_profile) if self.selected_profile else None
                 retry_options = {'reconnect_after_reset': True} if self.reconnecting_after_reset and profile else {}
                 self.button('Try again', lambda: self.start('install', profile, **retry_options), True)
@@ -981,7 +981,7 @@ class Wizard(QMainWindow):
             if self.report:
                 save_report = self.button('Save diagnostic report…', self.save_report,
                                           (failed or setup_review) and not retry_removal and not connection_help
-                                          and not resume_root_reinstall and not status_refresh and not retry_local_storage,
+                                          and not resume_root_reinstall and not status_refresh and not retry_setup,
                                           layout=report_actions)
                 save_report.setObjectName('resultReport')
                 if failed and not status_refresh:
@@ -993,7 +993,7 @@ class Wizard(QMainWindow):
                             layout=report_actions if connection_help else None)
             self.button('Back to start', self.home,
                         not doctor_ready and not connection_help and not retry_removal and not recover
-                        and not continue_removal and not resume_root_reinstall and not status_refresh and not retry_local_storage
+                        and not continue_removal and not resume_root_reinstall and not status_refresh and not retry_setup
                         and not ((failed or setup_review) and self.report),
                         layout=report_actions if retry_removal else None)
             failed_checks = [result for result in self.check_results.values() if result['status'] in ('fail', 'unknown')]
@@ -1004,7 +1004,8 @@ class Wizard(QMainWindow):
                     self.title.setText(tr(self.failure_help['title']))
                     self.badge.setText(self.title.text())
                 messages = [self.failure_help['next_step']]
-                if self.failure_help['code'] in ('root-home-unsupported', 'root-home-unconfirmed'):
+                if self.failure_help['code'] in ('root-home-unsupported', 'root-home-unconfirmed',
+                                                 'pairing-connection-refused'):
                     messages.insert(0, self.failure_help['detail'])
                 self.subtitle.setText('\n'.join(tr(message) for message in messages))
                 if not self.report and not active_operation:

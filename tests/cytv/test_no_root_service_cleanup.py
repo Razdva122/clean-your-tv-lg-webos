@@ -14,6 +14,12 @@ from cytv import package
                      and shutil.which('node'), 'exact ownership replay needs Linux root and Node')
 class EF950ServiceCleanup(unittest.TestCase):
     def test_install_remove_fresh_install_remove_with_protected_services(self):
+        self.run_owned_service_cycle()
+
+    def test_terminal_services_finish_after_verified_restart_with_opaque_process(self):
+        self.run_owned_service_cycle(opaque=True)
+
+    def run_owned_service_cycle(self, *, opaque=False):
         from multiprocessing import Pipe
         from tests.cytv.test_no_root_simple_removal import SimpleRemoval
         case = SimpleRemoval()
@@ -29,6 +35,7 @@ class EF950ServiceCleanup(unittest.TestCase):
         }) for app, service in zip(apps, services)]
 
         def install_packages(service_owner=(0, 0)):
+            shutil.rmtree(case.root / 'proc/987654', ignore_errors=True)
             for artifact in artifacts:
                 for name, data in package.data_files(artifact).items():
                     destination = case.root / 'developer/apps' / name
@@ -74,7 +81,15 @@ class EF950ServiceCleanup(unittest.TestCase):
                     case.remote.apps = set(apps)
                     self.assertFalse(os.access(base / 'services', os.W_OK))
                     result = case.remove()
-                    self.assertTrue(result['verified_clean'])
+                    if opaque:
+                        self.assertTrue(result['restart_required'])
+                        self.assertEqual(case.store.pending(case.profile)['removals'],
+                                         {app: 'terminal' for app in apps})
+                        case.reboot()
+                        if cycle:
+                            case.remote.boot = '33333333-3333-3333-3333-333333333333'
+                        result = case.remove()
+                    self.assertTrue(result['verified_clean'], result)
                     self.assertTrue(result['empty_helper_dirs_retained'])
                     self.assertTrue(result['empty_service_dirs_retained'])
                     self.assertIsNone(case.store.pending(case.profile))
@@ -113,6 +128,10 @@ class EF950ServiceCleanup(unittest.TestCase):
                         os.chown(leaf, 5999, 5000)
                     service = services[apps.index(app)]
                     (base / 'services' / service / 'service.js').unlink()
+                    if opaque and app == apps[-1]:
+                        process = case.root / 'proc/987654'
+                        process.mkdir(exist_ok=True)
+                        (process / 'cmdline').write_bytes(b'/usr/bin/node\0-e\0opaque\0')
                 server.send('done')
         except EOFError:
             pass
