@@ -19,27 +19,16 @@ baseline=$(python3 - <<'PYPIN'
 import json, runpy
 from pathlib import Path
 info = json.loads(Path('native/app/appinfo.json').read_text())
-raw = runpy.run_path('scripts/build-cytv.py')['helper_baseline'](info['version'])
-if raw is not None:
+build = runpy.run_path('scripts/build-cytv.py')
+raw = build['helper_baseline'](info['version'])
+if raw is None:
+    build['stage_helper'](Path('build/native-app'), Path('build/native-service'))
+else:
     Path('dist', info['id'] + '_' + info['version'] + '_arm.ipk').write_bytes(raw)
     print('published')
 PYPIN
 )
 if [[ "$baseline" != published ]]; then
-# Stage from a clean set of public sources; never package local runtime state.
-cp native/app/*.js native/app/*.json native/app/*.png build/native-app/
-mkdir -p build/native-app/screensaver
-cp screensaver/{controller,policy,transport,media,settings}.js build/native-app/screensaver/
-cp -R native/app/vendor build/native-app/
-cp native/service/*.js native/service/*.json build/native-service/
-cp native/service/app-inventory.js build/native-app/
-cp native/app/state-permissions.js native/app/contract-events.js build/native-service/
-python3 -m scripts.helper_build --input build/native-app --output build/native-app-compat
-python3 -m scripts.helper_build --input build/native-service --output build/native-service-compat
-rm -rf build/native-app build/native-service
-mv build/native-app-compat build/native-app
-mv build/native-service-compat build/native-service
-mkdir -p build/native-app/state build/native-service/state
 touch build/native-app/state/.keep build/native-service/state/.keep
 "$ZIG" cc -target arm-linux-musleabi -Os -static -s native/app/detach.c -o build/native-app/detach
 "$ZIG" cc -target arm-linux-musleabi -Os -static -s native/prototype/relay.c native/prototype/filter.c -o build/native-app/relay

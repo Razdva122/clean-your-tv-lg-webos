@@ -168,9 +168,10 @@ class DesktopPackageTests(unittest.TestCase):
 
 class ConsoleMediaExclusionTests(unittest.TestCase):
     def test_console_freeze_excludes_unused_wallpaper_encoder_wheel(self):
+        from contextlib import nullcontext
         root=Path(__file__).resolve().parents[2]
         build=runpy.run_path(str(root/'scripts/build-cytv.py'))
-        with patch.dict(build['main'].__globals__,{'build_payload':lambda:root/'payload-fixture'}),patch('sys.argv',['build-cytv.py']),patch('subprocess.run') as invoke:
+        with patch.dict(build['main'].__globals__,{'_payload_build':lambda:nullcontext(root/'payload-fixture')}),patch('sys.argv',['build-cytv.py']),patch('subprocess.run') as invoke:
             build['main']()
         freeze=invoke.call_args_list[0].args[0]
         self.assertIn('--exclude-module',freeze)
