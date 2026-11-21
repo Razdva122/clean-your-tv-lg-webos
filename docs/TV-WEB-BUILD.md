@@ -54,9 +54,18 @@ Scripts remain separate classic scripts so the existing globals and UMD
 wrappers keep their behavior. Compatible ES5 sources keep their original bytes, except block function
 declarations: Acorn accepts these as ES5, but strict Chrome 38 code rejects
 them, so the compiler also transforms that syntax.
-No webpack or application-module migration is needed. Build products are staged
-separately; the compiler never overwrites a developer's app configuration,
-inventory or icons in the source tree.
+No webpack or application-module migration is needed. The compiler writes its
+output to a separate directory. For a personalized Home, staging first recovers
+any interrupted inventory publication and copies the generated icons referenced
+by the current `launcher/apps.js`. Built-in artwork is included independently.
+A completed inventory can be read from a read-only checkout. If recovery is
+pending, retry in a writable copy so staging can restore the saved files.
+
+The staging command builds in a sibling directory before replacing its output.
+A read, compilation or write error leaves the previous successful stage available.
+If the process stops between moving the previous stage aside and publishing the
+new one, rerun the same command to recover it. Keep the adjacent
+`.cytv-web-stage-<output name>` directory until that retry completes.
 
 ## Static TV fonts
 
