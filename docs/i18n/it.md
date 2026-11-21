@@ -41,6 +41,8 @@ Usa il codice della TV, non la password del tuo account LG. Se il codice non app
 
 L’associazione è un passaggio separato: quando la TV lo chiede, autorizza CYTV con il telecomando. Se la TV rifiuta la richiesta, conferma in CYTV che vuoi riprovare con la stessa TV.
 
+Se la connessione al controllo remoto della TV viene rifiutata, lascia la TV accesa e verifica dal computer l’accesso alla porta TCP 3001. Poi scegli **Riprova** nel programma di installazione per computer.
+
 Se durante la prima installazione di No-root compare un avviso che gli ingressi HDMI non sono stati letti, puoi continuare con le app rilevate.
 
 Mantieni Developer Mode attivo: prima che scada il timer, aprilo e premi EXTEND con la TV connessa a Internet. Alla scadenza, LG può rimuovere queste app.

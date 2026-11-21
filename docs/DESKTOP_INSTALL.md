@@ -156,6 +156,9 @@ See the [localized installation, use and recovery guides](LANGUAGES.md).
   pairing on the TV; Root reads the catalog through its authenticated SSH connection.
   If the TV rejects pairing, choose **Continue** at **Try pairing again?** to
   send a new request to the same TV. Approve it with the remote when it appears.
+  If the TV remote-control connection is refused, leave the TV on and check
+  that the computer can reach TCP port 3001 on the TV. Then choose **Try again**
+  to continue setup with the same saved connection.
   If a first No-root setup warns that it could not read HDMI inputs, you can
   continue with the applications it found.
 - Root checks Python 3.9+, TV Node.js 8+, root/Homebrew services and input support.

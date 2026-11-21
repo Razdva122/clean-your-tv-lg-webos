@@ -1031,6 +1031,11 @@ def _run(args, ask, write, connect, secret, search, inspect, payload_root, check
                                 write('Keep the TV on and approve the next pairing request with the remote.')
                                 if not prompts.confirm('Try pairing again?', ask, write):
                                     raise
+                            except ConnectionRefusedError as error:
+                                if phase != 'pair-tv':
+                                    raise
+                                raise TVConnectionError('TV remote-control connection refused',
+                                                        reason_code='pairing-connection-refused') from error
                     write(f"Read {len(inventory['apps'])} applications.")
                 phase = 'install-packages'
                 def progress(message):

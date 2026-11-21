@@ -1192,6 +1192,33 @@ class GuiTests(unittest.TestCase):
                          if button.text() == 'Try again').click()
                     start.assert_called_once_with('install', profile)
 
+    def test_pairing_connection_refusal_offers_retry_on_the_same_profile(self):
+        from cytv.errors import TVConnectionError
+        from cytv.failure_help import for_error
+        from cytv.state import target
+
+        profile = target('test-tv', 'no-root')
+        for pending in (None, {'action': 'install'}):
+            with self.subTest(pending=pending):
+                w = Wizard()
+                self.addCleanup(w.close)
+                w.command = 'install'
+                w.receive('selected-profile', profile)
+                error = TVConnectionError('Refused', reason_code='pairing-connection-refused')
+                with patch.object(w, 'start') as start:
+                    w.receive('failure-help', for_error(error, 'pair-tv', profile, pending))
+                    w.receive('done', 2)
+                    self.assertEqual(w.title.text(), 'TV remote-control connection refused')
+                    self.assertIn('TCP port 3001', w.subtitle.text())
+                    self.assertIn('No TV packages were changed', w.subtitle.text())
+                    start.assert_not_called()
+                    buttons = {button.text(): button for button in w.form.findChildren(QPushButton)}
+                    if pending:
+                        self.assertNotIn('Try again', buttons)
+                    else:
+                        buttons['Try again'].click()
+                        start.assert_called_once_with('install', profile)
+
     def test_foreign_home_restore_help_hands_control_to_existing_integration(self):
         from cytv.failure_help import for_error
         from cytv.root_capabilities import ForeignHomeHandoffRequired
