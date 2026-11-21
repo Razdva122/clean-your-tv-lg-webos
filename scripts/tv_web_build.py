@@ -105,7 +105,13 @@ def launcher_inventory(source, *, write=False):
             raise RuntimeError('Launcher inventory changed during staging. Try again.')
         return
 
-    with build_lock(lock):
+    read_only = not write and lock.exists() and not os.access(lock, os.W_OK)
+    with build_lock(lock, read_only=read_only):
+        if read_only:
+            if draft.exists() or draft.is_symlink():
+                raise RuntimeError('Launcher inventory requires recovery in a writable source checkout.')
+            yield
+            return
         _recover_inventory(source, draft)
         if write:
             try:
@@ -163,14 +169,14 @@ def _inside(path, directory):
 
 
 @contextmanager
-def build_lock(lock):
+def build_lock(lock, *, read_only=False):
     """Reserve a build path or fail promptly if another process owns it."""
     if lock.is_symlink() or (lock.exists() and not lock.is_file()):
         raise ValueError('Invalid build lock: ' + str(lock))
 
     # Keep the lock file so every process takes the lock on the same inode.
     # The operating system releases it when the build exits, including on a crash.
-    with lock.open('ab') as stream:
+    with lock.open('rb' if read_only else 'ab') as stream:
         stream.seek(0)
         try:
             if os.name == 'nt':
@@ -178,7 +184,8 @@ def build_lock(lock):
                 msvcrt.locking(stream.fileno(), msvcrt.LK_NBLCK, 1)
             else:
                 import fcntl
-                fcntl.flock(stream, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                mode = fcntl.LOCK_SH if read_only else fcntl.LOCK_EX
+                fcntl.flock(stream, mode | fcntl.LOCK_NB)
         except OSError as error:
             if error.errno not in (errno.EACCES, errno.EAGAIN):
                 raise

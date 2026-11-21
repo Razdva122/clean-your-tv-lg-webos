@@ -703,6 +703,39 @@ class SourceInventorySyncTests(unittest.TestCase):
         finally:
             parent.chmod(0o755)
 
+    def test_stage_with_read_only_inventory_lock_requires_a_completed_sync(self):
+        from scripts.tv_web_build import stage
+
+        self.sync_tv('192.0.2.10', {'common': b'tv-a'})
+        output = self.root / 'output' / 'stage'
+        output.parent.mkdir()
+        lock = self.root / '.cytv-launcher-inventory-launcher.lock'
+        draft = self.root / '.cytv-launcher-inventory-launcher'
+        self.assertTrue(lock.is_file())
+
+        for interrupted in (False, True):
+            with self.subTest(interrupted=interrupted):
+                if interrupted:
+                    draft.mkdir()
+                    (draft / '.cytv-source-inventory-v1').touch()
+                    (draft / 'apps.js').write_bytes(b'uncommitted')
+                lock.chmod(0o444)
+                self.root.chmod(0o555)
+                try:
+                    if os.access(lock, os.W_OK):
+                        self.skipTest('Test user can write to files with mode 0444')
+                    if interrupted:
+                        with self.assertRaisesRegex(RuntimeError, 'requires recovery'):
+                            stage(self.launcher, output, compiler=lambda files: files)
+                        self.assertEqual((draft / 'apps.js').read_bytes(), b'uncommitted')
+                    else:
+                        stage(self.launcher, output, compiler=lambda files: files)
+                    self.assertEqual(self.files(output), self.files(self.launcher))
+                    self.assertEqual(lock.read_bytes(), b'')
+                finally:
+                    self.root.chmod(0o755)
+                    lock.chmod(0o644)
+
     def test_required_wire_replies_must_contain_valid_lists(self):
         self.sync_tv('192.0.2.10', {'alpha': b'tv-a'})
         old = self.files(self.root)
