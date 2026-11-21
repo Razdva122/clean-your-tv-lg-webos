@@ -29,7 +29,7 @@ class SourcePairingTests(unittest.IsolatedAsyncioTestCase):
         self.original = b'{ "earlier-tv": "earlier-key" }\n'
         self.store.write_bytes(self.original)
         self.enterContext(patch.object(lgtv, "KEY_FILE", str(self.store)))
-        self.enterContext(contextlib.redirect_stdout(io.StringIO()))
+        self.output = self.enterContext(contextlib.redirect_stdout(io.StringIO()))
         self.connect = self.enterContext(patch.object(lgtv.websockets, "connect", new_callable=AsyncMock))
 
     async def test_overlapping_registrations_keep_all_saved_tvs(self):
@@ -132,6 +132,30 @@ finally:
 
         self.assertEqual(self.store.read_bytes(), self.original)
         socket.close.assert_awaited_once()
+
+    async def test_missing_store_is_created_for_first_registration(self):
+        self.store.unlink()
+        socket = pairing_socket("new-key")
+        self.connect.return_value = socket
+
+        self.assertIs(await lgtv.session("new-tv"), socket)
+        self.assertEqual(json.loads(self.store.read_bytes()), {"new-tv": "new-key"})
+
+    async def test_invalid_existing_store_is_not_overwritten(self):
+        for raw in (b'{"earlier-tv":"earlier-key",', b'["earlier-key"]'):
+            with self.subTest(raw=raw):
+                self.store.write_bytes(raw)
+                socket = pairing_socket("new-key")
+                self.connect.return_value = socket
+
+                with self.assertRaises(ValueError) as failure:
+                    await lgtv.session("new-tv")
+
+                self.assertEqual(self.store.read_bytes(), raw)
+                self.assertNotIn("earlier-key", str(failure.exception))
+                self.assertNotIn("earlier-key", self.output.getvalue())
+                self.assertNotIn("new-key", self.output.getvalue())
+                socket.close.assert_awaited_once()
 
     async def test_partial_write_preserves_original_and_closes_socket(self):
         socket = pairing_socket("new-key")

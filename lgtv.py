@@ -41,15 +41,17 @@ def _read_keys():
     try:
         with open(KEY_FILE, encoding="utf-8") as stream:
             keys = json.load(stream)
-    except (FileNotFoundError, ValueError):
+    except FileNotFoundError:
         return {}
-    return keys if isinstance(keys, dict) else {}
+    if not isinstance(keys, dict):
+        raise ValueError("The saved TV pairing store must contain a JSON object")
+    return keys
 
 
 def load_keys():
     try:
         return _read_keys()
-    except OSError:
+    except (OSError, ValueError):
         return {}
 
 
