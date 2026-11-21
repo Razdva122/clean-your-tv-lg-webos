@@ -69,7 +69,7 @@ def activities(device):
     return rows
 
 
-def runtime_restore(payload, uid=0, *, activation_token=None):
+def runtime_restore(payload, uid=0, *, activation_token=None, routing_only=False):
     """Called in an isolated interpreter with only the current verified bundle.
 
     Native restore reads its original inverse/inode journal; the executable is
@@ -77,6 +77,8 @@ def runtime_restore(payload, uid=0, *, activation_token=None):
     """
     import sys
     import deploy
+    if routing_only and activation_token is None:
+        raise ValueError('retained_compositor_activation_required')
     payload=Path(payload)
     manifest=deploy.verify_bundle(payload,allow_experimental=True)
     sys.path.insert(0,str(payload/'runtime'))
@@ -112,7 +114,20 @@ def runtime_restore(payload, uid=0, *, activation_token=None):
             current = backend.native(['--status'], backend.STATE, uid)
             if current['token'] != activation_token:
                 raise ValueError('native_recovery_attempt_changed')
-            restored = backend.restore_locked(backend.STATE, uid, explicit_restore=True)
+            if routing_only:
+                if not backend.stopped_stock(backend.validate_native(current)) or current['reason'] != 'input_expired':
+                    raise ValueError('native_recovery_attempt_changed')
+                entry = backend.filter_entry(backend.STATE)
+                directory = backend.private_directory(backend.STATE, uid)
+                ownership = json.loads(backend.secure(directory/'ownership.json', uid, 4096))
+                chain = backend.read_chain()
+                if ownership != {'schema':1, 'entry':entry, 'token':activation_token} or chain.count(entry) != 1:
+                    raise ValueError('native_recovery_filter_unverified')
+                backend.stock_chain(backend.reconcile(chain, backend.STATE, False))
+                backend.require_stock_home_destination()
+                restored = backend.restore_locked(backend.STATE, uid, routing_only=True)
+            else:
+                restored = backend.restore_locked(backend.STATE, uid, explicit_restore=True)
     else:
         restored = backend.restore_for_removal(backend.STATE, uid) if compositor else cli.main('restore')
     result={'returnValue':True,'result':restored}
@@ -170,12 +185,12 @@ def activation_restore_entry(args):
     import deploy
     from updater.bootstrap import verify_bundle
 
-    if len(args) != 3 or args[1] != '--restore-activation':
+    if len(args) != 3 or args[1] not in ('--restore-activation', '--restore-activation-routing'):
         raise ValueError('retained_compositor_activation_required')
     deploy.require_device()
     verify_bundle(Path(__file__).resolve().parent)
     try:
-        return runtime_restore(args[0], activation_token=args[2])
+        return runtime_restore(args[0], activation_token=args[2], routing_only=args[1] == '--restore-activation-routing')
     except Exception as error:
         if not (hasattr(error, 'restore_check') or hasattr(error, 'native_reason')):
             return {'returnValue': False}
