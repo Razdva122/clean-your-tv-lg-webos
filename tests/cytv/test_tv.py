@@ -1,10 +1,16 @@
+import asyncio
 import base64
+from contextlib import redirect_stdout
 from http.client import IncompleteRead
+import io
 import json
+import os
 from pathlib import Path
+import runpy
+from shutil import copytree
 import tempfile
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 from cytv.tv import ICON_DOWNLOAD_BUDGET, Inventory, SSAP
 from cytv.errors import TVNotReady, TVConnectionError
@@ -450,7 +456,7 @@ class LegacySyncTunerTests(unittest.TestCase):
         from unittest.mock import AsyncMock
         from websockets.exceptions import ConnectionClosedError
         module = runpy.run_path(str(Path(__file__).resolve().parents[2] / 'sync-apps.py'))
-        async def call(ws, uri):
+        async def call(ws, uri, *, strict=False):
             if uri.endswith('/listLaunchPoints'): return {'launchPoints': [{'id': 'video', 'title': 'Video'}]}
             if uri.endswith('/getExternalInputList'): return {'devices': []}
             raise ConnectionClosedError(None, None)
@@ -486,7 +492,7 @@ class LegacySyncTunerTests(unittest.TestCase):
         import asyncio, contextlib, io, runpy
         from unittest.mock import AsyncMock
         module = runpy.run_path(str(Path(__file__).resolve().parents[2] / 'sync-apps.py'))
-        async def call(ws, uri):
+        async def call(ws, uri, *, strict=False):
             if uri.endswith('/listLaunchPoints'):
                 return {'launchPoints': [{'id': 'org.example.video', 'title': 'Video',
                                           'icon': 'http://192.0.2.10/video.png'}]}
@@ -507,6 +513,229 @@ class LegacySyncTunerTests(unittest.TestCase):
                               ('org.example.video', 'Video', 'icons/org.example.video.png')])
             for app in data['apps']:
                 self.assertEqual((Path(directory) / app['icon']).read_bytes(), b'fallback')
+
+
+class SourceInventorySyncTests(unittest.TestCase):
+    def setUp(self):
+        directory = self.enterContext(tempfile.TemporaryDirectory())
+        self.root = Path(directory)
+        self.launcher = self.root / 'launcher'
+        self.launcher.mkdir()
+        (self.launcher / 'appinfo.json').write_text('{"id":"com.gathin.tvhome"}')
+        (self.launcher / 'brand-v2-icon.png').write_bytes(b'bundled')
+        self.sync = runpy.run_path(str(Path(__file__).resolve().parents[2] / 'sync-apps.py'))['main']
+        self.sync.__globals__['APP_DIR'] = str(self.launcher)
+
+    def sync_tv(self, host, arts, inputs=None, list_only=False):
+        async def call(ws, uri, *, strict=False):
+            if uri.endswith('/listLaunchPoints'):
+                return {'launchPoints': [
+                    {'id': name, 'title': name.title(), 'art': art} for name, art in arts.items()
+                ]}
+            if uri.endswith('/getExternalInputList'):
+                return {'devices': [] if inputs is None else inputs}
+            return {}
+
+        with (patch('lgtv.session', new=AsyncMock(return_value=AsyncMock())),
+              patch('lgtv.call', new=call),
+              patch.object(Inventory, 'icon_data', side_effect=lambda app: (app['art'], 'png')) as icon,
+              redirect_stdout(io.StringIO()) as out):
+            asyncio.run(self.sync(host, list_only))
+        if list_only:
+            icon.assert_not_called()
+        return out.getvalue()
+
+    def files(self, directory):
+        return {
+            path.relative_to(directory).as_posix(): path.read_bytes()
+            for path in directory.rglob('*') if path.is_file()
+        }
+
+    def test_second_tv_replaces_generated_icons_and_preserves_bundled_art(self):
+        from scripts.tv_web_build import stage
+
+        self.sync_tv('192.0.2.10', {'alpha': b'tv-a', 'common': b'common-a'})
+        self.sync_tv('192.0.2.20', {'beta': b'tv-b', 'common': b'common-b'})
+        output = self.root / 'stage'
+        stage(self.launcher, output, compiler=lambda files: files)
+        files = self.files(output)
+        self.assertEqual(set(files), {'appinfo.json', 'apps.js', 'brand-v2-icon.png',
+                                      'icons/beta.png', 'icons/common.png'})
+        self.assertEqual(files['brand-v2-icon.png'], b'bundled')
+        self.assertEqual(files['icons/beta.png'], b'tv-b')
+        self.assertEqual(files['icons/common.png'], b'common-b')
+        apps = json.loads(files['apps.js'].split(b'window.TV_APPS = ', 1)[1].rstrip(b';\n'))['apps']
+        self.assertEqual([app['id'] for app in apps], ['beta', 'common'])
+        self.assertFalse((self.launcher / 'icons/alpha.png').exists())
+
+    def test_failed_and_list_only_syncs_preserve_previous_inventory_and_art(self):
+        self.sync_tv('192.0.2.10', {'alpha': b'tv-a'})
+        old = self.files(self.root)
+        self.assertIn('Beta', self.sync_tv('192.0.2.20', {'beta': b'tv-b'},
+                                          inputs='unavailable', list_only=True))
+        self.assertEqual(self.files(self.root), old)
+
+        with self.assertRaises(KeyError):
+            self.sync_tv('192.0.2.20', {'alpha': b'new-a', 'beta': b'tv-b'},
+                         inputs=[{'appId': 'missing-label-and-id'}])
+        self.assertEqual(self.files(self.root), old)
+
+    def test_empty_sync_preserves_previous_inventory_and_art(self):
+        self.sync_tv('192.0.2.10', {'alpha': b'tv-a'})
+        old = self.files(self.root)
+        with self.assertRaisesRegex(SystemExit, 'No apps were synced'):
+            self.sync_tv('192.0.2.20', {})
+        self.assertEqual(self.files(self.root), old)
+
+    def test_failed_inventory_publish_restores_previous_art(self):
+        self.sync_tv('192.0.2.10', {'alpha': b'tv-a'})
+        old = self.files(self.root)
+        replace = Path.replace
+
+        def fail_publish(path, target):
+            if target == self.launcher / 'apps.js':
+                raise OSError('inventory destination is unavailable')
+            return replace(path, target)
+
+        with (patch.object(Path, 'replace', autospec=True, side_effect=fail_publish),
+              self.assertRaisesRegex(OSError, 'inventory destination is unavailable')):
+            self.sync_tv('192.0.2.20', {'alpha': b'new-a', 'beta': b'tv-b'})
+        self.assertEqual(self.files(self.root), old)
+
+    def test_publish_excludes_staging_reads_and_other_publishers(self):
+        from scripts.tv_web_build import stage
+
+        self.sync_tv('192.0.2.10', {'alpha': b'tv-a'})
+        output = self.root / 'stage'
+
+        def build():
+            stage(self.launcher, output, compiler=lambda files: files)
+
+        build()
+        old = self.files(output)
+        replace = Path.replace
+        publish = self.sync.__globals__['publish_inventory']
+
+        def during_publish(path, target):
+            result = replace(path, target)
+            if path.name == 'icons' and target == self.launcher / 'icons':
+                # New icons have moved into place while apps.js still describes TV A.
+                with self.assertRaises(RuntimeError):
+                    build()
+                self.assertEqual(self.files(output), old)
+                with self.assertRaises(RuntimeError):
+                    publish(self.launcher, {'apps': [], 'inputs': []}, {'gamma.png': b'tv-c'})
+            return result
+
+        with patch.object(Path, 'replace', autospec=True, side_effect=during_publish):
+            self.sync_tv('192.0.2.20', {'beta': b'tv-b'})
+        build()
+        self.assertEqual(self.files(output / 'icons'), {'beta.png': b'tv-b'})
+
+    def test_stage_rejects_missing_referenced_art_and_keeps_previous_output(self):
+        from scripts.tv_web_build import stage
+
+        self.sync_tv('192.0.2.10', {'alpha': b'tv-a'})
+        output = self.root / 'stage'
+        stage(self.launcher, output, compiler=lambda files: files)
+        old = self.files(output)
+        (self.launcher / 'icons/alpha.png').unlink()
+        with self.assertRaisesRegex(ValueError, 'missing'):
+            stage(self.launcher, output, compiler=lambda files: files)
+        self.assertEqual(self.files(output), old)
+
+    def test_stage_restores_previous_art_after_interrupted_publish(self):
+        from scripts.tv_web_build import stage
+
+        self.sync_tv('192.0.2.10', {'common': b'tv-a'})
+        old = self.files(self.launcher)
+        other = self.root / 'other-home'
+        copytree(self.launcher, other)
+        (other / 'icons/common.png').write_bytes(b'other')
+        draft = self.root / '.cytv-launcher-inventory-launcher'
+        draft.mkdir()
+        (draft / '.cytv-source-inventory-v1').touch()
+        (self.launcher / 'icons').replace(draft / 'previous-icons')
+        (self.launcher / 'icons').mkdir()
+        (self.launcher / 'icons/common.png').write_bytes(b'tv-b')
+        (draft / 'apps.js').write_bytes(b'uncommitted')
+
+        output = self.root / 'stage'
+        stage(other, output, compiler=lambda files: files)
+        self.assertEqual((output / 'icons/common.png').read_bytes(), b'other')
+        self.assertTrue(draft.exists())
+        stage(self.launcher, output, compiler=lambda files: files)
+        self.assertEqual(self.files(output), old)
+        self.assertEqual(self.files(self.launcher), old)
+        self.assertFalse(draft.exists())
+
+    def test_stage_leaves_a_foreign_inventory_directory_untouched(self):
+        from scripts.tv_web_build import stage
+
+        self.sync_tv('192.0.2.10', {'common': b'tv-a'})
+        old = self.files(self.launcher)
+        draft = self.root / '.cytv-launcher-inventory-launcher'
+        (draft / 'previous-icons').mkdir(parents=True)
+        (draft / 'previous-icons/common.png').write_bytes(b'foreign')
+        (draft / 'apps.js').write_bytes(b'foreign')
+        foreign = self.files(draft)
+        with self.assertRaisesRegex(ValueError, 'Unmanaged launcher inventory workspace'):
+            stage(self.launcher, self.root / 'stage', compiler=lambda files: files)
+        self.assertEqual(self.files(self.launcher), old)
+        self.assertEqual(self.files(draft), foreign)
+
+    @unittest.skipIf(os.name == 'nt', 'Requires POSIX directory permissions')
+    def test_stage_accepts_a_read_only_source_without_inventory_state(self):
+        from scripts.tv_web_build import stage
+
+        self.sync_tv('192.0.2.10', {'common': b'tv-a'})
+        parent = self.root / 'read-only'
+        parent.mkdir()
+        source = copytree(self.launcher, parent / 'launcher')
+        output = self.root / 'stage'
+        parent.chmod(0o555)
+        try:
+            if os.access(parent, os.W_OK):
+                self.skipTest('Test user can write to directories with mode 0555')
+            stage(source, output, compiler=lambda files: files)
+            self.assertEqual(self.files(output), self.files(source))
+            self.assertEqual(set(parent.iterdir()), {source})
+        finally:
+            parent.chmod(0o755)
+
+    def test_required_wire_replies_must_contain_valid_lists(self):
+        self.sync_tv('192.0.2.10', {'alpha': b'tv-a'})
+        old = self.files(self.root)
+        baseline = {'listLaunchPoints': {'payload': {'launchPoints': []}},
+                    'getExternalInputList': {'payload': {'devices': []}},
+                    'listApps': {'payload': {'apps': [{'id': 'com.webos.app.livetv', 'title': 'TV'}]}}}
+
+        class Socket:
+            async def send(self, raw):
+                self.request = json.loads(raw)
+
+            async def recv(self):
+                response = replies[self.request['uri'].rsplit('/', 1)[1]]
+                return json.dumps({'id': self.request['id'], 'type': 'response', **response})
+
+            async def close(self):
+                pass
+
+        for method, field in (('listLaunchPoints', 'launchPoints'), ('getExternalInputList', 'devices')):
+            for response in ({'type': 'error'}, {'type': 'error', 'payload': {field: []}},
+                             {'payload': {'returnValue': False, field: []}},
+                             {'payload': {field: None}}, {'payload': {}}):
+                with self.subTest(method=method, response=response):
+                    replies = {**baseline, method: response}
+                    with (patch('lgtv.session', new=AsyncMock(return_value=Socket())),
+                          redirect_stdout(io.StringIO()), self.assertRaises(ValueError)):
+                        asyncio.run(self.sync('192.0.2.20', False))
+                    self.assertEqual(self.files(self.root), old)
+
+        replies = baseline
+        with patch('lgtv.session', new=AsyncMock(return_value=Socket())), redirect_stdout(io.StringIO()):
+            asyncio.run(self.sync('192.0.2.20', False))
+        self.assertEqual(set(self.files(self.launcher / 'icons')), {'com.webos.app.livetv.png'})
 
 
 class NativeIconQualityTests(unittest.TestCase):

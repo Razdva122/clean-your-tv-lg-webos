@@ -72,11 +72,15 @@ async def session(host, **connect_args):
     return ws
 
 
-async def call(ws, uri, payload=None, n=[0]):
+async def call(ws, uri, payload=None, n=[0], *, strict=False):
     n[0] += 1
     rid = f"c{n[0]}"
     await ws.send(json.dumps({"type": "request", "id": rid, "uri": uri, "payload": payload or {}}))
     while True:
         msg = json.loads(await asyncio.wait_for(ws.recv(), 20))
         if msg.get("id") == rid:
-            return msg.get("payload", {})
+            reply = msg.get("payload", {})
+            if strict and (msg.get("type", "response") != "response" or
+                           not isinstance(reply, dict) or reply.get("returnValue") is False):
+                raise ValueError("TV did not return a successful response for " + uri)
+            return reply
