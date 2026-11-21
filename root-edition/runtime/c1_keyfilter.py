@@ -239,6 +239,7 @@ def stock_bsp_overlay(mounts, overlay, critical):
     """Verify the two immutable backing images of the LG BSP overlay."""
     fields, _, _, _, options = overlay
     bsp = Path('/overlay/bsppart/bsp/usr')
+    bsp_home = bsp / 'bin/com.webos.app.home'
     lower = 'lowerdir=' + str(bsp) + ':/usr'
     # LG can report the mount as rw while the overlay superblock is read-only.
     if (fields[3] != '/' or not re.fullmatch(r'0:[0-9]+', fields[2])
@@ -248,7 +249,7 @@ def stock_bsp_overlay(mounts, overlay, critical):
         return False
     images = {}
     for entry, target, filesystem, _, flags in mounts:
-        if not (target == '/' or str(bsp) == target or str(bsp).startswith(target + '/')):
+        if not (target == '/' or str(bsp_home) == target or str(bsp_home).startswith(target + '/')):
             continue
         if (target not in ('/', '/overlay/bsppart') or target in images
                 or entry[3] != '/' or filesystem != 'squashfs'
@@ -263,10 +264,29 @@ def stock_bsp_overlay(mounts, overlay, critical):
 
     legacy.trusted_directory(bsp)
     overlay_device = tuple(map(int, fields[2].split(':')))
-    for path, expected in zip((*critical, bsp), (images['/'], overlay_device, images['/overlay/bsppart'])):
+    for index, (path, expected) in enumerate(zip(
+            (*critical, bsp), (images['/'], overlay_device, images['/overlay/bsppart']))):
         device = os.stat(path, follow_symlinks=False).st_dev
-        if (os.major(device), os.minor(device)) != expected:
+        observed = (os.major(device), os.minor(device))
+        if observed == expected:
+            continue
+        # Overlayfs can assign a lower file its own anonymous device. Both
+        # backing images are immutable and the BSP must not shadow this file.
+        if (index != 0 or str(path) != '/usr/bin/com.webos.app.home'
+                or observed[0] != 0 or observed == overlay_device):
             return False
+        try:
+            directory = bsp_home.parent.lstat()
+        except FileNotFoundError:
+            continue
+        if not stat.S_ISDIR(directory.st_mode):
+            return False
+        legacy.trusted_directory(bsp_home.parent)
+        try:
+            bsp_home.lstat()
+        except FileNotFoundError:
+            continue
+        return False
     return True
 
 
