@@ -25,14 +25,29 @@ def retained_retry_receipt(pending):
                         for pin in (pending.get('release_sha'), pending.get('bundle_sha'))))
 
 
-def retained_retry_token(device):
+def retained_retry_token(device, *, phase='disabled'):
     effective, intent = device.get('effective', {}), device.get('intent', {})
     token = effective.get('token')
     if (effective.get('routing') == 'compositor-keyfilter-v1'
             and effective.get('state') == 'stopped' and effective.get('reason') == 'input_expired'
-            and intent.get('phase') == 'disabled' and intent.get('token') == token
+            and intent.get('phase') == phase and intent.get('token') == token
             and isinstance(token, str) and re.fullmatch('[a-f0-9]{32}', token)):
         return token
+    return None
+
+
+def retained_filter_token(device):
+    from .root_gate import native_proof
+    effective = native_proof(device)
+    if effective is None:
+        return None
+    intent, recovery = device.get('intent'), device.get('recovery')
+    if (effective.get('stopped') is True and effective['guardian_pid'] == 0
+            and effective['healthy'] is False and effective['stock_verified'] is False
+            and effective.get('routing_active') is False and effective.get('filter_installed') is True
+            and isinstance(intent, dict) and intent.get('enabled') is False
+            and isinstance(recovery, dict) and recovery.get('integrity_verified') is True):
+        return retained_retry_token(device, phase='recovering')
     return None
 
 

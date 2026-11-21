@@ -404,7 +404,14 @@ def recover(installer, ask, write, non_interactive=False, initial_observation=No
         if retained_retry_receipt(pending):
             token = installer.retained_activation_token(pending, result)
             if not token:
-                raise UserError(BLOCKED, reason_code='pending-operation')
+                token = installer.retained_activation_token(pending, result, routing_restore=True)
+                if not token:
+                    raise UserError(BLOCKED, reason_code='pending-operation')
+                if not prompts.confirm('Restore LG Home?', ask, write):
+                    write(KEPT)
+                    return
+                if not installer.restore_retained_activation_routing(pending, token):
+                    raise UserError(BLOCKED, reason_code='pending-operation')
             plan(write, 'ready', 'LG Home is restored.')
             if prompts.confirm('Finish Root setup and turn on Home control?', ask, write):
                 installer.resume_retained_activation(pending, token)

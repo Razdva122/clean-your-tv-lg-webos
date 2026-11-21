@@ -1962,16 +1962,25 @@ else:
         self.outcome.packages_verified()
         return {'home_changed':False,'updates_ready':self.profile.get('root_variant') != 'node012-beta','home_control':'disabled'}
 
-    def retained_activation_token(self, pending, observation):
-        from .root_activation import retained_retry_receipt, retained_retry_token
+    def retained_activation_token(self, pending, observation, *, routing_restore=False):
+        from .root_activation import retained_filter_token, retained_retry_receipt, retained_retry_token
         if (self.profile['edition'] != 'root' or not retained_retry_receipt(pending)
                 or observation.get('deployment_stage') != 'installed-recovery-only'):
             return None
         device = observation.get('device', {}).get('result', {})
-        if self.root_setup_inactive(device) and (token := retained_retry_token(device)):
-            if self.root_files_match(pending) and self.store.pending(self.profile) == pending:
-                return token
+        token = (retained_filter_token(device) if routing_restore else
+                 retained_retry_token(device) if self.root_setup_inactive(device) else None)
+        if token and self.root_files_match(pending) and self.store.pending(self.profile) == pending:
+            return token
         return None
+
+    def restore_retained_activation_routing(self, pending, token):
+        from .root_install_recovery import restore_activation
+        if not token or self.retained_activation_token(pending, self.observe_recovery(), routing_restore=True) != token:
+            raise UserError('Recovery evidence changed. Check recovery again; recovery data was kept.',
+                            reason_code='pending-operation')
+        restore_activation(self, token, routing_only=True)
+        return self.retained_activation_token(pending, self.observe_recovery()) == token
 
     def resume_retained_activation(self, expected_pending, token):
         from .root_activation import activate, retained_retry_receipt

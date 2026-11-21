@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
-from unittest.mock import Mock, call
+from unittest.mock import Mock, call, patch
 from cytv import package, root_activation, state
 from cytv.errors import UserError
 from cytv.operations import Installer
@@ -65,7 +65,9 @@ class NativeActivationTests(unittest.TestCase):
         self.stock['result']['effective'].update(
             routing='compositor-keyfilter-v1', mounted=False, state='stopped', stopped=True,
             reason='input_expired', filter_installed=False, routing_active=False)
-        for scenario in ('retry', 'decline', 'receipt-changed', 'files-changed', 'token-changed', 'escape'):
+        for scenario in ('retry', 'decline', 'receipt-changed', 'files-changed', 'token-changed', 'escape',
+                         'filter-retry', 'filter-decline-restore', 'filter-decline-enable',
+                         'filter-not-cleared', 'filter-token-changed'):
             with self.subTest(scenario=scenario), tempfile.TemporaryDirectory() as directory:
                 store = state.Store(directory)
                 profile = state.target('tv.local', 'root')
@@ -77,6 +79,11 @@ class NativeActivationTests(unittest.TestCase):
                             requires_updater=False, migrate=False, release_sha='a'*64, bundle_sha='b'*64)
                 original = store.pending(profile)
                 stock = copy.deepcopy(self.stock)
+                filter_left = scenario.startswith('filter-')
+                restored = copy.deepcopy(stock)
+                if filter_left:
+                    stock['result']['effective'].update(stock_verified=False, filter_installed=True)
+                    stock['result']['intent']['phase'] = 'recovering'
                 if scenario == 'escape':
                     stock['result']['effective']['reason'] = 'escape'
                 installer.root_action = Mock(return_value=stock)
@@ -87,10 +94,17 @@ class NativeActivationTests(unittest.TestCase):
                 staged = []
 
                 def answer(prompt):
+                    if 'Restore LG Home?' in prompt:
+                        if scenario == 'filter-token-changed':
+                            for key in ('effective', 'intent'):
+                                stock['result'][key]['token'] = 'c'*32
+                        return 'n' if scenario == 'filter-decline-restore' else 'y'
                     if 'Finish Root setup and turn on Home control?' not in prompt:
                         return 'y'
                     staged.append(prompt)
-                    if scenario == 'decline':
+                    if filter_left:
+                        restore.assert_called_once_with(installer, 'b'*32, routing_only=True)
+                    if scenario in ('decline', 'filter-decline-enable'):
                         return 'n'
                     if scenario == 'files-changed':
                         installer.root_files_match.return_value = False
@@ -101,7 +115,7 @@ class NativeActivationTests(unittest.TestCase):
                             stock['result'][key]['token'] = 'c'*32
                     return 'y'
 
-                if scenario == 'retry':
+                if scenario in ('retry', 'filter-retry'):
                     remote.luna.return_value = {'returnValue': True, 'appId': package.ROOT_APP}
                     active = copy.deepcopy(self.active)
                     active['result']['effective'].update(
@@ -117,22 +131,29 @@ class NativeActivationTests(unittest.TestCase):
                         return stock
 
                     installer.root_action.side_effect = action
-                    recover(installer, answer, Console(lambda *_: None))
+                def restore_filter(*_args, **_kwargs):
+                    if scenario != 'filter-not-cleared':
+                        stock.update(restored)
+
+                with patch('cytv.root_install_recovery.restore_activation', side_effect=restore_filter) as restore:
+                    if scenario in ('retry', 'decline', 'filter-retry', 'filter-decline-restore', 'filter-decline-enable'):
+                        recover(installer, answer, Console(lambda *_: None))
+                    else:
+                        with self.assertRaises(UserError):
+                            recover(installer, answer, Console(lambda *_: None))
+                if scenario in ('retry', 'filter-retry'):
                     self.assertIsNone(store.pending(profile))
                     archive, = store.device_dir(profile).glob('recovery-*.json')
                     self.assertEqual(json.loads(archive.read_text())['previous'], original)
                     self.assertEqual(installer.root_action.call_args_list.count(call('enable', retry_token='b'*32)), 1)
                 else:
-                    if scenario == 'decline':
-                        recover(installer, answer, Console(lambda *_: None))
-                    else:
-                        with self.assertRaises(UserError):
-                            recover(installer, answer, Console(lambda *_: None))
                     self.assertEqual(store.pending(profile), dict(original, bundle_sha='c'*64)
                                      if scenario == 'receipt-changed' else original)
                     self.assertFalse(list(store.device_dir(profile).glob('recovery-*.json')))
                     self.assertTrue(all(request.args == ('status',) for request in installer.root_action.call_args_list))
-                self.assertEqual(len(staged), int(scenario != 'escape'))
+                self.assertEqual(restore.call_count, int(scenario in ('filter-retry', 'filter-decline-enable', 'filter-not-cleared')))
+                self.assertEqual(len(staged), int(scenario not in ('escape', 'filter-decline-restore',
+                                                                   'filter-not-cleared', 'filter-token-changed')))
                 remote.upload.assert_not_called()
 
     def test_existing_cytv_foreground_makes_no_launch_request(self):
