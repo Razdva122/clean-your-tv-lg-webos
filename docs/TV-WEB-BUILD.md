@@ -55,9 +55,16 @@ wrappers keep their behavior. Compatible ES5 sources keep their original bytes, 
 declarations: Acorn accepts these as ES5, but strict Chrome 38 code rejects
 them, so the compiler also transforms that syntax.
 No webpack or application-module migration is needed. The compiler writes its
-output to a separate directory. For a personalized Home, staging first recovers
-any interrupted inventory publication and copies the generated icons referenced
-by the current `launcher/apps.js`. Built-in artwork is included independently.
+output to a separate directory. Staging the project's `launcher/` selects file
+names from the Git index and reads their current working bytes. Use `git add`
+to include a new launcher source in a local build. For source exports without
+Git, keep the shared Home inventory in `scripts/home_assets.py` up to date
+when adding launcher files. Staging a separate input directory still takes
+its contents as explicit build inputs.
+
+For a personalized Home, staging first recovers any interrupted inventory
+publication and copies the generated `launcher/apps.js` and its referenced
+icons. Built-in artwork is included independently.
 A completed inventory can be read from a read-only checkout. If recovery is
 pending, retry in a writable copy so staging can restore the saved files.
 
@@ -221,7 +228,10 @@ Packages, standalone installer fonts and live/static previews use the same
 `scripts/chinese_fonts.py` preparation path. It decodes Chinese locale literals
 (including Unicode escapes and static template text) from runtime catalogs,
 including themes, Root audio, installers and updater screens, plus calendar and
-language labels. Compiler inputs also contribute unscoped JavaScript/template
+language labels. The shared catalog pass uses indexed runtime paths in a Git
+checkout and maintained runtime lists in a source export. When adding runtime
+files, update the appropriate shared Home, Root UI or component list used by
+`scripts/chinese_fonts.py` for source exports. Compiler inputs also contribute unscoped JavaScript/template
 text, JSON strings, HTML text/entities/inline code and CSS content/escapes, so a
 new locale module or static label needs no central source-list edit. Foreign
 locale branches stay separate; initial HTML language does not hide shared code. Retained static faces are reused only when they cover all required

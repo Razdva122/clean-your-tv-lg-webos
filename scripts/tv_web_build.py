@@ -12,6 +12,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+from scripts.source_inventory import indexed_paths, regular_source
 
 INVENTORY_PREFIX = '.cytv-launcher-inventory-'
 INVENTORY_OWNER = '.cytv-source-inventory-v1'
@@ -126,8 +127,24 @@ def launcher_inventory(source, *, write=False):
 
 def _read_launcher(source):
     with launcher_inventory(source):
-        paths = {path.relative_to(source).as_posix(): path for path in _source_files(source)}
-        files = {name: path.read_bytes() for name, path in paths.items() if not name.startswith('icons/')}
+        if source == ROOT / 'launcher':
+            indexed = indexed_paths(ROOT, 'launcher')
+            if indexed is None:
+                from scripts.home_assets import LAUNCHER_FILES
+                names = {Path(name) for name in LAUNCHER_FILES}
+            else:
+                names = {path.relative_to('launcher') for path in indexed}
+            names.add(Path('apps.js'))
+            files = {name.as_posix(): path.read_bytes() for name in sorted(names)
+                     if name.parts[0] != 'icons' and (path := regular_source(source, name)) is not None}
+            artwork = source / 'icons'
+            if artwork.is_symlink():
+                raise ValueError('Indirect web source: ' + str(artwork))
+            paths = {path.relative_to(source).as_posix(): path for path in _source_files(artwork)} \
+                if artwork.is_dir() else {}
+        else:
+            paths = {path.relative_to(source).as_posix(): path for path in _source_files(source)}
+            files = {name: path.read_bytes() for name, path in paths.items() if not name.startswith('icons/')}
         icons = _inventory_icon_paths(files.get('apps.js', b''))
         if not icons <= paths.keys():
             raise ValueError('Launcher inventory artwork is missing. Run sync-apps.py again.')
@@ -140,7 +157,7 @@ def _compile_stage(source, compiler, resolution):
     if not source.is_dir():
         raise ValueError('Web source must be a directory: ' + str(source))
     manifest = source / 'appinfo.json'
-    if (not manifest.is_symlink() and manifest.is_file()
+    if source == ROOT / 'launcher' or (not manifest.is_symlink() and manifest.is_file()
             and json.loads(manifest.read_bytes()).get('id') == 'com.gathin.tvhome'):
         files = _read_launcher(source)
     else:
@@ -209,7 +226,10 @@ def _stage_lock(workspace):
 def stage(source, output, compiler=compile_web, resolution=None):
     if resolution is not None and resolution not in ('1280x720', '1920x1080'):
         raise ValueError('Unsupported app graphics resolution')
-    source, output = Path(source).resolve(), Path(output).absolute()
+    source = Path(source)
+    if source.name == 'launcher' and source.parent.resolve() == ROOT and source.is_symlink():
+        raise ValueError('Indirect web source: ' + str(source))
+    source, output = source.resolve(), Path(output).absolute()
     if output.name == '..':
         output = output.resolve()
     output = output.parent.resolve() / output.name

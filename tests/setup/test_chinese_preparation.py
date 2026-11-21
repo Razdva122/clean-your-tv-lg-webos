@@ -1,6 +1,7 @@
 """Automatic font preparation follows runtime translations, never edits sources."""
 import json
 import re
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -10,6 +11,42 @@ from scripts import chinese_fonts as fonts
 ROOT = Path(__file__).resolve().parents[2]
 
 class PreparationTests(unittest.TestCase):
+    def test_checkout_collection_uses_index_names_and_working_bytes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            folder = root / 'root-edition/ui'
+            folder.mkdir(parents=True)
+            catalog = folder / 'root-locales.js'
+            catalog.write_bytes(b'window.label = "\\u5f62";')
+            subprocess.run(['git', 'init', '-q'], cwd=root, check=True)
+            subprocess.run(['git', 'add', 'root-edition/ui'], cwd=root, check=True)
+            catalog.write_bytes(b'window.label = "\\u9f98";')
+            (folder / 'new catalog.json').write_bytes(b'{"label":"\\u529b"}')
+            subprocess.run(['git', 'add', 'root-edition/ui/new catalog.json'], cwd=root, check=True)
+            (folder / 'local-draft.json').write_bytes(b'malformed untracked draft')
+
+            chars = fonts.required_characters(root, files={'explicit.js': b'window.title = "\\u9fa0";'})
+            for script in fonts.SCRIPTS:
+                self.assertTrue({ord(c) for c in '龘力龠'} <= chars[script])
+                self.assertNotIn(ord('形'), chars[script])
+
+    def test_export_catalog_inventory_matches_the_checkout(self):
+        expected = {path.relative_to(ROOT) for path in fonts._catalogs(ROOT)}
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            for name in expected:
+                target = root / name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes((ROOT / name).read_bytes())
+            for directory in fonts.JS_ROOTS:
+                folder = root / directory
+                folder.mkdir(parents=True, exist_ok=True)
+                (folder / 'local-draft.json').write_text('untracked workspace draft')
+
+            with patch.object(fonts, 'ROOT', root):
+                actual = {path.relative_to(root) for path in fonts._catalogs(root)}
+            self.assertEqual(actual, expected)
+
     def test_collector_decodes_scripts_and_ignores_other_locales(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)

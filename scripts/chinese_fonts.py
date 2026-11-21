@@ -14,6 +14,8 @@ import tempfile
 import urllib.request
 import unicodedata
 
+from scripts.source_inventory import indexed_paths, regular_source
+
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = {'SC': 'zh-Hans', 'TC': 'zh-Hant'}
 VERSION = '4.60.1'
@@ -25,6 +27,8 @@ SOURCES = {
 # Runtime roots only: no tests, documentation, research, vendored code or npm tree.
 JS_ROOTS = ('launcher', 'root-edition/ui', 'updater-app', 'root-edition/updater/app',
             'homebrew/app', 'android/app/src/main/assets/ui')
+WEB_KINDS = ('.js', '.html', '.css', '.json')
+PYTHON_CATALOG = Path('cytv/translations.py')
 COLLECT = r"""
 const fs=require('fs'),acorn=require('acorn'),postcss=require('postcss'),html=require('parse5');
 const out={'zh-Hans':[],'zh-Hant':[],shared:[]},chinese=['zh-Hans','zh-Hant'],locales=new Set(['en','cs','de','es','pt-BR','fr','it','ko','hi','pl','ro','ru',...chinese]);
@@ -83,22 +87,47 @@ def _cjk(code):
             or 0xff00 <= code <= 0xffef or 0x20000 <= code <= 0x323af)
 
 
-def required_characters(root=ROOT, files=None, cache=None):
-    """Read decoded per-locale literals from every first-party runtime catalog."""
+def _catalogs(root):
     from scripts.no_root_assets import UPDATER_APP_FILES
 
-    root = Path(root)
-    kinds = ('.js', '.html', '.css', '.json')
+    indexed = indexed_paths(root, *JS_ROOTS, PYTHON_CATALOG.as_posix())
+    if indexed is not None:
+        names = indexed
+    elif root == ROOT:
+        from scripts.home_assets import LAUNCHER_FILES, ROOT_UI_FILES
+        snapshot = {
+            'launcher': LAUNCHER_FILES,
+            'root-edition/ui': ROOT_UI_FILES,
+            'homebrew/app': ('appinfo.json', 'index.html', 'app.js', 'bridge.js', 'style.css', 'i18n.js'),
+            'android/app/src/main/assets/ui': ('app.js', 'translations.js', 'index.html', 'style.css'),
+        }
+        names = {Path(directory) / name for directory, files in snapshot.items() for name in files}
+        names.add(PYTHON_CATALOG)
+    else:
+        names = {path.relative_to(root) for directory in JS_ROOTS for path in (root / directory).glob('*')}
+        names.add(PYTHON_CATALOG)
+    runtime_dirs = {Path(directory) for directory in JS_ROOTS if directory != 'updater-app'}
+    names = {name for name in names if name == PYTHON_CATALOG or name.parent in runtime_dirs}
+    names.update(Path('updater-app') / name for name in UPDATER_APP_FILES)
+    for name in sorted(names):
+        if ((name == PYTHON_CATALOG or name.suffix in WEB_KINDS)
+                and (path := regular_source(root, name)) is not None):
+            yield path
+
+
+def required_characters(root=ROOT, files=None, cache=None):
+    """Read decoded per-locale literals from every first-party runtime catalog."""
+    root = Path(root).resolve()
     sources = []
-    for directory in JS_ROOTS:
-        folder = root / directory
-        paths = (folder / name for name in UPDATER_APP_FILES) if directory == 'updater-app' else sorted(folder.glob('*'))
-        sources.extend((p.suffix, p.read_text(encoding='utf-8')) for p in paths
-                       if p.suffix in kinds and p.is_file())
+    python_text = ''
+    for path in _catalogs(root):
+        text = path.read_text(encoding='utf-8')
+        if path == root / PYTHON_CATALOG:
+            python_text = text
+        else:
+            sources.append((path.suffix, text))
     sources.extend((Path(name).suffix, raw.decode('utf-8')) for name, raw in sorted((files or {}).items())
-                   if Path(name).suffix in kinds)
-    python = root/'cytv/translations.py'
-    python_text = python.read_text(encoding='utf-8') if python.is_file() else ''
+                   if Path(name).suffix in WEB_KINDS)
     required = {script: set(codes) for script, codes in _characters(tuple(sources), python_text).items()}
     optional = {code for code in set.union(*required.values()) if not _cjk(code)}
     ignored = {code for code in optional if unicodedata.category(chr(code)) in ('Sc', 'Cf')}
