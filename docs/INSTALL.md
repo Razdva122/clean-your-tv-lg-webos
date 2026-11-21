@@ -197,6 +197,8 @@ another profile without retargeting an existing TV connection.
 
 Rerunning resyncs and rebuilds the current checkout while preserving
 `launcher/config.js`; update the checkout first to obtain new source changes.
+Run one installation at a time in each checkout. If another installation is
+active, wait for it to finish before retrying.
 A failed run does not roll back installed packages. Keep `.lgtv-key.json` and CLI
 keys private and do not use `bash -x`. Native Windows is not supported by this
 Bash script; WSL installation is unvalidated. The Windows cytv console wizard

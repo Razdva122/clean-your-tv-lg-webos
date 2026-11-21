@@ -32,6 +32,19 @@ for tool in node npm; do
   command -v "$tool" >/dev/null || { echo 'Install Node.js 20.19+ (with npm) first.' >&2; exit 1; }
 done
 node -e 'const [major,minor]=process.versions.node.split(".").map(Number);if(major<20||(major===20&&minor<19))process.exit(1)' || { echo 'Node.js 20.19+ is required.' >&2; exit 1; }
+# Hold the checkout's directory lock through the final launch. Bash and this
+# Python child share descriptor 9, so the lock survives the child's exit.
+exec 9< .
+python3 - <<'PYLOCK'
+import fcntl
+
+try:
+    fcntl.flock(9, fcntl.LOCK_EX | fcntl.LOCK_NB)
+except BlockingIOError:
+    raise SystemExit('Another installation is running in this checkout. Retry after it exits.')
+except OSError as error:
+    raise SystemExit(f'Could not lock this checkout for installation: {error.strerror}.')
+PYLOCK
 npm ci --ignore-scripts --no-audit --no-fund
 stage='preparing tools'
 trap 'echo "Installation stopped while $stage. Fix the reported error and rerun ./install.sh. See docs/RECOVERY.md if packages were already installed." >&2' ERR
