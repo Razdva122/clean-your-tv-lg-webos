@@ -9,6 +9,24 @@ import stat
 import uuid
 
 MAX_BYTES = 4 * 1024 * 1024
+_ROOT_HEALTH_PREFIXES = {
+    ('ready', False): 'ready',
+    ('confirm', False): 'confirm',
+    ('ready', True): 'ready-rollback',
+}
+
+
+def health_receipt_name(transaction, kind, rollback):
+    return _ROOT_HEALTH_PREFIXES[kind, rollback] + '-' + transaction
+
+
+def validate_health_receipt(value, transaction):
+    if (not isinstance(value, dict) or set(value) != {'transaction', 'version', 'at'}
+            or value['transaction'] != transaction
+            or not isinstance(value['version'], str)
+            or not re.fullmatch(r'(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)', value['version'])
+            or type(value['at']) not in (int, float) or not 0 <= value['at'] < math.inf):
+        raise ValueError('invalid health receipt')
 
 
 def encode(value):
@@ -177,6 +195,8 @@ def _cache_snapshot(stores, product_complete=False):
     Callers hold installation.device_operation's product lock. The second read
     below also detects changed references before unlinking; no journal is edited.
     """
+    from .package import COMPANION_JOURNAL_PREFIXES, validate_companion_journal
+
     records = []
     fixed = {'baseline', 'current', 'current-root', 'current-no-root', 'transaction',
              'bootstrap', 'bootstrap-bundle', 'infrastructure', 'installed-package',
@@ -189,10 +209,17 @@ def _cache_snapshot(stores, product_complete=False):
             names = sorted(name for name in os.listdir(directory) if name.endswith('.json'))
             for filename in names:
                 name = filename[:-5]
-                if name not in fixed and not re.fullmatch(r'(?:profile|healthy|healthy-rollback|helper-resume|renewal-pause|mutable)-[a-f0-9]{32}(?:-rollback)?', name):
+                prefix, _, transaction = name.rpartition('-')
+                is_transaction = re.fullmatch('[a-f0-9]{32}', transaction) is not None
+                root_health = is_transaction and prefix in _ROOT_HEALTH_PREFIXES.values()
+                companion = is_transaction and prefix in COMPANION_JOURNAL_PREFIXES
+                if (not root_health and not companion and name not in fixed
+                        and not re.fullmatch(r'(?:profile|healthy|healthy-rollback|helper-resume|renewal-pause|mutable)-[a-f0-9]{32}(?:-rollback)?', name)):
                     raise ValueError('unknown retention record')
                 value = store._read(filename) if name == 'startup-hook.previous' else store.read(name)
                 if not isinstance(value, dict): raise ValueError('unknown retention record')
+                if root_health: validate_health_receipt(value, transaction)
+                if companion: validate_companion_journal(value)
                 if name in {'baseline', 'current', 'current-root', 'current-no-root'}: _cache_descriptor(value)
                 if name == 'bootstrap' and value.get('phase') != 'complete':
                     raise ValueError('unfinished bootstrap')

@@ -91,6 +91,8 @@ No-root: Öffnen Sie zum Neustart der Home-Steuerung Home Helper, wählen Sie He
 
 Wenn Home Helper angehalten ist, können Sie auch in den Einstellungen für den Home-Bildschirm oder den Bildschirmschoner **Helper starten** wählen. Der Status wird nach dem Start automatisch aktualisiert.
 
+Um nach einem Rollback von Home Speicherplatz freizugeben, öffne **Einstellungen → Designs**. Wähle beim nicht verfügbaren heruntergeladenen Design **Entfernen** und bestätige.
+
 ## Brauchen Sie Hilfe?
 
 Halten Sie bei `ssh-identity-changed` an und überprüfen Sie den SSH-Schlüssel des Fernsehers. [Wiederherstellung bei geändertem SSH-Schlüssel](../RECOVERY.md#ssh-identity-changed)

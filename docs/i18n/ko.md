@@ -91,6 +91,8 @@ No-root: Home 제어를 다시 시작하려면 Home Helper를 열고 Helper 시�
 
 Home Helper가 중지되면 Home 화면이나 화면 보호기 설정에서도 **Helper 시작**을 선택할 수 있습니다. 시작 후 상태가 자동으로 갱신됩니다.
 
+Home을 이전 버전으로 되돌린 후 저장 공간을 확보하려면 **설정 → 테마**를 여세요. 사용할 수 없는 다운로드 테마 옆의 **삭제**를 선택하고 확인하세요.
+
 ## 도움이 필요하신가요?
 
 `ssh-identity-changed`가 표시되면 중단하고 TV의 SSH 키를 확인하세요. [SSH 키 변경 후 복구](../RECOVERY.md#ssh-identity-changed)

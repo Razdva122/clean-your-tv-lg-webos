@@ -91,6 +91,8 @@ No-root: Per riavviare il controllo Home, apri Home Helper, scegli Avvia Helper 
 
 Se Home Helper è fermo, puoi anche scegliere **Avvia Helper** nelle impostazioni della schermata Home o del salvaschermo. Lo stato si aggiorna automaticamente dopo l’avvio.
 
+Per liberare spazio dopo aver ripristinato una versione precedente di Home, apri **Impostazioni → Temi**, scegli **Rimuovi** accanto al tema scaricato non disponibile e conferma.
+
 ## Serve aiuto?
 
 Se compare `ssh-identity-changed`, fermati e verifica la chiave SSH del televisore. [Ripristino dopo una modifica della chiave SSH](../RECOVERY.md#ssh-identity-changed)

@@ -5,6 +5,7 @@ import io
 import json
 import os
 from pathlib import Path, PurePosixPath
+import re
 import stat
 import tarfile
 
@@ -179,8 +180,29 @@ def installed_companion(installed, selected, uid=0):
     return True
 
 
+COMPANION_JOURNAL_PREFIXES = ('screensaver-update', 'screensaver-rollback')
+
+
 def companion_journal_name(tx, rollback):
-    return ('screensaver-rollback-' if rollback else 'screensaver-update-') + tx['id']
+    return COMPANION_JOURNAL_PREFIXES[bool(rollback)] + '-' + tx['id']
+
+
+def validate_companion_journal(value):
+    from installation import terminal_install, terminal_removal
+
+    if not isinstance(value, dict) or set(value) != {'identity', 'terminal'}:
+        raise ValueError('invalid Screensaver journal')
+    identity = value['identity']
+    if (not isinstance(identity, dict) or set(identity) != {'action', 'version', 'sha256'}
+            or identity['action'] not in ('install', 'remove')
+            or not isinstance(identity['version'], str)
+            or not re.fullmatch(r'[0-9]{1,4}\.[0-9]{1,4}\.[0-9]{1,4}', identity['version'])
+            or not isinstance(identity['sha256'], str)
+            or not re.fullmatch('[a-f0-9]{64}', identity['sha256'])):
+        raise ValueError('invalid Screensaver identity')
+    terminal = terminal_install if identity['action'] == 'install' else terminal_removal
+    if not terminal(value['terminal'], SCREENSAVER):
+        raise ValueError('unfinished Screensaver operation')
 
 
 def companion_outcome_pending(store, tx):
