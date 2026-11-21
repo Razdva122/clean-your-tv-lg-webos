@@ -1016,6 +1016,46 @@ class RuntimeTests(unittest.TestCase):
                                 self.k.restore_for_removal(self.root, self.uid)
                         self.assertNotEqual(self.k.read_intent(self.root, self.uid)['phase'], 'disabled')
 
+
+    def test_removal_with_unchanged_boot_id_and_reused_controller_pid(self):
+        self.admission = dict(self.generic(), model='OLED48A19LA', firmware='03.53.45', webos='6.5.3')
+        self.prepare()
+        record = self.root/'c1-keyfilter/controller.json'
+        controller = dict(pid=5618, start=351275, token='1'*32, boot=self.k.boot_identity())
+        chain = [{'file': '/usr/lib/qt5/qml/KeyFilters/systemUi.js', 'handler': 'handleSystemKeys'}]
+        for case in ('stock', 'unverified-stock', 'foreign-overlay'):
+            with self.subTest(case=case):
+                self.k.atomic(record, controller, self.uid)
+                stopped = dict(self.proof(), reason='input_lost', stock_verified=case != 'unverified-stock')
+                failure = dict(self.proof(), returnValue=False, reason='ui_release_failed')
+                surfaces = [{'appId': self.k.STOCK, 'windowType': self.k.HOME}]
+                if case == 'foreign-overlay':
+                    surfaces.append({'appId': self.k.APP, 'windowType': '_WEBOS_WINDOW_TYPE_OVERLAY'})
+                with patch.object(self.k, 'native', side_effect=[failure, stopped, stopped]), \
+                        patch.object(self.k, 'read_chain', return_value=chain), \
+                        patch.object(self.k, 'process_start', return_value=9619) as start, \
+                        patch.object(self.k.os, 'kill') as signal, \
+                        patch.object(self.k, 'luna', side_effect=[
+                            {'returnValue': True, 'appId': self.k.STOCK},
+                            {'returnValue': True, 'foregroundAppInfo': surfaces},
+                        ]):
+                    if case == 'stock':
+                        self.assertEqual(self.k.restore_for_removal(self.root, self.uid), 'restored')
+                        self.assertEqual(self.k.read_intent(self.root, self.uid)['phase'], 'disabled')
+                    else:
+                        with self.assertRaises(ValueError) as caught:
+                            self.k.restore_for_removal(self.root, self.uid)
+                        self.assertEqual(caught.exception.restore_check,
+                                         'native-stop-unverified' if case == 'unverified-stock'
+                                         else 'stock-surface-unverified')
+                    signal.assert_not_called()
+                    if case == 'unverified-stock':
+                        start.assert_not_called()
+                        self.assertEqual(json.loads(record.read_text()), controller)
+                    else:
+                        start.assert_called_once_with(controller['pid'])
+                        self.assertFalse(record.exists())
+
     def test_webos5_ribbon_removal_with_live_tv_foreground(self):
         import hashlib
 
