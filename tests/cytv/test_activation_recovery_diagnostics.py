@@ -276,6 +276,21 @@ class ActivationDiagnosticTests(unittest.TestCase):
         self.assertEqual([call.args[0] for call in self.installer.root_action.call_args_list],
                          ['status', 'restore'])
 
+    def test_retained_routing_restore_reports_child_stage(self):
+        self.installer.observe_recovery = MagicMock()
+        self.installer.retained_activation_token = MagicMock(return_value='a'*32)
+        error = TVCommandError(1)
+        error.root_restore_failure = {'restore_check': 'stock-destination-unverified',
+                                      'destination_check': 'home-missing', 'raw': 'PRIVATE'}
+        with patch('cytv.root_install_recovery.restore_activation', side_effect=error), \
+                self.assertRaises(TVCommandError) as caught:
+            self.installer.restore_retained_activation_routing(self.store.pending(self.profile), 'a'*32)
+        report = self.report_failure(caught.exception)
+        self.assertEqual(report['tv']['root_activation_restore_failure'], {
+            'step': 'restore', 'reason': 'ssh-command-failed', 'exit_status': 1,
+            'restore_check': 'stock-destination-unverified', 'destination_check': 'home-missing'})
+        self.assertNotIn('PRIVATE', json.dumps(report))
+
     def report_failure(self, error, action='recover'):
         return json.loads(diagnostics.create_report(self.store, action, self.profile, action,
             error, self.installer.tv_info).read_text())

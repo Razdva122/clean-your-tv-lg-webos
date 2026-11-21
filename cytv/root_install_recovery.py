@@ -13,6 +13,8 @@ sys.argv.pop(0)
 repair = dict(repair_beta_recovery='root_beta_repair_failure',
               repair_root_recovery='root_retained_repair_failure')
 key = repair.get(sys.argv[1]) if len(sys.argv) > 1 and sys.argv[0].endswith('/provision.py') else None
+restore = len(sys.argv) == 4 and sys.argv[0].endswith('/clean_removal.py') and sys.argv[2] in (
+    '--restore-activation', '--restore-activation-routing')
 stage = 'python-binding'
 try:
     from python_binding import verify_binding
@@ -21,9 +23,13 @@ try:
     stage = 'support-start'
     runpy.run_path(sys.argv[0], run_name='__main__')
 except Exception:
-    if key is None:
+    if restore:
+        failure = {'root_restore_failure': {'restore_check': stage}}
+    elif key is not None:
+        failure = {key: {'stage': stage, 'reason': 'failed'}}
+    else:
         raise
-    print(json.dumps({'returnValue': False, key: {'stage': stage, 'reason': 'failed'}}), flush=True)
+    print(json.dumps({'returnValue': False, **failure}), flush=True)
     raise SystemExit(1) from None
 '''
 
@@ -41,11 +47,15 @@ def recovery_python(remote):
 
 
 def run(installer, stage, script, args, timeout):
+    restoring = script == 'clean_removal.py' and len(args) == 3 and args[1] in (
+        '--restore-activation', '--restore-activation-routing')
     try:
         python=recovery_python(installer.remote)
     except UserError as error:
         if isinstance(error, TVCommandError):
             error.root_boundary='python-select'
+        if restoring:
+            error.root_restore_failure = {'restore_check': 'python-select'}
         if script == 'provision.py' and args:
             key = {'repair_beta_recovery': 'root_beta_repair_failure',
                    'repair_root_recovery': 'root_retained_repair_failure'}.get(args[0])
@@ -57,6 +67,8 @@ def run(installer, stage, script, args, timeout):
         raw=installer.remote.run(invocation,timeout=timeout)
     except TVCommandError as error:
         error.root_interpreter='system-python' if python=='/usr/bin/python3' else 'private-python'
+        if restoring and not getattr(error, 'root_restore_failure', None):
+            error.root_restore_failure = {'restore_check': 'support-no-diagnostic'}
         raise
     # Full interpreter inventory was verified by freshly staged python_binding.
     # Subsequent package readback must not run a retained binding module.

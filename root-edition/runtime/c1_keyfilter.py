@@ -154,21 +154,37 @@ def reboot_resume_supported(descriptor, root=STATE, uid=0):
             and probe in proof['shutdown_probes'])
 
 
-def require_stock_home_destination():
-    # On the verified webOS 5.6.2 firmware the stock key filter follows
-    # defaultApps.home, independently of our configd filter or native Home file.
+def stock_home_setting_check(selector):
     reply = luna('luna://com.webos.settingsservice/getSystemSettings',
-                 {'category': 'general', 'keys': ['defaultApps']}, allow_failure=True)
+                 {'category': 'general', **selector}, allow_failure=True)
+    if reply.get('returnValue') is not True:
+        return 'settings-rejected'
     settings = reply.get('settings')
     defaults = settings.get('defaultApps') if isinstance(settings, dict) else None
     if isinstance(defaults, str):
         try:
             defaults = json.loads(defaults)
         except (ValueError, RecursionError):
-            defaults = None
-    if (reply.get('returnValue') is not True or not isinstance(defaults, dict)
-            or defaults.get('home') not in (STOCK, 'com.webos.app.fullhome')):
-        raise ValueError('Explicit LG Home destination not verified')
+            return 'invalid-home'
+    home = defaults.get('home') if isinstance(defaults, dict) else None
+    if home in (STOCK, 'com.webos.app.fullhome'):
+        return None
+    if defaults is None or isinstance(defaults, dict) and home in (None, ''):
+        return 'home-missing'
+    return 'home-overridden' if isinstance(home, str) else 'invalid-home'
+
+
+def require_stock_home_destination():
+    # The factory webOS 5.6.2 SAM uses the singular key selector for defaultApps.
+    # Try it when the bulk query omits the value. Both require explicit LG Home.
+    check = stock_home_setting_check({'keys': ['defaultApps']})
+    if check == 'home-missing':
+        check = stock_home_setting_check({'key': 'defaultApps'})
+    if check is None:
+        return
+    error = ValueError('Explicit LG Home destination not verified')
+    error.destination_check = check
+    raise error
 
 
 def boot_session():
@@ -609,7 +625,7 @@ def native(args, root=STATE, uid=0, timeout=12, *, allow_ui_failure=False):
         raise ValueError('Native compositor recovery failed; retain evidence')
     if reply.returncode:
         error = ValueError('Native compositor recovery failed; retain evidence')
-        if args != ['--restore']:
+        if args not in (['--restore'], ['--restore-routing'], ['--status']):
             raise error
         try:
             value = json.loads(reply.stdout)
@@ -620,7 +636,7 @@ def native(args, root=STATE, uid=0, timeout=12, *, allow_ui_failure=False):
             raise error
         reason = value.get('reason')
         error.native_reason = reason
-        if not allow_ui_failure or reply.returncode != 1:
+        if args != ['--restore'] or not allow_ui_failure or reply.returncode != 1:
             raise error
         try:
             validate_native(dict(value, returnValue=True))
@@ -946,7 +962,11 @@ def restore_locked(root,uid, *, for_removal=False, explicit_restore=False, routi
                 raise ValueError('Stock embedded routing restored; Root window cleanup unverified; retain evidence')
         elif verify_destination:
             stock_chain(read_chain())
+            if routing_only:
+                check = 'stock-destination-readback-unverified'
             require_stock_home_destination()
+            if routing_only:
+                check = 'native-stop-unverified'
             current = validate_native(native(['--status'], root, uid))
             if not stopped_stock(current) or current['token'] != after['token']:
                 raise ValueError('Stock LG Home routing unverified; retain evidence')

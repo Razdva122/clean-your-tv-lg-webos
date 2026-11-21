@@ -1975,12 +1975,36 @@ else:
         return None
 
     def restore_retained_activation_routing(self, pending, token):
+        from .errors import connection_interrupted, root_restore_failure_details
         from .root_install_recovery import restore_activation
-        if not token or self.retained_activation_token(pending, self.observe_recovery(), routing_restore=True) != token:
-            raise UserError('Recovery evidence changed. Check recovery again; recovery data was kept.',
-                            reason_code='pending-operation')
-        restore_activation(self, token, routing_only=True)
-        return self.retained_activation_token(pending, self.observe_recovery()) == token
+
+        key = 'root_activation_restore_failure'
+        self.tv_info.pop(key, None)
+        step = 'initial-status'
+        try:
+            if not token or self.retained_activation_token(pending, self.observe_recovery(), routing_restore=True) != token:
+                raise UserError('Recovery evidence changed. Check recovery again; recovery data was kept.',
+                                reason_code='pending-operation')
+            step = 'restore'
+            restore_activation(self, token, routing_only=True)
+            step = 'final-status'
+            if self.retained_activation_token(pending, self.observe_recovery()) == token:
+                return True
+            self.tv_info[key] = {'step': step, 'reason': 'stock-home-unverified'}
+            return False
+        except Exception as error:
+            detail = {'step': step, 'reason': 'observation-failed'}
+            if isinstance(error, TVCommandError):
+                detail.update(reason=error.diagnostic_reason, exit_status=error.exit_status)
+            elif connection_interrupted(error):
+                detail['reason'] = 'connection-interrupted'
+            elif isinstance(error, (json.JSONDecodeError, UnicodeError)):
+                detail['reason'] = 'invalid-response'
+            elif isinstance(error, UserError):
+                detail['reason'] = 'operation-unconfirmed'
+            detail.update(root_restore_failure_details(getattr(error, 'root_restore_failure', None)))
+            self.tv_info[key] = detail
+            raise
 
     def resume_retained_activation(self, expected_pending, token):
         from .root_activation import activate, retained_retry_receipt

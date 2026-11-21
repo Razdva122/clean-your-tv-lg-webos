@@ -233,7 +233,7 @@ def tv_summary(value):
                 detail['reason'] = 'ssh-exit-status-missing'
             elif 0 <= code <= 255:
                 detail['exit_status'] = code
-        if detail['step'] == 'restore' and detail['reason'] == 'ssh-command-failed':
+        if detail['step'] == 'restore':
             from .errors import root_restore_failure_details
             detail.update(root_restore_failure_details(failure))
         if detail['reason'] == 'connection-interrupted' and failure.get('reconnect_failed') is True:
