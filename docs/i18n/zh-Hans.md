@@ -91,6 +91,8 @@ No-root: 要重新启动 Home 控制，请打开 Home Helper，选择启动 Help
 
 如果 Home Helper 已停止，也可以在 Home 主屏幕或屏幕保护程序设置中选择**启动 Helper**。启动后状态会自动更新。
 
+将 Home 回退到较早版本后，如需释放空间，打开**设置 → 主题**，在不可用的已下载主题旁选择**移除**并确认。
+
 ## 需要帮助？
 
 如果显示 `ssh-identity-changed`，请停止操作并验证电视的 SSH 密钥。 [SSH 密钥变更后的恢复](../RECOVERY.md#ssh-identity-changed)

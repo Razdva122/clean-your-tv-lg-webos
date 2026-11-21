@@ -229,7 +229,7 @@
       cursor.onsuccess = function () {
         var c = cursor.result;
         if (c) {
-          out.push(c.value);
+          out.push({ key: c.key, pack: c.value });
           c.continue();
         } else set(out);
       };

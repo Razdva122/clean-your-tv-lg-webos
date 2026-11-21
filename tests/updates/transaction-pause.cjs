@@ -39,8 +39,79 @@ function rig() {
     restart: () => create(io)
   };
 }
+async function expectExclusiveRestoration(
+  r,
+  operation,
+  expected,
+  fail = false
+) {
+  let started, resolve;
+  const restoring = new Promise((signal) => (started = signal));
+  const response = new Promise((signal) => (resolve = signal));
+  const resume = r.io.resumeRenewal;
+  r.io.resumeRenewal = async (receipt) => {
+    const result = await resume(receipt);
+    if (!started) return result;
+    started();
+    started = null;
+    return response;
+  };
+  const completion = operation();
+  await restoring;
+  const installs = r.events.filter((event) => event === 'install').length;
+  try {
+    await assert.rejects(r.m.reconcile(), { message: 'busy' });
+    assert.equal(r.state().status, 'restoring-renewal');
+  } finally {
+    resolve({ restored: !fail });
+    await completion;
+  }
+  assert.equal(r.events.filter((event) => event === 'resume').length, 1);
+  assert.equal(r.state().status, fail ? 'renewal-recovery' : expected);
+  if (fail) {
+    r.io.resumeRenewal = resume;
+    await r.m.reconcile();
+    assert.equal(r.state().status, expected);
+  }
+  assert.equal(
+    r.events.filter((event) => event === 'install').length,
+    installs
+  );
+}
+
 (async () => {
   let r = rig();
+  await r.m.install(candidate, prior, {});
+  await expectExclusiveRestoration(
+    r,
+    () => r.m.healthy(candidate.home),
+    'complete',
+    true
+  );
+  r = rig();
+  await r.m.install(candidate, prior, {});
+  await expectExclusiveRestoration(r, () => r.m.rollback(), 'rolled-back');
+  r = rig();
+  const install = r.io.install;
+  r.io.install = async (m) => {
+    if (m === candidate)
+      throw Object.assign(Error('rejected'), { definite: true });
+    return install(m);
+  };
+  await expectExclusiveRestoration(
+    r,
+    () => r.m.install(candidate, prior, {}),
+    'rolled-back'
+  );
+  r = rig();
+  const pause = r.io.pauseRenewal;
+  r.io.pauseRenewal = async () => {
+    throw Error('timeout');
+  };
+  await r.m.install(candidate, prior, {});
+  r.io.pauseRenewal = pause;
+  await expectExclusiveRestoration(r, () => r.m.reconcile(), 'aborted');
+  r = rig();
   await r.m.install(candidate, prior, {});
   assert(
     r.events.indexOf('pause') >= 0,

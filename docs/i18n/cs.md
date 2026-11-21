@@ -78,6 +78,8 @@ Pro opětovné zapnutí No-root otevřete **Home Helper**, zvolte spuštění He
 
 Pokud je Home Helper zastavený, můžete také zvolit **Spustit Helper** v nastavení obrazovky Home nebo spořiče. Stav se po spuštění automaticky aktualizuje.
 
+Po návratu k předchozí verzi Home uvolníte místo v nabídce **Nastavení → Motivy**. U nedostupného staženého motivu zvolte **Odstranit** a potvrďte.
+
 ## Potřebujete pomoc?
 
 Pokud se zobrazí chyba `ssh-identity-changed`, zastavte se a ověřte klíč televizoru. [Obnova po změně klíče SSH](../RECOVERY.md#ssh-identity-changed)

@@ -112,7 +112,7 @@ const ctx = {
   ThemeData: proxy,
   ThemeStore: {
     get: async () => previousPack,
-    list: async () => [previousPack],
+    list: async () => [{ key: previousPack.digest, pack: previousPack }],
     put: async () => {
       puts++;
     }
