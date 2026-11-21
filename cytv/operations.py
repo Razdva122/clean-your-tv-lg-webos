@@ -1180,7 +1180,8 @@ else:
                 if not self.helper_retry():
                     raise UserError('Root is installed, but Home Helper has not stopped. Press Home three times within two seconds (older Helper: hold Home for two seconds), release all buttons, then use Home settings > Turn on Home control. Run cytv status or cytv restore before reinstalling.') from None
 
-    def recover_failed_activation(self, *, verified_support=False, expected_token=None, stock_only=False):
+    def recover_failed_activation(self, *, verified_support=False, expected_token=None, stock_only=False,
+                                  routing_only=False):
         """Compensate our activation through the ownership-checked restore path.
 
         Keep the original stage/error, including when the compensation fails.
@@ -1201,10 +1202,15 @@ else:
             step = 'final-status' if restored_token is not None else 'initial-status'
             try:
                 current = self.root_action('status').get('result', {})
+                effective = current.get('effective', {})
                 if current.get('recovery', {}).get('integrity_verified') is not True:
                     self.tv_info[diagnostic_key] = {'step': step, 'reason': 'integrity-unverified'}
                     return False
                 if verified_support and current.get('backend') != 'c1-native-gate':
+                    raise UserError('Root operation was not confirmed. Run cytv status; retain recovery state.',
+                                    reason_code='root-operation-unconfirmed')
+                if routing_only and (effective.get('routing') != 'compositor-keyfilter-v1'
+                                     or expected_token is not None and effective.get('token') != expected_token):
                     raise UserError('Root operation was not confirmed. Run cytv status; retain recovery state.',
                                     reason_code='root-operation-unconfirmed')
                 if restored_token is not None:
@@ -1214,15 +1220,22 @@ else:
                         return False
                 elif not self.root_setup_inactive(current):
                     step = 'restore'
-                    effective = current.get('effective', {})
                     if stock_only or (expected_token is not None and effective.get('token') != expected_token):
                         self.tv_info[diagnostic_key] = {'step': step, 'reason': 'operation-unconfirmed'}
                         return False
                     if (verified_support and current.get('backend') == 'c1-native-gate'
                             and effective.get('routing') == 'compositor-keyfilter-v1'):
                         from .root_install_recovery import restore_activation
+                        if routing_only:
+                            from .root_activation import retained_filter_token
+                            if retained_filter_token(current) != effective.get('token') or not effective.get('token'):
+                                raise UserError('Root operation was not confirmed. Run cytv status; retain recovery state.',
+                                                reason_code='root-operation-unconfirmed')
                         restored_token = effective.get('token')
-                        restore_activation(self, restored_token)
+                        if routing_only:
+                            restore_activation(self, restored_token, routing_only=True)
+                        else:
+                            restore_activation(self, restored_token)
                     else:
                         self.root_action('restore')
                     step = 'final-status'

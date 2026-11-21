@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from unittest.mock import Mock, call, patch
 from cytv import package, root_activation, state
-from cytv.errors import UserError
+from cytv.errors import TVCommandError, UserError
 from cytv.operations import Installer
 from cytv.recovery import recover
 from cytv.terminal import Console
@@ -60,6 +60,69 @@ class NativeActivationTests(unittest.TestCase):
         self.tv.recover_failed_activation.assert_called_once_with(
             verified_support=True, expected_token=None, stock_only=True)
         self.tv.store.finish.assert_not_called()
+
+    def test_failed_retained_retry_restores_only_the_reported_new_attempt(self):
+        old, new = 'b'*32, 'a'*32
+        self.tv.store.pending.return_value.update(stage='enable')
+        for previous, expected in (
+                (old, {'expected_token': new, 'routing_only': True}),
+                ('c'*32, {'expected_token': None, 'stock_only': True})):
+            with self.subTest(previous=previous):
+                self.tv.recover_failed_activation.reset_mock()
+                failure = TVCommandError(1)
+                failure._retained_retry_attempt = (previous, new)
+                self.tv.root_action.side_effect = [self.stock, failure]
+                with self.assertRaises(TVCommandError) as raised:
+                    root_activation.activate(self.tv, retry_token=old)
+                self.assertIs(raised.exception, failure)
+                self.tv.recover_failed_activation.assert_called_once_with(verified_support=True, **expected)
+        self.tv.store.finish.assert_not_called()
+
+    def test_retained_timeout_after_ready_before_launch_restores_routing(self):
+        self.tv.store.pending.return_value.update(stage='enable')
+        for report in (self.stock, self.active):
+            effective = report['result']['effective']
+            effective.update(routing='compositor-keyfilter-v1', mounted=False,
+                             filter_installed=effective['healthy'], routing_active=effective['healthy'])
+        self.tv.remote.luna.return_value = {'returnValue': True, 'appId': 'com.webos.app.home'}
+        self.tv.root_action.side_effect = [self.stock, self.active, self.stock]
+        with self.assertRaises(UserError):
+            root_activation.activate(self.tv, retry_token='b'*32)
+        self.tv.recover_failed_activation.assert_called_once_with(
+            verified_support=True, expected_token='a'*32, routing_only=True)
+        self.tv.outcome.launch_submitted.assert_not_called()
+
+    def test_pending_retained_restore_continues_to_separate_activation_confirmation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            store = state.Store(directory)
+            profile = state.target('tv.local', 'root')
+            store.begin(profile, 'activate-root', stage='enable', home_backend='c1-native-gate',
+                        activation_restore='unverified', activation_restore_pending=True,
+                        requires_updater=False, migrate=False, release_sha='a'*64, bundle_sha='b'*64)
+            installer = Installer(Mock(), store, profile, Path(directory), {}, lambda *_: None)
+            installer.root_files_match = Mock(return_value=True)
+            stopped = self.stock['result']
+            stopped['intent'].update(phase='recovering')
+            stopped['effective'].update(routing='compositor-keyfilter-v1', stopped=True, state='stopped',
+                stock_verified=False, routing_active=False, filter_installed=True, reason='input_expired')
+            installer.root_action = Mock(return_value=self.stock)
+            installer.observe_recovery = Mock(return_value={'deployment_stage':'installed-recovery-only',
+                                                            'device':self.stock})
+            installer.resume_retained_activation = Mock()
+
+            def restore(_installer, token, *, routing_only):
+                self.assertEqual(token, 'b'*32)
+                self.assertTrue(routing_only)
+                stopped['intent'].update(phase='disabled')
+                stopped['effective'].update(stock_verified=True, filter_installed=False)
+
+            with patch('cytv.root_install_recovery.restore_activation', side_effect=restore) as restored:
+                recover(installer, lambda prompt: 'n' if 'Finish Root setup' in prompt else 'y',
+                        Console(lambda *_: None))
+            restored.assert_called_once_with(installer, 'b'*32, routing_only=True)
+            installer.resume_retained_activation.assert_not_called()
+            self.assertFalse(store.pending(profile)['activation_restore_pending'])
+            self.assertEqual(store.pending(profile)['activation_restore'], 'verified')
 
     def test_recovery_offers_retained_retry_only_after_proof_and_explicit_confirmation(self):
         self.stock['result']['effective'].update(
