@@ -95,6 +95,8 @@ No-root: To restart Home control, open Home Helper, choose Start Helper and conf
 
 If Home Helper is stopped, you can also choose **Start Helper** in the Home screen or Screensaver settings. The status updates automatically after startup.
 
+On TVs where LG Home opens as a panel, turning Root **Change Home** on or off may briefly restart the TV interface. After a restart or failure, open Clean Your TV and turn **Change Home** on again to resume. LG Home remains available.
+
 To free space after rolling back Home, open **Settings → Themes**, choose **Remove** next to the unavailable downloaded theme, and confirm.
 
 ## Need help?

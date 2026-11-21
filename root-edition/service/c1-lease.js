@@ -99,6 +99,7 @@ module.exports = function (service, options) {
       return value[0] * 1000 + value[1] / 1000000;
     };
   var subscribers = Object.create(null),
+    adapterSubscribers = Object.create(null),
     generation = 0,
     sequence = 0,
     token = '',
@@ -166,7 +167,7 @@ module.exports = function (service, options) {
         marker,
         'schema,backend,experimental,native_sha256,admission,routing'
       ) ||
-      (marker.schema !== 2 && marker.schema !== 3) ||
+      (marker.schema !== 2 && marker.schema !== 3 && marker.schema !== 4) ||
       marker.backend !== BACKEND ||
       marker.routing !== ROUTING ||
       marker.experimental !== true ||
@@ -180,6 +181,7 @@ module.exports = function (service, options) {
       marker.native_sha256
     )
       throw Error('Changed lease helper');
+    return marker;
   }
   function stop() {
     generation++;
@@ -220,6 +222,7 @@ module.exports = function (service, options) {
   function revoke() {
     var previous = subscribers;
     subscribers = Object.create(null);
+    adapterSubscribers = Object.create(null);
     Object.keys(previous).forEach(function (key) {
       failed(previous[key]);
       try {
@@ -335,7 +338,10 @@ module.exports = function (service, options) {
           };
           if (result.state === 'reconnecting') update.reconnecting = true;
           Object.keys(subscribers).forEach(function (key) {
-            if (!respond(subscribers[key], update)) delete subscribers[key];
+            if (!respond(subscribers[key], update)) {
+              delete subscribers[key];
+              delete adapterSubscribers[key];
+            }
           });
           if (!Object.keys(subscribers).length) stop();
         }
@@ -358,11 +364,14 @@ module.exports = function (service, options) {
   leaseService.register(
     'c1Lease',
     function (message) {
+      var adapter =
+        keys(message.payload, 'subscribe,adapter') &&
+        message.payload.adapter === 'embedded-qml-v1';
       // The hub-authenticated service name is independent of application metadata.
       if (
         !currentCaller(message) ||
         !message.isSubscription ||
-        !keys(message.payload, 'subscribe') ||
+        (!keys(message.payload, 'subscribe') && !adapter) ||
         message.payload.subscribe !== true ||
         typeof message.uniqueToken !== 'string' ||
         !message.uniqueToken ||
@@ -371,6 +380,15 @@ module.exports = function (service, options) {
       ) {
         failed(message);
         return;
+      }
+      if (adapter) {
+        try {
+          if (authority().schema !== 4) throw Error('Adapter not selected');
+        } catch (_) {
+          failed(message);
+          return;
+        }
+        adapterSubscribers[message.uniqueToken] = true;
       }
       var first = !Object.keys(subscribers).length;
       subscribers[message.uniqueToken] = message;
@@ -382,9 +400,37 @@ module.exports = function (service, options) {
     },
     function (message) {
       delete subscribers[message.uniqueToken];
+      delete adapterSubscribers[message.uniqueToken];
       if (!Object.keys(subscribers).length) stop();
     }
   );
+  leaseService.register('c1AdapterStatus', function (message) {
+    var sender;
+    try {
+      sender = message.ls2Message.senderServiceName();
+    } catch (_) {}
+    if (
+      typeof sender !== 'string' ||
+      !/^com\.webos\.lunasend-[A-Za-z0-9._-]+$/.test(sender) ||
+      message.isSubscription ||
+      !keys(message.payload, '')
+    ) {
+      respond(message, { returnValue: false });
+      return;
+    }
+    try {
+      if (authority().schema !== 4) throw Error('Adapter not selected');
+      respond(message, {
+        returnValue: true,
+        adapter: 'embedded-qml-v1',
+        attached: Object.keys(adapterSubscribers).some(function (key) {
+          return !!subscribers[key];
+        })
+      });
+    } catch (_) {
+      respond(message, { returnValue: false });
+    }
+  });
   leaseService.register('c1Home', function (message) {
     if (
       !currentCaller(message) ||

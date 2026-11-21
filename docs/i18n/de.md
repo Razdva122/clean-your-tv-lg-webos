@@ -93,6 +93,8 @@ No-root: Öffnen Sie zum Neustart der Home-Steuerung Home Helper, wählen Sie He
 
 Wenn Home Helper angehalten ist, können Sie auch in den Einstellungen für den Home-Bildschirm oder den Bildschirmschoner **Helper starten** wählen. Der Status wird nach dem Start automatisch aktualisiert.
 
+Auf Fernsehern, auf denen LG Home als Leiste erscheint, kann das Ein- oder Ausschalten von **Change Home** in Root die TV-Oberfläche kurz neu starten. Öffnen Sie nach einem Neustart oder Fehler Clean Your TV und schalten Sie **Change Home** erneut ein. LG Home bleibt verfügbar.
+
 Um nach einem Rollback von Home Speicherplatz freizugeben, öffne **Einstellungen → Designs**. Wähle beim nicht verfügbaren heruntergeladenen Design **Entfernen** und bestätige.
 
 ## Brauchen Sie Hilfe?

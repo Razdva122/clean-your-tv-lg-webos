@@ -275,7 +275,7 @@ def tv_summary(value):
         result['arm32_supported'] = value['arm32_supported']
     if value.get('home_backend') in ('system-profile', 'c1-native-gate'):
         result['home_backend'] = value['home_backend']
-    if type(value.get('home_backend_schema')) is int and value['home_backend_schema'] in (2,3):
+    if type(value.get('home_backend_schema')) is int and value['home_backend_schema'] in (2,3,4):
         result['home_backend_schema'] = value['home_backend_schema']
     from .root_capabilities import (COMPOSITOR_FAILURES, C1_PROBE_STATES, KEYFILTER_PREDICATES,
                                     KEYFILTER_PROBE_STATES, NATIVE_HOME_PREDICATES)

@@ -917,6 +917,76 @@ class RuntimeTests(unittest.TestCase):
                     state='stopped', mounted=False, healthy=False, stock_verified=True,
                     stopped=True, token='1'*32, guardian_pid=0, reason='', profiles=None, **kw)
 
+    def test_embedded_restore_uses_stock_compositor_readback_without_standalone_home(self):
+        self.prepare()
+        selected = self.k.selection(self.root, self.uid)
+        selected['schema'] = 4
+        self.k.atomic(self.root/'home-backend.json', selected, self.uid)
+        adapter = Mock(STOCK_QML='qrc:///main.qml')
+        adapter.current.return_value = (42, adapter.STOCK_QML)
+        with patch.object(self.k, 'embedded_adapter', return_value=adapter), patch.object(self.k, 'native', return_value=self.proof()), patch.object(self.k, 'stop_controller'), patch.object(self.k, 'change_chain') as change, patch.object(self.k, 'luna') as luna, patch.object(self.k, 'read_chain') as chain:
+            self.assertEqual(self.k.restore_for_removal(self.root, self.uid), 'restored')
+        change.assert_called_once_with(self.root, False, self.uid)
+        adapter.current.assert_called_once_with(self.root)
+        luna.assert_not_called()
+        chain.assert_not_called()
+        self.assertEqual(self.k.read_intent(self.root, self.uid)['phase'], 'disabled')
+
+    def test_embedded_boot_restores_routing_despite_ui_failure_but_retains_cleanup_gap(self):
+        self.prepare()
+        selected = self.k.selection(self.root, self.uid)
+        selected['schema'] = 4
+        self.k.atomic(self.root/'home-backend.json', selected, self.uid)
+        adapter = Mock(STOCK_QML='qrc:///main.qml')
+        adapter.current.return_value = (42, adapter.STOCK_QML)
+        calls = []
+        def native(args, *extra, **kwargs):
+            calls.append((args, kwargs))
+            if args == ['--restore']:
+                if not kwargs.get('allow_ui_failure'):
+                    raise ValueError('close failed before routing recovery')
+                return dict(self.proof(), returnValue=False, reason='ui_release_failed')
+            return self.proof()
+        with patch.object(self.k, 'embedded_adapter', return_value=adapter), patch.object(self.k, 'native', side_effect=native), patch.object(self.k, 'stop_controller'), patch.object(self.k, 'change_chain') as change, patch.object(self.k, 'luna') as luna, patch.object(self.k, 'read_chain') as chain:
+            with self.assertRaisesRegex(ValueError, 'Root window cleanup unverified') as caught:
+                self.k.execute('boot', root=self.root, uid=self.uid)
+        change.assert_called_once_with(self.root, False, self.uid)
+        adapter.current.assert_called_once_with(self.root)
+        self.assertEqual(caught.exception.native_reason, 'ui_release_failed')
+        self.assertEqual(caught.exception.restore_check, 'stock-surface-unverified')
+        self.assertEqual(self.k.read_intent(self.root, self.uid)['phase'], 'recovering')
+        luna.assert_not_called()
+        chain.assert_not_called()
+
+    def test_embedded_removal_preserves_assets_on_owned_window_close_failure(self):
+        self.prepare()
+        selected = self.k.selection(self.root, self.uid)
+        selected['schema'] = 4
+        self.k.atomic(self.root/'home-backend.json', selected, self.uid)
+        adapter = Mock(STOCK_QML='qrc:///main.qml')
+        adapter.current.return_value = (42, adapter.STOCK_QML)
+        failure = dict(self.proof(), returnValue=False, reason='ui_release_failed')
+        with patch.object(self.k, 'embedded_adapter', return_value=adapter), patch.object(self.k, 'native', side_effect=[failure, self.proof(), self.proof()]), patch.object(self.k, 'stop_controller'), patch.object(self.k, 'change_chain') as change, patch.object(self.k, 'luna') as luna:
+            with self.assertRaisesRegex(ValueError, 'Root window cleanup unverified'):
+                self.k.restore_for_removal(self.root, self.uid)
+        change.assert_called_once_with(self.root, False, self.uid)
+        self.assertTrue((self.root/'home-backend.json').exists())
+        self.assertEqual(self.k.read_intent(self.root, self.uid)['phase'], 'recovering')
+        luna.assert_not_called()
+
+    def test_embedded_restore_rejects_stale_stock_readback(self):
+        for case in ('wrapper-still-selected', 'different-native-token'):
+            with self.subTest(case=case):
+                adapter = Mock(STOCK_QML='qrc:///main.qml')
+                adapter.current.return_value = (42, 'file:///wrapper.qml' if case == 'wrapper-still-selected' else adapter.STOCK_QML)
+                selected = {'schema': 4}
+                fresh = dict(self.proof(), token='2'*32)
+                with patch.object(self.k, 'embedded_adapter', return_value=adapter), patch.object(self.k, 'selection', return_value=selected), patch.object(self.k, 'native', side_effect=[self.proof(), self.proof(), fresh]), patch.object(self.k, 'write_intent') as intent, patch.object(self.k, 'stop_controller'), patch.object(self.k, 'change_chain'), patch.object(self.k, 'luna') as luna:
+                    with self.assertRaisesRegex(ValueError, 'unverified'):
+                        self.k.restore_locked(self.root, self.uid, for_removal=True)
+                self.assertEqual(intent.call_args.args[3], 'recovering')
+                luna.assert_not_called()
+
     def test_prepare_exact_marker_and_seven_line_config(self):
         self.prepare()
         self.assertEqual(self.k.selection(self.root, self.uid)['schema'], 2)

@@ -522,7 +522,7 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
             return None
 
     def observe_failed_root_home_button(self):
-        if (self.profile['edition'] != 'root' or self.tv_info.get('home_backend_schema') != 3
+        if (self.profile['edition'] != 'root' or self.tv_info.get('home_backend_schema') not in (3, 4)
                 or self.outcome.values['home_button'] != 'not-working'):
             return
         field = 'root_home_button_readback'
@@ -1432,7 +1432,7 @@ else:
             if self.tv_info.get('home_backend') == 'c1-native-gate':
                 variant = self.manifest['root_backends']['c1-native-gate']['graphics'][self.tv_info['graphics_resolution']]
                 root = json.loads((self.payload / package.safe_name(variant) / 'release.json').read_text())['version']
-                targets = [(package.ROOT_APP, 'Root (experimental)' if self.tv_info.get('home_backend_schema') == 3 else 'Root (C1 Beta)', root)]
+                targets = [(package.ROOT_APP, 'Root (experimental)' if self.tv_info.get('home_backend_schema') in (3, 4) else 'Root (C1 Beta)', root)]
             else:
                 root = json.loads((self.payload / 'root/release.json').read_text())['version']
                 files = package.data_files((self.payload / 'root-updater/root-updater.ipk').read_bytes())

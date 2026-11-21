@@ -1249,8 +1249,8 @@ def luna(uri, payload):
         import provision
         rpc = driver.device.rpc
         replies = iter(({'returnValue': True, 'api': None},
-                        {'returnValue': True, 'api': {'/c1Lease': ['all']}},
-                        {'returnValue': True, 'api': {'/c1Lease': ['all']}},
+                        {'returnValue': True, 'api': {'/c1AdapterStatus': [provision.LEASE_NAME+'.adapter-status']}},
+                        {'returnValue': True, 'api': {'/c1AdapterStatus': [provision.LEASE_NAME+'.adapter-status']}},
                         {'returnValue': True, 'api': {'/*': ['all']}}))
         method = 'com.webos.service.bus/queryServicePermissions'
 
@@ -2078,7 +2078,9 @@ def luna(uri, payload):
             role, client, api = (json.loads(result[key]) for key in ('role', 'client', 'api'))
             role['permissions'][-1]['inbound'] = [old_sender]
             client[old_sender] = [old_group]
+            client.pop('com.webos.lunasend-*', None)
             api.pop('all', None)
+            api.pop(provision.LEASE_NAME+'.adapter-status', None)
             api[old_group] = [provision.LEASE_NAME+'/c1Lease', provision.LEASE_NAME+'/c1Home']
             return dict(result, role=provision.encoded(role), client=provision.encoded(client),
                         api=provision.encoded(api))
@@ -2254,12 +2256,16 @@ def luna(uri, payload):
             self.assertNotEqual(fresh['lease'], clean['lease'])
             self.assertTrue(ready.exists())
             normal = current_plan(original, provision.WALLPAPER_CAPABILITIES)
-            self.assertEqual(files['client'].read_bytes(), normal['client'])
+            client = json.loads(files['client'].read_bytes())
+            status_group = provision.LEASE_NAME+'.adapter-status'
+            self.assertEqual(client.pop('com.webos.lunasend-*'), [status_group])
+            self.assertEqual(provision.encoded(client), normal['client'])
             self.assertEqual(json.loads(files['role'].read_bytes())['permissions'][-1], {
-                'service': provision.LEASE_NAME, 'inbound': [old_sender, new_sender], 'outbound': [],
+                'service': provision.LEASE_NAME, 'inbound': [old_sender, new_sender, 'com.webos.lunasend-*'], 'outbound': [],
             })
             api = json.loads(files['api'].read_bytes())
             self.assertEqual(api.pop('all'), [provision.LEASE_NAME+'/c1Lease', provision.LEASE_NAME+'/c1Home'])
+            self.assertEqual(api.pop(status_group), [provision.LEASE_NAME+'/c1AdapterStatus'])
             self.assertEqual(provision.encoded(api), normal['api'])
 
     def test_install_inspection_leaves_live_compositor_probe_to_native_install(self):

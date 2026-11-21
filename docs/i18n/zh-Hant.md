@@ -93,6 +93,8 @@ No-root: 要重新啟動 Home 控制，請開啟 Home Helper，選擇啟動 Help
 
 如果 Home Helper 已停止，也可以在 Home 主畫面或螢幕保護程式設定中選擇**啟動 Helper**。啟動後狀態會自動更新。
 
+在 LG Home 以面板形式開啟的電視上，開啟或關閉 Root 的 **Change Home** 可能會讓電視介面短暫重新啟動。重新啟動或發生故障後，請開啟 Clean Your TV 並重新開啟 **Change Home**，以恢復控制。LG Home 仍可使用。
+
 將 Home 回復到較早版本後，如需釋放空間，開啟**設定 → 主題**，在無法使用的已下載主題旁選擇**移除**並確認。
 
 ## 需要協助？

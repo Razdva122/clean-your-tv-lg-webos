@@ -18,6 +18,7 @@ function fixture(uid, initialChange, diskDirectory) {
     cancel,
     handler,
     homeHandler,
+    adapterStatusHandler,
     clock = 0,
     calls = [],
     files = {},
@@ -138,7 +139,12 @@ function fixture(uid, initialChange, diskDirectory) {
     aliasCount++;
     return {
       register: function (name, fn, onCancel) {
-        assert(['c1Lease', 'c1Home'].includes(name));
+        assert(['c1Lease', 'c1Home', 'c1AdapterStatus'].includes(name));
+        if (name === 'c1AdapterStatus') {
+          adapterStatusHandler = fn;
+          assert.strictEqual(onCancel, undefined);
+          return;
+        }
         if (name === 'c1Home') {
           homeHandler = fn;
           assert.strictEqual(onCancel, undefined);
@@ -192,6 +198,13 @@ function fixture(uid, initialChange, diskDirectory) {
       homeHandler(m);
     },
     aliasCount: aliasCount,
+    adapterStatus: function (caller, payload, subscription) {
+      var m = message('status', caller || 'com.webos.lunasend-test');
+      m.isSubscription = subscription === true;
+      m.payload = payload === undefined ? {} : payload;
+      assert.strictEqual(typeof adapterStatusHandler, 'function');
+      adapterStatusHandler(m);
+    },
     subscribe: function (m) {
       if (handler) handler(m || message());
     },
@@ -737,7 +750,8 @@ function schema3(files, model, sdk) {
   undefined,
   function (files) {
     schema3(files, 'OLED55C37LA', '9.2.2');
-  }
+  },
+  embeddedMarker
 ].forEach(function (setup) {
   var trusted = ['com.webos.surfacemanager', 'com.webos.starfish.keyfilters'];
   trusted.forEach(function (caller) {
@@ -819,3 +833,139 @@ assert.strictEqual(
   'schema2 retains C1-only admission'
 );
 console.log('C1 and experimental compositor lease broker tests passed');
+
+function embeddedMarker(files) {
+  var m = JSON.parse(files[ROOT + '/home-backend.json']);
+  m.schema = 4;
+  m.admission.model = 'capability-admitted';
+  m.admission.firmware = '99.0.1';
+  m.admission.webos = '3.9.0';
+  files[ROOT + '/home-backend.json'] = Buffer.from(JSON.stringify(m));
+}
+var embedded = fixture(undefined, embeddedMarker);
+assert.strictEqual(
+  embedded.aliasCount,
+  1,
+  'embedded adapter uses the C1 lease broker'
+);
+embedded.adapterStatus();
+assert.deepStrictEqual(embedded.replies.at(-1), {
+  returnValue: true,
+  adapter: 'embedded-qml-v1',
+  attached: false
+});
+var wrapper = embedded.message('wrapper');
+wrapper.payload.adapter = 'embedded-qml-v1';
+embedded.subscribe(wrapper);
+assert.strictEqual(embedded.calls.length, 1);
+embedded.adapterStatus();
+assert.strictEqual(embedded.replies.at(-1).attached, true);
+embedded.reply(native());
+embedded.cancel(wrapper);
+embedded.adapterStatus();
+assert.strictEqual(embedded.replies.at(-1).attached, false);
+assert.strictEqual(
+  embedded.calls.length,
+  1,
+  'status and cancel do not execute a helper'
+);
+
+embedded = fixture(undefined, embeddedMarker);
+embedded.subscribe();
+embedded.adapterStatus();
+assert.strictEqual(
+  embedded.replies.at(-1).attached,
+  false,
+  'ordinary subscriber is not wrapper proof'
+);
+wrapper = embedded.message('wrapper');
+wrapper.payload.adapter = 'embedded-qml-v1';
+embedded.subscribe(wrapper);
+embedded.callbacks[0](new Error('guard unavailable'));
+embedded.adapterStatus();
+assert.strictEqual(
+  embedded.replies.at(-1).attached,
+  false,
+  'revocation retires wrapper proof'
+);
+
+[
+  undefined,
+  function (files) {
+    schema3(files, 'capability-admitted', '9.2.2');
+  }
+].forEach(function (setup) {
+  var old = fixture(undefined, setup);
+  var tagged = old.message('tagged');
+  tagged.payload.adapter = 'embedded-qml-v1';
+  old.subscribe(tagged);
+  assert.strictEqual(
+    old.replies.at(-1).returnValue,
+    false,
+    'old adapters reject tagged subscriptions'
+  );
+  assert.strictEqual(old.calls.length, 0);
+  old.adapterStatus();
+  assert.strictEqual(old.replies.at(-1).returnValue, false);
+});
+
+[
+  'com.webos.surfacemanager',
+  'com.attacker',
+  'com.webos.lunasend',
+  'com.webos.lunasend-',
+  'com.webos.lunasend-test/forged',
+  ''
+].forEach(function (caller) {
+  var locked = fixture(undefined, embeddedMarker);
+  locked.adapterStatus(caller || 'com.attacker');
+  assert.strictEqual(
+    locked.replies.at(-1).returnValue,
+    false,
+    'adapter status caller rejected: ' + caller
+  );
+  assert.strictEqual(locked.calls.length, 0);
+});
+[{ subscribe: true }, { command: '--home' }, null, []].forEach(
+  function (payload) {
+    var locked = fixture(undefined, embeddedMarker);
+    locked.adapterStatus(undefined, payload);
+    assert.strictEqual(locked.replies.at(-1).returnValue, false);
+  }
+);
+embedded = fixture(undefined, embeddedMarker);
+embedded.adapterStatus(undefined, {}, true);
+assert.strictEqual(embedded.replies.at(-1).returnValue, false);
+embedded.files[ROOT + '/runtime/c1-keyfilter-guard'] =
+  Buffer.from('changed helper');
+embedded.adapterStatus();
+assert.strictEqual(
+  embedded.replies.at(-1).returnValue,
+  false,
+  'status rechecks authority'
+);
+
+['other-adapter', null, true].forEach(function (adapter) {
+  var locked = fixture(undefined, embeddedMarker);
+  var tagged = locked.message('tagged');
+  tagged.payload.adapter = adapter;
+  locked.subscribe(tagged);
+  assert.strictEqual(locked.replies.at(-1).returnValue, false);
+  assert.strictEqual(locked.calls.length, 0);
+});
+embedded = fixture(undefined, embeddedMarker);
+wrapper = embedded.message('wrapper');
+wrapper.payload.adapter = 'embedded-qml-v1';
+wrapper.respond = function () {
+  return false;
+};
+embedded.subscribe(wrapper);
+embedded.reply(native());
+embedded.adapterStatus();
+assert.strictEqual(
+  embedded.replies.at(-1).attached,
+  false,
+  'failed delivery retires wrapper proof'
+);
+
+console.log('Embedded compositor adapter broker tests passed');

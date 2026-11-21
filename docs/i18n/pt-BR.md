@@ -93,6 +93,8 @@ No-root: Para reiniciar o controle de Home, abra Home Helper, escolha Iniciar He
 
 Se o Home Helper estiver parado, você também pode selecionar **Iniciar Helper** nas configurações da tela Home ou da proteção de tela. O status é atualizado automaticamente após a inicialização.
 
+Nas TVs em que o LG Home abre como um painel, ativar ou desativar **Change Home** no Root pode reiniciar brevemente a interface da TV. Após uma reinicialização ou falha, abra o Clean Your TV e ative **Change Home** novamente para retomar o controle. O LG Home continua disponível.
+
 Para liberar espaço após voltar a uma versão anterior do Home, abra **Configurações → Temas**, selecione **Remover** ao lado do tema baixado indisponível e confirme.
 
 ## Precisa de ajuda?

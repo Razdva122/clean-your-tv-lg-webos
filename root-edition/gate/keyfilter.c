@@ -31,6 +31,7 @@
 #define STATE FIXTURE_ROOT "/state"
 #define VOLATILE FIXTURE_ROOT "/volatile"
 #define HOME FIXTURE_ROOT "/home"
+#define COMPOSITOR FIXTURE_ROOT "/compositor"
 #define LUNA FIXTURE_ROOT "/luna"
 #define SYSTEMCTL FIXTURE_ROOT "/systemctl"
 #define INITCTL FIXTURE_ROOT "/initctl"
@@ -40,6 +41,7 @@
 #define STATE "/var/lib/clean-your-tv-root/c1-keyfilter"
 #define VOLATILE "/tmp/clean-your-tv-root-keyfilter"
 #define HOME "/usr/bin/com.webos.app.home"
+#define COMPOSITOR "/usr/bin/surface-manager-starfish"
 #define LUNA "/usr/bin/luna-send"
 #define SYSTEMCTL "/bin/systemctl"
 #define INITCTL "/sbin/initctl"
@@ -198,6 +200,7 @@ static int uuid(const char *s) {
 struct config {
   char token[33], boot[37];
   unsigned long long dev, ino, size, mtime;
+  int embedded;
 };
 static struct config cfg;
 static int boot_matches;
@@ -222,9 +225,17 @@ static int config_read(void) {
   if (n < 0)
     return 0;
   char *p = b;
-  if (strncmp(p, "CYTV-C1-KEYFILTER-1\ntoken ", 26))
+  const char native_header[] = "CYTV-C1-KEYFILTER-1\ntoken ";
+  const char embedded_header[] = "CYTV-QML-KEYFILTER-1\ntoken ";
+  if (!strncmp(p, native_header, sizeof(native_header) - 1)) {
+    cfg.embedded = 0;
+    p += sizeof(native_header) - 1;
+  } else if (!strncmp(p, embedded_header, sizeof(embedded_header) - 1)) {
+    cfg.embedded = 1;
+    p += sizeof(embedded_header) - 1;
+  } else {
     return 0;
-  p += 26;
+  }
   if (strlen(p) < 33 || p[32] != '\n')
     return 0;
   memcpy(cfg.token, p, 32);
@@ -258,14 +269,15 @@ static int same_config(void) {
   int same = valid && !strcmp(expected.token, cfg.token) &&
              !strcmp(expected.boot, cfg.boot) && expected.dev == cfg.dev &&
              expected.ino == cfg.ino && expected.size == cfg.size &&
-             expected.mtime == cfg.mtime;
+             expected.mtime == cfg.mtime && expected.embedded == cfg.embedded;
   cfg = expected;
   boot_matches = previous_boot;
   return same;
 }
 static int stock_identity(void) {
-  if (!trusted_parents(HOME)) return 0;
-  int fd = open(HOME, O_RDONLY | O_CLOEXEC | O_NOFOLLOW | O_NONBLOCK);
+  const char *target = cfg.embedded ? COMPOSITOR : HOME;
+  if (!trusted_parents(target)) return 0;
+  int fd = open(target, O_RDONLY | O_CLOEXEC | O_NOFOLLOW | O_NONBLOCK);
   if (fd < 0) return 0;
   struct stat s;
   int ok = !fstat(fd, &s) && S_ISREG(s.st_mode) && s.st_nlink == 1 &&
@@ -715,6 +727,9 @@ static int release_ui(void) {
   interrupted=0;
   int closed=luna("luna://com.webos.applicationManager/closeByAppId",
                   "com.cleanyourtv.root.preview");
+  /* Embedded LG Home lives in the compositor. Revoking its QML lease leaves
+   * the next Home pair with LG; launching a separate Home app is inapplicable. */
+  if (cfg.embedded) return closed;
   int launched=luna("luna://com.webos.applicationManager/launch",
                     "com.webos.app.home");
   return closed && launched;
