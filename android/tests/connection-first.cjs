@@ -5,8 +5,12 @@ let browser;
 (async () => {
   browser = await chromium.launch({
     headless: true,
+    channel: process.env.BROWSER_CHANNEL,
     executablePath:
-      '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+      process.env.CYTV_CHROME ||
+      (process.platform === 'darwin'
+        ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+        : undefined)
   });
   const page = await browser.newPage({
     locale: 'ru-RU',
@@ -41,16 +45,58 @@ let browser;
     await page.locator('#host').getAttribute('aria-invalid'),
     'true'
   );
+  const inspect = page.getByRole('button', {
+    name: 'Настроить телевизор',
+    exact: true
+  });
+  for (const kind of ['inspection-error', 'inspection']) {
+    await page.locator('#host').fill('192.168.1.50');
+    await inspect.click();
+    await page.locator('#host').fill('192.168.1.51');
+    await page.getByRole('button', { name: 'Обои', exact: true }).click();
+    await page.getByRole('button', { name: 'Назад', exact: true }).click();
+    await page.evaluate(
+      (kind) =>
+        receiveNative({
+          kind,
+          host: '192.168.1.50',
+          root_ssh: true,
+          developer_ssh: false
+        }),
+      kind
+    );
+    assert.equal(await page.locator('#host').inputValue(), '192.168.1.51');
+    assert.equal(await page.getByRole('radio').count(), 0);
+    assert.equal(await page.getByRole('dialog').count(), 0);
+    assert.equal(
+      await page.locator('[data-action=inspect]').isEnabled(),
+      true,
+      'an outdated ' +
+        kind +
+        ' result must unlock inspection of the new address'
+    );
+  }
   await page.locator('#host').fill('192.168.1.50');
   await page
     .getByRole('button', { name: 'Настроить телевизор', exact: true })
     .click();
+  await page.evaluate(() =>
+    receiveNative({ kind: 'inspection-error', host: '192.168.1.50' })
+  );
+  await page.getByRole('dialog').waitFor({ timeout: 3000 });
+  assert.match(
+    await page.getByRole('dialog').innerText(),
+    /Не удалось запустить проверку подключения/
+  );
+  assert.equal(await page.getByRole('radio').count(), 0);
+  await page.getByRole('button', { name: 'OK', exact: true }).click();
   for (const [r, d, selected] of [
     [true, false, 'Root'],
     [false, true, 'No-root'],
     [true, true, null],
     [false, false, null]
   ]) {
+    await inspect.click();
     await page.evaluate(
       ([r, d]) =>
         receiveNative({
@@ -65,6 +111,15 @@ let browser;
     const checked = page.locator('[role=radio][aria-checked=true]');
     assert.equal(await checked.count(), selected ? 1 : 0);
     if (selected) assert((await checked.innerText()).startsWith(selected));
+    if (!r && !d) {
+      assert.match(
+        await page.getByRole('status').innerText(),
+        /Доступ не определён/
+      );
+      assert.equal(await page.getByRole('dialog').count(), 0);
+    }
+    if (r || d)
+      await page.getByRole('button', { name: 'Назад', exact: true }).click();
   }
   await page.getByRole('radio', { name: /Root Уже есть root/ }).click();
   await page.getByRole('button', { name: 'Продолжить', exact: true }).click();
