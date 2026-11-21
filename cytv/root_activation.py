@@ -55,6 +55,7 @@ def retained_filter_token(device):
 # cli.main(). Check the exact stopped attempt at its native config write.
 RETRY_ENABLE = r'''
 import json
+import select
 import sys
 
 sys.path.insert(0, '/var/lib/clean-your-tv-root/runtime')
@@ -63,7 +64,19 @@ import c1_keyfilter as gate
 
 expected = sys.argv[1]
 write_config = gate.write_config
+spawn = gate.subprocess.Popen
 started = None
+
+def wait_for_observer(argv, *args, **kwargs):
+    if (isinstance(argv, (list, tuple)) and len(argv) == 7
+            and argv[0] == str(gate.STATE/'runtime/c1-keyfilter-guard')
+            and argv[1] in ('--guard', '--guard-resumable')
+            and argv[2] == started and argv[6] == '0'):
+        fd = int(argv[3])
+        if fd in kwargs.get('pass_fds', ()):
+            # Leave the pipe untouched so the old guardian validates READY.
+            select.select([fd], [], [], 4)
+    return spawn(argv, *args, **kwargs)
 
 def guarded_config(root, admission, token, uid=0):
     global started
@@ -87,6 +100,7 @@ try:
     if selected is None or cli.gate_backend() is None:
         raise ValueError('Compositor backend not selected')
     gate.write_config = guarded_config
+    gate.subprocess.Popen = wait_for_observer
     result = cli.main('enable')
     if not started:
         raise ValueError('Retained Home activation was not started')
@@ -98,6 +112,8 @@ except Exception:
                           'retained_retry_attempt': [expected, started]}), flush=True)
         raise SystemExit(1) from None
     reply = {'returnValue': False, 'retained_retry_refused': True}
+finally:
+    gate.subprocess.Popen = spawn
 print(json.dumps(reply), flush=True)
 '''
 
