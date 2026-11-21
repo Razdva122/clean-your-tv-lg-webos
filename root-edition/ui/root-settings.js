@@ -351,7 +351,15 @@
             );
             var phase = status.intent && status.intent.phase,
               active = phase === 'active',
-              pendingResume = standbyResumePending(status);
+              pendingResume = standbyResumePending(status),
+              effective = status.effective,
+              needsStockRestore =
+                phase === 'recovering' &&
+                effective &&
+                effective.backend === 'c1-native-gate' &&
+                effective.stopped === true &&
+                effective.filter_installed === true &&
+                effective.routing_active === false;
             buttons[3].disabled =
               !!phase &&
               phase !== 'active' &&
@@ -364,11 +372,16 @@
             message.textContent = t(
               active
                 ? 'Home and return from apps open Clean Your TV.'
-                : buttons[3].disabled
-                  ? 'Changing Home control…'
-                  : 'Home and return from apps open LG Home.'
+                : needsStockRestore
+                  ? 'Open LG Home to finish Home control recovery.'
+                  : buttons[3].disabled
+                    ? 'Changing Home control…'
+                    : 'Home and return from apps open LG Home.'
             );
-            if (buttons[3].disabled) {
+            if (needsStockRestore) {
+              buttons[12].hidden = false;
+              buttons[12].disabled = false;
+            } else if (buttons[3].disabled) {
               if (!remainingPolls--)
                 throw new Error(
                   'Response timed out. Check status before retrying.'
