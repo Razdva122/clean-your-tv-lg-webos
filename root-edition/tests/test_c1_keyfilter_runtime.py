@@ -1143,6 +1143,7 @@ class RuntimeTests(unittest.TestCase):
             self.assertEqual(argv[0], str(guard))
             native_actions.append(argv[-1])
             value = self.proof()
+            value['reason'] = 'input_expired'
             if argv[-1] == '--restore':
                 value.update(returnValue=False, reason='ui_release_failed')
             return SimpleNamespace(stdout=json.dumps(value).encode(), returncode=int(not value['returnValue']))
@@ -1166,6 +1167,36 @@ class RuntimeTests(unittest.TestCase):
             self.assertEqual(reply['native_restored_sha256'], hashlib.sha256(selection).hexdigest())
             self.assertEqual(chain, [vendor])
             self.assertEqual(native_actions, ['--status', '--restore', '--status', '--status'])
+            self.assertEqual(self.k.read_intent(self.root, self.uid)['phase'], 'disabled')
+
+            chain[:] = [own, vendor]
+            native_actions.clear()
+            write.reset_mock()
+            ownership = self.root/'c1-keyfilter/ownership.json'
+            self.k.atomic(ownership, dict(schema=1, entry=own, token='2'*32), self.uid)
+            with self.assertRaisesRegex(ValueError, 'native_recovery_filter_unverified'):
+                clean_removal.runtime_restore(payload, self.uid, activation_token=token, routing_only=True)
+            write.assert_not_called()
+            self.assertEqual(native_actions, ['--status'])
+
+            native_actions.clear()
+            self.k.atomic(ownership, dict(schema=1, entry=own, token=token), self.uid)
+            replies.side_effect = None
+            replies.return_value = {'returnValue':True, 'settings':{'defaultApps':{'home':self.k.APP}}}
+            with self.assertRaisesRegex(ValueError, 'LG Home destination'):
+                clean_removal.runtime_restore(payload, self.uid, activation_token=token, routing_only=True)
+            self.assertEqual(native_actions, ['--status'])
+            write.assert_not_called()
+
+            native_actions.clear()
+            replies.reset_mock()
+            replies.return_value['settings']['defaultApps']['home'] = self.k.STOCK
+            reply = clean_removal.runtime_restore(payload, self.uid, activation_token=token, routing_only=True)
+            self.assertEqual(reply['result'], 'restored')
+            self.assertEqual(reply['native_restored_sha256'], hashlib.sha256(selection).hexdigest())
+            self.assertEqual(chain, [vendor])
+            self.assertEqual(native_actions, ['--status', '--restore-routing', '--status', '--status'])
+            self.assertTrue(all(request.args[0].endswith('/getSystemSettings') for request in replies.call_args_list))
             self.assertEqual(self.k.read_intent(self.root, self.uid)['phase'], 'disabled')
         self.assertEqual(selection_path.read_bytes(), selection)
         cli.main.assert_not_called()
