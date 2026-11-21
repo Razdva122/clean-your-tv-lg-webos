@@ -16,7 +16,7 @@ from cytv.tv_sources import stage_sources
 from scripts.tv_web_build import compile_web
 from scripts.helper_build import compile_helper
 from scripts.home_assets import THEME_FILES
-from scripts.no_root_assets import renewal_service_assets, updater_app_assets, updater_service_assets
+from scripts.no_root_assets import renewal_service_assets, updater_sources
 
 
 def tracked_files(prefix):
@@ -238,13 +238,11 @@ def helper_baseline(version):
 
 
 def stage_updater(payload):
-    app=tracked_files('updater-app')
-    versions=json.loads((ROOT/'release-versions.json').read_text())
-    if json.loads(app['appinfo.json'])['version']!=versions['updater']:raise ValueError('No-root Updater version mismatch')
-    app.update(updater_app_assets(ROOT))
-    service={n:b for n,b in tracked_files('updater-service').items() if not n.startswith('state/')}
-    service.update(updater_service_assets(ROOT))
-    (payload/'updater.ipk').write_bytes(pack_app(app,service))
+    app, service = updater_sources(ROOT)
+    versions = json.loads((ROOT / 'release-versions.json').read_text())
+    if json.loads(app['appinfo.json'])['version'] != versions['updater']:
+        raise ValueError('No-root Updater version mismatch')
+    (payload / 'updater.ipk').write_bytes(pack_app(app, service))
 
 
 def stage_installer_support(payload, work):

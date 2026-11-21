@@ -85,10 +85,16 @@ def _cjk(code):
 
 def required_characters(root=ROOT, files=None, cache=None):
     """Read decoded per-locale literals from every first-party runtime catalog."""
+    from scripts.no_root_assets import UPDATER_APP_FILES
+
     root = Path(root)
     kinds = ('.js', '.html', '.css', '.json')
-    sources = [(p.suffix, p.read_text(encoding='utf-8')) for directory in JS_ROOTS
-               for p in sorted((root/directory).glob('*')) if p.suffix in kinds and p.is_file()]
+    sources = []
+    for directory in JS_ROOTS:
+        folder = root / directory
+        paths = (folder / name for name in UPDATER_APP_FILES) if directory == 'updater-app' else sorted(folder.glob('*'))
+        sources.extend((p.suffix, p.read_text(encoding='utf-8')) for p in paths
+                       if p.suffix in kinds and p.is_file())
     sources.extend((Path(name).suffix, raw.decode('utf-8')) for name, raw in sorted((files or {}).items())
                    if Path(name).suffix in kinds)
     python = root/'cytv/translations.py'
