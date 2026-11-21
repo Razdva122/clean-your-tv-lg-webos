@@ -247,6 +247,7 @@ and historical [1.5.0 TV acceptance and limits](docs/RELEASE-1.5.0.md).
 | Home | TV · Edition | Reported webOS |
 | :---: | --- | --- |
 | ✅ | OLED55G36LA · No-root | SDK 9.2.2 |
+| ❔ | OLED55C37LA · Root | 24; SDK 9.2.1 |
 
 </details>
 
