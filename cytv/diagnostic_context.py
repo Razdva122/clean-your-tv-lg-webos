@@ -483,7 +483,7 @@ def native_root_summary(value):
         'effective_backend': choice(effective.get('effective_backend', effective.get('backend')),
                                     ('c1-native-gate',)),
         'routing': choice(effective.get('routing'), ('compositor-keyfilter-v1',)),
-        'state': choice(effective.get('state'), ('stock', 'stopped', 'armed', 'blocked')),
+        'state': choice(effective.get('state'), ('stock', 'stopped', 'armed', 'blocked', 'reconnecting')),
         'reason': choice(effective.get('reason'), ('none', *COMPOSITOR_STOPS)),
     }
     for key in ('returnValue', 'stock_verified', 'mounted', 'healthy', 'stopped',

@@ -679,7 +679,7 @@ class RuntimeTests(unittest.TestCase):
             self.assertNotEqual(result['intent']['token'], token)
             self.assertEqual(writes, [[self.k.filter_entry(self.root), *stock]])
             self.assertEqual(start.call_count, 2)
-            self.assertEqual(start.call_args.args[0][:2], ['/fixture', '--guard-resumable'])
+            self.assertEqual(start.call_args.args[0][:2], ['/fixture', '--guard-resumable-reconnect'])
             normal.assert_called_once()
             startup.assert_called_once_with(result, root=self.root, uid=self.uid)
             self.assertEqual(observed, [result['intent']])

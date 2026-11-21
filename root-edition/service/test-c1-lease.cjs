@@ -577,6 +577,33 @@ assert.strictEqual(f.replies.at(-1).token, 'a'.repeat(32));
 f = fixture();
 f.subscribe();
 f.reply(native());
+f.home();
+var reconnectingNative = Object.assign(native(), {
+  state: 'reconnecting',
+  healthy: false,
+  reason: 'none'
+});
+f.callbacks.at(-1)(
+  { code: 1 },
+  JSON.stringify(
+    Object.assign({}, reconnectingNative, {
+      returnValue: false,
+      reason: 'home_refused'
+    })
+  )
+);
+assert.strictEqual(f.replies.at(-1).reconnecting, true);
+assert.strictEqual(f.replies.at(-1).returnValue, false);
+f.tick(400);
+f.reply(reconnectingNative);
+assert.strictEqual(f.replies.at(-1).reconnecting, true);
+f.tick(400);
+f.reply(native());
+assert.strictEqual(f.replies.at(-1).healthy, true);
+assert.strictEqual(f.replies.at(-1).reconnecting, undefined);
+f = fixture();
+f.subscribe();
+f.reply(native());
 f.home({ token: 'a'.repeat(32), command: '--restore' });
 assert.strictEqual(f.calls.length, 1, 'home has no arbitrary args');
 f.home(undefined, 'com.attacker');

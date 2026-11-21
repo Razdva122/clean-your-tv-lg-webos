@@ -59,13 +59,14 @@ class KeyfilterGuardTests(unittest.TestCase):
         p = subprocess.run([str(self.binary), *args], capture_output=True, text=True, timeout=8)
         self.assertEqual(p.stderr, '')
         return json.loads(p.stdout), p.returncode
-    def spawn(self, seconds=0, ready=(True, True), broker=True, *, resumable=False):
+    def spawn(self, seconds=0, ready=(True, True), broker=True, *, resumable=False, reconnect=False):
         ir, iw = os.pipe(); cr, cw = os.pipe(); rr, rw = os.pipe()
         # Queue the tiny fixture records while our read ends are still open;
         # a stopped guardian may refuse and close its inherited ends at once.
         for flag, fd in zip(ready, (iw, cw)):
             if flag: os.write(fd, b'READY\n')
         mode = '--guard-resumable' if resumable else '--guard'
+        if reconnect: mode += '-reconnect'
         p = subprocess.Popen([str(self.binary), mode, TOKEN, str(ir), str(cr), str(rw), str(seconds)],
                              pass_fds=(ir, cr, rw), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         for fd in (ir, cr, rw): os.close(fd)
@@ -76,8 +77,8 @@ class KeyfilterGuardTests(unittest.TestCase):
                 self.run_guard('--lease')
                 if select.select([rr], [], [], .03)[0]: break
         return p, iw, cw, rr
-    def armed(self, seconds=0, *, resumable=False):
-        p, iw, cw, rr = self.spawn(seconds, resumable=resumable)
+    def armed(self, seconds=0, *, resumable=False, reconnect=False):
+        p, iw, cw, rr = self.spawn(seconds, resumable=resumable, reconnect=reconnect)
         self.assertTrue(select.select([rr], [], [], 3)[0])
         ack = os.read(rr, 128); os.close(rr)
         self.assertEqual(ack, f'ARMED {TOKEN}\n'.encode())
@@ -231,6 +232,57 @@ int main(void) {
             except BrokenPipeError: break
         s = self.finish(p); self.assertEqual(s['reason'], 'broker_expired')
         self.assertFalse(self.run_guard('--lease')[0]['healthy'])
+    def await_input_reconnect(self):
+        proc, iw, cw = self.armed(reconnect=True)
+        deadline = time.monotonic() + 4
+        while time.monotonic() < deadline:
+            os.write(cw, b'PING\n')
+            status, rc = self.run_guard('--lease')
+            self.assertEqual(rc, 0, status)
+            if status['state'] == 'reconnecting':
+                self.assertFalse(status['healthy'])
+                self.assertFalse(status['stopped'])
+                return proc, iw, cw
+            time.sleep(.15)
+        self.fail('Guardian never suspended routing for input expiry')
+
+    def test_input_expiry_resumes_only_with_fresh_revalidation(self):
+        proc, iw, _ = self.await_input_reconnect()
+        self.assertNotEqual(self.run_guard('--home', TOKEN)[1], 0)
+        os.write(iw, b'PING\nCHECK 1\n')
+        self.assertFalse(self.run_guard('--lease')[0]['healthy'])
+        os.write(iw, ('CHECK %d\n' % (time.clock_gettime_ns(time.CLOCK_MONOTONIC) // 1_000_000)).encode())
+        deadline = time.monotonic() + 1
+        while time.monotonic() < deadline:
+            if self.run_guard('--lease')[0]['healthy']: break
+            time.sleep(.02)
+        else: self.fail('Fresh input validation never restored the route')
+        os.write(iw, b'ESCAPE\n')
+        self.assertEqual(self.finish(proc)['reason'], 'escape')
+
+    def test_manual_off_while_input_reconnect_is_pending(self):
+        proc, iw, _ = self.await_input_reconnect()
+        self.freeze(proc)
+        restore = subprocess.Popen([str(self.binary), '--restore'], stdout=subprocess.PIPE, text=True)
+        try:
+            deadline = time.monotonic() + 1
+            while not (self.root/'state/stopped').exists() and time.monotonic() < deadline:
+                time.sleep(.01)
+            self.assertTrue((self.root/'state/stopped').exists())
+            os.write(iw, ('CHECK %d\n' % (time.clock_gettime_ns(time.CLOCK_MONOTONIC) // 1_000_000)).encode())
+            self.assertFalse(self.run_guard('--lease')[0]['healthy'])
+        finally:
+            proc.send_signal(signal.SIGCONT)
+            restore.communicate(timeout=5)
+        self.assertEqual(restore.returncode, 0)
+        self.assertEqual(self.finish(proc)['reason'], 'external_stop')
+
+    def test_escape_while_input_reconnect_is_pending(self):
+        proc, iw, _ = self.await_input_reconnect()
+        os.write(iw, b'ESCAPE\n')
+        self.assertEqual(self.finish(proc)['reason'], 'escape')
+        self.assertFalse(self.run_guard('--lease')[0]['healthy'])
+
     def test_trial_expiry(self):
         p, iw, cw = self.armed(1); s = self.finish(p); self.assertEqual(s['reason'], 'trial_expired')
     def test_restore_latches_before_retirement_and_no_rearm(self):
@@ -631,8 +683,12 @@ int main(void) {
             deadline=time.monotonic()+1.5
             while not (self.root/'state/stopped').exists() and time.monotonic()<deadline: time.sleep(.01)
             self.assertTrue((self.root/'state/stopped').exists())
-            # Give restore time to enter retirement waiting. A SIGTERM sent to
-            # the saved PID would be queued while stopped and delivered here.
+            # A reconnect that was already in flight can still write to the
+            # open pipe. Explicit Off must veto that heartbeat under the latch.
+            os.write(iw, b'PING\n')
+            self.assertFalse(self.run_guard('--lease')[0]['healthy'])
+            self.assertNotEqual(self.run_guard('--home', TOKEN)[1], 0)
+            # A SIGTERM sent to the saved PID would be delivered here.
             time.sleep(.15); p.send_signal(signal.SIGCONT)
             s=self.finish(p); self.assertEqual(s['reason'],'external_stop')
             out,_=restore.communicate(timeout=5); result=json.loads(out)

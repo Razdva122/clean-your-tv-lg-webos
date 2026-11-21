@@ -76,6 +76,50 @@ function lease(sequence, token) {
     sequence: sequence
   };
 }
+var recovery = setup();
+recovery.reply(lease(1));
+recovery.reply(Object.assign(lease(2), { healthy: false, reconnecting: true }));
+assert.strictEqual(
+  recovery.key(true),
+  0,
+  'input reconnect leaves Home with LG'
+);
+assert.strictEqual(recovery.key(false), 0);
+recovery.reply(lease(3));
+assert.strictEqual(recovery.key(true), 1, 'verified input reopens the route');
+assert.strictEqual(recovery.key(false), 1);
+recovery.reply(Object.assign(lease(4), { healthy: false, reconnecting: true }));
+recovery.reply({ returnValue: false });
+recovery.reply(lease(5));
+assert.strictEqual(
+  recovery.key(true),
+  0,
+  'revocation cannot be undone by recheck'
+);
+
+var fallback = setup();
+fallback.reply(lease(1));
+assert.strictEqual(fallback.key(true), 1);
+fallback.homeCallbacks[0](
+  JSON.stringify({
+    returnValue: false,
+    reconnecting: true,
+    backend: 'c1-native-gate',
+    routing: 'compositor-keyfilter-v1',
+    token: 'a'.repeat(32)
+  })
+);
+assert.deepStrictEqual(fallback.launches, [['com.webos.app.home', '{}']]);
+assert.strictEqual(fallback.key(false), 1);
+assert.strictEqual(fallback.key(true), 0);
+assert.strictEqual(fallback.key(false), 0);
+fallback.reply(lease(2));
+assert.strictEqual(
+  fallback.key(true),
+  1,
+  'input-only refusal keeps verified subscription'
+);
+
 var s = setup();
 assert.strictEqual(s.key(true), 0);
 s.reply(lease(1));
