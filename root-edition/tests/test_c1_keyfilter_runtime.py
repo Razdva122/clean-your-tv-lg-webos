@@ -15,6 +15,64 @@ sys.path[:0] = [str(ROOT / 'runtime'), str(ROOT)]
 
 class RuntimeTests(unittest.TestCase):
 
+    def test_bsp_lower_home_accepts_anonymous_overlay_device_only_without_shadow(self):
+        import stat
+
+        lines = [
+            '1 0 179:27 / / ro - squashfs /dev/root ro',
+            '2 1 0:34 / /usr rw - overlay overlay ro,lowerdir=/overlay/bsppart/bsp/usr:/usr',
+            '3 1 179:29 / /overlay/bsppart ro - squashfs /dev/mmcblk0p29 ro',
+        ]
+        critical = ('/usr/bin/com.webos.app.home', '/usr/palm/applications/com.webos.app.home')
+        bsp = '/overlay/bsppart/bsp/usr'
+        real_lstat = os.lstat
+        for home_device, shadow, bin_kind, extra_mount, accepted in (
+                ((179, 27), False, 'missing', None, True),
+                ((0, 45), False, 'missing', None, True),
+                ((0, 45), False, 'directory', None, True),
+                ((0, 34), False, 'directory', None, False),
+                ((179, 30), False, 'directory', None, False),
+                ((0, 45), True, 'directory', None, False),
+                ((0, 45), False, 'symlink', None, False),
+                ((0, 45), False, 'denied', None, False),
+                ((0, 45), False, 'directory', bsp + '/bin', False),
+                ((0, 45), False, 'directory', bsp + '/bin/com.webos.app.home', False)):
+            with self.subTest(device=home_device, shadow=shadow, bin_kind=bin_kind, mount=extra_mount):
+                mounts = []
+                for line in lines + ([f'4 3 0:99 / {extra_mount} ro - tmpfs tmpfs ro'] if extra_mount else []):
+                    fields = line.split()
+                    index = fields.index('-')
+                    mounts.append((fields, fields[4], fields[index+1], fields[index+2],
+                                   fields[index+3].split(',')))
+                devices = dict(zip((*critical, bsp), (home_device, (0, 34), (179, 29))))
+
+                def lower_lstat(path, *args, **kwargs):
+                    if str(path) == bsp + '/bin':
+                        if bin_kind == 'missing':
+                            raise FileNotFoundError()
+                        if bin_kind == 'denied':
+                            raise PermissionError()
+                        return SimpleNamespace(st_mode=stat.S_IFLNK if bin_kind == 'symlink' else stat.S_IFDIR)
+                    if str(path) == bsp + '/bin/com.webos.app.home':
+                        if shadow:
+                            return SimpleNamespace(st_mode=stat.S_IFREG)
+                        raise FileNotFoundError()
+                    return real_lstat(path, *args, **kwargs)
+
+                def trusted(path):
+                    if str(path) == bsp + '/bin' and bin_kind == 'symlink':
+                        raise ValueError('Unsafe experimental backend directory')
+
+                with patch.object(self.k.os, 'stat', side_effect=lambda path, **kw:
+                        SimpleNamespace(st_dev=os.makedev(*devices[str(path)]))), \
+                        patch.object(self.k.os, 'lstat', side_effect=lower_lstat), \
+                        patch.object(self.k.legacy, 'trusted_directory', side_effect=trusted):
+                    try:
+                        actual = self.k.stock_bsp_overlay(mounts, mounts[1], critical)
+                    except (OSError, ValueError):
+                        actual = False
+                    self.assertEqual(actual, accepted)
+
     def read_factory_home_setting(self, uri, payload, *, allow_failure):
         self.assertEqual(uri, 'luna://com.webos.settingsservice/getSystemSettings')
         self.assertEqual(payload, {'category': 'general', 'keys': ['defaultApps']})

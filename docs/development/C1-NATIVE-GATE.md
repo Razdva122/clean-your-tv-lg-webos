@@ -245,8 +245,26 @@ the driver verifies a read-only `/usr` overlay filesystem with exactly
 `/overlay/bsppart/bsp/usr:/usr` as its lower layers and no upper or work layer.
 It requires distinct read-only MMC SquashFS roots at `/` and `/overlay/bsppart`
 and checks the device numbers of the BSP layer, Home binary and Home app
-directory. It rejects additional mounts covering those paths. Hardware
-acceptance of this layout remains pending.
+directory. Overlayfs can expose a lower-layer file on an anonymous major-zero
+device distinct from the overlay directory device. For this case only, both
+probes additionally require that the BSP layer cannot shadow
+`bin/com.webos.app.home`: its `bin` must be absent or a trusted directory without
+that entry. Symlinks, unreadable paths and nested mounts covering the BSP Home
+path are refused. Other device mismatches remain refusals.
+
+An offline Linux replay with two synthetic SquashFS images reproduced this:
+the base Home was `7:0`, merged Home `0:79`, overlay directory `0:76` and BSP
+`7:1`, with no BSP Home entry. The regression fixtures use the reported MMC
+layout and cover acceptance plus shadow, symlink and mount refusals in Python
+and the final Node cleaner. This validates the filesystem behavior, not TV
+acceptance; hardware acceptance of this layout remains pending.
+
+The later [#519 report](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/519#issuecomment-7052820546)
+retains the native stop reason `escape`: the emergency reader sends `ESCAPE`
+after three released short Home presses and the native guard latches that stop.
+Its status snapshot has no input history to establish which physical or firmware
+events triggered it. This BSP admission change does not clear the stop or
+resume interception automatically.
 
 An early native admission refusal can leave a host pending attempt without a TV
 deployment journal. Missing files do not resolve that attempt. Explicit full
