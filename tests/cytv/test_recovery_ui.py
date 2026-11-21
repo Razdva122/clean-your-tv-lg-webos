@@ -39,9 +39,12 @@ class RecoveryPresentationTests(unittest.TestCase):
 
         plan = {'state':'complete', 'disposition':'clean-removal', 'removed':True, 'verified_clean':True}
         self.assertEqual(removal_milestones(plan), (
-            'Stock controls are unknown.', 'Clean Your TV packages are absent.', 'Final cleanup is verified.',
+            'Clean Your TV packages are absent.', 'Final cleanup is verified.',
         ))
+        observed = dict(plan, removal_evidence={'stock':'routing-verified'})
+        self.assertIn('Home routing was verified. Physical remote untested.', removal_milestones(observed))
         for incomplete in ({'verified_clean':1}, {'state':'blocked'}, {'restart_required':True}):
+            self.assertIn('Stock controls are unknown.', removal_milestones(dict(plan, **incomplete)))
             self.assertNotIn('Final cleanup is verified.', removal_milestones(dict(plan, **incomplete)))
         self.assertNotIn('Final cleanup is verified.', removal_milestones(plan, {'code':'ssh-timeout'}))
 
