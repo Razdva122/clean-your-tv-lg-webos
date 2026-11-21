@@ -366,6 +366,45 @@ class CIScope(unittest.TestCase):
             with self.subTest(path=path):
                 self.assertEqual(route([path]), {'preview'})
 
+    def test_document_inputs_route_to_their_consumers_on_pr_and_main(self):
+        import runpy
+        scope = runpy.run_path(str(ROOT / 'scripts/ci-scope.py'))
+        base, head = 'a' * 40, 'b' * 40
+        event_scopes = (
+            ('pull_request', 'refs/pull/1/merge',
+             {'pull_request': {'base': {'sha': base, 'ref': 'release/next'},
+                               'head': {'sha': head, 'ref': 'codex/docs'}}}),
+            ('push', 'refs/heads/main', {'before': base, 'after': head}),
+        )
+        cases = (
+            # Both 9185293c and 074109f2 changed this pair.
+            (('docs/COMPATIBILITY.md', 'docs/compatibility-reports.json'), {'preview'}),
+            (('docs/COMPATIBILITY.md',), {'preview'}),
+            (('docs/compatibility-reports.json',), {'preview'}),
+            (('README.md',), {'setup', 'preview'}),
+            (('LICENSE',), {'installer', 'preview'}),
+            (('THIRD_PARTY_NOTICES.md',), {'installer', 'preview'}),
+            (('android/app/src/main/assets/ui/guide/README.md',), {'installer'}),
+            (('docs/development/README.md',), set()),
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            event_path, output = Path(directory) / 'event.json', Path(directory) / 'output'
+            for kind, ref, event in event_scopes:
+                event_path.write_text(json.dumps(event))
+                env = dict(GITHUB_EVENT_NAME=kind, GITHUB_REF=ref,
+                           GITHUB_EVENT_PATH=str(event_path), GITHUB_OUTPUT=str(output),
+                           CI_QUICK_SUITE='false', CI_FULL_SUITE='false')
+                for paths, expected in cases:
+                    output.write_text('')
+                    changed_paths = (chr(0).join(paths) + chr(0)).encode()
+                    with self.subTest(kind=kind, paths=paths), patch.dict(os.environ, env), \
+                         patch.dict(scope['main'].__globals__, git=lambda *args: changed_paths), \
+                         contextlib.redirect_stdout(io.StringIO()):
+                        scope['main']()
+                        result = dict(line.split('=', 1) for line in output.read_text().splitlines())
+                        self.assertEqual({name for name in scope['COMPONENTS']
+                                          if result[name.replace('-', '_')] == 'true'}, expected)
+
     def test_routes_changes_and_shared_dependencies(self):
         path = ROOT / 'scripts/ci-scope.py'
         self.assertTrue(path.exists(), 'Component routing is missing')
@@ -373,7 +412,7 @@ class CIScope(unittest.TestCase):
         scope = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(scope)
         cases = [
-            (['README.md', 'docs/INSTALL.md', 'android/README.md'], {'setup'}),
+            (['README.md', 'docs/INSTALL.md', 'android/README.md'], {'setup', 'preview'}),
             (['docs/INSTALL.md', 'android/README.md'], set()),
             (['launcher/app.js'], {'tv', 'installer', 'setup', 'preview'}),
             (['native/service/service.js'], {'tv', 'installer', 'setup'}),
