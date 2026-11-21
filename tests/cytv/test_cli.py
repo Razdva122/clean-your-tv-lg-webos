@@ -1377,6 +1377,38 @@ class CLITests(unittest.TestCase):
                     self.assertEqual(report['guidance'], {'code': 'tv-pairing-rejected', 'pending': False})
                     self.assertEqual(report['connection']['reason_code'], 'pairing-rejected')
 
+    def test_no_root_tcp_refusal_explains_remote_port_without_retrying(self):
+        from unittest.mock import Mock
+
+        with tempfile.TemporaryDirectory() as tmp, \
+             patch('cytv.cli.package.verify_payload', return_value={}), \
+             patch('cytv.cli.payload_dir', return_value=Path(tmp)), \
+             patch('websockets.sync.client.connect', side_effect=ConnectionRefusedError('PRIVATE')) as dial, \
+             patch('cytv.cli.Installer') as installer:
+            profile = state.target('192.0.2.10', 'no-root', 19922)
+            store = state.Store(tmp)
+            store.save(profile)
+            code, output, calls = self.run_cli([
+                'install', '--host', profile['host'], '--port', str(profile['port']), '--edition', profile['edition'],
+                '--data-dir', tmp, '--language', 'en', '--yes',
+            ], remote=Mock())
+            self.assertEqual(code, 2, output)
+            self.assertEqual(len(calls), 1)
+            self.assertIn('TV remote-control connection refused', output)
+            self.assertIn('TCP port 3001', output)
+            self.assertNotIn('Try pairing again?', output)
+            self.assertNotIn('PRIVATE', output)
+            dial.assert_called_once()
+            installer.return_value.install.assert_not_called()
+            self.assertIsNone(store.pending(profile))
+            report = json.loads(next(Path(tmp).glob('reports/*.json')).read_text())
+            self.assertEqual(report['phase'], 'pair-tv')
+            self.assertEqual(report['reason_code'], 'pairing-connection-refused')
+            self.assertEqual(report['connection'], {
+                'protocol': 'ssap', 'close_code': None, 'reason_code': 'pairing-connection-refused',
+            })
+            self.assertEqual(report['guidance'], {'code': 'pairing-connection-refused', 'pending': False})
+
     def test_no_root_partial_inventory_continues_only_for_fresh_setup(self):
         from unittest.mock import Mock
         from cytv.operations import HOME, Installer

@@ -41,6 +41,8 @@ Verwenden Sie den Code vom TV, nicht das Passwort Ihres LG-Kontos. Wird kein Cod
 
 Die Kopplung ist ein eigener Schritt: Bestätigen Sie CYTV mit der Fernbedienung, wenn der TV danach fragt. Wenn der TV die Anfrage ablehnt, bestätigen Sie in CYTV einen neuen Versuch mit demselben TV.
 
+Wenn der TV die Verbindung zur Fernsteuerung ablehnt, lassen Sie ihn eingeschaltet und prüfen Sie vom Computer aus den Zugriff auf TCP-Port 3001. Wählen Sie dann im Desktop-Installationsprogramm **Erneut versuchen**.
+
 Wenn sich die HDMI-Eingänge bei der ersten No-root-Einrichtung nicht lesen lassen, können Sie nach dem Hinweis mit den gefundenen Apps fortfahren.
 
 Halten Sie Developer Mode aktiv: Öffnen Sie die App vor Ablauf des Timers und drücken Sie bei bestehender Internetverbindung EXTEND. Nach Ablauf kann LG diese Apps entfernen.

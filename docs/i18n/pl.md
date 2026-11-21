@@ -41,6 +41,8 @@ Użyj kodu z TV, a nie hasła konta LG. Jeśli kodu nie widać, włącz Key Serv
 
 Parowanie to osobny krok: gdy TV zapyta, zatwierdź CYTV pilotem. Jeśli telewizor odrzuci prośbę, potwierdź w CYTV ponowienie parowania z tym samym telewizorem.
 
+Jeśli połączenie ze zdalnym sterowaniem telewizora zostało odrzucone, zostaw telewizor włączony i sprawdź na komputerze dostęp do portu TCP 3001. Następnie wybierz **Spróbuj ponownie** w instalatorze komputerowym.
+
 Jeśli przy pierwszej instalacji No-root pojawi się ostrzeżenie, że nie udało się odczytać wejść HDMI, możesz kontynuować instalację z wykrytymi aplikacjami.
 
 Utrzymuj Developer Mode aktywny: przed końcem odliczania otwórz aplikację i naciśnij EXTEND, gdy TV ma internet. Po wygaśnięciu LG może usunąć te aplikacje.

@@ -41,6 +41,8 @@ Use the code from the TV, not your LG account password. If no code is visible, t
 
 Pairing is a separate step: when the TV asks, approve CYTV with your remote. If the TV rejects the request, confirm the retry in CYTV. It uses the same TV connection.
 
+If the TV remote-control connection is refused, leave the TV on and check access to TCP port 3001 from your computer. Then choose **Try again** in the desktop installer.
+
 If a first No-root setup warns that it could not read HDMI inputs, you can continue with the applications it found.
 
 Keep Developer Mode active: open it before the timer runs out and press EXTEND while the TV is online. If it expires, LG can remove these apps.
