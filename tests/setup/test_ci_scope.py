@@ -289,6 +289,37 @@ class CIScope(unittest.TestCase):
                 expected_os = ['ubuntu-latest', 'macos-latest'] if 'macos' in enabled else ['ubuntu-latest']
                 self.assertEqual(json.loads(result['runtime_os']), expected_os)
 
+    def test_windows_fixture_pr_routing(self):
+        import runpy
+        scope = runpy.run_path(str(ROOT / 'scripts/ci-scope.py'))
+        event = {'pull_request': {'base': {'sha': 'a' * 40, 'ref': 'release/next'},
+                                  'head': {'sha': 'b' * 40, 'ref': 'codex/fix'}}}
+        with tempfile.TemporaryDirectory() as directory:
+            event_path, output = Path(directory) / 'event.json', Path(directory) / 'output'
+            env = dict(GITHUB_EVENT_PATH=str(event_path), GITHUB_OUTPUT=str(output),
+                       GITHUB_EVENT_NAME='pull_request', CI_FULL_SUITE='false', CI_QUICK_SUITE='false')
+            def route(path):
+                event_path.write_text(json.dumps(event))
+                output.write_text('')
+                with patch.dict(os.environ, env), contextlib.redirect_stdout(io.StringIO()), \
+                     patch.dict(scope['main'].__globals__, git=lambda *args: (path + '\0').encode()):
+                    scope['main']()
+                return dict(line.split('=') for line in output.read_text().splitlines())
+            for path in ('cytv/python_runtime.py', 'tests/cytv/test_python_runtime.py',
+                         'cytv/desktop.py', 'cytv/desktop_entry.py', 'cytv/gui.py',
+                         'cytv/cli.py', 'tests/cytv/test_desktop_recovery.py',
+                         '.github/workflows/cytv-runtime.yml'):
+                with self.subTest(path=path):
+                    result = route(path)
+                    self.assertEqual(result.get('windows_fixtures'), 'true')
+                    self.assertEqual(result['installers'], 'false')
+            for path in ('launcher/style.css', 'tests/cytv/test_transport.py', 'docs/development/README.md'):
+                with self.subTest(path=path):
+                    self.assertEqual(route(path).get('windows_fixtures'), 'false')
+            event['pull_request']['base']['ref'] = 'main'
+            event['pull_request']['head']['ref'] = 'release/next'
+            self.assertEqual(route('cytv/gui.py').get('windows_fixtures'), 'false')
+
     def test_weather_pr_routing_preserves_mixed_shared_and_full_coverage(self):
         import runpy
         scope = runpy.run_path(str(ROOT / 'scripts/ci-scope.py'))

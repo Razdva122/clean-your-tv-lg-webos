@@ -18,6 +18,19 @@ WEATHER_PR_PATHS = frozenset({
     'tests/weather/providers.cjs',
     'tests/weather/ui.cjs',
 })
+WINDOWS_FIXTURE_PR_PATHS = frozenset({
+    'cytv/cli.py',
+    'cytv/gui.py',
+    'cytv/python_runtime.py',
+    'cytv/requirements.txt',
+    'cytv/build-requirements.txt',
+    'scripts/build-requirements.txt',
+    'tests/cytv/test_desktop_recovery.py',
+    'tests/cytv/test_python_runtime.py',
+    'scripts/ci-scope.py',
+    '.github/workflows/cytv-runtime.yml',
+    '.github/workflows/tests.yml',
+})
 
 
 def components(paths):
@@ -148,10 +161,13 @@ def main():
     full_suite = os.environ.get('CI_FULL_SUITE') == 'true'
     quick_suite = os.environ.get('CI_QUICK_SUITE') == 'true'
     weather_paths = set()
+    windows_fixture_paths = set()
     if diff and not full_suite:
         paths = set(git('diff', '--name-only', '--no-renames', '-z', *diff).decode().split('\0')[:-1])
         if kind == 'pull_request' and not quick_suite:
             weather_paths = paths & WEATHER_PR_PATHS
+            windows_fixture_paths = {path for path in paths if path in WINDOWS_FIXTURE_PR_PATHS
+                                     or re.fullmatch(r'cytv/desktop[^/]*\.py', path)}
         selected = components(paths - weather_paths)
     else:
         selected = set(COMPONENTS)
@@ -172,8 +188,9 @@ def main():
             and not full_suite):
         selected = {'setup'}  # Release policy requires full tests from the trusted build.
         weather_paths.clear()
+        windows_fixture_paths.clear()
     outputs = {name.replace('-', '_'): name in selected for name in COMPONENTS}
-    outputs.update(weather=bool(weather_paths), any=bool(selected),
+    outputs.update(weather=bool(weather_paths), windows_fixtures=bool(windows_fixture_paths), any=bool(selected),
                    runtime=bool(selected - {'setup', 'browser-core'}), candidate=candidate, installers=installers,
                    browser_core=bool(selected & {'browser-core', 'tv', 'ui'}),
                    full=installers and full_candidate(event, kind, ref),
@@ -191,6 +208,9 @@ def main():
             if weather_paths:
                 paths = ', '.join(f'`{path}`' for path in sorted(weather_paths))
                 output.write(f'\nFocused weather checks selected for {paths}.\n')
+            if windows_fixture_paths:
+                paths = ', '.join(f'`{path}`' for path in sorted(windows_fixture_paths))
+                output.write(f'\nWindows installer fixture checks selected for {paths}.\n')
 
 
 if __name__ == '__main__':
