@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Build public TV payload and a native single-file cytv executable. Never contacts a TV."""
 import argparse
+from contextlib import contextmanager
 import hashlib
 import json
 import os
@@ -8,12 +9,13 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from cytv import package
 from cytv.tv_sources import stage_sources
-from scripts.tv_web_build import compile_web
+from scripts.tv_web_build import build_lock, compile_web
 from scripts.helper_build import compile_helper
 from scripts.home_assets import THEME_FILES
 from scripts.no_root_assets import renewal_service_assets, updater_sources
@@ -119,15 +121,16 @@ ROOT_BACKENDS = {'c1-native-gate': {'experimental': True, 'hardware_validated': 
                                   'admission_schema': 3, 'graphics': C1_GRAPHICS}}
 
 
-def stage_c1_root(payload, work, version, run=subprocess.run):
+def stage_c1_root(payload, work, version, run=subprocess.run, *, scratch=None):
     """Compile once with the existing pinned build-only Zig dependency."""
-    helper = Path(work) / 'c1-keyfilter-guard'
+    scratch = Path(work if scratch is None else scratch)
+    helper = scratch / 'c1-keyfilter-guard'
     environment = dict(os.environ, ZIG_GLOBAL_CACHE_DIR=str(Path(work) / 'zig-global-cache'),
                        ZIG_LOCAL_CACHE_DIR=str(Path(work) / 'zig-cache'))
     run([sys.executable, '-m', 'ziglang', 'cc', '-target', 'arm-linux-musleabi',
          '-Os', '-static', '-s', 'root-edition/gate/keyfilter.c', '-o', str(helper)],
         cwd=ROOT, env=environment, check=True)
-    recovery = Path(work) / 'c1-home-gate'
+    recovery = scratch / 'c1-home-gate'
     run([sys.executable, '-m', 'ziglang', 'cc', '-target', 'arm-linux-musleabi',
          '-Os', '-static', '-s', 'root-edition/gate/gate.c', '-o', str(recovery)],
         cwd=ROOT, env=environment, check=True)
@@ -257,13 +260,10 @@ def stage_installer_support(payload, work):
                    cwd=ROOT, env=environment, check=True)
 
 
-def build_payload():
-    versions = json.loads((ROOT / "release-versions.json").read_text())
-    work = (ROOT / 'build/cytv').resolve()
-    payload = work / 'payload'
-    if payload.exists():
-        shutil.rmtree(payload)
-    payload.mkdir(parents=True)
+def _prepare_payload(payload, work, versions):
+    # Compiler intermediates stay local to this attempt. Only Zig's own caches
+    # are shared, so a child left running cannot write into a later attempt.
+    scratch = payload.parent
     stage_installer_support(payload, work)
     helper = helper_baseline(versions['helper'])
     if helper is None:
@@ -276,7 +276,7 @@ def build_payload():
             'relay': ['native/prototype/relay.c', 'native/prototype/filter.c'],
             'resume': ['native/app/resume.c'],
         }.items():
-            output = work / name
+            output = scratch / name
             subprocess.run([str(zig), 'cc', '-target', 'arm-linux-musleabi', '-Os', '-static', '-s',
                             *sources, '-o', str(output)], cwd=ROOT, env=environment, check=True)
             app[name] = output.read_bytes()
@@ -305,7 +305,7 @@ def build_payload():
     stage_theme_previews(payload)
     for graphics, paths in GRAPHICS.items():
         subprocess.run([sys.executable, 'root-edition/build.py', '--output', str(payload / paths['root']), '--version', versions['root'], '--resolution', graphics], cwd=ROOT, check=True)
-    keyfilter_guard = stage_c1_root(payload, work, versions['root'])
+    keyfilter_guard = stage_c1_root(payload, work, versions['root'], scratch=scratch)
     subprocess.run([sys.executable, 'root-edition/build_updater.py', '--output', str(payload / 'root-updater')], cwd=ROOT, check=True)
     stage_updater(payload)
     subprocess.run([sys.executable,'system-updater/build.py','--output',str(payload/'system-updater')],cwd=ROOT,check=True)
@@ -337,9 +337,63 @@ def build_payload():
                 'files': {p.relative_to(payload).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
                           for p in sorted(payload.rglob('*')) if p.is_file()}}
     (payload / 'payload.json').write_text(json.dumps(manifest, indent=2), encoding='utf-8')
-    package.verify_payload(payload)
-    verify_release_versions(payload, versions)
-    return payload
+
+
+@contextmanager
+def _payload_build():
+    work = ROOT / 'build/cytv'
+    workspace = work / '.cytv-payload-build'
+    if workspace.resolve() != workspace:
+        raise ValueError('Indirect payload build directory: ' + str(workspace))
+    workspace.mkdir(parents=True, mode=0o700, exist_ok=True)
+    lock = workspace / '.cytv-payload-build-v1.lock'
+    if any(workspace.iterdir()) and not lock.exists():
+        raise ValueError('Unmanaged payload build directory: ' + str(workspace))
+
+    output, previous, attempts = work / 'payload', workspace / 'previous', workspace / 'attempts'
+    with build_lock(lock):
+        if any(path.name not in (lock.name, previous.name, attempts.name) for path in workspace.iterdir()):
+            raise ValueError('Unmanaged payload build directory: ' + str(workspace))
+        for path in (output, previous, attempts):
+            if path.is_symlink() or (path.exists() and (not path.is_dir() or path.resolve() != path)):
+                raise ValueError('Invalid payload build directory: ' + str(path))
+
+        # After an interruption between renames, restore the previous payload.
+        if previous.exists():
+            if output.exists():
+                shutil.rmtree(previous)
+            else:
+                previous.rename(output)
+        if attempts.exists():
+            shutil.rmtree(attempts)
+        attempts.mkdir()
+        try:
+            staged = Path(tempfile.mkdtemp(dir=attempts)) / 'payload'
+            staged.mkdir()
+            versions = json.loads((ROOT / 'release-versions.json').read_text())
+            _prepare_payload(staged, work, versions)
+            package.verify_payload(staged)
+            verify_release_versions(staged, versions)
+            # Replace whole directories. Unlocked readers can briefly see
+            # an absent path between these renames, never the unverified tree.
+            if output.exists():
+                output.rename(previous)
+            staged.rename(output)
+        except BaseException:
+            if previous.exists() and not output.exists():
+                previous.rename(output)
+            raise
+        finally:
+            shutil.rmtree(attempts)
+        if previous.exists():
+            shutil.rmtree(previous)
+
+        yield output
+
+
+def build_payload():
+    with _payload_build() as payload:
+        return payload
 
 
 def main():
@@ -347,10 +401,13 @@ def main():
     parser.add_argument('--payload-only', action='store_true', help='Build and verify TV assets, without freezing')
     parser.add_argument('--desktop', action='store_true', help='Also build the Windows GUI ZIP, macOS app or Debian package')
     args = parser.parse_args()
-    payload = build_payload()
-    print('Public TV payload verified:', payload)
-    if args.payload_only:
-        return
+    with _payload_build() as payload:
+        print('Public TV payload verified:', payload)
+        if not args.payload_only:
+            build_host(payload, args.desktop)
+
+
+def build_host(payload, desktop):
     trusted = ROOT / 'build/cytv/trusted-js'
     stage_sources(trusted)
     environment = dict(os.environ, PYINSTALLER_CONFIG_DIR=str(ROOT / 'build/cytv/pyinstaller-cache'))
@@ -366,7 +423,7 @@ def main():
     subprocess.run([str(executable), '--check-payload'], check=True)
     subprocess.run([str(executable), '--check-runtime'], check=True)
     print('Built:', executable)
-    if args.desktop:
+    if desktop:
         from desktop_packaging import build_desktop
         from cytv import __version__
         build_desktop(ROOT, payload, environment, __version__)
