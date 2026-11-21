@@ -979,7 +979,8 @@ def continue_removal(installer, expected_pending):
     store = installer.store
     evidence = getattr(installer, 'tv_info', {})['removal_evidence'] = {'cleanup': 'pending'}
     guard = profile.get('connection') != 'root-ssh'
-    retained_helper_reboot = (guard and pending.get('stage') == 'verified-clean'
+    # Keep the existing durable field for compatibility with saved removals.
+    retained_cleanup_reboot = (guard and pending.get('stage') == 'verified-clean'
                               and pending.get('cleanup_helper_kernel_changed') is True
                               and pending.get('removals', {}).get(APPS[0]) == 'terminal')
 
@@ -1050,9 +1051,9 @@ def continue_removal(installer, expected_pending):
             raise error
         evidence['packages'] = 'absent'
         retained_helper = final.get('empty_helper_dirs_retained') is True
-        require_idle = require_idle or retained_helper or final.get('empty_service_dirs_retained') is True
-        return final, wait_for_stopped_processes(require_idle, verify_after_remove=True,
-            allow_opaque=retained_helper_reboot and retained_helper)
+        retained_dirs = retained_helper or final.get('empty_service_dirs_retained') is True
+        return final, wait_for_stopped_processes(require_idle or retained_dirs, verify_after_remove=True,
+            allow_opaque=retained_cleanup_reboot and retained_dirs)
 
     def finish(result):
         from .root_no_root_handoff import release
@@ -1276,21 +1277,22 @@ def continue_removal(installer, expected_pending):
     if bound_package_pending and not original_package_settled and not targets.intersection(APPS):
         return require_restart(['original-package-unverified'], rearm=proof is not None
                                and 'original-package-unverified' not in boot_triggers)
-    terminal_helper_only = (guard and removals.get(APPS[0]) == 'terminal' and not submitted
-                            and not apps.intersection(APPS) and targets <= {APPS[0]}
+    terminal_cleanup = (guard and removals.get(APPS[0]) == 'terminal' and not submitted
+                            and not apps.intersection(APPS)
+                            and targets.intersection(APPS) <= {app for app in APPS if removals.get(app) == 'terminal'}
                             and not resident and not cancellation and not older_pending
                             and (previous is None or isinstance(previous, dict)
                                  and previous.get('action') == 'uninstall'))
-    retained_helper_reboot = (terminal_helper_only and observed_new_kernel
+    retained_cleanup_reboot = (terminal_cleanup and observed_new_kernel
                               and 'process-idle-unverified' in boot_triggers)
     installer.progress('Restoring TV controls…')
     idle_helper = False
     if guard and removals.get(APPS[0]) == 'terminal':
         before_stop = device('idle')
         if before_stop.get('project_running') is False:
-            idle_helper = (before_stop.get('idle') is True or retained_helper_reboot
+            idle_helper = (before_stop.get('idle') is True or retained_cleanup_reboot
                            and before_stop.get('proc_enumerated') is True)
-            if terminal_helper_only and not idle_helper:
+            if terminal_cleanup and not idle_helper:
                 residue = device('inventory', allow_empty_dirs=True)
                 check(residue, defer_packages=True)
                 if residue.get('empty_helper_dirs_retained') is True:
@@ -1358,7 +1360,7 @@ def continue_removal(installer, expected_pending):
     if guard:
         device('inventory')
     try:
-        evidence.update(restore_stock_home(installer, allow_legacy_launch_ack=retained_helper_reboot and idle_helper))
+        evidence.update(restore_stock_home(installer, allow_legacy_launch_ack=retained_cleanup_reboot and idle_helper))
     except TVRejected as error:
         error.removal_failure_phase = 'controls-unverified'
         raise
@@ -1467,7 +1469,7 @@ def continue_removal(installer, expected_pending):
     if proof is not None and not pending.get('cleanup_boot_release_started'):
         if restarted:
             store.checkpoint(profile, cleanup_boot_verified=True,
-                             cleanup_helper_kernel_changed=retained_helper_reboot)
+                             cleanup_helper_kernel_changed=retained_cleanup_reboot)
         else:
             store.checkpoint(profile, cleanup_boot_release_started=True)
         _device(installer, 'boot-retire' if restarted else 'boot-release', proof=proof)
@@ -1482,6 +1484,7 @@ def continue_removal(installer, expected_pending):
         result['temporary_files_retained'] = True
         installer.progress('Some temporary recovery files were kept.')
     store.checkpoint(profile, stage='verified-clean', removal_reason='removal-verified', result=result,
-                     cleanup_helper_kernel_changed=retained_helper_reboot and
-                     result.get('empty_helper_dirs_retained') is True)
+                     cleanup_helper_kernel_changed=retained_cleanup_reboot and
+                     any(result.get(key) is True for key in
+                         ('empty_helper_dirs_retained', 'empty_service_dirs_retained')))
     return finish(result)
