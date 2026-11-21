@@ -6,9 +6,11 @@ import os
 import shlex
 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 from pathlib import Path
+import sys
 import tempfile
 import threading
 import time
+import traceback
 import unittest
 from unittest.mock import patch
 
@@ -600,12 +602,27 @@ class DesktopRecoveryTests(unittest.TestCase):
                 result.return_value.__enter__.return_value = ssap
         self.addCleanup(i18n.set_language, 'en')
 
-    def pump(self, predicate, *, timeout=5):
+    def pump(self, predicate, *, timeout=5, wizard=None):
         deadline = time.monotonic() + timeout
-        while not predicate() and time.monotonic() < deadline:
+        while not predicate():
+            if time.monotonic() >= deadline:
+                message = f'Wait timed out after {timeout:g}s'
+                if wizard is not None:
+                    worker = wizard.worker
+                    worker_alive = worker is not None and worker.is_alive()
+                    frame = sys._current_frames().get(worker.ident) if worker_alive else None
+                    stack = ' <- '.join(
+                        f'{Path(frame.f_code.co_filename).name}:{line} ({frame.f_code.co_name})'
+                        for frame, line in itertools.islice(traceback.walk_stack(frame), 8)
+                    ) if frame is not None else 'unavailable'
+                    prompt = wizard.pending.title if wizard.pending is not None else None
+                    recovery = (wizard.recovery_plan or {}).get('state')
+                    message += (f': command={wizard.command!r}, worker_alive={worker_alive}, running={wizard.running}, '
+                                f'prompt={prompt!r}, title={wizard.title.text()!r}, recovery={recovery!r}, '
+                                f'report_ready={wizard.report is not None}, worker_stack={stack}')
+                self.fail(message)
             self.app.processEvents()
             time.sleep(.005)
-        self.assertTrue(predicate())
 
     def window(self):
         def runner(argv, **kwargs):
@@ -619,7 +636,7 @@ class DesktopRecoveryTests(unittest.TestCase):
             if w.running:
                 w.channel.answer(None)
                 w.worker.join(5)
-                self.pump(lambda: not w.running)
+                self.pump(lambda: not w.running, wizard=w)
             w.close()
         self.addCleanup(close)
         return w
@@ -1087,22 +1104,29 @@ class DesktopRecoveryTests(unittest.TestCase):
             self.connections.append(profile)
             raise TimeoutError('PRIVATE CONNECTION')
         self.connect = disconnected
+        # Record the requested backoff so the deadline covers worker and GUI completion.
+        retry_delays = []
         w = self.window()
-        w.start('uninstall')
-        self.pump(lambda: w.pending is not None)
-        w.submit('y')
-        self.pump(lambda: not w.running)
+        with patch.object(cli, 'sleep', retry_delays.append):
+            w.start('uninstall')
+            self.pump(lambda: w.pending is not None, wizard=w)
+            w.submit('y')
+            self.pump(lambda: not w.running and not w.worker.is_alive(), wizard=w)
         self.assertEqual(w.title.text(), 'Check the TV connection to continue removal')
         self.assertIsNotNone(self.button(w, 'Save diagnostic report…'))
         pending = self.store.pending(self.profile)
         self.assertEqual(pending['recovery_protocol'], 'clean-removal-v1')
         self.assertEqual(pending['stage'], 'requested')
         self.assertEqual(pending['previous'], original)
+        self.assertEqual(self.connections, [self.profile] * 3)
+        self.assertEqual(retry_delays, [1, 2])
         self.assertEqual(self.remote.calls, [])
+        self.assertIsNotNone(w.report)
         report = json.loads(w.report.read_bytes())
         self.assertEqual(report['frontend'], 'desktop')
         original_failure = self.store.device_dir(self.profile)/'diagnostic-failures'/(original['diagnostic_id']+'.json')
         self.assertEqual(json.loads(original_failure.read_bytes()), first)
+        self.assertEqual(report['first_failure'], first)
         self.assertEqual(report['guidance']['code'], 'ssh-timeout')
         self.assertNotIn('PRIVATE', w.report.read_text())
 

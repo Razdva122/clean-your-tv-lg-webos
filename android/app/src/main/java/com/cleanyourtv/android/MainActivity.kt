@@ -8,11 +8,23 @@ import android.graphics.Color
 import android.os.*
 import android.webkit.*
 import android.widget.FrameLayout
+import com.chaquo.python.Python
+import com.chaquo.python.android.AndroidPlatform
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.util.UUID
+
+internal fun inspectionResult(config: String, inspect: () -> String): String {
+    return try {
+        require(config.length <= 4096)
+        inspect()
+    } catch (_: Exception) {
+        val host = try { JSONObject(config).optString("host") } catch (_: Exception) { "" }
+        JSONObject().put("kind", "inspection-error").put("host", host).toString()
+    }
+}
 
 class MainActivity : Activity() {
     private lateinit var web: WebView
@@ -91,20 +103,14 @@ class MainActivity : Activity() {
                 inspecting = true
             }
             Thread({
-                try {
-                    require(config.length <= 4096)
-                    if (!com.chaquo.python.Python.isStarted()) {
-                        com.chaquo.python.Python.start(com.chaquo.python.android.AndroidPlatform(this@MainActivity))
+                val event = try {
+                    inspectionResult(config) {
+                        if (!Python.isStarted()) Python.start(AndroidPlatform(this@MainActivity))
+                        Python.getInstance().getModule("android_bridge")
+                            .callAttr("inspect_connection", config).toString()
                     }
-                    val event = com.chaquo.python.Python.getInstance().getModule("android_bridge")
-                        .callAttr("inspect_connection", config).toString()
-                    ui.post { if (!isDestroyed) emit(event) }
-                } catch (_: Exception) {
-                    val host = try { JSONObject(config).optString("host") } catch (_: Exception) { "" }
-                    val event = JSONObject().put("kind", "inspection").put("host", host)
-                        .put("root_ssh", false).put("developer_ssh", false).put("root_port", 22).toString()
-                    ui.post { if (!isDestroyed) emit(event) }
                 } finally { inspecting = false }
+                ui.post { if (!isDestroyed) emit(event) }
             }, "cytv-inspect").start()
         }
         @JavascriptInterface fun snapshot(): String = Operation.snapshot()

@@ -31,14 +31,45 @@ on:
       - 'scripts/desktop_packaging.py'
       - '.github/workflows/cytv-runtime.yml'
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      windows_fixtures:
+        required: true
+        type: boolean
 permissions:
   contents: read
 # Cancel superseded PR checks; explicit QA dispatches remain independent.
 concurrency:
-  group: cytv-runtime-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
+  group: cytv-runtime-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}-${{ inputs.windows_fixtures }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
+  windows-fixtures:
+    if: inputs.windows_fixtures
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - name: Enable long repository paths on Windows
+        run: git config --global core.longpaths true
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: |
+            cytv/build-requirements.txt
+            cytv/requirements.txt
+            scripts/build-requirements.txt
+      - run: python -m pip install -r cytv/build-requirements.txt
+      - name: Require Qt for the desktop recovery suite
+        run: python -c "from cytv.gui import Wizard"
+      - name: Test Python runtime and desktop recovery fixtures
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: python -m unittest -v tests.cytv.test_python_runtime tests.cytv.test_desktop_recovery
   runtime:
+    if: ${{ !inputs.windows_fixtures }}
     strategy:
       fail-fast: false
       matrix:
