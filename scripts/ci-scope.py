@@ -23,19 +23,28 @@ WEATHER_PR_PATHS = frozenset({
 def components(paths):
     selected = set()
     for path in paths:
+        if path == 'README.md':
+            selected.update(('setup', 'preview'))
+            continue
         if (path.startswith(('website/', 'docs/i18n/'))
                 or path in ('docs/launcher-classic.jpg', 'docs/launcher-alpine.jpg',
                             'docs/launcher-ribbon.jpg', 'docs/launcher-liquid-glass.jpg',
+                            'docs/COMPATIBILITY.md', 'docs/compatibility-reports.json',
                             'assets/brand/logo-dark.svg',
                             'assets/brand/symbol-color.svg')):
             selected.add('preview')
             continue
-        if path in ('README.md', 'release-plan.json'):
+        if path == 'release-plan.json':
             selected.add('setup')
             continue
+        if path in ('LICENSE', 'THIRD_PARTY_NOTICES.md'):
+            selected.update(('installer', 'preview'))
+            continue
+        if path == 'android/app/src/main/assets/ui/guide/README.md':
+            selected.add('installer')
+            continue
         if (path.startswith(('docs/', '.github/ISSUE_TEMPLATE/', '.github/PULL_REQUEST_TEMPLATE/'))
-                or path.lower().endswith(('.md', '.rst'))
-                or path == 'LICENSE'):
+                or path.lower().endswith(('.md', '.rst'))):
             continue
         if path.startswith(('launcher/', 'root-edition/ui/', 'updater-app/')) and Path(path).suffix in ('.css', '.svg', '.png', '.jpg', '.woff', '.woff2', '.ttf'):
             selected.update(('ui', 'preview'))
