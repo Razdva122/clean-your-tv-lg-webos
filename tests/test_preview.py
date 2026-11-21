@@ -72,6 +72,8 @@ class PreviewTest(unittest.TestCase):
                     self.assertTrue((Path(directory) / url.lstrip('/')).is_file(), url)
             apps = json.loads((output / 'launcher/apps.js').read_text().removeprefix('window.TV_APPS = ').rstrip(';\n'))
             self.assertEqual(apps, preview.inventory())
+            for name in ('LICENSE', 'THIRD_PARTY_NOTICES.md'):
+                self.assertEqual((output / name).read_bytes(), (ROOT / name).read_bytes())
             for file in (ROOT / 'preview/reference-apps').rglob('*'):
                 if file.is_file():
                     self.assertEqual((output / file.relative_to(ROOT)).read_bytes(), file.read_bytes())
