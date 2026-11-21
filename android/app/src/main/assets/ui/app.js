@@ -32,7 +32,7 @@ let screen = 'welcome',
   port = '22';
 let selectedConnection = null,
   rootVariant = null;
-let inspecting = false,
+let inspectionHost = null,
   detected = null,
   report = null;
 let auth = 'password',
@@ -136,7 +136,7 @@ function tvArt() {
   return `<div class="tv-scene" aria-hidden="true"><div class="tv"><div class="screen"></div><div class="tv-content"><div class="tv-time"><span>Clean Your TV</span><span>20:24</span></div><div><div class="tv-greeting">${t('tvGreeting')}</div><div class="tv-sub">${t('tvSubtitle')}</div></div><div class="dock"><div class="tile">${icon('play')}</div><div class="tile">${icon('tv')}</div><div class="tile">${icon('music')}</div><div class="tile">${icon('grid')}</div><div class="tile">${icon('wifi')}</div></div></div></div><div class="connection-pill">${icon('check')} LG webOS</div></div>`;
 }
 function welcome() {
-  return `<section class="intro"><h1>${action === 'install' ? t('hero') : operationTitle()}</h1><p>${t(action === 'install' ? 'subtitle' : 'toolsConnect')}</p></section>${action === 'install' ? tvArt() : ''}<form id="welcome-connection" novalidate><label class="field"><span>${t('ip')}</span><input id="host" inputmode="decimal" autocomplete="off" spellcheck="false" placeholder="192.168.1.50" value="${esc(host)}" aria-describedby="host-error" aria-invalid="false"><p id="host-error" class="error" hidden></p></label><input id="port" type="hidden" value="${esc(port)}"><p id="port-error" hidden></p><p class="field-help">${t('ipHelp')}</p></form><footer class="bottom"><button class="primary ${action === 'install' ? 'setup-tv' : ''}" data-action="inspect" ${inspecting ? 'disabled' : ''}>${t(inspecting ? 'detecting' : action === 'install' ? 'setupTV' : 'detect')}${icon('wifi')}</button><div class="footnote">${icon('wifi')}${t('networkFoot')}</div>${action === 'install' ? `<div class="home-actions"><button class="secondary" data-action="wallpapers">${icon('grid')}${t('wallpapers')}</button><button class="secondary maintenance-button" data-action="tools">${icon('refresh')}${t('maintenance')}</button></div>` : ''}</footer>`;
+  return `<section class="intro"><h1>${action === 'install' ? t('hero') : operationTitle()}</h1><p>${t(action === 'install' ? 'subtitle' : 'toolsConnect')}</p></section>${action === 'install' ? tvArt() : ''}<form id="welcome-connection" novalidate><label class="field"><span>${t('ip')}</span><input id="host" inputmode="decimal" autocomplete="off" spellcheck="false" placeholder="192.168.1.50" value="${esc(host)}" aria-describedby="host-error" aria-invalid="false"><p id="host-error" class="error" hidden></p></label><input id="port" type="hidden" value="${esc(port)}"><p id="port-error" hidden></p><p class="field-help">${t('ipHelp')}</p></form><footer class="bottom"><button class="primary ${action === 'install' ? 'setup-tv' : ''}" data-action="inspect" ${inspectionHost ? 'disabled' : ''}>${t(inspectionHost ? 'detecting' : action === 'install' ? 'setupTV' : 'detect')}${icon('wifi')}</button><div class="footnote">${icon('wifi')}${t('networkFoot')}</div>${action === 'install' ? `<div class="home-actions"><button class="secondary" data-action="wallpapers">${icon('grid')}${t('wallpapers')}</button><button class="secondary maintenance-button" data-action="tools">${icon('refresh')}${t('maintenance')}</button></div>` : ''}</footer>`;
 }
 function editions() {
   return `${step()}<section class="page-intro"><h1>${t(action === 'install' ? 'choose' : 'connectionMethod')}</h1><p>${esc(host)}</p></section><p class="notice" role="status">${t(detected === 'root' ? 'detectedRoot' : detected === 'no-root' ? 'detectedDev' : detected === 'both' ? 'detectedBoth' : 'detectedNone')}</p><p class="notice">${t('editionHelp')}</p><div class="edition-options" role="radiogroup" aria-label="${t(action === 'install' ? 'choose' : 'connectionMethod')}">${['no-root', 'root'].map((e) => `<button class="edition" role="radio" aria-checked="${edition === e}" data-action="edition" data-edition="${e}"><span class="edition-symbol">${icon(e === 'root' ? 'root' : 'shield')}</span><span class="edition-copy"><span class="edition-title">${e === 'root' ? 'Root' : 'No-root'}${detected === e ? ` <span class="connection-match">${t('connectionMatch')}</span>` : ''}</span><p>${t(e === 'root' ? 'rootDesc' : 'noRootDesc')}</p></span><span class="radio-dot" aria-hidden="true"></span></button>`).join('')}</div><footer class="bottom">${primary('editionNext', 'connect')}<div class="footnote">${icon('shield')}${t(action === 'install' ? 'reviewFoot' : 'progressFoot')}</div></footer>`;
@@ -452,12 +452,12 @@ function validate() {
   return valid;
 }
 function inspectConnection() {
-  if (inspecting || running || !validate()) return;
+  if (inspectionHost || running || !validate()) return;
   selectedConnection = null;
   rootVariant = null;
   edition = null;
   detected = null;
-  inspecting = true;
+  inspectionHost = host;
   render();
   if (native) {
     CYTV.inspect(JSON.stringify({ host, port: 22 }));
@@ -579,27 +579,32 @@ function updateLog() {
   const tasks = document.getElementById('tasks');
   if (tasks) tasks.innerHTML = taskList();
 }
+function showEditions(event) {
+  detected =
+    event.root_ssh && event.developer_ssh
+      ? 'both'
+      : event.root_ssh
+        ? 'root'
+        : event.developer_ssh
+          ? 'no-root'
+          : null;
+  edition = ['root', 'no-root'].includes(detected) ? detected : null;
+  port = edition === 'no-root' ? '9922' : String(event.root_port || 22);
+  screen = 'editions';
+  render();
+}
 window.receiveNative = function (event, fromSnapshot = false) {
-  if (event.kind === 'inspection-error') {
-    if (event.host !== host || !inspecting) return;
-    inspecting = false;
-    render();
-    info(t('inspectionError'), true);
-  } else if (event.kind === 'inspection') {
-    if (event.host !== host) return;
-    inspecting = false;
-    detected =
-      event.root_ssh && event.developer_ssh
-        ? 'both'
-        : event.root_ssh
-          ? 'root'
-          : event.developer_ssh
-            ? 'no-root'
-            : null;
-    edition = ['root', 'no-root'].includes(detected) ? detected : null;
-    port = edition === 'no-root' ? '9922' : String(event.root_port || 22);
-    screen = 'editions';
-    render();
+  if (event.kind === 'inspection-error' || event.kind === 'inspection') {
+    if (!inspectionHost || event.host !== inspectionHost) return;
+    inspectionHost = null;
+    if (screen !== 'welcome') return;
+    readForm();
+    if (event.host !== host) render();
+    else if (event.kind === 'inspection') showEditions(event);
+    else {
+      render();
+      info(t('inspectionError'), true);
+    }
   } else if (event.kind === 'started') {
     removalConnection = false;
     restartReview = false;
@@ -889,13 +894,7 @@ if (preview) {
   const mode = new URLSearchParams(location.search).get('preview');
   if (mode === 'editions') {
     host = '192.168.1.50';
-    receiveNative({
-      kind: 'inspection',
-      host,
-      root_ssh: false,
-      developer_ssh: true,
-      root_port: 22
-    });
+    showEditions({ root_ssh: false, developer_ssh: true, root_port: 22 });
   } else if (mode === 'connect' || mode === 'root') {
     edition = mode === 'root' ? 'root' : 'no-root';
     port = edition === 'root' ? '22' : '9922';
