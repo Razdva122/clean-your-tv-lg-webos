@@ -259,8 +259,17 @@ def root_restore_failure_details(value):
     check = value.get('restore_check')
     if check in ('native-restore-unverified', 'native-stop-unverified', 'stock-home-unverified',
                  'controller-stop-unverified', 'stock-routing-unverified', 'intent-write-failed',
-                 'stock-foreground-unverified', 'stock-surface-unverified'):
+                 'stock-foreground-unverified', 'stock-surface-unverified',
+                 'python-select', 'python-binding', 'support-start', 'support-no-diagnostic',
+                 'updater-bundle-unverified', 'root-bundle-unverified', 'backend-unverified',
+                 'routing-lock-unavailable', 'native-status-unverified', 'retained-attempt-unverified',
+                 'filter-ownership-unverified', 'filter-chain-unverified',
+                 'stock-destination-unverified', 'stock-destination-readback-unverified'):
         result['restore_check'] = check
+    destination = value.get('destination_check')
+    if (check in ('stock-destination-unverified', 'stock-destination-readback-unverified')
+            and destination in ('settings-rejected', 'home-missing', 'home-overridden', 'invalid-home')):
+        result['destination_check'] = destination
     reason = value.get('native_reason')
     if reason in ('state_untrusted', 'config_invalid', 'restore_blocked', 'retirement_failed',
                   'recovery_busy', 'effect_busy', 'ui_release_failed', 'explicit_off'):

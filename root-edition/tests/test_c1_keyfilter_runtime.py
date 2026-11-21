@@ -21,6 +21,16 @@ class RuntimeTests(unittest.TestCase):
         self.assertTrue(allow_failure)
         return {'returnValue': True, 'settings': {'defaultApps': {'home': self.k.STOCK}}}
 
+    def test_missing_plural_home_setting_uses_factory_single_key_request(self):
+        missing = {'returnValue': True, 'settings': {'defaultApps': {}}}
+        stock = {'returnValue': True, 'settings': {'defaultApps': {'home': self.k.STOCK}}}
+        with patch.object(self.k, 'luna', side_effect=[missing, stock]) as setting:
+            self.k.require_stock_home_destination()
+        self.assertEqual([request.args[1] for request in setting.call_args_list], [
+            {'category': 'general', 'keys': ['defaultApps']},
+            {'category': 'general', 'key': 'defaultApps'},
+        ])
+
     def test_restore_failure_preserves_native_reason_without_accepting_refusal(self):
         from types import SimpleNamespace
         failure = dict(self.proof(), returnValue=False, reason='ui_release_failed')
@@ -1112,8 +1122,10 @@ class RuntimeTests(unittest.TestCase):
             self.k.atomic(ownership, dict(schema=1, entry=own, token=token), self.uid)
             replies.side_effect = None
             replies.return_value = {'returnValue':True, 'settings':{'defaultApps':{'home':self.k.APP}}}
-            with self.assertRaisesRegex(ValueError, 'LG Home destination'):
+            with self.assertRaisesRegex(ValueError, 'LG Home destination') as refused:
                 clean_removal.runtime_restore(payload, self.uid, activation_token=token, routing_only=True)
+            self.assertEqual(refused.exception.restore_check, 'stock-destination-unverified')
+            self.assertEqual(refused.exception.destination_check, 'home-overridden')
             self.assertEqual(native_actions, ['--status'])
             write.assert_not_called()
 
