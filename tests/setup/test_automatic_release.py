@@ -1,12 +1,18 @@
+from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import importlib.util
 import json
+import os
 from pathlib import Path
 import unittest
 import tempfile
 import struct
+import tarfile
 import zipfile
 import subprocess
+import sys
+from threading import Barrier
+from types import SimpleNamespace
 from unittest.mock import patch
 from cytv.package import ipk
 
@@ -19,6 +25,153 @@ SHA = 'a' * 40
 
 
 class AutomaticRelease(unittest.TestCase):
+    def test_assembly_failure_leaves_output_available_for_retry(self):
+        with tempfile.TemporaryDirectory() as directory:
+            parent = Path(directory)
+            artifacts = parent / 'builds'
+            first = artifacts / 'cytv-windows-x64/cytv.exe'
+            first.parent.mkdir(parents=True)
+            first.write_bytes(b'first build artifact')
+            output = parent / 'assets'
+
+            # Setup tests do not install the CI-only archive reader. The missing
+            # artifact must fail before assembly tries to open any archive.
+            reader = SimpleNamespace(CArchiveReader=None)
+            with patch.dict(sys.modules, {'PyInstaller.archive.readers': reader}):
+                with self.assertRaises(FileNotFoundError) as error:
+                    release.assemble(artifacts, output, VERSIONS, SHA)
+            self.assertEqual(Path(error.exception.filename),
+                             artifacts / 'cytv-windows-x64-desktop/cytv-windows-x64-desktop.zip')
+            self.assertEqual(set(parent.iterdir()), {artifacts})
+
+            def assemble_fixture(builds, staged, versions, commit, build_commit):
+                self.assertFalse(output.exists())
+                self.assertEqual(staged.parent.parent, parent)
+                (staged / 'BUILD-INFO.json').write_text(json.dumps({'source_commit': commit}))
+                (staged / 'cytv-windows-x64.exe').write_bytes(first.read_bytes())
+
+            with patch.object(release, '_assemble_assets', side_effect=assemble_fixture):
+                release.assemble(artifacts, output, VERSIONS, SHA)
+            self.assertEqual(set(parent.iterdir()), {artifacts, output})
+            self.assertEqual({path.name for path in output.iterdir()},
+                             {'BUILD-INFO.json', 'cytv-windows-x64.exe'})
+            self.assertEqual(json.loads((output / 'BUILD-INFO.json').read_text()), {'source_commit': SHA})
+            self.assertEqual((output / 'cytv-windows-x64.exe').read_bytes(), first.read_bytes())
+
+    def test_assembly_refuses_an_existing_empty_output(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / 'assets'
+            output.mkdir()
+            with self.assertRaises(FileExistsError) as error:
+                release.assemble(Path(directory) / 'missing', output, VERSIONS, SHA)
+            self.assertEqual(Path(error.exception.filename), output)
+            self.assertEqual(list(output.iterdir()), [])
+
+    def test_competing_assemblies_keep_the_successful_output(self):
+        with tempfile.TemporaryDirectory() as directory:
+            parent = Path(directory)
+            output = parent / 'assets'
+            promotion = Barrier(2)
+            rename = Path.rename
+
+            def assemble_fixture(builds, staged, versions, commit, build_commit):
+                (staged / 'BUILD-INFO.json').write_text(builds.name)
+
+            def promote(staged, target):
+                # Both attempts have checked that the destination is absent.
+                promotion.wait(timeout=5)
+                return rename(staged, target)
+
+            candidates = ('first', 'second')
+            with patch.object(release, '_assemble_assets', side_effect=assemble_fixture), \
+                 patch.object(Path, 'rename', promote), ThreadPoolExecutor(2) as workers:
+                attempts = [workers.submit(release.assemble, parent / name, output, VERSIONS, SHA)
+                            for name in candidates]
+                results = {name: attempt.exception(timeout=10) for name, attempt in zip(candidates, attempts)}
+            winner = (output / 'BUILD-INFO.json').read_text()
+            self.assertIn(winner, candidates)
+            self.assertIsNone(results.pop(winner))
+            self.assertIsInstance(next(iter(results.values())), FileExistsError)
+            self.assertEqual(list(parent.iterdir()), [output])
+
+    @unittest.skipIf(os.name == 'nt', 'Release assembly preserves POSIX package modes')
+    def test_outer_archives_repeat_across_assembly_clocks_and_umasks(self):
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory)
+            timestamp = 1_767_225_600  # 2026-01-01 00:00:00 UTC
+            subprocess.run(['git', 'init', '-q', str(source)], check=True)
+            subprocess.run(['git', '-c', 'user.name=Release fixture', '-c',
+                            'user.email=fixture@example.invalid', 'commit', '--allow-empty',
+                            '--no-gpg-sign', '-qm', 'Archive fixture'],
+                           cwd=source, check=True, env={**os.environ,
+                               'GIT_AUTHOR_DATE': f'{timestamp} +0000',
+                               'GIT_COMMITTER_DATE': f'{timestamp} +0000'})
+            commit = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=source, text=True).strip()
+            note = 'docs/RELEASE-' + VERSIONS['release'] + '.md'
+            script = 'scripts/update-permissions.cjs'
+            for name in ('docs/MANUAL_INSTALL.md', 'docs/INSTALL.md', 'docs/CLI.md', note,
+                         'LICENSE', 'THIRD_PARTY_NOTICES.md', script,
+                         'scripts/lib/update-permissions.cjs', 'updater-service/permissions.js'):
+                path = source / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(name.encode())
+            (source / script).chmod(0o755)
+
+            def create_bundle(name, clock, umask, content):
+                run = source / name
+                payload, staging, output = (run / folder for folder in
+                                            ('payload', 'clean-your-tv-root-0.1.9', 'output'))
+                previous = os.umask(umask)
+                try:
+                    for folder, files in (
+                        (payload, {'launcher.ipk': b'1080p', 'launcher-720p.ipk': b'720p',
+                                   'helper.ipk': content, 'updater.ipk': b'updater',
+                                   'system-updater/b/manifest.json': b'manifest',
+                                   'system-updater/a/updater.ipk': b'system updater'}),
+                        (staging, {'build/root-candidate/root.ipk': content,
+                                   'install.sh': b'#!/bin/sh\nexit 0\n'}),
+                    ):
+                        for member, data in files.items():
+                            path = folder / member
+                            path.parent.mkdir(parents=True, exist_ok=True)
+                            path.write_bytes(data)
+                    (staging / 'install.sh').chmod(0o777 & ~umask)
+                    output.mkdir()
+                    for path in [run, *run.rglob('*')]:
+                        os.utime(path, (clock, clock))
+                    with patch.object(release, 'ROOT', source), patch('time.time', return_value=clock):
+                        release.write_outer_archives(payload, staging, output, VERSIONS, commit)
+                finally:
+                    os.umask(previous)
+                return (output / 'clean-your-tv-no-root-1.3.5.zip',
+                        output / 'clean-your-tv-root-0.1.9.tar.gz')
+
+            first = create_bundle('first', timestamp + 100, 0o022, b'unchanged IPK')
+            retry = create_bundle('retry', timestamp + 900, 0o077, b'unchanged IPK')
+            changed = create_bundle('changed', timestamp + 900, 0o077, b'changed IPK')
+            for original, duplicate, modified in zip(first, retry, changed):
+                sha = lambda path: hashlib.sha256(path.read_bytes()).digest()
+                self.assertEqual(sha(original), sha(duplicate))
+                self.assertNotEqual(sha(original), sha(modified))
+
+            with zipfile.ZipFile(first[0]) as archive:
+                helper = archive.getinfo('com.local.nativehome_0.6.16_arm.ipk')
+                self.assertEqual(archive.read(helper), b'unchanged IPK')
+                self.assertEqual(helper.date_time, (2026, 1, 1, 0, 0, 0))
+                self.assertEqual((helper.external_attr >> 16) & 0o777, 0o644)
+                self.assertEqual((archive.getinfo(script).external_attr >> 16) & 0o777, 0o755)
+                self.assertEqual(archive.read('system-updater/a/updater.ipk'), b'system updater')
+            self.assertEqual(struct.unpack_from('<I', first[1].read_bytes(), 4)[0], timestamp)
+            prefix = 'clean-your-tv-root-0.1.9/'
+            with tarfile.open(first[1]) as archive:
+                root = archive.getmember(prefix.rstrip('/'))
+                install = archive.getmember(prefix + 'install.sh')
+                package = archive.getmember(prefix + 'build/root-candidate/root.ipk')
+                self.assertEqual(archive.extractfile(package).read(), b'unchanged IPK')
+                self.assertEqual(archive.extractfile(install).read(), b'#!/bin/sh\nexit 0\n')
+                self.assertEqual((root.mode, install.mode, package.mode), (0o755, 0o755, 0o644))
+                self.assertTrue(all(member.mtime == timestamp for member in archive.getmembers()))
+
     def test_resolver_requires_all_successful_candidate_jobs(self):
         import runpy
         names = runpy.run_path(str(ROOT / 'scripts/release-flow.py'))['BUILD_JOBS']
