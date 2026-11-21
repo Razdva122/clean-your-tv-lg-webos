@@ -919,6 +919,33 @@ class RuntimeTests(unittest.TestCase):
                     state='stopped', mounted=False, healthy=False, stock_verified=True,
                     stopped=True, token='1'*32, guardian_pid=0, reason='', profiles=None, **kw)
 
+    def test_embedded_enable_keeps_its_original_input_loss_policy(self):
+        self.prepare()
+        runtime = self.root / 'runtime'
+        runtime.mkdir()
+        script = runtime / 'c1-home-filter.js'
+        script.write_text('filter')
+        script.chmod(0o600)
+        child = Mock()
+        child.poll.return_value = 0
+        with patch.object(self.k, 'embedded_adapter', return_value=Mock()), \
+                patch.object(self.k, 'verify_ready', return_value={'integrity_verified': True}), \
+                patch.object(self.k, 'native', return_value=self.proof()), \
+                patch.object(self.k, 'probe', return_value=self.admission), \
+                patch.object(self.k, 'binary', return_value=Path('/fixture')), \
+                patch('helper_bridge.require_idle'), \
+                patch('python_binding.command', return_value='/python'), \
+                patch.object(self.k, 'change_chain'), \
+                patch.object(self.k, 'start_controller', return_value=child), \
+                patch.object(self.k, 'restore_locked'), \
+                patch.object(self.k, 'read_handshake', side_effect=TimeoutError), \
+                patch.object(self.k.subprocess, 'Popen', return_value=child) as start:
+            with self.assertRaises(TimeoutError):
+                self.k.enable_locked(self.root, self.uid, 0)
+        observer, guardian = [call.args[0] for call in start.call_args_list]
+        self.assertEqual(len(observer), 3)
+        self.assertEqual(guardian[1], '--guard')
+
     def test_embedded_restore_uses_stock_compositor_readback_without_standalone_home(self):
         self.prepare()
         selected = self.k.selection(self.root, self.uid)

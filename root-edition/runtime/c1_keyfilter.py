@@ -1121,13 +1121,16 @@ def enable_locked(root,uid,seconds, *, session=None, resume_token=None):
         controller=start_controller(root,uid,token,control_write,log); children.append(controller)
         os.close(control_write); fds.remove(control_write)
         from python_binding import command
-        observer=subprocess.Popen([command(root),str(Path(root)/'runtime/emergency_reader.py'),
-            str(input_write),'--reconnect-on-disconnect' if seconds else '--recover-input'],
+        recover_input = adapter is None and not seconds
+        observer_args = [command(root), str(Path(root)/'runtime/emergency_reader.py'), str(input_write)]
+        if adapter is None:
+            observer_args.append('--recover-input' if recover_input else '--reconnect-on-disconnect')
+        observer=subprocess.Popen(observer_args,
             pass_fds=(input_write,),stdin=subprocess.DEVNULL,stdout=log,stderr=log,start_new_session=True,close_fds=True)
         children.append(observer)
         os.close(input_write); fds.remove(input_write)
         guard_mode = '--guard-resumable' if session is not None else '--guard'
-        if not seconds: guard_mode += '-reconnect'
+        if recover_input: guard_mode += '-reconnect'
         guard=subprocess.Popen([str(helper),guard_mode,token,str(input_read),str(control_read),str(ready_write),str(seconds)],
             pass_fds=(input_read,control_read,ready_write),stdin=subprocess.DEVNULL,stdout=log,stderr=log,
             env={'PATH':'/usr/bin:/bin','LANG':'C'},start_new_session=True,close_fds=True)
