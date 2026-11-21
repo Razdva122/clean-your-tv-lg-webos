@@ -2,6 +2,7 @@
 from functools import cache, lru_cache
 import json
 import os
+import re
 import shlex
 from pathlib import Path
 import tempfile
@@ -11,13 +12,25 @@ from cytv import operations, package, state
 from cytv.errors import UserError
 
 
+_OBSERVER_PREFIX = 'unset NODE_OPTIONS NODE_PATH && /usr/bin/node -e '
+_SHELL_APOSTROPHE = "'\"'\"'"
+_QUOTED_WORD = r"""'[^']*'(?:"'"'[^']*')*"""
+_OBSERVER_WORDS = re.compile(rf'({_QUOTED_WORD}) ({_QUOTED_WORD})')
+
+
 @lru_cache(maxsize=32)
 def _observer_arguments(command):
+    # The observer emits two shlex.quote words. Decode that form without
+    # scanning a large inline script one character at a time in Python.
+    match = _OBSERVER_WORDS.fullmatch(command, len(_OBSERVER_PREFIX))
+    if match:
+        source, request = (word[1:-1].replace(_SHELL_APOSTROPHE, "'") for word in match.groups())
+        return (*_OBSERVER_PREFIX.split(), source, request)
     return tuple(shlex.split(command))
 
 
 def split_observer_command(command):
-    if command.startswith('unset NODE_OPTIONS NODE_PATH && /usr/bin/node -e '):
+    if command.startswith(_OBSERVER_PREFIX):
         # Hooks and the remote often parse the same large inline program.
         return list(_observer_arguments(command))
     return shlex.split(command)
@@ -41,24 +54,36 @@ class RemoteCommandTests(unittest.TestCase):
         _observer_arguments.cache_clear()
         self.addCleanup(_observer_arguments.cache_clear)
         prefix = 'unset NODE_OPTIONS NODE_PATH && /usr/bin/node -e '
-        source = """\nconst chars = "a ' b \\ c";\n"""
-        request = json.dumps({'source': source, 'path': "/tmp/a' b"})
-        command = prefix + shlex.quote(source) + ' ' + shlex.quote(request)
-        expected = shlex.split(command)
-        with patch.object(shlex, 'split', wraps=shlex.split) as split:
-            first = split_observer_command(command)
-            first[-1] = 'mutated'
-            self.assertEqual(split_observer_command(command), expected)
-            split.assert_called_once_with(command)
+        for source in ("", "a ' b \\ c", "' '", "one\n''\ttwo"):
+            with self.subTest(source=source):
+                request = json.dumps({'source': source, 'path': "/tmp/a' b"})
+                command = prefix + shlex.quote(source) + ' ' + shlex.quote(request)
+                expected = shlex.split(command)
+                with patch.object(shlex, 'split', wraps=shlex.split) as split:
+                    first = split_observer_command(command)
+                    first[-1] = 'mutated'
+                    self.assertEqual(split_observer_command(command), expected)
+                    split.assert_not_called()
 
     def test_other_shell_forms_keep_shlex_semantics(self):
+        from unittest.mock import patch
+
+        prefix = 'unset NODE_OPTIONS NODE_PATH && /usr/bin/node -e '
         for command in (
             '/usr/bin/node -e "x y" two\\ words',
-            'unset NODE_OPTIONS NODE_PATH && /usr/bin/node -e \'source\' \'first\' \'second\'',
+            prefix + "'source' 'first' 'second'",
+            prefix + "'source'  'request'",
+            prefix + 'plain ' + shlex.quote('request with a space'),
+            prefix + '"x y" ' + shlex.quote('request with a space'),
             'test -e "/tmp/a b"',
         ):
             with self.subTest(command=command):
-                self.assertEqual(split_observer_command(command), shlex.split(command))
+                expected = shlex.split(command)
+                with patch.object(shlex, 'split', wraps=shlex.split) as split:
+                    self.assertEqual(split_observer_command(command), expected)
+                    split.assert_called_once_with(command)
+        with self.assertRaisesRegex(ValueError, 'No closing quotation'):
+            split_observer_command(prefix + "'unfinished")
 
 
 class RootBundleFixtureTests(unittest.TestCase):

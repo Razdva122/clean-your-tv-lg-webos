@@ -40,8 +40,6 @@ class Remote:
         code=code.replace('/var/lib',str(self.root/'varlib')).replace('/var/webos-profile',str(self.root/'profiles'))
         code=code.replace('/proc/sys/kernel/random/boot_id',str(self.root/'boot'))
         code=code.replace("'/proc/'",json.dumps(str(self.root/'proc')+'/'))
-        if request.get('wait_for_idle'):
-            code = code.replace('idleDeadline=Date.now()+8000', 'idleDeadline=Date.now()+500')
         # Adapt only the fixed volatile root and its root UID for this host fixture.
         volatile=self.root/'volatile';volatile.mkdir(exist_ok=True);volatile.chmod(getattr(self,'volatile_mode',0o1777))
         code=code.replace('/tmp/.cytv-installer',str(volatile/'.cytv-installer'))
@@ -52,10 +50,14 @@ class Remote:
               +json.dumps(str(volatile))+')s.uid=0;return s;};\n')+code
         if request.get('connection') == 'root-ssh':
             code = 'process.getuid=function(){return 0;};\n' + code
+        code = self.transform(code)
+        if request.get('wait_for_idle'):
+            # A case can set a different deadline before the fixture's default.
+            code = code.replace('idleDeadline=Date.now()+8000', 'idleDeadline=Date.now()+500')
         (self.root/'boot').write_text(self.boot)
         node=os.environ.get('NODE_EXEC') or shutil.which('node')
-        result=subprocess.run([node] if stdin else [node,'-e',self.transform(code),words[-1]],
-                              input=self.transform(code).encode() if stdin else data,capture_output=True,timeout=timeout)
+        result=subprocess.run([node] if stdin else [node,'-e',code,words[-1]],
+                              input=code.encode() if stdin else data,capture_output=True,timeout=timeout)
         if result.returncode:raise RuntimeError(result.stderr.decode())
         if request['action']=='boot-create' and self.cut_boot_create:
             self.cut_boot_create=False;raise UserError('Connection to the TV was interrupted.')
