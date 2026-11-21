@@ -1,6 +1,9 @@
 import importlib.util
 import json
 from pathlib import Path
+import shutil
+import subprocess
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -9,6 +12,41 @@ SOURCE = Path(__file__).resolve().parents[1] / 'app/src/main/python/android_brid
 
 
 class BridgeTests(unittest.TestCase):
+    def test_staged_bridge_dispatches_cli_without_checkout_modules(self):
+        from android import stage
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            shutil.copytree(stage.ROOT / 'cytv', root / 'cytv', ignore=shutil.ignore_patterns('__pycache__'))
+            for name in ('lgtv.py', 'release-versions.json'):
+                shutil.copy2(stage.ROOT / name, root)
+            (root / 'build/cytv/payload').mkdir(parents=True)
+            (root / 'build/cytv/payload/payload.json').write_text('{}')
+            with (patch.object(stage, 'ROOT', root),
+                  patch.object(stage, 'verify_payload', return_value={'files': {}}),
+                  patch.object(stage.subprocess, 'check_output', return_value='test')):
+                stage.main()
+            source = root / 'android/app/build/generated/python'
+            shutil.copy2(SOURCE, source / SOURCE.name)
+            result = subprocess.run([
+                sys.executable, '-I', '-c', """
+import sys
+from pathlib import Path
+
+source = Path(sys.argv[1]).resolve()
+sys.path.insert(0, str(source))
+import android_bridge
+
+code = android_bridge.cli.main(["--version"])
+for name, module in sys.modules.items():
+    if name in ("android_bridge", "cytv", "lgtv") or name.startswith("cytv."):
+        assert Path(module.__file__).resolve().is_relative_to(source), (name, module.__file__)
+raise SystemExit(code)
+""", str(source)
+            ], cwd=root, capture_output=True, text=True, timeout=30)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertRegex(result.stdout, r'^cytv \S+\n$')
+
     def test_storage_retry_rechecks_only_the_failed_read_before_confirming_setup(self):
         import shlex
         from cytv import i18n

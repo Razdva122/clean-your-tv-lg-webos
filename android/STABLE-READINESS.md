@@ -76,16 +76,19 @@ operations remain untested by the native Store instrumentation.
   rejects `application-debuggable`, checks the pinned signer, SDK/ABI/version,
   source provenance and embedded TV payload. The trusted report explicitly
   records `debuggable: false`; final assembly requires that boolean.
-- CI compiles `OperationChecks` but does not run it on physical hardware or claim
-  device acceptance. The instrumentation APK is not a public release asset.
+- The build verifies the pinned signer and records the APK's hash, version and
+  source. The required Android CI job installs those exact bytes on a clean
+  Google APIs API 35 emulator with ARM64 translation and runs `OperationChecks`.
+  Only a passing run uploads the APK for candidate assembly. The instrumentation
+  APK is a separate CI artifact.
 - A disposable local signer is suitable for emulator checks only. Such APKs must
   fail the pinned public-signer verifier. Do not change the pin to make them pass.
 
-Before publication, verify the final protected-CI APK and its update over a
-published preview with the **original** certificate. Local re-signing checks the
-same-signer update mechanism but cannot replace this final artifact check.
-Never instruct users to uninstall the Android app to bypass a signature error:
-that deletes private keys, profiles and durable recovery receipts.
+Before publication, verify a fresh install and an update to the final protected-CI
+APK on an isolated API 35 ARM64 userdebug emulator. Use the original signed APK
+from each published version selected by the candidate QA plan. Compare version
+codes and verify the original signer. Uninstalling on a user's device deletes
+private keys, profiles and durable recovery receipts.
 
 ## Native emulator fixtures
 
@@ -102,42 +105,40 @@ The runner uses the real Android `Operation` and JSON implementation. It checks
 both edition contexts, refuses a second operation, bounds replay to 450 events,
 retains the started event and outstanding prompt across 500 background log
 events, rejects stale prompt answers and keeps secret values out of replay.
-Detaching the Activity listener models the missed-live-event boundary; this is
-not a physical rotation/standby acceptance claim.
+Detaching the Activity listener models the missed-live-event boundary. The
+bridge smoke test also invokes real connection inspection against a loopback
+SSH banner and verifies that a synthetic status operation reports SSH
+negotiation failure and exits before authentication.
 
 The regression failed before the fix with `Pending prompt lost during Activity
 replay`. FIFO trimming used to discard the outstanding question; trimming now
 protects the started event and current prompt, allowing a recreated Activity to
 rebuild the dialog. Answered questions become ordinary evictable events again.
 
-### Preview-to-release and process-death fixture
+### Original-signer upgrade and process-death fixture
 
-Use an isolated emulator containing no real TV profiles or keys. The wrapper
-requires an explicit `emulator-N` serial and treats a missing success marker as
-failure, because `adb shell am instrument` can exit zero after a test failure.
+Use an isolated emulator with no real TV profiles or keys. The wrapper requires
+an explicit emulator serial and checks its success markers because ADB can
+return zero after an instrumentation failure.
 
-1. Download the v1.1.0 `cytv-android-arm64.apk` into a private test directory and
-   verify its original certificate with `apksigner verify --print-certs`; its
-   SHA-256 must equal `android/preview-certificate.sha256`.
-2. Create a disposable local keystore. For local checks only, re-sign a **copy**
-   of that preview APK with it, build the new release APK with the same keystore,
-   and re-sign the instrumentation APK with that key as well. Keep the originals
-   and never use or publish these test-signed APKs as release assets.
-3. Install the test-signed preview and instrumentation APK on the emulator.
-4. Run `python3 android/tests/native.py --serial emulator-5554 --upgrade seed`.
-   This uses the real Python `Store` in the preview to save a synthetic profile
-   and unfinished installation receipt, plus a dummy imported-key file and
-   private preference. It performs no TV commands.
-5. Force-stop the target app, then use `adb -s emulator-5554 install -r` with the
-   new test-signed release APK. Do **not** uninstall between seed and verification.
-6. Run `python3 android/tests/native.py --serial emulator-5554 --upgrade verify`.
-   It requires a non-debuggable target, retained files/preferences, the canonical
-   saved identity path and unchanged pending receipt. A second `Store.begin`
-   must refuse the unresolved operation. A fresh process must not replay an
-   installation automatically. Only its reserved synthetic fixtures are removed
-   after success.
-7. Run `python3 android/tests/native.py --serial emulator-5554` against the same
-   release target to verify native operation behavior without debug mode.
+1. Verify each published baseline and the final protected-CI APK against their
+   recorded SHA-256, versionCode and pinned signer. Use the retained native test
+   APK from the same candidate build.
+2. On the clean emulator, run `adb -s emulator-5554 root` and wait for the device.
+   Confirm shell UID 0 and install the candidate and its separately signed test
+   APK. Run `python3 android/tests/native.py --serial emulator-5554`.
+3. For each selected baseline, start with a clean emulator, enable its ADB root
+   shell and install the published APK and the same test APK. Run
+   `python3 android/tests/native.py --serial emulator-5554 --upgrade seed`. It
+   saves a synthetic profile, pending receipt, dummy key file and preference.
+4. Force-stop the target, then update in place with `adb -s emulator-5554 install -r`
+   using the unmodified candidate APK. Run
+   `python3 android/tests/native.py --serial emulator-5554 --upgrade verify`.
+   This checks the non-debuggable target, retained state, pending-operation
+   refusal and absence of automatic replay.
+5. Run `python3 android/tests/native.py --serial emulator-5554` against the
+   updated app. Record the fresh and upgrade results with each APK hash,
+   versionCode, signer and emulator image in the candidate verification ledger.
 
 Android canonicalizes `/data/user/0` and `/data/data` aliases; compare the saved
 identity to the key's canonical path rather than interpreting alias spelling as
