@@ -142,10 +142,11 @@ class ResourceDeliveryTests(unittest.TestCase):
             (project/'cytv').mkdir();(project/'cytv/__init__.py').write_text('')
             (project/'lgtv.py').write_text('');(project/'release-versions.json').write_text('{}')
             payload=project/'build/cytv/payload';payload.mkdir(parents=True);(payload/'payload.json').write_text('{}')
-            with patch.dict(stage['main'].__globals__, {'ROOT':project,'verify_payload':lambda _: {'files':{}}}), patch('subprocess.check_output',return_value='fixture'):
-                stage['main']()
+            generated = project/'android/app/build/generated/cytv'
+            with patch.dict(stage['main'].__globals__, {'ROOT':project,'verify_payload':lambda _: {'files':{}}}), patch('subprocess.check_output',side_effect=['cytv/__init__.py\0lgtv.py\0','fixture']):
+                stage['main'](generated)
             for name in tv_sources.NAMES:
-                self.assertEqual((project/'android/app/build/generated/python/cytv/tv'/(name+'.js')).read_bytes(),
+                self.assertEqual((generated/'python/cytv/tv'/(name+'.js')).read_bytes(),
                                  tv_sources.trusted_source(name).encode())
 
     def test_cli_freezer_stages_and_passes_both_trusted_resources(self):

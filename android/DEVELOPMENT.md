@@ -20,7 +20,13 @@ cd android
 ./gradlew :app:assembleDebug :app:lintDebug :app:assembleDebugAndroidTest
 ```
 
-Output: `android/app/build/outputs/apk/debug/app-debug.apk` relative to the repository root. No release signing material is stored in the repository. The first build downloads dependencies; runtime installation uses the embedded payload. Runtime extraction is cached by the bundled manifest SHA-256, so reinstalling a preview with the same versionCode cannot reuse a different older payload. Staging validates every payload hash and copies only public source modules, excluding Qt/desktop entry points, caches and local profiles. It does not automatically rebuild TV payloads during Gradle execution.
+Output: `android/app/build/outputs/apk/debug/app-debug.apk` relative to the repository root. No release signing material is stored in the repository. The first build downloads dependencies; runtime installation uses the embedded payload. Runtime extraction is cached by the bundled manifest SHA-256, so reinstalling a preview with the same versionCode cannot reuse a different older payload.
+
+Android staging validates every payload hash and copies the manifest's files.
+It selects CYTV Python modules from the Git index and reads their current
+checkout contents, excluding desktop-only modules. Add new runtime modules to
+Git before building so they are included. The task refreshes its own inputs
+under `android/app/build/generated/cytv/`. Prepare the TV payload before staging.
 
 After successful extraction and cleanup, Android retains one payload directory for
 the current APK. A failed extraction preserves the previous ready copy. A later

@@ -4,6 +4,10 @@ plugins {
     id 'com.chaquo.python'
 }
 
+def appBuildDir = layout.buildDirectory
+def stagedAssets = appBuildDir.dir('generated/cytv/assets')
+def stagedPython = appBuildDir.dir('generated/cytv/python')
+
 android {
     namespace 'com.cleanyourtv.android'
     buildFeatures { buildConfig true }
@@ -39,7 +43,7 @@ android {
         }
     }
     sourceSets {
-        main.assets.srcDir layout.buildDirectory.dir('generated/assets')
+        main.assets.srcDir stagedAssets
     }
 }
 
@@ -57,28 +61,36 @@ chaquopy {
         extractPackages 'cytv'
     }
     sourceSets {
-        main { srcDir layout.buildDirectory.dir('generated/python') }
+        main { srcDir stagedPython }
     }
 }
 
 tasks.register('stageCytv', Exec) {
-    workingDir rootProject.projectDir.parentFile
-    commandLine System.getenv('CYTV_BUILD_PYTHON') ?: 'python3', 'android/stage.py'
-    inputs.dir rootProject.file('../cytv')
+    def checkout = rootProject.projectDir.parentFile
+    def python = System.getenv('CYTV_BUILD_PYTHON') ?: 'python3'
+    def stageCommand = [python, '-B', 'android/stage.py', '--build-dir', appBuildDir.get().asFile.absolutePath]
+    def stagedInputs = providers.exec {
+        workingDir checkout
+        commandLine stageCommand + '--describe-inputs'
+    }.standardOutput.asText.map { new groovy.json.JsonSlurper().parseText(it) }
+
+    workingDir checkout
+    commandLine stageCommand
+    inputs.files(stagedInputs.map { spec ->
+        (spec.pythonSources + spec.payloadFiles).collect { new File(checkout, it) }
+    })
     inputs.file rootProject.file('stage.py')
     inputs.file rootProject.file('../native/app/state-permissions.js')
     inputs.file rootProject.file('../native/app/contract-events.js')
     inputs.file rootProject.file('../native/contracts/boot-proof.js')
-    inputs.file rootProject.file('../lgtv.py')
     inputs.file rootProject.file('../release-versions.json')
     inputs.property('sourceCommit', providers.exec {
-        workingDir rootProject.projectDir.parentFile
+        workingDir checkout
         commandLine 'git', 'rev-parse', 'HEAD'
     }.standardOutput.asText)
-    inputs.file rootProject.file('../build/cytv/payload/payload.json')
-    inputs.dir rootProject.file('../build/cytv/payload')
-    outputs.dir layout.buildDirectory.dir('generated/python')
-    outputs.dir layout.buildDirectory.dir('generated/assets')
+    outputs.dir stagedPython
+    outputs.dir stagedAssets
+    outputs.upToDateWhen { stagedInputs.get().outputsMatch }
 }
 tasks.configureEach {
     if ((name.startsWith('generate') || name.startsWith('merge')) && name.endsWith('PythonSources')) dependsOn 'stageCytv'
