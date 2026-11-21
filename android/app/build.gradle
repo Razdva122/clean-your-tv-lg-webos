@@ -77,12 +77,9 @@ tasks.register('stageCytv', Exec) {
     workingDir checkout
     commandLine stageCommand
     inputs.files(stagedInputs.map { spec ->
-        (spec.pythonSources + spec.payloadFiles).collect { new File(checkout, it) }
+        (spec.pythonSources + spec.nativeSources + spec.payloadFiles).collect { new File(checkout, it) }
     })
     inputs.file rootProject.file('stage.py')
-    inputs.file rootProject.file('../native/app/state-permissions.js')
-    inputs.file rootProject.file('../native/app/contract-events.js')
-    inputs.file rootProject.file('../native/contracts/boot-proof.js')
     inputs.file rootProject.file('../release-versions.json')
     inputs.property('sourceCommit', providers.exec {
         workingDir checkout

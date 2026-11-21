@@ -9,7 +9,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from cytv.package import verify_payload
-from cytv.tv_sources import NAMES, stage_sources
+from cytv.tv_sources import SOURCES, stage_sources
 
 DESKTOP_MODULES = {
     '__main__.py', 'desktop.py', 'desktop_entry.py', 'gui.py', 'gui_style.py',
@@ -40,7 +40,7 @@ def describe_inputs(generated):
     sources = python_sources()
     payload = json.loads((ROOT / 'build/cytv/payload/payload.json').read_text())
     payload_files = ['payload.json', *payload['files']]
-    python_files = {*sources, *(f'cytv/tv/{name}.js' for name in NAMES)}
+    python_files = {*sources, *(f'cytv/tv/{name}.js' for name in SOURCES)}
     asset_files = {'cytv-build.json', *(f'payload/{name}' for name in payload_files)}
 
     def matches(directory, expected):
@@ -57,6 +57,7 @@ def describe_inputs(generated):
     # Gradle's output fingerprints do not invalidate the task for extra files.
     return {
         'pythonSources': sources,
+        'nativeSources': list(SOURCES.values()),
         'payloadFiles': [f'build/cytv/payload/{name}' for name in payload_files],
         'outputsMatch': matches(generated / 'python', python_files) and matches(generated / 'assets', asset_files),
     }

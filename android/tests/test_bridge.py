@@ -15,6 +15,7 @@ SOURCE = Path(__file__).resolve().parents[1] / 'app/src/main/python/android_brid
 class BridgeTests(unittest.TestCase):
     def test_clean_and_incremental_staging_preserve_bridge_runtime(self):
         from android import stage
+        from cytv.tv_sources import SOURCES
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -22,8 +23,7 @@ class BridgeTests(unittest.TestCase):
                             ignore=shutil.ignore_patterns('__pycache__', 'local_notes.py'))
             for name in ('lgtv.py', 'release-versions.json'):
                 shutil.copy2(stage.ROOT / name, root)
-            for name in ('android/stage.py', 'native/app/state-permissions.js',
-                         'native/app/contract-events.js', 'native/contracts/boot-proof.js'):
+            for name in ('android/stage.py', *SOURCES.values()):
                 target = root / name
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(stage.ROOT / name, target)
@@ -61,6 +61,9 @@ class BridgeTests(unittest.TestCase):
             local.write_text('LOCAL_NOTE = True\n')
             before = json.loads(stage_android('--describe-inputs'))
             self.assertTrue(before['outputsMatch'])
+            self.assertEqual(set(before['nativeSources']), set(SOURCES.values()))
+            for name, original in SOURCES.items():
+                self.assertEqual((source / f'cytv/tv/{name}.js').read_bytes(), (root / original).read_bytes())
             self.assertEqual(set(before['payloadFiles']), {
                 'build/cytv/payload/current.txt', 'build/cytv/payload/payload.json'
             })
