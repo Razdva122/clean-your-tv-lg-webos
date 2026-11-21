@@ -1,3 +1,4 @@
+from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import importlib.util
 import json
@@ -9,6 +10,9 @@ import struct
 import tarfile
 import zipfile
 import subprocess
+import sys
+from threading import Barrier
+from types import SimpleNamespace
 from unittest.mock import patch
 from cytv.package import ipk
 
@@ -21,6 +25,75 @@ SHA = 'a' * 40
 
 
 class AutomaticRelease(unittest.TestCase):
+    def test_assembly_failure_leaves_output_available_for_retry(self):
+        with tempfile.TemporaryDirectory() as directory:
+            parent = Path(directory)
+            artifacts = parent / 'builds'
+            first = artifacts / 'cytv-windows-x64/cytv.exe'
+            first.parent.mkdir(parents=True)
+            first.write_bytes(b'first build artifact')
+            output = parent / 'assets'
+
+            # Setup tests do not install the CI-only archive reader. The missing
+            # artifact must fail before assembly tries to open any archive.
+            reader = SimpleNamespace(CArchiveReader=None)
+            with patch.dict(sys.modules, {'PyInstaller.archive.readers': reader}):
+                with self.assertRaises(FileNotFoundError) as error:
+                    release.assemble(artifacts, output, VERSIONS, SHA)
+            self.assertEqual(Path(error.exception.filename),
+                             artifacts / 'cytv-windows-x64-desktop/cytv-windows-x64-desktop.zip')
+            self.assertEqual(set(parent.iterdir()), {artifacts})
+
+            def assemble_fixture(builds, staged, versions, commit, build_commit):
+                self.assertFalse(output.exists())
+                self.assertEqual(staged.parent.parent, parent)
+                (staged / 'BUILD-INFO.json').write_text(json.dumps({'source_commit': commit}))
+                (staged / 'cytv-windows-x64.exe').write_bytes(first.read_bytes())
+
+            with patch.object(release, '_assemble_assets', side_effect=assemble_fixture):
+                release.assemble(artifacts, output, VERSIONS, SHA)
+            self.assertEqual(set(parent.iterdir()), {artifacts, output})
+            self.assertEqual({path.name for path in output.iterdir()},
+                             {'BUILD-INFO.json', 'cytv-windows-x64.exe'})
+            self.assertEqual(json.loads((output / 'BUILD-INFO.json').read_text()), {'source_commit': SHA})
+            self.assertEqual((output / 'cytv-windows-x64.exe').read_bytes(), first.read_bytes())
+
+    def test_assembly_refuses_an_existing_empty_output(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / 'assets'
+            output.mkdir()
+            with self.assertRaises(FileExistsError) as error:
+                release.assemble(Path(directory) / 'missing', output, VERSIONS, SHA)
+            self.assertEqual(Path(error.exception.filename), output)
+            self.assertEqual(list(output.iterdir()), [])
+
+    def test_competing_assemblies_keep_the_successful_output(self):
+        with tempfile.TemporaryDirectory() as directory:
+            parent = Path(directory)
+            output = parent / 'assets'
+            promotion = Barrier(2)
+            rename = Path.rename
+
+            def assemble_fixture(builds, staged, versions, commit, build_commit):
+                (staged / 'BUILD-INFO.json').write_text(builds.name)
+
+            def promote(staged, target):
+                # Both attempts have checked that the destination is absent.
+                promotion.wait(timeout=5)
+                return rename(staged, target)
+
+            candidates = ('first', 'second')
+            with patch.object(release, '_assemble_assets', side_effect=assemble_fixture), \
+                 patch.object(Path, 'rename', promote), ThreadPoolExecutor(2) as workers:
+                attempts = [workers.submit(release.assemble, parent / name, output, VERSIONS, SHA)
+                            for name in candidates]
+                results = {name: attempt.exception(timeout=10) for name, attempt in zip(candidates, attempts)}
+            winner = (output / 'BUILD-INFO.json').read_text()
+            self.assertIn(winner, candidates)
+            self.assertIsNone(results.pop(winner))
+            self.assertIsInstance(next(iter(results.values())), FileExistsError)
+            self.assertEqual(list(parent.iterdir()), [output])
+
     @unittest.skipIf(os.name == 'nt', 'Release assembly preserves POSIX package modes')
     def test_outer_archives_repeat_across_assembly_clocks_and_umasks(self):
         with tempfile.TemporaryDirectory() as directory:

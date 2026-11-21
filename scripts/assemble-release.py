@@ -2,6 +2,7 @@
 """Plan releases and assemble verified public CI artifacts, without signing keys."""
 import argparse
 from datetime import datetime, timezone
+import errno
 import gzip
 import hashlib
 import io
@@ -260,9 +261,29 @@ def write_outer_archives(payload, staging, output, versions, commit):
 
 
 def assemble(artifacts, output, versions, commit, build_commit=None):
+    def refuse_existing_output():
+        if os.path.lexists(output):
+            raise FileExistsError(errno.EEXIST, os.strerror(errno.EEXIST), str(output))
+
+    refuse_existing_output()
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix='.cytv-release-assets-', dir=output.parent) as temporary:
+        staged = Path(temporary) / 'assets'
+        staged.mkdir()
+        _assemble_assets(artifacts, staged, versions, commit, build_commit)
+        refuse_existing_output()
+        try:
+            # A completed assembly is nonempty, so a competing rename cannot replace it.
+            staged.rename(output)
+        except OSError:
+            refuse_existing_output()
+            raise
+    print('Prepared', len(list(output.iterdir())), 'unsigned release assets from', commit)
+
+
+def _assemble_assets(artifacts, output, versions, commit, build_commit):
     from PyInstaller.archive.readers import CArchiveReader
     builder = runpy.run_path(str(ROOT / 'scripts/build-cytv.py'))
-    output.mkdir(parents=True, exist_ok=False)
     paths = {
         'cytv-windows-x64.exe': 'cytv-windows-x64/cytv.exe',
         'cytv-windows-x64-desktop.zip': 'cytv-windows-x64-desktop/cytv-windows-x64-desktop.zip',
@@ -346,7 +367,6 @@ def assemble(artifacts, output, versions, commit, build_commit=None):
     if approval is not None: info['homebrew'] = approval
     (output / 'BUILD-INFO.json').write_text(json.dumps(info, indent=2) + '\n')
     (output / 'SHA256SUMS').write_text(''.join(hashlib.sha256(p.read_bytes()).hexdigest() + '  ' + p.name + '\n' for p in sorted(output.iterdir())))
-    print('Prepared', len(list(output.iterdir())), 'unsigned release assets from', commit)
 
 
 def main():
