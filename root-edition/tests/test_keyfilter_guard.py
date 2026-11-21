@@ -335,13 +335,16 @@ int main(void) {
         self.assertEqual(result['input_timeout_phase'], 'waiting-for-ready')
         self.assertEqual((self.root/'state/outcome').read_text(), f'{TOKEN} input_expired\n')
     def test_stale_input_does_not_get_controller_lease(self):
-        p, iw, cw = self.armed(); deadline = time.monotonic()+2.5
-        while p.poll() is None and time.monotonic()<deadline:
-            time.sleep(.3)
-            try: os.write(cw,b'PING\n')
-            except BrokenPipeError: break
-            self.run_guard('--lease')
+        p, iw, cw = self.armed()
+        # Extend the other channels once. A lease request at the input deadline
+        # can publish its own stop before the guardian records input_expired.
+        time.sleep(.5)
+        os.write(cw, b'PING\n')
+        lease, _ = self.run_guard('--lease')
+        self.assertTrue(lease['healthy'])
         s = self.finish(p); self.assertFalse(s['healthy']); self.assertTrue(s['stopped'])
+        expired, _ = self.run_guard('--lease')
+        self.assertFalse(expired['healthy'])
         self.assertEqual(s['reason'], 'input_expired')
         self.assertEqual(s['input_timeout_phase'], 'waiting-for-ping')
         self.assertEqual((self.root/'state/outcome').read_text(), f'{TOKEN} input_expired\n')

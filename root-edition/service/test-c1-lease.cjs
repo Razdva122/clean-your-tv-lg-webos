@@ -849,11 +849,15 @@ assert.strictEqual(
   'embedded adapter uses the C1 lease broker'
 );
 embedded.adapterStatus();
-assert.deepStrictEqual(embedded.replies.at(-1), {
-  returnValue: true,
-  adapter: 'embedded-qml-v1',
-  attached: false
-});
+var adapterStatus = embedded.replies.at(-1);
+assert.deepEqual(Object.keys(adapterStatus).sort(), [
+  'adapter',
+  'attached',
+  'returnValue'
+]);
+assert.strictEqual(adapterStatus.returnValue, true);
+assert.strictEqual(adapterStatus.adapter, 'embedded-qml-v1');
+assert.strictEqual(adapterStatus.attached, false);
 var wrapper = embedded.message('wrapper');
 wrapper.payload.adapter = 'embedded-qml-v1';
 embedded.subscribe(wrapper);

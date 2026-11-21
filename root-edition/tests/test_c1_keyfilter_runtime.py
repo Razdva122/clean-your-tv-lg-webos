@@ -25,7 +25,7 @@ class RuntimeTests(unittest.TestCase):
         ]
         critical = ('/usr/bin/com.webos.app.home', '/usr/palm/applications/com.webos.app.home')
         bsp = '/overlay/bsppart/bsp/usr'
-        real_lstat = os.lstat
+        real_lstat = Path.lstat
         for home_device, shadow, bin_kind, extra_mount, accepted in (
                 ((179, 27), False, 'missing', None, True),
                 ((0, 45), False, 'missing', None, True),
@@ -64,8 +64,10 @@ class RuntimeTests(unittest.TestCase):
                         raise ValueError('Unsafe experimental backend directory')
 
                 with patch.object(self.k.os, 'stat', side_effect=lambda path, **kw:
-                        SimpleNamespace(st_dev=os.makedev(*devices[str(path)]))), \
-                        patch.object(self.k.os, 'lstat', side_effect=lower_lstat), \
+                        SimpleNamespace(st_dev=devices[str(path)])), \
+                        patch.object(self.k.os, 'major', side_effect=lambda device: device[0]), \
+                        patch.object(self.k.os, 'minor', side_effect=lambda device: device[1]), \
+                        patch.object(Path, 'lstat', lower_lstat), \
                         patch.object(self.k.legacy, 'trusted_directory', side_effect=trusted):
                     try:
                         actual = self.k.stock_bsp_overlay(mounts, mounts[1], critical)
