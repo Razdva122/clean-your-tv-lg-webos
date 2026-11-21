@@ -335,3 +335,21 @@ Focused integration checks passed for 70 compositor runtime cases on Python
 3.11, 20 embedded runtime cases, eight bootstrap flow cases, the native stale
 input case, lease-broker behavior, and the Home CARD browser check in both
 editions. GitHub will validate the combined patch before merge.
+
+### Replacement integration results
+
+- At 17:50:48 UTC+05:00, [#789](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/789)
+  merged as `9f6fb58b`. [Combined CI](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/44904514619)
+  passed on `fd482ad5`. All 23 selected checks passed. The six unselected
+  checks were skipped. The review kept the embedded adapter's original
+  input-loss behavior while ordinary C1 retains input reconnection.
+- [#772](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/772) advanced
+  during combined CI. Its updated head `27af65d7` passed its
+  [own CI](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/44905177061).
+  The combined tree also passed the affected installer diagnostics, desktop
+  recovery, Root activation, compositor runtime, clean removal and transport
+  tests locally. It merged at 18:04:26 UTC+05:00 as `024a4f9d`, with the same
+  tree as the local verification.
+- All 22 implementation PRs are integrated. GitHub still lists v1.26.0 as
+  Latest, and `v1.27.0-dev.3` resolves to the original RC3 source. No new
+  candidate build, device operation or acceptance result was recorded.

@@ -102,6 +102,151 @@
       "pr": 762,
       "issues": [],
       "summary": "Preserve Root Home intent during signed updates"
+    },
+    {
+      "pr": 763,
+      "issues": [
+        741
+      ],
+      "summary": "Offer LG Home recovery after a C1 safety stop"
+    },
+    {
+      "pr": 764,
+      "issues": [
+        152
+      ],
+      "summary": "Finish terminal-service cleanup after a verified restart (#152)"
+    },
+    {
+      "pr": 765,
+      "issues": [
+        133
+      ],
+      "summary": "Keep verified removal results consistent and record C3 recovery"
+    },
+    {
+      "pr": 767,
+      "issues": [],
+      "summary": "Skip prereleases in stable OTA verification"
+    },
+    {
+      "pr": 768,
+      "issues": [
+        440
+      ],
+      "summary": "Fix Root removal with stock Home over content on webOS 6 (#440)"
+    },
+    {
+      "pr": 769,
+      "issues": [
+        741
+      ],
+      "summary": "Recover C1 Home after input-only lease expiry"
+    },
+    {
+      "pr": 771,
+      "issues": [
+        410
+      ],
+      "summary": "Root: reuse C1 backend for capability-admitted embedded LG Home"
+    },
+    {
+      "pr": 772,
+      "issues": [
+        739
+      ],
+      "summary": "Resume verified retained Root Home activation in place"
+    },
+    {
+      "pr": 773,
+      "issues": [],
+      "summary": "Run affected installer fixtures on Windows before candidate freeze"
+    },
+    {
+      "pr": 774,
+      "issues": [],
+      "summary": "Reduce No-root installer fixture overhead"
+    },
+    {
+      "pr": 775,
+      "issues": [
+        615
+      ],
+      "summary": "Fix Root reinstall with a reused lifecycle controller PID (#615)"
+    },
+    {
+      "pr": 776,
+      "issues": [],
+      "summary": "Restore the Android installer bridge and test the signed APK"
+    },
+    {
+      "pr": 777,
+      "issues": [],
+      "summary": "Distinguish superseded candidate refreshes from API and build failures"
+    },
+    {
+      "pr": 780,
+      "issues": [],
+      "summary": "Route compatibility catalog edits to Pages checks"
+    },
+    {
+      "pr": 781,
+      "issues": [
+        519
+      ],
+      "summary": "Fix immutable BSP overlay Home admission and cleanup"
+    },
+    {
+      "pr": 782,
+      "issues": [],
+      "summary": "Apply CI and release audit fixes"
+    },
+    {
+      "pr": 783,
+      "issues": [],
+      "summary": "Make source packaging repeatable and preserve verified payloads"
+    },
+    {
+      "pr": 784,
+      "issues": [],
+      "summary": "Fix updater recovery and removal of unavailable themes"
+    },
+    {
+      "pr": 785,
+      "issues": [],
+      "summary": "Make release archives deterministic and assembly retryable"
+    },
+    {
+      "pr": 786,
+      "issues": [],
+      "summary": "Use explicit SDK versions to group compatibility reports"
+    },
+    {
+      "pr": 787,
+      "issues": [],
+      "summary": "Constrain Android build inputs and retire superseded payloads"
+    },
+    {
+      "pr": 788,
+      "issues": [
+        778
+      ],
+      "summary": "Explain refused TV remote-control connections (#778)"
+    },
+    {
+      "pr": 789,
+      "issues": [
+        133,
+        152,
+        410,
+        440,
+        519,
+        615,
+        739,
+        741,
+        778
+      ],
+      "summary": "Integrate open changes for the next release candidate"
     }
   ],
   "excluded": [],
