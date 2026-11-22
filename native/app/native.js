@@ -421,6 +421,7 @@ function diagnostic(trigger, details) {
     }
     diagnostic('expired');
     diagnosticUntil = 0;
+    syncDiagnosticWindows();
     return;
   }
   log(
@@ -446,6 +447,26 @@ function diagnostic(trigger, details) {
       details || {}
     )
   );
+}
+function syncDiagnosticWindows() {
+  if (screenWatch && screenWatch.setForegroundDiagnostics)
+    screenWatch.setForegroundDiagnostics(
+      diagnosticUntil ? recordDiagnosticWindows : null
+    );
+}
+function recordDiagnosticWindows(windows) {
+  var safe = [];
+  windows.slice(0, 16).forEach(function (window) {
+    if (
+      window &&
+      typeof window.appId === 'string' &&
+      /^[a-zA-Z0-9_.-]{1,256}$/.test(window.appId) &&
+      typeof window.windowType === 'string' &&
+      /^[a-zA-Z0-9_]{1,64}$/.test(window.windowType)
+    )
+      safe.push({ appId: window.appId, windowType: window.windowType });
+  });
+  diagnostic('foreground-windows', { windows: safe });
 }
 function diagnosticCommand(command, raw, restored) {
   var cmd = command.cmd,
@@ -501,11 +522,13 @@ function diagnosticCommand(command, raw, restored) {
     homeSequence = 0;
     lastHomeAt = null;
     diagnostic(restored ? 'resumed' : 'started', { durationMs: 60000 });
+    syncDiagnosticWindows();
   }
   if (cmd === 'diagnostics-stop') {
     diagnostic('stopped');
     diagnosticUntil = 0;
     diagnosticControl = null;
+    syncDiagnosticWindows();
   }
 }
 // Restore the bounded request before startup launches or subscriptions can fire.
@@ -1734,3 +1757,4 @@ var screenWatch = require('./screen-watch')(
     }
   }
 );
+if (diagnosticUntil) syncDiagnosticWindows();

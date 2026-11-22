@@ -315,7 +315,8 @@ def collect_home_report(remote, store, profile, write, *, reconnect=None, ask=No
     )
     records = {}
     triggers = {'started', 'resumed', 'power', 'sample', 'home', 'launch-request', 'launch-result',
-                'launch-timeout', 'foreground', 'startup-foreground', 'monitor', 'monitor-reset', 'expired', 'stopped'}
+                'launch-timeout', 'foreground', 'startup-foreground', 'foreground-windows',
+                'monitor', 'monitor-reset', 'expired', 'stopped'}
     monitors = {'starting', 'reset', 'screen-watch-connected', 'screen-watch-unavailable',
                 'screen-watch-error', 'screen-watch-disconnected'}
     started = complete = announced = False
@@ -381,6 +382,18 @@ def collect_home_report(remote, store, profile, write, *, reconnect=None, ask=No
                         'Request Active Standby', 'Prepare Active Standby'):
                     clean['powerState'] = item['powerState']
                 clean['foregroundSource'] = 'subscription-cache'
+                if clean['trigger'] == 'foreground-windows':
+                    windows = item.get('windows')
+                    if type(clean.get('time')) is not int or not isinstance(windows, list):
+                        continue
+                    clean['windows'] = []
+                    for window in windows[:16]:
+                        if not isinstance(window, dict):
+                            continue
+                        app_id, window_type = window.get('appId'), window.get('windowType')
+                        if (isinstance(app_id, str) and re.fullmatch(r'[a-zA-Z0-9_.-]{1,256}', app_id)
+                                and isinstance(window_type, str) and re.fullmatch(r'[a-zA-Z0-9_]{1,64}', window_type)):
+                            clean['windows'].append({'appId': app_id, 'windowType': window_type})
                 records[line] = clean
                 started = started or clean['trigger'] in ('started', 'resumed')
                 complete = complete or clean['trigger'] == 'expired'

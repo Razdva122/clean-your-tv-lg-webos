@@ -1,7 +1,9 @@
 'use strict';
 var fs = require('fs'),
   os = require('os'),
-  WebSocket = require('./websocket');
+  WebSocket = require('./websocket'),
+  foregroundUri = 'ssap://com.webos.applicationManager/getForegroundAppInfo',
+  diagnosticPrefix = 'cytv-foreground-windows-';
 // Local self-connection: the TV rejects loopback, but accepts its own LAN address.
 // Never accepts a remote endpoint or launches anything itself.
 module.exports = function (data, log, onForeground, onReset, onPower) {
@@ -13,6 +15,8 @@ module.exports = function (data, log, onForeground, onReset, onPower) {
     backoff = 10000,
     registered = false,
     pending = null,
+    diagnosticId = null,
+    onDiagnosticWindows = null,
     requestSequence = 0;
   function settle(value) {
     var request = pending;
@@ -49,13 +53,40 @@ module.exports = function (data, log, onForeground, onReset, onPower) {
         JSON.stringify({
           type: 'request',
           id: request.id,
-          uri: 'ssap://com.webos.applicationManager/getForegroundAppInfo',
+          uri: foregroundUri,
           payload: {}
         })
       );
     } catch (ignore) {
       if (pending === request) settle(null);
     }
+  }
+  function subscribeDiagnosticWindows() {
+    if (!registered || !onDiagnosticWindows || diagnosticId) return;
+    diagnosticId = diagnosticPrefix + ++requestSequence;
+    try {
+      socket.send(
+        JSON.stringify({
+          type: 'subscribe',
+          id: diagnosticId,
+          uri: foregroundUri,
+          payload: { extraInfo: true }
+        })
+      );
+    } catch (ignore) {
+      diagnosticId = null;
+    }
+  }
+  function setForegroundDiagnostics(callback) {
+    var previousId = diagnosticId;
+    diagnosticId = null;
+    onDiagnosticWindows = callback;
+    if (registered && previousId) {
+      try {
+        socket.send(JSON.stringify({ type: 'unsubscribe', id: previousId }));
+      } catch (ignore) {}
+    }
+    subscribeDiagnosticWindows();
   }
   function later() {
     if (!closed) {
@@ -67,6 +98,7 @@ module.exports = function (data, log, onForeground, onReset, onPower) {
     if (closed) return;
     registered = false;
     socket = null;
+    diagnosticId = null;
     settle(null);
     onReset();
     if (!require('./state-permissions')(data, log)) {
@@ -167,6 +199,19 @@ module.exports = function (data, log, onForeground, onReset, onPower) {
         settle(null);
         return;
       }
+      if (typeof m.id === 'string' && m.id.indexOf(diagnosticPrefix) === 0) {
+        if (m.id === diagnosticId) {
+          if (m.type === 'error') diagnosticId = null;
+          else if (
+            m.type === 'response' &&
+            m.payload &&
+            m.payload.returnValue !== false &&
+            Array.isArray(m.payload.foregroundAppInfo)
+          )
+            onDiagnosticWindows(m.payload.foregroundAppInfo);
+        }
+        return;
+      }
       if (pending && pending.socket === s && m.id === pending.id) {
         var payload = m.payload,
           value =
@@ -191,7 +236,7 @@ module.exports = function (data, log, onForeground, onReset, onPower) {
           JSON.stringify({
             type: 'subscribe',
             id: 'foreground',
-            uri: 'ssap://com.webos.applicationManager/getForegroundAppInfo',
+            uri: foregroundUri,
             payload: {}
           })
         );
@@ -204,6 +249,7 @@ module.exports = function (data, log, onForeground, onReset, onPower) {
               payload: {}
             })
           );
+        subscribeDiagnosticWindows();
       } else if (m.id === 'power') {
         if (m.type === 'error')
           log({ event: 'power-watch-error', error: String(m.error) });
@@ -273,6 +319,7 @@ module.exports = function (data, log, onForeground, onReset, onPower) {
   connect();
   return {
     foreground: foreground,
+    setForegroundDiagnostics: setForegroundDiagnostics,
     close: function () {
       closed = true;
       registered = false;

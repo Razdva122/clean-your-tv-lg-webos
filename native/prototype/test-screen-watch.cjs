@@ -520,3 +520,68 @@ console.log(
 console.log(
   'PASS: fresh registered foreground request, correlation, timeout, reset/close/errors, stale socket and single settlement'
 );
+
+t = setup(true);
+s = t.WS.last;
+s.emit('message', JSON.stringify({ type: 'registered' }));
+a.equal(
+  s.sent.some((request) => request.payload.extraInfo),
+  false
+);
+const windowsSeen = [];
+t.watcher.setForegroundDiagnostics((windows) => windowsSeen.push(windows));
+const extra = s.sent.at(-1);
+a.equal(extra.type, 'subscribe');
+a.equal(extra.payload.extraInfo, true);
+a.equal(extra.uri, s.sent.find((request) => request.id === 'foreground').uri);
+t.watcher.foreground((id) => a.equal(id, 'youtube.leanback.v4'));
+const normal = s.sent.at(-1);
+const windows = [
+  { appId: 'youtube.leanback.v4', windowType: '_WEBOS_WINDOW_TYPE_CARD' },
+  { appId: 'com.webos.app.fullhome', windowType: '_WEBOS_WINDOW_TYPE_HOME' }
+];
+const sendWindows = (socket, id) =>
+  socket.emit(
+    'message',
+    JSON.stringify({
+      id,
+      type: 'response',
+      payload: { foregroundAppInfo: windows }
+    })
+  );
+sendWindows(s, extra.id);
+s.emit(
+  'message',
+  JSON.stringify({
+    id: normal.id,
+    type: 'response',
+    payload: { appId: 'youtube.leanback.v4' }
+  })
+);
+a.deepEqual(JSON.parse(JSON.stringify(windowsSeen)), [windows]);
+a.deepEqual(t.events, []);
+s.emit(
+  'message',
+  JSON.stringify({
+    id: extra.id,
+    type: 'error',
+    error: '403 access denied'
+  })
+);
+a.equal(s.ended, undefined);
+s.terminate();
+[...t.timers.values()][0].f();
+const reconnected = t.WS.last;
+reconnected.emit('message', JSON.stringify({ type: 'registered' }));
+const resumed = reconnected.sent.at(-1);
+a.equal(resumed.payload.extraInfo, true);
+a.notEqual(resumed.id, extra.id);
+sendWindows(reconnected, resumed.id);
+t.watcher.setForegroundDiagnostics(null);
+const unsubscribe = reconnected.sent.at(-1);
+a.equal(unsubscribe.type, 'unsubscribe');
+a.equal(unsubscribe.id, resumed.id);
+sendWindows(reconnected, resumed.id);
+a.equal(windowsSeen.length, 2);
+t.watcher.close();
+console.log('PASS: diagnostic windows are isolated, resubscribed, and stopped');
