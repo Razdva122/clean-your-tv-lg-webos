@@ -80,6 +80,39 @@ class HomeDiagnosticsTests(unittest.TestCase):
             self.assertNotIn('PAIRINGKEY', path.read_text())
             self.assertEqual(remote.commands[-1]['cmd'], 'diagnostics-stop')
 
+    def test_exports_window_types_and_time_from_extra_foreground_diagnostics(self):
+        remote = Mock()
+        windows = [
+            {'appId': 'youtube.leanback.v4', 'windowType': '_WEBOS_WINDOW_TYPE_CARD'},
+            {'appId': 'com.webos.app.fullhome', 'windowType': '_WEBOS_WINDOW_TYPE_HOME'},
+        ]
+
+        def read_log(_command):
+            session = json.loads(remote.upload.call_args.args[1])['nonce']
+            events = [
+                {'trigger': 'started', 'time': 85000},
+                {'trigger': 'foreground-windows', 'time': 85012, 'windows': [
+                    dict(windows[0], windowId='private-window'),
+                    dict(windows[1], processId='private-process'),
+                    {'appId': 'invalid app ID', 'windowType': '_WEBOS_WINDOW_TYPE_HOME'},
+                ]},
+                {'trigger': 'foreground-windows', 'time': 85030, 'windows': []},
+                {'trigger': 'expired', 'time': 145000},
+            ]
+            return '\n'.join(json.dumps(dict(event='home-diagnostic', session=session, **event))
+                             for event in events)
+
+        remote.run.side_effect = read_log
+        with tempfile.TemporaryDirectory() as tmp:
+            path = diagnostics.collect_home_report(remote, state.Store(tmp),
+                state.target('192.0.2.55', 'no-root'), Mock())
+            records = json.loads(path.read_text())['helper_diagnostics']['records']
+            self.assertEqual(
+                [(record['time'], record['windows']) for record in records
+                 if record['trigger'] == 'foreground-windows'],
+                [(85012, windows), (85030, [])])
+            self.assertNotIn('private-', path.read_text())
+
     def test_diagnostic_requires_explicit_physical_observation(self):
         from cytv.terminal import Console
 
