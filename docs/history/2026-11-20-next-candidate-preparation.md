@@ -353,3 +353,78 @@ editions. GitHub will validate the combined patch before merge.
 - All 22 implementation PRs are integrated. GitHub still lists v1.26.0 as
   Latest, and `v1.27.0-dev.3` resolves to the original RC3 source. No new
   candidate build, device operation or acceptance result was recorded.
+
+## RC4 preparation on 2026-11-22
+
+| Stage (UTC+05:00) | Result |
+| --- | --- |
+| 13:07:00 | Release coordination handoff. Confirmed v1.26.0 as Latest and v1.27.0-dev.3 as the previous development prerelease. |
+| 13:08:48–13:09:06 | Merged [#793](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/793) as `4d6bd0c3` and [#794](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/794) as `163d1707` after their focused CI. [#790](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/790) remains draft pending the outcome of the requested retained-activation test. |
+| 13:09–13:10 | The saved C3 remote connection timed out and SSDP returned no devices. The maintainer confirmed the TV was unavailable. No device change or fresh pairing was attempted. |
+| 13:10–13:12 | Downloaded v1.26.0 assets, matched their published checksums and verified four signed System feeds, 12 package bindings and the signed engine catalog against the production public keys. |
+| 13:11–13:13 | Built and verified the 634-file local TV payload on macOS ARM64. The first attempt could not resolve the pinned font download host. The retry used the existing hash-checked source font cache and verified the normal, C1 and legacy Beta packages. |
+| 13:12–13:14 | Three README tests, six screen-watch cases, 39 controller cases and 177 Python diagnostics tests passed locally. [Combined Tests](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/45001456000), [frozen installer runtime](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/45001455643) and [website scope](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/45001455817) passed on `163d1707`. |
+| 13:14 | Validated the four local System sets, engine transition and the separate Helper probe payload. The prior Helper approval rejected the new package pair as expected. |
+| 13:16 | Ten release-input boundary checks and eight System bootstrap flow checks passed locally. |
+| Pending | Published Home/new Helper on project C3, then one full CI dispatch, build pin and artifact-bound acceptance. |
+
+The [release notes](../RELEASE-1.27.0.md) show the prepared version set. Home,
+Root, cytv and both Updaters advance beyond RC3 because their packaged paths
+changed. The System Updater engine advances for the changed shared storage
+support and infrastructure inventory. The System Updater IPK stays 1.2.11.
+Android advances to 0.23.1 / 54 for upgrade from codes 52 and 53. #794 adds
+runtime code and requires Helper 0.9.4. No Homebrew Installer promotion is
+selected. The release plan remains unfrozen while the mandatory compatibility
+probe is blocked. #793 and #794 improve reports for #792 and #686. Those two
+issues and #739 still await reporter evidence for their original behavior.
+
+### RC4-P00 Helper compatibility before full dispatch
+
+| Input | SHA-256 |
+| --- | --- |
+| Published Home 1.20.5 FHD | `93dae5cd5f0be37efbe81981bef2283c9fe5c349b769a45f62d1db713095529e` |
+| Published Home 1.20.5 HD | `836b75bacf6f5d9a030e6fec5236e6acb6082a8b5a5f53d9fab720ea41cb1477` |
+| Published Helper 0.9.3 | `89a8d0eec0da5b0795ad239ca620408d3d93d5cb8995480a7f389108598c6f0f` |
+| Local Helper 0.9.4 IPK | `56e76e9d52d9196916f725c6499291f0417f666aa801b9e13a25c571fa3c2b55` |
+| Local Helper 0.9.4 canonical archive | `53432274e26e4621c5a64c32376c097e1f12379acaec843e864ce6dae1927859` |
+| Local System engine 1.2.16 | `7200e8ac7c133b24ff0228d3411a84cfe94954d8722a7f9cb4ad72c6efd79fb2` |
+
+Use the authorized project OLED55C3RLA. Recheck the firmware and prior edition,
+versions, pending operation and rollback readiness by readback. The last
+observed firmware was 43.21.71 with SDK 11.2.0 and an LG Magic Remote of unknown
+exact model. The macOS ARM64 source installer probe pairs authenticated
+published Home 1.20.5 with the exact Helper 0.9.4 used in the local TV payload.
+Read back the installed application and service files, check Start and enabled
+status from the published Home, and verify network HOME from Media Player
+reaches and remains on Clean Your TV. Observe that the diagnostics session
+opens, captures and closes the additional foreground subscription on firmware
+that supports it. Physical Magic Remote and standby observations belong to
+the affected cases below. Record the actual runtime result before updating
+the approval. Run `verify_helper_transition` with the real packages and
+approval before dispatching the full candidate. The previous approval remains
+in place until first-hand evidence exists for the new pair.
+
+### RC4 selected acceptance cases
+
+The original IDs remain in scope. This pass uses the complete candidate once
+pinned and signed. Attach each artifact hash, starting state, observed result
+and evidence before issuing a failure inventory or changing the device state.
+
+| Case | Affected behavior and minimum evidence | Disposition |
+| --- | --- | --- |
+| RC1-01 | Signed Repair and forward update in each edition retain the Romanian profile and render Home. Home, Root and updater package hashes changed. | Awaits final signed packages and C3. |
+| RC1-02 | Exercise signed forward, same-IPK Repair and supported rollback in both editions from the authenticated baseline, including engine 1.2.16 and the changed infrastructure. Verify usable Home after rollback. | Awaits final signed packages and C3. |
+| RC1-03 | Start from active published Root Home. Verify automatic resume after signed update, paired HOME from Media Player, physical triple-Home emergency exit, audio, standby and AC cold boot. Verify retained recovery separately on a matching fixture or authorized device. | Awaits final signed packages and C3. The reporter's W20H receipt is unavailable on C3. |
+| RC1-04 | Re-run the exact final Beta artifact on the W19H retained B9 fixture for in-place migration, boot resume, Off and rollback. | Awaits final bundle. Existing maintainer deferral of physical B9 testing remains recorded. |
+| RC1-05 | Cover affected ordinary No-root removal and Root recovery/cleanup. Verify restored LG Home and surviving state on C3; use the matching simulated legacy Python and metadata fixtures for those paths. | Awaits final package. |
+| RC1-06 | Run the production-signed code 54 APK on the owned emulator: clean install, upgrades from codes 52 and 53, retained profile/state and a native installer operation that reaches the desktop bridge. | Awaits final signed APK. RC3 operation failure keeps this case open. |
+| RC4-07 | On an admitted embedded LG Home device, verify native Home overlay, physical controls and safety stop, HDMI/audio, standby, restart and rollback for the changed embedded controller and lease broker. | Awaits final package and access to an admitted device. |
+| RC4-08 | On the final No-root package, verify report export with the added window fields and ordinary Home routing during capture. Fixtures cover sanitization, opt-in, reconnect and Stop; the original webOS 4.5 YouTube scenario needs a matching TV. | Awaits final package and C3; matching webOS 4.5 device unavailable. |
+
+Reviewed README, desktop and source installation, recovery, updates, Helper
+diagnostics, Android and Root guides, compatibility, themes and all 13
+localized guides against the changed paths. The integrated guidance covers
+refused connections, Root Home handoff and unavailable themes. Existing
+localized anchors were preserved. Records and release versions are kept
+outside the translations. Hardware claims still depend on the selected
+acceptance cases.

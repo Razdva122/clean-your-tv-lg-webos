@@ -143,12 +143,12 @@ For contributors: [build and technical references](docs/development/README.md),
 <!-- release:components -->
 | Component | Stable version |
 | --- | --- |
-| cytv installer | 0.24.0 |
-| Home | 1.20.6 |
-| Home Helper | 0.9.3 |
-| Root edition | 0.24.0 |
-| Both edition Updaters | 0.6.5 |
-| Android installer / versionCode | 0.23.0 / 53 |
+| cytv installer | 0.24.1 |
+| Home | 1.20.7 |
+| Home Helper | 0.9.4 |
+| Root edition | 0.24.1 |
+| Both edition Updaters | 0.6.6 |
+| Android installer / versionCode | 0.23.1 / 54 |
 <!-- /release:components -->
 
 v1.15.0 fresh System Updater: 1.2.8 / protocol 1. v1.14.0 used 1.2.7. Existing supervisors stay pinned; installed 1.1.2 has no general replacement path. See the [delivery limits](docs/RELEASE-1.13.0.md).

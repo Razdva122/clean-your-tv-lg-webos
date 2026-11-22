@@ -247,6 +247,20 @@
         778
       ],
       "summary": "Integrate open changes for the next release candidate"
+    },
+    {
+      "pr": 793,
+      "issues": [
+        792
+      ],
+      "summary": "Show failed Home check in completed installer issue drafts"
+    },
+    {
+      "pr": 794,
+      "issues": [
+        686
+      ],
+      "summary": "Record foreground window details in Home diagnostics"
     }
   ],
   "excluded": [],
