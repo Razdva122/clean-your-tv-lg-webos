@@ -764,6 +764,10 @@ def issue_summary(value):
         'phase': observed['phase'],
         'reason': observed['reason'],
         'outcome': _issue_verified_outcome(value) or _issue_verified_outcome(primary) or 'unknown',
+        'home_check_failed': (
+            current['action'] == 'install' and current['phase'] == 'install-complete'
+            and value.get('error_type') is None and mapping(value.get('checks')).get('home-button') == 'fail'
+        ),
         'previous_attempt': previous_attempt,
         'earlier': original_observation if original and original is not primary else None,
         'later': later,

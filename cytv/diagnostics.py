@@ -208,6 +208,9 @@ def issue_draft(report):
         'Reason: ' + reason,
         'Last verified outcome: ' + summary['outcome'],
     ]
+    if summary['home_check_failed']:
+        subject += ' (home button check failed)'
+        lines.append('Home button check: failed')
     for label, item in (('Earlier failure', summary['earlier']), ('Later observation', summary['later'])):
         if item:
             observation = item['action'] + ' at ' + item['phase']
