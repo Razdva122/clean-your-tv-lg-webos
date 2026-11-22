@@ -87,6 +87,8 @@ Las flechas seleccionan y OK abre; mantén OK para reordenar. Una pulsación bre
 
 Para editar con pulsaciones breves, abre **Ajustes de Home → Apariencia → Editar mosaicos**. Pulsa OK para seleccionar un mosaico, muévelo con las flechas y pulsa OK para colocarlo. Atrás cancela el movimiento o sale de la edición.
 
+Si el mando se desconecta temporalmente, deja activado el control de Home. Se reanudará cuando el televisor vuelva a detectar el mando.
+
 **Pulsa Home tres veces en dos segundos**, soltando entre pulsaciones. Se recupera LG Home y se detiene el control sin borrar preferencias.
 
 No-root: Para reiniciar el control de Home, abre Home Helper, elige Iniciar Helper y confirma. Se conserva tu pantalla Home elegida. Root: activa **Cambiar Home** en los ajustes de Home para reanudar. **Abrir LG Home** lo abre una vez sin cambiar el destino de Home. Para recuperar LG Home como destino permanente, desactiva **Cambiar Home**. No ejecutes ambos controladores a la vez. Si el fallo se repite, deja LG Home activo.

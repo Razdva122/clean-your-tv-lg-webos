@@ -211,15 +211,20 @@ class Coordinator:
             if expected['phase'] == 'active': self.event(expected,'shutdown')
             return True
 
-    def _healthy(self, intent):
+    def _healthy(self, intent, *, confirmed_route=False):
         from persistent_health import require_fresh, require_guardian
         binding = self.read_binding()
         if (binding['generation'],binding['token']) != (intent['generation'],intent['token']) or binding['restored']:
             raise ValueError('Inactive transaction binding')
         tx = binding['transaction']; journal = self.route(tx)
-        require_fresh(tx)
+        if confirmed_route:
+            # An owned route from a confirmed boot preference can stay in place
+            # on rescan evidence. Neither new publication nor promotion can use it.
+            require_fresh(tx,allow_wait=True)
+        else:
+            require_fresh(tx)
         require_guardian(tx)
-        if not d.active_guardian(journal): raise ValueError('Independent guardian is not ready')
+        if not d.active_guardian(journal,allow_wait=confirmed_route): raise ValueError('Independent guardian is not ready')
         current = d.read(); candidate = journal['candidate']
         if (current['sam_home'] != candidate
                 or current['profiles']['defaultApps']['categories']['home'] != candidate
@@ -246,20 +251,34 @@ class Coordinator:
                 return dict(intent=intent,effect=effect,transaction=tx,persistent=True)
             finally: os.close(fd)
 
-    def restart(self, expected):
+    def restart(self, expected, *, cancelled=None):
         import emergency_trial
         with self.locked(expected):
             if expected['phase'] != 'starting': raise ValueError('No verified boot recovery')
             try:
                 d.require_home()
-                result = emergency_trial.start(before_publish=lambda tx:self._bind(expected,tx))
+                try:
+                    options = {} if cancelled is None else {'cancelled':cancelled}
+                    if cancelled is not None and cancelled():raise RuntimeError('Boot input handoff cancelled')
+                    result = emergency_trial.start(before_publish=lambda tx:self._bind(expected,tx),**options)
+                except emergency_trial.BootInputMissing as missing:
+                    tx=missing.args[0];binding=self.read_binding();route=self.route(tx)
+                    if (binding['transaction']!=tx or binding['generation']!=expected['generation']
+                            or binding['token']!=expected['token'] or route['state']!='restored'
+                            or os.path.lexists(d.TARGET) or d.read()!=route['baseline']):
+                        raise ValueError('Deferred boot has no verified stock baseline')
+                    self.write_binding(dict(binding,restored=True))
+                    intent,effect=self.event(expected,'wait-input')
+                    emergency_trial.spawn_input_wait(tx)
+                    return dict(intent=intent,effect=effect,transaction=tx,persistent=True)
                 import time
                 from persistent_health import require_fresh
                 for attempt in range(20):
                     try:
-                        require_fresh(result['transaction']); break
+                        require_fresh(result['transaction'],allow_wait=True); break
                     except (OSError,ValueError): time.sleep(.1)
-                self._healthy(expected)
+                self._healthy(expected,confirmed_route=True)
+                if cancelled is not None and cancelled():raise RuntimeError('Boot input handoff cancelled')
                 intent, effect = self.event(expected,'ready')
                 # Rearm protection without a foreground side effect here.
                 # Native startup choices only prepare remembered input; no app launch.

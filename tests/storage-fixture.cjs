@@ -39,13 +39,9 @@ function create(io, prepare) {
       pid: 'controller.pid',
       logger: 'controller.log'
     }[kind];
-    if (!name) throw Error('Unknown data record');
-    return io.readFileSync(directory + '/' + name, 'utf8');
+    return io.readFileSync(directory + '/' + (name || kind + '.json'), 'utf8');
   };
   result.readChannelRecord = function (directory, kind) {
-    return io.readFileSync(directory + '/' + kind + '.json', 'utf8');
-  };
-  result.readRecord = function (directory, kind) {
     return io.readFileSync(directory + '/' + kind + '.json', 'utf8');
   };
   result.appendLog = function (directory, line) {

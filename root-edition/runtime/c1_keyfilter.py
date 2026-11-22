@@ -602,7 +602,7 @@ def prepare(root, native_sha256, admission, uid=0):
     return value
 
 
-def binary(root=STATE, uid=0, *, capabilities=False):
+def binary(root=STATE, uid=0, *, capabilities=False, features=None):
     saved=selection(root,uid)
     if saved is None: raise ValueError('Compositor backend not selected')
     private_directory(root,uid)
@@ -610,6 +610,9 @@ def binary(root=STATE, uid=0, *, capabilities=False):
     raw=secure(path,uid,4*1024*1024)
     if hashlib.sha256(raw).hexdigest()!=saved['native_sha256'] or not path.stat().st_mode & 0o111:
         raise ValueError('Verified compositor guardian unavailable')
+    if features is not None:
+        features['wait_input'] = b'--guard-wait-input\0' in raw
+        features['boot_wait'] = b'--guard-boot-wait-input\0' in raw
     # Old binaries can take the state lock on unknown commands. A command
     # literal in the verified bytes permits the query, but grants no capability.
     if capabilities and b'--capabilities\0' not in raw:
@@ -693,9 +696,12 @@ def status(root=STATE, uid=0):
         value['filter_installed'] = installed
         value['routing_active'] = value['healthy'] and not value['stopped'] and installed
         intent = read_intent(root, uid)
-        active = value['routing_active'] and intent['token'] == value['token'] and intent['boot'] == boot_identity()
+        owned = installed and intent['token'] == value['token'] and intent['boot'] == boot_identity()
+        reconnecting = owned and intent['phase'] == 'active' and value['state'] == 'reconnecting'
+        view = dict(intent, enabled=bool(owned and intent['enabled'] and (value['routing_active'] or reconnecting)))
+        if reconnecting: view['phase'] = 'input-reconnecting'
         return dict(backend=BACKEND, routing=ROUTING, experimental=True,
-                    effective=value, intent=dict(intent, enabled=bool(active and intent['enabled'])),
+                    effective=value, intent=view,
                     recovery=verify_ready(), candidate=APP,
                     update_home_resume_available=False, persistent_enable_available=False)
     chain=read_chain()
@@ -706,7 +712,7 @@ def status(root=STATE, uid=0):
     value['routing_active']=value['healthy'] and not value['stopped']
     intent=read_intent(root,uid)
     active=value['healthy'] and not value['stopped'] and intent['token']==value['token'] and intent['phase'] in ('active','trial')
-    reconnecting = (value['state']=='reconnecting' and value['filter_installed']
+    reconnecting = (value['state']=='reconnecting' and bool(chain and chain[0]==filter_entry(root))
                     and intent['phase']=='active' and intent['enabled'] and value['token']==intent['token'])
     phase=(intent['phase'] if active else 'input-reconnecting' if reconnecting
            else 'disabled' if value['stock_verified'] else 'recovering')
@@ -1114,7 +1120,8 @@ def enable_locked(root,uid,seconds, *, session=None, resume_token=None):
             session = None
     from helper_bridge import require_idle
     require_idle()
-    helper=binary(root,uid)
+    guard_features = {}
+    helper=binary(root,uid,features=guard_features)
     # Verify the filter is protected before configd is allowed to read it.
     secure(Path(root)/'runtime/c1-home-filter.js',uid,65536)
     if resume_token is not None:
@@ -1141,28 +1148,40 @@ def enable_locked(root,uid,seconds, *, session=None, resume_token=None):
         controller=start_controller(root,uid,token,control_write,log); children.append(controller)
         os.close(control_write); fds.remove(control_write)
         from python_binding import command
-        recover_input = adapter is None and not seconds
+        wait_input = not seconds and guard_features.get('wait_input', False)
+        boot_wait = wait_input and resume_token is not None and guard_features.get('boot_wait', False)
+        recover_input = not seconds and adapter is None
         observer_args = [command(root), str(Path(root)/'runtime/emergency_reader.py'), str(input_write)]
-        if adapter is None:
-            observer_args.append('--recover-input' if recover_input else '--reconnect-on-disconnect')
+        if boot_wait:
+            observer_args.append('--boot-wait-input')
+        elif wait_input:
+            observer_args.append('--wait-input')
+        elif recover_input:
+            observer_args.append('--recover-input')
+        elif adapter is None:
+            observer_args.append('--reconnect-on-disconnect')
         observer=subprocess.Popen(observer_args,
             pass_fds=(input_write,),stdin=subprocess.DEVNULL,stdout=log,stderr=log,start_new_session=True,close_fds=True)
         children.append(observer)
         os.close(input_write); fds.remove(input_write)
         guard_mode = '--guard-resumable' if session is not None else '--guard'
-        if recover_input: guard_mode += '-reconnect'
+        if boot_wait: guard_mode = '--guard-boot-wait-input'
+        elif wait_input: guard_mode += '-wait-input'
+        elif recover_input: guard_mode += '-reconnect'
         guard=subprocess.Popen([str(helper),guard_mode,token,str(input_read),str(control_read),str(ready_write),str(seconds)],
             pass_fds=(input_read,control_read,ready_write),stdin=subprocess.DEVNULL,stdout=log,stderr=log,
             env={'PATH':'/usr/bin:/bin','LANG':'C'},start_new_session=True,close_fds=True)
         children.append(guard)
         for fd in (input_read,control_read,ready_write): os.close(fd); fds.remove(fd)
-        read_handshake(ready_read,('ARMED '+token+'\n').encode(),children)
+        acknowledgement = 'SUPERVISED' if boot_wait else 'ARMED'
+        read_handshake(ready_read,(acknowledgement+' '+token+'\n').encode(),children)
         after=validate_native(native(['--status'],root,uid))
-        if not after['healthy'] or after['token']!=token:
+        if after['token']!=token or not (after['healthy'] or wait_input and after['state']=='reconnecting'):
             raise ValueError('Guardian stopped during activation')
         write_intent(root,seconds==0,token,'trial' if seconds else 'active',uid,session=session)
         result=status(root,uid)
-        if not result['effective']['healthy']: raise ValueError('Compositor lease not active')
+        if not (result['effective']['healthy'] or wait_input and result['intent']['phase']=='input-reconnecting'):
+            raise ValueError('Compositor lease not active')
         return result
     except BaseException:
         try:
@@ -1230,7 +1249,7 @@ def execute(mode,transaction=None,root=STATE,uid=0):
                 if (intent['enabled'] and intent['phase'] == 'active'
                         and intent['boot'] == boot_identity() and intent != previous):
                     current = status(root, uid)
-                    if (current['intent'] == intent
+                    if (current['intent'] in (intent, dict(intent, phase='input-reconnecting'))
                             and current['recovery'].get('integrity_verified') is True):
                         return current
                 if resumable and normal and intent == previous:

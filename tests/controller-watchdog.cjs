@@ -12,6 +12,7 @@ function controller({
   blocked = false,
   watchdog = false,
   automatic = true,
+  bootCallback = false,
   explicitStart = false,
   panelStart = explicitStart,
   setupGeneration,
@@ -160,6 +161,7 @@ function controller({
         'native.js',
         JSON.stringify({
           nativeHomeAuto: automatic,
+          nativeHomeBoot: bootCallback,
           nativeHomeStart: explicitStart,
           nativeHomePanel: panelStart,
           nativeHomeSetup: setupGeneration
@@ -359,15 +361,27 @@ test('setup enables Home and preserves its bound generation across a guarded rel
   assert.equal(c.files.get(dir + 'stop-generation'), cancelled);
   assert(blocked(c));
 });
+test('previously enabled boot callback waits with its retained Stop generation', () => {
+  const retainedGeneration = 'I' + '3'.repeat(32);
+  const c = controller({ bootCallback: true, retainedGeneration });
+  assert.deepEqual(Array.from(c.workers[0].args), ['boot', retainedGeneration]);
+});
+
+test('previously enabled boot passes the saved Home Off setting into the first grab', () => {
+  const c = controller({ bootCallback: true, homeInitiallyOff: true });
+  assert.deepEqual(Array.from(c.workers[0].args), ['boot', '--home-off']);
+  assert.deepEqual(c.launches, []);
+});
+
 test('setup generation survives confirmed power-removal wake without becoming a Stop', () => {
   const token = 'I' + '3'.repeat(32),
     c = controller({ setupGeneration: token });
   c.power({ state: 'Prepare Power Off' });
-  c.close(32);
+  c.workers[0].stdout.emit('data', Buffer.from('INPUT_WAIT\n'));
   c.power({ state: 'Active', processing: false, onOff: 'on' });
   c.advance(1500);
-  assert.equal(c.workers.length, 2);
-  c.workers[1].stdout.emit('data', Buffer.from('READY\n'));
+  assert.equal(c.workers.length, 1);
+  c.workers[0].stdout.emit('data', Buffer.from('READY\n'));
   assert.equal(c.files.get(dir + 'stop-generation'), token);
   assert(!blocked(c));
 });
@@ -1392,137 +1406,42 @@ for (const terminal of ['EXIT 27\n', 'EXIT 30\n'])
     }
   );
 
-for (const state of [
-  'Request Power Off',
-  'Request Suspend',
-  'Prepare Power Off'
-])
-  test(
-    'confirmed evdev removal during ' +
-      state +
-      ' exits without persistent stop',
-    () => {
-      const c = controller();
-      c.power({ state });
-      assert(c.workers[0].writes.includes('T'));
-      c.close(32);
-      assert.equal(
-        c.exit,
-        undefined,
-        'controller must survive same-boot standby'
-      );
-      assert(!blocked(c));
-      assert.equal(
-        c.cleanups.length,
-        0,
-        'closed vanished devices need no second cleanup'
-      );
-      assert.equal(
-        c.workers.length,
-        1,
-        'do not restart against suspended input'
-      );
-    }
-  );
-for (const kind of [
-  'no-power',
-  'expired',
-  'active',
-  'signal',
-  'missing-report',
-  'emergency',
-  'stop'
-])
-  test('power-removal exception refuses ' + kind, () => {
+for (const powerTiming of ['no hint', 'wake before loss', 'wake during loss']) {
+  test('input recovery preserves live Home routing with ' + powerTiming, () => {
     const c = controller();
-    if (kind !== 'no-power') c.power({ state: 'Prepare Power Off' });
-    if (kind === 'expired') c.advance(15001);
-    if (kind === 'active')
-      c.power({ state: 'Active', processing: false, onOff: 'on' });
-    if (kind === 'emergency') c.files.set(dir + 'blocked', 'explicit-stop');
-    if (kind === 'stop') c.command('stop');
-    c.close(
-      32,
-      kind === 'signal' ? 'SIGTERM' : null,
-      c.workers[0],
-      kind === 'missing-report' ? null : 32
-    );
-    if (c.cleanups.length) c.cleanup();
-    assert(blocked(c));
+    const worker = c.workers[0];
+    const send = (lines) => worker.stdout.emit('data', Buffer.from(lines));
+    if (powerTiming !== 'no hint') c.power({ state: 'Suspend' });
+    if (powerTiming === 'wake before loss') c.power({ state: 'Active' });
+    c.launches.length = 0;
+    send('IRHOME\nINPUT_WAIT\n');
+    c.advance(65000);
+    assert.equal(c.launches.length, 0, 'stale IR press cannot open Home');
+    assert.equal(c.workers.length, 1);
+    assert.equal(c.cleanups.length, 0);
+    assert.equal(c.exit, undefined);
+    assert(!blocked(c));
+    assert.equal(c.files.has(dir + 'watchdog'), false);
+    if (powerTiming === 'wake during loss') c.power({ state: 'Active' });
+    send('READY\nHOME\n');
+    assert.deepEqual(c.launches, ['com.gathin.tvhome']);
     assert.equal(c.workers.length, 1);
   });
-test('both evdev endpoints disappearing without a power hint ends this boot without Stop', () => {
-  const c = controller();
-  c.close(33);
-  assert.equal(blocked(c), false);
-  assert.equal(c.cleanups.length, 0);
-  assert.equal(c.exit, 33);
-});
-test('device removal cannot override a simultaneous Stop or an unconfirmed exit', () => {
-  const stopped = controller();
-  stopped.files.set(dir + 'control.json', '{"cmd":"stop"}');
-  stopped.close(33);
-  assert.equal(blocked(stopped), true);
-  const unconfirmed = controller();
-  unconfirmed.close(33, null, unconfirmed.workers[0], null);
-  assert.equal(blocked(unconfirmed), true);
-});
-test('ordinary cleanup failure remains blocked even during power-off', () => {
-  const c = controller();
-  c.power({ state: 'Prepare Power Off' });
-  c.close(31);
-  c.cleanup();
-  assert(blocked(c));
-});
+}
 
-test('same-boot wake starts one new relay only after fresh Active and retains Home routing', () => {
+test('preparing power off followed by input loss still restores Home on wake', () => {
   const c = controller();
+  const w = c.workers[0];
   c.power({ state: 'Prepare Power Off' });
-  c.close(32);
+  w.stdout.emit('data', Buffer.from('INPUT_WAIT\n'));
   c.launches.length = 0;
-  c.advance(60000);
-  assert.equal(c.workers.length, 1);
-  assert.equal(c.exit, undefined);
-  c.power({ state: 'Active', processing: true, onOff: 'on' });
-  c.advance(1600);
-  assert.equal(c.workers.length, 1);
-  c.power({ state: 'Active', processing: false, onOff: 'on' });
-  c.power({ state: 'Active', processing: false, onOff: 'on' });
-  c.advance(1499);
-  assert.equal(c.workers.length, 1);
-  c.advance(1);
-  assert.equal(c.workers.length, 2);
-  c.workers[1].stdout.emit('data', Buffer.from('READY\n'));
+  c.power({ state: 'Active' });
+  w.stdout.emit('data', Buffer.from('READY\n'));
   c.advance(400);
-  assert(c.workers[1].writes.includes('E'));
-  assert(c.launches.includes('com.gathin.tvhome'));
-  assert(!blocked(c));
+  assert.deepEqual(c.launches, ['com.gathin.tvhome']);
 });
-for (const kind of [
-  'stop',
-  'blocked',
-  'watchdog',
-  'off-again',
-  'processing-again'
-])
-  test('wake while waiting for input respects ' + kind, () => {
-    const c = controller();
-    c.power({ state: 'Request Suspend' });
-    c.close(32);
-    c.power({ state: 'Active', processing: false, onOff: 'on' });
-    if (kind === 'stop') c.command('stop');
-    if (kind === 'blocked') c.files.set(dir + 'blocked', 'explicit-stop');
-    if (kind === 'watchdog') c.files.set(dir + 'watchdog', 'stopped');
-    if (kind === 'off-again') c.power({ state: 'Prepare Power Off' });
-    if (kind === 'processing-again')
-      c.power({ state: 'Active', processing: true, onOff: 'on' });
-    c.advance(2000);
-    assert.equal(c.workers.length, 1);
-    if (kind === 'stop' || kind === 'blocked') assert(blocked(c));
-    if (kind === 'watchdog') assert(c.files.has(dir + 'watchdog'));
-  });
 
-test('Home Off stays disabled after power-removal wake', () => {
+test('Home Off survives waiting and reacquisition on the same relay', () => {
   const c = controller();
   c.files.set(
     dir + 'home-request.json',
@@ -1534,40 +1453,63 @@ test('Home Off stays disabled after power-removal wake', () => {
     })
   );
   c.advance(400);
-  c.power({ state: 'Suspend' });
-  c.close(32);
   c.launches.length = 0;
-  c.power({ state: 'Active', onOff: 'on', processing: false });
+  const w = c.workers[0];
+  c.power({ state: 'Suspend' });
+  w.stdout.emit('data', Buffer.from('INPUT_WAIT\n'));
+  c.power({ state: 'Active' });
   c.advance(1500);
-  const w = c.workers[1];
   w.stdout.emit('data', Buffer.from('READY\nHOME\n'));
   c.advance(400);
   assert(w.writes.includes('D'));
+  assert.equal(c.files.get(dir + 'home-control.json'), '{"enabled":false}');
   assert.equal(c.launches.length, 0);
   assert(!blocked(c));
 });
 
-test('power hint reaches a wake replacement before READY and removal waits for another wake', () => {
+for (const guard of ['stop', 'blocked', 'watchdog', 'generation']) {
+  test('waiting relay observes ' + guard + ' before reacquiring input', () => {
+    const c = controller({ retainedGeneration: 'I' + '1'.repeat(32) });
+    const w = c.workers[0];
+    w.stdout.emit('data', Buffer.from('INPUT_WAIT\n'));
+    if (guard === 'stop') c.command('stop');
+    if (guard === 'generation')
+      c.files.set(dir + 'stop-generation', 'S' + '2'.repeat(32));
+    if (guard === 'blocked' || guard === 'watchdog')
+      c.files.set(dir + guard, 'stopped');
+    c.advance(400);
+    assert(w.writes.includes('Q'));
+    c.launches.length = 0;
+    w.stdout.emit('data', Buffer.from('READY\nHOME\n'));
+    assert.deepEqual(c.launches, []);
+    c.close(29);
+    assert.equal(c.workers.length, 1);
+    assert.equal(
+      c.cleanups.length,
+      0,
+      'waiting relay already released all input'
+    );
+  });
+}
+
+test('unresponsive relay still triggers watchdog during discovery', () => {
   const c = controller();
-  c.power({ state: 'Suspend' });
-  c.close(32);
-  c.power({ state: 'Active', processing: false, onOff: 'on' });
-  c.advance(1500);
-  const w = c.workers[1];
-  c.power({ state: 'Prepare Power Off' });
-  assert(
-    w.writes.includes('T'),
-    'startup must receive the same bounded power hint'
-  );
-  c.close(32, null, w);
-  assert(!blocked(c));
-  assert.equal(c.exit, undefined);
-  c.advance(2000);
-  assert.equal(c.workers.length, 2);
-  c.power({ state: 'Active', processing: false, onOff: 'on' });
-  c.advance(1500);
-  assert.equal(c.workers.length, 3);
+  const w = c.workers[0];
+  w.stdout.emit('data', Buffer.from('INPUT_WAIT\n'));
+  w.ack = false;
+  c.advance(3200);
+  assert.deepEqual(w.kills, ['SIGKILL']);
+  assert(c.files.has(dir + 'watchdog'));
 });
+
+test('ordinary cleanup failure remains blocked even during power-off', () => {
+  const c = controller();
+  c.power({ state: 'Prepare Power Off' });
+  c.close(31);
+  c.cleanup();
+  assert(blocked(c));
+});
+
 test('mismatched relay exit logs safe original numeric facts before terminal cleanup', () => {
   const c = controller();
   c.close(99, null, c.workers[0], 20);
@@ -1580,17 +1522,17 @@ test('mismatched relay exit logs safe original numeric facts before terminal cle
   assert(blocked(c));
   assert.equal(c.workers.length, 1);
 });
-test('unknown power processing retains truthy wake delay and emits metadata only', () => {
+test('unknown power processing delays wake presentation and emits metadata only', () => {
   const c = controller();
   c.power({ state: 'Suspend' });
-  c.close(32);
+  c.launches.length = 0;
   c.power({
     state: 'Active',
     processing: 'private-processing-marker',
     onOff: 'on'
   });
   c.advance(2000);
-  assert.equal(c.workers.length, 1);
+  assert.deepEqual(c.launches, []);
   const snapshot = c.logs.find((x) => x.event === 'contract-snapshot');
   const e = snapshot && { contract: snapshot.contract.events[0] };
   assert(e, 'unknown firmware value needs safe metadata');

@@ -34,7 +34,7 @@ def watch(transaction, boot, load, restore, clock, sleep):
         if not isinstance(lease.get('transaction'), str): return fail('invalid-lease')
         if lease['transaction'] != transaction: return 'superseded'
         if lease.get('state') in ('restored', 'conflict'): return lease['state']
-        if (lease.get('state') != 'active' or lease.get('boot') != boot
+        if (lease.get('state') not in ('active','waiting-input') or lease.get('boot') != boot
                 or type(lease.get('sequence')) is not int or lease['sequence'] <= 0
                 or not finite(lease.get('issued')) or not finite(lease.get('expires'))):
             return fail('invalid-lease')

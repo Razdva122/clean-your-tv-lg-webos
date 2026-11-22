@@ -87,6 +87,8 @@ Les flèches sélectionnent, OK ouvre ; maintenez OK pour réorganiser. Un appui
 
 Pour modifier les tuiles avec des appuis courts, ouvrez **Paramètres de Home → Apparence → Modifier les tuiles**. Appuyez sur OK pour sélectionner une tuile, déplacez-la avec les flèches puis appuyez sur OK pour la poser. Retour annule le déplacement ou quitte la modification.
 
+Si la télécommande se déconnecte temporairement, laissez la commande de Home activée. Elle reprend dès que le téléviseur détecte à nouveau la télécommande.
+
 **Appuyez trois fois sur Home en deux secondes**, en relâchant entre les appuis. Cela rétablit LG Home et arrête le contrôle sans effacer vos préférences.
 
 No-root: Pour relancer le contrôle de Home, ouvrez Home Helper, choisissez Démarrer Helper et confirmez. Votre choix d’écran Home est conservé. Root: activez **Changer Home** dans les paramètres de Home pour reprendre. **Ouvrir LG Home** ouvre LG Home une fois sans modifier la destination de Home. Pour rétablir LG Home comme destination permanente, désactivez **Changer Home**. N’exécutez jamais les deux contrôleurs ensemble. Si la panne revient, laissez LG Home actif.

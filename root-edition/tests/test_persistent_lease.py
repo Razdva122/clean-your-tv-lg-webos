@@ -21,6 +21,13 @@ class LeaseTests(unittest.TestCase):
  def test_same_sequence_cannot_extend_lease(self):
   a=self.lease();b=dict(a,issued=.25,expires=2.25)
   self.assertEqual(self.run_case([a,b]),'invalid-lease')
+ def test_waiting_scans_are_watched_and_can_recover_active_input(self):
+  waiting=dict(self.lease(),state='waiting-input',sequence=2,issued=.25,expires=2.25)
+  self.assertEqual(self.run_case([self.lease(),waiting]),'lease-expired')
+  self.assertEqual(self.now,2.25)
+  active=dict(self.lease(),sequence=3,issued=.5,expires=2.5)
+  self.assertEqual(self.run_case([self.lease(),waiting,active,dict(transaction='tx',state='restored')]),'restored')
+  self.assertEqual(self.restores,[])
  def test_missing_and_wrong_boot_recover(self):
   for record in (None,dict(self.lease(),boot='other')):
    self.assertEqual(self.run_case([record]),'invalid-lease')

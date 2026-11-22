@@ -57,9 +57,9 @@ class ContinuationTests(unittest.TestCase):
 
     def dispatch(self, gate=None, spawn=None):
         fresh = health.require_fresh
-        def pulse(transaction):
+        def pulse(transaction,**options):
             if not continuation.waiting(transaction): health.publish(transaction, 1)
-            return fresh(transaction)
+            return fresh(transaction,**options)
         from unittest.mock import Mock
         with patch.object(continuation,'arm_bootstrap',return_value=Mock()), patch('provision.verify', return_value={}), \
                 patch('helper_bridge.require_idle', return_value={}), \
@@ -82,12 +82,201 @@ class ContinuationTests(unittest.TestCase):
         self.assertNotEqual(route['transaction'], 'route-a')
         self.assertFalse((self.root/continuation.NAME).exists())
 
+    def test_confirmed_normal_boot_keeps_owned_route_while_validated_remote_is_absent(self):
+        from unittest.mock import Mock
+        import time
+        def gate(**kwargs):
+            self.gate(**kwargs)
+            return True
+        original_save=continuation.save
+        def publish_when_released(value):
+            original_save(value)
+            if value['phase']=='released':
+                health.publish(value['route']['transaction'],1,waiting_since=time.monotonic())
+        with patch.object(continuation,'arm_bootstrap',return_value=Mock()), \
+                patch('provision.verify',return_value={}),patch('helper_bridge.require_idle'), \
+                patch('emergency_trial.spawn_guarded',side_effect=self.spawn), \
+                patch.object(continuation,'wait',side_effect=gate), \
+                patch.object(continuation,'save',side_effect=publish_when_released), \
+                patch.object(d,'active_guardian',return_value=True):
+            result=runtime.boot()
+        self.assertTrue(result['intent']['enabled'])
+        self.assertEqual(self.read(),self.expected)
+        self.assertEqual(self.target.stat().st_ino,self.original_inode)
+        self.assertEqual(self.launches,[])
+        with self.assertRaises(ValueError):health.require_fresh(result['transaction'])
+        health.publish(result['transaction'],2)
+        self.assertEqual(health.require_fresh(result['transaction'])['state'],'active')
+
     def test_gate_failure_restores_original_baseline_and_disables(self):
         with self.assertRaisesRegex(RuntimeError, 'Normal startup'):
             self.dispatch(gate=lambda **kwargs:False)
         self.assertEqual(self.store.read()['phase'], 'disabled')
         self.assertEqual(self.read(), self.baseline)
         self.assertFalse((self.root/continuation.NAME).exists())
+
+    def defer_stock_boot(self):
+        import emergency_trial as emergency
+        import time
+        from unittest.mock import Mock
+        start=self.c.boot(self.intent,runtime.boot_identity(),'next-attempt',False)['intent']
+        def timer(tx):
+            guardian=Mock(pid=141);guardian.poll.return_value=None
+            route=self.c.route(tx)
+            ready=dict(pid=guardian.pid,transaction=tx,deadline=route['deadline'])
+            (self.root/'profile-guardian-ready.json').write_text(json.dumps(ready))
+            health.guardian_ping(tx)
+            return guardian
+        def observer(args,**kwargs):
+            tx=args[-1]
+            child=Mock(pid=142);child.poll.return_value=None
+            health.publish(tx,1,waiting_since=time.monotonic())
+            ready=dict(transaction=tx,pid=142,start_ticks='142',observer_pid=143,
+                       observer_start_ticks='143',input_state='waiting-input')
+            (self.root/'escape-ready.json').write_text(json.dumps(ready))
+            return child
+        original_call=self.call
+        def registry(uri,payload):
+            if uri.endswith('/getAppInfo'):
+                return dict(returnValue=True,appInfo=dict(id=d.CANDIDATE,type='web',version='1',appCategory=['home']))
+            return original_call(uri,payload)
+        with patch.object(emergency.bounded,'spawn',side_effect=timer),patch('provision.verify'), \
+                patch('helper_bridge.require_idle'),patch.object(self,'call',side_effect=registry), \
+                patch.object(d,'process_start',side_effect=lambda pid:str(pid)), \
+                patch.object(emergency.subprocess,'Popen',side_effect=observer), \
+                patch.object(emergency,'spawn_input_wait'),patch.object(emergency.bounded,'publish') as publish:
+            result=self.c.restart(start)
+        publish.assert_not_called()
+        self.assertTrue(result['intent']['enabled'])
+        self.assertEqual(self.read(),self.baseline)
+        self.assertTrue(self.c.read_binding()['restored'])
+        self.assertEqual(self.launches,[])
+        return result
+
+    def test_stock_boot_starts_one_guarded_transaction_after_validated_input(self):
+        import emergency_trial as emergency
+        from test_health_startup import Observer
+        import threading
+        import time
+        deferred=self.defer_stock_boot()['transaction']
+        def healthy(before_publish, **options):
+            self.create_route('ready')
+            before_publish('ready')
+            health.guardian_ping('ready');health.publish('ready',1)
+            return {'transaction':'ready'}
+        def child(args,**kw):
+            reader=Observer(kw['pass_fds'][0],b'READY\nPING\n')
+            def pulse():
+                while not reader.stopped:
+                    time.sleep(.05)
+                    if reader.stopped:return
+                    try:os.write(reader.fd,b'PING\n')
+                    except OSError:return
+            threading.Thread(target=pulse,daemon=True).start()
+            return reader
+        with patch.object(emergency,'start',side_effect=healthy),patch.object(d,'active_guardian',return_value=True), \
+                patch.object(emergency.subprocess,'Popen',side_effect=child):
+            emergency.wait_boot_input(deferred)
+        self.assertEqual(self.store.read()['phase'],'active')
+        self.assertEqual(self.c.read_binding()['transaction'],'ready')
+        self.assertEqual(self.launches,[])
+
+    def test_escape_during_stock_handoff_cancels_the_new_guarded_publication(self):
+        import emergency_trial as emergency
+        from test_health_startup import Observer
+        import time
+        deferred=self.defer_stock_boot()['transaction']
+        old_reader=[]
+        def child(args,**kw):
+            old_reader.append(Observer(kw['pass_fds'][0],b'READY\nPING\n'))
+            return old_reader[0]
+        def start(before_publish, cancelled=lambda:False):
+            # The old descriptor has already observed the first two taps.
+            os.write(old_reader[0].fd,b'ESCAPE\n')
+            deadline=time.monotonic()+1
+            while time.monotonic()<deadline and not cancelled():time.sleep(.005)
+            self.assertTrue(cancelled(),'Emergency must cancel publication during guard startup')
+            raise RuntimeError('guarded start cancelled')
+        with patch.object(emergency,'start',side_effect=start),patch.object(emergency.subprocess,'Popen',side_effect=child):
+            emergency.wait_boot_input(deferred)
+        self.assertFalse(self.store.read()['enabled'])
+        self.assertEqual(self.read(),self.baseline)
+
+    def test_off_cancels_already_queued_stock_boot_retry(self):
+        import emergency_trial as emergency
+        deferred=self.defer_stock_boot()['transaction']
+        runtime.restore()
+        emergency.wait_boot_input(deferred)
+        self.assertFalse(self.store.read()['enabled'])
+        self.assertEqual(self.read(),self.baseline)
+
+    def test_off_cancels_guard_startup_while_it_owns_the_operation_lock(self):
+        import emergency_trial as emergency
+        import threading
+        import time
+        from test_health_startup import Observer
+        deferred=self.defer_stock_boot()['transaction']
+        started=threading.Event();revoked=threading.Event();errors=[]
+        def start(before_publish, cancelled):
+            started.set()
+            until=time.monotonic()+3
+            while time.monotonic()<until and not cancelled():time.sleep(.01)
+            if cancelled():revoked.set()
+            raise RuntimeError('Stopped boot attempt')
+        def run():
+            try: emergency.wait_boot_input(deferred)
+            except Exception as exc:errors.append(exc)
+        with patch.object(emergency,'start',side_effect=start),patch.object(emergency.subprocess,'Popen',side_effect=
+                lambda args,**kw:Observer(kw['pass_fds'][0],b'READY\nPING\n')):
+            thread=threading.Thread(target=run)
+            thread.start()
+            try:
+                self.assertTrue(started.wait(1))
+                self.assertEqual(runtime.restore(),'restored')
+            finally:thread.join(4)
+        self.assertTrue(revoked.is_set())
+        self.assertFalse(errors)
+        self.assertFalse(self.store.read()['enabled'])
+        self.assertEqual(self.read(),self.baseline)
+
+    def test_new_normal_boot_can_rearm_a_previously_deferred_stock_route(self):
+        self.defer_stock_boot()
+        self.new_startup(cold=True)
+        result=lifecycle.WakeLifecycleTests.dispatch(self)
+        self.assertTrue(result['intent']['enabled'])
+        self.assertEqual(self.c.read_binding()['transaction'],'route-b')
+        self.assertEqual(self.launches,[])
+
+    def test_input_removed_after_guarded_publication_retains_confirmed_route(self):
+        import time
+        from test_persistent_recovery import CANDIDATE
+        start=self.c.boot(self.intent,runtime.boot_identity(),'next-attempt',False)['intent']
+        def healthy_then_removed(before_publish):
+            self.create_route('published');before_publish('published')
+            health.publish('published',1)
+            health.guardian_ping('published')
+            health.publish('published',2,waiting_since=time.monotonic())
+            return {'transaction':'published'}
+        with patch('emergency_trial.start',side_effect=healthy_then_removed),patch.object(d,'active_guardian',return_value=True):
+            result=self.c.restart(start)
+        self.assertEqual(result['intent']['phase'],'active')
+        self.assertEqual(self.read()['sam_home'],CANDIDATE)
+        with self.assertRaises(ValueError):health.require_fresh('published')
+
+    def test_wait_following_a_ping_in_stock_wait_cancels_the_pending_retry(self):
+        import emergency_trial as emergency
+        import time
+        from test_health_startup import Observer
+        deferred=self.defer_stock_boot()['transaction']
+        scan=('WAIT %d\n'%int(time.monotonic()*1000)).encode()
+        def child(args,**kw):
+            reader=Observer(kw['pass_fds'][0],b'READY\nPING\n'+scan)
+            reader.kill()  # No further scan progress: fail closed on pipe EOF.
+            return reader
+        with patch.object(emergency.subprocess,'Popen',side_effect=child),patch.object(emergency,'start') as start:
+            emergency.wait_boot_input(deferred)
+        start.assert_not_called()
+        self.assertFalse(self.store.read()['enabled'])
 
     def test_observer_failure_restores_original_baseline_and_disables(self):
         def fail(transaction): raise RuntimeError('input failed')

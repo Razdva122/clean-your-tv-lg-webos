@@ -129,6 +129,17 @@ def restore(*, cancel_rearm=True):
             result = c.exit(cleanup_disabled=False, cancel_rearm=cancel_rearm)
             break
         except BlockingIOError:
+            # A confirmed boot restart holds the route lock through guarded
+            # publication. Revoke that attempt using the intent store's own
+            # compare-and-swap lock; the route restore still takes the normal
+            # operation lock below. A concurrent publication rechecks intent.
+            pending=c.store.read()
+            if cancel_rearm and pending['phase']=='starting' and pending['enabled']:
+                try:
+                    c.event(pending,'exit')
+                    deadline=time.monotonic()+60
+                except (BlockingIOError,ValueError):
+                    if c.store.read()==pending and time.monotonic()>=deadline:raise
             if time.monotonic() >= deadline: raise
             time.sleep(.01)
     if result.get('restored_transaction'): return 'restored'
@@ -180,7 +191,7 @@ def _boot():
             return 'shutdown-pending'
         try: journal = d.safe_json(d.STATE/'profile-trial.json')
         except FileNotFoundError: journal = None
-        if journal is not None and d.active_guardian(journal): return 'guarded-intent-trial'
+        if journal is not None and d.active_guardian(journal,allow_wait=True): return 'guarded-intent-trial'
         if intent['phase'] == 'disabled':
             _legacy_native_recovery(c)
             return 'restored'

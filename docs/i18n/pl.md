@@ -87,6 +87,8 @@ Strzałki wybierają, OK otwiera; przytrzymaj OK, aby zmienić kolejność. Kró
 
 Aby edytować krótkimi naciśnięciami, otwórz **Ustawienia Home → Wygląd → Edytuj kafelki**. Naciśnij OK, aby chwycić kafelek, przesuń go strzałkami i naciśnij OK, aby go umieścić. Wstecz anuluje przesunięcie lub kończy edycję.
 
+Jeśli pilot chwilowo straci połączenie, pozostaw sterowanie Home włączone. Zostanie wznowione, gdy telewizor ponownie wykryje pilota.
+
 **Naciśnij Home trzy razy w ciągu dwóch sekund**, puszczając przycisk po każdym naciśnięciu. Przywraca to LG Home i zatrzymuje sterowanie bez usuwania preferencji.
 
 No-root: Aby wznowić sterowanie Home, otwórz Home Helper, wybierz Uruchom Helper i potwierdź. Zapisany wybór ekranu Home zostaje zachowany. Root: włącz **Zmień Home** w ustawieniach Home, aby wznowić. **Otwórz LG Home** otwiera LG Home jednorazowo bez zmiany celu przycisku Home. Aby przywrócić LG Home jako stały cel, wyłącz **Zmień Home**. Nie uruchamiaj obu kontrolerów jednocześnie. Przy powtarzającym się błędzie pozostań przy LG Home.
