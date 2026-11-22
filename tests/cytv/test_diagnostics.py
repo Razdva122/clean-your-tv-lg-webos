@@ -30,6 +30,24 @@ class DiagnosticTests(unittest.TestCase):
             store.request_clean_removal(profile)
             self.assertNotEqual(report(status=proof)['removal']['state'], 'verified-clean')
 
+    def test_issue_draft_distinguishes_completed_install_from_failed_home_check(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            store = state.Store(tmp)
+            profile = state.target('tv.local', 'no-root')
+            checks = {'packages': {'status': 'pass'}}
+            for home_status in ('fail', 'pass', 'skipped', None):
+                with self.subTest(home_status=home_status):
+                    if home_status is not None:
+                        checks['home-button'] = {'status': home_status}
+                    else:
+                        checks.pop('home-button')
+                    path = diagnostics.create_report(
+                        store, 'install', profile, 'install-complete', checks=checks)
+                    draft = diagnostics.load_issue_draft(path, 'install')
+                    self.assertIn('Last verified outcome: Installation completed', draft['body'])
+                    self.assertEqual('Home button check: failed' in draft['body'], home_status == 'fail')
+                    self.assertEqual('home button check failed' in draft['title'], home_status == 'fail')
+
     def test_issue_draft_does_not_infer_cause_in_older_report(self):
         report = {'schema': 1, 'cytv_version': '0.13.0', 'edition': 'root',
                   'action': 'doctor', 'phase': 'ssh-connect',
