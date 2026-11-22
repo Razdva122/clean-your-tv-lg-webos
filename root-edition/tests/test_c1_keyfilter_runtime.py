@@ -956,6 +956,44 @@ class RuntimeTests(unittest.TestCase):
         self.assertEqual(len(observer), 3)
         self.assertEqual(guardian[1], '--guard')
 
+    def test_standalone_enable_waits_for_observer_pipe_before_starting_guard(self):
+        self.prepare_schema3()
+        runtime = self.root/'runtime'
+        runtime.mkdir()
+        filter_script = runtime/'c1-home-filter.js'
+        filter_script.write_text('filter')
+        filter_script.chmod(0o600)
+        child = Mock()
+        child.poll.return_value = 0
+        calls = []
+
+        def start(args, **_):
+            calls.append('guard' if args[1].startswith('--guard') else 'observer')
+            return child
+
+        def wait(readers, writers, errors, timeout):
+            calls.append('input-pipe')
+            self.assertEqual((len(readers), writers, errors), (1, [], []))
+            self.assertGreater(timeout, 2)
+            return readers, [], []
+
+        with patch.object(self.k, 'verify_ready', return_value={'integrity_verified': True}), \
+                patch.object(self.k, 'native', return_value=self.proof()), \
+                patch.object(self.k, 'probe', return_value=self.admission), \
+                patch.object(self.k, 'read_chain', return_value=[]), \
+                patch.object(self.k, 'binary', return_value=Path('/fixture')), \
+                patch('helper_bridge.require_idle'), \
+                patch('python_binding.command', return_value='/python'), \
+                patch.object(self.k, 'change_chain'), \
+                patch.object(self.k, 'start_controller', return_value=child), \
+                patch.object(self.k, 'restore_locked'), \
+                patch.object(self.k, 'read_handshake', side_effect=TimeoutError), \
+                patch.object(self.k.select, 'select', side_effect=wait), \
+                patch.object(self.k.subprocess, 'Popen', side_effect=start):
+            with self.assertRaises(TimeoutError):
+                self.k.enable_locked(self.root, self.uid, 0)
+        self.assertEqual(calls, ['observer', 'input-pipe', 'guard'])
+
     def test_embedded_restore_uses_stock_compositor_readback_without_standalone_home(self):
         self.prepare()
         selected = self.k.selection(self.root, self.uid)

@@ -359,7 +359,17 @@ def recover(installer, ask, write, non_interactive=False, initial_observation=No
         from .root_activation import retained_retry_receipt
         pending = installer.store.pending(installer.profile)
         activation_restore = pending and pending.get('activation_restore_pending') is True
-        if (initial_observation is None and pending and pending.get('home_backend') == 'c1-native-gate'
+        if retained_retry_receipt(pending, pending_restore=True):
+            if not prompts.confirm('Restore LG Home?', ask, write):
+                write(KEPT)
+                return
+            if (not installer.root_files_match(pending)
+                    or installer.store.pending(installer.profile) != pending
+                    or not installer.recover_failed_activation(verified_support=True, routing_only=True)):
+                raise UserError(BLOCKED, reason_code='pending-operation')
+            initial_observation = None
+            activation_restore = False
+        elif (initial_observation is None and pending and pending.get('home_backend') == 'c1-native-gate'
                 and (activation_restore or pending.get('activation_restore') == 'verified')
                 and not retained_retry_receipt(pending)):
             if not installer.recover_failed_activation(verified_support=True):

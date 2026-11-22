@@ -12,13 +12,13 @@ class RetryRefused(UserError):
     """The TV refused the retry before changing its activation state."""
 
 
-def retained_retry_receipt(pending):
+def retained_retry_receipt(pending, *, pending_restore=False):
     return bool(pending and pending.get('action') == 'activate-root'
                 and pending.get('stage') == 'enable' and pending.get('home_backend') == BACKEND
                 and pending.get('requires_updater') is False
                 and pending.get('migrate') is False
-                and pending.get('activation_restore') == 'verified'
-                and pending.get('activation_restore_pending') is False
+                and pending.get('activation_restore') == ('unverified' if pending_restore else 'verified')
+                and pending.get('activation_restore_pending') is pending_restore
                 and not any(key in pending for key in
                             ('previous', 'product_operation', 'recovery_protocol', 'home_token'))
                 and all(isinstance(pin, str) and re.fullmatch('[a-f0-9]{64}', pin)
@@ -55,6 +55,7 @@ def retained_filter_token(device):
 # cli.main(). Check the exact stopped attempt at its native config write.
 RETRY_ENABLE = r'''
 import json
+import select
 import sys
 
 sys.path.insert(0, '/var/lib/clean-your-tv-root/runtime')
@@ -63,7 +64,19 @@ import c1_keyfilter as gate
 
 expected = sys.argv[1]
 write_config = gate.write_config
-started = False
+spawn = gate.subprocess.Popen
+started = None
+
+def wait_for_observer(argv, *args, **kwargs):
+    if (isinstance(argv, (list, tuple)) and len(argv) == 7
+            and argv[0] == str(gate.STATE/'runtime/c1-keyfilter-guard')
+            and argv[1] in ('--guard', '--guard-resumable')
+            and argv[2] == started and argv[6] == '0'):
+        fd = int(argv[3])
+        if fd in kwargs.get('pass_fds', ()):
+            # Leave the pipe untouched so the old guardian validates READY.
+            select.select([fd], [], [], 4)
+    return spawn(argv, *args, **kwargs)
 
 def guarded_config(root, admission, token, uid=0):
     global started
@@ -79,7 +92,7 @@ def guarded_config(root, admission, token, uid=0):
                 or gate.secure(directory/'stopped', uid, 160) != expired
                 or gate.secure(directory/'outcome', uid, 160) != expired):
             raise ValueError('Retained Home attempt changed')
-        started = True
+        started = token
         write_config(root, admission, token, uid)
 
 try:
@@ -87,14 +100,20 @@ try:
     if selected is None or cli.gate_backend() is None:
         raise ValueError('Compositor backend not selected')
     gate.write_config = guarded_config
+    gate.subprocess.Popen = wait_for_observer
     result = cli.main('enable')
     if not started:
         raise ValueError('Retained Home activation was not started')
     reply = {'returnValue': True, 'result': result}
 except Exception:
     if started:
-        raise
+        # The installer may verify and retire this attempt even without ARMED.
+        print(json.dumps({'returnValue': False,
+                          'retained_retry_attempt': [expected, started]}), flush=True)
+        raise SystemExit(1) from None
     reply = {'returnValue': False, 'retained_retry_refused': True}
+finally:
+    gate.subprocess.Popen = spawn
 print(json.dumps(reply), flush=True)
 '''
 
@@ -159,26 +178,29 @@ def activate(installer, *, retry_token=None):
         installer.store.checkpoint(installer.profile, stage='enable')
     installer.progress('Turning on Root Home control…')
     token = None
+    home_may_be_open = False
     try:
         details = {}
         token = proof(installer, 'enable', active=True, details=details, retry_token=retry_token)
         if token == stock_token:
             token = None
             raise UserError('C1 activation did not establish a new Home attempt. Run cytv status or cytv restore.')
-        installer.store.checkpoint(installer.profile, stage='launch', home_token=token)
         foreground = installer.remote.luna('com.webos.applicationManager/getForegroundAppInfo', {}, timeout=5)
         app = foreground.get('appId') if isinstance(foreground,dict) and foreground.get('returnValue') is True else None
         if not isinstance(app,str) or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._-]{0,254}', app):
             raise UserError('C1 foreground is unconfirmed. Run cytv status or cytv restore.')
         requested = app != package.ROOT_APP
+        home_may_be_open = not requested
+        # A status read after the foreground probe keeps an intervening
+        # emergency stop authoritative before we authorize the launch.
+        if requested and proof(installer, 'status', active=True) != token:
+            raise UserError('C1 Home attempt changed before launch. Run cytv status or cytv restore.')
+        installer.store.checkpoint(installer.profile, stage='launch', home_token=token)
         if requested:
-            # The foreground probe can take seconds. An escape during that
-            # call must stop this installer from launching the candidate.
-            if proof(installer, 'status', active=True) != token:
-                raise UserError('C1 Home attempt changed before launch. Run cytv status or cytv restore.')
             installer.progress('Opening Clean Your TV Home…')
             installer.store.checkpoint(installer.profile, stage='launch-submitting')
             installer.outcome.launch_submitted()
+            home_may_be_open = True
             launched = (launch_keyfilter(installer, token) if details.get('routing') == 'compositor-keyfilter-v1'
                         else installer.remote.luna('com.webos.applicationManager/launch', {'id':package.ROOT_APP}))
             if not isinstance(launched,dict) or launched.get('returnValue') is not True:
@@ -191,14 +213,21 @@ def activate(installer, *, retry_token=None):
     except RetryRefused:
         installer.store.checkpoint(installer.profile, activation_restore_pending=False, activation_restore='verified')
         raise
-    except (OSError, RuntimeError, ValueError):
+    except (OSError, RuntimeError, ValueError) as error:
         installer.outcome.startup_observed('unverified')
         try:
             if retry_token is None:
                 installer.recover_failed_activation()
             else:
-                installer.recover_failed_activation(verified_support=True, expected_token=token,
-                                                    stock_only=token is None)
+                # An interrupted SSH reply cannot authorize a routing write.
+                failed_attempt = getattr(error, '_retained_retry_attempt', None)
+                if token is None and failed_attempt is not None and failed_attempt[0] == retry_token:
+                    token = failed_attempt[1]
+                if token is not None and not home_may_be_open:
+                    installer.recover_failed_activation(verified_support=True, expected_token=token, routing_only=True)
+                else:
+                    installer.recover_failed_activation(verified_support=True, expected_token=token,
+                                                        stock_only=token is None)
         except Exception:
             pass  # Retain the original activation failure even if storage is full.
         raise

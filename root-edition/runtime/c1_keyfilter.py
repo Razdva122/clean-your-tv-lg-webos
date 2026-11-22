@@ -1149,6 +1149,10 @@ def enable_locked(root,uid,seconds, *, session=None, resume_token=None):
             pass_fds=(input_write,),stdin=subprocess.DEVNULL,stdout=log,stderr=log,start_new_session=True,close_fds=True)
         children.append(observer)
         os.close(input_write); fds.remove(input_write)
+        if recover_input and resume_token is None:
+            # Give a cold observer time to reach its pipe. The guardian still
+            # reads READY and owns the deadline for all subsequent heartbeats.
+            select.select([input_read], [], [], 4)
         guard_mode = '--guard-resumable' if session is not None else '--guard'
         if recover_input: guard_mode += '-reconnect'
         guard=subprocess.Popen([str(helper),guard_mode,token,str(input_read),str(control_read),str(ready_write),str(seconds)],
