@@ -729,14 +729,22 @@ static int luna(const char *method, const char *app) {
   struct json j;
   if (!parse(&j,b)) return 0;
   if (literal(&j,field(&j,0,"returnValue"),"true")) return 1;
-  /* SAM PolicyManager::close uses ErrCode_CLOSE (40) when this exact app
-   * already has no running instance. Only that owned close is idempotent. */
-  return !strcmp(method,"luna://com.webos.applicationManager/closeByAppId") &&
-         !strcmp(app,"com.cleanyourtv.root.preview") &&
-         literal(&j,field(&j,0,"returnValue"),"false") &&
-         literal(&j,field(&j,0,"errorCode"),"40") &&
-         literal(&j,field(&j,0,"errorText"),
-                 "\"com.cleanyourtv.root.preview is not running\"");
+  /* Only this owned close is idempotent, and only when SAM reports that this
+   * exact app already has no running instance. */
+  if (strcmp(method,"luna://com.webos.applicationManager/closeByAppId") ||
+      strcmp(app,"com.cleanyourtv.root.preview") ||
+      !literal(&j,field(&j,0,"returnValue"),"false"))
+    return 0;
+  /* SAM PolicyManager::close uses ErrCode_CLOSE (40) and names the app. */
+  if (literal(&j,field(&j,0,"errorCode"),"40") &&
+      literal(&j,field(&j,0,"errorText"),
+              "\"com.cleanyourtv.root.preview is not running\""))
+    return 1;
+  /* Stock SAM on webOS 6.5.3 (OLED55C14LB 03.53.45) answers errorCode 1 with
+   * this fixed text. It reuses errorCode 1 for other failures, such as "no
+   * valid life handler" for an unknown id, so the text must match as well. */
+  return literal(&j,field(&j,0,"errorCode"),"1") &&
+         literal(&j,field(&j,0,"errorText"),"\"app is not running\"");
 }
 /* Routing is already durably stopped before these bounded best-effort UI calls.
  * Replies establish LS2 acknowledgement only, never physical visibility. */
