@@ -169,7 +169,12 @@ jobs:
       - name: Set up the API 35 Google APIs emulator
         run: |
           sdkmanager 'emulator' 'system-images;android-35;google_apis;x86_64'
-          printf 'no\n' | avdmanager create avd --name cytv-release-smoke --package 'system-images;android-35;google_apis;x86_64'
+          export ANDROID_AVD_HOME="$RUNNER_TEMP/cytv-release-avd"
+          mkdir -p "$ANDROID_AVD_HOME"
+          printf 'ANDROID_AVD_HOME=%s\n' "$ANDROID_AVD_HOME" >> "$GITHUB_ENV"
+          avdmanager create avd --name cytv-release-smoke --package 'system-images;android-35;google_apis;x86_64' \
+            --path "$ANDROID_AVD_HOME/cytv-release-smoke.avd" <<< 'no'
+          "$ANDROID_HOME/emulator/emulator" -list-avds | grep -Fx cytv-release-smoke
           sudo chmod a+rw /dev/kvm
       - name: Run the packaged installer bridge on a clean emulator
         shell: bash
