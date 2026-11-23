@@ -116,7 +116,7 @@ class IntegrationTests(IntegrationFixture, unittest.TestCase):
    return {'returnValue':True}
   with patch('emergency_trial.start',side_effect=start),patch('persistent_health.require_fresh') as fresh,patch('persistent_health.require_guardian') as guardian,patch.object(d,'active_guardian',return_value=True),patch.object(self,'call',side_effect=call):
    result=self.c.restart(starting)
-  fresh.assert_called_with('route-b');guardian.assert_called_once_with('route-b')
+  fresh.assert_called_with('route-b',allow_wait=True);guardian.assert_called_once_with('route-b')
   self.assertEqual(result['intent']['phase'],'active')
   self.assertTrue(result['intent']['enabled']);self.assertEqual(self.home,CANDIDATE)
   self.assertEqual(foreground,['com.emby.app'])

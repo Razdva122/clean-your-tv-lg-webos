@@ -59,14 +59,16 @@ class KeyfilterGuardTests(unittest.TestCase):
         p = subprocess.run([str(self.binary), *args], capture_output=True, text=True, timeout=8)
         self.assertEqual(p.stderr, '')
         return json.loads(p.stdout), p.returncode
-    def spawn(self, seconds=0, ready=(True, True), broker=True, *, resumable=False, reconnect=False):
+    def spawn(self, seconds=0, ready=(True, True), broker=True, *, resumable=False, reconnect=False, wait_input=False, boot_wait=False):
         ir, iw = os.pipe(); cr, cw = os.pipe(); rr, rw = os.pipe()
         # Queue the tiny fixture records while our read ends are still open;
         # a stopped guardian may refuse and close its inherited ends at once.
         for flag, fd in zip(ready, (iw, cw)):
             if flag: os.write(fd, b'READY\n')
         mode = '--guard-resumable' if resumable else '--guard'
-        if reconnect: mode += '-reconnect'
+        if boot_wait: mode = '--guard-boot-wait-input'
+        elif wait_input: mode += '-wait-input'
+        elif reconnect: mode += '-reconnect'
         p = subprocess.Popen([str(self.binary), mode, TOKEN, str(ir), str(cr), str(rw), str(seconds)],
                              pass_fds=(ir, cr, rw), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         for fd in (ir, cr, rw): os.close(fd)
@@ -77,8 +79,8 @@ class KeyfilterGuardTests(unittest.TestCase):
                 self.run_guard('--lease')
                 if select.select([rr], [], [], .03)[0]: break
         return p, iw, cw, rr
-    def armed(self, seconds=0, *, resumable=False, reconnect=False):
-        p, iw, cw, rr = self.spawn(seconds, resumable=resumable, reconnect=reconnect)
+    def armed(self, seconds=0, *, resumable=False, reconnect=False, wait_input=False):
+        p, iw, cw, rr = self.spawn(seconds, resumable=resumable, reconnect=reconnect, wait_input=wait_input)
         self.assertTrue(select.select([rr], [], [], 3)[0])
         ack = os.read(rr, 128); os.close(rr)
         self.assertEqual(ack, f'ARMED {TOKEN}\n'.encode())
@@ -259,6 +261,144 @@ int main(void) {
         else: self.fail('Fresh input validation never restored the route')
         os.write(iw, b'ESCAPE\n')
         self.assertEqual(self.finish(proc)['reason'], 'escape')
+
+    def report_missing_input(self, fd):
+        stamp = time.clock_gettime_ns(time.CLOCK_MONOTONIC) // 1_000_000
+        os.write(fd, f'WAIT {stamp}\n'.encode())
+
+    def test_missing_input_keeps_guardian_without_authorizing_home(self):
+        proc, iw, cw = self.armed(wait_input=True)
+        deadline = time.monotonic() + 2.5
+        while time.monotonic() < deadline:
+            self.report_missing_input(iw)
+            os.write(cw, b'PING\n')
+            status, rc = self.run_guard('--lease')
+            self.assertEqual(rc, 0, status)
+            self.assertEqual(status['guardian_pid'], proc.pid)
+            time.sleep(.15)
+        status, rc = self.run_guard('--home', TOKEN)
+        self.assertNotEqual(rc, 0)
+        self.assertEqual(status['state'], 'reconnecting')
+        self.assertFalse(status['healthy'])
+        self.assertFalse((self.root/'luna-calls').exists())
+        # A queued ordinary heartbeat cannot re-arm a removed device.
+        os.write(iw, b'PING\n')
+        self.assertFalse(self.run_guard('--lease')[0]['healthy'])
+        stamp = time.clock_gettime_ns(time.CLOCK_MONOTONIC) // 1_000_000
+        os.write(iw, f'CHECK {stamp}\n'.encode())
+        deadline = time.monotonic() + 1
+        while time.monotonic() < deadline:
+            if self.run_guard('--lease')[0]['healthy']:
+                break
+            time.sleep(.02)
+        else:
+            self.fail('Validated replacement did not resume the original guardian')
+        os.write(iw, b'ESCAPE\n')
+        self.assertEqual(self.finish(proc)['reason'], 'escape')
+
+    def test_confirmed_boot_can_wait_before_first_remote(self):
+        proc, iw, cw, rr = self.spawn(ready=(False, True), broker=False, boot_wait=True)
+        try:
+            self.report_missing_input(iw)
+            deadline = time.monotonic() + 1
+            while not select.select([rr], [], [], .02)[0]:
+                self.assertLess(time.monotonic(), deadline)
+                self.run_guard('--lease')
+            self.assertEqual(os.read(rr, 128), f'SUPERVISED {TOKEN}\n'.encode())
+        finally:
+            os.close(rr)
+        status, rc = self.run_guard('--home', TOKEN)
+        self.assertNotEqual(rc, 0)
+        self.assertEqual(status['state'], 'reconnecting')
+        self.assertFalse(status['healthy'])
+        self.assertEqual(status['guardian_pid'], proc.pid)
+        self.assertFalse((self.root/'luna-calls').exists())
+        stamp = time.clock_gettime_ns(time.CLOCK_MONOTONIC) // 1_000_000
+        os.write(iw, f'CHECK {stamp}\n'.encode())
+        deadline = time.monotonic() + 1
+        while not self.run_guard('--lease')[0]['healthy']:
+            self.assertLess(time.monotonic(), deadline)
+        os.write(iw, b'ESCAPE\n')
+        self.assertEqual(self.finish(proc)['reason'], 'escape')
+
+    def test_queued_escape_prevents_first_activation(self):
+        proc, iw, cw, rr = self.spawn(ready=(False, True), broker=False, wait_input=True)
+        try:
+            deadline = time.monotonic() + 1
+            while self.run_guard('--lease')[0]['guardian_pid'] != proc.pid:
+                self.assertLess(time.monotonic(), deadline)
+            time.sleep(.05)
+            os.write(iw, b'READY\nESCAPE\n')
+            self.assertEqual(self.finish(proc)['reason'], 'escape')
+            self.assertEqual(os.read(rr, 128), b'')
+        finally:
+            os.close(rr)
+
+    def test_first_enable_refuses_wait_before_remote_validation(self):
+        proc, iw, cw, rr = self.spawn(ready=(False, True), broker=False, wait_input=True)
+        try:
+            self.report_missing_input(iw)
+            self.assertEqual(self.finish(proc)['reason'], 'malformed_input')
+            self.assertEqual(os.read(rr, 128), b'')
+        finally:
+            os.close(rr)
+
+    def test_queued_ping_cannot_hide_fresh_device_removal(self):
+        proc, iw, _ = self.armed(wait_input=True)
+        # The reader observed removal while the preceding PING was still queued.
+        stamp = time.clock_gettime_ns(time.CLOCK_MONOTONIC) // 1_000_000 - 100
+        os.write(iw, f'PING\nWAIT {stamp}\n'.encode())
+        deadline = time.monotonic() + .8
+        while self.run_guard('--lease')[0]['healthy']:
+            self.assertLess(time.monotonic(), deadline)
+            time.sleep(.02)
+        os.write(iw, b'ESCAPE\n')
+        self.assertEqual(self.finish(proc)['reason'], 'escape')
+
+    def test_loss_in_same_millisecond_as_check_revokes_pending_grant(self):
+        proc, iw, _ = self.armed(wait_input=True)
+        time.sleep(.03)
+        stamp = time.clock_gettime_ns(time.CLOCK_MONOTONIC) // 1_000_000
+        os.write(iw, f'WAIT {stamp}\nCHECK {stamp}\nWAIT {stamp}\n'.encode())
+        time.sleep(.15)
+        status, _ = self.run_guard('--lease')
+        self.assertEqual(status['state'], 'reconnecting')
+        self.assertFalse(status['healthy'])
+        os.write(iw, b'ESCAPE\n')
+        self.assertEqual(self.finish(proc)['reason'], 'escape')
+
+    def test_input_removed_during_home_request_keeps_guardian(self):
+        proc, iw, cw = self.armed(wait_input=True)
+        (self.root/'root-delay').touch()
+        with subprocess.Popen([str(self.binary), '--home', TOKEN],
+                              stdout=subprocess.PIPE, text=True) as home:
+            deadline = time.monotonic() + 2
+            while not (self.root/'root-entered').exists():
+                self.assertLess(time.monotonic(), deadline)
+                time.sleep(.01)
+            self.report_missing_input(iw)
+            reply = json.loads(home.communicate(timeout=3)[0])
+        self.assertEqual(reply['reason'], 'home_refused')
+        self.assertEqual(reply['state'], 'reconnecting')
+        self.assertFalse(reply['stopped'])
+        self.assertEqual(reply['guardian_pid'], proc.pid)
+        os.write(cw, b'LGHOME\n')
+        self.assertEqual(self.finish(proc)['reason'], 'lg_home')
+
+    def test_hung_reader_still_expires_while_waiting_for_input(self):
+        proc, iw, cw = self.armed(wait_input=True)
+        self.report_missing_input(iw)
+        deadline = time.monotonic() + 4
+        while proc.poll() is None and time.monotonic() < deadline:
+            try:
+                os.write(cw, b'PING\n')
+            except BrokenPipeError:
+                break
+            self.run_guard('--lease')
+            time.sleep(.12)
+        result = self.finish(proc)
+        self.assertEqual(result['reason'], 'input_expired')
+        self.assertTrue(result['stopped'])
 
     def test_manual_off_while_input_reconnect_is_pending(self):
         proc, iw, _ = self.await_input_reconnect()
@@ -526,7 +666,9 @@ int main(void) {
     def shutdown_escape(self, command, response, status):
         systemctl = self.root/command
         probing = self.root/'shutdown-probing'
-        systemctl.write_text('#!/bin/sh\ntouch "'+str(probing)+'"\nsleep .25\nprintf "'+response+'\\n"\nexit '+str(status)+'\n')
+        released = self.root/'shutdown-probe-release'
+        systemctl.write_text('#!/bin/sh\ntouch "'+str(probing)+'"\nwhile test ! -f "'+
+                             str(released)+'"; do sleep .01; done\nprintf "'+response+'\\n"\nexit '+str(status)+'\n')
         systemctl.chmod(0o700)
         p, iw, _ = self.armed(resumable=True)
         p.terminate()
@@ -537,6 +679,7 @@ int main(void) {
         self.assertFalse(self.run_guard('--status')[0]['healthy'])
         self.assertNotEqual(self.run_guard('--home', TOKEN)[1], 0)
         os.write(iw, b'ESCAPE\n')
+        released.touch()
         self.finish(p)
         self.assertEqual((self.root/'state/stopped').read_text(), f'{TOKEN} escape\n')
         self.assertNotEqual(self.run_guard('--retire-boot', TOKEN)[1], 0)

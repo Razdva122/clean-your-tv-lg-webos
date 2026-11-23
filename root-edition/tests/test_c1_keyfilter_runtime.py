@@ -1,4 +1,5 @@
 """Host-only compositor routing and ownership tests; no TV acceptance."""
+import hashlib
 import importlib
 import json
 import os
@@ -410,6 +411,12 @@ class RuntimeTests(unittest.TestCase):
                 reply = self.k.execute('boot', root=self.root, uid=self.uid)
                 self.assertIsInstance(reply, dict, 'Same-boot callback stopped Home routing')
                 self.assertTrue(reply['effective']['routing_active'])
+            active.update(state='reconnecting', healthy=False, reason='none')
+            for _ in range(2):
+                reply = self.k.execute('boot', root=self.root, uid=self.uid)
+                self.assertTrue(reply['intent']['enabled'])
+                self.assertEqual(reply['intent']['phase'], 'input-reconnecting')
+                self.assertFalse(reply['effective']['routing_active'])
             self.assertTrue(all(call.args[0] == ['--status'] for call in guard.call_args_list))
             self.assertEqual(self.k.execute('restore', root=self.root, uid=self.uid), 'restored')
             self.assertEqual(active['reason'], 'explicit_off')
@@ -683,6 +690,12 @@ class RuntimeTests(unittest.TestCase):
                     self.assertEqual(intent['phase'], 'disabled' if is_stock else 'recovering')
 
     def test_reported_schema3_rearms_once_on_a_new_normal_session(self):
+        self.check_schema3_boot(missing_input=False)
+
+    def test_confirmed_compositor_boot_waits_for_input_without_changing_saved_choice(self):
+        self.check_schema3_boot(missing_input=True)
+
+    def check_schema3_boot(self, *, missing_input):
         import intent_runtime
         self.prepare_resumable()
         boot = self.k.boot_identity()
@@ -712,8 +725,13 @@ class RuntimeTests(unittest.TestCase):
             if chain == stock:
                 return self.proof()
             current = self.k.read_intent(self.root, self.uid)
-            return dict(self.proof(), token=current['token'], state='armed', healthy=True,
+            return dict(self.proof(), token=current['token'], state='reconnecting' if missing_input else 'armed',
+                        healthy=not missing_input, reason='none',
                         guardian_pid=123, stopped=False, stock_verified=False)
+
+        def guard_binary(root, uid, *, features):
+            features.update(wait_input=missing_input, boot_wait=missing_input)
+            return Path('/fixture')
 
         child = Mock()
         child.poll.return_value = None
@@ -734,25 +752,31 @@ class RuntimeTests(unittest.TestCase):
                 patch.object(self.k, 'write_chain', side_effect=write), \
                 patch.object(self.k, 'verify_ready', return_value={'integrity_verified':True}), \
                 patch.object(self.k, 'probe', return_value=self.admission), \
-                patch.object(self.k, 'binary', return_value=Path('/fixture')), \
+                patch.object(self.k, 'binary', side_effect=guard_binary), \
                 patch.object(self.k, 'luna', side_effect=self.read_factory_home_setting), \
                 patch('helper_bridge.require_idle'), patch('python_binding.command', return_value='/python'), \
                 patch.object(self.k, 'native', side_effect=native), \
                 patch.object(self.k, 'start_controller', return_value=child), \
-                patch.object(self.k, 'read_handshake'), \
+                patch.object(self.k, 'read_handshake') as handshake, \
                 patch.object(self.k.subprocess, 'Popen', return_value=child) as start:
             result = self.k.execute('boot', root=self.root, uid=self.uid)
             replay = self.k.execute('boot', root=self.root, uid=self.uid)
-            self.assertTrue(result['effective']['routing_active'])
+            self.assertEqual(result['effective']['routing_active'], not missing_input)
+            self.assertTrue(result['intent']['enabled'])
             self.assertEqual(result, replay)
             self.assertEqual(result['intent']['session'], new_session)
             self.assertNotEqual(result['intent']['token'], token)
             self.assertEqual(writes, [[self.k.filter_entry(self.root), *stock]])
             self.assertEqual(start.call_count, 2)
-            self.assertEqual(start.call_args.args[0][:2], ['/fixture', '--guard-resumable-reconnect'])
+            mode = '--guard-boot-wait-input' if missing_input else '--guard-resumable-reconnect'
+            self.assertEqual(start.call_args.args[0][:2], ['/fixture', mode])
+            reader = '--boot-wait-input' if missing_input else '--recover-input'
+            self.assertEqual(start.call_args_list[0].args[0][-1], reader)
+            ack = 'SUPERVISED' if missing_input else 'ARMED'
+            self.assertEqual(handshake.call_args.args[1], f"{ack} {result['intent']['token']}\n".encode())
             normal.assert_called_once()
             startup.assert_called_once_with(result, root=self.root, uid=self.uid)
-            self.assertEqual(observed, [result['intent']])
+            self.assertEqual(observed, [dict(result['intent'], phase='active')])
 
     def test_reported_schema3_boot_failure_and_stop_leave_routing_with_lg(self):
         import intent_runtime
@@ -929,7 +953,13 @@ class RuntimeTests(unittest.TestCase):
                     state='stopped', mounted=False, healthy=False, stock_verified=True,
                     stopped=True, token='1'*32, guardian_pid=0, reason='', profiles=None, **kw)
 
-    def test_embedded_enable_keeps_its_original_input_loss_policy(self):
+    def test_persistent_embedded_enable_recovers_disconnected_input(self):
+        self.check_embedded_input_protocol(b'fixture\0--guard-wait-input\0', '--wait-input', '--guard-wait-input')
+
+    def test_older_embedded_guard_keeps_its_original_reader_protocol(self):
+        self.check_embedded_input_protocol(b'older guardian', None, '--guard')
+
+    def check_embedded_input_protocol(self, guard_bytes, reader_flag, guard_flag):
         self.prepare()
         runtime = self.root / 'runtime'
         runtime.mkdir()
@@ -938,11 +968,16 @@ class RuntimeTests(unittest.TestCase):
         script.chmod(0o600)
         child = Mock()
         child.poll.return_value = 0
+        guard = self.root / 'runtime/c1-keyfilter-guard'
+        guard.write_bytes(guard_bytes)
+        guard.chmod(0o700)
+        descriptor = self.k.selection(self.root, self.uid)
+        descriptor['native_sha256'] = hashlib.sha256(guard.read_bytes()).hexdigest()
+        self.k.atomic(self.root/'home-backend.json', descriptor, self.uid)
         with patch.object(self.k, 'embedded_adapter', return_value=Mock()), \
                 patch.object(self.k, 'verify_ready', return_value={'integrity_verified': True}), \
                 patch.object(self.k, 'native', return_value=self.proof()), \
                 patch.object(self.k, 'probe', return_value=self.admission), \
-                patch.object(self.k, 'binary', return_value=Path('/fixture')), \
                 patch('helper_bridge.require_idle'), \
                 patch('python_binding.command', return_value='/python'), \
                 patch.object(self.k, 'change_chain'), \
@@ -953,8 +988,8 @@ class RuntimeTests(unittest.TestCase):
             with self.assertRaises(TimeoutError):
                 self.k.enable_locked(self.root, self.uid, 0)
         observer, guardian = [call.args[0] for call in start.call_args_list]
-        self.assertEqual(len(observer), 3)
-        self.assertEqual(guardian[1], '--guard')
+        self.assertEqual(observer[3:], [reader_flag] if reader_flag else [])
+        self.assertEqual(guardian[1], guard_flag)
 
     def test_standalone_enable_waits_for_observer_pipe_before_starting_guard(self):
         self.prepare_schema3()

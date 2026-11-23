@@ -47,15 +47,22 @@ def authorized(transaction):
     except (OSError,ValueError,KeyError): return False
 
 
-def publish(transaction, sequence):
+def publish(transaction, sequence, *, waiting_since=None):
     intent = context(transaction)
     if type(sequence) is not int or sequence <= 0: raise ValueError('Invalid sequence')
     try: ROOT.mkdir(mode=0o700)
     except FileExistsError: pass
     d.trusted_dir(ROOT)
     now = time.monotonic()
+    state='active';expires=now+2
+    if waiting_since is not None:
+        if (not intent['enabled'] or not 0 <= now-waiting_since < 2):
+            raise ValueError('Unconfirmed or stale input scan')
+        # Proves only that the supervised rescanner is making progress.
+        # All consumers of input authority continue to require an active lease.
+        expires=waiting_since+2;state='waiting-input'
     value = dict(transaction=transaction,boot=intent['boot'],sequence=sequence,
-                 state='active',issued=now,expires=now+2)
+                 state=state,issued=now,expires=expires)
     fd, name = tempfile.mkstemp(dir=ROOT,prefix='.health-')
     try:
         with os.fdopen(fd,'w') as out: json.dump(value,out)
@@ -69,11 +76,12 @@ def load(transaction):
     return d.safe_json(path(transaction))
 
 
-def require_fresh(transaction):
+def require_fresh(transaction, *, allow_wait=False):
     intent=context(transaction);value=load(transaction);now=time.monotonic()
     from persistent_lease import finite
     if (value.get('transaction') != transaction or value.get('boot') != intent['boot']
-            or value.get('state') != 'active' or type(value.get('sequence')) is not int
+            or value.get('state') not in (('active','waiting-input') if allow_wait else ('active',))
+            or type(value.get('sequence')) is not int
             or value['sequence'] <= 0 or not finite(value.get('issued'))
             or not finite(value.get('expires'))
             or not 0 <= value['issued'] <= now < value['expires']

@@ -53,31 +53,24 @@ The unchanged startup/filter regressions and final packaged-TV controls, sound,
 emergency release and recovery checks remain required. No Home authentication,
 storage provisioning, protection reset or new input authority is added here.
 
-## Power-transition source removal (#487, unpublished)
+<a id="power-transition-source-removal-487-unpublished"></a>
 
-The source fix adds a narrow exit 32, distinct from cleanup failure 31. The
-controller sends `T` on a recognized power-off/standby/suspend transition and `R`
-on Active. The relay retains this hint through its pre-grab startup pump; it
-expires after 15 monotonic seconds. It still attempts every cleanup operation.
-Only source-removal reason 25, cleanup mask 3, ENODEV/ENXIO from both key release
-and ungrab, successful descriptor closes, and a live hint can produce
-`POWER_REMOVED RELEASE_ERRNO UNGRAB_ERRNO` followed by `EXIT 32`. Stop/Q or a
-handled termination signal wins, including a signal during cleanup. Other
-errors remain persistent failures; output/report failure still blocks.
+## Disconnected remote
 
-The controller accepts this outcome only for its tracked child, with matching
-reported/actual exit 32, no signal, a recent hint and no stop/blocked/watchdog
-state. It keeps its power watcher and timer alive without reopening input while
-asleep. Fresh settled Active schedules one relay start after 1.5 seconds;
-renewed power-off or processing cancels it. Stop and both latches are checked
-again before starting. A new relay preserves Home Off, and enabled Home uses the
-existing guarded wake presentation. A real reboot uses the normal bootstrap.
-No latch is cleared by this path, and ordinary watchdog retry limits are unchanged.
-Pre-grab validation failures retain their existing fail-closed behavior.
+Following device removal the live relay releases any surviving keys and grab,
+closes retired descriptors, and waits for the validated input and output pair.
+It continues servicing the controller and watchdog while waiting. A replacement
+may have new event numbers. The relay checks the device identities and key state
+again before taking the grab. Manual Stop during discovery cancels it. A genuine
+cleanup error or a stalled relay still follows the normal recovery path.
 
-These are synthetic host checks, including same-boot wake, pre-READY power
-hints, renewed shutdown, Stop/HUP races and SIGTERM during cleanup. Actual device
-errno values and the final packaged transition remain unverified. The fix needs
-a newly selected Helper version built from source with its matching relay and
-controller, plus rebuilt embedded installers; published Helper bytes remain
-immutable. See the [verification ledger](../history/2026-11-10-issue487-helper-recovery.md).
+The controller distinguishes a waiting relay from one ready to process keys.
+On reattachment it applies the current Home selection. Reconnecting a device
+alone does not request a foreground app change. The relay can observe
+disappearance and return without a webOS power notification.
+
+Previously the native relay classified paired input/output disappearance as
+exit 32 during a recent power transition or exit 33 otherwise. See the
+[original power-transition work](../history/2026-11-10-issue487-helper-recovery.md).
+The reconnecting relay and matching controller ship together in a newly built
+Helper package.

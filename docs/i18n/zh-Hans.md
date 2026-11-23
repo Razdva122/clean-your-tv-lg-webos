@@ -87,6 +87,8 @@ Developer Mode 让 CYTV 可以在没有 root 的电视上安装应用。
 
 要用短按编辑磁贴，请打开 **Home 设置 → 外观 → 编辑磁贴**。按 OK 拾取磁贴，用方向键移动，再按 OK 放下。按返回可取消移动或退出编辑。
 
+如果遥控器暂时断开连接，请保持 Home 控制开启。电视重新识别遥控器后，Home 控制会自动恢复。
+
 **两秒内按 Home 三次，每次都松开**，即可返回 LG Home 并停止 Home 控制，偏好设置保留。
 
 No-root: 要重新启动 Home 控制，请打开 Home Helper，选择启动 Helper 并确认。已保存的主屏幕选择会保留。 Root：在 Home 设置中启用 **更改 Home（Change Home）** 恢复。**打开 LG Home（Open LG Home）** 只打开 LG Home 一次，不更改路由。要持续使用 LG Home，请关闭 **更改 Home（Change Home）**。不要同时运行两种控制器。若故障重复出现，请保持 LG Home 启用。

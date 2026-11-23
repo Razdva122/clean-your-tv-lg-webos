@@ -49,47 +49,12 @@ const vectors = [
     ['terminal', true, false, false]
   ],
   [
-    { code: 32, tracked: true, reportedReason: 32, powerOffUntil: 1000 },
-    ['wait-power', false, false, false]
-  ],
-  [
-    { code: 32, tracked: true, reportedReason: 32, powerOffUntil: 999 },
+    { code: 32, tracked: true, reportedReason: 32 },
     ['terminal', true, false, false]
   ],
   [
-    { code: 32, tracked: true, powerOffUntil: 1000 },
+    { code: 33, tracked: true, reportedReason: 33 },
     ['terminal', true, false, false]
-  ],
-  [
-    {
-      code: 32,
-      tracked: true,
-      reportedReason: 32,
-      powerOffUntil: 1000,
-      watchdog: true,
-      watchdogOwned: true
-    },
-    ['terminal', true, false, false]
-  ],
-  [
-    {
-      code: 32,
-      tracked: true,
-      reportedReason: 32,
-      powerOffUntil: 1000,
-      stop: true
-    },
-    ['terminal', true, false, true]
-  ],
-  [
-    {
-      code: 32,
-      tracked: true,
-      reportedReason: 32,
-      powerOffUntil: 1000,
-      signal: 'SIGTERM'
-    },
-    ['terminal', true, true, false]
   ],
   [{ code: 99, reportedReason: 20 }, ['terminal', true, false, false]]
 ];

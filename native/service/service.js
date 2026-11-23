@@ -118,7 +118,10 @@ service.register('tick', function (m) {
     save(next);
     call(
       'luna://com.webos.applicationManager/launch',
-      { id: 'com.local.nativehome', params: { nativeHomeAuto: true } },
+      {
+        id: 'com.local.nativehome',
+        params: { nativeHomeAuto: true, nativeHomeBoot: true }
+      },
       function (r) {
         next.launch = r;
         save(next);

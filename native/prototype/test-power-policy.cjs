@@ -44,23 +44,12 @@ for (const [processing, settled, count] of [
   );
   a.equal(facts.settledActive, settled);
   a.equal(facts.resumed, settled);
-  a.equal(facts.command, 'R');
-  a.equal(facts.deadline, 0);
-  a.equal(facts.cancelWakeWait, !settled);
   a.equal(facts.diagnostics.length, count);
   a(!JSON.stringify(facts.diagnostics).includes('private-marker'));
 }
 const facts = make().observe({ state: 'Prepare Power Off' }, 1000);
-a.deepEqual(
-  [
-    facts.command,
-    facts.deadline,
-    facts.settledActive,
-    facts.cancelWakeWait,
-    facts.cancelPresentation
-  ],
-  ['T', 16000, false, true, false]
-);
+a.equal(facts.settledActive, false);
+a.equal(facts.cancelPresentation, false);
 a.equal(make().observe({ state: 'Suspend' }, 1000).cancelPresentation, true);
 a.equal(
   make().observe({ state: 'unknown-private-value' }, 1000).diagnostics.length,
@@ -71,7 +60,7 @@ console.log(
 );
 for (const payload of [null, undefined, false, 'private-value', []]) {
   const d = make().observe(payload, 1000);
-  a.deepEqual([d.command, d.settledActive, d.resumed], [null, false, false]);
+  a.deepEqual([d.settledActive, d.resumed], [false, false]);
   a.equal(d.diagnostics[0].field, 'payload');
   a(!JSON.stringify(d.diagnostics).includes('private-value'));
 }

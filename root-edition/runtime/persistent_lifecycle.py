@@ -6,7 +6,7 @@ Boot identifiers must distinguish snapshot resumes that reset monotonic uptime.
 """
 PHASES = ('disabled', 'trial', 'active', 'stopping', 'recovering', 'starting')
 FIELDS = {'version', 'generation', 'phase', 'enabled', 'boot', 'token'}
-EVENTS = ('enable', 'confirmed', 'boot', 'restored', 'ready', 'exit', 'fault', 'shutdown', 'resume', 'late-standby', 'cancel-rearm')
+EVENTS = ('enable', 'confirmed', 'boot', 'restored', 'ready', 'exit', 'fault', 'shutdown', 'resume', 'late-standby', 'cancel-rearm', 'wait-input', 'input-ready')
 
 
 def initial():
@@ -79,6 +79,11 @@ def transition(state, event):
             raise ValueError('Expected verified disabled fallback')
         new.update(phase='stopping', enabled=True)
         effect = 'none'
+    elif kind in ('wait-input','input-ready'):
+        before,after=('starting','stopping') if kind=='wait-input' else ('stopping','starting')
+        if not state['enabled'] or state['phase']!=before: raise ValueError('Invalid boot input wait')
+        new['phase']=after
+        effect='none'
     elif kind == 'shutdown':
         if state['phase'] not in ('active', 'stopping') or not state['enabled']:
             raise ValueError('Only confirmed mode can enter shutdown')

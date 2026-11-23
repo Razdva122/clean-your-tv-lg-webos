@@ -52,6 +52,7 @@ try {
               assert.equal(uri, 'luna://com.webos.applicationManager/launch');
               assert.equal(args.id, 'com.local.nativehome');
               assert.equal(args.params.nativeHomeAuto, true);
+              assert.equal(args.params.nativeHomeBoot, true);
               launches++;
               callback({ payload: { returnValue: true } });
             }

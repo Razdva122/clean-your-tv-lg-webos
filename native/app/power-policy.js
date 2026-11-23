@@ -1,8 +1,9 @@
 'use strict';
 var events = require('./contract-events');
 module.exports = function () {
-  var asleep = false;
-  function observe(p, now) {
+  var asleep = false,
+    poweringOff = false;
+  function observe(p) {
     var diagnostics = [];
     function unknown(field, value, rule) {
       var actual = events.describe(value);
@@ -52,7 +53,7 @@ module.exports = function () {
       ) < 0
     )
       unknown('processing', p.processing, 'firmware-processing');
-    var poweringOff = p.onOff === 'off' || offStates.indexOf(p.state) !== -1;
+    poweringOff = p.onOff === 'off' || offStates.indexOf(p.state) !== -1;
     var settledActive = !poweringOff && p.state === 'Active' && !p.processing;
     var resumed = false;
     if (p.state === 'Active Standby' || p.state === 'Suspend') asleep = true;
@@ -61,11 +62,8 @@ module.exports = function () {
       asleep = false;
     }
     return {
-      command: poweringOff ? 'T' : p.state === 'Active' ? 'R' : null,
-      deadline: poweringOff ? now + 15000 : 0,
       settledActive: settledActive,
       resumed: resumed,
-      cancelWakeWait: !settledActive,
       cancelPresentation:
         p.onOff === 'off' ||
         p.state === 'Active Standby' ||
@@ -75,8 +73,11 @@ module.exports = function () {
   }
   return {
     observe: observe,
+    inputLost: function () {
+      if (poweringOff) asleep = true;
+    },
     next: function (p) {
-      return observe(p, 0).resumed;
+      return observe(p).resumed;
     }
   };
 };

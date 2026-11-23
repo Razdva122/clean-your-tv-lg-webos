@@ -29,6 +29,12 @@ class DeviceAdapterTests(unittest.TestCase):
             journal={'transaction':'test','deadline':deadline,'state':'pending'}
             with patch.object(d,'STATE',root),patch.object(d,'PROC',proc),patch.object(d,'FAILSAFE',root/'failsafe'):
                 self.assertTrue(d.active_guardian(journal))
+                def pulse(tx,*,allow_wait=False):
+                    if not allow_wait:raise ValueError('Input is waiting')
+                    return {'state':'waiting-input'}
+                with patch('persistent_health.authorized',return_value=True),patch('persistent_health.require_fresh',side_effect=pulse):
+                    self.assertFalse(d.active_guardian(journal),'A rescan cannot pass installation verification')
+                    self.assertTrue(d.active_guardian(journal,allow_wait=True),'Duplicate boot must preserve supervision')
                 (root/'failsafe').touch(); self.assertFalse(d.active_guardian(journal)); (root/'failsafe').unlink()
                 (process/'stat').write_text('123 (python3) S '+'0 '*18+'43 0')
                 self.assertFalse(d.active_guardian(journal))

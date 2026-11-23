@@ -1,4 +1,4 @@
-import os,subprocess,sys,unittest
+import os,subprocess,sys,time,unittest
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'runtime'))
 from emergency_watchdog import watch
@@ -55,3 +55,33 @@ class Tests(unittest.TestCase):
   try:watch(r,lambda why:reasons.append(why) or True,on_lg_home=lambda:visits.append('lg'),on_ping=lambda:pings.append('ping'))
   finally:os.close(r)
   self.assertEqual(visits,['lg']);self.assertEqual(pings,['ping']);self.assertEqual(reasons,['escape'])
+
+ def test_wait_revokes_pings_until_a_fresh_validated_replacement(self):
+  stamp = int(time.monotonic()*1000)
+  for first in (b'', b'READY\nPING\n'):
+   with self.subTest(first=first):
+    r=self.stream(first+('WAIT %d\nCHECK %d\nPING\nESCAPE\n'%(stamp,stamp)).encode())
+    seen=[]
+    try:
+     reason=watch(r,lambda why:True,on_wait=lambda at:seen.append('wait'),
+                  on_ping=lambda:seen.append('ping'))
+    finally:os.close(r)
+    self.assertEqual(reason,'escape')
+    self.assertEqual(seen,(['ping'] if first else [])+['wait','ping'])
+
+ def test_invalid_wait_or_unvalidated_ping_recovers(self):
+  stamp=int(time.monotonic()*1000)
+  for payload in (b'WAIT -1\n',b'WAIT 0\n',('WAIT %d\nPING\n'%stamp).encode(),
+                  ('CHECK %d\n'%stamp).encode()):
+   with self.subTest(payload=payload):
+    r=self.stream(b'READY\n'+payload);seen=[]
+    try:reason=watch(r,lambda why:True,on_wait=lambda at:None,on_ping=lambda:seen.append(1))
+    finally:os.close(r)
+    self.assertEqual(reason,'bad_protocol');self.assertEqual(seen,[])
+
+ def test_stalled_reconnect_loop_still_expires(self):
+  r,w=os.pipe()
+  try:
+   os.write(w,('READY\nWAIT %d\n'%int(time.monotonic()*1000)).encode())
+   self.assertEqual(watch(r,lambda why:True,timeout=.03,on_wait=lambda at:None),'heartbeat_timeout')
+  finally:os.close(r);os.close(w)

@@ -43,7 +43,7 @@ def process_start(pid):
     return fields[19]
 
 
-def active_guardian(journal):
+def active_guardian(journal, *, allow_wait=False):
     # Replayed boot callbacks must not cancel a live bounded trial. A real reboot
     # has no matching guardian process. Failsafe always recovers immediately.
     try:
@@ -51,10 +51,11 @@ def active_guardian(journal):
         ready=safe_json(STATE/'profile-guardian-ready.json')
         pid=ready['pid']; deadline=journal['deadline']
         if type(pid) is not int or pid<=0: return False
-        if not time.monotonic()<deadline<=time.monotonic()+90:
-            from persistent_health import authorized, require_fresh
-            if not authorized(journal['transaction']): return False
-            require_fresh(journal['transaction'])
+        from persistent_health import authorized, require_fresh
+        if authorized(journal['transaction']):
+            require_fresh(journal['transaction'],allow_wait=allow_wait)
+        elif not time.monotonic()<deadline<=time.monotonic()+90:
+            return False
         if ready['transaction']!=journal['transaction'] or ready['deadline']!=deadline: return False
         if (PROC/str(pid)).stat().st_uid!=EXPECTED_UID: return False
         command=(PROC/str(pid)/'cmdline').read_bytes().split(b'\0')
@@ -188,7 +189,7 @@ def main(mode):
         if not (STATE/'profile-trial.json').exists(): return 'absent'
         j = safe_json(STATE/'profile-trial.json'); validate(j)
         if j['state'] not in ('pending','recovering'): return j['state']
-        if active_guardian(j): return 'guarded-trial'
+        if active_guardian(j,allow_wait=True): return 'guarded-trial'
         fd = os.open(STATE/'profile-recovery.log',os.O_CREAT|os.O_APPEND|os.O_WRONLY|os.O_NOFOLLOW,0o600)
         try:
             child = subprocess.Popen([current_executable(),str(Path(__file__).resolve()),'recover'],
