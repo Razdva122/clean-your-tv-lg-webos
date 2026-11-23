@@ -16,7 +16,9 @@
     var data = window.RootProfileData,
       failed = false,
       booted = false,
-      systemRestore = false;
+      systemRestore = false,
+      relaunchPending = false,
+      relaunchReading = false;
     var marker = 'tvhome.root.restored.v1';
     function recovery(error) {
       failed = true;
@@ -137,7 +139,6 @@
     function boot(restored) {
       if (booted) return;
       booted = true;
-      if (!systemRestore && window.SystemUpdates) watchForSystemRestore();
       window.RootLauncherRendered = false;
       var script = document.createElement('script');
       script.src = 'app.js';
@@ -202,30 +203,36 @@
         else rendered();
       };
       document.body.appendChild(script);
+      if (relaunchPending) checkSystemRelaunch();
     }
-    function watchForSystemRestore() {
-      var checking = false;
-      document.addEventListener('webOSRelaunch', function check() {
-        if (checking || failed) return;
-        checking = true;
-        window.SystemUpdates.rpc('restoreProfile', { edition: 'root' })
-          .then(function (pending) {
-            if (
-              pending &&
-              pending.transaction &&
-              pending.version === window.ROOT_VERSION &&
-              ['verifying', 'verifying-rollback'].indexOf(pending.phase) >= 0
-            ) {
-              // The updater can reopen a CARD that already rendered from its local profile.
-              document.removeEventListener('webOSRelaunch', check);
-              window.location.reload();
-            }
-          })
-          .catch(function () {})
-          .then(function () {
-            checking = false;
-          });
-      });
+    function checkSystemRelaunch() {
+      if (!window.SystemUpdates || systemRestore || failed || relaunchReading)
+        return;
+      if (!booted) {
+        relaunchPending = true;
+        return;
+      }
+      relaunchPending = false;
+      relaunchReading = true;
+      pendingAttempts = 0;
+      pendingTransaction = null;
+      systemProfile()
+        .then(function (pending) {
+          if (
+            pending &&
+            pending.transaction &&
+            pending.version === window.ROOT_VERSION &&
+            ['verifying', 'verifying-rollback'].indexOf(pending.phase) >= 0
+          ) {
+            // The updater can reopen a CARD that already rendered from its local profile.
+            document.removeEventListener('webOSRelaunch', checkSystemRelaunch);
+            window.location.reload();
+          }
+        })
+        .catch(function () {})
+        .then(function () {
+          relaunchReading = false;
+        });
     }
     var saved = null,
       localError = null;
@@ -323,6 +330,7 @@
         }
       );
     }
+    document.addEventListener('webOSRelaunch', checkSystemRelaunch);
     restore()
       .then(function (restored) {
         if (restored) {

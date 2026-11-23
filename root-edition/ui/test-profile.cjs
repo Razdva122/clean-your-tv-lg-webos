@@ -60,7 +60,8 @@ function harness({
   iconStatus = 200,
   iconPath = 'icons/one.png',
   i18n = false,
-  systemRpc
+  systemRpc,
+  schedule = setTimeout
 } = {}) {
   const calls = [],
     scripts = [],
@@ -130,7 +131,7 @@ function harness({
     document,
     localStorage: storage,
     Promise,
-    setTimeout,
+    setTimeout: schedule,
     clearTimeout,
     XMLHttpRequest: class {
       open(method, url) {
@@ -188,6 +189,35 @@ function harness({
     'a Root launcher reopened by an active System update restarts profile validation'
   );
   assert(!reopened.calls.some(([method]) => method === 'system:healthy'));
+  let rejectStartup;
+  let reads = 0;
+  const earlyRelaunch = harness({
+    saved: profile,
+    i18n: true,
+    schedule: (callback) => setImmediate(callback),
+    systemRpc: async () => {
+      reads++;
+      if (reads === 1)
+        return new Promise((_, reject) => (rejectStartup = reject));
+      if (reads === 2)
+        throw Error(
+          'Legacy updater permissions changed; computer recovery required'
+        );
+      return { ...systemRestore, phase: 'verifying' };
+    }
+  });
+  earlyRelaunch.events.get('webOSRelaunch')?.();
+  rejectStartup(
+    Object.assign(Error('System updater unavailable'), { unavailable: true })
+  );
+  await tick();
+  await tick();
+  assert.strictEqual(
+    reads,
+    3,
+    'an early relaunch survives transient registration refusal'
+  );
+  assert(earlyRelaunch.calls.some(([method]) => method === 'reload'));
   const starting = harness();
   await tick();
   await assert.rejects(
