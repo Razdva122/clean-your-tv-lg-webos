@@ -742,3 +742,89 @@ stock LG Home. This covers the selected ordinary No-root removal and
 Root connection handoff. The Root-installed cleanup case remains
 separate. The published v1.26.0 Root installer passed its published
 checksum and was started after this clean-state readback.
+
+#### C3 Root observations
+
+The published v1.26.0 Root installer completed on the cleaned C3.
+Root Home 0.23.0 had a positive persistent active readback and paired
+network HOME from Media Player opened Root Home before the transition.
+The existing System IPK 1.2.11 reported its original engine 1.2.14.
+The recorded live Root profile was used for signed forward at 19:17.
+The candidate Root 0.24.1 IPK SHA-256 is
+`cc4dc070e7ff9400d051b733bc9f8b8afbf649a71e99296d295bd174dd14b9bd`;
+Root Updater 0.6.6 is
+`955eda9c015672b520554d12bdba68640d829048e958222e254186057ba25fda`;
+Root infrastructure is
+`1186cee5471a9d245fa4543bb1a69318e8dfb55caa3bfc1b98213546590fae38`.
+
+**Root forward failed.** The System engine migrated successfully and
+the device installed and foregrounded Root 0.24.1. The launcher failed
+to deliver its profile readiness receipt before the updater's 120-second
+health deadline. At about 19:23 the durable transaction automatically
+entered rollback with `Launcher profile readiness timed out`. The
+earlier harness timeout left the operation in place. No second install
+or manual health acknowledgement was submitted.
+
+The automatic rollback restored Root 0.23.0 and completed its normal
+Home restoration. Readback reported `phase=rolled-back`,
+`homeResumePhase=rolled-back`, `status=restored` and active persistent
+Root intent. The restored app had rendered. This is automatic recovery
+from a failed forward update. The separate supported Root rollback
+after a successful forward and the signed Romanian Root Repair remain
+blocked on a successful forward transaction. The `v1.27.0` OTA failed
+before successful active Home resume could be tested.
+
+After automatic rollback, paired network HOME from Media Player settled
+on Root Home, and the captured settings and configuration matched the
+pre-update export. The exact RC4 macOS installer then completed
+ordinary Root cleanup after a verified software restart. It returned
+`verified-completion`. Media Player remained available and network HOME
+settled on LG Home. This completes the selected C3 removal and recovery
+subcase of RC1-05 with its stated transition.
+
+The Root 0.24.1 application extracted from the verified signed IPK was
+exercised in local Chromium with the same privately captured Root
+profile and a modeled LS2 broker. An existing verifying transaction
+and a visible installing-to-verifying transition both submitted the
+correct health receipt. When the broker reported service unavailable
+at startup, the launcher loaded the saved profile. A later normal
+`webOSRelaunch` after broker restoration did not submit health. This
+demonstrates a failure mode under modeled replies. The actual C3
+broker reply at the failed startup was not captured, so causality is
+unconfirmed.
+
+A separate clean installation from the pinned RC4 macOS CLI was
+started only after the verified cleanup. It can exercise the
+independent Root runtime cases. It cannot supply signed OTA evidence.
+
+The clean RC4 direct Root installation reached verified completion.
+Root 0.24.1 persistent intent was active and paired HOME from Media
+Player opened Root Home. The rendered Change Home switch produced a
+verified disabled state and LG Home routing. An ordinary re-open
+and On returned the intent to active and restored Root Home routing.
+At 19:33:37, Media Player was foregrounded for the physical Root
+check. A pre-test uptime and unique temporary marker were recorded
+for the AC power verification.
+
+#### RC4 case reconciliation before physical Root evidence
+
+| Case | Disposition at this checkpoint |
+| --- | --- |
+| RC1-01 | No-root signed forward and Romanian Repair passed. Signed Romanian Root Repair is blocked by Root forward. |
+| RC1-02 | No-root signed forward, same-IPK Repair and supported rollback passed. Root forward failed its readiness deadline. Automatic Root rollback restored the previous package, profile and routing. A separate Root Repair and requested rollback require successful forward. |
+| RC1-03 | The source Root route was active. Candidate automatic resume after signed forward is blocked by Root OTA. Direct final Root network routing passed. Physical sound, standby, cold start and emergency escape await the owner on the direct build. W20H retained-receipt hardware remains deferred. |
+| RC1-04 | Exact Root Beta passed both modeled B9 offline scenarios. Physical B9 is explicitly deferred. |
+| RC1-05 | Both C3 editions reached verified full removal with stock LG Home and a surviving Media Player. Existing pinned CI evidence covers the scoped legacy cache and metadata fixtures. |
+| RC1-06 | Exact production-signed Android APK passed all owned-emulator cases. |
+| RC4-07 | Explicitly deferred to an eligible physical embedded LG Home device. |
+| RC4-08 | Final C3 No-root export and routing passed. The original webOS 4.5 YouTube case is deferred. |
+| RC4-09 | No-root retains Off and routes to LG Home. Its ordinary Off-to-On flow failed twice and needed software restart. Direct Root Off-to-On and both routing destinations passed. No-root physical evidence was unavailable during its handoff window. Root physical evidence is outstanding. The original G3 inactivity scenario is deferred. |
+
+Nine cases stay selected. Four passed within their non-deferred scope
+(RC1-04, RC1-05, RC1-06, RC4-08). Two have directly observed failures
+(RC1-02, RC4-09). Two are partially demonstrated with blocked signed
+Root scenarios (RC1-01, RC1-03). One case is explicitly deferred
+(RC4-07). P00 and CI support individual subchecks; no entire case
+uses prior-candidate evidence in place of the selected artifact.
+The required physical observations stay open. This is a checkpoint
+with release blockers, and stable acceptance remains unset.
