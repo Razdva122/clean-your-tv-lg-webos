@@ -828,3 +828,22 @@ Root scenarios (RC1-01, RC1-03). One case is explicitly deferred
 uses prior-candidate evidence in place of the selected artifact.
 The required physical observations stay open. This is a checkpoint
 with release blockers, and stable acceptance remains unset.
+
+At 19:40:35 UTC+05:00, C3 still had Media Player in front with the
+direct Root 0.24.1 route active. Uptime had continued and the unique
+cold-start marker remained. No physical result had arrived for sound,
+standby, Magic Remote Home/escape or AC boot. The C3 hardware subcases
+are blocked on the owner's physical availability in this window and
+retain their case IDs. The earlier No-root hardware subcases also
+retain their requirement on the exact No-root artifact.
+
+Exit reconciliation for the current QA window retains nine selected
+cases: four scoped passes, two cases with observed failures, two
+partially verified cases with concrete blockers, and one explicit
+other-model deferral. Earlier evidence supports individual subchecks;
+zero complete cases use previous-candidate evidence. There are zero
+remaining independent automated cases in the original plan. Owner
+input and successful signed Root forward are the remaining specific
+dependencies. The Root OTA failure and the reproduced No-root
+re-enable failure are recorded separately. Stable release acceptance
+remains unset and v1.26.0 remains the current public release.
