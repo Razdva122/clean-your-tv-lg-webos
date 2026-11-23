@@ -2621,6 +2621,167 @@ class SimpleRemoval(unittest.TestCase):
         self.assertIsNotNone(self.store.pending(self.profile))
 
     @unittest.skipIf(getattr(os, 'getuid', lambda: -1)() == 0, 'unprivileged SDK model')
+    def test_terminal_restart_with_previous_install_does_not_request_another_boot(self):
+        self.terminal_service_restart_fixture()
+        self.store.checkpoint(self.profile, previous={'action': 'install', 'stage': 'pending'})
+        self.assertTrue(self.remove()['restart_required'])
+        self.reboot()
+        result = self.remove()
+        self.assertTrue(result['verified_clean'], result)
+        self.assertIsNone(self.store.pending(self.profile))
+
+    @unittest.skipIf(getattr(os, 'getuid', lambda: -1)() == 0, 'unprivileged SDK model')
+    def test_terminal_restart_with_settled_cancellation_and_resident_history_finishes(self):
+        self.terminal_service_restart_fixture()
+        original = self.cleanup._device
+        def observation(installer, action, **options):
+            value = original(installer, action, **options)
+            if action == 'inventory':
+                value.update(resident_installer=True, cancellation={'package_pending': False,
+                    'eim_pending': False, 'launch_pending': False, 'closed': True})
+            return value
+        with patch.object(self.cleanup, '_device', side_effect=observation):
+            self.assertTrue(self.remove()['restart_required'])
+            self.reboot()
+            result = self.remove()
+        self.assertTrue(result['verified_clean'], result)
+
+    @unittest.skipIf(getattr(os, 'getuid', lambda: -1)() == 0, 'unprivileged SDK model')
+    def test_unavailable_proc_after_observed_restart_does_not_rearm_boot_proof(self):
+        self.terminal_service_restart_fixture()
+        self.assertTrue(self.remove()['restart_required'])
+        proof = self.store.pending(self.profile)['cleanup_boot_proof']
+        self.reboot()
+        (self.root / 'proc').rename(self.root / 'hidden-proc')
+        with self.assertRaises(UserError) as blocked:
+            self.remove()
+        self.assertEqual(blocked.exception.reason_code, 'cleanup-check-failed')
+        self.assertEqual(self.store.pending(self.profile)['cleanup_boot_proof'], proof)
+        from cytv import diagnostics
+        report = json.loads(diagnostics.create_report(self.store, 'uninstall', self.profile,
+                            'uninstall', blocked.exception).read_text())
+        evidence = report['removal']['restart_evidence']
+        self.assertTrue(evidence['kernel_changed'])
+        self.assertFalse(evidence['proc_enumerated'])
+        self.assertEqual(evidence['decision'], 'observation-blocked')
+
+    @unittest.skipIf(getattr(os, 'getuid', lambda: -1)() == 0, 'unprivileged SDK model')
+    def test_lost_marker_without_kernel_change_is_reported_without_rearming(self):
+        self.terminal_service_restart_fixture()
+        self.assertTrue(self.remove()['restart_required'])
+        proof = self.store.pending(self.profile)['cleanup_boot_proof']
+        self.boot_marker().unlink()
+        with self.assertRaises(UserError):
+            self.remove()
+        self.assertEqual(self.store.pending(self.profile)['cleanup_boot_proof'], proof)
+        observed = self.store.pending(self.profile)['cleanup_restart_evidence']
+        self.assertTrue(observed['boot_probe_returned'])
+        self.assertTrue(observed['restart_observed'])
+        self.assertFalse(observed['kernel_changed'])
+        self.assertEqual(observed['decision'], 'observation-blocked')
+
+    @unittest.skipIf(getattr(os, 'getuid', lambda: -1)() == 0, 'unprivileged SDK model')
+    def test_same_boot_reports_opaque_reason_and_keeps_original_baseline(self):
+        self.terminal_service_restart_fixture()
+        self.assertTrue(self.remove()['restart_required'])
+        proof = self.store.pending(self.profile)['cleanup_boot_proof']
+        with self.assertRaises(UserError):
+            self.remove()
+        saved = self.store.pending(self.profile)
+        self.assertEqual(saved['cleanup_boot_proof'], proof)
+        observed = saved['cleanup_restart_evidence']
+        self.assertTrue(observed['opaque_interpreter'])
+        self.assertFalse(observed['process_cmdline_unreadable'])
+        self.assertTrue(observed['proc_enumerated'])
+        self.assertFalse(observed['kernel_changed'])
+        self.assertEqual(observed['decision'], 'awaiting-restart')
+
+    @unittest.skipIf(getattr(os, 'getuid', lambda: -1)() == 0, 'unprivileged SDK model')
+    def test_unsettled_original_configuration_stays_blocking(self):
+        self.terminal_service_restart_fixture()
+        self.store.checkpoint(self.profile, previous={'action': 'install', 'stage': 'pending',
+                              'observer_operation': 'a' * 32})
+        original = self.cleanup._device
+        def observation(installer, action, **options):
+            value = original(installer, action, **options)
+            if action == 'inventory':
+                value['cancellation'] = {'eim_pending': True}
+            return value
+        with patch.object(self.cleanup, '_device', side_effect=observation):
+            result = self.remove()
+        self.assertTrue(result['restart_required'])
+        self.assertEqual(self.store.pending(self.profile)['cleanup_restart_triggers'],
+                         ['original-configuration-unverified'])
+        self.assertFalse(self.vendor_removals())
+
+    @unittest.skipIf(getattr(os, 'getuid', lambda: -1)() == 0, 'unprivileged SDK model')
+    def test_late_process_observation_failure_is_reported_and_retry_rechecks_it(self):
+        self.terminal_service_restart_fixture()
+        self.assertTrue(self.remove()['restart_required'])
+        self.reboot()
+        proc = self.root / 'proc'
+        hidden = self.root / 'hidden-proc'
+        original = self.cleanup._device
+        def observation(installer, action, **options):
+            if action == 'history' and proc.exists():
+                proc.rename(hidden)
+            return original(installer, action, **options)
+        with patch.object(self.cleanup, '_device', side_effect=observation), self.assertRaises(UserError):
+            self.remove()
+        saved = self.store.pending(self.profile)
+        self.assertEqual(saved['stage'], 'verified-clean')
+        self.assertEqual(saved['cleanup_restart_evidence']['phase'], 'finish-readback')
+        self.assertEqual(saved['cleanup_restart_evidence']['decision'], 'observation-blocked')
+        with self.assertRaises(UserError):
+            self.remove()
+        self.assertEqual(self.store.pending(self.profile)['cleanup_restart_evidence']['decision'], 'observation-blocked')
+        hidden.rename(proc)
+        self.assertTrue(self.remove()['verified_clean'])
+
+    @unittest.skipIf(getattr(os, 'getuid', lambda: -1)() == 0, 'unprivileged SDK model')
+    def test_process_diagnostic_flags_distinguish_unreadable_cmdline_and_links(self):
+        cmdline = self.terminal_service_restart_fixture()
+        cmdline.chmod(0)
+        self.addCleanup(cmdline.chmod, 0o600)
+        observed = self.cleanup._device(self.installer, 'idle', guard=True)
+        self.assertTrue(observed['process_cmdline_unreadable'])
+        self.assertFalse(observed['opaque_interpreter'])
+        cmdline.chmod(0o600)
+        cmdline.write_bytes(b'/usr/bin/unrelated\0')
+        self.remote.transform = lambda code: (
+            'var originalLink=require("fs").readlinkSync;require("fs").readlinkSync=function(p){'
+            'if(/987654\\/(exe|cwd)$/.test(p)){var e=new Error("fixture");e.code="EACCES";throw e;}'
+            'return originalLink(p);};' + code)
+        observed = self.cleanup._device(self.installer, 'idle', guard=True)
+        self.assertFalse(observed['process_cmdline_unreadable'])
+        self.assertTrue(observed['process_links_unreadable'])
+        self.assertFalse(observed['idle'])
+
+    @unittest.skipIf(getattr(os, 'getuid', lambda: -1)() == 0, 'unprivileged SDK model')
+    def test_restart_diagnostic_is_not_authority_and_failed_probe_has_a_phase(self):
+        self.terminal_service_restart_fixture()
+        self.assertTrue(self.remove()['restart_required'])
+        self.store.checkpoint(self.profile, cleanup_restart_evidence={
+            'kernel_changed': True, 'decision': 'completed', 'terminal_cleanup': True})
+        with self.assertRaises(UserError):
+            self.remove()
+        observed = self.store.pending(self.profile)['cleanup_restart_evidence']
+        self.assertFalse(observed['kernel_changed'])
+        self.assertEqual(observed['decision'], 'awaiting-restart')
+        original = self.cleanup._device
+        def failed_probe(installer, action, **options):
+            if action == 'boot-probe':
+                raise UserError('fixture probe failure')
+            return original(installer, action, **options)
+        with patch.object(self.cleanup, '_device', side_effect=failed_probe), self.assertRaises(UserError):
+            self.remove()
+        observed = self.store.pending(self.profile)['cleanup_restart_evidence']
+        self.assertEqual(observed['phase'], 'boot-probe')
+        self.assertEqual(observed['proof_kind'], 'volatile-marker')
+        self.assertFalse(observed['boot_probe_returned'])
+        self.assertEqual(observed['decision'], 'observing')
+
+    @unittest.skipIf(getattr(os, 'getuid', lambda: -1)() == 0, 'unprivileged SDK model')
     def test_terminal_helper_reboots_once_and_can_restore_stock_without_saved_pairing(self):
         app = self.cleanup.APPS[0]
         helper = self.root / 'developer/apps/usr/palm/applications' / app
@@ -2705,7 +2866,10 @@ class SimpleRemoval(unittest.TestCase):
         proc.rename(self.root / 'hidden-proc')
         self.assertTrue(self.remove()['restart_required'])
         self.reboot()
-        self.assertTrue(self.remove()['restart_required'])
+        with self.assertRaises(UserError) as blocked:
+            self.remove()
+        self.assertEqual(blocked.exception.reason_code, 'cleanup-check-failed')
+        self.assertEqual(self.store.pending(self.profile)['cleanup_restart_evidence']['decision'], 'observation-blocked')
         self.assertIsNotNone(self.store.pending(self.profile))
         self.assertEqual(list((helper / 'state').iterdir()), [])
         self.assertFalse(self.vendor_removals())
@@ -3001,20 +3165,25 @@ class SimpleRemoval(unittest.TestCase):
         self.assertFalse(any(uri.endswith('/dev/remove') for uri, _ in self.remote.calls))
         pid.unlink();shutil.rmtree(proc);self.assertTrue(self.remove()['verified_clean'])
 
-    def test_lost_rearm_create_reply_keeps_retry_seedable_without_adopting_a_mismatch(self):
+    def test_saved_verified_restart_does_not_create_another_marker_for_opaque_process(self):
         proc=self.root/'proc/123';proc.mkdir(parents=True)
         (proc/'cmdline').write_bytes(b'/usr/bin/node\0-e\0')
         self.remote.transform=lambda code:code.replace('Date.now()+8000','Date.now()+100')
         self.remove();marker=self.boot_marker()
-        with marker.open('rb') as held_old_inode:
-            marker.unlink()  # Keep the fixture inode distinct from the next marker.
+        proof=self.store.pending(self.profile)['cleanup_boot_proof']
+        with marker.open('rb'):
+            marker.unlink()
             self.store.checkpoint(self.profile, cleanup_boot_verified=True)
             self.remote.cut_boot_create=True
-            with self.assertRaisesRegex(UserError,'interrupted'):self.remove()
-            self.assertTrue(marker.exists())
-            self.assertTrue(self.remove()['restart_required'])
-            self.assertTrue(proc.exists())
-        shutil.rmtree(proc);marker.unlink();self.assertTrue(self.remove()['verified_clean'])
+            for _ in range(2):
+                with self.assertRaises(UserError) as blocked:
+                    self.remove()
+                self.assertEqual(blocked.exception.reason_code, 'cleanup-check-failed')
+                self.assertFalse(marker.exists())
+                self.assertEqual(self.store.pending(self.profile)['cleanup_boot_proof'], proof)
+            self.assertTrue(self.remote.cut_boot_create)  # No boot-create was attempted.
+        shutil.rmtree(proc)
+        self.assertTrue(self.remove()['verified_clean'])
 
     def test_stale_pid_of_foreign_process_does_not_force_endless_restart(self):
         pid=self.own_file('apps/usr/palm/applications/com.local.nativehome/state/controller.pid',str(os.getpid()))

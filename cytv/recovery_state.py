@@ -59,6 +59,27 @@ def restart_triggers(value):
     return [item for item in RESTART_TRIGGERS if item in known]
 
 
+def restart_evidence(value):
+    """Bounded diagnostic observations, never authority to continue removal."""
+    value = value if type(value) is dict else {}
+    result = {key: value[key] for key in (
+        'proof_present', 'boot_probe_returned', 'restart_observed', 'kernel_changed', 'reused_proof',
+        'idle', 'proc_enumerated', 'project_running', 'installer_running', 'homebrew_observed',
+        'process_cmdline_unreadable', 'process_links_unreadable', 'opaque_interpreter', 'process_limit_exceeded',
+        'terminal_cleanup', 'all_targets_terminal', 'project_catalog_absent', 'previous_present',
+        'resident_history', 'cancellation_present', 'configuration_pending', 'package_pending',
+        'older_pending', 'allow_opaque', 'empty_helper_dirs_retained', 'empty_service_dirs_retained')
+        if type(value.get(key)) is bool}
+    for key, allowed in (
+            ('proof_kind', ('none', 'volatile-marker', 'kernel-only', 'unknown')),
+            ('phase', ('boot-probe', 'writers', 'before-stop', 'before-packages', 'final-readback', 'finish-readback')),
+            ('decision', ('observing', 'restart-requested', 'awaiting-restart', 'observation-blocked',
+                          'process-blocked', 'continuing', 'completed'))):
+        if type(value.get(key)) is str and value[key] in allowed:
+            result[key] = value[key]
+    return result
+
+
 def removal_summary(pending):
     """Fixed safe projection; neither old success nor this advice grants effects."""
     pending = pending if type(pending) is dict else {}
@@ -84,6 +105,8 @@ def removal_summary(pending):
                 result[key] = True
     if stage == 'restart-required' and (triggers := restart_triggers(pending.get('cleanup_restart_triggers'))):
         result['restart_triggers'] = triggers
+    if evidence := restart_evidence(pending.get('cleanup_restart_evidence')):
+        result['restart_evidence'] = evidence
     return result
 
 
