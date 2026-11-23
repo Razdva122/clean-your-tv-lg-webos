@@ -847,3 +847,68 @@ input and successful signed Root forward are the remaining specific
 dependencies. The Root OTA failure and the reproduced No-root
 re-enable failure are recorded separately. Stable release acceptance
 remains unset and v1.26.0 remains the current public release.
+
+### Replacement candidate after RC4
+
+The maintainer resumed the release at 19:47 UTC+05:00 on 2026-11-23 and
+authorized the fix batch. RC4's original nine-case inventory and explicit
+other-model hardware deferrals remain in force.
+
+The instrumented repeat from the published active Root 0.23.0 baseline
+used the exact previous signed RC4 bundle. Root 0.24.1 appeared while the
+transaction was verifying, restored its profile and rendered. At
+20:00:51 the updater had accepted launcher readiness. It reported
+restored Home intent and paired HOME from Media Player opened Root Home.
+The requested signed rollback returned to published Root with working
+Home. The earlier failure remains an observed intermittent failure.
+This repeat did not encounter the transient broker responses modeled
+by the regression tests.
+
+[PR #802](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/802)
+preserves an OTA relaunch during initial or overlapping Root profile
+reads and reuses the existing validated System profile startup. A
+matching active transaction reloads the launcher before the standard
+render and health receipt checks. The No-root settings now offer the
+existing confirmed Start Helper action when the controller reports
+inactive and its Home broker reports a timeout or missing response.
+The confirmed Start preserves Off until the owner chooses On. The
+browser replay and new regressions passed, including an early
+relaunch, transient permission refusal, overlapping relaunch, active
+transaction validation and busy Helper behavior.
+
+Local preflight assembled all TV packages and verified the four System
+variants against the selected component metadata and published baseline.
+Helper SHA-256 again matched
+`b0020d1ae15b71737297c7dfdfa592a67da5d348beaf5d5356920ed71e53ff59`
+and its tested rollback contract. The unchanged 1.2.16 engine matched
+`7200e8ac7c133b24ff0228d3411a84cfe94954d8722a7f9cb4ad72c6efd79fb2`.
+The local B9 Beta bundle
+`27c1f8ee0e8d13b2b03a683719d2cf36e332dd7f53af3a31073397542b6317d7`
+passed both factory-Node/LS2 fixture variants with retained settings and
+148 unchanged installed files. It is reusable only if the final
+embedded bundle and its inputs match. Existing recovery and Home
+instructions were reviewed. Their controls and localized labels
+remain applicable.
+
+At 20:11–20:15 the C3 was prepared for the replacement with the
+published No-root 1.20.5, Helper 0.9.3, Home Updater 0.6.4 and
+System package 1.2.11. The clean published installation retained
+explicit Off and subsequently accepted On without restarting. The
+broker briefly reported BUSY during the concurrent read and the
+ordinary panel settled. The device has no selected engine slot or
+active product transaction. The real rendered profile was captured
+for final No-root forward verification.
+
+Compared with the verified RC4 System assets, both Root IPKs change
+only the compiled Root profile script. Both Home IPKs change only the
+compiled Helper controls and Home settings scripts. The two edition
+Updaters, Helper, Root infrastructure and System engine are byte
+identical. The selected v1.27.0 component versions are retained for
+this unpublished replacement. The packaging comparison scopes
+reusable evidence and leaves the original C3 hardware requirements open.
+
+GitHub canceled macOS runtime shard 3 before a hosted runner acquired it.
+The two aggregate jobs inherited that failure. Attempt 2 requeued
+only those checks on the reviewed source. Successful jobs were retained.
+
+Both attempts of the focused PR validation are retained at [45199897498](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/45199897498). The replacement package inputs were frozen after the successful retry.

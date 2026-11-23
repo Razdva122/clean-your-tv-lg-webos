@@ -51,6 +51,11 @@
   installer explains how to retry a refused TV remote connection
   (#784, #788).
 
+- Root rechecks the System profile when an update reopens Home during
+  startup. No-root settings can offer a confirmed Start Helper when
+  Home status is unavailable and Helper is inactive. The saved Home
+  choice stays Off until it is changed (#802).
+
 | Component | v1.26.0 | v1.27.0 |
 | --- | --- | --- |
 | cytv installer | 0.23.0 | 0.24.1 |
