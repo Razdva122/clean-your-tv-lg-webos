@@ -118,7 +118,7 @@ def _legacy_native_recovery(c=None):
         return result
 
 
-def restore():
+def restore(*, cancel_rearm=True):
     c = coordinator()
     if c is None or later_legacy_trial(c): return _legacy_native_recovery(c)
     # A late standby decision may briefly own the operation lock after the
@@ -126,9 +126,20 @@ def restore():
     deadline = time.monotonic() + 1
     while True:
         try:
-            result = c.exit(cleanup_disabled=False)
+            result = c.exit(cleanup_disabled=False, cancel_rearm=cancel_rearm)
             break
         except BlockingIOError:
+            # A confirmed boot restart holds the route lock through guarded
+            # publication. Revoke that attempt using the intent store's own
+            # compare-and-swap lock; the route restore still takes the normal
+            # operation lock below. A concurrent publication rechecks intent.
+            pending=c.store.read()
+            if cancel_rearm and pending['phase']=='starting' and pending['enabled']:
+                try:
+                    c.event(pending,'exit')
+                    deadline=time.monotonic()+60
+                except (BlockingIOError,ValueError):
+                    if c.store.read()==pending and time.monotonic()>=deadline:raise
             if time.monotonic() >= deadline: raise
             time.sleep(.01)
     if result.get('restored_transaction'): return 'restored'
@@ -180,7 +191,7 @@ def _boot():
             return 'shutdown-pending'
         try: journal = d.safe_json(d.STATE/'profile-trial.json')
         except FileNotFoundError: journal = None
-        if journal is not None and d.active_guardian(journal): return 'guarded-intent-trial'
+        if journal is not None and d.active_guardian(journal,allow_wait=True): return 'guarded-intent-trial'
         if intent['phase'] == 'disabled':
             _legacy_native_recovery(c)
             return 'restored'
@@ -237,8 +248,8 @@ def startup_validate(sources):
     return dict(sources)
 
 
-def startup_load():
-    try: value=d.safe_json(d.STATE/'startup-policy.json')
+def startup_load(read=None):
+    try: value=read() if read is not None else d.safe_json(d.STATE/'startup-policy.json')
     except FileNotFoundError:return dict(startup_DEFAULTS)
     if (not isinstance(value,dict) or set(value)!={'version','sources'}
             or type(value['version']) is not int or value['version'] not in (1,2)):

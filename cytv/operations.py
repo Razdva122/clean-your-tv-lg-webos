@@ -186,11 +186,12 @@ class Installer:
             args = ['env', '-u', 'PYTHONHOME', '-u', 'PYTHONPATH', 'PYTHONDONTWRITEBYTECODE=1', 'PYTHONNOUSERSITE=1', *args]
         return shlex.join(args)
 
-    def _select_python(self, provision=False):
+    def _select_python(self, provision=False, *, repair_cache=False):
         from .python_runtime import select_python
         from .state import default_dir
         cache = (self.store.root if self.store is not None else default_dir()) / 'python-cache'
-        return select_python(self.remote, cache, self.progress, provision=provision)
+        options = {'repair_cache': True} if repair_cache else {}
+        return select_python(self.remote, cache, self.progress, provision=provision, **options)
 
     def _python(self, state=None, *, repair_cache=False):
         if getattr(self, '_selected_python', None) and not repair_cache:
@@ -398,7 +399,8 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
             if action in ('clean-remove','clean-target','native-install'):
                 # Fresh support imports and a host-verified interpreter; no
                 # retained launcher/binding module executes during full cleanup.
-                python=self._select_python(provision=True)
+                options = {'repair_cache': True} if action in ('clean-remove', 'clean-target') else {}
+                python=self._select_python(provision=True, **options)
                 self._selected_python=python
                 entry='import runpy,sys;sys.path.insert(0,sys.argv.pop(1));sys.argv.pop(0);runpy.run_path(sys.argv[0],run_name="__main__")'
                 args=[python,'-I','-B','-c',entry,driver.rsplit('/',1)[0],driver,action]
@@ -520,7 +522,7 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
             return None
 
     def observe_failed_root_home_button(self):
-        if (self.profile['edition'] != 'root' or self.tv_info.get('home_backend_schema') != 3
+        if (self.profile['edition'] != 'root' or self.tv_info.get('home_backend_schema') not in (3, 4)
                 or self.outcome.values['home_button'] != 'not-working'):
             return
         field = 'root_home_button_readback'
@@ -539,7 +541,8 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
             # This observation is optional and does not reopen the completed install.
             pass
 
-    def root_action(self, action, bundle=None, migrate=False, experimental=False, *, timeout=None, read_only=False):
+    def root_action(self, action, bundle=None, migrate=False, experimental=False, *,
+                    timeout=None, read_only=False, retry_token=None):
         if action == 'status':
             # A failed new read must not advertise an earlier runtime observation.
             observed = self.tv_info.setdefault('status', {}).setdefault('device', {})
@@ -548,6 +551,11 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
                 observed.pop(key, None)
         driver = (bundle or ROOT_STATE) + '/deploy.py'
         args = [self._python(ROOT_STATE), driver, action]
+        if retry_token is not None:
+            from .root_activation import RETRY_ENABLE
+            if action != 'enable' or not re.fullmatch('[a-f0-9]{32}', retry_token):
+                raise ValueError('Invalid retained activation retry')
+            args = [args[0], '-I', '-B', '-c', RETRY_ENABLE, retry_token]
         if bundle:
             args += ['--bundle', bundle]
         if migrate:
@@ -598,6 +606,10 @@ with os.fdopen(f,'rb') as stream:
             raise
         if action == 'enable': self.collect_root_diagnostics(cursor)
         reply = json.loads(raw)
+        if retry_token is not None and reply == {'returnValue': False, 'retained_retry_refused': True}:
+            from .root_activation import RetryRefused
+            raise RetryRefused('Recovery evidence changed. Check recovery again; recovery data was kept.',
+                               reason_code='pending-operation')
         if action == 'status' and isinstance(reply, dict):
             # Retain only bounded data, even in the in-memory diagnostic context.
             observed.update(diagnostics.context.status_summary({'device': reply}))
@@ -1168,7 +1180,8 @@ else:
                 if not self.helper_retry():
                     raise UserError('Root is installed, but Home Helper has not stopped. Press Home three times within two seconds (older Helper: hold Home for two seconds), release all buttons, then use Home settings > Turn on Home control. Run cytv status or cytv restore before reinstalling.') from None
 
-    def recover_failed_activation(self, *, verified_support=False):
+    def recover_failed_activation(self, *, verified_support=False, expected_token=None, stock_only=False,
+                                  routing_only=False):
         """Compensate our activation through the ownership-checked restore path.
 
         Keep the original stage/error, including when the compensation fails.
@@ -1189,10 +1202,15 @@ else:
             step = 'final-status' if restored_token is not None else 'initial-status'
             try:
                 current = self.root_action('status').get('result', {})
+                effective = current.get('effective', {})
                 if current.get('recovery', {}).get('integrity_verified') is not True:
                     self.tv_info[diagnostic_key] = {'step': step, 'reason': 'integrity-unverified'}
                     return False
                 if verified_support and current.get('backend') != 'c1-native-gate':
+                    raise UserError('Root operation was not confirmed. Run cytv status; retain recovery state.',
+                                    reason_code='root-operation-unconfirmed')
+                if routing_only and (effective.get('routing') != 'compositor-keyfilter-v1'
+                                     or expected_token is not None and effective.get('token') != expected_token):
                     raise UserError('Root operation was not confirmed. Run cytv status; retain recovery state.',
                                     reason_code='root-operation-unconfirmed')
                 if restored_token is not None:
@@ -1202,12 +1220,22 @@ else:
                         return False
                 elif not self.root_setup_inactive(current):
                     step = 'restore'
-                    effective = current.get('effective', {})
+                    if stock_only or (expected_token is not None and effective.get('token') != expected_token):
+                        self.tv_info[diagnostic_key] = {'step': step, 'reason': 'operation-unconfirmed'}
+                        return False
                     if (verified_support and current.get('backend') == 'c1-native-gate'
                             and effective.get('routing') == 'compositor-keyfilter-v1'):
                         from .root_install_recovery import restore_activation
+                        if routing_only:
+                            from .root_activation import retained_filter_token
+                            if retained_filter_token(current) != effective.get('token') or not effective.get('token'):
+                                raise UserError('Root operation was not confirmed. Run cytv status; retain recovery state.',
+                                                reason_code='root-operation-unconfirmed')
                         restored_token = effective.get('token')
-                        restore_activation(self, restored_token)
+                        if routing_only:
+                            restore_activation(self, restored_token, routing_only=True)
+                        else:
+                            restore_activation(self, restored_token)
                     else:
                         self.root_action('restore')
                     step = 'final-status'
@@ -1417,7 +1445,7 @@ else:
             if self.tv_info.get('home_backend') == 'c1-native-gate':
                 variant = self.manifest['root_backends']['c1-native-gate']['graphics'][self.tv_info['graphics_resolution']]
                 root = json.loads((self.payload / package.safe_name(variant) / 'release.json').read_text())['version']
-                targets = [(package.ROOT_APP, 'Root (experimental)' if self.tv_info.get('home_backend_schema') == 3 else 'Root (C1 Beta)', root)]
+                targets = [(package.ROOT_APP, 'Root (experimental)' if self.tv_info.get('home_backend_schema') in (3, 4) else 'Root (C1 Beta)', root)]
             else:
                 root = json.loads((self.payload / 'root/release.json').read_text())['version']
                 files = package.data_files((self.payload / 'root-updater/root-updater.ipk').read_bytes())
@@ -1946,6 +1974,64 @@ else:
         self.store.finish(self.profile)
         self.outcome.packages_verified()
         return {'home_changed':False,'updates_ready':self.profile.get('root_variant') != 'node012-beta','home_control':'disabled'}
+
+    def retained_activation_token(self, pending, observation, *, routing_restore=False):
+        from .root_activation import retained_filter_token, retained_retry_receipt, retained_retry_token
+        if (self.profile['edition'] != 'root' or not retained_retry_receipt(pending)
+                or observation.get('deployment_stage') != 'installed-recovery-only'):
+            return None
+        device = observation.get('device', {}).get('result', {})
+        token = (retained_filter_token(device) if routing_restore else
+                 retained_retry_token(device) if self.root_setup_inactive(device) else None)
+        if token and self.root_files_match(pending) and self.store.pending(self.profile) == pending:
+            return token
+        return None
+
+    def restore_retained_activation_routing(self, pending, token):
+        from .errors import connection_interrupted, root_restore_failure_details
+        from .root_install_recovery import restore_activation
+
+        key = 'root_activation_restore_failure'
+        self.tv_info.pop(key, None)
+        step = 'initial-status'
+        try:
+            if not token or self.retained_activation_token(pending, self.observe_recovery(), routing_restore=True) != token:
+                raise UserError('Recovery evidence changed. Check recovery again; recovery data was kept.',
+                                reason_code='pending-operation')
+            step = 'restore'
+            restore_activation(self, token, routing_only=True)
+            step = 'final-status'
+            if self.retained_activation_token(pending, self.observe_recovery()) == token:
+                return True
+            self.tv_info[key] = {'step': step, 'reason': 'stock-home-unverified'}
+            return False
+        except Exception as error:
+            detail = {'step': step, 'reason': 'observation-failed'}
+            if isinstance(error, TVCommandError):
+                detail.update(reason=error.diagnostic_reason, exit_status=error.exit_status)
+            elif connection_interrupted(error):
+                detail['reason'] = 'connection-interrupted'
+            elif isinstance(error, (json.JSONDecodeError, UnicodeError)):
+                detail['reason'] = 'invalid-response'
+            elif isinstance(error, UserError):
+                detail['reason'] = 'operation-unconfirmed'
+            detail.update(root_restore_failure_details(getattr(error, 'root_restore_failure', None)))
+            self.tv_info[key] = detail
+            raise
+
+    def resume_retained_activation(self, expected_pending, token):
+        from .root_activation import activate, retained_retry_receipt
+        from .state import private_write
+        if (not token or self.store.pending(self.profile) != expected_pending
+                or not retained_retry_receipt(expected_pending)
+                or self.retained_activation_token(expected_pending, self.observe_recovery()) != token):
+            raise UserError('Recovery evidence changed. Check recovery again; recovery data was kept.',
+                            reason_code='pending-operation')
+        receipt = self.store.recovery(self.profile, 'resume-root-activation')
+        private_write(receipt, json.dumps({'action': 'resume-root-activation', 'previous': expected_pending}).encode())
+        self.outcome.begin()
+        self.outcome.packages_verified()
+        return activate(self, retry_token=token)
 
     def resume_root_setup(self, expected_pending=None):
         # Revalidate after the user's confirmation; never resubmit package setup.

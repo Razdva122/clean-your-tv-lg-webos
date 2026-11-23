@@ -41,6 +41,8 @@ Use the code from the TV, not your LG account password. If no code is visible, t
 
 Pairing is a separate step: when the TV asks, approve CYTV with your remote. If the TV rejects the request, confirm the retry in CYTV. It uses the same TV connection.
 
+If the TV remote-control connection is refused, leave the TV on and check access to TCP port 3001 from your computer. Then choose **Try again** in the desktop installer.
+
 If a first No-root setup warns that it could not read HDMI inputs, you can continue with the applications it found.
 
 Keep Developer Mode active: open it before the timer runs out and press EXTEND while the TV is online. If it expires, LG can remove these apps.
@@ -77,6 +79,8 @@ If Root setup offers to replace the current Home integration, confirm only if yo
 
 ## 6. Everyday use and recovery
 
+To migrate the existing Root Beta startup runtime, turn **Change Home** off and run `cytv migrate-root-beta --edition root --root-variant node012-beta` with the saved Root SSH connection. The application and preferences are kept. Migration stops if an earlier removal has already changed the installation. After completion, turn Change Home on and choose the startup sources in Home settings.
+
 To open the TV's notification center from Clean Your TV, choose **Home settings → Advanced → LG Notifications**.
 
 To pin an HDMI input, select it in **+ / Add app**. Press OK to switch to it. Hold OK to move or hide its tile.
@@ -85,11 +89,17 @@ Arrows select tiles; OK opens them; hold OK to reorder. Short Back retains the a
 
 To edit with short presses, open **Home settings → Appearance → Edit tiles**. Press OK to pick up a tile, move it with the arrows, then press OK to place it. Back cancels the move or exits tile editing.
 
+If the remote temporarily disconnects, leave Home control on. It reconnects when the TV can read the remote again.
+
 **Press Home three times within two seconds**, releasing between presses, to return to LG Home and stop Home control. This preserves preferences.
 
 No-root: To restart Home control, open Home Helper, choose Start Helper and confirm. Your saved Home screen choice is kept. Root: turn **Change Home** on in Home settings to resume. **Open LG Home** opens LG Home once without changing routing. To restore LG Home as the persistent destination, turn **Change Home** off. Do not run both controllers together. If a failure repeats, leave LG Home active.
 
 If Home Helper is stopped, you can also choose **Start Helper** in the Home screen or Screensaver settings. The status updates automatically after startup.
+
+On TVs where LG Home opens as a panel, turning Root **Change Home** on or off may briefly restart the TV interface. After a restart or failure, open Clean Your TV and turn **Change Home** on again to resume. LG Home remains available.
+
+To free space after rolling back Home, open **Settings → Themes**, choose **Remove** next to the unavailable downloaded theme, and confirm.
 
 ## Need help?
 

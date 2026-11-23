@@ -31,16 +31,20 @@
 #define STATE FIXTURE_ROOT "/state"
 #define VOLATILE FIXTURE_ROOT "/volatile"
 #define HOME FIXTURE_ROOT "/home"
+#define COMPOSITOR FIXTURE_ROOT "/compositor"
 #define LUNA FIXTURE_ROOT "/luna"
 #define SYSTEMCTL FIXTURE_ROOT "/systemctl"
+#define INITCTL FIXTURE_ROOT "/initctl"
 #define BOOT FIXTURE_ROOT "/boot"
 #define TRUST_UID getuid()
 #else
 #define STATE "/var/lib/clean-your-tv-root/c1-keyfilter"
 #define VOLATILE "/tmp/clean-your-tv-root-keyfilter"
 #define HOME "/usr/bin/com.webos.app.home"
+#define COMPOSITOR "/usr/bin/surface-manager-starfish"
 #define LUNA "/usr/bin/luna-send"
 #define SYSTEMCTL "/bin/systemctl"
+#define INITCTL "/sbin/initctl"
 #define BOOT "/proc/sys/kernel/random/boot_id"
 #define TRUST_UID 0
 #endif
@@ -196,6 +200,7 @@ static int uuid(const char *s) {
 struct config {
   char token[33], boot[37];
   unsigned long long dev, ino, size, mtime;
+  int embedded;
 };
 static struct config cfg;
 static int boot_matches;
@@ -220,9 +225,17 @@ static int config_read(void) {
   if (n < 0)
     return 0;
   char *p = b;
-  if (strncmp(p, "CYTV-C1-KEYFILTER-1\ntoken ", 26))
+  const char native_header[] = "CYTV-C1-KEYFILTER-1\ntoken ";
+  const char embedded_header[] = "CYTV-QML-KEYFILTER-1\ntoken ";
+  if (!strncmp(p, native_header, sizeof(native_header) - 1)) {
+    cfg.embedded = 0;
+    p += sizeof(native_header) - 1;
+  } else if (!strncmp(p, embedded_header, sizeof(embedded_header) - 1)) {
+    cfg.embedded = 1;
+    p += sizeof(embedded_header) - 1;
+  } else {
     return 0;
-  p += 26;
+  }
   if (strlen(p) < 33 || p[32] != '\n')
     return 0;
   memcpy(cfg.token, p, 32);
@@ -256,14 +269,15 @@ static int same_config(void) {
   int same = valid && !strcmp(expected.token, cfg.token) &&
              !strcmp(expected.boot, cfg.boot) && expected.dev == cfg.dev &&
              expected.ino == cfg.ino && expected.size == cfg.size &&
-             expected.mtime == cfg.mtime;
+             expected.mtime == cfg.mtime && expected.embedded == cfg.embedded;
   cfg = expected;
   boot_matches = previous_boot;
   return same;
 }
 static int stock_identity(void) {
-  if (!trusted_parents(HOME)) return 0;
-  int fd = open(HOME, O_RDONLY | O_CLOEXEC | O_NOFOLLOW | O_NONBLOCK);
+  const char *target = cfg.embedded ? COMPOSITOR : HOME;
+  if (!trusted_parents(target)) return 0;
+  int fd = open(target, O_RDONLY | O_CLOEXEC | O_NOFOLLOW | O_NONBLOCK);
   if (fd < 0) return 0;
   struct stat s;
   int ok = !fstat(fd, &s) && S_ISREG(s.st_mode) && s.st_nlink == 1 &&
@@ -445,7 +459,7 @@ static int pulse_read(const char *name, long long *input, long long *control, in
   snprintf(p,sizeof(p),VOLATILE "/%s",name);
   if (readfile(p,b,sizeof(b),1)<0 ||
       sscanf(b,"%32[a-f0-9] %ld %llu %lld %lld %d",token,&pid,&start,input,control,armed)!=6 ||
-      *input<0 || *control<0 || (*armed!=0 && *armed!=1)) return 0;
+      *input<0 || *control<0 || (*armed<0 || *armed>(!strcmp(name,"health") ? 3 : 1))) return 0;
   snprintf(expected,sizeof(expected),"%s %ld %llu %lld %lld %d\n",token,pid,start,*input,*control,*armed);
   return !strcmp(expected,b) && !strcmp(token,active.token) &&
          ((pid==active.pid && start==active.start) ||
@@ -458,8 +472,16 @@ static int fresh(long long stamp) {
 static int health(void) {
   long long i,c,b,u; int armed,unused;
   return active_live() && stock_identity() &&
-         pulse_read("health",&i,&c,&armed) && armed && fresh(i) && fresh(c) &&
+         pulse_read("health",&i,&c,&armed) && (armed==1 || armed==3) && fresh(i) && fresh(c) &&
          pulse_read("broker",&b,&u,&unused) && fresh(b);
+}
+/* Mode 3 permits a recoverable input gap; mode 2 is the suspended route.
+ * A dead controller, broker, guardian, or changed Home never qualifies. */
+static int reconnecting(void) {
+  long long i,c,b,u; int mode,unused;
+  return active_live() && stock_identity() &&
+         pulse_read("health",&i,&c,&mode) && (mode==2 || (mode==3 && !fresh(i))) &&
+         fresh(c) && pulse_read("broker",&b,&u,&unused) && fresh(b);
 }
 /* A bounded valid startup is stock routing, but not retired-stock proof. */
 static int pending(void) {
@@ -470,21 +492,25 @@ static int pending(void) {
          (!i || fresh(i)) && (!c || fresh(c)) &&
          ((pulse_read("broker",&b,&u,&unused) && fresh(b)) || absent(VOLATILE "/broker"));
 }
-static int reply(int success, int valid, const char *reason) {
+static int reply_with_input_timeout(int success, int valid, const char *reason, const char *phase) {
   char why[64];
   int jr=valid ? active_read() : -1;
   int stopped=valid ? latch_read(why) : -1;
   valid=valid && jr>=0 && stopped>=0;
   int healthy=valid && jr>0 && !stopped && health();
   int stock=valid && stock_identity() && (jr==0 || !active_live());
-  const char *state=!valid ? "blocked" : healthy ? "armed" : stopped ? "stopped" : (stock || (jr>0 && pending())) ? "stock" : "blocked";
+  const char *state=!valid ? "blocked" : healthy ? "armed" : stopped ? "stopped" : (jr>0 && reconnecting()) ? "reconnecting" : (stock || (jr>0 && pending())) ? "stock" : "blocked";
   if (stopped>0 && !strcmp(reason,"none")) reason=why;
   printf("{\"returnValue\":%s,\"backend\":\"c1-native-gate\",\"routing\":\"compositor-keyfilter-v1\","
          "\"state\":\"%s\",\"mounted\":false,\"healthy\":%s,\"stock_verified\":%s,"
-         "\"stopped\":%s,\"token\":\"%s\",\"guardian_pid\":%ld,\"reason\":\"%s\",\"profiles\":null}\n",
+         "\"stopped\":%s,\"token\":\"%s\",\"guardian_pid\":%ld,\"reason\":\"%s\",\"profiles\":null%s%s%s}\n",
          success&&valid ? "true":"false",state,healthy ? "true":"false",stock ? "true":"false",
-         stopped!=0 ? "true":"false",cfg.token,jr>0 ? active.pid:0,reason);
+         stopped!=0 ? "true":"false",cfg.token,jr>0 ? active.pid:0,reason,
+         phase ? ",\"input_timeout_phase\":\"":"", phase ? phase:"", phase ? "\"":"");
   return success&&valid ? 0:1;
+}
+static int reply(int success, int valid, const char *reason) {
+  return reply_with_input_timeout(success, valid, reason, NULL);
 }
 static int channel_fd(int fd, int output) {
   struct stat s; int flags=fcntl(fd,F_GETFL);
@@ -495,7 +521,7 @@ static int separate_pipes(int a,int b) {
   struct stat x,y;
   return !fstat(a,&x) && !fstat(b,&y) && (x.st_dev!=y.st_dev || x.st_ino!=y.st_ino);
 }
-struct channel { char line[17]; size_t len; long long last; int ready; };
+struct channel { char line[32]; size_t len; long long last, checked, waiting; int ready; int recheck, wait_input, boot_wait; };
 static const char *consume(int fd,struct channel *c,int controller) {
   char ch;
   ssize_t n=read(fd,&ch,1);
@@ -504,16 +530,47 @@ static const char *consume(int fd,struct channel *c,int controller) {
   if (ch=='\n') {
     c->line[c->len]=0; c->len=0;
     if ((!c->ready && !strcmp(c->line,"READY")) || (c->ready && !strcmp(c->line,"PING"))) {
-      c->ready=1; c->last=now_ms(); return NULL;
+      if (!c->waiting && (!c->ready || !c->recheck || fresh(c->last))) c->last=now_ms();
+      c->ready=1; return NULL;
+    }
+    int wait_frame=c->wait_input && !strncmp(c->line,"WAIT ",5);
+    if (c->recheck && ((wait_frame && (c->ready || c->boot_wait)) ||
+                       (c->ready && !strncmp(c->line,"CHECK ",6)))) {
+      char *stamp=c->line+(wait_frame ? 5 : 6);
+      errno=0;
+      if (!digits(stamp,strlen(stamp))) return "malformed_input";
+      long long checked=strtoll(stamp,NULL,10), now=now_ms();
+      if (errno || checked>now) return "malformed_input";
+      if (checked<=0) return "malformed_input";
+      if (wait_frame) {
+        /* A completed scan keeps the reader alive but cannot authorize Home. */
+        if (checked>=c->waiting && now-checked<2000) {
+          c->ready=1;
+          c->waiting=checked;
+          c->checked=0;
+        }
+      } else if (checked>c->last && now-checked<350 &&
+                 (c->waiting ? (fresh(c->waiting) && checked>=c->waiting) : now-c->last<62000)) {
+        c->checked=checked;
+      }
+      return NULL;
     }
     if (!strcmp(c->line,"ESCAPE")) return "escape";
     if (!strcmp(c->line,"LGHOME")) return "lg_home";
     if (!strcmp(c->line,"LOST")) return controller ? "controller_lost":"input_lost";
     return "malformed_input";
   }
-  if (ch<'A' || ch>'Z' || c->len>=16) return "malformed_input";
+  if (c->len>=sizeof(c->line)-1 ||
+      ((ch<'A' || ch>'Z') && !(c->recheck && (ch==' ' || (ch>='0' && ch<='9')))))
+    return "malformed_input";
   c->line[c->len++]=ch;
   return NULL;
+}
+static int input_expired(const struct channel *c, long long born, int armed, long long now) {
+  if (!armed && now-born>=2000) return 1;
+  if (c->waiting) return now-c->waiting>=2000;
+  /* Legacy readers can revalidate a short silent gap within their original deadline. */
+  return now-(c->ready ? c->last : born)>=(armed && c->recheck ? 62000 : 2000);
 }
 /* Child has a new process group, fixed argv/env, capped output and deadline. */
 static int child_output(char *const args[], char *b, size_t limit, int *exit_status,
@@ -627,12 +684,40 @@ static int child_output(char *const args[], char *b, size_t limit, int *exit_sta
   *exit_status = WEXITSTATUS(status);
   return 1;
 }
+/* Only the factory shutdown/reboot scripts establish Upstart shutdown intent.
+ * RUNLEVEL belongs to the event/job environment, not a proven global variable.
+ * Unknown state, a missing job or an unavailable daemon is never authorization. */
+static int upstart_shutdown_job(const char *job) {
+  char output[128], expected[64];
+  int status;
+  char *args[] = {INITCTL, "status", (char *)job, NULL};
+  if (!child_output(args,output,sizeof(output)-1,&status,500,0) || status)
+    return -1;
+  snprintf(expected,sizeof(expected),"%s stop/waiting\n",job);
+  if (!strcmp(output,expected)) return 0;
+  snprintf(expected,sizeof(expected),"%s start/running, process ",job);
+  size_t prefix=strlen(expected), n=strlen(output);
+  if (strncmp(output,expected,prefix) || n<=prefix+1 || output[n-1]!='\n' ||
+      !digits(output+prefix,n-prefix-1)) return -1;
+  errno=0;
+  unsigned long long pid=strtoull(output+prefix,NULL,10);
+  return !errno && pid>1 && pid<=INT_MAX ? 1:-1;
+}
 static int normal_shutdown(void) {
   char output[64];
   int status;
-  char *args[] = {SYSTEMCTL, "is-system-running", NULL};
-  return child_output(args,output,sizeof(output)-1,&status,500,0) &&
-         status==1 && !strcmp(output,"stopping\n");
+  struct stat s;
+  /* A present systemd observer owns the decision, even when it fails. Never
+   * turn its timeout/error into permission through another init adapter. */
+  if (!lstat(SYSTEMCTL,&s)) {
+    char *args[] = {SYSTEMCTL, "is-system-running", NULL};
+    return child_output(args,output,sizeof(output)-1,&status,500,0) &&
+           status==1 && !strcmp(output,"stopping\n");
+  }
+  if (errno!=ENOENT || !trusted_parents(INITCTL) || !secure(INITCTL,0) ||
+      access(INITCTL,X_OK)) return 0;
+  int shutdown=upstart_shutdown_job("shutdown");
+  return shutdown==1 || (shutdown==0 && upstart_shutdown_job("reboot")==1);
 }
 static int luna(const char *method, const char *app) {
   char payload[160], b[CYTV_JSON_LIMIT + 1];
@@ -659,11 +744,14 @@ static int release_ui(void) {
   interrupted=0;
   int closed=luna("luna://com.webos.applicationManager/closeByAppId",
                   "com.cleanyourtv.root.preview");
+  /* Embedded LG Home lives in the compositor. Revoking its QML lease leaves
+   * the next Home pair with LG; launching a separate Home app is inapplicable. */
+  if (cfg.embedded) return closed;
   int launched=luna("luna://com.webos.applicationManager/launch",
                     "com.webos.app.home");
   return closed && launched;
 }
-static int guard(const char *token,int input,int control,int ready,int seconds,int lock,int resumable) {
+static int guard(const char *token,int input,int control,int ready,int seconds,int lock,int resumable,int reconnect,int wait_input,int boot_wait) {
   char why[64];
   if (!boot_matches || !hex32(token) || strcmp(token,cfg.token) ||
       !channel_fd(input,0) || !channel_fd(control,0) || !channel_fd(ready,1) ||
@@ -690,7 +778,11 @@ static int guard(const char *token,int input,int control,int ready,int seconds,i
   struct channel channels[2]; memset(channels,0,sizeof(channels));
   long long born=active.born;
   int armed=0;
+  channels[0].recheck=(reconnect || wait_input) && !seconds;
+  channels[0].wait_input=wait_input && !seconds;
+  channels[0].boot_wait=boot_wait && !seconds;
   const char *reason=NULL;
+  const char *input_timeout_phase=NULL;
   while (!reason) {
     struct pollfd fds[2]={{input,POLLIN|POLLHUP,0},{control,POLLIN|POLLHUP,0}};
     int z=poll(fds,2,20);
@@ -702,23 +794,45 @@ static int guard(const char *token,int input,int control,int ready,int seconds,i
     if (lock<0) { reason="state_busy"; break; }
     if (!same_config() || active_read()!=1 || active.pid!=(long)getpid() ||
         active.start!=process_start(getpid())) { close(lock); return reply(0,1,"stale_attempt"); }
+    int pending_input=0;
+    if (channels[0].checked || (!armed && wait_input && channels[0].ready)) {
+      struct pollfd queued={input,POLLIN,0};
+      pending_input=poll(&queued,1,0);
+      if (pending_input<0 && errno!=EINTR) { close(lock); reason="input_lost"; break; }
+      /* Process queued emergencies before either first activation or reattachment. */
+      if (!pending_input && channels[0].checked) {
+        if (channels[0].checked>channels[0].last && now_ms()-channels[0].checked<350) {
+          channels[0].last=channels[0].checked;
+          channels[0].waiting=0;
+        }
+        channels[0].checked=0;
+      }
+    }
     long long now=now_ms(), b=0,u=0; int unused=0;
     int broker=pulse_read("broker",&b,&u,&unused);
     if (interrupted) reason="signal";
     else if (latch_read(why)!=0) reason="external_stop";
     else if (!stock_identity()) reason="home_changed";
     else if (seconds && now-born>=seconds*1000LL) reason="trial_expired";
-    else if (now-(channels[0].ready ? channels[0].last:born)>=2000) reason="input_expired";
+    else if (input_expired(&channels[0], born, armed, now)) {
+      reason="input_expired";
+      input_timeout_phase=channels[0].ready ? "waiting-for-ping":"waiting-for-ready";
+    }
     else if (now-(channels[1].ready ? channels[1].last:born)>=2000) reason="controller_expired";
     else if ((broker && !fresh(b)) ||
              (!broker && (armed || !absent(VOLATILE "/broker") || now-born>=2000))) reason="broker_expired";
-    if (!reason && !armed && channels[0].ready && channels[1].ready && broker && fresh(b)) {
-      char ack[80]; int n=snprintf(ack,sizeof(ack),"ARMED %s\n",token);
-      /* Publish health only together with the readiness acknowledgement. */
-      if (!pulse_write("health",channels[0].last,channels[1].last,1) || write(ready,ack,(size_t)n)!=n)
+    if (!reason && !armed && !pending_input && channels[0].ready && (!channels[0].waiting || boot_wait) &&
+        channels[1].ready && broker && fresh(b)) {
+      char ack[80]; int n=snprintf(ack,sizeof(ack),"%s %s\n",boot_wait ? "SUPERVISED":"ARMED",token);
+      /* A confirmed boot may start supervision with the route still suspended. */
+      int mode=channels[0].waiting ? 2 : (channels[0].recheck ? 3 : 1);
+      if (!pulse_write("health",channels[0].last,channels[1].last,mode) || write(ready,ack,(size_t)n)!=n)
         reason="ready_failed";
       else { armed=1; close(ready); ready=-1; }
-    } else if (!reason && !pulse_write("health",channels[0].last,channels[1].last,armed)) reason="journal_failed";
+    } else if (!reason) {
+      int mode=armed && channels[0].recheck ? (!channels[0].waiting && fresh(channels[0].last) ? 3 : 2) : armed;
+      if (!pulse_write("health",channels[0].last,channels[1].last,mode)) reason="journal_failed";
+    }
     close(lock);
   }
   if (ready>=0) close(ready);
@@ -729,7 +843,7 @@ static int guard(const char *token,int input,int control,int ready,int seconds,i
   if (resumable && armed && (!strcmp(reason,"signal") || !strcmp(reason,"input_lost") ||
                             !strcmp(reason,"controller_lost")) &&
       pulse_write("health",0,0,0)) {
-    /* Revoke launch authority before querying systemd. Keep reading the
+    /* Revoke launch authority before querying the init daemon. Keep reading the
      * emergency channels until the final durable reason is selected. */
     close(lock);
     if (normal_shutdown()) {
@@ -775,7 +889,7 @@ static int guard(const char *token,int input,int control,int ready,int seconds,i
     lock=lock_state();
     if (lock<0) return reply(0,0,"recovery_busy");
   }
-  int rc=reply(ok,1,reason); close(lock); return rc;
+  int rc=reply_with_input_timeout(ok,1,reason,input_timeout_phase); close(lock); return rc;
 }
 static int restore(int lock, int routing_only) {
   int latched=stop("explicit_off"); /* Guardian observes this under its state lock. */
@@ -809,6 +923,14 @@ static int restore(int lock, int routing_only) {
 }
 int main(int argc,char **argv) {
   umask(077);
+  /* Static implementation features only; no state, daemon or device access. */
+  if (argc==2 && !strcmp(argv[1],"--capabilities")) {
+    puts("{\"returnValue\":true,\"backend\":\"c1-native-gate\","
+         "\"routing\":\"compositor-keyfilter-v1\",\"protocol\":1,"
+         "\"resumable_guard\":true,\"boot_retirement\":true,"
+         "\"shutdown_probes\":[\"systemd-is-system-running-v1\",\"upstart-shutdown-jobs-v1\"]}");
+    return 0;
+  }
   if (argc==2 && !strcmp(argv[1],"--selfcheck")) {
     int ok=hex32("0123456789abcdef0123456789abcdef") &&
            parse_proc_start("42 (guardian) S 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 12345 0\n")==12345;
@@ -848,7 +970,12 @@ int main(int argc,char **argv) {
     lock=lock_state();
     if (lock<0) { close(effect_fd); effect_fd=-1; return reply(0,0,"recovery_busy"); }
     int stopped=latch_read(why);
-    int ok=launched && !interrupted && same_config() && stopped==0 && health();
+    int current=!interrupted && stopped==0 && same_config();
+    int ok=launched && current && health();
+    if (launched && current && !ok && reconnecting()) {
+      int rc=reply(0,1,"home_refused");
+      close(lock); close(effect_fd); effect_fd=-1; return rc;
+    }
     int release=!ok && stopped==0 && same_config() && stop("home_failed");
     if (release) {
       close(lock); release_ui(); lock=lock_state();
@@ -881,7 +1008,7 @@ int main(int argc,char **argv) {
         long long i,c,b,u; int armed,unused;
         int h=pulse_read("health",&i,&c,&armed);
         int prior=pulse_read("broker",&b,&u,&unused);
-        if (!h || (armed && (!fresh(i)||!fresh(c))) ||
+        if (!h || (armed && (!fresh(c) || (armed==1 && !fresh(i)))) ||
             (prior && !fresh(b)) ||
             (!prior && (armed || !absent(VOLATILE "/broker") || now_ms()-active.born>=2000))) {
           ok=stop("lease_expired");
@@ -890,8 +1017,15 @@ int main(int argc,char **argv) {
     }
     int rc=reply(ok,1,"none"); close(lock); return rc;
   }
-  int resumable=argc==7 && !strcmp(argv[1],"--guard-resumable");
-  if (argc==7 && (!strcmp(argv[1],"--guard") || resumable)) {
+  int boot_wait=argc==7 && !strcmp(argv[1],"--guard-boot-wait-input");
+  int resumable=boot_wait || (argc==7 && (!strcmp(argv[1],"--guard-resumable") ||
+                            !strcmp(argv[1],"--guard-resumable-reconnect") ||
+                            !strcmp(argv[1],"--guard-resumable-wait-input")));
+  int reconnect=argc==7 && (!strcmp(argv[1],"--guard-reconnect") ||
+                             !strcmp(argv[1],"--guard-resumable-reconnect"));
+  int wait_input=boot_wait || (argc==7 && (!strcmp(argv[1],"--guard-wait-input") ||
+                             !strcmp(argv[1],"--guard-resumable-wait-input")));
+  if (argc==7 && (!strcmp(argv[1],"--guard") || resumable || reconnect || wait_input)) {
     unsigned long long values[4];
     for (int x=0;x<4;x++) {
       char *s=argv[x+3]; errno=0;
@@ -899,8 +1033,8 @@ int main(int argc,char **argv) {
       values[x]=strtoull(s,NULL,10);
       if (errno || values[x]>INT_MAX) { close(lock); return reply(0,1,"arguments_invalid"); }
     }
-    if (values[3]>60) { close(lock); return reply(0,1,"arguments_invalid"); }
-    return guard(argv[2],(int)values[0],(int)values[1],(int)values[2],(int)values[3],lock,resumable);
+    if (values[3]>60 || (boot_wait && values[3])) { close(lock); return reply(0,1,"arguments_invalid"); }
+    return guard(argv[2],(int)values[0],(int)values[1],(int)values[2],(int)values[3],lock,resumable,reconnect,wait_input,boot_wait);
   }
   int rc=reply(0,1,"arguments_invalid"); close(lock); return rc;
 }

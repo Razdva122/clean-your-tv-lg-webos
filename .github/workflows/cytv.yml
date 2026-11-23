@@ -63,7 +63,7 @@ jobs:
     with:
       source_sha: ${{ github.sha }}
       full_suite: ${{ needs.scope.outputs.full == 'true' }}
-  android:
+  android-package:
     needs: scope
     if: needs.scope.outputs.installers == 'true'
     runs-on: ubuntu-22.04
@@ -133,7 +133,7 @@ jobs:
         with:
           overwrite: true
           retention-days: ${{ inputs.full_candidate && 90 || 14 }}
-          name: cytv-android-arm64
+          name: android-before-smoke
           path: dist/android/cytv-android-arm64*
           if-no-files-found: error
       - name: Retain the native Android verification runner
@@ -143,6 +143,77 @@ jobs:
           retention-days: ${{ inputs.full_candidate && 90 || 14 }}
           name: cytv-android-native-tests
           path: android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+          if-no-files-found: error
+  android:
+    needs: android-package
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: android-before-smoke
+          path: dist/android
+      - uses: actions/download-artifact@v4
+        with:
+          name: cytv-android-native-tests
+          path: dist/android-tests
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+          log-accepted-android-sdk-licenses: false
+      - name: Set up the API 35 Google APIs emulator
+        run: |
+          sdkmanager 'emulator' 'system-images;android-35;google_apis;x86_64'
+          export ANDROID_AVD_HOME="$RUNNER_TEMP/cytv-release-avd"
+          mkdir -p "$ANDROID_AVD_HOME"
+          printf 'ANDROID_AVD_HOME=%s\n' "$ANDROID_AVD_HOME" >> "$GITHUB_ENV"
+          avdmanager create avd --name cytv-release-smoke --package 'system-images;android-35;google_apis;x86_64' \
+            --path "$ANDROID_AVD_HOME/cytv-release-smoke.avd" <<< 'no'
+          "$ANDROID_HOME/emulator/emulator" -list-avds | grep -Fx cytv-release-smoke
+          sudo chmod a+rw /dev/kvm
+      - name: Run the packaged installer bridge on a clean emulator
+        shell: bash
+        run: |
+          apk=dist/android/cytv-android-arm64.apk
+          report=dist/android/cytv-android-arm64.build.json
+          printf '%s  %s\n' "$(jq -er '.sha256' "$report")" "$apk" | sha256sum -c -
+          test "$(jq -er '.source_commit' "$report")" = "$GITHUB_SHA"
+          test "$(jq -er '.signer_sha256' "$report")" = "$(cat android/preview-certificate.sha256)"
+
+          emulator_log="$RUNNER_TEMP/cytv-emulator.log"
+          "$ANDROID_HOME/emulator/emulator" -avd cytv-release-smoke -port 5554 -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect > "$emulator_log" 2>&1 &
+          emulator_pid=$!
+          trap 'status=$?; kill "$emulator_pid" 2>/dev/null || true; if (( status != 0 )); then tail -80 "$emulator_log"; fi' EXIT
+          timeout 240 bash -c 'adb -s emulator-5554 wait-for-device && until [[ "$(adb -s emulator-5554 shell getprop sys.boot_completed | tr -d "\r")" == 1 ]]; do sleep 2; done'
+
+          adb -s emulator-5554 shell getprop ro.product.cpu.abilist | grep -qw arm64-v8a
+          # The userdebug emulator admits the separately signed test runner via
+          # its root shell. The production APK and certificate stay intact.
+          timeout 60 adb -s emulator-5554 root
+          timeout 60 adb -s emulator-5554 wait-for-device
+          test "$(adb -s emulator-5554 shell id -u)" = 0
+          timeout 180 adb -s emulator-5554 install "$apk"
+          timeout 60 adb -s emulator-5554 install dist/android-tests/app-debug-androidTest.apk
+          python3 android/tests/native.py --serial emulator-5554 | tee "$RUNNER_TEMP/cytv-android-smoke.log"
+          {
+            printf '### Android installer smoke test\n\n'
+            printf 'Fresh install on Google APIs API 35 with ARM64 translation.\n\n'
+            jq -r '"APK SHA-256: \(.sha256) | versionCode: \(.android_version_code) | Signer SHA-256: \(.signer_sha256)"' "$report"
+            printf '\n'
+            grep '^PASS:' "$RUNNER_TEMP/cytv-android-smoke.log"
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Retain the verified APK for candidate assembly
+        uses: actions/upload-artifact@v4
+        with:
+          overwrite: true
+          retention-days: ${{ inputs.full_candidate && 90 || 14 }}
+          name: cytv-android-arm64
+          path: dist/android/cytv-android-arm64*
           if-no-files-found: error
   build:
     needs: scope

@@ -3,13 +3,8 @@ import queue
 import re
 from dataclasses import dataclass, field
 
+from .prompts import EXPLICIT_TV_CHOICE, RETRY_STORAGE_CHECK, RETRY_STORAGE_PROMPT, SSH_COMMAND_PROMPT
 from .terminal import Console
-
-
-SSH_COMMAND_PROMPT = 'Run SSH command'
-EXPLICIT_TV_CHOICE = 'TV number: '
-RETRY_STORAGE_CHECK = 'Retry storage check'
-RETRY_STORAGE_PROMPT = 'Retry storage check?'
 
 
 @dataclass(repr=False)

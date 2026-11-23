@@ -7,10 +7,60 @@ import com.chaquo.python.Python
 import com.chaquo.python.android.AndroidPlatform
 import org.json.JSONObject
 import java.io.File
+import java.io.IOException
 import java.util.UUID
 import java.security.MessageDigest
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
+
+private val payloadDirectoryName = Regex("payload-[0-9a-f]{64}")
+
+/** Called only by the single owner of an Android installer operation. */
+internal fun preparePayload(filesDir: File, manifest: ByteArray, copy: (File) -> Unit): File {
+    // Preview APKs may be reinstalled with the same versionCode.
+    val digest = MessageDigest.getInstance("SHA-256").digest(manifest)
+        .joinToString("") { "%02x".format(it) }
+    val root = filesDir.canonicalFile
+    val payload = File(root, "payload-$digest")
+    check(payload.canonicalFile == payload)
+    val ready = File(payload, ".ready")
+    val manifestFile = File(payload, "payload.json")
+    fun matchesManifest() = manifestFile.isFile && manifestFile.length() == manifest.size.toLong() &&
+        manifestFile.readBytes().contentEquals(manifest)
+    if (!ready.isFile || ready.length() != 5L || ready.readText() != "ready" || !matchesManifest()) {
+        check(!payload.exists() || (payload.isDirectory && discardPayload(payload)))
+        copy(payload)
+        check(matchesManifest()) { "Extracted payload manifest does not match the APK" }
+        ready.writeText("ready")
+    }
+
+    // Recovery uses saved receipts/capsules or original staging on the TV.
+    // Neither holds a reference to an Android extraction directory.
+    for (candidate in root.listFiles().orEmpty()) {
+        if (candidate == payload || !payloadDirectoryName.matches(candidate.name)) continue
+        try {
+            if (candidate.isDirectory && candidate.canonicalFile == candidate) discardPayload(candidate)
+        } catch (_: IOException) {
+            // A failed cleanup leaves the ready payload usable and is retried next time.
+        }
+    }
+    return payload
+}
+
+private fun discardPayload(directory: File): Boolean {
+    // If deletion is interrupted, the old cache must not appear ready on downgrade.
+    val ready = File(directory, ".ready")
+    return (ready.delete() || !ready.exists()) && deletePayloadTree(directory)
+}
+
+private fun deletePayloadTree(path: File): Boolean {
+    // Do not traverse links, even in a cached directory.
+    if (path.isDirectory && path.canonicalFile == path) {
+        val children = path.listFiles() ?: return false
+        if (children.any { !deletePayloadTree(it) }) return false
+    }
+    return path.delete() || !path.exists()
+}
 
 /** Process-owned operation state; Activity recreation never restarts installation. */
 object Operation {
@@ -120,17 +170,8 @@ class InstallerService : Service() {
     private fun execute(config: String) {
         try {
             if (!Python.isStarted()) Python.start(AndroidPlatform(this))
-            // Preview APKs may be reinstalled with the same versionCode. Key the
-            // extraction by its bundled manifest, never by the app version alone.
             val manifest = assets.open("payload/payload.json").use { it.readBytes() }
-            val digest = MessageDigest.getInstance("SHA-256").digest(manifest)
-                .joinToString("") { "%02x".format(it) }
-            val payload = File(filesDir, "payload-$digest")
-            if (!File(payload, ".ready").exists()) {
-                if (payload.exists()) payload.deleteRecursively()
-                copyAsset("payload", payload)
-                File(payload, ".ready").writeText("ready")
-            }
+            val payload = preparePayload(filesDir, manifest) { copyAsset("payload", it) }
             val request = JSONObject(config)
             val savedKey = getSharedPreferences("private", MODE_PRIVATE).getString("identity", "") ?: ""
             val identity = if (request.optBoolean("useImportedKey") && File(savedKey).isFile) savedKey else ""

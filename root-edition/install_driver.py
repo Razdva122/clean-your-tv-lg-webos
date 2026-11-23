@@ -55,7 +55,7 @@ def failure_summary(error):
         result['errno']=error.errno
     step=getattr(error,'cleanup_step',None)
     if isinstance(step,str) and step in ('routing-inverse','runtime-restore','provision-rollback','startup-hook',
-            'legacy-lockdown','registration-restore','legacy-permissions','home-readback'):result['cleanup_step']=step
+            'legacy-lockdown','registration-restore','legacy-permissions','home-readback','boot-identity','private-inventory'):result['cleanup_step']=step
     from updater.luna import summary
     if getattr(error,'package_rejected',False) is True:
         result['package_rejected']=True

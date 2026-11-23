@@ -15,15 +15,20 @@ from emergency_watchdog import watch
 HEARTBEAT_TIMEOUT = 2
 
 
+class BootInputMissing(RuntimeError):
+    """Confirmed boot preference, but a new profile cannot be published yet."""
+
+
 def record(value, error=False):
     try: print(json.dumps(value),file=sys.stderr if error else sys.stdout,flush=True)
     except Exception: pass  # Diagnostic storage never authorizes or blocks recovery.
 
 
-def save_ready(transaction, observer):
+def save_ready(transaction, observer, input_state=None):
     value = {'transaction':transaction, 'pid':os.getpid(),
              'start_ticks':d.process_start(os.getpid()), 'observer_pid':observer.pid,
              'observer_start_ticks':d.process_start(observer.pid)}
+    if input_state is not None: value['input_state']=input_state
     fd, name = tempfile.mkstemp(dir=d.STATE, prefix='.escape-ready-')
     try:
         with os.fdopen(fd, 'w') as f:
@@ -98,12 +103,12 @@ def supervise(transaction):
                 except (OSError,ValueError):time.sleep(min(.1,max(0,deadline-time.monotonic())))
             else:raise RuntimeError('Guardian not ready within guarded startup deadline')
         observer = subprocess.Popen([d.current_executable(), str(Path(__file__).with_name('emergency_reader.py')),
-                                     str(w), '--report-device-gone'],
+                                     str(w), '--recover-profile-input' if bound else '--report-device-gone'],
                                     pass_fds=(w,), stdin=subprocess.DEVNULL, close_fds=True)
         os.close(w); w = None
         sequence = [0]
         health_ready = [False]
-        def ping():
+        def ping(waiting_since=None):
             started=time.monotonic()
             # Legacy trials have no durable binding and keep their fixed timer.
             from persistent_recovery import Coordinator
@@ -114,13 +119,18 @@ def supervise(transaction):
             from persistent_health import publish, require_guardian
             require_guardian(transaction)
             from boot_gate import waiting
-            if not waiting(transaction):
+            gate=waiting(transaction)
+            if not gate:
                 sequence[0] += 1
-                publish(transaction, sequence[0])
+                if waiting_since is None:
+                    publish(transaction, sequence[0])
+                else:
+                    publish(transaction, sequence[0],waiting_since=waiting_since)
             if time.monotonic()-started>=HEARTBEAT_TIMEOUT:
                 raise RuntimeError('Input heartbeat validation exceeded watchdog deadline')
             if not health_ready[0]:
-                save_ready(transaction,observer);health_ready[0]=True
+                state='boot-gate' if gate else ('active' if waiting_since is None else 'waiting-input')
+                save_ready(transaction,observer,state);health_ready[0]=True
         visit = [None]
         def open_lg_home():
             # Luna may take seconds; never block the input health channel.
@@ -140,7 +150,7 @@ def supervise(transaction):
         reason = watch(r, recover_observer, timeout=HEARTBEAT_TIMEOUT,
                        on_ready=lambda:None if bound else save_ready(transaction, observer),
                        finished=lambda:completed(transaction), on_ping=ping, on_lg_home=open_lg_home,
-                       on_device_gone=device_gone)
+                       on_device_gone=device_gone,on_wait=ping if bound else None)
         record({'event':'emergency-monitor-ended','reason':reason,'transaction':transaction})
     except Exception as exc:
         try:
@@ -161,7 +171,7 @@ def supervise(transaction):
         if w is not None: os.close(w)
 
 
-def spawn_guarded(transaction):
+def spawn_guarded(transaction, cancelled=lambda:False):
     deadline=startup_deadline(transaction)
     guardian = bounded.spawn(transaction)
     fd = os.open(d.STATE/'emergency.log', os.O_CREAT|os.O_APPEND|os.O_WRONLY|os.O_NOFOLLOW, 0o600)
@@ -170,6 +180,7 @@ def spawn_guarded(transaction):
             stdin=subprocess.DEVNULL, stdout=fd, stderr=fd, start_new_session=True, close_fds=True)
     finally: os.close(fd)
     while time.monotonic()<deadline:
+        if cancelled(): raise RuntimeError('Guarded startup cancelled')
         try: ready = d.safe_json(d.STATE/'escape-ready.json')
         except FileNotFoundError: ready = {}
         if ready.get('transaction') == transaction and ready.get('pid') == supervisor.pid:
@@ -183,19 +194,119 @@ def spawn_guarded(transaction):
     class Guarded:
         pid = guardian.pid
         def poll(self):
-            if guardian.poll() is not None or supervisor.poll() is not None: return 1
+            if cancelled() or guardian.poll() is not None or supervisor.poll() is not None: return 1
             try:
                 if d.process_start(ready['observer_pid']) != ready['observer_start_ticks']: return 1
+                if ready.get('input_state') in ('active','waiting-input'):
+                    from persistent_health import require_fresh
+                    lease=require_fresh(transaction,allow_wait=True)
+                    if lease['state']=='waiting-input': raise BootInputMissing(transaction)
             except (OSError, ValueError): return 1
             return None
     return Guarded()
 
 
-def start(before_publish=None):
-    if before_publish is None: return bounded.begin(spawn_guarded)
-    return bounded.begin(spawn_guarded, before_publish=before_publish)
+def start(before_publish=None, *, cancelled=None):
+    spawn = spawn_guarded if cancelled is None else lambda tx: spawn_guarded(tx,cancelled)
+    if before_publish is None: return bounded.begin(spawn)
+    return bounded.begin(spawn, before_publish=before_publish)
+
+
+def spawn_input_wait(transaction):
+    fd=os.open(d.STATE/'emergency.log',os.O_CREAT|os.O_APPEND|os.O_WRONLY|os.O_NOFOLLOW,0o600)
+    try:
+        subprocess.Popen([d.current_executable(),str(Path(__file__).resolve()),'--wait-boot-input',transaction],
+                         stdin=subprocess.DEVNULL,stdout=fd,stderr=fd,start_new_session=True,close_fds=True)
+    finally: os.close(fd)
+
+
+def wait_boot_input(transaction):
+    """Stock is already verified. Observe this one deferred boot until Off or fresh input."""
+    from boot_gate import observation
+    from intent_runtime import coordinator, boot_identity, startup_after_ready
+    c=coordinator()
+    if c is None: return
+    intent=c.store.read()
+    binding=c.read_binding()
+    if (intent['phase']!='stopping' or not intent['enabled'] or not binding['restored']
+            or (binding['transaction'],binding['token'],binding['generation']) !=
+               (transaction,intent['token'],intent['generation']) or intent['boot']!=boot_identity()):
+        return
+    valid_input=False
+    handoff=None
+    completed_at=None
+    errors=[]
+    cancelled=threading.Event()
+
+    def same_attempt(current):
+        return all(current[key]==intent[key] for key in ('boot','generation','token'))
+
+    def transfer():
+        nonlocal completed_at
+        try:
+            with c.locked(intent):
+                if (cancelled.is_set() or c.read_binding()!=binding or c.route(transaction)['state']!='restored'
+                        or boot_identity()!=intent['boot'] or observation()!=(True,False)):
+                    raise ValueError('Deferred startup no longer owns stock Home')
+                starting,_=c.event(intent,'input-ready')
+            startup_after_ready(c.restart(starting,cancelled=cancelled.is_set))
+            completed_at=time.monotonic()
+        except Exception as exc:
+            errors.append(exc)
+
+    def ping():
+        nonlocal valid_input
+        valid_input=True
+    def waiting(at):
+        nonlocal valid_input
+        valid_input=False
+    def finished():
+        nonlocal handoff
+        current=c.store.read()
+        if not same_attempt(current) or boot_identity()!=intent['boot']: return True
+        if errors: raise errors[0]
+        if not current['enabled']: return True
+        d.require_home(purpose='live')
+        if observation()!=(True,False): raise ValueError('Normal startup revoked')
+        if valid_input and handoff is None:
+            handoff=threading.Thread(target=transfer)
+            handoff.start()
+        # A Home gesture can begin on this reader before the new observer
+        # starts. Keep both readers until a whole gesture and delivery deadline
+        # have elapsed after successful guarded publication.
+        return completed_at is not None and time.monotonic()-completed_at>2+HEARTBEAT_TIMEOUT
+
+    def fault(reason):
+        cancelled.set()
+        if handoff is not None: handoff.join()
+        current=c.store.read()
+        if same_attempt(current) and boot_identity()==intent['boot'] and current['phase']!='disabled':
+            if reason=='escape':
+                from update_guard import cancel
+                cancel(d.STATE,d.EXPECTED_UID,current)
+            c.exit(current,reason='fault',emergency=reason=='escape')
+        return True
+    r,w=os.pipe();reader=None
+    try:
+        reader=subprocess.Popen([d.current_executable(),str(Path(__file__).with_name('emergency_reader.py')),
+                                 str(w),'--recover-profile-input'],pass_fds=(w,),stdin=subprocess.DEVNULL,close_fds=True)
+        os.close(w);w=None
+        watch(r,fault,finished=finished,on_ping=ping,on_wait=waiting)
+    except Exception:
+        fault('supervisor_error')
+        raise
+    finally:
+        cancelled.set()
+        if handoff is not None: handoff.join()
+        if reader is not None:
+            if reader.poll() is None:reader.kill()
+            reader.wait()
+        os.close(r)
+        if w is not None:os.close(w)
 
 
 if __name__ == '__main__':
-    if os.geteuid() != 0 or len(sys.argv) != 2: raise SystemExit('Root and transaction required')
-    supervise(sys.argv[1])
+    if os.geteuid() != 0: raise SystemExit('Root required')
+    if len(sys.argv)==3 and sys.argv[1]=='--wait-boot-input':wait_boot_input(sys.argv[2])
+    elif len(sys.argv)==2:supervise(sys.argv[1])
+    else:raise SystemExit('Transaction required')

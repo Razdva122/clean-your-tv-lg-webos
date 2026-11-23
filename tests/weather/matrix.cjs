@@ -53,6 +53,7 @@ const languages = [
   'ko',
   'hi',
   'pl',
+  'ro',
   'zh-Hans',
   'zh-Hant'
 ];

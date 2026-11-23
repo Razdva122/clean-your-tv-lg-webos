@@ -90,6 +90,15 @@ class ReaderTests(unittest.TestCase):
   self.assertEqual(self.run_input(b'bad'),'input_lost')
 
 class DiscoveryTests(unittest.TestCase):
+ def test_unreadable_input_directory_is_a_fault_instead_of_verified_device_absence(self):
+  import errno
+  import emergency_reader as reader
+  from unittest.mock import patch
+  with patch.object(reader.struct,'calcsize',side_effect=lambda fmt:16 if fmt=='@llHHi' else 4), \
+       patch.object(reader.Path,'iterdir',side_effect=PermissionError(errno.EACCES,'denied')), \
+       self.assertRaises(PermissionError):
+   reader.open_remote()
+
  def test_disconnected_unrelated_node_is_skipped(self):
   import emergency_reader as r,errno
   from unittest.mock import patch,Mock
@@ -98,7 +107,7 @@ class DiscoveryTests(unittest.TestCase):
    self.assertEqual(flags & os.O_ACCMODE,os.O_RDONLY)
    if path==paths[0]:raise OSError(errno.ENXIO,'inactive')
    return 42
-  with patch.object(r.struct,'calcsize',side_effect=lambda fmt:16 if fmt=='@llHHi' else 4),patch.object(r.Path,'glob',return_value=paths),patch.object(r.os,'open',side_effect=opened),patch.object(r.os,'fstat',return_value=Mock(st_mode=0o020600)),patch.object(r,'query',return_value=r.NAME+b'\0'),patch.object(r.os,'close'):
+  with patch.object(r.struct,'calcsize',side_effect=lambda fmt:16 if fmt=='@llHHi' else 4),patch.object(r.Path,'iterdir',return_value=paths),patch.object(r.os,'open',side_effect=opened),patch.object(r.os,'fstat',return_value=Mock(st_mode=0o020600)),patch.object(r,'query',return_value=r.NAME+b'\0'),patch.object(r.os,'close'):
    self.assertEqual(r.open_remote(),42)
 
 class FaultDiagnosticsTests(unittest.TestCase):
@@ -175,7 +184,7 @@ class FaultDiagnosticsTests(unittest.TestCase):
      if hw is not None:os.close(hw)
 
 class ReconnectTests(unittest.TestCase):
-    def replay(self, reads, candidates=None, query=None, clock=None):
+    def replay(self, reads, candidates=None, query=None, clock=None, *, c1=False, guardian_events=None, recover=False, wait_input=False, profile=False, boot_wait=False, initial=42, sleep=None, log=None):
         import contextlib
         import io
         import emergency_reader as reader
@@ -204,15 +213,270 @@ class ReconnectTests(unittest.TestCase):
             opened = stack.enter_context(patch.object(reader, 'open_remote', side_effect=candidates or [43]))
             if clock:
                 stack.enter_context(patch.object(reader.time, 'monotonic', side_effect=clock))
-                stack.enter_context(patch.object(reader.time, 'sleep'))
-            stack.enter_context(contextlib.redirect_stderr(io.StringIO()))
-            reader.observe(42, 99, lambda: True)
+                stack.enter_context(patch.object(reader.time, 'sleep', side_effect=sleep))
+            stack.enter_context(contextlib.redirect_stderr(log or io.StringIO()))
+            if c1 or profile:
+                poll = stack.enter_context(patch.object(reader.select, 'poll'))
+                poll.return_value.poll.side_effect = guardian_events or (lambda _: [])
+                if profile:
+                    reader.observe(initial, 99, lambda: True, recover_profile_input=True)
+                else:
+                    reader.observe(initial, 99, lambda: True, reconnect_on_disconnect=True, recover_input=recover, wait_input=wait_input, boot_wait=boot_wait)
+            else:
+                reader.observe(42, 99, lambda: True)
         return messages, replace, close, opened
 
     def taps(self, count, start=0):
         import emergency_reader as reader
         return b''.join(reader.EVENT.pack(2, (start + tap * 300 + offset) * 1000, 1, 773, value)
                         for tap in range(count) for offset, value in ((0, 1), (100, 0)))
+
+    def test_disconnected_reader_can_wait_overnight_without_renewing_input_health(self):
+        import emergency_reader as reader
+        for profile in (False, True):
+            with self.subTest(profile=profile):
+                now = [100.0]
+                pauses = []
+                def sleep(seconds):
+                    pauses.append(seconds)
+                    now[0] += 8 * 3600 if len(pauses) == 1 else seconds
+
+                messages, _, _, opened = self.replay(
+                    [BlockingIOError(), b'', self.taps(3)],
+                    candidates=[reader.InputUnavailable('missing')] * 3 + [43],
+                    c1=True, wait_input=not profile, profile=profile, clock=lambda: now[0], sleep=sleep)
+                self.assertEqual(opened.call_count, 4)
+                self.assertEqual(messages[0], b'READY\n')
+                self.assertEqual(messages[-1], b'ESCAPE\n')
+                self.assertGreaterEqual(len(messages[1:-1]), 3)
+                for frame in messages[1:-1]:
+                    self.assertRegex(frame, rb'^WAIT [0-9]+\n$')
+                self.assertTrue(all(.25 <= pause <= 1 for pause in pauses))
+
+    def test_confirmed_profile_can_start_with_input_missing_then_validate_before_ping(self):
+        import emergency_reader as reader
+        messages, _, _, _ = self.replay(
+            [BlockingIOError(), BlockingIOError(), self.taps(3)],
+            candidates=[reader.InputUnavailable('missing'), 43], profile=True, initial=None)
+        self.assertRegex(messages[0], rb'^WAIT [0-9]+\n$')
+        self.assertRegex(messages[-3], rb'^CHECK [0-9]+\n$')
+        self.assertEqual(messages[-2:], [b'PING\n', b'ESCAPE\n'])
+        self.assertNotIn(b'READY\n', messages)
+
+    def test_resumed_compositor_boot_waits_for_native_ack_before_heartbeat(self):
+        from unittest.mock import patch
+        import emergency_reader as reader
+        with patch.object(reader, 'recheck_acknowledged', return_value=True):
+            messages, _, _, _ = self.replay(
+                [BlockingIOError(), BlockingIOError(), BlockingIOError(), self.taps(3)],
+                candidates=[reader.InputUnavailable('missing'), 43], c1=True, boot_wait=True, initial=None)
+        self.assertRegex(messages[0], rb'^WAIT [0-9]+\n$')
+        self.assertRegex(messages[1], rb'^CHECK [0-9]+\n$')
+        self.assertEqual(messages[2:], [b'PING\n', b'ESCAPE\n'])
+
+    def test_profile_device_disappears_after_open_and_before_startup_drain(self):
+        messages, _, _, _ = self.replay(
+            [b'', BlockingIOError(), BlockingIOError(), self.taps(3)], profile=True)
+        self.assertRegex(messages[0], rb'^WAIT [0-9]+\n$')
+        self.assertRegex(messages[1], rb'^CHECK [0-9]+\n$')
+        self.assertEqual(messages[2:], [b'PING\n', b'ESCAPE\n'])
+
+    def test_held_replacement_key_prevents_rearming_without_disabling_triple_home(self):
+        import emergency_reader as reader
+        def held(fd, nr, size):
+            bits = bytearray(size)
+            for code in ((773, 412) if nr == 0x21 else (116,)):
+                bits[code // 8] |= 1 << (code % 8)
+            return bits
+        messages, _, _, _ = self.replay(
+            [BlockingIOError(), b'', BlockingIOError(), self.taps(3)],
+            profile=True, query=held)
+        self.assertEqual(messages[0], b'READY\n')
+        self.assertEqual(messages[-1], b'ESCAPE\n')
+        self.assertTrue(messages[1:-1])
+        self.assertTrue(all(frame.startswith(b'WAIT ') for frame in messages[1:-1]))
+
+    def test_new_key_down_after_reopen_is_rechecked_before_routing(self):
+        key_states = iter(((), (116,), ()))
+        def query(fd, nr, size):
+            bits = bytearray(size)
+            for code in ((773, 412) if nr == 0x21 else next(key_states)):
+                bits[code // 8] |= 1 << (code % 8)
+            return bits
+        messages, _, _, _ = self.replay(
+            [BlockingIOError(), b'', BlockingIOError(), self.taps(3)],
+            profile=True, query=query)
+        self.assertEqual(messages[-1], b'ESCAPE\n')
+        self.assertFalse(any(frame.startswith(b'CHECK ') for frame in messages),
+                         'Key went down between opening the device and publishing CHECK')
+
+    def test_device_that_reopens_but_immediately_returns_eof_keeps_waiting(self):
+        from io import StringIO
+        log = StringIO()
+        elapsed = [100.0]
+        def sleep(seconds):
+            elapsed[0] += seconds
+        count = 100
+        messages, _, _, opened = self.replay(
+            [BlockingIOError()] + [b''] * count + [self.taps(3)],
+            profile=True, candidates=[43] * count, clock=lambda: elapsed[0], sleep=sleep, log=log)
+        self.assertEqual(messages[-1], b'ESCAPE\n')
+        self.assertEqual(opened.call_count, count)
+        self.assertGreaterEqual(elapsed[0], 100 + .25 * (count - 1))
+        self.assertEqual(len(log.getvalue().splitlines()), 1)
+        self.assertTrue(all(frame.startswith(b'WAIT ') for frame in messages[1:-1]))
+
+    def test_scheduler_gap_preserves_emergency_events_queued_on_original_device(self):
+        import emergency_reader as reader
+        from itertools import chain, repeat
+        # Startup deadline and first heartbeat run before suspension. Afterwards
+        # the old queue contains the entire emergency gesture from that interval.
+        clock = chain((100., 100.), repeat(103.))
+        startup = [True]
+        reopened = [False]
+        def read(fd, size):
+            if startup:
+                startup.pop()
+                raise BlockingIOError
+            if reopened[0]:
+                return reader.EVENT.pack(2, 0, 0, 3, 0)
+            return self.taps(3)
+        def open_remote():
+            reopened[0] = True
+            return 43
+        messages, _, _, _ = self.replay(read, candidates=open_remote, c1=True, wait_input=True,
+                                         clock=lambda: next(clock))
+        self.assertEqual(messages[-1], b'ESCAPE\n')
+
+    def test_elapsed_sleep_alone_cannot_turn_a_short_back_press_into_a_long_back(self):
+        import emergency_reader as reader
+        elapsed = [100.]
+        reads = iter((BlockingIOError(), reader.EVENT.pack(2, 0, 1, 412, 1),
+                      BlockingIOError(), None, self.taps(3)))
+        def read(fd, size):
+            event = next(reads)
+            if event is None:
+                elapsed[0] += 3600
+                raise BlockingIOError
+            if isinstance(event, BlockingIOError):
+                raise event
+            return event
+        messages, _, _, _ = self.replay(read, c1=True, wait_input=True, clock=lambda: elapsed[0])
+        self.assertEqual(messages[-1], b'ESCAPE\n')
+        self.assertNotIn(b'LGHOME\n', messages)
+
+    def test_second_loss_before_check_acknowledgement_immediately_revokes_again(self):
+        import emergency_reader as reader
+        messages, _, _, _ = self.replay(
+            [BlockingIOError(), b'', BlockingIOError(), b'', self.taps(3)],
+            c1=True, wait_input=True, candidates=[43, 44],
+            clock=lambda: 100., sleep=lambda _: None)
+        self.assertEqual([frame.split()[0] for frame in messages],
+                         [b'READY', b'WAIT', b'CHECK', b'WAIT', b'ESCAPE'])
+
+    def test_older_guardian_protocol_still_expires_without_any_wait_frame(self):
+        import emergency_reader as reader
+        now = [100.]
+        def sleep(seconds):
+            now[0] += 61
+        messages, _, _, _ = self.replay(
+            [BlockingIOError(), b''], c1=True, recover=True,
+            candidates=[reader.InputUnavailable('missing')],
+            clock=lambda: now[0], sleep=sleep)
+        self.assertEqual(messages, [b'READY\n', b'LOST\n'])
+
+    def test_untrusted_replacement_cannot_keep_the_new_reader_alive(self):
+        import errno
+        for candidate in (ValueError('ambiguous'), OSError(errno.EACCES, 'inaccessible')):
+            with self.subTest(candidate=candidate):
+                messages, _, _, _ = self.replay(
+                    [BlockingIOError(), b''], c1=True, wait_input=True, candidates=[candidate])
+                self.assertEqual([frame.split()[0] for frame in messages],
+                                 [b'READY', b'WAIT', b'LOST'])
+
+    def test_c1_reopens_after_eof_and_delivers_escape_before_a_heartbeat(self):
+        import emergency_reader as reader
+        messages, replace, _, opened = self.replay(
+            [BlockingIOError(), b'', self.taps(3)],
+            candidates=[reader.InputUnavailable('missing'), 43], c1=True)
+        self.assertEqual(opened.call_count, 2)
+        replace.assert_called_once_with(43, 42, inheritable=False)
+        self.assertEqual(messages, [b'READY\n', b'ESCAPE\n'])
+
+    def test_c1_replacement_can_renew_only_after_a_valid_read(self):
+        import emergency_reader as reader
+        dropped = reader.EVENT.pack(2, 0, 0, 3, 0)
+        messages, replace, _, _ = self.replay(
+            [BlockingIOError(), b'', BlockingIOError(), dropped], c1=True)
+        replace.assert_called_once_with(43, 42, inheritable=False)
+        self.assertEqual(messages, [b'READY\n', b'PING\n', b'LOST\n'])
+
+    def test_c1_reconnect_abandons_open_descriptor_if_guardian_retires(self):
+        import select
+        messages, replace, close, opened = self.replay(
+            [BlockingIOError(), b''], c1=True,
+            guardian_events=[[], [(99, select.POLLERR)]])
+        opened.assert_called_once()
+        replace.assert_not_called()
+        close.assert_called_once_with(43)
+        self.assertEqual(messages, [b'READY\n'])
+
+    def test_c1_home_activity_while_replacement_keys_are_held_cancels_recovery(self):
+        def held_other_key(fd, nr, size):
+            bits = bytearray(size)
+            for code in ((773, 412) if nr == 0x21 else (116,)):
+                bits[code // 8] |= 1 << (code % 8)
+            return bits
+
+        messages, replace, close, _ = self.replay(
+            [BlockingIOError(), b'', self.taps(3)], c1=True, query=held_other_key)
+        replace.assert_not_called()
+        close.assert_called_once_with(43)
+        self.assertEqual(messages, [b'READY\n', b'LOST\n'])
+
+    def test_c1_reopens_when_old_descriptor_reports_enxio(self):
+        import errno
+        messages, replace, _, _ = self.replay(
+            [BlockingIOError(), OSError(errno.ENXIO, 'gone'), self.taps(3)], c1=True)
+        replace.assert_called_once_with(43, 42, inheritable=False)
+        self.assertEqual(messages, [b'READY\n', b'ESCAPE\n'])
+
+    def test_c1_rechecks_device_after_scheduler_gap_before_renewing(self):
+        from itertools import chain, count
+        import emergency_reader as reader
+        dropped = reader.EVENT.pack(2, 0, 0, 3, 0)
+        clock = chain([0, 0, 2.1], count(2.2, .1))
+        messages, replace, _, opened = self.replay(
+            [BlockingIOError(), BlockingIOError(), dropped],
+            c1=True, recover=True, clock=lambda: next(clock))
+        opened.assert_called_once()
+        replace.assert_called_once_with(43, 42, inheritable=False)
+        self.assertEqual(messages[0], b'READY\n')
+        self.assertRegex(messages[1], rb'^CHECK [0-9]+\n$')
+        self.assertEqual(messages[2:], [b'LOST\n'])
+
+    def test_c1_revalidates_again_if_first_check_has_no_acknowledgement(self):
+        from itertools import chain, count
+        from unittest.mock import patch
+        import emergency_reader as reader
+        dropped = reader.EVENT.pack(2, 0, 0, 3, 0)
+        clock = chain([0, 0, 2.1], count(2.2, .2))
+        with patch.object(reader, 'recheck_acknowledged', side_effect=[False, True]), \
+             patch.object(reader.time, 'clock_gettime_ns',
+                          side_effect=[10_000_000_000, 10_000_000_000, 10_300_000_000, 10_300_000_000]):
+            messages, _, _, _ = self.replay(
+                [BlockingIOError()] * 5 + [dropped], c1=True, recover=True,
+                clock=lambda: next(clock))
+        self.assertEqual(messages, [b'READY\n', b'CHECK 10000\n',
+                                    b'CHECK 10300\n', b'PING\n', b'LOST\n'])
+
+    def test_c1_triple_home_across_reads_wins_before_recheck(self):
+        messages, _, _, _ = self.replay(
+            [BlockingIOError(), b'', self.taps(2), BlockingIOError(), self.taps(1, 600)],
+            c1=True, wait_input=True)
+        self.assertEqual(messages[0], b'READY\n')
+        self.assertRegex(messages[1], rb'^WAIT [0-9]+\n$')
+        self.assertEqual(messages[2:], [b'ESCAPE\n'])
 
     def test_enodev_replacement_keeps_health_and_emergency_escape(self):
         import errno

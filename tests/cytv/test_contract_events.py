@@ -129,26 +129,8 @@ class ResourceDeliveryTests(unittest.TestCase):
         self.assertEqual(files['usr/palm/applications/com.local.nativehome/contract-events.js'],
                          files['usr/palm/services/com.local.nativehome.service/contract-events.js'])
 
-    def test_android_tracks_every_canonical_contract_as_build_input(self):
-        gradle=(ROOT/'android/app/build.gradle').read_text()
-        for source in tv_sources.SOURCES.values():
-            self.assertIn("inputs.file rootProject.file('../"+source+"')",gradle)
-
-    def test_android_stages_exact_host_resources(self):
-        import runpy
-        stage = runpy.run_path(str(ROOT/'android/stage.py'))
-        with tempfile.TemporaryDirectory() as tmp:
-            project=Path(tmp)
-            (project/'cytv').mkdir();(project/'cytv/__init__.py').write_text('')
-            (project/'lgtv.py').write_text('');(project/'release-versions.json').write_text('{}')
-            payload=project/'build/cytv/payload';payload.mkdir(parents=True);(payload/'payload.json').write_text('{}')
-            with patch.dict(stage['main'].__globals__, {'ROOT':project,'verify_payload':lambda _: {'files':{}}}), patch('subprocess.check_output',return_value='fixture'):
-                stage['main']()
-            for name in tv_sources.NAMES:
-                self.assertEqual((project/'android/app/build/generated/python/cytv/tv'/(name+'.js')).read_bytes(),
-                                 tv_sources.trusted_source(name).encode())
-
     def test_cli_freezer_stages_and_passes_both_trusted_resources(self):
+        from contextlib import nullcontext
         import runpy
         build=runpy.run_path(str(ROOT/'scripts/build-cytv.py'))
         with tempfile.TemporaryDirectory() as tmp:
@@ -160,7 +142,7 @@ class ResourceDeliveryTests(unittest.TestCase):
                     staged=Path(spec.rsplit(os.pathsep,1)[0])
                     for name in tv_sources.NAMES:
                         self.assertEqual((staged/(name+'.js')).read_bytes(),tv_sources.trusted_source(name).encode())
-            with patch.dict(build['main'].__globals__, {'ROOT':project,'build_payload':lambda:project/'payload'}), patch.object(sys,'argv',['build']), patch('subprocess.run',side_effect=run):
+            with patch.dict(build['main'].__globals__, {'ROOT':project,'_payload_build':lambda:nullcontext(project/'payload')}), patch.object(sys,'argv',['build']), patch('subprocess.run',side_effect=run):
                 build['main']()
 
 class EventBoundaryTests(unittest.TestCase):

@@ -41,6 +41,8 @@ Usa el código del TV, no la contraseña de tu cuenta LG. Si no aparece el códi
 
 El emparejamiento es un paso aparte: cuando el TV lo pida, acepta CYTV con el mando. Si el TV rechaza la solicitud, confirma en CYTV que quieres reintentar con el mismo televisor.
 
+Si se rechaza la conexión con el control remoto del TV, deja el televisor encendido y comprueba desde el ordenador el acceso al puerto TCP 3001. Luego elige **Intentar de nuevo** en el instalador de escritorio.
+
 Si en la primera instalación de No-root aparece un aviso de que no se pudieron leer las entradas HDMI, puedes continuar con las aplicaciones detectadas.
 
 Mantén Developer Mode activo: antes de que termine el tiempo, ábrelo y pulsa EXTEND con el TV conectado a Internet. Si caduca, LG puede eliminar estas apps.
@@ -77,17 +79,25 @@ Si al instalar Root se te ofrece reemplazar la integración de Home actual, conf
 
 ## 6. Uso y recuperación
 
+Para migrar el entorno de inicio de Root Beta existente, desactiva **Change Home** y ejecuta `cytv migrate-root-beta --edition root --root-variant node012-beta` mediante la conexión Root SSH guardada. Se conservan la aplicación y las preferencias. La migración se detiene si una desinstalación anterior ya modificó la instalación. Al terminar, activa Change Home y elige las fuentes de inicio en los ajustes de Home.
+
 Para fijar una entrada HDMI, selecciónala en **+ / Añadir aplicación**. Pulsa OK para cambiar a esa entrada. Mantén pulsado OK para mover u ocultar su mosaico.
 
 Las flechas seleccionan y OK abre; mantén OK para reordenar. Una pulsación breve de Atrás conserva la navegación y confirmación de salida de cada aplicación. Home abre el lanzador mientras el control está activo. Mantén Atrás durante 1,2 segundos para abrir LG Home una vez. El interruptor de control de Home y tus ajustes no cambian.
 
 Para editar con pulsaciones breves, abre **Ajustes de Home → Apariencia → Editar mosaicos**. Pulsa OK para seleccionar un mosaico, muévelo con las flechas y pulsa OK para colocarlo. Atrás cancela el movimiento o sale de la edición.
 
+Si el mando se desconecta temporalmente, deja activado el control de Home. Se reanudará cuando el televisor vuelva a detectar el mando.
+
 **Pulsa Home tres veces en dos segundos**, soltando entre pulsaciones. Se recupera LG Home y se detiene el control sin borrar preferencias.
 
 No-root: Para reiniciar el control de Home, abre Home Helper, elige Iniciar Helper y confirma. Se conserva tu pantalla Home elegida. Root: activa **Cambiar Home** en los ajustes de Home para reanudar. **Abrir LG Home** lo abre una vez sin cambiar el destino de Home. Para recuperar LG Home como destino permanente, desactiva **Cambiar Home**. No ejecutes ambos controladores a la vez. Si el fallo se repite, deja LG Home activo.
 
 Si Home Helper está detenido, también puedes elegir **Iniciar Helper** en los ajustes de la pantalla Home o del protector de pantalla. El estado se actualiza automáticamente después del inicio.
+
+En los televisores donde LG Home se abre como un panel, activar o desactivar **Change Home** en Root puede reiniciar brevemente la interfaz del televisor. Tras un reinicio o fallo, abre Clean Your TV y vuelve a activar **Change Home** para reanudar el control. LG Home sigue disponible.
+
+Para liberar espacio después de volver a una versión anterior de Home, abre **Ajustes → Temas**, pulsa **Eliminar** junto al tema descargado no disponible y confirma.
 
 ## ¿Necesitas ayuda?
 

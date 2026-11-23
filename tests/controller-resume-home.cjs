@@ -20,6 +20,7 @@ function controller({
     seq = 0,
     worker,
     watch,
+    receiveWindows,
     requestId = 0;
   const timers = new Map(),
     files = new Map(),
@@ -120,7 +121,13 @@ function controller({
       if (n === './screen-watch')
         return (d, l, fg, reset, power) => {
           watch = { fg, reset, power, log: l };
-          return { close: reset, foreground: startupForeground };
+          return {
+            close: reset,
+            foreground: startupForeground,
+            setForegroundDiagnostics(callback) {
+              receiveWindows = callback;
+            }
+          };
         };
       return require('../native/app/' + n.slice(2));
     },
@@ -181,6 +188,7 @@ function controller({
     rpc,
     fg: (id) => watch.fg(id),
     watchLog: (x) => watch.log(x),
+    receiveWindows: () => receiveWindows,
     command(cmd, options = {}) {
       files.set(
         dir + 'control.json',
@@ -826,4 +834,43 @@ test('monitor reset during an automatic query retires its old launch', () => {
   reply(LG);
   assert.equal(c.homeCalls().length, 0);
   assert(c.worker(), 'Home input stays available after monitor reset');
+});
+
+test('foreground windows are timestamped and limited to the diagnostic session', () => {
+  const c = controller();
+  assert.equal(c.receiveWindows(), undefined);
+  c.command('diagnostics-start');
+  const receive = c.receiveWindows();
+  const windows = [
+    { appId: 'youtube.leanback.v4', windowType: '_WEBOS_WINDOW_TYPE_CARD' },
+    { appId: 'com.webos.app.fullhome', windowType: '_WEBOS_WINDOW_TYPE_HOME' }
+  ];
+  receive([
+    { ...windows[0], windowId: 'not-exported' },
+    windows[1],
+    { appId: '192.0.2.5 / invalid', windowType: '_WEBOS_WINDOW_TYPE_CARD' }
+  ]);
+  const record = c.logs.at(-1);
+  assert.equal(record.trigger, 'foreground-windows');
+  assert.equal(record.time, c.logs.find((x) => x.trigger === 'started').time);
+  assert.deepEqual(record.windows, windows);
+  assert.equal(c.homeCalls().length, 1);
+  c.advance(61000);
+  assert.equal(c.receiveWindows(), null);
+  receive(windows);
+  assert.equal(c.logs.at(-1).trigger, 'expired');
+
+  const restored = controller({
+    initialControl: JSON.stringify({
+      cmd: 'diagnostics-start',
+      nonce: 'b'.repeat(32),
+      expires: 180000
+    }),
+    startedAt: 85000
+  });
+  restored.receiveWindows()(windows);
+  assert.equal(restored.logs.at(-1).trigger, 'foreground-windows');
+  assert.equal(restored.logs.at(-1).session, 'b'.repeat(32));
+  restored.command('diagnostics-stop');
+  assert.equal(restored.receiveWindows(), null);
 });

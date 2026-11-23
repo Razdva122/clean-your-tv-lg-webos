@@ -273,11 +273,16 @@
     function standbyResumePending(status) {
       return !!(
         status.intent &&
-        status.intent.phase === 'stopping' &&
-        status.journal &&
-        status.journal.state === 'restored' &&
-        status.effective &&
-        status.effective.sam_home === 'com.webos.app.home'
+        ((status.intent.phase === 'input-reconnecting' &&
+          status.intent.enabled === true &&
+          status.effective &&
+          status.effective.backend === 'c1-native-gate' &&
+          status.effective.state === 'reconnecting') ||
+          (status.intent.phase === 'stopping' &&
+            status.journal &&
+            status.journal.state === 'restored' &&
+            status.effective &&
+            status.effective.sam_home === 'com.webos.app.home'))
       );
     }
     function showHomeChoice(state, active) {
@@ -351,7 +356,15 @@
             );
             var phase = status.intent && status.intent.phase,
               active = phase === 'active',
-              pendingResume = standbyResumePending(status);
+              pendingResume = standbyResumePending(status),
+              effective = status.effective,
+              needsStockRestore =
+                phase === 'recovering' &&
+                effective &&
+                effective.backend === 'c1-native-gate' &&
+                effective.stopped === true &&
+                effective.filter_installed === true &&
+                effective.routing_active === false;
             buttons[3].disabled =
               !!phase &&
               phase !== 'active' &&
@@ -364,15 +377,22 @@
             message.textContent = t(
               active
                 ? 'Home and return from apps open Clean Your TV.'
-                : buttons[3].disabled
-                  ? 'Changing Home control…'
-                  : 'Home and return from apps open LG Home.'
+                : needsStockRestore
+                  ? 'Open LG Home to finish Home control recovery.'
+                  : buttons[3].disabled
+                    ? 'Changing Home control…'
+                    : 'Home and return from apps open LG Home.'
             );
-            if (buttons[3].disabled) {
-              if (!remainingPolls--)
+            if (needsStockRestore) {
+              buttons[12].hidden = false;
+              buttons[12].disabled = false;
+            } else if (buttons[3].disabled || phase === 'input-reconnecting') {
+              if (!remainingPolls--) {
+                if (phase === 'input-reconnecting') return;
                 throw new Error(
                   'Response timed out. Check status before retrying.'
                 );
+              }
               // Do not hold refreshTail (or a completed UI action) during the wait.
               statusTimer = setTimeout(function () {
                 if (
@@ -443,7 +463,7 @@
       message.textContent = t(
         turnOff ? 'Turning off Home control…' : 'Turning on Home control…'
       );
-      (turnOff ? exit() : control('enable'))
+      (turnOff ? refreshTail.then(exit, exit) : control('enable'))
         .then(function () {
           busy = false;
           buttons.forEach(function (b) {

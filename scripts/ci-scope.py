@@ -18,24 +18,46 @@ WEATHER_PR_PATHS = frozenset({
     'tests/weather/providers.cjs',
     'tests/weather/ui.cjs',
 })
+WINDOWS_FIXTURE_PR_PATHS = frozenset({
+    'cytv/cli.py',
+    'cytv/gui.py',
+    'cytv/python_runtime.py',
+    'cytv/requirements.txt',
+    'cytv/build-requirements.txt',
+    'scripts/build-requirements.txt',
+    'tests/cytv/test_desktop_recovery.py',
+    'tests/cytv/test_python_runtime.py',
+    'scripts/ci-scope.py',
+    '.github/workflows/cytv-runtime.yml',
+    '.github/workflows/tests.yml',
+})
 
 
 def components(paths):
     selected = set()
     for path in paths:
+        if path == 'README.md':
+            selected.update(('setup', 'preview'))
+            continue
         if (path.startswith(('website/', 'docs/i18n/'))
                 or path in ('docs/launcher-classic.jpg', 'docs/launcher-alpine.jpg',
                             'docs/launcher-ribbon.jpg', 'docs/launcher-liquid-glass.jpg',
+                            'docs/COMPATIBILITY.md', 'docs/compatibility-reports.json',
                             'assets/brand/logo-dark.svg',
                             'assets/brand/symbol-color.svg')):
             selected.add('preview')
             continue
-        if path in ('README.md', 'release-plan.json'):
+        if path == 'release-plan.json':
             selected.add('setup')
             continue
+        if path in ('LICENSE', 'THIRD_PARTY_NOTICES.md'):
+            selected.update(('installer', 'preview'))
+            continue
+        if path == 'android/app/src/main/assets/ui/guide/README.md':
+            selected.add('installer')
+            continue
         if (path.startswith(('docs/', '.github/ISSUE_TEMPLATE/', '.github/PULL_REQUEST_TEMPLATE/'))
-                or path.lower().endswith(('.md', '.rst'))
-                or path == 'LICENSE'):
+                or path.lower().endswith(('.md', '.rst'))):
             continue
         if path.startswith(('launcher/', 'root-edition/ui/', 'updater-app/')) and Path(path).suffix in ('.css', '.svg', '.png', '.jpg', '.woff', '.woff2', '.ttf'):
             selected.update(('ui', 'preview'))
@@ -148,10 +170,13 @@ def main():
     full_suite = os.environ.get('CI_FULL_SUITE') == 'true'
     quick_suite = os.environ.get('CI_QUICK_SUITE') == 'true'
     weather_paths = set()
+    windows_fixture_paths = set()
     if diff and not full_suite:
         paths = set(git('diff', '--name-only', '--no-renames', '-z', *diff).decode().split('\0')[:-1])
         if kind == 'pull_request' and not quick_suite:
             weather_paths = paths & WEATHER_PR_PATHS
+            windows_fixture_paths = {path for path in paths if path in WINDOWS_FIXTURE_PR_PATHS
+                                     or re.fullmatch(r'cytv/desktop[^/]*\.py', path)}
         selected = components(paths - weather_paths)
     else:
         selected = set(COMPONENTS)
@@ -172,8 +197,9 @@ def main():
             and not full_suite):
         selected = {'setup'}  # Release policy requires full tests from the trusted build.
         weather_paths.clear()
+        windows_fixture_paths.clear()
     outputs = {name.replace('-', '_'): name in selected for name in COMPONENTS}
-    outputs.update(weather=bool(weather_paths), any=bool(selected),
+    outputs.update(weather=bool(weather_paths), windows_fixtures=bool(windows_fixture_paths), any=bool(selected),
                    runtime=bool(selected - {'setup', 'browser-core'}), candidate=candidate, installers=installers,
                    browser_core=bool(selected & {'browser-core', 'tv', 'ui'}),
                    full=installers and full_candidate(event, kind, ref),
@@ -191,6 +217,9 @@ def main():
             if weather_paths:
                 paths = ', '.join(f'`{path}`' for path in sorted(weather_paths))
                 output.write(f'\nFocused weather checks selected for {paths}.\n')
+            if windows_fixture_paths:
+                paths = ', '.join(f'`{path}`' for path in sorted(windows_fixture_paths))
+                output.write(f'\nWindows installer fixture checks selected for {paths}.\n')
 
 
 if __name__ == '__main__':

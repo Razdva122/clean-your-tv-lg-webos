@@ -55,7 +55,7 @@ and creating your own theme.
 ## Download and install
 
 <!-- release:downloads -->
-Current stable release: **[v1.26.0](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.26.0)** — [release notes](docs/RELEASE-1.26.0.md).
+Current stable release: **[v1.27.0](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.27.0)** — [release notes](docs/RELEASE-1.27.0.md).
 <!-- /release:downloads -->
 
 [![Download Windows x64 graphical installer — GUI ZIP](assets/brand/downloads/windows.svg)](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/latest/download/cytv-windows-x64-desktop.zip)
@@ -143,12 +143,12 @@ For contributors: [build and technical references](docs/development/README.md),
 <!-- release:components -->
 | Component | Stable version |
 | --- | --- |
-| cytv installer | 0.23.0 |
-| Home | 1.20.5 |
-| Home Helper | 0.9.3 |
-| Root edition | 0.23.0 |
-| Both edition Updaters | 0.6.4 |
-| Android installer / versionCode | 0.22.0 / 52 |
+| cytv installer | 0.24.1 |
+| Home | 1.20.7 |
+| Home Helper | 0.9.4 |
+| Root edition | 0.24.1 |
+| Both edition Updaters | 0.6.6 |
+| Android installer / versionCode | 0.23.1 / 54 |
 <!-- /release:components -->
 
 v1.15.0 fresh System Updater: 1.2.8 / protocol 1. v1.14.0 used 1.2.7. Existing supervisors stay pinned; installed 1.1.2 has no general replacement path. See the [delivery limits](docs/RELEASE-1.13.0.md).
@@ -247,6 +247,7 @@ and historical [1.5.0 TV acceptance and limits](docs/RELEASE-1.5.0.md).
 | Home | TV · Edition | Reported webOS |
 | :---: | --- | --- |
 | ✅ | OLED55G36LA · No-root | SDK 9.2.2 |
+| ❔ | OLED55C37LA · Root | 24; SDK 9.2.1 |
 
 </details>
 

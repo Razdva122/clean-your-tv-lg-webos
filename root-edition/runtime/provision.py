@@ -27,6 +27,9 @@ def verify():
         required.update((str(d.STATE/'home-backend.json'), str(native)))
         if compositor:
             required.add(str(root/'c1-home-filter.js'))
+        if selected.get('schema') == 4:
+            required.update(str(root/name) for name in
+                            ('embedded_home.py', 'embedded-home.qml', 'embedded-home.js'))
         if hashlib.sha256(secure(native, d.EXPECTED_UID, 4*1024*1024)).hexdigest() != selected['native_sha256']:
             raise ValueError('Experimental native recovery identity changed')
     required.update(str(d.STATE/name) for name in ('python_binding.py','python_boot.js','python-launcher','python-runtime.json') if (d.STATE/name).exists())

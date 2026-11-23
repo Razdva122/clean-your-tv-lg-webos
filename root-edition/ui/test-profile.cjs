@@ -59,11 +59,14 @@ function harness({
   memory = new Map(),
   iconStatus = 200,
   iconPath = 'icons/one.png',
-  i18n = false
+  i18n = false,
+  systemRpc,
+  schedule = setTimeout
 } = {}) {
   const calls = [],
     scripts = [],
-    errors = [];
+    errors = [],
+    events = new Map();
   if (saved !== null)
     memory.set(
       data.key,
@@ -102,7 +105,16 @@ function harness({
       }
     };
   }
+  if (systemRpc)
+    window.SystemUpdates = {
+      rpc(method, payload) {
+        calls.push(['system:' + method, payload]);
+        return systemRpc(method, payload);
+      }
+    };
   const document = {
+    addEventListener: (name, handler) => events.set(name, handler),
+    removeEventListener: (name) => events.delete(name),
     body: {
       appendChild: (s) => {
         scripts.push(s);
@@ -119,7 +131,7 @@ function harness({
     document,
     localStorage: storage,
     Promise,
-    setTimeout,
+    setTimeout: schedule,
     clearTimeout,
     XMLHttpRequest: class {
       open(method, url) {
@@ -143,9 +155,96 @@ function harness({
     fs.readFileSync(__dirname + '/root-profile.js', 'utf8'),
     ctx
   );
-  return { window, calls, scripts, errors, memory };
+  return { window, calls, scripts, errors, memory, events };
 }
 (async () => {
+  let systemRestore;
+  const reopened = harness({
+    saved: profile,
+    i18n: true,
+    systemRpc: async () => {
+      if (systemRestore === undefined)
+        throw Object.assign(Error('System updater unavailable'), {
+          unavailable: true
+        });
+      return systemRestore;
+    }
+  });
+  await tick();
+  assert.strictEqual(reopened.scripts.length, 1);
+  systemRestore = {
+    profile,
+    transaction: 'ota',
+    version: '0.0.1',
+    phase: 'complete'
+  };
+  reopened.events.get('webOSRelaunch')?.();
+  await tick();
+  assert(!reopened.calls.some(([method]) => method === 'reload'));
+  systemRestore.phase = 'verifying';
+  reopened.events.get('webOSRelaunch')?.();
+  await tick();
+  assert(
+    reopened.calls.some(([method]) => method === 'reload'),
+    'a Root launcher reopened by an active System update restarts profile validation'
+  );
+  assert(!reopened.calls.some(([method]) => method === 'system:healthy'));
+  let rejectStartup;
+  let reads = 0;
+  const earlyRelaunch = harness({
+    saved: profile,
+    i18n: true,
+    schedule: (callback) => setImmediate(callback),
+    systemRpc: async () => {
+      reads++;
+      if (reads === 1)
+        return new Promise((_, reject) => (rejectStartup = reject));
+      if (reads === 2)
+        throw Error(
+          'Legacy updater permissions changed; computer recovery required'
+        );
+      return { ...systemRestore, phase: 'verifying' };
+    }
+  });
+  earlyRelaunch.events.get('webOSRelaunch')?.();
+  rejectStartup(
+    Object.assign(Error('System updater unavailable'), { unavailable: true })
+  );
+  await tick();
+  await tick();
+  assert.strictEqual(
+    reads,
+    3,
+    'an early relaunch survives transient registration refusal'
+  );
+  assert(earlyRelaunch.calls.some(([method]) => method === 'reload'));
+  let rejectRelaunch;
+  let overlappingReads = 0;
+  const unavailable = () =>
+    Object.assign(Error('System updater unavailable'), { unavailable: true });
+  const overlappingRelaunch = harness({
+    saved: profile,
+    i18n: true,
+    systemRpc: async () => {
+      overlappingReads++;
+      if (overlappingReads === 1) throw unavailable();
+      if (overlappingReads === 2)
+        return new Promise((_, reject) => (rejectRelaunch = reject));
+      return { ...systemRestore, phase: 'verifying' };
+    }
+  });
+  await tick();
+  const onRelaunch = overlappingRelaunch.events.get('webOSRelaunch');
+  onRelaunch();
+  onRelaunch();
+  rejectRelaunch(unavailable());
+  await tick();
+  assert.strictEqual(
+    overlappingReads,
+    3,
+    'a second relaunch retriggers a stale read'
+  );
+  assert(overlappingRelaunch.calls.some(([method]) => method === 'reload'));
   const starting = harness();
   await tick();
   await assert.rejects(

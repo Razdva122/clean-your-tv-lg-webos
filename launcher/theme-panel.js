@@ -312,6 +312,15 @@
           row.themeItem = item;
           row.setAttribute('data-selected', String(selected));
           installed.appendChild(row);
+          if (item.unavailable) {
+            row.classList.add('theme-unavailable');
+            var label = node('div');
+            label.className = 'theme-choice';
+            label.appendChild(node('strong', unavailableLabel(item)));
+            row.appendChild(label);
+            row.appendChild(installedActions(item));
+            return;
+          }
           var b = node('button');
           b.type = 'button';
           b.className = 'theme-choice';
@@ -367,23 +376,7 @@
             meta.className = 'theme-meta';
             row.appendChild(meta);
           }
-          var rowActions = node('div');
-          rowActions.className = 'theme-card-actions';
-          row.appendChild(rowActions);
-          var apply = node('button', 'Apply theme');
-          apply.type = 'button';
-          apply.onclick = function () {
-            selectInstalled(item);
-          };
-          rowActions.appendChild(apply);
-          if (!item.builtin) {
-            var remove = node('button', 'Remove');
-            remove.className = 'theme-remove';
-            remove.onclick = function () {
-              removeInstalled(item);
-            };
-            rowActions.appendChild(remove);
-          }
+          row.appendChild(installedActions(item));
         });
         var actions = node('div');
         actions.className = 'theme-picker-actions';
@@ -429,6 +422,31 @@
         if (version === view) failed(e);
       }
     );
+  }
+  function unavailableLabel(item) {
+    return t(item.title) + ' · ' + item.reference;
+  }
+  function installedActions(item) {
+    var actions = node('div');
+    actions.className = 'theme-card-actions';
+    if (!item.unavailable) {
+      var apply = node('button', 'Apply theme');
+      apply.type = 'button';
+      apply.onclick = function () {
+        selectInstalled(item);
+      };
+      actions.appendChild(apply);
+    }
+    if (!item.builtin) {
+      var remove = node('button', 'Remove');
+      remove.type = 'button';
+      remove.className = 'theme-remove';
+      remove.onclick = function () {
+        removeInstalled(item);
+      };
+      actions.appendChild(remove);
+    }
+    return actions;
   }
   function installedPreview(item, parent) {
     root.ThemeManager.preview(item).then(
@@ -586,7 +604,7 @@
       .then(function (items) {
         if (version !== view) return [];
         items.forEach(function (item) {
-          installedIds[item.id] = true;
+          if (!item.unavailable) installedIds[item.id] = true;
         });
         return root.ThemeManager.catalog(requestSignal, display);
       })
@@ -608,10 +626,16 @@
     mode = 'remove';
     heading(
       'Remove theme?',
-      item.title + (item.version ? ' · ' + item.version : '')
+      item.unavailable
+        ? unavailableLabel(item)
+        : item.title + (item.version ? ' · ' + item.version : '')
     );
-    var active = root.ThemeManager.current();
-    if (active.id === item.id && active.digest === item.digest)
+    function isActive(theme) {
+      return item.unavailable
+        ? item.storageKey === theme.digest
+        : theme.id === item.id && theme.digest === item.digest;
+    }
+    if (isActive(root.ThemeManager.current()))
       card.appendChild(node('p', 'Classic will be restored.'));
     button(
       'Remove',
@@ -627,8 +651,7 @@
           }
         );
         var current = root.ThemeManager.current();
-        if (current.id === item.id && current.digest === item.digest)
-          root.ThemeManager.reset();
+        if (!current.trial && isActive(current)) root.ThemeManager.reset();
         root.ThemeManager.remove(item).then(
           function () {
             if (requestView === view) {
@@ -660,8 +683,9 @@
     Array.prototype.forEach.call(
       card.querySelectorAll('.theme-option'),
       function (row) {
-        var item = row.themeItem,
-          selected =
+        var item = row.themeItem;
+        if (item.unavailable) return;
+        var selected =
             item.id === current.id &&
             (!item.digest || item.digest === current.digest),
           choice = row.querySelector('.theme-choice');

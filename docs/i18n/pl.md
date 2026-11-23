@@ -41,6 +41,8 @@ Użyj kodu z TV, a nie hasła konta LG. Jeśli kodu nie widać, włącz Key Serv
 
 Parowanie to osobny krok: gdy TV zapyta, zatwierdź CYTV pilotem. Jeśli telewizor odrzuci prośbę, potwierdź w CYTV ponowienie parowania z tym samym telewizorem.
 
+Jeśli połączenie ze zdalnym sterowaniem telewizora zostało odrzucone, zostaw telewizor włączony i sprawdź na komputerze dostęp do portu TCP 3001. Następnie wybierz **Spróbuj ponownie** w instalatorze komputerowym.
+
 Jeśli przy pierwszej instalacji No-root pojawi się ostrzeżenie, że nie udało się odczytać wejść HDMI, możesz kontynuować instalację z wykrytymi aplikacjami.
 
 Utrzymuj Developer Mode aktywny: przed końcem odliczania otwórz aplikację i naciśnij EXTEND, gdy TV ma internet. Po wygaśnięciu LG może usunąć te aplikacje.
@@ -77,17 +79,25 @@ Jeśli instalator Root zaproponuje zastąpienie obecnej integracji Home, potwier
 
 ## 6. Obsługa i odzyskiwanie
 
+Aby zmigrować środowisko uruchamiania istniejącej Root Beta, wyłącz **Change Home** i uruchom `cytv migrate-root-beta --edition root --root-variant node012-beta` przez zapisane połączenie Root SSH. Aplikacja i ustawienia zostaną zachowane. Migracja zatrzyma się, jeśli wcześniejsze usuwanie zmieniło już instalację. Po zakończeniu włącz Change Home i wybierz źródła uruchamiania w ustawieniach Home.
+
 Aby przypiąć wejście HDMI, wybierz je w menu **+ / Dodaj aplikację**. Naciśnij OK, aby przełączyć wejście. Przytrzymaj OK, aby przesunąć lub ukryć kafelek.
 
 Strzałki wybierają, OK otwiera; przytrzymaj OK, aby zmienić kolejność. Krótkie Wstecz zachowuje nawigację aplikacji i jej potwierdzenie wyjścia. Home otwiera ekran Clean Your TV, gdy sterowanie jest aktywne. Przytrzymaj Wstecz przez 1,2 sekundy, aby jednorazowo otworzyć LG Home. Przełącznik sterowania Home i ustawienia pozostają bez zmian.
 
 Aby edytować krótkimi naciśnięciami, otwórz **Ustawienia Home → Wygląd → Edytuj kafelki**. Naciśnij OK, aby chwycić kafelek, przesuń go strzałkami i naciśnij OK, aby go umieścić. Wstecz anuluje przesunięcie lub kończy edycję.
 
+Jeśli pilot chwilowo straci połączenie, pozostaw sterowanie Home włączone. Zostanie wznowione, gdy telewizor ponownie wykryje pilota.
+
 **Naciśnij Home trzy razy w ciągu dwóch sekund**, puszczając przycisk po każdym naciśnięciu. Przywraca to LG Home i zatrzymuje sterowanie bez usuwania preferencji.
 
 No-root: Aby wznowić sterowanie Home, otwórz Home Helper, wybierz Uruchom Helper i potwierdź. Zapisany wybór ekranu Home zostaje zachowany. Root: włącz **Zmień Home** w ustawieniach Home, aby wznowić. **Otwórz LG Home** otwiera LG Home jednorazowo bez zmiany celu przycisku Home. Aby przywrócić LG Home jako stały cel, wyłącz **Zmień Home**. Nie uruchamiaj obu kontrolerów jednocześnie. Przy powtarzającym się błędzie pozostań przy LG Home.
 
 Gdy Home Helper jest zatrzymany, możesz też wybrać **Uruchom Helper** w ustawieniach ekranu Home lub wygaszacza. Stan zaktualizuje się automatycznie po uruchomieniu.
+
+Na telewizorach, na których LG Home otwiera się jako panel, włączenie lub wyłączenie **Change Home** w Root może na chwilę ponownie uruchomić interfejs telewizora. Po ponownym uruchomieniu lub awarii otwórz Clean Your TV i ponownie włącz **Change Home**, aby wznowić sterowanie. LG Home pozostaje dostępny.
+
+Aby zwolnić miejsce po przywróceniu wcześniejszej wersji Home, otwórz **Ustawienia → Motywy**, wybierz **Usuń** przy niedostępnym pobranym motywie i potwierdź.
 
 ## Potrzebujesz pomocy?
 

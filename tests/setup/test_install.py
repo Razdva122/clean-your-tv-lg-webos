@@ -6,6 +6,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -39,7 +40,7 @@ class InstallTests(unittest.TestCase):
 
     def run_installer(self, fault='', existing=False, host='192.0.2.10',
                       external_zig=False, path_zig=False, termux=False, zig_version='0.14.1',
-                      tv_node_output=None, tv_node_exit=0):
+                      tv_node_output=None, tv_node_exit=0, runner=None):
         with tempfile.TemporaryDirectory(prefix='tv install ') as tmp:
             root = Path(tmp)
             installer = ROOT / 'install.sh'
@@ -57,9 +58,26 @@ class InstallTests(unittest.TestCase):
             # Keep an installed host Zig out of the simulated tool search.
             for tool in ('bash', 'dirname', 'mkdir', 'ln'):
                 (bindir / tool).symlink_to(shutil.which(tool))
+            (root / 'pause.py').write_text("""import os, sys, time
+from pathlib import Path
+
+def pause(stage):
+    if os.environ.get('PAUSE_INSTALLER_AT') != stage:
+        return
+    Path('installer-ready').touch()
+    deadline = time.monotonic() + 15
+    while not Path('installer-resume').exists():
+        if time.monotonic() >= deadline:
+            raise SystemExit('Installer fixture timed out waiting to resume.')
+        time.sleep(0.01)
+
+if __name__ == '__main__':
+    pause(sys.argv[1])
+""")
             cli = bindir / 'cli'
             cli.write_text('''#!/usr/bin/env python3
 import json, os, pathlib, sys
+from pause import pause
 name=pathlib.Path(sys.argv[0]).name
 with open('calls.jsonl','a') as f: f.write(json.dumps([name]+sys.argv[1:])+'\\n')
 if name=='ares-setup-device' and '--add' in sys.argv:
@@ -73,18 +91,30 @@ if name=='ares-novacom' and '--run' in sys.argv:
         sys.exit(int(os.environ['TV_NODE_EXIT']))
     else: print('no confirmation' if os.environ['FAULT']=='ssh' else 'CYTV_SSH_OK')
 if name=='ares-install' and os.environ['FAULT']=='install': sys.exit(1)
+if name=='ares-install' and pathlib.Path(sys.argv[-1]).name.startswith('com.gathin.tvhome_'):
+    raw = pathlib.Path(sys.argv[-1]).read_text()
+    app = json.loads(raw.removeprefix('window.TV_APPS = ').removesuffix(';'))['apps'][0]
+    device = sys.argv[sys.argv.index('-d') + 1]
+    with open('calls.jsonl', 'a') as f:
+        f.write(json.dumps(['launcher-package', device, app['source']]) + '\\n')
+if name=='ares-launch':
+    pause('launch')
+    if os.environ['FAULT']=='launch': sys.exit(1)
 '''); cli.chmod(0o755)
             for name in ['ares-setup-device', 'ares-novacom', 'ares-install', 'ares-launch', 'ares-package']:
                 (bindir / name).symlink_to(cli)
             (bindir / 'node').write_text('#!/bin/sh\necho 22\n')
-            (bindir / 'npm').write_text('#!/bin/sh\n[ "$FAULT" != tools ]\n')
+            (bindir / 'npm').write_text('''#!/bin/sh
+printf '["npm","%s"]\\n' "$1" >> calls.jsonl
+[ "$FAULT" != tools ]
+''')
             for name in ['node', 'npm']: (bindir / name).chmod(0o755)
             # Fake only package download/bootstrap; all embedded Python validation runs normally.
             py = bindir / 'python3'
             py.write_text(f'''#!/bin/sh
 if [ "$1" = -m ] && [ "$2" = venv ]; then
  mkdir -p "$3/bin"
- ln -s "$0" "$3/bin/python3"
+ ln -sf "$0" "$3/bin/python3"
  exit 0
 fi
 if [ "$1" = -m ] && [ "$2" = pip ]; then
@@ -105,15 +135,16 @@ exec '{sys.executable}' "$@"
             shutil.copy(ROOT / 'scripts/build-requirements.txt', root / 'scripts')
             (root / 'sync-apps.py').write_text('''import json,os,pathlib,sys
 with open('calls.jsonl','a') as f: f.write(json.dumps(['sync',sys.argv[1]])+'\\n')
-icons=pathlib.Path('launcher/icons'); icons.mkdir()
+icons=pathlib.Path('launcher/icons'); icons.mkdir(exist_ok=True)
 with open('calls.jsonl','a') as f: f.write(json.dumps(['icons-traversable', bool(icons.stat().st_mode & 1)])+'\\n')
-apps=[] if os.environ['FAULT']=='empty' else [{'id':'example.app'}]
+apps=[] if os.environ['FAULT']=='empty' else [{'id':'example.app', 'source':sys.argv[1]}]
 pathlib.Path('launcher/apps.js').write_text('window.TV_APPS = '+json.dumps({'apps':apps})+';')
 ''')
             (root / 'scripts/build.sh').write_text(f'''#!/bin/sh
 [ "$FAULT" != build ] || exit 1
+python3 pause.py build
 mkdir -p dist
-printf 'package' > dist/com.gathin.tvhome_1.1.0_all.ipk
+python3 -c 'from pathlib import Path; Path("dist/com.gathin.tvhome_1.1.0_all.ipk").write_bytes(Path("launcher/apps.js").read_bytes())'
 printf 'package' > dist/com.local.nativehome_{helper_version}_arm.ipk
 ''')
             (root / 'scripts/configure-tv.sh').write_text('''#!/bin/sh
@@ -128,6 +159,7 @@ printf '["configure"]\\n' >> calls.jsonl
                        TV_NODE_EXIT=str(tv_node_exit))
             env.pop('ZIG', None); env.pop('TV_HOST', None)
             env.pop('TERMUX_VERSION', None); env.pop('PREFIX', None)
+            env.pop('PAUSE_INSTALLER_AT', None)
             if termux:
                 env['TERMUX_VERSION'] = 'test'
             if external_zig or path_zig:
@@ -136,10 +168,55 @@ printf '["configure"]\\n' >> calls.jsonl
                 supplied.chmod(0o755)
                 if external_zig:
                     env['ZIG'] = str(supplied)
+            if runner is not None:
+                return runner(root, env)
             result = subprocess.run(['bash', 'install.sh', host], cwd=root, env=env,
                                     text=True, capture_output=True)
             calls = [json.loads(line) for line in (root/'calls.jsonl').read_text().splitlines()] if (root/'calls.jsonl').exists() else []
             return result, calls
+
+    def test_concurrent_checkout_install_is_rejected_until_the_first_exits(self):
+        first_host, second_host = '192.0.2.10', '192.0.2.20'
+
+        def run_overlapping(root, env, pause_at):
+            first = subprocess.Popen(
+                ['bash', 'install.sh', first_host], cwd=root, text=True,
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                env=dict(env, PAUSE_INSTALLER_AT=pause_at))
+            calls = root / 'calls.jsonl'
+            inventory = root / 'launcher/apps.js'
+            try:
+                deadline = time.monotonic() + 10
+                while not (root / 'installer-ready').exists():
+                    if first.poll() is not None or time.monotonic() >= deadline:
+                        self.fail('The first installer did not reach ' + pause_at)
+                    time.sleep(0.01)
+                before = {path: path.read_bytes() for path in (calls, inventory)}
+                second = subprocess.run(
+                    ['bash', 'install.sh', second_host], cwd=root, text=True,
+                    capture_output=True, timeout=10,
+                    env=dict(env, DEVICE='second-tv', PROFILE_HOST=second_host, FAULT=''))
+                self.assertNotEqual(second.returncode, 0)
+                self.assertIn('Another installation is running in this checkout', second.stderr)
+                self.assertEqual({path: path.read_bytes() for path in before}, before)
+            finally:
+                (root / 'installer-resume').touch()
+                stdout, stderr = first.communicate(timeout=15)
+            self.assertEqual(first.returncode, 1 if env['FAULT'] else 0, stdout + stderr)
+
+            retry = subprocess.run(
+                ['bash', 'install.sh', second_host], cwd=root, text=True,
+                capture_output=True, timeout=10,
+                env=dict(env, DEVICE='second-tv', PROFILE_HOST=second_host, FAULT=''))
+            self.assertEqual(retry.returncode, 0, retry.stdout + retry.stderr)
+            packages = [call for line in calls.read_text().splitlines()
+                        if (call := json.loads(line))[0] == 'launcher-package']
+            self.assertEqual(packages, [['launcher-package', 'test-tv', first_host],
+                                        ['launcher-package', 'second-tv', second_host]])
+
+        for pause_at, fault in (('build', ''), ('launch', 'launch')):
+            with self.subTest(pause_at=pause_at):
+                self.run_installer(fault=fault, runner=lambda root, env: run_overlapping(root, env, pause_at))
 
     def test_installs_configures_then_launches(self):
         result, calls = self.run_installer()

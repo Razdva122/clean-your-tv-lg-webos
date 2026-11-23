@@ -21,7 +21,7 @@ class BootstrapFlowTests(test_bootstrap.BootstrapFixture):
         observed=importlib.import_module('observed_install')
         device_module=importlib.import_module('system_updater.device')
         prior=ipk(concrete.APP,version='1.0.0')
-        current=ipk(concrete.APP,version='1.0.0' if repair else '1.1.0')
+        current=prior if repair else ipk(concrete.APP,version='1.1.0')
         old={'version':'1.0.0','sha256':digest(prior),'size':len(prior)}
         original_terminal={'completed':True,'event':{'id':concrete.APP,'statusValue':30,'details':{'packageId':concrete.APP,
             'client':'com.webos.lunasend-40','ipkFile':'/var/lib/clean-your-tv-installer/cytv-root-install-old/package.ipk'}}}

@@ -22,6 +22,7 @@
     { code: 'ko', name: '한국어' },
     { code: 'hi', name: 'हिन्दी' },
     { code: 'pl', name: 'Polski' },
+    { code: 'ro', name: 'Română' },
     { code: 'ru', name: 'Русский' },
     { code: 'zh-Hans', name: '简体中文' },
     { code: 'zh-Hant', name: '繁體中文' }

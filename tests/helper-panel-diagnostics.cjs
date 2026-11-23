@@ -424,8 +424,8 @@ for (const label of [
 ])
   assert.equal(
     catalogs.filter((locale) => Object.hasOwn(locale, label)).length,
-    13,
-    'reuse all thirteen locale strings'
+    14,
+    'reuse all fourteen locale strings'
   );
 
 // A delayed status reply must not steal focus from read-only diagnostics.
@@ -590,7 +590,7 @@ if (process.argv.includes('--browser'))
             width +
             'x' +
             height +
-            ', all 13 locales'
+            ', all fourteen locales'
         );
       }
     } finally {

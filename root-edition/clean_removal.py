@@ -69,7 +69,17 @@ def activities(device):
     return rows
 
 
-def runtime_restore(payload, uid=0, *, activation_token=None):
+@contextmanager
+def restore_check(name):
+    try:
+        yield
+    except Exception as error:
+        if not getattr(error, 'restore_check', None):
+            error.restore_check = name
+        raise
+
+
+def runtime_restore(payload, uid=0, *, activation_token=None, routing_only=False):
     """Called in an isolated interpreter with only the current verified bundle.
 
     Native restore reads its original inverse/inode journal; the executable is
@@ -77,42 +87,69 @@ def runtime_restore(payload, uid=0, *, activation_token=None):
     """
     import sys
     import deploy
+    if routing_only and activation_token is None:
+        raise ValueError('retained_compositor_activation_required')
     payload=Path(payload)
-    manifest=deploy.verify_bundle(payload,allow_experimental=True)
+    with restore_check('root-bundle-unverified'):
+        manifest=deploy.verify_bundle(payload,allow_experimental=True)
     sys.path.insert(0,str(payload/'runtime'))
-    import cli
-    backend=cli.gate_backend()
-    compositor = False
-    if backend is not None:
-        selected=backend.selection(backend.STATE,uid)
-        name='c1-home-gate'
-        if selected.get('routing')=='compositor-keyfilter-v1':
-            import c1_keyfilter
-            backend=c1_keyfilter;name='c1-keyfilter-guard'
-            compositor = True
-        path=payload/'runtime'/name
-        raw=deploy.checked_file(payload,'runtime/'+name)
-        if hashlib.sha256(raw).hexdigest()!=manifest['files'].get('runtime/'+name):
-            raise ValueError('current_native_recovery_unverified')
-        fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW)
-        try:
-            info=os.fstat(fd)
-            if info.st_uid!=uid or info.st_nlink!=1 or not stat.S_ISREG(info.st_mode):raise ValueError('unsafe_current_native_recovery')
-            os.fchmod(fd,0o700)
-        finally:os.close(fd)
-        backend.binary=lambda root,uid:path
-    selection_raw=safe_bytes(backend.STATE/'home-backend.json',uid=uid) if backend is not None else None
+    with restore_check('backend-unverified'):
+        import cli
+        backend=cli.gate_backend()
+        compositor = False
+        if backend is not None:
+            selected=backend.selection(backend.STATE,uid)
+            name='c1-home-gate'
+            if selected.get('routing')=='compositor-keyfilter-v1':
+                import c1_keyfilter
+                backend=c1_keyfilter;name='c1-keyfilter-guard'
+                compositor = True
+            path=payload/'runtime'/name
+            raw=deploy.checked_file(payload,'runtime/'+name)
+            if hashlib.sha256(raw).hexdigest()!=manifest['files'].get('runtime/'+name):
+                raise ValueError('current_native_recovery_unverified')
+            fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW)
+            try:
+                info=os.fstat(fd)
+                if info.st_uid!=uid or info.st_nlink!=1 or not stat.S_ISREG(info.st_mode):raise ValueError('unsafe_current_native_recovery')
+                os.fchmod(fd,0o700)
+            finally:os.close(fd)
+            backend.binary=lambda root,uid:path
+        selection_raw=safe_bytes(backend.STATE/'home-backend.json',uid=uid) if backend is not None else None
     if activation_token is not None:
         if not compositor or not re.fullmatch('[a-f0-9]{32}', activation_token):
             raise ValueError('retained_compositor_activation_required')
         from update_guard import control
-        with control(backend.STATE, uid), backend.operation(backend.STATE, uid):
-            if safe_bytes(backend.STATE/'home-backend.json', uid=uid) != selection_raw:
-                raise ValueError('native_recovery_selection_changed')
-            current = backend.native(['--status'], backend.STATE, uid)
-            if current['token'] != activation_token:
-                raise ValueError('native_recovery_attempt_changed')
-            restored = backend.restore_locked(backend.STATE, uid, explicit_restore=True)
+        with ExitStack() as locks:
+            with restore_check('routing-lock-unavailable'):
+                locks.enter_context(control(backend.STATE, uid))
+                locks.enter_context(backend.operation(backend.STATE, uid))
+            with restore_check('retained-attempt-unverified'):
+                if safe_bytes(backend.STATE/'home-backend.json', uid=uid) != selection_raw:
+                    raise ValueError('native_recovery_selection_changed')
+            with restore_check('native-status-unverified'):
+                current = backend.native(['--status'], backend.STATE, uid)
+            with restore_check('retained-attempt-unverified'):
+                if (current['token'] != activation_token or routing_only
+                        and (not backend.stopped_stock(backend.validate_native(current)) or current['reason'] != 'input_expired')):
+                    raise ValueError('native_recovery_attempt_changed')
+            if routing_only:
+                with restore_check('filter-ownership-unverified'):
+                    entry = backend.filter_entry(backend.STATE)
+                    directory = backend.private_directory(backend.STATE, uid)
+                    ownership = json.loads(backend.secure(directory/'ownership.json', uid, 4096))
+                    if ownership != {'schema':1, 'entry':entry, 'token':activation_token}:
+                        raise ValueError('native_recovery_filter_unverified')
+                with restore_check('filter-chain-unverified'):
+                    chain = backend.read_chain()
+                    if chain.count(entry) != 1:
+                        raise ValueError('native_recovery_filter_unverified')
+                    backend.stock_chain(backend.reconcile(chain, backend.STATE, False))
+                with restore_check('stock-destination-unverified'):
+                    backend.require_stock_home_destination()
+                restored = backend.restore_locked(backend.STATE, uid, routing_only=True)
+            else:
+                restored = backend.restore_locked(backend.STATE, uid, explicit_restore=True)
     else:
         restored = backend.restore_for_removal(backend.STATE, uid) if compositor else cli.main('restore')
     result={'returnValue':True,'result':restored}
@@ -170,20 +207,24 @@ def activation_restore_entry(args):
     import deploy
     from updater.bootstrap import verify_bundle
 
-    if len(args) != 3 or args[1] != '--restore-activation':
+    if len(args) != 3 or args[1] not in ('--restore-activation', '--restore-activation-routing'):
         raise ValueError('retained_compositor_activation_required')
-    deploy.require_device()
-    verify_bundle(Path(__file__).resolve().parent)
     try:
-        return runtime_restore(args[0], activation_token=args[2])
+        with restore_check('support-start'):
+            deploy.require_device()
+        with restore_check('updater-bundle-unverified'):
+            verify_bundle(Path(__file__).resolve().parent)
+        with restore_check('backend-unverified'):
+            return runtime_restore(args[0], activation_token=args[2], routing_only=args[1] == '--restore-activation-routing')
     except Exception as error:
-        if not (hasattr(error, 'restore_check') or hasattr(error, 'native_reason')):
-            return {'returnValue': False}
-        from transport import root_restore_failure_details
-        return {'returnValue': False, 'root_restore_failure': root_restore_failure_details({
-            'restore_check': getattr(error, 'restore_check', None),
-            'native_reason': getattr(error, 'native_reason', None),
-        })}
+        detail = {'restore_check': error.restore_check}
+        native_reason = getattr(error, 'native_reason', None)
+        destination_check = getattr(error, 'destination_check', None)
+        if native_reason is not None or destination_check is not None:
+            from transport import root_restore_failure_details
+            detail = root_restore_failure_details({**detail, 'native_reason': native_reason,
+                                                   'destination_check': destination_check})
+        return {'returnValue': False, 'root_restore_failure': detail}
 
 
 def _cleanup_child_report(action, *args, **kwargs):
@@ -522,7 +563,7 @@ def compact_audit(record, store):
             result['package_rejected']=True
         step=value.get('cleanup_step')
         if step in ('routing-inverse','runtime-restore','provision-rollback','startup-hook',
-                    'legacy-lockdown','registration-restore','legacy-permissions','home-readback'):
+                    'legacy-lockdown','registration-restore','legacy-permissions','home-readback','boot-identity','private-inventory'):
             result['cleanup_step']=step
         # Existing validators assume frame file names are hashable. Ignore
         # malformed optional data without interrupting cleanup.

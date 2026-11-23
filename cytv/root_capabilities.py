@@ -175,6 +175,36 @@ NATIVE_HOME_MOUNT_AWK = """'
 NATIVE_HOME_MOUNT_PROBE = 'LC_ALL=C awk ' + NATIVE_HOME_MOUNT_AWK + ' /proc/self/mountinfo'
 
 
+# Read-only admission of a compositor entry-file adapter. Runtime attachment and
+# rollback are rechecked by the device backend before it may acquire Home.
+EMBEDDED_HEADERS = NATIVE_HEADERS.replace(
+    'home=/usr/bin/com.webos.app.home',
+    'home=/usr/bin/surface-manager-starfish'
+) + r"""
+test ! -e /usr/bin/com.webos.app.home && test ! -L /usr/bin/com.webos.app.home
+case "$(readlink /proc/1/exe)" in */init.upstart) ;; *) exit 1 ;; esac
+test -f /etc/init/surface-manager.conf
+test ! -L /etc/init/surface-manager.conf
+test -x /sbin/initctl && test ! -L /sbin/initctl
+grep -q 'LSM_MAIN_QML' /usr/bin/surface-manager-starfish
+grep -q 'qrc:///main.qml' /usr/bin/surface-manager-starfish
+grep -q 'exec.* /usr/bin/surface-manager-starfish' /etc/init/surface-manager.conf
+! grep -q 'LSM_MAIN_QML' /etc/init/surface-manager.conf
+/sbin/initctl help | grep -q 'start'
+printf '\nCYTV_EMBEDDED_READY\n'
+"""
+
+
+def embedded_compositor(remote):
+    try:
+        response = remote.run(EMBEDDED_HEADERS, timeout=8)
+    except Exception:
+        return False
+    if not isinstance(response, str) or not response.endswith("\nCYTV_EMBEDDED_READY\n"):
+        return False
+    return native_headers_valid(response.removesuffix("\nCYTV_EMBEDDED_READY\n"))
+
+
 def arm32_elf(dump):
     fields = dump.split()
     if len(fields) != 52 or any(not re.fullmatch(r'[0-9]{1,3}', value) or int(value) > 255 for value in fields):
@@ -456,6 +486,13 @@ def verify(remote, checklist, info, allow_c1=False, allow_compositor=False, *, d
                     ('root_native_home_probe' not in info or
                      (info['root_native_home_probe'] == 'home-script' and 'root_native_home_mount' not in info))):
                 probe_native_home(remote, info, read_headers=read)
+            embedded_candidate = failure in (
+                'native-home-unavailable', 'keyfilters-not-configured',
+                'keyfilters-service-absent', 'keyfilters-request-failed')
+            if (not supported and allow_compositor and embedded_candidate
+                    and embedded_compositor(remote)):
+                supported = True
+                schema = 4
             reasons[name] = reason
             if supported:
                 info.pop('root_native_home_mode', None)

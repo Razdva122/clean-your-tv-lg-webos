@@ -1,12 +1,14 @@
 """Host-only compositor routing and ownership tests; no TV acceptance."""
+import hashlib
 import importlib
 import json
 import os
 from pathlib import Path
 import sys
 import tempfile
+from types import SimpleNamespace
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(ROOT / 'runtime'), str(ROOT)]
@@ -14,11 +16,81 @@ sys.path[:0] = [str(ROOT / 'runtime'), str(ROOT)]
 
 class RuntimeTests(unittest.TestCase):
 
+    def test_bsp_lower_home_accepts_anonymous_overlay_device_only_without_shadow(self):
+        import stat
+
+        lines = [
+            '1 0 179:27 / / ro - squashfs /dev/root ro',
+            '2 1 0:34 / /usr rw - overlay overlay ro,lowerdir=/overlay/bsppart/bsp/usr:/usr',
+            '3 1 179:29 / /overlay/bsppart ro - squashfs /dev/mmcblk0p29 ro',
+        ]
+        critical = ('/usr/bin/com.webos.app.home', '/usr/palm/applications/com.webos.app.home')
+        bsp = '/overlay/bsppart/bsp/usr'
+        real_lstat = Path.lstat
+        for home_device, shadow, bin_kind, extra_mount, accepted in (
+                ((179, 27), False, 'missing', None, True),
+                ((0, 45), False, 'missing', None, True),
+                ((0, 45), False, 'directory', None, True),
+                ((0, 34), False, 'directory', None, False),
+                ((179, 30), False, 'directory', None, False),
+                ((0, 45), True, 'directory', None, False),
+                ((0, 45), False, 'symlink', None, False),
+                ((0, 45), False, 'denied', None, False),
+                ((0, 45), False, 'directory', bsp + '/bin', False),
+                ((0, 45), False, 'directory', bsp + '/bin/com.webos.app.home', False)):
+            with self.subTest(device=home_device, shadow=shadow, bin_kind=bin_kind, mount=extra_mount):
+                mounts = []
+                for line in lines + ([f'4 3 0:99 / {extra_mount} ro - tmpfs tmpfs ro'] if extra_mount else []):
+                    fields = line.split()
+                    index = fields.index('-')
+                    mounts.append((fields, fields[4], fields[index+1], fields[index+2],
+                                   fields[index+3].split(',')))
+                devices = dict(zip((*critical, bsp), (home_device, (0, 34), (179, 29))))
+
+                def lower_lstat(path, *args, **kwargs):
+                    if str(path) == bsp + '/bin':
+                        if bin_kind == 'missing':
+                            raise FileNotFoundError()
+                        if bin_kind == 'denied':
+                            raise PermissionError()
+                        return SimpleNamespace(st_mode=stat.S_IFLNK if bin_kind == 'symlink' else stat.S_IFDIR)
+                    if str(path) == bsp + '/bin/com.webos.app.home':
+                        if shadow:
+                            return SimpleNamespace(st_mode=stat.S_IFREG)
+                        raise FileNotFoundError()
+                    return real_lstat(path, *args, **kwargs)
+
+                def trusted(path):
+                    if str(path) == bsp + '/bin' and bin_kind == 'symlink':
+                        raise ValueError('Unsafe experimental backend directory')
+
+                with patch.object(self.k.os, 'stat', side_effect=lambda path, **kw:
+                        SimpleNamespace(st_dev=devices[str(path)])), \
+                        patch.object(self.k.os, 'major', side_effect=lambda device: device[0]), \
+                        patch.object(self.k.os, 'minor', side_effect=lambda device: device[1]), \
+                        patch.object(Path, 'lstat', lower_lstat), \
+                        patch.object(self.k.legacy, 'trusted_directory', side_effect=trusted):
+                    try:
+                        actual = self.k.stock_bsp_overlay(mounts, mounts[1], critical)
+                    except (OSError, ValueError):
+                        actual = False
+                    self.assertEqual(actual, accepted)
+
     def read_factory_home_setting(self, uri, payload, *, allow_failure):
         self.assertEqual(uri, 'luna://com.webos.settingsservice/getSystemSettings')
         self.assertEqual(payload, {'category': 'general', 'keys': ['defaultApps']})
         self.assertTrue(allow_failure)
         return {'returnValue': True, 'settings': {'defaultApps': {'home': self.k.STOCK}}}
+
+    def test_missing_plural_home_setting_uses_factory_single_key_request(self):
+        missing = {'returnValue': True, 'settings': {'defaultApps': {}}}
+        stock = {'returnValue': True, 'settings': {'defaultApps': {'home': self.k.STOCK}}}
+        with patch.object(self.k, 'luna', side_effect=[missing, stock]) as setting:
+            self.k.require_stock_home_destination()
+        self.assertEqual([request.args[1] for request in setting.call_args_list], [
+            {'category': 'general', 'keys': ['defaultApps']},
+            {'category': 'general', 'key': 'defaultApps'},
+        ])
 
     def test_restore_failure_preserves_native_reason_without_accepting_refusal(self):
         from types import SimpleNamespace
@@ -339,6 +411,12 @@ class RuntimeTests(unittest.TestCase):
                 reply = self.k.execute('boot', root=self.root, uid=self.uid)
                 self.assertIsInstance(reply, dict, 'Same-boot callback stopped Home routing')
                 self.assertTrue(reply['effective']['routing_active'])
+            active.update(state='reconnecting', healthy=False, reason='none')
+            for _ in range(2):
+                reply = self.k.execute('boot', root=self.root, uid=self.uid)
+                self.assertTrue(reply['intent']['enabled'])
+                self.assertEqual(reply['intent']['phase'], 'input-reconnecting')
+                self.assertFalse(reply['effective']['routing_active'])
             self.assertTrue(all(call.args[0] == ['--status'] for call in guard.call_args_list))
             self.assertEqual(self.k.execute('restore', root=self.root, uid=self.uid), 'restored')
             self.assertEqual(active['reason'], 'explicit_off')
@@ -369,9 +447,172 @@ class RuntimeTests(unittest.TestCase):
                     self.assertEqual(self.k.execute('boot', root=self.root, uid=self.uid), 'restored')
                     restore.assert_called_once_with(self.root, self.uid, explicit_restore=False)
 
-    def test_reported_schema3_refuses_enable_without_an_explicit_lg_destination(self):
-        self.admission = dict(self.generic(), model='65NANO913NA', firmware='04.64.00', webos='5.6.2')
+    def test_failed_enable_retires_filter_when_stock_home_is_independently_verified(self):
+        self.admission = dict(self.generic(), model='55UM7450PLA', firmware='05.40.97', webos='4.10.0')
         self.prepare()
+        filter_file = self.root / 'runtime/c1-home-filter.js'
+        filter_file.parent.mkdir()
+        filter_file.touch(mode=0o600)
+        stock = [{'file': '/usr/lib/qt5/qml/KeyFilters/systemUi.js', 'handler': 'handleSystemKeys'}]
+        chain = stock.copy()
+        stopped = self.proof()
+        failure = TimeoutError('Guardian startup failed')
+
+        def change(root, enabled, uid):
+            chain[:] = self.k.reconcile(chain, root, enabled)
+            if enabled:
+                raise failure
+
+        def native(args, *_args, allow_ui_failure=False):
+            if args == ['--restore']:
+                if not allow_ui_failure:
+                    raise ValueError('Native UI release failed')
+                return dict(stopped, returnValue=False, reason='ui_release_failed')
+            return stopped
+
+        with patch.object(self.k, 'verify_ready', return_value={'integrity_verified': True}), \
+                patch.object(self.k, 'probe', return_value=self.admission), \
+                patch.object(self.k, 'binary'), \
+                patch.object(self.k, 'read_chain', side_effect=lambda: chain.copy()), \
+                patch.object(self.k, 'change_chain', side_effect=change), \
+                patch.object(self.k, 'native', side_effect=native), \
+                patch.object(self.k, 'luna', side_effect=[
+                    {'returnValue': True, 'appId': self.k.STOCK},
+                    {'returnValue': True, 'foregroundAppInfo': [{'appId': self.k.STOCK, 'windowType': self.k.HOME}]},
+                ]), patch('helper_bridge.require_idle'):
+            with self.assertRaises(TimeoutError) as caught:
+                self.k.enable_locked(self.root, self.uid, 0)
+            self.assertIs(caught.exception, failure)
+        self.assertEqual(chain, stock)
+        self.assertEqual(self.k.read_intent(self.root, self.uid)['phase'], 'disabled')
+
+    def test_shutdown_probe_requires_running_manager_and_trusted_executable(self):
+        import stat
+        proc_init = Path('/proc/1/exe')
+        for init, command, expected in (
+            ('/lib/systemd/systemd', '/bin/systemctl', 'systemd-is-system-running-v1'),
+            ('/sbin/init.upstart', '/sbin/initctl', 'upstart-shutdown-jobs-v1'),
+            ('/bin/tini', '/bin/systemctl', None),
+        ):
+            trust = SimpleNamespace(st_uid=0, st_mode=stat.S_IFREG | 0o755)
+
+            def resolve(path, *, strict):
+                self.assertTrue(strict)
+                return Path(init) if path == proc_init else path
+
+            systemctl = init != '/sbin/init.upstart'
+
+            def lstat(path):
+                if path == Path('/bin/systemctl') and not systemctl:
+                    raise FileNotFoundError(path)
+                return trust
+
+            with self.subTest(init=init), \
+                    patch.object(Path, 'resolve', autospec=True, side_effect=resolve), \
+                    patch.object(Path, 'lstat', autospec=True, side_effect=lstat), \
+                    patch.object(Path, 'stat', autospec=True, return_value=trust) as file_stat, \
+                    patch.object(self.k.legacy, 'trusted_directory'), \
+                    patch.object(self.k, 'secure') as secure:
+                self.assertEqual(self.k.shutdown_probe(), expected)
+                if expected is not None:
+                    file_stat.assert_any_call(Path(command))
+                    trust.st_mode |= 0o002
+                    self.assertIsNone(self.k.shutdown_probe())
+                    trust.st_mode &= ~0o002
+                else:
+                    file_stat.assert_not_called()
+                if init == '/sbin/init.upstart':
+                    secure.assert_any_call(Path('/etc/init/shutdown.conf'))
+                    secure.assert_any_call(Path('/etc/init/reboot.conf'))
+                    secure.side_effect = FileNotFoundError('job')
+                    self.assertFalse(self.k.reboot_resume_supported({'schema': 3}))
+                    secure.side_effect = None
+                    trust.st_mode = stat.S_IFLNK | 0o777
+                    self.assertIsNone(self.k.shutdown_probe())
+                    trust.st_mode = stat.S_IFREG | 0o755
+                    systemctl = True
+                    self.assertIsNone(self.k.shutdown_probe())
+
+    def test_boot_without_guard_capability_restores_without_waiting_or_rearming(self):
+        self.prepare_schema3()
+        boot = self.k.boot_identity()
+        self.k.write_intent(self.root, True, '1'*32, 'active', self.uid,
+                            session=boot+':session-'+'2'*32)
+        with patch.object(self.k, 'shutdown_probe', return_value=None), \
+                patch.object(self.k, 'boot_resume_observation') as observe, \
+                patch.object(self.k, 'status', side_effect=ValueError('No active guard')), \
+                patch.object(self.k, 'restore_locked', return_value='restored') as restore, \
+                patch.object(self.k, 'enable_locked') as enable:
+            self.assertEqual(self.k.execute('boot', root=self.root, uid=self.uid), 'restored')
+            observe.assert_not_called()
+            enable.assert_not_called()
+            restore.assert_called_once_with(self.root, self.uid, explicit_restore=False)
+
+    def test_reboot_resume_requires_matching_guard_and_shutdown_capabilities(self):
+        descriptor = self.prepare_schema3()
+        systemd = 'systemd-is-system-running-v1'
+        upstart = 'upstart-shutdown-jobs-v1'
+        reply = dict(returnValue=True, backend=self.k.BACKEND, routing=self.k.ROUTING,
+                     protocol=1, resumable_guard=True, boot_retirement=True,
+                     shutdown_probes=[systemd, upstart])
+        for detector in (systemd, upstart, None):
+            for proof, valid in (
+                (reply, True),
+                (dict(reply, shutdown_probes=[systemd]), detector == systemd),
+                (dict(reply, protocol=True), False),
+                (dict(reply, resumable_guard=1), False),
+                (dict(reply, boot_retirement=False), False),
+                (dict(reply, shutdown_probes=systemd), False),
+                (dict(reply, shutdown_probes=[systemd, upstart, None]), False),
+                (dict(reply, returnValue=False), False),
+                ({}, False),
+            ):
+                with self.subTest(detector=detector, proof=proof), \
+                        patch.object(self.k, 'shutdown_probe', return_value=detector), \
+                        patch.object(self.k, 'native', return_value=proof) as native:
+                    self.assertEqual(self.k.reboot_resume_supported(descriptor, self.root, self.uid),
+                                     detector is not None and valid)
+                    if detector is not None:
+                        native.assert_called_once_with(['--capabilities'], self.root, self.uid, timeout=1)
+
+    def test_reboot_resume_refuses_old_untrusted_and_unresponsive_guards(self):
+        descriptor = self.prepare_schema3()
+        with patch.object(self.k, 'shutdown_probe', return_value='upstart-shutdown-jobs-v1'), \
+                patch.object(self.k.subprocess, 'run') as run:
+            self.assertFalse(self.k.reboot_resume_supported(descriptor, self.root, self.uid))
+            run.assert_not_called()  # Missing guard never reaches exec.
+        import hashlib
+        old = b'verified retained guard bytes'
+        data = b'new guard fixture\0--capabilities\0'
+        guard = self.root / 'runtime/c1-keyfilter-guard'
+        guard.parent.mkdir(mode=0o700)
+        guard.write_bytes(old)
+        guard.chmod(0o700)
+        descriptor['native_sha256'] = hashlib.sha256(old).hexdigest()
+        self.k.atomic(self.root/'home-backend.json', descriptor, self.uid)
+        with patch.object(self.k, 'shutdown_probe', return_value='upstart-shutdown-jobs-v1'), \
+                patch.object(self.k.subprocess, 'run') as run:
+            self.assertFalse(self.k.reboot_resume_supported(descriptor, self.root, self.uid))
+            run.assert_not_called()  # Unknown commands on the old guard acquire a state lock.
+        guard.write_bytes(data)
+        descriptor['native_sha256'] = hashlib.sha256(data).hexdigest()
+        self.k.atomic(self.root/'home-backend.json', descriptor, self.uid)
+        for result in (SimpleNamespace(returncode=2, stdout=b''),
+                       SimpleNamespace(returncode=0, stdout=b'not json'),
+                       self.k.subprocess.TimeoutExpired('guard', .5)):
+            with self.subTest(result=result), \
+                    patch.object(self.k, 'shutdown_probe', return_value='upstart-shutdown-jobs-v1'), \
+                    patch.object(self.k.subprocess, 'run', side_effect=[result]) as run:
+                self.assertFalse(self.k.reboot_resume_supported(descriptor, self.root, self.uid))
+                self.assertEqual(run.call_args.args[0], [str(guard), '--capabilities'])
+        guard.write_bytes(data + b'changed')
+        with patch.object(self.k, 'shutdown_probe', return_value='upstart-shutdown-jobs-v1'), \
+                patch.object(self.k.subprocess, 'run') as run:
+            self.assertFalse(self.k.reboot_resume_supported(descriptor, self.root, self.uid))
+            run.assert_not_called()
+
+    def test_resume_refuses_to_arm_without_an_explicit_lg_destination(self):
+        self.prepare_resumable()
         stock = [{'file': '/usr/lib/qml/KeyFilters/systemUi.js', 'handler': 'handleSystemKeys'}]
         for defaults in ({}, {'home': self.k.APP}, {'home': None}, '{"home":'):
             with self.subTest(defaults=defaults), \
@@ -384,13 +625,35 @@ class RuntimeTests(unittest.TestCase):
                     patch.object(self.k, 'write_config') as write_config, \
                     patch.object(self.k, 'change_chain') as change:
                 with self.assertRaisesRegex(ValueError, 'LG Home destination'):
-                    self.k.enable_locked(self.root, self.uid, 0)
+                    self.k.enable_locked(self.root, self.uid, 0, resume_token='1'*32)
                 write_config.assert_not_called()
                 change.assert_not_called()
 
+    def test_missing_stock_destination_keeps_generic_enable_in_the_current_session(self):
+        self.prepare_resumable()
+        stock = [{'file': '/usr/lib/qml/KeyFilters/systemUi.js', 'handler': 'handleSystemKeys'}]
+        session = self.k.boot_identity() + ':session-' + 'a'*32
+        script = self.root / 'runtime/c1-home-filter.js'
+        script.parent.mkdir(mode=0o700)
+        script.write_text('filter')
+        script.chmod(0o600)
+        with patch.object(self.k, 'probe', return_value=self.admission), \
+                patch.object(self.k, 'verify_ready', return_value={'integrity_verified': True}), \
+                patch.object(self.k, 'native', return_value=self.proof()), \
+                patch.object(self.k, 'read_chain', return_value=stock), \
+                patch.object(self.k, 'vendor_script', return_value=b'other compatible vendor handler'), \
+                patch.object(self.k, 'luna', return_value={'returnValue': True,
+                             'settings': {'defaultApps': {}}}), \
+                patch.object(self.k, 'binary', return_value=Path('/fixture')), \
+                patch('helper_bridge.require_idle'), \
+                patch.object(self.k, 'change_chain', side_effect=RuntimeError('interrupted activation')), \
+                patch.object(self.k, 'restore_locked') as restore:
+            with self.assertRaisesRegex(RuntimeError, 'interrupted activation'):
+                self.k.enable_locked(self.root, self.uid, 0, session=session)
+            restore.assert_called_once_with(self.root, self.uid, explicit_restore=True)
+
     def test_reported_schema3_explicit_restore_verifies_routing_without_forcing_foreground(self):
-        self.admission = dict(self.generic(), model='65NANO913NA', firmware='04.64.00', webos='5.6.2')
-        self.prepare()
+        self.prepare_resumable()
         own = self.k.filter_entry(self.root)
         stock = [{'file': '/usr/lib/qml/KeyFilters/systemUi.js', 'handler': 'handleSystemKeys'}]
         token = '1'*32
@@ -398,6 +661,8 @@ class RuntimeTests(unittest.TestCase):
         for destination in (self.k.STOCK, 'com.webos.app.fullhome', self.k.APP, 'org.example.home'):
             with self.subTest(destination=destination):
                 is_stock = destination in (self.k.STOCK, 'com.webos.app.fullhome')
+                session = self.k.boot_identity() + ':session-' + 'a'*32
+                self.k.write_intent(self.root, True, token, 'active', self.uid, session=session)
                 chain = [own, *stock]
 
                 def native(args, *_args, **_options):
@@ -425,10 +690,14 @@ class RuntimeTests(unittest.TestCase):
                     self.assertEqual(intent['phase'], 'disabled' if is_stock else 'recovering')
 
     def test_reported_schema3_rearms_once_on_a_new_normal_session(self):
+        self.check_schema3_boot(missing_input=False)
+
+    def test_confirmed_compositor_boot_waits_for_input_without_changing_saved_choice(self):
+        self.check_schema3_boot(missing_input=True)
+
+    def check_schema3_boot(self, *, missing_input):
         import intent_runtime
-        from unittest.mock import Mock
-        self.admission = dict(self.generic(), model='65NANO913NA', firmware='04.64.00', webos='5.6.2')
-        self.prepare()
+        self.prepare_resumable()
         boot = self.k.boot_identity()
         old_session = boot + ':session-' + 'a'*32
         new_session = boot + ':session-' + 'b'*32
@@ -456,40 +725,62 @@ class RuntimeTests(unittest.TestCase):
             if chain == stock:
                 return self.proof()
             current = self.k.read_intent(self.root, self.uid)
-            return dict(self.proof(), token=current['token'], state='armed', healthy=True,
+            return dict(self.proof(), token=current['token'], state='reconnecting' if missing_input else 'armed',
+                        healthy=not missing_input, reason='none',
                         guardian_pid=123, stopped=False, stock_verified=False)
+
+        def guard_binary(root, uid, *, features):
+            features.update(wait_input=missing_input, boot_wait=missing_input)
+            return Path('/fixture')
 
         child = Mock()
         child.poll.return_value = None
-        with patch.object(intent_runtime, 'boot_identity', return_value=new_session), \
+
+        observed = []
+
+        def after_boot(result, *, root, uid):
+            with self.k.operation(root, uid):
+                observed.append(self.k.read_intent(root, uid))
+            raise ValueError('Optional startup policy failed')
+
+        startup = Mock(side_effect=after_boot)
+        with patch.object(self.k, 'startup_after_boot', startup), \
+                patch.object(intent_runtime, 'boot_identity', return_value=new_session), \
                 patch('boot_gate.wait', return_value=True) as normal, \
                 patch('boot_gate.observation', return_value=(True, False)), \
                 patch.object(self.k, 'read_chain', side_effect=lambda: chain.copy()), \
                 patch.object(self.k, 'write_chain', side_effect=write), \
                 patch.object(self.k, 'verify_ready', return_value={'integrity_verified':True}), \
                 patch.object(self.k, 'probe', return_value=self.admission), \
-                patch.object(self.k, 'binary', return_value=Path('/fixture')), \
+                patch.object(self.k, 'binary', side_effect=guard_binary), \
                 patch.object(self.k, 'luna', side_effect=self.read_factory_home_setting), \
                 patch('helper_bridge.require_idle'), patch('python_binding.command', return_value='/python'), \
                 patch.object(self.k, 'native', side_effect=native), \
                 patch.object(self.k, 'start_controller', return_value=child), \
-                patch.object(self.k, 'read_handshake'), \
+                patch.object(self.k, 'read_handshake') as handshake, \
                 patch.object(self.k.subprocess, 'Popen', return_value=child) as start:
             result = self.k.execute('boot', root=self.root, uid=self.uid)
             replay = self.k.execute('boot', root=self.root, uid=self.uid)
-            self.assertTrue(result['effective']['routing_active'])
+            self.assertEqual(result['effective']['routing_active'], not missing_input)
+            self.assertTrue(result['intent']['enabled'])
             self.assertEqual(result, replay)
             self.assertEqual(result['intent']['session'], new_session)
             self.assertNotEqual(result['intent']['token'], token)
             self.assertEqual(writes, [[self.k.filter_entry(self.root), *stock]])
             self.assertEqual(start.call_count, 2)
-            self.assertEqual(start.call_args.args[0][:2], ['/fixture', '--guard-resumable'])
+            mode = '--guard-boot-wait-input' if missing_input else '--guard-resumable-reconnect'
+            self.assertEqual(start.call_args.args[0][:2], ['/fixture', mode])
+            reader = '--boot-wait-input' if missing_input else '--recover-input'
+            self.assertEqual(start.call_args_list[0].args[0][-1], reader)
+            ack = 'SUPERVISED' if missing_input else 'ARMED'
+            self.assertEqual(handshake.call_args.args[1], f"{ack} {result['intent']['token']}\n".encode())
             normal.assert_called_once()
+            startup.assert_called_once_with(result, root=self.root, uid=self.uid)
+            self.assertEqual(observed, [dict(result['intent'], phase='active')])
 
     def test_reported_schema3_boot_failure_and_stop_leave_routing_with_lg(self):
         import intent_runtime
-        self.admission = dict(self.generic(), model='65NANO913NA', firmware='04.64.00', webos='5.6.2')
-        self.prepare()
+        self.prepare_resumable()
         boot = self.k.boot_identity()
         old_session = boot + ':session-' + 'a'*32
         new_session = boot + ':session-' + 'b'*32
@@ -500,8 +791,10 @@ class RuntimeTests(unittest.TestCase):
                 intent = self.k.write_intent(self.root, True, token, 'active', self.uid)
                 self.k.atomic(self.root/'c1-keyfilter/intent.json', dict(intent, session=old_session), self.uid)
                 retired = dict(self.proof(), state='stock', stopped=False, reason='boot_retired')
-                with patch.object(intent_runtime, 'boot_identity',
-                                  return_value=old_session if case=='same-session' else new_session), \
+                startup = Mock()
+                with patch.object(self.k, 'startup_after_boot', startup), \
+                        patch.object(intent_runtime, 'boot_identity',
+                                     return_value=old_session if case=='same-session' else new_session), \
                         patch('boot_gate.wait', return_value=case!='boot-gate'), \
                         patch('boot_gate.observation', return_value=(True, False)), \
                         patch.object(self.k, 'read_chain', return_value=stock), \
@@ -512,6 +805,7 @@ class RuntimeTests(unittest.TestCase):
                     self.assertEqual(self.k.execute('boot', root=self.root, uid=self.uid), 'restored')
                     restore.assert_called_once_with(self.root, self.uid, routing_only=True)
                     self.assertEqual(enable.call_count, int(case=='activation-failure'))
+                    startup.assert_not_called()
 
     def test_reported_schema3_failed_controller_restores_the_written_chain(self):
         self.check_reported_schema3_interrupted_rearm(lost_ack=False)
@@ -521,8 +815,7 @@ class RuntimeTests(unittest.TestCase):
 
     def check_reported_schema3_interrupted_rearm(self, *, lost_ack):
         import intent_runtime
-        self.admission = dict(self.generic(), model='65NANO913NA', firmware='04.64.00', webos='5.6.2')
-        self.prepare()
+        self.prepare_resumable()
         boot = self.k.boot_identity()
         token = '1'*32
         self.k.write_config(self.root, self.admission, token, self.uid)
@@ -574,8 +867,7 @@ class RuntimeTests(unittest.TestCase):
             self.assertFalse((self.root/'c1-keyfilter/pending.json').exists())
 
     def test_direct_native_off_vetoes_rotation_after_boot_retirement(self):
-        self.admission = dict(self.generic(), model='65NANO913NA', firmware='04.64.00', webos='5.6.2')
-        self.prepare()
+        self.prepare_resumable()
         token = '1'*32
         directory = self.root/'c1-keyfilter'
         self.k.write_config(self.root, self.admission, token, self.uid)
@@ -587,8 +879,7 @@ class RuntimeTests(unittest.TestCase):
 
     def test_reported_schema3_off_during_boot_wait_cancels_continuation(self):
         import intent_runtime
-        self.admission = dict(self.generic(), model='65NANO913NA', firmware='04.64.00', webos='5.6.2')
-        self.prepare()
+        self.prepare_resumable()
         boot = self.k.boot_identity()
         self.k.write_intent(self.root, True, '1'*32, 'active', self.uid, session=boot+':session-'+'a'*32)
 
@@ -647,10 +938,166 @@ class RuntimeTests(unittest.TestCase):
     def prepare(self):
         return self.k.prepare(self.root, 'a'*64, self.admission, self.uid)
 
+    def prepare_schema3(self):
+        self.admission = dict(self.generic(), model='OLED65B9PLA', firmware='05.50.00', webos='4.10.0')
+        return self.prepare()
+
+    def prepare_resumable(self):
+        self.prepare_schema3()
+        capabilities = patch.object(self.k, 'reboot_resume_supported', return_value=True)
+        capabilities.start()
+        self.addCleanup(capabilities.stop)
+
     def proof(self, **kw):
         return dict(returnValue=True, backend='c1-native-gate', routing='compositor-keyfilter-v1',
                     state='stopped', mounted=False, healthy=False, stock_verified=True,
                     stopped=True, token='1'*32, guardian_pid=0, reason='', profiles=None, **kw)
+
+    def test_persistent_embedded_enable_recovers_disconnected_input(self):
+        self.check_embedded_input_protocol(b'fixture\0--guard-wait-input\0', '--wait-input', '--guard-wait-input')
+
+    def test_older_embedded_guard_keeps_its_original_reader_protocol(self):
+        self.check_embedded_input_protocol(b'older guardian', None, '--guard')
+
+    def check_embedded_input_protocol(self, guard_bytes, reader_flag, guard_flag):
+        self.prepare()
+        runtime = self.root / 'runtime'
+        runtime.mkdir()
+        script = runtime / 'c1-home-filter.js'
+        script.write_text('filter')
+        script.chmod(0o600)
+        child = Mock()
+        child.poll.return_value = 0
+        guard = self.root / 'runtime/c1-keyfilter-guard'
+        guard.write_bytes(guard_bytes)
+        guard.chmod(0o700)
+        descriptor = self.k.selection(self.root, self.uid)
+        descriptor['native_sha256'] = hashlib.sha256(guard.read_bytes()).hexdigest()
+        self.k.atomic(self.root/'home-backend.json', descriptor, self.uid)
+        with patch.object(self.k, 'embedded_adapter', return_value=Mock()), \
+                patch.object(self.k, 'verify_ready', return_value={'integrity_verified': True}), \
+                patch.object(self.k, 'native', return_value=self.proof()), \
+                patch.object(self.k, 'probe', return_value=self.admission), \
+                patch('helper_bridge.require_idle'), \
+                patch('python_binding.command', return_value='/python'), \
+                patch.object(self.k, 'change_chain'), \
+                patch.object(self.k, 'start_controller', return_value=child), \
+                patch.object(self.k, 'restore_locked'), \
+                patch.object(self.k, 'read_handshake', side_effect=TimeoutError), \
+                patch.object(self.k.subprocess, 'Popen', return_value=child) as start:
+            with self.assertRaises(TimeoutError):
+                self.k.enable_locked(self.root, self.uid, 0)
+        observer, guardian = [call.args[0] for call in start.call_args_list]
+        self.assertEqual(observer[3:], [reader_flag] if reader_flag else [])
+        self.assertEqual(guardian[1], guard_flag)
+
+    def test_standalone_enable_waits_for_observer_pipe_before_starting_guard(self):
+        self.prepare_schema3()
+        runtime = self.root/'runtime'
+        runtime.mkdir()
+        filter_script = runtime/'c1-home-filter.js'
+        filter_script.write_text('filter')
+        filter_script.chmod(0o600)
+        child = Mock()
+        child.poll.return_value = 0
+        calls = []
+
+        def start(args, **_):
+            calls.append('guard' if args[1].startswith('--guard') else 'observer')
+            return child
+
+        def wait(readers, writers, errors, timeout):
+            calls.append('input-pipe')
+            self.assertEqual((len(readers), writers, errors), (1, [], []))
+            self.assertGreater(timeout, 2)
+            return readers, [], []
+
+        with patch.object(self.k, 'verify_ready', return_value={'integrity_verified': True}), \
+                patch.object(self.k, 'native', return_value=self.proof()), \
+                patch.object(self.k, 'probe', return_value=self.admission), \
+                patch.object(self.k, 'read_chain', return_value=[]), \
+                patch.object(self.k, 'binary', return_value=Path('/fixture')), \
+                patch('helper_bridge.require_idle'), \
+                patch('python_binding.command', return_value='/python'), \
+                patch.object(self.k, 'change_chain'), \
+                patch.object(self.k, 'start_controller', return_value=child), \
+                patch.object(self.k, 'restore_locked'), \
+                patch.object(self.k, 'read_handshake', side_effect=TimeoutError), \
+                patch.object(self.k.select, 'select', side_effect=wait), \
+                patch.object(self.k.subprocess, 'Popen', side_effect=start):
+            with self.assertRaises(TimeoutError):
+                self.k.enable_locked(self.root, self.uid, 0)
+        self.assertEqual(calls, ['observer', 'input-pipe', 'guard'])
+
+    def test_embedded_restore_uses_stock_compositor_readback_without_standalone_home(self):
+        self.prepare()
+        selected = self.k.selection(self.root, self.uid)
+        selected['schema'] = 4
+        self.k.atomic(self.root/'home-backend.json', selected, self.uid)
+        adapter = Mock(STOCK_QML='qrc:///main.qml')
+        adapter.current.return_value = (42, adapter.STOCK_QML)
+        with patch.object(self.k, 'embedded_adapter', return_value=adapter), patch.object(self.k, 'native', return_value=self.proof()), patch.object(self.k, 'stop_controller'), patch.object(self.k, 'change_chain') as change, patch.object(self.k, 'luna') as luna, patch.object(self.k, 'read_chain') as chain:
+            self.assertEqual(self.k.restore_for_removal(self.root, self.uid), 'restored')
+        change.assert_called_once_with(self.root, False, self.uid)
+        adapter.current.assert_called_once_with(self.root)
+        luna.assert_not_called()
+        chain.assert_not_called()
+        self.assertEqual(self.k.read_intent(self.root, self.uid)['phase'], 'disabled')
+
+    def test_embedded_boot_restores_routing_despite_ui_failure_but_retains_cleanup_gap(self):
+        self.prepare()
+        selected = self.k.selection(self.root, self.uid)
+        selected['schema'] = 4
+        self.k.atomic(self.root/'home-backend.json', selected, self.uid)
+        adapter = Mock(STOCK_QML='qrc:///main.qml')
+        adapter.current.return_value = (42, adapter.STOCK_QML)
+        calls = []
+        def native(args, *extra, **kwargs):
+            calls.append((args, kwargs))
+            if args == ['--restore']:
+                if not kwargs.get('allow_ui_failure'):
+                    raise ValueError('close failed before routing recovery')
+                return dict(self.proof(), returnValue=False, reason='ui_release_failed')
+            return self.proof()
+        with patch.object(self.k, 'embedded_adapter', return_value=adapter), patch.object(self.k, 'native', side_effect=native), patch.object(self.k, 'stop_controller'), patch.object(self.k, 'change_chain') as change, patch.object(self.k, 'luna') as luna, patch.object(self.k, 'read_chain') as chain:
+            with self.assertRaisesRegex(ValueError, 'Root window cleanup unverified') as caught:
+                self.k.execute('boot', root=self.root, uid=self.uid)
+        change.assert_called_once_with(self.root, False, self.uid)
+        adapter.current.assert_called_once_with(self.root)
+        self.assertEqual(caught.exception.native_reason, 'ui_release_failed')
+        self.assertEqual(caught.exception.restore_check, 'stock-surface-unverified')
+        self.assertEqual(self.k.read_intent(self.root, self.uid)['phase'], 'recovering')
+        luna.assert_not_called()
+        chain.assert_not_called()
+
+    def test_embedded_removal_preserves_assets_on_owned_window_close_failure(self):
+        self.prepare()
+        selected = self.k.selection(self.root, self.uid)
+        selected['schema'] = 4
+        self.k.atomic(self.root/'home-backend.json', selected, self.uid)
+        adapter = Mock(STOCK_QML='qrc:///main.qml')
+        adapter.current.return_value = (42, adapter.STOCK_QML)
+        failure = dict(self.proof(), returnValue=False, reason='ui_release_failed')
+        with patch.object(self.k, 'embedded_adapter', return_value=adapter), patch.object(self.k, 'native', side_effect=[failure, self.proof(), self.proof()]), patch.object(self.k, 'stop_controller'), patch.object(self.k, 'change_chain') as change, patch.object(self.k, 'luna') as luna:
+            with self.assertRaisesRegex(ValueError, 'Root window cleanup unverified'):
+                self.k.restore_for_removal(self.root, self.uid)
+        change.assert_called_once_with(self.root, False, self.uid)
+        self.assertTrue((self.root/'home-backend.json').exists())
+        self.assertEqual(self.k.read_intent(self.root, self.uid)['phase'], 'recovering')
+        luna.assert_not_called()
+
+    def test_embedded_restore_rejects_stale_stock_readback(self):
+        for case in ('wrapper-still-selected', 'different-native-token'):
+            with self.subTest(case=case):
+                adapter = Mock(STOCK_QML='qrc:///main.qml')
+                adapter.current.return_value = (42, 'file:///wrapper.qml' if case == 'wrapper-still-selected' else adapter.STOCK_QML)
+                selected = {'schema': 4}
+                fresh = dict(self.proof(), token='2'*32)
+                with patch.object(self.k, 'embedded_adapter', return_value=adapter), patch.object(self.k, 'selection', return_value=selected), patch.object(self.k, 'native', side_effect=[self.proof(), self.proof(), fresh]), patch.object(self.k, 'write_intent') as intent, patch.object(self.k, 'stop_controller'), patch.object(self.k, 'change_chain'), patch.object(self.k, 'luna') as luna:
+                    with self.assertRaisesRegex(ValueError, 'unverified'):
+                        self.k.restore_locked(self.root, self.uid, for_removal=True)
+                self.assertEqual(intent.call_args.args[3], 'recovering')
+                luna.assert_not_called()
 
     def test_prepare_exact_marker_and_seven_line_config(self):
         self.prepare()
@@ -737,6 +1184,117 @@ class RuntimeTests(unittest.TestCase):
     def test_removal_reconciles_ui_failure_only_with_fresh_stock_proof(self):
         self.admission = dict(self.generic(), model='OLED48A19LA', firmware='03.53.45', webos='6.5.3')
         self.check_ui_failure_recovery(lambda: self.k.restore_for_removal(self.root, self.uid))
+
+    def test_webos6_removal_with_home_over_content(self):
+        self.admission = dict(self.generic(), model='65NANO926PB', firmware='03.34.55', webos='6.3.2')
+        work = self.root
+        vendor = {'file': '/usr/lib/qt5/qml/KeyFilters/systemUi.js', 'handler': 'handleSystemKeys'}
+        stopped = self.proof()
+        failure = dict(stopped, returnValue=False, reason='ui_release_failed')
+        content = 'content.youtube'
+        for case in ('home-over-content', 'home-only', 'content-only', 'hidden-home', 'wrong-home-type',
+                     'other-card', 'extra-card', 'duplicate-home', 'project-card', 'helper-card',
+                     'other-display', 'malformed-visible', 'foreign-filter', 'chain-drift',
+                     'foreground-changed', 'other-attempt', 'other-sdk', 'ordinary-restore'):
+            with self.subTest(case=case):
+                self.root = work/case; self.root.mkdir(mode=0o700)
+                self.admission['webos'] = '7.3.2' if case == 'other-sdk' else '6.3.2'
+                self.prepare()
+                background = self.k.APP if case == 'project-card' else (
+                    'com.local.nativehome' if case == 'helper-card' else content)
+                own = self.k.filter_entry(self.root)
+                self.k.atomic(self.root/'c1-keyfilter/ownership.json',
+                              dict(schema=1, entry=own, token='1'*32), self.uid)
+                chain = [own, vendor]
+                if case == 'foreign-filter':
+                    chain.append({'file': '/foreign/home.js', 'handler': 'otherHome'})
+                home = {'appId': self.k.STOCK, 'windowType': self.k.HOME, 'displayId': 0}
+                card = {'appId': background, 'windowType': self.k.CARD, 'displayId': 0}
+                surfaces = {
+                    'home-only': [home],
+                    'content-only': [card],
+                    'hidden-home': [card, dict(home, visible=False)],
+                    'wrong-home-type': [card, dict(home, windowType=self.k.CARD)],
+                    'other-card': [dict(card, appId='other.content'), home],
+                    'extra-card': [card, home, dict(card, appId='extra.content')],
+                    'duplicate-home': [card, home, home],
+                    'other-display': [card, dict(home, displayId=1)],
+                    'malformed-visible': [card, dict(home, visible=1)],
+                }.get(case, [card, home])
+                sam_reads = []
+                def luna(uri, payload):
+                    if uri == 'luna://com.webos.applicationManager/getForegroundAppInfo':
+                        sam_reads.append(uri)
+                        if case == 'chain-drift' and len(sam_reads)>1:
+                            chain.append({'file': '/foreign/home.js', 'handler': 'otherHome'})
+                        app = 'other.content' if case == 'foreground-changed' and len(sam_reads)>1 else background
+                        return {'returnValue': True, 'appId': app}
+                    self.assertEqual(uri, 'luna://com.webos.surfacemanager/getForegroundAppInfo')
+                    return {'returnValue': True, 'foregroundAppInfo': surfaces}
+                native_calls = []
+                def native(args, *_args, **_kwargs):
+                    native_calls.append(args)
+                    if args == ['--restore']:
+                        return failure
+                    if case == 'other-attempt' and len(native_calls)>2:
+                        return dict(stopped, token='2'*32)
+                    return stopped
+                with patch.object(self.k, 'native', side_effect=native), \
+                        patch.object(self.k, 'read_chain', side_effect=lambda: list(chain)), \
+                        patch.object(self.k, 'write_chain', side_effect=lambda value, **kw: chain.__setitem__(slice(None), value)), \
+                        patch.object(self.k, 'luna', side_effect=luna):
+                    if case == 'home-over-content':
+                        self.assertEqual(self.k.restore_for_removal(self.root, self.uid), 'restored')
+                        self.assertEqual(chain, [vendor])
+                        self.assertEqual(self.k.read_intent(self.root, self.uid)['phase'], 'disabled')
+                        self.assertEqual(len(sam_reads), 2)
+                    else:
+                        with self.assertRaises(ValueError):
+                            if case == 'ordinary-restore':
+                                self.k.restore_locked(self.root, self.uid, explicit_restore=True)
+                            else:
+                                self.k.restore_for_removal(self.root, self.uid)
+                        self.assertNotEqual(self.k.read_intent(self.root, self.uid)['phase'], 'disabled')
+
+
+    def test_removal_with_unchanged_boot_id_and_reused_controller_pid(self):
+        self.admission = dict(self.generic(), model='OLED48A19LA', firmware='03.53.45', webos='6.5.3')
+        self.prepare()
+        record = self.root/'c1-keyfilter/controller.json'
+        controller = dict(pid=5618, start=351275, token='1'*32, boot=self.k.boot_identity())
+        chain = [{'file': '/usr/lib/qt5/qml/KeyFilters/systemUi.js', 'handler': 'handleSystemKeys'}]
+        for case in ('stock', 'unverified-stock', 'foreign-overlay'):
+            with self.subTest(case=case):
+                self.k.atomic(record, controller, self.uid)
+                stopped = dict(self.proof(), reason='input_lost', stock_verified=case != 'unverified-stock')
+                failure = dict(self.proof(), returnValue=False, reason='ui_release_failed')
+                surfaces = [{'appId': self.k.STOCK, 'windowType': self.k.HOME}]
+                if case == 'foreign-overlay':
+                    surfaces.append({'appId': self.k.APP, 'windowType': '_WEBOS_WINDOW_TYPE_OVERLAY'})
+                with patch.object(self.k, 'native', side_effect=[failure, stopped, stopped]), \
+                        patch.object(self.k, 'read_chain', return_value=chain), \
+                        patch.object(self.k, 'process_start', return_value=9619) as start, \
+                        patch.object(self.k.os, 'kill') as signal, \
+                        patch.object(self.k, 'luna', side_effect=[
+                            {'returnValue': True, 'appId': self.k.STOCK},
+                            {'returnValue': True, 'foregroundAppInfo': surfaces},
+                        ]):
+                    if case == 'stock':
+                        self.assertEqual(self.k.restore_for_removal(self.root, self.uid), 'restored')
+                        self.assertEqual(self.k.read_intent(self.root, self.uid)['phase'], 'disabled')
+                    else:
+                        with self.assertRaises(ValueError) as caught:
+                            self.k.restore_for_removal(self.root, self.uid)
+                        self.assertEqual(caught.exception.restore_check,
+                                         'native-stop-unverified' if case == 'unverified-stock'
+                                         else 'stock-surface-unverified')
+                    signal.assert_not_called()
+                    if case == 'unverified-stock':
+                        start.assert_not_called()
+                        self.assertEqual(json.loads(record.read_text()), controller)
+                    else:
+                        start.assert_called_once_with(controller['pid'])
+                        self.assertFalse(record.exists())
 
     def test_webos5_ribbon_removal_with_live_tv_foreground(self):
         import hashlib
@@ -865,6 +1423,7 @@ class RuntimeTests(unittest.TestCase):
             self.assertEqual(argv[0], str(guard))
             native_actions.append(argv[-1])
             value = self.proof()
+            value['reason'] = 'input_expired'
             if argv[-1] == '--restore':
                 value.update(returnValue=False, reason='ui_release_failed')
             return SimpleNamespace(stdout=json.dumps(value).encode(), returncode=int(not value['returnValue']))
@@ -888,6 +1447,38 @@ class RuntimeTests(unittest.TestCase):
             self.assertEqual(reply['native_restored_sha256'], hashlib.sha256(selection).hexdigest())
             self.assertEqual(chain, [vendor])
             self.assertEqual(native_actions, ['--status', '--restore', '--status', '--status'])
+            self.assertEqual(self.k.read_intent(self.root, self.uid)['phase'], 'disabled')
+
+            chain[:] = [own, vendor]
+            native_actions.clear()
+            write.reset_mock()
+            ownership = self.root/'c1-keyfilter/ownership.json'
+            self.k.atomic(ownership, dict(schema=1, entry=own, token='2'*32), self.uid)
+            with self.assertRaisesRegex(ValueError, 'native_recovery_filter_unverified'):
+                clean_removal.runtime_restore(payload, self.uid, activation_token=token, routing_only=True)
+            write.assert_not_called()
+            self.assertEqual(native_actions, ['--status'])
+
+            native_actions.clear()
+            self.k.atomic(ownership, dict(schema=1, entry=own, token=token), self.uid)
+            replies.side_effect = None
+            replies.return_value = {'returnValue':True, 'settings':{'defaultApps':{'home':self.k.APP}}}
+            with self.assertRaisesRegex(ValueError, 'LG Home destination') as refused:
+                clean_removal.runtime_restore(payload, self.uid, activation_token=token, routing_only=True)
+            self.assertEqual(refused.exception.restore_check, 'stock-destination-unverified')
+            self.assertEqual(refused.exception.destination_check, 'home-overridden')
+            self.assertEqual(native_actions, ['--status'])
+            write.assert_not_called()
+
+            native_actions.clear()
+            replies.reset_mock()
+            replies.return_value['settings']['defaultApps']['home'] = self.k.STOCK
+            reply = clean_removal.runtime_restore(payload, self.uid, activation_token=token, routing_only=True)
+            self.assertEqual(reply['result'], 'restored')
+            self.assertEqual(reply['native_restored_sha256'], hashlib.sha256(selection).hexdigest())
+            self.assertEqual(chain, [vendor])
+            self.assertEqual(native_actions, ['--status', '--restore-routing', '--status', '--status'])
+            self.assertTrue(all(request.args[0].endswith('/getSystemSettings') for request in replies.call_args_list))
             self.assertEqual(self.k.read_intent(self.root, self.uid)['phase'], 'disabled')
         self.assertEqual(selection_path.read_bytes(), selection)
         cli.main.assert_not_called()

@@ -4,8 +4,7 @@ import re
 from pathlib import Path
 
 from cytv import cli, diagnostics, state, i18n
-from cytv.desktop import RETRY_STORAGE_CHECK, RETRY_STORAGE_PROMPT
-from cytv.prompts import HomeNamePrompt
+from cytv.prompts import HomeNamePrompt, RETRY_STORAGE_CHECK, RETRY_STORAGE_PROMPT
 from cytv.transport import SSH
 from cytv.terminal import Console
 

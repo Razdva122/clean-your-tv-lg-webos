@@ -159,7 +159,7 @@ var child,
 var restarts = [],
   restartTimer = null,
   cleaning = false,
-  waitingForPower = false,
+  waitingForInput = false,
   stopRequested = false,
   irHomeTimer = null;
 // The standard IR remote is observed, not grabbed, so webOS also opens its own Home
@@ -421,6 +421,7 @@ function diagnostic(trigger, details) {
     }
     diagnostic('expired');
     diagnosticUntil = 0;
+    syncDiagnosticWindows();
     return;
   }
   log(
@@ -446,6 +447,26 @@ function diagnostic(trigger, details) {
       details || {}
     )
   );
+}
+function syncDiagnosticWindows() {
+  if (screenWatch && screenWatch.setForegroundDiagnostics)
+    screenWatch.setForegroundDiagnostics(
+      diagnosticUntil ? recordDiagnosticWindows : null
+    );
+}
+function recordDiagnosticWindows(windows) {
+  var safe = [];
+  windows.slice(0, 16).forEach(function (window) {
+    if (
+      window &&
+      typeof window.appId === 'string' &&
+      /^[a-zA-Z0-9_.-]{1,256}$/.test(window.appId) &&
+      typeof window.windowType === 'string' &&
+      /^[a-zA-Z0-9_]{1,64}$/.test(window.windowType)
+    )
+      safe.push({ appId: window.appId, windowType: window.windowType });
+  });
+  diagnostic('foreground-windows', { windows: safe });
 }
 function diagnosticCommand(command, raw, restored) {
   var cmd = command.cmd,
@@ -501,11 +522,13 @@ function diagnosticCommand(command, raw, restored) {
     homeSequence = 0;
     lastHomeAt = null;
     diagnostic(restored ? 'resumed' : 'started', { durationMs: 60000 });
+    syncDiagnosticWindows();
   }
   if (cmd === 'diagnostics-stop') {
     diagnostic('stopped');
     diagnosticUntil = 0;
     diagnosticControl = null;
+    syncDiagnosticWindows();
   }
 }
 // Restore the bounded request before startup launches or subscriptions can fire.
@@ -1185,8 +1208,6 @@ function workerClosed(worker, code, signal) {
     tracked: child === worker,
     ready: ready,
     watchdogKill: worker.watchdogKill,
-    now: now,
-    powerOffUntil: worker.powerOffUntil,
     stop: stopRequested,
     blocked: fs.existsSync(data + '/blocked'),
     watchdog: fs.existsSync(data + '/watchdog'),
@@ -1197,14 +1218,7 @@ function workerClosed(worker, code, signal) {
   ready = false;
   stopScreensaver();
   buffer = '';
-  if (decision.action === 'wait-power') {
-    // The relay closed both vanished devices; do not reopen suspended input.
-    log({ event: 'power-input-removed' });
-    waitingForPower = true;
-    invalidatePresentation(false);
-    cancelResume();
-    return;
-  }
+  waitingForInput = false;
   if (decision.action === 'terminal') {
     if (decision.retryLimit) log({ event: 'worker-restart-limit' });
     finish(decision);
@@ -1247,13 +1261,15 @@ function start(recovering) {
   lastAck = monotonic();
   buffer = '';
   ready = false;
-  var worker = cp.spawn(
-    root + '/relay',
-    startGeneration ? ['setup', startGeneration] : [],
-    {
-      stdio: ['pipe', 'pipe', 'pipe']
-    }
-  );
+  var boot = automatic && launchParams.nativeHomeBoot === true;
+  waitingForInput = boot;
+  var args = boot ? ['boot'] : startGeneration ? ['setup'] : [];
+  if (startGeneration) args.push(startGeneration);
+  if (!homeControl.enabled()) args.push('--home-off');
+  var worker = cp.spawn(root + '/relay', args, {
+    stdio: ['pipe', 'pipe', 'pipe']
+  });
+  worker.recovering = recovering;
   child = worker;
   log({ event: 'worker-start', pid: worker.pid });
   worker.stderr.on('data', function (b) {
@@ -1290,6 +1306,18 @@ function start(recovering) {
       }
       if (worker.reason !== undefined || worker.watchdogKill || worker.exited)
         continue;
+      if (line === 'INPUT_WAIT') {
+        powerPolicy.inputLost();
+        ready = false;
+        waitingForInput = true;
+        stopScreensaver();
+        cancelIrHome();
+        screenPolicy.reset();
+        invalidatePresentation(false);
+        continue;
+      }
+      if (line === 'IR_LOST') cancelIrHome();
+      if (waitingForInput && line !== 'READY') continue;
       if (line === 'BACK_DOWN') {
         cancelResume();
         screenPolicy.back(true, monotonic());
@@ -1302,10 +1330,11 @@ function start(recovering) {
         diagnostic('home');
       }
       if (line === 'READY') {
-        if (readStop() || fs.existsSync(data + '/blocked')) {
+        if (liveStop(worker.recovering)) {
           worker.stdin.write('Q');
           continue;
         }
+        waitingForInput = false;
         ready = true;
         try {
           screensaverRequest(
@@ -1317,13 +1346,13 @@ function start(recovering) {
           );
         } catch (ignore) {}
         lastAck = monotonic();
-        if (recovering) {
+        if (worker.recovering) {
           try {
             fs.unlinkSync(data + '/watchdog');
           } catch (e) {
             if (e.code !== 'ENOENT') throw e;
           }
-          recovering = false;
+          worker.recovering = false;
         }
         worker.stdin.write(homeControl.enabled() ? 'E' : 'D');
       }
@@ -1372,7 +1401,7 @@ function openHome(worker) {
 }
 var timer = setInterval(function () {
   if (stopping) return;
-  if (readStop()) {
+  if (waitingForInput ? liveStop(child && child.recovering) : readStop()) {
     if (child) child.stdin.write('Q');
     else if (!cleaning) finish(0);
   }
@@ -1672,7 +1701,7 @@ var screenWatch = require('./screen-watch')(
       processing: p.processing,
       onOff: p.onOff
     });
-    var power = powerPolicy.observe(p, monotonic());
+    var power = powerPolicy.observe(p);
     if (diagnosticUntil && diagnosticExpires) {
       var remaining = diagnosticExpires - Date.now();
       if (power.cancelPresentation) {
@@ -1693,39 +1722,11 @@ var screenWatch = require('./screen-watch')(
     power.diagnostics.forEach(function (event) {
       log({ event: 'contract-event', contract: event });
     });
-    if (waitingForPower && power.cancelWakeWait) {
-      clearTimeout(restartTimer);
-      restartTimer = null;
-    }
-    var wakingInput = waitingForPower && !stopping && power.settledActive;
-    if (wakingInput && restartTimer === null) {
-      // Retain the controller across same-boot sleep. Reopen input once, only
-      // after fresh Active, with the existing settling delay and stop guards.
-      restartTimer = setTimeout(function () {
-        restartTimer = null;
-        if (stopping) return;
-        if (liveStop(false)) {
-          finish(0);
-          return;
-        }
-        waitingForPower = false;
-        start(false);
-      }, 1500);
-    }
-    if (child && !stopping && power.command) {
-      child.powerOffUntil = power.deadline;
-      child.stdin.write(power.command);
-    }
     if (power.cancelPresentation) {
       invalidatePresentation(false);
       cancelResume();
     }
-    if (
-      (power.resumed || wakingInput) &&
-      homeControl.enabled() &&
-      !visitingLG &&
-      !stopping
-    ) {
+    if (power.resumed && homeControl.enabled() && !visitingLG && !stopping) {
       var now = monotonic();
       resumePendingUntil = now + 10000;
       resumeGuardUntil = now + 30000;
@@ -1734,3 +1735,4 @@ var screenWatch = require('./screen-watch')(
     }
   }
 );
+if (diagnosticUntil) syncDiagnosticWindows();

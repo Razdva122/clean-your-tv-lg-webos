@@ -99,7 +99,7 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8879';
                 ? this.onservicecallback(JSON.stringify({ returnValue: false }))
                 : send({
                     intent: { phase: b.phase },
-                    effective: {
+                    effective: b.effective || {
                       sam_home: 'com.webos.app.home',
                       profiles: {
                         defaultApps: {
@@ -116,6 +116,19 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8879';
             send({});
           } else {
             b.phase = 'disabled';
+            if (b.effective) {
+              b.effective = {
+                backend: 'c1-native-gate',
+                routing: 'compositor-keyfilter-v1',
+                state: 'stopped',
+                profiles: null,
+                stock_verified: true,
+                mounted: false,
+                healthy: false,
+                filter_installed: false,
+                routing_active: false
+              };
+            }
             send('restored');
           }
         };
@@ -396,9 +409,55 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8879';
       2,
       'late LG reply cannot close a newly shown/relaunched Root window'
     );
+    // #741: a stopped C1 still has its filter installed. Waiting for a
+    // transition cannot finish recovery; offer the existing verified Restore.
+    await page.evaluate(() => {
+      settingsBackend.delayLG = false;
+      settingsBackend.calls.length = 0;
+      settingsBackend.phase = 'recovering';
+      settingsBackend.effective = {
+        backend: 'c1-native-gate',
+        stopped: true,
+        filter_installed: true,
+        routing_active: false
+      };
+    });
+    await page.locator('#btnSettings').click();
+    await page
+      .getByText('Open LG Home to finish Home control recovery.', {
+        exact: true
+      })
+      .waitFor({ timeout: 3000 });
+    assert(await toggle.isDisabled());
+    await retry.waitFor();
+    await page.waitForTimeout(1200);
+    assert.deepEqual(await page.evaluate(() => settingsBackend.calls), [
+      'status'
+    ]);
+    await page
+      .getByRole('button', { name: 'Open LG Home', exact: true })
+      .click();
+    await page.waitForFunction(
+      () => document.querySelector('.root-settings').hidden
+    );
+    assert.deepEqual(await page.evaluate(() => settingsBackend.calls), [
+      'status',
+      'restore',
+      'status'
+    ]);
+    assert.equal(await page.evaluate(() => settingsBackend.phase), 'disabled');
+    await page.locator('#btnSettings').click();
+    await page.waitForFunction(() => {
+      const button = document.querySelector(
+        '.home-routing-actions .home-routing-switch'
+      );
+      return (
+        !button.disabled && button.getAttribute('aria-checked') === 'false'
+      );
+    });
     assert.deepEqual(errors, []);
     console.log(
-      'PASS actual Root launcher/Settings/exit: emergency resume, relaunch, delayed status, explicit enable and Off'
+      'PASS Root Settings: relaunch, delayed status, explicit enable and Off, C1 restore after safety stop'
     );
   } finally {
     await browser.close();

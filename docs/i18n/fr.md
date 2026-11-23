@@ -41,6 +41,8 @@ Utilisez le code du TV, pas le mot de passe du compte LG. Si aucun code n’appa
 
 L’appairage est une étape distincte: quand le TV le demande, autorisez CYTV avec la télécommande. Si le téléviseur refuse la demande, confirmez dans CYTV que vous souhaitez réessayer avec le même téléviseur.
 
+Si la connexion à la commande à distance est refusée, laissez le téléviseur allumé et vérifiez depuis votre ordinateur l’accès au port TCP 3001. Choisissez ensuite **Réessayer** dans l’installateur pour ordinateur.
+
 Si un avertissement indique que les entrées HDMI n’ont pas pu être lues lors de la première installation de No-root, vous pouvez continuer avec les applications détectées.
 
 Gardez Developer Mode actif: avant la fin du compte à rebours, ouvrez-le et appuyez sur EXTEND avec le TV connecté à Internet. À expiration, LG peut supprimer ces apps.
@@ -77,17 +79,25 @@ Si l’installateur Root propose de remplacer l’intégration Home actuelle, co
 
 ## 6. Utilisation et récupération
 
+Pour migrer l’environnement de démarrage de Root Beta existant, désactivez **Change Home** et exécutez `cytv migrate-root-beta --edition root --root-variant node012-beta` avec la connexion Root SSH enregistrée. L’application et les préférences sont conservées. La migration s’arrête si une désinstallation précédente a déjà modifié l’installation. Ensuite, activez Change Home et choisissez les sources de démarrage dans les paramètres Home.
+
 Pour épingler une entrée HDMI, sélectionnez-la dans **+ / Ajouter une application**. Appuyez sur OK pour basculer vers cette entrée. Maintenez OK pour déplacer ou masquer sa tuile.
 
 Les flèches sélectionnent, OK ouvre ; maintenez OK pour réorganiser. Un appui bref sur Retour conserve la navigation et la confirmation de sortie de l’application. Home ouvre le lanceur si le contrôle est actif. Maintenez Retour pendant 1,2 seconde pour ouvrir LG Home une fois. L’interrupteur du contrôle de Home et vos paramètres restent inchangés.
 
 Pour modifier les tuiles avec des appuis courts, ouvrez **Paramètres de Home → Apparence → Modifier les tuiles**. Appuyez sur OK pour sélectionner une tuile, déplacez-la avec les flèches puis appuyez sur OK pour la poser. Retour annule le déplacement ou quitte la modification.
 
+Si la télécommande se déconnecte temporairement, laissez la commande de Home activée. Elle reprend dès que le téléviseur détecte à nouveau la télécommande.
+
 **Appuyez trois fois sur Home en deux secondes**, en relâchant entre les appuis. Cela rétablit LG Home et arrête le contrôle sans effacer vos préférences.
 
 No-root: Pour relancer le contrôle de Home, ouvrez Home Helper, choisissez Démarrer Helper et confirmez. Votre choix d’écran Home est conservé. Root: activez **Changer Home** dans les paramètres de Home pour reprendre. **Ouvrir LG Home** ouvre LG Home une fois sans modifier la destination de Home. Pour rétablir LG Home comme destination permanente, désactivez **Changer Home**. N’exécutez jamais les deux contrôleurs ensemble. Si la panne revient, laissez LG Home actif.
 
 Si Home Helper est arrêté, vous pouvez aussi choisir **Démarrer Helper** dans les paramètres de l’écran Home ou de l’économiseur d’écran. L’état se met à jour automatiquement après le démarrage.
+
+Sur les téléviseurs où LG Home s’ouvre sous forme de panneau, activer ou désactiver **Change Home** dans Root peut redémarrer brièvement l’interface du téléviseur. Après un redémarrage ou une panne, ouvrez Clean Your TV et réactivez **Change Home** pour reprendre le contrôle. LG Home reste accessible.
+
+Pour libérer de la place après le retour à une version antérieure de Home, ouvrez **Paramètres → Thèmes**, choisissez **Supprimer** pour le thème téléchargé indisponible et confirmez.
 
 ## Besoin d’aide ?
 

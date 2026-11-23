@@ -41,6 +41,8 @@ Verwenden Sie den Code vom TV, nicht das Passwort Ihres LG-Kontos. Wird kein Cod
 
 Die Kopplung ist ein eigener Schritt: Bestätigen Sie CYTV mit der Fernbedienung, wenn der TV danach fragt. Wenn der TV die Anfrage ablehnt, bestätigen Sie in CYTV einen neuen Versuch mit demselben TV.
 
+Wenn der TV die Verbindung zur Fernsteuerung ablehnt, lassen Sie ihn eingeschaltet und prüfen Sie vom Computer aus den Zugriff auf TCP-Port 3001. Wählen Sie dann im Desktop-Installationsprogramm **Erneut versuchen**.
+
 Wenn sich die HDMI-Eingänge bei der ersten No-root-Einrichtung nicht lesen lassen, können Sie nach dem Hinweis mit den gefundenen Apps fortfahren.
 
 Halten Sie Developer Mode aktiv: Öffnen Sie die App vor Ablauf des Timers und drücken Sie bei bestehender Internetverbindung EXTEND. Nach Ablauf kann LG diese Apps entfernen.
@@ -77,17 +79,25 @@ Wenn der Installer anbietet, die aktuelle Home-Integration zu ersetzen, bestäti
 
 ## 6. Bedienung und Wiederherstellung
 
+Um die Startumgebung der vorhandenen Root Beta zu migrieren, schalten Sie **Change Home** aus und führen Sie `cytv migrate-root-beta --edition root --root-variant node012-beta` über die gespeicherte Root-SSH-Verbindung aus. App und Einstellungen bleiben erhalten. Hat eine frühere Deinstallation die Installation bereits verändert, stoppt die Migration. Schalten Sie anschließend Change Home ein und wählen Sie die Startquellen in den Home-Einstellungen.
+
 Wählen Sie unter **+ / App hinzufügen** einen HDMI-Eingang aus, um ihn anzuheften. Mit OK wechseln Sie zum Eingang. Halten Sie OK gedrückt, um die Kachel zu verschieben oder auszublenden.
 
 Pfeile wählen eine Kachel, OK öffnet sie; OK gedrückt halten zum Verschieben. Kurzes Zurück behält Navigation und Beendigungsdialog der App bei. Kurzes Home öffnet bei aktiver Home-Steuerung den Launcher. Zurück 1,2 Sekunden gedrückt halten, um LG Home einmalig zu öffnen. Der Home-Schalter und Ihre Einstellungen bleiben unverändert.
 
 Öffnen Sie **Home-Einstellungen → Darstellung → Kacheln bearbeiten**, um Kacheln mit kurzen Tastendrücken zu bearbeiten. Nehmen Sie die Kachel mit OK auf, verschieben Sie sie mit den Pfeiltasten und legen Sie sie mit OK ab. Zurück bricht das Verschieben ab oder beendet die Bearbeitung.
 
+Wenn die Verbindung zur Fernbedienung kurzzeitig abbricht, lassen Sie die Home-Steuerung eingeschaltet. Sie wird fortgesetzt, sobald der Fernseher die Fernbedienung wieder erkennt.
+
 **Home innerhalb von zwei Sekunden dreimal kurz drücken**, dazwischen loslassen. Dies stellt LG Home wieder her und stoppt die Steuerung, ohne Einstellungen zurückzusetzen.
 
 No-root: Öffnen Sie zum Neustart der Home-Steuerung Home Helper, wählen Sie Helper starten und bestätigen Sie. Ihre gespeicherte Home-Auswahl bleibt erhalten. Root: **Home ändern** in den Home-Einstellungen einschalten, um fortzufahren. **LG Home öffnen** öffnet LG Home einmalig, ohne das Home-Ziel zu ändern. Für LG Home als dauerhaftes Ziel **Home ändern** ausschalten. Beide Steuerungen nie gleichzeitig betreiben. Bei wiederholtem Fehler LG Home aktiv lassen.
 
 Wenn Home Helper angehalten ist, können Sie auch in den Einstellungen für den Home-Bildschirm oder den Bildschirmschoner **Helper starten** wählen. Der Status wird nach dem Start automatisch aktualisiert.
+
+Auf Fernsehern, auf denen LG Home als Leiste erscheint, kann das Ein- oder Ausschalten von **Change Home** in Root die TV-Oberfläche kurz neu starten. Öffnen Sie nach einem Neustart oder Fehler Clean Your TV und schalten Sie **Change Home** erneut ein. LG Home bleibt verfügbar.
+
+Um nach einem Rollback von Home Speicherplatz freizugeben, öffne **Einstellungen → Designs**. Wähle beim nicht verfügbaren heruntergeladenen Design **Entfernen** und bestätige.
 
 ## Brauchen Sie Hilfe?
 

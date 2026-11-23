@@ -23,7 +23,7 @@ test('Root service keeps different icon priorities independent and releases fail
     fs.readFileSync('root-edition/service/service.js', 'utf8'),
     {
       __dirname: '/fixture/service',
-      process: { getuid: () => 0 },
+      process: { getuid: () => 0, argv: [] },
       Promise,
       require(name) {
         if (name === 'webos-service')

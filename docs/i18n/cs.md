@@ -33,6 +33,8 @@ Pokud instalátor nabídne **No-root**, můžete pokračovat přes stávající 
 
 Použijte kód z TV, nikoli heslo účtu LG. Pokud kód nevidíte, zapněte Key Server. Při samostatné žádosti o párování povolte CYTV dálkovým ovladačem. Pokud TV žádost odmítne, potvrďte v CYTV opakování párování se stejným televizorem.
 
+Pokud televizor odmítne připojení k dálkovému ovládání, nechte ho zapnutý a ověřte přístup k portu TCP 3001 z počítače. Potom v počítačovém instalátoru zvolte **Zkusit znovu**.
+
 Pokud při první instalaci No-root instalátor upozorní, že nemohl načíst vstupy HDMI, můžete pokračovat s nalezenými aplikacemi.
 
 Před vypršením časovače otevřete Developer Mode a při připojení TV k internetu stiskněte **EXTEND**. Po vypršení může LG takto instalované aplikace odstranit.
@@ -64,17 +66,25 @@ Pokud instalátor Root nabídne nahrazení současné integrace Home, potvrďte 
 
 ## 6. Každodenní ovládání
 
+Chcete-li aktualizovat prostředí automatického spuštění stávající Root Beta, vypněte **Change Home** a spusťte `cytv migrate-root-beta --edition root --root-variant node012-beta` přes uložené připojení Root SSH. Aplikace a nastavení zůstanou zachovány. Pokud předchozí odinstalace již změnila instalaci, migrace se zastaví. Po dokončení zapněte Change Home a vyberte zdroje automatického spuštění v nastavení Home.
+
 Chcete-li připnout vstup HDMI, vyberte ho v nabídce **+ / Přidat aplikaci**. Tlačítkem OK přepnete na tento vstup. Podržením OK můžete dlaždici přesunout nebo skrýt.
 
 Šipky vybírají aplikaci, **OK** ji otevře. Podržením OK můžete měnit pořadí. Krátké **Zpět** zachová navigaci aplikace. Krátké **Home** otevře Clean Your TV při zapnutém ovládání Home. Podržení Zpět po dobu 1,2 sekundy otevře LG Home jednou, bez změny uložených nastavení.
 
 Pro úpravy krátkými stisky otevřete **Nastavení Home → Vzhled → Upravit dlaždice**. Stiskněte OK, přesuňte dlaždici šipkami a znovu stiskněte OK pro umístění. Zpět zruší přesun nebo ukončí úpravy.
 
+Pokud se dálkový ovladač dočasně odpojí, nechte ovládání Home zapnuté. Jakmile televizor ovladač znovu rozpozná, ovládání Home se obnoví.
+
 **Stiskněte Home třikrát během dvou sekund**, mezi stisky tlačítko pusťte. Otevře se LG Home a ovládání Home se zastaví. Nastavení zůstanou zachována.
 
 Pro opětovné zapnutí No-root otevřete **Home Helper**, zvolte spuštění Helperu a potvrďte. Pro Root zapněte **Změnit Home** v nastavení Home. **Otevřít LG Home** otevře původní prostředí jen jednou; pro trvalé používání LG Home vypněte Změnit Home. Nespouštějte oba ovladače Home současně. Při opakované chybě nechte LG Home aktivní.
 
 Pokud je Home Helper zastavený, můžete také zvolit **Spustit Helper** v nastavení obrazovky Home nebo spořiče. Stav se po spuštění automaticky aktualizuje.
+
+Na televizorech, kde se LG Home otevírá jako panel, může zapnutí nebo vypnutí **Change Home** v Root krátce restartovat rozhraní televizoru. Po restartu nebo chybě otevřete Clean Your TV a znovu zapněte **Change Home**, aby se ovládání obnovilo. LG Home zůstává dostupný.
+
+Po návratu k předchozí verzi Home uvolníte místo v nabídce **Nastavení → Motivy**. U nedostupného staženého motivu zvolte **Odstranit** a potvrďte.
 
 ## Potřebujete pomoc?
 

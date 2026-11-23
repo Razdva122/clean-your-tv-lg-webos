@@ -53,3 +53,12 @@ follow the [Czech installation guide](i18n/cs.md). Homebrew installer availabili
 is tracked separately in its [technical guide](../homebrew/README.md).
 Browser/catalog checks are not physical TV or phone acceptance; native-speaker
 review remains outstanding.
+
+## Romanian TV interface
+
+Choose **Română** (`ro`) in **Home settings → Language** on either TV edition.
+The Automatic option recognizes Romanian system locales such as `ro-RO` and
+`ro-MD`. Theme, wallpaper, weather and update settings inside Home follow the
+selected language. The standalone Home and Root updaters can use Romanian from
+the TV's system language. The desktop, console, Android and Homebrew installers
+have their own language options.

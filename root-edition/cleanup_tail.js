@@ -396,6 +396,7 @@ function coversMount(target, path) {
 }
 function stockBspOverlay(mounts, overlay, homeDevice, appDevice) {
   var bsp = '/overlay/bsppart/bsp/usr',
+    bspHome = bsp + '/bin/com.webos.app.home',
     lower = 'lowerdir=' + bsp + ':/usr',
     overlayDevice = /^0:([0-9]+)$/.exec(overlay.fields[2]),
     layers = overlay.options.filter(function (option) {
@@ -413,7 +414,7 @@ function stockBspOverlay(mounts, overlay, homeDevice, appDevice) {
 
   var images = {};
   var valid = mounts.every(function (mount) {
-    if (!coversMount(mount.target, bsp)) return true;
+    if (!coversMount(mount.target, bspHome)) return true;
     if (
       (mount.target !== '/' && mount.target !== '/overlay/bsppart') ||
       images[mount.target] !== undefined
@@ -426,18 +427,37 @@ function stockBspOverlay(mounts, overlay, homeDevice, appDevice) {
   });
   if (
     !valid ||
-    images['/'] !== homeDevice ||
+    images['/'] === undefined ||
     images['/overlay/bsppart'] === undefined ||
-    images['/overlay/bsppart'] === homeDevice
+    images['/overlay/bsppart'] === images['/']
   )
     return false;
 
   // Linux dev_t encodes the low eight minor bits directly and shifts the rest.
   var minor = Number(overlayDevice[1]);
-  return (
-    appDevice === (minor % 256) + Math.floor(minor / 256) * 1048576 &&
-    fs.fstatSync(openDir(bsp)).dev === images['/overlay/bsppart']
-  );
+  var overlayDev = (minor % 256) + Math.floor(minor / 256) * 1048576;
+  if (
+    appDevice !== overlayDev ||
+    fs.fstatSync(openDir(bsp)).dev !== images['/overlay/bsppart']
+  )
+    return false;
+  if (homeDevice === images['/']) return true;
+  // Major zero, with the same Linux dev_t encoding as the overlay above.
+  if (
+    homeDevice <= 0 ||
+    homeDevice >= 1099511627776 ||
+    homeDevice % 1048576 >= 256 ||
+    homeDevice === overlayDev
+  )
+    return false;
+  try {
+    var bin = openDir(bsp + '/bin');
+    fs.lstatSync(at(bin, 'com.webos.app.home'));
+  } catch (error) {
+    if (error.code === 'ENOENT') return true;
+    throw error;
+  }
+  return false;
 }
 async function compositorStock() {
   if (

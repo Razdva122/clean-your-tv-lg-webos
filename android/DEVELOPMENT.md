@@ -20,7 +20,21 @@ cd android
 ./gradlew :app:assembleDebug :app:lintDebug :app:assembleDebugAndroidTest
 ```
 
-Output: `android/app/build/outputs/apk/debug/app-debug.apk` relative to the repository root. No release signing material is stored in the repository. The first build downloads dependencies; runtime installation uses the embedded payload. Runtime extraction is cached by the bundled manifest SHA-256, so reinstalling a preview with the same versionCode cannot reuse a different older payload. Staging validates every payload hash and copies only public source modules, excluding Qt/desktop entry points, caches and local profiles. It does not automatically rebuild TV payloads during Gradle execution.
+Output: `android/app/build/outputs/apk/debug/app-debug.apk` relative to the repository root. No release signing material is stored in the repository. The first build downloads dependencies; runtime installation uses the embedded payload. Runtime extraction is cached by the bundled manifest SHA-256, so reinstalling a preview with the same versionCode cannot reuse a different older payload.
+
+Android staging validates every payload hash and copies the manifest's files.
+It selects CYTV Python modules from the Git index and reads their current
+checkout contents, excluding desktop-only modules. Add new runtime modules to
+Git before building so they are included. The task refreshes its own inputs
+under `android/app/build/generated/cytv/`. Prepare the TV payload before staging.
+
+After successful extraction and cleanup, Android retains one payload directory for
+the current APK. A failed extraction preserves the previous ready copy. A later
+operation retries interrupted extraction and cleanup, even when the current copy
+is already ready. No-root continuation uses its private capsule containing the
+original packages and configuration. Root continuation verifies original staging
+or installed state on the TV. These recovery paths keep their private receipts
+and do not pin an APK extraction.
 
 For a release APK, supply the private `CYTV_ANDROID_KEYSTORE` through the protected
 build environment and run `:app:assembleRelease :app:lintRelease`. Output is
@@ -61,7 +75,13 @@ python3 android/tests/native.py --serial emulator-5554
 
 This checks both edition contexts, duplicate-operation rejection, bounded replay,
 pending-question retention and stale-answer rejection. It also checks that secret
-answers are absent from replay. `--upgrade seed` and `--upgrade verify` exercise
+answers are absent from replay. The runner imports `android_bridge` through
+Chaquopy, inspects a loopback SSH banner, then runs a synthetic status operation
+whose fixture closes the connection before authentication. It requires the
+expected SSH negotiation failure and a single terminal event with exit code 1.
+The runner also cancels setup before transport and exercises extraction changes
+across three synthetic manifests while comparing private recovery files byte-for-byte.
+`--upgrade seed` and `--upgrade verify` exercise
 synthetic private-data and unfinished-operation retention across an APK update;
 see [the upgrade procedure](STABLE-READINESS.md). These fixtures do not connect to
 a TV and cannot establish physical installation compatibility.

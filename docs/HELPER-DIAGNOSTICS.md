@@ -42,7 +42,7 @@ before sending the reply and link that RC in the comment.
 ## Implementation and report meaning
 
 The ordinary Helper has an opt-in 60-second observation window. It adds no
-launches, retries, input grabs or second foreground watcher. The existing control
+launches, retries, input grabs or extra SSAP connection. The existing control
 channel handles `diagnostics-start` and `diagnostics-stop`; the installer handles
 these automatically. A random session ID separates each capture from old logs.
 A new installer requests a three-minute lifetime. Helper converts it to an
@@ -64,6 +64,13 @@ state. The export also includes successful SSH read and reconnect attempt
 counts plus elapsed capture time. These fields distinguish a disconnected
 collector from a readable log whose diagnostic session stopped producing data.
 The controller start record advertises `diagnosticsSchema: 1`.
+
+While a capture is active, Helper also requests `extraInfo` on the existing
+paired SSAP connection. A `foreground-windows` record includes the TV timestamp
+and a bounded list of app IDs and window types. The list can show a Home
+surface over an app, but an absent surface may be missing from the TV's
+reported state. Older reports or unsupported firmware may lack these records.
+The normal foreground subscription still drives routing.
 
 Foreground samples use the existing subscription cache and carry its age; they
 are not new queries. A blank app ID is a transition, while null means unknown.

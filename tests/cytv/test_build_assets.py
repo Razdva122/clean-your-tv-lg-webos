@@ -90,16 +90,22 @@ class BuildAssetsTests(unittest.TestCase):
                 self.assertEqual((Path(directory) / packaged).read_bytes(),
                                  (root / 'assets/brand' / master).read_bytes())
 
-    def test_setup_examples_are_staged_for_offline_desktop_use(self):
+    def test_installer_documents_are_staged_for_offline_desktop_use(self):
         import tempfile
         root = Path(__file__).resolve().parents[2]
         build = runpy.run_path(str(root / 'scripts/build-cytv.py'))
         with tempfile.TemporaryDirectory() as directory:
-            build['stage_guide_assets'](Path(directory))
+            payload = Path(directory)
+            guide = root / 'android/app/src/main/assets/ui/guide'
+            build['stage_installer_docs'](payload)
             for name in ('sign-in.png', 'dev-mode.png', 'key-server.png'):
-                actual = (Path(directory) / 'setup-guide' / name).read_bytes()
+                actual = (payload / 'setup-guide' / name).read_bytes()
                 self.assertTrue(actual.startswith(b'\x89PNG\r\n\x1a\n'))
-                self.assertEqual(actual, (root / 'android/app/src/main/assets/ui/guide' / name).read_bytes())
+                self.assertEqual(actual, (guide / name).read_bytes())
+            self.assertEqual((payload / 'setup-guide/README.md').read_bytes(),
+                             (guide / 'README.md').read_bytes())
+            for name in ('LICENSE', 'THIRD_PARTY_NOTICES.md'):
+                self.assertEqual((payload / name).read_bytes(), (root / name).read_bytes())
 
     def test_theme_previews_are_staged_for_offline_desktop_use(self):
         import tempfile
@@ -120,6 +126,88 @@ class BuildAssetsTests(unittest.TestCase):
         self.assertIn('app-library.js', list(build['tracked_files']('launcher')))
         self.assertIn('release-notes.js', list(build['tracked_files']('launcher')))
         self.assertIn('app-inventory.js', list(build['tracked_files']('native/service')))
+
+    def test_fresh_helper_uses_only_tracked_sources_and_named_dependencies(self):
+        import json
+        import os
+        import shutil
+        import subprocess
+        import tempfile
+        from cytv import package
+
+        root = Path(__file__).resolve().parents[2]
+        app_names = {'appinfo.json', 'icon.png', 'state-permissions.js', 'contract-events.js',
+                     'helper-entry.js', 'home-control.js', 'websocket.js', 'screensaver-controller.js',
+                     'screensaver-lg.js', 'screensaver-owner.js', 'vendor/ws-legacy/LICENSE'}
+        service_names = {'services.json', 'package.json', 'service.js', 'app-inventory.js'}
+        generated_compat = {'compat-runtime.js', 'compat-polyfills.js', 'compat-buffer.js',
+                            'compat-LICENSE.txt', 'state/.keep'}
+        expected_app = app_names | generated_compat | {'app-inventory.js'} | {
+            'screensaver/' + name + '.js' for name in ('controller', 'policy', 'transport', 'media', 'settings')
+        }
+        expected_service = service_names | generated_compat | {'state-permissions.js', 'contract-events.js'}
+        explicit_untracked = {'native/app/home-control.js'}
+        tracked = []
+        with tempfile.TemporaryDirectory() as directory:
+            checkout = Path(directory)
+            paths = {'native/app/' + name for name in app_names} | {
+                'native/service/' + name for name in service_names
+            } | {'native/app/stop-generation.h', 'scripts/build-cytv.py', 'scripts/build.sh'} | {
+                'screensaver/' + name + '.js' for name in ('controller', 'policy', 'transport', 'media', 'settings')
+            }
+            for name in sorted(paths):
+                target = checkout / name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(root / name, target)
+                if name not in explicit_untracked:
+                    tracked.append(name)
+            info = checkout / 'native/app/appinfo.json'
+            manifest = json.loads(info.read_text())
+            info.write_text(json.dumps({**manifest, 'version': '9.9.9'}))
+            (checkout / 'launcher').mkdir()
+            for name in ('native/app/vendor/ws-legacy/notes.txt', 'native/app/stray.js',
+                         'native/service/stray.js', 'native/app/state/private.json',
+                         'native/service/state/private.json'):
+                path = checkout / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text('{}\n')
+                if '/state/' in name:
+                    tracked.append(name)
+            subprocess.run(['git', 'init', '-q'], cwd=checkout, check=True)
+            subprocess.run(['git', 'add', '--', *tracked], cwd=checkout, check=True)
+
+            bash = shutil.which('bash')
+            staged = {}
+            if bash and os.name != 'nt':
+                # Stop at the packager boundary, after build.sh has compiled the files.
+                stop = checkout / 'stop-at-packager'
+                stop.write_text('#!/bin/sh\nexit 77\n')
+                stop.chmod(0o755)
+                result = subprocess.run([bash, 'scripts/build.sh'], cwd=checkout,
+                    env={**os.environ, 'PYTHONPATH': str(root), 'ZIG': 'true', 'ARES_PACKAGE': str(stop)},
+                    capture_output=True, text=True)
+                self.assertEqual(result.returncode, 77, result.stdout + result.stderr)
+                for component, expected in (('app', expected_app), ('service', expected_service)):
+                    folder = checkout / ('build/native-' + component)
+                    staged[component] = {path.relative_to(folder).as_posix(): path.read_bytes()
+                                         for path in folder.rglob('*') if path.is_file()}
+                    self.assertEqual(set(staged[component]), expected)
+
+            build = runpy.run_path(str(checkout / 'scripts/build-cytv.py'))
+            raw = build['pack_app'](*build['helper_sources'](), architecture='arm', helper=True)
+            files = package.data_files(raw)
+            for component, prefix, expected in (
+                ('app', 'usr/palm/applications/com.local.nativehome/', expected_app),
+                ('service', 'usr/palm/services/com.local.nativehome.service/', expected_service),
+            ):
+                packaged = {name.removeprefix(prefix): data for name, data in files.items()
+                            if name.startswith(prefix)}
+                self.assertEqual(set(packaged), expected)
+                if component in staged:
+                    self.assertEqual(packaged, staged[component])
+            vendor = 'native/app/vendor/ws-legacy/LICENSE'
+            self.assertEqual(files['usr/palm/applications/com.local.nativehome/vendor/ws-legacy/LICENSE'],
+                             (checkout / vendor).read_bytes())
 
     def test_helper_service_bundles_permissions_module_inside_its_sandbox(self):
         import json

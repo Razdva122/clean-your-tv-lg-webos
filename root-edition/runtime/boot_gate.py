@@ -283,12 +283,12 @@ def start(c, prior, boot):
             save(dict(value,phase='released'))
         from persistent_health import require_fresh
         while time.monotonic() < route['deadline']-20:
-            try: require_fresh(route['transaction']); break
+            try: require_fresh(route['transaction'],allow_wait=True); break
             except (OSError,ValueError):
                 if child.poll() is not None: raise RuntimeError('Continuation observer exited')
                 time.sleep(.1)
         with c.locked(intent):
-            c._healthy(intent)
+            c._healthy(intent,confirmed_route=True)
             updated, effect = c.event(intent,'ready')
             remove()
         return dict(intent=updated,effect=effect,transaction=route['transaction'],persistent=True)

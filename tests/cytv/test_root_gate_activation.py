@@ -1,11 +1,15 @@
 """Native Home activation records real launches and one verified attempt only."""
 import copy
 import json
+from pathlib import Path
+import tempfile
 import unittest
-from unittest.mock import Mock
-from cytv import package, root_activation
-from cytv.errors import UserError
+from unittest.mock import Mock, call, patch
+from cytv import package, root_activation, state
+from cytv.errors import TVCommandError, UserError
 from cytv.operations import Installer
+from cytv.recovery import recover
+from cytv.terminal import Console
 
 
 class NativeActivationTests(unittest.TestCase):
@@ -25,6 +29,195 @@ class NativeActivationTests(unittest.TestCase):
         self.stock = report(False)
         self.active = report(True)
         self.tv.root_action.side_effect = [self.stock, self.active, self.active, self.active]
+
+    def test_retained_retry_uses_conditioned_enable(self):
+        old, new = 'b'*32, 'a'*32
+        for report in (self.stock, self.active):
+            effective = report['result']['effective']
+            effective.update(routing='compositor-keyfilter-v1', mounted=False,
+                             filter_installed=effective['healthy'], routing_active=effective['healthy'])
+        self.stock['result']['effective'].update(state='stopped', stopped=True, reason='input_expired')
+        self.tv.store.pending.return_value.update(stage='enable')
+        self.tv.remote.luna.return_value = {'returnValue': True, 'appId': package.ROOT_APP}
+        self.assertIs(root_activation.activate(self.tv, retry_token=old), False)
+        self.tv.root_action.assert_any_call('enable', retry_token=old)
+        self.tv.store.checkpoint.assert_any_call(self.tv.profile, stage='launch', home_token=new)
+        self.tv.store.finish.assert_called_once()
+
+    def test_retained_retry_refusal_does_not_restore_a_different_attempt(self):
+        self.tv.store.pending.return_value.update(stage='enable')
+        self.tv.root_action.side_effect = [self.stock, root_activation.RetryRefused('changed')]
+        with self.assertRaises(root_activation.RetryRefused):
+            root_activation.activate(self.tv, retry_token='b'*32)
+        self.tv.recover_failed_activation.assert_not_called()
+        self.tv.store.finish.assert_not_called()
+
+    def test_retained_retry_unknown_enable_requests_only_stock_verification(self):
+        self.tv.store.pending.return_value.update(stage='enable')
+        self.tv.root_action.side_effect = [self.stock, TimeoutError('lost reply')]
+        with self.assertRaises(TimeoutError):
+            root_activation.activate(self.tv, retry_token='b'*32)
+        self.tv.recover_failed_activation.assert_called_once_with(
+            verified_support=True, expected_token=None, stock_only=True)
+        self.tv.store.finish.assert_not_called()
+
+    def test_failed_retained_retry_restores_only_the_reported_new_attempt(self):
+        old, new = 'b'*32, 'a'*32
+        self.tv.store.pending.return_value.update(stage='enable')
+        for previous, expected in (
+                (old, {'expected_token': new, 'routing_only': True}),
+                ('c'*32, {'expected_token': None, 'stock_only': True})):
+            with self.subTest(previous=previous):
+                self.tv.recover_failed_activation.reset_mock()
+                failure = TVCommandError(1)
+                failure._retained_retry_attempt = (previous, new)
+                self.tv.root_action.side_effect = [self.stock, failure]
+                with self.assertRaises(TVCommandError) as raised:
+                    root_activation.activate(self.tv, retry_token=old)
+                self.assertIs(raised.exception, failure)
+                self.tv.recover_failed_activation.assert_called_once_with(verified_support=True, **expected)
+        self.tv.store.finish.assert_not_called()
+
+    def test_retained_timeout_after_ready_before_launch_restores_routing(self):
+        self.tv.store.pending.return_value.update(stage='enable')
+        for report in (self.stock, self.active):
+            effective = report['result']['effective']
+            effective.update(routing='compositor-keyfilter-v1', mounted=False,
+                             filter_installed=effective['healthy'], routing_active=effective['healthy'])
+        self.tv.remote.luna.return_value = {'returnValue': True, 'appId': 'com.webos.app.home'}
+        self.tv.root_action.side_effect = [self.stock, self.active, self.stock]
+        with self.assertRaises(UserError):
+            root_activation.activate(self.tv, retry_token='b'*32)
+        self.tv.recover_failed_activation.assert_called_once_with(
+            verified_support=True, expected_token='a'*32, routing_only=True)
+        self.tv.outcome.launch_submitted.assert_not_called()
+
+    def test_pending_retained_restore_continues_to_separate_activation_confirmation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            store = state.Store(directory)
+            profile = state.target('tv.local', 'root')
+            store.begin(profile, 'activate-root', stage='enable', home_backend='c1-native-gate',
+                        activation_restore='unverified', activation_restore_pending=True,
+                        requires_updater=False, migrate=False, release_sha='a'*64, bundle_sha='b'*64)
+            installer = Installer(Mock(), store, profile, Path(directory), {}, lambda *_: None)
+            installer.root_files_match = Mock(return_value=True)
+            stopped = self.stock['result']
+            stopped['intent'].update(phase='recovering')
+            stopped['effective'].update(routing='compositor-keyfilter-v1', stopped=True, state='stopped',
+                stock_verified=False, routing_active=False, filter_installed=True, reason='input_expired')
+            installer.root_action = Mock(return_value=self.stock)
+            installer.observe_recovery = Mock(return_value={'deployment_stage':'installed-recovery-only',
+                                                            'device':self.stock})
+            installer.resume_retained_activation = Mock()
+
+            def restore(_installer, token, *, routing_only):
+                self.assertEqual(token, 'b'*32)
+                self.assertTrue(routing_only)
+                stopped['intent'].update(phase='disabled')
+                stopped['effective'].update(stock_verified=True, filter_installed=False)
+
+            with patch('cytv.root_install_recovery.restore_activation', side_effect=restore) as restored:
+                recover(installer, lambda prompt: 'n' if 'Finish Root setup' in prompt else 'y',
+                        Console(lambda *_: None))
+            restored.assert_called_once_with(installer, 'b'*32, routing_only=True)
+            installer.resume_retained_activation.assert_not_called()
+            self.assertFalse(store.pending(profile)['activation_restore_pending'])
+            self.assertEqual(store.pending(profile)['activation_restore'], 'verified')
+
+    def test_recovery_offers_retained_retry_only_after_proof_and_explicit_confirmation(self):
+        self.stock['result']['effective'].update(
+            routing='compositor-keyfilter-v1', mounted=False, state='stopped', stopped=True,
+            reason='input_expired', filter_installed=False, routing_active=False)
+        for scenario in ('retry', 'decline', 'receipt-changed', 'files-changed', 'token-changed', 'escape',
+                         'filter-retry', 'filter-decline-restore', 'filter-decline-enable',
+                         'filter-not-cleared', 'filter-token-changed'):
+            with self.subTest(scenario=scenario), tempfile.TemporaryDirectory() as directory:
+                store = state.Store(directory)
+                profile = state.target('tv.local', 'root')
+                remote = Mock()
+                remote.run.return_value = '{"stage":"installed-recovery-only"}'
+                installer = Installer(remote, store, profile, Path(directory), {}, lambda *_: None)
+                store.begin(profile, 'activate-root', stage='enable', home_backend='c1-native-gate',
+                            activation_restore='verified', activation_restore_pending=False,
+                            requires_updater=False, migrate=False, release_sha='a'*64, bundle_sha='b'*64)
+                original = store.pending(profile)
+                stock = copy.deepcopy(self.stock)
+                filter_left = scenario.startswith('filter-')
+                restored = copy.deepcopy(stock)
+                if filter_left:
+                    stock['result']['effective'].update(stock_verified=False, filter_installed=True)
+                    stock['result']['intent']['phase'] = 'recovering'
+                if scenario == 'escape':
+                    stock['result']['effective']['reason'] = 'escape'
+                installer.root_action = Mock(return_value=stock)
+                installer.root_files_match = Mock(return_value=True)
+                installer._collect_observed_root_diagnostics = Mock()
+                installer.stop_root_helper_for_activation = Mock()
+                installer.outcome.review_home = Mock()
+                staged = []
+
+                def answer(prompt):
+                    if 'Restore LG Home?' in prompt:
+                        if scenario == 'filter-token-changed':
+                            for key in ('effective', 'intent'):
+                                stock['result'][key]['token'] = 'c'*32
+                        return 'n' if scenario == 'filter-decline-restore' else 'y'
+                    if 'Finish Root setup and turn on Home control?' not in prompt:
+                        return 'y'
+                    staged.append(prompt)
+                    if filter_left:
+                        restore.assert_called_once_with(installer, 'b'*32, routing_only=True)
+                    if scenario in ('decline', 'filter-decline-enable'):
+                        return 'n'
+                    if scenario == 'files-changed':
+                        installer.root_files_match.return_value = False
+                    if scenario == 'receipt-changed':
+                        store.checkpoint(profile, bundle_sha='c'*64)
+                    if scenario == 'token-changed':
+                        for key in ('effective', 'intent'):
+                            stock['result'][key]['token'] = 'c'*32
+                    return 'y'
+
+                if scenario in ('retry', 'filter-retry'):
+                    remote.luna.return_value = {'returnValue': True, 'appId': package.ROOT_APP}
+                    active = copy.deepcopy(self.active)
+                    active['result']['effective'].update(
+                        routing='compositor-keyfilter-v1', mounted=False,
+                        filter_installed=True, routing_active=True)
+
+                    def action(command, **kwargs):
+                        if command == 'enable':
+                            self.assertEqual(kwargs, {'retry_token': 'b'*32})
+                            installer.root_action.side_effect = None
+                            installer.root_action.return_value = active
+                            return active
+                        return stock
+
+                    installer.root_action.side_effect = action
+                def restore_filter(*_args, **_kwargs):
+                    if scenario != 'filter-not-cleared':
+                        stock.update(restored)
+
+                with patch('cytv.root_install_recovery.restore_activation', side_effect=restore_filter) as restore:
+                    if scenario in ('retry', 'decline', 'filter-retry', 'filter-decline-restore', 'filter-decline-enable'):
+                        recover(installer, answer, Console(lambda *_: None))
+                    else:
+                        with self.assertRaises(UserError):
+                            recover(installer, answer, Console(lambda *_: None))
+                if scenario in ('retry', 'filter-retry'):
+                    self.assertIsNone(store.pending(profile))
+                    archive, = store.device_dir(profile).glob('recovery-*.json')
+                    self.assertEqual(json.loads(archive.read_text())['previous'], original)
+                    self.assertEqual(installer.root_action.call_args_list.count(call('enable', retry_token='b'*32)), 1)
+                else:
+                    self.assertEqual(store.pending(profile), dict(original, bundle_sha='c'*64)
+                                     if scenario == 'receipt-changed' else original)
+                    self.assertFalse(list(store.device_dir(profile).glob('recovery-*.json')))
+                    self.assertTrue(all(request.args == ('status',) for request in installer.root_action.call_args_list))
+                self.assertEqual(restore.call_count, int(scenario in ('filter-retry', 'filter-decline-enable', 'filter-not-cleared')))
+                self.assertEqual(len(staged), int(scenario not in ('escape', 'filter-decline-restore',
+                                                                   'filter-not-cleared', 'filter-token-changed')))
+                remote.upload.assert_not_called()
 
     def test_existing_cytv_foreground_makes_no_launch_request(self):
         self.tv.remote.luna.return_value = {'returnValue':True, 'appId':package.ROOT_APP}

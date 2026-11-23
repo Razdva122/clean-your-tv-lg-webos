@@ -31,6 +31,7 @@ static ssize_t fake_read(int,void*,size_t),fake_write(int,const void*,size_t);
 #include "relay.c"
 #undef main
 static uint64_t now;static int grabbed,ir_grabbed,step,irhome,lost,hangup,polls;static char pending;
+static int waiting_ir,returned_ir;
 /* One step per 100 ms poll. Code -1 = idle, 'D'/'E' = controller command on stdin.
  * Held Home (1.2 s, autorepeat): nothing. Short Home: IRHOME. Off: short Home ignored. On again.
  * 2.5 s idle so earlier taps do not count, then a quick triple Home: two IRHOME, then exit 27. */
@@ -50,26 +51,41 @@ static const int overflow_emergency[][2]={{773,1},{773,0},{773,1},{773,0},{-2,0}
 static const int (*script)[2]=baseline;
 static int steps=LENGTH(baseline);
 /* event0 = M-RCU [0] (fd 10), event1 = M-RCU [1] (fd 11), event5 = LGE RCU (fd 12). */
-static int fake_open(const char*p,int flags,...){(void)flags;if(strstr(p,"relay.lock"))return 3;if(strstr(p,"/blocked")||strstr(p,"/watchdog"))return 4;if(!strcmp(p,"/dev/input/event0"))return 10;if(!strcmp(p,"/dev/input/event1"))return 11;if(!strcmp(p,"/dev/input/event5"))return 12;errno=ENOENT;return -1;}
+static int fake_open(const char*p,int flags,...){(void)flags;if(strstr(p,"relay.lock"))return 3;if(strstr(p,"/blocked")||strstr(p,"/watchdog"))return 4;if(!strcmp(p,"/dev/input/event0"))return 10;if(!strcmp(p,"/dev/input/event1"))return 11;if(!strcmp(p,"/dev/input/event5")&&!waiting_ir&&hangup!=3)return 12;
+ if(!strcmp(p,"/dev/input/event9")&&(waiting_ir||hangup==3)&&now>=2300){assert((flags&O_ACCMODE)==O_RDONLY);return 13;}errno=ENOENT;return -1;}
 static int fake_close(int fd){(void)fd;return 0;}
 static int fake_flock(int fd,int flags){(void)fd;(void)flags;return 0;}
 static int fake_clock(clockid_t id,struct timespec*t){(void)id;t->tv_sec=now/1000;t->tv_nsec=(now%1000)*1000000;return 0;}
 static int fake_ioctl(int fd,unsigned long request,...){
  va_list a;va_start(a,request);
- if(request==GRAB){int on=va_arg(a,int);va_end(a);if(fd==12)ir_grabbed=1;if(fd==10)grabbed=on;return 0;}
+ if(request==GRAB){int on=va_arg(a,int);va_end(a);if(fd==12||fd==13)ir_grabbed=1;if(fd==10)grabbed=on;return 0;}
  void*b=va_arg(a,void*);va_end(a);
  if(request==NAME(256)){strcpy(b,fd==10?"LGE M-RCU - Builtin [0]":fd==11?"LGE M-RCU - Builtin [1]":"LGE RCU");return 0;}
  memset(b,0,request==_IOR('E',0x40,int[6])||request==_IOR('E',0x41,int[6])?sizeof(int)*6:256);return 0;
 }
 /* Each poll: heartbeat (or scripted command) on stdin plus the next scripted IR event. */
 static int fake_poll(struct pollfd*p,nfds_t n,int timeout){(void)timeout;if(n==1){now+=50;p->revents=POLLIN;pending='P';return 1;}/* startup heartbeat */
- assert(n==3);now+=100;polls++;p[0].revents=0;p[1].revents=POLLIN;p[2].revents=0;pending='P';
- if(hangup){if(polls==1){assert(p[2].fd==12);p[2].revents=POLLHUP;}else{assert(p[2].fd==-1);stop=1;}return 1;}
+ assert(n==4);now+=100;polls++;p[0].revents=0;p[1].revents=POLLIN;p[2].revents=0;p[3].revents=0;pending='P';
+ if(hangup){
+  assert(polls<40);
+  if(polls==1&&hangup!=3){assert(p[2].fd==12);waiting_ir=1;
+   p[2].revents=hangup==1?POLLHUP:POLLIN;
+  }else if(p[2].fd==13){
+   returned_ir++;p[2].revents=POLLIN;
+   if(returned_ir>3)stop=1;
+  }else assert(p[2].fd==-1);
+  return 1;
+ }
  assert(p[2].fd==12);if(step>=steps){stop=1;return 1;}if(!grabbed)return 1;
  if(script[step][0]==-1){step++;return 1;}
  if(script[step][0]=='D'||script[step][0]=='E'){pending=(char)script[step][0];step++;return 1;}
  p[2].revents=POLLIN;return 1;}
 static ssize_t fake_read(int fd,void*b,size_t size){(void)size;if(fd==0){*(char*)b=pending;return 1;}
+ if(hangup==2&&fd==12&&waiting_ir){errno=ENODEV;return -1;}
+ if(fd==13&&returned_ir<=3){
+  /* Orphaned key-up first, then one fresh press and release. */
+  struct ev ev={0,0,1,773,returned_ir==2};memcpy(b,&ev,sizeof ev);return sizeof ev;
+ }
  if(fd==12&&grabbed&&step<steps){struct ev e={0,0,script[step][0]<0?0:1,(uint16_t)(script[step][0]==-2?3:script[step][0]==-3?0:script[step][0]),script[step][1]};step++;memcpy(b,&e,sizeof e);return sizeof e;}errno=EAGAIN;return -1;}
 static ssize_t fake_write(int fd,const void*b,size_t size){
  if(fd==1){if(size==7&&!memcmp(b,"IRHOME\n",7))irhome++;if(size==8&&!memcmp(b,"IR_LOST\n",8))lost++;}
@@ -92,8 +108,10 @@ int main(int argc,char**argv){
  assert(relay_main(1,args)==27);
  assert(!ir_grabbed&&step==steps);
  assert(irhome==3);/* short Home once, then the first two taps of the triple; held and Off: none */
- stop=0;grabbed=0;polls=0;hangup=1;now=0;
- assert(relay_main(1,args)==0);
- assert(lost==1&&polls==2);
+ for(hangup=1;hangup<=3;hangup++){
+  stop=grabbed=polls=waiting_ir=returned_ir=lost=irhome=0;now=0;
+  assert(relay_main(1,args)==0);
+  assert(lost==(hangup==3?0:1)&&irhome==1&&!ir_grabbed);
+ }
  printf("PASS: IR Home on short release only (held Home left to webOS, none while Off), never grabbed or re-emitted; lost IR keeps relay running; triple IR Home releases\n");
 }

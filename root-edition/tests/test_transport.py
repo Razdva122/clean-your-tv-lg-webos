@@ -24,3 +24,15 @@ class DeadlineTests(unittest.TestCase):
    with self.assertRaises(TimeoutError):transport.call('luna://test/stall',{},timeout=.05)
   self.assertLess(time.monotonic()-started,2)
   self.assertIsNotNone(children[0].poll())
+
+ def test_named_adapter_probe_uses_authenticated_fixed_caller(self):
+  import json
+  spawn=subprocess.Popen
+  commands=[]
+  def answer(command,**kwargs):
+   commands.append(command)
+   return spawn([sys.executable,'-c','import sys;print(\'{"returnValue":true}\',flush=True);sys.stdin.read()'],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+  with patch.object(transport.subprocess,'Popen',side_effect=answer):
+   self.assertEqual(transport.call('luna://test/read',{},named=True),{'returnValue':True})
+  self.assertEqual(commands[0][:2],['/usr/bin/luna-send','-m'])
+  self.assertRegex(commands[0][2],r'^com\.webos\.lunasend-cytv-adapter-[0-9]+$')

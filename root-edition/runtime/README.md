@@ -47,14 +47,15 @@ state instead of using this Root runtime.
 For the retained rollback live-authority window, capture/staging order and unresolved
 old-CLI forward cancellation, see the [2026-11-01 investigation](../../docs/history/2026-11-01-root-home-settings-intent.md).
 
-A confirmed normal shutdown retains the Home override, generated profile and transaction binding so bootd can select Clean Your TV as its first app. A normal new-session start may continue an exactly owned retained route without removing its override, rescanning profiles, rewriting Home or launching a foreground app. It preserves the original recovery baseline and file identity, rotates transaction/generation/token, and arms fresh input supervision plus an independent guardian before waiting for the normal-init gate. Uncertain ownership, missing predecessor evidence or a surviving predecessor guardian/supervisor/reader refuses continuation and retains conservative recovery. Explicit exit, input failure without a shutdown signal, and failsafe recovery restore LG Home.
+A confirmed normal shutdown retains the Home override, generated profile and transaction binding so bootd can select Clean Your TV as its first app. A normal new-session start may continue an exactly owned retained route without removing its override, rescanning profiles, rewriting Home or launching a foreground app. It preserves the original recovery baseline and file identity, rotates transaction/generation/token, and arms fresh input supervision plus an independent guardian before waiting for the normal-init gate. Uncertain ownership, missing predecessor evidence or a surviving predecessor guardian/supervisor/reader refuses continuation and retains conservative recovery. Explicit exit, corrupt input, a stalled or exited observer, and failsafe recovery restore LG Home.
 
 The shutdown monitor accepts only fresh transaction/session-bound evidence.
 Its local tvpower subscription must observe ON before Active Standby/Power Off;
 initial OFF snapshots, unknown replies and lost subscriptions grant no authority.
 Only actual pushes refresh the existing five-second evidence window. Returning ON
 or losing/invalidating the stream revokes its private volatile `.power` proof.
-No reconnect loop or ENODEV exception bypasses input recovery. A restored old
+An observed evdev disconnect enters the supervised input wait described below.
+The wait is independent of firmware power labels. A restored old
 observer defers enabled old-session intent to boot dispatch; escape, failsafe and
 package loss still override it. See [evidence and limits](../../docs/development/ROOT-COLD-BOOT.md).
 
@@ -137,6 +138,21 @@ The independent guardian then uses a renewable two-second input-loop lease. The
 supervisor checks the guardian's own pulse. Volatile health files live under a
 root-owned `/tmp/clean-your-tv-root-health`; frequent heartbeats do not write flash.
 
+When the validated input device disappears, a confirmed profile and its
+supervisor stay in place. The reader sends timestamped `WAIT` frames as it
+rescans. The volatile lease changes to `waiting-input`, which expires within
+two seconds of the last scan. Input-dependent actions require an active lease.
+After validating the replacement remote and reading its key state, the reader
+sends `CHECK`. Its next input-loop `PING` restores active health. Neither
+transition launches an app.
+
+On a normal boot, this rescan evidence can protect a retained, verified profile.
+If boot recovery has already restored stock routing, the selected Home stays
+pending against the verified stock baseline in the existing `stopping` phase.
+A detached input observer waits there for fresh input before attempting a new
+guarded publication. Off, emergency exit, failsafe and a newer session revoke
+the old observer's ability to start it.
+
 Three short Home presses within two seconds or Home settings → Return to LG Home disable
 intent before restoring original routing. A fault does the same. No-root helper
 is never automatically resumed. A later explicit enable is required after a fault,
@@ -215,13 +231,14 @@ never restarted after gate waiting, and its 20-second recovery reserve remains.
 Before the normal init marker exists, ordinary startup and a genuine failsafe
 cannot yet be distinguished. A recovery-only input supervisor protects this
 bounded classification interval: READY/PING do not authorize persistent health,
-and triple-Home, input loss and the two-second heartbeat watchdog still recover.
+and triple-Home, invalid input and the two-second heartbeat watchdog still recover.
 The normal-marker/cleared-failsafe gate waits at most 35 seconds, additionally
 limited by the original recovery reserve. Missing marker, uncleared failsafe,
 package loss, exhausted budget, observer failure or explicit Off disables and
 restores LG. No code clears failsafe or automatically re-enables emergency-stop
-state. Only the verified normal gate releases ordinary current-session health;
-active intent still requires fresh input and guardian proof.
+state. Only the verified normal gate releases ordinary current-session health.
+Retaining the old route during a rescan requires fresh supervisor and guardian
+evidence. Publishing a new route also requires validated input.
 
 This is a runtime sequencing correction, with no loading screen or UI launch
 restriction. Host simulations and subprocess failure injection do not establish

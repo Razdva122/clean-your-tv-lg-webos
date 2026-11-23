@@ -59,13 +59,16 @@ class KeyfilterGuardTests(unittest.TestCase):
         p = subprocess.run([str(self.binary), *args], capture_output=True, text=True, timeout=8)
         self.assertEqual(p.stderr, '')
         return json.loads(p.stdout), p.returncode
-    def spawn(self, seconds=0, ready=(True, True), broker=True, *, resumable=False):
+    def spawn(self, seconds=0, ready=(True, True), broker=True, *, resumable=False, reconnect=False, wait_input=False, boot_wait=False):
         ir, iw = os.pipe(); cr, cw = os.pipe(); rr, rw = os.pipe()
         # Queue the tiny fixture records while our read ends are still open;
         # a stopped guardian may refuse and close its inherited ends at once.
         for flag, fd in zip(ready, (iw, cw)):
             if flag: os.write(fd, b'READY\n')
         mode = '--guard-resumable' if resumable else '--guard'
+        if boot_wait: mode = '--guard-boot-wait-input'
+        elif wait_input: mode += '-wait-input'
+        elif reconnect: mode += '-reconnect'
         p = subprocess.Popen([str(self.binary), mode, TOKEN, str(ir), str(cr), str(rw), str(seconds)],
                              pass_fds=(ir, cr, rw), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         for fd in (ir, cr, rw): os.close(fd)
@@ -76,8 +79,8 @@ class KeyfilterGuardTests(unittest.TestCase):
                 self.run_guard('--lease')
                 if select.select([rr], [], [], .03)[0]: break
         return p, iw, cw, rr
-    def armed(self, seconds=0, *, resumable=False):
-        p, iw, cw, rr = self.spawn(seconds, resumable=resumable)
+    def armed(self, seconds=0, *, resumable=False, reconnect=False, wait_input=False):
+        p, iw, cw, rr = self.spawn(seconds, resumable=resumable, reconnect=reconnect, wait_input=wait_input)
         self.assertTrue(select.select([rr], [], [], 3)[0])
         ack = os.read(rr, 128); os.close(rr)
         self.assertEqual(ack, f'ARMED {TOKEN}\n'.encode())
@@ -231,6 +234,195 @@ int main(void) {
             except BrokenPipeError: break
         s = self.finish(p); self.assertEqual(s['reason'], 'broker_expired')
         self.assertFalse(self.run_guard('--lease')[0]['healthy'])
+    def await_input_reconnect(self):
+        proc, iw, cw = self.armed(reconnect=True)
+        deadline = time.monotonic() + 4
+        while time.monotonic() < deadline:
+            os.write(cw, b'PING\n')
+            status, rc = self.run_guard('--lease')
+            self.assertEqual(rc, 0, status)
+            if status['state'] == 'reconnecting':
+                self.assertFalse(status['healthy'])
+                self.assertFalse(status['stopped'])
+                return proc, iw, cw
+            time.sleep(.15)
+        self.fail('Guardian never suspended routing for input expiry')
+
+    def test_input_expiry_resumes_only_with_fresh_revalidation(self):
+        proc, iw, _ = self.await_input_reconnect()
+        self.assertNotEqual(self.run_guard('--home', TOKEN)[1], 0)
+        os.write(iw, b'PING\nCHECK 1\n')
+        self.assertFalse(self.run_guard('--lease')[0]['healthy'])
+        os.write(iw, ('CHECK %d\n' % (time.clock_gettime_ns(time.CLOCK_MONOTONIC) // 1_000_000)).encode())
+        deadline = time.monotonic() + 1
+        while time.monotonic() < deadline:
+            if self.run_guard('--lease')[0]['healthy']: break
+            time.sleep(.02)
+        else: self.fail('Fresh input validation never restored the route')
+        os.write(iw, b'ESCAPE\n')
+        self.assertEqual(self.finish(proc)['reason'], 'escape')
+
+    def report_missing_input(self, fd):
+        stamp = time.clock_gettime_ns(time.CLOCK_MONOTONIC) // 1_000_000
+        os.write(fd, f'WAIT {stamp}\n'.encode())
+
+    def test_missing_input_keeps_guardian_without_authorizing_home(self):
+        proc, iw, cw = self.armed(wait_input=True)
+        deadline = time.monotonic() + 2.5
+        while time.monotonic() < deadline:
+            self.report_missing_input(iw)
+            os.write(cw, b'PING\n')
+            status, rc = self.run_guard('--lease')
+            self.assertEqual(rc, 0, status)
+            self.assertEqual(status['guardian_pid'], proc.pid)
+            time.sleep(.15)
+        status, rc = self.run_guard('--home', TOKEN)
+        self.assertNotEqual(rc, 0)
+        self.assertEqual(status['state'], 'reconnecting')
+        self.assertFalse(status['healthy'])
+        self.assertFalse((self.root/'luna-calls').exists())
+        # A queued ordinary heartbeat cannot re-arm a removed device.
+        os.write(iw, b'PING\n')
+        self.assertFalse(self.run_guard('--lease')[0]['healthy'])
+        stamp = time.clock_gettime_ns(time.CLOCK_MONOTONIC) // 1_000_000
+        os.write(iw, f'CHECK {stamp}\n'.encode())
+        deadline = time.monotonic() + 1
+        while time.monotonic() < deadline:
+            if self.run_guard('--lease')[0]['healthy']:
+                break
+            time.sleep(.02)
+        else:
+            self.fail('Validated replacement did not resume the original guardian')
+        os.write(iw, b'ESCAPE\n')
+        self.assertEqual(self.finish(proc)['reason'], 'escape')
+
+    def test_confirmed_boot_can_wait_before_first_remote(self):
+        proc, iw, cw, rr = self.spawn(ready=(False, True), broker=False, boot_wait=True)
+        try:
+            self.report_missing_input(iw)
+            deadline = time.monotonic() + 1
+            while not select.select([rr], [], [], .02)[0]:
+                self.assertLess(time.monotonic(), deadline)
+                self.run_guard('--lease')
+            self.assertEqual(os.read(rr, 128), f'SUPERVISED {TOKEN}\n'.encode())
+        finally:
+            os.close(rr)
+        status, rc = self.run_guard('--home', TOKEN)
+        self.assertNotEqual(rc, 0)
+        self.assertEqual(status['state'], 'reconnecting')
+        self.assertFalse(status['healthy'])
+        self.assertEqual(status['guardian_pid'], proc.pid)
+        self.assertFalse((self.root/'luna-calls').exists())
+        stamp = time.clock_gettime_ns(time.CLOCK_MONOTONIC) // 1_000_000
+        os.write(iw, f'CHECK {stamp}\n'.encode())
+        deadline = time.monotonic() + 1
+        while not self.run_guard('--lease')[0]['healthy']:
+            self.assertLess(time.monotonic(), deadline)
+        os.write(iw, b'ESCAPE\n')
+        self.assertEqual(self.finish(proc)['reason'], 'escape')
+
+    def test_queued_escape_prevents_first_activation(self):
+        proc, iw, cw, rr = self.spawn(ready=(False, True), broker=False, wait_input=True)
+        try:
+            deadline = time.monotonic() + 1
+            while self.run_guard('--lease')[0]['guardian_pid'] != proc.pid:
+                self.assertLess(time.monotonic(), deadline)
+            time.sleep(.05)
+            os.write(iw, b'READY\nESCAPE\n')
+            self.assertEqual(self.finish(proc)['reason'], 'escape')
+            self.assertEqual(os.read(rr, 128), b'')
+        finally:
+            os.close(rr)
+
+    def test_first_enable_refuses_wait_before_remote_validation(self):
+        proc, iw, cw, rr = self.spawn(ready=(False, True), broker=False, wait_input=True)
+        try:
+            self.report_missing_input(iw)
+            self.assertEqual(self.finish(proc)['reason'], 'malformed_input')
+            self.assertEqual(os.read(rr, 128), b'')
+        finally:
+            os.close(rr)
+
+    def test_queued_ping_cannot_hide_fresh_device_removal(self):
+        proc, iw, _ = self.armed(wait_input=True)
+        # The reader observed removal while the preceding PING was still queued.
+        stamp = time.clock_gettime_ns(time.CLOCK_MONOTONIC) // 1_000_000 - 100
+        os.write(iw, f'PING\nWAIT {stamp}\n'.encode())
+        deadline = time.monotonic() + .8
+        while self.run_guard('--lease')[0]['healthy']:
+            self.assertLess(time.monotonic(), deadline)
+            time.sleep(.02)
+        os.write(iw, b'ESCAPE\n')
+        self.assertEqual(self.finish(proc)['reason'], 'escape')
+
+    def test_loss_in_same_millisecond_as_check_revokes_pending_grant(self):
+        proc, iw, _ = self.armed(wait_input=True)
+        time.sleep(.03)
+        stamp = time.clock_gettime_ns(time.CLOCK_MONOTONIC) // 1_000_000
+        os.write(iw, f'WAIT {stamp}\nCHECK {stamp}\nWAIT {stamp}\n'.encode())
+        time.sleep(.15)
+        status, _ = self.run_guard('--lease')
+        self.assertEqual(status['state'], 'reconnecting')
+        self.assertFalse(status['healthy'])
+        os.write(iw, b'ESCAPE\n')
+        self.assertEqual(self.finish(proc)['reason'], 'escape')
+
+    def test_input_removed_during_home_request_keeps_guardian(self):
+        proc, iw, cw = self.armed(wait_input=True)
+        (self.root/'root-delay').touch()
+        with subprocess.Popen([str(self.binary), '--home', TOKEN],
+                              stdout=subprocess.PIPE, text=True) as home:
+            deadline = time.monotonic() + 2
+            while not (self.root/'root-entered').exists():
+                self.assertLess(time.monotonic(), deadline)
+                time.sleep(.01)
+            self.report_missing_input(iw)
+            reply = json.loads(home.communicate(timeout=3)[0])
+        self.assertEqual(reply['reason'], 'home_refused')
+        self.assertEqual(reply['state'], 'reconnecting')
+        self.assertFalse(reply['stopped'])
+        self.assertEqual(reply['guardian_pid'], proc.pid)
+        os.write(cw, b'LGHOME\n')
+        self.assertEqual(self.finish(proc)['reason'], 'lg_home')
+
+    def test_hung_reader_still_expires_while_waiting_for_input(self):
+        proc, iw, cw = self.armed(wait_input=True)
+        self.report_missing_input(iw)
+        deadline = time.monotonic() + 4
+        while proc.poll() is None and time.monotonic() < deadline:
+            try:
+                os.write(cw, b'PING\n')
+            except BrokenPipeError:
+                break
+            self.run_guard('--lease')
+            time.sleep(.12)
+        result = self.finish(proc)
+        self.assertEqual(result['reason'], 'input_expired')
+        self.assertTrue(result['stopped'])
+
+    def test_manual_off_while_input_reconnect_is_pending(self):
+        proc, iw, _ = self.await_input_reconnect()
+        self.freeze(proc)
+        restore = subprocess.Popen([str(self.binary), '--restore'], stdout=subprocess.PIPE, text=True)
+        try:
+            deadline = time.monotonic() + 1
+            while not (self.root/'state/stopped').exists() and time.monotonic() < deadline:
+                time.sleep(.01)
+            self.assertTrue((self.root/'state/stopped').exists())
+            os.write(iw, ('CHECK %d\n' % (time.clock_gettime_ns(time.CLOCK_MONOTONIC) // 1_000_000)).encode())
+            self.assertFalse(self.run_guard('--lease')[0]['healthy'])
+        finally:
+            proc.send_signal(signal.SIGCONT)
+            restore.communicate(timeout=5)
+        self.assertEqual(restore.returncode, 0)
+        self.assertEqual(self.finish(proc)['reason'], 'external_stop')
+
+    def test_escape_while_input_reconnect_is_pending(self):
+        proc, iw, _ = self.await_input_reconnect()
+        os.write(iw, b'ESCAPE\n')
+        self.assertEqual(self.finish(proc)['reason'], 'escape')
+        self.assertFalse(self.run_guard('--lease')[0]['healthy'])
+
     def test_trial_expiry(self):
         p, iw, cw = self.armed(1); s = self.finish(p); self.assertEqual(s['reason'], 'trial_expired')
     def test_restore_latches_before_retirement_and_no_rearm(self):
@@ -272,14 +464,30 @@ int main(void) {
     def test_observer_eof_latches(self):
         p, iw, cw = self.armed(); os.close(iw)
         s = self.finish(p); self.assertEqual(s['reason'], 'input_lost'); self.assertTrue(s['stock_verified'])
+        self.assertNotIn('input_timeout_phase', s)
+    def test_input_timeout_before_first_ready(self):
+        (self.root/'luna-reply').write_text('{"returnValue":false}')
+        p, iw, cw, rr = self.spawn(ready=(False, True), broker=False)
+        self.addCleanup(os.close, rr)
+        result = self.finish(p)
+        self.assertEqual(os.read(rr, 128), b'')
+        self.assertEqual(result['reason'], 'ui_release_failed')
+        self.assertEqual(result['input_timeout_phase'], 'waiting-for-ready')
+        self.assertEqual((self.root/'state/outcome').read_text(), f'{TOKEN} input_expired\n')
     def test_stale_input_does_not_get_controller_lease(self):
-        p, iw, cw = self.armed(); deadline = time.monotonic()+2.5
-        while p.poll() is None and time.monotonic()<deadline:
-            time.sleep(.3)
-            try: os.write(cw,b'PING\n')
-            except BrokenPipeError: break
-            self.run_guard('--lease')
+        p, iw, cw = self.armed()
+        # Extend the other channels once. A lease request at the input deadline
+        # can publish its own stop before the guardian records input_expired.
+        time.sleep(.5)
+        os.write(cw, b'PING\n')
+        lease, _ = self.run_guard('--lease')
+        self.assertTrue(lease['healthy'])
         s = self.finish(p); self.assertFalse(s['healthy']); self.assertTrue(s['stopped'])
+        expired, _ = self.run_guard('--lease')
+        self.assertFalse(expired['healthy'])
+        self.assertEqual(s['reason'], 'input_expired')
+        self.assertEqual(s['input_timeout_phase'], 'waiting-for-ping')
+        self.assertEqual((self.root/'state/outcome').read_text(), f'{TOKEN} input_expired\n')
     def test_reused_pid_is_not_signalled(self):
         child = subprocess.Popen(['sleep','10'])
         try:
@@ -366,10 +574,101 @@ int main(void) {
         self.assertEqual(latch.read_text(), f'{TOKEN} explicit_off\n')
         self.assertNotEqual(self.run_guard('--retire-boot', TOKEN)[1], 0)
 
-    def test_emergency_escape_during_system_shutdown_still_vetoes_rearm(self):
+    def test_capabilities_are_static_and_do_not_require_or_change_state(self):
+        before = {p.relative_to(self.root): p.read_bytes()
+                  for p in self.root.rglob('*') if p.is_file()}
+        (self.root/'state/config').unlink()
+        before.pop(Path('state/config'))
+        result, rc = self.run_guard('--capabilities')
+        self.assertEqual(rc, 0)
+        self.assertEqual(result, {'returnValue': True, 'backend': 'c1-native-gate',
+            'routing': 'compositor-keyfilter-v1', 'protocol': 1,
+            'resumable_guard': True, 'boot_retirement': True,
+            'shutdown_probes': ['systemd-is-system-running-v1', 'upstart-shutdown-jobs-v1']})
+        after = {p.relative_to(self.root): p.read_bytes()
+                 for p in self.root.rglob('*') if p.is_file()}
+        self.assertEqual(after, before)
+
+    def test_upstart_shutdown_probe_requires_known_running_jobs_and_is_bounded(self):
+        # Exercise the real bounded subprocess/parser directly without needing
+        # a simulated TV session for every invalid daemon response.
+        source = self.root/'shutdown-probe.c'
+        source.write_text('#define main guardian_main\n#include "'+str(SOURCE)+
+                          '"\n#undef main\nint main(void) { return !normal_shutdown(); }\n')
+        binary = self.root/'shutdown-probe'
+        subprocess.run(['cc', '-std=c11', '-Wall', '-Wextra', '-Werror',
+            '-DCYTV_KEYFILTER_FIXTURE', f'-DFIXTURE_ROOT="{self.root}"',
+            str(source), '-o', str(binary)], check=True, capture_output=True)
+        initctl = self.root/'initctl'
+        def script(body):
+            initctl.write_text('#!/bin/sh\n'+body+'\n')
+            initctl.chmod(0o700)
+        def check(expected):
+            started = time.monotonic()
+            p = subprocess.run([str(binary)], capture_output=True, timeout=2)
+            self.assertEqual(p.returncode, 0 if expected else 1, p.stderr)
+            self.assertLess(time.monotonic()-started, 1.5)
+        check(False)  # Unsupported init system.
+        for job in ('shutdown', 'reboot'):
+            with self.subTest(running_job=job):
+                script('case "$*" in "status '+job+'") echo "'+job+' start/running, process 42" ;; '
+                       '"status shutdown"|"status reboot") echo "${2} stop/waiting" ;; *) exit 4 ;; esac')
+                check(True)
+        script('case "$*" in "status shutdown"|"status reboot") echo "${2} stop/waiting" ;; *) exit 4 ;; esac')
+        check(False)  # Both factory jobs are inactive during normal operation.
+        for reply in ('shutdown stop/waiting', 'shutdown start/starting',
+                      'shutdown start/running', 'shutdown start/running, process 0',
+                      'shutdown start/running, process -1', 'shutdown start/running, process 42 extra',
+                      'shutdown start/running, process 999999999999999999999999999999',
+                      'reboot start/running, process 42', 'shutdown stop/running'):
+            with self.subTest(reply=reply):
+                script('printf "%s\\n" "'+reply+'"')
+                check(False)
+        for body in ('echo "shutdown start/running, process 42"; exit 1',
+                     'printf "shutdown start/running, process 42\\nextra\\n"',
+                     'printf "shutdown start/running, process 42\\000\\n"',
+                     'sleep 5', 'printf "%01000d" 0', 'exit 1'):
+            with self.subTest(body=body):
+                script(body)
+                check(False)
+        script('echo "shutdown start/running, process 42"')
+        initctl.chmod(0o722)
+        check(False)
+        initctl.chmod(0o700)
         systemctl = self.root/'systemctl'
-        probing = self.root/'systemctl-probing'
-        systemctl.write_text('#!/bin/sh\ntouch "'+str(probing)+'"\nsleep .25\nprintf "stopping\\n"\nexit 1\n')
+        for body in ('echo running; exit 0', 'sleep 5', 'exit 1'):
+            systemctl.write_text('#!/bin/sh\n'+body+'\n')
+            systemctl.chmod(0o700)
+            check(False)  # A systemd probe failure must not fall through.
+
+    def test_verified_upstart_shutdown_allows_retirement(self):
+        initctl = self.root/'initctl'
+        initctl.write_text('#!/bin/sh\n[ "$*" = "status shutdown" ] || exit 4\n'
+                           'echo "shutdown start/running, process 42"\n')
+        initctl.chmod(0o700)
+        p, _, _ = self.armed(resumable=True)
+        p.terminate()
+        self.finish(p)
+        self.assertEqual((self.root/'state/stopped').read_text(), f'{TOKEN} normal_shutdown\n')
+        self.assertFalse((self.root/'luna-calls').exists())
+        result, rc = self.run_guard('--retire-boot', TOKEN)
+        self.assertEqual(rc, 0)
+        self.assertEqual(result['reason'], 'normal_shutdown')
+        self.assertEqual(self.run_guard('--restore-routing')[1], 0)
+        self.assertNotEqual(self.run_guard('--retire-boot', TOKEN)[1], 0)
+
+    def test_emergency_escape_during_system_shutdown_still_vetoes_rearm(self):
+        self.shutdown_escape('systemctl', 'stopping', 1)
+
+    def test_emergency_escape_during_upstart_shutdown_still_vetoes_rearm(self):
+        self.shutdown_escape('initctl', 'shutdown start/running, process 42', 0)
+
+    def shutdown_escape(self, command, response, status):
+        systemctl = self.root/command
+        probing = self.root/'shutdown-probing'
+        released = self.root/'shutdown-probe-release'
+        systemctl.write_text('#!/bin/sh\ntouch "'+str(probing)+'"\nwhile test ! -f "'+
+                             str(released)+'"; do sleep .01; done\nprintf "'+response+'\\n"\nexit '+str(status)+'\n')
         systemctl.chmod(0o700)
         p, iw, _ = self.armed(resumable=True)
         p.terminate()
@@ -380,6 +679,7 @@ int main(void) {
         self.assertFalse(self.run_guard('--status')[0]['healthy'])
         self.assertNotEqual(self.run_guard('--home', TOKEN)[1], 0)
         os.write(iw, b'ESCAPE\n')
+        released.touch()
         self.finish(p)
         self.assertEqual((self.root/'state/stopped').read_text(), f'{TOKEN} escape\n')
         self.assertNotEqual(self.run_guard('--retire-boot', TOKEN)[1], 0)
@@ -529,8 +829,12 @@ int main(void) {
             deadline=time.monotonic()+1.5
             while not (self.root/'state/stopped').exists() and time.monotonic()<deadline: time.sleep(.01)
             self.assertTrue((self.root/'state/stopped').exists())
-            # Give restore time to enter retirement waiting. A SIGTERM sent to
-            # the saved PID would be queued while stopped and delivered here.
+            # A reconnect that was already in flight can still write to the
+            # open pipe. Explicit Off must veto that heartbeat under the latch.
+            os.write(iw, b'PING\n')
+            self.assertFalse(self.run_guard('--lease')[0]['healthy'])
+            self.assertNotEqual(self.run_guard('--home', TOKEN)[1], 0)
+            # A SIGTERM sent to the saved PID would be delivered here.
             time.sleep(.15); p.send_signal(signal.SIGCONT)
             s=self.finish(p); self.assertEqual(s['reason'],'external_stop')
             out,_=restore.communicate(timeout=5); result=json.loads(out)

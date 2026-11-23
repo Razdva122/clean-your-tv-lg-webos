@@ -1,5 +1,13 @@
 # Release history and device evidence
 
+- [Embedded LG Home adapter, 2026-11-20](2026-11-20-embedded-home-adapter.md): capability admission, shared C1 recovery and offline W17M proof boundaries.
+- [Issue 152 terminal-service restart loop, 2026-11-20](2026-11-20-issue152-terminal-restart-loop.md): one verified restart covers opaque processes with terminal empty service residue; local reproduction and limits.
+- [Issue 133 recovery and offline compatibility start, 2026-11-20](2026-11-20-issue133-recovery-and-offline-start.md): owner-confirmed cleanup, consistent removal results and matching C3 23.20.54 archive discovery; original installation support remains unresolved.
+
+- [Next candidate preparation, 2026-11-20](2026-11-20-next-candidate-preparation.md): staged PR inventory, integration repairs and focused host verification.
+
+- [Issue 692 cleanup exec budget, 2026-11-20](2026-11-20-issue692-cleanup-exec-budget.md): W19P Node 0.12.2 replay, verified-source streaming and package metadata remnants.
+
 - [Issue 152 service-directory cleanup, 2026-11-19](2026-11-19-issue152-service-cleanup.md): repeated No-root removal after fresh installation, exact SDK ownership replay and remaining device limits.
 
 - [v1.26.0 RC1 verification ledger](2026-11-19-release-1.26.0-rc1-verification.md)

@@ -22,7 +22,7 @@ class RetentionTests(unittest.TestCase):
         self.addCleanup(capture.__exit__,None,None,None)
         self.tmp=tempfile.TemporaryDirectory();self.addCleanup(self.tmp.cleanup)
         self.root=Path(self.tmp.name).resolve()
-        self.stores=[storage.Store(self.root/name,uid=os.getuid()) for name in ('system','legacy')]
+        self.stores=[storage.Store(self.root/name,uid=os.getuid()) for name in ('clean-your-tv-system-updater','legacy')]
         for store in self.stores:
             (Path(store.root)/'cache').mkdir()
             store.write('bootstrap',{'phase':'complete'})
@@ -136,6 +136,114 @@ class RetentionTests(unittest.TestCase):
         device.runtime=runtime
         self.assertEqual(device.finish(tx),{'status':'skipped'})
         self.assertFalse(old.exists());self.assertEqual(self.stores[0].read('transaction')['homeResumePhase'],'aborted')
+
+    def test_cleanup_failure_preserves_the_finalized_update(self):
+        from updater.device import Device
+
+        store = self.stores[0]
+        old = self.package(store, b'obsolete')
+        tx = store.read('transaction')
+        tx.pop('homeResumePhase')
+        store.write('transaction', tx)
+        device = Device(store)
+        device.require_components = lambda: None
+        device.runtime = lambda *args: {'status': 'restored'}
+        with patch.object(storage, 'prune_update_caches', side_effect=OSError('cache unavailable')):
+            self.assertEqual(device.finish(tx), {'status': 'restored'})
+        self.assertTrue(old.exists())
+        self.assertEqual(store.read('transaction')['homeResumePhase'], 'aborted')
+        self.summary('cache-peer', 'filesystem-error', 0)
+
+    def test_root_writer_receipts_allow_forward_and_rollback_sweeps(self):
+        from test_update_core import Device as SimulatedDevice, profile
+        from updater.core import Manager
+        from updater.device import Device
+        from updater.package import SCREENSAVER, companion_journal_name
+
+        system, root = self.stores
+        device = SimulatedDevice()
+        device.store = root
+        updater = Device(root)
+        updater.require_components = lambda: None
+        updater.runtime = lambda *args: {'status': 'skipped'}
+        manager = Manager(root, device)
+        prior = self.package(root, b'prior')
+        candidate = self.package(root, b'candidate')
+        cross = self.package(root, b'referenced only by System')
+        system.write('current-root', {'sha256': cross.name})
+        device.prior['sha256'], device.candidate['sha256'] = prior.name, candidate.name
+
+        def advance(phase):
+            for _ in range(20):
+                tx = manager.run()
+                if tx['phase'] == phase:
+                    return tx
+            self.fail('Root update did not reach ' + phase)
+
+        def companion(tx, rollback):
+            terminal = {'completed': True, 'event': {'details': {'state': 'removed'}}}
+            action = 'remove'
+            if not rollback:
+                terminal['event'] = {'id': SCREENSAVER, 'statusValue': 30, 'details': {
+                    'packageId': SCREENSAVER, 'client': 'com.webos.lunasend-123',
+                    'ipkFile': '/var/lib/clean-your-tv-installer/cytv-root-install-test/package.ipk',
+                }}
+                action = 'install'
+            root.write(companion_journal_name(tx, rollback), {
+                'identity': {'action': action, 'version': '0.0.1', 'sha256': 'c'*64},
+                'terminal': terminal,
+            })
+
+        old = self.package(root, b'obsolete after forward update')
+        manager.install(device.candidate['version'], profile())
+        tx = advance('verifying')
+        companion(tx, False)
+        manager.ready(tx['id'], device.candidate['version'])
+        manager.confirm(tx['id'], device.candidate['version'])
+        self.assertEqual(updater.finish(advance('complete')), {'status': 'skipped'})
+        self.assertFalse(old.exists())
+        self.assertTrue(all(blob.exists() for blob in (prior, candidate, cross)))
+        self.assertEqual(manager.status()['homeResumePhase'], 'complete')
+
+        old = self.package(system, b'obsolete after rollback')
+        manager.rollback()
+        tx = advance('verifying-rollback')
+        companion(tx, True)
+        manager.ready(tx['id'], device.prior['version'])
+        self.assertEqual(updater.finish(advance('rolled-back')), {'status': 'skipped'})
+        self.assertFalse(old.exists())
+        self.assertTrue(all(blob.exists() for blob in (prior, candidate, cross)))
+        self.assertEqual(manager.status()['homeResumePhase'], 'rolled-back')
+
+    def test_receipt_shapes_stay_conservative_with_old_transactions(self):
+        system, root = self.stores
+        transaction = 'b'*32
+        ready_name = 'ready-rollback-' + transaction
+        companion_name = 'screensaver-rollback-' + transaction
+        ready = {'transaction': transaction, 'version': '1.0.0', 'at': 1000}
+        terminal = {'completed': True, 'event': {'details': {'state': 'removed'}}}
+        receipt = {'identity': {'action': 'remove', 'version': '0.0.1', 'sha256': 'd'*64},
+                   'terminal': terminal}
+        old = self.package(system, b'obsolete')
+        root.write(ready_name, ready)
+        root.write(companion_name, receipt)
+        for name, valid, bad in (
+            (ready_name, ready, dict(ready, transaction='c'*32)),
+            (ready_name, ready, dict(ready, version='unknown')),
+            (ready_name, ready, dict(ready, at=True)),
+            (companion_name, receipt, dict(receipt, terminal=None)),
+            (companion_name, receipt, dict(receipt, terminal={'completed': True})),
+            (companion_name, receipt, dict(receipt, identity={'action': 'remove'})),
+        ):
+            with self.subTest(name=name, bad=bad):
+                root.write(name, bad)
+                self.assertEqual(self.prune(), 0)
+                self.assertTrue(old.exists())
+                root.write(name, valid)
+        self.assertEqual(self.prune(), 1)
+        self.assertFalse(old.exists())
+        self.assertEqual(root.read(ready_name), ready)
+        self.assertEqual(root.read(companion_name), receipt)
 
     def test_latest_transaction_candidate_and_prior_remain_available(self):
         candidate=self.package(self.stores[0],b'candidate');prior=self.package(self.stores[0],b'prior')

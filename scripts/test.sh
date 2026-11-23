@@ -130,6 +130,7 @@ if on_shard 3; then
 fi
 if on_shard 2; then
 node root-edition/service/test-c1-filter.cjs
+node --test tests/embedded-home.cjs
 node root-edition/service/test-c1-lease.cjs
 node root-edition/service/test-audio-recovery.cjs
 node root-edition/service/test-handlers.js

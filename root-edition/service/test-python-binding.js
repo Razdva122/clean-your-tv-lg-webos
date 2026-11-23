@@ -75,10 +75,23 @@ vm.runInNewContext(fs.readFileSync(__dirname + '/../python_boot.js', 'utf8'), {
   }
 });
 const helper = helperModule.exports;
+const bootstrapArgs = [
+  'node',
+  'bootstrap-node.js',
+  '--',
+  'pid',
+  'roles',
+  'service'
+];
+const serviceProcess = { getuid: () => 0, argv: bootstrapArgs };
 vm.runInNewContext(fs.readFileSync(__dirname + '/service.js', 'utf8'), {
   require(name) {
     if (name === 'webos-service')
       return function () {
+        assert.deepEqual(Array.from(serviceProcess.argv), [
+          ...bootstrapArgs,
+          '--disable-activity-creation'
+        ]);
         this.register = function () {};
       };
     if (name === './handlers') {
@@ -95,8 +108,9 @@ vm.runInNewContext(fs.readFileSync(__dirname + '/service.js', 'utf8'), {
     return require(name);
   },
   __dirname,
-  process: { getuid: () => 0 }
+  process: serviceProcess
 });
+assert.strictEqual(serviceProcess.argv, bootstrapArgs);
 (async () => {
   assert.equal(helper.command(state), '/usr/bin/python3');
   files[executable] = 'verified-python';

@@ -157,6 +157,49 @@ class StartupHealthTests(unittest.TestCase):
         self.assertFalse(health.path('route-a').exists())
         emergency.recover.assert_called_once_with('route-a','input_lost')
 
+    def test_confirmed_wait_withholds_input_health_and_reattaches_without_routing(self):
+        stop=threading.Event();ready=threading.Event();errors=[]
+        thread=self.supervisor('route-a',stop,ready,errors)
+        pipe=[]
+        def observer(args,**kw):
+            self.assertIn('--recover-profile-input',args)
+            child=Observer(kw['pass_fds'][0],b'READY\nPING\n')
+            pipe.append(child.fd)
+            return child
+        def wait_state(state):
+            until=time.monotonic()+1
+            while time.monotonic()<until:
+                if health.load('route-a')['state']==state:return
+                time.sleep(.01)
+            self.fail('Observer did not enter '+state)
+        with patch.object(emergency.subprocess,'Popen',side_effect=observer):
+            thread.start()
+            try:
+                self.assertTrue(ready.wait(1))
+                os.write(pipe[0],('WAIT %d\n'%int(time.monotonic()*1000)).encode())
+                wait_state('waiting-input')
+                with self.assertRaises(ValueError):health.require_fresh('route-a')
+                self.assertTrue(self.case.store.read()['enabled'])
+                self.assertTrue(self.case.target.exists())
+                os.write(pipe[0],('CHECK %d\nPING\n'%int(time.monotonic()*1000)).encode())
+                wait_state('active');health.require_fresh('route-a')
+            finally:stop.set();thread.join(3)
+        self.assertEqual(errors,[])
+        emergency.recover.assert_not_called()
+
+    def test_unconfirmed_trial_cannot_defer_activation_on_a_live_rescan(self):
+        intent=dict(self.case.intent,phase='trial',enabled=False)
+        self.case.store._save(intent)
+        stop=threading.Event();ready=threading.Event();errors=[]
+        frame=('WAIT %d\n'%int(time.monotonic()*1000)).encode()
+        thread=self.supervisor('route-a',stop,ready,errors,frame)
+        thread.start();thread.join(3)
+        self.assertFalse(thread.is_alive())
+        self.assertFalse(ready.is_set())
+        self.assertFalse(health.path('route-a').exists())
+        self.assertEqual(len(errors),1)
+        emergency.recover.assert_called_once_with('route-a','supervisor_error')
+
     def test_missing_guardian_pulse_stops_before_input_and_preserves_reserve(self):
         journal=d.safe_json(self.case.root/'profile-trial.json');journal['deadline']=60;d.save(journal)
         now=[0.0]

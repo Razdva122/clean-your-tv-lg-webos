@@ -235,7 +235,7 @@ const inventory = require('../../root-edition/service/app-inventory');
     ),
     {
       __dirname: __dirname,
-      process: { getuid: () => 0 },
+      process: { getuid: () => 0, argv: [] },
       Promise,
       require(name) {
         if (name === 'webos-service')

@@ -240,7 +240,7 @@
           callback(null);
           return;
         }
-        callback(reply.blocked && !reply.running);
+        callback(reply.blocked && !reply.running, reply.running);
       });
     }
     function confirmStart(onStart, onReply) {

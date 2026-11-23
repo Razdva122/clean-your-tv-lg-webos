@@ -63,6 +63,16 @@ def create_report(store, action, profile, phase, error=None, tv_info=None, *, ch
     if removal and removal.get('recovery_protocol')=='clean-removal-v1':
         from .recovery_state import removal_summary
         report['removal']=removal_summary(removal)
+        # Only this successful observation may promote the saved summary. Retained
+        # receipts alone still require readback and never authorize more effects.
+        current = context.mapping(status)
+        if (pending is None and error is None and action in ('uninstall', 'recover')
+                and removal.get('stage') == 'verified-clean'
+                and removal.get('removal_reason') == 'removal-verified'
+                and all(current.get(key) is True for key in
+                        ('removed', 'verified_clean', 'private_cleanup_verified'))
+                and current.get('restart_required') is not True):
+            report['removal'].update(state='verified-clean', reason='removal-verified')
     from .failure_help import for_error, report_summary, network_failure_causes
     help = for_error(error, phase, profile, pending)
     if help:
@@ -97,9 +107,10 @@ def create_report(store, action, profile, phase, error=None, tv_info=None, *, ch
         driver=root_driver_details(getattr(error,'root_driver',None))
         if driver:report['root_driver']=driver
     from .errors import root_beta_repair_details
-    beta_repair = root_beta_repair_details(getattr(error, 'root_beta_repair_failure', None))
-    if beta_repair:
-        report['root_beta_repair_failure'] = beta_repair
+    for key in ('root_beta_repair_failure', 'root_retained_repair_failure'):
+        detail = root_beta_repair_details(getattr(error, key, None))
+        if detail:
+            report[key] = detail
     if action == phase == 'home-diagnostics':
         stage = context.choice(getattr(error, 'home_diagnostic_stage', None),
                                ('start-upload', 'log-read', 'start-unacknowledged'), None)
@@ -197,6 +208,9 @@ def issue_draft(report):
         'Reason: ' + reason,
         'Last verified outcome: ' + summary['outcome'],
     ]
+    if summary['home_check_failed']:
+        subject += ' (home button check failed)'
+        lines.append('Home button check: failed')
     for label, item in (('Earlier failure', summary['earlier']), ('Later observation', summary['later'])):
         if item:
             observation = item['action'] + ' at ' + item['phase']
@@ -301,7 +315,8 @@ def collect_home_report(remote, store, profile, write, *, reconnect=None, ask=No
     )
     records = {}
     triggers = {'started', 'resumed', 'power', 'sample', 'home', 'launch-request', 'launch-result',
-                'launch-timeout', 'foreground', 'startup-foreground', 'monitor', 'monitor-reset', 'expired', 'stopped'}
+                'launch-timeout', 'foreground', 'startup-foreground', 'foreground-windows',
+                'monitor', 'monitor-reset', 'expired', 'stopped'}
     monitors = {'starting', 'reset', 'screen-watch-connected', 'screen-watch-unavailable',
                 'screen-watch-error', 'screen-watch-disconnected'}
     started = complete = announced = False
@@ -367,6 +382,18 @@ def collect_home_report(remote, store, profile, write, *, reconnect=None, ask=No
                         'Request Active Standby', 'Prepare Active Standby'):
                     clean['powerState'] = item['powerState']
                 clean['foregroundSource'] = 'subscription-cache'
+                if clean['trigger'] == 'foreground-windows':
+                    windows = item.get('windows')
+                    if type(clean.get('time')) is not int or not isinstance(windows, list):
+                        continue
+                    clean['windows'] = []
+                    for window in windows[:16]:
+                        if not isinstance(window, dict):
+                            continue
+                        app_id, window_type = window.get('appId'), window.get('windowType')
+                        if (isinstance(app_id, str) and re.fullmatch(r'[a-zA-Z0-9_.-]{1,256}', app_id)
+                                and isinstance(window_type, str) and re.fullmatch(r'[a-zA-Z0-9_]{1,64}', window_type)):
+                            clean['windows'].append({'appId': app_id, 'windowType': window_type})
                 records[line] = clean
                 started = started or clean['trigger'] in ('started', 'resumed')
                 complete = complete or clean['trigger'] == 'expired'

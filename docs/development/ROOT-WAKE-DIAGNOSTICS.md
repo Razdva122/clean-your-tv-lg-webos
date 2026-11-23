@@ -7,7 +7,24 @@ boot/wake launch requests and added configurable native startup choices; see
 [the current native contract](ROOT-NATIVE-INPUT.md). Historical device outcomes
 below are retained with their original scope.
 
-## Late standby after loss of the input device (#702)
+## Confirmed Home and temporary input loss (#702)
+
+The persistent profile observer keeps its private pipe open when webOS removes
+the validated remote. A timestamped waiting report says the observer completed
+another check for input. This keeps the independent watchdog supervising the
+same process without granting fresh input authority. Once the remote is back,
+the observer validates its identity, capabilities, and key state before resuming
+normal heartbeats. A new device cannot complete a gesture started on the old one.
+A missing power-off event is immaterial to this path.
+
+Explicit Off and emergency release still revoke the saved Home choice. Stalled
+scans, observer process death and invalid input still enter fault recovery.
+Previously disabled profiles remain disabled. The reporting G3 on v1.25.0
+recorded an hour ending in Screen Saver and then an abrupt end to capture.
+The trace contains neither the device-removal event nor the final power state.
+[Owner's capture](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/702#issuecomment-7075992218).
+
+### Late standby after loss of the input device (#702)
 
 On the maintainer C3, firmware 43.21.71, a stock power subscription observed
 Request Power Off, Request Active Standby, Prepare Active Standby and Active
@@ -15,7 +32,7 @@ Standby over 464 ms. This capture had no running Root observer. The reporter's
 G3 reached observer recovery without valid shutdown evidence, and the next
 startup preserved the resulting disabled intent.
 
-An active input read returning ENODEV now reports device removal to the
+In v1.25.0 an active input read returning ENODEV reported device removal to the
 watchdog. Without shutdown proof already recorded before the read failed,
 recovery verifies the stock Home profile without waiting for a new systemd
 query. Only a complete firmware sequence for the same transaction and

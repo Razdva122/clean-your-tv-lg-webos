@@ -15,6 +15,8 @@ if (
     /^[IS][a-f0-9]{32}$/.test(params.nativeHomeSetup))
 ) {
   var start = { nativeHomeAuto: params.nativeHomeAuto === true };
+  if (start.nativeHomeAuto && params.nativeHomeBoot === true)
+    start.nativeHomeBoot = true;
   if (typeof params.nativeHomeSetup === 'string')
     start.nativeHomeSetup = params.nativeHomeSetup;
   else if (!start.nativeHomeAuto && params.nativeHomeStart === true) {

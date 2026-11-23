@@ -6,6 +6,7 @@ import http.client
 import io
 import json
 import os
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
@@ -439,14 +440,20 @@ class SSH:
                         from .errors import root_driver_details, root_restore_failure_details, root_beta_repair_details
                         reply=json.loads(b''.join(output))
                         if isinstance(reply,dict) and reply.get('returnValue') is False:
+                            retry = reply.get('retained_retry_attempt')
+                            if (set(reply) == {'returnValue', 'retained_retry_attempt'} and type(retry) is list
+                                    and len(retry) == 2 and retry[0] != retry[1]
+                                    and all(isinstance(item, str) and re.fullmatch('[a-f0-9]{32}', item) for item in retry)):
+                                error._retained_retry_attempt = tuple(retry)
                             detail=root_driver_details(reply.get('root_install_failure'),keep_attempt=True)
                             if detail:error._root_driver_failure=detail
                             detail = root_restore_failure_details(reply.get('root_restore_failure'))
                             if detail:
                                 error.root_restore_failure = detail
-                            detail = root_beta_repair_details(reply.get('root_beta_repair_failure'))
-                            if detail:
-                                error.root_beta_repair_failure = detail
+                            for key in ('root_beta_repair_failure', 'root_retained_repair_failure'):
+                                detail = root_beta_repair_details(reply.get(key))
+                                if detail:
+                                    setattr(error, key, detail)
                     except (ValueError, TypeError, RecursionError):pass
                 # Root's historic <=4096 parser above remains independent.
                 from .contract_events import export_events, record, envelope_failure

@@ -21,6 +21,7 @@ RUNTIME_FILES = ('bounded_profile_trial.py', 'cli.py', 'update_guard.py', 'devic
                  'staged_publication.py', 'transport.py', 'emergency_gesture.py', 'emergency_reader.py',
                  'emergency_watchdog.py', 'emergency_trial.py', 'persistent_lifecycle.py',
                  'boot_gate.py', 'shutdown_state.py', 'persistent_health.py', 'persistent_lease.py', 'persistent_store.py', 'persistent_recovery.py', 'intent_runtime.py')
+BETA_MIGRATION_SCRIPT = 'beta_startup_migration.py'
 SUPPORT_FILES = ('installation.py', 'updater/store.py', 'updater/package.py', 'setup.py', 'deploy.py', 'provision.py', 'observed_install.py', 'installer_status.py', 'personalize.py', 'system_permissions.py', 'activity.py', 'startup_hook.py','package_data.py','package_identity.py','startup_guard.py', 'python_binding.py', 'python_boot.js')
 
 
@@ -83,12 +84,17 @@ def verify_bundle(bundle, allow_experimental=False):
     if experimental and routing:
         expected.remove('runtime/c1-home-gate')
         expected.update(('runtime/c1-keyfilter-guard', 'runtime/c1_keyfilter.py', 'runtime/c1-home-filter.js'))
+        embedded = {'runtime/' + name for name in ('embedded_home.py', 'embedded-home.qml', 'embedded-home.js')}
+        if embedded & set(manifest.get('files', {})):
+            expected.update(embedded)
         if 'runtime/c1-home-gate' in manifest.get('files',{}):
             expected.add('runtime/c1-home-gate')  # Removal-only schema-1 executor; never fresh install routing.
         capabilities = release.get('capabilities')
         base = ['theme-receiver-v1', 'wallpaper-media-v1']
         contracts = [base + ['c1-keyfilter-v1']]
         if LEGACY_NODE_BETA:
+            if BETA_MIGRATION_SCRIPT in manifest.get('files', {}):
+                expected.add(BETA_MIGRATION_SCRIPT)
             contracts.append(base + ['c1-keyfilter-v2'])
         if capabilities not in contracts:
             raise ValueError('Invalid compositor routing capabilities')
@@ -282,6 +288,8 @@ def install(bundle, run=command, observe=observed_install, migrate=False, experi
     if experimental_c1_gate:
         compositor = release.get('routing') == 'compositor-keyfilter-v1'
         extras = ('c1_gate.py','c1_keyfilter.py','c1-home-filter.js') if compositor else ('c1_gate.py',)
+        if compositor and 'runtime/embedded_home.py' in manifest['files']:
+            extras += ('embedded_home.py', 'embedded-home.qml', 'embedded-home.js')
         for name in extras:
             target = STATE / 'runtime' / name
             target.write_bytes(checked_file(Path(bundle).resolve(), 'runtime/' + name)); target.chmod(0o600)

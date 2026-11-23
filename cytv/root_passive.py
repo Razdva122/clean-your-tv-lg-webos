@@ -260,10 +260,13 @@ BETA_PROGRAM = READERS + r'''
   var launch=sample(runner,4096);
   var leaseRaw=sample('/var/lib/clean-your-tv-installation/operation.json',65536);
   var lease=leaseRaw?parse(leaseRaw):null;
+  var migrationRaw=sample(root+'/beta-startup-migration.json',1024*1024);
+  var migration=migrationRaw?parse(migrationRaw):null;
   var startupRaw=sample(root+'/recovery-service.json',65536);
   var startup=startupRaw?parse(startupRaw):null;
   out={
    status:'read',
+   startup_migration:!migrationRaw?'missing':migration&&migration.schema===1?migration.phase:'unknown',
    deployment_stage:stage&&stage.app==='com.cleanyourtv.root.preview'?
     stage.stage:'unknown',
    runner:launch?classify(sha(launch.bytes)):'missing',
@@ -296,6 +299,7 @@ def beta_summary(value):
         return result
     file_states = ('original', 'patched', 'other', 'missing')
     for key, allowed in (
+            ('startup_migration', ('prepared', 'writing', 'published', 'complete', 'rolled-back', 'missing', 'unknown')),
             ('deployment_stage', ('provision-finalize-starting', 'installed-recovery-only', 'unknown')),
             ('runner', file_states), ('pending_proof', file_states), ('ready_proof', file_states),
             ('activity_receipt', ('present', 'missing')), ('startup_hook_receipt', ('present', 'missing')),
