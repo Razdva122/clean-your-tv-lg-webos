@@ -636,3 +636,109 @@ completed successfully. The trusted candidate verifier pinned source
 `63a96a2bb19b4236ec15437868ff160b2d73d8f4`. The Android and offline B9
 observations above use the exact selected artifact bytes. Stable hardware
 acceptance remains unset pending the signed C3 cases.
+
+At 18:43:44 UTC+05:00 the pinned commit dispatched the
+[private System signing run](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/45186783420).
+The successful run's artifact ZIP matched
+`daea3e036e49f1132343f5a089966e574460b57abaab2a0e108f356637558923`.
+Local verification with the production public key checked the exact
+build provenance, all four variants, catalog signature and package
+hashes. Catalog SHA-256 is
+`3a41af18d11522de989d8426f83587177bb50f74180325d279a893a89fbcb94f`.
+Engine 1.2.16 SHA-256 is
+`7200e8ac7c133b24ff0228d3411a84cfe94954d8722a7f9cb4ad72c6efd79fb2`.
+The bundled System IPK 1.2.11 is byte-identical to the published baseline.
+
+#### C3 No-root observations
+
+At 18:47–18:49 UTC+05:00, the signed v1.26.0 to v1.27.0 No-root
+forward operation completed on OLED55C3RLA (43.21.71 / SDK 11.2.0,
+Magic Remote model unknown, macOS ARM64 installer). The active engine
+1.2.16 and original System IPK 1.2.11 verified through the ordinary LS2
+status method. Home 1.20.7 is
+`cc2b2aa5f6924ee9523d635cab6fcd166d73670859807a30444af59d5d36b500`;
+Home Updater 0.6.6 is
+`791b0a63527bf1334ff79e54d83a06a40a333a31532cdddd139a32a6a2b68d11`.
+Network HOME from Media Player briefly entered LG Home and settled on
+Clean Your TV. Both exported settings and configuration matched the
+real English baseline.
+
+At 18:49–18:50, the same-IPK signed Repair produced a new real
+app-install terminal on the other verified engine slot and preserved
+the original product journal. The Romanian selection made through
+the running Home language picker rendered after Repair. The Romanian
+preference and captured settings and configuration matched the
+pre-Repair export.
+
+At 18:51, the normal Home setting confirmed explicit Off, persisted
+the false preference, and paired network HOME from Media Player
+settled on LG Home. On a fresh Home open, the normal status and
+switch did not become available for re-enable. The Helper status
+service reported not running and no Stop latch. Process readback
+still found the recorded controller PID, and the scoped journal
+showed a later relay-exit event. The cause is under investigation.
+No-root diagnostics, physical standby/escape and rollback are listed
+as outstanding until exercised against this artifact.
+
+At 18:56–18:57 the verified software restart reset uptime and removed a
+unique temporary marker. The normal settings panel read the retained Off
+choice and accepted explicit On. Paired network HOME again settled on
+Clean Your TV from Media Player. The first fresh-panel re-enable failure
+remains recorded. A single control repeat from this recovered state is
+justified to separate a repeatable Off-to-On transition failure from the
+observed unavailable control broker after the first Off. The repeat
+uses the same installed bytes and requires no reinstall or receipt edits.
+
+RC4-08 completed on the final Home 1.20.7 and Helper 0.9.4. The
+three-minute export completed with four populated foreground-window
+records, each with the bounded app ID and window type fields. During
+capture, paired network HOME from Media Player reached and stayed
+on Clean Your TV. The reporter's original webOS 4.5 YouTube scenario
+remains deferred to matching hardware.
+
+The controlled Off-to-On repeat reproduced the unavailable switch
+after explicit Off. LG Home routing and the saved Off choice were
+verified. A second software restart restored the ordinary On action
+for the independent physical tests. This repeat confirms a usable
+re-enable failure on the selected C3 package before restart. The
+mechanism and extent across other preconditions are open. At 19:00:13
+the final No-root package was active with Media Player in front, ready
+for the Magic Remote standby, Home and emergency escape checks.
+
+The No-root physical request was issued with the final package and a
+confirmed Media Player starting state. The owner was not observed
+performing the sequence before the 19:07 handoff to required rollback
+and the independent Root cases. Passive records showed a screen-saver
+cycle while the TV stayed Active, with Media Player still foreground.
+There is no physical evidence for No-root standby or triple-Home in
+this window. The case stays selected and requires physical input on
+the final artifact. The owner was asked to wait before further input.
+
+The signed No-root rollback completed at 19:07–19:08, retained the
+verified engine slot and restored working Home from Media Player.
+The rendered English settings and configuration exactly matched the
+published baseline export. Before removing that restored edition,
+one matching control comparison on the rolled-back Home and Helper
+isolates whether the new No-root package bytes are required for the
+Off-to-On failure. This uses the already available package state.
+
+The comparison after rollback reproduced the same unavailable
+Off-to-On switch with published Home 1.20.5 and Helper 0.9.3. The
+signed rollback kept engine 1.2.16. This comparison therefore shows
+the symptom with both package sets under that test state, and leaves
+the behavior with the original 1.2.14 bootstrap and fresh standalone
+install undetermined.
+
+The ordinary RC4 installer began full No-root removal. It required
+the previously saved Root connection for this installation. The Root
+handoff re-used the removal flow and reached its expected
+restart-required state. A verified software restart reset uptime and
+removed the unique temporary marker before retrying the same removal.
+
+At 19:13 the retained removal continuation reached
+`verified-completion`, with `removed` and `verified_clean` both true.
+Media Player remained available and paired network HOME settled on
+stock LG Home. This covers the selected ordinary No-root removal and
+Root connection handoff. The Root-installed cleanup case remains
+separate. The published v1.26.0 Root installer passed its published
+checksum and was started after this clean-state readback.
