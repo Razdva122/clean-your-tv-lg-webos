@@ -564,7 +564,7 @@ class SourceInventorySyncTests(unittest.TestCase):
         self.assertEqual(files['brand-v2-icon.png'], b'bundled')
         self.assertEqual(files['icons/beta.png'], b'tv-b')
         self.assertEqual(files['icons/common.png'], b'common-b')
-        apps = json.loads(files['apps.js'].split(b'window.TV_APPS = ', 1)[1].rstrip(b';\n'))['apps']
+        apps = json.loads(files['apps.js'].split(b'window.TV_APPS = ', 1)[1].rstrip(b';\r\n'))['apps']
         self.assertEqual([app['id'] for app in apps], ['beta', 'common'])
         self.assertFalse((self.launcher / 'icons/alpha.png').exists())
 
