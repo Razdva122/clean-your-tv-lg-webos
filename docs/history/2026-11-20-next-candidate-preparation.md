@@ -508,3 +508,38 @@ The author's [latest #739 report](https://github.com/Razdva122/clean-your-tv-lg-
 did not confirm resolution, and the issue is closed. RC4 carries the verified
 bench recovery improvement. The reported post-reboot and removal outcomes
 remain unverified.
+
+### First full RC4 run and CI corrections
+
+[Run 45174994655](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/45174994655)
+started at 17:30:40 UTC+05:00 on 2026-11-23 from `aeef4ca7`. Windows
+host testing found a generated inventory fixture parser that left a semicolon
+before CRLF. The signed Android APK matched its expected hash; its emulator
+failed to discover the AVD before installation. Forced CRLF reproduced the
+Windows error. The fixture fix passed forced CRLF and all 37 related tests.
+The shared runner-local AVD path passed local discovery, YAML and shell
+validation, and nine CI profile tests. Independent review found no blockers.
+[#801](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/801) merged
+at 17:56:47 with the maintainer's instruction to start the replacement without
+waiting for the outstanding jobs. The guarded test/workflow changes require a
+replacement run. The verified Helper archive and the pre-dispatch approval
+remain applicable. No final build pin or hardware acceptance has been recorded.
+
+The project C3 was returned to published v1.26.0 No-root for the selected
+signed forward/Repair/rollback tests. The ordinary macOS ARM64 installer
+verified Home 1.20.5 and Helper 0.9.3. The first System preparation stopped
+at setup while Home Updater was absent; read-only status confirmed no
+supervisor, and ordinary status reconciled the receipt. Installed the
+authenticated Home Updater 0.6.4 with a matching backend terminal. The
+ordinary setup retry completed System Updater 1.2.11, with no pending
+operation. Paired network HOME from Media Player settled on Clean Your TV.
+The existing Romanian setting from RC2 was unsupported by the older Home's
+profile export. English was selected through the published language picker,
+and the actual rendered profile was captured privately for the forward test.
+
+The nine selected acceptance IDs remain open pending the verified replacement.
+The B9 lab's retained factory executables were absent, so the exact official
+W19H 05.50.00 archive is being restored. The Android test setup matched the
+published code 52 and development code 53 hashes and signer and started an
+isolated ARM64 API 35 emulator. These checks establish preconditions for the
+remaining artifact-bound cases.

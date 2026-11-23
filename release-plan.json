@@ -276,6 +276,11 @@
         702
       ],
       "summary": "Keep Root and No-root Home enabled across input loss"
+    },
+    {
+      "pr": 801,
+      "issues": [],
+      "summary": "Fix Windows and Android release verification fixtures"
     }
   ],
   "excluded": [],
