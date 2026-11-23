@@ -393,7 +393,7 @@
       cancel();
       callback(apps, installedIds);
     }
-    function read(fallback) {
+    function read(fallback, retried) {
       var request = ++generation;
       cancel();
       function failed() {
@@ -423,6 +423,17 @@
                 ? result.installedIds
                 : undefined
             );
+          else if (
+            fallback &&
+            !retried &&
+            result &&
+            result.returnValue === false &&
+            result.errorText === 'Home Helper did not respond' &&
+            result.diagnostic &&
+            result.diagnostic.component === 'home' &&
+            ['ENOENT', 'TIMEOUT'].indexOf(result.diagnostic.code) !== -1
+          )
+            read(true, true);
           else failed();
         };
         // A cross-package LS2 refusal need not block the existing native reader.
