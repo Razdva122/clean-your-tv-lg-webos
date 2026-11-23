@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "id": "github:axistem-dev/neon86-theme:neon86",
+  "title": "Neon '86",
+  "description": "Original 80s synthwave look: chrome-and-neon clock, electric cyan outlines with a hot pink glow, monospace labels and neon horizon lines. Two original wallpapers: a striped sun over a neon grid (4K) and a night art-deco Ocean Drive (1080p).",
+  "author": {
+    "name": "aXistem",
+    "sourceProfile": "https://github.com/axistem-dev"
+  },
+  "sourceRepository": "https://github.com/axistem-dev/neon86-theme",
+  "sourceCommit": "30c46483024959e1d94ea126f082ed9e3efd1535",
+  "descriptorUrl": "https://raw.githubusercontent.com/axistem-dev/neon86-theme/d30df13125d947d8a637bf32ec3a4de659ca9f86/releases/neon86/1.1.0/cytv-theme.json",
+  "descriptorSha256": "6aa6148fcf4f3aba6c7ad173d64a9dc5f85eaed4971915d42a3262ef0340dd11",
+  "themeVersion": "1.1.0",
+  "themeApiVersion": 1,
+  "license": "CC-BY-4.0",
+  "creditsFile": "assets/axistem-dev--neon86-theme--neon86/6aa6148fcf4f3aba6c7ad173d64a9dc5f85eaed4971915d42a3262ef0340dd11/CREDITS.txt",
+  "previewFiles": [
+    "assets/axistem-dev--neon86-theme--neon86/6aa6148fcf4f3aba6c7ad173d64a9dc5f85eaed4971915d42a3262ef0340dd11/assets/sunset/preview.jpg"
+  ],
+  "tags": [
+    "dark",
+    "colorful"
+  ],
+  "addedAt": "2026-11-23",
+  "reviewedAt": "2026-11-23",
+  "evidence": [
+    {
+      "kind": "device",
+      "summary": "Same CSS and Sunset wallpaper installed with Receive from computer and used as the active theme on the author's LG TV (No-root, Home 1.20.7)."
+    }
+  ]
+}
