@@ -59,11 +59,13 @@ function harness({
   memory = new Map(),
   iconStatus = 200,
   iconPath = 'icons/one.png',
-  i18n = false
+  i18n = false,
+  systemRpc
 } = {}) {
   const calls = [],
     scripts = [],
-    errors = [];
+    errors = [],
+    events = new Map();
   if (saved !== null)
     memory.set(
       data.key,
@@ -102,7 +104,16 @@ function harness({
       }
     };
   }
+  if (systemRpc)
+    window.SystemUpdates = {
+      rpc(method, payload) {
+        calls.push(['system:' + method, payload]);
+        return systemRpc(method, payload);
+      }
+    };
   const document = {
+    addEventListener: (name, handler) => events.set(name, handler),
+    removeEventListener: (name) => events.delete(name),
     body: {
       appendChild: (s) => {
         scripts.push(s);
@@ -143,9 +154,40 @@ function harness({
     fs.readFileSync(__dirname + '/root-profile.js', 'utf8'),
     ctx
   );
-  return { window, calls, scripts, errors, memory };
+  return { window, calls, scripts, errors, memory, events };
 }
 (async () => {
+  let systemRestore;
+  const reopened = harness({
+    saved: profile,
+    i18n: true,
+    systemRpc: async () => {
+      if (systemRestore === undefined)
+        throw Object.assign(Error('System updater unavailable'), {
+          unavailable: true
+        });
+      return systemRestore;
+    }
+  });
+  await tick();
+  assert.strictEqual(reopened.scripts.length, 1);
+  systemRestore = {
+    profile,
+    transaction: 'ota',
+    version: '0.0.1',
+    phase: 'complete'
+  };
+  reopened.events.get('webOSRelaunch')?.();
+  await tick();
+  assert(!reopened.calls.some(([method]) => method === 'reload'));
+  systemRestore.phase = 'verifying';
+  reopened.events.get('webOSRelaunch')?.();
+  await tick();
+  assert(
+    reopened.calls.some(([method]) => method === 'reload'),
+    'a Root launcher reopened by an active System update restarts profile validation'
+  );
+  assert(!reopened.calls.some(([method]) => method === 'system:healthy'));
   const starting = harness();
   await tick();
   await assert.rejects(

@@ -137,6 +137,7 @@
     function boot(restored) {
       if (booted) return;
       booted = true;
+      if (!systemRestore && window.SystemUpdates) watchForSystemRestore();
       window.RootLauncherRendered = false;
       var script = document.createElement('script');
       script.src = 'app.js';
@@ -201,6 +202,30 @@
         else rendered();
       };
       document.body.appendChild(script);
+    }
+    function watchForSystemRestore() {
+      var checking = false;
+      document.addEventListener('webOSRelaunch', function check() {
+        if (checking || failed) return;
+        checking = true;
+        window.SystemUpdates.rpc('restoreProfile', { edition: 'root' })
+          .then(function (pending) {
+            if (
+              pending &&
+              pending.transaction &&
+              pending.version === window.ROOT_VERSION &&
+              ['verifying', 'verifying-rollback'].indexOf(pending.phase) >= 0
+            ) {
+              // The updater can reopen a CARD that already rendered from its local profile.
+              document.removeEventListener('webOSRelaunch', check);
+              window.location.reload();
+            }
+          })
+          .catch(function () {})
+          .then(function () {
+            checking = false;
+          });
+      });
     }
     var saved = null,
       localError = null;

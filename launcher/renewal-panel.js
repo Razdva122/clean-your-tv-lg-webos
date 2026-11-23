@@ -334,10 +334,19 @@
             return;
           }
         }
-        function unavailable(stopped) {
+        function unavailable(stopped, running) {
           renderHome(reply);
+          var diagnostic = reply && safeDiagnostic(reply.diagnostic);
+          var brokerUnavailable =
+            diagnostic &&
+            diagnostic.component === 'home' &&
+            ((diagnostic.operation === 'wait' &&
+              diagnostic.code === 'TIMEOUT') ||
+              (diagnostic.operation === 'read' &&
+                diagnostic.code === 'ENOENT'));
           // Offer the confirmed start action even when status is unknown.
-          homeStart.hidden = stopped === false;
+          homeStart.hidden =
+            stopped === false && !(running === false && brokerUnavailable);
           homeStart.disabled = false;
           homeVisit.disabled = stopped === true;
           homeRetry.hidden = stopped === true;
@@ -349,12 +358,12 @@
           return;
         }
         var generation = homeGeneration;
-        HomeHelper.checkStopped(function (stopped) {
+        HomeHelper.checkStopped(function (stopped, running) {
           if (generation !== homeGeneration) return;
           if (homeStatusRetries) {
             homeBusy = false;
             refreshHome();
-          } else unavailable(stopped);
+          } else unavailable(stopped, running);
         });
       });
     }

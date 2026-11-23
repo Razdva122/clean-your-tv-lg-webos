@@ -21,6 +21,9 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8876';
       window.helperStopped = false;
       window.helperStarting = false;
       window.helperStatusAvailable = true;
+      window.helperStopLatched = true;
+      window.homeChoice = null;
+      window.homeBrokerFailure = null;
       window.PalmServiceBridge = function () {
         this.cancel = () => clearTimeout(this.timer);
         this.call = (uri, data) => {
@@ -50,7 +53,7 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8876';
               if (!helperStatusAvailable)
                 r = { returnValue: false, errorCode: -1 };
               else {
-                r.blocked = helperStopped;
+                r.blocked = helperStopped && helperStopLatched;
                 r.running = !helperStopped;
               }
             } else if (
@@ -65,11 +68,18 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8876';
                 helperStarting = false;
               }, 1750);
             } else if (uri === 'luna://com.gathin.tvhome.renewal/homeStatus') {
-              if (helperStopped) r.returnValue = false;
-              else
-                r.enabled = calls.some(
-                  (call) => call.p.id === 'com.local.nativehome'
-                );
+              if (helperStopped) {
+                r.returnValue = false;
+                if (homeBrokerFailure) r.diagnostic = homeBrokerFailure;
+              } else
+                r.enabled =
+                  homeChoice ??
+                  calls.some((call) => call.p.id === 'com.local.nativehome');
+            } else if (
+              uri === 'luna://com.gathin.tvhome.renewal/setHomeControl'
+            ) {
+              homeChoice = p.enabled;
+              r.enabled = homeChoice;
             } else if (
               uri === 'luna://com.gathin.tvhome.renewal/screensaverStatus'
             ) {
@@ -203,6 +213,46 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8876';
       await page.reload();
       await page.locator('#tiles .item').first().waitFor();
     }
+    // A broker without its Helper must permit explicit recovery of the saved Off state.
+    await page.evaluate(() => {
+      homeChoice = false;
+      helperStopped = true;
+      helperStopLatched = false;
+      homeBrokerFailure = {
+        component: 'home',
+        operation: 'wait',
+        code: 'BUSY'
+      };
+    });
+    await page.locator('#btnSettings').click();
+    await page.locator('[data-category=home]').click();
+    const homePane = page.locator('#settings-pane-home');
+    const retryHome = homePane.getByRole('button', { name: 'Try again' });
+    const startHelper = homePane.getByRole('button', { name: 'Start Helper' });
+    const homeSwitch = homePane.locator('#homeRoutingToggle');
+    await retryHome.waitFor();
+    assert(await startHelper.isHidden());
+    await page.evaluate(() => {
+      homeBrokerFailure.code = 'TIMEOUT';
+    });
+    await retryHome.click();
+    await startHelper.waitFor({ timeout: 3000 });
+    assert(await homeSwitch.isDisabled());
+    assert(await page.evaluate(() => !helperStarting && helperStopped));
+    await startHelper.click();
+    await page
+      .locator('#homeConfirmation')
+      .getByRole('button', { name: 'Start Helper' })
+      .click();
+    await homePane
+      .locator('#homeRoutingToggle[role=switch][aria-checked=false]')
+      .waitFor();
+    await homeSwitch.click();
+    await homePane
+      .locator('#homeRoutingToggle[role=switch][aria-checked=true]')
+      .waitFor();
+    await page.reload();
+    await page.locator('#tiles .item').first().waitFor();
     await page.locator('#btnSettings').click();
     await page.locator('[data-category=developer]').click();
     await page
