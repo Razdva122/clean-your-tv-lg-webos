@@ -1528,7 +1528,92 @@ class OperationTests(unittest.TestCase):
         self.assertFalse(any('setup-updater.py --device' in c or 'deploy.py install' in c for c in commands))
         self.assertLess(commands.index(install),next(i for i,c in enumerate(commands) if c.endswith(' enable')))
         self.assertTrue(result['updates_ready'])
+        self.assertTrue(remote.uploads)
+        self.assertTrue(all(path.startswith('/tmp/cytv-') for path in remote.uploads))
         self.assertTrue(any(c[0] == 'luna' and c[1] == 'com.cleanyourtv.root.updater.service/status' for c in remote.calls))
+
+    def ramfs_remote(self, *, fail=None, unsafe=False, full=False, low_ram=False):
+        remote = Remote(fail=fail)
+        original = remote.run
+        def run(command, data=None, timeout=30):
+            if command == "LC_ALL=C stat -f -c '%t' /tmp":
+                return '858458f6'
+            if command == 'LC_ALL=C df -Pk /tmp':
+                return 'Filesystem 1024-blocks Used Available Capacity Mounted on\nramfs 0 0 0 0% /tmp'
+            if command == "LC_ALL=C stat -f -c '%t' /var/lib":
+                return 'ef53'
+            if command == 'LC_ALL=C cat /proc/meminfo':
+                return 'MemAvailable: '+('1' if low_ram else '1048576')+' kB\n'
+            if 'CYTV_ROOT_STAGE_READY' in command:
+                return '' if unsafe else 'CYTV_ROOT_STAGE_READY'
+            if full and command == 'LC_ALL=C df -Pk /var/lib':
+                return 'Filesystem 1024-blocks Used Available Capacity Mounted on\n/dev/test 10000000 9999999 1 100% /shared'
+            return original(command, data=data, timeout=timeout)
+        remote.run = run
+        return remote
+
+    def test_root_ramfs_install_stages_product_on_disk_and_coordinator_in_tmp(self):
+        from cytv.root_staging import ROOT
+        self.root_bundle()
+        remote = self.ramfs_remote()
+        result = self.installer(remote, 'root').install(self.inventory)
+        self.assertTrue(result['updates_ready'])
+        self.assertTrue(remote.uploads)
+        self.assertTrue(all(path.startswith((ROOT+'/cytv-product-', '/tmp/cytv-coordinator-')) for path in remote.uploads))
+        self.assertTrue(any(path.startswith(ROOT+'/cytv-product-') for path in remote.uploads))
+        self.assertTrue(any(path.startswith('/tmp/cytv-coordinator-') for path in remote.uploads))
+        self.assertFalse(any(path.startswith('/tmp/cytv-coordinator-') and path.endswith('.ipk') for path in remote.uploads))
+        nested = [call[1] for call in remote.calls if call[0] == 'run' and 'mkdir -p' in call[1]]
+        self.assertTrue(nested)
+        self.assertTrue(all(command.startswith('umask 077; mkdir -p ') for command in nested))
+
+    def test_root_ramfs_install_failure_retains_private_product_receipt(self):
+        from cytv.root_staging import ROOT
+        self.root_bundle()
+        remote = self.ramfs_remote(fail='updater')
+        installer = self.installer(remote, 'root')
+        with self.assertRaises(UserError):
+            installer.install(self.inventory)
+        pending = self.store.pending(installer.profile)
+        self.assertEqual(pending['action'], 'install')
+        self.assertRegex(pending['product_operation'], '^[a-f0-9]{32}$')
+        self.assertTrue(pending['product_payload'].startswith(ROOT+'/cytv-product-'))
+        self.assertTrue(any(path.startswith(pending['product_payload']+'/') for path in remote.uploads))
+        self.assertFalse(any(call[0] == 'run' and call[1].endswith(' enable') for call in remote.calls))
+
+    def test_root_ramfs_upload_interruption_records_support_stage_before_first_byte(self):
+        from cytv.root_staging import ROOT
+        self.root_bundle()
+        remote = self.ramfs_remote()
+        installer = self.installer(remote, 'root')
+        seen = []
+        def fail_upload(path, data, mode=0o600):
+            pending = self.store.pending(installer.profile)
+            seen.append((path, pending))
+            raise OSError('upload interrupted')
+        remote.upload = fail_upload
+        with self.assertRaisesRegex(OSError, 'upload interrupted'):
+            installer.install(self.inventory)
+        self.assertEqual(len(seen), 1)
+        path, pending = seen[0]
+        self.assertTrue(pending['support_upload'].startswith(ROOT+'/cytv-product-'))
+        self.assertTrue(path.startswith(pending['support_upload']+'/'))
+        self.assertNotIn('product_payload', pending)
+        self.assertEqual(self.store.pending(installer.profile), pending)
+
+    def test_root_ramfs_unsafe_or_full_storage_refuses_before_upload_or_receipt(self):
+        self.root_bundle()
+        for options, reason in (({'unsafe': True}, 'tv-storage-unavailable'),
+                                ({'full': True}, 'tv-storage-full'),
+                                ({'low_ram': True}, 'tv-storage-full')):
+            with self.subTest(options=options):
+                remote = self.ramfs_remote(**options)
+                installer = self.installer(remote, 'root')
+                with self.assertRaises(UserError) as caught:
+                    installer.install(self.inventory)
+                self.assertEqual(caught.exception.reason_code, reason)
+                self.assertEqual(remote.uploads, {})
+                self.assertIsNone(self.store.pending(installer.profile))
 
     def test_updater_failure_keeps_receipt_and_never_activates(self):
         for failure in ('updater', 'updater-service'):

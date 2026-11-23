@@ -767,7 +767,7 @@ def main():
     import json
     import subprocess
     from pathlib import Path
-    from install_device import LocalDevice, checked_store
+    from install_device import LocalDevice, checked_store, support_stage_path
     from installation import STATE
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('action',choices=('inspect','install','native-install','status','restore','remove','activate','clean-remove','clean-status','clean-target'))
@@ -805,7 +805,7 @@ def main():
             result=coordinator.removal_target(args.operation)
         elif args.action=='clean-remove':
             if args.payload is None:parser.error('clean-remove requires current verified support')
-            if any(not re.fullmatch(r'/tmp/cytv-product-[a-f0-9]{32}',path) for path in args.retire_stage):
+            if any(not support_stage_path(path,'product') for path in args.retire_stage):
                 raise ValueError('invalid_cleanup_support_stage')
             device.previous_stages=args.retire_stage
             device.helper_fence=json.loads(args.helper_fence) if args.helper_fence is not None else None

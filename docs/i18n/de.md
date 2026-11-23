@@ -70,6 +70,8 @@ Wähle im Desktop-Installationsprogramm nach erfolgreicher Verbindungsprüfung *
 
 Wenn der Installer anbietet, die aktuelle Home-Integration zu ersetzen, bestätigen Sie nur, wenn Sie LG Home wiederherstellen und die Root-Installation fortsetzen möchten. Wenn Sie ablehnen, bleibt das aktuelle Home aktiv.
 
+Bei der Root-Einrichtung verwendet der Installer bei Bedarf automatisch geprüften internen Zwischenspeicher; ein USB-Laufwerk ist nicht erforderlich, und wenn die Speicherprüfung fehlschlägt, behalten Sie die Wiederherstellungsdaten und speichern Sie einen Diagnosebericht.
+
 ## 5. Fernbedienung prüfen
 
 1. Öffnen Sie eine andere TV-App und drücken Sie kurz **Home**. Clean Your TV sollte erscheinen. Geben Sie im Assistenten Ihre Beobachtung an; überspringen Sie den Test, wenn Sie ihn nicht durchgeführt haben.

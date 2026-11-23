@@ -25,6 +25,7 @@ APP='com.cleanyourtv.root.preview'
 BUS=Path('/var/luna-service2-dev')
 INIT=Path('/var/lib/webosbrew/init.d')
 TEMP=Path('/tmp')
+PRIVATE_TEMP=Path('/var/lib/clean-your-tv-root-staging')
 SUPPORT_STAGE=re.compile(r'cytv-(?:product|coordinator|system-updater|c1-root|root-tail)-[a-f0-9]{32}')
 
 
@@ -53,6 +54,29 @@ def checked_store(path, uid=0):
     # Read-only inspection must never provision a state directory.
     store=Store.__new__(Store);store.root=str(path);store.uid=uid
     return store
+
+
+def support_stage_path(path, kind=None):
+    path=Path(path)
+    return (path.parent in (TEMP,PRIVATE_TEMP) and SUPPORT_STAGE.fullmatch(path.name) is not None
+            and (kind is None or re.fullmatch('cytv-'+re.escape(kind)+'-[a-f0-9]{32}',path.name) is not None))
+
+
+def support_stages(uid=0):
+    stages=[path for path in TEMP.iterdir() if SUPPORT_STAGE.fullmatch(path.name)]
+    if os.path.lexists(PRIVATE_TEMP):
+        directory=checked_store(PRIVATE_TEMP,uid)._directory()
+        try:
+            info=os.fstat(directory)
+            if info.st_uid!=uid or info.st_mode & 0o777 != 0o700:
+                raise ValueError('unsafe_private_support_directory')
+            for name in os.listdir(directory):
+                if not SUPPORT_STAGE.fullmatch(name):raise ValueError('unclassified_private_support')
+                path=PRIVATE_TEMP/name
+                os.close(checked_store(path,uid)._directory())
+                stages.append(path)
+        finally:os.close(directory)
+    return stages
 
 
 def sha(raw): return hashlib.sha256(raw).hexdigest()
@@ -1097,8 +1121,7 @@ class LocalDevice:
         except UnicodeError:return False
         if len(argv)<4 or argv[0] not in (sys.executable,os.path.realpath(sys.executable)) or argv[1]!='-B':return False
         driver=Path(argv[2]);stage=driver.parent
-        if (driver.name!='install_driver.py' or stage.parent!=TEMP
-                or not re.fullmatch(r'cytv-coordinator-[a-f0-9]{32}',stage.name)):return False
+        if (driver.name!='install_driver.py' or not support_stage_path(stage,'coordinator')):return False
         readonly=argv[3:] in (['inspect'], ['inspect', '--for-install'])
         if (len(argv) in (6,7) and argv[3:5]==['status','--operation']
                 and re.fullmatch(r'[a-f0-9]{32}',argv[5])
@@ -1114,7 +1137,7 @@ class LocalDevice:
                      for kind,suffix in (('applications',''),('services','.renewal' if app=='com.gathin.tvhome' else '.service')))
         paths.extend(Path(item['path']) for item in record.get('archives',[]))
         paths.extend(Path(item['path']) for item in record.get('support_stages',[]))
-        paths.extend(path for path in TEMP.iterdir() if SUPPORT_STAGE.fullmatch(path.name))
+        paths.extend(support_stages(self.ownership.store.uid))
         if helpers_only:
             paths=[INSTALLED/'usr/palm'/kind/(app+suffix) for app in ('com.local.nativehome','com.gathin.tvhome')
                    for kind,suffix in (('applications',''),('services','.service'),('services','.renewal'))]
@@ -1161,8 +1184,8 @@ class LocalDevice:
     def has_untracked_support(self, record):
         # Shared /tmp can contain interrupted uploads from any installer run.
         tracked = {item['path'] for item in record.get('support_stages', [])}
-        return any(SUPPORT_STAGE.fullmatch(path.name) and str(path) not in tracked and path != self.payload
-                   for path in TEMP.iterdir())
+        return any(str(path) not in tracked and path != self.payload
+                   for path in support_stages(self.ownership.store.uid))
 
     def routing_untouched(self, record):
         """Prove absence of CYTV routing effects, independently of firmware APIs."""

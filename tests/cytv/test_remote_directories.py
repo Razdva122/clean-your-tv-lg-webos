@@ -6,14 +6,18 @@ import shlex
 import tempfile
 import unittest
 from unittest.mock import patch
-from cytv import operations, state
+from cytv import operations, package, state
 
 
 class RemoteTree:
     def __init__(self):
         self.directories={'/','/tmp'};self.uploads=set();self.stage=None
     def run(self,command,**kwargs):
-        if command.startswith('umask 077; mkdir '):
+        if command == "LC_ALL=C stat -f -c '%t' /tmp":return 'ef53'
+        if command.startswith('LC_ALL=C df -Pk '):
+            return 'Filesystem 1024-blocks Used Available Capacity Mounted on\n/dev/test 10000000 0 10000000 0% /shared'
+        if command.startswith('umask 077; mkdir -p '):directory=shlex.split(command)[-1]
+        elif command.startswith('umask 077; mkdir '):
             directory=shlex.split(command)[-1];self.stage=directory
         elif command.startswith('mkdir -p '):directory=shlex.split(command)[-1]
         elif 'CYTV_SYSTEM_ROOT_READY' in command:return 'CYTV_SYSTEM_ROOT_READY'
@@ -42,7 +46,7 @@ class RemoteDirectoryTests(unittest.TestCase):
             payload=Path(temporary).resolve()
             bundle(payload/'root',{'deploy.py':b'# deploy','runtime/native/helper':b'helper'})
             bundle(payload/'root-updater',{'install_driver.py':b'# driver','system_updater/support/core.py':b'# core','root-updater.ipk':b'ipk'})
-            bundle(payload/'system-updater',{'setup-system-updater.py':b'# setup','system-updater.ipk':b'ipk','system_updater/support/core.py':b'# core'},schema=1,supervisor=1)
+            bundle(payload/'system-updater',{'setup-system-updater.py':b'# setup','system-updater.ipk':package.ipk('com.cleanyourtv.system.updater', '0.0.1', {'usr/palm/applications/com.cleanyourtv.system.updater/appinfo.json': b'{}'}),'system_updater/support/core.py':b'# core'},schema=1,supervisor=1)
             expected={
                 'coordinator_code':{'install_driver.py','system_updater/support/core.py','bundle.json'},
                 'upload_product':{'root/deploy.py','root/runtime/native/helper','root/bundle.json','root-updater/install_driver.py','root-updater/system_updater/support/core.py','root-updater/root-updater.ipk','root-updater/bundle.json'},
