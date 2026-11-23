@@ -16,7 +16,9 @@
     var data = window.RootProfileData,
       failed = false,
       booted = false,
-      systemRestore = false;
+      systemRestore = false,
+      relaunchPending = false,
+      relaunchReading = false;
     var marker = 'tvhome.root.restored.v1';
     function recovery(error) {
       failed = true;
@@ -201,6 +203,37 @@
         else rendered();
       };
       document.body.appendChild(script);
+      if (relaunchPending) checkSystemRelaunch();
+    }
+    function checkSystemRelaunch() {
+      if (!window.SystemUpdates || systemRestore || failed) return;
+      if (!booted || relaunchReading) {
+        relaunchPending = true;
+        return;
+      }
+      relaunchPending = false;
+      relaunchReading = true;
+      pendingAttempts = 0;
+      pendingTransaction = null;
+      systemProfile()
+        .then(function (pending) {
+          if (
+            pending &&
+            pending.transaction &&
+            pending.version === window.ROOT_VERSION &&
+            ['verifying', 'verifying-rollback'].indexOf(pending.phase) >= 0
+          ) {
+            // The updater can reopen a CARD that already rendered from its local profile.
+            relaunchPending = false;
+            document.removeEventListener('webOSRelaunch', checkSystemRelaunch);
+            window.location.reload();
+          }
+        })
+        .catch(function () {})
+        .then(function () {
+          relaunchReading = false;
+          if (relaunchPending) checkSystemRelaunch();
+        });
     }
     var saved = null,
       localError = null;
@@ -298,6 +331,7 @@
         }
       );
     }
+    document.addEventListener('webOSRelaunch', checkSystemRelaunch);
     restore()
       .then(function (restored) {
         if (restored) {
