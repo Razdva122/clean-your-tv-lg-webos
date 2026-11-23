@@ -289,10 +289,11 @@
     }
   ],
   "excluded": [],
-  "acceptance": "",
+  "acceptance": "Project LG OLED55C3RLA (firmware 43.21.71, SDK 11.2.0) passed signed forward, same-IPK Repair, rollback, profile and Home routing in both editions. Magic Remote, standby/wake and emergency LG Home exit passed in both editions. Root sound and AC cold boot passed. No-root diagnostics and clean removal passed. The prior verified Root removal applies to matching cleanup inputs. The exact Android APK passed and the final B9 bundle matches the passing offline replay. Other-model physical checks remain explicitly deferred. [Final nine-case ledger](docs/history/2026-11-20-next-candidate-preparation.md#final-replacement-nine-case-reconciliation).",
   "build": {
     "run_id": 45208179247,
     "attempt": 2,
     "source": "b76e871e4e73cbba476241dbb96aba5fe554441f"
-  }
+  },
+  "acceptance_build": "45208179247:2"
 }

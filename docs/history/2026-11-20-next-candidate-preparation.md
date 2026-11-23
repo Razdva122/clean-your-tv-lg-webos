@@ -912,3 +912,180 @@ The two aggregate jobs inherited that failure. Attempt 2 requeued
 only those checks on the reviewed source. Successful jobs were retained.
 
 Both attempts of the focused PR validation are retained at [45199897498](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/45199897498). The replacement package inputs were frozen after the successful retry.
+
+#### Replacement build and protected signing
+
+All timings use UTC+05:00 on 2026-11-23. The
+[replacement full build](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/45208179247)
+started at 20:42:15 from `b76e871e4e73cbba476241dbb96aba5fe554441f`.
+At 21:07 the hosted macOS runner failed to acquire runtime shard 3.
+The status summaries and full-release aggregate failed on that missing
+result. All four installer builds succeeded. At 21:21 their artifacts
+were retained while the missing shard and dependent aggregates reran.
+Attempt 2 succeeded and the build was pinned at 21:34.
+
+The
+[protected signature run](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/45217980068)
+completed at 21:36. At 21:41 its 13-file archive verified against the
+pinned build, its macOS installer archive and the production public key.
+The ZIP SHA-256 is
+`40f05423243ec64236d89304237961de12c90bbc545266280f43a4670157dad2`
+and the signed catalog SHA-256 is
+`736d457e8f75de3f4e04ef59d6b4c291a5fd69b9b025dbbf6acefb28eb39c2d9`.
+All four package variants verified. The built-in System IPK 1.2.11
+matched the published baseline, and engine 1.2.16 matched the previously
+verified digest.
+
+The exact production-signed Android 0.23.1 code 54 APK
+(`3301e05303c10ed2125551b1a75f676517e1b2d20952546c0c62d456d8ae514f`)
+passed clean installation, the packaged installer bridge and normal
+upgrades from codes 52 and 53 on the isolated ARM64 API 35 emulator.
+Both upgrades preserved four seeded files and passed Store readback.
+The final macOS ARM64 archive authenticated all 53 embedded B9 files.
+They matched the two passing offline factory-Node/LS2 scenarios file
+for file, including bundle SHA-256
+`27c1f8ee0e8d13b2b03a683719d2cf36e332dd7f53af3a31073397542b6317d7`.
+Physical B9 acceptance remains deferred by the maintainer.
+
+#### Replacement C3 No-root acceptance
+
+The project OLED55C3RLA used firmware 43.21.71 / SDK 11.2.0 and the
+macOS ARM64 installer. The exact Magic Remote model is unknown.
+The baseline was the published active Home 1.20.5, Helper 0.9.3,
+Home Updater 0.6.4 and the built-in System 1.2.14 engine. At 21:35,
+paired network HOME from Media Player reached the published No-root
+Home, and a new rendered profile matched the prepared baseline.
+
+At 21:41–21:44 signed forward and same-IPK Repair completed with
+engine 1.2.16 and the original System IPK 1.2.11. The actual English
+source profile's settings and configuration survived forward.
+Romanian was selected from the candidate's language picker. It
+finished reloading before Repair. Repair produced a new real
+own-package terminal on the other slot with an unchanged product
+journal. Romanian rendered afterward and settings and configuration
+matched the pre-Repair capture. Paired network HOME from Media Player
+reached the expected No-root destination after both operations.
+Home 1.20.7 SHA-256 is
+`a09f087101e25d9daa896ca0606a5098b6745bfd71a8bde4a5d6bc3611605d48`.
+Helper 0.9.4 retains digest
+`b0020d1ae15b71737297c7dfdfa592a67da5d348beaf5d5356920ed71e53ff59`.
+
+The explicit Off choice persisted through a new app open and network
+HOME settled on LG Home. The No-root Home settings showed known Off
+and the broker confirmed it. Explicit On then worked without a TV
+restart, and network HOME settled on Clean Your TV. The target
+unavailable-broker state did not recur on this trial. The regression
+fixture separately exercises confirmed Start Helper and retained Off.
+At 21:46, the bounded final-package diagnostic capture completed
+with four populated foreground-window records. Network HOME worked
+during capture. No raw diagnostics or household information are
+included. The Media Player handoff for the physical controls and
+standby followed.
+
+At 21:48 the maintainer confirmed the selected Magic Remote checks
+succeeded. The check covered volume +/−, normal Power standby and
+wake with mains connected, a single physical Home opening Clean
+Your TV, and the three-press emergency exit. Independent readback
+confirmed LG Home in the foreground and the Helper emergency stop
+latch present. The ordinary Home Helper panel offered Start Helper.
+After its confirmation, paired network HOME again opened Clean Your
+TV from Media Player.
+
+At 21:49 the requested signed rollback reached the matching
+`rolled-back` terminal, retained the accepted engine slot and restored
+published Home. Paired HOME from Media Player returned to it, and
+the rendered settings and configuration matched the actual
+pre-update English profile.
+
+#### Replacement C3 Root acceptance
+
+At 21:50–21:53 the replacement macOS installer used the saved Root
+connection to finish ordinary No-root removal. The required software
+restart reset uptime and removed a unique temporary marker. The
+resumed removal returned verified clean, Media Player remained
+available and network HOME opened LG Home.
+
+The v1.26.0 macOS installer matched its published checksum and
+installed the active Root 0.23.0 baseline. Paired HOME from Media
+Player opened Root Home before System Updater setup and capture.
+The published System IPK 1.2.11 used its built-in engine 1.2.14.
+
+At 21:57–22:00 the signed Root operation reached the required terminal.
+The 0.24.1 launcher rendered with the System profile marker at
+22:00:17. The updater accepted readiness and resumed active Root Home
+by 22:00:40, within its deadline and without automatic rollback.
+Network HOME from Media Player opened Root Home. The restored settings
+and configuration matched the real baseline. Root 0.24.1 SHA-256 is
+`af56f9a5af5293028333694332c3be6b6fe2bda559b9b61e525787f403ea8650`.
+
+At 22:01–22:03 the same-IPK Repair verified a new own-package
+terminal on the other signed slot. The original product journal
+stayed unchanged. The selected Romanian rendered afterward, and its
+captured settings and configuration matched. Explicit Off recorded
+disabled intent and network HOME reached LG Home. Explicit On
+recorded active intent and restored Root Home. Media Player was
+foregrounded with Root active and a unique cold-boot proof recorded
+before the remaining Magic Remote and audio checks.
+
+The maintainer confirmed the Root physical pass at 22:11. Sound
+worked on the selected source. Root Home opened from a physical Home
+press after both ordinary Power standby/wake and an unplugged cold
+start. The three-press exit returned to LG Home. Independent readback
+confirmed lower uptime, disappearance of the unique temporary marker,
+disabled Root intent and LG Home in front. This firmware reported
+the same boot ID before and after; cold-start evidence uses the
+observed AC procedure, uptime and temporary marker.
+
+The ordinary Root settings re-enabled Change Home after the safety
+stop. Persistent intent was active and paired HOME reached Root
+Home before the rollback request. At 22:15 the signed rollback
+completed and kept the accepted engine on the Repair slot. The
+published Root 0.23.0, Root Updater 0.6.4 and System IPK 1.2.11
+were read back from their installed application manifests. The
+rendered settings and configuration matched the actual published
+English source profile. Active intent and paired network HOME
+from Media Player confirmed the restored Root route.
+
+The earlier ordinary Root removal result is carried from
+[RC4 build 45179501341:1](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/45179501341)
+after its rollback to published Root 0.23.0, whose IPK digest is
+`f68ac968ba674bf244a98ac93da4860b43b402721719247025658ef4ddd9ce2c`.
+The earlier clean removal verified a software restart, Media
+Player survival and stock Home. The verified CLI ZIPs
+`111eb3b91fa89b2cd8087291427a6e8ed282ffac5be0776caa140922d75f6791`
+and
+`e019ad5dd90cec9a7206f91396337f5ed6917c656e24453af8cd6f6c6d932fef`
+had identical frozen installer entry points and all 63 relevant frozen
+installer/Root/System modules. For example, the embedded operations
+module SHA-256 was
+`7eb18c7cb027d68c7f56514985eea10e8eb4a9907e4d9d5a514525d4ef6218b4`.
+The restored published package, accepted engine and System IPK match
+the prior cleanup inputs. The changed launcher scripts were exercised
+in the replacement's forward, Repair and routing cases. Ordinary
+No-root removal was observed on the replacement.
+
+#### Final replacement nine-case reconciliation
+
+The [original plan](#rc4-selected-acceptance-cases) and its added
+[RC4-09 case](#additional-rc4-acceptance-coverage) remain the selected
+inventory. The observations above bind the replacement to build
+`45208179247:2` and protected signing run `45217980068`.
+
+| Case | Disposition |
+| --- | --- |
+| RC1-01 | Both signed forward operations retained the actual published English profiles. Both same-IPK Repair operations retained and rendered the selected Romanian profiles. The published paths did not have Romanian support. |
+| RC1-02 | Signed forward, same-IPK Repair and requested rollback passed in both editions with the authenticated engine, selected IPK and usable restored Home. |
+| RC1-03 | Root automatically resumed after signed forward. Network HOME and physical sound, standby/wake, AC cold boot, and triple-Home exit passed on C3. The W20H retained-receipt hardware subcase remains deferred. |
+| RC1-04 | Both passing B9 offline replays apply to the exact 53-file embedded bundle. Physical B9 is explicitly deferred. |
+| RC1-05 | Replacement No-root clean removal, verified restart and LG Home readback passed. The ordinary Root removal from restored published Root is carried with matching cleanup inputs and the previously verified C3 restart and readback. |
+| RC1-06 | Exact production-signed Android APK passed clean installation, the packaged desktop bridge and both retained-data upgrades. |
+| RC4-07 | The maintainer explicitly deferred the embedded LG Home physical case to an eligible device. C3 has System Profile and cannot exercise this path. |
+| RC4-08 | The replacement C3 diagnostic capture retained routing and included four populated window records. The original legacy webOS 4.5 YouTube behavior remains deferred. |
+| RC4-09 | Both editions verified explicit Off and On, and the maintainer verified physical standby/wake and emergency escape on the pinned packages. No-root volume controls worked. The original inactivity-driven G3 subcase remains deferred. |
+
+Nine selected cases are reconciled. Seven passed with replacement
+device or emulator evidence, including the one carried Root removal
+subcheck. One passed with exact-bundle offline evidence and a final
+file-for-file binding. One whole case is explicitly deferred. No
+selected independent C3 case remains untested or blocked. The scoped
+other-model deferrals are recorded above and remain user testing.
