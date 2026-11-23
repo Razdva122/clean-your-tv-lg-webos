@@ -428,3 +428,83 @@ refused connections, Root Home handoff and unavailable themes. Existing
 localized anchors were preserved. Records and release versions are kept
 outside the translations. Hardware claims still depend on the selected
 acceptance cases.
+
+## RC4 input recovery integration
+
+The maintainer requested the extra integration at 14:15:31 UTC+05:00 on
+2026-11-22. [#790](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/790)
+merged as `10e366a6` at 14:17:33 after its focused CI and explicit approval
+to take the PR out of draft. [#796](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/796)
+merged as `d805389a` at 17:07:58 on 2026-11-23 after
+[its selected CI](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/45006539797)
+passed. The merged tree matches the locally rehearsed integration tree.
+
+The combined macOS ARM64 build on 2026-11-22 verified 634 TV payload files and
+all four System sets. Home and Root app IPKs, both Updaters, and the System
+engine match the first RC4 preparation. Helper 0.9.4 and Root infrastructure
+0.24.1 changed. The unpublished RC4 component versions are retained. The
+macOS CLI and GUI verified payload and runtime. The GUI also passed the
+offscreen smoke test. The sandbox blocked the CLI bootloader's semaphore;
+the same binary passed the checks outside the sandbox. Android staging
+verified all 634 entries. Three focused suites on the combined source passed
+109 Root activation and recovery tests. The 13 updated localized guides
+retain their previous anchors and cover input reconnection; developer
+guides describe the changes to the relay and Root wake behavior.
+
+### Current RC4-P00 probe inputs
+
+These replace the earlier RC4 probe bytes for the same case ID. Published
+Home and the previous Helper remain the authenticated v1.26.0 inputs above.
+
+| Input | SHA-256 |
+| --- | --- |
+| Helper 0.9.4 IPK | `b0020d1ae15b71737297c7dfdfa592a67da5d348beaf5d5356920ed71e53ff59` |
+| Helper 0.9.4 canonical archive | `4f5f70daa3d2b0a6c78ab91692478149c5fd3685eccfc81d76aa03d2972b50a7` |
+| Root infrastructure 0.24.1 | `1186cee5471a9d245fa4543bb1a69318e8dfb55caa3bfc1b98213546590fae38` |
+
+TV QA handoff was 17:06:14 UTC+05:00 on 2026-11-23. Paired SSAP and saved
+Root SSH succeeded. The project OLED55C3RLA reports firmware 43.21.71,
+SDK 11.2.0 and Node 20.12.2. It starts in No-root on Home 1.20.6 and
+Helper 0.9.3, with no pending installer operation. This case requires
+the new exact Helper archive with published Home 1.20.5 because neither
+the current installation nor the older RC4 probe covers the changed
+Helper/controller/relay. Reuse the signed published baseline and recover
+through the ordinary installer if needed.
+
+### Additional RC4 acceptance coverage
+
+Keep the original cases and the W20H retained-state scope of RC1-03.
+RC4-09 covers the changed input-loss path from #796. On the pinned
+artifacts, verify both editions retain the confirmed Home choice and
+reconnect physical input across a standby/wake or actual device recreation,
+with explicit Off, emergency Stop and unrelated controls still working.
+Run the project-device routing and physical checks on the admitted C3 path.
+The G3 report also needs its original inactivity-driven cycle on matching
+hardware because the terminal transition was absent from the reporter's
+trace. Existing host fixtures cover device loss without a power frame,
+reconnect, Off, held keys and watchdog expiry within their modeled scope.
+
+### RC4-P00 result on 2026-11-23
+
+The published macOS ARM64 rollback installer matched v1.26.0 SHA256SUMS and
+verified its complete payload. The ordinary macOS ARM64 source installer
+0.24.1 used saved No-root Root SSH on the project OLED55C3RLA with firmware
+43.21.71 and SDK 11.2.0. The installed pair changed from Home 1.20.6 /
+Helper 0.9.3 to Home 1.20.5 / Helper 0.9.4. The installer verified both
+packages and reported that explicit Start Helper was required. All 14
+selected installed files matched the published Home and exact local Helper
+inputs. No installer operation remained pending. The maintainer confirmed
+Start Helper from the published Home UI with the physical remote.
+
+With Media Player foreground, one paired network HOME briefly entered LG
+Home and settled on Clean Your TV, still foreground after one second. The
+diagnostic recorder opened and expired normally with five populated
+foreground-window records. This completes the exact-pair compatibility
+probe. The committed approval and `verify_helper_transition` agree with
+the inputs above. Physical Home routing, standby, cold boot, audio, OTA,
+rollback and matching legacy device evidence remain distinct cases.
+
+The author's [latest #739 report](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/739#issuecomment-7079362528)
+did not confirm resolution, and the issue is closed. RC4 carries the verified
+bench recovery improvement. The reported post-reboot and removal outcomes
+remain unverified.

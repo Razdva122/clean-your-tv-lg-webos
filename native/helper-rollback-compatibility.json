@@ -1,9 +1,9 @@
 {
-  "from_helper": "0.9.2",
-  "to_helper": "0.9.3",
-  "rollback_home": "1.20.4",
-  "rollback_sha256": "9230471d36e1e3984e06e2f6636eeffea2f7fb9c397b4ca3055559ff35e650f2",
-  "prior_helper_sha256": "0aa4b43c91e6a14151dc29a2ad9975b33933376d00d6f9042059e60116c56da4",
-  "candidate_archive_sha256": "b7c52e679d39947f55733a6c0c0c5d20268200208c7597553437e5797b5b3327",
-  "acceptance": "2026-11-20 project LG OLED55C3RLA, firmware 43.21.71, SDK 11.2.0. Ordinary macOS ARM64 source installer cytv 0.23.0 via the saved No-root Root SSH connection installed exactly the published v1.25.0 Home 1.20.4 FHD and candidate Helper 0.9.3. Candidate Helper IPK SHA-256 89a8d0eec0da5b0795ad239ca620408d3d93d5cb8995480a7f389108598c6f0f. Twelve selected installed application and service files matched both inputs. The installer reported verified completion. The rendered published Home returned enabled from Renewal homeStatus and succeeded on listApps. Paired network HOME from Media Player reached Clean Your TV and remained in the foreground. The published HD archive and rollback Helper remain authenticated by the v1.25.0 feed evidence. Scope is this compatibility pair on C3; physical remote, audio, standby, cold boot, OTA and the reported webOS 4.5 sequence were outside this pair test."
+  "from_helper": "0.9.3",
+  "to_helper": "0.9.4",
+  "rollback_home": "1.20.5",
+  "rollback_sha256": "93dae5cd5f0be37efbe81981bef2283c9fe5c349b769a45f62d1db713095529e",
+  "prior_helper_sha256": "89a8d0eec0da5b0795ad239ca620408d3d93d5cb8995480a7f389108598c6f0f",
+  "candidate_archive_sha256": "4f5f70daa3d2b0a6c78ab91692478149c5fd3685eccfc81d76aa03d2972b50a7",
+  "acceptance": "2026-11-23 project LG OLED55C3RLA, firmware 43.21.71, SDK 11.2.0, Node 20.12.2, LG Magic Remote (model unknown). Ordinary macOS ARM64 source installer cytv 0.24.1 over saved No-root Root SSH installed published v1.26.0 Home 1.20.5 FHD with exact Helper 0.9.4 IPK SHA-256 b0020d1ae15b71737297c7dfdfa592a67da5d348beaf5d5356920ed71e53ff59. The installer verified both packages and requested explicit Start Helper. Fourteen installed application and service files matched the inputs, with no pending operation. The maintainer confirmed Start Helper in the published Home UI. Paired network HOME from Media Player briefly showed LG Home, then reached and stayed on Clean Your TV. The same diagnostic session started, captured five populated foreground-window records and completed at expiry. Published Home HD and prior Helper hashes match authenticated v1.26.0 feeds. This probe did not exercise physical Home routing, standby, cold boot, sound, signed OTA, rollback or the original webOS 4.5 scenario."
 }

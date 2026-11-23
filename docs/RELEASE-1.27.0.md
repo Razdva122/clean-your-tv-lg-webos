@@ -33,6 +33,13 @@
   pending, handles stock Home over content on webOS 6, and checks Root
   reinstallation when a lifecycle controller PID has been reused
   (#764, #765, #768, #775).
+- Root recovery verifies LG Home before offering to resume an interrupted
+  activation. Manual activation gives the retained input observer time to
+  start, and a failed activation can restore stock routing (#790).
+- Root and No-root can retain a confirmed Home selection while webOS
+  recreates its input device, including after screen saver or standby.
+  Reconnecting respects Home Off and emergency Stop. The affected G3
+  still needs an inactivity standby and wake check on the released build (#796).
 - A completed install that fails the Home button check now identifies that
   check in the issue draft. No-root Home diagnostics can include foreground
   window details when webOS reports them. The reported YouTube startup
