@@ -66,6 +66,8 @@ function harness(
     RootUpdates: { rpc: async () => null, open: (o) => errors.push(o) }
   };
   const document = {
+    addEventListener() {},
+    removeEventListener() {},
     createElement: () => ({}),
     body: { appendChild: (s) => scripts.push(s) },
     querySelector: () => (tiles.length ? {} : null),

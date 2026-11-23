@@ -218,6 +218,33 @@ function harness({
     'an early relaunch survives transient registration refusal'
   );
   assert(earlyRelaunch.calls.some(([method]) => method === 'reload'));
+  let rejectRelaunch;
+  let overlappingReads = 0;
+  const unavailable = () =>
+    Object.assign(Error('System updater unavailable'), { unavailable: true });
+  const overlappingRelaunch = harness({
+    saved: profile,
+    i18n: true,
+    systemRpc: async () => {
+      overlappingReads++;
+      if (overlappingReads === 1) throw unavailable();
+      if (overlappingReads === 2)
+        return new Promise((_, reject) => (rejectRelaunch = reject));
+      return { ...systemRestore, phase: 'verifying' };
+    }
+  });
+  await tick();
+  const onRelaunch = overlappingRelaunch.events.get('webOSRelaunch');
+  onRelaunch();
+  onRelaunch();
+  rejectRelaunch(unavailable());
+  await tick();
+  assert.strictEqual(
+    overlappingReads,
+    3,
+    'a second relaunch retriggers a stale read'
+  );
+  assert(overlappingRelaunch.calls.some(([method]) => method === 'reload'));
   const starting = harness();
   await tick();
   await assert.rejects(

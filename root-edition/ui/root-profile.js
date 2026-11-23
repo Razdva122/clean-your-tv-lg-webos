@@ -206,9 +206,8 @@
       if (relaunchPending) checkSystemRelaunch();
     }
     function checkSystemRelaunch() {
-      if (!window.SystemUpdates || systemRestore || failed || relaunchReading)
-        return;
-      if (!booted) {
+      if (!window.SystemUpdates || systemRestore || failed) return;
+      if (!booted || relaunchReading) {
         relaunchPending = true;
         return;
       }
@@ -225,6 +224,7 @@
             ['verifying', 'verifying-rollback'].indexOf(pending.phase) >= 0
           ) {
             // The updater can reopen a CARD that already rendered from its local profile.
+            relaunchPending = false;
             document.removeEventListener('webOSRelaunch', checkSystemRelaunch);
             window.location.reload();
           }
@@ -232,6 +232,7 @@
         .catch(function () {})
         .then(function () {
           relaunchReading = false;
+          if (relaunchPending) checkSystemRelaunch();
         });
     }
     var saved = null,
