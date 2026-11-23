@@ -192,9 +192,10 @@
     {
       "pr": 781,
       "issues": [
-        519
+        519,
+        798
       ],
-      "summary": "Fix immutable BSP overlay Home admission and cleanup"
+      "summary": "Fix immutable BSP overlay Home admission and cleanup. OLED65B36LA on firmware 13.41.07 still needs device confirmation."
     },
     {
       "pr": 782,
