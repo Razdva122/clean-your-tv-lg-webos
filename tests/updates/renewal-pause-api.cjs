@@ -65,7 +65,12 @@ function request(method, sender, appId = '') {
 }
 (async () => {
   assert.equal(typeof methods.pauseForUpdate, 'function');
-  for (const method of ['homeStatus', 'setHomeControl', 'openLGHome'])
+  for (const method of [
+    'homeStatus',
+    'setHomeControl',
+    'setKeepSource',
+    'openLGHome'
+  ])
     assert.equal(
       (await request(method, 'other.service', 'other.app')).returnValue,
       false

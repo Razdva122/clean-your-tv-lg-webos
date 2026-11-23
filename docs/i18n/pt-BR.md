@@ -176,6 +176,8 @@ Use ↑ ↓ para escolher uma categoria e → ou OK para entrar. ← volta às c
 
 Em **Configurações → Sua tela Home → Formato da hora**, escolha **Automático (região da TV)**, **12 horas** ou **24 horas**.
 
+No No-root, ative **Configurações → Sua tela Home → Manter a entrada ao ligar** para que a TV continue em um dispositivo HDMI ou na TV ao vivo ao ligar, em vez de abrir o Home. A opção vem desativada. O botão Home continua abrindo o Home.
+
 Se No-root não conseguir ler o estado de Home, escolha Tentar novamente. Um controle indisponível não significa que Home esteja desativado. Em Papéis de parede, envie uma imagem do telefone ou CYTV; qualidade e escurecimento aparecem quando há um papel de parede disponível. A remoção de um papel de parede pessoal pede confirmação; Cancelar o mantém.
 
 ## Clima

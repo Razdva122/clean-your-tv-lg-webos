@@ -945,10 +945,22 @@ function handleHomeRequest(channel, request, respond) {
         generation: request.generation
       });
     } else if (request.method === 'homeStatus')
-      respond({ returnValue: true, enabled: homeControl.enabled() });
+      respond({
+        returnValue: true,
+        enabled: homeControl.enabled(),
+        keepSource: homeControl.keepSource()
+      });
     else if (request.method === 'setHomeControl') {
       homeControl.set(request.enabled);
       respond({ returnValue: true, enabled: homeControl.enabled() });
+    } else if (request.method === 'setKeepSource') {
+      homeControl.setKeepSource(request.enabled);
+      log({ event: 'keep-source', enabled: homeControl.keepSource() });
+      respond({
+        returnValue: true,
+        enabled: homeControl.enabled(),
+        keepSource: homeControl.keepSource()
+      });
     } else if (request.method === 'openLGHome')
       visitLG(function (ok) {
         respond({ returnValue: ok });
@@ -1441,6 +1453,12 @@ var timer = setInterval(function () {
     resumePendingUntil = 0;
     if (!shouldResumeLaunch(lastForeground)) {
       log({ event: 'resume-already-foreground' });
+    } else if (
+      homeControl.keepSource() &&
+      shouldResumeLaunch.source(lastForeground)
+    ) {
+      // Opt-in Stay on input at power-on: keep the source the TV woke on.
+      log({ event: 'resume-preserved-source', id: lastForeground });
     } else if (monotonic() <= resumeDue) {
       launching = true;
       log({ event: 'resume-launch' });

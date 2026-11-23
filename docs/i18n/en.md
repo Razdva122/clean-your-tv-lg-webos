@@ -177,6 +177,8 @@ Use ↑ ↓ to choose a category and → or OK to enter it. ← returns to categ
 
 In **Settings → Your Home screen → Clock format**, choose **Automatic (TV locale)**, **12-hour**, or **24-hour**.
 
+On No-root, turn on **Settings → Your Home screen → Stay on input at power-on** to stay on an HDMI device or Live TV when the TV turns on, instead of opening Home. It is off by default. The Home button still opens Home.
+
 If No-root cannot read Home status, choose Try again. The unavailable control does not mean Home routing is off. Under Wallpapers, upload a personal image from a phone or CYTV; quality and dimming appear when a wallpaper is available. Removing a personal wallpaper asks for confirmation; Cancel keeps it.
 
 ## Weather

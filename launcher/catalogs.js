@@ -4756,3 +4756,76 @@ HomeI18n.add({
       'Aplicațiile deschise frecvent apar mai sus în grilă. Ordinea din bara de aplicații se păstrează.'
   }
 });
+
+HomeI18n.add({
+  'en': {
+    'Stay on input at power-on': 'Stay on input at power-on',
+    'When the TV turns on to an HDMI device or Live TV, stay there instead of opening Home.':
+      'When the TV turns on to an HDMI device or Live TV, stay there instead of opening Home.'
+  },
+  'cs': {
+    'Stay on input at power-on': 'Při zapnutí zůstat na vstupu',
+    'When the TV turns on to an HDMI device or Live TV, stay there instead of opening Home.':
+      'Když se televizor zapne na zařízení HDMI nebo na živém vysílání, zůstane tam a neotevře Home.'
+  },
+  'de': {
+    'Stay on input at power-on': 'Beim Einschalten auf dem Eingang bleiben',
+    'When the TV turns on to an HDMI device or Live TV, stay there instead of opening Home.':
+      'Startet der Fernseher mit einem HDMI-Gerät oder Live-TV, bleibt er dort, statt Home zu öffnen.'
+  },
+  'es': {
+    'Stay on input at power-on': 'Mantener la entrada al encender',
+    'When the TV turns on to an HDMI device or Live TV, stay there instead of opening Home.':
+      'Si la TV se enciende en un dispositivo HDMI o en TV en directo, se queda ahí en lugar de abrir Home.'
+  },
+  'pt-BR': {
+    'Stay on input at power-on': 'Manter a entrada ao ligar',
+    'When the TV turns on to an HDMI device or Live TV, stay there instead of opening Home.':
+      'Se a TV ligar em um dispositivo HDMI ou na TV ao vivo, ela continua ali em vez de abrir o Home.'
+  },
+  'fr': {
+    'Stay on input at power-on': 'Rester sur l’entrée à l’allumage',
+    'When the TV turns on to an HDMI device or Live TV, stay there instead of opening Home.':
+      'Si le téléviseur s’allume sur un appareil HDMI ou la TV en direct, il y reste au lieu d’ouvrir Home.'
+  },
+  'it': {
+    'Stay on input at power-on': 'Resta sull’ingresso all’accensione',
+    'When the TV turns on to an HDMI device or Live TV, stay there instead of opening Home.':
+      'Se la TV si accende su un dispositivo HDMI o sulla TV in diretta, resta lì invece di aprire Home.'
+  },
+  'ko': {
+    'Stay on input at power-on': '전원을 켤 때 입력 유지',
+    'When the TV turns on to an HDMI device or Live TV, stay there instead of opening Home.':
+      'TV가 HDMI 기기나 실시간 TV 화면으로 켜지면 Home을 열지 않고 그 화면을 유지합니다.'
+  },
+  'hi': {
+    'Stay on input at power-on': 'चालू होने पर इनपुट पर बने रहें',
+    'When the TV turns on to an HDMI device or Live TV, stay there instead of opening Home.':
+      'जब TV किसी HDMI डिवाइस या लाइव टीवी पर चालू हो, तो Home खोलने के बजाय वहीं बना रहे।'
+  },
+  'pl': {
+    'Stay on input at power-on': 'Pozostań na wejściu po włączeniu',
+    'When the TV turns on to an HDMI device or Live TV, stay there instead of opening Home.':
+      'Gdy telewizor włączy się na urządzeniu HDMI lub telewizji na żywo, pozostanie na nim zamiast otwierać Home.'
+  },
+  'ro': {
+    'Stay on input at power-on': 'Rămâi pe intrare la pornire',
+    'When the TV turns on to an HDMI device or Live TV, stay there instead of opening Home.':
+      'Când televizorul pornește pe un dispozitiv HDMI sau pe TV în direct, rămâne acolo în loc să deschidă Home.'
+  },
+  'ru': {
+    'Stay on input at power-on': 'Оставаться на входе при включении',
+    'When the TV turns on to an HDMI device or Live TV, stay there instead of opening Home.':
+      'Если телевизор включается на HDMI-устройстве или эфирном ТВ, он остаётся там и не открывает Home.'
+  },
+  'zh-Hans': {
+    'Stay on input at power-on': '开机时保持当前输入源',
+    'When the TV turns on to an HDMI device or Live TV, stay there instead of opening Home.':
+      '电视开机时如果显示 HDMI 设备或电视直播，将保持该画面，不打开 Home。'
+  },
+  'zh-Hant': {
+    'Stay on input at power-on': '開機時保持目前輸入來源',
+    'When the TV turns on to an HDMI device or Live TV, stay there instead of opening Home.':
+      '電視開機時如果顯示 HDMI 裝置或電視直播，將保持該畫面，不開啟 Home。'
+  }
+});

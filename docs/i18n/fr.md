@@ -175,6 +175,8 @@ Utilisez ↑ ↓ pour choisir une catégorie, puis → ou OK pour y entrer. ← 
 
 Dans **Réglages → Votre écran Home → Format de l’heure**, choisissez **Automatique (région du téléviseur)**, **12 heures** ou **24 heures**.
 
+Avec No-root, activez **Réglages → Votre écran Home → Rester sur l’entrée à l’allumage** pour que le téléviseur reste sur un appareil HDMI ou la TV en direct à l’allumage, au lieu d’ouvrir Home. L’option est désactivée par défaut. Le bouton Home ouvre toujours Home.
+
 Si No-root ne peut pas lire l’état de Home, choisissez Réessayer. Un contrôle indisponible ne signifie pas que Home est désactivé. Dans Fonds d’écran, transférez une image depuis le téléphone ou CYTV ; qualité et assombrissement apparaissent lorsqu’un fond est disponible. La suppression d’un fond personnel demande confirmation ; Annuler le conserve.
 
 ## Météo

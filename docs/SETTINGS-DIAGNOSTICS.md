@@ -20,8 +20,10 @@ the surrounding actions, and Back returns to Home settings.
 The report includes the installed renewal **serviceVersion**, not a hard-coded
 launcher version. `diagnostic` describes the current renewal/settings failure;
 `home` records the latest result of each Home RPC in this settings session:
-`homeStatus`, and `setHomeControl` / `openLGHome` only if used. A failed action
-remains distinguishable from its subsequent successful status refresh.
+`homeStatus`, and `setHomeControl` / `setKeepSource` / `openLGHome` only if
+used. A failed action remains distinguishable from its subsequent successful
+status refresh. Boolean `enabled` and `keepSource` (Stay on input at power-on)
+values are copied when the Helper reports them.
 
 Each diagnostic has three allowlisted fields:
 

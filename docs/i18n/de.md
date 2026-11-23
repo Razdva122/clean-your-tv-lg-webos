@@ -175,6 +175,8 @@ Wähle mit ↑ ↓ eine Kategorie und öffne sie mit → oder OK. ← führt zu 
 
 Wählen Sie unter **Einstellungen → Ihr Home-Bildschirm → Uhrzeitformat** zwischen **Automatisch (TV-Region)**, **12 Stunden** und **24 Stunden**.
 
+Bei No-root aktivieren Sie **Einstellungen → Ihr Home-Bildschirm → Beim Einschalten auf dem Eingang bleiben**, damit der Fernseher beim Einschalten auf einem HDMI-Gerät oder Live-TV bleibt, statt Home zu öffnen. Die Option ist standardmäßig aus. Die Home-Taste öffnet weiterhin Home.
+
 Kann No-root den Home-Status nicht lesen, wähle Erneut versuchen. Ein nicht verfügbarer Schalter bedeutet nicht, dass die Home-Steuerung ausgeschaltet ist. Unter Hintergründe kannst du ein Bild vom Smartphone oder CYTV übertragen; Qualität und Abdunklung erscheinen, wenn ein Hintergrund verfügbar ist. Das Entfernen eines eigenen Hintergrunds muss bestätigt werden; Abbrechen behält ihn.
 
 ## Wetter

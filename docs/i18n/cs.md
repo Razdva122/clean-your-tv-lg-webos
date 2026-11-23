@@ -151,6 +151,8 @@ Pomocí ↑ ↓ vyberte kategorii a pomocí → nebo OK do ní vstupte. ← se v
 
 V **Nastavení → Vaše obrazovka Home → Formát času** vyberte **Automaticky (podle nastavení TV)**, **12hodinový** nebo **24hodinový** formát.
 
+V edici No-root zapněte **Nastavení → Vaše obrazovka Home → Při zapnutí zůstat na vstupu**, aby televizor po zapnutí zůstal na zařízení HDMI nebo na živém vysílání a neotevřel Home. Ve výchozím stavu je volba vypnutá. Tlačítko Home dál otevírá Home.
+
 Pokud No-root nemůže načíst stav Home, zvolte Zkusit znovu. Nedostupný přepínač neznamená vypnuté ovládání Home. V Tapetách nahrajte obrázek z telefonu nebo CYTV; kvalita a ztmavení jsou dostupné po výběru tapety. Odstranění vlastní tapety vyžaduje potvrzení; Zrušit ji zachová.
 
 ## Počasí

@@ -23,6 +23,8 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8876';
       window.helperStatusAvailable = true;
       window.helperStopLatched = true;
       window.homeChoice = null;
+      // Older Helpers omit keepSource; set a boolean to emulate support.
+      window.keepSourceChoice = undefined;
       window.homeBrokerFailure = null;
       window.PalmServiceBridge = function () {
         this.cancel = () => clearTimeout(this.timer);
@@ -71,15 +73,24 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8876';
               if (helperStopped) {
                 r.returnValue = false;
                 if (homeBrokerFailure) r.diagnostic = homeBrokerFailure;
-              } else
+              } else {
                 r.enabled =
                   homeChoice ??
                   calls.some((call) => call.p.id === 'com.local.nativehome');
+                if (keepSourceChoice !== undefined)
+                  r.keepSource = keepSourceChoice;
+              }
             } else if (
               uri === 'luna://com.gathin.tvhome.renewal/setHomeControl'
             ) {
               homeChoice = p.enabled;
               r.enabled = homeChoice;
+            } else if (
+              uri === 'luna://com.gathin.tvhome.renewal/setKeepSource'
+            ) {
+              keepSourceChoice = p.enabled;
+              r.enabled = homeChoice;
+              r.keepSource = keepSourceChoice;
             } else if (
               uri === 'luna://com.gathin.tvhome.renewal/screensaverStatus'
             ) {
@@ -251,6 +262,53 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8876';
     await homePane
       .locator('#homeRoutingToggle[role=switch][aria-checked=true]')
       .waitFor();
+    // Stay on input at power-on stays hidden for a Helper that omits it.
+    assert(await homePane.locator('#homeKeepSource').isHidden());
+    assert(await homePane.locator('#homeKeepSourceHint').isHidden());
+    // Reopening settings refreshes Home status from a Helper that reports it.
+    await page.evaluate(() => {
+      keepSourceChoice = false;
+    });
+    await page.locator('#renewalClose').click();
+    await page.locator('#renewalPanel').waitFor({ state: 'hidden' });
+    await page.locator('#btnSettings').click();
+    await page.locator('[data-category=home]').click();
+    const keepSwitch = homePane.getByRole('switch', {
+      name: 'Stay on input at power-on'
+    });
+    await homePane
+      .locator('#homeKeepSource[role=switch][aria-checked=false]')
+      .waitFor();
+    assert(await homePane.locator('#homeKeepSourceHint').isVisible());
+    assert.equal(
+      await homePane.locator('#homeKeepSourceHint').textContent(),
+      'When the TV turns on to an HDMI device or Live TV, stay there instead of opening Home.'
+    );
+    await keepSwitch.focus();
+    await page.keyboard.press('Enter');
+    await homePane
+      .locator('#homeKeepSource[role=switch][aria-checked=true]')
+      .waitFor();
+    assert.equal(
+      await page.evaluate(() => document.activeElement.id),
+      'homeKeepSource'
+    );
+    assert.deepEqual(
+      await page.evaluate(() =>
+        calls
+          .filter(
+            (c) => c.uri === 'luna://com.gathin.tvhome.renewal/setKeepSource'
+          )
+          .map((c) => c.p)
+      ),
+      [{ enabled: true }]
+    );
+    assert.equal(await page.evaluate(() => keepSourceChoice), true);
+    assert.equal(
+      await homeSwitch.getAttribute('aria-checked'),
+      'true',
+      'Stay on input at power-on does not change Home routing'
+    );
     await page.reload();
     await page.locator('#tiles .item').first().waitFor();
     await page.locator('#btnSettings').click();

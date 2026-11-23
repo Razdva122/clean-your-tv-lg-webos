@@ -199,6 +199,7 @@ var catalogControl = require('./home-control')(fs, dir + '/home-control', {
 [
   'homeStatus',
   'setHomeControl',
+  'setKeepSource',
   'openLGHome',
   'inputStatus',
   'listApps',
