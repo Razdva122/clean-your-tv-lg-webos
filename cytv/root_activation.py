@@ -139,7 +139,10 @@ def proof(installer, command, active, details=None, *, retry_token=None):
                  and effective.get('stopped') is (effective['state'] == 'stopped'))
     if not valid:
         raise UserError('C1 Home routing or recovery readback was not confirmed. Run cytv status or cytv restore.')
-    if details is not None: details['routing'] = effective.get('routing')
+    if details is not None:
+        details['routing'] = effective.get('routing')
+        details['session_only'] = (effective.get('routing') == 'compositor-keyfilter-v1'
+                                   and 'session' not in state['intent'])
     return token
 
 
@@ -207,9 +210,11 @@ def activate(installer, *, retry_token=None):
                 raise UserError('C1 Home launch was not confirmed. Run cytv status or cytv restore.')
             installer.outcome.launch_accepted()
         installer.store.checkpoint(installer.profile, launch_requested=requested, foreground_observed=not requested)
-        if proof(installer, 'status', active=True) != token:
+        if proof(installer, 'status', active=True, details=details) != token:
             raise UserError('C1 Home attempt changed during activation. Run cytv status or cytv restore.')
         installer.outcome.startup_observed('root-state-verified')
+        if details['session_only']:
+            installer.outcome.root_home_session_only()
     except RetryRefused:
         installer.store.checkpoint(installer.profile, activation_restore_pending=False, activation_restore='verified')
         raise

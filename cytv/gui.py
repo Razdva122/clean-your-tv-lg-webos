@@ -1513,13 +1513,16 @@ class Wizard(QMainWindow):
             self.button(DOWNLOAD, download_installer, True).setFocus()
             self.button(CONTINUE, lambda: self.submit('2'))
         elif prompt.kind == 'confirm':
-            from .recovery import SAVED_CONNECTION_PROMPT
+            from .recovery import KEEP_LG_HOME, LG_HOME_RESTORED, RETAINED_ACTIVATION_PROMPT, SAVED_CONNECTION_PROMPT
             trust_prompt = prompt.label.startswith('Connect and remember this TV?')
             beta_prompt = prompt.label.startswith('Install experimental Root Beta?')
             if prompt.label.startswith(debloat.RESTORE_PROMPT):
                 yes_label, no_label = debloat.RESTORE_LABEL, debloat.SKIP_RESTORE
             elif prompt.title == SAVED_CONNECTION_PROMPT:
                 yes_label, no_label = 'Review recovery options', 'Cancel'
+            elif (prompt.title == RETAINED_ACTIVATION_PROMPT
+                  and (self.recovery_plan or {}).get('summary') == LG_HOME_RESTORED):
+                yes_label, no_label = 'Turn on Home control', KEEP_LG_HOME
             elif prompt.title == 'Continue Root installation?':
                 yes_label, no_label = 'Continue Root installation', 'Cancel'
             else:

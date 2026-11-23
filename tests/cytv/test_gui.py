@@ -197,6 +197,19 @@ class GuiTests(unittest.TestCase):
         self.assertEqual(w.subtitle.text(), KEPT)
         w.running = False
 
+    def test_retained_root_recovery_names_the_alternative_to_activation(self):
+        from cytv.recovery import KEPT, LG_HOME_RESTORED, RETAINED_ACTIVATION_PROMPT
+        for command in ('recover', 'install'):
+            with self.subTest(command=command):
+                w = Wizard(); self.addCleanup(w.close)
+                w.command = command
+                w.receive('recovery-plan', {'state': 'ready', 'summary': LG_HOME_RESTORED,
+                                            'next_step': KEPT})
+                w.show_prompt(Prompt(RETAINED_ACTIVATION_PROMPT + ' [y/N]: '))
+                buttons = {button.text(): button for button in w.form.findChildren(QPushButton)}
+                self.assertIn('Turn on Home control', buttons)
+                self.assertTrue(buttons['Keep LG Home'].isDefault())
+
     def test_unknown_package_result_rechecks_status_on_the_saved_connection(self):
         profile = {'host':'192.0.2.10', 'port':9922, 'edition':'no-root'}
         for command, code, reason in (

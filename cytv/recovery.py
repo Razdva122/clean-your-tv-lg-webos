@@ -6,7 +6,7 @@ from time import monotonic
 from . import prompts
 from .errors import TVRejected, UserError
 from .operations import require_removal_idle
-from .outcomes import START_HELPER
+from .outcomes import ROOT_SESSION_ONLY, START_HELPER
 from .recovery_state import assess, observation_diagnostics, setup_actions, unsubmitted_removal
 from .recovery_ui import observed_stock_surface, removal_action
 
@@ -15,6 +15,9 @@ SAVED_CONNECTION_PROMPT = 'Review recovery options for this saved connection?'
 KEPT = 'Recovery data kept. Installation has not restarted.'
 BLOCKED = 'Recovery could not be verified. Save the diagnostic report and keep recovery data. Do not repeat removal.'
 SEPARATE = 'Recovery finished. Start a new setup separately when you are ready.'
+RETAINED_ACTIVATION_PROMPT = 'Finish Root setup and turn on Home control?'
+KEEP_LG_HOME = 'Keep LG Home'
+LG_HOME_RESTORED = 'LG Home is restored.'
 
 
 class _RemovalRestartRequired(UserError):
@@ -422,13 +425,16 @@ def recover(installer, ask, write, non_interactive=False, initial_observation=No
                     return
                 if not installer.restore_retained_activation_routing(pending, token):
                     raise UserError(BLOCKED, reason_code='pending-operation')
-            plan(write, 'ready', 'LG Home is restored.')
-            if prompts.confirm('Finish Root setup and turn on Home control?', ask, write):
+            plan(write, 'ready', LG_HOME_RESTORED)
+            if prompts.confirm(RETAINED_ACTIVATION_PROMPT, ask, write,
+                               choices='y = Turn on Home control. Enter / n = Keep LG Home. q = Quit.'):
                 installer.resume_retained_activation(pending, token)
                 installer.outcome.review_home(ask, write)
-                plan(write, 'complete', 'Review TV checks', 'Save diagnostic report…')
+                summary = (ROOT_SESSION_ONLY if installer.outcome.values.get('root_home_scope') == 'current-session'
+                           else 'Review TV checks')
+                plan(write, 'complete', summary, 'Save diagnostic report…')
             else:
-                write(KEPT)
+                plan(write, 'complete', 'LG Home stays active.', KEPT)
             return
         from .root_gate import beta_repair_available, repair_beta_recovery
         if (pending is None and installer.profile.get('root_variant') == 'node012-beta'

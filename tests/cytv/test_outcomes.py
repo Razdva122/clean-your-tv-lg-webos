@@ -69,8 +69,12 @@ class OutcomeTests(unittest.TestCase):
                                   'startup':'unknown','home_button':'unknown'})
         self.assertNotIn('PRIVATE', str(exported))
         observed = self.info['setup_outcome']
-        observed.update(home_button='confirmed-by-user', home_destination='lg-home')
+        observed.update(home_button='confirmed-by-user', home_destination='lg-home',
+                        root_home_scope='PRIVATE')
         self.assertNotIn('home_destination', tv_summary(self.info)['setup_outcome'])
+        self.assertNotIn('root_home_scope', tv_summary(self.info)['setup_outcome'])
+        self.outcome.root_home_session_only()
+        self.assertEqual(tv_summary(self.info)['setup_outcome']['root_home_scope'], 'current-session')
 
     def test_stop_cancelled_activation_does_not_request_home_test_or_claim_startup(self):
         self.outcome.packages_verified()

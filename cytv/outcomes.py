@@ -11,6 +11,7 @@ FIELDS = {
 UNTESTED = 'The physical Home button has not been checked. A launch acknowledgement does not verify it.'
 REVIEW = 'Review TV checks'
 START_HELPER = 'Packages verified. Open Home Helper on the TV and choose Start Helper when ready.'
+ROOT_SESSION_ONLY = 'Home control applies to this TV session.'
 
 HOME_START = 'Open an app or TV input so neither Home screen is showing.'
 HOME_PRESS = 'Briefly press Home once on the physical TV remote. Clean Your TV Home should open.'
@@ -52,6 +53,8 @@ def summary(value):
     if type(destination) is str and destination in HOME_RESULTS:
         if result['home_button'] == HOME_RESULTS[destination][1]:
             result['home_destination'] = destination
+    if value.get('root_home_scope') == 'current-session':
+        result['root_home_scope'] = 'current-session'
     return result
 
 
@@ -89,6 +92,9 @@ class SetupOutcome:
                   'not-observed': 'No Helper process was observed in this check. Do not reinstall just to repeat it.'}.get(
                       state, 'Startup could not be verified. Save the diagnostic report; do not reinstall blindly.')
         self.checks.update('startup', 'pass' if state in ('process-observed', 'root-state-verified') else 'unknown', detail)
+
+    def root_home_session_only(self):
+        self.values['root_home_scope'] = 'current-session'
 
     def cancelled_by_stop(self):
         self.values['startup'] = 'stopped-during-setup'

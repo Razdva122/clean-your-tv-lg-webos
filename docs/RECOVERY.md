@@ -518,6 +518,13 @@ verifies the repaired service before offering to finish setup and enable Home
 control in a separate confirmation. If verification fails, keep the original
 recovery data and save the diagnostic report.
 
+If `cytv recover --edition root` restores LG Home and then offers to turn on
+Home control, choose **Keep LG Home** to end the review with the original
+routing and leave activation pending. Choose **Turn on Home control** to
+activate the installed runtime. When the result says **Home control applies
+to this TV session**, use **Change Home** on the TV to turn it on again after
+a restart.
+
 ## Repair an interrupted Root Beta setup
 
 If Root Beta stopped while preparing its recovery service, use the saved Root

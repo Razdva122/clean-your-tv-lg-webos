@@ -44,6 +44,29 @@ class NativeActivationTests(unittest.TestCase):
         self.tv.store.checkpoint.assert_any_call(self.tv.profile, stage='launch', home_token=new)
         self.tv.store.finish.assert_called_once()
 
+    def test_compositor_activation_with_no_resume_session_reports_current_session_only(self):
+        self.active['result']['effective'].update(
+            routing='compositor-keyfilter-v1', mounted=False,
+            filter_installed=True, routing_active=True)
+        self.tv.remote.luna.return_value = {'returnValue': True, 'appId': package.ROOT_APP}
+
+        self.assertIs(root_activation.activate(self.tv), False)
+
+        self.tv.outcome.root_home_session_only.assert_called_once()
+
+    def test_compositor_activation_does_not_report_session_only_when_resume_is_recorded(self):
+        self.active['result']['effective'].update(
+            routing='compositor-keyfilter-v1', mounted=False,
+            filter_installed=True, routing_active=True)
+        self.active['result']['intent'].update(
+            boot='00000000-0000-0000-0000-000000000001',
+            session='00000000-0000-0000-0000-000000000001:session-' + 'c' * 32)
+        self.tv.remote.luna.return_value = {'returnValue': True, 'appId': package.ROOT_APP}
+
+        self.assertIs(root_activation.activate(self.tv), False)
+
+        self.tv.outcome.root_home_session_only.assert_not_called()
+
     def test_retained_retry_refusal_does_not_restore_a_different_attempt(self):
         self.tv.store.pending.return_value.update(stage='enable')
         self.tv.root_action.side_effect = [self.stock, root_activation.RetryRefused('changed')]
@@ -155,6 +178,7 @@ class NativeActivationTests(unittest.TestCase):
                 installer.stop_root_helper_for_activation = Mock()
                 installer.outcome.review_home = Mock()
                 staged = []
+                output = []
 
                 def answer(prompt):
                     if 'Restore LG Home?' in prompt:
@@ -200,7 +224,13 @@ class NativeActivationTests(unittest.TestCase):
 
                 with patch('cytv.root_install_recovery.restore_activation', side_effect=restore_filter) as restore:
                     if scenario in ('retry', 'decline', 'filter-retry', 'filter-decline-restore', 'filter-decline-enable'):
-                        recover(installer, answer, Console(lambda *_: None))
+                        recover(installer, answer, Console(output.append))
+                        if scenario in ('decline', 'filter-decline-enable'):
+                            self.assertTrue(any('Keep LG Home' in line for line in output))
+                            self.assertTrue(any('LG Home stays active.' in line for line in output))
+                        if scenario in ('retry', 'filter-retry'):
+                            self.assertTrue(any('Home control applies to this TV session.' in line for line in output))
+                            self.assertEqual(installer.outcome.values['root_home_scope'], 'current-session')
                     else:
                         with self.assertRaises(UserError):
                             recover(installer, answer, Console(lambda *_: None))
