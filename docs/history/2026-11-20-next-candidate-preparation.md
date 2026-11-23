@@ -543,3 +543,96 @@ W19H 05.50.00 archive is being restored. The Android test setup matched the
 published code 52 and development code 53 hashes and signer and started an
 isolated ARM64 API 35 emulator. These checks establish preconditions for the
 remaining artifact-bound cases.
+
+### Replacement RC4 verification in progress
+
+The maintainer resumed end-to-end release coordination at 18:01:12 UTC+05:00
+on 2026-11-23. The [replacement run 45179501341](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/45179501341)
+was dispatched at 17:59:33 from `63a96a2b`. It waited for the superseded
+run's two macOS packaging jobs. The original full validation suite passed,
+while Windows host testing and Android emulator setup had already failed.
+The old run was cancelled to free the concurrency queue. Neither build
+was selected at this point.
+
+The original signed APK from run 45174994655, SHA-256
+`20a2cfa4e8a88185054ecb33116e54e1706bc809fb9fa3b9d572ae8154a72c45`,
+passed a clean install and its real bridge/native fixtures on an isolated
+ARM64 Google APIs API 35 userdebug emulator. In-place upgrades from codes
+52 and 53 to code 54 retained all four seeded files and passed real Store
+verification. Both baseline APKs matched their published digests and the
+candidate matched the pinned signer. This observation can cover RC1-06
+on the replacement only if the checked APK and relevant runner bytes match.
+
+The maintainer confirmed that only the project C3 is available and approved
+post-release user testing for other TV models. Read-only LS2 on the C3
+confirmed that System Profile is present, so it cannot run the embedded
+Home compositor path. RC4-07 physical W17M-class acceptance is explicitly
+deferred. The original G3 inactivity cycle, legacy webOS 4.5 YouTube
+reproduction and W20H retained recovery remain model-specific follow-up.
+All applicable C3 scenarios and the selected offline and Android checks
+remain in scope. The release must describe those limits without claiming
+hardware coverage from a different model.
+
+#### Android candidate result
+
+At 18:21–18:22 UTC+05:00, the exact RC4 APK passed RC1-06 on the owned
+ARM64 API 35 userdebug emulator. Its SHA-256
+`2d7f6af8e7d162a8c63e75dd70117ddbd658ebdd06e818a759eb984bcb7624a6`
+matches the APK build report from the post-smoke artifact of build
+45179501341, attempt 1. The APK source and original production signer
+verified, and the installed app was non-debuggable with version 0.23.1,
+code 54. A clean install passed both edition fixtures and a real packaged
+Python bridge operation with loopback inspection and a synthetic TV status
+response. In-place upgrades from code 52 and 53 to 54 preserved the
+original signer, all four seeded files and the app's Store readback.
+The isolated emulator was stopped after verification. These Android
+checks did not use a physical TV.
+
+#### Offline fixture and device readiness
+
+The B9 05.50.00 LG image ZIP was verified and extracted. Its SHA-256 is
+`59ef18516657a7a058d4a8cf86dab14020eb25d40f794e328506bbc999a1b976`.
+The restored W19H sysroot runs factory ARM Node 0.12.2, the LS2 hub and
+`luna-send` under QEMU in a network-isolated lab. The original v1.21.0
+Mac installer matched its published checksum. Its verified Root Beta
+0.20.0 bundle `716468795d7ca68592403b5d3258a51cc674cc68656f1b789580c2ca6c78b446`
+restored the 148-file installation fixture. The lab rehearsed migration,
+modeled startup and rollback using preliminary bytes. RC1-04 still
+requires the exact selected installer bundle.
+
+At 18:24–18:25 UTC+05:00, the project C3 answered a read-only package query
+with published No-root Home 1.20.5, Helper 0.9.3, Home Updater 0.6.4 and
+System Updater 1.2.11 installed. Root Home was absent, as expected for the
+initial No-root case. The query made no device changes.
+
+At 18:31–18:33 UTC+05:00, RC1-04 passed both the ordinary and pending-removal
+scenarios on that W19H fixture with the exact Root Beta bundle from RC4's
+macOS ARM64 installer. All 53 embedded files matched their payload manifest.
+Bundle SHA-256 was `ce0f165bdfc0a5ca1dbca2a09a6ec3e81327f0a5554da6d7bd6ff0c29c441e78`;
+the GitHub artifact ZIP was `111eb3b91fa89b2cd8087291427a6e8ed282ffac5be0776caa140922d75f6791`.
+The factory ARM Node and LS2 service reported verified integrity. The
+ordinary and pending-removal variants preserved all 148 installed files
+and settings. The latter recorded the previous pending removal before
+starting a new lease. Both verified startup-session admission, single
+resume, inverse rollback from a modeled Off state, and explicit reapply.
+Power and controller signals were modeled for the boot replay. Physical
+B9 acceptance remains deferred.
+
+For RC1-05, the successful Linux CI installer shards recorded the
+legacy Python recovery-before-removal check, validation before cache
+retirement, and No-root terminal cleanup limited to empty owned
+package metadata. The result covers those fixtures. The selected C3
+removal and recovery checks remain open.
+
+The exact macOS ARM64 payload carries Helper 0.9.4 with SHA-256
+`b0020d1ae15b71737297c7dfdfa592a67da5d348beaf5d5356920ed71e53ff59`,
+matching RC4-P00 and the committed published-Home rollback contract.
+The final C3 cases still use the new Home IPK and signed System catalog.
+
+#### Selected build
+
+At 18:43:01 UTC+05:00 the full RC4 run 45179501341, attempt 1,
+completed successfully. The trusted candidate verifier pinned source
+`63a96a2bb19b4236ec15437868ff160b2d73d8f4`. The Android and offline B9
+observations above use the exact selected artifact bytes. Stable hardware
+acceptance remains unset pending the signed C3 cases.
