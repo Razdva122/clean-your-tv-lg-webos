@@ -138,6 +138,37 @@ test('fallback failures are bounded and keep the saved catalog path', () => {
   assert.equal(f.completed, 1);
   assert.equal(f.timers.size, 0);
 });
+test('No-root retries an unanswered controller request once after cold startup', () => {
+  for (const code of ['ENOENT', 'TIMEOUT']) {
+    const f = fixture();
+    const noReply = {
+      returnValue: false,
+      errorText: 'Home Helper did not respond',
+      diagnostic: { component: 'home', code }
+    };
+    f.reply(0, { returnValue: false, errorCode: -1 });
+    f.advance(5000);
+    f.reply(1, noReply);
+    assert.equal(f.completed, 0);
+    assert.equal(f.calls[2].uri, f.calls[1].uri);
+    f.reply(2, {
+      returnValue: true,
+      apps: [{ id: 'org.example.homebrew', title: 'Homebrew' }]
+    });
+    assert.equal(f.result[0].id, 'org.example.homebrew');
+    assert.equal(f.completed, 1);
+    assert.equal(f.timers.size, 0);
+
+    const stalled = fixture();
+    stalled.reply(0, { returnValue: false });
+    stalled.reply(1, noReply);
+    stalled.reply(2, noReply);
+    assert.equal(stalled.result, null);
+    assert.equal(stalled.completed, 1);
+    assert.equal(stalled.calls.length, 3);
+    assert.equal(stalled.timers.size, 0);
+  }
+});
 test('Root inventory never crosses into the No-root broker', () => {
   const f = fixture(true);
   assert.equal(
