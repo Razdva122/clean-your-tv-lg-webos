@@ -1,7 +1,28 @@
 {
   "schema": 1,
   "version": null,
-  "changes": [],
+  "changes": [
+    {
+      "pr": 803,
+      "issues": [
+        766
+      ],
+      "summary": "Recover No-root catalog refresh during Home startup"
+    },
+    {
+      "pr": 807,
+      "issues": [
+        615,
+        741
+      ],
+      "summary": "Fix C1 boot recovery on webOS 6.5.3: absent-Root close reply and reused controller PID"
+    },
+    {
+      "pr": 808,
+      "issues": [],
+      "summary": "Add Neon '86 to the theme showcase"
+    }
+  ],
   "excluded": [],
   "acceptance": ""
 }

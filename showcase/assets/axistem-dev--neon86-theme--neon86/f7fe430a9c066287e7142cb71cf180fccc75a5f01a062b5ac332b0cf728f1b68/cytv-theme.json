@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 1,
+  "themeApiVersion": 1,
+  "id": "github:axistem-dev/neon86-theme:neon86",
+  "title": "Neon '86",
+  "description": "Original 80s synthwave look: chrome-and-neon clock, electric cyan outlines with a hot pink glow, monospace labels and neon horizon lines. Two original wallpapers: a striped sun over a neon grid (4K) and a night art-deco Ocean Drive (1080p).",
+  "author": {
+    "name": "aXistem",
+    "url": "https://github.com/axistem-dev"
+  },
+  "themeVersion": "1.1.1",
+  "layout": {
+    "preset": "dock-grid",
+    "columns": 5,
+    "spacingScale": 1,
+    "textScale": 1,
+    "focusScale": 1.1,
+    "weather": {
+      "formats": [
+        "text",
+        "current",
+        "details",
+        "forecast"
+      ],
+      "scale": 1,
+      "padding": 28,
+      "icons": "fill"
+    }
+  },
+  "defaults": {
+    "wallpaperAssetId": "wallpaper",
+    "dim": 0.18,
+    "accent": "#28dcff"
+  },
+  "assets": [
+    {
+      "id": "wallpaper",
+      "path": "assets/sunset/wallpaper.jpg",
+      "mediaType": "image/jpeg",
+      "width": 3840,
+      "height": 2160,
+      "size": 1011811,
+      "sha256": "70995aebcc5f845a8cc634ccc417e0f593f9669884520f8b3d70cab995f81e2a"
+    },
+    {
+      "id": "wallpaper-ocean-drive",
+      "path": "assets/ocean/wallpaper-1080p.jpg",
+      "mediaType": "image/jpeg",
+      "width": 1920,
+      "height": 1080,
+      "size": 287895,
+      "sha256": "844128f1081000fd3892432d78f137900009687a977e7dc488f24fd15573da58"
+    },
+    {
+      "id": "preview",
+      "path": "assets/sunset/preview.jpg",
+      "mediaType": "image/jpeg",
+      "width": 960,
+      "height": 540,
+      "size": 97957,
+      "sha256": "68caab45316468a53dab9d5ec59c923173a90c2f7c472f431aea8834b545f4a5"
+    }
+  ],
+  "previewAssetId": "preview",
+  "license": {
+    "identifier": "CC-BY-4.0",
+    "textPath": "LICENSE.txt",
+    "creditsPath": "CREDITS.txt"
+  },
+  "source": {
+    "repository": "https://github.com/axistem-dev/neon86-theme",
+    "commit": "b84cfae583fab7355edec8dccf43102b994f6469"
+  },
+  "requires": {
+    "minimumHomeVersion": "1.13.3",
+    "capabilities": [
+      "weather-v1"
+    ]
+  },
+  "rules": {
+    "path": "rules.json",
+    "size": 14465,
+    "sha256": "d4ddf32c9e814248271f4a068cd488945d2f843797048c1636016723a74e5169"
+  },
+  "documents": [
+    {
+      "path": "LICENSE.txt",
+      "size": 844,
+      "sha256": "27732b1f59c66de9f2f0601b94462df06414e48626ce3ebc0e398d77dd727ad3"
+    },
+    {
+      "path": "CREDITS.txt",
+      "size": 1185,
+      "sha256": "f24f6eb5a52c0bbe29c42c725c8900452c2aeeeffba1d02d5d90914bc20ba048"
+    }
+  ]
+}

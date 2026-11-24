@@ -942,9 +942,11 @@ def restore_locked(root,uid, *, for_removal=False, explicit_restore=False, routi
         write_intent(root,False,after['token'],'recovering',uid)
         if not for_removal:
             check = 'controller-stop-unverified'
-        # Some TVs reuse the kernel boot ID after reboot. A different process
-        # start time proves the recorded controller is gone, even on those TVs.
-        stop_controller(root, uid, allow_reused_pid=for_removal and generic and stopped_stock(after))
+        # Some TVs reuse the kernel boot ID after reboot, and a schema 2 record
+        # has no boot field. A different process start time proves the recorded
+        # controller is gone, even on those TVs. Boot recovery and explicit Off
+        # meet the same reused PID as removal, so none of them may stay blocked.
+        stop_controller(root, uid, allow_reused_pid=stopped_stock(after))
         check = 'stock-routing-unverified'
         change_chain(root,False,uid)
         if not after['stock_verified']:

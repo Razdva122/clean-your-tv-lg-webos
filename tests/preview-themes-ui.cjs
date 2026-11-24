@@ -220,6 +220,7 @@ const http = require('node:http');
         'Classic',
         'Minimal',
         'Atmosphere',
+        "Neon '86",
         'Vice',
         'Crăciun la Brașov'
       ]) {
