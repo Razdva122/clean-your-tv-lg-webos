@@ -23,6 +23,18 @@
       "summary": "Add Neon '86 to the theme showcase"
     },
     {
+      "pr": 809,
+      "issues": [],
+      "summary": "Add opt-in No-root \"Stay on input at power-on\" setting"
+    },
+    {
+      "pr": 811,
+      "issues": [
+        615
+      ],
+      "summary": "Allow fresh Root setup after verified removal (#615)"
+    },
+    {
       "pr": 815,
       "issues": [],
       "summary": "Add Vice to the theme showcase"
