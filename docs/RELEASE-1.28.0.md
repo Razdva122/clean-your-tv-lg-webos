@@ -2,7 +2,7 @@
 
 Combined test build. Device acceptance and the final release build are pending.
 
-- On No-root, **Stay on input at power-on** can keep HDMI, Live TV or another
+- On No-root, **Stay on HDMI or Live TV when the TV wakes** can keep HDMI, Live TV or another
   external input visible after standby. The switch is off by default (#809).
 - No-root Home can recover its app catalog during startup. The installer now
   preserves restart evidence and explains what still prevents removal (#803, #805).

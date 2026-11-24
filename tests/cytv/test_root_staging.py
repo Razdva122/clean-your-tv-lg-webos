@@ -63,6 +63,7 @@ class RootStagingTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             root_staging.retire(remote, '/var/lib/foreign', {})
 
+    @unittest.skipUnless(os.name == 'posix', 'TV staging fixture requires POSIX ownership and file modes')
     def test_real_script_refuses_foreign_directory_and_never_changes_its_mode(self):
         # Run the exact JS operation with a temporary test anchor and current UID.
         with tempfile.TemporaryDirectory() as temp:
