@@ -177,6 +177,10 @@ Usa ↑ ↓ para elegir una categoría y → u OK para entrar. ← vuelve a las 
 
 En **Ajustes → Tu pantalla Home → Formato de hora**, elige **Automático (región del TV)**, **12 horas** o **24 horas**.
 
+En No-root, abre **Ajustes → Tu pantalla Home → Mantener HDMI o TV en directo al salir del modo de espera**.
+
+Si el televisor sale del modo de espera mostrando una consola, la TV en directo u otra entrada, esa pantalla se mantiene abierta. El botón Home funciona como siempre. La opción está desactivada de forma predeterminada.
+
 Si No-root no puede leer el estado de Home, elige Reintentar. Un control no disponible no significa que Home esté desactivado. En Fondos puedes subir una imagen desde el teléfono o CYTV; la calidad y el oscurecimiento aparecen cuando hay un fondo disponible. Eliminar un fondo personal requiere confirmación; Cancelar lo conserva.
 
 ## Tiempo

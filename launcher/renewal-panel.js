@@ -36,7 +36,7 @@
     panel.innerHTML = ht(
       [
         '<div id="settingsMain" class="renewal-card settings-main"><div class="settings-heading"><h2>Home settings</h2><span class="settings-edition">No-root Edition</span></div><section class="settings-home"><h3>Your Home screen</h3><p>Home is your app screen. Home Helper makes the Home button open it.</p><p id="homeRoutingStatus" class="settings-status" aria-live="polite">Checking Home control…</p>',
-        '<div class="renewal-actions home-routing-actions"><button id="homeRoutingToggle" class="home-routing-switch" role="switch" aria-checked="false" aria-describedby="homeRoutingStatus" disabled>Change Home</button><button id="homeRoutingStart" hidden>Start Helper</button><button id="homeRoutingRetry" hidden>Try again</button><button id="homeVisit" class="home-visit-button" aria-describedby="homeVisitHint">Open LG Home</button></div><p id="homeVisitHint" class="home-visit-hint">Open LG Home once, keeping your Home choice.</p>',
+        '<div class="renewal-actions home-routing-actions"><button id="homeRoutingToggle" class="home-routing-switch" role="switch" aria-checked="false" aria-describedby="homeRoutingStatus" disabled>Change Home</button><button id="homeRoutingStart" hidden>Start Helper</button><button id="homeRoutingRetry" hidden>Try again</button><button id="homeVisit" class="home-visit-button" aria-describedby="homeVisitHint">Open LG Home</button></div><p id="homeVisitHint" class="home-visit-hint">Open LG Home once, keeping your Home choice.</p><div class="renewal-actions home-routing-actions"><button id="homeKeepSource" class="home-routing-switch" role="switch" aria-checked="false" aria-describedby="homeKeepSourceHint" hidden>Stay on HDMI or Live TV when the TV wakes</button></div><p id="homeKeepSourceHint" class="home-visit-hint" hidden>If your TV wakes from standby already showing a game console, Live TV, or another input, that screen stays open. The Home button works as usual.</p>',
         '<div class="renewal-actions settings-layout"><div id="homeThemeHost"></div></div><div class="renewal-actions settings-layout"><button id="homeColumns">Columns</button></div></section>',
         '<div id="homeAppSettings" class="renewal-actions settings-layout"><button id="homeUsageSort" class="home-routing-switch" role="switch" aria-checked="false">Sort by most used</button><button id="homeShowAddApp" class="home-routing-switch" role="switch" aria-checked="true">Show Add app tile</button><button id="homeAddApp">Add app</button><button id="homeEditTiles">Edit tiles</button><button id="homePreviewInputs" class="home-routing-switch" role="switch" aria-checked="true">Preview inputs on focus</button><p id="homeAppsError" role="alert"></p></div>',
         '<div class="renewal-actions settings-links settings-section"><button id="homeLanguage">Language<span class="settings-chevron" aria-hidden="true"></span></button><button id="renewalUpdates">Software updates<span class="settings-update-dot" aria-hidden="true"></span><span class="settings-chevron" aria-hidden="true"></span></button><button id="renewalTV">TV settings<span class="settings-chevron" aria-hidden="true"></span></button><button id="renewalNotifications">LG Notifications<span class="settings-chevron" aria-hidden="true"></span></button></div><div class="renewal-actions settings-developer"><button id="developerOpen" aria-controls="developerSettings" aria-describedby="renewalSummary"><span><span>Developer Mode</span><span id="renewalSummary" class="renewal-summary" aria-live="polite">Checking auto-renewal…</span></span><span class="settings-chevron" aria-hidden="true"></span></button></div><div class="settings-footer">',
@@ -173,6 +173,19 @@
         finish(null);
       }
     }
+    var homeKeep = document.getElementById('homeKeepSource'),
+      homeKeepHint = document.getElementById('homeKeepSourceHint'),
+      homeKeepOn = null;
+    // Helpers without Stay on HDMI or Live TV when the TV wakes do not report keepSource;
+    // the switch stays hidden until the running Helper confirms its value.
+    function renderKeepSource(r) {
+      var known =
+        !!r && r.returnValue === true && typeof r.keepSource === 'boolean';
+      if (known) homeKeepOn = r.keepSource;
+      homeKeep.hidden = homeKeepHint.hidden = homeKeepOn === null;
+      homeKeep.disabled = !known;
+      homeKeep.setAttribute('aria-checked', String(homeKeepOn === true));
+    }
     var homeToggle = document.getElementById('homeRoutingToggle'),
       homeVisit = document.getElementById('homeVisit'),
       homeRetry = document.getElementById('homeRoutingRetry'),
@@ -220,6 +233,8 @@
         )
           reply.errorCode = r.errorCode;
         if (r && typeof r.enabled === 'boolean') reply.enabled = r.enabled;
+        if (r && typeof r.keepSource === 'boolean')
+          reply.keepSource = r.keepSource;
         if (
           !diagnostic &&
           (!reply.returnValue ||
@@ -266,8 +281,9 @@
         });
       }
     }
-    function renderHome(r) {
+    function renderHome(r, routingOnly) {
       homeBusy = false;
+      if (!routingOnly) renderKeepSource(r);
       homeVisit.disabled = false;
       homeRetry.disabled = false;
       if (!r || r.returnValue !== true || typeof r.enabled !== 'boolean') {
@@ -404,13 +420,38 @@
       homeVisit.disabled = true;
       homeStatus.textContent = tr('Changing Home control…');
       homeRPC('setHomeControl', { enabled: !homeEnabled }, function (r) {
-        if (r.returnValue === true) renderHome(r);
+        // setHomeControl reports only the Home button preference.
+        if (r.returnValue === true) renderHome(r, true);
         else
           homeRPC('homeStatus', {}, function (status) {
             renderHome(status);
             homeStatus.textContent = tr(
               'Change was not confirmed. Check the switch and try again.'
             );
+          });
+      });
+    };
+    homeKeep.onclick = function () {
+      if (homeBusy || homeKeepOn === null) return;
+      var focused = document.activeElement === homeKeep;
+      function refocus() {
+        if (focused && openNow() && !homeKeep.hidden && !homeKeep.disabled)
+          homeKeep.focus();
+      }
+      homeBusy = true;
+      homeKeep.disabled = true;
+      homeRPC('setKeepSource', { enabled: !homeKeepOn }, function (r) {
+        if (r.returnValue === true && typeof r.keepSource === 'boolean') {
+          homeBusy = false;
+          renderKeepSource(r);
+          refocus();
+        } else
+          homeRPC('homeStatus', {}, function (status) {
+            renderHome(status);
+            homeStatus.textContent = tr(
+              'Change was not confirmed. Check the switch and try again.'
+            );
+            refocus();
           });
       });
     };

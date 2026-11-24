@@ -65,6 +65,29 @@ if ((fs.statSync(dir).mode & 0o7777) !== 0o2770) {
       (await send('setHomeControl', { enabled: 'false' })).returnValue,
       false
     );
+    pending = send('setKeepSource', { enabled: true });
+    req = JSON.parse(
+      fs.readFileSync(path.join(dir, 'home-request.json'), 'utf8')
+    );
+    assert.equal(req.method, 'setKeepSource');
+    assert.equal(req.enabled, true);
+    fs.writeFileSync(
+      path.join(dir, 'home-response.json'),
+      JSON.stringify({
+        id: req.id,
+        returnValue: true,
+        enabled: true,
+        keepSource: true
+      })
+    );
+    queue.shift()();
+    assert.equal((await pending).keepSource, true);
+    for (const payload of [{}, { enabled: 'true' }, { enabled: 1 }])
+      assert.equal(
+        (await send('setKeepSource', payload)).returnValue,
+        false,
+        'Stay on input at power-on accepts only a boolean'
+      );
     assert.equal((await send('shell', { command: 'noop' })).returnValue, false);
     const settings = {
       enabled: true,
@@ -174,7 +197,12 @@ if ((fs.statSync(dir).mode & 0o7777) !== 0o2770) {
       assert.equal(stat.mode & 0o7777, 0o660);
       assert.equal(stat.gid, fs.statSync(dir).gid);
     }
-    for (const method of ['homeStatus', 'setHomeControl', 'inputStatus'])
+    for (const method of [
+      'homeStatus',
+      'setHomeControl',
+      'setKeepSource',
+      'inputStatus'
+    ])
       assert.equal(
         (await catalog(method, {})).returnValue,
         false,
@@ -246,11 +274,12 @@ if ((fs.statSync(dir).mode & 0o7777) !== 0o2770) {
       false,
       'input reads cannot choose a target or add payload fields'
     );
-    assert.equal(
-      (await input('setHomeControl', { enabled: false })).returnValue,
-      false,
-      'metadata channel cannot mutate Home'
-    );
+    for (const method of ['setHomeControl', 'setKeepSource'])
+      assert.equal(
+        (await input(method, { enabled: false })).returnValue,
+        false,
+        'metadata channel cannot mutate Home'
+      );
     pending = send('presentationContext', {});
     req = JSON.parse(
       fs.readFileSync(path.join(dir, 'home-request.json'), 'utf8')

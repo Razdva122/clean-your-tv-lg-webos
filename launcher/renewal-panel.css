@@ -4,7 +4,9 @@
   font-family: Outfit, sans-serif;
 }
 
-#homeRoutingToggle[hidden] {
+#homeRoutingToggle[hidden],
+#homeKeepSource[hidden],
+#homeKeepSourceHint[hidden] {
   display: none;
 }
 

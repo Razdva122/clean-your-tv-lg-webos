@@ -5,7 +5,8 @@
   window.PREVIEW_HOME_CONTEXT = 'empty';
   // The browser preview stays open when explicit recovery simulates leaving Home.
   window.close = function () {};
-  var homeEnabled = true;
+  var homeEnabled = true,
+    keepSource = false;
   var enabled = false,
     rootPhase = 'disabled';
   var firmwareBlocked = false,
@@ -108,18 +109,19 @@
         result = { returnValue: true };
       } else if (
         uri.indexOf('luna://com.gathin.tvhome.renewal/') === 0 &&
-        ['homeStatus', 'setHomeControl', 'openLGHome'].indexOf(
+        ['homeStatus', 'setHomeControl', 'setKeepSource', 'openLGHome'].indexOf(
           uri.split('/').pop()
         ) >= 0
       ) {
         var homeMethod = uri.split('/').pop();
         if (homeMethod === 'setHomeControl') homeEnabled = payload.enabled;
+        if (homeMethod === 'setKeepSource') keepSource = payload.enabled;
         if (homeMethod === 'openLGHome') message('LG Home · settings kept');
-        if (
-          ['homeStatus', 'setHomeControl', 'openLGHome'].indexOf(homeMethod) >=
-          0
-        )
-          result = { returnValue: true, enabled: homeEnabled };
+        result = {
+          returnValue: true,
+          enabled: homeEnabled,
+          keepSource: keepSource
+        };
       } else if (
         uri === 'luna://com.local.nativehome.service/listApps' ||
         (uri === 'luna://com.cleanyourtv.root.preview.service/listApps' &&

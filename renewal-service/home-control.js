@@ -93,6 +93,7 @@ module.exports = function (fs, dir, options) {
           : [
               'homeStatus',
               'setHomeControl',
+              'setKeepSource',
               'openLGHome',
               'presentationContext',
               'presentationDismissed'
@@ -116,7 +117,7 @@ module.exports = function (fs, dir, options) {
           typeof payload !== 'object' ||
           Array.isArray(payload) ||
           Object.keys(payload).length !== 0)) ||
-      (method === 'setHomeControl' &&
+      ((method === 'setHomeControl' || method === 'setKeepSource') &&
         (!payload || typeof payload.enabled !== 'boolean'))
     )
       return Promise.resolve({
@@ -139,7 +140,8 @@ module.exports = function (fs, dir, options) {
         lastFailure = null;
       try {
         var request = { id: id, method: method, expires: deadline };
-        if (method === 'setHomeControl') request.enabled = payload.enabled;
+        if (method === 'setHomeControl' || method === 'setKeepSource')
+          request.enabled = payload.enabled;
         if (method === 'screensaverConfigure') request.settings = payload;
         if (
           (method === 'screensaverPreview' ||

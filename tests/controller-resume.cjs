@@ -66,7 +66,7 @@ function run(baseline, scenario) {
           };
         };
       if (name === './resume-policy')
-        return require('../native/app/resume-policy');
+        return baseline ? () => true : require('../native/app/resume-policy');
       return require('../native/app/' + name.slice(2));
     },
     process: {
@@ -90,12 +90,10 @@ function run(baseline, scenario) {
     },
     clearInterval() {}
   };
-  let code = fs.readFileSync(
+  const code = fs.readFileSync(
     require('path').join(__dirname, '../native/app/native.js'),
     'utf8'
   );
-  if (baseline)
-    code = code.replace('!shouldResumeLaunch(lastForeground)', 'false');
   vm.runInNewContext(code, context);
   timeouts.find((t) => t.ms === 0).fn();
   worker.stdout.emit('data', Buffer.from('READY\n'));

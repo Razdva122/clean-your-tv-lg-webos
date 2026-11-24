@@ -97,6 +97,7 @@ node tests/home-control-bridge.cjs
 node tests/home-control-jail.cjs
 node tests/resume.cjs
 node tests/controller-resume.cjs
+node tests/controller-keep-source.cjs
 node --test tests/controller-resume-home.cjs tests/controller-watchdog.cjs
 node tests/controller-home.cjs
 node tests/controller-ir-home.cjs
