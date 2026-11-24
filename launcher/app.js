@@ -2381,7 +2381,7 @@
     });
     return inputRows.length;
   }
-  function activateTopButton(index) {
+  function activateTopButton(index, okHeld) {
     if (tileEditMode) setTileEditMode(false);
     0 === index
       ? (function () {
@@ -2412,7 +2412,7 @@
         })()
       : 1 === index
         ? openNetworkSettings()
-        : window.RenewalPanel.open();
+        : window.RenewalPanel.open(okHeld);
   }
   function addInputSeparator() {
     var separator = document.createElement('div');
@@ -2662,7 +2662,7 @@
             focusShelf(nearestShelf(buttonRect.left + buttonRect.width / 2));
           } else focusTile(0 === rowFor(focusedTile) ? focusedTile : 0);
         } else if (key === KEY_OK) {
-          activateTopButton(focusedTopButton);
+          activateTopButton(focusedTopButton, true);
         } else if (key !== KEY_BACK) {
           return;
         }

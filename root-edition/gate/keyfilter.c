@@ -848,8 +848,12 @@ static int guard(const char *token,int input,int control,int ready,int seconds,i
   if (lock<0) return reply(0,1,"recovery_busy");
   if (!same_config() || active_read()!=1 || active.pid!=(long)getpid() ||
       active.start!=process_start(getpid())) { close(lock); return reply(0,1,"stale_attempt"); }
+  /* Once the reader reports the remote gone, the broker/controller may time
+   * out before their pipes close during shutdown. Still require the init proof. */
+  int waiting_transport_lost=channels[0].waiting &&
+    (!strcmp(reason,"broker_expired") || !strcmp(reason,"controller_expired"));
   if (resumable && armed && (!strcmp(reason,"signal") || !strcmp(reason,"input_lost") ||
-                            !strcmp(reason,"controller_lost")) &&
+                            !strcmp(reason,"controller_lost") || waiting_transport_lost) &&
       pulse_write("health",0,0,0)) {
     /* Revoke launch authority before querying the init daemon. Keep reading the
      * emergency channels until the final durable reason is selected. */

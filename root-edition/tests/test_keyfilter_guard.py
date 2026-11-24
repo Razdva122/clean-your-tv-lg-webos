@@ -574,6 +574,37 @@ int main(void) {
         self.assertEqual(latch.read_text(), f'{TOKEN} explicit_off\n')
         self.assertNotEqual(self.run_guard('--retire-boot', TOKEN)[1], 0)
 
+    def test_remote_disappears_before_broker_during_verified_shutdown(self):
+        self.check_remote_disappears_before_broker('stopping', 1, 'normal_shutdown')
+
+    def test_remote_disappears_before_broker_without_verified_shutdown(self):
+        self.check_remote_disappears_before_broker('running', 0, 'broker_expired')
+
+    def check_remote_disappears_before_broker(self, system_state, status, reason):
+        systemctl = self.root/'systemctl'
+        systemctl.write_text(f'#!/bin/sh\nprintf "{system_state}\\n"\nexit {status}\n')
+        systemctl.chmod(0o700)
+        proc, iw, cw = self.armed(resumable=True, wait_input=True)
+        # Replay ENODEV as WAIT, then stop renewing the broker lease while
+        # the observer and controller are still alive.
+        deadline = time.monotonic() + 4
+        while proc.poll() is None and time.monotonic() < deadline:
+            try:
+                self.report_missing_input(iw)
+                os.write(cw, b'PING\n')
+            except BrokenPipeError:
+                break
+            time.sleep(.12)
+        self.assertEqual(self.finish(proc)['reason'], reason)
+        result, rc = self.run_guard('--retire-boot', TOKEN)
+        if reason == 'normal_shutdown':
+            self.assertEqual(rc, 0)
+            self.assertEqual(result['reason'], reason)
+            self.assertFalse((self.root/'luna-calls').exists())
+        else:
+            self.assertNotEqual(rc, 0)
+            self.assertTrue((self.root/'luna-calls').exists())
+
     def test_capabilities_are_static_and_do_not_require_or_change_state(self):
         before = {p.relative_to(self.root): p.read_bytes()
                   for p in self.root.rglob('*') if p.is_file()}
