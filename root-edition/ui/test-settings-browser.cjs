@@ -134,7 +134,8 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8879';
         };
       };
     });
-    await page.locator('#btnSettings').click();
+    await page.locator('#btnSettings').hover();
+    await page.keyboard.down('Enter');
     const toggle = page.locator('.root-settings .home-routing-switch').first();
     await page.waitForFunction(
       () =>
@@ -146,6 +147,21 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8879';
       await page.evaluate(() => document.activeElement.id),
       'settings-tab-home',
       'status must preserve category navigation focus'
+    );
+    // Some Magic Remote paths send extra OK downs without a repeat flag.
+    await page.evaluate(() => {
+      for (let i = 0; i < 2; i++)
+        document.activeElement.dispatchEvent(
+          new KeyboardEvent('keydown', { keyCode: 13, bubbles: true })
+        );
+    });
+    await page.keyboard.up('Enter');
+    assert.deepEqual(
+      await page.evaluate(() =>
+        settingsBackend.calls.filter((m) => m !== 'status')
+      ),
+      [],
+      'the OK that opened Settings cannot change Home control'
     );
     // A backend transition completes while Settings stays open, without writes.
     await page.evaluate(() => {

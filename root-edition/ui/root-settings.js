@@ -19,6 +19,7 @@
       visitHint,
       selected = 0,
       busy = false,
+      okDown = false,
       previous,
       rootStatus = null;
     var checkingUpdates = false,
@@ -490,6 +491,14 @@
       if (!buttons[selected].disabled && !buttons[selected].hidden)
         buttons[selected].focus();
     }
+    function allowOk(event) {
+      if (okDown || event.repeat) return false;
+      okDown = true;
+      return true;
+    }
+    document.addEventListener('keyup', function (event) {
+      if (event.keyCode === 13) okDown = false;
+    });
     function move(direction) {
       var index = order.indexOf(selected);
       for (var count = 0; count < order.length; count++) {
@@ -816,24 +825,29 @@
       var wallpapers = document.createElement('div');
       if (window.HomeWallpaperPanel) HomeWallpaperPanel.mount(wallpapers);
       if (window.SettingsCategories)
-        categories = SettingsCategories.attach(panel, card, [
-          { id: 'home', label: 'Your Home screen', elements: [home] },
-          { id: 'appearance', label: 'Appearance', elements: [layout, apps] },
-          { id: 'themes', label: 'Themes', elements: [themes] },
-          { id: 'wallpapers', label: 'Wallpapers', elements: [wallpapers] },
-          { id: 'language', label: 'Language', elements: [buttons[5]] },
-          {
-            id: 'updates',
-            label: 'Software updates',
-            elements: [buttons[4], buttons[6]]
-          },
-          {
-            id: 'advanced',
-            label: 'Advanced',
-            icons: ['tv', 'notifications', 'sound'],
-            elements: [buttons[0], buttons[17], buttons[7]]
-          }
-        ]);
+        categories = SettingsCategories.attach(
+          panel,
+          card,
+          [
+            { id: 'home', label: 'Your Home screen', elements: [home] },
+            { id: 'appearance', label: 'Appearance', elements: [layout, apps] },
+            { id: 'themes', label: 'Themes', elements: [themes] },
+            { id: 'wallpapers', label: 'Wallpapers', elements: [wallpapers] },
+            { id: 'language', label: 'Language', elements: [buttons[5]] },
+            {
+              id: 'updates',
+              label: 'Software updates',
+              elements: [buttons[4], buttons[6]]
+            },
+            {
+              id: 'advanced',
+              label: 'Advanced',
+              icons: ['tv', 'notifications', 'sound'],
+              elements: [buttons[0], buttons[17], buttons[7]]
+            }
+          ],
+          allowOk
+        );
       document.body.appendChild(panel);
       document.addEventListener(
         'keydown',
@@ -850,7 +864,7 @@
           if (busy) return;
           if (e.keyCode === 461 || e.keyCode === 27) return close();
           if (e.keyCode === 13) {
-            if (!e.repeat) activate(selected);
+            if (allowOk(e)) activate(selected);
             return;
           }
           move(
@@ -877,9 +891,11 @@
       isOpen: function () {
         return !!panel && !panel.hidden;
       },
-      open: function () {
+      open: function (okHeld) {
         if (!panel) build();
         if (!panel.hidden) return;
+        // The press that opened Settings belongs to the launcher until release.
+        okDown = okHeld === true;
         if (window.HomeAppControls) HomeAppControls.refresh();
         if (window.HomeInputShelf) HomeInputShelf.refresh();
         if (window.HomeLayoutPanel) HomeLayoutPanel.refreshAvailability();

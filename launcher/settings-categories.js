@@ -105,7 +105,7 @@
     pane.appendChild(choices);
     pane.appendChild(error);
   }
-  function attach(panel, card, groups) {
+  function attach(panel, card, groups, allowOk) {
     var nav = document.createElement('div'),
       workspace = document.createElement('div'),
       content = document.createElement('div');
@@ -322,6 +322,7 @@
           active = document.activeElement,
           inNav = nav.contains(active),
           list = actions();
+        if (key === 13 && allowOk && !allowOk(e)) return true;
         if (key === 27 || key === 461) {
           if (!inNav) {
             tabs[current].focus();
