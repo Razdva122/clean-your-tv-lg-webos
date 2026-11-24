@@ -220,6 +220,7 @@ const http = require('node:http');
         'Classic',
         'Minimal',
         'Atmosphere',
+        "Neon '86",
         'Crăciun la Brașov'
       ]) {
         await page.getByRole('button', { name: title, exact: true }).click();

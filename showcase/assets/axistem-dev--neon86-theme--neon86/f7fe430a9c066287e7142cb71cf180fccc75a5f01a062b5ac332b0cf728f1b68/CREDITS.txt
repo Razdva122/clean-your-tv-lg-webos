@@ -1,6 +1,6 @@
 Neon '86 credits
 
-All artwork is original. tools/generate-wallpapers.py renders it from code only
+All wallpaper artwork is original. tools/generate-wallpapers.py renders it from code only
 (Pillow and numpy, seed 1986): gradients, a striped sun, a perspective neon
 grid, mountain and palm silhouettes, an abstract art-deco skyline with text-free
 neon shapes, a rippled water reflection, haze, vignette and grain. No
@@ -11,7 +11,11 @@ were used.
   Ocean Drive  extra wallpaper, 1920x1080: night art-deco skyline, neon, palms,
                ocean reflection (downscaled from a 3840x2160 render)
 
-The preview is a 960x540 downscale with a schematic dock and clock overlay.
+The preview (assets/sunset/preview.jpg, 960x540) is a screenshot of the Clean Your
+TV browser preview with this theme and the Sunset wallpaper. It shows that
+preview's demo app icons, which remain the property of their publishers and are
+not covered by this theme's license (see preview/reference-apps/NOTICE.txt in
+Clean Your TV).
 
 Palette: hot pink #ff2e88, electric cyan #28dcff, violet #8a3cff, sunset
 orange #ff9a45, sun yellow #ffe066, near-black navy #070818, ice text #e9f7ff.

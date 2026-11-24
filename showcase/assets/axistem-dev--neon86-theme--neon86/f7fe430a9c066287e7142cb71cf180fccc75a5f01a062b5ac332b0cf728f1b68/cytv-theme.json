@@ -8,7 +8,7 @@
     "name": "aXistem",
     "url": "https://github.com/axistem-dev"
   },
-  "themeVersion": "1.1.0",
+  "themeVersion": "1.1.1",
   "layout": {
     "preset": "dock-grid",
     "columns": 5,
@@ -57,8 +57,8 @@
       "mediaType": "image/jpeg",
       "width": 960,
       "height": 540,
-      "size": 90207,
-      "sha256": "c05d02955f6233925f87a25ff5419e054e2791d64885bd07742546fbac749b2e"
+      "size": 97957,
+      "sha256": "68caab45316468a53dab9d5ec59c923173a90c2f7c472f431aea8834b545f4a5"
     }
   ],
   "previewAssetId": "preview",
@@ -69,7 +69,7 @@
   },
   "source": {
     "repository": "https://github.com/axistem-dev/neon86-theme",
-    "commit": "30c46483024959e1d94ea126f082ed9e3efd1535"
+    "commit": "b84cfae583fab7355edec8dccf43102b994f6469"
   },
   "requires": {
     "minimumHomeVersion": "1.13.3",
@@ -85,13 +85,13 @@
   "documents": [
     {
       "path": "LICENSE.txt",
-      "size": 689,
-      "sha256": "448e473a0dbe915198cbe927a68c470acb26fee83c82aca11c101a9f715e9d3a"
+      "size": 844,
+      "sha256": "27732b1f59c66de9f2f0601b94462df06414e48626ce3ebc0e398d77dd727ad3"
     },
     {
       "path": "CREDITS.txt",
-      "size": 919,
-      "sha256": "f93c51b2c93be7959357bc90d0c9166ea3c35ba452f118681b46929d6afa4404"
+      "size": 1185,
+      "sha256": "f24f6eb5a52c0bbe29c42c725c8900452c2aeeeffba1d02d5d90914bc20ba048"
     }
   ]
 }

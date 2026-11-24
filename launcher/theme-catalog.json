@@ -113,18 +113,18 @@
       "digest": "b0a5648b029a28b2688879b5c7c5e3c13aed9b84d71cb9c2915bbffccac7a72c"
     },
     {
-      "packageSize": 1408561,
+      "packageSize": 1416733,
       "has4k": false,
       "hasVideo": false,
       "id": "github:axistem-dev/neon86-theme:neon86",
       "title": "Neon '86",
-      "version": "1.1.0",
+      "version": "1.1.1",
       "author": "aXistem",
       "license": "CC-BY-4.0",
       "description": "Original 80s synthwave look: chrome-and-neon clock, electric cyan outlines with a hot pink glow, monospace labels and neon horizon lines. Two original wallpapers: a striped sun over a neon grid (4K) and a night art-deco Ocean Drive (1080p).",
-      "preview": "theme-catalog/axistem-dev--neon86-theme--neon86/6aa6148fcf4f3aba6c7ad173d64a9dc5f85eaed4971915d42a3262ef0340dd11/preview.jpg",
-      "url": "https://raw.githubusercontent.com/axistem-dev/neon86-theme/d30df13125d947d8a637bf32ec3a4de659ca9f86/releases/neon86/1.1.0/cytv-theme.json",
-      "digest": "6aa6148fcf4f3aba6c7ad173d64a9dc5f85eaed4971915d42a3262ef0340dd11"
+      "preview": "theme-catalog/axistem-dev--neon86-theme--neon86/f7fe430a9c066287e7142cb71cf180fccc75a5f01a062b5ac332b0cf728f1b68/preview.jpg",
+      "url": "https://raw.githubusercontent.com/axistem-dev/neon86-theme/5b95a7044e2026c8d1a6aa0fc6bf941d803a325c/releases/neon86/1.1.1/cytv-theme.json",
+      "digest": "f7fe430a9c066287e7142cb71cf180fccc75a5f01a062b5ac332b0cf728f1b68"
     }
   ]
 }
