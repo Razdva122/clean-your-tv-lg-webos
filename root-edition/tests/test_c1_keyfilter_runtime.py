@@ -1296,6 +1296,39 @@ class RuntimeTests(unittest.TestCase):
                         start.assert_called_once_with(controller['pid'])
                         self.assertFalse(record.exists())
 
+    def test_c1_boot_and_restore_retire_reused_controller_pid_after_reboot(self):
+        # Observed on OLED55C14LB 03.53.45 (schema 2): the record has no boot
+        # field, the kernel boot ID survives reboots, and after a cold boot the
+        # recorded PID belonged to /usr/sbin/physical-device-manager.
+        self.admission = dict(self.admission, model='OLED55C14LB', firmware='03.53.45', webos='6.5.3')
+        self.assertEqual(self.prepare()['schema'], 2)
+        record = self.root/'c1-keyfilter/controller.json'
+        controller = dict(pid=4282, start=23011, token='1'*32)
+        chain = [{'file': '/usr/lib/qt5/qml/KeyFilters/systemUi.js', 'handler': 'handleSystemKeys'}]
+        stopped = dict(self.proof(), reason='input_lost')
+        for mode in ('boot', 'restore'):
+            with self.subTest(mode=mode):
+                self.k.atomic(record, controller, self.uid)
+                self.k.write_intent(self.root, False, '1'*32, 'recovering', self.uid)
+                with patch.object(self.k, 'native', return_value=stopped), \
+                        patch.object(self.k, 'read_chain', side_effect=lambda: list(chain)), \
+                        patch.object(self.k, 'process_start', return_value=2335) as start, \
+                        patch.object(self.k.os, 'kill') as signal:
+                    self.assertEqual(self.k.execute(mode, root=self.root, uid=self.uid), 'restored')
+                start.assert_called_once_with(controller['pid'])
+                signal.assert_not_called()
+                self.assertFalse(record.exists())
+                self.assertEqual(self.k.read_intent(self.root, self.uid)['phase'], 'disabled')
+        # A changed Home identity still retains the record and its evidence.
+        self.k.atomic(record, controller, self.uid)
+        with patch.object(self.k, 'native', return_value=dict(stopped, stock_verified=False)), \
+                patch.object(self.k, 'read_chain', side_effect=lambda: list(chain)), \
+                patch.object(self.k, 'process_start', return_value=2335) as start:
+            with self.assertRaises(ValueError):
+                self.k.execute('boot', root=self.root, uid=self.uid)
+        start.assert_not_called()
+        self.assertEqual(json.loads(record.read_text()), controller)
+
     def test_webos5_ribbon_removal_with_live_tv_foreground(self):
         import hashlib
 

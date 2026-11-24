@@ -872,6 +872,37 @@ int main(void) {
         self.assertTrue(s['stopped']); self.assertTrue(s['stock_verified'])
         self.assertEqual((self.root/'luna-calls').read_text().splitlines()[-1],
             '-n 1 luna://com.webos.applicationManager/launch {"id":"com.webos.app.home"}')
+    def test_restore_succeeds_with_webos6_absent_root_reply(self):
+        # Stock SAM on OLED55C14LB 03.53.45 (webOS 6.5.3), captured byte-for-byte
+        # from closeByAppId for an installed app with no running instance.
+        (self.root/'luna-close-reply').write_text(
+            '{"errorCode":1,"returnValue":false,"errorText":"app is not running"}\n')
+        s,rc=self.run_guard('--restore'); self.assertEqual(rc,0)
+        self.assertEqual(s['reason'],'explicit_off')
+        self.assertTrue(s['stopped']); self.assertTrue(s['stock_verified'])
+        self.assertEqual((self.root/'luna-calls').read_text().splitlines()[-2:],
+            ['-n 1 luna://com.webos.applicationManager/closeByAppId {"id":"com.cleanyourtv.root.preview"}',
+             '-n 1 luna://com.webos.applicationManager/launch {"id":"com.webos.app.home"}'])
+    def test_webos6_absent_root_exception_does_not_accept_other_errors(self):
+        valid=dict(errorCode=1,returnValue=False,errorText='app is not running')
+        # The same firmware answers errorCode 1 for an unknown or empty id and
+        # errorCode 2 for a missing id; only the exact absent text is idempotent.
+        invalid=[dict(valid,errorText='no valid life handler'),
+                 dict(valid,errorCode=2,errorText='invalid parameters'),
+                 dict(valid,errorText='Permission denied'),dict(valid,errorText='app is not running '),
+                 dict(valid,errorText='com.cleanyourtv.root.preview is not running'),
+                 dict(valid,errorCode=40),dict(valid,errorCode='1'),dict(valid,errorCode=True),
+                 dict(valid,errorCode=-1),dict(valid,errorText=None),dict(valid,returnValue='false')]
+        for value in invalid:
+            with self.subTest(value=value):
+                (self.root/'luna-close-reply').write_text(json.dumps(value))
+                s,rc=self.run_guard('--restore'); self.assertNotEqual(rc,0)
+                self.assertEqual(s['reason'],'ui_release_failed'); self.assertTrue(s['stopped'])
+        # The absent-Root reply never makes LG Home launch idempotent.
+        (self.root/'luna-close-reply').write_text(json.dumps(valid))
+        (self.root/'luna-reply').write_text(json.dumps(valid))
+        s,rc=self.run_guard('--restore'); self.assertNotEqual(rc,0)
+        self.assertEqual(s['reason'],'ui_release_failed')
     def test_absent_root_exception_does_not_accept_other_errors(self):
         valid=dict(returnValue=False,errorCode=40,errorText='com.cleanyourtv.root.preview is not running')
         invalid=[dict(valid,errorText='com.webos.app.home is not running'),
