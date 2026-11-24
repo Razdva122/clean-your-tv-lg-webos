@@ -23,6 +23,8 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8876';
       window.helperStatusAvailable = true;
       window.helperStopLatched = true;
       window.homeChoice = null;
+      // Older Helpers omit keepSource; set a boolean to emulate support.
+      window.keepSourceChoice = undefined;
       window.homeBrokerFailure = null;
       window.PalmServiceBridge = function () {
         this.cancel = () => clearTimeout(this.timer);
@@ -71,15 +73,24 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8876';
               if (helperStopped) {
                 r.returnValue = false;
                 if (homeBrokerFailure) r.diagnostic = homeBrokerFailure;
-              } else
+              } else {
                 r.enabled =
                   homeChoice ??
                   calls.some((call) => call.p.id === 'com.local.nativehome');
+                if (keepSourceChoice !== undefined)
+                  r.keepSource = keepSourceChoice;
+              }
             } else if (
               uri === 'luna://com.gathin.tvhome.renewal/setHomeControl'
             ) {
               homeChoice = p.enabled;
               r.enabled = homeChoice;
+            } else if (
+              uri === 'luna://com.gathin.tvhome.renewal/setKeepSource'
+            ) {
+              keepSourceChoice = p.enabled;
+              r.enabled = homeChoice;
+              r.keepSource = keepSourceChoice;
             } else if (
               uri === 'luna://com.gathin.tvhome.renewal/screensaverStatus'
             ) {
@@ -251,6 +262,63 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8876';
     await homePane
       .locator('#homeRoutingToggle[role=switch][aria-checked=true]')
       .waitFor();
+    // Stay on HDMI or Live TV when the TV wakes stays hidden for a Helper that omits it.
+    assert(await homePane.locator('#homeKeepSource').isHidden());
+    assert(await homePane.locator('#homeKeepSourceHint').isHidden());
+    // Reopening settings refreshes Home status from a Helper that reports it.
+    await page.evaluate(() => {
+      keepSourceChoice = false;
+    });
+    await page.locator('#renewalClose').click();
+    await page.locator('#renewalPanel').waitFor({ state: 'hidden' });
+    await page.locator('#btnSettings').click();
+    await page.locator('[data-category=home]').click();
+    const keepSwitch = homePane.getByRole('switch', {
+      name: 'Stay on HDMI or Live TV when the TV wakes'
+    });
+    await homePane
+      .locator('#homeKeepSource[role=switch][aria-checked=false]')
+      .waitFor();
+    assert(await homePane.locator('#homeKeepSourceHint').isVisible());
+    assert.equal(
+      await homePane.locator('#homeKeepSourceHint').textContent(),
+      'If your TV wakes from standby already showing a game console, Live TV, or another input, that screen stays open. The Home button works as usual.'
+    );
+    await keepSwitch.focus();
+    await page.keyboard.press('Enter');
+    await homePane
+      .locator('#homeKeepSource[role=switch][aria-checked=true]')
+      .waitFor();
+    assert.equal(
+      await page.evaluate(() => document.activeElement.id),
+      'homeKeepSource'
+    );
+    assert.deepEqual(
+      await page.evaluate(() =>
+        calls
+          .filter(
+            (c) => c.uri === 'luna://com.gathin.tvhome.renewal/setKeepSource'
+          )
+          .map((c) => c.p)
+      ),
+      [{ enabled: true }]
+    );
+    assert.equal(await page.evaluate(() => keepSourceChoice), true);
+    assert.equal(
+      await homeSwitch.getAttribute('aria-checked'),
+      'true',
+      'Stay on HDMI or Live TV when the TV wakes does not change Home routing'
+    );
+    await homeSwitch.click();
+    await homePane.locator('#homeRoutingToggle[aria-checked=false]').waitFor();
+    assert(
+      await keepSwitch.isEnabled(),
+      'Change Home leaves the input switch usable'
+    );
+    assert.equal(await keepSwitch.getAttribute('aria-checked'), 'true');
+    await keepSwitch.click();
+    await homePane.locator('#homeKeepSource[aria-checked=false]').waitFor();
+    assert.equal(await page.evaluate(() => keepSourceChoice), false);
     await page.reload();
     await page.locator('#tiles .item').first().waitFor();
     await page.locator('#btnSettings').click();

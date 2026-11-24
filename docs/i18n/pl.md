@@ -176,6 +176,10 @@ Wybierz kategorię przyciskami ↑ ↓ i wejdź do niej przez → lub OK. ← wr
 
 W **Ustawienia → Twój ekran Home → Format godziny** wybierz **Automatycznie (region telewizora)**, **12-godzinny** lub **24-godzinny**.
 
+W No-root otwórz **Ustawienia → Twój ekran Home → Po wybudzeniu pozostań na HDMI lub w telewizji na żywo**.
+
+Jeśli po wyjściu z trybu czuwania telewizor wyświetla już obraz z konsoli, telewizję na żywo lub inne wejście, ten ekran pozostanie otwarty. Przycisk Home działa jak zwykle. Ta opcja jest domyślnie wyłączona.
+
 Jeśli No-root nie może odczytać stanu Home, wybierz Spróbuj ponownie. Niedostępny przełącznik nie oznacza wyłączonego sterowania Home. W Tapetach prześlij obraz z telefonu lub CYTV; jakość i przyciemnienie pojawiają się, gdy tapeta jest dostępna. Usunięcie własnej tapety wymaga potwierdzenia; Anuluj ją zachowuje.
 
 ## Pogoda

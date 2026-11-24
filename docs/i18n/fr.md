@@ -175,6 +175,10 @@ Utilisez ↑ ↓ pour choisir une catégorie, puis → ou OK pour y entrer. ← 
 
 Dans **Réglages → Votre écran Home → Format de l’heure**, choisissez **Automatique (région du téléviseur)**, **12 heures** ou **24 heures**.
 
+Dans l’édition No-root, ouvrez **Réglages → Votre écran Home → Rester sur HDMI ou la TV en direct à la sortie de veille**.
+
+Si le téléviseur affiche déjà une console, la TV en direct ou une autre entrée à la sortie de veille, cet écran reste affiché. Le bouton Home fonctionne comme d’habitude. L’option est désactivée par défaut.
+
 Si No-root ne peut pas lire l’état de Home, choisissez Réessayer. Un contrôle indisponible ne signifie pas que Home est désactivé. Dans Fonds d’écran, transférez une image depuis le téléphone ou CYTV ; qualité et assombrissement apparaissent lorsqu’un fond est disponible. La suppression d’un fond personnel demande confirmation ; Annuler le conserve.
 
 ## Météo

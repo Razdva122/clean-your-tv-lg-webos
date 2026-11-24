@@ -186,6 +186,40 @@ assert.deepEqual(
 );
 pending.homeStatus({ returnValue: true, enabled: true });
 assert.equal(report().home.homeStatus.enabled, true);
+// Stay on input at power-on appears only when the Helper reports a boolean.
+assert.equal(ids.homeKeepSource.hidden, true);
+assert.equal(ids.homeKeepSourceHint.hidden, true);
+ids.homeRoutingRetry.onclick();
+pending.homeStatus({ returnValue: true, enabled: true, keepSource: 'PRIVATE' });
+assert.equal(report().home.homeStatus.keepSource, undefined);
+assert.equal(ids.homeKeepSource.hidden, true);
+ids.homeRoutingRetry.onclick();
+pending.homeStatus({ returnValue: true, enabled: true, keepSource: false });
+assert.equal(report().home.homeStatus.keepSource, false);
+assert.equal(ids.homeKeepSource.hidden, false);
+assert.equal(ids.homeKeepSourceHint.hidden, false);
+assert.equal(ids.homeKeepSource.disabled, false);
+assert.equal(ids.homeKeepSource.attrs['aria-checked'], 'false');
+ids.homeKeepSource.onclick();
+assert.equal(ids.homeKeepSource.disabled, true);
+pending.setKeepSource({ returnValue: true, enabled: true, keepSource: true });
+assert.equal(ids.homeKeepSource.attrs['aria-checked'], 'true');
+assert.equal(ids.homeKeepSource.disabled, false);
+assert.deepEqual(report().home.setKeepSource, {
+  returnValue: true,
+  enabled: true,
+  keepSource: true
+});
+// An unconfirmed change re-reads the Helper instead of guessing.
+ids.homeKeepSource.onclick();
+pending.setKeepSource({ returnValue: false, errorText: 'PRIVATE' });
+pending.homeStatus({ returnValue: true, enabled: true, keepSource: true });
+assert.equal(ids.homeKeepSource.attrs['aria-checked'], 'true');
+assert.equal(
+  ids.homeRoutingStatus.textContent,
+  'Change was not confirmed. Check the switch and try again.'
+);
+assert.equal(calls.filter((uri) => uri.endsWith('/setKeepSource')).length, 2);
 console.log(
   'PASS settings diagnostics: async Home results, safe fields, actual service version, unknown switch and no side effects'
 );

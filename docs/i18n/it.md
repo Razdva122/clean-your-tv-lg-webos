@@ -177,6 +177,10 @@ Usa ↑ ↓ per scegliere una categoria e → oppure OK per aprirla. ← torna a
 
 In **Impostazioni → La tua schermata Home → Formato dell’ora**, scegli **Automatico (regione del TV)**, **12 ore** o **24 ore**.
 
+Nell’edizione No-root, apri **Impostazioni → La tua schermata Home → Resta su HDMI o sulla TV in diretta all’uscita dallo standby**.
+
+Se all’uscita dallo standby il televisore mostra già una console, la TV in diretta o un altro ingresso, quella schermata rimane aperta. Il tasto Home funziona come sempre. L’opzione è disattivata per impostazione predefinita.
+
 Se No-root non riesce a leggere lo stato di Home, scegli Riprova. Un controllo non disponibile non significa che Home sia disattivato. In Sfondi, carica un’immagine dal telefono o da CYTV; qualità e oscuramento compaiono quando è disponibile uno sfondo. La rimozione di uno sfondo personale richiede conferma; Annulla lo conserva.
 
 ## Meteo
