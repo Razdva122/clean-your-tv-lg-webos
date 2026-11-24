@@ -241,6 +241,16 @@ class DesktopRecoveryTests(unittest.TestCase):
                     self.pump(lambda: not w.running)
             w.close()
 
+            with patch('cytv.cli.package.verify_payload', return_value=dict(self.manifest, home_version='changed')):
+                attempts = len(auth)
+                w = self.window()
+                self.button(w, 'Continue Root reinstallation').click()
+                self.pump(lambda: not w.running)
+                self.assertIn('same installer build', w.content.toPlainText())
+                self.assertEqual(len(auth), attempts)
+                self.assertEqual(len(cleanup_calls), 2)
+                w.close()
+
             # A separate host attempt before the TV's SSH service has come back.
             online = False
             w = self.window()
@@ -424,6 +434,39 @@ class DesktopRecoveryTests(unittest.TestCase):
                             self.assertGreater(len(connections), 1)
                             self.assertIn('Try again', w.subtitle.text())
                     w.close()
+
+    def test_fresh_root_setup_ignores_completed_reinstall_from_another_build(self):
+        from cytv.operations import Installer
+
+        self.store.finish(self.profile)
+        profile = state.target('192.0.2.10', 'root')
+        self.store.save(profile)
+        directory = self.store.device_dir(profile)
+        (directory / 'known_hosts').write_bytes(b'original pin')
+        self.store.request_clean_removal(profile, root_reinstall_payload='a' * 64)
+        self.store.checkpoint(profile, stage='verified-clean',
+                              result={'removed': True, 'verified_clean': True})
+        self.store.finish_clean_removal(profile)
+        receipt = directory / 'clean-removal.json'
+        archived = receipt.read_bytes()
+
+        with patch.object(Installer, 'continue_clean_removal') as cleanup, \
+                patch.object(Installer, 'preflight') as preflight, \
+                patch.object(Installer, 'select_graphics'), \
+                patch.object(Installer, 'version_summary', return_value=[]):
+            w = self.window()
+            w.start('install', profile)
+            for prompt in ('Connect to check installed versions?', 'Install these versions?'):
+                self.pump(lambda: w.pending is not None or not w.running)
+                self.assertIsNotNone(w.pending, w.content.toPlainText())
+                self.assertEqual(w.pending.title, prompt)
+                w.submit('y' if prompt.startswith('Connect') else 'n')
+            self.pump(lambda: not w.running)
+            self.assertEqual(self.connections, [profile])
+            preflight.assert_called_once_with(install=True, home_interfaces=True)
+            cleanup.assert_not_called()
+            self.assertIsNone(self.store.pending(profile))
+            self.assertEqual(receipt.read_bytes(), archived)
 
     def test_root_reinstall_finalizes_verified_checkpoint_without_touching_the_tv(self):
         import hashlib
