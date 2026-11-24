@@ -1039,7 +1039,7 @@ int main(int argc,char **argv) {
         int h=pulse_read("health",&i,&c,&armed);
         int prior=pulse_read("broker",&b,&u,&unused);
         int expired=prior && !fresh(b);
-        int recovering=expired && broker_recoverable(b,armed);
+        int recovering=h && expired && broker_recoverable(b,armed);
         if (broker_retry && (!h || !prior || !broker_recoverable(b,armed))) {
           int rc=reply(0,1,"lease_refused"); close(lock); return rc;
         }

@@ -177,6 +177,9 @@ still live. A fresh recovery pulse blocks routing for a further two seconds so
 queued emergency input can be processed. Explicit Off and the emergency latch
 remain terminal. The existing channel checks still apply to input and controller
 loss. No power-state subscription is required.
+If a Home dispatch reports a broker transport failure before the lease expires,
+the filter opens LG Home, keeps ownership of the paired release, and waits for
+a new authenticated subscription before capturing another press.
 
 State is root-owned under `/var/lib/clean-your-tv-root/c1-keyfilter` (0700), with volatile guardian state under `/tmp/clean-your-tv-root-keyfilter`. The selected marker remains `home-backend.json`. A native guardian requires independent emergency-input, lifecycle-controller and service-broker leases. The filter expires its own in-memory lease and passes Home to LG when authority is lost. Healthy Home requests and lifecycle returns both use the guardian's fixed `--home TOKEN` operation. Durable stop revokes authority before waiting for an in-flight launch and closing only the owned Root app, then requesting LG Home. Recovery never signals a journal PID. SIGKILL cannot execute guardian UI cleanup: the compositor lease expires independently, but explicit Restore may still be needed to close retained Root UI and reconcile the owned chain.
 

@@ -84,18 +84,20 @@ def inspect(remote):
     _run(remote)
 
 
-def create(remote, kind, *, required=0):
+def create(remote, kind, *, required=0, clean_removal=False):
     if kind not in KINDS or type(required) is not int or required < 0:
         raise ValueError('Invalid Root staging kind')
-    from .storage import _tmp_is_ramfs
+    from . import storage
     name = 'cytv-'+kind+'-'+uuid.uuid4().hex
     ramfs = remote.__dict__.get('_cytv_root_ramfs')
     if type(ramfs) is not bool:
-        ramfs = _tmp_is_ramfs(remote, strict=True)
-    if ramfs:
+        ramfs = storage._tmp_is_ramfs(remote, strict=True)
+    if ramfs and clean_removal:
+        # Cleanup must work even when the installation fills internal storage.
+        storage.ramfs_budget(remote, required, lambda _: None, clean_removal=True)
+    elif ramfs:
         inspect(remote)
-        from .storage import check
-        check(remote, {'/var/lib': required}, lambda _: None)
+        storage.check(remote, {'/var/lib': required}, lambda _: None)
         _run(remote, name)
         return ROOT+'/'+name
     stage = '/tmp/'+name

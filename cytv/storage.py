@@ -86,7 +86,7 @@ def check(remote, requirements, progress, *, allow_tmp_ramfs=False):
     return ramfs_tmp
 
 
-def ramfs_budget(remote, required, progress):
+def ramfs_budget(remote, required, progress, *, clean_removal=False):
     """Bound vendor scratch by current RAM, never invent ramfs disk blocks."""
     try:
         reply = remote.run('LC_ALL=C cat /proc/meminfo', timeout=5)
@@ -99,8 +99,10 @@ def ramfs_budget(remote, required, progress):
                 values[match[1]] = int(match[2])*1024
         available = values['MemAvailable'] if 'MemAvailable' in values else values['MemFree']
     except (UserError, OSError, ValueError, KeyError, AttributeError):
-        raise UserError('Temporary RAM capacity could not be verified. Installation stopped before package submission.',
-                        reason_code='tv-storage-ramfs') from None
+        message = 'Temporary RAM capacity could not be verified.'
+        if not clean_removal:
+            message += ' Installation stopped before package submission.'
+        raise UserError(message, reason_code='tv-storage-ramfs') from None
     needed = required + RESERVE
     message = SUMMARY.format(location='Temporary RAM', required=mib(needed),
         available=mib(available, False), shortfall=mib(max(0, needed-available)))

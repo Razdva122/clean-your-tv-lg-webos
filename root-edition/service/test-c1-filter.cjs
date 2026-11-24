@@ -115,6 +115,30 @@ assert.strictEqual(disconnected.subscriptions.length, 2);
 disconnected.reply(lease(1));
 assert.strictEqual(disconnected.key(true), 1);
 
+var dispatchLost = setup();
+dispatchLost.reply(lease(1));
+assert.strictEqual(dispatchLost.key(true), 1);
+dispatchLost.homeCallbacks[0](
+  JSON.stringify({ returnValue: false, errorCode: -1 })
+);
+assert.deepStrictEqual(dispatchLost.launches, [['com.webos.app.home', '{}']]);
+assert.strictEqual(dispatchLost.key(false), 1, 'captured release stays paired');
+assert.strictEqual(
+  dispatchLost.key(true),
+  0,
+  'Home stays with LG while reconnecting'
+);
+assert.strictEqual(dispatchLost.key(false), 0);
+assert.deepStrictEqual(dispatchLost.subscriptions[1], {
+  subscribe: true,
+  reconnect: 'a'.repeat(32)
+});
+dispatchLost.callbacks[0](JSON.stringify(lease(2)));
+assert.strictEqual(dispatchLost.key(true), 0, 'old stream cannot rearm Home');
+assert.strictEqual(dispatchLost.key(false), 0);
+dispatchLost.reply(lease(1));
+assert.strictEqual(dispatchLost.key(true), 1, 'a fresh stream restores Home');
+
 var recovery = setup();
 recovery.reply(lease(1));
 recovery.reply(Object.assign(lease(2), { healthy: false, reconnecting: true }));

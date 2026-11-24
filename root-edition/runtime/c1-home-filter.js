@@ -190,6 +190,7 @@ function cytvC1DispatchHome() {
         applicationManager.launch('com.webos.app.home', '{}');
       } catch (_) {}
     }
+    return true;
   }
   try {
     genericTimer.set(3000, function () {
@@ -207,6 +208,17 @@ function cytvC1DispatchHome() {
         try {
           var reply =
             typeof payload === 'string' ? JSON.parse(payload) : payload;
+          if (
+            !cytvC1Embedded &&
+            reply &&
+            reply.returnValue === false &&
+            reply.errorCode === -1
+          ) {
+            // A dispatch transport failure does not revoke guardian authority.
+            // Fall back to LG and require a new authenticated subscription.
+            if (finish(false, true)) cytvC1Retry(generation, 4);
+            return;
+          }
           var reconnecting = reply && reply.reconnecting === true;
           var keys = reconnecting
             ? 'backend,reconnecting,returnValue,routing,token'

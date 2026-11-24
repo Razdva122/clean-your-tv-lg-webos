@@ -35,6 +35,12 @@ restarts. Ordinary coordinator and native recovery staging omit package archives
 This differs from staging the full native installation bundle. Existing paths
 remain under `/tmp` when that filesystem is not confirmed ramfs.
 
+Full removal stages its verified support bundle in a private `/tmp` directory.
+On ramfs it checks current RAM against the exact upload size and reserve before
+staging. Removal can then start when internal storage falls below the
+installation staging reserve. Insufficient RAM stops the upload and preserves
+the removal receipt.
+
 The installer does not set `TMPDIR`, remount vendor filesystems or modify vendor
 package-manager temporary paths. It neither enlarges ramfs nor redirects all
 system temporary files to disk.

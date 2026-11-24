@@ -476,7 +476,9 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
             manifests[component]=manifest
             candidate[component]=hashlib.sha256(raw).hexdigest()
         digest=hashlib.sha256(json.dumps(candidate,sort_keys=True,separators=(',',':')).encode()).hexdigest()
-        stage=root_staging.create(self.remote, 'product', required=sum((bundle/name).stat().st_size for component,bundle in bundles for name in (*manifests[component]['files'],'bundle.json')))
+        required = sum((bundle/name).stat().st_size for component,bundle in bundles
+                       for name in (*manifests[component]['files'],'bundle.json'))
+        stage = root_staging.create(self.remote, 'product', required=required, clean_removal=clean_removal)
         if self.store.pending(self.profile):
             self.store.checkpoint(self.profile, support_upload=stage)
         if clean_removal:

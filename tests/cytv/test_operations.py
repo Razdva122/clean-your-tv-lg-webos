@@ -1569,6 +1569,33 @@ class OperationTests(unittest.TestCase):
         self.assertTrue(nested)
         self.assertTrue(all(command.startswith('umask 077; mkdir -p ') for command in nested))
 
+    def test_root_ramfs_removal_stages_verified_support_without_free_internal_disk(self):
+        self.root_bundle()
+        remote = self.ramfs_remote(full=True)
+        installer = self.installer(remote, 'root')
+        self.store.request_clean_removal(installer.profile)
+
+        stage = installer.upload_product(self.payload / 'root', clean_removal=True)
+
+        self.assertTrue(stage.startswith('/tmp/cytv-product-'))
+        self.assertTrue(remote.uploads)
+        self.assertTrue(all(path.startswith(stage + '/') for path in remote.uploads))
+        self.assertEqual(self.store.pending(installer.profile)['cleanup_stages'], [stage])
+
+    def test_root_ramfs_removal_refuses_support_upload_when_ram_is_insufficient(self):
+        from cytv.storage import TVStorageShortfall
+
+        self.root_bundle()
+        remote = self.ramfs_remote(low_ram=True)
+        installer = self.installer(remote, 'root')
+        self.store.request_clean_removal(installer.profile)
+
+        with self.assertRaises(TVStorageShortfall):
+            installer.upload_product(self.payload / 'root', clean_removal=True)
+
+        self.assertFalse(remote.uploads)
+        self.assertNotIn('support_upload', self.store.pending(installer.profile))
+
     def test_root_ramfs_install_failure_retains_private_product_receipt(self):
         from cytv.root_staging import ROOT
         self.root_bundle()
