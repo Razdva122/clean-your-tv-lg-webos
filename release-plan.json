@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "version": null,
+  "version": "1.28.0",
   "changes": [
     {
       "pr": 803,
@@ -8,6 +8,16 @@
         766
       ],
       "summary": "Recover No-root catalog refresh during Home startup"
+    },
+    {
+      "pr": 805,
+      "issues": [],
+      "summary": "Fix remaining No-root restart loops and export restart evidence (#152)"
+    },
+    {
+      "pr": 806,
+      "issues": [],
+      "summary": "Fix Root staging when /tmp uses ramfs"
     },
     {
       "pr": 807,
@@ -35,9 +45,48 @@
       "summary": "Allow fresh Root setup after verified removal (#615)"
     },
     {
+      "pr": 812,
+      "issues": [
+        741
+      ],
+      "summary": "Reconnect C1 Home after a broker lease gap"
+    },
+    {
       "pr": 815,
       "issues": [],
       "summary": "Add Vice to the theme showcase"
+    },
+    {
+      "pr": 816,
+      "issues": [
+        810
+      ],
+      "summary": "Clear the owned C1 configd override on Home restore"
+    },
+    {
+      "pr": 817,
+      "issues": [
+        813
+      ],
+      "summary": "Keep HDMI visible during C1 boot recovery"
+    },
+    {
+      "pr": 819,
+      "issues": [
+        152,
+        410,
+        741,
+        810,
+        813
+      ],
+      "summary": "Integrate the remaining v1.28.0 changes"
+    },
+    {
+      "pr": 824,
+      "issues": [
+        615
+      ],
+      "summary": "Keep the Settings opener from toggling Root Home"
     }
   ],
   "excluded": [
