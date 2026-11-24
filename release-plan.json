@@ -95,7 +95,8 @@
       "reason": "Original Vice submission was merged indirectly through #815; the theme is counted once under #815."
     }
   ],
-  "acceptance": "",
+  "acceptance_build": "45431309453:2",
+  "acceptance": "LG OLED55C3RLA, firmware 43.21.71, webOS SDK 11.2.0. Exact macOS arm64 CLI SHA-256 903c563f8f5a04bb915780cc15238467c0c709e6dc260e244e1a405d7f9f1369. No-root Home 1.21.0 FHD and Helper 0.10.0 installed by the ordinary installer, with twelve matching file hashes. Paired network Home from Media Player and same-session standby with Live TV passed in both settings. Reused the published Home and Helper transition and installer recovery fixtures. C1, EF950V and ramfs physical results remain with device owners. Root physical controls, audio, AC-loss recovery, OTA and retained rollback were untested on this build. Case results and TV package hashes are recorded in docs/history/2026-11-25-release-1.28.0-rc-verification.md.",
   "build": {
     "run_id": 45431309453,
     "attempt": 2,
