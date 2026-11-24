@@ -4814,9 +4814,9 @@ HomeI18n.add({
       'Când televizorul pornește pe un dispozitiv HDMI sau pe TV în direct, rămâne acolo în loc să deschidă Home.'
   },
   'ru': {
-    'Stay on input at power-on': 'Оставаться на входе при включении',
+    'Stay on input at power-on': 'Оставлять HDMI и эфирное ТВ при пробуждении',
     'When the TV turns on to an HDMI device or Live TV, stay there instead of opening Home.':
-      'Если телевизор включается на HDMI-устройстве или эфирном ТВ, он остаётся там и не открывает Home.'
+      'Если после выхода из режима ожидания телевизор уже показывает приставку, эфирное ТВ или другой вход, этот экран останется открытым. Кнопка Home работает как обычно.'
   },
   'zh-Hans': {
     'Stay on input at power-on': '开机时保持当前输入源',
