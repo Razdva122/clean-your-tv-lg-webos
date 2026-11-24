@@ -445,7 +445,7 @@ class RuntimeTests(unittest.TestCase):
                         patch.object(self.k, 'verify_ready', return_value={'integrity_verified': verified}), \
                         patch.object(self.k, 'restore_locked', return_value='restored') as restore:
                     self.assertEqual(self.k.execute('boot', root=self.root, uid=self.uid), 'restored')
-                    restore.assert_called_once_with(self.root, self.uid, explicit_restore=False)
+                    restore.assert_called_once_with(self.root, self.uid, routing_only=True)
 
     def test_failed_enable_retires_filter_when_stock_home_is_independently_verified(self):
         self.admission = dict(self.generic(), model='55UM7450PLA', firmware='05.40.97', webos='4.10.0')
@@ -903,7 +903,7 @@ class RuntimeTests(unittest.TestCase):
                 patch.object(self.k, 'restore_locked', return_value='restored') as restore:
             self.assertEqual(self.k.execute('boot', root=self.root, uid=self.uid), 'restored')
             status.assert_not_called()
-            restore.assert_called_once_with(self.root, self.uid, explicit_restore=False)
+            restore.assert_called_once_with(self.root, self.uid, routing_only=True)
 
     def test_schema3_configd_reset_cancels_lifecycle_return_without_reinstalling(self):
         self.admission=self.generic();self.prepare()
@@ -1376,6 +1376,52 @@ class RuntimeTests(unittest.TestCase):
                         start.assert_called_once_with(controller['pid'])
                         self.assertFalse(record.exists())
 
+    def test_schema2_boot_restores_stock_routing_without_opening_home(self):
+        self.admission.update(model='OLED55C14LB', firmware='03.53.45', webos='6.5.3')
+        self.assertEqual(self.prepare()['schema'], 2)
+        token = '1'*32
+        own = self.k.filter_entry(self.root)
+        stock = [{'file': '/usr/lib/qt5/qml/KeyFilters/systemUi.js', 'handler': 'handleSystemKeys'}]
+        chain = [own, *stock]
+        self.k.atomic(self.root/'c1-keyfilter/ownership.json',
+                      dict(schema=1, entry=own, token=token), self.uid)
+        self.k.write_intent(self.root, False, token, 'recovering', self.uid)
+
+        def write(value):
+            chain[:] = value
+
+        with patch.object(self.k, 'native', return_value=self.proof()) as native, \
+                patch.object(self.k, 'read_chain', side_effect=lambda: chain.copy()), \
+                patch.object(self.k, 'write_chain', side_effect=write) as configd, \
+                patch.object(self.k, 'luna', side_effect=self.read_factory_home_setting) as settings:
+            for _ in range(2):
+                native.reset_mock()
+                self.assertEqual(self.k.execute('boot', root=self.root, uid=self.uid), 'restored')
+                self.assertEqual(chain, stock)
+                self.assertEqual(self.k.read_intent(self.root, self.uid)['phase'], 'disabled')
+                self.assertEqual([call.args[0] for call in native.call_args_list],
+                                 [['--restore-routing'], ['--status'], ['--status']])
+            configd.assert_called_once_with(stock)
+            self.assertEqual(settings.call_count, 2)
+
+            native.reset_mock()
+            settings.reset_mock()
+            self.assertEqual(self.k.execute('restore', root=self.root, uid=self.uid), 'restored')
+            self.assertEqual([call.args[0] for call in native.call_args_list], [['--restore'], ['--status']])
+            settings.assert_not_called()
+
+    def test_schema2_boot_keeps_recovering_when_stock_destination_is_unverified(self):
+        self.prepare()
+        stock = [{'file': '/usr/lib/qt5/qml/KeyFilters/systemUi.js', 'handler': 'handleSystemKeys'}]
+        with patch.object(self.k, 'native', return_value=self.proof()) as native, \
+                patch.object(self.k, 'read_chain', return_value=stock), \
+                patch.object(self.k, 'luna', return_value={'returnValue': False}):
+            with self.assertRaisesRegex(ValueError, 'Explicit LG Home destination not verified') as error:
+                self.k.execute('boot', root=self.root, uid=self.uid)
+        self.assertEqual(error.exception.restore_check, 'stock-destination-readback-unverified')
+        self.assertEqual(self.k.read_intent(self.root, self.uid)['phase'], 'recovering')
+        self.assertEqual([call.args[0] for call in native.call_args_list], [['--restore-routing'], ['--status']])
+
     def test_c1_boot_and_restore_retire_reused_controller_pid_after_reboot(self):
         # Observed on OLED55C14LB 03.53.45 (schema 2): the record has no boot
         # field, the kernel boot ID survives reboots, and after a cold boot the
@@ -1392,6 +1438,7 @@ class RuntimeTests(unittest.TestCase):
                 self.k.write_intent(self.root, False, '1'*32, 'recovering', self.uid)
                 with patch.object(self.k, 'native', return_value=stopped), \
                         patch.object(self.k, 'read_chain', side_effect=lambda: list(chain)), \
+                        patch.object(self.k, 'luna', side_effect=self.read_factory_home_setting), \
                         patch.object(self.k, 'process_start', return_value=2335) as start, \
                         patch.object(self.k.os, 'kill') as signal:
                     self.assertEqual(self.k.execute(mode, root=self.root, uid=self.uid), 'restored')
