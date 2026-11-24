@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "version": null,
+  "version": "1.28.0",
   "changes": [
     {
       "pr": 803,
@@ -8,6 +8,20 @@
         766
       ],
       "summary": "Recover No-root catalog refresh during Home startup"
+    },
+    {
+      "pr": 805,
+      "issues": [
+        152
+      ],
+      "summary": "Preserve restart proof and explain blocked No-root cleanup"
+    },
+    {
+      "pr": 806,
+      "issues": [
+        410
+      ],
+      "summary": "Use verified internal disk for Root staging on ramfs TVs"
     },
     {
       "pr": 807,
@@ -23,9 +37,42 @@
       "summary": "Add Neon '86 to the theme showcase"
     },
     {
+      "pr": 809,
+      "issues": [],
+      "summary": "Add opt-in Stay on input at power-on to No-root Home"
+    },
+    {
+      "pr": 811,
+      "issues": [
+        615
+      ],
+      "summary": "Allow fresh Root setup after verified removal by an earlier installer"
+    },
+    {
+      "pr": 812,
+      "issues": [
+        741
+      ],
+      "summary": "Reconnect persistent C1 Home routing after a broker lease gap"
+    },
+    {
       "pr": 815,
       "issues": [],
       "summary": "Add Vice to the theme showcase"
+    },
+    {
+      "pr": 816,
+      "issues": [
+        810
+      ],
+      "summary": "Clear the owned persistent C1 configd override on Home restore"
+    },
+    {
+      "pr": 817,
+      "issues": [
+        813
+      ],
+      "summary": "Keep HDMI visible during C1 boot recovery"
     }
   ],
   "excluded": [
