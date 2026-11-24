@@ -187,7 +187,7 @@ A diagnostic capture records `startup-foreground` with the query result in
 
 When the TV wakes from standby with Home control on, Helper opens Home once
 unless Clean Your TV Home is already in front (`resume-already-foreground`).
-The opt-in **Settings → Your Home screen → Stay on input at power-on** switch,
+The opt-in **Settings → Your Home screen → Stay on HDMI or Live TV when the TV wakes** switch,
 off by default, also keeps an input source the TV woke on: an HDMI port, Live
 TV or an external analog input. The controller log then records
 `resume-preserved-source` with the foreground app ID instead of

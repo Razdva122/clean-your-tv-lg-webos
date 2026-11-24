@@ -4759,73 +4759,87 @@ HomeI18n.add({
 
 HomeI18n.add({
   'en': {
-    'Stay on input at power-on': 'Stay on input at power-on',
-    'When the TV turns on to an HDMI device or Live TV, stay there instead of opening Home.':
-      'When the TV turns on to an HDMI device or Live TV, stay there instead of opening Home.'
+    'Stay on HDMI or Live TV when the TV wakes':
+      'Stay on HDMI or Live TV when the TV wakes',
+    'If your TV wakes from standby already showing a game console, Live TV, or another input, that screen stays open. The Home button works as usual.':
+      'If your TV wakes from standby already showing a game console, Live TV, or another input, that screen stays open. The Home button works as usual.'
   },
   'cs': {
-    'Stay on input at power-on': 'Při zapnutí zůstat na vstupu',
-    'When the TV turns on to an HDMI device or Live TV, stay there instead of opening Home.':
-      'Když se televizor zapne na zařízení HDMI nebo na živém vysílání, zůstane tam a neotevře Home.'
+    'Stay on HDMI or Live TV when the TV wakes':
+      'Po probuzení zůstat na HDMI nebo živém vysílání',
+    'If your TV wakes from standby already showing a game console, Live TV, or another input, that screen stays open. The Home button works as usual.':
+      'Pokud televizor po probuzení z pohotovostního režimu už zobrazuje herní konzoli, živé vysílání nebo jiný vstup, zůstane na této obrazovce. Tlačítko Home funguje jako obvykle.'
   },
   'de': {
-    'Stay on input at power-on': 'Beim Einschalten auf dem Eingang bleiben',
-    'When the TV turns on to an HDMI device or Live TV, stay there instead of opening Home.':
-      'Startet der Fernseher mit einem HDMI-Gerät oder Live-TV, bleibt er dort, statt Home zu öffnen.'
+    'Stay on HDMI or Live TV when the TV wakes':
+      'Nach dem Aufwachen auf HDMI oder Live-TV bleiben',
+    'If your TV wakes from standby already showing a game console, Live TV, or another input, that screen stays open. The Home button works as usual.':
+      'Wenn der Fernseher nach dem Standby bereits eine Spielkonsole, Live-TV oder einen anderen Eingang anzeigt, bleibt dieser Bildschirm geöffnet. Die Home-Taste funktioniert wie gewohnt.'
   },
   'es': {
-    'Stay on input at power-on': 'Mantener la entrada al encender',
-    'When the TV turns on to an HDMI device or Live TV, stay there instead of opening Home.':
-      'Si la TV se enciende en un dispositivo HDMI o en TV en directo, se queda ahí en lugar de abrir Home.'
+    'Stay on HDMI or Live TV when the TV wakes':
+      'Mantener HDMI o TV en directo al salir del modo de espera',
+    'If your TV wakes from standby already showing a game console, Live TV, or another input, that screen stays open. The Home button works as usual.':
+      'Si el televisor sale del modo de espera mostrando una consola, la TV en directo u otra entrada, esa pantalla se mantiene abierta. El botón Home funciona como siempre.'
   },
   'pt-BR': {
-    'Stay on input at power-on': 'Manter a entrada ao ligar',
-    'When the TV turns on to an HDMI device or Live TV, stay there instead of opening Home.':
-      'Se a TV ligar em um dispositivo HDMI ou na TV ao vivo, ela continua ali em vez de abrir o Home.'
+    'Stay on HDMI or Live TV when the TV wakes':
+      'Manter HDMI ou TV ao vivo ao sair do modo de espera',
+    'If your TV wakes from standby already showing a game console, Live TV, or another input, that screen stays open. The Home button works as usual.':
+      'Se a TV sair do modo de espera exibindo um console, a TV ao vivo ou outra entrada, essa tela permanece aberta. O botão Home funciona como de costume.'
   },
   'fr': {
-    'Stay on input at power-on': 'Rester sur l’entrée à l’allumage',
-    'When the TV turns on to an HDMI device or Live TV, stay there instead of opening Home.':
-      'Si le téléviseur s’allume sur un appareil HDMI ou la TV en direct, il y reste au lieu d’ouvrir Home.'
+    'Stay on HDMI or Live TV when the TV wakes':
+      'Rester sur HDMI ou la TV en direct à la sortie de veille',
+    'If your TV wakes from standby already showing a game console, Live TV, or another input, that screen stays open. The Home button works as usual.':
+      'Si le téléviseur affiche déjà une console, la TV en direct ou une autre entrée à la sortie de veille, cet écran reste affiché. Le bouton Home fonctionne comme d’habitude.'
   },
   'it': {
-    'Stay on input at power-on': 'Resta sull’ingresso all’accensione',
-    'When the TV turns on to an HDMI device or Live TV, stay there instead of opening Home.':
-      'Se la TV si accende su un dispositivo HDMI o sulla TV in diretta, resta lì invece di aprire Home.'
+    'Stay on HDMI or Live TV when the TV wakes':
+      'Resta su HDMI o sulla TV in diretta all’uscita dallo standby',
+    'If your TV wakes from standby already showing a game console, Live TV, or another input, that screen stays open. The Home button works as usual.':
+      'Se all’uscita dallo standby il televisore mostra già una console, la TV in diretta o un altro ingresso, quella schermata rimane aperta. Il tasto Home funziona come sempre.'
   },
   'ko': {
-    'Stay on input at power-on': '전원을 켤 때 입력 유지',
-    'When the TV turns on to an HDMI device or Live TV, stay there instead of opening Home.':
-      'TV가 HDMI 기기나 실시간 TV 화면으로 켜지면 Home을 열지 않고 그 화면을 유지합니다.'
+    'Stay on HDMI or Live TV when the TV wakes':
+      '대기 모드 해제 시 HDMI 또는 실시간 TV 유지',
+    'If your TV wakes from standby already showing a game console, Live TV, or another input, that screen stays open. The Home button works as usual.':
+      '대기 모드에서 깨어난 TV에 게임 콘솔, 실시간 TV 또는 다른 입력 화면이 이미 표시되어 있으면 그 화면을 유지합니다. Home 버튼은 평소처럼 작동합니다.'
   },
   'hi': {
-    'Stay on input at power-on': 'चालू होने पर इनपुट पर बने रहें',
-    'When the TV turns on to an HDMI device or Live TV, stay there instead of opening Home.':
-      'जब TV किसी HDMI डिवाइस या लाइव टीवी पर चालू हो, तो Home खोलने के बजाय वहीं बना रहे।'
+    'Stay on HDMI or Live TV when the TV wakes':
+      'टीवी के जागने पर HDMI या लाइव टीवी पर बने रहें',
+    'If your TV wakes from standby already showing a game console, Live TV, or another input, that screen stays open. The Home button works as usual.':
+      'अगर स्टैंडबाय से जागने पर टीवी पहले से गेम कंसोल, लाइव टीवी या कोई अन्य इनपुट दिखा रहा हो, तो वही स्क्रीन खुली रहती है। Home बटन सामान्य तरीके से काम करता है।'
   },
   'pl': {
-    'Stay on input at power-on': 'Pozostań na wejściu po włączeniu',
-    'When the TV turns on to an HDMI device or Live TV, stay there instead of opening Home.':
-      'Gdy telewizor włączy się na urządzeniu HDMI lub telewizji na żywo, pozostanie na nim zamiast otwierać Home.'
+    'Stay on HDMI or Live TV when the TV wakes':
+      'Po wybudzeniu pozostań na HDMI lub w telewizji na żywo',
+    'If your TV wakes from standby already showing a game console, Live TV, or another input, that screen stays open. The Home button works as usual.':
+      'Jeśli po wyjściu z trybu czuwania telewizor wyświetla już obraz z konsoli, telewizję na żywo lub inne wejście, ten ekran pozostanie otwarty. Przycisk Home działa jak zwykle.'
   },
   'ro': {
-    'Stay on input at power-on': 'Rămâi pe intrare la pornire',
-    'When the TV turns on to an HDMI device or Live TV, stay there instead of opening Home.':
-      'Când televizorul pornește pe un dispozitiv HDMI sau pe TV în direct, rămâne acolo în loc să deschidă Home.'
+    'Stay on HDMI or Live TV when the TV wakes':
+      'Rămâi pe HDMI sau pe TV în direct la ieșirea din standby',
+    'If your TV wakes from standby already showing a game console, Live TV, or another input, that screen stays open. The Home button works as usual.':
+      'Dacă televizorul iese din standby și afișează deja o consolă de jocuri, TV în direct sau o altă intrare, ecranul respectiv rămâne deschis. Butonul Home funcționează ca de obicei.'
   },
   'ru': {
-    'Stay on input at power-on': 'Оставлять HDMI и эфирное ТВ при пробуждении',
-    'When the TV turns on to an HDMI device or Live TV, stay there instead of opening Home.':
+    'Stay on HDMI or Live TV when the TV wakes':
+      'Оставлять HDMI и эфирное ТВ при пробуждении',
+    'If your TV wakes from standby already showing a game console, Live TV, or another input, that screen stays open. The Home button works as usual.':
       'Если после выхода из режима ожидания телевизор уже показывает приставку, эфирное ТВ или другой вход, этот экран останется открытым. Кнопка Home работает как обычно.'
   },
   'zh-Hans': {
-    'Stay on input at power-on': '开机时保持当前输入源',
-    'When the TV turns on to an HDMI device or Live TV, stay there instead of opening Home.':
-      '电视开机时如果显示 HDMI 设备或电视直播，将保持该画面，不打开 Home。'
+    'Stay on HDMI or Live TV when the TV wakes':
+      '从待机唤醒时保留 HDMI 或电视直播画面',
+    'If your TV wakes from standby already showing a game console, Live TV, or another input, that screen stays open. The Home button works as usual.':
+      '如果电视从待机唤醒后已经显示游戏机、电视直播或其他输入源的画面，就会保留该画面。Home 键照常使用。'
   },
   'zh-Hant': {
-    'Stay on input at power-on': '開機時保持目前輸入來源',
-    'When the TV turns on to an HDMI device or Live TV, stay there instead of opening Home.':
-      '電視開機時如果顯示 HDMI 裝置或電視直播，將保持該畫面，不開啟 Home。'
+    'Stay on HDMI or Live TV when the TV wakes':
+      '從待機喚醒時保留 HDMI 或電視直播畫面',
+    'If your TV wakes from standby already showing a game console, Live TV, or another input, that screen stays open. The Home button works as usual.':
+      '如果電視從待機喚醒後已顯示遊戲主機、電視直播或其他輸入來源的畫面，就會保留該畫面。Home 鍵照常使用。'
   }
 });

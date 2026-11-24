@@ -262,7 +262,7 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8876';
     await homePane
       .locator('#homeRoutingToggle[role=switch][aria-checked=true]')
       .waitFor();
-    // Stay on input at power-on stays hidden for a Helper that omits it.
+    // Stay on HDMI or Live TV when the TV wakes stays hidden for a Helper that omits it.
     assert(await homePane.locator('#homeKeepSource').isHidden());
     assert(await homePane.locator('#homeKeepSourceHint').isHidden());
     // Reopening settings refreshes Home status from a Helper that reports it.
@@ -274,7 +274,7 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8876';
     await page.locator('#btnSettings').click();
     await page.locator('[data-category=home]').click();
     const keepSwitch = homePane.getByRole('switch', {
-      name: 'Stay on input at power-on'
+      name: 'Stay on HDMI or Live TV when the TV wakes'
     });
     await homePane
       .locator('#homeKeepSource[role=switch][aria-checked=false]')
@@ -282,7 +282,7 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8876';
     assert(await homePane.locator('#homeKeepSourceHint').isVisible());
     assert.equal(
       await homePane.locator('#homeKeepSourceHint').textContent(),
-      'When the TV turns on to an HDMI device or Live TV, stay there instead of opening Home.'
+      'If your TV wakes from standby already showing a game console, Live TV, or another input, that screen stays open. The Home button works as usual.'
     );
     await keepSwitch.focus();
     await page.keyboard.press('Enter');
@@ -307,7 +307,7 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8876';
     assert.equal(
       await homeSwitch.getAttribute('aria-checked'),
       'true',
-      'Stay on input at power-on does not change Home routing'
+      'Stay on HDMI or Live TV when the TV wakes does not change Home routing'
     );
     await homeSwitch.click();
     await homePane.locator('#homeRoutingToggle[aria-checked=false]').waitFor();

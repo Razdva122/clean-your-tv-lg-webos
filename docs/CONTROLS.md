@@ -97,12 +97,11 @@ the other.
 Startup can initially show a black screen or LG Home. Standby/wake success does
 not prove cold-boot reliability or a fixed startup time. See [device limits](COMPATIBILITY.md).
 
-On No-root, Helper opens Home when the TV wakes from standby. Turn on
-**Settings → Your Home screen → Stay on input at power-on** to stay on an HDMI
-device, Live TV or another input the TV wakes on instead. It is off by default
-and appears only when the running Helper supports it. Waking on LG Home or an
-app still opens Home, and the Home button is unchanged. See
-[wake from standby](HELPER-DIAGNOSTICS.md#wake-from-standby).
+On No-root, turn on **Settings → Your Home screen → Stay on HDMI or Live TV when the TV wakes**
+to keep the HDMI, Live TV or other input screen that the TV already shows when it wakes
+from standby. The setting is off by default and appears when the running Helper
+supports it. Waking on LG Home or an ordinary app still opens Home. The Home button
+works as usual. See [wake from standby](HELPER-DIAGNOSTICS.md#wake-from-standby).
 
 In Root 1.7.0, **Home settings → Open Clean Your TV first**
 chooses two native startup sources: LG Channels / Live TV defaults on and

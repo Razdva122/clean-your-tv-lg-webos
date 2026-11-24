@@ -22,7 +22,7 @@ launcher version. `diagnostic` describes the current renewal/settings failure;
 `home` records the latest result of each Home RPC in this settings session:
 `homeStatus`, and `setHomeControl` / `setKeepSource` / `openLGHome` only if
 used. A failed action remains distinguishable from its subsequent successful
-status refresh. Boolean `enabled` and `keepSource` (Stay on input at power-on)
+status refresh. Boolean `enabled` and `keepSource` (Stay on HDMI or Live TV when the TV wakes)
 values are copied when the Helper reports them.
 
 Each diagnostic has three allowlisted fields:
