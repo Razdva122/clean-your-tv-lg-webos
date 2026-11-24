@@ -191,8 +191,11 @@ The opt-in **Settings → Your Home screen → Stay on input at power-on** switc
 off by default, also keeps an input source the TV woke on: an HDMI port, Live
 TV or an external analog input. The controller log then records
 `resume-preserved-source` with the foreground app ID instead of
-`resume-launch`. LG Home, the startup cover and ordinary apps still receive
-Home. The Home button and triple-Home emergency release are unchanged.
+`resume-launch`. Helper checks the foreground again after wake and waits
+through transient screens. Stable LG Home and ordinary apps still receive
+Home. If the screen cannot be confirmed within the wake window, Helper logs
+`resume-foreground-unavailable` and skips the automatic launch. The Home
+button and triple-Home emergency release are unchanged.
 
 The switch is stored as `keepSource: true` in the existing Home preference
 record (`home-control.json`) only while it is on; turning it off restores the

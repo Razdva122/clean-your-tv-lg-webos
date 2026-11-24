@@ -155,7 +155,9 @@ var child,
   buffer = '',
   lastCommand = '',
   launching = false,
-  resumePendingUntil = 0;
+  resumePendingUntil = 0,
+  resumeWaitingForActive = false,
+  resumeProbe = null;
 var restarts = [],
   restartTimer = null,
   cleaning = false,
@@ -550,6 +552,7 @@ function screenLog(x) {
 }
 function cancelResume() {
   resumePendingUntil = 0;
+  resumeProbe = null;
   resumeGuardUntil = 0;
   lgHomeSince = null;
 }
@@ -1405,10 +1408,73 @@ function openHome(worker) {
   )
     return;
   suppressReturnUntil = 0;
+  if (homeControl.keepSource() && resumePendingUntil) cancelResume();
   launching = true;
   launchHome('home', function (ok) {
     launching = false;
     if (!ok && child === worker) worker.stdin.end();
+  });
+}
+function launchAfterResume(foreground) {
+  var due = resumePendingUntil;
+  resumePendingUntil = 0;
+  if (!shouldResumeLaunch(foreground)) {
+    log({ event: 'resume-already-foreground' });
+  } else if (monotonic() <= due) {
+    launching = true;
+    log({ event: 'resume-launch' });
+    launchHome('wake', function (ok) {
+      launching = false;
+      if (!ok) log({ event: 'resume-launch-failed' });
+    });
+  }
+}
+function checkResumeForeground() {
+  if (monotonic() >= resumePendingUntil) {
+    cancelResume();
+    log({ event: 'resume-foreground-unavailable' });
+    return;
+  }
+  if (
+    resumeProbe ||
+    !screenWatch ||
+    typeof screenWatch.foreground !== 'function'
+  )
+    return;
+  var probe = { sequence: foregroundSequence };
+  resumeProbe = probe;
+  screenWatch.foreground(function (id) {
+    if (resumeProbe !== probe) return;
+    resumeProbe = null;
+    if (
+      stopping ||
+      stopRequested ||
+      launching ||
+      visitingLG ||
+      !ready ||
+      !homeControl.enabled() ||
+      !homeControl.keepSource() ||
+      monotonic() >= resumePendingUntil
+    )
+      return;
+    // Prefer a subscription update that arrived after this query was sent.
+    if (foregroundSequence !== probe.sequence) id = lastForeground;
+    if (!id || id === 'com.webos.app.cpcover') {
+      lgHomeSince = null;
+      return;
+    }
+    if (shouldResumeLaunch.source(id)) {
+      cancelResume();
+      log({ event: 'resume-preserved-source', id: id });
+      return;
+    }
+    if (id === 'com.webos.app.home') {
+      // LG Home can flash while firmware is still restoring the input.
+      var now = monotonic();
+      if (lgHomeSince === null) lgHomeSince = now;
+      if (now - lgHomeSince < 1500) return;
+    } else lgHomeSince = null;
+    launchAfterResume(id);
   });
 }
 var timer = setInterval(function () {
@@ -1449,24 +1515,8 @@ var timer = setInterval(function () {
     !visitingLG &&
     homeControl.enabled()
   ) {
-    var resumeDue = resumePendingUntil;
-    resumePendingUntil = 0;
-    if (!shouldResumeLaunch(lastForeground)) {
-      log({ event: 'resume-already-foreground' });
-    } else if (
-      homeControl.keepSource() &&
-      shouldResumeLaunch.source(lastForeground)
-    ) {
-      // Opt-in Stay on input at power-on: keep the source the TV woke on.
-      log({ event: 'resume-preserved-source', id: lastForeground });
-    } else if (monotonic() <= resumeDue) {
-      launching = true;
-      log({ event: 'resume-launch' });
-      launchHome('wake', function (ok) {
-        launching = false;
-        if (!ok) log({ event: 'resume-launch-failed' });
-      });
-    }
+    if (homeControl.keepSource()) checkResumeForeground();
+    else launchAfterResume(lastForeground);
   }
   // A successful Luna reply only acknowledges the request. LG Home can win
   // later, including while a launch is in flight, so check the current level.
@@ -1478,6 +1528,7 @@ var timer = setInterval(function () {
   if (resumeGuardUntil && now >= resumeGuardUntil) cancelResume();
   if (
     resumeGuardUntil &&
+    (!resumePendingUntil || !homeControl.keepSource()) &&
     resumeRetries < 2 &&
     ready &&
     !launching &&
@@ -1660,7 +1711,12 @@ var screenWatch = require('./screen-watch')(
       if (lgHomeSince === null) lgHomeSince = monotonic();
     } else {
       lgHomeSince = null;
-      if (id && id !== 'com.webos.app.cpcover' && id !== 'com.gathin.tvhome')
+      if (
+        id &&
+        id !== 'com.webos.app.cpcover' &&
+        id !== 'com.gathin.tvhome' &&
+        !(resumePendingUntil && homeControl.keepSource())
+      )
         cancelResume();
     }
     if (
@@ -1676,6 +1732,10 @@ var screenWatch = require('./screen-watch')(
     var exited = screenPolicy.next(id, monotonic());
     if (
       exited &&
+      !(
+        (resumeWaitingForActive || resumePendingUntil) &&
+        homeControl.keepSource()
+      ) &&
       homeControl.enabled() &&
       !visitingLG &&
       monotonic() > suppressReturnUntil &&
@@ -1741,11 +1801,13 @@ var screenWatch = require('./screen-watch')(
       log({ event: 'contract-event', contract: event });
     });
     if (power.cancelPresentation) {
+      resumeWaitingForActive = true;
       invalidatePresentation(false);
       cancelResume();
-    }
+    } else if (power.settledActive) resumeWaitingForActive = false;
     if (power.resumed && homeControl.enabled() && !visitingLG && !stopping) {
       var now = monotonic();
+      resumeProbe = null;
       resumePendingUntil = now + 10000;
       resumeGuardUntil = now + 30000;
       resumeRetries = 0;

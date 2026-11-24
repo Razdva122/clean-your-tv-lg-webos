@@ -11,7 +11,8 @@ function run(saved, bootForeground, scenario) {
   let now = 1000,
     interval,
     watch,
-    worker;
+    worker,
+    foreground = bootForeground;
   const calls = [],
     logs = [],
     timeouts = [],
@@ -51,7 +52,9 @@ function run(saved, bootForeground, scenario) {
     c.stdout = new E();
     c.stderr = new E();
     c.stdin = new E();
-    c.stdin.write = () => {};
+    c.stdin.write = (command) => {
+      if (command === 'P') c.stdout.emit('data', Buffer.from('P\n'));
+    };
     c.stdin.end = () => {};
     return c;
   };
@@ -73,11 +76,25 @@ function run(saved, bootForeground, scenario) {
       if (name === '/usr/lib/node_modules/webos-service') return Service;
       if (name === './screen-watch')
         return (d, l, fg, reset, power) => {
-          watch = { fg, reset, power };
+          watch = {
+            fg(id) {
+              foreground = id;
+              fg(id);
+            },
+            reset,
+            power,
+            foreground(id) {
+              foreground = id;
+            }
+          };
           return {
             close() {},
             foreground(done) {
-              done(bootForeground);
+              if (watch.nextForeground) {
+                const read = watch.nextForeground;
+                watch.nextForeground = null;
+                read(done);
+              } else done(foreground);
             }
           };
         };
@@ -134,7 +151,7 @@ for (const [id, expected] of [
   for (const saved of [on, undefined])
     run(saved, id, (t) => a.equal(homeLaunches(t.calls), expected));
 
-function wake(saved, id) {
+function wake(saved, id, afterActive) {
   let extra, logs;
   run(saved, 'com.webos.app.home', (t) => {
     t.watch.fg('com.gathin.tvhome');
@@ -144,8 +161,13 @@ function wake(saved, id) {
     t.watch.power({ state: 'Active Standby' });
     t.watch.fg(id);
     t.watch.power({ state: 'Active' });
-    t.advance(400);
-    t.tick();
+    if (afterActive) afterActive(t);
+    else {
+      for (let i = 0; i < 5; i++) {
+        t.advance(400);
+        t.tick();
+      }
+    }
     extra = homeLaunches(t.calls) - before;
     logs = t.logs;
   });
@@ -163,10 +185,115 @@ for (const id of [
     r.logs.some((l) => l.event === 'resume-preserved-source' && l.id === id)
   );
 }
-// LG Home, ordinary apps and unknown screens still open Home on wake.
+// A startup cover at the first read must not hide an input that arrives later.
+for (const id of ['com.webos.app.hdmi2', 'com.webos.app.livetv']) {
+  const r = wake(on, 'com.webos.app.cpcover', (t) => {
+    t.advance(400);
+    t.tick();
+    t.watch.fg(id);
+    t.advance(400);
+    t.tick();
+  });
+  a.equal(r.extra, 0, 'do not launch over a late input: ' + id);
+  a.ok(
+    r.logs.some((l) => l.event === 'resume-preserved-source' && l.id === id)
+  );
+}
+
+// LG Home can appear briefly while webOS switches to the actual input.
+{
+  const r = wake(on, 'com.webos.app.home', (t) => {
+    t.advance(400);
+    t.tick();
+    t.watch.fg('com.webos.app.hdmi2');
+    t.advance(400);
+    t.tick();
+  });
+  a.equal(r.extra, 0, 'do not launch during a brief LG Home transition');
+  a.ok(r.logs.some((l) => l.event === 'resume-preserved-source'));
+}
+
+// The app-exit redirect must also wait while firmware wakes from standby.
+run(on, 'com.gathin.tvhome', (t) => {
+  t.watch.power({ state: 'Active' });
+  t.watch.fg('com.example.video');
+  t.watch.power({ state: 'Active Standby' });
+  t.watch.fg('com.webos.app.home');
+  t.watch.power({ state: 'Active' });
+  t.watch.fg('com.webos.app.hdmi2');
+  t.advance(400);
+  t.tick();
+  a.equal(
+    homeLaunches(t.calls),
+    0,
+    'the app-exit redirect must not cover HDMI'
+  );
+  a.ok(t.logs.some((l) => l.event === 'resume-preserved-source'));
+});
+
+// A fresh foreground query supersedes an input cached before wake.
+a.equal(
+  wake(on, 'com.webos.app.hdmi2', (t) => {
+    t.watch.foreground('com.example.video');
+    t.advance(400);
+    t.tick();
+  }).extra,
+  1,
+  'launch Home when the current app supersedes the cached HDMI'
+);
+
+// A newer subscription update wins over an in-flight query reply.
+{
+  const r = wake(on, 'com.webos.app.cpcover', (t) => {
+    let reply;
+    t.watch.nextForeground = (done) => {
+      reply = done;
+    };
+    t.advance(400);
+    t.tick();
+    t.watch.fg('com.webos.app.hdmi2');
+    reply('com.webos.app.home');
+  });
+  a.equal(r.extra, 0);
+  a.ok(
+    r.logs.some(
+      (l) =>
+        l.event === 'resume-preserved-source' && l.id === 'com.webos.app.hdmi2'
+    )
+  );
+}
+
+// A reply after another standby transition must not trigger a wake launch.
+a.equal(
+  wake(on, 'com.webos.app.cpcover', (t) => {
+    let reply;
+    t.watch.nextForeground = (done) => {
+      reply = done;
+    };
+    t.advance(400);
+    t.tick();
+    t.watch.power({ state: 'Active Standby' });
+    reply('com.example.video');
+  }).extra,
+  0
+);
+
+// Without a confirmed screen, expire without launching over a possible input.
+for (const unknown of [null, 'com.webos.app.cpcover']) {
+  const r = wake(on, 'com.webos.app.home', (t) => {
+    t.watch.foreground(unknown);
+    for (let i = 0; i < 30; i++) {
+      t.advance(400);
+      t.tick();
+    }
+  });
+  a.equal(r.extra, 0);
+  a.ok(r.logs.some((l) => l.event === 'resume-foreground-unavailable'));
+}
+
+// LG Home and ordinary apps still open Home on wake.
 for (const id of [
   'com.webos.app.home',
-  'com.webos.app.cpcover',
   'com.example.video',
   'com.webos.app.hdmi'
 ])

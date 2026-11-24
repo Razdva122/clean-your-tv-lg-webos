@@ -309,6 +309,16 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8876';
       'true',
       'Stay on input at power-on does not change Home routing'
     );
+    await homeSwitch.click();
+    await homePane.locator('#homeRoutingToggle[aria-checked=false]').waitFor();
+    assert(
+      await keepSwitch.isEnabled(),
+      'Change Home leaves the input switch usable'
+    );
+    assert.equal(await keepSwitch.getAttribute('aria-checked'), 'true');
+    await keepSwitch.click();
+    await homePane.locator('#homeKeepSource[aria-checked=false]').waitFor();
+    assert.equal(await page.evaluate(() => keepSourceChoice), false);
     await page.reload();
     await page.locator('#tiles .item').first().waitFor();
     await page.locator('#btnSettings').click();

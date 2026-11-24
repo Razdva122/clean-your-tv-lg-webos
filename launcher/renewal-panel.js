@@ -281,9 +281,9 @@
         });
       }
     }
-    function renderHome(r) {
+    function renderHome(r, routingOnly) {
       homeBusy = false;
-      renderKeepSource(r);
+      if (!routingOnly) renderKeepSource(r);
       homeVisit.disabled = false;
       homeRetry.disabled = false;
       if (!r || r.returnValue !== true || typeof r.enabled !== 'boolean') {
@@ -420,7 +420,8 @@
       homeVisit.disabled = true;
       homeStatus.textContent = tr('Changing Home control…');
       homeRPC('setHomeControl', { enabled: !homeEnabled }, function (r) {
-        if (r.returnValue === true) renderHome(r);
+        // setHomeControl reports only the Home button preference.
+        if (r.returnValue === true) renderHome(r, true);
         else
           homeRPC('homeStatus', {}, function (status) {
             renderHome(status);
