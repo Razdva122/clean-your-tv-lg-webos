@@ -8,6 +8,40 @@ from cytv import cli, diagnostics, state
 
 
 class DiagnosticTests(unittest.TestCase):
+    def test_restart_observations_are_allowlisted_in_saved_and_status_reports(self):
+        from cytv.recovery_state import removal_summary
+        with tempfile.TemporaryDirectory() as tmp:
+            store = state.Store(tmp)
+            profile = state.target('tv.local', 'no-root')
+            store.request_clean_removal(profile)
+            sample = {'kernel_changed': True, 'proc_enumerated': False, 'opaque_interpreter': True,
+                      'decision': 'observation-blocked', 'phase': 'final-readback',
+                      'pid': 12345, 'cmdline': 'PRIVATE-COMMAND', 'boot_id': 'PRIVATE-BOOT',
+                      'previous_present': 1, 'unknown': 'PRIVATE-VALUE'}
+            store.checkpoint(profile, stage='restart-required', cleanup_restart_evidence=sample)
+            pending = store.pending(profile)
+            expected = {'kernel_changed': True, 'proc_enumerated': False, 'opaque_interpreter': True,
+                        'decision': 'observation-blocked', 'phase': 'final-readback'}
+            report = json.loads(diagnostics.create_report(store, 'uninstall', profile, 'uninstall',
+                status={'removal': dict(removal_summary(pending), restart_evidence=sample)}).read_text())
+            self.assertEqual(report['pending']['stage'], 'restart-required')
+            self.assertEqual(report['removal']['restart_evidence'], expected)
+            self.assertEqual(report['status']['removal']['restart_evidence'], expected)
+            self.assertNotIn('PRIVATE-', json.dumps(report))
+            store.checkpoint(profile, cleanup_restart_evidence={'phase': 'PRIVATE-PHASE', 'decision': []})
+            self.assertNotIn('restart_evidence', removal_summary(store.pending(profile)))
+
+    def test_restart_unverified_reason_is_preserved(self):
+        from cytv.errors import UserError
+        with tempfile.TemporaryDirectory() as tmp:
+            store = state.Store(tmp)
+            profile = state.target('tv.local', 'no-root')
+            store.request_clean_removal(profile)
+            error = UserError('fixture', reason_code='restart-unverified')
+            report = json.loads(diagnostics.create_report(store, 'uninstall', profile,
+                                'uninstall', error).read_text())
+            self.assertEqual(report['reason_code'], 'restart-unverified')
+
     def test_current_verified_removal_report_does_not_request_another_cleanup(self):
         with tempfile.TemporaryDirectory() as tmp:
             store = state.Store(tmp)

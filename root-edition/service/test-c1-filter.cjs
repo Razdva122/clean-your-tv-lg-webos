@@ -10,7 +10,8 @@ function setup(change) {
     timers = [],
     launches = [],
     sends = [],
-    homeCallbacks = [];
+    homeCallbacks = [],
+    subscriptions = [];
   var ctx = {
     Qt: { Key_Super_L: 42 },
     KeyPolicy: { NextPolicy: 0, Accepted: 1 },
@@ -36,6 +37,7 @@ function setup(change) {
         assert.strictEqual(service, 'com.webos.cleanyourtv.root.lease');
         assert.strictEqual(method, '/c1Lease');
         assert.strictEqual(JSON.parse(payload).subscribe, true);
+        subscriptions.push(JSON.parse(payload));
         callbacks.push(cb);
       }
     }
@@ -53,6 +55,7 @@ function setup(change) {
   return {
     ctx: ctx,
     callbacks: callbacks,
+    subscriptions: subscriptions,
     timers: timers,
     launches: launches,
     sends: sends,
@@ -76,6 +79,42 @@ function lease(sequence, token) {
     sequence: sequence
   };
 }
+var brokerRetry = setup();
+brokerRetry.reply(lease(10));
+brokerRetry.timers[0]();
+assert.deepStrictEqual(brokerRetry.subscriptions[1], {
+  subscribe: true,
+  reconnect: 'a'.repeat(32)
+});
+assert.strictEqual(brokerRetry.key(true), 0);
+assert.strictEqual(brokerRetry.key(false), 0);
+brokerRetry.callbacks[0](JSON.stringify(lease(11)));
+assert.strictEqual(brokerRetry.key(true), 0, 'old callback cannot rearm');
+assert.strictEqual(brokerRetry.key(false), 0);
+brokerRetry.reply(
+  Object.assign(lease(1), { healthy: false, reconnecting: true })
+);
+brokerRetry.reply(lease(2));
+assert.strictEqual(brokerRetry.key(true), 1, 'fresh stream restores Home');
+
+var disconnected = setup();
+disconnected.reply(lease(1));
+assert.strictEqual(disconnected.key(true), 1);
+disconnected.reply({ returnValue: false, errorCode: -1 });
+disconnected.reply(lease(2));
+disconnected.timers[0]();
+assert.deepStrictEqual(disconnected.launches, [['com.webos.app.home', '{}']]);
+assert.strictEqual(disconnected.key(false), 1, 'captured release stays paired');
+disconnected.homeCallbacks[0]('{}');
+assert.strictEqual(
+  disconnected.launches.length,
+  1,
+  'old dispatch cannot fall back twice'
+);
+assert.strictEqual(disconnected.subscriptions.length, 2);
+disconnected.reply(lease(1));
+assert.strictEqual(disconnected.key(true), 1);
+
 var recovery = setup();
 recovery.reply(lease(1));
 recovery.reply(Object.assign(lease(2), { healthy: false, reconnecting: true }));

@@ -525,6 +525,7 @@ class ExplicitRecoveryTests(unittest.TestCase):
                     return {'returnValue':True,'result':None}
                 def run(self,command,**kwargs):
                     calls.append(command);words=shlex.split(command)
+                    if command == "LC_ALL=C stat -f -c '%t' /tmp":return '1021994'
                     if '/usr/bin/node' in words:return '/usr/bin/python3'
                     if command.startswith(('umask ','mkdir ')):return ''
                     if RECOVERY_ENTRY in words:

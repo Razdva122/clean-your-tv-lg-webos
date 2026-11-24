@@ -1,5 +1,8 @@
 # Release history and device evidence
 
+- [Issue 152 remaining restart causes and diagnostics, 2026-11-23](2026-11-23-issue152-restart-evidence.md): inherited-install/cancellation history, stable restart baselines and allowlisted process/boot observations.
+- [Issue 410 Root ramfs storage, 2026-11-23](2026-11-23-issue410-root-ramfs-storage.md): stock W17M utility replay, private disk staging and recovery limits.
+
 - [Embedded LG Home adapter, 2026-11-20](2026-11-20-embedded-home-adapter.md): capability admission, shared C1 recovery and offline W17M proof boundaries.
 - [Issue 152 terminal-service restart loop, 2026-11-20](2026-11-20-issue152-terminal-restart-loop.md): one verified restart covers opaque processes with terminal empty service residue; local reproduction and limits.
 - [Issue 133 recovery and offline compatibility start, 2026-11-20](2026-11-20-issue133-recovery-and-offline-start.md): owner-confirmed cleanup, consistent removal results and matching C3 23.20.54 archive discovery; original installation support remains unresolved.

@@ -59,6 +59,8 @@ V instalátoru pro počítač po úspěšné kontrole připojení zvolte **Pokra
 
 Pokud instalátor Root nabídne nahrazení současné integrace Home, potvrďte je jen tehdy, pokud chcete obnovit LG Home a pokračovat. Při odmítnutí zůstane současný Home aktivní.
 
+Při instalaci Root instalátor podle potřeby automaticky použije ověřené interní dočasné úložiště; USB disk není potřeba, a pokud kontrola úložiště selže, ponechte data pro obnovení a uložte diagnostickou zprávu.
+
 ## 5. Vyzkoušejte ovladač
 
 1. Otevřete jinou aplikaci na TV a krátce stiskněte **Home**. Má se otevřít Clean Your TV. V průvodci uveďte, co jste viděli; pokud jste test neprovedli, přeskočte ho.
