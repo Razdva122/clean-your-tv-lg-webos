@@ -70,6 +70,8 @@ En el instalador de escritorio, tras comprobar la conexión, elige **Continuar c
 
 Si al instalar Root se te ofrece reemplazar la integración de Home actual, confirma solo si quieres restaurar LG Home y continuar. Si rechazas la oferta, se mantiene el Home actual.
 
+En la instalación Root, el instalador usa automáticamente almacenamiento temporal interno verificado cuando es necesario; no hace falta una unidad USB y, si falla la comprobación del almacenamiento, conserva los datos de recuperación y guarda un informe de diagnóstico.
+
 ## 5. Comprueba el mando
 
 1. Abre otra app del TV y pulsa brevemente **Home**. Debe abrirse Clean Your TV. Indica al asistente lo que viste; omite la prueba si no la hiciste.
@@ -174,6 +176,10 @@ En **Ajustes → Apariencia**, activa **Ordenar por frecuencia de uso**. El orde
 Usa ↑ ↓ para elegir una categoría y → u OK para entrar. ← vuelve a las categorías; Atrás vuelve primero a ellas y luego cierra los ajustes. Al volver a una sección se recupera el último control disponible. En Columnas, las flechas siguen la cuadrícula de tres columnas. En Idioma, el foco entra en el idioma seleccionado.
 
 En **Ajustes → Tu pantalla Home → Formato de hora**, elige **Automático (región del TV)**, **12 horas** o **24 horas**.
+
+En No-root, abre **Ajustes → Tu pantalla Home → Mantener HDMI o TV en directo al salir del modo de espera**.
+
+Si el televisor sale del modo de espera mostrando una consola, la TV en directo u otra entrada, esa pantalla se mantiene abierta. El botón Home funciona como siempre. La opción está desactivada de forma predeterminada.
 
 Si No-root no puede leer el estado de Home, elige Reintentar. Un control no disponible no significa que Home esté desactivado. En Fondos puedes subir una imagen desde el teléfono o CYTV; la calidad y el oscurecimiento aparecen cuando hay un fondo disponible. Eliminar un fondo personal requiere confirmación; Cancelar lo conserva.
 

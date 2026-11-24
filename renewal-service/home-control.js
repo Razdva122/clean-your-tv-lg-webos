@@ -69,7 +69,7 @@ function validScreensaver(method, payload, object) {
 // reads this provisioned prisoner:jailer 2770 channel; request files stay 0660.
 module.exports = function (fs, dir, options) {
   options = options || {};
-  var busy = false,
+  var pending = null,
     now = options.now || Date.now,
     later = options.later || setTimeout;
   var inputs = options.inputs === true,
@@ -93,6 +93,7 @@ module.exports = function (fs, dir, options) {
           : [
               'homeStatus',
               'setHomeControl',
+              'setKeepSource',
               'openLGHome',
               'presentationContext',
               'presentationDismissed'
@@ -116,32 +117,31 @@ module.exports = function (fs, dir, options) {
           typeof payload !== 'object' ||
           Array.isArray(payload) ||
           Object.keys(payload).length !== 0)) ||
-      (method === 'setHomeControl' &&
+      ((method === 'setHomeControl' || method === 'setKeepSource') &&
         (!payload || typeof payload.enabled !== 'boolean'))
     )
       return Promise.resolve({
         returnValue: false,
         errorText: 'Invalid Home request'
       });
-    if (busy)
+    if (pending) {
+      // Startup and Add app can ask for the same catalog at the same time.
+      if (catalog) return pending;
       return Promise.resolve({
         returnValue: false,
         errorText: 'Home control busy',
         diagnostic: diagnostics.describe('home', 'wait', { code: 'BUSY' })
       });
-    busy = true;
-    return new Promise(function (resolve) {
+    }
+    pending = new Promise(function (finish) {
       var id = nonce(),
         deadline = now() + 5000,
         operation = 'write',
         lastFailure = null;
-      function finish(r) {
-        busy = false;
-        resolve(r);
-      }
       try {
         var request = { id: id, method: method, expires: deadline };
-        if (method === 'setHomeControl') request.enabled = payload.enabled;
+        if (method === 'setHomeControl' || method === 'setKeepSource')
+          request.enabled = payload.enabled;
         if (method === 'screensaverConfigure') request.settings = payload;
         if (
           (method === 'screensaverPreview' ||
@@ -209,6 +209,16 @@ module.exports = function (fs, dir, options) {
         later(poll, 100);
       }
       poll();
-    });
+    }).then(
+      function (reply) {
+        pending = null;
+        return reply;
+      },
+      function (error) {
+        pending = null;
+        throw error;
+      }
+    );
+    return pending;
   };
 };

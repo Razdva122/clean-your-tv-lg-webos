@@ -1,10 +1,9 @@
 """Explicit migration entry point, separate from recovery and package removal."""
 import json
 import shlex
-import uuid
 from pathlib import PurePosixPath
 
-from . import package, prompts
+from . import package, prompts, root_staging
 from .errors import UserError
 from .state import private_write
 
@@ -37,11 +36,10 @@ def run(installer, ask, write, *, rollback=False):
     script = 'beta_startup_migration.py'
     if script not in data:
         raise UserError('Root runtime support is missing or changed. Use a complete installer build.')
-    stage = '/tmp/cytv-c1-root-'+uuid.uuid4().hex
-    installer.remote.run('umask 077; mkdir '+shlex.quote(stage))
+    stage = root_staging.create(installer.remote, 'c1-root', required=sum(map(len,data.values())))
     for name, raw in data.items():
         target = stage+'/'+package.safe_name(name)
-        installer.remote.run('mkdir -p '+shlex.quote(str(PurePosixPath(target).parent)))
+        installer.remote.run('umask 077; mkdir -p '+shlex.quote(str(PurePosixPath(target).parent)))
         installer.remote.upload(target, raw, mode=0o700 if name == 'runtime/c1-keyfilter-guard' else 0o600)
     args = [stage]
     if rollback:
@@ -65,6 +63,7 @@ def run(installer, ask, write, *, rollback=False):
         original = directory/'operation.json'
         private_write(directory/('beta-startup-preserved-'+preserved[1]+'.json'), original.read_bytes())
         installer.store.finish(installer.profile)
+    root_staging.retire(installer.remote, stage, data)
     # The device retains its inverse and authenticated transaction for retry.
     # Staged bytes remain available if the SSH response is lost.
     write('Root Beta startup runtime migration completed. The application and preferences were preserved.')

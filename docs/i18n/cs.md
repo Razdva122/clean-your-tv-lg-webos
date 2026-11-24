@@ -59,6 +59,8 @@ V instalátoru pro počítač po úspěšné kontrole připojení zvolte **Pokra
 
 Pokud instalátor Root nabídne nahrazení současné integrace Home, potvrďte je jen tehdy, pokud chcete obnovit LG Home a pokračovat. Při odmítnutí zůstane současný Home aktivní.
 
+Při instalaci Root instalátor podle potřeby automaticky použije ověřené interní dočasné úložiště; USB disk není potřeba, a pokud kontrola úložiště selže, ponechte data pro obnovení a uložte diagnostickou zprávu.
+
 ## 5. Vyzkoušejte ovladač
 
 1. Otevřete jinou aplikaci na TV a krátce stiskněte **Home**. Má se otevřít Clean Your TV. V průvodci uveďte, co jste viděli; pokud jste test neprovedli, přeskočte ho.
@@ -150,6 +152,10 @@ V nabídce **Nastavení → Vzhled** zapněte **Nejčastěji používané aplika
 Pomocí ↑ ↓ vyberte kategorii a pomocí → nebo OK do ní vstupte. ← se vrací ke kategoriím; Zpět se nejprve vrátí k nim a poté zavře nastavení. Při návratu do sekce se obnoví poslední dostupný ovládací prvek. Ve Sloupcích šipky odpovídají mřížce se třemi sloupci. V Jazyku se zaměří vybraný jazyk.
 
 V **Nastavení → Vaše obrazovka Home → Formát času** vyberte **Automaticky (podle nastavení TV)**, **12hodinový** nebo **24hodinový** formát.
+
+V edici No-root otevřete **Nastavení → Vaše obrazovka Home → Po probuzení zůstat na HDMI nebo živém vysílání**.
+
+Pokud televizor po probuzení z pohotovostního režimu už zobrazuje herní konzoli, živé vysílání nebo jiný vstup, zůstane na této obrazovce. Tlačítko Home funguje jako obvykle. Tato volba je ve výchozím nastavení vypnutá.
 
 Pokud No-root nemůže načíst stav Home, zvolte Zkusit znovu. Nedostupný přepínač neznamená vypnuté ovládání Home. V Tapetách nahrajte obrázek z telefonu nebo CYTV; kvalita a ztmavení jsou dostupné po výběru tapety. Odstranění vlastní tapety vyžaduje potvrzení; Zrušit ji zachová.
 

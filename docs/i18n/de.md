@@ -70,6 +70,8 @@ Wähle im Desktop-Installationsprogramm nach erfolgreicher Verbindungsprüfung *
 
 Wenn der Installer anbietet, die aktuelle Home-Integration zu ersetzen, bestätigen Sie nur, wenn Sie LG Home wiederherstellen und die Root-Installation fortsetzen möchten. Wenn Sie ablehnen, bleibt das aktuelle Home aktiv.
 
+Bei der Root-Einrichtung verwendet der Installer bei Bedarf automatisch geprüften internen Zwischenspeicher; ein USB-Laufwerk ist nicht erforderlich, und wenn die Speicherprüfung fehlschlägt, behalten Sie die Wiederherstellungsdaten und speichern Sie einen Diagnosebericht.
+
 ## 5. Fernbedienung prüfen
 
 1. Öffnen Sie eine andere TV-App und drücken Sie kurz **Home**. Clean Your TV sollte erscheinen. Geben Sie im Assistenten Ihre Beobachtung an; überspringen Sie den Test, wenn Sie ihn nicht durchgeführt haben.
@@ -174,6 +176,10 @@ Aktiviere unter **Einstellungen → Darstellung** die Option **Häufig genutzte 
 Wähle mit ↑ ↓ eine Kategorie und öffne sie mit → oder OK. ← führt zu den Kategorien zurück; Zurück führt zuerst dorthin und schließt danach die Einstellungen. Beim erneuten Betreten bleibt der Fokus auf dem letzten verfügbaren Element. Unter Spalten folgen die Pfeile dem dreispaltigen Raster. Unter Sprache wird die gewählte Sprache fokussiert.
 
 Wählen Sie unter **Einstellungen → Ihr Home-Bildschirm → Uhrzeitformat** zwischen **Automatisch (TV-Region)**, **12 Stunden** und **24 Stunden**.
+
+Öffnen Sie in der No-root-Edition **Einstellungen → Ihr Home-Bildschirm → Nach dem Aufwachen auf HDMI oder Live-TV bleiben**.
+
+Wenn der Fernseher nach dem Standby bereits eine Spielkonsole, Live-TV oder einen anderen Eingang anzeigt, bleibt dieser Bildschirm geöffnet. Die Home-Taste funktioniert wie gewohnt. Die Funktion ist standardmäßig ausgeschaltet.
 
 Kann No-root den Home-Status nicht lesen, wähle Erneut versuchen. Ein nicht verfügbarer Schalter bedeutet nicht, dass die Home-Steuerung ausgeschaltet ist. Unter Hintergründe kannst du ein Bild vom Smartphone oder CYTV übertragen; Qualität und Abdunklung erscheinen, wenn ein Hintergrund verfügbar ist. Das Entfernen eines eigenen Hintergrunds muss bestätigt werden; Abbrechen behält ihn.
 

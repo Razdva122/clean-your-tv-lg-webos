@@ -466,10 +466,12 @@ def _run(args, ask, write, connect, secret, search, inspect, payload_root, check
         if args.tv_name is not None and profile['edition'] != 'root':
             raise UserError('--tv-name requires Root Edition.')
         desktop_install = desktop and args.command == 'install' and not args.non_interactive
-        reinstall_step = store.root_reinstall(profile) if desktop_install else None
+        resume_reinstall = getattr(args, 'resume_root_reinstall', False)
+        # Only an explicit continuation uses a completed removal as its predecessor.
+        reinstall_step = store.root_reinstall(profile, include_completed_removal=resume_reinstall) if desktop_install else None
         if reinstall_step:
             profile = state.target(**dict(profile, root_variant=reinstall_step.variant))
-        if getattr(args, 'resume_root_reinstall', False) and not reinstall_step:
+        if resume_reinstall and not reinstall_step:
             raise UserError('There is no saved Root reinstallation to continue.')
         if args.command == 'install' and not args.reconnect_after_reset:
             from .root_runtime import saved_operation_for_review
@@ -500,7 +502,7 @@ def _run(args, ask, write, connect, secret, search, inspect, payload_root, check
         write.selected_profile(profile)
         if reinstall_step:
             write.root_reinstall()
-            if not getattr(args, 'resume_root_reinstall', False) and not prompts.confirm('Continue Root reinstallation?', ask, write):
+            if not resume_reinstall and not prompts.confirm('Continue Root reinstallation?', ask, write):
                 return 130
         setup = {}
         if args.command == 'replace-system-updater':
@@ -647,7 +649,7 @@ def _run(args, ask, write, connect, secret, search, inspect, payload_root, check
                 if (confirmed_uninstall(pending) != removal_operation
                         or args.command == 'restore' and pending.get('stage') in ('restart-required', 'verified-clean')):
                     raise UserError('Removal evidence changed. Recovery data was kept.', reason_code='pending-operation')
-            if desktop_install and store.root_reinstall(profile) != reinstall_step:
+            if desktop_install and store.root_reinstall(profile, include_completed_removal=resume_reinstall) != reinstall_step:
                 raise UserError('The saved Root reinstallation changed. Return to the start screen and check again.')
             if reinstall_step and reinstall_step.payload != reinstall_payload:
                 raise UserError('Continue Root reinstallation using the same installer build.')

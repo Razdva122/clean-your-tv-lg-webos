@@ -145,6 +145,43 @@ class CleanupTail(unittest.TestCase):
         self.assertTrue(result.stdout,result.stderr)
         return result,json.loads(result.stdout)
 
+    def test_private_disk_support_and_host_tail_are_retired(self):
+        parent = self.base/'var/lib/clean-your-tv-root-staging'
+        parent.mkdir(mode=0o700)
+        support = parent/('cytv-product-'+'e'*32); support.mkdir(mode=0o700)
+        (support/'root').mkdir(mode=0o700)
+        (support/'root/payload').write_bytes(b'inert support')
+        info = support.stat()
+        self.record['support_stages'] = [dict(path='/var/lib/clean-your-tv-root-staging/'+support.name, dev=info.st_dev, ino=info.st_ino)]
+        self.write('clean-removal-'+ID+'.json',self.record)
+        tail = parent/('cytv-root-tail-'+'c'*32); tail.mkdir(mode=0o700)
+        (tail/'gate').write_bytes(b'current gate'); (tail/'gate').chmod(0o700)
+        result,reply = self.run_tail(TAIL_STAGE='/var/lib/clean-your-tv-root-staging/'+tail.name,GATE_SHA=hashlib.sha256(b'current gate').hexdigest())
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertEqual(reply['state'],'complete')
+        self.assertFalse(support.exists())
+        self.assertFalse(tail.exists())
+
+    def test_completed_host_tail_rejects_nonprivate_disk_parent(self):
+        result,_ = self.run_tail(); self.assertEqual(result.returncode,0,result.stderr)
+        parent = self.base/'var/lib/clean-your-tv-root-staging'
+        parent.mkdir(mode=0o755)
+        tail = parent/('cytv-root-tail-'+'c'*32); tail.mkdir(mode=0o700)
+        (tail/'gate').write_bytes(b'inert gate')
+        result,reply = self.run_tail(TAIL_STAGE='/var/lib/clean-your-tv-root-staging/'+tail.name,GATE_SHA='f'*64)
+        self.assertNotEqual(result.returncode,0)
+        self.assertTrue((tail/'gate').exists())
+        self.assertEqual((tail/'gate').read_bytes(),b'inert gate')
+
+    def test_unknown_private_stage_parent_entry_prevents_retirement(self):
+        parent = self.base/'var/lib/clean-your-tv-root-staging'
+        parent.mkdir(mode=0o700)
+        (parent/'foreign').write_bytes(b'keep')
+        result,reply = self.run_tail()
+        self.assertNotEqual(result.returncode,0)
+        self.assertTrue(self.runtime.exists())
+        self.assertEqual((parent/'foreign').read_bytes(),b'keep')
+
     def test_legacy_tv_cleanup_uses_async_children_and_activity_fallback(self):
         result,reply=self.run_tail(NO_SYNC='1',ACTIVITY_LIST_UNAVAILABLE='1')
         self.assertEqual(result.returncode,0,result.stderr)

@@ -167,7 +167,19 @@ New C1 bundles use marker schema 2 with routing `compositor-keyfilter-v1`. They 
 
 The implementation uses no bind mounts, checkpoint changes, CRIU operations or permission changes to checkpoint directories. Existing schema 1 installations retain their original mount guardian and recovery path; do not replace their helper or marker to migrate them. A fresh installation is required after verified recovery/removal.
 
-Triple Home, long Back, Open LG Home, lease loss, controller loss, trial expiry or handled shutdown latches routing off. Explicitly enable Change Home again after a safety or power stop. Boot reconciliation restores rather than automatically rearming. Unknown foreground state and conflicting SAM/compositor observations cancel return; a new content event cancels the one-second return delay.
+Triple Home, long Back, Open LG Home, terminal lease failure, controller loss, trial expiry or handled shutdown latches routing off. Explicitly enable Change Home again after a safety or power stop. Boot reconciliation restores rather than automatically rearming. Unknown foreground state and conflicting SAM/compositor observations cancel return; a new content event cancels the one-second return delay.
+
+On the persistent keyfilter path, a compositor subscription gap immediately
+leaves Home with LG. The filter retries the private subscription with the same
+attempt token and ignores the previous stream's callbacks. The guardian accepts
+renewal only within 15 seconds of the last broker pulse, with its controller
+still live. A fresh recovery pulse blocks routing for a further two seconds so
+queued emergency input can be processed. Explicit Off and the emergency latch
+remain terminal. The existing channel checks still apply to input and controller
+loss. No power-state subscription is required.
+If a Home dispatch reports a broker transport failure before the lease expires,
+the filter opens LG Home, keeps ownership of the paired release, and waits for
+a new authenticated subscription before capturing another press.
 
 State is root-owned under `/var/lib/clean-your-tv-root/c1-keyfilter` (0700), with volatile guardian state under `/tmp/clean-your-tv-root-keyfilter`. The selected marker remains `home-backend.json`. A native guardian requires independent emergency-input, lifecycle-controller and service-broker leases. The filter expires its own in-memory lease and passes Home to LG when authority is lost. Healthy Home requests and lifecycle returns both use the guardian's fixed `--home TOKEN` operation. Durable stop revokes authority before waiting for an in-flight launch and closing only the owned Root app, then requesting LG Home. Recovery never signals a journal PID. SIGKILL cannot execute guardian UI cleanup: the compositor lease expires independently, but explicit Restore may still be needed to close retained Root UI and reconcile the owned chain.
 

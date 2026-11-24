@@ -19,7 +19,10 @@ class EF950ServiceCleanup(unittest.TestCase):
     def test_terminal_services_finish_after_verified_restart_with_opaque_process(self):
         self.run_owned_service_cycle(opaque=True)
 
-    def run_owned_service_cycle(self, *, opaque=False):
+    def test_terminal_restart_with_inherited_install_history(self):
+        self.run_owned_service_cycle(opaque=True, inherited=True)
+
+    def run_owned_service_cycle(self, *, opaque=False, inherited=False):
         from multiprocessing import Pipe
         from tests.cytv.test_no_root_simple_removal import SimpleRemoval
         case = SimpleRemoval()
@@ -79,12 +82,19 @@ class EF950ServiceCleanup(unittest.TestCase):
                 case.remote.luna = luna
                 for cycle in range(2):
                     case.remote.apps = set(apps)
+                    if inherited and not case.store.pending(case.profile):
+                        case.store.begin(case.profile, 'install')
                     self.assertFalse(os.access(base / 'services', os.W_OK))
                     result = case.remove()
                     if opaque:
                         self.assertTrue(result['restart_required'])
                         self.assertEqual(case.store.pending(case.profile)['removals'],
                                          {app: 'terminal' for app in apps})
+                        from cytv import diagnostics
+                        report = json.loads(diagnostics.create_report(case.store, 'uninstall', case.profile, 'uninstall').read_text())
+                        evidence = report['removal']['restart_evidence']
+                        self.assertTrue(evidence['opaque_interpreter'])
+                        self.assertFalse(evidence['kernel_changed'])
                         case.reboot()
                         if cycle:
                             case.remote.boot = '33333333-3333-3333-3333-333333333333'
@@ -93,6 +103,10 @@ class EF950ServiceCleanup(unittest.TestCase):
                     self.assertTrue(result['empty_helper_dirs_retained'])
                     self.assertTrue(result['empty_service_dirs_retained'])
                     self.assertIsNone(case.store.pending(case.profile))
+                    if opaque:
+                        completed = case.store.diagnostic_removal['cleanup_restart_evidence']
+                        self.assertTrue(completed['kernel_changed'])
+                        self.assertEqual(completed['decision'], 'completed')
                     for service in services:
                         leaf = base / 'services' / service
                         self.assertEqual(list(leaf.iterdir()), [])

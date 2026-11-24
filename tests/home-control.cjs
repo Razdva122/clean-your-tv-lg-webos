@@ -68,6 +68,52 @@ try {
       bytes
     );
   }
+  // Stay on input at power-on shares the record, defaults off and is written
+  // only while on, so the original record shape and older readers are unchanged.
+  fs.writeFileSync(path.join(dir, 'home-control.json'), '{"enabled":true}');
+  applied = [];
+  c = create(
+    fs,
+    dir,
+    (v) => applied.push(v),
+    () => {}
+  );
+  assert.equal(c.keepSource(), false);
+  assert.throws(() => c.setKeepSource('true'));
+  assert.deepEqual(c.setKeepSource(true), { keepSource: true });
+  assert.deepEqual(applied, []);
+  assert.equal(
+    fs.readFileSync(path.join(dir, 'home-control.json'), 'utf8'),
+    '{"enabled":true,"keepSource":true}'
+  );
+  c.set(false);
+  c = create(
+    fs,
+    dir,
+    () => {},
+    () => {}
+  );
+  assert.equal(c.enabled(), false);
+  assert.equal(c.keepSource(), true);
+  c.setKeepSource(false);
+  assert.equal(
+    fs.readFileSync(path.join(dir, 'home-control.json'), 'utf8'),
+    '{"enabled":false}'
+  );
+  for (const value of [{ keepSource: 'true' }, { keepSource: 1 }]) {
+    fs.writeFileSync(
+      path.join(dir, 'home-control.json'),
+      JSON.stringify(value)
+    );
+    assert.throws(() =>
+      create(
+        fs,
+        dir,
+        () => {},
+        () => {}
+      )
+    );
+  }
   console.log(
     'PASS Home preference persists independently of stock-Home visits and user profile'
   );

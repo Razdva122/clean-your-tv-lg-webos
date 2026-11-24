@@ -70,6 +70,8 @@ Dans l’installateur pour ordinateur, après une vérification réussie de la c
 
 Si l’installateur Root propose de remplacer l’intégration Home actuelle, confirmez uniquement si vous souhaitez rétablir LG Home et poursuivre. En cas de refus, le Home actuel reste actif.
 
+Pour la configuration Root, l’installateur utilise automatiquement un stockage temporaire interne vérifié si nécessaire ; aucune clé USB n’est requise et, si la vérification du stockage échoue, conservez les données de récupération et enregistrez un rapport de diagnostic.
+
 ## 5. Vérifier la télécommande
 
 1. Ouvrez une autre application sur la TV et appuyez brièvement sur **Home**. Clean Your TV doit s’ouvrir. Indiquez votre observation dans l’assistant ; ignorez le test si vous ne l’avez pas effectué.
@@ -174,6 +176,10 @@ Dans **Réglages → Apparence**, activez **Applications les plus utilisées en 
 Utilisez ↑ ↓ pour choisir une catégorie, puis → ou OK pour y entrer. ← revient aux catégories ; Retour y revient d’abord, puis ferme les réglages. En revenant dans une section, le dernier contrôle disponible reprend le focus. Dans Colonnes, les flèches suivent la grille de trois colonnes. Dans Langue, le focus se place sur la langue choisie.
 
 Dans **Réglages → Votre écran Home → Format de l’heure**, choisissez **Automatique (région du téléviseur)**, **12 heures** ou **24 heures**.
+
+Dans l’édition No-root, ouvrez **Réglages → Votre écran Home → Rester sur HDMI ou la TV en direct à la sortie de veille**.
+
+Si le téléviseur affiche déjà une console, la TV en direct ou une autre entrée à la sortie de veille, cet écran reste affiché. Le bouton Home fonctionne comme d’habitude. L’option est désactivée par défaut.
 
 Si No-root ne peut pas lire l’état de Home, choisissez Réessayer. Un contrôle indisponible ne signifie pas que Home est désactivé. Dans Fonds d’écran, transférez une image depuis le téléphone ou CYTV ; qualité et assombrissement apparaissent lorsqu’un fond est disponible. La suppression d’un fond personnel demande confirmation ; Annuler le conserve.
 

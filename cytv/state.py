@@ -400,13 +400,15 @@ class Store:
     def pending(self, profile):
         return self._read_operation(self.device_path(profile) / 'operation.json')[1]
 
-    def root_reinstall(self, profile):
+    def root_reinstall(self, profile, *, include_completed_removal=True):
         """Return the host's saved reinstall step and payload, never TV authority."""
         if profile['edition'] != 'root':
             return None
         pending = self.pending(profile)
         receipt = pending
         if receipt is None:
+            if not include_completed_removal:
+                return None
             path = self.device_path(profile) / 'clean-removal.json'
             if path.is_symlink():
                 return None

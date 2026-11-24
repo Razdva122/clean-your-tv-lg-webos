@@ -70,6 +70,8 @@ No instalador para computador, após verificar a conexão, escolha **Continuar c
 
 Se a instalação do Root oferecer a substituição da integração atual do Home, confirme apenas se quiser restaurar o LG Home e continuar. Se recusar, o Home atual continua em uso.
 
+Na instalação Root, o instalador usa automaticamente armazenamento temporário interno verificado quando necessário; não é preciso um dispositivo USB e, se a verificação do armazenamento falhar, mantenha os dados de recuperação e salve um relatório de diagnóstico.
+
 ## 5. Confira o controle remoto
 
 1. Abra outro app na TV e pressione **Home** brevemente. Clean Your TV deve abrir. Informe ao assistente o que você viu; pule a verificação se não a realizou.
@@ -175,6 +177,10 @@ Em **Configurações → Aparência**, ative **Ordenar por frequência de uso**.
 Use ↑ ↓ para escolher uma categoria e → ou OK para entrar. ← volta às categorias; Voltar retorna primeiro a elas e depois fecha as configurações. Ao retornar a uma seção, o foco volta ao último controle disponível. Em Colunas, as setas seguem a grade de três colunas. Em Idioma, o foco entra no idioma selecionado.
 
 Em **Configurações → Sua tela Home → Formato da hora**, escolha **Automático (região da TV)**, **12 horas** ou **24 horas**.
+
+Na edição No-root, abra **Configurações → Sua tela Home → Manter HDMI ou TV ao vivo ao sair do modo de espera**.
+
+Se a TV sair do modo de espera exibindo um console, a TV ao vivo ou outra entrada, essa tela permanece aberta. O botão Home funciona como de costume. A opção vem desativada por padrão.
 
 Se No-root não conseguir ler o estado de Home, escolha Tentar novamente. Um controle indisponível não significa que Home esteja desativado. Em Papéis de parede, envie uma imagem do telefone ou CYTV; qualidade e escurecimento aparecem quando há um papel de parede disponível. A remoção de um papel de parede pessoal pede confirmação; Cancelar o mantém.
 

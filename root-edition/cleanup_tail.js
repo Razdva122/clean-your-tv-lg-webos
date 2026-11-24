@@ -880,17 +880,41 @@ async function absent() {
     throw Error('owned-input-remains');
   requireIdle();
 }
-function requireIdle() {
-  var temporarySupport = fs
+var privateTemp = '/var/lib/clean-your-tv-root-staging';
+function supportPath(path, kind) {
+  return new RegExp(
+    '^(?:/tmp|/var/lib/clean-your-tv-root-staging)/cytv-' +
+      kind +
+      '-[a-f0-9]{32}$'
+  ).test(path);
+}
+function supportDirectories() {
+  var pattern =
+    /^cytv-(?:product|coordinator|system-updater|c1-root|root-tail)-[a-f0-9]{32}$/;
+  var result = fs
     .readdirSync('/tmp')
     .filter(function (name) {
-      return /^cytv-(?:product|coordinator|system-updater|c1-root|root-tail)-[a-f0-9]{32}$/.test(
-        name
-      );
+      return pattern.test(name);
     })
     .map(function (name) {
       return '/tmp/' + name + '/';
     });
+  if (exists(privateTemp)) {
+    var directory = openDir(privateTemp),
+      info = fs.fstatSync(directory);
+    if (info.uid !== uid || (info.mode & 511) !== 448)
+      throw Error('unsafe-private-support-directory');
+    fs.readdirSync(at(directory)).forEach(function (name) {
+      if (!pattern.test(name)) throw Error('unclassified-private-support');
+      var path = privateTemp + '/' + name;
+      openDir(path);
+      result.push(path + '/');
+    });
+  }
+  return result;
+}
+function requireIdle() {
+  var temporarySupport = supportDirectories();
   fs.readdirSync('/proc')
     .filter(function (n) {
       return (
@@ -1003,7 +1027,7 @@ function requireIdle() {
     });
 }
 function retire(path, inventory, pin, removeRoot, scratch) {
-  if (scratch && !/^\/tmp\/cytv-root-tail-[a-f0-9]{32}$/.test(path))
+  if (scratch && !supportPath(path, 'root-tail'))
     throw Error('invalid-tail-stage');
   if (!exists(path)) return;
   var root = openDir(path),
@@ -1139,11 +1163,12 @@ function finalizeFence() {
 // The saved host goal names whole private scratch directories, not file states.
 // Their contents are inert; confinement and ownership, not filenames, gate cleanup.
 function retireHostStages() {
+  supportDirectories();
   var stages = process.argv[4] === '-' ? [] : process.argv[4].split(',');
   if (
     stages.length > 128 ||
     stages.some(function (stage) {
-      return !/^\/tmp\/cytv-root-tail-[a-f0-9]{32}$/.test(stage);
+      return !supportPath(stage, 'root-tail');
     })
   )
     throw Error('invalid-tail-stages');
@@ -1381,7 +1406,7 @@ function canRecheckBoot() {
         if (!Array.isArray(gates)) throw Error('invalid-tail-stages');
         (process.argv[4] === '-' ? [] : process.argv[4].split(',')).forEach(
           function (path) {
-            if (!/^\/tmp\/cytv-root-tail-[a-f0-9]{32}$/.test(path))
+            if (!supportPath(path, 'root-tail'))
               throw Error('invalid-tail-stage');
             if (
               !exists(path) ||
@@ -1401,9 +1426,14 @@ function canRecheckBoot() {
         // Other users of this private runtime prevent retirement.
         requireIdle();
         (record.support_stages || []).forEach(function (stage) {
-          if (!/^\/tmp\/cytv-product-[a-f0-9]{32}$/.test(stage.path))
+          if (!supportPath(stage.path, 'product'))
             throw Error('invalid-support-stage');
-          retire(stage.path, null, stage);
+          retire(
+            stage.path,
+            null,
+            stage,
+            stage.path.indexOf(privateTemp + '/') === 0
+          );
         });
         if (
           record.cleanup_without_restart === true &&

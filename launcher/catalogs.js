@@ -4756,3 +4756,90 @@ HomeI18n.add({
       'Aplicațiile deschise frecvent apar mai sus în grilă. Ordinea din bara de aplicații se păstrează.'
   }
 });
+
+HomeI18n.add({
+  'en': {
+    'Stay on HDMI or Live TV when the TV wakes':
+      'Stay on HDMI or Live TV when the TV wakes',
+    'If your TV wakes from standby already showing a game console, Live TV, or another input, that screen stays open. The Home button works as usual.':
+      'If your TV wakes from standby already showing a game console, Live TV, or another input, that screen stays open. The Home button works as usual.'
+  },
+  'cs': {
+    'Stay on HDMI or Live TV when the TV wakes':
+      'Po probuzení zůstat na HDMI nebo živém vysílání',
+    'If your TV wakes from standby already showing a game console, Live TV, or another input, that screen stays open. The Home button works as usual.':
+      'Pokud televizor po probuzení z pohotovostního režimu už zobrazuje herní konzoli, živé vysílání nebo jiný vstup, zůstane na této obrazovce. Tlačítko Home funguje jako obvykle.'
+  },
+  'de': {
+    'Stay on HDMI or Live TV when the TV wakes':
+      'Nach dem Aufwachen auf HDMI oder Live-TV bleiben',
+    'If your TV wakes from standby already showing a game console, Live TV, or another input, that screen stays open. The Home button works as usual.':
+      'Wenn der Fernseher nach dem Standby bereits eine Spielkonsole, Live-TV oder einen anderen Eingang anzeigt, bleibt dieser Bildschirm geöffnet. Die Home-Taste funktioniert wie gewohnt.'
+  },
+  'es': {
+    'Stay on HDMI or Live TV when the TV wakes':
+      'Mantener HDMI o TV en directo al salir del modo de espera',
+    'If your TV wakes from standby already showing a game console, Live TV, or another input, that screen stays open. The Home button works as usual.':
+      'Si el televisor sale del modo de espera mostrando una consola, la TV en directo u otra entrada, esa pantalla se mantiene abierta. El botón Home funciona como siempre.'
+  },
+  'pt-BR': {
+    'Stay on HDMI or Live TV when the TV wakes':
+      'Manter HDMI ou TV ao vivo ao sair do modo de espera',
+    'If your TV wakes from standby already showing a game console, Live TV, or another input, that screen stays open. The Home button works as usual.':
+      'Se a TV sair do modo de espera exibindo um console, a TV ao vivo ou outra entrada, essa tela permanece aberta. O botão Home funciona como de costume.'
+  },
+  'fr': {
+    'Stay on HDMI or Live TV when the TV wakes':
+      'Rester sur HDMI ou la TV en direct à la sortie de veille',
+    'If your TV wakes from standby already showing a game console, Live TV, or another input, that screen stays open. The Home button works as usual.':
+      'Si le téléviseur affiche déjà une console, la TV en direct ou une autre entrée à la sortie de veille, cet écran reste affiché. Le bouton Home fonctionne comme d’habitude.'
+  },
+  'it': {
+    'Stay on HDMI or Live TV when the TV wakes':
+      'Resta su HDMI o sulla TV in diretta all’uscita dallo standby',
+    'If your TV wakes from standby already showing a game console, Live TV, or another input, that screen stays open. The Home button works as usual.':
+      'Se all’uscita dallo standby il televisore mostra già una console, la TV in diretta o un altro ingresso, quella schermata rimane aperta. Il tasto Home funziona come sempre.'
+  },
+  'ko': {
+    'Stay on HDMI or Live TV when the TV wakes':
+      '대기 모드 해제 시 HDMI 또는 실시간 TV 유지',
+    'If your TV wakes from standby already showing a game console, Live TV, or another input, that screen stays open. The Home button works as usual.':
+      '대기 모드에서 깨어난 TV에 게임 콘솔, 실시간 TV 또는 다른 입력 화면이 이미 표시되어 있으면 그 화면을 유지합니다. Home 버튼은 평소처럼 작동합니다.'
+  },
+  'hi': {
+    'Stay on HDMI or Live TV when the TV wakes':
+      'टीवी के जागने पर HDMI या लाइव टीवी पर बने रहें',
+    'If your TV wakes from standby already showing a game console, Live TV, or another input, that screen stays open. The Home button works as usual.':
+      'अगर स्टैंडबाय से जागने पर टीवी पहले से गेम कंसोल, लाइव टीवी या कोई अन्य इनपुट दिखा रहा हो, तो वही स्क्रीन खुली रहती है। Home बटन सामान्य तरीके से काम करता है।'
+  },
+  'pl': {
+    'Stay on HDMI or Live TV when the TV wakes':
+      'Po wybudzeniu pozostań na HDMI lub w telewizji na żywo',
+    'If your TV wakes from standby already showing a game console, Live TV, or another input, that screen stays open. The Home button works as usual.':
+      'Jeśli po wyjściu z trybu czuwania telewizor wyświetla już obraz z konsoli, telewizję na żywo lub inne wejście, ten ekran pozostanie otwarty. Przycisk Home działa jak zwykle.'
+  },
+  'ro': {
+    'Stay on HDMI or Live TV when the TV wakes':
+      'Rămâi pe HDMI sau pe TV în direct la ieșirea din standby',
+    'If your TV wakes from standby already showing a game console, Live TV, or another input, that screen stays open. The Home button works as usual.':
+      'Dacă televizorul iese din standby și afișează deja o consolă de jocuri, TV în direct sau o altă intrare, ecranul respectiv rămâne deschis. Butonul Home funcționează ca de obicei.'
+  },
+  'ru': {
+    'Stay on HDMI or Live TV when the TV wakes':
+      'Оставлять HDMI и эфирное ТВ при пробуждении',
+    'If your TV wakes from standby already showing a game console, Live TV, or another input, that screen stays open. The Home button works as usual.':
+      'Если после выхода из режима ожидания телевизор уже показывает приставку, эфирное ТВ или другой вход, этот экран останется открытым. Кнопка Home работает как обычно.'
+  },
+  'zh-Hans': {
+    'Stay on HDMI or Live TV when the TV wakes':
+      '从待机唤醒时保留 HDMI 或电视直播画面',
+    'If your TV wakes from standby already showing a game console, Live TV, or another input, that screen stays open. The Home button works as usual.':
+      '如果电视从待机唤醒后已经显示游戏机、电视直播或其他输入源的画面，就会保留该画面。Home 键照常使用。'
+  },
+  'zh-Hant': {
+    'Stay on HDMI or Live TV when the TV wakes':
+      '從待機喚醒時保留 HDMI 或電視直播畫面',
+    'If your TV wakes from standby already showing a game console, Live TV, or another input, that screen stays open. The Home button works as usual.':
+      '如果電視從待機喚醒後已顯示遊戲主機、電視直播或其他輸入來源的畫面，就會保留該畫面。Home 鍵照常使用。'
+  }
+});

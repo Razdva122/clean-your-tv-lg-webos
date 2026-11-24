@@ -70,6 +70,8 @@ Nel programma di installazione desktop, dopo la verifica della connessione, sceg
 
 Se durante l’installazione Root viene proposta la sostituzione dell’integrazione Home attuale, conferma solo se vuoi ripristinare LG Home e proseguire. Se rifiuti, resta attiva la Home attuale.
 
+Per la configurazione Root, l’installer usa automaticamente uno spazio temporaneo interno verificato quando necessario; non serve un’unità USB e, se il controllo dello spazio non riesce, conserva i dati di ripristino e salva un rapporto diagnostico.
+
 ## 5. Controlla il telecomando
 
 1. Apri un’altra app sulla TV e premi brevemente **Home**. Deve aprirsi Clean Your TV. Indica nella procedura guidata ciò che hai visto; salta la verifica se non l’hai eseguita.
@@ -176,6 +178,10 @@ In **Impostazioni → Aspetto**, attiva **App più usate per prime**. Il dock ma
 Usa ↑ ↓ per scegliere una categoria e → oppure OK per aprirla. ← torna alle categorie; Indietro torna prima alle categorie e poi chiude le impostazioni. Rientrando in una sezione, il focus torna all’ultimo controllo disponibile. In Colonne, le frecce seguono la griglia a tre colonne. In Lingua, il focus va alla lingua selezionata.
 
 In **Impostazioni → La tua schermata Home → Formato dell’ora**, scegli **Automatico (regione del TV)**, **12 ore** o **24 ore**.
+
+Nell’edizione No-root, apri **Impostazioni → La tua schermata Home → Resta su HDMI o sulla TV in diretta all’uscita dallo standby**.
+
+Se all’uscita dallo standby il televisore mostra già una console, la TV in diretta o un altro ingresso, quella schermata rimane aperta. Il tasto Home funziona come sempre. L’opzione è disattivata per impostazione predefinita.
 
 Se No-root non riesce a leggere lo stato di Home, scegli Riprova. Un controllo non disponibile non significa che Home sia disattivato. In Sfondi, carica un’immagine dal telefono o da CYTV; qualità e oscuramento compaiono quando è disponibile uno sfondo. La rimozione di uno sfondo personale richiede conferma; Annulla lo conserva.
 

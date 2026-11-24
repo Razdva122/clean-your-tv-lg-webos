@@ -31,11 +31,15 @@ def unpacked(data):
         return sum(max(4096, (member.size + 4095) // 4096 * 4096) for member in archive)
 
 
-def _tmp_is_ramfs(remote):
+def _tmp_is_ramfs(remote, *, strict=False):
     try:
         filesystem = remote.run("LC_ALL=C stat -f -c '%t' /tmp", timeout=5)
     except (UserError, OSError):
+        if strict:
+            raise UserError('Temporary storage type could not be verified.', reason_code='tv-storage-unavailable') from None
         return False
+    if strict and (not isinstance(filesystem, str) or not re.fullmatch(r'[0-9a-fA-F]{1,16}', filesystem.strip())):
+        raise UserError('Temporary storage type could not be verified.', reason_code='tv-storage-unavailable')
     return isinstance(filesystem, str) and filesystem.strip().lower() == RAMFS_MAGIC
 
 
@@ -82,6 +86,31 @@ def check(remote, requirements, progress, *, allow_tmp_ramfs=False):
     return ramfs_tmp
 
 
+def ramfs_budget(remote, required, progress, *, clean_removal=False):
+    """Bound vendor scratch by current RAM, never invent ramfs disk blocks."""
+    try:
+        reply = remote.run('LC_ALL=C cat /proc/meminfo', timeout=5)
+        values = {}
+        for line in reply.splitlines():
+            if line.startswith(('MemAvailable:', 'MemFree:')):
+                match = re.fullmatch(r'(MemAvailable|MemFree):\s+([0-9]{1,16}) kB', line)
+                if match is None or match[1] in values:
+                    raise ValueError('Unknown RAM capacity')
+                values[match[1]] = int(match[2])*1024
+        available = values['MemAvailable'] if 'MemAvailable' in values else values['MemFree']
+    except (UserError, OSError, ValueError, KeyError, AttributeError):
+        message = 'Temporary RAM capacity could not be verified.'
+        if not clean_removal:
+            message += ' Installation stopped before package submission.'
+        raise UserError(message, reason_code='tv-storage-ramfs') from None
+    needed = required + RESERVE
+    message = SUMMARY.format(location='Temporary RAM', required=mib(needed),
+        available=mib(available, False), shortfall=mib(max(0, needed-available)))
+    progress(message)
+    if needed > available:
+        raise TVStorageShortfall([message])
+
+
 def install(remote, bundles, progress, root=False, *, no_root_root_ssh=False):
     """Budget new bytes alongside existing installs, including staging and rollback copies.
 
@@ -91,6 +120,7 @@ def install(remote, bundles, progress, root=False, *, no_root_root_ssh=False):
     staged = sum(len(data) for data in bundles.values())
     sizes = [unpacked(data) for name, data in bundles.items() if name.endswith('.ipk')]
     expanded = sum(sizes)
+    root_edition = root
     root = root or no_root_root_ssh
     if root:
         requirements = {'/tmp': staged + max(sizes, default=0),
@@ -99,9 +129,21 @@ def install(remote, bundles, progress, root=False, *, no_root_root_ssh=False):
     else:
         requirements = {'/media/developer': staged + 2 * expanded,
                         '/tmp': max(sizes, default=0)}
-    # Both No-root connections expand apps under /media/developer/apps. Root
-    # SSH stages the IPKs on /var/lib. Vendor scratch on ramfs is unmeasurable.
-    return check(remote, requirements, progress, allow_tmp_ramfs=not root or no_root_root_ssh)
+    # Full Root can stage on internal disk when /tmp is confirmed ramfs. Charge
+    # the extra retained support copy there, and bound vendor scratch by RAM.
+    ramfs = check(remote, requirements, progress, allow_tmp_ramfs=True)
+    if root_edition and ramfs:
+        # The first pass already established all measured partitions. Add the
+        # disk staging copy only for the layout which actually uses it.
+        disk = {key: value for key,value in requirements.items() if key != '/tmp'}
+        disk['/var/lib'] += staged
+        check(remote, disk, progress)
+        from .root_staging import inspect
+        inspect(remote)
+        ramfs_budget(remote, max(sizes, default=0), progress)
+    if root_edition:
+        remote.__dict__['_cytv_root_ramfs'] = ramfs
+    return ramfs
 
 
 def local(required, progress):

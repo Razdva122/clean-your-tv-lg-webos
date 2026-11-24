@@ -188,7 +188,7 @@ function attach(ysm, api) {
         if (!down || !captured) remove();
       }
     };
-    init();
+    init(true);
     return attachment;
   } catch (_) {
     if (attachment) attachment.retire();

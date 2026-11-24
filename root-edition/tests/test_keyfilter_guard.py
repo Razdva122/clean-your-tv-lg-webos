@@ -225,6 +225,73 @@ int main(void) {
             if time.monotonic() - started < 1.5:
                 self.run_guard('--lease')
         s = self.finish(p); self.assertEqual(s['reason'], 'controller_expired'); self.assertFalse(s['healthy'])
+    def await_broker_reconnect(self):
+        proc, iw, cw = self.armed(reconnect=True)
+        end = time.monotonic() + 4
+        while time.monotonic() < end:
+            os.write(iw, b'PING\n')
+            os.write(cw, b'PING\n')
+            if self.run_guard('--status')[0]['state'] == 'reconnecting':
+                break
+            time.sleep(.12)
+        else:
+            self.fail('Broker gap did not enter recovery')
+        return proc, iw, cw
+
+    def test_persistent_broker_recovery_stays_off_until_fresh_lease_and_can_escape(self):
+        proc, iw, _ = self.await_broker_reconnect()
+        self.assertNotEqual(self.run_guard('--home', TOKEN)[1], 0)
+        self.assertEqual(self.run_guard('--lease-reconnect', TOKEN)[0]['state'], 'reconnecting')
+        os.write(iw, b'ESCAPE\n')
+        self.assertEqual(self.finish(proc)['reason'], 'escape')
+        self.assertFalse(self.run_guard('--lease')[0]['healthy'])
+
+    def test_persistent_broker_recovery_requires_matching_token_and_recovers(self):
+        proc, iw, cw = self.await_broker_reconnect()
+        self.assertNotEqual(self.run_guard('--lease-reconnect', 'b' * 32)[1], 0)
+        self.assertEqual(self.run_guard('--lease-reconnect', TOKEN)[0]['state'], 'reconnecting')
+        self.assertNotEqual(self.run_guard('--home', TOKEN)[1], 0)
+        end = time.monotonic() + 4
+        while time.monotonic() < end:
+            os.write(iw, b'PING\n')
+            os.write(cw, b'PING\n')
+            status, rc = self.run_guard('--lease')
+            self.assertEqual(rc, 0, status)
+            if status['healthy']:
+                break
+            time.sleep(.12)
+        else:
+            self.fail('Fresh broker did not restore routing')
+        os.write(iw, b'ESCAPE\n')
+        self.assertEqual(self.finish(proc)['reason'], 'escape')
+
+    def test_broker_barrier_waits_for_guardian_to_drain_queued_escape(self):
+        proc, iw, _ = self.await_broker_reconnect()
+        self.assertEqual(self.run_guard('--lease-reconnect', TOKEN)[0]['state'], 'reconnecting')
+        self.freeze(proc)
+        try:
+            os.write(iw, b'ESCAPE\n')
+            # Simulate the deadline elapsing while the guardian is not scheduled.
+            broker = self.root / 'volatile/broker'
+            fields = broker.read_text().split()
+            fields[4] = fields[3]
+            broker.write_text(' '.join(fields) + '\n')
+            self.assertEqual(self.run_guard('--lease')[0]['state'], 'reconnecting')
+            self.assertNotEqual(self.run_guard('--home', TOKEN)[1], 0)
+        finally:
+            proc.send_signal(signal.SIGCONT)
+        self.assertEqual(self.finish(proc)['reason'], 'escape')
+        self.assertFalse(self.run_guard('--lease-reconnect', TOKEN)[0]['healthy'])
+
+    def test_manual_off_during_broker_recovery_is_terminal(self):
+        proc, _, _ = self.await_broker_reconnect()
+        self.assertEqual(self.run_guard('--lease-reconnect', TOKEN)[0]['state'], 'reconnecting')
+        self.assertEqual(self.run_guard('--restore')[1], 0)
+        self.finish(proc)
+        self.assertFalse(self.run_guard('--lease-reconnect', TOKEN)[0]['healthy'])
+        self.assertNotEqual(self.run_guard('--home', TOKEN)[1], 0)
+        self.assertIn('explicit_off', (self.root / 'state/stopped').read_text())
+
     def test_broker_cannot_revive_expired_health(self):
         p, iw, cw = self.armed()
         deadline = time.monotonic() + 2.3
@@ -872,6 +939,37 @@ int main(void) {
         self.assertTrue(s['stopped']); self.assertTrue(s['stock_verified'])
         self.assertEqual((self.root/'luna-calls').read_text().splitlines()[-1],
             '-n 1 luna://com.webos.applicationManager/launch {"id":"com.webos.app.home"}')
+    def test_restore_succeeds_with_webos6_absent_root_reply(self):
+        # Stock SAM on OLED55C14LB 03.53.45 (webOS 6.5.3), captured byte-for-byte
+        # from closeByAppId for an installed app with no running instance.
+        (self.root/'luna-close-reply').write_text(
+            '{"errorCode":1,"returnValue":false,"errorText":"app is not running"}\n')
+        s,rc=self.run_guard('--restore'); self.assertEqual(rc,0)
+        self.assertEqual(s['reason'],'explicit_off')
+        self.assertTrue(s['stopped']); self.assertTrue(s['stock_verified'])
+        self.assertEqual((self.root/'luna-calls').read_text().splitlines()[-2:],
+            ['-n 1 luna://com.webos.applicationManager/closeByAppId {"id":"com.cleanyourtv.root.preview"}',
+             '-n 1 luna://com.webos.applicationManager/launch {"id":"com.webos.app.home"}'])
+    def test_webos6_absent_root_exception_does_not_accept_other_errors(self):
+        valid=dict(errorCode=1,returnValue=False,errorText='app is not running')
+        # The same firmware answers errorCode 1 for an unknown or empty id and
+        # errorCode 2 for a missing id; only the exact absent text is idempotent.
+        invalid=[dict(valid,errorText='no valid life handler'),
+                 dict(valid,errorCode=2,errorText='invalid parameters'),
+                 dict(valid,errorText='Permission denied'),dict(valid,errorText='app is not running '),
+                 dict(valid,errorText='com.cleanyourtv.root.preview is not running'),
+                 dict(valid,errorCode=40),dict(valid,errorCode='1'),dict(valid,errorCode=True),
+                 dict(valid,errorCode=-1),dict(valid,errorText=None),dict(valid,returnValue='false')]
+        for value in invalid:
+            with self.subTest(value=value):
+                (self.root/'luna-close-reply').write_text(json.dumps(value))
+                s,rc=self.run_guard('--restore'); self.assertNotEqual(rc,0)
+                self.assertEqual(s['reason'],'ui_release_failed'); self.assertTrue(s['stopped'])
+        # The absent-Root reply never makes LG Home launch idempotent.
+        (self.root/'luna-close-reply').write_text(json.dumps(valid))
+        (self.root/'luna-reply').write_text(json.dumps(valid))
+        s,rc=self.run_guard('--restore'); self.assertNotEqual(rc,0)
+        self.assertEqual(s['reason'],'ui_release_failed')
     def test_absent_root_exception_does_not_accept_other_errors(self):
         valid=dict(returnValue=False,errorCode=40,errorText='com.cleanyourtv.root.preview is not running')
         invalid=[dict(valid,errorText='com.webos.app.home is not running'),

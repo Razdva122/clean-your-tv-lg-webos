@@ -183,9 +183,9 @@ module.exports = function (service, options) {
       throw Error('Changed lease helper');
     return marker;
   }
-  function stop() {
+  function stop(reconnecting) {
     generation++;
-    finishHome(false);
+    finishHome(false, reconnecting);
     if (pollTimer !== null) clear(pollTimer);
     if (deadline !== null) clear(deadline);
     pollTimer = null;
@@ -256,7 +256,7 @@ module.exports = function (service, options) {
     var pending = homePending;
     homePending = null;
     clear(pending.timer);
-    if (!ok && pending.child) {
+    if (!ok && !reconnecting && pending.child) {
       try {
         pending.child.kill();
       } catch (_) {}
@@ -270,7 +270,7 @@ module.exports = function (service, options) {
     if (reconnecting) result.reconnecting = true;
     return respond(pending.message, result);
   }
-  function poll() {
+  function poll(reconnectToken) {
     if (!Object.keys(subscribers).length) return stop();
     var current = generation;
     try {
@@ -294,7 +294,7 @@ module.exports = function (service, options) {
     try {
       child = execFile(
         ROOT + '/runtime/c1-keyfilter-guard',
-        ['--lease'],
+        reconnectToken ? ['--lease-reconnect', reconnectToken] : ['--lease'],
         { timeout: 350, maxBuffer: 8192 },
         function (error, stdout) {
           if (current !== generation || completed) return;
@@ -367,19 +367,52 @@ module.exports = function (service, options) {
       var adapter =
         keys(message.payload, 'subscribe,adapter') &&
         message.payload.adapter === 'embedded-qml-v1';
+      var reconnect =
+        keys(message.payload, 'subscribe,reconnect') &&
+        typeof message.payload.reconnect === 'string' &&
+        /^[a-f0-9]{32}$/.test(message.payload.reconnect);
       // The hub-authenticated service name is independent of application metadata.
       if (
         !currentCaller(message) ||
         !message.isSubscription ||
-        (!keys(message.payload, 'subscribe') && !adapter) ||
+        (!keys(message.payload, 'subscribe') && !adapter && !reconnect) ||
         message.payload.subscribe !== true ||
         typeof message.uniqueToken !== 'string' ||
         !message.uniqueToken ||
-        Object.keys(subscribers).length >= 2 ||
+        (!reconnect && Object.keys(subscribers).length >= 2) ||
         subscribers[message.uniqueToken]
       ) {
         failed(message);
         return;
+      }
+      if (reconnect) {
+        try {
+          if (
+            authority().schema === 4 ||
+            (token && token !== message.payload.reconnect)
+          )
+            throw Error('Reconnect attempt changed');
+          var prior = Object.keys(subscribers);
+          if (
+            prior.some(function (key) {
+              return adapterSubscribers[key];
+            })
+          )
+            throw Error('Adapter owns subscription');
+          var previous = subscribers;
+          subscribers = Object.create(null);
+          // Let the bounded native dispatch finish. Killing it here would
+          // convert a transport retry into a durable native launch fault.
+          stop(true);
+          prior.forEach(function (key) {
+            try {
+              if (previous[key].cancel) previous[key].cancel();
+            } catch (_) {}
+          });
+        } catch (_) {
+          failed(message);
+          return;
+        }
       }
       if (adapter) {
         try {
@@ -395,7 +428,7 @@ module.exports = function (service, options) {
       if (first) {
         generation++;
         token = '';
-        poll();
+        poll(reconnect ? message.payload.reconnect : undefined);
       }
     },
     function (message) {

@@ -1,0 +1,106 @@
+{
+  "schemaVersion": 1,
+  "themeApiVersion": 1,
+  "id": "github:axistem-dev/vice-theme:vice",
+  "title": "Vice",
+  "description": "Modern Miami-style sunset look: night-plum glass panels with a neon cyan edge, a pink-and-orange neon clock and a sunset focus glow, over an original 4K Vice Beach sunset. Includes two extra original wallpapers: Ocean Drive at night and the Keys at golden hour.",
+  "author": {
+    "name": "aXistem",
+    "url": "https://github.com/axistem-dev"
+  },
+  "themeVersion": "1.0.0",
+  "layout": {
+    "preset": "dock-grid",
+    "columns": 5,
+    "spacingScale": 1,
+    "textScale": 1,
+    "focusScale": 1.1,
+    "weather": {
+      "formats": [
+        "text",
+        "current",
+        "details",
+        "forecast"
+      ],
+      "scale": 0.85,
+      "padding": 24,
+      "icons": "fill"
+    }
+  },
+  "defaults": {
+    "wallpaperAssetId": "wallpaper",
+    "dim": 0.16,
+    "accent": "#f85586"
+  },
+  "assets": [
+    {
+      "id": "wallpaper",
+      "path": "assets/wallpaper.jpg",
+      "mediaType": "image/jpeg",
+      "width": 3840,
+      "height": 2160,
+      "size": 1855036,
+      "sha256": "d7bbea843a9f55be2d84a60eb465b18b0b6b7af0ca4ce6a53577899d94b00fb1"
+    },
+    {
+      "id": "wallpaper-ocean-drive",
+      "path": "assets/wallpaper-ocean-drive.jpg",
+      "mediaType": "image/jpeg",
+      "width": 1920,
+      "height": 1080,
+      "size": 636233,
+      "sha256": "5113673664bdf982c60431a452d1f37d3c02fa53c06abd3d6a7b11f63d9a38b6"
+    },
+    {
+      "id": "wallpaper-keys",
+      "path": "assets/wallpaper-keys.jpg",
+      "mediaType": "image/jpeg",
+      "width": 1920,
+      "height": 1080,
+      "size": 679333,
+      "sha256": "34f1978aeca31851c8037560e952083cb1e3c7ceee03ad1256f31f7a5c76154b"
+    },
+    {
+      "id": "preview",
+      "path": "assets/preview.jpg",
+      "mediaType": "image/jpeg",
+      "width": 960,
+      "height": 540,
+      "size": 164793,
+      "sha256": "2da79c89d65a0307c6751c3db220e4948acc65985d261ad5f659252045c23ddc"
+    }
+  ],
+  "previewAssetId": "preview",
+  "license": {
+    "identifier": "CC-BY-4.0",
+    "textPath": "LICENSE.txt",
+    "creditsPath": "CREDITS.txt"
+  },
+  "source": {
+    "repository": "https://github.com/axistem-dev/vice-theme",
+    "commit": "853c04efe7bc6a6ae05d54887a430b24dc96a979"
+  },
+  "requires": {
+    "minimumHomeVersion": "1.13.3",
+    "capabilities": [
+      "weather-v1"
+    ]
+  },
+  "rules": {
+    "path": "rules.json",
+    "size": 15547,
+    "sha256": "fe4a913645663147a5adc898ef5c9e1a56882d07a39e98f39fcec610dcfa6bee"
+  },
+  "documents": [
+    {
+      "path": "LICENSE.txt",
+      "size": 1031,
+      "sha256": "e8cf98a13f5269618dd48e767c83dbbd749864fcaaa411a6c2949b88d9bc77d5"
+    },
+    {
+      "path": "CREDITS.txt",
+      "size": 1595,
+      "sha256": "4c473d75fb0a9a457fc340db0ba9e5bae8898c2bf62023dbab12030bf7dc498d"
+    }
+  ]
+}

@@ -52,6 +52,22 @@ residue, absent project apps and checked controls/registrations. A same-boot ret
 does not establish this exception. The existing durable kernel-change field is
 kept across interrupted verified-clean completion, including service-only residue.
 
+An inherited install receipt, a closed cancellation observation, or historical
+installer directories do not by themselves defeat this terminal cleanup rule.
+Current package/configuration requests, original unsettled work and observed
+writers still have their own gates. If process observation remains incomplete
+after an accepted restart, cleanup blocks with recovery data rather than replacing
+the boot baseline and repeatedly requesting another power cycle.
+
+Standard diagnostics export `removal.restart_evidence`: strict booleans for the
+boot-probe result and kernel change, process visibility/uncertainty, package and
+configuration state, terminal eligibility and retained directory types. Fixed
+`phase`, `decision` and `proof_kind` values identify the last branch. The private
+operation receipt stores these under `cleanup_restart_evidence` for later report
+exports; they are observations of the latest cleanup attempt, never admission
+authority. No PID, process arguments, path, raw kernel ID or proof identity is
+exported. `restart-required` also remains visible in the pending-stage projection.
+
 No-root supports only existing pending install and pending/removing uninstall
 receipts. Except for the pre-submission case below, offering removal requires a positive bounded ten-second
 `appInstallService/status` response with an empty apps list and rejects conflicting

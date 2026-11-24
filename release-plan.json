@@ -1,299 +1,105 @@
 {
   "schema": 1,
-  "version": "1.27.0",
+  "version": "1.28.0",
   "changes": [
     {
-      "pr": 738,
+      "pr": 803,
       "issues": [
-        389
+        766
       ],
-      "summary": "Recover private Python cache before resuming Root removal"
+      "summary": "Recover No-root catalog refresh during Home startup"
     },
     {
-      "pr": 742,
-      "issues": [
-        739
-      ],
-      "summary": "Use Linux system CAs for private Python downloads"
+      "pr": 805,
+      "issues": [],
+      "summary": "Fix remaining No-root restart loops and export restart evidence (#152)"
     },
     {
-      "pr": 744,
-      "issues": [
-        712
-      ],
-      "summary": "Add Romanian language to the TV interface"
+      "pr": 806,
+      "issues": [],
+      "summary": "Fix Root staging when /tmp uses ramfs"
     },
     {
-      "pr": 745,
+      "pr": 807,
       "issues": [
-        739
-      ],
-      "summary": "Use local activity dispatch for Root recovery"
-    },
-    {
-      "pr": 746,
-      "issues": [
-        739
-      ],
-      "summary": "Repair retained Root 0.22.0 recovery in place"
-    },
-    {
-      "pr": 749,
-      "issues": [
-        160
-      ],
-      "summary": "Stream Root private cleanup source within legacy exec limits"
-    },
-    {
-      "pr": 750,
-      "issues": [
-        160
-      ],
-      "summary": "Document B9 native startup and in-place migration requirements"
-    },
-    {
-      "pr": 751,
-      "issues": [
-        160
-      ],
-      "summary": "Gate Root Beta boot resumption on runtime capabilities"
-    },
-    {
-      "pr": 753,
-      "issues": [
-        739
-      ],
-      "summary": "Distinguish Root input readiness and heartbeat timeouts"
-    },
-    {
-      "pr": 754,
-      "issues": [
-        160
-      ],
-      "summary": "Migrate retained Root Beta startup in place with capability admission"
-    },
-    {
-      "pr": 757,
-      "issues": [
-        615
-      ],
-      "summary": "Recover No-root cleanup and LG Home after failed Root setup"
-    },
-    {
-      "pr": 758,
-      "issues": [
-        692
-      ],
-      "summary": "Fix legacy Root removal E2BIG and verify package metadata cleanup"
-    },
-    {
-      "pr": 759,
-      "issues": [
-        160,
-        389,
         615,
-        692,
-        712,
-        739
-      ],
-      "summary": "Integrate the next cycle and preserve Root recovery and published OTA compatibility"
-    },
-    {
-      "pr": 762,
-      "issues": [],
-      "summary": "Preserve Root Home intent during signed updates"
-    },
-    {
-      "pr": 763,
-      "issues": [
         741
       ],
-      "summary": "Offer LG Home recovery after a C1 safety stop"
+      "summary": "Fix C1 boot recovery on webOS 6.5.3: absent-Root close reply and reused controller PID"
     },
     {
-      "pr": 764,
-      "issues": [
-        152
-      ],
-      "summary": "Finish terminal-service cleanup after a verified restart (#152)"
-    },
-    {
-      "pr": 765,
-      "issues": [
-        133
-      ],
-      "summary": "Keep verified removal results consistent and record C3 recovery"
-    },
-    {
-      "pr": 767,
+      "pr": 808,
       "issues": [],
-      "summary": "Skip prereleases in stable OTA verification"
+      "summary": "Add Neon '86 to the theme showcase"
     },
     {
-      "pr": 768,
-      "issues": [
-        440
-      ],
-      "summary": "Fix Root removal with stock Home over content on webOS 6 (#440)"
-    },
-    {
-      "pr": 769,
-      "issues": [
-        741
-      ],
-      "summary": "Recover C1 Home after input-only lease expiry"
-    },
-    {
-      "pr": 771,
-      "issues": [
-        410
-      ],
-      "summary": "Root: reuse C1 backend for capability-admitted embedded LG Home"
-    },
-    {
-      "pr": 772,
-      "issues": [
-        739
-      ],
-      "summary": "Resume verified retained Root Home activation in place"
-    },
-    {
-      "pr": 773,
+      "pr": 809,
       "issues": [],
-      "summary": "Run affected installer fixtures on Windows before candidate freeze"
+      "summary": "Add opt-in No-root \"Stay on input at power-on\" setting"
     },
     {
-      "pr": 774,
-      "issues": [],
-      "summary": "Reduce No-root installer fixture overhead"
-    },
-    {
-      "pr": 775,
+      "pr": 811,
       "issues": [
         615
       ],
-      "summary": "Fix Root reinstall with a reused lifecycle controller PID (#615)"
+      "summary": "Allow fresh Root setup after verified removal (#615)"
     },
     {
-      "pr": 776,
-      "issues": [],
-      "summary": "Restore the Android installer bridge and test the signed APK"
-    },
-    {
-      "pr": 777,
-      "issues": [],
-      "summary": "Distinguish superseded candidate refreshes from API and build failures"
-    },
-    {
-      "pr": 780,
-      "issues": [],
-      "summary": "Route compatibility catalog edits to Pages checks"
-    },
-    {
-      "pr": 781,
+      "pr": 812,
       "issues": [
-        519,
-        798
+        741
       ],
-      "summary": "Fix immutable BSP overlay Home admission and cleanup. OLED65B36LA on firmware 13.41.07 still needs device confirmation."
+      "summary": "Reconnect C1 Home after a broker lease gap"
     },
     {
-      "pr": 782,
+      "pr": 815,
       "issues": [],
-      "summary": "Apply CI and release audit fixes"
+      "summary": "Add Vice to the theme showcase"
     },
     {
-      "pr": 783,
-      "issues": [],
-      "summary": "Make source packaging repeatable and preserve verified payloads"
-    },
-    {
-      "pr": 784,
-      "issues": [],
-      "summary": "Fix updater recovery and removal of unavailable themes"
-    },
-    {
-      "pr": 785,
-      "issues": [],
-      "summary": "Make release archives deterministic and assembly retryable"
-    },
-    {
-      "pr": 786,
-      "issues": [],
-      "summary": "Use explicit SDK versions to group compatibility reports"
-    },
-    {
-      "pr": 787,
-      "issues": [],
-      "summary": "Constrain Android build inputs and retire superseded payloads"
-    },
-    {
-      "pr": 788,
+      "pr": 816,
       "issues": [
-        778
+        810
       ],
-      "summary": "Explain refused TV remote-control connections (#778)"
+      "summary": "Clear the owned C1 configd override on Home restore"
     },
     {
-      "pr": 789,
+      "pr": 817,
       "issues": [
-        133,
+        813
+      ],
+      "summary": "Keep HDMI visible during C1 boot recovery"
+    },
+    {
+      "pr": 819,
+      "issues": [
         152,
         410,
-        440,
-        519,
-        615,
-        739,
         741,
-        778
+        810,
+        813
       ],
-      "summary": "Integrate open changes for the next release candidate"
+      "summary": "Integrate the remaining v1.28.0 changes"
     },
     {
-      "pr": 790,
+      "pr": 824,
       "issues": [
-        739
+        615
       ],
-      "summary": "Restore LG Home after a failed retained Root activation"
-    },
-    {
-      "pr": 793,
-      "issues": [
-        792
-      ],
-      "summary": "Show failed Home check in completed installer issue drafts"
-    },
-    {
-      "pr": 794,
-      "issues": [
-        686
-      ],
-      "summary": "Record foreground window details in Home diagnostics"
-    },
-    {
-      "pr": 796,
-      "issues": [
-        702
-      ],
-      "summary": "Keep Root and No-root Home enabled across input loss"
-    },
-    {
-      "pr": 801,
-      "issues": [],
-      "summary": "Fix Windows and Android release verification fixtures"
-    },
-    {
-      "pr": 802,
-      "issues": [],
-      "summary": "Recover signed Root startup and No-root Home settings"
+      "summary": "Keep the Settings opener from toggling Root Home"
     }
   ],
-  "excluded": [],
-  "acceptance": "Project LG OLED55C3RLA (firmware 43.21.71, SDK 11.2.0) passed signed forward, same-IPK Repair, rollback, profile and Home routing in both editions. Magic Remote, standby/wake and emergency LG Home exit passed in both editions. Root sound and AC cold boot passed. No-root diagnostics and clean removal passed. The prior verified Root removal applies to matching cleanup inputs. The exact Android APK passed and the final B9 bundle matches the passing offline replay. Other-model physical checks remain explicitly deferred. [Final nine-case ledger](docs/history/2026-11-20-next-candidate-preparation.md#final-replacement-nine-case-reconciliation).",
+  "excluded": [
+    {
+      "pr": 814,
+      "reason": "Original Vice submission was merged indirectly through #815; the theme is counted once under #815."
+    }
+  ],
+  "acceptance_build": "45431309453:2",
+  "acceptance": "LG OLED55C3RLA, firmware 43.21.71, webOS SDK 11.2.0. Exact macOS arm64 CLI SHA-256 903c563f8f5a04bb915780cc15238467c0c709e6dc260e244e1a405d7f9f1369. No-root Home 1.21.0 FHD and Helper 0.10.0 installed by the ordinary installer, with twelve matching file hashes. Paired network Home from Media Player and same-session standby with Live TV passed in both settings. Reused the published Home and Helper transition and installer recovery fixtures. C1, EF950V and ramfs physical results remain with device owners. Root physical controls, audio, AC-loss recovery, OTA and retained rollback were untested on this build. Case results and TV package hashes are recorded in docs/history/2026-11-25-release-1.28.0-rc-verification.md.",
   "build": {
-    "run_id": 45208179247,
+    "run_id": 45431309453,
     "attempt": 2,
-    "source": "b76e871e4e73cbba476241dbb96aba5fe554441f"
-  },
-  "acceptance_build": "45208179247:2"
+    "source": "83f78766b0d6f9a00a84cc0d3e24f588a72da71d"
+  }
 }

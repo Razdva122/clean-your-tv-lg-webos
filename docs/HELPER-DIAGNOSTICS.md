@@ -182,3 +182,24 @@ An explicit manual start keeps its requested Home opening.
 
 A diagnostic capture records `startup-foreground` with the query result in
 `id`. The usual `foreground` field still describes the subscription cache.
+
+## Wake from standby
+
+When the TV wakes from standby with Home control on, Helper opens Home once
+unless Clean Your TV Home is already in front (`resume-already-foreground`).
+The opt-in **Settings → Your Home screen → Stay on HDMI or Live TV when the TV wakes** switch,
+off by default, also keeps an input source the TV woke on: an HDMI port, Live
+TV or an external analog input. The controller log then records
+`resume-preserved-source` with the foreground app ID instead of
+`resume-launch`. Helper checks the foreground again after wake and waits
+through transient screens. Stable LG Home and ordinary apps still receive
+Home. If the screen cannot be confirmed within the wake window, Helper logs
+`resume-foreground-unavailable` and skips the automatic launch. The Home
+button and triple-Home emergency release are unchanged.
+
+The switch is stored as `keepSource: true` in the existing Home preference
+record (`home-control.json`) only while it is on; turning it off restores the
+original record. Changing it logs `keep-source`. Home settings show the switch
+only when the running Helper reports the value, so an older Helper keeps its
+previous wake behavior. Root Edition has no late wake launch and does not use
+this setting.

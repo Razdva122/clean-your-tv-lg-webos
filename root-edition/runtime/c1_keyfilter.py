@@ -23,6 +23,8 @@ APP = legacy.APP
 BACKEND = legacy.BACKEND
 ROUTING = 'compositor-keyfilter-v1'
 KEY = 'com.webos.surfacemanager.keyFilters'
+FACTORY_FILTERS = Path('/etc/configd/layers/base/com.webos.surfacemanager.json')
+CONFIGD_FACTORY_DB = Path('/var/preferences/configd_factory_db.json')
 STOCK = 'com.webos.app.home'
 LIVE_TV = 'com.webos.app.livetv'
 # Identical stock short-Home handler in LG W20P and W20H firmware 04.64.00.
@@ -208,11 +210,12 @@ def validate_chain(value):
     return value
 
 
-def read_chain():
+def read_chain(*, allow_missing=False):
     reply=luna('luna://com.webos.service.config/getConfigs', {'configNames':[KEY]})
     if not isinstance(reply,dict) or reply.get('returnValue') is not True or not isinstance(reply.get('configs'),dict):
         raise ValueError('Cannot read configd filter chain')
-    return validate_chain(reply['configs'].get(KEY))
+    chain = reply['configs'].get(KEY)
+    return None if allow_missing and chain is None else validate_chain(chain)
 
 
 def write_chain(value,volatile=False):
@@ -221,6 +224,55 @@ def write_chain(value,volatile=False):
     reply=luna('luna://com.webos.service.config/setConfigs', payload)
     if not isinstance(reply,dict) or reply.get('returnValue') is not True:
         raise ValueError('Configd did not acknowledge filter write')
+
+
+def factory_override(uid):
+    try:
+        database = json.loads(secure(CONFIGD_FACTORY_DB, uid, 1024 * 1024))
+    except FileNotFoundError:
+        return False, None
+    config = database.get('com.webos.service.config', {})
+    defined = config.get('usrDefined', [])
+    if not isinstance(defined, list) or any(not isinstance(key, str) for key in defined):
+        raise ValueError('Invalid configd user overrides')
+    namespace = database.get('com.webos.surfacemanager', {})
+    return KEY in defined, namespace.get('keyFilters')
+
+
+def reset_factory_override(expected, uid):
+    """Resume a recorded reset without treating a missing live key as stock."""
+    factory = json.loads(secure(FACTORY_FILTERS, uid, 65536))
+    if stock_chain(factory['keyFilters']) != expected:
+        raise ValueError('Configd factory chain changed; retain recovery evidence')
+    defined, stored = factory_override(uid)
+    if (defined, stored) == (True, expected):
+        if read_chain() != expected or factory_override(uid) != (True, expected):
+            raise ValueError('Concurrent configd edit; retain recovery evidence')
+        luna('luna://com.webos.service.config/setConfigs', {'configs': {KEY: None}})
+        defined, stored = factory_override(uid)
+    if stored is not None and (not defined or stored != expected):
+        raise ValueError('Concurrent configd edit; retain recovery evidence')
+    # configd may expose no list while effective layers are being rebuilt.
+    live = read_chain(allow_missing=True)
+    if live is not None and live != expected:
+        raise ValueError('Concurrent configd edit; retain recovery evidence')
+    if defined or live is None:
+        luna('luna://com.webos.service.config/reconfigure', {}, timeout=25)
+    if read_chain() != expected or factory_override(uid) != (False, None):
+        raise ValueError('Configd factory override reset unverified; retain recovery evidence')
+
+
+def begin_factory_override_reset(expected, pending, entry, uid):
+    try:
+        factory = json.loads(secure(FACTORY_FILTERS, uid, 65536))
+        if stock_chain(factory['keyFilters']) != expected or factory_override(uid) != (True, expected):
+            return False
+    except (OSError, ValueError, KeyError, AttributeError, TypeError, RecursionError):
+        return False
+    # Equal before/after identifies the reset phase after the normal inverse.
+    atomic(pending, dict(schema=1,before=expected,after=expected,entry=entry),uid)
+    reset_factory_override(expected, uid)
+    return True
 
 
 VENDOR_FILTER = re.compile(r'/usr/lib/(?:qt5/)?qml/KeyFilters/[A-Za-z0-9_-]+\.js')
@@ -419,48 +471,70 @@ def change_chain(root, enabled, uid=0):
     adapter = embedded_adapter(root, uid)
     if adapter:
         return adapter.install(root, uid) if enabled else adapter.remove(root)
-    before=read_chain()
     generic=selection(root,uid)['schema'] in (3,4)
-    after=reconcile(before,root,enabled)
-    if enabled:
-        if generic:
-            stock_chain(before)
-        else:
-            # On C1, replace third-party compositor hooks with the stock LG
-            # chain plus CYTV. Off removes CYTV from that current chain.
-            after=[filter_entry(root), *removal_vendor_chain(after[1:], (APP,))]
     directory=private_directory(root,uid)
     pending=directory/'pending.json'
+    receipt=directory/'ownership.json'
+    own=filter_entry(root)
+    reset = None
     if os.path.lexists(pending):
         saved=json.loads(secure(pending,uid,65536))
         if (not isinstance(saved,dict) or set(saved)!={'schema','before','after','entry'}
-                or type(saved['schema']) is not int or saved['schema']!=1 or saved['entry']!=filter_entry(root)):
+                or type(saved['schema']) is not int or saved['schema']!=1 or saved['entry']!=own):
             raise ValueError('Unknown pending filter transaction; retain evidence')
         reconcile(saved['before'],root,False)
         reconcile(saved['after'],root,False)
+        if not generic and saved['before'] == saved['after']:
+            if enabled:
+                raise ValueError('Restore interrupted configd reset before enabling')
+            reset = saved['after']
+
+    if reset is None:
+        before=read_chain()
+        after=reconcile(before,root,enabled)
+        if enabled:
+            if generic:
+                stock_chain(before)
+            else:
+                # On C1, replace third-party compositor hooks with the stock LG
+                # chain plus CYTV. Off removes CYTV from that current chain.
+                after=[own, *removal_vendor_chain(after[1:], (APP,))]
+            if before==after:
+                return
+
+    ownership = None
+    if reset is not None or own in before or (not generic and not enabled and os.path.lexists(receipt)):
+        try: ownership=json.loads(secure(receipt,uid,4096))
+        except FileNotFoundError:
+            if reset is None or factory_override(uid) != (False, None) or read_chain() != reset:
+                raise ValueError('Unknown owned filter; retain evidence')
+        else:
+            if (not isinstance(ownership,dict) or set(ownership)!={'schema','entry','token'}
+                    or type(ownership['schema']) is not int or ownership['schema']!=1 or ownership['entry']!=own
+                    or not isinstance(ownership['token'],str) or not legacy.TOKEN.fullmatch(ownership['token'])):
+                raise ValueError('Invalid filter ownership; retain evidence')
+
+    if reset is not None:
+        if ownership:
+            reset_factory_override(reset, uid)
+            receipt.unlink()
+        pending.unlink()
+        return
+
     if before==after:
-        if not enabled and os.path.lexists(pending):
+        if ownership and not generic and begin_factory_override_reset(after, pending, own, uid):
+            receipt.unlink()
+        if os.path.lexists(pending):
             if read_chain()!=before: raise ValueError('Concurrent filter recovery edit')
             pending.unlink()
         return
 
-    receipt=directory/'ownership.json'
-    own=filter_entry(root)
-    if own in before:
-        try: ownership=json.loads(secure(receipt,uid,4096))
-        except FileNotFoundError: raise ValueError('Unknown owned filter; retain evidence')
-        if (not isinstance(ownership,dict) or set(ownership)!={'schema','entry','token'}
-                or type(ownership['schema']) is not int or ownership['schema']!=1
-                or ownership['entry']!=own or not isinstance(ownership['token'],str)
-                or not legacy.TOKEN.fullmatch(ownership['token'])):
-            raise ValueError('Invalid filter ownership; retain evidence')
     if enabled:
         intent=read_intent(root,uid)
         atomic(receipt,dict(schema=1,entry=own,token=intent['token']),uid)
-    pending=directory/'pending.json'
     # Durable inverse precedes every possible configd effect. Never restore an
     # old entire chain: the next operation reconciles the current foreign edits.
-    atomic(pending, dict(schema=1,before=before,after=after,entry=filter_entry(root)),uid)
+    atomic(pending, dict(schema=1,before=before,after=after,entry=own),uid)
     if read_chain()!=before:
         raise ValueError('Concurrent configd edit; retain pending evidence')
     # Do not silently reinterpret retained schema2 persistent transactions.
@@ -470,6 +544,8 @@ def change_chain(root, enabled, uid=0):
         write_chain(after)
     if read_chain()!=after:
         raise ValueError('Configd readback mismatch; retain pending evidence')
+    if not generic and not enabled and begin_factory_override_reset(after, pending, own, uid):
+        receipt.unlink()
     pending.unlink()
 
 
@@ -942,9 +1018,11 @@ def restore_locked(root,uid, *, for_removal=False, explicit_restore=False, routi
         write_intent(root,False,after['token'],'recovering',uid)
         if not for_removal:
             check = 'controller-stop-unverified'
-        # Some TVs reuse the kernel boot ID after reboot. A different process
-        # start time proves the recorded controller is gone, even on those TVs.
-        stop_controller(root, uid, allow_reused_pid=for_removal and generic and stopped_stock(after))
+        # Some TVs reuse the kernel boot ID after reboot, and a schema 2 record
+        # has no boot field. A different process start time proves the recorded
+        # controller is gone, even on those TVs. Boot recovery and explicit Off
+        # meet the same reused PID as removal, so none of them may stay blocked.
+        stop_controller(root, uid, allow_reused_pid=stopped_stock(after))
         check = 'stock-routing-unverified'
         change_chain(root,False,uid)
         if not after['stock_verified']:
@@ -1240,7 +1318,8 @@ def boot_resume_observation(root, uid):
 
 def execute(mode,transaction=None,root=STATE,uid=0):
     if mode=='status': return status(root,uid)
-    resumable = mode in ('boot', 'enable') and reboot_resume_supported(selection(root, uid), root, uid)
+    selected = selection(root, uid) if mode in ('boot', 'enable') else None
+    resumable = mode in ('boot', 'enable') and reboot_resume_supported(selected, root, uid)
     previous, session, normal = (boot_resume_observation(root, uid)
                                  if mode == 'boot' and resumable else (None, None, False))
     resumed = None
@@ -1263,8 +1342,12 @@ def execute(mode,transaction=None,root=STATE,uid=0):
             except (OSError, ValueError, RuntimeError, subprocess.SubprocessError):
                 pass  # Unverified activation still needs stock Home recovery.
         if resumed is None and mode in ('restore','boot'):
-            if mode == 'boot' and resumable and (previous is not None or can_restore_routing_only(root, uid)):
-                return restore_locked(root, uid, routing_only=True)
+            if mode == 'boot':
+                # C1 boot recovery returns the Home key to LG without taking over the current input.
+                if selected and selected['schema'] == 2:
+                    return restore_locked(root, uid, routing_only=True)
+                if resumable and (previous is not None or can_restore_routing_only(root, uid)):
+                    return restore_locked(root, uid, routing_only=True)
             return restore_locked(root,uid,explicit_restore=mode=='restore')
         if mode in ('enable','trial','intent-trial','emergency-trial'):
             if mode == 'enable' and resumable:

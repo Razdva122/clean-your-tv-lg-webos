@@ -65,6 +65,29 @@ if ((fs.statSync(dir).mode & 0o7777) !== 0o2770) {
       (await send('setHomeControl', { enabled: 'false' })).returnValue,
       false
     );
+    pending = send('setKeepSource', { enabled: true });
+    req = JSON.parse(
+      fs.readFileSync(path.join(dir, 'home-request.json'), 'utf8')
+    );
+    assert.equal(req.method, 'setKeepSource');
+    assert.equal(req.enabled, true);
+    fs.writeFileSync(
+      path.join(dir, 'home-response.json'),
+      JSON.stringify({
+        id: req.id,
+        returnValue: true,
+        enabled: true,
+        keepSource: true
+      })
+    );
+    queue.shift()();
+    assert.equal((await pending).keepSource, true);
+    for (const payload of [{}, { enabled: 'true' }, { enabled: 1 }])
+      assert.equal(
+        (await send('setKeepSource', payload)).returnValue,
+        false,
+        'Stay on input at power-on accepts only a boolean'
+      );
     assert.equal((await send('shell', { command: 'noop' })).returnValue, false);
     const settings = {
       enabled: true,
@@ -137,7 +160,20 @@ if ((fs.statSync(dir).mode & 0o7777) !== 0o2770) {
       catalogReq = JSON.parse(
         fs.readFileSync(path.join(dir, 'catalog-request.json'), 'utf8')
       );
+    const pickerPending = catalog('listApps', {});
     assert.equal(catalogReq.method, 'listApps');
+    assert.equal(
+      JSON.parse(
+        fs.readFileSync(path.join(dir, 'catalog-request.json'), 'utf8')
+      ).id,
+      catalogReq.id,
+      'startup and picker refresh share the original controller request'
+    );
+    assert.equal(
+      (await catalog('listApps', { uri: 'PRIVATE' })).returnValue,
+      false,
+      'invalid callers cannot join an in-flight catalog read'
+    );
     storage.atomicRecord(
       dir,
       'catalog-response',
@@ -149,12 +185,24 @@ if ((fs.statSync(dir).mode & 0o7777) !== 0o2770) {
     );
     queue.pop()();
     assert.equal((await catalogPending).apps[0].id, 'org.example');
+    const pickerReply = await pickerPending;
+    assert.equal(
+      pickerReply.returnValue,
+      true,
+      'the picker receives the live catalog'
+    );
+    assert.equal(pickerReply.apps[0].id, 'org.example');
     for (const name of ['catalog-request.json', 'catalog-response.json']) {
       const stat = fs.statSync(path.join(dir, name));
       assert.equal(stat.mode & 0o7777, 0o660);
       assert.equal(stat.gid, fs.statSync(dir).gid);
     }
-    for (const method of ['homeStatus', 'setHomeControl', 'inputStatus'])
+    for (const method of [
+      'homeStatus',
+      'setHomeControl',
+      'setKeepSource',
+      'inputStatus'
+    ])
       assert.equal(
         (await catalog(method, {})).returnValue,
         false,
@@ -165,6 +213,32 @@ if ((fs.statSync(dir).mode & 0o7777) !== 0o2770) {
       false,
       'catalog query accepts no caller-selected arguments'
     );
+    const failingRefresh = catalog('listApps', {});
+    const joinedRefresh = catalog('listApps', {});
+    const failedRequest = JSON.parse(
+      fs.readFileSync(path.join(dir, 'catalog-request.json'), 'utf8')
+    );
+    assert.notEqual(failedRequest.id, catalogReq.id);
+    storage.atomicRecord(
+      dir,
+      'catalog-response',
+      JSON.stringify({ id: failedRequest.id, returnValue: false })
+    );
+    queue.pop()();
+    assert.equal((await failingRefresh).returnValue, false);
+    assert.equal((await joinedRefresh).returnValue, false);
+    const retriedRefresh = catalog('listApps', {});
+    const retriedRequest = JSON.parse(
+      fs.readFileSync(path.join(dir, 'catalog-request.json'), 'utf8')
+    );
+    assert.notEqual(retriedRequest.id, failedRequest.id);
+    storage.atomicRecord(
+      dir,
+      'catalog-response',
+      JSON.stringify({ id: retriedRequest.id, returnValue: true, apps: [] })
+    );
+    queue.pop()();
+    assert.equal((await retriedRefresh).returnValue, true);
     const homePending = send('homeStatus', {}),
       homeReq = JSON.parse(
         fs.readFileSync(path.join(dir, 'home-request.json'), 'utf8')
@@ -200,11 +274,12 @@ if ((fs.statSync(dir).mode & 0o7777) !== 0o2770) {
       false,
       'input reads cannot choose a target or add payload fields'
     );
-    assert.equal(
-      (await input('setHomeControl', { enabled: false })).returnValue,
-      false,
-      'metadata channel cannot mutate Home'
-    );
+    for (const method of ['setHomeControl', 'setKeepSource'])
+      assert.equal(
+        (await input(method, { enabled: false })).returnValue,
+        false,
+        'metadata channel cannot mutate Home'
+      );
     pending = send('presentationContext', {});
     req = JSON.parse(
       fs.readFileSync(path.join(dir, 'home-request.json'), 'utf8')
