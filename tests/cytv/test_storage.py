@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 from cytv import failure_help, package, storage
 from cytv.errors import UserError
 
@@ -102,12 +102,12 @@ class StorageTests(unittest.TestCase):
         full = header + '/dev/tmp 1024 1024 0 100% /tmp'
         for tmp, magic, root, reason in (
                 (ramfs, '858458f6', False, None),
-                (ramfs, '858458f6', True, 'tv-storage-ramfs'),
+                (ramfs, '858458f6', True, 'tv-storage-unavailable'),
                 (ramfs, '1021994', False, 'tv-storage-full'),
                 (full, '', False, 'tv-storage-full')):
             with self.subTest(tmp=tmp, magic=magic, root=root):
                 remote = Mock()
-                remote.run.side_effect = [tmp, *([magic] if tmp == ramfs else []), available, available]
+                remote.run.side_effect = [tmp, *([magic] if tmp == ramfs else []), available, available, '']
                 options = {'root': True} if root else {'no_root_root_ssh': True}
                 if reason is None:
                     storage.install(remote, {'data': b'data'}, lambda _: None, **options)
@@ -115,6 +115,40 @@ class StorageTests(unittest.TestCase):
                     with self.assertRaises(UserError) as caught:
                         storage.install(remote, {'data': b'data'}, lambda _: None, **options)
                     self.assertEqual(caught.exception.reason_code, reason)
+
+    def test_root_ramfs_budgets_internal_staging_and_vendor_ram(self):
+        from cytv import root_staging
+        header = 'Filesystem 1024-blocks Used Available Capacity Mounted on\n'
+        def read(command, **kwargs):
+            if command == "LC_ALL=C stat -f -c '%t' /tmp": return '858458f6'
+            if command == 'LC_ALL=C cat /proc/meminfo': return 'MemTotal: 200000 kB\nMemFree: 32768 kB\nMemAvailable: 65536 kB\n'
+            if command.endswith(' /tmp'): return header+'tmp 0 0 0 0% /tmp'
+            return header+'/dev/data 1000000 0 1000000 0% /var'
+        remote = Mock(); remote.run.side_effect = read
+        with patch.object(root_staging, 'inspect') as inspect:
+            self.assertTrue(storage.install(remote, {'data': b'x'*1048576}, lambda _: None, root=True))
+        inspect.assert_called_once_with(remote)
+
+    def test_ramfs_memory_fallback_uses_only_reported_free_pages(self):
+        for memory in ('MemFree: 65536 kB\n', 'MemAvailable: 65536 kB\nMemFree: 0 kB\n'):
+            remote = Mock(); remote.run.return_value = memory
+            messages = []
+            storage.ramfs_budget(remote, 1024, messages.append)
+            self.assertIn('available 64.0 MiB', messages[0])
+
+    def test_root_ramfs_unverified_ram_or_full_disk_never_uploads(self):
+        from cytv import root_staging
+        header = 'Filesystem 1024-blocks Used Available Capacity Mounted on\n'
+        for memory in ('MemAvailable: 0 kB\n', 'MemAvailable: PRIVATE kB', 'MemFree: 0 kB\n', 'MemAvailable: 100000 kB\nMemAvailable: 100000 kB\n'):
+            def read(command, **kwargs):
+                if command.startswith('LC_ALL=C stat'): return '858458f6'
+                if command == 'LC_ALL=C cat /proc/meminfo': return memory
+                if command.endswith(' /tmp'): return header+'tmp 0 0 0 0% /tmp'
+                return header+'/dev/data 1000000 0 1000000 0% /var'
+            remote = Mock(); remote.run.side_effect = read
+            with patch.object(root_staging, 'inspect'), self.assertRaises(UserError):
+                storage.install(remote, {'data':b'x'}, lambda _: None, root=True)
+            remote.upload.assert_not_called()
 
     def test_noroot_install_stops_before_receipt_or_upload_on_full_partition(self):
         from test_operations import OperationTests, Remote

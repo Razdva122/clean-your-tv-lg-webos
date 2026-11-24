@@ -70,6 +70,8 @@ No instalador para computador, após verificar a conexão, escolha **Continuar c
 
 Se a instalação do Root oferecer a substituição da integração atual do Home, confirme apenas se quiser restaurar o LG Home e continuar. Se recusar, o Home atual continua em uso.
 
+Na instalação Root, o instalador usa automaticamente armazenamento temporário interno verificado quando necessário; não é preciso um dispositivo USB e, se a verificação do armazenamento falhar, mantenha os dados de recuperação e salve um relatório de diagnóstico.
+
 ## 5. Confira o controle remoto
 
 1. Abra outro app na TV e pressione **Home** brevemente. Clean Your TV deve abrir. Informe ao assistente o que você viu; pule a verificação se não a realizou.

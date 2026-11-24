@@ -29,6 +29,7 @@ class FullUninstallTests(unittest.TestCase):
         device={'outcome':terminal,'present':True,'requests':[],
                 'target_operation':'b'*32,'target_lease':'c'*32,'target_removal':'e'*32}
         def run(command,**kwargs):
+            if command == "LC_ALL=C stat -f -c '%t' /tmp":return 'ef53'
             if '/install_driver.py ' not in command:return ''
             words=shlex.split(command);action=words[next(i for i,w in enumerate(words) if w.endswith('/install_driver.py'))+1]
             operation=words[words.index('--operation')+1];calls.append((action,operation))

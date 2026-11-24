@@ -70,6 +70,8 @@ W instalatorze na komputer po udanym sprawdzeniu połączenia wybierz **Kontynuu
 
 Jeśli instalator Root zaproponuje zastąpienie obecnej integracji Home, potwierdź tylko wtedy, gdy chcesz przywrócić LG Home i kontynuować. Odmowa zachowa obecny ekran Home.
 
+Podczas instalacji Root instalator w razie potrzeby automatycznie korzysta ze sprawdzonej wewnętrznej pamięci tymczasowej; nośnik USB nie jest wymagany, a jeśli kontrola pamięci się nie powiedzie, zachowaj dane odzyskiwania i zapisz raport diagnostyczny.
+
 ## 5. Sprawdź pilota
 
 1. Otwórz inną aplikację na TV i krótko naciśnij **Home**. Powinien otworzyć się Clean Your TV. W kreatorze zaznacz, co zobaczyłeś; pomiń test, jeśli go nie wykonałeś.

@@ -70,6 +70,8 @@ On desktop, after a successful connection check, choose **Continue setup** to ke
 
 If Root setup offers to replace the current Home integration, confirm only if you want to restore LG Home and continue. Declining keeps the current Home in use.
 
+For Root setup, the installer automatically uses verified internal temporary storage when needed; no USB drive is required, and if the storage check fails, keep the recovery data and save a diagnostic report.
+
 ## 5. Check your remote
 
 1. Open another TV app and briefly press **Home**. Clean Your TV should open. Tell the wizard what you saw; leave the check skipped if you did not test it.
