@@ -1,9 +1,9 @@
 {
-  "from_helper": "0.9.3",
-  "to_helper": "0.9.4",
-  "rollback_home": "1.20.5",
-  "rollback_sha256": "93dae5cd5f0be37efbe81981bef2283c9fe5c349b769a45f62d1db713095529e",
-  "prior_helper_sha256": "89a8d0eec0da5b0795ad239ca620408d3d93d5cb8995480a7f389108598c6f0f",
-  "candidate_archive_sha256": "4f5f70daa3d2b0a6c78ab91692478149c5fd3685eccfc81d76aa03d2972b50a7",
-  "acceptance": "2026-11-23 project LG OLED55C3RLA, firmware 43.21.71, SDK 11.2.0, Node 20.12.2, LG Magic Remote (model unknown). Ordinary macOS ARM64 source installer cytv 0.24.1 over saved No-root Root SSH installed published v1.26.0 Home 1.20.5 FHD with exact Helper 0.9.4 IPK SHA-256 b0020d1ae15b71737297c7dfdfa592a67da5d348beaf5d5356920ed71e53ff59. The installer verified both packages and requested explicit Start Helper. Fourteen installed application and service files matched the inputs, with no pending operation. The maintainer confirmed Start Helper in the published Home UI. Paired network HOME from Media Player briefly showed LG Home, then reached and stayed on Clean Your TV. The same diagnostic session started, captured five populated foreground-window records and completed at expiry. Published Home HD and prior Helper hashes match authenticated v1.26.0 feeds. This probe did not exercise physical Home routing, standby, cold boot, sound, signed OTA, rollback or the original webOS 4.5 scenario."
+  "from_helper": "0.9.4",
+  "to_helper": "0.10.0",
+  "rollback_home": "1.20.7",
+  "rollback_sha256": "a09f087101e25d9daa896ca0606a5098b6745bfd71a8bde4a5d6bc3611605d48",
+  "prior_helper_sha256": "b0020d1ae15b71737297c7dfdfa592a67da5d348beaf5d5356920ed71e53ff59",
+  "candidate_archive_sha256": "cb630d0cd02d1ace95d37dfcbb229c5c261bf38e55240acef566da407ef1d0dd",
+  "acceptance": "2026-11-24 project LG OLED55C3RLA, firmware 43.21.71, SDK 11.2.0. Remote model unknown. The ordinary macOS ARM64 source installer cytv 0.24.2 completed verified removal of Root 0.23.0 after a confirmed software restart. Network HOME from Media Player opened LG Home. The No-root Root SSH installer then verified published Home 1.20.7 FHD and exact Helper 0.10.0 IPK SHA-256 1de7ee53a0d992d726d363bd13a30f44b3f60bdd0ed3507e59f151044c5cf707. Twelve installed files matched the inputs, startup process was observed and no operation remained pending. One paired network HOME from Media Player briefly showed LG Home, then reached and stayed on Clean Your TV after one second. Both published Home display packages and previous Helper matched authenticated v1.27.0 feeds. Physical remote, standby, cold boot, sound, OTA, end-to-end rollback and HD TV operation were not exercised."
 }
