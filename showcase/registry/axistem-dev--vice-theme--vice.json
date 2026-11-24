@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "id": "github:axistem-dev/vice-theme:vice",
+  "title": "Vice",
+  "description": "Modern Miami-style sunset look: night-plum glass panels with a neon cyan edge, a pink-and-orange neon clock and a sunset focus glow, over an original 4K Vice Beach sunset. Includes two extra original wallpapers: Ocean Drive at night and the Keys at golden hour.",
+  "author": {
+    "name": "aXistem",
+    "sourceProfile": "https://github.com/axistem-dev"
+  },
+  "sourceRepository": "https://github.com/axistem-dev/vice-theme",
+  "sourceCommit": "853c04efe7bc6a6ae05d54887a430b24dc96a979",
+  "descriptorUrl": "https://raw.githubusercontent.com/axistem-dev/vice-theme/ce4184a83a6f46206f9c94ca4a6e146531f6aa6e/releases/vice/1.0.0/cytv-theme.json",
+  "descriptorSha256": "6ed1571f08455d03e5b93076436bafbf18c52cc9cb9ebd63ca167ff0e65ed510",
+  "themeVersion": "1.0.0",
+  "themeApiVersion": 1,
+  "license": "CC-BY-4.0",
+  "creditsFile": "assets/axistem-dev--vice-theme--vice/6ed1571f08455d03e5b93076436bafbf18c52cc9cb9ebd63ca167ff0e65ed510/CREDITS.txt",
+  "previewFiles": [
+    "assets/axistem-dev--vice-theme--vice/6ed1571f08455d03e5b93076436bafbf18c52cc9cb9ebd63ca167ff0e65ed510/assets/preview.jpg"
+  ],
+  "tags": [
+    "dark",
+    "colorful"
+  ],
+  "addedAt": "2026-11-24",
+  "reviewedAt": "2026-11-24",
+  "evidence": [
+    {
+      "kind": "browser",
+      "summary": "Compiled with the project theme compiler, verified like the TV (descriptor, hashes, image decode) and used as the active theme in the No-root browser preview."
+    }
+  ]
+}

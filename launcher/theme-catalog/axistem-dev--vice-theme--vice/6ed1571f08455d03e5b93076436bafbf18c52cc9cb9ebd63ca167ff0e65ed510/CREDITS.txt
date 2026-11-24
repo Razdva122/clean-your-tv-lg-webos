@@ -1,0 +1,31 @@
+Vice credits
+
+Theme, scenes and wallpapers: aXistem (https://github.com/axistem-dev).
+
+All wallpaper artwork is original. The three scenes are HTML/SVG/canvas drawings in
+tools/scenes/, generated from code with a fixed random seed: layered gradients,
+SVG fractal-noise clouds, procedural palm silhouettes, invented art-deco
+facades with text-free neon shapes (a flamingo, a palm, a sun over waves),
+wet-street and water reflections. tools/render-scenes.cjs renders them in
+headless Chrome; tools/generate-wallpapers.py (Pillow) adds a fine film grain,
+encodes the JPEGs. No photographs, stock images, AI image
+models, screenshots, fonts, logos or third-party artwork were used.
+
+  wallpaper               Vice Beach sunset    3840x2160  default
+  wallpaper-ocean-drive   Ocean Drive, night   1920x1080  extra
+  wallpaper-keys          The Keys, golden hr  1920x1080  extra
+  preview                 960x540 screenshot of Home with this theme
+
+The preview is a screenshot of the Clean Your TV browser preview with this
+theme and the Vice Beach wallpaper. It shows that preview's demo app icons,
+which remain the property of their publishers and are not covered by this
+theme's license (see preview/reference-apps/NOTICE.txt in Clean Your TV).
+
+Palette: night plum #20052d, neon cyan #1da3ca, sunset blue #2d59ca, violet
+#c137c1, magenta #eb399d, hot pink #f85586, orange #fea241, peach #ffd9c2,
+cream #fff3e6.
+
+Inspired by the public mood of modern Miami and the Florida Keys. Not
+affiliated with any game publisher; no game names, logos or assets are used.
+
+License: CC BY 4.0, see LICENSE.txt.
