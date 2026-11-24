@@ -125,6 +125,20 @@
       "preview": "theme-catalog/axistem-dev--neon86-theme--neon86/f7fe430a9c066287e7142cb71cf180fccc75a5f01a062b5ac332b0cf728f1b68/preview.jpg",
       "url": "https://raw.githubusercontent.com/axistem-dev/neon86-theme/5b95a7044e2026c8d1a6aa0fc6bf941d803a325c/releases/neon86/1.1.1/cytv-theme.json",
       "digest": "f7fe430a9c066287e7142cb71cf180fccc75a5f01a062b5ac332b0cf728f1b68"
+    },
+    {
+      "packageSize": 3356413,
+      "has4k": false,
+      "hasVideo": false,
+      "id": "github:axistem-dev/vice-theme:vice",
+      "title": "Vice",
+      "version": "1.0.0",
+      "author": "aXistem",
+      "license": "CC-BY-4.0",
+      "description": "Modern Miami-style sunset look: night-plum glass panels with a neon cyan edge, a pink-and-orange neon clock and a sunset focus glow, over an original 4K Vice Beach sunset. Includes two extra original wallpapers: Ocean Drive at night and the Keys at golden hour.",
+      "preview": "theme-catalog/axistem-dev--vice-theme--vice/6ed1571f08455d03e5b93076436bafbf18c52cc9cb9ebd63ca167ff0e65ed510/preview.jpg",
+      "url": "https://raw.githubusercontent.com/axistem-dev/vice-theme/ce4184a83a6f46206f9c94ca4a6e146531f6aa6e/releases/vice/1.0.0/cytv-theme.json",
+      "digest": "6ed1571f08455d03e5b93076436bafbf18c52cc9cb9ebd63ca167ff0e65ed510"
     }
   ]
 }

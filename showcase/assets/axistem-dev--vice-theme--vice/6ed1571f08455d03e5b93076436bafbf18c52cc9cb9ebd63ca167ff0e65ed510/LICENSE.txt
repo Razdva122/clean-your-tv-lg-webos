@@ -1,0 +1,19 @@
+Vice, a Home theme for Clean Your TV
+
+Copyright (c) 2026 aXistem
+
+This theme (theme.json, theme.css, the tools in tools/ including the scene
+sources in tools/scenes/, the wallpapers and the preview) is licensed under the
+Creative Commons Attribution 4.0 International License (CC BY 4.0):
+https://creativecommons.org/licenses/by/4.0/
+
+Attribution: "Vice" by aXistem, https://github.com/axistem-dev/vice-theme
+
+The wallpapers are original and generated from code (tools/scenes/*.html
+rendered by tools/render-scenes.cjs, finished by tools/generate-wallpapers.py).
+They contain no third-party artwork, photographs, fonts, logos or trademarks.
+The preview screenshot shows Clean Your TV's demo app icons; those icons
+remain the property of their publishers and are not licensed under CC BY 4.0. The theme is a fan tribute to the general look of modern Miami and the
+Florida Keys. It contains no material from any game, film or TV production and
+is not affiliated with, endorsed by or sponsored by any game publisher or
+rights holder.
