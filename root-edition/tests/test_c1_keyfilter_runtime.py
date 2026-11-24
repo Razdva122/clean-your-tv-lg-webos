@@ -1139,6 +1139,86 @@ class RuntimeTests(unittest.TestCase):
         for chain in (None, {}, ['opaque'], [{'file':1,'handler':'x'}]):
             with self.assertRaises(ValueError): self.k.reconcile(chain, self.root, False)
 
+    def test_schema2_off_unmasks_volatile_writes_after_restoring_factory_chain(self):
+        self.prepare()
+        stock = [{'file': '/usr/lib/qt5/qml/KeyFilters/systemUi.js', 'handler': 'handleSystemKeys'}]
+        foreign = {'file': '/var/lib/other/buttons.js', 'handler': 'buttons'}
+        factory = self.root / 'factory.json'
+        factory.write_text(json.dumps({'keyFilters': stock}))
+        database = self.root / 'database.json'
+        pending = self.root / 'c1-keyfilter/pending.json'
+        namespace = 'com.webos.surfacemanager'
+        service = 'com.webos.service.config'
+        for case in ('stock', 'foreign', 'old-off', 'direct-reset', 'interrupted-reset'):
+            with self.subTest(case=case):
+                later_edit = [foreign] if case == 'foreign' else []
+                interrupt = case == 'interrupted-reset'
+                reset_count = 0
+                state = {service: {'usrDefined': ['other.keep']}, 'other': {'keep': 42}}
+                database.write_text(json.dumps(state))
+                temporary = None
+
+                def rpc(uri, payload, **kwargs):
+                    nonlocal temporary, interrupt, reset_count
+                    if uri.endswith('/getConfigs'):
+                        if self.k.KEY in state[service]['usrDefined'] and namespace in state and not state[namespace]:
+                            return {'returnValue': True, 'configs': {}}
+                        live = state.get(namespace, {}).get('keyFilters', temporary or stock)
+                        return {'returnValue': True, 'configs': {self.k.KEY: live.copy()}}
+                    if uri.endswith('/reconfigure'):
+                        self.assertTrue(pending.exists())
+                        if interrupt:
+                            interrupt = False
+                            raise TimeoutError('reconfigure outcome unknown')
+                        del state[namespace]
+                        state[service]['usrDefined'].remove(self.k.KEY)
+                    else:
+                        self.assertTrue(uri.endswith('/setConfigs'))
+                        value = payload['configs'][self.k.KEY]
+                        if payload.get('volatile'):
+                            temporary = value
+                        else:
+                            self.assertTrue(pending.exists())
+                            defined = state[service]['usrDefined']
+                            if self.k.KEY not in defined:
+                                defined.append(self.k.KEY)
+                            if value is None:
+                                reset_count += 1
+                                if case == 'direct-reset':
+                                    del state[namespace]
+                                    defined.remove(self.k.KEY)
+                                else:
+                                    state[namespace] = {}
+                            else:
+                                state[namespace] = {'keyFilters': value.copy()}
+                    database.write_text(json.dumps(state))
+                    return {'returnValue': True}
+
+                with patch.object(self.k, 'luna', side_effect=rpc), \
+                        patch.object(self.k, 'FACTORY_FILTERS', factory, create=True), \
+                        patch.object(self.k, 'CONFIGD_FACTORY_DB', database, create=True):
+                    self.k.change_chain(self.root, True, self.uid)
+                    state[namespace]['keyFilters'].extend(later_edit)
+                    if case == 'old-off':
+                        state[namespace] = {'keyFilters': stock.copy()}
+                        database.write_text(json.dumps(state))
+                    if interrupt:
+                        with self.assertRaises(TimeoutError):
+                            self.k.change_chain(self.root, False, self.uid)
+                        self.assertTrue(pending.exists())
+                        with self.assertRaises(ValueError):
+                            self.k.read_chain()
+                    self.k.change_chain(self.root, False, self.uid)
+                    self.assertEqual(reset_count, 0 if later_edit else 1)
+                    self.assertEqual(self.k.read_chain(), stock + later_edit)
+                    self.assertEqual(state['other']['keep'], 42)
+                    self.assertIn('other.keep', state[service]['usrDefined'])
+                    self.assertEqual(self.k.KEY in state[service]['usrDefined'], bool(later_edit))
+                    probe = [dict(stock[0], probe=True)]
+                    self.k.write_chain(probe, volatile=True)
+                    self.assertEqual(self.k.read_chain(), stock + later_edit if later_edit else probe)
+                    self.assertFalse(pending.exists())
+
     def test_pending_durable_before_write_and_readback_failure_retains_evidence(self):
         self.prepare()
         chain=[{'file':'/usr/lib/qt5/qml/KeyFilters/systemUi.js','handler':'handleSystemKeys'}]
