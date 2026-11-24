@@ -1242,7 +1242,8 @@ def boot_resume_observation(root, uid):
 
 def execute(mode,transaction=None,root=STATE,uid=0):
     if mode=='status': return status(root,uid)
-    resumable = mode in ('boot', 'enable') and reboot_resume_supported(selection(root, uid), root, uid)
+    selected = selection(root, uid) if mode in ('boot', 'enable') else None
+    resumable = mode in ('boot', 'enable') and reboot_resume_supported(selected, root, uid)
     previous, session, normal = (boot_resume_observation(root, uid)
                                  if mode == 'boot' and resumable else (None, None, False))
     resumed = None
@@ -1265,8 +1266,12 @@ def execute(mode,transaction=None,root=STATE,uid=0):
             except (OSError, ValueError, RuntimeError, subprocess.SubprocessError):
                 pass  # Unverified activation still needs stock Home recovery.
         if resumed is None and mode in ('restore','boot'):
-            if mode == 'boot' and resumable and (previous is not None or can_restore_routing_only(root, uid)):
-                return restore_locked(root, uid, routing_only=True)
+            if mode == 'boot':
+                # C1 boot recovery returns the Home key to LG without taking over the current input.
+                if selected and selected['schema'] == 2:
+                    return restore_locked(root, uid, routing_only=True)
+                if resumable and (previous is not None or can_restore_routing_only(root, uid)):
+                    return restore_locked(root, uid, routing_only=True)
             return restore_locked(root,uid,explicit_restore=mode=='restore')
         if mode in ('enable','trial','intent-trial','emergency-trial'):
             if mode == 'enable' and resumable:
