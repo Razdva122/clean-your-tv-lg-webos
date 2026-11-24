@@ -348,10 +348,10 @@ retry.subscribe(next);
 assert.strictEqual(cancelled, true);
 assert.strictEqual(pendingDispatch.killed, false);
 assert.strictEqual(retry.replies.at(-1).reconnecting, true);
-assert.deepStrictEqual(retry.calls.at(-1).args, [
-  '--lease-reconnect',
-  'a'.repeat(32)
-]);
+var reconnectArgs = retry.calls.at(-1).args;
+assert.strictEqual(reconnectArgs.length, 2);
+assert.strictEqual(reconnectArgs[0], '--lease-reconnect');
+assert.strictEqual(reconnectArgs[1], 'a'.repeat(32));
 retry.reply(
   Object.assign(native(), {
     state: 'reconnecting',
