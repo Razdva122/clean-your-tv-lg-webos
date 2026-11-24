@@ -182,6 +182,8 @@ class Remote:
             if 'CYTV_SETUP_GENERATION' in code:return json.dumps('I'+'1'*32)
             if code==no_root_observer.STATE_CHECK:return 'CYTV_CONFIGURATION_PRIVATE'
         if 'CYTV_STOP_RETAINED' in command:return 'CYTV_START_ALLOWED'
+        if command == "LC_ALL=C stat -f -c '%t' /tmp":
+            return 'ef53'
         if command.startswith('LC_ALL=C df -Pk '):
             return 'Filesystem 1024-blocks Used Available Capacity Mounted on\n/dev/test 10000000 0 10000000 0% /shared'
         if 'CYTV_NODE_READY' in command: return 'CYTV_NODE_READY'

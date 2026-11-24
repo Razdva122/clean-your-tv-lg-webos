@@ -6,6 +6,7 @@ var cytvC1LeaseGeneration = 0;
 var cytvC1Healthy = false;
 var cytvC1Failed = true;
 var cytvC1EverArmed = false;
+var cytvC1Embedded = false;
 var cytvC1Token = '';
 var cytvC1Sequence = 0;
 var cytvC1Down = false;
@@ -23,7 +24,7 @@ function cytvC1Revoke() {
 function cytvC1Retry(generation, remaining) {
   if (generation !== cytvC1Generation || cytvC1Failed || !cytvC1Token) return;
   cytvC1Healthy = false;
-  if (!remaining) {
+  if (cytvC1Embedded || !remaining) {
     cytvC1Revoke();
     return;
   }
@@ -35,7 +36,8 @@ function cytvC1Retry(generation, remaining) {
   cytvC1Subscribe(++cytvC1Generation, remaining - 1, cytvC1Token);
 }
 
-function init() {
+function init(embedded) {
+  cytvC1Embedded = embedded === true;
   var generation = ++cytvC1Generation;
   cytvC1HomeGeneration++;
   cytvC1HomePending = false;
