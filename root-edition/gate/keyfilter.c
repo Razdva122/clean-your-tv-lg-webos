@@ -459,7 +459,7 @@ static int pulse_read(const char *name, long long *input, long long *control, in
   snprintf(p,sizeof(p),VOLATILE "/%s",name);
   if (readfile(p,b,sizeof(b),1)<0 ||
       sscanf(b,"%32[a-f0-9] %ld %llu %lld %lld %d",token,&pid,&start,input,control,armed)!=6 ||
-      *input<0 || *control<0 || (*armed<0 || *armed>(!strcmp(name,"health") ? 3 : 1))) return 0;
+      *input<0 || *control<0 || (*armed<0 || *armed>(!strcmp(name,"health") ? 4 : 1))) return 0;
   snprintf(expected,sizeof(expected),"%s %ld %llu %lld %lld %d\n",token,pid,start,*input,*control,*armed);
   return !strcmp(expected,b) && !strcmp(token,active.token) &&
          ((pid==active.pid && start==active.start) ||
@@ -469,19 +469,28 @@ static int fresh(long long stamp) {
   long long now=now_ms();
   return stamp>0 && now>=stamp && now-stamp<2000;
 }
+/* Health modes 2 and 3 support input reconnection; 4 waits for the
+ * guardian's broker reattachment barrier. */
+static int broker_recoverable(long long stamp, int mode) {
+  long long now=now_ms();
+  return !cfg.embedded && (mode==2 || mode==3 || mode==4) &&
+         stamp>0 && now>=stamp && now-stamp<15000;
+}
 static int health(void) {
   long long i,c,b,u; int armed,unused;
   return active_live() && stock_identity() &&
          pulse_read("health",&i,&c,&armed) && (armed==1 || armed==3) && fresh(i) && fresh(c) &&
-         pulse_read("broker",&b,&u,&unused) && fresh(b);
+         pulse_read("broker",&b,&u,&unused) && fresh(b) && now_ms()>=u;
 }
 /* Mode 3 permits a recoverable input gap; mode 2 is the suspended route.
- * A dead controller, broker, guardian, or changed Home never qualifies. */
+ * Only a bounded broker gap on a live attempt can be renewed. */
 static int reconnecting(void) {
   long long i,c,b,u; int mode,unused;
   return active_live() && stock_identity() &&
-         pulse_read("health",&i,&c,&mode) && (mode==2 || (mode==3 && !fresh(i))) &&
-         fresh(c) && pulse_read("broker",&b,&u,&unused) && fresh(b);
+         pulse_read("health",&i,&c,&mode) && (mode==2 || mode==3 || mode==4) &&
+         fresh(c) && pulse_read("broker",&b,&u,&unused) &&
+         (fresh(b) || broker_recoverable(b,mode)) &&
+         (mode==2 || mode==4 || !fresh(i) || !fresh(b) || now_ms()<u);
 }
 /* A bounded valid startup is stock routing, but not retired-stock proof. */
 static int pending(void) {
@@ -827,7 +836,8 @@ static int guard(const char *token,int input,int control,int ready,int seconds,i
       input_timeout_phase=channels[0].ready ? "waiting-for-ping":"waiting-for-ready";
     }
     else if (now-(channels[1].ready ? channels[1].last:born)>=2000) reason="controller_expired";
-    else if ((broker && !fresh(b)) ||
+    else if ((broker && !fresh(b) &&
+              !broker_recoverable(b,armed && channels[0].recheck ? 3 : 0)) ||
              (!broker && (armed || !absent(VOLATILE "/broker") || now-born>=2000))) reason="broker_expired";
     if (!reason && !armed && !pending_input && channels[0].ready && (!channels[0].waiting || boot_wait) &&
         channels[1].ready && broker && fresh(b)) {
@@ -839,6 +849,14 @@ static int guard(const char *token,int input,int control,int ready,int seconds,i
       else { armed=1; close(ready); ready=-1; }
     } else if (!reason) {
       int mode=armed && channels[0].recheck ? (!channels[0].waiting && fresh(channels[0].last) ? 3 : 2) : armed;
+      long long input_pulse,control_pulse;
+      int old_mode;
+      if (armed && pulse_read("health",&input_pulse,&control_pulse,&old_mode) && old_mode==4) {
+        struct pollfd queue={input,POLLIN,0};
+        /* Health remains suspended until the guardian itself has drained input.
+         * Lease readers never infer reattachment just from a timer expiring. */
+        if (now<u || channels[0].len || poll(&queue,1,0)!=0) mode=4;
+      }
       if (!pulse_write("health",channels[0].last,channels[1].last,mode)) reason="journal_failed";
     }
     close(lock);
@@ -1004,11 +1022,15 @@ int main(int argc,char **argv) {
     int rc=reply(ok,1,ok && latched>0 ? "normal_shutdown":ok ? "boot_retired":"boot_retire_refused");
     close(lock); return rc;
   }
-  if (argc==2 && !strcmp(argv[1],"--lease")) {
+  int broker_retry=argc==3 && !strcmp(argv[1],"--lease-reconnect");
+  if ((argc==2 && !strcmp(argv[1],"--lease")) || broker_retry) {
+    if (broker_retry && strcmp(argv[2],cfg.token)) {
+      int rc=reply(0,1,"lease_refused"); close(lock); return rc;
+    }
     char why[64]; int jr=active_read(), stopped=latch_read(why);
     int ok=jr>=0 && stopped>=0;
     if (ok && !stopped && boot_matches && stock_identity() && volatile_ready()) {
-      if (jr==0) {
+      if (jr==0 && !broker_retry) {
         /* Compositor subscribes before guard creation; no invented guardian. */
         strcpy(active.token,cfg.token);
         ok=pulse_write("broker",now_ms(),0,0);
@@ -1016,11 +1038,23 @@ int main(int argc,char **argv) {
         long long i,c,b,u; int armed,unused;
         int h=pulse_read("health",&i,&c,&armed);
         int prior=pulse_read("broker",&b,&u,&unused);
+        int expired=prior && !fresh(b);
+        int recovering=h && expired && broker_recoverable(b,armed);
+        if (broker_retry && (!h || !prior || !broker_recoverable(b,armed))) {
+          int rc=reply(0,1,"lease_refused"); close(lock); return rc;
+        }
         if (!h || (armed && (!fresh(c) || (armed==1 && !fresh(i)))) ||
-            (prior && !fresh(b)) ||
+            (expired && !recovering) ||
             (!prior && (armed || !absent(VOLATILE "/broker") || now_ms()-active.born>=2000))) {
           ok=stop("lease_expired");
-        } else ok=pulse_write("broker",now_ms(),0,0);
+        } else {
+          long long now=now_ms();
+          /* Leave one full emergency gesture window after broker renewal.
+           * The observer continues consuming input and the stop latch wins. */
+          int reattach=(recovering || broker_retry) && u<=now;
+          ok=(!reattach || pulse_write("health",i,c,4)) &&
+             pulse_write("broker",now,reattach ? now+2000 : (prior ? u : 0),0);
+        }
       }
     }
     int rc=reply(ok,1,"none"); close(lock); return rc;

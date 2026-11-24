@@ -359,6 +359,7 @@ if(input.action==='idle'){
   try{args.push(fs.readlinkSync(file).replace(/ \(deleted\)$/,''));}
   catch(e){
    if(e.code==='ENOENT')return;
+   reply.process_links_unreadable=true;
    // After startup shutdown, the readable command
    // line identifies project invocations even if Linux restricts these links.
    if(afterStop&&(e.code==='EACCES'||e.code==='EPERM')&&
@@ -387,12 +388,16 @@ if(input.action==='idle'){
   reply.proc_enumerated=false;
   reply.project_running=false;
   reply.installer_running=false;
+  reply.process_cmdline_unreadable=false;reply.process_links_unreadable=false;
+  reply.opaque_interpreter=false;reply.process_limit_exceeded=false;
   // Keep observed Homebrew activity even if it exits during this poll.
   try{var proc='/proc/',pids=fs.readdirSync(proc).filter(function(pid){return /^[1-9][0-9]*$/.test(pid)&&Number(pid)!==process.pid;});
    reply.proc_enumerated=pids.length<=4096;
-   if(pids.length>4096)reply.idle=false;
+   if(pids.length>4096){reply.idle=false;reply.process_limit_exceeded=true;}
    pids.forEach(function(pid){try{
-    var args=fs.readFileSync(proc+pid+'/cmdline','utf8').split('\0').filter(Boolean),argc=args.length;
+    var args,argc;
+    try{args=fs.readFileSync(proc+pid+'/cmdline','utf8').split('\0').filter(Boolean);argc=args.length;}
+    catch(e){if(e.code!=='ENOENT'||exists(proc+pid))reply.process_cmdline_unreadable=true;throw e;}
     var homebrew=packageSender(args,'luna://org.webosbrew.hbchannel.service/install');
     var own=homebrew||isInstaller(args);if(own)reply.installer_running=true;
     if(homebrew)reply.homebrew_observed=true;
@@ -407,7 +412,7 @@ if(input.action==='idle'){
      args[1]==='/usr/bin/run-js-service'&&/^[a-zA-Z0-9_-]+(?:[.][a-zA-Z0-9_-]+)+$/.test(args[2]);
     // Interpreter flags do not establish the script's identity.
     if(!serviceLauncher&&args.some(function(arg){return /(^|\/)(node|python[0-9.]*)$/.test(arg);})&&
-       (argc<2||!/^\/.*[.](js|cjs|mjs|py|pyc)$/.test(args[1])))reply.idle=false;
+       (argc<2||!/^\/.*[.](js|cjs|mjs|py|pyc)$/.test(args[1]))){reply.idle=false;reply.opaque_interpreter=true;}
    }catch(e){if(e.code!=='ENOENT'||exists(proc+pid))reply.idle=false;}});
   }catch(e){reply.idle=false;}
   // Calling disable can temporarily activate an LS2 service. Wait for its
@@ -984,11 +989,29 @@ def continue_removal(installer, expected_pending):
                               and pending.get('cleanup_helper_kernel_changed') is True
                               and pending.get('removals', {}).get(APPS[0]) == 'terminal')
 
+    restart_observation = {'previous_present': previous is not None, 'decision': 'observing'}
+
+    def record_restart(**values):
+        from .recovery_state import restart_evidence
+        restart_observation.update(restart_evidence(values))
+        store.checkpoint(profile, cleanup_restart_evidence=dict(restart_observation))
+
+    proof = pending.get('cleanup_boot_proof')
+    proof_kind = ('none' if proof is None else 'kernel-only' if isinstance(proof, dict) and proof.get('schema') == 2
+                  else 'volatile-marker' if isinstance(proof, dict) and proof.get('schema') == 1 else 'unknown')
+    record_restart(proof_present=proof is not None, proof_kind=proof_kind)
+    process_phase = 'writers'
+
     terminals_this_pass = set()
     surviving_registrations = set()
 
     def device(action, **options):
         value = _device(installer, action, guard=guard, **options)
+        if action == 'idle':
+            record_restart(phase=process_phase, **{key: value[key] for key in
+                ('idle', 'proc_enumerated', 'project_running', 'installer_running', 'homebrew_observed',
+                 'process_cmdline_unreadable', 'process_links_unreadable', 'opaque_interpreter',
+                 'process_limit_exceeded') if key in value})
         if guard and action in ('inventory', 'sweep'):
             # Track only public registration leaves observed after this pass's
             # vendor terminal. A hidden directory cannot refute that evidence.
@@ -1013,6 +1036,7 @@ def continue_removal(installer, expected_pending):
         check(defer_catalogued_paths(idle) if not verify_after_remove else idle,
               defer_packages=True, action='idle')
         if idle.get('project_running') is True:
+            record_restart(decision='process-blocked')
             raise UserError('A Clean Your TV process did not stop in time. Removal data was kept.',
                             reason_code='cleanup-check-failed')
         return idle.get('project_running') is False and (not require_idle or idle.get('idle') is True
@@ -1030,6 +1054,7 @@ def continue_removal(installer, expected_pending):
             raise error
 
     def verify_functional(require_idle, allow_empty_dirs=False):
+        nonlocal process_phase
         final = device('inventory', allow_empty_dirs=allow_empty_dirs)
         check(final)
         check_surviving_registrations()
@@ -1052,10 +1077,14 @@ def continue_removal(installer, expected_pending):
         evidence['packages'] = 'absent'
         retained_helper = final.get('empty_helper_dirs_retained') is True
         retained_dirs = retained_helper or final.get('empty_service_dirs_retained') is True
+        record_restart(allow_opaque=retained_cleanup_reboot and retained_dirs,
+                       **{key: final.get(key) is True for key in
+                          ('empty_helper_dirs_retained', 'empty_service_dirs_retained')})
         return final, wait_for_stopped_processes(require_idle or retained_dirs, verify_after_remove=True,
             allow_opaque=retained_cleanup_reboot and retained_dirs)
 
     def finish(result):
+        nonlocal process_phase
         from .root_no_root_handoff import release
         if guard:
             history = device('history')
@@ -1067,8 +1096,10 @@ def continue_removal(installer, expected_pending):
             installer.progress('Developer Mode could not inspect all legacy service registration directories.')
         if any(result.get(key) is True for key in ('empty_helper_dirs_retained', 'empty_service_dirs_retained')):
             # Controls and history operations ran after the first readback.
+            process_phase = 'finish-readback'
             final, stopped = verify_functional(True, allow_empty_dirs=True)
             if not stopped:
+                record_restart(decision='observation-blocked')
                 raise UserError('Removal could not be verified. Review recovery options before continuing.',
                                 reason_code='cleanup-check-failed')
             updated = dict(result)
@@ -1084,14 +1115,21 @@ def continue_removal(installer, expected_pending):
                 result = updated
                 store.checkpoint(profile, result=result)
         release(installer)
+        record_restart(decision='completed')
         store.finish_clean_removal(profile)
         return result
 
     if pending.get('stage') == 'verified-clean':
+        record_restart(proof_present=pending.get('cleanup_boot_proof') is not None,
+                       boot_probe_returned=False, restart_observed=pending.get('cleanup_boot_verified') is True,
+                       kernel_changed=retained_cleanup_reboot, reused_proof=pending.get('cleanup_boot_verified') is True)
+        process_phase = 'final-readback'
         _, stopped = verify_functional(not guard or pending.get('removal_reason') in (
             'original-writer-active', 'ownership-conflict', 'cleanup-check-failed'),
             allow_empty_dirs=any(pending['result'].get(key) is True for key in
                                    ('empty_helper_dirs_retained', 'empty_service_dirs_retained')))
+        if not stopped:
+            record_restart(decision='observation-blocked')
         if not stopped or (guard and not _input_absent(installer)):
             raise UserError('TV controls could not be verified. Recovery data was kept.', reason_code='controls-unverified')
         return finish(pending['result'])
@@ -1133,6 +1171,8 @@ def continue_removal(installer, expected_pending):
     restarted = reused_restart
     new_kernel = reused_restart
     observed_new_kernel = reused_restart and pending.get('cleanup_helper_kernel_changed') is True
+    record_restart(phase='boot-probe', proof_present=proof is not None, boot_probe_returned=False,
+                   restart_observed=restarted, kernel_changed=observed_new_kernel, reused_proof=reused_restart)
     if proof is not None and not reused_restart and not pending.get('cleanup_boot_release_started'):
         boot = _device(installer, 'boot-probe', proof=proof)
         new_kernel = boot.get('boot_id') not in (None, proof.get('kernel'))
@@ -1142,10 +1182,20 @@ def continue_removal(installer, expected_pending):
             'original-package-unverified', 'homebrew-request-unverified', 'catalog-helper-stop-unverified'}
         restarted = boot['boot_restarted'] is True and (not (legacy_install or critical) or new_kernel)
 
+    record_restart(phase='boot-probe', proof_present=proof is not None,
+                   boot_probe_returned=proof is not None and not reused_restart and not pending.get('cleanup_boot_release_started'),
+                   restart_observed=restarted, kernel_changed=observed_new_kernel, reused_proof=reused_restart)
+
     def require_restart(triggers, *, rearm=False, observed_writer=False):
         nonlocal proof
         stage = 'restart-required'
         reason = triggers[0]
+        if reason == 'process-idle-unverified' and restarted:
+            record_restart(decision='observation-blocked')
+            store.checkpoint(profile, removal_reason='cleanup-check-failed')
+            raise UserError('Removal could not be verified. Review recovery options before continuing.',
+                            reason_code='cleanup-check-failed')
+        record_restart(decision='restart-requested')
         # A vendor idle observation cannot settle an independent Homebrew
         # request. A newer shared baseline still covers both outstanding scopes.
         if guard and not new_kernel and 'homebrew-request-unverified' in boot_triggers:
@@ -1161,6 +1211,7 @@ def continue_removal(installer, expected_pending):
                                        removal_reason=stage, cleanup_restart_triggers=triggers)
             proof = _device(installer, 'boot-create')['boot_proof']
             installer.store.checkpoint(installer.profile, cleanup_boot_proof=proof)
+            record_restart(proof_present=True, proof_kind='kernel-only' if proof.get('schema') == 2 else 'volatile-marker')
         else:
             installer.store.checkpoint(installer.profile, stage=stage, removal_reason=stage,
                                        cleanup_restart_triggers=triggers)
@@ -1175,6 +1226,7 @@ def continue_removal(installer, expected_pending):
                                 reason_code='removal-terminal-unknown')
             # This check still needs the original proof. Keep its baseline and
             # surface the current result without repeating the power-cycle steps.
+            record_restart(decision='awaiting-restart')
             store.checkpoint(profile, removal_reason='restart-unverified')
             raise UserError('The TV restart could not be verified. Save the diagnostic report and keep recovery data.',
                             reason_code='restart-unverified')
@@ -1258,6 +1310,10 @@ def continue_removal(installer, expected_pending):
             store.checkpoint(profile, cleanup_original_configuration_settled=original)
             configuration_settled = True
 
+    bound_package_pending = cancellation.get('package_pending') is True
+    record_restart(resident_history=resident, cancellation_present=bool(cancellation),
+                   configuration_pending=bool(configuration_pending), package_pending=bound_package_pending)
+
     # A proof predating our new vendor request cannot settle that request.
     if submitted and not package_idle and not (new_kernel and 'package-removal-unverified' in boot_triggers):
         return require_restart(['package-removal-unverified'], rearm=proof is not None
@@ -1265,7 +1321,6 @@ def continue_removal(installer, expected_pending):
     if configuration_pending and not configuration_settled:
         return require_restart(['original-configuration-unverified'], rearm=proof is not None
                                and 'original-configuration-unverified' not in boot_triggers)
-    bound_package_pending = cancellation.get('package_pending') is True
     older_request = legacy_install or (isinstance(previous, dict)
         and (previous.get('stage') in ('submitted', 'removing') or
              isinstance(previous.get('removals'), dict) and 'submitted' in previous['removals'].values()))
@@ -1280,11 +1335,18 @@ def continue_removal(installer, expected_pending):
     terminal_cleanup = (guard and removals.get(APPS[0]) == 'terminal' and not submitted
                             and not apps.intersection(APPS)
                             and targets.intersection(APPS) <= {app for app in APPS if removals.get(app) == 'terminal'}
-                            and not resident and not cancellation and not older_pending
-                            and (previous is None or isinstance(previous, dict)
-                                 and previous.get('action') == 'uninstall'))
+                            and not older_pending
+                            and (not configuration_pending or configuration_settled)
+                            and (not bound_package_pending or original_package_settled))
     retained_cleanup_reboot = (terminal_cleanup and observed_new_kernel
                               and 'process-idle-unverified' in boot_triggers)
+    record_restart(phase='before-stop', terminal_cleanup=terminal_cleanup,
+                   all_targets_terminal=targets.intersection(APPS) <= {app for app in APPS if removals.get(app) == 'terminal'},
+                   project_catalog_absent=not bool(apps.intersection(APPS)), resident_history=resident,
+                   cancellation_present=bool(cancellation), configuration_pending=bool(configuration_pending),
+                   package_pending=bound_package_pending, older_pending=older_pending,
+                   decision='continuing')
+    process_phase = 'before-stop'
     installer.progress('Restoring TV controls…')
     idle_helper = False
     if guard and removals.get(APPS[0]) == 'terminal':
@@ -1380,6 +1442,7 @@ def continue_removal(installer, expected_pending):
     if restart_triggers:
         return require_restart(restart_triggers, rearm=restarted)
 
+    process_phase = 'before-packages'
     if not wait_for_stopped_processes(invalid_stop_record or
                                      not restarted and (uncertain_install or inaccessible_packages or unavailable)):
         if invalid_stop_record:
@@ -1454,6 +1517,7 @@ def continue_removal(installer, expected_pending):
     swept = device('sweep', allow_empty_dirs=True)
     check(swept, action='sweep')
     installer.progress('Verifying removal…')
+    process_phase = 'final-readback'
     final, process_stopped = verify_functional(not restarted or reused_restart or invalid_stop_record,
         allow_empty_dirs=any(swept.get(key) is True for key in
                                ('empty_helper_dirs_retained', 'empty_service_dirs_retained')))

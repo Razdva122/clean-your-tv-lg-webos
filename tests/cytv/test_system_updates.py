@@ -6,7 +6,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from cytv import operations, state
+from cytv import operations, package, state
 from cytv.errors import UserError
 
 
@@ -16,6 +16,9 @@ class Remote:
 
     def run(self, command, **kwargs):
         self.calls.append(('run', command))
+        if command == "LC_ALL=C stat -f -c '%t' /tmp":return 'ef53'
+        if command.startswith('LC_ALL=C df -Pk '):
+            return 'Filesystem 1024-blocks Used Available Capacity Mounted on\n/dev/test 10000000 0 10000000 0% /shared'
         if 'CYTV_PYTHON_READY' in command:return 'CYTV_PYTHON_READY'
         if 'CYTV_SYSTEM_ROOT_READY' in command:
             return 'CYTV_SYSTEM_ROOT_READY' if self.root else ''
@@ -54,7 +57,7 @@ class SystemBootstrapTests(unittest.TestCase):
         self.payload = self.path/'payload'
         bundle = self.payload/'system-updater'
         bundle.mkdir(parents=True)
-        files={'setup-system-updater.py':b'# setup', 'system-updater.ipk':b'ipk', 'system_updater/core.py':b'# core'}
+        files={'setup-system-updater.py':b'# setup', 'system-updater.ipk':package.ipk('com.cleanyourtv.system.updater', '0.0.1', {'usr/palm/applications/com.cleanyourtv.system.updater/appinfo.json': b'{}'}), 'system_updater/core.py':b'# core'}
         for name, raw in files.items():
             target=bundle/name;target.parent.mkdir(parents=True, exist_ok=True);target.write_bytes(raw)
         (bundle/'bundle.json').write_text(json.dumps({'schema':1,'supervisor':1,'files':{n:hashlib.sha256(b).hexdigest() for n,b in files.items()}}))
@@ -110,6 +113,25 @@ class SystemBootstrapTests(unittest.TestCase):
         self.assertIsNone(self.store.pending(self.profile))
         self.assertEqual(json.loads(archived[0].read_text())['previous'],original)
         self.assertFalse(any(c[0]=='luna' or c[0]=='run' and ' enable' in c[1] for c in remote.calls))
+
+    def test_ramfs_low_ram_stops_before_receipt_or_upload(self):
+        remote = Remote()
+        original = remote.run
+        def run(command, **kwargs):
+            if command == "LC_ALL=C stat -f -c '%t' /tmp":return '858458f6'
+            if command == "LC_ALL=C stat -f -c '%t' /var/lib":return 'ef53'
+            if command == 'LC_ALL=C df -Pk /tmp':
+                return 'Filesystem 1024-blocks Used Available Capacity Mounted on\nramfs 0 0 0 0% /tmp'
+            if command == 'LC_ALL=C cat /proc/meminfo':return 'MemAvailable: 1 kB\n'
+            if 'CYTV_ROOT_STAGE_READY' in command:return 'CYTV_ROOT_STAGE_READY'
+            return original(command, **kwargs)
+        remote.run = run
+        with self.assertRaises(UserError) as caught:
+            self.installer(remote).enable_system_updates()
+        self.assertEqual(caught.exception.reason_code, 'tv-storage-full')
+        self.assertIsNone(self.store.pending(self.profile))
+        self.assertFalse(any(call[0] == 'upload' for call in remote.calls))
+        self.assertFalse(any(call[0] == 'run' and 'setup-system-updater.py' in call[1] for call in remote.calls))
 
     def test_unrooted_or_corrupt_bundle_never_uploads(self):
         remote=Remote(root=False)

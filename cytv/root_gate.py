@@ -8,7 +8,7 @@ import tempfile
 import tarfile
 import uuid
 
-from . import package
+from . import package, root_staging
 from .errors import TVCommandError, UserError
 from .state import private_write
 
@@ -153,7 +153,7 @@ def stage_recovery_support(installer):
         if name.endswith('.ipk'):
             continue
         target = stage+'/'+name
-        installer.remote.run('mkdir -p '+shlex.quote(str(PurePosixPath(target).parent)))
+        installer.remote.run('umask 077; mkdir -p '+shlex.quote(str(PurePosixPath(target).parent)))
         installer.remote.upload(target, raw, mode=0o600)
     return stage
 
@@ -302,13 +302,13 @@ def install(installer, inventory, migrate=False, reinstall=None):
             raise UserError('Previous operation is unresolved. Run cytv status or cytv restore; do not retry installation.',reason_code='pending-operation')
         result=reply.get('result')
     else:
-        stage = '/tmp/cytv-c1-root-'+uuid.uuid4().hex
-        installer.remote.run('umask 077; mkdir '+shlex.quote(stage))
+        stage = root_staging.create(installer.remote, 'c1-root', required=sum(map(len, prepared.values())))
+        installer.store.checkpoint(installer.profile, native_payload=stage)
         for name, raw in prepared.items():
             target = stage+'/'+name
-            installer.remote.run('mkdir -p '+shlex.quote(str(PurePosixPath(target).parent)))
+            installer.remote.run('umask 077; mkdir -p '+shlex.quote(str(PurePosixPath(target).parent)))
             installer.remote.upload(target, raw, mode=0o600)
-        installer.store.checkpoint(installer.profile, stage='setup')
+        installer.store.checkpoint(installer.profile, stage='setup', native_payload=stage)
         result = installer.root_action('install', bundle=stage, experimental=True)
     if (not isinstance(result, dict) or result.get('returnValue') is not True
             or result.get('installed') != package.ROOT_APP or result.get('home_changed') is not False):
@@ -317,6 +317,8 @@ def install(installer, inventory, migrate=False, reinstall=None):
     device = status.get('result', {}) if isinstance(status, dict) else {}
     if not stock_proof(device) or not isinstance(device.get('recovery'), dict) or device['recovery'].get('integrity_verified') is not True:
         raise UserError('C1 recovery could not be verified. Run cytv status; activation has not started.')
+    files = getattr(installer, '_product_files', {}).get(stage, {}) if getattr(installer, '_native_clean_install', False) else prepared
+    root_staging.retire(installer.remote, stage, files)
     installer.outcome.packages_verified()
     record_native_installation(installer)
     installer.store.checkpoint(installer.profile, action='activate-root', stage='stop-helper',

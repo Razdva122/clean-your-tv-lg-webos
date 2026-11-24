@@ -70,6 +70,8 @@ En el instalador de escritorio, tras comprobar la conexión, elige **Continuar c
 
 Si al instalar Root se te ofrece reemplazar la integración de Home actual, confirma solo si quieres restaurar LG Home y continuar. Si rechazas la oferta, se mantiene el Home actual.
 
+En la instalación Root, el instalador usa automáticamente almacenamiento temporal interno verificado cuando es necesario; no hace falta una unidad USB y, si falla la comprobación del almacenamiento, conserva los datos de recuperación y guarda un informe de diagnóstico.
+
 ## 5. Comprueba el mando
 
 1. Abre otra app del TV y pulsa brevemente **Home**. Debe abrirse Clean Your TV. Indica al asistente lo que viste; omite la prueba si no la hiciste.

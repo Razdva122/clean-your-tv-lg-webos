@@ -70,6 +70,8 @@ Nel programma di installazione desktop, dopo la verifica della connessione, sceg
 
 Se durante l’installazione Root viene proposta la sostituzione dell’integrazione Home attuale, conferma solo se vuoi ripristinare LG Home e proseguire. Se rifiuti, resta attiva la Home attuale.
 
+Per la configurazione Root, l’installer usa automaticamente uno spazio temporaneo interno verificato quando necessario; non serve un’unità USB e, se il controllo dello spazio non riesce, conserva i dati di ripristino e salva un rapporto diagnostico.
+
 ## 5. Controlla il telecomando
 
 1. Apri un’altra app sulla TV e premi brevemente **Home**. Deve aprirsi Clean Your TV. Indica nella procedura guidata ciò che hai visto; salta la verifica se non l’hai eseguita.

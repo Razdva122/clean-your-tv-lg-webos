@@ -52,7 +52,7 @@ REASONS = ('unknown', 'user-error', 'ssh-command-failed', 'ssh-exit-status-missi
            'operation-timeout', 'tv-storage-full', 'tv-storage-ramfs', 'tv-storage-unavailable', 'storage-preflight-failed',
            'computer-storage-full', 'computer-storage-unavailable')
 REASONS += ACTIVATION_CODES
-REASONS += ('installer-runtime-mismatch', 'clean-handoff-refused', 'foreign-home-restore-failed',
+REASONS += ('restart-unverified', 'installer-runtime-mismatch', 'clean-handoff-refused', 'foreign-home-restore-failed',
             'pairing-rejected', 'pairing-connection-refused')
 ACTIONS = ('recover', 'install', 'uninstall', 'restore', 'status', 'doctor', 'home-diagnostics',
            'enable-system-updates', 'enable-firmware-access', 'disable-firmware-access',
@@ -70,7 +70,7 @@ STATES = ('pending', 'complete', 'recovery_required', 'unknown', 'fresh', 'insta
 STAGES = ('unknown', 'blocked', 'reserved', 'root-deploy', 'root-updater', 'supervisor',
           'readback', 'complete', 'absent', 'incomplete-state', 'installed-recovery-only',
           'uninstalled-state-retained', 'pending', 'coordinator-upload', 'coordinator-submitted')
-STAGES += ('requested','original-writers-fenced','controls-restored','package-removal','private-cleanup','verified-clean')
+STAGES += ('requested','original-writers-fenced','controls-restored','package-removal','private-cleanup','restart-required','verified-clean')
 STAGES += ('provision-finalize-starting',)
 CODES = ('unknown_operation', 'operation_pending', 'verified', 'installation_requires_recovery',
          'operation_requires_recovery', 'recovery_evidence_required', 'continuation_requires_recovery',
@@ -509,6 +509,9 @@ def status_summary(value):
                            'stage':choice(removal.get('stage'),REMOVAL_STAGES),
                            'reason':choice(removal.get('reason'),REMOVAL_REASONS),
                            'original_outcome':choice(removal.get('original_outcome'),('unknown','complete','recovery_required'))}
+        from .recovery_state import restart_evidence
+        if evidence := restart_evidence(removal.get('restart_evidence')):
+            result['removal']['restart_evidence'] = evidence
     if 'removal_binding' in value:
         result['removal_binding'] = removal_binding_summary(value['removal_binding'])
     if 'observer' in device:

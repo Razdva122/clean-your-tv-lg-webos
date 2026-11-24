@@ -17,7 +17,7 @@ NOTICE='C1 Beta: native Home control selected automatically. Power recovery and 
 
 class Remote:
     def __init__(self):self.calls=[];self.uploads={}
-    def run(self,command):
+    def run(self,command, timeout=30):
         self.calls.append(command)
         if command.startswith('LC_ALL=C df -Pk '):
             return 'Filesystem 1024-blocks Used Available Capacity Mounted on\n/dev/test 10000000 0 10000000 0% /shared'
@@ -231,7 +231,67 @@ class RootGateTests(unittest.TestCase):
         self.assertEqual([a for a,_ in self.actions],['install','status']);self.assertTrue(result['home_changed']);self.assertFalse(result['updates_ready']);self.assertTrue(result['beta']);self.assertEqual(result['backend'],BACKEND)
         self.assertIsNone(self.store.pending(self.profile));self.installer.outcome.packages_verified.assert_called_once()
         self.assertIn(NOTICE,self.progress)
+        self.assertTrue(self.remote.uploads)
+        self.assertTrue(all(path.startswith('/tmp/cytv-c1-root-') for path in self.remote.uploads))
         marker=json.loads((self.store.device_dir(self.profile)/'installation.json').read_text());self.assertEqual(marker['home_backend'],BACKEND)
+    def ramfs_remote(self):
+        original = self.remote.run
+        def run(command, timeout=30):
+            if command == "LC_ALL=C stat -f -c '%t' /tmp":return '858458f6'
+            if command == 'LC_ALL=C df -Pk /tmp':
+                return 'Filesystem 1024-blocks Used Available Capacity Mounted on\nramfs 0 0 0 0% /tmp'
+            if command == "LC_ALL=C stat -f -c '%t' /var/lib":return 'ef53'
+            if command == 'LC_ALL=C cat /proc/meminfo':return 'MemAvailable: 1048576 kB\n'
+            if 'CYTV_ROOT_STAGE_READY' in command:return 'CYTV_ROOT_STAGE_READY'
+            return original(command, timeout=timeout)
+        self.remote.run = run
+
+    def test_ramfs_native_install_failure_retains_private_payload(self):
+        from cytv.root_staging import ROOT
+        self.ramfs_remote()
+        self.failure = 'install'
+        with self.assertRaisesRegex(RuntimeError, 'interrupted install'):
+            root_gate.install(self.installer, self.inventory)
+        pending = self.store.pending(self.profile)
+        self.assertEqual(pending['stage'], 'setup')
+        self.assertTrue(pending['native_payload'].startswith(ROOT+'/cytv-c1-root-'))
+        self.assertTrue(self.remote.uploads)
+        self.assertTrue(all(path.startswith(pending['native_payload']+'/') for path in self.remote.uploads))
+        self.installer.product_action.assert_not_called()
+        self.installer.outcome.packages_verified.assert_not_called()
+
+    def test_ramfs_native_success_uses_private_nested_directories_and_retires_exact_uploads(self):
+        from cytv import root_staging
+        self.ramfs_remote()
+        with patch.object(root_staging, 'retire', wraps=root_staging.retire) as retire:
+            result = root_gate.install(self.installer, self.inventory)
+        self.assertTrue(result['home_changed'])
+        retire.assert_called_once()
+        remote, stage, files = retire.call_args.args
+        self.assertIs(remote, self.remote)
+        self.assertTrue(stage.startswith(root_staging.ROOT+'/cytv-c1-root-'))
+        self.assertEqual(files, {path[len(stage)+1:]: raw for path, raw in self.remote.uploads.items()})
+        nested = [command for command in self.remote.calls if isinstance(command, str) and 'mkdir -p' in command]
+        self.assertTrue(nested)
+        self.assertTrue(all(command.startswith('umask 077; mkdir -p ') for command in nested))
+        self.assertTrue(all(call[2] == 0o600 for call in self.remote.calls if isinstance(call, tuple) and call[0] == 'upload'))
+        self.assertIsNone(self.store.pending(self.profile))
+
+    def test_ramfs_native_upload_failure_records_private_path_before_first_byte(self):
+        from cytv.root_staging import ROOT
+        self.ramfs_remote()
+        def upload(path, data, mode=0o600):
+            pending = self.store.pending(self.profile)
+            self.assertTrue(pending['native_payload'].startswith(ROOT+'/cytv-c1-root-'))
+            self.assertTrue(path.startswith(pending['native_payload']+'/'))
+            raise OSError('upload interrupted')
+        self.remote.upload = Mock(side_effect=upload)
+        with self.assertRaisesRegex(OSError, 'upload interrupted'):
+            root_gate.install(self.installer, self.inventory)
+        self.remote.upload.assert_called_once()
+        self.assertEqual(self.store.pending(self.profile)['stage'], 'upload')
+        self.assertEqual(self.actions, [])
+
     def test_migrate_reinstall_and_unknown_resolution_refuse_before_effects(self):
         for migrate,reinstall in [(True,None),(False,'removed')]:
             with self.subTest(migrate=migrate,reinstall=reinstall),self.assertRaises(UserError):root_gate.install(self.installer,self.inventory,migrate,reinstall)

@@ -10,6 +10,7 @@ import time
 from time import sleep
 import uuid
 
+from . import root_staging
 from . import package, i18n, diagnostics, graphics, storage
 from .errors import UserError, TVRejected, ExistingRoot, TVCommandError, ROOT_CLEANUP_ACCESS_REQUIRED, root_recovery_details
 
@@ -345,11 +346,12 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
         check = self._python_command([python, '-I', '-B', '-c', SYSTEM_PROBE])
         if self.remote.run('if ' + check + ' >/dev/null 2>&1; then printf CYTV_PYTHON_READY; fi').strip() != 'CYTV_PYTHON_READY':
             self._selected_python = self._select_python(provision=True)
+        storage.install(self.remote, {name:(bundle/name).read_bytes() for name in (*files,'bundle.json')}, self.progress, root=True)
         self.store.begin(self.profile, 'enable-system-updates', stage='upload')
-        stage = '/tmp/cytv-system-updater-' + uuid.uuid4().hex
-        self.remote.run('umask 077; mkdir ' + stage)
+        stage = root_staging.create(self.remote, 'system-updater', required=sum((bundle/name).stat().st_size for name in (*files, 'bundle.json')))
+        self.store.checkpoint(self.profile, support_upload=stage)
         for directory in sorted({str(PurePosixPath(name).parent) for name in files} - {'.'}):
-            self.remote.run('mkdir -p ' + shlex.quote(stage + '/' + directory))
+            self.remote.run('umask 077; mkdir -p ' + shlex.quote(stage + '/' + directory))
         for name in [*files, 'bundle.json']:
             self.remote.upload(stage + '/' + package.safe_name(name), (bundle / name).read_bytes(), mode=0o600)
         self.store.checkpoint(self.profile, stage='setup')
@@ -359,6 +361,7 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
             '--edition', self.profile['edition'], '--device', '--apply']), timeout=360))
         if not isinstance(reply, dict) or reply.get('installed') is not True:
             raise UserError('System updater setup was not confirmed. Keep recovery state and run cytv status.')
+        root_staging.retire(self.remote, stage, {name:(bundle/name).read_bytes() for name in (*files,'bundle.json')})
         self.store.finish(self.profile)
         return reply
 
@@ -381,7 +384,7 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
         for name in (*files,'bundle.json'):
             if name.endswith('.ipk') and not recovery: continue
             target=stage+'/'+package.safe_name(name)
-            self.remote.run('mkdir -p '+shlex.quote(str(PurePosixPath(target).parent)))
+            self.remote.run('umask 077; mkdir -p '+shlex.quote(str(PurePosixPath(target).parent)))
             self.remote.upload(target,(bundle/name).read_bytes(),mode=0o600)
         setattr(self,cache,stage)
         return stage
@@ -424,7 +427,7 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
                     raise ValueError('Invalid current removal lease')
                 args+=['--removal-lease',removal_lease]
             for retired in retire_stages:
-                if action!='clean-remove' or not isinstance(retired,str) or not re.fullmatch(r'/tmp/cytv-product-[a-f0-9]{32}',retired):
+                if action!='clean-remove' or not isinstance(retired,str) or not root_staging.product_path(retired):
                     raise ValueError('Invalid cleanup support stage')
                 args+=['--retire-stage',retired]
             if resume:
@@ -473,20 +476,28 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
             manifests[component]=manifest
             candidate[component]=hashlib.sha256(raw).hexdigest()
         digest=hashlib.sha256(json.dumps(candidate,sort_keys=True,separators=(',',':')).encode()).hexdigest()
-        stage='/tmp/cytv-product-'+uuid.uuid4().hex
+        required = sum((bundle/name).stat().st_size for component,bundle in bundles
+                       for name in (*manifests[component]['files'],'bundle.json'))
+        stage = root_staging.create(self.remote, 'product', required=required, clean_removal=clean_removal)
+        if self.store.pending(self.profile):
+            self.store.checkpoint(self.profile, support_upload=stage)
         if clean_removal:
             pending=self.store.pending(self.profile)
             if not pending or pending.get('recovery_protocol')!='clean-removal-v1':raise ValueError('Clean removal intent required')
             stages=list(pending.get('cleanup_stages',[]))
-            if any(not isinstance(path,str) or not re.fullmatch(r'/tmp/cytv-product-[a-f0-9]{32}',path) for path in stages):
+            if any(not isinstance(path,str) or not root_staging.product_path(path) for path in stages):
                 raise ValueError('Invalid cleanup support stage')
             self.store.checkpoint(self.profile,cleanup_stages=stages+[stage])
-        self.remote.run('umask 077; mkdir '+stage)
+        uploaded = {}
         for component,bundle in bundles:
             for name in (*manifests[component]['files'],'bundle.json'):
                 target=stage+'/'+component+'/'+package.safe_name(name)
-                self.remote.run('mkdir -p '+shlex.quote(str(PurePosixPath(target).parent)))
-                self.remote.upload(target,(bundle/name).read_bytes(),mode=0o600)
+                self.remote.run('umask 077; mkdir -p '+shlex.quote(str(PurePosixPath(target).parent)))
+                raw = (bundle/name).read_bytes()
+                self.remote.upload(target,raw,mode=0o600)
+                uploaded[component+'/'+name] = raw
+        if not hasattr(self,'_product_files'): self._product_files={}
+        self._product_files[stage] = uploaded
         if not hasattr(self,'_product_candidates'):self._product_candidates={}
         self._product_candidates[stage]=digest
         return stage
@@ -1075,6 +1086,7 @@ printf '%s' "$cytv_state"
                 raise UserError('Root updater recovery verification failed. Keep recovery state and run cytv status.')
             self.store.checkpoint(self.profile,stage='verify',baseline_sha=baseline_sha)
             self.verify_root_updater(baseline_sha)
+            root_staging.retire(self.remote, stage, getattr(self, '_product_files', {}).get(stage, {}))
             self.outcome.packages_verified()
             updates_ready = self.profile.get('root_variant') != 'node012-beta'
             # This receipt proves recovery infrastructure readiness, not OTA eligibility.
@@ -2412,8 +2424,10 @@ print('CYTV_PROJECT_REMOVED')
             retire_stages=list(pending.get('cleanup_stages',[]))
             old=pending
             while isinstance(old,dict):
-                retained=old.get('product_payload')
-                if isinstance(retained,str) and re.fullmatch(r'/tmp/cytv-product-[a-f0-9]{32}',retained):retire_stages.append(retained)
+                for field in ('product_payload', 'support_upload'):
+                    retained=old.get(field)
+                    if root_staging.product_path(retained) and retained not in retire_stages:
+                        retire_stages.append(retained)
                 old=old.get('previous')
             self.store.checkpoint(self.profile,product_payload=stage)
             target=self.product_action('clean-target',operation,stage)
