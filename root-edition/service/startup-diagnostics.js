@@ -49,6 +49,20 @@ function save() {
     }
   }
 }
+var milestones = [
+  'status-registered',
+  'status-requested',
+  'status-response-returned'
+];
+module.exports = function (milestone) {
+  if (
+    milestones.indexOf(milestone) <=
+    milestones.indexOf(record.startup_milestone)
+  )
+    return;
+  record.startup_milestone = milestone;
+  save();
+};
 save();
 // Node 12.17+/13.7+ observes fatal exceptions without changing default exit behavior.
 // Older supported Node versions still record normal/explicit/fatal exit codes.

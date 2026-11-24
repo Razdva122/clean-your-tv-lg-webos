@@ -1,6 +1,8 @@
 'use strict';
 var Service = require('webos-service');
 var execFile = require('child_process').execFile;
+var recordStartup =
+  process.getuid() === 0 ? require('./startup-diagnostics') : function () {};
 function pythonCommand() {
   return require('/var/lib/clean-your-tv-root/python_boot.js').command(
     '/var/lib/clean-your-tv-root'
@@ -146,12 +148,16 @@ var handlers = require('./handlers')(
   })
 );
 Object.keys(handlers).forEach(function (method) {
+  var status = method === 'status';
   service.register(method, function (message) {
+    if (status) recordStartup('status-requested');
     handlers[method](message.payload).then(function (result) {
       result.root = process.getuid() === 0;
       message.respond(result);
+      if (status) recordStartup('status-response-returned');
     });
   });
+  if (status) recordStartup('status-registered');
 });
 // Activity registration belongs to the root installer, not the web service.
 

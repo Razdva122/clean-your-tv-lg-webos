@@ -23,6 +23,16 @@ startup record or no record. No exit code is invented in those cases.
 If `finalize` fails, `recovery-failure.json` retains the failed phase, bounded
 numeric Luna/client codes, recognized service/method/permission categories and
 safe startup observations. A previous unchanged startup record is marked stale.
+
+The optional `startup_milestone` records startup progress.
+`status-registered` means the local handler registration returned,
+`status-requested` means the callback was entered, and
+`status-response-returned` means the local response call returned. The field
+is exported only for a fresh process record or a milestone that advanced during
+finalization. It may be absent on older builds, a previously active service or
+failed diagnostic I/O. A local response call does not prove delivery to Luna's
+client or authorise recovery. No request payloads or response contents are saved.
+
 Luna stdout and stderr are drained with a combined 64-KiB limit; raw RPC text is
 not exported. No readiness proof, Home activation or automatic retry is added.
 
