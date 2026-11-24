@@ -1929,6 +1929,51 @@ class RuntimeTests(unittest.TestCase):
                 changes=iter([False]*stage+[True])
                 self.assertFalse(self.k.return_ready(self.root,self.uid,'1'*32,lambda:next(changes)))
 
+    def test_optional_return_timeout_preserves_controller_heartbeat(self):
+        self.prepare()
+        token = '1' * 32
+        self.k.write_intent(self.root, True, token, 'active', self.uid)
+        proof = dict(self.proof(), healthy=True, stopped=False, state='armed',
+                     guardian_pid=123, stock_verified=False)
+        replies = [
+            {'returnValue': True, 'state': 'Active'},
+            {'returnValue': True, 'foregroundAppInfo': []},
+            {'returnValue': True, 'appId': self.k.STOCK},
+        ]
+        subscription = b'{"returnValue":true,"subscribed":true}\n'
+
+        for stage in ('power', 'surfaces', 'foreground', 'native'):
+            with self.subTest(stage=stage):
+                child = Mock()
+                child.poll.side_effect = [None, None, 0, 0]
+                policy = Mock(generation=0)
+                policy.due.side_effect = [True, False]
+                luna_replies = replies
+                native_replies = [proof, proof]
+                if stage == 'native':
+                    native_replies = [proof, self.k.subprocess.TimeoutExpired('guard', .3), proof]
+                else:
+                    index = ('power', 'surfaces', 'foreground').index(stage)
+                    luna_replies = replies[:index] + [TimeoutError(stage)]
+
+                with patch.object(self.k.subprocess, 'Popen', return_value=child), \
+                     patch.object(self.k, 'ReturnPolicy', return_value=policy), \
+                     patch.object(self.k.select, 'select', side_effect=[([child.stdout], [], [])] + [([], [], [])] * 4), \
+                     patch.object(self.k.os, 'read', return_value=subscription), \
+                     patch.object(self.k.os, 'set_blocking'), \
+                     patch.object(self.k.os, 'close'), \
+                     patch.object(self.k.os, 'write', side_effect=lambda fd, data: len(data)) as write, \
+                     patch.object(self.k, 'luna', side_effect=luna_replies) as luna, \
+                     patch.object(self.k, 'native', side_effect=native_replies) as native, \
+                     patch.object(self.k, 'launch_return') as launch:
+                    self.k.watch(token, 10, 11, self.root, self.uid)
+
+                self.assertEqual([data for fd, data in (call.args for call in write.call_args_list)
+                                  if fd == 10], [b'READY\n', b'PING\n', b'PING\n', b'LOST\n'])
+                self.assertEqual(luna.call_count, len(luna_replies))
+                self.assertEqual(native.call_count, len(native_replies))
+                launch.assert_not_called()
+
     def test_return_dispatch_uses_only_fixed_native_home_barrier(self):
         proof=self.proof(); proof.update(healthy=True,stopped=False,state='armed',guardian_pid=123,stock_verified=False)
         with patch.object(self.k,'native',return_value=proof) as native, patch.object(self.k,'luna',side_effect=AssertionError('raw launch bypass')):
