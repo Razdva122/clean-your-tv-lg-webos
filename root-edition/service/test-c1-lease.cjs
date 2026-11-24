@@ -121,9 +121,14 @@ function fixture(uid, initialChange, diskDirectory) {
       t.clear = true;
     },
     execFile: function (path, args, options, cb) {
-      calls.push({ path: path, args: args, options: options });
+      var call = { path: path, args: args, options: options, killed: false };
+      calls.push(call);
       callbacks.push(cb);
-      return { kill: function () {} };
+      return {
+        kill: function () {
+          call.killed = true;
+        }
+      };
     }
   };
   var service = { activityManager: { shared: true } },
@@ -318,6 +323,47 @@ if (process.argv[2]) {
   disk.reply(native());
   assert.strictEqual(disk.replies.at(-1).healthy, true);
 }
+var retry = fixture();
+var predecessor = retry.message('predecessor');
+var cancelled = false;
+predecessor.cancel = function () {
+  cancelled = true;
+  retry.cancel(predecessor);
+};
+retry.subscribe(predecessor);
+retry.reply(native());
+var next = retry.message('replacement');
+next.payload = { subscribe: true, reconnect: 'b'.repeat(32) };
+retry.subscribe(next);
+assert.strictEqual(
+  retry.calls.length,
+  1,
+  'wrong attempt cannot replace stream'
+);
+assert.strictEqual(cancelled, false);
+retry.home();
+var pendingDispatch = retry.calls.at(-1);
+next.payload.reconnect = 'a'.repeat(32);
+retry.subscribe(next);
+assert.strictEqual(cancelled, true);
+assert.strictEqual(pendingDispatch.killed, false);
+assert.strictEqual(retry.replies.at(-1).reconnecting, true);
+assert.deepStrictEqual(retry.calls.at(-1).args, [
+  '--lease-reconnect',
+  'a'.repeat(32)
+]);
+retry.reply(
+  Object.assign(native(), {
+    state: 'reconnecting',
+    healthy: false,
+    reason: 'none'
+  })
+);
+assert.strictEqual(retry.replies.at(-1).reconnecting, true);
+retry.tick(400);
+retry.reply(native());
+assert.strictEqual(retry.replies.at(-1).healthy, true);
+
 assert.strictEqual(f.calls.length, 0, 'module load never starts native');
 f.subscribe();
 assert.strictEqual(f.calls.length, 1);

@@ -225,6 +225,73 @@ int main(void) {
             if time.monotonic() - started < 1.5:
                 self.run_guard('--lease')
         s = self.finish(p); self.assertEqual(s['reason'], 'controller_expired'); self.assertFalse(s['healthy'])
+    def await_broker_reconnect(self):
+        proc, iw, cw = self.armed(reconnect=True)
+        end = time.monotonic() + 4
+        while time.monotonic() < end:
+            os.write(iw, b'PING\n')
+            os.write(cw, b'PING\n')
+            if self.run_guard('--status')[0]['state'] == 'reconnecting':
+                break
+            time.sleep(.12)
+        else:
+            self.fail('Broker gap did not enter recovery')
+        return proc, iw, cw
+
+    def test_persistent_broker_recovery_stays_off_until_fresh_lease_and_can_escape(self):
+        proc, iw, _ = self.await_broker_reconnect()
+        self.assertNotEqual(self.run_guard('--home', TOKEN)[1], 0)
+        self.assertEqual(self.run_guard('--lease-reconnect', TOKEN)[0]['state'], 'reconnecting')
+        os.write(iw, b'ESCAPE\n')
+        self.assertEqual(self.finish(proc)['reason'], 'escape')
+        self.assertFalse(self.run_guard('--lease')[0]['healthy'])
+
+    def test_persistent_broker_recovery_requires_matching_token_and_recovers(self):
+        proc, iw, cw = self.await_broker_reconnect()
+        self.assertNotEqual(self.run_guard('--lease-reconnect', 'b' * 32)[1], 0)
+        self.assertEqual(self.run_guard('--lease-reconnect', TOKEN)[0]['state'], 'reconnecting')
+        self.assertNotEqual(self.run_guard('--home', TOKEN)[1], 0)
+        end = time.monotonic() + 4
+        while time.monotonic() < end:
+            os.write(iw, b'PING\n')
+            os.write(cw, b'PING\n')
+            status, rc = self.run_guard('--lease')
+            self.assertEqual(rc, 0, status)
+            if status['healthy']:
+                break
+            time.sleep(.12)
+        else:
+            self.fail('Fresh broker did not restore routing')
+        os.write(iw, b'ESCAPE\n')
+        self.assertEqual(self.finish(proc)['reason'], 'escape')
+
+    def test_broker_barrier_waits_for_guardian_to_drain_queued_escape(self):
+        proc, iw, _ = self.await_broker_reconnect()
+        self.assertEqual(self.run_guard('--lease-reconnect', TOKEN)[0]['state'], 'reconnecting')
+        self.freeze(proc)
+        try:
+            os.write(iw, b'ESCAPE\n')
+            # Simulate the deadline elapsing while the guardian is not scheduled.
+            broker = self.root / 'volatile/broker'
+            fields = broker.read_text().split()
+            fields[4] = fields[3]
+            broker.write_text(' '.join(fields) + '\n')
+            self.assertEqual(self.run_guard('--lease')[0]['state'], 'reconnecting')
+            self.assertNotEqual(self.run_guard('--home', TOKEN)[1], 0)
+        finally:
+            proc.send_signal(signal.SIGCONT)
+        self.assertEqual(self.finish(proc)['reason'], 'escape')
+        self.assertFalse(self.run_guard('--lease-reconnect', TOKEN)[0]['healthy'])
+
+    def test_manual_off_during_broker_recovery_is_terminal(self):
+        proc, _, _ = self.await_broker_reconnect()
+        self.assertEqual(self.run_guard('--lease-reconnect', TOKEN)[0]['state'], 'reconnecting')
+        self.assertEqual(self.run_guard('--restore')[1], 0)
+        self.finish(proc)
+        self.assertFalse(self.run_guard('--lease-reconnect', TOKEN)[0]['healthy'])
+        self.assertNotEqual(self.run_guard('--home', TOKEN)[1], 0)
+        self.assertIn('explicit_off', (self.root / 'state/stopped').read_text())
+
     def test_broker_cannot_revive_expired_health(self):
         p, iw, cw = self.armed()
         deadline = time.monotonic() + 2.3

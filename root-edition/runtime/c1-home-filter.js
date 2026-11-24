@@ -11,6 +11,7 @@ var cytvC1Sequence = 0;
 var cytvC1Down = false;
 var cytvC1Captured = false;
 var cytvC1HomePending = false;
+var cytvC1FallbackPending = null;
 var cytvC1HomeGeneration = 0;
 
 function cytvC1Revoke() {
@@ -19,10 +20,26 @@ function cytvC1Revoke() {
   cytvC1LeaseGeneration++;
 }
 
+function cytvC1Retry(generation, remaining) {
+  if (generation !== cytvC1Generation || cytvC1Failed || !cytvC1Token) return;
+  cytvC1Healthy = false;
+  if (!remaining) {
+    cytvC1Revoke();
+    return;
+  }
+  // Finish the stock fallback for any captured press before fencing callbacks.
+  if (cytvC1FallbackPending) cytvC1FallbackPending();
+  // Keep key-down ownership until the paired release.
+  cytvC1HomeGeneration++;
+  cytvC1HomePending = false;
+  cytvC1Subscribe(++cytvC1Generation, remaining - 1, cytvC1Token);
+}
+
 function init() {
   var generation = ++cytvC1Generation;
   cytvC1HomeGeneration++;
   cytvC1HomePending = false;
+  cytvC1FallbackPending = null;
   cytvC1Revoke();
   cytvC1Token = '';
   cytvC1Sequence = 0;
@@ -50,15 +67,48 @@ function init() {
       cytvC1Revoke();
       return;
     }
+    cytvC1Subscribe(generation, 4, '');
+  } catch (_) {
+    cytvC1Revoke();
+  }
+}
+
+function cytvC1Subscribe(generation, retries, reconnectToken) {
+  cytvC1Sequence = 0;
+  var streamFailed = false;
+  try {
+    // A new subscription must acknowledge before this attempt can regain Home.
+    var initial = ++cytvC1LeaseGeneration;
+    if (reconnectToken) {
+      genericTimer.set(1500, function () {
+        if (initial === cytvC1LeaseGeneration) cytvC1Retry(generation, retries);
+      });
+    }
     lunaCall.subscribe(
       'com.webos.cleanyourtv.root.lease',
       '/c1Lease',
-      JSON.stringify({ subscribe: true }),
+      JSON.stringify(
+        reconnectToken
+          ? { subscribe: true, reconnect: reconnectToken }
+          : { subscribe: true }
+      ),
       function (payload) {
-        if (generation !== cytvC1Generation || cytvC1Failed) return;
+        if (generation !== cytvC1Generation || cytvC1Failed || streamFailed)
+          return;
         try {
           var reply =
             typeof payload === 'string' ? JSON.parse(payload) : payload;
+          if (
+            cytvC1EverArmed &&
+            reply &&
+            typeof reply === 'object' &&
+            !Array.isArray(reply) &&
+            reply.returnValue === false
+          ) {
+            cytvC1Healthy = false;
+            streamFailed = true;
+            return; // The outstanding deadline can request a fresh stream.
+          }
           var reconnecting = reply && reply.reconnecting === true;
           var keys = reconnecting
             ? 'backend,healthy,reconnecting,returnValue,routing,sequence,subscribed,token'
@@ -96,7 +146,7 @@ function init() {
               generation === cytvC1Generation &&
               leaseGeneration === cytvC1LeaseGeneration
             )
-              cytvC1Revoke();
+              cytvC1Retry(generation, reply.healthy ? 4 : retries);
           });
           cytvC1Healthy = reply.healthy;
           if (reply.healthy) cytvC1EverArmed = true;
@@ -130,10 +180,13 @@ function cytvC1DispatchHome() {
       return;
     completed = true;
     cytvC1HomePending = false;
+    cytvC1FallbackPending = null;
     if (!ok) {
       if (reconnecting) cytvC1Healthy = false;
       else cytvC1Revoke();
-      applicationManager.launch('com.webos.app.home', '{}');
+      try {
+        applicationManager.launch('com.webos.app.home', '{}');
+      } catch (_) {}
     }
   }
   try {
@@ -141,6 +194,9 @@ function cytvC1DispatchHome() {
       finish(false);
     });
     cytvC1HomePending = true;
+    cytvC1FallbackPending = function () {
+      finish(false, true);
+    };
     lunaCall.send(
       'com.webos.cleanyourtv.root.lease',
       '/c1Home',
@@ -172,6 +228,7 @@ function cytvC1DispatchHome() {
   } catch (_) {
     completed = true;
     cytvC1HomePending = false;
+    cytvC1FallbackPending = null;
     cytvC1Revoke();
     return false;
   }
