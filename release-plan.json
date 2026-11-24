@@ -21,8 +21,18 @@
       "pr": 808,
       "issues": [],
       "summary": "Add Neon '86 to the theme showcase"
+    },
+    {
+      "pr": 815,
+      "issues": [],
+      "summary": "Add Vice to the theme showcase"
     }
   ],
-  "excluded": [],
+  "excluded": [
+    {
+      "pr": 814,
+      "reason": "Original Vice submission was merged indirectly through #815; the theme is counted once under #815."
+    }
+  ],
   "acceptance": ""
 }
