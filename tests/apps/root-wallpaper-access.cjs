@@ -40,6 +40,7 @@ for (const failure of [false, true]) {
       if (name === './theme-receiver')
         return require('../../theme-receiver/register');
       if (name === './c1-lease') return () => {};
+      if (name === './startup-diagnostics') return () => {};
       throw Error('Unexpected module: ' + name);
     }
   });

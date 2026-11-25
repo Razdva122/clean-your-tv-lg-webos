@@ -202,6 +202,111 @@ handlers.status({}).then(reply => {
                 self.assertEqual(target.read_text(), 'untouched')
                 record.unlink()
 
+    def test_service_records_first_status_milestones(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            service = root / 'service'
+            service.mkdir()
+            for name in ('service.js', 'startup-diagnostics.js'):
+                shutil.copyfile(ROOT / 'service' / name, service / name)
+            script = """
+const assert = require('assert');
+const fs = require('fs');
+const Module = require('module');
+const lstat = fs.lstatSync;
+const fstat = fs.fstatSync;
+fs.lstatSync = function () {
+  const data = lstat.apply(fs, arguments);
+  data.uid = 0;
+  if (data.isDirectory()) data.mode &= ~18;
+  return data;
+};
+fs.fstatSync = function () {
+  const data = fstat.apply(fs, arguments);
+  data.uid = 0;
+  return data;
+};
+process.getuid = () => 0;
+const servicePath = fs.realpathSync(process.argv[1]);
+const record = () => fs.existsSync(process.argv[2]) ? JSON.parse(fs.readFileSync(process.argv[2])) : {};
+const callbacks = {};
+let resolveStatus;
+const Service = function () {};
+Service.prototype.register = (method, callback) => { callbacks[method] = callback; };
+const load = Module._load;
+const receiver = () => {};
+receiver.activityHold = () => {};
+const dependencies = {
+  'webos-service': Service,
+  './c1-lease': () => {},
+  './handlers': Object.assign(() => ({
+    restore: () => Promise.resolve({}),
+    status: () => new Promise(resolve => { resolveStatus = resolve; })
+  }), {audio: () => {}}),
+  './presentation-context': () => {},
+  './app-inventory': {inputHandler: () => {}},
+  './theme-receiver': receiver,
+  './weather': () => {},
+  './package.json': {}
+};
+Module._load = function (name, parent) {
+  if (parent && parent.filename === servicePath && name in dependencies)
+    return dependencies[name];
+  return load.apply(this, arguments);
+};
+require(servicePath);
+assert.strictEqual(record().startup_milestone, 'status-registered');
+callbacks.restore({respond() {}});
+assert.strictEqual(record().startup_milestone, 'status-registered');
+callbacks.status({payload: {private: 'do not record'}, respond(result) {
+  assert.strictEqual(record().startup_milestone, 'status-requested');
+  assert.strictEqual(result.root, true);
+}});
+assert.strictEqual(record().startup_milestone, 'status-requested');
+resolveStatus({returnValue: true});
+setImmediate(() => {
+  assert.strictEqual(record().startup_milestone, 'status-response-returned');
+  callbacks.status({respond() {}});
+  assert.strictEqual(record().startup_milestone, 'status-response-returned');
+});
+"""
+            record = root / 'recovery-service.json'
+            output = subprocess.run(['node', '-e', script, str(service / 'service.js'), str(record)],
+                                    capture_output=True, text=True, timeout=10)
+            self.assertEqual(output.returncode, 0, output.stderr)
+            data = json.loads(record.read_text())
+            self.assertEqual(data['phase'], 'exited')
+            self.assertEqual(data['startup_milestone'], 'status-response-returned')
+            self.assertNotIn('private', json.dumps(data))
+
+    def test_finalize_reports_only_new_allowlisted_startup_milestone(self):
+        before = {'schema': 1, 'phase': 'starting', 'attempt': 'old',
+                  'startup_milestone': 'status-registered'}
+        for attempt, milestone, expected in (
+                ('new', 'status-registered', 'status-registered'),
+                ('old', 'status-requested', 'status-requested'),
+                ('old', 'status-registered', None),
+                ('new', 'PRIVATE', None)):
+            with self.subTest(attempt=attempt, milestone=milestone), tempfile.TemporaryDirectory() as folder:
+                root = Path(folder)
+                (root / 'recovery-provision.pending.json').write_text('{}')
+                record = root / 'recovery-service.json'
+                record.write_text(json.dumps(before))
+
+                def timeout(method):
+                    self.assertEqual(method, 'status')
+                    record.write_text(json.dumps(dict(before, attempt=attempt, phase='exited',
+                                                      startup_milestone=milestone)))
+                    raise p.RecoveryRPCError('timeout')
+
+                with patch.multiple(p, STATE=root, secure=Path.read_bytes, manifest=dict, rpc=timeout):
+                    with self.assertRaises(p.RecoveryRPCError):
+                        p.finalize()
+                result = json.loads((root / 'recovery-failure.json').read_text())
+                self.assertEqual(result['reason'], 'timeout')
+                self.assertEqual(result['startup_state'], 'exited')
+                self.assertEqual(result.get('startup_milestone'), expected)
+
     def test_finalize_failure_retains_phase_and_safe_luna_code_without_readiness(self):
         child = MagicMock(); child.poll.return_value = 0
         expected = {'version': 1}
