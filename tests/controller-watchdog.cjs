@@ -977,7 +977,7 @@ for (const cleanupCode of [0, 11])
   test(
     'reported emergency with signaled close and cleanup ' +
       cleanupCode +
-      ' remains bounded on unknown owned launch',
+      ' remains bounded on pending slow owned launch',
     () => {
       let hold = false;
       const c = controller({
@@ -999,8 +999,7 @@ for (const cleanupCode of [0, 11])
         c.logs.some(
           (x) =>
             x.event === 'terminal-ui-failed' &&
-            x.reason ===
-              (cleanupCode ? 'input-cleanup-failed' : 'home-launch-unknown')
+            x.reason === 'home-launch-pending'
         )
       );
     }
