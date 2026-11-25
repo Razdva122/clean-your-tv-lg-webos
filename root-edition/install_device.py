@@ -814,7 +814,28 @@ class LocalDevice:
                              'reply=runtime_restore_report('+repr(str(self.payload/'root'))+');'
                              'print(json.dumps(reply),flush=True);sys.exit(0 if reply["returnValue"] is True else 1)')
                     with cleanup_step('runtime-restore'):
-                        restored=self.cleanup_child(program)
+                        original=(record.get('fenced_components') or {}).get('deploy') or {}
+                        if (original.get('stage')=='prepared' and self.routing_untouched(record)
+                                and os.path.lexists(ROOT/'runtime/c1_keyfilter.py')):
+                            from clean_removal import unprepared_native_payload
+                            # A failed prepare can leave native runtime bytes
+                            # without a descriptor. Never execute those bytes or
+                            # invent backend state just to restore an unused gate.
+                            unprepared_native_payload(ROOT,original,uid)
+                            if APP in self.apps():raise ValueError('unprepared_native_package_present')
+                            self.absent(APP)
+                            if os.path.lexists(INIT/'50-clean-your-tv-root'):
+                                raise ValueError('unprepared_native_startup_present')
+                            for folder in ('services.d','roles.d','client-permissions.d','api-permissions.d','manifests.d'):
+                                directory=BUS/folder
+                                if not os.path.lexists(directory):continue
+                                os.close(checked_store(directory,uid)._directory())
+                                if any(path.name.startswith(APP+'.') for path in directory.iterdir()):
+                                    raise ValueError('unprepared_native_registration_present')
+                            self.clean_quiescent(record,all_processes=True)
+                            restored={'returnValue':True,'result':'absent'}
+                        else:
+                            restored=self.cleanup_child(program)
                         if restored.get('result') not in ('restored','absent'):raise ValueError('controls_restore_unverified')
                         if restored.get('native_restored_sha256') is not None:
                             record['native_restored_sha256']=restored['native_restored_sha256']

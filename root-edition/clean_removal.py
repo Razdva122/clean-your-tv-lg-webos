@@ -30,6 +30,55 @@ PRE_ACTIVATION=('prepared','install-submitting','install-accepted','install-obse
     'provision-'+step+'-'+phase for step in ('apply','resume_pending','refresh','finalize') for phase in ('starting','complete'))
 
 
+def unprepared_native_payload(root, original, uid):
+    """Validate nonexecuted payload data left before backend preparation.
+
+    This is only an inventory check. Its caller must independently prove no
+    routing effects, package registration or live original worker remains.
+    """
+    import deploy
+    root=Path(root)
+    store=Store(root,uid=uid)
+    os.close(store._directory())
+    def read(name):
+        path=root/name
+        os.close(store._walk(str(path.parent)))
+        return safe_bytes(path,uid=uid,limit=32*1024*1024)
+    manifest=json.loads(read('bundle.json'))
+    release=json.loads(read('release.json'))
+    if json.loads(read('deploy.json'))!={'version':1,'app':deploy.APP,'stage':'cancellation-admitted'}:
+        raise ValueError('unprepared_native_fence_changed')
+    package=manifest.get('package')
+    if (not isinstance(package,str) or not re.fullmatch(re.escape(deploy.APP)+r'_\d{1,4}\.\d{1,4}\.\d{1,4}_all\.ipk',package)
+            or original!={'version':1,'app':deploy.APP,'stage':'prepared','package':package}
+            or release.get('application_id')!=deploy.APP or release.get('home_backend')!='c1-native-gate'
+            or release.get('experimental') is not True or release.get('routing')!='compositor-keyfilter-v1'):
+        raise ValueError('unprepared_native_payload_unverified')
+    retained=set(deploy.SUPPORT_FILES)|{'runtime/'+n for n in deploy.RUNTIME_FILES}
+    retained|={'release.json'}|{'runtime/'+n for n in ('c1_gate.py','c1_keyfilter.py','c1-keyfilter-guard',
+        'c1-home-filter.js','embedded_home.py','embedded-home.qml','embedded-home.js')}
+    files=manifest.get('files')
+    # Deploy never copies these build/recovery-only members into private state.
+    manifest_only={package,'SHA256SUMS','runtime/c1-home-gate',deploy.BETA_MIGRATION_SCRIPT}
+    if (not isinstance(files,dict) or not retained|{package,'SHA256SUMS'}<=set(files)
+            or set(files)-retained-manifest_only):
+        raise ValueError('unprepared_native_inventory_unverified')
+    for name in retained:
+        if hashlib.sha256(read(name)).hexdigest()!=files[name]:
+            raise ValueError('unprepared_native_bytes_changed')
+    expected=retained|{'bundle.json','deploy.json','provision.lock'}
+    directories={str(parent) for name in retained for parent in Path(name).parents if str(parent)!='.'}
+    def inspect(directory):
+        for path in directory.iterdir():
+            info=path.lstat();name=str(path.relative_to(root))
+            if stat.S_ISDIR(info.st_mode) and name in directories:
+                os.close(store._walk(str(path)));inspect(path)
+            elif name not in expected or not stat.S_ISREG(info.st_mode) or info.st_nlink!=1:
+                raise ValueError('unprepared_native_inventory_unverified')
+            else:read(name)
+    inspect(root)
+
+
 # Diagnostic context only; never used for recovery admission or progress.
 @contextmanager
 def cleanup_step(name):

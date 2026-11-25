@@ -29,12 +29,49 @@ class KeyfilterIntegrationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder).resolve()
             helper = root / 'guardian'
-            helper.write_bytes(static_arm())
+            helper.write_bytes(static_arm() + b'CYTV-QML-KEYFILTER-1\0')
             bundle = root / 'bundle'
             load('build').build(bundle, experimental_c1_keyfilter=helper, legacy_node_beta=True)
             subprocess.run([sys.executable, '-c',
                             "from deploy import verify_bundle; verify_bundle('.', allow_experimental=True)"],
                            cwd=bundle, check=True, capture_output=True)
+            # Exercise the packaged files through the real secure reader and
+            # prepare boundary. Only factory admission is modeled on the host.
+            program = r"""
+import hashlib, json, os, shutil, sys
+from pathlib import Path
+from unittest.mock import patch
+from runtime import c1_keyfilter as backend, embedded_home as embedded
+root = Path(sys.argv[1]); root.mkdir(mode=0o700)
+(root/'runtime').mkdir(mode=0o700)
+for name in (*embedded.ASSETS, 'c1-keyfilter-guard'):
+    target = root/'runtime'/name
+    shutil.copyfile(Path('runtime')/name, target)
+    target.chmod(0o700 if name == 'c1-keyfilter-guard' else 0o600)
+guard = root/'runtime/c1-keyfilter-guard'
+info = guard.stat()
+admission = dict(model='capability-fixture', firmware='99.0.1', webos='88.7.6',
+    target_sha256='b'*64, target=dict(dev=info.st_dev,ino=info.st_ino,
+    size=info.st_size,mtime_ns=info.st_mtime_ns))
+with patch.object(embedded, 'COMPOSITOR', guard), patch.object(embedded, 'matches', return_value=True), patch.object(backend, 'boot_identity', return_value='12345678-1234-1234-1234-123456789abc'):
+    result = backend.prepare(root, hashlib.sha256(guard.read_bytes()).hexdigest(), admission, uid=os.getuid())
+    assert result['schema'] == 4
+    assert json.loads((root/'home-backend.json').read_text()) == result
+    # Existing size and metadata guards remain effective after packaging fix.
+    asset = root/'runtime/embedded-home.js'
+    for bad, mode in ((b'x'*(256*1024+1), 0o600), (b'unsafe writable source', 0o622)):
+        asset.write_bytes(bad)
+        asset.chmod(mode)
+        try:
+            backend.secure(asset, os.getuid(), 256*1024)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError('Unsafe QML asset admitted')
+"""
+            prepared = subprocess.run([sys.executable, '-c', program, str(root/'prepared')],
+                                      cwd=bundle, capture_output=True, text=True)
+            self.assertEqual(prepared.returncode, 0, prepared.stderr)
             release = json.loads((bundle/'release.json').read_bytes())
             deploy = load('deploy')
             self.assertTrue((bundle/deploy.BETA_MIGRATION_SCRIPT).is_file())

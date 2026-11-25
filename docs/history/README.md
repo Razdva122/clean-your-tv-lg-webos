@@ -1,5 +1,7 @@
 # Release history and device evidence
 
+- [Issue 410 QML packaging, 2026-11-25](2026-11-25-issue410-qml-packaging.md): exact released build reproduction and preserved QML execution scope.
+
 - [Issue 152 remaining restart causes and diagnostics, 2026-11-23](2026-11-23-issue152-restart-evidence.md): inherited-install/cancellation history, stable restart baselines and allowlisted process/boot observations.
 - [Issue 410 Root ramfs storage, 2026-11-23](2026-11-23-issue410-root-ramfs-storage.md): stock W17M utility replay, private disk staging and recovery limits.
 

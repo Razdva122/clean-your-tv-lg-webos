@@ -33,12 +33,18 @@ class BetaBuild(unittest.TestCase):
         cls.tmp.cleanup()
 
     def test_compositor_script_stays_outside_node_compatibility_runtime(self):
-        from scripts.root_node_build import compile_root_beta
-        name = 'runtime/c1-home-filter.js'
-        source = (ROOT/'root-edition'/name).read_bytes()
-        compiled = compile_root_beta({name: source, 'python_boot.js': b'module.exports = true;\n'})
-        self.assertEqual(compiled[name], source)
-        self.assertIn(b'__cytvRootNodePrototypeCompat', compiled['python_boot.js'])
+        from scripts.root_node_build import compile_root_beta, compile_root_node
+        names = ('runtime/c1-home-filter.js', 'runtime/embedded-home.js')
+        sources = {name: (ROOT/'root-edition'/name).read_bytes() for name in names}
+        subprocess.run(['node', '-e', "const fs=require('fs'),acorn=require('acorn');process.argv.slice(1).forEach(name=>acorn.parse(fs.readFileSync(name,'utf8'),{ecmaVersion:5}));",
+                        *(str(ROOT/'root-edition'/name) for name in names)], cwd=ROOT, check=True, capture_output=True)
+        for compile_files in (compile_root_node, compile_root_beta):
+            with self.subTest(compiler=compile_files.__name__):
+                compiled = compile_files(dict(sources, **{'python_boot.js': b'module.exports = true;\n'}))
+                for name in names:
+                    self.assertEqual(compiled[name], sources[name], name)
+                    self.assertLess(len(compiled[name]), 256*1024)
+                self.assertIn(b'__cytvRootNodePrototypeCompat', compiled['python_boot.js'])
 
     def test_beta_keyfilter_bundle_uses_shared_backend_and_exact_runtime_driver(self):
         from cytv.package import data_files
