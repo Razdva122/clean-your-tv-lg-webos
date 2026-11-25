@@ -6,6 +6,18 @@ import unittest
 
 
 class BuildAssetsTests(unittest.TestCase):
+    def test_no_root_web_bootstrap_identifies_packaged_brand_icon(self):
+        from base64 import b64encode
+        from scripts.tv_web_build import compile_web
+
+        root = Path(__file__).resolve().parents[2]
+        brand = (root / 'launcher/brand-v2-icon.png').read_bytes()
+        files = compile_web({'brand-v2-icon.png': brand,
+                             'profile-bootstrap.js': b'window.profileLoaded = true;'})
+        self.assertIn(b'window.CYTVBrandIconFallback = "data:image/png;base64,'
+                      + b64encode(brand) + b'";', files['profile-bootstrap.js'])
+        self.assertIn(b'window.profileLoaded = true;', files['profile-bootstrap.js'])
+
     def test_home_package_includes_storage_diagnostics_dependency(self):
         import json
         from cytv import package

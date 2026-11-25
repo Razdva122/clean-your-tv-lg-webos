@@ -79,7 +79,7 @@ function fixtureReply(command,args,options){
  }
  var method=args[2],value={returnValue:true};
  if(method.indexOf('listApps')!==-1){if(process.env.PRIVATE_ERROR)throw Error(process.env.PRIVATE_ERROR);if(process.env.ALL_CATALOGS_DENIED || process.env.DEV_CATALOG_DENIED && method.indexOf('/dev/')!==-1)value.returnValue=false;if(process.env.CATALOG_MALFORMED && method.indexOf('/dev/')!==-1)delete value.returnValue;value.apps=[];}
- else if(method.indexOf('getSystemSettings')!==-1){if(process.env.NO_HOME_APIS)throw Error('Home APIs unavailable');value.settings={defaultApps:process.env.UNSET_SAM_HOME?{}:{home:process.env.SETTINGS_HOME||(process.env.FOREIGN_ROUTE?'changed':'third.party.home')}};}
+ else if(method.indexOf('getSystemSettings')!==-1){if(process.env.NO_HOME_APIS)throw Error('Home APIs unavailable');if(process.env.SETTINGS_ERROR)value=JSON.parse(process.env.SETTINGS_ERROR);else value.settings={defaultApps:process.env.UNSET_SAM_HOME?{}:{home:process.env.SETTINGS_HOME||(process.env.FOREIGN_ROUTE?'changed':'third.party.home')}};}
  else if(method.indexOf('getProfiles')!==-1){if(process.env.FAIL_FINAL_READBACK && ++profileReads===1)throw Error('injected final readback failure');if(process.env.MISSING_PROFILES){value.returnValue=false;if(process.env.PROFILE_ERROR)value=JSON.parse(process.env.PROFILE_ERROR);}else value.profiles={defaultApps:{categories:{home:process.env.PROFILE_HOME||'third.party.home'}},idleApp:{appId:process.env.IDLE_HOME||'third.party.home'}};}
  else if(method.indexOf('activitymanager')!==-1){
   if(process.env.ACTIVITY_BOTH_UNAVAILABLE || process.env.ACTIVITY_LIST_UNAVAILABLE && method.indexOf('/list')!==-1)return {status:1,stdout:new Buffer('')};
@@ -882,7 +882,9 @@ class CleanupTail(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assert_completion_pending_after_retirement()
 
-        result, reply = self.run_tail(UNSET_SAM_HOME='1', PROFILE_HOME=stock, IDLE_HOME=stock)
+        missing = json.dumps({'returnValue': False, 'category': 'general', 'method': 'getSystemSettings',
+                              'errorText': 'There is no matched result from DB'})
+        result, reply = self.run_tail(SETTINGS_ERROR=missing, PROFILE_HOME=stock, IDLE_HOME=stock)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(reply['stage'], 'verified-clean')
 
@@ -895,6 +897,43 @@ class CleanupTail(unittest.TestCase):
         self.assertEqual(result.returncode,0,result.stderr)
         self.assertEqual(reply['stage'],'verified-clean')
         self.assertFalse(self.runtime.exists())
+
+    def test_no_root_compositor_proof_requires_absent_settings_and_stock_route(self):
+        _, _, vendor = self.compositor_record()
+        journals = dict.fromkeys(('deploy', 'root-bootstrap', 'root-update', 'system-bootstrap',
+                                 'system-engine', 'system-update'))
+        self.record.update(stage='original-writers-fenced', routes=None,
+            original={'lease': {'owner': 'clean-removal'}, 'request': None, 'submission': None,
+                      'removal': None, 'components': journals}, fenced_components=journals)
+        self.write('clean-removal-'+ID+'.json', self.record)
+        settings_error = {'returnValue': False, 'errorText': 'There is no matched result from DB'}
+        profiles_error = {'returnValue': False, 'errorCode': -1,
+                          'errorText': 'Service does not exist: com.webos.service.systemprofile.'}
+        environment = dict(NO_SYNC='1', SYSTEM_DEVICE='1', SETTINGS_ERROR=json.dumps(settings_error),
+                           MISSING_PROFILES='1', PROFILE_ERROR=json.dumps(profiles_error))
+        foreign_filter = {'file': '/foreign.js', 'handler': 'foreign'}
+        stock_filter = {'file': '/usr/lib/qml/KeyFilters/systemUi.js', 'handler': 'handleSystemKeys'}
+        for changes in ({'SETTINGS_ERROR': json.dumps(dict(settings_error, errorCode=-1))},
+                        {'SETTINGS_ERROR': json.dumps(dict(settings_error, errorText='Permission denied'))},
+                        {'FILTER_CHAIN': json.dumps([stock_filter, foreign_filter])},
+                        {'MISSING_PROFILES': ''}):
+            with self.subTest(changes=changes):
+                result, _ = self.run_tail(MODE='capture-stock-proof', **(environment | changes))
+                self.assertNotEqual(result.returncode, 0)
+        result, reply = self.run_tail(MODE='capture-stock-proof', **environment)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(reply['routes']['settings_absent'])
+        self.assertEqual(json.loads((self.base/'mutations.json').read_text()), [])
+        self.record.update(stage='private-cleanup', routes=reply['routes'])
+        self.write('clean-removal-'+ID+'.json', self.record)
+        vendor_bytes = vendor.read_bytes()
+        vendor.write_text('function invalid() {}')
+        result, _ = self.run_tail(MODE='stock-proof', **environment)
+        self.assertNotEqual(result.returncode, 0)
+        vendor.write_bytes(vendor_bytes)
+        result, reply = self.run_tail(**environment)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(reply['stage'], 'verified-clean')
 
     def compositor_record(self):
         self.record['profileless_cleanup_eligible']=True

@@ -156,6 +156,61 @@ class ObserverDiagnosticsTests(unittest.TestCase):
         self.assertEqual(report['no_root_observer'], {'command': 'start', 'failure': 'invalid-json'})
         self.assertEqual(report['recovery']['actions'], ['check', 'retain-evidence'])
 
+    def test_artifact_upload_rechecks_original_staging_after_transport_failure(self):
+        import base64
+
+        for result in ('before-write', 'after-write', 'missing-exit-status', 'persistent',
+                       'storage-full', 'unverified-staging', 'unreachable-staging',
+                       'lost-second-acknowledgement'):
+            with self.subTest(result=result):
+                staged = {}
+                uploads = []
+
+                def run(command, *, data, timeout):
+                    request = json.loads(shlex.split(command)[-1])
+                    if request['command'] == 'artifacts':
+                        if result == 'unverified-staging' and uploads:
+                            return json.dumps(dict(self.plan, missing=None))
+                        if result == 'unreachable-staging' and uploads:
+                            raise BrokenPipeError('test session closed')
+                        return json.dumps(dict(self.plan, missing=[i for i in (0, 1) if i not in staged]))
+                    self.assertEqual(request['command'], 'upload-artifact')
+                    index = request['slot']
+                    uploads.append(index)
+                    if result == 'storage-full':
+                        raise TVCommandError(1, storage_full=True)
+                    if result == 'missing-exit-status' and len(uploads) == 1:
+                        raise TVCommandError(-1)
+                    if (result in ('persistent', 'unverified-staging', 'unreachable-staging')
+                            or result in ('before-write', 'lost-second-acknowledgement') and len(uploads) == 1):
+                        raise BrokenPipeError('test channel closed')
+                    staged[index] = data
+                    if (result == 'after-write' and len(uploads) == 1
+                            or result == 'lost-second-acknowledgement' and index == 1):
+                        raise BrokenPipeError('test acknowledgement lost')
+                    return json.dumps(self.plan)
+
+                installer = SimpleNamespace(remote=SimpleNamespace(run=run))
+                capsule = {
+                    'plan': dict(self.plan, action='install', slots=[{}, {}]),
+                    'artifacts': {'helper.ipk': base64.b64encode(b'helper'),
+                                  'launcher.ipk': base64.b64encode(b'home')},
+                }
+                if result in ('persistent', 'storage-full', 'unverified-staging', 'unreachable-staging'):
+                    with self.assertRaises(UserError) as caught:
+                        observer.stage_remaining(installer, capsule)
+                    self.assertEqual(uploads, [0, 0] if result == 'persistent' else [0])
+                    self.assertEqual(staged, {})
+                    if result == 'unreachable-staging':
+                        self.assertEqual(caught.exception.no_root_observer,
+                                         {'command': 'upload-artifact', 'failure': 'transport-error'})
+                else:
+                    observer.stage_remaining(installer, capsule)
+                    retried = result in ('before-write', 'missing-exit-status', 'lost-second-acknowledgement')
+                    self.assertEqual(uploads, [0, 0, 1] if retried else [0, 1])
+                    self.assertEqual(staged, {0: b'helper', 1: b'home'})
+                self.assertEqual(self.journal.read_bytes(), self.before)
+
     def test_actual_ssh_deadline_is_reported_as_timeout(self):
         from cytv.transport import SSH
         def run(*args, **kwargs):
