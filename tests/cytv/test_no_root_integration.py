@@ -2262,19 +2262,34 @@ class OriginalOperationIntegration(unittest.TestCase):
         self.assertFalse(any(call[0] in ('upload','luna') for call in self.remote.calls[before:]),self.remote.calls[before:])
 
     def test_original_capsule_completes_interrupted_staging_before_any_request(self):
-        run=self.remote.run
-        def interrupted(command,data=None,timeout=30):
-            if data and data.startswith(b'!<arch>'):raise RuntimeError('upload interrupted')
-            return run(command,data,timeout)
-        self.remote.run=interrupted
-        with self.assertRaises(RuntimeError):self.installer.install(self.inventory,'original-secret')
-        pending=self.store.pending(self.profile)
-        self.assertFalse((self.root/'requests').exists())
-        self.remote.run=run
-        saved=observer.capsule(self.installer,pending)
-        observer.stage_remaining(self.installer,saved)
+        run = self.remote.run
+
+        def interrupted(command, data=None, timeout=30):
+            if data and data.startswith(b'!<arch>'):
+                raise BrokenPipeError('upload interrupted')
+            return run(command, data, timeout)
+
+        self.remote.run = interrupted
+        with self.assertRaises(RuntimeError):
+            self.installer.install(self.inventory, 'original-secret')
+        pending = self.store.pending(self.profile)
+        self.assertFalse((self.root / 'requests').exists())
+        uploaded = []
+
+        def lose_first_upload_reply(command, data=None, timeout=30):
+            reply = run(command, data, timeout)
+            if data and data.startswith(b'!<arch>'):
+                self.assertFalse((self.root / 'requests').exists())
+                uploaded.append(data)
+                if len(uploaded) == 1:
+                    raise BrokenPipeError('upload acknowledgement lost')
+            return reply
+
+        self.remote.run = lose_first_upload_reply
         self.installer.continue_no_root(pending)
-        self.assertEqual((self.root/'requests').read_text().splitlines(),list(observer.APPS))
+        self.assertEqual(len(uploaded), 2)
+        self.assertNotEqual(uploaded[0], uploaded[1])
+        self.assertEqual((self.root / 'requests').read_text().splitlines(), list(observer.APPS))
         self.assertIsNone(self.store.pending(self.profile))
 
     def test_recovery_requires_explicit_confirmation_and_status_has_no_writes(self):
