@@ -1,9 +1,9 @@
 {
-  "from_helper": "0.9.4",
-  "to_helper": "0.10.0",
-  "rollback_home": "1.20.7",
-  "rollback_sha256": "a09f087101e25d9daa896ca0606a5098b6745bfd71a8bde4a5d6bc3611605d48",
-  "prior_helper_sha256": "b0020d1ae15b71737297c7dfdfa592a67da5d348beaf5d5356920ed71e53ff59",
-  "candidate_archive_sha256": "cb630d0cd02d1ace95d37dfcbb229c5c261bf38e55240acef566da407ef1d0dd",
-  "acceptance": "2026-11-24 project LG OLED55C3RLA, firmware 43.21.71, SDK 11.2.0. Remote model unknown. The ordinary macOS ARM64 source installer cytv 0.24.2 completed verified removal of Root 0.23.0 after a confirmed software restart. Network HOME from Media Player opened LG Home. The No-root Root SSH installer then verified published Home 1.20.7 FHD and exact Helper 0.10.0 IPK SHA-256 1de7ee53a0d992d726d363bd13a30f44b3f60bdd0ed3507e59f151044c5cf707. Twelve installed files matched the inputs, startup process was observed and no operation remained pending. One paired network HOME from Media Player briefly showed LG Home, then reached and stayed on Clean Your TV after one second. Both published Home display packages and previous Helper matched authenticated v1.27.0 feeds. Physical remote, standby, cold boot, sound, OTA, end-to-end rollback and HD TV operation were not exercised."
+  "from_helper": "0.10.0",
+  "to_helper": "0.11.0",
+  "rollback_home": "1.21.0",
+  "rollback_sha256": "5b920c0d877d6a4eafb4d4709298972e6e854200cd92f2749d3ab946a0b744eb",
+  "prior_helper_sha256": "1de7ee53a0d992d726d363bd13a30f44b3f60bdd0ed3507e59f151044c5cf707",
+  "candidate_archive_sha256": "a3a5faa1ee55b94aed84c3cccce3139a9a7d339d0eb697bcb562159627ce9bab",
+  "acceptance": "2026-11-25 project LG OLED55C3RLA, firmware 43.21.71, SDK 11.2.0. macOS ARM64 cytv 0.24.3 source installer over saved Root SSH verified the signed published FHD Home 1.21.0 and final Helper 0.11.0 IPK SHA-256 2a0b2beb51215547fbf43b2f49abe0b49e36571ec675ba228e84d48254f8494c. Initial startup readback was unavailable until explicit Start. No pending operation. Installed launcher manifest and JS, Helper controller and ARM relay match their selected IPKs. One paired network HOME from Media Player reached LG Home at 0.27 s and CYTV at 4.71 s, where it held for one second. The same pair passed a 15-second network standby/Wake-on-LAN cycle with Ambient off. The Helper logged resume-already-foreground. All four network arrows moved selection before any Home input. The popup capability on this firmware reuses the earlier rejection evidence because its application IDs, implementation and permissions match. Physical input, HD, Developer Mode, sound, cold boot, OTA and full rollback were not checked in this compatibility probe."
 }

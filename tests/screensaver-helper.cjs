@@ -30,6 +30,7 @@ function fixture(overrides = {}) {
   const service = {
     call(uri, payload, done) {
       calls.push({ uri, payload });
+      if (overrides.onCall) return overrides.onCall(uri, done);
       done({ payload: { returnValue: true } });
     },
     subscribe(uri, payload) {
@@ -119,6 +120,177 @@ function fixture(overrides = {}) {
   };
 }
 
+const closeUri = 'luna://com.webos.applicationManager/closeByAppId';
+const devCloseUri = 'luna://com.webos.applicationManager/dev/closeByAppId';
+const launchUri = 'luna://com.webos.applicationManager/launch';
+const appId = 'com.cleanyourtv.screensaver';
+
+function deferredCalls() {
+  const replies = [];
+  const f = fixture({
+    onCall(uri, done) {
+      if (uri === closeUri || uri === devCloseUri || uri === launchUri)
+        replies.push(done);
+      else done({ payload: { returnValue: true } });
+    }
+  });
+  f.enable();
+  return Object.assign(f, {
+    reply(payload) {
+      assert.ok(replies.length, 'a SAM call is waiting for a reply');
+      replies.shift()({ payload });
+    },
+    tick(time) {
+      f.setTime(time);
+      for (const callback of f.intervals.keys()) callback();
+    }
+  });
+}
+
+{
+  const f = deferredCalls();
+  assert.equal(f.adapter.preview(), false, 'wait for SAM close capability');
+  assert.deepEqual(f.calls, [{ uri: closeUri, payload: { id: appId } }]);
+  f.reply({
+    returnValue: false,
+    errorCode: -1,
+    errorText: 'Permission denied'
+  });
+  assert.deepEqual(f.calls.at(-1), {
+    uri: devCloseUri,
+    payload: { id: appId }
+  });
+  f.reply({
+    returnValue: false,
+    errorCode: -1,
+    errorText: 'Permission denied'
+  });
+  assert.equal(f.adapter.unavailable(), true);
+  assert.equal(f.adapter.preview(), false);
+  assert.equal(
+    f.calls.some((call) => call.uri === launchUri),
+    false
+  );
+  f.adapter.dispose();
+}
+
+{
+  const f = deferredCalls();
+  f.reply({
+    returnValue: false,
+    errorCode: -1,
+    errorText: 'Permission denied'
+  });
+  assert.deepEqual(f.calls.at(-1), {
+    uri: devCloseUri,
+    payload: { id: appId }
+  });
+  f.reply({
+    returnValue: false,
+    errorCode: 1,
+    errorText: 'app is not running'
+  });
+  assert.equal(f.adapter.preview(), true);
+  f.reply({ returnValue: true });
+  f.tick(10100);
+  assert.deepEqual(f.calls.at(-1), {
+    uri: devCloseUri,
+    payload: { id: appId }
+  });
+  f.reply({ returnValue: true });
+  f.adapter.dispose();
+}
+
+{
+  const f = deferredCalls();
+  f.reply({
+    returnValue: false,
+    errorCode: 40,
+    errorText: appId + ' is not running'
+  });
+  assert.equal(f.adapter.preview(), true);
+  assert.equal(f.calls.at(-1).uri, launchUri);
+  f.reply({ returnValue: true });
+  f.tick(10100);
+  assert.deepEqual(f.calls.at(-1), { uri: closeUri, payload: { id: appId } });
+  f.tick(12100);
+  assert.equal(
+    f.adapter.preview(),
+    false,
+    'unconfirmed close blocks another launch'
+  );
+  f.reply({ returnValue: true });
+  assert.equal(f.adapter.preview(), true);
+  f.reply({ returnValue: true });
+  f.adapter.dispose();
+  f.reply({ returnValue: true });
+}
+
+{
+  const f = deferredCalls();
+  f.reply({ returnValue: true });
+  f.adapter.preview();
+  f.tick(10100);
+  assert.equal(
+    f.calls.at(-1).uri,
+    closeUri,
+    'close even if launch reply is missing'
+  );
+  f.reply({ returnValue: true }); // Accept the late launch.
+  f.reply({ returnValue: true }); // Settle the first close.
+  assert.deepEqual(
+    f.calls.map(({ uri }) => uri),
+    [closeUri, launchUri, closeUri, closeUri]
+  );
+  f.adapter.stop();
+  assert.equal(f.adapter.closePending(), true);
+  f.reply({ returnValue: true });
+  assert.equal(f.adapter.closePending(), false);
+}
+
+{
+  const f = deferredCalls();
+  f.reply({
+    returnValue: false,
+    errorCode: 1,
+    errorText: 'app is not running'
+  });
+  f.adapter.preview();
+  f.reply({ returnValue: true });
+  const params = f.ready();
+  f.update({
+    schema: 1,
+    ...params,
+    visible: false,
+    focused: false,
+    mediaState: 'closed'
+  });
+  assert.deepEqual(f.calls.at(-1), { uri: closeUri, payload: { id: appId } });
+  assert.equal(
+    f.adapter.preview(),
+    false,
+    'renderer cannot confirm SAM closed'
+  );
+  f.reply({
+    returnValue: false,
+    errorCode: -1,
+    errorText: 'Permission denied'
+  });
+  assert.equal(
+    f.calls.filter(({ uri }) => uri === closeUri).length,
+    3,
+    'one close retry'
+  );
+  f.reply({
+    returnValue: false,
+    errorCode: -1,
+    errorText: 'Permission denied'
+  });
+  assert.equal(f.adapter.unavailable(), true);
+  assert.equal(f.adapter.preview(), false);
+  f.adapter.dispose();
+}
+
 // Removing explicit enable/capability gates would create transport and LG ownership.
 let f = fixture();
 assert.equal(f.created(), 0);
@@ -136,10 +308,11 @@ assert.equal(f.enable(), true);
 assert.equal(f.created(), 1);
 assert.equal(f.subscriptions.length, 1);
 assert.equal(f.adapter.preview(), true);
-assert.equal(f.calls[0].uri, 'luna://com.webos.applicationManager/launch');
-assert.equal(f.calls[0].payload.id, 'com.cleanyourtv.screensaver');
-assert.equal(f.calls[0].payload.params.generation, 9);
-assert.match(f.calls[0].payload.params.sessionId, /^[a-f0-9]{48}$/);
+assert.deepEqual(f.calls[0], { uri: closeUri, payload: { id: appId } });
+assert.equal(f.calls[1].uri, launchUri);
+assert.equal(f.calls[1].payload.id, appId);
+assert.equal(f.calls[1].payload.params.generation, 9);
+assert.match(f.calls[1].payload.params.sessionId, /^[a-f0-9]{48}$/);
 f.request('1000');
 assert.equal(f.calls.at(-1).payload.ack, true, 'startup must allow LG');
 const first = f.ready();
@@ -175,12 +348,14 @@ assert.equal(f.adapter.getSession(), null);
 assert.ok(
   f.calls.every(
     (c) =>
-      c.uri.endsWith('/launch') || c.uri.endsWith('/responseScreenSaverRequest')
+      c.uri === launchUri ||
+      c.uri === closeUri ||
+      c.uri.endsWith('/responseScreenSaverRequest')
   )
 );
 assert.ok(
   f.calls
-    .filter((c) => c.uri.endsWith('/launch'))
+    .filter((c) => c.uri === launchUri || c.uri === closeUri)
     .every((c) => c.payload.id === 'com.cleanyourtv.screensaver')
 );
 

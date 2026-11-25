@@ -89,7 +89,10 @@ function create(options) {
     var result = policy.transition(state, message, context(), now());
     state = result.state;
     result.effects.forEach(function (effect) {
-      if (effect.type === 'CLOSE' || effect.type === 'RELEASE') releaseMedia();
+      if (effect.type === 'CLOSE' || effect.type === 'RELEASE') {
+        releaseMedia();
+        if (options.closePopup) options.closePopup(effect);
+      }
       if (effect.type !== 'LAUNCH' || !ownsActivation(effect)) return;
       acquireMedia(effect);
       if (!ownsActivation(effect)) return;

@@ -85,7 +85,7 @@ Para migrar el entorno de inicio de Root Beta existente, desactiva **Change Home
 
 Para fijar una entrada HDMI, selecciónala en **+ / Añadir aplicación**. Pulsa OK para cambiar a esa entrada. Mantén pulsado OK para mover u ocultar su mosaico.
 
-Las flechas seleccionan y OK abre; mantén OK para reordenar. Una pulsación breve de Atrás conserva la navegación y confirmación de salida de cada aplicación. Home abre el lanzador mientras el control está activo. Mantén Atrás durante 1,2 segundos para abrir LG Home una vez. El interruptor de control de Home y tus ajustes no cambian.
+Las flechas seleccionan y OK abre; mantén OK para reordenar. Una pulsación breve de Atrás conserva la navegación y confirmación de salida de cada aplicación. Home abre el lanzador mientras el control está activo.
 
 Para editar con pulsaciones breves, abre **Ajustes de Home → Apariencia → Editar mosaicos**. Pulsa OK para seleccionar un mosaico, muévelo con las flechas y pulsa OK para colocarlo. Atrás cancela el movimiento o sale de la edición.
 

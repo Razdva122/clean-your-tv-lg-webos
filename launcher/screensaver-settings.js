@@ -7,6 +7,11 @@
   var state = config.normalize();
   var known = false;
   var available = false;
+  var popupUnavailable = false;
+  var inlineFrame = null;
+  var inlineKeys = {};
+  var lastPointer = null;
+  var inlinePointerOrigin = null;
   var busy = false;
   var requestEpoch = 0;
   var statusPending = false;
@@ -69,7 +74,7 @@
         'Show clock': 'Показывать часы',
         'Show clock and date': 'Показывать часы и дату',
         'Use the standard screensaver': 'Выбрать стандартную заставку',
-        'Preview screensaver': 'Предпросмотр',
+        'Preview screensaver': 'Предпросмотр заставки',
         'Start on Home after': 'Запуск на Home через',
         'Background': 'Фон',
         'Clock': 'Часы',
@@ -105,11 +110,25 @@
         'Checking screensaver availability…': 'Проверка доступности заставки…',
         'Screensaver is unavailable on this TV.':
           'Заставка недоступна на этом телевизоре.',
+        'Screensaver runs only in Clean Your TV.':
+          'Заставка работает только внутри Clean Your TV.',
         'Could not save screensaver settings.':
           'Не удалось сохранить настройки заставки.',
         'Screensaver preview is unavailable right now.':
           'Предпросмотр заставки сейчас недоступен.'
-      }
+      },
+      cs: { 'Preview screensaver': 'Náhled spořiče obrazovky' },
+      de: { 'Preview screensaver': 'Bildschirmschoner-Vorschau' },
+      es: { 'Preview screensaver': 'Vista previa del protector de pantalla' },
+      'pt-BR': { 'Preview screensaver': 'Prévia do protetor de tela' },
+      fr: { 'Preview screensaver': 'Aperçu de l’économiseur d’écran' },
+      it: { 'Preview screensaver': 'Anteprima salvaschermo' },
+      ko: { 'Preview screensaver': '화면 보호기 미리보기' },
+      hi: { 'Preview screensaver': 'स्क्रीनसेवर का पूर्वावलोकन' },
+      pl: { 'Preview screensaver': 'Podgląd wygaszacza ekranu' },
+      ro: { 'Preview screensaver': 'Previzualizare economizor de ecran' },
+      'zh-Hans': { 'Preview screensaver': '预览屏幕保护程序' },
+      'zh-Hant': { 'Preview screensaver': '預覽螢幕保護程式' }
     });
   function t(value) {
     return root.HomeI18n ? root.HomeI18n.t(value) : value;
@@ -346,6 +365,12 @@
     );
   }
   function releaseMedia() {
+    if (inlineFrame) {
+      inlineFrame.parentNode.removeChild(inlineFrame);
+      inlineFrame = null;
+      inlineKeys = {};
+      inlinePointerOrigin = null;
+    }
     var old = activeMedia,
       pending = pendingMedia,
       wallpaper = wallpaperHeld;
@@ -388,7 +413,7 @@
     );
   }
   function canEdit() {
-    return known && available && state.enabled;
+    return known && (available || popupUnavailable) && state.enabled;
   }
   function running() {
     return canEdit() && supportedChoice();
@@ -420,10 +445,11 @@
       helperStarting;
     retry.disabled = retry.hidden;
     retry.parentNode.hidden = startHelper.hidden && retry.hidden;
+    enabled.hidden = !known || statusUnconfirmed;
+    enabled.disabled = enabled.hidden || !(available || popupUnavailable);
     enabled.setAttribute('aria-checked', String(state.enabled));
     enabled.textContent =
       t('Screensaver') + ': ' + t(state.enabled ? 'On' : 'Off');
-    enabled.disabled = !known || !available;
     var ownMedia = config.personal(state.mode, state.assetId);
     host.querySelector('#screensaverPersonalHint').hidden =
       !editable || !ownMedia;
@@ -514,7 +540,9 @@
                 ? 'Home Helper is stopped.'
                 : statusUnconfirmed && !rootEdition()
                   ? 'Could not check screensaver availability.'
-                  : 'Screensaver is unavailable on this TV.'
+                  : popupUnavailable
+                    ? 'Screensaver runs only in Clean Your TV.'
+                    : 'Screensaver is unavailable on this TV.'
           : !state.enabled
             ? 'Turn on the screensaver to edit its settings.'
             : ''
@@ -544,6 +572,8 @@
     state = config.normalize(reply.state);
     known = true;
     available = reply.available;
+    popupUnavailable =
+      !rootEdition() && !available && reply.reason === 'popup-unavailable';
     return true;
   }
   function retryStatus(recheck) {
@@ -575,11 +605,12 @@
     rpc('screensaverStatus', {}, function (reply, channelBusy) {
       statusPending = false;
       if (epoch !== requestEpoch) return;
-      statusUnconfirmed = !accepted(reply);
+      var confirmed = accepted(reply);
+      if (!confirmed && channelBusy && known && !helperStarting) return;
+      statusUnconfirmed = !confirmed;
       if (statusUnconfirmed) {
-        if (channelBusy && known && !helperStarting) return;
         known = true;
-        available = false;
+        available = popupUnavailable = false;
       }
       if (available) {
         statusRetries = 0;
@@ -632,7 +663,7 @@
     if (
       busy ||
       !known ||
-      !available ||
+      !(available || popupUnavailable) ||
       (!clockSync && !canEdit() && typeof changes.enabled !== 'boolean')
     )
       return;
@@ -718,6 +749,10 @@
     activityAcknowledged = null;
     root.clearTimeout(pendingOffer);
     pendingOffer = null;
+    if (popupUnavailable) {
+      activityAcknowledged = now();
+      return;
+    }
     if (activityTimer !== null || activityBusy) return;
     activityTimer = root.setTimeout(function () {
       activityTimer = null;
@@ -752,13 +787,78 @@
     delete settings.clock;
     return JSON.stringify(settings);
   }
+  function dismissInline() {
+    if (!inlineFrame) return;
+    handoff = actionPending = null;
+    root.clearTimeout(handoffTimer);
+    releaseMedia();
+    contextActive = false;
+    if (idle) idle.refresh();
+  }
+  function openInline(content, canMount, failed) {
+    function mount(assets) {
+      if (!canMount()) return failed();
+      content.assets = assets;
+      var frame = doc.createElement('iframe');
+      frame.className = 'screensaver-inline';
+      frame.tabIndex = -1;
+      frame.setAttribute('aria-hidden', 'true');
+      frame.onload = function () {
+        if (inlineFrame === frame)
+          frame.contentWindow.postMessage(
+            { type: 'cytv-screensaver-start', content: content },
+            '*'
+          );
+      };
+      frame.src = 'screensaver-companion/files/index.html#cytv-inline';
+      inlinePointerOrigin = lastPointer;
+      inlineFrame = frame;
+      doc.body.appendChild(frame);
+    }
+    var background = config.background(content.mode, content.assetId);
+    if (!background) return mount({});
+    var request = new root.XMLHttpRequest();
+    request.open('GET', 'screensaver-companion/manifest.json', true);
+    request.timeout = 3000;
+    request.onerror = request.ontimeout = failed;
+    request.onload = function () {
+      var assets = {};
+      try {
+        var files = JSON.parse(request.responseText).files;
+        [background.file, background.hdFile].forEach(function (key) {
+          if (!key) return;
+          var prefix = 'usr/palm/applications/com.gathin.tvhome/';
+          var path = files[key];
+          if (typeof path !== 'string' || path.indexOf(prefix) !== 0)
+            throw Error('Missing screensaver asset');
+          path = path.slice(prefix.length);
+          if (
+            !/^(?:[a-zA-Z0-9_-]+\/)*[a-zA-Z0-9_.-]+$/.test(path) ||
+            path === '.' ||
+            path === '..'
+          )
+            throw Error('Invalid screensaver asset path');
+          assets[key] = '../../' + path;
+        });
+      } catch (_) {
+        return failed();
+      }
+      mount(assets);
+    };
+    try {
+      request.send();
+    } catch (_) {
+      failed();
+    }
+  }
   function offer(preview) {
     if (actionPending || handoff || !running() || !localContext(preview))
       return;
     var attempt = {
         config: activationSettings(),
         preparing: true,
-        preview: preview
+        preview: preview,
+        idleEpoch: !preview && idle ? idle.status().epoch : null
       },
       selected = state.mode;
     handoff = attempt;
@@ -778,7 +878,7 @@
       if (!current() || !localContext(preview)) return;
       failed();
       stopped = true;
-      rpc('screensaverStop', {}, function () {});
+      if (!popupUnavailable) rpc('screensaverStop', {}, function () {});
     }
     root.clearTimeout(handoffTimer);
     handoffTimer = root.setTimeout(expired, 120000);
@@ -818,8 +918,39 @@
           return;
         }
         activeMedia = lease;
-        attempt.preparing = false;
         root.clearTimeout(handoffTimer);
+        if (popupUnavailable) {
+          // Allow the manifest read and both supported video render attempts.
+          handoffTimer = root.setTimeout(failed, 22000);
+          var content = config.normalize(state);
+          var clock = clockPresentation();
+          if (clock) content.clock = clock;
+          if (lease) {
+            content.mode = /\.mp4$/.test(lease.mediaUrl) ? 'video' : 'photo';
+            content.cacheUrl = lease.mediaUrl;
+          } else if (content.mode === 'video' && content.quality === 'image') {
+            content.mode = 'photo';
+            content.assetId = content.assetId.replace(/-video$/, '-photo');
+          }
+          openInline(
+            content,
+            function () {
+              if (
+                !current() ||
+                !running() ||
+                !popupUnavailable ||
+                !localContext(preview) ||
+                attempt.config !== activationSettings()
+              )
+                return false;
+              attempt.preparing = false;
+              return true;
+            },
+            failed
+          );
+          return;
+        }
+        attempt.preparing = false;
         handoffTimer = root.setTimeout(expired, 10000);
         rpc(
           preview ? 'screensaverPreview' : 'screensaverEligible',
@@ -827,7 +958,25 @@
           function (reply) {
             if (!current()) return;
             actionPending = null;
-            if (!reply || reply.started !== true) failed();
+            if (!reply || reply.started !== true) {
+              failed();
+              if (
+                !rootEdition() &&
+                reply &&
+                reply.reason === 'popup-unavailable' &&
+                accepted(reply)
+              ) {
+                statusUnconfirmed = false;
+                render();
+                if (
+                  attempt.idleEpoch !== null &&
+                  idle &&
+                  idle.status().epoch === attempt.idleEpoch &&
+                  attempt.config === activationSettings()
+                )
+                  offer(false);
+              }
+            }
           }
         );
       },
@@ -905,8 +1054,82 @@
   function start() {
     if (started) return;
     started = true;
+    function inlineReply(event) {
+      if (!inlineFrame || event.source !== inlineFrame.contentWindow) return;
+      if (event.data === 'cytv-screensaver-rendered') {
+        root.clearTimeout(handoffTimer);
+        actionPending = null;
+        inlineFrame.classList.add('visible');
+      } else if (event.data === 'cytv-screensaver-closed') dismissInline();
+    }
+    function inlineKey(event) {
+      if (!inlineFrame) return;
+      var code = event.keyCode;
+      var navigation =
+        code === 8 ||
+        code === 13 ||
+        code === 27 ||
+        code === 461 ||
+        (code >= 37 && code <= 40) ||
+        (code >= 48 && code <= 57) ||
+        (code >= 403 && code <= 406);
+      if (navigation) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        if (event.type === 'keydown') {
+          if (!event.repeat) inlineKeys[code] = true;
+          return;
+        }
+        // Settings activates Preview on OK-down, before the frame exists.
+        if (!inlineKeys[code]) return;
+      }
+      dismissInline();
+    }
+    function inlinePointer(event) {
+      var move = event.type === 'pointermove' || event.type === 'mousemove';
+      var point = { x: event.clientX, y: event.clientY };
+      if (!inlineFrame) {
+        if (move || (event.type === 'click' && event.detail > 0))
+          lastPointer = point;
+        return;
+      }
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      if (move) {
+        // Magic Remote still sends small pointer shifts after a click.
+        if (!inlinePointerOrigin) inlinePointerOrigin = point;
+        var dx = point.x - inlinePointerOrigin.x;
+        var dy = point.y - inlinePointerOrigin.y;
+        if (dx * dx + dy * dy < 12 * 12) return;
+        lastPointer = point;
+      }
+      // Hold the overlay through a press so its click cannot select a tile.
+      if (event.type !== 'pointerdown' && event.type !== 'mousedown')
+        dismissInline();
+    }
+    var pointerEvents = [
+      'click',
+      'pointerdown',
+      'pointermove',
+      'mousedown',
+      'mousemove',
+      'touchstart',
+      'wheel'
+    ];
+    root.addEventListener('message', inlineReply);
+    // Capture outside the document so settings cannot handle a dismissal key.
+    root.addEventListener('keydown', inlineKey, true);
+    root.addEventListener('keyup', inlineKey, true);
+    doc.addEventListener('webOSRelaunch', dismissInline);
+    pointerEvents.forEach(function (type) {
+      doc.addEventListener(type, inlinePointer, {
+        capture: true,
+        passive: false
+      });
+    });
     root.addEventListener('blur', function () {
       localFocused = false;
+      dismissInline();
       stopReceiver();
       cancelPreparing();
       stopLocal();
@@ -914,12 +1137,20 @@
     root.addEventListener('focus', focus);
     doc.addEventListener('visibilitychange', function () {
       if (doc.hidden) {
+        dismissInline();
         stopReceiver();
         cancelPreparing();
         stopLocal();
       } else focus();
     });
     root.addEventListener('pagehide', function () {
+      root.removeEventListener('message', inlineReply);
+      root.removeEventListener('keydown', inlineKey, true);
+      root.removeEventListener('keyup', inlineKey, true);
+      doc.removeEventListener('webOSRelaunch', dismissInline);
+      pointerEvents.forEach(function (type) {
+        doc.removeEventListener(type, inlinePointer, true);
+      });
       handoff = null;
       clearMediaPreview();
       stopReceiver();
@@ -1326,7 +1557,7 @@
     var previewAction = button(
       layout.left,
       'screensaverPreview',
-      'Full screen'
+      'Preview screensaver'
     );
     previewAction.onclick = function () {
       if (!busy) offer(true);

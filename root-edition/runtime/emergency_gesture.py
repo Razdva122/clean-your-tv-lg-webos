@@ -37,23 +37,3 @@ class TripleHome:
         else:
             raise ValueError('Invalid key value')
         return False
-
-
-class LongBack:
-    """One stock-Home visit per hold; independent of emergency recovery."""
-    def __init__(self):
-        self.down = None
-        self.fired = False
-    def event(self, kind, code, value, now):
-        if kind == 1 and code == 412:
-            if value == 1 and self.down is None:
-                self.down = now
-                self.fired = False
-            elif value == 0:
-                self.down = None
-                self.fired = False
-    def tick(self, now):
-        if self.down is not None and not self.fired and now - self.down >= 1200:
-            self.fired = True
-            return True
-        return False

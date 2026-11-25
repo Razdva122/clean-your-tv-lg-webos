@@ -641,6 +641,46 @@ int main(void) {
         self.assertEqual(latch.read_text(), f'{TOKEN} explicit_off\n')
         self.assertNotEqual(self.run_guard('--retire-boot', TOKEN)[1], 0)
 
+    def test_remote_disappears_before_broker_during_verified_shutdown(self):
+        self.check_remote_disappears_before_broker('stopping', 1, 'normal_shutdown')
+
+    def test_remote_disappears_before_broker_without_verified_shutdown(self):
+        self.check_remote_disappears_before_broker('running', 0, 'broker_expired')
+
+    def check_remote_disappears_before_broker(self, system_state, status, reason):
+        systemctl = self.root/'systemctl'
+        systemctl.write_text(f'#!/bin/sh\nprintf "{system_state}\\n"\nexit {status}\n')
+        systemctl.chmod(0o700)
+        proc, iw, cw = self.armed(resumable=True, wait_input=True)
+        self.report_missing_input(iw)
+        deadline = time.monotonic() + 1
+        while time.monotonic() < deadline:
+            if self.run_guard('--status')[0]['state'] == 'reconnecting':
+                break
+            time.sleep(.02)
+        else:
+            self.fail('Guardian did not observe the missing remote')
+
+        # Advance the broker pulse past its 15-second recovery window while
+        # keeping the reader's WAIT and the controller heartbeat fresh.
+        os.write(cw, b'PING\n')
+        broker = self.root / 'volatile/broker'
+        fields = broker.read_text().split()
+        fields[3] = str(time.clock_gettime_ns(time.CLOCK_MONOTONIC) // 1_000_000 - 16_000)
+        expired = broker.with_name('expired-broker')
+        expired.write_text(' '.join(fields) + '\n')
+        expired.chmod(0o600)
+        expired.replace(broker)
+        self.assertEqual(self.finish(proc)['reason'], reason)
+        result, rc = self.run_guard('--retire-boot', TOKEN)
+        if reason == 'normal_shutdown':
+            self.assertEqual(rc, 0)
+            self.assertEqual(result['reason'], reason)
+            self.assertFalse((self.root/'luna-calls').exists())
+        else:
+            self.assertNotEqual(rc, 0)
+            self.assertTrue((self.root/'luna-calls').exists())
+
     def test_capabilities_are_static_and_do_not_require_or_change_state(self):
         before = {p.relative_to(self.root): p.read_bytes()
                   for p in self.root.rglob('*') if p.is_file()}

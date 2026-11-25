@@ -1,105 +1,115 @@
 {
   "schema": 1,
-  "version": "1.28.0",
+  "version": "1.29.0",
   "changes": [
     {
-      "pr": 803,
+      "pr": 820,
       "issues": [
-        766
+        687,
+        818
       ],
-      "summary": "Recover No-root catalog refresh during Home startup"
+      "summary": "Recover late LG Home takeover after an IR Home press"
     },
     {
-      "pr": 805,
-      "issues": [],
-      "summary": "Fix remaining No-root restart loops and export restart evidence (#152)"
-    },
-    {
-      "pr": 806,
-      "issues": [],
-      "summary": "Fix Root staging when /tmp uses ramfs"
-    },
-    {
-      "pr": 807,
-      "issues": [
-        615,
-        741
-      ],
-      "summary": "Fix C1 boot recovery on webOS 6.5.3: absent-Root close reply and reused controller PID"
-    },
-    {
-      "pr": 808,
-      "issues": [],
-      "summary": "Add Neon '86 to the theme showcase"
-    },
-    {
-      "pr": 809,
-      "issues": [],
-      "summary": "Add opt-in No-root \"Stay on input at power-on\" setting"
-    },
-    {
-      "pr": 811,
+      "pr": 821,
       "issues": [
         615
       ],
-      "summary": "Allow fresh Root setup after verified removal (#615)"
+      "summary": "Recover Home after confirmed normal shutdown and preserve the Settings OK guard"
     },
     {
-      "pr": 812,
+      "pr": 822,
+      "issues": [
+        818
+      ],
+      "summary": "Keep No-root Home resident in the background"
+    },
+    {
+      "pr": 823,
+      "issues": [
+        740,
+        791
+      ],
+      "summary": "Report Root startup milestones when installation recovery times out"
+    },
+    {
+      "pr": 826,
       "issues": [
         741
       ],
-      "summary": "Reconnect C1 Home after a broker lease gap"
+      "summary": "Keep the C1 backend controller alive when an optional return hint times out"
     },
     {
-      "pr": 815,
-      "issues": [],
-      "summary": "Add Vice to the theme showcase"
-    },
-    {
-      "pr": 816,
+      "pr": 831,
       "issues": [
-        810
+        830
       ],
-      "summary": "Clear the owned C1 configd override on Home restore"
+      "summary": "Verify stock Home during No-root removal without defaultApps (#830)"
     },
     {
-      "pr": 817,
+      "pr": 832,
       "issues": [
-        813
+        410
       ],
-      "summary": "Keep HDMI visible during C1 boot recovery"
+      "summary": "Fix Root Beta QML packaging and verified pre-submission cleanup"
     },
     {
-      "pr": 819,
+      "pr": 834,
       "issues": [
-        152,
-        410,
-        741,
-        810,
-        813
+        825
       ],
-      "summary": "Integrate the remaining v1.28.0 changes"
+      "summary": "Resume No-root staging after an interrupted SSH upload"
     },
     {
-      "pr": 824,
+      "pr": 835,
+      "issues": [
+        829
+      ],
+      "summary": "Use a tuner icon for unavailable Live TV artwork"
+    },
+    {
+      "pr": 836,
+      "issues": [
+        828
+      ],
+      "summary": "Recover an unresponsive No-root screensaver popup"
+    },
+    {
+      "pr": 837,
       "issues": [
         615
       ],
-      "summary": "Keep the Settings opener from toggling Root Home"
+      "summary": "Make the guardian regression exercises select broker expiry before input expiry"
+    },
+    {
+      "pr": 838,
+      "issues": [
+        828
+      ],
+      "summary": "Leave Back to webOS, recover Helper status, and render the No-root screensaver inside Home when needed"
+    },
+    {
+      "pr": 839,
+      "issues": [],
+      "summary": "Keep the screensaver preview open after activation"
+    },
+    {
+      "pr": 840,
+      "issues": [],
+      "summary": "Wait for webOS foreground before restoring No-root Home"
     }
   ],
   "excluded": [
     {
-      "pr": 814,
-      "reason": "Original Vice submission was merged indirectly through #815; the theme is counted once under #815."
+      "pr": 833,
+      "reason": "Superseded by #838. The candidate leaves Back behavior to webOS and removes CYTV\u2019s separate shortcut and setting."
     }
   ],
-  "acceptance_build": "45431309453:2",
-  "acceptance": "LG OLED55C3RLA, firmware 43.21.71, webOS SDK 11.2.0. Exact macOS arm64 CLI SHA-256 903c563f8f5a04bb915780cc15238467c0c709e6dc260e244e1a405d7f9f1369. No-root Home 1.21.0 FHD and Helper 0.10.0 installed by the ordinary installer, with twelve matching file hashes. Paired network Home from Media Player and same-session standby with Live TV passed in both settings. Reused the published Home and Helper transition and installer recovery fixtures. C1, EF950V and ramfs physical results remain with device owners. Root physical controls, audio, AC-loss recovery, OTA and retained rollback were untested on this build. Case results and TV package hashes are recorded in docs/history/2026-11-25-release-1.28.0-rc-verification.md.",
+  "acceptance": "Project LG OLED55C3RLA, firmware 43.21.71 / SDK 11.2.0. Exact macOS ARM64 CLI SHA-256 724404cdda1f384bbf4c9bb622e6ac1651df207483bfb36db6f8de687677a662. No-root over Root SSH: normal update from published Home 1.21.0, nine matching installed file hashes, paired HOME from Media Player, same-session 15-second standby and all four arrows before HOME, sustained OK screensaver preview and arrow dismissal, short Back, persistent Stop and responsive LG Home. P00 archive match, C1 Beta QML packaging and exact Root signatures passed. Physical Magic Remote pointer, original reporter devices, cold boot, audio, live Root and OTA/rollback retain the limits in docs/history/2026-11-26-release-1.29.0-rc-verification.md.",
   "build": {
-    "run_id": 45431309453,
-    "attempt": 2,
-    "source": "83f78766b0d6f9a00a84cc0d3e24f588a72da71d"
-  }
+    "run_id": 45660735856,
+    "attempt": 1,
+    "source": "0ab6fccf6409baa8745c282b871bf6cac461ffcc"
+  },
+  "acceptance_build": "45660735856:1"
 }

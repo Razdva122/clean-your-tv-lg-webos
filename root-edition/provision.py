@@ -483,6 +483,11 @@ def finalize(*, record_failure=True, firmware_permissions=True, writer=None):
         report['startup_state'] = 'unavailable' if after is None else 'stale'
         if after is not None and after != before and after.get('phase') in ('starting','exited'):
             report['startup_state'] = after['phase']
+            milestone = after.get('startup_milestone')
+            if (milestone in ('status-registered', 'status-requested', 'status-response-returned')
+                    and (before is None or after.get('attempt') != before.get('attempt')
+                         or milestone != before.get('startup_milestone'))):
+                report['startup_milestone'] = milestone
             code = after.get('exit_status')
             if type(code) is int and 0 <= code <= 255: report['startup_exit_status'] = code
             exception = after.get('exception', {})

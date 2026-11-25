@@ -168,7 +168,7 @@ assert.equal(
 );
 assert(!commands.includes('Q'), 'Home closure must not stop the relay');
 watch.fg('test.app');
-worker.stdout.emit('data', Buffer.from('LGHOME\n'));
+rpc('openLGHome');
 assert.equal(calls.at(-1), 'com.webos.app.home');
 const count = calls.length;
 watch.fg('com.webos.app.home');

@@ -185,15 +185,17 @@ A diagnostic capture records `startup-foreground` with the query result in
 
 ## Wake from standby
 
-When the TV wakes from standby with Home control on, Helper opens Home once
-unless Clean Your TV Home is already in front (`resume-already-foreground`).
+When the TV wakes from standby with Home control on, Helper checks the current
+foreground and waits through the startup cover and transient LG Home. If webOS
+already restored Clean Your TV Home, Helper retains its window
+(`resume-already-foreground`).
 The opt-in **Settings → Your Home screen → Stay on HDMI or Live TV when the TV wakes** switch,
 off by default, also keeps an input source the TV woke on: an HDMI port, Live
 TV or an external analog input. The controller log then records
 `resume-preserved-source` with the foreground app ID instead of
-`resume-launch`. Helper checks the foreground again after wake and waits
-through transient screens. Stable LG Home and ordinary apps still receive
-Home. If the screen cannot be confirmed within the wake window, Helper logs
+`resume-launch`. Otherwise Helper opens Home over a confirmed foreground,
+including settled LG Home. If the foreground cannot be confirmed within the
+wake window, Helper logs
 `resume-foreground-unavailable` and skips the automatic launch. The Home
 button and triple-Home emergency release are unchanged.
 

@@ -49,6 +49,7 @@ const uiFile = path.join(root, 'launcher/screensaver-settings.js');
         };
         window.available = true;
         window.started = false;
+        window.popupUnavailable = false;
         window.personal = { photo: false, video: false };
         window.mediaCalls = [];
         window.ScreensaverPersonal = {
@@ -117,6 +118,7 @@ const uiFile = path.join(root, 'launcher/screensaver-settings.js');
             if (savingBusy) busyConfigure--;
             else if (method === 'screensaverConfigure') backend = payload;
             const channelBusy = statusBusy || savingBusy;
+            const denied = popupUnavailable;
             const response = JSON.stringify(
               channelBusy
                 ? {
@@ -125,9 +127,10 @@ const uiFile = path.join(root, 'launcher/screensaver-settings.js');
                   }
                 : {
                     returnValue: true,
-                    available,
+                    available: available && !denied,
                     state: backend,
-                    started
+                    started: started && !denied,
+                    reason: denied ? 'popup-unavailable' : undefined
                   }
             );
             const send = () => this.onservicecallback(response);
@@ -330,6 +333,31 @@ const uiFile = path.join(root, 'launcher/screensaver-settings.js');
       });
       assert.equal(await date.textContent(), 'Monday');
       assert.equal(await previewTime.textContent(), '12:00 PM');
+      if (edition === 'noroot') {
+        await page.evaluate(() => (popupUnavailable = true));
+        await page.locator('#screensaverPreview').click();
+        await page.waitForFunction(() =>
+          document
+            .querySelector('.screensaver-status')
+            .textContent.includes('only in Clean Your TV')
+        );
+        assert.equal(await toggle.isDisabled(), false);
+        assert.equal(
+          await page.locator('#screensaverPreview').isDisabled(),
+          false
+        );
+        await toggle.click();
+        assert.equal(await toggle.getAttribute('aria-checked'), 'false');
+        await toggle.click();
+        assert.equal(await toggle.getAttribute('aria-checked'), 'true');
+        await page.evaluate(() => {
+          popupUnavailable = false;
+          HomeScreensaver.activate(true);
+        });
+        await page.waitForFunction(
+          () => !document.querySelector('#screensaverEnabled').disabled
+        );
+      }
       if (edition === 'root') {
         for (const launches of [true, false]) {
           await page.evaluate((launches) => {
@@ -628,6 +656,8 @@ const uiFile = path.join(root, 'launcher/screensaver-settings.js');
       await page.evaluate(() =>
         document.getElementById('renewalPanel').classList.add('hidden')
       );
+      // Let the regular observer notice the newly eligible Home surface.
+      await page.clock.runFor(1000);
       await page.keyboard.press('ArrowRight');
       await page.clock.runFor(31000);
       assert.ok(
@@ -911,6 +941,131 @@ const uiFile = path.join(root, 'launcher/screensaver-settings.js');
           writes + 1,
           'Root availability readback does not replay a setting write'
         );
+      }
+      if (edition === 'noroot') {
+        await page.evaluate(() => {
+          backend = {
+            enabled: true,
+            scope: 'global',
+            mode: 'ambient',
+            assetId: '',
+            idleTimeoutMs: 30000
+          };
+          popupUnavailable = true;
+          document.getElementById('renewalPanel').classList.remove('hidden');
+          document.querySelector('[data-category=screensaver]').click();
+          window.dispatchEvent(new Event('focus'));
+          HomeScreensaver.activate(true);
+        });
+        await page
+          .locator('.screensaver-status')
+          .filter({ hasText: 'only in Clean Your TV' })
+          .waitFor();
+        const inlineOrigin = 'http://cytv-screensaver.invalid/';
+        await page.route(
+          inlineOrigin + 'screensaver-companion/files/**',
+          (route) => {
+            const name = new URL(route.request().url()).pathname
+              .split('/')
+              .pop();
+            return route.fulfill({
+              path: path.join(root, 'screensaver', name)
+            });
+          }
+        );
+        await page.evaluate((origin) => {
+          const base = document.createElement('base');
+          base.href = origin;
+          document.head.appendChild(base);
+          calls = [];
+        }, inlineOrigin);
+        const preview = page.getByRole('button', {
+          name: 'Preview screensaver'
+        });
+        await preview.focus();
+        await page.keyboard.down('Enter');
+        const inline = page.locator('.screensaver-inline.visible');
+        await inline.waitFor();
+        await page.keyboard.up('Enter');
+        assert.equal(
+          await inline.isVisible(),
+          true,
+          'the initiating OK release leaves the preview open'
+        );
+        await inline.contentFrame().locator('#clock:not([hidden])').waitFor();
+        assert.deepEqual(
+          await page.evaluate(() =>
+            calls.filter(({ method }) => method === 'screensaverPreview')
+          ),
+          [],
+          'the iframe uses the existing renderer without a popup request'
+        );
+        await page.keyboard.press('ArrowLeft');
+        await inline.waitFor({ state: 'detached' });
+        assert.equal(
+          await page.locator('#screensaverPreview').isEnabled(),
+          true
+        );
+        const bundledPhoto = 'wallpapers/ribbon-preview.jpg';
+        await page.route(
+          inlineOrigin + 'screensaver-companion/manifest.json',
+          (route) =>
+            route.fulfill({
+              headers: { 'Access-Control-Allow-Origin': '*' },
+              json: {
+                files: {
+                  'backgrounds/ribbon-photo.jpg':
+                    'usr/palm/applications/com.gathin.tvhome/' + bundledPhoto
+                }
+              }
+            })
+        );
+        await page.route(inlineOrigin + bundledPhoto, (route) =>
+          route.fulfill({ path: path.join(root, 'launcher', bundledPhoto) })
+        );
+        await page.evaluate(() => {
+          backend.mode = 'video';
+          backend.assetId = 'ribbon-video';
+          backend.quality = 'image';
+          HomeScreensaver.activate(true);
+        });
+        await preview.click();
+        await inline.contentFrame().locator('#photo:not([hidden])').waitFor();
+        const position = await preview.boundingBox();
+        await page.mouse.move(
+          position.x + position.width / 2 + 1,
+          position.y + position.height / 2 + 1
+        );
+        assert.equal(
+          await inline.isVisible(),
+          true,
+          'one-pixel pointer drift leaves the preview open'
+        );
+        await page.mouse.move(5, 5);
+        await inline.waitFor({ state: 'detached' });
+        await page.evaluate(() => {
+          backend.mode = 'ambient';
+          backend.assetId = '';
+          backend.quality = 'auto';
+          HomeScreensaver.activate(true);
+        });
+        await page.evaluate(() => {
+          HomeScreensaver.activate(false);
+          document.getElementById('renewalPanel').classList.add('hidden');
+        });
+        await page.keyboard.press('ArrowRight');
+        await page.clock.runFor(32000);
+        await inline.waitFor();
+        assert.equal(
+          await page.evaluate(() =>
+            calls.some(({ method }) => method === 'screensaverEligible')
+          ),
+          false
+        );
+        await page.evaluate(() =>
+          document.dispatchEvent(new Event('webOSRelaunch'))
+        );
+        await inline.waitFor({ state: 'detached' });
       }
       assert.deepEqual(errors, []);
       await page.close();

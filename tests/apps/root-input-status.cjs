@@ -257,6 +257,7 @@ const inventory = require('../../root-edition/service/app-inventory');
         if (name === './c1-lease') return () => {};
         if (name === './presentation-context')
           return require('../../root-edition/service/presentation-context');
+        if (name === './startup-diagnostics') return () => {};
         throw Error('Unexpected import ' + name);
       }
     }

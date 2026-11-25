@@ -977,7 +977,7 @@ for (const cleanupCode of [0, 11])
   test(
     'reported emergency with signaled close and cleanup ' +
       cleanupCode +
-      ' remains bounded on unknown owned launch',
+      ' remains bounded on pending slow owned launch',
     () => {
       let hold = false;
       const c = controller({
@@ -999,8 +999,7 @@ for (const cleanupCode of [0, 11])
         c.logs.some(
           (x) =>
             x.event === 'terminal-ui-failed' &&
-            x.reason ===
-              (cleanupCode ? 'input-cleanup-failed' : 'home-launch-unknown')
+            x.reason === 'home-launch-pending'
         )
       );
     }
@@ -1430,14 +1429,14 @@ for (const powerTiming of ['no hint', 'wake before loss', 'wake during loss']) {
 }
 
 test('preparing power off followed by input loss still restores Home on wake', () => {
-  const c = controller();
+  const c = controller({ foreground: (done) => done('com.webos.app.home') });
   const w = c.workers[0];
   c.power({ state: 'Prepare Power Off' });
   w.stdout.emit('data', Buffer.from('INPUT_WAIT\n'));
   c.launches.length = 0;
   c.power({ state: 'Active' });
   w.stdout.emit('data', Buffer.from('READY\n'));
-  c.advance(400);
+  c.advance(2000);
   assert.deepEqual(c.launches, ['com.gathin.tvhome']);
 });
 

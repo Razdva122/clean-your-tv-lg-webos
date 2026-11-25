@@ -27,6 +27,7 @@ class PreviewTests(unittest.TestCase):
             self.assertEqual(info['defaultWindowType'], 'card')
             self.assertIs(info['transparent'], False)
             self.assertNotIn('handlesRelaunch', info)
+            self.assertNotIn('keepAlive', info)
             self.assertIs(info['noSplashOnLaunch'], True)
             self.assertIs(info['spinnerOnLaunch'], False)
             self.assertNotIn('splashBackground', info)

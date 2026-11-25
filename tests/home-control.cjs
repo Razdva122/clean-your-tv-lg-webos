@@ -68,9 +68,11 @@ try {
       bytes
     );
   }
-  // Stay on input at power-on shares the record, defaults off and is written
-  // only while on, so the original record shape and older readers are unchanged.
-  fs.writeFileSync(path.join(dir, 'home-control.json'), '{"enabled":true}');
+  // Accept RC2 records with the removed gesture setting and drop it on write.
+  fs.writeFileSync(
+    path.join(dir, 'home-control.json'),
+    '{"enabled":true,"longBackHome":false}'
+  );
   applied = [];
   c = create(
     fs,
@@ -78,6 +80,7 @@ try {
     (v) => applied.push(v),
     () => {}
   );
+  assert.equal(c.enabled(), true);
   assert.equal(c.keepSource(), false);
   assert.throws(() => c.setKeepSource('true'));
   assert.deepEqual(c.setKeepSource(true), { keepSource: true });

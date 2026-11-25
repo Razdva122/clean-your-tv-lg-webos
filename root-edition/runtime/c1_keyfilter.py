@@ -1510,14 +1510,18 @@ def return_ready(root,uid,token,changed):
     # delayed hint after any such message, including unknown/partial messages.
     intent=read_intent(root,uid)
     if intent['token']!=token or intent['phase'] not in ('active','trial'): return False
-    power=luna('luna://com.webos.service.tvpower/power/getPowerState',{},timeout=.3)
-    if changed(): return False
-    surfaces=luna('luna://com.webos.surfacemanager/getForegroundAppInfo',{},timeout=.3)
-    if changed(): return False
-    foreground=luna('luna://com.webos.applicationManager/getForegroundAppInfo',{},timeout=.3)
-    if changed(): return False
-    proof=validate_native(native(['--status'],root,uid,timeout=.3))
-    if changed(): return False
+    try:
+        power=luna('luna://com.webos.service.tvpower/power/getPowerState',{},timeout=.3)
+        if changed(): return False
+        surfaces=luna('luna://com.webos.surfacemanager/getForegroundAppInfo',{},timeout=.3)
+        if changed(): return False
+        foreground=luna('luna://com.webos.applicationManager/getForegroundAppInfo',{},timeout=.3)
+        if changed(): return False
+        proof=validate_native(native(['--status'],root,uid,timeout=.3))
+        if changed(): return False
+    except (TimeoutError, subprocess.TimeoutExpired):
+        # This hint may be skipped while the lifecycle controller stays armed.
+        return False
     if selection(root,uid)['schema']==3 and (not filter_present(root,uid) or changed()): return False
     intent=read_intent(root,uid)
     return (intent['token']==token and intent['phase'] in ('active','trial')

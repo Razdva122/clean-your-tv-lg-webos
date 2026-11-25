@@ -311,6 +311,7 @@ def root_recovery_details(value):
         'reason': ('failed','negative-reply','invalid-reply','oversized-reply','oversized-client-output','client-exited','client-start-failed','timeout'),
         'luna_reason': ('permission-denied','service-missing','method-missing'),
         'startup_state': ('starting','exited','stale','unavailable'),
+        'startup_milestone': ('status-registered','status-requested','status-response-returned'),
         'exception_name': ('Error','TypeError','SyntaxError','ReferenceError','RangeError'),
         'exception_code': ('MODULE_NOT_FOUND','ERR_DLOPEN_FAILED','EACCES','EPERM','ENOENT'),
     }

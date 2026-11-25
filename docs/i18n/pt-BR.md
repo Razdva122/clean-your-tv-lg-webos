@@ -85,7 +85,7 @@ Para migrar o ambiente de inicialização da Root Beta existente, desative **Cha
 
 Para fixar uma entrada HDMI, selecione-a em **+ / Adicionar aplicativo**. Pressione OK para mudar para a entrada. Mantenha OK pressionado para mover ou ocultar o bloco.
 
-Setas selecionam; OK abre; segure OK para reorganizar. Um toque em Voltar mantém a navegação e a confirmação de saída do aplicativo. Home abre o lançador com o controle ativo. Segure Voltar por 1,2 segundos para abrir LG Home uma vez. O interruptor de controle do Home e suas configurações não mudam.
+Setas selecionam; OK abre; segure OK para reorganizar. Um toque em Voltar mantém a navegação e a confirmação de saída do aplicativo. Home abre o lançador com o controle ativo.
 
 Para editar com toques curtos, abra **Configurações do Home → Aparência → Editar blocos**. Pressione OK para selecionar um bloco, mova-o com as setas e pressione OK para soltá-lo. Voltar cancela o movimento ou encerra a edição.
 

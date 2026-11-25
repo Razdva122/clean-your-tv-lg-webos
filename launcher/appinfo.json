@@ -1,6 +1,6 @@
 {
   "id": "com.gathin.tvhome",
-  "version": "1.21.0",
+  "version": "1.22.0",
   "vendor": "tv-vibehack",
   "type": "web",
   "main": "index.html",
@@ -12,6 +12,7 @@
   "resolution": "1920x1080",
   "disableBackHistoryAPI": true,
   "defaultWindowType": "card",
+  "keepAlive": true,
   "transparent": false,
   "noSplashOnLaunch": true,
   "spinnerOnLaunch": false,

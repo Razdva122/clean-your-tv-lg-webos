@@ -85,7 +85,7 @@ Aby zmigrować środowisko uruchamiania istniejącej Root Beta, wyłącz **Chang
 
 Aby przypiąć wejście HDMI, wybierz je w menu **+ / Dodaj aplikację**. Naciśnij OK, aby przełączyć wejście. Przytrzymaj OK, aby przesunąć lub ukryć kafelek.
 
-Strzałki wybierają, OK otwiera; przytrzymaj OK, aby zmienić kolejność. Krótkie Wstecz zachowuje nawigację aplikacji i jej potwierdzenie wyjścia. Home otwiera ekran Clean Your TV, gdy sterowanie jest aktywne. Przytrzymaj Wstecz przez 1,2 sekundy, aby jednorazowo otworzyć LG Home. Przełącznik sterowania Home i ustawienia pozostają bez zmian.
+Strzałki wybierają, OK otwiera; przytrzymaj OK, aby zmienić kolejność. Krótkie Wstecz zachowuje nawigację aplikacji i jej potwierdzenie wyjścia. Home otwiera ekran Clean Your TV, gdy sterowanie jest aktywne.
 
 Aby edytować krótkimi naciśnięciami, otwórz **Ustawienia Home → Wygląd → Edytuj kafelki**. Naciśnij OK, aby chwycić kafelek, przesuń go strzałkami i naciśnij OK, aby go umieścić. Wstecz anuluje przesunięcie lub kończy edycję.
 

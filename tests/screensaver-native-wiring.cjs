@@ -50,6 +50,8 @@ const context = {
               return true;
             },
             whenReady: () => Promise.resolve(true),
+            unavailable: () => false,
+            closePending: () => false,
             preview() {
               actions.push('preview');
               return true;
@@ -195,8 +197,24 @@ async function request(method, settings, channel = {}) {
     false,
     'actual installed inventory gates feature'
   );
+  const timers = [];
+  const exits = [];
+  context.screensaverOwner.closePending = () => true;
+  context.setTimeout = (callback, delay) => timers.push({ callback, delay });
+  context.process.exit = (code) => exits.push(code);
+  context.finish({ code: 0, exitCode: 0, terminalUI: false });
+  assert.deepEqual(exits, [], 'keep Helper alive for outstanding popup close');
+  const drain = timers.at(-1);
+  assert.equal(drain.delay, 50);
+  now += 3200;
+  drain.callback();
+  assert.deepEqual(
+    exits,
+    [0],
+    'unanswered popup close cannot block terminal exit'
+  );
   console.log(
-    'PASS native production screensaver wiring: authenticated channel, inventory, foreground, reset and power'
+    'PASS native production screensaver wiring: authenticated channel, inventory, foreground, reset, power and bounded shutdown'
   );
 })().catch((error) => {
   console.error(error);

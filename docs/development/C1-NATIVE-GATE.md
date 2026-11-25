@@ -167,7 +167,7 @@ New C1 bundles use marker schema 2 with routing `compositor-keyfilter-v1`. They 
 
 The implementation uses no bind mounts, checkpoint changes, CRIU operations or permission changes to checkpoint directories. Existing schema 1 installations retain their original mount guardian and recovery path; do not replace their helper or marker to migrate them. A fresh installation is required after verified recovery/removal.
 
-Triple Home, long Back, Open LG Home, terminal lease failure, controller loss, trial expiry or handled shutdown latches routing off. Explicitly enable Change Home again after a safety or power stop. Boot reconciliation restores rather than automatically rearming. Unknown foreground state and conflicting SAM/compositor observations cancel return; a new content event cancels the one-second return delay.
+Triple Home, Open LG Home, terminal lease failure, controller loss, trial expiry or handled shutdown latches routing off. Explicitly enable Change Home again after a safety or power stop. Boot reconciliation restores rather than automatically rearming. Unknown foreground state and conflicting SAM/compositor observations cancel return; a new content event cancels the one-second return delay.
 
 On the persistent keyfilter path, a compositor subscription gap immediately
 leaves Home with LG. The filter retries the private subscription with the same

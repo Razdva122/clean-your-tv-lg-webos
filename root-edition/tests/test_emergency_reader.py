@@ -545,7 +545,7 @@ class ReconnectTests(unittest.TestCase):
         self.assertEqual(messages, [b'READY\n', b'LOST\n'])
         replace.assert_not_called()
 
-    def test_long_back_still_opens_lg_home_after_replacement(self):
+    def test_long_back_stays_with_webos_after_replacement(self):
         import errno
         import emergency_reader as reader
         from itertools import count
@@ -554,7 +554,7 @@ class ReconnectTests(unittest.TestCase):
             [BlockingIOError(), OSError(errno.ENODEV, 'gone'),
              reader.EVENT.pack(2, 0, 1, 412, 1)] + [BlockingIOError()] * 20 + [b''],
             clock=lambda: next(clock))
-        self.assertEqual(messages.count(b'LGHOME\n'), 1)
+        self.assertNotIn(b'LGHOME\n', messages)
         self.assertNotIn(b'ESCAPE\n', messages)
 
     def test_replacement_requires_home_and_back_capabilities(self):

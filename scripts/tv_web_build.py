@@ -1,5 +1,6 @@
 """Compile only TV web application assets; never process native/Node services."""
 import argparse
+from base64 import b64encode
 from contextlib import contextmanager
 import errno
 import json
@@ -23,6 +24,11 @@ def compile_web(files):
     files = with_fonts(files)
     web = {name: raw.decode('utf-8') for name, raw in files.items()
            if name.endswith(('.js', '.css', '.html'))}
+    if 'profile-bootstrap.js' in web and 'brand-v2-icon.png' in files:
+        # The generic No-root update can restore a saved catalog without apps.js artwork.
+        fallback_icon = 'data:image/png;base64,' + b64encode(files['brand-v2-icon.png']).decode('ascii')
+        web['profile-bootstrap.js'] = ('window.CYTVBrandIconFallback = ' + json.dumps(fallback_icon)
+                                       + ';\n' + web['profile-bootstrap.js'])
     try:
         result = subprocess.run(['node', str(ROOT / 'scripts/compile-tv-web.cjs')],
                                 input=json.dumps(web), capture_output=True, text=True, encoding='utf-8',

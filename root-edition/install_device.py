@@ -814,7 +814,28 @@ class LocalDevice:
                              'reply=runtime_restore_report('+repr(str(self.payload/'root'))+');'
                              'print(json.dumps(reply),flush=True);sys.exit(0 if reply["returnValue"] is True else 1)')
                     with cleanup_step('runtime-restore'):
-                        restored=self.cleanup_child(program)
+                        original=(record.get('fenced_components') or {}).get('deploy') or {}
+                        if (original.get('stage')=='prepared' and self.routing_untouched(record)
+                                and os.path.lexists(ROOT/'runtime/c1_keyfilter.py')):
+                            from clean_removal import unprepared_native_payload
+                            # A failed prepare can leave native runtime bytes
+                            # without a descriptor. Never execute those bytes or
+                            # invent backend state just to restore an unused gate.
+                            unprepared_native_payload(ROOT,original,uid)
+                            if APP in self.apps():raise ValueError('unprepared_native_package_present')
+                            self.absent(APP)
+                            if os.path.lexists(INIT/'50-clean-your-tv-root'):
+                                raise ValueError('unprepared_native_startup_present')
+                            for folder in ('services.d','roles.d','client-permissions.d','api-permissions.d','manifests.d'):
+                                directory=BUS/folder
+                                if not os.path.lexists(directory):continue
+                                os.close(checked_store(directory,uid)._directory())
+                                if any(path.name.startswith(APP+'.') for path in directory.iterdir()):
+                                    raise ValueError('unprepared_native_registration_present')
+                            self.clean_quiescent(record,all_processes=True)
+                            restored={'returnValue':True,'result':'absent'}
+                        else:
+                            restored=self.cleanup_child(program)
                         if restored.get('result') not in ('restored','absent'):raise ValueError('controls_restore_unverified')
                         if restored.get('native_restored_sha256') is not None:
                             record['native_restored_sha256']=restored['native_restored_sha256']
@@ -1225,7 +1246,10 @@ class LocalDevice:
 
     def compositor_stock_eligible(self, record):
         from clean_removal import ROUTING_EVIDENCE, restored_native_schema
-        retained_proof=isinstance(record.get('routes'),dict) and record['routes'].get('mode')=='stock-compositor'
+        proof = record.get('routes')
+        retained_proof = isinstance(proof, dict) and proof.get('mode') == 'stock-compositor'
+        if retained_proof and proof.get('settings_absent') is True and not self.stock_profiles_eligible(record):
+            return False
         if not retained_proof and (self.payload is None or not (self.payload/'root/runtime/c1_keyfilter.py').is_file()):return False
         backup=self.ownership.store.read('routing-backup-'+record['operation'])
         schema=restored_native_schema(record,backup)
@@ -1243,10 +1267,13 @@ class LocalDevice:
             and not any(os.path.lexists(ROOT/name) for name in ROUTING_EVIDENCE)
             and not os.path.lexists('/var/webos-profile/override/clean-your-tv-root.json'))
 
-    def compositor_stock(self, record, *, retire_orphan=False):
-        if self.payload is None:
+    def compositor_stock(self, record, *, retire_orphan=False, capture_missing_settings=False):
+        proof = record.get('routes')
+        if (self.payload is None or capture_missing_settings
+                or isinstance(proof, dict) and proof.get('settings_absent') is True):
+            mode = 'capture-stock-proof' if capture_missing_settings else 'stock-proof'
             result=subprocess.run(['/usr/bin/node',str(Path(__file__).parent/'cleanup_tail.js'),
-                'stock-proof',record['operation'],'-','-1','-1','-1','-',record['removal']],
+                mode,record['operation'],'-','-1','-1','-1','-',record['removal']],
                 check=True,stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=90)
             return json.loads(result.stdout)['routes']
         option = ',retire_orphan=True' if retire_orphan else ''
