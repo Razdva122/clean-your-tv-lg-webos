@@ -346,10 +346,19 @@ def routes(device, record=None, *, retire_orphan=False):
                 and record.get('native_restored_sha256') is None):
             return device.compositor_stock(record, retire_orphan=True)
         return device.compositor_stock(record)
-    settings=device.rpc('com.webos.settingsservice/getSystemSettings',{'category':'general','keys':['defaultApps']})
-    default_apps = settings.get('settings', {}).get('defaultApps')
-    if settings.get('returnValue') is not True or not isinstance(default_apps, dict):
-        raise ValueError('route_readback_unverified')
+    missing_settings = False
+    try:
+        settings = device.rpc('com.webos.settingsservice/getSystemSettings',
+                              {'category': 'general', 'keys': ['defaultApps']})
+    except RuntimeError as error:
+        if getattr(error, 'system_setting_not_found', False) is not True:
+            raise
+        missing_settings = True
+        default_apps = {}
+    else:
+        default_apps = settings.get('settings', {}).get('defaultApps')
+        if settings.get('returnValue') is not True or not isinstance(default_apps, dict):
+            raise ValueError('route_readback_unverified')
     home = default_apps.get('home')
     previous = (record or {}).get('routes')
     stock_proof = {'mode': 'stock-profiles'}
@@ -364,6 +373,9 @@ def routes(device, record=None, *, retire_orphan=False):
     try:reply=device.rpc('com.webos.service.systemprofile/getProfiles',{'names':['defaultApps','idleApp'],'subscribe':False})
     except (OSError,RuntimeError,ValueError,KeyError,subprocess.SubprocessError) as error:
         if never:return {'mode':'never-applied','home':home}
+        if (missing_settings and previous is None
+                and getattr(error, 'systemprofile_missing', False) is True):
+            return device.compositor_stock(record, capture_missing_settings=True)
         # Only the firmware's exact missing-service reply admits stock-only
         # verification. A timeout/ACL failure cannot select another backend.
         stock={'mode':'stock-settings','home':'com.webos.app.home'}

@@ -248,6 +248,10 @@ async function rpc(method, payload) {
     throw Error('cleanup-readback-malformed');
   if (value.returnValue !== true) {
     var error = Error('cleanup-readback-unavailable');
+    error.system_setting_not_found =
+      method === 'com.webos.settingsservice/getSystemSettings' &&
+      value.errorCode == null &&
+      value.errorText === 'There is no matched result from DB';
     error.systemprofile_missing =
       method === 'com.webos.service.systemprofile/getProfiles' &&
       value.errorCode === -1 &&
@@ -256,6 +260,20 @@ async function rpc(method, payload) {
     throw error;
   }
   return value;
+}
+async function readDefaultApps(allowMissing) {
+  try {
+    var settings = await rpc('com.webos.settingsservice/getSystemSettings', {
+      category: 'general',
+      keys: ['defaultApps']
+    });
+  } catch (error) {
+    if (allowMissing && error.system_setting_not_found === true) return null;
+    throw error;
+  }
+  if (!object(settings.settings) || !object(settings.settings.defaultApps))
+    throw Error('cleanup-readback-malformed');
+  return settings.settings.defaultApps;
 }
 function unownedRouting(allowNative) {
   var evidence = [
@@ -324,7 +342,8 @@ function stockProfilesEligible() {
   function noJournals(value) {
     return (
       object(value) &&
-      Object.keys(value).length === journals.length &&
+      Object.keys(value).length ===
+        journals.length + (value['system-engine'] === null ? 1 : 0) &&
       journals.every(function (key) {
         return value[key] === null;
       })
@@ -459,7 +478,7 @@ function stockBspOverlay(mounts, overlay, homeDevice, appDevice) {
   }
   return false;
 }
-async function compositorStock() {
+async function compositorStock(capture) {
   if (
     [
       '/media/developer/cleanyourtv',
@@ -482,14 +501,22 @@ async function compositorStock() {
   var proof = record.routes,
     home = '/usr/bin/com.webos.app.home',
     app = '/usr/palm/applications/com.webos.app.home';
-  if (
-    !unownedRouting(true) ||
-    !object(proof.target) ||
-    !/^[a-f0-9]{64}$/.test(proof.target_sha256)
-  )
+  if (!unownedRouting(!capture) || (!capture && !object(proof.target)))
     throw Error('route-changed');
+  if (capture || proof.settings_absent === true) {
+    if (!stockProfilesEligible() || (await readDefaultApps(true)) !== null)
+      throw Error('route-changed');
+  }
   var before = fs.lstatSync(home),
-    raw = read(openDir('/usr/bin'), 'com.webos.app.home');
+    raw = read(openDir('/usr/bin'), 'com.webos.app.home'),
+    digest = nodeCrypto.createHash('sha256').update(raw).digest('hex');
+  if (capture)
+    proof = {
+      mode: 'stock-compositor',
+      settings_absent: true,
+      target: { dev: before.dev, ino: before.ino, size: before.size },
+      target_sha256: digest
+    };
   if (
     !before.isFile() ||
     !(before.mode & 73) ||
@@ -500,8 +527,7 @@ async function compositorStock() {
     raw.slice(0, 7).toString('hex') !== '7f454c46010101' ||
     raw[18] !== 40 ||
     raw[19] !== 0 ||
-    nodeCrypto.createHash('sha256').update(raw).digest('hex') !==
-      proof.target_sha256 ||
+    digest !== proof.target_sha256 ||
     !identity(before, fs.lstatSync(home))
   )
     throw Error('route-changed');
@@ -607,6 +633,7 @@ async function compositorStock() {
     return vendorFilter.test(entry.file);
   });
   if (
+    (proof.settings_absent === true && vendor.length !== chain.length) ||
     vendor.filter(function (entry) {
       return (
         /\/systemUi\.js$/.test(entry.file) &&
@@ -633,6 +660,7 @@ async function compositorStock() {
     )
       throw Error('route-changed');
   });
+  return proof;
 }
 async function absent() {
   if (exists(bootRoot)) throw Error('boot-session-remains');
@@ -721,14 +749,10 @@ async function absent() {
     Object.keys(record.routes).length === 1 &&
     routingUntouched()
   )) {
-    var settings = await rpc('com.webos.settingsservice/getSystemSettings', {
-      category: 'general',
-      keys: ['defaultApps']
-    });
-    var defaultApps = settings.settings.defaultApps,
-      home = defaultApps.home,
-      stockProfiles =
+    var stockProfiles =
         object(record.routes) && record.routes.mode === 'stock-profiles',
+      defaultApps = (await readDefaultApps(stockProfiles)) || {},
+      home = defaultApps.home,
       stockOnly =
         record.profileless_cleanup_eligible === true &&
         object(record.routes) &&
@@ -1230,20 +1254,23 @@ function canRecheckBoot() {
               : 'not-ready'
         })
       );
-    } else if (mode === 'stock-proof') {
+    } else if (mode === 'stock-proof' || mode === 'capture-stock-proof') {
       // Read-only helper for the coordinator while it owns the original mutex.
       // It grants no deletion/lease authority and cannot turn an install into success.
+      var capture = mode === 'capture-stock-proof';
       if (
         !record ||
         record.schema !== 1 ||
         record.operation !== id ||
         record.protocol !== 'clean-removal-v1' ||
-        !object(record.routes) ||
-        record.routes.mode !== 'stock-compositor'
+        (capture
+          ? record.stage !== 'original-writers-fenced' || record.routes != null
+          : !object(record.routes) || record.routes.mode !== 'stock-compositor')
       )
         throw Error('original-removal-required');
-      await compositorStock();
-      process.stdout.write(JSON.stringify({ routes: record.routes }));
+      process.stdout.write(
+        JSON.stringify({ routes: await compositorStock(capture) })
+      );
     } else {
       var lock = Number(process.argv[5]);
       if (!Number.isInteger(lock) || lock < 3)
