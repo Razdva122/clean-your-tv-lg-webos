@@ -77,11 +77,15 @@ async def main(host, list_only):
         if p.get("hidden"):
             continue
         name = "".join(ch if ch.isalnum() or ch in "._-" else "_" for ch in p["id"]) + ".png"
-        artwork[name], _ = icons.icon_data(p)
+        icon, _ = icons.icon_data(p)
+        icon_path = ""
+        if p["id"] != "com.webos.app.livetv" or icon != icons.fallback:
+            artwork[name] = icon
+            icon_path = "icons/" + name
         apps.append({
             "id": p["id"],
             "title": p["title"],
-            "icon": "icons/" + name,
+            "icon": icon_path,
             "iconColor": p.get("iconColor") or p.get("bgColor") or "",
         })
     if not apps:

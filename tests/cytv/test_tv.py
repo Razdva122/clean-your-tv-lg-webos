@@ -509,10 +509,10 @@ class LegacySyncTunerTests(unittest.TestCase):
             script = (Path(directory) / 'apps.js').read_text()
             data = json.loads(script.split('window.TV_APPS = ', 1)[1].rstrip(';\n'))
             self.assertEqual([(a['id'], a['title'], a['icon']) for a in data['apps']],
-                             [('com.webos.app.livetv', 'TV', 'icons/com.webos.app.livetv.png'),
+                             [('com.webos.app.livetv', 'TV', ''),
                               ('org.example.video', 'Video', 'icons/org.example.video.png')])
-            for app in data['apps']:
-                self.assertEqual((Path(directory) / app['icon']).read_bytes(), b'fallback')
+            self.assertEqual((Path(directory) / 'icons/org.example.video.png').read_bytes(), b'fallback')
+            self.assertFalse((Path(directory) / 'icons/com.webos.app.livetv.png').exists())
 
 
 class SourceInventorySyncTests(unittest.TestCase):
@@ -741,7 +741,8 @@ class SourceInventorySyncTests(unittest.TestCase):
         old = self.files(self.root)
         baseline = {'listLaunchPoints': {'payload': {'launchPoints': []}},
                     'getExternalInputList': {'payload': {'devices': []}},
-                    'listApps': {'payload': {'apps': [{'id': 'com.webos.app.livetv', 'title': 'TV'}]}}}
+                    'listApps': {'payload': {'apps': [{'id': 'com.webos.app.livetv', 'title': 'TV',
+                                                     'icon': 'http://192.0.2.20/tv.png'}]}}}
 
         class Socket:
             async def send(self, raw):
@@ -766,9 +767,12 @@ class SourceInventorySyncTests(unittest.TestCase):
                     self.assertEqual(self.files(self.root), old)
 
         replies = baseline
-        with patch('lgtv.session', new=AsyncMock(return_value=Socket())), redirect_stdout(io.StringIO()):
+        tuner_icon = b'\x89PNG\r\n\x1a\noriginal'
+        with (patch('lgtv.session', new=AsyncMock(return_value=Socket())),
+              patch('cytv.tv.fetch_icon', return_value=tuner_icon),
+              redirect_stdout(io.StringIO())):
             asyncio.run(self.sync('192.0.2.20', False))
-        self.assertEqual(set(self.files(self.launcher / 'icons')), {'com.webos.app.livetv.png'})
+        self.assertEqual(self.files(self.launcher / 'icons'), {'com.webos.app.livetv.png': tuner_icon})
 
 
 class NativeIconQualityTests(unittest.TestCase):

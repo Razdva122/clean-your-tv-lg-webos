@@ -895,7 +895,7 @@
       button.dataset.appId = app.id;
       var icon = document.createElement('img');
       icon.className = 'ctv-icon';
-      icon.src = app.input ? inputIcon(app.input) : app.icon || '';
+      icon.src = app.input ? inputIcon(app.input) : appIcon(app) || '';
       icon.alt = '';
       icon.onerror = function () {
         icon.style.visibility = 'hidden';
@@ -1312,7 +1312,9 @@
       card.classList.add('missing-icon');
       card.setAttribute('data-initial', app.title.charAt(0));
     };
-    image.src = app.input ? inputIcon(app.input) : app.icon || 'missing-icon';
+    image.src = app.input
+      ? inputIcon(app.input)
+      : appIcon(app) || 'missing-icon';
     card.appendChild(image);
     element.appendChild(card);
     var label = document.createElement('div');
@@ -1638,15 +1640,16 @@
           };
           getElement('homeSurface').appendChild(channelArtwork);
         }
-        if (tiles[index].app.icon) {
+        var artwork = appIcon(tiles[index].app);
+        if (artwork) {
           channelArtwork.style.visibility =
             channelArtwork.complete &&
             channelArtwork.naturalWidth > 0 &&
-            channelArtwork.getAttribute('src') === tiles[index].app.icon
+            channelArtwork.getAttribute('src') === artwork
               ? 'visible'
               : 'hidden';
-          if (channelArtwork.getAttribute('src') !== tiles[index].app.icon)
-            channelArtwork.src = tiles[index].app.icon;
+          if (channelArtwork.getAttribute('src') !== artwork)
+            channelArtwork.src = artwork;
         } else {
           channelArtwork.style.visibility = 'hidden';
           channelArtwork.removeAttribute('src');
@@ -1855,6 +1858,17 @@
       }
     });
     return nearest;
+  }
+  function appIcon(app) {
+    if (
+      !window.ROOT_VERSION &&
+      app.id === 'com.webos.app.livetv' &&
+      (!app.icon ||
+        app.icon === window.CYTVBrandIconFallback ||
+        app.icon === window.CYTVPackagedIconFallback)
+    )
+      return inputIcon({ kind: 'tv' });
+    return app.icon;
   }
   function inputIcon(input) {
     return (
