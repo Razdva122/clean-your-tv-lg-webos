@@ -13,7 +13,7 @@
 | Home FHD/HD | 1.21.0 | 1.22.0 |
 | Home Helper | 0.10.0 | 0.11.0 |
 | Root edition | 0.24.2 | 0.25.0 |
-| Both edition Updaters | 0.6.7 | 0.6.7 |
+| Both edition Updaters | 0.6.7 | 0.6.8 |
 | Android installer / versionCode | 0.23.2 / 55 | 0.23.3 / 56 |
 | No-root screensaver popup | 0.0.6 | 0.0.7 |
 

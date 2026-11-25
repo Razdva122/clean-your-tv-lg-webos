@@ -147,7 +147,7 @@ For contributors: [build and technical references](docs/development/README.md),
 | Home | 1.22.0 |
 | Home Helper | 0.11.0 |
 | Root edition | 0.25.0 |
-| Both edition Updaters | 0.6.7 |
+| Both edition Updaters | 0.6.8 |
 | Android installer / versionCode | 0.23.3 / 56 |
 <!-- /release:components -->
 
