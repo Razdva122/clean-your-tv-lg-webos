@@ -49,6 +49,11 @@ def context(error,uri,reason,reply=None):
         and reason=='negative-reply' and isinstance(reply,dict) and reply.get('returnValue') is False
         and type(reply.get('errorCode')) is int and reply['errorCode']==-1
         and reply.get('errorText')=='Service does not exist: com.webos.service.systemprofile.')
+    error.system_setting_not_found = (
+        uri.removeprefix('luna://') == 'com.webos.settingsservice/getSystemSettings'
+        and reason == 'negative-reply' and isinstance(reply, dict)
+        and reply.get('returnValue') is False and reply.get('errorCode') is None
+        and reply.get('errorText') == 'There is no matched result from DB')
     error.stopped_launcher=None
     if (uri=='luna://com.webos.applicationManager/closeByAppId' and reason=='negative-reply'
             and isinstance(reply,dict) and reply.get('returnValue') is False

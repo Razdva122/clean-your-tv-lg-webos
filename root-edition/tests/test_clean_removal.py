@@ -1809,6 +1809,7 @@ def luna(uri, payload):
         self.assertTrue((root/'state/ssap.json').exists())
 
     def test_retry_no_root_removal_when_sam_home_is_unset(self):
+        from updater.luna import context
         driver, identifier, root, updater, _, calls, present = self.fixture()
         for path in (root, updater):
             shutil.rmtree(path)
@@ -1823,6 +1824,10 @@ def luna(uri, payload):
         observed = {'home': 'third.party.home', 'idle': stock, 'settings': {}}
         def reply(method, data):
             if method.endswith('/getSystemSettings'):
+                if observed['settings'] is None:
+                    response = {'returnValue': False, 'category': 'general', 'method': 'getSystemSettings',
+                                'errorText': 'There is no matched result from DB'}
+                    raise context(RuntimeError('Bus operation rejected'), method, 'negative-reply', response)
                 return {'returnValue': True, 'settings': {'defaultApps': observed['settings']}}
             if method.endswith('/getProfiles'):
                 return {'returnValue': True, 'profiles': {
@@ -1847,6 +1852,7 @@ def luna(uri, payload):
             self.assertFalse(any(call.startswith('remove-') for call in calls))
             present.remove('com.cleanyourtv.root.preview')
 
+            observed['settings'] = None
             resumed = driver.clean_remove(identifier, failed['removal'], failed['lease'])
             if resumed['stage'] == 'restart-required':
                 device.current_boot = '22222222-2222-2222-2222-222222222222'
@@ -1855,6 +1861,32 @@ def luna(uri, payload):
         self.assertEqual(resumed['removal'], failed['removal'])
         self.assertEqual(calls.count('remove-com.gathin.tvhome'), 1)
         self.assertFalse(present)
+
+    def test_both_home_settings_interfaces_absent_use_read_only_compositor_proof(self):
+        from clean_removal import routes
+        from updater.luna import context
+        driver, *_ = self.fixture()
+        device = driver.device
+        record = {'routes': None}
+        proof = {'mode': 'stock-compositor', 'settings_absent': True}
+        settings = 'com.webos.settingsservice/getSystemSettings'
+        profiles = 'com.webos.service.systemprofile/getProfiles'
+        missing_settings = context(RuntimeError(), settings, 'negative-reply',
+            {'returnValue': False, 'errorText': 'There is no matched result from DB'})
+        missing_profiles = context(RuntimeError(), profiles, 'negative-reply',
+            {'returnValue': False, 'errorCode': -1,
+             'errorText': 'Service does not exist: com.webos.service.systemprofile.'})
+        with patch.object(device, 'routing_untouched', return_value=False), \
+                patch.object(device, 'stock_profiles_eligible', return_value=True), \
+                patch.object(device, 'compositor_stock_eligible', return_value=False), \
+                patch.object(device, 'compositor_stock', return_value=proof) as compositor:
+            with patch.object(device, 'rpc', side_effect=[missing_settings, TimeoutError()]):
+                with self.assertRaises(TimeoutError):
+                    routes(device, record)
+            compositor.assert_not_called()
+            with patch.object(device, 'rpc', side_effect=[missing_settings, missing_profiles]):
+                self.assertEqual(routes(device, record), proof)
+            compositor.assert_called_once_with(record, capture_missing_settings=True)
 
     def profileless_fixture(self, reply=None, home='com.webos.app.home'):
         from updater.luna import context
