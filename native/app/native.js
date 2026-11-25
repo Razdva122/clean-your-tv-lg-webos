@@ -163,11 +163,11 @@ var restarts = [],
   cleaning = false,
   waitingForInput = false,
   stopRequested = false,
-  irHomeTimer = null;
+  irHomeTimer = null,
+  irHomeGuard = null;
 // The standard IR remote is observed, not grabbed, so webOS also opens its own Home
-// on IR Home. Launching custom Home after this delay lands it above LG Home.
-// ponytail: fixed delay from #207, not measured per model; replace it with a
-// foreground signal if webOS ever reports its Home bar.
+// on IR Home. Use its foreground signal when available, with a delayed fallback
+// and bounded recovery when LG's queued launch takes foreground back (#687).
 var IR_HOME_DELAY = 700;
 var homeCloseState = 'idle',
   homeCloseWaiters = [],
@@ -321,9 +321,10 @@ function launchHome(reason, done) {
               if (homeCloseState === 'closed') homeCloseState = 'idle';
               invalidatePresentation(!terminalUI);
             }
-            if (done) done(ok);
+            if (done) done(ok, known);
           },
-          params
+          params,
+          reason === 'home' ? 15000 : 3000
         );
       }
       if (reason !== 'startup' || !automatic) {
@@ -563,7 +564,7 @@ log({
   automatic: automatic,
   diagnosticsSchema: 1
 });
-function launch(id, done, params) {
+function launch(id, done, params, timeout) {
   var request = ++launchSequence;
   diagnostic('launch-request', { launchSequence: request, id: id });
   var settled = false;
@@ -574,7 +575,7 @@ function launch(id, done, params) {
     log({ event: 'launch-timeout', id: id });
     diagnostic('launch-timeout', { launchSequence: request, id: id });
     if (done) done(false, false);
-  }, 3000);
+  }, timeout || 3000);
   service.call(
     'luna://com.webos.applicationManager/launch',
     params ? { id: id, params: params } : { id: id },
@@ -947,6 +948,7 @@ function handleHomeRequest(channel, request, respond) {
     ) {
       var dismissed = presentation.dismiss(request.generation);
       if (dismissed) {
+        cancelIrHome();
         cancelResume();
         screenPolicy.reset();
         suppressReturnUntil = monotonic() + 7000;
@@ -1360,6 +1362,7 @@ function start(recovering) {
       }
       if (line === 'IR_LOST') cancelIrHome();
       if (waitingForInput && line !== 'READY') continue;
+      if (line === 'BACK_DOWN') cancelIrHome();
       if (line === 'BACK_DOWN' && worker.heldBackOpensHome === null) {
         cancelResume();
         worker.heldBackOpensHome = homeControl.longBackHome();
@@ -1412,7 +1415,15 @@ function start(recovering) {
       }
       // Repeated IR Home presses restart the delay, so they open Home once.
       if (line === 'IRHOME') {
-        clearTimeout(irHomeTimer);
+        cancelIrHome();
+        cancelResume();
+        irHomeGuard = {
+          worker: worker,
+          until: monotonic() + 10000,
+          retries: 0,
+          lastLaunch: monotonic(),
+          homeSeen: false
+        };
         irHomeTimer = setTimeout(function () {
           irHomeTimer = null;
           if (child === worker && ready && !stopping) openHome(worker);
@@ -1425,6 +1436,7 @@ function start(recovering) {
 function cancelIrHome() {
   clearTimeout(irHomeTimer);
   irHomeTimer = null;
+  irHomeGuard = null;
 }
 function openHome(worker) {
   if (
@@ -1443,10 +1455,20 @@ function openHome(worker) {
     return;
   suppressReturnUntil = 0;
   if (homeControl.keepSource() && resumePendingUntil) cancelResume();
+  if (irHomeGuard) {
+    irHomeGuard.lastLaunch = monotonic();
+    irHomeGuard.homeSeen = false;
+  }
   launching = true;
-  launchHome('home', function (ok) {
+  launchHome('home', function (ok, known) {
     launching = false;
-    if (!ok && child === worker) worker.stdin.end();
+    if (!ok) {
+      log({ event: 'home-launch-failed' });
+      if ((known || homeCloseState === 'unknown') && child === worker) {
+        cancelIrHome();
+        worker.stdin.end();
+      }
+    }
   });
 }
 function launchAfterResume(foreground) {
@@ -1558,6 +1580,21 @@ var timer = setInterval(function () {
   if (diagnosticUntil && now >= diagnosticNext) {
     diagnostic('sample');
     diagnosticNext = now + 1000;
+  }
+  if (irHomeGuard && now >= irHomeGuard.until) cancelIrHome();
+  if (
+    irHomeGuard &&
+    irHomeGuard.retries < 2 &&
+    !irHomeTimer &&
+    !launching &&
+    lastForeground === 'com.webos.app.home' &&
+    lgHomeSince !== null &&
+    now - lgHomeSince >= 600 &&
+    now - irHomeGuard.lastLaunch >= (irHomeGuard.homeSeen ? 600 : 6000)
+  ) {
+    irHomeGuard.retries++;
+    log({ event: 'ir-home-retry', attempt: irHomeGuard.retries });
+    openHome(irHomeGuard.worker);
   }
   if (resumeGuardUntil && now >= resumeGuardUntil) cancelResume();
   if (
@@ -1759,13 +1796,30 @@ var screenWatch = require('./screen-watch')(
       id !== lastForeground
     )
       invalidatePresentation(false);
+    if (
+      irHomeGuard &&
+      id &&
+      id !== lastForeground &&
+      id !== 'com.gathin.tvhome' &&
+      id !== 'com.webos.app.home' &&
+      id !== 'com.webos.app.cpcover'
+    )
+      cancelIrHome();
     lastForeground = id;
     lastForegroundAt = monotonic();
+    if (irHomeGuard && id === 'com.gathin.tvhome') irHomeGuard.homeSeen = true;
+    if (irHomeTimer && id === 'com.webos.app.home' && !launching) {
+      clearTimeout(irHomeTimer);
+      irHomeTimer = null;
+      log({ event: 'ir-home-on-lg' });
+      openHome(irHomeGuard.worker);
+    }
     log({ event: 'foreground', id: id });
     diagnostic('foreground');
     var exited = screenPolicy.next(id, monotonic());
     if (
       exited &&
+      !irHomeGuard &&
       !(
         (resumeWaitingForActive || resumePendingUntil) &&
         homeControl.keepSource()
@@ -1796,6 +1850,7 @@ var screenWatch = require('./screen-watch')(
     lastForegroundAt = null;
     monitor = 'reset';
     monitorReason = null;
+    cancelIrHome();
     lgHomeSince = null;
     screenPolicy.reset();
     refreshWatchCatalog();
@@ -1828,8 +1883,10 @@ var screenWatch = require('./screen-watch')(
 
     var wasActive = screensaverPowerActive;
     screensaverPowerActive = p.state === 'Active';
-    if (!screensaverPowerActive) stopScreensaver();
-    else if (!wasActive && screensaverOwner)
+    if (!screensaverPowerActive) {
+      cancelIrHome();
+      stopScreensaver();
+    } else if (!wasActive && screensaverOwner)
       screensaverOwner.foreground(lastForeground);
     power.diagnostics.forEach(function (event) {
       log({ event: 'contract-event', contract: event });

@@ -907,3 +907,134 @@ test('foreground windows are timestamped and limited to the diagnostic session',
   restored.command('diagnostics-stop');
   assert.equal(restored.receiveWindows(), null);
 });
+
+function irPress(c) {
+  c.worker().stdout.emit('data', Buffer.from('IRHOME\n'));
+}
+test('IR Home starts immediately when LG Home arrives during the delay', () => {
+  const c = controller();
+  c.fg('com.example.video');
+  irPress(c);
+  c.advance(300);
+  c.fg(LG);
+  assert.equal(c.homeCalls().length, 2);
+  c.homeCalls()[1].reply();
+  c.fg(HOME);
+  c.advance(500);
+  assert.equal(c.homeCalls().length, 2, 'cancel the original delay');
+});
+test('IR Home recovers the reported late LG takeover with bounded retries', () => {
+  const c = controller();
+  c.fg('youtube.leanback.v4');
+  irPress(c);
+  c.advance(802);
+  c.advance(725);
+  c.homeCalls()[1].reply();
+  c.advance(1509);
+  c.fg(HOME);
+  c.advance(2118);
+  c.fg(LG);
+  c.advance(599);
+  assert.equal(c.homeCalls().length, 2);
+  c.advance(401);
+  assert.equal(c.homeCalls().length, 3);
+  c.homeCalls()[2].reply();
+  c.fg(HOME);
+  c.advance(400);
+  c.fg(LG);
+  c.advance(1000);
+  assert.equal(c.homeCalls().length, 4, 'at most two guard retries');
+  c.homeCalls()[3].reply();
+  c.advance(20000);
+  assert.equal(c.homeCalls().length, 4);
+});
+test('IR Home waits for a cold launch and accepts a delayed successful reply', () => {
+  const c = controller();
+  c.fg('youtube.leanback.v4');
+  irPress(c);
+  c.advance(700);
+  c.fg(LG);
+  c.advance(7000);
+  assert.equal(c.homeCalls().length, 2, 'no concurrent relaunch');
+  assert(!c.logs.some((x) => x.event === 'launch-timeout'));
+  c.homeCalls()[1].reply();
+  c.fg(HOME);
+  c.advance(20000);
+  assert.equal(c.homeCalls().length, 2);
+});
+test('manual Home timeout keeps the worker alive and allows a new press', () => {
+  const c = controller();
+  let ended = false;
+  c.worker().stdin.end = () => {
+    ended = true;
+  };
+  c.worker().stdout.emit('data', Buffer.from('HOME\n'));
+  c.advance(15100);
+  assert.equal(ended, false);
+  assert(c.logs.some((x) => x.event === 'home-launch-failed'));
+  c.homeCalls()[1].reply();
+  c.worker().stdout.emit('data', Buffer.from('HOME\n'));
+  assert.equal(c.homeCalls().length, 3);
+});
+test('IR guard cancels on user navigation, lifecycle changes and explicit stock Home', () => {
+  for (const action of [
+    (c) => c.fg('com.example.other'),
+    (c) => c.worker().stdout.emit('data', Buffer.from('BACK_DOWN\n')),
+    (c) => c.worker().stdout.emit('data', Buffer.from('BACK_DOWN\nLGHOME\n')),
+    (c) => c.rpc('openLGHome'),
+    (c) => {
+      c.rpc('setHomeControl', false);
+      c.rpc('setHomeControl', true);
+    },
+    (c) => c.power({ state: 'Suspend' }),
+    (c) => c.reset(),
+    (c) => c.worker().stdout.emit('data', Buffer.from('IR_LOST\n'))
+  ]) {
+    const c = controller();
+    c.fg('youtube.leanback.v4');
+    irPress(c);
+    c.advance(700);
+    c.homeCalls()[1].reply();
+    c.fg(HOME);
+    action(c);
+    c.fg(LG);
+    c.advance(12000);
+    assert.equal(c.homeCalls().length, 2, action.toString());
+  }
+});
+test('Magic Home does not arm the IR recovery guard', () => {
+  const c = controller();
+  c.fg('youtube.leanback.v4');
+  c.worker().stdout.emit('data', Buffer.from('HOME\n'));
+  c.homeCalls()[1].reply();
+  c.fg(HOME);
+  c.fg(LG);
+  c.advance(12000);
+  assert.equal(c.homeCalls().length, 2);
+});
+test('IR cold-load retry waits six seconds after request and expires at ten seconds', () => {
+  const c = controller();
+  c.fg('youtube.leanback.v4');
+  irPress(c);
+  c.advance(700);
+  c.homeCalls()[1].reply();
+  c.fg(LG);
+  c.advance(5900);
+  assert.equal(c.homeCalls().length, 2);
+  c.advance(500);
+  assert.equal(c.homeCalls().length, 3);
+  c.homeCalls()[2].reply();
+  c.advance(15000);
+  assert.equal(c.homeCalls().length, 3, 'expiry prevents another cold retry');
+});
+test('IR recovery cancels when an in-flight request outlives emergency release', () => {
+  const c = controller();
+  c.fg('youtube.leanback.v4');
+  irPress(c);
+  c.advance(700);
+  c.worker().stdout.emit('data', Buffer.from('EXIT 27\n'));
+  c.homeCalls()[1].reply();
+  c.fg(LG);
+  c.advance(12000);
+  assert.equal(c.homeCalls().length, 2);
+});
