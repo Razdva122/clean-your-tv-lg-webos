@@ -1,7 +1,58 @@
 {
   "schema": 1,
   "version": null,
-  "changes": [],
+  "changes": [
+    {
+      "pr": 820,
+      "issues": [
+        687,
+        818
+      ],
+      "summary": "Recover late LG Home takeover after an IR Home press"
+    },
+    {
+      "pr": 822,
+      "issues": [
+        818
+      ],
+      "summary": "Keep No-root Home resident in the background"
+    },
+    {
+      "pr": 826,
+      "issues": [
+        741
+      ],
+      "summary": "Keep C1 Home control active after a return hint timeout"
+    },
+    {
+      "pr": 831,
+      "issues": [
+        830
+      ],
+      "summary": "Verify stock Home during No-root removal without defaultApps (#830)"
+    },
+    {
+      "pr": 832,
+      "issues": [
+        410
+      ],
+      "summary": "Fix embedded QML packaging and pre-submission recovery"
+    },
+    {
+      "pr": 834,
+      "issues": [
+        825
+      ],
+      "summary": "Resume No-root staging after an interrupted SSH upload"
+    },
+    {
+      "pr": 835,
+      "issues": [
+        829
+      ],
+      "summary": "Use a tuner icon for unavailable Live TV artwork"
+    }
+  ],
   "excluded": [],
   "acceptance": ""
 }
