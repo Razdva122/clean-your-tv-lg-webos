@@ -6,7 +6,8 @@ function run(baseline, scenario) {
   let now = 1000,
     interval,
     watch,
-    worker;
+    worker,
+    foreground = 'com.webos.app.home';
   const calls = [],
     logs = [],
     timeouts = [];
@@ -57,11 +58,18 @@ function run(baseline, scenario) {
       if (name === '/usr/lib/node_modules/webos-service') return Service;
       if (name === './screen-watch')
         return (d, l, fg, reset, power) => {
-          watch = { fg, reset, power };
+          watch = {
+            fg(id) {
+              foreground = id;
+              fg(id);
+            },
+            reset,
+            power
+          };
           return {
             close() {},
             foreground(done) {
-              done('com.webos.app.home');
+              done(foreground);
             }
           };
         };
