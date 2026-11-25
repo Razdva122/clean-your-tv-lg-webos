@@ -91,7 +91,6 @@ HomeI18n.add({
     'Not yet': 'Not yet',
     'Offline': 'Offline',
     'Open LG Home': 'Open LG Home',
-    'Open LG Home when holding Back': 'Open LG Home when holding Back',
     'This button opens LG Home once. Your Home screen choice and settings stay saved.':
       'This button opens LG Home once. Your Home screen choice and settings stay saved.',
     'Recovery': 'Recovery',
@@ -315,8 +314,6 @@ HomeI18n.add({
     'Not yet': 'Noch nicht',
     'Offline': 'Offline',
     'Open LG Home': 'LG Home öffnen',
-    'Open LG Home when holding Back':
-      'LG Home durch Gedrückthalten der Zurück-Taste öffnen',
     'This button opens LG Home once. Your Home screen choice and settings stay saved.':
       'Diese Taste öffnet LG Home einmalig. Die Auswahl Ihres Startbildschirms und Ihre Einstellungen bleiben gespeichert.',
     'Recovery': 'Wiederherstellung',
@@ -544,7 +541,6 @@ HomeI18n.add({
     'Not yet': 'Todavía no',
     'Offline': 'Sin conexión',
     'Open LG Home': 'Abrir LG Home',
-    'Open LG Home when holding Back': 'Abrir LG Home al mantener pulsado Atrás',
     'This button opens LG Home once. Your Home screen choice and settings stay saved.':
       'Este botón abre LG Home una vez. La elección de pantalla de inicio y los ajustes se conservan.',
     'Recovery': 'Recuperación',
@@ -771,8 +767,6 @@ HomeI18n.add({
     'Not yet': 'Ainda não',
     'Offline': 'Sem conexão',
     'Open LG Home': 'Abrir LG Home',
-    'Open LG Home when holding Back':
-      'Abrir o LG Home ao manter o botão Voltar pressionado',
     'This button opens LG Home once. Your Home screen choice and settings stay saved.':
       'Este botão abre o LG Home uma vez. A escolha da tela inicial e as configurações são mantidas.',
     'Recovery': 'Recuperação',
@@ -1001,8 +995,6 @@ HomeI18n.add({
     'Not yet': 'Pas encore',
     'Offline': 'Hors ligne',
     'Open LG Home': 'Ouvrir LG Home',
-    'Open LG Home when holding Back':
-      'Ouvrir LG Home par un appui long sur Retour',
     'This button opens LG Home once. Your Home screen choice and settings stay saved.':
       'Ce bouton ouvre LG Home une seule fois. Le choix de votre écran d’accueil et vos paramètres sont conservés.',
     'Recovery': 'Récupération',
@@ -1229,7 +1221,6 @@ HomeI18n.add({
     'Not yet': 'Non ancora',
     'Offline': 'Non in linea',
     'Open LG Home': 'Apri LG Home',
-    'Open LG Home when holding Back': 'Apri LG Home tenendo premuto Indietro',
     'This button opens LG Home once. Your Home screen choice and settings stay saved.':
       'Questo pulsante apre LG Home una volta. La scelta della schermata iniziale e le impostazioni restano salvate.',
     'Recovery': 'Ripristino',
@@ -1454,7 +1445,6 @@ HomeI18n.add({
     'Not yet': '아직 없음',
     'Offline': '오프라인',
     'Open LG Home': 'LG Home 열기',
-    'Open LG Home when holding Back': '뒤로 버튼을 길게 눌러 LG Home 열기',
     'This button opens LG Home once. Your Home screen choice and settings stay saved.':
       '이 버튼은 LG Home을 한 번 엽니다. 선택한 홈 화면과 설정은 유지됩니다.',
     'Recovery': '복구',
@@ -1676,7 +1666,6 @@ HomeI18n.add({
     'Not yet': 'अभी नहीं',
     'Offline': 'ऑफ़लाइन',
     'Open LG Home': 'LG Home खोलें',
-    'Open LG Home when holding Back': 'वापस बटन दबाए रखने पर LG Home खोलें',
     'This button opens LG Home once. Your Home screen choice and settings stay saved.':
       'यह बटन LG Home को एक बार खोलता है। आपकी होम स्क्रीन की पसंद और सेटिंग्स सुरक्षित रहती हैं।',
     'Recovery': 'पुनर्प्राप्ति',
@@ -1901,8 +1890,6 @@ HomeI18n.add({
     'Not yet': 'Jeszcze nie',
     'Offline': 'Bez połączenia',
     'Open LG Home': 'Otwórz LG Home',
-    'Open LG Home when holding Back':
-      'Otwieraj LG Home po przytrzymaniu przycisku Wstecz',
     'This button opens LG Home once. Your Home screen choice and settings stay saved.':
       'Ten przycisk otwiera LG Home jednorazowo. Wybór ekranu głównego i ustawienia zostają zachowane.',
     'Recovery': 'Odzyskiwanie',
@@ -2130,8 +2117,6 @@ HomeI18n.add({
     'Not yet': 'Пока нет',
     'Offline': 'Нет подключения',
     'Open LG Home': 'Открыть LG Home',
-    'Open LG Home when holding Back':
-      'Открывать LG Home при удержании кнопки «Назад»',
     'This button opens LG Home once. Your Home screen choice and settings stay saved.':
       'Кнопка открывает LG Home один раз. Выбор главного экрана и настройки сохраняются.',
     'Recovery': 'Восстановление',
@@ -3027,7 +3012,6 @@ HomeI18n.add({
     'Not yet': '暂不',
     'Offline': '离线',
     'Open LG Home': '打开 LG Home',
-    'Open LG Home when holding Back': '长按返回键打开 LG Home',
     'This button opens LG Home once. Your Home screen choice and settings stay saved.':
       '此按钮仅打开 LG Home 一次。您选择的 Home 主屏幕和设置将保留。',
     'Recovery': '恢复',
@@ -3299,7 +3283,6 @@ HomeI18n.add({
     'Not yet': '暫時不要',
     'Offline': '離線',
     'Open LG Home': '開啟 LG Home',
-    'Open LG Home when holding Back': '長按返回鍵開啟 LG Home',
     'This button opens LG Home once. Your Home screen choice and settings stay saved.':
       '此按鈕僅開啟 LG Home 一次。您選擇的 Home 主畫面和設定將保留。',
     'Recovery': '還原',
@@ -3886,7 +3869,6 @@ HomeI18n.add({
     'Not yet': 'Zatím ne',
     'Offline': 'Offline',
     'Open LG Home': 'Otevřít LG Home',
-    'Open LG Home when holding Back': 'Otevřít LG Home podržením tlačítka Zpět',
     'This button opens LG Home once. Your Home screen choice and settings stay saved.':
       'Toto tlačítko jednorázově otevře LG Home. Vaše volba obrazovky Home a nastavení zůstanou uložené.',
     'Recovery': 'Obnovení',
@@ -4546,8 +4528,6 @@ HomeI18n.add({
     'Not yet': 'Încă nu',
     'Offline': 'Offline',
     'Open LG Home': 'Deschide LG Home',
-    'Open LG Home when holding Back':
-      'Deschide LG Home la apăsarea lungă a butonului Înapoi',
     'This button opens LG Home once. Your Home screen choice and settings stay saved.':
       'Acest buton deschide LG Home o singură dată. Alegerea ecranului Home și setările tale rămân salvate.',
     'Recovery': 'Recuperare',

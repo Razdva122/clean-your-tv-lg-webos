@@ -69,7 +69,6 @@ function request(method, sender, appId = '') {
     'homeStatus',
     'setHomeControl',
     'setKeepSource',
-    'setLongBackHome',
     'openLGHome'
   ])
     assert.equal(

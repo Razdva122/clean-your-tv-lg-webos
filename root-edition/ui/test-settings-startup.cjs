@@ -11,9 +11,6 @@ let phase = 'active',
   delay = false,
   fail = false,
   active = true,
-  supportsLongBack = false,
-  longBack = true,
-  rejectLongBack = false,
   statusOverride = null;
 class Element {
   constructor(tag) {
@@ -65,19 +62,7 @@ const context = {
             result: { returnValue: true, result }
           })
         );
-      if (payload.longBack) {
-        if (!supportsLongBack || (rejectLongBack && uri.endsWith('/enable')))
-          return this.onservicecallback(JSON.stringify({ returnValue: false }));
-        if (uri.endsWith('/enable')) {
-          assert.equal(payload.longBack, 'configure');
-          assert.equal(typeof payload.enabled, 'boolean');
-          longBack = payload.enabled;
-        } else {
-          assert(uri.endsWith('/status'));
-          assert.equal(payload.longBack, 'status');
-        }
-        reply({ longBackOpensHome: longBack });
-      } else if (payload.startup === 'status') {
+      if (payload.startup === 'status') {
         const snapshot = statusOverride || {
           sources: { ...sources },
           active: active && phase === 'active'
@@ -116,12 +101,6 @@ const key = (keyCode) =>
 (async () => {
   panel.open();
   await tick();
-  const backSwitch = byText('Open LG Home when holding Back');
-  assert(backSwitch, 'Home settings expose the long Back shortcut');
-  assert(
-    backSwitch.hidden && backSwitch.disabled,
-    'old runtime cannot change the shortcut'
-  );
   const tv = byText('LG Channels / Live TV'),
     youtube = byText('YouTube'),
     home = byText('Change Home'),
@@ -263,57 +242,6 @@ const key = (keyCode) =>
   listeners.webOSRelaunch();
   await tick();
   assert(!tv.disabled && !youtube.disabled);
-  supportsLongBack = true;
-  phase = 'disabled';
-  listeners.webOSRelaunch();
-  await tick();
-  assert.equal(backSwitch.attrs.role, 'switch');
-  assert.equal(backSwitch.attrs['aria-checked'], 'true');
-  assert(!backSwitch.hidden && !backSwitch.disabled);
-  visit.focus();
-  key(39);
-  assert.equal(
-    document.activeElement,
-    backSwitch,
-    'shortcut follows Open LG Home'
-  );
-  const configWrites = () =>
-    calls.filter((c) => c.payload.longBack === 'configure');
-  backSwitch.onclick();
-  backSwitch.onclick();
-  await tick();
-  assert.equal(configWrites().length, 1, 'duplicate click is ignored');
-  assert.deepEqual(configWrites()[0].payload, {
-    longBack: 'configure',
-    enabled: false
-  });
-  assert.equal(backSwitch.attrs['aria-checked'], 'false');
-  assert.equal(
-    phase,
-    'disabled',
-    'configuring a shortcut does not change Home routing'
-  );
-  key(461);
-  panel.open();
-  await tick();
-  assert.equal(
-    backSwitch.attrs['aria-checked'],
-    'false',
-    'reopened settings read the saved choice'
-  );
-  rejectLongBack = true;
-  backSwitch.onclick();
-  await tick();
-  assert.equal(
-    backSwitch.attrs['aria-checked'],
-    'false',
-    'rejected writes retain saved state'
-  );
-  assert(!backSwitch.disabled);
-  rejectLongBack = false;
-  backSwitch.onclick();
-  await tick();
-  assert.equal(backSwitch.attrs['aria-checked'], 'true');
   console.log(
     'PASS startup source defaults, exact payload, readback, disabled controls, focus, stale status and failure isolation'
   );

@@ -52,13 +52,6 @@ function call(
     (await call('status', { presentation: 'context' })).result.content,
     null
   );
-  const renewal = 'com.gathin.tvhome.renewal';
-  assert.equal((await call('homeStatus', {}, renewal)).longBackHome, true);
-  assert.equal(
-    (await call('setLongBackHome', { enabled: false }, renewal)).longBackHome,
-    false
-  );
-  assert.equal((await call('homeStatus', {}, renewal)).longBackHome, false);
   const supervisor = 'com.cleanyourtv.system.updater.service';
   assert.equal(
     (await call('restoreProfile', { edition: 'root' }, supervisor)).result,

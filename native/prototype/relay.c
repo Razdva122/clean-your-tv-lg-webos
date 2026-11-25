@@ -216,7 +216,7 @@ static int forward_input(int in,int out,int ir){
  struct filter f={0},irf={0};uint64_t last=ms(),irDown=0,irRetry=ir<0?last+1000:0;int reason=0,device_removed=0,irSyncLost=0;struct pollfd p[4]={{in,POLLIN,0},{0,POLLIN,0},{ir,POLLIN,0},{out,0,0}};
  f.disabled=irf.disabled=home_disabled;
  if(!generation_current()){reason=29;generation_cancelled=1;}else report("READY\n");
- while(!generation_cancelled&&!stop&&!output_failed){if(!generation_current()){reason=29;generation_cancelled=1;break;}uint64_t now=ms();if(now-last>2000){reason=20;break;}if(filter_timeout(&f,now)==OPEN_LG&&report("LGHOME\n")<0)break;
+ while(!generation_cancelled&&!stop&&!output_failed){if(!generation_current()){reason=29;generation_cancelled=1;break;}uint64_t now=ms();if(now-last>2000){reason=20;break;}
  if(irRetry&&now>=irRetry){
   int index;
   p[2].fd=find_device("LGE RCU",O_RDONLY,&index);

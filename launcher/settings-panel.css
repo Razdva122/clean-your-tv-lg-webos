@@ -977,18 +977,11 @@
   display: none;
 }
 
-/* Keep Home and app settings visible in the HD reading area. */
+/* Keep the primary app actions visible alongside sorting on HD screens. */
 @media (max-height: 800px) {
-  #settings-pane-home > h3,
   #settings-pane-appearance > h3 {
     padding-bottom: 8px;
     margin-bottom: 8px;
-  }
-  #settings-pane-home .settings-status {
-    margin: 4px 0 6px;
-  }
-  #renewalPanel .settings-home .home-routing-actions > button {
-    margin-top: 6px;
   }
   #settings-pane-appearance .settings-subheading {
     margin: 4px 0 6px;

@@ -87,8 +87,6 @@ Para fijar una entrada HDMI, selecciónala en **+ / Añadir aplicación**. Pulsa
 
 Las flechas seleccionan y OK abre; mantén OK para reordenar. Una pulsación breve de Atrás conserva la navegación y confirmación de salida de cada aplicación. Home abre el lanzador mientras el control está activo.
 
-Por defecto, si mantienes pulsado Atrás unos 1,2 segundos, se abre LG Home. Desactiva **Ajustes → Tu pantalla Home → Abrir LG Home al mantener pulsado Atrás** para quitar este acceso directo de Clean Your TV. En algunos televisores, el propio firmware de LG puede seguir abriendo LG Home al mantener pulsado Atrás. El interruptor aparece si el control de Home instalado admite esta función.
-
 Para editar con pulsaciones breves, abre **Ajustes de Home → Apariencia → Editar mosaicos**. Pulsa OK para seleccionar un mosaico, muévelo con las flechas y pulsa OK para colocarlo. Atrás cancela el movimiento o sale de la edición.
 
 Si el mando se desconecta temporalmente, deja activado el control de Home. Se reanudará cuando el televisor vuelva a detectar el mando.

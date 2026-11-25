@@ -12,8 +12,8 @@ import struct
 import sys
 import time
 from pathlib import Path
-try: from .emergency_gesture import TripleHome, LongBack
-except ImportError: from emergency_gesture import TripleHome, LongBack
+try: from .emergency_gesture import TripleHome
+except ImportError: from emergency_gesture import TripleHome
 EVENT = struct.Struct('<IIHHi')
 NAME = b'LGE M-RCU - Builtin [0]'
 DISCONNECTED = (errno.ENODEV, errno.ENXIO, errno.ENOENT)
@@ -77,18 +77,6 @@ def recheck_acknowledged(stamp):
 
 def observe(fd, health, keys_released, *, report_device_gone=False, reconnect_on_disconnect=False,
             recover_input=False, wait_input=False, recover_profile_input=False, boot_wait=False):
-    from device_adapter import long_back_preference
-
-    def long_back_generation():
-        try:
-            enabled, generation = long_back_preference()
-            return generation if enabled else None
-        except (OSError, ValueError, RecursionError):
-            return None  # A damaged optional setting must not interrupt recovery input.
-
-    def gestures():
-        return TripleHome(), LongBack(long_back_generation)
-
     wait_at_start = recover_profile_input or boot_wait
     persistent = wait_input or wait_at_start
     recheck_input = persistent or recover_input
@@ -229,7 +217,7 @@ def observe(fd, health, keys_released, *, report_device_gone=False, reconnect_on
 
     def monitor(awaiting_recheck):
         nonlocal last_wait, validation_stamp
-        policy, back = gestures()
+        policy = TripleHome()
         last_heartbeat = time.monotonic() if recheck_input else None
         last_recovery_home = None
         offered_at = None
@@ -241,7 +229,7 @@ def observe(fd, health, keys_released, *, report_device_gone=False, reconnect_on
                 reconnect_deadline = time.monotonic() + 60
                 if not replace(reconnect_deadline):
                     return
-                policy, back = gestures()
+                policy = TripleHome()
                 awaiting_recheck = True
                 last_recovery_home = None
                 offered_at = None
@@ -281,7 +269,7 @@ def observe(fd, health, keys_released, *, report_device_gone=False, reconnect_on
                         return
                     # No gesture may span two kernel input-device instances. Process
                     # fresh events before publishing the first replacement heartbeat.
-                    policy, back = gestures()
+                    policy = TripleHome()
                     awaiting_recheck = recheck_input
                     last_recovery_home = None
                     offered_at = None
@@ -299,7 +287,6 @@ def observe(fd, health, keys_released, *, report_device_gone=False, reconnect_on
                     now = time.monotonic()
                     if awaiting_recheck and kind == 1 and code == 773:
                         last_recovery_home = now
-                    back.event(kind, code, value, now * 1000)
                     if fired: send(b'ESCAPE'); return
             else: lost('active', 'drain_limit'); return
             if reopened:
@@ -311,12 +298,11 @@ def observe(fd, health, keys_released, *, report_device_gone=False, reconnect_on
                 if not replace(None):
                     return
                 waiting()
-                policy, back = gestures()
+                policy = TripleHome()
                 awaiting_recheck = True
                 last_recovery_home = None
                 offered_at = None
                 continue
-            if back.tick(now * 1000): send(b'LGHOME')
             if recheck_input:
                 now = time.monotonic()
                 if awaiting_recheck:
@@ -343,7 +329,7 @@ def observe(fd, health, keys_released, *, report_device_gone=False, reconnect_on
                             if persistent: waiting()
                             if not replace(None if persistent else time.monotonic() + 60):
                                 return
-                            policy, back = gestures()
+                            policy = TripleHome()
                             last_recovery_home = None
                             offered_at = None
                             continue

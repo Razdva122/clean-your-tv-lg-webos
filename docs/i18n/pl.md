@@ -87,8 +87,6 @@ Aby przypiąć wejście HDMI, wybierz je w menu **+ / Dodaj aplikację**. Naciś
 
 Strzałki wybierają, OK otwiera; przytrzymaj OK, aby zmienić kolejność. Krótkie Wstecz zachowuje nawigację aplikacji i jej potwierdzenie wyjścia. Home otwiera ekran Clean Your TV, gdy sterowanie jest aktywne.
 
-Domyślnie przytrzymanie przycisku Wstecz przez około 1,2 sekundy otwiera LG Home. Aby wyłączyć ten skrót Clean Your TV, wyłącz opcję **Ustawienia → Twój ekran Home → Otwieraj LG Home po przytrzymaniu przycisku Wstecz**. Na niektórych telewizorach oprogramowanie LG może nadal otwierać LG Home po przytrzymaniu przycisku Wstecz. Przełącznik pojawia się, gdy zainstalowana wersja oprogramowania sterującego ekranem Home obsługuje tę funkcję.
-
 Aby edytować krótkimi naciśnięciami, otwórz **Ustawienia Home → Wygląd → Edytuj kafelki**. Naciśnij OK, aby chwycić kafelek, przesuń go strzałkami i naciśnij OK, aby go umieścić. Wstecz anuluje przesunięcie lub kończy edycję.
 
 Jeśli pilot chwilowo straci połączenie, pozostaw sterowanie Home włączone. Zostanie wznowione, gdy telewizor ponownie wykryje pilota.

@@ -168,27 +168,7 @@ assert.equal(
 );
 assert(!commands.includes('Q'), 'Home closure must not stop the relay');
 watch.fg('test.app');
-function remote(events) {
-  worker.stdout.emit('data', Buffer.from(events.join('\n') + '\n'));
-}
-assert.equal(rpc('homeStatus').longBackHome, true);
-remote(['BACK_DOWN']);
-assert.equal(rpc('setLongBackHome', { enabled: false }).longBackHome, false);
-const beforeDisabled = calls.length;
-remote(['LGHOME', 'BACK_UP', 'BACK_DOWN', 'LGHOME']);
-assert.equal(
-  calls.length,
-  beforeDisabled,
-  'disabled holds never launch LG Home'
-);
-assert.equal(rpc('setLongBackHome', { enabled: true }).longBackHome, true);
-remote(['BACK_DOWN', 'LGHOME', 'BACK_UP']);
-assert.equal(
-  calls.length,
-  beforeDisabled,
-  're-enabling during a hold requires a fresh press'
-);
-remote(['BACK_DOWN', 'LGHOME', 'BACK_UP']);
+rpc('openLGHome');
 assert.equal(calls.at(-1), 'com.webos.app.home');
 const count = calls.length;
 watch.fg('com.webos.app.home');

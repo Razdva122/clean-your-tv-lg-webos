@@ -2,14 +2,10 @@
 int filter_event(struct filter*f,const struct ev*e,uint64_t now){
  if(e->type==0&&e->code==3)return RELEASE;
  if(e->type!=1)return PASS;
- if(now<f->last){f->home=0;f->short_press=0;f->count=0;f->back=0;}
+ if(now<f->last){f->home=0;f->short_press=0;f->count=0;}
  f->last=now;
  /* Cursor-show notifications are not physical button presses. */
  if(e->code==1198)return PASS;
- if(e->code==412){
-  if(e->value==1&&!f->back){f->back=1;f->back_fired=0;f->back_since=now;}
-  if(e->value==0){f->back=0;f->back_fired=0;}
- }
  if(e->code==773&&f->disabled)return PASS;
  if(e->code!=773){if(e->value){f->short_press=0;f->count=0;}return PASS;}
  if(e->value==1){
@@ -29,9 +25,4 @@ int filter_event(struct filter*f,const struct ev*e,uint64_t now){
   if(kept==3){f->count=0;return RELEASE;}
  }
  return DROP;
-}
-/* A long Back opens stock Home once; it never releases the helper. */
-int filter_timeout(struct filter*f,uint64_t now){
- if(f->back&&!f->back_fired&&now>=f->back_since&&now-f->back_since>=1200){f->back_fired=1;return OPEN_LG;}
- return 0;
 }

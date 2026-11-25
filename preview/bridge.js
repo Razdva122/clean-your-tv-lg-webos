@@ -6,11 +6,9 @@
   // The browser preview stays open when explicit recovery simulates leaving Home.
   window.close = function () {};
   var homeEnabled = true,
-    keepSource = false,
-    longBackHome = true;
+    keepSource = false;
   var enabled = false,
-    rootPhase = 'disabled',
-    rootLongBack = true;
+    rootPhase = 'disabled';
   var firmwareBlocked = false,
     audioAutomatic = false,
     audioLast = null;
@@ -111,24 +109,18 @@
         result = { returnValue: true };
       } else if (
         uri.indexOf('luna://com.gathin.tvhome.renewal/') === 0 &&
-        [
-          'homeStatus',
-          'setHomeControl',
-          'setKeepSource',
-          'setLongBackHome',
-          'openLGHome'
-        ].indexOf(uri.split('/').pop()) >= 0
+        ['homeStatus', 'setHomeControl', 'setKeepSource', 'openLGHome'].indexOf(
+          uri.split('/').pop()
+        ) >= 0
       ) {
         var homeMethod = uri.split('/').pop();
         if (homeMethod === 'setHomeControl') homeEnabled = payload.enabled;
         if (homeMethod === 'setKeepSource') keepSource = payload.enabled;
-        if (homeMethod === 'setLongBackHome') longBackHome = payload.enabled;
         if (homeMethod === 'openLGHome') message('LG Home · settings kept');
         result = {
           returnValue: true,
           enabled: homeEnabled,
-          keepSource: keepSource,
-          longBackHome: longBackHome
+          keepSource: keepSource
         };
       } else if (
         uri === 'luna://com.local.nativehome.service/listApps' ||
@@ -193,25 +185,6 @@
         uri.indexOf('luna://com.cleanyourtv.root.preview.service/') === 0
       ) {
         var rootMethod = uri.split('/').pop();
-        if (
-          (rootMethod === 'status' && payload.longBack === 'status') ||
-          (rootMethod === 'enable' &&
-            payload.longBack === 'configure' &&
-            typeof payload.enabled === 'boolean')
-        ) {
-          if (rootMethod === 'enable') rootLongBack = payload.enabled;
-          if (bridge.onservicecallback)
-            bridge.onservicecallback(
-              JSON.stringify({
-                returnValue: true,
-                result: {
-                  returnValue: true,
-                  result: { longBackOpensHome: rootLongBack }
-                }
-              })
-            );
-          return;
-        }
         if (rootMethod === 'status' && payload.presentation === 'context') {
           result = {
             returnValue: true,

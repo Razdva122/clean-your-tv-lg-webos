@@ -70,12 +70,6 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8879';
             );
             return;
           }
-          if (payload.longBack) {
-            original.onservicecallback = (value) =>
-              this.onservicecallback(value);
-            original.call(uri, raw);
-            return;
-          }
           if (payload.startup) {
             const send = (result) =>
               this.onservicecallback(
@@ -306,28 +300,6 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8879';
       await page.evaluate(() => document.activeElement.textContent),
       'Open LG Home'
     );
-    const shortcut = page.getByRole('switch', {
-      name: 'Open LG Home when holding Back',
-      exact: true
-    });
-    await page.keyboard.press('ArrowDown');
-    assert(
-      await shortcut.evaluate((button) => document.activeElement === button)
-    );
-    assert.equal(await shortcut.getAttribute('aria-checked'), 'true');
-    await page.keyboard.press('Enter');
-    await page
-      .getByRole('switch', {
-        name: 'Open LG Home when holding Back',
-        checked: false
-      })
-      .waitFor();
-    await page
-      .getByRole('switch', {
-        name: 'Open Clean Your TV with the Home button',
-        checked: false
-      })
-      .waitFor();
     await toggle.click();
     await page.waitForFunction(
       () =>
@@ -388,7 +360,6 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8879';
           .querySelector('.home-routing-actions .home-routing-switch')
           .getAttribute('aria-checked') === 'true'
     );
-    assert.equal(await shortcut.getAttribute('aria-checked'), 'false');
     await page.evaluate(() => (settingsBackend.delayLG = true));
     await page
       .getByRole('button', { name: 'Open LG Home', exact: true })

@@ -220,46 +220,6 @@ assert.equal(
   'Change was not confirmed. Check the switch and try again.'
 );
 assert.equal(calls.filter((uri) => uri.endsWith('/setKeepSource')).length, 2);
-assert.equal(ids.homeLongBack.hidden, true, 'older Helpers omit the shortcut');
-ids.homeRoutingRetry.onclick();
-pending.homeStatus({ returnValue: true, enabled: true, longBackHome: true });
-assert.equal(ids.homeLongBack.hidden, false);
-assert.equal(ids.homeLongBack.attrs['aria-checked'], 'true');
-ids.homeLongBack.focus();
-ids.homeLongBack.onclick();
-pending.setLongBackHome({
-  returnValue: true,
-  enabled: true,
-  longBackHome: false
-});
-assert.equal(ids.homeLongBack.attrs['aria-checked'], 'false');
-assert.equal(document.activeElement, ids.homeLongBack);
-assert.equal(report().home.setLongBackHome.longBackHome, false);
-ids.homeLongBack.onclick();
-pending.setLongBackHome({ returnValue: true, enabled: true });
-pending.homeStatus({ returnValue: true, enabled: true, longBackHome: false });
-assert.equal(
-  ids.homeLongBack.attrs['aria-checked'],
-  'false',
-  'unconfirmed write reads back actual state'
-);
-assert.equal(
-  ids.homeRoutingStatus.textContent,
-  'Change was not confirmed. Check the switch and try again.'
-);
-ids.renewalClose.onclick();
-window.RenewalPanel.open();
-assert.equal(
-  ids.homeLongBack.hidden,
-  true,
-  'wait for this Helper to confirm support'
-);
-pending.homeStatus({ returnValue: true, enabled: true });
-assert.equal(
-  ids.homeLongBack.hidden,
-  true,
-  'a rollback to an older Helper hides the switch'
-);
 console.log(
   'PASS settings diagnostics: async Home results, safe fields, actual service version, unknown switch and no side effects'
 );

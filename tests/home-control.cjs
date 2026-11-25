@@ -68,9 +68,11 @@ try {
       bytes
     );
   }
-  // Stay on input at power-on shares the record, defaults off and is written
-  // only while on, so the original record shape and older readers are unchanged.
-  fs.writeFileSync(path.join(dir, 'home-control.json'), '{"enabled":true}');
+  // Accept RC2 records with the removed gesture setting and drop it on write.
+  fs.writeFileSync(
+    path.join(dir, 'home-control.json'),
+    '{"enabled":true,"longBackHome":false}'
+  );
   applied = [];
   c = create(
     fs,
@@ -78,6 +80,7 @@ try {
     (v) => applied.push(v),
     () => {}
   );
+  assert.equal(c.enabled(), true);
   assert.equal(c.keepSource(), false);
   assert.throws(() => c.setKeepSource('true'));
   assert.deepEqual(c.setKeepSource(true), { keepSource: true });
@@ -100,31 +103,7 @@ try {
     fs.readFileSync(path.join(dir, 'home-control.json'), 'utf8'),
     '{"enabled":false}'
   );
-  // The long Back shortcut defaults on for old records and persists independently.
-  assert.equal(c.longBackHome(), true);
-  assert.throws(() => c.setLongBackHome('false'));
-  c.setLongBackHome(false);
-  c.setKeepSource(true);
-  c.set(true);
-  c = create(
-    fs,
-    dir,
-    () => {},
-    () => {}
-  );
-  assert.equal(c.longBackHome(), false);
-  assert.equal(c.keepSource(), true);
-  assert.equal(c.enabled(), true);
-  c.setLongBackHome(true);
-  assert.equal(
-    fs.readFileSync(path.join(dir, 'home-control.json'), 'utf8'),
-    '{"enabled":true,"keepSource":true}'
-  );
-  for (const value of [
-    { keepSource: 'true' },
-    { keepSource: 1 },
-    { longBackHome: 'false' }
-  ]) {
+  for (const value of [{ keepSource: 'true' }, { keepSource: 1 }]) {
     fs.writeFileSync(
       path.join(dir, 'home-control.json'),
       JSON.stringify(value)
