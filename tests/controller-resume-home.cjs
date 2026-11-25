@@ -21,7 +21,8 @@ function controller({
     worker,
     watch,
     receiveWindows,
-    requestId = 0;
+    requestId = 0,
+    currentForeground;
   const timers = new Map(),
     files = new Map(),
     calls = [],
@@ -120,10 +121,24 @@ function controller({
       if (n === '/usr/lib/node_modules/webos-service') return Service;
       if (n === './screen-watch')
         return (d, l, fg, reset, power) => {
-          watch = { fg, reset, power, log: l };
+          watch = {
+            fg(id) {
+              currentForeground = id;
+              fg(id);
+            },
+            reset() {
+              currentForeground = null;
+              reset();
+            },
+            power,
+            log: l
+          };
           return {
             close: reset,
-            foreground: startupForeground,
+            foreground(done) {
+              if (currentForeground === undefined) startupForeground(done);
+              else done(currentForeground);
+            },
             setForegroundDiagnostics(callback) {
               receiveWindows = callback;
             }
@@ -164,6 +179,9 @@ function controller({
     watch.power({ state: 'Suspend' });
     watch.fg(COVER);
     watch.power({ state: 'Active' });
+    // The current foreground query sees the source as the cover clears.
+    // The subscription can still lag behind that query.
+    currentForeground = 'com.webos.app.hdmi1';
     advance(400);
   }
   function rpc(method, enabled) {
@@ -545,7 +563,8 @@ test('the original diagnostic session records standby wake and the next app', ()
   c.advance(12000);
   c.fg(COVER);
   c.power({ state: 'Active' });
-  c.advance(400);
+  c.fg(LG);
+  c.advance(1600);
   c.homeCalls().at(-1).reply();
   c.fg(HOME);
   c.fg('youtube.leanback.v4');

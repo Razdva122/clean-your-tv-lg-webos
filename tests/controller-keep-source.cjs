@@ -213,6 +213,57 @@ for (const id of ['com.webos.app.hdmi2', 'com.webos.app.livetv']) {
   a.ok(r.logs.some((l) => l.event === 'resume-preserved-source'));
 }
 
+// RC3 launched from the wake cover before webOS had assigned input focus.
+a.equal(
+  wake(undefined, 'com.webos.app.cpcover', (t) => {
+    t.advance(400);
+    t.tick();
+    t.watch.foreground(null);
+    t.advance(400);
+    t.tick();
+    t.watch.fg('com.gathin.tvhome');
+    t.advance(400);
+    t.tick();
+  }).extra,
+  0,
+  'let webOS restore the launcher without a premature launch'
+);
+
+// A fresh reply that finds CYTV invalidates stale LG Home dwell.
+wake(undefined, 'com.webos.app.home', (t) => {
+  const before = homeLaunches(t.calls);
+  t.watch.foreground('com.gathin.tvhome');
+  t.advance(400);
+  t.tick();
+  for (let i = 0; i < 15; i++) {
+    t.advance(400);
+    t.tick();
+  }
+  a.equal(homeLaunches(t.calls), before, 'do not retry based on stale LG Home');
+  t.watch.fg('com.webos.app.home');
+  t.advance(1600);
+  t.tick();
+  a.equal(
+    homeLaunches(t.calls),
+    before + 1,
+    'recover a later genuine takeover'
+  );
+});
+
+wake(undefined, 'com.webos.app.cpcover', (t) => {
+  const before = homeLaunches(t.calls);
+  t.advance(400);
+  t.tick();
+  a.equal(homeLaunches(t.calls), before, 'ignore the wake cover');
+  t.watch.fg('com.webos.app.home');
+  t.advance(1400);
+  t.tick();
+  a.equal(homeLaunches(t.calls), before, 'wait for stable LG Home');
+  t.advance(200);
+  t.tick();
+  a.equal(homeLaunches(t.calls), before + 1, 'route after stable LG Home');
+});
+
 // The app-exit redirect must also wait while firmware wakes from standby.
 run(on, 'com.gathin.tvhome', (t) => {
   t.watch.power({ state: 'Active' });
@@ -263,6 +314,22 @@ a.equal(
   );
 }
 
+// Seeing the restored input in the subscription first must not change the
+// decision made by the fresh read, including with the preference off.
+for (const saved of [undefined, on]) {
+  const r = wake(saved, 'com.webos.app.cpcover', (t) => {
+    let reply;
+    t.watch.nextForeground = (done) => {
+      reply = done;
+    };
+    t.advance(400);
+    t.tick();
+    t.watch.fg('com.webos.app.hdmi2');
+    reply('com.webos.app.cpcover');
+  });
+  a.equal(r.extra, saved ? 0 : 1);
+}
+
 // A reply after another standby transition must not trigger a wake launch.
 a.equal(
   wake(on, 'com.webos.app.cpcover', (t) => {
@@ -278,18 +345,34 @@ a.equal(
   0
 );
 
+// Stop can arrive after sampling starts, before the next controller tick.
+a.equal(
+  wake(undefined, 'com.webos.app.cpcover', (t) => {
+    let reply;
+    t.watch.nextForeground = (done) => {
+      reply = done;
+    };
+    t.advance(400);
+    t.tick();
+    t.files[state + '/control.json'] = '{"cmd":"stop"}';
+    reply('com.example.video');
+  }).extra,
+  0
+);
+
 // Without a confirmed screen, expire without launching over a possible input.
-for (const unknown of [null, 'com.webos.app.cpcover']) {
-  const r = wake(on, 'com.webos.app.home', (t) => {
-    t.watch.foreground(unknown);
-    for (let i = 0; i < 30; i++) {
-      t.advance(400);
-      t.tick();
-    }
-  });
-  a.equal(r.extra, 0);
-  a.ok(r.logs.some((l) => l.event === 'resume-foreground-unavailable'));
-}
+for (const saved of [undefined, on])
+  for (const unknown of [null, 'com.webos.app.cpcover']) {
+    const r = wake(saved, 'com.webos.app.home', (t) => {
+      t.watch.foreground(unknown);
+      for (let i = 0; i < 30; i++) {
+        t.advance(400);
+        t.tick();
+      }
+    });
+    a.equal(r.extra, 0);
+    a.ok(r.logs.some((l) => l.event === 'resume-foreground-unavailable'));
+  }
 
 // LG Home and ordinary apps still open Home on wake.
 for (const id of [

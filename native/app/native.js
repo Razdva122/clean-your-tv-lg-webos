@@ -1426,7 +1426,7 @@ function openHome(worker) {
   )
     return;
   suppressReturnUntil = 0;
-  if (homeControl.keepSource() && resumePendingUntil) cancelResume();
+  if (resumePendingUntil) cancelResume();
   if (irHomeGuard) {
     irHomeGuard.lastLaunch = monotonic();
     irHomeGuard.homeSeen = false;
@@ -1481,7 +1481,6 @@ function checkResumeForeground() {
       visitingLG ||
       !ready ||
       !homeControl.enabled() ||
-      !homeControl.keepSource() ||
       monotonic() >= resumePendingUntil
     )
       return;
@@ -1491,7 +1490,7 @@ function checkResumeForeground() {
       lgHomeSince = null;
       return;
     }
-    if (shouldResumeLaunch.source(id)) {
+    if (homeControl.keepSource() && shouldResumeLaunch.source(id)) {
       cancelResume();
       log({ event: 'resume-preserved-source', id: id });
       return;
@@ -1543,8 +1542,8 @@ var timer = setInterval(function () {
     !visitingLG &&
     homeControl.enabled()
   ) {
-    if (homeControl.keepSource()) checkResumeForeground();
-    else launchAfterResume(lastForeground);
+    // Active power can arrive before webOS restores the focused surface.
+    checkResumeForeground();
   }
   // A successful Luna reply only acknowledges the request. LG Home can win
   // later, including while a launch is in flight, so check the current level.
@@ -1571,7 +1570,7 @@ var timer = setInterval(function () {
   if (resumeGuardUntil && now >= resumeGuardUntil) cancelResume();
   if (
     resumeGuardUntil &&
-    (!resumePendingUntil || !homeControl.keepSource()) &&
+    !resumePendingUntil &&
     resumeRetries < 2 &&
     ready &&
     !launching &&
@@ -1758,7 +1757,10 @@ var screenWatch = require('./screen-watch')(
         id &&
         id !== 'com.webos.app.cpcover' &&
         id !== 'com.gathin.tvhome' &&
-        !(resumePendingUntil && homeControl.keepSource())
+        !(
+          resumePendingUntil &&
+          (homeControl.keepSource() || shouldResumeLaunch.source(id))
+        )
       )
         cancelResume();
     }
@@ -1792,10 +1794,8 @@ var screenWatch = require('./screen-watch')(
     if (
       exited &&
       !irHomeGuard &&
-      !(
-        (resumeWaitingForActive || resumePendingUntil) &&
-        homeControl.keepSource()
-      ) &&
+      !(resumeWaitingForActive && homeControl.keepSource()) &&
+      !resumePendingUntil &&
       homeControl.enabled() &&
       !visitingLG &&
       monotonic() > suppressReturnUntil &&
