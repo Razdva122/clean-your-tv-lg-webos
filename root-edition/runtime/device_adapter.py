@@ -92,6 +92,20 @@ def sync(path):
     finally: os.close(fd)
 
 
+def long_back_preference():
+    """Return the switch and its generation; old installations have no file."""
+    try:
+        trusted_dir(STATE)
+        value = safe_json(STATE/'long-back.json')
+    except FileNotFoundError:
+        return True, 'default'
+    if (not isinstance(value, dict) or set(value) != {'enabled', 'generation'}
+            or type(value['enabled']) is not bool or not isinstance(value['generation'], str)
+            or not re.fullmatch('[0-9a-f]{32}', value['generation'])):
+        raise ValueError('Invalid long Back preference')
+    return value['enabled'], value['generation']
+
+
 def save(journal):
     fd, temp = tempfile.mkstemp(dir=STATE, prefix='.profile-state-')
     try:

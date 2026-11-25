@@ -15,7 +15,8 @@ let files = {},
   spawns = 0,
   invoke,
   allowSpawn = false,
-  lastOptions;
+  lastOptions,
+  lastArgs;
 const fakeFs = {
   lstatSync(name) {
     if (
@@ -55,6 +56,7 @@ const child = {
     spawns++;
     if (!allowSpawn) throw Error('unexpected service spawn');
     lastOptions = options;
+    lastArgs = Array.from(args);
     callback(null, '{"returnValue":true}');
     return {};
   },
@@ -198,6 +200,15 @@ assert.strictEqual(serviceProcess.argv, bootstrapArgs);
     30000,
     'descriptor does not extend other operations'
   );
+  await invoke('long-back', 'off');
+  assert.deepStrictEqual(lastArgs, [
+    state + '/runtime/cli.py',
+    'long-back',
+    'off'
+  ]);
+  const previousSpawns = spawns;
+  await assert.rejects(() => invoke('long-back', 'enable'));
+  assert.equal(spawns, previousSpawns);
   console.log(
     'Root service and boot reject invalid Python bindings before execution'
   );

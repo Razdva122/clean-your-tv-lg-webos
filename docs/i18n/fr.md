@@ -85,7 +85,9 @@ Pour migrer l’environnement de démarrage de Root Beta existant, désactivez *
 
 Pour épingler une entrée HDMI, sélectionnez-la dans **+ / Ajouter une application**. Appuyez sur OK pour basculer vers cette entrée. Maintenez OK pour déplacer ou masquer sa tuile.
 
-Les flèches sélectionnent, OK ouvre ; maintenez OK pour réorganiser. Un appui bref sur Retour conserve la navigation et la confirmation de sortie de l’application. Home ouvre le lanceur si le contrôle est actif. Maintenez Retour pendant 1,2 seconde pour ouvrir LG Home une fois. L’interrupteur du contrôle de Home et vos paramètres restent inchangés.
+Les flèches sélectionnent, OK ouvre ; maintenez OK pour réorganiser. Un appui bref sur Retour conserve la navigation et la confirmation de sortie de l’application. Home ouvre le lanceur si le contrôle est actif.
+
+Par défaut, un appui d’environ 1,2 seconde sur Retour ouvre LG Home. Désactivez **Réglages → Votre écran Home → Ouvrir LG Home par un appui long sur Retour** pour couper ce raccourci de Clean Your TV. Sur certains téléviseurs, le micrologiciel LG peut encore ouvrir LG Home lors d’un appui long sur Retour. L’option apparaît si la version installée du contrôle de Home prend en charge ce raccourci.
 
 Pour modifier les tuiles avec des appuis courts, ouvrez **Paramètres de Home → Apparence → Modifier les tuiles**. Appuyez sur OK pour sélectionner une tuile, déplacez-la avec les flèches puis appuyez sur OK pour la poser. Retour annule le déplacement ou quitte la modification.
 

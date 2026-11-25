@@ -156,16 +156,19 @@
     > button:first-child {
     margin-left: 0;
   }
+  #rootHomeVisitHint {
+    margin-bottom: 8px;
+  }
   .startup-sources {
-    margin-top: 16px;
-    padding-top: 12px;
+    margin-top: 10px;
+    padding-top: 8px;
   }
   .startup-sources h3 {
     font-size: 22px;
     margin-bottom: 8px;
   }
   .startup-source-actions .home-routing-switch {
-    min-height: 76px;
+    min-height: 62px;
     font-size: 20px;
     padding: 12px 104px 12px 16px;
   }

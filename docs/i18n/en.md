@@ -87,7 +87,9 @@ To open the TV's notification center from Clean Your TV, choose **Home settings 
 
 To pin an HDMI input, select it in **+ / Add app**. Press OK to switch to it. Hold OK to move or hide its tile.
 
-Arrows select tiles; OK opens them; hold OK to reorder. Short Back retains the app's navigation and exit confirmation. Short Home opens Clean Your TV while Home control is active. Hold Back for 1.2 seconds to open LG Home once. The Home-control switch and your settings remain unchanged.
+Arrows select tiles; OK opens them; hold OK to reorder. Short Back retains the app's navigation and exit confirmation. Short Home opens Clean Your TV while Home control is active.
+
+By default, holding Back for about 1.2 seconds opens LG Home. Turn off **Settings → Your Home screen → Open LG Home when holding Back** to disable this Clean Your TV shortcut. Some TVs may still open LG Home when their firmware handles a long Back press. The switch appears when the installed Home controller supports it.
 
 To edit with short presses, open **Home settings → Appearance → Edit tiles**. Press OK to pick up a tile, move it with the arrows, then press OK to place it. Back cancels the move or exits tile editing.
 

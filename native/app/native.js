@@ -598,8 +598,9 @@ function launch(id, done, params) {
   );
 }
 var visitingLG = false,
-  suppressReturnUntil = 0;
-function visitLG(done) {
+  suppressReturnUntil = 0,
+  longBackGeneration = 0;
+function visitLG(done, gestureGeneration) {
   cancelIrHome();
   if (visitingLG) {
     if (done) done(false);
@@ -611,6 +612,14 @@ function visitLG(done) {
   suppressReturnUntil = monotonic() + 7000;
   var deadline = monotonic() + 3500;
   function open() {
+    if (
+      gestureGeneration !== undefined &&
+      gestureGeneration !== longBackGeneration
+    ) {
+      visitingLG = false;
+      suppressReturnUntil = 0;
+      return;
+    }
     if (launching && monotonic() < deadline) {
       setTimeout(open, 50);
       return;
@@ -951,7 +960,8 @@ function handleHomeRequest(channel, request, respond) {
       respond({
         returnValue: true,
         enabled: homeControl.enabled(),
-        keepSource: homeControl.keepSource()
+        keepSource: homeControl.keepSource(),
+        longBackHome: homeControl.longBackHome()
       });
     else if (request.method === 'setHomeControl') {
       homeControl.set(request.enabled);
@@ -963,6 +973,20 @@ function handleHomeRequest(channel, request, respond) {
         returnValue: true,
         enabled: homeControl.enabled(),
         keepSource: homeControl.keepSource()
+      });
+    } else if (request.method === 'setLongBackHome') {
+      var previous = homeControl.longBackHome();
+      homeControl.setLongBackHome(request.enabled);
+      if (previous !== request.enabled) {
+        longBackGeneration++;
+        screenPolicy.clearBack();
+        if (child && child.heldBackOpensHome !== null)
+          child.heldBackOpensHome = false;
+      }
+      respond({
+        returnValue: true,
+        enabled: homeControl.enabled(),
+        longBackHome: homeControl.longBackHome()
       });
     } else if (request.method === 'openLGHome')
       visitLG(function (ok) {
@@ -1284,6 +1308,8 @@ function start(recovering) {
   var worker = cp.spawn(root + '/relay', args, {
     stdio: ['pipe', 'pipe', 'pipe']
   });
+  // Null means released. A press that starts disabled stays ineligible until key-up.
+  worker.heldBackOpensHome = null;
   worker.recovering = recovering;
   child = worker;
   log({ event: 'worker-start', pid: worker.pid });
@@ -1322,6 +1348,7 @@ function start(recovering) {
       if (worker.reason !== undefined || worker.watchdogKill || worker.exited)
         continue;
       if (line === 'INPUT_WAIT') {
+        worker.heldBackOpensHome = null;
         powerPolicy.inputLost();
         ready = false;
         waitingForInput = true;
@@ -1333,11 +1360,15 @@ function start(recovering) {
       }
       if (line === 'IR_LOST') cancelIrHome();
       if (waitingForInput && line !== 'READY') continue;
-      if (line === 'BACK_DOWN') {
+      if (line === 'BACK_DOWN' && worker.heldBackOpensHome === null) {
         cancelResume();
-        screenPolicy.back(true, monotonic());
+        worker.heldBackOpensHome = homeControl.longBackHome();
+        if (worker.heldBackOpensHome) screenPolicy.back(true, monotonic());
       }
-      if (line === 'BACK_UP') screenPolicy.back(false, monotonic());
+      if (line === 'BACK_UP') {
+        screenPolicy.back(false, monotonic());
+        worker.heldBackOpensHome = null;
+      }
       if (line === 'HOME' || line === 'IRHOME') {
         screenPolicy.clearBack();
         homeSequence++;
@@ -1371,7 +1402,10 @@ function start(recovering) {
         }
         worker.stdin.write(homeControl.enabled() ? 'E' : 'D');
       }
-      if (line === 'LGHOME' && !stopRequested) visitLG();
+      if (line === 'LGHOME' && worker.heldBackOpensHome && !stopRequested) {
+        worker.heldBackOpensHome = false;
+        visitLG(undefined, longBackGeneration);
+      }
       if (line === 'HOME') {
         cancelIrHome();
         openHome(worker);

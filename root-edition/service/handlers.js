@@ -21,6 +21,41 @@ module.exports = function (execute, audio, startup, presentation) {
   function handler(command) {
     return async function (payload) {
       if (
+        payload &&
+        Object.prototype.hasOwnProperty.call(payload, 'longBack')
+      ) {
+        var shortcut;
+        var shortcutKeys = Object.keys(payload);
+        if (
+          command === 'status' &&
+          shortcutKeys.length === 1 &&
+          payload.longBack === 'status'
+        )
+          shortcut = 'status';
+        else if (
+          command === 'enable' &&
+          shortcutKeys.length === 2 &&
+          payload.longBack === 'configure' &&
+          shortcutKeys.indexOf('enabled') >= 0 &&
+          typeof payload.enabled === 'boolean'
+        )
+          shortcut = payload.enabled ? 'on' : 'off';
+        else
+          return { returnValue: false, errorText: 'Invalid shortcut request' };
+        try {
+          return {
+            returnValue: true,
+            result: await execute('long-back', shortcut)
+          };
+        } catch (_) {
+          return {
+            returnValue: false,
+            errorText:
+              'Root control did not confirm success. Check status before retrying.'
+          };
+        }
+      }
+      if (
         presentation &&
         command === 'status' &&
         payload &&

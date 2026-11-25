@@ -85,7 +85,9 @@ Um die Startumgebung der vorhandenen Root Beta zu migrieren, schalten Sie **Chan
 
 Wählen Sie unter **+ / App hinzufügen** einen HDMI-Eingang aus, um ihn anzuheften. Mit OK wechseln Sie zum Eingang. Halten Sie OK gedrückt, um die Kachel zu verschieben oder auszublenden.
 
-Pfeile wählen eine Kachel, OK öffnet sie; OK gedrückt halten zum Verschieben. Kurzes Zurück behält Navigation und Beendigungsdialog der App bei. Kurzes Home öffnet bei aktiver Home-Steuerung den Launcher. Zurück 1,2 Sekunden gedrückt halten, um LG Home einmalig zu öffnen. Der Home-Schalter und Ihre Einstellungen bleiben unverändert.
+Pfeile wählen eine Kachel, OK öffnet sie; OK gedrückt halten zum Verschieben. Kurzes Zurück behält Navigation und Beendigungsdialog der App bei. Kurzes Home öffnet bei aktiver Home-Steuerung den Launcher.
+
+Wenn Sie die Zurück-Taste etwa 1,2 Sekunden lang gedrückt halten, öffnet sich standardmäßig LG Home. Schalten Sie **Einstellungen → Ihr Home-Bildschirm → LG Home durch Gedrückthalten der Zurück-Taste öffnen** aus, um diese Funktion von Clean Your TV zu deaktivieren. Auf manchen Fernsehern kann die LG-Firmware bei einem langen Tastendruck weiterhin LG Home öffnen. Der Schalter erscheint, wenn die installierte Home-Steuerung diese Funktion unterstützt.
 
 Öffnen Sie **Home-Einstellungen → Darstellung → Kacheln bearbeiten**, um Kacheln mit kurzen Tastendrücken zu bearbeiten. Nehmen Sie die Kachel mit OK auf, verschieben Sie sie mit den Pfeiltasten und legen Sie sie mit OK ab. Zurück bricht das Verschieben ab oder beendet die Bearbeitung.
 

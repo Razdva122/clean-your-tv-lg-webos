@@ -77,6 +77,18 @@ def recheck_acknowledged(stamp):
 
 def observe(fd, health, keys_released, *, report_device_gone=False, reconnect_on_disconnect=False,
             recover_input=False, wait_input=False, recover_profile_input=False, boot_wait=False):
+    from device_adapter import long_back_preference
+
+    def long_back_generation():
+        try:
+            enabled, generation = long_back_preference()
+            return generation if enabled else None
+        except (OSError, ValueError, RecursionError):
+            return None  # A damaged optional setting must not interrupt recovery input.
+
+    def gestures():
+        return TripleHome(), LongBack(long_back_generation)
+
     wait_at_start = recover_profile_input or boot_wait
     persistent = wait_input or wait_at_start
     recheck_input = persistent or recover_input
@@ -217,8 +229,7 @@ def observe(fd, health, keys_released, *, report_device_gone=False, reconnect_on
 
     def monitor(awaiting_recheck):
         nonlocal last_wait, validation_stamp
-        policy = TripleHome()
-        back = LongBack()
+        policy, back = gestures()
         last_heartbeat = time.monotonic() if recheck_input else None
         last_recovery_home = None
         offered_at = None
@@ -230,7 +241,7 @@ def observe(fd, health, keys_released, *, report_device_gone=False, reconnect_on
                 reconnect_deadline = time.monotonic() + 60
                 if not replace(reconnect_deadline):
                     return
-                policy = TripleHome(); back = LongBack()
+                policy, back = gestures()
                 awaiting_recheck = True
                 last_recovery_home = None
                 offered_at = None
@@ -270,7 +281,7 @@ def observe(fd, health, keys_released, *, report_device_gone=False, reconnect_on
                         return
                     # No gesture may span two kernel input-device instances. Process
                     # fresh events before publishing the first replacement heartbeat.
-                    policy = TripleHome(); back = LongBack()
+                    policy, back = gestures()
                     awaiting_recheck = recheck_input
                     last_recovery_home = None
                     offered_at = None
@@ -300,7 +311,7 @@ def observe(fd, health, keys_released, *, report_device_gone=False, reconnect_on
                 if not replace(None):
                     return
                 waiting()
-                policy = TripleHome(); back = LongBack()
+                policy, back = gestures()
                 awaiting_recheck = True
                 last_recovery_home = None
                 offered_at = None
@@ -332,7 +343,7 @@ def observe(fd, health, keys_released, *, report_device_gone=False, reconnect_on
                             if persistent: waiting()
                             if not replace(None if persistent else time.monotonic() + 60):
                                 return
-                            policy = TripleHome(); back = LongBack()
+                            policy, back = gestures()
                             last_recovery_home = None
                             offered_at = None
                             continue

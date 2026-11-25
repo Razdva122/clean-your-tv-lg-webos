@@ -25,6 +25,7 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8876';
       window.homeChoice = null;
       // Older Helpers omit keepSource; set a boolean to emulate support.
       window.keepSourceChoice = undefined;
+      window.longBackChoice = undefined;
       window.homeBrokerFailure = null;
       window.PalmServiceBridge = function () {
         this.cancel = () => clearTimeout(this.timer);
@@ -79,6 +80,8 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8876';
                   calls.some((call) => call.p.id === 'com.local.nativehome');
                 if (keepSourceChoice !== undefined)
                   r.keepSource = keepSourceChoice;
+                if (longBackChoice !== undefined)
+                  r.longBackHome = longBackChoice;
               }
             } else if (
               uri === 'luna://com.gathin.tvhome.renewal/setHomeControl'
@@ -91,6 +94,12 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8876';
               keepSourceChoice = p.enabled;
               r.enabled = homeChoice;
               r.keepSource = keepSourceChoice;
+            } else if (
+              uri === 'luna://com.gathin.tvhome.renewal/setLongBackHome'
+            ) {
+              longBackChoice = p.enabled;
+              r.enabled = homeChoice;
+              r.longBackHome = longBackChoice;
             } else if (
               uri === 'luna://com.gathin.tvhome.renewal/screensaverStatus'
             ) {
@@ -265,9 +274,11 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8876';
     // Stay on HDMI or Live TV when the TV wakes stays hidden for a Helper that omits it.
     assert(await homePane.locator('#homeKeepSource').isHidden());
     assert(await homePane.locator('#homeKeepSourceHint').isHidden());
+    assert(await homePane.locator('#homeLongBack').isHidden());
     // Reopening settings refreshes Home status from a Helper that reports it.
     await page.evaluate(() => {
       keepSourceChoice = false;
+      longBackChoice = true;
     });
     await page.locator('#renewalClose').click();
     await page.locator('#renewalPanel').waitFor({ state: 'hidden' });
@@ -284,6 +295,19 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8876';
       await homePane.locator('#homeKeepSourceHint').textContent(),
       'If your TV wakes from standby already showing a game console, Live TV, or another input, that screen stays open. The Home button works as usual.'
     );
+    const longBackSwitch = homePane.getByRole('switch', {
+      name: 'Open LG Home when holding Back'
+    });
+    assert.equal(await longBackSwitch.getAttribute('aria-checked'), 'true');
+    await longBackSwitch.focus();
+    await page.keyboard.press('Enter');
+    await homePane.locator('#homeLongBack[aria-checked=false]').waitFor();
+    assert.equal(
+      await page.evaluate(() => document.activeElement.id),
+      'homeLongBack'
+    );
+    assert.equal(await page.evaluate(() => longBackChoice), false);
+    assert.equal(await homeSwitch.getAttribute('aria-checked'), 'true');
     await keepSwitch.focus();
     await page.keyboard.press('Enter');
     await homePane

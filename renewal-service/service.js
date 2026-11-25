@@ -200,6 +200,7 @@ var catalogControl = require('./home-control')(fs, dir + '/home-control', {
   'homeStatus',
   'setHomeControl',
   'setKeepSource',
+  'setLongBackHome',
   'openLGHome',
   'inputStatus',
   'listApps',
