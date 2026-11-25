@@ -34,6 +34,25 @@
       sourceUnavailable = false,
       sourceKeys = ['tv', 'youtube'];
     var sources = { tv: true, youtube: false };
+    var longBackEnabled = null;
+    function renderLongBack(value) {
+      longBackEnabled = typeof value === 'boolean' ? value : null;
+      var toggle = buttons[20];
+      toggle.hidden = longBackEnabled === null;
+      toggle.disabled = toggle.hidden || busy;
+      if (toggle.hidden) toggle.removeAttribute('aria-checked');
+      else toggle.setAttribute('aria-checked', String(longBackEnabled));
+    }
+    function refreshLongBack(generation) {
+      return control('status', { longBack: 'status' })
+        .then(function (status) {
+          if (generation === statusGeneration)
+            renderLongBack(status ? status.longBackOpensHome : null);
+        })
+        .catch(function () {
+          if (generation === statusGeneration) renderLongBack(null);
+        });
+    }
     function renderSources() {
       var enabled =
         !busy &&
@@ -63,7 +82,7 @@
       if (
         !enabled &&
         !busy &&
-        selected >= 15 &&
+        (selected === 15 || selected === 16) &&
         document.activeElement === buttons[selected]
       )
         focus(1);
@@ -94,7 +113,7 @@
             return;
           readSources(status);
           if (
-            selected >= 15 &&
+            (selected === 15 || selected === 16) &&
             buttons[selected].disabled &&
             (!categories || document.activeElement === buttons[selected])
           )
@@ -116,6 +135,26 @@
       if (!sourceStatus || buttons[index].disabled || busy) return;
       var next = { tv: sources.tv, youtube: sources.youtube };
       next[sourceKeys[index - 15]] = !next[sourceKeys[index - 15]];
+      saveHomeOption(
+        index,
+        { startup: 'configure', sources: next },
+        readSources
+      );
+    }
+    function changeLongBack() {
+      if (longBackEnabled === null || busy) return;
+      var enabled = !longBackEnabled;
+      saveHomeOption(
+        20,
+        { longBack: 'configure', enabled: enabled },
+        function (status) {
+          if (!status || status.longBackOpensHome !== enabled)
+            throw new Error('Invalid service response');
+          renderLongBack(enabled);
+        }
+      );
+    }
+    function saveHomeOption(index, payload, readResult) {
       stopModePoll();
       busy = true;
       buttons.forEach(function (button) {
@@ -124,14 +163,18 @@
       renderSources();
       var generation = statusGeneration,
         error;
-      control('enable', { startup: 'configure', sources: next })
+      function write() {
+        return control('enable', payload);
+      }
+      refreshTail
+        .then(write, write)
         .then(function (status) {
           if (
             generation === statusGeneration &&
             !panel.hidden &&
             !document.hidden
           )
-            readSources(status);
+            readResult(status);
         })
         .catch(function (e) {
           error = e.message;
@@ -303,6 +346,7 @@
       rootStatus = null;
       sourceStatus = null;
       sourceUnavailable = false;
+      renderLongBack(null);
       renderSources();
       buttons[3].disabled = true;
       showHomeChoice('checking');
@@ -435,7 +479,17 @@
           });
       }
       // Serialize lifecycle reads; queued stale generations do no service work.
-      refreshTail = refreshTail.then(read, read);
+      function initialRead() {
+        if (
+          generation !== statusGeneration ||
+          panel.hidden ||
+          document.hidden ||
+          busy
+        )
+          return;
+        return refreshLongBack(generation).then(read);
+      }
+      refreshTail = refreshTail.then(initialRead, initialRead);
       return refreshTail;
     }
     function resumeMode() {
@@ -485,7 +539,9 @@
           });
         });
     }
-    var order = [3, 1, 12, 15, 16, 9, 8, 10, 11, 18, 14, 5, 4, 0, 17, 7, 6, 2];
+    var order = [
+      3, 1, 20, 12, 15, 16, 9, 8, 10, 11, 18, 14, 5, 4, 0, 17, 7, 6, 2
+    ];
     function focus(index) {
       selected = index;
       if (!buttons[selected].disabled && !buttons[selected].hidden)
@@ -553,6 +609,7 @@
         return;
       }
       if (index === 3) return changeMode();
+      if (index === 20) return changeLongBack();
       if (index >= 15 && index <= 16) return changeSource(index);
       if (index === 7) {
         if (!window.RootAudio) return;
@@ -677,6 +734,9 @@
         'home-visit-hint'
       );
       visitHint.id = 'rootHomeVisitHint';
+      var shortcutActions = document.createElement('div');
+      shortcutActions.className = 'renewal-actions home-routing-actions';
+      home.appendChild(shortcutActions);
       sourceGroup = document.createElement('section');
       sourceGroup.className = 'startup-sources';
       sourceGroup.setAttribute('aria-label', t('Open Clean Your TV first'));
@@ -718,7 +778,7 @@
       footer.appendChild(back);
       buttons = [];
       [
-        3, 1, 9, 8, 19, 10, 11, 18, 14, 5, 4, 0, 17, 7, 6, 2, 12, 15, 16
+        3, 1, 9, 8, 19, 10, 11, 18, 14, 5, 4, 0, 17, 7, 6, 2, 12, 15, 16, 20
       ].forEach(function (i) {
         var labels = [
           'TV settings',
@@ -740,7 +800,8 @@
           'YouTube',
           'LG Notifications',
           'Edit tiles',
-          'Sort by most used'
+          'Sort by most used',
+          'Open LG Home when holding Back'
         ];
         var b = document.createElement('button');
         b.textContent = t(i === 6 ? 'Block LG firmware updates' : labels[i]);
@@ -765,6 +826,13 @@
                       : i === 4 || i === 0 || i === 5 || i === 17
                         ? links
                         : back;
+        if (i === 20) {
+          target = shortcutActions;
+          b.className = 'home-routing-switch';
+          b.setAttribute('role', 'switch');
+          b.hidden = true;
+          b.disabled = true;
+        }
         if (i === 10 || i === 19) {
           b.id = i === 10 ? 'homeShowAddApp' : 'homeUsageSort';
           b.className = 'home-routing-switch';

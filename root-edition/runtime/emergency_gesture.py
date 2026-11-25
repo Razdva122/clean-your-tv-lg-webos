@@ -41,19 +41,22 @@ class TripleHome:
 
 class LongBack:
     """One stock-Home visit per hold; independent of emergency recovery."""
-    def __init__(self):
+    def __init__(self, generation=lambda: True):
         self.down = None
         self.fired = False
+        self.generation = generation
+        self.started_generation = None
     def event(self, kind, code, value, now):
         if kind == 1 and code == 412:
             if value == 1 and self.down is None:
                 self.down = now
                 self.fired = False
+                self.started_generation = self.generation()
             elif value == 0:
                 self.down = None
                 self.fired = False
     def tick(self, now):
         if self.down is not None and not self.fired and now - self.down >= 1200:
             self.fired = True
-            return True
+            return self.started_generation is not None and self.started_generation == self.generation()
         return False

@@ -100,7 +100,31 @@ try {
     fs.readFileSync(path.join(dir, 'home-control.json'), 'utf8'),
     '{"enabled":false}'
   );
-  for (const value of [{ keepSource: 'true' }, { keepSource: 1 }]) {
+  // The long Back shortcut defaults on for old records and persists independently.
+  assert.equal(c.longBackHome(), true);
+  assert.throws(() => c.setLongBackHome('false'));
+  c.setLongBackHome(false);
+  c.setKeepSource(true);
+  c.set(true);
+  c = create(
+    fs,
+    dir,
+    () => {},
+    () => {}
+  );
+  assert.equal(c.longBackHome(), false);
+  assert.equal(c.keepSource(), true);
+  assert.equal(c.enabled(), true);
+  c.setLongBackHome(true);
+  assert.equal(
+    fs.readFileSync(path.join(dir, 'home-control.json'), 'utf8'),
+    '{"enabled":true,"keepSource":true}'
+  );
+  for (const value of [
+    { keepSource: 'true' },
+    { keepSource: 1 },
+    { longBackHome: 'false' }
+  ]) {
     fs.writeFileSync(
       path.join(dir, 'home-control.json'),
       JSON.stringify(value)

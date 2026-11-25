@@ -83,11 +83,17 @@ returns focus to the app cards. It does not dismiss a transparent bar or reveal
 video/HDMI underneath. Selecting an app uses normal TV app switching, without
 Home forcing its own window to close. See the [1.8.2 tested scope and known limits](RELEASE-1.8.2.md); new candidate artifacts need their own affected acceptance.
 
+By default, holding **Back** for about 1.2 seconds opens LG Home. To disable
+this shortcut, open **Settings → Your Home screen** and turn off
+**Open LG Home when holding Back**. The switch appears when the installed Root
+controller or No-root Home Helper supports it. Some LG firmware may still open
+LG Home on a long Back press. Short Back keeps its usual navigation and exit
+behavior in apps.
 
-**Hold Back for about 1.2 seconds** to visit LG Home once. This preserves the
-saved Home choice and does not stop Home control; a later short Home returns to
-Clean. Use triple Home when you want to stop interception. Short Back remains
-the current app's normal navigation/exit action.
+With either switch position, you can choose **Open LG Home** in the same menu
+for a one-time visit. To stop Home control, [press Home three times](#return-to-lg-home).
+On the experimental C1 Root backend, both the menu action and the enabled
+Back shortcut stop Home control. See [C1 recovery](development/C1-NATIVE-GATE.md#selection-and-recovery).
 
 The No-root Helper can return to the launcher after watched apps exit, and LG Home
 may briefly appear. Firmware-specific long-Back behavior still needs device

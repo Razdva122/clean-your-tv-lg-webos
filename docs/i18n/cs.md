@@ -72,7 +72,9 @@ Chcete-li aktualizovat prostředí automatického spuštění stávající Root 
 
 Chcete-li připnout vstup HDMI, vyberte ho v nabídce **+ / Přidat aplikaci**. Tlačítkem OK přepnete na tento vstup. Podržením OK můžete dlaždici přesunout nebo skrýt.
 
-Šipky vybírají aplikaci, **OK** ji otevře. Podržením OK můžete měnit pořadí. Krátké **Zpět** zachová navigaci aplikace. Krátké **Home** otevře Clean Your TV při zapnutém ovládání Home. Podržení Zpět po dobu 1,2 sekundy otevře LG Home jednou, bez změny uložených nastavení.
+Šipky vybírají aplikaci, **OK** ji otevře. Podržením OK můžete měnit pořadí. Krátké **Zpět** zachová navigaci aplikace. Krátké **Home** otevře Clean Your TV při zapnutém ovládání Home.
+
+Ve výchozím nastavení otevřete LG Home podržením tlačítka Zpět asi na 1,2 sekundy. Tuto zkratku Clean Your TV vypnete v nabídce **Nastavení → Vaše obrazovka Home → Otevřít LG Home podržením tlačítka Zpět**. Na některých televizorech může LG Home při dlouhém stisku tlačítka Zpět stále otevírat samotný firmware LG. Přepínač se zobrazí, pokud nainstalovaná verze ovládání Home tuto funkci podporuje.
 
 Pro úpravy krátkými stisky otevřete **Nastavení Home → Vzhled → Upravit dlaždice**. Stiskněte OK, přesuňte dlaždici šipkami a znovu stiskněte OK pro umístění. Zpět zruší přesun nebo ukončí úpravy.
 

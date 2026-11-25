@@ -85,7 +85,9 @@ Per migrare l’ambiente di avvio di Root Beta esistente, disattiva **Change Hom
 
 Per fissare un ingresso HDMI, selezionalo in **+ / Aggiungi app**. Premi OK per passare all’ingresso. Tieni premuto OK per spostare o nascondere il riquadro.
 
-Le frecce selezionano, OK apre; tieni premuto OK per riordinare. Un breve Indietro conserva navigazione e conferma di uscita dell’app. Home apre il launcher quando il controllo è attivo. Tieni premuto Indietro per 1,2 secondi per aprire LG Home una volta. L’interruttore del controllo Home e le impostazioni restano invariati.
+Le frecce selezionano, OK apre; tieni premuto OK per riordinare. Un breve Indietro conserva navigazione e conferma di uscita dell’app. Home apre il launcher quando il controllo è attivo.
+
+Per impostazione predefinita, tenendo premuto Indietro per circa 1,2 secondi si apre LG Home. Disattiva **Impostazioni → La tua schermata Home → Apri LG Home tenendo premuto Indietro** per disabilitare questa scorciatoia di Clean Your TV. Su alcuni televisori, il firmware LG può comunque aprire LG Home quando tieni premuto Indietro. L’opzione compare se la versione installata del controllo Home supporta questa funzione.
 
 Per modificare con pressioni brevi, apri **Impostazioni Home → Aspetto → Modifica riquadri**. Premi OK per selezionare un riquadro, spostalo con le frecce e premi ancora OK per posizionarlo. Indietro annulla lo spostamento o esce dalla modifica.
 
