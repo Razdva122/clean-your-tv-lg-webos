@@ -80,6 +80,13 @@
         828
       ],
       "summary": "Recover an unresponsive No-root screensaver popup"
+    },
+    {
+      "pr": 837,
+      "issues": [
+        615
+      ],
+      "summary": "Make the guardian regression exercises select broker expiry before input expiry"
     }
   ],
   "excluded": [],
