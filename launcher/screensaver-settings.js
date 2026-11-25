@@ -778,9 +778,9 @@
     contextActive = false;
     if (idle) idle.refresh();
   }
-  function openInline(content, current, failed) {
+  function openInline(content, canMount, failed) {
     function mount(assets) {
-      if (!current()) return;
+      if (!canMount()) return failed();
       content.assets = assets;
       var frame = doc.createElement('iframe');
       frame.className = 'screensaver-inline';
@@ -839,7 +839,8 @@
     var attempt = {
         config: activationSettings(),
         preparing: true,
-        preview: preview
+        preview: preview,
+        idleEpoch: !preview && idle ? idle.status().epoch : null
       },
       selected = state.mode;
     handoff = attempt;
@@ -899,17 +900,40 @@
           return;
         }
         activeMedia = lease;
-        attempt.preparing = false;
         root.clearTimeout(handoffTimer);
-        handoffTimer = root.setTimeout(expired, 10000);
         if (popupUnavailable) {
+          // Allow the manifest read and both supported video render attempts.
+          handoffTimer = root.setTimeout(failed, 22000);
           var content = config.normalize(state);
           var clock = clockPresentation();
           if (clock) content.clock = clock;
-          if (lease) content.cacheUrl = lease.mediaUrl;
-          openInline(content, current, failed);
+          if (lease) {
+            content.mode = /\.mp4$/.test(lease.mediaUrl) ? 'video' : 'photo';
+            content.cacheUrl = lease.mediaUrl;
+          } else if (content.mode === 'video' && content.quality === 'image') {
+            content.mode = 'photo';
+            content.assetId = content.assetId.replace(/-video$/, '-photo');
+          }
+          openInline(
+            content,
+            function () {
+              if (
+                !current() ||
+                !running() ||
+                !popupUnavailable ||
+                !localContext(preview) ||
+                attempt.config !== activationSettings()
+              )
+                return false;
+              attempt.preparing = false;
+              return true;
+            },
+            failed
+          );
           return;
         }
+        attempt.preparing = false;
+        handoffTimer = root.setTimeout(expired, 10000);
         rpc(
           preview ? 'screensaverPreview' : 'screensaverEligible',
           lease ? { mediaUrl: lease.mediaUrl } : {},
@@ -926,6 +950,13 @@
               ) {
                 statusUnconfirmed = false;
                 render();
+                if (
+                  attempt.idleEpoch !== null &&
+                  idle &&
+                  idle.status().epoch === attempt.idleEpoch &&
+                  attempt.config === activationSettings()
+                )
+                  offer(false);
               }
             }
           }
@@ -1031,16 +1062,32 @@
       }
       dismissInline();
     }
-    function inlineClick(event) {
+    function inlinePointer(event) {
       if (!inlineFrame) return;
       event.preventDefault();
       event.stopImmediatePropagation();
-      dismissInline();
+      // Hold the overlay through a press so its click cannot select a tile.
+      if (event.type !== 'pointerdown' && event.type !== 'mousedown')
+        dismissInline();
     }
+    var pointerEvents = [
+      'click',
+      'pointerdown',
+      'pointermove',
+      'mousedown',
+      'mousemove',
+      'touchstart',
+      'wheel'
+    ];
     root.addEventListener('message', inlineReply);
     doc.addEventListener('keydown', inlineKey, true);
     doc.addEventListener('keyup', inlineKey, true);
-    doc.addEventListener('click', inlineClick, true);
+    pointerEvents.forEach(function (type) {
+      doc.addEventListener(type, inlinePointer, {
+        capture: true,
+        passive: false
+      });
+    });
     root.addEventListener('blur', function () {
       localFocused = false;
       dismissInline();
@@ -1061,7 +1108,9 @@
       root.removeEventListener('message', inlineReply);
       doc.removeEventListener('keydown', inlineKey, true);
       doc.removeEventListener('keyup', inlineKey, true);
-      doc.removeEventListener('click', inlineClick, true);
+      pointerEvents.forEach(function (type) {
+        doc.removeEventListener(type, inlinePointer, true);
+      });
       handoff = null;
       clearMediaPreview();
       stopReceiver();

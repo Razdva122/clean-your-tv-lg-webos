@@ -994,6 +994,39 @@ const uiFile = path.join(root, 'launcher/screensaver-settings.js');
           await page.locator('#screensaverPreview').isEnabled(),
           true
         );
+        const bundledPhoto = 'wallpapers/ribbon-preview.jpg';
+        await page.route(
+          inlineOrigin + 'screensaver-companion/manifest.json',
+          (route) =>
+            route.fulfill({
+              headers: { 'Access-Control-Allow-Origin': '*' },
+              json: {
+                files: {
+                  'backgrounds/ribbon-photo.jpg':
+                    'usr/palm/applications/com.gathin.tvhome/' + bundledPhoto
+                }
+              }
+            })
+        );
+        await page.route(inlineOrigin + bundledPhoto, (route) =>
+          route.fulfill({ path: path.join(root, 'launcher', bundledPhoto) })
+        );
+        await page.evaluate(() => {
+          backend.mode = 'video';
+          backend.assetId = 'ribbon-video';
+          backend.quality = 'image';
+          HomeScreensaver.activate(true);
+        });
+        await page.locator('#screensaverPreview').click();
+        await inline.contentFrame().locator('#photo:not([hidden])').waitFor();
+        await page.mouse.move(5, 5);
+        await inline.waitFor({ state: 'detached' });
+        await page.evaluate(() => {
+          backend.mode = 'ambient';
+          backend.assetId = '';
+          backend.quality = 'auto';
+          HomeScreensaver.activate(true);
+        });
         await page.evaluate(() => {
           HomeScreensaver.activate(false);
           document.getElementById('renewalPanel').classList.add('hidden');
