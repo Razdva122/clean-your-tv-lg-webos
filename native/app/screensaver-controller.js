@@ -1,5 +1,8 @@
 'use strict';
 
+var popupId = 'com.cleanyourtv.screensaver';
+var applicationManager = 'luna://com.webos.applicationManager/';
+
 // Trusted hooks for the existing Helper input/lifecycle owner. Construction is
 // inert; integration must establish package and firmware capabilities first.
 // The shared controller is supplied by packaging, not downloaded at runtime.
@@ -8,6 +11,9 @@ module.exports = function (options) {
   var lg = null;
   var enabled = false;
   var disposed = false;
+  var activation = null;
+  var closeReady = null;
+  var closeVerified = null;
 
   function context() {
     var source;
@@ -39,27 +45,126 @@ module.exports = function (options) {
     } catch (ignore) {}
   }
 
-  function launch(id, params, done) {
-    var capability = context();
-    if (
-      !enabled ||
-      disposed ||
-      capability.ownerHealthy !== true ||
-      capability.popupSupported !== true ||
-      id !== 'com.cleanyourtv.screensaver'
-    ) {
-      done(false);
-      return;
+  function reportUnverifiedClose() {
+    if (options.log)
+      options.log({ event: 'screensaver-popup-close-unverified' });
+  }
+
+  function closePopup(done) {
+    function report(reply) {
+      var closed =
+        reply &&
+        (reply.returnValue === true ||
+          (reply.returnValue === false &&
+            ((reply.errorCode === 40 &&
+              reply.errorText === popupId + ' is not running') ||
+              (reply.errorCode === 1 &&
+                reply.errorText === 'app is not running'))));
+      if (!closed) reportUnverifiedClose();
+      done(!!closed);
     }
     try {
       options.service.call(
-        'luna://com.webos.applicationManager/launch',
-        {
-          id: 'com.cleanyourtv.screensaver',
-          params: params
-        },
+        applicationManager + 'closeByAppId',
+        { id: popupId },
         function (message) {
-          done(
+          report(message && message.payload);
+        }
+      );
+    } catch (ignore) {
+      report(null);
+    }
+  }
+
+  function checkClose() {
+    if (closeReady) return;
+    closeReady = new Promise(function (resolve) {
+      var timer = setTimeout(function () {
+        reportUnverifiedClose();
+        finish(false);
+      }, 3000);
+      function finish(closed) {
+        if (timer === null) {
+          if (closed) closeVerified = true;
+          return;
+        }
+        clearTimeout(timer);
+        timer = null;
+        closeVerified = closed;
+        resolve();
+      }
+      // Clear a stale window and prove this Helper can remove its own popup.
+      closePopup(finish);
+    });
+  }
+
+  function canLaunch() {
+    return (
+      closeVerified === true &&
+      !(activation && (activation.launching || activation.cancelled))
+    );
+  }
+
+  function closeActivation(attempt) {
+    if (attempt.closing) {
+      attempt.closeAgain = true;
+      return;
+    }
+    attempt.closing = true;
+    var timer = setTimeout(function () {
+      closeVerified = false;
+      reportUnverifiedClose();
+    }, 3000);
+    closePopup(function (closed) {
+      clearTimeout(timer);
+      attempt.closing = false;
+      closeVerified = closed;
+      if (attempt.closeAgain || (!closed && !attempt.retried)) {
+        attempt.retried = attempt.retried || !closed;
+        attempt.closeAgain = false;
+        closeActivation(attempt);
+      } else if (!attempt.launching) activation = null;
+    });
+  }
+
+  function cancelPopup(effect) {
+    if (
+      !activation ||
+      activation.sessionId !== effect.sessionId ||
+      activation.cancelled
+    )
+      return;
+    activation.cancelled = true;
+    closeActivation(activation);
+  }
+
+  function launch(id, params, done) {
+    var capability = context();
+    if (
+      id !== popupId ||
+      !canLaunch() ||
+      capability.ownerHealthy !== true ||
+      capability.popupSupported !== true
+    )
+      return done(false);
+    var attempt = { sessionId: params.sessionId, launching: true };
+    activation = attempt;
+    function reported(ok) {
+      attempt.launching = false;
+      if (attempt.cancelled) {
+        // An in-flight SAM launch may succeed after the first close request.
+        if (ok) closeActivation(attempt);
+        else if (!attempt.closing) activation = null;
+        return;
+      }
+      done(ok);
+    }
+    try {
+      options.service.call(
+        applicationManager + 'launch',
+        { id: popupId, params: params },
+        function (message) {
+          reported(
             !!(
               message &&
               message.payload &&
@@ -69,7 +174,7 @@ module.exports = function (options) {
         }
       );
     } catch (ignore) {
-      done(false);
+      reported(false);
     }
   }
 
@@ -124,6 +229,7 @@ module.exports = function (options) {
           generation: options.generation,
           context: context,
           launch: launch,
+          closePopup: cancelPopup,
           acquireMedia: acquireMedia,
           now: now,
           listen: options.listen,
@@ -135,7 +241,9 @@ module.exports = function (options) {
           clientName: 'com.local.nativehome.screensaver',
           getSession: getSession,
           startGlobal: function (done) {
-            return enabled && controller ? controller.startGlobal(done) : null;
+            return enabled && controller && canLaunch()
+              ? controller.startGlobal(done)
+              : null;
           },
           now: now,
           log: options.log
@@ -146,6 +254,7 @@ module.exports = function (options) {
           stop();
           return false;
         }
+        checkClose();
         return true;
       } catch (ignore) {
         stop();
@@ -155,15 +264,27 @@ module.exports = function (options) {
     whenReady: function () {
       var current = controller;
       if (!enabled || disposed || !current) return Promise.resolve(false);
-      return current.whenReady().then(function (ready) {
-        return ready && enabled && !disposed && controller === current;
-      });
+      return Promise.all([current.whenReady(), closeReady]).then(
+        function (ready) {
+          return (
+            ready[0] &&
+            closeVerified === true &&
+            enabled &&
+            !disposed &&
+            controller === current
+          );
+        }
+      );
     },
     preview: function () {
-      return enabled && !disposed && controller ? controller.preview() : false;
+      return enabled && !disposed && controller && canLaunch()
+        ? controller.preview()
+        : false;
     },
     eligible: function () {
-      return enabled && !disposed && controller ? controller.eligible() : false;
+      return enabled && !disposed && controller && canLaunch()
+        ? controller.eligible()
+        : false;
     },
     activity: function () {
       if (enabled && !disposed && controller) controller.activity();
@@ -179,6 +300,12 @@ module.exports = function (options) {
       stop();
     },
     getSession: getSession,
+    unavailable: function () {
+      return closeVerified === false;
+    },
+    closePending: function () {
+      return !!(activation && activation.cancelled);
+    },
     ownsPopup: function () {
       return !!(enabled && controller && controller.ownsPopup());
     }

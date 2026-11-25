@@ -49,6 +49,7 @@ const uiFile = path.join(root, 'launcher/screensaver-settings.js');
         };
         window.available = true;
         window.started = false;
+        window.popupUnavailable = false;
         window.personal = { photo: false, video: false };
         window.mediaCalls = [];
         window.ScreensaverPersonal = {
@@ -117,6 +118,7 @@ const uiFile = path.join(root, 'launcher/screensaver-settings.js');
             if (savingBusy) busyConfigure--;
             else if (method === 'screensaverConfigure') backend = payload;
             const channelBusy = statusBusy || savingBusy;
+            const denied = method === 'screensaverPreview' && popupUnavailable;
             const response = JSON.stringify(
               channelBusy
                 ? {
@@ -125,9 +127,10 @@ const uiFile = path.join(root, 'launcher/screensaver-settings.js');
                   }
                 : {
                     returnValue: true,
-                    available,
+                    available: available && !denied,
                     state: backend,
-                    started
+                    started: started && !denied,
+                    reason: denied ? 'popup-unavailable' : undefined
                   }
             );
             const send = () => this.onservicecallback(response);
@@ -330,6 +333,23 @@ const uiFile = path.join(root, 'launcher/screensaver-settings.js');
       });
       assert.equal(await date.textContent(), 'Monday');
       assert.equal(await previewTime.textContent(), '12:00 PM');
+      if (edition === 'noroot') {
+        await page.evaluate(() => (popupUnavailable = true));
+        await page.locator('#screensaverPreview').click();
+        await page.waitForFunction(() =>
+          document
+            .querySelector('.screensaver-status')
+            .textContent.includes('unavailable on this TV')
+        );
+        assert.equal(await toggle.isDisabled(), true);
+        await page.evaluate(() => {
+          popupUnavailable = false;
+          HomeScreensaver.activate(true);
+        });
+        await page.waitForFunction(
+          () => !document.querySelector('#screensaverEnabled').disabled
+        );
+      }
       if (edition === 'root') {
         for (const launches of [true, false]) {
           await page.evaluate((launches) => {

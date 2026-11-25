@@ -1154,6 +1154,13 @@ function finish(decision) {
   // A signal can replace the OS exit code after the relay reported emergency.
   // Keep the real code/signal above for cleanup policy and diagnostics.
   function end() {
+    if (screensaverOwner && screensaverOwner.closePending()) {
+      if (monotonic() < finishDeadline) {
+        setTimeout(end, 50);
+        return;
+      }
+      log({ event: 'screensaver-popup-close-pending-on-exit' });
+    }
     try {
       fs.unlinkSync(pidPath);
     } catch (e) {}
