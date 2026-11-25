@@ -1,6 +1,6 @@
 # v1.29.0
 
-- Root and No-root leave the remote’s Back gesture to LG firmware. **Open LG Home** in Home settings remains available for a one-time visit.
+- Root and No-root leave the remote’s Back gesture to LG firmware. **Open LG Home** remains available in Home settings.
 - No-root Home stays resident when webOS supports background suspension. The Helper retries a late LG Home takeover after an IR Home press, and Settings retries when the Home broker is briefly busy. A brief system transition can still appear (#820, #822, #838).
 - After standby, No-root Helper waits for webOS to restore the foreground. It keeps the existing Clean Your TV window when webOS has already brought it back (#840).
 - No-root Home uses tuner artwork when the TV provides no usable Live TV icon. If Helper cannot verify that it can dismiss the screensaver popup, Clean Your TV shows its screensaver inside Home. Other apps keep the LG screensaver. **Preview screensaver** stays visible after pressing OK or clicking it, and closes on the next navigation input (#835, #836, #838, #839).
