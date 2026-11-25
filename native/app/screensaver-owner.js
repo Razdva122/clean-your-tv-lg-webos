@@ -42,6 +42,7 @@ module.exports = function (options) {
   function available() {
     return (
       installed &&
+      !adapter.unavailable() &&
       healthy() &&
       (state.scope === 'cytv' || globalMode()) &&
       (state.mode === 'ambient' ||
@@ -109,13 +110,14 @@ module.exports = function (options) {
     };
     if (started !== undefined) reply.started = started;
     if (!reply.available)
-      reply.reason = !installed
-        ? 'popup-unavailable'
-        : !healthy()
-          ? 'owner-unavailable'
-          : state.scope !== 'cytv'
-            ? 'global-media-unavailable'
-            : 'media-unavailable';
+      reply.reason =
+        !installed || adapter.unavailable()
+          ? 'popup-unavailable'
+          : !healthy()
+            ? 'owner-unavailable'
+            : state.scope !== 'cytv'
+              ? 'global-media-unavailable'
+              : 'media-unavailable';
     return reply;
   }
   function validSettings(value) {
@@ -181,6 +183,7 @@ module.exports = function (options) {
         stop();
     },
     stop: stop,
+    closePending: adapter.closePending,
     handle: function (method, payload, requestCurrent) {
       if (!healthy()) stop();
       if (method === 'screensaverStatus') return status(true);

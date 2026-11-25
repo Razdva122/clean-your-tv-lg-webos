@@ -199,6 +199,9 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8876';
       const start = pane.getByRole('button', { name: 'Start Helper' });
       await start.waitFor({ timeout: 3000 });
       assert(await pane.getByRole('button', { name: 'Try again' }).isVisible());
+      if (category === 'screensaver')
+        assert(await pane.locator('#screensaverEnabled').isHidden());
+
       assert(!(await pane.getByText('Home Helper is stopped.').isVisible()));
       assert(await page.evaluate(() => !helperStarting && helperStopped));
       await start.click();

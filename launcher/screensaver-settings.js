@@ -420,10 +420,11 @@
       helperStarting;
     retry.disabled = retry.hidden;
     retry.parentNode.hidden = startHelper.hidden && retry.hidden;
+    enabled.hidden = !known || statusUnconfirmed;
+    enabled.disabled = enabled.hidden || !available;
     enabled.setAttribute('aria-checked', String(state.enabled));
     enabled.textContent =
       t('Screensaver') + ': ' + t(state.enabled ? 'On' : 'Off');
-    enabled.disabled = !known || !available;
     var ownMedia = config.personal(state.mode, state.assetId);
     host.querySelector('#screensaverPersonalHint').hidden =
       !editable || !ownMedia;
@@ -575,9 +576,10 @@
     rpc('screensaverStatus', {}, function (reply, channelBusy) {
       statusPending = false;
       if (epoch !== requestEpoch) return;
-      statusUnconfirmed = !accepted(reply);
+      var confirmed = accepted(reply);
+      if (!confirmed && channelBusy && known && !helperStarting) return;
+      statusUnconfirmed = !confirmed;
       if (statusUnconfirmed) {
-        if (channelBusy && known && !helperStarting) return;
         known = true;
         available = false;
       }
@@ -827,7 +829,18 @@
           function (reply) {
             if (!current()) return;
             actionPending = null;
-            if (!reply || reply.started !== true) failed();
+            if (!reply || reply.started !== true) {
+              failed();
+              if (
+                !rootEdition() &&
+                reply &&
+                reply.reason === 'popup-unavailable' &&
+                accepted(reply)
+              ) {
+                statusUnconfirmed = false;
+                render();
+              }
+            }
           }
         );
       },

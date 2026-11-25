@@ -29,6 +29,8 @@ function fixture(overrides = {}) {
           return true;
         },
         whenReady: overrides.whenReady || (() => Promise.resolve(true)),
+        unavailable: overrides.unavailable || (() => false),
+        closePending: () => false,
         preview() {
           calls.push('preview');
           return true;
@@ -85,6 +87,18 @@ test('No-root enables the screensaver if no preference exists', async () => {
   f.owner.installed(['com.cleanyourtv.screensaver']);
   f.owner.foreground('com.gathin.tvhome');
   assert.equal((await f.owner.handle('screensaverEligible')).started, true);
+});
+
+test('no close capability leaves the saved choice intact and prevents launches', async () => {
+  const f = fixture({ unavailable: () => true });
+  f.owner.installed(['com.cleanyourtv.screensaver']);
+  f.owner.foreground('com.gathin.tvhome');
+  const status = f.owner.handle('screensaverStatus');
+  assert.equal(status.state.enabled, true);
+  assert.equal(status.available, false);
+  assert.equal(status.reason, 'popup-unavailable');
+  assert.equal((await f.owner.handle('screensaverPreview')).started, false);
+  assert.equal(f.calls.includes('preview'), false);
 });
 
 test('No-root owner controls activation and persisted settings', async () => {
