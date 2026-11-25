@@ -54,13 +54,6 @@
       "summary": "Fix Root Beta QML packaging and verified pre-submission cleanup"
     },
     {
-      "pr": 833,
-      "issues": [
-        797
-      ],
-      "summary": "Let owners disable the long Back shortcut without suppressing other Home actions"
-    },
-    {
       "pr": 834,
       "issues": [
         825
@@ -87,13 +80,20 @@
         615
       ],
       "summary": "Make the guardian regression exercises select broker expiry before input expiry"
+    },
+    {
+      "pr": 838,
+      "issues": [
+        828
+      ],
+      "summary": "Leave Back to webOS, recover Helper status, and render the No-root screensaver inside Home when needed"
     }
   ],
-  "excluded": [],
-  "acceptance": "",
-  "build": {
-    "run_id": 45579690127,
-    "attempt": 1,
-    "source": "438975c4830635db9e6660ab4bd2399721f5aa09"
-  }
+  "excluded": [
+    {
+      "pr": 833,
+      "reason": "Superseded by #838. The candidate leaves Back behavior to webOS and removes CYTV\u2019s separate shortcut and setting."
+    }
+  ],
+  "acceptance": ""
 }
