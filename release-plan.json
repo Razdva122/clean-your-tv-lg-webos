@@ -105,10 +105,11 @@
       "reason": "Superseded by #838. The candidate leaves Back behavior to webOS and removes CYTV\u2019s separate shortcut and setting."
     }
   ],
-  "acceptance": "",
+  "acceptance": "Project LG OLED55C3RLA, firmware 43.21.71 / SDK 11.2.0. Exact macOS ARM64 CLI SHA-256 724404cdda1f384bbf4c9bb622e6ac1651df207483bfb36db6f8de687677a662. No-root over Root SSH: normal update from published Home 1.21.0, nine matching installed file hashes, paired HOME from Media Player, same-session 15-second standby and all four arrows before HOME, sustained OK screensaver preview and arrow dismissal, short Back, persistent Stop and responsive LG Home. P00 archive match, C1 Beta QML packaging and exact Root signatures passed. Physical Magic Remote pointer, original reporter devices, cold boot, audio, live Root and OTA/rollback retain the limits in docs/history/2026-11-26-release-1.29.0-rc-verification.md.",
   "build": {
     "run_id": 45660735856,
     "attempt": 1,
     "source": "0ab6fccf6409baa8745c282b871bf6cac461ffcc"
-  }
+  },
+  "acceptance_build": "45660735856:1"
 }
