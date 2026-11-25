@@ -39,6 +39,7 @@ def prepare(version='0.0.1', resolution=None):
                 noSplashOnLaunch=True, spinnerOnLaunch=False)
     info.pop('splashBackground', None)
     info.pop('handlesRelaunch', None)
+    info.pop('keepAlive', None)
     for name in ('brand-v2-icon.png', 'brand-v2-largeIcon.png'):
         path = UI.parent / 'assets' / ('home.png' if name == 'brand-v2-icon.png' else 'home-large.png')
         if path.is_symlink() or not path.is_file() or not path.resolve().is_relative_to(UI.parent.resolve()):

@@ -25,6 +25,7 @@ class NoRootCardPackageTests(unittest.TestCase):
                 self.assertEqual(installed['id'], 'com.gathin.tvhome')
                 self.assertEqual(installed['resolution'], resolution)
                 self.assertEqual(installed['defaultWindowType'], 'card')
+                self.assertIs(installed.get('keepAlive'), True)
                 self.assertIs(installed['transparent'], False)
                 self.assertNotIn('handlesRelaunch', installed)
                 self.assertIs(installed['noSplashOnLaunch'], True)
