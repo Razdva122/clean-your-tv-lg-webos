@@ -1,4 +1,4 @@
-"""Opt-in legacy Root prototype; no shipping builder selects this by default."""
+"""Build Root Node compatibility without transforming compositor QML assets."""
 import json
 from pathlib import Path
 import subprocess
@@ -12,9 +12,10 @@ def compile_root_beta(files):
     return compile_root_node(files)
 
 def compile_root_node(files):
-    # The QML compositor filter is already ES5 and has no Node module loader.
+    # These compositor scripts run in QML, not Node: preserve their Qt.include
+    # scope and never inject a Node module loader or compatibility runtime.
     scripts = {name: raw.decode('utf-8') for name, raw in files.items()
-               if name.endswith('.js') and name != 'runtime/c1-home-filter.js'}
+               if name.endswith('.js') and name not in ('runtime/c1-home-filter.js', 'runtime/embedded-home.js')}
     result = subprocess.run(['node', str(ROOT/'scripts/compile-root-node.cjs')],
                             input=json.dumps(scripts), capture_output=True, text=True,
                             encoding='utf-8', cwd=ROOT, timeout=120)
