@@ -36,9 +36,7 @@
     panel.innerHTML = ht(
       [
         '<div id="settingsMain" class="renewal-card settings-main"><div class="settings-heading"><h2>Home settings</h2><span class="settings-edition">No-root Edition</span></div><section class="settings-home"><h3>Your Home screen</h3><p>Home is your app screen. Home Helper makes the Home button open it.</p><p id="homeRoutingStatus" class="settings-status" aria-live="polite">Checking Home control…</p>',
-        '<div class="renewal-actions home-routing-actions"><button id="homeRoutingToggle" class="home-routing-switch" role="switch" aria-checked="false" aria-describedby="homeRoutingStatus" disabled>Change Home</button><button id="homeRoutingStart" hidden>Start Helper</button><button id="homeRoutingRetry" hidden>Try again</button><button id="homeVisit" class="home-visit-button" aria-describedby="homeVisitHint">Open LG Home</button></div><p id="homeVisitHint" class="home-visit-hint">Open LG Home once, keeping your Home choice.</p>',
-        '<div class="renewal-actions home-routing-actions"><button id="homeLongBack" class="home-routing-switch" role="switch" aria-checked="true" hidden>Open LG Home when holding Back</button></div>',
-        '<div class="renewal-actions home-routing-actions"><button id="homeKeepSource" class="home-routing-switch" role="switch" aria-checked="false" aria-describedby="homeKeepSourceHint" hidden>Stay on HDMI or Live TV when the TV wakes</button></div><p id="homeKeepSourceHint" class="home-visit-hint" hidden>If your TV wakes from standby already showing a game console, Live TV, or another input, that screen stays open. The Home button works as usual.</p>',
+        '<div class="renewal-actions home-routing-actions"><button id="homeRoutingToggle" class="home-routing-switch" role="switch" aria-checked="false" aria-describedby="homeRoutingStatus" disabled>Change Home</button><button id="homeRoutingStart" hidden>Start Helper</button><button id="homeRoutingRetry" hidden>Try again</button><button id="homeVisit" class="home-visit-button" aria-describedby="homeVisitHint">Open LG Home</button></div><p id="homeVisitHint" class="home-visit-hint">Open LG Home once, keeping your Home choice.</p><div class="renewal-actions home-routing-actions"><button id="homeKeepSource" class="home-routing-switch" role="switch" aria-checked="false" aria-describedby="homeKeepSourceHint" hidden>Stay on HDMI or Live TV when the TV wakes</button></div><p id="homeKeepSourceHint" class="home-visit-hint" hidden>If your TV wakes from standby already showing a game console, Live TV, or another input, that screen stays open. The Home button works as usual.</p>',
         '<div class="renewal-actions settings-layout"><div id="homeThemeHost"></div></div><div class="renewal-actions settings-layout"><button id="homeColumns">Columns</button></div></section>',
         '<div id="homeAppSettings" class="renewal-actions settings-layout"><button id="homeUsageSort" class="home-routing-switch" role="switch" aria-checked="false">Sort by most used</button><button id="homeShowAddApp" class="home-routing-switch" role="switch" aria-checked="true">Show Add app tile</button><button id="homeAddApp">Add app</button><button id="homeEditTiles">Edit tiles</button><button id="homePreviewInputs" class="home-routing-switch" role="switch" aria-checked="true">Preview inputs on focus</button><p id="homeAppsError" role="alert"></p></div>',
         '<div class="renewal-actions settings-links settings-section"><button id="homeLanguage">Language<span class="settings-chevron" aria-hidden="true"></span></button><button id="renewalUpdates">Software updates<span class="settings-update-dot" aria-hidden="true"></span><span class="settings-chevron" aria-hidden="true"></span></button><button id="renewalTV">TV settings<span class="settings-chevron" aria-hidden="true"></span></button><button id="renewalNotifications">LG Notifications<span class="settings-chevron" aria-hidden="true"></span></button></div><div class="renewal-actions settings-developer"><button id="developerOpen" aria-controls="developerSettings" aria-describedby="renewalSummary"><span><span>Developer Mode</span><span id="renewalSummary" class="renewal-summary" aria-live="polite">Checking auto-renewal…</span></span><span class="settings-chevron" aria-hidden="true"></span></button></div><div class="settings-footer">',
@@ -175,6 +173,19 @@
         finish(null);
       }
     }
+    var homeKeep = document.getElementById('homeKeepSource'),
+      homeKeepHint = document.getElementById('homeKeepSourceHint'),
+      homeKeepOn = null;
+    // Helpers without Stay on HDMI or Live TV when the TV wakes do not report keepSource;
+    // the switch stays hidden until the running Helper confirms its value.
+    function renderKeepSource(r) {
+      var known =
+        !!r && r.returnValue === true && typeof r.keepSource === 'boolean';
+      if (r && r.returnValue === true) homeKeepOn = known ? r.keepSource : null;
+      homeKeep.hidden = homeKeepHint.hidden = homeKeepOn === null;
+      homeKeep.disabled = !known;
+      homeKeep.setAttribute('aria-checked', String(homeKeepOn === true));
+    }
     var homeToggle = document.getElementById('homeRoutingToggle'),
       homeVisit = document.getElementById('homeVisit'),
       homeRetry = document.getElementById('homeRoutingRetry'),
@@ -183,7 +194,8 @@
       homeEnabled = null,
       homeBusy = false,
       homeStatusRetry = null,
-      homeStatusRetries = 0;
+      homeStatusRetries = 0,
+      homeBusyRetries = 0;
     function hideHomeChoice() {
       var focused = document.activeElement === homeToggle;
       homeToggle.hidden = false;
@@ -224,14 +236,10 @@
         if (r && typeof r.enabled === 'boolean') reply.enabled = r.enabled;
         if (r && typeof r.keepSource === 'boolean')
           reply.keepSource = r.keepSource;
-        if (r && typeof r.longBackHome === 'boolean')
-          reply.longBackHome = r.longBackHome;
         if (
           !diagnostic &&
           (!reply.returnValue ||
-            (method !== 'openLGHome' && typeof reply.enabled !== 'boolean') ||
-            (method === 'setLongBackHome' &&
-              typeof reply.longBackHome !== 'boolean'))
+            (method !== 'openLGHome' && typeof reply.enabled !== 'boolean'))
         )
           diagnostic = {
             component: 'home',
@@ -276,10 +284,7 @@
     }
     function renderHome(r, routingOnly) {
       homeBusy = false;
-      if (!routingOnly) {
-        renderKeepSource(r);
-        renderLongBack(r);
-      }
+      if (!routingOnly) renderKeepSource(r);
       homeVisit.disabled = false;
       homeRetry.disabled = false;
       if (!r || r.returnValue !== true || typeof r.enabled !== 'boolean') {
@@ -293,6 +298,7 @@
         return;
       }
       homeStatusRetries = 0;
+      homeBusyRetries = 0;
       var retryFocused =
         document.activeElement === homeRetry ||
         document.activeElement === homeStart;
@@ -315,12 +321,20 @@
       )
         focus(index);
     }
+    function retryHomeStatus() {
+      homeBusy = false;
+      homeStatusRetry = setTimeout(function () {
+        homeStatusRetry = null;
+        refreshHome();
+      }, 1000);
+    }
     function refreshHome() {
       if (homeBusy || homeStatusRetry !== null || !openNow() || document.hidden)
         return;
       homeBusy = true;
       homeRetry.disabled = true;
       homeStart.disabled = true;
+      homeKeep.disabled = true;
       homeToggle.setAttribute('data-home-state', 'checking');
       hideHomeChoice();
       homeStatus.textContent = tr(
@@ -338,17 +352,23 @@
         if (homeStatusRetries > 0) {
           homeStatusRetries--;
           if (homeStatusRetries) {
-            homeBusy = false;
-            homeStatusRetry = setTimeout(function () {
-              homeStatusRetry = null;
-              refreshHome();
-            }, 1000);
+            retryHomeStatus();
             return;
           }
         }
+        var diagnostic = reply && safeDiagnostic(reply.diagnostic);
+        var brokerBusy =
+          diagnostic &&
+          diagnostic.component === 'home' &&
+          diagnostic.operation === 'wait' &&
+          diagnostic.code === 'BUSY';
+        if (brokerBusy && homeBusyRetries < 3) {
+          homeBusyRetries++;
+          retryHomeStatus();
+          return;
+        }
         function unavailable(stopped, running) {
           renderHome(reply);
-          var diagnostic = reply && safeDiagnostic(reply.diagnostic);
           var brokerUnavailable =
             diagnostic &&
             diagnostic.component === 'home' &&
@@ -358,7 +378,9 @@
                 diagnostic.code === 'ENOENT'));
           // Offer the confirmed start action even when status is unknown.
           homeStart.hidden =
-            stopped === false && !(running === false && brokerUnavailable);
+            stopped !== true &&
+            (brokerBusy ||
+              (stopped === false && !(running === false && brokerUnavailable)));
           homeStart.disabled = false;
           homeVisit.disabled = stopped === true;
           homeRetry.hidden = stopped === true;
@@ -379,7 +401,10 @@
         });
       });
     }
-    homeRetry.onclick = refreshHome;
+    homeRetry.onclick = function () {
+      homeBusyRetries = 0;
+      refreshHome();
+    };
     homeStart.onclick = function () {
       if (homeBusy || homeStatusRetries) return;
       var generation = homeGeneration;
@@ -409,6 +434,12 @@
     window.addEventListener('focus', function () {
       if (homeEnabled === null && homeStatusRetry === null) refreshHome();
     });
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden && openNow() && homeEnabled === null) {
+        homeBusyRetries = 0;
+        refreshHome();
+      }
+    });
     homeToggle.onclick = function () {
       if (homeBusy || homeEnabled === null) return;
       homeBusy = true;
@@ -427,58 +458,31 @@
           });
       });
     };
-    // Older Helpers omit optional preferences from homeStatus.
-    function homePreference(buttonId, field, method, hintId) {
-      var button = document.getElementById(buttonId),
-        hint = hintId && document.getElementById(hintId),
-        enabled = null;
-      function render(r) {
-        enabled =
-          r && r.returnValue === true && typeof r[field] === 'boolean'
-            ? r[field]
-            : null;
-        button.hidden = button.disabled = enabled === null;
-        if (hint) hint.hidden = button.hidden;
-        button.setAttribute('aria-checked', String(enabled === true));
+    homeKeep.onclick = function () {
+      if (homeBusy || homeKeepOn === null) return;
+      var focused = document.activeElement === homeKeep;
+      var enabled = !homeKeepOn;
+      function refocus() {
+        if (focused && openNow() && !homeKeep.hidden && !homeKeep.disabled)
+          homeKeep.focus();
       }
-      button.onclick = function () {
-        if (homeBusy || enabled === null) return;
-        var focused = document.activeElement === button,
-          requested = !enabled;
-        function refocus() {
-          if (focused && openNow() && !button.hidden && !button.disabled)
-            button.focus();
-        }
-        homeBusy = true;
-        button.disabled = true;
-        homeRPC(method, { enabled: requested }, function (r) {
-          if (r.returnValue === true && r[field] === requested) {
-            homeBusy = false;
-            render(r);
+      homeBusy = true;
+      homeKeep.disabled = true;
+      homeRPC('setKeepSource', { enabled: enabled }, function (r) {
+        if (r.returnValue === true && r.keepSource === enabled) {
+          homeBusy = false;
+          renderKeepSource(r);
+          refocus();
+        } else
+          homeRPC('homeStatus', {}, function (status) {
+            renderHome(status);
+            homeStatus.textContent = tr(
+              'Change was not confirmed. Check the switch and try again.'
+            );
             refocus();
-          } else
-            homeRPC('homeStatus', {}, function (status) {
-              renderHome(status);
-              homeStatus.textContent = tr(
-                'Change was not confirmed. Check the switch and try again.'
-              );
-              refocus();
-            });
-        });
-      };
-      return render;
-    }
-    var renderKeepSource = homePreference(
-        'homeKeepSource',
-        'keepSource',
-        'setKeepSource',
-        'homeKeepSourceHint'
-      ),
-      renderLongBack = homePreference(
-        'homeLongBack',
-        'longBackHome',
-        'setLongBackHome'
-      );
+          });
+      });
+    };
     homeVisit.onclick = function () {
       if (homeBusy) return;
       homeBusy = true;
@@ -801,6 +805,7 @@
       clearTimeout(homeStatusRetry);
       homeStatusRetry = null;
       homeStatusRetries = 0;
+      homeBusyRetries = 0;
       if (window.HomeWallpaperPanel) HomeWallpaperPanel.unmount();
       if (window.HomeThemePanel) HomeThemePanel.unmount();
       panel.classList.add('hidden');
@@ -996,8 +1001,6 @@
         developerOpen = false;
         homeGeneration++;
         homeBusy = false;
-        renderLongBack(null);
-        renderKeepSource(null);
         homeRetry.hidden = true;
         homeStart.hidden = true;
         homeStart.disabled = false;

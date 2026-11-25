@@ -68,10 +68,6 @@ const context = {
     call(uri, raw) {
       calls.push({ uri, payload: JSON.parse(raw) });
       let r = { returnValue: true };
-      if (JSON.parse(raw).longBack) {
-        this.onservicecallback(JSON.stringify({ returnValue: false }));
-        return;
-      }
       if (JSON.parse(raw).startup) {
         r.result = {
           returnValue: true,

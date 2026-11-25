@@ -88,27 +88,6 @@ if ((fs.statSync(dir).mode & 0o7777) !== 0o2770) {
         false,
         'Stay on input at power-on accepts only a boolean'
       );
-    pending = send('setLongBackHome', { enabled: false });
-    req = JSON.parse(
-      fs.readFileSync(path.join(dir, 'home-request.json'), 'utf8')
-    );
-    assert.equal(req.method, 'setLongBackHome');
-    assert.equal(req.enabled, false);
-    fs.writeFileSync(
-      path.join(dir, 'home-response.json'),
-      JSON.stringify({
-        id: req.id,
-        returnValue: true,
-        enabled: true,
-        longBackHome: false
-      })
-    );
-    queue.shift()();
-    assert.equal((await pending).longBackHome, false);
-    assert.equal(
-      (await send('setLongBackHome', { enabled: 'false' })).returnValue,
-      false
-    );
     assert.equal((await send('shell', { command: 'noop' })).returnValue, false);
     const settings = {
       enabled: true,
@@ -222,7 +201,6 @@ if ((fs.statSync(dir).mode & 0o7777) !== 0o2770) {
       'homeStatus',
       'setHomeControl',
       'setKeepSource',
-      'setLongBackHome',
       'inputStatus'
     ])
       assert.equal(
@@ -296,7 +274,7 @@ if ((fs.statSync(dir).mode & 0o7777) !== 0o2770) {
       false,
       'input reads cannot choose a target or add payload fields'
     );
-    for (const method of ['setHomeControl', 'setKeepSource', 'setLongBackHome'])
+    for (const method of ['setHomeControl', 'setKeepSource'])
       assert.equal(
         (await input(method, { enabled: false })).returnValue,
         false,

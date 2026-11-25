@@ -1,8 +1,8 @@
 # v1.29.0
 
-- **Settings → Your Home screen → Open LG Home when holding Back** lets you turn off the long Back shortcut in Root and No-root. It is enabled by default. LG firmware may still handle Back itself. The native recent-apps list remains a separate request (#833).
-- No-root Home stays resident when webOS supports background suspension. The Helper retries a late LG Home takeover after an IR Home press and stays available after a slow launch. A brief system transition can still appear (#820, #822).
-- No-root Home uses tuner artwork when the TV provides no usable Live TV icon. The Helper checks that it can dismiss the screensaver popup before enabling it and falls back to LG's screensaver when that check fails (#835, #836).
+- Root and No-root leave the remote’s Back gesture to LG firmware. **Open LG Home** in Home settings remains available for a one-time visit.
+- No-root Home stays resident when webOS supports background suspension. The Helper retries a late LG Home takeover after an IR Home press, and Settings retries when the Home broker is briefly busy. A brief system transition can still appear (#820, #822, #838).
+- No-root Home uses tuner artwork when the TV provides no usable Live TV icon. If Helper cannot verify that it can dismiss the screensaver popup, Clean Your TV shows its screensaver inside Home. Other apps keep the LG screensaver (#835, #836, #838).
 - No-root setup can resume an interrupted SSH upload after verifying staged files. No-root removal can verify stock Home by alternate readbacks on firmware that explicitly reports an absent defaultApps setting (#834, #831).
 - Root Beta preserves the QML compositor scripts and can clean up a verified pre-submission failure through the ordinary installer. Root recovery reports include the last observed local startup milestone (#832, #823).
 - The Root guardian can recover Home after confirmed normal shutdown when the remote disconnects during shutdown. The C1 backend also discards optional return hints that time out and keeps sending its normal heartbeat (#821, #826).

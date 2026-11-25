@@ -67,6 +67,10 @@ class ScreensaverPackageTests(unittest.TestCase):
         self.assertEqual(recipe['version'], popup_info['version'])
         self.assertEqual({name: files[source] for name, source in recipe['files'].items()}, popup)
         self.assertTrue(all(source.startswith(prefix) for source in recipe['files'].values()))
+        inline = prefix + "screensaver-companion/files/"
+        for name in ("index.html", "settings.js", "renderer.js", "style.css", "compat-polyfills.js"):
+            with self.subTest(inline_resource=name):
+                self.assertEqual(files[inline + name], popup[name])
         root_dir = str(Path("root-edition").resolve())
         sys.path.insert(0, root_dir)
         try:

@@ -313,34 +313,7 @@ def main(mode, transaction=None):
     return execute(mode,transaction)
 
 
-def long_back_command(operation):
-    d.trusted_dir(d.STATE)
-    current, _ = d.long_back_preference()
-    if operation == 'status':
-        return {'longBackOpensHome': current}
-    if operation not in ('on', 'off'):
-        raise ValueError('Unknown shortcut request')
-    enabled = operation == 'on'
-    if enabled != current:
-        fd, temporary = tempfile.mkstemp(dir=d.STATE, prefix='.long-back-')
-        try:
-            with os.fdopen(fd, 'w') as out:
-                json.dump({'enabled': enabled, 'generation': uuid.uuid4().hex}, out)
-                out.flush()
-                os.fsync(out.fileno())
-            os.replace(temporary, d.STATE/'long-back.json')
-        finally:
-            if os.path.lexists(temporary): os.unlink(temporary)
-    d.sync(d.STATE)
-    saved, _ = d.long_back_preference()
-    if saved != enabled:
-        raise ValueError('Shortcut setting changed during save')
-    return {'longBackOpensHome': saved}
-
-
 def execute(mode, transaction=None):
-    if mode == 'long-back':
-        return long_back_command(transaction)
     if mode == 'screensaver':
         from intent_runtime import screensaver_entry
         value = None

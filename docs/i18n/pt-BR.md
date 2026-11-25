@@ -87,8 +87,6 @@ Para fixar uma entrada HDMI, selecione-a em **+ / Adicionar aplicativo**. Pressi
 
 Setas selecionam; OK abre; segure OK para reorganizar. Um toque em Voltar mantém a navegação e a confirmação de saída do aplicativo. Home abre o lançador com o controle ativo.
 
-Por padrão, manter o botão Voltar pressionado por cerca de 1,2 segundos abre o LG Home. Desative **Configurações → Sua tela Home → Abrir o LG Home ao manter o botão Voltar pressionado** para desligar esse atalho do Clean Your TV. Em algumas TVs, o próprio firmware da LG ainda pode abrir o LG Home quando você mantém o botão Voltar pressionado. O interruptor aparece quando a versão instalada do controle do Home oferece esse recurso.
-
 Para editar com toques curtos, abra **Configurações do Home → Aparência → Editar blocos**. Pressione OK para selecionar um bloco, mova-o com as setas e pressione OK para soltá-lo. Voltar cancela o movimento ou encerra a edição.
 
 Se o controle remoto se desconectar por um tempo, mantenha o controle da tecla Home ativado. Ele voltará a funcionar quando a TV reconhecer o controle remoto novamente.

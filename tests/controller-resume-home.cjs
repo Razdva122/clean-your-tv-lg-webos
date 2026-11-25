@@ -309,54 +309,36 @@ test('disabling Home control cancels recovery even after re-enabling it', () => 
   c.advance(20000);
   assert.equal(c.homeCalls().length, 2);
 });
-test('explicit LG visit cancels resume recovery for both controls', () => {
-  for (const source of ['remote', 'settings']) {
-    const c = controller();
-    c.resume();
-    c.calls[1].reply();
-    if (source === 'remote')
-      c.worker().stdout.emit(
-        'data',
-        Buffer.from('BACK_DOWN\nLGHOME\nBACK_UP\n')
-      );
-    else c.rpc('openLGHome');
-    assert.equal(c.calls.at(-1).id, LG);
-    c.calls.at(-1).reply();
-    c.fg(LG);
-    c.advance(20000);
-    assert.equal(c.homeCalls().length, 2);
-  }
-});
-test('turning off the shortcut cancels a gesture waiting behind a Home launch', () => {
+test('a physical Back hold does not launch LG Home through the Helper', () => {
   const c = controller();
-  c.worker().stdout.emit('data', Buffer.from('HOME\nBACK_DOWN\nLGHOME\n'));
-  assert.equal(c.calls.at(-1).id, HOME);
-  c.rpc('setLongBackHome', false);
-  c.calls.at(-1).reply();
-  c.advance(100);
+  c.worker().stdout.emit('data', Buffer.from('BACK_DOWN\nLGHOME\nBACK_UP\n'));
   assert.equal(c.calls.filter((call) => call.id === LG).length, 0);
 });
-test('turning off long Back clears the pending foreground exception and keeps explicit LG Home available', () => {
+
+test('a stock foreground transition during held Back stays with webOS', () => {
   const c = controller();
   c.fg('com.example.video');
+  const launchCount = c.homeCalls().length;
   c.worker().stdout.emit('data', Buffer.from('BACK_DOWN\n'));
-  c.advance(800);
-  c.worker().stdout.emit('data', Buffer.from('BACK_UP\n'));
-  c.rpc('setLongBackHome', false);
+  c.advance(1200);
   c.fg(LG);
-  assert.equal(
-    c.homeCalls().length,
-    2,
-    'the old hold cannot suppress app-exit routing'
-  );
-  c.calls.at(-1).reply();
-  c.rpc('openLGHome');
-  assert.equal(
-    c.calls.at(-1).id,
-    LG,
-    'the one-time button still opens LG Home'
-  );
+  c.worker().stdout.emit('data', Buffer.from('BACK_UP\n'));
+  c.advance(12000);
+  assert.equal(c.homeCalls().length, launchCount);
 });
+
+test('the explicit LG Home action still cancels resume recovery', () => {
+  const c = controller();
+  c.resume();
+  c.calls[1].reply();
+  c.rpc('openLGHome');
+  assert.equal(c.calls.at(-1).id, LG);
+  c.calls.at(-1).reply();
+  c.fg(LG);
+  c.advance(20000);
+  assert.equal(c.homeCalls().length, 2);
+});
+
 test('guard expires after 30 seconds; duplicate Active does not extend it', () => {
   const c = controller();
   c.resume();
@@ -980,7 +962,6 @@ test('IR guard cancels on user navigation, lifecycle changes and explicit stock 
   for (const action of [
     (c) => c.fg('com.example.other'),
     (c) => c.worker().stdout.emit('data', Buffer.from('BACK_DOWN\n')),
-    (c) => c.worker().stdout.emit('data', Buffer.from('BACK_DOWN\nLGHOME\n')),
     (c) => c.rpc('openLGHome'),
     (c) => {
       c.rpc('setHomeControl', false);

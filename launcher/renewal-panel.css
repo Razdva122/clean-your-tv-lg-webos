@@ -5,7 +5,6 @@
 }
 
 #homeRoutingToggle[hidden],
-#homeLongBack[hidden],
 #homeKeepSource[hidden],
 #homeKeepSourceHint[hidden] {
   display: none;

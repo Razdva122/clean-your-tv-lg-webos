@@ -83,9 +83,6 @@ module.exports = function (fs, dir, options) {
   return function (method, payload) {
     var object =
       payload && typeof payload === 'object' && !Array.isArray(payload);
-    var preference =
-      ['setHomeControl', 'setKeepSource', 'setLongBackHome'].indexOf(method) >=
-      0;
     var generation =
       method === 'presentationDismissed' && object ? payload.generation : null;
     if (
@@ -97,7 +94,6 @@ module.exports = function (fs, dir, options) {
               'homeStatus',
               'setHomeControl',
               'setKeepSource',
-              'setLongBackHome',
               'openLGHome',
               'presentationContext',
               'presentationDismissed'
@@ -121,7 +117,8 @@ module.exports = function (fs, dir, options) {
           typeof payload !== 'object' ||
           Array.isArray(payload) ||
           Object.keys(payload).length !== 0)) ||
-      (preference && (!payload || typeof payload.enabled !== 'boolean'))
+      ((method === 'setHomeControl' || method === 'setKeepSource') &&
+        (!payload || typeof payload.enabled !== 'boolean'))
     )
       return Promise.resolve({
         returnValue: false,
@@ -143,7 +140,8 @@ module.exports = function (fs, dir, options) {
         lastFailure = null;
       try {
         var request = { id: id, method: method, expires: deadline };
-        if (preference) request.enabled = payload.enabled;
+        if (method === 'setHomeControl' || method === 'setKeepSource')
+          request.enabled = payload.enabled;
         if (method === 'screensaverConfigure') request.settings = payload;
         if (
           (method === 'screensaverPreview' ||

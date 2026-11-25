@@ -74,9 +74,8 @@ var handlers = require('./handlers')(
       if (process.getuid() !== 0)
         return reject(new Error('Root recovery service required'));
       if (
-        ['boot', 'status', 'restore', 'enable', 'confirm', 'long-back'].indexOf(
-          command
-        ) === -1
+        ['boot', 'status', 'restore', 'enable', 'confirm'].indexOf(command) ===
+        -1
       )
         return reject(new Error('Unknown operation'));
       var selected = pythonCommand();
@@ -85,13 +84,7 @@ var handlers = require('./handlers')(
         command === 'boot'
           ? [__dirname + '/boot-recover.sh']
           : [runtime, command];
-      if (
-        command === 'long-back' &&
-        ['status', 'on', 'off'].indexOf(transaction) < 0
-      )
-        return reject(new Error('Unknown shortcut request'));
-      if (command === 'confirm' || command === 'long-back')
-        args.push(transaction);
+      if (command === 'confirm') args.push(transaction);
       // This selects a deadline only; Python authenticates the backend descriptor.
       var gateEnable =
         command === 'enable' &&

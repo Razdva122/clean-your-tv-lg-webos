@@ -87,7 +87,11 @@ def add_root_resources(payload, prefix):
     sources = {}
     for name, data in sorted(popup.items()):
         source = index.get(hashlib.sha256(data).digest())
-        if source is None or payload[source] != data:
+        inline_entry = prefix == "usr/palm/applications/com.gathin.tvhome/" and name in (
+            "index.html", "style.css", "renderer.js", "settings.js", "compat-polyfills.js"
+        )
+        # Embedded HTML loads its sibling scripts and stylesheet directly.
+        if inline_entry or source is None or payload[source] != data:
             source = prefix + "screensaver-companion/files/" + name
             payload[source] = data
         sources[name] = source
