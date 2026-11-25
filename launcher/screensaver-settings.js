@@ -9,6 +9,9 @@
   var available = false;
   var popupUnavailable = false;
   var inlineFrame = null;
+  var inlineKeys = {};
+  var lastPointer = null;
+  var inlinePointerOrigin = null;
   var busy = false;
   var requestEpoch = 0;
   var statusPending = false;
@@ -71,7 +74,7 @@
         'Show clock': 'Показывать часы',
         'Show clock and date': 'Показывать часы и дату',
         'Use the standard screensaver': 'Выбрать стандартную заставку',
-        'Preview screensaver': 'Предпросмотр',
+        'Preview screensaver': 'Предпросмотр заставки',
         'Start on Home after': 'Запуск на Home через',
         'Background': 'Фон',
         'Clock': 'Часы',
@@ -113,7 +116,19 @@
           'Не удалось сохранить настройки заставки.',
         'Screensaver preview is unavailable right now.':
           'Предпросмотр заставки сейчас недоступен.'
-      }
+      },
+      cs: { 'Preview screensaver': 'Náhled spořiče obrazovky' },
+      de: { 'Preview screensaver': 'Bildschirmschoner-Vorschau' },
+      es: { 'Preview screensaver': 'Vista previa del protector de pantalla' },
+      'pt-BR': { 'Preview screensaver': 'Prévia do protetor de tela' },
+      fr: { 'Preview screensaver': 'Aperçu de l’économiseur d’écran' },
+      it: { 'Preview screensaver': 'Anteprima salvaschermo' },
+      ko: { 'Preview screensaver': '화면 보호기 미리보기' },
+      hi: { 'Preview screensaver': 'स्क्रीनसेवर का पूर्वावलोकन' },
+      pl: { 'Preview screensaver': 'Podgląd wygaszacza ekranu' },
+      ro: { 'Preview screensaver': 'Previzualizare economizor de ecran' },
+      'zh-Hans': { 'Preview screensaver': '预览屏幕保护程序' },
+      'zh-Hant': { 'Preview screensaver': '預覽螢幕保護程式' }
     });
   function t(value) {
     return root.HomeI18n ? root.HomeI18n.t(value) : value;
@@ -353,6 +368,8 @@
     if (inlineFrame) {
       inlineFrame.parentNode.removeChild(inlineFrame);
       inlineFrame = null;
+      inlineKeys = {};
+      inlinePointerOrigin = null;
     }
     var old = activeMedia,
       pending = pendingMedia,
@@ -794,6 +811,7 @@
           );
       };
       frame.src = 'screensaver-companion/files/index.html#cytv-inline';
+      inlinePointerOrigin = lastPointer;
       inlineFrame = frame;
       doc.body.appendChild(frame);
     }
@@ -1058,14 +1076,33 @@
       if (navigation) {
         event.preventDefault();
         event.stopImmediatePropagation();
-        if (event.type === 'keydown') return;
+        if (event.type === 'keydown') {
+          if (!event.repeat) inlineKeys[code] = true;
+          return;
+        }
+        // Settings activates Preview on OK-down, before the frame exists.
+        if (!inlineKeys[code]) return;
       }
       dismissInline();
     }
     function inlinePointer(event) {
-      if (!inlineFrame) return;
+      var move = event.type === 'pointermove' || event.type === 'mousemove';
+      var point = { x: event.clientX, y: event.clientY };
+      if (!inlineFrame) {
+        if (move || (event.type === 'click' && event.detail > 0))
+          lastPointer = point;
+        return;
+      }
       event.preventDefault();
       event.stopImmediatePropagation();
+      if (move) {
+        // Magic Remote still sends small pointer shifts after a click.
+        if (!inlinePointerOrigin) inlinePointerOrigin = point;
+        var dx = point.x - inlinePointerOrigin.x;
+        var dy = point.y - inlinePointerOrigin.y;
+        if (dx * dx + dy * dy < 12 * 12) return;
+        lastPointer = point;
+      }
       // Hold the overlay through a press so its click cannot select a tile.
       if (event.type !== 'pointerdown' && event.type !== 'mousedown')
         dismissInline();
@@ -1080,8 +1117,10 @@
       'wheel'
     ];
     root.addEventListener('message', inlineReply);
-    doc.addEventListener('keydown', inlineKey, true);
-    doc.addEventListener('keyup', inlineKey, true);
+    // Capture outside the document so settings cannot handle a dismissal key.
+    root.addEventListener('keydown', inlineKey, true);
+    root.addEventListener('keyup', inlineKey, true);
+    doc.addEventListener('webOSRelaunch', dismissInline);
     pointerEvents.forEach(function (type) {
       doc.addEventListener(type, inlinePointer, {
         capture: true,
@@ -1106,8 +1145,9 @@
     });
     root.addEventListener('pagehide', function () {
       root.removeEventListener('message', inlineReply);
-      doc.removeEventListener('keydown', inlineKey, true);
-      doc.removeEventListener('keyup', inlineKey, true);
+      root.removeEventListener('keydown', inlineKey, true);
+      root.removeEventListener('keyup', inlineKey, true);
+      doc.removeEventListener('webOSRelaunch', dismissInline);
       pointerEvents.forEach(function (type) {
         doc.removeEventListener(type, inlinePointer, true);
       });
@@ -1517,7 +1557,7 @@
     var previewAction = button(
       layout.left,
       'screensaverPreview',
-      'Full screen'
+      'Preview screensaver'
     );
     previewAction.onclick = function () {
       if (!busy) offer(true);

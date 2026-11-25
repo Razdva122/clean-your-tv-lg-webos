@@ -656,6 +656,8 @@ const uiFile = path.join(root, 'launcher/screensaver-settings.js');
       await page.evaluate(() =>
         document.getElementById('renewalPanel').classList.add('hidden')
       );
+      // Let the regular observer notice the newly eligible Home surface.
+      await page.clock.runFor(1000);
       await page.keyboard.press('ArrowRight');
       await page.clock.runFor(31000);
       assert.ok(
@@ -977,9 +979,19 @@ const uiFile = path.join(root, 'launcher/screensaver-settings.js');
           document.head.appendChild(base);
           calls = [];
         }, inlineOrigin);
-        await page.locator('#screensaverPreview').click();
+        const preview = page.getByRole('button', {
+          name: 'Preview screensaver'
+        });
+        await preview.focus();
+        await page.keyboard.down('Enter');
         const inline = page.locator('.screensaver-inline.visible');
         await inline.waitFor();
+        await page.keyboard.up('Enter');
+        assert.equal(
+          await inline.isVisible(),
+          true,
+          'the initiating OK release leaves the preview open'
+        );
         await inline.contentFrame().locator('#clock:not([hidden])').waitFor();
         assert.deepEqual(
           await page.evaluate(() =>
@@ -1017,8 +1029,18 @@ const uiFile = path.join(root, 'launcher/screensaver-settings.js');
           backend.quality = 'image';
           HomeScreensaver.activate(true);
         });
-        await page.locator('#screensaverPreview').click();
+        await preview.click();
         await inline.contentFrame().locator('#photo:not([hidden])').waitFor();
+        const position = await preview.boundingBox();
+        await page.mouse.move(
+          position.x + position.width / 2 + 1,
+          position.y + position.height / 2 + 1
+        );
+        assert.equal(
+          await inline.isVisible(),
+          true,
+          'one-pixel pointer drift leaves the preview open'
+        );
         await page.mouse.move(5, 5);
         await inline.waitFor({ state: 'detached' });
         await page.evaluate(() => {
@@ -1040,7 +1062,9 @@ const uiFile = path.join(root, 'launcher/screensaver-settings.js');
           ),
           false
         );
-        await page.evaluate(() => window.dispatchEvent(new Event('blur')));
+        await page.evaluate(() =>
+          document.dispatchEvent(new Event('webOSRelaunch'))
+        );
         await inline.waitFor({ state: 'detached' });
       }
       assert.deepEqual(errors, []);
