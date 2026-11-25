@@ -879,16 +879,50 @@ def begin(installer, action, artifacts, versions, expected, configuration, setup
 
 
 def stage_remaining(installer, value):
-    """Only missing unclaimed paths; never replace changed or claimed payloads."""
-    plan=value['plan']
-    if plan['action']!='install':return
-    missing=invoke(installer.remote,plan,'artifacts').get('missing')
-    if not isinstance(missing,list) or any(type(index) is not int or not 0 <= index < len(plan['slots']) for index in missing):refuse()
-    for index in missing:
-        name=('helper.ipk', 'launcher.ipk', SCREENSAVER_IPK)[index]
-        raw=base64.b64decode(value['artifacts'][name],validate=True)
-        invoke(installer.remote,plan,'upload-artifact',index,data=raw)
-    if invoke(installer.remote,plan,'artifacts').get('missing')!=[]:refuse()
+    """Only stage missing, unclaimed artifacts from the original operation."""
+    plan = value['plan']
+    if plan['action'] != 'install':
+        return
+    remote = installer.remote
+    names = ('helper.ipk', 'launcher.ipk', SCREENSAVER_IPK)
+
+    def missing_artifacts():
+        missing = invoke(remote, plan, 'artifacts').get('missing')
+        if not isinstance(missing, list) or any(
+                type(index) is not int or not 0 <= index < len(plan['slots']) for index in missing):
+            refuse()
+        return missing
+
+    def transport_unconfirmed(error):
+        failure = getattr(error, 'no_root_observer', {}).get('failure')
+        return (failure in ('connection-interrupted', 'timeout', 'transport-error')
+                or error.reason_code == 'ssh-exit-status-missing')
+
+    missing = missing_artifacts()
+    for attempt in range(2):
+        if not missing:
+            return
+        try:
+            for index in missing:
+                raw = base64.b64decode(value['artifacts'][names[index]], validate=True)
+                invoke(remote, plan, 'upload-artifact', index, data=raw)
+        except UserError as error:
+            if not transport_unconfirmed(error):
+                raise
+            # A lost response can follow a successful write. Recheck the
+            # original reservation and artifact hashes before sending again.
+            try:
+                missing = missing_artifacts()
+            except UserError as check_error:
+                if not transport_unconfirmed(check_error):
+                    raise
+                raise error from None
+            if attempt and missing:
+                raise
+        else:
+            if missing_artifacts():
+                refuse()
+            return
 
 
 def capsule(installer, pending):
