@@ -121,6 +121,7 @@ function fixture(overrides = {}) {
 }
 
 const closeUri = 'luna://com.webos.applicationManager/closeByAppId';
+const devCloseUri = 'luna://com.webos.applicationManager/dev/closeByAppId';
 const launchUri = 'luna://com.webos.applicationManager/launch';
 const appId = 'com.cleanyourtv.screensaver';
 
@@ -128,7 +129,8 @@ function deferredCalls() {
   const replies = [];
   const f = fixture({
     onCall(uri, done) {
-      if (uri === closeUri || uri === launchUri) replies.push(done);
+      if (uri === closeUri || uri === devCloseUri || uri === launchUri)
+        replies.push(done);
       else done({ payload: { returnValue: true } });
     }
   });
@@ -154,12 +156,48 @@ function deferredCalls() {
     errorCode: -1,
     errorText: 'Permission denied'
   });
+  assert.deepEqual(f.calls.at(-1), {
+    uri: devCloseUri,
+    payload: { id: appId }
+  });
+  f.reply({
+    returnValue: false,
+    errorCode: -1,
+    errorText: 'Permission denied'
+  });
   assert.equal(f.adapter.unavailable(), true);
   assert.equal(f.adapter.preview(), false);
   assert.equal(
     f.calls.some((call) => call.uri === launchUri),
     false
   );
+  f.adapter.dispose();
+}
+
+{
+  const f = deferredCalls();
+  f.reply({
+    returnValue: false,
+    errorCode: -1,
+    errorText: 'Permission denied'
+  });
+  assert.deepEqual(f.calls.at(-1), {
+    uri: devCloseUri,
+    payload: { id: appId }
+  });
+  f.reply({
+    returnValue: false,
+    errorCode: 1,
+    errorText: 'app is not running'
+  });
+  assert.equal(f.adapter.preview(), true);
+  f.reply({ returnValue: true });
+  f.tick(10100);
+  assert.deepEqual(f.calls.at(-1), {
+    uri: devCloseUri,
+    payload: { id: appId }
+  });
+  f.reply({ returnValue: true });
   f.adapter.dispose();
 }
 

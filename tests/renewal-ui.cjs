@@ -23,6 +23,7 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8876';
       window.helperStatusAvailable = true;
       window.helperStopLatched = true;
       window.homeChoice = null;
+      window.homeBusyReplies = 0;
       // Older Helpers omit keepSource; set a boolean to emulate support.
       window.keepSourceChoice = undefined;
       window.homeBrokerFailure = null;
@@ -70,7 +71,15 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8876';
                 helperStarting = false;
               }, 1750);
             } else if (uri === 'luna://com.gathin.tvhome.renewal/homeStatus') {
-              if (helperStopped) {
+              if (homeBusyReplies > 0) {
+                homeBusyReplies--;
+                r.returnValue = false;
+                r.diagnostic = {
+                  component: 'home',
+                  operation: 'wait',
+                  code: 'BUSY'
+                };
+              } else if (helperStopped) {
                 r.returnValue = false;
                 if (homeBrokerFailure) r.diagnostic = homeBrokerFailure;
               } else {
@@ -227,6 +236,19 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8876';
       await page.reload();
       await page.locator('#tiles .item').first().waitFor();
     }
+    // A concurrent screensaver query can briefly own the Home broker.
+    await page.evaluate(() => {
+      homeChoice = true;
+      homeBusyReplies = 1;
+    });
+    await page.locator('#btnSettings').click();
+    await page.locator('[data-category=home]').click();
+    await page
+      .locator('#homeRoutingToggle[role=switch][aria-checked=true]')
+      .waitFor({ timeout: 3500 });
+    assert(await page.locator('#homeRoutingStart').isHidden());
+    assert(await page.evaluate(() => !helperStarting && !helperStopped));
+    await page.locator('#renewalClose').click();
     // A broker without its Helper must permit explicit recovery of the saved Off state.
     await page.evaluate(() => {
       homeChoice = false;

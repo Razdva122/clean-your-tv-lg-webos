@@ -7,6 +7,7 @@
   var state = config.normalize();
   var known = false;
   var available = false;
+  var popupUnavailable = false;
   var busy = false;
   var requestEpoch = 0;
   var statusPending = false;
@@ -388,10 +389,10 @@
     );
   }
   function canEdit() {
-    return known && available && state.enabled;
+    return known && (available || popupUnavailable) && state.enabled;
   }
   function running() {
-    return canEdit() && supportedChoice();
+    return canEdit() && available && supportedChoice();
   }
   function status(message) {
     if (host)
@@ -421,7 +422,7 @@
     retry.disabled = retry.hidden;
     retry.parentNode.hidden = startHelper.hidden && retry.hidden;
     enabled.hidden = !known || statusUnconfirmed;
-    enabled.disabled = enabled.hidden || !available;
+    enabled.disabled = enabled.hidden || !(available || popupUnavailable);
     enabled.setAttribute('aria-checked', String(state.enabled));
     enabled.textContent =
       t('Screensaver') + ': ' + t(state.enabled ? 'On' : 'Off');
@@ -545,6 +546,8 @@
     state = config.normalize(reply.state);
     known = true;
     available = reply.available;
+    popupUnavailable =
+      !rootEdition() && !available && reply.reason === 'popup-unavailable';
     return true;
   }
   function retryStatus(recheck) {
@@ -581,7 +584,7 @@
       statusUnconfirmed = !confirmed;
       if (statusUnconfirmed) {
         known = true;
-        available = false;
+        available = popupUnavailable = false;
       }
       if (available) {
         statusRetries = 0;
@@ -634,7 +637,7 @@
     if (
       busy ||
       !known ||
-      !available ||
+      !(available || popupUnavailable) ||
       (!clockSync && !canEdit() && typeof changes.enabled !== 'boolean')
     )
       return;

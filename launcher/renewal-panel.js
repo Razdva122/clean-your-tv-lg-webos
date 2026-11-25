@@ -194,7 +194,8 @@
       homeEnabled = null,
       homeBusy = false,
       homeStatusRetry = null,
-      homeStatusRetries = 0;
+      homeStatusRetries = 0,
+      homeBusyRetries = 0;
     function hideHomeChoice() {
       var focused = document.activeElement === homeToggle;
       homeToggle.hidden = false;
@@ -297,6 +298,7 @@
         return;
       }
       homeStatusRetries = 0;
+      homeBusyRetries = 0;
       var retryFocused =
         document.activeElement === homeRetry ||
         document.activeElement === homeStart;
@@ -318,6 +320,13 @@
         (!categories || buttons.indexOf(document.activeElement) >= 0)
       )
         focus(index);
+    }
+    function retryHomeStatus() {
+      homeBusy = false;
+      homeStatusRetry = setTimeout(function () {
+        homeStatusRetry = null;
+        refreshHome();
+      }, 1000);
     }
     function refreshHome() {
       if (homeBusy || homeStatusRetry !== null || !openNow() || document.hidden)
@@ -342,17 +351,23 @@
         if (homeStatusRetries > 0) {
           homeStatusRetries--;
           if (homeStatusRetries) {
-            homeBusy = false;
-            homeStatusRetry = setTimeout(function () {
-              homeStatusRetry = null;
-              refreshHome();
-            }, 1000);
+            retryHomeStatus();
             return;
           }
         }
+        var diagnostic = reply && safeDiagnostic(reply.diagnostic);
+        var brokerBusy =
+          diagnostic &&
+          diagnostic.component === 'home' &&
+          diagnostic.operation === 'wait' &&
+          diagnostic.code === 'BUSY';
+        if (brokerBusy && homeBusyRetries < 3) {
+          homeBusyRetries++;
+          retryHomeStatus();
+          return;
+        }
         function unavailable(stopped, running) {
           renderHome(reply);
-          var diagnostic = reply && safeDiagnostic(reply.diagnostic);
           var brokerUnavailable =
             diagnostic &&
             diagnostic.component === 'home' &&
@@ -362,7 +377,9 @@
                 diagnostic.code === 'ENOENT'));
           // Offer the confirmed start action even when status is unknown.
           homeStart.hidden =
-            stopped === false && !(running === false && brokerUnavailable);
+            stopped !== true &&
+            (brokerBusy ||
+              (stopped === false && !(running === false && brokerUnavailable)));
           homeStart.disabled = false;
           homeVisit.disabled = stopped === true;
           homeRetry.hidden = stopped === true;
@@ -383,7 +400,10 @@
         });
       });
     }
-    homeRetry.onclick = refreshHome;
+    homeRetry.onclick = function () {
+      homeBusyRetries = 0;
+      refreshHome();
+    };
     homeStart.onclick = function () {
       if (homeBusy || homeStatusRetries) return;
       var generation = homeGeneration;
@@ -412,6 +432,12 @@
     });
     window.addEventListener('focus', function () {
       if (homeEnabled === null && homeStatusRetry === null) refreshHome();
+    });
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden && openNow() && homeEnabled === null) {
+        homeBusyRetries = 0;
+        refreshHome();
+      }
     });
     homeToggle.onclick = function () {
       if (homeBusy || homeEnabled === null) return;
@@ -777,6 +803,7 @@
       clearTimeout(homeStatusRetry);
       homeStatusRetry = null;
       homeStatusRetries = 0;
+      homeBusyRetries = 0;
       if (window.HomeWallpaperPanel) HomeWallpaperPanel.unmount();
       if (window.HomeThemePanel) HomeThemePanel.unmount();
       panel.classList.add('hidden');

@@ -118,7 +118,7 @@ const uiFile = path.join(root, 'launcher/screensaver-settings.js');
             if (savingBusy) busyConfigure--;
             else if (method === 'screensaverConfigure') backend = payload;
             const channelBusy = statusBusy || savingBusy;
-            const denied = method === 'screensaverPreview' && popupUnavailable;
+            const denied = popupUnavailable;
             const response = JSON.stringify(
               channelBusy
                 ? {
@@ -341,7 +341,15 @@ const uiFile = path.join(root, 'launcher/screensaver-settings.js');
             .querySelector('.screensaver-status')
             .textContent.includes('unavailable on this TV')
         );
-        assert.equal(await toggle.isDisabled(), true);
+        assert.equal(await toggle.isDisabled(), false);
+        assert.equal(
+          await page.locator('#screensaverPreview').isDisabled(),
+          true
+        );
+        await toggle.click();
+        assert.equal(await toggle.getAttribute('aria-checked'), 'false');
+        await toggle.click();
+        assert.equal(await toggle.getAttribute('aria-checked'), 'true');
         await page.evaluate(() => {
           popupUnavailable = false;
           HomeScreensaver.activate(true);

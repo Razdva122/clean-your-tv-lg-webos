@@ -110,14 +110,13 @@ module.exports = function (options) {
     };
     if (started !== undefined) reply.started = started;
     if (!reply.available)
-      reply.reason =
-        !installed || adapter.unavailable()
+      reply.reason = !healthy()
+        ? 'owner-unavailable'
+        : !installed || adapter.unavailable()
           ? 'popup-unavailable'
-          : !healthy()
-            ? 'owner-unavailable'
-            : state.scope !== 'cytv'
-              ? 'global-media-unavailable'
-              : 'media-unavailable';
+          : state.scope !== 'cytv'
+            ? 'global-media-unavailable'
+            : 'media-unavailable';
     return reply;
   }
   function validSettings(value) {

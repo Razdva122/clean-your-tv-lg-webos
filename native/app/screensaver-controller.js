@@ -14,6 +14,7 @@ module.exports = function (options) {
   var activation = null;
   var closeReady = null;
   var closeVerified = null;
+  var closeMethod = 'closeByAppId';
 
   function context() {
     var source;
@@ -50,8 +51,11 @@ module.exports = function (options) {
       options.log({ event: 'screensaver-popup-close-unverified' });
   }
 
-  function closePopup(done) {
+  function closePopup(method, done) {
+    var reported = false;
     function report(reply) {
+      if (reported) return;
+      reported = true;
       var closed =
         reply &&
         (reply.returnValue === true ||
@@ -60,12 +64,12 @@ module.exports = function (options) {
               reply.errorText === popupId + ' is not running') ||
               (reply.errorCode === 1 &&
                 reply.errorText === 'app is not running'))));
-      if (!closed) reportUnverifiedClose();
-      done(!!closed);
+      var code = reply && reply.errorCode;
+      done(!!closed, typeof code === 'number' && isFinite(code) ? code : null);
     }
     try {
       options.service.call(
-        applicationManager + 'closeByAppId',
+        applicationManager + method,
         { id: popupId },
         function (message) {
           report(message && message.payload);
@@ -94,7 +98,23 @@ module.exports = function (options) {
         resolve();
       }
       // Clear a stale window and prove this Helper can remove its own popup.
-      closePopup(finish);
+      closePopup(closeMethod, function (closed, code) {
+        if (closed) return finish(true);
+        if (timer === null) return;
+        // Developer-installed popups can have a separate SAM close route.
+        // Only keep the route if SAM confirms this exact target is closed.
+        var devClose = 'dev/closeByAppId';
+        closePopup(devClose, function (devClosed, devCode) {
+          if (devClosed) closeMethod = devClose;
+          else if (timer !== null && options.log)
+            options.log({
+              event: 'screensaver-popup-close-unverified',
+              errorCode: code,
+              devErrorCode: devCode
+            });
+          finish(devClosed);
+        });
+      });
     });
   }
 
@@ -115,8 +135,9 @@ module.exports = function (options) {
       closeVerified = false;
       reportUnverifiedClose();
     }, 3000);
-    closePopup(function (closed) {
+    closePopup(closeMethod, function (closed) {
       clearTimeout(timer);
+      if (!closed) reportUnverifiedClose();
       attempt.closing = false;
       closeVerified = closed;
       if (attempt.closeAgain || (!closed && !attempt.retried)) {
