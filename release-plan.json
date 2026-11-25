@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "version": null,
+  "version": "1.29.0",
   "changes": [
     {
       "pr": 820,
@@ -11,6 +11,13 @@
       "summary": "Recover late LG Home takeover after an IR Home press"
     },
     {
+      "pr": 821,
+      "issues": [
+        615
+      ],
+      "summary": "Recover Home after confirmed normal shutdown and preserve the Settings OK guard"
+    },
+    {
       "pr": 822,
       "issues": [
         818
@@ -18,11 +25,19 @@
       "summary": "Keep No-root Home resident in the background"
     },
     {
+      "pr": 823,
+      "issues": [
+        740,
+        791
+      ],
+      "summary": "Report Root startup milestones when installation recovery times out"
+    },
+    {
       "pr": 826,
       "issues": [
         741
       ],
-      "summary": "Keep C1 Home control active after a return hint timeout"
+      "summary": "Keep the C1 backend controller alive when an optional return hint times out"
     },
     {
       "pr": 831,
@@ -36,7 +51,14 @@
       "issues": [
         410
       ],
-      "summary": "Fix embedded QML packaging and pre-submission recovery"
+      "summary": "Fix Root Beta QML packaging and verified pre-submission cleanup"
+    },
+    {
+      "pr": 833,
+      "issues": [
+        797
+      ],
+      "summary": "Let owners disable the long Back shortcut without suppressing other Home actions"
     },
     {
       "pr": 834,
@@ -51,6 +73,13 @@
         829
       ],
       "summary": "Use a tuner icon for unavailable Live TV artwork"
+    },
+    {
+      "pr": 836,
+      "issues": [
+        828
+      ],
+      "summary": "Recover an unresponsive No-root screensaver popup"
     }
   ],
   "excluded": [],
