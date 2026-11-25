@@ -344,6 +344,15 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8876';
     await keepSwitch.click();
     await homePane.locator('#homeKeepSource[aria-checked=false]').waitFor();
     assert.equal(await page.evaluate(() => keepSourceChoice), false);
+    await page.evaluate(() => {
+      keepSourceChoice = undefined;
+    });
+    await page.locator('#renewalClose').click();
+    await page.locator('#btnSettings').click();
+    await page.locator('[data-category=home]').click();
+    await homePane.locator('#homeRoutingToggle[role=switch]').waitFor();
+    assert(await homePane.locator('#homeKeepSource').isHidden());
+    assert(await homePane.locator('#homeKeepSourceHint').isHidden());
     await page.reload();
     await page.locator('#tiles .item').first().waitFor();
     await page.locator('#btnSettings').click();

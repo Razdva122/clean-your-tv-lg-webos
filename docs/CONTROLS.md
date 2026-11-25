@@ -83,12 +83,16 @@ returns focus to the app cards. It does not dismiss a transparent bar or reveal
 video/HDMI underneath. Selecting an app uses normal TV app switching, without
 Home forcing its own window to close. See the [1.8.2 tested scope and known limits](RELEASE-1.8.2.md); new candidate artifacts need their own affected acceptance.
 
-
 The Back button follows the current app and LG firmware. To visit LG Home once,
 choose **Open LG Home** in Home settings. Use triple Home to stop Home control.
+On the [experimental C1 native gate](development/C1-NATIVE-GATE.md),
+**Open LG Home** leaves CYTV routing off until you enable **Change Home** again.
 
 The No-root Helper can return to the launcher after watched apps exit, and LG Home
 may briefly appear.
+
+On No-root TVs where webOS denies closing the CYTV screensaver window, preview
+and idle playback stay inside Clean Your TV. Other apps use LG's screensaver.
 
 Startup can initially show a black screen or LG Home. Standby/wake success does
 not prove cold-boot reliability or a fixed startup time. See [device limits](COMPATIBILITY.md).

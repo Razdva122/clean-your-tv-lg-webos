@@ -12,6 +12,7 @@
   var retired = [];
   var finished = false;
   var startupTimer;
+  var embedded = root.parent !== root && root.location.hash === '#cytv-inline';
   function now() {
     return root.performance.now();
   }
@@ -90,9 +91,10 @@
     cancelCandidate();
     if (owner) {
       dispose(owner);
-      terminalReport(owner);
+      if (!embedded) terminalReport(owner);
     }
-    root.close();
+    if (embedded) root.parent.postMessage('cytv-screensaver-closed', '*');
+    else root.close();
   }
 
   function live(session, epoch) {
@@ -276,6 +278,7 @@
   function activate(session) {
     if (session.activated) return;
     session.activated = true;
+    if (embedded) return;
     var system = root.webOSSystem || root.PalmSystem;
     try {
       if (system && typeof system.activate === 'function') system.activate();
@@ -287,10 +290,15 @@
     var mode = content.mode;
     var bundled = bundledBackground(content);
     var cached = cacheUrl(content);
+    var assetPath =
+      bundled &&
+      (((content.quality === '1080p' || session.hdFallback === bundled.id) &&
+        bundled.hdFile) ||
+        bundled.file);
     var url = bundled
-      ? ((content.quality === '1080p' || session.hdFallback === bundled.id) &&
-          bundled.hdFile) ||
-        bundled.file
+      ? embedded
+        ? content.assets[assetPath]
+        : assetPath
       : cached || content.url;
     session.clockOverlay = content.clockOverlay === true;
     session.clock = root.CYTVScreensaverSettings.clockPresentation(
@@ -320,7 +328,7 @@
     }
     function failed() {
       if (!live(session, epoch)) return;
-      if (bundled && bundled.hdFile && url !== bundled.hdFile) {
+      if (bundled && bundled.hdFile && assetPath !== bundled.hdFile) {
         session.hdFallback = bundled.id;
         return render(session, content);
       }
@@ -341,7 +349,12 @@
       setClock(session, session.clockOverlay, true);
       if (cached && !session.cacheTimer)
         session.cacheTimer = root.setInterval(function () {
-          if (!live(session, epoch) || doc.hidden || !doc.hasFocus()) return;
+          if (
+            !live(session, epoch) ||
+            doc.hidden ||
+            (!embedded && !doc.hasFocus())
+          )
+            return;
           try {
             var request = new root.XMLHttpRequest();
             request.open('HEAD', cached, true);
@@ -379,6 +392,10 @@
 
   function reportMedia(session, state) {
     session.mediaState = state;
+    if (embedded) {
+      root.parent.postMessage('cytv-screensaver-rendered', '*');
+      return;
+    }
     if (state !== 'ready' || doc.hasFocus()) heartbeat(session);
   }
 
@@ -554,6 +571,17 @@
       heartbeat(session);
     }, 1000);
     heartbeat(session);
+  }
+
+  if (embedded) {
+    root.addEventListener('message', function (event) {
+      if (event.source !== root.parent || owner || finished) return;
+      var data = event.data;
+      if (!data || data.type !== 'cytv-screensaver-start') return;
+      owner = { contentEpoch: 0, mediaState: 'loading' };
+      render(owner, data.content);
+    });
+    return;
   }
 
   var held = {};

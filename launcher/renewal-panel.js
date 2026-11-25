@@ -181,7 +181,7 @@
     function renderKeepSource(r) {
       var known =
         !!r && r.returnValue === true && typeof r.keepSource === 'boolean';
-      if (known) homeKeepOn = r.keepSource;
+      if (r && r.returnValue === true) homeKeepOn = known ? r.keepSource : null;
       homeKeep.hidden = homeKeepHint.hidden = homeKeepOn === null;
       homeKeep.disabled = !known;
       homeKeep.setAttribute('aria-checked', String(homeKeepOn === true));
@@ -334,6 +334,7 @@
       homeBusy = true;
       homeRetry.disabled = true;
       homeStart.disabled = true;
+      homeKeep.disabled = true;
       homeToggle.setAttribute('data-home-state', 'checking');
       hideHomeChoice();
       homeStatus.textContent = tr(
@@ -460,14 +461,15 @@
     homeKeep.onclick = function () {
       if (homeBusy || homeKeepOn === null) return;
       var focused = document.activeElement === homeKeep;
+      var enabled = !homeKeepOn;
       function refocus() {
         if (focused && openNow() && !homeKeep.hidden && !homeKeep.disabled)
           homeKeep.focus();
       }
       homeBusy = true;
       homeKeep.disabled = true;
-      homeRPC('setKeepSource', { enabled: !homeKeepOn }, function (r) {
-        if (r.returnValue === true && typeof r.keepSource === 'boolean') {
+      homeRPC('setKeepSource', { enabled: enabled }, function (r) {
+        if (r.returnValue === true && r.keepSource === enabled) {
           homeBusy = false;
           renderKeepSource(r);
           refocus();

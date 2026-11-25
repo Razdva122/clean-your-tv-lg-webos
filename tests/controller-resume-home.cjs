@@ -315,6 +315,18 @@ test('a physical Back hold does not launch LG Home through the Helper', () => {
   assert.equal(c.calls.filter((call) => call.id === LG).length, 0);
 });
 
+test('a stock foreground transition during held Back stays with webOS', () => {
+  const c = controller();
+  c.fg('com.example.video');
+  const launchCount = c.homeCalls().length;
+  c.worker().stdout.emit('data', Buffer.from('BACK_DOWN\n'));
+  c.advance(1200);
+  c.fg(LG);
+  c.worker().stdout.emit('data', Buffer.from('BACK_UP\n'));
+  c.advance(12000);
+  assert.equal(c.homeCalls().length, launchCount);
+});
+
 test('the explicit LG Home action still cancels resume recovery', () => {
   const c = controller();
   c.resume();

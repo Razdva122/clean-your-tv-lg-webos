@@ -8,6 +8,7 @@
   var known = false;
   var available = false;
   var popupUnavailable = false;
+  var inlineFrame = null;
   var busy = false;
   var requestEpoch = 0;
   var statusPending = false;
@@ -106,6 +107,8 @@
         'Checking screensaver availability…': 'Проверка доступности заставки…',
         'Screensaver is unavailable on this TV.':
           'Заставка недоступна на этом телевизоре.',
+        'Screensaver runs only in Clean Your TV.':
+          'Заставка работает только внутри Clean Your TV.',
         'Could not save screensaver settings.':
           'Не удалось сохранить настройки заставки.',
         'Screensaver preview is unavailable right now.':
@@ -347,6 +350,10 @@
     );
   }
   function releaseMedia() {
+    if (inlineFrame) {
+      inlineFrame.parentNode.removeChild(inlineFrame);
+      inlineFrame = null;
+    }
     var old = activeMedia,
       pending = pendingMedia,
       wallpaper = wallpaperHeld;
@@ -392,7 +399,7 @@
     return known && (available || popupUnavailable) && state.enabled;
   }
   function running() {
-    return canEdit() && available && supportedChoice();
+    return canEdit() && supportedChoice();
   }
   function status(message) {
     if (host)
@@ -516,7 +523,9 @@
                 ? 'Home Helper is stopped.'
                 : statusUnconfirmed && !rootEdition()
                   ? 'Could not check screensaver availability.'
-                  : 'Screensaver is unavailable on this TV.'
+                  : popupUnavailable
+                    ? 'Screensaver runs only in Clean Your TV.'
+                    : 'Screensaver is unavailable on this TV.'
           : !state.enabled
             ? 'Turn on the screensaver to edit its settings.'
             : ''
@@ -723,6 +732,10 @@
     activityAcknowledged = null;
     root.clearTimeout(pendingOffer);
     pendingOffer = null;
+    if (popupUnavailable) {
+      activityAcknowledged = now();
+      return;
+    }
     if (activityTimer !== null || activityBusy) return;
     activityTimer = root.setTimeout(function () {
       activityTimer = null;
@@ -757,6 +770,69 @@
     delete settings.clock;
     return JSON.stringify(settings);
   }
+  function dismissInline() {
+    if (!inlineFrame) return;
+    handoff = actionPending = null;
+    root.clearTimeout(handoffTimer);
+    releaseMedia();
+    contextActive = false;
+    if (idle) idle.refresh();
+  }
+  function openInline(content, current, failed) {
+    function mount(assets) {
+      if (!current()) return;
+      content.assets = assets;
+      var frame = doc.createElement('iframe');
+      frame.className = 'screensaver-inline';
+      frame.tabIndex = -1;
+      frame.setAttribute('aria-hidden', 'true');
+      frame.onload = function () {
+        if (inlineFrame === frame)
+          frame.contentWindow.postMessage(
+            { type: 'cytv-screensaver-start', content: content },
+            '*'
+          );
+      };
+      frame.src = 'screensaver-companion/files/index.html#cytv-inline';
+      inlineFrame = frame;
+      doc.body.appendChild(frame);
+    }
+    var background = config.background(content.mode, content.assetId);
+    if (!background) return mount({});
+    var request = new root.XMLHttpRequest();
+    request.open('GET', 'screensaver-companion/manifest.json', true);
+    request.timeout = 3000;
+    request.onerror = request.ontimeout = failed;
+    request.onload = function () {
+      var assets = {};
+      try {
+        var files = JSON.parse(request.responseText).files;
+        [background.file, background.hdFile].forEach(function (key) {
+          if (!key) return;
+          var prefix = 'usr/palm/applications/com.gathin.tvhome/';
+          var path = files[key];
+          if (typeof path !== 'string' || path.indexOf(prefix) !== 0)
+            throw Error('Missing screensaver asset');
+          path = path.slice(prefix.length);
+          if (
+            !/^(?:[a-zA-Z0-9_-]+\/)*[a-zA-Z0-9_.-]+$/.test(path) ||
+            path === '.' ||
+            path === '..'
+          )
+            throw Error('Invalid screensaver asset path');
+          assets[key] = '../../' + path;
+        });
+      } catch (_) {
+        return failed();
+      }
+      mount(assets);
+    };
+    try {
+      request.send();
+    } catch (_) {
+      failed();
+    }
+  }
   function offer(preview) {
     if (actionPending || handoff || !running() || !localContext(preview))
       return;
@@ -783,7 +859,7 @@
       if (!current() || !localContext(preview)) return;
       failed();
       stopped = true;
-      rpc('screensaverStop', {}, function () {});
+      if (!popupUnavailable) rpc('screensaverStop', {}, function () {});
     }
     root.clearTimeout(handoffTimer);
     handoffTimer = root.setTimeout(expired, 120000);
@@ -826,6 +902,14 @@
         attempt.preparing = false;
         root.clearTimeout(handoffTimer);
         handoffTimer = root.setTimeout(expired, 10000);
+        if (popupUnavailable) {
+          var content = config.normalize(state);
+          var clock = clockPresentation();
+          if (clock) content.clock = clock;
+          if (lease) content.cacheUrl = lease.mediaUrl;
+          openInline(content, current, failed);
+          return;
+        }
         rpc(
           preview ? 'screensaverPreview' : 'screensaverEligible',
           lease ? { mediaUrl: lease.mediaUrl } : {},
@@ -921,8 +1005,45 @@
   function start() {
     if (started) return;
     started = true;
+    function inlineReply(event) {
+      if (!inlineFrame || event.source !== inlineFrame.contentWindow) return;
+      if (event.data === 'cytv-screensaver-rendered') {
+        root.clearTimeout(handoffTimer);
+        actionPending = null;
+        inlineFrame.classList.add('visible');
+      } else if (event.data === 'cytv-screensaver-closed') dismissInline();
+    }
+    function inlineKey(event) {
+      if (!inlineFrame) return;
+      var code = event.keyCode;
+      var navigation =
+        code === 8 ||
+        code === 13 ||
+        code === 27 ||
+        code === 461 ||
+        (code >= 37 && code <= 40) ||
+        (code >= 48 && code <= 57) ||
+        (code >= 403 && code <= 406);
+      if (navigation) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        if (event.type === 'keydown') return;
+      }
+      dismissInline();
+    }
+    function inlineClick(event) {
+      if (!inlineFrame) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      dismissInline();
+    }
+    root.addEventListener('message', inlineReply);
+    doc.addEventListener('keydown', inlineKey, true);
+    doc.addEventListener('keyup', inlineKey, true);
+    doc.addEventListener('click', inlineClick, true);
     root.addEventListener('blur', function () {
       localFocused = false;
+      dismissInline();
       stopReceiver();
       cancelPreparing();
       stopLocal();
@@ -930,12 +1051,17 @@
     root.addEventListener('focus', focus);
     doc.addEventListener('visibilitychange', function () {
       if (doc.hidden) {
+        dismissInline();
         stopReceiver();
         cancelPreparing();
         stopLocal();
       } else focus();
     });
     root.addEventListener('pagehide', function () {
+      root.removeEventListener('message', inlineReply);
+      doc.removeEventListener('keydown', inlineKey, true);
+      doc.removeEventListener('keyup', inlineKey, true);
+      doc.removeEventListener('click', inlineClick, true);
       handoff = null;
       clearMediaPreview();
       stopReceiver();
