@@ -1,6 +1,7 @@
 // Start scripts/preview.py first; PREVIEW_URL overrides its default port 8876.
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const assert = require('node:assert/strict');
+const { readFileSync } = require('node:fs');
 const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8876';
 (async () => {
   const browser = await chromium.launch({ headless: true, channel: 'chrome' });
@@ -558,6 +559,93 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8876';
       await choice.click();
       assert.deepEqual(await ids(), ['b', pin, '+']);
     }
+    // No-root may discover Live TV without any usable SSAP icon URL.
+    const tunerId = 'com.webos.app.livetv';
+    const brandIcon =
+      'data:image/png;base64,' +
+      readFileSync('launcher/brand-v2-icon.png').toString('base64');
+    const tuner = { id: tunerId, title: 'Live TV' };
+    const originalIcon =
+      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=';
+    const tunerTile = page.locator(
+      '#tiles [data-app-id="' + tunerId + '"] img'
+    );
+    const tunerChoice = page.locator(
+      '#appPicker [data-app-id="' + tunerId + '"]'
+    );
+    await page.addInitScript((icon) => {
+      window.CYTVBrandIconFallback = icon;
+    }, brandIcon);
+    let packagedApps = [{ ...tuner, icon: brandIcon }];
+    await page.route('**/apps.js', (route) =>
+      route.fulfill({
+        contentType: 'application/javascript',
+        body:
+          'window.TV_APPS=' + JSON.stringify({ apps: packagedApps, inputs: [] })
+      })
+    );
+    await page.evaluate(() => localStorage.removeItem('tvhome.layout'));
+    await page.goto(base + '/launcher/index.html');
+    await ready();
+    assert.match(await tunerTile.getAttribute('src'), /^data:image\/svg\+xml,/);
+    await tunerTile.evaluate((image) => image.decode());
+
+    // A generic update has no packaged inventory. Keep the user's order and
+    // replace the displayed placeholder from the older saved catalog.
+    packagedApps = [];
+    await page.evaluate(
+      ({ tuner, brandIcon }) => {
+        localStorage.setItem(
+          'tvhome.layout',
+          JSON.stringify({
+            version: 1,
+            ids: [tuner.id],
+            hidden: [],
+            catalog: [{ ...tuner, icon: brandIcon }],
+            catalogConfirmed: true
+          })
+        );
+      },
+      { tuner, brandIcon }
+    );
+    await page.reload();
+    await ready();
+    assert.match(await tunerTile.getAttribute('src'), /^data:image\/svg\+xml,/);
+
+    // A tuner that arrives on picker refresh gets the same icon, and a later
+    // authentic image takes priority over it.
+    await page.evaluate(() => {
+      const state = JSON.parse(localStorage.getItem('tvhome.layout'));
+      state.ids = [];
+      state.catalog = [];
+      localStorage.setItem('tvhome.layout', JSON.stringify(state));
+    });
+    await page.reload();
+    await ready();
+    await page.evaluate((tuner) => {
+      window.inventoryOverride = [tuner];
+    }, tuner);
+    await page.locator('.add-app').click();
+    assert.match(
+      await tunerChoice.locator('img').getAttribute('src'),
+      /^data:image\/svg\+xml,/
+    );
+    await tunerChoice.click();
+    assert.match(await tunerTile.getAttribute('src'), /^data:image\/svg\+xml,/);
+    await page.evaluate(
+      (tuner) => {
+        window.inventoryOverride = [tuner];
+      },
+      { ...tuner, icon: originalIcon }
+    );
+    await page.locator('.add-app').click();
+    await page
+      .locator('#appPickerStatus')
+      .filter({ hasText: /All installed|Choose an app or input/ })
+      .waitFor({ state: 'attached' });
+    await page.keyboard.press('Escape');
+    assert.equal(await tunerTile.getAttribute('src'), originalIcon);
+
     assert.deepEqual(errors, []);
     await page.screenshot({ path: '/tmp/home-app-management.png' });
     console.log(
