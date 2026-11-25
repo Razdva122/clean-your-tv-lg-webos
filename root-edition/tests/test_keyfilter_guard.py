@@ -652,16 +652,25 @@ int main(void) {
         systemctl.write_text(f'#!/bin/sh\nprintf "{system_state}\\n"\nexit {status}\n')
         systemctl.chmod(0o700)
         proc, iw, cw = self.armed(resumable=True, wait_input=True)
-        # Replay ENODEV as WAIT, then stop renewing the broker lease while
-        # the observer and controller are still alive.
-        deadline = time.monotonic() + 4
-        while proc.poll() is None and time.monotonic() < deadline:
-            try:
-                self.report_missing_input(iw)
-                os.write(cw, b'PING\n')
-            except BrokenPipeError:
+        self.report_missing_input(iw)
+        deadline = time.monotonic() + 1
+        while time.monotonic() < deadline:
+            if self.run_guard('--status')[0]['state'] == 'reconnecting':
                 break
-            time.sleep(.12)
+            time.sleep(.02)
+        else:
+            self.fail('Guardian did not observe the missing remote')
+
+        # Advance the broker pulse past its 15-second recovery window while
+        # keeping the reader's WAIT and the controller heartbeat fresh.
+        os.write(cw, b'PING\n')
+        broker = self.root / 'volatile/broker'
+        fields = broker.read_text().split()
+        fields[3] = str(time.clock_gettime_ns(time.CLOCK_MONOTONIC) // 1_000_000 - 16_000)
+        expired = broker.with_name('expired-broker')
+        expired.write_text(' '.join(fields) + '\n')
+        expired.chmod(0o600)
+        expired.replace(broker)
         self.assertEqual(self.finish(proc)['reason'], reason)
         result, rc = self.run_guard('--retire-boot', TOKEN)
         if reason == 'normal_shutdown':
