@@ -266,13 +266,17 @@ function fixture(shared, largeMember) {
     module: { exports: {} }
   };
   var originalPin = digest(fs.readFileSync(path.join(root, 'manifest.json')));
+  assert(runtimeSource.includes("'/var/lib/clean-your-tv-root-staging'"));
   vm.runInNewContext(
     runtimeSource
       .replace(/'\/media([^']*)'/g, function (all, suffix) {
         return JSON.stringify(base + '/media' + suffix);
       })
       .replace("'/var/lib/clean-your-tv-python'", JSON.stringify(runtimeBase))
-      .replace("'/var/lib/clean-your-tv-installer'", JSON.stringify(execBase)),
+      .replace(
+        "'/var/lib/clean-your-tv-root-staging'",
+        JSON.stringify(execBase)
+      ),
     sandbox
   );
   return {
@@ -541,6 +545,7 @@ async function rejection(change) {
     sharedBase.setSystem();
     var sharedState = await sharedBase.api.inspect(sharedBase.root);
     var first = await sharedBase.api.stage(sharedState, false);
+    assert(/^cytv-homebrew-[0-9a-f]{32}$/.test(path.basename(first.root)));
     var second = await sharedBase.api.stage(sharedState, false);
     await first.cleanup();
     assert(fs.existsSync(second.driver), 'preserve an overlapping stage');

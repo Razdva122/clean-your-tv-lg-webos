@@ -26,12 +26,13 @@ function loadBridge(reply) {
   );
   return context.module.exports;
 }
-async function rejects(fn) {
+async function rejects(fn, expectedMessage) {
   var failed = false;
   try {
     await fn();
   } catch (e) {
     failed = true;
+    if (expectedMessage) assert.strictEqual(e.message, expectedMessage);
   }
   assert(failed, 'must reject');
 }
@@ -177,10 +178,11 @@ async function rejects(fn) {
       errorCode: -1,
       errorText: denialText
     });
-    await assert.rejects(bridge.inspect(), { message: 'homebrew_exec_denied' });
-    await assert.rejects(bridge.start({ operation: ID, candidate: SHA }), {
-      message: 'homebrew_exec_denied'
-    });
+    await rejects(() => bridge.inspect(), 'homebrew_exec_denied');
+    await rejects(
+      () => bridge.start({ operation: ID, candidate: SHA }),
+      'homebrew_exec_denied'
+    );
   }
   for (var errorReply of [
     { returnValue: false, errorText: 'Unknown method' },
@@ -200,9 +202,7 @@ async function rejects(fn) {
     }
   ]) {
     bridge = loadBridge(errorReply);
-    await assert.rejects(bridge.inspect(), {
-      message: 'installer_unavailable'
-    });
+    await rejects(() => bridge.inspect(), 'installer_unavailable');
   }
   bridge = loadBridge({ returnValue: true, stdout: '{}' });
   await rejects(function () {

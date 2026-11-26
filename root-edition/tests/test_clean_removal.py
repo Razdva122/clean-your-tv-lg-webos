@@ -359,6 +359,66 @@ class CoordinatorCleanRemoval(unittest.TestCase):
 
 
 class ConfinedCleanup(unittest.TestCase):
+    def test_external_package_readback_requires_catalog_package_and_all_registrations_absent(self):
+        import install_device
+        from unittest.mock import Mock
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            folders = ('services.d','roles.d','client-permissions.d','api-permissions.d','manifests.d')
+            for folder in folders:
+                (root/folder).mkdir()
+            app = install_device.APP
+            device = Mock()
+            device.ownership.store.uid = os.getuid()
+            device.apps.return_value = {app}
+            with patch.object(install_device,'BUS',root):
+                absent = lambda: install_device.LocalDevice.package_registrations_gone(device,app)
+                self.assertFalse(absent())
+                device.apps.return_value = set()
+                self.assertTrue(absent())
+                device.absent.assert_called_once_with(app)
+                leaf = root/'roles.d'/(app+'.service.service.json')
+                leaf.symlink_to(root/'missing')
+                self.assertFalse(absent())
+                leaf.unlink()
+                device.absent.side_effect = ValueError('package_remains')
+                self.assertFalse(absent())
+
+    def test_removed_root_provision_checks_the_snapshot_without_recreating_sdk_files(self):
+        import hashlib
+        import provision
+        from clean_removal import verify_removed_root_provision
+        with tempfile.TemporaryDirectory() as tmp:
+            paths = {key: Path(tmp)/key for key in provision.FILES}
+            entries = {str(path): dict(original='sdk', original_sha256=hashlib.sha256(b'sdk').hexdigest(),
+                        installed_sha256='a'*64, mode=0o644, uid=0, gid=0) for path in paths.values()}
+            snapshot = dict(version=1, service=provision.NAME, files=entries)
+            with patch.object(provision,'FILES',paths):
+                verify_removed_root_provision(snapshot)
+                self.assertEqual(list(Path(tmp).iterdir()), [])
+                paths['role'].symlink_to(Path(tmp)/'missing')
+                with self.assertRaises(ValueError):
+                    verify_removed_root_provision(snapshot)
+                paths['role'].unlink()
+                entries[str(paths['role'])]['original']='different'
+                with self.assertRaises(ValueError):
+                    verify_removed_root_provision(snapshot)
+
+    def test_homebrew_snapshot_is_inventoried_without_desktop_retirement_authority(self):
+        import install_device as device
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            private = root/'private'
+            private.mkdir(mode=0o700)
+            stage = private/('cytv-homebrew-' + 'a'*32)
+            stage.mkdir(mode=0o700)
+            with patch.multiple(device, TEMP=root, PRIVATE_TEMP=private):
+                self.assertEqual(device.support_stages(os.getuid()), [stage])
+                self.assertFalse(device.support_stage_path(stage))
+                (private/'unknown').mkdir()
+                with self.assertRaisesRegex(ValueError, 'unclassified_private_support'):
+                    device.support_stages(os.getuid())
+
     def setUp(self):
         self.tmp=tempfile.TemporaryDirectory();self.addCleanup(self.tmp.cleanup)
         self.root=Path(self.tmp.name).resolve()/'owned';self.root.mkdir(mode=0o700)
@@ -395,6 +455,24 @@ class ConfinedCleanup(unittest.TestCase):
             with self.assertRaises(OSError):retire_tree(self.root,{'key.json','code.py'},uid=os.getuid())
         self.assertEqual(calls,['code.py','key.json']);self.assertFalse((self.root/'code.py').exists())
         self.assertEqual(retire_tree(self.root,{'key.json','code.py'},uid=os.getuid()),1)
+
+    def test_package_deleted_updater_never_recreates_its_registrations(self):
+        from clean_removal import restore_registrations
+        base=self.root.parent/'bus'
+        app='com.cleanyourtv.root.updater'
+        files={}
+        for folder,suffix in (('services.d','.service'),('roles.d','.service.json'),
+                              ('client-permissions.d','.service.json'),('api-permissions.d','.api.json')):
+            (base/folder).mkdir(parents=True)
+            files[str(base/folder/(app+'.service'+suffix))]={'original':'original','installed':'installed'}
+        Store(self.root,uid=os.getuid()).write('registration',{'files':files})
+        restore_registrations(self.root,app,base,os.getuid(),package_removed=True)
+        self.assertFalse(any(os.path.lexists(name) for name in files))
+        path=Path(next(iter(files)))
+        path.write_text('foreign')
+        with self.assertRaisesRegex(ValueError,'registration_ownership_conflict'):
+            restore_registrations(self.root,app,base,os.getuid(),package_removed=True)
+        self.assertEqual(path.read_text(),'foreign')
 
     def test_partial_registration_restore_checks_foreign_bytes_before_any_write(self):
         import clean_removal

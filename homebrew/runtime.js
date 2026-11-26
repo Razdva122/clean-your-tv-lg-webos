@@ -6,7 +6,7 @@ var fs = require('fs'),
   cp = require('child_process');
 var BASE = '/var/lib/clean-your-tv-python';
 var PIN = '4a71641c8d5536175e404a961624e8656eba30e97b5026f6bd7dc31e4bbeaaea';
-var EXEC_BASE = '/var/lib/clean-your-tv-installer';
+var EXEC_BASE = '/var/lib/clean-your-tv-root-staging';
 var SHARED = [
   '/media',
   '/media/developer',
@@ -723,8 +723,12 @@ function stage(state, full) {
       if (error.code !== 'EEXIST') throw error;
     }
     ancestors(EXEC_BASE);
-    var root = fs.mkdtempSync(EXEC_BASE + '/.exec-');
-    fs.chmodSync(root, 448);
+    var base = owned(EXEC_BASE, true);
+    if ((base.mode & 4095) !== 448 || base.dev !== owned('/var/lib', true).dev)
+      fail('Unsafe execution staging directory');
+    var root =
+      EXEC_BASE + '/cytv-homebrew-' + crypto.randomBytes(16).toString('hex');
+    fs.mkdirSync(root, 448);
     var saved = [],
       directories = [root];
     function cleanup() {
