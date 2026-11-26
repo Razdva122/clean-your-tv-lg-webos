@@ -1,0 +1,41 @@
+# Unsubmitted review draft for the current Root-only candidate. See SUBMISSION.md.
+title: CYTV Installer
+iconUri: https://raw.githubusercontent.com/Razdva122/clean-your-tv-lg-webos/main/assets/icons/installer-256.png
+manifestUrl: https://github.com/Razdva122/clean-your-tv-lg-webos/releases/latest/download/homebrew-manifest.json
+category: utility
+pool: main
+requirements:
+  webosRelease: '>=5.0'
+shortDescription: Install and maintain Clean Your TV Root on a compatible rooted LG TV.
+description: |
+  CYTV Installer guides you through installing Clean Your TV Root, a replacement
+  Home screen for compatible LG TVs. Review the selected components and choose
+  **Install and activate** to use Root Home with the Home button. If Python
+  is needed, the confirmation includes preparing it before the compatibility
+  checks. An active emergency stop keeps Root Home disabled.
+  The maintenance screen lets you restore LG Home.
+
+  ### Before you start
+
+  Your TV must already be rooted. Homebrew Channel must be able to run the
+  Installer's status check with root privileges. On webOS 11 or later, use
+  Homebrew Channel 0.8.0 or later. If the app reports access denied, update
+  Homebrew and choose **Check status**. The desktop and Android installers
+  are also available.
+
+  Setup requires webOS 5.0 or later with Node.js 8 or later and a compatible Python 3.9 or later.
+  The package includes an offline Python runtime for supported ARMv7 TVs.
+  Preparing that runtime requires at least 320 MiB free after installing CYTV
+  Installer. Allow additional space for the installer and product packages.
+
+  ### Updates and removal
+
+  Homebrew Channel updates the Installer app. Clean Your TV's System Updater
+  handles complete product updates. Removing the Installer leaves Clean Your TV
+  installed. To remove the product, use the complete removal action in the
+  Installer or the computer installer.
+
+  [Installation guide](https://github.com/Razdva122/clean-your-tv-lg-webos/blob/main/docs/INSTALL.md)
+  · [Support](https://github.com/Razdva122/clean-your-tv-lg-webos/issues)
+  · [MIT license](https://github.com/Razdva122/clean-your-tv-lg-webos/blob/main/LICENSE)
+  · [Third-party notices](https://github.com/Razdva122/clean-your-tv-lg-webos/blob/main/THIRD_PARTY_NOTICES.md)

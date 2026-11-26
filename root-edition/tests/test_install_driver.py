@@ -137,6 +137,9 @@ class ActivationTests(unittest.TestCase):
                 with guard.control(root,os.getuid()): pass
             with ownership.operation('product','product.json',resume=record['id']) as record:
                 ownership.stage(record,'complete',terminal=True)
+                # Completion is visible before the package worker releases the mutex.
+                with self.assertRaises(guard.ProductPending):
+                    with guard.control(root,os.getuid()): pass
             with guard.control(root,os.getuid()): pass
 
     def test_direct_activation_serializes_with_product_ownership(self):
@@ -371,6 +374,37 @@ Coordinator(Device(),Ownership(Store(sys.argv[2],uid=os.getuid())),read=lambda p
             self.assertEqual(snapshot.read_bytes(),b'verified worker v1')
             self.assertEqual(install_driver.submit('a'*32,payload,ownership=owner)['state'],'pending')
             self.assertEqual(spawn.call_count,1)
+
+    def test_tv_approval_is_bound_before_spawn_and_never_added_by_replay(self):
+        import install_device
+        from installation import TV_APPROVAL, TV_INSTALLER, cancel_setup_activation
+        _, payload, inventories, owner = self.submission_fixture()
+        candidate = install_driver.candidate_digest(payload, inventories)
+        with patch('install_driver._verified_payload', return_value=inventories), \
+             patch('install_driver.root_review_binding', return_value={'identity':{},'code':{}}), \
+             patch.object(install_device.LocalDevice, 'preflight') as preflight, patch('subprocess.Popen') as spawn:
+            plain = 'a' * 32
+            install_driver.submit(plain, payload, candidate=candidate, ownership=owner)
+            self.assertNotIn('--activate-after-install', spawn.call_args.args[0])
+            install_driver.submit(plain, payload, candidate=candidate, ownership=owner, activate_after_install=True)
+            self.assertEqual(spawn.call_count, 1)
+            self.assertIsNone(owner.store.read(TV_APPROVAL))
+            self.assertIsNone(owner.store.read('homebrew-activation-token'))
+            selected = 'b' * 32
+            submission = install_driver.submit(selected, payload, candidate=candidate, ownership=owner, activate_after_install=True)
+            self.assertEqual(owner.store.read(TV_APPROVAL),
+                             dict(operation=selected, candidate_sha256=candidate, issuer=TV_INSTALLER,
+                                  token=submission['tv_activation_token']))
+            self.assertIn('--activate-after-install', spawn.call_args.args[0])
+            public = install_driver.setup_public_result(submission)
+            self.assertNotIn('staging', public)
+            self.assertNotIn('tv_activation_token', public)
+            preflight.side_effect = lambda *args, **kwargs: cancel_setup_activation(owner.store)
+            stopped = install_driver.submit('c'*32, payload, candidate=candidate, ownership=owner, activate_after_install=True)
+            self.assertEqual(stopped['stage'], 'submitted')
+            self.assertIsNone(owner.store.read(TV_APPROVAL))
+            install_driver.submit(selected, payload, candidate=candidate, ownership=owner, activate_after_install=True)
+            self.assertIsNone(owner.store.read('homebrew-activation-token'))
 
     def test_submission_parent_wait_is_bounded_and_only_tracks_exact_parent(self):
         with patch('os.getppid',side_effect=[42,42,1]),patch('time.monotonic',side_effect=[0,0.1,0.2]),patch('time.sleep') as sleep:

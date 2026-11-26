@@ -41,7 +41,7 @@ function fixture(shared, largeMember) {
     root = shared
       ? path.join(
           base,
-          'media/developer/apps/usr/palm/applications/com.cleanyourtv.installer/payload'
+          'media/developer/apps/usr/palm/applications/io.github.razdva122.cytvinstaller/payload'
         )
       : path.join(base, 'payload'),
     runtimeBase = path.join(base, 'private'),
@@ -54,7 +54,7 @@ function fixture(shared, largeMember) {
   }
   parents.forEach(function (folder) {
     fs.mkdirSync(folder);
-    if (shared && folder.indexOf('/com.cleanyourtv.installer') < 0)
+    if (shared && folder.indexOf('/io.github.razdva122.cytvinstaller') < 0)
       fs.chmodSync(folder, 511);
   });
   var calls = [],
@@ -90,6 +90,8 @@ function fixture(shared, largeMember) {
   fs.mkdirSync(path.join(root, 'root'));
   fs.mkdirSync(path.join(root, 'supervisor'));
   fs.mkdirSync(path.join(root, 'baseline'));
+  fs.mkdirSync(path.join(root, 'edition'));
+  write('edition/edition.py', 'TRUSTED_EDITION_READER');
   write('root-updater/install_driver.py', DRIVER_CODE);
   write('root-updater/support.py', SUPPORT_CODE);
   write('root-updater/root-updater.ipk', 'IPK');
@@ -476,7 +478,7 @@ async function rejection(change) {
     'media/developer/apps/usr',
     'media/developer/apps/usr/palm',
     'media/developer/apps/usr/palm/applications',
-    'media/developer/apps/usr/palm/applications/com.cleanyourtv.installer'
+    'media/developer/apps/usr/palm/applications/io.github.razdva122.cytvinstaller'
   ]) {
     var foreign = fixture(true);
     try {
@@ -493,7 +495,7 @@ async function rejection(change) {
     'media/developer/apps/usr',
     'media/developer/apps/usr/palm',
     'media/developer/apps/usr/palm/applications',
-    'media/developer/apps/usr/palm/applications/com.cleanyourtv.installer'
+    'media/developer/apps/usr/palm/applications/io.github.razdva122.cytvinstaller'
   ]) {
     var linked = fixture(true);
     try {
@@ -569,6 +571,10 @@ async function rejection(change) {
     var loaded = await staged.api.inspect(staged.root);
     var snapshot = await staged.api.stage(loaded, true);
     assert.equal(fs.readFileSync(snapshot.driver, 'utf8'), DRIVER_CODE);
+    assert.equal(
+      fs.readFileSync(snapshot.editionInspector, 'utf8'),
+      'TRUSTED_EDITION_READER'
+    );
     assert(!fs.existsSync(path.join(snapshot.root, 'runtime.tar.gz')));
     assert(
       fs.existsSync(path.join(snapshot.root, 'root-updater/root-updater.ipk'))

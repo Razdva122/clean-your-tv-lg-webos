@@ -14,6 +14,25 @@ licenses are bundled with that archive, and Noto fonts carry OFL files. Project
 source is [MIT licensed](../LICENSE); see [third-party notices](../THIRD_PARTY_NOTICES.md)
 and the pinned [runtime source contract](../cytv/python_runtime.py).
 
+The offline inventory includes the fixed Python edition reader and the desktop
+Root capability modules it imports. For fresh setup the bootstrap executes
+that reader in its private, inventory-checked snapshot. The supported local
+installation uses the system-profile Root backend. A supported desktop-only
+Root backend leads to a desktop handoff. Positive evidence that Root cannot
+control Home leads to computer or Android setup to establish No-root eligibility
+and pair Home Helper. The TV candidate has no first-pair or installation path
+for No-root. [Edition selection](../docs/superpowers/specs/2026-11-26-homebrew-edition-selection.md)
+
+One explicit setup confirmation covers the reviewed Root components and a
+single activation attempt. When Python preparation is required, the UI checks
+the original payload digest, fresh installation state and candidate digest
+before submission. The product worker verifies the installed generation,
+releases its installation mutex and uses the guarded runtime to request
+activation. Status reports package completion, launch acknowledgement and
+current routing separately. Restore or removal revokes the setup approval.
+Verify this path, interruption and recovery on the selected physical artifact
+before recording acceptance. [Private files and operations](../docs/development/HOMEBREW-INSTALL-ACCEPTANCE.md#review-inventory-persistent-files-permissions-and-endpoints)
+
 `cytv.yml` has an optional `homebrew_candidate` manual input. Its `homebrew` job
 also runs with normal candidate installer builds; it uses no signing secret and
 uploads only a `homebrew-candidate` CI artifact. Its failure is optional unless
@@ -28,7 +47,7 @@ Generate metadata only after the final IPK exists:
 
 ```sh
 python3 scripts/homebrew-manifest.py --ipk /absolute/path/installer.ipk \
-  --ipk-url https://github.com/Razdva122/clean-your-tv-lg-webos/releases/download/vX.Y.Z/com.cleanyourtv.installer_A.B.C_all.ipk \
+  --ipk-url https://github.com/Razdva122/clean-your-tv-lg-webos/releases/download/vX.Y.Z/io.github.razdva122.cytvinstaller_A.B.C_all.ipk \
   --icon-url https://raw.githubusercontent.com/Razdva122/clean-your-tv-lg-webos/COMMIT/assets/icons/installer-256.png \
   --output /absolute/path/homebrew-manifest.json
 ```
@@ -38,9 +57,9 @@ valid release inputs. The generator derives id, title, type, installer version,
 installed bytes, IPK size and SHA256 from the actual package. It requires
 `rootRequired: true`, HTTPS project release URLs, and validates the outer offline
 inventory, inner component inventories/versions, runtime binding, provenance and
-runtime inventory without executing any package or bundle code. Only this fixed
-installer reader allows the bounded large runtime member; ordinary IPKs retain
-their 16 MiB per-member limit.
+runtime inventory without executing any package or bundle code. The dedicated
+Installer IPK reader allows up to 64 MiB per runtime archive, matching Root IPK
+or baseline cache member. Its other members retain a 16 MiB limit.
 
 ## Acceptance and existing release gate
 
@@ -102,13 +121,13 @@ check-only verification; missing assets or verification failures block success.
 
 ## Catalog review
 
-`catalog/cleanyourtv-installer.yml` targets upstream apps-repo `PackageInfo.json`
+`catalog/io.github.razdva122.cytvinstaller.yml` targets upstream apps-repo `PackageInfo.json`
 (category `utility`, pool `main`). Generated metadata targets
 `api/PackageManifest.json`. Its planned URLs and screenshot omissions must be
 resolved before submission. Schema success cannot establish URL availability.
 Validate against current upstream validators at submission time, using bounded
-network checks and without executing downloaded application code. The draft was
-checked against apps-repo commit `291da2bce269fbc901a0716b645caf64f709e3dc`.
+network checks and without executing downloaded application code. The
+[catalog preflight](catalog/SUBMISSION.md#catalog-preflight) records the upstream revision and results.
 
 Required remaining evidence: public HTTPS URLs, representative TV screenshots,
 package staging/storage measurement, clean HBC setup, both cytv/TV handoffs,
@@ -126,6 +145,7 @@ current, transaction or own-package proof keeps automatic Home rearm inhibited,
 while independent private LG Home restoration remains available. Deliver the
 changed helper closure through checked fresh setup/rebootstrap, preserving
 existing recovery archives and unknown-operation records. Updating Installer
-alone does not replace retained private product code. Root remains disabled until
-an explicit activation through the normal setup/settings flow. See the
+alone does not replace retained private product code. Fresh setup can authorize
+the separate activation attempt together with installation. Maintenance also
+offers explicit activation and Restore. See the
 [candidate authority and acceptance record](../docs/development/HOMEBREW-INSTALL-ACCEPTANCE.md#cold-boot-data-authority-correction).

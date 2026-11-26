@@ -1,7 +1,7 @@
 /* Node 8 only. Fixed installed entry; never a generic command or path API. */
 'use strict';
 var APP =
-  '/media/developer/apps/usr/palm/applications/com.cleanyourtv.installer';
+  '/media/developer/apps/usr/palm/applications/io.github.razdva122.cytvinstaller';
 // Initial privileged HBC launch trusts the installed app. Subsequent payload bytes are pinned.
 var PAYLOAD_SHA256 = '__CYTV_PAYLOAD_SHA256__';
 var PAYLOAD = APP + '/payload',
@@ -16,6 +16,7 @@ function parse(args) {
     flags = {
       '--prepare-supervisor': 'supervisor',
       '--migrate-packaged-home': 'migrate',
+      '--activate-after-install': 'activateAfterInstall',
       '--verify-current': 'current',
       '--resume': 'resume'
     };
@@ -49,7 +50,14 @@ function parse(args) {
   var allowed = {
     inspect: ['supervisor'],
     'prepare-runtime': [],
-    install: ['operation', 'candidate', 'supervisor', 'migrate', 'resume'],
+    install: [
+      'operation',
+      'candidate',
+      'supervisor',
+      'migrate',
+      'activateAfterInstall',
+      'resume'
+    ],
     status: ['operation', 'current'],
     restore: [],
     remove: ['operation', 'candidate', 'resume'],
@@ -71,7 +79,10 @@ function parse(args) {
     fail();
   if (
     request.resume &&
-    (request.candidate || request.supervisor || request.migrate)
+    (request.candidate ||
+      request.supervisor ||
+      request.migrate ||
+      request.activateAfterInstall)
   )
     fail();
   return request;
@@ -102,6 +113,44 @@ function execute(executable, args) {
       }
     );
   });
+}
+function inspectEdition(result, stage, python, executeRead) {
+  if (result.state !== 'fresh' || result.active_operation) return result;
+  var unknown = {
+    state: 'edition_unconfirmed',
+    code: 'home_interfaces_unconfirmed'
+  };
+  if (
+    !result.installation ||
+    result.installation.can_install !== true ||
+    !(
+      (result.installation.reason === 'no_installation' &&
+        result.installation.clean_removal_verified === undefined) ||
+      (result.installation.reason === 'verified_clean_removal' &&
+        result.installation.clean_removal_verified === true &&
+        result.installation.can_maintain === false)
+    ) ||
+    result.active_operation !== null ||
+    typeof stage.editionInspector !== 'string'
+  )
+    return unknown;
+  return executeRead(python, ['-E', '-s', '-B', stage.editionInspector])
+    .then(function (raw) {
+      var decision = JSON.parse(raw).decision;
+      if (decision === 'root') return result;
+      if (decision === 'external_no_root' || decision === 'external_root')
+        return {
+          state: 'external_setup',
+          code:
+            decision === 'external_root'
+              ? 'root_setup_on_computer'
+              : 'no_root_setup_on_computer'
+        };
+      return unknown;
+    })
+    .catch(function () {
+      return unknown;
+    });
 }
 function run(args, deps) {
   return Promise.resolve().then(function () {
@@ -135,6 +184,7 @@ function run(args, deps) {
           return {
             state: 'prerequisites',
             code: 'private_runtime_required',
+            payload_sha256: PAYLOAD_SHA256,
             runtime: state
           };
         }
@@ -157,6 +207,8 @@ function run(args, deps) {
               command.push('--candidate', request.candidate);
             if (request.supervisor) command.push('--prepare-supervisor');
             if (request.migrate) command.push('--migrate-packaged-home');
+            if (request.activateAfterInstall)
+              command.push('--activate-after-install');
             if (request.current) command.push('--verify-current');
             return deps
               .execute(state.python, command)
@@ -169,10 +221,14 @@ function run(args, deps) {
                   typeof result.state !== 'string'
                 )
                   fail();
-                return result;
+                return request.action === 'inspect'
+                  ? inspectEdition(result, stage, state.python, deps.execute)
+                  : result;
               })
               .then(
                 function (result) {
+                  if (request.action === 'inspect')
+                    result.payload_sha256 = PAYLOAD_SHA256;
                   return stage.cleanup().then(function () {
                     return result;
                   });
@@ -187,9 +243,36 @@ function run(args, deps) {
       });
   });
 }
-module.exports = { run: run, PAYLOAD: PAYLOAD, DRIVER: DRIVER };
-if (require.main === module)
-  run(process.argv.slice(2)).then(
+function main(args) {
+  // Old firmware may have neither Promise nor the runtime module's Node APIs.
+  // A version from the local executable can explain this installer prerequisite.
+  var version = process.versions.node;
+  if (/^[0-7]\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(version)) {
+    var inspection =
+      args[0] === 'inspect' &&
+      (args.length === 1 ||
+        (args.length === 2 && args[1] === '--prepare-supervisor'));
+    if (
+      inspection &&
+      typeof process.geteuid === 'function' &&
+      process.geteuid() === 0
+    ) {
+      process.stdout.write(
+        JSON.stringify({
+          state: 'external_setup',
+          code: 'legacy_node_on_computer',
+          payload_sha256: PAYLOAD_SHA256
+        }) + '\n'
+      );
+    } else {
+      process.stdout.write(
+        '{"state":"unsupported","code":"installer_unavailable"}\n'
+      );
+      process.exitCode = 1;
+    }
+    return;
+  }
+  run(args).then(
     function (result) {
       process.stdout.write(JSON.stringify(result) + '\n');
     },
@@ -203,3 +286,6 @@ if (require.main === module)
       process.exitCode = 1;
     }
   );
+}
+module.exports = { run: run, PAYLOAD: PAYLOAD, DRIVER: DRIVER };
+if (require.main === module) main(process.argv.slice(2));

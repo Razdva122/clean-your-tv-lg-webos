@@ -631,6 +631,30 @@ class LocalDevice:
                 raise ValueError('root_recovery_runtime_mismatch')
         Device.require_home_resume_runtime(ROOT)
 
+    def prepare_setup_activation(self, identifier, payload):
+        import deploy
+        self.require_selected_runtime(payload)
+        self.validate_root_driver()
+        command = [deploy.python_command(ROOT), str(ROOT/'runtime/cli.py'), 'setup-enable', identifier]
+        return lambda: deploy.command(command)
+
+    def setup_worker_live(self, store, identifier, pid):
+        if type(pid) is not int or pid <= 1:
+            return False
+        path = Path(store.root)/('request-' + identifier)
+        try:
+            args = (PROC/str(pid)/'cmdline').read_bytes().split(b'\0')
+        except FileNotFoundError:
+            return False
+        return (os.fsencode(path/'root-updater/install_driver.py') in args and b'--worker' in args
+                and b'--activate-after-install' in args and identifier.encode() in args)
+
+    def setup_activation_active(self, identifier):
+        import deploy
+        from installation import setup_profile_active
+        self.validate_root_driver()
+        return setup_profile_active(deploy.runtime('status').get('result', {}), identifier)
+
     def activate(self):
         import deploy
         if self.inspect()['state']!='installed':raise ValueError('current_installation_required')

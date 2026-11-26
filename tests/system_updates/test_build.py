@@ -150,7 +150,7 @@ class BuildTests(unittest.TestCase):
         def rpc(uri,payload):
             calls.append(uri.rsplit('/',1)[-1])
             if uri.endswith('/running'):
-                return {'returnValue':True,'running':[{'id':'com.cleanyourtv.installer'}]}
+                return {'returnValue':True,'running':[{'id':'io.github.razdva122.cytvinstaller'}]}
             raise AssertionError('A stopped launcher has no stale client to close')
         setup.restart_registered_launcher('root',rpc)
         self.assertEqual(calls,['running'])

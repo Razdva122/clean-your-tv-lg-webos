@@ -1,20 +1,36 @@
 # Homebrew Installer — unreleased
 
-For a supported published installation path, use the [desktop installer](../docs/INSTALL.md)
-or [Android](../android/README.md). Homebrew Installer is **not included in the
-published 1.4.0 distribution**; no catalog listing is approved.
-
-This is an unpublished Root-edition installation path. Physical TV acceptance
-(Task 8), public asset verification, meaningful human review, screenshots and
-catalog-maintainer approval remain separate gates. The catalog file is a review
-**draft**, not a submitted or approved listing. See the [candidate setup guide](../docs/INSTALL.md#candidate-on-tv-root-installation),
-all [localized guides](../docs/LANGUAGES.md), and the [physical acceptance/state inventory](../docs/development/HOMEBREW-INSTALL-ACCEPTANCE.md).
+CYTV Installer is an unpublished Homebrew Channel candidate for Root setup.
+The current public installation paths are the desktop and Android installers.
+The candidate and its catalog draft still require exact-package TV acceptance,
+public asset verification, screenshots, human review and catalog approval.
+[Desktop setup](../docs/INSTALL.md) · [Android setup](../android/README.md) ·
+[Localized guides](../docs/LANGUAGES.md)
 
 The installer requires a rooted compatible LG webOS TV, Homebrew Channel's exec
 service with actual root execution, Node.js 8+, and a usable Python 3.9+ or the
 bundled pinned ARMv7 Python 3.13 runtime. Runtime preparation requires 320 MiB free
 after Installer is installed. Allow additional space for the selected IPK and
 package-manager staging. See the acceptance record for measured package bytes.
+
+On a fresh, compatible TV the candidate offers **Install and activate**. Review
+the selected components and optional System Updater before confirming. If
+needed, this confirmation also covers preparation of the bundled Python
+runtime. The installer checks the reviewed payload and the TV again before
+submitting the packages. Activation is a separate operation after verified
+installation. Restore LG Home cancels outstanding setup approval. After an
+interruption, choose **Check status** to read the original request. This
+one-confirmation workflow awaits physical acceptance on the selected IPK.
+[Candidate setup](../docs/INSTALL.md#candidate-on-tv-root-installation) ·
+[Acceptance record](../docs/development/HOMEBREW-INSTALL-ACCEPTANCE.md)
+
+If the TV needs a Root Home backend available through the desktop installer,
+continue on a computer. If the candidate confirms that Root cannot control
+Home, it directs you to computer or Android setup to check No-root and pair
+Home Helper with the TV. The TV package has no No-root installer or supported
+way to establish the Helper's first pairing on the same TV. An inconclusive
+Home check offers **Check status**. With Node older than 8, use the computer
+or Android installer to check available editions.
 
 On webOS 11, stock Homebrew Channel **0.7.3** can reject Installer's `exec`
 request with `Denied method call` even when the same entry works from root SSH.
@@ -50,7 +66,10 @@ requires an existing trusted root execution path; it is not an Installer `exec`
 permission solution. No Homebrew/shared ACL, appinfo permission experiment,
 root-check relaxation or automatic service restart is added here.
 
-Homebrew updates the separate `com.cleanyourtv.installer` application. Root Home,
+The candidate package ID is `io.github.razdva122.cytvinstaller`. Earlier TV
+observations cover the draft ID `com.cleanyourtv.installer`. Homebrew treats
+the new ID as a separate application, with its own installation and removal.
+Homebrew updates the Installer application. Root Home,
 Root Updater and optional System Updater retain their product and recovery
 contracts; complete product updates belong to System Updater. Removing the
 installer leaves those components installed. Complete-product removal is an

@@ -164,9 +164,20 @@ inactive recovery evidence is retained intentionally.
 
 **Unpublished:** the separate CYTV Installer for Homebrew Channel is Root-only;
 no public catalog listing is established. It requires a verified candidate package,
-compatible ARM32 TV, effective root services and runtime/storage checks. Home
-activation and optional System Updater preparation are explicit separate steps.
-Homebrew upgrades Installer itself; product updates use the product updaters.
+compatible ARM32 TV, effective root services and runtime/storage checks. Review
+the components and choose **Install and activate** to authorize setup and Home
+activation together. If the TV needs the bundled Python runtime, the
+confirmation includes preparing it and proceeding only after the TV passes
+the checks. An active emergency stop keeps Root Home disabled. The
+maintenance screen still offers **Activate Root Home** and **Restore LG Home**.
+System Updater preparation is optional. Homebrew updates the Installer app.
+The product updaters handle Clean Your TV updates.
+
+If the Installer directs you to a computer for Root setup, use the desktop
+installer. If it identifies a No-root alternative, use the computer or Android
+installer for No-root. If it cannot identify the supported Home interfaces,
+choose **Check status** before selecting an edition.
+
 For candidate testing on webOS 11 or later, use
 [Homebrew Channel 0.8.0](https://github.com/webosbrew/webos-homebrew-channel/releases/tag/v0.8.0)
 or later. If Installer reports **Homebrew access denied**, update Homebrew

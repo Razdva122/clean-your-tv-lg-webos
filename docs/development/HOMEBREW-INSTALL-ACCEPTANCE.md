@@ -1,12 +1,18 @@
 # Homebrew Installer candidate acceptance
 
-Current session: [2026-10-27 catalog preparation](../../homebrew/catalog/SUBMISSION.md)
-records a successful isolated package install and a webOS 11/Homebrew 0.7.3
-API-access blocker. These bounded observations do not complete the product
-installation matrix below. Its supervised temporary upstream-patch test must
-remain separate from compatibility with an unmodified Homebrew installation.
+The candidate package ID is `io.github.razdva122.cytvinstaller`. The October
+and November device observations below used the earlier draft ID
+`com.cleanyourtv.installer`. Their exact artifacts, hashes and outcomes remain
+part of the historical record. Acceptance of the new ID requires a selected
+IPK and tests of its package registration, foreground identity, app-originated
+access, and removal. Record its product workflow against those same bytes.
 
-Status: **UNRELEASED CANDIDATE — physical acceptance NOT RUN**.
+The [October catalog record](https://github.com/Razdva122/clean-your-tv-lg-webos/blob/edd4053f495cebf14f49ff5d9d9df1d60402a72b/homebrew/catalog/SUBMISSION.md)
+records the earlier package's isolated installation and webOS 11/Homebrew
+0.7.3 access failure. Its supervised test with a temporary upstream patch
+applies only to that modified Homebrew installation.
+
+Status: **Unreleased candidate. Final hardware acceptance is pending.**
 No new model, firmware, webOS, input ABI, boot or Homebrew catalog compatibility
 is established. All current implementation and code reviews were AI-assisted;
 meaningful named human review and supervised TV testing are pending. This record
@@ -111,8 +117,8 @@ historical acceptance cannot be substituted for actual observations.
 
 | Scenario | Required observation | Physical result |
 | --- | --- | --- |
-| Clean HBC install with suitable system Python | Full setup and usable Home without computer; no private-runtime preparation | NOT RUN |
-| Clean HBC install without Python | Explicit offline pinned-runtime preparation, reinspection, final review and full setup without computer | NOT RUN |
+| Clean HBC install with suitable system Python | One confirmation covers selected Root packages and activation. Verify installation, activation readback, opening Home and subsequent Home-button routing independently. | NOT RUN |
+| Clean HBC install without suitable Python | The same confirmation covers pinned offline runtime preparation. Verify that reinspection of the reviewed payload admits Root before product submission, then check activation and Home routing. | NOT RUN |
 | cytv install → TV maintenance | Same profile, identity, ownership and recovery records without reinstall/reset | NOT RUN |
 | HBC install → cytv maintenance | Status, restore and complete removal without reinstall | NOT RUN |
 | Concurrent cytv/TV operations | Exactly one owner; second client blocked safely | NOT RUN |
@@ -154,15 +160,18 @@ validated identifiers, not arbitrary caller paths. Directories listed with
 contents cover that component's existing files, receipts and caches; this feature
 reuses their recovery contracts rather than adding a competing updater.
 
-| Persistent scope | Contents and ownership/lifetime |
+| Device scope | Contents and ownership/lifetime |
 | --- | --- |
-| `/media/developer/apps/usr/palm/applications/com.cleanyourtv.installer/` | Installer web assets, fixed `bootstrap.js`, verified `payload/` (Root, Root Updater, supervisor, baseline, runtime archive/manifests/licenses). Archive modes remain 0644 or explicitly executable 0755. Observed SDK 0777 own directories/files are accepted only as DATA against the original outer manifest and per-file SHA256; own objects remain root-owned, real and single-link. This is a DATA policy, not execution authority. No separate Installer LS2 service. |
-| `/media/developer/apps/usr/palm/packages/com.cleanyourtv.installer/packageinfo.json` | Package metadata owned/removed by the package manager. Removing Installer does not request product removal. |
+| `/media/developer/apps/usr/palm/applications/io.github.razdva122.cytvinstaller/` | Installer web assets, fixed `bootstrap.js` and verified `payload/` containing Root, Root Updater, supervisor, baseline, the edition reader and the runtime archive, manifests and licenses. Archive modes are 0644 or explicitly executable 0755. Under the prior ID, SDK package directories and files were observed with mode 0777. The reader accepts those modes only for root-owned package data verified against the pinned outer manifest and file digests. |
+| `/media/developer/apps/usr/palm/packages/io.github.razdva122.cytvinstaller/packageinfo.json` | Package metadata owned/removed by the package manager. Removing Installer does not request product removal. |
 | `/var/lib/clean-your-tv-installation/` | Shared root-owned 0700 store; 0600 `operation.json` durable owner/lease, `request-<id>.json`, `submission-<id>.json`, `removal-<lease>.json`, `ownership.lock` product mutex and `worker.lock` submission/store mutex. Exact journals remain authoritative across clients. |
+| `homebrew-activation.lock` in the shared store | A root-owned 0600 file serializes setup approval, revocation and the first durable enable claim. The installer releases the file lock after each short operation and retains the inode for the next caller. |
+| `homebrew-activation-token.json` and `homebrew-activation.json` in the shared store | Private 0600 records. A fresh setup request obtains a 32-hex token. After candidate and device preflight, the approval records the Installer ID, install operation ID, candidate SHA-256 and token. The submission receipt binds the same issuer and token. Explicit Restore or product removal revokes the approval by unlinking the token and approval under the lock. A later approval must match its own submission. |
+| `activation-<operation>.json` in the shared store | Private 0600 attempt record. The original worker records its PID, operation ID, product lease and launch acknowledgement, starting in `ready`. After the install mutex is released, the guarded activation changes the attempt to `claimed` before enabling Home. A successful launch reply and matching routing readback allow `active`. Failure can leave `unverified`, and interruption can leave a claim. The durable attempt remains with the request for read-only status after UI close, Restore or a generation change. Status cannot resubmit enable. |
 | `/var/lib/clean-your-tv-installation/request-<id>/` | Original checked private worker/payload snapshot; 0700 directories, 0600 files and `worker.log`. Worker lifetime is independent of Installer UI. Retained for checked continuation and diagnosis, not deleted to reset an operation. |
 | `/var/lib/clean-your-tv-root/` | Existing root-owned recovery/deploy code and `runtime/`, `service/`, manifests, `deploy.json`, `install-terminal.json`, `personalization.json`, `recovery-provision.json`/pending, `ls2-provision-snapshot.json`, `system-permissions.json`, `activity-registration.json`, startup/binding and routing/intent/update receipts/locks. Private files normally 0600, directories 0700, fixed executable launchers/runners 0700. Retained after removal; verified cytv reinstall may create `.archive-<id>`, never blind deletion. |
 | `/var/lib/clean-your-tv-root-updater/` and `/var/lib/clean-your-tv-system-updater/` | Existing private 0700 `code/`, `cache/`, bootstrap/infrastructure/installed-package/installed-terminal receipts, original full-bundle/IPK `bootstrap-bundle.json` continuation binding, transactions, baselines/profiles, `run-service`, bindings and `startup-hook.json` (plus `startup-hook.previous.json` on exact legacy migration). Full removal disables/archives owned state under `.archive-<id>` and retains removal evidence. Regular data 0600; fixed runners 0700. |
-| `/var/lib/clean-your-tv-installer/.exec-<random>/` | Unique root-owned 0700 temporary execution snapshot with 0600 original-inventory-checked code/data. Payload actions stage required component/baseline inputs, excluding the runtime archive; other actions stage code only. Python/imports and `--payload` use this private tree. Removed after child exit; unknown drift is retained. Inspect permits this ephemeral staging without product or operation-receipt mutations. |
+| `/var/lib/clean-your-tv-root-staging/cytv-homebrew-<32hex>/` | Per-call, root-owned 0700 execution snapshot. The bootstrap copies and verifies 0600 files against the pinned inventory. Full staging includes `root/`, `root-updater/`, `supervisor/`, `baseline/` and `edition/`. Code-only staging uses the Root Updater support files. Python runs from this private tree. After child exit the bootstrap checks and removes its own entries and retains unexpected changes. It removes a newly created staging parent only if still empty and unchanged. |
 | `/var/lib/clean-your-tv-installer/cytv-root-install-<id>/package.ipk` | Existing bounded observed-install staging; exact terminal event must match it. Preserve uncertain operation evidence. Root-owned 0755 staging directories and 0644 IPK permit package-manager read access; no private bundle is exposed and no user-supplied path is accepted. |
 | `/var/lib/clean-your-tv-python/<sha256>/` | Immutable pinned private CPython slot with `.cytv-runtime.json` inventory; 0755 directories/executables and 0644 regular data, root owned and not group/world writable. Pin is `4a71641c8d5536175e404a961624e8656eba30e97b5026f6bd7dc31e4bbeaaea`. No `/usr/bin` replacement or global PATH change. |
 | `/var/lib/clean-your-tv-python/.stage-<id>/` and `.install.lock` | Checked runtime staging/tree and 0600 immutable-promotion lock, separate from the product lease. Only the exact owned runtime stage is cleaned; drift is retained. Referenced slots remain after application removal. |
@@ -268,9 +277,21 @@ boot, standby and controls acceptance; earlier hardware records stay historical.
 Installer creates no new generic execution service, shell input or service port.
 Its browser bridge calls only
 `luna://org.webosbrew.hbchannel.service/exec` with fixed
-`/usr/bin/node /media/developer/apps/usr/palm/applications/com.cleanyourtv.installer/bootstrap.js`
+`/usr/bin/node /media/developer/apps/usr/palm/applications/io.github.razdva122.cytvinstaller/bootstrap.js`
 and action-specific validated arguments. Effective UID is checked again in the
 backend. It does not patch Homebrew's runner or firmware Node/service launcher.
+
+For a fresh installation or verified clean removal, the bootstrap also runs the
+fixed `edition/edition.py` entry from the private snapshot. Its inventory includes
+`cytv/__init__.py`, `checks.py`, `errors.py` and `root_capabilities.py`.
+The reader checks the Home settings and System Profile interfaces. When the
+System Profile service is positively absent it uses the shared desktop
+classifier's fixed queries for system information, KeyFilters, native Home,
+embedded compositor and ribbon. It returns an edition decision to the UI.
+The No-root outcome directs the owner to computer or Android setup for
+pairing and installation. An inconclusive result offers another status check.
+An older Node runtime can report the installer prerequisite before loading the
+edition reader. [Edition reader](../../homebrew/edition.py) · [Private staging](../../homebrew/runtime.js)
 
 Existing Root recovery, Root Updater and System Updater each use owned service,
 role, client and API files under `/var/luna-service2-dev/{services.d,roles.d,client-permissions.d,api-permissions.d}/`.

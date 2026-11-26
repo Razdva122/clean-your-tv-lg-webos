@@ -34,7 +34,7 @@ function safeName(name) {
 }
 function sdkData(name) {
   var app =
-    '/media/developer/apps/usr/palm/applications/com.cleanyourtv.installer';
+    '/media/developer/apps/usr/palm/applications/io.github.razdva122.cytvinstaller';
   return name === app || name.indexOf(app + '/') === 0;
 }
 function owned(name, directory, packageData) {
@@ -791,7 +791,9 @@ function stage(state, full) {
     try {
       var names = Object.keys(expected).filter(function (name) {
           if (full)
-            return /^(root|root-updater|supervisor|baseline)\//.test(name);
+            return /^(root|root-updater|supervisor|baseline|edition)\//.test(
+              name
+            );
           return name.indexOf('root-updater/') === 0 && !/\.ipk$/.test(name);
         }),
         ordinaryBytes = 0;
@@ -864,6 +866,7 @@ function stage(state, full) {
       return {
         root: root,
         driver: root + '/root-updater/install_driver.py',
+        editionInspector: root + '/edition/edition.py',
         cleanup: cleanup
       };
     } catch (error) {
