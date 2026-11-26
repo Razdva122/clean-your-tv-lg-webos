@@ -631,6 +631,7 @@ with os.fdopen(f,'rb') as stream:
     def preflight(self, install=False, home_interfaces=False, stop_running_helper=False, *, fresh_only=False,
                   diagnose=False, defer_helper=False):
         from .root_capabilities import CALLS, clear_home_observations, verify
+        self.tv_info.pop('root_mrcu_probe', None)
         clear_home_observations(self.tv_info)
         for name in CALLS:
             if name in self.checks.results:
@@ -673,6 +674,12 @@ with os.fdopen(f,'rb') as stream:
 
             for name, probe in zip(diagnostics.ROOT_REQUIREMENTS, probes):
                 check(name, probe)
+            if diagnose and not install:
+                from . import doctor_mrcu
+                self.tv_info['root_mrcu_probe'] = {'state': 'unavailable'}
+                if all(checks[name] == 'pass' for name in ('root-user', 'python3', 'python-fcntl')):
+                    command = self._python_command([python, '-I', '-B', '-'])
+                    self.tv_info['root_mrcu_probe'] = doctor_mrcu.observe(self.remote, command)
             python_result = python_status()
             other_requirements_pass = all(result == 'pass' for name, result in checks.items()
                                           if name not in PYTHON_REQUIREMENTS)

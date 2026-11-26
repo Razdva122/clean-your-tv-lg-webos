@@ -207,6 +207,9 @@ def root_home_button_readback(value):
 def tv_summary(value):
     value = mapping(value)
     result = metadata(value)
+    if 'root_mrcu_probe' in value:
+        from .doctor_mrcu import summary
+        result['root_mrcu_probe'] = summary(value['root_mrcu_probe'])
     if 'root_beta_state' in value:
         from .root_passive import beta_summary
         result['root_beta_state'] = beta_summary(value['root_beta_state'])
