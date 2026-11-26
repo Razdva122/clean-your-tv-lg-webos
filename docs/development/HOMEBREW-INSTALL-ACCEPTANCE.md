@@ -558,3 +558,30 @@ also covered the mobile download and the prefilled GitHub issue. This
 development run did not cover OTA, standby, loss of mains or physical key
 timing. Final release and catalog acceptance require the selected release
 artifact.
+
+### C3 full removal from the TV Installer (2026-11-27)
+
+The project OLED55C3RLA used firmware 43.21.71, webOS SDK 11.2.0 and stock
+Homebrew Channel 0.8.0. Installer 0.0.0 from source `9b7ce111` was
+122,205,938 bytes, SHA-256
+`d099565da1b0f2cc6be7f88dcf0d532691c34b1a06aa0930fff4377f63d0bbf1`.
+The normal Homebrew catalog installed the IPK and all 211 installed application
+files matched its bytes. Root 0.25.0, System Updater 1.2.11 and Ambient 0.0.7
+were present during the removal test. Automated input used the visible TV
+controls and the paired network remote. The physical remote model was unknown.
+
+| Case | Observed result |
+| --- | --- |
+| HB-TVREMOVE-01 | The exact IPK opened from Homebrew. Root Home Settings → Advanced → Clean Your TV recovery opened the installed TV Installer review. |
+| HB-TVREMOVE-02 | Cancel returned to the same installed review. Opening the confirmation again and accepting once started removal from the TV Installer. |
+| HB-TVREMOVE-03 | After LG Home regained control, normal reopening displayed the matching retained request at `restart-required`. The Installer-only removal control was unavailable. |
+| HB-TVREMOVE-04 | A verified software restart cleared the temporary boot marker and reset uptime. Normal reopening retained the original UUID. One on-TV Continue after restarting action completed that request. |
+| HB-TVREMOVE-05 | The TV UI showed verified removal. Independent current-fence and package readback confirmed absence of CYTV product files, startup hooks, routing and recovery registrations. Only allowed ownership records remained. Homebrew configuration and the Installer tile were still present. |
+| HB-TVREMOVE-06 | The TV's separate Remove Installer confirmation removed the application and its package directory. The original verified product receipt remained current. The temporary catalog was removed separately as setup teardown. |
+| HB-TVREMOVE-07 | The paired network remote launched Media Player, sent HOME once and verified stable LG Home after one second. |
+
+All seven selected cases passed on this development IPK. The device used system
+Python. The offline suites covered managed-runtime retirement and interrupted
+reads. Physical key timing, standby, loss of mains and OTA were outside this
+pass. Final release and catalog acceptance still require a selected release
+artifact.
