@@ -698,7 +698,7 @@
         render();
         versions.textContent = '';
         message.textContent = t(
-          'Open Clean Your TV on your computer or Android phone to update this TV.'
+          'Continue in Clean Your TV on your computer or Android phone.'
         );
         notesHeading.hidden = notes.hidden = true;
         buttons.slice(0, 4).forEach(function (button) {

@@ -294,7 +294,7 @@
             });
           window.alert(
             tr(
-              'Open Clean Your TV on your computer or Android phone to update this TV.'
+              'Continue in Clean Your TV on your computer or Android phone.'
             )
           );
           if (options && options.onClose) options.onClose();

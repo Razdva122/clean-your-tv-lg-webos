@@ -477,7 +477,7 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8876';
       await page.locator('#renewalUpdates').click();
       await page
         .getByText(
-          'Open Clean Your TV on your computer or Android phone to update this TV.'
+          'Continue in Clean Your TV on your computer or Android phone.'
         )
         .waitFor();
       await page.keyboard.press('Escape');
