@@ -393,7 +393,9 @@ class Device:
             path.unlink();self.sync(path.parent)
 
     def _refresh_root_receipts(self,hashes):
-        proof_path=self.root_state/'recovery-provision.json';proof=json.loads(safe_bytes(proof_path,limit=1024*1024,uid=self.uid))
+        proof_path=self.root_state/'recovery-provision.json'
+        original=safe_bytes(proof_path,limit=1024*1024,uid=self.uid)
+        proof=json.loads(original)
         if proof.get('mode')!='recovery-only' or not isinstance(proof.get('files'),dict):raise ValueError('Invalid recovery provisioning receipt')
         inventory=self._infra_inventory()
         if set(hashes)-inventory:raise ValueError('Foreign infrastructure receipt path')
@@ -402,10 +404,22 @@ class Device:
                 path=str(self._infra_path(name))
                 if name in hashes:proof['files'][path]=hashes[name]
                 else:proof['files'].pop(path,None)
-        proof_raw=json.dumps(proof,sort_keys=True,separators=(',',':')).encode();self.atomic(proof_path,proof_raw)
+        proof_raw=json.dumps(proof,sort_keys=True,separators=(',',':')).encode()
         if self.product_schema() == 2:
-            self.store.write('root-recovery-integrity', {'schema':1, 'sha256':digest(proof_raw)})
+            current, target = digest(original), digest(proof_raw)
+            pin = self.store.read('root-recovery-integrity') or {}
+            if pin != {'schema':1,'sha256':current}:
+                # A crash can leave either side of this pinned two-file write.
+                # Only the same authenticated target may complete that intent.
+                if (set(pin) != {'schema','sha256','pending'} or pin['schema'] != 1
+                        or pin['pending'] != target or current not in (pin['sha256'], target)):
+                    raise ValueError('Root recovery receipt changed')
+            if current != target:
+                self.store.write('root-recovery-integrity', {'schema':1,'sha256':current,'pending':target})
+                self.atomic(proof_path,proof_raw)
+            self.store.write('root-recovery-integrity', {'schema':1, 'sha256':target})
             return
+        self.atomic(proof_path,proof_raw)
         from .support.store import Store
         root_store=Store(self.root_updater,uid=self.uid);receipt=root_store.read('infrastructure')
         if not isinstance(receipt,dict) or not isinstance(receipt.get('code'),dict):raise ValueError('Missing Root updater receipt')

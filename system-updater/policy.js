@@ -26,8 +26,14 @@ var SINGLE_TILE_SETS = {
 };
 function generation() {
   var file = __dirname + '/product-generation.json';
-  if (!fs.existsSync(file)) return 1;
-  if (JSON.parse(fs.readFileSync(file, 'utf8')) !== 2)
+  var raw;
+  try {
+    raw = fs.readFileSync(file, 'utf8');
+  } catch (error) {
+    if (error.code === 'ENOENT') return 1;
+    throw error;
+  }
+  if (raw !== '2\n')
     throw Error('invalid-product-generation');
   return 2;
 }

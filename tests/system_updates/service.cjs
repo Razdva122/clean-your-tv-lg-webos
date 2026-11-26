@@ -50,8 +50,26 @@ function caller(id) {
 }
 (async () => {
   const tile = caller('io.github.razdva122.cytvinstaller');
-  for (const method of ['status', 'reconcile', 'rollback'])
-    assert.equal(await dispatch(tile, method, {}), 'ok');
+  assert.equal(await dispatch(tile, 'status', { edition: 'root' }), 'ok');
+  for (const method of ['reconcile', 'rollback']) {
+    assert.equal(
+      await dispatch(tile, method, {
+        edition: 'no-root',
+        transaction: 'f'.repeat(32)
+      }),
+      'ok'
+    );
+    for (const invalid of [
+      {},
+      { edition: 'root' },
+      { edition: 'root', transaction: 'current' }
+    ])
+      await assert.rejects(() => dispatch(tile, method, invalid));
+  }
+  await assert.rejects(
+    () => dispatch(tile, 'status', { edition: 'constructor' }),
+    /edition/
+  );
   for (const method of [
     'check',
     'install',

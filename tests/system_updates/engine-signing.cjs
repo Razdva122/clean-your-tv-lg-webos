@@ -183,6 +183,16 @@ for (const variant of Object.keys(releases)) {
   assert.deepEqual(policy.verify(feed, publicKey, 2), tileProduct[variant]);
   assert.throws(() => policy.verify(feed, publicKey), /incompatible/);
 }
+assert.throws(
+  () =>
+    signBootstrap(
+      { ...catalog, releases: tileProduct },
+      tileProduct,
+      privateKey,
+      publicKey
+    ),
+  /legacy-channel/
+);
 const tileEnvelope = tileFeeds['system-bootstrap-v2.json'];
 assert.deepEqual(engine.verify(tileEnvelope, publicKey, 2), tileCatalog);
 assert.throws(() => engine.verify(tileEnvelope, publicKey), /catalog/);

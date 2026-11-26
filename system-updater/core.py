@@ -78,6 +78,29 @@ def validate_profile(value,edition,*,captured=False):
     return checked
 
 
+RECOVERY_FIELDS = {'status': {'edition'}, 'reconcile': {'edition', 'transaction'}, 'rollback': {'edition', 'transaction'}}
+
+
+def tile_product(store, edition):
+    baseline = store.read('baseline')
+    bootstrap = store.read('bootstrap') or {}
+    binding = store.read('bootstrap-bundle') or {}
+    if (bootstrap.get('phase') != 'complete' or bootstrap.get('edition') != edition
+            or binding.get('bundle', {}).get('product_schema') != 2
+            or release_set(baseline, edition)['schema'] != 2):
+        raise ValueError('No matching single-tile installation')
+    tx = store.read('transaction')
+    if tx is not None and (tx.get('edition') != edition or any(
+            release_set(tx.get(key), edition)['schema'] != 2 for key in ('prior', 'candidate'))):
+        raise ValueError('Recovery belongs to another product')
+    return tx
+
+
+def check_tile_transaction(tx, payload):
+    if 'transaction' in payload and (not tx or tx.get('id') != payload['transaction']):
+        raise ValueError('Recovery transaction changed')
+
+
 class Manager:
     def __init__(self,store,io):self.store=store;self.io=io;self._launched=set()
 

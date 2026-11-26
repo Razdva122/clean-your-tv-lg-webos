@@ -403,6 +403,31 @@ class LegacyNoRootCompanionTests(DeviceBase):
         self.assertIsNone(Store(self.device.state/'legacy-no-root-screensaver',uid=os.getuid()).read('baseline-'+self.tx['id']))
 
 class PrivateServiceTests(DeviceBase):
+    def test_single_tile_receipt_finishes_only_its_original_interrupted_write(self):
+        from unittest.mock import patch
+        files={'runtime/cli.py':b'new'}
+        raw=tar(files);hashes={name:digest(value) for name,value in files.items()}
+        c={'name':'root-infrastructure','kind':'infrastructure','version':'1.1.0','sha256':digest(raw),'size':len(raw),'local':True,'files':hashes}
+        self.baseline({'schema':2,'edition':'root','components':[c]})
+        self.device.root_state.mkdir()
+        path=self.device.root_state/'recovery-provision.json'
+        original=json.dumps({'mode':'recovery-only','files':{str(self.device._infra_path('runtime/cli.py')):digest(b'old')}}).encode()
+        path.write_bytes(original)
+        self.store.write('root-recovery-integrity',{'schema':1,'sha256':digest(original)})
+        write=self.store.write
+        def interrupt(name,value):
+            if name=='root-recovery-integrity' and 'pending' not in value:raise KeyboardInterrupt()
+            return write(name,value)
+        with patch.object(self.store,'write',side_effect=interrupt):
+            with self.assertRaises(KeyboardInterrupt):self.device._refresh_root_receipts(hashes)
+        self.assertEqual(self.store.read('root-recovery-integrity')['pending'],digest(path.read_bytes()))
+        self.device._refresh_root_receipts(hashes)
+        self.assertEqual(self.store.read('root-recovery-integrity'),{'schema':1,'sha256':digest(path.read_bytes())})
+        self.assertFalse(self.device.root_updater.exists())
+        path.write_bytes(original)
+        with self.assertRaisesRegex(ValueError,'receipt changed'):self.device._refresh_root_receipts(hashes)
+        self.assertEqual(path.read_bytes(),original)
+
     def test_private_recovery_service_has_fixed_destination_and_receipts(self):
         files={'runtime/cli.py':b'runtime','service/service.js':b'new-service','updater/service.js':b'updater'}
         raw=tar(files);c={'name':'root-infrastructure','kind':'infrastructure','version':'1.1.0','sha256':digest(raw),'size':len(raw),'local':True,'files':{n:digest(v) for n,v in files.items()}}

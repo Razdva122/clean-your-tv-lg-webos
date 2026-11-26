@@ -46,6 +46,25 @@ class RetentionTests(unittest.TestCase):
         self.assertIn(message,self.stderr.getvalue())
         self.assertTrue(any(call.args[-1]==message for call in self.syslog.call_args_list))
 
+    def test_single_tile_retains_bootstrap_current_and_rollback_without_legacy_peer(self):
+        store=self.stores[0];missing=self.root/'never-installed'
+        pins=[self.package(store,raw) for raw in (b'original',b'candidate',b'prior',b'supervisor')]
+        store.write('baseline',{'schema':2,'components':[{'sha256':pins[0].name}]})
+        store.write('current-root',{'schema':2,'components':[{'sha256':pins[1].name}]})
+        tx=store.read('transaction')
+        tx['prior']={'schema':2,'components':[{'sha256':pins[2].name}]}
+        store.write('transaction',tx)
+        store.write('bootstrap-bundle',{'package':{'sha256':pins[3].name}})
+        stale=self.package(store,b'stale')
+        store.write('root-recovery-integrity',{'schema':1,'sha256':'invalid'})
+        self.assertEqual(storage.prune_peer_caches(store,missing),0)
+        self.assertTrue(stale.exists())
+        store.write('root-recovery-integrity',{'schema':1,'sha256':'f'*64})
+        self.assertEqual(storage.prune_peer_caches(store,missing),1)
+        self.assertFalse(stale.exists())
+        self.assertFalse(missing.exists())
+        self.assertTrue(all(path.exists() for path in pins))
+
     def test_diagnostics_distinguish_noop_refusal_and_changed_proof(self):
         self.assertEqual(self.prune(),0);self.summary('cache','complete',0)
         self.stderr.truncate(0);self.stderr.seek(0)

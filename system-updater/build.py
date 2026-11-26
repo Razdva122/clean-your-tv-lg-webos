@@ -184,6 +184,10 @@ def engine_archive_files(manifest, read):
             raise ValueError('Engine bundle hash mismatch: ' + name)
         if name != 'setup-system-updater.py':
             files[name] = raw
+    generation = manifest.get('product_schema', 1)
+    marker = files.get('system_updater/product-generation.json')
+    if type(generation) is not int or generation not in (1, 2) or marker != (b'2\n' if generation == 2 else None):
+        raise ValueError('Engine product generation marker mismatch')
     if 'engine-entry.py' not in files:
         raise ValueError('Engine entry point missing')
     inventory = {name: digest(raw) for name, raw in files.items()}

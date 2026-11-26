@@ -16,6 +16,8 @@ function signBootstrap(
 ) {
   if (!require('node:util').isDeepStrictEqual(catalog.releases, releases))
     throw Error('engine-product-manifests-mismatch');
+  if (generation === 1 && Object.values(releases).some((m) => m.schema === 2))
+    throw Error('generation-2-release-on-legacy-channel');
   const bytes = Buffer.from(JSON.stringify(catalog, null, 2) + '\n');
   const envelope = {
     payload: bytes.toString('base64'),

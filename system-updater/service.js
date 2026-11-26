@@ -43,7 +43,12 @@ function createDispatch(execute) {
       ['status', 'rollback', 'reconcile'].indexOf(method) < 0
     )
       throw Error('caller-not-authorized');
-    var allowed = fields[method];
+    var tile = id === 'io.github.razdva122.cytvinstaller';
+    var allowed = tile
+      ? method === 'status'
+        ? ['edition']
+        : ['edition', 'transaction']
+      : fields[method];
     if (
       !allowed ||
       !payload ||
@@ -55,7 +60,10 @@ function createDispatch(execute) {
       })
     )
       throw Error('invalid-request');
-    if (allowed.indexOf('edition') >= 0 && !launchers[payload.edition])
+    if (
+      allowed.indexOf('edition') >= 0 &&
+      !Object.prototype.hasOwnProperty.call(launchers, payload.edition)
+    )
       throw Error('invalid-edition');
     if (
       ['install', 'repair', 'restoreProfile', 'healthy'].indexOf(method) >= 0 &&

@@ -431,6 +431,18 @@ def provision(bundle,baseline,state=STATE,installed=INSTALLED,base=BASE,hook=HOO
     require_normal_root()
     manifest,current=preflight(bundle,baseline,state,installed,base,hook)
     state=Path(state);bundle=Path(bundle);baseline=Path(baseline)
+    recovery_pin = None
+    if current['edition'] == 'root' and current['schema'] == 2:
+        root = Path('/var/lib/clean-your-tv-root')
+        raw = safe(root/'recovery-provision.json',os.geteuid())
+        proof = json.loads(raw)
+        if proof.get('mode') != 'recovery-only' or not isinstance(proof.get('files'),dict) or not proof['files']:
+            raise ValueError('Missing verified Root recovery inventory')
+        for name, expected in proof['files'].items():
+            path = Path(name)
+            if not path.is_relative_to(root) or '..' in path.parts or digest(safe(path,os.geteuid())) != expected:
+                raise ValueError('Root recovery inventory differs from installed files')
+        recovery_pin = {'schema':1,'sha256':digest(raw)}
     state.mkdir(mode=0o700);code=state/'code';code.mkdir(mode=0o700);(state/'cache').mkdir(mode=0o700)
     def record(name,value):atomic(state/(name+'.json'),json.dumps(value,sort_keys=True))
     own=safe(bundle/'system-updater.ipk')
@@ -446,9 +458,7 @@ def provision(bundle,baseline,state=STATE,installed=INSTALLED,base=BASE,hook=HOO
         path=code/name;path.parent.mkdir(parents=True,mode=0o700,exist_ok=True);atomic(path,safe(bundle/name))
     record('infrastructure',{'schema':1,'code':{name:manifest['files'][name] for name in sorted(bundle_code(manifest))}})
     for item in current['components']:atomic(state/'cache'/item['sha256'],safe(baseline/'cache'/item['sha256']))
-    if current['edition'] == 'root' and current['schema'] == 2:
-        proof = safe(Path('/var/lib/clean-your-tv-root/recovery-provision.json'),os.geteuid())
-        record('root-recovery-integrity', {'schema':1, 'sha256':digest(proof)})
+    if recovery_pin:record('root-recovery-integrity', recovery_pin)
     record('baseline',current);record('current-'+current['edition'],current)
     if install is None:
         sys.path.insert(0,str(code));from observed_install import install
