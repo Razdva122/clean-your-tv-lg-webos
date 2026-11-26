@@ -1,4 +1,4 @@
-"""In-place maintenance of a Developer Mode generation-two Home and its daily tile."""
+"""Repair the Developer Mode tile and screensaver while preserving Home and Helper."""
 import hashlib
 import re
 import shlex
@@ -6,7 +6,7 @@ import shlex
 from . import no_root_observer, package, storage
 from .errors import UserError
 from .operations import HELPER, HOME, SYSTEM_UPDATER_APP, UPDATER_APP
-from .single_tile_setup import app_metadata, installed_role
+from .single_tile_setup import app_metadata, installed_role, read_app_file
 
 
 def admission(installer, apps):
