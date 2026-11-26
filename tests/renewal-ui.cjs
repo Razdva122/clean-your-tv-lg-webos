@@ -462,6 +462,52 @@ const base = process.env.PREVIEW_URL || 'http://127.0.0.1:8876';
     await page.reload();
     await page.locator('#btnSettings').click();
     await page.locator('[data-category=developer]').waitFor();
+    await page.addInitScript(() => {
+      window.CYTVProductGeneration = 2;
+    });
+    for (const mode of ['developer-mode', undefined]) {
+      connection = mode;
+      await page.reload();
+      await page.locator('#tiles .item').first().waitFor();
+      await page.evaluate(() => {
+        helperStopped = true;
+      });
+      await page.locator('#btnSettings').click();
+      await page.locator('[data-category=updates]').click();
+      await page.locator('#renewalUpdates').click();
+      await page
+        .getByText(
+          'Open Clean Your TV on your computer or Android phone to update this TV.'
+        )
+        .waitFor();
+      await page.keyboard.press('Escape');
+      await page.locator('[data-category=home]').click();
+      const resume = page.getByRole('button', {
+        name: 'Resume Home control',
+        exact: true
+      });
+      await resume.click();
+      const confirm = page.locator('#homeConfirmation');
+      await confirm.getByRole('button', { name: 'Cancel' }).click();
+      assert(
+        await page.evaluate(
+          () =>
+            helperStopped &&
+            !helperStarting &&
+            !calls.some(
+              (c) =>
+                /cleanyourtv\.(?:system\.updater|updater)\.service/.test(
+                  c.uri
+                ) || c.p.params?.nativeHomeStart
+            )
+        )
+      );
+      await resume.click();
+      await confirm
+        .getByRole('button', { name: 'Resume Home control' })
+        .click();
+      await page.waitForFunction(() => !helperStopped);
+    }
     assert.deepEqual(errors, []);
     console.log(
       'PASS renewal UI, updates, navigation and Developer Mode visibility by installation method'
