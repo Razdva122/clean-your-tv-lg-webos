@@ -149,9 +149,9 @@ def _journal(tx,system=False):
             release=tx.get(key)
             if (not isinstance(release,dict) or release.get('edition')!=tx['edition']
                     or type(release.get('schema')) is not int or release['schema'] != generation
-                    or not isinstance(release.get('components'),list) or tuple(c.get('name') for c in release['components'])!=expected):raise ValueError('Invalid private release')
+                    or not _component_order(release.get('components'), expected)):raise ValueError('Invalid private release')
             for c in release['components']:_descriptor(c)
-        if not isinstance(tx.get('components'),list) or tuple(c.get('name') for c in tx['components'])!=expected:raise ValueError('Invalid private component journal')
+        if not _component_order(tx.get('components'), expected):raise ValueError('Invalid private component journal')
         for c,target in zip(tx['components'],tx['candidate']['components']):
             if c.get('version')!=target['version']:raise ValueError('Conflicting private component journal')
             installed=_evidence(c.get('installEvidence'),True);rolled=_evidence(c.get('rollbackEvidence'),True)
@@ -166,6 +166,12 @@ def _journal(tx,system=False):
         if not tx['rollbackAttempted'] and any(v is not None for v in tx['rollbackEvidence'].values()):raise ValueError('Unexpected private rollback evidence')
         if tx['phase'] in ('preparing','downloading','backed-up','restoring-route','aborted') and (tx['rollbackAttempted'] or any(v is not None for v in tx['installEvidence'].values())):raise ValueError('Installer evidence before submission phase')
     return tx
+
+
+def _component_order(components, expected):
+    return (isinstance(components, list) and len(components) == len(expected)
+            and all(isinstance(item, dict) and item.get('name') == name
+                    for item, name in zip(components, expected)))
 
 
 def _retained_rollback_pending(tx):
@@ -339,8 +345,8 @@ def _single_tile_inventory(root, updater, system, purpose, uid):
 
     def root_component(release):
         if (not isinstance(release, dict) or release.get('schema') != 2
-                or release.get('edition') != 'root' or not isinstance(release.get('components'), list)
-                or tuple(c['name'] for c in release['components']) != PRODUCT_COMPONENTS[2]['root']):
+                or release.get('edition') != 'root'
+                or not _component_order(release.get('components'), PRODUCT_COMPONENTS[2]['root'])):
             raise ValueError('Single-tile Root baseline required')
         return _descriptor(release['components'][0])
 
