@@ -77,6 +77,11 @@
       "pr": 857,
       "issues": [],
       "summary": "Cover the Root first-run translation catalog in CI"
+    },
+    {
+      "pr": 858,
+      "issues": [],
+      "summary": "Use system Chrome for Homebrew setup tests in runtime CI"
     }
   ],
   "excluded": [],
