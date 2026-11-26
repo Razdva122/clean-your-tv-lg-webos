@@ -4759,6 +4759,93 @@ HomeI18n.add({
 
 HomeI18n.add({
   'en': {
+    'Resume Home control': 'Resume Home control',
+    'Use your saved Home button setting again?':
+      'Use your saved Home button setting again?',
+    'Home control is paused.': 'Home control is paused.'
+  },
+  'ru': {
+    'Resume Home control': 'Возобновить управление кнопкой Home',
+    'Use your saved Home button setting again?':
+      'Снова использовать сохранённую настройку кнопки Home?',
+    'Home control is paused.': 'Управление кнопкой Home приостановлено.'
+  },
+  'cs': {
+    'Resume Home control': 'Obnovit ovládání tlačítka Home',
+    'Use your saved Home button setting again?':
+      'Znovu použít uložené nastavení tlačítka Home?',
+    'Home control is paused.': 'Ovládání tlačítka Home je pozastavené.'
+  },
+  'de': {
+    'Resume Home control': 'Steuerung der Home-Taste fortsetzen',
+    'Use your saved Home button setting again?':
+      'Die gespeicherte Einstellung der Home-Taste wieder verwenden?',
+    'Home control is paused.': 'Die Steuerung der Home-Taste ist pausiert.'
+  },
+  'es': {
+    'Resume Home control': 'Reanudar el control del botón Home',
+    'Use your saved Home button setting again?':
+      '¿Volver a usar el ajuste guardado del botón Home?',
+    'Home control is paused.': 'El control del botón Home está en pausa.'
+  },
+  'fr': {
+    'Resume Home control': 'Réactiver la commande du bouton Home',
+    'Use your saved Home button setting again?':
+      'Réutiliser le réglage enregistré du bouton Home ?',
+    'Home control is paused.': 'La commande du bouton Home est en pause.'
+  },
+  'pt-BR': {
+    'Resume Home control': 'Retomar o controle do botão Home',
+    'Use your saved Home button setting again?':
+      'Usar novamente a configuração salva do botão Home?',
+    'Home control is paused.': 'O controle do botão Home está pausado.'
+  },
+  'it': {
+    'Resume Home control': 'Riprendi il controllo del tasto Home',
+    'Use your saved Home button setting again?':
+      'Usare di nuovo l’impostazione salvata per il tasto Home?',
+    'Home control is paused.': 'Il controllo del tasto Home è in pausa.'
+  },
+  'hi': {
+    'Resume Home control': 'होम बटन का नियंत्रण फिर शुरू करें',
+    'Use your saved Home button setting again?':
+      'होम बटन की सहेजी गई सेटिंग फिर से इस्तेमाल करें?',
+    'Home control is paused.': 'होम बटन का नियंत्रण रुका हुआ है।'
+  },
+  'ko': {
+    'Resume Home control': '홈 버튼 제어 재개',
+    'Use your saved Home button setting again?':
+      '저장된 홈 버튼 설정을 다시 사용할까요?',
+    'Home control is paused.': '홈 버튼 제어가 일시 중지되었습니다.'
+  },
+  'pl': {
+    'Resume Home control': 'Wznów sterowanie przyciskiem Home',
+    'Use your saved Home button setting again?':
+      'Użyć ponownie zapisanych ustawień przycisku Home?',
+    'Home control is paused.': 'Sterowanie przyciskiem Home jest wstrzymane.'
+  },
+  'ro': {
+    'Resume Home control': 'Reia controlul butonului Home',
+    'Use your saved Home button setting again?':
+      'Folosești din nou setarea salvată pentru butonul Home?',
+    'Home control is paused.': 'Controlul butonului Home este întrerupt.'
+  },
+  'zh-Hans': {
+    'Resume Home control': '恢复主页键控制',
+    'Use your saved Home button setting again?':
+      '要重新使用已保存的主页键设置吗？',
+    'Home control is paused.': '主页键控制已暂停。'
+  },
+  'zh-Hant': {
+    'Resume Home control': '恢復首頁鍵控制',
+    'Use your saved Home button setting again?':
+      '要重新使用已儲存的首頁鍵設定嗎？',
+    'Home control is paused.': '首頁鍵控制已暫停。'
+  }
+});
+
+HomeI18n.add({
+  'en': {
     'Stay on HDMI or Live TV when the TV wakes':
       'Stay on HDMI or Live TV when the TV wakes',
     'If your TV wakes from standby already showing a game console, Live TV, or another input, that screen stays open. The Home button works as usual.':

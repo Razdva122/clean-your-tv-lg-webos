@@ -14,6 +14,8 @@ const tick = () => new Promise((resolve) => setImmediate(resolve));
 function harness(
   edition,
   {
+    generation,
+    connection,
     unavailable = false,
     corrupt = false,
     versionMismatch = false,
@@ -45,6 +47,8 @@ function harness(
     phase: phase
   };
   const window = {
+    CYTVProductGeneration: generation,
+    CYTVNoRootConnection: connection,
     ROOT_VERSION: '1.2.3',
     CONFIG: profile.config,
     TV_APPS: packagedInventory,
@@ -63,7 +67,13 @@ function harness(
         return method === 'restoreProfile' ? (noBackup ? null : restored) : {};
       }
     },
-    RootUpdates: { rpc: async () => null, open: (o) => errors.push(o) }
+    RootUpdates: {
+      rpc: async (method) => {
+        calls.push(['legacy', method]);
+        return null;
+      },
+      open: (o) => errors.push(o)
+    }
   };
   const document = {
     addEventListener() {},
@@ -85,7 +95,9 @@ function harness(
     clearTimeout,
     Promise,
     PalmServiceBridge: class {
-      call() {
+      call(uri) {
+        if (uri.startsWith('luna://com.cleanyourtv.updater.service/'))
+          calls.push(['legacy', uri]);
         this.onservicecallback(
           JSON.stringify({ returnValue: true, state: { enabled: false } })
         );
@@ -166,6 +178,46 @@ async function startAppearance(h) {
   return context.ThemeManager.current();
 }
 (async () => {
+  for (const edition of ['root', 'no-root']) {
+    const data = require(
+      edition === 'root'
+        ? '../../root-edition/ui/root-profile-data'
+        : '../../launcher/user-data'
+    );
+    for (const connection of edition === 'root'
+      ? [null]
+      : ['developer-mode', 'root-ssh']) {
+      for (const unavailable of [false, true]) {
+        const stored = new Map([
+          [data.key, JSON.stringify(profile)],
+          ['tvhome.order', 'my-new-order'],
+          ['tvhome.theme.choice.v1', 'my-theme']
+        ]);
+        const before = [...stored.entries()];
+        const h = harness(edition, {
+          generation: 2,
+          connection,
+          storage: stored,
+          unavailable,
+          noBackup: true
+        });
+        await tick();
+        assert.equal(h.scripts.length, 1);
+        assert.equal(h.window.TV_APPS.apps[0].id, 'app.one');
+        h.scripts[0].onload();
+        await tick();
+        assert.deepEqual([...stored.entries()], before);
+        assert.equal(
+          h.calls.some(
+            ([method]) => method === 'legacy' || method === 'healthy'
+          ),
+          false
+        );
+        if (connection === 'developer-mode') assert.equal(h.calls.length, 0);
+        assert.deepEqual(h.errors, []);
+      }
+    }
+  }
   const capture = harness('no-root');
   const liveInventory = {
     apps: [

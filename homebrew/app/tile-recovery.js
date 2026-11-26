@@ -32,6 +32,7 @@ window.HomeI18n.ready(function () {
     window.SystemUpdates.open({
       edition: edition,
       standalone: true,
+      singleTile: true,
       recovery: true,
       onClose: back,
       fallback: back

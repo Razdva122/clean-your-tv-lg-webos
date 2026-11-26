@@ -25,7 +25,9 @@
     try {
       var params = event && event.detail;
       if (!params) params = root.PalmSystem && root.PalmSystem.launchParams;
+      if (params && params.params) params = params.params;
       if (typeof params === 'string') params = JSON.parse(params);
+      if (params && params.params) params = params.params;
       return (
         params &&
         params.cytvRecovery === true &&

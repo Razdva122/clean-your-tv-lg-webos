@@ -204,3 +204,28 @@ assert.equal(captures, 1, 'duplicate acceptance cannot install twice');
 console.log(
   'PASS Home update requires separate confirmation and prevents duplicate install'
 );
+
+const beforeExternal = calls;
+const externalOptions = [];
+let systemOpens = 0;
+ctx.window.CYTVProductGeneration = 2;
+ctx.window.SystemUpdates = {
+  open: (options) => {
+    systemOpens++;
+    options.fallback();
+  },
+  openExternal: (options) => externalOptions.push(options)
+};
+for (const connection of ['developer-mode', 'root-ssh']) {
+  ctx.window.CYTVNoRootConnection = connection;
+  const onClose = () => {};
+  ctx.window.HomeUpdates.open({ onClose });
+  assert.equal(externalOptions.at(-1).edition, 'no-root');
+  assert.equal(externalOptions.at(-1).onClose, onClose);
+}
+assert.equal(systemOpens, 1);
+assert.equal(
+  calls,
+  beforeExternal,
+  'single-tile external updates cannot call legacy services'
+);

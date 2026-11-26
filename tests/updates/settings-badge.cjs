@@ -2,7 +2,13 @@ const assert = require('node:assert/strict'),
   fs = require('fs'),
   vm = require('vm');
 const tick = () => new Promise((resolve) => setImmediate(resolve));
-function harness(root, system = false, blurHidden = true) {
+function harness(
+  root,
+  system = false,
+  blurHidden = true,
+  generation,
+  connection
+) {
   const ids = {},
     buttons = [],
     pending = [],
@@ -77,6 +83,9 @@ function harness(root, system = false, blurHidden = true) {
       e.parentNode = this;
       this.children.push(e);
     }
+    removeChild(child) {
+      this.children = this.children.filter((e) => e !== child);
+    }
     setAttribute(k, v) {
       this.attrs[k] = v;
     }
@@ -113,6 +122,8 @@ function harness(root, system = false, blurHidden = true) {
     }
   };
   const window = root ? { RootUpdates: updates } : { HomeUpdates: updates };
+  window.CYTVProductGeneration = generation;
+  window.CYTVNoRootConnection = connection;
   window.addEventListener = () => {};
   window.HomeLayoutState = {
     state: () => ({ allowColumnOverride: allowColumns, columns: 5 })
@@ -274,6 +285,23 @@ function harness(root, system = false, blurHidden = true) {
       assert.equal(h.focus().disabled, false);
     }
   }
+  for (const root of [false, true]) {
+    const h = harness(root, true, true, 2, root ? undefined : 'root-ssh');
+    h.panel.open();
+    await tick();
+    h.failSystem('Service does not exist');
+    await tick();
+    assert.deepEqual(
+      h.calls,
+      [],
+      'single-tile settings must never check legacy Updater'
+    );
+  }
+  const developer = harness(false, true, true, 2, 'developer-mode');
+  developer.panel.open();
+  await tick();
+  assert.deepEqual(developer.systemCalls, []);
+  assert.deepEqual(developer.calls, []);
   const home = harness(false);
   home.panel.open();
   assert.equal(

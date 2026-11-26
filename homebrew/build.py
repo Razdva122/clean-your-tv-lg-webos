@@ -54,7 +54,9 @@ def build_payload(root_bundle, root_updater_bundle, supervisor_bundle, runtime_a
     verify_root(root_bundle);verify_updater(root_updater_bundle)
     spec=importlib.util.spec_from_file_location('homebrew_supervisor_setup',project/'system-updater/setup.py')
     setup=importlib.util.module_from_spec(spec);spec.loader.exec_module(setup)
-    setup.verify_bundle(supervisor_bundle)
+    supervisor_info = setup.verify_bundle(supervisor_bundle)
+    if supervisor_info.get('product_schema') != 2:
+        raise ValueError('Single-tile setup requires the second-generation System Updater')
     raw=python_runtime._verified_bytes(Path(runtime_archive))
     output.mkdir()
     try:
@@ -64,7 +66,7 @@ def build_payload(root_bundle, root_updater_bundle, supervisor_bundle, runtime_a
                 target.write_bytes(read_file(Path(root)/name))
         spec=importlib.util.spec_from_file_location('homebrew_supervisor_builder',Path(__file__).resolve().parents[1]/'system-updater/build.py')
         supervisor=importlib.util.module_from_spec(spec);spec.loader.exec_module(supervisor)
-        supervisor.prepare_baseline(output,'root',output/'baseline')
+        supervisor.prepare_baseline(output,'root',output/'baseline',single_tile=True)
         binding=python_runtime.normalize_to_file(raw,output/'runtime.tar.gz')
         runtime_files=validate_runtime(output/'runtime.tar.gz',binding)
         (output/'runtime-binding.json').write_text(json.dumps(binding,sort_keys=True,separators=(',',':')))
@@ -169,6 +171,12 @@ def verify_offline(payload):
         raise ValueError('Missing Root product package')
     root_files = package.data_files(read_file(payload/'root'/root_name))
     require_tile_home(json.loads(root_files['usr/palm/applications/'+IDENTITIES['root']+'/appinfo.json']))
+    supervisor_info = json.loads(read_file(payload/'supervisor/bundle.json'))
+    baseline = json.loads(read_file(payload/'baseline/baseline.json'))
+    if (supervisor_info.get('product_schema') != 2 or baseline.get('schema') != 2
+            or baseline.get('edition') != 'root'
+            or sorted(c.get('name', '') for c in baseline.get('components', [])) != ['root', 'root-infrastructure']):
+        raise ValueError('Mismatched single-tile supervisor or rollback baseline')
     binding=json.loads(read_file(payload/'runtime-binding.json'))
     records=validate_runtime(payload/'runtime.tar.gz',binding)
     if records!=manifest['runtime']['files'] or manifest['runtime']['archive_sha256']!=python_runtime.SHA256:raise ValueError('Offline runtime mismatch')

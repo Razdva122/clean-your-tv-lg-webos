@@ -57,6 +57,7 @@
       s.src = 'app.js';
       s.onload = function () {
         function rendered() {
+          if (window.CYTVProductGeneration === 2 && !systemRestore) return;
           // A rendered grid (including an intentionally empty Home) is a startup signal.
           if (
             !systemRestore &&
@@ -275,7 +276,7 @@
         next();
       }
     };
-    function legacy() {
+    function ordinaryHome() {
       var packaged = window.TV_APPS;
       if (packaged && window.CYTVPackagedIconFallback) {
         window.HomePackagedInventory = {
@@ -288,6 +289,20 @@
         saved = HomeData.load(localStorage);
       } catch (_) {
         profileError = true;
+        boot();
+        return;
+      }
+      if (window.CYTVProductGeneration === 2) {
+        if (saved) {
+          window.TV_APPS = saved.inventory;
+          window.CONFIG = saved.config;
+          if (window.HomePackagedInventory)
+            AppLibrary.replaceFallbackIcons(
+              saved.inventory.apps,
+              packaged.apps,
+              window.CYTVPackagedIconFallback
+            );
+        }
         boot();
         return;
       }
@@ -365,11 +380,17 @@
         error: error.message
       });
     }
-    if (window.SystemUpdates) {
+    if (
+      window.SystemUpdates &&
+      !(
+        window.CYTVProductGeneration === 2 &&
+        window.CYTVNoRootConnection === 'developer-mode'
+      )
+    ) {
       window.SystemUpdates.rpc('restoreProfile', { edition: 'no-root' })
         .then(function (restored) {
           if (!restored) {
-            legacy();
+            ordinaryHome();
             return;
           }
           if (!restored.transaction || !restored.version || !restored.profile)
@@ -417,9 +438,9 @@
           manifest.send();
         })
         .catch(function (error) {
-          if (error.unavailable === true) legacy();
+          if (error.unavailable === true) ordinaryHome();
           else systemError(error);
         });
-    } else legacy();
+    } else ordinaryHome();
   })();
 });

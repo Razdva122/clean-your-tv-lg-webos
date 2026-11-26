@@ -8,7 +8,8 @@ const create = require('../../launcher/app-library').create;
 const inventory = [
   { id: 'a', title: 'A', icon: '' },
   { id: 'b', title: 'B', icon: '' },
-  { id: 'c', title: 'C', icon: '' }
+  { id: 'c', title: 'C', icon: '' },
+  { id: 'io.github.razdva122.cytvinstaller', title: 'Clean Your TV', icon: '' }
 ];
 const map = new Map();
 const storage = {
