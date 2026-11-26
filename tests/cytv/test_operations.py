@@ -694,6 +694,13 @@ class OperationTests(unittest.TestCase):
                 self.assertIn('Home Helper: Not installed → 0.6.13 (Install)', rows)
                 self.assertTrue(all(call[0] == 'luna' and call[1].endswith('/listApps') for call in remote.calls))
 
+    def test_single_tile_version_review_shows_one_product(self):
+        remote = Remote()
+        remote.installed = [{'id': operations.package.TILE_APP, 'version': '1.2.0'}]
+        installer = self.installer(remote)
+        installer.manifest['single_tile'] = {'version': '1.3.0'}
+        self.assertEqual(installer.version_summary(), ['Clean Your TV: 1.2.0 → 1.3.0 (Update)'])
+
     def test_root_version_review_reads_versions_from_bundled_packages(self):
         installer = self.installer(Remote(), 'root')
         root = self.payload / 'root'

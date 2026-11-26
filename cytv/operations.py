@@ -1491,7 +1491,9 @@ else:
         observed = self.installed_apps()
         self.tv_info['components'] = diagnostics.context.status_summary({'device': {'apps': observed}}).get('components', {})
         apps = {app['id']: app for app in observed}
-        if self.profile['edition'] == 'root':
+        if self.manifest.get('single_tile'):
+            targets = [(package.TILE_APP, 'Clean Your TV', self.manifest['single_tile']['version'])]
+        elif self.profile['edition'] == 'root':
             if self.tv_info.get('home_backend') == 'c1-native-gate':
                 variant = self.manifest['root_backends']['c1-native-gate']['graphics'][self.tv_info['graphics_resolution']]
                 root = json.loads((self.payload / package.safe_name(variant) / 'release.json').read_text())['version']
