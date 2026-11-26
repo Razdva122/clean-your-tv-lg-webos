@@ -54,6 +54,15 @@ continue recovery from the matching host installer. Device acceptance must
 check app visibility, physical Home routing, standby, stored media and reboot
 on the exact candidate.
 
+On-device product updates capture the Home profile while the original app can
+still read its browser storage. The profile includes the supported local
+preferences and the app's own theme and personal wallpaper stores. The update
+service accepts up to 3 MiB of serialized browser data within the existing
+4 MiB request limit. An incomplete or oversized backup stops the update before
+package replacement. Home restores and reads back the snapshot before reporting
+a successful start. The host Developer Mode repair path keeps the Home package
+installed because that path has no verified browser-profile transfer.
+
 One setup confirmation covers the verified fresh Root installation, preparation
 of complete updates and a single activation attempt. Existing editions require
 the dedicated transition flow. When Python preparation is required, the UI checks

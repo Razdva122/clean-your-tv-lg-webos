@@ -20,8 +20,7 @@ class RootHandoff(unittest.TestCase):
                                         non_interactive=non_interactive)
 
     def test_fresh_with_full_tile_continues_only_on_tv(self):
-        with patch.object(single_tile_root, '_exact_developer_app', return_value=True), \
-                patch.object(single_tile_root, 'installed_role', return_value='homebrew') as role:
+        with patch.object(single_tile_root, 'installed_role', return_value='homebrew') as role:
             self.assertEqual(self.handoff(), 0)
             role.assert_called_once_with(self.installer, require_tile_protocol=True)
             self.installer.remote.luna.assert_called_once_with(
@@ -37,8 +36,7 @@ class RootHandoff(unittest.TestCase):
                 self.installer.remote.luna.assert_not_called()
 
     def test_light_tile_and_unattended_mode_do_not_launch(self):
-        with patch.object(single_tile_root, '_exact_developer_app', return_value=True), \
-                patch.object(single_tile_root, 'installed_role', return_value='no-root') as role:
+        with patch.object(single_tile_root, 'installed_role', return_value='no-root') as role:
             with self.assertRaises(UserError):
                 self.handoff()
             role.return_value = 'homebrew'
@@ -51,8 +49,7 @@ class RootHandoff(unittest.TestCase):
         self.installer.native_root_present.return_value = False
         self.installer.root_installation.return_value = {'state': 'installed', 'can_maintain': True}
         self.installer.uninstall_project.return_value = {'removed': True, 'verified_clean': True}
-        with patch.object(single_tile_root, '_exact_developer_app', return_value=True), \
-                patch.object(single_tile_root, 'installed_role', return_value='homebrew'), \
+        with patch.object(single_tile_root, 'installed_role', return_value='homebrew'), \
                 patch.object(single_tile_root.prompts, 'confirm', side_effect=[False, True, False]):
             self.assertEqual(self.handoff(), 130)
             self.installer.uninstall_project.assert_not_called()
@@ -67,8 +64,7 @@ class RootHandoff(unittest.TestCase):
         self.installer.native_root_present.return_value = False
         self.installer.root_installation.return_value = {'state': 'installed', 'can_maintain': True}
         self.installer.uninstall_project.return_value = {'removed': True, 'verified_clean': False}
-        with patch.object(single_tile_root, '_exact_developer_app', return_value=True), \
-                patch.object(single_tile_root, 'installed_role', return_value='homebrew'):
+        with patch.object(single_tile_root, 'installed_role', return_value='homebrew'):
             with self.assertRaises(UserError):
                 self.handoff()
             self.installer.remote.luna.assert_not_called()
