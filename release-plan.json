@@ -65,6 +65,13 @@
       "pr": 855,
       "issues": [],
       "summary": "Add TV setup and diagnostic reports to Homebrew"
+    },
+    {
+      "pr": 856,
+      "issues": [
+        116
+      ],
+      "summary": "Show Homebrew installation checks and share diagnostic reports"
     }
   ],
   "excluded": [],
