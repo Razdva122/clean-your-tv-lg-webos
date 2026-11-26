@@ -76,7 +76,11 @@ Per la configurazione Root, l’installer usa automaticamente uno spazio tempora
 
 ### Se CYTV Installer è già aperto sul televisore
 
-Scegli **Installa e attiva** e conferma una volta. Il programma installa insieme Root Home, Root Updater e System Updater. Se trova impostazioni compatibili di una precedente configurazione di Clean Your TV Home, le importa automaticamente. Il tasto Home aprirà Root Home, salvo che sia attivo l’arresto di emergenza. Se il programma ti invita a continuare la configurazione di Root su un computer, prosegui lì. Se propone No-root, usa il programma di installazione per computer o Android.
+Scegli **Installa e attiva** e conferma una volta. Il programma installa insieme Root Home, Root Updater e System Updater. Il tasto Home aprirà Root Home, salvo che sia attivo l’arresto di emergenza. Se il programma ti invita a continuare la configurazione di Root su un computer, prosegui lì. Se propone No-root, usa il programma di installazione per computer o Android.
+
+Dopo l’installazione, Root Home apre **Configura il televisore**. Scegli un tema integrato in **Temi**. Apri **Modifica le impostazioni LG**, seleziona le opzioni da modificare per pubblicità e suggerimenti e scegli **Applica le impostazioni selezionate**. Controlla il risultato di ogni opzione. Per tornare ai valori originali salvati, seleziona le opzioni e scegli **Ripristina le impostazioni selezionate**. Premi **Apri Home** per accedere alla schermata Home. Per riaprire il pannello, vai su **Impostazioni → Avanzate → Configura il televisore**.
+
+Se il programma di installazione segnala un problema, segui le istruzioni sullo schermo. Salva il rapporto diagnostico per conservarne una copia sul televisore. Riapri il rapporto nel programma di installazione o nel ripristino del riquadro per leggerlo o acquisire il codice QR con il telefono.
 
 Per disinstallare Clean Your TV, scegli **Rimuovi prodotto completo** nel programma di installazione. Se elimini solo l’app di installazione, Clean Your TV rimane sul televisore.
 

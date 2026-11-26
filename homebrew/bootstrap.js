@@ -9,10 +9,17 @@ var PAYLOAD = APP + '/payload',
 function fail() {
   throw new Error('Installer prerequisite or request is unsupported');
 }
+function debloatAction(action) {
+  return ['debloat', 'debloat-status', 'debloat-restore'].indexOf(action) >= 0;
+}
 function parse(args) {
   var action = args[0],
     request = { action: action },
-    valueOptions = { '--operation': 'operation', '--candidate': 'candidate' },
+    valueOptions = {
+      '--operation': 'operation',
+      '--candidate': 'candidate',
+      '--settings': 'settings'
+    },
     flags = {
       '--prepare-supervisor': 'supervisor',
       '--migrate-packaged-home': 'migrate',
@@ -28,7 +35,10 @@ function parse(args) {
       'status',
       'restore',
       'remove',
-      'activate'
+      'activate',
+      'debloat',
+      'debloat-status',
+      'debloat-restore'
     ].indexOf(action) < 0
   )
     fail();
@@ -61,7 +71,10 @@ function parse(args) {
     status: ['operation', 'current'],
     restore: [],
     remove: ['operation', 'candidate', 'resume'],
-    activate: []
+    activate: [],
+    debloat: ['settings'],
+    'debloat-status': [],
+    'debloat-restore': ['settings']
   }[action];
   Object.keys(request).forEach(function (key) {
     if (key !== 'action' && allowed.indexOf(key) < 0) fail();
@@ -83,6 +96,15 @@ function parse(args) {
       request.supervisor ||
       request.migrate ||
       request.activateAfterInstall)
+  )
+    fail();
+  if (
+    debloatAction(action) &&
+    action !== 'debloat-status' &&
+    (typeof request.settings !== 'string' ||
+      !/^[a-zA-Z][a-zA-Z0-9]{0,31}(,[a-zA-Z][a-zA-Z0-9]{0,31}){0,10}$/.test(
+        request.settings
+      ))
   )
     fail();
   return request;
@@ -162,10 +184,14 @@ function run(args, deps) {
     };
     if (
       !deps.process.geteuid ||
-      deps.process.geteuid() !== 0 ||
       parseInt(deps.process.versions.node.split('.')[0], 10) < 8
     )
       fail();
+    if (deps.process.geteuid() !== 0) {
+      if (request.action === 'inspect')
+        return { state: 'unsupported', code: 'homebrew_root_required' };
+      fail();
+    }
     return deps.runtime
       .inspect(
         PAYLOAD,
@@ -195,7 +221,15 @@ function run(args, deps) {
               ['inspect', 'install', 'remove'].indexOf(request.action) >= 0
           )
           .then(function (stage) {
-            var command = ['-E', '-s', '-B', stage.driver, request.action];
+            var debloat = debloatAction(request.action);
+            var command = [
+              '-E',
+              '-s',
+              '-B',
+              debloat ? stage.debloat : stage.driver,
+              request.action
+            ];
+            if (debloat && request.settings) command.push(request.settings);
             if (request.operation)
               command.push('--operation', request.operation);
             if (request.resume) command.push('--resume');

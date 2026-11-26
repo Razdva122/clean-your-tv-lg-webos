@@ -22,6 +22,13 @@ one-confirmation workflow awaits physical acceptance on the selected IPK.
 [Candidate setup](../docs/INSTALL.md#candidate-on-tv-root-installation) ·
 [Acceptance record](../docs/development/HOMEBREW-INSTALL-ACCEPTANCE.md)
 
+After installation, Root Home opens **Set up your TV**. Choose a built-in theme
+under **Themes**. To change LG ads or recommendations, open **Adjust LG settings**,
+select the options you want, and choose **Apply selected settings**. Check the
+result beside each option. Choose **Restore selected settings** to return selected
+options to their saved original values. Choose **Open Home** to continue. To return
+later, use **Settings → Advanced → Set up your TV**.
+
 After verified setup, opening the tile opens your Home. A stopped Home
 controller stays stopped. If Home fails to open, choose **Recovery** to inspect
 an available product rollback or use the computer installer. **Restore LG Home**
@@ -76,15 +83,13 @@ or later. Version 0.8.0 is the first published release that includes #233.
 Verify access by opening the Installer app on the TV and checking its status.
 If access remains denied, use the published computer or Android installer.
 
-The candidate uses its existing read-only, app-originated `inspect` as the access
-preflight. An exact LS2 `exec` denial shows **Homebrew access denied** with
-the update and fallback instructions in all supported languages. Only Check
-status and Close are offered. A saved request ID is retained, and retry inspects
-before querying its status.
-The message also applies if access is lost after opening. Missing services,
-malformed replies and backend/root failures retain their generic handling; raw
-service diagnostics are never displayed. This does not grant access or establish
-physical-TV acceptance.
+The Installer shows the cause it can confirm and recommends the next step.
+Choose **Check status** to check an existing request again. Choose
+**Save diagnostic report** to keep a copy on this TV. **Open saved report** in
+the Installer or tile recovery shows the latest saved report and a QR code
+you can scan with your phone. The report contains the observed status and
+diagnostic codes. It stays in the tile's local storage until the next report
+is saved or the app's data is cleared.
 
 A self-registration step inside the Installer bootstrap cannot solve a denial
 that prevents that bootstrap from starting. The Root Home firmware helper's

@@ -92,6 +92,10 @@ function fixture(shared, largeMember) {
   fs.mkdirSync(path.join(root, 'baseline'));
   fs.mkdirSync(path.join(root, 'edition'));
   write('edition/edition.py', 'TRUSTED_EDITION_READER');
+  fs.mkdirSync(path.join(root, 'edition/cytv'));
+  write('edition/debloat.py', 'TRUSTED_DEBLOAT_ACTION');
+  write('edition/cytv/__init__.py', '');
+  write('edition/cytv/debloat_policy.py', 'TRUSTED_DEBLOAT_POLICY');
   write('root-updater/install_driver.py', DRIVER_CODE);
   write('root-updater/support.py', SUPPORT_CODE);
   write('root-updater/personalize.py', 'TRUSTED_MIGRATION_READER');
@@ -548,6 +552,22 @@ async function rejection(change) {
     sharedBase.setSystem();
     var sharedState = await sharedBase.api.inspect(sharedBase.root);
     var first = await sharedBase.api.stage(sharedState, false);
+    assert.equal(
+      fs.readFileSync(first.debloat, 'utf8'),
+      'TRUSTED_DEBLOAT_ACTION'
+    );
+    assert.equal(
+      fs.readFileSync(
+        path.join(first.root, 'edition/cytv/debloat_policy.py'),
+        'utf8'
+      ),
+      'TRUSTED_DEBLOAT_POLICY'
+    );
+    assert(
+      !fs.existsSync(first.editionInspector),
+      'ordinary stage only carries the dedicated Debloat closure'
+    );
+
     assert.equal(
       fs.readFileSync(
         path.join(first.root, 'root-updater/personalize.py'),

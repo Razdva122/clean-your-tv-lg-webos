@@ -794,7 +794,12 @@ function stage(state, full) {
             return /^(root|root-updater|supervisor|baseline|edition)\//.test(
               name
             );
-          return name.indexOf('root-updater/') === 0 && !/\.ipk$/.test(name);
+          return (
+            (name.indexOf('root-updater/') === 0 && !/\.ipk$/.test(name)) ||
+            name === 'edition/debloat.py' ||
+            name === 'edition/cytv/__init__.py' ||
+            name === 'edition/cytv/debloat_policy.py'
+          );
         }),
         ordinaryBytes = 0;
       var version = (context.manifest.versions || {}).root;
@@ -867,6 +872,7 @@ function stage(state, full) {
         root: root,
         driver: root + '/root-updater/install_driver.py',
         editionInspector: root + '/edition/edition.py',
+        debloat: root + '/edition/debloat.py',
         cleanup: cleanup
       };
     } catch (error) {

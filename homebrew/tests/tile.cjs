@@ -9,7 +9,8 @@ function fixture(
   edition,
   saved = {},
   response = { returnValue: true },
-  params = {}
+  params = {},
+  initiallyHidden = false
 ) {
   const calls = [],
     pages = [],
@@ -26,7 +27,7 @@ function fixture(
       setItem: (key, value) => storage.set(key, value)
     },
     document: {
-      hidden: false,
+      hidden: initiallyHidden,
       addEventListener: (name, callback) => {
         events[name] = callback;
       }
@@ -91,6 +92,24 @@ for (const [edition, target] of [
     'ack without backgrounding opens recovery'
   );
 }
+for (const [edition, target] of [
+  [null, null],
+  ['root', 'com.cleanyourtv.root.preview']
+]) {
+  const hiddenLaunch = fixture(edition, {}, { returnValue: true }, {}, true);
+  assert.equal(hiddenLaunch.calls.length, 0);
+  assert.deepEqual(hiddenLaunch.pages, []);
+  hiddenLaunch.window.document.hidden = false;
+  hiddenLaunch.events.visibilitychange();
+  hiddenLaunch.runTimers();
+  if (target) {
+    assert.deepEqual(hiddenLaunch.calls[0].payload, { id: target });
+    assert.deepEqual(hiddenLaunch.pages, []);
+  } else {
+    assert.deepEqual(hiddenLaunch.pages, ['setup.html#open']);
+    assert.equal(hiddenLaunch.calls.length, 0);
+  }
+}
 assert.deepStrictEqual(fixture(null).pages, ['setup.html#open']);
 assert.deepStrictEqual(
   fixture(null, {
@@ -120,20 +139,44 @@ timeout.runTimers();
 assert.deepStrictEqual(timeout.pages, ['recovery.html']);
 {
   const elements = {};
+  function node() {
+    return { focus() {}, scrollIntoView() {}, appendChild() {} };
+  }
   const document = {
     getElementById(id) {
-      if (!elements[id]) elements[id] = { focus() {} };
+      if (!elements[id]) elements[id] = node();
       return elements[id];
     },
+    createElement: node,
     addEventListener() {}
   };
-  let external;
+  let external, saved, shown;
   const window = {
+    InstallerDiagnostics: {
+      explain() {},
+      load() {
+        return saved;
+      },
+      save(value) {
+        saved = value;
+        return true;
+      },
+      render(parent, value, translate, persisted) {
+        shown = { value, persisted };
+      },
+      record(source, detail, code) {
+        return { source, code };
+      }
+    },
+    InstallerDiagnosticI18n: (key) => key,
     location: { hash: '' },
     CYTVTileEdition: 'no-root',
     HomeI18n: {
       ready(callback) {
         callback();
+      },
+      t(key) {
+        return key;
       }
     },
     SystemUpdates: {
@@ -154,6 +197,13 @@ assert.deepStrictEqual(timeout.pages, ['recovery.html']);
   assert.equal(elements.tileActions.hidden, true);
   external.onClose();
   assert.equal(elements.tileActions.hidden, false);
+  assert.equal(elements['save-report'].hidden, false);
+  elements['save-report'].onclick();
+  assert.equal(elements['tile-main'].hidden, true);
+  assert.equal(elements['tile-report-body'].hidden, false);
+  assert.equal(shown.persisted, true);
+  assert.equal(shown.value.source, 'recovery');
+  assert.equal(shown.value.code, 'update_service_unavailable');
 }
 console.log(
   'PASS edition-bound tile, daily launch, no Home activation, crash/timeout and explicit recovery'

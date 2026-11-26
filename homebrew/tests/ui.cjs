@@ -1,5 +1,6 @@
 'use strict';
 require('./tile.cjs');
+require('./diagnostics.cjs');
 const assert = require('assert'),
   fs = require('fs'),
   path = require('path');
@@ -153,9 +154,12 @@ const SOURCE_APP = path.resolve(__dirname, '../app'),
       const name = decodeURIComponent(
         new URL(route.request().url()).pathname
       ).replace(/^\//, '');
-      const file = path.resolve(APP, name),
-        base = path.resolve(APP) + path.sep;
-      if (!file.startsWith(base) || !fs.existsSync(file)) {
+      const base = path.resolve(APP) + path.sep;
+      const vendorQr = APP === SOURCE_APP && name === 'wallpaper-qr.js';
+      const file = vendorQr
+        ? path.join(__dirname, '../../launcher/wallpaper-qr.js')
+        : path.resolve(APP, name);
+      if ((!vendorQr && !file.startsWith(base)) || !fs.existsSync(file)) {
         await route.fulfill({ status: 404, body: '' });
         return;
       }
@@ -226,6 +230,8 @@ const SOURCE_APP = path.resolve(__dirname, '../app'),
               reply = {
                 state: window.model.state,
                 code: window.model.code,
+                reason: window.model.reason,
+                failure: window.model.failure,
                 installation: {
                   state: window.model.state,
                   tile_protocol: window.model.legacy ? undefined : 1,
@@ -626,6 +632,70 @@ const SOURCE_APP = path.resolve(__dirname, '../app'),
         c.endsWith('install --operation ' + 'a'.repeat(32) + ' --resume')
       )
     );
+    await f.context.close();
+    f = await fixture(
+      {
+        state: 'recovery_required',
+        code: 'operation_requires_recovery',
+        reason: 'restart-required',
+        failure: {
+          inspect_check: 'live_original_worker',
+          errorText: 'secret 10.1.2.3'
+        }
+      },
+      'ru'
+    );
+    p = f.page;
+    await p.waitForSelector('#save-report');
+    assert.match(
+      await p.locator('#diagnostic-reason').textContent(),
+      /нужен перезапуск/
+    );
+    assert.match(
+      await p.locator('#diagnostic-next').textContent(),
+      /Проверить статус/
+    );
+    await p.locator('#save-report').focus();
+    await p.keyboard.press('Enter');
+    await p.waitForSelector('[data-screen="diagnostic-report"]');
+    assert.match(
+      await p.locator('#diagnostic-storage').textContent(),
+      /Отчёт сохранён/
+    );
+    const reportText = await p.locator('#diagnostic-json').textContent();
+    assert.equal(JSON.parse(reportText).detail, 'live_original_worker');
+    assert(!reportText.includes('10.1.2.3') && !reportText.includes('secret'));
+    const qr = await p.locator('#diagnostic-qr').evaluate((canvas) => {
+      const { width, height } = canvas;
+      const pixels = canvas.getContext('2d').getImageData(0, 0, width, height);
+      return { width, height, pixels: Array.from(pixels.data) };
+    });
+    const decoded = require('jsqr')(
+      Uint8ClampedArray.from(qr.pixels),
+      qr.width,
+      qr.height
+    );
+    assert.deepEqual(JSON.parse(decoded.data), JSON.parse(reportText));
+    await p.keyboard.press('Escape');
+    assert.equal(
+      await p.evaluate(() => document.activeElement.id),
+      'save-report'
+    );
+    await p.reload();
+    await p.locator('#open-report').click();
+    assert.equal(await p.locator('#diagnostic-json').textContent(), reportText);
+    await p.locator('#back').click();
+    await p.evaluate(() => {
+      Storage.prototype.setItem = function () {
+        throw new Error('storage not available');
+      };
+    });
+    await p.locator('#save-report').click();
+    assert.match(
+      await p.locator('#diagnostic-storage').textContent(),
+      /не смог сохранить/
+    );
+    assert.equal(await p.locator('#diagnostic-json').textContent(), reportText);
     await f.context.close();
     for (const savedOperation of [false, true]) {
       f = await fixture({ execDenied: true, savedOperation });

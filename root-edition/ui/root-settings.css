@@ -180,3 +180,46 @@
     right: 24px;
   }
 }
+
+.cytv-post-install .root-settings-card {
+  width: 1120px;
+  max-width: 87vw;
+  max-height: 86vh;
+  overflow: auto;
+}
+
+.cytv-post-install .renewal-actions {
+  flex-wrap: wrap;
+}
+
+.cytv-post-install .renewal-actions button {
+  margin: 6px 12px 6px 0;
+}
+
+.cytv-setup-settings {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 16px -8px 24px;
+}
+
+.cytv-setup-settings > div {
+  width: 50%;
+  box-sizing: border-box;
+  padding: 5px 8px;
+}
+
+.cytv-setup-settings button {
+  width: 100%;
+  text-align: left;
+}
+
+.cytv-setup-settings button[aria-checked='true'],
+.cytv-post-install button[aria-pressed='true'] {
+  box-shadow: inset 5px 0 0 #90cfad;
+}
+
+.cytv-setup-settings span {
+  display: block;
+  color: #c9cbd3;
+  margin: 4px 12px 6px;
+}

@@ -18,6 +18,14 @@ class InstallerPackageTests(unittest.TestCase):
             with self.subTest(incompatible), self.assertRaisesRegex(ValueError, 'second-generation'):
                 build.require_tile_home(dict(info, **incompatible))
 
+    def test_complete_homebrew_tile_retains_standard_sdk_access(self):
+        with patch('scripts.tv_web_build.compile_web', side_effect=lambda files: files):
+            files = build.tile_web_files('0.0.0', versions={})
+        info = json.loads(files[build.APP_PREFIX + 'appinfo.json'])
+        self.assertNotIn('requiredACG', info)
+        self.assertEqual(info['cytvTileProtocol'], 1)
+        self.assertIn(build.APP_PREFIX + 'setup.html', files)
+
     def test_host_tiles_bind_one_edition_and_exclude_homebrew_installer(self):
         with tempfile.TemporaryDirectory() as temp, patch('scripts.tv_web_build.compile_web', side_effect=lambda files: files):
             for edition in ('root','no-root'):
@@ -26,6 +34,7 @@ class InstallerPackageTests(unittest.TestCase):
                 raw = target.read_bytes()
                 info = build.installer_metadata(raw)
                 self.assertEqual(info['cytvTileEdition'], edition)
+                self.assertEqual(info['requiredACG'], ['application.launcher'])
                 self.assertEqual((info['cytvTileProtocol'], info['title']), (1, 'Clean Your TV'))
                 files = build.installer_files(raw)
                 self.assertIn(json.dumps(edition).encode(), files[build.APP_PREFIX+'tile-config.js'])

@@ -7,6 +7,7 @@
   var storageKey = 'cytv.tile.home';
   var doc = root.document;
   var busy = false;
+  var opened = false;
   var handoff;
   var returned;
   var currentBridge;
@@ -40,6 +41,7 @@
   function open(event) {
     clearTimeout(returned);
     if (busy || doc.hidden) return;
+    opened = true;
     var request = ++generation;
     var bound = root.CYTVTileEdition;
     var edition = valid(bound) ? bound : saved(storageKey);
@@ -128,7 +130,9 @@
       // webOS can deliver visibilitychange just before webOSRelaunch. Give
       // deliberate relaunch its own turn instead of opening two destinations.
       returned = setTimeout(function () {
-        if (!busy && !doc.hidden) root.location.replace('recovery.html');
+        if (busy || doc.hidden) return;
+        if (!opened) open();
+        else root.location.replace('recovery.html');
       }, 300);
     }
   });

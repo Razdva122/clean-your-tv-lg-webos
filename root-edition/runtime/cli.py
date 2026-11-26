@@ -347,7 +347,8 @@ def setup_enable(identifier):
                 or not intent.get('enabled') or setup_activation_binding(store, identifier) != binding):
             raise ValueError('Setup Home activation was stopped')
         # The physical escape must remain able to take the lifecycle lock while SAM replies.
-        luna('luna://com.webos.applicationManager/launch', {'id': d.CANDIDATE})
+        luna('luna://com.webos.applicationManager/launch',
+             {'id': d.CANDIDATE, 'params': {'cytvPostInstall': identifier}})
         attempt['launch_requested'] = True
         store.write(name, attempt)
         if (setup_activation_binding(store, identifier) != binding

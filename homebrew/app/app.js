@@ -2,6 +2,7 @@
   'use strict';
   var bridge = root.InstallerBridge,
     i18n = root.InstallerI18n,
+    diagnostics = root.InstallerDiagnostics,
     doc = root.document,
     content = doc.getElementById('content'),
     hint = doc.getElementById('hint'),
@@ -15,9 +16,12 @@
     opener = null,
     screen = 'checking',
     message = null,
-    accessDenied = false;
+    accessDenied = false,
+    transportFailure = null,
+    reportView = null;
   function t(k) {
-    return i18n.t(k);
+    var text = root.InstallerDiagnosticI18n(k);
+    return text === k ? i18n.t(k) : text;
   }
   function remember(id) {
     if (!/^[a-f0-9]{32}$/.test(id)) throw new Error('invalid_request');
@@ -141,7 +145,54 @@
       /^[a-f0-9]{64}$/.test(inspected.payload_sha256 || '')
     );
   }
+  function addDiagnostics(value, code) {
+    var data = value || code ? diagnostics.record('setup', value, code) : null;
+    if (data && code !== 'homebrew_exec_denied') {
+      var description = element('div');
+      diagnostics.explain(description, data, t);
+      content.insertBefore(description, content.querySelector('.actions'));
+    }
+    var previous = diagnostics.load();
+    if (!data && !previous) return;
+    var actions = controls();
+    if (data)
+      button(actions, 'save-report', t('saveDiagnostic'), function () {
+        openReport(data, diagnostics.save(data), 'save-report');
+      });
+    if (previous)
+      button(actions, 'open-report', t('viewDiagnostic'), function () {
+        openReport(previous, true, 'open-report');
+      });
+  }
+  function openReport(value, saved, entry) {
+    reportView = { value: value, saved: saved, entry: entry };
+    renderReport();
+  }
+  function renderReport() {
+    begin('diagnostic-report', 'diagnosticTitle');
+    diagnostics.render(content, reportView.value, t, reportView.saved);
+    button(controls(), 'back', t('back'), closeReport, 'primary');
+    focus('back');
+  }
+  function closeReport() {
+    var entry = reportView.entry;
+    reportView = null;
+    render();
+    focus(entry);
+  }
+  function failureCode(error, action) {
+    if (error && error.diagnosticCode) return error.diagnosticCode;
+    if (error && error.message === 'runtime_unconfirmed')
+      return 'runtime_unconfirmed';
+    if (operation) return 'status_unavailable';
+    if (action === 'prepare-runtime') return 'runtime_unconfirmed';
+    return 'installer_unavailable';
+  }
   function render() {
+    if (reportView) {
+      renderReport();
+      return;
+    }
     if (accessDenied) {
       begin('homebrew-access', 'homebrewDeniedTitle');
       paragraph('homebrewDeniedBody');
@@ -154,6 +205,7 @@
       var denied = controls();
       button(denied, 'refresh', t('refresh'), refresh);
       button(denied, 'close', t('close'), close);
+      addDiagnostics(job, 'homebrew_exec_denied');
       focus('refresh');
       return;
     }
@@ -173,10 +225,13 @@
         pending ? 'progress' : 'recovery',
         pending ? 'progress' : 'recovery'
       );
-      paragraph(
-        message ||
-          (pending ? 'progressBody' : unknown ? 'unknown' : 'recoveryBody')
-      );
+      if (
+        pending ||
+        message === 'activationUnverified' ||
+        unknown ||
+        message === 'lost'
+      )
+        paragraph(message || (pending ? 'progressBody' : 'unknown'));
       if (operation)
         content.appendChild(
           element('p', t('request') + ': ' + operation, 'details')
@@ -207,21 +262,17 @@
           old.parentNode.removeChild(old);
           return;
         }
-        var safe = ['stage', 'state', 'code', 'resume_reason']
-          .map(function (k) {
-            return (
-              k +
-              ': ' +
-              String(job[k] || '')
-                .replace(/[^a-z0-9_-]/g, '')
-                .slice(0, 80)
-            );
-          })
-          .join(' · ');
-        var node = element('p', safe);
+        var node = element(
+          'p',
+          JSON.stringify(diagnostics.record('setup', job, transportFailure))
+        );
         node.id = 'technical';
         content.appendChild(node);
       });
+      addDiagnostics(
+        !pending || transportFailure ? job : null,
+        transportFailure
+      );
       focus('refresh');
       if (pending && !doc.hidden) poll = setTimeout(pollStatus, 8000);
       return;
@@ -239,6 +290,7 @@
         },
         'primary'
       );
+      addDiagnostics(inspected, transportFailure);
     } else if (managedHome(inspected)) {
       begin('installed', 'installed');
       versions();
@@ -266,6 +318,7 @@
         'danger'
       );
       paragraph('retained');
+      addDiagnostics(transportFailure ? inspected : null, transportFailure);
     } else if (
       (state === 'installed' &&
         inspected.installation &&
@@ -275,14 +328,14 @@
         inspected.installation.migrate_available === true)
     ) {
       begin('existing-installation', 'recovery');
-      paragraph('existingSetup');
       var existing = controls();
       button(existing, 'refresh', t('refresh'), refresh);
       button(existing, 'close', t('close'), close);
+      addDiagnostics(inspected, 'existing_installation');
     } else if (canInstall(inspected) || canPrepareForSetup()) {
       var preparing = state === 'prerequisites';
       begin(preparing ? 'prerequisites' : 'review', 'review');
-      paragraph(message || 'reviewBody');
+      paragraph('reviewBody');
       if (preparing) paragraph('runtimeBody');
       var actions = controls();
       button(
@@ -299,33 +352,25 @@
         'primary'
       );
       button(actions, 'close', t('close'), close);
+      addDiagnostics(transportFailure ? inspected : null, transportFailure);
     } else if (state === 'external_setup' || state === 'edition_unconfirmed') {
       begin('edition-advice', 'unsupported');
-      var advice = 'editionUnconfirmed';
-      if (state === 'external_setup') {
-        if (inspected.code === 'legacy_node_on_computer')
-          advice = 'legacyNodeSetup';
-        if (inspected.code === 'root_setup_on_computer')
-          advice = 'externalRootSetup';
-        if (inspected.code === 'no_root_setup_on_computer')
-          advice = 'noRootHandoff';
-      }
-      paragraph(advice);
       var next = controls();
       button(next, 'refresh', t('refresh'), refresh);
       button(next, 'close', t('close'), close);
+      addDiagnostics(inspected, transportFailure);
     } else if (state === 'unsupported') {
       begin('unsupported', 'unsupported');
-      paragraph('unsupportedBody');
       button(controls(), 'refresh', t('refresh'), refresh);
+      addDiagnostics(inspected, transportFailure);
     } else {
       begin('recovery', 'recovery');
-      paragraph(message || 'recoveryBody');
       var recover = controls();
       button(recover, 'refresh', t('refresh'), refresh);
       button(recover, 'restore', t('restore'), function () {
         ask('restore', 'restore', 'restoreConfirm');
       });
+      addDiagnostics(inspected, transportFailure);
     }
     focus('');
   }
@@ -371,6 +416,8 @@
       .inspect({ prepareSupervisor: true })
       .then(function (result) {
         accessDenied = false;
+        transportFailure = null;
+        if (message === 'lost' || message === 'failed') message = null;
         inspected = result;
         var active = result.active_operation;
         if (active && /^[a-f0-9]{32}$/.test(active.operation || ''))
@@ -420,6 +467,7 @@
         function (error) {
           busy = false;
           accessDenied = error.message === 'homebrew_exec_denied';
+          transportFailure = failureCode(error, 'inspect');
           if (operation) {
             job = job || { state: 'unknown' };
             message = 'lost';
@@ -437,6 +485,8 @@
     bridge.status(operation).then(
       function (result) {
         busy = false;
+        transportFailure = null;
+        if (message === 'lost') message = null;
         job = result;
         if (activationStatus(result)) {
           if (!job) {
@@ -458,6 +508,7 @@
       function (error) {
         busy = false;
         accessDenied = error.message === 'homebrew_exec_denied';
+        transportFailure = failureCode(error, 'status');
         message = 'lost';
         render();
         focus(previous);
@@ -541,8 +592,9 @@
         promise = bridge.resume(operation, job.action);
         job.can_resume = false;
       } else promise = bridge.restore();
-    } catch (_) {
+    } catch (error) {
       busy = false;
+      transportFailure = failureCode(error, action);
       message = 'failed';
       render();
       return;
@@ -560,6 +612,7 @@
     promise.then(
       function (result) {
         busy = false;
+        transportFailure = null;
         if (result === null) {
           refresh();
           return;
@@ -591,6 +644,7 @@
       function (error) {
         busy = false;
         accessDenied = error.message === 'homebrew_exec_denied';
+        transportFailure = failureCode(error, action);
         message = operation ? 'lost' : 'failed';
         if (operation) job = job || { state: 'unknown' };
         render();
@@ -632,7 +686,8 @@
     if (back) {
       event.preventDefault();
       if (busy) return;
-      if (screen === 'confirm') cancel();
+      if (screen === 'diagnostic-report') closeReport();
+      else if (screen === 'confirm') cancel();
       else if (screen === 'language') {
         render();
         focus('language');
@@ -676,7 +731,7 @@
   });
   doc.addEventListener('visibilitychange', function () {
     clearTimeout(poll);
-    if (!doc.hidden) refresh();
+    if (!doc.hidden && !reportView) refresh();
   });
   doc.addEventListener('webOSRelaunch', function () {
     if (!operation && !busy && !confirmation) {

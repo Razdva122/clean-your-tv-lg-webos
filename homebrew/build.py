@@ -85,8 +85,9 @@ def build_payload(root_bundle, root_updater_bundle, supervisor_bundle, runtime_a
         (output/'runtime.js').write_bytes(read_file(Path(__file__).with_name('runtime.js')))
         edition = output/'edition'
         (edition/'cytv').mkdir(parents=True)
-        (edition/'edition.py').write_bytes(read_file(Path(__file__).with_name('edition.py')))
-        for name in ('__init__.py', 'root_capabilities.py', 'checks.py', 'errors.py'):
+        for name in ('edition.py', 'debloat.py'):
+            (edition/name).write_bytes(read_file(Path(__file__).with_name(name)))
+        for name in ('__init__.py', 'root_capabilities.py', 'checks.py', 'errors.py', 'debloat_policy.py'):
             (edition/'cytv'/name).write_bytes(read_file(project/'cytv'/name))
         bootstrap={'shell':python_runtime._SHELL,'smoke':python_runtime.SMOKE,'inspect_probe':python_runtime._PROBE_BODY.split('with tempfile.TemporaryDirectory')[0]+"\nprint('CYTV_SYSTEM_PYTHON')\n",'system_probe':python_runtime.SYSTEM_PROBE,'promote':python_runtime._PROMOTE}
         (output/'runtime-bootstrap.json').write_text(json.dumps(bootstrap,sort_keys=True,separators=(',',':')))
@@ -202,7 +203,9 @@ def tile_web_files(version, edition=None, versions=None):
     project = source.parent
     app = updater_app_assets(project)
     app['home-i18n.js'] = app.pop('i18n.js')
-    names = ('appinfo.json','index.html','tile.js','recovery.html','tile-recovery.js')
+    names = ('appinfo.json','index.html','tile.js','recovery.html','tile-recovery.js',
+             'diagnostics.js','diagnostic-locales.js','diagnostic.css')
+    app['wallpaper-qr.js'] = read_file(project/'launcher/wallpaper-qr.js')
     if edition is None:
         names += ('setup.html','app.js','bridge.js','style.css','i18n.js','tile-config.js')
     for name in names:
@@ -210,6 +213,9 @@ def tile_web_files(version, edition=None, versions=None):
     info = json.loads(app['appinfo.json'])
     info['version'] = version
     if edition is None:
+        # The full tile relies on the stock Homebrew caller policy. The host
+        # tile only asks SAM to launch its bound Home application.
+        info.pop('requiredACG', None)
         app['candidate.js'] = ('window.InstallerCandidate='+json.dumps(versions,sort_keys=True)+';\n').encode()
         app['setup.html'] = app['setup.html'].replace(b'<script src="i18n.js">',b'<script src="candidate.js"></script><script src="i18n.js">')
     else:

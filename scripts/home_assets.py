@@ -59,5 +59,5 @@ LAUNCHER_FILES = ROOT_HOME_FILES + (
 ROOT_UI_FILES = (
     'root-audio-locales.js', 'root-audio.js', 'root-locales.js', 'root-exit.js',
     'root-firmware-control.js', 'root-firmware.js', 'root-settings.js', 'root-settings.css',
-    'tv-name.js', 'root-profile-data.js', 'root-profile.js', 'root-updates.js',
+    'root-post-install.js', 'root-post-install-locales.js', 'tv-name.js', 'root-profile-data.js', 'root-profile.js', 'root-updates.js',
 )

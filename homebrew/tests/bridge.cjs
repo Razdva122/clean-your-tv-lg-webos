@@ -285,6 +285,7 @@ async function rejects(fn, expectedMessage) {
           root: '/private/stage',
           driver: '/private/stage/root-updater/install_driver.py',
           editionInspector: '/private/stage/edition/edition.py',
+          debloat: '/private/stage/edition/debloat.py',
           cleanup: function () {
             cleanups++;
             return Promise.resolve();
@@ -337,7 +338,11 @@ async function rejects(fn, expectedMessage) {
     ],
     ['inspect', '--resume'],
     ['remove', '--operation', ID],
-    ['activate', '--payload', '/tmp']
+    ['activate', '--payload', '/tmp'],
+    ['debloat-status', '--settings', 'lmt'],
+    ['debloat', '--settings', 'lmt;whoami'],
+    ['debloat-restore', '--settings'],
+    ['debloat', '--settings', 'lmt', '--operation', ID]
   ])
     await rejects(function () {
       return bootstrap.run(badArgs, deps);
@@ -482,12 +487,40 @@ async function rejects(fn, expectedMessage) {
     priorCleanups + 2,
     'failed child still cleans this private stage after exit'
   );
+  deps.execute = function (exe, args) {
+    executed.push({ exe: exe, args: args });
+    return Promise.resolve(JSON.stringify({ state: 'debloat' }));
+  };
+  for (var fixture of [
+    [['debloat-status'], []],
+    [['debloat', '--settings', 'homePromotion,lmt'], ['homePromotion,lmt']],
+    [['debloat-restore', '--settings', 'lmt'], ['lmt']]
+  ]) {
+    assert.equal((await bootstrap.run(fixture[0], deps)).state, 'debloat');
+    assert.deepEqual(
+      executed[executed.length - 1].args,
+      [
+        '-E',
+        '-s',
+        '-B',
+        '/private/stage/edition/debloat.py',
+        fixture[0][0]
+      ].concat(fixture[1])
+    );
+  }
   deps.process.geteuid = function () {
     return 1000;
   };
-  await rejects(function () {
-    return bootstrap.run(['inspect'], deps);
+  var beforeRootGate = inspects;
+  assert.deepEqual(await bootstrap.run(['inspect'], deps), {
+    state: 'unsupported',
+    code: 'homebrew_root_required'
   });
+  await rejects(function () {
+    return bootstrap.run(['debloat', '--settings', 'lmt'], deps);
+  });
+  assert.equal(inspects, beforeRootGate);
+
   deps.process.geteuid = function () {
     return 0;
   };

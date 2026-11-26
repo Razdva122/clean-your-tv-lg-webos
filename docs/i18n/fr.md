@@ -76,7 +76,11 @@ Pour la configuration Root, l’installateur utilise automatiquement un stockage
 
 ### Si CYTV Installer est déjà ouvert sur le téléviseur
 
-Choisissez **Installer et activer** et confirmez une fois. L’installateur configure ensemble Root Home, Root Updater et System Updater. S’il trouve des réglages compatibles provenant d’une ancienne installation de Clean Your TV Home, il les importe automatiquement. La touche Accueil ouvrira Root Home, sauf si l’arrêt d’urgence est enclenché. Si l’installateur vous invite à poursuivre la configuration de Root sur un ordinateur, suivez cette indication. S’il propose No-root, utilisez l’installateur pour ordinateur ou Android.
+Choisissez **Installer et activer** et confirmez une fois. L’installateur configure ensemble Root Home, Root Updater et System Updater. La touche Accueil ouvrira Root Home, sauf si l’arrêt d’urgence est enclenché. Si l’installateur vous invite à poursuivre la configuration de Root sur un ordinateur, suivez cette indication. S’il propose No-root, utilisez l’installateur pour ordinateur ou Android.
+
+Après l’installation, Root Home ouvre **Configurer le téléviseur**. Choisissez un thème intégré dans **Thèmes**. Ouvrez **Modifier les réglages LG**, cochez les options de publicité et de recommandations à modifier et choisissez **Appliquer les réglages sélectionnés**. Vérifiez le résultat de chaque option. Pour retrouver les valeurs d’origine enregistrées, cochez les options et choisissez **Rétablir les réglages sélectionnés**. Sélectionnez **Ouvrir Home** pour accéder à l’accueil. Pour rouvrir le panneau plus tard, ouvrez **Paramètres → Avancé → Configurer le téléviseur**.
+
+Si l’installateur signale un problème, suivez l’instruction affichée. Enregistrez le rapport de diagnostic pour conserver une copie sur ce téléviseur. Rouvrez le rapport dans l’installateur ou dans la rubrique de récupération de la vignette pour le lire ou scanner son code QR avec votre téléphone.
 
 Pour désinstaller Clean Your TV, choisissez **Supprimer le produit complet** dans l’installateur. Supprimer uniquement l’application d’installation laisse Clean Your TV sur le téléviseur.
 

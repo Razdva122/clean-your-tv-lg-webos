@@ -76,7 +76,11 @@ Na instalação Root, o instalador usa automaticamente armazenamento temporário
 
 ### Se o CYTV Installer já estiver aberto na TV
 
-Escolha **Instalar e ativar** e confirme uma vez. O instalador configura o Root Home, o Root Updater e o System Updater juntos. Se encontrar configurações compatíveis de uma instalação anterior do Clean Your TV Home, ele as importa automaticamente. O botão Home abrirá o Root Home, a menos que a parada de emergência esteja ativa. Se o instalador indicar um computador para configurar o Root, continue nele. Se oferecer No-root, use o instalador para computador ou Android.
+Escolha **Instalar e ativar** e confirme uma vez. O instalador configura o Root Home, o Root Updater e o System Updater juntos. O botão Home abrirá o Root Home, a menos que a parada de emergência esteja ativa. Se o instalador indicar um computador para configurar o Root, continue nele. Se oferecer No-root, use o instalador para computador ou Android.
+
+Após a instalação, o Root Home abre **Configurar a TV**. Escolha um tema integrado em **Temas**. Abra **Alterar as configurações da LG**, marque as opções de anúncios e recomendações e selecione **Aplicar as configurações selecionadas**. Confira o resultado de cada opção. Para recuperar os valores originais salvos, marque as opções e selecione **Restaurar as configurações selecionadas**. Selecione **Abrir Home** para entrar na tela inicial. Para voltar mais tarde, abra **Configurações → Avançado → Configurar a TV**.
+
+Se o instalador informar um problema, siga a instrução da tela. Salve o relatório de diagnóstico para guardar uma cópia na TV. Abra o relatório salvo no instalador ou na recuperação do bloco para lê-lo ou escanear o QR code com o celular.
 
 Para desinstalar o Clean Your TV, escolha **Remover produto completo** no instalador. Se você excluir apenas o aplicativo do instalador, o Clean Your TV continuará na TV.
 
