@@ -232,8 +232,13 @@ class Device:
             try:prior=self._baseline(edition)
             except (ValueError,KeyError,TypeError):raise ValueError(VERIFICATION_ERROR) from None
             components=[{'name':c['name'],'installed':c['version'] if c['kind']=='infrastructure' else self.installed(c['application']),'version':None} for c in prior['components']]
-            return {'edition':edition,'release':None,'notes':'','components':components,'canInstall':False,'reason':error.reason}
-        return {k:v for k,v in offer.items() if k not in ('candidate','prior')}
+            result = {'edition':edition,'release':None,'notes':'','components':components,'canInstall':False,'reason':error.reason}
+        else:
+            prior = offer['prior']
+            result = {k:v for k,v in offer.items() if k not in ('candidate','prior')}
+        if prior.get('schema') == 2:
+            result['installedRelease'] = prior['release']
+        return result
 
     def check_legacy(self):
         self.enforce_legacy_lockdown()

@@ -112,6 +112,9 @@
     function tileRecovery() {
       return options.standalone === true && options.singleTile === true;
     }
+    function singleTile() {
+      return window.CYTVProductGeneration === 2 || options.singleTile === true;
+    }
     function readStatus() {
       return rpc('status', tileRecovery() ? { edition: options.edition } : {});
     }
@@ -141,6 +144,7 @@
       var focused = document.activeElement;
       editionLabel.textContent =
         options.edition === 'root' ? 'Root' : 'No-root';
+      editionLabel.hidden = singleTile();
       var rows = (offer && offer.components) || [];
       versions.textContent = rows
         .map(function (component) {
@@ -165,6 +169,18 @@
           );
         })
         .join('\n');
+      if (singleTile()) {
+        var productVersions = [];
+        if (offer && offer.installedRelease)
+          productVersions.push(
+            t('Installed: {version}', { version: offer.installedRelease })
+          );
+        if (offer && offer.release && offer.canInstall)
+          productVersions.push(
+            t('Available: {version}', { version: offer.release })
+          );
+        versions.textContent = productVersions.join('  →  ');
+      }
       var descriptions = {
         complete: 'Update complete. Your apps and settings are preserved.',
         'rolled-back': 'Previous version and profile restored.',
@@ -255,8 +271,10 @@
       buttons[1].hidden = recovery && !(offer && offer.selfUpdate);
       buttons[1].textContent = t(
         recovery
-          ? 'Reinstall System Updater'
-          : window.CYTVProductGeneration === 2
+          ? singleTile()
+            ? 'Repair updates'
+            : 'Reinstall System Updater'
+          : singleTile()
             ? 'Update Clean Your TV'
             : 'Update all'
       );
@@ -405,18 +423,26 @@
       confirm(
         {
           title: repair
-            ? 'Reinstall System Updater?'
+            ? singleTile()
+              ? 'Repair updates'
+              : 'Reinstall System Updater?'
             : 'Install system update?',
           message: repair
             ? t(
-                'Reinstall only System Updater. Home and your settings will stay unchanged. Keep the TV powered on.'
+                singleTile()
+                  ? 'Keep the TV powered on. Status will refresh automatically.'
+                  : 'Reinstall only System Updater. Home and your settings will stay unchanged. Keep the TV powered on.'
               )
             : t('Available: {version}', { version: release }) +
               '\n' +
               t(
                 'Home will close during installation. Your apps and settings will be saved.'
               ),
-          action: repair ? 'Reinstall System Updater' : 'Install update'
+          action: repair
+            ? singleTile()
+              ? 'Repair updates'
+              : 'Reinstall System Updater'
+            : 'Install update'
         },
         function () {
           if (

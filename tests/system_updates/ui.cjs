@@ -436,6 +436,24 @@ async function settle() {
   external.key(461);
   assert(closedExternal);
   assert.equal(external.calls.length, 0);
+  const simple = harness({ edition: 'root' });
+  simple.window.CYTVProductGeneration = 2;
+  simple.offer.installedRelease = 'v1.2.0';
+  simple.offer.selfUpdate = simple.offer.canRepair = true;
+  await simple.window.SystemUpdates.open({ edition: 'root' });
+  assert.equal(
+    simple.ids.systemUpdateInstall.textContent,
+    'Update Clean Your TV'
+  );
+  assert.equal(
+    simple.ids.systemUpdateVersions.textContent,
+    'Installed: v1.2.0  →  Available: v1.3.0'
+  );
+  simple.ids.systemUpdateRecovery.click();
+  await settle();
+  simple.ids.systemUpdateInstall.click();
+  assert.equal(simple.confirmation.opts.title, 'Repair updates');
+  assert.equal(simple.confirmation.opts.action, 'Repair updates');
   const tile = harness({ standalone: true });
   tile.state = {
     edition: 'root',
