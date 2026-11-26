@@ -239,6 +239,11 @@ def tile_payload(root, manifest, edition):
     app = json.loads(files.get(prefix + 'appinfo.json', b'null'))
     if (not isinstance(app, dict) or app.get('type') != 'web' or app.get('id') != TILE_APP
             or app.get('version') != version or app.get('visible') is False
+            or app.get('main') != 'index.html' or app.get('title') != 'Clean Your TV'
+            or app.get('requiredACG') != ['application.launcher'] or app.get('privilegedJail')
+            or not all(files.get(prefix + asset) for asset in ('index.html', 'tile.js', 'recovery.html', 'tile-recovery.js'))
+            or prefix + 'setup.html' in files
+            or files.get(prefix + 'tile-config.js') != ('window.CYTVTileEdition = ' + json.dumps(edition) + ';\n').encode()
             or app.get('cytvTileProtocol') != 1 or app.get('cytvTileEdition') != edition
             or json.loads(files.get(meta, b'null')) != {
                 'id': TILE_APP, 'app': TILE_APP, 'version': version, 'services': []}):

@@ -17,6 +17,7 @@ def select_source(installer, write, ask, *, non_interactive):
         if non_interactive or not prompts.confirm('Update or repair the installed tile?', ask, write, default=False):
             return False
         run(installer, source)
+        write('The Clean Your TV tile is ready to open.')
         return 'maintained'
 
     # A's built-in snapshot excludes browser media and service/pairing state.

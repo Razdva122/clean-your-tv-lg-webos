@@ -293,10 +293,15 @@ class OriginalOperationIntegration(unittest.TestCase):
         version = '1.0.0'
         name = package.TILE_FILES[edition]
         prefix = 'usr/palm/applications/' + app + '/'
-        info = {'type': 'web', 'id': app, 'version': version, 'cytvTileProtocol': 1, 'cytvTileEdition': edition}
+        info = {'type': 'web', 'id': app, 'version': version, 'main': 'index.html',
+                'title': 'Clean Your TV', 'requiredACG': ['application.launcher'],
+                'cytvTileProtocol': 1, 'cytvTileEdition': edition}
         metadata = {'id': app, 'app': app, 'version': version, 'services': []}
-        raw = package.ipk(app, version, {prefix + 'appinfo.json': json.dumps(info).encode(),
-                              'usr/palm/packages/' + app + '/packageinfo.json': json.dumps(metadata).encode()})
+        assets = {prefix + name: b'fixture' for name in ('index.html', 'tile.js', 'recovery.html', 'tile-recovery.js')}
+        assets[prefix + 'tile-config.js'] = b'window.CYTVTileEdition = "no-root";\n'
+        assets[prefix + 'appinfo.json'] = json.dumps(info).encode()
+        assets['usr/palm/packages/' + app + '/packageinfo.json'] = json.dumps(metadata).encode()
+        raw = package.ipk(app, version, assets)
         (self.installer.payload / name).write_bytes(raw)
         self.installer.manifest['single_tile'] = dict(package.TILE_FILES, version=version)
         self.installer.manifest.setdefault('files', {})[name] = hashlib.sha256(raw).hexdigest()
@@ -327,6 +332,17 @@ class OriginalOperationIntegration(unittest.TestCase):
         requests = [call for call in self.remote.calls if call[0] == 'luna'
                     and call[1].endswith('/dev/remove') and call[2]['id'] == tile]
         self.assertEqual(len(requests), 1)
+
+    def test_removal_with_wrong_payload_stops_before_removing_other_apps(self):
+        self.include_tile()
+        self.installer.install(self.inventory, 'paired-key')
+        before = (self.root / 'installed.json').read_bytes()
+        self.installer.manifest.pop('single_tile')
+        with self.assertRaisesRegex(RuntimeError, 'Use the installer'):
+            self.installer.uninstall_project()
+        self.assertEqual(before, (self.root / 'installed.json').read_bytes())
+        self.assertFalse(any(call[0] == 'luna' and call[1].endswith('/dev/remove')
+                             for call in self.remote.calls))
 
     def test_later_home_and_tile_update_keep_stopped_helper_and_pairing(self):
         from cytv import single_tile_maintenance
@@ -371,6 +387,12 @@ class OriginalOperationIntegration(unittest.TestCase):
         current = self.installer.single_tile_source()
         single_tile_maintenance.run(self.installer, current)
         self.assertEqual(after, (self.root / 'requests').read_text().splitlines())
+        # Simulate the owner removing just the entry outside this installer.
+        self.remote.luna('com.webos.appInstallService/dev/remove', {'id': tile})
+        single_tile_maintenance.run(self.installer, self.installer.single_tile_source())
+        after.append(tile)
+        self.assertEqual(after, (self.root / 'requests').read_text().splitlines())
+        self.assertEqual(stop.read_bytes(), b'{"mode":"stopped"}')
         self.installer.manifest['helper_version'] = '9.1.0'
         with self.assertRaisesRegex(RuntimeError, 'Use the installer'):
             self.installer.single_tile_source()

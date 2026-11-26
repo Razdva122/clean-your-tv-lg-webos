@@ -860,7 +860,7 @@ def _remove_package(installer, app):
         raise
 
 
-def remove_single_tile(installer):
+def remove_single_tile(installer, *, check_only=False):
     """Retire only this edition's verified light entry on explicit product removal."""
     manifest = getattr(installer, 'manifest', {})
     pending = installer.store.pending(installer.profile) or {}
@@ -875,9 +875,6 @@ def remove_single_tile(installer):
         return
     if status == 'terminal':
         raise UserError('A removed package is present again. Recovery data was kept.', reason_code='cleanup-check-failed')
-    if not _exact_developer_app(installer, TILE_APP):
-        raise UserError('The TV returned a different application location. Recovery data was kept.',
-                        reason_code='cleanup-check-failed')
     from .operations import BASE
     # Some SAMs filter custom appinfo keys. Classify the installed metadata
     # independently instead of treating a missing API field as Homebrew.
@@ -896,6 +893,8 @@ def remove_single_tile(installer):
     raw, _ = package.tile_payload(installer.payload, installer.manifest, installer.profile['edition'])
     files_match(installer, {BASE.removesuffix('/usr/palm') + '/' + path: hashlib.sha256(data).hexdigest()
                             for path, data in package.data_files(raw).items()})
+    if check_only:
+        return
     installer.store.checkpoint(installer.profile, tile_removal='submitted')
     _remove_package(installer, TILE_APP)
     installer.store.checkpoint(installer.profile, tile_removal='terminal')
@@ -1028,6 +1027,9 @@ def continue_removal(installer, expected_pending):
     pending = installer.store.pending(installer.profile)
     if pending != expected_pending or not pending or pending.get('recovery_protocol') != 'clean-removal-v1':
         raise UserError('Removal evidence changed. Recovery data was kept.', reason_code='pending-operation')
+    # A mismatched installer cannot begin dismantling the daily product and
+    # discover only at the last step that it cannot remove the entry it owns.
+    remove_single_tile(installer, check_only=True)
     previous = pending.get('previous')
     legacy_install = (isinstance(previous, dict) and previous.get('action') == 'install'
                       and previous.get('stage') == 'pending' and 'recovery_protocol' not in previous)
