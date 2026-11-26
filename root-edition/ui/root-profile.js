@@ -353,6 +353,20 @@
                   ? 'rollback'
                   : 'install')
               : '');
+          if (systemRestore && window.CYTVProductGeneration === 2) {
+            return window.HomeBrowserProfile.resume(
+              restored,
+              'browser1:' + identity,
+              marker,
+              data,
+              saved
+            ).then(function (profile) {
+              if (!profile) return;
+              window.TV_APPS = profile.inventory;
+              window.CONFIG = profile.config;
+              boot(restored);
+            });
+          }
           var profile = data.validate(restored.profile);
           var alreadyRestored =
             saved &&

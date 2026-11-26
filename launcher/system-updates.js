@@ -468,6 +468,18 @@
                     else resolve(profile);
                   });
                 });
+          if (!repair && window.CYTVProductGeneration === 2) {
+            capture = capture.then(function (profile) {
+              if (!profile)
+                throw Error(
+                  'Could not save your complete profile. Nothing was installed.'
+                );
+              return window.HomeBrowserProfile.capture().then(function (state) {
+                profile.browserState = state;
+                return profile;
+              });
+            });
+          }
           capture
             .then(function (profile) {
               if (request !== generation || !visible()) return;
@@ -480,6 +492,14 @@
                 profile: profile
               };
               if (!repair) payload.release = release;
+              if (
+                profile.browserState &&
+                unescape(encodeURIComponent(JSON.stringify(payload))).length >
+                  4 * 1024 * 1024 - 1024
+              )
+                throw Error(
+                  'The backup is too large. To update, remove a downloaded theme or personal wallpaper you no longer need.'
+                );
               return rpc(repair ? 'repair' : 'install', payload);
             })
             .then(function (state) {

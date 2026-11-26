@@ -424,10 +424,25 @@
               } catch (_) {}
               var already =
                 saved && localStorage.getItem(restoreMarker) === identity;
-              use(already ? saved : restored.profile, !already, identity, true);
-              systemRestore = restored;
-              window.RootLauncherRendered = false;
-              boot();
+              function present(profile, apply) {
+                use(profile, apply, identity, true);
+                systemRestore = restored;
+                window.RootLauncherRendered = false;
+                boot();
+              }
+              if (window.CYTVProductGeneration === 2) {
+                window.HomeBrowserProfile.resume(
+                  restored,
+                  'browser1:' + identity,
+                  restoreMarker,
+                  HomeData,
+                  saved
+                )
+                  .then(function (profile) {
+                    if (profile) present(profile, false);
+                  })
+                  .catch(systemError);
+              } else present(already ? saved : restored.profile, !already);
             } catch (error) {
               systemError(error);
             }

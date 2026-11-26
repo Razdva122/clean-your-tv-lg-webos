@@ -1,5 +1,92 @@
 HomeI18n.add({
   'en': {
+    'The backup is too large. To update, remove a downloaded theme or personal wallpaper you no longer need.':
+      'The backup is too large. To update, remove a downloaded theme or personal wallpaper you no longer need.',
+    'Finish or cancel your theme preview before updating.':
+      'Finish or cancel your theme preview before updating.'
+  },
+  'ru': {
+    'The backup is too large. To update, remove a downloaded theme or personal wallpaper you no longer need.':
+      'Резервная копия слишком велика. Чтобы обновить приложение, удалите ненужную загруженную тему или личные обои.',
+    'Finish or cancel your theme preview before updating.':
+      'Примените тему или отмените предпросмотр перед обновлением.'
+  },
+  'cs': {
+    'The backup is too large. To update, remove a downloaded theme or personal wallpaper you no longer need.':
+      'Záloha je příliš velká. Před aktualizací odeberte stažený motiv nebo vlastní tapetu, kterou už nepotřebujete.',
+    'Finish or cancel your theme preview before updating.':
+      'Před aktualizací dokončete nebo zrušte náhled motivu.'
+  },
+  'de': {
+    'The backup is too large. To update, remove a downloaded theme or personal wallpaper you no longer need.':
+      'Die Sicherung ist zu groß. Entferne für das Update ein nicht mehr benötigtes heruntergeladenes Design oder eigenes Hintergrundbild.',
+    'Finish or cancel your theme preview before updating.':
+      'Beende oder verwirf die Designvorschau vor dem Update.'
+  },
+  'es': {
+    'The backup is too large. To update, remove a downloaded theme or personal wallpaper you no longer need.':
+      'La copia de seguridad es demasiado grande. Para actualizar, elimina un tema descargado o un fondo personal que ya no necesites.',
+    'Finish or cancel your theme preview before updating.':
+      'Termina o cancela la vista previa del tema antes de actualizar.'
+  },
+  'fr': {
+    'The backup is too large. To update, remove a downloaded theme or personal wallpaper you no longer need.':
+      'La sauvegarde est trop volumineuse. Pour mettre à jour, supprimez un thème téléchargé ou un fond d’écran personnel devenu inutile.',
+    'Finish or cancel your theme preview before updating.':
+      'Terminez ou annulez l’aperçu du thème avant la mise à jour.'
+  },
+  'pt-BR': {
+    'The backup is too large. To update, remove a downloaded theme or personal wallpaper you no longer need.':
+      'O backup é grande demais. Para atualizar, remova um tema baixado ou um papel de parede pessoal que você não usa mais.',
+    'Finish or cancel your theme preview before updating.':
+      'Conclua ou cancele a prévia do tema antes de atualizar.'
+  },
+  'it': {
+    'The backup is too large. To update, remove a downloaded theme or personal wallpaper you no longer need.':
+      'Il backup è troppo grande. Per aggiornare, elimina un tema scaricato o uno sfondo personale che non usi più.',
+    'Finish or cancel your theme preview before updating.':
+      'Concludi o annulla l’anteprima del tema prima di aggiornare.'
+  },
+  'hi': {
+    'The backup is too large. To update, remove a downloaded theme or personal wallpaper you no longer need.':
+      'बैकअप बहुत बड़ा है। अपडेट करने के लिए कोई ऐसी डाउनलोड की गई थीम या अपना वॉलपेपर हटाएँ जिसकी अब ज़रूरत नहीं है।',
+    'Finish or cancel your theme preview before updating.':
+      'अपडेट करने से पहले थीम का पूर्वावलोकन पूरा करें या रद्द करें।'
+  },
+  'ko': {
+    'The backup is too large. To update, remove a downloaded theme or personal wallpaper you no longer need.':
+      '백업 크기가 너무 큽니다. 업데이트하려면 더 이상 사용하지 않는 다운로드한 테마나 개인 배경화면을 삭제하세요.',
+    'Finish or cancel your theme preview before updating.':
+      '업데이트하기 전에 테마 미리보기를 완료하거나 취소하세요.'
+  },
+  'pl': {
+    'The backup is too large. To update, remove a downloaded theme or personal wallpaper you no longer need.':
+      'Kopia zapasowa jest za duża. Aby zaktualizować, usuń pobrany motyw lub własną tapetę, których już nie potrzebujesz.',
+    'Finish or cancel your theme preview before updating.':
+      'Przed aktualizacją zakończ lub anuluj podgląd motywu.'
+  },
+  'ro': {
+    'The backup is too large. To update, remove a downloaded theme or personal wallpaper you no longer need.':
+      'Copia de rezervă este prea mare. Pentru actualizare, elimină o temă descărcată sau un fundal personal de care nu mai ai nevoie.',
+    'Finish or cancel your theme preview before updating.':
+      'Finalizează sau anulează previzualizarea temei înainte de actualizare.'
+  },
+  'zh-Hans': {
+    'The backup is too large. To update, remove a downloaded theme or personal wallpaper you no longer need.':
+      '备份过大。要更新，请删除不再需要的已下载主题或个人壁纸。',
+    'Finish or cancel your theme preview before updating.':
+      '请先完成或取消主题预览，再进行更新。'
+  },
+  'zh-Hant': {
+    'The backup is too large. To update, remove a downloaded theme or personal wallpaper you no longer need.':
+      '備份過大。若要更新，請移除不再需要的已下載佈景主題或個人桌布。',
+    'Finish or cancel your theme preview before updating.':
+      '請先完成或取消佈景主題預覽，再進行更新。'
+  }
+});
+
+HomeI18n.add({
+  'en': {
     'A signed Home update is available.': 'A signed Home update is available.',
     'Add app': 'Add app',
     'All installed apps are already on Home.':

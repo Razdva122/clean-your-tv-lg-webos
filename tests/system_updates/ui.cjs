@@ -387,6 +387,28 @@ async function settle() {
     !broken.calls.some((c) => c.method === 'install'),
     'incomplete capture must block installation'
   );
+  for (const edition of ['root', 'no-root']) {
+    for (const trouble of ['unreadable', 'over-budget', null]) {
+      const b = harness({ edition });
+      b.window.CYTVProductGeneration = 2;
+      b.window.HomeBrowserProfile = {
+        capture: async () => {
+          if (trouble === 'unreadable') throw Error('Storage unavailable');
+          return trouble === 'over-budget'
+            ? { value: 'a'.repeat(4 * 1024 * 1024) }
+            : { schema: 1, local: {}, themes: [], wallpapers: [] };
+        }
+      };
+      await b.window.SystemUpdates.open({ edition });
+      b.ids.systemUpdateInstall.click();
+      b.confirmation.accept();
+      await settle();
+      const installs = b.calls.filter((call) => call.method === 'install');
+      assert.equal(installs.length, trouble ? 0 : 1);
+      if (!trouble)
+        assert.equal(installs[0].payload.profile.browserState.schema, 1);
+    }
+  }
   const standalone = harness({ standalone: true });
   standalone.state = { id: 'old', phase: 'complete', canRollback: true };
   await standalone.window.SystemUpdates.open({
