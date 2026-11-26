@@ -536,6 +536,28 @@ async function rejection(change) {
       large.clean();
     }
   }
+  var sharedBase = fixture();
+  try {
+    sharedBase.setSystem();
+    var sharedState = await sharedBase.api.inspect(sharedBase.root);
+    var first = await sharedBase.api.stage(sharedState, false);
+    var second = await sharedBase.api.stage(sharedState, false);
+    await first.cleanup();
+    assert(fs.existsSync(second.driver), 'preserve an overlapping stage');
+    await second.cleanup();
+    assert(
+      fs.existsSync(sharedBase.execBase),
+      'preserve a base this invocation did not create'
+    );
+    var existing = await sharedBase.api.stage(sharedState, false);
+    await existing.cleanup();
+    assert(
+      fs.existsSync(sharedBase.execBase),
+      'preserve an existing empty desktop workspace'
+    );
+  } finally {
+    sharedBase.clean();
+  }
   var staged = fixture();
   try {
     staged.setSystem();
@@ -560,6 +582,10 @@ async function rejection(change) {
     );
     await snapshot.cleanup();
     assert(!fs.existsSync(snapshot.root));
+    assert(
+      !fs.existsSync(staged.execBase),
+      'remove the empty base created for this invocation'
+    );
     fs.renameSync(staged.root + '-deleted', staged.root);
   } finally {
     staged.clean();
@@ -594,7 +620,10 @@ async function rejection(change) {
         changed.save();
       }
       await rejects(changed.api.stage(anchored, true));
-      assert.equal(fs.readdirSync(changed.execBase).length, 0);
+      assert(
+        !fs.existsSync(changed.execBase),
+        'failed staging must also retire its own empty base'
+      );
     } finally {
       changed.clean();
     }

@@ -715,7 +715,13 @@ function stage(state, full) {
     var context = state.context,
       expected = context.manifest.files;
     ancestors('/var/lib');
-    if (!fs.existsSync(EXEC_BASE)) fs.mkdirSync(EXEC_BASE, 448);
+    var createdBase;
+    try {
+      fs.mkdirSync(EXEC_BASE, 448);
+      createdBase = owned(EXEC_BASE, true);
+    } catch (error) {
+      if (error.code !== 'EEXIST') throw error;
+    }
     ancestors(EXEC_BASE);
     var root = fs.mkdtempSync(EXEC_BASE + '/.exec-');
     fs.chmodSync(root, 448);
@@ -755,6 +761,21 @@ function stage(state, full) {
           .forEach(function (folder) {
             fs.rmdirSync(folder);
           });
+        if (createdBase) {
+          // The computer installer shares this directory. Never remove its
+          // contents or a replacement directory, even when the name matches.
+          try {
+            var currentBase = owned(EXEC_BASE, true);
+            if (
+              currentBase.dev === createdBase.dev &&
+              currentBase.ino === createdBase.ino
+            )
+              fs.rmdirSync(EXEC_BASE);
+          } catch (error) {
+            if (['ENOENT', 'ENOTEMPTY', 'EEXIST'].indexOf(error.code) < 0)
+              throw error;
+          }
+        }
       });
     }
     function mkdir(folder) {
