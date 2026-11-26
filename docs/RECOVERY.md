@@ -110,6 +110,21 @@ the installation named by the old receipt survived the reset. Keep the profile
 and receipts for maintainer-assisted recovery. Share the independently verified
 method and reset history privately if requested. Keep raw profiles and keys private.
 
+For a Root uninstall stopped at `coordinator-submitted`, keep the original
+receipt pending. The installer saved this stage before calling the TV's removal
+driver. A command failure at that point leaves the outcome unknown. Even a
+successful full removal through another saved connection at the same address
+cannot verify the earlier operation.
+
+For maintainer-assisted review, use an independently trusted access path with
+the owner's permission. Compare the original receipt's `product_operation` with
+the on-device coordinator request for that operation and its removal action.
+A matching record can identify the operation for investigation. Confirming
+completion also requires its terminal removal result and a current check of
+the affected packages, services and startup registrations. If the record is
+missing, inconsistent or inaccessible, keep the outcome unknown and retain
+the receipt. No repeat uninstall or reset is needed to report that result.
+
 ## Interrupted setup or removal
 
 Keep the original TV connection and recovery data. On desktop, start from the

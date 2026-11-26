@@ -89,6 +89,27 @@ class ProfileReconciliation(unittest.TestCase):
         self.assertEqual(archive.read_bytes(), self.original)
         self.assertFalse((self.path.parent / 'clean-removal.json').exists())
 
+    def assert_submitted_root_uninstall_retained(self, *, wrapped):
+        self.store.checkpoint(self.other, action='uninstall', stage='coordinator-submitted',
+                              full_project=True, product_operation='a' * 32)
+        if wrapped:
+            self.store.request_clean_removal(self.other)
+        original = self.path.read_bytes()
+        timestamp = self.path.stat().st_mtime_ns - 1_000_000_000
+        os.utime(self.path, ns=(timestamp, timestamp))
+        self.complete()
+        with self.assertRaises(UserError) as blocked:
+            require_idle(self.store, self.profile)
+        self.assertEqual(blocked.exception.reason_code, 'pending-operation')
+        self.assertEqual(self.path.read_bytes(), original)
+        self.assertEqual(list(self.path.parent.glob('operation-superseded-*')), [])
+
+    def test_other_connection_cannot_retire_submitted_root_uninstall(self):
+        self.assert_submitted_root_uninstall_retained(wrapped=False)
+
+    def test_other_connection_cannot_retire_wrapped_submitted_root_uninstall(self):
+        self.assert_submitted_root_uninstall_retained(wrapped=True)
+
     def test_error_archiving_leaves_original_and_retry_recovers(self):
         self.complete()
         original_write = state.private_write
