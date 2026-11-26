@@ -44,3 +44,31 @@ class RootHandoff(unittest.TestCase):
             role.return_value = 'homebrew'
             self.assertEqual(self.handoff(non_interactive=True), 130)
             self.installer.remote.luna.assert_not_called()
+
+    def test_legacy_root_erasure_and_handoff_have_separate_consent(self):
+        self.installer.installed_apps.return_value += [
+            {'id': package.ROOT_APP}, {'id': 'com.cleanyourtv.root.updater'}]
+        self.installer.native_root_present.return_value = False
+        self.installer.root_installation.return_value = {'state': 'installed', 'can_maintain': True}
+        self.installer.uninstall_project.return_value = {'removed': True, 'verified_clean': True}
+        with patch.object(single_tile_root, '_exact_developer_app', return_value=True), \
+                patch.object(single_tile_root, 'installed_role', return_value='homebrew'), \
+                patch.object(single_tile_root.prompts, 'confirm', side_effect=[False, True, False]):
+            self.assertEqual(self.handoff(), 130)
+            self.installer.uninstall_project.assert_not_called()
+            self.assertEqual(self.handoff(), 130)
+            self.installer.uninstall_project.assert_called_once_with()
+            self.installer.remote.luna.assert_not_called()
+            self.assertIn('saved preferences will be removed', ' '.join(self.output))
+
+    def test_legacy_with_incomplete_cleanup_cannot_launch_new_setup(self):
+        self.installer.installed_apps.return_value += [
+            {'id': package.ROOT_APP}, {'id': 'com.cleanyourtv.root.updater'}]
+        self.installer.native_root_present.return_value = False
+        self.installer.root_installation.return_value = {'state': 'installed', 'can_maintain': True}
+        self.installer.uninstall_project.return_value = {'removed': True, 'verified_clean': False}
+        with patch.object(single_tile_root, '_exact_developer_app', return_value=True), \
+                patch.object(single_tile_root, 'installed_role', return_value='homebrew'):
+            with self.assertRaises(UserError):
+                self.handoff()
+            self.installer.remote.luna.assert_not_called()
