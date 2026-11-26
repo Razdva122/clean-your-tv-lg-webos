@@ -1,13 +1,12 @@
 """In-place maintenance of a Developer Mode generation-two Home and its daily tile."""
 import hashlib
-import json
 import re
 import shlex
 
 from . import no_root_observer, package, storage
 from .errors import UserError
 from .operations import HELPER, HOME, SYSTEM_UPDATER_APP, UPDATER_APP
-from .single_tile_setup import app_metadata, installed_role, read_app_file
+from .single_tile_setup import app_metadata, installed_role
 
 
 def admission(installer, apps):
@@ -44,22 +43,6 @@ def version(value):
     return tuple(map(int, value.split('.')))
 
 
-def inventory(installer):
-    # Re-serialize only data emitted by package.inventory_script. The TV source
-    # is never copied to the new app or evaluated by the installer.
-    source = read_app_file(installer, HOME, 'apps.js')
-    marker = 'window.TV_APPS = '
-    if not source.startswith(marker):
-        raise UserError('The TV package result could not be verified.', reason_code='version-mismatch')
-    data, end = json.JSONDecoder().raw_decode(source[len(marker):])
-    rest = source[len(marker) + end:]
-    fallback = ';\nwindow.CYTVPackagedIconFallback = '
-    if rest.startswith(fallback):
-        data['fallbackIcon'], _ = json.JSONDecoder().raw_decode(rest[len(fallback):])
-    package.inventory_script(data)
-    return data
-
-
 def digests(raw):
     from .operations import BASE
     return {BASE.removesuffix('/usr/palm') + '/' + path: hashlib.sha256(data).hexdigest()
@@ -83,7 +66,6 @@ def run(installer, source):
     if source != installer.single_tile_source():
         raise UserError('The Clean Your TV installation changed.', reason_code='pending-operation')
     installed = source['maintenance']
-    installer.select_graphics()
     tile, tile_version = package.tile_payload(installer.payload, installer.manifest, 'no-root')
     tile_name = package.TILE_FILES['no-root']
     if package.TILE_APP in installed and version(installed[package.TILE_APP]) > version(tile_version):
@@ -97,10 +79,9 @@ def run(installer, source):
     if version(target) < version(installed[HOME]):
         raise UserError('Use the installer for the installed Clean Your TV version.', reason_code='version-mismatch')
     if version(target) > version(installed[HOME]):
-        launcher = (installer.payload / installer._graphics_paths['launcher']).read_bytes()
-        bundles['launcher.ipk'], _ = package.personalize(launcher, HOME, inventory(installer),
-                                                        no_root_connection='developer-mode')
-        versions[HOME] = target
+        # webOS can clear packaged-app localStorage on an in-place update.
+        # The installed Home has no complete export/restore for its profile.
+        installer.progress('Home stays at its installed version to preserve your settings.')
     saver = package.screensaver_payload(installer.payload, installer.manifest)
     if saver and (package.SCREENSAVER_APP not in installed or version(saver[1]) > version(installed[package.SCREENSAVER_APP])):
         bundles[package.SCREENSAVER_IPK], versions[package.SCREENSAVER_APP] = saver

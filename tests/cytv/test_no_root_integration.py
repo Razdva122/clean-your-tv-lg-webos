@@ -344,7 +344,7 @@ class OriginalOperationIntegration(unittest.TestCase):
         self.assertFalse(any(call[0] == 'luna' and call[1].endswith('/dev/remove')
                              for call in self.remote.calls))
 
-    def test_later_home_and_tile_update_keep_stopped_helper_and_pairing(self):
+    def test_repair_with_newer_home_keeps_home_renewal_and_stopped_helper(self):
         from cytv import single_tile_maintenance
         tile = self.include_tile()
         self.installer.install(self.inventory, 'paired-key')
@@ -360,6 +360,10 @@ class OriginalOperationIntegration(unittest.TestCase):
         stop.write_bytes(b'{"mode":"stopped"}')
         key = (helper_state / 'ssap-key.json').read_bytes()
         apps = (home / 'apps.js').read_bytes()
+        renewal = Path(self.base) / 'services' / (operations.HOME + '.renewal') / 'state'
+        renewal.mkdir(parents=True, exist_ok=True)
+        (renewal / 'settings.json').write_bytes(b'{"enabled":true}')
+        original_home = (home / 'appinfo.json').read_bytes()
         launcher_name = self.installer._graphics_paths['launcher']
         artifact = self.installer.payload / launcher_name
         files = package.data_files(artifact.read_bytes())
@@ -379,7 +383,9 @@ class OriginalOperationIntegration(unittest.TestCase):
         self.assertIsNotNone(pending)
         self.assertFalse(self.installer.continue_no_root(pending)['launch_requested'])
         after = (self.root / 'requests').read_text().splitlines()
-        self.assertEqual(after[len(before):], [tile, operations.HOME])
+        self.assertEqual(after[len(before):], [tile])
+        self.assertEqual((home / 'appinfo.json').read_bytes(), original_home)
+        self.assertEqual((renewal / 'settings.json').read_bytes(), b'{"enabled":true}')
         self.assertEqual(stop.read_bytes(), b'{"mode":"stopped"}')
         self.assertEqual((helper_state / 'ssap-key.json').read_bytes(), key)
         self.assertEqual((home / 'apps.js').read_bytes(), apps)

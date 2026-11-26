@@ -41,8 +41,7 @@ def read_app_file(installer, app, name):
     """Return the role of the fixed SDK package without exposing device data."""
     from .operations import BASE
     from .operations import HOME, HELPER
-    if (app, name) not in ((HOME, 'apps.js'), (HOME, 'appinfo.json'), (HELPER, 'appinfo.json'),
-                           (package.TILE_APP, 'appinfo.json')):
+    if app not in (HOME, HELPER, package.TILE_APP) or name != 'appinfo.json':
         raise ValueError('Unexpected application file')
     path = BASE + '/applications/' + app + '/' + name
     script = r"""
@@ -63,9 +62,8 @@ try {
   process.stdout.write(bytes);
 } finally {fs.closeSync(opened);}
 """
-    limit = 16 * 1024 * 1024 if name == 'apps.js' else 65536
     return installer.remote.run('/usr/bin/node -e ' + shlex.quote(script) + ' ' +
-                                shlex.quote(path) + ' ' + str(limit))
+                                shlex.quote(path) + ' 65536')
 
 
 def app_metadata(installer, app):

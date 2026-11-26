@@ -557,7 +557,10 @@ def installation_components(screensaver=False, tile=False, maintenance=None):
     if screensaver:
         components.append((SCREENSAVER_APP, SCREENSAVER_IPK))
     if maintenance is not None:
-        permitted = [name for app, name in components if app != APPS[0]]
+        # Both older hidden Home and its visible predecessor keep settings
+        # inside the web app origin. Maintenance has no verified profile
+        # backup, so neither Home nor Helper is an admissible package here.
+        permitted = [name for app, name in components if app in (TILE_APP, SCREENSAVER_APP)]
         if (not isinstance(maintenance, list) or not maintenance
                 or maintenance != [name for name in permitted if name in maintenance]):
             refuse()
