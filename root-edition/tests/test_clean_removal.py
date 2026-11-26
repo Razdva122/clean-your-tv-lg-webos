@@ -386,14 +386,16 @@ class ConfinedCleanup(unittest.TestCase):
 
     def test_removed_root_provision_checks_the_snapshot_without_recreating_sdk_files(self):
         import hashlib
-        import provision
         from clean_removal import verify_removed_root_provision
+        spec=importlib.util.spec_from_file_location('qa_cleanup_provision',Path(__file__).resolve().parents[1]/'provision.py')
+        provision=importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(provision)
         with tempfile.TemporaryDirectory() as tmp:
             paths = {key: Path(tmp)/key for key in provision.FILES}
             entries = {str(path): dict(original='sdk', original_sha256=hashlib.sha256(b'sdk').hexdigest(),
                         installed_sha256='a'*64, mode=0o644, uid=0, gid=0) for path in paths.values()}
             snapshot = dict(version=1, service=provision.NAME, files=entries)
-            with patch.object(provision,'FILES',paths):
+            with patch.dict(sys.modules,{'provision':provision}),patch.object(provision,'FILES',paths):
                 verify_removed_root_provision(snapshot)
                 self.assertEqual(list(Path(tmp).iterdir()), [])
                 paths['role'].symlink_to(Path(tmp)/'missing')

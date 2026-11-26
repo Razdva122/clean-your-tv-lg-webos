@@ -854,7 +854,10 @@ def main():
                 result['active_operation']=dict(request_status(match.group(1),ownership.store),**continuation_status(match.group(1),ownership.store)) if match else None
             except (OSError,ValueError):result['active_operation']=None
             if args.payload:
-                result['candidate_sha256']=candidate_digest(args.payload,_verified_payload(args.payload,args.prepare_supervisor))
+                # Maintenance reviews the removal closure. The optional supervisor
+                # bundle is an install input only; submit still verifies the digest.
+                prepare_supervisor=args.prepare_supervisor and inspected['state']=='fresh'
+                result['candidate_sha256']=candidate_digest(args.payload,_verified_payload(args.payload,prepare_supervisor))
         elif args.action=='activate':result=dict(operation=None,stage='activate',state='complete',code='activated',result=device.activate())
         else: result=dict(operation=None,stage='restore',state='complete',code='restored',result=coordinator.restore())
     except Exception as error:

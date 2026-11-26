@@ -413,6 +413,19 @@ Coordinator(Device(),Ownership(Store(sys.argv[2],uid=os.getuid())),read=lambda p
             self.assertEqual(install_driver.submit('a'*32,payload,ownership=owner)['state'],'recovery_required')
             self.assertEqual(spawn.call_count,1)
 
+    def test_maintenance_review_uses_the_removal_inputs_after_optional_install(self):
+        import json
+        for state, expected in [('installed',False),('fresh',True)]:
+            with self.subTest(state=state), patch.object(sys,'argv',['driver','inspect','--payload','/fixture','--prepare-supervisor']), \
+                 patch.object(install_driver.Coordinator,'inspect',return_value={'state':state}), \
+                 patch.object(Ownership,'status',return_value=None), \
+                 patch.object(install_driver,'_verified_payload',side_effect=lambda path,optional:optional) as verified, \
+                 patch.object(install_driver,'candidate_digest',side_effect=lambda path,optional:'optional' if optional else 'ordinary'), \
+                 redirect_stdout(io.StringIO()) as stream:
+                install_driver.main()
+                self.assertEqual(verified.call_args.args[1],expected)
+                self.assertEqual(json.loads(stream.getvalue())['candidate_sha256'],'optional' if expected else 'ordinary')
+
     def test_changed_reviewed_candidate_never_stages_or_spawns(self):
         from unittest.mock import patch
         _,payload,inventories,owner=self.submission_fixture()

@@ -235,6 +235,17 @@ const APP = process.env.CYTV_INSTALLER_APP || path.join(__dirname, '../app'),
       (await p.evaluate(() => calls)).every((c) => c.includes(' inspect')),
       'opening inspects only'
     );
+    for (let toggle = 0; toggle < 2; toggle++) {
+      assert.equal(
+        await p.evaluate(() => {
+          document.getElementById('supervisor').click();
+          return Boolean(document.getElementById('install'));
+        }),
+        false,
+        'install is unavailable during a new review'
+      );
+      await p.waitForSelector('[data-screen="review"]');
+    }
     await p.locator('#language').click();
     for (const [code, font] of [
       ['zh-Hans', 'CYTVChineseSC'],

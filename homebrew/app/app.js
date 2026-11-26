@@ -309,6 +309,7 @@
     busy = true;
     clearTimeout(poll);
     var previous = doc.activeElement && doc.activeElement.id;
+    begin('checking', 'checking');
     bridge
       .inspect({ prepareSupervisor: supervisor })
       .then(function (result) {
