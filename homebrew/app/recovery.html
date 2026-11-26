@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Clean Your TV</title>
+    <link rel="stylesheet" href="settings-panel.css" />
+    <link rel="stylesheet" href="renewal-panel.css" />
+    <link rel="stylesheet" href="i18n.css" />
+    <style>
+      body{margin:0;background:#10121a;color:white}#tileActions[hidden]{display:none}
+    </style>
+  </head>
+  <body>
+    <section class="root-settings companion-app" id="tileActions">
+      <div class="root-settings-card">
+        <h1>Clean Your TV</h1>
+        <p id="launchFailure" data-i18n="Could not open Home.">
+          Could not open Home.
+        </p>
+        <p
+          data-i18n="Refresh status first. If recovery remains unavailable, use the installer on your computer."
+        >
+          Refresh status first. If recovery remains unavailable, use the
+          installer on your computer.
+        </p>
+        <div class="renewal-actions">
+          <button id="retry" data-i18n="Open Home">Open Home</button>
+          <button id="recover" data-i18n="Recovery">Recovery</button>
+          <button id="setup" data-i18n="Settings" hidden>Settings</button>
+        </div>
+      </div>
+    </section>
+    <script src="tile-config.js"></script>
+    <script src="home-i18n.js"></script>
+    <script src="catalogs.js"></script>
+    <script src="root-locales.js"></script>
+    <script src="release-notes.js"></script>
+    <script src="system-updates.js"></script>
+    <script src="tile-recovery.js"></script>
+  </body>
+</html>

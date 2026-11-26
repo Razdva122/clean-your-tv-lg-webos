@@ -103,6 +103,21 @@
         !!(options.edition === 'root' ? window.RootProfile : window.HomeProfile)
       );
     }
+    function otherEdition() {
+      if (!transaction) return false;
+      if (tileRecovery())
+        return transaction.edition !== options.edition || !transaction.id;
+      return transaction.edition && transaction.edition !== options.edition;
+    }
+    function tileRecovery() {
+      return options.standalone === true && options.singleTile === true;
+    }
+    function singleTile() {
+      return window.CYTVProductGeneration === 2 || options.singleTile === true;
+    }
+    function readStatus() {
+      return rpc('status', tileRecovery() ? { edition: options.edition } : {});
+    }
     function enabled() {
       return buttons.filter(function (button) {
         return !button.hidden && !button.disabled;
@@ -129,6 +144,7 @@
       var focused = document.activeElement;
       editionLabel.textContent =
         options.edition === 'root' ? 'Root' : 'No-root';
+      editionLabel.hidden = singleTile();
       var rows = (offer && offer.components) || [];
       versions.textContent = rows
         .map(function (component) {
@@ -153,6 +169,18 @@
           );
         })
         .join('\n');
+      if (singleTile()) {
+        var productVersions = [];
+        if (offer && offer.installedRelease)
+          productVersions.push(
+            t('Installed: {version}', { version: offer.installedRelease })
+          );
+        if (offer && offer.release && offer.canInstall)
+          productVersions.push(
+            t('Available: {version}', { version: offer.release })
+          );
+        versions.textContent = productVersions.join('  →  ');
+      }
       var descriptions = {
         complete: 'Update complete. Your apps and settings are preserved.',
         'rolled-back': 'Previous version and profile restored.',
@@ -230,11 +258,7 @@
       if (transaction && transaction.error)
         message.textContent +=
           '\n' + String(transaction.error.message || transaction.error);
-      if (
-        transaction &&
-        transaction.edition &&
-        transaction.edition !== options.edition
-      )
+      if (otherEdition())
         message.textContent +=
           '\n' + t('Recovery belongs to the other installed edition.');
       window.HomeReleaseNotes.render(
@@ -246,12 +270,19 @@
       buttons[0].disabled = busy || polling;
       buttons[1].hidden = recovery && !(offer && offer.selfUpdate);
       buttons[1].textContent = t(
-        recovery ? 'Reinstall System Updater' : 'Update all'
+        recovery
+          ? singleTile()
+            ? 'Repair updates'
+            : 'Reinstall System Updater'
+          : singleTile()
+            ? 'Update Clean Your TV'
+            : 'Update all'
       );
       buttons[1].disabled =
         busy ||
         polling ||
         !!active() ||
+        otherEdition() ||
         !profileAvailable() ||
         !offer ||
         !(recovery ? offer.canRepair : offer.canInstall);
@@ -264,8 +295,14 @@
           : 'Roll back'
       );
       buttons[3].disabled =
-        busy || polling || !transaction || transaction.canRollback !== true;
-      buttons[4].textContent = t(options.standalone ? 'Open Home' : 'Back');
+        busy ||
+        polling ||
+        otherEdition() ||
+        !transaction ||
+        transaction.canRollback !== true;
+      buttons[4].textContent = t(
+        options.standalone && !tileRecovery() ? 'Open Home' : 'Back'
+      );
       if (visible()) {
         if (preserveFocus && enabled().indexOf(focused) >= 0)
           selected = enabled().indexOf(focused);
@@ -334,7 +371,7 @@
         busy = true;
         render(true);
       }
-      return rpc('status', {})
+      return readStatus()
         .then(function (state) {
           if (request !== generation) return;
           transaction = state;
@@ -352,12 +389,15 @@
         });
     }
     function operation(method, payload) {
-      if (busy || polling || !visible()) return;
+      if (busy || polling || !visible() || otherEdition()) return;
       var request = generation;
       busy = true;
       errorText = '';
       clearTimeout(timer);
       render(true);
+      if (tileRecovery()) {
+        payload = { edition: options.edition, transaction: transaction.id };
+      }
       rpc(method, payload)
         .then(function (state) {
           if (request === generation && state && state.phase)
@@ -385,18 +425,26 @@
       confirm(
         {
           title: repair
-            ? 'Reinstall System Updater?'
+            ? singleTile()
+              ? 'Repair updates'
+              : 'Reinstall System Updater?'
             : 'Install system update?',
           message: repair
             ? t(
-                'Reinstall only System Updater. Home and your settings will stay unchanged. Keep the TV powered on.'
+                singleTile()
+                  ? 'Keep the TV powered on. Status will refresh automatically.'
+                  : 'Reinstall only System Updater. Home and your settings will stay unchanged. Keep the TV powered on.'
               )
             : t('Available: {version}', { version: release }) +
               '\n' +
               t(
                 'Home will close during installation. Your apps and settings will be saved.'
               ),
-          action: repair ? 'Reinstall System Updater' : 'Install update'
+          action: repair
+            ? singleTile()
+              ? 'Repair updates'
+              : 'Reinstall System Updater'
+            : 'Install update'
         },
         function () {
           if (
@@ -420,6 +468,18 @@
                     else resolve(profile);
                   });
                 });
+          if (!repair && window.CYTVProductGeneration === 2) {
+            capture = capture.then(function (profile) {
+              if (!profile)
+                throw Error(
+                  'Could not save your complete profile. Nothing was installed.'
+                );
+              return window.HomeBrowserProfile.capture().then(function (state) {
+                profile.browserState = state;
+                return profile;
+              });
+            });
+          }
           capture
             .then(function (profile) {
               if (request !== generation || !visible()) return;
@@ -432,6 +492,14 @@
                 profile: profile
               };
               if (!repair) payload.release = release;
+              if (
+                profile.browserState &&
+                unescape(encodeURIComponent(JSON.stringify(payload))).length >
+                  4 * 1024 * 1024 - 1024
+              )
+                throw Error(
+                  'The backup is too large. To update, remove a downloaded theme or personal wallpaper you no longer need.'
+                );
               return rpc(repair ? 'repair' : 'install', payload);
             })
             .then(function (state) {
@@ -538,7 +606,12 @@
           refresh(true);
         } else {
           stickyError = '';
-          operation('reconcile', {});
+          if (
+            otherEdition() ||
+            (tileRecovery() && !(transaction && transaction.id))
+          )
+            refresh(false);
+          else operation('reconcile', {});
         }
       };
       buttons[3].onclick = function () {
@@ -639,7 +712,22 @@
       errorText = checkError = '';
       recovery = options.recovery === true;
       selected = 0;
-      return rpc('status', {})
+      if (options.external) {
+        busy = false;
+        panel.hidden = false;
+        render();
+        versions.textContent = '';
+        message.textContent = t(
+          'Continue in Clean Your TV on your computer or Android phone.'
+        );
+        notesHeading.hidden = notes.hidden = true;
+        buttons.slice(0, 4).forEach(function (button) {
+          button.hidden = true;
+        });
+        focus(0);
+        return Promise.resolve();
+      }
+      return readStatus()
         .then(function (state) {
           if (request !== generation) return;
           supervisorSeen = true;
@@ -652,9 +740,9 @@
           if (request !== generation) return;
           if (!supervisorSeen && error.unavailable && options.fallback) {
             panel.hidden = true;
-            options.fallback();
             if (window.ThemeRuntime)
               window.ThemeRuntime.resume('system-updates');
+            options.fallback();
             return;
           }
           errorText = error.message;
@@ -669,6 +757,13 @@
     }
     window.SystemUpdates = {
       open: open,
+      openExternal: function (value) {
+        return open({
+          edition: value.edition,
+          onClose: value.onClose,
+          external: true
+        });
+      },
       rpc: rpc,
       check: check,
       isOpen: visible

@@ -295,9 +295,11 @@ def install(bundle, run=command, observe=observed_install, migrate=False, experi
     root = Path(bundle).resolve()
     release = json.loads(checked_file(root, 'release.json'))
     raw = checked_file(root, manifest['package'])
+    single_tile = release.get('product_generation') == 2
+    if single_tile and migrate:
+        raise ValueError('Personalize the single-tile Root package before installation')
     root_companion(raw, {'version': release['version'], 'size': len(raw),
                          'sha256': manifest['files'][manifest['package']]})
-    del raw
     # Validate and retain the exact migration bytes before any install mutation.
     if homebrew_settings is not None:
         prepared, _ = homebrew_migration(expected=homebrew_settings)
@@ -307,6 +309,12 @@ def install(bundle, run=command, observe=observed_install, migrate=False, experi
         prepared = migration_source() if migrate else None
     STATE.mkdir(mode=0o700, parents=False)
     write_stage('prepared', package=manifest['package'])
+    if single_tile:
+        from package_identity import SINGLE_TILE_ORIGINAL
+        if hashlib.sha256(raw).hexdigest() != manifest['files'][manifest['package']]:
+            raise ValueError('Reviewed Root package changed')
+        write_binding(STATE/SINGLE_TILE_ORIGINAL, raw)
+    del raw
     (STATE / 'runtime').mkdir(mode=0o700)
     for name in SUPPORT_FILES + ('release.json', 'bundle.json'):
         target = STATE / name

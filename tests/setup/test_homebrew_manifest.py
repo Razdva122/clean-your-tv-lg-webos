@@ -22,13 +22,24 @@ def fixture(version='1.2.3'):
     files={}; components={}; versions={}; packages={}
     for key, app in IDENTITIES.items():
         name=key+'.ipk'; version_value='2.3.4'
-        content={name: package.ipk(app,version_value,{'usr/palm/applications/'+app+'/appinfo.json':encoded({'id':app,'version':version_value})}),
+        info={'id':app,'version':version_value}
+        if key == 'root':
+            info.update(cytvProductGeneration=2,visible=False)
+        content={name: package.ipk(app,version_value,{'usr/palm/applications/'+app+'/appinfo.json':encoded(info)}),
                  'must-not-run.py': b'raise RuntimeError("artifact code executed")'}
         if key in ('root', 'root-updater'):
             content['personalize.py'] = b'# Shared Home settings reader fixture.\n'
-        content['bundle.json']=encoded({'files':{n:digest(v) for n,v in content.items()}})
+        bundle = {'files': {n: digest(v) for n, v in content.items()}}
+        if key == 'supervisor':
+            bundle['product_schema'] = 2
+        content['bundle.json'] = encoded(bundle)
         components[key]=inventory(content); versions[key]=version_value; packages[key]=name
         files.update({key+'/'+n:v for n,v in content.items()})
+    files['baseline/baseline.json'] = encoded({
+        'schema': 2,
+        'edition': 'root',
+        'components': [{'name': 'root'}, {'name': 'root-infrastructure'}],
+    })
     runtime_files={'bin/python3.13':b'not executable on this host','LICENSE':b'Python license fixture'}
     binding={'schema':1,'archive_sha256':python_runtime.SHA256,'files':{n:digest(v) for n,v in runtime_files.items()}}
     runtime_files['.cytv-runtime.json']=encoded(binding)
@@ -40,7 +51,7 @@ def fixture(version='1.2.3'):
         records={m.name:{'size':m.size,'sha256':digest(archive.extractfile(m).read()),'mode':m.mode} for m in archive if m.isfile()}
     files['manifest.json']=encoded({'schema':1,'files':inventory(files),'components':components,'versions':versions,'packages':packages,
         'runtime':{'files':records,'archive_sha256':python_runtime.SHA256}})
-    app={'id':APP_ID,'title':'CYTV Installer','type':'web','main':'index.html','version':version}
+    app={'id':APP_ID,'title':'Clean Your TV','type':'web','main':'index.html','version':version}
     return {APP_PREFIX+'appinfo.json':encoded(app),**{APP_PREFIX+'payload/'+n:v for n,v in files.items()}}
 
 def ipk(files=None, version='1.2.3'): return installer_ipk(version,files or fixture(version))
@@ -70,7 +81,7 @@ class HomebrewManifest(HomebrewFixture, unittest.TestCase):
         with patch('subprocess.run',side_effect=AssertionError('must not execute')),patch('subprocess.check_output',side_effect=AssertionError('must not execute')):
             value=self.manifest()
         self.assertEqual({k:value[k] for k in ('id','title','type','version','rootRequired','ipkSize')},
-            {'id':APP_ID,'title':'CYTV Installer','type':'web','version':'1.2.3','rootRequired':True,'ipkSize':len(self.raw)})
+            {'id':APP_ID,'title':'Clean Your TV','type':'web','version':'1.2.3','rootRequired':True,'ipkSize':len(self.raw)})
         self.assertEqual(value['ipkHash']['sha256'],digest(self.raw))
     def test_malformed_identity_and_control_version_drift_fail(self):
         files=fixture(); info=json.loads(files[APP_PREFIX+'appinfo.json']);info['id']='foreign.app';files[APP_PREFIX+'appinfo.json']=encoded(info)

@@ -6,7 +6,7 @@ const { signBootstrap } = require('./sign-release-feeds.cjs');
 const enginePolicy = require('../system-updater/engine-policy');
 const systemPolicy = require('../system-updater/policy');
 
-function signSystemCandidate(folder, key, publicKey, chain = []) {
+function signSystemCandidate(folder, key, publicKey, chain = [], schema = 1) {
   const read = (name, limit = 64 * 1024 * 1024) => {
     if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(name))
       throw Error('Invalid candidate asset name');
@@ -55,7 +55,8 @@ function signSystemCandidate(folder, key, publicKey, chain = []) {
   const catalog = enginePolicy.validate(
     JSON.parse(
       verified('system-bootstrap-manifest.json', undefined, undefined, 393216)
-    )
+    ),
+    schema
   );
   const releases = JSON.parse(
     verified('system-manifests.json', undefined, undefined, 393216)
@@ -71,7 +72,7 @@ function signSystemCandidate(folder, key, publicKey, chain = []) {
     meta.artifact.sha256 +
     '.';
   for (const manifest of Object.values(catalog.releases)) {
-    systemPolicy.validate(manifest);
+    systemPolicy.validate(manifest, schema);
     if (manifest.release !== meta.release || manifest.notes !== notes)
       throw Error('Candidate provenance differs from manifest');
     for (const item of manifest.components) {
@@ -100,9 +101,16 @@ function signSystemCandidate(folder, key, publicKey, chain = []) {
     throw Error('Unexpected candidate asset inventory');
   }
 
-  const envelope = signBootstrap(catalog, releases, key, publicKey, chain);
+  const envelope = signBootstrap(
+    catalog,
+    releases,
+    key,
+    publicKey,
+    chain,
+    schema
+  );
   fs.writeFileSync(
-    path.join(folder, 'system-bootstrap-v1.json'),
+    path.join(folder, 'system-bootstrap-v' + schema + '.json'),
     JSON.stringify(envelope, null, 2) + '\n',
     { flag: 'wx', mode: 0o600 }
   );
@@ -117,7 +125,9 @@ if (require.main === module) {
   delete process.env.BOOTSTRAP_SIGNING_PRIVATE_KEY;
   delete process.env.UPDATE_SIGNING_PRIVATE_KEY;
   try {
-    if (process.argv.length !== 3 || !key)
+    const singleTile =
+      process.argv.length === 4 && process.argv[3] === '--single-tile';
+    if ((!singleTile && process.argv.length !== 3) || !key)
       throw Error('Missing candidate signing inputs');
     signSystemCandidate(
       process.argv[2],
@@ -125,7 +135,8 @@ if (require.main === module) {
       fs.readFileSync(
         path.join(__dirname, '../system-updater/bootstrap-public.pem')
       ),
-      JSON.parse(process.env.BOOTSTRAP_SIGNING_KEY_CHAIN || '[]')
+      JSON.parse(process.env.BOOTSTRAP_SIGNING_KEY_CHAIN || '[]'),
+      singleTile ? 2 : 1
     );
     console.log('Verified and signed the unpublished System QA catalog.');
   } catch (_) {

@@ -216,6 +216,29 @@ class PreferenceTests(PreferenceBase):
     def test_mutable_restore_never_overwrites_newer_emergency_latch(self):
         latch=self.root/'installed/usr/palm/applications/com.local.nativehome/state/blocked';latch.parent.mkdir(parents=True);latch.write_bytes(b'older');self.device.snapshot_mutable();latch.write_bytes(b'new emergency');self.device.restore_mutable();self.assertEqual(latch.read_bytes(),b'new emergency')
 
+    def test_single_tile_keeps_stop_and_saver_preference_after_helper_replacement(self):
+        self.store.write('baseline', {'schema': 2})
+        helper = self.root/'installed/usr/palm/applications/com.local.nativehome'
+        state = helper/'state'
+        state.mkdir(parents=True)
+        token = b'I' + b'c'*32
+        (state/'stop-generation').write_bytes(token)
+        generation = self.device._resume_generation(helper)
+        self.assertIsNotNone(generation)
+        (state/'screensaver-preference.json').write_bytes(b'{"enabled":false}')
+        (state/'control.json').write_bytes(b'{"cmd":"stop"}')
+        self.device.snapshot_mutable()
+        (state/'stop-generation').write_bytes(b'S'+b'f'*32)
+        (state/'control.json').unlink()
+        (state/'screensaver-preference.json').unlink()
+        self.device.restore_mutable()
+        self.assertEqual((state/'control.json').read_bytes(), b'{"cmd":"stop"}')
+        self.assertEqual((state/'screensaver-preference.json').read_bytes(), b'{"enabled":false}')
+        self.assertEqual((state/'stop-generation').read_bytes(), b'S'+b'f'*32)
+        self.assertIsNone(self.device._resume_generation(helper))
+        (state/'control.json').unlink()
+        self.assertNotEqual(generation, self.device._resume_generation(helper))
+
 class InfraTransitionTests(DeviceBase):
     def test_local_resume_accepts_only_prior_or_candidate_file_hashes(self):
         old=tar({'runtime/cli.py':b'old'});new=tar({'runtime/cli.py':b'new'})
@@ -403,6 +426,44 @@ class LegacyNoRootCompanionTests(DeviceBase):
         self.assertIsNone(Store(self.device.state/'legacy-no-root-screensaver',uid=os.getuid()).read('baseline-'+self.tx['id']))
 
 class PrivateServiceTests(DeviceBase):
+    def test_single_tile_never_manages_an_updater_path_even_in_retained_inventory(self):
+        files={'runtime/cli.py':b'code'}
+        raw=tar(files);component={'name':'root-infrastructure','sha256':digest(raw),'size':len(raw),
+                                  'files':{name:digest(value) for name,value in files.items()}}
+        self.baseline({'edition':'root','schema':2,'components':[component]})
+        other=tar({'updater/service.js':b'legacy'})
+        old=dict(component,sha256=digest(other),size=len(other))
+        self.device.cached(old).write_bytes(other)
+        self.store.write('current-root',{'edition':'root','schema':2,'components':[old]})
+        with self.assertRaisesRegex(ValueError,'Standalone Root Updater'):
+            self.device._infra_path('updater/service.js')
+        self.assertFalse(self.device.root_updater.exists())
+
+    def test_single_tile_receipt_finishes_only_its_original_interrupted_write(self):
+        from unittest.mock import patch
+        files={'runtime/cli.py':b'new'}
+        raw=tar(files);hashes={name:digest(value) for name,value in files.items()}
+        c={'name':'root-infrastructure','kind':'infrastructure','version':'1.1.0','sha256':digest(raw),'size':len(raw),'local':True,'files':hashes}
+        self.baseline({'schema':2,'edition':'root','components':[c]})
+        self.device.root_state.mkdir()
+        path=self.device.root_state/'recovery-provision.json'
+        original=json.dumps({'mode':'recovery-only','files':{str(self.device._infra_path('runtime/cli.py')):digest(b'old')}}).encode()
+        path.write_bytes(original)
+        self.store.write('root-recovery-integrity',{'schema':1,'sha256':digest(original)})
+        write=self.store.write
+        def interrupt(name,value):
+            if name=='root-recovery-integrity' and 'pending' not in value:raise KeyboardInterrupt()
+            return write(name,value)
+        with patch.object(self.store,'write',side_effect=interrupt):
+            with self.assertRaises(KeyboardInterrupt):self.device._refresh_root_receipts(hashes)
+        self.assertEqual(self.store.read('root-recovery-integrity')['pending'],digest(path.read_bytes()))
+        self.device._refresh_root_receipts(hashes)
+        self.assertEqual(self.store.read('root-recovery-integrity'),{'schema':1,'sha256':digest(path.read_bytes())})
+        self.assertFalse(self.device.root_updater.exists())
+        path.write_bytes(original)
+        with self.assertRaisesRegex(ValueError,'receipt changed'):self.device._refresh_root_receipts(hashes)
+        self.assertEqual(path.read_bytes(),original)
+
     def test_private_recovery_service_has_fixed_destination_and_receipts(self):
         files={'runtime/cli.py':b'runtime','service/service.js':b'new-service','updater/service.js':b'updater'}
         raw=tar(files);c={'name':'root-infrastructure','kind':'infrastructure','version':'1.1.0','sha256':digest(raw),'size':len(raw),'local':True,'files':{n:digest(v) for n,v in files.items()}}

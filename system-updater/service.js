@@ -16,7 +16,8 @@ var callers = [
   'com.gathin.tvhome',
   'com.cleanyourtv.root.preview',
   'com.cleanyourtv.updater',
-  'com.cleanyourtv.root.updater'
+  'com.cleanyourtv.root.updater',
+  'io.github.razdva122.cytvinstaller'
 ];
 var fields = {
   check: ['edition'],
@@ -37,7 +38,17 @@ function createDispatch(execute) {
       throw Error('caller-not-authorized');
     }
     if (callers.indexOf(id) < 0) throw Error('caller-not-authorized');
-    var allowed = fields[method];
+    if (
+      id === 'io.github.razdva122.cytvinstaller' &&
+      ['status', 'rollback', 'reconcile'].indexOf(method) < 0
+    )
+      throw Error('caller-not-authorized');
+    var tile = id === 'io.github.razdva122.cytvinstaller';
+    var allowed = tile
+      ? method === 'status'
+        ? ['edition']
+        : ['edition', 'transaction']
+      : fields[method];
     if (
       !allowed ||
       !payload ||
@@ -49,7 +60,10 @@ function createDispatch(execute) {
       })
     )
       throw Error('invalid-request');
-    if (allowed.indexOf('edition') >= 0 && !launchers[payload.edition])
+    if (
+      allowed.indexOf('edition') >= 0 &&
+      !Object.prototype.hasOwnProperty.call(launchers, payload.edition)
+    )
       throw Error('invalid-edition');
     if (
       ['install', 'repair', 'restoreProfile', 'healthy'].indexOf(method) >= 0 &&

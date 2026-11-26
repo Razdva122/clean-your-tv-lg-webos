@@ -23,10 +23,49 @@ control Home leads to computer or Android setup to establish No-root eligibility
 and pair Home Helper. The TV candidate has no first-pair or installation path
 for No-root. [Edition selection](../docs/superpowers/specs/2026-11-26-homebrew-edition-selection.md)
 
-One confirmation authorizes a fresh Homebrew setup of Root Home, Root
-Updater and System Updater together, automatic import of compatible settings
-from a previous Clean Your TV Home setup when present, and a single
-activation attempt. When Python preparation is required, the UI checks
+The same application ID is used for the Homebrew package and the small
+edition-bound tile built by `build_tile(output, version, edition)`. The latter
+contains no Homebrew bridge or offline installer payload. Its `cytvTileEdition`
+metadata identifies the target of a plain application-manager launch. The full
+package stores this routing preference after the coordinator verifies a
+single-tile Root installation. A pending setup request goes to its original
+status flow first. An explicit launch with `cytvRecovery: true` opens the
+independent recovery interface.
+
+## Installation and recovery in the single-tile candidate
+
+The public host builds still select the existing generation. Use the
+[single-tile build commands](../android/DEVELOPMENT.md) for this candidate.
+
+| Starting installation | Owner flow |
+| --- | --- |
+| Compatible rooted TV with Homebrew | Install the full Clean Your TV IPK, open the tile and confirm setup. Desktop and Android can open an already-installed full tile on the TV. The tile checks Homebrew access and Root compatibility. |
+| Fresh Developer Mode TV | Desktop or Android pairs the TV and installs the daily tile, hidden Home and Helper. Subsequent launches open Home directly. |
+| Existing supported Root or No-root | Keeping the installation is the default. Switching via the clean-install option removes the old settings. Root requires the full tile on the TV first. The host verifies removal before asking to continue setup. Mixed editions, incomplete operations and experimental Root setups require their existing recovery route. |
+| Developer Mode TV already using the tile | Run the matching desktop or Android installer to repair the tile or update a compatible screensaver. The installer keeps Home and Helper in place. A full Home upgrade that preserves preferences needs an app-mediated export and verified restore on the host path. |
+| No-root installed over an existing root SSH connection | Fresh single-tile setup prepares on-device updates after verifying the installed Home and Helper. An interrupted preparation is bound to its original host and TV receipts. |
+
+The first installation starts a new rollback history. To return to an older
+multi-tile release, remove the product and install that release separately.
+On a TV with the verified update service, a later signed update records the
+prior generation-two package set and profile. The independent recovery screen
+can restore that set after a failed Home launch. With an unavailable service,
+continue recovery from the matching host installer. Device acceptance must
+check app visibility, physical Home routing, standby, stored media and reboot
+on the exact candidate.
+
+On-device product updates capture the Home profile while the original app can
+still read its browser storage. The profile includes the supported local
+preferences and the app's own theme and personal wallpaper stores. The update
+service accepts up to 3 MiB of serialized browser data within the existing
+4 MiB request limit. An incomplete or oversized backup stops the update before
+package replacement. Home restores and reads back the snapshot before reporting
+a successful start. The host Developer Mode repair path keeps the Home package
+installed because that path has no verified browser-profile transfer.
+
+One setup confirmation covers the verified fresh Root installation, preparation
+of complete updates and a single activation attempt. Existing editions require
+the dedicated transition flow. When Python preparation is required, the UI checks
 the original payload digest, fresh installation state and candidate digest
 before submission. The product worker verifies the installed generation,
 releases its installation mutex and uses the guarded runtime to request

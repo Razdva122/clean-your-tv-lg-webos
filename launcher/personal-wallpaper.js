@@ -838,6 +838,74 @@
   }
   root.PersonalWallpaper = {
     start: start,
+    readProfileRecords: function (visit) {
+      var failure;
+      return transaction('readonly', function (store, set, abort) {
+        var request = store.openCursor();
+        request.onsuccess = function () {
+          var cursor = request.result;
+          if (!cursor) return;
+          try {
+            visit(cursor.key, cursor.value);
+            cursor.continue();
+          } catch (error) {
+            failure = error;
+            abort(error);
+          }
+        };
+      }).catch(function (error) {
+        throw failure || error;
+      });
+    },
+    validateProfileRecords: function (records) {
+      var seen = Object.create(null),
+        refs = [];
+      records.forEach(function (item) {
+        keys(item, 'key value');
+        var key = item.key,
+          value = item.value;
+        if (typeof key !== 'string' || key.length > 240 || seen[key]) fail();
+        seen[key] = true;
+        if (key === 'slot') {
+          if (
+            !value ||
+            (value.source !== 'personal' &&
+              value.source !== 'theme' &&
+              !root.WallpaperLibrary.has(value.source))
+          )
+            fail();
+          if (Object.prototype.hasOwnProperty.call(value, 'mediaRef')) {
+            keys(value, 'source mediaRef');
+            refs.push(value.mediaRef);
+          } else {
+            keys(value, 'source envelope');
+            if (value.envelope !== null) validate(value.envelope);
+            else if (value.source === 'personal') fail();
+          }
+        } else if (key === 'library:photo' || key === 'library:video') {
+          refs.push(value);
+        } else {
+          validate(value);
+          if (key !== mediaRef(value)) fail();
+        }
+      });
+      refs.forEach(function (ref) {
+        if (
+          typeof ref !== 'string' ||
+          ref.indexOf('media:') !== 0 ||
+          !seen[ref]
+        )
+          fail();
+      });
+    },
+    replaceProfileRecords: function (records) {
+      return transaction('readwrite', function (store) {
+        store.clear();
+        records.forEach(function (item) {
+          store.put(item.value, item.key);
+        });
+      });
+    },
     receive: receive,
     apply: apply,
     cancel: cancel,

@@ -85,3 +85,34 @@ class ReleaseTests(unittest.TestCase):
                 prepare.verify_system_assets(manifests,{'tag':'v1.0.3','versions':versions},{**files,first:b'wrong'})
             with self.assertRaisesRegex(ValueError,'version'):
                 prepare.verify_system_assets(manifests,{'tag':'v1.0.3','versions':{**versions,'home':'2.0.0'}},files)
+
+            for relative,component in [('launcher.ipk','home'),('launcher-720p.ipk','home'),
+                    ('root/root.ipk','root'),('root-720p/root.ipk','root'),('helper.ipk','helper')]:
+                app=build.APPS[component]
+                target=payload/relative
+                entries=package.data_files(target.read_bytes())
+                key='usr/palm/applications/'+app+'/appinfo.json'
+                info=json.loads(entries[key])
+                info.update(cytvProductGeneration=2,visible=False,systemUpdateProtocol=1)
+                entries[key]=json.dumps(info).encode()
+                target.write_bytes(package.ipk(app,info['version'],entries))
+            (payload/'updater.ipk').unlink()
+            shutil.rmtree(payload/'root-updater')
+            build.build(payload/'system-updater',single_tile=True)
+            with self.assertRaisesRegex(ValueError,'generation'):
+                build.prepare_release(payload,path/'legacy-rejected','v1.0.3','Changes')
+            output=path/'generation-2'
+            manifests=build.prepare_release(payload,output,'v1.0.3','Changes',single_tile=True)
+            files={p.name:p.read_bytes() for p in output.iterdir()}
+            catalog=json.loads(files['system-bootstrap-manifest.json'])
+            self.assertEqual(catalog['releases'],manifests)
+            self.assertEqual(catalog['schema'],2)
+            self.assertEqual(catalog['engine']['sha256'],build.digest(build.engine_archive(payload/'system-updater')))
+            prepare.verify_system_assets(manifests,{'tag':'v1.0.3','versions':versions},files,single_tile=True)
+            for key,manifest in manifests.items():
+                self.assertEqual(manifest['schema'],2)
+                self.assertEqual([c['name'] for c in manifest['components']],
+                        ['root','root-infrastructure'] if key.startswith('root') else ['home','helper'])
+            self.assertFalse(any('updater' in filename for filename in files))
+            with self.assertRaisesRegex(ValueError,'release set'):
+                prepare.verify_system_assets(manifests,{'tag':'v1.0.3','versions':versions},files)

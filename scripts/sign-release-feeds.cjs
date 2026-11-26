@@ -11,17 +11,24 @@ function signBootstrap(
   releases,
   privateKey,
   publicKey,
-  keyChain = []
+  keyChain = [],
+  generation = 1
 ) {
   if (!require('node:util').isDeepStrictEqual(catalog.releases, releases))
     throw Error('engine-product-manifests-mismatch');
+  if (generation === 1 && Object.values(releases).some((m) => m.schema === 2))
+    throw Error('generation-2-release-on-legacy-channel');
   const bytes = Buffer.from(JSON.stringify(catalog, null, 2) + '\n');
   const envelope = {
     payload: bytes.toString('base64'),
     signature: crypto.sign('RSA-SHA256', bytes, privateKey).toString('base64')
   };
   if (keyChain.length) envelope.keyChain = keyChain;
-  require('../system-updater/engine-policy').verify(envelope, publicKey);
+  require('../system-updater/engine-policy').verify(
+    envelope,
+    publicKey,
+    generation
+  );
   return envelope;
 }
 function signFeeds(
@@ -32,14 +39,37 @@ function signFeeds(
   ),
   bootstrap = {}
 ) {
-  function sign(manifest, policy) {
+  function sign(manifest, policy, generation = 1) {
     const bytes = Buffer.from(JSON.stringify(manifest, null, 2) + '\n');
     const envelope = {
       payload: bytes.toString('base64'),
       signature: crypto.sign('RSA-SHA256', bytes, privateKey).toString('base64')
     };
-    policy.verify(envelope, publicKey);
+    policy.verify(envelope, publicKey, generation);
     return envelope;
+  }
+  if (manifests.productSchema === 2) {
+    // A generation-B release must never publish a v1 engine catalog or
+    // legacy Home-only offer; neither older client knows the new baseline.
+    const allowed = ['bootstrap', 'graphics', 'productSchema', 'system'];
+    if (Object.keys(manifests).some((key) => !allowed.includes(key)))
+      throw Error('legacy-feeds-forbidden-for-generation-2');
+    const catalog = signBootstrap(
+      manifests.bootstrap,
+      manifests.system,
+      bootstrap.privateKey || privateKey,
+      bootstrap.publicKey || publicKey,
+      bootstrap.keyChain || [],
+      2
+    );
+    const result = { 'system-bootstrap-v2.json': catalog };
+    for (const [key, manifest] of Object.entries(manifests.system))
+      result['system-update-v2-' + key + '.json'] = sign(
+        manifest,
+        systemPolicy,
+        2
+      );
+    return result;
   }
   function graphicsSlot(manifest, hd, app, version) {
     if (

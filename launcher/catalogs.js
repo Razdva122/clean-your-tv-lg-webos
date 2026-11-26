@@ -1,5 +1,92 @@
 HomeI18n.add({
   'en': {
+    'The backup is too large. To update, remove a downloaded theme or personal wallpaper you no longer need.':
+      'The backup is too large. To update, remove a downloaded theme or personal wallpaper you no longer need.',
+    'Finish or cancel your theme preview before updating.':
+      'Finish or cancel your theme preview before updating.'
+  },
+  'ru': {
+    'The backup is too large. To update, remove a downloaded theme or personal wallpaper you no longer need.':
+      'Резервная копия слишком велика. Чтобы обновить приложение, удалите ненужную загруженную тему или личные обои.',
+    'Finish or cancel your theme preview before updating.':
+      'Примените тему или отмените предпросмотр перед обновлением.'
+  },
+  'cs': {
+    'The backup is too large. To update, remove a downloaded theme or personal wallpaper you no longer need.':
+      'Záloha je příliš velká. Před aktualizací odeberte stažený motiv nebo vlastní tapetu, kterou už nepotřebujete.',
+    'Finish or cancel your theme preview before updating.':
+      'Před aktualizací dokončete nebo zrušte náhled motivu.'
+  },
+  'de': {
+    'The backup is too large. To update, remove a downloaded theme or personal wallpaper you no longer need.':
+      'Die Sicherung ist zu groß. Entferne für das Update ein nicht mehr benötigtes heruntergeladenes Design oder eigenes Hintergrundbild.',
+    'Finish or cancel your theme preview before updating.':
+      'Beende oder verwirf die Designvorschau vor dem Update.'
+  },
+  'es': {
+    'The backup is too large. To update, remove a downloaded theme or personal wallpaper you no longer need.':
+      'La copia de seguridad es demasiado grande. Para actualizar, elimina un tema descargado o un fondo personal que ya no necesites.',
+    'Finish or cancel your theme preview before updating.':
+      'Termina o cancela la vista previa del tema antes de actualizar.'
+  },
+  'fr': {
+    'The backup is too large. To update, remove a downloaded theme or personal wallpaper you no longer need.':
+      'La sauvegarde est trop volumineuse. Pour mettre à jour, supprimez un thème téléchargé ou un fond d’écran personnel devenu inutile.',
+    'Finish or cancel your theme preview before updating.':
+      'Terminez ou annulez l’aperçu du thème avant la mise à jour.'
+  },
+  'pt-BR': {
+    'The backup is too large. To update, remove a downloaded theme or personal wallpaper you no longer need.':
+      'O backup é grande demais. Para atualizar, remova um tema baixado ou um papel de parede pessoal que você não usa mais.',
+    'Finish or cancel your theme preview before updating.':
+      'Conclua ou cancele a prévia do tema antes de atualizar.'
+  },
+  'it': {
+    'The backup is too large. To update, remove a downloaded theme or personal wallpaper you no longer need.':
+      'Il backup è troppo grande. Per aggiornare, elimina un tema scaricato o uno sfondo personale che non usi più.',
+    'Finish or cancel your theme preview before updating.':
+      'Concludi o annulla l’anteprima del tema prima di aggiornare.'
+  },
+  'hi': {
+    'The backup is too large. To update, remove a downloaded theme or personal wallpaper you no longer need.':
+      'बैकअप बहुत बड़ा है। अपडेट करने के लिए कोई ऐसी डाउनलोड की गई थीम या अपना वॉलपेपर हटाएँ जिसकी अब ज़रूरत नहीं है।',
+    'Finish or cancel your theme preview before updating.':
+      'अपडेट करने से पहले थीम का पूर्वावलोकन पूरा करें या रद्द करें।'
+  },
+  'ko': {
+    'The backup is too large. To update, remove a downloaded theme or personal wallpaper you no longer need.':
+      '백업 크기가 너무 큽니다. 업데이트하려면 더 이상 사용하지 않는 다운로드한 테마나 개인 배경화면을 삭제하세요.',
+    'Finish or cancel your theme preview before updating.':
+      '업데이트하기 전에 테마 미리보기를 완료하거나 취소하세요.'
+  },
+  'pl': {
+    'The backup is too large. To update, remove a downloaded theme or personal wallpaper you no longer need.':
+      'Kopia zapasowa jest za duża. Aby zaktualizować, usuń pobrany motyw lub własną tapetę, których już nie potrzebujesz.',
+    'Finish or cancel your theme preview before updating.':
+      'Przed aktualizacją zakończ lub anuluj podgląd motywu.'
+  },
+  'ro': {
+    'The backup is too large. To update, remove a downloaded theme or personal wallpaper you no longer need.':
+      'Copia de rezervă este prea mare. Pentru actualizare, elimină o temă descărcată sau un fundal personal de care nu mai ai nevoie.',
+    'Finish or cancel your theme preview before updating.':
+      'Finalizează sau anulează previzualizarea temei înainte de actualizare.'
+  },
+  'zh-Hans': {
+    'The backup is too large. To update, remove a downloaded theme or personal wallpaper you no longer need.':
+      '备份过大。要更新，请删除不再需要的已下载主题或个人壁纸。',
+    'Finish or cancel your theme preview before updating.':
+      '请先完成或取消主题预览，再进行更新。'
+  },
+  'zh-Hant': {
+    'The backup is too large. To update, remove a downloaded theme or personal wallpaper you no longer need.':
+      '備份過大。若要更新，請移除不再需要的已下載佈景主題或個人桌布。',
+    'Finish or cancel your theme preview before updating.':
+      '請先完成或取消佈景主題預覽，再進行更新。'
+  }
+});
+
+HomeI18n.add({
+  'en': {
     'A signed Home update is available.': 'A signed Home update is available.',
     'Add app': 'Add app',
     'All installed apps are already on Home.':
@@ -4759,6 +4846,93 @@ HomeI18n.add({
 
 HomeI18n.add({
   'en': {
+    'Resume Home control': 'Resume Home control',
+    'Use your saved Home button setting again?':
+      'Use your saved Home button setting again?',
+    'Home control is paused.': 'Home control is paused.'
+  },
+  'ru': {
+    'Resume Home control': 'Возобновить управление кнопкой Home',
+    'Use your saved Home button setting again?':
+      'Снова использовать сохранённую настройку кнопки Home?',
+    'Home control is paused.': 'Управление кнопкой Home приостановлено.'
+  },
+  'cs': {
+    'Resume Home control': 'Obnovit ovládání tlačítka Home',
+    'Use your saved Home button setting again?':
+      'Znovu použít uložené nastavení tlačítka Home?',
+    'Home control is paused.': 'Ovládání tlačítka Home je pozastavené.'
+  },
+  'de': {
+    'Resume Home control': 'Steuerung der Home-Taste fortsetzen',
+    'Use your saved Home button setting again?':
+      'Die gespeicherte Einstellung der Home-Taste wieder verwenden?',
+    'Home control is paused.': 'Die Steuerung der Home-Taste ist pausiert.'
+  },
+  'es': {
+    'Resume Home control': 'Reanudar el control del botón Home',
+    'Use your saved Home button setting again?':
+      '¿Volver a usar el ajuste guardado del botón Home?',
+    'Home control is paused.': 'El control del botón Home está en pausa.'
+  },
+  'fr': {
+    'Resume Home control': 'Réactiver la commande du bouton Home',
+    'Use your saved Home button setting again?':
+      'Réutiliser le réglage enregistré du bouton Home ?',
+    'Home control is paused.': 'La commande du bouton Home est en pause.'
+  },
+  'pt-BR': {
+    'Resume Home control': 'Retomar o controle do botão Home',
+    'Use your saved Home button setting again?':
+      'Usar novamente a configuração salva do botão Home?',
+    'Home control is paused.': 'O controle do botão Home está pausado.'
+  },
+  'it': {
+    'Resume Home control': 'Riprendi il controllo del tasto Home',
+    'Use your saved Home button setting again?':
+      'Usare di nuovo l’impostazione salvata per il tasto Home?',
+    'Home control is paused.': 'Il controllo del tasto Home è in pausa.'
+  },
+  'hi': {
+    'Resume Home control': 'होम बटन का नियंत्रण फिर शुरू करें',
+    'Use your saved Home button setting again?':
+      'होम बटन की सहेजी गई सेटिंग फिर से इस्तेमाल करें?',
+    'Home control is paused.': 'होम बटन का नियंत्रण रुका हुआ है।'
+  },
+  'ko': {
+    'Resume Home control': '홈 버튼 제어 재개',
+    'Use your saved Home button setting again?':
+      '저장된 홈 버튼 설정을 다시 사용할까요?',
+    'Home control is paused.': '홈 버튼 제어가 일시 중지되었습니다.'
+  },
+  'pl': {
+    'Resume Home control': 'Wznów sterowanie przyciskiem Home',
+    'Use your saved Home button setting again?':
+      'Użyć ponownie zapisanych ustawień przycisku Home?',
+    'Home control is paused.': 'Sterowanie przyciskiem Home jest wstrzymane.'
+  },
+  'ro': {
+    'Resume Home control': 'Reia controlul butonului Home',
+    'Use your saved Home button setting again?':
+      'Folosești din nou setarea salvată pentru butonul Home?',
+    'Home control is paused.': 'Controlul butonului Home este întrerupt.'
+  },
+  'zh-Hans': {
+    'Resume Home control': '恢复主页键控制',
+    'Use your saved Home button setting again?':
+      '要重新使用已保存的主页键设置吗？',
+    'Home control is paused.': '主页键控制已暂停。'
+  },
+  'zh-Hant': {
+    'Resume Home control': '恢復首頁鍵控制',
+    'Use your saved Home button setting again?':
+      '要重新使用已儲存的首頁鍵設定嗎？',
+    'Home control is paused.': '首頁鍵控制已暫停。'
+  }
+});
+
+HomeI18n.add({
+  'en': {
     'Stay on HDMI or Live TV when the TV wakes':
       'Stay on HDMI or Live TV when the TV wakes',
     'If your TV wakes from standby already showing a game console, Live TV, or another input, that screen stays open. The Home button works as usual.':
@@ -4841,5 +5015,78 @@ HomeI18n.add({
       '從待機喚醒時保留 HDMI 或電視直播畫面',
     'If your TV wakes from standby already showing a game console, Live TV, or another input, that screen stays open. The Home button works as usual.':
       '如果電視從待機喚醒後已顯示遊戲主機、電視直播或其他輸入來源的畫面，就會保留該畫面。Home 鍵照常使用。'
+  }
+});
+
+HomeI18n.add({
+  "en": {
+    "Repair updates": "Repair updates",
+    "Update Clean Your TV": "Update Clean Your TV",
+    "Continue in Clean Your TV on your computer or Android phone.": "Continue in Clean Your TV on your computer or Android phone."
+  },
+  "ru": {
+    "Repair updates": "Восстановить обновления",
+    "Update Clean Your TV": "Обновить Clean Your TV",
+    "Continue in Clean Your TV on your computer or Android phone.": "Продолжите в Clean Your TV на компьютере или телефоне Android."
+  },
+  "de": {
+    "Repair updates": "Updates reparieren",
+    "Update Clean Your TV": "Clean Your TV aktualisieren",
+    "Continue in Clean Your TV on your computer or Android phone.": "Fahre in Clean Your TV auf deinem Computer oder Android-Smartphone fort."
+  },
+  "es": {
+    "Repair updates": "Reparar las actualizaciones",
+    "Update Clean Your TV": "Actualizar Clean Your TV",
+    "Continue in Clean Your TV on your computer or Android phone.": "Continúa en Clean Your TV desde tu ordenador o teléfono Android."
+  },
+  "fr": {
+    "Repair updates": "Réparer les mises à jour",
+    "Update Clean Your TV": "Mettre à jour Clean Your TV",
+    "Continue in Clean Your TV on your computer or Android phone.": "Continuez dans Clean Your TV sur votre ordinateur ou votre téléphone Android."
+  },
+  "it": {
+    "Repair updates": "Ripara gli aggiornamenti",
+    "Update Clean Your TV": "Aggiorna Clean Your TV",
+    "Continue in Clean Your TV on your computer or Android phone.": "Continua in Clean Your TV sul computer o sul telefono Android."
+  },
+  "pt-BR": {
+    "Repair updates": "Reparar as atualizações",
+    "Update Clean Your TV": "Atualizar o Clean Your TV",
+    "Continue in Clean Your TV on your computer or Android phone.": "Continue no Clean Your TV pelo computador ou celular Android."
+  },
+  "ko": {
+    "Repair updates": "업데이트 복구",
+    "Update Clean Your TV": "Clean Your TV 업데이트",
+    "Continue in Clean Your TV on your computer or Android phone.": "컴퓨터나 Android 휴대전화에서 Clean Your TV를 열고 계속하세요."
+  },
+  "hi": {
+    "Repair updates": "अपडेट ठीक करें",
+    "Update Clean Your TV": "Clean Your TV अपडेट करें",
+    "Continue in Clean Your TV on your computer or Android phone.": "अपने कंप्यूटर या Android फ़ोन पर Clean Your TV में आगे बढ़ें।"
+  },
+  "pl": {
+    "Repair updates": "Napraw aktualizacje",
+    "Update Clean Your TV": "Zaktualizuj Clean Your TV",
+    "Continue in Clean Your TV on your computer or Android phone.": "Kontynuuj w Clean Your TV na komputerze lub telefonie z Androidem."
+  },
+  "cs": {
+    "Repair updates": "Opravit aktualizace",
+    "Update Clean Your TV": "Aktualizovat Clean Your TV",
+    "Continue in Clean Your TV on your computer or Android phone.": "Pokračujte v aplikaci Clean Your TV na počítači nebo telefonu s Androidem."
+  },
+  "ro": {
+    "Repair updates": "Repară actualizările",
+    "Update Clean Your TV": "Actualizează Clean Your TV",
+    "Continue in Clean Your TV on your computer or Android phone.": "Continuă în Clean Your TV pe computer sau pe telefonul Android."
+  },
+  "zh-Hans": {
+    "Repair updates": "修复更新",
+    "Update Clean Your TV": "更新 Clean Your TV",
+    "Continue in Clean Your TV on your computer or Android phone.": "请在电脑或安卓手机上打开 Clean Your TV 并继续。"
+  },
+  "zh-Hant": {
+    "Repair updates": "修復更新",
+    "Update Clean Your TV": "更新 Clean Your TV",
+    "Continue in Clean Your TV on your computer or Android phone.": "請在電腦或 Android 手機上開啟 Clean Your TV 並繼續。"
   }
 });

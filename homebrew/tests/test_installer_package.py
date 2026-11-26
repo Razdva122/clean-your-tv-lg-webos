@@ -1,12 +1,39 @@
 import io
 import json
 import tarfile
+import tempfile
+from pathlib import Path
+from unittest.mock import patch
 import unittest
 from cytv import package
 from homebrew import build
 
 class InstallerPackageTests(unittest.TestCase):
     def raw(self,files):return build.installer_ipk('0.0.0',files)
+    def test_homebrew_payload_requires_a_hidden_new_generation_home(self):
+        info = {'id': build.IDENTITIES['root'], 'cytvProductGeneration': 2, 'visible': False}
+        build.require_tile_home(info)
+        for incompatible in ({'visible': True}, {'cytvProductGeneration': 1},
+                             {'cytvProductGeneration': '2'}, {'id': 'com.gathin.tvhome'}):
+            with self.subTest(incompatible), self.assertRaisesRegex(ValueError, 'second-generation'):
+                build.require_tile_home(dict(info, **incompatible))
+
+    def test_host_tiles_bind_one_edition_and_exclude_homebrew_installer(self):
+        with tempfile.TemporaryDirectory() as temp, patch('scripts.tv_web_build.compile_web', side_effect=lambda files: files):
+            for edition in ('root','no-root'):
+                target = Path(temp) / (edition+'.ipk')
+                self.assertEqual(build.build_tile(target,'1.2.3',edition), target)
+                raw = target.read_bytes()
+                info = build.installer_metadata(raw)
+                self.assertEqual(info['cytvTileEdition'], edition)
+                self.assertEqual((info['cytvTileProtocol'], info['title']), (1, 'Clean Your TV'))
+                files = build.installer_files(raw)
+                self.assertIn(json.dumps(edition).encode(), files[build.APP_PREFIX+'tile-config.js'])
+                self.assertIn(build.APP_PREFIX+'recovery.html', files)
+                self.assertFalse(any(name.endswith(('setup.html','bridge.js','bootstrap.js')) or '/payload/' in name for name in files))
+            with self.assertRaises(ValueError):
+                build.build_tile(Path(temp)/'unknown.ipk','1.2.3','auto')
+
     def test_homebrew_catalog_can_read_installed_size_in_bytes(self):
         files = {build.APP_PREFIX + 'index.html': b'x' * 12000,
                  build.PACKAGE_INFO: b'{}'}
@@ -18,7 +45,7 @@ class InstallerPackageTests(unittest.TestCase):
         self.assertEqual(build.installer_files(raw), files)
 
     def test_metadata_rejects_absent_or_incorrect_control_size(self):
-        info = {'id': build.APP_ID, 'version': '0.0.0', 'title': 'CYTV Installer',
+        info = {'id': build.APP_ID, 'version': '0.0.0', 'title': 'Clean Your TV',
                 'type': 'web', 'main': 'index.html'}
         parts = package.read_ar(self.raw({build.APP_PREFIX + 'appinfo.json': json.dumps(info).encode()}))
         with tarfile.open(fileobj=io.BytesIO(parts['control.tar.gz'])) as archive:
@@ -33,7 +60,7 @@ class InstallerPackageTests(unittest.TestCase):
 
     def test_dedicated_metadata_reader_accepts_only_fixed_installer_identity(self):
         prefix='usr/palm/applications/io.github.razdva122.cytvinstaller/'
-        raw=self.raw({prefix+'appinfo.json':json.dumps({'id':'io.github.razdva122.cytvinstaller','version':'0.0.0','title':'CYTV Installer','type':'web','main':'index.html'}).encode(),prefix+'payload/runtime.tar.gz':b'x'*(17*1024*1024)})
+        raw=self.raw({prefix+'appinfo.json':json.dumps({'id':'io.github.razdva122.cytvinstaller','version':'0.0.0','title':'Clean Your TV','type':'web','main':'index.html'}).encode(),prefix+'payload/runtime.tar.gz':b'x'*(17*1024*1024)})
         with self.assertRaises(ValueError):package.data_files(raw)
         self.assertEqual(build.installer_metadata(raw)['version'],'0.0.0')
         with self.assertRaises(ValueError):build.installer_metadata(self.raw({'usr/palm/applications/foreign/appinfo.json':b'{}'}))

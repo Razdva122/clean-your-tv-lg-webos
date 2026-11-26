@@ -375,9 +375,9 @@ jobs:
           tag='v'+versions['release']
           Path('build').mkdir(exist_ok=True)
           Path('dist').mkdir(exist_ok=True)
-          subprocess.run([sys.executable,'root-edition/build.py','--output','build/homebrew-root','--version',versions['root']],check=True)
+          subprocess.run([sys.executable,'root-edition/build.py','--single-tile','--output','build/homebrew-root','--version',versions['root']],check=True)
           subprocess.run([sys.executable,'root-edition/build_updater.py','--output','build/homebrew-updater'],check=True)
-          subprocess.run([sys.executable,'system-updater/build.py','--output','build/homebrew-supervisor'],check=True)
+          subprocess.run([sys.executable,'system-updater/build.py','--single-tile','--output','build/homebrew-supervisor'],check=True)
           approval=json.loads(approval_path.read_text()) if approval_path.exists() else {}
           if approval.get('release') != tag: approval={}
           runtime=prime_cache(Path(os.environ['RUNNER_TEMP'])/'homebrew-python', print)

@@ -35,6 +35,29 @@ class BootstrapFixture(unittest.TestCase):
         test_activation.ActivationTests.tearDown(self)
 
 class BootstrapRecoveryTests(BootstrapFixture):
+    def test_tile_recovery_is_bound_to_generation_edition_and_exact_transaction(self):
+        from test_core import release
+        current=release('1.0.0');current.update(schema=2,components=current['components'][:2])
+        candidate=dict(current,release='v2.0.0')
+        self.runtime.product.write('baseline',current)
+        self.runtime.product.write('bootstrap-bundle',{'bundle':{'product_schema':2,'engine_version':'2.0.0'}})
+        self.runtime.product.write('bootstrap',{'phase':'complete','edition':'no-root'})
+        self.catalog.update(schema=2,releases={'no-root':candidate})
+        active={'edition':'no-root','transaction':self.identifier}
+        with self.assertRaisesRegex(ValueError,'matching single-tile'):
+            self.runtime.handle('rollback',dict(active,edition='root'))
+        with self.assertRaisesRegex(ValueError,'transaction changed'):
+            self.runtime.handle('rollback',dict(active,transaction='c'*32))
+        self.runtime.product.write('transaction',{'edition':'no-root','prior':release('1.0.0'),'candidate':release('2.0.0')})
+        with self.assertRaisesRegex(ValueError,'another product'):
+            self.runtime.handle('rollback',active)
+        self.assertFalse(self.owner.status()['terminal'])
+        (self.runtime.state/'transaction.json').unlink()
+        status=self.runtime.handle('status',{'edition':'no-root'})
+        self.assertEqual(status['id'],active['transaction'])
+        self.runtime.handle('rollback',active)
+        self.assertTrue(self.owner.status()['terminal'])
+
     def test_download_failure_can_retry_same_offer_and_profile(self):
         with patch.object(self.bootstrap,'policy',side_effect=lambda method,*a: self.catalog if method=='verify' else (_ for _ in ()).throw(OSError('offline'))):
             self.runtime.worker()

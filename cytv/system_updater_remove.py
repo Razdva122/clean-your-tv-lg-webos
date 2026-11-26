@@ -86,8 +86,28 @@ def bootstrap(state):
     for name,sha in code['code'].items():
         path=Path(name)
         if path.is_absolute() or '..' in path.parts or str(path)!=name or not re.fullmatch('[a-f0-9]{64}',sha) or hashlib.sha256(read(state/'code'/name)).hexdigest()!=sha:raise ValueError('Supervisor code integrity mismatch')
-    baseline=json.loads(read(state/'baseline.json'));expected={'root','root-updater','root-infrastructure'} if value['edition']=='root' else {'home','helper','updater'}
-    if baseline.get('schema')!=1 or baseline.get('supervisor')!=1 or baseline.get('edition')!=value['edition'] or not isinstance(baseline.get('components'),list) or len(baseline['components'])!=len(expected) or {c.get('name') for c in baseline['components']}!=expected:raise ValueError('Invalid supervisor baseline receipt')
+    baseline=json.loads(read(state/'baseline.json'))
+    marker='system_updater/product-generation.json'
+    schema=2 if marker in code['code'] else 1
+    if schema==2:
+        anchor=json.loads(read(state/'bootstrap-bundle.json'))
+        bundle=anchor.get('bundle')
+        if (anchor.get('schema')!=1 or not isinstance(bundle,dict) or bundle.get('schema')!=1
+                or bundle.get('supervisor')!=1 or bundle.get('product_schema')!=2 or not isinstance(bundle.get('files'),dict)
+                or set(bundle['files'])!=set(code['code'])|{'setup-system-updater.py','system-updater.ipk'}
+                or any(bundle['files'][name]!=sha for name,sha in code['code'].items())
+                or read(state/'code'/marker)!=b'2\n' or 'root-provision.py' not in code['code']):
+            raise ValueError('Invalid single-tile supervisor origin')
+        value=dict(value,product_schema=2,bootstrap_digest=hashlib.sha256(json.dumps(bundle,sort_keys=True,separators=(',',':')).encode()).hexdigest())
+        if 'request' in anchor:
+            request=anchor['request']
+            if (value['edition']!='no-root' or not isinstance(request,dict) or set(request)!={'id','lease'}
+                    or any(not isinstance(token,str) or not re.fullmatch('[a-f0-9]{32}',token) for token in request.values())):
+                raise ValueError('Invalid original host setup request')
+            value['setup_id']=request['id']
+    expected={'root','root-infrastructure'} if value['edition']=='root' else {'home','helper'}
+    if schema==1:expected.add('root-updater' if value['edition']=='root' else 'updater')
+    if type(baseline.get('schema')) is not int or baseline.get('schema')!=schema or baseline.get('supervisor')!=1 or baseline.get('edition')!=value['edition'] or not isinstance(baseline.get('components'),list) or len(baseline['components'])!=len(expected) or {c.get('name') for c in baseline['components']}!=expected:raise ValueError('Invalid supervisor baseline receipt')
     for item in baseline['components']:
         sha=item.get('sha256','');size=item.get('size')
         if not re.fullmatch('[a-f0-9]{64}',sha) or item.get('local') is not True or type(size) is not int or not 0<size<=64*1024*1024:raise ValueError('Invalid supervisor baseline descriptor')
@@ -261,7 +281,7 @@ def operate(action,state=STATE,base=Path('/var/luna-service2-dev'),hook=Path('/v
             elif record is None or (hook_read(saved/key,state,hook,APP,installed,expected['hook']) if key=='hook' else read(saved/key))!=expected[key]:raise ValueError('Supervisor registration missing without ownership proof: '+key)
         repair=root_removal_repair(legacy,base) if record is not None and record.get('phase')=='disabled' else None
         if action=='status' and record is None and any(read(Path(name))!=entry['disabled'].encode() for name,entry in legacy.items()):raise ValueError('Legacy lockdown is not active')
-        if action=='status':return {'present':True,'bootstrap_complete':record is None,'edition':setup['edition'],'ownership_verified':True,'disabled':record is not None and record['phase']=='disabled','archive':destination}
+        if action=='status':return {'present':True,'bootstrap_complete':record is None,'edition':setup['edition'],'ownership_verified':True,'disabled':record is not None and record['phase']=='disabled','archive':destination,**{k:setup[k] for k in ('product_schema','bootstrap_digest','setup_id') if k in setup}}
         if action=='disable' and record is not None and record['phase']=='disabled':
             stop_processes(state/'code');idle()
             if repair is not None:write(*repair)

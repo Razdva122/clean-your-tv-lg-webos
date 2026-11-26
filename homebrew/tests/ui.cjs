@@ -1,4 +1,5 @@
 'use strict';
+require('./tile.cjs');
 const assert = require('assert'),
   fs = require('fs'),
   path = require('path');
@@ -14,7 +15,6 @@ const SOURCE_APP = path.resolve(__dirname, '../app'),
     fs.existsSync(path.join(APP, 'index.html')),
     'TV installer interface is required'
   );
-  let packagedComponents;
   if (path.resolve(APP) !== SOURCE_APP) {
     const metadata = { window: {} };
     vm.runInNewContext(
@@ -29,13 +29,6 @@ const SOURCE_APP = path.resolve(__dirname, '../app'),
         'packaged version for ' + key
       );
     }
-    packagedComponents =
-      'Root Home ' +
-      versions.root +
-      ' · Root Updater ' +
-      versions['root-updater'] +
-      ' · System Updater ' +
-      versions.supervisor;
   }
   const catalog = fs.readFileSync(path.join(APP, 'i18n.js'), 'utf8'),
     sandbox = {
@@ -88,7 +81,10 @@ const SOURCE_APP = path.resolve(__dirname, '../app'),
     'continueOriginal',
     'resumeConfirm',
     'homebrewDeniedTitle',
-    'homebrewDeniedBody'
+    'homebrewDeniedBody',
+    'existingSetup',
+    'readyHome',
+    'removeProductConfirm'
   );
   for (const locale of Object.keys(sandbox.window.InstallerI18n.names)) {
     sandbox.window.InstallerI18n.set(locale);
@@ -232,6 +228,7 @@ const SOURCE_APP = path.resolve(__dirname, '../app'),
                 code: window.model.code,
                 installation: {
                   state: window.model.state,
+                  tile_protocol: window.model.legacy ? undefined : 1,
                   can_install: window.model.state === 'fresh',
                   can_maintain: window.model.state === 'installed',
                   migrate_available:
@@ -259,7 +256,7 @@ const SOURCE_APP = path.resolve(__dirname, '../app'),
       { state, ID, LEASE, SHA, locale }
     );
     const page = await context.newPage();
-    await page.goto('https://cytv.test/index.html');
+    await page.goto('https://cytv.test/setup.html');
     await page.waitForSelector('[data-screen]');
     return { context, page };
   }
@@ -278,10 +275,7 @@ const SOURCE_APP = path.resolve(__dirname, '../app'),
       0
     );
     assert.equal(await p.evaluate(() => document.activeElement.id), 'install');
-    assert.equal(
-      await p.locator('.details').innerText(),
-      packagedComponents || 'Root Home + Root Updater + System Updater'
-    );
+    assert(!(await p.locator('#content').innerText()).includes('Updater'));
     await p.locator('#language').click();
     for (const [code, font] of [
       ['zh-Hans', 'CYTVChineseSC'],
@@ -371,52 +365,23 @@ const SOURCE_APP = path.resolve(__dirname, '../app'),
       'reopening never resubmits'
     );
     await f.context.close();
-    f = await fixture(
-      {
-        state: 'fresh',
-        migrateAvailable: true,
-        candidate: packagedComponents
-          ? undefined
-          : {
-              root: '1.2.3',
-              'root-updater': '2.3.4',
-              supervisor: '3.4.5'
-            }
-      },
-      'ru'
-    );
-    p = f.page;
-    await p.waitForSelector('[data-screen="review"]');
-    assert.equal(
-      await p.locator('.details p').first().innerText(),
-      packagedComponents ||
-        'Root Home 1.2.3 · Root Updater 2.3.4 · System Updater 3.4.5'
-    );
-    assert(
-      (await p.locator('.details').innerText()).includes(
-        await p.evaluate(() => InstallerI18n.t('migrationAvailable'))
-      )
-    );
-    assert.equal(
-      await p.locator('#supervisor,#migrate,input[type=checkbox]').count(),
-      0
-    );
-    await p.locator('#install').click();
-    assert(
-      (await p.evaluate(() => calls)).every((call) => call.includes(' inspect'))
-    );
-    await p.locator('#confirm').click();
-    await p.waitForSelector('[data-screen="progress"]');
-    const migrated = (await p.evaluate(() => calls)).filter((call) =>
-      call.includes(' install ')
-    );
-    assert.equal(migrated.length, 1);
-    assert(
-      migrated[0].endsWith(
-        '--prepare-supervisor --migrate-packaged-home --activate-after-install'
-      )
-    );
-    await f.context.close();
+    for (const existing of [
+      { state: 'fresh', migrateAvailable: true },
+      { state: 'installed', legacy: true }
+    ]) {
+      f = await fixture(existing, 'ru');
+      await f.page.waitForSelector('[data-screen="existing-installation"]');
+      assert.equal(
+        await f.page.locator('#install,#remove,#activate').count(),
+        0
+      );
+      assert(
+        (await f.page.evaluate(() => calls)).every((call) =>
+          call.includes(' inspect')
+        )
+      );
+      await f.context.close();
+    }
     for (const [state, code, textKey] of [
       ['external_setup', 'root_setup_on_computer', 'externalRootSetup'],
       ['external_setup', 'legacy_node_on_computer', 'legacyNodeSetup'],
@@ -450,7 +415,7 @@ const SOURCE_APP = path.resolve(__dirname, '../app'),
       ['pending', true, 'progress', 'activationPending'],
       ['unverified', true, 'recovery', 'activationUnverified'],
       ['cancelled', true, 'installed', 'activationCancelled'],
-      ['finished', false, 'installed', 'installedBody'],
+      ['finished', false, 'installed', 'readyHome'],
       ['superseded', false, 'review', 'reviewBody'],
       ['active', false, 'recovery', 'activationUnverified'],
       ['active', true, 'installed', 'activationDone']
@@ -535,7 +500,11 @@ const SOURCE_APP = path.resolve(__dirname, '../app'),
     await f.context.close();
     for (const [afterPrepare, screen, submits] of [
       [{ state: 'fresh', pin: SHA }, 'progress', 1],
-      [{ state: 'fresh', pin: SHA, migrateAvailable: true }, 'progress', 1],
+      [
+        { state: 'fresh', pin: SHA, migrateAvailable: true },
+        'existing-installation',
+        0
+      ],
       [{ state: 'fresh', pin: SHA, migrateAvailable: null }, 'recovery', 0],
       [{ state: 'fresh', pin: 'd'.repeat(64) }, 'review', 0],
       [{ state: 'installed', pin: SHA }, 'installed', 0],
@@ -855,7 +824,7 @@ const SOURCE_APP = path.resolve(__dirname, '../app'),
         }
         await p.evaluate(() => {
           model.execDenied = true;
-          document.dispatchEvent(new Event('webOSRelaunch'));
+          document.dispatchEvent(new Event('visibilitychange'));
         });
         await p.waitForSelector('[data-screen="homebrew-access"]');
         assert.equal(await p.locator('#install,#restore,#prepare').count(), 0);

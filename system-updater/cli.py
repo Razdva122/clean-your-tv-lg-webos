@@ -9,16 +9,16 @@ import stat
 import subprocess
 import sys
 import time
-from .core import Manager, SETS, FINISHED, version
+from .core import Manager, SETS, FINISHED, version, RECOVERY_FIELDS, tile_product, check_tile_transaction
 from .device import Device, STATE
-from .support.store import Store, prune_peer_caches
+from .support.store import Store, prune_peer_caches, prune_update_caches
 LEGACY_NODE_BETA = False
 
 FIELDS={'check':{'edition'},'status':set(),'install':{'edition','release','profile'},'restoreProfile':{'edition'},'healthy':{'edition','transaction','version'},'rollback':set(),'reconcile':set()}
 
 
 def validate_request(method,payload):
-    if method not in FIELDS or not isinstance(payload,dict) or set(payload)!=FIELDS[method]:raise ValueError('Invalid system updater request')
+    if method not in FIELDS or not isinstance(payload,dict) or set(payload) not in (FIELDS[method], RECOVERY_FIELDS.get(method)):raise ValueError('Invalid system updater request')
     if 'edition' in payload and payload['edition'] not in SETS:raise ValueError('Invalid edition')
     if 'version' in payload:version(payload['version'])
     if 'release' in payload:
@@ -36,6 +36,9 @@ def handle(method,payload,store,device,wake=spawn_worker):
     if LEGACY_NODE_BETA and method in ('check','install'):
         raise ValueError('Root Beta automatic updates are unavailable; use the computer installer.')
     p=validate_request(method,payload);manager=Manager(store,device)
+    if method in RECOVERY_FIELDS and 'edition' in p:
+        # Mutating handlers run inside the shared device_operation lock.
+        check_tile_transaction(tile_product(store, p['edition']), p)
     device.integrity()
     if method=='status':return manager.status()
     if method=='restoreProfile':return manager.restore_profile(p['edition'])
@@ -80,7 +83,10 @@ def worker(store,device):
                                 except Exception as error:
                                     current['homeResume']={'status':'failed','error':str(error)[:512]};current['error']=str(error)[:1024]
                                 store.write('transaction',current)
-                    prune_peer_caches(store, device.root_updater)
+                    if device.product_schema() == 2:
+                        prune_update_caches([store])
+                    else:
+                        prune_peer_caches(store, device.root_updater)
                     return
             time.sleep(1 if tx['phase'] in ('verifying','verifying-rollback') else .05)
     finally:os.close(fd)
@@ -189,7 +195,9 @@ def main():
     if method in ('status','check','restoreProfile'):
         return handle(method,payload,store,device)
     if method != 'install' and store.read('transaction') is None:
-        if method in ('rollback','reconcile'):return None
+        if method in ('rollback','reconcile'):
+            if 'transaction' in payload:raise ValueError('Recovery transaction changed')
+            return None
         raise ValueError('Stale health signal')
     from installation import device_operation
     operation=healthy_operation(payload,store,device) if method=='healthy' else device_operation('system-update',recovery=True)

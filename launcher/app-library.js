@@ -9,7 +9,8 @@
     'com.gathin.tvhome',
     'com.local.nativehome',
     'com.cleanyourtv.root.preview',
-    'com.cleanyourtv.updater'
+    'com.cleanyourtv.updater',
+    'io.github.razdva122.cytvinstaller'
   ];
   var pickerExcluded = [
     'com.sdk.ares.hostedapp',

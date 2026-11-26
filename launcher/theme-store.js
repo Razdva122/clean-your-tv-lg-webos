@@ -294,6 +294,30 @@
   }
   root.ThemeStore = {
     list: list,
+    readProfileRecords: function (visit) {
+      return operation('readonly', function (store, set, tx) {
+        var request = store.openCursor();
+        request.onsuccess = function () {
+          var cursor = request.result;
+          if (!cursor) return;
+          try {
+            visit(cursor.key, cursor.value);
+            cursor.continue();
+          } catch (error) {
+            tx.storageError = error;
+            tx.abort();
+          }
+        };
+      });
+    },
+    replaceProfileRecords: function (packs) {
+      return operation('readwrite', function (store) {
+        store.clear();
+        packs.forEach(function (pack) {
+          store.put(pack);
+        });
+      });
+    },
     clear: function () {
       return operation('readwrite', function (store) {
         store.clear();

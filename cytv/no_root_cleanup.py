@@ -13,7 +13,7 @@ from .errors import (TVRejected, UserError, TVCommandError, TV_STORAGE_FULL, CLE
                      OBSERVER_EXCEPTION_NAMES, OBSERVER_EXCEPTION_CODES,
                      OBSERVER_FILESYSTEM_OPERATIONS, ROOT_CLEANUP_ACCESS_REQUIRED, connection_interrupted, no_root_cleanup_details)
 from .transport import LunaReplyUnconfirmed
-from .package import SCREENSAVER_APP
+from .package import SCREENSAVER_APP, TILE_APP
 
 from .tv_sources import node_loader, trusted_source
 
@@ -623,8 +623,8 @@ function next(){if(!stages.length){process.stdout.write(JSON.stringify(reply));r
  try{pin=fs.lstatSync(dir);if(!pin.isDirectory()||pin.isSymbolicLink()){if(known)visit(dir,'installer-staging');next();return;}files=fs.readdirSync(dir);}catch(e){if(known)blocked('installer-staging',e);next();return;}
  function retire(name,expected){if(!expected)return;owned=true;try{if(!same(pin,fs.lstatSync(dir)))fail();if(input.action==='sweep')remove(dir+'/'+name,expected);if(exists(dir+'/'+name))reply.present.push('installer-staging '+name);}catch(e){blocked('installer-staging',e);}}
  function file(){if(!files.length){try{if(input.action==='sweep'&&(known||owned)&&same(pin,fs.lstatSync(dir))&&!fs.readdirSync(dir).length)fs.rmdirSync(dir);}catch(e){blocked('installer-staging',e);}next();return;}
-  var name=files.shift(),index=['helper.ipk','launcher.ipk','updater.ipk','screensaver.ipk'].indexOf(name);if(index<0){if(known)retire(name,exists(dir+'/'+name));file();return;}
-  controlIdentity(dir+'/'+name,function(error,app,expected){if(error){if(known)retire(name,exists(dir+'/'+name));file();return;}if(app===apps[index])retire(name,expected);file();});
+  var name=files.shift(),index=['helper.ipk','launcher.ipk','updater.ipk','screensaver.ipk','tile-no-root.ipk'].indexOf(name);if(index<0){if(known)retire(name,exists(dir+'/'+name));file();return;}
+  controlIdentity(dir+'/'+name,function(error,app,expected){if(error){if(known)retire(name,exists(dir+'/'+name));file();return;}if(app===(index===4?'io.github.razdva122.cytvinstaller':apps[index]))retire(name,expected);file();});
  }file();
 }next();
 }());
@@ -636,9 +636,14 @@ def _program(request):
     # Keep the SSH exec request tiny; old TV SSH servers reject long argv.
     source = PRIVATE_CLEANUP_PROGRAM
     if request.get('cancellation') or request.get('missing_capsule'):
-        from .no_root_cancellation import COMPANION_SOURCE, SOURCE
+        from .no_root_cancellation import COMPANION_SOURCE, SOURCE, cancellation_source
+        from .no_root_observer import PROGRAM, companion_source
         plan = request.get('plan') or request.get('missing_capsule') or {}
-        cancellation = COMPANION_SOURCE if plan.get('screensaver') is True else SOURCE
+        if plan.get('tile') is True or plan.get('maintenance'):
+            cancellation = cancellation_source(companion_source(PROGRAM, tile=plan.get('tile') is True,
+                screensaver=plan.get('screensaver') is True, maintenance=plan.get('maintenance')))
+        else:
+            cancellation = COMPANION_SOURCE if plan.get('screensaver') is True else SOURCE
         source = source.replace('/* CYTV_OWNED_CANCELLATION */null', cancellation)
     if request.get('action') in CLEANUP_BOOT_ACTIONS:
         # Semantic failure envelope follows the observer protocol: SSH completion
@@ -674,11 +679,14 @@ def _missing_capsule_receipt(previous):
     if 'previous' in previous:
         return None
     try:
-        components = observer.APPS + ((SCREENSAVER_APP,) if SCREENSAVER_APP in previous['versions'] else ())
+        screensaver = SCREENSAVER_APP in previous['versions']
+        tile = TILE_APP in previous['versions']
+        maintenance = previous.get('maintenance')
+        components = [app for app, _ in observer.installation_components(screensaver, tile, maintenance)]
         versions = [previous['versions'][app] for app in components]
-        configuration = {name: previous['expected'][HELPER_STATE+'/'+name]
-                         for name in ('ssap-key.json', 'apps.json')}
-    except (KeyError, TypeError):
+        configuration = {} if maintenance else {
+            name: previous['expected'][HELPER_STATE+'/'+name] for name in ('ssap-key.json', 'apps.json')}
+    except (KeyError, TypeError, UserError):
         return None
     if not all(isinstance(value, str) for value in versions) or not all(
             isinstance(value, str) and re.fullmatch('[a-f0-9]{64}', value)
@@ -687,16 +695,17 @@ def _missing_capsule_receipt(previous):
     original_source = hashlib.sha256(observer.PROGRAM.encode()).hexdigest()
     packaged_source = hashlib.sha256(observer.PACKAGED_STATE_PROGRAM.encode()).hexdigest()
     source = previous.get('observer_source_sha256', original_source)
-    screensaver = len(components) > len(observer.APPS)
     supported = (original_source, packaged_source)
-    if screensaver:
-        supported = tuple(hashlib.sha256(observer.companion_source(program).encode()).hexdigest()
+    if screensaver or tile or maintenance:
+        supported = tuple(hashlib.sha256(observer.companion_source(program, tile=tile, screensaver=screensaver,
+                          maintenance=maintenance).encode()).hexdigest()
                           for program in (observer.PROGRAM, observer.PACKAGED_STATE_PROGRAM))
     if source not in supported:
         return None
     return {'operation': operation, 'diagnostic_id': diagnostic_id, 'versions': versions,
             'configuration_sha256': hashlib.sha256(observer.canonical(configuration).encode()).hexdigest(),
-            'screensaver': screensaver,
+            'screensaver': screensaver, **({'tile': True} if tile else {}),
+            **({'maintenance': maintenance} if maintenance else {}),
             'source_sha256': source,
             'default_root': observer.ROOT, 'roots': [observer.ROOT, observer.JAIL_ROOT]}
 
@@ -915,6 +924,47 @@ def _remove_package(installer, app):
         raise
 
 
+def remove_single_tile(installer, *, check_only=False):
+    """Retire only this edition's verified light entry on explicit product removal."""
+    manifest = getattr(installer, 'manifest', {})
+    pending = installer.store.pending(installer.profile) or {}
+    status = pending.get('tile_removal')
+    if status == 'submitted':
+        raise UserError('The TV package result could not be verified. Review recovery options before continuing.',
+                        reason_code='pending-operation')
+    installed = any(row.get('id') == TILE_APP for row in installer.installed_apps())
+    if not installed:
+        if 'single_tile' in manifest or status is not None:
+            installer.verify_absent(TILE_APP)
+        return
+    if status == 'terminal':
+        raise UserError('A removed package is present again. Recovery data was kept.', reason_code='cleanup-check-failed')
+    from .operations import BASE
+    # Some SAMs filter custom appinfo keys. Classify the installed metadata
+    # independently instead of treating a missing API field as Homebrew.
+    from .single_tile_setup import installed_role
+    role = installed_role(installer)
+    if role == 'homebrew':
+        return
+    if role != installer.profile['edition']:
+        raise UserError('The installed Clean Your TV entry belongs to another installation.',
+                        reason_code='cleanup-check-failed')
+    if 'single_tile' not in manifest:
+        raise UserError('Use the installer for the installed Clean Your TV version.',
+                        reason_code='cleanup-check-failed')
+    from . import package
+    from .no_root_observer import files_match
+    raw, _ = package.tile_payload(installer.payload, installer.manifest, installer.profile['edition'])
+    files_match(installer, {BASE.removesuffix('/usr/palm') + '/' + path: hashlib.sha256(data).hexdigest()
+                            for path, data in package.data_files(raw).items()})
+    if check_only:
+        return
+    installer.store.checkpoint(installer.profile, tile_removal='submitted')
+    _remove_package(installer, TILE_APP)
+    installer.store.checkpoint(installer.profile, tile_removal='terminal')
+    installer.verify_absent(TILE_APP)
+
+
 def _input_request(installer, method, payload):
     try:
         return installer.remote.luna('com.webos.service.eim/' + method, payload)
@@ -1041,6 +1091,9 @@ def continue_removal(installer, expected_pending):
     pending = installer.store.pending(installer.profile)
     if pending != expected_pending or not pending or pending.get('recovery_protocol') != 'clean-removal-v1':
         raise UserError('Removal evidence changed. Recovery data was kept.', reason_code='pending-operation')
+    # A mismatched installer cannot begin dismantling the daily product and
+    # discover only at the last step that it cannot remove the entry it owns.
+    remove_single_tile(installer, check_only=True)
     previous = pending.get('previous')
     legacy_install = (isinstance(previous, dict) and previous.get('action') == 'install'
                       and previous.get('stage') == 'pending' and 'recovery_protocol' not in previous)
@@ -1207,6 +1260,7 @@ def continue_removal(installer, expected_pending):
             record_restart(decision='observation-blocked')
         if not stopped or (guard and not _input_absent(installer)):
             raise UserError('TV controls could not be verified. Recovery data was kept.', reason_code='controls-unverified')
+        remove_single_tile(installer)
         return finish(pending['result'])
 
     def catalog():
@@ -1631,6 +1685,7 @@ def continue_removal(installer, expected_pending):
     if final['present'] or final['blocked'] or swept['blocked']:
         result['temporary_files_retained'] = True
         installer.progress('Some temporary recovery files were kept.')
+    remove_single_tile(installer)
     store.checkpoint(profile, stage='verified-clean', removal_reason='removal-verified', result=result,
                      cleanup_helper_kernel_changed=retained_cleanup_reboot and
                      any(result.get(key) is True for key in

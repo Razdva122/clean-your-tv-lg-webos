@@ -285,18 +285,35 @@
     }
     window.HomeUpdates = {
       open: function (options) {
+        function fallback() {
+          if (window.CYTVProductGeneration !== 2) return legacyOpen(options);
+          if (window.SystemUpdates && window.SystemUpdates.openExternal)
+            return window.SystemUpdates.openExternal({
+              edition: 'no-root',
+              onClose: options && options.onClose
+            });
+          window.alert(
+            tr(
+              'Continue in Clean Your TV on your computer or Android phone.'
+            )
+          );
+          if (options && options.onClose) options.onClose();
+        }
+        if (
+          window.CYTVProductGeneration === 2 &&
+          window.CYTVNoRootConnection === 'developer-mode'
+        )
+          return fallback();
         if (window.SystemUpdates) {
           panel.classList.add('hidden');
           var value = {
             edition: 'no-root',
             onClose: options && options.onClose,
-            fallback: function () {
-              legacyOpen(options);
-            }
+            fallback: fallback
           };
           return window.SystemUpdates.open(value);
         }
-        return legacyOpen(options);
+        return fallback();
       },
       rpc: rpc
     };

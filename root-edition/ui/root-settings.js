@@ -164,6 +164,7 @@
         );
       }
       function legacy() {
+        if (window.CYTVProductGeneration === 2) return Promise.resolve();
         return window.RootUpdates.rpc('check', {}).then(function (offer) {
           if (offer)
             badge(

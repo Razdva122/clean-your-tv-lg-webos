@@ -110,7 +110,7 @@ class EngineBuildTests(unittest.TestCase):
 
     def test_catalog_covers_both_editions_and_graphics_from_exact_manifests(self):
         builder = load('build')
-        manifests = {name: {'edition': name.removesuffix('-720p'), 'release': 'v1.23.0'}
+        manifests = {name: {'schema': 1, 'edition': name.removesuffix('-720p'), 'release': 'v1.23.0'}
                      for name in ('root', 'root-720p', 'no-root', 'no-root-720p')}
         raw = b'verified-engine-archive'
         catalog = builder.engine_catalog(raw, manifests, 'v1.23.0')

@@ -387,6 +387,28 @@ async function settle() {
     !broken.calls.some((c) => c.method === 'install'),
     'incomplete capture must block installation'
   );
+  for (const edition of ['root', 'no-root']) {
+    for (const trouble of ['unreadable', 'over-budget', null]) {
+      const b = harness({ edition });
+      b.window.CYTVProductGeneration = 2;
+      b.window.HomeBrowserProfile = {
+        capture: async () => {
+          if (trouble === 'unreadable') throw Error('Storage unavailable');
+          return trouble === 'over-budget'
+            ? { value: 'a'.repeat(4 * 1024 * 1024) }
+            : { schema: 1, local: {}, themes: [], wallpapers: [] };
+        }
+      };
+      await b.window.SystemUpdates.open({ edition });
+      b.ids.systemUpdateInstall.click();
+      b.confirmation.accept();
+      await settle();
+      const installs = b.calls.filter((call) => call.method === 'install');
+      assert.equal(installs.length, trouble ? 0 : 1);
+      if (!trouble)
+        assert.equal(installs[0].payload.profile.browserState.schema, 1);
+    }
+  }
   const standalone = harness({ standalone: true });
   standalone.state = { id: 'old', phase: 'complete', canRollback: true };
   await standalone.window.SystemUpdates.open({
@@ -404,6 +426,87 @@ async function settle() {
   standalone.confirmation.accept();
   await settle();
   assert(standalone.calls.some((c) => c.method === 'rollback'));
+  const foreign = harness({ standalone: true });
+  foreign.state = {
+    edition: 'root',
+    id: 'foreign',
+    phase: 'complete',
+    canRollback: true
+  };
+  await foreign.window.SystemUpdates.open({
+    edition: 'no-root',
+    standalone: true,
+    recovery: true
+  });
+  assert(foreign.ids.systemUpdateRollback.disabled);
+  foreign.ids.systemUpdateRecovery.click();
+  await settle();
+  assert(!foreign.calls.some((c) => c.method === 'reconcile'));
+  const external = harness();
+  let closedExternal = false;
+  await external.window.SystemUpdates.openExternal({
+    edition: 'no-root',
+    onClose() {
+      closedExternal = true;
+    }
+  });
+  assert.match(
+    external.ids.systemUpdateStatus.textContent,
+    /computer or Android phone/
+  );
+  assert.equal(external.document.activeElement, external.ids.systemUpdateBack);
+  external.key(461);
+  assert(closedExternal);
+  assert.equal(external.calls.length, 0);
+  const simple = harness({ edition: 'root' });
+  simple.window.CYTVProductGeneration = 2;
+  simple.offer.installedRelease = 'v1.2.0';
+  simple.offer.selfUpdate = simple.offer.canRepair = true;
+  await simple.window.SystemUpdates.open({ edition: 'root' });
+  assert.equal(
+    simple.ids.systemUpdateInstall.textContent,
+    'Update Clean Your TV'
+  );
+  assert.equal(
+    simple.ids.systemUpdateVersions.textContent,
+    'Installed: v1.2.0  →  Available: v1.3.0'
+  );
+  simple.ids.systemUpdateRecovery.click();
+  await settle();
+  simple.ids.systemUpdateInstall.click();
+  assert.equal(simple.confirmation.opts.title, 'Repair updates');
+  assert.equal(simple.confirmation.opts.action, 'Repair updates');
+  const tile = harness({ standalone: true });
+  tile.state = {
+    edition: 'root',
+    id: 'root-update',
+    phase: 'complete',
+    canRollback: true
+  };
+  const tileOptions = {
+    edition: 'root',
+    standalone: true,
+    singleTile: true,
+    recovery: true
+  };
+  await tile.window.SystemUpdates.open(tileOptions);
+  assert.equal(tile.ids.systemUpdateBack.textContent, 'Back');
+  assert.deepEqual(tile.calls[0].payload, { edition: 'root' });
+  tile.ids.systemUpdateRecovery.click();
+  await settle();
+  tile.ids.systemUpdateRollback.click();
+  tile.confirmation.accept();
+  await settle();
+  for (const method of ['reconcile', 'rollback']) {
+    const call = tile.calls.find((item) => item.method === method);
+    assert.deepEqual(call.payload, {
+      edition: 'root',
+      transaction: 'root-update'
+    });
+  }
+  tile.state = { id: 'unbound', phase: 'complete', canRollback: true };
+  await tile.window.SystemUpdates.open(tileOptions);
+  assert(tile.ids.systemUpdateRollback.disabled);
   const resumeFailure = harness();
   resumeFailure.state = {
     id: 'tx',

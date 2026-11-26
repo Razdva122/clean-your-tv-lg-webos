@@ -260,17 +260,20 @@ def stage_installer_support(payload, work):
                    cwd=ROOT, env=environment, check=True)
 
 
-def _prepare_payload(payload, work, versions):
+def _prepare_payload(payload, work, versions, *, single_tile=False):
     # Compiler intermediates stay local to this attempt. Only Zig's own caches
     # are shared, so a child left running cannot write into a later attempt.
     scratch = payload.parent
     stage_installer_support(payload, work)
-    helper = helper_baseline(versions['helper'])
+    helper = None if single_tile else helper_baseline(versions['helper'])
     if helper is None:
         import ziglang
         zig = Path(ziglang.__file__).parent / ('zig.exe' if os.name == 'nt' else 'zig')
         environment = dict(os.environ, ZIG_GLOBAL_CACHE_DIR=str(work / 'zig-global-cache'), ZIG_LOCAL_CACHE_DIR=str(work / 'zig-cache'))
         app, service = helper_sources()
+        if single_tile:
+            info = json.loads(app['appinfo.json'])
+            app['appinfo.json'] = json.dumps(dict(info, visible=False, cytvProductGeneration=2)).encode()
         for name, sources in {
             'detach': ['native/app/detach.c'],
             'relay': ['native/prototype/relay.c', 'native/prototype/filter.c'],
@@ -285,11 +288,18 @@ def _prepare_payload(payload, work, versions):
     from scripts.screensaver_package import build as screensaver_package
     (payload / 'screensaver.ipk').write_bytes(screensaver_package())
     launcher = {n: b for n, b in tracked_files('launcher').items() if n != 'apps.js' and not n.startswith('icons/')}
+    if single_tile:
+        head = b'<head>'
+        if launcher['index.html'].count(head) != 1:
+            raise ValueError('Missing Home document head')
+        launcher['index.html'] = launcher['index.html'].replace(head, head + b'<script>window.CYTVProductGeneration=2;</script>', 1)
     launcher['config.js'] = b'window.CONFIG = {columns:5,dockApps:[],hiddenApps:["com.gathin.tvhome","com.local.nativehome"]};\n'
     launcher['apps.js'] = b'window.TV_APPS = {apps:[],inputs:[]};\n'
     renewal = {n: b for n, b in tracked_files('renewal-service').items() if not n.startswith('state/')}
     for graphics, paths in GRAPHICS.items():
         app=dict(launcher);info=json.loads(app['appinfo.json']);info['resolution']=graphics
+        if single_tile:
+            info.update(visible=False, cytvProductGeneration=2)
         app['appinfo.json']=(json.dumps(info,indent=2)+'\n').encode()
         (payload / paths['launcher']).write_bytes(pack_app(app, renewal))
     from scripts.chinese_fonts import with_fonts
@@ -304,12 +314,18 @@ def _prepare_payload(payload, work, versions):
     stage_installer_docs(payload)
     stage_theme_previews(payload)
     for graphics, paths in GRAPHICS.items():
-        subprocess.run([sys.executable, 'root-edition/build.py', '--output', str(payload / paths['root']), '--version', versions['root'], '--resolution', graphics], cwd=ROOT, check=True)
+        subprocess.run([sys.executable, 'root-edition/build.py', '--output', str(payload / paths['root']), '--version', versions['root'], '--resolution', graphics,
+                        *(['--single-tile'] if single_tile else [])], cwd=ROOT, check=True)
     keyfilter_guard = stage_c1_root(payload, work, versions['root'], scratch=scratch)
     subprocess.run([sys.executable, 'root-edition/build_updater.py', '--output', str(payload / 'root-updater')], cwd=ROOT, check=True)
     stage_updater(payload)
-    subprocess.run([sys.executable,'system-updater/build.py','--output',str(payload/'system-updater')],cwd=ROOT,check=True)
+    subprocess.run([sys.executable,'system-updater/build.py','--output',str(payload/'system-updater'),
+                    *(['--single-tile'] if single_tile else [])],cwd=ROOT,check=True)
     stage_legacy_root_beta(payload, versions['root'], keyfilter_guard)
+    if single_tile:
+        from homebrew.build import build_tile
+        for edition, name in package.TILE_FILES.items():
+            build_tile(payload / name, versions['release'], edition)
     shutil.copytree(ROOT / 'cytv/licenses', payload / 'licenses/Qt', dirs_exist_ok=True)
     # Ship dependency license metadata as well as application notices in the executable.
     import importlib.metadata
@@ -336,11 +352,13 @@ def _prepare_payload(payload, work, versions):
                 'root_backends': ROOT_BACKENDS,
                 'files': {p.relative_to(payload).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
                           for p in sorted(payload.rglob('*')) if p.is_file()}}
+    if single_tile:
+        manifest['single_tile'] = {**package.TILE_FILES, 'version': versions['release']}
     (payload / 'payload.json').write_text(json.dumps(manifest, indent=2), encoding='utf-8')
 
 
 @contextmanager
-def _payload_build():
+def _payload_build(*, single_tile=False):
     work = ROOT / 'build/cytv'
     workspace = work / '.cytv-payload-build'
     if workspace.resolve() != workspace:
@@ -371,7 +389,10 @@ def _payload_build():
             staged = Path(tempfile.mkdtemp(dir=attempts)) / 'payload'
             staged.mkdir()
             versions = json.loads((ROOT / 'release-versions.json').read_text())
-            _prepare_payload(staged, work, versions)
+            if single_tile:
+                _prepare_payload(staged, work, versions, single_tile=True)
+            else:
+                _prepare_payload(staged, work, versions)
             package.verify_payload(staged)
             verify_release_versions(staged, versions)
             # Replace whole directories. Unlocked readers can briefly see
@@ -400,8 +421,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--payload-only', action='store_true', help='Build and verify TV assets, without freezing')
     parser.add_argument('--desktop', action='store_true', help='Also build the Windows GUI ZIP, macOS app or Debian package')
+    parser.add_argument('--single-tile', action='store_true', help='Build the single-entry candidate installer payload')
     args = parser.parse_args()
-    with _payload_build() as payload:
+    with _payload_build(single_tile=args.single_tile) as payload:
         print('Public TV payload verified:', payload)
         if not args.payload_only:
             build_host(payload, args.desktop)

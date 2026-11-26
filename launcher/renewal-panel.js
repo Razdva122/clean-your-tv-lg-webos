@@ -22,7 +22,11 @@
         // Generic Home updates replace apps.js without a connection marker.
         if (connection === 'root-ssh' || connection === 'developer-mode')
           window.localStorage.setItem(key, connection);
-        else connection = window.localStorage.getItem(key);
+        else {
+          connection = window.localStorage.getItem(key);
+          if (connection === 'root-ssh' || connection === 'developer-mode')
+            window.CYTVNoRootConnection = connection;
+        }
       } catch (_) {}
       return connection !== 'root-ssh';
     }
@@ -83,7 +87,13 @@
     });
     var checkingUpdates = false;
     function checkUpdates() {
-      if (checkingUpdates || !window.HomeUpdates || !window.HomeUpdates.rpc)
+      if (
+        checkingUpdates ||
+        !window.HomeUpdates ||
+        !window.HomeUpdates.rpc ||
+        (window.CYTVProductGeneration === 2 &&
+          window.CYTVNoRootConnection === 'developer-mode')
+      )
         return;
       checkingUpdates = true;
       function badge(available) {
@@ -100,6 +110,7 @@
         );
       }
       function legacy() {
+        if (window.CYTVProductGeneration === 2) return Promise.resolve();
         return new Promise(function (resolve) {
           window.HomeUpdates.rpc('check', {}, function (offer) {
             if (offer)
@@ -196,6 +207,8 @@
       homeStatusRetry = null,
       homeStatusRetries = 0,
       homeBusyRetries = 0;
+    if (window.CYTVProductGeneration === 2)
+      homeStart.textContent = tr('Resume Home control');
     function hideHomeChoice() {
       var focused = document.activeElement === homeToggle;
       homeToggle.hidden = false;
@@ -385,7 +398,11 @@
           homeVisit.disabled = stopped === true;
           homeRetry.hidden = stopped === true;
           if (stopped === true)
-            homeStatus.textContent = tr('Home Helper is stopped.');
+            homeStatus.textContent = tr(
+              window.CYTVProductGeneration === 2
+                ? 'Home control is paused.'
+                : 'Home Helper is stopped.'
+            );
         }
         if (!window.HomeHelper) {
           unavailable(false);

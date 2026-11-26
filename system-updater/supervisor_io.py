@@ -39,6 +39,8 @@ def package_files(raw, descriptor):
 
 def permissions(value):
     clients=('com.gathin.tvhome','com.cleanyourtv.root.preview','com.cleanyourtv.updater','com.cleanyourtv.root.updater')
+    tile='io.github.razdva122.cytvinstaller'
+    clients += (tile,)
     allowed=set(clients)|{name+'-*' for name in clients}
     if not isinstance(value,dict) or set(value)!={'role.json','client.json','api.json'}:raise ValueError('Invalid supervisor permissions')
     role=value['role.json'];client=value['client.json'];api=value['api.json']
@@ -52,6 +54,10 @@ def permissions(value):
     if (not isinstance(api,dict) or not api or len(api)>16 or any(not group(key) or not isinstance(methods,list) or not methods or len(methods)>32
             or any(not isinstance(m,str) or not re.fullmatch(re.escape(SERVICE)+r'/[A-Za-z][A-Za-z0-9]{0,48}',m) for m in methods) for key,methods in api.items())):raise ValueError('Foreign supervisor API')
     if not isinstance(client,dict) or not set(client)<=allowed or any(not isinstance(groups,list) or not set(groups)<=set(api) for groups in client.values()):raise ValueError('Foreign supervisor clients')
+    recovery={SERVICE+'/'+method for method in ('status','rollback','reconcile')}
+    for name in (tile, tile+'-*'):
+        for group in client.get(name, []):
+            if not set(api[group]) <= recovery:raise ValueError('Excessive tile recovery permissions')
     return value
 
 

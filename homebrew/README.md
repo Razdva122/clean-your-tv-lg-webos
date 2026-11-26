@@ -1,6 +1,6 @@
-# Homebrew Installer — unreleased
+# Clean Your TV tile — unreleased
 
-CYTV Installer is an unpublished Homebrew Channel candidate for Root setup.
+The Clean Your TV tile is an unpublished Homebrew Channel candidate for compatible Root TVs.
 The current public installation paths are the desktop and Android installers.
 The candidate and its catalog draft still require exact-package TV acceptance,
 public asset verification, screenshots, human review and catalog approval.
@@ -14,16 +14,42 @@ after Installer is installed. Allow additional space for the selected IPK and
 package-manager staging. See the acceptance record for measured package bytes.
 
 For a fresh Root setup, choose **Install and activate** and confirm once.
-The Installer sets up Root Home, Root Updater and System Updater together.
-It automatically imports compatible Home settings from an earlier Clean Your
-TV setup when it finds them. The same confirmation covers preparation of
-the bundled Python runtime if needed. The Installer checks the payload and
+This includes preparing the bundled Python runtime when needed. The Installer checks the payload and
 the TV again before submitting the packages. It requests activation after
 verifying installation. Restore LG Home cancels outstanding setup approval. After an
 interruption, choose **Check status** to read the original request. This
 one-confirmation workflow awaits physical acceptance on the selected IPK.
 [Candidate setup](../docs/INSTALL.md#candidate-on-tv-root-installation) ·
 [Acceptance record](../docs/development/HOMEBREW-INSTALL-ACCEPTANCE.md)
+
+After verified setup, opening the tile opens your Home. A stopped Home
+controller stays stopped. If Home fails to open, choose **Recovery** to inspect
+an available product rollback or use the computer installer. **Restore LG Home**
+restores LG button routing. It does not change the installed product version.
+
+For an existing older edition, continue on the computer when prompted. Returning
+from the single-tile generation to the older edition requires complete removal
+and a fresh installation of that edition. The tile cannot restore that earlier
+generation. Desktop and Android distributions can install an edition-specific
+tile without the Homebrew payload. Its normal launch uses the TV's application
+manager and works without an Internet connection or a Homebrew status check.
+
+The single-tile desktop and Android candidates let you keep an older installation
+or choose a clean switch. A clean switch removes saved layout, themes, personal
+wallpapers and preferences. No-root also needs fresh pairing. Removal and new
+setup each have their own confirmation. For Root, install the full Homebrew
+tile first so the host can open it when setup is ready.
+
+On a Developer Mode TV already using the single tile, the desktop or Android
+installer can repair a missing tile and update a compatible screensaver.
+It keeps the installed Home and Helper, including the current preferences,
+pairing and stopped state. Replacing Home requires a verified backup of its
+browser data. LG documents that updating a packaged app clears its local
+storage. [Web Storage on webOS TV](https://github.com/webOS-TV-app-samples/WebStorage#local-storage)
+
+On a TV with on-device updates, open Home settings and choose
+**Update Clean Your TV**. A later update in this generation can be rolled
+back from **Recovery**.
 
 If the TV needs a Root Home backend available through the desktop installer,
 continue on a computer. If the candidate confirms that Root cannot control
@@ -70,9 +96,8 @@ root-check relaxation or automatic service restart is added here.
 The candidate package ID is `io.github.razdva122.cytvinstaller`. Earlier TV
 observations cover the draft ID `com.cleanyourtv.installer`. Homebrew treats
 the new ID as a separate application, with its own installation and removal.
-Homebrew updates the Installer application. Root Home,
-Root Updater and System Updater retain their product and recovery
-contracts; complete product updates belong to System Updater. Removing the
+Homebrew updates the tile and its setup client. Product updates use the signed
+release for the installed edition. Removing the
 installer leaves those components installed. Complete-product removal is an
 explicit installer/cytv operation. External component removal, emergency release,
 standby and separate cold boot still require physical acceptance.
