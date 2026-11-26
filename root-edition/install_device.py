@@ -13,7 +13,7 @@ import subprocess
 import sys
 from time import monotonic, sleep
 
-from installation import classify, device_snapshot, read_journal, _optional_record
+from installation import TV_INSTALLER, classify, device_snapshot, read_journal, _optional_record
 from updater.package import safe_bytes, inspect_package, verify_payload, members
 from updater.store import Store
 
@@ -83,6 +83,11 @@ def support_stages(uid=0):
 
 
 def sha(raw): return hashlib.sha256(raw).hexdigest()
+
+
+def single_tile_installed():
+    from package_identity import SINGLE_TILE_ORIGINAL
+    return os.path.lexists(ROOT / SINGLE_TILE_ORIGINAL)
 
 
 def component_journal_snapshot():
@@ -264,8 +269,19 @@ class LocalDevice:
         self.payload=Path(payload)
         deploy.verify_bundle(self.payload/'root',allow_experimental=not product)
         verify_bundle(self.payload/'root-updater')
+        release = json.loads(safe_bytes(self.payload/'root/release.json'))
+        self.single_tile = release.get('product_generation') == 2
         if options['prepare_supervisor']:
-            self.system_setup().verify_bundle(self.payload/'supervisor')
+            supervisor = self.system_setup().verify_bundle(self.payload/'supervisor')
+            if (supervisor.get('product_schema', 1) == 2) != self.single_tile:
+                raise ValueError('Root and supervisor belong to different product generations')
+        if product and self.single_tile:
+            if not options['prepare_supervisor'] or options['migrate']:
+                raise ValueError('Single-tile Root requires a complete prepared product')
+            apps = self.apps()
+            if TV_INSTALLER not in apps or {'com.gathin.tvhome', 'com.local.nativehome',
+                    'com.cleanyourtv.updater', 'com.cleanyourtv.root.updater'} & apps:
+                raise ValueError('Single-tile setup requires its entry and a matching edition')
         from python_binding import launcher_bytes
         launcher_bytes(sys.executable)
         self.options=options
@@ -298,7 +314,14 @@ class LocalDevice:
         values=device_snapshot(owned_operation=operation['id'] if operation else None)
         # device_snapshot intentionally refuses to bless lifecycle markers alone.
         # Complete descriptor/profile readback adds the missing package evidence.
-        if not any(values[k] for k in ('pending','retained')) and os.path.lexists(ROOT) and os.path.lexists(UPDATER):
+        if single_tile_installed() and not any(values[k] for k in ('pending','retained')):
+            try:
+                result = self.readback()
+                versions = {'root': result['root_version']}
+                values.update(packages_match=True,receipts_match=True,complete=True)
+            except (OSError,ValueError,TypeError,KeyError,RuntimeError,subprocess.SubprocessError):
+                values['retained'] = True
+        elif not any(values[k] for k in ('pending','retained')) and os.path.lexists(ROOT) and os.path.lexists(UPDATER):
             try:
                 if os.path.lexists(SUPERVISOR): self.verify_supervisor()
                 current_updater(UPDATER,INSTALLED,hashes=getattr(self,'supervisor_updater',None))
@@ -314,6 +337,7 @@ class LocalDevice:
                 values['retained']=True;versions=None
         result=classify(values)
         if result['state']=='installed' and versions is not None:result['versions']=versions
+        if result['state']=='installed' and single_tile_installed():result['tile_protocol']=1
         return result
 
     def verify_snapshot(self, payload, submission, *, inventories=None):
@@ -406,7 +430,10 @@ class LocalDevice:
             if options['migrate']:_capture_migrated_baseline(root)
             deploy.verify_payload(json.loads(safe_bytes(root/'release.json')))
             verify_package_modes(safe_bytes(root/json.loads(safe_bytes(root/'bundle.json'))['package']),INSTALLED)
-        if not os.path.lexists(UPDATER):
+        if getattr(self, 'single_tile', False):
+            if os.path.lexists(UPDATER):
+                raise ValueError('Standalone Root Updater requires migration')
+        elif not os.path.lexists(UPDATER):
             # Bootstrap always writes private state before submission. Also reject
             # foreign/externally retained package and bus artifacts before setup.
             app='com.cleanyourtv.root.updater'
@@ -546,15 +573,30 @@ class LocalDevice:
         if not all(device.verify_installed(c) for c in baseline['components'] if c['name']!='root'):raise ValueError('supervisor_baseline_mismatch')
         from package_identity import identity
         identity('com.cleanyourtv.system.updater',installed=INSTALLED,full=True)
-        updater=next(item for item in baseline['components'] if item['name']=='root-updater')
-        raw=device.cache_bytes(updater)
-        self.supervisor_updater=device.inspect(raw,updater)
+        if baseline['schema'] == 1:
+            updater=next(item for item in baseline['components'] if item['name']=='root-updater')
+            raw=device.cache_bytes(updater)
+            self.supervisor_updater=device.inspect(raw,updater)
+            verify_package_modes(raw,INSTALLED)
+        elif baseline['schema'] != 2 or not single_tile_installed():
+            raise ValueError('Original single-tile Root proof required')
         infrastructure=next(item for item in baseline['components'] if item['name']=='root-infrastructure')
         self.supervisor_infrastructure=device.inspect(device.cache_bytes(infrastructure),infrastructure)
-        verify_package_modes(raw,INSTALLED)
         return baseline
 
     def readback(self):
+        if single_tile_installed():
+            from package_identity import identity
+            baseline = self.verify_supervisor()
+            if baseline.get('schema') != 2 or os.path.lexists(UPDATER) or TV_INSTALLER not in self.apps():
+                raise ValueError('Incomplete single-tile installation')
+            home = next(item for item in baseline['components'] if item['name'] == 'root')
+            actual = identity(APP, installed=INSTALLED, full=True)
+            if (actual.get('version') != home['version'] or actual.get('visible') is not False
+                    or actual.get('cytvProductGeneration') != 2):
+                raise ValueError('Installed single-tile Home does not match the committed release')
+            return dict(verified=True, installed=APP, home_changed=False, baseline_sha=home['sha256'],
+                        root_version=home['version'], tile_protocol=1)
         if os.path.lexists(SUPERVISOR): self.verify_supervisor()
         current_updater(UPDATER,INSTALLED,hashes=getattr(self,'supervisor_updater',None));descriptor=current_root(ROOT,UPDATER,INSTALLED)
         return {'verified':True,'installed':APP,'home_changed':False,'baseline_sha':descriptor['sha256']}
@@ -617,7 +659,10 @@ class LocalDevice:
             selected=tx['candidate' if tx['phase']=='complete' else 'prior'] if tx else None
             if 'proof' not in baseline or selected!=baseline:
                 raise ValueError('root_recovery_current_provenance_required')
-            current_root(ROOT,UPDATER,INSTALLED)
+            if baseline.get('schema') == 2:
+                self.readback()
+            else:
+                current_root(ROOT,UPDATER,INSTALLED)
             infrastructure=self.supervisor_infrastructure
             if {name[len('runtime/'):] for name in infrastructure if name.startswith('runtime/')}!=expected:
                 raise ValueError('root_recovery_runtime_inventory_mismatch')

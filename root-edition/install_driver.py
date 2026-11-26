@@ -334,8 +334,9 @@ class Coordinator:
             if state=='fresh':
                 checkpoint('root-deploy')
                 self.device.deploy(payload,options)
-                checkpoint('root-updater')
-                self.device.updater(payload,options)
+                if not getattr(self.device, 'single_tile', False):
+                    checkpoint('root-updater')
+                    self.device.updater(payload,options)
             elif state=='installed':
                 self.device.require_selected_runtime(payload)
             else:

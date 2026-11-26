@@ -40,7 +40,7 @@ def classify(snapshot):
     return dict(state=state, reason=reason, can_install=state == 'fresh', can_maintain=state == 'installed')
 
 
-def snapshot(supported, observe):
+def snapshot(supported, observe, *, single_tile=False):
     """Combine fixed component observers; unknown protocols fail closed.
 
     Each observer verifies package files, runtime bindings and its own receipts.
@@ -58,7 +58,10 @@ def snapshot(supported, observe):
         except (OSError, ValueError, TypeError, KeyError, ImportError):
             value = dict(present=True, packages_match=False, receipts_match=False,
                          pending=False, retained=True, complete=False, migration_supported=False)
-        if name != 'system-updater' or value['present']:
+        if single_tile and name == 'root-updater':
+            if value['present']:
+                observations.append(dict(value, retained=True))
+        elif single_tile or name != 'system-updater' or value['present']:
             observations.append(value)
     present = any(v['present'] for v in observations)
     result = dict(supported=supported,
@@ -594,7 +597,9 @@ def device_snapshot(supported=True, read=read_journal, owned_operation=None):
         # replace a complete current package/profile inventory after updates.
         result['receipts_match'] = True
         return result
-    values = snapshot(supported,observe)
+    from package_identity import SINGLE_TILE_ORIGINAL
+    values = snapshot(supported, observe, single_tile=os.path.lexists(
+        Path('/var/lib/clean-your-tv-root') / SINGLE_TILE_ORIGINAL))
     ownership = Ownership.__new__(Ownership)
     ownership.store = Store.__new__(Store)
     ownership.store.root, ownership.store.uid = str(STATE),0

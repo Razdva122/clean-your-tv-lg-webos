@@ -113,6 +113,22 @@ class IdentityTests(unittest.TestCase):
         self.install(p.ROOT,self.package(p.ROOT,'1.1.0'))
         return tx
 
+    def test_single_tile_system_transaction_has_exact_generation_and_no_legacy_updater(self):
+        tx = self.system_tx()
+        for key in ('candidate', 'prior'):
+            tx[key]['schema'] = 2
+            del tx[key]['components'][1]
+        del tx['components'][1]
+        self.assertEqual(p._journal(tx, system=True), tx)
+        for schema in (1, True, 3):
+            changed = copy.deepcopy(tx)
+            changed['prior']['schema'] = schema
+            with self.subTest(schema=schema), self.assertRaises(ValueError):
+                p._journal(changed, system=True)
+        tx['components'].reverse()
+        with self.assertRaises(ValueError):
+            p._journal(tx, system=True)
+
     def test_retained_rollback_does_not_revoke_live_health_before_suspension(self):
         # Real package selector -> device presence -> health context. A declared
         # rollback has not changed any installed byte or captured Home intent.
@@ -241,6 +257,51 @@ class IdentityTests(unittest.TestCase):
         with self.assertRaises(ValueError):self.identity()
         self.stores[p.ROOT].write('install-terminal',{'completed':True})
         with self.assertRaises(ValueError):p.bootstrap_inventory(root,uid=self.uid)
+
+    def test_single_tile_root_uses_private_original_and_system_publication(self):
+        tx = self.system_tx()
+        original, _, expected, raw = self.packages[p.ROOT]
+        root = self.states[p.ROOT]
+        package = p.ROOT + '_1.0.0_all.ipk'
+        (root/p.SINGLE_TILE_ORIGINAL).write_bytes(raw)
+        product = self.stores[p.ROOT]
+        product.write('deploy', {'app': p.ROOT, 'stage': 'installed-recovery-only'})
+        product.write('release', {'application_id': p.ROOT, 'version': '1.0.0',
+                                  'product_generation': 2, 'files': expected})
+        product.write('bundle', {'package': package, 'files': {
+            package: p.digest(raw), 'release.json': p.digest((root/'release.json').read_bytes())}})
+        terminal = {'completed': True, 'event': {'id': p.ROOT, 'statusValue': 30,
+            'details': {'packageId': p.ROOT, 'client': 'com.webos.lunasend-99',
+                        'ipkFile': '/var/lib/clean-your-tv-installer/cytv-root-install-fixture/package.ipk'}}}
+        product.write('install-terminal', terminal)
+        self.assertEqual(p.single_tile_original(root, self.uid), (original, raw, expected))
+        self.states[p.UPDATER] = self.base/'absent-old-updater'
+        system = self.stores[p.SYSTEM]
+        for key in ('prior', 'candidate'):
+            tx[key]['schema'] = 2
+            del tx[key]['components'][1]
+        del tx['components'][1]
+        system.write('baseline', tx['prior'])
+        system.write('current-root', tx['prior'])
+        self.assertEqual(self.identity(full=True)['version'], '1.0.0')
+        system.write('transaction', tx)
+        tx['components'][0]['installEvidence']['intent'] = True
+        system.write('transaction', tx)
+        with self.assertRaises(p.TransitionUnknown):
+            self.identity(purpose='worker')
+        for c in tx['components']:
+            c['installEvidence'] = dict(self.success(), intent=True)
+        tx['phase'] = 'complete'
+        system.write('transaction', tx)
+        with self.assertRaises(p.TransitionUnknown):
+            self.identity()
+        system.write('current-root', tx['candidate'])
+        self.install(p.ROOT, self.packages[p.ROOT])  # installed bytes still belong to the prior
+        with self.assertRaises(ValueError):
+            self.identity()
+        product.write('install-terminal', {'completed': True})
+        with self.assertRaises(ValueError):
+            p.single_tile_original(root, self.uid)
 
     def test_aborted_later_system_transaction_preserves_prior_published_owners(self):
         tx=self.system_tx();tx.update(phase='aborted',homeResumePhase='aborted',id='d'*32,profile='profile-'+'d'*32)

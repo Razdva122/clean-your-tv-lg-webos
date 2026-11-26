@@ -41,6 +41,13 @@ class CoordinatorTests(unittest.TestCase):
         self.assertEqual(self.device.calls,['preflight','inspect','deploy','updater','supervisor','readback'])
         self.assertEqual(result['state'],'complete'); self.assertTrue(self.owner.status()['terminal'])
         self.assertFalse(result['home_changed'])
+    def test_single_tile_setup_uses_supervisor_without_installing_legacy_updater(self):
+        self.device.single_tile = True
+        result = self.driver.install(self.identifier, '/verified', prepare_supervisor=True)
+        self.assertEqual(result['state'], 'complete')
+        self.assertEqual(self.device.calls, ['preflight', 'inspect', 'deploy', 'supervisor', 'readback'])
+        self.assertEqual(self.driver.install(self.identifier, '/verified', prepare_supervisor=True), result)
+
     def test_failure_at_every_boundary_retains_ownership_and_never_replays(self):
         for boundary in ('deploy','updater','supervisor','readback'):
             with self.subTest(boundary=boundary), tempfile.TemporaryDirectory() as tmp:
