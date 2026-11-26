@@ -59,6 +59,11 @@ def restart_triggers(value):
     return [item for item in RESTART_TRIGGERS if item in known]
 
 
+REMOVAL_PROCESS_MATCHES = ('helper', 'home', 'updater', 'screensaver', 'helper-service',
+                           'renewal-service', 'updater-service', 'project-path', 'shell-command',
+                           'installer', 'homebrew')
+
+
 def restart_evidence(value):
     """Bounded diagnostic observations, never authority to continue removal."""
     value = value if type(value) is dict else {}
@@ -77,6 +82,10 @@ def restart_evidence(value):
                           'process-blocked', 'continuing', 'completed'))):
         if type(value.get(key)) is str and value[key] in allowed:
             result[key] = value[key]
+    matches = value.get('process_matches')
+    if type(matches) is list:
+        observed = {match for match in matches if type(match) is str}
+        result['process_matches'] = [match for match in REMOVAL_PROCESS_MATCHES if match in observed]
     return result
 
 

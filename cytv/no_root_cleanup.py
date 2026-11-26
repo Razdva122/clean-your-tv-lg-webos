@@ -345,9 +345,16 @@ if(input.action==='history'){
 if(input.action==='idle'){
  // File absence alone cannot prove that a deleted service or installer stopped.
  var prefixes=installerRoots.concat([publicRoot+'/cytv-', '/var/lib/clean-your-tv-', '/tmp/cytv-', '/tmp/clean-your-tv-']);
- apps.forEach(function(app){prefixes.push(base+'/applications/'+app);});
- services.forEach(function(service){prefixes.push(base+'/services/'+service);});
+ var targets=apps.concat(services);
+ var componentNames=['helper','home','updater','screensaver','helper-service','renewal-service','updater-service'];
+ var componentPaths=apps.map(function(app){return base+'/applications/'+app;})
+  .concat(services.map(function(service){return base+'/services/'+service;}));
+ var shellPrefixes=prefixes.concat(componentPaths);
  var afterStop=input.after_stop===true,waitForIdle=input.wait_for_idle===true,idleDeadline=Date.now()+8000;
+ var drainDeadline=Date.now()+20000, drainKinds=[];
+ var drainServices=Array.isArray(input.drain_services)?input.drain_services:[];
+ if(drainServices.indexOf(services[0])>=0)drainKinds.push('helper-service');
+ if(drainServices.indexOf(services[1])>=0)drainKinds.push('renewal-service');
  var hasNoUserspace=function(directory){
   var stat=fs.readFileSync(directory+'/stat','utf8'),close=stat.lastIndexOf(')');
   if(close<0)return false;
@@ -367,9 +374,26 @@ if(input.action==='idle'){
    throw e;
   }
  };
- var isProject=function(args){
-  var shell=args.length&&/(^|\/)(sh|ash|bash|dash|zsh|ksh)$/.test(args[0]);
-  return args.some(function(arg){return apps.concat(services).indexOf(arg)>=0||prefixes.some(function(prefix){return arg===prefix||arg.indexOf(prefix+'/')===0||(/[-]$/.test(prefix)&&arg.indexOf(prefix)===0)||(shell&&arg.indexOf(prefix)>=0);})||(shell&&apps.some(function(app){return arg.indexOf(app)>=0;}));});
+ var under=function(arg,prefix){return arg===prefix||arg.indexOf(prefix+'/')===0;};
+ var readOnlyShell=function(command){
+  // Single literal commands only. Shell expansions, redirections and compounds
+  // can hide a delayed writer before its child appears in /proc.
+  return /^(?:printf|echo)(?:[ \t]+(?:[\w./:%+-]+|'[\w./:%+-]+'|"[\w./:%+-]+"))+[ \t]*$/.test(command);
+ };
+ var projectMatch=function(args){
+  // Match complete IDs and owned paths in individual arguments or proc links.
+  for(var i=0;i<targets.length;i++){
+   if(args.indexOf(targets[i])>=0||args.some(function(arg){return under(arg,componentPaths[i]);}))
+    return componentNames[i];
+  }
+  if(args.some(function(arg){return prefixes.some(function(prefix){
+   return under(arg,prefix)||(/[-]$/.test(prefix)&&arg.indexOf(prefix)===0);
+  });}))return 'project-path';
+  if(/(^|\/)(sh|ash|bash|dash|zsh|ksh)$/.test(args[0])&&args.some(function(arg,index){
+   if(index===2&&(args[0]==='sh'||args[0]==='/bin/sh')&&args[1]==='-c'&&readOnlyShell(arg))return false;
+   return apps.some(function(app){return arg.indexOf(app)>=0;})||
+    shellPrefixes.some(function(prefix){return arg.indexOf(prefix)>=0;});
+  }))return 'shell-command';
  };
  var packageSender=function(args,prefix){
   return args.some(function(arg){return arg.indexOf(prefix)===0;})&&
@@ -383,10 +407,22 @@ if(input.action==='idle'){
    args.some(function(arg){return arg===services[2]||arg.indexOf(base+'/services/'+services[2])===0;})||
    packageSender(args,'luna://com.webos.appInstallService/dev/');
  };
+ var recordProcess=function(args,homebrew){
+  var installer=homebrew||isInstaller(args), match=projectMatch(args);
+  if(installer)reply.installer_running=true;
+  if(!match&&!installer)return false;
+  [match,homebrew?'homebrew':installer?'installer':null].forEach(function(kind){
+   if(kind&&reply.process_matches.indexOf(kind)<0)reply.process_matches.push(kind);
+  });
+  reply.project_running=true;
+  reply.idle=false;
+  return true;
+ };
  var checkIdle=function(){
   reply.idle=true;
   reply.proc_enumerated=false;
   reply.project_running=false;
+  reply.process_matches=[];
   reply.installer_running=false;
   reply.process_cmdline_unreadable=false;reply.process_links_unreadable=false;
   reply.opaque_interpreter=false;reply.process_limit_exceeded=false;
@@ -399,13 +435,11 @@ if(input.action==='idle'){
     try{args=fs.readFileSync(proc+pid+'/cmdline','utf8').split('\0').filter(Boolean);argc=args.length;}
     catch(e){if(e.code!=='ENOENT'||exists(proc+pid))reply.process_cmdline_unreadable=true;throw e;}
     var homebrew=packageSender(args,'luna://org.webosbrew.hbchannel.service/install');
-    var own=homebrew||isInstaller(args);if(own)reply.installer_running=true;
     if(homebrew)reply.homebrew_observed=true;
-    if(isProject(args)||own){reply.project_running=true;reply.idle=false;return;}
+    if(recordProcess(args,homebrew))return;
     readProcLink(proc+pid+'/exe',args,argc);
     readProcLink(proc+pid+'/cwd',args,argc);
-    var own=isInstaller(args);if(own)reply.installer_running=true;
-    if(isProject(args)||own){reply.project_running=true;reply.idle=false;return;}
+    if(recordProcess(args,false))return;
     // Known LS2 launcher with an explicit service ID. Project IDs and
     // project paths were already checked above.
     var serviceLauncher=afterStop&&argc===3&&/(^|\/)node$/.test(args[0])&&
@@ -415,9 +449,10 @@ if(input.action==='idle'){
        (argc<2||!/^\/.*[.](js|cjs|mjs|py|pyc)$/.test(args[1]))){reply.idle=false;reply.opaque_interpreter=true;}
    }catch(e){if(e.code!=='ENOENT'||exists(proc+pid))reply.idle=false;}});
   }catch(e){reply.idle=false;}
-  // Calling disable can temporarily activate an LS2 service. Wait for its
-  // process to exit without calling disable again while polling.
-  if(waitForIdle&&reply.project_running&&Date.now()<idleDeadline){
+  // LS2 may acknowledge disable before the activity completion and idle
+  // timer finish. Only the acknowledged startup services get extra time.
+  var now=Date.now(), draining=reply.process_matches.every(function(kind){return drainKinds.indexOf(kind)>=0;});
+  if(waitForIdle&&reply.project_running&&(now<idleDeadline||(draining&&now<drainDeadline))){
    setTimeout(checkIdle,250);return;
   }
   process.stdout.write(JSON.stringify(reply));
@@ -643,7 +678,7 @@ def _missing_capsule_receipt(previous):
 
 
 def _device(installer, action, proof=None, *, after_stop=False, wait_for_idle=False, guard=False,
-            allow_empty_dirs=False, pending=None):
+            allow_empty_dirs=False, pending=None, drain_services=()):
     if pending is None:
         pending = installer.store.pending(installer.profile) or {}
     request = {'action':action, 'staging_ids':pending.get('cleanup_staging_ids', []),
@@ -681,6 +716,8 @@ def _device(installer, action, proof=None, *, after_stop=False, wait_for_idle=Fa
         request['after_stop'] = True
     if wait_for_idle:
         request['wait_for_idle'] = True
+        if drain_services:
+            request['drain_services'] = drain_services
     if installer.profile.get('connection') == 'root-ssh':
         request['connection'] = 'root-ssh'
     try:
@@ -1011,7 +1048,7 @@ def continue_removal(installer, expected_pending):
             record_restart(phase=process_phase, **{key: value[key] for key in
                 ('idle', 'proc_enumerated', 'project_running', 'installer_running', 'homebrew_observed',
                  'process_cmdline_unreadable', 'process_links_unreadable', 'opaque_interpreter',
-                 'process_limit_exceeded') if key in value})
+                 'process_limit_exceeded', 'process_matches') if key in value})
         if guard and action in ('inventory', 'sweep'):
             # Track only public registration leaves observed after this pass's
             # vendor terminal. A hidden directory cannot refute that evidence.
@@ -1031,8 +1068,9 @@ def continue_removal(installer, expected_pending):
             # Catalogue absence alone cannot rule out a legacy package.
             evidence.pop('packages', None)
 
-    def wait_for_stopped_processes(require_idle, *, verify_after_remove=False, allow_opaque=False):
-        idle = device('idle', after_stop=True, wait_for_idle=True)
+    def wait_for_stopped_processes(require_idle, *, verify_after_remove=False, allow_opaque=False,
+                                   drain_services=()):
+        idle = device('idle', after_stop=True, wait_for_idle=True, drain_services=drain_services)
         check(defer_catalogued_paths(idle) if not verify_after_remove else idle,
               defer_packages=True, action='idle')
         if idle.get('project_running') is True:
@@ -1381,6 +1419,7 @@ def continue_removal(installer, expected_pending):
     inaccessible_packages.discard(None)
     startup_access_blocked = not restarted and bool(inaccessible_packages - targets)
     startup_disable_unverified = False
+    disabled_services = []
     inaccessible_startup = ({row['scope'] for row in current['blocked'] + stopped['blocked']
                              if _protected_package(row)} if invalid_stop_record else set())
     for app, service in zip(APPS, STARTUP_SERVICES):
@@ -1402,6 +1441,7 @@ def continue_removal(installer, expected_pending):
                 disabled = state.get('enabled') is False and not state.get('error')
             if not disabled:
                 raise UserError('TV startup could not be disabled. Try again.')
+            disabled_services.append(service)
         except UserError as error:
             if not isinstance(error, TVRejected) and str(error) not in (
                     'TV startup could not be disabled. Try again.',
@@ -1444,7 +1484,8 @@ def continue_removal(installer, expected_pending):
 
     process_phase = 'before-packages'
     if not wait_for_stopped_processes(invalid_stop_record or
-                                     not restarted and (uncertain_install or inaccessible_packages or unavailable)):
+                                     not restarted and (uncertain_install or inaccessible_packages or unavailable),
+                                     drain_services=disabled_services):
         if invalid_stop_record:
             raise UserError('Removal could not be verified. Review recovery options before continuing.', reason_code='cleanup-check-failed')
         return require_restart(['process-idle-unverified'], rearm=restarted)
