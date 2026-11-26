@@ -22,6 +22,12 @@ def require_tile_home(info):
         raise ValueError('Single-tile setup requires the hidden second-generation Root Home')
 
 
+def verify_migration_module(components):
+    root = components['root'].get('personalize.py')
+    if root is None or components['root-updater'].get('personalize.py') != root:
+        raise ValueError('Mismatched component baseline: personalize.py')
+
+
 def build_payload(root_bundle, root_updater_bundle, supervisor_bundle, runtime_archive, output):
     output=Path(output).absolute()
     if '..' in output.parts or any(p.is_symlink() for p in (output,*output.parents)): raise ValueError('Unsafe output')
@@ -43,6 +49,7 @@ def build_payload(root_bundle, root_updater_bundle, supervisor_bundle, runtime_a
     for name in ('installation.py','observed_install.py','installer_status.py','startup_hook.py','package_data.py','package_identity.py','startup_guard.py','python_binding.py','python_boot.js'):
         hashes={components[key].get(name,{}).get('sha256') for key in inputs}
         if len(hashes)!=1 or None in hashes: raise ValueError('Mismatched component baseline: '+name)
+    verify_migration_module(components)
     for name in ('store.py','package.py'):
         hashes={components[key].get(('system_updater/support/' if key=='supervisor' else 'updater/')+name,{}).get('sha256') for key in inputs}
         if len(hashes)!=1 or None in hashes: raise ValueError('Mismatched component parser baseline: '+name)
@@ -166,6 +173,7 @@ def verify_offline(payload):
     if manifest.get('schema')!=1 or actual!=manifest.get('files'):raise ValueError('Offline inventory mismatch')
     for name in IDENTITIES:
         if checked_bundle(payload/name)!=manifest['components'][name]:raise ValueError('Offline component mismatch')
+    verify_migration_module(manifest['components'])
     root_name = package.safe_name(manifest['packages']['root'])
     if root_name not in manifest['components']['root'] or not root_name.endswith('.ipk'):
         raise ValueError('Missing Root product package')

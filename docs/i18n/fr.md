@@ -208,6 +208,10 @@ Ouvrez Paramètres → Fonds d’écran → Envoyer depuis le téléphone et sca
 
 Avant de choisir un thème, utilisez **Debloat** pour sélectionner les réglages LG de publicité, de recommandations, de confidentialité et de notifications à modifier. Vérifiez chaque résultat. Si la valeur d’origine ne peut pas être lue, elle ne peut pas être enregistrée pour une restauration automatique. Choisissez **Ignorer Debloat** pour conserver vos réglages.
 
+Les deux éditions peuvent désactiver les flux promotionnels LG si le téléviseur propose ce réglage.
+
+Pour annuler une seule modification, ouvrez Debloat dans Maintenance avec la même connexion enregistrée au téléviseur. Choisissez le réglage, vérifiez sa valeur d’origine et confirmez. Sur les modèles compatibles, désactivez le démarrage automatique de LG Channels dans Tous les paramètres → Général → Chaînes → Démarrage automatique de LG Channels.
+
 Lors de la désinstallation, vous pouvez rétablir les valeurs d’origine enregistrées par Debloat. Si vous ignorez la restauration, la désinstallation se poursuit sans modifier ces réglages.
 
 Après une installation réussie, choisissez Classic, Liquid Glass ou Ribbon et activez ou désactivez la météo. Ribbon ne prend pas en charge la météo ; Liquid Glass utilise le format compact. La ville est estimée selon votre connexion et peut être modifiée dans Home.

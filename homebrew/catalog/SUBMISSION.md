@@ -66,9 +66,9 @@ schemas and all three catalog CI commands from apps-repo revision
 
 | File or measurement | Bytes | SHA-256 |
 | --- | ---: | --- |
-| Installer IPK | 123,947,008 | `993be912c04dbede34ee2422e259c4fd332f87be2785e1d1a253554635652324` |
-| Serialized Homebrew manifest | 795 | `5465ae9f8199cabf56cda4298467eb1ac111467e136ea24d38c3efbc0ab9b1ed` |
-| Installed file contents | 129,365,107 | — |
+| Installer IPK | 123,949,458 | `901190b81b3878b81a74a5c76882bb52775e138ab05c934a76c8eff9f0149a0f` |
+| Serialized Homebrew manifest | 795 | `4ca78609360ffcbf8e3b2ffaf6194ade437845e17f4a824edb63093e8f8d02a1` |
+| Installed file contents | 129,372,295 | — |
 
 `repogen.lintpkg --new` returned zero using the local manifest. It warned
 about missing screenshots and could not check the public icon or GitHub
@@ -91,6 +91,18 @@ The firmware profiles produced the following static compatibility results.
 | 9.2.0 | 108 | Pass |
 | 10.2.0 | 120 | Pass |
 | 11.2.0 | 132 | Pass |
+
+### Previous bundled-setup preflight on 2026-11-26
+
+Before the payload was corrected, the 123,947,008-byte IPK had SHA-256
+`993be912c04dbede34ee2422e259c4fd332f87be2785e1d1a253554635652324`.
+Its 795-byte manifest had SHA-256
+`5465ae9f8199cabf56cda4298467eb1ac111467e136ea24d38c3efbc0ab9b1ed`.
+The installed files totalled 129,365,107 bytes. Both schemas and the three
+offline catalog commands passed, including the seven firmware profiles.
+The linter warned about absent screenshots and offline icon and licence
+checks. Toolbox flagged the custom packager. The corrected package is
+identified in the newer preflight above.
 
 ### Previous artifact and public checks on 2026-11-26
 

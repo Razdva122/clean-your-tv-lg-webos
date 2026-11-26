@@ -1,7 +1,29 @@
 {
   "schema": 1,
   "version": null,
-  "changes": [],
+  "changes": [
+    {
+      "pr": 845,
+      "issues": [
+        841
+      ],
+      "summary": "Fix premature No-root removal process blocking (#841)"
+    },
+    {
+      "pr": 847,
+      "issues": [
+        830
+      ],
+      "summary": "Resume No-root removal after a verified Root handoff (#830)"
+    },
+    {
+      "pr": 849,
+      "issues": [
+        368
+      ],
+      "summary": "Preserve pending Root uninstall receipts across saved connections and nested retry records (partial recovery fix)"
+    }
+  ],
   "excluded": [],
   "acceptance": ""
 }

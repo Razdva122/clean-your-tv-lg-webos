@@ -1249,6 +1249,8 @@ class DesktopRecoveryTests(unittest.TestCase):
         def run(command, **kwargs):
             if launched and 'CYTV_HELPER_IDLE' in command:
                 return 'CYTV_HELPER_ACTIVE'
+            if launched and command.startswith('/usr/bin/node -e ') and 'worker-ready' in command:
+                return json.dumps({'state': 'ready', 'controller_running': True, 'home_enabled': True})
             return original_run(command, **kwargs)
         self.remote.luna, self.remote.run = luna, run
         w = self.window()

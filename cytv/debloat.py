@@ -16,6 +16,8 @@ REVIEW = 'Review Debloat results: '
 CONTINUE = 'Continue to customization'
 APPLY = 'Apply selected settings'
 RESTORE_PROMPT = 'Restore saved Debloat settings before removal?'
+SELECT_RESTORE = 'Choose a saved setting to restore'
+CONFIRM_ONE = 'Restore this saved setting?'
 RESTORE_LABEL = 'Restore saved Debloat settings'
 SKIP_RESTORE = 'Skip restoration'
 NOTICE = 'If the original value cannot be read, the selected change cannot be automatically undone.'
@@ -27,6 +29,7 @@ GROUPS = (
     ('Ads and promotions', (
         ('screenSaverAd', 'general', 'Turn off screen saver ads', 'off'),
         ('livePromotion', 'option', 'Turn off promotions while watching', 'off'),
+        ('promotionStreamer', 'option', 'Turn off LG promotional streams', 'off'),
         ('webOSPromotionVideo', 'option', 'Turn off webOS promotional video', 'off'),
     )),
     ('Privacy', (
@@ -51,6 +54,7 @@ SETTING_NAMES = {
     'lmt': 'Ad tracking limit',
     'aiNudge': 'Smart Tips',
     'sportsAlarm': 'Sports notifications',
+    'promotionStreamer': 'LG promotional streams',
 }
 RESULTS = {
     'already': ('✓', '#b4ada4', 'Already in the requested state'),
@@ -58,11 +62,21 @@ RESULTS = {
     'failed': ('×', '#ff8580', 'Could not change the setting'),
     'write-rejected': ('×', '#ff8580', 'The TV rejected the request to change this setting.'),
     'firmware-blocked': ('×', '#ff8580', 'This TV firmware blocks changing this setting in No-root.'),
+    'unavailable': ('–', '#b4ada4', 'Setting unavailable on this connection. Skipped.'),
     'unverified': ('✓', '#b4ada4', 'Command sent. The result could not be verified.'),
 }
+RESTORE_RESULTS = {
+    'restored': ('✓', '#90cfad', 'Restored and verified'),
+    'restore-already': ('✓', '#b4ada4', 'Already at the saved original value'),
+    'restore-unavailable': ('–', '#b4ada4', 'Could not read the current value'),
+    'restore-unverified': ('?', '#b4ada4', 'Could not verify the restored value'),
+    'restore-failed': ('×', '#ff8580', 'Could not restore the setting'),
+}
+RESULTS.update(RESTORE_RESULTS)
 DIAGNOSTIC_RESULTS = ('already', 'verified', 'pairing-rejected', 'pairing-timeout',
                       'pairing-unavailable', 'write-rejected', 'write-unavailable',
-                      'journal-failed', 'verify-unavailable', 'verify-mismatch')
+                      'journal-failed', 'unavailable', 'verify-unavailable', 'verify-mismatch',
+                      *RESTORE_RESULTS)
 SERVICE = 'com.webos.settingsservice/'
 # Execute in the existing Developer Mode SSH jail. Return only the requested
 # value so private data from the preferences files never leaves the TV.
@@ -80,6 +94,15 @@ try {
 } catch (error) {}
 process.stdout.write(JSON.stringify(value));
 '''
+
+
+def result_message(key, status):
+    message = tr(RESULTS[status][2])
+    home_menu = {'homePromotion': 'Home Promotion', 'contentRecommendation': 'Content Recommendation'}
+    if status == 'write-rejected' and key in home_menu:
+        path = tr('On webOS 6 and 22: All Settings → General → System → Additional Settings → Home Settings → {setting} → Off.')
+        return message + ' ' + path.format(setting=tr(home_menu[key]))
+    return message
 
 
 def read(remote, category, key):
@@ -129,8 +152,8 @@ def verify_value(remote, tv, category, key, value, previous):
     return actual
 
 
-def offer_restore(remote, store, profile, ask, write):
-    """Offer one best-effort restoration before the normal removal operation."""
+def offer_restore(remote, store, profile, ask, write, *, maintenance=False, diagnostic=None):
+    """Return True when maintenance handled a single saved setting."""
     try:
         path = store.device_dir(profile) / 'debloat.json'
         journal = json.loads(path.read_text(encoding='utf-8'))
@@ -152,7 +175,18 @@ def offer_restore(remote, store, profile, ask, write):
     ]
     if not eligible:
         return
+    if maintenance:
+        write.heading(SELECT_RESTORE)
+        write.option(0, 'Adjust LG settings (Debloat)')
+        for index, key in enumerate(eligible, 1):
+            write.option(index, SETTING_NAMES[key])
+        choice = prompts.number(ask, write, SELECT_RESTORE + ' [0]: ', 0, len(eligible), default=0)
+        if not choice:
+            return False
+        eligible = [eligible[choice - 1]]
+
     remaining = entries.copy()
+    events = diagnostic if diagnostic is not None else {}
     with ExitStack() as stack:
         tv = None
         current_values = {key: read(remote, SETTINGS[key][0], key) for key in eligible}
@@ -179,21 +213,24 @@ def offer_restore(remote, store, profile, ask, write):
                 write(f"{label} — {tr('Could not read the current value')}")
             else:
                 write(f"{label} — {tr('Already at the saved original value')}")
-        if not planned:
+        if planned:
+            if write.frontend == 'android':
+                write.option('y', RESTORE_LABEL)
+                write.option('n', SKIP_RESTORE)
+            if not prompts.confirm(CONFIRM_ONE if maintenance else RESTORE_PROMPT, ask, write):
+                return maintenance
+            write.heading('Debloat restoration results')
+        elif not maintenance:
             return
-        if write.frontend == 'android':
-            write.option('y', RESTORE_LABEL)
-            write.option('n', SKIP_RESTORE)
-        if not prompts.confirm(RESTORE_PROMPT, ask, write):
-            return
-
-        write.heading('Debloat restoration results')
         pairing_failed = False
         for key in eligible:
             original = entries[key]['original']
             if key not in planned:
                 if current_values[key] == original:
                     del remaining[key]
+                    events[key] = 'restore-already'
+                else:
+                    events[key] = 'restore-unavailable'
                 continue
             category, _, target = SETTINGS[key]
             if not remote.root and tv is None and not pairing_failed:
@@ -203,9 +240,9 @@ def offer_restore(remote, store, profile, ask, write):
                     pairing_failed = True
             current = read_current(remote, category, key, tv)
             if current == original:
-                message = 'Already at the saved original value'
+                status = 'restore-already'
             elif current is None:
-                message = 'Could not read the current value'
+                status = 'restore-unavailable'
             elif current == target and (remote.root or tv is not None):
                 try:
                     reply = set_value(remote, tv, category, key, original)
@@ -213,22 +250,24 @@ def offer_restore(remote, store, profile, ask, write):
                     reply = None
                 if isinstance(reply, dict) and reply.get('returnValue') is True:
                     actual = verify_value(remote, tv, category, key, original, current)
-                    message = 'Restored and verified' if actual == original else 'Could not verify the restored value'
+                    status = 'restored' if actual == original else 'restore-unverified'
                 else:
-                    message = 'Could not restore the setting'
+                    status = 'restore-failed'
             else:
-                message = 'Could not restore the setting'
-            if message in ('Already at the saved original value', 'Restored and verified'):
+                status = 'restore-failed'
+            events[key] = status
+            if status in ('restore-already', 'restored'):
                 del remaining[key]
-            write(f'{tr(SETTING_NAMES[key])} — {tr(message)}')
+            write(f'{tr(SETTING_NAMES[key])} — {tr(RESTORE_RESULTS[status][2])}')
 
     if remaining == entries:
-        return
+        return maintenance
     journal['settings'] = remaining
     try:
         private_write(path, json.dumps(journal).encode())
     except OSError:
         write('Could not update the saved Debloat settings.')
+    return maintenance
 
 
 def remember(path, key, original, target):
@@ -261,6 +300,9 @@ def apply(installer, selected, progress=lambda _: None, *, diagnostic=None):
                 continue
             progress(label)
             original = read(remote, category, key)
+            if original is None and key == 'promotionStreamer':
+                results[key] = events[key] = 'unavailable'
+                continue
             if original == target:
                 results[key] = events[key] = 'already'
                 continue
@@ -305,8 +347,15 @@ def apply(installer, selected, progress=lambda _: None, *, diagnostic=None):
 
 
 def run(installer, ask, write, *, diagnostic=None, maintenance=False):
+    events = diagnostic if diagnostic is not None else {}
     if maintenance:
         write.heading(TITLE)
+        if offer_restore(installer.remote, installer.store, installer.profile, ask, write,
+                         maintenance=True, diagnostic=events):
+            if events and write.frontend == 'desktop':
+                write.debloat_results(events)
+                prompts.answer(ask, REVIEW)
+            return
     else:
         write.step(5, TITLE)
     if write.frontend == 'desktop':
@@ -349,7 +398,6 @@ def run(installer, ask, write, *, diagnostic=None, maintenance=False):
                 return
     if not selected:
         return
-    events = diagnostic if diagnostic is not None else {}
     try:
         results = apply(installer, selected, write, diagnostic=events)
     except (OSError, ValueError):
@@ -368,8 +416,8 @@ def run(installer, ask, write, *, diagnostic=None, maintenance=False):
     else:
         write.heading('Debloat results')
         for key, status in results.items():
-            icon, _, message = RESULTS[status]
-            write(f'{icon} {tr(SETTINGS[key][1])} — {tr(message)}')
+            icon = RESULTS[status][0]
+            write(f'{icon} {tr(SETTINGS[key][1])} — {result_message(key, status)}')
         if write.frontend == 'android':
             write.option('1', CONTINUE)
         if not maintenance:

@@ -27,9 +27,19 @@ def fixture(version='1.2.3'):
             info.update(cytvProductGeneration=2,visible=False)
         content={name: package.ipk(app,version_value,{'usr/palm/applications/'+app+'/appinfo.json':encoded(info)}),
                  'must-not-run.py': b'raise RuntimeError("artifact code executed")'}
-        content['bundle.json']=encoded({'files':{n:digest(v) for n,v in content.items()}})
+        if key in ('root', 'root-updater'):
+            content['personalize.py'] = b'# Shared Home settings reader fixture.\n'
+        bundle = {'files': {n: digest(v) for n, v in content.items()}}
+        if key == 'supervisor':
+            bundle['product_schema'] = 2
+        content['bundle.json'] = encoded(bundle)
         components[key]=inventory(content); versions[key]=version_value; packages[key]=name
         files.update({key+'/'+n:v for n,v in content.items()})
+    files['baseline/baseline.json'] = encoded({
+        'schema': 2,
+        'edition': 'root',
+        'components': [{'name': 'root'}, {'name': 'root-infrastructure'}],
+    })
     runtime_files={'bin/python3.13':b'not executable on this host','LICENSE':b'Python license fixture'}
     binding={'schema':1,'archive_sha256':python_runtime.SHA256,'files':{n:digest(v) for n,v in runtime_files.items()}}
     runtime_files['.cytv-runtime.json']=encoded(binding)

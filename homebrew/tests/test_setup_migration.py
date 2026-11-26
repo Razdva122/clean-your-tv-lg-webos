@@ -2,6 +2,8 @@
 from contextlib import redirect_stdout
 import io
 import json
+import shutil
+import subprocess
 from pathlib import Path
 import sys
 import tempfile
@@ -113,6 +115,50 @@ class HomebrewMigrationTests(unittest.TestCase):
         (self.home / 'appinfo.json').write_text('{"id":"another.app"}')
         with self.assertRaises(ValueError):
             deploy.homebrew_migration()
+
+
+class StagedMigrationTests(unittest.TestCase):
+    def test_packaged_coordinator_runs_migration_using_only_its_own_modules(self):
+        from updater.bootstrap import persistent_code, verify_bundle
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            full = root / 'full'
+            subprocess.run([sys.executable, str(ROOT / 'root-edition/build_updater.py'), '--output', str(full)],
+                           cwd=ROOT, capture_output=True, check=True)
+            manifest = verify_bundle(full)
+            self.assertNotIn('personalize.py', persistent_code(manifest))
+            code = root / 'code-only'
+            shutil.copytree(full, code, ignore=shutil.ignore_patterns('*.ipk'))
+            script = """
+import json, sys
+from pathlib import Path
+stage = Path(sys.argv[1])
+sys.path.insert(0, str(stage))
+import deploy
+assert Path(deploy.__file__).parent == stage
+deploy.INSTALLED = Path(sys.argv[2])
+assert deploy.homebrew_migration() == (None, 'absent')
+try:
+    deploy.migration_source()
+except ValueError as error:
+    assert 'migration source is unavailable' in str(error)
+else:
+    raise AssertionError('explicit CLI migration incorrectly accepted missing source')
+profile = deploy.INSTALLED/'usr/palm/services/com.cleanyourtv.updater.service/state/profile.json'
+profile.parent.mkdir(parents=True)
+profile.write_text(json.dumps(dict(schema=1, inventory=dict(apps=[], inputs=[]),
+                                  config=dict(columns=4, dockApps=[], hiddenApps=[]))))
+assert deploy.homebrew_migration()[0] == deploy.migration_source()
+import personalize
+assert Path(personalize.__file__).parent == stage
+"""
+            for stage in (full, code):
+                with self.subTest(stage=stage.name):
+                    result = subprocess.run([sys.executable, '-I', '-B', '-c', script, str(stage),
+                                             str(root / ('device-' + stage.name))],
+                                            cwd=root, capture_output=True, text=True)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn('personalize.py', manifest['files'])
 
 
 if __name__ == '__main__':

@@ -208,7 +208,11 @@ Open Settings → Wallpapers → Upload from phone and scan the code. Choose a J
 
 ## Set up your Clean Your TV
 
-Before choosing a theme, use **Debloat** to select which LG ads, recommendations, privacy settings and notifications to change. The desktop installer selects every option by default. Clear any options you want to keep as they are before clicking **Continue**. Check each result before continuing. If the installer could not read the original value, it cannot save it for an automatic undo. Choose **Skip Debloat** to keep your current settings.
+Before choosing a theme, use **Debloat** to select which LG ads, recommendations, privacy settings and notifications to change. The desktop installer preselects the LG advertising, recommendation, privacy and notification settings. Clear any options you want to keep as they are before clicking **Continue**. Check each result before continuing. If the installer could not read the original value, it cannot save it for an automatic undo. Choose **Skip Debloat** to keep your current settings.
+
+Both editions can turn off LG promotional streams when the TV exposes the setting.
+
+To undo one change while keeping CYTV installed, open Debloat in Maintenance with the same saved TV connection. Select a saved setting, review its original value and confirm. To stop LG Channels starting automatically on supported TVs, open All Settings → General → Channels → Auto Start LG Channels and choose Off.
 
 During removal, you can choose to restore the saved original Debloat settings. If you skip restoration, removal continues with those settings as they are.
 

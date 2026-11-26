@@ -1297,6 +1297,29 @@ class OperationTests(unittest.TestCase):
                                   'startup':'not-observed','home_button':'not-tested'})
         self.assertIsNone(self.store.pending(installer.profile))
 
+    def test_resuming_legacy_install_plan_cannot_confirm_startup_from_a_running_process(self):
+        from unittest.mock import patch
+        from cytv import no_root_observer
+        installer = self.installer(Remote())
+        begin = no_root_observer.begin
+        def legacy_plan(*args, **options):
+            return begin(*args, **dict(options, setup_activation=False))
+        # Save the same receipt shape used before setup generation binding.
+        with patch.object(no_root_observer, 'begin', side_effect=legacy_plan), \
+             patch.object(installer, 'continue_no_root', return_value=None):
+            installer.install(self.inventory, 'test-pairing')
+        pending = self.store.pending(installer.profile)
+        def helper_state(timeout=None):
+            launched = any(call[:2] == ('luna', 'com.webos.applicationManager/launch')
+                           for call in installer.remote.calls)
+            return 'running' if launched else 'stopped'
+        with patch.object(installer, 'helper_state', side_effect=helper_state), \
+             patch('cytv.helper_startup.observe') as readiness:
+            installer.continue_no_root(pending)
+        readiness.assert_not_called()
+        self.assertEqual(installer.tv_info['setup_outcome']['startup'], 'unverified')
+        self.assertIsNone(self.store.pending(installer.profile))
+
     def test_launch_failure_preserves_verified_packages_and_pending_receipt(self):
         remote = Remote(); original = remote.luna
         def luna(uri, payload, **kwargs):

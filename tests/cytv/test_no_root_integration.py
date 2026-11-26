@@ -269,6 +269,32 @@ class OriginalOperationIntegration(unittest.TestCase):
         report = diagnostics.create_report(self.store, 'uninstall', self.profile, 'uninstall')
         self.assertTrue(json.loads(report.read_text())['removal']['empty_service_dirs_retained'])
 
+    def test_fresh_install_does_not_report_failed_relay_as_successful_home_startup(self):
+        from cytv import diagnostics
+        with patch('cytv.helper_startup.observe', return_value={
+                'state': 'failed', 'controller_running': False, 'relay_exit_code': 22}) as observe:
+            self.installer.install(self.inventory, 'fresh-secret')
+        observe.assert_called()
+        self.assertEqual(self.installer.outcome.values['startup'], 'unverified')
+        self.assertEqual(self.installer.tv_info['helper_startup']['relay_exit_code'], 22)
+        self.assertIsNone(self.store.pending(self.profile))
+        report = diagnostics.create_report(self.store, 'install', self.profile, 'install-complete',
+                                           tv_info=self.installer.tv_info)
+        value = json.loads(report.read_text())
+        self.assertEqual(value['tv']['helper_startup']['state'], 'failed')
+
+    def test_stop_during_startup_readiness_probe_wins_and_does_not_relaunch(self):
+        def stopped(installer, generation):
+            self.publish_stop()
+            return {'state': 'ready', 'controller_running': True, 'home_enabled': True}
+        with patch('cytv.helper_startup.observe', side_effect=stopped):
+            result = self.installer.install(self.inventory, 'fresh-secret')
+        self.assertTrue(result['activation_cancelled'])
+        self.assertEqual(self.installer.outcome.values['startup'], 'stopped-during-setup')
+        launches = [entry for entry in self.remote.calls if entry[0] == 'luna' and
+                    entry[1].endswith('/launch') and entry[2].get('id') == operations.HELPER]
+        self.assertEqual(len(launches), 1)
+
     def include_screensaver_companion(self):
         app = 'com.cleanyourtv.screensaver'
         prefix = 'usr/palm/applications/' + app + '/'

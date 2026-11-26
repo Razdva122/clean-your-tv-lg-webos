@@ -94,6 +94,7 @@ function fixture(shared, largeMember) {
   write('edition/edition.py', 'TRUSTED_EDITION_READER');
   write('root-updater/install_driver.py', DRIVER_CODE);
   write('root-updater/support.py', SUPPORT_CODE);
+  write('root-updater/personalize.py', 'TRUSTED_MIGRATION_READER');
   write('root-updater/root-updater.ipk', 'IPK');
   write('root/bundle.json', 'ROOT_DATA');
   write('supervisor/bundle.json', 'SUPERVISOR_DATA');
@@ -547,6 +548,13 @@ async function rejection(change) {
     sharedBase.setSystem();
     var sharedState = await sharedBase.api.inspect(sharedBase.root);
     var first = await sharedBase.api.stage(sharedState, false);
+    assert.equal(
+      fs.readFileSync(
+        path.join(first.root, 'root-updater/personalize.py'),
+        'utf8'
+      ),
+      'TRUSTED_MIGRATION_READER'
+    );
     assert(/^cytv-homebrew-[0-9a-f]{32}$/.test(path.basename(first.root)));
     var second = await sharedBase.api.stage(sharedState, false);
     await first.cleanup();
@@ -570,6 +578,13 @@ async function rejection(change) {
     staged.setSystem();
     var loaded = await staged.api.inspect(staged.root);
     var snapshot = await staged.api.stage(loaded, true);
+    assert.equal(
+      fs.readFileSync(
+        path.join(snapshot.root, 'root-updater/personalize.py'),
+        'utf8'
+      ),
+      'TRUSTED_MIGRATION_READER'
+    );
     assert.equal(fs.readFileSync(snapshot.driver, 'utf8'), DRIVER_CODE);
     assert.equal(
       fs.readFileSync(snapshot.editionInspector, 'utf8'),

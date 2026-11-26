@@ -207,6 +207,9 @@ def root_home_button_readback(value):
 def tv_summary(value):
     value = mapping(value)
     result = metadata(value)
+    if 'root_mrcu_probe' in value:
+        from .doctor_mrcu import summary
+        result['root_mrcu_probe'] = summary(value['root_mrcu_probe'])
     if 'root_beta_state' in value:
         from .root_passive import beta_summary
         result['root_beta_state'] = beta_summary(value['root_beta_state'])
@@ -256,6 +259,9 @@ def tv_summary(value):
             ('read', 'missing', 'launch-error', 'invalid-output', 'unavailable'), 'unavailable')
     if 'root_diagnostics' in value:
         result['root_diagnostics'] = root_diagnostics_summary(value['root_diagnostics'])
+    if 'helper_startup' in value:
+        from .helper_startup import summary
+        result['helper_startup'] = summary(value['helper_startup'])
     if 'setup_outcome' in value:
         from .outcomes import summary
         result['setup_outcome'] = summary(value['setup_outcome'])

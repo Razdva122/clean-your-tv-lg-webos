@@ -1942,6 +1942,102 @@ def luna(uri, payload):
         self.assertEqual(calls.count('remove-com.gathin.tvhome'), 1)
         self.assertFalse(present)
 
+    def test_no_root_successor_resumes_old_removal_without_home_settings(self):
+        from updater.luna import context
+
+        driver, identifier, root, updater, payload, calls, present = self.fixture()
+        for path in (root, updater):
+            shutil.rmtree(path)
+        Store(root, uid=os.getuid()).write('deploy', {
+            'version': 1, 'app': 'com.cleanyourtv.root.preview', 'stage': 'cancellation-admitted'})
+        Store(updater, uid=os.getuid()).write('bootstrap', {'phase': 'cancellation-admitted'})
+        store = driver.store
+        predecessor, successor, lease = '1'*32, '2'*32, '3'*32
+        original_lease, final_fence, removal = '4'*32, '5'*32, '6'*32
+        store.write('clean-removal-'+predecessor, dict(schema=1, protocol='clean-removal-v1',
+            operation=predecessor, removal=removal, lease=original_lease, final_original_lease=original_lease,
+            final_fence=final_fence, stage='verified-clean', state='complete', current=True,
+            result={'verified_clean': True, 'private_cleanup_verified': True}))
+        binding = dict(schema=1, protocol='no-root-root-handoff-v1', operation=successor, lease=lease,
+            plan_sha256='a'*64, source_sha256='b'*64, effects_started=True, completed=True,
+            predecessor={'operation': predecessor, 'removal': removal, 'lease': final_fence})
+        store.write('no-root-'+successor, binding)
+        store.write('operation', dict(schema=1, id=lease, owner='no-root',
+            journal='no-root-'+successor+'.json', stage='reserved', terminal=False))
+        (Path(store.root)/('request-'+identifier+'.json')).unlink()
+        present.clear()
+        app = 'com.gathin.tvhome'
+        present.add(app)
+        device = driver.device
+        original_rpc = device.rpc
+        old_support = True
+
+        def reply(method, data):
+            if method.endswith('/getSystemSettings'):
+                response = {'returnValue': False, 'errorText': 'There is no matched result from DB'}
+                error = context(RuntimeError('Bus operation rejected'), method, 'negative-reply', response)
+                if old_support:
+                    error.system_setting_not_found = False
+                raise error
+            if method.endswith('/getProfiles'):
+                response = {'returnValue': False, 'errorCode': -1,
+                            'errorText': 'Service does not exist: com.webos.service.systemprofile.'}
+                raise context(RuntimeError('Bus operation rejected'), method, 'negative-reply', response)
+            if method == app+'.renewal/disable':
+                return {'returnValue': True, 'state': {'enabled': False}}
+            return original_rpc(method, data)
+
+        proof = {'mode': 'stock-compositor', 'settings_absent': True}
+        device.rpc = reply
+        with patch.object(device, 'log'), patch.object(device, 'compositor_stock', return_value=proof) as compositor:
+            failed = driver.clean_remove(identifier, expected_lease=lease)
+            self.assertEqual(failed['last_failure']['cleanup_step'], 'home-readback')
+            self.assertEqual(failed['last_failure']['exception_type'], 'RuntimeError')
+            old_support = False
+            with patch.object(device, 'stock_profiles_eligible', return_value=False):
+                released_retry = driver.clean_remove(identifier, failed['removal'], lease)
+            self.assertEqual(released_retry['last_failure']['cleanup_step'], 'home-readback')
+            self.assertEqual(released_retry['last_failure']['exception_type'], 'ValueError')
+            compositor.assert_not_called()
+            store.write('no-root-'+successor, {**binding, 'completed': False})
+            rejected = driver.clean_remove(identifier, failed['removal'], lease)
+            self.assertEqual(rejected['stage'], 'original-writers-fenced')
+            self.assertIn(app, present)
+            compositor.assert_not_called()
+
+            store.write('no-root-'+successor, binding)
+            unexpected = root/'foreign-state'
+            unexpected.touch()
+            rejected = driver.clean_remove(identifier, failed['removal'], lease)
+            self.assertEqual(rejected['stage'], 'original-writers-fenced')
+            self.assertIn(app, present)
+            compositor.assert_not_called()
+            unexpected.unlink()
+            resumed = driver.clean_remove(identifier, failed['removal'], lease)
+            if resumed['stage'] == 'restart-required':
+                device.current_boot = '22222222-2222-2222-2222-222222222222'
+                resumed = driver.clean_remove(identifier, failed['removal'], lease)
+        self.assertEqual(resumed['stage'], 'verified-clean', resumed)
+        self.assertEqual(resumed['removal'], failed['removal'])
+        self.assertEqual(calls.count('remove-'+app), 1)
+        self.assertEqual(driver.inspect(for_install=True), {
+            'state': 'fresh', 'reason': 'verified_clean_removal', 'can_install': True,
+            'can_maintain': False, 'clean_removal_verified': True})
+        fresh = '7'*32
+        installed = {'returnValue': True, 'installed': 'com.cleanyourtv.root.preview', 'home_changed': False}
+        with patch.object(device, 'preflight'), patch.object(device, 'log'), \
+                patch.object(device, 'native_deploy', return_value=installed) as deploy, \
+                patch.object(device, 'compositor_stock', side_effect=ValueError('route changed')) as readback:
+            refused = driver.native_install(fresh, payload)
+            self.assertEqual(refused['code'], 'clean-handoff-refused')
+            deploy.assert_not_called()
+            readback.side_effect = None
+            readback.return_value = proof
+            result = driver.native_install(fresh, payload)
+        self.assertEqual(result['state'], 'complete', result)
+        self.assertEqual(result['clean_predecessor'], identifier)
+        deploy.assert_called_once_with(payload)
+
     def test_both_home_settings_interfaces_absent_use_read_only_compositor_proof(self):
         from clean_removal import routes
         from updater.luna import context
