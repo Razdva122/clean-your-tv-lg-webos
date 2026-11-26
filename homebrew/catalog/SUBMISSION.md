@@ -1,6 +1,6 @@
 # Homebrew catalog submission preparation
 
-Historical candidate/session date: 2026-10-27. Prerequisite rechecked: 2026-10-30.
+Historical candidate/session date: 2026-10-27. Prerequisite rechecked: 2026-11-25.
 Status: **not submitted; public promotion disabled**.
 
 ## Published product and Installer identity
@@ -56,11 +56,13 @@ exposes its elevated API to `public`, while webOS 11's generated application
 permissions no longer include that group. The upstream
 [Homebrew PR #233](https://github.com/webosbrew/webos-homebrew-channel/pull/233),
 commit `50fa99e1f08959b665b2e34d0d85cb2222c4c2c9`, grants `lunabus.query` too.
-It is merged upstream but, rechecked on 2026-10-30, absent from the latest
-published Homebrew release (0.7.3). No supported published replacement version
-is available yet. The updated candidate detects an exact app-originated `exec`
-denial, keeps any saved operation ID and recommends the published computer or
-Android installer. This is failure handling, not an access grant or new TV evidence.
+The correction first shipped in
+[Homebrew Channel 0.8.0](https://github.com/webosbrew/webos-homebrew-channel/releases/tag/v0.8.0).
+The candidate detects an exact app-originated `exec` denial, keeps any saved
+operation ID and guides users to update Homebrew and check status, with the
+published computer or Android installer as a fallback. The stock 0.8.0
+Installer UI result belongs in the
+[acceptance record](../../docs/development/HOMEBREW-INSTALL-ACCEPTANCE.md#homebrew-080-verification-2026-11-25).
 
 A tested appinfo-only permission declaration did not change the generated
 client ACL on this TV. That unsuccessful change and its packaging assertion
@@ -101,7 +103,7 @@ would only have tested the ineffective declaration, not functional TV access.
 
 ## Remaining submission gates
 
-- Resolve and document the supported Homebrew prerequisite on webOS 11.
+- Verify real Installer-app access on webOS 11 with published Homebrew 0.8.0.
 - Complete the new installation-path matrix, including clean setup, both-client
   handoff, runtime preparation, interruptions, upgrades, rollback and removal.
   Published Root power-cycle evidence is scoped to that product and path.

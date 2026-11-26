@@ -167,6 +167,11 @@ no public catalog listing is established. It requires a verified candidate packa
 compatible ARM32 TV, effective root services and runtime/storage checks. Home
 activation and optional System Updater preparation are explicit separate steps.
 Homebrew upgrades Installer itself; product updates use the product updaters.
+For candidate testing on webOS 11 or later, use
+[Homebrew Channel 0.8.0](https://github.com/webosbrew/webos-homebrew-channel/releases/tag/v0.8.0)
+or later. If Installer reports **Homebrew access denied**, update Homebrew
+Channel and use **Check status**. If access remains denied, use the published
+computer or Android installer.
 
 For supervised testing, follow the [candidate acceptance and recovery contract](development/HOMEBREW-INSTALL-ACCEPTANCE.md)
 and [manual continuation requirements](MANUAL_INSTALL.md#candidate-shared-product-continuation).

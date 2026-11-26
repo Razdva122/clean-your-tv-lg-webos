@@ -433,7 +433,7 @@ const APP = process.env.CYTV_INSTALLER_APP || path.join(__dirname, '../app'),
       f = await fixture({ execDenied: true, savedOperation });
       p = f.page;
       await p.waitForSelector('[data-screen="homebrew-access"]');
-      assert((await p.locator('#content').textContent()).includes('0.7.3'));
+      assert((await p.locator('#content').textContent()).includes('0.8.0'));
       assert((await p.locator('#content').textContent()).includes('Android'));
       assert.equal(
         await p
@@ -629,7 +629,7 @@ const APP = process.env.CYTV_INSTALLER_APP || path.join(__dirname, '../app'),
         await p.waitForSelector('[data-screen="homebrew-access"]');
         assert.equal(await p.locator('#install,#restore,#prepare').count(), 0);
         assert(
-          (await p.locator('#content').textContent()).includes('0.7.3'),
+          (await p.locator('#content').textContent()).includes('0.8.0'),
           locale + ' localized prerequisite'
         );
         await p.locator('#refresh').focus();

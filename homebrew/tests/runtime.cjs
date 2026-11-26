@@ -34,7 +34,7 @@ async function rejects(promise) {
 function digest(raw) {
   return crypto.createHash('sha256').update(raw).digest('hex');
 }
-function fixture(shared) {
+function fixture(shared, largeMember) {
   var base = fs.mkdtempSync(
       path.join(fs.realpathSync(os.tmpdir()), 'cytv-node-offline-')
     ),
@@ -96,6 +96,16 @@ function fixture(shared) {
   write('root/bundle.json', 'ROOT_DATA');
   write('supervisor/bundle.json', 'SUPERVISOR_DATA');
   write('baseline/baseline.json', 'BASELINE_DATA');
+  if (largeMember) {
+    var media = Buffer.alloc(17 * 1024 * 1024);
+    write('root/com.cleanyourtv.root.preview_1.0.0_all.ipk', media);
+    if (largeMember !== 'root/oversized.py')
+      fs.mkdirSync(path.join(root, 'baseline/cache'));
+    write(
+      largeMember === 'root' ? 'baseline/cache/' + digest(media) : largeMember,
+      media
+    );
+  }
   write('runtime.tar.gz', 'verified normalized archive');
   write('runtime-binding.json', bindraw);
   write(
@@ -117,6 +127,7 @@ function fixture(shared) {
   );
   var manifest = {
     schema: 1,
+    versions: { root: '1.0.0' },
     files: files,
     runtime: {
       archive_sha256: PIN,
@@ -505,6 +516,25 @@ async function rejection(change) {
     await rejects(reanchored.api.inspect(reanchored.root));
   } finally {
     reanchored.clean();
+  }
+  for (var member of [
+    'root',
+    'root/oversized.py',
+    'baseline/cache/' + '0'.repeat(64)
+  ]) {
+    var large = fixture(false, member);
+    try {
+      large.setSystem();
+      var largeState = await large.api.inspect(large.root);
+      if (member === 'root') {
+        var largeStage = await large.api.stage(largeState, true);
+        await largeStage.cleanup();
+      } else {
+        await rejects(large.api.stage(largeState, true));
+      }
+    } finally {
+      large.clean();
+    }
   }
   var staged = fixture();
   try {

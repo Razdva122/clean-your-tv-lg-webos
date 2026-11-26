@@ -392,8 +392,8 @@ remain separate. No Homebrew public approval record is added.
 
 ## Issue #116 access preflight follow-up (2026-10-30)
 
-Upstream release verification still finds Homebrew 0.7.3 as latest; its webOS 11
-correction #233 is merged source only. The candidate now classifies the exact LS2
+On 2026-10-30 Homebrew 0.7.3 was the latest release and the webOS 11 correction
+#233 was available only in upstream source. The candidate classified the exact LS2
 `exec` denial and displays a localized prerequisite/workaround screen. It retains
 saved requests and provides read-only inspection retry without resubmission or
 permission changes. No supported minimum Homebrew version can be named yet.
@@ -404,3 +404,102 @@ acceptance was performed; all earlier C3 observations retain their original
 artifact and temporary-prerequisite scope. Public promotion remains disabled;
 exact-artifact full installation-path acceptance and named human review remain
 required after a supported prerequisite exists.
+
+## Homebrew 0.8.0 verification (2026-11-25)
+
+[Homebrew Channel 0.8.0](https://github.com/webosbrew/webos-homebrew-channel/releases/tag/v0.8.0)
+includes [upstream #233](https://github.com/webosbrew/webos-homebrew-channel/pull/233).
+The candidate's denial screen now directs webOS 11+ users to update Homebrew,
+retry the read-only status check, and use the computer or Android installer if
+access remains denied. The October experiment above remains scoped to its
+temporary patch.
+
+Development preparation used the macOS ARM64 checkout. The official Homebrew
+IPK matched GitHub's declared SHA-256
+`44bbca8e7b86a2491ec3ffed0d469094602b9f965c6dbd05bac5899392bececa`.
+The published service still contains the `stdoutString` response field used by
+the CYTV bridge.
+The local Installer 0.0.0 IPK passed the repository manifest and payload checks
+at 117,599,636 bytes (122,658,589 installed bytes), with SHA-256
+`68e332018dac843f930f02d5a50248e54f3843944797b6c5b8aa54ffaca398ae`.
+It is a development build from the working checkout. Select and record the
+checkout and exact artifact that will be installed after the TV handoff.
+
+Local Homebrew payload, runtime, bridge and continuation checks passed.
+The source and compiled browser suites passed for 13 locales at 720p and
+1080p. The wider host Installer suite reported four wallpaper GUI failures
+from English assertions against Russian translations. The wallpaper suite
+passed all eight tests when run independently with English selected.
+
+The project C3 was reachable over SSH and reported Homebrew 0.7.3 before the
+planned retest. The maintainer scheduled TV changes after the C3 checks for
+[release candidate #827](https://github.com/Razdva122/clean-your-tv-lg-webos/pull/827).
+The following device cases are pending. Record the actual package identities,
+preconditions and result of each case before counting it toward acceptance.
+
+| Case | Expected result |
+| --- | --- |
+| HB08-01 | Official Homebrew 0.8.0 update completes, installed version matches, configured root service and recovery access are available, and existing CYTV state matches its baseline. |
+| HB08-02 | The exact CYTV Installer IPK installs and launches. The actual TV app completes read-only inspection without the LS2 denial and shows the setup or maintenance screen matching the starting product state. |
+| HB08-03 | Clean setup and runtime preparation complete with measured staging/free space, and both computer/TV continuation paths preserve and resume the same operation. |
+| HB08-04 | Upgrade, interruption/recovery, rollback and optional System Updater behavior satisfy the existing cases in this ledger. |
+| HB08-05 | Affected product Home activation, network Home, physical emergency controls, standby and separate AC cold boot meet the planned outcomes. |
+| HB08-06 | Installer-only and component/full-product removal meet their separate cleanup and preserved-state expectations. Run only after cases needing the corresponding installed state. |
+| HB08-07 | While Root Home is installed, confirm its LG firmware-blocking UI can read and change the Homebrew setting, verify it after a software restart, and restore its original value. Keep this result with the firmware-blocking evidence. |
+
+Device reconciliation at handoff: seven selected groups, zero new observed
+passes or failures, zero covered by matching earlier evidence, all seven pending
+the C3 release-QA handoff. The remaining publication and human review gates
+are tracked above.
+
+### C3 first pass on released Homebrew (2026-11-26)
+
+The maintainer handed back the project OLED55C3RLA after #827. The Mac used
+the paired network remote and existing trusted SSH connection. The previous
+C3 record identifies firmware 43.21.71 / webOS 11.2.0. Physical remote model
+unknown. Homebrew's built-in self-update downloaded and verified 0.8.0, then
+installed it over 0.7.3. SSH remained available, Homebrew reported effective
+root and blockUpdates enabled, and the existing Home and Ambient app metadata
+hashes matched their baseline. No-root Home 1.22.0, Helper 0.11.0 and Ambient
+0.0.7 were installed, with Root Home absent.
+
+Selected [CI run 45761587837](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/45761587837)
+at source `1337f4c6` from the 1.29.1 release cycle. Workflow and Homebrew
+job succeeded. Installer 0.0.0 with Root 0.25.0, Root Updater 0.6.8 and
+System Updater 1.2.11 measured 123,903,520 bytes. The CI artifact ZIP matched
+GitHub's digest and the staged IPK matched its manifest and build record
+(`c32390775a58c1199f5df64a514bd522a48ba5696b508c6a8cdddd7787a37785`).
+The LG package manager reached installed, all 174 installed application files
+matched the IPK, and the Installer reached foreground. Available /var/lib
+space measured 447,156 KiB before and 447,148 KiB after installation.
+
+| Group | Observation on the original CI artifact |
+| --- | --- |
+| HB08-01 | Passed self-update, version, configuration and SSH readback. |
+| HB08-02 | Failed. The genuine Installer showed the unsupported screen. Its own read-only bridge returned installer_unavailable. The packaged inspect entry reproduced “Execution snapshot too large” over SSH. The manifest has a 32,562,014-byte Root IPK, the same bytes in the rollback cache, and 72,459,002 bytes of staging inputs. The TV runtime allowed 16 MiB per file and 32 MiB in total. No product submission was possible. |
+| HB08-03/04 | Clean setup, runtime/continuation and subsequent product transactions depend on passing the failing inspection. Neither client started a Root installation. |
+| HB08-05 | The paired network Home test on the existing stopped No-root setup passed. Media Player held foreground before one HOME, and LG Home stayed foreground for the one-second readback. Root activation, emergency and power cases need the installed Root product. |
+| HB08-06 | Installer-only removal reached removed. Both SDK package and app directories disappeared. Existing Home and Ambient metadata still matched the baseline. Direct removal of the Root components and full-product removal need the corresponding installed components. |
+| HB08-07 | Root Home was absent. Its configuration switch and restart verification require an installed Root product. |
+
+Original-artifact reconciliation: seven groups, one pass, one failure, two
+partial groups with independent subcases observed and three groups blocked by
+missing product setup. The remaining portions of the partial groups require
+Root installation. The owner authorized clearing CYTV test data for the clean
+setup. The next artifact needs the affected inspection and dependent device cases.
+
+The ordinary computer client also returned stopped for the existing No-root
+Helper. Corrected development IPK SHA-256
+`be6d82a787ff68d540d9c1db6faefcbd1151919143219342ec77f6a229c74732`
+measures 123,903,688 bytes. Its component inventories match the trusted
+1.29.1 CI artifact. The embedded runtime staging module, its manifest and
+bootstrap pin, and the localized denial instructions changed. The specific
+oversized-media regression failed before the change and passed afterward.
+The runtime and bridge tests, 20 Homebrew Python tests and the browser suite
+against the compiled IPK UI passed.
+
+The source CLI without a prepared desktop payload could not start device
+cleanup. The verified 1.29.1 macOS ARM64 CLI resumed the same cleanup goal
+and requested an AC power cycle before its final sweep. This is setup for
+the clean-install case. A zero exit with a pending power cycle is an
+intermediate state.

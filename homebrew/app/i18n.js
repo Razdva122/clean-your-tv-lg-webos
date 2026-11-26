@@ -709,55 +709,55 @@
   var homebrewDenied = {
     cs: [
       'Přístup k Homebrew byl odepřen',
-      'Homebrew Channel odepřel tomuto instalátoru přístup. V systému webOS 11 potřebuje Homebrew 0.7.3 aktualizaci kompatibility od svých vývojářů. Dokud podporovaná verze Homebrew nebude obsahovat opravu, použijte vydaný instalátor pro počítač nebo Android.'
+      'Homebrew Channel odepřel instalátoru přístup. V systému webOS 11 nebo novějším aktualizujte Homebrew Channel na verzi 0.8.0 nebo novější a znovu zkontrolujte stav. Pokud chyba přetrvává, použijte instalátor pro počítač nebo Android.'
     ],
     'en': [
       'Homebrew access denied',
-      'Homebrew Channel denied access to this installer. On webOS 11, Homebrew 0.7.3 needs an upstream compatibility update. Use the published computer or Android installer until a supported Homebrew release includes the fix.'
+      'Homebrew Channel denied access to this installer. On webOS 11 or later, update Homebrew Channel to 0.8.0 or later, then check status again. If access is still denied, use the computer or Android installer.'
     ],
     'de': [
       'Homebrew-Zugriff verweigert',
-      'Homebrew Channel verweigert diesem Installer den Zugriff. Unter webOS 11 benötigt Homebrew 0.7.3 ein Kompatibilitätsupdate von upstream. Bis eine unterstützte Homebrew-Version die Korrektur enthält, den veröffentlichten Computer- oder Android-Installer verwenden.'
+      'Homebrew Channel hat diesem Installer den Zugriff verweigert. Aktualisieren Sie unter webOS 11 oder neuer Homebrew Channel auf 0.8.0 oder neuer und prüfen Sie den Status erneut. Falls der Zugriff weiterhin verweigert wird, verwenden Sie den Computer- oder Android-Installer.'
     ],
     'es': [
       'Acceso a Homebrew denegado',
-      'Homebrew Channel denegó el acceso a este instalador. En webOS 11, Homebrew 0.7.3 necesita una actualización de compatibilidad de sus desarrolladores. Usa el instalador publicado para ordenador o Android hasta que una versión compatible de Homebrew incluya la corrección.'
+      'Homebrew Channel denegó el acceso a este instalador. En webOS 11 o posterior, actualiza Homebrew Channel a la versión 0.8.0 o posterior y vuelve a comprobar el estado. Si el acceso sigue bloqueado, usa el instalador para ordenador o Android.'
     ],
     'pt-BR': [
       'Acesso ao Homebrew negado',
-      'Homebrew Channel negou acesso a este instalador. No webOS 11, o Homebrew 0.7.3 precisa de uma atualização de compatibilidade dos desenvolvedores. Use o instalador publicado para computador ou Android até uma versão compatível do Homebrew incluir a correção.'
+      'O Homebrew Channel negou acesso a este instalador. No webOS 11 ou posterior, atualize o Homebrew Channel para a versão 0.8.0 ou posterior e verifique o estado novamente. Se o acesso continuar bloqueado, use o instalador para computador ou Android.'
     ],
     'fr': [
       'Accès Homebrew refusé',
-      'Homebrew Channel a refusé l’accès à cet installateur. Sur webOS 11, Homebrew 0.7.3 nécessite une mise à jour de compatibilité de ses développeurs. Utilisez l’installateur publié pour ordinateur ou Android jusqu’à ce qu’une version prise en charge de Homebrew intègre la correction.'
+      'Homebrew Channel a refusé l’accès à cet installateur. Sur webOS 11 ou une version ultérieure, mettez Homebrew Channel à jour vers la version 0.8.0 ou ultérieure, puis vérifiez à nouveau l’état. Si l’accès est toujours refusé, utilisez l’installateur pour ordinateur ou Android.'
     ],
     'it': [
       'Accesso a Homebrew negato',
-      'Homebrew Channel ha negato l’accesso a questo programma di installazione. Su webOS 11, Homebrew 0.7.3 richiede un aggiornamento di compatibilità dai suoi sviluppatori. Usa il programma pubblicato per computer o Android finché una versione supportata di Homebrew non include la correzione.'
+      'Homebrew Channel ha negato l’accesso a questo programma di installazione. Su webOS 11 o versioni successive, aggiorna Homebrew Channel alla versione 0.8.0 o successiva e ricontrolla lo stato. Se l’accesso è ancora negato, usa il programma per computer o Android.'
     ],
     'ko': [
       'Homebrew 접근 거부',
-      'Homebrew Channel이 이 설치 프로그램의 접근을 거부했습니다. webOS 11에서는 Homebrew 0.7.3에 개발자의 호환성 업데이트가 필요합니다. 수정 사항이 포함된 지원 Homebrew 버전이 나올 때까지 공개된 컴퓨터 또는 Android 설치 프로그램을 사용하세요.'
+      'Homebrew Channel이 이 설치 프로그램의 접근을 거부했습니다. webOS 11 이상이라면 Homebrew Channel을 0.8.0 이상으로 업데이트한 뒤 상태를 다시 확인하세요. 여전히 접근이 거부되면 컴퓨터 또는 Android 설치 프로그램을 사용하세요.'
     ],
     'hi': [
       'Homebrew पहुँच अस्वीकृत',
-      'Homebrew Channel ने इस इंस्टॉलर की पहुँच रोक दी। webOS 11 पर Homebrew 0.7.3 को उसके डेवलपर से संगतता अपडेट चाहिए। सुधार वाला समर्थित Homebrew संस्करण आने तक प्रकाशित कंप्यूटर या Android इंस्टॉलर उपयोग करें।'
+      'Homebrew Channel ने इस इंस्टॉलर की पहुँच रोक दी। webOS 11 या बाद के संस्करण पर Homebrew Channel को 0.8.0 या बाद के संस्करण में अपडेट करें और स्थिति फिर से जाँचें। अगर पहुँच अब भी रुकी है, तो कंप्यूटर या Android इंस्टॉलर का उपयोग करें।'
     ],
     'pl': [
       'Odmowa dostępu do Homebrew',
-      'Homebrew Channel odmówił temu instalatorowi dostępu. W webOS 11 Homebrew 0.7.3 wymaga aktualizacji zgodności od swoich twórców. Dopóki obsługiwana wersja Homebrew nie zawiera poprawki, użyj opublikowanego instalatora na komputer lub Android.'
+      'Homebrew Channel odmówił temu instalatorowi dostępu. W webOS 11 lub nowszym zaktualizuj Homebrew Channel do wersji 0.8.0 lub nowszej i ponownie sprawdź stan. Jeśli nadal nie ma dostępu, użyj instalatora na komputer lub Android.'
     ],
     'ru': [
       'Homebrew запретил доступ',
-      'Homebrew Channel запретил доступ этому установщику. На webOS 11 для Homebrew 0.7.3 требуется исправление совместимости от его разработчиков. Пока оно не войдёт в поддерживаемый выпуск Homebrew, используйте опубликованный установщик для компьютера или Android.'
+      'Homebrew Channel запретил доступ установщику. На webOS 11 или новее обновите Homebrew Channel до 0.8.0 или новее и снова проверьте состояние. Если доступ по-прежнему закрыт, воспользуйтесь установщиком для компьютера или Android.'
     ],
     'zh-Hans': [
       'Homebrew 拒绝访问',
-      'Homebrew Channel 拒绝此安装程序访问。在 webOS 11 上，Homebrew 0.7.3 需要开发者提供兼容性更新。在受支持的 Homebrew 版本包含此更新前，请使用已发布的电脑或 Android 安装程序。'
+      'Homebrew Channel 拒绝此安装程序访问。在 webOS 11 或更高版本上，请将 Homebrew Channel 更新至 0.8.0 或更高版本，再次检查状态。如果仍无法访问，请使用电脑或 Android 安装程序。'
     ],
     'zh-Hant': [
       'Homebrew 拒絕存取',
-      'Homebrew Channel 拒絕此安裝程式存取。在 webOS 11 上，Homebrew 0.7.3 需要開發者提供相容性更新。在受支援的 Homebrew 版本包含此更新前，請使用已發布的電腦或 Android 安裝程式。'
+      'Homebrew Channel 拒絕此安裝程式存取。在 webOS 11 或更新版本上，請將 Homebrew Channel 更新至 0.8.0 或更新版本，再次檢查狀態。如果仍無法存取，請使用電腦或 Android 安裝程式。'
     ]
   };
   keys.push('homebrewDeniedTitle', 'homebrewDeniedBody');

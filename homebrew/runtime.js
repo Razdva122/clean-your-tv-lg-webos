@@ -769,14 +769,32 @@ function stage(state, full) {
             return /^(root|root-updater|supervisor|baseline)\//.test(name);
           return name.indexOf('root-updater/') === 0 && !/\.ipk$/.test(name);
         }),
-        total = 0;
+        ordinaryBytes = 0;
+      var version = (context.manifest.versions || {}).root;
+      var rootIpk =
+        typeof version === 'string' && /^\d+\.\d+\.\d+$/.test(version)
+          ? 'root/com.cleanyourtv.root.preview_' + version + '_all.ipk'
+          : null;
+      var rootRecord = rootIpk && expected[rootIpk];
+      var rollbackCopy = rootRecord && 'baseline/cache/' + rootRecord.sha256;
       if (!names.length || names.indexOf('root-updater/install_driver.py') < 0)
         fail('Missing execution closure');
       names.forEach(function (name) {
         safeName(name);
         var record = expected[name];
-        total += record.size;
-        if (record.size > 16 * 1024 * 1024 || total > 32 * 1024 * 1024)
+        // The package and its identical rollback copy may each contain Root media.
+        var rootMedia =
+          name === rootIpk ||
+          (name === rollbackCopy &&
+            record.sha256 === rootRecord.sha256 &&
+            record.size === rootRecord.size);
+        if (!rootMedia) ordinaryBytes += record.size;
+        if (
+          !Number.isSafeInteger(record.size) ||
+          record.size < 0 ||
+          record.size > (rootMedia ? 64 : 16) * 1024 * 1024 ||
+          ordinaryBytes > 32 * 1024 * 1024
+        )
           fail('Execution snapshot too large');
         var raw = checkedBytes(
           path.join(context.root, name),

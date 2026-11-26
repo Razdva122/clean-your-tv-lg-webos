@@ -12,9 +12,9 @@ all [localized guides](../docs/LANGUAGES.md), and the [physical acceptance/state
 
 The installer requires a rooted compatible LG webOS TV, Homebrew Channel's exec
 service with actual root execution, Node.js 8+, and a usable Python 3.9+ or the
-bundled pinned ARMv7 Python 3.13 runtime. Runtime preparation requires 320 MiB free;
-the approximately 57 MiB development IPK also requires unmeasured package-manager
-staging capacity. No new model, firmware or webOS compatibility is claimed.
+bundled pinned ARMv7 Python 3.13 runtime. Runtime preparation requires 320 MiB free
+after Installer is installed. Allow additional space for the selected IPK and
+package-manager staging. See the acceptance record for measured package bytes.
 
 On webOS 11, stock Homebrew Channel **0.7.3** can reject Installer's `exec`
 request with `Denied method call` even when the same entry works from root SSH.
@@ -27,17 +27,17 @@ Do not silently patch Homebrew's ACLs or count a temporary prerequisite patch
 as an unmodified public installation. See the
 [current submission record](catalog/SUBMISSION.md).
 
-Prerequisite check on **2026-10-30**: upstream's latest published release remains
-[0.7.3](https://github.com/webosbrew/webos-homebrew-channel/releases/tag/v0.7.3).
-No supported published Homebrew release contains #233 yet. Reinstalling 0.7.3
-does not address this denial. Use the
-published computer/Android installer until such a release is available and its
-actual Installer-app access has been accepted.
+For candidate testing on webOS 11 or later, use
+[Homebrew Channel 0.8.0](https://github.com/webosbrew/webos-homebrew-channel/releases/tag/v0.8.0)
+or later. Version 0.8.0 is the first published release that includes #233.
+Verify access by opening the Installer app on the TV and checking its status.
+If access remains denied, use the published computer or Android installer.
 
 The candidate uses its existing read-only, app-originated `inspect` as the access
-preflight. An exact LS2 `exec` denial now shows **Homebrew access denied** with
-that workaround in all supported languages. Only Check status and Close are offered;
-a saved request ID is retained, and retry inspects before querying its status.
+preflight. An exact LS2 `exec` denial shows **Homebrew access denied** with
+the update and fallback instructions in all supported languages. Only Check
+status and Close are offered. A saved request ID is retained, and retry inspects
+before querying its status.
 The message also applies if access is lost after opening. Missing services,
 malformed replies and backend/root failures retain their generic handling; raw
 service diagnostics are never displayed. This does not grant access or establish
