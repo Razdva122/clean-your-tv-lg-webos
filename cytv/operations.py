@@ -1063,8 +1063,8 @@ printf '%s' "$cytv_state"
             except (RuntimeError, OSError, ValueError) as error:
                 message = 'Clean Your TV is installed. On-TV update setup needs attention.'
                 if isinstance(error, UserError):
-                    message += ' ' + str(error)
-                raise UserError(message + ' Use the saved root SSH connection, check status, then choose Enable updates '
+                    message += '\n' + str(error)
+                raise UserError(message + '\nUse the saved root SSH connection, check status, then choose Enable updates '
                                 'for all TV components to continue the original setup.',
                                 reason_code='system-updates-incomplete') from error
             result['system_updates'] = True

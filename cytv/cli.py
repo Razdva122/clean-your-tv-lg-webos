@@ -921,8 +921,6 @@ def _run(args, ask, write, connect, secret, search, inspect, payload_root, check
                     if args.non_interactive:
                         write.command_outcome('owner-input-required', 'confirm-reinstallation')
                         raise UserError('Root is already installed or recovery state remains. Run the installer interactively to confirm reinstallation. --yes does not approve replacing Root.')
-                    if manifest.get('single_tile') and profile['edition']=='no-root' and profile.get('connection')=='root-ssh':
-                        write('Setup installs Clean Your TV and prepares updates and rollback on this TV.')
                     write.heading('Versions on the TV → versions in this installer')
                     for row in installer.version_summary():
                         write(row)
