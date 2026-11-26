@@ -468,6 +468,7 @@ async function settle() {
     recovery: true
   };
   await tile.window.SystemUpdates.open(tileOptions);
+  assert.equal(tile.ids.systemUpdateBack.textContent, 'Back');
   assert.deepEqual(tile.calls[0].payload, { edition: 'root' });
   tile.ids.systemUpdateRecovery.click();
   await settle();

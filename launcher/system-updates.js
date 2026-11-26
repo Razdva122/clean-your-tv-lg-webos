@@ -300,7 +300,9 @@
         otherEdition() ||
         !transaction ||
         transaction.canRollback !== true;
-      buttons[4].textContent = t(options.standalone ? 'Open Home' : 'Back');
+      buttons[4].textContent = t(
+        options.standalone && !tileRecovery() ? 'Open Home' : 'Back'
+      );
       if (visible()) {
         if (preserveFocus && enabled().indexOf(focused) >= 0)
           selected = enabled().indexOf(focused);
