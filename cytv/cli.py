@@ -829,6 +829,9 @@ def _run(args, ask, write, connect, secret, search, inspect, payload_root, check
                     pending = None
                 continue_after_cleanup = bool(reinstall_step and reinstall_step.stage == 'removed')
                 if manifest.get('single_tile') and not pending and not reinstall_step:
+                    if profile['edition'] == 'root':
+                        from .single_tile_root import handoff
+                        return handoff(installer, write, ask, non_interactive=args.non_interactive)
                     # Both Android and desktop pass through this admission before
                     # offering destructive reinstallation or initiating pairing.
                     from .single_tile_setup import select_source

@@ -29,7 +29,7 @@ def select_source(installer, write, ask, *, non_interactive):
     return prompts.confirm('Install Clean Your TV with one tile now?', ask, write, default=False)
 
 
-def installed_role(installer):
+def installed_role(installer, *, require_tile_protocol=False):
     """Return the role of the fixed SDK package without exposing device data."""
     from .operations import BASE
     path = BASE + '/applications/' + package.TILE_APP + '/appinfo.json'
@@ -48,6 +48,7 @@ try {
   while(offset<s.size){var n=fs.readSync(opened,bytes,offset,s.size-offset,null);if(!n)throw Error('changed metadata');offset+=n;}
   var info=JSON.parse(bytes.toString('utf8')),now=fs.lstatSync(file);
   if(now.ino!==s.ino||now.dev!==s.dev||now.size!==s.size||info.id!==id||info.type!=='web')throw Error('changed entry');
+  if(process.argv[3]==='tile'&&info.cytvTileProtocol!==1)throw Error('unsupported tile');
   var edition=info.cytvTileEdition;
   if(edition===undefined)process.stdout.write('homebrew');
   else if(info.cytvTileProtocol===1&&(edition==='root'||edition==='no-root'))process.stdout.write(edition);
@@ -55,7 +56,8 @@ try {
 } finally {fs.closeSync(opened);}
 """
     reply = installer.remote.run('/usr/bin/node -e ' + shlex.quote(script) + ' ' +
-                                 shlex.quote(path) + ' ' + shlex.quote(package.TILE_APP)).strip()
+                                 shlex.quote(path) + ' ' + shlex.quote(package.TILE_APP) +
+                                 (' tile' if require_tile_protocol else '')).strip()
     if reply not in ('root', 'no-root', 'homebrew'):
         raise UserError('The TV package result could not be verified.', reason_code='cleanup-check-failed')
     return reply
