@@ -335,6 +335,7 @@ class LocalDevice:
 
     def verify_resume(self, payload, submission):
         options=self.verify_snapshot(payload,submission)
+        self.homebrew_settings = submission.get('homebrew_settings')
         self.preflight(Path(payload),options,product=submission['action']=='install')
         return options
 
@@ -494,7 +495,11 @@ class LocalDevice:
                 apps=json.loads(result.stdout)
                 inventory={'apps':[{k:a[k] for k in ('id','title','icon','iconColor')} for a in apps if not a.get('hidden') and isinstance(a.get('id'),str) and isinstance(a.get('title'),str)],'inputs':[]}
                 root_package.personalize_root(root,inventory)
-        result=deploy.install(root,migrate=options['migrate'])
+        settings = getattr(self, 'homebrew_settings', None)
+        if settings is None:
+            result=deploy.install(root,migrate=options['migrate'])
+        else:
+            result=deploy.install(root,migrate=options['migrate'],homebrew_settings=settings)
         if options['migrate']: _capture_migrated_baseline(root)
         return result
 

@@ -266,6 +266,8 @@ class Coordinator:
                 submission=_optional_record(self.store,'submission-'+identifier)
                 if submission is not None:
                     record['candidate_sha256']=submission['candidate_sha256']
+                    if 'homebrew_settings' in submission:
+                        self.device.homebrew_settings = submission['homebrew_settings']
                     if submission.get('tv_activation') == TV_INSTALLER:
                         record['tv_activation'] = True
                 def checkpoint(stage):
@@ -327,6 +329,8 @@ class Coordinator:
         def perform(checkpoint):
             nonlocal dispatch
             state=self.device.inspect()['state']
+            if state != 'fresh' and isinstance(getattr(self.device, 'homebrew_settings', None), str):
+                raise ValueError('homebrew_setup_requires_fresh_installation')
             if state=='fresh':
                 checkpoint('root-deploy')
                 self.device.deploy(payload,options)
@@ -534,7 +538,7 @@ class Coordinator:
             raise ValueError('package-terminal-unverified')
         if final_readback_only:
             if (previous.get('candidate_sha256')!=submission.get('candidate_sha256')
-                    or candidate_digest(payload,_verified_payload(payload,options['prepare_supervisor']))!=submission.get('candidate_sha256')):
+                    or reviewed_candidate(payload,_verified_payload(payload,options['prepare_supervisor']),submission.get('homebrew_settings'))!=submission.get('candidate_sha256')):
                 raise ValueError('original_candidate_changed')
         original_binding = dict(candidate_sha256=submission.get('candidate_sha256'))
         if submission.get('tv_activation') == TV_INSTALLER:
@@ -584,7 +588,7 @@ class Coordinator:
                 if _optional_record(self.store,'submission-'+identifier)!=submission:
                     raise ValueError('original_candidate_changed')
                 options=self.device.verify_resume(payload,submission)
-                if candidate_digest(payload,_verified_payload(payload,options['prepare_supervisor']))!=submission.get('candidate_sha256'):
+                if reviewed_candidate(payload,_verified_payload(payload,options['prepare_supervisor']),submission.get('homebrew_settings'))!=submission.get('candidate_sha256'):
                     raise ValueError('original_candidate_changed')
                 self.device.continuation_quiescent(payload)
                 if record.get('candidate_sha256')!=previous.get('candidate_sha256'):
@@ -657,6 +661,16 @@ def candidate_digest(payload, inventories):
     return hashlib.sha256(json.dumps(value,sort_keys=True,separators=(',',':')).encode()).hexdigest()
 
 
+def reviewed_candidate(payload, inventories, settings=None):
+    digest = candidate_digest(payload, inventories)
+    if settings is None:
+        return digest
+    if settings != 'absent' and (not isinstance(settings, str) or not re.fullmatch('[a-f0-9]{64}', settings)):
+        raise ValueError('invalid_homebrew_settings_binding')
+    import hashlib
+    return hashlib.sha256(('homebrew-setup-v1:' + digest + ':' + settings).encode()).hexdigest()
+
+
 def root_review_binding(payload, inventories):
     import hashlib,json
     from pathlib import Path
@@ -674,7 +688,7 @@ def root_review_binding(payload, inventories):
             'code':{name:digest for name,digest in hashes.items() if not mutable(name)}}
 
 
-def submit(identifier, payload, migrate=False, prepare_supervisor=False, action='install', candidate=None, ownership=None, activate_after_install=False):
+def submit(identifier, payload, migrate=False, prepare_supervisor=False, action='install', candidate=None, ownership=None, activate_after_install=False, homebrew_setup=False):
     """Persist once, snapshot trusted worker material, then detach.
 
     The submission receipt precedes Popen. A lost reply or a failed spawn is
@@ -703,11 +717,22 @@ def submit(identifier, payload, migrate=False, prepare_supervisor=False, action=
             if existing.get('action')!=action: raise ValueError('operation_action_conflict')
             return request_status(identifier,store)
         token = setup_activation_token(store) if activate_after_install else None
+        settings = None
+        if homebrew_setup:
+            if action != 'install' or not activate_after_install or not candidate:
+                raise ValueError('invalid_homebrew_setup')
+            from deploy import homebrew_migration
+            prepared, settings = homebrew_migration()
+            migrate = prepared is not None
+            del prepared
+            prepare_supervisor = True
         inventories=_verified_payload(payload,prepare_supervisor)
-        actual_candidate=candidate_digest(payload,inventories)
+        actual_candidate=reviewed_candidate(payload,inventories,settings)
         if candidate is not None and candidate!=actual_candidate: raise ValueError('reviewed_candidate_changed')
         device=LocalDevice();device.preflight(payload,dict(migrate=migrate,prepare_supervisor=prepare_supervisor),product=action=='install')
         receipt=dict(operation=identifier,stage='preparing',state='pending',code='operation_pending',action=action,home_changed=False,candidate_sha256=actual_candidate,options=dict(migrate=migrate,prepare_supervisor=prepare_supervisor),worker_sha256=hashlib.sha256((__import__('pathlib').Path(payload)/'root-updater/bundle.json').read_bytes()).hexdigest(),root_binding=root_review_binding(payload,inventories),root_static={n:d for n,d in inventories['root']['files'].items() if n not in (inventories['root'].get('package'),'release.json','SHA256SUMS')})
+        if settings is not None:
+            receipt['homebrew_settings'] = settings
         if activate_after_install:
             receipt['tv_activation'] = TV_INSTALLER
             receipt['tv_activation_token'] = token
@@ -733,7 +758,7 @@ def submit(identifier, payload, migrate=False, prepare_supervisor=False, action=
                         staging[component+'/'+name]=hashlib.sha256(raw).hexdigest()
                         output.write(raw);output.flush();os.fsync(output.fileno())
                     target.chmod(0o600)
-            if candidate_digest(root,inventories)!=actual_candidate: raise ValueError('worker_source_changed')
+            if reviewed_candidate(root,inventories,settings)!=actual_candidate: raise ValueError('worker_source_changed')
         except (OSError,ValueError):
             receipt.update(state='recovery_required',code='worker_snapshot_unavailable')
             store.write('submission-'+identifier,receipt)
@@ -843,7 +868,7 @@ def continuation_status(identifier, store, device=None):
         snapshot=Path(store.root)/('request-'+identifier)
         options=device.verify_resume(snapshot,submission)
         if (record.get('candidate_sha256')!=submission.get('candidate_sha256')
-                or candidate_digest(snapshot,_verified_payload(snapshot,options['prepare_supervisor']))!=submission.get('candidate_sha256')):return result
+                or reviewed_candidate(snapshot,_verified_payload(snapshot,options['prepare_supervisor']),submission.get('homebrew_settings'))!=submission.get('candidate_sha256')):return result
         device.operation=lease;device.ownership=owner
         result['resume_reason']='worker-not-quiescent'
         device.continuation_quiescent(snapshot)
@@ -890,6 +915,7 @@ def main():
     parser.add_argument('--prepare-supervisor',action='store_true')
     parser.add_argument('--activate-after-install',action='store_true')
     parser.add_argument('--verify-current',action='store_true',help='Read current completion proof without replay')
+    parser.add_argument('--homebrew-setup',action='store_true',help=argparse.SUPPRESS)
     parser.add_argument('--for-install',action='store_true',help=argparse.SUPPRESS)
     parser.add_argument('--resume',action='store_true',help='Explicitly continue the original verified request; never replay unknown submissions')
     parser.add_argument('--final-readback-only',action='store_true',help='Revalidate the final readback under the original lease; no package replay')
@@ -897,6 +923,9 @@ def main():
     parser.add_argument('--submission-parent',type=int,help=argparse.SUPPRESS)
     args=parser.parse_args()
     if args.activate_after_install and (args.action != 'install' or args.resume):parser.error('--activate-after-install requires a fresh install')
+    if args.homebrew_setup and (args.action not in ('install','inspect') or args.worker or args.resume
+                                or not args.payload or args.action == 'install' and not args.activate_after_install):
+        parser.error('--homebrew-setup requires a first Homebrew setup inspection or submission')
     if args.for_install and args.action!='inspect':parser.error('--for-install requires inspect')
     if args.final_readback_only and (not args.resume or args.action!='install'):
         parser.error('--final-readback-only requires install --resume')
@@ -941,7 +970,7 @@ def main():
             if args.worker:
                 result=coordinator.install(args.operation,args.payload,migrate=args.migrate_packaged_home,prepare_supervisor=args.prepare_supervisor,activate_after_install=args.activate_after_install)
             else:
-                result=submit(args.operation,args.payload,migrate=args.migrate_packaged_home,prepare_supervisor=args.prepare_supervisor,candidate=args.candidate,activate_after_install=args.activate_after_install)
+                result=submit(args.operation,args.payload,migrate=args.migrate_packaged_home,prepare_supervisor=args.prepare_supervisor,candidate=args.candidate,activate_after_install=args.activate_after_install,homebrew_setup=args.homebrew_setup)
         elif args.action=='remove':
             if args.worker: result=coordinator.remove(args.operation)
             else:
@@ -967,8 +996,14 @@ def main():
             if args.payload:
                 # Maintenance reviews the removal closure. The optional supervisor
                 # bundle is an install input only; submit still verifies the digest.
-                prepare_supervisor=args.prepare_supervisor and inspected['state']=='fresh'
-                result['candidate_sha256']=candidate_digest(args.payload,_verified_payload(args.payload,prepare_supervisor))
+                fresh = inspected['state'] == 'fresh'
+                prepare_supervisor = fresh and (args.prepare_supervisor or args.homebrew_setup)
+                settings = None
+                if args.homebrew_setup and fresh and result['active_operation'] is None:
+                    from deploy import homebrew_migration
+                    prepared, settings = homebrew_migration()
+                    inspected['migrate_available'] = prepared is not None
+                result['candidate_sha256']=reviewed_candidate(args.payload,_verified_payload(args.payload,prepare_supervisor),settings)
         elif args.action=='activate':result=dict(operation=None,stage='activate',state='complete',code='activated',result=device.activate())
         else: result=dict(operation=None,stage='restore',state='complete',code='restored',result=coordinator.restore())
     except Exception as error:

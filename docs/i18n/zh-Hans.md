@@ -76,7 +76,7 @@ Root 安装程序会在需要时自动使用经过验证的内部临时存储空
 
 ### 如果电视上已经打开 CYTV Installer
 
-检查所选组件，选择**安装并启用**，然后确认一次。安装后，按主页键即可打开 Root Home。如果已触发紧急停用，Root Home 将保持停用。如果安装程序提示在电脑上继续设置 Root，请转到电脑操作。如果提示改用 No-root，请使用电脑或 Android 设备上的安装程序。
+选择**安装并启用**，然后确认一次。安装程序会一起安装 Root Home、Root Updater 和 System Updater。如果找到以前的 Clean Your TV Home 设置且这些设置兼容，安装程序会自动导入。安装后，按主页键即可打开 Root Home。如果已触发紧急停用，Root Home 将保持停用。如果安装程序提示在电脑上继续设置 Root，请转到电脑操作。如果提示改用 No-root，请使用电脑或 Android 设备上的安装程序。
 
 要卸载 Clean Your TV，请在安装程序中选择**完整移除产品**。如果只删除安装程序，Clean Your TV 仍会保留在电视上。
 

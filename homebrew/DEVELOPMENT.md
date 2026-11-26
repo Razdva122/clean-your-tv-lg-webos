@@ -23,8 +23,10 @@ control Home leads to computer or Android setup to establish No-root eligibility
 and pair Home Helper. The TV candidate has no first-pair or installation path
 for No-root. [Edition selection](../docs/superpowers/specs/2026-11-26-homebrew-edition-selection.md)
 
-One explicit setup confirmation covers the reviewed Root components and a
-single activation attempt. When Python preparation is required, the UI checks
+One confirmation authorizes a fresh Homebrew setup of Root Home, Root
+Updater and System Updater together, automatic import of compatible settings
+from a previous Clean Your TV Home setup when present, and a single
+activation attempt. When Python preparation is required, the UI checks
 the original payload digest, fresh installation state and candidate digest
 before submission. The product worker verifies the installed generation,
 releases its installation mutex and uses the guarded runtime to request
@@ -131,9 +133,10 @@ network checks and without executing downloaded application code. The
 
 Required remaining evidence: public HTTPS URLs, representative TV screenshots,
 package staging/storage measurement, clean HBC setup, both cytv/TV handoffs,
-upgrade/rollback, explicit optional supervisor behavior, direct installer and
-component removal, triple-Home, standby and separate cold boot. Record exact
-artifacts and human review. AI assistance was used for implementation and this
+upgrade/rollback, System Updater setup, automatic import when compatible Home
+settings exist, setup without a migration source, direct installer and component
+removal, triple-Home, standby and separate cold boot. Record exact artifacts
+and human review. AI assistance was used for implementation and this
 draft; disclose it in the eventual submission. Do not submit the catalog draft
 or publish Homebrew assets before those gates pass.
 

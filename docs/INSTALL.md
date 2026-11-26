@@ -164,14 +164,16 @@ inactive recovery evidence is retained intentionally.
 
 **Unpublished:** the separate CYTV Installer for Homebrew Channel is Root-only;
 no public catalog listing is established. It requires a verified candidate package,
-compatible ARM32 TV, effective root services and runtime/storage checks. Review
-the components and choose **Install and activate** to authorize setup and Home
-activation together. If the TV needs the bundled Python runtime, the
+compatible ARM32 TV, effective root services and runtime/storage checks. Choose
+**Install and activate** and confirm once. The Installer sets up Root Home,
+Root Updater and System Updater together, then activates Root Home. If it
+finds compatible settings from a previous Clean Your TV Home setup, it
+imports them automatically. If the TV needs the bundled Python runtime, the
 confirmation includes preparing it and proceeding only after the TV passes
 the checks. An active emergency stop keeps Root Home disabled. The
 maintenance screen still offers **Activate Root Home** and **Restore LG Home**.
-System Updater preparation is optional. Homebrew updates the Installer app.
-The product updaters handle Clean Your TV updates.
+Homebrew updates the Installer app. The product updaters handle Clean Your TV
+updates.
 
 If the Installer directs you to a computer for Root setup, use the desktop
 installer. If it identifies a No-root alternative, use the computer or Android

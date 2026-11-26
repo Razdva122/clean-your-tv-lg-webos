@@ -205,6 +205,8 @@ function run(args, deps) {
               command.push('--payload', stage.root);
             if (request.candidate)
               command.push('--candidate', request.candidate);
+            if (request.action === 'inspect' || request.activateAfterInstall)
+              command.push('--homebrew-setup');
             if (request.supervisor) command.push('--prepare-supervisor');
             if (request.migrate) command.push('--migrate-packaged-home');
             if (request.activateAfterInstall)

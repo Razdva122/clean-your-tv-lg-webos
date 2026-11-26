@@ -9,8 +9,6 @@
   var inspected = null,
     job = null,
     operation = null,
-    supervisor = false,
-    migrate = false,
     poll = null,
     busy = false,
     confirmation = null,
@@ -103,18 +101,27 @@
     render();
     focus(opener);
   }
+  function componentVersions(versions) {
+    var names = {
+      'root': 'Root Home',
+      'root-updater': 'Root Updater',
+      'supervisor': 'System Updater',
+      'system-updater': 'System Updater'
+    };
+    return Object.keys(names)
+      .filter(function (key) {
+        return typeof versions[key] === 'string';
+      })
+      .map(function (key) {
+        return names[key] + ' ' + versions[key];
+      })
+      .join(' · ');
+  }
   function versions() {
     var v =
       inspected && inspected.installation && inspected.installation.versions;
     if (!v) return;
-    var node = element(
-      'p',
-      Object.keys(v)
-        .map(function (k) {
-          return (k === 'root' ? 'Root Home' : 'Root Updater') + ' ' + v[k];
-        })
-        .join(' · ')
-    );
+    var node = element('p', componentVersions(v));
     node.id = 'versions';
     content.appendChild(node);
   }
@@ -122,7 +129,8 @@
     return (
       result.state === 'fresh' &&
       result.installation &&
-      result.installation.can_install === true
+      result.installation.can_install === true &&
+      typeof result.installation.migrate_available === 'boolean'
     );
   }
   function canPrepareForSetup() {
@@ -267,40 +275,21 @@
       paragraph(message || 'reviewBody');
       if (preparing) paragraph('runtimeBody');
       var details = element('div', undefined, 'details');
-      details.appendChild(element('p', t('components')));
       var candidate = root.InstallerCandidate;
-      if (candidate)
-        details.appendChild(
-          element(
-            'p',
-            Object.keys(candidate)
-              .map(function (k) {
-                return k + ' ' + candidate[k];
-              })
-              .join(' · ')
-          )
-        );
+      details.appendChild(
+        element(
+          'p',
+          candidate &&
+            candidate.root &&
+            candidate['root-updater'] &&
+            candidate.supervisor
+            ? componentVersions(candidate)
+            : t('components')
+        )
+      );
+      if (!preparing && inspected.installation.migrate_available)
+        details.appendChild(element('p', t('migrationAvailable')));
       content.appendChild(details);
-      var choices = controls();
-      button(
-        choices,
-        'supervisor',
-        t('supervisor') + ': ' + t(supervisor ? 'yes' : 'no'),
-        function () {
-          supervisor = !supervisor;
-          refresh('supervisor');
-        }
-      );
-      button(
-        choices,
-        'migrate',
-        t('migration') + ': ' + t(migrate ? 'yes' : 'no'),
-        function () {
-          migrate = !migrate;
-          render();
-          focus('migrate');
-        }
-      );
       var actions = controls();
       button(
         actions,
@@ -385,7 +374,7 @@
     var previous = doc.activeElement && doc.activeElement.id;
     begin('checking', 'checking');
     bridge
-      .inspect({ prepareSupervisor: supervisor })
+      .inspect({ prepareSupervisor: true })
       .then(function (result) {
         accessDenied = false;
         inspected = result;
@@ -493,8 +482,8 @@
       candidate: inspected.candidate_sha256
     };
     if (action === 'remove') return bridge.remove(options);
-    options.prepareSupervisor = supervisor;
-    options.migrate = migrate;
+    options.prepareSupervisor = true;
+    options.migrate = inspected.installation.migrate_available;
     options.activateAfterInstall = true;
     return bridge.start(options);
   }
@@ -508,7 +497,7 @@
       .then(function (prepared) {
         if (prepared.state !== 'runtime_ready')
           throw new Error('runtime_unconfirmed');
-        return bridge.inspect({ prepareSupervisor: supervisor });
+        return bridge.inspect({ prepareSupervisor: true });
       })
       .then(function (current) {
         if (

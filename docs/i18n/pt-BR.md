@@ -76,7 +76,7 @@ Na instalação Root, o instalador usa automaticamente armazenamento temporário
 
 ### Se o CYTV Installer já estiver aberto na TV
 
-Confira os componentes selecionados, escolha **Instalar e ativar** e confirme uma vez. O botão Home abrirá o Root Home, a menos que a parada de emergência esteja ativa. Se o instalador indicar um computador para configurar o Root, continue nele. Se oferecer No-root, use o instalador para computador ou Android.
+Escolha **Instalar e ativar** e confirme uma vez. O instalador configura o Root Home, o Root Updater e o System Updater juntos. Se encontrar configurações compatíveis de uma instalação anterior do Clean Your TV Home, ele as importa automaticamente. O botão Home abrirá o Root Home, a menos que a parada de emergência esteja ativa. Se o instalador indicar um computador para configurar o Root, continue nele. Se oferecer No-root, use o instalador para computador ou Android.
 
 Para desinstalar o Clean Your TV, escolha **Remover produto completo** no instalador. Se você excluir apenas o aplicativo do instalador, o Clean Your TV continuará na TV.
 

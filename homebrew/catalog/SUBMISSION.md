@@ -58,9 +58,47 @@ project acceptance results in the [acceptance record](../../docs/development/HOM
   python -m repogen.check_compat -i "$listing" -p "$package_file"
   ```
 
-### Local and public checks on 2026-11-26
+### Offline catalog checks for the bundled setup on 2026-11-26
 
-The local Installer 0.0.0 candidate passed both upstream schemas at revision
+The local Installer 0.0.0 candidate for the bundled setup passed both official
+schemas and all three catalog CI commands from apps-repo revision
+`bc55f62416e7c87e79edf5947c56400808bf7592`.
+
+| File or measurement | Bytes | SHA-256 |
+| --- | ---: | --- |
+| Installer IPK | 123,947,008 | `993be912c04dbede34ee2422e259c4fd332f87be2785e1d1a253554635652324` |
+| Serialized Homebrew manifest | 795 | `5465ae9f8199cabf56cda4298467eb1ac111467e136ea24d38c3efbc0ab9b1ed` |
+| Installed file contents | 129,365,107 | — |
+
+`repogen.lintpkg --new` returned zero using the local manifest. It warned
+about missing screenshots and could not check the public icon or GitHub
+licence metadata offline. `repogen.downloadipk` read a loopback HTTP copy
+of the IPK and confirmed the app ID. The downloaded digest matched the
+original manifest. Its `installedSize`, the IPK control field
+`Installed-Size` and the sum of the regular file sizes in the data archive
+agreed.
+
+`repogen.check_compat` used Homebrew Toolbox 0.10.0 and returned zero. It
+flagged the custom packager and found ES2017 features and bundled core-js.
+The firmware profiles produced the following static compatibility results.
+
+| webOS firmware profile | Chromium | ES2017 support |
+| --- | ---: | --- |
+| 5.3.1 | 68 | Pass |
+| 6.4.0 | 79 | Pass |
+| 7.4.0 | 87 | Pass |
+| 8.3.0 | 94 | Pass |
+| 9.2.0 | 108 | Pass |
+| 10.2.0 | 120 | Pass |
+| 11.2.0 | 132 | Pass |
+
+### Previous artifact and public checks on 2026-11-26
+
+These results apply to the previous Installer artifact, which still offered
+component and migration choices. Fresh setup now includes both updaters and
+imports compatible Home settings automatically. The offline checks for the changed package are recorded above.
+
+The previous local Installer 0.0.0 candidate passed both upstream schemas at revision
 `bc55f62416e7c87e79edf5947c56400808bf7592`. The IPK was 123,945,768 bytes,
 SHA-256 `e0b87958e05660ece1773c5881194aa524185060453121b9f36e8f3e03f6d100`.
 The serialized manifest SHA-256 was

@@ -1,6 +1,6 @@
 # Edition selection in CYTV Installer on the TV
 
-Design for review, based on `edd4053f`. On a fresh TV, offer Root by default. Offer a reduced-function No-root installation only after the Installer establishes both that ordinary Root cannot run on this TV and that it can complete the No-root workflow. A person still confirms installation and approves TV pairing. An existing product or operation opens its own status or recovery flow first.
+Design for review, based on `edd4053f`. On a fresh TV, offer Root by default. Offer a reduced-function No-root installation only after the Installer establishes both that ordinary Root cannot run on this TV and that it can complete the No-root workflow. One confirmation covers the Root launcher, both CYTV updaters, and activation. The TV installer transfers supported personalization from an existing CYTV Home automatically when available. First-time No-root pairing needs owner approval. An existing product or operation opens its own status or recovery flow first.
 
 The owner selected the GitHub-account namespace for the candidate, `io.github.razdva122.cytvinstaller`. The earlier `com.cleanyourtv.installer` package has a distinct app identity. Keep each candidate's app-originated tests, package paths, operation evidence and hashes attached to its actual ID. [Candidate acceptance](../../development/HOMEBREW-INSTALL-ACCEPTANCE.md)
 

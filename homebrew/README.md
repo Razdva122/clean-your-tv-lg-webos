@@ -13,12 +13,13 @@ bundled pinned ARMv7 Python 3.13 runtime. Runtime preparation requires 320 MiB f
 after Installer is installed. Allow additional space for the selected IPK and
 package-manager staging. See the acceptance record for measured package bytes.
 
-On a fresh, compatible TV the candidate offers **Install and activate**. Review
-the selected components and optional System Updater before confirming. If
-needed, this confirmation also covers preparation of the bundled Python
-runtime. The installer checks the reviewed payload and the TV again before
-submitting the packages. Activation is a separate operation after verified
-installation. Restore LG Home cancels outstanding setup approval. After an
+For a fresh Root setup, choose **Install and activate** and confirm once.
+The Installer sets up Root Home, Root Updater and System Updater together.
+It automatically imports compatible Home settings from an earlier Clean Your
+TV setup when it finds them. The same confirmation covers preparation of
+the bundled Python runtime if needed. The Installer checks the payload and
+the TV again before submitting the packages. It requests activation after
+verifying installation. Restore LG Home cancels outstanding setup approval. After an
 interruption, choose **Check status** to read the original request. This
 one-confirmation workflow awaits physical acceptance on the selected IPK.
 [Candidate setup](../docs/INSTALL.md#candidate-on-tv-root-installation) ·
@@ -70,7 +71,7 @@ The candidate package ID is `io.github.razdva122.cytvinstaller`. Earlier TV
 observations cover the draft ID `com.cleanyourtv.installer`. Homebrew treats
 the new ID as a separate application, with its own installation and removal.
 Homebrew updates the Installer application. Root Home,
-Root Updater and optional System Updater retain their product and recovery
+Root Updater and System Updater retain their product and recovery
 contracts; complete product updates belong to System Updater. Removing the
 installer leaves those components installed. Complete-product removal is an
 explicit installer/cytv operation. External component removal, emergency release,
@@ -83,9 +84,10 @@ release or catalog submission. `homebrew/release.json` is absent; promotion rema
 disabled until exact-artifact TV acceptance and meaningful human review are recorded.
 
 Required evidence includes clean setup, storage/staging measurement, both client
-handoffs, upgrade/rollback, optional supervisor behavior, component/direct Installer
-removal, triple-Home, standby and separate cold boot. Public URLs and TV screenshots
-also need verification. See [acceptance](../docs/development/HOMEBREW-INSTALL-ACCEPTANCE.md).
+handoffs, upgrade/rollback, System Updater setup, setup with and without
+compatible Home settings, component/direct Installer removal, triple-Home,
+standby and separate cold boot. Public URLs and TV screenshots also need
+verification. See [acceptance](../docs/development/HOMEBREW-INSTALL-ACCEPTANCE.md).
 
 For build APIs, metadata generation, protected release carry-forward and catalog
 submission requirements, use the [development and promotion contract](DEVELOPMENT.md).

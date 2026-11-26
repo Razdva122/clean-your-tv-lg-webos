@@ -117,7 +117,7 @@ historical acceptance cannot be substituted for actual observations.
 
 | Scenario | Required observation | Physical result |
 | --- | --- | --- |
-| Clean HBC install with suitable system Python | One confirmation covers selected Root packages and activation. Verify installation, activation readback, opening Home and subsequent Home-button routing independently. | NOT RUN |
+| Clean HBC install with suitable system Python | One confirmation covers Root Home, Root Updater, System Updater, automatic import from a compatible previous Home when present, and activation. Verify installation, activation readback, opening Home and subsequent Home-button routing independently. | NOT RUN |
 | Clean HBC install without suitable Python | The same confirmation covers pinned offline runtime preparation. Verify that reinspection of the reviewed payload admits Root before product submission, then check activation and Home routing. | NOT RUN |
 | cytv install → TV maintenance | Same profile, identity, ownership and recovery records without reinstall/reset | NOT RUN |
 | HBC install → cytv maintenance | Status, restore and complete removal without reinstall | NOT RUN |
@@ -135,7 +135,8 @@ historical acceptance cannot be substituted for actual observations.
 | Direct System Updater deletion through LG/HBC | Owned 52 hook inert; live worker/activities stop; product recovery remains coherent | NOT RUN |
 | CYTV Installer-only deletion through LG/HBC | Separately installed product/profile/updaters remain coherent; interrupted snapshot not lost | NOT RUN |
 | Complete product removal through either client | LG Home restored; exact owned package/registration/startup cleanup; recovery retained | NOT RUN |
-| Explicit optional supervisor choice | Root setup works without it; chosen preparation captures exact installed baseline | NOT RUN |
+| Standard System Updater preparation | A fresh install registers all three components and captures the exact installed baseline. Opening maintenance on an older installation preserves its recorded component set. | NOT RUN |
+| Automatic Home settings transfer | With a valid previous Home, transfer its supported personalization and verify the files. A clean TV installs with fresh settings. Confirm there are no separate prompts for either path. | NOT RUN |
 | No-root cytv regression | Existing installation, maintenance, emergency release and recovery still work | NOT RUN |
 
 Keep unavailable/failed scenarios explicit. Resolve material removal/recovery
