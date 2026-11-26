@@ -813,7 +813,7 @@ def _run(args, ask, write, connect, secret, search, inspect, payload_root, check
                 resume = False
                 pending = store.pending(profile)
                 if manifest.get('single_tile') and (reinstall_step or profile.get('root_variant')):
-                    raise UserError('Continue the original setup using its matching installer.',
+                    raise UserError('Use the installer for the installed Clean Your TV version.',
                                     reason_code='pending-operation')
                 if reinstall_step and reinstall_step.stage in ('removing', 'verified'):
                     phase = 'remove-existing-root'

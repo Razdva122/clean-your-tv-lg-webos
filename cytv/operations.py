@@ -1034,7 +1034,7 @@ printf '%s' "$cytv_state"
     def single_tile_source(self):
         """Classify only unambiguous No-root installations under this connection."""
         if self.profile['edition'] == 'root':
-            raise UserError('Root setup from this single-tile installer is unavailable. Keep the current installation.',
+            raise UserError('This installer supports single-tile setup for No-root only.',
                             reason_code='unsupported-operation')
         if self.store.pending(self.profile):
             raise UserError('Previous operation is unresolved. Run cytv status or cytv restore; do not retry installation.',
@@ -1043,7 +1043,7 @@ printf '%s' "$cytv_state"
         other_owners = (package.ROOT_APP, 'com.cleanyourtv.root.updater', 'com.cleanyourtv.system.updater', package.TILE_APP)
         legacy = {app: apps[app] for app in (HOME, HELPER, 'com.cleanyourtv.updater') if app in apps}
         if any(app in apps for app in other_owners) or (legacy and not {HOME, HELPER} <= legacy.keys()):
-            raise UserError('A Clean Your TV installation already exists. Keep the current installation and check its status.',
+            raise UserError('Check the existing Clean Your TV installation before continuing.',
                             reason_code='existing-installation')
         for app in (*other_owners, HOME, HELPER, 'com.cleanyourtv.updater'):
             if app not in legacy:
@@ -1052,7 +1052,7 @@ printf '%s' "$cytv_state"
 
     def require_fresh_single_tile(self):
         if self.single_tile_source():
-            raise UserError('A Clean Your TV installation already exists. Keep the current installation and check its status.',
+            raise UserError('Check the existing Clean Your TV installation before continuing.',
                             reason_code='existing-installation')
 
     def continue_no_root(self, expected_pending):

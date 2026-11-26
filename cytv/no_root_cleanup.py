@@ -858,8 +858,7 @@ def _remove_package(installer, app):
 
 def remove_single_tile(installer):
     """Retire only this edition's verified light entry on explicit product removal."""
-    if 'single_tile' not in getattr(installer, 'manifest', {}):
-        return
+    manifest = getattr(installer, 'manifest', {})
     pending = installer.store.pending(installer.profile) or {}
     status = pending.get('tile_removal')
     if status == 'submitted':
@@ -867,26 +866,31 @@ def remove_single_tile(installer):
                         reason_code='pending-operation')
     installed = any(row.get('id') == TILE_APP for row in installer.installed_apps())
     if not installed:
-        installer.verify_absent(TILE_APP)
+        if 'single_tile' in manifest or status is not None:
+            installer.verify_absent(TILE_APP)
         return
     if status == 'terminal':
         raise UserError('A removed package is present again. Recovery data was kept.', reason_code='cleanup-check-failed')
-    result = installer.remote.luna('com.webos.applicationManager/getAppInfo', {'id': TILE_APP})
-    info = result.get('appInfo') if result.get('returnValue') is True else None
-    if (not isinstance(info, dict) or info.get('id') != TILE_APP or
-            info.get('folderPath', '').rstrip('/') != '/media/developer/apps/usr/palm/applications/' + TILE_APP):
+    if not _exact_developer_app(installer, TILE_APP):
         raise UserError('The TV returned a different application location. Recovery data was kept.',
                         reason_code='cleanup-check-failed')
-    if 'cytvTileEdition' not in info:
-        # A Homebrew installation with the same ID has an independent lifecycle.
+    from .operations import BASE
+    # Some SAMs filter custom appinfo keys. Classify the installed metadata
+    # independently instead of treating a missing API field as Homebrew.
+    from .single_tile_setup import installed_role
+    role = installed_role(installer)
+    if role == 'homebrew':
         return
-    if info.get('cytvTileProtocol') != 1 or info.get('cytvTileEdition') != installer.profile['edition']:
+    if role != installer.profile['edition']:
         raise UserError('The installed Clean Your TV entry belongs to another installation.',
+                        reason_code='cleanup-check-failed')
+    if 'single_tile' not in manifest:
+        raise UserError('Use the installer for the installed Clean Your TV version.',
                         reason_code='cleanup-check-failed')
     from . import package
     from .no_root_observer import files_match
     raw, _ = package.tile_payload(installer.payload, installer.manifest, installer.profile['edition'])
-    files_match(installer, {'/media/developer/apps/' + path: hashlib.sha256(data).hexdigest()
+    files_match(installer, {BASE.removesuffix('/usr/palm') + '/' + path: hashlib.sha256(data).hexdigest()
                             for path, data in package.data_files(raw).items()})
     installer.store.checkpoint(installer.profile, tile_removal='submitted')
     _remove_package(installer, TILE_APP)
@@ -1127,7 +1131,6 @@ def continue_removal(installer, expected_pending):
             allow_opaque=retained_cleanup_reboot and retained_dirs)
 
     def finish(result):
-        remove_single_tile(installer)
         nonlocal process_phase
         from .root_no_root_handoff import release
         if guard:
@@ -1176,6 +1179,7 @@ def continue_removal(installer, expected_pending):
             record_restart(decision='observation-blocked')
         if not stopped or (guard and not _input_absent(installer)):
             raise UserError('TV controls could not be verified. Recovery data was kept.', reason_code='controls-unverified')
+        remove_single_tile(installer)
         return finish(pending['result'])
 
     def catalog():
@@ -1591,6 +1595,7 @@ def continue_removal(installer, expected_pending):
     if final['present'] or final['blocked'] or swept['blocked']:
         result['temporary_files_retained'] = True
         installer.progress('Some temporary recovery files were kept.')
+    remove_single_tile(installer)
     store.checkpoint(profile, stage='verified-clean', removal_reason='removal-verified', result=result,
                      cleanup_helper_kernel_changed=retained_cleanup_reboot and
                      any(result.get(key) is True for key in

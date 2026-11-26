@@ -1,6 +1,8 @@
 """Explicit clean transition from an eligible ordinary No-root installation."""
 
-from . import prompts
+import shlex
+
+from . import package, prompts
 from .errors import UserError
 from .operations import require_root_reinstall_cleanup
 
@@ -19,9 +21,41 @@ def select_source(installer, write, ask, *, non_interactive):
     installer.select_graphics()
     installer.preflight(install=True, defer_helper=True)
     if installer.single_tile_source() != source:
-        raise UserError('The installation changed. Check TV status before continuing.',
+        raise UserError('The Clean Your TV installation changed.',
                         reason_code='pending-operation')
     result = installer.uninstall_project()
     require_root_reinstall_cleanup(result)
     installer.require_fresh_single_tile()
     return prompts.confirm('Install Clean Your TV with one tile now?', ask, write, default=False)
+
+
+def installed_role(installer):
+    """Return the role of the fixed SDK package without exposing device data."""
+    from .operations import BASE
+    path = BASE + '/applications/' + package.TILE_APP + '/appinfo.json'
+    script = r"""
+var fs=require('fs'),p=require('path'),c=require('constants');
+var file=process.argv[1],id=process.argv[2];
+for(var parent=p.dirname(file);;parent=p.dirname(parent)){
+  if(!fs.lstatSync(parent).isDirectory())throw Error('indirect directory');
+  if(parent===p.dirname(parent))break;
+}
+var opened=fs.openSync(file,c.O_RDONLY|c.O_NOFOLLOW|c.O_NONBLOCK);
+try {
+  var s=fs.fstatSync(opened);
+  if(!s.isFile()||s.nlink!==1||s.size>65536)throw Error('invalid metadata');
+  var bytes=new Buffer(s.size),offset=0;
+  while(offset<s.size){var n=fs.readSync(opened,bytes,offset,s.size-offset,null);if(!n)throw Error('changed metadata');offset+=n;}
+  var info=JSON.parse(bytes.toString('utf8')),now=fs.lstatSync(file);
+  if(now.ino!==s.ino||now.dev!==s.dev||now.size!==s.size||info.id!==id||info.type!=='web')throw Error('changed entry');
+  var edition=info.cytvTileEdition;
+  if(edition===undefined)process.stdout.write('homebrew');
+  else if(info.cytvTileProtocol===1&&(edition==='root'||edition==='no-root'))process.stdout.write(edition);
+  else throw Error('unrecognized entry');
+} finally {fs.closeSync(opened);}
+"""
+    reply = installer.remote.run('/usr/bin/node -e ' + shlex.quote(script) + ' ' +
+                                 shlex.quote(path) + ' ' + shlex.quote(package.TILE_APP)).strip()
+    if reply not in ('root', 'no-root', 'homebrew'):
+        raise UserError('The TV package result could not be verified.', reason_code='cleanup-check-failed')
+    return reply

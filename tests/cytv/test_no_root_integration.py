@@ -140,6 +140,9 @@ sys.stdin.read()
         return result.stdout.decode()
 
     def luna(self,uri,payload,**kwargs):
+        if uri.endswith('/getAppInfo') and payload.get('id') == package.TILE_APP:
+            return {'returnValue': True, 'appInfo': {'id': package.TILE_APP,
+                    'folderPath': '/media/developer/apps/usr/palm/applications/' + package.TILE_APP}}
         if uri == 'com.webos.appInstallService/status':
             from cytv.errors import TVRejected
             raise TVRejected('Denied', {'returnValue': False, 'errorCode': -1}, uri)
@@ -313,11 +316,21 @@ class OriginalOperationIntegration(unittest.TestCase):
         self.assertEqual((self.root / 'requests').read_text().splitlines(),
                          [tile, operations.HELPER, operations.HOME, companion])
 
+    def test_light_tile_is_removed_once_by_full_product_cleanup(self):
+        tile = self.include_tile()
+        (self.root / 'proc').mkdir()
+        self.installer.install(self.inventory, 'paired-key')
+        self.assertTrue(self.installer.uninstall_project()['verified_clean'])
+        self.assertNotIn(tile, json.loads((self.root / 'installed.json').read_text()))
+        requests = [call for call in self.remote.calls if call[0] == 'luna'
+                    and call[1].endswith('/dev/remove') and call[2]['id'] == tile]
+        self.assertEqual(len(requests), 1)
+
     def test_retained_homebrew_entry_is_never_overwritten_by_light_tile(self):
         tile = self.include_tile()
         (self.root / 'installed.json').write_text(json.dumps({tile: '0.0.0'}))
         from cytv.errors import UserError
-        with self.assertRaisesRegex(UserError, 'already exists'):
+        with self.assertRaisesRegex(UserError, 'existing Clean Your TV installation'):
             self.installer.install(self.inventory, 'secret')
         self.assertIsNone(self.store.pending(self.profile))
         self.assertFalse((self.root / 'requests').exists())
