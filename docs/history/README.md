@@ -1,6 +1,7 @@
 # Release history and device evidence
 
 - [Issue 152 Home startup and package-runtime removal, 2026-11-26](2026-11-26-issue152-home-process.md): current-relay readiness, vendor-owned process shutdown and exact SDK ownership replay; physical root cause remains unconfirmed.
+- [Issue 830 edition transition, 2026-11-26](2026-11-26-issue830-edition-transition.md): old removal resume, factory LG Home evidence and fresh Root handoff.
 
 - [Issue 410 QML packaging, 2026-11-25](2026-11-25-issue410-qml-packaging.md): exact released build reproduction and preserved QML execution scope.
 

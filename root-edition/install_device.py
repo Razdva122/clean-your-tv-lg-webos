@@ -1222,20 +1222,53 @@ class LocalDevice:
             and not os.path.lexists('/var/webos-profile/override/clean-your-tv-root.json'))
 
     def stock_profiles_eligible(self, record):
-        """Allow stock-profile proof only for removal without Root Edition state."""
+        """Allow stock-profile proof without live Root Edition state."""
         from clean_removal import APPS
-        from installation import JOURNALS
+        from installation import Busy, JOURNALS, completed_no_root_fence
 
         original = record['original']
+        lease = original['lease']
         if (record.get('profileless_cleanup_eligible') is not True
-                or original['lease']['owner'] != 'clean-removal'
-                or any(original[key] is not None for key in ('request', 'submission', 'removal'))
-                or original['components'] != dict.fromkeys(JOURNALS)
-                or record.get('fenced_components') != dict.fromkeys(JOURNALS)):
+                or any(original[key] is not None for key in ('request', 'submission', 'removal'))):
             return False
+        components = dict.fromkeys(JOURNALS)
+        roots = (ROOT, UPDATER, SUPERVISOR)
+        if lease['owner'] == 'no-root' and lease['id'] == record['lease']:
+            try:
+                completed_no_root_fence(self.ownership.store, lease)
+            except Busy:
+                return False
+            fences = {
+                'deploy': (ROOT, 'deploy.json', {'provision.lock'},
+                           {'version': 1, 'app': APP, 'stage': 'cancellation-admitted'}),
+                'root-bootstrap': (UPDATER, 'bootstrap.json', {'daemon.lock', 'worker.lock'},
+                                   {'phase': 'cancellation-admitted'}),
+                'system-bootstrap': (SUPERVISOR, 'bootstrap.json', {'daemon.lock', 'worker.lock'},
+                                     {'phase': 'cancellation-admitted'}),
+            }
+            for key, (root, marker, locks, expected) in fences.items():
+                components[key] = expected
+                if not os.path.lexists(root):
+                    continue
+                store = checked_store(root, self.ownership.store.uid)
+                directory = store._directory()
+                try:
+                    names = set(os.listdir(directory))
+                    if names - (locks | {marker}) or store.read(marker) != expected:
+                        return False
+                    for name in names & locks:
+                        store._check(os.stat(name, dir_fd=directory, follow_symlinks=False))
+                finally:
+                    os.close(directory)
+        elif lease['owner'] != 'clean-removal' or any(os.path.lexists(root) for root in roots):
+            return False
+        for snapshot in (original['components'], record.get('fenced_components')):
+            if (not isinstance(snapshot, dict) or snapshot.keys() != components.keys()
+                    or any(value is not None and value != components[key] for key, value in snapshot.items())):
+                return False
         backup = self.ownership.store.read('routing-backup-'+record['operation'])
         if backup != {} or any(os.path.lexists(path) for path in (
-                ROOT, UPDATER, SUPERVISOR, '/var/webos-profile/override/clean-your-tv-root.json',
+                '/var/webos-profile/override/clean-your-tv-root.json',
                 '/var/luna-service2/manifests.d/com.cleanyourtv.root.preview.recovery.json',
                 *(INIT/name for name in ('50-clean-your-tv-root', '51-clean-your-tv-root-updater',
                                          '52-clean-your-tv-system-updater')))):

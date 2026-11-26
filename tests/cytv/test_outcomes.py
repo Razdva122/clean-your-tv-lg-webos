@@ -56,7 +56,9 @@ class OutcomeTests(unittest.TestCase):
 
     def test_new_attempt_discards_old_owner_observation(self):
         self.outcome.review_home(lambda _: '1', self.write)
+        self.info['helper_startup'] = {'state': 'ready'}
         self.outcome.begin()
+        self.assertNotIn('helper_startup', self.info)
         self.assertEqual(self.info['setup_outcome']['home_button'], 'not-tested')
 
     def test_export_revalidates_hostile_and_extra_fields(self):

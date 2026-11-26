@@ -35,9 +35,25 @@ class HelperStartup(unittest.TestCase):
             ready = observe([start, {'event': 'worker-ready', 'homeEnabled': True}])
             self.assertEqual(ready['state'], 'ready')
             self.assertTrue(ready['home_enabled'])
+            ready_event = {'event': 'worker-ready', 'homeEnabled': True}
+            input_wait = {'event': 'worker', 'message': 'INPUT_WAIT'}
+            history = [start, ready_event, input_wait]
+            self.assertEqual(observe(history)['state'], 'starting')
+            self.assertEqual(observe(history + [ready_event])['state'], 'ready')
+            exiting = observe([start, ready_event, {'event': 'worker', 'message': 'EXIT 22'}])
+            self.assertEqual(exiting['state'], 'stopped')
+            self.assertNotIn('relay_exit_code', exiting)
             (proc / 'cmdline').write_bytes(('node\0/usr/bin/unrelated.js\0' + str(root / 'native.js') + '\0').encode())
             self.assertFalse(observe([start, {'event': 'worker-ready', 'homeEnabled': True}])['controller_running'])
             (proc / 'cmdline').write_bytes(('node\0' + str(root / 'native.js') + '\0').encode())
+            cmdline = proc / 'cmdline'
+            cmdline.rename(proc / 'saved-cmdline')
+            cmdline.mkdir()  # an unreadable cmdline, distinct from a vanished process
+            unavailable = observe([start, ready_event])
+            self.assertEqual(unavailable['state'], 'unavailable')
+            self.assertNotIn('controller_running', unavailable)
+            cmdline.rmdir()
+            (proc / 'saved-cmdline').rename(cmdline)
             preference = state / 'home-control.json'
             preference.write_text('{"enabled":false}')
             self.assertFalse(observe([start, {'event': 'worker-ready', 'homeEnabled': True}])['home_enabled'])
@@ -50,6 +66,7 @@ class HelperStartup(unittest.TestCase):
             self.assertEqual(observe([start, {'event': 'worker-exit', 'code': 12}])['relay_exit_code'], 12)
             self.assertEqual(observe([start, {'event': 'worker-ready'}])['state'], 'stopped')
             (state / 'blocked').write_text('explicit-stop')
+            self.assertEqual(observe([start, {'event': 'worker-exit', 'code': 12}])['state'], 'failed')
             self.assertEqual(observe([start, {'event': 'worker-ready'}])['state'], 'stopped')
 
     def test_startup_summary_does_not_export_process_or_generation_data(self):

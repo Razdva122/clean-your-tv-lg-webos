@@ -935,6 +935,60 @@ class CleanupTail(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(reply['stage'], 'verified-clean')
 
+    def test_stock_compositor_accepts_only_verified_no_root_successor(self):
+        self.compositor_record()
+        journals = dict.fromkeys(('deploy', 'root-bootstrap', 'root-update', 'system-bootstrap',
+                                 'system-engine', 'system-update'))
+        journals['deploy'] = {'version': 1, 'app': 'com.cleanyourtv.root.preview',
+                              'stage': 'cancellation-admitted'}
+        root = self.base/'var/lib/clean-your-tv-root'
+        root.mkdir(mode=0o700)
+        marker = root/'deploy.json'
+        marker.write_text(json.dumps(journals['deploy']))
+        marker.chmod(0o600)
+        (root/'provision.lock').touch(mode=0o600)
+        successor, predecessor, lease = '1'*32, '2'*32, self.record['lease']
+        first_lease, fence, removal = '3'*32, '4'*32, '5'*32
+        original_lease = dict(schema=1, id=lease, owner='no-root', journal='no-root-'+successor+'.json',
+                              stage='reserved', terminal=False)
+        self.record.update(stage='original-writers-fenced', routes=None,
+            original={'lease': original_lease, 'request': None, 'submission': None,
+                      'removal': None, 'components': journals}, fenced_components=journals)
+        self.write('clean-removal-'+ID+'.json', self.record)
+        self.write('clean-removal-'+predecessor+'.json', dict(schema=1, protocol='clean-removal-v1',
+            operation=predecessor, removal=removal, lease=first_lease, final_original_lease=first_lease,
+            final_fence=fence, stage='verified-clean', state='complete', current=True,
+            result={'verified_clean': True, 'private_cleanup_verified': True}))
+        binding = dict(schema=1, protocol='no-root-root-handoff-v1', operation=successor, lease=lease,
+            plan_sha256='a'*64, source_sha256='b'*64, effects_started=True, completed=True,
+            predecessor={'operation': predecessor, 'removal': removal, 'lease': fence})
+        settings_error = {'returnValue': False, 'errorText': 'There is no matched result from DB'}
+        profiles_error = {'returnValue': False, 'errorCode': -1,
+                          'errorText': 'Service does not exist: com.webos.service.systemprofile.'}
+        env = dict(NO_SYNC='1', SYSTEM_DEVICE='1', SETTINGS_ERROR=json.dumps(settings_error),
+                   MISSING_PROFILES='1', PROFILE_ERROR=json.dumps(profiles_error))
+        name = original_lease['journal']
+        self.write(name, {**binding, 'completed': False})
+        result, _ = self.run_tail(MODE='capture-stock-proof', **env)
+        self.assertNotEqual(result.returncode, 0)
+        self.write(name, binding)
+        foreign = root/'foreign-state'
+        foreign.touch()
+        result, _ = self.run_tail(MODE='capture-stock-proof', **env)
+        self.assertNotEqual(result.returncode, 0)
+        foreign.unlink()
+        result, reply = self.run_tail(MODE='capture-stock-proof', **env)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads((self.base/'mutations.json').read_text()), [])
+        self.record.update(stage='private-cleanup', routes=reply['routes'])
+        self.write('clean-removal-'+ID+'.json', self.record)
+        result, reply = self.run_tail(**env)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(reply['stage'], 'verified-clean')
+        result, reply = self.run_tail(MODE='verify', **env)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(reply['state'], 'verified-clean')
+
     def compositor_record(self):
         self.record['profileless_cleanup_eligible']=True
         home=self.base/'usr/bin/com.webos.app.home';home.parent.mkdir(parents=True)
