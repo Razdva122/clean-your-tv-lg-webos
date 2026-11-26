@@ -293,7 +293,10 @@ class Device:
             if len(raw)!=old['size'] or digest(raw)!=old['sha256']:raise ValueError('Historical infrastructure changed')
             inventory |= self._infra_names(list(archive(raw)))
             inventory |= set(old.get('absent',[]))
-        return self._infra_names(inventory)
+        inventory=self._infra_names(inventory)
+        if self.product_schema()==2 and any(name.startswith('updater/') for name in inventory):
+            raise ValueError('Standalone Root Updater cannot be managed by the single tile')
+        return inventory
 
     def inspect(self,raw,c):
         if len(raw)!=c['size'] or digest(raw)!=c['sha256']:raise ValueError('Package hash mismatch')

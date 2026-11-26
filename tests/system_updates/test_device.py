@@ -403,6 +403,19 @@ class LegacyNoRootCompanionTests(DeviceBase):
         self.assertIsNone(Store(self.device.state/'legacy-no-root-screensaver',uid=os.getuid()).read('baseline-'+self.tx['id']))
 
 class PrivateServiceTests(DeviceBase):
+    def test_single_tile_never_manages_an_updater_path_even_in_retained_inventory(self):
+        files={'runtime/cli.py':b'code'}
+        raw=tar(files);component={'name':'root-infrastructure','sha256':digest(raw),'size':len(raw),
+                                  'files':{name:digest(value) for name,value in files.items()}}
+        self.baseline({'edition':'root','schema':2,'components':[component]})
+        other=tar({'updater/service.js':b'legacy'})
+        old=dict(component,sha256=digest(other),size=len(other))
+        self.device.cached(old).write_bytes(other)
+        self.store.write('current-root',{'edition':'root','schema':2,'components':[old]})
+        with self.assertRaisesRegex(ValueError,'Standalone Root Updater'):
+            self.device._infra_path('updater/service.js')
+        self.assertFalse(self.device.root_updater.exists())
+
     def test_single_tile_receipt_finishes_only_its_original_interrupted_write(self):
         from unittest.mock import patch
         files={'runtime/cli.py':b'new'}

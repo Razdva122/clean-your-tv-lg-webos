@@ -1,4 +1,4 @@
-"""Root deployment to System baseline with the actual personalized Home IPK."""
+"""Offline single-tile product installation, signed update and retained rollback."""
 import hashlib
 import json
 import os
@@ -14,19 +14,21 @@ from cytv import package
 from test_build import load, ROOT
 from test_core import Store, IO, profile
 
+def build_bundle(system):
+    return json.loads((system/'bundle.json').read_bytes())
+
 def digest(raw):
     return hashlib.sha256(raw).hexdigest()
 
 class SingleTileOriginTests(unittest.TestCase):
-    def run_signed_update_and_undo(self, top, system, device, baseline):
+    def run_signed_update_and_undo(self, payload, system, device, baseline):
         # Package installation and the TV bus are simulated. The engine uses
         # real signed descriptors, cached archives, disk journals and readback.
         from system_updater.core import Manager
         build=load('build')
-        payload=top/'candidate';payload.mkdir()
-        subprocess.run([sys.executable,str(ROOT/'root-edition/build.py'),'--single-tile',
-                        '--output',str(payload/'root'),'--version','1.1.0'],check=True,stdout=subprocess.PIPE)
-        candidate,raws=build.release_set(payload,'root','v1.1.0',local=False,single_tile=True)
+        edition=baseline['edition']
+        home=package.ROOT_APP if edition=='root' else 'com.gathin.tvhome'
+        candidate,raws=build.release_set(payload,edition,'v1.1.0',local=False,single_tile=True)
         sign="""const fs=require('fs'),crypto=require('crypto');
         const raw=fs.readFileSync(0),key=crypto.generateKeyPairSync('rsa',{modulusLength:2048});
         console.log(JSON.stringify({key:key.publicKey.export({type:'spki',format:'pem'}),
@@ -42,7 +44,7 @@ class SingleTileOriginTests(unittest.TestCase):
         device.fetch=verify
         def prepare(target,prior):
             for release in (prior,target):
-                device._verify_release(release,'root')
+                device._verify_release(release,edition)
                 for c in release['components']:
                     if release==target:device.cached(c).write_bytes(raws[c['name']])
                     device.inspect(device.cache_bytes(c),c)
@@ -69,15 +71,58 @@ class SingleTileOriginTests(unittest.TestCase):
                 if tx['phase']==phase:return tx
                 if tx['phase'] in ('recovery-required','aborted'):self.fail(tx.get('error',tx['phase']))
             self.fail(manager.status())
-        tx=manager.install('root','v1.1.0',profile())
-        advance('verifying');manager.healthy('root',tx['id'],'1.1.0');advance('complete')
-        self.assertEqual(device.owner_identity(package.ROOT_APP)['version'],'1.1.0')
-        self.assertTrue(device.verify_baseline(device._baseline('root')))
-        manager.rollback()
-        advance('verifying-rollback');manager.healthy('root',tx['id'],'1.0.0');advance('rolled-back')
-        self.assertEqual(device.owner_identity(package.ROOT_APP)['version'],'1.0.0')
-        self.assertEqual(device._baseline('root'),baseline)
+        tx=manager.install(edition,'v1.1.0',profile())
+        advance('verifying');manager.healthy(edition,tx['id'],'1.1.0');advance('complete')
+        self.assertEqual(device.installed(home),'1.1.0')
+        self.assertTrue(device.verify_baseline(device._baseline(edition)))
+        scope={'edition':edition, 'transaction':tx['id']}
+        from system_updater.cli import handle
+        from unittest.mock import Mock
+        io.integrity=Mock()
+        with self.assertRaisesRegex(ValueError,'transaction changed'):
+            handle('rollback',dict(scope,transaction='f'*32),device.store,io,wake=lambda:None)
+        # Recovery from the independently registered tile; it operates only on
+        # the same product and the exact transaction the owner saw in status.
+        handle('rollback',scope,device.store,io,wake=lambda:None)
+        advance('verifying-rollback');manager.healthy(edition,tx['id'],'1.0.0');advance('rolled-back')
+        self.assertEqual(device.installed(home),'1.0.0')
+        self.assertEqual(device._baseline(edition),baseline)
         self.assertTrue(device.verify_baseline(baseline))
+
+    def test_no_root_home_and_helper_update_and_rollback_together(self):
+        from system_updater.device import Device
+        with tempfile.TemporaryDirectory() as tmp:
+            top=Path(tmp).resolve()
+            build,setup=load('build'),load('setup')
+            system=top/'supervisor';build.build(system,single_tile=True)
+            installed=top/'installed';candidate=top/'candidate';candidate.mkdir()
+            for version in ('1.0.0','1.1.0'):
+                for app,service,filename in [('com.gathin.tvhome','com.gathin.tvhome.renewal','launcher.ipk'),
+                                            ('com.local.nativehome','com.local.nativehome.service','helper.ipk')]:
+                    prefix='usr/palm/applications/'+app+'/'
+                    info=dict(id=app,version=version,type='web',main='index.html',
+                              cytvProductGeneration=2,visible=False,systemUpdateProtocol=1)
+                    files={prefix+'appinfo.json':json.dumps(info).encode(),prefix+'index.html':version.encode(),
+                           'usr/palm/services/'+service+'/service.js':b'fixture',
+                           'usr/palm/packages/'+app+'/packageinfo.json':json.dumps(
+                               dict(id=app,app=app,version=version,services=[service])).encode()}
+                    raw=package.ipk(app,version,files,architecture='arm' if filename=='helper.ipk' else 'all')
+                    if version=='1.1.0':(candidate/filename).write_bytes(raw)
+                    else:
+                        for name,data in files.items():
+                            dest=installed/name;dest.parent.mkdir(parents=True,exist_ok=True);dest.write_bytes(data)
+            baseline_path=setup.snapshot(system,'no-root',top/'captured',installed=installed)
+            baseline=setup.verify_baseline(baseline_path,system)
+            store=Store(top/'active',uid=os.geteuid())
+            shutil.copytree(baseline_path/'cache', Path(store.root)/'cache')
+            for key in ('baseline','current-no-root'):store.write(key,baseline)
+            store.write('bootstrap',{'phase':'complete','edition':'no-root'})
+            store.write('bootstrap-bundle',{'bundle':build_bundle(system)})
+            device=Device(store,code=system,installed=installed,root_state=top/'no-root-state',
+                          root_updater=top/'legacy',uid=os.geteuid())
+            self.run_signed_update_and_undo(candidate,system,device,baseline)
+            self.assertEqual(device.installed('com.local.nativehome'),'1.0.0')
+            self.assertFalse(device.root_updater.exists())
 
     def test_deployed_original_is_the_only_root_rollback_baseline(self):
         import package_identity
@@ -142,7 +187,12 @@ class SingleTileOriginTests(unittest.TestCase):
                 (output/'baseline.json').write_text(json.dumps(baseline))
                 with self.assertRaisesRegex(ValueError,'original personalized'):
                     setup.preflight(system, output, state, installed, top/'ls2', top/'hook')
-            self.run_signed_update_and_undo(top,system,device,active.read('baseline'))
+            active.write('bootstrap',{'phase':'complete','edition':'root'})
+            active.write('bootstrap-bundle',{'bundle':build_bundle(system)})
+            payload=top/'candidate';payload.mkdir()
+            subprocess.run([sys.executable,str(ROOT/'root-edition/build.py'),'--single-tile',
+                            '--output',str(payload/'root'),'--version','1.1.0'],check=True,stdout=subprocess.PIPE)
+            self.run_signed_update_and_undo(payload,system,device,active.read('baseline'))
             self.assertFalse(state.exists())
             self.assertFalse(legacy.exists())
             evidence=store.read('install-terminal')

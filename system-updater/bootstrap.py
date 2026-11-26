@@ -195,8 +195,8 @@ class Bootstrap:
         if lease['id']!=tx['lease']:raise ValueError('Terminal engine journal belongs to another lease')
         with owner.operation('system-engine','transaction.json',resume=lease['id']) as record:
             if scope:
-                retained = self.product.read('transaction')
-                self.recovery_scope(scope, None if retained else tx)
+                self.recovery_scope({'edition':scope['edition']}, tx)
+                check_tile_transaction(self.product.read('transaction') or tx, scope)
             if self.transaction()!=tx or self.product.read('transaction')!=tx['previousTransaction']:
                 raise ValueError('Terminal engine state changed before ownership completion')
             migration=self.store.read('supervisor-migration')

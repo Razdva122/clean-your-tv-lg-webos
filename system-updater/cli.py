@@ -11,7 +11,7 @@ import sys
 import time
 from .core import Manager, SETS, FINISHED, version, RECOVERY_FIELDS, tile_product, check_tile_transaction
 from .device import Device, STATE
-from .support.store import Store, prune_peer_caches
+from .support.store import Store, prune_peer_caches, prune_update_caches
 LEGACY_NODE_BETA = False
 
 FIELDS={'check':{'edition'},'status':set(),'install':{'edition','release','profile'},'restoreProfile':{'edition'},'healthy':{'edition','transaction','version'},'rollback':set(),'reconcile':set()}
@@ -83,7 +83,10 @@ def worker(store,device):
                                 except Exception as error:
                                     current['homeResume']={'status':'failed','error':str(error)[:512]};current['error']=str(error)[:1024]
                                 store.write('transaction',current)
-                    prune_peer_caches(store, device.root_updater)
+                    if device.product_schema() == 2:
+                        prune_update_caches([store])
+                    else:
+                        prune_peer_caches(store, device.root_updater)
                     return
             time.sleep(1 if tx['phase'] in ('verifying','verifying-rollback') else .05)
     finally:os.close(fd)
