@@ -829,7 +829,7 @@ class ComponentTerminalRecoveryTests(unittest.TestCase):
         from install_fixture import CurrentInstallation
         from updater import bootstrap,device as updater_device,store as updater_store
         from unittest.mock import patch
-        installer_only={'cancel_install.py','cancel_provision.py','clean_removal.py','cleanup_tail.js','cleanup_no_root_private.js'}
+        installer_only={'personalize.py','cancel_install.py','cancel_provision.py','clean_removal.py','cleanup_tail.js','cleanup_no_root_private.js'}
         with CurrentInstallation() as fixture:
             bundle=fixture.payload/'root-updater';manifest=bootstrap.verify_bundle(bundle)
             self.assertTrue(installer_only <= set(manifest['files']))

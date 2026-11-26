@@ -49,7 +49,11 @@ def verify_bundle(bundle,reader=None,allow_legacy_recovery=False):
     from coordinator_inventory import BUNDLED_FILES
     required.update(BUNDLED_FILES)
     cleanup={'clean_removal.py','cleanup_tail.js','cleanup_no_root_private.js'}
-    inventories=(required,required-{'cleanup_no_root_private.js'},required-cleanup,required-cleanup-{'cancel_install.py','cancel_provision.py'}) if allow_legacy_recovery else (required,)
+    inventories = (required,)
+    if allow_legacy_recovery:
+        previous = required - {'personalize.py'}
+        inventories += (previous, previous - {'cleanup_no_root_private.js'}, previous - cleanup,
+                        previous - cleanup - {'cancel_install.py','cancel_provision.py'})
     if set(manifest['files']) not in inventories:raise ValueError('Unexpected updater bundle inventory')
     for name,sha in manifest['files'].items():
         if digest(reader(bundle/name))!=sha:raise ValueError('Updater bundle hash mismatch: '+name)
