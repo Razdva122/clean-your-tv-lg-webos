@@ -106,6 +106,8 @@ sys.stdin.read()
             is_observer = any(source in code or any(
                 observer.companion_source(source, screensaver=screensaver, tile=tile) in code
                 for screensaver, tile in ((True, False), (True, True), (False, True))) for source in sources)
+            if not is_observer and 'var configSteps=[];' in code and 'plan.source_sha256' in code:
+                is_observer = True
             if is_observer or observer.STORAGE_SELECT in code:
                 request=json.loads(argument)
                 request['sender']=str(self.sender)
@@ -140,9 +142,9 @@ sys.stdin.read()
         return result.stdout.decode()
 
     def luna(self,uri,payload,**kwargs):
-        if uri.endswith('/getAppInfo') and payload.get('id') == package.TILE_APP:
-            return {'returnValue': True, 'appInfo': {'id': package.TILE_APP,
-                    'folderPath': '/media/developer/apps/usr/palm/applications/' + package.TILE_APP}}
+        if uri.endswith('/getAppInfo') and payload.get('id') in getattr(self, 'verified_app_paths', (package.TILE_APP,)):
+            return {'returnValue': True, 'appInfo': {'id': payload['id'],
+                    'folderPath': '/media/developer/apps/usr/palm/applications/' + payload['id']}}
         if uri == 'com.webos.appInstallService/status':
             from cytv.errors import TVRejected
             raise TVRejected('Denied', {'returnValue': False, 'errorCode': -1}, uri)
@@ -325,6 +327,78 @@ class OriginalOperationIntegration(unittest.TestCase):
         requests = [call for call in self.remote.calls if call[0] == 'luna'
                     and call[1].endswith('/dev/remove') and call[2]['id'] == tile]
         self.assertEqual(len(requests), 1)
+
+    def test_later_home_and_tile_update_keep_stopped_helper_and_pairing(self):
+        from cytv import single_tile_maintenance
+        tile = self.include_tile()
+        self.installer.install(self.inventory, 'paired-key')
+        self.remote.verified_app_paths = (tile, operations.HOME, operations.HELPER)
+        home = Path(self.base) / 'applications' / operations.HOME
+        for app in (operations.HOME, operations.HELPER):
+            path = Path(self.base) / 'applications' / app / 'appinfo.json'
+            info = json.loads(path.read_text())
+            info.update(id=app, cytvProductGeneration=2, visible=False)
+            path.write_text(json.dumps(info))
+        helper_state = Path(operations.HELPER_STATE)
+        stop = helper_state / 'control.json'
+        stop.write_bytes(b'{"mode":"stopped"}')
+        key = (helper_state / 'ssap-key.json').read_bytes()
+        apps = (home / 'apps.js').read_bytes()
+        launcher_name = self.installer._graphics_paths['launcher']
+        artifact = self.installer.payload / launcher_name
+        files = package.data_files(artifact.read_bytes())
+        name = 'usr/palm/applications/' + operations.HOME + '/appinfo.json'
+        files[name] = json.dumps(dict(json.loads(files[name]), id=operations.HOME, version='9.0.0',
+                                      visible=False, cytvProductGeneration=2)).encode()
+        artifact.write_bytes(package.ipk(operations.HOME, '9.0.0', files))
+        self.installer.manifest.update(home_version='9.0.0')
+        self.installer.manifest['files'][launcher_name] = hashlib.sha256(artifact.read_bytes()).hexdigest()
+        (Path(self.base) / 'packages' / tile / 'packageinfo.json').write_bytes(b'{}')
+        before = (self.root / 'requests').read_text().splitlines()
+        self.remote.cut = True
+        source = self.installer.single_tile_source()
+        with self.assertRaises(RuntimeError):
+            single_tile_maintenance.run(self.installer, source)
+        pending = self.store.pending(self.profile)
+        self.assertIsNotNone(pending)
+        self.assertFalse(self.installer.continue_no_root(pending)['launch_requested'])
+        after = (self.root / 'requests').read_text().splitlines()
+        self.assertEqual(after[len(before):], [tile, operations.HOME])
+        self.assertEqual(stop.read_bytes(), b'{"mode":"stopped"}')
+        self.assertEqual((helper_state / 'ssap-key.json').read_bytes(), key)
+        self.assertEqual((home / 'apps.js').read_bytes(), apps)
+        self.assertIsNone(self.store.pending(self.profile))
+        current = self.installer.single_tile_source()
+        single_tile_maintenance.run(self.installer, current)
+        self.assertEqual(after, (self.root / 'requests').read_text().splitlines())
+        self.installer.manifest['helper_version'] = '9.1.0'
+        with self.assertRaisesRegex(RuntimeError, 'Use the installer'):
+            self.installer.single_tile_source()
+        self.assertEqual(after, (self.root / 'requests').read_text().splitlines())
+
+    def test_legacy_owner_can_keep_or_confirm_clean_transition_and_fresh_setup(self):
+        from cytv import single_tile_setup
+        self.installer.install(self.inventory, 'legacy-pair')
+        self.remote.verified_app_paths = (package.TILE_APP, operations.HOME, operations.HELPER)
+        tile = self.include_tile()
+        source = self.installer.single_tile_source()
+        self.assertEqual(set(source), {operations.HOME, operations.HELPER})
+        request_file = self.root / 'requests'
+        requests_before = request_file.read_text()
+        with patch.object(single_tile_setup.prompts, 'confirm', return_value=False):
+            self.assertFalse(single_tile_setup.select_source(self.installer, lambda line: None, input,
+                                                            non_interactive=False))
+        self.assertEqual(request_file.read_text(), requests_before)
+        self.assertEqual(self.installer.single_tile_source(), source)
+        (self.root / 'proc').mkdir()
+        with patch.object(single_tile_setup.prompts, 'confirm', side_effect=[True, True]):
+            self.assertTrue(single_tile_setup.select_source(self.installer, lambda line: None, input,
+                                                           non_interactive=False))
+        self.assertEqual(json.loads((self.root / 'installed.json').read_text()), {})
+        self.installer.install(self.inventory, 'new-pair')
+        self.assertEqual(set(json.loads((self.root / 'installed.json').read_text())),
+                         {tile, operations.HOME, operations.HELPER})
+        self.assertIsNone(self.store.pending(self.profile))
 
     def test_retained_homebrew_entry_is_never_overwritten_by_light_tile(self):
         tile = self.include_tile()

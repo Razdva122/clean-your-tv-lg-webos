@@ -835,7 +835,10 @@ def _run(args, ask, write, connect, secret, search, inspect, payload_root, check
                     # Both Android and desktop pass through this admission before
                     # offering destructive reinstallation or initiating pairing.
                     from .single_tile_setup import select_source
-                    if not select_source(installer, write, ask, non_interactive=args.non_interactive):
+                    source = select_source(installer, write, ask, non_interactive=args.non_interactive)
+                    if source == 'maintained':
+                        return 0
+                    if not source:
                         return 130
                 replacing_activation = (profile['edition'] == 'root' and pending
                     and pending.get('action') == 'activate-root'

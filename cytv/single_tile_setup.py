@@ -1,5 +1,6 @@
 """Explicit clean transition from an eligible ordinary No-root installation."""
 
+import json
 import shlex
 
 from . import package, prompts
@@ -11,6 +12,12 @@ def select_source(installer, write, ask, *, non_interactive):
     source = installer.single_tile_source()
     if not source:
         return True
+    if 'maintenance' in source:
+        from .single_tile_maintenance import run
+        if non_interactive or not prompts.confirm('Update or repair the installed tile?', ask, write, default=False):
+            return False
+        run(installer, source)
+        return 'maintained'
 
     # A's built-in snapshot excludes browser media and service/pairing state.
     # The existing complete-removal path is a separate owner choice. It cannot
@@ -29,13 +36,17 @@ def select_source(installer, write, ask, *, non_interactive):
     return prompts.confirm('Install Clean Your TV with one tile now?', ask, write, default=False)
 
 
-def installed_role(installer, *, require_tile_protocol=False):
+def read_app_file(installer, app, name):
     """Return the role of the fixed SDK package without exposing device data."""
     from .operations import BASE
-    path = BASE + '/applications/' + package.TILE_APP + '/appinfo.json'
+    from .operations import HOME, HELPER
+    if (app, name) not in ((HOME, 'apps.js'), (HOME, 'appinfo.json'), (HELPER, 'appinfo.json'),
+                           (package.TILE_APP, 'appinfo.json')):
+        raise ValueError('Unexpected application file')
+    path = BASE + '/applications/' + app + '/' + name
     script = r"""
 var fs=require('fs'),p=require('path'),c=require('constants');
-var file=process.argv[1],id=process.argv[2];
+var file=process.argv[1],limit=Number(process.argv[2]);
 for(var parent=p.dirname(file);;parent=p.dirname(parent)){
   if(!fs.lstatSync(parent).isDirectory())throw Error('indirect directory');
   if(parent===p.dirname(parent))break;
@@ -43,21 +54,35 @@ for(var parent=p.dirname(file);;parent=p.dirname(parent)){
 var opened=fs.openSync(file,c.O_RDONLY|c.O_NOFOLLOW|c.O_NONBLOCK);
 try {
   var s=fs.fstatSync(opened);
-  if(!s.isFile()||s.nlink!==1||s.size>65536)throw Error('invalid metadata');
+  if(!s.isFile()||s.nlink!==1||s.size>limit)throw Error('invalid metadata');
   var bytes=new Buffer(s.size),offset=0;
   while(offset<s.size){var n=fs.readSync(opened,bytes,offset,s.size-offset,null);if(!n)throw Error('changed metadata');offset+=n;}
-  var info=JSON.parse(bytes.toString('utf8')),now=fs.lstatSync(file);
-  if(now.ino!==s.ino||now.dev!==s.dev||now.size!==s.size||info.id!==id||info.type!=='web')throw Error('changed entry');
-  if(process.argv[3]==='tile'&&info.cytvTileProtocol!==1)throw Error('unsupported tile');
-  var edition=info.cytvTileEdition;
-  if(edition===undefined)process.stdout.write('homebrew');
-  else if(info.cytvTileProtocol===1&&(edition==='root'||edition==='no-root'))process.stdout.write(edition);
-  else throw Error('unrecognized entry');
+  var now=fs.lstatSync(file);
+  if(now.ino!==s.ino||now.dev!==s.dev||now.size!==s.size)throw Error('changed entry');
+  process.stdout.write(bytes);
 } finally {fs.closeSync(opened);}
 """
-    reply = installer.remote.run('/usr/bin/node -e ' + shlex.quote(script) + ' ' +
-                                 shlex.quote(path) + ' ' + shlex.quote(package.TILE_APP) +
-                                 (' tile' if require_tile_protocol else '')).strip()
-    if reply not in ('root', 'no-root', 'homebrew'):
-        raise UserError('The TV package result could not be verified.', reason_code='cleanup-check-failed')
-    return reply
+    limit = 16 * 1024 * 1024 if name == 'apps.js' else 65536
+    return installer.remote.run('/usr/bin/node -e ' + shlex.quote(script) + ' ' +
+                                shlex.quote(path) + ' ' + str(limit))
+
+
+def app_metadata(installer, app):
+    from .no_root_cleanup import _exact_developer_app
+    if _exact_developer_app(installer, app):
+        info = json.loads(read_app_file(installer, app, 'appinfo.json'))
+        if isinstance(info, dict) and info.get('id') == app:
+            return info
+    raise UserError('The TV package result could not be verified.', reason_code='cleanup-check-failed')
+
+
+def installed_role(installer, *, require_tile_protocol=False):
+    info = app_metadata(installer, package.TILE_APP)
+    if require_tile_protocol and (type(info.get('cytvTileProtocol')) is not int or info['cytvTileProtocol'] != 1):
+        raise UserError('Use the installer for the installed Clean Your TV version.',
+                        reason_code='unsupported-operation')
+    if info.get('type') == 'web' and 'cytvTileEdition' not in info:
+        return 'homebrew'
+    if info.get('type') == 'web' and info.get('cytvTileProtocol') == 1 and info.get('cytvTileEdition') in ('root', 'no-root'):
+        return info['cytvTileEdition']
+    raise UserError('The TV package result could not be verified.', reason_code='cleanup-check-failed')

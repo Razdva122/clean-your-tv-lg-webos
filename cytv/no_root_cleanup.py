@@ -580,8 +580,9 @@ def _program(request):
         from .no_root_cancellation import COMPANION_SOURCE, SOURCE, cancellation_source
         from .no_root_observer import PROGRAM, companion_source
         plan = request.get('plan') or request.get('missing_capsule') or {}
-        if plan.get('tile') is True:
-            cancellation = cancellation_source(companion_source(PROGRAM, tile=True, screensaver=plan.get('screensaver') is True))
+        if plan.get('tile') is True or plan.get('maintenance'):
+            cancellation = cancellation_source(companion_source(PROGRAM, tile=plan.get('tile') is True,
+                screensaver=plan.get('screensaver') is True, maintenance=plan.get('maintenance')))
         else:
             cancellation = COMPANION_SOURCE if plan.get('screensaver') is True else SOURCE
         source = source.replace('/* CYTV_OWNED_CANCELLATION */null', cancellation)
@@ -621,11 +622,12 @@ def _missing_capsule_receipt(previous):
     try:
         screensaver = SCREENSAVER_APP in previous['versions']
         tile = TILE_APP in previous['versions']
-        components = [app for app, _ in observer.installation_components(screensaver, tile)]
+        maintenance = previous.get('maintenance')
+        components = [app for app, _ in observer.installation_components(screensaver, tile, maintenance)]
         versions = [previous['versions'][app] for app in components]
-        configuration = {name: previous['expected'][HELPER_STATE+'/'+name]
-                         for name in ('ssap-key.json', 'apps.json')}
-    except (KeyError, TypeError):
+        configuration = {} if maintenance else {
+            name: previous['expected'][HELPER_STATE+'/'+name] for name in ('ssap-key.json', 'apps.json')}
+    except (KeyError, TypeError, UserError):
         return None
     if not all(isinstance(value, str) for value in versions) or not all(
             isinstance(value, str) and re.fullmatch('[a-f0-9]{64}', value)
@@ -635,14 +637,16 @@ def _missing_capsule_receipt(previous):
     packaged_source = hashlib.sha256(observer.PACKAGED_STATE_PROGRAM.encode()).hexdigest()
     source = previous.get('observer_source_sha256', original_source)
     supported = (original_source, packaged_source)
-    if screensaver or tile:
-        supported = tuple(hashlib.sha256(observer.companion_source(program, tile=tile, screensaver=screensaver).encode()).hexdigest()
+    if screensaver or tile or maintenance:
+        supported = tuple(hashlib.sha256(observer.companion_source(program, tile=tile, screensaver=screensaver,
+                          maintenance=maintenance).encode()).hexdigest()
                           for program in (observer.PROGRAM, observer.PACKAGED_STATE_PROGRAM))
     if source not in supported:
         return None
     return {'operation': operation, 'diagnostic_id': diagnostic_id, 'versions': versions,
             'configuration_sha256': hashlib.sha256(observer.canonical(configuration).encode()).hexdigest(),
             'screensaver': screensaver, **({'tile': True} if tile else {}),
+            **({'maintenance': maintenance} if maintenance else {}),
             'source_sha256': source,
             'default_root': observer.ROOT, 'roots': [observer.ROOT, observer.JAIL_ROOT]}
 

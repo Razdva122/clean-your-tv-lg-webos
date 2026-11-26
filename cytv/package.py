@@ -283,6 +283,25 @@ def verify_payload(root):
             if script.endswith('.sh') and b'\r' in data:
                 raise ValueError('POSIX script must use LF line endings: ' + name + ': ' + script)
     screensaver_payload(root, manifest)
-    for edition in TILE_FILES:
-        tile_payload(root, manifest, edition)
+    if 'single_tile' in manifest:
+        for edition in TILE_FILES:
+            tile_payload(root, manifest, edition)
+        # A light entry combined with old visible components would leave
+        # several tiles. Admit only the supported, edition-bound closure.
+        homes = {variant['launcher'] for variant in manifest['graphics'].values()}
+        if homes != {'launcher.ipk', 'launcher-720p.ipk'} or manifest.get('helper') != 'helper.ipk':
+            raise ValueError('Unexpected single-tile component set')
+        for name in sorted(homes | {manifest['helper']}):
+            if name not in manifest['files']:
+                raise ValueError('Undeclared single-tile component')
+            helper = name == manifest['helper']
+            app = 'com.local.nativehome' if helper else 'com.gathin.tvhome'
+            prefix = 'usr/palm/applications/' + app + '/'
+            contents = data_files(_payload_file(root, name).read_bytes())
+            info = json.loads(contents[prefix + 'appinfo.json'])
+            if (info.get('id') != app or info.get('visible') is not False
+                    or type(info.get('cytvProductGeneration')) is not int or info['cytvProductGeneration'] != 2
+                    or info.get('version') != manifest['helper_version' if helper else 'home_version']
+                    or not helper and info.get('systemUpdateProtocol') != 1):
+                raise ValueError('Invalid single-tile product generation')
     return manifest

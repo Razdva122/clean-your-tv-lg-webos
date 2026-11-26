@@ -1042,6 +1042,11 @@ printf '%s' "$cytv_state"
         apps = {row['id']: row.get('version') for row in self.installed_apps()}
         other_owners = (package.ROOT_APP, 'com.cleanyourtv.root.updater', 'com.cleanyourtv.system.updater', package.TILE_APP)
         legacy = {app: apps[app] for app in (HOME, HELPER, 'com.cleanyourtv.updater') if app in apps}
+        if self.profile.get('connection') != 'root-ssh' and {HOME, HELPER} <= legacy.keys():
+            from .single_tile_maintenance import admission
+            existing = admission(self, apps)
+            if existing:
+                return existing
         if any(app in apps for app in other_owners) or (legacy and not {HOME, HELPER} <= legacy.keys()):
             raise UserError('Check the existing Clean Your TV installation before continuing.',
                             reason_code='existing-installation')

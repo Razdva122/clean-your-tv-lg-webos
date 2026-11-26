@@ -549,20 +549,26 @@ PACKAGED_STATE_PROGRAM = PROGRAM.replace(
 )
 
 
-def installation_components(screensaver=False, tile=False):
+def installation_components(screensaver=False, tile=False, maintenance=None):
     from .package import TILE_APP, TILE_FILES
     components = list(zip(APPS, ('helper.ipk', 'launcher.ipk')))
     if tile:
         components.insert(0, (TILE_APP, TILE_FILES['no-root']))
     if screensaver:
         components.append((SCREENSAVER_APP, SCREENSAVER_IPK))
+    if maintenance is not None:
+        permitted = [name for app, name in components if app != APPS[0]]
+        if (not isinstance(maintenance, list) or not maintenance
+                or maintenance != [name for name in permitted if name in maintenance]):
+            refuse()
+        components = [(app, name) for app, name in components if name in maintenance]
     return components
 
 
-def companion_source(program, *, tile=False, screensaver=True):
+def companion_source(program, *, tile=False, screensaver=True, maintenance=None):
     # New three-package receipts have distinct source bytes. Keep the original
     # two-package program and each of its connection variants byte-for-byte.
-    components = installation_components(screensaver, tile)
+    components = installation_components(screensaver, tile, maintenance)
     def js_strings(values):
         return '[' + ','.join("'" + value + "'" for value in values) + ']'
     apps = js_strings(app for app, name in components)
@@ -574,6 +580,9 @@ def companion_source(program, *, tile=False, screensaver=True):
         ("(i===0?'helper.ipk':'launcher.ipk')", "packages[i]"),
         ("name=index===0?'helper.ipk':'launcher.ipk'", "name=packages[index]"),
     )
+    if maintenance is not None:
+        replacements += (("var configSteps=plan.action==='install'?['files','eim','launch']:['restore'];",
+                          "var configSteps=[];"),)
     for old, new in replacements:
         if program.count(old) != 1:
             raise ValueError('Unexpected No-root observer source')
@@ -581,7 +590,7 @@ def companion_source(program, *, tile=False, screensaver=True):
     return program
 
 
-def source_for(root_ssh, private=None, configuration_directory=None, screensaver=False, tile=False):
+def source_for(root_ssh, private=None, configuration_directory=None, screensaver=False, tile=False, maintenance=None):
     # Existing capsules continue to authenticate the original source bytes.
     if root_ssh and private == ROOT_SSH_DISK:
         program = ROOT_PROGRAM.replace("root!=='/tmp/.cytv-installer-root'",
@@ -590,17 +599,20 @@ def source_for(root_ssh, private=None, configuration_directory=None, screensaver
         program = ROOT_PROGRAM
     else:
         program = PACKAGED_STATE_PROGRAM if configuration_directory is not None else PROGRAM
-    return companion_source(program, tile=tile, screensaver=screensaver) if screensaver or tile else program
+    return companion_source(program, tile=tile, screensaver=screensaver, maintenance=maintenance) if screensaver or tile or maintenance else program
 
 
-def make_plan(operation, diagnostic_id, action, artifacts, versions, public_root=PUBLIC_ROOT, configuration_sha256=None, root_ssh=False, private_root=None, root_handoff=None, setup_start=None, configuration_directory=None):
+def make_plan(operation, diagnostic_id, action, artifacts, versions, public_root=PUBLIC_ROOT, configuration_sha256=None, root_ssh=False, private_root=None, root_handoff=None, setup_start=None, configuration_directory=None, maintenance=None):
     if root_ssh:
         public_root = ROOT_SSH_PUBLIC
     slots = []
     include_screensaver = action == 'install' and SCREENSAVER_IPK in artifacts
     from .package import TILE_FILES
     include_tile = action == 'install' and TILE_FILES['no-root'] in artifacts
-    components = installation_components(include_screensaver, include_tile)
+    if maintenance is not None and (root_ssh or action != 'install' or set(maintenance) != set(artifacts)
+                                    or setup_start is not None or configuration_directory is not None):
+        refuse()
+    components = installation_components(include_screensaver, include_tile, maintenance)
     for index, (app, name) in enumerate(components):
         request = {'id': app, 'subscribe': True}
         if action == 'install':
@@ -611,8 +623,10 @@ def make_plan(operation, diagnostic_id, action, artifacts, versions, public_root
                           artifact_sha256=hashlib.sha256(artifacts[name]).hexdigest() if action == 'install' else None,
                           version=versions[app] if action == 'install' else None))
     plan = dict(protocol=PROTOCOL, edition='no-root', operation=operation, diagnostic_id=diagnostic_id,
-                action=action, source_sha256=hashlib.sha256(source_for(root_ssh, private_root, configuration_directory, include_screensaver, include_tile).encode()).hexdigest(), slots=slots,
+                action=action, source_sha256=hashlib.sha256(source_for(root_ssh, private_root, configuration_directory, include_screensaver, include_tile, maintenance).encode()).hexdigest(), slots=slots,
                 configuration_sha256=configuration_sha256 or hashlib.sha256(b'{}').hexdigest())
+    if maintenance is not None:
+        plan['maintenance'] = maintenance
     if include_screensaver:
         plan['screensaver'] = True
     if include_tile:
@@ -684,7 +698,7 @@ def invoke(remote, plan, command, slot=None, source=None, proof=None, data=None,
             refuse()
         request.update(public_root=ROOT_SSH_PUBLIC, sender='/usr/bin/luna-send')
     program_source = source_for(plan.get('connection') == 'root-ssh', plan.get('private_root'),
-                                plan.get('configuration_directory'), plan.get('screensaver') is True, plan.get('tile') is True)
+                                plan.get('configuration_directory'), plan.get('screensaver') is True, plan.get('tile') is True, plan.get('maintenance'))
     if command == 'storage-select':
         if plan.get('connection') == 'root-ssh' or 'private_root' in plan:
             refuse()
@@ -811,7 +825,7 @@ def inspect_root_ssh_storage(installer, bundles, ramfs):
     invoke(installer.remote, plan, 'storage-inspect')
 
 
-def begin(installer, action, artifacts, versions, expected, configuration, setup_activation=False, ramfs=False):
+def begin(installer, action, artifacts, versions, expected, configuration, setup_activation=False, ramfs=False, maintenance=None):
     if installer.store.pending(installer.profile):
         refuse()
     operation = uuid.uuid4().hex
@@ -821,7 +835,7 @@ def begin(installer, action, artifacts, versions, expected, configuration, setup
     handoff=getattr(installer,'_root_handoff',None)
     selected = root_ssh_storage(installer, ramfs) if root_ssh else None
     check_plan = make_plan(operation, uuid.uuid4().hex, action, artifacts, versions, PUBLIC_ROOT, root_ssh=root_ssh,
-                           private_root=selected, root_handoff=handoff)
+                           private_root=selected, root_handoff=handoff, maintenance=maintenance)
     fresh_install = action == 'install'
     review = getattr(installer, 'storage_preflight_review', None) if fresh_install else None
     needs_selection = not root_ssh
@@ -845,7 +859,7 @@ def begin(installer, action, artifacts, versions, expected, configuration, setup
                 raise
             review(error)
     before_staging = getattr(installer, 'before_no_root_staging', None) if fresh_install else None
-    if before_staging is not None:
+    if before_staging is not None and maintenance is None:
         before_staging()
     elif fresh_install and setup_activation:
         installer.prepare_install_helper(True)
@@ -879,16 +893,17 @@ def begin(installer, action, artifacts, versions, expected, configuration, setup
     configuration_directory = HELPER_STATE if expanded_state else None
     plan = make_plan(operation, pending['diagnostic_id'], action, artifacts, versions, PUBLIC_ROOT,config_hash,
                      root_ssh=root_ssh,private_root=selected,root_handoff=handoff,setup_start=setup_start,
-                     configuration_directory=configuration_directory)
+                     configuration_directory=configuration_directory, maintenance=maintenance)
     capsule = dict(schema=1, profile=installer.profile, plan=plan,
-                   source=source_for(root_ssh, selected, configuration_directory, plan.get('screensaver') is True, plan.get('tile') is True), expected=expected,
+                   source=source_for(root_ssh, selected, configuration_directory, plan.get('screensaver') is True, plan.get('tile') is True, plan.get('maintenance')), expected=expected,
                    artifacts={name: base64.b64encode(raw).decode() for name, raw in artifacts.items()},
                    configuration={name: raw.decode('utf8') for name, raw in configuration.items()})
     digest = installer.store.save_capsule(installer.profile, operation, capsule)
     installer.store.checkpoint(installer.profile, capsule_sha256=digest,
                                **({'setup_cancelled':True} if start_cancelled else {}),
                                **({'setup_install_stop':install_stop} if owns_stop else {}),
-                               **({'observer_source_sha256':plan['source_sha256']} if expanded_state or plan.get('screensaver') or plan.get('tile') else {}))
+                               **({'maintenance':maintenance} if maintenance else {}),
+                               **({'observer_source_sha256':plan['source_sha256']} if expanded_state or plan.get('screensaver') or plan.get('tile') or maintenance else {}))
     if handoff:
         from .root_no_root_handoff import call
         call(installer.remote,installer.remote._cytv_root_handoff_support,'claim',plan=plan)
@@ -903,7 +918,7 @@ def stage_remaining(installer, value):
     if plan['action'] != 'install':
         return
     remote = installer.remote
-    names = [name for app, name in installation_components(plan.get('screensaver'), plan.get('tile'))]
+    names = [name for app, name in installation_components(plan.get('screensaver'), plan.get('tile'), plan.get('maintenance'))]
 
     def missing_artifacts():
         missing = invoke(remote, plan, 'artifacts').get('missing')
@@ -957,16 +972,18 @@ def capsule(installer, pending):
                 hashlib.sha256(value['source'].encode()).hexdigest() != plan['source_sha256'] or
                 value['expected'] != pending['expected']):
             refuse()
+        if plan.get('maintenance') != pending.get('maintenance'):
+            refuse()
         if value['source'] != source_for(installer.profile.get('connection') == 'root-ssh',
-                                         plan.get('private_root'), plan.get('configuration_directory'), plan.get('screensaver') is True, plan.get('tile') is True):
+                                         plan.get('private_root'), plan.get('configuration_directory'), plan.get('screensaver') is True, plan.get('tile') is True, plan.get('maintenance')):
             raise LocalRecoveryError('source-incompatible')
-        if ('configuration_directory' in plan or plan.get('screensaver') or plan.get('tile')) and pending.get('observer_source_sha256') != plan['source_sha256']:
+        if ('configuration_directory' in plan or plan.get('screensaver') or plan.get('tile') or plan.get('maintenance')) and pending.get('observer_source_sha256') != plan['source_sha256']:
             refuse()
         artifacts = {name: base64.b64decode(raw, validate=True) for name, raw in value['artifacts'].items()}
         config_hash=hashlib.sha256(canonical({name:hashlib.sha256(raw.encode()).hexdigest() for name,raw in value['configuration'].items()}).encode()).hexdigest()
         rebuilt = make_plan(plan['operation'], plan['diagnostic_id'], plan['action'], artifacts, pending['versions'], PUBLIC_ROOT,config_hash,
                             root_ssh=installer.profile.get('connection') == 'root-ssh', private_root=plan.get('private_root'),root_handoff=plan.get('root_handoff'),setup_start=plan.get('setup_start'),
-                            configuration_directory=plan.get('configuration_directory'))
+                            configuration_directory=plan.get('configuration_directory'), maintenance=plan.get('maintenance'))
         rebuilt['source_sha256'] = plan['source_sha256']
         if rebuilt != plan:
             refuse()
@@ -975,7 +992,7 @@ def capsule(installer, pending):
             installer.remote._cytv_root_handoff_support=support(installer)
         if plan['action'] == 'install':
             from .operations import HELPER_STATE
-            if set(value['configuration']) != {'ssap-key.json', 'apps.json'}:
+            if set(value['configuration']) != (set() if plan.get('maintenance') else {'ssap-key.json', 'apps.json'}):
                 refuse()
             for name, raw in value['configuration'].items():
                 if hashlib.sha256(raw.encode()).hexdigest() != value['expected'][HELPER_STATE+'/'+name]:
@@ -1147,7 +1164,7 @@ def snapshot(installer, value):
             or not isinstance(result.get('slots'),list) or len(result['slots'])!=len(plan['slots'])
             or result.get('reservation') not in ('active','prepared','closed','busy','unknown')
             or not isinstance(result.get('configuration'),dict)
-            or set(result['configuration'])!=set(('files','eim','launch') if plan['action']=='install' else ('restore',))
+            or set(result['configuration'])!=set(() if plan.get('maintenance') else ('files','eim','launch') if plan['action']=='install' else ('restore',))
             or any(state not in ('prepared','unknown','complete') for state in result['configuration'].values())):
         raise observation_error('status', 'invalid-status')
     for slot in result['slots']:
@@ -1492,11 +1509,12 @@ def continue_operation(installer, expected_pending):
         for index in range(len(plan['slots'])):readback(installer,value,index)
         if plan['action']=='install':
             installer.outcome.packages_verified()
-            configure(installer,value)
+            if not plan.get('maintenance'):
+                configure(installer,value)
         invoke(installer.remote,plan,'configured')
     else:
         for index in range(len(plan['slots'])):readback(installer,value,index)
-        if plan['action']=='install':configuration_readback(installer,value)
+        if plan['action']=='install' and not plan.get('maintenance'):configuration_readback(installer,value)
     setup = plan['action']=='install' and 'setup_start' in plan
     setup_receipt = installer.store.pending(installer.profile) or {}
     cancelled = setup and setup_receipt.get('setup_cancelled') is True
@@ -1525,6 +1543,8 @@ def continue_operation(installer, expected_pending):
         installer.store.retire_capsule(installer.profile,pending['observer_operation'],pending['capsule_sha256'])
     except (RuntimeError,OSError):
         installer.progress('Setup is verified, but the private recovery capsule could not be removed. Keep the local record for cleanup.')
+    if plan.get('maintenance'):
+        return {'maintained': 'no-root', 'launch_requested': False, 'hardware_verified': False}
     if plan['action']=='install':
         installer.outcome.packages_verified()
         if setup and expected_generation is not None and setup_receipt.get('setup_cancelled') is not True:
