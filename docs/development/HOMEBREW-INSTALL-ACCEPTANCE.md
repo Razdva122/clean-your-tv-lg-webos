@@ -525,3 +525,36 @@ cleanup. The verified 1.29.1 macOS ARM64 CLI resumed the same cleanup goal
 and requested an AC power cycle before its final sweep. This is setup for
 the clean-install case. A zero exit with a pending power cycle is an
 intermediate state.
+
+### C3 clean install and removal with setup checks (2026-11-26)
+
+The project OLED55C3RLA ran firmware 43.21.71, webOS SDK 11.2.0 and stock
+Homebrew Channel 0.8.0. The first attempt stopped at the existing installation
+check. A previous package removal had left the Root deployment record at
+`uninstalled-state-retained` after its packages and startup hooks were gone.
+The matching desktop installer resumed full removal. It reached
+`restart-required`, then verified clean after a confirmed software restart
+and continuation of the same operation.
+
+The exact development IPK from source `506e70e8` was 122,169,002 bytes, SHA-256
+`24ad97ea5d027ea23b945b324d56b6757e3815e1ad63525911b77ce56af3871e`.
+The installer was 0.0.0 with CYTV 0.24.3 diagnostic metadata, Root 0.25.0
+and System Updater 1.2.11. The C3 used the ordinary Homebrew catalog UI with a
+temporary local feed. Device controls were driven by automated UI input and
+the paired network remote. The physical remote model was not established.
+
+| Case | Observed result |
+| --- | --- |
+| HB-E2E-01 | Previous retained state was resolved through full removal and verified restart. Inspection admitted a clean setup. |
+| HB-E2E-02 | Homebrew installed and launched the exact IPK. One confirmation installed Root and System Updater. The operation reported verified completion and Root Home appeared in the foreground. |
+| HB-E2E-03 | The first-run setup opened with theme previews. Liquid Glass applied and remained selected after the network remote sent HOME once from Media Player to Root Home. |
+| HB-E2E-04 | Debloat showed limiting ad tracking was already applied. Applying the sports notifications option changed it from On to Off. Both that change and restoration to On passed a fresh readback. Back returned to Root Home. |
+| HB-E2E-05 | The matching desktop installer verified full product removal after a verified software restart. Project packages, startup hooks and owned registrations were absent. Only allowed ownership records remained. One network HOME from Media Player opened LG Home and it stayed in the foreground for the one-second readback. |
+| HB-E2E-06 | The temporary feed came out of Homebrew settings, and Installer-only removal completed through the package manager. Homebrew 0.8.0 and its prior root and update-blocking settings remained in place. |
+
+All six focused device cases passed. The previously verified on-TV QR and
+desktop-schema JSON result is reusable for the same IPK. The browser suite
+also covered the mobile download and the prefilled GitHub issue. This
+development run did not cover OTA, standby, loss of mains or physical key
+timing. Final release and catalog acceptance require the selected release
+artifact.
