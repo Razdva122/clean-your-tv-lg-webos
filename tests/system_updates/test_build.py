@@ -221,6 +221,26 @@ class BuildTests(unittest.TestCase):
                 self.assertEqual(calls,[('luna://com.webos.applicationManager/running',{}),
                                         ('luna://com.webos.applicationManager/closeByAppId',{'id':app})])
 
+    def test_no_root_resume_requires_original_host_request_and_original_lease(self):
+        from unittest.mock import patch
+        import python_binding
+        setup,build=load('setup'),load('build')
+        with tempfile.TemporaryDirectory() as tmp:
+            top=Path(tmp).resolve();bundle=top/'bundle';state=top/'state';state.mkdir()
+            build.build(bundle,single_tile=True);manifest=setup.verify_bundle(bundle)
+            own=(bundle/'system-updater.ipk').read_bytes()
+            request={'id':'a'*32,'lease':'b'*32}
+            anchor={'schema':1,'bundle':manifest,'package':{'sha256':setup.digest(own),'size':len(own)},'request':request}
+            (state/'bootstrap-bundle.json').write_text(json.dumps(anchor))
+            with patch.object(python_binding,'verify_binding',side_effect=RuntimeError('original admitted')) as checked:
+                for other in (None,dict(request,id='c'*32),dict(request,lease='d'*32)):
+                    with self.assertRaisesRegex(ValueError,'original bootstrap bundle'):
+                        setup.resume(bundle,state,request=other)
+                checked.assert_not_called()
+                with self.assertRaisesRegex(RuntimeError,'original admitted'):
+                    setup.resume(bundle,state,request=request)
+                checked.assert_called_once_with(state)
+
     def test_single_tile_no_root_setup_preserves_other_foreground_and_stopped_home(self):
         setup=load('setup');app=setup.APPS['home']
         for running,front,reopen in [(True,app,True),(True,'media',False),(False,'media',False)]:

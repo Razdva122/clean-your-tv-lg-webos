@@ -437,7 +437,7 @@ def preflight(bundle,baseline,state=STATE,installed=INSTALLED,base=BASE,hook=HOO
     return manifest,current
 
 
-def provision(bundle,baseline,state=STATE,installed=INSTALLED,base=BASE,hook=HOOK,install=None,refresh=None):
+def provision(bundle,baseline,state=STATE,installed=INSTALLED,base=BASE,hook=HOOK,install=None,refresh=None,*,request=None):
     require_normal_root()
     manifest,current=preflight(bundle,baseline,state,installed,base,hook)
     state=Path(state);bundle=Path(bundle);baseline=Path(baseline)
@@ -456,7 +456,9 @@ def provision(bundle,baseline,state=STATE,installed=INSTALLED,base=BASE,hook=HOO
     state.mkdir(mode=0o700);code=state/'code';code.mkdir(mode=0o700);(state/'cache').mkdir(mode=0o700)
     def record(name,value):atomic(state/(name+'.json'),json.dumps(value,sort_keys=True))
     own=safe(bundle/'system-updater.ipk')
-    record('bootstrap-bundle',{'schema':1,'bundle':manifest,'package':{'sha256':manifest['files']['system-updater.ipk'],'size':len(own)}})
+    origin={'schema':1,'bundle':manifest,'package':{'sha256':manifest['files']['system-updater.ipk'],'size':len(own)}}
+    if request is not None:origin['request']=request
+    record('bootstrap-bundle',origin)
     # Retain the independently verified original before submission/source loss.
     # It gains installed authority only after exact terminal and full readback.
     atomic(state/'cache'/(digest(own)+'.ipk'),own)
@@ -568,7 +570,7 @@ def finish_registration(bundle,baseline,state=STATE,installed=INSTALLED,base=BAS
     record('bootstrap',{'phase':'complete','edition':current['edition'],'hardware_validated':False})
     return {'installed':True,'edition':current['edition'],'hardware_validated':False}
 
-def resume(bundle,state=STATE,installed=INSTALLED,base=BASE,hook=HOOK,refresh=None):
+def resume(bundle,state=STATE,installed=INSTALLED,base=BASE,hook=HOOK,refresh=None,*,request=None):
     """Bounded explicit bootstrap continuation, using original cached baseline."""
     require_normal_root()
     from installation import terminal_install
@@ -577,8 +579,9 @@ def resume(bundle,state=STATE,installed=INSTALLED,base=BASE,hook=HOOK,refresh=No
     expected={'schema':1,'bundle':manifest,'package':{'sha256':manifest['files']['system-updater.ipk'],'size':len(safe(bundle/'system-updater.ipk'))}}
     try:binding=json.loads(safe(state/'bootstrap-bundle.json',os.geteuid()))
     except FileNotFoundError:binding=None
+    if request is not None:expected['request']=request
     if binding!=expected:
-        raise ValueError('Matching original bootstrap bundle proof required; retain state for recovery')
+        raise ValueError('Matching original bootstrap bundle and request proof required; retain state for recovery')
     verify_binding(state)
     receipt=json.loads(safe(state/'infrastructure.json',os.geteuid()))
     expected={name:manifest['files'][name] for name in sorted(bundle_code(manifest))}
@@ -721,7 +724,11 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--bundle',type=Path,required=True);parser.add_argument('--baseline',type=Path);parser.add_argument('--edition',choices=('root','no-root'));parser.add_argument('--ssh');parser.add_argument('--identity',type=Path);parser.add_argument('--apply',action='store_true');parser.add_argument('--device',action='store_true',help=argparse.SUPPRESS)
     parser.add_argument('--python',default='/usr/bin/python3',choices=('/usr/bin/python3','/var/lib/clean-your-tv-python/4a71641c8d5536175e404a961624e8656eba30e97b5026f6bd7dc31e4bbeaaea/bin/python3.13'))
     parser.add_argument('--resume',action='store_true',help='Explicit bounded continuation of retained bootstrap; never replay unknown submissions')
+    parser.add_argument('--setup-id',help=argparse.SUPPRESS)
     args=parser.parse_args()
+    if args.setup_id is not None and (not re.fullmatch('[a-f0-9]{32}',args.setup_id) or not args.device or args.edition!='no-root'
+                                      or args.baseline is not None or verify_bundle(args.bundle).get('product_schema')!=2):
+        parser.error('Invalid single-tile host setup request')
     if args.device:
         if not args.apply or os.geteuid()!=0 or not Path('/usr/bin/luna-send').is_file() or sys.version_info<(3,9):raise PermissionError('Explicit root webOS Python 3.9+ setup required')
         policy = 'process.versions.node === "0.12.2"' if LEGACY_NODE_BETA else 'Number(process.versions.node.split(".")[0])>=8'
@@ -744,8 +751,11 @@ def main():
                     selected[0]=snapshot(args.bundle,args.edition,Path(tmp)/'baseline')
                 preflight(args.bundle,selected[0],cancelled_fence=cancelled_fence)
             edition=(lambda: verify_baseline(args.baseline,args.bundle)['edition']) if args.baseline else args.edition
-            with bootstrap_operation(edition,args.resume,eligible,handoff_check=lambda:eligible(cancelled_fence=True)):
-                print(json.dumps(resume(args.bundle) if args.resume else provision(args.bundle,selected[0])))
+            with bootstrap_operation(edition,args.resume,eligible,handoff_check=lambda:eligible(cancelled_fence=True)) as lease:
+                request={'id':args.setup_id,'lease':lease['id']} if args.setup_id else None
+                result=resume(args.bundle,request=request) if args.resume else provision(args.bundle,selected[0],request=request)
+                if request:result['setup_id']=request['id']
+                print(json.dumps(result))
         return
     verify_bundle(args.bundle);baseline=verify_baseline(args.baseline,args.bundle) if args.baseline else {'edition':args.edition}
     if not baseline['edition']:parser.error('--edition is required without --baseline')

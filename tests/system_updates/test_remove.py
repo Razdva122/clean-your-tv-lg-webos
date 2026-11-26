@@ -59,15 +59,15 @@ class RemovalTests(unittest.TestCase):
             (code/marker).write_bytes(b'2\n');(code/'root-provision.py').write_bytes(b'provision')
             inventory={path.relative_to(code).as_posix():digest(path.read_bytes()) for path in code.rglob('*') if path.is_file()}
             (state/'infrastructure.json').write_text(json.dumps({'schema':1,'code':inventory}))
-            bundle={'product_schema':2,'files':dict(inventory,**{'setup-system-updater.py':'c'*64,'system-updater.ipk':'d'*64})}
-            (state/'bootstrap-bundle.json').write_text(json.dumps({'bundle':bundle}))
+            bundle={'schema':1,'supervisor':1,'product_schema':2,'files':dict(inventory,**{'setup-system-updater.py':'c'*64,'system-updater.ipk':'d'*64})}
+            (state/'bootstrap-bundle.json').write_text(json.dumps({'schema':1,'bundle':bundle}))
             baseline=json.loads((state/'baseline.json').read_text());baseline.update(schema=2,components=baseline['components'][:2])
             (state/'baseline.json').write_text(json.dumps(baseline))
             report=namespace['operate']('status',**args)
             self.assertTrue(report['ownership_verified']);self.assertEqual(report['product_schema'],2)
             self.assertEqual(report['bootstrap_digest'],digest(json.dumps(bundle,sort_keys=True,separators=(',',':')).encode()))
             bundle['files'][marker]='a'*64
-            (state/'bootstrap-bundle.json').write_text(json.dumps({'bundle':bundle}))
+            (state/'bootstrap-bundle.json').write_text(json.dumps({'schema':1,'bundle':bundle}))
             with self.assertRaisesRegex(ValueError,'origin'):namespace['operate']('status',**args)
 
     def test_owned_link_survives_interrupted_disable_and_missing_target(self):

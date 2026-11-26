@@ -372,11 +372,18 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
             for name in [*files, 'bundle.json']:
                 self.remote.upload(stage + '/' + package.safe_name(name), (bundle / name).read_bytes(), mode=0o600)
             self.store.checkpoint(self.profile, stage='setup', support_upload=stage)
+        setup_args=[]
+        if rooted_tile:
+            setup_id=self.store.pending(self.profile)['diagnostic_id']
+            if not isinstance(setup_id,str) or not re.fullmatch('[a-f0-9]{32}',setup_id):
+                raise UserError('The original update setup receipt could not be verified.',reason_code='pending-operation')
+            setup_args=['--setup-id', setup_id]
+        if resume:setup_args.append('--resume')
         self.progress('Preparing updates for every TV component…')
         reply = json.loads(self.remote.run(self._python_command([
             self._python(), '-B', stage + '/setup-system-updater.py', '--bundle', stage,
-            '--edition', self.profile['edition'], '--device', '--apply', *(['--resume'] if resume else [])]), timeout=360))
-        if not isinstance(reply, dict) or reply.get('installed') is not True or rooted_tile and reply.get('edition')!='no-root':
+            '--edition', self.profile['edition'], '--device', '--apply', *setup_args]), timeout=360))
+        if not isinstance(reply, dict) or reply.get('installed') is not True or rooted_tile and (reply.get('edition')!='no-root' or reply.get('setup_id')!=setup_id):
             raise UserError('System updater setup was not confirmed. Keep recovery state and run cytv status.')
         root_staging.retire(self.remote, stage, {name:(bundle/name).read_bytes() for name in (*files,'bundle.json')})
         self.store.finish(self.profile)
@@ -1795,7 +1802,8 @@ else:
             completion = self._system_updater_completion(report) if reconcile else None
             if (completion=='system-updater-bootstrap-verified' and pending.get('bootstrap_digest')
                     and (report.get('edition')!='no-root' or report.get('product_schema')!=2
-                         or report.get('ownership_verified') is not True or report.get('bootstrap_digest')!=pending['bootstrap_digest'])):
+                         or report.get('ownership_verified') is not True or report.get('bootstrap_digest')!=pending['bootstrap_digest']
+                         or report.get('setup_id')!=pending.get('diagnostic_id'))):
                 completion=None
             reconciled = self._finish_status_transition(completion)
             return {'device': {'system_updater': report}, 'pending': self.store.pending(self.profile),

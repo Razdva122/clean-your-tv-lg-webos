@@ -185,7 +185,7 @@ class SystemBootstrapTests(unittest.TestCase):
                 self.assertIn('--resume',command)
                 self.assertIn(prior['support_upload'],command)
                 if not remote.confirmed:raise RuntimeError('unknown submission outcome')
-                return '{"installed":true,"edition":"no-root"}'
+                return json.dumps({'installed':True,'edition':'no-root','setup_id':prior['diagnostic_id']})
             return original(command,**options)
         remote.run=continued
         with patch('cytv.system_bootstrap.retained_stage',return_value=prior['support_upload']):
@@ -247,8 +247,8 @@ class SystemBootstrapTests(unittest.TestCase):
         inst=self.installer(Remote())
         self.store.begin(self.profile,'enable-system-updates',stage='setup',bootstrap_digest='b'*64)
         report=dict(present=True,bootstrap_complete=True,disabled=False,ownership_verified=True,
-                    edition='no-root',product_schema=2,bootstrap_digest='b'*64)
-        for bad in (dict(report,edition='root'),dict(report,bootstrap_digest='e'*64),dict(report,product_schema=1)):
+                    edition='no-root',product_schema=2,bootstrap_digest='b'*64,setup_id=self.store.pending(self.profile)['diagnostic_id'])
+        for bad in (dict(report,setup_id='f'*32),dict(report,edition='root'),dict(report,bootstrap_digest='e'*64),dict(report,product_schema=1)):
             inst.system_updater_cleanup=Mock(return_value=bad)
             self.assertIsNone(inst.status()['reconciled'])
             self.assertTrue(self.store.pending(self.profile))
