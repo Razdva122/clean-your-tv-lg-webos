@@ -34,6 +34,19 @@ generation. Desktop and Android distributions can install an edition-specific
 tile without the Homebrew payload. Its normal launch uses the TV's application
 manager and works without an Internet connection or a Homebrew status check.
 
+The single-tile desktop and Android candidates let you keep an older installation
+or choose a clean switch. A clean switch removes saved layout, themes, personal
+wallpapers and preferences. No-root also needs fresh pairing. Removal and new
+setup each have their own confirmation. For Root, install the full Homebrew
+tile first so the host can open it when setup is ready.
+
+On a Developer Mode TV already using the single tile, use the desktop or
+Android installer to update Home or repair a missing tile. With a matching
+Helper version, this keeps the existing Home ID, paired Helper and its
+stopped state. On a TV with on-device updates, open Home settings and choose
+**Update Clean Your TV**. A later update in this generation can be rolled
+back from **Recovery**.
+
 If the TV needs a Root Home backend available through the desktop installer,
 continue on a computer. If the candidate confirms that Root cannot control
 Home, it directs you to computer or Android setup to check No-root and pair
