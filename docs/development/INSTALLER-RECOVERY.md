@@ -68,6 +68,28 @@ exports; they are observations of the latest cleanup attempt, never admission
 authority. No PID, process arguments, path, raw kernel ID or proof identity is
 exported. `restart-required` also remains visible in the pending-stage projection.
 
+For a currently installed Helper, its fixed controller/entry/relay/detach runtime
+may reach the vendor uninstall after checked Stop publication and stock-control
+restoration. Positively disabled Helper/Home LS2 hosts and the targeted Home web
+process can also remain resident until that vendor request. This is delegation
+to the package manager, not signal-based termination or permission to sweep live
+code. After a delegated runtime was observed, its stricter process readback is
+persisted in `cleanup_package_runtime_delegated` and survives retries. Vendor
+terminal is followed by a process check before any private sweep; a surviving
+runtime or lost visibility keeps files and recovery data. The existing verified
+restart/opaque-process rule applies separately. Updater/installer activity and
+unknown project-path references are not delegated.
+
+Startup now observes a bounded current-controller log and PID/proc binding after
+the launch acknowledgement. A native `worker-ready` record with Home enabled is
+required before the installer marks startup observed. A process alone, a stopped
+or failed relay, old generation, or absent telemetry is unverified. The bounded
+wait never resubmits launch and the final Stop generation check still wins.
+`tv.helper_startup` records only a fixed state, booleans and a bounded numeric
+relay exit code; failed Home diagnostics can attach the same observation. The
+raw PID, log, generation and paths are not exported. This is runtime observation,
+not a physical Home-button acceptance result.
+
 No-root supports only existing pending install and pending/removing uninstall
 receipts. Except for the pre-submission case below, offering removal requires a positive bounded ten-second
 `appInstallService/status` response with an empty apps list and rejects conflicting

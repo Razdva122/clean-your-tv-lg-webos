@@ -1518,6 +1518,20 @@ def continue_operation(installer, expected_pending):
             observed='process-observed' if current=='running' else 'not-observed' if current in ('stopped','stale') else 'unverified'
         except Exception:pass
         if setup and not cancelled:
+            from .helper_startup import observe
+            try:
+                deadline = time.monotonic() + 5
+                while True:
+                    startup = observe(installer, expected_generation)
+                    if startup['state'] != 'starting' or time.monotonic() >= deadline:
+                        break
+                    time.sleep(.2)
+                installer.tv_info['helper_startup'] = startup
+                observed = 'process-observed' if startup['state'] == 'ready' and startup.get('controller_running') is True and startup.get('home_enabled') is True else 'unverified'
+            except (RuntimeError, OSError, ValueError):
+                installer.tv_info['helper_startup'] = {'state': 'unavailable'}
+                observed = 'unverified'
+        if setup and not cancelled:
             try:
                 # Sample after release/retire/receipt completion and the process
                 # probe: a Stop in any of those stages still wins the result.

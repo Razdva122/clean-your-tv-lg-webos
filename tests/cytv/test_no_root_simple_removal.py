@@ -1948,6 +1948,117 @@ class SimpleRemoval(unittest.TestCase):
         self.assertTrue(self.remove()['restart_required'])
         self.assertFalse(any(uri.endswith('/disable') for uri,_ in self.remote.calls))
 
+    def test_disabled_ls2_hosts_are_removed_by_vendor_before_final_process_check(self):
+        (self.root / 'proc').mkdir()
+        apps = self.cleanup.APPS[:2]
+        self.remote.apps = set(apps)
+        for index, service in enumerate(('com.local.nativehome.service', 'com.gathin.tvhome.renewal')):
+            self.own_file('apps/usr/palm/services/' + service + '/service.js', '// fixture')
+            proc = self.root / 'proc' / str(987650 + index)
+            proc.mkdir()
+            (proc / 'cmdline').write_bytes(('node\0/usr/bin/run-js-service\0' + service + '\0').encode())
+        web = self.root / 'proc/987659'
+        web.mkdir()
+        (web / 'cmdline').write_bytes(b'/usr/bin/WebProcess\0com.gathin.tvhome\0')
+        original = self.remote.luna
+        def vendor(uri, payload, **options):
+            if uri.endswith('/dev/remove'):
+                index = apps.index(payload['id'])
+                shutil.rmtree(self.root / 'proc' / str(987650 + index))
+                if index == 1:
+                    shutil.rmtree(web)
+            return original(uri, payload, **options)
+        self.remote.luna = vendor
+        result = self.remove()
+        self.assertTrue(result['verified_clean'], result)
+        self.assertEqual(set(self.vendor_removals()), set(apps))
+        self.assertIsNone(self.store.pending(self.profile))
+
+    def test_vendor_terminal_with_surviving_service_host_preserves_service_files(self):
+        (self.root / 'proc').mkdir()
+        app = self.cleanup.APPS[0]
+        self.remote.apps = {app}
+        file = self.own_file('apps/usr/palm/services/com.local.nativehome.service/service.js', '// preserve')
+        proc = self.root / 'proc/987650'
+        proc.mkdir()
+        (proc / 'cmdline').write_bytes(b'node\0/usr/bin/run-js-service\0com.local.nativehome.service\0')
+        with self.assertRaises(UserError):
+            self.remove()
+        self.assertEqual(self.vendor_removals(), [app])
+        self.assertTrue(file.exists())
+        evidence = self.store.pending(self.profile)['cleanup_restart_evidence']
+        self.assertEqual(evidence['phase'], 'after-packages')
+        self.assertTrue(evidence['helper_service_host_running'])
+        self.assertTrue(evidence['active_project_running'])
+        shutil.rmtree(proc)
+        self.assertTrue(self.remove()['verified_clean'])
+
+    def test_installed_controller_uses_vendor_stop_but_failed_service_disable_still_blocks(self):
+        (self.root / 'proc').mkdir()
+        app = self.cleanup.APPS[0]
+        self.remote.apps = {app}
+        self.own_file('apps/usr/palm/services/com.local.nativehome.service/service.js', '// fixture')
+        proc = self.root / 'proc/987650'
+        proc.mkdir()
+        cmdline = proc / 'cmdline'
+        cmdline.write_bytes(('node\0' + str(self.root / 'developer/apps/usr/palm/applications' / app / 'native.js') + '\0').encode())
+        original = self.remote.luna
+        def vendor(uri, payload, **options):
+            if uri.endswith('/dev/remove'):
+                cmdline.write_bytes(b'/usr/bin/unrelated\0')
+            return original(uri, payload, **options)
+        self.remote.luna = vendor
+        self.assertTrue(self.remove()['verified_clean'])
+        self.assertEqual(self.vendor_removals(), [app])
+        self.remote.apps = {app}
+        self.remote.luna = original
+        self.remote.calls.clear()
+        cmdline.write_bytes(b'node\0/usr/bin/run-js-service\0com.local.nativehome.service\0')
+        self.remote.broken_service = True
+        with self.assertRaises(UserError):
+            self.remove()
+        self.assertFalse(self.vendor_removals())
+
+    def test_lost_process_visibility_after_vendor_terminal_preserves_service_before_sweep(self):
+        procroot = self.root / 'proc'
+        proc = procroot / '987650'
+        proc.mkdir(parents=True)
+        app = self.cleanup.APPS[0]
+        self.remote.apps = {app}
+        file = self.own_file('apps/usr/palm/services/com.local.nativehome.service/service.js', '// preserve')
+        (proc / 'cmdline').write_bytes(b'node\0/usr/bin/run-js-service\0com.local.nativehome.service\0')
+        original = self.remote.luna
+        def vendor(uri, payload, **options):
+            reply = original(uri, payload, **options)
+            if uri.endswith('/dev/remove'):
+                procroot.rename(self.root / 'hidden-proc')
+            return reply
+        self.remote.luna = vendor
+        self.assertTrue(self.remove()['restart_required'])
+        self.assertTrue(file.exists())
+        self.assertTrue(self.store.pending(self.profile)['cleanup_package_runtime_delegated'])
+        with self.assertRaises(UserError):
+            self.remove()
+        self.assertTrue(file.exists())
+        self.assertEqual(self.store.pending(self.profile)['removals'][app], 'terminal')
+        self.assertEqual(self.store.pending(self.profile)['cleanup_restart_evidence']['phase'], 'after-packages')
+
+    def test_unrelated_process_cwd_or_argument_is_not_mistaken_for_helper_controller(self):
+        app = self.cleanup.APPS[0]
+        self.remote.apps = {app}
+        self.own_file('apps/usr/palm/services/com.local.nativehome.service/service.js', '// fixture')
+        helper = self.root / 'developer/apps/usr/palm/applications' / app
+        helper.mkdir(parents=True)
+        proc = self.root / 'proc/987650'
+        proc.mkdir(parents=True)
+        (proc / 'cmdline').write_bytes(('node\0/usr/bin/unrelated.js\0' + str(helper / 'native.js') + '\0').encode())
+        with self.assertRaises(UserError):
+            self.remove()
+        evidence = self.store.pending(self.profile)['cleanup_restart_evidence']
+        self.assertFalse(evidence['helper_controller_running'])
+        self.assertTrue(evidence['project_path_reference_running'])
+        self.assertFalse(self.vendor_removals())
+
     def test_present_functional_services_use_normal_disable(self):
         self.remote.apps={'com.local.nativehome','com.gathin.tvhome'}
         for service in ('com.local.nativehome.service','com.gathin.tvhome.renewal'):
