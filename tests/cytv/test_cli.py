@@ -369,7 +369,7 @@ class CLITests(unittest.TestCase):
                 ssap.call.return_value = {'returnValue': outcome != 'write-rejected'}
                 if outcome == 'pairing-rejected':
                     pair.return_value.__enter__.side_effect = UserError('Refused', reason_code='pairing-rejected')
-                answers = ['q'] if outcome == 'cancelled' else ['y', '2', 'y', 'n', '0', '0', '0', 'y']
+                answers = ['q'] if outcome == 'cancelled' else ['y', '2', 'y', 'n', '0', '0', '0'] + (['0'] if edition == 'root' else []) + ['y']
                 if outcome == 'declined':
                     answers[-1] = 'n'
                 prompts = iter(answers)

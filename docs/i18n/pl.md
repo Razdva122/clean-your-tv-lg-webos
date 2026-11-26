@@ -202,6 +202,8 @@ Otwórz Ustawienia → Tapety → Prześlij z telefonu i zeskanuj kod. Wybierz J
 
 Przed wyborem motywu użyj opcji **Debloat**, aby wybrać ustawienia reklam, poleceń, prywatności i powiadomień LG do zmiany. Sprawdź każdy wynik. Jeśli instalator nie może odczytać wartości początkowej, nie zapisze jej do automatycznego przywrócenia. Wybierz **Pomiń Debloat**, aby zachować bieżące ustawienia.
 
+W obu edycjach można wyłączyć transmisje promocyjne LG, jeśli telewizor udostępnia to ustawienie. W edycji Root można osobno wyłączyć wstępne ładowanie serwisu Netflix, YouTube lub przeglądarki na czas bieżącej sesji. Te opcje są początkowo odznaczone. Aplikacja może uruchamiać się wolniej. Po wybudzeniu lub ponownym uruchomieniu telewizor może wznowić wstępne ładowanie.
+
 Podczas odinstalowywania możesz przywrócić zapisane początkowe ustawienia Debloat. Jeśli pominiesz przywracanie, odinstalowywanie będzie kontynuowane bez zmiany tych ustawień.
 
 Po udanej instalacji wybierz Classic, Liquid Glass lub Ribbon i włącz albo wyłącz pogodę. Ribbon nie obsługuje pogody; Liquid Glass używa formatu kompaktowego. Miasto jest szacowane z połączenia i można je zmienić w Home.

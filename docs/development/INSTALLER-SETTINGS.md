@@ -22,7 +22,8 @@ remain intact. An edition fallback determines the final mode before customizatio
 ## Debloat
 
 The optional Debloat step comes before customization. The desktop wizard starts
-with all ten choices selected and applies them when the user clicks Continue.
+with the eleven LG settings selected and applies them on Continue. The separate
+Root app preloading group starts unchecked. Maintenance starts with all groups unchecked.
 With root SSH, both editions read and write through the LG Settings Service.
 No-root in Developer Mode writes through a separate SSAP pairing requesting
 the regular `WRITE_SETTINGS` permission. It reads preferences through Developer
@@ -50,6 +51,34 @@ The SSAP setter may be unavailable or rejected on a given firmware. Debloat
 reports the rejected write for each affected setting. It verifies accepted writes
 with a separate read. Debloat is skipped for non-interactive installs and
 console installs using `--yes`.
+
+### Additional Debloat choices
+
+| Choice | Developer Mode | No-root with root SSH | Root edition with root SSH |
+| --- | --- | --- | --- |
+| LG promotional streams | Paired SSAP write if the original is readable and the firmware accepts the request | LG Settings Service | LG Settings Service |
+| Netflix, YouTube and browser preloading | Unavailable | Unavailable | Individual opt-in for the current session |
+
+The installer skips the new choices when it cannot read an eligible original.
+For app preloading it reads the live Preload Manager policy, changes only the
+selected app's enabled flag with a non-permanent request and verifies the live
+policy. The result describes that flag. Apps already running may remain in
+memory. Standby, service restart and cold boot can reset the policy. Removal
+uses the saved original and the same per-app readback.
+
+[Reveal80's debloater](https://github.com/Reveal80/lg-webos-debloat) reports
+the extra promotion switch on webOS 22. Its reversible app hiding also removes
+access to a hidden app. CYTV keeps those apps available to open.
+[Glasshouse](https://rorygallagher2024.github.io/glasshouse/IMPLEMENTATION/#apps-kept-ready-in-the-background)
+observed different preload persistence across firmware and found that webOS can
+rewrite the preload file. This is why CYTV uses the live service for this option.
+[CleanYourTV for LG webOS](https://lasharor.github.io/cleanyourtv-WebOS/debloat/)
+also controls telemetry services and ad domains while its launcher is Home.
+That approach requires coordination with stock Home restoration and other
+hosts-file managers. It remains a separate Root candidate.
+
+A generic No-root rejection of Home Promotion or Content Recommendation includes
+the [LG manual path for webOS 6 and 22](https://www.lg.com/nz/support/product-support/troubleshooting/help-library/cs-CT52007864-20153529296644OLT/).
 
 ## Application and persistence
 

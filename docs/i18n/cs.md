@@ -177,6 +177,8 @@ Otevřete Nastavení → Tapety → Nahrát z telefonu a naskenujte kód. Vybert
 
 Před výběrem motivu zvolte v kroku **Debloat**, která nastavení reklam, doporučení, soukromí a oznámení LG chcete změnit. Zkontrolujte každý výsledek. Pokud instalátor nemůže přečíst původní hodnotu, nemůže ji uložit pro automatické obnovení. Volbou **Přeskočit Debloat** zachováte aktuální nastavení.
 
+Obě edice mohou vypnout propagační vysílání LG, pokud televizor toto nastavení nabízí. V edici Root můžete pro aktuální relaci samostatně vypnout přednačítání Netflixu, YouTube nebo prohlížeče. Tyto možnosti jsou ve výchozím stavu nezaškrtnuté. Aplikace se může otevírat pomaleji. Po probuzení nebo restartu může televizor přednačítání obnovit.
+
 Při odinstalaci můžete potvrdit obnovení uložených původních nastavení Debloat. Pokud obnovení přeskočíte, odinstalace pokračuje bez jejich změny.
 
 Po úspěšné instalaci vyberte Classic, Liquid Glass nebo Ribbon a zapněte či vypněte počasí. Ribbon počasí nepodporuje; Liquid Glass používá stručný formát. Město se odhaduje podle připojení a lze je změnit v Home.

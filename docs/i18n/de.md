@@ -201,6 +201,8 @@ Einstellungen → Hintergrundbilder → Vom Telefon hochladen öffnen und den Co
 
 Wählen Sie vor dem Design unter **Debloat**, welche LG-Einstellungen für Werbung, Empfehlungen, Datenschutz und Benachrichtigungen Sie ändern möchten. Prüfen Sie jedes Ergebnis. Kann der ursprüngliche Wert nicht gelesen werden, steht dafür keine automatische Wiederherstellung zur Verfügung. Wählen Sie **Debloat überspringen**, um die Einstellungen beizubehalten.
 
+Beide Editionen können LG-Werbestreams abschalten, sofern der Fernseher die Einstellung bereitstellt. In Root können Sie das Vorladen von Netflix, YouTube oder dem Browser für die aktuelle Sitzung einzeln ausschalten. Diese Optionen sind anfangs abgewählt. Eine App kann langsamer starten. Nach Standby oder Neustart kann der Fernseher sie wieder vorladen.
+
 Bei der Deinstallation können Sie die gespeicherten ursprünglichen Debloat-Einstellungen wiederherstellen. Wenn Sie die Wiederherstellung überspringen, läuft die Deinstallation ohne diese Änderungen weiter.
 
 Wähle nach erfolgreicher Installation Classic, Liquid Glass oder Ribbon und schalte das Wetter ein oder aus. Ribbon unterstützt kein Wetter; Liquid Glass nutzt das Kurzformat. Der ungefähre Ort wird über die Internetverbindung ermittelt und lässt sich in Home ändern.

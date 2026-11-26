@@ -27,6 +27,7 @@ GROUPS = (
     ('Ads and promotions', (
         ('screenSaverAd', 'general', 'Turn off screen saver ads', 'off'),
         ('livePromotion', 'option', 'Turn off promotions while watching', 'off'),
+        ('promotionStreamer', 'option', 'Turn off LG promotional streams', 'off'),
         ('webOSPromotionVideo', 'option', 'Turn off webOS promotional video', 'off'),
     )),
     ('Privacy', (
@@ -39,7 +40,15 @@ GROUPS = (
         ('sportsAlarm', 'general', 'Turn off sports notifications', 'off'),
     )),
 )
-SETTINGS = {key: (category, label, target) for _, rows in GROUPS for key, category, label, target in rows}
+PRELOAD_APPS = {'preloadNetflix': 'netflix', 'preloadYouTube': 'youtube.leanback.v4',
+                'preloadBrowser': 'com.webos.app.browser'}
+PRELOAD_GROUP = ('App preloading (current session)', (
+    ('preloadNetflix', 'preload', 'Skip Netflix preloading', 'off'),
+    ('preloadYouTube', 'preload', 'Skip YouTube preloading', 'off'),
+    ('preloadBrowser', 'preload', 'Skip browser preloading', 'off'),
+))
+ALL_GROUPS = (*GROUPS, PRELOAD_GROUP)
+SETTINGS = {key: (category, label, target) for _, rows in ALL_GROUPS for key, category, label, target in rows}
 SETTING_NAMES = {
     'homePromotion': 'Sponsored tiles',
     'contentRecommendation': 'Content recommendations',
@@ -51,6 +60,10 @@ SETTING_NAMES = {
     'lmt': 'Ad tracking limit',
     'aiNudge': 'Smart Tips',
     'sportsAlarm': 'Sports notifications',
+    'promotionStreamer': 'LG promotional streams',
+    'preloadNetflix': 'Netflix preloading',
+    'preloadYouTube': 'YouTube preloading',
+    'preloadBrowser': 'Browser preloading',
 }
 RESULTS = {
     'already': ('✓', '#b4ada4', 'Already in the requested state'),
@@ -58,12 +71,14 @@ RESULTS = {
     'failed': ('×', '#ff8580', 'Could not change the setting'),
     'write-rejected': ('×', '#ff8580', 'The TV rejected the request to change this setting.'),
     'firmware-blocked': ('×', '#ff8580', 'This TV firmware blocks changing this setting in No-root.'),
+    'unavailable': ('–', '#b4ada4', 'Setting unavailable on this connection. Skipped.'),
     'unverified': ('✓', '#b4ada4', 'Command sent. The result could not be verified.'),
 }
 DIAGNOSTIC_RESULTS = ('already', 'verified', 'pairing-rejected', 'pairing-timeout',
                       'pairing-unavailable', 'write-rejected', 'write-unavailable',
-                      'journal-failed', 'verify-unavailable', 'verify-mismatch')
+                      'journal-failed', 'unavailable', 'verify-unavailable', 'verify-mismatch')
 SERVICE = 'com.webos.settingsservice/'
+PRELOAD_SERVICE = 'com.webos.service.preloadmanager/'
 # Execute in the existing Developer Mode SSH jail. Return only the requested
 # value so private data from the preferences files never leaves the TV.
 READ_PREFERENCE = r'''
@@ -82,8 +97,35 @@ process.stdout.write(JSON.stringify(value));
 '''
 
 
+def result_message(key, status):
+    message = tr(RESULTS[status][2])
+    home_menu = {'homePromotion': 'Home Promotion', 'contentRecommendation': 'Content Recommendation'}
+    if status == 'write-rejected' and key in home_menu:
+        path = tr('On webOS 6 and 22: All Settings → General → System → Additional Settings → Home Settings → {setting} → Off.')
+        return message + ' ' + path.format(setting=tr(home_menu[key]))
+    return message
+
+
+def supports_preload(profile, remote):
+    return profile.get('edition') == 'root' and getattr(remote, 'root', False) is True
+
+
 def read(remote, category, key):
     try:
+        if key in PRELOAD_APPS:
+            if not remote.root:
+                return None
+            reply = remote.luna(PRELOAD_SERVICE + 'getPreloadPolicy', {}, timeout=5)
+            if reply.get('returnValue') is not True:
+                return None
+            apps = [app for app in reply.get('applications', [])
+                    if isinstance(app, dict) and app.get('id') == PRELOAD_APPS[key]]
+            if len(apps) != 1:
+                return None
+            app = apps[0]
+            if app.get('isAllowed', True) is not True or app.get('extPolicy') or type(app.get('isEnabled')) is not bool:
+                return None
+            return 'on' if app['isEnabled'] else 'off'
         if remote.root:
             reply = remote.luna(SERVICE + 'getSystemSettings', {'category': category, 'keys': [key]}, timeout=5)
             value = reply.get('settings', {}).get(key) if reply.get('returnValue') is True else None
@@ -112,6 +154,11 @@ def read_current(remote, category, key, tv):
 
 
 def set_value(remote, tv, category, key, value):
+    if key in PRELOAD_APPS:
+        if not remote.root or tv is not None:
+            raise ValueError('Root connection required for app preloading')
+        return remote.luna(PRELOAD_SERVICE + 'setPreloadPolicy', {
+            'application': {'id': PRELOAD_APPS[key], 'isEnabled': value == 'on'}, 'permanent': False}, timeout=8)
     payload = {'category': category, 'settings': {key: value}}
     if tv is not None:
         return tv.call('ssap://settings/setSystemSettings', payload, timeout=8)
@@ -145,7 +192,8 @@ def offer_restore(remote, store, profile, ask, write):
     entries = journal['settings']
     eligible = [
         key for key, (_, _, target) in SETTINGS.items()
-        if isinstance(entries.get(key), dict)
+        if (key not in PRELOAD_APPS or supports_preload(profile, remote))
+        and isinstance(entries.get(key), dict)
         and entries[key].get('target') == target
         and entries[key].get('original') in ('on', 'off')
         and entries[key]['original'] != target
@@ -249,6 +297,8 @@ def apply(installer, selected, progress=lambda _: None, *, diagnostic=None):
     if not selected:
         return {}
     profile, remote = installer.profile, installer.remote
+    if any(key in PRELOAD_APPS for key in selected) and not supports_preload(profile, remote):
+        raise ValueError('Invalid Debloat selection for this edition')
     directory = installer.store.device_dir(profile)
     results = {}
     events = diagnostic if diagnostic is not None else {}
@@ -261,6 +311,9 @@ def apply(installer, selected, progress=lambda _: None, *, diagnostic=None):
                 continue
             progress(label)
             original = read(remote, category, key)
+            if original is None and (key == 'promotionStreamer' or key in PRELOAD_APPS):
+                results[key] = events[key] = 'unavailable'
+                continue
             if original == target:
                 results[key] = events[key] = 'already'
                 continue
@@ -309,7 +362,11 @@ def run(installer, ask, write, *, diagnostic=None, maintenance=False):
         write.heading(TITLE)
     else:
         write.step(5, TITLE)
+    groups = ALL_GROUPS if supports_preload(installer.profile, installer.remote) else GROUPS
     if write.frontend == 'desktop':
+        for _, rows in groups:
+            for key, _, label, _ in rows:
+                write.option(key, label)
         try:
             selected = json.loads(prompts.answer(ask, SELECT))
         except (ValueError, TypeError):
@@ -321,7 +378,7 @@ def run(installer, ask, write, *, diagnostic=None, maintenance=False):
             write.option('n', 'Skip Debloat')
         if prompts.confirm('Apply optional Debloat settings?', ask, write):
             write(NOTICE)
-            for group, rows in GROUPS:
+            for group, rows in groups:
                 write.heading(group)
                 for _, _, label, _ in rows:
                     write(label)
@@ -368,8 +425,8 @@ def run(installer, ask, write, *, diagnostic=None, maintenance=False):
     else:
         write.heading('Debloat results')
         for key, status in results.items():
-            icon, _, message = RESULTS[status]
-            write(f'{icon} {tr(SETTINGS[key][1])} — {tr(message)}')
+            icon = RESULTS[status][0]
+            write(f'{icon} {tr(SETTINGS[key][1])} — {result_message(key, status)}')
         if write.frontend == 'android':
             write.option('1', CONTINUE)
         if not maintenance:

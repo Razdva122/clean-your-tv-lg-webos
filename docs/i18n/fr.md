@@ -201,6 +201,8 @@ Ouvrez Paramètres → Fonds d’écran → Envoyer depuis le téléphone et sca
 
 Avant de choisir un thème, utilisez **Debloat** pour sélectionner les réglages LG de publicité, de recommandations, de confidentialité et de notifications à modifier. Vérifiez chaque résultat. Si la valeur d’origine ne peut pas être lue, elle ne peut pas être enregistrée pour une restauration automatique. Choisissez **Ignorer Debloat** pour conserver vos réglages.
 
+Les deux éditions peuvent désactiver les flux promotionnels LG si le téléviseur propose ce réglage. Dans Root, vous pouvez désactiver séparément le préchargement de Netflix, de YouTube ou du navigateur pour la session en cours. Ces options sont décochées par défaut. L’application peut mettre plus de temps à s’ouvrir. Le téléviseur peut reprendre le préchargement après une veille ou un redémarrage.
+
 Lors de la désinstallation, vous pouvez rétablir les valeurs d’origine enregistrées par Debloat. Si vous ignorez la restauration, la désinstallation se poursuit sans modifier ces réglages.
 
 Après une installation réussie, choisissez Classic, Liquid Glass ou Ribbon et activez ou désactivez la météo. Ribbon ne prend pas en charge la météo ; Liquid Glass utilise le format compact. La ville est estimée selon votre connexion et peut être modifiée dans Home.

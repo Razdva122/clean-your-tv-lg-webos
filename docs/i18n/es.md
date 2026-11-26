@@ -201,6 +201,8 @@ Abre Ajustes → Fondos → Subir desde el teléfono y escanea el código. Elige
 
 Antes de elegir un tema, usa **Debloat** para seleccionar los ajustes de publicidad, recomendaciones, privacidad y notificaciones de LG que quieras cambiar. Revisa cada resultado. Si el instalador no puede leer el valor original, no podrá guardarlo para restaurarlo automáticamente. Elige **Omitir Debloat** para conservar los ajustes actuales.
 
+Ambas ediciones pueden desactivar las transmisiones promocionales de LG si el televisor ofrece el ajuste. En Root puedes desactivar por separado la precarga de Netflix, YouTube o el navegador durante la sesión actual. Estas opciones empiezan desmarcadas. La aplicación puede tardar más en abrirse y el televisor puede reanudar la precarga al salir del modo de espera o al reiniciarse.
+
 Durante la desinstalación, puedes restaurar los ajustes originales de Debloat guardados. Si omites la restauración, la desinstalación continúa sin cambiar esos ajustes.
 
 Después de instalar correctamente, elige Classic, Liquid Glass o Ribbon y activa o desactiva el tiempo. Ribbon no admite el tiempo; Liquid Glass usa el formato compacto. La ciudad se estima por tu conexión y puedes cambiarla en Home.
