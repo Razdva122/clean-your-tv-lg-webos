@@ -70,6 +70,8 @@ def restart_evidence(value):
     result = {key: value[key] for key in (
         'proof_present', 'boot_probe_returned', 'restart_observed', 'kernel_changed', 'reused_proof',
         'idle', 'proc_enumerated', 'project_running', 'installer_running', 'homebrew_observed',
+        'active_project_running', 'package_runtime_running', 'helper_controller_running',
+        'helper_relay_running', 'helper_service_host_running', 'home_service_host_running', 'home_app_running', 'project_path_reference_running',
         'process_cmdline_unreadable', 'process_links_unreadable', 'opaque_interpreter', 'process_limit_exceeded',
         'terminal_cleanup', 'all_targets_terminal', 'project_catalog_absent', 'previous_present',
         'resident_history', 'cancellation_present', 'configuration_pending', 'package_pending',
@@ -77,7 +79,7 @@ def restart_evidence(value):
         if type(value.get(key)) is bool}
     for key, allowed in (
             ('proof_kind', ('none', 'volatile-marker', 'kernel-only', 'unknown')),
-            ('phase', ('boot-probe', 'writers', 'before-stop', 'before-packages', 'final-readback', 'finish-readback')),
+            ('phase', ('boot-probe', 'writers', 'before-stop', 'before-packages', 'after-packages', 'final-readback', 'finish-readback')),
             ('decision', ('observing', 'restart-requested', 'awaiting-restart', 'observation-blocked',
                           'process-blocked', 'continuing', 'completed'))):
         if type(value.get(key)) is str and value[key] in allowed:

@@ -2028,6 +2028,128 @@ fs.readFileSync=function(file){
         self.assertTrue(self.remove()['restart_required'])
         self.assertFalse(any(uri.endswith('/disable') for uri,_ in self.remote.calls))
 
+    def test_installed_home_web_process_does_not_shorten_acknowledged_service_drain(self):
+        self.model_service_exit_after_disable(12000, other_process='node\0/usr/bin/run-js-service\0com.local.nativehome.service')
+        home = self.cleanup.APPS[1]
+        self.remote.apps.add(home)
+        web = self.root / 'proc/987659'
+        web.mkdir()
+        (web / 'cmdline').write_bytes(b'/usr/bin/WebProcess\0com.gathin.tvhome\0')
+        original = self.remote.luna
+        def vendor(uri, payload, **options):
+            if uri.endswith('/dev/remove') and payload['id'] == home:
+                shutil.rmtree(web)
+            return original(uri, payload, **options)
+        self.remote.luna = vendor
+        self.assertTrue(self.remove()['verified_clean'])
+        self.assertEqual(set(self.vendor_removals()), set(self.cleanup.APPS[:2]))
+
+    def test_vendor_terminal_with_surviving_relay_preserves_service_files(self):
+        (self.root / 'proc').mkdir()
+        app = self.cleanup.APPS[0]
+        self.remote.apps = {app}
+        file = self.own_file('apps/usr/palm/services/com.local.nativehome.service/service.js', '// preserve')
+        proc = self.root / 'proc/987650'
+        proc.mkdir()
+        (proc / 'cmdline').write_bytes(str(self.root / 'developer/apps/usr/palm/applications' / app / 'relay').encode())
+        with self.assertRaises(UserError):
+            self.remove()
+        self.assertEqual(self.vendor_removals(), [app])
+        self.assertTrue(file.exists())
+        evidence = self.store.pending(self.profile)['cleanup_restart_evidence']
+        self.assertEqual(evidence['phase'], 'after-packages')
+        self.assertTrue(evidence['helper_relay_running'])
+        self.assertEqual(evidence['process_matches'], ['helper'])
+        self.assertTrue(evidence['active_project_running'])
+        with self.assertRaises(UserError):
+            self.remove()
+        self.assertTrue(file.exists())
+        self.assertEqual(self.vendor_removals(), [app])
+        shutil.rmtree(proc)
+        self.assertTrue(self.remove()['verified_clean'])
+
+    def test_installed_controller_uses_vendor_stop_but_failed_service_disable_still_blocks(self):
+        (self.root / 'proc').mkdir()
+        app = self.cleanup.APPS[0]
+        self.remote.apps = {app}
+        self.own_file('apps/usr/palm/services/com.local.nativehome.service/service.js', '// fixture')
+        proc = self.root / 'proc/987650'
+        proc.mkdir()
+        cmdline = proc / 'cmdline'
+        cmdline.write_bytes(('node\0' + str(self.root / 'developer/apps/usr/palm/applications' / app / 'native.js') + '\0').encode())
+        original = self.remote.luna
+        def vendor(uri, payload, **options):
+            if uri.endswith('/dev/remove'):
+                cmdline.write_bytes(b'/usr/bin/unrelated\0')
+            return original(uri, payload, **options)
+        self.remote.luna = vendor
+        self.assertTrue(self.remove()['verified_clean'])
+        self.assertEqual(self.vendor_removals(), [app])
+        self.remote.apps = {app}
+        self.remote.luna = original
+        self.remote.calls.clear()
+        cmdline.write_bytes(b'node\0/usr/bin/run-js-service\0com.local.nativehome.service\0')
+        self.remote.broken_service = True
+        with self.assertRaises(UserError):
+            self.remove()
+        self.assertFalse(self.vendor_removals())
+
+    def test_lost_process_visibility_after_vendor_terminal_preserves_service_before_sweep(self):
+        procroot = self.root / 'proc'
+        proc = procroot / '987650'
+        proc.mkdir(parents=True)
+        app = self.cleanup.APPS[0]
+        self.remote.apps = {app}
+        file = self.own_file('apps/usr/palm/services/com.local.nativehome.service/service.js', '// preserve')
+        (proc / 'cmdline').write_bytes(str(self.root / 'developer/apps/usr/palm/applications' / app / 'relay').encode())
+        original = self.remote.luna
+        def vendor(uri, payload, **options):
+            reply = original(uri, payload, **options)
+            if uri.endswith('/dev/remove'):
+                procroot.rename(self.root / 'hidden-proc')
+            return reply
+        self.remote.luna = vendor
+        self.assertTrue(self.remove()['restart_required'])
+        self.assertTrue(file.exists())
+        self.assertTrue(self.store.pending(self.profile)['cleanup_package_runtime_delegated'])
+        with self.assertRaises(UserError):
+            self.remove()
+        self.assertTrue(file.exists())
+        self.assertEqual(self.store.pending(self.profile)['removals'][app], 'terminal')
+        self.assertEqual(self.store.pending(self.profile)['cleanup_restart_evidence']['phase'], 'after-packages')
+
+        self.reboot()
+        # The new kernel is visible, but one listed process has no readable
+        # command line. The terminal package still has a functional service file.
+        unreadable = procroot / '987651' / 'cmdline'
+        unreadable.mkdir(parents=True)
+        with self.assertRaises(UserError):
+            self.remove()
+        self.assertTrue(file.exists())
+        evidence = self.store.pending(self.profile)['cleanup_restart_evidence']
+        self.assertTrue(evidence['kernel_changed'])
+        self.assertTrue(evidence['process_cmdline_unreadable'])
+        self.assertEqual(evidence['phase'], 'after-packages')
+        shutil.rmtree(unreadable.parent)
+        self.assertTrue(self.remove()['verified_clean'])
+        self.assertEqual(self.vendor_removals(), [app])
+
+    def test_unrelated_process_cwd_or_argument_is_not_mistaken_for_helper_controller(self):
+        app = self.cleanup.APPS[0]
+        self.remote.apps = {app}
+        self.own_file('apps/usr/palm/services/com.local.nativehome.service/service.js', '// fixture')
+        helper = self.root / 'developer/apps/usr/palm/applications' / app
+        helper.mkdir(parents=True)
+        proc = self.root / 'proc/987650'
+        proc.mkdir(parents=True)
+        (proc / 'cmdline').write_bytes(('node\0/usr/bin/unrelated.js\0' + str(helper / 'native.js') + '\0').encode())
+        with self.assertRaises(UserError):
+            self.remove()
+        evidence = self.store.pending(self.profile)['cleanup_restart_evidence']
+        self.assertFalse(evidence['helper_controller_running'])
+        self.assertTrue(evidence['project_path_reference_running'])
+        self.assertFalse(self.vendor_removals())
+
     def test_present_functional_services_use_normal_disable(self):
         self.remote.apps={'com.local.nativehome','com.gathin.tvhome'}
         for service in ('com.local.nativehome.service','com.gathin.tvhome.renewal'):

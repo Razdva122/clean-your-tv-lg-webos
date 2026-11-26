@@ -559,6 +559,8 @@ function cancelResume() {
 }
 log({
   event: 'start',
+  startupSchema: 1,
+  generation: startGeneration,
   pid: process.pid,
   uid: process.getuid(),
   automatic: automatic,
@@ -1380,6 +1382,7 @@ function start(recovering) {
           worker.recovering = false;
         }
         worker.stdin.write(homeControl.enabled() ? 'E' : 'D');
+        log({ event: 'worker-ready', homeEnabled: homeControl.enabled() });
       }
       if (line === 'HOME') {
         cancelIrHome();

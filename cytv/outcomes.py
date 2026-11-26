@@ -64,6 +64,7 @@ class SetupOutcome:
         return self.info.setdefault('setup_outcome', {key: values[0] for key, values in FIELDS.items()})
 
     def begin(self):
+        self.info.pop('helper_startup', None)
         self.info['setup_outcome'] = {key: values[0] for key, values in FIELDS.items()}
         self.checks.update('packages', 'pending')
         self.checks.update('startup', 'unknown', 'Startup has not been verified.')
