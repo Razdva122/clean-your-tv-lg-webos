@@ -839,6 +839,7 @@
   root.PersonalWallpaper = {
     start: start,
     readProfileRecords: function (visit) {
+      var failure;
       return transaction('readonly', function (store, set, abort) {
         var request = store.openCursor();
         request.onsuccess = function () {
@@ -848,9 +849,12 @@
             visit(cursor.key, cursor.value);
             cursor.continue();
           } catch (error) {
+            failure = error;
             abort(error);
           }
         };
+      }).catch(function (error) {
+        throw failure || error;
       });
     },
     validateProfileRecords: function (records) {

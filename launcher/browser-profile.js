@@ -1,7 +1,10 @@
 /* Device-local System update snapshot for the Home origin's own settings and stores. */
 (function (root) {
   'use strict';
-  var limit = 3 * 1024 * 1024;
+  var limit = 3 * 1024 * 1024,
+    sizeMessage =
+      'The backup is too large. To update, remove a downloaded theme or personal wallpaper you no longer need.',
+    trialMessage = 'Finish or cancel your theme preview before updating.';
   var keys = [
     'tvhome.clockFormat',
     'tvhome.columns.v1',
@@ -18,12 +21,10 @@
     'tvhome.weather.v1'
   ];
   function fail() {
-    throw Error('Could not save your complete profile. Nothing was installed.');
+    throw Error('Invalid system update backup');
   }
   function tooLarge() {
-    throw Error(
-      'The backup is too large. To update, remove a downloaded theme or personal wallpaper you no longer need.'
-    );
+    throw Error(sizeMessage);
   }
   function bytes(value) {
     return unescape(encodeURIComponent(value)).length;
@@ -208,16 +209,27 @@
       });
   }
   function capture() {
-    if (root.localStorage.getItem('tvhome.theme.trial.v1') !== null)
-      throw Error('Finish or cancel your theme preview before updating.');
-    return read().then(function (state) {
-      return (state.themes.length ? version() : Promise.resolve(null)).then(
-        function (v) {
-          inspect(state, v);
-          return state;
-        }
-      );
-    });
+    return Promise.resolve()
+      .then(function () {
+        if (root.localStorage.getItem('tvhome.theme.trial.v1') !== null)
+          throw Error(trialMessage);
+        return read();
+      })
+      .then(function (state) {
+        return (state.themes.length ? version() : Promise.resolve(null)).then(
+          function (v) {
+            inspect(state, v);
+            return state;
+          }
+        );
+      })
+      .catch(function (error) {
+        if (error.message === sizeMessage || error.message === trialMessage)
+          throw error;
+        throw Error(
+          'Could not save your complete profile. Nothing was installed.'
+        );
+      });
   }
   function restore(state) {
     return (

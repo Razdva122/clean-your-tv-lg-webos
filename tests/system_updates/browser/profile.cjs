@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
+const { execFileSync } = require('node:child_process');
 const { chromium } = require('playwright');
 const root = path.resolve(__dirname, '../../..');
 const sample = require('../../../scripts/check-theme-submissions.cjs')
@@ -171,6 +172,72 @@ const origin = 'https://profile.test';
       }, browserState);
       snapshot = await page.evaluate(() => HomeBrowserProfile.capture());
       assert.deepEqual(snapshot, browserState);
+      // The worker authenticates and stores the actual JSON received over the app bridge.
+      const temp = fs.mkdtempSync(
+        path.join(require('node:os').tmpdir(), 'cytv-browser-profile-')
+      );
+      try {
+        const fixture = path.join(temp, 'profile.json');
+        fs.writeFileSync(
+          fixture,
+          JSON.stringify({ ...profile, browserState: snapshot }),
+          { mode: 0o600 }
+        );
+        execFileSync(
+          process.env.PYTHON || 'python3',
+          [
+            '-c',
+            [
+              'import json, runpy, sys',
+              'from pathlib import Path',
+              "runpy.run_path('tests/system_updates/test_core.py')",
+              'from system_updater.core import validate_profile',
+              'path=Path(sys.argv[2]); src=json.loads(path.read_text())',
+              'path.write_text(json.dumps(validate_profile(src,sys.argv[1],captured=True)))'
+            ].join('\n'),
+            edition,
+            fixture
+          ],
+          { cwd: root, timeout: 10000 }
+        );
+        snapshot = JSON.parse(fs.readFileSync(fixture, 'utf8')).browserState;
+      } finally {
+        fs.rmSync(temp, { recursive: true, force: true });
+      }
+
+      const mediaError = await page.evaluate(async (state) => {
+        await PersonalWallpaper.replaceProfileRecords([
+          {
+            key: 'slot',
+            value: {
+              source: 'personal',
+              envelope: { image: { data: 'a'.repeat(3 * 1024 * 1024) } }
+            }
+          }
+        ]);
+        try {
+          await HomeBrowserProfile.capture();
+        } catch (error) {
+          return error.message;
+        } finally {
+          await PersonalWallpaper.replaceProfileRecords(state.wallpapers);
+        }
+      }, snapshot);
+      assert.match(mediaError, /backup is too large/);
+      const trial = await page.evaluate(async () => {
+        localStorage.setItem('tvhome.theme.trial.v1', 'active');
+        try {
+          await HomeBrowserProfile.capture();
+        } catch (e) {
+          return e.message;
+        } finally {
+          localStorage.removeItem('tvhome.theme.trial.v1');
+        }
+      });
+      assert.equal(
+        trial,
+        'Finish or cancel your theme preview before updating.'
+      );
       await page.evaluate(() =>
         localStorage.setItem('tvhome.name', 'x'.repeat(65537))
       );
