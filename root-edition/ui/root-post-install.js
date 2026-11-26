@@ -47,6 +47,7 @@
     selected = {},
     results = {},
     themes = [],
+    previews = [],
     notice = '';
   function t(key) {
     return root.HomeI18n.t(key);
@@ -195,9 +196,20 @@
     themes = [];
     busy = true;
     render();
-    root.ThemeManager.list()
-      .then(function (items) {
-        themes = items.filter(function (item) {
+    var catalog = root.ThemeData
+      ? root.ThemeData.request('theme-catalog.json', 65536, true)
+          .then(function (bytes) {
+            var value = JSON.parse(root.ThemeData.decode(bytes));
+            return Array.isArray(value.themes) ? value.themes : [];
+          })
+          .catch(function () {
+            return [];
+          })
+      : Promise.resolve([]);
+    Promise.all([root.ThemeManager.list(), catalog])
+      .then(function (result) {
+        previews = result[1];
+        themes = result[0].filter(function (item) {
           return item.builtin === true && !item.unavailable;
         });
       })
@@ -365,18 +377,42 @@
       var actions = node(card, 'div');
       actions.className = 'renewal-actions';
       if (view === 'themes') {
+        var choices = node(card, 'div');
+        choices.className = 'cytv-setup-themes';
+        card.insertBefore(choices, actions);
         themes.forEach(function (item) {
-          var choice = button(actions, item.title, function () {
+          var choice = button(choices, item.title, function () {
             selectTheme(item);
           });
           choice.setAttribute(
             'aria-pressed',
             String(root.ThemeManager.current().id === item.id)
           );
+          var preview = previews.find(function (entry) {
+            return (
+              entry.id === item.id &&
+              entry.builtin === true &&
+              typeof entry.preview === 'string' &&
+              /^(?:theme-catalog|themes)\/[\w/.-]+\.(?:png|jpg)$/.test(
+                entry.preview
+              ) &&
+              entry.preview.indexOf('..') === -1
+            );
+          });
+          if (preview) {
+            var image = doc.createElement('img');
+            image.alt = '';
+            image.src = preview.preview;
+            image.onerror = function () {
+              image.hidden = true;
+            };
+            choice.insertBefore(image, choice.firstChild);
+          }
           choice.disabled = busy;
         });
         button(actions, 'Back', main).disabled = busy;
       } else {
+        actions.className += ' cytv-setup-main-actions';
         button(actions, 'Themes', showThemes);
         button(actions, 'Adjust LG settings', function () {
           launchApplication('debloat');

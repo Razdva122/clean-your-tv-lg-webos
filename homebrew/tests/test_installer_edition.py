@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 from cytv import root_capabilities as home
 from cytv.errors import TVCommandError
-from homebrew.edition import LocalReads, decision
+from homebrew.edition import LocalReads, decision, inspect_edition
 
 
 class LocalEditionTests(unittest.TestCase):
@@ -54,6 +54,43 @@ class LocalEditionTests(unittest.TestCase):
     def test_compositor_support_routes_to_root_on_the_computer(self):
         with patch.object(home, 'verify', return_value='c1-native-gate'):
             self.assertEqual(decision(LocalReads()), 'external_root')
+
+    def test_metadata_read_does_not_change_the_backend_decision(self):
+        device = LocalReads()
+        reply = {'returnValue': True, 'modelName': 'OLED55C3PUA', 'firmwareVersion': '03.20.11',
+                 'sdkVersion': '8.3.0-7', 'serialNumber': 'private', 'ipAddress': '192.0.2.20'}
+        with patch('homebrew.edition.decision', return_value='root'), patch.object(
+            device, '_read', return_value=reply
+        ) as read:
+            self.assertEqual(inspect_edition(device), {'decision': 'root', 'tv': {
+                'modelName': 'OLED55C3PUA', 'firmwareVersion': '03.20.11', 'sdkVersion': '8.3.0-7'}
+            })
+            read.assert_called_once()
+        with patch('homebrew.edition.decision', side_effect=AssertionError('must not probe')), patch.object(
+            device, '_read', return_value=reply
+        ):
+            self.assertEqual(inspect_edition(device, metadata_only=True), {
+                'decision': None, 'tv': {
+                    'modelName': 'OLED55C3PUA', 'firmwareVersion': '03.20.11', 'sdkVersion': '8.3.0-7'}
+            })
+        with patch('homebrew.edition.decision', return_value='root'), patch.object(
+            LocalReads, '_read', side_effect=TimeoutError('private')
+        ):
+            self.assertEqual(inspect_edition(LocalReads()), {'decision': 'root', 'tv': {}})
+
+    def test_already_observed_system_info_is_reused_and_sanitized(self):
+        device = LocalReads()
+        def choose(reader):
+            reader.luna('com.webos.service.tv.systemproperty/getSystemInfo', {
+                'keys': ['modelName', 'firmwareVersion', 'sdkVersion']
+            }, timeout=5)
+            return 'external_root'
+        with patch('homebrew.edition.decision', side_effect=choose), patch.object(
+            device, '_read', return_value={'returnValue': True, 'modelName': 'name/secret',
+                                           'firmwareVersion': '1.2.3-private', 'sdkVersion': '1.2.3'}
+        ) as read:
+            self.assertEqual(inspect_edition(device), {'decision': 'external_root', 'tv': {'sdkVersion': '1.2.3'}})
+            read.assert_called_once()
 
     def test_local_reader_rejects_other_commands_uris_and_arguments(self):
         reader = LocalReads()

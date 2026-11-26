@@ -83,13 +83,15 @@ or later. Version 0.8.0 is the first published release that includes #233.
 Verify access by opening the Installer app on the TV and checking its status.
 If access remains denied, use the published computer or Android installer.
 
-The Installer shows the cause it can confirm and recommends the next step.
-Choose **Check status** to check an existing request again. Choose
-**Save diagnostic report** to keep a copy on this TV. **Open saved report** in
-the Installer or tile recovery shows the latest saved report and a QR code
-you can scan with your phone. The report contains the observed status and
-diagnostic codes. It stays in the tile's local storage until the next report
-is saved or the app's data is cleared.
+The list of checks shows what passed, the current installation stage and any
+failure the Installer could confirm. Choose **Check status** to inspect the
+existing operation. The error screen describes the cause and the next step.
+
+Choose **Save diagnostic report** and scan the QR with your phone. The
+project's support page offers a JSON file in the same diagnostic format as
+the computer installer. **Open draft on GitHub** includes that report in the
+issue text. Add a short description and optionally attach the saved JSON
+before submitting. **Open saved report** shows the last report on the TV.
 
 A self-registration step inside the Installer bootstrap cannot solve a denial
 that prevents that bootstrap from starting. The Root Home firmware helper's

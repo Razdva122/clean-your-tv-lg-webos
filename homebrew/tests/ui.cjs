@@ -204,6 +204,19 @@ const SOURCE_APP = path.resolve(__dirname, '../app'),
                 lease: LEASE
               };
             else if (command.endsWith('prepare-runtime')) {
+              if (window.model.runtimeFailure) {
+                setTimeout(
+                  () =>
+                    this.onservicecallback(
+                      JSON.stringify({
+                        returnValue: true,
+                        stdoutString: JSON.stringify({ state: 'unsupported' })
+                      })
+                    ),
+                  75
+                );
+                return;
+              }
               window.model = window.model.afterPrepare || {
                 state: 'fresh',
                 pin: window.model.pin
@@ -219,6 +232,7 @@ const SOURCE_APP = path.resolve(__dirname, '../app'),
               }
               reply = {
                 state: 'pending',
+                stage: 'submitted',
                 operation: command.match(/--operation ([a-f0-9]+)/)[1],
                 action: command.includes(' remove ') ? 'remove' : 'install'
               };
@@ -231,6 +245,7 @@ const SOURCE_APP = path.resolve(__dirname, '../app'),
                 state: window.model.state,
                 code: window.model.code,
                 reason: window.model.reason,
+                checks: window.model.checks,
                 failure: window.model.failure,
                 installation: {
                   state: window.model.state,
@@ -267,9 +282,27 @@ const SOURCE_APP = path.resolve(__dirname, '../app'),
     return { context, page };
   }
   try {
-    let f = await fixture({ state: 'fresh' }),
+    let f = await fixture({
+        state: 'fresh',
+        checks: {
+          'homebrew-access': 'pass',
+          'python-runtime': 'pass',
+          'home-compatibility': 'pass'
+        }
+      }),
       p = f.page;
     await p.waitForSelector('[data-screen="review"]');
+    assert.equal(
+      await p
+        .locator('[data-check="python-runtime"]')
+        .getAttribute('data-status'),
+      'pass'
+    );
+    assert.equal(
+      await p.locator('[data-check="root-user"]').getAttribute('data-status'),
+      'pending'
+    );
+    await p.locator('#install').focus();
     assert(
       (await p.evaluate(() => calls)).every((c) =>
         c.endsWith(' inspect --prepare-supervisor')
@@ -663,7 +696,10 @@ const SOURCE_APP = path.resolve(__dirname, '../app'),
       /Отчёт сохранён/
     );
     const reportText = await p.locator('#diagnostic-json').textContent();
-    assert.equal(JSON.parse(reportText).detail, 'live_original_worker');
+    const report = JSON.parse(reportText);
+    assert.equal(report.homebrew.detail, 'live_original_worker');
+    assert.equal(report.frontend, 'homebrew');
+    assert.equal(report.schema, 1);
     assert(!reportText.includes('10.1.2.3') && !reportText.includes('secret'));
     const qr = await p.locator('#diagnostic-qr').evaluate((canvas) => {
       const { width, height } = canvas;
@@ -675,7 +711,18 @@ const SOURCE_APP = path.resolve(__dirname, '../app'),
       qr.width,
       qr.height
     );
-    assert.deepEqual(JSON.parse(decoded.data), JSON.parse(reportText));
+    assert.ok(decoded, 'the production QR is decodable');
+    const reportUrl = new URL(decoded.data);
+    assert.equal(reportUrl.origin, 'https://razdva122.github.io');
+    assert.equal(
+      reportUrl.pathname,
+      '/clean-your-tv-lg-webos/support/homebrew/'
+    );
+    assert.equal(reportUrl.search, '');
+    assert.deepEqual(
+      require('../app/report-format.js').decode(reportUrl.hash),
+      report
+    );
     await p.keyboard.press('Escape');
     assert.equal(
       await p.evaluate(() => document.activeElement.id),
@@ -695,7 +742,13 @@ const SOURCE_APP = path.resolve(__dirname, '../app'),
       await p.locator('#diagnostic-storage').textContent(),
       /не смог сохранить/
     );
-    assert.equal(await p.locator('#diagnostic-json').textContent(), reportText);
+    const latestReport = JSON.parse(
+      await p.locator('#diagnostic-json').textContent()
+    );
+    assert.deepEqual(
+      { ...latestReport, timestamp_utc: report.timestamp_utc },
+      report
+    );
     await f.context.close();
     f = await fixture({ state: 'fresh' });
     p = f.page;
@@ -709,6 +762,41 @@ const SOURCE_APP = path.resolve(__dirname, '../app'),
     );
     await p.waitForURL('**/debloat.html');
     await p.waitForFunction(() => window.CYTVDebloatPage === true);
+    await f.context.close();
+    f = await fixture(
+      {
+        state: 'prerequisites',
+        pin: SHA,
+        runtimeFailure: true,
+        checks: { 'homebrew-access': 'pass', 'python-runtime': 'pending' }
+      },
+      'ru',
+      { width: 1280, height: 720 }
+    );
+    p = f.page;
+    await p.locator('#install').click();
+    await p.locator('#confirm').click();
+    await p
+      .locator(
+        '[data-screen="checking"] [data-check="python-runtime"][data-status="running"]'
+      )
+      .waitFor();
+    await p
+      .locator('[data-check="python-runtime"][data-status="fail"]')
+      .waitFor();
+    await p.evaluate(() => document.fonts.ready);
+    assert(
+      await p
+        .locator('#save-report')
+        .evaluate((el) => el.getBoundingClientRect().bottom <= innerHeight),
+      'the TV offers a visible report action on the failing step at 720p'
+    );
+    await p.locator('#save-report').click();
+    const runtimeReport = JSON.parse(
+      await p.locator('#diagnostic-json').textContent()
+    );
+    assert.equal(runtimeReport.phase, 'python-runtime');
+    assert.equal(runtimeReport.reason_code, 'runtime_unconfirmed');
     await f.context.close();
     for (const savedOperation of [false, true]) {
       f = await fixture({ execDenied: true, savedOperation });
@@ -735,7 +823,11 @@ const SOURCE_APP = path.resolve(__dirname, '../app'),
       );
       await p.locator('#refresh').focus();
       await p.keyboard.press('ArrowDown');
-      assert.equal(await p.evaluate(() => document.activeElement.id), 'close');
+      assert.equal(
+        await p.evaluate(() => document.activeElement.id),
+        'save-report',
+        'the first recovery action after retry is reachable with the remote'
+      );
       await p.locator('#refresh').click();
       assert(
         (await p.evaluate(() => calls)).every((c) =>

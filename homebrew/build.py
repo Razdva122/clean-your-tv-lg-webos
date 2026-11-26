@@ -196,6 +196,7 @@ def verify_offline(payload):
 
 def tile_web_files(version, edition=None, versions=None):
     from scripts.no_root_assets import updater_app_assets
+    from cytv import __version__
     from scripts.tv_web_build import compile_web
     if not isinstance(version,str) or len(version)>32 or not re.fullmatch(r'(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)', version):
         raise ValueError('Invalid tile version')
@@ -204,11 +205,11 @@ def tile_web_files(version, edition=None, versions=None):
     app = updater_app_assets(project)
     app['home-i18n.js'] = app.pop('i18n.js')
     names = ('appinfo.json','index.html','tile.js','tile-launch.js','recovery.html','tile-recovery.js',
-             'diagnostics.js','diagnostic-locales.js','diagnostic.css')
+             'diagnostics.js','diagnostic-locales.js','diagnostic.css','report-format.js')
     app['wallpaper-qr.js'] = read_file(project/'launcher/wallpaper-qr.js')
     if edition is None:
         names += ('setup.html','app.js','bridge.js','style.css','i18n.js','tile-config.js',
-                  'debloat.html','debloat-page.js')
+                  'debloat.html','debloat-page.js','setup-progress.js','setup-progress-locales.js')
         root_ui = project/'root-edition/ui'
         for name in ('root-post-install.js','root-post-install-locales.js','root-settings.css'):
             app[name] = read_file(root_ui/name)
@@ -216,6 +217,8 @@ def tile_web_files(version, edition=None, versions=None):
         app[name] = read_file(source/'app'/name)
     info = json.loads(app['appinfo.json'])
     info['version'] = version
+    app['report-version.js'] = ('window.CYTVReportVersion='+json.dumps(
+        {'installer': version, 'cytv': __version__}, sort_keys=True)+';\n').encode()
     if edition is None:
         # The full tile relies on the stock Homebrew caller policy. The host
         # tile only asks SAM to launch its bound Home application.

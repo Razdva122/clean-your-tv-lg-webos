@@ -221,3 +221,146 @@ button[lang='zh-Hans'] {
 button[lang='zh-Hant'] {
   font-family: CYTVChineseTC, CYTVChineseSC, CYTV, sans-serif;
 }
+
+/* Keep the review, real checks and actions together at a TV viewing distance. */
+.check-panel {
+  margin: 16px 0 20px;
+  padding: 17px 21px 12px;
+  border: 1px solid #3d4859;
+  border-radius: 14px;
+  background: #171e29;
+}
+.check-panel h3 {
+  margin: 0 0 10px;
+  color: #e1ecff;
+  font-size: 23px;
+  font-weight: 600;
+}
+.check-steps {
+  display: flex;
+  flex-wrap: wrap;
+  padding: 0;
+  margin: 0 -8px;
+  list-style: none;
+}
+.check-step {
+  display: flex;
+  align-items: center;
+  width: calc(50% - 16px);
+  min-height: 42px;
+  margin: 2px 8px;
+  padding: 5px 9px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font-size: 19px;
+  line-height: 1.3;
+}
+.check-marker {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  margin-right: 10px;
+  border: 1px solid #8190a6;
+  border-radius: 50%;
+  color: #b6c6d9;
+  text-align: center;
+  font: bold 14px/18px sans-serif;
+}
+.check-name {
+  flex: 1;
+  color: #eff4fb;
+}
+.check-status {
+  width: 32%;
+  margin-left: 8px;
+  color: #c1ccdb;
+  text-align: right;
+  font-size: 16px;
+}
+.check-running {
+  border-color: #6489ba;
+  background: #253954;
+}
+.check-running .check-marker {
+  border: 5px solid #83b8ff;
+}
+.check-fail {
+  border-color: #a46467;
+  background: #422c34;
+}
+.check-fail .check-marker,
+.check-fail .check-status {
+  color: #ffb6b6;
+  border-color: #ffb6b6;
+}
+.check-pass .check-marker,
+.check-pass .check-status {
+  color: #a8e1bf;
+  border-color: #a8e1bf;
+}
+.check-unknown .check-marker,
+.check-unknown .check-status {
+  color: #f5d295;
+  border-color: #f5d295;
+}
+#diagnostic-reason {
+  margin-bottom: 4px;
+  color: #ffe2ca;
+  font-weight: 600;
+}
+#diagnostic-next {
+  margin-top: 0;
+}
+
+@media (max-width: 850px) {
+  .check-step {
+    width: calc(100% - 16px);
+  }
+}
+@media (max-height: 850px) {
+  body {
+    padding-top: 20px;
+    padding-bottom: 20px;
+  }
+  main {
+    padding: 18px 26px;
+  }
+  header {
+    padding-bottom: 12px;
+    margin-bottom: 12px;
+  }
+  header img {
+    width: 54px;
+    height: 54px;
+    margin-right: 16px;
+  }
+  h2 {
+    margin-bottom: 8px;
+  }
+  p {
+    margin: 8px 0 12px;
+    font-size: 24px;
+  }
+  button,
+  #language {
+    min-height: 50px;
+    padding: 7px 14px;
+    font-size: 24px;
+  }
+  footer {
+    margin-top: 12px;
+    padding-top: 10px;
+    font-size: 19px;
+  }
+  .check-panel {
+    margin: 10px 0 12px;
+    padding: 11px 16px 8px;
+  }
+  .check-panel h3 {
+    margin-bottom: 4px;
+  }
+  .check-step {
+    min-height: 34px;
+  }
+}

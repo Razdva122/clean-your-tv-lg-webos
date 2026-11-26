@@ -136,31 +136,77 @@ function execute(executable, args) {
     );
   });
 }
-function inspectEdition(result, stage, python, executeRead) {
-  if (result.state !== 'fresh' || result.active_operation) return result;
-  var unknown = {
-    state: 'edition_unconfirmed',
-    code: 'home_interfaces_unconfirmed'
+function inspectionEvidence(version) {
+  var evidence = {
+    checks: {
+      'homebrew-access': 'pass',
+      'root-user': 'pending',
+      'node-version': 'pending',
+      'installer-payload': 'pending',
+      'python-runtime': 'pending',
+      'installer-staging': 'pending',
+      'product-state': 'pending',
+      'home-compatibility': 'pending'
+    },
+    tv: {}
   };
   if (
-    !result.installation ||
-    result.installation.can_install !== true ||
-    !(
-      (result.installation.reason === 'no_installation' &&
-        result.installation.clean_removal_verified === undefined) ||
-      (result.installation.reason === 'verified_clean_removal' &&
-        result.installation.clean_removal_verified === true &&
-        result.installation.can_maintain === false)
-    ) ||
-    result.active_operation !== null ||
-    typeof stage.editionInspector !== 'string'
-  )
-    return unknown;
-  return executeRead(python, ['-E', '-s', '-B', stage.editionInspector])
+    typeof version === 'string' &&
+    /^\d{1,5}\.\d{1,5}\.\d{1,5}$/.test(version)
+  ) {
+    evidence.tv.node_version = version;
+    evidence.tv.node_version_status = 'read';
+  }
+  return evidence;
+}
+function withEvidence(result, evidence) {
+  if (evidence) {
+    result.checks = evidence.checks;
+    result.tv = evidence.tv;
+  }
+  return result;
+}
+function inspectEdition(result, stage, python, executeRead, evidence) {
+  var installation = result.installation,
+    fresh = result.state === 'fresh' && !result.active_operation,
+    eligible =
+      fresh &&
+      installation &&
+      installation.can_install === true &&
+      result.active_operation === null &&
+      ((installation.reason === 'no_installation' &&
+        installation.clean_removal_verified === undefined) ||
+        (installation.reason === 'verified_clean_removal' &&
+          installation.clean_removal_verified === true &&
+          installation.can_maintain === false)),
+    fallback = fresh
+      ? { state: 'edition_unconfirmed', code: 'home_interfaces_unconfirmed' }
+      : result;
+  if (typeof stage.editionInspector !== 'string') return fallback;
+  if (eligible) evidence.checks['home-compatibility'] = 'unknown';
+  var command = ['-E', '-s', '-B', stage.editionInspector];
+  if (!eligible) command.push('--metadata-only');
+  return executeRead(python, command)
     .then(function (raw) {
-      var decision = JSON.parse(raw).decision;
-      if (decision === 'root') return result;
-      if (decision === 'external_no_root' || decision === 'external_root')
+      var observation = JSON.parse(raw),
+        decision = observation.decision,
+        tv = observation.tv || {};
+      ['modelName', 'firmwareVersion', 'sdkVersion'].forEach(function (key) {
+        var value = tv[key];
+        var pattern =
+          key === 'modelName'
+            ? /^(?=.*[0-9])(?=.*[A-Z])[A-Z0-9][A-Z0-9._-]{1,47}$/
+            : /^[0-9]{1,5}(?:\.[0-9]{1,5}){1,2}(?:-[0-9]{1,6})?$/;
+        if (typeof value === 'string' && pattern.test(value))
+          evidence.tv[key] = value;
+      });
+      if (!eligible) return fallback;
+      if (decision === 'root') {
+        evidence.checks['home-compatibility'] = 'pass';
+        return result;
+      }
+      if (decision === 'external_no_root' || decision === 'external_root') {
+        evidence.checks['home-compatibility'] = 'fail';
         return {
           state: 'external_setup',
           code:
@@ -168,35 +214,55 @@ function inspectEdition(result, stage, python, executeRead) {
               ? 'root_setup_on_computer'
               : 'no_root_setup_on_computer'
         };
-      return unknown;
+      }
+      return fallback;
     })
     .catch(function () {
-      return unknown;
+      return fallback;
     });
 }
 function run(args, deps) {
-  return Promise.resolve().then(function () {
-    var request = parse(args);
+  var evidence,
+    boundary = 'node-version';
+  function checked(check, status) {
+    if (evidence) evidence.checks[check] = status;
+  }
+  function unsupported(code) {
+    return withEvidence({ state: 'unsupported', code: code }, evidence);
+  }
+  var result = Promise.resolve().then(function () {
+    // Parse failures and non-inspection operations keep their existing rejection behavior.
+    var request = parse(args),
+      runtimeProcess = deps ? deps.process : process,
+      version = runtimeProcess.versions.node;
+    if (request.action === 'inspect') evidence = inspectionEvidence(version);
+    if (parseInt(version.split('.')[0], 10) < 8) fail();
+    checked('node-version', 'pass');
+    boundary = 'root-user';
+    if (!runtimeProcess.geteuid) fail();
+    if (runtimeProcess.geteuid() !== 0) {
+      checked(boundary, 'fail');
+      if (evidence) return unsupported('homebrew_root_required');
+      fail();
+    }
+    checked(boundary, 'pass');
+    boundary = 'installer-payload';
     deps = deps || {
       process: process,
       runtime: require('./payload/runtime.js'),
       execute: execute
     };
-    if (
-      !deps.process.geteuid ||
-      parseInt(deps.process.versions.node.split('.')[0], 10) < 8
-    )
-      fail();
-    if (deps.process.geteuid() !== 0) {
-      if (request.action === 'inspect')
-        return { state: 'unsupported', code: 'homebrew_root_required' };
-      fail();
-    }
     return deps.runtime
       .inspect(
         PAYLOAD,
         ['status', 'restore', 'remove'].indexOf(request.action) >= 0,
-        PAYLOAD_SHA256
+        PAYLOAD_SHA256,
+        evidence
+          ? function () {
+              checked('installer-payload', 'pass');
+              boundary = 'python-runtime';
+            }
+          : undefined
       )
       .then(function (state) {
         if (request.action === 'prepare-runtime')
@@ -205,15 +271,21 @@ function run(args, deps) {
             .then(function () {
               return { state: 'runtime_ready', code: 'inspect_required' };
             });
+        checked('installer-payload', 'pass');
         if (!state.python) {
-          if (request.action !== 'inspect') fail();
-          return {
-            state: 'prerequisites',
-            code: 'private_runtime_required',
-            payload_sha256: PAYLOAD_SHA256,
-            runtime: state
-          };
+          if (!evidence) fail();
+          return withEvidence(
+            {
+              state: 'prerequisites',
+              code: 'private_runtime_required',
+              payload_sha256: PAYLOAD_SHA256,
+              runtime: state
+            },
+            evidence
+          );
         }
+        checked('python-runtime', 'pass');
+        boundary = 'installer-staging';
         return deps.runtime
           .stage(
             state,
@@ -221,6 +293,8 @@ function run(args, deps) {
               ['inspect', 'install', 'remove'].indexOf(request.action) >= 0
           )
           .then(function (stage) {
+            checked('installer-staging', 'pass');
+            boundary = 'product-state';
             var debloat = debloatAction(request.action);
             var command = [
               '-E',
@@ -257,16 +331,35 @@ function run(args, deps) {
                   typeof result.state !== 'string'
                 )
                   fail();
-                return request.action === 'inspect'
-                  ? inspectEdition(result, stage, state.python, deps.execute)
-                  : result;
+                if (!evidence) return result;
+                checked(
+                  'product-state',
+                  [
+                    'recovery_required',
+                    'unsupported',
+                    'conflict',
+                    'migration_required'
+                  ].indexOf(result.state) >= 0
+                    ? 'fail'
+                    : result.installation &&
+                        ['fresh', 'installed'].indexOf(result.state) >= 0
+                      ? 'pass'
+                      : 'unknown'
+                );
+                return inspectEdition(
+                  result,
+                  stage,
+                  state.python,
+                  deps.execute,
+                  evidence
+                );
               })
               .then(
                 function (result) {
-                  if (request.action === 'inspect')
-                    result.payload_sha256 = PAYLOAD_SHA256;
+                  if (evidence) result.payload_sha256 = PAYLOAD_SHA256;
+                  boundary = 'installer-staging';
                   return stage.cleanup().then(function () {
-                    return result;
+                    return withEvidence(result, evidence);
                   });
                 },
                 function (error) {
@@ -277,6 +370,11 @@ function run(args, deps) {
               );
           });
       });
+  });
+  return result.catch(function (error) {
+    if (!evidence) throw error;
+    checked(boundary, boundary === 'product-state' ? 'unknown' : 'fail');
+    return unsupported('installer_unavailable');
   });
 }
 function main(args) {
@@ -293,12 +391,20 @@ function main(args) {
       typeof process.geteuid === 'function' &&
       process.geteuid() === 0
     ) {
+      var evidence = inspectionEvidence(version);
+      evidence.checks['root-user'] = 'pass';
+      evidence.checks['node-version'] = 'fail';
       process.stdout.write(
-        JSON.stringify({
-          state: 'external_setup',
-          code: 'legacy_node_on_computer',
-          payload_sha256: PAYLOAD_SHA256
-        }) + '\n'
+        JSON.stringify(
+          withEvidence(
+            {
+              state: 'external_setup',
+              code: 'legacy_node_on_computer',
+              payload_sha256: PAYLOAD_SHA256
+            },
+            evidence
+          )
+        ) + '\n'
       );
     } else {
       process.stdout.write(

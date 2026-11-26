@@ -223,3 +223,51 @@
   color: #c9cbd3;
   margin: 4px 12px 6px;
 }
+
+.cytv-post-install .root-settings-card {
+  border: 1px solid #485872;
+  background: #17202d;
+}
+.cytv-post-install .cytv-setup-main-actions {
+  margin-top: 20px;
+}
+.cytv-post-install .cytv-setup-main-actions button {
+  min-height: 72px;
+  background: #263750;
+  border: 1px solid #546b8b;
+}
+.cytv-post-install .cytv-setup-main-actions button:last-child {
+  background: transparent;
+}
+.cytv-setup-themes {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 16px -7px 8px;
+}
+.cytv-setup-themes button {
+  flex: 1;
+  display: block;
+  min-width: 150px;
+  margin: 0 7px 8px;
+  padding: 6px 8px 10px;
+  text-align: left;
+  background: #223149;
+}
+.cytv-setup-themes button img {
+  display: block;
+  width: 100%;
+  border-radius: 5px;
+  margin-bottom: 9px;
+}
+.cytv-setup-themes button img[hidden] {
+  display: none;
+}
+.cytv-post-install .cytv-setup-settings {
+  max-height: 48vh;
+  overflow: auto;
+  margin-bottom: 14px;
+}
+.cytv-post-install .root-settings-card button:focus {
+  outline: 3px solid #a7caff;
+  outline-offset: 2px;
+}

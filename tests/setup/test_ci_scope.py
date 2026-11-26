@@ -423,6 +423,7 @@ class CIScope(unittest.TestCase):
             (['android/app/src/main/AndroidManifest.xml'], {'android'}),
             (['preview/settings.html'], {'preview'}),
             (['website/src/lib/locales.json'], {'preview'}),
+            (['homebrew/app/report-format.js'], {'installer', 'tv', 'setup', 'preview'}),
             (['website/README.md'], {'preview'}),
             (['docs/i18n/de.md'], {'preview'}),
             (['docs/launcher-classic.jpg'], {'preview'}),

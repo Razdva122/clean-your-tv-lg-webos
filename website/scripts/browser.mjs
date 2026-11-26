@@ -52,6 +52,101 @@ try {
     headless: true,
     channel: process.env.BROWSER_CHANNEL || 'chrome'
   });
+  const diagnosticPage = await browser.newPage({
+    locale: 'ru-RU',
+    viewport: { width: 390, height: 844 }
+  });
+  const reportFormat = require('./homebrew/app/report-format.js');
+  const wireUrl = reportFormat.url(
+    reportFormat.canonical({
+      source: 'setup',
+      action: 'install',
+      edition: 'root',
+      state: 'unsupported',
+      stage: 'inspect',
+      timestamp: '2026-11-26T12:00:00.000Z',
+      code: 'homebrew_exec_denied',
+      tv: { modelName: 'OLED55C3RLA', firmwareVersion: '43.21.71' },
+      checks: { 'homebrew-access': 'fail', 'node-version': 'pending' }
+    })
+  );
+  const reportHash = new URL(wireUrl).hash;
+  const expectedReport = reportFormat.decode(reportHash);
+  assert(expectedReport, 'TV payload can be decoded for transport');
+  const diagnosticRequests = [];
+  diagnosticPage.on('request', (request) =>
+    diagnosticRequests.push(request.url())
+  );
+  await diagnosticPage.goto(host + base + 'support/homebrew/' + reportHash);
+  const openDraft = diagnosticPage.getByRole('link', {
+    name: 'Открыть черновик на GitHub'
+  });
+  await openDraft.waitFor();
+  const destination = new URL(await openDraft.getAttribute('href'));
+  assert.equal(
+    destination.origin + destination.pathname,
+    'https://github.com/Razdva122/clean-your-tv-lg-webos/issues/new'
+  );
+  const markdown = destination.searchParams.get('body');
+  assert.deepEqual(
+    JSON.parse(markdown.match(/```json\n([\s\S]+?)\n```/)[1]),
+    expectedReport
+  );
+  assert(
+    diagnosticRequests.every((url) => new URL(url).origin === host),
+    'opening a diagnostic link downloads only local site assets'
+  );
+  assert(
+    diagnosticRequests.every(
+      (url) => !new URL(url).hash && !url.includes(reportHash.slice(1))
+    ),
+    'the encoded diagnostic fragment is excluded from asset requests'
+  );
+  const [download] = await Promise.all([
+    diagnosticPage.waitForEvent('download'),
+    diagnosticPage.getByRole('link', { name: 'Скачать JSON' }).click()
+  ]);
+  assert.equal(
+    download.suggestedFilename(),
+    reportFormat.filename(expectedReport)
+  );
+  assert.deepEqual(
+    JSON.parse(readFileSync(await download.path(), 'utf8')),
+    expectedReport
+  );
+  assert(
+    await diagnosticPage.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth
+    )
+  );
+  if (shots)
+    await diagnosticPage.screenshot({
+      path: shots + '/homebrew-report-mobile.png'
+    });
+  let issuedUrl;
+  await diagnosticPage.route(
+    (url) => url.origin === 'https://github.com',
+    async (route) => {
+      issuedUrl = route.request().url();
+      assert.equal(route.request().method(), 'GET');
+      assert.equal(route.request().headers().referer, undefined);
+      await route.fulfill({
+        body: 'Prepared draft',
+        contentType: 'text/plain'
+      });
+    }
+  );
+  await openDraft.click();
+  await diagnosticPage.getByText('Prepared draft').waitFor();
+  assert.equal(issuedUrl, destination.href);
+  await diagnosticPage.goto(host + base + 'support/homebrew/#%C0');
+  await diagnosticPage.getByText('Отчёт не удалось прочитать.').waitFor();
+  assert.equal(await openDraft.isVisible(), false);
+  await diagnosticPage.close();
+  console.log(
+    'PASS Homebrew phone report, verified JSON download and prepared GitHub draft'
+  );
+
   // The landing page shows captures; the full renderer stays on /demo/.
   const showcase = await browser.newPage();
   showcase.on('pageerror', (error) => errors.push(error.message));
