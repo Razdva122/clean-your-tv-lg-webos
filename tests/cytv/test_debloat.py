@@ -16,6 +16,32 @@ class DebloatTests(unittest.TestCase):
         self.installer = SimpleNamespace(profile=profile, store=Store(self.tmp.name))
         self.record = self.installer.store.device_dir(profile) / 'debloat.json'
 
+    def test_promotion_streamer_requires_a_readable_original_before_ssap_write(self):
+        self.installer.profile.update(edition='no-root', port=9922)
+        self.installer.remote = Mock(root=False)
+        self.installer.remote.run.side_effect = ['null', '"on"', '"off"']
+        with patch.object(debloat, 'SSAP') as pair:
+            self.assertEqual(debloat.apply(self.installer, ['promotionStreamer']),
+                             {'promotionStreamer': 'unavailable'})
+            pair.assert_not_called()
+            ssap = pair.return_value.__enter__.return_value
+            ssap.call.return_value = {'returnValue': True}
+            self.assertEqual(debloat.apply(self.installer, ['promotionStreamer']),
+                             {'promotionStreamer': 'verified'})
+            ssap.call.assert_called_once_with('ssap://settings/setSystemSettings',
+                {'category': 'option', 'settings': {'promotionStreamer': 'off'}}, timeout=8)
+
+    def test_old_session_only_choices_cannot_trigger_a_partial_write(self):
+        self.installer.remote = Mock(root=True)
+        for key in ('preloadNetflix', 'preloadYouTube', 'preloadBrowser'):
+            with self.subTest(key=key), self.assertRaises(ValueError):
+                debloat.apply(self.installer, ['promotionStreamer', key])
+        self.assertEqual(self.installer.remote.method_calls, [])
+        self.assertFalse(self.record.exists())
+
+    def test_known_older_firmware_does_not_offer_the_webos_22_menu_path(self):
+        self.assertNotIn('Home Settings', debloat.result_message('homePromotion', 'firmware-blocked'))
+
     def test_results_distinguish_no_root_write_rejection_from_other_failures(self):
         from cytv.desktop import DesktopConsole
 
@@ -157,6 +183,37 @@ class DebloatTests(unittest.TestCase):
                     'homePromotion': 'write-rejected', 'aiNudge': 'verify-mismatch', 'sportsAlarm': 'verify-unavailable',
                 })
                 self.assertNotIn('private-', report)
+
+    def test_maintenance_restores_one_saved_setting_without_touching_others(self):
+        from cytv.terminal import Console
+
+        entries = {key: {'original': 'on', 'target': 'off'} for key in ('homePromotion', 'sportsAlarm')}
+        self.installer.remote = Mock(root=True)
+        for decision, replies, expected, keep in (
+            ('n', ['off'], None, True),
+            ('y', ['off', 'off', False], 'restore-failed', True),
+            ('y', ['off', 'off', True, 'on'], 'restored', False),
+            (None, ['on'], 'restore-already', False),
+        ):
+            with self.subTest(decision=decision, replies=replies):
+                self.record.write_text(json.dumps({'schema': 1, 'settings': entries}))
+                answers = iter(['2'] + ([decision] if decision else []))
+                values = iter(replies)
+                def luna(uri, payload, **kwargs):
+                    value = next(values)
+                    if uri.endswith('/getSystemSettings'):
+                        self.assertEqual(payload, {'category': 'general', 'keys': ['sportsAlarm']})
+                        return {'returnValue': True, 'settings': {'sportsAlarm': value}}
+                    self.assertEqual(payload, {'category': 'general', 'settings': {'sportsAlarm': 'on'}})
+                    return {'returnValue': value}
+                self.installer.remote.luna.side_effect = luna
+                log, events = [], {}
+                debloat.run(self.installer, lambda _: next(answers), Console(log.append),
+                            maintenance=True, diagnostic=events)
+                self.assertEqual(list(values), [])
+                self.assertEqual(events, {'sportsAlarm': expected} if expected else {})
+                saved = json.loads(self.record.read_text())['settings']
+                self.assertEqual(saved, entries if keep else {'homePromotion': entries['homePromotion']})
 
     def test_restore_requires_consent_and_keeps_unverified_entries(self):
         from cytv.terminal import Console

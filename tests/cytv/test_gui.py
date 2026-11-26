@@ -429,8 +429,9 @@ class GuiTests(unittest.TestCase):
         self.assertLessEqual(scroll.widget().width(), scroll.viewport().width())
         self.assertLess(scroll.viewport().grab().toImage().pixelColor(1, 1).lightness(), 100)
         toggles = w.form.findChildren(ToggleSwitch)
-        self.assertEqual(len(toggles), 14)
+        self.assertIsNone(w.form.findChild(ToggleSwitch, 'debloat-preloadNetflix'))
         self.assertTrue(all(toggle.isChecked() for toggle in toggles))
+        self.assertTrue(w.form.findChild(ToggleSwitch, 'debloat-promotionStreamer').isChecked())
         section = w.form.findChild(ToggleSwitch, 'debloatGroup-homePromotion')
         section.click()
         field = w.form.findChild(ToggleSwitch, 'debloat-contentRecommendation')
@@ -442,9 +443,11 @@ class GuiTests(unittest.TestCase):
         next(b for b in w.form.findChildren(QPushButton) if b.text() == 'Continue').click()
         self.assertEqual(json.loads(w.channel.answers.get_nowait()),
                          [key for key in debloat.SETTINGS if key != 'contentRecommendation'])
-        w.receive('debloat-results', {'homePromotion': 'unverified', 'aiNudge': 'firmware-blocked'})
+        w.receive('debloat-results', {'homePromotion': 'unverified', 'contentRecommendation': 'write-rejected', 'aiNudge': 'firmware-blocked'})
         w.show_prompt(Prompt(debloat.REVIEW))
         self.assertFalse(w.reading.isHidden())
+        self.assertIn('Home Settings → Content Recommendation', w.content.toPlainText())
+        self.assertNotIn('Home Settings → Home Promotion', w.content.toPlainText())
         self.assertIn('The result could not be verified.', w.content.toPlainText())
         self.assertIn('This TV firmware blocks changing this setting in No-root.', w.content.toPlainText())
         self.app.processEvents()
@@ -1077,6 +1080,43 @@ class GuiTests(unittest.TestCase):
                     w.close()
                     if outcome == 'pending':
                         store.device_dir(profile).joinpath('operation.json').unlink()
+
+    def test_debloat_maintenance_selects_and_reviews_one_restoration(self):
+        import json
+        from unittest.mock import Mock
+        from cytv import cli, debloat, state
+
+        store = state.Store(self.directory.name)
+        profile = state.target('192.0.2.10', 'root')
+        store.save(profile)
+        entry = {'original': 'on', 'target': 'off'}
+        record = store.device_dir(profile) / 'debloat.json'
+        record.write_text(json.dumps({'schema': 1, 'settings': {'sportsAlarm': entry, 'livePlus': entry}}))
+        remote = Mock(root=True)
+        remote.luna.side_effect = [{'returnValue': False}, *[
+            {'returnValue': True, 'settings': {'sportsAlarm': value}} for value in ('off', 'off')],
+            {'returnValue': True}, {'returnValue': True, 'settings': {'sportsAlarm': 'on'}}]
+        w = Wizard(run=lambda argv, **kwargs: cli.main(argv, connect=lambda *_: remote, **kwargs))
+        self.addCleanup(w.close)
+        w.start('debloat', profile)
+        self.pump(lambda: w.pending is not None)
+        self.assertEqual(w.pending.title, debloat.SELECT_RESTORE)
+        combo = w.form.findChild(QComboBox)
+        index = combo.findText('Sports notifications')
+        self.assertGreaterEqual(index, 0)
+        combo.setCurrentIndex(index)
+        next(b for b in w.form.findChildren(QPushButton) if b.text() == 'Continue').click()
+        self.pump(lambda: w.pending is not None)
+        self.assertEqual(w.pending.title, debloat.CONFIRM_ONE)
+        self.assertIn('Sports notifications — Off → On', w.content.toPlainText())
+        next(b for b in w.form.findChildren(QPushButton) if b.text() == debloat.RESTORE_LABEL).click()
+        self.pump(lambda: w.pending is not None)
+        self.assertEqual(w.pending.label, debloat.REVIEW)
+        self.assertIn('Restored and verified', w.content.toPlainText())
+        next(b for b in w.form.findChildren(QPushButton) if b.text() == 'Continue').click()
+        self.pump(lambda: not w.running)
+        self.assertEqual(json.loads(record.read_text())['settings'], {'livePlus': entry})
+        self.assertEqual(json.loads(w.report.read_text())['debloat'], {'sportsAlarm': 'restored'})
 
     def test_debloat_maintenance_uses_setup_selection_and_saves_report(self):
         from unittest.mock import Mock
