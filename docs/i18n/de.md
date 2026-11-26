@@ -80,7 +80,7 @@ Wählen Sie **Installieren und aktivieren** und bestätigen Sie einmal. Der Inst
 
 Nach der Installation öffnet Root Home **Fernseher einrichten**. Wähle unter **Designs** ein integriertes Design. Öffne **LG-Einstellungen ändern**, markiere die gewünschten Optionen für Werbung oder Empfehlungen und wähle **Ausgewählte Einstellungen anwenden**. Prüfe das Ergebnis jeder Option. Um gespeicherte ursprüngliche Werte wiederherzustellen, markiere die Optionen und wähle **Ausgewählte Einstellungen wiederherstellen**. Mit **Home öffnen** gelangst du zum Startbildschirm. Du kannst das Menü später unter **Einstellungen → Erweitert → Fernseher einrichten** erneut öffnen.
 
-Wenn der Installer ein Problem meldet, folge der Anweisung auf dem Bildschirm. Über die Schaltfläche zum Speichern des Diagnoseberichts bleibt eine Kopie auf diesem Fernseher. Öffne den gespeicherten Bericht im Installer oder in der Wiederherstellung der Kachel, um ihn zu lesen oder den QR-Code mit deinem Telefon zu scannen.
+Wenn der Installer ein Problem meldet, folge der Anweisung auf dem Bildschirm. Über die Schaltfläche zum Speichern des Diagnoseberichts bleibt eine Kopie auf diesem Fernseher. Öffne den gespeicherten Bericht im Installer oder in der Wiederherstellung der Kachel, um ihn zu lesen oder den QR-Code mit deinem Telefon zu scannen. Die Liste zeigt abgeschlossene Prüfungen, den aktuellen Schritt und mögliche Fehler. Scanne den QR-Code, lade den JSON-Bericht herunter oder öffne den ausgefüllten GitHub-Entwurf. Beschreibe das Problem vor dem Absenden.
 
 Zum Entfernen von Clean Your TV wählen Sie im Installer **Vollständiges Produkt entfernen**. Wenn Sie nur die Installer-App löschen, bleibt Clean Your TV auf dem Fernseher.
 

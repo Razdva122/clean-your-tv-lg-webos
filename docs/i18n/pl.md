@@ -80,7 +80,7 @@ Wybierz **Zainstaluj i aktywuj** i potwierdź raz. Instalator zainstaluje razem 
 
 Po instalacji Root Home otwiera ekran **Skonfiguruj telewizor**. Wybierz wbudowany motyw w sekcji **Motywy**. Otwórz **Zmień ustawienia LG**, zaznacz opcje reklam i rekomendacji i wybierz **Zastosuj wybrane ustawienia**. Sprawdź wynik każdej zmiany. Aby przywrócić zapisane wartości pierwotne, zaznacz opcje i wybierz **Przywróć wybrane ustawienia**. Wybierz **Otwórz Home**, aby przejść do ekranu głównego. Panel możesz otworzyć ponownie w **Ustawienia → Zaawansowane → Skonfiguruj telewizor**.
 
-Jeśli instalator zgłosi problem, postępuj zgodnie z instrukcją na ekranie. Zapisz raport diagnostyczny, aby zachować kopię na telewizorze. Otwórz zapisany raport w instalatorze lub w sekcji odzyskiwania kafelka, aby go przeczytać lub zeskanować kod QR telefonem.
+Jeśli instalator zgłosi problem, postępuj zgodnie z instrukcją na ekranie. Zapisz raport diagnostyczny, aby zachować kopię na telewizorze. Otwórz zapisany raport w instalatorze lub w sekcji odzyskiwania kafelka, aby go przeczytać lub zeskanować kod QR telefonem. Lista pokazuje ukończone kontrole, bieżący etap i błędy. Zeskanuj kod QR, aby pobrać raport JSON lub otworzyć uzupełniony szkic zgłoszenia GitHub. Przed wysłaniem krótko opisz problem.
 
 Aby odinstalować Clean Your TV, wybierz w instalatorze **Usuń cały produkt**. Usunięcie samej aplikacji instalatora pozostawi Clean Your TV na telewizorze.
 

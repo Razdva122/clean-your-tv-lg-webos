@@ -483,7 +483,7 @@ function verifiedPayload(root, pin) {
     return { root: root, manifest: manifest, bootstrap: bootstrap };
   });
 }
-function inspectInternal(payloadRoot, recovery, pin) {
+function inspectInternal(payloadRoot, recovery, pin, payloadVerified) {
   return Promise.resolve()
     .then(function () {
       if (!process.geteuid || process.geteuid() !== 0)
@@ -491,6 +491,7 @@ function inspectInternal(payloadRoot, recovery, pin) {
       return verifiedPayload(payloadRoot, pin);
     })
     .then(function (context) {
+      if (payloadVerified) payloadVerified();
       return (
         recovery === true ? Promise.resolve() : abi(context.bootstrap)
       ).then(function () {
@@ -699,16 +700,18 @@ function prepare(payloadRoot, pin) {
       }
     );
 }
-function inspect(payloadRoot, recovery, pin) {
-  return inspectInternal(payloadRoot, recovery, pin).then(function (state) {
-    var result = {
-      python: state.python,
-      privateRuntimeRequired: state.privateRuntimeRequired,
-      requiredSpace: state.requiredSpace || 0
-    };
-    Object.defineProperty(result, 'context', { value: state.context });
-    return result;
-  });
+function inspect(payloadRoot, recovery, pin, payloadVerified) {
+  return inspectInternal(payloadRoot, recovery, pin, payloadVerified).then(
+    function (state) {
+      var result = {
+        python: state.python,
+        privateRuntimeRequired: state.privateRuntimeRequired,
+        requiredSpace: state.requiredSpace || 0
+      };
+      Object.defineProperty(result, 'context', { value: state.context });
+      return result;
+    }
+  );
 }
 function stage(state, full) {
   return Promise.resolve().then(function () {

@@ -80,7 +80,7 @@ Escolha **Instalar e ativar** e confirme uma vez. O instalador configura o Root 
 
 Após a instalação, o Root Home abre **Configurar a TV**. Escolha um tema integrado em **Temas**. Abra **Alterar as configurações da LG**, marque as opções de anúncios e recomendações e selecione **Aplicar as configurações selecionadas**. Confira o resultado de cada opção. Para recuperar os valores originais salvos, marque as opções e selecione **Restaurar as configurações selecionadas**. Selecione **Abrir Home** para entrar na tela inicial. Para voltar mais tarde, abra **Configurações → Avançado → Configurar a TV**.
 
-Se o instalador informar um problema, siga a instrução da tela. Salve o relatório de diagnóstico para guardar uma cópia na TV. Abra o relatório salvo no instalador ou na recuperação do bloco para lê-lo ou escanear o QR code com o celular.
+Se o instalador informar um problema, siga a instrução da tela. Salve o relatório de diagnóstico para guardar uma cópia na TV. Abra o relatório salvo no instalador ou na recuperação do bloco para lê-lo ou escanear o QR code com o celular. A lista mostra as verificações concluídas, a etapa atual e as falhas. Escaneie o código QR para baixar o relatório JSON ou abrir o rascunho preenchido no GitHub. Descreva o problema antes de enviar.
 
 Para desinstalar o Clean Your TV, escolha **Remover produto completo** no instalador. Se você excluir apenas o aplicativo do instalador, o Clean Your TV continuará na TV.
 

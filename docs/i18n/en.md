@@ -80,7 +80,7 @@ Choose **Install and activate** and confirm once. The Installer sets up Root Hom
 
 After installation, **Set up your TV** opens in Root Home. Choose a built-in theme under **Themes**, or open **Adjust LG settings** to select the ad and recommendation settings you want to change. Check each result after choosing **Apply selected settings**. To undo changes with a saved original value, select the settings and choose **Restore selected settings**. To continue to the launcher, choose **Open Home**. To return later, open **Settings → Advanced → Set up your TV**.
 
-If the installer reports a problem, follow the step shown on the screen. Choose **Save diagnostic report** to keep a copy on this TV. Use **Open saved report** in the installer or tile recovery to read it again or scan its QR code with a phone.
+If the installer reports a problem, follow the step shown on the screen. Choose **Save diagnostic report** to keep a copy on this TV. Use **Open saved report** in the installer or tile recovery to read it again or scan its QR code with a phone. The checklist shows completed checks, the active stage and any failure. After scanning the QR code, download the JSON report or open the prefilled GitHub issue. Add a short description before submitting.
 
 To uninstall Clean Your TV, choose **Remove complete product** in the Installer. Removing the Installer app alone leaves Clean Your TV on the television.
 

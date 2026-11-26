@@ -67,10 +67,13 @@ async function rejects(fn, expectedMessage) {
     });
     return JSON.parse(stdout);
   }
-  assert.equal(
-    runLegacy('0.10.15', 0, ['inspect']).code,
-    'legacy_node_on_computer'
-  );
+  var legacy = runLegacy('0.10.15', 0, ['inspect']);
+  assert.equal(legacy.code, 'legacy_node_on_computer');
+  assert.equal(legacy.checks['homebrew-access'], 'pass');
+  assert.equal(legacy.checks['root-user'], 'pass');
+  assert.equal(legacy.checks['node-version'], 'fail');
+  assert.equal(legacy.checks['installer-payload'], 'pending');
+  assert.equal(legacy.tv.node_version, '0.10.15');
   assert.equal(
     runLegacy('0.12.2', 0, ['status']).code,
     'installer_unavailable'
@@ -358,12 +361,13 @@ async function rejects(fn, expectedMessage) {
     executed[0].args[executed[0].args.indexOf('--payload') + 1],
     '/private/stage'
   );
+  assert(executed[1].args.includes('--metadata-only'));
   await bootstrap.run(['status', '--operation', ID, '--verify-current'], deps);
-  assert(executed[1].args.indexOf('--verify-current') >= 0);
+  assert(executed[2].args.indexOf('--verify-current') >= 0);
   await bootstrap.run(['remove', '--operation', ID, '--resume'], deps);
-  assert(executed[2].args.indexOf('--resume') >= 0);
+  assert(executed[3].args.indexOf('--resume') >= 0);
   assert(
-    executed[2].args.indexOf('--payload') < 0,
+    executed[3].args.indexOf('--payload') < 0,
     'resume uses original snapshot'
   );
   await bootstrap.run(
@@ -400,24 +404,55 @@ async function rejects(fn, expectedMessage) {
   var verdict = 'root';
   deps.execute = function (exe, args) {
     if (args[3] === '/private/stage/edition/edition.py') {
-      probeCount++;
+      if (!args.includes('--metadata-only')) probeCount++;
       assert.deepEqual(args.slice(0, 3), ['-E', '-s', '-B']);
-      return Promise.resolve(JSON.stringify({ decision: verdict }));
+      return Promise.resolve(
+        JSON.stringify({
+          decision: verdict,
+          tv: {
+            modelName: 'OLED55C3PUA',
+            sdkVersion: '8.3.0-7',
+            firmwareVersion: '1.2.3-private',
+            serialNumber: 'private'
+          }
+        })
+      );
     }
     return Promise.resolve(JSON.stringify(fresh));
   };
   for (var scenario of [
-    ['root', 'fresh', undefined],
-    ['external_root', 'external_setup', 'root_setup_on_computer'],
-    ['external_no_root', 'external_setup', 'no_root_setup_on_computer'],
-    ['unconfirmed', 'edition_unconfirmed', 'home_interfaces_unconfirmed'],
-    ['bad', 'edition_unconfirmed', 'home_interfaces_unconfirmed']
+    ['root', 'fresh', undefined, 'pass'],
+    ['external_root', 'external_setup', 'root_setup_on_computer', 'fail'],
+    ['external_no_root', 'external_setup', 'no_root_setup_on_computer', 'fail'],
+    [
+      'unconfirmed',
+      'edition_unconfirmed',
+      'home_interfaces_unconfirmed',
+      'unknown'
+    ],
+    ['bad', 'edition_unconfirmed', 'home_interfaces_unconfirmed', 'unknown']
   ]) {
     verdict = scenario[0];
     var inspection = await bootstrap.run(['inspect'], deps);
     assert.equal(inspection.state, scenario[1]);
     assert.equal(inspection.code, scenario[2]);
     assert.equal(typeof inspection.payload_sha256, 'string');
+    assert.deepEqual(inspection.checks, {
+      'homebrew-access': 'pass',
+      'root-user': 'pass',
+      'node-version': 'pass',
+      'installer-payload': 'pass',
+      'python-runtime': 'pass',
+      'installer-staging': 'pass',
+      'product-state': 'pass',
+      'home-compatibility': scenario[3]
+    });
+    assert.deepEqual(inspection.tv, {
+      node_version: '8.12.0',
+      node_version_status: 'read',
+      modelName: 'OLED55C3PUA',
+      sdkVersion: '8.3.0-7'
+    });
     if (verdict !== 'root') assert.equal(inspection.installation, undefined);
   }
   fresh.installation.clean_removal_verified = true;
@@ -442,6 +477,19 @@ async function rejects(fn, expectedMessage) {
     'edition_unconfirmed'
   );
   assert.equal(probeCount, 6);
+  for (const state of ['conflict', 'migration_required', 'recovery_required']) {
+    fresh.state = state;
+    const inspected = await bootstrap.run(['inspect'], deps);
+    assert.equal(inspected.state, state);
+    assert.equal(inspected.checks['product-state'], 'fail');
+    assert.equal(inspected.checks['home-compatibility'], 'pending');
+    assert.equal(inspected.tv.modelName, 'OLED55C3PUA');
+  }
+  assert.equal(
+    probeCount,
+    6,
+    'metadata alone does not repeat the admission probe'
+  );
   deps.execute = originalExecute;
   deps.runtime.inspect = function () {
     return Promise.resolve({
@@ -450,7 +498,11 @@ async function rejects(fn, expectedMessage) {
       requiredSpace: 335544320
     });
   };
-  assert.equal((await bootstrap.run(['inspect'], deps)).state, 'prerequisites');
+  var prerequisites = await bootstrap.run(['inspect'], deps);
+  assert.equal(prerequisites.state, 'prerequisites');
+  assert.equal(prerequisites.checks['installer-payload'], 'pass');
+  assert.equal(prerequisites.checks['python-runtime'], 'pending');
+  assert.equal(prerequisites.checks['installer-staging'], 'pending');
   assert.equal(prepares, 0);
   await rejects(function () {
     return bootstrap.run(
@@ -464,13 +516,44 @@ async function rejects(fn, expectedMessage) {
   deps.runtime.inspect = function () {
     return Promise.resolve({ python: '/usr/bin/python3' });
   };
+  var priorInspect = deps.runtime.inspect;
+  for (var verified of [false, true]) {
+    deps.runtime.inspect = function (root, recovery, pin, payloadVerified) {
+      if (verified) payloadVerified();
+      return Promise.reject(new Error('private path mock-secret'));
+    };
+    var failedInspect = await bootstrap.run(['inspect'], deps);
+    assert.equal(failedInspect.code, 'installer_unavailable');
+    assert.equal(
+      failedInspect.checks['installer-payload'],
+      verified ? 'pass' : 'fail'
+    );
+    assert.equal(
+      failedInspect.checks['python-runtime'],
+      verified ? 'fail' : 'pending'
+    );
+    assert.equal(failedInspect.checks['product-state'], 'pending');
+    assert(!JSON.stringify(failedInspect).includes('mock-secret'));
+  }
+  deps.runtime.inspect = priorInspect;
+  var priorStage = deps.runtime.stage;
+  deps.runtime.stage = function () {
+    return Promise.reject(new Error('private path mock-secret'));
+  };
+  var failedStage = await bootstrap.run(['inspect'], deps);
+  assert.equal(failedStage.checks['python-runtime'], 'pass');
+  assert.equal(failedStage.checks['installer-staging'], 'fail');
+  assert.equal(failedStage.checks['product-state'], 'pending');
+  deps.runtime.stage = priorStage;
   var priorCleanups = cleanups;
   deps.execute = function () {
     return Promise.resolve('invalid json');
   };
-  await rejects(function () {
-    return bootstrap.run(['inspect'], deps);
-  });
+  var unreadableState = await bootstrap.run(['inspect'], deps);
+  assert.equal(unreadableState.code, 'installer_unavailable');
+  assert.equal(unreadableState.checks['installer-staging'], 'pass');
+  assert.equal(unreadableState.checks['product-state'], 'unknown');
+  assert.equal(unreadableState.checks['home-compatibility'], 'pending');
   assert.equal(
     cleanups,
     priorCleanups + 1,
@@ -512,10 +595,12 @@ async function rejects(fn, expectedMessage) {
     return 1000;
   };
   var beforeRootGate = inspects;
-  assert.deepEqual(await bootstrap.run(['inspect'], deps), {
-    state: 'unsupported',
-    code: 'homebrew_root_required'
-  });
+  var denied = await bootstrap.run(['inspect'], deps);
+  assert.equal(denied.state, 'unsupported');
+  assert.equal(denied.code, 'homebrew_root_required');
+  assert.equal(denied.checks['homebrew-access'], 'pass');
+  assert.equal(denied.checks['root-user'], 'fail');
+  assert.equal(denied.checks['installer-payload'], 'pending');
   await rejects(function () {
     return bootstrap.run(['debloat', '--settings', 'lmt'], deps);
   });
@@ -525,9 +610,10 @@ async function rejects(fn, expectedMessage) {
     return 0;
   };
   deps.process.versions.node = '0.12.2';
-  await rejects(function () {
-    return bootstrap.run(['inspect'], deps);
-  });
+  var unavailable = await bootstrap.run(['inspect'], deps);
+  assert.equal(unavailable.state, 'unsupported');
+  assert.equal(unavailable.checks['node-version'], 'fail');
+  assert.equal(unavailable.checks['root-user'], 'pending');
   console.log(
     'PASS fixed HBC exec reply, exact LS2 denial classification, input boundaries, root/Node gates, read-only prerequisites/status, explicit runtime and original resume'
   );

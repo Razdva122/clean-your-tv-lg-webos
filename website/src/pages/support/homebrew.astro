@@ -1,0 +1,270 @@
+---
+import formatUrl from '../../../../homebrew/app/report-format.js?url';
+
+const base = import.meta.env.BASE_URL;
+const issue = 'https://github.com/Razdva122/clean-your-tv-lg-webos/issues/new';
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <meta name="referrer" content="no-referrer" />
+    <title>Homebrew diagnostic report | Clean Your TV</title>
+    <script is:inline src={formatUrl}></script>
+  </head>
+  <body>
+    <main>
+      <header class="brand">
+        <img
+          src={base + 'assets/symbol-color.svg'}
+          width="34"
+          height="34"
+          alt=""
+        />
+        <span>Clean Your TV</span>
+      </header>
+      <h1 data-copy="heading">Homebrew diagnostic report</h1>
+      <section id="report-ready" hidden aria-labelledby="report-intro">
+        <p id="report-intro" class="lead" data-copy="intro">
+          The report from your TV is ready. Open a GitHub draft with the report
+          included and add a short description of what happened.
+        </p>
+        <div class="actions">
+          <a
+            id="report-issue"
+            class="action primary"
+            referrerpolicy="no-referrer"
+            rel="noreferrer"
+            data-copy="open"
+          >
+            Open draft on GitHub
+          </a>
+          <a id="report-download" class="action secondary" data-copy="download">
+            Download JSON
+          </a>
+        </div>
+        <p class="note" data-copy="attach">
+          You can attach the downloaded JSON separately before submitting the
+          issue.
+        </p>
+        <details>
+          <summary data-copy="view">View report data</summary>
+          <pre id="report-preview" tabindex="0"></pre>
+        </details>
+      </section>
+      <section id="report-invalid" hidden>
+        <h2 data-copy="invalid">Could not read the report.</h2>
+        <p class="lead" data-copy="rescan">
+          Open the saved report on your TV and scan the QR code again.
+        </p>
+        <a
+          class="action secondary"
+          href={issue + '?template=cytv.yml'}
+          referrerpolicy="no-referrer"
+          rel="noreferrer"
+          data-copy="manual"
+        >
+          Open the GitHub form
+        </a>
+      </section>
+      <noscript>
+        <p>
+          Enable JavaScript to read the TV report and prepare the GitHub draft.
+        </p>
+      </noscript>
+    </main>
+  </body>
+</html>
+
+<script>
+  interface Report {
+    schema: 1;
+    action: string;
+    frontend: 'homebrew';
+  }
+  interface ReportFormat {
+    decode(hash: string): Report | null;
+    filename(report: Report): string;
+  }
+  const format = (window as Window & { CYTVHomebrewReport?: ReportFormat }).CYTVHomebrewReport;
+  const ru = /^ru(?:-|$)/i.test(navigator.language);
+  const russian = {
+    heading: 'Диагностический отчёт Homebrew',
+    intro: 'Отчёт с телевизора готов. Откройте черновик GitHub с отчётом и коротко опишите, что случилось.',
+    open: 'Открыть черновик на GitHub',
+    download: 'Скачать JSON',
+    attach: 'Перед публикацией можно прикрепить скачанный JSON отдельным файлом.',
+    view: 'Посмотреть данные отчёта',
+    invalid: 'Отчёт не удалось прочитать.',
+    rescan: 'Откройте сохранённый отчёт на ТВ и отсканируйте QR-код ещё раз.',
+    manual: 'Открыть форму на GitHub'
+  };
+
+  if (ru) {
+    document.documentElement.lang = 'ru';
+    document.title = russian.heading + ' | Clean Your TV';
+    for (const node of document.querySelectorAll<HTMLElement>('[data-copy]')) {
+      const key = node.dataset.copy as keyof typeof russian;
+      node.textContent = russian[key];
+    }
+  }
+
+  const ready = document.querySelector<HTMLElement>('#report-ready')!;
+  const invalid = document.querySelector<HTMLElement>('#report-invalid')!;
+  const draft = document.querySelector<HTMLAnchorElement>('#report-issue')!;
+  const download = document.querySelector<HTMLAnchorElement>('#report-download')!;
+  const preview = document.querySelector<HTMLElement>('#report-preview')!;
+
+  function issueDraft(json: string): URL {
+    const url = new URL('https://github.com/Razdva122/clean-your-tv-lg-webos/issues/new');
+    const title = ru ? '[Homebrew] Ошибка установщика CYTV' : '[Homebrew] CYTV installer problem';
+    const intro = ru
+      ? '### Что произошло?\n<!-- Напишите, что вы делали, чего ожидали и что увидели на телевизоре. -->\n\n### Диагностический отчёт'
+      : '### What happened?\n<!-- Describe what you did, what you expected, and what appeared on your TV. -->\n\n### Diagnostic report';
+    url.searchParams.set('title', title);
+    url.searchParams.set('body', intro + '\n\n```json\n' + json.trimEnd() + '\n```');
+    return url;
+  }
+
+  let fileUrl: string | undefined;
+  function prepare() {
+    if (fileUrl) URL.revokeObjectURL(fileUrl);
+    fileUrl = undefined;
+    draft.removeAttribute('href');
+    download.removeAttribute('href');
+    preview.textContent = '';
+    const report = format?.decode(window.location.hash);
+    ready.hidden = !report;
+    invalid.hidden = !!report;
+    if (!report || !format) return;
+
+    const json = JSON.stringify(report, null, 2) + '\n';
+    fileUrl = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
+    download.href = fileUrl;
+    download.download = format.filename(report);
+    draft.href = issueDraft(json).href;
+    preview.textContent = json;
+  }
+
+  prepare();
+  window.addEventListener('hashchange', prepare);
+</script>
+
+<style>
+  :global(*) {
+    box-sizing: border-box;
+  }
+  :global(html) {
+    background: #141918;
+    color: #f4f5ef;
+    font: 1rem/1.55 system-ui, sans-serif;
+    color-scheme: dark;
+  }
+  :global(body) {
+    margin: 0;
+  }
+  [hidden] {
+    display: none;
+  }
+  main {
+    width: min(100%, 40rem);
+    margin-inline: auto;
+    padding: clamp(1.5rem, 6vw, 3rem);
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: clamp(2rem, 7vw, 4rem);
+    color: #bfcac1;
+    font-weight: 650;
+  }
+  .brand img {
+    padding: 5px;
+    border-radius: 8px;
+    background: #e0ece0;
+  }
+  h1,
+  h2 {
+    color: #f4f5ef;
+    line-height: 1.05;
+    margin: 0;
+    text-wrap: balance;
+    overflow-wrap: anywhere;
+  }
+  h1 {
+    font-size: clamp(2.25rem, 7vw, 3.2rem);
+    letter-spacing: -0.045em;
+  }
+  h2 {
+    margin-top: 1.5rem;
+    font-size: 1.4rem;
+  }
+  .lead,
+  .note {
+    color: #c0cbc3;
+  }
+  .lead {
+    margin: 1rem 0 1.75rem;
+    font-size: 1.075rem;
+  }
+  .note {
+    margin: 1rem 0 2rem;
+    font-size: 0.95rem;
+  }
+  .actions {
+    display: grid;
+    gap: 0.75rem;
+  }
+  .action {
+    display: flex;
+    min-height: 3.375rem;
+    padding: 0.85rem 1rem;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #576660;
+    border-radius: 0.8rem;
+    color: #f4f5ef;
+    font-weight: 700;
+    text-align: center;
+    text-decoration: none;
+  }
+  .primary {
+    background: #a7f2cb;
+    border-color: #a7f2cb;
+    color: #13231a;
+  }
+  .secondary {
+    background: #202a26;
+  }
+  .action:active {
+    filter: brightness(0.9);
+  }
+  .action:focus-visible,
+  summary:focus-visible,
+  pre:focus-visible {
+    outline: 3px solid #a7f2cb;
+    outline-offset: 3px;
+  }
+  details {
+    border-top: 1px solid #46514c;
+  }
+  summary {
+    min-height: 3rem;
+    padding-block: 0.75rem;
+    cursor: pointer;
+  }
+  pre {
+    max-height: 22rem;
+    overflow: auto;
+    margin: 0 0 1rem;
+    padding: 1rem;
+    border-radius: 0.6rem;
+    background: #202a26;
+    color: #daeee1;
+    font: 0.85rem/1.55 ui-monospace, monospace;
+  }
+</style>

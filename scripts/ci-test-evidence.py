@@ -93,6 +93,7 @@ def test_units(path, entry):
     if (re.fullmatch(r'homebrew/tests/test_[^/]+\.py', path)
             or path in {'homebrew/tests/runtime.cjs', 'homebrew/tests/bridge.cjs',
                         'homebrew/tests/diagnostics.cjs', 'homebrew/tests/ui.cjs',
+                        'homebrew/tests/setup-progress.cjs',
                         'root-edition/ui/test-post-install.cjs'}):
         return {'installer'}
     if (re.fullmatch(r'android/tests/test_[^/]+\.py', path)

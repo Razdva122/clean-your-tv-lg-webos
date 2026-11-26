@@ -681,11 +681,38 @@ def failure_summary(value):
     return result
 
 
+HOMEBREW_REPORT_REASONS = (*CODES, 'unconfirmed', 'homebrew_exec_denied',
+    'homebrew_root_required', 'homebrew_timeout', 'homebrew_unreachable', 'homebrew_invalid_reply',
+    'installer_unavailable', 'status_unavailable', 'runtime_unconfirmed', 'private_runtime_required',
+    'legacy_node_on_computer', 'root_setup_on_computer', 'no_root_setup_on_computer',
+    'home_interfaces_unconfirmed', 'existing_installation', 'invalid_snapshot', 'component_mismatch',
+    'supported_migration', 'retained_operation', 'unsupported_device', 'worker_snapshot_unavailable',
+    'worker_submission_unknown', 'clean_removal_requested', 'tile_home_unavailable',
+    'tile_edition_unconfirmed', 'update_service_unavailable')
+HOMEBREW_REPORT_PHASES = (*STAGES, 'homebrew-access', 'setup', 'activate', 'recovery', 'inspect',
+    'preparing', 'snapshot', 'submitting', 'submitted', 'restore', 'resume-submitted', 'clean-removal-requested',
+    'package-remove-submitting', 'root-remove-submitting', 'supervisor-disable', 'supervisor-archive')
+HOMEBREW_REPORT_PHASES += ('root-user', 'node-version', 'installer-payload', 'python-runtime',
+    'installer-staging', 'product-state', 'home-compatibility', 'install-request', 'install-root',
+    'install-updates', 'install-readback', 'activate-home')
+
+
+def _issue_report_version(value):
+    if value.get('frontend') == 'homebrew':
+        installer = mapping(mapping(value.get('homebrew')).get('versions')).get('installer')
+        if version(installer):
+            return installer
+    return version(value.get('cytv_version'))
+
+
 def _issue_observation(value):
     from .failure_help import report_summary
 
     value = mapping(value)
-    reason = choice(value.get('reason_code'), REASONS)
+    is_homebrew = value.get('schema') == 1 and value.get('frontend') == 'homebrew'
+    reasons = (*REASONS, *HOMEBREW_REPORT_REASONS) if is_homebrew else REASONS
+    phases = (*PHASES, *HOMEBREW_REPORT_PHASES) if is_homebrew else PHASES
+    reason = choice(value.get('reason_code'), reasons)
     if reason in ('unknown', 'user-error'):
         package_reason = choice(mapping(value.get('luna')).get('reason'), PACKAGE_FAILURE_REASONS)
         guidance = report_summary(value.get('guidance'))['code']
@@ -697,7 +724,7 @@ def _issue_observation(value):
     if reason == 'ssh-command-failed' and type(exit_status) is int and exit_status == -1:
         reason = 'ssh-exit-status-missing'
     return {'action': choice(value.get('action'), PENDING_ACTIONS),
-            'phase': choice(value.get('phase'), PHASES),
+            'phase': choice(value.get('phase'), phases),
             'reason': reason}
 
 
@@ -769,7 +796,7 @@ def issue_summary(value):
     return {
         'goal': goal,
         'edition': choice(value.get('edition'), ('no-root', 'root')),
-        'version': version(primary.get('cytv_version')) if primary else version(value.get('cytv_version')),
+        'version': _issue_report_version(primary or value),
         'phase': observed['phase'],
         'reason': observed['reason'],
         'outcome': _issue_verified_outcome(value) or _issue_verified_outcome(primary) or 'unknown',

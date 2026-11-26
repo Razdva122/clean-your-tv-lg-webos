@@ -80,7 +80,7 @@ Choisissez **Installer et activer** et confirmez une fois. L’installateur conf
 
 Après l’installation, Root Home ouvre **Configurer le téléviseur**. Choisissez un thème intégré dans **Thèmes**. Ouvrez **Modifier les réglages LG**, cochez les options de publicité et de recommandations à modifier et choisissez **Appliquer les réglages sélectionnés**. Vérifiez le résultat de chaque option. Pour retrouver les valeurs d’origine enregistrées, cochez les options et choisissez **Rétablir les réglages sélectionnés**. Sélectionnez **Ouvrir Home** pour accéder à l’accueil. Pour rouvrir le panneau plus tard, ouvrez **Paramètres → Avancé → Configurer le téléviseur**.
 
-Si l’installateur signale un problème, suivez l’instruction affichée. Enregistrez le rapport de diagnostic pour conserver une copie sur ce téléviseur. Rouvrez le rapport dans l’installateur ou dans la rubrique de récupération de la vignette pour le lire ou scanner son code QR avec votre téléphone.
+Si l’installateur signale un problème, suivez l’instruction affichée. Enregistrez le rapport de diagnostic pour conserver une copie sur ce téléviseur. Rouvrez le rapport dans l’installateur ou dans la rubrique de récupération de la vignette pour le lire ou scanner son code QR avec votre téléphone. La liste indique les vérifications terminées, l’étape en cours et les échecs. Scannez le code QR pour télécharger le rapport JSON ou ouvrir le brouillon GitHub prérempli. Décrivez le problème avant l’envoi.
 
 Pour désinstaller Clean Your TV, choisissez **Supprimer le produit complet** dans l’installateur. Supprimer uniquement l’application d’installation laisse Clean Your TV sur le téléviseur.
 

@@ -1,92 +1,74 @@
 (function (root, factory) {
   'use strict';
-  if (typeof module === 'object' && module.exports) module.exports = factory;
-  else root.InstallerDiagnostics = factory(root);
-})(this, function (root) {
-  'use strict';
-  var storageKey = 'cytv.installer.diagnostic.v1',
-    sources = ['setup', 'recovery'],
-    codes = [
-      'unconfirmed',
-      'homebrew_exec_denied',
-      'homebrew_root_required',
-      'homebrew_timeout',
-      'homebrew_unreachable',
-      'homebrew_invalid_reply',
-      'installer_unavailable',
-      'status_unavailable',
-      'runtime_unconfirmed',
-      'private_runtime_required',
-      'legacy_node_on_computer',
-      'root_setup_on_computer',
-      'no_root_setup_on_computer',
-      'home_interfaces_unconfirmed',
-      'existing_installation',
-      'unknown_operation',
-      'operation_requires_recovery',
-      'installation_requires_recovery',
-      'continuation_requires_recovery',
-      'worker_snapshot_unavailable',
-      'worker_submission_unknown',
-      'clean-handoff-refused',
-      'clean_removal_requested',
-      'historical_completion_is_not_current',
-      'installer-runtime-mismatch',
-      'tile_home_unavailable',
-      'tile_edition_unconfirmed',
-      'update_service_unavailable'
-    ],
-    fields = {
-      state:
-        'recovery_required unknown unsupported external_setup edition_unconfirmed prerequisites fresh pending complete installed'.split(
-          ' '
-        ),
-      stage:
-        'inspect requested blocked preparing reserved snapshot root-deploy root-updater supervisor readback submitting complete activate restore resume-submitted clean-removal-requested package-remove-submitting root-remove-submitting supervisor-disable supervisor-archive restart-required verified-clean'.split(
-          ' '
-        ),
-      detail:
-        'restart-required live_original_worker support_stage_remains project_apps_remain restored_routes_changed owned_registration_remains no_root_private_cleanup_required private_members_remain owned_activity_remains owned_input_registration_remains route-changed original-removal-required different-removal-intent unsafe-cleanup-directory unsafe-cleanup-member cleanup-guard-failed package_rejected'.split(
-          ' '
-        ),
-      activation:
-        'pending unverified cancelled active finished superseded'.split(' '),
-      resume:
-        'worker-not-quiescent original-request-unverified original-snapshot-unverified package-terminal-unverified current-package-files-unverified'.split(
-          ' '
-        )
+  if (typeof module === 'object' && module.exports)
+    module.exports = function (environment) {
+      return factory(environment, require('./report-format.js'));
     };
+  else root.InstallerDiagnostics = factory(root, root.CYTVHomebrewReport);
+})(this, function (root, format) {
+  'use strict';
+  var storageKey = 'cytv.installer.diagnostic.v2',
+    legacyStorage = 'cytv.installer.diagnostic.v1',
+    fields = format.fields,
+    accepted = format.accepted;
 
-  function accepted(value, values) {
-    return typeof value === 'string' && values.indexOf(value) >= 0;
-  }
   function record(source, result, code) {
     result = result || {};
     var failure = result.failure || {},
-      output = {
-        schema: 1,
-        source: accepted(source, sources) ? source : 'setup',
-        code: accepted(code, codes)
-          ? code
-          : accepted(result.code, codes)
-            ? result.code
-            : 'unconfirmed'
-      },
-      observed = {
-        state: result.state,
-        stage: result.stage,
-        detail: accepted(failure.inspect_check, fields.detail)
-          ? failure.inspect_check
-          : failure.package_rejected === true
-            ? 'package_rejected'
-            : result.reason,
-        activation: result.activation && result.activation.state,
-        resume: result.resume_reason
-      };
-    Object.keys(fields).forEach(function (key) {
-      if (accepted(observed[key], fields[key])) output[key] = observed[key];
+      metadata = root.CYTVReportVersion || {},
+      suppliedCandidate = root.InstallerCandidate || {},
+      installed = (result.installation && result.installation.versions) || {},
+      productReason = result.installation && result.installation.reason,
+      activity =
+        result.action === 'remove'
+          ? 'uninstall'
+          : source === 'recovery'
+            ? 'recover'
+            : result.action || 'install';
+    return format.cleanObservation({
+      source: source,
+      timestamp: new Date().toISOString(),
+      action: activity,
+      edition:
+        result.edition ||
+        root.CYTVTileEdition ||
+        (source === 'setup' ? 'root' : null),
+      phase:
+        typeof result.phase === 'string'
+          ? result.phase
+          : code === 'homebrew_exec_denied'
+            ? 'homebrew-access'
+            : null,
+      code: accepted(code, format.codes)
+        ? code
+        : accepted(result.code, format.codes)
+          ? result.code
+          : productReason,
+      state: result.state,
+      stage: result.stage,
+      detail: accepted(failure.inspect_check, fields.detail)
+        ? failure.inspect_check
+        : failure.package_rejected === true
+          ? 'package_rejected'
+          : result.reason ||
+            (result.installation && result.installation.reason),
+      activation: result.activation && result.activation.state,
+      resume: result.resume_reason,
+      failure: failure,
+      checks: result.checks,
+      tv: result.tv,
+      versions: {
+        cytv: metadata.cytv,
+        installer: metadata.installer,
+        homebrew: result.tv && result.tv.homebrew_version,
+        root: installed.root,
+        root_updater: installed['root-updater'],
+        system_updater: installed.supervisor || installed['system-updater'],
+        candidate_root: suppliedCandidate.root,
+        candidate_root_updater: suppliedCandidate['root-updater'],
+        candidate_system_updater: suppliedCandidate.supervisor
+      }
     });
-    return output;
   }
   function advice(value) {
     switch (value.code) {
@@ -121,7 +103,12 @@
       case 'home_interfaces_unconfirmed':
         return ['homeUnconfirmed', 'editionUnconfirmed'];
       case 'existing_installation':
+      case 'supported_migration':
         return ['olderInstallation', 'existingSetup'];
+      case 'retained_operation':
+        return ['statusUnavailable', 'checkOriginal'];
+      case 'component_mismatch':
+        return ['componentsRemain', 'computerRecovery'];
       case 'tile_home_unavailable':
         return ['tileHomeUnavailable', 'tileRecoveryNext'];
       case 'tile_edition_unconfirmed':
@@ -148,33 +135,21 @@
         (value.activation === 'active' || value.activation === 'pending'))
     )
       return ['activationUnverified', 'checkOrComputer'];
-    if (value.state === 'unknown')
+    if (value.detail === 'supported_migration')
+      return ['olderInstallation', 'existingSetup'];
+    if (value.state === 'unknown' || value.detail === 'retained_operation')
       return ['statusUnavailable', 'checkOriginal'];
     return ['reasonUnknown', 'checkOrComputer'];
   }
-  function isReport(value) {
-    return (
-      value &&
-      typeof value === 'object' &&
-      !Array.isArray(value) &&
-      value.schema === 1 &&
-      accepted(value.source, sources) &&
-      accepted(value.code, codes) &&
-      Object.keys(value).every(function (key) {
-        return (
-          key === 'schema' ||
-          key === 'source' ||
-          key === 'code' ||
-          (Object.prototype.hasOwnProperty.call(fields, key) &&
-            accepted(value[key], fields[key]))
-        );
-      })
-    );
-  }
   function save(value) {
-    if (!isReport(value)) return false;
     try {
-      var text = JSON.stringify(value);
+      if (
+        JSON.stringify(value) !== JSON.stringify(format.cleanObservation(value))
+      )
+        return false;
+      // Only the compact projection is persisted. Exposed fields have already
+      // passed the same validation used when the report reaches the phone.
+      var text = format.serialize(value);
       root.localStorage.setItem(storageKey, text);
       return root.localStorage.getItem(storageKey) === text;
     } catch (_) {
@@ -184,9 +159,25 @@
   function load() {
     try {
       var raw = root.localStorage.getItem(storageKey);
+      if (raw) return format.deserialize(raw);
+      raw = root.localStorage.getItem(legacyStorage);
       if (!raw || raw.length > 1000) return null;
       var value = JSON.parse(raw);
-      return isReport(value) ? value : null;
+      if (
+        !value ||
+        value.schema !== 1 ||
+        !accepted(value.code, format.codes) ||
+        !accepted(value.source, ['setup', 'recovery']) ||
+        !Object.keys(value).every(function (key) {
+          return (
+            ['schema', 'source', 'code'].indexOf(key) >= 0 ||
+            (Object.prototype.hasOwnProperty.call(fields, key) &&
+              accepted(value[key], fields[key]))
+          );
+        })
+      )
+        return null;
+      return format.cleanObservation(value);
     } catch (_) {
       return null;
     }
@@ -211,18 +202,18 @@
       'diagnostic-storage'
     );
     var layout = append(parent, 'div', null, 'diagnostic-layout');
-    var data = JSON.stringify(value);
+    var report = format.canonical(value);
     var canvas = append(layout, 'canvas', null, 'diagnostic-qr');
     canvas.setAttribute('role', 'img');
     canvas.setAttribute('aria-label', translate('diagnosticQr'));
     try {
-      root.WallpaperQR.render(canvas, data);
+      root.WallpaperQR.render(canvas, format.url(report));
     } catch (_) {
       canvas.hidden = true;
     }
     var text = append(layout, 'div');
     if (!canvas.hidden) append(text, 'p', translate('diagnosticQr'));
-    append(text, 'pre', JSON.stringify(value, null, 2), 'diagnostic-json');
+    append(text, 'pre', JSON.stringify(report, null, 2), 'diagnostic-json');
   }
   return {
     record: record,

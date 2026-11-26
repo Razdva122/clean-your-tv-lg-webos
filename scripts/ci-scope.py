@@ -71,6 +71,8 @@ def components(paths):
             selected.update(('installer', 'android', 'setup'))
         elif path.startswith('homebrew/'):
             selected.update(('installer', 'tv', 'setup'))
+            if path == 'homebrew/app/report-format.js':
+                selected.add('preview')
         elif path.startswith('cytv/'):
             selected.add('installer')
             if Path(path).name not in ('desktop.py', 'desktop_entry.py', 'gui_style.py', 'build-requirements.txt'):

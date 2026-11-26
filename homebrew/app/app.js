@@ -4,6 +4,7 @@
   var bridge = root.InstallerBridge,
     i18n = root.InstallerI18n,
     diagnostics = root.InstallerDiagnostics,
+    progress = root.InstallerProgress,
     doc = root.document,
     content = doc.getElementById('content'),
     hint = doc.getElementById('hint'),
@@ -19,6 +20,7 @@
     message = null,
     accessDenied = false,
     transportFailure = null,
+    runtimePreparation = null,
     reportView = null;
   function t(k) {
     var text = root.InstallerDiagnosticI18n(k);
@@ -89,6 +91,57 @@
     doc.getElementById('language').textContent = t('language');
     hint.textContent = t('navigation');
   }
+  function observedChecks() {
+    return progress.observe(
+      inspected,
+      job,
+      transportFailure,
+      screen === 'checking',
+      runtimePreparation
+    );
+  }
+  function drawChecks() {
+    var checks = observedChecks(),
+      installation = job && job.action === 'install',
+      names = installation ? progress.installation : progress.preflight,
+      label = function (key) {
+        return root.InstallerProgressText(doc.documentElement.lang, key);
+      },
+      section = element('section', undefined, 'check-panel'),
+      title = element(
+        'h3',
+        label(installation ? 'installationTitle' : 'preflightTitle')
+      ),
+      list = element('ol', undefined, 'check-steps');
+    title.id = 'setup-checklist-title';
+    section.id = 'setup-checklist';
+    section.setAttribute('aria-labelledby', title.id);
+    section.appendChild(title);
+    names.forEach(function (key) {
+      var status = checks[key],
+        row = element('li', undefined, 'check-step check-' + status),
+        icon = element(
+          'span',
+          { pending: '', running: '', pass: '✓', fail: '!', unknown: '?' }[
+            status
+          ],
+          'check-marker'
+        ),
+        name = element('span', label(key), 'check-name');
+      row.setAttribute('data-check', key);
+      row.setAttribute('data-status', status);
+      if (status === 'running') row.setAttribute('aria-current', 'step');
+      icon.setAttribute('aria-hidden', 'true');
+      row.appendChild(icon);
+      row.appendChild(name);
+      row.appendChild(element('span', label(status), 'check-status'));
+      list.appendChild(row);
+    });
+    section.appendChild(list);
+    var existing = doc.getElementById(section.id);
+    if (existing) content.replaceChild(section, existing);
+    else content.appendChild(section);
+  }
   function ask(action, from, copy) {
     confirmation = action;
     opener = from;
@@ -147,19 +200,53 @@
     );
   }
   function addDiagnostics(value, code) {
-    var data = value || code ? diagnostics.record('setup', value, code) : null;
+    var data = null;
+    var actions = content.querySelector('.actions');
+    if (value || code) {
+      var checks = observedChecks();
+      var order =
+        value && value.action === 'install'
+          ? progress.installation.concat(progress.preflight)
+          : progress.preflight;
+      var failed = order.filter(function (key) {
+        return checks[key] === 'fail';
+      });
+      data = diagnostics.record(
+        'setup',
+        Object.assign({}, inspected, value, {
+          checks: checks,
+          tv: (value && value.tv) || (inspected && inspected.tv),
+          phase:
+            code === 'homebrew_exec_denied'
+              ? 'homebrew-access'
+              : failed[0] || (value && value.phase)
+        }),
+        code
+      );
+    }
     if (data && code !== 'homebrew_exec_denied') {
       var description = element('div');
       diagnostics.explain(description, data, t);
-      content.insertBefore(description, content.querySelector('.actions'));
+      content.insertBefore(description, actions);
     }
     var previous = diagnostics.load();
     if (!data && !previous) return;
-    var actions = controls();
-    if (data)
-      button(actions, 'save-report', t('saveDiagnostic'), function () {
-        openReport(data, diagnostics.save(data), 'save-report');
-      });
+    actions = actions || controls();
+    if (data) {
+      var save = button(
+        actions,
+        'save-report',
+        t('saveDiagnostic'),
+        function () {
+          openReport(data, diagnostics.save(data), 'save-report');
+        }
+      );
+      var refreshButton = actions.querySelector('#refresh');
+      actions.insertBefore(
+        save,
+        refreshButton ? refreshButton.nextSibling : actions.firstChild
+      );
+    }
     if (previous)
       button(actions, 'open-report', t('viewDiagnostic'), function () {
         openReport(previous, true, 'open-report');
@@ -196,6 +283,7 @@
     }
     if (accessDenied) {
       begin('homebrew-access', 'homebrewDeniedTitle');
+      drawChecks();
       paragraph('homebrewDeniedBody');
       if (operation) {
         paragraph('lost');
@@ -212,6 +300,7 @@
     }
     if (!inspected) {
       begin('checking', 'checking');
+      drawChecks();
       return;
     }
     if (job) {
@@ -226,6 +315,7 @@
         pending ? 'progress' : 'recovery',
         pending ? 'progress' : 'recovery'
       );
+      if (!job.action || job.action === 'install') drawChecks();
       if (
         pending ||
         message === 'activationUnverified' ||
@@ -233,10 +323,6 @@
         message === 'lost'
       )
         paragraph(message || (pending ? 'progressBody' : 'unknown'));
-      if (operation)
-        content.appendChild(
-          element('p', t('request') + ': ' + operation, 'details')
-        );
       var jobs = controls();
       button(jobs, 'refresh', t('refresh'), refresh, 'primary');
       if (
@@ -263,9 +349,14 @@
           old.parentNode.removeChild(old);
           return;
         }
-        var node = element(
-          'p',
-          JSON.stringify(diagnostics.record('setup', job, transportFailure))
+        var node = element('div', undefined, 'details');
+        if (operation)
+          node.appendChild(element('p', t('request') + ': ' + operation));
+        node.appendChild(
+          element(
+            'p',
+            JSON.stringify(diagnostics.record('setup', job, transportFailure))
+          )
         );
         node.id = 'technical';
         content.appendChild(node);
@@ -279,8 +370,16 @@
       return;
     }
     var state = inspected.state;
-    if (state === 'prerequisites' && !canPrepareForSetup()) {
+    if (runtimePreparation === 'fail' || runtimePreparation === 'unknown') {
       begin('prerequisites', 'prerequisites');
+      drawChecks();
+      var runtimeActions = controls();
+      button(runtimeActions, 'refresh', t('refresh'), refresh, 'primary');
+      button(runtimeActions, 'close', t('close'), close);
+      addDiagnostics(inspected, transportFailure);
+    } else if (state === 'prerequisites' && !canPrepareForSetup()) {
+      begin('prerequisites', 'prerequisites');
+      drawChecks();
       paragraph('runtimeBody');
       button(
         controls(),
@@ -336,6 +435,7 @@
     } else if (canInstall(inspected) || canPrepareForSetup()) {
       var preparing = state === 'prerequisites';
       begin(preparing ? 'prerequisites' : 'review', 'review');
+      drawChecks();
       paragraph('reviewBody');
       if (preparing) paragraph('runtimeBody');
       var actions = controls();
@@ -356,16 +456,19 @@
       addDiagnostics(transportFailure ? inspected : null, transportFailure);
     } else if (state === 'external_setup' || state === 'edition_unconfirmed') {
       begin('edition-advice', 'unsupported');
+      drawChecks();
       var next = controls();
       button(next, 'refresh', t('refresh'), refresh);
       button(next, 'close', t('close'), close);
       addDiagnostics(inspected, transportFailure);
     } else if (state === 'unsupported') {
       begin('unsupported', 'unsupported');
+      drawChecks();
       button(controls(), 'refresh', t('refresh'), refresh);
       addDiagnostics(inspected, transportFailure);
     } else {
       begin('recovery', 'recovery');
+      drawChecks();
       var recover = controls();
       button(recover, 'refresh', t('refresh'), refresh);
       button(recover, 'restore', t('restore'), function () {
@@ -412,7 +515,10 @@
     busy = true;
     clearTimeout(poll);
     var previous = doc.activeElement && doc.activeElement.id;
-    begin('checking', 'checking');
+    if (!inspected) {
+      begin('checking', 'checking');
+      drawChecks();
+    }
     bridge
       .inspect({ prepareSupervisor: true })
       .then(function (result) {
@@ -420,6 +526,7 @@
         transportFailure = null;
         if (message === 'lost' || message === 'failed') message = null;
         inspected = result;
+        runtimePreparation = null;
         var active = result.active_operation;
         if (active && /^[a-f0-9]{32}$/.test(active.operation || ''))
           remember(active.operation);
@@ -548,15 +655,23 @@
     return bridge.start(options);
   }
 
+  function prepareRuntime() {
+    runtimePreparation = 'running';
+    begin('checking', 'checking');
+    drawChecks();
+    paragraph('runtimeBody');
+    return bridge.prepareRuntime().then(function (result) {
+      if (result.state !== 'runtime_ready')
+        throw new Error('runtime_unconfirmed');
+      runtimePreparation = 'pass';
+      drawChecks();
+      return result;
+    });
+  }
   function prepareAndInstall() {
     var reviewedPayload = inspected.payload_sha256;
-    begin('checking', 'checking');
-    paragraph('runtimeBody');
-    return bridge
-      .prepareRuntime()
-      .then(function (prepared) {
-        if (prepared.state !== 'runtime_ready')
-          throw new Error('runtime_unconfirmed');
+    return prepareRuntime()
+      .then(function () {
         return bridge.inspect({ prepareSupervisor: true });
       })
       .then(function (current) {
@@ -570,6 +685,7 @@
         )
           return null;
         inspected = current;
+        runtimePreparation = null;
         return startProduct('install');
       });
   }
@@ -585,8 +701,7 @@
           action === 'install' && canPrepareForSetup()
             ? prepareAndInstall()
             : startProduct(action);
-      } else if (action === 'prepare-runtime')
-        promise = bridge.prepareRuntime();
+      } else if (action === 'prepare-runtime') promise = prepareRuntime();
       else if (action === 'activate') promise = bridge.activate();
       else if (action === 'resume') {
         if (!job || job.can_resume !== true) throw new Error('not_recoverable');
@@ -596,19 +711,14 @@
     } catch (error) {
       busy = false;
       transportFailure = failureCode(error, action);
+      if (runtimePreparation === 'running') runtimePreparation = 'unknown';
       message = 'failed';
       render();
       return;
     }
-    if (action !== 'install' && action !== 'remove' && action !== 'resume') {
+    if (action === 'activate' || action === 'restore') {
       begin('checking', 'checking');
-      paragraph(
-        action === 'prepare-runtime'
-          ? 'runtimeBody'
-          : action === 'activate'
-            ? 'activateConfirm'
-            : 'restoreConfirm'
-      );
+      paragraph(action === 'activate' ? 'activateConfirm' : 'restoreConfirm');
     }
     promise.then(
       function (result) {
@@ -623,7 +733,12 @@
           action === 'remove' ||
           action === 'resume'
         ) {
-          job = result;
+          job = result.action
+            ? result
+            : Object.assign(
+                { action: action === 'resume' ? job.action : action },
+                result
+              );
           message = null;
           render();
           return;
@@ -646,6 +761,9 @@
         busy = false;
         accessDenied = error.message === 'homebrew_exec_denied';
         transportFailure = failureCode(error, action);
+        if (runtimePreparation === 'running')
+          runtimePreparation =
+            transportFailure === 'runtime_unconfirmed' ? 'fail' : 'unknown';
         message = operation ? 'lost' : 'failed';
         if (operation) job = job || { state: 'unknown' };
         render();
