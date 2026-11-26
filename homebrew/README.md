@@ -40,10 +40,14 @@ wallpapers and preferences. No-root also needs fresh pairing. Removal and new
 setup each have their own confirmation. For Root, install the full Homebrew
 tile first so the host can open it when setup is ready.
 
-On a Developer Mode TV already using the single tile, use the desktop or
-Android installer to update Home or repair a missing tile. With a matching
-Helper version, this keeps the existing Home ID, paired Helper and its
-stopped state. On a TV with on-device updates, open Home settings and choose
+On a Developer Mode TV already using the single tile, the desktop or Android
+installer can repair a missing tile and update a compatible screensaver.
+It keeps the installed Home and Helper, including the current preferences,
+pairing and stopped state. Replacing Home requires a verified backup of its
+browser data. LG documents that updating a packaged app clears its local
+storage. [Web Storage on webOS TV](https://github.com/webOS-TV-app-samples/WebStorage#local-storage)
+
+On a TV with on-device updates, open Home settings and choose
 **Update Clean Your TV**. A later update in this generation can be rolled
 back from **Recovery**.
 

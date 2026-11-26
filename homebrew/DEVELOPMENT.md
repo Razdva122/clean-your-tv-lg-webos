@@ -42,7 +42,8 @@ The public host builds still select the existing generation. Use the
 | Compatible rooted TV with Homebrew | Install the full Clean Your TV IPK, open the tile and confirm setup. Desktop and Android can open an already-installed full tile on the TV. The tile checks Homebrew access and Root compatibility. |
 | Fresh Developer Mode TV | Desktop or Android pairs the TV and installs the daily tile, hidden Home and Helper. Subsequent launches open Home directly. |
 | Existing supported Root or No-root | Keeping the installation is the default. Switching via the clean-install option removes the old settings. Root requires the full tile on the TV first. The host verifies removal before asking to continue setup. Mixed editions, incomplete operations and experimental Root setups require their existing recovery route. |
-| Developer Mode TV already using the tile | Run the matching desktop or Android installer. It can repair the daily tile and upgrade Home in place, retaining the application ID and its personalized inventory. This operation leaves the installed Helper, pairing and emergency stop state in place. A different Helper version requires a matching installer. |
+| Developer Mode TV already using the tile | Run the matching desktop or Android installer to repair the tile or update a compatible screensaver. The installer keeps Home and Helper in place. A full Home upgrade that preserves preferences needs an app-mediated export and verified restore on the host path. |
+| No-root installed over an existing root SSH connection | Fresh single-tile setup prepares on-device updates after verifying the installed Home and Helper. An interrupted preparation is bound to its original host and TV receipts. |
 
 The first installation starts a new rollback history. To return to an older
 multi-tile release, remove the product and install that release separately.
