@@ -236,6 +236,7 @@ def completed_no_root_fence(store, lease):
             or record.get('protocol')!='clean-removal-v1'
             or any(record.get(k)!=previous[k] for k in ('operation','removal'))
             or record.get('final_fence')!=previous['lease']
+            or record.get('lease')==previous['lease']
             or not isinstance(record.get('lease'),str) or not re.fullmatch(r'[a-f0-9]{32}',record['lease'])
             or record.get('final_original_lease')!=record['lease']
             or record.get('stage')!='verified-clean' or record.get('state')!='complete'

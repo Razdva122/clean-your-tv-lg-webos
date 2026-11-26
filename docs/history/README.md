@@ -1,5 +1,7 @@
 # Release history and device evidence
 
+- [Issue 830 edition transition, 2026-11-26](2026-11-26-issue830-edition-transition.md): old removal resume, factory LG Home evidence and fresh Root handoff.
+
 - [Issue 410 QML packaging, 2026-11-25](2026-11-25-issue410-qml-packaging.md): exact released build reproduction and preserved QML execution scope.
 
 - [Issue 152 remaining restart causes and diagnostics, 2026-11-23](2026-11-23-issue152-restart-evidence.md): inherited-install/cancellation history, stable restart baselines and allowlisted process/boot observations.

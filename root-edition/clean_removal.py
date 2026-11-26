@@ -661,6 +661,18 @@ def compact_audit(record, store):
             elif key in ('failure','last_failure') and isinstance(item,dict):
                 result[key]=safe_failure(item)
         return result
+    def safe_component(value):
+        # Keep the exact inert markers used by final stock-route readback.
+        # A malformed journal must remain distinguishable from an absent one.
+        if (isinstance(value, dict) and type(value.get('version')) is int
+                and value == {'version': 1, 'app': APPS[0], 'stage': 'cancellation-admitted'}):
+            return dict(value)
+        compact = safe(value)
+        cancelled = {'phase': 'cancellation-admitted'}
+        if (compact == cancelled and value != cancelled) or (compact is None and value is not None):
+            return {'stage': 'unknown'}
+        return compact
+
     if record.get('audit_compacted') is True:return
     original=record['original']
     hashes={key:digest(value) for key,value in original.items() if value is not None}
@@ -669,11 +681,11 @@ def compact_audit(record, store):
         if value is not None:
             original[key]=safe(value)
             store.write(key+'-'+original['operation'],original[key])
-    original['components']={key:safe(value) for key,value in original.get('components',{}).items()}
+    original['components']={key:safe_component(value) for key,value in original.get('components',{}).items()}
     if original.get('removal') is not None:original['removal']=safe(original['removal'])
     if 'fenced_components' in record:
         record['fenced_component_digests']={key:digest(value) for key,value in record['fenced_components'].items() if value is not None}
-        record['fenced_components']={key:safe(value) for key,value in record['fenced_components'].items()}
+        record['fenced_components']={key:safe_component(value) for key,value in record['fenced_components'].items()}
     for app,item in record['packages'].items():
         if item.get('state')=='terminal':
             proof=item['terminal']
