@@ -55,7 +55,7 @@ and creating your own theme.
 ## Download and install
 
 <!-- release:downloads -->
-Current stable release: **[v1.29.0](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.29.0)** — [release notes](docs/RELEASE-1.29.0.md).
+Current stable release: **[v1.29.1](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.29.1)** — [release notes](docs/RELEASE-1.29.1.md).
 <!-- /release:downloads -->
 
 [![Download Windows x64 graphical installer — GUI ZIP](assets/brand/downloads/windows.svg)](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/latest/download/cytv-windows-x64-desktop.zip)

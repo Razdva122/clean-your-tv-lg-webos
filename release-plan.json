@@ -1,115 +1,31 @@
 {
   "schema": 1,
-  "version": "1.29.0",
+  "version": "1.29.1",
   "changes": [
     {
-      "pr": 820,
+      "pr": 842,
       "issues": [
+        410,
+        615,
         687,
-        818
-      ],
-      "summary": "Recover late LG Home takeover after an IR Home press"
-    },
-    {
-      "pr": 821,
-      "issues": [
-        615
-      ],
-      "summary": "Recover Home after confirmed normal shutdown and preserve the Settings OK guard"
-    },
-    {
-      "pr": 822,
-      "issues": [
-        818
-      ],
-      "summary": "Keep No-root Home resident in the background"
-    },
-    {
-      "pr": 823,
-      "issues": [
         740,
-        791
-      ],
-      "summary": "Report Root startup milestones when installation recovery times out"
-    },
-    {
-      "pr": 826,
-      "issues": [
-        741
-      ],
-      "summary": "Keep the C1 backend controller alive when an optional return hint times out"
-    },
-    {
-      "pr": 831,
-      "issues": [
+        741,
+        791,
+        818,
+        825,
+        828,
+        829,
         830
       ],
-      "summary": "Verify stock Home during No-root removal without defaultApps (#830)"
-    },
-    {
-      "pr": 832,
-      "issues": [
-        410
-      ],
-      "summary": "Fix Root Beta QML packaging and verified pre-submission cleanup"
-    },
-    {
-      "pr": 834,
-      "issues": [
-        825
-      ],
-      "summary": "Resume No-root staging after an interrupted SSH upload"
-    },
-    {
-      "pr": 835,
-      "issues": [
-        829
-      ],
-      "summary": "Use a tuner icon for unavailable Live TV artwork"
-    },
-    {
-      "pr": 836,
-      "issues": [
-        828
-      ],
-      "summary": "Recover an unresponsive No-root screensaver popup"
-    },
-    {
-      "pr": 837,
-      "issues": [
-        615
-      ],
-      "summary": "Make the guardian regression exercises select broker expiry before input expiry"
-    },
-    {
-      "pr": 838,
-      "issues": [
-        828
-      ],
-      "summary": "Leave Back to webOS, recover Helper status, and render the No-root screensaver inside Home when needed"
-    },
-    {
-      "pr": 839,
-      "issues": [],
-      "summary": "Keep the screensaver preview open after activation"
-    },
-    {
-      "pr": 840,
-      "issues": [],
-      "summary": "Wait for webOS foreground before restoring No-root Home"
+      "summary": "Deliver the accepted #827 fixes with System Updater Engine 1.2.17 after the unpublished v1.29.0 signing failure"
     }
   ],
-  "excluded": [
-    {
-      "pr": 833,
-      "reason": "Superseded by #838. The candidate leaves Back behavior to webOS and removes CYTV\u2019s separate shortcut and setting."
-    }
-  ],
-  "acceptance": "Project LG OLED55C3RLA, firmware 43.21.71 / SDK 11.2.0. Exact macOS ARM64 CLI SHA-256 724404cdda1f384bbf4c9bb622e6ac1651df207483bfb36db6f8de687677a662. No-root over Root SSH: normal update from published Home 1.21.0, nine matching installed file hashes, paired HOME from Media Player, same-session 15-second standby and all four arrows before HOME, sustained OK screensaver preview and arrow dismissal, short Back, persistent Stop and responsive LG Home. P00 archive match, C1 Beta QML packaging and exact Root signatures passed. Physical Magic Remote pointer, original reporter devices, cold boot, audio, live Root and OTA/rollback retain the limits in docs/history/2026-11-26-release-1.29.0-rc-verification.md.",
+  "excluded": [],
+  "acceptance": "Exact macOS ARM64 installer SHA-256 fc87c6946ea5ec5aab54fc96598250134b2744e48abaca6f5c7543dfa7b3c40c preserves all 631 unaffected RC4 payload entries. Reuse matching project OLED55C3RLA firmware 43.21.71 / SDK 11.2.0 No-root Root-SSH evidence for published-Home Helper compatibility, installed Home, standby focus, OK preview, Back and LG Home recovery. Engine 1.2.17 transitions from the published 1.2.16 archive and its production-signed catalog verifies with the shipped 1.2.16 policy and pinned key for all four System variants. Physical pointer, differing hardware, live engine OTA and Root activation or rollback remain outside the observed scope. Exact artifact and acceptance cases: docs/history/2026-11-26-release-1.29.1-engine-recovery.md.",
   "build": {
-    "run_id": 45660735856,
+    "run_id": 45761587837,
     "attempt": 1,
-    "source": "0ab6fccf6409baa8745c282b871bf6cac461ffcc"
+    "source": "1337f4c6181ce68365c52858423a82f189c63734"
   },
-  "acceptance_build": "45660735856:1"
+  "acceptance_build": "45761587837:1"
 }

@@ -288,10 +288,16 @@ check. The coordinator must verify all of the following against actual packages:
    `scripts/prepare-release.py` against those real packages and that approval.
    Preliminary package preparation and focused tests are sufficient to obtain
    this evidence; do not start a full installer matrix merely to discover this gate.
-3. Audit any other selected signing/promotion approval, including a selected
+3. Build the actual System Updater Engine archive from the candidate installer
+   payload. Compare its version and digest with the last published engine using
+   `verify_engine_transition` from `scripts/prepare-release.py`. Shared support
+   code counts as engine content. A changed archive requires a higher engine
+   version before freeze, including when the System Updater app version stays
+   the same.
+4. Audit any other selected signing/promotion approval, including a selected
    Homebrew Installer record. Mandatory evidence must already exist; explicitly
    deferred product limitations must be documented rather than marked passed.
-4. Confirm the intended frozen commit is clean and contains all required inputs.
+5. Confirm the intended frozen commit is clean and contains all required inputs.
    Keep untracked private QA data out of Git. Record the preflight results in the
    release PR, then dispatch one full candidate from that commit.
 
