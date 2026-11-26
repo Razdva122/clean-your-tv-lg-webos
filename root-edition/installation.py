@@ -94,6 +94,97 @@ def _optional_record(store, name):
         raise
 
 
+TV_INSTALLER = 'io.github.razdva122.cytvinstaller'
+TV_APPROVAL = 'homebrew-activation'
+TV_APPROVAL_TOKEN = 'homebrew-activation-token'
+
+
+@contextmanager
+def setup_activation_lock(store):
+    """Only serialize approval, revocation and publication of first intent; never wait for TV I/O here."""
+    import fcntl
+    directory = store._directory()
+    try:
+        fd = os.open('homebrew-activation.lock', os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW | os.O_NONBLOCK,
+                     0o600, dir_fd=directory)
+        try:
+            store._check(os.fstat(fd))
+            fcntl.flock(fd, fcntl.LOCK_EX)
+            yield
+        finally:
+            os.close(fd)
+    finally:
+        os.close(directory)
+
+
+def setup_activation_token(store):
+    with setup_activation_lock(store):
+        token = store.read(TV_APPROVAL_TOKEN)
+        if token is None:
+            token = store.write(TV_APPROVAL_TOKEN, uuid.uuid4().hex)
+        if not isinstance(token, str) or not re.fullmatch('[a-f0-9]{32}', token):
+            raise ValueError('Invalid setup activation token')
+        return token
+
+
+def cancel_setup_activation(store):
+    """Revoke in-flight approval, including while the candidate is still being verified."""
+    # Its contents can be damaged. Revocation needs only the checked directory
+    # and these two fixed names; no malformed token may outlive Restore.
+    if not os.path.lexists(Path(store.root)/(TV_APPROVAL_TOKEN + '.json')):
+        return
+    with setup_activation_lock(store):
+        directory = store._directory()
+        try:
+            for name in (TV_APPROVAL_TOKEN, TV_APPROVAL):
+                try:
+                    os.unlink(name + '.json', dir_fd=directory)
+                except FileNotFoundError:
+                    pass
+            os.fsync(directory)
+        finally:
+            os.close(directory)
+
+
+def setup_activation_binding(store, identifier):
+    """Recheck the original confirmed fresh installation inside the public runtime guard."""
+    if not isinstance(identifier, str) or not re.fullmatch('[a-f0-9]{32}', identifier):
+        raise ValueError('invalid_setup_operation')
+    request = store.read('request-' + identifier) or {}
+    submission = store.read('submission-' + identifier) or {}
+    lease = Ownership(store).status() or {}
+    candidate = request.get('candidate_sha256')
+    token = submission.get('tv_activation_token')
+    approval = dict(issuer=TV_INSTALLER, operation=identifier, candidate_sha256=candidate, token=token)
+    if (not isinstance(candidate, str) or not re.fullmatch('[a-f0-9]{64}', candidate)
+            or not isinstance(token, str) or not re.fullmatch('[a-f0-9]{32}', token)
+            or store.read(TV_APPROVAL_TOKEN) != token
+            or request.get('operation') != identifier or request.get('action') != 'install'
+            or request.get('stage') != 'complete' or request.get('state') != 'complete'
+            or request.get('code') != 'verified' or request.get('tv_activation') is not True
+            or request.get('result', {}).get('verified') is not True
+            or submission.get('operation') != identifier or submission.get('action') != 'install'
+            or submission.get('stage') != 'submitted' or submission.get('candidate_sha256') != candidate
+            or submission.get('tv_activation') != TV_INSTALLER or store.read(TV_APPROVAL) != approval
+            or lease.get('owner') != 'product' or lease.get('stage') != 'complete'
+            or lease.get('terminal') is not True or lease.get('journal') != 'product-' + identifier + '.json'
+            or lease.get('id') != request.get('lease')):
+        raise ValueError('setup_activation_superseded')
+    return dict(approval, lease=lease['id'])
+
+
+def setup_profile_active(snapshot, token):
+    effective = snapshot.get('effective') or {}
+    profiles = effective.get('profiles') or {}
+    intent = snapshot.get('intent') or {}
+    app = 'com.cleanyourtv.root.preview'
+    return (snapshot.get('recovery', {}).get('integrity_verified') is True
+            and snapshot.get('guardian_active') is True
+            and intent.get('token') == token and intent.get('enabled') is True and intent.get('phase') == 'active'
+            and effective.get('sam_home') == app and profiles.get('idleApp', {}).get('appId') == app
+            and profiles.get('defaultApps', {}).get('categories', {}).get('home') == app)
+
+
 def retire_product_staging(store, identifier, ownership, after=None):
     """Retire sealed payload files while holding the original ownership mutex."""
     removed = 0
@@ -236,6 +327,7 @@ def completed_no_root_fence(store, lease):
             or record.get('protocol')!='clean-removal-v1'
             or any(record.get(k)!=previous[k] for k in ('operation','removal'))
             or record.get('final_fence')!=previous['lease']
+            or record.get('lease')==previous['lease']
             or not isinstance(record.get('lease'),str) or not re.fullmatch(r'[a-f0-9]{32}',record['lease'])
             or record.get('final_original_lease')!=record['lease']
             or record.get('stage')!='verified-clean' or record.get('state')!='complete'

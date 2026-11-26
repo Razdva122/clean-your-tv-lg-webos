@@ -16,12 +16,14 @@ class DiagnosticTests(unittest.TestCase):
             store.request_clean_removal(profile)
             sample = {'kernel_changed': True, 'proc_enumerated': False, 'opaque_interpreter': True,
                       'decision': 'observation-blocked', 'phase': 'final-readback',
+                      'process_matches': ['renewal-service', 'PRIVATE-PATH', 'helper-service', 'renewal-service', {}],
                       'pid': 12345, 'cmdline': 'PRIVATE-COMMAND', 'boot_id': 'PRIVATE-BOOT',
                       'previous_present': 1, 'unknown': 'PRIVATE-VALUE'}
             store.checkpoint(profile, stage='restart-required', cleanup_restart_evidence=sample)
             pending = store.pending(profile)
             expected = {'kernel_changed': True, 'proc_enumerated': False, 'opaque_interpreter': True,
-                        'decision': 'observation-blocked', 'phase': 'final-readback'}
+                        'decision': 'observation-blocked', 'phase': 'final-readback',
+                        'process_matches': ['helper-service', 'renewal-service']}
             report = json.loads(diagnostics.create_report(store, 'uninstall', profile, 'uninstall',
                 status={'removal': dict(removal_summary(pending), restart_evidence=sample)}).read_text())
             self.assertEqual(report['pending']['stage'], 'restart-required')

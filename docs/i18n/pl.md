@@ -72,6 +72,14 @@ Jeśli instalator Root zaproponuje zastąpienie obecnej integracji Home, potwier
 
 Podczas instalacji Root instalator w razie potrzeby automatycznie korzysta ze sprawdzonej wewnętrznej pamięci tymczasowej; nośnik USB nie jest wymagany, a jeśli kontrola pamięci się nie powiedzie, zachowaj dane odzyskiwania i zapisz raport diagnostyczny.
 
+<a id="nieopublikowany-kandydat-instalacja-root-przez-homebrew"></a>
+
+### Gdy CYTV Installer jest już otwarty na telewizorze
+
+Wybierz **Zainstaluj i aktywuj** i potwierdź raz. Instalator zainstaluje razem Root Home, Root Updater i System Updater. Jeśli znajdzie zgodne ustawienia z wcześniejszej instalacji Clean Your TV Home, zaimportuje je automatycznie. Przycisk Home będzie otwierał Root Home, chyba że działa blokada awaryjna. Jeśli instalator wskaże komputer do konfiguracji Root, kontynuuj na komputerze. Jeśli zaproponuje No-root, użyj instalatora na komputerze lub urządzeniu z Androidem.
+
+Aby odinstalować Clean Your TV, wybierz w instalatorze **Usuń cały produkt**. Usunięcie samej aplikacji instalatora pozostawi Clean Your TV na telewizorze.
+
 ## 5. Sprawdź pilota
 
 1. Otwórz inną aplikację na TV i krótko naciśnij **Home**. Powinien otworzyć się Clean Your TV. W kreatorze zaznacz, co zobaczyłeś; pomiń test, jeśli go nie wykonałeś.
@@ -150,7 +158,6 @@ W instalatorze na komputerze otwórz **Czynność konserwacyjna → Dostosuj ust
 <a id="blokada-oprogramowania-lg-w-120"></a>
 <a id="nowości-w-130-odzyskiwanie-w-instalatorze-komputerowym"></a>
 <a id="nowości-w-130--12"></a>
-<a id="nieopublikowany-kandydat-instalacja-root-przez-homebrew"></a>
 <a id="nieopublikowany-kandydat-odzyskiwanie-dźwięku-hdmi-root"></a>
 <a id="motywy--kandydat-rozwojowy"></a>
 <a id="kategorie-ustawień-nieopublikowany-kandydat"></a>

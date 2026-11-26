@@ -4,7 +4,8 @@ const assert = require('assert'),
   path = require('path');
 const { chromium } = require('playwright');
 const vm = require('vm');
-const APP = process.env.CYTV_INSTALLER_APP || path.join(__dirname, '../app'),
+const SOURCE_APP = path.resolve(__dirname, '../app'),
+  APP = process.env.CYTV_INSTALLER_APP || SOURCE_APP,
   ID = 'a'.repeat(32),
   LEASE = 'c'.repeat(32),
   SHA = 'b'.repeat(64);
@@ -13,6 +14,29 @@ const APP = process.env.CYTV_INSTALLER_APP || path.join(__dirname, '../app'),
     fs.existsSync(path.join(APP, 'index.html')),
     'TV installer interface is required'
   );
+  let packagedComponents;
+  if (path.resolve(APP) !== SOURCE_APP) {
+    const metadata = { window: {} };
+    vm.runInNewContext(
+      fs.readFileSync(path.join(APP, 'candidate.js'), 'utf8'),
+      metadata
+    );
+    const versions = metadata.window.InstallerCandidate;
+    for (const key of ['root', 'root-updater', 'supervisor']) {
+      assert.match(
+        versions[key],
+        /^\d+\.\d+\.\d+$/,
+        'packaged version for ' + key
+      );
+    }
+    packagedComponents =
+      'Root Home ' +
+      versions.root +
+      ' · Root Updater ' +
+      versions['root-updater'] +
+      ' · System Updater ' +
+      versions.supervisor;
+  }
   const catalog = fs.readFileSync(path.join(APP, 'i18n.js'), 'utf8'),
     sandbox = {
       window: {
@@ -147,6 +171,7 @@ const APP = process.env.CYTV_INSTALLER_APP || path.join(__dirname, '../app'),
           localStorage.setItem('cytv.installer.language', locale);
         window.calls = [];
         window.model = state;
+        if (state.candidate) window.InstallerCandidate = state.candidate;
         window.saved = ID;
         if (state.savedOperation)
           localStorage.setItem('cytv.installer.operation', ID);
@@ -179,7 +204,10 @@ const APP = process.env.CYTV_INSTALLER_APP || path.join(__dirname, '../app'),
                 lease: LEASE
               };
             else if (command.endsWith('prepare-runtime')) {
-              window.model = { state: 'fresh' };
+              window.model = window.model.afterPrepare || {
+                state: 'fresh',
+                pin: window.model.pin
+              };
               reply = { state: 'runtime_ready' };
             } else if (
               command.includes(' install ') ||
@@ -201,13 +229,21 @@ const APP = process.env.CYTV_INSTALLER_APP || path.join(__dirname, '../app'),
             else
               reply = {
                 state: window.model.state,
+                code: window.model.code,
                 installation: {
                   state: window.model.state,
                   can_install: window.model.state === 'fresh',
                   can_maintain: window.model.state === 'installed',
+                  migrate_available:
+                    window.model.state === 'fresh'
+                      ? Object.hasOwn(window.model, 'migrateAvailable')
+                        ? window.model.migrateAvailable
+                        : false
+                      : undefined,
                   versions: window.model.versions
                 },
                 candidate_sha256: SHA,
+                payload_sha256: window.model.pin,
                 active_operation: window.model.active || null,
                 runtime: window.model.runtime
               };
@@ -232,8 +268,19 @@ const APP = process.env.CYTV_INSTALLER_APP || path.join(__dirname, '../app'),
       p = f.page;
     await p.waitForSelector('[data-screen="review"]');
     assert(
-      (await p.evaluate(() => calls)).every((c) => c.includes(' inspect')),
-      'opening inspects only'
+      (await p.evaluate(() => calls)).every((c) =>
+        c.endsWith(' inspect --prepare-supervisor')
+      ),
+      'opening reviews the full installation'
+    );
+    assert.equal(
+      await p.locator('#supervisor,#migrate,input[type=checkbox]').count(),
+      0
+    );
+    assert.equal(await p.evaluate(() => document.activeElement.id), 'install');
+    assert.equal(
+      await p.locator('.details').innerText(),
+      packagedComponents || 'Root Home + Root Updater + System Updater'
     );
     await p.locator('#language').click();
     for (const [code, font] of [
@@ -255,7 +302,10 @@ const APP = process.env.CYTV_INSTALLER_APP || path.join(__dirname, '../app'),
     await p.locator('#lang-cs').click();
     await p.waitForSelector('[data-screen="review"]');
     assert.equal(await p.locator('html').getAttribute('lang'), 'cs');
-    assert.equal(await p.locator('#install').textContent(), 'Instalovat');
+    assert.equal(
+      await p.locator('#install').textContent(),
+      'Nainstalovat a aktivovat'
+    );
     await p.reload();
     await p.waitForSelector('[data-screen="review"]');
     assert.equal(await p.locator('html').getAttribute('lang'), 'cs');
@@ -288,6 +338,16 @@ const APP = process.env.CYTV_INSTALLER_APP || path.join(__dirname, '../app'),
       localStorage.getItem('cytv.installer.operation')
     );
     assert(
+      (await p.evaluate(() => calls)).some(
+        (call) =>
+          call.includes(' install ') &&
+          call.includes('--prepare-supervisor') &&
+          !call.includes('--migrate-packaged-home') &&
+          call.includes('--activate-after-install')
+      ),
+      'one confirmed fresh setup authorizes package installation and Home activation'
+    );
+    assert(
       /^[a-f0-9]{32}$/.test(original),
       'submission saves the original request'
     );
@@ -311,6 +371,125 @@ const APP = process.env.CYTV_INSTALLER_APP || path.join(__dirname, '../app'),
       'reopening never resubmits'
     );
     await f.context.close();
+    f = await fixture(
+      {
+        state: 'fresh',
+        migrateAvailable: true,
+        candidate: packagedComponents
+          ? undefined
+          : {
+              root: '1.2.3',
+              'root-updater': '2.3.4',
+              supervisor: '3.4.5'
+            }
+      },
+      'ru'
+    );
+    p = f.page;
+    await p.waitForSelector('[data-screen="review"]');
+    assert.equal(
+      await p.locator('.details p').first().innerText(),
+      packagedComponents ||
+        'Root Home 1.2.3 · Root Updater 2.3.4 · System Updater 3.4.5'
+    );
+    assert(
+      (await p.locator('.details').innerText()).includes(
+        await p.evaluate(() => InstallerI18n.t('migrationAvailable'))
+      )
+    );
+    assert.equal(
+      await p.locator('#supervisor,#migrate,input[type=checkbox]').count(),
+      0
+    );
+    await p.locator('#install').click();
+    assert(
+      (await p.evaluate(() => calls)).every((call) => call.includes(' inspect'))
+    );
+    await p.locator('#confirm').click();
+    await p.waitForSelector('[data-screen="progress"]');
+    const migrated = (await p.evaluate(() => calls)).filter((call) =>
+      call.includes(' install ')
+    );
+    assert.equal(migrated.length, 1);
+    assert(
+      migrated[0].endsWith(
+        '--prepare-supervisor --migrate-packaged-home --activate-after-install'
+      )
+    );
+    await f.context.close();
+    for (const [state, code, textKey] of [
+      ['external_setup', 'root_setup_on_computer', 'externalRootSetup'],
+      ['external_setup', 'legacy_node_on_computer', 'legacyNodeSetup'],
+      ['external_setup', 'no_root_setup_on_computer', 'noRootHandoff'],
+      [
+        'edition_unconfirmed',
+        'home_interfaces_unconfirmed',
+        'editionUnconfirmed'
+      ]
+    ]) {
+      const preflight = await fixture({ state, code });
+      await preflight.page.waitForSelector('[data-screen="edition-advice"]');
+      assert(
+        await preflight.page.evaluate(
+          (key) =>
+            document
+              .getElementById('content')
+              .innerText.includes(InstallerI18n.t(key)),
+          textKey
+        )
+      );
+      assert.equal(
+        await preflight.page
+          .locator('#install,#activate,#resume,#restore')
+          .count(),
+        0
+      );
+      await preflight.context.close();
+    }
+    for (const [state, current, expectedScreen, textKey] of [
+      ['pending', true, 'progress', 'activationPending'],
+      ['unverified', true, 'recovery', 'activationUnverified'],
+      ['cancelled', true, 'installed', 'activationCancelled'],
+      ['finished', false, 'installed', 'installedBody'],
+      ['superseded', false, 'review', 'reviewBody'],
+      ['active', false, 'recovery', 'activationUnverified'],
+      ['active', true, 'installed', 'activationDone']
+    ]) {
+      const restored = await fixture({
+        state: state === 'superseded' ? 'fresh' : 'installed',
+        savedOperation: true,
+        status: {
+          state: 'complete',
+          action: 'install',
+          current,
+          activation: { state }
+        }
+      });
+      await restored.page.waitForSelector(
+        '[data-screen="' + expectedScreen + '"]'
+      );
+      assert.equal(
+        await restored.page.evaluate(() =>
+          Boolean(localStorage.getItem('cytv.installer.operation'))
+        ),
+        expectedScreen === 'progress' || expectedScreen === 'recovery'
+      );
+      assert(
+        await restored.page.evaluate(
+          (key) =>
+            document
+              .getElementById('content')
+              .innerText.includes(InstallerI18n.t(key)),
+          textKey
+        )
+      );
+      assert(
+        (await restored.page.evaluate(() => calls)).every(
+          (call) => call.includes(' inspect') || call.includes(' status ')
+        )
+      );
+      await restored.context.close();
+    }
     f = await fixture({
       state: 'recovery_required',
       active: {
@@ -354,6 +533,53 @@ const APP = process.env.CYTV_INSTALLER_APP || path.join(__dirname, '../app'),
       1
     );
     await f.context.close();
+    for (const [afterPrepare, screen, submits] of [
+      [{ state: 'fresh', pin: SHA }, 'progress', 1],
+      [{ state: 'fresh', pin: SHA, migrateAvailable: true }, 'progress', 1],
+      [{ state: 'fresh', pin: SHA, migrateAvailable: null }, 'recovery', 0],
+      [{ state: 'fresh', pin: 'd'.repeat(64) }, 'review', 0],
+      [{ state: 'installed', pin: SHA }, 'installed', 0],
+      [
+        {
+          state: 'external_setup',
+          code: 'no_root_setup_on_computer',
+          pin: SHA
+        },
+        'edition-advice',
+        0
+      ]
+    ]) {
+      const prepared = await fixture({
+        state: 'prerequisites',
+        pin: SHA,
+        afterPrepare
+      });
+      const page = prepared.page;
+      await page.locator('#install').click();
+      assert(
+        (await page.evaluate(() => calls)).every((call) =>
+          call.includes(' inspect')
+        )
+      );
+      await page.locator('#confirm').click();
+      await page.waitForSelector('[data-screen="' + screen + '"]');
+      const calls = await page.evaluate(() => window.calls);
+      assert.equal(
+        calls.filter((call) => call.endsWith('prepare-runtime')).length,
+        1
+      );
+      const installs = calls.filter((call) => call.includes(' install '));
+      assert.equal(installs.length, submits);
+      if (submits) {
+        assert(installs[0].includes('--prepare-supervisor'));
+        assert(installs[0].includes('--activate-after-install'));
+        assert.equal(
+          installs[0].includes('--migrate-packaged-home'),
+          afterPrepare.migrateAvailable === true
+        );
+      }
+      await prepared.context.close();
+    }
     f = await fixture({
       state: 'installed',
       versions: { root: '1.2.3', 'root-updater': '2.3.4' }
@@ -361,6 +587,9 @@ const APP = process.env.CYTV_INSTALLER_APP || path.join(__dirname, '../app'),
     p = f.page;
     await p.waitForSelector('[data-screen="installed"]');
     assert((await p.locator('#versions').textContent()).includes('1.2.3'));
+    assert(
+      !(await p.locator('#versions').textContent()).includes('System Updater')
+    );
     assert.equal(await p.locator('#install').count(), 0);
     await p.locator('#remove').click();
     await p.waitForSelector('[data-screen="confirm"]');
@@ -433,7 +662,7 @@ const APP = process.env.CYTV_INSTALLER_APP || path.join(__dirname, '../app'),
       f = await fixture({ execDenied: true, savedOperation });
       p = f.page;
       await p.waitForSelector('[data-screen="homebrew-access"]');
-      assert((await p.locator('#content').textContent()).includes('0.7.3'));
+      assert((await p.locator('#content').textContent()).includes('0.8.0'));
       assert((await p.locator('#content').textContent()).includes('Android'));
       assert.equal(
         await p
@@ -457,7 +686,9 @@ const APP = process.env.CYTV_INSTALLER_APP || path.join(__dirname, '../app'),
       assert.equal(await p.evaluate(() => document.activeElement.id), 'close');
       await p.locator('#refresh').click();
       assert(
-        (await p.evaluate(() => calls)).every((c) => c.endsWith(' inspect')),
+        (await p.evaluate(() => calls)).every((c) =>
+          c.endsWith(' inspect --prepare-supervisor')
+        ),
         'retry only inspects'
       );
       await p.evaluate(() => {
@@ -629,7 +860,7 @@ const APP = process.env.CYTV_INSTALLER_APP || path.join(__dirname, '../app'),
         await p.waitForSelector('[data-screen="homebrew-access"]');
         assert.equal(await p.locator('#install,#restore,#prepare').count(), 0);
         assert(
-          (await p.locator('#content').textContent()).includes('0.7.3'),
+          (await p.locator('#content').textContent()).includes('0.8.0'),
           locale + ' localized prerequisite'
         );
         await p.locator('#refresh').focus();

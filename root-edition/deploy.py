@@ -175,19 +175,44 @@ def restore(run=command):
     return reply
 
 
-def migration_source():
+def migration_source(*, homebrew=False):
     import personalize
+    def present(path):
+        if not homebrew:
+            return os.path.lexists(path)
+        for part in (*reversed(path.parents), path):
+            try:
+                mode = part.lstat().st_mode
+            except FileNotFoundError:
+                return False
+            if stat.S_ISLNK(mode):
+                raise ValueError('Indirect migration source')
+        return True
     profile=INSTALLED/'usr/palm/services/com.cleanyourtv.updater.service/state/profile.json'
-    if os.path.lexists(profile):
+    if present(profile):
         files=personalize.from_profile(profile)
         source='validated updater profile; browser storage excluded'
     else:
         home=INSTALLED / 'usr/palm/applications/com.gathin.tvhome'
-        if not os.path.lexists(home):
+        if not present(home):
+            if homebrew:
+                return None
             raise ValueError('Home migration source is unavailable; omit --migrate-packaged-home or prepare ordinary Home first')
-        files=personalize.prepare(home)
+        files=personalize.prepare(home, data_only=homebrew)
         source='packaged com.gathin.tvhome only; browser storage excluded'
     return files,source
+
+
+def homebrew_migration(expected=None):
+    prepared = migration_source(homebrew=True)
+    binding = 'absent'
+    if prepared is not None:
+        files, source = prepared
+        inventory = {name: hashlib.sha256(raw).hexdigest() for name, raw in files.items()}
+        binding = hashlib.sha256(json.dumps([source, inventory], sort_keys=True).encode()).hexdigest()
+    if expected is not None and binding != expected:
+        raise ValueError('Reviewed Home settings changed')
+    return prepared, binding
 
 
 def migrate_packaged_home(prepared=None):
@@ -249,7 +274,7 @@ def install_screensaver(bundle, release, observe=observed_install):
     sync_companion(INSTALLED, selected, None, journal, STATE, uid=store.uid, install=observe)
 
 
-def install(bundle, run=command, observe=observed_install, migrate=False, experimental_c1_gate=False, _experimental_admission=None):
+def install(bundle, run=command, observe=observed_install, migrate=False, experimental_c1_gate=False, _experimental_admission=None, homebrew_settings=None):
     if sys.version_info < (3, 9):
         raise RuntimeError('Root requires TV Python 3.9+')
     if STATE.exists() or STATE.is_symlink() or any(p.exists() or p.is_symlink() for p in installed_paths()):
@@ -274,7 +299,12 @@ def install(bundle, run=command, observe=observed_install, migrate=False, experi
                          'sha256': manifest['files'][manifest['package']]})
     del raw
     # Validate and retain the exact migration bytes before any install mutation.
-    prepared = migration_source() if migrate else None
+    if homebrew_settings is not None:
+        prepared, _ = homebrew_migration(expected=homebrew_settings)
+        if migrate != (prepared is not None):
+            raise ValueError('Reviewed migration selection changed')
+    else:
+        prepared = migration_source() if migrate else None
     STATE.mkdir(mode=0o700, parents=False)
     write_stage('prepared', package=manifest['package'])
     (STATE / 'runtime').mkdir(mode=0o700)

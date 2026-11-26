@@ -108,6 +108,15 @@ def require_original_ssh_identity(directory):
                     reason_code='ssh-identity-unverified')
 
 
+def _has_submitted_root_uninstall(receipt):
+    # A newer clean-removal request can wrap the original coordinator receipt.
+    while isinstance(receipt, dict):
+        if receipt.get('action') == 'uninstall' and receipt.get('stage') == 'coordinator-submitted':
+            return True
+        receipt = receipt.get('previous')
+    return False
+
+
 class Store:
     def __init__(self, root=None):
         # Canonicalize the caller-selected root once (including macOS /var).
@@ -570,7 +579,7 @@ class Store:
                 continue
             cutoff = completed.stat().st_mtime_ns
             operation = receipt['removal_operation']
-            for other_directory in sources:
+            for other_directory, other_profile in sources.items():
                 pending_path = other_directory / 'operation.json'
                 if (other_directory == directory or other_directory.is_symlink() or pending_path.is_symlink()
                         or (other_directory / SSH_IDENTITY_REVIEW).exists()
@@ -578,6 +587,10 @@ class Store:
                     continue
                 original, pending = self._read_operation(pending_path, require_access=True)
                 if not pending or pending.get('action') not in ('install', 'uninstall'):
+                    continue
+                # The other connection cannot attest to this coordinator's outcome,
+                # even before the owner reviews a changed Root SSH identity.
+                if other_profile['edition'] == 'root' and _has_submitted_root_uninstall(pending):
                     continue
                 original_stat = pending_path.stat()
                 if original_stat.st_mtime_ns >= cutoff:

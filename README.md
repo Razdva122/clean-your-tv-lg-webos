@@ -260,6 +260,7 @@ and historical [1.5.0 TV acceptance and limits](docs/RELEASE-1.5.0.md).
 | ✅ | 55UR91006LA · No-root | SDK10.3.2 |
 | ✅ | OLED42C24LA · No-root | 10.3.1 |
 | ✅ | OLED55B36LA · No-root | SDK 10.3.2 |
+| ✅ | OLED55C47LA · No-root | SDK 10.3.1 |
 | ✅ | QNED75URA · No-root | 25 / SDK 10.3.2 |
 | ❔ | 65QNED80SRA · No-root | 25; 10.3.2-33 reported |
 | ❔ | 65QNED80TSA · No-root | SDK 10.3.2 |
@@ -299,7 +300,6 @@ and historical [1.5.0 TV acceptance and limits](docs/RELEASE-1.5.0.md).
 | ❔ | LG C5 77″ · No-root | Not reported |
 | ❔ | OLED48C55LA · No-root | Not reported |
 | ❔ | OLED55C16LA · No-root | Not reported |
-| ❔ | OLED55C47LA · No-root | Not reported |
 | ❔ | OLED55G59LS · No-root | Not reported |
 | ❔ | OLED65C2PUA · No-root | Not reported |
 | ❔ | OLED65C3LA · No-root | Not reported |

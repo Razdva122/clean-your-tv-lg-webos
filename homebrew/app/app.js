@@ -9,8 +9,6 @@
   var inspected = null,
     job = null,
     operation = null,
-    supervisor = false,
-    migrate = false,
     poll = null,
     busy = false,
     confirmation = null,
@@ -25,6 +23,12 @@
     if (!/^[a-f0-9]{32}$/.test(id)) throw new Error('invalid_request');
     root.localStorage.setItem(key, id);
     operation = id;
+  }
+  function forgetOperation() {
+    operation = null;
+    try {
+      root.localStorage.removeItem(key);
+    } catch (_) {}
   }
   try {
     var saved = root.localStorage.getItem(key);
@@ -97,20 +101,44 @@
     render();
     focus(opener);
   }
+  function componentVersions(versions) {
+    var names = {
+      'root': 'Root Home',
+      'root-updater': 'Root Updater',
+      'supervisor': 'System Updater',
+      'system-updater': 'System Updater'
+    };
+    return Object.keys(names)
+      .filter(function (key) {
+        return typeof versions[key] === 'string';
+      })
+      .map(function (key) {
+        return names[key] + ' ' + versions[key];
+      })
+      .join(' · ');
+  }
   function versions() {
     var v =
       inspected && inspected.installation && inspected.installation.versions;
     if (!v) return;
-    var node = element(
-      'p',
-      Object.keys(v)
-        .map(function (k) {
-          return (k === 'root' ? 'Root Home' : 'Root Updater') + ' ' + v[k];
-        })
-        .join(' · ')
-    );
+    var node = element('p', componentVersions(v));
     node.id = 'versions';
     content.appendChild(node);
+  }
+  function canInstall(result) {
+    return (
+      result.state === 'fresh' &&
+      result.installation &&
+      result.installation.can_install === true &&
+      typeof result.installation.migrate_available === 'boolean'
+    );
+  }
+  function canPrepareForSetup() {
+    return (
+      inspected.state === 'prerequisites' &&
+      !operation &&
+      /^[a-f0-9]{64}$/.test(inspected.payload_sha256 || '')
+    );
   }
   function render() {
     if (accessDenied) {
@@ -133,7 +161,12 @@
       return;
     }
     if (job) {
-      var pending = job.state === 'pending',
+      var pending =
+          job.state === 'pending' ||
+          (job.state === 'complete' &&
+            job.current === true &&
+            job.activation &&
+            job.activation.state === 'pending'),
         unknown = job.state === 'unknown';
       begin(
         pending ? 'progress' : 'recovery',
@@ -193,7 +226,7 @@
       return;
     }
     var state = inspected.state;
-    if (state === 'prerequisites') {
+    if (state === 'prerequisites' && !canPrepareForSetup()) {
       begin('prerequisites', 'prerequisites');
       paragraph('runtimeBody');
       button(
@@ -236,59 +269,57 @@
         'danger'
       );
       paragraph('retained');
-    } else if (
-      state === 'fresh' &&
-      inspected.installation &&
-      inspected.installation.can_install === true
-    ) {
-      begin('review', 'review');
+    } else if (canInstall(inspected) || canPrepareForSetup()) {
+      var preparing = state === 'prerequisites';
+      begin(preparing ? 'prerequisites' : 'review', 'review');
       paragraph(message || 'reviewBody');
+      if (preparing) paragraph('runtimeBody');
       var details = element('div', undefined, 'details');
-      details.appendChild(element('p', t('components')));
       var candidate = root.InstallerCandidate;
-      if (candidate)
-        details.appendChild(
-          element(
-            'p',
-            Object.keys(candidate)
-              .map(function (k) {
-                return k + ' ' + candidate[k];
-              })
-              .join(' · ')
-          )
-        );
+      details.appendChild(
+        element(
+          'p',
+          candidate &&
+            candidate.root &&
+            candidate['root-updater'] &&
+            candidate.supervisor
+            ? componentVersions(candidate)
+            : t('components')
+        )
+      );
+      if (!preparing && inspected.installation.migrate_available)
+        details.appendChild(element('p', t('migrationAvailable')));
       content.appendChild(details);
-      var choices = controls();
-      button(
-        choices,
-        'supervisor',
-        t('supervisor') + ': ' + t(supervisor ? 'yes' : 'no'),
-        function () {
-          supervisor = !supervisor;
-          refresh('supervisor');
-        }
-      );
-      button(
-        choices,
-        'migrate',
-        t('migration') + ': ' + t(migrate ? 'yes' : 'no'),
-        function () {
-          migrate = !migrate;
-          render();
-          focus('migrate');
-        }
-      );
       var actions = controls();
       button(
         actions,
         'install',
-        t('install'),
+        t('installAndActivate'),
         function () {
-          ask('install', 'install', 'installConfirm');
+          ask(
+            'install',
+            'install',
+            preparing ? 'prepareInstallConfirm' : 'installConfirm'
+          );
         },
         'primary'
       );
       button(actions, 'close', t('close'), close);
+    } else if (state === 'external_setup' || state === 'edition_unconfirmed') {
+      begin('edition-advice', 'unsupported');
+      var advice = 'editionUnconfirmed';
+      if (state === 'external_setup') {
+        if (inspected.code === 'legacy_node_on_computer')
+          advice = 'legacyNodeSetup';
+        if (inspected.code === 'root_setup_on_computer')
+          advice = 'externalRootSetup';
+        if (inspected.code === 'no_root_setup_on_computer')
+          advice = 'noRootHandoff';
+      }
+      paragraph(advice);
+      var next = controls();
+      button(next, 'refresh', t('refresh'), refresh);
+      button(next, 'close', t('close'), close);
     } else if (state === 'unsupported') {
       begin('unsupported', 'unsupported');
       paragraph('unsupportedBody');
@@ -304,13 +335,46 @@
     }
     focus('');
   }
+  // Package completion and completion of the requested Home activation are
+  // independent. Reopening this screen only reads the original operation.
+  function activationStatus(status) {
+    if (
+      status.action !== 'install' ||
+      status.state !== 'complete' ||
+      !status.activation
+    )
+      return false;
+    var state = status.activation.state;
+    if (state === 'finished' || state === 'superseded') {
+      message = null;
+      job = null;
+      forgetOperation();
+      return true;
+    }
+    if (
+      status.current === true &&
+      (state === 'active' || state === 'cancelled')
+    ) {
+      message = state === 'active' ? 'activationDone' : 'activationCancelled';
+      job = null;
+      forgetOperation();
+      return true;
+    }
+    job = status;
+    message =
+      state === 'pending' && status.current === true
+        ? 'activationPending'
+        : 'activationUnverified';
+    return true;
+  }
   function refresh(focusId) {
     if (busy) return;
     busy = true;
     clearTimeout(poll);
     var previous = doc.activeElement && doc.activeElement.id;
+    begin('checking', 'checking');
     bridge
-      .inspect({ prepareSupervisor: supervisor })
+      .inspect({ prepareSupervisor: true })
       .then(function (result) {
         accessDenied = false;
         inspected = result;
@@ -323,6 +387,7 @@
           result.state !== 'unsupported'
         )
           return bridge.status(operation).then(function (status) {
+            if (activationStatus(status)) return;
             if (
               status.state === 'complete' &&
               (status.current === true ||
@@ -332,10 +397,7 @@
             ) {
               job = null;
               if (status.action === 'remove') {
-                operation = null;
-                try {
-                  root.localStorage.removeItem(key);
-                } catch (_) {}
+                forgetOperation();
               }
             } else job = status;
           });
@@ -368,6 +430,15 @@
       function (result) {
         busy = false;
         job = result;
+        if (activationStatus(result)) {
+          if (!job) {
+            refresh();
+            return;
+          }
+          render();
+          focus(previous);
+          return;
+        }
         if (result.state === 'complete' && result.current === true) {
           job = null;
           refresh();
@@ -396,6 +467,52 @@
       })
       .join('');
   }
+  function startProduct(action) {
+    remember(uuid());
+    job = {
+      operation: operation,
+      action: action,
+      state: 'pending',
+      stage: 'submitting'
+    };
+    message = null;
+    render();
+    var options = {
+      operation: operation,
+      candidate: inspected.candidate_sha256
+    };
+    if (action === 'remove') return bridge.remove(options);
+    options.prepareSupervisor = true;
+    options.migrate = inspected.installation.migrate_available;
+    options.activateAfterInstall = true;
+    return bridge.start(options);
+  }
+
+  function prepareAndInstall() {
+    var reviewedPayload = inspected.payload_sha256;
+    begin('checking', 'checking');
+    paragraph('runtimeBody');
+    return bridge
+      .prepareRuntime()
+      .then(function (prepared) {
+        if (prepared.state !== 'runtime_ready')
+          throw new Error('runtime_unconfirmed');
+        return bridge.inspect({ prepareSupervisor: true });
+      })
+      .then(function (current) {
+        if (
+          current.payload_sha256 !== reviewedPayload ||
+          current.active_operation ||
+          !canInstall(current) ||
+          !/^[a-f0-9]{64}$/.test(current.candidate_sha256 || '') ||
+          operation ||
+          doc.hidden
+        )
+          return null;
+        inspected = current;
+        return startProduct('install');
+      });
+  }
   function submit() {
     if (busy || !confirmation) return;
     var action = confirmation;
@@ -404,25 +521,10 @@
     var promise;
     try {
       if (action === 'install' || action === 'remove') {
-        remember(uuid());
-        job = {
-          operation: operation,
-          action: action,
-          state: 'pending',
-          stage: 'submitting'
-        };
-        message = null;
-        render();
-        var options = {
-          operation: operation,
-          candidate: inspected.candidate_sha256
-        };
-        if (action === 'install') {
-          options.prepareSupervisor = supervisor;
-          options.migrate = migrate;
-        }
         promise =
-          action === 'install' ? bridge.start(options) : bridge.remove(options);
+          action === 'install' && canPrepareForSetup()
+            ? prepareAndInstall()
+            : startProduct(action);
       } else if (action === 'prepare-runtime')
         promise = bridge.prepareRuntime();
       else if (action === 'activate') promise = bridge.activate();
@@ -450,6 +552,10 @@
     promise.then(
       function (result) {
         busy = false;
+        if (result === null) {
+          refresh();
+          return;
+        }
         if (
           action === 'install' ||
           action === 'remove' ||

@@ -1370,27 +1370,30 @@
     {
       "id": "c4-55-c47la-noroot",
       "model": "OLED55C47LA",
-      "firmware": null,
-      "webos": null,
+      "firmware": "33.31.61",
+      "webos": "SDK 10.3.1",
       "edition": "no-root",
-      "release": null,
+      "release": "v1.20.6",
       "showOnWebsite": true,
-      "result": "reported-working",
-      "reportedVersions": "cytv 0.20.6; installed component versions not reported",
-      "installer": null,
+      "result": "controls-tested",
+      "reportedVersions": "cytv 0.20.6, Home 1.18.5, Helper 0.8.4",
+      "installer": "macOS desktop (arm64)",
       "remote": null,
       "tested": {
-        "install": "The original setup observation could not be verified and a later operation reported a busy TV reservation. Removal completed on cytv 0.20.5. The owner then reported setup and operation worked on cytv 0.20.6.",
-        "Home": "Owner reported everything worked; individual Home checks were not described.",
+        "install": "Recovery of the interrupted setup stopped on cytv 0.20.3. Removal on 0.20.6 stopped at the reservation check. The owner completed removal on 0.20.5 and ran a fresh No-root installation on 0.20.6. The installer verified both packages and observed startup.",
+        "Home": "The owner confirmed in the installer that a short press of Home on the remote from another app opened Clean Your TV Home.",
         "emergency": "not reported",
         "audio": "not reported",
         "power": "not reported",
         "OTA_rollback": "not reported"
       },
-      "limitations": "Exact firmware, webOS, installer platform, published release, component versions and remote were not reported. No individual Home, emergency, audio, power or rollback results were described.",
+      "limitations": "Recovery of the original saved operation remains unconfirmed. The owner did not identify the remote model or report emergency Home, audio, power, OTA or rollback checks.",
       "sources": [
         {
           "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/635#issuecomment-6877112869"
+        },
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/635#issuecomment-6877078780"
         }
       ],
       "evidenceKind": "public-owner-report"

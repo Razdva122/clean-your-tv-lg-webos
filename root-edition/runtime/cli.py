@@ -275,6 +275,15 @@ def reconcile_firmware_access():
 
 
 def _restore_home(cancel_resume):
+    if cancel_resume:
+        # An absent setup approval is the common case for existing installations.
+        state = d.STATE.parent/'clean-your-tv-installation'
+        if os.path.lexists(state/'homebrew-activation-token.json'):
+            try:
+                from installation import _fence_store, cancel_setup_activation
+                cancel_setup_activation(_fence_store(state, d.EXPECTED_UID))
+            except (ImportError, OSError, ValueError):
+                pass  # Damaged product evidence must never suppress LG Home restoration.
     gate = gate_backend()
     if gate is not None:
         return gate.execute('restore', root=d.STATE, uid=d.EXPECTED_UID)
@@ -295,10 +304,78 @@ def _restore_home(cancel_resume):
     return result
 
 
+def setup_enable(identifier):
+    """One approved fresh installation; caller already holds both public activation guards."""
+    from installation import (Ownership, setup_activation_binding, setup_activation_lock, setup_profile_active)
+    from intent_runtime import coordinator, enable
+    from helper_bridge import STATE as helper_state
+    if gate_backend() is not None:
+        raise ValueError('Fresh profile backend required')
+    owner = Ownership()
+    store = owner.store
+    binding = setup_activation_binding(store, identifier)
+    name = 'activation-' + identifier
+    attempt = store.read(name) or {}
+    if (attempt.get('state') != 'ready' or attempt.get('operation') != identifier
+            or attempt.get('lease') != binding['lease'] or attempt.get('worker') != os.getppid()):
+        raise ValueError('Original activation attempt required')
+    if (os.path.lexists(d.FAILSAFE) or os.path.lexists(d.STATE/'profile-trial.json')
+            or os.path.lexists(helper_state/'blocked')):
+        raise ValueError('Fresh unblocked Home required')
+
+    @contextmanager
+    def claim():
+        # Revocation and the first durable Home intent are ordered by the same
+        # short lock. Slow TV calls and independent emergency recovery stay outside it.
+        with setup_activation_lock(store):
+            if (setup_activation_binding(store, identifier) != binding or store.read(name) != attempt
+                    or os.path.lexists(d.FAILSAFE) or os.path.lexists(helper_state/'blocked')):
+                raise ValueError('Setup activation is no longer available')
+            attempt['state'] = 'claimed'
+            store.write(name, attempt)
+            yield
+
+    try:
+        enable(setup_operation=identifier, admission=claim)
+        if setup_activation_binding(store, identifier) != binding:
+            raise ValueError('Setup activation changed')
+        if not setup_profile_active(execute('status'), identifier):
+            raise ValueError('Setup Home routing unverified')
+        lifecycle = coordinator()
+        intent = lifecycle.store.read()
+        if (intent.get('token') != identifier or intent.get('phase') != 'active'
+                or not intent.get('enabled') or setup_activation_binding(store, identifier) != binding):
+            raise ValueError('Setup Home activation was stopped')
+        # The physical escape must remain able to take the lifecycle lock while SAM replies.
+        luna('luna://com.webos.applicationManager/launch', {'id': d.CANDIDATE})
+        attempt['launch_requested'] = True
+        store.write(name, attempt)
+        if (setup_activation_binding(store, identifier) != binding
+                or not setup_profile_active(execute('status'), identifier)):
+            raise ValueError('Setup Home routing changed')
+        attempt['state'] = 'active'
+        store.write(name, attempt)
+        return {'activation': 'active', 'launch_requested': True}
+    except Exception:
+        if attempt.get('state') == 'claimed':
+            try:
+                lifecycle = coordinator()
+                intent = lifecycle.store.read() if lifecycle is not None else {}
+                if intent.get('token') == identifier:
+                    # Recheck this exact generation while taking the lifecycle lock.
+                    lifecycle.exit(expected=intent, reason='fault')
+                    if attempt.get('launch_requested') and not intent.get('enabled'):
+                        luna('luna://com.webos.applicationManager/closeByAppId', {'id': d.CANDIDATE})
+            finally:
+                attempt['state'] = 'unverified'
+                store.write(name, attempt)
+        raise
+
+
 def main(mode, transaction=None):
     if os.geteuid() != 0:
         raise PermissionError('Root required')
-    if mode in ('enable','intent-trial','confirm','trial','emergency-trial','boot'):
+    if mode in ('enable','setup-enable','intent-trial','confirm','trial','emergency-trial','boot'):
         from update_guard import control, ProductPending
         # Automatic recovery restores safely without cancelling the updater
         # ticket; only explicit Off or emergency escape revokes Home resume.
@@ -306,6 +383,7 @@ def main(mode, transaction=None):
             return _restore_home(cancel_resume=False)
         try:
             with control(d.STATE,d.EXPECTED_UID):
+                if mode == 'setup-enable': return setup_enable(transaction)
                 return execute(mode,transaction)
         except ProductPending:
             if mode == 'boot': return _restore_home(cancel_resume=False)

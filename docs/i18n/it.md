@@ -72,6 +72,14 @@ Se durante l’installazione Root viene proposta la sostituzione dell’integraz
 
 Per la configurazione Root, l’installer usa automaticamente uno spazio temporaneo interno verificato quando necessario; non serve un’unità USB e, se il controllo dello spazio non riesce, conserva i dati di ripristino e salva un rapporto diagnostico.
 
+<a id="candidato-non-pubblicato-installazione-root-tramite-homebrew"></a>
+
+### Se CYTV Installer è già aperto sul televisore
+
+Scegli **Installa e attiva** e conferma una volta. Il programma installa insieme Root Home, Root Updater e System Updater. Se trova impostazioni compatibili di una precedente configurazione di Clean Your TV Home, le importa automaticamente. Il tasto Home aprirà Root Home, salvo che sia attivo l’arresto di emergenza. Se il programma ti invita a continuare la configurazione di Root su un computer, prosegui lì. Se propone No-root, usa il programma di installazione per computer o Android.
+
+Per disinstallare Clean Your TV, scegli **Rimuovi prodotto completo** nel programma di installazione. Se elimini solo l’app di installazione, Clean Your TV rimane sul televisore.
+
 ## 5. Controlla il telecomando
 
 1. Apri un’altra app sulla TV e premi brevemente **Home**. Deve aprirsi Clean Your TV. Indica nella procedura guidata ciò che hai visto; salta la verifica se non l’hai eseguita.
@@ -151,7 +159,6 @@ Nell’installer desktop apri **Operazione di manutenzione → Modifica le impos
 <a id="blocco-firmware-lg-in-120"></a>
 <a id="novità-della-130-ripristino-guidato-dal-computer"></a>
 <a id="novità-della-130--12"></a>
-<a id="candidato-non-pubblicato-installazione-root-tramite-homebrew"></a>
 <a id="candidato-non-pubblicato-ripristino-audio-hdmi-root"></a>
 <a id="temi-154"></a>
 <a id="categorie-delle-impostazioni-candidato-non-pubblicato"></a>

@@ -26,16 +26,63 @@ function loadBridge(reply) {
   );
   return context.module.exports;
 }
-async function rejects(fn) {
+async function rejects(fn, expectedMessage) {
   var failed = false;
   try {
     await fn();
   } catch (e) {
     failed = true;
+    if (expectedMessage) assert.strictEqual(e.message, expectedMessage);
   }
   assert(failed, 'must reject');
 }
 (async function () {
+  var bootstrapSource = fs.readFileSync(
+    path.join(__dirname, '../bootstrap.js'),
+    'utf8'
+  );
+  function runLegacy(version, uid, args) {
+    var stdout = '';
+    var entry = { exports: {} };
+    function requireNothing() {
+      throw Error('legacy inspect loaded a dependency');
+    }
+    requireNothing.main = entry;
+    vm.runInNewContext(bootstrapSource, {
+      module: entry,
+      require: requireNothing,
+      Promise: undefined,
+      process: {
+        versions: { node: version },
+        geteuid: function () {
+          return uid;
+        },
+        argv: ['node', 'bootstrap.js'].concat(args),
+        stdout: {
+          write: function (line) {
+            stdout += line;
+          }
+        }
+      }
+    });
+    return JSON.parse(stdout);
+  }
+  assert.equal(
+    runLegacy('0.10.15', 0, ['inspect']).code,
+    'legacy_node_on_computer'
+  );
+  assert.equal(
+    runLegacy('0.12.2', 0, ['status']).code,
+    'installer_unavailable'
+  );
+  assert.equal(
+    runLegacy('7.9.0', 1000, ['inspect']).code,
+    'installer_unavailable'
+  );
+  assert.equal(
+    runLegacy('0.12.2', 0, ['inspect', '--unknown']).code,
+    'installer_unavailable'
+  );
   assert(
     fs.existsSync(path.join(__dirname, '../app/bridge.js')),
     'fixed Homebrew bridge is required'
@@ -52,6 +99,7 @@ async function rejects(fn) {
     { operation: '$(id)', candidate: SHA },
     { operation: ID, candidate: 'A'.repeat(64) },
     { operation: ID, candidate: SHA, prepareSupervisor: 'true' },
+    { operation: ID, candidate: SHA, activateAfterInstall: 'true' },
     { operation: ID, candidate: SHA, url: 'https://example.com' }
   ])
     await rejects(function () {
@@ -62,16 +110,17 @@ async function rejects(fn) {
     operation: ID,
     candidate: SHA,
     prepareSupervisor: true,
-    migrate: false
+    migrate: false,
+    activateAfterInstall: true
   });
   assert.equal(calls[0].uri, 'luna://org.webosbrew.hbchannel.service/exec');
   assert.equal(
     calls[0].body.command,
-    '/usr/bin/node /media/developer/apps/usr/palm/applications/com.cleanyourtv.installer/bootstrap.js install --operation ' +
+    '/usr/bin/node /media/developer/apps/usr/palm/applications/io.github.razdva122.cytvinstaller/bootstrap.js install --operation ' +
       ID +
       ' --candidate ' +
       SHA +
-      ' --prepare-supervisor'
+      ' --prepare-supervisor --activate-after-install'
   );
   await bridge.status(ID);
   assert(
@@ -115,7 +164,7 @@ async function rejects(fn) {
   assert.equal(calls.length, beforeAccessor + 1);
   assert.equal(
     calls[calls.length - 1].body.command,
-    '/usr/bin/node /media/developer/apps/usr/palm/applications/com.cleanyourtv.installer/bootstrap.js install --operation ' +
+    '/usr/bin/node /media/developer/apps/usr/palm/applications/io.github.razdva122.cytvinstaller/bootstrap.js install --operation ' +
       ID +
       ' --candidate ' +
       SHA
@@ -177,10 +226,11 @@ async function rejects(fn) {
       errorCode: -1,
       errorText: denialText
     });
-    await assert.rejects(bridge.inspect(), { message: 'homebrew_exec_denied' });
-    await assert.rejects(bridge.start({ operation: ID, candidate: SHA }), {
-      message: 'homebrew_exec_denied'
-    });
+    await rejects(() => bridge.inspect(), 'homebrew_exec_denied');
+    await rejects(
+      () => bridge.start({ operation: ID, candidate: SHA }),
+      'homebrew_exec_denied'
+    );
   }
   for (var errorReply of [
     { returnValue: false, errorText: 'Unknown method' },
@@ -200,9 +250,7 @@ async function rejects(fn) {
     }
   ]) {
     bridge = loadBridge(errorReply);
-    await assert.rejects(bridge.inspect(), {
-      message: 'installer_unavailable'
-    });
+    await rejects(() => bridge.inspect(), 'installer_unavailable');
   }
   bridge = loadBridge({ returnValue: true, stdout: '{}' });
   await rejects(function () {
@@ -236,6 +284,7 @@ async function rejects(fn) {
         return Promise.resolve({
           root: '/private/stage',
           driver: '/private/stage/root-updater/install_driver.py',
+          editionInspector: '/private/stage/edition/edition.py',
           cleanup: function () {
             cleanups++;
             return Promise.resolve();
@@ -244,7 +293,12 @@ async function rejects(fn) {
       },
       inspect: function (p) {
         inspects++;
-        assert.equal(p, bootstrap.PAYLOAD);
+        assert.equal(
+          p,
+          '/media/developer/apps/usr/palm/applications/' +
+            require('../app/appinfo.json').id +
+            '/payload'
+        );
         return Promise.resolve({
           python: '/usr/bin/python3',
           privateRuntimeRequired: false
@@ -263,6 +317,15 @@ async function rejects(fn) {
   for (var badArgs of [
     ['install', '--operation', ID, '--candidate', SHA, '--url', 'x'],
     ['status', '--operation', 'A'.repeat(32)],
+    [
+      'remove',
+      '--operation',
+      ID,
+      '--candidate',
+      SHA,
+      '--activate-after-install'
+    ],
+    ['install', '--operation', ID, '--resume', '--activate-after-install'],
     [
       'install',
       '--operation',
@@ -298,6 +361,20 @@ async function rejects(fn) {
     executed[2].args.indexOf('--payload') < 0,
     'resume uses original snapshot'
   );
+  await bootstrap.run(
+    [
+      'install',
+      '--operation',
+      ID,
+      '--candidate',
+      SHA,
+      '--activate-after-install'
+    ],
+    deps
+  );
+  assert(
+    executed[executed.length - 1].args.includes('--activate-after-install')
+  );
   var recoverySelections = [];
   deps.runtime.inspect = function (root, recovery) {
     recoverySelections.push(recovery);
@@ -308,6 +385,59 @@ async function rejects(fn) {
   await bootstrap.run(['remove', '--operation', ID, '--candidate', SHA], deps);
   await bootstrap.run(['inspect'], deps);
   assert.deepEqual(recoverySelections, [true, true, true, false]);
+  var originalExecute = deps.execute;
+  var fresh = {
+    state: 'fresh',
+    active_operation: null,
+    installation: { can_install: true, reason: 'no_installation' }
+  };
+  var probeCount = 0;
+  var verdict = 'root';
+  deps.execute = function (exe, args) {
+    if (args[3] === '/private/stage/edition/edition.py') {
+      probeCount++;
+      assert.deepEqual(args.slice(0, 3), ['-E', '-s', '-B']);
+      return Promise.resolve(JSON.stringify({ decision: verdict }));
+    }
+    return Promise.resolve(JSON.stringify(fresh));
+  };
+  for (var scenario of [
+    ['root', 'fresh', undefined],
+    ['external_root', 'external_setup', 'root_setup_on_computer'],
+    ['external_no_root', 'external_setup', 'no_root_setup_on_computer'],
+    ['unconfirmed', 'edition_unconfirmed', 'home_interfaces_unconfirmed'],
+    ['bad', 'edition_unconfirmed', 'home_interfaces_unconfirmed']
+  ]) {
+    verdict = scenario[0];
+    var inspection = await bootstrap.run(['inspect'], deps);
+    assert.equal(inspection.state, scenario[1]);
+    assert.equal(inspection.code, scenario[2]);
+    assert.equal(typeof inspection.payload_sha256, 'string');
+    if (verdict !== 'root') assert.equal(inspection.installation, undefined);
+  }
+  fresh.installation.clean_removal_verified = true;
+  assert.equal(
+    (await bootstrap.run(['inspect'], deps)).state,
+    'edition_unconfirmed'
+  );
+  fresh.installation.reason = 'verified_clean_removal';
+  fresh.installation.can_maintain = false;
+  verdict = 'external_no_root';
+  assert.equal(
+    (await bootstrap.run(['inspect'], deps)).code,
+    'no_root_setup_on_computer'
+  );
+  delete fresh.installation.clean_removal_verified;
+  fresh.installation.reason = 'no_installation';
+  fresh.active_operation = { state: 'pending' };
+  assert((await bootstrap.run(['inspect'], deps)).active_operation);
+  delete fresh.active_operation;
+  assert.equal(
+    (await bootstrap.run(['inspect'], deps)).state,
+    'edition_unconfirmed'
+  );
+  assert.equal(probeCount, 6);
+  deps.execute = originalExecute;
   deps.runtime.inspect = function () {
     return Promise.resolve({
       python: null,

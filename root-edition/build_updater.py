@@ -27,7 +27,7 @@ def build(output, legacy_node_prototype=False, legacy_node_beta=False):
     builder=importlib.util.module_from_spec(spec);spec.loader.exec_module(builder)
     code={'updater/'+name:source(ROOT/'updater'/name) for name in UPDATER_FILES}
     code.update({name:source(ROOT/name) for name in SUPPORT})
-    for name in ('coordinator_inventory.py','install_driver.py','install_device.py','cancel_install.py','cancel_provision.py','clean_removal.py','cleanup_tail.js'):
+    for name in ('coordinator_inventory.py','install_driver.py','install_device.py','personalize.py','cancel_install.py','cancel_provision.py','clean_removal.py','cleanup_tail.js'):
         code[name]=source(ROOT/name)
     code['system_setup.py']=source(ROOT.parent/'system-updater/setup.py')
     code['root_package.py']=source(ROOT.parent/'cytv/package.py')

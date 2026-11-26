@@ -16,6 +16,12 @@ from homebrew.payload import checked_bundle, inventory, read_file, validate_runt
 
 IDENTITIES={'root':'com.cleanyourtv.root.preview','root-updater':'com.cleanyourtv.root.updater','supervisor':'com.cleanyourtv.system.updater'}
 
+def verify_migration_module(components):
+    root = components['root'].get('personalize.py')
+    if root is None or components['root-updater'].get('personalize.py') != root:
+        raise ValueError('Mismatched component baseline: personalize.py')
+
+
 def build_payload(root_bundle, root_updater_bundle, supervisor_bundle, runtime_archive, output):
     output=Path(output).absolute()
     if '..' in output.parts or any(p.is_symlink() for p in (output,*output.parents)): raise ValueError('Unsafe output')
@@ -35,6 +41,7 @@ def build_payload(root_bundle, root_updater_bundle, supervisor_bundle, runtime_a
     for name in ('installation.py','observed_install.py','installer_status.py','startup_hook.py','package_data.py','package_identity.py','startup_guard.py','python_binding.py','python_boot.js'):
         hashes={components[key].get(name,{}).get('sha256') for key in inputs}
         if len(hashes)!=1 or None in hashes: raise ValueError('Mismatched component baseline: '+name)
+    verify_migration_module(components)
     for name in ('store.py','package.py'):
         hashes={components[key].get(('system_updater/support/' if key=='supervisor' else 'updater/')+name,{}).get('sha256') for key in inputs}
         if len(hashes)!=1 or None in hashes: raise ValueError('Mismatched component parser baseline: '+name)
@@ -66,6 +73,11 @@ def build_payload(root_bundle, root_updater_bundle, supervisor_bundle, runtime_a
         if not any(n=='LICENSE' or n.endswith('/LICENSE') for n in runtime_files): raise ValueError('Runtime license missing')
         (output/'runtime-provenance.json').write_text(json.dumps(provenance,sort_keys=True,separators=(',',':')))
         (output/'runtime.js').write_bytes(read_file(Path(__file__).with_name('runtime.js')))
+        edition = output/'edition'
+        (edition/'cytv').mkdir(parents=True)
+        (edition/'edition.py').write_bytes(read_file(Path(__file__).with_name('edition.py')))
+        for name in ('__init__.py', 'root_capabilities.py', 'checks.py', 'errors.py'):
+            (edition/'cytv'/name).write_bytes(read_file(project/'cytv'/name))
         bootstrap={'shell':python_runtime._SHELL,'smoke':python_runtime.SMOKE,'inspect_probe':python_runtime._PROBE_BODY.split('with tempfile.TemporaryDirectory')[0]+"\nprint('CYTV_SYSTEM_PYTHON')\n",'system_probe':python_runtime.SYSTEM_PROBE,'promote':python_runtime._PROMOTE}
         (output/'runtime-bootstrap.json').write_text(json.dumps(bootstrap,sort_keys=True,separators=(',',':')))
         manifest={'schema':1,'files':inventory(output),'components':components,'versions':versions,'packages':package_names,
@@ -77,9 +89,22 @@ def build_payload(root_bundle, root_updater_bundle, supervisor_bundle, runtime_a
     except BaseException:
         shutil.rmtree(output);raise
 
-APP_ID='com.cleanyourtv.installer'
+APP_ID='io.github.razdva122.cytvinstaller'
 APP_PREFIX='usr/palm/applications/'+APP_ID+'/'
 PACKAGE_INFO='usr/palm/packages/'+APP_ID+'/packageinfo.json'
+
+
+def installer_ipk(version, files):
+    """Build Homebrew control metadata from the same file bytes as the manifest."""
+    installed_size = sum(len(contents) for contents in files.values())
+    control = (f'Package: {APP_ID}\nVersion: {version}\nArchitecture: all\n'
+               f'Installed-Size: {installed_size}\n'
+               'Maintainer: Clean Your TV\nDescription: Clean Your TV\n')
+    return package.ar({
+        'debian-binary': b'2.0\n',
+        'control.tar.gz': package.tgz({'control': control.encode('utf-8')}),
+        'data.tar.gz': package.tgz(files),
+    })
 
 
 def installer_files(raw):
@@ -124,6 +149,9 @@ def installer_metadata(raw):
             control=archive.extractfile(entry).read().decode('utf-8')
     fields=dict(line.split(': ',1) for line in (control or '').splitlines() if ': ' in line)
     if fields.get('Package')!=APP_ID or fields.get('Version')!=info['version']:raise ValueError('Installer control mismatch')
+    sizes = [line for line in control.splitlines() if line.startswith('Installed-Size:')]
+    if sizes != [f'Installed-Size: {sum(map(len, files.values()))}']:
+        raise ValueError('Incorrect installer control Installed-Size')
     return info
 
 
@@ -135,6 +163,7 @@ def verify_offline(payload):
     if manifest.get('schema')!=1 or actual!=manifest.get('files'):raise ValueError('Offline inventory mismatch')
     for name in IDENTITIES:
         if checked_bundle(payload/name)!=manifest['components'][name]:raise ValueError('Offline component mismatch')
+    verify_migration_module(manifest['components'])
     binding=json.loads(read_file(payload/'runtime-binding.json'))
     records=validate_runtime(payload/'runtime.tar.gz',binding)
     if records!=manifest['runtime']['files'] or manifest['runtime']['archive_sha256']!=python_runtime.SHA256:raise ValueError('Offline runtime mismatch')
@@ -164,7 +193,7 @@ def build_installer(payload, output, version='0.0.0'):
     files[APP_PREFIX+'bootstrap.js']=read_file(source/'bootstrap.js').replace(b'__CYTV_PAYLOAD_SHA256__',hashlib.sha256(read_file(Path(payload)/'manifest.json')).hexdigest().encode())
     for name in (*manifest['files'],'manifest.json'):files[APP_PREFIX+'payload/'+name]=read_file(Path(payload)/name)
     files[PACKAGE_INFO]=(json.dumps({'id':APP_ID,'version':version,'app':APP_ID,'services':[]},sort_keys=True)+'\n').encode()
-    raw=package.ipk(APP_ID,version,files)
+    raw=installer_ipk(version,files)
     installer_metadata(raw)
     if installer_files(raw)!=files:raise ValueError('Final installer bytes differ')
     output.mkdir()

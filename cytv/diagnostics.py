@@ -116,6 +116,9 @@ def create_report(store, action, profile, phase, error=None, tv_info=None, *, ch
                                ('start-upload', 'log-read', 'start-unacknowledged'), None)
         if stage:
             report['helper_diagnostics'] = {'failure_stage': stage}
+            if hasattr(error, 'home_startup_observation'):
+                from .helper_startup import summary
+                report['helper_diagnostics']['startup'] = summary(error.home_startup_observation)
             if stage == 'start-upload':
                 report['helper_diagnostics']['state_directory'] = context.choice(
                     getattr(error, 'home_diagnostic_directory', None),
@@ -411,6 +414,12 @@ def collect_home_report(remote, store, profile, write, *, reconnect=None, ask=No
     except Exception as error:
         if failure_stage:
             error.home_diagnostic_stage = failure_stage
+        if failure_stage == 'start-unacknowledged' and remote is not None:
+            try:
+                from .helper_startup import observe_remote
+                error.home_startup_observation = observe_remote(remote)
+            except Exception:
+                pass  # Keep the original diagnostics failure if observation fails.
         if failure_stage == 'start-upload' and isinstance(error, TVCommandError):
             error.home_diagnostic_directory = _observe_home_diagnostic_directory(remote, directory)
         raise
