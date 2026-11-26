@@ -11,6 +11,8 @@ import tarfile
 ROOT_APP = 'com.cleanyourtv.root.preview'
 SCREENSAVER_APP = 'com.cleanyourtv.screensaver'
 SCREENSAVER_IPK = 'screensaver.ipk'
+TILE_APP = 'io.github.razdva122.cytvinstaller'
+TILE_FILES = {'root': 'tile-root.ipk', 'no-root': 'tile-no-root.ipk'}
 # webOS pkgverifier rejects epoch-zero tar dates. Fixed 2024-01-01 keeps builds reproducible.
 IPK_MTIME = 1704067200
 
@@ -213,6 +215,37 @@ def screensaver_payload(root, manifest):
     return raw, version
 
 
+def tile_payload(root, manifest, edition):
+    """Authenticate the edition-specific local entry before offering B setup."""
+    if 'single_tile' not in manifest:
+        return None
+    declared = manifest['single_tile']
+    if (edition not in TILE_FILES or not isinstance(declared, dict)
+            or set(declared) != {*TILE_FILES, 'version'}
+            or any(declared[k] != v for k, v in TILE_FILES.items())):
+        raise ValueError('Invalid single-tile payload declaration')
+    version = declared['version']
+    if not isinstance(version, str) or not re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+', version):
+        raise ValueError('Invalid single-tile version')
+    name = TILE_FILES[edition]
+    raw = _payload_file(Path(root), name).read_bytes()
+    if hashlib.sha256(raw).hexdigest() != manifest['files'].get(name):
+        raise ValueError('Single-tile package integrity mismatch')
+    files = data_files(raw)
+    prefix = 'usr/palm/applications/' + TILE_APP + '/'
+    meta = 'usr/palm/packages/' + TILE_APP + '/packageinfo.json'
+    if not all(path == meta or path.startswith(prefix) for path in files):
+        raise ValueError('Unexpected single-tile payload path')
+    app = json.loads(files.get(prefix + 'appinfo.json', b'null'))
+    if (not isinstance(app, dict) or app.get('type') != 'web' or app.get('id') != TILE_APP
+            or app.get('version') != version or app.get('visible') is False
+            or app.get('cytvTileProtocol') != 1 or app.get('cytvTileEdition') != edition
+            or json.loads(files.get(meta, b'null')) != {
+                'id': TILE_APP, 'app': TILE_APP, 'version': version, 'services': []}):
+        raise ValueError('Single-tile edition or package identity mismatch')
+    return raw, version
+
+
 def _payload_manifest(root):
     manifest = json.loads((root / 'payload.json').read_text())
     if not isinstance(manifest, dict) or not isinstance(manifest.get('files'), dict):
@@ -250,4 +283,6 @@ def verify_payload(root):
             if script.endswith('.sh') and b'\r' in data:
                 raise ValueError('POSIX script must use LF line endings: ' + name + ': ' + script)
     screensaver_payload(root, manifest)
+    for edition in TILE_FILES:
+        tile_payload(root, manifest, edition)
     return manifest

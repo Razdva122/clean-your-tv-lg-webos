@@ -959,6 +959,9 @@ printf '%s' "$cytv_state"
             if hashlib.sha256(data).hexdigest() != self.manifest['files'][name]:
                 raise ValueError('Embedded payload integrity mismatch')
             bundles[slot] = data
+        tile = package.tile_payload(self.payload, self.manifest, 'no-root')
+        if tile:
+            bundles[package.TILE_FILES['no-root']] = tile[0]
         companion = package.screensaver_payload(self.payload, self.manifest)
         if companion:
             bundles[package.SCREENSAVER_IPK] = companion[0]
@@ -974,6 +977,8 @@ printf '%s' "$cytv_state"
                               and pending.get('home_backend') != 'c1-native-gate')
         if pending and not replace_activation:
             raise UserError('Previous operation is unresolved. Run cytv status or cytv restore; do not retry installation.', reason_code='pending-operation')
+        if self.manifest.get('single_tile') and self.profile['edition'] == 'root':
+            self.require_fresh_single_tile()
         if reinstall and migrate:
             raise UserError('Reinstallation does not support --migrate-home. Omit it to read a fresh TV inventory before replacing Root.')
         if not migrate:
@@ -999,6 +1004,10 @@ printf '%s' "$cytv_state"
         helper = (self.payload / self.manifest['helper']).read_bytes()
         bundles = {'helper.ipk': helper, 'launcher.ipk': launcher}
         versions = {HOME: self.manifest['home_version'], HELPER: self.manifest['helper_version']}
+        tile = package.tile_payload(self.payload, self.manifest, 'no-root')
+        if tile:
+            self.require_fresh_single_tile()
+            bundles[package.TILE_FILES['no-root']], versions[package.TILE_APP] = tile
         if companion:
             archive, version = companion
             bundles[package.SCREENSAVER_IPK] = archive
@@ -1009,7 +1018,7 @@ printf '%s' "$cytv_state"
                 if '/state/' not in name:
                     expected[BASE.removesuffix('/usr/palm') + '/' + name] = hashlib.sha256(content).hexdigest()
         key_data = json.dumps({'key': ssap_key}).encode()
-        ids = [app['id'] for app in inventory['apps'] if app['id'] not in (HOME, HELPER, 'com.webos.app.home', package.ROOT_APP, package.SCREENSAVER_APP)]
+        ids = [app['id'] for app in inventory['apps'] if app['id'] not in (HOME, HELPER, 'com.webos.app.home', package.ROOT_APP, package.SCREENSAVER_APP, package.TILE_APP)]
         apps_data = json.dumps(ids).encode()
         expected[HELPER_STATE + '/ssap-key.json'] = hashlib.sha256(key_data).hexdigest()
         expected[HELPER_STATE + '/apps.json'] = hashlib.sha256(apps_data).hexdigest()
@@ -1021,6 +1030,30 @@ printf '%s' "$cytv_state"
         pending = no_root_observer.begin(self, 'install', bundles, versions, expected,
             {'ssap-key.json': key_data, 'apps.json': apps_data}, setup_activation=True, ramfs=ramfs)
         return self.continue_no_root(pending)
+
+    def single_tile_source(self):
+        """Classify only unambiguous No-root installations under this connection."""
+        if self.profile['edition'] == 'root':
+            raise UserError('Root setup from this single-tile installer is unavailable. Keep the current installation.',
+                            reason_code='unsupported-operation')
+        if self.store.pending(self.profile):
+            raise UserError('Previous operation is unresolved. Run cytv status or cytv restore; do not retry installation.',
+                            reason_code='pending-operation')
+        apps = {row['id']: row.get('version') for row in self.installed_apps()}
+        other_owners = (package.ROOT_APP, 'com.cleanyourtv.root.updater', 'com.cleanyourtv.system.updater', package.TILE_APP)
+        legacy = {app: apps[app] for app in (HOME, HELPER, 'com.cleanyourtv.updater') if app in apps}
+        if any(app in apps for app in other_owners) or (legacy and not {HOME, HELPER} <= legacy.keys()):
+            raise UserError('A Clean Your TV installation already exists. Keep the current installation and check its status.',
+                            reason_code='existing-installation')
+        for app in (*other_owners, HOME, HELPER, 'com.cleanyourtv.updater'):
+            if app not in legacy:
+                self.verify_absent(app)
+        return legacy
+
+    def require_fresh_single_tile(self):
+        if self.single_tile_source():
+            raise UserError('A Clean Your TV installation already exists. Keep the current installation and check its status.',
+                            reason_code='existing-installation')
 
     def continue_no_root(self, expected_pending):
         from .no_root_observer import continue_operation

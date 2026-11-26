@@ -578,7 +578,8 @@ def _run(args, ask, write, connect, secret, search, inspect, payload_root, check
         check_doctor_payload = root_doctor and (
             payload_root is not None or getattr(sys, 'frozen', False) or (payload / 'payload.json').exists()
         )
-        if not partial and (check_doctor_payload or (profile.get('root_variant') and args.command not in ('ssh-command', 'debloat')) or args.command in (
+        check_removal_payload = (args.command == 'uninstall' and (payload / 'payload.json').is_file())
+        if not partial and (check_doctor_payload or check_removal_payload or (profile.get('root_variant') and args.command not in ('ssh-command', 'debloat')) or args.command in (
                 'install', 'enable-system-updates', 'enable-firmware-access',
                 'disable-firmware-access', 'repair-root-recovery', 'replace-system-updater')):
             if root_doctor:
@@ -811,6 +812,9 @@ def _run(args, ask, write, connect, secret, search, inspect, payload_root, check
                 home_pending = False
                 resume = False
                 pending = store.pending(profile)
+                if manifest.get('single_tile') and (reinstall_step or profile.get('root_variant')):
+                    raise UserError('Continue the original setup using its matching installer.',
+                                    reason_code='pending-operation')
                 if reinstall_step and reinstall_step.stage in ('removing', 'verified'):
                     phase = 'remove-existing-root'
                     if reinstall_step.stage == 'verified':
@@ -824,6 +828,12 @@ def _run(args, ask, write, connect, secret, search, inspect, payload_root, check
                         raise UserError('The saved Root reinstallation changed. Return to the start screen and check again.')
                     pending = None
                 continue_after_cleanup = bool(reinstall_step and reinstall_step.stage == 'removed')
+                if manifest.get('single_tile') and not pending and not reinstall_step:
+                    # Both Android and desktop pass through this admission before
+                    # offering destructive reinstallation or initiating pairing.
+                    from .single_tile_setup import select_source
+                    if not select_source(installer, write, ask, non_interactive=args.non_interactive):
+                        return 130
                 replacing_activation = (profile['edition'] == 'root' and pending
                     and pending.get('action') == 'activate-root'
                     and not reinstall_step

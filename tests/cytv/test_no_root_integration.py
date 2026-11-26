@@ -103,7 +103,9 @@ sys.stdin.read()
             code=words[words.index('-e')+1]
             argument=words[-1]
             sources = (observer.PROGRAM, observer.ROOT_PROGRAM, observer.PACKAGED_STATE_PROGRAM)
-            is_observer = any(source in code or observer.companion_source(source) in code for source in sources)
+            is_observer = any(source in code or any(
+                observer.companion_source(source, screensaver=screensaver, tile=tile) in code
+                for screensaver, tile in ((True, False), (True, True), (False, True))) for source in sources)
             if is_observer or observer.STORAGE_SELECT in code:
                 request=json.loads(argument)
                 request['sender']=str(self.sender)
@@ -279,6 +281,46 @@ class OriginalOperationIntegration(unittest.TestCase):
         self.installer.manifest.update(screensaver='screensaver.ipk', screensaver_version='0.0.3')
         self.installer.manifest.setdefault('files', {})['screensaver.ipk'] = hashlib.sha256(companion).hexdigest()
         return app
+
+    def include_tile(self):
+        app = package.TILE_APP
+        edition = 'no-root'
+        version = '1.0.0'
+        name = package.TILE_FILES[edition]
+        prefix = 'usr/palm/applications/' + app + '/'
+        info = {'type': 'web', 'id': app, 'version': version, 'cytvTileProtocol': 1, 'cytvTileEdition': edition}
+        metadata = {'id': app, 'app': app, 'version': version, 'services': []}
+        raw = package.ipk(app, version, {prefix + 'appinfo.json': json.dumps(info).encode(),
+                              'usr/palm/packages/' + app + '/packageinfo.json': json.dumps(metadata).encode()})
+        (self.installer.payload / name).write_bytes(raw)
+        self.installer.manifest['single_tile'] = dict(package.TILE_FILES, version=version)
+        self.installer.manifest.setdefault('files', {})[name] = hashlib.sha256(raw).hexdigest()
+        return app
+
+    def test_single_tile_is_first_durable_slot_and_disconnect_does_not_resubmit(self):
+        tile = self.include_tile()
+        companion = self.include_screensaver_companion()
+        self.remote.cut = True
+        from cytv.errors import UserError
+        with self.assertRaises(UserError) as cut:
+            self.installer.install(self.inventory, 'secret')
+        self.assertEqual(cut.exception.no_root_observer, {'command': 'status', 'failure': 'transport-error'})
+        pending = self.store.pending(self.profile)
+        self.assertIsNotNone(pending)
+        self.assertEqual((self.root / 'requests').read_text().splitlines(), [tile])
+        self.installer.continue_no_root(pending)
+        self.assertIsNone(self.store.pending(self.profile))
+        self.assertEqual((self.root / 'requests').read_text().splitlines(),
+                         [tile, operations.HELPER, operations.HOME, companion])
+
+    def test_retained_homebrew_entry_is_never_overwritten_by_light_tile(self):
+        tile = self.include_tile()
+        (self.root / 'installed.json').write_text(json.dumps({tile: '0.0.0'}))
+        from cytv.errors import UserError
+        with self.assertRaisesRegex(UserError, 'already exists'):
+            self.installer.install(self.inventory, 'secret')
+        self.assertIsNone(self.store.pending(self.profile))
+        self.assertFalse((self.root / 'requests').exists())
 
     def test_screensaver_install_resumes_without_submitting_the_companion_twice(self):
         app = self.include_screensaver_companion()
