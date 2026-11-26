@@ -38,15 +38,16 @@ def select_source(installer, write, ask, *, non_interactive):
 
 
 def read_app_file(installer, app, name):
-    """Return the role of the fixed SDK package without exposing device data."""
+    """Read fixed SDK metadata or just the transport marker from Home's inventory."""
     from .operations import BASE
     from .operations import HOME, HELPER
-    if app not in (HOME, HELPER, package.TILE_APP) or name != 'appinfo.json':
+    marker = (app, name) == (HOME, 'apps.js')
+    if not marker and (app not in (HOME, HELPER, package.TILE_APP) or name != 'appinfo.json'):
         raise ValueError('Unexpected application file')
     path = BASE + '/applications/' + app + '/' + name
     script = r"""
 var fs=require('fs'),p=require('path'),c=require('constants');
-var file=process.argv[1],limit=Number(process.argv[2]);
+var file=process.argv[1],marker=p.basename(file)==='apps.js',limit=marker?16*1024*1024:65536;
 for(var parent=p.dirname(file);;parent=p.dirname(parent)){
   if(!fs.lstatSync(parent).isDirectory())throw Error('indirect directory');
   if(parent===p.dirname(parent))break;
@@ -55,15 +56,18 @@ var opened=fs.openSync(file,c.O_RDONLY|c.O_NOFOLLOW|c.O_NONBLOCK);
 try {
   var s=fs.fstatSync(opened);
   if(!s.isFile()||s.nlink!==1||s.size>limit)throw Error('invalid metadata');
-  var bytes=new Buffer(s.size),offset=0;
-  while(offset<s.size){var n=fs.readSync(opened,bytes,offset,s.size-offset,null);if(!n)throw Error('changed metadata');offset+=n;}
+  var size=marker?Math.min(128,s.size):s.size,bytes=new Buffer(size),offset=0;
+  while(offset<size){var n=fs.readSync(opened,bytes,offset,size-offset,s.size-size+offset);if(!n)throw Error('changed metadata');offset+=n;}
   var now=fs.lstatSync(file);
   if(now.ino!==s.ino||now.dev!==s.dev||now.size!==s.size)throw Error('changed entry');
-  process.stdout.write(bytes);
+  if(marker){
+    var match=/\nwindow\.CYTVNoRootConnection = "(developer-mode|root-ssh)";\n$/.exec(bytes.toString('utf8'));
+    process.stdout.write(match?match[1]:'unknown');
+  } else process.stdout.write(bytes);
 } finally {fs.closeSync(opened);}
 """
     return installer.remote.run('/usr/bin/node -e ' + shlex.quote(script) + ' ' +
-                                shlex.quote(path) + ' 65536')
+                                shlex.quote(path))
 
 
 def app_metadata(installer, app):
