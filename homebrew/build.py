@@ -30,6 +30,8 @@ def build_payload(root_bundle, root_updater_bundle, supervisor_bundle, runtime_a
         app=IDENTITIES[key]
         info=json.loads(files['usr/palm/applications/'+app+'/appinfo.json'])
         if info.get('id')!=app: raise ValueError('Component identity mismatch')
+        if key == 'root' and (info.get('cytvProductGeneration') != 2 or info.get('visible') is not False):
+            raise ValueError('Single-tile setup requires the hidden second-generation Root Home')
         versions[key]=info['version']
     # Shared protocol/binding sources must come from the same component baseline.
     for name in ('installation.py','observed_install.py','installer_status.py','startup_hook.py','package_data.py','package_identity.py','startup_guard.py','python_binding.py','python_boot.js'):
@@ -130,7 +132,7 @@ def installer_metadata(raw):
     """Read final installer metadata without relaxing component package parsers."""
     files=installer_files(raw)
     info=json.loads(files.get(APP_PREFIX+'appinfo.json',b'{}'))
-    if (info.get('id'),info.get('title'),info.get('type'),info.get('main'))!=(APP_ID,'CYTV Installer','web','index.html'):raise ValueError('Invalid installer identity')
+    if (info.get('id'),info.get('title'),info.get('type'),info.get('main'))!=(APP_ID,'Clean Your TV','web','index.html'):raise ValueError('Invalid installer identity')
     if not isinstance(info.get('version'),str) or not re.fullmatch(r'(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)',info['version']) or len(info['version'])>32:raise ValueError('Invalid installer version')
     control=None
     parts=package.read_ar(raw)
@@ -164,27 +166,59 @@ def verify_offline(payload):
     return manifest
 
 
-def build_installer(payload, output, version='0.0.0'):
+def tile_web_files(version, edition=None, versions=None):
+    from scripts.no_root_assets import updater_app_assets
     from scripts.tv_web_build import compile_web
-    if not isinstance(version,str) or len(version)>32 or not re.fullmatch(r'(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)',version):raise ValueError('Invalid installer version')
+    if not isinstance(version,str) or len(version)>32 or not re.fullmatch(r'(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)', version):
+        raise ValueError('Invalid tile version')
+    source = Path(__file__).resolve().parent
+    project = source.parent
+    app = updater_app_assets(project)
+    app['home-i18n.js'] = app.pop('i18n.js')
+    names = ('appinfo.json','index.html','tile.js','recovery.html','tile-recovery.js')
+    if edition is None:
+        names += ('setup.html','app.js','bridge.js','style.css','i18n.js','tile-config.js')
+    for name in names:
+        app[name] = read_file(source/'app'/name)
+    info = json.loads(app['appinfo.json'])
+    info['version'] = version
+    if edition is None:
+        app['candidate.js'] = ('window.InstallerCandidate='+json.dumps(versions,sort_keys=True)+';\n').encode()
+        app['setup.html'] = app['setup.html'].replace(b'<script src="i18n.js">',b'<script src="candidate.js"></script><script src="i18n.js">')
+    else:
+        if edition not in ('root','no-root'):
+            raise ValueError('Invalid tile edition')
+        info['cytvTileEdition'] = edition
+        app['tile-config.js'] = ('window.CYTVTileEdition = '+json.dumps(edition)+';\n').encode()
+    app['appinfo.json'] = (json.dumps(info,sort_keys=True)+'\n').encode()
+    app['icon.png'] = read_file(project/'launcher/brand-v2-icon.png')
+    files = {APP_PREFIX+name:raw for name,raw in compile_web(app).items()}
+    files[PACKAGE_INFO] = (json.dumps({'id':APP_ID,'version':version,'app':APP_ID,'services':[]},sort_keys=True)+'\n').encode()
+    return files
+
+
+def build_tile(output: Path, version: str, edition: str) -> Path:
+    """Build a host-installed daily tile, bound to the installed edition."""
+    if edition not in ('root','no-root'):
+        raise ValueError('Invalid tile edition')
+    output = Path(output)
+    files = tile_web_files(version,edition)
+    raw = installer_ipk(version,files)
+    if installer_files(raw) != files:
+        raise ValueError('Tile package readback mismatch')
+    with output.open('xb') as target:
+        target.write(raw)
+    return output
+
+
+def build_installer(payload, output, version='0.0.0'):
     output=Path(output).absolute()
     if '..' in output.parts or any(p.is_symlink() for p in (output,*output.parents)):raise ValueError('Unsafe output')
     manifest=verify_offline(payload)
-    source=Path(__file__).parent;project=source.parent
-    app={name:read_file(source/'app'/name) for name in ('appinfo.json','index.html','app.js','bridge.js','style.css','i18n.js')}
-    info=json.loads(app['appinfo.json']);info['version']=version
-    app['appinfo.json']=(json.dumps(info,sort_keys=True)+'\n').encode()
-    app['candidate.js']=('window.InstallerCandidate='+json.dumps(manifest['versions'],sort_keys=True)+';\n').encode()
-    app['index.html']=app['index.html'].replace(b'<script src="i18n.js">',b'<script src="candidate.js"></script><script src="i18n.js">')
-    # Existing installer icon provenance: assets/icons/README.md (installer.svg).
-    app['icon.png']=read_file(project/'assets/icons/installer-256.png')
-    for name in ('NotoSans.ttf','NotoSans-OFL.txt','NotoSansDevanagari.ttf','NotoSansDevanagari-OFL.txt','NotoSansKR.ttf','NotoSansKR-OFL.txt','NotoSansSC.ttf','NotoSansSC-OFL.txt','NotoSansTC.ttf','NotoSansTC-OFL.txt'):
-        app['fonts/'+name]=read_file(project/'launcher/fonts'/name)
-    # Backend and offline runtime are deliberately added AFTER web compilation.
-    files={APP_PREFIX+name:raw for name,raw in compile_web(app).items()}
+    source=Path(__file__).parent
+    files=tile_web_files(version, versions=manifest['versions'])
     files[APP_PREFIX+'bootstrap.js']=read_file(source/'bootstrap.js').replace(b'__CYTV_PAYLOAD_SHA256__',hashlib.sha256(read_file(Path(payload)/'manifest.json')).hexdigest().encode())
     for name in (*manifest['files'],'manifest.json'):files[APP_PREFIX+'payload/'+name]=read_file(Path(payload)/name)
-    files[PACKAGE_INFO]=(json.dumps({'id':APP_ID,'version':version,'app':APP_ID,'services':[]},sort_keys=True)+'\n').encode()
     raw=installer_ipk(version,files)
     installer_metadata(raw)
     if installer_files(raw)!=files:raise ValueError('Final installer bytes differ')

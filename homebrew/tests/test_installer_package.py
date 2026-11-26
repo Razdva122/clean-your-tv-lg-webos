@@ -18,7 +18,7 @@ class InstallerPackageTests(unittest.TestCase):
         self.assertEqual(build.installer_files(raw), files)
 
     def test_metadata_rejects_absent_or_incorrect_control_size(self):
-        info = {'id': build.APP_ID, 'version': '0.0.0', 'title': 'CYTV Installer',
+        info = {'id': build.APP_ID, 'version': '0.0.0', 'title': 'Clean Your TV',
                 'type': 'web', 'main': 'index.html'}
         parts = package.read_ar(self.raw({build.APP_PREFIX + 'appinfo.json': json.dumps(info).encode()}))
         with tarfile.open(fileobj=io.BytesIO(parts['control.tar.gz'])) as archive:
@@ -33,7 +33,7 @@ class InstallerPackageTests(unittest.TestCase):
 
     def test_dedicated_metadata_reader_accepts_only_fixed_installer_identity(self):
         prefix='usr/palm/applications/io.github.razdva122.cytvinstaller/'
-        raw=self.raw({prefix+'appinfo.json':json.dumps({'id':'io.github.razdva122.cytvinstaller','version':'0.0.0','title':'CYTV Installer','type':'web','main':'index.html'}).encode(),prefix+'payload/runtime.tar.gz':b'x'*(17*1024*1024)})
+        raw=self.raw({prefix+'appinfo.json':json.dumps({'id':'io.github.razdva122.cytvinstaller','version':'0.0.0','title':'Clean Your TV','type':'web','main':'index.html'}).encode(),prefix+'payload/runtime.tar.gz':b'x'*(17*1024*1024)})
         with self.assertRaises(ValueError):package.data_files(raw)
         self.assertEqual(build.installer_metadata(raw)['version'],'0.0.0')
         with self.assertRaises(ValueError):build.installer_metadata(self.raw({'usr/palm/applications/foreign/appinfo.json':b'{}'}))

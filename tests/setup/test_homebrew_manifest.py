@@ -38,7 +38,7 @@ def fixture(version='1.2.3'):
         records={m.name:{'size':m.size,'sha256':digest(archive.extractfile(m).read()),'mode':m.mode} for m in archive if m.isfile()}
     files['manifest.json']=encoded({'schema':1,'files':inventory(files),'components':components,'versions':versions,'packages':packages,
         'runtime':{'files':records,'archive_sha256':python_runtime.SHA256}})
-    app={'id':APP_ID,'title':'CYTV Installer','type':'web','main':'index.html','version':version}
+    app={'id':APP_ID,'title':'Clean Your TV','type':'web','main':'index.html','version':version}
     return {APP_PREFIX+'appinfo.json':encoded(app),**{APP_PREFIX+'payload/'+n:v for n,v in files.items()}}
 
 def ipk(files=None, version='1.2.3'): return installer_ipk(version,files or fixture(version))
@@ -68,7 +68,7 @@ class HomebrewManifest(HomebrewFixture, unittest.TestCase):
         with patch('subprocess.run',side_effect=AssertionError('must not execute')),patch('subprocess.check_output',side_effect=AssertionError('must not execute')):
             value=self.manifest()
         self.assertEqual({k:value[k] for k in ('id','title','type','version','rootRequired','ipkSize')},
-            {'id':APP_ID,'title':'CYTV Installer','type':'web','version':'1.2.3','rootRequired':True,'ipkSize':len(self.raw)})
+            {'id':APP_ID,'title':'Clean Your TV','type':'web','version':'1.2.3','rootRequired':True,'ipkSize':len(self.raw)})
         self.assertEqual(value['ipkHash']['sha256'],digest(self.raw))
     def test_malformed_identity_and_control_version_drift_fail(self):
         files=fixture(); info=json.loads(files[APP_PREFIX+'appinfo.json']);info['id']='foreign.app';files[APP_PREFIX+'appinfo.json']=encoded(info)

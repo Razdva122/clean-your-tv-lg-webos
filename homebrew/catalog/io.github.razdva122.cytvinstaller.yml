@@ -1,5 +1,5 @@
 # Unsubmitted review draft for the current Root-only candidate. See SUBMISSION.md.
-title: CYTV Installer
+title: Clean Your TV
 iconUri: https://raw.githubusercontent.com/Razdva122/clean-your-tv-lg-webos/main/assets/icons/installer-256.png
 manifestUrl: https://github.com/Razdva122/clean-your-tv-lg-webos/releases/latest/download/homebrew-manifest.json
 category: utility

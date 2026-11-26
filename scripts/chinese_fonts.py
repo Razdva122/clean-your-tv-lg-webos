@@ -98,7 +98,8 @@ def _catalogs(root):
         snapshot = {
             'launcher': LAUNCHER_FILES,
             'root-edition/ui': ROOT_UI_FILES,
-            'homebrew/app': ('appinfo.json', 'index.html', 'app.js', 'bridge.js', 'style.css', 'i18n.js'),
+            'homebrew/app': ('appinfo.json', 'index.html', 'tile-config.js', 'tile.js', 'recovery.html',
+                             'tile-recovery.js', 'setup.html', 'app.js', 'bridge.js', 'style.css', 'i18n.js'),
             'android/app/src/main/assets/ui': ('app.js', 'translations.js', 'index.html', 'style.css'),
         }
         names = {Path(directory) / name for directory, files in snapshot.items() for name in files}

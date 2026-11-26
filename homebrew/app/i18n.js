@@ -848,6 +848,77 @@
   Object.keys(rows).forEach(function (code) {
     rows[code] = rows[code].concat(homebrewDenied[code]);
   });
+  var tileCopy = {
+    'en': [
+      'Continue on a computer to switch this installation to one Clean Your TV tile.',
+      'Clean Your TV is ready.',
+      'Return to LG Home and remove Clean Your TV and its settings?'
+    ],
+    'ru': [
+      'Продолжите на компьютере, чтобы перейти на одну плитку Clean Your TV.',
+      'Clean Your TV готов к работе.',
+      'Вернуть LG Home и удалить Clean Your TV вместе с его настройками?'
+    ],
+    'cs': [
+      'Pro přechod na jednu dlaždici Clean Your TV pokračujte na počítači.',
+      'Clean Your TV je připraveno.',
+      'Vrátit LG Home a odebrat Clean Your TV včetně nastavení?'
+    ],
+    'de': [
+      'Setze die Umstellung auf eine Clean Your TV-Kachel am Computer fort.',
+      'Clean Your TV ist bereit.',
+      'LG Home wiederherstellen und Clean Your TV mit seinen Einstellungen entfernen?'
+    ],
+    'es': [
+      'Continúa en un ordenador para pasar a un solo icono de Clean Your TV.',
+      'Clean Your TV está listo.',
+      '¿Volver a LG Home y eliminar Clean Your TV con sus ajustes?'
+    ],
+    'pt-BR': [
+      'Continue no computador para usar apenas um ícone do Clean Your TV.',
+      'O Clean Your TV está pronto.',
+      'Voltar ao LG Home e remover o Clean Your TV e as configurações?'
+    ],
+    'fr': [
+      'Continuez sur un ordinateur pour passer à une seule tuile Clean Your TV.',
+      'Clean Your TV est prêt.',
+      'Revenir à LG Home et supprimer Clean Your TV et ses paramètres ?'
+    ],
+    'it': [
+      'Continua sul computer per passare a una sola icona Clean Your TV.',
+      'Clean Your TV è pronto.',
+      'Ripristinare LG Home e rimuovere Clean Your TV e le sue impostazioni?'
+    ],
+    'ko': [
+      'Clean Your TV 타일을 하나로 통합하려면 컴퓨터에서 계속하세요.',
+      'Clean Your TV가 준비되었습니다.',
+      'LG Home으로 돌아가서 Clean Your TV와 설정을 삭제할까요?'
+    ],
+    'hi': [
+      'Clean Your TV की एक टाइल पर जाने के लिए कंप्यूटर पर जारी रखें।',
+      'Clean Your TV तैयार है।',
+      'LG Home पर वापस जाएँ और Clean Your TV तथा उसकी सेटिंग हटाएँ?'
+    ],
+    'pl': [
+      'Aby przejść na jeden kafelek Clean Your TV, kontynuuj na komputerze.',
+      'Clean Your TV jest gotowy.',
+      'Przywrócić LG Home i usunąć Clean Your TV wraz z ustawieniami?'
+    ],
+    'zh-Hans': [
+      '请在电脑上继续，将现有安装切换为单个 Clean Your TV 图标。',
+      'Clean Your TV 已就绪。',
+      '返回 LG Home 并删除 Clean Your TV 及其设置？'
+    ],
+    'zh-Hant': [
+      '請在電腦上繼續，將現有安裝切換為單一 Clean Your TV 圖示。',
+      'Clean Your TV 已就緒。',
+      '返回 LG Home 並刪除 Clean Your TV 及其設定？'
+    ]
+  };
+  keys.push('existingSetup', 'readyHome', 'removeProductConfirm');
+  Object.keys(rows).forEach(function (code) {
+    rows[code] = rows[code].concat(tileCopy[code]);
+  });
   var names = {
     'en': 'English',
     'de': 'Deutsch',

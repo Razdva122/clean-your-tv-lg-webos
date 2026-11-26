@@ -24,6 +24,12 @@
     root.localStorage.setItem(key, id);
     operation = id;
   }
+  function dailyHome(edition) {
+    try {
+      if (edition) root.localStorage.setItem('cytv.tile.home', edition);
+      else root.localStorage.removeItem('cytv.tile.home');
+    } catch (_) {}
+  }
   function forgetOperation() {
     operation = null;
     try {
@@ -101,27 +107,10 @@
     render();
     focus(opener);
   }
-  function componentVersions(versions) {
-    var names = {
-      'root': 'Root Home',
-      'root-updater': 'Root Updater',
-      'supervisor': 'System Updater',
-      'system-updater': 'System Updater'
-    };
-    return Object.keys(names)
-      .filter(function (key) {
-        return typeof versions[key] === 'string';
-      })
-      .map(function (key) {
-        return names[key] + ' ' + versions[key];
-      })
-      .join(' · ');
-  }
   function versions() {
-    var v =
-      inspected && inspected.installation && inspected.installation.versions;
-    if (!v) return;
-    var node = element('p', componentVersions(v));
+    var v = inspected.installation.versions;
+    if (!v || typeof v.root !== 'string') return;
+    var node = element('p', 'Clean Your TV · ' + v.root);
     node.id = 'versions';
     content.appendChild(node);
   }
@@ -130,7 +119,16 @@
       result.state === 'fresh' &&
       result.installation &&
       result.installation.can_install === true &&
-      typeof result.installation.migrate_available === 'boolean'
+      result.installation.migrate_available === false
+    );
+  }
+  function managedHome(result) {
+    return (
+      result &&
+      result.state === 'installed' &&
+      result.installation &&
+      result.installation.can_maintain === true &&
+      result.installation.tile_protocol === 1
     );
   }
   function canPrepareForSetup() {
@@ -238,14 +236,10 @@
         },
         'primary'
       );
-    } else if (
-      state === 'installed' &&
-      inspected.installation &&
-      inspected.installation.can_maintain === true
-    ) {
+    } else if (managedHome(inspected)) {
       begin('installed', 'installed');
       versions();
-      paragraph(message || 'installedBody');
+      paragraph(message || 'readyHome');
       var maintenance = controls();
       button(
         maintenance,
@@ -264,32 +258,29 @@
         'remove',
         t('remove'),
         function () {
-          ask('remove', 'remove', 'removeConfirm');
+          ask('remove', 'remove', 'removeProductConfirm');
         },
         'danger'
       );
       paragraph('retained');
+    } else if (
+      (state === 'installed' &&
+        inspected.installation &&
+        inspected.installation.can_maintain === true) ||
+      (state === 'fresh' &&
+        inspected.installation &&
+        inspected.installation.migrate_available === true)
+    ) {
+      begin('existing-installation', 'recovery');
+      paragraph('existingSetup');
+      var existing = controls();
+      button(existing, 'refresh', t('refresh'), refresh);
+      button(existing, 'close', t('close'), close);
     } else if (canInstall(inspected) || canPrepareForSetup()) {
       var preparing = state === 'prerequisites';
       begin(preparing ? 'prerequisites' : 'review', 'review');
       paragraph(message || 'reviewBody');
       if (preparing) paragraph('runtimeBody');
-      var details = element('div', undefined, 'details');
-      var candidate = root.InstallerCandidate;
-      details.appendChild(
-        element(
-          'p',
-          candidate &&
-            candidate.root &&
-            candidate['root-updater'] &&
-            candidate.supervisor
-            ? componentVersions(candidate)
-            : t('components')
-        )
-      );
-      if (!preparing && inspected.installation.migrate_available)
-        details.appendChild(element('p', t('migrationAvailable')));
-      content.appendChild(details);
       var actions = controls();
       button(
         actions,
@@ -397,6 +388,7 @@
             ) {
               job = null;
               if (status.action === 'remove') {
+                dailyHome(null);
                 forgetOperation();
               }
             } else job = status;
@@ -406,6 +398,19 @@
       .then(
         function () {
           busy = false;
+          if (
+            !operation &&
+            !job &&
+            managedHome(inspected) &&
+            !inspected.active_operation
+          ) {
+            dailyHome('root');
+            if (root.location.hash === '#open') {
+              // Continue to the verified Home without changing button routing.
+              root.location.replace('index.html');
+              return;
+            }
+          }
           render();
           focus(typeof focusId === 'string' ? focusId : previous);
         },
@@ -483,7 +488,7 @@
     };
     if (action === 'remove') return bridge.remove(options);
     options.prepareSupervisor = true;
-    options.migrate = inspected.installation.migrate_available;
+    options.migrate = false;
     options.activateAfterInstall = true;
     return bridge.start(options);
   }
@@ -670,7 +675,17 @@
     clearTimeout(poll);
     if (!doc.hidden) refresh();
   });
-  doc.addEventListener('webOSRelaunch', refresh);
+  doc.addEventListener('webOSRelaunch', function () {
+    if (!operation && !busy && !confirmation) {
+      try {
+        if (root.localStorage.getItem('cytv.tile.home') === 'root') {
+          root.location.replace('index.html');
+          return;
+        }
+      } catch (_) {}
+    }
+    refresh();
+  });
   render();
   refresh();
 })(window);
