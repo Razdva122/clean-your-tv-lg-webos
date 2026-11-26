@@ -5,7 +5,7 @@ from pathlib import Path
 import tarfile
 import tempfile
 import unittest
-from homebrew.payload import checked_bundle, validate_runtime
+from homebrew.payload import checked_bundle, inventory, validate_runtime
 from cytv import python_runtime
 from cytv.errors import UserError
 from homebrew.build import build_payload
@@ -35,6 +35,27 @@ class PayloadTests(unittest.TestCase):
                 if change=='link': p.unlink();p.symlink_to('bundle.json')
                 with self.assertRaises(ValueError): checked_bundle(self.root)
                 if (self.root/'extra').exists(): (self.root/'extra').unlink()
+    def test_repackaging_rejects_self_consistent_missing_or_different_migration_module(self):
+        from homebrew.build import verify_offline
+        for mode in ('absent', 'different'):
+            with self.subTest(mode=mode), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp).resolve()
+                components = {}
+                for name in ('root', 'root-updater', 'supervisor'):
+                    directory = root/name
+                    directory.mkdir()
+                    files = {}
+                    if name == 'root' or (name == 'root-updater' and mode == 'different'):
+                        raw = name.encode()
+                        (directory/'personalize.py').write_bytes(raw)
+                        files['personalize.py'] = hashlib.sha256(raw).hexdigest()
+                    (directory/'bundle.json').write_text(json.dumps({'files':files}))
+                    components[name] = checked_bundle(directory)
+                manifest = dict(schema=1, files=inventory(root), components=components)
+                (root/'manifest.json').write_text(json.dumps(manifest))
+                with self.assertRaisesRegex(ValueError, 'Mismatched component baseline: personalize.py'):
+                    verify_offline(root)
+
     def test_unsafe_name(self):
         self.manifest['files']['../outside']='0'*64;self.save()
         with self.assertRaises(ValueError): checked_bundle(self.root)
