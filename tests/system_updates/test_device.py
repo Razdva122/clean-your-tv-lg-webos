@@ -216,6 +216,29 @@ class PreferenceTests(PreferenceBase):
     def test_mutable_restore_never_overwrites_newer_emergency_latch(self):
         latch=self.root/'installed/usr/palm/applications/com.local.nativehome/state/blocked';latch.parent.mkdir(parents=True);latch.write_bytes(b'older');self.device.snapshot_mutable();latch.write_bytes(b'new emergency');self.device.restore_mutable();self.assertEqual(latch.read_bytes(),b'new emergency')
 
+    def test_single_tile_keeps_stop_and_saver_preference_after_helper_replacement(self):
+        self.store.write('baseline', {'schema': 2})
+        helper = self.root/'installed/usr/palm/applications/com.local.nativehome'
+        state = helper/'state'
+        state.mkdir(parents=True)
+        token = b'I' + b'c'*32
+        (state/'stop-generation').write_bytes(token)
+        generation = self.device._resume_generation(helper)
+        self.assertIsNotNone(generation)
+        (state/'screensaver-preference.json').write_bytes(b'{"enabled":false}')
+        (state/'control.json').write_bytes(b'{"cmd":"stop"}')
+        self.device.snapshot_mutable()
+        (state/'stop-generation').write_bytes(b'S'+b'f'*32)
+        (state/'control.json').unlink()
+        (state/'screensaver-preference.json').unlink()
+        self.device.restore_mutable()
+        self.assertEqual((state/'control.json').read_bytes(), b'{"cmd":"stop"}')
+        self.assertEqual((state/'screensaver-preference.json').read_bytes(), b'{"enabled":false}')
+        self.assertEqual((state/'stop-generation').read_bytes(), b'S'+b'f'*32)
+        self.assertIsNone(self.device._resume_generation(helper))
+        (state/'control.json').unlink()
+        self.assertNotEqual(generation, self.device._resume_generation(helper))
+
 class InfraTransitionTests(DeviceBase):
     def test_local_resume_accepts_only_prior_or_candidate_file_hashes(self):
         old=tar({'runtime/cli.py':b'old'});new=tar({'runtime/cli.py':b'new'})

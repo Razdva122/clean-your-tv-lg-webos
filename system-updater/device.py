@@ -378,7 +378,12 @@ class Device:
                 out.write(raw);out.flush();os.fchmod(out.fileno(),mode)
                 if owner is not None:os.fchown(out.fileno(),*owner)
                 os.fsync(out.fileno())
-            os.replace(temporary,path);self.sync(path.parent)
+            if exclusive:
+                os.link(temporary,path)
+                temporary.unlink()
+            else:
+                os.replace(temporary,path)
+            self.sync(path.parent)
         finally:
             if temporary.exists():temporary.unlink()
 
@@ -688,7 +693,10 @@ class Device:
         app=self.installed_root/'usr/palm/applications/com.local.nativehome/state'
         service=self.installed_root/'usr/palm/services/com.local.nativehome.service/state'
         renewal=self.installed_root/'usr/palm/services/com.gathin.tvhome.renewal/state'
-        return [app/name for name in ('home-control.json','blocked','ssap-key.json','apps.json')]+[service/'startup-state.json']+[renewal/name for name in ('settings.json','renewal.json')]
+        names = ['home-control.json','blocked','ssap-key.json','apps.json']
+        if self.product_schema() == 2:
+            names += ['stop-generation', 'watchdog', 'control.json', 'screensaver-preference.json']
+        return [app/name for name in names]+[service/'startup-state.json']+[renewal/name for name in ('settings.json','renewal.json')]
 
     def snapshot_mutable(self):
         tx=self.store.read('transaction')
@@ -697,6 +705,10 @@ class Device:
         for path in self._mutable_paths():
             if not os.path.lexists(path):continue
             raw=safe_bytes(path,limit=1024*1024);info=path.stat()
+            if path.name == 'control.json':
+                control = json.loads(raw)
+                if not isinstance(control,dict) or control.get('cmd') != 'stop':
+                    continue  # Only persist Stop. Other commands are one-shot requests.
             directory=path.parent.stat()
             snapshot[str(path)]={'parent':{'uid':directory.st_uid,'gid':directory.st_gid,'mode':stat.S_IMODE(directory.st_mode)},'bytes':base64.b64encode(raw).decode(),'uid':info.st_uid,'gid':info.st_gid,'mode':stat.S_IMODE(info.st_mode)}
         self.store.write(name,snapshot)
@@ -715,7 +727,11 @@ class Device:
                 if not record_parent or not path.parent.parent.is_dir() or any(p.is_symlink() for p in (path.parent.parent,*path.parent.parent.parents)):raise ValueError('Missing mutable state directory metadata')
                 path.parent.mkdir(mode=0o700)
                 os.chown(path.parent,record_parent['uid'],record_parent['gid']);os.chmod(path.parent,record_parent['mode']);self.sync(path.parent.parent)
-            self.atomic(path,base64.b64decode(record['bytes'],validate=True),record['mode'],owner=(record['uid'],record['gid']))
+            try:
+                self.atomic(path,base64.b64decode(record['bytes'],validate=True),record['mode'],
+                            exclusive=True,owner=(record['uid'],record['gid']))
+            except FileExistsError:
+                continue  # A newer owner preference arrived after the initial check.
 
     def _helper_processes(self):
         home=str(self.installed_root/'usr/palm/applications/com.local.nativehome')
@@ -731,6 +747,25 @@ class Device:
     @staticmethod
     def boot():return Path('/proc/sys/kernel/random/boot_id').read_text().strip()
 
+    def _resume_generation(self, helper):
+        state = helper/'state'
+        if any(os.path.lexists(state/name) for name in ('blocked', 'watchdog')):
+            return None
+        if os.path.lexists(state/'control.json'):
+            control = json.loads(safe_bytes(state/'control.json',limit=4096))
+            if not isinstance(control,dict) or control.get('cmd') == 'stop':
+                return None
+        path = state/'stop-generation'
+        if not os.path.lexists(path):
+            return None
+        before = path.lstat()
+        token = safe_bytes(path,limit=33)
+        after = path.lstat()
+        if (not re.fullmatch(b'[IS][a-f0-9]{32}',token)
+                or (before.st_dev,before.st_ino) != (after.st_dev,after.st_ino)):
+            return None
+        return [after.st_dev, after.st_ino, digest(token)]
+
     def _suspend_helper(self,tx):
         ticket_name='helper-resume-'+self._cycle(tx);ticket=self.store.read(ticket_name)
         helper=self.installed_root/'usr/palm/applications/com.local.nativehome'
@@ -740,6 +775,8 @@ class Device:
             settings=None
             if os.path.lexists(pref):settings=digest(safe_bytes(pref,limit=65536))
             ticket={'boot':self.boot(),'preference':settings,'startupPreference':digest(safe_bytes(startup,limit=65536)) if os.path.lexists(startup) else None,'running':bool(self._helper_processes()),'blocked':os.path.lexists(blocked),'attempted':False,'suspended':False}
+            if self.product_schema() == 2:
+                ticket['stopGeneration'] = self._resume_generation(helper)
             if os.path.lexists(startup):
                 raw=safe_bytes(startup,limit=65536);info=startup.stat();parsed=json.loads(raw)
                 if not isinstance(parsed,dict) or type(parsed.get('enabled')) is not bool:raise ValueError('Invalid Helper startup preference')
@@ -875,6 +912,9 @@ class Device:
         startup=self.installed_root/'usr/palm/services/com.local.nativehome.service/state/startup-state.json'
         startup_current=digest(safe_bytes(startup,limit=65536)) if os.path.lexists(startup) else None
         startup_unchanged=startup_current==ticket.get('startupPreference')
+        if self.product_schema() == 2:
+            if not ticket.get('stopGeneration') or self._resume_generation(helper) != ticket['stopGeneration']:
+                startup_unchanged = False
         if startup_unchanged and not ticket.get('startupCancelled') and 'startupOriginal' in ticket and ticket['boot']==self.boot():
             record=ticket['startupOriginal'];self.atomic(startup,base64.b64decode(record['bytes'],validate=True),record['mode'],owner=(record['uid'],record['gid']))
             self.snapshot_mutable()
