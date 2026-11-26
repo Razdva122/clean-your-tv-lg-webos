@@ -40,6 +40,10 @@
   }
   function open(event) {
     clearTimeout(returned);
+    if (root.CYTVTileLaunch.openDebloat(event)) {
+      stopHandoff();
+      return;
+    }
     if (busy || doc.hidden) return;
     opened = true;
     var request = ++generation;
@@ -112,20 +116,23 @@
       finish(false);
     }
   }
+  function stopHandoff() {
+    clearTimeout(handoff);
+    clearTimeout(returned);
+    if (currentBridge) {
+      try {
+        currentBridge.cancel();
+      } catch (_) {}
+      currentBridge = null;
+    }
+    ++generation;
+    busy = false;
+  }
   // A failed/crashed foreground application can return us to view without a
   // relaunch. Show recovery instead of starting the same Home in a loop.
   doc.addEventListener('visibilitychange', function () {
     if (doc.hidden) {
-      clearTimeout(handoff);
-      clearTimeout(returned);
-      if (currentBridge) {
-        try {
-          currentBridge.cancel();
-        } catch (_) {}
-        currentBridge = null;
-      }
-      ++generation;
-      busy = false;
+      stopHandoff();
     } else if (!busy) {
       // webOS can deliver visibilitychange just before webOSRelaunch. Give
       // deliberate relaunch its own turn instead of opening two destinations.

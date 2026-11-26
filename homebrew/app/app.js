@@ -1,5 +1,6 @@
 (function (root) {
   'use strict';
+  if (root.CYTVTileLaunch.openDebloat()) return;
   var bridge = root.InstallerBridge,
     i18n = root.InstallerI18n,
     diagnostics = root.InstallerDiagnostics,
@@ -733,7 +734,8 @@
     clearTimeout(poll);
     if (!doc.hidden && !reportView) refresh();
   });
-  doc.addEventListener('webOSRelaunch', function () {
+  doc.addEventListener('webOSRelaunch', function (event) {
+    if (root.CYTVTileLaunch.openDebloat(event)) return;
     if (!operation && !busy && !confirmation) {
       try {
         if (root.localStorage.getItem('cytv.tile.home') === 'root') {

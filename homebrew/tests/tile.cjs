@@ -45,6 +45,8 @@ function fixture(
     return nextTimer;
   };
   const clearTimeout = (id) => timers.delete(id);
+  const launchFile = path.join(__dirname, '../app/tile-launch.js');
+  vm.runInNewContext(fs.readFileSync(launchFile, 'utf8'), { window });
   vm.runInNewContext(source, { window, setTimeout, clearTimeout });
   return {
     calls,
@@ -110,6 +112,38 @@ for (const [edition, target] of [
     assert.equal(hiddenLaunch.calls.length, 0);
   }
 }
+{
+  const initial = fixture(null, {}, null, { params: { cytvDebloat: true } });
+  assert.deepEqual(initial.pages, ['debloat.html']);
+  assert.equal(initial.calls.length, 0);
+  const returning = fixture(null, { 'cytv.tile.home': 'root' }, null);
+  returning.window.document.hidden = true;
+  returning.events.visibilitychange();
+  returning.events.webOSRelaunch({
+    detail: { params: JSON.stringify({ params: { cytvDebloat: true } }) }
+  });
+  assert.deepEqual(returning.pages, ['debloat.html']);
+  assert.equal(
+    returning.calls.length,
+    1,
+    'the root launch made before the handoff'
+  );
+  for (const params of [
+    { cytvDebloat: false },
+    { cytvDebloat: 1 },
+    { cytvDebloat: 'true' },
+    { cytvDebloat: true, path: 'unexpected' },
+    { cytvDebloat: { enabled: true } }
+  ]) {
+    const unsupported = fixture(null, {}, null, params);
+    assert.deepEqual(unsupported.pages, ['setup.html#open']);
+  }
+  for (const edition of ['root', 'no-root']) {
+    const thin = fixture(edition, {}, null, { cytvDebloat: true });
+    assert.deepEqual(thin.pages, []);
+    assert.equal(thin.calls.length, 1);
+  }
+}
 assert.deepStrictEqual(fixture(null).pages, ['setup.html#open']);
 assert.deepStrictEqual(
   fixture(null, {
@@ -152,6 +186,11 @@ assert.deepStrictEqual(timeout.pages, ['recovery.html']);
   };
   let external, saved, shown;
   const window = {
+    CYTVTileLaunch: {
+      openDebloat() {
+        return false;
+      }
+    },
     InstallerDiagnostics: {
       explain() {},
       load() {
@@ -204,6 +243,37 @@ assert.deepStrictEqual(timeout.pages, ['recovery.html']);
   assert.equal(shown.persisted, true);
   assert.equal(shown.value.source, 'recovery');
   assert.equal(shown.value.code, 'update_service_unavailable');
+}
+{
+  const pages = [],
+    events = {};
+  const window = {
+    CYTVTileEdition: null,
+    location: { replace: (page) => pages.push(page) },
+    document: {
+      addEventListener: (name, fn) => {
+        events[name] = fn;
+      }
+    }
+  };
+  for (const name of ['tile-launch.js', 'debloat-page.js'])
+    vm.runInNewContext(
+      fs.readFileSync(path.join(__dirname, '../app', name), 'utf8'),
+      { window }
+    );
+  assert.equal(window.CYTVDebloatPage, true);
+  events.webOSRelaunch({ detail: { params: { cytvDebloat: true } } });
+  assert.deepEqual(
+    pages,
+    [],
+    'a repeated explicit launch keeps the dedicated screen'
+  );
+  events.webOSRelaunch({ detail: { params: {} } });
+  assert.deepEqual(
+    pages,
+    ['index.html#openHome'],
+    'ordinary device launch opens Home'
+  );
 }
 console.log(
   'PASS edition-bound tile, daily launch, no Home activation, crash/timeout and explicit recovery'

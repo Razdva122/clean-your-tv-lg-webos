@@ -203,11 +203,15 @@ def tile_web_files(version, edition=None, versions=None):
     project = source.parent
     app = updater_app_assets(project)
     app['home-i18n.js'] = app.pop('i18n.js')
-    names = ('appinfo.json','index.html','tile.js','recovery.html','tile-recovery.js',
+    names = ('appinfo.json','index.html','tile.js','tile-launch.js','recovery.html','tile-recovery.js',
              'diagnostics.js','diagnostic-locales.js','diagnostic.css')
     app['wallpaper-qr.js'] = read_file(project/'launcher/wallpaper-qr.js')
     if edition is None:
-        names += ('setup.html','app.js','bridge.js','style.css','i18n.js','tile-config.js')
+        names += ('setup.html','app.js','bridge.js','style.css','i18n.js','tile-config.js',
+                  'debloat.html','debloat-page.js')
+        root_ui = project/'root-edition/ui'
+        for name in ('root-post-install.js','root-post-install-locales.js','root-settings.css'):
+            app[name] = read_file(root_ui/name)
     for name in names:
         app[name] = read_file(source/'app'/name)
     info = json.loads(app['appinfo.json'])

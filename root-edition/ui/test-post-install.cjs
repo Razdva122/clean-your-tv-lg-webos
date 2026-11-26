@@ -43,6 +43,10 @@ const { chromium } = require('playwright');
           this.cancel = function () {};
           this.call = (uri, raw) => {
             window.commands.push({ uri, raw: JSON.parse(raw) });
+            if (uri === 'luna://com.webos.applicationManager/launch') {
+              this.onservicecallback('{"returnValue":true}');
+              return;
+            }
             const result = / debloat-status$/.test(JSON.parse(raw).command)
               ? {
                   settings: {
@@ -78,6 +82,19 @@ const { chromium } = require('playwright');
       );
       await page.keyboard.press('Escape');
       await page.getByRole('button', { name: 'Adjust LG settings' }).click();
+      assert.deepEqual(await page.evaluate(() => window.commands), [
+        {
+          uri: 'luna://com.webos.applicationManager/launch',
+          raw: {
+            id: 'io.github.razdva122.cytvinstaller',
+            params: { cytvDebloat: true }
+          }
+        }
+      ]);
+      await page.evaluate(() => {
+        window.CYTVDebloatPage = true;
+        window.RootPostInstall.openDebloat();
+      });
       const apply = page.getByRole('button', {
         name: 'Apply selected settings'
       });
@@ -95,6 +112,14 @@ const { chromium } = require('playwright');
       assert.equal(last.uri, 'luna://org.webosbrew.hbchannel.service/exec');
       assert.match(last.raw.command, / debloat --settings homePromotion$/);
       await page.keyboard.press('Escape');
+      assert.deepEqual(await page.evaluate(() => window.commands.at(-1)), {
+        uri: 'luna://com.webos.applicationManager/launch',
+        raw: { id: 'com.cleanyourtv.root.preview' }
+      });
+      await page.evaluate(() => {
+        window.CYTVDebloatPage = false;
+        window.RootPostInstall.open();
+      });
       await page
         .getByRole('button', { name: 'Open Home', exact: true })
         .click();

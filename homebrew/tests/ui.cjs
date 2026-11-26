@@ -697,6 +697,19 @@ const SOURCE_APP = path.resolve(__dirname, '../app'),
     );
     assert.equal(await p.locator('#diagnostic-json').textContent(), reportText);
     await f.context.close();
+    f = await fixture({ state: 'fresh' });
+    p = f.page;
+    await p.waitForSelector('[data-screen="review"]');
+    await p.evaluate(() =>
+      document.dispatchEvent(
+        new CustomEvent('webOSRelaunch', {
+          detail: { params: { cytvDebloat: true } }
+        })
+      )
+    );
+    await p.waitForURL('**/debloat.html');
+    await p.waitForFunction(() => window.CYTVDebloatPage === true);
+    await f.context.close();
     for (const savedOperation of [false, true]) {
       f = await fixture({ execDenied: true, savedOperation });
       p = f.page;

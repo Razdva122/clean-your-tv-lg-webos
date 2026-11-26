@@ -71,6 +71,8 @@
     }
   }
   function request(action, keys) {
+    if (root.CYTVDebloatPage !== true)
+      return Promise.reject(new Error('Open the installer settings'));
     var settingsAction = action === 'debloat' || action === 'debloat-restore';
     if (
       (!settingsAction && action !== 'debloat-status') ||
@@ -124,6 +126,54 @@
         finish();
       }
     });
+  }
+  function launchApplication(destination) {
+    if (busy) return;
+    var returnHome = destination === 'home';
+    busy = true;
+    notice = '';
+    render();
+    function finish() {
+      if (done) return;
+      done = true;
+      clearTimeout(timeout);
+      if (bridge) {
+        try {
+          bridge.cancel();
+        } catch (_) {}
+      }
+      busy = false;
+      if (!accepted)
+        notice =
+          'Homebrew could not access LG Settings. Check status and try again.';
+      render();
+    }
+    var bridge,
+      done = false,
+      accepted = false,
+      timeout = setTimeout(finish, 8000);
+    try {
+      bridge = new root.PalmServiceBridge();
+      bridge.onservicecallback = function (raw) {
+        try {
+          accepted = JSON.parse(raw).returnValue === true;
+        } catch (_) {}
+        finish();
+      };
+      bridge.call(
+        'luna://com.webos.applicationManager/launch',
+        JSON.stringify(
+          returnHome
+            ? { id: 'com.cleanyourtv.root.preview' }
+            : {
+                id: 'io.github.razdva122.cytvinstaller',
+                params: { cytvDebloat: true }
+              }
+        )
+      );
+    } catch (_) {
+      finish();
+    }
   }
   function focusFirst() {
     var first = card.querySelector('button:not(:disabled)');
@@ -290,7 +340,9 @@
       });
     update();
     button(actions, 'Check status', readSettings).disabled = busy;
-    button(actions, 'Back', main).disabled = busy;
+    button(actions, 'Back', function () {
+      launchApplication('home');
+    }).disabled = busy;
   }
   function render() {
     card.textContent = '';
@@ -326,7 +378,9 @@
         button(actions, 'Back', main).disabled = busy;
       } else {
         button(actions, 'Themes', showThemes);
-        button(actions, 'Adjust LG settings', readSettings);
+        button(actions, 'Adjust LG settings', function () {
+          launchApplication('debloat');
+        }).disabled = busy;
         button(actions, 'Open Home', close);
       }
     }
@@ -343,7 +397,8 @@
     event.stopImmediatePropagation();
     if (busy) return;
     if (event.keyCode === 27 || event.keyCode === 461) {
-      if (view === 'main') close();
+      if (view === 'debloat') launchApplication('home');
+      else if (view === 'main') close();
       else main();
     } else if (event.keyCode === 13) {
       if (!event.repeat && card.contains(doc.activeElement))
@@ -365,14 +420,17 @@
         ].focus();
     }
   }
-  function open() {
+  function open(debloat) {
     if (!panel) {
       panel = node(doc.body, 'section');
       panel.id = 'cytvPostInstall';
       panel.className = 'root-settings cytv-post-install';
       panel.setAttribute('role', 'dialog');
       panel.setAttribute('aria-modal', 'true');
-      panel.setAttribute('aria-label', t('Set up your TV'));
+      panel.setAttribute(
+        'aria-label',
+        t(debloat ? 'Adjust LG settings' : 'Set up your TV')
+      );
       card = node(panel, 'div');
       card.className = 'root-settings-card';
       doc.addEventListener('keydown', keydown, true);
@@ -380,7 +438,8 @@
     if (panel.hidden || !view) previous = doc.activeElement;
     panel.hidden = false;
     if (root.ThemeRuntime) root.ThemeRuntime.suspend('post-install');
-    main();
+    if (debloat) readSettings();
+    else main();
   }
   function launch(event) {
     var id;
@@ -411,10 +470,17 @@
       return !!panel && !panel.hidden;
     },
     open: function () {
-      if (available()) open();
+      if (available() && root.CYTVDebloatPage !== true) open(false);
+    },
+    openDebloat: function () {
+      if (root.CYTVDebloatPage === true) open(true);
     }
   };
   root.HomeI18n.ready(function () {
+    if (root.CYTVDebloatPage === true) {
+      root.RootPostInstall.openDebloat();
+      return;
+    }
     doc.addEventListener('webOSRelaunch', launch);
     launch();
   });
