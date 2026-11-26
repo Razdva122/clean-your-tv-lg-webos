@@ -24,6 +24,8 @@ def fixture(version='1.2.3'):
         name=key+'.ipk'; version_value='2.3.4'
         content={name: package.ipk(app,version_value,{'usr/palm/applications/'+app+'/appinfo.json':encoded({'id':app,'version':version_value})}),
                  'must-not-run.py': b'raise RuntimeError("artifact code executed")'}
+        if key in ('root', 'root-updater'):
+            content['personalize.py'] = b'# Shared Home settings reader fixture.\n'
         content['bundle.json']=encoded({'files':{n:digest(v) for n,v in content.items()}})
         components[key]=inventory(content); versions[key]=version_value; packages[key]=name
         files.update({key+'/'+n:v for n,v in content.items()})
