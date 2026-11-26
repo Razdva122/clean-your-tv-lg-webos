@@ -51,6 +51,25 @@ class RemovalTests(unittest.TestCase):
         (state/'startup-hook.json').write_text(json.dumps(dict(version=2,path=str(hook),target=str(target),owner_app=app,target_sha256=hashlib.sha256(target.read_bytes()).hexdigest())))
         return args,target
 
+    def test_single_tile_status_authenticates_the_two_component_origin(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            args=self.fixture(Path(tmp).resolve());state=args['state']
+            code=state/'code';marker='system_updater/product-generation.json'
+            (code/'system_updater').mkdir()
+            (code/marker).write_bytes(b'2\n');(code/'root-provision.py').write_bytes(b'provision')
+            inventory={path.relative_to(code).as_posix():digest(path.read_bytes()) for path in code.rglob('*') if path.is_file()}
+            (state/'infrastructure.json').write_text(json.dumps({'schema':1,'code':inventory}))
+            bundle={'product_schema':2,'files':dict(inventory,**{'setup-system-updater.py':'c'*64,'system-updater.ipk':'d'*64})}
+            (state/'bootstrap-bundle.json').write_text(json.dumps({'bundle':bundle}))
+            baseline=json.loads((state/'baseline.json').read_text());baseline.update(schema=2,components=baseline['components'][:2])
+            (state/'baseline.json').write_text(json.dumps(baseline))
+            report=namespace['operate']('status',**args)
+            self.assertTrue(report['ownership_verified']);self.assertEqual(report['product_schema'],2)
+            self.assertEqual(report['bootstrap_digest'],digest(json.dumps(bundle,sort_keys=True,separators=(',',':')).encode()))
+            bundle['files'][marker]='a'*64
+            (state/'bootstrap-bundle.json').write_text(json.dumps({'bundle':bundle}))
+            with self.assertRaisesRegex(ValueError,'origin'):namespace['operate']('status',**args)
+
     def test_owned_link_survives_interrupted_disable_and_missing_target(self):
         with tempfile.TemporaryDirectory() as tmp:
             args,target=self.link_fixture(Path(tmp).resolve())

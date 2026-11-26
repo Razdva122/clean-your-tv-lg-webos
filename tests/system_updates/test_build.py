@@ -221,6 +221,19 @@ class BuildTests(unittest.TestCase):
                 self.assertEqual(calls,[('luna://com.webos.applicationManager/running',{}),
                                         ('luna://com.webos.applicationManager/closeByAppId',{'id':app})])
 
+    def test_single_tile_no_root_setup_preserves_other_foreground_and_stopped_home(self):
+        setup=load('setup');app=setup.APPS['home']
+        for running,front,reopen in [(True,app,True),(True,'media',False),(False,'media',False)]:
+            calls=[]
+            def rpc(uri,payload):
+                action=uri.rsplit('/',1)[-1];calls.append(action)
+                if action=='running':return {'returnValue':True,'running':[{'id':app}] if running else []}
+                if action=='getForegroundAppInfo':return {'returnValue':True,'appId':front}
+                return {'returnValue':True}
+            setup.restart_registered_launcher('no-root',rpc,single_tile=True)
+            self.assertEqual('closeByAppId' in calls,running)
+            self.assertEqual('launch' in calls,reopen)
+
     def test_registration_refresh_restarts_no_root_launcher(self):
         setup=load('setup');calls=[];app='com.gathin.tvhome'
         def rpc(uri,payload):
@@ -408,7 +421,7 @@ class BuildTests(unittest.TestCase):
                         with patch.object(setup.Path,'is_file',return_value=True),patch.object(setup.subprocess,'run') as scan,patch.object(setup,'restart_registered_launcher') as restart:
                             result=setup.resume(bundle,state,installed,base,hook)
                         self.assertEqual(scan.call_args.args[0][-1],'scan-services')
-                        restart.assert_called_once_with('no-root')
+                        restart.assert_called_once_with('no-root',single_tile=False)
                 self.assertTrue(owner.status()['terminal'])
                 own=json.loads((state/'installed-package.json').read_text())
                 self.assertEqual((state/'cache'/(own['package']['sha256']+'.ipk')).read_bytes(),(bundle/'system-updater.ipk').read_bytes())

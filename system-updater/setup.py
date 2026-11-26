@@ -216,6 +216,10 @@ def require_transition_home(installed,edition,schema=1,root=Path('/var/lib/clean
         info=identity(app,installed=installed,uid=os.geteuid())
     else:info=json.loads(safe(Path(installed)/'usr/palm/applications'/app/'appinfo.json'))
     require_generation(info,schema)
+    if edition=='no-root' and schema==2:
+        marker = b'window.CYTVNoRootConnection = "root-ssh";\n'
+        if not safe(Path(installed)/'usr/palm/applications'/app/'apps.js').endswith(marker):
+            raise ValueError('Use the No-root installation set up with the root SSH connection')
     if info.get('id')!=app or type(info.get('systemUpdateProtocol')) is not int or info['systemUpdateProtocol']!=1:raise ValueError('Install the transition Home from computer before enabling System Updates')
     return original
 
@@ -475,14 +479,14 @@ def provision(bundle,baseline,state=STATE,installed=INSTALLED,base=BASE,hook=HOO
     return finish_registration(bundle,baseline,state,installed,base,hook,refresh)
 
 
-def restart_registered_launcher(edition,rpc=None):
+def restart_registered_launcher(edition,rpc=None,*,single_tile=False):
     """Close the stale LS2 client and let normal Home routing reopen Root."""
     if edition not in ('root','no-root'):raise ValueError('Unknown launcher edition')
     if rpc is None:
         from system_updater.support.luna import call
         rpc=call
     app=APPS['root' if edition=='root' else 'home']
-    if edition=='root':
+    if edition=='root' or single_tile:
         # A fresh TV-side install has never opened Root Home. Some SAMs reject
         # closing a stopped app without identifying it in the error response.
         try:inventory=rpc('luna://com.webos.applicationManager/running',{})
@@ -492,7 +496,14 @@ def restart_registered_launcher(edition,rpc=None):
                 and all(isinstance(row,dict) and isinstance(row.get('id'),str) and row['id'] for row in running)
                 and all(row['id']!=app for row in running)):
             return
-    methods=('closeByAppId',) if edition=='root' else ('closeByAppId','launch')
+    reopen = edition=='no-root'
+    if reopen and single_tile:
+        # Registration must not move a stopped Helper or another app into Home.
+        # Drop a background client's old grant; it reconnects on its next launch.
+        try:foreground=rpc('luna://com.webos.applicationManager/getForegroundAppInfo',{})
+        except (RuntimeError,TimeoutError,ValueError):foreground=None
+        reopen=isinstance(foreground,dict) and foreground.get('returnValue') is True and foreground.get('appId')==app
+    methods=('closeByAppId','launch') if reopen else ('closeByAppId',)
     for method in methods:
         try:reply=rpc('luna://com.webos.applicationManager/'+method,{'id':app})
         except RuntimeError as error:
@@ -546,7 +557,7 @@ def finish_registration(bundle,baseline,state=STATE,installed=INSTALLED,base=BAS
         executable=next((p for p in (Path('/usr/bin/ls-control'),Path('/usr/sbin/ls-control')) if p.is_file()),None)
         if executable is None:raise ValueError('ls-control unavailable')
         subprocess.run([str(executable),'scan-services'],check=True,timeout=15,stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-        restart_registered_launcher(current['edition'])
+        restart_registered_launcher(current['edition'],single_tile=current['schema']==2)
     else:refresh()
     require_legacy_idle()
     for item in current['components']:

@@ -167,6 +167,60 @@ class SystemBootstrapTests(unittest.TestCase):
             self.installer(remote).enable_system_updates()
         self.assertFalse(remote.calls)
 
+    def test_single_tile_rooted_no_root_resumes_only_unchanged_original(self):
+        from unittest.mock import patch
+        self.profile=state.target('192.0.2.10','no-root',connection='root-ssh')
+        metadata=self.payload/'system-updater/bundle.json'
+        fields=json.loads(metadata.read_text());fields['product_schema']=2
+        metadata.write_text(json.dumps(fields))
+        remote=Remote(confirmed=False)
+        inst=self.installer(remote);inst.manifest['single_tile']={'version':'2.0.0'}
+        with self.assertRaisesRegex(UserError,'confirmed'):inst.enable_system_updates()
+        prior=self.store.pending(self.profile)
+        self.assertEqual(prior['bootstrap_digest'],hashlib.sha256(json.dumps(fields,sort_keys=True,separators=(',',':')).encode()).hexdigest())
+        before=len(remote.calls)
+        original=remote.run
+        def continued(command,**options):
+            if 'setup-system-updater.py' in command:
+                self.assertIn('--resume',command)
+                self.assertIn(prior['support_upload'],command)
+                if not remote.confirmed:raise RuntimeError('unknown submission outcome')
+                return '{"installed":true,"edition":"no-root"}'
+            return original(command,**options)
+        remote.run=continued
+        with patch('cytv.system_bootstrap.retained_stage',return_value=prior['support_upload']):
+            with self.assertRaisesRegex(RuntimeError,'unknown submission'):
+                inst.enable_system_updates()
+            self.assertEqual(self.store.pending(self.profile),prior)
+            metadata.write_text(json.dumps(dict(fields,engine_version='2.0.1')))
+            with self.assertRaisesRegex(UserError,'integrity'):inst.enable_system_updates()
+            metadata.write_text(json.dumps(fields))
+            remote.confirmed=True
+            self.assertTrue(inst.enable_system_updates()['installed'])
+        self.assertIsNone(self.store.pending(self.profile))
+        self.assertFalse(any(call[0]=='upload' for call in remote.calls[before:]))
+
+    def test_reused_root_upload_rejects_changed_bytes_extra_files_and_links(self):
+        import subprocess,sys
+        from cytv.system_bootstrap import VERIFY
+        # Non-root host fixture substitutes only the TV UID and parent chain.
+        verify=VERIFY.replace('os.geteuid()!=0','False').replace('info.st_uid!=0','info.st_uid!=os.geteuid()')
+        verify=verify.replace('reversed(stage.parents)','[stage.parent]')
+        stage=self.path/'retained';stage.mkdir(mode=0o700)
+        child=stage/'code';child.mkdir(mode=0o700)
+        file=child/'setup';file.write_bytes(b'expected')
+        expected=json.dumps({'code/setup':[8,hashlib.sha256(b'expected').hexdigest()]}).encode()
+        def check():return subprocess.run([sys.executable,'-I','-B','-c',verify,str(stage)],input=expected,capture_output=True)
+        self.assertEqual(check().stdout,b'verified\n')
+        file.write_bytes(b'modified')
+        self.assertNotEqual(check().returncode,0)
+        file.write_bytes(b'expected');(stage/'extra').mkdir(mode=0o700)
+        self.assertNotEqual(check().returncode,0)
+        (stage/'extra').rmdir();(stage/'link').symlink_to(file)
+        self.assertNotEqual(check().returncode,0)
+        (stage/'link').unlink();file.unlink();child.rmdir();stage.rmdir()
+        self.assertEqual(check().stdout,b'absent\n')
+
     def test_unconfirmed_bootstrap_retains_receipt_and_blocks_retry(self):
         remote=Remote(confirmed=False)
         with self.assertRaisesRegex(UserError,'confirmed'):self.installer(remote).enable_system_updates()
@@ -186,6 +240,21 @@ class SystemBootstrapTests(unittest.TestCase):
                 self.assertEqual(result['reconciled'],'system-updater-bootstrap-verified' if complete else None)
                 self.assertEqual(self.store.pending(self.profile) is None,complete)
                 if not complete:self.store.finish(self.profile)
+
+    def test_single_tile_host_reconciles_only_its_own_verified_bootstrap(self):
+        from unittest.mock import Mock
+        self.profile=state.target('192.0.2.10','no-root',connection='root-ssh')
+        inst=self.installer(Remote())
+        self.store.begin(self.profile,'enable-system-updates',stage='setup',bootstrap_digest='b'*64)
+        report=dict(present=True,bootstrap_complete=True,disabled=False,ownership_verified=True,
+                    edition='no-root',product_schema=2,bootstrap_digest='b'*64)
+        for bad in (dict(report,edition='root'),dict(report,bootstrap_digest='e'*64),dict(report,product_schema=1)):
+            inst.system_updater_cleanup=Mock(return_value=bad)
+            self.assertIsNone(inst.status()['reconciled'])
+            self.assertTrue(self.store.pending(self.profile))
+        inst.system_updater_cleanup=Mock(return_value=report)
+        self.assertEqual(inst.status()['reconciled'],'system-updater-bootstrap-verified')
+        self.assertIsNone(self.store.pending(self.profile))
 
     def test_verified_not_started_bootstrap_releases_local_receipt(self):
         from unittest.mock import MagicMock

@@ -106,11 +106,18 @@ class SingleTileOriginTests(unittest.TestCase):
                            'usr/palm/services/'+service+'/service.js':b'fixture',
                            'usr/palm/packages/'+app+'/packageinfo.json':json.dumps(
                                dict(id=app,app=app,version=version,services=[service])).encode()}
+                    if app=='com.gathin.tvhome' and version=='1.0.0':
+                        files[prefix+'apps.js']=b'window.CYTVNoRootConnection = "root-ssh";\n'
                     raw=package.ipk(app,version,files,architecture='arm' if filename=='helper.ipk' else 'all')
                     if version=='1.1.0':(candidate/filename).write_bytes(raw)
                     else:
                         for name,data in files.items():
                             dest=installed/name;dest.parent.mkdir(parents=True,exist_ok=True);dest.write_bytes(data)
+            mode=installed/'usr/palm/applications/com.gathin.tvhome/apps.js'
+            mode.write_bytes(b'window.CYTVNoRootConnection = "developer-mode";\n')
+            with self.assertRaisesRegex(ValueError,'root SSH connection'):
+                setup.snapshot(system,'no-root',top/'wrong-mode',installed=installed)
+            mode.write_bytes(b'window.CYTVNoRootConnection = "root-ssh";\n')
             baseline_path=setup.snapshot(system,'no-root',top/'captured',installed=installed)
             baseline=setup.verify_baseline(baseline_path,system)
             store=Store(top/'active',uid=os.geteuid())

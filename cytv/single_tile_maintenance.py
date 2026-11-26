@@ -15,6 +15,10 @@ def admission(installer, apps):
     helper = app_metadata(installer, HELPER)
     if all('cytvProductGeneration' not in info for info in (home, helper)) and package.TILE_APP not in apps:
         return None
+    connection = installer.profile.get('connection') or 'developer-mode'
+    if connection != 'developer-mode' or not read_app_file(installer, HOME, 'apps.js').endswith(
+            'window.CYTVNoRootConnection = "developer-mode";\n'):
+        raise UserError('Use the saved connection for this Clean Your TV installation.', reason_code='existing-installation')
     if (any(info.get('cytvProductGeneration') != 2 or info.get('visible') is not False for info in (home, helper))
             or any(app in apps for app in (package.ROOT_APP, UPDATER_APP, SYSTEM_UPDATER_APP, 'com.cleanyourtv.updater'))
             or package.TILE_APP in apps and installed_role(installer) != 'no-root'):

@@ -386,6 +386,12 @@ class OriginalOperationIntegration(unittest.TestCase):
         self.assertIsNone(self.store.pending(self.profile))
         current = self.installer.single_tile_source()
         single_tile_maintenance.run(self.installer, current)
+        # Transport ownership comes from the installed Home, even without an
+        # active System service. A Developer Mode session cannot rewrite it.
+        (home/'apps.js').write_bytes(apps.replace(b'"developer-mode"',b'"root-ssh"'))
+        with self.assertRaisesRegex(RuntimeError,'saved connection'):
+            self.installer.single_tile_source()
+        (home/'apps.js').write_bytes(apps)
         self.assertEqual(after, (self.root / 'requests').read_text().splitlines())
         # Simulate the owner removing just the entry outside this installer.
         self.remote.luna('com.webos.appInstallService/dev/remove', {'id': tile})
@@ -1456,7 +1462,7 @@ class OriginalOperationIntegration(unittest.TestCase):
         self.assertEqual((self.root/'requests').read_text().splitlines(), list(observer.APPS))
         self.assertIsNone(self.store.pending(self.profile))
 
-    def test_root_ssh_observer_install_and_remove_keep_original_receipts(self):
+    def use_root_ssh_observer(self):
         # Host fixture substitutes UID and fixed TV paths only. Run the actual
         # root-transport observer, its private sender and durable package stream.
         self.profile.update(connection='root-ssh', port=22)
@@ -1470,20 +1476,46 @@ class OriginalOperationIntegration(unittest.TestCase):
             'var originalChown=fs.fchownSync;fs.fchownSync=function(fd,uid,gid){fs.appendFileSync('+json.dumps(ownership_log)+',uid+":"+gid+"\\n");return originalChown(fd,uid,gid);};var uid=process.getuid()')
         # ProcessRemote supplies the fixture sender instead of the TV binary.
         source=source.replace("input.sender!=='/usr/bin/luna-send'", 'input.sender!=='+json.dumps(str(self.remote.sender)))
-        with patch.object(observer,'ROOT_PROGRAM',source), patch.object(observer,'ROOT_SSH_PRIVATE',root_private), \
-             patch.object(observer,'ROOT_SSH_PUBLIC',root_public):
-            self.installer.install(self.inventory,'original-secret')
-            launcher_apps = Path(self.base) / 'applications' / operations.HOME / 'apps.js'
-            self.assertIn('window.CYTVNoRootConnection = "root-ssh";', launcher_apps.read_text())
+        for name,value in [('ROOT_PROGRAM',source),('ROOT_SSH_PRIVATE',root_private),('ROOT_SSH_PUBLIC',root_public)]:
+            patched=patch.object(observer,name,value);patched.start();self.addCleanup(patched.stop)
+        return ownership_log
+
+    def test_single_tile_root_ssh_seeds_updates_after_verified_home_install(self):
+        self.use_root_ssh_observer()
+        tile=self.include_tile()
+        def bootstrap():
             self.assertIsNone(self.store.pending(self.profile))
-            self.assertEqual((self.root/'requests').read_text().splitlines(),list(observer.APPS))
-            owner=Path(operations.HELPER_STATE).stat()
-            self.assertEqual(Path(ownership_log).read_text().splitlines(),[str(owner.st_uid)+':'+str(owner.st_gid)]*2,
-                             'Both configuration files must inherit the checked sandbox owner/group')
-            self.installer.uninstall()
-            self.assertIsNone(self.store.pending(self.profile))
-            self.assertEqual((self.root/'requests').read_text().splitlines(),list(observer.APPS)*2)
-            self.assertEqual(list(Path(root_public).iterdir()),[])
+            self.assertEqual((self.root/'requests').read_text().splitlines(), [tile,*observer.APPS])
+            apps=Path(self.base)/'applications'/operations.HOME/'apps.js'
+            self.assertTrue(apps.read_text().endswith('window.CYTVNoRootConnection = "root-ssh";\n'))
+            return {'installed':True,'edition':'no-root'}
+        with patch.object(self.installer,'enable_system_updates',side_effect=bootstrap) as call:
+            self.assertTrue(self.installer.install(self.inventory,'original-secret')['system_updates'])
+            call.assert_called_once_with()
+
+    def test_failed_auto_bootstrap_preserves_verified_home_and_pairing(self):
+        self.use_root_ssh_observer()
+        tile=self.include_tile()
+        with patch.object(self.installer,'enable_system_updates',side_effect=ValueError('unknown submission')):
+            with self.assertRaisesRegex(RuntimeError,'Clean Your TV is installed'):
+                self.installer.install(self.inventory,'original-secret')
+        self.assertEqual((self.root/'requests').read_text().splitlines(),[tile,*observer.APPS])
+        self.assertTrue((Path(operations.HELPER_STATE)/'ssap-key.json').is_file())
+
+    def test_root_ssh_observer_install_and_remove_keep_original_receipts(self):
+        ownership_log=self.use_root_ssh_observer()
+        self.installer.install(self.inventory,'original-secret')
+        launcher_apps = Path(self.base) / 'applications' / operations.HOME / 'apps.js'
+        self.assertIn('window.CYTVNoRootConnection = "root-ssh";', launcher_apps.read_text())
+        self.assertIsNone(self.store.pending(self.profile))
+        self.assertEqual((self.root/'requests').read_text().splitlines(),list(observer.APPS))
+        owner=Path(operations.HELPER_STATE).stat()
+        self.assertEqual(Path(ownership_log).read_text().splitlines(),[str(owner.st_uid)+':'+str(owner.st_gid)]*2,
+                         'Both configuration files must inherit the checked sandbox owner/group')
+        self.installer.uninstall()
+        self.assertIsNone(self.store.pending(self.profile))
+        self.assertEqual((self.root/'requests').read_text().splitlines(),list(observer.APPS)*2)
+        self.assertEqual(list(Path(observer.ROOT_SSH_PUBLIC).iterdir()),[])
 
     def test_storage_failure_before_journal_does_not_block_another_setup(self):
         # A valid private namespace, but no writable/usable staging parent.
