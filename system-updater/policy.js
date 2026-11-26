@@ -33,8 +33,7 @@ function generation() {
     if (error.code === 'ENOENT') return 1;
     throw error;
   }
-  if (raw !== '2\n')
-    throw Error('invalid-product-generation');
+  if (raw !== '2\n') throw Error('invalid-product-generation');
   return 2;
 }
 function version(v) {

@@ -202,12 +202,13 @@ def require_generation(info, schema):
         raise ValueError('Install the matching Home with the installer before enabling updates')
 
 
-def require_transition_home(installed,edition,schema=1):
+def require_transition_home(installed,edition,schema=1,root=Path('/var/lib/clean-your-tv-root')):
+    original = None
     app=APPS['root' if edition=='root' else 'home']
     if edition=='root' and schema==2:
         from package_identity import single_tile_original
         from package_data import read_verified
-        _, _, inventory = single_tile_original(Path('/var/lib/clean-your-tv-root'), uid=os.geteuid())
+        original, _, inventory = single_tile_original(root, uid=os.geteuid())
         name = 'usr/palm/applications/'+app+'/appinfo.json'
         info = json.loads(read_verified(Path(installed)/name,sha256=inventory[name],limit=65536,installed=installed,uid=os.geteuid()))
     elif edition=='root':
@@ -216,6 +217,7 @@ def require_transition_home(installed,edition,schema=1):
     else:info=json.loads(safe(Path(installed)/'usr/palm/applications'/app/'appinfo.json'))
     require_generation(info,schema)
     if info.get('id')!=app or type(info.get('systemUpdateProtocol')) is not int or info['systemUpdateProtocol']!=1:raise ValueError('Install the transition Home from computer before enabling System Updates')
+    return original
 
 def snapshot(bundle,edition,output,installed=INSTALLED,runtime=Path('/var/lib/clean-your-tv-root/runtime'),updater=Path('/var/lib/clean-your-tv-root-updater/code'),service=Path('/var/lib/clean-your-tv-root/service')):
     require_normal_root()
@@ -415,7 +417,11 @@ def preflight(bundle,baseline,state=STATE,installed=INSTALLED,base=BASE,hook=HOO
     require_unprovisioned(state, cancelled_fence=cancelled_fence)
     require_legacy_idle()
     bundle=Path(bundle);baseline=Path(baseline);manifest=verify_bundle(bundle);current=verify_baseline(baseline,bundle)
-    require_transition_home(installed,current['edition'],current['schema'])
+    original = require_transition_home(installed,current['edition'],current['schema'])
+    if current['edition'] == 'root' and current['schema'] == 2:
+        component = next(c for c in current['components'] if c['name']=='root')
+        if any(original[key] != component.get(key) for key in ('version','size','sha256')):
+            raise ValueError('System baseline differs from original personalized Root package')
     if os.path.lexists(hook):raise FileExistsError('Supervisor boot hook exists')
     # Prove baseline payloads match installed files before creating any durable state.
     for item in current['components']:
