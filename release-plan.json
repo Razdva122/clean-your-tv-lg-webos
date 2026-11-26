@@ -72,6 +72,11 @@
         116
       ],
       "summary": "Show Homebrew installation checks and share diagnostic reports"
+    },
+    {
+      "pr": 857,
+      "issues": [],
+      "summary": "Cover the Root first-run translation catalog in CI"
     }
   ],
   "excluded": [],
