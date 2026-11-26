@@ -4,9 +4,7 @@ const { chromium } = require('playwright');
 
 (async () => {
   const browser = await chromium.launch({
-    ...(process.env.BROWSER_CHANNEL
-      ? { channel: process.env.BROWSER_CHANNEL }
-      : {})
+    channel: process.env.BROWSER_CHANNEL || 'chrome'
   });
   try {
     for (const size of [
