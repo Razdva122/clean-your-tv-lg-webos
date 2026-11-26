@@ -62,8 +62,15 @@ the boot baseline and repeatedly requesting another power cycle.
 Standard diagnostics export `removal.restart_evidence`: strict booleans for the
 boot-probe result and kernel change, process visibility/uncertainty, package and
 configuration state, terminal eligibility and retained directory types. Fixed
-`phase`, `decision` and `proof_kind` values identify the last branch. The private
-operation receipt stores these under `cleanup_restart_evidence` for later report
+`phase`, `decision` and `proof_kind` values identify the last branch.
+`process_matches` lists fixed categories such as Helper, renewal service or
+installer. The process scan checks individual arguments and process links for
+project IDs and owned paths. Shell text that refers to project components can
+still block removal before a delayed child starts. A single literal print can
+proceed through the remaining checks. After an acknowledged startup disable,
+the installer gives the specific Helper or renewal service up to 20 seconds
+to exit before requesting any package removal. Other process matches keep
+the ordinary eight-second window. The private operation receipt stores these under `cleanup_restart_evidence` for later report
 exports; they are observations of the latest cleanup attempt, never admission
 authority. No PID, process arguments, path, raw kernel ID or proof identity is
 exported. `restart-required` also remains visible in the pending-stage projection.

@@ -524,15 +524,93 @@ class SimpleRemoval(unittest.TestCase):
                 calls = [uri for uri, _ in case.remote.calls]
                 self.assertIn(disable_uri, calls[:calls.index(remove_uri)])
 
+    def test_read_only_shell_command_does_not_block_project_package_removal(self):
+        cmdline = self.root / 'proc' / '123' / 'cmdline'
+        cmdline.parent.mkdir(parents=True)
+        helper = self.cleanup.APPS[0]
+        state_dir = self.root / 'developer/apps/usr/palm/applications' / helper
+        cmdline.write_bytes(b'\0'.join(
+            (b'/bin/sh', b'-c', f'printf "%s" {helper} {state_dir}'.encode())))
+        self.remote.apps = {helper}
+        self.remote.os_cleanup = True
+
+        self.assertTrue(self.remove()['verified_clean'])
+        self.assertFalse(self.remote.apps)
+        self.assertEqual(len(self.vendor_removals()), 1)
+
+    def model_service_exit_after_disable(self, exit_after, *, other_process=None):
+        helper = self.cleanup.APPS[0]
+        service = helper + '.service'
+        self.remote.apps = {helper}
+        self.remote.os_cleanup = True
+        self.own_file(f'apps/usr/palm/services/{service}/service.js')
+        proc = self.root / 'proc' / '123'
+        proc.mkdir(parents=True)
+        (proc / 'cmdline').touch()
+        disabled = False
+        vendor_luna = self.remote.luna
+
+        def luna(uri, payload, **options):
+            nonlocal disabled
+            if uri == service + '/disable':
+                disabled = True
+            return vendor_luna(uri, payload, **options)
+
+        self.remote.luna = luna
+
+        def model(source):
+            if not disabled or helper not in self.remote.apps:
+                return source
+            mock_clock = r"""
+var testTime=0, testRead=fs.readFileSync, testTimer=setTimeout;
+Date.now=function(){return testTime;};
+setTimeout=function(callback,delay){testTime+=delay;return testTimer(callback,0);};
+fs.readFileSync=function(file){
+ if(file===CMDLINE)return testTime<EXIT_TIME?PROCESS:'';
+ return testRead.apply(fs,arguments);
+};
+"""
+            mock_clock = mock_clock.replace('CMDLINE', json.dumps(str(proc / 'cmdline')))
+            mock_clock = mock_clock.replace('EXIT_TIME', str(exit_after))
+            mock_clock = mock_clock.replace('PROCESS', json.dumps(other_process or service))
+            source = source.replace("if(input.action==='idle'){", "if(input.action==='idle'){" + mock_clock)
+            return source.replace('idleDeadline=Date.now()+8000', 'idleDeadline=Date.now() + 8000')
+
+        self.remote.transform = model
+
+    def test_removal_waits_for_slow_service_after_successful_disable(self):
+        self.model_service_exit_after_disable(12000)
+        self.assertTrue(self.remove()['verified_clean'])
+        self.assertEqual(self.vendor_removals(), ['com.local.nativehome'])
+        self.assertEqual(sum(uri == 'com.local.nativehome.service/disable' for uri, _ in self.remote.calls), 1)
+
+    def test_startup_disable_does_not_extend_wait_for_other_project_processes(self):
+        self.model_service_exit_after_disable(12000, other_process='com.gathin.tvhome')
+        with self.assertRaisesRegex(UserError, 'process did not stop'):
+            self.remove()
+        self.assertFalse(self.vendor_removals())
+
+    def test_acknowledged_startup_service_still_blocks_if_it_outlasts_the_drain(self):
+        self.model_service_exit_after_disable(21000)
+        with self.assertRaisesRegex(UserError, 'process did not stop'):
+            self.remove()
+        self.assertFalse(self.vendor_removals())
+
     def test_live_project_process_blocks_package_removal(self):
         proc=self.root/'proc'/'123';proc.mkdir(parents=True)
         (proc/'cmdline').write_text('/usr/bin/node\0'+str(self.root/'developer/apps/usr/palm/services/com.gathin.tvhome.renewal/service.js')+'\0')
+        helper_service = self.root / 'proc' / '124'
+        helper_service.mkdir()
+        (helper_service / 'cmdline').write_bytes(b'com.local.nativehome.service\0')
         self.remote.apps={'com.gathin.tvhome'}
         with self.assertRaises(UserError) as error:
             self.remove()
         self.assertEqual(error.exception.reason_code, 'cleanup-check-failed')
         self.assertEqual(self.remote.apps, {'com.gathin.tvhome'})
         self.assertFalse(self.boot_marker().exists())
+        blocked = self.store.pending(self.profile)['cleanup_restart_evidence']
+        self.assertEqual(blocked['decision'], 'process-blocked')
+        self.assertEqual(blocked['process_matches'], ['helper-service', 'renewal-service'])
 
     def test_removal_waits_for_project_process_despite_denied_foreign_proc_links(self):
         proc = self.root / 'proc'
@@ -745,6 +823,8 @@ class SimpleRemoval(unittest.TestCase):
         proc=self.root/'proc'/'123';proc.mkdir(parents=True)
         for argv in ('/usr/bin/node\0/media/developer/apps/usr/palm/services/com.gathin.tvhome.renewal/service.js\0',
                      '/bin/sh\0-c\0sleep 1; /usr/bin/node /media/developer/apps/usr/palm/services/com.gathin.tvhome.renewal/service.js\0',
+                     '/bin/sh\0-c\0printf 1 > /media/developer/apps/usr/palm/services/com.gathin.tvhome.renewal/settings\0',
+                     "/bin/sh\0-c\0/usr/bin/luna-send-pub -n 1 luna://com.local.nativehome.service/status '{}'\0",
                      '/usr/bin/node\0-e\0setInterval(function(){},1000)\0',
                      '/usr/bin/node\0--eval=setInterval(function(){},1000)\0',
                      '/usr/bin/node\0--eval\0setInterval(function(){},1000)\0',
@@ -756,7 +836,7 @@ class SimpleRemoval(unittest.TestCase):
                 (self.store.device_dir(self.profile)/'clean-removal.json').unlink(missing_ok=True)
                 if argv is not None:(proc/'cmdline').write_text(argv.replace('/media/developer',str(self.root/'developer')))
                 elif (proc/'cmdline').exists():(proc/'cmdline').unlink()
-                if argv and 'com.gathin.tvhome.renewal' in argv:
+                if argv and ('com.gathin.tvhome.renewal' in argv or 'com.local.nativehome.service' in argv):
                     with self.assertRaisesRegex(UserError, 'process did not stop'):
                         self.remove()
                 else:
