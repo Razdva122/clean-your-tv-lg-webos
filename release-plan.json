@@ -60,6 +60,11 @@
       "pr": 853,
       "issues": [],
       "summary": "Unify Clean Your TV behind one tile"
+    },
+    {
+      "pr": 855,
+      "issues": [],
+      "summary": "Add TV setup and diagnostic reports to Homebrew"
     }
   ],
   "excluded": [],
