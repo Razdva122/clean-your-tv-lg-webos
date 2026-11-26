@@ -35,7 +35,9 @@ window.HomeI18n.ready(function () {
       singleTile: true,
       recovery: true,
       onClose: back,
-      fallback: back
+      fallback: function () {
+        window.SystemUpdates.openExternal({ edition: edition, onClose: back });
+      }
     });
   };
   var buttons = [open, recover, setup].filter(function (button) {

@@ -118,6 +118,43 @@ assert.strictEqual(unknown.calls.length, 0);
 const timeout = fixture('root', {}, null);
 timeout.runTimers();
 assert.deepStrictEqual(timeout.pages, ['recovery.html']);
+{
+  const elements = {};
+  const document = {
+    getElementById(id) {
+      if (!elements[id]) elements[id] = { focus() {} };
+      return elements[id];
+    },
+    addEventListener() {}
+  };
+  let external;
+  const window = {
+    location: { hash: '' },
+    CYTVTileEdition: 'no-root',
+    HomeI18n: {
+      ready(callback) {
+        callback();
+      }
+    },
+    SystemUpdates: {
+      open(options) {
+        options.fallback();
+      },
+      openExternal(options) {
+        external = options;
+      }
+    }
+  };
+  vm.runInNewContext(fs.readFileSync('homebrew/app/tile-recovery.js', 'utf8'), {
+    window,
+    document
+  });
+  elements.recover.onclick();
+  assert.equal(external.edition, 'no-root');
+  assert.equal(elements.tileActions.hidden, true);
+  external.onClose();
+  assert.equal(elements.tileActions.hidden, false);
+}
 console.log(
   'PASS edition-bound tile, daily launch, no Home activation, crash/timeout and explicit recovery'
 );
