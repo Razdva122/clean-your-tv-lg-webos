@@ -91,7 +91,10 @@ class RuntimeArchiveTests(unittest.TestCase):
             identities=('com.cleanyourtv.root.preview','com.cleanyourtv.root.updater','com.cleanyourtv.system.updater')
             for index,identity in enumerate(identities):
                 folder=root/str(index);folder.mkdir();inputs.append(folder)
-                raw=package.ipk(identity,'0.1.0',{'usr/palm/applications/'+identity+'/appinfo.json':json.dumps({'id':identity,'version':'0.1.0'}).encode()})
+                info = {'id': identity, 'version': '0.1.0'}
+                if index == 0:
+                    info.update(cytvProductGeneration=2, visible=False)
+                raw=package.ipk(identity,'0.1.0',{'usr/palm/applications/'+identity+'/appinfo.json':json.dumps(info).encode()})
                 files={'component.ipk':raw}
                 for name in ('installation.py','observed_install.py','installer_status.py','startup_hook.py','package_data.py','package_identity.py','startup_guard.py','python_binding.py','python_boot.js'): files[name]=b'same'
                 for name,data in files.items(): (folder/name).write_bytes(data)

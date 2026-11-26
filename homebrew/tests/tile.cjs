@@ -107,7 +107,7 @@ assert.deepStrictEqual(fixture('root', {}, { returnValue: false }).pages, [
   'recovery.html'
 ]);
 const explicit = fixture('root', {}, null, { cytvRecovery: true });
-assert.deepStrictEqual(explicit.pages, ['recovery.html']);
+assert.deepStrictEqual(explicit.pages, ['recovery.html#status']);
 assert.strictEqual(explicit.calls.length, 0);
 const unknown = fixture('neither', { 'cytv.tile.home': 'root' });
 assert.deepStrictEqual(unknown.pages, ['recovery.html']);

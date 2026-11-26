@@ -16,6 +16,12 @@ from homebrew.payload import checked_bundle, inventory, read_file, validate_runt
 
 IDENTITIES={'root':'com.cleanyourtv.root.preview','root-updater':'com.cleanyourtv.root.updater','supervisor':'com.cleanyourtv.system.updater'}
 
+def require_tile_home(info):
+    if (info.get('id') != IDENTITIES['root'] or type(info.get('cytvProductGeneration')) is not int
+            or info['cytvProductGeneration'] != 2 or info.get('visible') is not False):
+        raise ValueError('Single-tile setup requires the hidden second-generation Root Home')
+
+
 def build_payload(root_bundle, root_updater_bundle, supervisor_bundle, runtime_archive, output):
     output=Path(output).absolute()
     if '..' in output.parts or any(p.is_symlink() for p in (output,*output.parents)): raise ValueError('Unsafe output')
@@ -30,8 +36,8 @@ def build_payload(root_bundle, root_updater_bundle, supervisor_bundle, runtime_a
         app=IDENTITIES[key]
         info=json.loads(files['usr/palm/applications/'+app+'/appinfo.json'])
         if info.get('id')!=app: raise ValueError('Component identity mismatch')
-        if key == 'root' and (info.get('cytvProductGeneration') != 2 or info.get('visible') is not False):
-            raise ValueError('Single-tile setup requires the hidden second-generation Root Home')
+        if key == 'root':
+            require_tile_home(info)
         versions[key]=info['version']
     # Shared protocol/binding sources must come from the same component baseline.
     for name in ('installation.py','observed_install.py','installer_status.py','startup_hook.py','package_data.py','package_identity.py','startup_guard.py','python_binding.py','python_boot.js'):
@@ -158,6 +164,11 @@ def verify_offline(payload):
     if manifest.get('schema')!=1 or actual!=manifest.get('files'):raise ValueError('Offline inventory mismatch')
     for name in IDENTITIES:
         if checked_bundle(payload/name)!=manifest['components'][name]:raise ValueError('Offline component mismatch')
+    root_name = package.safe_name(manifest['packages']['root'])
+    if root_name not in manifest['components']['root'] or not root_name.endswith('.ipk'):
+        raise ValueError('Missing Root product package')
+    root_files = package.data_files(read_file(payload/'root'/root_name))
+    require_tile_home(json.loads(root_files['usr/palm/applications/'+IDENTITIES['root']+'/appinfo.json']))
     binding=json.loads(read_file(payload/'runtime-binding.json'))
     records=validate_runtime(payload/'runtime.tar.gz',binding)
     if records!=manifest['runtime']['files'] or manifest['runtime']['archive_sha256']!=python_runtime.SHA256:raise ValueError('Offline runtime mismatch')

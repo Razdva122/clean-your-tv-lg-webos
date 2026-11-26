@@ -22,7 +22,10 @@ def fixture(version='1.2.3'):
     files={}; components={}; versions={}; packages={}
     for key, app in IDENTITIES.items():
         name=key+'.ipk'; version_value='2.3.4'
-        content={name: package.ipk(app,version_value,{'usr/palm/applications/'+app+'/appinfo.json':encoded({'id':app,'version':version_value})}),
+        info={'id':app,'version':version_value}
+        if key == 'root':
+            info.update(cytvProductGeneration=2,visible=False)
+        content={name: package.ipk(app,version_value,{'usr/palm/applications/'+app+'/appinfo.json':encoded(info)}),
                  'must-not-run.py': b'raise RuntimeError("artifact code executed")'}
         content['bundle.json']=encoded({'files':{n:digest(v) for n,v in content.items()}})
         components[key]=inventory(content); versions[key]=version_value; packages[key]=name

@@ -1,4 +1,5 @@
 'use strict';
+require('./tile.cjs');
 const assert = require('assert'),
   fs = require('fs'),
   path = require('path');

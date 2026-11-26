@@ -51,12 +51,12 @@
     function recovery() {
       root.location.replace('recovery.html');
     }
-    if (
-      (!valid(bound) && bound !== null) ||
-      !valid(edition) ||
-      requestedRecovery(event)
-    ) {
+    if ((!valid(bound) && bound !== null) || !valid(edition)) {
       recovery();
+      return;
+    }
+    if (requestedRecovery(event)) {
+      root.location.replace('recovery.html#status');
       return;
     }
     busy = true;

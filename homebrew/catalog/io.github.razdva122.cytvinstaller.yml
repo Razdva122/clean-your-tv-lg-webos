@@ -8,11 +8,9 @@ requirements:
   webosRelease: '>=5.0'
 shortDescription: Install and maintain Clean Your TV Root on a compatible rooted LG TV.
 description: |
-  CYTV Installer guides you through installing Clean Your TV Root, a replacement
-  Home screen for compatible LG TVs. Choose **Install and activate** to set up
-  Root Home, Root Updater and System Updater together and use Root Home with
-  the Home button. Compatible settings from a previous Clean Your TV Home
-  setup are imported automatically. If Python is needed, the confirmation
+  Choose **Install and activate** to set up Clean Your TV on a compatible
+  rooted TV. Once installed, the same tile opens your Home. For an older
+  installation, continue on the computer when prompted. If Python is needed, the confirmation
   includes preparing it before the compatibility checks. An active emergency stop keeps Root Home disabled.
   The maintenance screen lets you restore LG Home.
 

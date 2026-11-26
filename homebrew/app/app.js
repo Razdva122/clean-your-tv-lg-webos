@@ -28,7 +28,10 @@
     try {
       if (edition) root.localStorage.setItem('cytv.tile.home', edition);
       else root.localStorage.removeItem('cytv.tile.home');
-    } catch (_) {}
+      return root.localStorage.getItem('cytv.tile.home') === edition;
+    } catch (_) {
+      return false;
+    }
   }
   function forgetOperation() {
     operation = null;
@@ -404,8 +407,8 @@
             managedHome(inspected) &&
             !inspected.active_operation
           ) {
-            dailyHome('root');
-            if (root.location.hash === '#open') {
+            var savedHome = dailyHome('root');
+            if (savedHome && root.location.hash === '#open') {
               // Continue to the verified Home without changing button routing.
               root.location.replace('index.html');
               return;

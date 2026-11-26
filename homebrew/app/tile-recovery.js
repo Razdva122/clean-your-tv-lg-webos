@@ -7,6 +7,8 @@ window.HomeI18n.ready(function () {
       edition = localStorage.getItem('cytv.tile.home');
     } catch (_) {}
   }
+  var statusRequested = window.location.hash === '#status';
+  document.getElementById('launchFailure').hidden = statusRequested;
   var known = edition === 'root' || edition === 'no-root';
   var panel = document.getElementById('tileActions');
   var open = document.getElementById('retry');
@@ -39,6 +41,7 @@ window.HomeI18n.ready(function () {
     return !button.hidden && !button.disabled;
   });
   if (buttons.length) buttons[0].focus();
+  if (known && statusRequested) recover.click();
   document.addEventListener('keydown', function (event) {
     if (panel.hidden) return;
     var key = event.keyCode;

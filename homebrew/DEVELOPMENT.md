@@ -23,10 +23,18 @@ control Home leads to computer or Android setup to establish No-root eligibility
 and pair Home Helper. The TV candidate has no first-pair or installation path
 for No-root. [Edition selection](../docs/superpowers/specs/2026-11-26-homebrew-edition-selection.md)
 
-One confirmation authorizes a fresh Homebrew setup of Root Home, Root
-Updater and System Updater together, automatic import of compatible settings
-from a previous Clean Your TV Home setup when present, and a single
-activation attempt. When Python preparation is required, the UI checks
+The same application ID is used for the Homebrew package and the small
+edition-bound tile built by `build_tile(output, version, edition)`. The latter
+contains no Homebrew bridge or offline installer payload. Its `cytvTileEdition`
+metadata identifies the target of a plain application-manager launch. The full
+package stores this routing preference after the coordinator verifies a
+single-tile Root installation. A pending setup request goes to its original
+status flow first. An explicit launch with `cytvRecovery: true` opens the
+independent recovery interface.
+
+One setup confirmation covers the verified fresh Root installation, preparation
+of complete updates and a single activation attempt. Existing editions require
+the dedicated transition flow. When Python preparation is required, the UI checks
 the original payload digest, fresh installation state and candidate digest
 before submission. The product worker verifies the installed generation,
 releases its installation mutex and uses the guarded runtime to request
