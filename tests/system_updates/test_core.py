@@ -17,6 +17,45 @@ from system_updater.support.store import Store
 def profile():
     return {'schema':1,'inventory':{'apps':[],'inputs':[]},'config':{'columns':5,'dockApps':[],'hiddenApps':[]},'settings':{}}
 
+def single_tile_profile():
+    return dict(profile(), browserState={'schema':1, 'local':{}, 'themes':[], 'wallpapers':[]})
+
+class BrowserProfileTests(unittest.TestCase):
+    def setUp(self):
+        from system_updater.core import validate_profile
+        self.validate = lambda value: validate_profile(value, 'no-root', captured=True)
+        self.profile = single_tile_profile()
+        self.state = self.profile['browserState']
+        self.state['local']['tvhome.clockFormat'] = '24h'
+
+    def test_round_trip_recovers_original_data_only_profile(self):
+        import base64, hashlib
+        raw = b'poster'
+        sha = hashlib.sha256(raw).hexdigest()
+        encoded = base64.b64encode(raw).decode('ascii')
+        img = dict(mediaType='image/png', width=1, height=1, sha256=sha, data=encoded, size=len(raw))
+        ref = 'media:'+sha+':'
+        self.state['themes'] = [dict(digest=sha, descriptor=encoded, files={'icons/brand.png':encoded})]
+        self.state['wallpapers'] = [
+            dict(key='slot',value={'source':'personal','mediaRef':ref}),
+            dict(key='library:photo',value=ref),
+            dict(key=ref,value=dict(schemaVersion=1,kind='wallpaper',source='phone',image=img,variants=[]))]
+        self.assertEqual(self.validate(self.profile)['browserState'], self.state)
+        img['sha256'] = '0'*64
+        with self.assertRaises(ValueError):
+            self.validate(self.profile)
+
+    def test_unknown_keys_incomplete_refs_and_oversized_values_fail(self):
+        for invalid in (
+                {'local':{'foreign.key':'value'}},
+                {'local':{'tvhome.language':'x'*65537}},
+                {'wallpapers':[dict(key='library:photo',value='media:missing')]},
+                {'themes':[{}]*9},
+                {'schema':True}):
+            with self.subTest(invalid=next(iter(invalid))):
+                with self.assertRaises(ValueError):
+                    self.validate(dict(self.profile, browserState=dict(self.state,**invalid)))
+
 def release(version):
     return {'schema':1,'edition':'no-root','release':'v'+version,'supervisor':1,'notes':'Test',
             'components':[{'name':name,'application':app,'version':version,'kind':'ipk','sha256':str(i)*64,'size':10,'local':True}
@@ -146,7 +185,10 @@ class Tests(CoreBase):
                         for name in names])
                 store = Store(os.path.realpath(tmp), uid=os.getuid())
                 manager = self.Manager(store, io)
-                tx = manager.install(edition, 'v1.1.0', profile())
+                with self.assertRaisesRegex(ValueError, 'Complete browser profile'):
+                    manager.install(edition, 'v1.1.0', profile())
+                self.assertIsNone(store.read('transaction'))
+                tx = manager.install(edition, 'v1.1.0', single_tile_profile())
                 def advance(phase):
                     for _ in range(40):
                         if manager.run()['phase'] == phase:

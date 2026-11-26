@@ -3,6 +3,8 @@
 A missing terminal receipt is uncertainty, never permission to repeat or undo.
 All TV effects, release trust and package inspection belong to the pinned adapter.
 """
+import base64
+import binascii
 import copy
 import hashlib
 import math
@@ -46,9 +48,115 @@ def release_set(value,edition):
     return result
 
 
+_BROWSER_KEYS = frozenset('tvhome.' + name for name in (
+    'clockFormat', 'columns.v1', 'inputs.preview.v1', 'installer.settings.v1',
+    'language', 'layout', 'name', 'no-root-connection.v1', 'order', 'theme.choice.v1',
+    'usage.v1', 'wallpaper.preferences.v1', 'weather.v1'))
+_BROWSER_LIMIT = 3 * 1024 * 1024
+
+
+def _browser_require(condition):
+    if not condition:
+        raise ValueError('Invalid browser profile')
+
+
+def _browser_binary(value, maximum, *, sha=None):
+    _browser_require(isinstance(value, str) and 0 < len(value) <= 4*((maximum+2)//3))
+    try:
+        raw = base64.b64decode(value, validate=True)
+    except (ValueError, binascii.Error):
+        raise ValueError('Invalid binary in browser profile') from None
+    _browser_require(len(raw) <= maximum and base64.b64encode(raw).decode('ascii') == value)
+    if sha is not None:
+        _browser_require(hashlib.sha256(raw).hexdigest() == sha)
+    return len(raw)
+
+
+def _wallpaper_media(item, video=False):
+    fields = {'mediaType','width','height','size','sha256','data'}
+    _browser_require(isinstance(item,dict) and set(item) == (fields | {'quality'} if video else fields))
+    if video:
+        _browser_require(item['mediaType'] == 'video/mp4' and item['quality'] in ('1080p','4k'))
+    else:
+        _browser_require(item['mediaType'] in ('image/jpeg','image/png'))
+    for field in ('width','height'):
+        _browser_require(type(item[field]) is int and 0 < item[field] <= 16384)
+    _browser_require(isinstance(item['sha256'],str) and re.fullmatch('[0-9a-f]{64}',item['sha256']))
+    _browser_require(type(item['size']) is int and item['size'] ==
+                     _browser_binary(item['data'], _BROWSER_LIMIT, sha=item['sha256']))
+
+
+def _wallpaper_key(envelope):
+    fields = {'schemaVersion','kind','source','image','variants'}
+    _browser_require(isinstance(envelope,dict) and set(envelope) in (fields,fields|{'mediaKind'}))
+    _browser_require(type(envelope['schemaVersion']) is int and envelope['schemaVersion'] == 1
+                     and envelope['kind'] == 'wallpaper' and envelope['source'] in ('phone','cytv')
+                     and envelope.get('mediaKind','photo') in ('photo','video'))
+    _wallpaper_media(envelope['image'])
+    variants = envelope['variants']
+    _browser_require(isinstance(variants,list) and len(variants) <= 2 and
+                     (not variants or envelope['source'] != 'phone'))
+    for variant in variants:
+        _wallpaper_media(variant, video=True)
+    _browser_require(len({variant['quality'] for variant in variants}) == len(variants))
+    labels = sorted(v['quality'] + ':' + v['sha256'] for v in variants)
+    return 'media:' + envelope['image']['sha256'] + ':' + ':'.join(labels)
+
+
+def validate_browser_state(state):
+    _browser_require(isinstance(state,dict) and set(state) == {'schema','local','themes','wallpapers'}
+                     and type(state['schema']) is int and state['schema'] == 1
+                     and len(encode(state)) <= _BROWSER_LIMIT)
+    local = state['local']
+    _browser_require(isinstance(local,dict) and set(local) <= _BROWSER_KEYS)
+    for key, value in local.items():
+        limit = 1024*1024 if key == 'tvhome.layout' else 64*1024
+        _browser_require(isinstance(value,str) and len(value.encode('utf-8')) <= limit)
+    themes = state['themes']
+    _browser_require(isinstance(themes,list) and len(themes) <= 8)
+    digests = set()
+    for theme in themes:
+        _browser_require(isinstance(theme,dict) and set(theme) == {'digest','descriptor','files'})
+        digest = theme['digest']
+        _browser_require(isinstance(digest,str) and re.fullmatch('[0-9a-f]{64}',digest) and digest not in digests)
+        digests.add(digest)
+        _browser_binary(theme['descriptor'], 65536, sha=digest)
+        files = theme['files']
+        _browser_require(isinstance(files,dict) and len(files) <= 128)
+        for path, data in files.items():
+            _browser_require(isinstance(path,str) and len(path) <= 240 and
+                             re.fullmatch(r'[A-Za-z0-9_-]+(?:[./][A-Za-z0-9_-]+)*',path))
+            _browser_binary(data, _BROWSER_LIMIT)
+    records = state['wallpapers']
+    _browser_require(isinstance(records,list) and len(records) <= 8)
+    refs, keys = [], set()
+    for record in records:
+        _browser_require(isinstance(record,dict) and set(record) == {'key','value'})
+        key, value = record['key'], record['value']
+        _browser_require(isinstance(key,str) and key not in keys)
+        keys.add(key)
+        if key == 'slot':
+            _browser_require(isinstance(value,dict) and set(value) in (
+                {'source','mediaRef'}, {'source','envelope'}) and isinstance(value['source'],str)
+                and (value['source'] in ('theme','personal') or re.fullmatch('builtin:[a-z0-9-]{1,64}',value['source'])))
+            if 'mediaRef' in value:
+                refs.append(value['mediaRef'])
+            elif value['envelope'] is not None:
+                _wallpaper_key(value['envelope'])
+        elif key in ('library:photo','library:video'):
+            refs.append(value)
+        else:
+            _browser_require(key == _wallpaper_key(value))
+    _browser_require(all(isinstance(ref,str) and ref.startswith('media:') and ref in keys for ref in refs))
+    return state
+
+
 def validate_profile(value,edition,*,captured=False):
     if edition not in SETS or not isinstance(value,dict):raise ValueError('Invalid profile edition')
     data=copy.deepcopy(value);renewal=data.pop('renewal',None)
+    has_browser_state = 'browserState' in data
+    if has_browser_state:
+        browser = validate_browser_state(data.pop('browserState'))
     # Older No-root Home includes an empty color when webOS has no icon tint.
     # Normalize the capture before it becomes the authenticated rollback snapshot.
     inventory=data.get('inventory')
@@ -74,6 +182,8 @@ def validate_profile(value,edition,*,captured=False):
         for key in ('last','error'):
             if key in renewal and renewal[key] is not None and not isinstance(renewal[key],(str,dict)):raise ValueError('Invalid renewal history')
         checked['renewal']=copy.deepcopy(renewal)
+    if has_browser_state:
+        checked['browserState'] = browser
     if len(encode(checked))>4*1024*1024:raise ValueError('Profile too large')
     return checked
 
@@ -177,6 +287,10 @@ class Manager:
             if not isinstance(offer,dict) or offer.get('canInstall') is not True:raise ValueError(offer.get('reason','Update unavailable'))
             candidate=release_set(offer.get('candidate'),edition);prior=release_set(offer.get('prior'),edition)
             if prior['schema'] != candidate['schema']:raise ValueError('Change product generation with the installer')
+            if prior['schema'] == 2 and 'browserState' not in snapshot:
+                raise ValueError('Complete browser profile required before replacing Home')
+            if prior['schema'] == 1 and 'browserState' in snapshot:
+                raise ValueError('Browser profile belongs to another product generation')
             if candidate['release']!=release or version(release[1:])<=version(prior['release'][1:]) or not self.io.verify_baseline(prior):raise ValueError('Installed baseline or signed offer changed')
             if any(version(c['version'])<version(p['version']) for c,p in zip(candidate['components'],prior['components'])):raise ValueError('Component downgrade is not permitted')
             identifier=operation or uuid.uuid4().hex

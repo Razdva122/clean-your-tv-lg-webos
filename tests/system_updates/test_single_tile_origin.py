@@ -12,7 +12,7 @@ from unittest.mock import patch
 
 from cytv import package
 from test_build import load, ROOT
-from test_core import Store, IO, profile
+from test_core import Store, IO, single_tile_profile
 
 def build_bundle(system):
     return json.loads((system/'bundle.json').read_bytes())
@@ -71,7 +71,7 @@ class SingleTileOriginTests(unittest.TestCase):
                 if tx['phase']==phase:return tx
                 if tx['phase'] in ('recovery-required','aborted'):self.fail(tx.get('error',tx['phase']))
             self.fail(manager.status())
-        tx=manager.install(edition,'v1.1.0',profile())
+        tx=manager.install(edition,'v1.1.0',single_tile_profile())
         advance('verifying');manager.healthy(edition,tx['id'],'1.1.0');advance('complete')
         self.assertEqual(device.installed(home),'1.1.0')
         self.assertTrue(device.verify_baseline(device._baseline(edition)))
