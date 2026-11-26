@@ -28,6 +28,53 @@ checkout contents, excluding desktop-only modules. Add new runtime modules to
 Git before building so they are included. The task refreshes its own inputs
 under `android/app/build/generated/cytv/`. Prepare the TV payload before staging.
 
+### Build the single-tile candidate
+
+From the repository root, use the Android environment above and install the
+pinned JavaScript dependencies. Select the single-tile payload explicitly,
+then build the debug APK from those staged assets:
+
+```sh
+npm ci --ignore-scripts --no-audit --no-fund
+export CYTV_BUILD_PYTHON="$PWD/android/.build-venv/bin/python"
+"$CYTV_BUILD_PYTHON" scripts/build-cytv.py --single-tile --payload-only
+android/gradlew -p android :app:assembleDebug
+```
+
+The flag selects both edition-bound tile packages. Each uses the same webOS
+app ID. The installer selects the matching package when it installs the chosen
+edition. Gradle copies the files declared in `build/cytv/payload/payload.json`.
+To verify the APK contains the selected manifest and both original IPKs,
+run this from the repository root before rebuilding the payload:
+
+```sh
+"$CYTV_BUILD_PYTHON" - <<'PYTHON'
+import json
+from pathlib import Path
+from zipfile import ZipFile
+
+payload = Path("build/cytv/payload")
+manifest = (payload / "payload.json").read_bytes()
+tile = json.loads(manifest)["single_tile"]
+assert (tile["root"], tile["no-root"]) == ("tile-root.ipk", "tile-no-root.ipk")
+with ZipFile("android/app/build/outputs/apk/debug/app-debug.apk") as apk:
+    for name in ("payload.json", tile["root"], tile["no-root"]):
+        assert apk.read("assets/payload/" + name) == (payload / name).read_bytes(), name
+PYTHON
+```
+
+For the desktop installer, use a native build environment on each target.
+With the JavaScript dependencies installed, run:
+
+```sh
+python -m pip install -r cytv/build-requirements.txt
+python scripts/build-cytv.py --single-tile --desktop
+```
+
+This builds the CLI and the platform's desktop package with the same
+single-tile payload. See the [desktop build guide](../docs/development/DESKTOP-BUILD.md)
+for artifact paths and offline smoke checks.
+
 After successful extraction and cleanup, Android retains one payload directory for
 the current APK. A failed extraction preserves the previous ready copy. A later
 operation retries interrupted extraction and cleanup, even when the current copy
