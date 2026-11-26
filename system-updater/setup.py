@@ -411,6 +411,16 @@ def restart_registered_launcher(edition,rpc=None):
         from system_updater.support.luna import call
         rpc=call
     app=APPS['root' if edition=='root' else 'home']
+    if edition=='root':
+        # A fresh TV-side install has never opened Root Home. Some SAMs reject
+        # closing a stopped app without identifying it in the error response.
+        try:inventory=rpc('luna://com.webos.applicationManager/running',{})
+        except (RuntimeError,TimeoutError,ValueError):inventory=None
+        running=inventory.get('running') if isinstance(inventory,dict) and inventory.get('returnValue') is True else None
+        if (isinstance(running,list)
+                and all(isinstance(row,dict) and isinstance(row.get('id'),str) and row['id'] for row in running)
+                and all(row['id']!=app for row in running)):
+            return
     methods=('closeByAppId',) if edition=='root' else ('closeByAppId','launch')
     for method in methods:
         try:reply=rpc('luna://com.webos.applicationManager/'+method,{'id':app})

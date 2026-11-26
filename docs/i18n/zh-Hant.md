@@ -72,6 +72,14 @@ Developer Mode 讓 CYTV 可以在沒有 root 的電視上安裝應用程式。
 
 Root 安裝程式會在需要時自動使用經過驗證的內部暫存空間，無需 USB 儲存裝置；如果儲存空間檢查失敗，請保留復原資料並儲存診斷報告。
 
+<a id="未發佈候選版透過-homebrew-設定-root"></a>
+
+### 如果電視上已經開啟 CYTV Installer
+
+選擇**安裝並啟用**，然後確認一次。安裝程式會一併安裝 Root Home、Root Updater 和 System Updater。如果找到先前的 Clean Your TV Home 設定且這些設定相容，安裝程式會自動匯入。安裝後，按首頁鍵即可開啟 Root Home。如果已觸發緊急停用，Root Home 將保持停用。如果安裝程式提示在電腦上繼續設定 Root，請改用電腦操作。如果提示改用 No-root，請使用電腦或 Android 裝置上的安裝程式。
+
+若要解除安裝 Clean Your TV，請在安裝程式中選擇**完整移除產品**。只移除安裝程式會讓 Clean Your TV 保留在電視上。
+
 ## 5. 檢查遙控器
 
 1. 在電視上開啟另一個應用程式，短按一次 **Home**。應開啟 Clean Your TV。在精靈中填寫實際看到的結果；未測試時請略過。
@@ -149,7 +157,6 @@ No-root: 要重新啟動 Home 控制，請開啟 Home Helper，選擇啟動 Help
 <a id="120-的-lg-固件更新阻止功能"></a>
 <a id="130-新增功能"></a>
 <a id="130-新增功能--12"></a>
-<a id="未發佈候選版透過-homebrew-設定-root"></a>
 <a id="未發佈候選版本hdmi-聲音恢復root"></a>
 <a id="主題-154"></a>
 <a id="設定分類未發布候選版本"></a>

@@ -5,7 +5,7 @@ before an emergency restore; failures retain the binding and recovery evidence.
 The returned start_guarded effect is a request, never permission to bypass input,
 lease and provisioning readiness checks in the future activation adapter.
 """
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 import fcntl
 import json
 import os
@@ -289,12 +289,12 @@ class Coordinator:
                     self.event(current,'fault')
                 raise
 
-    def enable(self, expected, boot, token):
+    def enable(self, expected, boot, token, *, admission=None):
         """Activate persistently once input and recovery are ready."""
         import time
         from persistent_health import require_fresh
         try:
-            result = self.start_trial(expected, boot, token)
+            result = self.start_trial(expected, boot, token, admission=admission)
             for attempt in range(20):
                 try:
                     require_fresh(result['trial']['transaction'])
@@ -318,12 +318,13 @@ class Coordinator:
                 self.exit(current, reason='fault')
             raise
 
-    def start_trial(self, expected, boot, token):
+    def start_trial(self, expected, boot, token, *, admission=None):
         # The existing independent 60-second deadline is never removed here.
         import emergency_trial
         with self.locked(expected):
             d.require_home()
-            intent, effect = self.event(expected, 'enable', boot=boot, token=token)
+            with admission() if admission else nullcontext():
+                intent, effect = self.event(expected, 'enable', boot=boot, token=token)
             try:
                 result = emergency_trial.start(before_publish=lambda tx:self._bind(intent, tx))
                 return dict(intent=intent, trial=result, persistent=False)

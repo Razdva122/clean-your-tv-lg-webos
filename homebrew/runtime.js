@@ -6,7 +6,7 @@ var fs = require('fs'),
   cp = require('child_process');
 var BASE = '/var/lib/clean-your-tv-python';
 var PIN = '4a71641c8d5536175e404a961624e8656eba30e97b5026f6bd7dc31e4bbeaaea';
-var EXEC_BASE = '/var/lib/clean-your-tv-installer';
+var EXEC_BASE = '/var/lib/clean-your-tv-root-staging';
 var SHARED = [
   '/media',
   '/media/developer',
@@ -34,7 +34,7 @@ function safeName(name) {
 }
 function sdkData(name) {
   var app =
-    '/media/developer/apps/usr/palm/applications/com.cleanyourtv.installer';
+    '/media/developer/apps/usr/palm/applications/io.github.razdva122.cytvinstaller';
   return name === app || name.indexOf(app + '/') === 0;
 }
 function owned(name, directory, packageData) {
@@ -715,10 +715,20 @@ function stage(state, full) {
     var context = state.context,
       expected = context.manifest.files;
     ancestors('/var/lib');
-    if (!fs.existsSync(EXEC_BASE)) fs.mkdirSync(EXEC_BASE, 448);
+    var createdBase;
+    try {
+      fs.mkdirSync(EXEC_BASE, 448);
+      createdBase = owned(EXEC_BASE, true);
+    } catch (error) {
+      if (error.code !== 'EEXIST') throw error;
+    }
     ancestors(EXEC_BASE);
-    var root = fs.mkdtempSync(EXEC_BASE + '/.exec-');
-    fs.chmodSync(root, 448);
+    var base = owned(EXEC_BASE, true);
+    if ((base.mode & 4095) !== 448 || base.dev !== owned('/var/lib', true).dev)
+      fail('Unsafe execution staging directory');
+    var root =
+      EXEC_BASE + '/cytv-homebrew-' + crypto.randomBytes(16).toString('hex');
+    fs.mkdirSync(root, 448);
     var saved = [],
       directories = [root];
     function cleanup() {
@@ -755,6 +765,21 @@ function stage(state, full) {
           .forEach(function (folder) {
             fs.rmdirSync(folder);
           });
+        if (createdBase) {
+          // The computer installer shares this directory. Never remove its
+          // contents or a replacement directory, even when the name matches.
+          try {
+            var currentBase = owned(EXEC_BASE, true);
+            if (
+              currentBase.dev === createdBase.dev &&
+              currentBase.ino === createdBase.ino
+            )
+              fs.rmdirSync(EXEC_BASE);
+          } catch (error) {
+            if (['ENOENT', 'ENOTEMPTY', 'EEXIST'].indexOf(error.code) < 0)
+              throw error;
+          }
+        }
       });
     }
     function mkdir(folder) {
@@ -766,17 +791,37 @@ function stage(state, full) {
     try {
       var names = Object.keys(expected).filter(function (name) {
           if (full)
-            return /^(root|root-updater|supervisor|baseline)\//.test(name);
+            return /^(root|root-updater|supervisor|baseline|edition)\//.test(
+              name
+            );
           return name.indexOf('root-updater/') === 0 && !/\.ipk$/.test(name);
         }),
-        total = 0;
+        ordinaryBytes = 0;
+      var version = (context.manifest.versions || {}).root;
+      var rootIpk =
+        typeof version === 'string' && /^\d+\.\d+\.\d+$/.test(version)
+          ? 'root/com.cleanyourtv.root.preview_' + version + '_all.ipk'
+          : null;
+      var rootRecord = rootIpk && expected[rootIpk];
+      var rollbackCopy = rootRecord && 'baseline/cache/' + rootRecord.sha256;
       if (!names.length || names.indexOf('root-updater/install_driver.py') < 0)
         fail('Missing execution closure');
       names.forEach(function (name) {
         safeName(name);
         var record = expected[name];
-        total += record.size;
-        if (record.size > 16 * 1024 * 1024 || total > 32 * 1024 * 1024)
+        // The package and its identical rollback copy may each contain Root media.
+        var rootMedia =
+          name === rootIpk ||
+          (name === rollbackCopy &&
+            record.sha256 === rootRecord.sha256 &&
+            record.size === rootRecord.size);
+        if (!rootMedia) ordinaryBytes += record.size;
+        if (
+          !Number.isSafeInteger(record.size) ||
+          record.size < 0 ||
+          record.size > (rootMedia ? 64 : 16) * 1024 * 1024 ||
+          ordinaryBytes > 32 * 1024 * 1024
+        )
           fail('Execution snapshot too large');
         var raw = checkedBytes(
           path.join(context.root, name),
@@ -821,6 +866,7 @@ function stage(state, full) {
       return {
         root: root,
         driver: root + '/root-updater/install_driver.py',
+        editionInspector: root + '/edition/edition.py',
         cleanup: cleanup
       };
     } catch (error) {

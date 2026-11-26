@@ -55,15 +55,16 @@ class RootCapabilityError(UserError):
 
 class NativeHomeScriptError(RootCapabilityError):
     reason = 'native-home-script'
+    detail = 'The Home executable path currently points to a script.'
 
     def __init__(self):
-        from .failure_help import GUIDES
-        super().__init__(GUIDES[self.reason][1])
+        super().__init__(self.detail)
         self.reason_code = self.reason
 
 
 class ForeignHomeHandoffRequired(NativeHomeScriptError):
     reason = 'foreign-home-handoff-required'
+    detail = 'Another Home integration covers LG Home. This installer cannot restore it safely.'
 
 
 class NoRootAlternativeError(RootCapabilityError):

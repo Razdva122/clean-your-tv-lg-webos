@@ -1,117 +1,153 @@
-# Homebrew catalog submission preparation
+# Prepare the webOS Homebrew catalog entry
 
-Historical candidate/session date: 2026-10-27. Prerequisite rechecked: 2026-10-30.
-Status: **not submitted; public promotion disabled**.
+**Draft, checked 2026-11-26.** The [v1.29.1 public assets](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/expanded_assets/v1.29.1)
+contain the published desktop and Android installers. The on-TV application
+`io.github.razdva122.cytvinstaller` and its Homebrew manifest still await publication.
 
-## Published product and Installer identity
+## Listing and package identity
 
-Project [v1.4.0](https://github.com/Razdva122/clean-your-tv-lg-webos/releases/tag/v1.4.0)
-was published on 2026-10-27. It contains no CYTV Installer IPK or Homebrew manifest.
-Publishing Root 0.5.0 does not publish or accept the separate TV installation path.
+The [catalog YAML](io.github.razdva122.cytvinstaller.yml) describes the development
+package with its current Root-only payload and `rootRequired: true`. The planned
+autonomous installer will prefer Root and offer No-root after confirming both Root
+incompatibility and support for on-TV No-root setup. See the
+[edition-selection design](../../docs/superpowers/specs/2026-11-26-homebrew-edition-selection.md). Before advertising that flow, reconcile the listing, manifest,
+payload and results for both editions on the selected artifact. An inconclusive
+prerequisite check or an interrupted operation cannot establish incompatibility.
 
-The trusted [candidate run 40512827076](https://github.com/Razdva122/clean-your-tv-lg-webos/actions/runs/40512827076)
-at `9785fd6795ce145d5084d196ecfeb08194a11729` has a successful Homebrew job.
-Its development Installer is `com.cleanyourtv.installer` **0.0.0**, with Root
-0.5.0, Root Updater 0.3.1 and supervisor 1.1.0 in the offline payload.
+Copy the final YAML to `packages/io.github.razdva122.cytvinstaller.yml` in
+`webosbrew/apps-repo`. Upstream derives the package ID from the filename and
+checks it against the manifest. The IPK's appinfo must identify the same app.
+The project is open source (`pool: main`), and `utility` is a catalog category.
 
-| Candidate property | Value |
-| --- | --- |
-| IPK size | 61,328,554 bytes |
-| IPK SHA256 | `fb1d38620ac1da731bff91dce23f9c154800b00794c025d47f9eeb2f509d81fd` |
-| Serialized manifest SHA256 | `315118e2095cf5599c33b49015e08a4b60a7a0a4b9885a292e45c6713c847638` |
-| Offline payload manifest SHA256 | `d25fc57561115f8e80b7e2233920db57f135f8aedf936d6004a3d4d6d1cdda0d` |
-
-The candidate manifest's intended v1.4.0 IPK URL is not a published asset.
-Version 0.0.0 cannot be promoted. Freeze a new originating release, independent
-Installer version and exact rebuilt artifacts after acceptance; do not append
-unaccepted Installer files to the already published release.
+The new ID uses the publisher's GitHub namespace. The linter uses the
+lowercase GitHub login when suggesting a reverse-DNS package ID. Historical
+development packages used `com.cleanyourtv.installer`; their manifests and
+IPKs cannot be submitted under the new filename. See the
+[upstream package review instructions](https://github.com/webosbrew/apps-repo/blob/bc55f62416e7c87e79edf5947c56400808bf7592/.github/instructions/packages.instructions.md)
+and [namespace check](https://github.com/webosbrew/apps-repo/blob/bc55f62416e7c87e79edf5947c56400808bf7592/repogen/lintpkg.py#L184-L189).
 
 ## Catalog preflight
 
-The existing `cleanyourtv-installer.yml` and actual candidate manifest passed
-the upstream PackageInfo and PackageManifest JSON schemas at apps-repo commit
-`f3c64646459e9526832fcfc6e61d5c8d009decb4`. This is schema validation, not the
-complete upstream linter or proof of public URL reachability. Screenshots are
-recommended by upstream; the project's own acceptance requires representative
-TV images. Do not publish the maintainer's private room photo or raw diagnostics.
+Use [the upstream submission rules](https://github.com/webosbrew/apps-repo#submit-your-application)
+and [PR template](https://github.com/webosbrew/apps-repo/blob/main/.github/pull_request_template.md).
+Keep the user-facing description in the YAML. Put AI-use disclosure and human
+review evidence in the eventual PR. Put the exact artifact identity and
+project acceptance results in the [acceptance record](../../docs/development/HOMEBREW-INSTALL-ACCEPTANCE.md).
 
-The eventual upstream change belongs at
-`webosbrew/apps-repo:packages/cleanyourtv-installer.yml`, category `utility`,
-pool `main`. Keep the current YAML explicitly marked as a draft until the
-remaining gates pass. The intended stable manifest endpoint remains
-`https://github.com/Razdva122/clean-your-tv-lg-webos/releases/latest/download/homebrew-manifest.json`.
+- Verify the YAML against `content/schemas/packages/PackageInfo.json` and the
+  generated manifest against `content/schemas/api/PackageManifest.json`.
+  Check the filename against both the manifest ID and IPK appinfo.
+- Check the public icon and open-source repository. For the project's screenshot
+  gate, capture representative setup and maintenance views from the accepted
+  TV build. Add public full-size HTTPS image URLs in the top-level `screenshots`
+  list, in display order. Each item may have a `url` and a short `caption`
+  for alt text. Upstream warns if screenshots are absent.
+- Verify the final manifest at the YAML's stable latest-release URL. Its
+  `ipkUrl` must still serve the accepted bytes from the original versioned
+  release. Compare the public manifest and IPK against the frozen hashes
+  and `SHA256SUMS`. Follow the [protected promotion procedure](../DEVELOPMENT.md#acceptance-and-existing-release-gate).
+- From a current apps-repo checkout with its dependencies and Homebrew Toolbox
+  installed, run the same steps as [upstream package CI](https://github.com/webosbrew/apps-repo/blob/main/.github/workflows/package-lint.yml).
+  Use a temporary directory for the IPK:
 
-## Physical session and prerequisite blocker
+  ```sh
+  listing=packages/io.github.razdva122.cytvinstaller.yml
+  package_file="$(mktemp -d)/installer.ipk"
+  python -m repogen.lintpkg -f "$listing" --new
+  python -m repogen.downloadipk -i "$listing" -o "$package_file"
+  python -m repogen.check_compat -i "$listing" -p "$package_file"
+  ```
 
-The maintainer's C3 accepted the original candidate package; all 161 regular
-files matched the IPK. Fixed root-side Homebrew inspection recognized the
-existing Root 0.4.0 / Root Updater 0.3.0 installation as maintainable with no
-active operation. All 73 existing product package files remained unchanged.
-The maintainer confirmed readable UI and directional focus, but supplied a
-photo showing **Setup unavailable**, not a successful maintenance screen.
+### Offline catalog checks for the bundled setup on 2026-11-26
 
-[Issue #116](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/116)
-tracks this blocker. An app-attributed call was denied by LS2. Homebrew 0.7.3
-exposes its elevated API to `public`, while webOS 11's generated application
-permissions no longer include that group. The upstream
-[Homebrew PR #233](https://github.com/webosbrew/webos-homebrew-channel/pull/233),
-commit `50fa99e1f08959b665b2e34d0d85cb2222c4c2c9`, grants `lunabus.query` too.
-It is merged upstream but, rechecked on 2026-10-30, absent from the latest
-published Homebrew release (0.7.3). No supported published replacement version
-is available yet. The updated candidate detects an exact app-originated `exec`
-denial, keeps any saved operation ID and recommends the published computer or
-Android installer. This is failure handling, not an access grant or new TV evidence.
+The local Installer 0.0.0 candidate for the bundled setup passed both official
+schemas and all three catalog CI commands from apps-repo revision
+`bc55f62416e7c87e79edf5947c56400808bf7592`.
 
-A tested appinfo-only permission declaration did not change the generated
-client ACL on this TV. That unsuccessful change and its packaging assertion
-were removed from project source. Its local test IPK was
-`a501b2f2d1e9ae11a04a633638a042c5b024992b816cac8e0576cbb6cdb6b1a0`;
-do not confuse it with the original CI artifact or approved release bytes.
+| File or measurement | Bytes | SHA-256 |
+| --- | ---: | --- |
+| Installer IPK | 123,949,458 | `901190b81b3878b81a74a5c76882bb52775e138ab05c934a76c8eff9f0149a0f` |
+| Serialized Homebrew manifest | 795 | `4ca78609360ffcbf8e3b2ffaf6194ade437845e17f4a824edb63093e8f8d02a1` |
+| Installed file contents | 129,372,295 | — |
 
-The maintainer authorized a temporary exact upstream prerequisite patch and
-its subsequent rollback. The two exact upstream changes plus a service rescan
-alone did not change the already running service's effective API groups.
-After the service's normal `quit`/lazy-restart cycle, it still ran as UID 0,
-introspection included `lunabus.query`, and app-attributed fixed `inspect`
-returned `installed`. This establishes a conditional backend result; the
-actual UI confirmation and verified prerequisite rollback are recorded
-separately below. It cannot establish stock-0.7.3 compatibility.
-Raw evidence and original rollback bytes stay in ignored local diagnostics.
+`repogen.lintpkg --new` returned zero using the local manifest. It warned
+about missing screenshots and could not check the public icon or GitHub
+licence metadata offline. `repogen.downloadipk` read a loopback HTTP copy
+of the IPK and confirmed the app ID. The downloaded digest matched the
+original manifest. Its `installedSize`, the IPK control field
+`Installed-Size` and the sum of the regular file sizes in the data archive
+agreed.
 
-The maintainer then confirmed that pressing **Check status** displayed the
-maintenance screen with Root Home 0.4.0 / Root Updater 0.3.0. No activation,
-restore or product-removal action was confirmed. The temporary Homebrew API
-file was removed, the original manifest SHA256 was restored exactly, and a
-normal Homebrew service restart confirmed both UID 0 and the original
-effective API groups without `lunabus.query`. The temporary prerequisite
-change is no longer installed.
+`repogen.check_compat` used Homebrew Toolbox 0.10.0 and returned zero. It
+flagged the custom packager and found ES2017 features and bundled core-js.
+The firmware profiles produced the following static compatibility results.
 
-Installer-only removal then returned a matching terminal result, its application
-and package directories were absent, and all 73 original product package-file
-hashes still matched the baseline. The two test upload stages were removed.
-No clean product setup, full-product removal, activation, update, rollback or
-power-cycle acceptance is claimed from this session.
+| webOS firmware profile | Chromium | ES2017 support |
+| --- | ---: | --- |
+| 5.3.1 | 68 | Pass |
+| 6.4.0 | 79 | Pass |
+| 7.4.0 | 87 | Pass |
+| 8.3.0 | 94 | Pass |
+| 9.2.0 | 108 | Pass |
+| 10.2.0 | 120 | Pass |
+| 11.2.0 | 132 | Pass |
 
-Local `npm ci --ignore-scripts --no-audit --no-fund` and the project's
-`scripts/test.sh setup installer` checks passed using the existing cytv Python
-environment outside the desktop sandbox (Chrome and PTY checks require it).
-The final unchanged manifest suite passed 17 tests. The unsuccessful appinfo
-experiment's assertion was intentionally removed with that experiment; it
-would only have tested the ineffective declaration, not functional TV access.
+### Previous bundled-setup preflight on 2026-11-26
+
+Before the payload was corrected, the 123,947,008-byte IPK had SHA-256
+`993be912c04dbede34ee2422e259c4fd332f87be2785e1d1a253554635652324`.
+Its 795-byte manifest had SHA-256
+`5465ae9f8199cabf56cda4298467eb1ac111467e136ea24d38c3efbc0ab9b1ed`.
+The installed files totalled 129,365,107 bytes. Both schemas and the three
+offline catalog commands passed, including the seven firmware profiles.
+The linter warned about absent screenshots and offline icon and licence
+checks. Toolbox flagged the custom packager. The corrected package is
+identified in the newer preflight above.
+
+### Previous artifact and public checks on 2026-11-26
+
+These results apply to the previous Installer artifact, which still offered
+component and migration choices. Fresh setup now includes both updaters and
+imports compatible Home settings automatically. The offline checks for the changed package are recorded above.
+
+The previous local Installer 0.0.0 candidate passed both upstream schemas at revision
+`bc55f62416e7c87e79edf5947c56400808bf7592`. The IPK was 123,945,768 bytes,
+SHA-256 `e0b87958e05660ece1773c5881194aa524185060453121b9f36e8f3e03f6d100`.
+The serialized manifest SHA-256 was
+`5446e40cc7a35d3dedafaa6a7a0788d7a05d94d8e5047a02c8286da16db26cea`.
+
+| Upstream check | Observed result |
+| --- | --- |
+| `repogen.lintpkg --new` | Passed with the local manifest. The public source and icon resolved. The check warned about missing screenshots and requested manual license review. The [license file](../../LICENSE) contains the MIT terms and an Outfit font notice. |
+| `repogen.downloadipk` | Passed using a local HTTP copy of the candidate. The downloaded SHA-256, appinfo and package ID matched. The IPK control field `Installed-Size` and manifest field `installedSize` both report 129,358,143 bytes. |
+| `repogen.check_compat` | Passed with Homebrew Toolbox 0.10.0 for all seven firmware samples in the declared range (webOS 5.3.1 through 11.2.0). The verifier flagged the custom packager as a warning. |
+| Live manifest URL | HTTP 404. Public delivery and real-TV acceptance remain pending. |
+
+The catalog minimum of webOS 5.0 reflects the Node.js 8 prerequisite. LG lists
+Node 8.12.0 for webOS 5.0 and Node 0.12.2 for webOS 4.x. On earlier releases,
+use the computer or Android installer to check which editions are available.
+[LG JavaScript service runtime table](https://webostv.developer.lge.com/develop/guides/js-service-basics#supported-nodejs-version)
+
+The upstream IPK verifier scans JavaScript throughout the application tree.
+Its unfiltered scan identified ES2017 in the embedded Node updater files,
+which use async/await. All five scripts loaded by the Installer HTML parsed
+as ES5. [Upstream web app analyzer](https://github.com/webosbrew/dev-toolbox-cli/blob/v20261017-2d5a7b6/common/webdetect/src/web.rs#L30-L47)
 
 ## Remaining submission gates
 
-- Resolve and document the supported Homebrew prerequisite on webOS 11.
-- Complete the new installation-path matrix, including clean setup, both-client
-  handoff, runtime preparation, interruptions, upgrades, rollback and removal.
-  Published Root power-cycle evidence is scoped to that product and path.
-- Obtain meaningful named human review; disclose AI assistance in the eventual
-  catalog PR. Automated review alone does not satisfy upstream's policy.
-- Freeze exact nondevelopment artifacts and add `homebrew/release.json` only
-  after real acceptance. Use the protected release pipeline for publication.
-- Verify public manifest, original immutable IPK, checksums, icon and screenshot
-  URLs. Rerun current upstream validation before submission.
-- Submit the catalog PR and address maintainer review; submission itself is
-  not catalog acceptance.
-
-No catalog PR or release approval is created by this preparation record.
+1. Complete the project installation, runtime, recovery, removal and physical
+   Home/power cases for the selected artifact. Homebrew Channel
+   [0.8.0](https://github.com/webosbrew/webos-homebrew-channel/releases/tag/v0.8.0)
+   includes the access change for webOS 11. Use the current
+   [verification ledger](../../docs/development/HOMEBREW-INSTALL-ACCEPTANCE.md#homebrew-080-verification-2026-11-25)
+   to determine which cases still need evidence.
+2. Obtain meaningful human development, testing and review. The upstream PR
+   asks the submitter to attest to real-TV testing and compliance with its
+   rules. Coding agents contributed to the application and this draft. Record
+   the experienced developer's review and tests before making that declaration.
+3. Freeze an independent Installer version and bind the approval to the exact
+   IPK and serialized manifest. Development version `0.0.0` is ineligible.
+   A successful candidate CI job alone cannot enable promotion.
+4. After protected publication, verify the public files, complete the upstream
+   checks above, and add the representative TV images. Submit the single
+   package entry for catalog maintainer review when authorized.

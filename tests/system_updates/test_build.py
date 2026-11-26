@@ -145,6 +145,16 @@ class BuildTests(unittest.TestCase):
             with path.open('wb') as stream:stream.truncate(96*1024*1024+1)
             with self.assertRaisesRegex(ValueError,'Unsafe file'):setup.safe(path)
 
+    def test_fresh_root_registration_does_not_close_a_launcher_that_never_ran(self):
+        setup=load('setup');calls=[]
+        def rpc(uri,payload):
+            calls.append(uri.rsplit('/',1)[-1])
+            if uri.endswith('/running'):
+                return {'returnValue':True,'running':[{'id':'io.github.razdva122.cytvinstaller'}]}
+            raise AssertionError('A stopped launcher has no stale client to close')
+        setup.restart_registered_launcher('root',rpc)
+        self.assertEqual(calls,['running'])
+
     def test_registration_refresh_closes_root_without_launching_it(self):
         setup=load('setup')
         app='com.cleanyourtv.root.preview'
@@ -153,11 +163,14 @@ class BuildTests(unittest.TestCase):
                 calls=[]
                 def rpc(uri,payload):
                     calls.append((uri,payload))
+                    if uri.endswith('/running') and not stopped:
+                        return {'returnValue':True,'running':[{'id':app}]}
                     if stopped and uri.endswith('/closeByAppId'):
                         error=RuntimeError('Bus operation rejected');error.stopped_launcher=app;raise error
                     return {'returnValue':True}
                 setup.restart_registered_launcher('root',rpc)
-                self.assertEqual(calls,[('luna://com.webos.applicationManager/closeByAppId',{'id':app})])
+                self.assertEqual(calls,[('luna://com.webos.applicationManager/running',{}),
+                                        ('luna://com.webos.applicationManager/closeByAppId',{'id':app})])
 
     def test_registration_refresh_restarts_no_root_launcher(self):
         setup=load('setup');calls=[];app='com.gathin.tvhome'
@@ -200,9 +213,9 @@ class BuildTests(unittest.TestCase):
             calls.append(uri);return {'returnValue':False}
         with self.assertRaisesRegex(ValueError,'closeByAppId'):
             setup.restart_registered_launcher('root',rpc)
-        self.assertEqual(len(calls),1)
+        self.assertEqual([uri.rsplit('/',1)[-1] for uri in calls],['running','closeByAppId'])
         with self.assertRaises(ValueError):setup.restart_registered_launcher('unknown',rpc)
-        self.assertEqual(len(calls),1)
+        self.assertEqual(len(calls),2)
 
     def test_baseline_keeps_exact_personalized_packages_and_readback(self):
         build=load('build');setup=load('setup')

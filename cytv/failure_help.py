@@ -6,7 +6,8 @@ from .errors import DeveloperKeyError, LocalRecoveryError, TVConnectionError, TV
 from .recovery_state import REMOVAL_FAILURE_PHASES, REMOVAL_REASONS, unsubmitted_removal
 from .root_action_failure import ACTIVATION_CODES, ACTIVATION_DETAILS
 from .root_capabilities import (
-    LEGACY_RIBBON, NATIVE_HOME_UNAVAILABLE_MESSAGE, UNSUPPORTED_EXPERIMENTAL_HOME, RootCapabilityError,
+    LEGACY_RIBBON, NATIVE_HOME_UNAVAILABLE_MESSAGE, UNSUPPORTED_EXPERIMENTAL_HOME,
+    ForeignHomeHandoffRequired, NativeHomeScriptError, RootCapabilityError,
 )
 from .storage import TVStorageShortfall
 
@@ -22,7 +23,7 @@ AUTH_FAILURES = ('ssh-auth-root', 'ssh-auth-no-root', 'ssh-key-file', 'ssh-ident
 CONNECTION_FAILURES = NETWORK_FAILURES + AUTH_FAILURES
 NATIVE_HOME_SCRIPT = (
     'Restore LG Home before Root setup',
-    'The Home executable path currently points to a script.',
+    NativeHomeScriptError.detail,
     'Use the existing integration’s own supported procedure to return to LG Home. Then choose Diagnostics → Check connection and create a diagnostic report.',
     False,
 )
@@ -49,7 +50,7 @@ GUIDES = {
     'native-home-script': NATIVE_HOME_SCRIPT,
     'foreign-home-handoff-required': (
         'Return to LG Home with the existing integration',
-        'Another Home integration covers LG Home. This installer cannot restore it safely.',
+        ForeignHomeHandoffRequired.detail,
         NATIVE_HOME_SCRIPT[2],
         False,
     ),

@@ -3,7 +3,7 @@
 (function (root) {
   'use strict';
   var FIXED =
-    '/usr/bin/node /media/developer/apps/usr/palm/applications/com.cleanyourtv.installer/bootstrap.js';
+    '/usr/bin/node /media/developer/apps/usr/palm/applications/io.github.razdva122.cytvinstaller/bootstrap.js';
   function fail() {
     throw new Error('installer_unavailable');
   }
@@ -29,7 +29,7 @@
     activate: /^$/,
     status: /^--operation [a-f0-9]{32} --verify-current$/,
     install:
-      /^--operation [a-f0-9]{32} (--resume|--candidate [a-f0-9]{64}( --prepare-supervisor)?( --migrate-packaged-home)?)$/,
+      /^--operation [a-f0-9]{32} (--resume|--candidate [a-f0-9]{64}( --prepare-supervisor)?( --migrate-packaged-home)?( --activate-after-install)?)$/,
     remove: /^--operation [a-f0-9]{32} (--resume|--candidate [a-f0-9]{64})$/
   };
   function call(action, tokens) {
@@ -114,7 +114,13 @@
       value = options(
         value,
         action === 'install'
-          ? ['operation', 'candidate', 'prepareSupervisor', 'migrate']
+          ? [
+              'operation',
+              'candidate',
+              'prepareSupervisor',
+              'migrate',
+              'activateAfterInstall'
+            ]
           : ['operation', 'candidate']
       );
       var args = ['--operation', id(value.operation)];
@@ -124,11 +130,14 @@
       )
         fail();
       args.push('--candidate', value.candidate);
-      ['prepareSupervisor', 'migrate'].forEach(function (k) {
-        if (value[k] !== undefined && typeof value[k] !== 'boolean') fail();
-      });
+      ['prepareSupervisor', 'migrate', 'activateAfterInstall'].forEach(
+        function (k) {
+          if (value[k] !== undefined && typeof value[k] !== 'boolean') fail();
+        }
+      );
       if (value.prepareSupervisor) args.push('--prepare-supervisor');
       if (value.migrate) args.push('--migrate-packaged-home');
+      if (value.activateAfterInstall) args.push('--activate-after-install');
       return call(action, args);
     });
   }

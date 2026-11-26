@@ -210,7 +210,7 @@ function verifyHomebrewRelease(folder, build) {
   }
   const manifest = JSON.parse(fs.readFileSync(file));
   const match =
-    /^https:\/\/github\.com\/Razdva122\/clean-your-tv-lg-webos\/releases\/download\/(v\d{1,4}\.\d{1,4}\.\d{1,4})\/(com\.cleanyourtv\.installer_\d+\.\d+\.\d+_all\.ipk)$/.exec(
+    /^https:\/\/github\.com\/Razdva122\/clean-your-tv-lg-webos\/releases\/download\/(v\d{1,4}\.\d{1,4}\.\d{1,4})\/(io\.github\.razdva122\.cytvinstaller_\d+\.\d+\.\d+_all\.ipk)$/.exec(
       manifest.ipkUrl
     );
   if (!match) throw Error('invalid-homebrew-url');
@@ -351,6 +351,7 @@ function main(args) {
     const homebrewAssets = releaseAssets.filter(
       (a) =>
         a.name === 'homebrew-manifest.json' ||
+        a.name.startsWith('io.github.razdva122.cytvinstaller_') ||
         a.name.startsWith('com.cleanyourtv.installer_')
     );
     if (!build.homebrew && homebrewAssets.length)
@@ -364,7 +365,7 @@ function main(args) {
         '--pattern',
         'homebrew-manifest.json',
         '--pattern',
-        'com.cleanyourtv.installer_*.ipk',
+        'io.github.razdva122.cytvinstaller_*.ipk',
         '--dir',
         folder
       ]);

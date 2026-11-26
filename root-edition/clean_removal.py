@@ -448,7 +448,28 @@ def routes(device, record=None, *, retire_orphan=False):
     return result
 
 
-def restore_registrations(state, app, base, uid=0):
+def verify_removed_root_provision(snapshot):
+    """Validate the retained receipt without recreating grants for a deleted app."""
+    import provision
+    if (not isinstance(snapshot,dict) or snapshot.get('version')!=1
+            or snapshot.get('service')!=provision.NAME or snapshot.get('phase') not in (None,'restoring','rolled-back')
+            or not isinstance(snapshot.get('files'),dict)
+            or set(snapshot['files'])!={str(path) for path in provision.FILES.values()}):
+        raise ValueError('Invalid provision snapshot')
+    provision.snapshot_capabilities(snapshot)
+    for name,entry in snapshot['files'].items():
+        if (not isinstance(entry,dict) or not isinstance(entry.get('original'),str)
+                or entry.get('original_sha256')!=hashlib.sha256(entry['original'].encode()).hexdigest()
+                or not isinstance(entry.get('installed_sha256'),str) or not re.fullmatch('[0-9a-f]{64}',entry['installed_sha256'])
+                or type(entry.get('mode')) is not int or not 0<=entry['mode']<=0o777 or entry['mode']&0o022
+                or entry.get('uid')!=0 or type(entry.get('gid')) is not int or entry['gid']<0):
+            raise ValueError('Invalid provision snapshot')
+        try:Path(name).lstat()
+        except FileNotFoundError:continue
+        raise ValueError('registration_ownership_conflict')
+
+
+def restore_registrations(state, app, base, uid=0, *, package_removed=False):
     """Restore an interrupted bootstrap's fixed original/installed snapshot."""
     from cancel_provision import write_registration
     state,base=Path(state),Path(base)
@@ -472,7 +493,15 @@ def restore_registrations(state, app, base, uid=0):
         if (not isinstance(entry,dict) or set(entry) not in ({'original','installed'},{'original','installed','mode','uid','gid'})
                 or not all(isinstance(entry[k],str) for k in ('original','installed'))):
             raise ValueError('registration_ownership_conflict')
-        path=Path(name);raw=safe_bytes(path,uid=uid);info=path.lstat()
+        path=Path(name)
+        if package_removed:
+            if 'mode' in entry and (any(type(entry[k]) is not int or entry[k]<0 for k in ('mode','uid','gid'))
+                    or entry['uid']!=uid or entry['mode']>0o777 or entry['mode']&0o022):
+                raise ValueError('registration_metadata_conflict')
+            try:path.lstat()
+            except FileNotFoundError:continue
+            raise ValueError('registration_ownership_conflict')
+        raw=safe_bytes(path,uid=uid);info=path.lstat()
         if raw not in (entry['original'].encode(),entry['installed'].encode()):
             raise ValueError('registration_ownership_conflict')
         metadata=dict(mode=stat.S_IMODE(info.st_mode),uid=info.st_uid,gid=info.st_gid)

@@ -34,14 +34,14 @@ async function rejects(promise) {
 function digest(raw) {
   return crypto.createHash('sha256').update(raw).digest('hex');
 }
-function fixture(shared) {
+function fixture(shared, largeMember) {
   var base = fs.mkdtempSync(
       path.join(fs.realpathSync(os.tmpdir()), 'cytv-node-offline-')
     ),
     root = shared
       ? path.join(
           base,
-          'media/developer/apps/usr/palm/applications/com.cleanyourtv.installer/payload'
+          'media/developer/apps/usr/palm/applications/io.github.razdva122.cytvinstaller/payload'
         )
       : path.join(base, 'payload'),
     runtimeBase = path.join(base, 'private'),
@@ -54,7 +54,7 @@ function fixture(shared) {
   }
   parents.forEach(function (folder) {
     fs.mkdirSync(folder);
-    if (shared && folder.indexOf('/com.cleanyourtv.installer') < 0)
+    if (shared && folder.indexOf('/io.github.razdva122.cytvinstaller') < 0)
       fs.chmodSync(folder, 511);
   });
   var calls = [],
@@ -90,12 +90,25 @@ function fixture(shared) {
   fs.mkdirSync(path.join(root, 'root'));
   fs.mkdirSync(path.join(root, 'supervisor'));
   fs.mkdirSync(path.join(root, 'baseline'));
+  fs.mkdirSync(path.join(root, 'edition'));
+  write('edition/edition.py', 'TRUSTED_EDITION_READER');
   write('root-updater/install_driver.py', DRIVER_CODE);
   write('root-updater/support.py', SUPPORT_CODE);
+  write('root-updater/personalize.py', 'TRUSTED_MIGRATION_READER');
   write('root-updater/root-updater.ipk', 'IPK');
   write('root/bundle.json', 'ROOT_DATA');
   write('supervisor/bundle.json', 'SUPERVISOR_DATA');
   write('baseline/baseline.json', 'BASELINE_DATA');
+  if (largeMember) {
+    var media = Buffer.alloc(17 * 1024 * 1024);
+    write('root/com.cleanyourtv.root.preview_1.0.0_all.ipk', media);
+    if (largeMember !== 'root/oversized.py')
+      fs.mkdirSync(path.join(root, 'baseline/cache'));
+    write(
+      largeMember === 'root' ? 'baseline/cache/' + digest(media) : largeMember,
+      media
+    );
+  }
   write('runtime.tar.gz', 'verified normalized archive');
   write('runtime-binding.json', bindraw);
   write(
@@ -117,6 +130,7 @@ function fixture(shared) {
   );
   var manifest = {
     schema: 1,
+    versions: { root: '1.0.0' },
     files: files,
     runtime: {
       archive_sha256: PIN,
@@ -255,13 +269,17 @@ function fixture(shared) {
     module: { exports: {} }
   };
   var originalPin = digest(fs.readFileSync(path.join(root, 'manifest.json')));
+  assert(runtimeSource.includes("'/var/lib/clean-your-tv-root-staging'"));
   vm.runInNewContext(
     runtimeSource
       .replace(/'\/media([^']*)'/g, function (all, suffix) {
         return JSON.stringify(base + '/media' + suffix);
       })
       .replace("'/var/lib/clean-your-tv-python'", JSON.stringify(runtimeBase))
-      .replace("'/var/lib/clean-your-tv-installer'", JSON.stringify(execBase)),
+      .replace(
+        "'/var/lib/clean-your-tv-root-staging'",
+        JSON.stringify(execBase)
+      ),
     sandbox
   );
   return {
@@ -461,7 +479,7 @@ async function rejection(change) {
     'media/developer/apps/usr',
     'media/developer/apps/usr/palm',
     'media/developer/apps/usr/palm/applications',
-    'media/developer/apps/usr/palm/applications/com.cleanyourtv.installer'
+    'media/developer/apps/usr/palm/applications/io.github.razdva122.cytvinstaller'
   ]) {
     var foreign = fixture(true);
     try {
@@ -478,7 +496,7 @@ async function rejection(change) {
     'media/developer/apps/usr',
     'media/developer/apps/usr/palm',
     'media/developer/apps/usr/palm/applications',
-    'media/developer/apps/usr/palm/applications/com.cleanyourtv.installer'
+    'media/developer/apps/usr/palm/applications/io.github.razdva122.cytvinstaller'
   ]) {
     var linked = fixture(true);
     try {
@@ -506,12 +524,66 @@ async function rejection(change) {
   } finally {
     reanchored.clean();
   }
+  for (var member of [
+    'root',
+    'root/oversized.py',
+    'baseline/cache/' + '0'.repeat(64)
+  ]) {
+    var large = fixture(false, member);
+    try {
+      large.setSystem();
+      var largeState = await large.api.inspect(large.root);
+      if (member === 'root') {
+        var largeStage = await large.api.stage(largeState, true);
+        await largeStage.cleanup();
+      } else {
+        await rejects(large.api.stage(largeState, true));
+      }
+    } finally {
+      large.clean();
+    }
+  }
+  var sharedBase = fixture();
+  try {
+    sharedBase.setSystem();
+    var sharedState = await sharedBase.api.inspect(sharedBase.root);
+    var first = await sharedBase.api.stage(sharedState, false);
+    assert.equal(
+      fs.readFileSync(path.join(first.root, 'root-updater/personalize.py'), 'utf8'),
+      'TRUSTED_MIGRATION_READER'
+    );
+    assert(/^cytv-homebrew-[0-9a-f]{32}$/.test(path.basename(first.root)));
+    var second = await sharedBase.api.stage(sharedState, false);
+    await first.cleanup();
+    assert(fs.existsSync(second.driver), 'preserve an overlapping stage');
+    await second.cleanup();
+    assert(
+      fs.existsSync(sharedBase.execBase),
+      'preserve a base this invocation did not create'
+    );
+    var existing = await sharedBase.api.stage(sharedState, false);
+    await existing.cleanup();
+    assert(
+      fs.existsSync(sharedBase.execBase),
+      'preserve an existing empty desktop workspace'
+    );
+  } finally {
+    sharedBase.clean();
+  }
   var staged = fixture();
   try {
     staged.setSystem();
     var loaded = await staged.api.inspect(staged.root);
     var snapshot = await staged.api.stage(loaded, true);
+    assert.equal(
+      fs.readFileSync(path.join(snapshot.root, 'root-updater/personalize.py'), 'utf8'),
+      'TRUSTED_MIGRATION_READER'
+    );
     assert.equal(fs.readFileSync(snapshot.driver, 'utf8'), DRIVER_CODE);
+    assert.equal(
+      fs.readFileSync(snapshot.editionInspector, 'utf8'),
+      'TRUSTED_EDITION_READER'
+    );
     assert(!fs.existsSync(path.join(snapshot.root, 'runtime.tar.gz')));
     assert(
       fs.existsSync(path.join(snapshot.root, 'root-updater/root-updater.ipk'))
@@ -530,6 +602,10 @@ async function rejection(change) {
     );
     await snapshot.cleanup();
     assert(!fs.existsSync(snapshot.root));
+    assert(
+      !fs.existsSync(staged.execBase),
+      'remove the empty base created for this invocation'
+    );
     fs.renameSync(staged.root + '-deleted', staged.root);
   } finally {
     staged.clean();
@@ -564,7 +640,10 @@ async function rejection(change) {
         changed.save();
       }
       await rejects(changed.api.stage(anchored, true));
-      assert.equal(fs.readdirSync(changed.execBase).length, 0);
+      assert(
+        !fs.existsSync(changed.execBase),
+        'failed staging must also retire its own empty base'
+      );
     } finally {
       changed.clean();
     }

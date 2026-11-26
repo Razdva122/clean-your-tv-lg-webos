@@ -71,7 +71,10 @@ def support_stages(uid=0):
             if info.st_uid!=uid or info.st_mode & 0o777 != 0o700:
                 raise ValueError('unsafe_private_support_directory')
             for name in os.listdir(directory):
-                if not SUPPORT_STAGE.fullmatch(name):raise ValueError('unclassified_private_support')
+                # Observe Homebrew snapshots for worker/cleanup checks. The desktop
+                # retirement API continues to accept only its own staging kinds.
+                if not (SUPPORT_STAGE.fullmatch(name) or re.fullmatch(r'cytv-homebrew-[a-f0-9]{32}',name)):
+                    raise ValueError('unclassified_private_support')
                 path=PRIVATE_TEMP/name
                 os.close(checked_store(path,uid)._directory())
                 stages.append(path)
@@ -332,6 +335,7 @@ class LocalDevice:
 
     def verify_resume(self, payload, submission):
         options=self.verify_snapshot(payload,submission)
+        self.homebrew_settings = submission.get('homebrew_settings')
         self.preflight(Path(payload),options,product=submission['action']=='install')
         return options
 
@@ -491,7 +495,11 @@ class LocalDevice:
                 apps=json.loads(result.stdout)
                 inventory={'apps':[{k:a[k] for k in ('id','title','icon','iconColor')} for a in apps if not a.get('hidden') and isinstance(a.get('id'),str) and isinstance(a.get('title'),str)],'inputs':[]}
                 root_package.personalize_root(root,inventory)
-        result=deploy.install(root,migrate=options['migrate'])
+        settings = getattr(self, 'homebrew_settings', None)
+        if settings is None:
+            result=deploy.install(root,migrate=options['migrate'])
+        else:
+            result=deploy.install(root,migrate=options['migrate'],homebrew_settings=settings)
         if options['migrate']: _capture_migrated_baseline(root)
         return result
 
@@ -628,6 +636,30 @@ class LocalDevice:
                 raise ValueError('root_recovery_runtime_mismatch')
         Device.require_home_resume_runtime(ROOT)
 
+    def prepare_setup_activation(self, identifier, payload):
+        import deploy
+        self.require_selected_runtime(payload)
+        self.validate_root_driver()
+        command = [deploy.python_command(ROOT), str(ROOT/'runtime/cli.py'), 'setup-enable', identifier]
+        return lambda: deploy.command(command)
+
+    def setup_worker_live(self, store, identifier, pid):
+        if type(pid) is not int or pid <= 1:
+            return False
+        path = Path(store.root)/('request-' + identifier)
+        try:
+            args = (PROC/str(pid)/'cmdline').read_bytes().split(b'\0')
+        except FileNotFoundError:
+            return False
+        return (os.fsencode(path/'root-updater/install_driver.py') in args and b'--worker' in args
+                and b'--activate-after-install' in args and identifier.encode() in args)
+
+    def setup_activation_active(self, identifier):
+        import deploy
+        from installation import setup_profile_active
+        self.validate_root_driver()
+        return setup_profile_active(deploy.runtime('status').get('result', {}), identifier)
+
     def activate(self):
         import deploy
         if self.inspect()['state']!='installed':raise ValueError('current_installation_required')
@@ -693,6 +725,24 @@ class LocalDevice:
             if package.is_symlink() or not package.is_dir(): raise ValueError('unsafe_package_remainder')
             package.rmdir()
         if any(os.path.lexists(p) for p in paths): raise ValueError('package_remains')
+
+    def package_registrations_gone(self, app):
+        """Prove LG removed this entire package before retiring private state."""
+        if app not in (APP,'com.cleanyourtv.root.updater','com.cleanyourtv.system.updater'):
+            raise ValueError('foreign_package')
+        if app in self.apps():return False
+        try:self.absent(app)
+        except ValueError as error:
+            if str(error)=='package_remains':return False
+            raise
+        for folder in ('services.d','roles.d','client-permissions.d','api-permissions.d','manifests.d','groups.d'):
+            directory=BUS/folder
+            if not os.path.lexists(directory):continue
+            fd=checked_store(directory,self.ownership.store.uid)._walk(str(directory))
+            try:
+                if any(name==app or name.startswith(app+'.') for name in os.listdir(fd)):return False
+            finally:os.close(fd)
+        return True
 
     def root_journal(self):return read_journal(ROOT/'deploy.json')
 
@@ -844,7 +894,14 @@ class LocalDevice:
                     if snapshot is not None:
                         self.ownership.store.write('owner-backup-'+record['operation'],{'provision':snapshot})
                         with cleanup_step('provision-rollback'):
-                            provision.rollback(restored=restored)
+                            if self.package_registrations_gone(APP):
+                                from clean_removal import verify_removed_root_provision
+                                import system_permissions
+                                verify_removed_root_provision(snapshot)
+                                system_permissions.remove(provision.secure)
+                                startup_hook.remove(provision.secure)
+                            else:
+                                provision.rollback(restored=restored)
                             provision.refresh()
                     else:
                         if any(os.path.lexists(ROOT/name) for name in ('recovery-provision.json','recovery-provision.pending.json')):
@@ -857,13 +914,23 @@ class LocalDevice:
                 if os.path.lexists(SUPERVISOR/'legacy-lockdown.json'):
                     from cleanup_system_updater import lockdown, write
                     with cleanup_step('legacy-lockdown'):
-                        entries=lockdown(SUPERVISOR,BUS,check=lambda files:validate_restored_root_api(files,BUS,UPDATER,uid))
+                        api=BUS/'api-permissions.d/com.cleanyourtv.root.updater.service.api.json'
+                        updater_gone=not os.path.lexists(api) and self.package_registrations_gone('com.cleanyourtv.root.updater')
+                        entries=lockdown(SUPERVISOR,BUS,allow_missing=updater_gone,
+                            check=lambda files:validate_restored_root_api(files,BUS,UPDATER,uid))
+                        if updater_gone:
+                            # LG owns the removed package API. All other lockdown
+                            # entries must still match their exact recorded bytes.
+                            entries.pop(str(api),None)
+                            for name,entry in entries.items():
+                                if safe_bytes(name,uid=uid) not in (entry['original'].encode(),entry['disabled'].encode()):
+                                    raise ValueError('Legacy lockdown file changed')
                         for name,entry in entries.items():write(Path(name),entry['original'].encode(),entry['mode'])
                 for state,app,hookname in ((SUPERVISOR,'com.cleanyourtv.system.updater','52-clean-your-tv-system-updater'),
                                           (UPDATER,'com.cleanyourtv.root.updater','51-clean-your-tv-root-updater')):
                     if not os.path.lexists(state):continue
                     with cleanup_step('registration-restore'):
-                        restore_registrations(state,app,BUS,uid)
+                        restore_registrations(state,app,BUS,uid,package_removed=self.package_registrations_gone(app))
                         startup_hook.remove_link(provision.secure,state,INIT/hookname,app,startup_hook.owned_legacy(app,state))
                 unavailable=set(record.get('cleanup_startup_unavailable',[]))
                 for app,service in (('com.local.nativehome','com.local.nativehome.service'),

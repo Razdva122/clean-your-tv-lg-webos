@@ -72,6 +72,14 @@ Si l’installateur Root propose de remplacer l’intégration Home actuelle, co
 
 Pour la configuration Root, l’installateur utilise automatiquement un stockage temporaire interne vérifié si nécessaire ; aucune clé USB n’est requise et, si la vérification du stockage échoue, conservez les données de récupération et enregistrez un rapport de diagnostic.
 
+<a id="candidat-non-publié--installer-root-avec-homebrew"></a>
+
+### Si CYTV Installer est déjà ouvert sur le téléviseur
+
+Choisissez **Installer et activer** et confirmez une fois. L’installateur configure ensemble Root Home, Root Updater et System Updater. S’il trouve des réglages compatibles provenant d’une ancienne installation de Clean Your TV Home, il les importe automatiquement. La touche Accueil ouvrira Root Home, sauf si l’arrêt d’urgence est enclenché. Si l’installateur vous invite à poursuivre la configuration de Root sur un ordinateur, suivez cette indication. S’il propose No-root, utilisez l’installateur pour ordinateur ou Android.
+
+Pour désinstaller Clean Your TV, choisissez **Supprimer le produit complet** dans l’installateur. Supprimer uniquement l’application d’installation laisse Clean Your TV sur le téléviseur.
+
 ## 5. Vérifier la télécommande
 
 1. Ouvrez une autre application sur la TV et appuyez brièvement sur **Home**. Clean Your TV doit s’ouvrir. Indiquez votre observation dans l’assistant ; ignorez le test si vous ne l’avez pas effectué.
@@ -149,7 +157,6 @@ Dans l’installateur de bureau, ouvrez **Action de maintenance → Ajuster les 
 <a id="blocage-du-micrologiciel-lg-dans-120"></a>
 <a id="nouveautés-de-130-récupération-guidée-sur-ordinateur"></a>
 <a id="nouveautés-de-130--12"></a>
-<a id="candidat-non-publié--installer-root-avec-homebrew"></a>
 <a id="candidat-non-publié--récupération-du-son-hdmi-root"></a>
 <a id="thèmes-154"></a>
 <a id="catégories-des-paramètres-candidat-non-publié"></a>
