@@ -10,6 +10,13 @@
       "summary": "Fix premature No-root removal process blocking (#841)"
     },
     {
+      "pr": 846,
+      "issues": [
+        152
+      ],
+      "summary": "Verify Helper startup and guard No-root removal of package runtimes (#152)"
+    },
+    {
       "pr": 847,
       "issues": [
         830
@@ -17,11 +24,42 @@
       "summary": "Resume No-root removal after a verified Root handoff (#830)"
     },
     {
+      "pr": 848,
+      "issues": [
+        116
+      ],
+      "summary": "Fix Homebrew Installer staging for current Root packages on webOS"
+    },
+    {
       "pr": 849,
       "issues": [
         368
       ],
       "summary": "Preserve pending Root uninstall receipts across saved connections and nested retry records (partial recovery fix)"
+    },
+    {
+      "pr": 850,
+      "issues": [
+        635
+      ],
+      "summary": "Record the OLED55C47LA Home button result"
+    },
+    {
+      "pr": 851,
+      "issues": [],
+      "summary": "Add individual Debloat restoration and LG promotion controls"
+    },
+    {
+      "pr": 852,
+      "issues": [
+        364
+      ],
+      "summary": "Report Magic Remote Home and Back capabilities in Root Doctor"
+    },
+    {
+      "pr": 853,
+      "issues": [],
+      "summary": "Unify Clean Your TV behind one tile"
     }
   ],
   "excluded": [],
