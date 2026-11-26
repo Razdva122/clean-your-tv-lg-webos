@@ -1,31 +1,7 @@
 {
   "schema": 1,
-  "version": "1.29.1",
-  "changes": [
-    {
-      "pr": 842,
-      "issues": [
-        410,
-        615,
-        687,
-        740,
-        741,
-        791,
-        818,
-        825,
-        828,
-        829,
-        830
-      ],
-      "summary": "Deliver the accepted #827 fixes with System Updater Engine 1.2.17 after the unpublished v1.29.0 signing failure"
-    }
-  ],
+  "version": null,
+  "changes": [],
   "excluded": [],
-  "acceptance": "Exact macOS ARM64 installer SHA-256 fc87c6946ea5ec5aab54fc96598250134b2744e48abaca6f5c7543dfa7b3c40c preserves all 631 unaffected RC4 payload entries. Reuse matching project OLED55C3RLA firmware 43.21.71 / SDK 11.2.0 No-root Root-SSH evidence for published-Home Helper compatibility, installed Home, standby focus, OK preview, Back and LG Home recovery. Engine 1.2.17 transitions from the published 1.2.16 archive and its production-signed catalog verifies with the shipped 1.2.16 policy and pinned key for all four System variants. Physical pointer, differing hardware, live engine OTA and Root activation or rollback remain outside the observed scope. Exact artifact and acceptance cases: docs/history/2026-11-26-release-1.29.1-engine-recovery.md.",
-  "build": {
-    "run_id": 45761587837,
-    "attempt": 1,
-    "source": "1337f4c6181ce68365c52858423a82f189c63734"
-  },
-  "acceptance_build": "45761587837:1"
+  "acceptance": ""
 }
