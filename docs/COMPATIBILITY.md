@@ -143,7 +143,7 @@ catalog groups the result by the SDK and records the other name in the report.
 - OLED55C16LA — No-root — firmware 03.53.45 — [owner reported operation (#454)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/454#issuecomment-6900707375)
 - OLED55C35LA — No-root — webOS 26 (build 11.2.0-3711) — [owner reported operation (#664)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/664)
 - OLED55C46LA — Root — firmware 33.31.68 — webOS 10.3.1 — v1.13.0 — [owner reported operation (#416)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/416)
-- OLED55C47LA — No-root — [owner reported operation (#635)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/635#issuecomment-6877112869)
+- OLED55C47LA — No-root — firmware 33.31.61 — webOS SDK 10.3.1 — v1.20.6 — [owner confirmed short Home opened Clean Your TV Home after fresh setup (#635)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/635#issuecomment-6877112869)
 - OLED55C5ELB — No-root — firmware 43.21.77 — webOS 26 — v1.24.0 — [partial result (#715)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/715)
 - OLED55C9PLA — No-root — firmware 05.30.25 — webOS 4.5 / SDK 4.9.0 — v1.20.7 — [partial result (#626)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/626#issuecomment-6881622004)
 - OLED55G59LS — No-root — firmware 43.21.96 — v1.20.5 — [owner reported operation (#529)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/529)
