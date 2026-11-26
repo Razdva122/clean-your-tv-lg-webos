@@ -82,7 +82,7 @@ Nach der Installation öffnet Root Home **Fernseher einrichten**. Wähle unter *
 
 Wenn der Installer ein Problem meldet, folge der Anweisung auf dem Bildschirm. Über die Schaltfläche zum Speichern des Diagnoseberichts bleibt eine Kopie auf diesem Fernseher. Öffne den gespeicherten Bericht im Installer oder in der Wiederherstellung der Kachel, um ihn zu lesen oder den QR-Code mit deinem Telefon zu scannen. Die Liste zeigt abgeschlossene Prüfungen, den aktuellen Schritt und mögliche Fehler. Scanne den QR-Code, lade den JSON-Bericht herunter oder öffne den ausgefüllten GitHub-Entwurf. Beschreibe das Problem vor dem Absenden.
 
-Zum Entfernen von Clean Your TV wählen Sie im Installer **Vollständiges Produkt entfernen**. Wenn Sie nur die Installer-App löschen, bleibt Clean Your TV auf dem Fernseher.
+Zum Entfernen am Fernseher öffnen Sie in Root Home **Einstellungen → Erweitert → Clean Your TV wiederherstellen** und bestätigen Sie die vollständige Deinstallation. Wenn ein vollständiger Neustart erforderlich ist, starten Sie den Fernseher neu, öffnen Sie Clean Your TV erneut und setzen Sie den Vorgang fort. Nach der Prüfung können Sie auch die Installer-Kachel vom Ergebnisbildschirm aus entfernen.
 
 ## 5. Fernbedienung prüfen
 

@@ -45,7 +45,8 @@ function fixture(shared, largeMember) {
         )
       : path.join(base, 'payload'),
     runtimeBase = path.join(base, 'private'),
-    execBase = path.join(base, 'exec');
+    execBase = path.join(base, 'exec'),
+    productBase = path.join(base, 'product');
   var parents = [],
     cursor = root;
   while (cursor !== base) {
@@ -96,6 +97,9 @@ function fixture(shared, largeMember) {
   write('edition/debloat.py', 'TRUSTED_DEBLOAT_ACTION');
   write('edition/cytv/__init__.py', '');
   write('edition/cytv/debloat_policy.py', 'TRUSTED_DEBLOAT_POLICY');
+  fs.mkdirSync(path.join(root, 'installer-support'));
+  write('installer-support/lifecycle-gate', 'GATE');
+  write('root-updater/cleanup_tail.js', 'TAIL');
   write('root-updater/install_driver.py', DRIVER_CODE);
   write('root-updater/support.py', SUPPORT_CODE);
   write('root-updater/personalize.py', 'TRUSTED_MIGRATION_READER');
@@ -198,6 +202,47 @@ function fixture(shared, largeMember) {
   };
   function exec(executable, args, options, callback) {
     calls.push({ executable: executable, args: args });
+    if (args.indexOf('cytv-cleanup-tail') >= 0) {
+      var index = args.indexOf('cytv-cleanup-tail');
+      return {
+        stdin: {
+          on: function () {},
+          end: function (source) {
+            assert.equal(String(source), 'TAIL');
+            var mode = args[index + 1],
+              target = args[index + 2],
+              scratch = args[index + 3],
+              intent = args[index + 8];
+            if (mode !== 'inspect') {
+              assert.equal(args[0], 'root-clean-lock');
+              assert.equal(executable, scratch + '/gate');
+              assert.equal(fs.statSync(executable).mode & 511, 448);
+              assert.deepEqual(Array.from(args.slice(index + 4, index + 7)), [
+                '3',
+                '4',
+                '5'
+              ]);
+              assert.equal(args[index + 7], digest('GATE'));
+              remove(scratch);
+            }
+            callback(
+              null,
+              JSON.stringify({
+                operation: target,
+                removal: intent,
+                state:
+                  mode === 'inspect'
+                    ? 'tail-ready'
+                    : mode === 'finish'
+                      ? 'complete'
+                      : 'verified-clean',
+                current: true
+              })
+            );
+          }
+        }
+      };
+    }
     if (executable === '/usr/bin/python3')
       return callback(
         system ? null : new Error('missing'),
@@ -281,6 +326,10 @@ function fixture(shared, largeMember) {
       })
       .replace("'/var/lib/clean-your-tv-python'", JSON.stringify(runtimeBase))
       .replace(
+        "'/var/lib/clean-your-tv-installation'",
+        JSON.stringify(productBase)
+      )
+      .replace(
         "'/var/lib/clean-your-tv-root-staging'",
         JSON.stringify(execBase)
       ),
@@ -298,11 +347,20 @@ function fixture(shared, largeMember) {
       prepare: function (root) {
         return sandbox.module.exports.prepare(root, originalPin);
       },
-      stage: sandbox.module.exports.stage
+      stage: sandbox.module.exports.stage,
+      removal: function (operation, action) {
+        return sandbox.module.exports.removal(
+          root,
+          originalPin,
+          operation,
+          action
+        );
+      }
     },
     base: base,
     runtimeBase: runtimeBase,
     execBase: execBase,
+    productBase: productBase,
     setMachine: function (value) {
       machine = value;
     },
@@ -430,6 +488,137 @@ async function rejection(change) {
     assert(!fs.existsSync(native64.runtimeBase));
   } finally {
     native64.clean();
+  }
+  var removal = fixture();
+  try {
+    removal.setSystem();
+    var removalState = await removal.api.inspect(removal.root),
+      removalStage = await removal.api.stage(removalState, 'removal');
+    assert(
+      /^cytv-product-[a-f0-9]{32}$/.test(path.basename(removalStage.root))
+    );
+    assert.deepEqual(fs.readdirSync(removalStage.root).sort(), [
+      'root',
+      'root-updater'
+    ]);
+    remove(removalStage.root);
+    await removalStage.cleanup();
+    var intent = 'a'.repeat(32),
+      target = 'b'.repeat(32),
+      lease = 'c'.repeat(32),
+      final = 'd'.repeat(32);
+    assert.equal(
+      await removal.api.removal(intent, 'homebrew-remove-status'),
+      null
+    );
+    assert.equal(
+      (await removal.api.removal(intent, 'homebrew-remove-tile')).can_resume,
+      false
+    );
+    fs.mkdirSync(removal.productBase, 448);
+    function receipt(name, value) {
+      fs.writeFileSync(
+        path.join(removal.productBase, name + '.json'),
+        JSON.stringify(value),
+        { mode: 384 }
+      );
+    }
+    receipt('homebrew-removal-' + intent, {
+      schema: 1,
+      operation: intent,
+      target: target,
+      lease: lease
+    });
+    receipt('operation', {
+      schema: 1,
+      id: lease,
+      owner: 'product',
+      stage: 'complete',
+      journal: 'product-' + target + '.json'
+    });
+    receipt('clean-removal-' + target, {
+      schema: 1,
+      operation: target,
+      removal: intent,
+      lease: lease,
+      protocol: 'clean-removal-v1',
+      stage: 'requested',
+      state: 'recovery_required'
+    });
+    assert.equal(
+      await removal.api.removal(intent, 'homebrew-remove-status'),
+      null
+    );
+    receipt('operation', {
+      schema: 1,
+      id: lease,
+      stage: 'private-cleanup',
+      owner: 'clean-removal',
+      journal: 'product-' + target + '.json'
+    });
+    receipt('clean-removal-' + target, {
+      schema: 1,
+      operation: target,
+      removal: intent,
+      lease: lease,
+      protocol: 'clean-removal-v1',
+      stage: 'private-cleanup',
+      state: 'recovery_required',
+      runtime_cleanup: {}
+    });
+    assert.equal(
+      (await removal.api.removal(intent, 'homebrew-remove-status')).can_resume,
+      true
+    );
+    assert(
+      !removal.calls.some(function (call) {
+        return call.args.indexOf('finish') >= 0;
+      })
+    );
+    assert.equal(
+      (await removal.api.removal(intent, 'homebrew-remove')).current,
+      true
+    );
+    receipt('clean-removal-' + target, {
+      schema: 1,
+      operation: target,
+      removal: intent,
+      lease: lease,
+      protocol: 'clean-removal-v1',
+      stage: 'verified-clean',
+      state: 'complete',
+      final_original_lease: lease,
+      final_fence: final
+    });
+    receipt('operation', {
+      schema: 1,
+      id: final,
+      stage: 'verified-clean',
+      owner: 'clean-removal',
+      journal: 'product-' + target + '.json'
+    });
+    assert.equal(
+      (await removal.api.removal(intent, 'homebrew-remove-status')).code,
+      'removal-verified'
+    );
+    assert.equal(
+      (await removal.api.removal(intent, 'homebrew-remove-tile')).code,
+      'installer-removed'
+    );
+    receipt('operation', {
+      schema: 1,
+      id: 'e'.repeat(32),
+      owner: 'product',
+      journal: 'product-' + target + '.json'
+    });
+    var priorCalls = removal.calls.length;
+    assert.equal(
+      (await removal.api.removal(intent, 'homebrew-remove-tile')).current,
+      false
+    );
+    assert.equal(removal.calls.length, priorCalls);
+  } finally {
+    removal.clean();
   }
   var cold = fixture(true);
   try {

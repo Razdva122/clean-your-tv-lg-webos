@@ -8,7 +8,8 @@
     doc = root.document,
     content = doc.getElementById('content'),
     hint = doc.getElementById('hint'),
-    key = 'cytv.installer.operation';
+    key = 'cytv.installer.operation',
+    cleanKey = 'cytv.installer.clean-removal';
   var inspected = null,
     job = null,
     operation = null,
@@ -21,7 +22,12 @@
     accessDenied = false,
     transportFailure = null,
     runtimePreparation = null,
-    reportView = null;
+    reportView = null,
+    cleanOperation = null,
+    cleanResult = null,
+    cleanFailure = null,
+    cleanStorageFailure = false,
+    cleanTileResult = null;
   function t(k) {
     var text = root.InstallerDiagnosticI18n(k);
     return text === k ? i18n.t(k) : text;
@@ -49,6 +55,8 @@
   try {
     var saved = root.localStorage.getItem(key);
     if (/^[a-f0-9]{32}$/.test(saved || '')) operation = saved;
+    var savedClean = root.localStorage.getItem(cleanKey);
+    if (/^[a-f0-9]{32}$/.test(savedClean || '')) cleanOperation = savedClean;
   } catch (_) {}
   function element(tag, text, className) {
     var node = doc.createElement(tag);
@@ -86,6 +94,9 @@
     screen = name;
     clearTimeout(poll);
     content.textContent = '';
+    content.removeAttribute('data-confirm-action');
+    content.removeAttribute('data-clean-state');
+    content.removeAttribute('data-clean-stage');
     content.setAttribute('data-screen', name);
     content.appendChild(element('h2', t(title)));
     doc.getElementById('language').textContent = t('language');
@@ -149,15 +160,19 @@
       'confirm',
       action === 'install'
         ? 'review'
-        : action === 'remove'
+        : action === 'clean-remove'
           ? 'remove'
-          : action === 'activate'
-            ? 'activate'
-            : action === 'restore'
-              ? 'restore'
-              : 'prerequisites'
+          : action === 'remove-installer'
+            ? 'removeInstaller'
+            : action === 'activate'
+              ? 'activate'
+              : action === 'restore'
+                ? 'restore'
+                : 'prerequisites'
     );
+    content.setAttribute('data-confirm-action', action);
     paragraph(copy);
+    if (action === 'clean-remove') paragraph('cleanKeepInstaller');
     var actions = controls();
     button(actions, 'cancel', t('cancel'), cancel);
     button(actions, 'confirm', t('confirm'), submit, 'primary');
@@ -199,7 +214,7 @@
       /^[a-f0-9]{64}$/.test(inspected.payload_sha256 || '')
     );
   }
-  function addDiagnostics(value, code) {
+  function addDiagnostics(value, code, hideAdvice) {
     var data = null;
     var actions = content.querySelector('.actions');
     if (value || code) {
@@ -224,7 +239,7 @@
         code
       );
     }
-    if (data && code !== 'homebrew_exec_denied') {
+    if (data && !hideAdvice && code !== 'homebrew_exec_denied') {
       var description = element('div');
       diagnostics.explain(description, data, t);
       content.insertBefore(description, actions);
@@ -276,9 +291,169 @@
     if (action === 'prepare-runtime') return 'runtime_unconfirmed';
     return 'installer_unavailable';
   }
+  var cleanStages = {
+    requested: 'cleanRestoring',
+    'original-writers-fenced': 'cleanRestoring',
+    'controls-restored': 'restoreDone',
+    'package-removal': 'cleanPackages',
+    'private-cleanup': 'cleanFiles',
+    'restart-required': 'restartNeeded',
+    'verified-clean': 'cleanVerified'
+  };
+  function cleanVerified() {
+    return (
+      cleanResult &&
+      cleanResult.state === 'complete' &&
+      cleanResult.current === true &&
+      cleanResult.restart_required !== true
+    );
+  }
+  function canContinueClean() {
+    return (
+      cleanResult &&
+      !cleanFailure &&
+      cleanResult.state !== 'complete' &&
+      (cleanResult.can_resume === true ||
+        (cleanResult.state === 'unknown' &&
+          cleanResult.stage === 'unknown' &&
+          cleanResult.code === 'unknown-operation'))
+    );
+  }
+  function renderClean() {
+    var result = cleanResult || { action: 'remove', state: 'unknown' };
+    var tileRemoved = cleanTileResult === 'done';
+    var state =
+      cleanVerified() || tileRemoved
+        ? 'complete'
+        : result.state === 'complete'
+          ? 'unknown'
+          : result.state;
+    var stage = Object.prototype.hasOwnProperty.call(cleanStages, result.stage)
+      ? result.stage
+      : null;
+    var pending = state === 'pending' || busy;
+    begin('clean-removal', 'remove');
+    content.setAttribute('data-clean-state', pending ? 'pending' : state);
+    if (stage && !(stage === 'verified-clean' && !cleanVerified()))
+      content.setAttribute('data-clean-stage', stage);
+    if (cleanTileResult) paragraph(cleanTileResult);
+    else if (cleanVerified()) paragraph('cleanVerified');
+    else if (result.restart_required === true) {
+      paragraph('restartNeeded');
+      paragraph('restartAndRetry');
+    } else if (pending) {
+      paragraph(stage ? cleanStages[stage] : 'checking');
+    } else if (canContinueClean()) paragraph('cleanContinue');
+    var actions = controls();
+    if (!tileRemoved)
+      button(actions, 'refresh', t('refresh'), refresh, 'primary').disabled =
+        busy;
+    if (!busy && canContinueClean())
+      button(
+        actions,
+        'continue-removal',
+        t(
+          result.restart_required === true
+            ? 'cleanContinueAfterRestart'
+            : 'continueOriginal'
+        ),
+        function () {
+          if (canContinueClean()) requestClean('cleanRemove');
+        }
+      );
+    if (!busy && cleanVerified() && !cleanTileResult) {
+      button(
+        actions,
+        'remove-installer',
+        t('removeInstaller'),
+        function () {
+          ask('remove-installer', 'remove-installer', 'removeInstallerConfirm');
+        },
+        'danger'
+      );
+    }
+    button(actions, 'close', t('close'), close).disabled = busy;
+    addDiagnostics(
+      !busy &&
+        !tileRemoved &&
+        (cleanFailure || state !== 'pending' || result.restart_required)
+        ? result
+        : null,
+      cleanFailure,
+      cleanVerified() ||
+        result.restart_required === true ||
+        (canContinueClean() && result.code === 'removal-pending') ||
+        !!cleanTileResult
+    );
+    focus(tileRemoved ? 'close' : 'refresh');
+    if (
+      !busy &&
+      pending &&
+      !doc.hidden &&
+      !result.restart_required &&
+      !canContinueClean()
+    )
+      poll = setTimeout(refresh, 8000);
+  }
+  function requestClean(method) {
+    if (busy || !cleanOperation) return;
+    var previous = doc.activeElement && doc.activeElement.id;
+    busy = true;
+    cleanFailure = null;
+    cleanTileResult = null;
+    if (method !== 'cleanStatus') cleanResult = null;
+    renderClean();
+    Promise.resolve()
+      .then(function () {
+        return bridge[method](cleanOperation);
+      })
+      .then(function (result) {
+        if (
+          result.action !== 'remove' ||
+          ['pending', 'recovery_required', 'complete', 'unknown'].indexOf(
+            result.state
+          ) < 0 ||
+          (result.operation !== undefined &&
+            result.operation !== cleanOperation)
+        )
+          throw new Error('homebrew_invalid_reply');
+        if (method === 'removeInstaller') {
+          if (
+            result.code === 'installer-removed' &&
+            result.state === 'complete' &&
+            result.current === true
+          ) {
+            cleanTileResult = 'done';
+          } else {
+            cleanTileResult = 'cleanTileUnverified';
+            cleanFailure = result.code || 'status_unavailable';
+          }
+        } else cleanResult = result;
+        if (cleanVerified()) dailyHome(null);
+      })
+      .catch(function (error) {
+        cleanResult = null;
+        if (method === 'removeInstaller')
+          cleanTileResult = 'cleanTileUnverified';
+        cleanFailure =
+          error.diagnosticCode ||
+          (error.message === 'homebrew_invalid_reply'
+            ? error.message
+            : 'status_unavailable');
+      })
+      .then(function () {
+        busy = false;
+        render();
+        focus(previous);
+      });
+  }
   function render() {
     if (reportView) {
       renderReport();
+      return;
+    }
+    if (cleanOperation) {
+      renderClean();
       return;
     }
     if (accessDenied) {
@@ -413,11 +588,12 @@
         'remove',
         t('remove'),
         function () {
-          ask('remove', 'remove', 'removeProductConfirm');
+          ask('clean-remove', 'remove', 'removeProductConfirm');
         },
         'danger'
       );
       paragraph('retained');
+      if (cleanStorageFailure) paragraph('cleanRequestNotSaved');
       addDiagnostics(transportFailure ? inspected : null, transportFailure);
     } else if (
       (state === 'installed' &&
@@ -512,6 +688,7 @@
   }
   function refresh(focusId) {
     if (busy) return;
+    if (cleanOperation) return requestClean('cleanStatus');
     busy = true;
     clearTimeout(poll);
     var previous = doc.activeElement && doc.activeElement.id;
@@ -634,11 +811,11 @@
       })
       .join('');
   }
-  function startProduct(action) {
+  function startInstall() {
     remember(uuid());
     job = {
       operation: operation,
-      action: action,
+      action: 'install',
       state: 'pending',
       stage: 'submitting'
     };
@@ -648,7 +825,6 @@
       operation: operation,
       candidate: inspected.candidate_sha256
     };
-    if (action === 'remove') return bridge.remove(options);
     options.prepareSupervisor = true;
     options.migrate = false;
     options.activateAfterInstall = true;
@@ -686,21 +862,45 @@
           return null;
         inspected = current;
         runtimePreparation = null;
-        return startProduct('install');
+        return startInstall();
       });
   }
   function submit() {
     if (busy || !confirmation) return;
     var action = confirmation;
     confirmation = null;
+    if (action === 'clean-remove') {
+      try {
+        var id = root.localStorage.getItem(cleanKey);
+        if (/^[a-f0-9]{32}$/.test(id || '')) {
+          cleanOperation = id;
+          refresh();
+          return;
+        }
+        id = uuid();
+        root.localStorage.setItem(cleanKey, id);
+        if (root.localStorage.getItem(cleanKey) !== id)
+          throw new Error('request_not_saved');
+        cleanOperation = id;
+      } catch (_) {
+        cleanStorageFailure = true;
+        render();
+        focus('remove');
+        return;
+      }
+      requestClean('cleanRemove');
+      return;
+    }
+    if (action === 'remove-installer') {
+      if (cleanVerified()) requestClean('removeInstaller');
+      else refresh();
+      return;
+    }
     busy = true;
     var promise;
     try {
-      if (action === 'install' || action === 'remove') {
-        promise =
-          action === 'install' && canPrepareForSetup()
-            ? prepareAndInstall()
-            : startProduct(action);
+      if (action === 'install') {
+        promise = canPrepareForSetup() ? prepareAndInstall() : startInstall();
       } else if (action === 'prepare-runtime') promise = prepareRuntime();
       else if (action === 'activate') promise = bridge.activate();
       else if (action === 'resume') {
@@ -728,11 +928,7 @@
           refresh();
           return;
         }
-        if (
-          action === 'install' ||
-          action === 'remove' ||
-          action === 'resume'
-        ) {
+        if (action === 'install' || action === 'resume') {
           job = result.action
             ? result
             : Object.assign(
@@ -854,7 +1050,13 @@
   });
   doc.addEventListener('webOSRelaunch', function (event) {
     if (root.CYTVTileLaunch.openDebloat(event)) return;
-    if (!operation && !busy && !confirmation) {
+    if (
+      !cleanOperation &&
+      !operation &&
+      !busy &&
+      !confirmation &&
+      !root.CYTVTileLaunch.maintenanceRequested(event)
+    ) {
       try {
         if (root.localStorage.getItem('cytv.tile.home') === 'root') {
           root.location.replace('index.html');

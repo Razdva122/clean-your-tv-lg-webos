@@ -38,6 +38,16 @@
       'worker_submission_unknown',
       'clean-handoff-refused',
       'clean_removal_requested',
+      'unknown-operation',
+      'removal-pending',
+      'restart-required',
+      'removal-verified',
+      'removal-not-current',
+      'ownership-conflict',
+      'cleanup-check-failed',
+      'root-worker-busy',
+      'removal-failed',
+      'root-access-required',
       'historical_completion_is_not_current',
       'installer-runtime-mismatch',
       'tile_home_unavailable',
@@ -50,7 +60,7 @@
           ' '
         ),
       stage:
-        'inspect requested blocked preparing reserved snapshot root-deploy root-updater supervisor readback submitting submitted complete activate restore resume-submitted clean-removal-requested package-remove-submitting root-remove-submitting supervisor-disable supervisor-archive restart-required verified-clean'.split(
+        'inspect requested blocked preparing reserved snapshot root-deploy root-updater supervisor readback submitting submitted complete activate restore resume-submitted clean-removal-requested package-remove-submitting root-remove-submitting supervisor-disable supervisor-archive original-writers-fenced controls-restored package-removal private-cleanup restart-required verified-clean'.split(
           ' '
         ),
       detail:

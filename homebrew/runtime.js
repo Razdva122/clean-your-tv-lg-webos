@@ -20,6 +20,15 @@ var MAX = 160 * 1024 * 1024,
 function fail(message) {
   throw new Error(message);
 }
+function exists(name) {
+  try {
+    fs.lstatSync(name);
+    return true;
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+    return false;
+  }
+}
 function safeName(name) {
   if (
     typeof name !== 'string' ||
@@ -713,31 +722,52 @@ function inspect(payloadRoot, recovery, pin, payloadVerified) {
     }
   );
 }
+function executionBase() {
+  ancestors('/var/lib');
+  var createdBase;
+  try {
+    fs.mkdirSync(EXEC_BASE, 448);
+    createdBase = owned(EXEC_BASE, true);
+  } catch (error) {
+    if (error.code !== 'EEXIST') throw error;
+  }
+  ancestors(EXEC_BASE);
+  var base = owned(EXEC_BASE, true);
+  if ((base.mode & 4095) !== 448 || base.dev !== owned('/var/lib', true).dev)
+    fail('Unsafe execution staging directory');
+  return createdBase;
+}
 function stage(state, full) {
   return Promise.resolve().then(function () {
     var context = state.context,
       expected = context.manifest.files;
-    ancestors('/var/lib');
-    var createdBase;
-    try {
-      fs.mkdirSync(EXEC_BASE, 448);
-      createdBase = owned(EXEC_BASE, true);
-    } catch (error) {
-      if (error.code !== 'EEXIST') throw error;
-    }
-    ancestors(EXEC_BASE);
-    var base = owned(EXEC_BASE, true);
-    if ((base.mode & 4095) !== 448 || base.dev !== owned('/var/lib', true).dev)
-      fail('Unsafe execution staging directory');
+    var createdBase = executionBase();
+    var removing = full === 'removal';
     var root =
-      EXEC_BASE + '/cytv-homebrew-' + crypto.randomBytes(16).toString('hex');
+      EXEC_BASE +
+      (removing ? '/cytv-product-' : '/cytv-homebrew-') +
+      crypto.randomBytes(16).toString('hex');
     fs.mkdirSync(root, 448);
+    var identityRoot = owned(root, true);
     var saved = [],
       directories = [root];
     function cleanup() {
       // Only exact invocation-owned private entries are removed; drift is retained.
       return Promise.resolve().then(function () {
+        // The lock-held cleanup tail may retire the full removal snapshot.
+        if (removing && !exists(root)) return;
         ancestors(root);
+        var current = owned(root, true);
+        if (
+          current.dev !== identityRoot.dev ||
+          current.ino !== identityRoot.ino
+        )
+          fail('Execution staging drift');
+        // An interrupted tail can empty the root before releasing the receipt.
+        if (removing && !fs.readdirSync(root).length && saved.length) {
+          fs.rmdirSync(root);
+          return;
+        }
         saved.forEach(function (r) {
           var st = owned(r[0], false);
           if (st.dev !== r[1] || st.ino !== r[2])
@@ -793,6 +823,7 @@ function stage(state, full) {
     }
     try {
       var names = Object.keys(expected).filter(function (name) {
+          if (removing) return /^(root|root-updater)\//.test(name);
           if (full)
             return /^(root|root-updater|supervisor|baseline|edition)\//.test(
               name
@@ -887,4 +918,295 @@ function stage(state, full) {
     }
   });
 }
-module.exports = { inspect: inspect, prepare: prepare, stage: stage };
+var PRODUCT = '/var/lib/clean-your-tv-installation';
+var ID = /^[a-f0-9]{32}$/;
+function removalRecord(name, size) {
+  try {
+    return JSON.parse(
+      checkedBytes(PRODUCT + '/' + name, size, false).toString('utf8')
+    );
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+    return null;
+  }
+}
+function observedRemoval(operation) {
+  if (!ID.test(operation)) fail('Invalid removal intent');
+  var binding = removalRecord('homebrew-removal-' + operation + '.json', 2048);
+  if (!binding) return null;
+  if (
+    Object.keys(binding).sort().join(',') !== 'lease,operation,schema,target' ||
+    binding.schema !== 1 ||
+    binding.operation !== operation ||
+    !ID.test(binding.target) ||
+    (binding.lease !== '-' && !ID.test(binding.lease))
+  )
+    fail('Unverified removal intent');
+  var record = removalRecord(
+    'clean-removal-' + binding.target + '.json',
+    4 * 1024 * 1024
+  );
+  var lease = removalRecord('operation.json', 2048);
+  // The target can already have a historical receipt. It belongs to this
+  // operation only when the independent removal intent matches exactly.
+  if (!record || record.removal !== operation) return null;
+  if (
+    record.schema !== 1 ||
+    record.protocol !== 'clean-removal-v1' ||
+    record.operation !== binding.target ||
+    !ID.test(record.lease) ||
+    (binding.lease !== '-' && binding.lease !== record.lease)
+  )
+    fail('Unverified removal receipt');
+  var current =
+    lease &&
+    lease.schema === 1 &&
+    lease.owner === 'clean-removal' &&
+    lease.journal === 'product-' + binding.target + '.json' &&
+    (lease.id === record.lease ||
+      (ID.test(record.final_fence) &&
+        record.final_original_lease === record.lease &&
+        lease.id === record.final_fence));
+  // The locked writer saves the receipt before transferring the ownership
+  // record. Only its exact predecessor may still finish that handoff.
+  if (
+    !current &&
+    record.stage === 'requested' &&
+    lease &&
+    lease.id === binding.lease &&
+    record.lease === lease.id &&
+    lease.owner !== 'clean-removal'
+  )
+    return null;
+  return {
+    target: binding.target,
+    intent: operation,
+    record: record,
+    current: current,
+    ownerStage: current ? lease.stage : null,
+    ownerLease: current ? lease.id : null
+  };
+}
+function pinnedFile(context, name) {
+  var expected = context.manifest.files[name];
+  if (
+    !expected ||
+    !Number.isSafeInteger(expected.size) ||
+    expected.size < 1 ||
+    expected.size > 1024 * 1024
+  )
+    fail('Missing cleanup support');
+  var bytes = checkedBytes(
+    path.join(context.root, name),
+    expected.size,
+    true,
+    expected
+  );
+  if (
+    bytes.length !== expected.size ||
+    crypto.createHash('sha256').update(bytes).digest('hex') !== expected.sha256
+  )
+    fail('Cleanup support changed');
+  return bytes;
+}
+function invokeTail(context, work, mode) {
+  var source = pinnedFile(context, 'root-updater/cleanup_tail.js');
+  var node = '/usr/bin/node',
+    command = node,
+    scratch,
+    identity,
+    gate,
+    pidLocks = ['0', '-1', '-1'],
+    gateHash = '-';
+  if (mode !== 'inspect') {
+    gate = pinnedFile(context, 'installer-support/lifecycle-gate');
+    executionBase();
+    scratch =
+      EXEC_BASE + '/cytv-root-tail-' + crypto.randomBytes(16).toString('hex');
+    fs.mkdirSync(scratch, 448);
+    identity = owned(scratch, true);
+    command = scratch + '/gate';
+    fs.writeFileSync(command, gate, { flag: 'wx', mode: 448 });
+    if (!checkedBytes(command, gate.length, false).equals(gate))
+      fail('Cleanup gate copy changed');
+    pidLocks = ['3', '4', '5'];
+    gateHash = crypto.createHash('sha256').update(gate).digest('hex');
+  }
+  var argv = (scratch ? ['root-clean-lock', node] : []).concat(
+    [
+      '-e',
+      "var parts=[];process.stdin.on('data',function(b){parts.push(b);});process.stdin.on('end',function(){eval(Buffer.concat(parts).toString('utf8'));});",
+      'cytv-cleanup-tail',
+      mode,
+      work.target,
+      scratch || '-'
+    ],
+    pidLocks,
+    [gateHash, work.intent]
+  );
+  return new Promise(function (resolve, reject) {
+    var child = cp.execFile(
+      command,
+      argv,
+      {
+        env: { PATH: '/usr/sbin:/usr/bin:/sbin:/bin', LC_ALL: 'C' },
+        timeout: 110000,
+        maxBuffer: 65536
+      },
+      function (error, stdout) {
+        try {
+          if (scratch && exists(scratch)) {
+            var info = owned(scratch, true);
+            if (info.dev !== identity.dev || info.ino !== identity.ino)
+              fail('Cleanup staging changed');
+            if (exists(command)) {
+              if (!checkedBytes(command, gate.length, false).equals(gate))
+                fail('Cleanup gate changed');
+              fs.unlinkSync(command);
+            }
+            fs.rmdirSync(scratch);
+          }
+          var reply = JSON.parse(stdout);
+          if (reply.operation !== work.target || reply.removal !== work.intent)
+            fail('Cleanup result does not match the confirmed operation');
+          if (error && reply.state !== 'recovery_required') throw error;
+          resolve(reply);
+        } catch (failure) {
+          reject(failure);
+        }
+      }
+    );
+    child.stdin.on('error', function () {});
+    child.stdin.end(source);
+  });
+}
+function removal(payloadRoot, pin, operation, action) {
+  return Promise.resolve().then(function () {
+    var work = observedRemoval(operation);
+    var removeTile = action === 'homebrew-remove-tile';
+    function answer(state, stage, code, current, resume) {
+      return {
+        action: 'remove',
+        state: state,
+        stage: stage,
+        code: code,
+        current: current,
+        can_resume: resume
+      };
+    }
+    function stale() {
+      return answer(
+        'recovery_required',
+        'verified-clean',
+        'removal-not-current',
+        false,
+        false
+      );
+    }
+    if (!work) return removeTile ? stale() : null;
+    if (!work.current) return stale();
+    if (
+      work.record.stage === 'verified-clean' &&
+      work.record.state === 'complete'
+    ) {
+      if (
+        !ID.test(work.record.final_fence) ||
+        work.record.final_fence !== work.ownerLease
+      )
+        return stale();
+      if (work.ownerStage === 'final-fence-pending') {
+        if (removeTile) return stale();
+        if (action === 'homebrew-remove-status')
+          return answer(
+            'recovery_required',
+            'private-cleanup',
+            'cleanup-check-failed',
+            false,
+            true
+          );
+        return verifiedPayload(payloadRoot, pin)
+          .then(function (context) {
+            return invokeTail(context, work, 'finish');
+          })
+          .then(function (result) {
+            return result.state === 'complete' && result.current === true
+              ? answer(
+                  'complete',
+                  'verified-clean',
+                  'removal-verified',
+                  true,
+                  false
+                )
+              : answer(
+                  'recovery_required',
+                  'private-cleanup',
+                  'cleanup-check-failed',
+                  false,
+                  true
+                );
+          });
+      }
+      if (work.ownerStage !== 'verified-clean') return stale();
+      return verifiedPayload(payloadRoot, pin)
+        .then(function (context) {
+          return invokeTail(
+            context,
+            work,
+            removeTile ? 'remove-installer' : 'verify'
+          );
+        })
+        .then(function (result) {
+          return result.state === 'verified-clean'
+            ? answer(
+                'complete',
+                'verified-clean',
+                removeTile ? 'installer-removed' : 'removal-verified',
+                true,
+                false
+              )
+            : stale();
+        });
+    }
+    if (removeTile) return stale();
+    if (!work.record.runtime_cleanup) return null;
+    return verifiedPayload(payloadRoot, pin).then(function (context) {
+      return invokeTail(context, work, 'inspect').then(function (result) {
+        if (result.state !== 'tail-ready') return null;
+        if (action === 'homebrew-remove-status')
+          return answer(
+            'recovery_required',
+            'private-cleanup',
+            'cleanup-check-failed',
+            false,
+            true
+          );
+        return invokeTail(context, work, 'finish').then(function (completed) {
+          if (completed.state === 'complete' && completed.current === true)
+            return answer(
+              'complete',
+              'verified-clean',
+              'removal-verified',
+              true,
+              false
+            );
+          var pending = answer(
+            'recovery_required',
+            'private-cleanup',
+            'cleanup-check-failed',
+            false,
+            true
+          );
+          if (completed.restart_required === true)
+            pending.restart_required = true;
+          return pending;
+        });
+      });
+    });
+  });
+}
+module.exports = {
+  inspect: inspect,
+  prepare: prepare,
+  stage: stage,
+  removal: removal
+};

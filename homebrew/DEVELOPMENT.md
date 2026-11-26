@@ -5,6 +5,8 @@
 
 ## Reproducible candidate preparation
 
+The offline Homebrew build also requires `ziglang==0.14.1` to build the shared ARM cleanup-lock gate.
+
 Keep `build_payload(...)`, `build_installer(...)` and the existing
 `homebrew/build.py` CLI as the build API. Build Root, Root Updater and supervisor
 from the candidate source; use `cytv.python_runtime.prime_cache` to authenticate

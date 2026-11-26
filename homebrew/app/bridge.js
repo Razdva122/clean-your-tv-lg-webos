@@ -35,6 +35,9 @@
     restore: /^$/,
     activate: /^$/,
     status: /^--operation [a-f0-9]{32} --verify-current$/,
+    'homebrew-remove': /^--operation [a-f0-9]{32}$/,
+    'homebrew-remove-status': /^--operation [a-f0-9]{32}$/,
+    'homebrew-remove-tile': /^--operation [a-f0-9]{32}$/,
     install:
       /^--operation [a-f0-9]{32} (--resume|--candidate [a-f0-9]{64}( --prepare-supervisor)?( --migrate-packaged-home)?( --activate-after-install)?)$/,
     remove: /^--operation [a-f0-9]{32} (--resume|--candidate [a-f0-9]{64})$/
@@ -98,7 +101,7 @@
             }
             if (reply.returnValue === false) {
               finish(
-                action === 'status'
+                action === 'status' || action === 'homebrew-remove-status'
                   ? 'status_unavailable'
                   : 'installer_unavailable'
               );
@@ -160,6 +163,11 @@
       return call(action, args);
     });
   }
+  function cleanup(action, operation) {
+    return Promise.resolve().then(function () {
+      return call(action, ['--operation', id(operation)]);
+    });
+  }
   var api = {
     inspect: function (value) {
       return Promise.resolve().then(function () {
@@ -195,6 +203,15 @@
     },
     remove: function (value) {
       return submission('remove', value);
+    },
+    cleanRemove: function (operation) {
+      return cleanup('homebrew-remove', operation);
+    },
+    cleanStatus: function (operation) {
+      return cleanup('homebrew-remove-status', operation);
+    },
+    removeInstaller: function (operation) {
+      return cleanup('homebrew-remove-tile', operation);
     },
     prepareRuntime: function () {
       return call('prepare-runtime', []);

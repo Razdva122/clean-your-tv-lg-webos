@@ -487,7 +487,7 @@
         });
     }
     var order = [
-      3, 1, 12, 15, 16, 9, 8, 10, 11, 18, 14, 5, 4, 20, 0, 17, 7, 6, 2
+      3, 1, 12, 15, 16, 9, 8, 10, 11, 18, 14, 5, 4, 20, 0, 17, 7, 21, 6, 2
     ];
     function focus(index) {
       selected = index;
@@ -525,6 +525,15 @@
       if (index === 20 && window.RootPostInstall) {
         close();
         window.RootPostInstall.open();
+        return;
+      }
+      if (index === 21) {
+        if (window.HomeAppControls)
+          HomeAppControls.launch(
+            'io.github.razdva122.cytvinstaller',
+            t('Clean Your TV recovery'),
+            { cytvMaintenance: true }
+          );
         return;
       }
       if (index === 12) {
@@ -726,7 +735,7 @@
       footer.appendChild(back);
       buttons = [];
       [
-        3, 1, 9, 8, 19, 10, 11, 18, 14, 5, 4, 20, 0, 17, 7, 6, 2, 12, 15, 16
+        3, 1, 9, 8, 19, 10, 11, 18, 14, 5, 4, 20, 0, 17, 7, 21, 6, 2, 12, 15, 16
       ].forEach(function (i) {
         var labels = [
           'TV settings',
@@ -749,7 +758,8 @@
           'LG Notifications',
           'Edit tiles',
           'Sort by most used',
-          'Set up your TV'
+          'Set up your TV',
+          'Clean Your TV recovery'
         ];
         var b = document.createElement('button');
         b.textContent = t(i === 6 ? 'Block LG firmware updates' : labels[i]);
@@ -758,6 +768,10 @@
           b.hidden =
             !window.RootPostInstall || !window.RootPostInstall.available();
           b.disabled = b.hidden;
+        }
+        if (i === 21) {
+          b.id = 'rootInstallerMaintenance';
+          b.hidden = window.CYTVProductGeneration !== 2;
         }
         if (i === 12) {
           b.hidden = true;
@@ -777,7 +791,12 @@
                     ? firmware
                     : i === 3 || i === 12 || i === 1
                       ? homeActions
-                      : i === 4 || i === 0 || i === 5 || i === 17 || i === 20
+                      : i === 4 ||
+                          i === 0 ||
+                          i === 5 ||
+                          i === 17 ||
+                          i === 20 ||
+                          i === 21
                         ? links
                         : back;
         if (i === 10 || i === 19) {
@@ -823,7 +842,7 @@
           dot.setAttribute('aria-hidden', 'true');
           b.appendChild(dot);
         }
-        if (i === 4 || i === 0 || i === 5 || i === 17 || i === 20) {
+        if (i === 4 || i === 0 || i === 5 || i === 17 || i === 20 || i === 21) {
           var arrow = document.createElement('span');
           arrow.className = 'settings-chevron';
           arrow.setAttribute('aria-hidden', 'true');
@@ -858,7 +877,13 @@
               id: 'advanced',
               label: 'Advanced',
               icons: ['tv', 'notifications', 'sound'],
-              elements: [buttons[20], buttons[0], buttons[17], buttons[7]]
+              elements: [
+                buttons[20],
+                buttons[0],
+                buttons[17],
+                buttons[7],
+                buttons[21]
+              ]
             }
           ],
           allowOk

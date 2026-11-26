@@ -82,7 +82,7 @@ Après l’installation, Root Home ouvre **Configurer le téléviseur**. Choisis
 
 Si l’installateur signale un problème, suivez l’instruction affichée. Enregistrez le rapport de diagnostic pour conserver une copie sur ce téléviseur. Rouvrez le rapport dans l’installateur ou dans la rubrique de récupération de la vignette pour le lire ou scanner son code QR avec votre téléphone. La liste indique les vérifications terminées, l’étape en cours et les échecs. Scannez le code QR pour télécharger le rapport JSON ou ouvrir le brouillon GitHub prérempli. Décrivez le problème avant l’envoi.
 
-Pour désinstaller Clean Your TV, choisissez **Supprimer le produit complet** dans l’installateur. Supprimer uniquement l’application d’installation laisse Clean Your TV sur le téléviseur.
+Pour désinstaller depuis le téléviseur, ouvrez **Paramètres → Avancé → Récupération de Clean Your TV** dans Root Home et confirmez la suppression complète. Si un redémarrage complet est demandé, redémarrez le téléviseur, rouvrez Clean Your TV et reprenez la suppression. Une fois celle-ci vérifiée, vous pouvez aussi retirer la vignette de l’installateur depuis l’écran de résultat.
 
 ## 5. Vérifier la télécommande
 

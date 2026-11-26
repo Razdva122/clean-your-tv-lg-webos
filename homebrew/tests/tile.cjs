@@ -152,6 +152,26 @@ assert.deepStrictEqual(
   }).pages,
   ['setup.html#open']
 );
+{
+  const saved = {
+    'cytv.installer.clean-removal': 'b'.repeat(32),
+    'cytv.tile.home': 'root'
+  };
+  const removal = fixture(null, saved);
+  assert.deepEqual(removal.pages, ['setup.html#open']);
+  assert.equal(removal.calls.length, 0);
+  for (const [edition, expected] of [
+    [null, 'setup.html#maintenance'],
+    ['root', 'recovery.html']
+  ]) {
+    const maintenance = fixture(edition, saved, null, {
+      params: { cytvMaintenance: true }
+    });
+    assert.deepEqual(maintenance.pages, [expected]);
+    assert.equal(maintenance.calls.length, 0);
+  }
+  assert.equal(fixture('root', saved).calls.length, 1);
+}
 assert.deepStrictEqual(
   fixture(null, { 'cytv.tile.home': 'no-root' }).calls[0].payload,
   { id: 'com.gathin.tvhome' }

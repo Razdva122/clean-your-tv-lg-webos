@@ -358,6 +358,172 @@ class CoordinatorCleanRemoval(unittest.TestCase):
         self.assertNotIn('PRIVATE_SECRET',str(self.owner.store.read('request-'+self.id)))
 
 
+class HomebrewRemoval(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.client = 'b'*32
+        self.target = 'a'*32
+        directory = Path(self.tmp.name).resolve()
+        self.store = Store(directory/'state', uid=os.getuid())
+        self.owner = Ownership(self.store)
+        self.device = Device()
+        self.driver = Coordinator(self.device, self.owner, read=lambda path:None)
+        self.payload = directory/('cytv-product-'+'c'*32)
+        self.payload.mkdir(mode=0o700)
+        (self.payload/'root').mkdir(parents=True)
+        (self.payload/'root-updater').mkdir()
+        self.device.preflight = lambda payload, options, product: None
+        private_temp = patch('install_device.PRIVATE_TEMP', directory)
+        private_temp.start()
+        self.addCleanup(private_temp.stop)
+
+    def prior_product(self, action='install', terminal=True):
+        with self.owner.operation('product', 'product-'+self.target+'.json') as lease:
+            self.owner.stage(lease, 'complete' if terminal else 'root-updater', terminal=terminal)
+            self.store.write('request-'+self.target, dict(operation=self.target, action=action, lease=lease['id'],
+                stage=lease['stage'], state='complete' if terminal else 'pending'))
+            return lease
+
+    def test_first_submission_binds_client_before_cleanup_and_retries_only_current_proof(self):
+        lease = self.prior_product()
+        downstream = self.device.clean_remove
+        def remove(record, save):
+            self.assertEqual(self.store.read('homebrew-removal-'+self.client),
+                dict(schema=1, operation=self.client, target=self.target, lease=lease['id']))
+            self.assertEqual(record['removal'], self.client)
+            status = self.driver.homebrew_remove_status(self.client)
+            self.assertEqual(status['state'], 'pending')
+            self.assertFalse(status['can_resume'])
+            return downstream(record, save)
+        self.device.clean_remove = remove
+        expected = dict(action='remove', state='complete', stage='verified-clean', code='removal-verified',
+                        current=True, restart_required=False, can_resume=False)
+        self.assertEqual(self.driver.homebrew_remove(self.client, self.payload), expected)
+        files = {path.name: path.read_bytes() for path in Path(self.store.root).iterdir()}
+        self.device.clean_remove = lambda *args: self.fail('completed ID must not clean again')
+        self.assertEqual(self.driver.homebrew_remove_status(self.client), expected)
+        self.assertEqual(self.driver.homebrew_remove(self.client, self.payload), expected)
+        self.assertEqual({path.name: path.read_bytes() for path in Path(self.store.root).iterdir()}, files)
+
+    def test_completed_removal_is_historical_after_current_proof_changes(self):
+        self.prior_product()
+        self.driver.homebrew_remove(self.client, self.payload)
+        self.device.verify_clean = lambda record: False
+        self.device.clean_remove = lambda *args: self.fail('completed ID must not clean again')
+        for result in (self.driver.homebrew_remove_status(self.client),
+                       self.driver.homebrew_remove(self.client, self.payload)):
+            self.assertEqual(result['code'], 'removal-not-current')
+            self.assertFalse(result['current'])
+            self.assertFalse(result['can_resume'])
+
+    def test_new_client_id_cannot_claim_active_desktop_intent(self):
+        self.prior_product()
+        self.device.fail = 'package-removal'
+        self.driver.clean_remove(self.target, self.client)
+        calls = list(self.device.calls)
+        self.assertEqual(self.driver.homebrew_remove(self.client, self.payload)['code'], 'ownership-conflict')
+        self.assertEqual(self.device.calls, calls)
+        self.assertIsNone(self.store.read('homebrew-removal-'+self.client))
+
+    def test_legacy_product_removal_continues_owned_by_desktop(self):
+        original = self.prior_product(action='remove', terminal=False)
+        result = self.driver.homebrew_remove(self.client, self.payload)
+        self.assertEqual(result['code'], 'ownership-conflict')
+        self.assertEqual(self.owner.status(), original)
+        self.assertEqual(self.device.calls, [])
+
+    def test_read_only_unknown_never_creates_lock_or_receipt(self):
+        self.assertEqual(self.driver.homebrew_remove_status(self.client),
+            dict(action='remove', state='unknown', stage='unknown', code='unknown-operation',
+                 current=False, restart_required=False, can_resume=False))
+        self.assertEqual(list(Path(self.store.root).iterdir()), [])
+
+    def test_lost_reply_after_first_lease_reservation_keeps_the_original_intent(self):
+        binding = dict(schema=1, operation=self.client, target=self.client, lease='-')
+        self.store.write('homebrew-removal-'+self.client, binding)
+        with self.owner.operation('clean-removal', 'product-'+self.client+'.json') as reserved:
+            lease = reserved['id']
+        self.assertTrue(self.driver.homebrew_remove_status(self.client)['can_resume'])
+        self.assertEqual(self.driver.homebrew_remove(self.client, self.payload)['state'], 'complete')
+        self.assertEqual(self.store.read('homebrew-removal-'+self.client), binding)
+        self.assertEqual(self.store.read('clean-removal-'+self.client)['lease'], lease)
+
+    def test_first_lease_reservation_without_binding_is_foreign(self):
+        with self.owner.operation('clean-removal', 'product-'+self.client+'.json'):
+            pass
+        self.assertEqual(self.driver.homebrew_remove(self.client, self.payload)['code'], 'ownership-conflict')
+        self.assertIsNone(self.store.read('homebrew-removal-'+self.client))
+        self.assertIsNone(self.store.read('clean-removal-'+self.client))
+
+    def test_lost_reply_before_ownership_transfer_can_continue_the_bound_receipt(self):
+        previous = self.prior_product()
+        write = self.store.write
+        def interrupt_transfer(name, value):
+            if name == 'operation' and value['owner'] == 'clean-removal':
+                raise OSError('interrupted ownership transfer')
+            return write(name, value)
+        with patch.object(self.store, 'write', side_effect=interrupt_transfer):
+            self.assertEqual(self.driver.homebrew_remove(self.client, self.payload)['state'], 'recovery_required')
+        self.assertEqual(self.owner.status(), previous)
+        self.assertEqual(self.store.read('clean-removal-'+self.target)['stage'], 'requested')
+        self.assertTrue(self.driver.homebrew_remove_status(self.client)['can_resume'])
+        self.assertEqual(self.driver.homebrew_remove(self.client, self.payload)['state'], 'complete')
+
+    def test_cli_status_accepts_only_browser_uuid_and_reads_no_payload(self):
+        from contextlib import redirect_stderr, redirect_stdout
+        import io
+        import json
+        import install_driver
+
+        stdout = io.StringIO()
+        with patch.object(sys, 'argv', ['driver', 'homebrew-remove-status', '--operation', self.client]), \
+                patch('install_device.checked_store', return_value=self.store), redirect_stdout(stdout):
+            install_driver.main()
+        self.assertEqual(json.loads(stdout.getvalue())['state'], 'unknown')
+        for extra in (['--payload', str(self.payload)], ['--verify-current'], ['--removal-intent', self.target]):
+            with self.subTest(extra=extra), patch.object(sys, 'argv',
+                    ['driver', 'homebrew-remove-status', '--operation', self.client, *extra]), \
+                    redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+                install_driver.main()
+        self.assertEqual(list(Path(self.store.root).iterdir()), [])
+
+    def test_lost_reply_keeps_restart_required_and_explicit_retry_waits_for_boot(self):
+        self.prior_product()
+        boot = ['11111111-1111-1111-1111-111111111111:session-'+'d'*32]
+        next_boot = '22222222-2222-2222-2222-222222222222:session-'+'e'*32
+        self.device.boot_id = lambda: boot[0]
+        downstream = self.device.clean_remove
+        attempts = []
+        def remove(record, save):
+            attempts.append(boot[0])
+            baseline = record.setdefault('cleanup_boot_id', boot[0])
+            if boot[0] == baseline:
+                save('restart-required')
+                return {'restart_required': True}
+            record['cleanup_verified_boot_id'] = boot[0]
+            return downstream(record, save)
+        self.device.clean_remove = remove
+        expected = dict(action='remove', state='recovery_required', stage='restart-required', code='restart-required',
+                        current=False, restart_required=True, can_resume=True)
+        self.assertEqual(self.driver.homebrew_remove(self.client, self.payload), expected)
+        self.assertEqual(self.driver.homebrew_remove_status(self.client), expected)
+        self.assertEqual(self.driver.homebrew_remove(self.client, self.payload), expected)
+        self.assertEqual(len(attempts), 1)
+        boot[0] = next_boot
+        self.assertEqual(self.driver.homebrew_remove_status(self.client), expected)
+        self.assertEqual(self.driver.homebrew_remove(self.client, self.payload)['state'], 'complete')
+        self.assertEqual(len(attempts), 2)
+
+    def test_unverified_payload_never_writes_consent(self):
+        (self.payload/'unrelated').write_text('private')
+        result = self.driver.homebrew_remove(self.client, self.payload)
+        self.assertEqual(result['code'], 'cleanup-check-failed')
+        self.assertNotIn('private', str(result))
+        self.assertIsNone(self.owner.status())
+        self.assertIsNone(self.store.read('homebrew-removal-'+self.client))
+
+
 class ConfinedCleanup(unittest.TestCase):
     def test_external_package_readback_requires_catalog_package_and_all_registrations_absent(self):
         import install_device

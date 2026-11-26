@@ -104,10 +104,15 @@ The candidate package ID is `io.github.razdva122.cytvinstaller`. Earlier TV
 observations cover the draft ID `com.cleanyourtv.installer`. Homebrew treats
 the new ID as a separate application, with its own installation and removal.
 Homebrew updates the tile and its setup client. Product updates use the signed
-release for the installed edition. Removing the
-installer leaves those components installed. Complete-product removal is an
-explicit installer/cytv operation. External component removal, emergency release,
-standby and separate cold boot still require physical acceptance.
+release for the installed edition.
+
+To remove the product from the TV, open **Settings → Advanced → Clean Your TV
+recovery** in Root Home, choose **Remove complete product**, and confirm. If a
+full restart is requested, restart the TV, reopen Clean Your TV and choose
+**Continue after restarting**. After the installer verifies removal and restores
+LG Home, **Remove Installer** also removes the tile. Removing only the tile
+through Homebrew leaves installed product components. External component removal,
+emergency release, standby and separate cold boot still require physical acceptance.
 
 ## Development and publication gates
 
