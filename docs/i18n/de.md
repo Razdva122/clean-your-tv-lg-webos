@@ -72,6 +72,14 @@ Wenn der Installer anbietet, die aktuelle Home-Integration zu ersetzen, bestäti
 
 Bei der Root-Einrichtung verwendet der Installer bei Bedarf automatisch geprüften internen Zwischenspeicher; ein USB-Laufwerk ist nicht erforderlich, und wenn die Speicherprüfung fehlschlägt, behalten Sie die Wiederherstellungsdaten und speichern Sie einen Diagnosebericht.
 
+<a id="unveröffentlichter-kandidat-root-über-homebrew-einrichten"></a>
+
+### Wenn CYTV Installer auf dem Fernseher bereits geöffnet ist
+
+Prüfen Sie die ausgewählten Komponenten, wählen Sie **Installieren und aktivieren** und bestätigen Sie einmal. Die Home-Taste öffnet dann Root Home, sofern der Not-Aus nicht aktiv ist. Verweist der Installer für Root auf einen Computer, setzen Sie die Einrichtung dort fort. Wird No-root angeboten, verwenden Sie den Installer auf einem Computer oder Android-Gerät.
+
+Zum Entfernen von Clean Your TV wählen Sie im Installer **Vollständiges Produkt entfernen**. Wenn Sie nur die Installer-App löschen, bleibt Clean Your TV auf dem Fernseher.
+
 ## 5. Fernbedienung prüfen
 
 1. Öffnen Sie eine andere TV-App und drücken Sie kurz **Home**. Clean Your TV sollte erscheinen. Geben Sie im Assistenten Ihre Beobachtung an; überspringen Sie den Test, wenn Sie ihn nicht durchgeführt haben.
@@ -149,7 +157,6 @@ Wenn der Assistent bei der Bereinigung einen vollständigen Neustart verlangt, t
 <a id="lg-firmware-sperre-in-120"></a>
 <a id="neu-in-130-geführte-desktop-wiederherstellung"></a>
 <a id="neu-in-130--12"></a>
-<a id="unveröffentlichter-kandidat-root-über-homebrew-einrichten"></a>
 <a id="unveröffentlichter-kandidat-hdmi-ton-wiederherstellen-root"></a>
 <a id="designs-154"></a>
 <a id="einstellungskategorien-unveröffentlichter-kandidat"></a>

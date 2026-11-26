@@ -72,6 +72,14 @@ If Root setup offers to replace the current Home integration, confirm only if yo
 
 For Root setup, the installer automatically uses verified internal temporary storage when needed; no USB drive is required, and if the storage check fails, keep the recovery data and save a diagnostic report.
 
+<a id="unreleased-candidate-root-setup-through-homebrew"></a>
+
+### If CYTV Installer is already open on your TV
+
+Review the selected components, choose **Install and activate**, and confirm once. Root Home will open with the Home button unless emergency-off is active. If the Installer directs you to a computer for Root, continue there. If it offers No-root, use the computer or Android installer.
+
+To uninstall Clean Your TV, choose **Remove complete product** in the Installer. Removing the Installer app alone leaves Clean Your TV on the television.
+
 ## 5. Check your remote
 
 1. Open another TV app and briefly press **Home**. Clean Your TV should open. Tell the wizard what you saw; leave the check skipped if you did not test it.
@@ -151,7 +159,6 @@ In the desktop installer, open **Maintenance action → Adjust LG settings (Debl
 <a id="lg-firmware-blocking-in-120"></a>
 <a id="new-in-130-guided-desktop-recovery"></a>
 <a id="new-in-130--12"></a>
-<a id="unreleased-candidate-root-setup-through-homebrew"></a>
 <a id="unreleased-candidate-hdmi-sound-recovery-root"></a>
 <a id="themes-154"></a>
 <a id="settings-categories-unpublished-candidate"></a>

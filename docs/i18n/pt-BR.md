@@ -72,6 +72,14 @@ Se a instalação do Root oferecer a substituição da integração atual do Hom
 
 Na instalação Root, o instalador usa automaticamente armazenamento temporário interno verificado quando necessário; não é preciso um dispositivo USB e, se a verificação do armazenamento falhar, mantenha os dados de recuperação e salve um relatório de diagnóstico.
 
+<a id="candidato-não-publicado-instalar-root-pelo-homebrew"></a>
+
+### Se o CYTV Installer já estiver aberto na TV
+
+Confira os componentes selecionados, escolha **Instalar e ativar** e confirme uma vez. O botão Home abrirá o Root Home, a menos que a parada de emergência esteja ativa. Se o instalador indicar um computador para configurar o Root, continue nele. Se oferecer No-root, use o instalador para computador ou Android.
+
+Para desinstalar o Clean Your TV, escolha **Remover produto completo** no instalador. Se você excluir apenas o aplicativo do instalador, o Clean Your TV continuará na TV.
+
 ## 5. Confira o controle remoto
 
 1. Abra outro app na TV e pressione **Home** brevemente. Clean Your TV deve abrir. Informe ao assistente o que você viu; pule a verificação se não a realizou.
@@ -150,7 +158,6 @@ No instalador para computador, abra **Ação de manutenção → Ajustar as conf
 <a id="bloqueio-de-firmware-lg-no-120"></a>
 <a id="novidades-da-130-recuperação-guiada-no-computador"></a>
 <a id="novidades-da-130--12"></a>
-<a id="candidato-não-publicado-instalar-root-pelo-homebrew"></a>
 <a id="candidato-não-publicado-recuperação-de-som-hdmi-root"></a>
 <a id="temas-154"></a>
 <a id="categorias-de-configurações-candidato-não-publicado"></a>

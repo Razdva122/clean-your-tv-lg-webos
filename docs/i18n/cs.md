@@ -61,6 +61,12 @@ Pokud instalátor Root nabídne nahrazení současné integrace Home, potvrďte 
 
 Při instalaci Root instalátor podle potřeby automaticky použije ověřené interní dočasné úložiště; USB disk není potřeba, a pokud kontrola úložiště selže, ponechte data pro obnovení a uložte diagnostickou zprávu.
 
+### Pokud už je na televizoru otevřený CYTV Installer
+
+Zkontrolujte vybrané součásti, zvolte **Nainstalovat a aktivovat** a jednou potvrďte. Tlačítko Home pak otevře Root Home, pokud není aktivní nouzové vypnutí. Pokud vás instalátor při nastavování Root odkáže na počítač, pokračujte tam. Nabídne-li No-root, použijte instalátor na počítači nebo zařízení se systémem Android.
+
+Chcete-li odinstalovat Clean Your TV, zvolte v instalátoru **Úplně odebrat produkt**. Pokud odeberete pouze aplikaci instalátoru, Clean Your TV v televizoru zůstane.
+
 ## 5. Vyzkoušejte ovladač
 
 1. Otevřete jinou aplikaci na TV a krátce stiskněte **Home**. Má se otevřít Clean Your TV. V průvodci uveďte, co jste viděli; pokud jste test neprovedli, přeskočte ho.
