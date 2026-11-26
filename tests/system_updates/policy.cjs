@@ -156,6 +156,10 @@ async function offerFixture(status, body, error) {
     }
   });
   const fakeFs = {
+    existsSync(file) {
+      assert.equal(file, directory + '/product-generation.json');
+      return false;
+    },
     readFileSync(file) {
       if (file === directory + '/release-public.pem')
         return publicKey.export({ type: 'spki', format: 'pem' });

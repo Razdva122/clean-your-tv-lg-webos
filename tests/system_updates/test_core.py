@@ -133,6 +133,43 @@ class Tests(CoreBase):
         self.reserve();tx=self.advance('verifying');self.io.time+=121;self.advance('verifying-rollback')
         legs=[c for c in self.io.calls if c.startswith('install:')];self.assertEqual(legs[-3:],['install:updater:1.0.0','install:helper:1.0.0','install:home:1.0.0'])
         self.assertEqual(self.m.restore_profile('no-root')['version'],'1.0.0');self.m.healthy('no-root',tx['id'],'1.0.0');self.advance('rolled-back')
+    def test_single_tile_update_and_rollback_use_same_generation(self):
+        for edition, names in [('no-root', ('home', 'helper')), ('root', ('root', 'root-infrastructure'))]:
+            with self.subTest(edition=edition), tempfile.TemporaryDirectory() as tmp:
+                from system_updater.core import IDENTITIES
+                io = IO()
+                for manifest in (io.current, io.candidate):
+                    template = manifest['components'][0]
+                    manifest.update(schema=2, edition=edition, components=[
+                        dict(template, name=name, application=IDENTITIES[name],
+                             kind='infrastructure' if name == 'root-infrastructure' else 'ipk')
+                        for name in names])
+                store = Store(os.path.realpath(tmp), uid=os.getuid())
+                manager = self.Manager(store, io)
+                tx = manager.install(edition, 'v1.1.0', profile())
+                def advance(phase):
+                    for _ in range(40):
+                        if manager.run()['phase'] == phase:
+                            return
+                    self.fail(manager.status())
+                advance('verifying')
+                manager.healthy(edition, tx['id'], '1.1.0')
+                advance('complete')
+                manager.rollback()
+                advance('verifying-rollback')
+                manager.healthy(edition, tx['id'], '1.0.0')
+                advance('rolled-back')
+                self.assertEqual([c['name'] for c in store.read('current-' + edition)['components']], list(names))
+
+    def test_generation_boundary_is_refused_before_reservation(self):
+        for manifest in (self.io.current, self.io.candidate):
+            previous = copy.deepcopy(manifest)
+            manifest.update(schema=2, components=manifest['components'][:2])
+            with self.assertRaisesRegex(ValueError, 'generation'):
+                self.reserve()
+            self.assertIsNone(self.store.read('transaction'))
+            manifest.update(previous)
+
     def test_explicit_retained_rollback_after_complete(self):
         self.reserve();tx=self.advance('verifying');self.m.healthy('no-root',tx['id'],'1.1.0');self.advance('complete');self.assertTrue(self.m.status()['canRollback']);self.m.rollback();self.advance('verifying-rollback')
     def test_restart_between_component_intent_and_call_is_unknown(self):

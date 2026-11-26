@@ -20,6 +20,55 @@ def fixture(root):
         (root/(name+'.ipk')).write_bytes(package.ipk(app,version,files))
 
 class BuildTests(unittest.TestCase):
+    def test_single_tile_is_a_separate_pinned_bundle_and_baseline(self):
+        from test_core import Store  # load the packaged module layout for the verifier
+        from system_updater.supervisor_io import permissions
+        build, setup = load('build'), load('setup')
+        with tempfile.TemporaryDirectory() as tmp:
+            top = Path(tmp).resolve()
+            bundle, legacy = top/'system', top/'legacy'
+            build.build(bundle, single_tile=True)
+            build.build(legacy)
+            manifest = setup.verify_bundle(bundle)
+            self.assertEqual(manifest['product_schema'], 2)
+            self.assertEqual(manifest['engine_version'], build.SINGLE_TILE_ENGINE_VERSION)
+            self.assertFalse(any(n.startswith('updater/') for n in json.loads((bundle/'infrastructure-paths.json').read_text())))
+            plan = json.loads((bundle/'permissions.json').read_text())
+            self.assertEqual(permissions(plan),plan)
+            self.assertEqual(plan['client.json'][setup.TILE],[setup.SERVICE+'.recovery'])
+            self.assertNotIn(setup.APPS['root-updater'],plan['client.json'])
+            plan['client.json'][setup.TILE]=[setup.SERVICE+'.launcher']
+            with self.assertRaisesRegex(ValueError,'Excessive'):
+                permissions(plan)
+            fixture(top)
+            with self.assertRaisesRegex(ValueError,'product generation'):
+                build.prepare_baseline(top, 'no-root', top/'bad', single_tile=True)
+            app = setup.APPS['home']
+            path = 'usr/palm/applications/'+app+'/appinfo.json'
+            files = package.data_files((top/'launcher.ipk').read_bytes())
+            info = json.loads(files[path])
+            info.update(cytvProductGeneration=2, visible=False)
+            files[path] = json.dumps(info).encode()
+            (top/'launcher.ipk').write_bytes(package.ipk(app, info['version'],files))
+            (top/'updater.ipk').unlink()
+            with self.assertRaisesRegex(ValueError,'product generation'):
+                build.prepare_baseline(top, 'no-root', top/'wrong-helper', single_tile=True)
+            helper = setup.APPS['helper']
+            path = 'usr/palm/applications/'+helper+'/appinfo.json'
+            files = package.data_files((top/'helper.ipk').read_bytes())
+            info = json.loads(files[path])
+            info.update(cytvProductGeneration=2, visible=False)
+            files[path] = json.dumps(info).encode()
+            (top/'helper.ipk').write_bytes(package.ipk(helper,info['version'],files))
+            baseline = build.prepare_baseline(top, 'no-root', top/'baseline', single_tile=True)
+            verified = setup.verify_baseline(baseline,bundle)
+            self.assertEqual([c['name'] for c in verified['components']],['home','helper'])
+            with self.assertRaisesRegex(ValueError,'generation mismatch'):
+                setup.verify_baseline(baseline,legacy)
+            (bundle/'system_updater/product-generation.json').write_text('1')
+            with self.assertRaisesRegex(ValueError,'generation'):
+                setup.verify_bundle(bundle)
+
     def test_only_verified_cancellation_fence_passes_handoff_preflight(self):
         setup = load('setup')
         with tempfile.TemporaryDirectory() as tmp:

@@ -16,6 +16,7 @@ SERVICE='com.cleanyourtv.system.updater.service'
 APP='com.cleanyourtv.system.updater'
 VERSION='1.2.11'
 ENGINE_VERSION='1.2.17'
+SINGLE_TILE_ENGINE_VERSION='2.0.0'
 APPS={'home':'com.gathin.tvhome','helper':'com.local.nativehome','updater':'com.cleanyourtv.updater','root':'com.cleanyourtv.root.preview','root-updater':'com.cleanyourtv.root.updater'}
 
 def digest(raw):return hashlib.sha256(raw).hexdigest()
@@ -30,7 +31,7 @@ def assigned(path,name):
     raise ValueError('Missing inventory')
 
 
-def build(output, legacy_node_prototype=False, legacy_node_beta=False):
+def build(output, legacy_node_prototype=False, legacy_node_beta=False, *, single_tile=False):
     output=Path(output).absolute()
     if '..' in output.parts or any(p.is_symlink() for p in (output,*output.parents)):raise ValueError('Indirect output')
     code={'system_updater/__init__.py':b'', 'system_updater/support/__init__.py':b''}
@@ -47,6 +48,11 @@ def build(output, legacy_node_prototype=False, legacy_node_beta=False):
     support=assigned(ROOT/'root-edition/build_updater.py','SUPPORT')+assigned(ROOT/'root-edition/build_updater.py','COORDINATOR_FILES')
     private=assigned(ROOT/'root-edition/provision.py','PRIVATE_FILES')
     infra=['support/python_binding.py','support/python_boot.js','support/package_data.py','support/package_identity.py','support/updater/store.py','support/updater/package.py','support/startup_guard.py']+['service/'+n for n in private]+['runtime/'+n for n in runtime]+['updater/updater/'+n for n in updater]+['updater/'+n for n in support]+['updater/updater/release-public.pem','updater/service.js','updater/run-updater.py','updater/services.json','updater/package.json']
+    if single_tile:
+        if legacy_node_beta or legacy_node_prototype:raise ValueError('Legacy Root OTA is unavailable')
+        infra = [name for name in infra if not name.startswith('updater/')]
+        code['system_updater/product-generation.json'] = b'2\n'
+        code['root-provision.py'] = source(ROOT/'root-edition/provision.py')
     code['infrastructure-paths.json']=(json.dumps(sorted(infra))+'\n').encode()
     code['service.js']=source(ROOT/'system-updater/service.js')
     code['run-system-updater.py']=b'import sys\nsys.dont_write_bytecode = True\nfrom system_updater.bootstrap import entry\nentry()\n'
@@ -64,7 +70,7 @@ def build(output, legacy_node_prototype=False, legacy_node_beta=False):
            'usr/palm/packages/'+APP+'/packageinfo.json':json.dumps({'id':APP,'version':VERSION,'app':APP,'services':[SERVICE]}).encode()}
     sys.path.insert(0,str(ROOT/'root-edition'))
     from startup_hook import packaged_content
-    permissions=runpy.run_path(str(ROOT/'system-updater/setup.py'))['permission_plan']()
+    permissions=runpy.run_path(str(ROOT/'system-updater/setup.py'))['permission_plan'](single_tile=single_tile)
     code['permissions.json']=(json.dumps(permissions,sort_keys=True)+'\n').encode()
     files[ap+'startup.sh']=packaged_content(APP)
     code['system-updater.ipk']=package.ipk(APP,VERSION,files,executable={ap+'startup.sh'})
@@ -78,12 +84,20 @@ def build(output, legacy_node_prototype=False, legacy_node_beta=False):
     output.mkdir(parents=True,exist_ok=False)
     for name,raw in code.items():
         target=output/name;target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(raw)
-    (output/'bundle.json').write_text(json.dumps({'schema':1,'supervisor':1,'engine_version':ENGINE_VERSION,'health_lock_wait_seconds':10,'files':{n:digest(b) for n,b in sorted(code.items())}},indent=2)+'\n')
+    (output/'bundle.json').write_text(json.dumps({'schema':1,'supervisor':1,'engine_version':SINGLE_TILE_ENGINE_VERSION if single_tile else ENGINE_VERSION,**({'product_schema':2} if single_tile else {}),'health_lock_wait_seconds':10,'files':{n:digest(b) for n,b in sorted(code.items())}},indent=2)+'\n')
     return output/'system-updater.ipk'
 
-def component(name,raw,local=True,release=None,graphics="1920x1080"):
+def component(name,raw,local=True,release=None,graphics="1920x1080",*,single_tile=False):
     result={'name':name,'kind':'ipk','application':APPS[name],'sha256':digest(raw),'size':len(raw)}
     info=json.loads(package.data_files(raw)['usr/palm/applications/'+APPS[name]+'/appinfo.json'])
+    if name in ('home','root','helper'):
+        schema = info.get('cytvProductGeneration', 1)
+        if type(schema) is not int or schema != (2 if single_tile else 1):
+            raise ValueError('Package product generation differs from release channel')
+        if single_tile and info.get('visible') is not False:
+            raise ValueError('Single-tile edition needs hidden product packages')
+        if single_tile and name in ('home','root') and info.get('systemUpdateProtocol') != 1:
+            raise ValueError('Single-tile Home profile protocol mismatch')
     if info['id']!=APPS[name]:raise ValueError('Package identity mismatch')
     result['version']=info['version']
     if name in ('home','root') and info.get('resolution', '1920x1080')!=graphics:raise ValueError('Package graphics resolution mismatch')
@@ -93,11 +107,12 @@ def component(name,raw,local=True,release=None,graphics="1920x1080"):
         result['url']='https://github.com/Razdva122/clean-your-tv-lg-webos/releases/download/'+release+'/'+APPS[name]+'_'+info['version']+('_720p' if graphics=='1280x720' and name in ('home','root') else '')+'_'+arch+'.ipk'
     return result
 
-def infrastructure(payload,graphics="1920x1080"):
+def infrastructure(payload,graphics="1920x1080",*,single_tile=False):
     root_folder="root-720p" if graphics=="1280x720" else "root"
     installer_only=assigned(ROOT/'root-edition/coordinator_inventory.py','INSTALLER_ONLY_FILES')
     files={}
     for folder,prefix in ((root_folder,''),('root-updater','updater/')):
+        if single_tile and prefix == 'updater/':continue
         root=Path(payload)/folder
         manifest=json.loads(source(root/'bundle.json'))
         for name,expected in manifest['files'].items():
@@ -118,35 +133,35 @@ def infrastructure(payload,graphics="1920x1080"):
         files['service/'+name]=package_files['usr/palm/services/com.cleanyourtv.root.preview.service/'+name]
     return package.tgz(files,directories=False),{n:digest(b) for n,b in sorted(files.items())}
 
-def release_set(payload,edition,release,local=True,notes='Computer-provisioned baseline.',graphics='1920x1080'):
+def release_set(payload,edition,release,local=True,notes='Computer-provisioned baseline.',graphics='1920x1080', *, single_tile=False):
     if graphics not in ('1920x1080','1280x720'):raise ValueError('Invalid graphics resolution')
     root_folder='root-720p' if graphics=='1280x720' else 'root'
     if edition not in ('root','no-root'):raise ValueError('Invalid edition')
     payload=Path(payload);raws={}
     if edition=='no-root':
         for name,filename in (('home','launcher-720p.ipk' if graphics=='1280x720' else 'launcher.ipk'),('helper','helper.ipk'),('updater','updater.ipk')):
-            raws[name]=source(payload/filename)
+            if name != 'updater' or not single_tile:raws[name]=source(payload/filename)
     if edition=='root':
         root=json.loads(source(payload/root_folder/'bundle.json'))
         raws['root']=source(payload/root_folder/root['package'])
-        raws['root-updater']=source(payload/'root-updater/root-updater.ipk')
-    components=[component(n,b,local,release,graphics) for n,b in raws.items()]
+        if not single_tile:raws['root-updater']=source(payload/'root-updater/root-updater.ipk')
+    components=[component(n,b,local,release,graphics,single_tile=single_tile) for n,b in raws.items()]
     if edition=='root':
-        raw,files=infrastructure(payload,graphics);raws['root-infrastructure']=raw
-        item={'name':'root-infrastructure','kind':'infrastructure','version':components[-2]['version'],'sha256':digest(raw),'size':len(raw)}
+        raw,files=infrastructure(payload,graphics,single_tile=single_tile);raws['root-infrastructure']=raw
+        item={'name':'root-infrastructure','kind':'infrastructure','version':components[0]['version'],'sha256':digest(raw),'size':len(raw)}
         if local:item.update(local=True,files=files,absent=[])
-        else:item['url']='https://github.com/Razdva122/clean-your-tv-lg-webos/releases/download/'+release+'/root-infrastructure_'+item['version']+('_720p' if graphics=='1280x720' and raw!=infrastructure(payload)[0] else '')+'.tar.gz'
+        else:item['url']='https://github.com/Razdva122/clean-your-tv-lg-webos/releases/download/'+release+'/root-infrastructure_'+item['version']+('_720p' if graphics=='1280x720' and raw!=infrastructure(payload,single_tile=single_tile)[0] else '')+'.tar.gz'
         components.append(item)
     app_component = 'root' if edition == 'root' else 'home'
     companion = not local and 'usr/palm/applications/'+APPS[app_component]+'/screensaver-companion/manifest.json' in package.data_files(raws[app_component])
-    manifest={'schema':1,'edition':edition,'release':release,'supervisor':2 if companion else 1,'notes':notes,'components':components}
+    manifest={'schema':2 if single_tile else 1,'edition':edition,'release':release,'supervisor':2 if companion else 1,'notes':notes,'components':components}
     if edition=='root' and not local:manifest['minimumSupervisorVersion']='1.2.10' if companion else '1.1.1'
     if edition=='no-root' and companion:manifest['minimumSupervisorVersion']='1.2.11'
     return manifest,raws
 
-def prepare_baseline(payload,edition,output,release=None,graphics="1920x1080"):
+def prepare_baseline(payload,edition,output,release=None,graphics="1920x1080",*,single_tile=False):
     release=release or 'v'+json.loads((ROOT/'release-versions.json').read_text())['release']
-    manifest,raws=release_set(payload,edition,release,graphics=graphics)
+    manifest,raws=release_set(payload,edition,release,graphics=graphics,single_tile=single_tile)
     output=Path(output);output.mkdir(parents=True,exist_ok=False);(output/'cache').mkdir()
     for item in manifest['components']:(output/'cache'/item['sha256']).write_bytes(raws[item['name']])
     (output/'baseline.json').write_text(json.dumps(manifest,indent=2)+'\n')
@@ -177,27 +192,33 @@ def engine_archive_files(manifest, read):
     return package.tgz(files, directories=False)
 
 
-def engine_catalog(raw, manifests, release):
+def engine_catalog(raw, manifests, release, *, single_tile=False):
     expected = {'root', 'root-720p', 'no-root', 'no-root-720p'}
     if set(manifests) != expected or any(m.get('release') != release for m in manifests.values()):
         raise ValueError('Complete matching engine release inventory required')
-    return {'schema': 1, 'engine': {
-        'version': ENGINE_VERSION, 'bootstrap': 1, 'minimumPython': '3.9.0',
+    generation = 2 if single_tile else 1
+    if any(m.get('schema') != generation for m in manifests.values()):raise ValueError('Mixed product generations')
+    engine_version = SINGLE_TILE_ENGINE_VERSION if single_tile else ENGINE_VERSION
+    return {'schema': generation, 'engine': {
+        'version': engine_version, 'bootstrap': generation, 'minimumPython': '3.9.0',
         'minimumNode': 8, 'sha256': digest(raw), 'size': len(raw),
         'url': 'https://github.com/Razdva122/clean-your-tv-lg-webos/releases/download/'
-               + release + '/system-engine_' + ENGINE_VERSION + '.tar.gz'},
+               + release + '/system-engine_' + engine_version + '.tar.gz'},
         'releases': manifests}
 
-def prepare_release(payload,output,release,notes,*,historical=False):
+def prepare_release(payload,output,release,notes,*,historical=False,single_tile=False):
     bundle = Path(payload) / 'system-updater'
     if not historical and not (bundle / 'engine-entry.py').is_file():
         raise ValueError('Complete self-updating engine bundle required')
+    if (bundle/'engine-entry.py').is_file():
+        generation = json.loads(source(bundle/'bundle.json')).get('product_schema', 1)
+        if generation != (2 if single_tile else 1):raise ValueError('Engine and release product generation mismatch')
     output=Path(output);output.mkdir(parents=True,exist_ok=True)
     manifests={}
     variants=('1920x1080','1280x720') if (Path(payload)/'launcher-720p.ipk').exists() else ('1920x1080',)
     for key in (edition+('-720p' if graphics=='1280x720' else '') for graphics in variants for edition in ('root','no-root')):
         edition=key.removesuffix('-720p');graphics='1280x720' if key.endswith('-720p') else '1920x1080'
-        manifest,raws=release_set(payload,edition,release,local=False,notes=notes,graphics=graphics)
+        manifest,raws=release_set(payload,edition,release,local=False,notes=notes,graphics=graphics,single_tile=single_tile)
         manifests[key]=manifest
         for item in manifest['components']:
             filename=item['url'].rsplit('/',1)[1];raw=raws[item['name']];target=output/filename
@@ -206,8 +227,8 @@ def prepare_release(payload,output,release,notes,*,historical=False):
     (output/'system-manifests.json').write_text(json.dumps(manifests,indent=2)+'\n')
     if (bundle / 'engine-entry.py').is_file():
         raw = engine_archive(bundle)
-        catalog = engine_catalog(raw, manifests, release)
-        (output / ('system-engine_' + ENGINE_VERSION + '.tar.gz')).write_bytes(raw)
+        catalog = engine_catalog(raw, manifests, release, single_tile=single_tile)
+        (output / ('system-engine_' + catalog['engine']['version'] + '.tar.gz')).write_bytes(raw)
         (output / 'system-bootstrap-manifest.json').write_text(json.dumps(catalog, indent=2) + '\n')
     return manifests
 
@@ -215,5 +236,6 @@ if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--output',type=Path,required=True)
     parser.add_argument('--legacy-node-prototype',action='store_true',help='Host-only Node 0.12 prototype; admission remains Node 8+')
     parser.add_argument('--legacy-node-beta',action='store_true',help='Node 0.12.2 Beta with ordinary OTA disabled')
+    parser.add_argument('--single-tile',action='store_true',help='Build the separate signed single-tile product generation')
     args=parser.parse_args()
-    print(build(args.output,legacy_node_prototype=args.legacy_node_prototype,legacy_node_beta=args.legacy_node_beta))
+    print(build(args.output,legacy_node_prototype=args.legacy_node_prototype,legacy_node_beta=args.legacy_node_beta,single_tile=args.single_tile))

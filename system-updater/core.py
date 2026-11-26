@@ -15,6 +15,7 @@ from .support.profile import validate as validate_root_profile
 IDENTITIES = {'home':'com.gathin.tvhome','helper':'com.local.nativehome','updater':'com.cleanyourtv.updater',
               'root':'com.cleanyourtv.root.preview','root-updater':'com.cleanyourtv.root.updater','root-infrastructure':None}
 SETS = {'no-root':('home','helper','updater'),'root':('root','root-updater','root-infrastructure')}
+SINGLE_TILE_SETS = {'no-root': ('home', 'helper'), 'root': ('root', 'root-infrastructure')}
 FINISHED = {'complete','rolled-back','aborted'}
 PHASES = FINISHED | {'preparing','downloading','backed-up','suspending','installing','verifying','rolling-back','verifying-rollback','recovery-required'}
 HEALTH_SECONDS = 120
@@ -27,18 +28,21 @@ def version(value):
 
 def release_set(value,edition):
     if not isinstance(value,dict) or value.get('edition')!=edition or edition not in SETS:raise ValueError('Invalid release edition')
+    schema = value.get('schema')
+    if type(schema) is not int or schema not in (1, 2):raise ValueError('Unknown product generation')
+    required = (SINGLE_TILE_SETS if schema == 2 else SETS)[edition]
     release=value.get('release')
     if not isinstance(release,str) or not release.startswith('v'):raise ValueError('Invalid release')
     version(release[1:]);components=value.get('components')
-    if not isinstance(components,list) or len(components)!=len(SETS[edition]):raise ValueError('Incomplete release set')
+    if not isinstance(components,list) or len(components)!=len(required):raise ValueError('Incomplete release set')
     names=[]
     for c in components:
-        if not isinstance(c,dict) or c.get('name') not in SETS[edition]:raise ValueError('Invalid component')
+        if not isinstance(c,dict) or c.get('name') not in required:raise ValueError('Invalid component')
         name=c['name'];names.append(name);version(c.get('version'))
         if c.get('application')!=IDENTITIES[name] or c.get('kind')!=('infrastructure' if name=='root-infrastructure' else 'ipk'):raise ValueError('Component identity mismatch')
         if not isinstance(c.get('sha256'),str) or not re.fullmatch('[a-f0-9]{64}',c['sha256']) or type(c.get('size')) is not int or not 0<c['size']<=64*1024*1024:raise ValueError('Invalid component digest/size')
     if len(set(names))!=len(names):raise ValueError('Duplicate component')
-    result=copy.deepcopy(value);result['components'].sort(key=lambda c:SETS[edition].index(c['name']))
+    result=copy.deepcopy(value);result['components'].sort(key=lambda c:required.index(c['name']))
     return result
 
 
@@ -94,6 +98,7 @@ class Manager:
         for key in ('created','updated'):
             if type(tx.get(key)) not in (int,float) or not math.isfinite(tx[key]) or tx[key]<0:raise ValueError('Corrupt journal clock')
         prior=release_set(tx.get('prior'),tx['edition']);candidate=release_set(tx.get('candidate'),tx['edition'])
+        if prior['schema'] != candidate['schema']:raise ValueError('Invalid journal product generation')
         if tx.get('release')!=candidate['release'] or len(tx.get('components',[]))!=len(candidate['components']):raise ValueError('Corrupt journal release')
         for c,trusted in zip(tx['components'],candidate['components']):
             if c.get('name')!=trusted['name'] or c.get('version')!=trusted['version']:raise ValueError('Corrupt component journal')
@@ -148,6 +153,7 @@ class Manager:
             self.io.check_legacy();offer=self.io.offer(edition)
             if not isinstance(offer,dict) or offer.get('canInstall') is not True:raise ValueError(offer.get('reason','Update unavailable'))
             candidate=release_set(offer.get('candidate'),edition);prior=release_set(offer.get('prior'),edition)
+            if prior['schema'] != candidate['schema']:raise ValueError('Change product generation with the installer')
             if candidate['release']!=release or version(release[1:])<=version(prior['release'][1:]) or not self.io.verify_baseline(prior):raise ValueError('Installed baseline or signed offer changed')
             if any(version(c['version'])<version(p['version']) for c,p in zip(candidate['components'],prior['components'])):raise ValueError('Component downgrade is not permitted')
             identifier=operation or uuid.uuid4().hex

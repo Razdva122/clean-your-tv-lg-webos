@@ -20,6 +20,17 @@ var SETS = {
     root: ['root', 'root-updater', 'root-infrastructure']
   },
   MAX = 64 * 1024 * 1024;
+var SINGLE_TILE_SETS = {
+  'no-root': ['home', 'helper'],
+  root: ['root', 'root-infrastructure']
+};
+function generation() {
+  var file = __dirname + '/product-generation.json';
+  if (!fs.existsSync(file)) return 1;
+  if (JSON.parse(fs.readFileSync(file, 'utf8')) !== 2)
+    throw Error('invalid-product-generation');
+  return 2;
+}
 function version(v) {
   if (
     typeof v !== 'string' ||
@@ -45,14 +56,14 @@ function fields(value, required) {
     })
   );
 }
-function feedName(edition, resolution) {
+function feedName(edition, resolution, schema = generation()) {
   if (
     !Object.prototype.hasOwnProperty.call(SETS, edition) ||
     ['1280x720', '1920x1080'].indexOf(resolution) < 0
   )
     throw Error('invalid-graphics-selection');
   return (
-    'system-update-' +
+    (schema === 2 ? 'system-update-v2-' : 'system-update-') +
     edition +
     (resolution === '1280x720' ? '-720p' : '') +
     '.json'
@@ -80,7 +91,7 @@ function graphics(m, resolution) {
     throw Error('signed-graphics-mismatch');
   return m;
 }
-function validate(m) {
+function validate(m, schema = generation()) {
   var required = [
     'schema',
     'edition',
@@ -97,7 +108,8 @@ function validate(m) {
     required.push('minimumSupervisorVersion');
   if (
     !fields(m, required) ||
-    m.schema !== 1 ||
+    (schema !== 1 && schema !== 2) ||
+    m.schema !== schema ||
     (m.supervisor !== 1 && m.supervisor !== 2) ||
     !SETS[m.edition] ||
     typeof m.release !== 'string' ||
@@ -114,7 +126,7 @@ function validate(m) {
     throw Error('minimum-supervisor-version');
   version(m.release.slice(1));
   var seen = {},
-    names = SETS[m.edition];
+    names = (schema === 2 ? SINGLE_TILE_SETS : SETS)[m.edition];
   if (m.components.length !== names.length)
     throw Error('incomplete-system-release');
   m.components.forEach(function (c) {
@@ -149,7 +161,7 @@ function validate(m) {
   });
   return m;
 }
-function verify(e, key) {
+function verify(e, key, schema = generation()) {
   if (
     !fields(e, ['payload', 'signature']) ||
     typeof e.payload !== 'string' ||
@@ -169,7 +181,7 @@ function verify(e, key) {
   verifier.update(bytes);
   verifier.end();
   if (!verifier.verify(key, sig)) throw Error('invalid-signature');
-  return validate(JSON.parse(bytes.toString('utf8')));
+  return validate(JSON.parse(bytes.toString('utf8')), schema);
 }
 function allowed(raw) {
   try {
@@ -261,6 +273,7 @@ function get(url, limit, redirects) {
   });
 }
 module.exports = {
+  generation: generation,
   feedName: feedName,
   graphics: graphics,
   supervisorVersion: SUPERVISOR_VERSION,

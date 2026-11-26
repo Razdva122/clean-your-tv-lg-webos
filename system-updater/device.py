@@ -83,8 +83,16 @@ class Device:
     def components_present(self):
         owners=[SYSTEM]
         tx=self.store.read('transaction')
-        if tx and tx.get('edition')=='root':owners.extend((ROOT,UPDATER))
+        if tx and tx.get('edition')=='root':
+            owners.append(ROOT)
+            if self.product_schema() == 1:owners.append(UPDATER)
         return owners_present(owners,self.owner_identity)
+
+    def product_schema(self):
+        baseline = self.store.read('baseline')
+        schema = baseline.get('schema', 1) if baseline else 1
+        if type(schema) is not int or schema not in (1, 2):raise ValueError('Unknown product generation')
+        return schema
 
     def require_components(self):
         if not self.components_present():raise ValueError('CYTV component removed; retained recovery requires inspection')
@@ -146,6 +154,7 @@ class Device:
 
     def _verify_release(self,value,edition):
         checked=release_set(value,edition)
+        if checked['schema'] != self.product_schema():raise ValueError('Product generation mismatch')
         if 'proof' in checked:
             trusted=release_set(self.fetch('verify',{'proof':checked['proof']}),edition)
             if {k:v for k,v in checked.items() if k!='proof'}!=trusted:raise ValueError('Saved signed release mismatch')
@@ -310,6 +319,10 @@ class Device:
         if any('/state/' in name and (name not in state_markers or files[name]!=b'') for name in files):raise ValueError('Mutable state in package payload')
         appinfo=json.loads(files.get(prefix+'appinfo.json',b'{}'));pkg=json.loads(files.get(info,b'{}'))
         if appinfo.get('id')!=app or appinfo.get('version')!=c['version'] or pkg.get('id')!=app or pkg.get('app')!=app or pkg.get('version')!=c['version'] or not isinstance(pkg.get('services'),list) or set(pkg['services'])-services:raise ValueError('Package application identity mismatch')
+        if c['name'] in ('home','root','helper'):
+            schema = self.product_schema()
+            if appinfo.get('cytvProductGeneration', 1) != schema or schema == 2 and appinfo.get('visible') is not False:
+                raise ValueError('Wrong product generation in launcher package')
         if c['name'] in ('home','root') and appinfo.get('systemUpdateProtocol')!=1:raise ValueError('Launcher profile/health protocol incompatible')
         if c['name'] in ('home','root') and 'url' in c:
             expected='1280x720' if c['url'].endswith('_720p_all.ipk') else '1920x1080'
@@ -390,6 +403,9 @@ class Device:
                 if name in hashes:proof['files'][path]=hashes[name]
                 else:proof['files'].pop(path,None)
         proof_raw=json.dumps(proof,sort_keys=True,separators=(',',':')).encode();self.atomic(proof_path,proof_raw)
+        if self.product_schema() == 2:
+            self.store.write('root-recovery-integrity', {'schema':1, 'sha256':digest(proof_raw)})
+            return
         from .support.store import Store
         root_store=Store(self.root_updater,uid=self.uid);receipt=root_store.read('infrastructure')
         if not isinstance(receipt,dict) or not isinstance(receipt.get('code'),dict):raise ValueError('Missing Root updater receipt')
@@ -603,14 +619,22 @@ class Device:
     def _root_integrity(self):
         self.require_normal_root()
         from python_binding import verify_binding
-        verify_binding(self.root_state);verify_binding(self.root_updater)
+        verify_binding(self.root_state)
         proof_raw=safe_bytes(self.root_state/'recovery-provision.json',limit=1024*1024,uid=self.uid);proof=json.loads(proof_raw)
         from .support.store import Store
-        receipt=Store(self.root_updater,uid=self.uid).read('infrastructure')
-        if proof.get('mode')!='recovery-only' or not receipt or receipt.get('recovery_sha256')!=digest(proof_raw):raise ValueError('Root recovery receipt mismatch')
+        single_tile = self.product_schema() == 2
+        if single_tile:
+            pin = self.store.read('root-recovery-integrity')
+            if pin != {'schema':1, 'sha256':digest(proof_raw)}:raise ValueError('Root recovery receipt mismatch')
+        else:
+            verify_binding(self.root_updater)
+            receipt=Store(self.root_updater,uid=self.uid).read('infrastructure')
+            if not receipt or receipt.get('recovery_sha256')!=digest(proof_raw):raise ValueError('Root recovery receipt mismatch')
+        if proof.get('mode')!='recovery-only':raise ValueError('Root recovery receipt mismatch')
         for name,expected in proof['files'].items():
             path=Path(name)
             if not path.is_relative_to(self.root_state) or digest(safe_bytes(path,limit=4*1024*1024,uid=self.uid))!=expected:raise ValueError('Root recovery integrity failed')
+        if single_tile:return
         for name,expected in receipt['code'].items():
             p=PurePosixPath(name)
             if p.is_absolute() or '..' in p.parts or str(p)!=name or digest(safe_bytes(self.root_updater/'code'/name,limit=4*1024*1024,uid=self.uid))!=expected:raise ValueError('Root updater integrity failed')
@@ -747,7 +771,7 @@ class Device:
         # IPK replacement may reset app service registrations. Restore only the
         # original or installed bytes recorded by explicit computer provision.
         tx=self.store.read('transaction')
-        stores=(self.state,self.root_updater) if tx and tx['edition']=='root' else (self.state,)
+        stores=(self.state,self.root_updater) if tx and tx['edition']=='root' and self.product_schema()==1 else (self.state,)
         for store_root in stores:
             if not (store_root/'registration.json').exists():continue
             from .support.store import Store
@@ -764,7 +788,8 @@ class Device:
             self._root_integrity()
             # The provision module and its contract are in the verified Root
             # updater inventory; its plan contains only fixed Root LS2 paths.
-            spec=importlib.util.spec_from_file_location('system_root_provision',self.root_updater/'code/provision.py');provision=importlib.util.module_from_spec(spec);spec.loader.exec_module(provision)
+            source = self.code/'root-provision.py' if self.product_schema()==2 else self.root_updater/'code/provision.py'
+            spec=importlib.util.spec_from_file_location('system_root_provision',source);provision=importlib.util.module_from_spec(spec);spec.loader.exec_module(provision)
             self.repair_root_registration(provision, screensaver=screensaver)
             provision.refresh()
         else:self.scan_services()
@@ -964,7 +989,7 @@ class Device:
             if current not in (expected[0].get(name),expected[1].get(name)):raise ValueError('Managed infrastructure conflict; computer recovery required')
 
     def sync_root_baseline(self,tx):
-        if tx.get('edition')!='root' or tx.get('phase') not in ('complete','rolled-back'):return
+        if tx.get('edition')!='root' or tx.get('phase') not in ('complete','rolled-back') or self.product_schema()==2:return
         selected=tx['prior' if tx['phase']=='rolled-back' else 'candidate']
         c=next(c for c in selected['components'] if c['name']=='root');raw=self.cache_bytes(c);self.inspect(raw,c)
         from .support.store import Store

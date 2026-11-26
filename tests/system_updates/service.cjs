@@ -49,6 +49,18 @@ function caller(id) {
   };
 }
 (async () => {
+  const tile = caller('io.github.razdva122.cytvinstaller');
+  for (const method of ['status', 'reconcile', 'rollback'])
+    assert.equal(await dispatch(tile, method, {}), 'ok');
+  for (const method of [
+    'check',
+    'install',
+    'repair',
+    'restoreProfile',
+    'healthy'
+  ])
+    await assert.rejects(() => dispatch(tile, method, {}), /authorized/);
+  calls.length = 0;
   assert.equal(
     await dispatch(caller('com.gathin.tvhome 123'), 'install', {
       edition: 'no-root',

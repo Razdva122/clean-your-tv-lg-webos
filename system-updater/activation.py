@@ -51,6 +51,8 @@ class Slots:
                 or manifest['files'] != {name: digest(data) for name, data in files.items()}
                 or 'engine-entry.py' not in files):
             raise ValueError('Engine inventory mismatch')
+        if catalog.get('schema') == 2 and files.get('system_updater/product-generation.json') != b'2\n':
+            raise ValueError('Wrong product generation in engine')
         for name in files:
             path = PurePosixPath(name)
             if path.is_absolute() or str(path) != name or '..' in path.parts or '\\' in name:

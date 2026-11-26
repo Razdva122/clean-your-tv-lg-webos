@@ -78,6 +78,17 @@ def package_files(raw):
     if set(parts)!={'debian-binary','control.tar.gz','data.tar.gz'} or parts['debian-binary']!=b'2.0\n':raise ValueError('Invalid IPK inventory')
     return entries(parts['data.tar.gz'])
 
+TILE = 'io.github.razdva122.cytvinstaller'
+TILE_CODE = {'system_updater/product-generation.json', 'root-provision.py'}
+
+
+def bundle_code(manifest):
+    schema = manifest.get('product_schema', 1)
+    if type(schema) is not int or schema not in (1, 2):
+        raise ValueError('Unknown supervisor product generation')
+    return CODE | TILE_CODE if schema == 2 else CODE
+
+
 def verify_bundle(bundle, *, historical_manifest=None):
     bundle = Path(bundle)
     if historical_manifest is None:
@@ -86,12 +97,13 @@ def verify_bundle(bundle, *, historical_manifest=None):
         manifest = json.loads(historical_manifest)
     files = manifest.get('files')
     extras = {'setup-system-updater.py', 'system-updater.ipk'}
-    inventories = [CODE | extras]
+    inventories = [bundle_code(manifest) | extras]
     if historical_manifest is not None and 'engine_version' not in manifest:
         inventories.append(LEGACY_CODE | extras)
     if (manifest.get('schema') != 1 or manifest.get('supervisor') != 1
             or not isinstance(files, dict) or set(files) not in inventories):
         raise ValueError('Unexpected supervisor bundle inventory')
+    if manifest.get('product_schema') == 2 and safe(bundle/'system_updater/product-generation.json') != b'2\n':raise ValueError('Incorrect signed feed generation')
     for name, sha in files.items():
         if digest(safe(bundle/name)) != sha:
             raise ValueError('Supervisor bundle hash mismatch')
@@ -145,7 +157,13 @@ def verify_baseline(baseline,bundle=None):
     baseline=Path(baseline);manifest=json.loads(safe(baseline/'baseline.json'))
     edition=manifest.get('edition');expected={'root','root-updater'} if edition=='root' else {'home','helper','updater'}
     if edition=='root':expected.add('root-infrastructure')
-    if manifest.get('schema')!=1 or manifest.get('supervisor')!=1 or edition not in ('root','no-root') or not re.fullmatch(r'v\d{1,4}\.\d{1,4}\.\d{1,4}',manifest.get('release','')) or {c['name'] for c in manifest['components']}!=expected or len(manifest['components'])!=len(expected):raise ValueError('Invalid baseline')
+    schema = manifest.get('schema')
+    if schema == 2:
+        expected.discard('root-updater' if edition=='root' else 'updater')
+    if bundle is not None:
+        bundle_schema = json.loads(safe(Path(bundle)/'bundle.json')).get('product_schema', 1)
+        if schema != bundle_schema:raise ValueError('Baseline product generation mismatch')
+    if type(schema) is not int or schema not in (1,2) or manifest.get('supervisor')!=1 or edition not in ('root','no-root') or not re.fullmatch(r'v\d{1,4}\.\d{1,4}\.\d{1,4}',manifest.get('release','')) or {c['name'] for c in manifest['components']}!=expected or len(manifest['components'])!=len(expected):raise ValueError('Invalid baseline')
     for item in manifest['components']:
         sha=item.get('sha256','')
         if not re.fullmatch('[a-f0-9]{64}',sha) or item.get('local') is not True:raise ValueError('Invalid baseline descriptor')
@@ -157,6 +175,7 @@ def verify_baseline(baseline,bundle=None):
         else:
             app=APPS[item['name']];files=package_files(raw)
             info=json.loads(files['usr/palm/applications/'+app+'/appinfo.json'])
+            if item['name'] in ('root','home','helper'):require_generation(info,schema)
             if item.get('kind')!='ipk' or item.get('application')!=app or info.get('id')!=app or info.get('version')!=item['version']:raise ValueError('Baseline package identity mismatch')
     return manifest
 
@@ -177,44 +196,64 @@ def tgz(files,executable=None):
             archive.addfile(item,io.BytesIO(raw))
     return gzip.compress(buffer.getvalue(),mtime=0)
 
-def require_transition_home(installed,edition):
+def require_generation(info, schema):
+    value = info.get('cytvProductGeneration', 1)
+    if type(value) is not int or value != schema or schema == 2 and info.get('visible') is not False:
+        raise ValueError('Install the matching Home with the installer before enabling updates')
+
+
+def require_transition_home(installed,edition,schema=1):
     app=APPS['root' if edition=='root' else 'home']
-    if edition=='root':
+    if edition=='root' and schema==2:
+        from package_identity import single_tile_original
+        from package_data import read_verified
+        _, _, inventory = single_tile_original(Path('/var/lib/clean-your-tv-root'), uid=os.geteuid())
+        name = 'usr/palm/applications/'+app+'/appinfo.json'
+        info = json.loads(read_verified(Path(installed)/name,sha256=inventory[name],limit=65536,installed=installed,uid=os.geteuid()))
+    elif edition=='root':
         from package_identity import identity
         info=identity(app,installed=installed,uid=os.geteuid())
     else:info=json.loads(safe(Path(installed)/'usr/palm/applications'/app/'appinfo.json'))
+    require_generation(info,schema)
     if info.get('id')!=app or type(info.get('systemUpdateProtocol')) is not int or info['systemUpdateProtocol']!=1:raise ValueError('Install the transition Home from computer before enabling System Updates')
 
 def snapshot(bundle,edition,output,installed=INSTALLED,runtime=Path('/var/lib/clean-your-tv-root/runtime'),updater=Path('/var/lib/clean-your-tv-root-updater/code'),service=Path('/var/lib/clean-your-tv-root/service')):
     require_normal_root()
     if Path(runtime).parent != Path('/var/lib/clean-your-tv-root'):require_normal_root(Path(runtime).parent)
-    verify_bundle(bundle)
-    names=('root','root-updater') if edition=='root' else ('home','helper','updater')
+    schema = verify_bundle(bundle).get('product_schema', 1)
+    if schema == 2:
+        names = ('root',) if edition == 'root' else ('home', 'helper')
+    else:
+        names = ('root','root-updater') if edition=='root' else ('home','helper','updater')
     if edition not in ('root','no-root'):raise ValueError('Invalid edition')
     rooted={};desired={}
     if edition=='root':
         import package_identity
         from package_data import read_verified
-        states={**package_identity.STATES,package_identity.ROOT:Path(runtime).parent,package_identity.UPDATER:Path(updater).parent}
-        for name in names:
-            app=APPS[name]
-            rooted[name]=package_identity.inventory(app,states=states,uid=os.geteuid())
-        # Root archive modes are original pinned metadata; Updater keeps its
-        # original archive executable inventory through System publication.
-        root_store=package_identity.store(Path(updater).parent,os.geteuid())
-        descriptor=root_store.read('current')
-        original=safe(Path(updater).parent/'cache'/(descriptor['sha256']+'.ipk'),os.geteuid())
-        if len(original)!=descriptor['size'] or digest(original)!=descriptor['sha256'] or {n:digest(b) for n,b in package_files(original).items()}!=rooted['root']:raise ValueError('Root original cache/identity conflict')
+        if schema == 2:
+            descriptor, original, rooted['root'] = package_identity.single_tile_original(Path(runtime).parent, uid=os.geteuid())
+        else:
+            states={**package_identity.STATES,package_identity.ROOT:Path(runtime).parent,package_identity.UPDATER:Path(updater).parent}
+            for name in names:
+                app=APPS[name]
+                rooted[name]=package_identity.inventory(app,states=states,uid=os.geteuid())
+            # Root archive modes are original pinned metadata; Updater keeps its
+            # original archive executable inventory through System publication.
+            root_store=package_identity.store(Path(updater).parent,os.geteuid())
+            descriptor=root_store.read('current')
+            original=safe(Path(updater).parent/'cache'/(descriptor['sha256']+'.ipk'),os.geteuid())
+            if len(original)!=descriptor['size'] or digest(original)!=descriptor['sha256'] or {n:digest(b) for n,b in package_files(original).items()}!=rooted['root']:raise ValueError('Root original cache/identity conflict')
         # Read modes only after the original private package has been checked.
         try:from updater.package import members
         except ModuleNotFoundError:from system_updater.support.package import members
         parts=members(original)
         with tarfile.open(fileobj=io.BytesIO(parts['data.tar.gz']),mode='r:gz') as archive:
             desired['root']={m.name for m in archive if m.isfile() and m.mode&0o111}
-        receipt=root_store.read('installed-package')
-        if not isinstance(receipt,dict) or receipt.get('files')!=rooted['root-updater'] or not isinstance(receipt.get('executable'),list):raise ValueError('Root Updater original mode inventory unavailable')
-        desired['root-updater']=set(receipt['executable'])
-    else:require_transition_home(installed,edition)
+        if schema == 1:
+            receipt=root_store.read('installed-package')
+            if not isinstance(receipt,dict) or receipt.get('files')!=rooted['root-updater'] or not isinstance(receipt.get('executable'),list):raise ValueError('Root Updater original mode inventory unavailable')
+            desired['root-updater']=set(receipt['executable'])
+    else:require_transition_home(installed,edition,schema)
     output=Path(output);output.mkdir(mode=0o700);(output/'cache').mkdir(mode=0o700)
     components=[]
     for name in names:
@@ -222,6 +261,7 @@ def snapshot(bundle,edition,output,installed=INSTALLED,runtime=Path('/var/lib/cl
         if edition=='root':
             files={n:read_verified(Path(installed)/n,sha256=h,limit=32*1024*1024,installed=installed,uid=os.geteuid()) for n,h in rooted[name].items()}
             info=json.loads(files[appinfo]);metadata=json.loads(files[packageinfo]);executable=desired[name]
+            if name == 'root':require_generation(info,schema)
             if name=='root' and info.get('systemUpdateProtocol')!=1:raise ValueError('Transition Root required')
         else:
             info=json.loads(safe(Path(installed)/appinfo));metadata=json.loads(safe(Path(installed)/packageinfo));files={};executable=set()
@@ -243,30 +283,42 @@ def snapshot(bundle,edition,output,installed=INSTALLED,runtime=Path('/var/lib/cl
                         relative_name=prefix+'/'+rel.as_posix();files[relative_name]=safe(path)
                         if channel and files[relative_name]!=b'':raise ValueError('Nonempty Home channel sentinel')
                         if path.stat().st_mode&0o111:executable.add(relative_name)
-        control=('Package: '+app+'\nVersion: '+info['version']+'\nArchitecture: '+('arm' if name=='helper' else 'all')+'\nMaintainer: Clean Your TV\nDescription: Captured installed baseline\n').encode()
-        raw=bytearray(b'!<arch>\n')
-        for part,data in {'debian-binary':b'2.0\n','control.tar.gz':tgz({'control':control}),'data.tar.gz':tgz(files,executable)}.items():
-            raw.extend(f'{part + "/":<16}{0:<12}{0:<6}{0:<6}{"100644":<8}{len(data):<10}`\n'.encode());raw.extend(data)
-            if len(data)%2:raw.extend(b'\n')
-        raw=bytes(raw);sha=digest(raw);(output/'cache'/sha).write_bytes(raw)
+        if schema == 2 and name == 'root':
+            # Preserve the personalized, authenticated archive including its modes.
+            raw = original
+        else:
+            control=('Package: '+app+'\nVersion: '+info['version']+'\nArchitecture: '+('arm' if name=='helper' else 'all')+'\nMaintainer: Clean Your TV\nDescription: Captured installed baseline\n').encode()
+            raw=bytearray(b'!<arch>\n')
+            for part,data in {'debian-binary':b'2.0\n','control.tar.gz':tgz({'control':control}),'data.tar.gz':tgz(files,executable)}.items():
+                raw.extend(f'{part + "/":<16}{0:<12}{0:<6}{0:<6}{"100644":<8}{len(data):<10}`\n'.encode());raw.extend(data)
+                if len(data)%2:raw.extend(b'\n')
+            raw = bytes(raw)
+        sha=digest(raw);(output/'cache'/sha).write_bytes(raw)
         components.append({'name':name,'kind':'ipk','application':app,'version':info['version'],'sha256':sha,'size':len(raw),'local':True})
     if edition=='root':
         files,absent=capture_infrastructure(infrastructure_paths(bundle),runtime,updater,service)
         raw=tgz(files);sha=digest(raw);(output/'cache'/sha).write_bytes(raw)
         components.append({'name':'root-infrastructure','kind':'infrastructure','version':components[0]['version'],'sha256':sha,'size':len(raw),'local':True,'files':{n:digest(b) for n,b in files.items()},'absent':absent})
-    manifest={'schema':1,'supervisor':1,'edition':edition,'release':'v0.0.0','notes':'Exact installed baseline captured during explicit computer setup.','components':components}
+    manifest={'schema':schema,'supervisor':1,'edition':edition,'release':'v0.0.0','notes':'Exact installed baseline captured during explicit computer setup.','components':components}
     (output/'baseline.json').write_text(json.dumps(manifest)+'\n')
     verify_baseline(output,bundle)
     return output
 
 
-def permission_plan():
+def permission_plan(*, single_tile=False):
     group=SERVICE+'.ui';launcher=SERVICE+'.launcher'
     clients={}
-    for app in ('com.gathin.tvhome','com.cleanyourtv.root.preview','com.cleanyourtv.updater','com.cleanyourtv.root.updater'):
+    homes = ('com.gathin.tvhome','com.cleanyourtv.root.preview')
+    apps = homes if single_tile else homes + ('com.cleanyourtv.updater','com.cleanyourtv.root.updater')
+    for app in apps:
         for pattern in (app,app+'-*'):clients[pattern]=[group]+([launcher] if app in ('com.gathin.tvhome','com.cleanyourtv.root.preview') else [])
+    api={group:[SERVICE+'/'+m for m in ('check','status','rollback','reconcile')],launcher:[SERVICE+'/'+m for m in ('install','repair','restoreProfile','healthy')]}
+    if single_tile:
+        recovery=SERVICE+'.recovery'
+        api[recovery]=[SERVICE+'/'+m for m in ('status','rollback','reconcile')]
+        for pattern in (TILE,TILE+'-*'):clients[pattern]=[recovery]
     return {'role.json':{'appId':SERVICE,'type':'regular','allowedNames':[SERVICE],'permissions':[{'service':SERVICE,'inbound':list(clients),'outbound':[]}]},
-            'client.json':clients,'api.json':{group:[SERVICE+'/'+m for m in ('check','status','rollback','reconcile')],launcher:[SERVICE+'/'+m for m in ('install','repair','restoreProfile','healthy')]}}
+            'client.json':clients,'api.json':api}
 
 def atomic(path,raw,mode=0o600):
     path=Path(path);raw=raw.encode() if isinstance(raw,str) else raw
@@ -363,7 +415,7 @@ def preflight(bundle,baseline,state=STATE,installed=INSTALLED,base=BASE,hook=HOO
     require_unprovisioned(state, cancelled_fence=cancelled_fence)
     require_legacy_idle()
     bundle=Path(bundle);baseline=Path(baseline);manifest=verify_bundle(bundle);current=verify_baseline(baseline,bundle)
-    require_transition_home(installed,current['edition'])
+    require_transition_home(installed,current['edition'],current['schema'])
     if os.path.lexists(hook):raise FileExistsError('Supervisor boot hook exists')
     # Prove baseline payloads match installed files before creating any durable state.
     for item in current['components']:
@@ -390,10 +442,13 @@ def provision(bundle,baseline,state=STATE,installed=INSTALLED,base=BASE,hook=HOO
     from python_binding import install_launcher
     install_launcher(state, atomic)
     record('bootstrap',{'phase':'prepared','edition':current['edition']})
-    for name in CODE:
+    for name in bundle_code(manifest):
         path=code/name;path.parent.mkdir(parents=True,mode=0o700,exist_ok=True);atomic(path,safe(bundle/name))
-    record('infrastructure',{'schema':1,'code':{name:manifest['files'][name] for name in sorted(CODE)}})
+    record('infrastructure',{'schema':1,'code':{name:manifest['files'][name] for name in sorted(bundle_code(manifest))}})
     for item in current['components']:atomic(state/'cache'/item['sha256'],safe(baseline/'cache'/item['sha256']))
+    if current['edition'] == 'root' and current['schema'] == 2:
+        proof = safe(Path('/var/lib/clean-your-tv-root/recovery-provision.json'),os.geteuid())
+        record('root-recovery-integrity', {'schema':1, 'sha256':digest(proof)})
     record('baseline',current);record('current-'+current['edition'],current)
     if install is None:
         sys.path.insert(0,str(code));from observed_install import install
@@ -460,7 +515,7 @@ def finish_registration(bundle,baseline,state=STATE,installed=INSTALLED,base=BAS
     if original['service'].decode().splitlines().count(expected)!=1 or json.loads(original['role']).get('appId')!=SERVICE:raise ValueError('Unexpected supervisor registration')
     runner=state/'run-service'
     atomic(runner,'#!/bin/sh\nset -eu\n[ "$#" -eq 0 ] || exit 2\nunset NODE_OPTIONS NODE_PATH\nexec /usr/bin/node '+str(code/'python_boot.js')+' '+str(state)+' '+str(code/'service-entry.py')+' service\n',0o700)
-    plan=permission_plan();role=json.loads(original['role']);role.update(plan['role.json'])
+    plan=permission_plan(single_tile=current['schema']==2);role=json.loads(original['role']);role.update(plan['role.json'])
     updated={'service':original['service'].decode().replace(expected,'Exec='+str(runner)).encode(),'role':json.dumps(role).encode(),'client':json.dumps(plan['client.json']).encode(),'api':json.dumps(plan['api.json']).encode()}
     expected={'files':{str(paths[k]):{'original':original[k].decode(),'installed':v.decode()} for k,v in updated.items()}}
     if saved is not None and saved!=expected:raise ValueError('Supervisor registration receipt mismatch')
@@ -499,7 +554,7 @@ def resume(bundle,state=STATE,installed=INSTALLED,base=BASE,hook=HOOK,refresh=No
         raise ValueError('Matching original bootstrap bundle proof required; retain state for recovery')
     verify_binding(state)
     receipt=json.loads(safe(state/'infrastructure.json',os.geteuid()))
-    expected={name:manifest['files'][name] for name in sorted(CODE)}
+    expected={name:manifest['files'][name] for name in sorted(bundle_code(manifest))}
     if receipt!={'schema':1,'code':expected}:raise ValueError('Unknown supervisor bootstrap infrastructure')
     for name,digest_value in expected.items():
         if digest(safe(state/'code'/name,os.geteuid()))!=digest_value:raise ValueError('Supervisor bootstrap code changed')
@@ -667,7 +722,7 @@ def main():
         return
     verify_bundle(args.bundle);baseline=verify_baseline(args.baseline,args.bundle) if args.baseline else {'edition':args.edition}
     if not baseline['edition']:parser.error('--edition is required without --baseline')
-    print(json.dumps({'operation':'one-time-system-updater-setup','edition':baseline['edition'],'permissions':permission_plan(),'hardware_validated':False},indent=2))
+    print(json.dumps({'operation':'one-time-system-updater-setup','edition':baseline['edition'],'permissions':permission_plan(single_tile=verify_bundle(args.bundle).get('product_schema')==2),'hardware_validated':False},indent=2))
     if args.apply:
         if not args.ssh:parser.error('--apply requires --ssh')
         execute(args.bundle,args.baseline,args.ssh,args.identity,edition=baseline['edition'],python=args.python,resume=args.resume)
