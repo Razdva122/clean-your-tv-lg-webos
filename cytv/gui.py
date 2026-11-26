@@ -1202,7 +1202,7 @@ class Wizard(QMainWindow):
         self.button('Back to start', self.home)
         address.setFocus()
 
-    def show_debloat_selection(self, options):
+    def show_debloat_selection(self):
         maintenance = self.command == 'debloat'
         self.content.hide()
         self.preview.hide()
@@ -1250,7 +1250,7 @@ class Wizard(QMainWindow):
                 text = WrappedLabel(tr(label))
                 toggle = ToggleSwitch(tr(label), tr('Selected'), tr('Keep current'))
                 toggle.setObjectName('debloat-' + key)
-                toggle.setChecked(not maintenance and key not in debloat.PRELOAD_APPS)
+                toggle.setChecked(not maintenance)
                 text.setBuddy(toggle)
                 row.addWidget(text, 1)
                 row.addWidget(toggle)
@@ -1283,12 +1283,8 @@ class Wizard(QMainWindow):
             return section
 
         first = None
-        offered = {key for key, _, _ in options}
-        for group, rows in debloat.ALL_GROUPS:
-            available = [row for row in rows if row[0] in offered]
-            if not available:
-                continue
-            section = add_group(group, available)
+        for group, rows in debloat.GROUPS:
+            section = add_group(group, rows)
             if first is None:
                 first = section
         actions = QHBoxLayout()
@@ -1474,7 +1470,7 @@ class Wizard(QMainWindow):
             self.show_ssh_command_prompt()
             return
         if prompt.label == debloat.SELECT:
-            self.show_debloat_selection(prompt.options)
+            self.show_debloat_selection()
             return
         if prompt.label == debloat.REVIEW:
             self.show_debloat_results()

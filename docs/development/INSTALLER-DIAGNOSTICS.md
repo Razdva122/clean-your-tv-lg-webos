@@ -346,8 +346,8 @@ are `pairing-rejected`, `pairing-timeout` and `pairing-unavailable`. A
 negative reply to a write is `write-rejected`, while a transport failure or
 invalid reply is `write-unavailable`. After a confirmed write,
 `verify-mismatch` means the value differs from the target and
-`verify-unavailable` means no value could be read. An `unavailable` result means the installer skipped a setting whose
-original value or eligible preload policy could not be read. Other outcomes are
+`verify-unavailable` means no value could be read. An `unavailable` result means the installer skipped a promotion setting whose
+original value could not be read. Other outcomes are
 `already`, `verified` and `journal-failed` (the original value could not be
 saved locally). The export excludes setting values and raw TV responses.
 

@@ -31,67 +31,13 @@ class DebloatTests(unittest.TestCase):
             ssap.call.assert_called_once_with('ssap://settings/setSystemSettings',
                 {'category': 'option', 'settings': {'promotionStreamer': 'off'}}, timeout=8)
 
-    def test_root_preload_apply_and_restore_only_selected_app(self):
-        from cytv.terminal import Console
-        apps = {'netflix': True, 'com.webos.app.home': True}
-        writes = []
-
-        def luna(uri, payload, **kwargs):
-            if uri == 'com.webos.service.preloadmanager/getPreloadPolicy':
-                self.assertEqual(payload, {})
-                return {'returnValue': True, 'applications': [
-                    {'id': app, 'isEnabled': enabled} for app, enabled in apps.items()]}
-            self.assertEqual(uri, 'com.webos.service.preloadmanager/setPreloadPolicy')
-            self.assertIs(payload['permanent'], False)
-            row = payload['application']
-            self.assertEqual(row['id'], 'netflix')
-            self.assertIs(type(row['isEnabled']), bool)
-            self.assertEqual(json.loads(self.record.read_text())['settings']['preloadNetflix']['original'], 'on')
-            apps['netflix'] = row['isEnabled']
-            writes.append(row['isEnabled'])
-            return {'returnValue': True}
-
-        self.installer.remote = SimpleNamespace(root=True, luna=luna)
-        selection = ['preloadNetflix', 'preloadYouTube']
-        self.assertEqual(debloat.apply(self.installer, selection),
-                         {'preloadNetflix': 'verified', 'preloadYouTube': 'unavailable'})
-        self.assertEqual(debloat.apply(self.installer, ['preloadNetflix']), {'preloadNetflix': 'already'})
-        debloat.offer_restore(self.installer.remote, self.installer.store, self.installer.profile,
-                              lambda _: 'y', Console(lambda _: None))
-        self.assertEqual(writes, [False, True])
-        self.assertTrue(apps['com.webos.app.home'])
-        self.assertEqual(json.loads(self.record.read_text())['settings'], {})
-
-    def test_unusable_preload_policy_causes_no_write_or_journal(self):
-        row = {'id': 'netflix', 'isEnabled': True}
-        for apps in ([dict(row, isAllowed=False)], [dict(row, extPolicy=['managed'])],
-                     [dict(row, isEnabled='true')], [row, row], None):
-            with self.subTest(apps=apps):
-                remote = Mock(root=True)
-                remote.luna.return_value = {'returnValue': True, 'applications': apps}
-                self.installer.remote = remote
-                events = {}
-                self.assertEqual(debloat.apply(self.installer, ['preloadNetflix'], diagnostic=events),
-                                 {'preloadNetflix': 'unavailable'})
-                self.assertEqual(events, {'preloadNetflix': 'unavailable'})
-                remote.luna.assert_called_once_with('com.webos.service.preloadmanager/getPreloadPolicy',
-                                                    {}, timeout=5)
-                self.assertFalse(self.record.exists())
-
-    def test_preload_requires_both_root_edition_and_root_connection(self):
-        from cytv.terminal import Console
-        for edition, root in [('no-root', False), ('no-root', True), ('root', False)]:
-            with self.subTest(edition=edition, root=root):
-                self.installer.profile['edition'] = edition
-                self.installer.remote = Mock(root=root)
-                record = self.installer.store.device_dir(self.installer.profile) / 'debloat.json'
-                record.write_text(json.dumps({'schema': 1, 'settings': {
-                    'preloadNetflix': {'original': 'on', 'target': 'off'}}}))
-                with self.assertRaises(ValueError):
-                    debloat.apply(self.installer, ['homePromotion', 'preloadNetflix'])
-                debloat.offer_restore(self.installer.remote, self.installer.store, self.installer.profile,
-                                      lambda _: self.fail('unexpected prompt'), Console(lambda _: None))
-                self.assertEqual(self.installer.remote.method_calls, [])
+    def test_old_session_only_choices_cannot_trigger_a_partial_write(self):
+        self.installer.remote = Mock(root=True)
+        for key in ('preloadNetflix', 'preloadYouTube', 'preloadBrowser'):
+            with self.subTest(key=key), self.assertRaises(ValueError):
+                debloat.apply(self.installer, ['promotionStreamer', key])
+        self.assertEqual(self.installer.remote.method_calls, [])
+        self.assertFalse(self.record.exists())
 
     def test_known_older_firmware_does_not_offer_the_webos_22_menu_path(self):
         self.assertNotIn('Home Settings', debloat.result_message('homePromotion', 'firmware-blocked'))
