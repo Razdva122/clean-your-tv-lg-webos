@@ -63,7 +63,11 @@ Při instalaci Root instalátor podle potřeby automaticky použije ověřené i
 
 ### Pokud už je na televizoru otevřený CYTV Installer
 
-Zvolte **Nainstalovat a aktivovat** a jednou potvrďte. Instalátor společně nainstaluje Root Home, Root Updater a System Updater. Pokud najde kompatibilní nastavení z dřívější instalace Clean Your TV Home, automaticky je převezme. Tlačítko Home pak otevře Root Home, pokud není aktivní nouzové vypnutí. Pokud vás instalátor při nastavování Root odkáže na počítač, pokračujte tam. Nabídne-li No-root, použijte instalátor na počítači nebo zařízení se systémem Android.
+Zvolte **Nainstalovat a aktivovat** a jednou potvrďte. Instalátor společně nainstaluje Root Home, Root Updater a System Updater. Tlačítko Home pak otevře Root Home, pokud není aktivní nouzové vypnutí. Pokud vás instalátor při nastavování Root odkáže na počítač, pokračujte tam. Nabídne-li No-root, použijte instalátor na počítači nebo zařízení se systémem Android.
+
+Po instalaci se v Root Home otevře **Nastavit televizor**. V nabídce **Motivy** vyberte vestavěný motiv. V nabídce **Upravit nastavení LG** označte reklamy a doporučení, které chcete změnit, zvolte **Použít vybraná nastavení** a zkontrolujte výsledek každé změny. Chcete-li vrátit uložené původní hodnoty, označte položky a zvolte **Obnovit vybraná nastavení**. Chcete-li přejít na domovskou obrazovku, zvolte **Otevřít Home**. Později můžete panel otevřít přes **Nastavení → Pokročilé → Nastavit televizor**.
+
+Pokud instalátor ohlásí problém, postupujte podle pokynu na obrazovce. Volba pro uložení diagnostické zprávy uloží kopii v televizoru. Uloženou zprávu pak můžete otevřít v instalátoru nebo v nabídce obnovení dlaždice a přečíst si ji či naskenovat její QR kód telefonem.
 
 Chcete-li odinstalovat Clean Your TV, zvolte v instalátoru **Úplně odebrat produkt**. Pokud odeberete pouze aplikaci instalátoru, Clean Your TV v televizoru zůstane.
 

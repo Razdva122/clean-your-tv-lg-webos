@@ -7,6 +7,7 @@
   var storageKey = 'cytv.tile.home';
   var doc = root.document;
   var busy = false;
+  var opened = false;
   var handoff;
   var returned;
   var currentBridge;
@@ -39,7 +40,12 @@
   }
   function open(event) {
     clearTimeout(returned);
+    if (root.CYTVTileLaunch.openDebloat(event)) {
+      stopHandoff();
+      return;
+    }
     if (busy || doc.hidden) return;
+    opened = true;
     var request = ++generation;
     var bound = root.CYTVTileEdition;
     var edition = valid(bound) ? bound : saved(storageKey);
@@ -110,25 +116,30 @@
       finish(false);
     }
   }
+  function stopHandoff() {
+    clearTimeout(handoff);
+    clearTimeout(returned);
+    if (currentBridge) {
+      try {
+        currentBridge.cancel();
+      } catch (_) {}
+      currentBridge = null;
+    }
+    ++generation;
+    busy = false;
+  }
   // A failed/crashed foreground application can return us to view without a
   // relaunch. Show recovery instead of starting the same Home in a loop.
   doc.addEventListener('visibilitychange', function () {
     if (doc.hidden) {
-      clearTimeout(handoff);
-      clearTimeout(returned);
-      if (currentBridge) {
-        try {
-          currentBridge.cancel();
-        } catch (_) {}
-        currentBridge = null;
-      }
-      ++generation;
-      busy = false;
+      stopHandoff();
     } else if (!busy) {
       // webOS can deliver visibilitychange just before webOSRelaunch. Give
       // deliberate relaunch its own turn instead of opening two destinations.
       returned = setTimeout(function () {
-        if (!busy && !doc.hidden) root.location.replace('recovery.html');
+        if (busy || doc.hidden) return;
+        if (!opened) open();
+        else root.location.replace('recovery.html');
       }, 300);
     }
   });

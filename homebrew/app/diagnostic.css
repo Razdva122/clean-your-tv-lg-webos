@@ -1,0 +1,38 @@
+#diagnostic-layout {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  margin: 16px 0;
+}
+#diagnostic-layout > div {
+  min-width: 0;
+  flex: 1 1 280px;
+}
+#diagnostic-qr {
+  margin: 0 22px 12px 0;
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+}
+#diagnostic-qr[hidden],
+#tile-report-body[hidden],
+#tile-main[hidden] {
+  display: none;
+}
+#diagnostic-json {
+  margin: 0;
+  color: inherit;
+  font-size: 19px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+#diagnostic-reason {
+  margin-bottom: 4px;
+}
+#diagnostic-next {
+  margin-top: 4px;
+}
+#tile-report-body h2 {
+  margin-top: 0;
+}

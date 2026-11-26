@@ -5,6 +5,7 @@ import shlex
 import time
 
 from . import prompts
+from .debloat_policy import GROUPS, SETTINGS
 from .errors import UserError, TVRejected
 from .i18n import translate as tr
 from .state import private_write
@@ -21,28 +22,6 @@ CONFIRM_ONE = 'Restore this saved setting?'
 RESTORE_LABEL = 'Restore saved Debloat settings'
 SKIP_RESTORE = 'Skip restoration'
 NOTICE = 'If the original value cannot be read, the selected change cannot be automatically undone.'
-GROUPS = (
-    ('LG Home', (
-        ('homePromotion', 'general', 'Turn off sponsored tiles', 'off'),
-        ('contentRecommendation', 'other', 'Turn off content recommendations', 'off'),
-    )),
-    ('Ads and promotions', (
-        ('screenSaverAd', 'general', 'Turn off screen saver ads', 'off'),
-        ('livePromotion', 'option', 'Turn off promotions while watching', 'off'),
-        ('promotionStreamer', 'option', 'Turn off LG promotional streams', 'off'),
-        ('webOSPromotionVideo', 'option', 'Turn off webOS promotional video', 'off'),
-    )),
-    ('Privacy', (
-        ('livePlus', 'option', 'Turn off Live Plus', 'off'),
-        ('adCookie', 'general', 'Turn off advertising cookies', 'off'),
-        ('lmt', 'general', 'Limit ad tracking', 'on'),
-    )),
-    ('Tips and notifications', (
-        ('aiNudge', 'general', 'Turn off Smart Tips', 'off'),
-        ('sportsAlarm', 'general', 'Turn off sports notifications', 'off'),
-    )),
-)
-SETTINGS = {key: (category, label, target) for _, rows in GROUPS for key, category, label, target in rows}
 SETTING_NAMES = {
     'homePromotion': 'Sponsored tiles',
     'contentRecommendation': 'Content recommendations',

@@ -4,8 +4,15 @@
   'use strict';
   var FIXED =
     '/usr/bin/node /media/developer/apps/usr/palm/applications/io.github.razdva122.cytvinstaller/bootstrap.js';
+  function failure(code) {
+    var error = new Error(
+      code === 'homebrew_exec_denied' ? code : 'installer_unavailable'
+    );
+    error.diagnosticCode = code;
+    return error;
+  }
   function fail() {
-    throw new Error('installer_unavailable');
+    throw failure('installer_unavailable');
   }
   function id(value) {
     if (typeof value !== 'string' || !/^[a-f0-9]{32}$/.test(value)) fail();
@@ -47,7 +54,8 @@
       if (!grammar[action].test(argumentsText)) fail();
       var command =
         FIXED + ' ' + action + (argumentsText ? ' ' + argumentsText : '');
-      if (typeof root.PalmServiceBridge !== 'function') fail();
+      if (typeof root.PalmServiceBridge !== 'function')
+        throw failure('homebrew_unreachable');
       return new Promise(function (resolve, reject) {
         var bridge = new root.PalmServiceBridge(),
           done = false,
@@ -59,18 +67,11 @@
           try {
             bridge.cancel();
           } catch (_) {}
-          if (error)
-            reject(
-              new Error(
-                error === 'homebrew_exec_denied'
-                  ? error
-                  : 'installer_unavailable'
-              )
-            );
+          if (error) reject(failure(error));
           else resolve(value);
         }
         timer = setTimeout(function () {
-          finish(true);
+          finish('homebrew_timeout');
         }, 125000);
         bridge.onservicecallback = function (raw) {
           try {
@@ -86,6 +87,24 @@
               return;
             }
             if (
+              reply.returnValue === false &&
+              typeof reply.errorText === 'string' &&
+              /^(?:Service does not exist|Service not available|No such service)[:.]?(?: org\.webosbrew\.hbchannel\.service)?[.]?$/.test(
+                reply.errorText
+              )
+            ) {
+              finish('homebrew_unreachable');
+              return;
+            }
+            if (reply.returnValue === false) {
+              finish(
+                action === 'status'
+                  ? 'status_unavailable'
+                  : 'installer_unavailable'
+              );
+              return;
+            }
+            if (
               reply.returnValue !== true ||
               typeof reply.stdoutString !== 'string' ||
               reply.stdoutString.length > 65536
@@ -95,7 +114,7 @@
             if (!value || typeof value.state !== 'string') fail();
             finish(false, value);
           } catch (_) {
-            finish(true);
+            finish('homebrew_invalid_reply');
           }
         };
         try {
@@ -104,7 +123,7 @@
             JSON.stringify({ command: command })
           );
         } catch (_) {
-          finish(true);
+          finish('homebrew_unreachable');
         }
       });
     });

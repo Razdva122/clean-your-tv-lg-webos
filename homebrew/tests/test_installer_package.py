@@ -18,6 +18,20 @@ class InstallerPackageTests(unittest.TestCase):
             with self.subTest(incompatible), self.assertRaisesRegex(ValueError, 'second-generation'):
                 build.require_tile_home(dict(info, **incompatible))
 
+    def test_complete_homebrew_tile_retains_standard_sdk_access(self):
+        with patch('scripts.tv_web_build.compile_web', side_effect=lambda files: files):
+            files = build.tile_web_files('0.0.0', versions={})
+        info = json.loads(files[build.APP_PREFIX + 'appinfo.json'])
+        self.assertNotIn('requiredACG', info)
+        self.assertEqual(info['cytvTileProtocol'], 1)
+        self.assertIn(build.APP_PREFIX + 'setup.html', files)
+
+        for name in ('debloat.html', 'debloat-page.js', 'root-settings.css',
+                     'root-post-install.js', 'root-post-install-locales.js'):
+            self.assertTrue(build.APP_PREFIX + name in files, 'Missing tile asset: ' + name)
+        page = files[build.APP_PREFIX + 'debloat.html']
+        self.assertLess(page.index(b'src="debloat-page.js"'), page.index(b'src="root-post-install.js"'))
+
     def test_host_tiles_bind_one_edition_and_exclude_homebrew_installer(self):
         with tempfile.TemporaryDirectory() as temp, patch('scripts.tv_web_build.compile_web', side_effect=lambda files: files):
             for edition in ('root','no-root'):
@@ -26,8 +40,11 @@ class InstallerPackageTests(unittest.TestCase):
                 raw = target.read_bytes()
                 info = build.installer_metadata(raw)
                 self.assertEqual(info['cytvTileEdition'], edition)
+                self.assertEqual(info['requiredACG'], ['application.launcher'])
                 self.assertEqual((info['cytvTileProtocol'], info['title']), (1, 'Clean Your TV'))
                 files = build.installer_files(raw)
+                for name in ('debloat.html', 'debloat-page.js', 'root-post-install.js'):
+                    self.assertNotIn(build.APP_PREFIX + name, files.keys())
                 self.assertIn(json.dumps(edition).encode(), files[build.APP_PREFIX+'tile-config.js'])
                 self.assertIn(build.APP_PREFIX+'recovery.html', files)
                 self.assertFalse(any(name.endswith(('setup.html','bridge.js','bootstrap.js')) or '/payload/' in name for name in files))

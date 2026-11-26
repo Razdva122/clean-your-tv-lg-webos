@@ -486,7 +486,9 @@
           });
         });
     }
-    var order = [3, 1, 12, 15, 16, 9, 8, 10, 11, 18, 14, 5, 4, 0, 17, 7, 6, 2];
+    var order = [
+      3, 1, 12, 15, 16, 9, 8, 10, 11, 18, 14, 5, 4, 20, 0, 17, 7, 6, 2
+    ];
     function focus(index) {
       selected = index;
       if (!buttons[selected].disabled && !buttons[selected].hidden)
@@ -520,6 +522,11 @@
     function activate(index) {
       if (busy || buttons[index].disabled) return;
       if (index === 2) return close();
+      if (index === 20 && window.RootPostInstall) {
+        close();
+        window.RootPostInstall.open();
+        return;
+      }
       if (index === 12) {
         refreshMode();
         focus(1);
@@ -719,7 +726,7 @@
       footer.appendChild(back);
       buttons = [];
       [
-        3, 1, 9, 8, 19, 10, 11, 18, 14, 5, 4, 0, 17, 7, 6, 2, 12, 15, 16
+        3, 1, 9, 8, 19, 10, 11, 18, 14, 5, 4, 20, 0, 17, 7, 6, 2, 12, 15, 16
       ].forEach(function (i) {
         var labels = [
           'TV settings',
@@ -741,10 +748,17 @@
           'YouTube',
           'LG Notifications',
           'Edit tiles',
-          'Sort by most used'
+          'Sort by most used',
+          'Set up your TV'
         ];
         var b = document.createElement('button');
         b.textContent = t(i === 6 ? 'Block LG firmware updates' : labels[i]);
+        if (i === 20) {
+          b.id = 'rootPostInstallSettings';
+          b.hidden =
+            !window.RootPostInstall || !window.RootPostInstall.available();
+          b.disabled = b.hidden;
+        }
         if (i === 12) {
           b.hidden = true;
           b.disabled = true;
@@ -763,7 +777,7 @@
                     ? firmware
                     : i === 3 || i === 12 || i === 1
                       ? homeActions
-                      : i === 4 || i === 0 || i === 5 || i === 17
+                      : i === 4 || i === 0 || i === 5 || i === 17 || i === 20
                         ? links
                         : back;
         if (i === 10 || i === 19) {
@@ -809,7 +823,7 @@
           dot.setAttribute('aria-hidden', 'true');
           b.appendChild(dot);
         }
-        if (i === 4 || i === 0 || i === 5 || i === 17) {
+        if (i === 4 || i === 0 || i === 5 || i === 17 || i === 20) {
           var arrow = document.createElement('span');
           arrow.className = 'settings-chevron';
           arrow.setAttribute('aria-hidden', 'true');
@@ -844,7 +858,7 @@
               id: 'advanced',
               label: 'Advanced',
               icons: ['tv', 'notifications', 'sound'],
-              elements: [buttons[0], buttons[17], buttons[7]]
+              elements: [buttons[20], buttons[0], buttons[17], buttons[7]]
             }
           ],
           allowOk
@@ -902,6 +916,9 @@
         if (window.HomeLayoutPanel) HomeLayoutPanel.refreshAvailability();
         if (window.ThemeRuntime) window.ThemeRuntime.suspend('settings');
         previous = document.activeElement;
+        buttons[20].hidden =
+          !window.RootPostInstall || !window.RootPostInstall.available();
+        buttons[20].disabled = buttons[20].hidden;
         message.textContent = t('Checking whether Home control is on…');
         panel.hidden = false;
         selected = 3;

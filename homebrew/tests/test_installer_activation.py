@@ -88,7 +88,8 @@ class SetupActivationTests(unittest.TestCase):
 
     def test_original_worker_enables_once_after_product_unlock_and_reads_route(self):
         self.assertEqual(self.install(), {'state':'active','launch_requested':True,'completed':True})
-        self.launch.assert_called_once_with('luna://com.webos.applicationManager/launch', {'id':self.cli.d.CANDIDATE})
+        self.launch.assert_called_once_with('luna://com.webos.applicationManager/launch',
+                                           {'id':self.cli.d.CANDIDATE, 'params':{'cytvPostInstall':self.operation}})
         self.install()
         with self.assertRaises(ValueError):
             self.dispatch()
