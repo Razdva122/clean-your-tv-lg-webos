@@ -4843,3 +4843,62 @@ HomeI18n.add({
       '如果電視從待機喚醒後已顯示遊戲主機、電視直播或其他輸入來源的畫面，就會保留該畫面。Home 鍵照常使用。'
   }
 });
+
+HomeI18n.add({
+  "en": {
+    "Update Clean Your TV": "Update Clean Your TV",
+    "Open Clean Your TV on your computer or Android phone to update this TV.": "Open Clean Your TV on your computer or Android phone to update this TV."
+  },
+  "ru": {
+    "Update Clean Your TV": "Обновить Clean Your TV",
+    "Open Clean Your TV on your computer or Android phone to update this TV.": "Чтобы обновить этот телевизор, откройте Clean Your TV на компьютере или телефоне Android."
+  },
+  "de": {
+    "Update Clean Your TV": "Clean Your TV aktualisieren",
+    "Open Clean Your TV on your computer or Android phone to update this TV.": "Öffne Clean Your TV auf deinem Computer oder Android-Smartphone, um diesen Fernseher zu aktualisieren."
+  },
+  "es": {
+    "Update Clean Your TV": "Actualizar Clean Your TV",
+    "Open Clean Your TV on your computer or Android phone to update this TV.": "Abre Clean Your TV en tu ordenador o teléfono Android para actualizar este televisor."
+  },
+  "fr": {
+    "Update Clean Your TV": "Mettre à jour Clean Your TV",
+    "Open Clean Your TV on your computer or Android phone to update this TV.": "Ouvrez Clean Your TV sur votre ordinateur ou votre téléphone Android pour mettre à jour ce téléviseur."
+  },
+  "it": {
+    "Update Clean Your TV": "Aggiorna Clean Your TV",
+    "Open Clean Your TV on your computer or Android phone to update this TV.": "Apri Clean Your TV sul computer o sul telefono Android per aggiornare questo televisore."
+  },
+  "pt-BR": {
+    "Update Clean Your TV": "Atualizar o Clean Your TV",
+    "Open Clean Your TV on your computer or Android phone to update this TV.": "Abra o Clean Your TV no computador ou celular Android para atualizar esta TV."
+  },
+  "ko": {
+    "Update Clean Your TV": "Clean Your TV 업데이트",
+    "Open Clean Your TV on your computer or Android phone to update this TV.": "이 TV를 업데이트하려면 컴퓨터 또는 Android 휴대전화에서 Clean Your TV를 여세요."
+  },
+  "hi": {
+    "Update Clean Your TV": "Clean Your TV अपडेट करें",
+    "Open Clean Your TV on your computer or Android phone to update this TV.": "इस टीवी को अपडेट करने के लिए कंप्यूटर या Android फ़ोन पर Clean Your TV खोलें।"
+  },
+  "pl": {
+    "Update Clean Your TV": "Zaktualizuj Clean Your TV",
+    "Open Clean Your TV on your computer or Android phone to update this TV.": "Aby zaktualizować ten telewizor, otwórz Clean Your TV na komputerze lub telefonie z Androidem."
+  },
+  "cs": {
+    "Update Clean Your TV": "Aktualizovat Clean Your TV",
+    "Open Clean Your TV on your computer or Android phone to update this TV.": "Pro aktualizaci televizoru otevřete Clean Your TV na počítači nebo telefonu s Androidem."
+  },
+  "ro": {
+    "Update Clean Your TV": "Actualizează Clean Your TV",
+    "Open Clean Your TV on your computer or Android phone to update this TV.": "Pentru a actualiza televizorul, deschide Clean Your TV pe computer sau pe telefonul Android."
+  },
+  "zh-Hans": {
+    "Update Clean Your TV": "更新 Clean Your TV",
+    "Open Clean Your TV on your computer or Android phone to update this TV.": "请在电脑或安卓手机上打开 Clean Your TV，以更新这台电视。"
+  },
+  "zh-Hant": {
+    "Update Clean Your TV": "更新 Clean Your TV",
+    "Open Clean Your TV on your computer or Android phone to update this TV.": "請在電腦或 Android 手機上開啟 Clean Your TV，以更新這台電視。"
+  }
+});

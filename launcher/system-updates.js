@@ -103,6 +103,18 @@
         !!(options.edition === 'root' ? window.RootProfile : window.HomeProfile)
       );
     }
+    function otherEdition() {
+      if (!transaction) return false;
+      if (tileRecovery())
+        return transaction.edition !== options.edition || !transaction.id;
+      return transaction.edition && transaction.edition !== options.edition;
+    }
+    function tileRecovery() {
+      return options.standalone === true && options.singleTile === true;
+    }
+    function readStatus() {
+      return rpc('status', tileRecovery() ? { edition: options.edition } : {});
+    }
     function enabled() {
       return buttons.filter(function (button) {
         return !button.hidden && !button.disabled;
@@ -230,11 +242,7 @@
       if (transaction && transaction.error)
         message.textContent +=
           '\n' + String(transaction.error.message || transaction.error);
-      if (
-        transaction &&
-        transaction.edition &&
-        transaction.edition !== options.edition
-      )
+      if (otherEdition())
         message.textContent +=
           '\n' + t('Recovery belongs to the other installed edition.');
       window.HomeReleaseNotes.render(
@@ -246,12 +254,17 @@
       buttons[0].disabled = busy || polling;
       buttons[1].hidden = recovery && !(offer && offer.selfUpdate);
       buttons[1].textContent = t(
-        recovery ? 'Reinstall System Updater' : 'Update all'
+        recovery
+          ? 'Reinstall System Updater'
+          : window.CYTVProductGeneration === 2
+            ? 'Update Clean Your TV'
+            : 'Update all'
       );
       buttons[1].disabled =
         busy ||
         polling ||
         !!active() ||
+        otherEdition() ||
         !profileAvailable() ||
         !offer ||
         !(recovery ? offer.canRepair : offer.canInstall);
@@ -264,7 +277,11 @@
           : 'Roll back'
       );
       buttons[3].disabled =
-        busy || polling || !transaction || transaction.canRollback !== true;
+        busy ||
+        polling ||
+        otherEdition() ||
+        !transaction ||
+        transaction.canRollback !== true;
       buttons[4].textContent = t(options.standalone ? 'Open Home' : 'Back');
       if (visible()) {
         if (preserveFocus && enabled().indexOf(focused) >= 0)
@@ -334,7 +351,7 @@
         busy = true;
         render(true);
       }
-      return rpc('status', {})
+      return readStatus()
         .then(function (state) {
           if (request !== generation) return;
           transaction = state;
@@ -352,12 +369,15 @@
         });
     }
     function operation(method, payload) {
-      if (busy || polling || !visible()) return;
+      if (busy || polling || !visible() || otherEdition()) return;
       var request = generation;
       busy = true;
       errorText = '';
       clearTimeout(timer);
       render(true);
+      if (tileRecovery()) {
+        payload = { edition: options.edition, transaction: transaction.id };
+      }
       rpc(method, payload)
         .then(function (state) {
           if (request === generation && state && state.phase)
@@ -538,7 +558,12 @@
           refresh(true);
         } else {
           stickyError = '';
-          operation('reconcile', {});
+          if (
+            otherEdition() ||
+            (tileRecovery() && !(transaction && transaction.id))
+          )
+            refresh(false);
+          else operation('reconcile', {});
         }
       };
       buttons[3].onclick = function () {
@@ -639,7 +664,22 @@
       errorText = checkError = '';
       recovery = options.recovery === true;
       selected = 0;
-      return rpc('status', {})
+      if (options.external) {
+        busy = false;
+        panel.hidden = false;
+        render();
+        versions.textContent = '';
+        message.textContent = t(
+          'Open Clean Your TV on your computer or Android phone to update this TV.'
+        );
+        notesHeading.hidden = notes.hidden = true;
+        buttons.slice(0, 4).forEach(function (button) {
+          button.hidden = true;
+        });
+        focus(0);
+        return Promise.resolve();
+      }
+      return readStatus()
         .then(function (state) {
           if (request !== generation) return;
           supervisorSeen = true;
@@ -652,9 +692,9 @@
           if (request !== generation) return;
           if (!supervisorSeen && error.unavailable && options.fallback) {
             panel.hidden = true;
-            options.fallback();
             if (window.ThemeRuntime)
               window.ThemeRuntime.resume('system-updates');
+            options.fallback();
             return;
           }
           errorText = error.message;
@@ -669,6 +709,13 @@
     }
     window.SystemUpdates = {
       open: open,
+      openExternal: function (value) {
+        return open({
+          edition: value.edition,
+          onClose: value.onClose,
+          external: true
+        });
+      },
       rpc: rpc,
       check: check,
       isOpen: visible

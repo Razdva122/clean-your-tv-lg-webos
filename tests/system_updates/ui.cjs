@@ -404,6 +404,68 @@ async function settle() {
   standalone.confirmation.accept();
   await settle();
   assert(standalone.calls.some((c) => c.method === 'rollback'));
+  const foreign = harness({ standalone: true });
+  foreign.state = {
+    edition: 'root',
+    id: 'foreign',
+    phase: 'complete',
+    canRollback: true
+  };
+  await foreign.window.SystemUpdates.open({
+    edition: 'no-root',
+    standalone: true,
+    recovery: true
+  });
+  assert(foreign.ids.systemUpdateRollback.disabled);
+  foreign.ids.systemUpdateRecovery.click();
+  await settle();
+  assert(!foreign.calls.some((c) => c.method === 'reconcile'));
+  const external = harness();
+  let closedExternal = false;
+  await external.window.SystemUpdates.openExternal({
+    edition: 'no-root',
+    onClose() {
+      closedExternal = true;
+    }
+  });
+  assert.match(
+    external.ids.systemUpdateStatus.textContent,
+    /computer or Android phone/
+  );
+  assert.equal(external.document.activeElement, external.ids.systemUpdateBack);
+  external.key(461);
+  assert(closedExternal);
+  assert.equal(external.calls.length, 0);
+  const tile = harness({ standalone: true });
+  tile.state = {
+    edition: 'root',
+    id: 'root-update',
+    phase: 'complete',
+    canRollback: true
+  };
+  const tileOptions = {
+    edition: 'root',
+    standalone: true,
+    singleTile: true,
+    recovery: true
+  };
+  await tile.window.SystemUpdates.open(tileOptions);
+  assert.deepEqual(tile.calls[0].payload, { edition: 'root' });
+  tile.ids.systemUpdateRecovery.click();
+  await settle();
+  tile.ids.systemUpdateRollback.click();
+  tile.confirmation.accept();
+  await settle();
+  for (const method of ['reconcile', 'rollback']) {
+    const call = tile.calls.find((item) => item.method === method);
+    assert.deepEqual(call.payload, {
+      edition: 'root',
+      transaction: 'root-update'
+    });
+  }
+  tile.state = { id: 'unbound', phase: 'complete', canRollback: true };
+  await tile.window.SystemUpdates.open(tileOptions);
+  assert(tile.ids.systemUpdateRollback.disabled);
   const resumeFailure = harness();
   resumeFailure.state = {
     id: 'tx',
