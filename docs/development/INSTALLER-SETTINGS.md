@@ -45,7 +45,14 @@ connection and rechecks each displayed value before writing. Settings already
 at the original value and settings whose current value cannot be read are skipped. Verified
 restorations and values already back at their original setting are retired from
 the record. Failed or unreadable entries stay saved, and removal continues.
-Non-interactive removal skips restoration.
+Non-interactive removal skips restoration. Interactive Debloat maintenance offers
+individual restoration from the same profile. Only the selected key is read,
+restored and retired from the journal. Unreadable or unverified entries remain
+available for retry. Selecting the adjustment action opens the regular groups.
+
+LG documents **Auto Start LG Channels** under General → Channels on supported
+models. This is distinct from disabling the LG Channels service or changing the
+power-on input. See the [LG TV user guide](https://kr.eguide.lgappstv.com/manual/w26_tv/w26_b06/enga.html).
 
 The SSAP setter may be unavailable or rejected on a given firmware. Debloat
 reports the rejected write for each affected setting. It verifies accepted writes

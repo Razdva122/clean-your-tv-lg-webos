@@ -179,6 +179,8 @@ Před výběrem motivu zvolte v kroku **Debloat**, která nastavení reklam, dop
 
 Obě edice mohou vypnout propagační vysílání LG, pokud televizor toto nastavení nabízí.
 
+Chcete-li vrátit jednu změnu, otevřete Debloat v nabídce údržby se stejným uloženým připojením k televizoru. Vyberte nastavení, zkontrolujte původní hodnotu a potvrďte obnovení. Na podporovaných televizorech můžete automatické spuštění LG Channels vypnout v nabídce Všechna nastavení → Obecné → Kanály → Automatické spuštění LG Channels.
+
 Při odinstalaci můžete potvrdit obnovení uložených původních nastavení Debloat. Pokud obnovení přeskočíte, odinstalace pokračuje bez jejich změny.
 
 Po úspěšné instalaci vyberte Classic, Liquid Glass nebo Ribbon a zapněte či vypněte počasí. Ribbon počasí nepodporuje; Liquid Glass používá stručný formát. Město se odhaduje podle připojení a lze je změnit v Home.

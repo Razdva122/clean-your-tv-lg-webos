@@ -184,6 +184,37 @@ class DebloatTests(unittest.TestCase):
                 })
                 self.assertNotIn('private-', report)
 
+    def test_maintenance_restores_one_saved_setting_without_touching_others(self):
+        from cytv.terminal import Console
+
+        entries = {key: {'original': 'on', 'target': 'off'} for key in ('homePromotion', 'sportsAlarm')}
+        self.installer.remote = Mock(root=True)
+        for decision, replies, expected, keep in (
+            ('n', ['off'], None, True),
+            ('y', ['off', 'off', False], 'restore-failed', True),
+            ('y', ['off', 'off', True, 'on'], 'restored', False),
+            (None, ['on'], 'restore-already', False),
+        ):
+            with self.subTest(decision=decision, replies=replies):
+                self.record.write_text(json.dumps({'schema': 1, 'settings': entries}))
+                answers = iter(['2'] + ([decision] if decision else []))
+                values = iter(replies)
+                def luna(uri, payload, **kwargs):
+                    value = next(values)
+                    if uri.endswith('/getSystemSettings'):
+                        self.assertEqual(payload, {'category': 'general', 'keys': ['sportsAlarm']})
+                        return {'returnValue': True, 'settings': {'sportsAlarm': value}}
+                    self.assertEqual(payload, {'category': 'general', 'settings': {'sportsAlarm': 'on'}})
+                    return {'returnValue': value}
+                self.installer.remote.luna.side_effect = luna
+                log, events = [], {}
+                debloat.run(self.installer, lambda _: next(answers), Console(log.append),
+                            maintenance=True, diagnostic=events)
+                self.assertEqual(list(values), [])
+                self.assertEqual(events, {'sportsAlarm': expected} if expected else {})
+                saved = json.loads(self.record.read_text())['settings']
+                self.assertEqual(saved, entries if keep else {'homePromotion': entries['homePromotion']})
+
     def test_restore_requires_consent_and_keeps_unverified_entries(self):
         from cytv.terminal import Console
 

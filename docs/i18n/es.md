@@ -203,6 +203,8 @@ Antes de elegir un tema, usa **Debloat** para seleccionar los ajustes de publici
 
 Ambas ediciones pueden desactivar las transmisiones promocionales de LG si el televisor ofrece el ajuste.
 
+Para deshacer un solo cambio, abre Debloat en Mantenimiento con la misma conexión guardada del televisor. Elige el ajuste, revisa el valor original y confirma. En televisores compatibles, puedes desactivar el inicio automático de LG Channels en Todos los ajustes → General → Canales → Inicio automático de LG Channels.
+
 Durante la desinstalación, puedes restaurar los ajustes originales de Debloat guardados. Si omites la restauración, la desinstalación continúa sin cambiar esos ajustes.
 
 Después de instalar correctamente, elige Classic, Liquid Glass o Ribbon y activa o desactiva el tiempo. Ribbon no admite el tiempo; Liquid Glass usa el formato compacto. La ciudad se estima por tu conexión y puedes cambiarla en Home.

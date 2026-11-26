@@ -349,7 +349,9 @@ invalid reply is `write-unavailable`. After a confirmed write,
 `verify-unavailable` means no value could be read. An `unavailable` result means the installer skipped a promotion setting whose
 original value could not be read. Other outcomes are
 `already`, `verified` and `journal-failed` (the original value could not be
-saved locally). The export excludes setting values and raw TV responses.
+saved locally). Maintenance restoration records only the selected key, with one of
+`restored`, `restore-already`, `restore-unavailable`, `restore-unverified` or
+`restore-failed`. The export excludes setting values and raw TV responses.
 
 <a id="recovery-journal-summary-unreleased"></a>
 

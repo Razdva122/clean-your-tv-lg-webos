@@ -203,6 +203,8 @@ Wählen Sie vor dem Design unter **Debloat**, welche LG-Einstellungen für Werbu
 
 Beide Editionen können LG-Werbestreams abschalten, sofern der Fernseher die Einstellung bereitstellt.
 
+Um eine einzelne Änderung rückgängig zu machen, öffnen Sie Debloat unter Wartung mit derselben gespeicherten TV-Verbindung. Wählen Sie eine gespeicherte Einstellung, prüfen Sie den ursprünglichen Wert und bestätigen Sie. Auf unterstützten Fernsehern lässt sich der Autostart von LG Channels unter Alle Einstellungen → Allgemein → Sender → LG Channels automatisch starten ausschalten.
+
 Bei der Deinstallation können Sie die gespeicherten ursprünglichen Debloat-Einstellungen wiederherstellen. Wenn Sie die Wiederherstellung überspringen, läuft die Deinstallation ohne diese Änderungen weiter.
 
 Wähle nach erfolgreicher Installation Classic, Liquid Glass oder Ribbon und schalte das Wetter ein oder aus. Ribbon unterstützt kein Wetter; Liquid Glass nutzt das Kurzformat. Der ungefähre Ort wird über die Internetverbindung ermittelt und lässt sich in Home ändern.
