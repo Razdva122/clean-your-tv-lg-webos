@@ -98,6 +98,24 @@ assert.equal(
   })['install-root'],
   'pending'
 );
+const noRoot = { edition: 'no-root', action: 'install' };
+const rejected = observe(inspected, {
+  ...noRoot,
+  stage: 'pairing',
+  state: 'recovery_required'
+});
+assert.equal(rejected['install-request'], 'pass');
+assert.equal(rejected['no-root-pairing'], 'fail');
+assert.equal(rejected['no-root-install'], 'pending');
+assert.equal(rejected['activate-home'], 'pending');
+assert.equal(rejected['install-root'], undefined);
+const updater = observe(inspected, {
+  ...noRoot,
+  stage: 'updates',
+  state: 'pending'
+});
+assert.equal(updater['install-updates'], 'running');
+assert.equal(updater['install-readback'], 'pending');
 console.log(
   'PASS Homebrew check projections preserve unknown, failed and untouched stages'
 );

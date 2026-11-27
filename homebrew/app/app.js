@@ -9,10 +9,12 @@
     content = doc.getElementById('content'),
     hint = doc.getElementById('hint'),
     key = 'cytv.installer.operation',
+    editionKey = 'cytv.installer.operation.edition',
     cleanKey = 'cytv.installer.clean-removal';
   var inspected = null,
     job = null,
     operation = null,
+    operationEdition = null,
     poll = null,
     busy = false,
     confirmation = null,
@@ -32,8 +34,10 @@
     var text = root.InstallerDiagnosticI18n(k);
     return text === k ? i18n.t(k) : text;
   }
-  function remember(id) {
+  function remember(id, edition) {
     if (!/^[a-f0-9]{32}$/.test(id)) throw new Error('invalid_request');
+    operationEdition = edition === 'no-root' ? 'no-root' : 'root';
+    root.localStorage.setItem(editionKey, operationEdition);
     root.localStorage.setItem(key, id);
     operation = id;
   }
@@ -48,13 +52,21 @@
   }
   function forgetOperation() {
     operation = null;
+    operationEdition = null;
     try {
       root.localStorage.removeItem(key);
+      root.localStorage.removeItem(editionKey);
     } catch (_) {}
   }
   try {
     var saved = root.localStorage.getItem(key);
-    if (/^[a-f0-9]{32}$/.test(saved || '')) operation = saved;
+    if (/^[a-f0-9]{32}$/.test(saved || '')) {
+      operation = saved;
+      operationEdition =
+        root.localStorage.getItem(editionKey) === 'no-root'
+          ? 'no-root'
+          : 'root';
+    }
     var savedClean = root.localStorage.getItem(cleanKey);
     if (/^[a-f0-9]{32}$/.test(savedClean || '')) cleanOperation = savedClean;
   } catch (_) {}
@@ -114,9 +126,17 @@
   function drawChecks() {
     var checks = observedChecks(),
       installation = job && job.action === 'install',
-      names = installation ? progress.installation : progress.preflight,
+      names = installation
+        ? job.edition === 'no-root'
+          ? progress.noRootInstallation
+          : progress.installation
+        : progress.preflight,
       label = function (key) {
-        return root.InstallerProgressText(doc.documentElement.lang, key);
+        if (key === 'activate-home' && job && job.edition === 'no-root')
+          return t('noRootHelperActivation');
+        return (
+          root.InstallerProgressText(doc.documentElement.lang, key) || t(key)
+        );
       },
       section = element('section', undefined, 'check-panel'),
       title = element(
@@ -158,17 +178,19 @@
     opener = from;
     begin(
       'confirm',
-      action === 'install'
-        ? 'review'
-        : action === 'clean-remove'
-          ? 'remove'
-          : action === 'remove-installer'
-            ? 'removeInstaller'
-            : action === 'activate'
-              ? 'activate'
-              : action === 'restore'
-                ? 'restore'
-                : 'prerequisites'
+      action === 'no-root-install'
+        ? 'noRootReview'
+        : action === 'install'
+          ? 'review'
+          : action === 'clean-remove'
+            ? 'remove'
+            : action === 'remove-installer'
+              ? 'removeInstaller'
+              : action === 'activate'
+                ? 'activate'
+                : action === 'restore'
+                  ? 'restore'
+                  : 'prerequisites'
     );
     content.setAttribute('data-confirm-action', action);
     paragraph(copy);
@@ -221,7 +243,10 @@
       var checks = observedChecks();
       var order =
         value && value.action === 'install'
-          ? progress.installation.concat(progress.preflight)
+          ? (value.edition === 'no-root'
+              ? progress.noRootInstallation
+              : progress.installation
+            ).concat(progress.preflight)
           : progress.preflight;
       var failed = order.filter(function (key) {
         return checks[key] === 'fail';
@@ -478,6 +503,37 @@
       drawChecks();
       return;
     }
+    if (job && job.edition === 'no-root') {
+      var running = job.state === 'pending';
+      begin(
+        running ? 'no-root-progress' : 'no-root-recovery',
+        running ? 'progress' : 'recovery'
+      );
+      drawChecks();
+      if (running)
+        paragraph(
+          job.stage === 'pairing'
+            ? 'noRootPairing'
+            : job.stage === 'checking-status'
+              ? 'checkOriginal'
+              : 'progressBody'
+        );
+      var noRootJobs = controls();
+      button(noRootJobs, 'refresh', t('refresh'), refresh, 'primary');
+      if (job.can_resume === true) {
+        button(noRootJobs, 'resume', t('continueOriginal'), function () {
+          ask('no-root-resume', 'resume', 'resumeConfirm');
+        });
+      }
+      button(noRootJobs, 'close', t('close'), close);
+      addDiagnostics(
+        running && !transportFailure ? null : job,
+        transportFailure
+      );
+      focus('refresh');
+      if (running && !doc.hidden) poll = setTimeout(pollStatus, 4000);
+      return;
+    }
     if (job) {
       var pending =
           job.state === 'pending' ||
@@ -566,6 +622,48 @@
         'primary'
       );
       addDiagnostics(inspected, transportFailure);
+    } else if (state === 'no_root_ready') {
+      begin('no-root-review', 'noRootReview');
+      drawChecks();
+      paragraph('noRootReviewBody');
+      var fallback = controls();
+      button(
+        fallback,
+        'install',
+        t('noRootInstall'),
+        function () {
+          ask('no-root-install', 'install', 'noRootConfirm');
+        },
+        'primary'
+      );
+      button(fallback, 'close', t('close'), close);
+    } else if (state === 'no_root_installed') {
+      begin('no-root-installed', 'installed');
+      paragraph('noRootReady');
+      if (!inspected.result || inspected.result.helper_running !== true)
+        paragraph('noRootHelperUnverified');
+      var noRootHome = controls();
+      button(
+        noRootHome,
+        'open-home',
+        t('noRootOpen'),
+        function () {
+          if (dailyHome('no-root'))
+            root.location.replace('index.html#openHome');
+        },
+        'primary'
+      );
+      button(noRootHome, 'refresh', t('refresh'), refresh);
+      button(
+        noRootHome,
+        'remove',
+        t('remove'),
+        function () {
+          ask('clean-remove', 'remove', 'noRootRemoveConfirm');
+        },
+        'danger'
+      );
+      if (cleanStorageFailure) paragraph('cleanRequestNotSaved');
     } else if (managedHome(inspected)) {
       begin('installed', 'installed');
       versions();
@@ -630,7 +728,11 @@
       );
       button(actions, 'close', t('close'), close);
       addDiagnostics(transportFailure ? inspected : null, transportFailure);
-    } else if (state === 'external_setup' || state === 'edition_unconfirmed') {
+    } else if (
+      state === 'external_setup' ||
+      state === 'edition_unconfirmed' ||
+      state === 'no_root_unavailable'
+    ) {
       begin('edition-advice', 'unsupported');
       drawChecks();
       var next = controls();
@@ -686,18 +788,74 @@
         : 'activationUnverified';
     return true;
   }
+  function noRootStatus(result) {
+    if (
+      result.edition !== 'no-root' ||
+      (operation && result.operation && result.operation !== operation)
+    )
+      throw new Error('invalid_request');
+    if (result.state === 'complete' && result.current === true) {
+      inspected = Object.assign({}, inspected, result, {
+        state: 'no_root_installed'
+      });
+      job = null;
+      forgetOperation();
+      dailyHome('no-root');
+      return;
+    }
+    if (result.state === 'unknown' || result.state === 'unavailable') {
+      job = null;
+      forgetOperation();
+      if (result.state === 'unavailable') {
+        inspected = Object.assign({}, inspected, result, {
+          state: 'no_root_unavailable'
+        });
+      }
+      return;
+    }
+    if (result.operation) remember(result.operation, 'no-root');
+    job = Object.assign({ action: 'install' }, result);
+  }
   function refresh(focusId) {
     if (busy) return;
     if (cleanOperation) return requestClean('cleanStatus');
     busy = true;
     clearTimeout(poll);
     var previous = doc.activeElement && doc.activeElement.id;
-    if (!inspected) {
-      begin('checking', 'checking');
-      drawChecks();
+    var read;
+    if (operation && operationEdition === 'no-root') {
+      if (!job || job.edition !== 'no-root') {
+        if (!inspected) inspected = { state: 'pending', edition: 'no-root' };
+        job = {
+          action: 'install',
+          edition: 'no-root',
+          state: 'pending',
+          operation: operation,
+          stage: 'checking-status'
+        };
+        render();
+      }
+      read = bridge.noRootStatus(operation).then(function (status) {
+        if (status.state !== 'unknown')
+          return Object.assign(
+            {
+              checks: inspected && inspected.checks,
+              tv: inspected && inspected.tv,
+              versions: inspected && inspected.versions
+            },
+            status
+          );
+        noRootStatus(status);
+        return bridge.inspect({ prepareSupervisor: true });
+      });
+    } else {
+      if (!inspected) {
+        begin('checking', 'checking');
+        drawChecks();
+      }
+      read = bridge.inspect({ prepareSupervisor: true });
     }
-    bridge
-      .inspect({ prepareSupervisor: true })
+    read
       .then(function (result) {
         accessDenied = false;
         transportFailure = null;
@@ -705,6 +863,21 @@
         inspected = result;
         runtimePreparation = null;
         var active = result.active_operation;
+        if (
+          result.edition === 'no-root' &&
+          (!operation || operationEdition === 'no-root')
+        ) {
+          if (result.state === 'no_root_ready') {
+            if (operation)
+              return bridge.noRootStatus(operation).then(noRootStatus);
+            job = null;
+          } else if (result.state === 'no_root_unavailable') {
+            job = null;
+          } else {
+            noRootStatus(result);
+          }
+          return;
+        }
         if (active && /^[a-f0-9]{32}$/.test(active.operation || ''))
           remember(active.operation);
         if (
@@ -733,15 +906,17 @@
       .then(
         function () {
           busy = false;
-          if (
-            !operation &&
-            !job &&
-            managedHome(inspected) &&
-            !inspected.active_operation
-          ) {
-            var savedHome = dailyHome('root');
-            if (savedHome && root.location.hash === '#open') {
-              // Continue to the verified Home without changing button routing.
+          if (!operation && !job && !inspected.active_operation) {
+            var installedEdition = managedHome(inspected)
+              ? 'root'
+              : inspected.state === 'no_root_installed'
+                ? 'no-root'
+                : null;
+            if (
+              installedEdition &&
+              dailyHome(installedEdition) &&
+              root.location.hash === '#open'
+            ) {
               root.location.replace('index.html');
               return;
             }
@@ -767,11 +942,18 @@
     if (busy || !operation || doc.hidden) return;
     busy = true;
     var previous = doc.activeElement && doc.activeElement.id;
-    bridge.status(operation).then(
+    var noRoot = job && job.edition === 'no-root';
+    (noRoot ? bridge.noRootStatus(operation) : bridge.status(operation)).then(
       function (result) {
         busy = false;
         transportFailure = null;
         if (message === 'lost') message = null;
+        if (noRoot) {
+          noRootStatus(result);
+          render();
+          focus(previous);
+          return;
+        }
         job = result;
         if (activationStatus(result)) {
           if (!job) {
@@ -811,13 +993,14 @@
       })
       .join('');
   }
-  function startInstall() {
-    remember(uuid());
+  function startInstall(noRoot) {
+    remember(uuid(), noRoot ? 'no-root' : 'root');
     job = {
       operation: operation,
       action: 'install',
       state: 'pending',
-      stage: 'submitting'
+      stage: 'submitting',
+      edition: noRoot ? 'no-root' : 'root'
     };
     message = null;
     render();
@@ -825,6 +1008,7 @@
       operation: operation,
       candidate: inspected.candidate_sha256
     };
+    if (noRoot) return bridge.startNoRoot(options);
     options.prepareSupervisor = true;
     options.migrate = false;
     options.activateAfterInstall = true;
@@ -901,6 +1085,14 @@
     try {
       if (action === 'install') {
         promise = canPrepareForSetup() ? prepareAndInstall() : startInstall();
+      } else if (action === 'no-root-install') {
+        if (inspected.state !== 'no_root_ready')
+          throw new Error('not_installable');
+        promise = startInstall(true);
+      } else if (action === 'no-root-resume') {
+        if (!job || job.edition !== 'no-root' || job.can_resume !== true)
+          throw new Error('not_recoverable');
+        promise = bridge.resumeNoRoot(operation);
       } else if (action === 'prepare-runtime') promise = prepareRuntime();
       else if (action === 'activate') promise = bridge.activate();
       else if (action === 'resume') {
@@ -926,6 +1118,11 @@
         transportFailure = null;
         if (result === null) {
           refresh();
+          return;
+        }
+        if (action === 'no-root-install' || action === 'no-root-resume') {
+          noRootStatus(result);
+          render();
           return;
         }
         if (action === 'install' || action === 'resume') {
@@ -1058,7 +1255,8 @@
       !root.CYTVTileLaunch.maintenanceRequested(event)
     ) {
       try {
-        if (root.localStorage.getItem('cytv.tile.home') === 'root') {
+        var savedHome = root.localStorage.getItem('cytv.tile.home');
+        if (savedHome === 'root' || savedHome === 'no-root') {
           root.location.replace('index.html');
           return;
         }

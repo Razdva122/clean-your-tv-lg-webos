@@ -585,3 +585,91 @@ Python. The offline suites covered managed-runtime retirement and interrupted
 reads. Physical key timing, standby, loss of mains and OTA were outside this
 pass. Final release and catalog acceptance still require a selected release
 artifact.
+
+
+### C3 automatic edition fallback (2026-11-27)
+
+Scope for this focused development pass: project OLED55C3RLA, firmware
+43.21.71, webOS SDK 11.2.0, stock Homebrew Channel 0.8.0. The TV reported no
+Clean Your TV product packages before the new installation. Both local TV
+remote-control service ports responded. The separate final release gate
+remains open.
+
+| Case | Evidence to capture |
+| --- | --- |
+| HB-FALLBACK-01 | Package install and launch from the stock Homebrew catalog UI, installed file comparison and the natural Root-default review on the unmodified C3. |
+| HB-FALLBACK-02 | On the same C3, exercise the fallback review with a separately identified build that substitutes only the positive Root incompatibility result. Decline first pairing and verify that no product package was installed. |
+| HB-FALLBACK-03 | Explicitly continue the same request, approve the genuine webOS pairing prompt and verify the same operation, package files and System Updater. |
+| HB-FALLBACK-04 | Verify daily tile launch and foreground after one paired network HOME from Media Player. |
+| HB-FALLBACK-05 | Verify full No-root removal from the TV installer and the return to LG Home. |
+
+HB-FALLBACK-01 passed on the preliminary unchanged-admission development IPK
+(Installer 0.0.0, 205,945,074 bytes, SHA-256
+`6488752c3e7fb3ae0e1896264df92175d6d849ee58f262319501dcebcdb2d662`).
+All 325 application files matched. A private catalog supplied the package
+through the stock UI. The installer offered Root in its ordinary review.
+This established delivery of the larger package and the Root default on C3.
+It did not run a new Root product installation.
+
+The first fallback-only development fixture (205,953,512 bytes, SHA-256
+`a2249220d415b87c43e97111633f8b45de2ce6f4f7f05add3405c51a3f689ced`)
+matched all 325 installed files. The fixture substitutes the No-root outcome
+only after the unmodified Root detector returns system-profile. It showed the
+failed Root compatibility check. No-root admission stopped on the retained
+proof of the earlier complete Root removal. No product package had been
+submitted. The correction uses the canonical removal handoff with the same
+actual C3 state and keeps its prior proofs.
+
+A separate smoke check ran the exact pinned pairing code from that fixture in
+a private disposable directory. The first registration returned a rejection
+without an observed manual decision. In the second observed attempt, webOS
+presented its actual remote-control prompt. After the owner approved it, the
+TV returned a matching registration response and the installer read its
+application and input inventory successfully. The probe installed no packages
+and retained no key or inventory on the host.
+
+The retained-handoff fixture (205,954,260 bytes, SHA-256
+`154f50f8999fbb29b7f4012d5385377597e3b08bb911f1b1e9ec966a5efd1592`)
+also matched all 325 files. It still stopped before pairing because the live
+Homebrew snapshots shared Root's private staging namespace. An isolated
+read-only admission probe using the same pinned bytes returned
+`eligible / no-root-eligible` on C3. The subsequent build moves both
+inspection and No-root staging outside the Root namespace. The isolated
+probe did not authorize a product mutation.
+
+The isolated-staging development fixture (Installer 0.0.0, 205,954,498
+bytes, SHA-256 `ade954dd6eca508a8c66324886a77b8974f58e9a9286fbc41bd2642967b2c164`)
+was installed and launched in the stock Homebrew catalog and matched all
+325 files. The independent system profile check still makes the unmodified C3
+eligible for Root. This fixture substitutes the No-root outcome after that
+check and uses the actual preflight, user prompt and product code.
+
+| Case | Observed result on the isolated-staging fixture |
+| --- | --- |
+| HB-FALLBACK-02 | The wizard selected No-root. The first pairing attempt ended on its recovery screen with the pairing step failed, and independent package listing still contained only the Installer. A manual refusal in that attempt was not observed. |
+| HB-FALLBACK-03 | Continue original operation kept the same receipt. The owner accepted the real webOS prompt. No-root Home 1.22.0, Home Helper 0.11.0, Ambient 0.0.7 and System Updater 1.2.11 installed. Production readback verified the package files, configuration, updater and running Helper. No Root edition components were installed. |
+| HB-FALLBACK-04 | The first reopening after background completion showed the verified installed screen. Its Open Clean Your TV action worked. One network HOME from Media Player reached No-root Home and stayed there for one second. The next daily tile launch also opened No-root Home. |
+| HB-FALLBACK-05 | Full removal from the TV installer bound a new removal receipt. A verified software restart reset uptime and removed a test boot marker. On-TV Continue retained the same receipt and reached current verified-clean. Clean Your TV components, routing and registration were absent. One network HOME from Media Player reached LG Home and stayed there. An independent read found an 87,499,270-byte private staging snapshot with no open No-root capsule. The new fixed retirement entry removed precisely that snapshot on C3 and left the verified receipt unchanged. The separate on-TV Remove Installer action removed the app and package files. Readback and another single network HOME confirmed clean product paths and stable LG Home. |
+
+The owner observed empty pairing and package-step labels, and did not see
+the installation progress on the production fixture. Device DOM readback
+reproduced the empty labels. Subsequent UI changes use the localized
+No-root labels, display System Updater as a separate step, and lead with the
+saved No-root operation on reopening. Browser regressions cover these
+changes, including Russian labels at 1080p and English at 720p. The production
+installation and Home routing evidence above is tied to the earlier exact
+fixture. A naturally incompatible TV, final release artifact, standby,
+cold boot, OTA and physical Home timing remain outside this focused proof.
+
+Focused exit reconciliation covers five cases. Four have observed passes.
+The first-attempt negative check covered the product safety property of zero
+writes before consent. An explicit physical refusal on that attempt was not
+observed. No selected cases were deferred. The later development IPK with
+unmodified compatibility decisions and the UI, recovery and retirement fixes
+passed local manifest and package validation at 205,955,908 bytes, SHA-256
+`122fb3a71ced66fb3858c19d81148bb4efa205cf3a7d6094949b4ccf94d30f94`.
+It was not installed as a new product build on C3. The completed C3 run
+establishes the behavior of the selected device fixture, and the separate
+retirement call verifies the latest helper against that fixture's exact
+retained snapshot. The final release still requires its selected artifact
+and catalog promotion checks.

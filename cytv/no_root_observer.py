@@ -652,7 +652,7 @@ def make_plan(operation, diagnostic_id, action, artifacts, versions, public_root
         plan['configuration_directory'] = configuration_directory
     if root_handoff is not None:
         from .root_no_root_handoff import validate
-        if not root_ssh or private_root is not None:refuse()
+        if not root_ssh or private_root not in (None, ROOT_SSH_DISK):refuse()
         plan['root_handoff']=validate(root_handoff)
     return plan
 
@@ -661,7 +661,7 @@ def private_root(plan):
     if plan.get('connection') == 'root-ssh':
         if 'private_root' not in plan:
             return ROOT_SSH_PRIVATE
-        if plan['private_root'] != ROOT_SSH_DISK or 'root_handoff' in plan:
+        if plan['private_root'] != ROOT_SSH_DISK:
             refuse()
         return ROOT_SSH_DISK
     root = plan.get('private_root', ROOT)
@@ -808,6 +808,10 @@ if [ -e {disk} ] || [ -L {disk} ]; then
 fi
 '''
     layout = installer.remote.run(command).strip()
+    if getattr(installer, 'homebrew_entry', False):
+        if layout in ('', 'CYTV_DISK_STORAGE'):
+            return ROOT_SSH_DISK
+        refuse()
     if not ramfs and layout in ('', 'CYTV_LEGACY_STORAGE'):
         return None
     if layout in ('', 'CYTV_DISK_STORAGE') and not getattr(installer, '_root_handoff', None):
@@ -1188,7 +1192,8 @@ def observe(installer, pending, *, read_only=False):
         if read_only:
             # Handoff observation would stage a temporary gate on the TV.
             return dict(device={}, pending=pending, reconciled=None, can_resume_root_setup=False,
-                        no_root_ready=False, no_root_reason='observation-unverified')
+                        no_root_ready=False, no_root_reason='observation-unverified',
+                        no_root_locked_observation=True)
         from .root_no_root_handoff import continuation
         if continuation(installer,value['plan']) in ('unclaimed','unprepared'):
             return dict(device={'observer':{'operation':value['plan']['operation']}},pending=pending,

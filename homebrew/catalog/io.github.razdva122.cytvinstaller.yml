@@ -1,4 +1,4 @@
-# Unsubmitted review draft for the current Root-only candidate. See SUBMISSION.md.
+# Unsubmitted review draft. See SUBMISSION.md.
 title: Clean Your TV
 iconUri: https://raw.githubusercontent.com/Razdva122/clean-your-tv-lg-webos/main/assets/icons/installer-256.png
 manifestUrl: https://github.com/Razdva122/clean-your-tv-lg-webos/releases/latest/download/homebrew-manifest.json
@@ -6,10 +6,12 @@ category: utility
 pool: main
 requirements:
   webosRelease: '>=5.0'
-shortDescription: Install and maintain Clean Your TV Root on a compatible rooted LG TV.
+shortDescription: Install and maintain Clean Your TV on a compatible rooted LG TV.
 description: |
-  Choose **Install and activate** to set up Clean Your TV on a compatible
-  rooted TV. Once installed, the same tile opens your Home. For an older
+  Choose **Install and activate** to set up Clean Your TV. The installer
+  selects Root by default. If Root is incompatible and the No-root checks
+  pass, the installer offers No-root and asks you to allow TV remote-control
+  pairing. Once installed, the same tile opens your Home. For an older
   installation, continue on the computer when prompted. If Python is needed, the confirmation
   includes preparing it before the compatibility checks. An active emergency stop keeps Root Home disabled.
   The maintenance screen lets you restore LG Home.

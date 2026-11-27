@@ -135,6 +135,29 @@ async function rejects(fn, expectedMessage) {
   assert(
     calls[2].body.command.endsWith('remove --operation ' + ID + ' --resume')
   );
+  await bridge.startNoRoot({ operation: ID, candidate: SHA });
+  assert(
+    calls
+      .at(-1)
+      .body.command.endsWith(
+        'no-root-start --operation ' + ID + ' --candidate ' + SHA
+      )
+  );
+  await bridge.noRootStatus(ID);
+  assert(
+    calls.at(-1).body.command.endsWith('no-root-status --operation ' + ID)
+  );
+  await bridge.resumeNoRoot(ID);
+  assert(
+    calls.at(-1).body.command.endsWith('no-root-resume --operation ' + ID)
+  );
+  var afterNoRoot = calls.length;
+  await rejects(() =>
+    bridge.startNoRoot({ operation: ID, candidate: SHA, host: '127.0.0.1' })
+  );
+  await rejects(() => bridge.startNoRoot({ operation: ID, candidate: 'bad' }));
+  await rejects(() => bridge.noRootStatus('$(id)'));
+  assert.equal(calls.length, afterNoRoot);
   var candidateReads = 0,
     operationReads = 0,
     supervisorReads = 0,
@@ -342,6 +365,18 @@ async function rejects(fn, expectedMessage) {
     ['inspect', '--resume'],
     ['remove', '--operation', ID],
     ['activate', '--payload', '/tmp'],
+    ['no-root-start', '--operation', ID],
+    [
+      'no-root-start',
+      '--operation',
+      ID,
+      '--candidate',
+      SHA,
+      '--payload',
+      '/tmp'
+    ],
+    ['no-root-status', '--operation', ID, '--candidate', SHA],
+    ['no-root-resume'],
     ['debloat-status', '--settings', 'lmt'],
     ['debloat', '--settings', 'lmt;whoami'],
     ['debloat-restore', '--settings'],
@@ -455,6 +490,70 @@ async function rejects(fn, expectedMessage) {
     });
     if (verdict !== 'root') assert.equal(inspection.installation, undefined);
   }
+  var ordinaryStage = deps.runtime.stage;
+  var probeExecute = deps.execute;
+  var noRootAvailability = { state: 'unknown' };
+  var noRootAdmission = {
+    state: 'eligible',
+    candidate_sha256: SHA,
+    versions: { home: '1.2.3' }
+  };
+  var noRootCalls = [];
+  deps.runtime.stage = function (state, kind) {
+    return ordinaryStage(state, kind).then(function (stage) {
+      stage.noRoot = '/private/stage/edition/no_root.py';
+      return stage;
+    });
+  };
+  deps.execute = function (exe, args) {
+    if (args[3] !== '/private/stage/edition/no_root.py')
+      return probeExecute(exe, args);
+    noRootCalls.push(args.slice(4));
+    assert.equal(args[args.indexOf('--payload') + 1], '/private/stage');
+    var answer = {
+      status: noRootAvailability,
+      inspect: noRootAdmission,
+      start: { state: 'pending', operation: ID, stage: 'pairing' },
+      resume: { state: 'pending', operation: ID, stage: 'installing' }
+    }[args[4]];
+    return Promise.resolve(JSON.stringify(answer));
+  };
+  verdict = 'root';
+  assert.equal((await bootstrap.run(['inspect'], deps)).state, 'fresh');
+  assert.deepEqual(
+    noRootCalls.map((args) => args[0]),
+    ['status']
+  );
+  verdict = 'external_no_root';
+  var noRootReady = await bootstrap.run(['inspect'], deps);
+  assert.equal(noRootReady.state, 'no_root_ready');
+  assert.equal(noRootReady.edition, 'no-root');
+  assert.equal(noRootReady.candidate_sha256, SHA);
+  assert.deepEqual(
+    noRootCalls.map((args) => args[0]),
+    ['status', 'status', 'inspect']
+  );
+  var noRootStarted = await bootstrap.run(
+    ['no-root-start', '--operation', ID, '--candidate', SHA],
+    deps
+  );
+  assert.equal(noRootStarted.state, 'pending');
+  assert.equal(noRootStarted.edition, 'no-root');
+  assert(noRootCalls.at(-1).includes(ID));
+  assert(noRootCalls.at(-1).includes(SHA));
+  noRootAvailability = { state: 'pending', operation: ID, stage: 'pairing' };
+  assert.equal((await bootstrap.run(['inspect'], deps)).state, 'pending');
+  assert.equal(
+    (await bootstrap.run(['no-root-status', '--operation', ID], deps))
+      .operation,
+    ID
+  );
+  assert.equal(
+    (await bootstrap.run(['no-root-resume', '--operation', ID], deps)).stage,
+    'installing'
+  );
+  deps.runtime.stage = ordinaryStage;
+  deps.execute = probeExecute;
   fresh.installation.clean_removal_verified = true;
   assert.equal(
     (await bootstrap.run(['inspect'], deps)).state,
@@ -476,7 +575,7 @@ async function rejects(fn, expectedMessage) {
     (await bootstrap.run(['inspect'], deps)).state,
     'edition_unconfirmed'
   );
-  assert.equal(probeCount, 6);
+  assert.equal(probeCount, 8);
   for (const state of ['conflict', 'migration_required', 'recovery_required']) {
     fresh.state = state;
     const inspected = await bootstrap.run(['inspect'], deps);
@@ -487,7 +586,7 @@ async function rejects(fn, expectedMessage) {
   }
   assert.equal(
     probeCount,
-    6,
+    8,
     'metadata alone does not repeat the admission probe'
   );
   deps.execute = originalExecute;
@@ -650,6 +749,46 @@ async function rejects(fn, expectedMessage) {
     'removal',
     [ID, 'homebrew-remove-tile']
   ]);
+  var fenced = [];
+  var fenceStatus = 'pending';
+  deps.runtime.inspect = function () {
+    return Promise.resolve({
+      python: '/usr/bin/python3',
+      context: { manifest: { files: { 'edition/no_root.py': {} } } }
+    });
+  };
+  deps.runtime.stage = function (state, kind) {
+    return priorStage(state, kind).then(function (stage) {
+      stage.noRoot = '/private/stage/edition/no_root.py';
+      return stage;
+    });
+  };
+  deps.execute = function (executable, args) {
+    fenced.push(args.slice(4));
+    return Promise.resolve(
+      JSON.stringify({
+        state: args[4] === 'prepare-remove' ? fenceStatus : 'complete'
+      })
+    );
+  };
+  assert.equal(
+    (await bootstrap.run(['homebrew-remove', '--operation', ID], deps)).state,
+    'pending'
+  );
+  assert.deepEqual(
+    fenced.map((args) => args[0]),
+    ['prepare-remove']
+  );
+  assert.deepEqual(fenced[0].slice(-2), ['--removal', ID]);
+  fenceStatus = 'removal_ready';
+  assert.equal(
+    (await bootstrap.run(['homebrew-remove', '--operation', ID], deps)).state,
+    'complete'
+  );
+  assert.deepEqual(
+    fenced.map((args) => args[0]),
+    ['prepare-remove', 'prepare-remove', 'homebrew-remove']
+  );
   deps.runtime.stage = priorStage;
   deps.process.geteuid = function () {
     return 1000;
