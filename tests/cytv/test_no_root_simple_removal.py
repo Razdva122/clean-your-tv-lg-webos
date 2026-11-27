@@ -230,7 +230,7 @@ class SimpleRemoval(unittest.TestCase):
                     self.remove()
                 self.assertEqual(caught.exception.reason_code, reason)
                 self.assertEqual(self.store.pending(self.profile)['stage'], 'requested')
-                self.assertNotIn('packages', self.installer.tv_info['removal_evidence'])
+                self.assertNotIn('removal_evidence', self.installer.tv_info)
                 self.assertFalse(self.vendor_removals())
 
     def test_inherited_removal_uses_paired_foreground_when_public_luna_refuses(self):
