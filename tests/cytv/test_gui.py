@@ -1118,6 +1118,29 @@ class GuiTests(unittest.TestCase):
         self.assertEqual(json.loads(record.read_text())['settings'], {'livePlus': entry})
         self.assertEqual(json.loads(w.report.read_text())['debloat'], {'sportsAlarm': 'restored'})
 
+    def test_debloat_shows_verified_domain_blocking_result(self):
+        from unittest.mock import Mock
+        from cytv import cli, debloat, state
+
+        store = state.Store(self.directory.name)
+        profile = state.target('192.0.2.10', 'root')
+        store.save(profile)
+        remote = Mock(root=True)
+        remote.luna.side_effect = [{'returnValue':False}] + [
+            {'root':True, 'returnValue':True, 'result':{'returnValue':True, 'result':value}}
+            for value in ('off', 'on', 'on')]
+        w = Wizard(run=lambda argv, **kwargs: cli.main(argv, connect=lambda *_:remote, **kwargs))
+        self.addCleanup(w.close)
+        w.start('debloat', profile)
+        self.pump(lambda: w.pending is not None)
+        self.assertEqual(w.pending.title, debloat.BLOCKING_TITLE)
+        combo = w.form.findChild(QComboBox)
+        self.assertIn('Off', combo.currentText())
+        combo.setCurrentIndex(combo.findText('On'))
+        next(b for b in w.form.findChildren(QPushButton) if b.text() == 'Continue').click()
+        self.pump(lambda: not w.running)
+        self.assertIn(debloat.BLOCKING_TITLE + ' — On', w.content.toPlainText())
+
     def test_debloat_maintenance_uses_setup_selection_and_saves_report(self):
         from unittest.mock import Mock
         from cytv import cli, debloat, state
@@ -1129,6 +1152,7 @@ class GuiTests(unittest.TestCase):
         remote = Mock(root=True)
         remote.luna.side_effect = [
             {'returnValue': False},
+            {'returnValue': False},  # Legacy service has no domain-blocking control.
             {'returnValue': True, 'settings': {'homePromotion': 'on'}},
             {'returnValue': True},
             {'returnValue': True, 'settings': {'homePromotion': 'off'}},

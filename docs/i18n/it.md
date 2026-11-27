@@ -218,6 +218,8 @@ Entrambe le edizioni possono disattivare le trasmissioni promozionali LG se il t
 
 Per annullare una singola modifica, apri Debloat in Manutenzione con la stessa connessione salvata del televisore. Seleziona l’impostazione, verifica il valore originale e conferma. Sui televisori compatibili puoi disattivare l’avvio automatico di LG Channels in Tutte le impostazioni → Generale → Canali → Avvio automatico LG Channels.
 
+Nell’edizione Root, apri Manutenzione → Debloat → Blocco dei domini pubblicitari e di tracciamento. Attiva l’opzione per bloccare alcuni domini su questo televisore. Disattivala per ripristinare il file hosts originale. Alcune app possono continuare a mostrare pubblicità. Ricontrolla l’opzione dopo un aggiornamento di Root.
+
 Durante la disinstallazione puoi ripristinare le impostazioni originali salvate da Debloat. Se salti il ripristino, la disinstallazione prosegue senza modificare queste impostazioni.
 
 Dopo l’installazione riuscita, scegli Classic, Liquid Glass o Ribbon e attiva o disattiva il meteo. Ribbon non supporta il meteo; Liquid Glass usa il formato compatto. La città viene stimata dalla connessione e può essere modificata in Home.

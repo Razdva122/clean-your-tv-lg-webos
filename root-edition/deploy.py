@@ -422,6 +422,10 @@ def _remove_root(run, proof):
     if proof and any(os.path.lexists(STATE/name) for name in (
             'ls2-provision-snapshot.json','recovery-provision.pending.json','recovery-provision.json')):
         raise ValueError('Conflicting provisioning evidence; retain state for recovery')
+    if os.path.lexists(STATE/'domain-blocking.hosts'):
+        runtime('retire-domain-blocking', run)
+        if os.path.lexists(STATE/'domain-blocking.hosts'):
+            raise ValueError('Domain blocking cleanup is incomplete')
     write_stage('uninstall-restored', **proof)
     # No overrides were installed on the pre-provision path. Package removal
     # handles its original registrations; neither rollback nor a scan is needed.

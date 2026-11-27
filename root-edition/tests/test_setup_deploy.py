@@ -367,6 +367,26 @@ class DeployTests(unittest.TestCase):
         self.assertEqual(len(calls), 1)
 
 
+    def test_component_uninstall_waits_for_domain_mount_cleanup(self):
+        deploy = load('deploy')
+        import observed_install
+        with tempfile.TemporaryDirectory() as tmp:
+            state = Path(tmp).resolve()
+            table = state/'domain-blocking.hosts'
+            table.touch()
+            actions = []
+            def run(args):
+                actions.append(args[-1])
+                return {'returnValue':True, 'result':'restored'}
+            with (patch.object(deploy, 'STATE', state),
+                  patch.object(observed_install, 'remove') as remove):
+                deploy.write_stage('installed-recovery-only')
+                with self.assertRaisesRegex(ValueError, 'Domain blocking cleanup'):
+                    deploy.uninstall(run=run)
+                self.assertEqual(actions, ['restore', 'retire-domain-blocking'])
+                remove.assert_not_called()
+
+
 if __name__ == '__main__':
     unittest.main()
 

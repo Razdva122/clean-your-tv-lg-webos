@@ -218,6 +218,8 @@ Both editions can turn off LG promotional streams when the TV exposes the settin
 
 To undo one change while keeping CYTV installed, open Debloat in Maintenance with the same saved TV connection. Select a saved setting, review its original value and confirm. To stop LG Channels starting automatically on supported TVs, open All Settings → General → Channels → Auto Start LG Channels and choose Off.
 
+In the Root edition, open Maintenance → Debloat → Ad and tracking domain blocking. Choose On to block selected advertising and tracking hostnames on this TV, or Off to restore the original hosts file. Other apps may still show ads. Check this setting again after a Root update.
+
 During removal, you can choose to restore the saved original Debloat settings. If you skip restoration, removal continues with those settings as they are.
 
 After successful installation, choose Classic, Liquid Glass or Ribbon and turn Home weather on or off. Ribbon does not support weather; Liquid Glass uses the compact format. Weather can find an approximate city through your internet connection; change it later in Home settings.

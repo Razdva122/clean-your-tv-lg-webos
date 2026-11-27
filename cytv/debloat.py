@@ -325,6 +325,61 @@ def apply(installer, selected, progress=lambda _: None, *, diagnostic=None):
     return results
 
 
+BLOCKING_TITLE = 'Ad and tracking domain blocking'
+BLOCKING_STATES = {
+    'off': 'Off', 'on': 'On', 'pending': 'Saved, currently inactive',
+    'partial': 'Incomplete mount', 'external': 'Another hosts mount is present',
+    'displaced': 'Saved, currently inactive',
+}
+
+
+def offer_domain_blocking(installer, ask, write):
+    from .package import ROOT_APP
+    if installer.profile.get('edition') != 'root' or not installer.remote.root:
+        return False
+
+    def request(action):
+        method = 'status' if action == 'status' else 'enable'
+        try:
+            reply = installer.remote.luna(ROOT_APP + '.service/' + method,
+                {'domainBlocking':action}, app_id=ROOT_APP, timeout=25)
+            if reply.get('returnValue') is True and reply.get('root') is True:
+                result = reply.get('result')
+                if isinstance(result, dict) and result.get('returnValue') is True:
+                    state = result.get('result')
+                    if isinstance(state, str) and state in BLOCKING_STATES:
+                        return state
+        except Exception:
+            pass
+        return None
+
+    state = request('status')
+    if state is None:
+        write(tr(BLOCKING_TITLE) + ' — ' + tr('Setting unavailable on this connection. Skipped.'))
+        return False
+    write.heading(BLOCKING_TITLE)
+    if state == 'external':
+        write(BLOCKING_STATES[state])
+        # No owner action can safely change this mount.
+        return False
+    write.option(0, 'Adjust LG settings (Debloat)', BLOCKING_STATES[state])
+    actions = ('off',) if state == 'displaced' else ('on', 'off')
+    for index, action in enumerate(actions, 1):
+        write.option(index, BLOCKING_STATES[action])
+    choice = prompts.number(ask, write, BLOCKING_TITLE + ' [0]: ', 0, len(actions), default=0)
+    if not choice:
+        return False
+    requested = actions[choice - 1]
+    if state != requested:
+        request(requested)
+        state = request('status')  # A lost reply is reconciled by reading, never by retrying the write.
+    label = BLOCKING_STATES.get(state, 'Could not read the current value')
+    write(tr(BLOCKING_TITLE) + ' — ' + tr(label))
+    if state != requested and (requested, state) != ('off', 'external'):
+        write('Could not change the setting')
+    return True
+
+
 def run(installer, ask, write, *, diagnostic=None, maintenance=False):
     events = diagnostic if diagnostic is not None else {}
     if maintenance:
@@ -334,6 +389,8 @@ def run(installer, ask, write, *, diagnostic=None, maintenance=False):
             if events and write.frontend == 'desktop':
                 write.debloat_results(events)
                 prompts.answer(ask, REVIEW)
+            return
+        if offer_domain_blocking(installer, ask, write):
             return
     else:
         write.step(5, TITLE)

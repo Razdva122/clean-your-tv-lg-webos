@@ -102,6 +102,32 @@ module.exports = function (execute, audio, startup, presentation) {
           }
         }
       }
+      if (
+        payload &&
+        typeof payload === 'object' &&
+        !Array.isArray(payload) &&
+        Object.keys(payload).length === 1 &&
+        ((command === 'status' && payload.domainBlocking === 'status') ||
+          (command === 'enable' &&
+            (payload.domainBlocking === 'on' ||
+              payload.domainBlocking === 'off')))
+      ) {
+        if (busy) return { returnValue: false, errorText: 'Recovery busy' };
+        busy = true;
+        try {
+          return {
+            returnValue: true,
+            result: await execute('domain-blocking', payload.domainBlocking)
+          };
+        } catch (_) {
+          return {
+            returnValue: false,
+            errorText: 'Domain blocking unavailable'
+          };
+        } finally {
+          busy = false;
+        }
+      }
       var confirmation = command === 'confirm';
       var allowed = confirmation
         ? payload &&

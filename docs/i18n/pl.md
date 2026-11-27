@@ -217,6 +217,8 @@ W obu edycjach można wyłączyć transmisje promocyjne LG, jeśli telewizor udo
 
 Aby cofnąć jedną zmianę, otwórz Debloat w menu konserwacji, korzystając z tego samego zapisanego połączenia z telewizorem. Wybierz ustawienie, sprawdź pierwotną wartość i potwierdź. Na obsługiwanych modelach możesz wyłączyć automatyczne uruchamianie LG Channels w menu Wszystkie ustawienia → Ogólne → Kanały → Automatyczne uruchamianie LG Channels.
 
+W wydaniu Root otwórz Konserwacja → Debloat → Blokowanie domen reklamowych i śledzących. Włącz tę opcję, aby blokować wybrane domeny na tym telewizorze. Wyłącz ją, aby przywrócić oryginalny plik hosts. Aplikacje nadal mogą wyświetlać reklamy. Sprawdź ustawienie po aktualizacji Root.
+
 Podczas odinstalowywania możesz przywrócić zapisane początkowe ustawienia Debloat. Jeśli pominiesz przywracanie, odinstalowywanie będzie kontynuowane bez zmiany tych ustawień.
 
 Po udanej instalacji wybierz Classic, Liquid Glass lub Ribbon i włącz albo wyłącz pogodę. Ribbon nie obsługuje pogody; Liquid Glass używa formatu kompaktowego. Miasto jest szacowane z połączenia i można je zmienić w Home.
