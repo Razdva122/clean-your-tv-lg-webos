@@ -102,6 +102,13 @@
       "pr": 868,
       "issues": [],
       "summary": "Make the Helper startup fixture portable to Windows and keep the staging ownership fixture on POSIX hosts"
+    },
+    {
+      "pr": 876,
+      "issues": [
+        364
+      ],
+      "summary": "Keep Root Doctor scanning past stale input nodes with no device registered in sysfs"
     }
   ],
   "excluded": [],
