@@ -673,3 +673,74 @@ establishes the behavior of the selected device fixture, and the separate
 retirement call verifies the latest helper against that fixture's exact
 retained snapshot. The final release still requires its selected artifact
 and catalog promotion checks.
+
+#### C3 follow-up on the corrected progress UI (2026-11-27)
+
+The prior run verifies the product flow but predates the corrected progress
+screen and lacks an observed manual refusal. Reuse its firmware and component
+evidence. The planned checks below use stock Homebrew 0.8.0 and the same C3.
+
+| Case | Selected check |
+| --- | --- |
+| HB-FALLBACK-01 | Install and launch the exact 205,955,908-byte development IPK. Verify file digests and the natural Root review. |
+| HB-FALLBACK-02 | Install the matched forced-decision fixture. Verify the localized progress and a deliberate refusal of the real webOS prompt. Verify zero product package writes. |
+| HB-FALLBACK-03 | Resume the original request, allow pairing and observe the displayed installation stages against the worker receipt. Verify the installed components and current setup result. |
+| HB-FALLBACK-04 | Verify the automatic daily launch after reopening and one network HOME from Media Player. |
+| HB-FALLBACK-05 | Run the installer's full removal and required restart or continuation. Verify stock Home and absence of product files, temporary setup payload, and test tile. |
+
+The unchanged development IPK matched all 325 installed application files.
+Stock Homebrew installed and launched it, and the TV displayed the ordinary
+Root review. The matched fixture is 205,955,916 bytes, SHA-256
+`0a8e9aab8cdae891981eb9332b3e3a9536b15bd18a6c965eb56061ad60d3d529`.
+Only the system-profile decision in `edition.py`, its manifest inventory
+entry and the bootstrap manifest pin differ. All UI files are byte-identical.
+The stock Homebrew catalog installed the matched fixture as well. All 325
+files matched and the TV displayed the No-root review.
+
+For HB-FALLBACK-02, all six Russian installation labels were visible in the
+foreground. Setup advanced from request submission to pairing. The owner
+pressed No on the native webOS prompt. The installer marked only pairing
+failed, displayed its pairing error and offered Continue original operation
+and Save diagnostic report. The retained request recorded
+`pairing-rejected` at the pairing stage. The Installer was still the only
+Clean Your TV application registered. No product installation was submitted.
+
+For HB-FALLBACK-03, the owner approved the next native prompt and the exact
+same operation advanced through packages, updates and complete. The
+foreground screen showed pairing passed and No-root components in progress.
+The installer moved to the background during installation. Reopening it while
+the updater was still running returned to the saved progress screen and
+showed the update step in progress in the foreground. The terminal receipt
+verified package files and configuration. No-root Home 1.22.0, Home Helper
+0.11.0, Ambient 0.0.7 and System Updater 1.2.11 were present, and the worker
+reported a running Helper. The worker payload and its retirement directory
+were both absent without a separate cleanup command.
+
+For HB-FALLBACK-04, the tile opened its recovery page and the paired remote's
+single HOME from Media Player settled on LG Home. A direct No-root Home
+launch was accepted by the application manager, and the No-root WebKit
+renderer loaded. The application manager still reported LG Home in the
+foreground. Helper had a controller and reported enabled routing and
+accepted launch responses, with no emergency block or watchdog marker.
+The embedded No-root Home, Helper, Ambient and System Updater bytes match
+the earlier fixture that passed the routing check.
+
+The owner confirmed that the physical screen remained on LG Home after the
+direct launch. This confirms a visible routing failure in this run.
+
+For HB-FALLBACK-05, full removal started in the Installer and required a
+software restart. Uptime reset and the temporary boot marker cleared.
+The Installer reopened the original removal and continued it to current
+verified-clean. Package, service, routing, startup and private-cleanup
+readback passed. The separate on-TV action removed the Installer tile and
+its application and package files. A single network HOME from Media Player
+then reached LG Home and stayed there. The temporary catalog and staged
+catalog files were removed.
+
+The follow-up exit check covers all five selected cases. HB-FALLBACK-01,
+02, 03 and 05 passed. HB-FALLBACK-04 failed on both normal tile launch and
+network HOME. No selected case was deferred, blocked by missing evidence,
+or replaced with reused device results. The fixed progress and deliberate
+pairing refusal passed on C3. No-root foreground routing remains an open
+acceptance issue. This run used development artifacts and does not select
+or accept a release IPK.
