@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "reviewedAt": "2026-11-20",
+  "reviewedAt": "2026-11-27",
   "reports": [
     {
       "id": "g1-noroot",
@@ -1890,6 +1890,37 @@
         },
         {
           "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/133#issuecomment-7035596176"
+        }
+      ],
+      "evidenceKind": "public-owner-report"
+    },
+    {
+      "id": "c2-65-aua-root",
+      "model": "OLED65C2AUA",
+      "firmware": "04.40.90",
+      "webos": "22; SDK 7.4.0",
+      "edition": "root",
+      "release": null,
+      "showOnWebsite": true,
+      "result": "controls-tested",
+      "reportedVersions": "cytv 0.24.3; Root (experimental) 0.25.0",
+      "installer": "Windows desktop; saved Root SSH connection",
+      "remote": null,
+      "tested": {
+        "install": "Earlier setup stopped at root-deploy. The installer verified full removal, LG Home and the remote worked afterward, and fresh Root setup completed with package and startup checks passing.",
+        "Home": "One press of the physical Home button from an app opened Clean Your TV Home using the experimental compositor backend.",
+        "emergency": "not reported",
+        "audio": "not confirmed",
+        "power": "Home, navigation and audio after restart are awaiting confirmation; standby/wake and AC cold boot were not reported",
+        "OTA_rollback": "not reported"
+      },
+      "limitations": "System Profile was absent and the standard Home settings/profile checks remained unverified. Exact installer release and remote model were not reported.",
+      "sources": [
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/101"
+        },
+        {
+          "url": "https://github.com/Razdva122/clean-your-tv-lg-webos/issues/101#issuecomment-7211265242"
         }
       ],
       "evidenceKind": "public-owner-report"

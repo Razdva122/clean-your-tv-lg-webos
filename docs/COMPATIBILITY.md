@@ -148,6 +148,7 @@ catalog groups the result by the SDK and records the other name in the report.
 - OLED55C9PLA — No-root — firmware 05.30.25 — webOS 4.5 / SDK 4.9.0 — v1.20.7 — [partial result (#626)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/626#issuecomment-6881622004)
 - OLED55G59LS — No-root — firmware 43.21.96 — v1.20.5 — [owner reported operation (#529)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/529)
 - OLED65C11LB — Root — firmware 03.53.45 — v1.24.0 — [partial result (#389)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/389#issuecomment-6971032548)
+- OLED65C2AUA — Root (experimental) — firmware 04.40.90 — webOS 22; SDK 7.4.0 — verified removal, fresh setup and physical Home button; behavior after restart is awaiting confirmation. [Owner report #101](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/101#issuecomment-7211265242)
 - OLED65C2PUA — No-root — firmware 43.21.94 — [owner reported operation (#646)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/646)
 - OLED65C3LA — No-root — [owner reported operation (#279)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/279)
 - OLED65C57LA — No-root — firmware 43.21.77 — webOS SDK 11.2.0 — [partial result (#96)](https://github.com/Razdva122/clean-your-tv-lg-webos/issues/96)

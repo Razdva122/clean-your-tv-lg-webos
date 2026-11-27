@@ -231,10 +231,11 @@ and historical [1.5.0 TV acceptance and limits](docs/RELEASE-1.5.0.md).
 </details>
 
 <details>
-<summary>❔ webOS 22</summary>
+<summary>✅ webOS 22</summary>
 
 | Home | TV · Edition | Reported webOS |
 | :---: | --- | --- |
+| ✅ | OLED65C2AUA · Root | 22; SDK 7.4.0 |
 | ❔ | 43NANO766QA · No-root | 22 |
 | ❔ | 43UQ75003LF · No-root | 7.6.0 |
 | ❔ | 55UQ7400PSF · No-root | 22 |
