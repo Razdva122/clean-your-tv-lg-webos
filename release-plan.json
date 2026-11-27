@@ -82,6 +82,11 @@
       "pr": 858,
       "issues": [],
       "summary": "Use system Chrome for Homebrew setup tests in runtime CI"
+    },
+    {
+      "pr": 860,
+      "issues": [],
+      "summary": "Run full Root removal from the Homebrew Installer on TV"
     }
   ],
   "excluded": [],
