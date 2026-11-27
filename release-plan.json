@@ -97,6 +97,11 @@
       "pr": 866,
       "issues": [],
       "summary": "Restore Homebrew export font inputs, localize the tile verification error and align the installer regression fixtures."
+    },
+    {
+      "pr": 868,
+      "issues": [],
+      "summary": "Make the Helper startup fixture portable to Windows and keep the staging ownership fixture on POSIX hosts"
     }
   ],
   "excluded": [],
