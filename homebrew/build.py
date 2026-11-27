@@ -7,12 +7,14 @@ import importlib.util
 import io
 import re
 import tarfile
+import tempfile
 from pathlib import Path
 import shutil
 import sys
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from cytv import package, python_runtime
 from homebrew.payload import checked_bundle, inventory, read_file, validate_runtime
+from scripts.lifecycle_support import build_lifecycle_gate
 
 IDENTITIES={'root':'com.cleanyourtv.root.preview','root-updater':'com.cleanyourtv.root.updater','supervisor':'com.cleanyourtv.system.updater'}
 
@@ -83,6 +85,8 @@ def build_payload(root_bundle, root_updater_bundle, supervisor_bundle, runtime_a
         if not any(n=='LICENSE' or n.endswith('/LICENSE') for n in runtime_files): raise ValueError('Runtime license missing')
         (output/'runtime-provenance.json').write_text(json.dumps(provenance,sort_keys=True,separators=(',',':')))
         (output/'runtime.js').write_bytes(read_file(Path(__file__).with_name('runtime.js')))
+        with tempfile.TemporaryDirectory(prefix='cytv-homebrew-gate-', dir=output.parent) as work:
+            build_lifecycle_gate(output/'installer-support/lifecycle-gate', work)
         edition = output/'edition'
         (edition/'cytv').mkdir(parents=True)
         for name in ('edition.py', 'debloat.py'):

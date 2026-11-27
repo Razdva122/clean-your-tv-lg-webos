@@ -82,7 +82,7 @@ Po instalacji Root Home otwiera ekran **Skonfiguruj telewizor**. Wybierz wbudowa
 
 Jeśli instalator zgłosi problem, postępuj zgodnie z instrukcją na ekranie. Zapisz raport diagnostyczny, aby zachować kopię na telewizorze. Otwórz zapisany raport w instalatorze lub w sekcji odzyskiwania kafelka, aby go przeczytać lub zeskanować kod QR telefonem. Lista pokazuje ukończone kontrole, bieżący etap i błędy. Zeskanuj kod QR, aby pobrać raport JSON lub otworzyć uzupełniony szkic zgłoszenia GitHub. Przed wysłaniem krótko opisz problem.
 
-Aby odinstalować Clean Your TV, wybierz w instalatorze **Usuń cały produkt**. Usunięcie samej aplikacji instalatora pozostawi Clean Your TV na telewizorze.
+Aby odinstalować na telewizorze, w Root Home otwórz **Ustawienia → Zaawansowane → Odzyskiwanie Clean Your TV** i potwierdź pełne usunięcie. Jeśli potrzebny jest pełny restart, uruchom ponownie telewizor, otwórz Clean Your TV i wznów usuwanie. Po jego potwierdzeniu możesz usunąć też kafelek instalatora z ekranu wyniku.
 
 ## 5. Sprawdź pilota
 

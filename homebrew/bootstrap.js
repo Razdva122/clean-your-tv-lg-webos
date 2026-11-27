@@ -35,6 +35,9 @@ function parse(args) {
       'status',
       'restore',
       'remove',
+      'homebrew-remove',
+      'homebrew-remove-status',
+      'homebrew-remove-tile',
       'activate',
       'debloat',
       'debloat-status',
@@ -45,7 +48,9 @@ function parse(args) {
   for (var i = 1; i < args.length; i++) {
     var key = valueOptions[args[i]] || flags[args[i]];
     if (!key || Object.prototype.hasOwnProperty.call(request, key)) fail();
-    request[key] = valueOptions[args[i]] ? args[++i] : true;
+    var option = valueOptions[args[i]];
+    if (option && typeof args[i + 1] !== 'string') fail();
+    request[key] = option ? args[++i] : true;
   }
   if (
     request.operation !== undefined &&
@@ -71,6 +76,9 @@ function parse(args) {
     status: ['operation', 'current'],
     restore: [],
     remove: ['operation', 'candidate', 'resume'],
+    'homebrew-remove': ['operation'],
+    'homebrew-remove-status': ['operation'],
+    'homebrew-remove-tile': ['operation'],
     activate: [],
     debloat: ['settings'],
     'debloat-status': [],
@@ -80,7 +88,14 @@ function parse(args) {
     if (key !== 'action' && allowed.indexOf(key) < 0) fail();
   });
   if (
-    ['install', 'remove', 'status'].indexOf(action) >= 0 &&
+    [
+      'install',
+      'remove',
+      'status',
+      'homebrew-remove',
+      'homebrew-remove-status',
+      'homebrew-remove-tile'
+    ].indexOf(action) >= 0 &&
     !request.operation
   )
     fail();
@@ -221,6 +236,50 @@ function inspectEdition(result, stage, python, executeRead, evidence) {
       return fallback;
     });
 }
+function runRemoval(deps, request) {
+  return deps.runtime
+    .removal(PAYLOAD, PAYLOAD_SHA256, request.operation, request.action)
+    .then(function (observed) {
+      if (observed) return observed;
+      return deps.runtime
+        .inspect(PAYLOAD, true, PAYLOAD_SHA256)
+        .then(function (state) {
+          if (!state.python) fail();
+          var removing = request.action === 'homebrew-remove';
+          return deps.runtime
+            .stage(state, removing ? 'removal' : false)
+            .then(function (stage) {
+              var args = [
+                '-E',
+                '-s',
+                '-B',
+                stage.driver,
+                request.action,
+                '--operation',
+                request.operation
+              ];
+              if (removing) args.push('--payload', stage.root);
+              return deps
+                .execute(state.python, args)
+                .then(function (raw) {
+                  return JSON.parse(raw);
+                })
+                .then(
+                  function (result) {
+                    return stage.cleanup().then(function () {
+                      return result;
+                    });
+                  },
+                  function (error) {
+                    return stage.cleanup().then(function () {
+                      throw error;
+                    });
+                  }
+                );
+            });
+        });
+    });
+}
 function run(args, deps) {
   var evidence,
     boundary = 'node-version';
@@ -252,6 +311,8 @@ function run(args, deps) {
       runtime: require('./payload/runtime.js'),
       execute: execute
     };
+    if (/^homebrew-remove(?:-status|-tile)?$/.test(request.action))
+      return runRemoval(deps, request);
     return deps.runtime
       .inspect(
         PAYLOAD,

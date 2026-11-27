@@ -82,7 +82,7 @@ Después de instalar, Root Home abre **Configurar el televisor**. Elige un tema 
 
 Si el instalador indica un problema, sigue el paso que se muestra en pantalla. Guarda el informe de diagnóstico para dejar una copia en el televisor. Abre el informe guardado en el instalador o en la recuperación de la aplicación para leerlo o escanear su código QR con el teléfono. La lista muestra las comprobaciones completadas, el paso actual y los errores. Escanea el código QR para descargar el informe JSON o abrir el borrador de GitHub con los datos. Describe el problema antes de enviarlo.
 
-Para desinstalar Clean Your TV, elige **Eliminar el producto completo** dentro del instalador. Si solo borras la aplicación del instalador, Clean Your TV seguirá en el televisor.
+Para desinstalar desde el televisor, abre **Ajustes → Avanzado → Recuperación de Clean Your TV** en Root Home y confirma la desinstalación completa. Si se solicita un reinicio completo, reinicia el televisor, vuelve a abrir Clean Your TV y continúa. Tras verificar la desinstalación, puedes quitar también la ficha del instalador desde la pantalla de resultados.
 
 ## 5. Comprueba el mando
 

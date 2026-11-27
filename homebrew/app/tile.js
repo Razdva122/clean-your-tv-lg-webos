@@ -40,7 +40,10 @@
   }
   function open(event) {
     clearTimeout(returned);
-    if (root.CYTVTileLaunch.openDebloat(event)) {
+    if (
+      root.CYTVTileLaunch.openDebloat(event) ||
+      root.CYTVTileLaunch.openMaintenance(event)
+    ) {
       stopHandoff();
       return;
     }
@@ -51,7 +54,9 @@
     var edition = valid(bound) ? bound : saved(storageKey);
     if (
       bound === null &&
-      (saved('cytv.installer.operation') || !valid(edition))
+      (saved('cytv.installer.operation') ||
+        /^[a-f0-9]{32}$/.test(saved('cytv.installer.clean-removal') || '') ||
+        !valid(edition))
     ) {
       root.location.replace('setup.html#open');
       return;

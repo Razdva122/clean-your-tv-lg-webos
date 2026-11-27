@@ -69,7 +69,7 @@ Po instalaci se v Root Home otevře **Nastavit televizor**. V nabídce **Motivy*
 
 Pokud instalátor ohlásí problém, postupujte podle pokynu na obrazovce. Volba pro uložení diagnostické zprávy uloží kopii v televizoru. Uloženou zprávu pak můžete otevřít v instalátoru nebo v nabídce obnovení dlaždice a přečíst si ji či naskenovat její QR kód telefonem. Seznam ukazuje hotové kontroly, aktuální krok a případnou chybu. Po naskenování QR kódu stáhněte zprávu JSON nebo otevřete předvyplněný návrh na GitHubu. Před odesláním stručně popište problém.
 
-Chcete-li odinstalovat Clean Your TV, zvolte v instalátoru **Úplně odebrat produkt**. Pokud odeberete pouze aplikaci instalátoru, Clean Your TV v televizoru zůstane.
+Pro odinstalaci na televizoru otevřete v Root Home **Nastavení → Pokročilé → Obnovení Clean Your TV** a potvrďte úplné odebrání. Pokud je vyžadován úplný restart, restartujte televizor, znovu otevřete Clean Your TV a pokračujte v odebrání. Po ověření můžete na obrazovce výsledku odstranit i dlaždici instalátoru.
 
 ## 5. Vyzkoušejte ovladač
 

@@ -75,6 +75,7 @@
       case 'homebrew_exec_denied':
         return ['homebrewDeniedTitle', 'homebrewDeniedBody'];
       case 'homebrew_root_required':
+      case 'root-access-required':
         return ['rootAccessRequired', 'checkHomebrew'];
       case 'homebrew_timeout':
         return ['responseTimedOut', 'checkOrComputer'];
@@ -84,10 +85,21 @@
         return ['responseUnrecognized', 'checkOrComputer'];
       case 'status_unavailable':
       case 'unknown_operation':
+      case 'unknown-operation':
       case 'worker_submission_unknown':
-        return ['statusUnavailable', 'checkOriginal'];
+        return [
+          'statusUnavailable',
+          value.action === 'uninstall' ? 'checkOrComputer' : 'checkOriginal'
+        ];
       case 'historical_completion_is_not_current':
+      case 'removal-not-current':
         return ['statusUnavailable', 'checkOrComputer'];
+      case 'restart-required':
+        return ['restartNeeded', 'restartAndRetry'];
+      case 'ownership-conflict':
+        return ['statusUnavailable', 'computerRecovery'];
+      case 'root-worker-busy':
+        return ['progress', 'checkOrComputer'];
       case 'worker_snapshot_unavailable':
         return ['workerUnavailable', 'checkOriginal'];
       case 'private_runtime_required':

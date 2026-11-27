@@ -17,6 +17,7 @@ from cytv import package
 from cytv.tv_sources import stage_sources
 from scripts.tv_web_build import build_lock, compile_web
 from scripts.helper_build import compile_helper
+from scripts.lifecycle_support import build_lifecycle_gate
 from scripts.home_assets import THEME_FILES
 from scripts.no_root_assets import renewal_service_assets, updater_sources
 
@@ -249,15 +250,7 @@ def stage_updater(payload):
 
 def stage_installer_support(payload, work):
     """Independent static support; never alter a pinned Helper package."""
-    target = Path(payload) / 'installer-support'
-    target.mkdir(parents=True, exist_ok=True)
-    environment = dict(os.environ, ZIG_GLOBAL_CACHE_DIR=str(Path(work) / 'zig-global-cache'),
-                       ZIG_LOCAL_CACHE_DIR=str(Path(work) / 'zig-cache'))
-    name = 'lifecycle-gate'
-    subprocess.run([sys.executable, '-m', 'ziglang', 'cc', '-target', 'arm-linux-musleabi',
-                    '-std=c99', '-Wall', '-Wextra', '-Werror', '-Os', '-static', '-s',
-                    'native/installer/' + name + '.c', '-o', str(target / name)],
-                   cwd=ROOT, env=environment, check=True)
+    build_lifecycle_gate(Path(payload) / 'installer-support/lifecycle-gate', work)
 
 
 def _prepare_payload(payload, work, versions, *, single_tile=False):

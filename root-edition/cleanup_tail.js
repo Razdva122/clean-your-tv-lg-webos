@@ -759,8 +759,7 @@ async function compositorStock(capture) {
   });
   return proof;
 }
-async function absent() {
-  if (exists(bootRoot)) throw Error('boot-session-remains');
+async function installedApps() {
   var inventory;
   try {
     inventory = (await rpc('com.webos.applicationManager/dev/listApps', {}))
@@ -769,6 +768,11 @@ async function absent() {
     if (error.message !== 'cleanup-readback-unavailable') throw error;
     inventory = (await rpc('com.webos.applicationManager/listApps', {})).apps;
   }
+  return inventory;
+}
+async function absent() {
+  if (exists(bootRoot)) throw Error('boot-session-remains');
+  var inventory = await installedApps();
   if (
     !Array.isArray(inventory) ||
     inventory.some(function (a) {
@@ -1297,6 +1301,39 @@ function retireHostStages() {
     retire(stage, null, null, true, true);
   });
 }
+async function removeInstallerTile() {
+  const tile = 'io.github.razdva122.cytvinstaller';
+  const prefix = '/media/developer/apps/usr/palm/';
+  async function tileAbsent() {
+    const inventory = await installedApps();
+    if (
+      !Array.isArray(inventory) ||
+      inventory.some(function (app) {
+        return !object(app) || typeof app.id !== 'string';
+      })
+    )
+      throw Error('cleanup-readback-malformed');
+    return (
+      !inventory.some(function (app) {
+        return app.id === tile;
+      }) &&
+      !exists(prefix + 'applications/' + tile) &&
+      !exists(prefix + 'packages/' + tile)
+    );
+  }
+  if (await tileAbsent()) return;
+  await rpc('com.webos.appInstallService/dev/remove', {
+    id: tile,
+    subscribe: false
+  });
+  const deadline = Date.now() + 45000;
+  while (!(await tileAbsent())) {
+    if (Date.now() >= deadline) throw Error('package-absence-unverified');
+    await new Promise(function (resolve) {
+      setTimeout(resolve, 500);
+    });
+  }
+}
 function completion() {
   return {
     operation: id,
@@ -1459,6 +1496,7 @@ function canRecheckBoot() {
       packageReceipts();
       if (
         mode === 'verify' ||
+        mode === 'remove-installer' ||
         mode === 'finalize' ||
         record.final_fence === lease.id ||
         record.stage === 'verified-clean'
@@ -1484,6 +1522,7 @@ function canRecheckBoot() {
         // Keep all original lock inodes and receipts untouched.
         retireHostStages();
         await absent();
+        if (mode === 'remove-installer') await removeInstallerTile();
         if (
           pendingFinal ||
           ((mode === 'finalize' || mode === 'finish') && !record.final_fence)

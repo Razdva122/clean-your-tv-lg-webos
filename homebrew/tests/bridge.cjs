@@ -591,6 +591,66 @@ async function rejects(fn, expectedMessage) {
       ].concat(fixture[1])
     );
   }
+  var cleanupBridge = loadBridge({
+    returnValue: true,
+    stdoutString: JSON.stringify({ state: 'recovery_required' })
+  });
+  for (var [method, action] of [
+    ['cleanRemove', 'homebrew-remove'],
+    ['cleanStatus', 'homebrew-remove-status'],
+    ['removeInstaller', 'homebrew-remove-tile']
+  ]) {
+    await rejects(function () {
+      return cleanupBridge[method](ID + ' --payload /tmp');
+    });
+    await cleanupBridge[method](ID);
+    assert(
+      calls[calls.length - 1].body.command.endsWith(
+        ' ' + action + ' --operation ' + ID
+      )
+    );
+    await rejects(function () {
+      return bootstrap.run(
+        [action, '--operation', ID, '--payload', '/tmp'],
+        deps
+      );
+    });
+    await rejects(function () {
+      return bootstrap.run([action, '--operation'], deps);
+    });
+  }
+  var collected = [];
+  deps.runtime.removal = function (payload, pin, id, action) {
+    collected.push([id, action]);
+    return Promise.resolve(
+      action === 'homebrew-remove-tile' ? { state: 'complete' } : null
+    );
+  };
+  deps.runtime.stage = function (state, full) {
+    collected.push(full);
+    return priorStage(state, full);
+  };
+  deps.execute = function (exe, args) {
+    executed.push({ exe: exe, args: args });
+    return Promise.resolve(JSON.stringify({ state: 'recovery_required' }));
+  };
+  await bootstrap.run(['homebrew-remove-status', '--operation', ID], deps);
+  assert(!executed[executed.length - 1].args.includes('--payload'));
+  await bootstrap.run(['homebrew-remove', '--operation', ID], deps);
+  assert(executed[executed.length - 1].args.includes('--payload'));
+  assert.equal(
+    (await bootstrap.run(['homebrew-remove-tile', '--operation', ID], deps))
+      .state,
+    'complete'
+  );
+  assert.deepEqual(collected, [
+    [ID, 'homebrew-remove-status'],
+    false,
+    [ID, 'homebrew-remove'],
+    'removal',
+    [ID, 'homebrew-remove-tile']
+  ]);
+  deps.runtime.stage = priorStage;
   deps.process.geteuid = function () {
     return 1000;
   };

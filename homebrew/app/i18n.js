@@ -919,6 +919,193 @@
   Object.keys(rows).forEach(function (code) {
     rows[code] = rows[code].concat(tileCopy[code]);
   });
+  var removalCopy = {
+    en: [
+      'Keep this installer tile until removal is verified. A full TV restart may be required.',
+      'Restoring LG Home and its Home button control…',
+      'Removing Clean Your TV components…',
+      'Removing saved Clean Your TV files and settings…',
+      'Clean Your TV was removed and LG Home was restored. You can now remove this installer tile.',
+      'The saved removal can continue. Choose Continue original operation.',
+      'Remove installer tile',
+      'Remove this installer tile from the TV?',
+      'The removal request could not be saved. No removal was started.',
+      'Could not confirm removal of this installer tile. Choose Check status.',
+      'Continue after restarting'
+    ],
+    ru: [
+      'Оставьте установщик Clean Your TV на телевизоре до завершения проверки. Может потребоваться полный перезапуск телевизора.',
+      'Восстанавливаются LG Home и управление кнопкой Home…',
+      'Удаляются компоненты Clean Your TV…',
+      'Удаляются сохранённые файлы и настройки Clean Your TV…',
+      'Удаление Clean Your TV и восстановление LG Home проверены. Теперь можно удалить плитку установщика.',
+      'Сохранённую операцию удаления можно продолжить. Выберите «Продолжить исходную операцию».',
+      'Удалить плитку установщика',
+      'Удалить плитку установщика с телевизора?',
+      'Не удалось сохранить запрос. Удаление не запущено.',
+      'Не удалось подтвердить удаление плитки установщика. Выберите «Проверить статус».',
+      'Продолжить после перезапуска'
+    ],
+    cs: [
+      'Ponechte instalátor Clean Your TV v televizoru až do ověření odebrání. Může být nutné televizor úplně restartovat.',
+      'Obnovuje se LG Home a ovládání tlačítka Home…',
+      'Odebírají se součásti Clean Your TV…',
+      'Odstraňují se uložené soubory a nastavení Clean Your TV…',
+      'Clean Your TV byl odebrán a LG Home byl obnoven. Nyní můžete odebrat dlaždici instalátoru.',
+      'V uloženém odebrání lze pokračovat. Zvolte pokračování v původní operaci.',
+      'Odebrat dlaždici instalátoru',
+      'Odebrat dlaždici instalátoru z televizoru?',
+      'Požadavek nešlo uložit. Odebrání se nespustilo.',
+      'Odebrání dlaždice instalátoru nešlo ověřit. Zkontrolujte stav.',
+      'Pokračovat po restartování'
+    ],
+    de: [
+      'Behalten Sie diese Installer-Kachel, bis die Entfernung bestätigt ist. Ein vollständiger Neustart des Fernsehers kann erforderlich sein.',
+      'LG Home und die Steuerung der Home-Taste werden wiederhergestellt…',
+      'Die Komponenten von Clean Your TV werden entfernt…',
+      'Gespeicherte Dateien und Einstellungen von Clean Your TV werden entfernt…',
+      'Clean Your TV wurde entfernt und LG Home wiederhergestellt. Sie können jetzt die Installer-Kachel entfernen.',
+      'Die gespeicherte Entfernung kann fortgesetzt werden. Wählen Sie den ursprünglichen Vorgang.',
+      'Installer-Kachel entfernen',
+      'Die Installer-Kachel vom Fernseher entfernen?',
+      'Die Anfrage konnte nicht gespeichert werden. Die Entfernung wurde nicht gestartet.',
+      'Die Entfernung der Installer-Kachel konnte nicht bestätigt werden. Prüfen Sie den Status.',
+      'Nach dem Neustart fortfahren'
+    ],
+    es: [
+      'Conserva el instalador de Clean Your TV hasta verificar la eliminación. Es posible que tengas que reiniciar por completo el televisor.',
+      'Restaurando LG Home y el control del botón Home…',
+      'Eliminando los componentes de Clean Your TV…',
+      'Eliminando los archivos y ajustes guardados de Clean Your TV…',
+      'Se ha eliminado Clean Your TV y se ha restaurado LG Home. Ya puedes eliminar el icono del instalador.',
+      'Puedes continuar con la eliminación guardada. Selecciona la opción para continuar con la operación original.',
+      'Eliminar el icono del instalador',
+      '¿Eliminar el icono del instalador del televisor?',
+      'No se pudo guardar la solicitud. La eliminación no se inició.',
+      'No se pudo confirmar la eliminación del icono del instalador. Comprueba el estado.',
+      'Continuar tras reiniciar'
+    ],
+    'pt-BR': [
+      'Mantenha o instalador do Clean Your TV até a remoção ser confirmada. Talvez seja necessário reiniciar completamente a TV.',
+      'Restaurando o LG Home e o controle do botão Home…',
+      'Removendo os componentes do Clean Your TV…',
+      'Apagando arquivos e configurações salvas do Clean Your TV…',
+      'O Clean Your TV foi removido e o LG Home foi restaurado. Agora você pode remover o ícone do instalador.',
+      'A remoção salva pode continuar. Selecione a opção para continuar a operação original.',
+      'Remover ícone do instalador',
+      'Remover o ícone do instalador da TV?',
+      'Não foi possível salvar a solicitação. A remoção não foi iniciada.',
+      'Não foi possível confirmar a remoção do ícone do instalador. Verifique o status.',
+      'Continuar após reiniciar'
+    ],
+    fr: [
+      'Gardez le programme d’installation de Clean Your TV jusqu’à la vérification de la suppression. Un redémarrage complet du téléviseur peut être nécessaire.',
+      'Restauration de LG Home et de la commande du bouton Home…',
+      'Suppression des composants de Clean Your TV…',
+      'Suppression des fichiers et réglages enregistrés de Clean Your TV…',
+      'Clean Your TV a été supprimé et LG Home a été restauré. Vous pouvez maintenant supprimer la vignette du programme d’installation.',
+      'La suppression enregistrée peut reprendre. Choisissez de reprendre l’opération d’origine.',
+      'Supprimer la vignette du programme d’installation',
+      'Supprimer la vignette du programme d’installation du téléviseur ?',
+      'La demande n’a pas pu être enregistrée. La suppression n’a pas commencé.',
+      'Impossible de confirmer la suppression de la vignette du programme d’installation. Vérifiez l’état.',
+      'Continuer après le redémarrage'
+    ],
+    it: [
+      'Mantieni il programma di installazione di Clean Your TV fino alla verifica della rimozione. Potrebbe essere necessario riavviare completamente il televisore.',
+      'Ripristino di LG Home e del controllo del tasto Home…',
+      'Rimozione dei componenti di Clean Your TV…',
+      'Rimozione dei file e delle impostazioni salvate di Clean Your TV…',
+      'Clean Your TV è stato rimosso e LG Home è stato ripristinato. Ora puoi rimuovere il riquadro del programma di installazione.',
+      'Puoi continuare la rimozione salvata. Scegli di continuare l’operazione originale.',
+      'Rimuovi riquadro di installazione',
+      'Rimuovere il riquadro del programma di installazione dal televisore?',
+      'Impossibile salvare la richiesta. La rimozione non è iniziata.',
+      'Impossibile confermare la rimozione del riquadro del programma di installazione. Controlla lo stato.',
+      'Continua dopo il riavvio'
+    ],
+    ko: [
+      '제거를 확인할 때까지 Clean Your TV 설치 프로그램을 유지하세요. TV를 완전히 다시 시작해야 할 수도 있습니다.',
+      'LG Home 및 홈 버튼 동작 복원 중…',
+      'Clean Your TV 구성 요소 제거 중…',
+      'Clean Your TV 저장 파일 및 설정 제거 중…',
+      'Clean Your TV가 제거되고 LG Home이 복원되었습니다. 이제 설치 프로그램 타일을 제거할 수 있습니다.',
+      '저장된 제거 작업을 계속할 수 있습니다. 기존 작업 계속을 선택하세요.',
+      '설치 프로그램 타일 제거',
+      'TV에서 설치 프로그램 타일을 제거할까요?',
+      '요청을 저장하지 못했습니다. 제거를 시작하지 않았습니다.',
+      '설치 프로그램 타일 제거를 확인할 수 없습니다. 상태를 확인하세요.',
+      '다시 시작한 후 계속'
+    ],
+    hi: [
+      'हटाने की पुष्टि होने तक Clean Your TV इंस्टॉलर रखें। टीवी को पूरी तरह रीस्टार्ट करना पड़ सकता है।',
+      'LG Home और Home बटन का नियंत्रण बहाल हो रहा है…',
+      'Clean Your TV के घटक हटाए जा रहे हैं…',
+      'Clean Your TV की सहेजी गई फ़ाइलें और सेटिंग हटाई जा रही हैं…',
+      'Clean Your TV हटा दिया गया है और LG Home बहाल है। अब आप इंस्टॉलर टाइल हटा सकते हैं।',
+      'सहेजी गई हटाने की प्रक्रिया जारी रख सकते हैं। मूल कार्रवाई जारी रखने का विकल्प चुनें।',
+      'इंस्टॉलर टाइल हटाएँ',
+      'टीवी से इंस्टॉलर टाइल हटाएँ?',
+      'अनुरोध सहेजा नहीं जा सका। हटाने की प्रक्रिया शुरू नहीं हुई।',
+      'इंस्टॉलर टाइल हटाने की पुष्टि नहीं हो सकी। स्थिति जाँचें।',
+      'रीस्टार्ट करने के बाद जारी रखें'
+    ],
+    pl: [
+      'Zachowaj instalator Clean Your TV do czasu potwierdzenia usunięcia. Może być konieczne pełne ponowne uruchomienie telewizora.',
+      'Przywracanie LG Home i działania przycisku Home…',
+      'Usuwanie składników Clean Your TV…',
+      'Usuwanie zapisanych plików i ustawień Clean Your TV…',
+      'Usunięto Clean Your TV i przywrócono LG Home. Możesz teraz usunąć kafelek instalatora.',
+      'Można wznowić zapisane usuwanie. Wybierz kontynuowanie pierwotnej operacji.',
+      'Usuń kafelek instalatora',
+      'Usunąć kafelek instalatora z telewizora?',
+      'Nie udało się zapisać żądania. Usuwanie nie zostało rozpoczęte.',
+      'Nie udało się potwierdzić usunięcia kafelka instalatora. Sprawdź stan.',
+      'Kontynuuj po ponownym uruchomieniu'
+    ],
+    'zh-Hans': [
+      '请保留 Clean Your TV 安装程序，直到确认移除完成。电视可能需要完全重启。',
+      '正在恢复 LG Home 和 Home 键功能…',
+      '正在移除 Clean Your TV 组件…',
+      '正在删除 Clean Your TV 保存的文件和设置…',
+      '已移除 Clean Your TV 并恢复 LG Home。现在可以移除安装程序图标。',
+      '可以继续已保存的移除操作。请选择继续原操作。',
+      '移除安装程序图标',
+      '从电视上移除安装程序图标？',
+      '无法保存请求。尚未开始移除。',
+      '无法确认安装程序图标已移除。请检查状态。',
+      '重启后继续'
+    ],
+    'zh-Hant': [
+      '請保留 Clean Your TV 安裝程式，直到確認移除完成。電視可能需要完全重新啟動。',
+      '正在還原 LG Home 和 Home 鍵功能…',
+      '正在移除 Clean Your TV 元件…',
+      '正在刪除 Clean Your TV 儲存的檔案和設定…',
+      '已移除 Clean Your TV 並還原 LG Home。現在可以移除安裝程式圖示。',
+      '可以繼續已儲存的移除操作。請選擇繼續原操作。',
+      '移除安裝程式圖示',
+      '從電視上移除安裝程式圖示？',
+      '無法儲存要求。尚未開始移除。',
+      '無法確認安裝程式圖示已移除。請檢查狀態。',
+      '重新啟動後繼續'
+    ]
+  };
+  keys.push(
+    'cleanKeepInstaller',
+    'cleanRestoring',
+    'cleanPackages',
+    'cleanFiles',
+    'cleanVerified',
+    'cleanContinue',
+    'removeInstaller',
+    'removeInstallerConfirm',
+    'cleanRequestNotSaved',
+    'cleanTileUnverified',
+    'cleanContinueAfterRestart'
+  );
+  Object.keys(rows).forEach(function (code) {
+    rows[code] = rows[code].concat(removalCopy[code]);
+  });
   var names = {
     'en': 'English',
     'de': 'Deutsch',

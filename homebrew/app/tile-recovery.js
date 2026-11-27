@@ -2,6 +2,10 @@
   'use strict';
   if (root.CYTVTileLaunch.openDebloat()) return;
   document.addEventListener('webOSRelaunch', root.CYTVTileLaunch.openDebloat);
+  document.addEventListener('webOSRelaunch', function (event) {
+    if (root.CYTVTileEdition === null)
+      root.CYTVTileLaunch.openMaintenance(event);
+  });
   root.HomeI18n.ready(function () {
     var bound = window.CYTVTileEdition;
     var edition = bound;

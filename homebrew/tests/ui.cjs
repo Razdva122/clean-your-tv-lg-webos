@@ -85,7 +85,18 @@ const SOURCE_APP = path.resolve(__dirname, '../app'),
     'homebrewDeniedBody',
     'existingSetup',
     'readyHome',
-    'removeProductConfirm'
+    'removeProductConfirm',
+    'cleanKeepInstaller',
+    'cleanRestoring',
+    'cleanPackages',
+    'cleanFiles',
+    'cleanVerified',
+    'cleanContinue',
+    'removeInstaller',
+    'removeInstallerConfirm',
+    'cleanRequestNotSaved',
+    'cleanTileUnverified',
+    'cleanContinueAfterRestart'
   );
   for (const locale of Object.keys(sandbox.window.InstallerI18n.names)) {
     sandbox.window.InstallerI18n.set(locale);
@@ -170,6 +181,7 @@ const SOURCE_APP = path.resolve(__dirname, '../app'),
         if (!localStorage.getItem('cytv.installer.language'))
           localStorage.setItem('cytv.installer.language', locale);
         window.calls = [];
+        window.cleanRequests = [];
         window.model = state;
         if (state.candidate) window.InstallerCandidate = state.candidate;
         window.saved = ID;
@@ -195,7 +207,33 @@ const SOURCE_APP = path.resolve(__dirname, '../app'),
               );
               return;
             }
-            if (command.includes(' status '))
+            const clean = command.match(
+              / (homebrew-remove(?:-status|-tile)?) --operation ([a-f0-9]{32})(?: |$)/
+            );
+            if (clean) {
+              window.cleanRequests.push({
+                action: clean[1],
+                operation: clean[2],
+                saved: localStorage.getItem('cytv.installer.clean-removal')
+              });
+              if (
+                clean[1] === 'homebrew-remove' &&
+                window.model.loseCleanReply
+              ) {
+                this.onservicecallback(JSON.stringify({ returnValue: false }));
+                return;
+              }
+              reply = (clean[1] === 'homebrew-remove-tile'
+                ? window.model.tileRemoval
+                : window.model.cleanStatus) || {
+                action: 'remove',
+                state: 'pending',
+                stage: 'requested',
+                current: false,
+                restart_required: false,
+                can_resume: false
+              };
+            } else if (command.includes(' status '))
               reply = window.model.status || {
                 state: 'pending',
                 stage: 'root-deploy',
@@ -606,6 +644,146 @@ const SOURCE_APP = path.resolve(__dirname, '../app'),
     );
     await p.keyboard.press('Escape');
     assert.equal(await p.evaluate(() => document.activeElement.id), 'remove');
+    await f.context.close();
+    f = await fixture({ state: 'installed', loseCleanReply: true });
+    p = f.page;
+    await p.locator('#remove').click();
+    await p.locator('#confirm').click();
+    const removal = p.locator('[data-screen="clean-removal"]');
+    await removal.locator('#save-report').waitFor();
+    const cleanId = await p.evaluate(() =>
+      localStorage.getItem('cytv.installer.clean-removal')
+    );
+    assert.match(cleanId, /^[a-f0-9]{32}$/);
+    assert.deepEqual(await p.evaluate(() => cleanRequests), [
+      { action: 'homebrew-remove', operation: cleanId, saved: cleanId }
+    ]);
+    assert.equal(
+      await p.evaluate(() => localStorage.getItem('cytv.installer.operation')),
+      null
+    );
+    assert.equal(
+      await p.locator('#continue-removal,#remove-installer').count(),
+      0
+    );
+    await p.locator('#save-report').click();
+    await p.locator('#diagnostic-json').waitFor();
+    assert.equal(
+      JSON.parse(await p.locator('#diagnostic-json').textContent()).action,
+      'uninstall'
+    );
+    await p.locator('#back').click();
+    await p.reload();
+    await p.waitForSelector('[data-clean-stage="requested"]');
+    assert.deepEqual(await p.evaluate(() => cleanRequests), [
+      { action: 'homebrew-remove-status', operation: cleanId, saved: cleanId }
+    ]);
+    for (const [status, selector] of [
+      [
+        {
+          state: 'unknown',
+          stage: 'unknown',
+          code: 'unknown-operation',
+          can_resume: false
+        },
+        '#continue-removal'
+      ],
+      [
+        {
+          state: 'pending',
+          stage: 'restart-required',
+          restart_required: true,
+          can_resume: true
+        },
+        '[data-clean-stage="restart-required"]'
+      ],
+      [
+        {
+          state: 'recovery_required',
+          stage: 'restart-required',
+          can_resume: true
+        },
+        '#continue-removal'
+      ]
+    ]) {
+      await p.evaluate((status) => {
+        model.cleanStatus = { action: 'remove', current: false, ...status };
+      }, status);
+      await p.locator('#refresh').click();
+      await p.locator(selector).waitFor();
+      assert.equal(await p.locator('#remove-installer').count(), 0);
+      if (status.restart_required)
+        assert.equal(
+          await p.locator('#continue-removal').textContent(),
+          'Continue after restarting'
+        );
+    }
+    assert(
+      (await p.evaluate(() => cleanRequests)).every(
+        (request) => request.action === 'homebrew-remove-status'
+      )
+    );
+    await p.evaluate(() => {
+      model.loseCleanReply = false;
+      model.cleanStatus = {
+        action: 'remove',
+        state: 'unknown',
+        can_resume: false
+      };
+    });
+    await p.locator('#continue-removal').click();
+    await p.waitForSelector('[data-clean-state="unknown"]');
+    assert.deepEqual((await p.evaluate(() => cleanRequests)).at(-1), {
+      action: 'homebrew-remove',
+      operation: cleanId,
+      saved: cleanId
+    });
+    for (const current of [false, true]) {
+      await p.evaluate((current) => {
+        model.cleanStatus = {
+          action: 'remove',
+          state: 'complete',
+          stage: 'verified-clean',
+          current
+        };
+      }, current);
+      await p.locator('#refresh').click();
+      await p.waitForSelector(
+        `[data-clean-state="${current ? 'complete' : 'unknown'}"]`
+      );
+      assert.equal(
+        await p.locator('#remove-installer').count(),
+        Number(current)
+      );
+    }
+    assert.equal(
+      (await p.evaluate(() => cleanRequests)).filter(
+        (request) => request.action === 'homebrew-remove-tile'
+      ).length,
+      0
+    );
+    await p.evaluate(() => {
+      model.tileRemoval = {
+        action: 'remove',
+        state: 'complete',
+        stage: 'verified-clean',
+        code: 'installer-removed',
+        current: true
+      };
+    });
+    await p.locator('#remove-installer').click();
+    await p.waitForSelector('[data-confirm-action="remove-installer"]');
+    await p.locator('#confirm').click();
+    await p.waitForFunction(
+      () => cleanRequests.at(-1).action === 'homebrew-remove-tile'
+    );
+    assert.deepEqual((await p.evaluate(() => cleanRequests)).at(-1), {
+      action: 'homebrew-remove-tile',
+      operation: cleanId,
+      saved: cleanId
+    });
+    await p.waitForSelector('[data-clean-state="complete"]');
+    assert.equal(await p.locator('#remove-installer,#refresh').count(), 0);
     await f.context.close();
     f = await fixture({ state: 'fresh', loseReply: true });
     p = f.page;
