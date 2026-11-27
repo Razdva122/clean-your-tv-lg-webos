@@ -11,21 +11,23 @@ import unittest
 class HelperStartup(unittest.TestCase):
     def test_current_controller_without_ready_is_not_success_and_exit_is_reported(self):
         from cytv.helper_startup import PROGRAM
-        with tempfile.TemporaryDirectory() as tmp:
+        with tempfile.TemporaryDirectory(prefix="cytv-helper's-") as tmp:
             root = Path(tmp)
             state = root / 'state'
             state.mkdir()
             proc = root / 'proc/1234'
             proc.mkdir(parents=True)
             (state / 'controller.pid').write_text('1234')
-            (proc / 'cmdline').write_bytes(('node\0' + str(root / 'native.js') + '\0').encode())
+            native = (root / 'native.js').as_posix()
+            (proc / 'cmdline').write_bytes(('node\0' + native + '\0').encode())
             generation = 'I' + 'a' * 32
             start = {'event': 'start', 'pid': 1234, 'startupSchema': 1, 'generation': generation}
             log = state / 'controller.log'
             def observe(events, expected=generation):
                 log.write_text('\n'.join(json.dumps(e) for e in events) + '\n')
-                source = PROGRAM.replace('/media/developer/apps/usr/palm/applications/com.local.nativehome', str(root))
-                source = source.replace("'/proc/'", json.dumps(str(root / 'proc') + '/'))
+                source = PROGRAM.replace("'/media/developer/apps/usr/palm/applications/com.local.nativehome'",
+                                         json.dumps(root.as_posix()))
+                source = source.replace("'/proc/'", json.dumps((root / 'proc').as_posix() + '/'))
                 reply = subprocess.run(['node', '-e', source, expected], capture_output=True, check=True, text=True)
                 return json.loads(reply.stdout)
             self.assertEqual(observe([start, {'event': 'worker-start'}])['state'], 'starting')
@@ -43,9 +45,9 @@ class HelperStartup(unittest.TestCase):
             exiting = observe([start, ready_event, {'event': 'worker', 'message': 'EXIT 22'}])
             self.assertEqual(exiting['state'], 'stopped')
             self.assertNotIn('relay_exit_code', exiting)
-            (proc / 'cmdline').write_bytes(('node\0/usr/bin/unrelated.js\0' + str(root / 'native.js') + '\0').encode())
+            (proc / 'cmdline').write_bytes(('node\0/usr/bin/unrelated.js\0' + native + '\0').encode())
             self.assertFalse(observe([start, {'event': 'worker-ready', 'homeEnabled': True}])['controller_running'])
-            (proc / 'cmdline').write_bytes(('node\0' + str(root / 'native.js') + '\0').encode())
+            (proc / 'cmdline').write_bytes(('node\0' + native + '\0').encode())
             cmdline = proc / 'cmdline'
             cmdline.rename(proc / 'saved-cmdline')
             cmdline.mkdir()  # an unreadable cmdline, distinct from a vanished process
