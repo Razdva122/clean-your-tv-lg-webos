@@ -9,6 +9,7 @@
   var available = false;
   var popupUnavailable = false;
   var inlineFrame = null;
+  var inlinePower = null;
   var inlineKeys = {};
   var lastPointer = null;
   var inlinePointerOrigin = null;
@@ -365,6 +366,10 @@
     );
   }
   function releaseMedia() {
+    if (inlinePower) {
+      inlinePower.stop();
+      inlinePower = null;
+    }
     if (inlineFrame) {
       inlineFrame.parentNode.removeChild(inlineFrame);
       inlineFrame = null;
@@ -789,6 +794,98 @@
     delete settings.clock;
     return JSON.stringify(settings);
   }
+  // The inline renderer has no popup owner. Use Home's own public tvpower
+  // subscription for exactly the lifetime of the visible, responsive frame.
+  function watchInlinePower(frame) {
+    var uri = 'luna://com.webos.service.tvpower/power/';
+    var name = 'com.gathin.tvhome.inline';
+    var subscription = null;
+    var response = null;
+    var deadline, responseTimer;
+    var lastPaint,
+      retryAt = 0;
+    function cancel(bridge) {
+      try {
+        if (bridge) bridge.cancel();
+      } catch (_) {}
+    }
+    function stop() {
+      var oldSubscription = subscription,
+        oldResponse = response;
+      subscription = response = null;
+      root.clearTimeout(deadline);
+      root.clearTimeout(responseTimer);
+      cancel(oldSubscription);
+      cancel(oldResponse);
+    }
+    function pulse() {
+      lastPaint = now();
+      root.clearTimeout(deadline);
+      deadline = root.setTimeout(stop, 3000);
+      if (subscription || lastPaint < retryAt) return;
+      retryAt = lastPaint + 5000;
+      try {
+        var bridge = new root.PalmServiceBridge();
+        subscription = bridge;
+        bridge.onservicecallback = function (raw) {
+          if (bridge !== subscription) return;
+          try {
+            var request = JSON.parse(raw);
+            if (request.returnValue !== true) return stop();
+            if (request.timestamp === undefined) return;
+            if (
+              (typeof request.timestamp !== 'string' &&
+                !Number.isSafeInteger(request.timestamp)) ||
+              !/^[0-9]{1,32}$/.test(String(request.timestamp)) ||
+              response
+            )
+              return stop();
+            var elapsed = now() - lastPaint;
+            var defer =
+              request.state === 'Active' &&
+              inlineFrame === frame &&
+              !doc.hidden &&
+              localFocused &&
+              doc.hasFocus() &&
+              visible(frame) &&
+              elapsed >= 0 &&
+              elapsed < 3000;
+            var reply = new root.PalmServiceBridge();
+            response = reply;
+            responseTimer = root.setTimeout(stop, 1000);
+            reply.onservicecallback = function (rawReply) {
+              if (response !== reply) return;
+              try {
+                if (JSON.parse(rawReply).returnValue !== true) return stop();
+              } catch (_) {
+                return stop();
+              }
+              response = null;
+              root.clearTimeout(responseTimer);
+              cancel(reply);
+            };
+            reply.call(
+              uri + 'responseScreenSaverRequest',
+              JSON.stringify({
+                clientName: name,
+                timestamp: request.timestamp,
+                ack: !defer
+              })
+            );
+          } catch (_) {
+            stop();
+          }
+        };
+        bridge.call(
+          uri + 'registerScreenSaverRequest',
+          JSON.stringify({ clientName: name, subscribe: true })
+        );
+      } catch (_) {
+        stop();
+      }
+    }
+    return { pulse: pulse, stop: stop };
+  }
   function dismissInline() {
     if (!inlineFrame) return;
     handoff = actionPending = null;
@@ -1062,6 +1159,10 @@
         root.clearTimeout(handoffTimer);
         actionPending = null;
         inlineFrame.classList.add('visible');
+        if (!inlinePower) inlinePower = watchInlinePower(inlineFrame);
+        inlinePower.pulse();
+      } else if (event.data === 'cytv-screensaver-alive' && inlinePower) {
+        inlinePower.pulse();
       } else if (event.data === 'cytv-screensaver-closed') dismissInline();
     }
     function inlineKey(event) {
