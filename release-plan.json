@@ -112,10 +112,11 @@
     }
   ],
   "excluded": [],
-  "acceptance": "",
+  "acceptance": "Project LG OLED55C3RLA on firmware 43.21.71 and webOS SDK 11.2.0. RC3 macOS ARM64 Doctor verified advertised Home and Back. Matching RC2 device inputs cover No-root upgrade, Root startup, network HOME, both verified clean removals with confirmed software restarts, fresh Root admission and individual Debloat restoration. Exact Android and protected System verification passed. Physical remote, standby, cold boot, audio, live OTA/rollback and reporter hardware were not exercised. Evidence: docs/history/2026-11-28-release-1.30.0-final-acceptance.md.",
   "build": {
     "run_id": 46070775288,
     "attempt": 1,
     "source": "dc9196fd1258cd38900db023f4b9cbd3ce76c68a"
-  }
+  },
+  "acceptance_build": "46070775288:1"
 }
