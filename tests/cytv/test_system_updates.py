@@ -236,6 +236,7 @@ class SystemBootstrapTests(unittest.TestCase):
             self.assertTrue(retained.call_args.kwargs['allow_partial'])
         self.assertIsNone(self.store.pending(profile))
 
+    @unittest.skipUnless(os.name == 'posix', 'TV staging verifier requires POSIX ownership, modes and nofollow')
     def test_reused_root_upload_rejects_changed_bytes_extra_files_and_links(self):
         import subprocess,sys
         from cytv.system_bootstrap import VERIFY
