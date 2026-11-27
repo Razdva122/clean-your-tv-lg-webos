@@ -123,6 +123,8 @@ For your own No-root TV after a factory reset, choose **Reconnect after factory 
 
 If setup is unfinished on desktop, choose **Review recovery options** on the result screen and **Continue** at **Check recovery options?**. The wizard uses the same saved TV connection. For No-root, use **Check TV status** first if the package result is unknown and that button is offered. Confirm the offered change separately. If setup stays blocked, keep the saved connection and recovery data.
 
+In the CLI, starting without a subcommand means installation. If it redirects an unfinished installation to Recovery, it shows a separate `cytv uninstall` command. To remove CYTV, exit recovery and run that command using the same executable, saved TV connection and any custom `--data-dir` option. Confirm removal separately; it also removes installed No-root Home/Helper and saved preferences.
+
 If No-root offers **Retry storage check**, choose it to repeat the read-only check on the same TV. Confirm installation separately after the check passes. If the installer finds an unfinished operation, use **Review recovery options**.
 
 If the desktop installer verifies the packages but Home doesn't open Clean Your TV, choose **Home button diagnostics** for No-root or **Check TV status** for Root on the results screen. No-root shows your recorded result. Use **Save diagnostic report** to keep a copy.

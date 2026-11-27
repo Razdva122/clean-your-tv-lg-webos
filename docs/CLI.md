@@ -459,6 +459,20 @@ See [replacement and recovery](RECOVERY.md#replace-the-root-system-updater-candi
 
 ## Interrupted operations
 
+Starting the CLI without a subcommand means `install`. When an unfinished
+installation redirects it to Recovery, the interactive console also shows a
+separate removal command for the saved edition and connection, for example:
+
+```sh
+cytv uninstall --edition root --root-variant node012-beta
+```
+
+To request removal, exit recovery and run the displayed command using the same
+executable and saved TV connection. Retain any custom `--data-dir` option.
+Removal requires separate confirmation and removes installed CYTV components,
+including No-root Home/Helper and saved preferences. The hint itself does not
+start removal or discard recovery records.
+
 If connection stops at `ssh-connect` with `ssh-identity-changed` /
 `BadHostKeyException`, recovery has not inspected the TV. Preserve the saved
 profile and pending receipts; follow [independent identity verification and
