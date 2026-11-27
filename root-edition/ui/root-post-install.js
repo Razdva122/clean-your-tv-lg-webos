@@ -14,6 +14,8 @@
       webOSPromotionVideo: 'Turn off webOS promotional video',
       livePlus: 'Turn off Live Plus',
       adCookie: 'Turn off advertising cookies',
+      dbgLogUpload: 'Turn off debug log uploads to LG',
+      faultLogUpload: 'Turn off fault log uploads to LG',
       lmt: 'Limit ad tracking',
       aiNudge: 'Turn off Smart Tips',
       sportsAlarm: 'Turn off sports notifications'
@@ -282,6 +284,11 @@
         render();
       });
   }
+  function stateLabel(key, value) {
+    if (key === 'dbgLogUpload' || key === 'faultLogUpload')
+      return value === true ? 'On' : value === false ? 'Off' : null;
+    return value === 'on' ? 'On' : value === 'off' ? 'Off' : null;
+  }
   function renderDebloat() {
     var status = node(
       card,
@@ -289,7 +296,7 @@
       notice ||
         (busy
           ? 'Checking LG settings…'
-          : 'Select which LG ads and recommendations to change.')
+          : 'Select the LG settings you want to change.')
     );
     status.setAttribute('role', 'status');
     var rows = node(card, 'div');
@@ -314,7 +321,7 @@
         busy ||
         !keys.length ||
         keys.some(function (key) {
-          return settings[key].value !== 'on' && settings[key].value !== 'off';
+          return !stateLabel(key, settings[key].value);
         });
       restore.disabled =
         busy ||
@@ -335,19 +342,13 @@
           }),
           detail = Object.prototype.hasOwnProperty.call(outcomes, results[key])
             ? outcomes[results[key]]
-            : option.value === 'on'
-              ? 'On'
-              : option.value === 'off'
-                ? 'Off'
-                : 'This setting is unavailable on this TV.';
+            : stateLabel(key, option.value) ||
+              'This setting is unavailable on this TV.';
         control.id = 'cytvDebloat-' + key;
         control.setAttribute('role', 'checkbox');
         control.setAttribute('aria-checked', String(!!selected[key]));
         control.disabled =
-          busy ||
-          (option.value !== 'on' &&
-            option.value !== 'off' &&
-            option.saved !== true);
+          busy || (!stateLabel(key, option.value) && option.saved !== true);
         node(row, 'span', detail);
       });
     update();

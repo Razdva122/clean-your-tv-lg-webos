@@ -126,7 +126,7 @@ function parse(args) {
     debloatAction(action) &&
     action !== 'debloat-status' &&
     (typeof request.settings !== 'string' ||
-      !/^[a-zA-Z][a-zA-Z0-9]{0,31}(,[a-zA-Z][a-zA-Z0-9]{0,31}){0,10}$/.test(
+      !/^[a-zA-Z][a-zA-Z0-9]{0,31}(,[a-zA-Z][a-zA-Z0-9]{0,31}){0,12}$/.test(
         request.settings
       ))
   )

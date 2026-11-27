@@ -1250,7 +1250,7 @@ class Wizard(QMainWindow):
                 text = WrappedLabel(tr(label))
                 toggle = ToggleSwitch(tr(label), tr('Selected'), tr('Keep current'))
                 toggle.setObjectName('debloat-' + key)
-                toggle.setChecked(not maintenance)
+                toggle.setChecked(not maintenance and key not in debloat.LOG_UPLOADS)
                 text.setBuddy(toggle)
                 row.addWidget(text, 1)
                 row.addWidget(toggle)

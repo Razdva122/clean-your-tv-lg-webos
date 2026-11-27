@@ -216,6 +216,8 @@ Prima di scegliere un tema, usa **Debloat** per selezionare le impostazioni LG d
 
 Entrambe le edizioni possono disattivare le trasmissioni promozionali LG se il televisore offre questa impostazione.
 
+In Privacy puoi disattivare separatamente l’invio a LG dei log di debug e dei log degli errori. Se il valore originale è illeggibile, l’impostazione viene saltata. In modalità No-root il firmware può rifiutare la modifica. Alcuni televisori riattivano l’invio dei log di debug all’avvio. Controlla l’impostazione dopo il riavvio.
+
 Per annullare una singola modifica, apri Debloat in Manutenzione con la stessa connessione salvata del televisore. Seleziona l’impostazione, verifica il valore originale e conferma. Sui televisori compatibili puoi disattivare l’avvio automatico di LG Channels in Tutte le impostazioni → Generale → Canali → Avvio automatico LG Channels.
 
 Durante la disinstallazione puoi ripristinare le impostazioni originali salvate da Debloat. Se salti il ripristino, la disinstallazione prosegue senza modificare queste impostazioni.

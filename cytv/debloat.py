@@ -5,7 +5,7 @@ import shlex
 import time
 
 from . import prompts
-from .debloat_policy import GROUPS, SETTINGS
+from .debloat_policy import GROUPS, LOG_UPLOADS, SETTINGS, valid_value, valid_record
 from .errors import UserError, TVRejected
 from .i18n import translate as tr
 from .state import private_write
@@ -29,6 +29,8 @@ SETTING_NAMES = {
     'livePromotion': 'Promotions while watching',
     'webOSPromotionVideo': 'webOS promotional video',
     'livePlus': 'Live Plus',
+    'dbgLogUpload': 'Debug log uploads to LG',
+    'faultLogUpload': 'Fault log uploads to LG',
     'adCookie': 'Advertising cookies',
     'lmt': 'Ad tracking limit',
     'aiNudge': 'Smart Tips',
@@ -68,7 +70,8 @@ try {
     var info = fs.statSync(path);
     if (info.isFile() && info.size <= 1048576) {
         var data = JSON.parse(fs.readFileSync(path, 'utf8'));
-        if (data[args[1]] === 'on' || data[args[1]] === 'off') value = data[args[1]];
+        var setting = data[args[1]];
+        if (typeof setting === 'boolean' || setting === 'on' || setting === 'off') value = setting;
     }
 } catch (error) {}
 process.stdout.write(JSON.stringify(value));
@@ -92,25 +95,25 @@ def read(remote, category, key):
         else:
             command = shlex.join(['/usr/bin/node', '-e', READ_PREFERENCE, json.dumps([category, key])])
             value = json.loads(remote.run(command, timeout=5))
-        return value if value in ('on', 'off') else None
+        return value if valid_value(key, value) else None
     except Exception:
         return None
 
 
 def read_ssap(tv, category, key):
-    # Only Live Plus is known to be readable over paired SSAP.
-    if tv is None or key != 'livePlus':
+    if tv is None or (key != 'livePlus' and key not in LOG_UPLOADS):
         return None
     try:
         reply = tv.call('ssap://settings/getSystemSettings', {'category': category, 'keys': [key]}, timeout=5)
         value = reply.get('settings', {}).get(key) if reply.get('returnValue') is True else None
-        return value if value in ('on', 'off') else None
+        return value if valid_value(key, value) else None
     except Exception:
         return None
 
 
 def read_current(remote, category, key, tv):
-    return read(remote, category, key) or read_ssap(tv, category, key)
+    current = read(remote, category, key)
+    return current if current is not None else read_ssap(tv, category, key)
 
 
 def set_value(remote, tv, category, key, value):
@@ -120,14 +123,21 @@ def set_value(remote, tv, category, key, value):
     return remote.luna(SERVICE + 'setSystemSettings', payload, timeout=8)
 
 
-def verify_value(remote, tv, category, key, value, previous):
-    actual = read_current(remote, category, key, tv)
+def verify_value(remote, tv, category, key, value, previous, *, paired_upload=False):
+    def readback():
+        # A stale file can already contain the target before the SSAP write.
+        # If SSAP supplied the upload switch, verify through the same source.
+        if paired_upload:
+            return read_ssap(tv, category, key)
+        return read_current(remote, category, key, tv)
+
+    actual = readback()
     # The on-disk snapshot can lag the SSAP action. Retry reads only.
     for delay in (.25, .5, 1):
         if actual == value or (actual is None and previous is None):
             break
         time.sleep(delay)
-        actual = read_current(remote, category, key, tv)
+        actual = readback()
     return actual
 
 
@@ -145,13 +155,7 @@ def offer_restore(remote, store, profile, ask, write, *, maintenance=False, diag
         return
 
     entries = journal['settings']
-    eligible = [
-        key for key, (_, _, target) in SETTINGS.items()
-        if isinstance(entries.get(key), dict)
-        and entries[key].get('target') == target
-        and entries[key].get('original') in ('on', 'off')
-        and entries[key]['original'] != target
-    ]
+    eligible = [key for key in SETTINGS if valid_record(key, entries.get(key))]
     if not eligible:
         return
     if maintenance:
@@ -169,20 +173,29 @@ def offer_restore(remote, store, profile, ask, write, *, maintenance=False, diag
     with ExitStack() as stack:
         tv = None
         current_values = {key: read(remote, SETTINGS[key][0], key) for key in eligible}
-        # Live Plus can be read over an existing pairing without a TV prompt.
-        if not remote.root and 'livePlus' in current_values and current_values['livePlus'] is None:
+        paired_preview = set()
+        paired_reads = [key for key, current in current_values.items()
+                        if key in LOG_UPLOADS or (key == 'livePlus' and current is None)]
+        if not remote.root and paired_reads:
             try:
+                # Only prompt for pairing before the preview when the owner
+                # explicitly selected a saved upload setting in Maintenance.
+                reuse_only = not (maintenance and eligible[0] in LOG_UPLOADS)
                 tv = stack.enter_context(SSAP(profile['host'], path.parent, write,
-                                             settings_write=True, reuse_only=True))
+                                             settings_write=True, reuse_only=reuse_only))
             except Exception:
                 pass
-            current_values['livePlus'] = read_ssap(tv, SETTINGS['livePlus'][0], 'livePlus')
+            for key in paired_reads:
+                paired_value = read_ssap(tv, SETTINGS[key][0], key)
+                if paired_value is not None:
+                    current_values[key] = paired_value
+                    paired_preview.add(key)
         planned = {key for key, current in current_values.items() if current == entries[key]['target']}
         if write.frontend == 'desktop' and planned:
             write.step(1, 'Debloat restoration preview')
         else:
             write.heading('Debloat restoration preview')
-        states = {'on': tr('On'), 'off': tr('Off')}
+        states = {'on': tr('On'), True: tr('On'), 'off': tr('Off'), False: tr('Off')}
         for key, current in current_values.items():
             label = tr(SETTING_NAMES[key])
             if key in planned:
@@ -217,7 +230,13 @@ def offer_restore(remote, store, profile, ask, write, *, maintenance=False, diag
                     tv = stack.enter_context(SSAP(profile['host'], path.parent, write, settings_write=True))
                 except Exception:
                     pairing_failed = True
-            current = read_current(remote, category, key, tv)
+            paired_value = read_ssap(tv, category, key) if key in LOG_UPLOADS else None
+            if paired_value is not None or (key in LOG_UPLOADS and key in paired_preview):
+                current = paired_value
+            elif key in LOG_UPLOADS:
+                current = read(remote, category, key)
+            else:
+                current = read_current(remote, category, key, tv)
             if current == original:
                 status = 'restore-already'
             elif current is None:
@@ -228,7 +247,8 @@ def offer_restore(remote, store, profile, ask, write, *, maintenance=False, diag
                 except Exception:
                     reply = None
                 if isinstance(reply, dict) and reply.get('returnValue') is True:
-                    actual = verify_value(remote, tv, category, key, original, current)
+                    actual = verify_value(remote, tv, category, key, original, current,
+                                          paired_upload=paired_value is not None)
                     status = 'restored' if actual == original else 'restore-unverified'
                 else:
                     status = 'restore-failed'
@@ -256,6 +276,8 @@ def remember(path, key, original, target):
         journal = {'schema': 1, 'settings': {}}
     if journal['schema'] != 1 or not isinstance(journal['settings'], dict):
         raise ValueError('Invalid Debloat record')
+    if key in journal['settings'] and not valid_record(key, journal['settings'][key]):
+        raise ValueError('Invalid Debloat setting record')
     if key not in journal['settings']:
         journal['settings'][key] = {'original': original, 'target': target}
         private_write(path, json.dumps(journal).encode())
@@ -279,10 +301,10 @@ def apply(installer, selected, progress=lambda _: None, *, diagnostic=None):
                 continue
             progress(label)
             original = read(remote, category, key)
-            if original is None and key == 'promotionStreamer':
+            if original is None and (key == 'promotionStreamer' or (remote.root and key in LOG_UPLOADS)):
                 results[key] = events[key] = 'unavailable'
                 continue
-            if original == target:
+            if original == target and (remote.root or key not in LOG_UPLOADS):
                 results[key] = events[key] = 'already'
                 continue
             results[key] = 'failed'
@@ -295,8 +317,15 @@ def apply(installer, selected, progress=lambda _: None, *, diagnostic=None):
             if pairing_failure:
                 events[key] = pairing_failure
                 continue
-            if original is None and use_ssap:
-                original = read_ssap(tv, category, key)
+            paired_upload = False
+            if use_ssap and (original is None or key in LOG_UPLOADS):
+                paired_value = read_ssap(tv, category, key)
+                if paired_value is not None:
+                    original = paired_value
+                    paired_upload = key in LOG_UPLOADS
+                if original is None and key in LOG_UPLOADS:
+                    results[key] = events[key] = 'unavailable'
+                    continue
                 if original == target:
                     results[key] = events[key] = 'already'
                     continue
@@ -319,7 +348,7 @@ def apply(installer, selected, progress=lambda _: None, *, diagnostic=None):
                 rejected = isinstance(reply, dict) and reply.get('returnValue') is False
                 events[key] = 'write-rejected' if rejected else 'write-unavailable'
                 continue
-            actual = verify_value(remote, tv, category, key, target, original)
+            actual = verify_value(remote, tv, category, key, target, original, paired_upload=paired_upload)
             results[key] = 'verified' if actual == target else 'unverified' if actual is None else 'failed'
             events[key] = 'verified' if actual == target else 'verify-unavailable' if actual is None else 'verify-mismatch'
     return results

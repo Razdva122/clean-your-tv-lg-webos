@@ -215,6 +215,8 @@ Przed wyborem motywu użyj opcji **Debloat**, aby wybrać ustawienia reklam, pol
 
 W obu edycjach można wyłączyć transmisje promocyjne LG, jeśli telewizor udostępnia to ustawienie.
 
+W grupie Prywatność możesz osobno wyłączyć wysyłanie dzienników debugowania i dzienników awarii do LG. Ustawienie jest pomijane, jeśli nie można odczytać jego pierwotnej wartości. W trybie No-root oprogramowanie telewizora może odrzucić zmianę. Niektóre telewizory ponownie włączają wysyłanie dzienników debugowania przy starcie. Sprawdź ustawienie po ponownym uruchomieniu.
+
 Aby cofnąć jedną zmianę, otwórz Debloat w menu konserwacji, korzystając z tego samego zapisanego połączenia z telewizorem. Wybierz ustawienie, sprawdź pierwotną wartość i potwierdź. Na obsługiwanych modelach możesz wyłączyć automatyczne uruchamianie LG Channels w menu Wszystkie ustawienia → Ogólne → Kanały → Automatyczne uruchamianie LG Channels.
 
 Podczas odinstalowywania możesz przywrócić zapisane początkowe ustawienia Debloat. Jeśli pominiesz przywracanie, odinstalowywanie będzie kontynuowane bez zmiany tych ustawień.

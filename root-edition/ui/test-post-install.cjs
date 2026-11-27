@@ -49,12 +49,20 @@ const { chromium } = require('playwright');
               ? {
                   settings: {
                     homePromotion: { value: 'on', saved: false },
-                    livePlus: { value: null, saved: false }
+                    livePlus: { value: null, saved: false },
+                    dbgLogUpload: { value: true, saved: false },
+                    faultLogUpload: { value: false, saved: false }
                   }
                 }
               : {
-                  results: { homePromotion: 'verified' },
-                  settings: { homePromotion: { value: 'off', saved: true } }
+                  results: {
+                    homePromotion: 'verified',
+                    dbgLogUpload: 'verified'
+                  },
+                  settings: {
+                    homePromotion: { value: 'off', saved: true },
+                    dbgLogUpload: { value: false, saved: true }
+                  }
                 };
             this.onservicecallback(
               JSON.stringify({
@@ -100,15 +108,36 @@ const { chromium } = require('playwright');
       await page
         .getByRole('checkbox', { name: 'Turn off sponsored tiles' })
         .click();
+      const debug = page.getByRole('checkbox', {
+        name: 'Turn off debug log uploads to LG'
+      });
+      const fault = page.getByRole('checkbox', {
+        name: 'Turn off fault log uploads to LG'
+      });
+      assert.equal(await debug.isChecked(), false);
+      assert.equal(await fault.isChecked(), false);
+      assert.equal(
+        await debug.locator('..').getByText('On', { exact: true }).count(),
+        1
+      );
+      assert.equal(
+        await fault.locator('..').getByText('Off', { exact: true }).count(),
+        1
+      );
+      await debug.click();
       await apply.click();
       await page
         .getByText('Successfully applied and verified', { exact: true })
+        .first()
         .waitFor();
       const last = await page.evaluate(
         () => window.commands[window.commands.length - 1]
       );
       assert.equal(last.uri, 'luna://org.webosbrew.hbchannel.service/exec');
-      assert.match(last.raw.command, / debloat --settings homePromotion$/);
+      assert.match(
+        last.raw.command,
+        / debloat --settings homePromotion,dbgLogUpload$/
+      );
       await page.keyboard.press('Escape');
       assert.deepEqual(await page.evaluate(() => window.commands.at(-1)), {
         uri: 'luna://com.webos.applicationManager/launch',

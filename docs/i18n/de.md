@@ -214,6 +214,8 @@ Wählen Sie vor dem Design unter **Debloat**, welche LG-Einstellungen für Werbu
 
 Beide Editionen können LG-Werbestreams abschalten, sofern der Fernseher die Einstellung bereitstellt.
 
+Unter Datenschutz können Sie den Versand von Debug- und Fehlerprotokollen an LG einzeln abschalten. Kann der ursprüngliche Wert nicht gelesen werden, wird die jeweilige Einstellung übersprungen. Bei No-root kann die Firmware eine Änderung ablehnen. Manche Fernseher aktivieren den Versand von Debug-Protokollen beim Start erneut. Prüfen Sie die Einstellung nach einem Neustart.
+
 Um eine einzelne Änderung rückgängig zu machen, öffnen Sie Debloat unter Wartung mit derselben gespeicherten TV-Verbindung. Wählen Sie eine gespeicherte Einstellung, prüfen Sie den ursprünglichen Wert und bestätigen Sie. Auf unterstützten Fernsehern lässt sich der Autostart von LG Channels unter Alle Einstellungen → Allgemein → Sender → LG Channels automatisch starten ausschalten.
 
 Bei der Deinstallation können Sie die gespeicherten ursprünglichen Debloat-Einstellungen wiederherstellen. Wenn Sie die Wiederherstellung überspringen, läuft die Deinstallation ohne diese Änderungen weiter.

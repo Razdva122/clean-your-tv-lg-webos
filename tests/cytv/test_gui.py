@@ -430,7 +430,9 @@ class GuiTests(unittest.TestCase):
         self.assertLess(scroll.viewport().grab().toImage().pixelColor(1, 1).lightness(), 100)
         toggles = w.form.findChildren(ToggleSwitch)
         self.assertIsNone(w.form.findChild(ToggleSwitch, 'debloat-preloadNetflix'))
-        self.assertTrue(all(toggle.isChecked() for toggle in toggles))
+        self.assertEqual({toggle.objectName() for toggle in toggles if not toggle.isChecked()},
+                         {'debloatGroup-livePlus', 'debloat-dbgLogUpload', 'debloat-faultLogUpload'})
+        w.form.findChild(ToggleSwitch, 'debloat-dbgLogUpload').click()
         self.assertTrue(w.form.findChild(ToggleSwitch, 'debloat-promotionStreamer').isChecked())
         section = w.form.findChild(ToggleSwitch, 'debloatGroup-homePromotion')
         section.click()
@@ -442,7 +444,7 @@ class GuiTests(unittest.TestCase):
         self.assertEqual(section.accessibleDescription(), 'Some selected')
         next(b for b in w.form.findChildren(QPushButton) if b.text() == 'Continue').click()
         self.assertEqual(json.loads(w.channel.answers.get_nowait()),
-                         [key for key in debloat.SETTINGS if key != 'contentRecommendation'])
+                         [key for key in debloat.SETTINGS if key not in ('contentRecommendation', 'faultLogUpload')])
         w.receive('debloat-results', {'homePromotion': 'unverified', 'contentRecommendation': 'write-rejected', 'aiNudge': 'firmware-blocked'})
         w.show_prompt(Prompt(debloat.REVIEW))
         self.assertFalse(w.reading.isHidden())

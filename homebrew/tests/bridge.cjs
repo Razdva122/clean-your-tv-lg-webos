@@ -673,7 +673,10 @@ async function rejects(fn, expectedMessage) {
     executed.push({ exe: exe, args: args });
     return Promise.resolve(JSON.stringify({ state: 'debloat' }));
   };
+  var allDebloat =
+    'homePromotion,contentRecommendation,screenSaverAd,livePromotion,promotionStreamer,webOSPromotionVideo,livePlus,adCookie,lmt,aiNudge,sportsAlarm,dbgLogUpload,faultLogUpload';
   for (var fixture of [
+    [['debloat', '--settings', allDebloat], [allDebloat]],
     [['debloat-status'], []],
     [['debloat', '--settings', 'homePromotion,lmt'], ['homePromotion,lmt']],
     [['debloat-restore', '--settings', 'lmt'], ['lmt']]

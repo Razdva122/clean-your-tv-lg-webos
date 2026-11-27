@@ -7,11 +7,10 @@ import subprocess
 import sys
 from time import sleep
 
-from cytv.debloat_policy import SETTINGS
+from cytv.debloat_policy import SETTINGS, valid_value, valid_record
 
 SERVICE = 'luna://com.webos.settingsservice/'
 RECEIPT = 'homebrew-debloat'
-VALUES = ('on', 'off')
 ACTIONS = ('debloat-status', 'debloat', 'debloat-restore')
 
 
@@ -34,8 +33,7 @@ def read_receipt(store):
         raise ValueError('invalid Debloat receipt')
     for key, record in receipt['settings'].items():
         if (key not in SETTINGS or not isinstance(record, dict) or set(record) != {'original', 'target'}
-                or record['target'] != SETTINGS[key][2] or record['original'] not in VALUES
-                or record['original'] == record['target']):
+                or not valid_record(key, record)):
             raise ValueError('invalid Debloat setting receipt')
     return receipt['settings']
 
@@ -48,7 +46,7 @@ def read_settings(invoke, category, keys, timeout):
     if not isinstance(reply, dict) or reply.get('returnValue') is not True:
         return {}
     settings = reply.get('settings')
-    return {key: settings[key] for key in keys if settings.get(key) in VALUES} if isinstance(settings, dict) else {}
+    return {key: settings[key] for key in keys if valid_value(key, settings.get(key))} if isinstance(settings, dict) else {}
 
 
 def write_setting(invoke, category, key, value):

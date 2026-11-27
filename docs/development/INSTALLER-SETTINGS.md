@@ -22,14 +22,15 @@ remain intact. An edition fallback determines the final mode before customizatio
 ## Debloat
 
 The optional Debloat step comes before customization. The desktop wizard starts
-with the eleven LG settings selected and applies them on Continue.
+with the advertising, recommendation, tracking and notification settings selected.
+Both log upload controls start unchecked. Continue applies the current selection.
 Maintenance starts with all groups unchecked.
 With root SSH, both editions read and write through the LG Settings Service.
 No-root in Developer Mode writes through a separate SSAP pairing requesting
 the regular `WRITE_SETTINGS` permission. It reads preferences through Developer
-Mode SSH and can also read Live Plus through SSAP. The file reader returns
-only the requested `on` or `off` value. A firmware may expose a setting
-without making its value readable to the installer.
+Mode SSH and can also read Live Plus and the two log upload settings through
+SSAP. The file reader returns only the requested switch value. Firmware may
+expose a setting without making its value readable to the installer.
 
 The installer skips values that already match. Before a selected write with a
 readable original, it saves the original and requested value in the private
@@ -38,7 +39,8 @@ subsequent installations. The record captures pre-write values for future
 restoration support. Its presence alone does not prove that a write changed
 the setting.
 Selected settings with unreadable originals can be sent without adding a
-restore entry. Interactive removal offers to restore saved settings, with Skip as the default.
+restore entry, except for promotional streams and the two log upload settings.
+Interactive removal offers to restore saved settings, with Skip as the default.
 Before confirmation it shows each planned change from the current value to the
 saved original. It uses the existing Root SSH or Developer Mode settings
 connection and rechecks each displayed value before writing. Settings already
@@ -64,8 +66,15 @@ console installs using `--yes`.
 | Choice | Developer Mode | No-root with root SSH | Root edition with root SSH |
 | --- | --- | --- | --- |
 | LG promotional streams | Paired SSAP write if the original is readable and the firmware accepts the request | LG Settings Service | LG Settings Service |
+| Debug log uploads to LG | Paired SSAP write after reading the original | LG Settings Service | LG Settings Service |
+| Fault log uploads to LG | Paired SSAP write after reading the original | LG Settings Service | LG Settings Service |
 
-The installer skips promotional streams when it cannot read the original value.
+All three choices require a readable original. For uploads, both the desktop
+installer and the Homebrew settings panel save and restore the native JSON
+boolean. The keys are `option/dbgLogUpload` and `option/faultLogUpload`.
+Glasshouse reports that some TVs can re-enable debug log uploads at startup.
+CYTV verifies the current value after a change. Checking again after a restart
+requires a new read. See the [Glasshouse settings definitions](https://github.com/rorygallagher2024/glasshouse/blob/main/server/lib/lgsettings.js).
 
 [Reveal80's debloater](https://github.com/Reveal80/lg-webos-debloat) reports
 the extra promotion switch on webOS 22. Its reversible app hiding also removes
