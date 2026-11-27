@@ -87,6 +87,11 @@
       "pr": 860,
       "issues": [],
       "summary": "Run full Root removal from the Homebrew Installer on TV"
+    },
+    {
+      "pr": 864,
+      "issues": [],
+      "summary": "Install No-root from Homebrew and preserve daily tile launch"
     }
   ],
   "excluded": [],
