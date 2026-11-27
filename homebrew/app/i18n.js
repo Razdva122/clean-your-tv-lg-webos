@@ -1106,6 +1106,282 @@
   Object.keys(rows).forEach(function (code) {
     rows[code] = rows[code].concat(removalCopy[code]);
   });
+  var noRootCopy = {
+    'en': [
+      'Install No-root',
+      'Root Home is incompatible with this TV. The installer will set up No-root Home and Home Helper.',
+      'Install and activate No-root',
+      'Install No-root? When webOS asks to allow remote control, choose Allow.',
+      'Choose Allow in the webOS remote-control prompt.',
+      'No-root Home and its components were installed and verified.',
+      'Open Clean Your TV',
+      'Pair with webOS',
+      'Install No-root components',
+      'TV pairing or inventory could not be verified.',
+      'Check that the TV allows remote control, then choose Continue original operation and respond to the webOS prompt.',
+      'This TV did not pass the No-root setup checks. Check the status or continue setup on a computer.'
+    ],
+    'ru': [
+      'Установка No-root',
+      'Root Home несовместим с этим телевизором. Мастер установит No-root Home и Home Helper.',
+      'Установить и активировать No-root',
+      'Установить No-root? Когда webOS запросит доступ к сетевому управлению, выберите «Разрешить».',
+      'В запросе webOS на сетевое управление выберите «Разрешить».',
+      'No-root Home и его компоненты установлены и проверены.',
+      'Открыть Clean Your TV',
+      'Сопряжение с webOS',
+      'Установка компонентов No-root',
+      'Не удалось подтвердить сопряжение или прочитать данные телевизора.',
+      'Проверьте разрешение на сетевое управление, выберите «Продолжить исходную операцию» и ответьте на запрос webOS.',
+      'Телевизор не прошёл проверки установки No-root. Проверьте состояние или продолжите настройку на компьютере.'
+    ],
+    'cs': [
+      'Instalace No-root',
+      'Root Home není s tímto televizorem kompatibilní. Instalátor nastaví No-root Home a Home Helper.',
+      'Nainstalovat a aktivovat No-root',
+      'Nainstalovat No-root? Až webOS požádá o povolení dálkového ovládání, zvolte Povolit.',
+      'V žádosti webOS o dálkové ovládání zvolte Povolit.',
+      'No-root Home a jeho součásti byly nainstalovány a ověřeny.',
+      'Otevřít Clean Your TV',
+      'Spárovat s webOS',
+      'Nainstalovat součásti No-root',
+      'Párování nebo data televizoru se nepodařilo ověřit.',
+      'Zkontrolujte povolení dálkového ovládání, pokračujte v původní operaci a odpovězte na žádost webOS.',
+      'Televizor neprošel kontrolami No-root. Zkontrolujte stav nebo pokračujte v nastavení na počítači.'
+    ],
+    'de': [
+      'No-root installieren',
+      'Root Home ist mit diesem Fernseher inkompatibel. Der Installer richtet No-root Home und Home Helper ein.',
+      'No-root installieren und aktivieren',
+      'No-root installieren? Wenn webOS nach der Fernsteuerung fragt, wählen Sie Zulassen.',
+      'Wählen Sie in der webOS-Anfrage zur Fernsteuerung Zulassen.',
+      'No-root Home und seine Komponenten wurden installiert und geprüft.',
+      'Clean Your TV öffnen',
+      'Mit webOS koppeln',
+      'No-root-Komponenten installieren',
+      'Kopplung oder TV-Daten konnten nicht geprüft werden.',
+      'Überprüfen Sie die Fernsteuerung, setzen Sie den ursprünglichen Vorgang fort und antworten Sie auf die webOS-Anfrage.',
+      'Der Fernseher hat die No-root-Prüfungen nicht bestanden. Prüfen Sie den Status oder setzen Sie die Einrichtung am Computer fort.'
+    ],
+    'es': [
+      'Instalar No-root',
+      'Root Home es incompatible con este televisor. El instalador configurará No-root Home y Home Helper.',
+      'Instalar y activar No-root',
+      '¿Instalar No-root? Cuando webOS solicite acceso al control remoto, selecciona Permitir.',
+      'Selecciona Permitir en la solicitud de control remoto de webOS.',
+      'Se instalaron y verificaron No-root Home y sus componentes.',
+      'Abrir Clean Your TV',
+      'Vincular con webOS',
+      'Instalar los componentes de No-root',
+      'No se pudo verificar la vinculación o los datos del televisor.',
+      'Comprueba que el control remoto esté permitido, continúa la operación original y responde a la solicitud de webOS.',
+      'El televisor no superó las comprobaciones de No-root. Comprueba el estado o continúa la instalación en un ordenador.'
+    ],
+    'fr': [
+      'Installer No-root',
+      'Root Home est incompatible avec ce téléviseur. Le programme configurera No-root Home et Home Helper.',
+      'Installer et activer No-root',
+      'Installer No-root ? Lorsque webOS demande le contrôle à distance, choisissez Autoriser.',
+      'Choisissez Autoriser dans la demande de contrôle à distance webOS.',
+      'No-root Home et ses composants ont été installés et vérifiés.',
+      'Ouvrir Clean Your TV',
+      'Associer à webOS',
+      'Installer les composants No-root',
+      'Impossible de vérifier l’association ou les données du téléviseur.',
+      'Vérifiez que le contrôle à distance est autorisé, reprenez l’opération d’origine et répondez à la demande de webOS.',
+      'Le téléviseur n’a pas passé les contrôles No-root. Vérifiez l’état ou poursuivez l’installation sur un ordinateur.'
+    ],
+    'it': [
+      'Installa No-root',
+      'Root Home è incompatibile con questo televisore. Il programma configurerà No-root Home e Home Helper.',
+      'Installa e attiva No-root',
+      'Installare No-root? Quando webOS richiede il controllo remoto, seleziona Consenti.',
+      'Seleziona Consenti nella richiesta di controllo remoto di webOS.',
+      'No-root Home e i suoi componenti sono stati installati e verificati.',
+      'Apri Clean Your TV',
+      'Associa con webOS',
+      'Installa i componenti No-root',
+      'Impossibile verificare l’associazione o i dati del televisore.',
+      'Controlla che il controllo remoto sia consentito, continua l’operazione originale e rispondi alla richiesta di webOS.',
+      'Il televisore non ha superato i controlli No-root. Controlla lo stato o continua la configurazione sul computer.'
+    ],
+    'pt-BR': [
+      'Instalar No-root',
+      'Root Home é incompatível com esta TV. O instalador vai configurar No-root Home e Home Helper.',
+      'Instalar e ativar No-root',
+      'Instalar No-root? Quando o webOS pedir acesso ao controle remoto, selecione Permitir.',
+      'Selecione Permitir na solicitação de controle remoto do webOS.',
+      'No-root Home e seus componentes foram instalados e verificados.',
+      'Abrir Clean Your TV',
+      'Parear com o webOS',
+      'Instalar componentes No-root',
+      'Não foi possível verificar o pareamento ou os dados da TV.',
+      'Verifique se o controle remoto está autorizado, continue a operação original e responda à solicitação do webOS.',
+      'A TV não passou nas verificações do No-root. Confira o status ou continue a instalação no computador.'
+    ],
+    'pl': [
+      'Zainstaluj No-root',
+      'Root Home jest niezgodny z tym telewizorem. Instalator skonfiguruje No-root Home i Home Helper.',
+      'Zainstaluj i aktywuj No-root',
+      'Zainstalować No-root? Gdy webOS poprosi o dostęp do zdalnego sterowania, wybierz Zezwól.',
+      'Wybierz Zezwól w prośbie webOS o zdalne sterowanie.',
+      'No-root Home i jego składniki zostały zainstalowane i sprawdzone.',
+      'Otwórz Clean Your TV',
+      'Sparuj z webOS',
+      'Zainstaluj składniki No-root',
+      'Nie udało się zweryfikować parowania lub danych telewizora.',
+      'Sprawdź uprawnienia do zdalnego sterowania, wznów poprzednią operację i odpowiedz na prośbę webOS.',
+      'Telewizor nie przeszedł kontroli No-root. Sprawdź stan lub kontynuuj instalację na komputerze.'
+    ],
+    'ko': [
+      'No-root 설치',
+      '이 TV는 Root Home과 호환되지 않습니다. 설치 프로그램이 No-root Home과 Home Helper를 설정합니다.',
+      'No-root 설치 및 활성화',
+      'No-root를 설치할까요? webOS가 원격 제어 권한을 요청하면 허용을 선택하세요.',
+      'webOS 원격 제어 메시지에서 허용을 선택하세요.',
+      'No-root Home과 구성 요소가 설치 및 확인되었습니다.',
+      'Clean Your TV 열기',
+      'webOS와 페어링',
+      'No-root 구성 요소 설치',
+      '페어링 또는 TV 데이터를 확인할 수 없습니다.',
+      '원격 제어가 허용되어 있는지 확인하고 기존 작업을 계속한 다음 webOS 요청에 응답하세요.',
+      'TV가 No-root 설치 검사를 통과하지 못했습니다. 상태를 확인하거나 컴퓨터에서 설정을 계속하세요.'
+    ],
+    'hi': [
+      'No-root इंस्टॉल करें',
+      'Root Home इस टीवी के साथ संगत नहीं है। इंस्टॉलर No-root Home और Home Helper सेट करेगा।',
+      'No-root इंस्टॉल और सक्रिय करें',
+      'No-root इंस्टॉल करें? जब webOS रिमोट कंट्रोल की अनुमति माँगे, तो अनुमति दें चुनें।',
+      'webOS के रिमोट कंट्रोल अनुरोध में अनुमति दें चुनें।',
+      'No-root Home और उसके घटक इंस्टॉल हो गए हैं और उनकी जाँच हो गई है।',
+      'Clean Your TV खोलें',
+      'webOS के साथ पेयर करें',
+      'No-root के घटक इंस्टॉल करें',
+      'पेयरिंग या टीवी डेटा की पुष्टि नहीं हो सकी।',
+      'रिमोट कंट्रोल की अनुमति जाँचें, मूल प्रक्रिया जारी रखें और webOS अनुरोध का जवाब दें।',
+      'टीवी No-root की जाँच में सफल नहीं हुआ। स्थिति जाँचें या कंप्यूटर पर सेटअप जारी रखें।'
+    ],
+    'zh-Hans': [
+      '安装 No-root',
+      '此电视与 Root Home 不兼容。安装程序将设置 No-root Home 和 Home Helper。',
+      '安装并启用 No-root',
+      '是否安装 No-root？webOS 请求远程控制权限时，请选择允许。',
+      '在 webOS 的远程控制提示中选择允许。',
+      'No-root Home 及其组件已安装并验证。',
+      '打开 Clean Your TV',
+      '与 webOS 配对',
+      '安装 No-root 组件',
+      '无法验证配对或电视数据。',
+      '检查是否允许远程控制，继续原操作并回应 webOS 的提示。',
+      '此电视未通过 No-root 安装检查。请检查状态或在电脑上继续设置。'
+    ],
+    'zh-Hant': [
+      '安裝 No-root',
+      '此電視與 Root Home 不相容。安裝程式將設定 No-root Home 和 Home Helper。',
+      '安裝並啟用 No-root',
+      '要安裝 No-root 嗎？webOS 要求遠端控制權限時，請選擇允許。',
+      '在 webOS 的遠端控制提示中選擇允許。',
+      'No-root Home 及其元件已安裝並驗證。',
+      '開啟 Clean Your TV',
+      '與 webOS 配對',
+      '安裝 No-root 元件',
+      '無法驗證配對或電視資料。',
+      '確認已允許遠端控制，繼續原操作並回應 webOS 的提示。',
+      '此電視未通過 No-root 安裝檢查。請檢查狀態或在電腦上繼續設定。'
+    ]
+  };
+  keys = keys.concat([
+    'noRootReview',
+    'noRootReviewBody',
+    'noRootInstall',
+    'noRootConfirm',
+    'noRootPairing',
+    'noRootReady',
+    'noRootOpen',
+    'no-root-pairing',
+    'no-root-install',
+    'noRootPairingFailed',
+    'noRootPairingNext',
+    'noRootUnavailable'
+  ]);
+  Object.keys(rows).forEach(function (code) {
+    rows[code] = rows[code].concat(noRootCopy[code]);
+  });
+  var noRootMaintenance = {
+    'cs': [
+      'Aktivace Home nebyla potvrzena. Zkontrolujte stav nebo otevřete Clean Your TV ručně.',
+      'Obnovit LG Home a odebrat No-root Home, Home Helper, jejich nastavení a součásti? Instalátor zůstane nainstalován.',
+      'Spustit Home Helper'
+    ],
+    'en': [
+      'Home activation has not been verified. Check status or open Clean Your TV manually.',
+      'Restore LG Home and remove No-root Home, Home Helper, their settings and components? The installer will stay installed.',
+      'Start Home Helper'
+    ],
+    'ru': [
+      'Активация Home не подтверждена. Проверьте состояние или откройте Clean Your TV вручную.',
+      'Восстановить LG Home и удалить No-root Home, Home Helper, их настройки и компоненты? Установщик останется на телевизоре.',
+      'Запуск Home Helper'
+    ],
+    'de': [
+      'Die Home-Aktivierung wurde nicht bestätigt. Prüfen Sie den Status oder öffnen Sie Clean Your TV manuell.',
+      'LG Home wiederherstellen und No-root Home, Home Helper, deren Einstellungen und Komponenten entfernen? Der Installer bleibt installiert.',
+      'Home Helper starten'
+    ],
+    'es': [
+      'No se ha confirmado la activación de Home. Comprueba el estado o abre Clean Your TV manualmente.',
+      '¿Restaurar LG Home y eliminar No-root Home, Home Helper, sus ajustes y componentes? El instalador permanecerá instalado.',
+      'Iniciar Home Helper'
+    ],
+    'fr': [
+      'L’activation de Home n’a pas été confirmée. Vérifiez l’état ou ouvrez Clean Your TV manuellement.',
+      'Restaurer LG Home et supprimer No-root Home, Home Helper, leurs réglages et leurs composants ? Le programme d’installation restera installé.',
+      'Démarrer Home Helper'
+    ],
+    'it': [
+      'L’attivazione di Home non è stata confermata. Controlla lo stato o apri Clean Your TV manualmente.',
+      'Ripristinare LG Home e rimuovere No-root Home, Home Helper, le relative impostazioni e i componenti? Il programma di installazione rimarrà installato.',
+      'Avvia Home Helper'
+    ],
+    'pt-BR': [
+      'A ativação do Home não foi confirmada. Confira o status ou abra Clean Your TV manualmente.',
+      'Restaurar o LG Home e remover o No-root Home, o Home Helper, suas configurações e componentes? O instalador permanecerá na TV.',
+      'Iniciar Home Helper'
+    ],
+    'pl': [
+      'Nie potwierdzono aktywacji Home. Sprawdź stan lub otwórz Clean Your TV ręcznie.',
+      'Przywrócić LG Home i usunąć No-root Home, Home Helper, ich ustawienia i składniki? Instalator pozostanie zainstalowany.',
+      'Uruchom Home Helper'
+    ],
+    'ko': [
+      'Home 활성화가 확인되지 않았습니다. 상태를 확인하거나 Clean Your TV를 직접 여세요.',
+      'LG Home을 복원하고 No-root Home, Home Helper와 해당 설정 및 구성 요소를 제거할까요? 설치 프로그램은 남습니다.',
+      'Home Helper 시작'
+    ],
+    'hi': [
+      'Home के सक्रिय होने की पुष्टि नहीं हुई। स्थिति जाँचें या Clean Your TV स्वयं खोलें।',
+      'LG Home बहाल करें और No-root Home, Home Helper, उनकी सेटिंग और घटकों को हटाएँ? इंस्टॉलर टीवी पर रहेगा।',
+      'Home Helper शुरू करें'
+    ],
+    'zh-Hans': [
+      '尚未确认 Home 已启用。请检查状态或手动打开 Clean Your TV。',
+      '还原 LG Home 并移除 No-root Home、Home Helper 及其设置和组件？安装程序将保留在电视上。',
+      '启动 Home Helper'
+    ],
+    'zh-Hant': [
+      '尚未確認 Home 已啟用。請檢查狀態或手動開啟 Clean Your TV。',
+      '還原 LG Home 並移除 No-root Home、Home Helper 及其設定和元件？安裝程式將保留在電視上。',
+      '啟動 Home Helper'
+    ]
+  };
+  keys.push(
+    'noRootHelperUnverified',
+    'noRootRemoveConfirm',
+    'noRootHelperActivation'
+  );
+  Object.keys(rows).forEach(function (code) {
+    rows[code] = rows[code].concat(noRootMaintenance[code]);
+  });
   var names = {
     'en': 'English',
     'de': 'Deutsch',

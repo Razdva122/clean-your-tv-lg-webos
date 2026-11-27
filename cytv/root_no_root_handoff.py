@@ -26,6 +26,9 @@ def validate(stamp):
 
 
 def support(installer):
+    local = getattr(installer, '_verified_root_handoff_support', None)
+    if local is not None:
+        return local
     version=installer.tv_info.get('node_version')
     if not version:
         version=installer.remote.run('/usr/bin/node --version').strip().lstrip('v')
@@ -62,6 +65,12 @@ PROGRAM = r'''
   }
   var input = JSON.parse(process.argv[process.argv.length - 1]),
     root = '/var/lib/clean-your-tv-installation';
+  var observerPublic = '/var/lib/clean-your-tv-installer';
+  function observerRoot(value) {
+    if (value.private_root === undefined) return '/tmp/.cytv-installer-root';
+    if (value.private_root !== observerPublic + '/private') fail();
+    return value.private_root;
+  }
   if (input.cleanup_stdin) {
     var chunks = [],
       length = 0,
@@ -259,6 +268,7 @@ PROGRAM = r'''
     )
       fail();
     binding = read(dir, lease.journal);
+    observerRoot(binding);
     original = stamp(binding.predecessor);
     if (
       binding.schema !== 1 ||
@@ -344,7 +354,7 @@ PROGRAM = r'''
     if (!binding) fail();
     if (!requireObserverReceipt && binding.completed === true) return;
     var privateDir = directory(
-        '/tmp/.cytv-installer-root/operations/' + binding.operation
+        observerRoot(binding) + '/operations/' + binding.operation
       ),
       value = read(privateDir, 'closed.json');
     if (
@@ -478,6 +488,7 @@ PROGRAM = r'''
     canonical(stamp(plan.root_handoff)) !== canonical(original)
   )
     fail();
+  var observerPrivate = observerRoot(plan);
   var digest = sha(canonical(plan));
   if (input.command === 'continuation') {
     if (!binding || binding.operation !== plan.operation) {
@@ -497,7 +508,7 @@ PROGRAM = r'''
     var prepared = true;
     try {
       fs.lstatSync(
-        '/tmp/.cytv-installer-root/operations/' +
+        observerPrivate + '/operations/' +
           plan.operation +
           '/prepared.json'
       );
@@ -523,7 +534,7 @@ PROGRAM = r'''
     )
       fail();
     var created = [];
-    ['/tmp/.cytv-installer-root', '/var/lib/clean-your-tv-installer'].forEach(
+    [observerPrivate, observerPublic].forEach(
       function (path) {
         try {
           fs.lstatSync(path);
@@ -558,7 +569,8 @@ PROGRAM = r'''
   if (binding && binding.operation === plan.operation) {
     if (
       binding.plan_sha256 !== digest ||
-      binding.source_sha256 !== plan.source_sha256
+      binding.source_sha256 !== plan.source_sha256 ||
+      observerRoot(binding) !== observerPrivate
     )
       fail();
   } else {
@@ -575,6 +587,7 @@ PROGRAM = r'''
       source_sha256: plan.source_sha256,
       effects_started: false
     };
+    if (plan.private_root !== undefined) binding.private_root = observerPrivate;
     var name = 'no-root-' + plan.operation + '.json';
     // Reserve the binding before advertising its owner. A crash between writes
     // has no observer effects; retry must use the identical plan.
@@ -677,8 +690,8 @@ PROGRAM = r'''
   if (input.request.command === 'prepare' && plan.action === 'install') {
     if (
       canonical(input.request.plan) !== canonical(plan) ||
-      input.request.root !== '/tmp/.cytv-installer-root' ||
-      input.request.public_root !== '/var/lib/clean-your-tv-installer' ||
+      input.request.root !== observerPrivate ||
+      input.request.public_root !== observerPublic ||
       input.request.sender !== '/usr/bin/luna-send' ||
       input.request.source !== input.source
     )
@@ -722,7 +735,7 @@ PROGRAM = r'''
         command === process.execPath &&
         Array.isArray(args) &&
         args[0] ===
-          '/tmp/.cytv-installer-root/operations/' +
+          observerPrivate + '/operations/' +
             plan.operation +
             '/observer.js'
       ) {

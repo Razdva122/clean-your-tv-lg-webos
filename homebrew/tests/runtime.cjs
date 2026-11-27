@@ -107,7 +107,13 @@ function fixture(shared, largeMember) {
   write('root/bundle.json', 'ROOT_DATA');
   write('supervisor/bundle.json', 'SUPERVISOR_DATA');
   write('baseline/baseline.json', 'BASELINE_DATA');
-  if (largeMember) {
+  if (largeMember === 'no-root') {
+    fs.mkdirSync(path.join(root, 'no-root'));
+    write('edition/no_root.py', 'fixed_no_root_driver');
+    write('root-updater/bundle.json', '{}');
+    write('no-root/launcher.ipk', 'reviewed_home');
+    write('no-root/payload.json', '{}');
+  } else if (largeMember) {
     var media = Buffer.alloc(17 * 1024 * 1024);
     write('root/com.cleanyourtv.root.preview_1.0.0_all.ipk', media);
     if (largeMember !== 'root/oversized.py')
@@ -332,6 +338,10 @@ function fixture(shared, largeMember) {
       .replace(
         "'/var/lib/clean-your-tv-root-staging'",
         JSON.stringify(execBase)
+      )
+      .replace(
+        "'/var/lib/clean-your-tv-homebrew-staging'",
+        JSON.stringify(path.join(base, 'homebrew-exec'))
       ),
     sandbox
   );
@@ -735,6 +745,62 @@ async function rejection(change) {
     } finally {
       large.clean();
     }
+  }
+  var fallback = fixture(false, 'no-root');
+  try {
+    fallback.setSystem();
+    var alternative = await fallback.api.inspect(fallback.root);
+    var statusStage = await fallback.api.stage(alternative, 'no-root-status');
+    assert.equal(
+      fs.readFileSync(statusStage.noRoot, 'utf8'),
+      'fixed_no_root_driver'
+    );
+    assert(fs.existsSync(path.join(statusStage.root, 'manifest.json')));
+    assert(!fs.existsSync(path.join(statusStage.root, 'no-root/launcher.ipk')));
+    assert(!fs.existsSync(statusStage.driver));
+    for (const closure of [
+      'root-updater/bundle.json',
+      'root-updater/cleanup_tail.js',
+      'installer-support/lifecycle-gate'
+    ]) {
+      assert(fs.existsSync(path.join(statusStage.root, closure)), closure);
+    }
+    assert(
+      !fs.existsSync(
+        path.join(statusStage.root, 'root-updater/root-updater.ipk')
+      )
+    );
+    await statusStage.cleanup();
+    var admissionStage = await fallback.api.stage(alternative, 'no-root');
+    assert.equal(
+      fs.readFileSync(
+        path.join(admissionStage.root, 'no-root/launcher.ipk'),
+        'utf8'
+      ),
+      'reviewed_home'
+    );
+    assert(!fs.existsSync(admissionStage.driver));
+    await admissionStage.cleanup();
+    var rootOnlyStage = await fallback.api.stage(alternative, true);
+    assert(fs.existsSync(rootOnlyStage.noRoot));
+    assert.notEqual(
+      path.dirname(rootOnlyStage.root),
+      path.dirname(admissionStage.root)
+    );
+    var inspectionStage = await fallback.api.stage(alternative, 'inspection');
+    assert.equal(
+      path.dirname(inspectionStage.root),
+      path.dirname(admissionStage.root)
+    );
+    assert(fs.existsSync(inspectionStage.driver));
+    assert(fs.existsSync(inspectionStage.noRoot));
+    await inspectionStage.cleanup();
+    assert(
+      !fs.existsSync(path.join(rootOnlyStage.root, 'no-root/launcher.ipk'))
+    );
+    await rootOnlyStage.cleanup();
+  } finally {
+    fallback.clean();
   }
   var sharedBase = fixture();
   try {

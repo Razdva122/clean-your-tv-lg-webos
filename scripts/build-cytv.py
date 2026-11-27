@@ -253,11 +253,7 @@ def stage_installer_support(payload, work):
     build_lifecycle_gate(Path(payload) / 'installer-support/lifecycle-gate', work)
 
 
-def _prepare_payload(payload, work, versions, *, single_tile=False):
-    # Compiler intermediates stay local to this attempt. Only Zig's own caches
-    # are shared, so a child left running cannot write into a later attempt.
-    scratch = payload.parent
-    stage_installer_support(payload, work)
+def stage_no_root_packages(payload, work, versions, *, single_tile=False, scratch):
     helper = None if single_tile else helper_baseline(versions['helper'])
     if helper is None:
         import ziglang
@@ -295,13 +291,22 @@ def _prepare_payload(payload, work, versions, *, single_tile=False):
             info.update(visible=False, cytvProductGeneration=2)
         app['appinfo.json']=(json.dumps(info,indent=2)+'\n').encode()
         (payload / paths['launcher']).write_bytes(pack_app(app, renewal))
+    (payload / 'fallback.png').write_bytes(launcher['brand-v2-icon.png'])
+    return launcher
+
+
+def _prepare_payload(payload, work, versions, *, single_tile=False):
+    # Compiler intermediates stay local to this attempt. Only Zig's own caches
+    # are shared, so a child left running cannot write into a later attempt.
+    scratch = payload.parent
+    stage_installer_support(payload, work)
+    launcher = stage_no_root_packages(payload, work, versions, single_tile=single_tile, scratch=scratch)
     from scripts.chinese_fonts import with_fonts
     launcher = with_fonts(launcher)
     (payload / 'fonts').mkdir()
     for name, data in launcher.items():
         if name.startswith('fonts/Noto'):
             (payload / name).write_bytes(data)
-    (payload / 'fallback.png').write_bytes(launcher['brand-v2-icon.png'])
     (payload / 'installer.png').write_bytes((ROOT / 'assets/icons/installer.png').read_bytes())
     stage_brand_assets(payload)
     stage_installer_docs(payload)

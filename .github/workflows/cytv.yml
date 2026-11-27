@@ -362,7 +362,7 @@ jobs:
           cache: pip
           cache-dependency-path: |
             scripts/build-requirements.txt
-      - run: python -m pip install -r scripts/build-requirements.txt ziglang==0.14.1
+      - run: python -m pip install -r scripts/build-requirements.txt ziglang==0.14.1 websockets==15.0.1
       - name: Build offline candidate without publishing
         run: |
           python - <<'PYTHON'

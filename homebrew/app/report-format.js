@@ -52,15 +52,28 @@
       'installer-runtime-mismatch',
       'tile_home_unavailable',
       'tile_edition_unconfirmed',
-      'update_service_unavailable'
+      'update_service_unavailable',
+      'no-root-prerequisites',
+      'no-root-payload-invalid',
+      'root-admission-changed',
+      'original-worker-interrupted',
+      'original-work-unverified',
+      'current-state-unverified',
+      'worker-unavailable',
+      'pairing-unavailable',
+      'pairing-rejected',
+      'pairing-timeout',
+      'inventory-unavailable',
+      'no-root-removal-mismatch',
+      'no-root-worker-busy'
     ],
     fields = {
       state:
-        'conflict migration_required recovery_required unknown unsupported external_setup edition_unconfirmed prerequisites fresh pending complete installed'.split(
+        'conflict migration_required recovery_required unknown unsupported external_setup edition_unconfirmed prerequisites fresh pending complete installed no_root_ready no_root_unavailable no_root_installed'.split(
           ' '
         ),
       stage:
-        'inspect requested blocked preparing reserved snapshot root-deploy root-updater supervisor readback submitting submitted complete activate restore resume-submitted clean-removal-requested package-remove-submitting root-remove-submitting supervisor-disable supervisor-archive original-writers-fenced controls-restored package-removal private-cleanup restart-required verified-clean'.split(
+        'inspect requested blocked preparing reserved snapshot root-deploy root-updater supervisor readback submitting submitted complete activate restore resume-submitted clean-removal-requested package-remove-submitting root-remove-submitting supervisor-disable supervisor-archive original-writers-fenced controls-restored package-removal private-cleanup restart-required verified-clean pairing inventory updates'.split(
           ' '
         ),
       detail:
@@ -78,7 +91,7 @@
     checks = (
       'homebrew-access root-user node-version installer-payload python-runtime installer-staging product-state home-compatibility ' +
       'home-settings home-profiles packages startup home-button python3 python-json python-fcntl python-version luna-send ' +
-      'apps-directory luna-services-directory install-request install-root install-updates install-readback activate-home'
+      'apps-directory luna-services-directory install-request install-root install-updates install-readback activate-home no-root-pairing no-root-install'
     ).split(' '),
     actions = [
       'install',

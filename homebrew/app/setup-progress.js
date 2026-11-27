@@ -21,6 +21,27 @@
       'install-readback',
       'activate-home'
     ],
+    noRootInstallation = [
+      'install-request',
+      'no-root-pairing',
+      'no-root-install',
+      'install-updates',
+      'install-readback',
+      'activate-home'
+    ],
+    noRootStages = {
+      submitting: 0,
+      'checking-status': 0,
+      requested: 0,
+      pairing: 1,
+      inventory: 1,
+      installing: 2,
+      packages: 2,
+      updates: 3,
+      readback: 4,
+      'setting-up-updates': 3,
+      complete: 5
+    },
     status = ['pending', 'running', 'pass', 'fail', 'unknown'],
     stages = {
       requested: 0,
@@ -47,31 +68,54 @@
   ) {
     var checks = {};
     var backend = inspection && inspection.checks;
-    preflight.concat(installation).forEach(function (key) {
-      checks[key] =
-        backend && status.indexOf(backend[key]) >= 0 ? backend[key] : 'pending';
-    });
+    preflight
+      .concat(
+        operation && operation.edition === 'no-root'
+          ? noRootInstallation
+          : installation
+      )
+      .forEach(function (key) {
+        checks[key] =
+          backend && status.indexOf(backend[key]) >= 0
+            ? backend[key]
+            : 'pending';
+      });
     if (checking && !inspection) checks['homebrew-access'] = 'running';
     if (runtimePreparation) checks['python-runtime'] = runtimePreparation;
     if (failure === 'homebrew_exec_denied') checks['homebrew-access'] = 'fail';
     else if (failure && !operation && checks['homebrew-access'] !== 'pass')
       checks['homebrew-access'] = 'unknown';
     if (!operation || operation.action !== 'install') return checks;
-    var position = Object.prototype.hasOwnProperty.call(stages, operation.stage)
-      ? stages[operation.stage]
+    var noRoot = operation.edition === 'no-root',
+      steps = noRoot ? noRootInstallation : installation,
+      stageOrder = noRoot ? noRootStages : stages;
+    var position = Object.prototype.hasOwnProperty.call(
+      stageOrder,
+      operation.stage
+    )
+      ? stageOrder[operation.stage]
       : -1;
     if (position < 0) {
       if (operation.state === 'unknown') checks['install-request'] = 'unknown';
       return checks;
     }
-    installation.slice(0, position).forEach(function (key) {
+    steps.slice(0, position).forEach(function (key) {
       checks[key] = 'pass';
     });
-    var active = installation[position],
+    var active = steps[position],
       activation = operation.activation || {};
     if (failure || operation.state === 'unknown') checks[active] = 'unknown';
     else if (operation.state === 'recovery_required') checks[active] = 'fail';
-    else if (position === 4 && operation.state === 'complete') {
+    else if (
+      noRoot &&
+      position === steps.length - 1 &&
+      operation.state === 'complete'
+    ) {
+      checks[active] =
+        operation.result && operation.result.helper_running === true
+          ? 'pass'
+          : 'unknown';
+    } else if (position === 4 && operation.state === 'complete') {
       if (activation.completed === true) checks[active] = 'pass';
       else if (activation.state === 'pending') checks[active] = 'running';
       else if (activation.state !== 'cancelled' && activation.state)
@@ -80,5 +124,10 @@
     return checks;
   }
 
-  return { observe: observe, preflight: preflight, installation: installation };
+  return {
+    observe: observe,
+    preflight: preflight,
+    installation: installation,
+    noRootInstallation: noRootInstallation
+  };
 });

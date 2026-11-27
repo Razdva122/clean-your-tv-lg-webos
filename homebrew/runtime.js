@@ -7,6 +7,7 @@ var fs = require('fs'),
 var BASE = '/var/lib/clean-your-tv-python';
 var PIN = '4a71641c8d5536175e404a961624e8656eba30e97b5026f6bd7dc31e4bbeaaea';
 var EXEC_BASE = '/var/lib/clean-your-tv-root-staging';
+var HOMEBREW_EXEC_BASE = '/var/lib/clean-your-tv-homebrew-staging';
 var SHARED = [
   '/media',
   '/media/developer',
@@ -722,17 +723,17 @@ function inspect(payloadRoot, recovery, pin, payloadVerified) {
     }
   );
 }
-function executionBase() {
+function executionBase(basePath) {
   ancestors('/var/lib');
   var createdBase;
   try {
-    fs.mkdirSync(EXEC_BASE, 448);
-    createdBase = owned(EXEC_BASE, true);
+    fs.mkdirSync(basePath, 448);
+    createdBase = owned(basePath, true);
   } catch (error) {
     if (error.code !== 'EEXIST') throw error;
   }
-  ancestors(EXEC_BASE);
-  var base = owned(EXEC_BASE, true);
+  ancestors(basePath);
+  var base = owned(basePath, true);
   if ((base.mode & 4095) !== 448 || base.dev !== owned('/var/lib', true).dev)
     fail('Unsafe execution staging directory');
   return createdBase;
@@ -741,10 +742,29 @@ function stage(state, full) {
   return Promise.resolve().then(function () {
     var context = state.context,
       expected = context.manifest.files;
-    var createdBase = executionBase();
-    var removing = full === 'removal';
+    var removing = full === 'removal',
+      noRoot = full === 'no-root',
+      noRootStatus = full === 'no-root-status',
+      noRootEntry = 'edition/no_root.py';
+    // The Root removal oracle inventories its own staging namespace. Keep
+    // Homebrew's read-only admission and No-root execution outside it.
+    var basePath =
+      noRoot || noRootStatus || full === 'inspection'
+        ? HOMEBREW_EXEC_BASE
+        : EXEC_BASE;
+    var createdBase = executionBase(basePath);
+    var handoffFiles = [
+      'root-updater/bundle.json',
+      'root-updater/cleanup_tail.js',
+      'installer-support/lifecycle-gate'
+    ];
+    var noRootMedia = {
+      'no-root/launcher.ipk': 64 * 1024 * 1024,
+      'no-root/launcher-720p.ipk': 64 * 1024 * 1024,
+      'no-root/screensaver.ipk': 32 * 1024 * 1024
+    };
     var root =
-      EXEC_BASE +
+      basePath +
       (removing ? '/cytv-product-' : '/cytv-homebrew-') +
       crypto.randomBytes(16).toString('hex');
     fs.mkdirSync(root, 448);
@@ -802,12 +822,12 @@ function stage(state, full) {
           // The computer installer shares this directory. Never remove its
           // contents or a replacement directory, even when the name matches.
           try {
-            var currentBase = owned(EXEC_BASE, true);
+            var currentBase = owned(basePath, true);
             if (
               currentBase.dev === createdBase.dev &&
               currentBase.ino === createdBase.ino
             )
-              fs.rmdirSync(EXEC_BASE);
+              fs.rmdirSync(basePath);
           } catch (error) {
             if (['ENOENT', 'ENOTEMPTY', 'EEXIST'].indexOf(error.code) < 0)
               throw error;
@@ -824,9 +844,20 @@ function stage(state, full) {
     try {
       var names = Object.keys(expected).filter(function (name) {
           if (removing) return /^(root|root-updater)\//.test(name);
+          if (noRoot || noRootStatus)
+            return (
+              name === 'manifest.json' ||
+              name === 'no-root/payload.json' ||
+              handoffFiles.indexOf(name) >= 0 ||
+              name.indexOf('edition/') === 0 ||
+              (noRoot && /^(no-root|supervisor)\//.test(name))
+            );
           if (full)
-            return /^(root|root-updater|supervisor|baseline|edition)\//.test(
-              name
+            return (
+              (expected[noRootEntry] &&
+                (name === 'manifest.json' ||
+                  handoffFiles.indexOf(name) >= 0)) ||
+              /^(root|root-updater|supervisor|baseline|edition)\//.test(name)
             );
           return (
             (name.indexOf('root-updater/') === 0 && !/\.ipk$/.test(name)) ||
@@ -843,8 +874,9 @@ function stage(state, full) {
           : null;
       var rootRecord = rootIpk && expected[rootIpk];
       var rollbackCopy = rootRecord && 'baseline/cache/' + rootRecord.sha256;
-      if (!names.length || names.indexOf('root-updater/install_driver.py') < 0)
-        fail('Missing execution closure');
+      var entry =
+        noRoot || noRootStatus ? noRootEntry : 'root-updater/install_driver.py';
+      if (names.indexOf(entry) < 0) fail('Missing execution closure');
       names.forEach(function (name) {
         safeName(name);
         var record = expected[name];
@@ -854,11 +886,16 @@ function stage(state, full) {
           (name === rollbackCopy &&
             record.sha256 === rootRecord.sha256 &&
             record.size === rootRecord.size);
-        if (!rootMedia) ordinaryBytes += record.size;
+        var mediaLimit = rootMedia
+          ? 64 * 1024 * 1024
+          : noRoot && Object.prototype.hasOwnProperty.call(noRootMedia, name)
+            ? noRootMedia[name]
+            : 0;
+        if (!mediaLimit) ordinaryBytes += record.size;
         if (
           !Number.isSafeInteger(record.size) ||
           record.size < 0 ||
-          record.size > (rootMedia ? 64 : 16) * 1024 * 1024 ||
+          record.size > (mediaLimit || 16 * 1024 * 1024) ||
           ordinaryBytes > 32 * 1024 * 1024
         )
           fail('Execution snapshot too large');
@@ -906,6 +943,8 @@ function stage(state, full) {
         root: root,
         driver: root + '/root-updater/install_driver.py',
         editionInspector: root + '/edition/edition.py',
+        noRoot:
+          names.indexOf(noRootEntry) >= 0 ? root + '/' + noRootEntry : null,
         debloat: root + '/edition/debloat.py',
         cleanup: cleanup
       };
@@ -1020,7 +1059,7 @@ function invokeTail(context, work, mode) {
     gateHash = '-';
   if (mode !== 'inspect') {
     gate = pinnedFile(context, 'installer-support/lifecycle-gate');
-    executionBase();
+    executionBase(EXEC_BASE);
     scratch =
       EXEC_BASE + '/cytv-root-tail-' + crypto.randomBytes(16).toString('hex');
     fs.mkdirSync(scratch, 448);
