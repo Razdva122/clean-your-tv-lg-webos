@@ -52,6 +52,11 @@ jobs:
           with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
               output.write('homebrew_required='+str(selected).lower()+'\n')
           PY
+      - name: Verify packaged Engine transition against the latest stable release
+        if: steps.scope.outputs.full == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/check-engine-transition.py
   validation:
     needs: scope
     if: needs.scope.outputs.installers == 'true'
