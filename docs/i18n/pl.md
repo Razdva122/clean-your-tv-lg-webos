@@ -72,6 +72,18 @@ Jeśli instalator Root zaproponuje zastąpienie obecnej integracji Home, potwier
 
 Podczas instalacji Root instalator w razie potrzeby automatycznie korzysta ze sprawdzonej wewnętrznej pamięci tymczasowej; nośnik USB nie jest wymagany, a jeśli kontrola pamięci się nie powiedzie, zachowaj dane odzyskiwania i zapisz raport diagnostyczny.
 
+<a id="nieopublikowany-kandydat-instalacja-root-przez-homebrew"></a>
+
+### Gdy CYTV Installer jest już otwarty na telewizorze
+
+Wybierz **Zainstaluj i aktywuj** i potwierdź raz. Instalator zainstaluje razem Root Home, Root Updater i System Updater. Przycisk Home będzie otwierał Root Home, chyba że działa blokada awaryjna. Jeśli instalator wskaże komputer do konfiguracji Root, kontynuuj na komputerze. Jeśli zaproponuje No-root, użyj instalatora na komputerze lub urządzeniu z Androidem.
+
+Po instalacji Root Home otwiera ekran **Skonfiguruj telewizor**. Wybierz wbudowany motyw w sekcji **Motywy**. Otwórz **Zmień ustawienia LG**, zaznacz opcje reklam i rekomendacji i wybierz **Zastosuj wybrane ustawienia**. Sprawdź wynik każdej zmiany. Aby przywrócić zapisane wartości pierwotne, zaznacz opcje i wybierz **Przywróć wybrane ustawienia**. Wybierz **Otwórz Home**, aby przejść do ekranu głównego. Panel możesz otworzyć ponownie w **Ustawienia → Zaawansowane → Skonfiguruj telewizor**.
+
+Jeśli instalator zgłosi problem, postępuj zgodnie z instrukcją na ekranie. Zapisz raport diagnostyczny, aby zachować kopię na telewizorze. Otwórz zapisany raport w instalatorze lub w sekcji odzyskiwania kafelka, aby go przeczytać lub zeskanować kod QR telefonem. Lista pokazuje ukończone kontrole, bieżący etap i błędy. Zeskanuj kod QR, aby pobrać raport JSON lub otworzyć uzupełniony szkic zgłoszenia GitHub. Przed wysłaniem krótko opisz problem.
+
+Aby odinstalować na telewizorze, w Root Home otwórz **Ustawienia → Zaawansowane → Odzyskiwanie Clean Your TV** i potwierdź pełne usunięcie. Jeśli potrzebny jest pełny restart, uruchom ponownie telewizor, otwórz Clean Your TV i wznów usuwanie. Po jego potwierdzeniu możesz usunąć też kafelek instalatora z ekranu wyniku.
+
 ## 5. Sprawdź pilota
 
 1. Otwórz inną aplikację na TV i krótko naciśnij **Home**. Powinien otworzyć się Clean Your TV. W kreatorze zaznacz, co zobaczyłeś; pomiń test, jeśli go nie wykonałeś.
@@ -150,7 +162,6 @@ W instalatorze na komputerze otwórz **Czynność konserwacyjna → Dostosuj ust
 <a id="blokada-oprogramowania-lg-w-120"></a>
 <a id="nowości-w-130-odzyskiwanie-w-instalatorze-komputerowym"></a>
 <a id="nowości-w-130--12"></a>
-<a id="nieopublikowany-kandydat-instalacja-root-przez-homebrew"></a>
 <a id="nieopublikowany-kandydat-odzyskiwanie-dźwięku-hdmi-root"></a>
 <a id="motywy--kandydat-rozwojowy"></a>
 <a id="kategorie-ustawień-nieopublikowany-kandydat"></a>
@@ -201,6 +212,10 @@ Otwórz Ustawienia → Tapety → Prześlij z telefonu i zeskanuj kod. Wybierz J
 ## Skonfiguruj Clean Your TV
 
 Przed wyborem motywu użyj opcji **Debloat**, aby wybrać ustawienia reklam, poleceń, prywatności i powiadomień LG do zmiany. Sprawdź każdy wynik. Jeśli instalator nie może odczytać wartości początkowej, nie zapisze jej do automatycznego przywrócenia. Wybierz **Pomiń Debloat**, aby zachować bieżące ustawienia.
+
+W obu edycjach można wyłączyć transmisje promocyjne LG, jeśli telewizor udostępnia to ustawienie.
+
+Aby cofnąć jedną zmianę, otwórz Debloat w menu konserwacji, korzystając z tego samego zapisanego połączenia z telewizorem. Wybierz ustawienie, sprawdź pierwotną wartość i potwierdź. Na obsługiwanych modelach możesz wyłączyć automatyczne uruchamianie LG Channels w menu Wszystkie ustawienia → Ogólne → Kanały → Automatyczne uruchamianie LG Channels.
 
 Podczas odinstalowywania możesz przywrócić zapisane początkowe ustawienia Debloat. Jeśli pominiesz przywracanie, odinstalowywanie będzie kontynuowane bez zmiany tych ustawień.
 

@@ -122,6 +122,8 @@ diagnostic report and keep recovery files. [Recovery](RECOVERY.md).
 
 Before choosing a theme, use **Debloat** to select which LG ads, recommendations, privacy settings and notifications to change. Check each result before continuing. If the installer could not read the original value, it cannot save it for an automatic undo. Choose **Skip Debloat** to keep your current settings.
 
+Both editions can turn off LG promotional streams when the TV exposes the setting.
+
 After successful installation, choose Classic, Liquid Glass or Ribbon and turn Home weather on or off. Ribbon does not support weather; Liquid Glass uses the compact format. Weather can find an approximate city through your internet connection; change it later in Home settings.
 
 No-root with Developer Mode offers optional auto-renewal; keep monitoring the official timer. No-root through existing root SSH does not use this option. Root offers LG firmware update blocking through Homebrew Channel, including security updates; a real restart through Homebrew Channel is required. This is separate from CYTV updates.
@@ -162,11 +164,30 @@ inactive recovery evidence is retained intentionally.
 
 ## Candidate: on-TV Root installation
 
-**Unpublished:** the separate CYTV Installer for Homebrew Channel is Root-only;
-no public catalog listing is established. It requires a verified candidate package,
-compatible ARM32 TV, effective root services and runtime/storage checks. Home
-activation and optional System Updater preparation are explicit separate steps.
-Homebrew upgrades Installer itself; product updates use the product updaters.
+**Unpublished:** the separate CYTV Installer for Homebrew Channel requires an
+already-rooted ARM32 TV, effective root services, a verified candidate package
+and passing runtime/storage checks. For Root, choose
+**Install and activate** and confirm once. The Installer sets up Root Home,
+Root Updater and System Updater together, then activates Root Home. If it
+finds compatible settings from a previous Clean Your TV Home setup, it
+imports them automatically. If the TV needs the bundled Python runtime, the
+confirmation includes preparing it and proceeding only after the TV passes
+the checks. An active emergency stop keeps Root Home disabled. The
+maintenance screen still offers **Activate Root Home** and **Restore LG Home**.
+Homebrew updates the Installer app. The product updaters handle Clean Your TV
+updates.
+
+If the Installer identifies a supported on-TV No-root alternative, confirm the
+installation and allow webOS remote-control pairing on the TV. Reopen the tile
+to continue the same request. If it directs you to a computer for Root setup,
+use the desktop installer. If it cannot identify the supported Home interfaces,
+choose **Check status** before selecting an edition.
+
+For candidate testing on webOS 11 or later, use
+[Homebrew Channel 0.8.0](https://github.com/webosbrew/webos-homebrew-channel/releases/tag/v0.8.0)
+or later. If Installer reports **Homebrew access denied**, update Homebrew
+Channel and use **Check status**. If access remains denied, use the published
+computer or Android installer.
 
 For supervised testing, follow the [candidate acceptance and recovery contract](development/HOMEBREW-INSTALL-ACCEPTANCE.md)
 and [manual continuation requirements](MANUAL_INSTALL.md#candidate-shared-product-continuation).

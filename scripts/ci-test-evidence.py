@@ -91,7 +91,10 @@ def test_units(path, entry):
     if re.fullmatch(r'(root-edition/tests|tests/system_updates)/test_[^/]+\.(py|cjs)', path):
         return {'tv-runtime', 'installer', 'installer-host'}
     if (re.fullmatch(r'homebrew/tests/test_[^/]+\.py', path)
-            or path in {'homebrew/tests/runtime.cjs', 'homebrew/tests/bridge.cjs', 'homebrew/tests/ui.cjs'}):
+            or path in {'homebrew/tests/runtime.cjs', 'homebrew/tests/bridge.cjs',
+                        'homebrew/tests/diagnostics.cjs', 'homebrew/tests/ui.cjs',
+                        'homebrew/tests/setup-progress.cjs',
+                        'root-edition/ui/test-post-install.cjs'}):
         return {'installer'}
     if (re.fullmatch(r'android/tests/test_[^/]+\.py', path)
             or TEST_RUNNERS.get(path) == 'browser-core'):

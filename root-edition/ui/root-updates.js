@@ -671,8 +671,22 @@
       if (!options.error) refresh(!recovery);
     }
     function open(options) {
-      if (!window.SystemUpdates) return legacyOpen(options);
       options = options || {};
+      function fallback() {
+        if (window.CYTVProductGeneration !== 2) return legacyOpen(options);
+        if (window.SystemUpdates && window.SystemUpdates.openExternal)
+          return window.SystemUpdates.openExternal({
+            edition: 'root',
+            onClose: options && options.onClose
+          });
+        window.alert(
+          t(
+            'Continue in Clean Your TV on your computer or Android phone.'
+          )
+        );
+        if (options && options.onClose) options.onClose();
+      }
+      if (!window.SystemUpdates) return fallback();
       if (panel) {
         panel.hidden = true;
         clearTimeout(timer);
@@ -683,9 +697,7 @@
         standalone: options.standalone,
         recovery: options.recovery,
         error: options.error,
-        fallback: function () {
-          legacyOpen(options);
-        }
+        fallback: fallback
       });
     }
     window.RootUpdates = {

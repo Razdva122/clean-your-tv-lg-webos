@@ -72,6 +72,18 @@ If Root setup offers to replace the current Home integration, confirm only if yo
 
 For Root setup, the installer automatically uses verified internal temporary storage when needed; no USB drive is required, and if the storage check fails, keep the recovery data and save a diagnostic report.
 
+<a id="unreleased-candidate-root-setup-through-homebrew"></a>
+
+### If CYTV Installer is already open on your TV
+
+Choose **Install and activate** and confirm once. The Installer sets up Root Home, Root Updater and System Updater together. Root Home will open with the Home button unless emergency-off is active. If the Installer directs you to a computer for Root, continue there. If it offers No-root, use the computer or Android installer.
+
+After installation, **Set up your TV** opens in Root Home. Choose a built-in theme under **Themes**, or open **Adjust LG settings** to select the ad and recommendation settings you want to change. Check each result after choosing **Apply selected settings**. To undo changes with a saved original value, select the settings and choose **Restore selected settings**. To continue to the launcher, choose **Open Home**. To return later, open **Settings → Advanced → Set up your TV**.
+
+If the installer reports a problem, follow the step shown on the screen. Choose **Save diagnostic report** to keep a copy on this TV. Use **Open saved report** in the installer or tile recovery to read it again or scan its QR code with a phone. The checklist shows completed checks, the active stage and any failure. After scanning the QR code, download the JSON report or open the prefilled GitHub issue. Add a short description before submitting.
+
+To uninstall from the TV, open **Settings → Advanced → Clean Your TV recovery** in Root Home, then choose **Remove complete product** and confirm. If asked for a full restart, restart the TV, reopen Clean Your TV and continue the same removal. After removal is verified, you can remove the Installer tile from the result screen.
+
 ## 5. Check your remote
 
 1. Open another TV app and briefly press **Home**. Clean Your TV should open. Tell the wizard what you saw; leave the check skipped if you did not test it.
@@ -151,7 +163,6 @@ In the desktop installer, open **Maintenance action → Adjust LG settings (Debl
 <a id="lg-firmware-blocking-in-120"></a>
 <a id="new-in-130-guided-desktop-recovery"></a>
 <a id="new-in-130--12"></a>
-<a id="unreleased-candidate-root-setup-through-homebrew"></a>
 <a id="unreleased-candidate-hdmi-sound-recovery-root"></a>
 <a id="themes-154"></a>
 <a id="settings-categories-unpublished-candidate"></a>
@@ -201,7 +212,11 @@ Open Settings → Wallpapers → Upload from phone and scan the code. Choose a J
 
 ## Set up your Clean Your TV
 
-Before choosing a theme, use **Debloat** to select which LG ads, recommendations, privacy settings and notifications to change. The desktop installer selects every option by default. Clear any options you want to keep as they are before clicking **Continue**. Check each result before continuing. If the installer could not read the original value, it cannot save it for an automatic undo. Choose **Skip Debloat** to keep your current settings.
+Before choosing a theme, use **Debloat** to select which LG ads, recommendations, privacy settings and notifications to change. The desktop installer preselects the LG advertising, recommendation, privacy and notification settings. Clear any options you want to keep as they are before clicking **Continue**. Check each result before continuing. If the installer could not read the original value, it cannot save it for an automatic undo. Choose **Skip Debloat** to keep your current settings.
+
+Both editions can turn off LG promotional streams when the TV exposes the setting.
+
+To undo one change while keeping CYTV installed, open Debloat in Maintenance with the same saved TV connection. Select a saved setting, review its original value and confirm. To stop LG Channels starting automatically on supported TVs, open All Settings → General → Channels → Auto Start LG Channels and choose Off.
 
 During removal, you can choose to restore the saved original Debloat settings. If you skip restoration, removal continues with those settings as they are.
 

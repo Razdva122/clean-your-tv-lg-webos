@@ -13,7 +13,7 @@ import subprocess
 import sys
 from time import monotonic, sleep
 
-from installation import classify, device_snapshot, read_journal, _optional_record
+from installation import TV_INSTALLER, classify, device_snapshot, read_journal, _optional_record
 from updater.package import safe_bytes, inspect_package, verify_payload, members
 from updater.store import Store
 
@@ -71,7 +71,10 @@ def support_stages(uid=0):
             if info.st_uid!=uid or info.st_mode & 0o777 != 0o700:
                 raise ValueError('unsafe_private_support_directory')
             for name in os.listdir(directory):
-                if not SUPPORT_STAGE.fullmatch(name):raise ValueError('unclassified_private_support')
+                # Observe Homebrew snapshots for worker/cleanup checks. The desktop
+                # retirement API continues to accept only its own staging kinds.
+                if not (SUPPORT_STAGE.fullmatch(name) or re.fullmatch(r'cytv-homebrew-[a-f0-9]{32}',name)):
+                    raise ValueError('unclassified_private_support')
                 path=PRIVATE_TEMP/name
                 os.close(checked_store(path,uid)._directory())
                 stages.append(path)
@@ -80,6 +83,11 @@ def support_stages(uid=0):
 
 
 def sha(raw): return hashlib.sha256(raw).hexdigest()
+
+
+def single_tile_installed():
+    from package_identity import SINGLE_TILE_ORIGINAL
+    return os.path.lexists(ROOT / SINGLE_TILE_ORIGINAL)
 
 
 def component_journal_snapshot():
@@ -261,8 +269,19 @@ class LocalDevice:
         self.payload=Path(payload)
         deploy.verify_bundle(self.payload/'root',allow_experimental=not product)
         verify_bundle(self.payload/'root-updater')
+        release = json.loads(safe_bytes(self.payload/'root/release.json'))
+        self.single_tile = release.get('product_generation') == 2
         if options['prepare_supervisor']:
-            self.system_setup().verify_bundle(self.payload/'supervisor')
+            supervisor = self.system_setup().verify_bundle(self.payload/'supervisor')
+            if (supervisor.get('product_schema', 1) == 2) != self.single_tile:
+                raise ValueError('Root and supervisor belong to different product generations')
+        if product and self.single_tile:
+            if not options['prepare_supervisor'] or options['migrate']:
+                raise ValueError('Single-tile Root requires a complete prepared product')
+            apps = self.apps()
+            if TV_INSTALLER not in apps or {'com.gathin.tvhome', 'com.local.nativehome',
+                    'com.cleanyourtv.updater', 'com.cleanyourtv.root.updater'} & apps:
+                raise ValueError('Single-tile setup requires its entry and a matching edition')
         from python_binding import launcher_bytes
         launcher_bytes(sys.executable)
         self.options=options
@@ -295,7 +314,14 @@ class LocalDevice:
         values=device_snapshot(owned_operation=operation['id'] if operation else None)
         # device_snapshot intentionally refuses to bless lifecycle markers alone.
         # Complete descriptor/profile readback adds the missing package evidence.
-        if not any(values[k] for k in ('pending','retained')) and os.path.lexists(ROOT) and os.path.lexists(UPDATER):
+        if single_tile_installed() and not any(values[k] for k in ('pending','retained')):
+            try:
+                result = self.readback()
+                versions = {'root': result['root_version']}
+                values.update(packages_match=True,receipts_match=True,complete=True)
+            except (OSError,ValueError,TypeError,KeyError,RuntimeError,subprocess.SubprocessError):
+                values['retained'] = True
+        elif not any(values[k] for k in ('pending','retained')) and os.path.lexists(ROOT) and os.path.lexists(UPDATER):
             try:
                 if os.path.lexists(SUPERVISOR): self.verify_supervisor()
                 current_updater(UPDATER,INSTALLED,hashes=getattr(self,'supervisor_updater',None))
@@ -311,6 +337,7 @@ class LocalDevice:
                 values['retained']=True;versions=None
         result=classify(values)
         if result['state']=='installed' and versions is not None:result['versions']=versions
+        if result['state']=='installed' and single_tile_installed():result['tile_protocol']=1
         return result
 
     def verify_snapshot(self, payload, submission, *, inventories=None):
@@ -332,6 +359,7 @@ class LocalDevice:
 
     def verify_resume(self, payload, submission):
         options=self.verify_snapshot(payload,submission)
+        self.homebrew_settings = submission.get('homebrew_settings')
         self.preflight(Path(payload),options,product=submission['action']=='install')
         return options
 
@@ -402,7 +430,10 @@ class LocalDevice:
             if options['migrate']:_capture_migrated_baseline(root)
             deploy.verify_payload(json.loads(safe_bytes(root/'release.json')))
             verify_package_modes(safe_bytes(root/json.loads(safe_bytes(root/'bundle.json'))['package']),INSTALLED)
-        if not os.path.lexists(UPDATER):
+        if getattr(self, 'single_tile', False):
+            if os.path.lexists(UPDATER):
+                raise ValueError('Standalone Root Updater requires migration')
+        elif not os.path.lexists(UPDATER):
             # Bootstrap always writes private state before submission. Also reject
             # foreign/externally retained package and bus artifacts before setup.
             app='com.cleanyourtv.root.updater'
@@ -491,7 +522,11 @@ class LocalDevice:
                 apps=json.loads(result.stdout)
                 inventory={'apps':[{k:a[k] for k in ('id','title','icon','iconColor')} for a in apps if not a.get('hidden') and isinstance(a.get('id'),str) and isinstance(a.get('title'),str)],'inputs':[]}
                 root_package.personalize_root(root,inventory)
-        result=deploy.install(root,migrate=options['migrate'])
+        settings = getattr(self, 'homebrew_settings', None)
+        if settings is None:
+            result=deploy.install(root,migrate=options['migrate'])
+        else:
+            result=deploy.install(root,migrate=options['migrate'],homebrew_settings=settings)
         if options['migrate']: _capture_migrated_baseline(root)
         return result
 
@@ -538,15 +573,30 @@ class LocalDevice:
         if not all(device.verify_installed(c) for c in baseline['components'] if c['name']!='root'):raise ValueError('supervisor_baseline_mismatch')
         from package_identity import identity
         identity('com.cleanyourtv.system.updater',installed=INSTALLED,full=True)
-        updater=next(item for item in baseline['components'] if item['name']=='root-updater')
-        raw=device.cache_bytes(updater)
-        self.supervisor_updater=device.inspect(raw,updater)
+        if baseline['schema'] == 1:
+            updater=next(item for item in baseline['components'] if item['name']=='root-updater')
+            raw=device.cache_bytes(updater)
+            self.supervisor_updater=device.inspect(raw,updater)
+            verify_package_modes(raw,INSTALLED)
+        elif baseline['schema'] != 2 or not single_tile_installed():
+            raise ValueError('Original single-tile Root proof required')
         infrastructure=next(item for item in baseline['components'] if item['name']=='root-infrastructure')
         self.supervisor_infrastructure=device.inspect(device.cache_bytes(infrastructure),infrastructure)
-        verify_package_modes(raw,INSTALLED)
         return baseline
 
     def readback(self):
+        if single_tile_installed():
+            from package_identity import identity
+            baseline = self.verify_supervisor()
+            if baseline.get('schema') != 2 or os.path.lexists(UPDATER) or TV_INSTALLER not in self.apps():
+                raise ValueError('Incomplete single-tile installation')
+            home = next(item for item in baseline['components'] if item['name'] == 'root')
+            actual = identity(APP, installed=INSTALLED, full=True)
+            if (actual.get('version') != home['version'] or actual.get('visible') is not False
+                    or actual.get('cytvProductGeneration') != 2):
+                raise ValueError('Installed single-tile Home does not match the committed release')
+            return dict(verified=True, installed=APP, home_changed=False, baseline_sha=home['sha256'],
+                        root_version=home['version'], tile_protocol=1)
         if os.path.lexists(SUPERVISOR): self.verify_supervisor()
         current_updater(UPDATER,INSTALLED,hashes=getattr(self,'supervisor_updater',None));descriptor=current_root(ROOT,UPDATER,INSTALLED)
         return {'verified':True,'installed':APP,'home_changed':False,'baseline_sha':descriptor['sha256']}
@@ -609,7 +659,10 @@ class LocalDevice:
             selected=tx['candidate' if tx['phase']=='complete' else 'prior'] if tx else None
             if 'proof' not in baseline or selected!=baseline:
                 raise ValueError('root_recovery_current_provenance_required')
-            current_root(ROOT,UPDATER,INSTALLED)
+            if baseline.get('schema') == 2:
+                self.readback()
+            else:
+                current_root(ROOT,UPDATER,INSTALLED)
             infrastructure=self.supervisor_infrastructure
             if {name[len('runtime/'):] for name in infrastructure if name.startswith('runtime/')}!=expected:
                 raise ValueError('root_recovery_runtime_inventory_mismatch')
@@ -627,6 +680,30 @@ class LocalDevice:
             if digest!=expected_digest or digest!=sha(safe_bytes(ROOT/'runtime'/name,uid=0)):
                 raise ValueError('root_recovery_runtime_mismatch')
         Device.require_home_resume_runtime(ROOT)
+
+    def prepare_setup_activation(self, identifier, payload):
+        import deploy
+        self.require_selected_runtime(payload)
+        self.validate_root_driver()
+        command = [deploy.python_command(ROOT), str(ROOT/'runtime/cli.py'), 'setup-enable', identifier]
+        return lambda: deploy.command(command)
+
+    def setup_worker_live(self, store, identifier, pid):
+        if type(pid) is not int or pid <= 1:
+            return False
+        path = Path(store.root)/('request-' + identifier)
+        try:
+            args = (PROC/str(pid)/'cmdline').read_bytes().split(b'\0')
+        except FileNotFoundError:
+            return False
+        return (os.fsencode(path/'root-updater/install_driver.py') in args and b'--worker' in args
+                and b'--activate-after-install' in args and identifier.encode() in args)
+
+    def setup_activation_active(self, identifier):
+        import deploy
+        from installation import setup_profile_active
+        self.validate_root_driver()
+        return setup_profile_active(deploy.runtime('status').get('result', {}), identifier)
 
     def activate(self):
         import deploy
@@ -693,6 +770,24 @@ class LocalDevice:
             if package.is_symlink() or not package.is_dir(): raise ValueError('unsafe_package_remainder')
             package.rmdir()
         if any(os.path.lexists(p) for p in paths): raise ValueError('package_remains')
+
+    def package_registrations_gone(self, app):
+        """Prove LG removed this entire package before retiring private state."""
+        if app not in (APP,'com.cleanyourtv.root.updater','com.cleanyourtv.system.updater'):
+            raise ValueError('foreign_package')
+        if app in self.apps():return False
+        try:self.absent(app)
+        except ValueError as error:
+            if str(error)=='package_remains':return False
+            raise
+        for folder in ('services.d','roles.d','client-permissions.d','api-permissions.d','manifests.d','groups.d'):
+            directory=BUS/folder
+            if not os.path.lexists(directory):continue
+            fd=checked_store(directory,self.ownership.store.uid)._walk(str(directory))
+            try:
+                if any(name==app or name.startswith(app+'.') for name in os.listdir(fd)):return False
+            finally:os.close(fd)
+        return True
 
     def root_journal(self):return read_journal(ROOT/'deploy.json')
 
@@ -844,7 +939,14 @@ class LocalDevice:
                     if snapshot is not None:
                         self.ownership.store.write('owner-backup-'+record['operation'],{'provision':snapshot})
                         with cleanup_step('provision-rollback'):
-                            provision.rollback(restored=restored)
+                            if self.package_registrations_gone(APP):
+                                from clean_removal import verify_removed_root_provision
+                                import system_permissions
+                                verify_removed_root_provision(snapshot)
+                                system_permissions.remove(provision.secure)
+                                startup_hook.remove(provision.secure)
+                            else:
+                                provision.rollback(restored=restored)
                             provision.refresh()
                     else:
                         if any(os.path.lexists(ROOT/name) for name in ('recovery-provision.json','recovery-provision.pending.json')):
@@ -857,13 +959,23 @@ class LocalDevice:
                 if os.path.lexists(SUPERVISOR/'legacy-lockdown.json'):
                     from cleanup_system_updater import lockdown, write
                     with cleanup_step('legacy-lockdown'):
-                        entries=lockdown(SUPERVISOR,BUS,check=lambda files:validate_restored_root_api(files,BUS,UPDATER,uid))
+                        api=BUS/'api-permissions.d/com.cleanyourtv.root.updater.service.api.json'
+                        updater_gone=not os.path.lexists(api) and self.package_registrations_gone('com.cleanyourtv.root.updater')
+                        entries=lockdown(SUPERVISOR,BUS,allow_missing=updater_gone,
+                            check=lambda files:validate_restored_root_api(files,BUS,UPDATER,uid))
+                        if updater_gone:
+                            # LG owns the removed package API. All other lockdown
+                            # entries must still match their exact recorded bytes.
+                            entries.pop(str(api),None)
+                            for name,entry in entries.items():
+                                if safe_bytes(name,uid=uid) not in (entry['original'].encode(),entry['disabled'].encode()):
+                                    raise ValueError('Legacy lockdown file changed')
                         for name,entry in entries.items():write(Path(name),entry['original'].encode(),entry['mode'])
                 for state,app,hookname in ((SUPERVISOR,'com.cleanyourtv.system.updater','52-clean-your-tv-system-updater'),
                                           (UPDATER,'com.cleanyourtv.root.updater','51-clean-your-tv-root-updater')):
                     if not os.path.lexists(state):continue
                     with cleanup_step('registration-restore'):
-                        restore_registrations(state,app,BUS,uid)
+                        restore_registrations(state,app,BUS,uid,package_removed=self.package_registrations_gone(app))
                         startup_hook.remove_link(provision.secure,state,INIT/hookname,app,startup_hook.owned_legacy(app,state))
                 unavailable=set(record.get('cleanup_startup_unavailable',[]))
                 for app,service in (('com.local.nativehome','com.local.nativehome.service'),
@@ -1222,20 +1334,53 @@ class LocalDevice:
             and not os.path.lexists('/var/webos-profile/override/clean-your-tv-root.json'))
 
     def stock_profiles_eligible(self, record):
-        """Allow stock-profile proof only for removal without Root Edition state."""
+        """Allow stock-profile proof without live Root Edition state."""
         from clean_removal import APPS
-        from installation import JOURNALS
+        from installation import Busy, JOURNALS, completed_no_root_fence
 
         original = record['original']
+        lease = original['lease']
         if (record.get('profileless_cleanup_eligible') is not True
-                or original['lease']['owner'] != 'clean-removal'
-                or any(original[key] is not None for key in ('request', 'submission', 'removal'))
-                or original['components'] != dict.fromkeys(JOURNALS)
-                or record.get('fenced_components') != dict.fromkeys(JOURNALS)):
+                or any(original[key] is not None for key in ('request', 'submission', 'removal'))):
             return False
+        components = dict.fromkeys(JOURNALS)
+        roots = (ROOT, UPDATER, SUPERVISOR)
+        if lease['owner'] == 'no-root' and lease['id'] == record['lease']:
+            try:
+                completed_no_root_fence(self.ownership.store, lease)
+            except Busy:
+                return False
+            fences = {
+                'deploy': (ROOT, 'deploy.json', {'provision.lock'},
+                           {'version': 1, 'app': APP, 'stage': 'cancellation-admitted'}),
+                'root-bootstrap': (UPDATER, 'bootstrap.json', {'daemon.lock', 'worker.lock'},
+                                   {'phase': 'cancellation-admitted'}),
+                'system-bootstrap': (SUPERVISOR, 'bootstrap.json', {'daemon.lock', 'worker.lock'},
+                                     {'phase': 'cancellation-admitted'}),
+            }
+            for key, (root, marker, locks, expected) in fences.items():
+                components[key] = expected
+                if not os.path.lexists(root):
+                    continue
+                store = checked_store(root, self.ownership.store.uid)
+                directory = store._directory()
+                try:
+                    names = set(os.listdir(directory))
+                    if names - (locks | {marker}) or store.read(marker) != expected:
+                        return False
+                    for name in names & locks:
+                        store._check(os.stat(name, dir_fd=directory, follow_symlinks=False))
+                finally:
+                    os.close(directory)
+        elif lease['owner'] != 'clean-removal' or any(os.path.lexists(root) for root in roots):
+            return False
+        for snapshot in (original['components'], record.get('fenced_components')):
+            if (not isinstance(snapshot, dict) or snapshot.keys() != components.keys()
+                    or any(value is not None and value != components[key] for key, value in snapshot.items())):
+                return False
         backup = self.ownership.store.read('routing-backup-'+record['operation'])
         if backup != {} or any(os.path.lexists(path) for path in (
-                ROOT, UPDATER, SUPERVISOR, '/var/webos-profile/override/clean-your-tv-root.json',
+                '/var/webos-profile/override/clean-your-tv-root.json',
                 '/var/luna-service2/manifests.d/com.cleanyourtv.root.preview.recovery.json',
                 *(INIT/name for name in ('50-clean-your-tv-root', '51-clean-your-tv-root-updater',
                                          '52-clean-your-tv-system-updater')))):

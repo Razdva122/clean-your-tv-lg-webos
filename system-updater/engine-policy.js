@@ -4,7 +4,11 @@ var crypto = require('crypto'),
   fs = require('fs'),
   transport = require('./policy');
 var REPO = 'https://github.com/Razdva122/clean-your-tv-lg-webos/releases/';
-var CATALOG = REPO + 'latest/download/system-bootstrap-v1.json';
+var CATALOG =
+  REPO +
+  'latest/download/system-bootstrap-v' +
+  transport.generation() +
+  '.json';
 var VARIANTS = ['no-root', 'no-root-720p', 'root', 'root-720p'];
 function fields(value, names) {
   return (
@@ -23,10 +27,11 @@ function version(value) {
   )
     throw Error('invalid-engine-version');
 }
-function validate(catalog) {
+function validate(catalog, schema = transport.generation()) {
   if (
     !fields(catalog, ['schema', 'engine', 'releases']) ||
-    catalog.schema !== 1 ||
+    (schema !== 1 && schema !== 2) ||
+    catalog.schema !== schema ||
     !fields(catalog.releases, VARIANTS)
   )
     throw Error('invalid-bootstrap-catalog');
@@ -41,7 +46,7 @@ function validate(catalog) {
       'size',
       'url'
     ]) ||
-    e.bootstrap !== 1 ||
+    e.bootstrap !== schema ||
     !Number.isInteger(e.minimumNode) ||
     e.minimumNode < 8 ||
     e.minimumNode > 100 ||
@@ -70,6 +75,13 @@ function validate(catalog) {
       m.components.length > 32
     )
       throw Error('invalid-engine-release');
+    if (schema === 2) {
+      transport.validate(m, schema);
+      transport.graphics(
+        m,
+        variant.endsWith('-720p') ? '1280x720' : '1920x1080'
+      );
+    }
     version(m.release.slice(1));
     if (release && release !== m.release)
       throw Error('engine-release-conflict');
@@ -94,9 +106,9 @@ function validate(catalog) {
     throw Error('invalid-engine-url');
   return catalog;
 }
-function verify(envelope, key) {
+function verify(envelope, key, schema = transport.generation()) {
   var raw = require('./bootstrap-trust').verify(envelope, key);
-  return validate(JSON.parse(raw.toString('utf8')));
+  return validate(JSON.parse(raw.toString('utf8')), schema);
 }
 module.exports = { validate: validate, verify: verify, catalogUrl: CATALOG };
 if (require.main === module) {

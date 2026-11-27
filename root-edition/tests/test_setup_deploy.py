@@ -189,6 +189,24 @@ class DeployTests(unittest.TestCase):
                 observe.assert_not_called()
             self.assertFalse((root/'state').exists())
 
+    def test_homebrew_settings_appear_after_submission_no_package_or_product_state_created(self):
+        deploy = load('deploy')
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            bundle = root / 'bundle'
+            load('build').build(bundle)
+            installed = root / 'installed'
+            profile = installed/'usr/palm/services/com.cleanyourtv.updater.service/state/profile.json'
+            profile.parent.mkdir(parents=True)
+            data = dict(schema=1, inventory=dict(apps=[], inputs=[]), config=dict(columns=4, dockApps=[], hiddenApps=[]))
+            profile.write_text(json.dumps(data))
+            with patch.object(deploy,'STATE',root/'state'), patch.object(deploy,'INSTALLED',installed), \
+                 patch.object(deploy,'observed_install') as observe:
+                with self.assertRaisesRegex(ValueError, 'Reviewed Home settings changed'):
+                    deploy.install(bundle, migrate=False, homebrew_settings='absent', observe=observe)
+                observe.assert_not_called()
+            self.assertFalse((root/'state').exists())
+
     def test_preprovision_uninstall_skips_rollback_and_preserves_proof_on_resume(self):
         deploy = load('deploy')
         import observed_install

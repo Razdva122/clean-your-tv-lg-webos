@@ -95,7 +95,7 @@ def tgz(files, executables=()):
     return package_tgz(files, executable=executables)
 
 
-def build(output, version='0.0.1', legacy_node_prototype=False, resolution=None, experimental_c1_gate=None, experimental_c1_keyfilter=None, legacy_node_beta=False, c1_mount_recovery=None):
+def build(output, version='0.0.1', legacy_node_prototype=False, resolution=None, experimental_c1_gate=None, experimental_c1_keyfilter=None, legacy_node_beta=False, c1_mount_recovery=None, *, single_tile=False):
     output = Path(output).absolute()
     if '..' in output.parts or any(path.is_symlink() for path in (output, *output.parents)):
         raise ValueError('Output must not traverse symlinks or parent segments')
@@ -104,6 +104,8 @@ def build(output, version='0.0.1', legacy_node_prototype=False, resolution=None,
     if keyfilter and experimental_c1_gate is not None:
         raise ValueError('Select exactly one experimental C1 routing helper')
     experimental_helper = experimental_c1_keyfilter if keyfilter else experimental_c1_gate
+    if single_tile and (experimental_helper or legacy_node_prototype or legacy_node_beta):
+        raise ValueError('Single-tile Root requires the standard Home backend')
     if experimental_helper is not None:
         from deploy import checked_file
         candidate = Path(experimental_helper).absolute()
@@ -122,6 +124,13 @@ def build(output, version='0.0.1', legacy_node_prototype=False, resolution=None,
     files = compile_web(preview.prepare(version=version, resolution=resolution))
     info = json.loads(files['appinfo.json'])
     app_id = info['id']
+    if single_tile:
+        info.update(visible=False, cytvProductGeneration=2)
+        files['appinfo.json'] = (json.dumps(info, indent=2) + '\n').encode()
+        if files['index.html'].count(b'<head>') != 1:
+            raise ValueError('Single-tile Home requires a known document entry')
+        files['index.html'] = files['index.html'].replace(
+            b'<head>', b'<head><script>window.CYTVProductGeneration=2;</script>', 1)
     version = info['version']
     if app_id != 'com.cleanyourtv.root.preview':
         raise ValueError('Unexpected isolated candidate identity')
@@ -186,6 +195,8 @@ def build(output, version='0.0.1', legacy_node_prototype=False, resolution=None,
     if legacy_node_beta:
         release['runtime_variant'] = 'node012-beta'
         release['automatic_updates'] = False
+    if single_tile:
+        release['product_generation'] = 2
     if screensaver_enabled:
         release['capabilities'].append('screensaver-v1')
     if native_gate is not None:
@@ -239,6 +250,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, required=True, help='New directory; parent must exist')
     parser.add_argument('--version', default='0.0.1', help='Root release version, X.Y.Z')
+    parser.add_argument('--single-tile', action='store_true', help='Build the Home opened by the independent Clean Your TV tile')
     parser.add_argument('--legacy-node-prototype', action='store_true', help='Host-only Node 0.12 prototype; admission remains Node 8+')
     parser.add_argument('--legacy-node-beta', action='store_true', help='Explicit Node 0.12.2 Beta payload with ordinary OTA disabled')
     parser.add_argument('--resolution', choices=('1280x720', '1920x1080'), help='Explicit graphics resolution for this candidate package')
@@ -251,7 +263,7 @@ def main():
     args = parser.parse_args()
     try:
         package = build(args.output, version=args.version, legacy_node_prototype=args.legacy_node_prototype, legacy_node_beta=args.legacy_node_beta,
-                        resolution=args.resolution, experimental_c1_gate=args.experimental_c1_gate, experimental_c1_keyfilter=args.experimental_c1_keyfilter, c1_mount_recovery=args.c1_mount_recovery)
+                        resolution=args.resolution, experimental_c1_gate=args.experimental_c1_gate, experimental_c1_keyfilter=args.experimental_c1_keyfilter, c1_mount_recovery=args.c1_mount_recovery, single_tile=args.single_tile)
     except (ValueError, OSError) as exc:
         parser.exit(1, 'Candidate build failed: ' + str(exc) + '\n')
     print('Built ' + str(package) + '. Offline only; hardware validation pending.')

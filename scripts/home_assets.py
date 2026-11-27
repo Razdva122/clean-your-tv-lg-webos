@@ -8,7 +8,7 @@ ROOT = Path(__file__).resolve().parents[1]
 WEATHER_FILES = ['weather-transport.js', 'weather-data.js', 'weather-icons.js', 'weather.js', 'weather-locales.js', 'weather.css'] + ['weather-icons/LICENSE-METEOCONS.txt', 'weather-icons/fill-clear-day.svg', 'weather-icons/fill-clear-night.svg', 'weather-icons/fill-drizzle.svg', 'weather-icons/fill-fog.svg', 'weather-icons/fill-overcast.svg', 'weather-icons/fill-partly-cloudy-day.svg', 'weather-icons/fill-partly-cloudy-night.svg', 'weather-icons/fill-rain.svg', 'weather-icons/fill-snow.svg', 'weather-icons/fill-thunderstorms.svg', 'weather-icons/monochrome-clear-day.svg', 'weather-icons/monochrome-clear-night.svg', 'weather-icons/monochrome-drizzle.svg', 'weather-icons/monochrome-fog.svg', 'weather-icons/monochrome-overcast.svg', 'weather-icons/monochrome-partly-cloudy-day.svg', 'weather-icons/monochrome-partly-cloudy-night.svg', 'weather-icons/monochrome-rain.svg', 'weather-icons/monochrome-snow.svg', 'weather-icons/monochrome-thunderstorms.svg']
 
 THEME_FILES = WEATHER_FILES + [
-    'install-settings.js',
+    'install-settings.js', 'browser-profile.js',
     'wallpaper.js',
     'wallpaper.css',
     'wallpaper-panel.js',
@@ -59,5 +59,5 @@ LAUNCHER_FILES = ROOT_HOME_FILES + (
 ROOT_UI_FILES = (
     'root-audio-locales.js', 'root-audio.js', 'root-locales.js', 'root-exit.js',
     'root-firmware-control.js', 'root-firmware.js', 'root-settings.js', 'root-settings.css',
-    'tv-name.js', 'root-profile-data.js', 'root-profile.js', 'root-updates.js',
+    'root-post-install.js', 'root-post-install-locales.js', 'tv-name.js', 'root-profile-data.js', 'root-profile.js', 'root-updates.js',
 )

@@ -162,7 +162,10 @@ if has installer; then
   "$PYTHON" -m unittest discover -s homebrew/tests -p test_payload.py
   node homebrew/tests/runtime.cjs
   node homebrew/tests/bridge.cjs
+  node homebrew/tests/diagnostics.cjs
+  node homebrew/tests/setup-progress.cjs
   node homebrew/tests/ui.cjs
+  node root-edition/ui/test-post-install.cjs
   node tests/installer-settings-ui.cjs
   "$PYTHON" -m unittest discover -s homebrew/tests -p 'test_installer*.py'
   "$PYTHON" -m unittest discover -s homebrew/tests -p test_continuation.py

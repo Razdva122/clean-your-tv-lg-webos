@@ -3,24 +3,14 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>CYTV Installer</title>
-    <link rel="stylesheet" href="style.css" />
+    <title>Clean Your TV</title>
+    <style>
+      html,body{background:#10121a;color:white;font:32px sans-serif}
+    </style>
   </head>
   <body>
-    <main id="app" aria-labelledby="heading">
-      <header>
-        <img src="icon.png" alt="" />
-        <div>
-          <p class="eyebrow">Clean Your TV · Root</p>
-          <h1 id="heading">CYTV Installer</h1>
-        </div>
-        <button id="language" type="button">Language</button>
-      </header>
-      <section id="content" aria-live="polite" aria-atomic="true"></section>
-      <footer id="hint"></footer>
-    </main>
-    <script src="i18n.js"></script>
-    <script src="bridge.js"></script>
-    <script src="app.js"></script>
+    <script src="tile-config.js"></script>
+    <script src="tile-launch.js"></script>
+    <script src="tile.js"></script>
   </body>
 </html>

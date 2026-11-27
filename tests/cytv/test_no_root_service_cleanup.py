@@ -22,7 +22,13 @@ class EF950ServiceCleanup(unittest.TestCase):
     def test_terminal_restart_with_inherited_install_history(self):
         self.run_owned_service_cycle(opaque=True, inherited=True)
 
-    def run_owned_service_cycle(self, *, opaque=False, inherited=False):
+    def test_failed_home_startup_then_vendor_owned_web_process_removal(self):
+        self.run_owned_service_cycle(package_runtimes=True)
+
+    def test_stalled_controller_after_install_is_stopped_by_package_manager(self):
+        self.run_owned_service_cycle(package_runtimes=True, stalled_controller=True)
+
+    def run_owned_service_cycle(self, *, opaque=False, inherited=False, package_runtimes=False, stalled_controller=False):
         from multiprocessing import Pipe
         from tests.cytv.test_no_root_simple_removal import SimpleRemoval
         case = SimpleRemoval()
@@ -52,6 +58,18 @@ class EF950ServiceCleanup(unittest.TestCase):
             os.chown(helper_state, 5999, 5000)
             for service in services:
                 os.chown(base / 'services' / service, *service_owner)
+            if package_runtimes:
+                (helper_state / 'controller.log').write_text(json.dumps({
+                    'event': 'start', 'pid': 987649, 'startupSchema': 1, 'generation': 'I' + 'a' * 32}) + '\n' +
+                    json.dumps({'event': 'worker-start'} if stalled_controller else {'event': 'worker-exit', 'code': 22}) + '\n')
+                if stalled_controller:
+                    (helper_state / 'controller.pid').write_text('987649')
+                    process = case.root / 'proc/987649'
+                    process.mkdir(exist_ok=True)
+                    (process / 'cmdline').write_bytes(('node\0' + str(base / 'applications' / apps[0] / 'native.js') + '\0').encode())
+                process = case.root / 'proc/987650'
+                process.mkdir(exist_ok=True)
+                (process / 'cmdline').write_bytes(b'/usr/bin/WebProcess\0com.gathin.tvhome\0')
 
         install_packages()
         for folder, _, files in os.walk(case.root):
@@ -85,6 +103,19 @@ class EF950ServiceCleanup(unittest.TestCase):
                     if inherited and not case.store.pending(case.profile):
                         case.store.begin(case.profile, 'install')
                     self.assertFalse(os.access(base / 'services', os.W_OK))
+                    if package_runtimes:
+                        import subprocess
+                        from cytv.helper_startup import PROGRAM
+                        source = PROGRAM.replace('/media/developer/apps/usr/palm/applications/com.local.nativehome',
+                                                 str(base / 'applications' / apps[0]))
+                        source = source.replace("'/proc/'", json.dumps(str(case.root / 'proc') + '/'))
+                        observed = subprocess.run(['node', '-e', source, 'I' + 'a' * 32],
+                                                  check=True, capture_output=True, text=True)
+                        startup = json.loads(observed.stdout)
+                        self.assertEqual(startup['state'], 'starting' if stalled_controller else 'failed')
+                        if not stalled_controller:
+                            self.assertEqual(startup['relay_exit_code'], 22)
+                        self.assertEqual(startup['controller_running'], stalled_controller)
                     result = case.remove()
                     if opaque:
                         self.assertTrue(result['restart_required'])
@@ -142,6 +173,11 @@ class EF950ServiceCleanup(unittest.TestCase):
                         os.chown(leaf, 5999, 5000)
                     service = services[apps.index(app)]
                     (base / 'services' / service / 'service.js').unlink()
+                    if package_runtimes:
+                        if app == apps[1]:
+                            shutil.rmtree(case.root / 'proc/987650')
+                        if stalled_controller and app == apps[0]:
+                            shutil.rmtree(case.root / 'proc/987649')
                     if opaque and app == apps[-1]:
                         process = case.root / 'proc/987654'
                         process.mkdir(exist_ok=True)

@@ -1,31 +1,122 @@
 {
   "schema": 1,
-  "version": "1.29.1",
+  "version": "1.30.0",
   "changes": [
     {
-      "pr": 842,
+      "pr": 845,
       "issues": [
-        410,
-        615,
-        687,
-        740,
-        741,
-        791,
-        818,
-        825,
-        828,
-        829,
+        841
+      ],
+      "summary": "Fix premature No-root removal process blocking (#841)"
+    },
+    {
+      "pr": 846,
+      "issues": [
+        152
+      ],
+      "summary": "Verify Helper startup and guard No-root removal of package runtimes (#152)"
+    },
+    {
+      "pr": 847,
+      "issues": [
         830
       ],
-      "summary": "Deliver the accepted #827 fixes with System Updater Engine 1.2.17 after the unpublished v1.29.0 signing failure"
+      "summary": "Resume No-root removal after a verified Root handoff (#830)"
+    },
+    {
+      "pr": 848,
+      "issues": [
+        116
+      ],
+      "summary": "Improve shared Root staging and Home integration checks. The corrected Homebrew Installer remains unpublished."
+    },
+    {
+      "pr": 849,
+      "issues": [
+        368
+      ],
+      "summary": "Preserve pending Root uninstall receipts across saved connections and nested retry records (partial recovery fix)"
+    },
+    {
+      "pr": 850,
+      "issues": [
+        635
+      ],
+      "summary": "Record the OLED55C47LA Home button result"
+    },
+    {
+      "pr": 851,
+      "issues": [],
+      "summary": "Add individual Debloat restoration and LG promotion controls"
+    },
+    {
+      "pr": 852,
+      "issues": [
+        364
+      ],
+      "summary": "Report Magic Remote Home and Back capabilities in Root Doctor"
+    },
+    {
+      "pr": 853,
+      "issues": [],
+      "summary": "Include shared launcher and edition-transition safeguards. The single-tile generation remains unpublished."
+    },
+    {
+      "pr": 855,
+      "issues": [],
+      "summary": "Include shared Debloat changes and Root setup resources. On-TV first-run setup through Homebrew remains unpublished."
+    },
+    {
+      "pr": 856,
+      "issues": [
+        116
+      ],
+      "summary": "Improve shared diagnostics and packaged Root setup resources. Homebrew on-TV checks and diagnostic reports remain unpublished."
+    },
+    {
+      "pr": 857,
+      "issues": [],
+      "summary": "Cover the Root first-run translation catalog in CI"
+    },
+    {
+      "pr": 858,
+      "issues": [],
+      "summary": "Use system Chrome for Homebrew setup tests in runtime CI"
+    },
+    {
+      "pr": 860,
+      "issues": [],
+      "summary": "Include shared Root cleanup runtime and installer support. The Homebrew full-removal entry remains unpublished."
+    },
+    {
+      "pr": 864,
+      "issues": [],
+      "summary": "Include shared No-root installer support and pairing handling. On-TV No-root fallback remains unpublished."
+    },
+    {
+      "pr": 866,
+      "issues": [],
+      "summary": "Restore Homebrew export font inputs, localize the tile verification error and align the installer regression fixtures."
+    },
+    {
+      "pr": 868,
+      "issues": [],
+      "summary": "Make the Helper startup fixture portable to Windows and keep the staging ownership fixture on POSIX hosts"
+    },
+    {
+      "pr": 876,
+      "issues": [
+        364
+      ],
+      "summary": "Keep Root Doctor scanning past stale input nodes with no device registered in sysfs"
     }
   ],
   "excluded": [],
-  "acceptance": "Exact macOS ARM64 installer SHA-256 fc87c6946ea5ec5aab54fc96598250134b2744e48abaca6f5c7543dfa7b3c40c preserves all 631 unaffected RC4 payload entries. Reuse matching project OLED55C3RLA firmware 43.21.71 / SDK 11.2.0 No-root Root-SSH evidence for published-Home Helper compatibility, installed Home, standby focus, OK preview, Back and LG Home recovery. Engine 1.2.17 transitions from the published 1.2.16 archive and its production-signed catalog verifies with the shipped 1.2.16 policy and pinned key for all four System variants. Physical pointer, differing hardware, live engine OTA and Root activation or rollback remain outside the observed scope. Exact artifact and acceptance cases: docs/history/2026-11-26-release-1.29.1-engine-recovery.md.",
+  "acceptance": "Project LG OLED55C3RLA on firmware 43.21.71 and webOS SDK 11.2.0. RC3 macOS ARM64 Doctor verified advertised Home and Back. Matching RC2 device inputs cover No-root upgrade, Root startup, network HOME, both verified clean removals with confirmed software restarts, fresh Root admission and individual Debloat restoration. Exact Android and protected System verification passed. Physical remote, standby, cold boot, audio, live OTA/rollback and reporter hardware were not exercised. Evidence: docs/history/2026-11-28-release-1.30.0-final-acceptance.md.",
   "build": {
-    "run_id": 45761587837,
+    "run_id": 46070775288,
     "attempt": 1,
-    "source": "1337f4c6181ce68365c52858423a82f189c63734"
+    "source": "dc9196fd1258cd38900db023f4b9cbd3ce76c68a"
   },
-  "acceptance_build": "45761587837:1"
+  "acceptance_build": "46070775288:1"
 }

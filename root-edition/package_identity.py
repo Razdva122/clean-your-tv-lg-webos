@@ -27,6 +27,10 @@ STATES={ROOT:Path('/var/lib/clean-your-tv-root'),UPDATER:Path('/var/lib/clean-yo
 INSTALLED=Path('/media/developer/apps')
 FINISHED={'complete','rolled-back','aborted'}
 _CACHE={}
+PRODUCT_COMPONENTS = {
+    1: {'root': ('root', 'root-updater', 'root-infrastructure'), 'no-root': ('home', 'helper', 'updater')},
+    2: {'root': ('root', 'root-infrastructure'), 'no-root': ('home', 'helper')},
+}
 
 
 class TransitionUnknown(ValueError):
@@ -136,13 +140,18 @@ def _journal(tx,system=False):
         if type(tx.get(key)) not in (int,float) or not math.isfinite(tx[key]) or tx[key]<0:raise ValueError('Invalid private transaction clock')
     if system:
         if tx.get('edition') not in ('root','no-root'):raise ValueError('Invalid private transaction edition')
-        expected=('root','root-updater','root-infrastructure') if tx['edition']=='root' else ('home','helper','updater')
+        prior = tx.get('prior')
+        generation = prior.get('schema') if isinstance(prior, dict) else None
+        if type(generation) is not int or generation not in PRODUCT_COMPONENTS:
+            raise ValueError('Invalid private release generation')
+        expected = PRODUCT_COMPONENTS[generation][tx['edition']]
         for key in ('prior','candidate'):
             release=tx.get(key)
-            if (not isinstance(release,dict) or release.get('edition')!=tx['edition'] or release.get('schema')!=1
-                    or not isinstance(release.get('components'),list) or tuple(c.get('name') for c in release['components'])!=expected):raise ValueError('Invalid private release')
+            if (not isinstance(release,dict) or release.get('edition')!=tx['edition']
+                    or type(release.get('schema')) is not int or release['schema'] != generation
+                    or not _component_order(release.get('components'), expected)):raise ValueError('Invalid private release')
             for c in release['components']:_descriptor(c)
-        if not isinstance(tx.get('components'),list) or tuple(c.get('name') for c in tx['components'])!=expected:raise ValueError('Invalid private component journal')
+        if not _component_order(tx.get('components'), expected):raise ValueError('Invalid private component journal')
         for c,target in zip(tx['components'],tx['candidate']['components']):
             if c.get('version')!=target['version']:raise ValueError('Conflicting private component journal')
             installed=_evidence(c.get('installEvidence'),True);rolled=_evidence(c.get('rollbackEvidence'),True)
@@ -157,6 +166,12 @@ def _journal(tx,system=False):
         if not tx['rollbackAttempted'] and any(v is not None for v in tx['rollbackEvidence'].values()):raise ValueError('Unexpected private rollback evidence')
         if tx['phase'] in ('preparing','downloading','backed-up','restoring-route','aborted') and (tx['rollbackAttempted'] or any(v is not None for v in tx['installEvidence'].values())):raise ValueError('Installer evidence before submission phase')
     return tx
+
+
+def _component_order(components, expected):
+    return (isinstance(components, list) and len(components) == len(expected)
+            and all(isinstance(item, dict) and item.get('name') == name
+                    for item, name in zip(components, expected)))
 
 
 def _retained_rollback_pending(tx):
@@ -292,11 +307,84 @@ def bootstrap_inventory(root,*,uid=0):
     return dict(_inventory(ROOT,release.get('files')))
 
 
+SINGLE_TILE_ORIGINAL = 'single-tile-original.ipk'
+
+
+def _single_tile_origin(root, uid):
+    expected = bootstrap_inventory(root, uid=uid)
+    bundle = _record(root, 'bundle', uid)
+    release = _record(root, 'release', uid)
+    if release.get('product_generation') != 2:
+        raise ValueError('Original release does not use the single tile')
+    path = Path(root) / SINGLE_TILE_ORIGINAL
+    descriptor = dict(version=release['version'], size=path.lstat().st_size,
+                      sha256=bundle['files'][bundle['package']], local=True)
+    if _package(ROOT, path, descriptor, uid) != expected:
+        raise ValueError('Original single-tile Root inventory changed')
+    return descriptor, expected
+
+
+def single_tile_original(root, uid=0):
+    """Return the exact reviewed package for the first System baseline."""
+    descriptor, expected = _single_tile_origin(root, uid)
+    raw = safe_bytes(Path(root) / SINGLE_TILE_ORIGINAL, limit=64*1024*1024, uid=uid)
+    if digest(raw) != descriptor['sha256']:
+        raise ValueError('Original single-tile Root package changed')
+    return descriptor, raw, expected
+
+
+def _single_tile_inventory(root, updater, system, purpose, uid):
+    if os.path.lexists(updater):
+        raise ValueError('Conflicting standalone Root Updater state')
+    original, original_files = _single_tile_origin(root, uid)
+    if not os.path.lexists(system):
+        return original_files
+    baseline = _record(system, 'baseline', uid)
+    current = _record(system, 'current-root', uid)
+    tx = _record(system, 'transaction', uid)
+
+    def root_component(release):
+        if (not isinstance(release, dict) or release.get('schema') != 2
+                or release.get('edition') != 'root'
+                or not _component_order(release.get('components'), PRODUCT_COMPONENTS[2]['root'])):
+            raise ValueError('Single-tile Root baseline required')
+        return _descriptor(release['components'][0])
+
+    first = root_component(baseline)
+    def cached(component):
+        return _package(ROOT, system/'cache'/component['sha256'], component, uid)
+    if not _same(first, original):
+        raise ValueError('Single-tile baseline differs from observed installation')
+    committed = root_component(current)
+    if tx is None:
+        if current != baseline:
+            raise ValueError('Missing single-tile publication journal')
+        return original_files
+    _journal(tx, system=True)
+    if tx['edition'] != 'root' or tx['prior']['schema'] != 2:
+        raise ValueError('Conflicting single-tile generation')
+    prior, candidate = (root_component(tx[key]) for key in ('prior', 'candidate'))
+    evidence = tx['components'][0]
+    selected = _select(tx, prior, candidate, evidence, purpose, True)
+    if current not in (tx['prior'], tx['candidate']):
+        raise ValueError('Unrecognized single-tile publication')
+    if tx['phase'] in FINISHED and not _same(committed, selected):
+        raise TransitionUnknown('Single-tile current publication pending')
+    if purpose == 'live' and tx['phase'] not in FINISHED and not _retained_rollback_pending(tx):
+        if any(c[leg]['intent'] for c in tx['components'] for leg in ('installEvidence', 'rollbackEvidence')):
+            raise TransitionUnknown('System mutation inhibits live presence')
+    return cached(selected)
+
+
 def inventory(owner,*,purpose='current',states=None,uid=0):
     if owner not in STATES or purpose not in ('current','worker','admission','live'):raise ValueError('Invalid package identity purpose')
     if purpose=='live' and owner!=ROOT:raise ValueError('Live health belongs only to Root')
     states=STATES if states is None else states
     root,updater,system=(Path(states[o]) for o in (ROOT,UPDATER,SYSTEM))
+    if owner in (ROOT, UPDATER) and os.path.lexists(root/SINGLE_TILE_ORIGINAL):
+        if owner == UPDATER:
+            raise ValueError('Standalone Root Updater is outside the single-tile set')
+        return _single_tile_inventory(root, updater, system, purpose, uid)
     if owner==SYSTEM:
         if os.path.lexists(system/'engine-state/supervisor-generation.json'):
             files = system_helper(system, 'own-package', uid=uid)
@@ -320,6 +408,8 @@ def inventory(owner,*,purpose='current',states=None,uid=0):
     sys_tx=_record(system,'transaction',uid)
     if sys_tx is not None:sys_tx=_journal(sys_tx,True)
     if sys_tx is not None and sys_tx['edition']=='root':
+        if sys_tx['prior']['schema'] == 2:
+            raise ValueError('Original single-tile Root proof missing')
         if purpose=='live' and sys_tx['phase'] not in FINISHED and not _retained_rollback_pending(sys_tx) and any(c[leg]['intent'] for c in sys_tx['components'] for leg in ('installEvidence','rollbackEvidence')):
             raise TransitionUnknown('System mutation inhibits live presence')
         name='root' if owner==ROOT else 'root-updater'
@@ -449,6 +539,7 @@ def identity(owner,*,purpose='current',states=None,installed=INSTALLED,uid=0,ful
                 if tx['phase'] in FINISHED:continue
                 if system:
                     if tx['edition']!='root':continue
+                    if owner == UPDATER and tx['prior']['schema'] == 2:continue
                     component=tx['components'][0 if owner==ROOT else 1]
                     touched=any(component[leg]['intent'] for leg in ('installEvidence','rollbackEvidence'))
                 else:touched=tx['phase']=='installing' or tx['installEvidence']['submitted'] is not None or tx['rollbackAttempted']

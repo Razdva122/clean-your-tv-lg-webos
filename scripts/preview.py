@@ -32,7 +32,7 @@ LAUNCHER_FILES.update(['appinfo.json'] + THEME_FILES)
 ROOT_LAUNCHER_FILES = {
     'index.html', 'home-presentation.js', 'viewport.js', 'app.js', 'app-library.js', 'input-sources.js', 'input-preview.js', 'style.css', 'theme-defaults.css', 'theme-policy.js', 'theme-runtime.js', 'home-layout.js', 'layout-panel.js', 'settings-categories.js', 'layout-panel.css', 'config.js', 'apps.js',
     'fonts/outfit-300.ttf', 'fonts/outfit-400.ttf', 'fonts/outfit-500.ttf', 'fonts/outfit-700.ttf', 'fonts/NotoSans.ttf', 'fonts/NotoSans-OFL.txt', 'fonts/NotoSansDevanagari.ttf', 'fonts/NotoSansDevanagari-OFL.txt', 'fonts/NotoSansKR.ttf', 'fonts/NotoSansKR-OFL.txt', 'fonts/NotoSansSC.ttf', 'fonts/NotoSansSC-OFL.txt', 'fonts/NotoSansTC.ttf', 'fonts/NotoSansTC-OFL.txt', 'fonts/OFL.txt',
-    'i18n.js', 'catalogs.js', 'i18n.css', 'root-locales.js', 'root-exit.js', 'root-firmware-control.js', 'root-firmware.js', 'root-audio.js', 'root-audio-locales.js', 'root-settings.js', 'settings-panel.css', 'root-settings.css',
+    'i18n.js', 'catalogs.js', 'i18n.css', 'root-locales.js', 'root-exit.js', 'root-firmware-control.js', 'root-firmware.js', 'root-post-install.js', 'root-post-install-locales.js', 'root-audio.js', 'root-audio-locales.js', 'root-settings.js', 'settings-panel.css', 'root-settings.css',
     'tv-name.js', 'root-profile-data.js', 'root-profile.js', 'release-notes.js', 'system-updates.js', 'root-updates.js',
 }
 # Legacy synthetic icons remain available for isolated bridge fixtures.
@@ -66,7 +66,7 @@ def revision():
              if name != 'screensaver-config.js']
     files += [ROOT / 'screensaver/settings.js']
     files += [ROOT / 'root-edition/preview.py']
-    files += [ROOT / 'root-edition/ui' / name for name in ('root-locales.js', 'root-exit.js', 'root-firmware-control.js', 'root-firmware.js', 'root-audio.js', 'root-audio-locales.js', 'root-settings.js', 'root-settings.css', 'tv-name.js', 'root-profile-data.js', 'root-profile.js', 'root-updates.js')]
+    files += [ROOT / 'root-edition/ui' / name for name in ('root-locales.js', 'root-exit.js', 'root-firmware-control.js', 'root-firmware.js', 'root-post-install.js', 'root-post-install-locales.js', 'root-audio.js', 'root-audio-locales.js', 'root-settings.js', 'root-settings.css', 'tv-name.js', 'root-profile-data.js', 'root-profile.js', 'root-updates.js')]
     files += [ROOT / 'preview/index.html', ROOT / 'preview/bridge.js', ROOT / 'preview/live-reload.js', ROOT / 'preview/themes.js', ROOT / 'preview/presentation.js', ROOT / 'scripts/build-preview-themes.cjs']
     files += list((ROOT / 'showcase/registry').glob('*.json'))
     files += [ROOT / 'showcase/order.json']

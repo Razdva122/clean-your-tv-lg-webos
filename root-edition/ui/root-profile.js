@@ -309,16 +309,19 @@
           return waitForSystemProfile();
         });
     }
+    function editionProfile() {
+      if (window.CYTVProductGeneration === 2) return Promise.resolve(null);
+      return window.RootUpdates.rpc('restoreProfile', {});
+    }
     function restore() {
-      if (!window.SystemUpdates)
-        return window.RootUpdates.rpc('restoreProfile', {});
+      if (!window.SystemUpdates) return editionProfile();
       return systemProfile().then(
         function (value) {
           if (value) {
             systemRestore = true;
             return value;
           }
-          return window.RootUpdates.rpc('restoreProfile', {});
+          return editionProfile();
         },
         function (error) {
           if (
@@ -326,7 +329,7 @@
             !systemPermissionRefused &&
             error.unavailable === true
           )
-            return window.RootUpdates.rpc('restoreProfile', {});
+            return editionProfile();
           throw error;
         }
       );
@@ -350,6 +353,20 @@
                   ? 'rollback'
                   : 'install')
               : '');
+          if (systemRestore && window.CYTVProductGeneration === 2) {
+            return window.HomeBrowserProfile.resume(
+              restored,
+              'browser1:' + identity,
+              marker,
+              data,
+              saved
+            ).then(function (profile) {
+              if (!profile) return;
+              window.TV_APPS = profile.inventory;
+              window.CONFIG = profile.config;
+              boot(restored);
+            });
+          }
           var profile = data.validate(restored.profile);
           var alreadyRestored =
             saved &&

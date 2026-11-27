@@ -3,9 +3,16 @@
 (function (root) {
   'use strict';
   var FIXED =
-    '/usr/bin/node /media/developer/apps/usr/palm/applications/com.cleanyourtv.installer/bootstrap.js';
+    '/usr/bin/node /media/developer/apps/usr/palm/applications/io.github.razdva122.cytvinstaller/bootstrap.js';
+  function failure(code) {
+    var error = new Error(
+      code === 'homebrew_exec_denied' ? code : 'installer_unavailable'
+    );
+    error.diagnosticCode = code;
+    return error;
+  }
   function fail() {
-    throw new Error('installer_unavailable');
+    throw failure('installer_unavailable');
   }
   function id(value) {
     if (typeof value !== 'string' || !/^[a-f0-9]{32}$/.test(value)) fail();
@@ -25,11 +32,17 @@
   var grammar = {
     inspect: /^(--prepare-supervisor)?$/,
     'prepare-runtime': /^$/,
+    'no-root-start': /^--operation [a-f0-9]{32} --candidate [a-f0-9]{64}$/,
+    'no-root-status': /^--operation [a-f0-9]{32}$/,
+    'no-root-resume': /^--operation [a-f0-9]{32}$/,
     restore: /^$/,
     activate: /^$/,
     status: /^--operation [a-f0-9]{32} --verify-current$/,
+    'homebrew-remove': /^--operation [a-f0-9]{32}$/,
+    'homebrew-remove-status': /^--operation [a-f0-9]{32}$/,
+    'homebrew-remove-tile': /^--operation [a-f0-9]{32}$/,
     install:
-      /^--operation [a-f0-9]{32} (--resume|--candidate [a-f0-9]{64}( --prepare-supervisor)?( --migrate-packaged-home)?)$/,
+      /^--operation [a-f0-9]{32} (--resume|--candidate [a-f0-9]{64}( --prepare-supervisor)?( --migrate-packaged-home)?( --activate-after-install)?)$/,
     remove: /^--operation [a-f0-9]{32} (--resume|--candidate [a-f0-9]{64})$/
   };
   function call(action, tokens) {
@@ -47,7 +60,8 @@
       if (!grammar[action].test(argumentsText)) fail();
       var command =
         FIXED + ' ' + action + (argumentsText ? ' ' + argumentsText : '');
-      if (typeof root.PalmServiceBridge !== 'function') fail();
+      if (typeof root.PalmServiceBridge !== 'function')
+        throw failure('homebrew_unreachable');
       return new Promise(function (resolve, reject) {
         var bridge = new root.PalmServiceBridge(),
           done = false,
@@ -59,18 +73,11 @@
           try {
             bridge.cancel();
           } catch (_) {}
-          if (error)
-            reject(
-              new Error(
-                error === 'homebrew_exec_denied'
-                  ? error
-                  : 'installer_unavailable'
-              )
-            );
+          if (error) reject(failure(error));
           else resolve(value);
         }
         timer = setTimeout(function () {
-          finish(true);
+          finish('homebrew_timeout');
         }, 125000);
         bridge.onservicecallback = function (raw) {
           try {
@@ -86,6 +93,26 @@
               return;
             }
             if (
+              reply.returnValue === false &&
+              typeof reply.errorText === 'string' &&
+              /^(?:Service does not exist|Service not available|No such service)[:.]?(?: org\.webosbrew\.hbchannel\.service)?[.]?$/.test(
+                reply.errorText
+              )
+            ) {
+              finish('homebrew_unreachable');
+              return;
+            }
+            if (reply.returnValue === false) {
+              finish(
+                action === 'status' ||
+                  action === 'homebrew-remove-status' ||
+                  action === 'no-root-status'
+                  ? 'status_unavailable'
+                  : 'installer_unavailable'
+              );
+              return;
+            }
+            if (
               reply.returnValue !== true ||
               typeof reply.stdoutString !== 'string' ||
               reply.stdoutString.length > 65536
@@ -95,7 +122,7 @@
             if (!value || typeof value.state !== 'string') fail();
             finish(false, value);
           } catch (_) {
-            finish(true);
+            finish('homebrew_invalid_reply');
           }
         };
         try {
@@ -104,7 +131,7 @@
             JSON.stringify({ command: command })
           );
         } catch (_) {
-          finish(true);
+          finish('homebrew_unreachable');
         }
       });
     });
@@ -114,7 +141,13 @@
       value = options(
         value,
         action === 'install'
-          ? ['operation', 'candidate', 'prepareSupervisor', 'migrate']
+          ? [
+              'operation',
+              'candidate',
+              'prepareSupervisor',
+              'migrate',
+              'activateAfterInstall'
+            ]
           : ['operation', 'candidate']
       );
       var args = ['--operation', id(value.operation)];
@@ -124,12 +157,20 @@
       )
         fail();
       args.push('--candidate', value.candidate);
-      ['prepareSupervisor', 'migrate'].forEach(function (k) {
-        if (value[k] !== undefined && typeof value[k] !== 'boolean') fail();
-      });
+      ['prepareSupervisor', 'migrate', 'activateAfterInstall'].forEach(
+        function (k) {
+          if (value[k] !== undefined && typeof value[k] !== 'boolean') fail();
+        }
+      );
       if (value.prepareSupervisor) args.push('--prepare-supervisor');
       if (value.migrate) args.push('--migrate-packaged-home');
+      if (value.activateAfterInstall) args.push('--activate-after-install');
       return call(action, args);
+    });
+  }
+  function cleanup(action, operation) {
+    return Promise.resolve().then(function () {
+      return call(action, ['--operation', id(operation)]);
     });
   }
   var api = {
@@ -150,6 +191,15 @@
     start: function (value) {
       return submission('install', value);
     },
+    startNoRoot: function (value) {
+      return submission('no-root-start', value);
+    },
+    noRootStatus: function (operation) {
+      return cleanup('no-root-status', operation);
+    },
+    resumeNoRoot: function (operation) {
+      return cleanup('no-root-resume', operation);
+    },
     status: function (operation) {
       return Promise.resolve().then(function () {
         return call('status', [
@@ -167,6 +217,15 @@
     },
     remove: function (value) {
       return submission('remove', value);
+    },
+    cleanRemove: function (operation) {
+      return cleanup('homebrew-remove', operation);
+    },
+    cleanStatus: function (operation) {
+      return cleanup('homebrew-remove-status', operation);
+    },
+    removeInstaller: function (operation) {
+      return cleanup('homebrew-remove-tile', operation);
     },
     prepareRuntime: function () {
       return call('prepare-runtime', []);

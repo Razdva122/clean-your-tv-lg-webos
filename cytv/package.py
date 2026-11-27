@@ -11,6 +11,8 @@ import tarfile
 ROOT_APP = 'com.cleanyourtv.root.preview'
 SCREENSAVER_APP = 'com.cleanyourtv.screensaver'
 SCREENSAVER_IPK = 'screensaver.ipk'
+TILE_APP = 'io.github.razdva122.cytvinstaller'
+TILE_FILES = {'root': 'tile-root.ipk', 'no-root': 'tile-no-root.ipk'}
 # webOS pkgverifier rejects epoch-zero tar dates. Fixed 2024-01-01 keeps builds reproducible.
 IPK_MTIME = 1704067200
 
@@ -213,6 +215,42 @@ def screensaver_payload(root, manifest):
     return raw, version
 
 
+def tile_payload(root, manifest, edition):
+    """Authenticate the edition-specific local entry before offering B setup."""
+    if 'single_tile' not in manifest:
+        return None
+    declared = manifest['single_tile']
+    if (edition not in TILE_FILES or not isinstance(declared, dict)
+            or set(declared) != {*TILE_FILES, 'version'}
+            or any(declared[k] != v for k, v in TILE_FILES.items())):
+        raise ValueError('Invalid single-tile payload declaration')
+    version = declared['version']
+    if not isinstance(version, str) or not re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+', version):
+        raise ValueError('Invalid single-tile version')
+    name = TILE_FILES[edition]
+    raw = _payload_file(Path(root), name).read_bytes()
+    if hashlib.sha256(raw).hexdigest() != manifest['files'].get(name):
+        raise ValueError('Single-tile package integrity mismatch')
+    files = data_files(raw)
+    prefix = 'usr/palm/applications/' + TILE_APP + '/'
+    meta = 'usr/palm/packages/' + TILE_APP + '/packageinfo.json'
+    if not all(path == meta or path.startswith(prefix) for path in files):
+        raise ValueError('Unexpected single-tile payload path')
+    app = json.loads(files.get(prefix + 'appinfo.json', b'null'))
+    if (not isinstance(app, dict) or app.get('type') != 'web' or app.get('id') != TILE_APP
+            or app.get('version') != version or app.get('visible') is False
+            or app.get('main') != 'index.html' or app.get('title') != 'Clean Your TV'
+            or app.get('requiredACG') != ['application.launcher'] or app.get('privilegedJail')
+            or not all(files.get(prefix + asset) for asset in ('index.html', 'tile.js', 'recovery.html', 'tile-recovery.js'))
+            or prefix + 'setup.html' in files
+            or files.get(prefix + 'tile-config.js') != ('window.CYTVTileEdition = ' + json.dumps(edition) + ';\n').encode()
+            or app.get('cytvTileProtocol') != 1 or app.get('cytvTileEdition') != edition
+            or json.loads(files.get(meta, b'null')) != {
+                'id': TILE_APP, 'app': TILE_APP, 'version': version, 'services': []}):
+        raise ValueError('Single-tile edition or package identity mismatch')
+    return raw, version
+
+
 def _payload_manifest(root):
     manifest = json.loads((root / 'payload.json').read_text())
     if not isinstance(manifest, dict) or not isinstance(manifest.get('files'), dict):
@@ -250,4 +288,25 @@ def verify_payload(root):
             if script.endswith('.sh') and b'\r' in data:
                 raise ValueError('POSIX script must use LF line endings: ' + name + ': ' + script)
     screensaver_payload(root, manifest)
+    if 'single_tile' in manifest:
+        for edition in TILE_FILES:
+            tile_payload(root, manifest, edition)
+        # A light entry combined with old visible components would leave
+        # several tiles. Admit only the supported, edition-bound closure.
+        homes = {variant['launcher'] for variant in manifest['graphics'].values()}
+        if homes != {'launcher.ipk', 'launcher-720p.ipk'} or manifest.get('helper') != 'helper.ipk':
+            raise ValueError('Unexpected single-tile component set')
+        for name in sorted(homes | {manifest['helper']}):
+            if name not in manifest['files']:
+                raise ValueError('Undeclared single-tile component')
+            helper = name == manifest['helper']
+            app = 'com.local.nativehome' if helper else 'com.gathin.tvhome'
+            prefix = 'usr/palm/applications/' + app + '/'
+            contents = data_files(_payload_file(root, name).read_bytes())
+            info = json.loads(contents[prefix + 'appinfo.json'])
+            if (info.get('id') != app or info.get('visible') is not False
+                    or type(info.get('cytvProductGeneration')) is not int or info['cytvProductGeneration'] != 2
+                    or info.get('version') != manifest['helper_version' if helper else 'home_version']
+                    or not helper and info.get('systemUpdateProtocol') != 1):
+                raise ValueError('Invalid single-tile product generation')
     return manifest

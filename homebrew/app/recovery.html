@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Clean Your TV</title>
+    <link rel="stylesheet" href="settings-panel.css" />
+    <link rel="stylesheet" href="renewal-panel.css" />
+    <link rel="stylesheet" href="i18n.css" />
+    <style>
+      body{margin:0;background:#10121a;color:white}#tileActions[hidden]{display:none}
+    </style>
+    <link rel="stylesheet" href="diagnostic.css" />
+  </head>
+  <body>
+    <section class="root-settings companion-app" id="tileActions">
+      <div class="root-settings-card">
+        <h1>Clean Your TV</h1>
+        <div id="tile-main">
+          <div id="tile-issue" aria-live="polite"></div>
+          <div class="renewal-actions">
+            <button id="retry" data-i18n="Open Home">Open Home</button>
+            <button id="recover" data-i18n="Recovery">Recovery</button>
+            <button id="setup" data-i18n="Settings" hidden>Settings</button>
+            <button id="save-report" hidden></button>
+            <button id="open-report" hidden></button>
+          </div>
+        </div>
+        <div id="tile-report-body" hidden></div>
+      </div>
+    </section>
+    <script src="tile-config.js"></script>
+    <script src="tile-launch.js"></script>
+    <script src="home-i18n.js"></script>
+    <script src="catalogs.js"></script>
+    <script src="root-locales.js"></script>
+    <script src="release-notes.js"></script>
+    <script src="system-updates.js"></script>
+    <script src="wallpaper-qr.js"></script>
+    <script src="diagnostic-locales.js"></script>
+    <script src="report-version.js"></script>
+    <script src="report-format.js"></script>
+    <script src="diagnostics.js"></script>
+    <script src="tile-recovery.js"></script>
+  </body>
+</html>

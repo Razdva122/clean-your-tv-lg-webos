@@ -83,8 +83,16 @@ class Device:
     def components_present(self):
         owners=[SYSTEM]
         tx=self.store.read('transaction')
-        if tx and tx.get('edition')=='root':owners.extend((ROOT,UPDATER))
+        if tx and tx.get('edition')=='root':
+            owners.append(ROOT)
+            if self.product_schema() == 1:owners.append(UPDATER)
         return owners_present(owners,self.owner_identity)
+
+    def product_schema(self):
+        baseline = self.store.read('baseline')
+        schema = baseline.get('schema', 1) if baseline else 1
+        if type(schema) is not int or schema not in (1, 2):raise ValueError('Unknown product generation')
+        return schema
 
     def require_components(self):
         if not self.components_present():raise ValueError('CYTV component removed; retained recovery requires inspection')
@@ -146,6 +154,7 @@ class Device:
 
     def _verify_release(self,value,edition):
         checked=release_set(value,edition)
+        if checked['schema'] != self.product_schema():raise ValueError('Product generation mismatch')
         if 'proof' in checked:
             trusted=release_set(self.fetch('verify',{'proof':checked['proof']}),edition)
             if {k:v for k,v in checked.items() if k!='proof'}!=trusted:raise ValueError('Saved signed release mismatch')
@@ -223,8 +232,13 @@ class Device:
             try:prior=self._baseline(edition)
             except (ValueError,KeyError,TypeError):raise ValueError(VERIFICATION_ERROR) from None
             components=[{'name':c['name'],'installed':c['version'] if c['kind']=='infrastructure' else self.installed(c['application']),'version':None} for c in prior['components']]
-            return {'edition':edition,'release':None,'notes':'','components':components,'canInstall':False,'reason':error.reason}
-        return {k:v for k,v in offer.items() if k not in ('candidate','prior')}
+            result = {'edition':edition,'release':None,'notes':'','components':components,'canInstall':False,'reason':error.reason}
+        else:
+            prior = offer['prior']
+            result = {k:v for k,v in offer.items() if k not in ('candidate','prior')}
+        if prior.get('schema') == 2:
+            result['installedRelease'] = prior['release']
+        return result
 
     def check_legacy(self):
         self.enforce_legacy_lockdown()
@@ -279,7 +293,10 @@ class Device:
             if len(raw)!=old['size'] or digest(raw)!=old['sha256']:raise ValueError('Historical infrastructure changed')
             inventory |= self._infra_names(list(archive(raw)))
             inventory |= set(old.get('absent',[]))
-        return self._infra_names(inventory)
+        inventory=self._infra_names(inventory)
+        if self.product_schema()==2 and any(name.startswith('updater/') for name in inventory):
+            raise ValueError('Standalone Root Updater cannot be managed by the single tile')
+        return inventory
 
     def inspect(self,raw,c):
         if len(raw)!=c['size'] or digest(raw)!=c['sha256']:raise ValueError('Package hash mismatch')
@@ -310,6 +327,10 @@ class Device:
         if any('/state/' in name and (name not in state_markers or files[name]!=b'') for name in files):raise ValueError('Mutable state in package payload')
         appinfo=json.loads(files.get(prefix+'appinfo.json',b'{}'));pkg=json.loads(files.get(info,b'{}'))
         if appinfo.get('id')!=app or appinfo.get('version')!=c['version'] or pkg.get('id')!=app or pkg.get('app')!=app or pkg.get('version')!=c['version'] or not isinstance(pkg.get('services'),list) or set(pkg['services'])-services:raise ValueError('Package application identity mismatch')
+        if c['name'] in ('home','root','helper'):
+            schema = self.product_schema()
+            if appinfo.get('cytvProductGeneration', 1) != schema or schema == 2 and appinfo.get('visible') is not False:
+                raise ValueError('Wrong product generation in launcher package')
         if c['name'] in ('home','root') and appinfo.get('systemUpdateProtocol')!=1:raise ValueError('Launcher profile/health protocol incompatible')
         if c['name'] in ('home','root') and 'url' in c:
             expected='1280x720' if c['url'].endswith('_720p_all.ipk') else '1920x1080'
@@ -357,7 +378,12 @@ class Device:
                 out.write(raw);out.flush();os.fchmod(out.fileno(),mode)
                 if owner is not None:os.fchown(out.fileno(),*owner)
                 os.fsync(out.fileno())
-            os.replace(temporary,path);self.sync(path.parent)
+            if exclusive:
+                os.link(temporary,path)
+                temporary.unlink()
+            else:
+                os.replace(temporary,path)
+            self.sync(path.parent)
         finally:
             if temporary.exists():temporary.unlink()
 
@@ -380,7 +406,9 @@ class Device:
             path.unlink();self.sync(path.parent)
 
     def _refresh_root_receipts(self,hashes):
-        proof_path=self.root_state/'recovery-provision.json';proof=json.loads(safe_bytes(proof_path,limit=1024*1024,uid=self.uid))
+        proof_path=self.root_state/'recovery-provision.json'
+        original=safe_bytes(proof_path,limit=1024*1024,uid=self.uid)
+        proof=json.loads(original)
         if proof.get('mode')!='recovery-only' or not isinstance(proof.get('files'),dict):raise ValueError('Invalid recovery provisioning receipt')
         inventory=self._infra_inventory()
         if set(hashes)-inventory:raise ValueError('Foreign infrastructure receipt path')
@@ -389,7 +417,22 @@ class Device:
                 path=str(self._infra_path(name))
                 if name in hashes:proof['files'][path]=hashes[name]
                 else:proof['files'].pop(path,None)
-        proof_raw=json.dumps(proof,sort_keys=True,separators=(',',':')).encode();self.atomic(proof_path,proof_raw)
+        proof_raw=json.dumps(proof,sort_keys=True,separators=(',',':')).encode()
+        if self.product_schema() == 2:
+            current, target = digest(original), digest(proof_raw)
+            pin = self.store.read('root-recovery-integrity') or {}
+            if pin != {'schema':1,'sha256':current}:
+                # A crash can leave either side of this pinned two-file write.
+                # Only the same authenticated target may complete that intent.
+                if (set(pin) != {'schema','sha256','pending'} or pin['schema'] != 1
+                        or pin['pending'] != target or current not in (pin['sha256'], target)):
+                    raise ValueError('Root recovery receipt changed')
+            if current != target:
+                self.store.write('root-recovery-integrity', {'schema':1,'sha256':current,'pending':target})
+                self.atomic(proof_path,proof_raw)
+            self.store.write('root-recovery-integrity', {'schema':1, 'sha256':target})
+            return
+        self.atomic(proof_path,proof_raw)
         from .support.store import Store
         root_store=Store(self.root_updater,uid=self.uid);receipt=root_store.read('infrastructure')
         if not isinstance(receipt,dict) or not isinstance(receipt.get('code'),dict):raise ValueError('Missing Root updater receipt')
@@ -603,14 +646,22 @@ class Device:
     def _root_integrity(self):
         self.require_normal_root()
         from python_binding import verify_binding
-        verify_binding(self.root_state);verify_binding(self.root_updater)
+        verify_binding(self.root_state)
         proof_raw=safe_bytes(self.root_state/'recovery-provision.json',limit=1024*1024,uid=self.uid);proof=json.loads(proof_raw)
         from .support.store import Store
-        receipt=Store(self.root_updater,uid=self.uid).read('infrastructure')
-        if proof.get('mode')!='recovery-only' or not receipt or receipt.get('recovery_sha256')!=digest(proof_raw):raise ValueError('Root recovery receipt mismatch')
+        single_tile = self.product_schema() == 2
+        if single_tile:
+            pin = self.store.read('root-recovery-integrity')
+            if pin != {'schema':1, 'sha256':digest(proof_raw)}:raise ValueError('Root recovery receipt mismatch')
+        else:
+            verify_binding(self.root_updater)
+            receipt=Store(self.root_updater,uid=self.uid).read('infrastructure')
+            if not receipt or receipt.get('recovery_sha256')!=digest(proof_raw):raise ValueError('Root recovery receipt mismatch')
+        if proof.get('mode')!='recovery-only':raise ValueError('Root recovery receipt mismatch')
         for name,expected in proof['files'].items():
             path=Path(name)
             if not path.is_relative_to(self.root_state) or digest(safe_bytes(path,limit=4*1024*1024,uid=self.uid))!=expected:raise ValueError('Root recovery integrity failed')
+        if single_tile:return
         for name,expected in receipt['code'].items():
             p=PurePosixPath(name)
             if p.is_absolute() or '..' in p.parts or str(p)!=name or digest(safe_bytes(self.root_updater/'code'/name,limit=4*1024*1024,uid=self.uid))!=expected:raise ValueError('Root updater integrity failed')
@@ -642,7 +693,10 @@ class Device:
         app=self.installed_root/'usr/palm/applications/com.local.nativehome/state'
         service=self.installed_root/'usr/palm/services/com.local.nativehome.service/state'
         renewal=self.installed_root/'usr/palm/services/com.gathin.tvhome.renewal/state'
-        return [app/name for name in ('home-control.json','blocked','ssap-key.json','apps.json')]+[service/'startup-state.json']+[renewal/name for name in ('settings.json','renewal.json')]
+        names = ['home-control.json','blocked','ssap-key.json','apps.json']
+        if self.product_schema() == 2:
+            names += ['stop-generation', 'watchdog', 'control.json', 'screensaver-preference.json']
+        return [app/name for name in names]+[service/'startup-state.json']+[renewal/name for name in ('settings.json','renewal.json')]
 
     def snapshot_mutable(self):
         tx=self.store.read('transaction')
@@ -651,6 +705,10 @@ class Device:
         for path in self._mutable_paths():
             if not os.path.lexists(path):continue
             raw=safe_bytes(path,limit=1024*1024);info=path.stat()
+            if path.name == 'control.json':
+                control = json.loads(raw)
+                if not isinstance(control,dict) or control.get('cmd') != 'stop':
+                    continue  # Only persist Stop. Other commands are one-shot requests.
             directory=path.parent.stat()
             snapshot[str(path)]={'parent':{'uid':directory.st_uid,'gid':directory.st_gid,'mode':stat.S_IMODE(directory.st_mode)},'bytes':base64.b64encode(raw).decode(),'uid':info.st_uid,'gid':info.st_gid,'mode':stat.S_IMODE(info.st_mode)}
         self.store.write(name,snapshot)
@@ -669,7 +727,11 @@ class Device:
                 if not record_parent or not path.parent.parent.is_dir() or any(p.is_symlink() for p in (path.parent.parent,*path.parent.parent.parents)):raise ValueError('Missing mutable state directory metadata')
                 path.parent.mkdir(mode=0o700)
                 os.chown(path.parent,record_parent['uid'],record_parent['gid']);os.chmod(path.parent,record_parent['mode']);self.sync(path.parent.parent)
-            self.atomic(path,base64.b64decode(record['bytes'],validate=True),record['mode'],owner=(record['uid'],record['gid']))
+            try:
+                self.atomic(path,base64.b64decode(record['bytes'],validate=True),record['mode'],
+                            exclusive=True,owner=(record['uid'],record['gid']))
+            except FileExistsError:
+                continue  # A newer owner preference arrived after the initial check.
 
     def _helper_processes(self):
         home=str(self.installed_root/'usr/palm/applications/com.local.nativehome')
@@ -685,6 +747,25 @@ class Device:
     @staticmethod
     def boot():return Path('/proc/sys/kernel/random/boot_id').read_text().strip()
 
+    def _resume_generation(self, helper):
+        state = helper/'state'
+        if any(os.path.lexists(state/name) for name in ('blocked', 'watchdog')):
+            return None
+        if os.path.lexists(state/'control.json'):
+            control = json.loads(safe_bytes(state/'control.json',limit=4096))
+            if not isinstance(control,dict) or control.get('cmd') == 'stop':
+                return None
+        path = state/'stop-generation'
+        if not os.path.lexists(path):
+            return None
+        before = path.lstat()
+        token = safe_bytes(path,limit=33)
+        after = path.lstat()
+        if (not re.fullmatch(b'[IS][a-f0-9]{32}',token)
+                or (before.st_dev,before.st_ino) != (after.st_dev,after.st_ino)):
+            return None
+        return [after.st_dev, after.st_ino, digest(token)]
+
     def _suspend_helper(self,tx):
         ticket_name='helper-resume-'+self._cycle(tx);ticket=self.store.read(ticket_name)
         helper=self.installed_root/'usr/palm/applications/com.local.nativehome'
@@ -694,6 +775,8 @@ class Device:
             settings=None
             if os.path.lexists(pref):settings=digest(safe_bytes(pref,limit=65536))
             ticket={'boot':self.boot(),'preference':settings,'startupPreference':digest(safe_bytes(startup,limit=65536)) if os.path.lexists(startup) else None,'running':bool(self._helper_processes()),'blocked':os.path.lexists(blocked),'attempted':False,'suspended':False}
+            if self.product_schema() == 2:
+                ticket['stopGeneration'] = self._resume_generation(helper)
             if os.path.lexists(startup):
                 raw=safe_bytes(startup,limit=65536);info=startup.stat();parsed=json.loads(raw)
                 if not isinstance(parsed,dict) or type(parsed.get('enabled')) is not bool:raise ValueError('Invalid Helper startup preference')
@@ -747,7 +830,7 @@ class Device:
         # IPK replacement may reset app service registrations. Restore only the
         # original or installed bytes recorded by explicit computer provision.
         tx=self.store.read('transaction')
-        stores=(self.state,self.root_updater) if tx and tx['edition']=='root' else (self.state,)
+        stores=(self.state,self.root_updater) if tx and tx['edition']=='root' and self.product_schema()==1 else (self.state,)
         for store_root in stores:
             if not (store_root/'registration.json').exists():continue
             from .support.store import Store
@@ -764,7 +847,8 @@ class Device:
             self._root_integrity()
             # The provision module and its contract are in the verified Root
             # updater inventory; its plan contains only fixed Root LS2 paths.
-            spec=importlib.util.spec_from_file_location('system_root_provision',self.root_updater/'code/provision.py');provision=importlib.util.module_from_spec(spec);spec.loader.exec_module(provision)
+            source = self.code/'root-provision.py' if self.product_schema()==2 else self.root_updater/'code/provision.py'
+            spec=importlib.util.spec_from_file_location('system_root_provision',source);provision=importlib.util.module_from_spec(spec);spec.loader.exec_module(provision)
             self.repair_root_registration(provision, screensaver=screensaver)
             provision.refresh()
         else:self.scan_services()
@@ -828,6 +912,9 @@ class Device:
         startup=self.installed_root/'usr/palm/services/com.local.nativehome.service/state/startup-state.json'
         startup_current=digest(safe_bytes(startup,limit=65536)) if os.path.lexists(startup) else None
         startup_unchanged=startup_current==ticket.get('startupPreference')
+        if self.product_schema() == 2:
+            if not ticket.get('stopGeneration') or self._resume_generation(helper) != ticket['stopGeneration']:
+                startup_unchanged = False
         if startup_unchanged and not ticket.get('startupCancelled') and 'startupOriginal' in ticket and ticket['boot']==self.boot():
             record=ticket['startupOriginal'];self.atomic(startup,base64.b64decode(record['bytes'],validate=True),record['mode'],owner=(record['uid'],record['gid']))
             self.snapshot_mutable()
@@ -964,7 +1051,7 @@ class Device:
             if current not in (expected[0].get(name),expected[1].get(name)):raise ValueError('Managed infrastructure conflict; computer recovery required')
 
     def sync_root_baseline(self,tx):
-        if tx.get('edition')!='root' or tx.get('phase') not in ('complete','rolled-back'):return
+        if tx.get('edition')!='root' or tx.get('phase') not in ('complete','rolled-back') or self.product_schema()==2:return
         selected=tx['prior' if tx['phase']=='rolled-back' else 'candidate']
         c=next(c for c in selected['components'] if c['name']=='root');raw=self.cache_bytes(c);self.inspect(raw,c)
         from .support.store import Store

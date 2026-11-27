@@ -72,6 +72,18 @@ Wenn der Installer anbietet, die aktuelle Home-Integration zu ersetzen, bestäti
 
 Bei der Root-Einrichtung verwendet der Installer bei Bedarf automatisch geprüften internen Zwischenspeicher; ein USB-Laufwerk ist nicht erforderlich, und wenn die Speicherprüfung fehlschlägt, behalten Sie die Wiederherstellungsdaten und speichern Sie einen Diagnosebericht.
 
+<a id="unveröffentlichter-kandidat-root-über-homebrew-einrichten"></a>
+
+### Wenn CYTV Installer auf dem Fernseher bereits geöffnet ist
+
+Wählen Sie **Installieren und aktivieren** und bestätigen Sie einmal. Der Installer richtet Root Home, Root Updater und System Updater gemeinsam ein. Die Home-Taste öffnet dann Root Home, sofern der Not-Aus nicht aktiv ist. Verweist der Installer für Root auf einen Computer, setzen Sie die Einrichtung dort fort. Wird No-root angeboten, verwenden Sie den Installer auf einem Computer oder Android-Gerät.
+
+Nach der Installation öffnet Root Home **Fernseher einrichten**. Wähle unter **Designs** ein integriertes Design. Öffne **LG-Einstellungen ändern**, markiere die gewünschten Optionen für Werbung oder Empfehlungen und wähle **Ausgewählte Einstellungen anwenden**. Prüfe das Ergebnis jeder Option. Um gespeicherte ursprüngliche Werte wiederherzustellen, markiere die Optionen und wähle **Ausgewählte Einstellungen wiederherstellen**. Mit **Home öffnen** gelangst du zum Startbildschirm. Du kannst das Menü später unter **Einstellungen → Erweitert → Fernseher einrichten** erneut öffnen.
+
+Wenn der Installer ein Problem meldet, folge der Anweisung auf dem Bildschirm. Über die Schaltfläche zum Speichern des Diagnoseberichts bleibt eine Kopie auf diesem Fernseher. Öffne den gespeicherten Bericht im Installer oder in der Wiederherstellung der Kachel, um ihn zu lesen oder den QR-Code mit deinem Telefon zu scannen. Die Liste zeigt abgeschlossene Prüfungen, den aktuellen Schritt und mögliche Fehler. Scanne den QR-Code, lade den JSON-Bericht herunter oder öffne den ausgefüllten GitHub-Entwurf. Beschreibe das Problem vor dem Absenden.
+
+Zum Entfernen am Fernseher öffnen Sie in Root Home **Einstellungen → Erweitert → Clean Your TV wiederherstellen** und bestätigen Sie die vollständige Deinstallation. Wenn ein vollständiger Neustart erforderlich ist, starten Sie den Fernseher neu, öffnen Sie Clean Your TV erneut und setzen Sie den Vorgang fort. Nach der Prüfung können Sie auch die Installer-Kachel vom Ergebnisbildschirm aus entfernen.
+
 ## 5. Fernbedienung prüfen
 
 1. Öffnen Sie eine andere TV-App und drücken Sie kurz **Home**. Clean Your TV sollte erscheinen. Geben Sie im Assistenten Ihre Beobachtung an; überspringen Sie den Test, wenn Sie ihn nicht durchgeführt haben.
@@ -149,7 +161,6 @@ Wenn der Assistent bei der Bereinigung einen vollständigen Neustart verlangt, t
 <a id="lg-firmware-sperre-in-120"></a>
 <a id="neu-in-130-geführte-desktop-wiederherstellung"></a>
 <a id="neu-in-130--12"></a>
-<a id="unveröffentlichter-kandidat-root-über-homebrew-einrichten"></a>
 <a id="unveröffentlichter-kandidat-hdmi-ton-wiederherstellen-root"></a>
 <a id="designs-154"></a>
 <a id="einstellungskategorien-unveröffentlichter-kandidat"></a>
@@ -200,6 +211,10 @@ Einstellungen → Hintergrundbilder → Vom Telefon hochladen öffnen und den Co
 ## Clean Your TV einrichten
 
 Wählen Sie vor dem Design unter **Debloat**, welche LG-Einstellungen für Werbung, Empfehlungen, Datenschutz und Benachrichtigungen Sie ändern möchten. Prüfen Sie jedes Ergebnis. Kann der ursprüngliche Wert nicht gelesen werden, steht dafür keine automatische Wiederherstellung zur Verfügung. Wählen Sie **Debloat überspringen**, um die Einstellungen beizubehalten.
+
+Beide Editionen können LG-Werbestreams abschalten, sofern der Fernseher die Einstellung bereitstellt.
+
+Um eine einzelne Änderung rückgängig zu machen, öffnen Sie Debloat unter Wartung mit derselben gespeicherten TV-Verbindung. Wählen Sie eine gespeicherte Einstellung, prüfen Sie den ursprünglichen Wert und bestätigen Sie. Auf unterstützten Fernsehern lässt sich der Autostart von LG Channels unter Alle Einstellungen → Allgemein → Sender → LG Channels automatisch starten ausschalten.
 
 Bei der Deinstallation können Sie die gespeicherten ursprünglichen Debloat-Einstellungen wiederherstellen. Wenn Sie die Wiederherstellung überspringen, läuft die Deinstallation ohne diese Änderungen weiter.
 

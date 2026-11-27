@@ -147,6 +147,7 @@ function harness({
       return confirmation;
     },
     api,
+    window,
     calls,
     timers,
     elements,
@@ -175,6 +176,21 @@ function harness({
   };
 }
 (async () => {
+  const b = harness();
+  b.window.CYTVProductGeneration = 2;
+  let external;
+  b.window.SystemUpdates = {
+    open: (opts) => opts.fallback(),
+    openExternal: (opts) => {
+      external = opts;
+    }
+  };
+  const onClose = () => {};
+  const before = b.calls.length;
+  b.api.open({ onClose });
+  assert.equal(external.edition, 'root');
+  assert.equal(external.onClose, onClose);
+  assert.equal(b.calls.length, before);
   let h = harness();
   h.api.open();
   await tick();

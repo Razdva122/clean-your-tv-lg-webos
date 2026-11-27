@@ -18,6 +18,13 @@ function loadCatalogs(...files) {
   return catalogs;
 }
 const catalogs = loadCatalogs('root-locales.js', 'root-audio-locales.js');
+const setup = loadCatalogs('root-post-install-locales.js');
+// This catalog leaves English to HomeI18n's source-text fallback.
+setup.en = Object.fromEntries(
+  Object.keys(setup.ru).map((source) => [source, source])
+);
+for (const [locale, values] of Object.entries(setup))
+  Object.assign(catalogs[locale], values);
 const shared = loadCatalogs('../../launcher/catalogs.js');
 const sources = Object.keys(catalogs.en);
 for (const locale of [

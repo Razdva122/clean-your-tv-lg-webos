@@ -85,12 +85,19 @@ def start():
     return c.start_trial(intent, boot_identity(), str(uuid.uuid4()))
 
 
-def enable():
+def enable(*, setup_operation=None, admission=None):
     from provision import verify
     from helper_bridge import require_idle
     verify(); require_idle()
     c = Coordinator(Store(d.STATE))
-    result=c.enable(c.store.read(), boot_identity(), str(uuid.uuid4()))
+    expected = c.store.read()
+    if setup_operation is None:
+        result = c.enable(expected, boot_identity(), str(uuid.uuid4()))
+    else:
+        from persistent_lifecycle import initial
+        if expected != initial():
+            raise ValueError('Fresh Home intent required for install activation')
+        result = c.enable(expected, boot_identity(), setup_operation, admission=admission)
     startup_after_ready(result)
     return result
 

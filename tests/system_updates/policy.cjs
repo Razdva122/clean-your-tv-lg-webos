@@ -157,6 +157,8 @@ async function offerFixture(status, body, error) {
   });
   const fakeFs = {
     readFileSync(file) {
+      if (file === directory + '/product-generation.json')
+        throw Object.assign(Error('not present'), { code: 'ENOENT' });
       if (file === directory + '/release-public.pem')
         return publicKey.export({ type: 'spki', format: 'pem' });
       if (file === directory + '/ca-bundle.crt') return 'offline CA fixture';

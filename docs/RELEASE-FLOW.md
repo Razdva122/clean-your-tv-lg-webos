@@ -756,8 +756,8 @@ physical-device follow-up and the mandatory final signed-artifact upgrade checks
 
 ## Homebrew Installer candidate and promotion gate
 
-The new Root-only CYTV Installer remains **unreleased**. Its independent installer
-version and embedded product versions must be recorded separately. Review
+The CYTV Installer for already-rooted TVs remains **unreleased**. Its independent
+installer version and embedded product versions must be recorded separately. Review
 [Homebrew packaging and exact CLI](../homebrew/README.md) and the
 [acceptance matrix and persistent-state inventory](development/HOMEBREW-INSTALL-ACCEPTANCE.md).
 All physical rows and meaningful human review remain pending; current coding and

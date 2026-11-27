@@ -72,6 +72,18 @@ Si l’installateur Root propose de remplacer l’intégration Home actuelle, co
 
 Pour la configuration Root, l’installateur utilise automatiquement un stockage temporaire interne vérifié si nécessaire ; aucune clé USB n’est requise et, si la vérification du stockage échoue, conservez les données de récupération et enregistrez un rapport de diagnostic.
 
+<a id="candidat-non-publié--installer-root-avec-homebrew"></a>
+
+### Si CYTV Installer est déjà ouvert sur le téléviseur
+
+Choisissez **Installer et activer** et confirmez une fois. L’installateur configure ensemble Root Home, Root Updater et System Updater. La touche Accueil ouvrira Root Home, sauf si l’arrêt d’urgence est enclenché. Si l’installateur vous invite à poursuivre la configuration de Root sur un ordinateur, suivez cette indication. S’il propose No-root, utilisez l’installateur pour ordinateur ou Android.
+
+Après l’installation, Root Home ouvre **Configurer le téléviseur**. Choisissez un thème intégré dans **Thèmes**. Ouvrez **Modifier les réglages LG**, cochez les options de publicité et de recommandations à modifier et choisissez **Appliquer les réglages sélectionnés**. Vérifiez le résultat de chaque option. Pour retrouver les valeurs d’origine enregistrées, cochez les options et choisissez **Rétablir les réglages sélectionnés**. Sélectionnez **Ouvrir Home** pour accéder à l’accueil. Pour rouvrir le panneau plus tard, ouvrez **Paramètres → Avancé → Configurer le téléviseur**.
+
+Si l’installateur signale un problème, suivez l’instruction affichée. Enregistrez le rapport de diagnostic pour conserver une copie sur ce téléviseur. Rouvrez le rapport dans l’installateur ou dans la rubrique de récupération de la vignette pour le lire ou scanner son code QR avec votre téléphone. La liste indique les vérifications terminées, l’étape en cours et les échecs. Scannez le code QR pour télécharger le rapport JSON ou ouvrir le brouillon GitHub prérempli. Décrivez le problème avant l’envoi.
+
+Pour désinstaller depuis le téléviseur, ouvrez **Paramètres → Avancé → Récupération de Clean Your TV** dans Root Home et confirmez la suppression complète. Si un redémarrage complet est demandé, redémarrez le téléviseur, rouvrez Clean Your TV et reprenez la suppression. Une fois celle-ci vérifiée, vous pouvez aussi retirer la vignette de l’installateur depuis l’écran de résultat.
+
 ## 5. Vérifier la télécommande
 
 1. Ouvrez une autre application sur la TV et appuyez brièvement sur **Home**. Clean Your TV doit s’ouvrir. Indiquez votre observation dans l’assistant ; ignorez le test si vous ne l’avez pas effectué.
@@ -149,7 +161,6 @@ Dans l’installateur de bureau, ouvrez **Action de maintenance → Ajuster les 
 <a id="blocage-du-micrologiciel-lg-dans-120"></a>
 <a id="nouveautés-de-130-récupération-guidée-sur-ordinateur"></a>
 <a id="nouveautés-de-130--12"></a>
-<a id="candidat-non-publié--installer-root-avec-homebrew"></a>
 <a id="candidat-non-publié--récupération-du-son-hdmi-root"></a>
 <a id="thèmes-154"></a>
 <a id="catégories-des-paramètres-candidat-non-publié"></a>
@@ -200,6 +211,10 @@ Ouvrez Paramètres → Fonds d’écran → Envoyer depuis le téléphone et sca
 ## Configurer votre Clean Your TV
 
 Avant de choisir un thème, utilisez **Debloat** pour sélectionner les réglages LG de publicité, de recommandations, de confidentialité et de notifications à modifier. Vérifiez chaque résultat. Si la valeur d’origine ne peut pas être lue, elle ne peut pas être enregistrée pour une restauration automatique. Choisissez **Ignorer Debloat** pour conserver vos réglages.
+
+Les deux éditions peuvent désactiver les flux promotionnels LG si le téléviseur propose ce réglage.
+
+Pour annuler une seule modification, ouvrez Debloat dans Maintenance avec la même connexion enregistrée au téléviseur. Choisissez le réglage, vérifiez sa valeur d’origine et confirmez. Sur les modèles compatibles, désactivez le démarrage automatique de LG Channels dans Tous les paramètres → Général → Chaînes → Démarrage automatique de LG Channels.
 
 Lors de la désinstallation, vous pouvez rétablir les valeurs d’origine enregistrées par Debloat. Si vous ignorez la restauration, la désinstallation se poursuit sans modifier ces réglages.
 

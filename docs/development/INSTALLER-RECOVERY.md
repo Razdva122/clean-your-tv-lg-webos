@@ -62,11 +62,39 @@ the boot baseline and repeatedly requesting another power cycle.
 Standard diagnostics export `removal.restart_evidence`: strict booleans for the
 boot-probe result and kernel change, process visibility/uncertainty, package and
 configuration state, terminal eligibility and retained directory types. Fixed
-`phase`, `decision` and `proof_kind` values identify the last branch. The private
-operation receipt stores these under `cleanup_restart_evidence` for later report
+`phase`, `decision` and `proof_kind` values identify the last branch.
+`process_matches` lists fixed categories such as Helper, renewal service or
+installer. The process scan checks individual arguments and process links for
+project IDs and owned paths. Shell text that refers to project components can
+still block removal before a delayed child starts. A single literal print can
+proceed through the remaining checks. After an acknowledged startup disable,
+the installer gives the specific Helper or renewal service up to 20 seconds
+to exit before requesting any package removal. Other process matches keep
+the ordinary eight-second window. The private operation receipt stores these under `cleanup_restart_evidence` for later report
 exports; they are observations of the latest cleanup attempt, never admission
 authority. No PID, process arguments, path, raw kernel ID or proof identity is
 exported. `restart-required` also remains visible in the pending-stage projection.
+
+After Stop publication and stock-control restoration, the installer can ask the
+vendor package manager to remove a catalogued Helper or Home with its own runtime
+still resident. The scan recognizes the installed Helper entry, controller, relay
+or detach command, or a Home web process with the exact application argument.
+LS2 service hosts still have to exit. Only acknowledged startup services receive
+the extended drain window, even when a package runtime is present alongside them.
+
+The private receipt records `cleanup_package_runtime_delegated` before the
+package request. Every subsequent attempt requires a positive process check
+after the vendor terminal and before the private sweep. A surviving runtime,
+missing process listing or unreadable command line preserves the files. The
+receipt keeps this requirement across connection loss and restart.
+
+After a generation-bound launch the installer reads bounded controller logs,
+checks the PID and command line, and looks for relay READY with Home enabled.
+Input loss invalidates READY until the relay signals readiness again. An exit
+announcement ends readiness immediately. The final Stop generation check wins.
+A negative process scan remains reportable when newer telemetry is unavailable.
+Physical Home is recorded separately. Standard reports export fixed startup
+states, booleans and a bounded numeric relay exit code.
 
 No-root supports only existing pending install and pending/removing uninstall
 receipts. Except for the pre-submission case below, offering removal requires a positive bounded ten-second

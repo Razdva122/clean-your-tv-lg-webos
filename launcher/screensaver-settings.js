@@ -537,7 +537,9 @@
             : helperLaunchFailed
               ? 'Could not start Home Helper.'
               : helperStopped
-                ? 'Home Helper is stopped.'
+                ? root.CYTVProductGeneration === 2
+                  ? 'Home control is paused.'
+                  : 'Home Helper is stopped.'
                 : statusUnconfirmed && !rootEdition()
                   ? 'Could not check screensaver availability.'
                   : popupUnavailable
@@ -1336,7 +1338,7 @@
     var startHelper = button(
       recovery,
       'screensaverStartHelper',
-      'Start Helper'
+      root.CYTVProductGeneration === 2 ? 'Resume Home control' : 'Start Helper'
     );
     startHelper.onclick = function () {
       root.HomeHelper.confirmStart(

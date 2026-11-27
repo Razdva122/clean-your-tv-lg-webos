@@ -149,9 +149,10 @@ def require_root_reinstall_cleanup(result):
 
 
 class Installer:
-    def __init__(self, remote, store, profile, payload, manifest, progress=print, tv_info=None, checks=None):
+    def __init__(self, remote, store, profile, payload, manifest, progress=print, tv_info=None, checks=None, *, homebrew_entry=False):
         self.remote, self.store, self.profile = remote, store, profile
         self.payload, self.manifest, self.progress = Path(payload), manifest, progress
+        self.homebrew_entry = homebrew_entry
         self.helper_retry = lambda: False
         self.storage_preflight_review = None
         self.before_no_root_staging = None
@@ -317,11 +318,19 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
         if self.profile.get('root_variant') == 'node012-beta':
             raise UserError('Root Beta automatic updates are unavailable; use the computer installer.')
         """Provision the independent supervisor without replacing the active edition."""
-        if self.store.pending(self.profile):
+        rooted_tile = (self.profile['edition']=='no-root' and self.profile.get('connection')=='root-ssh'
+                       and bool(self.manifest.get('single_tile') or getattr(self, 'homebrew_entry', False)))
+        pending = self.store.pending(self.profile)
+        resume = bool(rooted_tile and pending and pending.get('action')=='enable-system-updates'
+                      and pending.get('stage')=='setup' and pending.get('bootstrap_digest'))
+        resume_upload = bool(rooted_tile and getattr(self, 'homebrew_entry', False) and pending
+                            and pending.get('action') == 'enable-system-updates' and pending.get('stage') == 'upload'
+                            and pending.get('bootstrap_digest'))
+        if pending and not (resume or resume_upload):
             raise UserError('Previous operation is unresolved. Run cytv status; retain recovery state before retrying.')
         # Canonicalize the packaged root (macOS /var and PyInstaller app aliases),
         # while keeping links inside the bundle subject to the integrity check.
-        bundle = self.payload.resolve() / 'system-updater'
+        bundle = getattr(self, '_system_bundle', self.payload / 'system-updater').resolve()
         try:
             metadata = json.loads((bundle / 'bundle.json').read_text())
             files = metadata['files']
@@ -329,6 +338,11 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
                     or not isinstance(files, dict)
                     or not {'setup-system-updater.py', 'system-updater.ipk'} <= files.keys()):
                 raise ValueError('Invalid bootstrap inventory')
+            if rooted_tile and metadata.get('product_schema')!=2:
+                raise ValueError('Single-tile System bundle required')
+            bundle_digest=hashlib.sha256(json.dumps(metadata,sort_keys=True,separators=(',',':')).encode()).hexdigest()
+            if (resume or resume_upload) and pending['bootstrap_digest']!=bundle_digest:
+                raise ValueError('Original System bundle required')
             for name, digest in files.items():
                 path = bundle / package.safe_name(name)
                 if (any(p.is_symlink() for p in (path, *path.parents))
@@ -346,20 +360,36 @@ if ! env -u PYTHONHOME -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=
         check = self._python_command([python, '-I', '-B', '-c', SYSTEM_PROBE])
         if self.remote.run('if ' + check + ' >/dev/null 2>&1; then printf CYTV_PYTHON_READY; fi').strip() != 'CYTV_PYTHON_READY':
             self._selected_python = self._select_python(provision=True)
-        storage.install(self.remote, {name:(bundle/name).read_bytes() for name in (*files,'bundle.json')}, self.progress, root=True)
-        self.store.begin(self.profile, 'enable-system-updates', stage='upload')
-        stage = root_staging.create(self.remote, 'system-updater', required=sum((bundle/name).stat().st_size for name in (*files, 'bundle.json')))
-        self.store.checkpoint(self.profile, support_upload=stage)
-        for directory in sorted({str(PurePosixPath(name).parent) for name in files} - {'.'}):
-            self.remote.run('umask 077; mkdir -p ' + shlex.quote(stage + '/' + directory))
-        for name in [*files, 'bundle.json']:
-            self.remote.upload(stage + '/' + package.safe_name(name), (bundle / name).read_bytes(), mode=0o600)
-        self.store.checkpoint(self.profile, stage='setup')
+        stage=None
+        if resume or resume_upload and 'support_upload' in pending:
+            from .system_bootstrap import retained_stage
+            options = {'allow_partial': True} if resume_upload else {}
+            stage=retained_stage(self,pending.get('support_upload'),bundle,files,**options)
+        if stage is None or resume_upload:
+            storage.install(self.remote, {name:(bundle/name).read_bytes() for name in (*files,'bundle.json')}, self.progress, root=True)
+            if not (resume or resume_upload):
+                self.store.begin(self.profile, 'enable-system-updates', stage='upload',
+                                 **({'bootstrap_digest':bundle_digest} if rooted_tile else {}))
+            if stage is None:
+                stage = root_staging.create(self.remote, 'system-updater', required=sum((bundle/name).stat().st_size for name in (*files, 'bundle.json')))
+                if not resume:self.store.checkpoint(self.profile, support_upload=stage)
+            for directory in sorted({str(PurePosixPath(name).parent) for name in files} - {'.'}):
+                self.remote.run('umask 077; mkdir -p ' + shlex.quote(stage + '/' + directory))
+            for name in [*files, 'bundle.json']:
+                self.remote.upload(stage + '/' + package.safe_name(name), (bundle / name).read_bytes(), mode=0o600)
+            self.store.checkpoint(self.profile, stage='setup', support_upload=stage)
+        setup_args=[]
+        if rooted_tile:
+            setup_id=self.store.pending(self.profile)['diagnostic_id']
+            if not isinstance(setup_id,str) or not re.fullmatch('[a-f0-9]{32}',setup_id):
+                raise UserError('The original update setup receipt could not be verified.',reason_code='pending-operation')
+            setup_args=['--setup-id', setup_id]
+        if resume:setup_args.append('--resume')
         self.progress('Preparing updates for every TV component…')
         reply = json.loads(self.remote.run(self._python_command([
             self._python(), '-B', stage + '/setup-system-updater.py', '--bundle', stage,
-            '--edition', self.profile['edition'], '--device', '--apply']), timeout=360))
-        if not isinstance(reply, dict) or reply.get('installed') is not True:
+            '--edition', self.profile['edition'], '--device', '--apply', *setup_args]), timeout=360))
+        if not isinstance(reply, dict) or reply.get('installed') is not True or rooted_tile and (reply.get('edition')!='no-root' or reply.get('setup_id')!=setup_id):
             raise UserError('System updater setup was not confirmed. Keep recovery state and run cytv status.')
         root_staging.retire(self.remote, stage, {name:(bundle/name).read_bytes() for name in (*files,'bundle.json')})
         self.store.finish(self.profile)
@@ -631,6 +661,7 @@ with os.fdopen(f,'rb') as stream:
     def preflight(self, install=False, home_interfaces=False, stop_running_helper=False, *, fresh_only=False,
                   diagnose=False, defer_helper=False):
         from .root_capabilities import CALLS, clear_home_observations, verify
+        self.tv_info.pop('root_mrcu_probe', None)
         clear_home_observations(self.tv_info)
         for name in CALLS:
             if name in self.checks.results:
@@ -673,6 +704,12 @@ with os.fdopen(f,'rb') as stream:
 
             for name, probe in zip(diagnostics.ROOT_REQUIREMENTS, probes):
                 check(name, probe)
+            if diagnose and not install:
+                from . import doctor_mrcu
+                self.tv_info['root_mrcu_probe'] = {'state': 'unavailable'}
+                if all(checks[name] == 'pass' for name in ('root-user', 'python3', 'python-fcntl')):
+                    command = self._python_command([python, '-I', '-B', '-'])
+                    self.tv_info['root_mrcu_probe'] = doctor_mrcu.observe(self.remote, command)
             python_result = python_status()
             other_requirements_pass = all(result == 'pass' for name, result in checks.items()
                                           if name not in PYTHON_REQUIREMENTS)
@@ -945,9 +982,11 @@ printf '%s' "$cytv_state"
         self._graphics_paths = paths
         self.tv_info['graphics_resolution'] = selected
 
-    def check_no_root_alternative(self):
-        """Read-only admission before offering No-root; check final bytes at install."""
-        self.preflight(install=True, fresh_only=True)
+    def check_no_root_alternative(self, *, allow_clean_root_handoff=False):
+        """Verify No-root eligibility and check final bytes again at install."""
+        if allow_clean_root_handoff and not getattr(self, 'homebrew_entry', False):
+            raise ValueError('Verified clean handoff requires the Homebrew setup route')
+        self.preflight(install=True, fresh_only=not allow_clean_root_handoff)
         self.select_graphics()
         bundles = {}
         for slot, name in (('helper.ipk', self.manifest['helper']),
@@ -959,6 +998,9 @@ printf '%s' "$cytv_state"
             if hashlib.sha256(data).hexdigest() != self.manifest['files'][name]:
                 raise ValueError('Embedded payload integrity mismatch')
             bundles[slot] = data
+        tile = package.tile_payload(self.payload, self.manifest, 'no-root')
+        if tile:
+            bundles[package.TILE_FILES['no-root']] = tile[0]
         companion = package.screensaver_payload(self.payload, self.manifest)
         if companion:
             bundles[package.SCREENSAVER_IPK] = companion[0]
@@ -974,6 +1016,8 @@ printf '%s' "$cytv_state"
                               and pending.get('home_backend') != 'c1-native-gate')
         if pending and not replace_activation:
             raise UserError('Previous operation is unresolved. Run cytv status or cytv restore; do not retry installation.', reason_code='pending-operation')
+        if self.manifest.get('single_tile') and self.profile['edition'] == 'root':
+            self.require_fresh_single_tile()
         if reinstall and migrate:
             raise UserError('Reinstallation does not support --migrate-home. Omit it to read a fresh TV inventory before replacing Root.')
         if not migrate:
@@ -999,6 +1043,11 @@ printf '%s' "$cytv_state"
         helper = (self.payload / self.manifest['helper']).read_bytes()
         bundles = {'helper.ipk': helper, 'launcher.ipk': launcher}
         versions = {HOME: self.manifest['home_version'], HELPER: self.manifest['helper_version']}
+        tile = package.tile_payload(self.payload, self.manifest, 'no-root')
+        if tile or getattr(self, 'homebrew_entry', False):
+            self.require_fresh_single_tile()
+        if tile:
+            bundles[package.TILE_FILES['no-root']], versions[package.TILE_APP] = tile
         if companion:
             archive, version = companion
             bundles[package.SCREENSAVER_IPK] = archive
@@ -1009,7 +1058,7 @@ printf '%s' "$cytv_state"
                 if '/state/' not in name:
                     expected[BASE.removesuffix('/usr/palm') + '/' + name] = hashlib.sha256(content).hexdigest()
         key_data = json.dumps({'key': ssap_key}).encode()
-        ids = [app['id'] for app in inventory['apps'] if app['id'] not in (HOME, HELPER, 'com.webos.app.home', package.ROOT_APP, package.SCREENSAVER_APP)]
+        ids = [app['id'] for app in inventory['apps'] if app['id'] not in (HOME, HELPER, 'com.webos.app.home', package.ROOT_APP, package.SCREENSAVER_APP, package.TILE_APP)]
         apps_data = json.dumps(ids).encode()
         expected[HELPER_STATE + '/ssap-key.json'] = hashlib.sha256(key_data).hexdigest()
         expected[HELPER_STATE + '/apps.json'] = hashlib.sha256(apps_data).hexdigest()
@@ -1020,7 +1069,56 @@ printf '%s' "$cytv_state"
         from . import no_root_observer
         pending = no_root_observer.begin(self, 'install', bundles, versions, expected,
             {'ssap-key.json': key_data, 'apps.json': apps_data}, setup_activation=True, ramfs=ramfs)
-        return self.continue_no_root(pending)
+        result = self.continue_no_root(pending)
+        if tile and root_ssh:
+            if result.get('installed') != 'no-root' or self.store.pending(self.profile):
+                raise UserError('Verify the original No-root installation before setting up updates.',
+                                reason_code='pending-operation')
+            try:
+                self.enable_system_updates()
+            except (RuntimeError, OSError, ValueError) as error:
+                message = 'Clean Your TV is installed. On-TV update setup needs attention.'
+                if isinstance(error, UserError):
+                    message += '\n' + str(error)
+                raise UserError(message + '\nUse the saved root SSH connection, check status, then choose Enable updates '
+                                'for all TV components to continue the original setup.',
+                                reason_code='system-updates-incomplete') from error
+            result['system_updates'] = True
+        return result
+
+    def single_tile_source(self):
+        """Classify only unambiguous No-root installations under this connection."""
+        if self.profile['edition'] == 'root':
+            raise UserError('This installer supports single-tile setup for No-root only.',
+                            reason_code='unsupported-operation')
+        if self.store is not None and self.store.pending(self.profile):
+            raise UserError('Previous operation is unresolved. Run cytv status or cytv restore; do not retry installation.',
+                            reason_code='pending-operation')
+        apps = {row['id']: row.get('version') for row in self.installed_apps()}
+        other_owners = (package.ROOT_APP, 'com.cleanyourtv.root.updater', 'com.cleanyourtv.system.updater', package.TILE_APP)
+        if getattr(self, 'homebrew_entry', False):
+            from .single_tile_setup import installed_role
+            if (package.TILE_APP not in apps or installed_role(self, require_tile_protocol=True) != 'homebrew'):
+                raise UserError('The full Clean Your TV entry could not be verified.', reason_code='existing-installation')
+            other_owners = (*other_owners[:-1], package.SCREENSAVER_APP)
+        legacy = {app: apps[app] for app in (HOME, HELPER, 'com.cleanyourtv.updater') if app in apps}
+        if {HOME, HELPER} <= legacy.keys():
+            from .single_tile_maintenance import admission
+            existing = admission(self, apps)
+            if existing:
+                return existing
+        if any(app in apps for app in other_owners) or (legacy and not {HOME, HELPER} <= legacy.keys()):
+            raise UserError('Check the existing Clean Your TV installation before continuing.',
+                            reason_code='existing-installation')
+        for app in (*other_owners, HOME, HELPER, 'com.cleanyourtv.updater'):
+            if app not in legacy:
+                self.verify_absent(app)
+        return legacy
+
+    def require_fresh_single_tile(self):
+        if self.single_tile_source():
+            raise UserError('Check the existing Clean Your TV installation before continuing.',
+                            reason_code='existing-installation')
 
     def continue_no_root(self, expected_pending):
         from .no_root_observer import continue_operation
@@ -1453,7 +1551,9 @@ else:
         observed = self.installed_apps()
         self.tv_info['components'] = diagnostics.context.status_summary({'device': {'apps': observed}}).get('components', {})
         apps = {app['id']: app for app in observed}
-        if self.profile['edition'] == 'root':
+        if self.manifest.get('single_tile'):
+            targets = [(package.TILE_APP, 'Clean Your TV', self.manifest['single_tile']['version'])]
+        elif self.profile['edition'] == 'root':
             if self.tv_info.get('home_backend') == 'c1-native-gate':
                 variant = self.manifest['root_backends']['c1-native-gate']['graphics'][self.tv_info['graphics_resolution']]
                 root = json.loads((self.payload / package.safe_name(variant) / 'release.json').read_text())['version']
@@ -1721,6 +1821,11 @@ else:
         if pending and pending.get('action') == 'enable-system-updates':
             report = self.system_updater_cleanup('status')
             completion = self._system_updater_completion(report) if reconcile else None
+            if (completion=='system-updater-bootstrap-verified' and pending.get('bootstrap_digest')
+                    and (report.get('edition')!='no-root' or report.get('product_schema')!=2
+                         or report.get('ownership_verified') is not True or report.get('bootstrap_digest')!=pending['bootstrap_digest']
+                         or report.get('setup_id')!=pending.get('diagnostic_id'))):
+                completion=None
             reconciled = self._finish_status_transition(completion)
             return {'device': {'system_updater': report}, 'pending': self.store.pending(self.profile),
                     'reconciled': reconciled, 'can_resume_root_setup': False}

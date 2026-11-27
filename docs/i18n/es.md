@@ -72,6 +72,18 @@ Si al instalar Root se te ofrece reemplazar la integración de Home actual, conf
 
 En la instalación Root, el instalador usa automáticamente almacenamiento temporal interno verificado cuando es necesario; no hace falta una unidad USB y, si falla la comprobación del almacenamiento, conserva los datos de recuperación y guarda un informe de diagnóstico.
 
+<a id="candidato-sin-publicar-instalar-root-mediante-homebrew"></a>
+
+### Si ya tienes CYTV Installer abierto en el televisor
+
+Elige **Instalar y activar** y confirma una vez. El instalador configura Root Home, Root Updater y System Updater juntos. El botón de inicio abrirá Root Home salvo que esté activada la parada de emergencia. Si el instalador te indica que uses un ordenador para instalar Root, continúa allí. Si te ofrece No-root, usa el instalador para ordenador o Android.
+
+Después de instalar, Root Home abre **Configurar el televisor**. Elige un tema integrado en **Temas**. Abre **Cambiar los ajustes de LG**, marca las opciones de anuncios y recomendaciones que quieres cambiar y elige **Aplicar los ajustes seleccionados**. Comprueba el resultado de cada opción. Para recuperar los valores originales guardados, marca las opciones y elige **Restaurar los ajustes seleccionados**. Elige **Abrir Home** para ir a la pantalla de inicio. Para volver más adelante, abre **Ajustes → Avanzado → Configurar el televisor**.
+
+Si el instalador indica un problema, sigue el paso que se muestra en pantalla. Guarda el informe de diagnóstico para dejar una copia en el televisor. Abre el informe guardado en el instalador o en la recuperación de la aplicación para leerlo o escanear su código QR con el teléfono. La lista muestra las comprobaciones completadas, el paso actual y los errores. Escanea el código QR para descargar el informe JSON o abrir el borrador de GitHub con los datos. Describe el problema antes de enviarlo.
+
+Para desinstalar desde el televisor, abre **Ajustes → Avanzado → Recuperación de Clean Your TV** en Root Home y confirma la desinstalación completa. Si se solicita un reinicio completo, reinicia el televisor, vuelve a abrir Clean Your TV y continúa. Tras verificar la desinstalación, puedes quitar también la ficha del instalador desde la pantalla de resultados.
+
 ## 5. Comprueba el mando
 
 1. Abre otra app del TV y pulsa brevemente **Home**. Debe abrirse Clean Your TV. Indica al asistente lo que viste; omite la prueba si no la hiciste.
@@ -149,7 +161,6 @@ En el instalador de escritorio, abre **Acción de mantenimiento → Ajustar la c
 <a id="bloqueo-de-firmware-lg-en-120"></a>
 <a id="novedades-de-130-recuperación-guiada-de-escritorio"></a>
 <a id="novedades-de-130--12"></a>
-<a id="candidato-sin-publicar-instalar-root-mediante-homebrew"></a>
 <a id="candidato-sin-publicar-recuperación-de-sonido-hdmi-root"></a>
 <a id="temas-154"></a>
 <a id="categorías-de-ajustes-candidato-no-publicado"></a>
@@ -200,6 +211,10 @@ Abre Ajustes → Fondos → Subir desde el teléfono y escanea el código. Elige
 ## Configura tu Clean Your TV
 
 Antes de elegir un tema, usa **Debloat** para seleccionar los ajustes de publicidad, recomendaciones, privacidad y notificaciones de LG que quieras cambiar. Revisa cada resultado. Si el instalador no puede leer el valor original, no podrá guardarlo para restaurarlo automáticamente. Elige **Omitir Debloat** para conservar los ajustes actuales.
+
+Ambas ediciones pueden desactivar las transmisiones promocionales de LG si el televisor ofrece el ajuste.
+
+Para deshacer un solo cambio, abre Debloat en Mantenimiento con la misma conexión guardada del televisor. Elige el ajuste, revisa el valor original y confirma. En televisores compatibles, puedes desactivar el inicio automático de LG Channels en Todos los ajustes → General → Canales → Inicio automático de LG Channels.
 
 Durante la desinstalación, puedes restaurar los ajustes originales de Debloat guardados. Si omites la restauración, la desinstalación continúa sin cambiar esos ajustes.
 

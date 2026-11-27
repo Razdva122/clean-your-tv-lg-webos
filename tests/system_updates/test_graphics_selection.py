@@ -41,7 +41,7 @@ class Graphics(unittest.TestCase):
     def test_hd_bytes_required_and_original_fhd_rollback_unchanged(self):
         from test_device import ipk,digest
         from cytv import package
-        module=importlib.import_module('system_updater.device');d=module.Device.__new__(module.Device)
+        module=importlib.import_module('system_updater.device');d=module.Device.__new__(module.Device);d.product_schema=lambda:1
         raw=ipk();descriptor={'name':'home','application':'com.gathin.tvhome','version':'1.0.0','sha256':digest(raw),'size':len(raw),'kind':'ipk','url':'https://github.com/Razdva122/clean-your-tv-lg-webos/releases/download/v2.0.0/com.gathin.tvhome_1.0.0_720p_all.ipk'}
         with self.assertRaisesRegex(ValueError,'graphics'):d.inspect(raw,descriptor)
         files=package.data_files(raw);name='usr/palm/applications/com.gathin.tvhome/appinfo.json'

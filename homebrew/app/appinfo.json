@@ -1,1 +1,1 @@
-{"id":"com.cleanyourtv.installer","version":"0.0.0","vendor":"Clean Your TV","type":"web","main":"index.html","title":"CYTV Installer","icon":"icon.png","largeIcon":"icon.png","appCategory":["utility"],"disableBackHistoryAPI":true}
+{"id":"io.github.razdva122.cytvinstaller","version":"0.0.0","vendor":"Clean Your TV","type":"web","main":"index.html","title":"Clean Your TV","icon":"icon.png","largeIcon":"icon.png","appCategory":["utility"],"disableBackHistoryAPI":true,"requiredACG":["application.launcher"],"cytvTileProtocol":1}

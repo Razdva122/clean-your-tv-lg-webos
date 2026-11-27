@@ -20,6 +20,55 @@ def fixture(root):
         (root/(name+'.ipk')).write_bytes(package.ipk(app,version,files))
 
 class BuildTests(unittest.TestCase):
+    def test_single_tile_is_a_separate_pinned_bundle_and_baseline(self):
+        from test_core import Store  # load the packaged module layout for the verifier
+        from system_updater.supervisor_io import permissions
+        build, setup = load('build'), load('setup')
+        with tempfile.TemporaryDirectory() as tmp:
+            top = Path(tmp).resolve()
+            bundle, legacy = top/'system', top/'legacy'
+            build.build(bundle, single_tile=True)
+            build.build(legacy)
+            manifest = setup.verify_bundle(bundle)
+            self.assertEqual(manifest['product_schema'], 2)
+            self.assertEqual(manifest['engine_version'], build.SINGLE_TILE_ENGINE_VERSION)
+            self.assertFalse(any(n.startswith('updater/') for n in json.loads((bundle/'infrastructure-paths.json').read_text())))
+            plan = json.loads((bundle/'permissions.json').read_text())
+            self.assertEqual(permissions(plan),plan)
+            self.assertEqual(plan['client.json'][setup.TILE],[setup.SERVICE+'.recovery'])
+            self.assertNotIn(setup.APPS['root-updater'],plan['client.json'])
+            plan['client.json'][setup.TILE]=[setup.SERVICE+'.launcher']
+            with self.assertRaisesRegex(ValueError,'Excessive'):
+                permissions(plan)
+            fixture(top)
+            with self.assertRaisesRegex(ValueError,'product generation'):
+                build.prepare_baseline(top, 'no-root', top/'bad', single_tile=True)
+            app = setup.APPS['home']
+            path = 'usr/palm/applications/'+app+'/appinfo.json'
+            files = package.data_files((top/'launcher.ipk').read_bytes())
+            info = json.loads(files[path])
+            info.update(cytvProductGeneration=2, visible=False)
+            files[path] = json.dumps(info).encode()
+            (top/'launcher.ipk').write_bytes(package.ipk(app, info['version'],files))
+            (top/'updater.ipk').unlink()
+            with self.assertRaisesRegex(ValueError,'product generation'):
+                build.prepare_baseline(top, 'no-root', top/'wrong-helper', single_tile=True)
+            helper = setup.APPS['helper']
+            path = 'usr/palm/applications/'+helper+'/appinfo.json'
+            files = package.data_files((top/'helper.ipk').read_bytes())
+            info = json.loads(files[path])
+            info.update(cytvProductGeneration=2, visible=False)
+            files[path] = json.dumps(info).encode()
+            (top/'helper.ipk').write_bytes(package.ipk(helper,info['version'],files))
+            baseline = build.prepare_baseline(top, 'no-root', top/'baseline', single_tile=True)
+            verified = setup.verify_baseline(baseline,bundle)
+            self.assertEqual([c['name'] for c in verified['components']],['home','helper'])
+            with self.assertRaisesRegex(ValueError,'generation mismatch'):
+                setup.verify_baseline(baseline,legacy)
+            (bundle/'system_updater/product-generation.json').write_text('1')
+            with self.assertRaisesRegex(ValueError,'generation'):
+                setup.verify_bundle(bundle)
+
     def test_only_verified_cancellation_fence_passes_handoff_preflight(self):
         setup = load('setup')
         with tempfile.TemporaryDirectory() as tmp:
@@ -145,6 +194,16 @@ class BuildTests(unittest.TestCase):
             with path.open('wb') as stream:stream.truncate(96*1024*1024+1)
             with self.assertRaisesRegex(ValueError,'Unsafe file'):setup.safe(path)
 
+    def test_fresh_root_registration_does_not_close_a_launcher_that_never_ran(self):
+        setup=load('setup');calls=[]
+        def rpc(uri,payload):
+            calls.append(uri.rsplit('/',1)[-1])
+            if uri.endswith('/running'):
+                return {'returnValue':True,'running':[{'id':'io.github.razdva122.cytvinstaller'}]}
+            raise AssertionError('A stopped launcher has no stale client to close')
+        setup.restart_registered_launcher('root',rpc)
+        self.assertEqual(calls,['running'])
+
     def test_registration_refresh_closes_root_without_launching_it(self):
         setup=load('setup')
         app='com.cleanyourtv.root.preview'
@@ -153,11 +212,47 @@ class BuildTests(unittest.TestCase):
                 calls=[]
                 def rpc(uri,payload):
                     calls.append((uri,payload))
+                    if uri.endswith('/running') and not stopped:
+                        return {'returnValue':True,'running':[{'id':app}]}
                     if stopped and uri.endswith('/closeByAppId'):
                         error=RuntimeError('Bus operation rejected');error.stopped_launcher=app;raise error
                     return {'returnValue':True}
                 setup.restart_registered_launcher('root',rpc)
-                self.assertEqual(calls,[('luna://com.webos.applicationManager/closeByAppId',{'id':app})])
+                self.assertEqual(calls,[('luna://com.webos.applicationManager/running',{}),
+                                        ('luna://com.webos.applicationManager/closeByAppId',{'id':app})])
+
+    def test_no_root_resume_requires_original_host_request_and_original_lease(self):
+        from unittest.mock import patch
+        import python_binding
+        setup,build=load('setup'),load('build')
+        with tempfile.TemporaryDirectory() as tmp:
+            top=Path(tmp).resolve();bundle=top/'bundle';state=top/'state';state.mkdir()
+            build.build(bundle,single_tile=True);manifest=setup.verify_bundle(bundle)
+            own=(bundle/'system-updater.ipk').read_bytes()
+            request={'id':'a'*32,'lease':'b'*32}
+            anchor={'schema':1,'bundle':manifest,'package':{'sha256':setup.digest(own),'size':len(own)},'request':request}
+            (state/'bootstrap-bundle.json').write_text(json.dumps(anchor))
+            with patch.object(python_binding,'verify_binding',side_effect=RuntimeError('original admitted')) as checked:
+                for other in (None,dict(request,id='c'*32),dict(request,lease='d'*32)):
+                    with self.assertRaisesRegex(ValueError,'original bootstrap bundle'):
+                        setup.resume(bundle,state,request=other)
+                checked.assert_not_called()
+                with self.assertRaisesRegex(RuntimeError,'original admitted'):
+                    setup.resume(bundle,state,request=request)
+                checked.assert_called_once_with(state)
+
+    def test_single_tile_no_root_setup_preserves_other_foreground_and_stopped_home(self):
+        setup=load('setup');app=setup.APPS['home']
+        for running,front,reopen in [(True,app,True),(True,'media',False),(False,'media',False)]:
+            calls=[]
+            def rpc(uri,payload):
+                action=uri.rsplit('/',1)[-1];calls.append(action)
+                if action=='running':return {'returnValue':True,'running':[{'id':app}] if running else []}
+                if action=='getForegroundAppInfo':return {'returnValue':True,'appId':front}
+                return {'returnValue':True}
+            setup.restart_registered_launcher('no-root',rpc,single_tile=True)
+            self.assertEqual('closeByAppId' in calls,running)
+            self.assertEqual('launch' in calls,reopen)
 
     def test_registration_refresh_restarts_no_root_launcher(self):
         setup=load('setup');calls=[];app='com.gathin.tvhome'
@@ -200,9 +295,9 @@ class BuildTests(unittest.TestCase):
             calls.append(uri);return {'returnValue':False}
         with self.assertRaisesRegex(ValueError,'closeByAppId'):
             setup.restart_registered_launcher('root',rpc)
-        self.assertEqual(len(calls),1)
+        self.assertEqual([uri.rsplit('/',1)[-1] for uri in calls],['running','closeByAppId'])
         with self.assertRaises(ValueError):setup.restart_registered_launcher('unknown',rpc)
-        self.assertEqual(len(calls),1)
+        self.assertEqual(len(calls),2)
 
     def test_baseline_keeps_exact_personalized_packages_and_readback(self):
         build=load('build');setup=load('setup')
@@ -346,7 +441,7 @@ class BuildTests(unittest.TestCase):
                         with patch.object(setup.Path,'is_file',return_value=True),patch.object(setup.subprocess,'run') as scan,patch.object(setup,'restart_registered_launcher') as restart:
                             result=setup.resume(bundle,state,installed,base,hook)
                         self.assertEqual(scan.call_args.args[0][-1],'scan-services')
-                        restart.assert_called_once_with('no-root')
+                        restart.assert_called_once_with('no-root',single_tile=False)
                 self.assertTrue(owner.status()['terminal'])
                 own=json.loads((state/'installed-package.json').read_text())
                 self.assertEqual((state/'cache'/(own['package']['sha256']+'.ipk')).read_bytes(),(bundle/'system-updater.ipk').read_bytes())

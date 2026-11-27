@@ -1304,9 +1304,10 @@ class Wizard(QMainWindow):
         self.content.show()
         rows = []
         for key, status in self.debloat_results.items():
-            icon, color, message = debloat.RESULTS[status]
-            label = html.escape(tr(debloat.SETTINGS[key][1]))
-            message = html.escape(tr(message))
+            icon, color, _ = debloat.RESULTS[status]
+            name = debloat.SETTING_NAMES[key] if status in debloat.RESTORE_RESULTS else debloat.SETTINGS[key][1]
+            label = html.escape(tr(name))
+            message = html.escape(debloat.result_message(key, status))
             rows.append(f'<tr><td width="32" valign="top" style="color:{color}">{icon}</td>'
                         f'<td><span style="color:#f3ede3;font-weight:600">{label}</span><br>'
                         f'<small>{message}</small></td></tr>')
@@ -1516,7 +1517,7 @@ class Wizard(QMainWindow):
             from .recovery import SAVED_CONNECTION_PROMPT
             trust_prompt = prompt.label.startswith('Connect and remember this TV?')
             beta_prompt = prompt.label.startswith('Install experimental Root Beta?')
-            if prompt.label.startswith(debloat.RESTORE_PROMPT):
+            if prompt.label.startswith((debloat.RESTORE_PROMPT, debloat.CONFIRM_ONE)):
                 yes_label, no_label = debloat.RESTORE_LABEL, debloat.SKIP_RESTORE
             elif prompt.title == SAVED_CONNECTION_PROMPT:
                 yes_label, no_label = 'Review recovery options', 'Cancel'

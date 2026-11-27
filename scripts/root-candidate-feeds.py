@@ -246,7 +246,8 @@ def system_notes(metadata):
             '; artifact '+metadata['artifact']['sha256']+'.')
 
 
-def prepare(metadata,source,output,*,system_qa=False):
+def prepare(metadata,source,output,*,system_qa=False,single_tile=False):
+    if single_tile and not system_qa:raise ValueError('Single-tile candidate requires full System QA provenance')
     source=Path(source).resolve(strict=True);output=Path(output).absolute()
     if subprocess.check_output(['git','rev-parse','HEAD'],cwd=source,text=True).strip()!=metadata['source'] or subprocess.check_output(['git','status','--porcelain'],cwd=source).strip():
         raise ValueError('Clean checkout of the exact build source is required')
@@ -271,7 +272,7 @@ def prepare(metadata,source,output,*,system_qa=False):
             relative=safe_name(name.replace('\\','/')[len('payload/'):]);target=payload/relative
             target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(packaged.extract(name))
         if system_qa:
-            prepare_system_inputs(metadata,payload,output)
+            prepare_system_inputs(metadata,payload,output,single_tile=single_tile)
         else:
             prepare_inputs(metadata,source,payload,output,notes_for(metadata))
     if system_qa:
@@ -282,7 +283,7 @@ def prepare(metadata,source,output,*,system_qa=False):
     (output/'PROVENANCE.json').write_text(json.dumps(metadata,indent=2)+'\n')
     recheck({k:v for k,v in metadata.items() if k!='files'})
 
-def prepare_system_inputs(metadata,payload,output):
+def prepare_system_inputs(metadata,payload,output,*,single_tile=False):
     # Use only the signing workflow's source and parse the candidate as data.
     sys.path.insert(0,str(ROOT))
     from cytv import package
@@ -293,16 +294,19 @@ def prepare_system_inputs(metadata,payload,output):
     bundle=payload/'system-updater'
     if (bundle/'system_updater/bootstrap-public.pem').read_bytes()!=(ROOT/'system-updater/bootstrap-public.pem').read_bytes():
         raise ValueError('Candidate bootstrap trust root mismatch')
-    if json.loads((bundle/'bundle.json').read_text()).get('engine_version')!=build['ENGINE_VERSION']:
-        raise ValueError('Candidate engine version differs from signing tools')
+    bundle_manifest=json.loads((bundle/'bundle.json').read_text())
+    generation=2 if single_tile else 1
+    expected_engine=build['SINGLE_TILE_ENGINE_VERSION' if single_tile else 'ENGINE_VERSION']
+    if bundle_manifest.get('product_schema',1)!=generation or bundle_manifest.get('engine_version')!=expected_engine:
+        raise ValueError('Candidate engine version or generation differs from signing tools')
     output.mkdir(parents=True,exist_ok=False)
-    manifests=build['prepare_release'](payload,output,metadata['release'],system_notes(metadata))
+    manifests=build['prepare_release'](payload,output,metadata['release'],system_notes(metadata),single_tile=single_tile)
     if set(manifests)!={'root','root-720p','no-root','no-root-720p'}:
         raise ValueError('All four System variants are required')
     files={item.name:item.read_bytes() for item in output.iterdir()}
-    verification['verify_system_assets'](manifests,{'tag':metadata['release'],'versions':metadata['versions']},files)
+    verification['verify_system_assets'](manifests,{'tag':metadata['release'],'versions':metadata['versions']},files,single_tile=single_tile)
     catalog=json.loads(files['system-bootstrap-manifest.json'])
-    raw=files['system-engine_'+build['ENGINE_VERSION']+'.tar.gz']
+    raw=files['system-engine_'+expected_engine+'.tar.gz']
     verification['verify_engine_transition'](catalog['engine'],raw,build['engine_archive'](bundle),None)
 
 
@@ -320,7 +324,8 @@ def notes_for(metadata):
 
 def main():
     os.umask(0o077)
-    p=argparse.ArgumentParser(description=__doc__);p.add_argument('action',choices=('inspect','prepare','recheck'));p.add_argument('--run-id',type=int);p.add_argument('--tag');p.add_argument('--metadata',type=Path,required=True);p.add_argument('--source',type=Path);p.add_argument('--output',type=Path);p.add_argument('--preliminary',action='store_true');p.add_argument('--direct-tv',action='store_true');p.add_argument('--system-qa',action='store_true');p.add_argument('--source-sha');p.add_argument('--branch');args=p.parse_args()
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('action',choices=('inspect','prepare','recheck'));p.add_argument('--run-id',type=int);p.add_argument('--tag');p.add_argument('--metadata',type=Path,required=True);p.add_argument('--source',type=Path);p.add_argument('--output',type=Path);p.add_argument('--preliminary',action='store_true');p.add_argument('--direct-tv',action='store_true');p.add_argument('--system-qa',action='store_true');p.add_argument('--single-tile',action='store_true');p.add_argument('--source-sha');p.add_argument('--branch');args=p.parse_args()
+    if args.single_tile and not args.system_qa:p.error('--single-tile requires --system-qa')
     if args.action=='inspect':
         if not args.run_id or not args.tag:p.error('inspect needs --run-id and --tag')
         value=inspect_build(args.run_id,args.tag,preliminary=args.preliminary,source_sha=args.source_sha,branch=args.branch,direct_tv=args.direct_tv)
@@ -335,7 +340,7 @@ def main():
             if args.system_qa:verify_system_pin(value)
         else:
             if not args.source or not args.output:p.error('prepare needs --source and --output')
-            prepare(value,args.source,args.output,system_qa=args.system_qa)
+            prepare(value,args.source,args.output,system_qa=args.system_qa,single_tile=args.single_tile)
     scope='System catalog' if args.system_qa else 'Root-only'
     print('Verified '+scope+' candidate inputs; no release published.')
 

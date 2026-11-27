@@ -3,6 +3,8 @@
 A missing terminal receipt is uncertainty, never permission to repeat or undo.
 All TV effects, release trust and package inspection belong to the pinned adapter.
 """
+import base64
+import binascii
 import copy
 import hashlib
 import math
@@ -15,6 +17,7 @@ from .support.profile import validate as validate_root_profile
 IDENTITIES = {'home':'com.gathin.tvhome','helper':'com.local.nativehome','updater':'com.cleanyourtv.updater',
               'root':'com.cleanyourtv.root.preview','root-updater':'com.cleanyourtv.root.updater','root-infrastructure':None}
 SETS = {'no-root':('home','helper','updater'),'root':('root','root-updater','root-infrastructure')}
+SINGLE_TILE_SETS = {'no-root': ('home', 'helper'), 'root': ('root', 'root-infrastructure')}
 FINISHED = {'complete','rolled-back','aborted'}
 PHASES = FINISHED | {'preparing','downloading','backed-up','suspending','installing','verifying','rolling-back','verifying-rollback','recovery-required'}
 HEALTH_SECONDS = 120
@@ -27,24 +30,133 @@ def version(value):
 
 def release_set(value,edition):
     if not isinstance(value,dict) or value.get('edition')!=edition or edition not in SETS:raise ValueError('Invalid release edition')
+    schema = value.get('schema')
+    if type(schema) is not int or schema not in (1, 2):raise ValueError('Unknown product generation')
+    required = (SINGLE_TILE_SETS if schema == 2 else SETS)[edition]
     release=value.get('release')
     if not isinstance(release,str) or not release.startswith('v'):raise ValueError('Invalid release')
     version(release[1:]);components=value.get('components')
-    if not isinstance(components,list) or len(components)!=len(SETS[edition]):raise ValueError('Incomplete release set')
+    if not isinstance(components,list) or len(components)!=len(required):raise ValueError('Incomplete release set')
     names=[]
     for c in components:
-        if not isinstance(c,dict) or c.get('name') not in SETS[edition]:raise ValueError('Invalid component')
+        if not isinstance(c,dict) or c.get('name') not in required:raise ValueError('Invalid component')
         name=c['name'];names.append(name);version(c.get('version'))
         if c.get('application')!=IDENTITIES[name] or c.get('kind')!=('infrastructure' if name=='root-infrastructure' else 'ipk'):raise ValueError('Component identity mismatch')
         if not isinstance(c.get('sha256'),str) or not re.fullmatch('[a-f0-9]{64}',c['sha256']) or type(c.get('size')) is not int or not 0<c['size']<=64*1024*1024:raise ValueError('Invalid component digest/size')
     if len(set(names))!=len(names):raise ValueError('Duplicate component')
-    result=copy.deepcopy(value);result['components'].sort(key=lambda c:SETS[edition].index(c['name']))
+    result=copy.deepcopy(value);result['components'].sort(key=lambda c:required.index(c['name']))
     return result
+
+
+_BROWSER_KEYS = frozenset('tvhome.' + name for name in (
+    'clockFormat', 'columns.v1', 'inputs.preview.v1', 'installer.settings.v1',
+    'language', 'layout', 'name', 'no-root-connection.v1', 'order', 'theme.choice.v1',
+    'usage.v1', 'wallpaper.preferences.v1', 'weather.v1'))
+_BROWSER_LIMIT = 3 * 1024 * 1024
+
+
+def _browser_require(condition):
+    if not condition:
+        raise ValueError('Invalid browser profile')
+
+
+def _browser_binary(value, maximum, *, sha=None):
+    _browser_require(isinstance(value, str) and 0 < len(value) <= 4*((maximum+2)//3))
+    try:
+        raw = base64.b64decode(value, validate=True)
+    except (ValueError, binascii.Error):
+        raise ValueError('Invalid binary in browser profile') from None
+    _browser_require(len(raw) <= maximum and base64.b64encode(raw).decode('ascii') == value)
+    if sha is not None:
+        _browser_require(hashlib.sha256(raw).hexdigest() == sha)
+    return len(raw)
+
+
+def _wallpaper_media(item, video=False):
+    fields = {'mediaType','width','height','size','sha256','data'}
+    _browser_require(isinstance(item,dict) and set(item) == (fields | {'quality'} if video else fields))
+    if video:
+        _browser_require(item['mediaType'] == 'video/mp4' and item['quality'] in ('1080p','4k'))
+    else:
+        _browser_require(item['mediaType'] in ('image/jpeg','image/png'))
+    for field in ('width','height'):
+        _browser_require(type(item[field]) is int and 0 < item[field] <= 16384)
+    _browser_require(isinstance(item['sha256'],str) and re.fullmatch('[0-9a-f]{64}',item['sha256']))
+    _browser_require(type(item['size']) is int and item['size'] ==
+                     _browser_binary(item['data'], _BROWSER_LIMIT, sha=item['sha256']))
+
+
+def _wallpaper_key(envelope):
+    fields = {'schemaVersion','kind','source','image','variants'}
+    _browser_require(isinstance(envelope,dict) and set(envelope) in (fields,fields|{'mediaKind'}))
+    _browser_require(type(envelope['schemaVersion']) is int and envelope['schemaVersion'] == 1
+                     and envelope['kind'] == 'wallpaper' and envelope['source'] in ('phone','cytv')
+                     and envelope.get('mediaKind','photo') in ('photo','video'))
+    _wallpaper_media(envelope['image'])
+    variants = envelope['variants']
+    _browser_require(isinstance(variants,list) and len(variants) <= 2 and
+                     (not variants or envelope['source'] != 'phone'))
+    for variant in variants:
+        _wallpaper_media(variant, video=True)
+    _browser_require(len({variant['quality'] for variant in variants}) == len(variants))
+    labels = sorted(v['quality'] + ':' + v['sha256'] for v in variants)
+    return 'media:' + envelope['image']['sha256'] + ':' + ':'.join(labels)
+
+
+def validate_browser_state(state):
+    _browser_require(isinstance(state,dict) and set(state) == {'schema','local','themes','wallpapers'}
+                     and type(state['schema']) is int and state['schema'] == 1
+                     and len(encode(state)) <= _BROWSER_LIMIT)
+    local = state['local']
+    _browser_require(isinstance(local,dict) and set(local) <= _BROWSER_KEYS)
+    for key, value in local.items():
+        limit = 1024*1024 if key == 'tvhome.layout' else 64*1024
+        _browser_require(isinstance(value,str) and len(value.encode('utf-8')) <= limit)
+    themes = state['themes']
+    _browser_require(isinstance(themes,list) and len(themes) <= 8)
+    digests = set()
+    for theme in themes:
+        _browser_require(isinstance(theme,dict) and set(theme) == {'digest','descriptor','files'})
+        digest = theme['digest']
+        _browser_require(isinstance(digest,str) and re.fullmatch('[0-9a-f]{64}',digest) and digest not in digests)
+        digests.add(digest)
+        _browser_binary(theme['descriptor'], 65536, sha=digest)
+        files = theme['files']
+        _browser_require(isinstance(files,dict) and len(files) <= 128)
+        for path, data in files.items():
+            _browser_require(isinstance(path,str) and len(path) <= 240 and
+                             re.fullmatch(r'[A-Za-z0-9_-]+(?:[./][A-Za-z0-9_-]+)*',path))
+            _browser_binary(data, _BROWSER_LIMIT)
+    records = state['wallpapers']
+    _browser_require(isinstance(records,list) and len(records) <= 8)
+    refs, keys = [], set()
+    for record in records:
+        _browser_require(isinstance(record,dict) and set(record) == {'key','value'})
+        key, value = record['key'], record['value']
+        _browser_require(isinstance(key,str) and key not in keys)
+        keys.add(key)
+        if key == 'slot':
+            _browser_require(isinstance(value,dict) and set(value) in (
+                {'source','mediaRef'}, {'source','envelope'}) and isinstance(value['source'],str)
+                and (value['source'] in ('theme','personal') or re.fullmatch('builtin:[a-z0-9-]{1,64}',value['source'])))
+            if 'mediaRef' in value:
+                refs.append(value['mediaRef'])
+            elif value['envelope'] is not None:
+                _wallpaper_key(value['envelope'])
+        elif key in ('library:photo','library:video'):
+            refs.append(value)
+        else:
+            _browser_require(key == _wallpaper_key(value))
+    _browser_require(all(isinstance(ref,str) and ref.startswith('media:') and ref in keys for ref in refs))
+    return state
 
 
 def validate_profile(value,edition,*,captured=False):
     if edition not in SETS or not isinstance(value,dict):raise ValueError('Invalid profile edition')
     data=copy.deepcopy(value);renewal=data.pop('renewal',None)
+    has_browser_state = 'browserState' in data
+    if has_browser_state:
+        browser = validate_browser_state(data.pop('browserState'))
     # Older No-root Home includes an empty color when webOS has no icon tint.
     # Normalize the capture before it becomes the authenticated rollback snapshot.
     inventory=data.get('inventory')
@@ -70,8 +182,33 @@ def validate_profile(value,edition,*,captured=False):
         for key in ('last','error'):
             if key in renewal and renewal[key] is not None and not isinstance(renewal[key],(str,dict)):raise ValueError('Invalid renewal history')
         checked['renewal']=copy.deepcopy(renewal)
+    if has_browser_state:
+        checked['browserState'] = browser
     if len(encode(checked))>4*1024*1024:raise ValueError('Profile too large')
     return checked
+
+
+RECOVERY_FIELDS = {'status': {'edition'}, 'reconcile': {'edition', 'transaction'}, 'rollback': {'edition', 'transaction'}}
+
+
+def tile_product(store, edition):
+    baseline = store.read('baseline')
+    bootstrap = store.read('bootstrap') or {}
+    binding = store.read('bootstrap-bundle') or {}
+    if (bootstrap.get('phase') != 'complete' or bootstrap.get('edition') != edition
+            or binding.get('bundle', {}).get('product_schema') != 2
+            or release_set(baseline, edition)['schema'] != 2):
+        raise ValueError('No matching single-tile installation')
+    tx = store.read('transaction')
+    if tx is not None and (tx.get('edition') != edition or any(
+            release_set(tx.get(key), edition)['schema'] != 2 for key in ('prior', 'candidate'))):
+        raise ValueError('Recovery belongs to another product')
+    return tx
+
+
+def check_tile_transaction(tx, payload):
+    if 'transaction' in payload and (not tx or tx.get('id') != payload['transaction']):
+        raise ValueError('Recovery transaction changed')
 
 
 class Manager:
@@ -94,6 +231,7 @@ class Manager:
         for key in ('created','updated'):
             if type(tx.get(key)) not in (int,float) or not math.isfinite(tx[key]) or tx[key]<0:raise ValueError('Corrupt journal clock')
         prior=release_set(tx.get('prior'),tx['edition']);candidate=release_set(tx.get('candidate'),tx['edition'])
+        if prior['schema'] != candidate['schema']:raise ValueError('Invalid journal product generation')
         if tx.get('release')!=candidate['release'] or len(tx.get('components',[]))!=len(candidate['components']):raise ValueError('Corrupt journal release')
         for c,trusted in zip(tx['components'],candidate['components']):
             if c.get('name')!=trusted['name'] or c.get('version')!=trusted['version']:raise ValueError('Corrupt component journal')
@@ -148,6 +286,11 @@ class Manager:
             self.io.check_legacy();offer=self.io.offer(edition)
             if not isinstance(offer,dict) or offer.get('canInstall') is not True:raise ValueError(offer.get('reason','Update unavailable'))
             candidate=release_set(offer.get('candidate'),edition);prior=release_set(offer.get('prior'),edition)
+            if prior['schema'] != candidate['schema']:raise ValueError('Change product generation with the installer')
+            if prior['schema'] == 2 and 'browserState' not in snapshot:
+                raise ValueError('Complete browser profile required before replacing Home')
+            if prior['schema'] == 1 and 'browserState' in snapshot:
+                raise ValueError('Browser profile belongs to another product generation')
             if candidate['release']!=release or version(release[1:])<=version(prior['release'][1:]) or not self.io.verify_baseline(prior):raise ValueError('Installed baseline or signed offer changed')
             if any(version(c['version'])<version(p['version']) for c,p in zip(candidate['components'],prior['components'])):raise ValueError('Component downgrade is not permitted')
             identifier=operation or uuid.uuid4().hex

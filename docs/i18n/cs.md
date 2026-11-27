@@ -61,6 +61,16 @@ Pokud instalátor Root nabídne nahrazení současné integrace Home, potvrďte 
 
 Při instalaci Root instalátor podle potřeby automaticky použije ověřené interní dočasné úložiště; USB disk není potřeba, a pokud kontrola úložiště selže, ponechte data pro obnovení a uložte diagnostickou zprávu.
 
+### Pokud už je na televizoru otevřený CYTV Installer
+
+Zvolte **Nainstalovat a aktivovat** a jednou potvrďte. Instalátor společně nainstaluje Root Home, Root Updater a System Updater. Tlačítko Home pak otevře Root Home, pokud není aktivní nouzové vypnutí. Pokud vás instalátor při nastavování Root odkáže na počítač, pokračujte tam. Nabídne-li No-root, použijte instalátor na počítači nebo zařízení se systémem Android.
+
+Po instalaci se v Root Home otevře **Nastavit televizor**. V nabídce **Motivy** vyberte vestavěný motiv. V nabídce **Upravit nastavení LG** označte reklamy a doporučení, které chcete změnit, zvolte **Použít vybraná nastavení** a zkontrolujte výsledek každé změny. Chcete-li vrátit uložené původní hodnoty, označte položky a zvolte **Obnovit vybraná nastavení**. Chcete-li přejít na domovskou obrazovku, zvolte **Otevřít Home**. Později můžete panel otevřít přes **Nastavení → Pokročilé → Nastavit televizor**.
+
+Pokud instalátor ohlásí problém, postupujte podle pokynu na obrazovce. Volba pro uložení diagnostické zprávy uloží kopii v televizoru. Uloženou zprávu pak můžete otevřít v instalátoru nebo v nabídce obnovení dlaždice a přečíst si ji či naskenovat její QR kód telefonem. Seznam ukazuje hotové kontroly, aktuální krok a případnou chybu. Po naskenování QR kódu stáhněte zprávu JSON nebo otevřete předvyplněný návrh na GitHubu. Před odesláním stručně popište problém.
+
+Pro odinstalaci na televizoru otevřete v Root Home **Nastavení → Pokročilé → Obnovení Clean Your TV** a potvrďte úplné odebrání. Pokud je vyžadován úplný restart, restartujte televizor, znovu otevřete Clean Your TV a pokračujte v odebrání. Po ověření můžete na obrazovce výsledku odstranit i dlaždici instalátoru.
+
 ## 5. Vyzkoušejte ovladač
 
 1. Otevřete jinou aplikaci na TV a krátce stiskněte **Home**. Má se otevřít Clean Your TV. V průvodci uveďte, co jste viděli; pokud jste test neprovedli, přeskočte ho.
@@ -176,6 +186,10 @@ Otevřete Nastavení → Tapety → Nahrát z telefonu a naskenujte kód. Vybert
 ## Nastavte si Clean Your TV
 
 Před výběrem motivu zvolte v kroku **Debloat**, která nastavení reklam, doporučení, soukromí a oznámení LG chcete změnit. Zkontrolujte každý výsledek. Pokud instalátor nemůže přečíst původní hodnotu, nemůže ji uložit pro automatické obnovení. Volbou **Přeskočit Debloat** zachováte aktuální nastavení.
+
+Obě edice mohou vypnout propagační vysílání LG, pokud televizor toto nastavení nabízí.
+
+Chcete-li vrátit jednu změnu, otevřete Debloat v nabídce údržby se stejným uloženým připojením k televizoru. Vyberte nastavení, zkontrolujte původní hodnotu a potvrďte obnovení. Na podporovaných televizorech můžete automatické spuštění LG Channels vypnout v nabídce Všechna nastavení → Obecné → Kanály → Automatické spuštění LG Channels.
 
 Při odinstalaci můžete potvrdit obnovení uložených původních nastavení Debloat. Pokud obnovení přeskočíte, odinstalace pokračuje bez jejich změny.
 

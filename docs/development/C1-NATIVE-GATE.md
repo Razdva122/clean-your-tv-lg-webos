@@ -47,6 +47,19 @@ the common `/usr/lib/qt5` alias is accepted without writing through it. The live
 filter verifies its Qt key/policy, timer, Luna and application-manager APIs before
 subscribing. Missing APIs leave Home with LG and prevent guardian activation.
 
+### Root Doctor input observation
+
+During a fresh Root Doctor preflight, the installer uses the existing TV Python
+to open input devices read-only and query their names. For exactly one
+`LGE M-RCU - Builtin [0]`, it queries the advertised Home (773) and Back (412)
+bits on that same descriptor. It skips a stale character node only when the
+open returns `ENXIO` and sysfs confirms there is no registered device. The
+saved report records `tv.root_mrcu_probe`
+with state `unique` and boolean `home` and `back` fields. Other states are
+`missing`, `ambiguous` and `unavailable`. An absent field means no observation
+was recorded. The probe reads no events and requires no keypress or deployment.
+Device admission and physical emergency-stop acceptance are separate checks.
+
 ### Stock executable ownership
 
 The host preflight, schema2/3 compositor reader and native guardian accept a

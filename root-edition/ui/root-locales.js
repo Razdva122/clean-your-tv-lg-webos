@@ -1,6 +1,23 @@
 // Root settings and independent updater translations.
 if (window.HomeI18n)
   window.HomeI18n.add({
+    en: { 'Clean Your TV recovery': 'Clean Your TV recovery' },
+    cs: { 'Clean Your TV recovery': 'Obnovení Clean Your TV' },
+    de: { 'Clean Your TV recovery': 'Clean Your TV wiederherstellen' },
+    es: { 'Clean Your TV recovery': 'Recuperación de Clean Your TV' },
+    'pt-BR': { 'Clean Your TV recovery': 'Recuperação do Clean Your TV' },
+    fr: { 'Clean Your TV recovery': 'Récupération de Clean Your TV' },
+    it: { 'Clean Your TV recovery': 'Ripristino di Clean Your TV' },
+    ko: { 'Clean Your TV recovery': 'Clean Your TV 복구' },
+    hi: { 'Clean Your TV recovery': 'Clean Your TV रिकवरी' },
+    pl: { 'Clean Your TV recovery': 'Odzyskiwanie Clean Your TV' },
+    ro: { 'Clean Your TV recovery': 'Recuperare Clean Your TV' },
+    ru: { 'Clean Your TV recovery': 'Восстановление Clean Your TV' },
+    'zh-Hans': { 'Clean Your TV recovery': 'Clean Your TV 恢复' },
+    'zh-Hant': { 'Clean Your TV recovery': 'Clean Your TV 還原' }
+  });
+if (window.HomeI18n)
+  window.HomeI18n.add({
     'en': {
       'Checking the updated launcher and restored settings…':
         'Checking the updated launcher and restored settings…',

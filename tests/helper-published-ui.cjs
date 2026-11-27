@@ -70,7 +70,7 @@ function publishedStatus(blocked = false) {
   );
   return reply;
 }
-function panel(statusReply, homeReply) {
+function panel(statusReply, homeReply, generation) {
   if (arguments.length === 1) homeReply = { returnValue: true, enabled: true };
   const elements = [],
     calls = [],
@@ -95,11 +95,13 @@ function panel(statusReply, homeReply) {
     }
   };
   const window = {
+    CYTVProductGeneration: generation,
     HomeI18n: {
       ready: (callback) => callback(),
       t: (text) => text,
       confirm(options, callback) {
         window.confirmStart = callback;
+        window.confirmation = options;
       }
     }
   };
@@ -140,6 +142,27 @@ function panel(statusReply, homeReply) {
     buttons: elements.filter((e) => e.tag === 'button'),
     status: elements.filter((e) => e.tag === 'p')[1]
   };
+}
+{
+  const paused = panel(publishedStatus(true), undefined, 2);
+  assert.equal(paused.buttons[2].textContent, 'Resume Home control');
+  assert.equal(paused.buttons[2].hidden, false);
+  paused.buttons[2].onclick();
+  assert.equal(paused.window.confirmation.action, 'Resume Home control');
+  assert.equal(
+    paused.calls.some((call) => call.uri.endsWith('/launch')),
+    false
+  );
+  paused.window.confirmStart();
+  assert.deepEqual(
+    paused.calls.filter((c) => c.uri.endsWith('/launch')).map((c) => c.params),
+    [
+      {
+        id: 'com.local.nativehome',
+        params: { nativeHomeStart: true, nativeHomePanel: true }
+      }
+    ]
+  );
 }
 for (const enabled of [true, false]) {
   const ui = panel(publishedStatus(), { returnValue: true, enabled });

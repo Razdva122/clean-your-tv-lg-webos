@@ -6,13 +6,20 @@ record; even a dead worker cannot authorize replay of an uncertain submission.
 """
 import re
 
-from installation import Busy, Ownership, _optional_record, pending_journals, read_journal
+from installation import (Busy, Ownership, _optional_record, pending_journals, read_journal,
+                          TV_INSTALLER, TV_APPROVAL, TV_APPROVAL_TOKEN, setup_activation_lock,
+                          setup_activation_token, cancel_setup_activation)
 
 
 def operation_id(value):
     if not isinstance(value,str) or not re.fullmatch('[0-9a-f]{32}',value):
         raise ValueError('invalid_operation_uuid')
     return value
+
+
+def homebrew_removal_result(state, stage, code, *, current=False, restart_required=False, can_resume=False):
+    return dict(action='remove', state=state, stage=stage, code=code, current=current,
+                restart_required=restart_required, can_resume=can_resume)
 
 
 def cleanup_probe_details(value):
@@ -119,6 +126,52 @@ class Coordinator:
             raise ValueError('unknown_product_operation')
         return value
 
+    def activation_status(self, record, verify_current):
+        """Report the original attempt without issuing another enable or launch."""
+        if record.get('tv_activation') not in (True, TV_INSTALLER):
+            return record
+        identifier = operation_id(record['operation'])
+        outcome = dict(state='unverified', launch_requested=False, completed=False)
+        try:
+            attempt = self.store.read('activation-' + identifier) or {}
+            bound = (record.get('lease') is not None and attempt.get('operation') == identifier
+                     and attempt.get('lease') == record['lease'])
+            if bound:
+                outcome['launch_requested'] = attempt.get('launch_requested') is True
+                outcome['completed'] = attempt.get('state') == 'active' and outcome['launch_requested']
+            if outcome['completed']:
+                # A new boot may legitimately assign a new intent token. Keep the
+                # original completion while making no claim about today's routing.
+                outcome['state'] = 'finished'
+            complete = record.get('state') == 'complete' and record.get('stage') == 'complete'
+            owner = self.ownership.status() if complete else None
+            if complete and record.get('lease') and owner and owner['id'] != record['lease']:
+                outcome['state'] = 'superseded'
+                return dict(record, activation=outcome)
+            approval = self.store.read(TV_APPROVAL) or {}
+            if (approval.get('operation') != identifier or approval.get('issuer') != TV_INSTALLER
+                    or approval.get('candidate_sha256') != record.get('candidate_sha256')
+                    or not approval.get('token') or self.store.read(TV_APPROVAL_TOKEN) != approval['token']):
+                outcome['state'] = 'cancelled'
+            elif record.get('state') == 'pending':
+                outcome['state'] = 'pending'
+            elif complete and bound and owner:
+                if (attempt.get('state') in ('ready', 'claimed')
+                        and self.device.setup_worker_live(self.store, identifier, attempt.get('worker'))):
+                    # The worker can still compensate a failed launch. Its own
+                    # live intermediate route is never a terminal startup result.
+                    outcome['state'] = 'pending'
+                    if owner['terminal'] is False:
+                        return dict(record, state='pending', stage='readback', activation=outcome)
+                elif (attempt.get('state') in ('claimed', 'active') and verify_current
+                        and record.get('current') is True and self.device.setup_activation_active(identifier)
+                        and self.ownership.status() == owner and self.store.read(TV_APPROVAL) == approval
+                        and self.store.read(TV_APPROVAL_TOKEN) == approval['token']):
+                    outcome['state'] = 'active'
+        except (OSError, ValueError, RuntimeError, AttributeError, TypeError, KeyError):
+            pass
+        return dict(record, activation=outcome)
+
     def _clean_record(self, lease, *, for_install_inspection=False):
         identifier=operation_id(lease['journal'][8:-5])
         record=_optional_record(self.store,'clean-removal-'+identifier)
@@ -165,7 +218,15 @@ class Coordinator:
                             can_maintain=False,clean_removal_verified=True)
         return self.device.inspect()
 
+    def _cancel_setup_activation(self):
+        try:
+            cancel_setup_activation(self.store)
+        except (OSError, ValueError) as error:
+            log_failure(self.device, error)
+
     def restore(self):
+        # Always attempt emergency restoration, including with damaged approval data.
+        self._cancel_setup_activation()
         # Emergency restoration must work even while another operation is retained.
         lease=self.ownership.status()
         if lease and lease['owner']=='clean-removal' and lease['stage']=='verified-clean':
@@ -208,7 +269,12 @@ class Coordinator:
                 record=dict(operation=identifier,lease=lease['id'],action=action,stage='reserved',state='pending',code='operation_pending',home_changed=False)
                 if cleaned:record['clean_predecessor']=cleaned[0][1]['operation']
                 submission=_optional_record(self.store,'submission-'+identifier)
-                if submission is not None: record['candidate_sha256']=submission['candidate_sha256']
+                if submission is not None:
+                    record['candidate_sha256']=submission['candidate_sha256']
+                    if 'homebrew_settings' in submission:
+                        self.device.homebrew_settings = submission['homebrew_settings']
+                    if submission.get('tv_activation') == TV_INSTALLER:
+                        record['tv_activation'] = True
                 def checkpoint(stage):
                     record['stage']=stage
                     self.store.write('request-'+identifier,record)
@@ -252,9 +318,9 @@ class Coordinator:
             return self.device.native_deploy(payload)
         return self._run(identifier,'install',perform,native=True)
 
-    def install(self, identifier, payload, migrate=False, prepare_supervisor=False):
+    def install(self, identifier, payload, migrate=False, prepare_supervisor=False, activate_after_install=False):
         operation_id(identifier)
-        if type(migrate) is not bool or type(prepare_supervisor) is not bool:
+        if type(migrate) is not bool or type(prepare_supervisor) is not bool or type(activate_after_install) is not bool:
             raise ValueError('invalid_install_options')
         # Validate payload/runtime readiness before taking the product lease. A
         # replay never re-enters preflight, provisioning, or package submission.
@@ -264,13 +330,18 @@ class Coordinator:
             return previous
         options=dict(migrate=migrate,prepare_supervisor=prepare_supervisor)
         self.device.preflight(payload,options)
+        dispatch = None
         def perform(checkpoint):
+            nonlocal dispatch
             state=self.device.inspect()['state']
+            if state != 'fresh' and isinstance(getattr(self.device, 'homebrew_settings', None), str):
+                raise ValueError('homebrew_setup_requires_fresh_installation')
             if state=='fresh':
                 checkpoint('root-deploy')
                 self.device.deploy(payload,options)
-                checkpoint('root-updater')
-                self.device.updater(payload,options)
+                if not getattr(self.device, 'single_tile', False):
+                    checkpoint('root-updater')
+                    self.device.updater(payload,options)
             elif state=='installed':
                 self.device.require_selected_runtime(payload)
             else:
@@ -279,11 +350,31 @@ class Coordinator:
                 checkpoint('supervisor')
                 self.device.supervisor(payload,options)
             checkpoint('readback')
-            return self.device.readback()
-        return self._run(identifier,'install',perform)
+            verified = self.device.readback()
+            if (activate_after_install and state == 'fresh' and verified.get('verified') is True
+                    and self.status(identifier).get('tv_activation') is True):
+                try:
+                    run = self.device.prepare_setup_activation(identifier, payload)
+                    import os
+                    self.store.write('activation-' + identifier, dict(state='ready', worker=os.getpid(),
+                                     operation=identifier, lease=self.device.operation['id'], launch_requested=False))
+                    dispatch = run
+                except Exception as error:
+                    log_failure(self.device, error)
+            return verified
+        record = self._run(identifier,'install',perform)
+        # The public enable command must take the shared mutex itself. Its fixed
+        # interpreter and retained runtime entry were verified before retiring staging.
+        if dispatch and record.get('state') == 'complete' and record.get('tv_activation') is True:
+            try:
+                dispatch()
+            except Exception as error:
+                log_failure(self.device, error)
+        return record
 
     def remove(self, identifier):
         def perform(checkpoint):
+            self._cancel_setup_activation()
             return self.device.remove(checkpoint)
         return self._run(identifier,'remove',perform)
 
@@ -312,12 +403,201 @@ class Coordinator:
         return dict(operation=identifier,state='fresh',target_operation=selected,
                     target_lease=lease['id'] if lease else None,target_removal=goal)
 
+    def _homebrew_binding(self, identifier):
+        binding = _optional_record(self.store, 'homebrew-removal-'+identifier)
+        if binding is not None:
+            if (not isinstance(binding, dict) or set(binding) != {'schema','operation','target','lease'}
+                    or type(binding['schema']) is not int or binding['schema'] != 1
+                    or binding['operation'] != identifier): raise Busy()
+            operation_id(binding['target'])
+            if binding['lease'] == '-':
+                if binding['target'] != identifier: raise Busy()
+            else:
+                operation_id(binding['lease'])
+        return binding
+
+    def _homebrew_record(self, binding):
+        record = _optional_record(self.store, 'clean-removal-'+binding['target'])
+        if record is not None:
+            if (not isinstance(record, dict) or type(record.get('schema')) is not int or record['schema'] != 1
+                    or record.get('protocol') != 'clean-removal-v1' or record.get('operation') != binding['target']
+                    or record.get('removal') != binding['operation']
+                    or binding['lease'] not in ('-', record.get('lease'))): raise Busy()
+            operation_id(record.get('lease'))
+            final = record.get('final_fence')
+            if final is not None and (operation_id(final) == record['lease']
+                    or record.get('final_original_lease') != record['lease']): raise Busy()
+        return record
+
+    def _homebrew_lease(self, binding, record, lease):
+        target = binding['target']
+        journal = 'product-'+target+'.json'
+        expected = binding['lease']
+        if lease is None:
+            if expected == '-' and record is None: return '-'
+            raise Busy()
+        if lease['owner'] == 'clean-removal' and lease['journal'] == journal and not lease['terminal']:
+            if record and lease['id'] in (record['lease'], record.get('final_fence')):
+                return lease['id']
+            if record is None and expected == '-' and lease['stage'] == 'reserved':
+                return lease['id']  # The initial reservation was written before the engine receipt.
+        if lease['owner'] == 'clean-removal' and lease['stage'] != 'verified-clean': raise Busy()
+        if lease['id'] != expected or record and record.get('stage') != 'requested': raise Busy()
+        if lease['owner'] == 'product' and not lease['terminal']:
+            if any((_optional_record(self.store, prefix+target) or {}).get('action') == 'remove'
+                   for prefix in ('request-', 'submission-')): raise Busy()
+        return expected
+
+    def _homebrew_worker_active(self):
+        import fcntl
+        import os
+        directory = self.store._directory()
+        try:
+            try:
+                fd = os.open('worker.lock', os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=directory)
+            except FileNotFoundError:
+                return False
+            try:
+                self.store._check(os.fstat(fd))
+                fcntl.flock(fd, fcntl.LOCK_SH | fcntl.LOCK_NB)
+                return False
+            except BlockingIOError:
+                return True
+            finally:
+                os.close(fd)
+        finally:
+            os.close(directory)
+
+    def homebrew_remove_status(self, identifier):
+        return self._homebrew_remove_status(operation_id(identifier))
+
+    def _homebrew_remove_status(self, identifier, proof=None):
+        reply = homebrew_removal_result
+        try:
+            binding = self._homebrew_binding(identifier)
+            if binding is None: return reply('unknown', 'unknown', 'unknown-operation')
+            record = self._homebrew_record(binding)
+            lease = self.ownership.status()
+            if record and record.get('stage') == 'verified-clean':
+                stale = reply('recovery_required', 'verified-clean', 'removal-not-current')
+                if (not lease or record.get('final_fence') != lease['id']
+                        or lease['owner'] != 'clean-removal' or lease['journal'] != 'product-'+binding['target']+'.json'
+                        or lease['terminal'] or record.get('state') != 'complete' or record.get('current') is not True
+                        or (record.get('result') or {}).get('private_cleanup_verified') is not True):
+                    return stale
+                if lease['stage'] == 'final-fence-pending':
+                    return reply('recovery_required', 'private-cleanup', 'removal-pending', can_resume=True)
+                if lease['stage'] != 'verified-clean': return stale
+                try:
+                    # A just-returned tail proved live absence while owning this fence and
+                    # can have retired Python and its support files before replying.
+                    if not (proof and proof.get('state') == 'complete' and proof.get('current') is True
+                            and proof.get('stage') == 'verified-clean' and proof.get('operation') == binding['target']
+                            and proof.get('removal') == identifier):
+                        with self.ownership._lock(create=False):
+                            if self.ownership.status() != lease: return stale
+                            try:
+                                self._clean_record(lease)
+                            except Busy:
+                                return stale
+                except Busy:
+                    return reply('pending', 'verified-clean', 'root-worker-busy')
+                except (OSError, RuntimeError, ValueError, KeyError, TypeError):
+                    return stale
+                if self.ownership.status() != lease or self._homebrew_record(binding) != record: return stale
+                return reply('complete', 'verified-clean', 'removal-verified', current=True)
+            self._homebrew_lease(binding, record, lease)
+            stage = record.get('stage') if record else 'requested'
+            if stage not in ('requested', 'original-writers-fenced', 'controls-restored', 'package-removal',
+                             'private-cleanup', 'restart-required'): raise Busy()
+            if self._homebrew_worker_active():
+                return reply('pending', stage, 'removal-pending')
+            if stage == 'restart-required' or proof and proof.get('restart_required') is True:
+                return reply('recovery_required', 'restart-required', 'restart-required',
+                             restart_required=True, can_resume=True)
+            failure = (proof or {}).get('cleanup_error') or (record or {}).get('cleanup_error')
+            if failure not in ('root-access-required', 'root-worker-busy', 'removal-failed', 'cleanup-check-failed'):
+                failure = 'removal-pending' if stage == 'requested' else 'cleanup-check-failed'
+            return reply('recovery_required', stage, failure, can_resume=True)
+        except Busy:
+            return reply('recovery_required', 'blocked', 'ownership-conflict')
+        except (OSError, RuntimeError, ValueError, KeyError, TypeError) as error:
+            log_failure(self.device, error)
+            return reply('recovery_required', 'blocked', 'cleanup-check-failed')
+
+    def homebrew_remove(self, identifier, payload):
+        """Submit or explicitly continue the browser's original, bound removal."""
+        from pathlib import Path
+        import os
+        from clean_removal import boot_format, verified_restart
+        from install_device import PRIVATE_TEMP, support_stage_path
+
+        identifier = operation_id(identifier)
+        reply = homebrew_removal_result
+        try:
+            # Completed IDs take the read-only route even if their previous support
+            # and interpreter have already been retired by the cleanup tail.
+            proof = None
+            binding = self._homebrew_binding(identifier)
+            if binding:
+                status = self.homebrew_remove_status(identifier)
+                if not status['can_resume']: return status
+            with self.store.lock(blocking=False):
+                binding = self._homebrew_binding(identifier)
+                if binding is None:
+                    lease = self.ownership.status()
+                    target = self.removal_target(identifier)
+                    if (self.ownership.status() != lease or target['target_removal'] is not None
+                            or lease and lease['owner'] == 'clean-removal' and lease['stage'] != 'verified-clean'):
+                        raise Busy()
+                    binding = dict(schema=1, operation=identifier, target=target['target_operation'],
+                                   lease=target['target_lease'] or '-')
+                    if _optional_record(self.store, 'clean-removal-'+binding['target']) is not None: raise Busy()
+                    fresh = True
+                    record = None
+                else:
+                    fresh = False
+                    record = self._homebrew_record(binding)
+                lease = self.ownership.status()
+                expected = self._homebrew_lease(binding, record, lease)
+                if not (record and record.get('stage') == 'verified-clean' and lease['stage'] != 'final-fence-pending'):
+                    payload = Path(payload)
+                    if payload.parent != PRIVATE_TEMP or not support_stage_path(payload, 'product'):
+                        raise ValueError('invalid_cleanup_support_stage')
+                    directory = self.store._walk(str(payload))
+                    try:
+                        info = os.fstat(directory)
+                        if info.st_uid != self.store.uid or info.st_mode & 0o777 != 0o700:
+                            raise ValueError('unsafe_cleanup_support_stage')
+                        if set(os.listdir(directory)) != {'root', 'root-updater'}:
+                            raise ValueError('invalid_cleanup_support_stage')
+                    finally:
+                        os.close(directory)
+                    self.device.preflight(payload, dict(migrate=False, prepare_supervisor=False), product=False)
+                    if fresh: self.store.write('homebrew-removal-'+identifier, binding)
+                    baseline = (record or {}).get('cleanup_boot_id')
+                    if not (record and record.get('stage') == 'restart-required' and not verified_restart(record)
+                            and boot_format(baseline) == 'session' and self.device.boot_id() == baseline):
+                        proof = self._clean_remove_locked(binding['target'], identifier, expected)
+            return self._homebrew_remove_status(identifier, proof)
+        except Busy:
+            return reply('recovery_required', 'blocked', 'ownership-conflict')
+        except BlockingIOError:
+            return reply('pending', 'requested', 'root-worker-busy')
+        except Exception as error:
+            log_failure(self.device, error)
+            return reply('recovery_required', 'blocked', cleanup_failure(error))
+
     def clean_remove(self, identifier, intent=None, expected_lease=None):
         """Explicit desired absence, distinct from an old unknown installation."""
         identifier = operation_id(identifier)
         intent=operation_id(intent if intent is not None else identifier)
+        with self.store.lock(blocking=False):
+            return self._clean_remove_locked(identifier, intent, expected_lease)
+
+    def _clean_remove_locked(self, identifier, intent, expected_lease):
         name = 'clean-removal-'+identifier
-        with self.store.lock(blocking=False), self.ownership.removal(identifier,expected=expected_lease) as (lease, original_lease):
+        with self.ownership.removal(identifier,expected=expected_lease) as (lease, original_lease):
             record = _optional_record(self.store, name)
             if (record is not None and record.get('final_fence') is not None
                     and lease['id'] in (record.get('lease'),record.get('final_fence'))):
@@ -384,6 +664,7 @@ class Coordinator:
                 self.store.write('request-'+original_id,dict(operation=original_id,action='install',lease=lease['id'],
                     stage='clean-removal-requested',state='recovery_required',code='clean_removal_requested'))
             self.device.operation=lease; self.device.ownership=self.ownership
+            self._cancel_setup_activation()
             support=record.setdefault('support_stages',[])
             from pathlib import Path
             import os
@@ -452,8 +733,13 @@ class Coordinator:
             raise ValueError('package-terminal-unverified')
         if final_readback_only:
             if (previous.get('candidate_sha256')!=submission.get('candidate_sha256')
-                    or candidate_digest(payload,_verified_payload(payload,options['prepare_supervisor']))!=submission.get('candidate_sha256')):
+                    or reviewed_candidate(payload,_verified_payload(payload,options['prepare_supervisor']),submission.get('homebrew_settings'))!=submission.get('candidate_sha256')):
                 raise ValueError('original_candidate_changed')
+        original_binding = dict(candidate_sha256=submission.get('candidate_sha256'))
+        if submission.get('tv_activation') == TV_INSTALLER:
+            # A continued package request still owes an activation outcome. Recovery
+            # never grants its worker permission to reissue the original enable.
+            original_binding['tv_activation'] = True
         if previous['state']=='unknown' or (not previous.get('lease') and previous.get('stage')=='blocked'):
             current=self.ownership.status()
             journal='product-'+identifier+'.json'
@@ -463,13 +749,13 @@ class Coordinator:
                 # checkpoint. Effects are forbidden until that checkpoint exists.
                 with self.ownership.operation('product',journal,resume=current['id']) as lease:
                     if self.status(identifier)['state']=='unknown' or not self.status(identifier).get('lease'):
-                        self.store.write('request-'+identifier,dict(operation=identifier,lease=lease['id'],action=submission['action'],stage='reserved',state='pending',code='operation_pending',home_changed=False,candidate_sha256=submission.get('candidate_sha256')))
+                        self.store.write('request-'+identifier,dict(operation=identifier,lease=lease['id'],action=submission['action'],stage='reserved',state='pending',code='operation_pending',home_changed=False,**original_binding))
                 previous=self.status(identifier)
             elif previous['state']!='unknown':
                 # A blocked record without a reservation is a proved failure
                 # before the kernel's first checkpoint, not a package attempt.
                 with self.ownership.operation('product',journal,check=lambda:pending_journals('product',self.read)) as lease:
-                    self.store.write('request-'+identifier,dict(operation=identifier,lease=lease['id'],action=submission['action'],stage='reserved',state='pending',code='operation_pending',home_changed=False,candidate_sha256=submission.get('candidate_sha256')))
+                    self.store.write('request-'+identifier,dict(operation=identifier,lease=lease['id'],action=submission['action'],stage='reserved',state='pending',code='operation_pending',home_changed=False,**original_binding))
                 previous=self.status(identifier)
         if previous['state']=='unknown':
             # Before the first reservation no product effect is possible. The
@@ -497,7 +783,7 @@ class Coordinator:
                 if _optional_record(self.store,'submission-'+identifier)!=submission:
                     raise ValueError('original_candidate_changed')
                 options=self.device.verify_resume(payload,submission)
-                if candidate_digest(payload,_verified_payload(payload,options['prepare_supervisor']))!=submission.get('candidate_sha256'):
+                if reviewed_candidate(payload,_verified_payload(payload,options['prepare_supervisor']),submission.get('homebrew_settings'))!=submission.get('candidate_sha256'):
                     raise ValueError('original_candidate_changed')
                 self.device.continuation_quiescent(payload)
                 if record.get('candidate_sha256')!=previous.get('candidate_sha256'):
@@ -570,6 +856,16 @@ def candidate_digest(payload, inventories):
     return hashlib.sha256(json.dumps(value,sort_keys=True,separators=(',',':')).encode()).hexdigest()
 
 
+def reviewed_candidate(payload, inventories, settings=None):
+    digest = candidate_digest(payload, inventories)
+    if settings is None:
+        return digest
+    if settings != 'absent' and (not isinstance(settings, str) or not re.fullmatch('[a-f0-9]{64}', settings)):
+        raise ValueError('invalid_homebrew_settings_binding')
+    import hashlib
+    return hashlib.sha256(('homebrew-setup-v1:' + digest + ':' + settings).encode()).hexdigest()
+
+
 def root_review_binding(payload, inventories):
     import hashlib,json
     from pathlib import Path
@@ -587,7 +883,7 @@ def root_review_binding(payload, inventories):
             'code':{name:digest for name,digest in hashes.items() if not mutable(name)}}
 
 
-def submit(identifier, payload, migrate=False, prepare_supervisor=False, action='install', candidate=None, ownership=None):
+def submit(identifier, payload, migrate=False, prepare_supervisor=False, action='install', candidate=None, ownership=None, activate_after_install=False, homebrew_setup=False):
     """Persist once, snapshot trusted worker material, then detach.
 
     The submission receipt precedes Popen. A lost reply or a failed spawn is
@@ -603,6 +899,8 @@ def submit(identifier, payload, migrate=False, prepare_supervisor=False, action=
     operation_id(identifier)
     if type(migrate) is not bool or type(prepare_supervisor) is not bool: raise ValueError('invalid_install_options')
     if action not in ('install','remove'): raise ValueError('invalid_product_action')
+    if type(activate_after_install) is not bool or activate_after_install and (action != 'install' or not candidate):
+        raise ValueError('invalid_setup_activation_request')
     ownership=ownership if ownership is not None else Ownership();store=ownership.store
     with store.lock():
         existing=_optional_record(store,'submission-'+identifier)
@@ -613,11 +911,30 @@ def submit(identifier, payload, migrate=False, prepare_supervisor=False, action=
         if existing is not None:
             if existing.get('action')!=action: raise ValueError('operation_action_conflict')
             return request_status(identifier,store)
+        token = setup_activation_token(store) if activate_after_install else None
+        settings = None
+        if homebrew_setup:
+            if action != 'install' or not activate_after_install or not candidate:
+                raise ValueError('invalid_homebrew_setup')
+            from deploy import homebrew_migration
+            prepared, settings = homebrew_migration()
+            migrate = prepared is not None
+            del prepared
+            prepare_supervisor = True
         inventories=_verified_payload(payload,prepare_supervisor)
-        actual_candidate=candidate_digest(payload,inventories)
+        actual_candidate=reviewed_candidate(payload,inventories,settings)
         if candidate is not None and candidate!=actual_candidate: raise ValueError('reviewed_candidate_changed')
         device=LocalDevice();device.preflight(payload,dict(migrate=migrate,prepare_supervisor=prepare_supervisor),product=action=='install')
         receipt=dict(operation=identifier,stage='preparing',state='pending',code='operation_pending',action=action,home_changed=False,candidate_sha256=actual_candidate,options=dict(migrate=migrate,prepare_supervisor=prepare_supervisor),worker_sha256=hashlib.sha256((__import__('pathlib').Path(payload)/'root-updater/bundle.json').read_bytes()).hexdigest(),root_binding=root_review_binding(payload,inventories),root_static={n:d for n,d in inventories['root']['files'].items() if n not in (inventories['root'].get('package'),'release.json','SHA256SUMS')})
+        if settings is not None:
+            receipt['homebrew_settings'] = settings
+        if activate_after_install:
+            receipt['tv_activation'] = TV_INSTALLER
+            receipt['tv_activation_token'] = token
+            with setup_activation_lock(store):
+                if store.read(TV_APPROVAL_TOKEN) == token:
+                    store.write(TV_APPROVAL, dict(issuer=TV_INSTALLER, operation=identifier,
+                                                 candidate_sha256=actual_candidate, token=token))
         store.write('submission-'+identifier,receipt)
         try:
             staging={}
@@ -636,7 +953,7 @@ def submit(identifier, payload, migrate=False, prepare_supervisor=False, action=
                         staging[component+'/'+name]=hashlib.sha256(raw).hexdigest()
                         output.write(raw);output.flush();os.fsync(output.fileno())
                     target.chmod(0o600)
-            if candidate_digest(root,inventories)!=actual_candidate: raise ValueError('worker_source_changed')
+            if reviewed_candidate(root,inventories,settings)!=actual_candidate: raise ValueError('worker_source_changed')
         except (OSError,ValueError):
             receipt.update(state='recovery_required',code='worker_snapshot_unavailable')
             store.write('submission-'+identifier,receipt)
@@ -655,6 +972,7 @@ def submit(identifier, payload, migrate=False, prepare_supervisor=False, action=
         receipt['stage']='submitted'
         store.write('submission-'+identifier,receipt)
         args=[sys.executable,'-B',str(root/'root-updater/install_driver.py'),action,'--operation',identifier,'--payload',str(root),'--worker','--submission-parent',str(os.getpid())]
+        if activate_after_install: args.append('--activate-after-install')
         if migrate: args.append('--migrate-packaged-home')
         if prepare_supervisor: args.append('--prepare-supervisor')
         log=root/'worker.log'
@@ -706,6 +1024,16 @@ def request_status(identifier, store):
 
 
 
+def setup_public_result(record):
+    if not isinstance(record, dict) or record.get('tv_activation') not in (True, TV_INSTALLER):
+        return record
+    # The detached submission can include a full staging inventory. Expose only
+    # progress and evidence to HBC, whose stdout is bounded at 64 KiB.
+    fields = ('operation', 'action', 'stage', 'state', 'code', 'candidate_sha256', 'home_changed',
+              'current', 'can_resume', 'resume_reason', 'result', 'activation', 'failure')
+    return {field: record[field] for field in fields if field in record}
+
+
 def continuation_status(identifier, store, device=None):
     """Prove a narrow continuation without creating locks, records or workers."""
     import fcntl, os
@@ -735,7 +1063,7 @@ def continuation_status(identifier, store, device=None):
         snapshot=Path(store.root)/('request-'+identifier)
         options=device.verify_resume(snapshot,submission)
         if (record.get('candidate_sha256')!=submission.get('candidate_sha256')
-                or candidate_digest(snapshot,_verified_payload(snapshot,options['prepare_supervisor']))!=submission.get('candidate_sha256')):return result
+                or reviewed_candidate(snapshot,_verified_payload(snapshot,options['prepare_supervisor']),submission.get('homebrew_settings'))!=submission.get('candidate_sha256')):return result
         device.operation=lease;device.ownership=owner
         result['resume_reason']='worker-not-quiescent'
         device.continuation_quiescent(snapshot)
@@ -770,7 +1098,9 @@ def main():
     from install_device import LocalDevice, checked_store, support_stage_path
     from installation import STATE
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action',choices=('inspect','install','native-install','status','restore','remove','activate','clean-remove','clean-status','clean-target'))
+    homebrew_removal = ('homebrew-remove', 'homebrew-remove-status')
+    parser.add_argument('action',choices=('inspect','install','native-install','status','restore','remove','activate',
+                                          'clean-remove','clean-status','clean-target',*homebrew_removal))
     parser.add_argument('--operation')
     parser.add_argument('--payload',type=Path)
     parser.add_argument('--retire-stage',action='append',default=[])
@@ -780,13 +1110,24 @@ def main():
     parser.add_argument('--candidate',help='SHA-256 of the reviewed component bundle manifests')
     parser.add_argument('--migrate-packaged-home',action='store_true')
     parser.add_argument('--prepare-supervisor',action='store_true')
+    parser.add_argument('--activate-after-install',action='store_true')
     parser.add_argument('--verify-current',action='store_true',help='Read current completion proof without replay')
+    parser.add_argument('--homebrew-setup',action='store_true',help=argparse.SUPPRESS)
     parser.add_argument('--for-install',action='store_true',help=argparse.SUPPRESS)
     parser.add_argument('--resume',action='store_true',help='Explicitly continue the original verified request; never replay unknown submissions')
     parser.add_argument('--final-readback-only',action='store_true',help='Revalidate the final readback under the original lease; no package replay')
     parser.add_argument('--worker',action='store_true',help=argparse.SUPPRESS)
     parser.add_argument('--submission-parent',type=int,help=argparse.SUPPRESS)
     args=parser.parse_args()
+    if args.action in homebrew_removal:
+        if (args.operation is None or (args.payload is not None) != (args.action == 'homebrew-remove')
+                or any(value is not None and value is not False and value != [] for key,value in vars(args).items()
+                       if key not in ('action','operation','payload'))):
+            parser.error('Homebrew removal requires --operation and only submission accepts --payload')
+    if args.activate_after_install and (args.action != 'install' or args.resume):parser.error('--activate-after-install requires a fresh install')
+    if args.homebrew_setup and (args.action not in ('install','inspect') or args.worker or args.resume
+                                or not args.payload or args.action == 'install' and not args.activate_after_install):
+        parser.error('--homebrew-setup requires a first Homebrew setup inspection or submission')
     if args.for_install and args.action!='inspect':parser.error('--for-install requires inspect')
     if args.final_readback_only and (not args.resume or args.action!='install'):
         parser.error('--final-readback-only requires install --resume')
@@ -796,6 +1137,17 @@ def main():
         if not args.worker or args.action not in ('install','remove') or args.submission_parent<=1:parser.error('invalid submission parent')
         wait_submission_parent(args.submission_parent)
     device=LocalDevice()
+    if args.action in homebrew_removal:
+        try:
+            if args.action == 'homebrew-remove':
+                result = Coordinator(device).homebrew_remove(operation_id(args.operation), args.payload)
+            else:
+                result = Coordinator(device, Ownership(checked_store(STATE))).homebrew_remove_status(args.operation)
+        except Exception as error:
+            log_failure(device,error)
+            result = homebrew_removal_result('recovery_required','blocked',cleanup_failure(error))
+        print(json.dumps(result,sort_keys=True),flush=True)
+        return
     if args.action in ('inspect','status','restore','activate','clean-status','clean-target'):
         ownership=Ownership.__new__(Ownership);ownership.store=checked_store(STATE)
     else: ownership=Ownership()
@@ -829,9 +1181,9 @@ def main():
         elif args.action=='install':
             if args.payload is None: parser.error('install requires a verified local payload')
             if args.worker:
-                result=coordinator.install(args.operation,args.payload,migrate=args.migrate_packaged_home,prepare_supervisor=args.prepare_supervisor)
+                result=coordinator.install(args.operation,args.payload,migrate=args.migrate_packaged_home,prepare_supervisor=args.prepare_supervisor,activate_after_install=args.activate_after_install)
             else:
-                result=submit(args.operation,args.payload,migrate=args.migrate_packaged_home,prepare_supervisor=args.prepare_supervisor,candidate=args.candidate)
+                result=submit(args.operation,args.payload,migrate=args.migrate_packaged_home,prepare_supervisor=args.prepare_supervisor,candidate=args.candidate,activate_after_install=args.activate_after_install,homebrew_setup=args.homebrew_setup)
         elif args.action=='remove':
             if args.worker: result=coordinator.remove(args.operation)
             else:
@@ -845,6 +1197,7 @@ def main():
                 if result['state']=='complete':
                     try:result['current']=device.validate_completion(result['action'],result.get('lease'))
                     except (OSError,ValueError,RuntimeError,KeyError):pass
+            result=coordinator.activation_status(result,args.verify_current)
         elif args.action=='inspect':
             inspected=coordinator.inspect(for_install=True) if args.for_install else coordinator.inspect()
             result=dict(operation=None,stage='inspect',state=inspected['state'],code='inspected',installation=inspected)
@@ -854,7 +1207,16 @@ def main():
                 result['active_operation']=dict(request_status(match.group(1),ownership.store),**continuation_status(match.group(1),ownership.store)) if match else None
             except (OSError,ValueError):result['active_operation']=None
             if args.payload:
-                result['candidate_sha256']=candidate_digest(args.payload,_verified_payload(args.payload,args.prepare_supervisor))
+                # Maintenance reviews the removal closure. The optional supervisor
+                # bundle is an install input only; submit still verifies the digest.
+                fresh = inspected['state'] == 'fresh'
+                prepare_supervisor = fresh and (args.prepare_supervisor or args.homebrew_setup)
+                settings = None
+                if args.homebrew_setup and fresh and result['active_operation'] is None:
+                    from deploy import homebrew_migration
+                    prepared, settings = homebrew_migration()
+                    inspected['migrate_available'] = prepared is not None
+                result['candidate_sha256']=reviewed_candidate(args.payload,_verified_payload(args.payload,prepare_supervisor),settings)
         elif args.action=='activate':result=dict(operation=None,stage='activate',state='complete',code='activated',result=device.activate())
         else: result=dict(operation=None,stage='restore',state='complete',code='restored',result=coordinator.restore())
     except Exception as error:
@@ -888,7 +1250,9 @@ def main():
             result['action']=args.action
             if _optional_record(ownership.store,'request-'+args.operation) is None:
                 ownership.store.write('request-'+args.operation,result)
-    print(json.dumps(result,sort_keys=True),flush=True)
+    if result.get('active_operation'):
+        result['active_operation'] = setup_public_result(result['active_operation'])
+    print(json.dumps(setup_public_result(result),sort_keys=True),flush=True)
 
 
 if __name__=='__main__': main()

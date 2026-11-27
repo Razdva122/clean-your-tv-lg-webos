@@ -13,7 +13,7 @@ from .errors import (TVRejected, UserError, TVCommandError, TV_STORAGE_FULL, CLE
                      OBSERVER_EXCEPTION_NAMES, OBSERVER_EXCEPTION_CODES,
                      OBSERVER_FILESYSTEM_OPERATIONS, ROOT_CLEANUP_ACCESS_REQUIRED, connection_interrupted, no_root_cleanup_details)
 from .transport import LunaReplyUnconfirmed
-from .package import SCREENSAVER_APP
+from .package import SCREENSAVER_APP, TILE_APP
 
 from .tv_sources import node_loader, trusted_source
 
@@ -345,9 +345,16 @@ if(input.action==='history'){
 if(input.action==='idle'){
  // File absence alone cannot prove that a deleted service or installer stopped.
  var prefixes=installerRoots.concat([publicRoot+'/cytv-', '/var/lib/clean-your-tv-', '/tmp/cytv-', '/tmp/clean-your-tv-']);
- apps.forEach(function(app){prefixes.push(base+'/applications/'+app);});
- services.forEach(function(service){prefixes.push(base+'/services/'+service);});
+ var targets=apps.concat(services);
+ var componentNames=['helper','home','updater','screensaver','helper-service','renewal-service','updater-service'];
+ var componentPaths=apps.map(function(app){return base+'/applications/'+app;})
+  .concat(services.map(function(service){return base+'/services/'+service;}));
+ var shellPrefixes=prefixes.concat(componentPaths);
  var afterStop=input.after_stop===true,waitForIdle=input.wait_for_idle===true,idleDeadline=Date.now()+8000;
+ var drainDeadline=Date.now()+20000, drainKinds=[];
+ var drainServices=Array.isArray(input.drain_services)?input.drain_services:[];
+ if(drainServices.indexOf(services[0])>=0)drainKinds.push('helper-service');
+ if(drainServices.indexOf(services[1])>=0)drainKinds.push('renewal-service');
  var hasNoUserspace=function(directory){
   var stat=fs.readFileSync(directory+'/stat','utf8'),close=stat.lastIndexOf(')');
   if(close<0)return false;
@@ -367,9 +374,26 @@ if(input.action==='idle'){
    throw e;
   }
  };
- var isProject=function(args){
-  var shell=args.length&&/(^|\/)(sh|ash|bash|dash|zsh|ksh)$/.test(args[0]);
-  return args.some(function(arg){return apps.concat(services).indexOf(arg)>=0||prefixes.some(function(prefix){return arg===prefix||arg.indexOf(prefix+'/')===0||(/[-]$/.test(prefix)&&arg.indexOf(prefix)===0)||(shell&&arg.indexOf(prefix)>=0);})||(shell&&apps.some(function(app){return arg.indexOf(app)>=0;}));});
+ var under=function(arg,prefix){return arg===prefix||arg.indexOf(prefix+'/')===0;};
+ var readOnlyShell=function(command){
+  // Single literal commands only. Shell expansions, redirections and compounds
+  // can hide a delayed writer before its child appears in /proc.
+  return /^(?:printf|echo)(?:[ \t]+(?:[\w./:%+-]+|'[\w./:%+-]+'|"[\w./:%+-]+"))+[ \t]*$/.test(command);
+ };
+ var projectMatch=function(args){
+  // Match complete IDs and owned paths in individual arguments or proc links.
+  for(var i=0;i<targets.length;i++){
+   if(args.indexOf(targets[i])>=0||args.some(function(arg){return under(arg,componentPaths[i]);}))
+    return componentNames[i];
+  }
+  if(args.some(function(arg){return prefixes.some(function(prefix){
+   return under(arg,prefix)||(/[-]$/.test(prefix)&&arg.indexOf(prefix)===0);
+  });}))return 'project-path';
+  if(/(^|\/)(sh|ash|bash|dash|zsh|ksh)$/.test(args[0])&&args.some(function(arg,index){
+   if(index===2&&(args[0]==='sh'||args[0]==='/bin/sh')&&args[1]==='-c'&&readOnlyShell(arg))return false;
+   return apps.some(function(app){return arg.indexOf(app)>=0;})||
+    shellPrefixes.some(function(prefix){return arg.indexOf(prefix)>=0;});
+  }))return 'shell-command';
  };
  var packageSender=function(args,prefix){
   return args.some(function(arg){return arg.indexOf(prefix)===0;})&&
@@ -383,10 +407,46 @@ if(input.action==='idle'){
    args.some(function(arg){return arg===services[2]||arg.indexOf(base+'/services/'+services[2])===0;})||
    packageSender(args,'luna://com.webos.appInstallService/dev/');
  };
+ var onlyDraining;
+ var recordProcess=function(args,homebrew,argv){
+  var installer=homebrew||isInstaller(args), match=projectMatch(args);
+  if(installer)reply.installer_running=true;
+  if(!match&&!installer)return false;
+  [match,homebrew?'homebrew':installer?'installer':null].forEach(function(kind){
+   if(kind&&reply.process_matches.indexOf(kind)<0)reply.process_matches.push(kind);
+  });
+  reply.project_running=true;
+  // Only original argv identifies a package runtime. A proc link or another
+  // program's argument can identify a blocker, never a delegation target.
+  var helper=componentPaths[0], node=argv[0]==='node'||argv[0]==='/usr/bin/node';
+  var controller=node&&argv[1]===helper+'/native.js';
+  var relay=argv[0]===helper+'/relay';
+  var helperApp=controller||relay||argv[0]===helper+'/detach'||(node&&argv[1]===helper+'/helper-entry.js');
+  var homeApp=argv.length===2&&argv[1]===apps[1]&&
+   ['/usr/bin/WebProcess','/usr/bin/QtWebProcess','/usr/bin/WebAppMgr'].indexOf(argv[0])>=0;
+  var host=node&&argv.length===3&&argv[1]==='/usr/bin/run-js-service';
+  if(controller)reply.helper_controller_running=true;
+  if(relay)reply.helper_relay_running=true;
+  if(homeApp)reply.home_app_running=true;
+  if(host&&argv[2]===services[0])reply.helper_service_host_running=true;
+  if(host&&argv[2]===services[1])reply.home_service_host_running=true;
+  if(!installer&&!helperApp&&!homeApp&&!host)reply.project_path_reference_running=true;
+  if(afterStop&&!installer&&((helperApp&&input.allow_helper_app===true)||(homeApp&&input.allow_home_app===true))){
+   reply.package_runtime_running=true;
+  }else{
+   reply.active_project_running=true;reply.idle=false;
+   if(installer||drainKinds.indexOf(match)<0)onlyDraining=false;
+  }
+  return true;
+ };
  var checkIdle=function(){
   reply.idle=true;
   reply.proc_enumerated=false;
-  reply.project_running=false;
+  reply.project_running=false;reply.active_project_running=false;reply.package_runtime_running=false;
+  reply.helper_controller_running=false;reply.helper_relay_running=false;
+  reply.helper_service_host_running=false;reply.home_service_host_running=false;reply.home_app_running=false;reply.project_path_reference_running=false;
+  reply.process_matches=[];
+  onlyDraining=true;
   reply.installer_running=false;
   reply.process_cmdline_unreadable=false;reply.process_links_unreadable=false;
   reply.opaque_interpreter=false;reply.process_limit_exceeded=false;
@@ -399,13 +459,11 @@ if(input.action==='idle'){
     try{args=fs.readFileSync(proc+pid+'/cmdline','utf8').split('\0').filter(Boolean);argc=args.length;}
     catch(e){if(e.code!=='ENOENT'||exists(proc+pid))reply.process_cmdline_unreadable=true;throw e;}
     var homebrew=packageSender(args,'luna://org.webosbrew.hbchannel.service/install');
-    var own=homebrew||isInstaller(args);if(own)reply.installer_running=true;
     if(homebrew)reply.homebrew_observed=true;
-    if(isProject(args)||own){reply.project_running=true;reply.idle=false;return;}
+    if(recordProcess(args,homebrew,args))return;
     readProcLink(proc+pid+'/exe',args,argc);
     readProcLink(proc+pid+'/cwd',args,argc);
-    var own=isInstaller(args);if(own)reply.installer_running=true;
-    if(isProject(args)||own){reply.project_running=true;reply.idle=false;return;}
+    if(recordProcess(args,false,args.slice(0,argc)))return;
     // Known LS2 launcher with an explicit service ID. Project IDs and
     // project paths were already checked above.
     var serviceLauncher=afterStop&&argc===3&&/(^|\/)node$/.test(args[0])&&
@@ -415,9 +473,10 @@ if(input.action==='idle'){
        (argc<2||!/^\/.*[.](js|cjs|mjs|py|pyc)$/.test(args[1]))){reply.idle=false;reply.opaque_interpreter=true;}
    }catch(e){if(e.code!=='ENOENT'||exists(proc+pid))reply.idle=false;}});
   }catch(e){reply.idle=false;}
-  // Calling disable can temporarily activate an LS2 service. Wait for its
-  // process to exit without calling disable again while polling.
-  if(waitForIdle&&reply.project_running&&Date.now()<idleDeadline){
+  // LS2 may acknowledge disable before the activity completion and idle
+  // timer finish. Only the acknowledged startup services get extra time.
+  var now=Date.now();
+  if(waitForIdle&&reply.active_project_running&&(now<idleDeadline||(onlyDraining&&now<drainDeadline))){
    setTimeout(checkIdle,250);return;
   }
   process.stdout.write(JSON.stringify(reply));
@@ -564,8 +623,8 @@ function next(){if(!stages.length){process.stdout.write(JSON.stringify(reply));r
  try{pin=fs.lstatSync(dir);if(!pin.isDirectory()||pin.isSymbolicLink()){if(known)visit(dir,'installer-staging');next();return;}files=fs.readdirSync(dir);}catch(e){if(known)blocked('installer-staging',e);next();return;}
  function retire(name,expected){if(!expected)return;owned=true;try{if(!same(pin,fs.lstatSync(dir)))fail();if(input.action==='sweep')remove(dir+'/'+name,expected);if(exists(dir+'/'+name))reply.present.push('installer-staging '+name);}catch(e){blocked('installer-staging',e);}}
  function file(){if(!files.length){try{if(input.action==='sweep'&&(known||owned)&&same(pin,fs.lstatSync(dir))&&!fs.readdirSync(dir).length)fs.rmdirSync(dir);}catch(e){blocked('installer-staging',e);}next();return;}
-  var name=files.shift(),index=['helper.ipk','launcher.ipk','updater.ipk','screensaver.ipk'].indexOf(name);if(index<0){if(known)retire(name,exists(dir+'/'+name));file();return;}
-  controlIdentity(dir+'/'+name,function(error,app,expected){if(error){if(known)retire(name,exists(dir+'/'+name));file();return;}if(app===apps[index])retire(name,expected);file();});
+  var name=files.shift(),index=['helper.ipk','launcher.ipk','updater.ipk','screensaver.ipk','tile-no-root.ipk'].indexOf(name);if(index<0){if(known)retire(name,exists(dir+'/'+name));file();return;}
+  controlIdentity(dir+'/'+name,function(error,app,expected){if(error){if(known)retire(name,exists(dir+'/'+name));file();return;}if(app===(index===4?'io.github.razdva122.cytvinstaller':apps[index]))retire(name,expected);file();});
  }file();
 }next();
 }());
@@ -577,9 +636,14 @@ def _program(request):
     # Keep the SSH exec request tiny; old TV SSH servers reject long argv.
     source = PRIVATE_CLEANUP_PROGRAM
     if request.get('cancellation') or request.get('missing_capsule'):
-        from .no_root_cancellation import COMPANION_SOURCE, SOURCE
+        from .no_root_cancellation import COMPANION_SOURCE, SOURCE, cancellation_source
+        from .no_root_observer import PROGRAM, companion_source
         plan = request.get('plan') or request.get('missing_capsule') or {}
-        cancellation = COMPANION_SOURCE if plan.get('screensaver') is True else SOURCE
+        if plan.get('tile') is True or plan.get('maintenance'):
+            cancellation = cancellation_source(companion_source(PROGRAM, tile=plan.get('tile') is True,
+                screensaver=plan.get('screensaver') is True, maintenance=plan.get('maintenance')))
+        else:
+            cancellation = COMPANION_SOURCE if plan.get('screensaver') is True else SOURCE
         source = source.replace('/* CYTV_OWNED_CANCELLATION */null', cancellation)
     if request.get('action') in CLEANUP_BOOT_ACTIONS:
         # Semantic failure envelope follows the observer protocol: SSH completion
@@ -615,11 +679,14 @@ def _missing_capsule_receipt(previous):
     if 'previous' in previous:
         return None
     try:
-        components = observer.APPS + ((SCREENSAVER_APP,) if SCREENSAVER_APP in previous['versions'] else ())
+        screensaver = SCREENSAVER_APP in previous['versions']
+        tile = TILE_APP in previous['versions']
+        maintenance = previous.get('maintenance')
+        components = [app for app, _ in observer.installation_components(screensaver, tile, maintenance)]
         versions = [previous['versions'][app] for app in components]
-        configuration = {name: previous['expected'][HELPER_STATE+'/'+name]
-                         for name in ('ssap-key.json', 'apps.json')}
-    except (KeyError, TypeError):
+        configuration = {} if maintenance else {
+            name: previous['expected'][HELPER_STATE+'/'+name] for name in ('ssap-key.json', 'apps.json')}
+    except (KeyError, TypeError, UserError):
         return None
     if not all(isinstance(value, str) for value in versions) or not all(
             isinstance(value, str) and re.fullmatch('[a-f0-9]{64}', value)
@@ -628,26 +695,30 @@ def _missing_capsule_receipt(previous):
     original_source = hashlib.sha256(observer.PROGRAM.encode()).hexdigest()
     packaged_source = hashlib.sha256(observer.PACKAGED_STATE_PROGRAM.encode()).hexdigest()
     source = previous.get('observer_source_sha256', original_source)
-    screensaver = len(components) > len(observer.APPS)
     supported = (original_source, packaged_source)
-    if screensaver:
-        supported = tuple(hashlib.sha256(observer.companion_source(program).encode()).hexdigest()
+    if screensaver or tile or maintenance:
+        supported = tuple(hashlib.sha256(observer.companion_source(program, tile=tile, screensaver=screensaver,
+                          maintenance=maintenance).encode()).hexdigest()
                           for program in (observer.PROGRAM, observer.PACKAGED_STATE_PROGRAM))
     if source not in supported:
         return None
     return {'operation': operation, 'diagnostic_id': diagnostic_id, 'versions': versions,
             'configuration_sha256': hashlib.sha256(observer.canonical(configuration).encode()).hexdigest(),
-            'screensaver': screensaver,
+            'screensaver': screensaver, **({'tile': True} if tile else {}),
+            **({'maintenance': maintenance} if maintenance else {}),
             'source_sha256': source,
             'default_root': observer.ROOT, 'roots': [observer.ROOT, observer.JAIL_ROOT]}
 
 
 def _device(installer, action, proof=None, *, after_stop=False, wait_for_idle=False, guard=False,
-            allow_empty_dirs=False, pending=None):
+            allow_empty_dirs=False, pending=None, drain_services=(), allow_home_app=False, allow_helper_app=False):
     if pending is None:
         pending = installer.store.pending(installer.profile) or {}
     request = {'action':action, 'staging_ids':pending.get('cleanup_staging_ids', []),
                'removal':pending.get('removal_operation'), 'proof':proof}
+    if action == 'idle' and after_stop:
+        request['allow_home_app'] = allow_home_app is True
+        request['allow_helper_app'] = allow_helper_app is True
     capsule = 'no-original-install'
     if guard and installer.profile.get('connection') != 'root-ssh':
         from . import no_root_observer
@@ -681,6 +752,8 @@ def _device(installer, action, proof=None, *, after_stop=False, wait_for_idle=Fa
         request['after_stop'] = True
     if wait_for_idle:
         request['wait_for_idle'] = True
+        if drain_services:
+            request['drain_services'] = drain_services
     if installer.profile.get('connection') == 'root-ssh':
         request['connection'] = 'root-ssh'
     try:
@@ -851,6 +924,47 @@ def _remove_package(installer, app):
         raise
 
 
+def remove_single_tile(installer, *, check_only=False):
+    """Retire only this edition's verified light entry on explicit product removal."""
+    manifest = getattr(installer, 'manifest', {})
+    pending = installer.store.pending(installer.profile) or {}
+    status = pending.get('tile_removal')
+    if status == 'submitted':
+        raise UserError('The TV package result could not be verified. Review recovery options before continuing.',
+                        reason_code='pending-operation')
+    installed = any(row.get('id') == TILE_APP for row in installer.installed_apps())
+    if not installed:
+        if 'single_tile' in manifest or status is not None:
+            installer.verify_absent(TILE_APP)
+        return
+    if status == 'terminal':
+        raise UserError('A removed package is present again. Recovery data was kept.', reason_code='cleanup-check-failed')
+    from .operations import BASE
+    # Some SAMs filter custom appinfo keys. Classify the installed metadata
+    # independently instead of treating a missing API field as Homebrew.
+    from .single_tile_setup import installed_role
+    role = installed_role(installer)
+    if role == 'homebrew':
+        return
+    if role != installer.profile['edition']:
+        raise UserError('The installed Clean Your TV entry belongs to another installation.',
+                        reason_code='cleanup-check-failed')
+    if 'single_tile' not in manifest:
+        raise UserError('Use the installer for the installed Clean Your TV version.',
+                        reason_code='cleanup-check-failed')
+    from . import package
+    from .no_root_observer import files_match
+    raw, _ = package.tile_payload(installer.payload, installer.manifest, installer.profile['edition'])
+    files_match(installer, {BASE.removesuffix('/usr/palm') + '/' + path: hashlib.sha256(data).hexdigest()
+                            for path, data in package.data_files(raw).items()})
+    if check_only:
+        return
+    installer.store.checkpoint(installer.profile, tile_removal='submitted')
+    _remove_package(installer, TILE_APP)
+    installer.store.checkpoint(installer.profile, tile_removal='terminal')
+    installer.verify_absent(TILE_APP)
+
+
 def _input_request(installer, method, payload):
     try:
         return installer.remote.luna('com.webos.service.eim/' + method, payload)
@@ -977,6 +1091,9 @@ def continue_removal(installer, expected_pending):
     pending = installer.store.pending(installer.profile)
     if pending != expected_pending or not pending or pending.get('recovery_protocol') != 'clean-removal-v1':
         raise UserError('Removal evidence changed. Recovery data was kept.', reason_code='pending-operation')
+    # A mismatched installer cannot begin dismantling the daily product and
+    # discover only at the last step that it cannot remove the entry it owns.
+    remove_single_tile(installer, check_only=True)
     previous = pending.get('previous')
     legacy_install = (isinstance(previous, dict) and previous.get('action') == 'install'
                       and previous.get('stage') == 'pending' and 'recovery_protocol' not in previous)
@@ -1011,7 +1128,9 @@ def continue_removal(installer, expected_pending):
             record_restart(phase=process_phase, **{key: value[key] for key in
                 ('idle', 'proc_enumerated', 'project_running', 'installer_running', 'homebrew_observed',
                  'process_cmdline_unreadable', 'process_links_unreadable', 'opaque_interpreter',
-                 'process_limit_exceeded') if key in value})
+                 'process_limit_exceeded', 'process_matches', 'active_project_running', 'package_runtime_running',
+                 'helper_controller_running', 'helper_relay_running', 'helper_service_host_running',
+                 'home_service_host_running', 'home_app_running', 'project_path_reference_running') if key in value})
         if guard and action in ('inventory', 'sweep'):
             # Track only public registration leaves observed after this pass's
             # vendor terminal. A hidden directory cannot refute that evidence.
@@ -1031,15 +1150,24 @@ def continue_removal(installer, expected_pending):
             # Catalogue absence alone cannot rule out a legacy package.
             evidence.pop('packages', None)
 
-    def wait_for_stopped_processes(require_idle, *, verify_after_remove=False, allow_opaque=False):
-        idle = device('idle', after_stop=True, wait_for_idle=True)
+    delegated_package_processes = pending.get('cleanup_package_runtime_delegated') is True
+
+    def wait_for_stopped_processes(require_idle, *, verify_after_remove=False, allow_opaque=False,
+                                   drain_services=(), allow_home_app=False, allow_helper_app=False):
+        nonlocal delegated_package_processes
+        idle = device('idle', after_stop=True, wait_for_idle=True, drain_services=drain_services,
+                      allow_home_app=allow_home_app, allow_helper_app=allow_helper_app)
         check(defer_catalogued_paths(idle) if not verify_after_remove else idle,
               defer_packages=True, action='idle')
-        if idle.get('project_running') is True:
+        if idle.get('package_runtime_running') is True and not delegated_package_processes:
+            store.checkpoint(profile, cleanup_package_runtime_delegated=True)
+            delegated_package_processes = True
+        active = idle.get('active_project_running', idle.get('project_running'))
+        if active is True:
             record_restart(decision='process-blocked')
             raise UserError('A Clean Your TV process did not stop in time. Removal data was kept.',
                             reason_code='cleanup-check-failed')
-        return idle.get('project_running') is False and (not require_idle or idle.get('idle') is True
+        return active is False and (not require_idle or idle.get('idle') is True
             or allow_opaque and idle.get('proc_enumerated') is True)
 
     # The fixed IDs from this goal's package requests still need readback
@@ -1132,6 +1260,7 @@ def continue_removal(installer, expected_pending):
             record_restart(decision='observation-blocked')
         if not stopped or (guard and not _input_absent(installer)):
             raise UserError('TV controls could not be verified. Recovery data was kept.', reason_code='controls-unverified')
+        remove_single_tile(installer)
         return finish(pending['result'])
 
     def catalog():
@@ -1381,6 +1510,7 @@ def continue_removal(installer, expected_pending):
     inaccessible_packages.discard(None)
     startup_access_blocked = not restarted and bool(inaccessible_packages - targets)
     startup_disable_unverified = False
+    disabled_services = []
     inaccessible_startup = ({row['scope'] for row in current['blocked'] + stopped['blocked']
                              if _protected_package(row)} if invalid_stop_record else set())
     for app, service in zip(APPS, STARTUP_SERVICES):
@@ -1402,6 +1532,7 @@ def continue_removal(installer, expected_pending):
                 disabled = state.get('enabled') is False and not state.get('error')
             if not disabled:
                 raise UserError('TV startup could not be disabled. Try again.')
+            disabled_services.append(service)
         except UserError as error:
             if not isinstance(error, TVRejected) and str(error) not in (
                     'TV startup could not be disabled. Try again.',
@@ -1444,7 +1575,9 @@ def continue_removal(installer, expected_pending):
 
     process_phase = 'before-packages'
     if not wait_for_stopped_processes(invalid_stop_record or
-                                     not restarted and (uncertain_install or inaccessible_packages or unavailable)):
+                                     not restarted and (uncertain_install or inaccessible_packages or unavailable),
+                                     drain_services=disabled_services, allow_home_app=guard and APPS[1] in apps and not invalid_stop_record,
+                                     allow_helper_app=guard and APPS[0] in apps and not invalid_stop_record):
         if invalid_stop_record:
             raise UserError('Removal could not be verified. Review recovery options before continuing.', reason_code='cleanup-check-failed')
         return require_restart(['process-idle-unverified'], rearm=restarted)
@@ -1512,6 +1645,11 @@ def continue_removal(installer, expected_pending):
         observe_catalog(remaining_apps)
         if any(app in remaining_apps for app in APPS):
             raise UserError('The TV package result could not be verified.', reason_code='removal-failed')
+    # Vendor terminal must also retire a delegated package runtime before its
+    # files are swept. A failed/partial vendor stop is never permission to unlink.
+    process_phase = 'after-packages'
+    if delegated_package_processes and not wait_for_stopped_processes(True, verify_after_remove=True):
+        return require_restart(['process-idle-unverified'], rearm=restarted)
     installer.progress('Removing project files…')
     store.checkpoint(profile, stage='private-cleanup')
     swept = device('sweep', allow_empty_dirs=True)
@@ -1547,6 +1685,7 @@ def continue_removal(installer, expected_pending):
     if final['present'] or final['blocked'] or swept['blocked']:
         result['temporary_files_retained'] = True
         installer.progress('Some temporary recovery files were kept.')
+    remove_single_tile(installer)
     store.checkpoint(profile, stage='verified-clean', removal_reason='removal-verified', result=result,
                      cleanup_helper_kernel_changed=retained_cleanup_reboot and
                      any(result.get(key) is True for key in

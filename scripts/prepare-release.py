@@ -77,6 +77,8 @@ def validate_versions(versions):
 def package_version(raw, kind, expected):
     app = APPS[kind]
     info = json.loads(data_files(raw)['usr/palm/applications/' + app + '/appinfo.json'])
+    if kind in ('root','home') and info.get('cytvProductGeneration', 1) != 1:
+        raise ValueError('Single-tile Home is ineligible for legacy feeds')
     if info.get('id') != app or info.get('version') != expected:
         raise ValueError(kind + ' package version differs from release metadata')
     version(expected)
@@ -236,8 +238,11 @@ def prepare_manifests(tag, build, packages, prior_build, prior_packages, rollbac
     return manifests, files
 
 
-def verify_system_assets(manifests,build,files):
+def verify_system_assets(manifests,build,files,*,single_tile=False):
     expected={'root':{'root','root-updater','root-infrastructure'},'no-root':{'home','helper','updater'}}
+    schema = 2 if single_tile else 1
+    if single_tile:
+        expected = {'root':{'root','root-infrastructure'},'no-root':{'home','helper'}}
     apps={**APPS,'updater':'com.cleanyourtv.updater','root-updater':'com.cleanyourtv.root.updater'}
     if set(manifests) not in (set(expected),set(expected)|{'root-720p','no-root-720p'}):raise ValueError('Both system release sets required')
     for key,manifest in manifests.items():
@@ -246,7 +251,7 @@ def verify_system_assets(manifests,build,files):
         expected_supervisor = '1.2.10' if manifest.get('supervisor') == 2 else '1.1.1'
         if edition=='root' and manifest.get('minimumSupervisorVersion')!=expected_supervisor:raise ValueError('Root minimum supervisor mismatch')
         if edition=='no-root' and manifest.get('minimumSupervisorVersion')!=('1.2.11' if manifest.get('supervisor')==2 else None):raise ValueError('No-root minimum supervisor mismatch')
-        if manifest.get('edition')!=edition or manifest.get('release')!=build['tag'] or manifest.get('schema')!=1 or manifest.get('supervisor') not in (1, 2) or {c['name'] for c in manifest['components']}!=names or len(manifest['components'])!=len(names):raise ValueError('Invalid system release set')
+        if manifest.get('edition')!=edition or manifest.get('release')!=build['tag'] or manifest.get('schema')!=schema or manifest.get('supervisor') not in (1, 2) or {c['name'] for c in manifest['components']}!=names or len(manifest['components'])!=len(names):raise ValueError('Invalid system release set')
         for item in manifest['components']:
             filename=item['url'].rsplit('/',1)[1]
             if item['url']!=URL+build['tag']+'/'+filename or not re.fullmatch(r'[A-Za-z0-9._-]+',filename):raise ValueError('Invalid system release asset')
@@ -263,6 +268,9 @@ def verify_system_assets(manifests,build,files):
                 if item.get('application')!=app or item.get('kind')!='ipk':raise ValueError('System component identity mismatch')
                 info=json.loads(data_files(raw)['usr/palm/applications/'+app+'/appinfo.json'])
                 if info.get('id')!=app or info.get('version')!=item['version']:raise ValueError('System package version mismatch')
+                if item['name'] in ('home','root','helper'):
+                    generation=info.get('cytvProductGeneration',1)
+                    if type(generation) is not int or generation!=schema or single_tile and info.get('visible') is not False:raise ValueError('System package generation mismatch')
                 if item['name'] in ('home','root'):
                     suffix='_720p_all.ipk' if graphics=='1280x720' else '_all.ipk'
                     if filename!=app+'_'+item['version']+suffix or info.get('resolution','1920x1080')!=graphics:raise ValueError('System package resolution mismatch')
@@ -272,7 +280,7 @@ def verify_system_assets(manifests,build,files):
                     seen=set()
                     for member in archive:
                         safe_name(member.name)
-                        allowed = member.name.startswith(('runtime/','updater/','service/')) or member.name in ('support/python_binding.py','support/python_boot.js','support/package_data.py','support/package_identity.py','support/updater/store.py','support/updater/package.py','support/startup_guard.py')
+                        allowed = member.name.startswith(('runtime/','service/')) or not single_tile and member.name.startswith('updater/') or member.name in ('support/python_binding.py','support/python_boot.js','support/package_data.py','support/package_identity.py','support/updater/store.py','support/updater/package.py','support/startup_guard.py')
                         if not member.isfile() or not allowed or member.name in seen or member.size>32*1024*1024:raise ValueError('Invalid system infrastructure inventory')
                         seen.add(member.name)
                     if not seen:raise ValueError('Empty system infrastructure')

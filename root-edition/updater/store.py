@@ -201,7 +201,7 @@ def _cache_snapshot(stores, product_complete=False):
     fixed = {'baseline', 'current', 'current-root', 'current-no-root', 'transaction',
              'bootstrap', 'bootstrap-bundle', 'infrastructure', 'installed-package',
              'installed-terminal', 'registration', 'legacy-lockdown', 'python-runtime',
-             'installer-accepted', 'mutable', 'startup-hook', 'startup-hook.previous'}
+             'installer-accepted', 'mutable', 'startup-hook', 'startup-hook.previous', 'root-recovery-integrity'}
     terminal_seen = product_complete is True
     for store in stores:
         directory = store._directory()
@@ -218,6 +218,9 @@ def _cache_snapshot(stores, product_complete=False):
                     raise ValueError('unknown retention record')
                 value = store._read(filename) if name == 'startup-hook.previous' else store.read(name)
                 if not isinstance(value, dict): raise ValueError('unknown retention record')
+                if name == 'root-recovery-integrity' and (set(value) != {'schema', 'sha256'} or value['schema'] != 1
+                        or not isinstance(value['sha256'], str) or not re.fullmatch('[a-f0-9]{64}', value['sha256'])):
+                    raise ValueError('invalid recovery inventory pin')
                 if root_health: validate_health_receipt(value, transaction)
                 if companion: validate_companion_journal(value)
                 if name in {'baseline', 'current', 'current-root', 'current-no-root'}: _cache_descriptor(value)

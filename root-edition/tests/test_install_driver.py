@@ -41,6 +41,13 @@ class CoordinatorTests(unittest.TestCase):
         self.assertEqual(self.device.calls,['preflight','inspect','deploy','updater','supervisor','readback'])
         self.assertEqual(result['state'],'complete'); self.assertTrue(self.owner.status()['terminal'])
         self.assertFalse(result['home_changed'])
+    def test_single_tile_setup_uses_supervisor_without_installing_legacy_updater(self):
+        self.device.single_tile = True
+        result = self.driver.install(self.identifier, '/verified', prepare_supervisor=True)
+        self.assertEqual(result['state'], 'complete')
+        self.assertEqual(self.device.calls, ['preflight', 'inspect', 'deploy', 'supervisor', 'readback'])
+        self.assertEqual(self.driver.install(self.identifier, '/verified', prepare_supervisor=True), result)
+
     def test_failure_at_every_boundary_retains_ownership_and_never_replays(self):
         for boundary in ('deploy','updater','supervisor','readback'):
             with self.subTest(boundary=boundary), tempfile.TemporaryDirectory() as tmp:
@@ -79,6 +86,13 @@ class CoordinatorTests(unittest.TestCase):
         self.device.installed=True
         self.assertEqual(self.driver.install(self.identifier,'/verified')['state'],'complete')
         self.assertEqual(self.device.calls,['preflight','inspect','runtime-contract','readback'])
+    def test_reviewed_fresh_homebrew_worker_cannot_switch_to_existing_installation(self):
+        self.store.write('submission-'+self.identifier, {'candidate_sha256':'f'*64,'homebrew_settings':'absent'})
+        self.device.installed = True
+        result = self.driver.install(self.identifier, '/verified', prepare_supervisor=True)
+        self.assertEqual(result['state'], 'recovery_required')
+        self.assertEqual(self.device.calls, ['preflight', 'inspect'])
+
     def test_installed_runtime_mismatch_is_not_success_and_never_replays(self):
         from install_device import InstallerRuntimeMismatch
         self.device.installed=True
@@ -137,6 +151,9 @@ class ActivationTests(unittest.TestCase):
                 with guard.control(root,os.getuid()): pass
             with ownership.operation('product','product.json',resume=record['id']) as record:
                 ownership.stage(record,'complete',terminal=True)
+                # Completion is visible before the package worker releases the mutex.
+                with self.assertRaises(guard.ProductPending):
+                    with guard.control(root,os.getuid()): pass
             with guard.control(root,os.getuid()): pass
 
     def test_direct_activation_serializes_with_product_ownership(self):
@@ -372,6 +389,71 @@ Coordinator(Device(),Ownership(Store(sys.argv[2],uid=os.getuid())),read=lambda p
             self.assertEqual(install_driver.submit('a'*32,payload,ownership=owner)['state'],'pending')
             self.assertEqual(spawn.call_count,1)
 
+    def test_tv_approval_is_bound_before_spawn_and_never_added_by_replay(self):
+        import install_device
+        from installation import TV_APPROVAL, TV_INSTALLER, cancel_setup_activation
+        _, payload, inventories, owner = self.submission_fixture()
+        candidate = install_driver.candidate_digest(payload, inventories)
+        with patch('install_driver._verified_payload', return_value=inventories), \
+             patch('install_driver.root_review_binding', return_value={'identity':{},'code':{}}), \
+             patch.object(install_device.LocalDevice, 'preflight') as preflight, patch('subprocess.Popen') as spawn:
+            plain = 'a' * 32
+            install_driver.submit(plain, payload, candidate=candidate, ownership=owner)
+            self.assertNotIn('--activate-after-install', spawn.call_args.args[0])
+            install_driver.submit(plain, payload, candidate=candidate, ownership=owner, activate_after_install=True)
+            self.assertEqual(spawn.call_count, 1)
+            self.assertIsNone(owner.store.read(TV_APPROVAL))
+            self.assertIsNone(owner.store.read('homebrew-activation-token'))
+            selected = 'b' * 32
+            submission = install_driver.submit(selected, payload, candidate=candidate, ownership=owner, activate_after_install=True)
+            self.assertEqual(owner.store.read(TV_APPROVAL),
+                             dict(operation=selected, candidate_sha256=candidate, issuer=TV_INSTALLER,
+                                  token=submission['tv_activation_token']))
+            self.assertIn('--activate-after-install', spawn.call_args.args[0])
+            public = install_driver.setup_public_result(submission)
+            self.assertNotIn('staging', public)
+            self.assertNotIn('tv_activation_token', public)
+            preflight.side_effect = lambda *args, **kwargs: cancel_setup_activation(owner.store)
+            stopped = install_driver.submit('c'*32, payload, candidate=candidate, ownership=owner, activate_after_install=True)
+            self.assertEqual(stopped['stage'], 'submitted')
+            self.assertIsNone(owner.store.read(TV_APPROVAL))
+            install_driver.submit(selected, payload, candidate=candidate, ownership=owner, activate_after_install=True)
+            self.assertIsNone(owner.store.read('homebrew-activation-token'))
+
+    def test_homebrew_submission_binds_real_reviewed_settings_and_forces_supervisor(self):
+        import deploy
+        import install_device
+        _, payload, inventories, owner = self.submission_fixture()
+        binding = 'a' * 64
+        candidate = install_driver.reviewed_candidate(payload, inventories, binding)
+        with patch('install_driver._verified_payload', return_value=inventories) as verified, \
+             patch('install_driver.root_review_binding', return_value={'identity':{},'code':{}}), \
+             patch.object(deploy,'homebrew_migration',return_value=(({}, 'validated'),binding)) as source, \
+             patch.object(install_device.LocalDevice, 'preflight') as preflight, patch('subprocess.Popen') as spawn:
+            def submit(identifier):
+                return install_driver.submit(identifier, payload, candidate=candidate, ownership=owner,
+                                             homebrew_setup=True, activate_after_install=True)
+            record = submit('a'*32)
+            self.assertEqual(record['options'], {'prepare_supervisor':True,'migrate':True})
+            self.assertEqual(record['candidate_sha256'], candidate)
+            self.assertEqual(record['homebrew_settings'], binding)
+            self.assertNotIn('homebrew_settings', install_driver.setup_public_result(record))
+            self.assertTrue(verified.call_args.args[1])
+            self.assertIn('--migrate-packaged-home', spawn.call_args.args[0])
+            self.assertIn('--prepare-supervisor', spawn.call_args.args[0])
+            source.return_value = (None, 'absent')
+            submit('a'*32)
+            self.assertEqual(source.call_count, 1)
+            with self.assertRaisesRegex(ValueError, 'reviewed_candidate_changed'):
+                submit('b'*32)
+            self.assertEqual(preflight.call_count, 1)
+            self.assertEqual(spawn.call_count, 1)
+            self.assertIsNone(owner.store.read('submission-'+'b'*32))
+            candidate = install_driver.reviewed_candidate(payload, inventories, 'absent')
+            empty = submit('c'*32)
+            self.assertEqual(empty['options'], {'prepare_supervisor':True,'migrate':False})
+            self.assertNotIn('--migrate-packaged-home', spawn.call_args.args[0])
+
     def test_submission_parent_wait_is_bounded_and_only_tracks_exact_parent(self):
         with patch('os.getppid',side_effect=[42,42,1]),patch('time.monotonic',side_effect=[0,0.1,0.2]),patch('time.sleep') as sleep:
             install_driver.wait_submission_parent(42)
@@ -412,6 +494,19 @@ Coordinator(Device(),Ownership(Store(sys.argv[2],uid=os.getuid())),read=lambda p
             self.assertEqual(install_driver.submit('a'*32,payload,ownership=owner)['state'],'recovery_required')
             self.assertEqual(install_driver.submit('a'*32,payload,ownership=owner)['state'],'recovery_required')
             self.assertEqual(spawn.call_count,1)
+
+    def test_maintenance_review_uses_the_removal_inputs_after_optional_install(self):
+        import json
+        for state, expected in [('installed',False),('fresh',True)]:
+            with self.subTest(state=state), patch.object(sys,'argv',['driver','inspect','--payload','/fixture','--prepare-supervisor']), \
+                 patch.object(install_driver.Coordinator,'inspect',return_value={'state':state}), \
+                 patch.object(Ownership,'status',return_value=None), \
+                 patch.object(install_driver,'_verified_payload',side_effect=lambda path,optional:optional) as verified, \
+                 patch.object(install_driver,'candidate_digest',side_effect=lambda path,optional:'optional' if optional else 'ordinary'), \
+                 redirect_stdout(io.StringIO()) as stream:
+                install_driver.main()
+                self.assertEqual(verified.call_args.args[1],expected)
+                self.assertEqual(json.loads(stream.getvalue())['candidate_sha256'],'optional' if expected else 'ordinary')
 
     def test_changed_reviewed_candidate_never_stages_or_spawns(self):
         from unittest.mock import patch
@@ -741,7 +836,7 @@ class ComponentTerminalRecoveryTests(unittest.TestCase):
         from install_fixture import CurrentInstallation
         from updater import bootstrap,device as updater_device,store as updater_store
         from unittest.mock import patch
-        installer_only={'cancel_install.py','cancel_provision.py','clean_removal.py','cleanup_tail.js','cleanup_no_root_private.js'}
+        installer_only={'personalize.py','cancel_install.py','cancel_provision.py','clean_removal.py','cleanup_tail.js','cleanup_no_root_private.js'}
         with CurrentInstallation() as fixture:
             bundle=fixture.payload/'root-updater';manifest=bootstrap.verify_bundle(bundle)
             self.assertTrue(installer_only <= set(manifest['files']))

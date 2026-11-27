@@ -244,12 +244,14 @@
       });
     }
     function confirmStart(onStart, onReply) {
+      var singleTile = window.CYTVProductGeneration === 2;
       window.HomeI18n.confirm(
         {
-          title: 'Start Helper?',
-          message:
-            'Start Helper to use Home control again. Your saved Home screen choice will be used.',
-          action: 'Start Helper'
+          title: singleTile ? 'Resume Home control' : 'Start Helper?',
+          message: singleTile
+            ? 'Use your saved Home button setting again?'
+            : 'Start Helper to use Home control again. Your saved Home screen choice will be used.',
+          action: singleTile ? 'Resume Home control' : 'Start Helper'
         },
         function () {
           if (onStart() === false) return;
@@ -300,7 +302,9 @@
       buttons = [
         'Open Home',
         'Home button settings',
-        'Start Helper',
+        window.CYTVProductGeneration === 2
+          ? 'Resume Home control'
+          : 'Start Helper',
         'Refresh status',
         'Show diagnostics'
       ].map(function (label, i) {

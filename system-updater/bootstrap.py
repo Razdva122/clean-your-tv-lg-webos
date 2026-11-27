@@ -12,7 +12,7 @@ import subprocess
 import sys
 import uuid
 from .activation import Slots
-from .core import version, FINISHED
+from .core import version, FINISHED, RECOVERY_FIELDS, tile_product, check_tile_transaction
 from .support.store import Store, encode
 from .support.package import safe_bytes
 
@@ -185,7 +185,7 @@ class Bootstrap:
                          stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                          start_new_session=True, close_fds=True)
 
-    def reconcile_terminal(self):
+    def reconcile_terminal(self, scope=None):
         """Close only the exact owner whose terminal journal reached disk first."""
         from installation import Ownership
         tx=self.transaction()
@@ -194,6 +194,9 @@ class Bootstrap:
         if not lease or lease['owner']!='system-engine' or lease['terminal']:return False
         if lease['id']!=tx['lease']:raise ValueError('Terminal engine journal belongs to another lease')
         with owner.operation('system-engine','transaction.json',resume=lease['id']) as record:
+            if scope:
+                self.recovery_scope({'edition':scope['edition']}, tx)
+                check_tile_transaction(self.product.read('transaction') or tx, scope)
             if self.transaction()!=tx or self.product.read('transaction')!=tx['previousTransaction']:
                 raise ValueError('Terminal engine state changed before ownership completion')
             migration=self.store.read('supervisor-migration')
@@ -302,19 +305,33 @@ class Bootstrap:
                 return
         os.execv(sys.executable, [sys.executable, '-B', str(self.slots.active()/'engine-entry.py'), 'worker'])
 
-    def recover(self, abort=False):
+    def recovery_scope(self, payload, engine=None):
+        current = tile_product(self.product, payload['edition'])
+        if engine is not None:
+            variant = engine.get('variant')
+            if engine.get('edition') != payload['edition'] or variant not in (payload['edition'], payload['edition']+'-720p'):
+                raise ValueError('Recovery belongs to another edition')
+            catalog = self.slots.verify(engine['proof'])
+            manifest = catalog['releases'][variant]
+            if catalog.get('schema') != 2 or manifest.get('edition') != payload['edition'] or manifest.get('schema') != 2 or manifest.get('release') != engine['release']:
+                raise ValueError('Recovery belongs to another product')
+        check_tile_transaction(engine or current, payload)
+
+    def recover(self, abort=False, scope=None):
         from installation import Ownership
         owner = Ownership()
         lease = owner.status()
         if lease and lease['owner']=='system-update' and not abort:
             tx=self.active_transition();product=self.product.read('transaction')
             if tx and tx['lease']==lease['id'] and product and product.get('id')==tx['id']:
+                if scope:self.recovery_scope(scope, tx)
                 self.wake();return self.summary(tx)
         if not lease or lease['owner'] != 'system-engine' or lease['terminal']:
             raise ValueError('Original engine ownership required')
         with owner.operation('system-engine', 'transaction.json', resume=lease['id']) as record:
             tx = self.active_transition()
             if not tx or tx.get('lease')!=record['id']: raise ValueError('Engine transition no longer pending')
+            if scope:self.recovery_scope(scope, tx)
             current = self.product.read('transaction')
             if current != tx['previousTransaction'] and (not current or current.get('id') != tx['id']):
                 raise ValueError('Product transaction changed during recovery')
@@ -344,20 +361,24 @@ class Bootstrap:
         return self.summary(tx)
 
     def handle(self, method, payload):
-        if method not in FIELDS or not isinstance(payload,dict) or set(payload)!=FIELDS[method]: raise ValueError('Invalid bootstrap request')
+        if method not in FIELDS or not isinstance(payload,dict) or set(payload) not in (FIELDS[method], RECOVERY_FIELDS.get(method)): raise ValueError('Invalid bootstrap request')
         if 'edition' in payload and payload['edition'] not in ('root','no-root'): raise ValueError('Invalid edition')
         tx = self.active_transition()
-        if method == 'status':
-            last=self.transaction()
-            if tx:return self.summary(tx)
+        scope = payload if method in RECOVERY_FIELDS and 'edition' in payload else None
+        last = self.transaction()
+        if scope:
+            engine = tx or (last if not self.product.read('transaction') and last and last.get('engineOnly') else None)
+            self.recovery_scope(scope, engine)
+        if method == 'status' and tx:return self.summary(tx)
         if method == 'check':
             offer = self.offer(payload['edition'])
             return {k:v for k,v in offer.items() if k not in ('proof','variant','engine','engineOnly')}
         if method == 'install': return self.reserve(payload)
         if method == 'repair': return self.reserve(payload,repair=True)
-        if method == 'reconcile' and tx: return self.recover()
-        if method == 'reconcile' and self.reconcile_terminal():return self.handle('status', {})
-        if method == 'rollback' and tx: return self.recover(abort=True)
+        if method == 'reconcile' and tx: return self.recover(scope=scope)
+        if method == 'reconcile' and self.reconcile_terminal(scope=scope):
+            return self.handle('status', {'edition': scope['edition']} if scope else {})
+        if method == 'rollback' and tx: return self.recover(abort=True, scope=scope)
         if tx and method not in ('restoreProfile',): raise ValueError('System updater replacement is pending')
         result=self.call(self.slots.active(), method, payload)
         if method=='status':

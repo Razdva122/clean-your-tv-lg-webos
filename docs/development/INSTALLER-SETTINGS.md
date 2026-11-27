@@ -22,7 +22,8 @@ remain intact. An edition fallback determines the final mode before customizatio
 ## Debloat
 
 The optional Debloat step comes before customization. The desktop wizard starts
-with all ten choices selected and applies them when the user clicks Continue.
+with the eleven LG settings selected and applies them on Continue.
+Maintenance starts with all groups unchecked.
 With root SSH, both editions read and write through the LG Settings Service.
 No-root in Developer Mode writes through a separate SSAP pairing requesting
 the regular `WRITE_SETTINGS` permission. It reads preferences through Developer
@@ -44,12 +45,43 @@ connection and rechecks each displayed value before writing. Settings already
 at the original value and settings whose current value cannot be read are skipped. Verified
 restorations and values already back at their original setting are retired from
 the record. Failed or unreadable entries stay saved, and removal continues.
-Non-interactive removal skips restoration.
+Non-interactive removal skips restoration. Interactive Debloat maintenance offers
+individual restoration from the same profile. Only the selected key is read,
+restored and retired from the journal. Unreadable or unverified entries remain
+available for retry. Selecting the adjustment action opens the regular groups.
+
+LG documents **Auto Start LG Channels** under General → Channels on supported
+models. This is distinct from disabling the LG Channels service or changing the
+power-on input. See the [LG TV user guide](https://kr.eguide.lgappstv.com/manual/w26_tv/w26_b06/enga.html).
 
 The SSAP setter may be unavailable or rejected on a given firmware. Debloat
 reports the rejected write for each affected setting. It verifies accepted writes
 with a separate read. Debloat is skipped for non-interactive installs and
 console installs using `--yes`.
+
+### Additional Debloat choices
+
+| Choice | Developer Mode | No-root with root SSH | Root edition with root SSH |
+| --- | --- | --- | --- |
+| LG promotional streams | Paired SSAP write if the original is readable and the firmware accepts the request | LG Settings Service | LG Settings Service |
+
+The installer skips promotional streams when it cannot read the original value.
+
+[Reveal80's debloater](https://github.com/Reveal80/lg-webos-debloat) reports
+the extra promotion switch on webOS 22. Its reversible app hiding also removes
+access to a hidden app. CYTV keeps those apps available to open.
+[Glasshouse](https://rorygallagher2024.github.io/glasshouse/IMPLEMENTATION/#apps-kept-ready-in-the-background)
+observed different preload persistence across firmware and found that webOS can
+rewrite the preload file. A user-facing preload control would need verified
+behavior after standby and cold boot, and a way to restore the original
+policy during normal use.
+[CleanYourTV for LG webOS](https://lasharor.github.io/cleanyourtv-WebOS/debloat/)
+also controls telemetry services and ad domains while its launcher is Home.
+That approach requires coordination with stock Home restoration and other
+hosts-file managers. It remains a separate Root candidate.
+
+A generic No-root rejection of Home Promotion or Content Recommendation includes
+the [LG manual path for webOS 6 and 22](https://www.lg.com/nz/support/product-support/troubleshooting/help-library/cs-CT52007864-20153529296644OLT/).
 
 ## Application and persistence
 

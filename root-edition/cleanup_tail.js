@@ -330,44 +330,141 @@ function unownedRouting(allowNative) {
     !exists('/var/webos-profile/override/clean-your-tv-root.json')
   );
 }
+function stockProfileOwner(lease) {
+  if (!object(lease)) return false;
+  if (lease.owner === 'clean-removal') return true;
+  var identifier = /^[a-f0-9]{32}$/,
+    digest = /^[a-f0-9]{64}$/,
+    successor = /^no-root-([a-f0-9]{32})\.json$/.exec(lease.journal);
+  if (
+    lease.owner !== 'no-root' ||
+    lease.id !== record.lease ||
+    lease.stage !== 'reserved' ||
+    lease.terminal !== false ||
+    !successor
+  )
+    return false;
+  var binding = json(directory, lease.journal);
+  if (
+    !object(binding) ||
+    binding.schema !== 1 ||
+    binding.protocol !== 'no-root-root-handoff-v1' ||
+    binding.operation !== successor[1] ||
+    binding.lease !== lease.id ||
+    binding.effects_started !== true ||
+    binding.completed !== true ||
+    (binding.revoked !== undefined && binding.revoked !== false) ||
+    typeof binding.plan_sha256 !== 'string' ||
+    !digest.test(binding.plan_sha256) ||
+    typeof binding.source_sha256 !== 'string' ||
+    !digest.test(binding.source_sha256)
+  )
+    return false;
+  var previous = binding.predecessor;
+  if (
+    !object(previous) ||
+    Object.keys(previous).sort().join(',') !== 'lease,operation,removal' ||
+    !Object.keys(previous).every(function (key) {
+      return (
+        typeof previous[key] === 'string' && identifier.test(previous[key])
+      );
+    }) ||
+    previous.lease === lease.id
+  )
+    return false;
+  var clean = json(directory, 'clean-removal-' + previous.operation + '.json');
+  return (
+    object(clean) &&
+    clean.schema === 1 &&
+    clean.protocol === 'clean-removal-v1' &&
+    clean.operation === previous.operation &&
+    clean.removal === previous.removal &&
+    clean.final_fence === previous.lease &&
+    clean.lease !== previous.lease &&
+    typeof clean.lease === 'string' &&
+    identifier.test(clean.lease) &&
+    clean.final_original_lease === clean.lease &&
+    clean.stage === 'verified-clean' &&
+    clean.state === 'complete' &&
+    clean.current === true &&
+    object(clean.result) &&
+    clean.result.verified_clean === true &&
+    clean.result.private_cleanup_verified === true
+  );
+}
 function stockProfilesEligible() {
   var original = record.original;
-  var journals = [
-    'deploy',
-    'root-bootstrap',
-    'root-update',
-    'system-bootstrap',
-    'system-update'
-  ];
-  function noJournals(value) {
+  if (!object(original) || !stockProfileOwner(original.lease)) return false;
+  var noRoot = original.lease.owner === 'no-root',
+    journals = [
+      'deploy',
+      'root-bootstrap',
+      'root-update',
+      'system-bootstrap',
+      'system-update'
+    ],
+    fences = [
+      ['deploy', 'root', 'deploy.json', ['provision.lock']],
+      [
+        'root-bootstrap',
+        'root-updater',
+        'bootstrap.json',
+        ['daemon.lock', 'worker.lock']
+      ],
+      [
+        'system-bootstrap',
+        'system-updater',
+        'bootstrap.json',
+        ['daemon.lock', 'worker.lock']
+      ]
+    ];
+  function cancelled(key, value) {
+    if (!noRoot || !object(value)) return false;
+    if (key === 'deploy')
+      return (
+        Object.keys(value).sort().join(',') === 'app,stage,version' &&
+        value.version === 1 &&
+        value.app === 'com.cleanyourtv.root.preview' &&
+        value.stage === 'cancellation-admitted'
+      );
+    return (
+      (key === 'root-bootstrap' || key === 'system-bootstrap') &&
+      Object.keys(value).length === 1 &&
+      value.phase === 'cancellation-admitted'
+    );
+  }
+  function inertJournals(value) {
     return (
       object(value) &&
       Object.keys(value).length ===
         journals.length + (value['system-engine'] === null ? 1 : 0) &&
       journals.every(function (key) {
-        return value[key] === null;
+        return value[key] === null || cancelled(key, value[key]);
       })
     );
   }
   var backup = json(directory, 'routing-backup-' + id + '.json');
   return (
     record.profileless_cleanup_eligible === true &&
-    object(original) &&
-    object(original.lease) &&
-    original.lease.owner === 'clean-removal' &&
     original.request === null &&
     original.submission === null &&
     original.removal === null &&
-    noJournals(original.components) &&
-    noJournals(record.fenced_components) &&
+    inertJournals(original.components) &&
+    inertJournals(record.fenced_components) &&
     object(backup) &&
     Object.keys(backup).length === 0 &&
-    ![
-      'clean-your-tv-root',
-      'clean-your-tv-root-updater',
-      'clean-your-tv-system-updater'
-    ].some(function (name) {
-      return exists('/var/lib/' + name);
+    fences.every(function (fence) {
+      var path = '/var/lib/clean-your-tv-' + fence[1];
+      if (!exists(path)) return true;
+      if (!noRoot) return false;
+      var fd = openDir(path);
+      return (
+        fs.readdirSync(at(fd)).every(function (name) {
+          if (name !== fence[2] && fence[3].indexOf(name) === -1) return false;
+          owned(fs.lstatSync(at(fd, name)), false);
+          return true;
+        }) && cancelled(fence[0], json(fd, fence[2]))
+      );
     })
   );
 }
@@ -662,8 +759,7 @@ async function compositorStock(capture) {
   });
   return proof;
 }
-async function absent() {
-  if (exists(bootRoot)) throw Error('boot-session-remains');
+async function installedApps() {
   var inventory;
   try {
     inventory = (await rpc('com.webos.applicationManager/dev/listApps', {}))
@@ -672,6 +768,11 @@ async function absent() {
     if (error.message !== 'cleanup-readback-unavailable') throw error;
     inventory = (await rpc('com.webos.applicationManager/listApps', {})).apps;
   }
+  return inventory;
+}
+async function absent() {
+  if (exists(bootRoot)) throw Error('boot-session-remains');
+  var inventory = await installedApps();
   if (
     !Array.isArray(inventory) ||
     inventory.some(function (a) {
@@ -1200,6 +1301,39 @@ function retireHostStages() {
     retire(stage, null, null, true, true);
   });
 }
+async function removeInstallerTile() {
+  const tile = 'io.github.razdva122.cytvinstaller';
+  const prefix = '/media/developer/apps/usr/palm/';
+  async function tileAbsent() {
+    const inventory = await installedApps();
+    if (
+      !Array.isArray(inventory) ||
+      inventory.some(function (app) {
+        return !object(app) || typeof app.id !== 'string';
+      })
+    )
+      throw Error('cleanup-readback-malformed');
+    return (
+      !inventory.some(function (app) {
+        return app.id === tile;
+      }) &&
+      !exists(prefix + 'applications/' + tile) &&
+      !exists(prefix + 'packages/' + tile)
+    );
+  }
+  if (await tileAbsent()) return;
+  await rpc('com.webos.appInstallService/dev/remove', {
+    id: tile,
+    subscribe: false
+  });
+  const deadline = Date.now() + 45000;
+  while (!(await tileAbsent())) {
+    if (Date.now() >= deadline) throw Error('package-absence-unverified');
+    await new Promise(function (resolve) {
+      setTimeout(resolve, 500);
+    });
+  }
+}
 function completion() {
   return {
     operation: id,
@@ -1362,6 +1496,7 @@ function canRecheckBoot() {
       packageReceipts();
       if (
         mode === 'verify' ||
+        mode === 'remove-installer' ||
         mode === 'finalize' ||
         record.final_fence === lease.id ||
         record.stage === 'verified-clean'
@@ -1387,6 +1522,7 @@ function canRecheckBoot() {
         // Keep all original lock inodes and receipts untouched.
         retireHostStages();
         await absent();
+        if (mode === 'remove-installer') await removeInstallerTile();
         if (
           pendingFinal ||
           ((mode === 'finalize' || mode === 'finish') && !record.final_fence)

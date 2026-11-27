@@ -578,7 +578,8 @@ def _run(args, ask, write, connect, secret, search, inspect, payload_root, check
         check_doctor_payload = root_doctor and (
             payload_root is not None or getattr(sys, 'frozen', False) or (payload / 'payload.json').exists()
         )
-        if not partial and (check_doctor_payload or (profile.get('root_variant') and args.command not in ('ssh-command', 'debloat')) or args.command in (
+        check_removal_payload = (args.command == 'uninstall' and (payload / 'payload.json').is_file())
+        if not partial and (check_doctor_payload or check_removal_payload or (profile.get('root_variant') and args.command not in ('ssh-command', 'debloat')) or args.command in (
                 'install', 'enable-system-updates', 'enable-firmware-access',
                 'disable-firmware-access', 'repair-root-recovery', 'replace-system-updater')):
             if root_doctor:
@@ -811,6 +812,9 @@ def _run(args, ask, write, connect, secret, search, inspect, payload_root, check
                 home_pending = False
                 resume = False
                 pending = store.pending(profile)
+                if manifest.get('single_tile') and (reinstall_step or profile.get('root_variant')):
+                    raise UserError('Use the installer for the installed Clean Your TV version.',
+                                    reason_code='pending-operation')
                 if reinstall_step and reinstall_step.stage in ('removing', 'verified'):
                     phase = 'remove-existing-root'
                     if reinstall_step.stage == 'verified':
@@ -824,6 +828,18 @@ def _run(args, ask, write, connect, secret, search, inspect, payload_root, check
                         raise UserError('The saved Root reinstallation changed. Return to the start screen and check again.')
                     pending = None
                 continue_after_cleanup = bool(reinstall_step and reinstall_step.stage == 'removed')
+                if manifest.get('single_tile') and not pending and not reinstall_step:
+                    if profile['edition'] == 'root':
+                        from .single_tile_root import handoff
+                        return handoff(installer, write, ask, non_interactive=args.non_interactive)
+                    # Both Android and desktop pass through this admission before
+                    # offering destructive reinstallation or initiating pairing.
+                    from .single_tile_setup import select_source
+                    source = select_source(installer, write, ask, non_interactive=args.non_interactive)
+                    if source == 'maintained':
+                        return 0
+                    if not source:
+                        return 130
                 replacing_activation = (profile['edition'] == 'root' and pending
                     and pending.get('action') == 'activate-root'
                     and not reinstall_step
@@ -920,6 +936,8 @@ def _run(args, ask, write, connect, secret, search, inspect, payload_root, check
                         write.root_reinstall()
                 if not reinstall and not resume and not continue_after_cleanup:
                     phase = 'inspect-installation'
+                    if manifest.get('single_tile') and profile['edition']=='no-root' and profile.get('connection')=='root-ssh':
+                        write('Setup installs Clean Your TV and prepares updates and rollback on this TV.')
                     write.heading('Versions on the TV → versions in this installer')
                     for row in installer.version_summary():
                         write(row)
@@ -1045,6 +1063,7 @@ def _run(args, ask, write, connect, secret, search, inspect, payload_root, check
                              'Installing Root Updater and preparing rollback…': 'install-root-updater',
                              'Checking Root Updater…': 'verify-root-updater',
                              'Checking Root recovery…': 'verify-root-recovery',
+                             'Preparing updates for every TV component…': 'enable-system-updates',
                              'Stopping the old Home Helper…': 'stop-old-helper',
                              'Turning on Root Home control…': 'activate-root',
                              'Opening Clean Your TV Home…': 'launch-root',
@@ -1104,6 +1123,8 @@ def _run(args, ask, write, connect, secret, search, inspect, payload_root, check
                     if result.get('activation_cancelled') is not True:
                         write('Packages installed. Home Helper launch requested.')
                     if profile.get('connection') == 'root-ssh':
+                        if result.get('system_updates') is True:
+                            write('Update Clean Your TV from Settings on the TV.')
                         write('No-root is installed using root SSH. Keep this saved connection for status, recovery and removal.')
                     else:
                         write('Emergency exit: three short Home presses within two seconds. Keep Developer Mode active. The computer can now be switched off.')

@@ -10,6 +10,23 @@ from cytv.errors import UserError, TVCommandError
 
 
 class ContextTests(unittest.TestCase):
+    def test_homebrew_report_uses_the_existing_issue_draft_with_real_phase_and_reasons(self):
+        report = {
+            'schema': 1, 'frontend': 'homebrew', 'action': 'install', 'edition': 'root',
+            'cytv_version': '0.24.3', 'homebrew': {'versions': {'installer': '0.1.0'}},
+            'phase': 'root-deploy', 'reason_code': 'installation_requires_recovery',
+        }
+        draft = diagnostics.issue_draft(report)
+        self.assertIn('root deploy (installation requires recovery)', draft['title'])
+        self.assertIn('root-deploy', draft['body'])
+        self.assertIn('0.1.0', draft['body'])
+        retained = diagnostics.issue_draft(dict(
+            report, phase='product-state', reason_code='retained_operation'
+        ))
+        self.assertIn('product state (retained operation)', retained['title'])
+        invalid = diagnostics.issue_draft(dict(report, phase='private-key', reason_code='private-password'))
+        self.assertNotIn('private', json.dumps(invalid))
+
     def test_root_inventory_summary_excludes_untrusted_details(self):
         report=self.report('install','read-inventory',UserError('PRIVATE'),tv_info={'root_inventory':{
             'applications':'read','inputs':'unavailable','raw':'PRIVATE'}})
