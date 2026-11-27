@@ -267,8 +267,13 @@ jobs:
           QT_QPA_PLATFORM: offscreen
           GH_TOKEN: ${{ github.token }}
         run: python scripts/ci-test-evidence.py plan --kind desktop --os "${{ matrix.os }}" --units installer-host --directory "${{ runner.temp }}/ci-evidence"
+      - name: Test Intel macOS desktop installer host behavior in parallel
+        if: steps.evidence.outputs.fresh == 'true' && matrix.os == 'macos-15-intel'
+        run: bash scripts/test-intel-installer.sh "$RUNNER_TEMP/test-timings"
+        env:
+          QT_QPA_PLATFORM: offscreen
       - name: Test desktop installer host behavior
-        if: steps.evidence.outputs.fresh == 'true'
+        if: steps.evidence.outputs.fresh == 'true' && matrix.os != 'macos-15-intel'
         run: python scripts/test-shard.py -s tests/cytv -v --timings "${{ runner.temp }}/test-timings/cytv.json"
         env:
           QT_QPA_PLATFORM: offscreen
