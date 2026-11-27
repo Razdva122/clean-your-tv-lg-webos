@@ -3,6 +3,7 @@
 # Sent to the existing TV Python over SSH stdin. Only EVIOCGNAME and
 # EVIOCGBIT(EV_KEY) are queried. Keep the matching descriptor through both.
 PROBE = """
+import errno
 import fcntl
 import os
 import stat
@@ -12,13 +13,32 @@ def query(fd, number, size):
     fcntl.ioctl(fd, 0x80000000 | (size << 16) | (ord('E') << 8) | number, buffer, True)
     return buffer
 
+def unregistered_character_node(path):
+    if not os.path.isdir('/sys/dev/char'):
+        return False
+    info = os.lstat(path)
+    if not stat.S_ISCHR(info.st_mode):
+        return False
+    device = '/sys/dev/char/%d:%d' % (os.major(info.st_rdev), os.minor(info.st_rdev))
+    try:
+        os.lstat(device)
+    except FileNotFoundError:
+        return True
+    return False
+
 def observe():
     match = None
     try:
         for entry in os.listdir('/dev/input'):
             if not entry.startswith('event'):
                 continue
-            fd = os.open('/dev/input/' + entry, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC)
+            path = '/dev/input/' + entry
+            try:
+                fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC)
+            except OSError as error:
+                if error.errno == errno.ENXIO and unregistered_character_node(path):
+                    continue
+                raise
             try:
                 if not stat.S_ISCHR(os.fstat(fd).st_mode):
                     return 'unavailable'

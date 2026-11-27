@@ -52,7 +52,9 @@ subscribing. Missing APIs leave Home with LG and prevent guardian activation.
 During a fresh Root Doctor preflight, the installer uses the existing TV Python
 to open input devices read-only and query their names. For exactly one
 `LGE M-RCU - Builtin [0]`, it queries the advertised Home (773) and Back (412)
-bits on that same descriptor. The saved report records `tv.root_mrcu_probe`
+bits on that same descriptor. It skips a stale character node only when the
+open returns `ENXIO` and sysfs confirms there is no registered device. The
+saved report records `tv.root_mrcu_probe`
 with state `unique` and boolean `home` and `back` fields. Other states are
 `missing`, `ambiguous` and `unavailable`. An absent field means no observation
 was recorded. The probe reads no events and requires no keypress or deployment.
