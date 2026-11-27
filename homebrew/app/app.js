@@ -17,6 +17,7 @@
     operationEdition = null,
     poll = null,
     busy = false,
+    refreshing = false,
     confirmation = null,
     opener = null,
     screen = 'checking',
@@ -819,7 +820,7 @@
   function refresh(focusId) {
     if (busy) return;
     if (cleanOperation) return requestClean('cleanStatus');
-    busy = true;
+    busy = refreshing = true;
     clearTimeout(poll);
     var previous = doc.activeElement && doc.activeElement.id;
     var read;
@@ -905,7 +906,7 @@
       })
       .then(
         function () {
-          busy = false;
+          busy = refreshing = false;
           if (!operation && !job && !inspected.active_operation) {
             var installedEdition = managedHome(inspected)
               ? 'root'
@@ -925,7 +926,7 @@
           focus(typeof focusId === 'string' ? focusId : previous);
         },
         function (error) {
-          busy = false;
+          busy = refreshing = false;
           accessDenied = error.message === 'homebrew_exec_denied';
           transportFailure = failureCode(error, 'inspect');
           if (operation) {
@@ -1247,10 +1248,11 @@
   });
   doc.addEventListener('webOSRelaunch', function (event) {
     if (root.CYTVTileLaunch.openDebloat(event)) return;
+    // webOS can show setup and start a status read just before a tile relaunch.
     if (
       !cleanOperation &&
       !operation &&
-      !busy &&
+      (!busy || refreshing) &&
       !confirmation &&
       !root.CYTVTileLaunch.maintenanceRequested(event)
     ) {

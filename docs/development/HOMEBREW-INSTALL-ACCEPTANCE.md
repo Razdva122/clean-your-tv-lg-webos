@@ -744,3 +744,123 @@ or replaced with reused device results. The fixed progress and deliberate
 pairing refusal passed on C3. No-root foreground routing remains an open
 acceptance issue. This run used development artifacts and does not select
 or accept a release IPK.
+
+#### C3 diagnosis and routing retest (2026-11-27)
+
+HB-FALLBACK-04 is the affected case. The previous exit has four observed
+passes and one observed routing failure. Keep those four passes as prior
+evidence. Reuse the matched No-root fixture for diagnosis because the failed
+run did not record the system's window activation events or prove why even a
+direct launch stayed behind LG Home. The exact failed-state package set is no
+longer installed after its verified removal.
+
+| Case | Selected check |
+| --- | --- |
+| HB-ROUTE-01 | Identify the common failed foreground handoff. Capture bounded application, window and Helper evidence and compare it with a control. |
+| HB-ROUTE-02 | Verify the corrected tile launch and stable No-root Home foreground on the same C3. |
+| HB-ROUTE-03 | Launch Media Player, send one network HOME, and verify the No-root Home foreground after one second. |
+| HB-ROUTE-04 | Return the QA device to a safe LG Home state after the checks. Preserve any relevant recovery evidence. |
+
+Both routes request the same application through the webOS Application
+Manager. The tile opens recovery if its accepted launch leaves the tile
+visible past the handoff deadline. The previous direct launch also left
+LG Home in front, so the two routes need an on-device window trace.
+
+The comparable Global C3 factory image 43.21.71.01, o22n, SDK 11.2.0-3701
+was extracted after checking the archive CRC, embedded EPK SHA-256
+`1fbc7638893293480481d7bbb73994c9ce306046dc5f43feeebab8cf8ca0c602` and
+302 image signatures. The official regional download for this model
+returned an authorization error. The comparable image shows separate
+SAM options for hiding splash and launching an app in the background.
+Both Clean Your TV routes use an ordinary launch. SAM and the surface
+manager expose the active CARD separately from the renderer's visibility.
+The current factory stack uses Weston and Flutter System UI. The older
+factory JavaScript replay for the IR Home case does not exercise this
+stack or reproduce a live compositor handoff.
+
+The previous 205,955,916-byte fixture was installed through stock
+Homebrew 0.8.0 and matched all 325 installed files again. For the
+HB-ROUTE-01 control, only the fixture's FHD No-root Home was installed
+temporarily. Its launcher IPK SHA-256 was
+`c5945e4c89b96cc9db7033c059bb9154052ec4a7ff3e67afd3919d80b0bb8f6b`.
+The existing paired desktop connection supplied the same inventory
+personalization used in production. SAM and the surface manager both
+reported the No-root CARD after a cold direct launch from Media Player,
+then after a warm and a cold direct launch from LG Home. The latter
+two became foreground at roughly 0.9 and 3.6 seconds. The renderer was
+visible and focused in all three controls. The standalone package was
+removed and the registry returned to the installer-only baseline.
+
+The new full Homebrew attempt reached native pairing after reserving a
+new operation. The native request returned `pairing-rejected`. The
+compositor trace recorded a system UI overlay followed by the screen
+saver, with the installer still the underlying CARD. No product package
+was installed by that operation. Its original receipt remains available
+to continue after owner approval.
+
+The temporary Homebrew catalog and its staged files were removed. One
+paired network HOME from stable Media Player opened LG Home and stayed
+there. Only the Installer and its saved operation remain. No component
+changes were made in this diagnostic pass.
+
+| Case | Current result |
+| --- | --- |
+| HB-ROUTE-01 | Direct launch controls passed. The original full-installation foreground failure remains unconfirmed in the new trace because a fresh owner-approved pairing is required. |
+| HB-ROUTE-02 | Blocked before the No-root packages and verified setup receipt are available. The installer is still waiting for native pairing approval. |
+| HB-ROUTE-03 | Blocked at the same prerequisite. The Helper is absent, so the observed stock HOME cannot verify No-root routing. |
+| HB-ROUTE-04 | Pass for safe return to LG Home with the original setup available to continue. |
+
+Exit reconciliation against the four selected cases above: one observed
+pass, three cases blocked on the same pairing prerequisite, and zero new
+observed routing failures, reused passes, approved deferrals or
+independent untested cases. The historical HB-FALLBACK-04 failure
+remains open. Resume the saved operation before repeating the two
+routing cases.
+
+##### Resume after native pairing approval
+
+The same saved operation resumed and completed after the owner chose Allow
+in the webOS prompt. Home 1.22.0, Helper 0.11.0, Ambient 0.0.7 and System
+Updater 1.2.11 were present. The worker verified package files,
+configuration and the updater, and observed the running Helper. The
+installer displayed the installed screen and bound daily use to No-root.
+
+On the original fixture, a single paired network HOME from stable Media
+Player showed LG Home at 0.33 seconds, then the No-root CARD at 0.59
+seconds. No-root held foreground and had document focus. The daily tile
+launched from LG Home twice stayed on `setup.html#maintenance` instead.
+On the captured relaunch, the visibility event started a status read 8 ms
+before the ordinary `webOSRelaunch` event. The read completed about 11
+seconds later. The busy guard had already discarded the ordinary relaunch.
+
+The regression test reproduces the visibility-first ordering with the
+status read in flight. An ordinary relaunch can now use the saved edition
+while status is refreshing. Confirmation, saved install/removal requests
+and explicit maintenance still keep setup in control.
+
+The recheck changes only the compiled installer `app.js` compared to
+the selected original fixture. The development IPK is 205,955,958 bytes,
+SHA-256 `cfefdf068be7dd1e52d58866439802f415a9b86ba2281a7b1f0d6987c354af17`.
+The original product installation and native pairing already establish
+the unchanged payload. Update just the installer for the two routing
+checks and verify the updated file digests before launching it.
+
+The development update used the TV package manager and preserved the
+installed product. The transferred IPK matched its SHA-256, and all 325
+installed application files matched the new archive. The source and
+packaged UI browser suites and TV web compatibility check passed.
+
+| Case | Result after resuming |
+| --- | --- |
+| HB-ROUTE-01 | Pass for the reproduced daily-tile blocker. The application visibility event started a status read that suppressed the normal relaunch. The older result where a direct launch stayed behind LG Home remains a separate, unreproduced observation. |
+| HB-ROUTE-02 | Pass on the updated IPK. The ordinary tile opened from LG Home, and No-root Home reached foreground after about 0.68 seconds and kept focus. The installer navigated to `index.html` without rendering recovery. |
+| HB-ROUTE-03 | Pass on the updated IPK. One paired network HOME from stable Media Player reached No-root Home after about 0.32 seconds. |
+| HB-ROUTE-04 | Reuse the safe LG Home return demonstrated before pairing resumed. This focused follow-up left the successfully installed No-root Home in front for the owner. |
+
+For both routes the TV reported the No-root CARD as the primary surface,
+with a ready, visible and focused document. No-root stayed in front for
+the independent stability check. The exit reconciliation covers four
+selected cases with three observed passes and one reused pass. Zero
+selected cases are blocked, deferred or independently untested. This
+checks development routing on the forced No-root fixture. It does not
+select a catalog candidate or verify physical Magic Remote timing.

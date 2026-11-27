@@ -401,9 +401,26 @@ const SOURCE_APP = path.resolve(__dirname, '../app'),
       ),
       1
     );
+    // C3 makes setup visible and starts a status read before sending relaunch.
+    await fallback.page.evaluate(() => {
+      window.InstallerBridge.inspect = function () {
+        window.visibilityRefreshStarted = true;
+        return new Promise(() => {});
+      };
+      document.dispatchEvent(new Event('visibilitychange'));
+      if (window.visibilityRefreshStarted !== true)
+        throw new Error('Visibility did not start a status read');
+      document.dispatchEvent(
+        new CustomEvent('webOSRelaunch', {
+          detail: { params: { cytvMaintenance: true } }
+        })
+      );
+    });
+    assert.equal(new URL(fallback.page.url()).pathname, '/setup.html');
     await Promise.all([
       fallback.page.waitForRequest(
-        (request) => new URL(request.url()).pathname === '/index.html'
+        (request) => new URL(request.url()).pathname === '/index.html',
+        { timeout: 3000 }
       ),
       fallback.page.evaluate(() =>
         document.dispatchEvent(new Event('webOSRelaunch'))
