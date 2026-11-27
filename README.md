@@ -221,6 +221,7 @@ and historical [1.5.0 TV acceptance and limits](docs/RELEASE-1.5.0.md).
 | ✅ | 50NANO756PA · No-root | 6; SDK 6.5.3 |
 | ✅ | OLED55B19LA · No-root | 6; SDK 6.5.3 |
 | ✅ | OLED65C1PSA · Root | SDK 6.5.3 |
+| ✅ | OLED65C11LB · Root | SDK 6.5.3 |
 | ✅ | OLED65G19LA · No-root | SDK 6.5.3 |
 | ✅ | OLED77C12LA · No-root | SDK 6.5.3 |
 | ❔ | 43UP751C0ZF · No-root | SDK 6.5.3 |
@@ -247,6 +248,7 @@ and historical [1.5.0 TV acceptance and limits](docs/RELEASE-1.5.0.md).
 | Home | TV · Edition | Reported webOS |
 | :---: | --- | --- |
 | ✅ | OLED55G36LA · No-root | SDK 9.2.2 |
+| ✅ | OLED65C27LA · Root | 9.2.1-2617 |
 | ❔ | OLED55C37LA · Root | 24; SDK 9.2.1 |
 
 </details>
@@ -304,7 +306,6 @@ and historical [1.5.0 TV acceptance and limits](docs/RELEASE-1.5.0.md).
 | ❔ | OLED65C2PUA · No-root | Not reported |
 | ❔ | OLED65C3LA · No-root | Not reported |
 | ❔ | OLED65C3PUA · No-root | Not reported |
-| ❔ | OLED65C11LB · Root | Not reported |
 | ❔ | UN70006LA · No-root | Not reported |
 
 </details>
