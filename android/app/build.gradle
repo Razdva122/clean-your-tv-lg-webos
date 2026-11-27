@@ -16,8 +16,8 @@ android {
         applicationId 'com.cleanyourtv.android'
         minSdk 24
         targetSdk 35
-        versionCode 56
-        versionName '0.23.3'
+        versionCode 57
+        versionName '0.23.4'
         testInstrumentationRunner 'com.cleanyourtv.android.OperationChecks'
         ndk { abiFilters 'arm64-v8a' }
     }
