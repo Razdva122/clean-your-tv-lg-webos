@@ -504,7 +504,8 @@
         }
       );
     });
-    disclosure(destination, personalControls, 'Add a file');
+    if (root.PilotHome) personalControls.hidden = true;
+    else disclosure(destination, personalControls, 'Add a file');
   }
   function refreshPersonal() {
     if (!personalControls) return;

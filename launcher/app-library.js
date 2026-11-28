@@ -109,18 +109,9 @@
     if (storage.getItem(usageKey) !== value)
       throw Error('Usage preference not saved');
   }
-  function create(storage, inventory, config, readInputs, packaged) {
-    var catalog = clean(inventory),
-      hidden = unique(config.hiddenApps || []),
-      ids,
-      saved,
-      showAddApp = true,
-      catalogConfirmed = false;
-    var usage = readUsage(storage),
-      usageSorted = usage.enabled,
-      counts = Object.create(null);
+  function readLayout(storage) {
     try {
-      saved = JSON.parse(storage.getItem(KEY));
+      var saved = JSON.parse(storage.getItem(KEY));
       if (
         !saved ||
         saved.version !== 1 ||
@@ -128,10 +119,22 @@
         !Array.isArray(saved.hidden) ||
         !Array.isArray(saved.catalog)
       )
-        saved = null;
+        return null;
+      return saved;
     } catch (_) {
-      saved = null;
+      return null;
     }
+  }
+  function create(storage, inventory, config, readInputs, packaged, options) {
+    var catalog = clean(inventory),
+      hidden = unique(config.hiddenApps || []),
+      ids,
+      saved = readLayout(storage),
+      showAddApp = true,
+      catalogConfirmed = false;
+    var usage = readUsage(storage),
+      usageSorted = usage.enabled,
+      counts = Object.create(null);
     if (saved) {
       showAddApp = saved.showAddApp !== false;
       catalogConfirmed = saved.catalogConfirmed === true;
@@ -140,6 +143,12 @@
       );
       hidden = unique(saved.hidden);
       ids = unique(saved.ids);
+    } else if (options && Array.isArray(options.initialIds)) {
+      ids = unique(options.initialIds);
+      catalog.forEach(function (app) {
+        if (ids.indexOf(app.id) < 0 && hidden.indexOf(app.id) < 0)
+          hidden.push(app.id);
+      });
     } else {
       var legacy;
       try {
@@ -358,14 +367,15 @@
         if (authoritative) {
           catalogConfirmed = true;
           try {
-            save(
-              ids.filter(function (id) {
+            // Launch points describe what can be opened now. A missing launch
+            // point can reappear later in the owner's existing position.
+            if (options && options.retainMissingIds) save(ids, hidden);
+            else {
+              var stillInstalled = function (id) {
                 return inputId(id) || installedIds.indexOf(id) >= 0;
-              }),
-              hidden.filter(function (id) {
-                return inputId(id) || installedIds.indexOf(id) >= 0;
-              })
-            );
+              };
+              save(ids.filter(stillInstalled), hidden.filter(stillInstalled));
+            }
           } catch (error) {
             catalog = previous;
             catalogConfirmed = previousConfirmed;
@@ -459,6 +469,7 @@
     create: create,
     installed: installed,
     key: KEY,
+    readLayout: readLayout,
     replaceFallbackIcons: replaceFallbackIcons,
     setUsageSort: function (storage, enabled) {
       writeUsage(storage, enabled, readUsage(storage).counts);

@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Clean Your TV Home</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header>
+      <div class="brand"><img src="icon.png" alt="" />Clean Your TV</div>
+      <button id="back" hidden></button>
+    </header>
+    <main>
+      <h1 id="title"></h1>
+      <p id="notice" role="status" aria-live="polite"></p>
+      <section id="pairArea" class="panel">
+        <h2 id="pairHeading"></h2>
+        <p id="pairStatus"></p>
+        <div class="actions">
+          <button id="pair" class="primary"></button
+          ><button id="pairAgain"></button
+          ><button id="retry" class="primary"></button
+          ><button id="cancelPair"></button><button id="later"></button>
+        </div>
+        <p id="storageStatus"></p>
+        <button id="probe"></button>
+      </section>
+      <section id="startupArea" class="panel" hidden>
+        <h2 id="startupHeading"></h2>
+        <p id="startupStatus" aria-live="polite"></p>
+        <div class="actions">
+          <button id="enableStartup"></button><button id="stop"></button>
+        </div>
+      </section>
+    </main>
+    <script src="app.js"></script>
+  </body>
+</html>

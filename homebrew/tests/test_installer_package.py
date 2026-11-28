@@ -175,6 +175,21 @@ class InstallerPackageTests(unittest.TestCase):
                     with self.assertRaises(ValueError):
                         verify(folder)
 
+    def test_stage_original_desktop_packages_without_rebuilding(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            desktop = root / 'desktop'
+            desktop.mkdir()
+            manifest = self.no_root_payload(desktop)
+            with self.assertRaisesRegex(ValueError, 'single-tile desktop payload'):
+                build.stage_no_root_payload(root, root / 'legacy', root, desktop)
+            manifest['single_tile'] = dict(package.TILE_FILES, version='1.2.3')
+            (desktop / 'payload.json').write_text(json.dumps(manifest))
+            out = root / 'out'
+            build.stage_no_root_payload(root, out, root, desktop)
+            for name in build.NO_ROOT_FILES:
+                self.assertEqual((desktop / name).read_bytes(), (out / name).read_bytes(), name)
+
     def test_no_root_runtime_stages_a_pure_python_websocket_client_and_license(self):
         stage = getattr(build, 'stage_websockets', None)
         self.assertIsNotNone(stage, 'Missing No-root Python dependency staging')

@@ -89,6 +89,8 @@ node tests/renewal-storage.cjs
 node tests/renewal-diagnostics.cjs
 node tests/settings-diagnostics.cjs
 node tests/helper-entry.cjs
+node --test single-home/tests/{pairing,service,storage,product-bootstrap}.cjs
+"$PYTHON" single-home/tests/product_package.py
 node tests/helper-service-status.cjs
 node tests/helper-published-ui.cjs
 node --test tests/screensaver-{policy,controller,lg,helper,transport,idle,media,settings,native,native-wiring}.cjs root-edition/service/test-screensaver{,-register}.cjs

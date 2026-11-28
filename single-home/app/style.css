@@ -1,0 +1,129 @@
+* {
+  box-sizing: border-box;
+}
+[hidden] {
+  display: none !important;
+}
+html {
+  background: #141a20;
+  color: #f7f5ec;
+  font:
+    1.65vw/1.35 'LG Smart UI',
+    'Segoe UI',
+    Arial,
+    sans-serif;
+}
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: radial-gradient(
+    ellipse at 95% 0%,
+    #29383b 0%,
+    #192125 47%,
+    #12181c 85%
+  );
+}
+header,
+.brand,
+.actions {
+  display: flex;
+  align-items: center;
+}
+header {
+  margin: 0 5vw;
+  padding: 2.2vw 0 1.5vw;
+  justify-content: space-between;
+  border-bottom: 1px solid #50605e;
+}
+.brand {
+  font-size: 1.55vw;
+  font-weight: 600;
+}
+.brand img {
+  width: 3.8vw;
+  height: 3.8vw;
+  margin-right: 1vw;
+  border-radius: 0.85vw;
+}
+main {
+  padding: 2vw 5vw 4.5vw;
+}
+h1,
+h2,
+p {
+  margin: 0;
+}
+h1 {
+  font-size: 4.4vw;
+  line-height: 1.1;
+  font-weight: 500;
+  letter-spacing: -0.12vw;
+  margin-bottom: 1.8vw;
+}
+h2 {
+  font-size: 2.15vw;
+  font-weight: 600;
+}
+p {
+  font-size: 1.5vw;
+  line-height: 1.4;
+  color: #c7d0ca;
+}
+#notice:empty {
+  display: none;
+}
+#notice {
+  margin: 0 0 1.1vw;
+  padding-left: 0.8vw;
+  border-left: 0.22vw solid #f4ca86;
+  color: #ffe0ad;
+}
+.panel {
+  background: #26323a;
+  border: 1px solid #536260;
+  border-radius: 1.1vw;
+  padding: 1.45vw 1.8vw;
+  margin-bottom: 1vw;
+  max-width: 90vw;
+}
+.panel p {
+  margin: 0.45vw 0 1vw;
+}
+#storageStatus {
+  font-size: 1.25vw;
+  margin: 0.85vw 0 0.5vw;
+}
+#storageStatus:empty {
+  display: none;
+}
+button {
+  font: inherit;
+  font-size: 1.4vw;
+  font-weight: 600;
+  text-align: left;
+  color: #f8f7ef;
+  background: #3a474e;
+  border: 0.13vw solid #5a6668;
+  border-radius: 0.6vw;
+  padding: 0.65vw 1.2vw;
+  min-height: 3.15vw;
+  cursor: pointer;
+}
+button.primary {
+  background: #cdeed5;
+  color: #17261c;
+  border-color: #cdeed5;
+}
+button:focus {
+  outline: 0.23vw solid #fff8c9;
+  outline-offset: 0.2vw;
+}
+button:disabled {
+  opacity: 0.45;
+}
+.actions {
+  flex-wrap: wrap;
+}
+.actions button {
+  margin: 0 0.65vw 0.25vw 0;
+}

@@ -128,7 +128,7 @@ class HomebrewReleaseIntegration(HomebrewFixture, unittest.TestCase):
             folder=Path(directory);(folder/'homebrew-candidate').mkdir()
             (folder/'homebrew-candidate'/self.url.rsplit('/',1)[1]).write_bytes(self.raw)
             output=folder/'out';output.mkdir()
-            self.assertIsNone(self.assemble['assemble_homebrew'](folder,output,None))
+            self.assertIsNone(self.assemble['assemble_homebrew'](folder,output,None,{}))
             self.assertEqual(list(output.iterdir()),[])
     def test_accepted_assembly_and_carry_forward_preserve_original_immutable_url(self):
         metadata=self.manifest();raw=encoded(metadata);approval=self.accepted(metadata)
@@ -137,7 +137,7 @@ class HomebrewReleaseIntegration(HomebrewFixture, unittest.TestCase):
             (candidate/self.url.rsplit('/',1)[1]).write_bytes(self.raw)
             (candidate/'homebrew-manifest.json').write_bytes(raw)
             output=folder/'out';output.mkdir()
-            result=self.assemble['assemble_homebrew'](folder,output,approval)
+            result=self.assemble['assemble_homebrew'](folder,output,approval,{})
             self.assertEqual(result,approval)
             files={'homebrew-manifest.json':raw,self.url.rsplit('/',1)[1]:self.raw}
             current={};target=folder/'next';target.mkdir()
@@ -147,6 +147,39 @@ class HomebrewReleaseIntegration(HomebrewFixture, unittest.TestCase):
             self.assertEqual(json.loads(carried['homebrew-manifest.json'])['ipkUrl'],self.url)
             # Orphan assets from releases with no approved provenance are never adopted.
             self.assertEqual(self.prepare['prepare_homebrew']({}, {},lambda name:self.fail('orphan fetched'),lambda name:self.fail('orphan fetched')),{})
+    def test_no_root_release_rejects_different_desktop_bytes_before_copy(self):
+        from homebrew.tests.test_installer_package import InstallerPackageTests
+        from homebrew.build import NO_ROOT_FILES
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp).resolve()
+            desktop = folder / 'desktop'
+            desktop.mkdir()
+            InstallerPackageTests().no_root_payload(desktop)
+            reference = {p.name: p.read_bytes() for p in desktop.iterdir()}
+            files = fixture()
+            prefix = APP_PREFIX + 'payload/'
+            files.update({prefix + 'no-root/' + name: raw for name, raw in reference.items()})
+            manifest = json.loads(files[prefix + 'manifest.json'])
+            manifest['files'].update(inventory({'no-root/' + name: raw for name, raw in reference.items()}))
+            files[prefix + 'manifest.json'] = encoded(manifest)
+            self.raw = ipk(files)
+            candidate = folder / 'homebrew-candidate'
+            candidate.mkdir()
+            metadata = self.manifest()
+            approval = self.accepted(metadata)
+            (candidate / self.url.rsplit('/', 1)[1]).write_bytes(self.raw)
+            (candidate / 'homebrew-manifest.json').write_bytes(encoded(metadata))
+            out = folder / 'result'
+            out.mkdir()
+            assemble = self.assemble['assemble_homebrew']
+            other = dict(reference)
+            other['helper.ipk'] += b'changed'
+            other['payload.json'] = encoded({'files': {name: digest(other[name]) for name in NO_ROOT_FILES}})
+            with self.assertRaisesRegex(ValueError, 'Homebrew differs from desktop: helper.ipk'):
+                assemble(folder, out, approval, other)
+            self.assertEqual(list(out.iterdir()), [])
+            self.assertEqual(assemble(folder, out, approval, reference), approval)
+
     def test_carried_assets_and_changed_version_require_approval(self):
         metadata=self.manifest();raw=encoded(metadata);approval=self.accepted(metadata)
         with tempfile.TemporaryDirectory() as directory:

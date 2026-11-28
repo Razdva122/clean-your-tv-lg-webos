@@ -378,29 +378,31 @@
           }
           row.appendChild(installedActions(item));
         });
-        var actions = node('div');
-        actions.className = 'theme-picker-actions';
-        card.insertBefore(actions, installed);
-        function entryAction(label, description, fn, id) {
-          var b = button(label, fn, id);
-          b.className = 'theme-entry-action';
-          var detail = node('small', description);
-          b.appendChild(detail);
-          actions.appendChild(b);
+        if (!root.PilotHome) {
+          var actions = node('div');
+          actions.className = 'theme-picker-actions';
+          card.insertBefore(actions, installed);
+          function entryAction(label, description, fn, id) {
+            var b = button(label, fn, id);
+            b.className = 'theme-entry-action';
+            var detail = node('small', description);
+            b.appendChild(detail);
+            actions.appendChild(b);
+          }
+          entryAction(
+            'Theme showcase',
+            'Community themes',
+            catalog,
+            'themeCatalog'
+          );
+          entryAction(
+            'Receive from computer',
+            'Send a theme from your computer',
+            receivePush,
+            'themeReceive'
+          );
+          entryAction('Add by ID', 'Theme ID', urlForm, 'themeAddUrl');
         }
-        entryAction(
-          'Theme showcase',
-          'Community themes',
-          catalog,
-          'themeCatalog'
-        );
-        entryAction(
-          'Receive from computer',
-          'Send a theme from your computer',
-          receivePush,
-          'themeReceive'
-        );
-        entryAction('Add by ID', 'Theme ID', urlForm, 'themeAddUrl');
         if (!inlineHost) button('Back', close);
         var selected = Array.prototype.slice
           .call(installed.querySelectorAll('button[data-theme-id]'))

@@ -1,0 +1,10 @@
+{
+  "id": "io.github.razdva122.cytvhomepilot.service",
+  "description": "Clean Your TV pairing and background startup",
+  "services": [{ "name": "io.github.razdva122.cytvhomepilot.service" }],
+  "requiredACG": [
+    "activity.operation",
+    "database.operation",
+    "securitykey.operation"
+  ]
+}

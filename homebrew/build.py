@@ -109,15 +109,58 @@ def verify_no_root_payload(root):
     return manifest
 
 
-def stage_no_root_payload(project, output, scratch):
-    versions = json.loads(read_file(project / 'release-versions.json'))
-    stage_packages = runpy.run_path(str(project / 'scripts/build-cytv.py'))['stage_no_root_packages']
-    output.mkdir()
-    stage_packages(output, scratch, versions, single_tile=True, scratch=scratch)
+def desktop_components(desktop):
+    """Read only the canonical No-root installation inputs from a desktop payload."""
+    desktop = Path(desktop)
+    return {name: read_file(desktop / name) for name in sorted(NO_ROOT_FILES | {'payload.json'})}
+
+
+def desktop_component_hashes(components):
+    manifest = json.loads(components['payload.json'])
+    expected = manifest['files']
+    hashes = {}
+    for name in sorted(NO_ROOT_FILES):
+        if name not in components:
+            raise ValueError('Desktop payload is missing ' + name)
+        digest = hashlib.sha256(components[name]).hexdigest()
+        if expected.get(name) != digest:
+            raise ValueError('Desktop manifest mismatch: ' + name)
+        hashes[name] = digest
+    return hashes
+
+
+def desktop_parity(components, installer_contents):
+    hashes = desktop_component_hashes(components)
+    mismatched = [name for name in hashes
+                  if components[name] != installer_contents.get(APP_PREFIX + 'payload/no-root/' + name)]
+    if mismatched:
+        raise ValueError('Homebrew differs from desktop: ' + ', '.join(mismatched))
+    return hashes
+
+
+def stage_no_root_payload(project, output, scratch, desktop_payload=None):
+    if desktop_payload is None:
+        output.mkdir()
+        versions = json.loads(read_file(project / 'release-versions.json'))
+        stage_packages = runpy.run_path(str(project / 'scripts/build-cytv.py'))['stage_no_root_packages']
+        stage_packages(output, scratch, versions, single_tile=True, scratch=scratch)
+        screensaver_version = json.loads(read_file(project / 'screensaver/appinfo.json'))['version']
+    else:
+        components = desktop_components(desktop_payload)
+        hashes = desktop_component_hashes(components)
+        reference = json.loads(components['payload.json'])
+        if 'single_tile' not in reference:
+            raise ValueError('This desktop release uses the original visible Home and Helper. '
+                             'The single-tile installer requires a matching single-tile desktop payload.')
+        output.mkdir()
+        for name in hashes:
+            (output / name).write_bytes(components[name])
+        versions = {'home': reference['home_version'], 'helper': reference['helper_version']}
+        screensaver_version = reference['screensaver_version']
     manifest = {'schema': 1, 'graphics': NO_ROOT_GRAPHICS, 'launcher': 'launcher.ipk',
                 'helper': 'helper.ipk', 'home_version': versions['home'], 'helper_version': versions['helper'],
                 'screensaver': package.SCREENSAVER_IPK,
-                'screensaver_version': json.loads(read_file(project / 'screensaver/appinfo.json'))['version'],
+                'screensaver_version': screensaver_version,
                 'files': {name: record['sha256'] for name, record in inventory(output).items()}}
     (output / 'payload.json').write_text(json.dumps(manifest, sort_keys=True, separators=(',', ':')) + '\n')
     verify_no_root_payload(output)
@@ -143,7 +186,7 @@ def stage_websockets(destination):
         target.write_bytes(raw)
 
 
-def build_payload(root_bundle, root_updater_bundle, supervisor_bundle, runtime_archive, output):
+def build_payload(root_bundle, root_updater_bundle, supervisor_bundle, runtime_archive, output, desktop_payload=None):
     output=Path(output).absolute()
     if '..' in output.parts or any(p.is_symlink() for p in (output,*output.parents)): raise ValueError('Unsafe output')
     inputs=dict(zip(IDENTITIES,(root_bundle,root_updater_bundle,supervisor_bundle)))
@@ -200,7 +243,7 @@ def build_payload(root_bundle, root_updater_bundle, supervisor_bundle, runtime_a
         (output/'runtime.js').write_bytes(read_file(Path(__file__).with_name('runtime.js')))
         with tempfile.TemporaryDirectory(prefix='cytv-homebrew-gate-', dir=output.parent) as work:
             build_lifecycle_gate(output/'installer-support/lifecycle-gate', work)
-            stage_no_root_payload(project, output/'no-root', Path(work))
+            stage_no_root_payload(project, output/'no-root', Path(work), desktop_payload)
         edition = output/'edition'
         (edition/'cytv').mkdir(parents=True)
         for name in ('edition.py', 'debloat.py', 'no_root.py', 'pairing.py'):
@@ -387,7 +430,7 @@ def build_tile(output: Path, version: str, edition: str) -> Path:
     return output
 
 
-def build_installer(payload, output, version='0.0.0'):
+def build_installer(payload, output, version='0.0.0', desktop_payload=None):
     output=Path(output).absolute()
     if '..' in output.parts or any(p.is_symlink() for p in (output,*output.parents)):raise ValueError('Unsafe output')
     manifest=verify_offline(payload)
@@ -397,11 +440,15 @@ def build_installer(payload, output, version='0.0.0'):
     for name in (*manifest['files'],'manifest.json'):files[APP_PREFIX+'payload/'+name]=read_file(Path(payload)/name)
     raw=installer_ipk(version,files)
     installer_metadata(raw)
-    if installer_files(raw)!=files:raise ValueError('Final installer bytes differ')
+    packaged = installer_files(raw)
+    if packaged != files:raise ValueError('Final installer bytes differ')
+    reference_hashes = desktop_parity(desktop_components(desktop_payload), packaged) if desktop_payload else None
     output.mkdir()
     try:
         target=output/(APP_ID+'_'+version+'_all.ipk');target.write_bytes(raw)
         metadata={'schema':1,'application_id':APP_ID,'version':version,'size':len(raw),'sha256':hashlib.sha256(raw).hexdigest(),'payload_manifest_sha256':hashlib.sha256(read_file(Path(payload)/'manifest.json')).hexdigest(),'payload_bytes':sum(record['size'] for record in manifest['files'].values()),'required_runtime_free_bytes':manifest['runtime']['required_space'],'hardware_validated':False}
+        if reference_hashes is not None:
+            metadata['desktop_no_root_sha256'] = reference_hashes
         (output/'installer-build.json').write_text(json.dumps(metadata,sort_keys=True,indent=2)+'\n')
         return target
     except BaseException:
@@ -410,6 +457,7 @@ def build_installer(payload, output, version='0.0.0'):
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--desktop-payload', type=Path, help='Use the No-root product files from this desktop payload and verify their final bytes')
     parser.add_argument('--installer-payload',type=Path,help='Package an already built complete offline payload')
     parser.add_argument('--version',default='0.0.0',help='Separate installer development/candidate version')
     for name in ('root-bundle','root-updater-bundle','supervisor-bundle','runtime-archive'):parser.add_argument('--'+name,type=Path)
@@ -417,7 +465,7 @@ if __name__=='__main__':
     args=vars(parser.parse_args());payload=args.pop('installer_payload');version=args.pop('version')
     if payload:
         if any(args[name] is not None for name in ('root_bundle','root_updater_bundle','supervisor_bundle','runtime_archive')):parser.error('Choose payload build or installer packaging')
-        print(build_installer(payload,args['output'],version))
+        print(build_installer(payload,args['output'],version,args['desktop_payload']))
     else:
-        if any(value is None for value in args.values()):parser.error('All component bundles and runtime archive are required')
+        if any(value is None for name,value in args.items() if name!='desktop_payload'):parser.error('All component bundles and runtime archive are required')
         print(build_payload(**args))

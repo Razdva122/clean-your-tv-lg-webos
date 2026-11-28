@@ -126,4 +126,32 @@ class RuntimeArchiveTests(unittest.TestCase):
                 with self.subTest(name=name),self.assertRaisesRegex(ValueError,'Mismatched component baseline'):build_payload(*inputs,root/'absent-runtime',root/'output')
                 (inputs[1]/name).write_bytes(b'same');manifest['files'][name]=hashlib.sha256(b'same').hexdigest();(inputs[1]/'bundle.json').write_text(json.dumps(manifest))
 
+
+
+class DesktopParityTests(unittest.TestCase):
+    def test_final_bytes_match_the_desktop_manifest_for_both_resolutions(self):
+        from homebrew.build import APP_PREFIX, NO_ROOT_FILES, desktop_components, desktop_parity
+        with tempfile.TemporaryDirectory() as tmp:
+            desktop = Path(tmp).resolve()
+            files = {}
+            hashes = {}
+            for name in NO_ROOT_FILES:
+                raw = name.encode()
+                (desktop / name).write_bytes(raw)
+                hashes[name] = hashlib.sha256(raw).hexdigest()
+                files[APP_PREFIX + 'payload/no-root/' + name] = raw
+            (desktop / 'payload.json').write_text(json.dumps({'files': hashes}))
+            self.assertEqual(desktop_parity(desktop_components(desktop), files), hashes)
+            key = APP_PREFIX + 'payload/no-root/launcher-720p.ipk'
+            files[key] += b'changed'
+            with self.assertRaisesRegex(ValueError, 'launcher-720p.ipk'):
+                desktop_parity(desktop_components(desktop), files)
+            del files[key]
+            with self.assertRaisesRegex(ValueError, 'launcher-720p.ipk'):
+                desktop_parity(desktop_components(desktop), files)
+            (desktop / 'helper.ipk').write_bytes(b'unrecorded change')
+            with self.assertRaisesRegex(ValueError, 'helper.ipk'):
+                desktop_parity(desktop_components(desktop), files)
+
+
 if __name__=='__main__': unittest.main()
