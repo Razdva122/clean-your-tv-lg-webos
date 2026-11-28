@@ -811,6 +811,10 @@ h3 {
   width: 16px;
   height: 16px;
 }
+.log a,
+.context a {
+  color: #9acaff;
+}
 .log pre,
 .context {
   white-space: pre-wrap;

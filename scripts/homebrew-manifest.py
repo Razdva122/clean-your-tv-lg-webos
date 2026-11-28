@@ -56,7 +56,7 @@ def manifest(ipk_bytes, ipk_url, icon_url, source_url):
     if not re.fullmatch(re.escape(ASSETS)+r'v\d{1,4}\.\d{1,4}\.\d{1,4}/'+re.escape(filename),https(ipk_url)):
         raise ValueError('Immutable project release IPK URL required')
     return {'id':info['id'],'title':info['title'],'type':info['type'],'version':info['version'],
-            'appDescription':'Install and maintain CYTV Root on a compatible rooted TV. Installer updates are separate from product updates.',
+            'appDescription':'Install Clean Your TV on an already-rooted TV. Setup offers the No-root edition when Root is incompatible and No-root checks pass. Installer updates are separate from product updates.',
             'iconUri':https(icon_url),'sourceUrl':https(source_url),'rootRequired':True,
             'ipkUrl':ipk_url,'ipkHash':{'sha256':digest(ipk_bytes)},'ipkSize':len(ipk_bytes),
             'installedSize':sum(map(len,files.values()))}

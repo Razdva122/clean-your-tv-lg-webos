@@ -329,6 +329,65 @@ class OriginalOperationTest(unittest.TestCase):
             self.assertEqual(json.loads(archive.read_text()), previous)
             self.assertEqual(capsule.read_text(), 'original evidence')
 
+    def test_stale_inspection_preserves_recovery_until_live_handoff_proof(self):
+        from types import SimpleNamespace
+        from cytv.errors import UserError
+        from unittest.mock import Mock
+        previous = dict(stage='complete', operation='a' * 32)
+        status = dict(previous, state='recovery_required', code='current-state-unverified')
+        coordinator = Mock()
+        coordinator.current.return_value = previous
+        coordinator.worker_active.return_value = False
+        installer = SimpleNamespace()
+        with (patch.object(self.backend, 'live_status', return_value=status),
+              patch.object(self.backend, 'make_installer', return_value=installer),
+              patch.object(self.backend, 'inspect_candidate') as inspect,
+              patch.object(self.backend, 'predecessor_clean') as clean):
+            clean.return_value = False
+            inspect.side_effect = UserError('cannot confirm a predecessor')
+            self.assertEqual(self.backend.inspect_setup(coordinator, None, 'b' * 64), status)
+            clean.return_value = True
+            inspect.side_effect = None
+            inspect.return_value = dict(state='unavailable', code='pairing-unavailable')
+            review = self.backend.inspect_setup(coordinator, None, 'b' * 64)
+            self.assertEqual(review['code'], 'pairing-unavailable')
+            self.assertEqual(review['superseded_no_root_operation'], previous['operation'])
+            coordinator.worker_active.return_value = True
+            self.assertEqual(self.backend.inspect_setup(coordinator, None, 'b' * 64), status)
+
+    def test_desktop_removal_reenrollment_rechecks_reviewed_final_fence(self):
+        from types import SimpleNamespace
+        with tempfile.TemporaryDirectory() as temporary:
+            folder = Path(temporary).resolve()
+            product = folder / 'product'
+            product.mkdir(mode=0o700)
+            coordinator = self.backend.Coordinator(folder / 'operations')
+            previous = coordinator.reserve('a' * 32, 'b' * 64, 'c' * 64)
+            previous.update(stage='complete', result={'system_updates': True})
+            coordinator.write(previous)
+            handoff = dict(operation='d' * 32, removal='e' * 32, lease='f' * 32)
+            owner = dict(schema=1, owner='clean-removal', stage='verified-clean', terminal=False,
+                         id=handoff['lease'], journal='product-' + handoff['operation'] + '.json')
+            candidate = '9' * 64
+            installer = SimpleNamespace(_root_handoff=handoff)
+            def copy_worker(source, destination, pin):
+                destination.mkdir(mode=0o700)
+            with (patch.object(self.backend, 'PRODUCT', product),
+                  patch.object(self.backend, 'make_installer', return_value=installer),
+                  patch.object(self.backend, 'inspect_candidate', return_value={'candidate_sha256': candidate}),
+                  patch.object(self.backend, 'copy_worker', side_effect=copy_worker)):
+                for fence in ('1' * 32, handoff['lease']):
+                    self.backend.private_write(product / 'operation.json', json.dumps(dict(owner, id=fence)).encode())
+                    if fence != handoff['lease']:
+                        with self.assertRaises((ValueError, RuntimeError)):
+                            self.backend.reserve_setup(coordinator, folder, 'b' * 64, '2' * 32, candidate)
+                        self.assertEqual(coordinator.current(), previous)
+                    else:
+                        result = self.backend.reserve_setup(coordinator, folder, 'b' * 64, '2' * 32, candidate)
+                        self.assertEqual(result['stage'], 'reserved')
+                        archive = coordinator.path(previous['operation']) / 'archived-setup.json'
+                        self.assertEqual(json.loads(archive.read_text()), previous)
+
     def test_a_previously_archived_setup_id_cannot_be_replayed(self):
         with tempfile.TemporaryDirectory() as temporary:
             coordinator = self.backend.Coordinator(Path(temporary).resolve() / 'operations')

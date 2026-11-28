@@ -122,6 +122,8 @@ diagnostic report and keep recovery files. [Recovery](RECOVERY.md).
 
 Before choosing a theme, use **Debloat** to select which LG ads, recommendations, privacy settings and notifications to change. Check each result before continuing. If the installer could not read the original value, it cannot save it for an automatic undo. Choose **Skip Debloat** to keep your current settings.
 
+If the TV rejects a change, follow the [LG privacy guide for your model](PRIVACY.md). For network filtering, see [DNS setup without root](PRIVACY-DNS.md) and [the services CYTV contacts](CYTV-NETWORK.md).
+
 Both editions can turn off LG promotional streams when the TV exposes the setting.
 
 After successful installation, choose Classic, Liquid Glass or Ribbon and turn Home weather on or off. Ribbon does not support weather; Liquid Glass uses the compact format. Weather can find an approximate city through your internet connection; change it later in Home settings.

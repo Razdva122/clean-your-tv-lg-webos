@@ -35,6 +35,8 @@
       'restore-unavailable': 'This setting is unavailable on this TV.',
       'restore-unverified':
         'The change could not be verified. Check LG Settings.',
+      'restore-rejected':
+        'The TV rejected the request to restore this setting.',
       'restore-failed': 'Could not restore the setting'
     },
     panel,
@@ -128,7 +130,7 @@
       }
     });
   }
-  function launchApplication(destination) {
+  function launchApplication(destination, guideUrl) {
     if (busy) return;
     var returnHome = destination === 'home';
     busy = true;
@@ -146,6 +148,7 @@
       busy = false;
       if (!accepted)
         notice =
+          guideUrl ||
           'Homebrew could not access LG Settings. Check status and try again.';
       render();
     }
@@ -166,10 +169,12 @@
         JSON.stringify(
           returnHome
             ? { id: 'com.cleanyourtv.root.preview' }
-            : {
-                id: 'io.github.razdva122.cytvinstaller',
-                params: { cytvDebloat: true }
-              }
+            : guideUrl
+              ? { id: 'com.webos.app.browser', params: { target: guideUrl } }
+              : {
+                  id: 'io.github.razdva122.cytvinstaller',
+                  params: { cytvDebloat: true }
+                }
         )
       );
     } catch (_) {
@@ -349,6 +354,22 @@
             option.value !== 'off' &&
             option.saved !== true);
         node(row, 'span', detail);
+        if (
+          (results[key] === 'write-rejected' ||
+            results[key] === 'restore-rejected') &&
+          /^[a-z-]+$/.test(option.guide || '')
+        ) {
+          var file =
+            root.HomeI18n.language() === 'ru' ? 'PRIVACY.ru.md' : 'PRIVACY.md';
+          var guideUrl =
+            'https://github.com/Razdva122/clean-your-tv-lg-webos/blob/release/next/docs/' +
+            file +
+            '#' +
+            option.guide;
+          button(row, 'Open privacy guide', function () {
+            launchApplication('guide', guideUrl);
+          }).disabled = busy;
+        }
       });
     update();
     button(actions, 'Check status', readSettings).disabled = busy;

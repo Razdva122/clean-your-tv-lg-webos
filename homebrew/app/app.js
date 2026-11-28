@@ -789,6 +789,16 @@
         : 'activationUnverified';
     return true;
   }
+  function needsSetupInspection(status) {
+    return (
+      status.operation === operation &&
+      status.edition === 'no-root' &&
+      (status.state === 'removed' ||
+        (status.state === 'recovery_required' &&
+          status.code === 'current-state-unverified' &&
+          status.stage === 'complete'))
+    );
+  }
   function noRootStatus(result) {
     if (
       result.edition !== 'no-root' ||
@@ -837,6 +847,37 @@
         render();
       }
       read = bridge.noRootStatus(operation).then(function (status) {
+        if (needsSetupInspection(status) && status.state !== 'removed') {
+          return bridge
+            .inspect({ prepareSupervisor: true })
+            .then(function (current) {
+              return current.superseded_no_root_operation === operation ||
+                (current.active_operation &&
+                  /^[a-f0-9]{32}$/.test(
+                    current.active_operation.operation || ''
+                  ))
+                ? current
+                : Object.assign(
+                    {
+                      checks: current.checks,
+                      tv: current.tv,
+                      versions: current.versions,
+                      payload_sha256: current.payload_sha256
+                    },
+                    status
+                  );
+            });
+        }
+        if (
+          status.state === 'removed' &&
+          status.operation === operation &&
+          status.edition === 'no-root'
+        ) {
+          dailyHome(null);
+          forgetOperation();
+          job = null;
+          return bridge.inspect({ prepareSupervisor: true });
+        }
         if (status.state !== 'unknown')
           return Object.assign(
             {
@@ -863,6 +904,16 @@
         if (message === 'lost' || message === 'failed') message = null;
         inspected = result;
         runtimePreparation = null;
+        if (
+          result.superseded_no_root_operation &&
+          (!operation ||
+            (operationEdition === 'no-root' &&
+              operation === result.superseded_no_root_operation))
+        ) {
+          dailyHome(null);
+          forgetOperation();
+          job = null;
+        }
         var active = result.active_operation;
         if (
           result.edition === 'no-root' &&
@@ -950,6 +1001,10 @@
         transportFailure = null;
         if (message === 'lost') message = null;
         if (noRoot) {
+          if (needsSetupInspection(result)) {
+            refresh();
+            return;
+          }
           noRootStatus(result);
           render();
           focus(previous);

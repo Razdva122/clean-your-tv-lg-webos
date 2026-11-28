@@ -655,6 +655,8 @@ def compact_audit(record, store):
             result['stage']=value['stage']
         if value.get('package_rejected') is True:
             result['package_rejected']=True
+        from installation import home_conflict_details
+        result.update(home_conflict_details(value.get('home_conflict_paths')))
         step=value.get('cleanup_step')
         if step in ('routing-inverse','runtime-restore','provision-rollback','startup-hook',
                     'legacy-lockdown','registration-restore','legacy-permissions','home-readback','boot-identity','private-inventory'):

@@ -213,6 +213,8 @@ Otwórz Ustawienia → Tapety → Prześlij z telefonu i zeskanuj kod. Wybierz J
 
 Przed wyborem motywu użyj opcji **Debloat**, aby wybrać ustawienia reklam, poleceń, prywatności i powiadomień LG do zmiany. Sprawdź każdy wynik. Jeśli instalator nie może odczytać wartości początkowej, nie zapisze jej do automatycznego przywrócenia. Wybierz **Pomiń Debloat**, aby zachować bieżące ustawienia.
 
+Jeśli telewizor odrzuci zmianę, sprawdź [jak ustawić prywatność pilotem w Twoim modelu (po angielsku)](../PRIVACY.md).
+
 W obu edycjach można wyłączyć transmisje promocyjne LG, jeśli telewizor udostępnia to ustawienie.
 
 Aby cofnąć jedną zmianę, otwórz Debloat w menu konserwacji, korzystając z tego samego zapisanego połączenia z telewizorem. Wybierz ustawienie, sprawdź pierwotną wartość i potwierdź. Na obsługiwanych modelach możesz wyłączyć automatyczne uruchamianie LG Channels w menu Wszystkie ustawienia → Ogólne → Kanały → Automatyczne uruchamianie LG Channels.
