@@ -576,14 +576,25 @@ function stockBspOverlay(mounts, overlay, homeDevice, appDevice) {
   return false;
 }
 async function compositorStock(capture) {
-  if (
-    [
-      '/media/developer/cleanyourtv',
-      '/var/lib/luma-home',
-      '/var/lib/webosbrew/homechooser'
-    ].some(exists)
-  )
-    throw Error('route-changed');
+  var conflicts = [];
+  var lookupError;
+  [
+    '/media/developer/cleanyourtv',
+    '/var/lib/luma-home',
+    '/var/lib/webosbrew/homechooser'
+  ].forEach(function (path) {
+    try {
+      if (exists(path)) conflicts.push(path);
+    } catch (error) {
+      lookupError = error;
+    }
+  });
+  if (conflicts.length) {
+    var error = Error('route-changed');
+    error.home_conflict_paths = conflicts;
+    throw error;
+  }
+  if (lookupError) throw lookupError;
   var bindingRoot = '/home/root/.config/lginputhook';
   if (exists(bindingRoot + '/keybinds.json')) {
     var bindingsRaw = read(openDir(bindingRoot), 'keybinds.json');
@@ -1648,6 +1659,8 @@ function canRecheckBoot() {
         reason: 'private-cleanup-incomplete',
         cleanup_error: diagnostic
       };
+      if (diagnostic === 'route-changed' && error.home_conflict_paths)
+        failure.home_conflict_paths = error.home_conflict_paths;
       if (diagnostic === 'owned-process-still-used')
         failure.restart_required = mode === 'finish' && canRecheckBoot();
       process.stdout.write(JSON.stringify(failure));

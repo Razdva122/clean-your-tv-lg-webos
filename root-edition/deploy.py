@@ -523,6 +523,9 @@ def install_failure(error, *, attempt=None):
     if isinstance(error,OSError) and type(error.errno) is int and 0<=error.errno<=4095:result['errno']=error.errno
     if isinstance(error,subprocess.CalledProcessError) and type(error.returncode) is int and -255<=error.returncode<=255:
         result['exit_status']=error.returncode
+    if hasattr(error, 'home_conflict_paths'):
+        from installation import home_conflict_details
+        result.update(home_conflict_details(error.home_conflict_paths))
     return result
 
 
@@ -545,6 +548,9 @@ def install_failure_details(value, attempt=None):
     for key,low,high in (('errno',0,4095),('exit_status',-255,255)):
         number=value.get(key)
         if type(number) is int and low<=number<=high:result[key]=number
+    if 'home_conflict_paths' in value:
+        from installation import home_conflict_details
+        result.update(home_conflict_details(value['home_conflict_paths']))
     return result
 
 

@@ -693,6 +693,24 @@ class ConfinedCleanup(unittest.TestCase):
         self.assertIn({'file':'deploy.py','line':2},detail.get('frames',[]))
         self.assertNotIn('PRIVATE',str(summary))
 
+    def test_stock_proof_failure_exports_only_paths_from_matching_removal(self):
+        import json, subprocess
+        from install_device import LocalDevice
+        from install_driver import failure_summary
+        record = {'operation': 'c' * 32, 'removal': 'a' * 32}
+        paths = ['/media/developer/cleanyourtv', '/var/lib/webosbrew/homechooser']
+        reply = dict(record, cleanup_error='route-changed', state='recovery_required', stage='private-cleanup',
+                     current=False, home_conflict_paths=paths)
+        for changes, expected in [({}, paths), ({'removal': 'd' * 32}, None),
+                                  ({'cleanup_error': 'other'}, None), ({'home_conflict_paths': ['/PRIVATE']}, None)]:
+            with self.subTest(changes=changes):
+                result = subprocess.CompletedProcess(['node'], 1, json.dumps(dict(reply, **changes)).encode(), b'PRIVATE')
+                with patch('subprocess.run', return_value=result), self.assertRaises(subprocess.CalledProcessError) as caught:
+                    LocalDevice().compositor_stock(record)
+                summary = failure_summary(caught.exception)
+                self.assertEqual(summary.get('home_conflict_paths'), expected)
+                self.assertNotIn('PRIVATE', str(summary))
+
     def test_stock_probe_invalid_child_output_cannot_become_route_or_private_diagnostic(self):
         import json, subprocess, deploy
         from install_device import LocalDevice

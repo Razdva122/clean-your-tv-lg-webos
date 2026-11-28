@@ -88,6 +88,9 @@ PROGRAM = READERS + r'''
    detail.root_driver={exception_type:child.exception_type,frames:child.frames.filter(function(f){
     return f&&files.indexOf(f.file)!==-1&&integer(f.line,1,10000);
    }).map(function(f){return {file:f.file,line:f.line};})};
+   var paths=child.home_conflict_paths,known=HOME_CONFLICT_PATHS;
+   if(Array.isArray(paths)&&paths.length>0&&paths.length<=known.length&&paths.every(function(p){return known.indexOf(p)!==-1;}))
+    detail.root_driver.home_conflict_paths=known.filter(function(p){return paths.indexOf(p)!==-1;});
    if(integer(child.errno,0,4095))detail.root_driver.errno=child.errno;
    if(integer(child.exit_status,-255,255))detail.root_driver.exit_status=child.exit_status;
   }
@@ -325,6 +328,7 @@ def collect_beta(remote):
 
 
 def program(operation, pending=None):
+    from .errors import HOME_CONFLICT_PATHS
     if not isinstance(operation,str) or not re.fullmatch('[a-f0-9]{32}',operation):
         raise ValueError('original_operation_required')
     states=['/var/lib/clean-your-tv-root','/var/lib/clean-your-tv-root-updater','/var/lib/clean-your-tv-system-updater']
@@ -338,6 +342,7 @@ def program(operation, pending=None):
                     raise ValueError('original_archive_path_required')
                 states.append(archived)
     return (PROGRAM.replace('OPERATION',json.dumps(operation)).replace('STATES',json.dumps(states))
+            .replace('HOME_CONFLICT_PATHS', json.dumps(HOME_CONFLICT_PATHS))
             .replace('NATIVE_REQUEST',json.dumps(is_native_pending(pending))))
 
 
